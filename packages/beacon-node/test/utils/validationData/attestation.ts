@@ -1,7 +1,12 @@
 import {BitArray, toHexString} from "@chainsafe/ssz";
-import {DataAvailabilityStatus, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {DOMAIN_BEACON_ATTESTER} from "@lodestar/params";
-import {computeEpochAtSlot, computeSigningRoot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {
+  DataAvailabilityStatus,
+  computeEpochAtSlot,
+  computeSigningRoot,
+  computeStartSlotAtEpoch,
+} from "@lodestar/state-transition";
 import {Slot, SubnetID, phase0, ssz} from "@lodestar/types";
 import {
   generateTestCachedBeaconStateOnlyValidators,
