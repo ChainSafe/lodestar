@@ -1,0 +1,114 @@
+import {ForkName, ForkPostDeneb, ForkPostElectra, ForkPreDeneb} from "@lodestar/params";
+import {RootHex, SignedBeaconBlock, deneb} from "@lodestar/types";
+import {PeerIdStr} from "../../../util/peerId.js";
+
+export enum DataAvailabilityStatus {
+  Unknown = "unknown",
+  PreData = "pre_data",
+  Available = "available",
+  /* validator activities can't be performed on out of range data */
+  OutOfRange = "out_of_range",
+}
+
+export enum BlockInputDataStatus {
+  NoData = "no_data",
+  IncompleteData = "incomplete_data",
+  CompleteData = "complete_data",
+}
+
+export enum BlockInputType {
+  PreData = "pre-data",
+  Blobs = "blobs",
+  Columns = "columns",
+}
+
+export type PossibleDataTypes = null | deneb.BlobSidecars;
+
+/**
+ * Represents were input originated. Blocks and Data can come from different
+ * sources so each should be labelled individually.
+ */
+export enum BlockInputSource {
+  gossip = "gossip",
+  api = "api",
+  engine = "engine",
+  byRange = "req_resp_by_range",
+  byRoot = "req_resp_by_root",
+}
+
+export type PromiseParts<T> = {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+  reject: (e: Error) => void;
+};
+
+export type LogMetaBasic = {
+  slot: number | string;
+  blockRoot: string;
+};
+
+export type LogMetaBlobs = LogMetaBasic & {
+  expectedBlobs: string;
+  receivedBlobs: number;
+};
+
+export type LogMetaColumns = LogMetaBasic & {
+  expectedColumns: number;
+  receivedColumns: number;
+};
+
+export type BlockWithSource<BlockType extends SignedBeaconBlock> = {
+  block: BlockType;
+  source: BlockInputSource;
+  seenTimestampSec: number;
+  peerIdStr?: string;
+};
+
+export type BlobWithSource = {
+  blobSidecar: deneb.BlobSidecar;
+  source: BlockInputSource;
+  seenTimestampSec: number;
+  peerIdStr?: string;
+};
+
+export type ColumnWithSource = {
+  columnSidecar: deneb.BlobSidecar;
+  source: BlockInputSource;
+  seenTimestampSec: number;
+  peerIdStr?: string;
+};
+
+export type AddBlockProps<BlockType extends SignedBeaconBlock> = BlockWithSource<BlockType> & {
+  rootHex: string;
+  blockRoot: Uint8Array;
+  forkName: ForkName;
+  dataAvailability: DataAvailabilityStatus;
+};
+
+export type AddBlobProps = {
+  rootHex: RootHex;
+  blobSidecar: deneb.BlobSidecar;
+  source: BlockInputSource;
+  seenTimestampSec: number;
+  peerIdStr: PeerIdStr;
+};
+
+export type AddColumnProps = {};
+
+export type BlobMeta = ColumnMeta & {versionHash: Uint8Array};
+
+export type ColumnMeta = {
+  blockRoot: Uint8Array;
+  index: number;
+};
+
+export type BlockInputBaseProps = {
+  rootHex: string;
+  blockRoot: Uint8Array;
+};
+
+export type BlockInputPreDataProps<BlockType extends SignedBeaconBlock> = AddBlockProps<BlockType> & {};
+
+export type BlockInputBlobsProps<BlockType extends SignedBeaconBlock> = BlockInputPreDataProps<BlockType> & {};
+
+export type BlockInputColumnsProps<BlockType extends SignedBeaconBlock> = BlockInputPreDataProps<BlockType> & {};
