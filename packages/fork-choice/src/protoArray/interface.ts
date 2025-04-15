@@ -1,3 +1,4 @@
+import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot, UintNum64} from "@lodestar/types";
 
 // RootHex is a root as a hex string
@@ -34,13 +35,6 @@ export type LVHInvalidResponse = {
 export type LVHExecResponse = LVHValidResponse | LVHInvalidResponse;
 
 export type MaybeValidExecutionStatus = Exclude<ExecutionStatus, ExecutionStatus.Invalid>;
-
-export enum DataAvailabilityStatus {
-  preData = "PreData",
-  /* validator activities can't be performed on out of range data */
-  OutOfRange = "OutOfRange",
-  available = "Available",
-}
 
 export type BlockExtraMeta =
   | {
