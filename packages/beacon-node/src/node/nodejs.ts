@@ -13,6 +13,7 @@ import {ProcessShutdownCallback} from "@lodestar/validator";
 
 import {BeaconRestApiServer, getApi} from "../api/index.js";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
+import {ValidatorMonitor, createValidatorMonitor} from "../chain/validatorMonitor.js";
 import {IBeaconDb} from "../db/index.js";
 import {initializeEth1ForBlockProduction} from "../eth1/index.js";
 import {initializeExecutionBuilder, initializeExecutionEngine} from "../execution/index.js";
@@ -33,6 +34,7 @@ export type BeaconNodeModules = {
   config: BeaconConfig;
   db: IBeaconDb;
   metrics: Metrics | null;
+  validatorMonitor: ValidatorMonitor | null;
   network: Network;
   chain: IBeaconChain;
   api: BeaconApiMethods;
@@ -96,6 +98,7 @@ export class BeaconNode {
   metrics: Metrics | null;
   metricsServer: HttpMetricsServer | null;
   monitoring: MonitoringService | null;
+  validatorMonitor: ValidatorMonitor | null;
   network: Network;
   chain: IBeaconChain;
   api: BeaconApiMethods;
@@ -113,6 +116,7 @@ export class BeaconNode {
     metrics,
     metricsServer,
     monitoring,
+    validatorMonitor,
     network,
     chain,
     api,
@@ -126,6 +130,7 @@ export class BeaconNode {
     this.metrics = metrics;
     this.metricsServer = metricsServer;
     this.monitoring = monitoring;
+    this.validatorMonitor = validatorMonitor;
     this.db = db;
     this.chain = chain;
     this.api = api;
@@ -184,6 +189,17 @@ export class BeaconNode {
       signal.addEventListener("abort", metrics.close, {once: true});
     }
 
+    let validatorMonitor = null;
+    if (opts.metrics.enabled || opts.validatorMonitor.validatorMonitorLogs) {
+      validatorMonitor = createValidatorMonitor(
+        metrics,
+        config,
+        anchorState.genesisTime,
+        logger,
+        opts.validatorMonitor
+      );
+    }
+
     const clock = new Clock({config, genesisTime: anchorState.genesisTime, signal});
 
     // Prune hot db repos
@@ -207,6 +223,7 @@ export class BeaconNode {
       logger: logger.child({module: LoggerModule.chain}),
       processShutdownCallback,
       metrics,
+      validatorMonitor,
       anchorState,
       eth1: initializeEth1ForBlockProduction(opts.eth1, {
         config,
@@ -306,6 +323,7 @@ export class BeaconNode {
       metrics,
       metricsServer,
       monitoring,
+      validatorMonitor,
       network,
       chain,
       api,

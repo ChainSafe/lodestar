@@ -193,6 +193,7 @@ export class BeaconChain implements IBeaconChain {
       processShutdownCallback,
       clock,
       metrics,
+      validatorMonitor,
       anchorState,
       eth1,
       executionEngine,
@@ -207,6 +208,7 @@ export class BeaconChain implements IBeaconChain {
       /** Used for testing to supply fake clock */
       clock?: IClock;
       metrics: Metrics | null;
+      validatorMonitor: ValidatorMonitor | null;
       anchorState: BeaconStateAllForks;
       eth1: IEth1ForBlockProduction;
       executionEngine: IExecutionEngine;
@@ -219,10 +221,6 @@ export class BeaconChain implements IBeaconChain {
     this.logger = logger;
     this.processShutdownCallback = processShutdownCallback;
     this.metrics = metrics;
-    const validatorMonitor =
-      metrics || opts.validatorMonitorLogs
-        ? createValidatorMonitor(metrics, config, anchorState.genesisTime, logger, opts)
-        : null;
     this.validatorMonitor = validatorMonitor;
     this.genesisTime = anchorState.genesisTime;
     this.anchorStateLatestBlockSlot = anchorState.latestBlockHeader.slot;

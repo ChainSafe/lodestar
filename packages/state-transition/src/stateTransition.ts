@@ -72,7 +72,7 @@ export function stateTransition(
     dataAvailableStatus: DataAvailableStatus.available,
   },
   metrics?: BeaconStateTransitionMetrics | null,
-  validatorMonitor?: IValidatorMonitor | null
+  validatorMonitor?: ValidatorMonitor | null
 ): CachedBeaconStateAllForks {
   const {verifyStateRoot = true, verifyProposer = true} = options;
 
@@ -147,7 +147,7 @@ export function processSlots(
   slot: Slot,
   epochTransitionCacheOpts?: EpochTransitionCacheOpts & {dontTransferCache?: boolean},
   metrics?: BeaconStateTransitionMetrics | null,
-  validatorMonitor?: IValidatorMonitor | null
+  validatorMonitor?: ValidatorMonitor | null
 ): CachedBeaconStateAllForks {
   // .clone() before mutating state in state transition
   let postState = state.clone(epochTransitionCacheOpts?.dontTransferCache);
@@ -190,7 +190,7 @@ export function processSlots(
  *   beacon-node ShufflingCache
  */
 
-type IValidatorMonitor = {
+interface ValidatorMonitor {
   registerValidatorStatuses(
     currentEpoch: Epoch,
     inclusionDelays: number[],
@@ -199,14 +199,14 @@ type IValidatorMonitor = {
     isActivePrevEpoch: boolean[],
     balances?: number[]
   ): void;
-};
+}
 
 function processSlotsWithTransientCache(
   postState: CachedBeaconStateAllForks,
   slot: Slot,
   epochTransitionCacheOpts?: EpochTransitionCacheOpts,
   metrics?: BeaconStateTransitionMetrics | null,
-  validatorMonitor?: IValidatorMonitor | null
+  validatorMonitor?: ValidatorMonitor | null
 ): CachedBeaconStateAllForks {
   const {config} = postState;
   if (postState.slot > slot) {
