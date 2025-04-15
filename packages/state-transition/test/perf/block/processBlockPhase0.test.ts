@@ -110,7 +110,7 @@ describe("phase0 processBlock", () => {
       fn: ({state, block}) => {
         stateTransition(state, block, {
           executionPayloadStatus: ExecutionPayloadStatus.valid,
-          dataAvailableStatus: DataAvailableStatus.available,
+          dataAvailabilityStatus: DataAvailableStatus.available,
           verifyProposer: false,
           verifySignatures: false,
           verifyStateRoot: false,

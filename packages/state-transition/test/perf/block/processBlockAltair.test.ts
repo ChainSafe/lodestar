@@ -126,7 +126,7 @@ describe("altair processBlock", () => {
         fn: ({state, block}) => {
           const postState = stateTransition(state, block, {
             executionPayloadStatus: ExecutionPayloadStatus.valid,
-            dataAvailableStatus: DataAvailableStatus.available,
+            dataAvailabilityStatus: DataAvailableStatus.available,
             verifyProposer: false,
             verifySignatures: false,
             verifyStateRoot: false,
