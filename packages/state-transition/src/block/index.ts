@@ -70,7 +70,7 @@ export function processBlock(
     // Only throw preDeneb so beacon can also sync/process blocks optimistically
     // and let forkChoice handle it
     if (externalData.dataAvailabilityStatus === DataAvailabilityStatus.preData) {
-      throw Error("dataAvailableStatus preDeneb");
+      throw Error("dataAvailabilityStatus preDeneb");
     }
   }
 }
