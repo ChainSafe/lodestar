@@ -220,7 +220,7 @@ export class BeaconChain implements IBeaconChain {
     this.processShutdownCallback = processShutdownCallback;
     this.metrics = metrics;
     const validatorMonitor =
-      opts.validatorMonitorLogs
+      metrics || opts.validatorMonitorLogs
         ? createValidatorMonitor(metrics, config, anchorState.genesisTime, logger, opts)
         : null;
     this.validatorMonitor = validatorMonitor;
