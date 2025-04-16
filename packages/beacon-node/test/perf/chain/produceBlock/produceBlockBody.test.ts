@@ -46,6 +46,7 @@ describe("produceBlockBody", () => {
         logger,
         processShutdownCallback: () => {},
         metrics: null,
+        validatorMonitor: null,
         anchorState: state,
         eth1: new Eth1ForBlockProductionDisabled(),
         executionEngine: new ExecutionEngineDisabled(),

@@ -129,7 +129,7 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
   },
 
   validatorMonitorLogs: {
-    description: "Log validator monitor events as info. This requires metrics to be enabled.",
+    description: "Log validator monitor events as info.",
     type: "boolean",
   },
 

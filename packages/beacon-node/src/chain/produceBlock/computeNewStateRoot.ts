@@ -39,7 +39,7 @@ export function computeNewStateRoot(
       // Preserve cache in source state, since the resulting state is not added to the state cache
       dontTransferCache: true,
     },
-    metrics
+    {metrics}
   );
 
   const {attestations, syncAggregate, slashing} = postState.proposerRewards;

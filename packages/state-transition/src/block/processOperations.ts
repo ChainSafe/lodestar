@@ -49,7 +49,7 @@ export function processOperations(
     processAttesterSlashing(fork, state, attesterSlashing, opts.verifySignatures);
   }
 
-  processAttestations(fork, state, body.attestations, opts.verifySignatures);
+  processAttestations(fork, state, body.attestations, opts.verifySignatures, metrics);
 
   for (const deposit of body.deposits) {
     processDeposit(fork, state, deposit);
