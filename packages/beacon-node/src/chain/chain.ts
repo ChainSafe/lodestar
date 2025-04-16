@@ -381,7 +381,7 @@ export class BeaconChain implements IBeaconChain {
     }
 
     if (metrics) {
-      metrics.opPool.aggregatedAttestationPool.size.addCollect(() => this.onScrapeMetrics(metrics));
+      metrics.clockSlot.addCollect(() => this.onScrapeMetrics(metrics));
       // Register a single collect() function to run all validatorMonitor metrics
       metrics.validatorMonitor.validatorsConnected.addCollect(() => {
         const clockSlot = getCurrentSlot(config, anchorState.genesisTime);
