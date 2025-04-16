@@ -106,6 +106,11 @@ export async function createNodeJsLibp2p(
     connectionMonitor: {
       enabled: false,
     },
+    // for our purposes, we don't want peer store data to expire
+    peerStore: {
+      maxAddressAge: Infinity,
+      maxPeerAge: Infinity,
+    },
     datastore,
     services: {
       identify: identify({
