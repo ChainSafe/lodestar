@@ -16,6 +16,7 @@ import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   createCachedBeaconState,
+  getCurrentSlot,
   getEffectiveBalanceIncrementsZeroInactive,
   isCachedBeaconState,
 } from "@lodestar/state-transition";
@@ -103,6 +104,7 @@ import {FileCPStateDatastore} from "./stateCache/datastore/file.js";
 import {FIFOBlockStateCache} from "./stateCache/fifoBlockStateCache.js";
 import {InMemoryCheckpointStateCache} from "./stateCache/inMemoryCheckpointsCache.js";
 import {PersistentCheckpointStateCache} from "./stateCache/persistentCheckpointsCache.js";
+import {ValidatorMonitor} from "./validatorMonitor.js";
 
 /**
  * Arbitrary constants, blobs and payloads should be consumed immediately in the same slot
@@ -121,6 +123,7 @@ export class BeaconChain implements IBeaconChain {
   readonly config: BeaconConfig;
   readonly logger: Logger;
   readonly metrics: Metrics | null;
+  readonly validatorMonitor: ValidatorMonitor | null;
   readonly bufferPool: BufferPool | null;
 
   readonly anchorStateLatestBlockSlot: Slot;
@@ -190,6 +193,7 @@ export class BeaconChain implements IBeaconChain {
       processShutdownCallback,
       clock,
       metrics,
+      validatorMonitor,
       anchorState,
       eth1,
       executionEngine,
@@ -204,6 +208,7 @@ export class BeaconChain implements IBeaconChain {
       /** Used for testing to supply fake clock */
       clock?: IClock;
       metrics: Metrics | null;
+      validatorMonitor: ValidatorMonitor | null;
       anchorState: BeaconStateAllForks;
       eth1: IEth1ForBlockProduction;
       executionEngine: IExecutionEngine;
@@ -216,6 +221,7 @@ export class BeaconChain implements IBeaconChain {
     this.logger = logger;
     this.processShutdownCallback = processShutdownCallback;
     this.metrics = metrics;
+    this.validatorMonitor = validatorMonitor;
     this.genesisTime = anchorState.genesisTime;
     this.anchorStateLatestBlockSlot = anchorState.latestBlockHeader.slot;
     this.genesisValidatorsRoot = anchorState.genesisValidatorsRoot;
@@ -332,6 +338,7 @@ export class BeaconChain implements IBeaconChain {
       checkpointStateCache,
       db,
       metrics,
+      validatorMonitor,
       logger,
       emitter,
       signal,
@@ -375,6 +382,11 @@ export class BeaconChain implements IBeaconChain {
 
     if (metrics) {
       metrics.clockSlot.addCollect(() => this.onScrapeMetrics(metrics));
+      // Register a single collect() function to run all validatorMonitor metrics
+      metrics.validatorMonitor.validatorsConnected.addCollect(() => {
+        const clockSlot = getCurrentSlot(config, this.genesisTime);
+        this.validatorMonitor?.scrapeMetrics(clockSlot);
+      });
     }
 
     // Event handlers. emitter is created internally and dropped on close(). Not need to .removeListener()
@@ -1130,7 +1142,7 @@ export class BeaconChain implements IBeaconChain {
     if (metrics && (slot + 1) % SLOTS_PER_EPOCH === 0) {
       // On the last slot of the epoch
       sleep((1000 * this.config.SECONDS_PER_SLOT) / 2)
-        .then(() => metrics.onceEveryEndOfEpoch(this.getHeadState()))
+        .then(() => this.validatorMonitor?.onceEveryEndOfEpoch(this.getHeadState()))
         .catch((e) => {
           if (!isErrorAborted(e)) this.logger.error("Error on validator monitor onceEveryEndOfEpoch", {slot}, e);
         });

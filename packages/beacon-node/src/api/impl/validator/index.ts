@@ -1329,7 +1329,7 @@ export function getValidatorApi(
             metrics?.opPool.aggregatedAttestationPool.apiInsertOutcome.inc({insertOutcome});
 
             const sentPeers = await network.publishBeaconAggregateAndProof(signedAggregateAndProof);
-            metrics?.onPoolSubmitAggregatedAttestation(seenTimestampSec, indexedAttestation, sentPeers);
+            chain.validatorMonitor?.onPoolSubmitAggregatedAttestation(seenTimestampSec, indexedAttestation, sentPeers);
           } catch (e) {
             const logCtx = {
               slot: signedAggregateAndProof.message.aggregate.data.slot,
@@ -1435,7 +1435,7 @@ export function getValidatorApi(
 
       if (metrics) {
         for (const subscription of subscriptions) {
-          metrics.registerLocalValidator(subscription.validatorIndex);
+          chain.validatorMonitor?.registerLocalValidator(subscription.validatorIndex);
         }
       }
     },
@@ -1472,7 +1472,10 @@ export function getValidatorApi(
 
       if (metrics) {
         for (const subscription of subscriptions) {
-          metrics.registerLocalValidatorInSyncCommittee(subscription.validatorIndex, subscription.untilEpoch);
+          chain.validatorMonitor?.registerLocalValidatorInSyncCommittee(
+            subscription.validatorIndex,
+            subscription.untilEpoch
+          );
         }
       }
     },

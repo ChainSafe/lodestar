@@ -11,6 +11,7 @@ import {byteArrayEquals} from "../../util/bytes.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
+import {ValidatorMonitor} from "../validatorMonitor.js";
 import {BlockInput, ImportBlockOpts} from "./types.js";
 
 /**
@@ -27,6 +28,7 @@ export async function verifyBlocksStateTransitionOnly(
   dataAvailabilityStatuses: DataAvailableStatus[],
   logger: Logger,
   metrics: Metrics | null,
+  validatorMonitor: ValidatorMonitor | null,
   signal: AbortSignal,
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<{postStates: CachedBeaconStateAllForks[]; proposerBalanceDeltas: number[]; verifyStateTime: number}> {
@@ -57,7 +59,7 @@ export async function verifyBlocksStateTransitionOnly(
         verifyProposer: !useBlsBatchVerify && !validSignatures && !validProposerSignature,
         verifySignatures: !useBlsBatchVerify && !validSignatures,
       },
-      metrics
+      {metrics, validatorMonitor}
     );
 
     const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({

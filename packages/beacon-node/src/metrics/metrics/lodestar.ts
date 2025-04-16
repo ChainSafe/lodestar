@@ -10,6 +10,7 @@ import {ReprocessStatus} from "../../chain/reprocess.js";
 import {RejectReason} from "../../chain/seenCache/seenAttestationData.js";
 import {BlockInputAvailabilitySource} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {CacheItemType} from "../../chain/stateCache/types.js";
+import {OpSource} from "../../chain/validatorMonitor.js";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {GossipType} from "../../network/index.js";
 import {CannotAcceptWorkReason, ReprocessRejectReason} from "../../network/processor/index.js";
@@ -19,7 +20,6 @@ import {PeerSyncType, RangeSyncType} from "../../sync/utils/remoteSyncType.js";
 import {AllocSource} from "../../util/bufferPool.js";
 import {LodestarMetadata} from "../options.js";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
-import {OpSource} from "../validatorMonitor.js";
 
 export type LodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 
@@ -29,7 +29,7 @@ export type LodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 export function createLodestarMetrics(
   register: RegistryMetricCreator,
   metadata?: LodestarMetadata,
-  anchorState?: Pick<BeaconState, "genesisTime">
+  genesisTime?: number
 ) {
   if (metadata) {
     register.static<LodestarMetadata>({
@@ -40,13 +40,13 @@ export function createLodestarMetrics(
   }
 
   // Initial static metrics
-  if (anchorState) {
+  if (genesisTime) {
     register
       .gauge({
         name: "lodestar_genesis_time",
         help: "Genesis time in seconds",
       })
-      .set(anchorState.genesisTime);
+      .set(genesisTime);
   }
 
   return {
@@ -923,7 +923,7 @@ export function createLodestarMetrics(
             labelNames: ["index"],
           }),
           totalEffectiveBalance: register.gauge<{index: number}>({
-            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_total_effective_balance",
+            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_effective_balance_total",
             help: "Total effective balance of new seen attesters in packed attestation ${index}",
             labelNames: ["index"],
           }),

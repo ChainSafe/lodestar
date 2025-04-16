@@ -119,6 +119,7 @@ export async function verifyBlocksInEpoch(
         blocks.map(() => DataAvailableStatus.available),
         this.logger,
         this.metrics,
+        this.validatorMonitor,
         abortController.signal,
         opts
       ),

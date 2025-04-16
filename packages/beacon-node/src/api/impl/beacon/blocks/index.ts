@@ -29,7 +29,7 @@ import {verifyBlocksInEpoch} from "../../../../chain/blocks/verifyBlock.js";
 import {BeaconChain} from "../../../../chain/chain.js";
 import {BlockError, BlockErrorCode, BlockGossipError} from "../../../../chain/errors/index.js";
 import {validateGossipBlock} from "../../../../chain/validation/block.js";
-import {OpSource} from "../../../../metrics/validatorMonitor.js";
+import {OpSource} from "../../../../chain/validatorMonitor.js";
 import {NetworkEvent} from "../../../../network/index.js";
 import {computeBlobSidecars} from "../../../../util/blobs.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
@@ -53,7 +53,6 @@ const IDENTITY_PEER_ID = ""; // TODO: Compute identity keypair
 export function getBeaconBlockApi({
   chain,
   config,
-  metrics,
   network,
   db,
 }: Pick<
@@ -202,7 +201,7 @@ export function getBeaconBlockApi({
     chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRoot});
 
     // TODO: Validate block
-    metrics?.registerBeaconBlock(OpSource.api, seenTimestampSec, blockForImport.block.message);
+    chain.validatorMonitor?.registerBeaconBlock(OpSource.api, seenTimestampSec, blockForImport.block.message);
     chain.logger.info("Publishing block", valLogMeta);
     const publishPromises = [
       // Send the block, regardless of whether or not it is valid. The API
