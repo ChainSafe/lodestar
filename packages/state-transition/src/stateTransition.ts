@@ -203,7 +203,6 @@ export function processSlots(
  *   ╚═══════════════════════════════════════════════════════════════════════════════════╝
  *   beacon-node ShufflingCache
  */
-
 function processSlotsWithTransientCache(
   postState: CachedBeaconStateAllForks,
   slot: Slot,
