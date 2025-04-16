@@ -112,9 +112,29 @@ export async function archiveBlocks(
     }
   }
 
+  // Delete expired data column sidecars
+  // Keep only `[current_epoch - max(MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS, archiveBlobEpochs)]`
   if (finalizedPostFulu) {
-    // TODO
-    // Keep only `[current_epoch - max(MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, archiveBlobEpochs)]
+    if (archiveBlobEpochs !== Infinity) {
+      const dataColumnSidecarsArchiveWindow = Math.max(
+        config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS,
+        archiveBlobEpochs ?? 0
+      );
+      const dataColumnSidecarsMinEpoch = currentEpoch - dataColumnSidecarsArchiveWindow;
+      if (dataColumnSidecarsMinEpoch >= config.FULU_FORK_EPOCH) {
+        const slotsToDelete = await db.dataColumnSidecarsArchive.keys({
+          lt: computeStartSlotAtEpoch(dataColumnSidecarsMinEpoch),
+        });
+        if (slotsToDelete.length > 0) {
+          await db.dataColumnSidecarsArchive.batchDelete(slotsToDelete);
+          logger.verbose(`dataColumnSidecars prune: batchDelete range ${slotsToDelete[0]}..${slotsToDelete.at(-1)}`);
+        } else {
+          logger.verbose(`dataColumnSidecars prune: no entries before epoch ${dataColumnSidecarsMinEpoch}`);
+        }
+      }
+    } else {
+      logger.verbose("dataColumnSidecars pruning skipped: archiveBlobEpochs set to Infinity");
+    }
   }
 
   // Prunning potential checkpoint data

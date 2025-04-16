@@ -100,6 +100,7 @@ export type BeaconPreset = {
   FIELD_ELEMENTS_PER_CELL: number;
   FIELD_ELEMENTS_PER_EXT_BLOB: number;
   KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH: number;
+  MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: number;
 };
 
 /**
@@ -205,6 +206,7 @@ export const beaconPresetTypes: BeaconPresetTypes = {
   FIELD_ELEMENTS_PER_CELL: "number",
   FIELD_ELEMENTS_PER_EXT_BLOB: "number",
   KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH: "number",
+  MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: "number",
 };
 
 type BeaconPresetTypes = {

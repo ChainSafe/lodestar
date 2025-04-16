@@ -24,6 +24,13 @@ describe("block archiver task", () => {
 
     vi.spyOn(dbStub.blockArchive, "batchPutBinary");
     vi.spyOn(dbStub.block, "batchDelete");
+    vi.spyOn(dbStub.blobSidecarsArchive, "batchPutBinary");
+    vi.spyOn(dbStub.blobSidecars, "batchDelete");
+    vi.spyOn(dbStub.dataColumnSidecarsArchive, "batchPutBinary");
+    vi.spyOn(dbStub.dataColumnSidecars, "batchDelete");
+    // Mock keys() to return empty array by default
+    vi.spyOn(dbStub.blobSidecarsArchive, "keys").mockResolvedValue([]);
+    vi.spyOn(dbStub.dataColumnSidecarsArchive, "keys").mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -74,5 +81,57 @@ describe("block archiver task", () => {
     );
     // delete non canonical blocks
     expect(dbStub.block.batchDelete).toBeCalledWith([blocks[2]].map((summary) => fromHexString(summary.blockRoot)));
+  });
+
+  it("should archive data column sidecars for finalized blocks", async () => {
+    const blockBytes = ssz.fulu.SignedBeaconBlock.serialize(ssz.fulu.SignedBeaconBlock.defaultValue());
+    const dataColumnBytes = ssz.fulu.DataColumnSidecar.serialize(ssz.fulu.DataColumnSidecar.defaultValue());
+    vi.spyOn(dbStub.block, "getBinary").mockResolvedValue(blockBytes);
+    vi.spyOn(dbStub.dataColumnSidecars, "getBinary").mockResolvedValue(dataColumnBytes);
+
+    // Create blocks after fulu fork
+    const blocks = Array.from({length: 5}, (_, i) =>
+      generateProtoBlock({slot: i + 1 + config.FULU_FORK_EPOCH * 32, blockRoot: toHexString(Buffer.alloc(32, i + 1))})
+    );
+    const canonicalBlocks = [blocks[4], blocks[3], blocks[1], blocks[0]];
+    const nonCanonicalBlocks = [blocks[2]];
+    const currentEpoch = config.FULU_FORK_EPOCH + 8;
+
+    vi.spyOn(forkChoiceStub, "getAllAncestorBlocks").mockReturnValue(canonicalBlocks);
+    vi.spyOn(forkChoiceStub, "getAllNonAncestorBlocks").mockReturnValue(nonCanonicalBlocks);
+
+    // Mock expired slots to be pruned
+    const expiredSlots = [1, 2, 3].map((slot) => slot + config.FULU_FORK_EPOCH * 32);
+    vi.spyOn(dbStub.dataColumnSidecarsArchive, "keys").mockResolvedValue(expiredSlots);
+
+    await archiveBlocks(
+      config,
+      dbStub,
+      forkChoiceStub,
+      lightclientServer,
+      logger,
+      {epoch: config.FULU_FORK_EPOCH + 5, rootHex: ZERO_HASH_HEX},
+      currentEpoch
+    );
+
+    // Verify data column sidecars are archived
+    const expectedDataColumnEntries = canonicalBlocks.map((block) => ({
+      key: block.slot,
+      value: dataColumnBytes,
+    }));
+    expect(dbStub.dataColumnSidecarsArchive.batchPutBinary).toHaveBeenCalledWith(expectedDataColumnEntries);
+
+    // Verify canonical data column sidecars are deleted from hot storage
+    expect(dbStub.dataColumnSidecars.batchDelete).toBeCalledWith(
+      canonicalBlocks.map((block) => fromHexString(block.blockRoot))
+    );
+
+    // Verify non-canonical data column sidecars are deleted
+    expect(dbStub.dataColumnSidecars.batchDelete).toBeCalledWith(
+      nonCanonicalBlocks.map((block) => fromHexString(block.blockRoot))
+    );
+
+    // Verify expired data column sidecars are pruned
+    expect(dbStub.dataColumnSidecarsArchive.batchDelete).toHaveBeenCalledWith(expiredSlots);
   });
 });
