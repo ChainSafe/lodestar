@@ -1,5 +1,5 @@
 import {CELLS_PER_EXT_BLOB, ForkName} from "@lodestar/params";
-import {ExecutionPayload} from "@lodestar/types";
+import {deneb, ExecutionPayload, fulu} from "@lodestar/types";
 import {beforeAll, describe, expect, it} from "vitest";
 import {validateBlobsAndKzgCommitments} from "../../../../src/chain/produceBlock/validateBlobsAndKzgCommitments.js";
 import {BlobsBundle} from "../../../../src/execution/index.js";
@@ -12,7 +12,7 @@ describe("validateBlobsAndKzgCommitments", () => {
     loadEthereumTrustedSetup();
   });
 
-  it("should validate a valid V1 (deneb) blobs bundle", () => {
+  it("should validate a valid V1 blobs bundle", () => {
     const blobs = [generateRandomBlob(), generateRandomBlob()];
     const commitments = blobs.map((blob) => ckzg.blobToKzgCommitment(blob));
     const proofs = blobs.map(() => new Uint8Array(48).fill(1));
@@ -31,27 +31,6 @@ describe("validateBlobsAndKzgCommitments", () => {
     } as ExecutionPayload;
 
     expect(() => validateBlobsAndKzgCommitments(ForkName.deneb, mockPayload, blobsBundle)).not.toThrow();
-  });
-
-  it("should validate a valid V2 (electra) blobs bundle", () => {
-    const blobs = [generateRandomBlob(), generateRandomBlob()];
-    const commitments = blobs.map((blob) => ckzg.blobToKzgCommitment(blob));
-    const proofs = blobs.flatMap((blob) => ckzg.computeCellsAndKzgProofs(blob)[1]);
-
-    const blobsBundle: BlobsBundle = {
-      commitments,
-      blobs,
-      proofs,
-    };
-
-    // Create a mock ExecutionPayload
-    const mockPayload = {
-      blockNumber: 1,
-      blockHash: new Uint8Array(32),
-      parentHash: new Uint8Array(32),
-    } as ExecutionPayload;
-
-    expect(() => validateBlobsAndKzgCommitments(ForkName.fulu, mockPayload, blobsBundle)).not.toThrow();
   });
 
   it("should throw if commitments and blobs lengths don't match", () => {
@@ -137,5 +116,65 @@ describe("validateBlobsAndKzgCommitments", () => {
     expect(() => validateBlobsAndKzgCommitments(ForkName.fulu, mockPayload, blobsBundle)).toThrow(
       "Error in verifyCellKzgProofBatch"
     );
+  });
+
+  it("should validate BlobsBundleV2 when cells are passed", () => {
+    const blobs = [generateRandomBlob()];
+
+    // Compute commitments, cells, and proofs for each blob
+    const commitments: deneb.KZGCommitment[] = [];
+    const cells: fulu.Cell[][] = [];
+    const proofs: deneb.KZGProof[] = [];
+    blobs.map((blob) => {
+      commitments.push(ckzg.blobToKzgCommitment(blob));
+
+      const [blobCells, blobProofs] = ckzg.computeCellsAndKzgProofs(blob);
+      cells.push(blobCells);
+      proofs.push(...blobProofs);
+    });
+
+    const blobsBundle: BlobsBundle = {
+      commitments,
+      blobs,
+      proofs,
+    };
+
+    // Create a mock ExecutionPayload
+    const mockPayload = {
+      blockNumber: 1,
+      blockHash: new Uint8Array(32),
+      parentHash: new Uint8Array(32),
+    } as ExecutionPayload;
+
+    expect(() => validateBlobsAndKzgCommitments(ForkName.fulu, mockPayload, blobsBundle, cells)).not.toThrow();
+  });
+
+  it("should validate V2 blobs bundle when cells are not passed", () => {
+    const blobs = [generateRandomBlob()];
+
+    // Compute commitments and proofs for each blob
+    const commitments: deneb.KZGCommitment[] = [];
+    const proofs: deneb.KZGProof[] = [];
+    blobs.map((blob) => {
+      commitments.push(ckzg.blobToKzgCommitment(blob));
+
+      const [_, blobProofs] = ckzg.computeCellsAndKzgProofs(blob);
+      proofs.push(...blobProofs);
+    });
+
+    const blobsBundle: BlobsBundle = {
+      commitments,
+      blobs,
+      proofs,
+    };
+
+    // Create a mock ExecutionPayload
+    const mockPayload = {
+      blockNumber: 1,
+      blockHash: new Uint8Array(32),
+      parentHash: new Uint8Array(32),
+    } as ExecutionPayload;
+
+    expect(() => validateBlobsAndKzgCommitments(ForkName.fulu, mockPayload, blobsBundle)).not.toThrow();
   });
 });

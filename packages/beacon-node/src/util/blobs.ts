@@ -73,7 +73,7 @@ export function computeBlobSidecars(
 export function computeDataColumnSidecars(
   config: ChainForkConfig,
   signedBlock: SignedBeaconBlock,
-  contents: fulu.Contents & {kzgCommitmentsInclusionProof?: fulu.KzgCommitmentsInclusionProof, cells?: fulu.Cell[][]}
+  contents: fulu.Contents & {kzgCommitmentsInclusionProof?: fulu.KzgCommitmentsInclusionProof; cells?: fulu.Cell[][]}
 ): fulu.DataColumnSidecars {
   const blobKzgCommitments = (signedBlock as deneb.SignedBeaconBlock).message.body.blobKzgCommitments;
   if (blobKzgCommitments === undefined) {
@@ -96,7 +96,10 @@ export function computeDataColumnSidecars(
   return Array.from({length: NUMBER_OF_COLUMNS}, (_, columnIndex) => {
     // columnIndex'th column
     const column = Array.from({length: blobs.length}, (_, rowNumber) => cellsAndProofs[rowNumber].cells[columnIndex]);
-    const kzgProofs = Array.from({length: blobs.length}, (_, rowNumber) => cellsAndProofs[rowNumber].proofs[columnIndex]);
+    const kzgProofs = Array.from(
+      {length: blobs.length},
+      (_, rowNumber) => cellsAndProofs[rowNumber].proofs[columnIndex]
+    );
     return {
       index: columnIndex,
       column,
