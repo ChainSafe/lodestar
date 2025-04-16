@@ -14,7 +14,6 @@ import {BeaconBlock, RootHex, SubnetID, altair, deneb} from "@lodestar/types";
 import {Epoch, Slot, ValidatorIndex} from "@lodestar/types";
 import {IndexedAttestation, SignedAggregateAndProof} from "@lodestar/types";
 import {LogData, LogHandler, LogLevel, Logger, MapDef, MapDefMax, toRootHex} from "@lodestar/utils";
-import {IChainOptions} from "../chain/options.js";
 import {GENESIS_SLOT} from "../constants/constants.js";
 import {Metrics} from "../metrics/index.js";
 

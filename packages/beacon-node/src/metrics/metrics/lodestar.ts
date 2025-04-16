@@ -29,7 +29,7 @@ export type LodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 export function createLodestarMetrics(
   register: RegistryMetricCreator,
   metadata?: LodestarMetadata,
-  anchorState?: Pick<BeaconState, "genesisTime">
+  genesisTime?: number
 ) {
   if (metadata) {
     register.static<LodestarMetadata>({
@@ -40,13 +40,13 @@ export function createLodestarMetrics(
   }
 
   // Initial static metrics
-  if (anchorState) {
+  if (genesisTime) {
     register
       .gauge({
         name: "lodestar_genesis_time",
         help: "Genesis time in seconds",
       })
-      .set(anchorState.genesisTime);
+      .set(genesisTime);
   }
 
   return {

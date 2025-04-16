@@ -104,7 +104,7 @@ import {FileCPStateDatastore} from "./stateCache/datastore/file.js";
 import {FIFOBlockStateCache} from "./stateCache/fifoBlockStateCache.js";
 import {InMemoryCheckpointStateCache} from "./stateCache/inMemoryCheckpointsCache.js";
 import {PersistentCheckpointStateCache} from "./stateCache/persistentCheckpointsCache.js";
-import {ValidatorMonitor, createValidatorMonitor} from "./validatorMonitor.js";
+import {ValidatorMonitor} from "./validatorMonitor.js";
 
 /**
  * Arbitrary constants, blobs and payloads should be consumed immediately in the same slot
@@ -384,7 +384,7 @@ export class BeaconChain implements IBeaconChain {
       metrics.clockSlot.addCollect(() => this.onScrapeMetrics(metrics));
       // Register a single collect() function to run all validatorMonitor metrics
       metrics.validatorMonitor.validatorsConnected.addCollect(() => {
-        const clockSlot = getCurrentSlot(config, anchorState.genesisTime);
+        const clockSlot = getCurrentSlot(config, this.genesisTime);
         this.validatorMonitor?.scrapeMetrics(clockSlot);
       });
     }

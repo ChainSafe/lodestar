@@ -182,23 +182,17 @@ export class BeaconNode {
       // monitoring relies on metrics data
       opts.monitoring.endpoint
     ) {
-      metrics = createMetrics(opts.metrics, anchorState, metricsRegistries);
+      metrics = createMetrics(opts.metrics, anchorState.genesisTime, metricsRegistries);
       initBeaconMetrics(metrics, anchorState);
       // Since the db is instantiated before this, metrics must be injected manually afterwards
       db.setMetrics(metrics.db);
       signal.addEventListener("abort", metrics.close, {once: true});
     }
 
-    let validatorMonitor = null;
-    if (opts.metrics.enabled || opts.validatorMonitor.validatorMonitorLogs) {
-      validatorMonitor = createValidatorMonitor(
-        metrics,
-        config,
-        anchorState.genesisTime,
-        logger,
-        opts.validatorMonitor
-      );
-    }
+    const validatorMonitor =
+      opts.metrics.enabled || opts.validatorMonitor.validatorMonitorLogs
+        ? createValidatorMonitor(metrics, config, anchorState.genesisTime, logger, opts.validatorMonitor)
+        : null;
 
     const clock = new Clock({config, genesisTime: anchorState.genesisTime, signal});
 

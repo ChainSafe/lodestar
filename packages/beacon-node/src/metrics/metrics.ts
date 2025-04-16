@@ -10,14 +10,10 @@ import {RegistryMetricCreator} from "./utils/registryMetricCreator.js";
 
 export type Metrics = BeaconMetrics & LodestarMetrics & {register: RegistryMetricCreator; close: () => void};
 
-export function createMetrics(
-  opts: MetricsOptions,
-  anchorState: BeaconStateAllForks,
-  externalRegistries: Registry[] = []
-): Metrics {
+export function createMetrics(opts: MetricsOptions, genesisTime: number, externalRegistries: Registry[] = []): Metrics {
   const register = new RegistryMetricCreator();
   const beacon = createBeaconMetrics(register);
-  const lodestar = createLodestarMetrics(register, opts.metadata, anchorState);
+  const lodestar = createLodestarMetrics(register, opts.metadata, genesisTime);
 
   process.on("unhandledRejection", (_error) => {
     lodestar.unhandledPromiseRejections.inc();
