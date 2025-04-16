@@ -2,6 +2,7 @@ import {ByteVectorType, ContainerType, ListBasicType, ListCompositeType, VectorC
 import {
   BYTES_PER_FIELD_ELEMENT,
   FIELD_ELEMENTS_PER_CELL,
+  FIELD_ELEMENTS_PER_EXT_BLOB,
   KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH,
   MAX_BLOB_COMMITMENTS_PER_BLOCK,
   MAX_REQUEST_DATA_COLUMN_SIDECARS,
@@ -28,7 +29,10 @@ export const Cell = new ByteVectorType(BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_
 export const DataColumn = new ListCompositeType(Cell, MAX_BLOB_COMMITMENTS_PER_BLOCK);
 export const ExtendedMatrix = new ListCompositeType(Cell, MAX_BLOB_COMMITMENTS_PER_BLOCK * NUMBER_OF_COLUMNS);
 export const KzgCommitmentsInclusionProof = new VectorCompositeType(Bytes32, KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH);
-export const KZGProofs = new ListCompositeType(denebSsz.KZGProof, MAX_BLOB_COMMITMENTS_PER_BLOCK * NUMBER_OF_COLUMNS);
+export const KZGProofs = new ListCompositeType(
+  denebSsz.KZGProof,
+  FIELD_ELEMENTS_PER_EXT_BLOB * MAX_BLOB_COMMITMENTS_PER_BLOCK
+);
 
 export const DataColumnSidecar = new ContainerType(
   {
