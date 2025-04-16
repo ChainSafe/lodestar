@@ -59,8 +59,7 @@ export async function verifyBlocksStateTransitionOnly(
         verifyProposer: !useBlsBatchVerify && !validSignatures && !validProposerSignature,
         verifySignatures: !useBlsBatchVerify && !validSignatures,
       },
-      metrics,
-      validatorMonitor
+      {metrics, validatorMonitor}
     );
 
     const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({

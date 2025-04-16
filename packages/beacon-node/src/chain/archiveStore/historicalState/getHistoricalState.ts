@@ -88,7 +88,7 @@ export async function getHistoricalState(
           executionPayloadStatus: ExecutionPayloadStatus.valid,
           dataAvailableStatus: DataAvailableStatus.available,
         },
-        metrics
+        {metrics}
       );
     } catch (e) {
       metrics?.regenErrorCount.inc({reason: RegenErrorType.blockProcessing});
