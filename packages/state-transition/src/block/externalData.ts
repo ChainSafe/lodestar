@@ -14,9 +14,9 @@ export enum ExecutionPayloadStatus {
 }
 
 export enum DataAvailabilityStatus {
-  preData = "preData",
+  PreData = "preData",
   /* validator activities can't be performed on out of range data */
-  outOfRange = "outOfRange",
+  OutOfRange = "outOfRange",
   available = "available",
 }
 
