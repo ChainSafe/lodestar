@@ -10,6 +10,7 @@ import {NetworkCoreMetrics} from "../core/metrics.js";
 import {Discv5Worker} from "../discv5/index.js";
 import {LodestarDiscv5Opts} from "../discv5/types.js";
 import {Libp2p} from "../interface.js";
+import {getLibp2pError} from "../libp2p/error.js";
 import {ENRKey, SubnetType} from "../metadata.js";
 import {getConnectionsMap, prettyPrintPeerId} from "../util.js";
 import {IPeerRpcScoreStore, ScoreState} from "./score/index.js";
@@ -52,6 +53,12 @@ export enum DiscoveredPeerStatus {
   attempt_dial = "attempt_dial",
   cached = "cached",
   dropped = "dropped",
+  no_multiaddrs = "no_multiaddrs",
+}
+
+export enum NotDialReason {
+  not_contain_requested_sampling_groups = "not_contain_requested_sampling_groups",
+  not_contain_requested_attnet_syncnet_subnets = "not_contain_requested_attnet_syncnet_subnets",
   no_multiaddrs = "no_multiaddrs",
 }
 
@@ -448,7 +455,11 @@ export class PeerDiscovery {
 
     // Must add the multiaddrs array to the address book before dialing
     // https://github.com/libp2p/js-libp2p/blob/aec8e3d3bb1b245051b60c2a890550d262d5b062/src/index.js#L638
-    await this.libp2p.peerStore.merge(peerId, {multiaddrs: [multiaddrTCP]});
+    const peer = await this.libp2p.peerStore.merge(peerId, {multiaddrs: [multiaddrTCP]});
+    if (peer.addresses.length === 0) {
+      this.metrics?.discovery.notDialReason.inc({reason: NotDialReason.no_multiaddrs});
+      return;
+    }
 
     // Note: PeerDiscovery adds the multiaddrTCP beforehand
     const peerIdShort = prettyPrintPeerId(peerId);
@@ -466,6 +477,7 @@ export class PeerDiscovery {
     } catch (e) {
       timer?.({status: "error"});
       formatLibp2pDialError(e as Error);
+      this.metrics?.discovery.dialError.inc({reason: getLibp2pError(e as Error)});
       this.logger.debug("Error dialing discovered peer", {peer: peerIdShort}, e as Error);
     }
   }
