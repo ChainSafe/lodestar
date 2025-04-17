@@ -67,7 +67,7 @@ const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllForks> = (f
         wrappedState = stateTransition(wrappedState, signedBlock, {
           // Assume valid and available for this test
           executionPayloadStatus: ExecutionPayloadStatus.valid,
-          dataAvailabilityStatus: DataAvailabilityStatus.available,
+          dataAvailabilityStatus: DataAvailabilityStatus.Available,
           verifyStateRoot: verify,
           verifyProposer: verify,
           verifySignatures: verify,

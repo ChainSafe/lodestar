@@ -26,7 +26,7 @@ const finality: TestRunnerFn<FinalityTestCase, BeaconStateAllForks> = (fork) => 
         state = stateTransition(state, signedBlock, {
           // Should assume payload valid and blob data available for this test
           executionPayloadStatus: ExecutionPayloadStatus.valid,
-          dataAvailabilityStatus: DataAvailabilityStatus.available,
+          dataAvailabilityStatus: DataAvailabilityStatus.Available,
           verifyStateRoot: false,
           verifyProposer: verify,
           verifySignatures: verify,

@@ -259,7 +259,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
           {
             // Replay previously imported blocks, assume valid and available
             executionPayloadStatus: ExecutionPayloadStatus.valid,
-            dataAvailabilityStatus: DataAvailabilityStatus.available,
+            dataAvailabilityStatus: DataAvailabilityStatus.Available,
             verifyStateRoot: false,
             verifyProposer: false,
             verifySignatures: false,

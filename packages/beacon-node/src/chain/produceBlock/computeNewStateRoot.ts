@@ -29,7 +29,7 @@ export function computeNewStateRoot(
       // ExecutionPayloadStatus.valid: Assume payload valid, it has been produced by a trusted EL
       executionPayloadStatus: ExecutionPayloadStatus.valid,
       // DataAvailabilityStatus.available: Assume the blobs to be available, have just been produced by trusted EL
-      dataAvailabilityStatus: DataAvailabilityStatus.available,
+      dataAvailabilityStatus: DataAvailabilityStatus.Available,
       // verifyStateRoot: false  | the root in the block is zero-ed, it's being computed here
       verifyStateRoot: false,
       // verifyProposer: false   | as the block signature is zero-ed

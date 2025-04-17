@@ -57,7 +57,7 @@ const transition =
           state = stateTransition(state, signedBlock, {
             // Assume valid and available for this test
             executionPayloadStatus: ExecutionPayloadStatus.valid,
-            dataAvailabilityStatus: DataAvailabilityStatus.available,
+            dataAvailabilityStatus: DataAvailabilityStatus.Available,
             verifyStateRoot: true,
             verifyProposer: false,
             verifySignatures: false,

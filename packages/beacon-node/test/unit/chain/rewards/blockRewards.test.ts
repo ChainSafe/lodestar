@@ -114,7 +114,7 @@ describe("chain / rewards / blockRewards", () => {
 
       const postState = stateTransition(state as CachedBeaconStateAllForks, block, {
         executionPayloadStatus: ExecutionPayloadStatus.valid,
-        dataAvailabilityStatus: DataAvailabilityStatus.available,
+        dataAvailabilityStatus: DataAvailabilityStatus.Available,
         verifyProposer: false,
         verifySignatures: false,
         verifyStateRoot: false,
@@ -142,7 +142,7 @@ describe("chain / rewards / blockRewards", () => {
 
     const postState = stateTransition(preState as CachedBeaconStateAllForks, block, {
       executionPayloadStatus: ExecutionPayloadStatus.valid,
-      dataAvailabilityStatus: DataAvailabilityStatus.available,
+      dataAvailabilityStatus: DataAvailabilityStatus.Available,
       verifyProposer: false,
       verifySignatures: false,
       verifyStateRoot: false,

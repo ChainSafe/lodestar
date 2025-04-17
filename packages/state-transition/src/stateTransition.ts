@@ -69,7 +69,7 @@ export function stateTransition(
   options: StateTransitionOpts = {
     // Assume default to be valid and available
     executionPayloadStatus: ExecutionPayloadStatus.valid,
-    dataAvailabilityStatus: DataAvailabilityStatus.available,
+    dataAvailabilityStatus: DataAvailabilityStatus.Available,
   },
   metrics?: BeaconStateTransitionMetrics | null
 ): CachedBeaconStateAllForks {

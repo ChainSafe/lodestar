@@ -116,7 +116,7 @@ export async function verifyBlocksInEpoch(
         preState0,
         blocksInput,
         // hack availability for state transition eval as availability is separately determined
-        blocks.map(() => DataAvailabilityStatus.available),
+        blocks.map(() => DataAvailabilityStatus.Available),
         this.logger,
         this.metrics,
         abortController.signal,

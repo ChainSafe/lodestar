@@ -86,7 +86,7 @@ export async function getHistoricalState(
           verifySignatures: false,
           verifyStateRoot: false,
           executionPayloadStatus: ExecutionPayloadStatus.valid,
-          dataAvailabilityStatus: DataAvailabilityStatus.available,
+          dataAvailabilityStatus: DataAvailabilityStatus.Available,
         },
         metrics
       );
