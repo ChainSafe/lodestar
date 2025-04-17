@@ -79,10 +79,18 @@ type ReturnPromiseWithTuple<Tuple extends NonEmptyArray<PromiseLike<unknown>>> =
 
 /**
  * Two phased approach for resolving promises:
- * - first wait `resolveTimeoutMs` or until all promises settle
- * - then wait `raceTimeoutMs - resolveTimeoutMs` or until at least a single promise resolves
  *
- * Returns a list of promise results, see `PromiseResult`
+ * Phase 1:
+ * - Wait for all promises to settle
+ * - if not, then timeout after resolveTimeoutMs
+ *
+ * Phase 2:
+ * - Wait for any pro,mise to resolve
+ * - if not, then timeout after `raceTimeoutMs - resolveTimeoutMs`
+ *
+ * If aborted via `signal`, returns early.
+ * Always returns wrapped promise results with `.status` and `.value` or `.reason`.
+ *
  */
 export async function resolveOrRacePromises<T extends NonEmptyArray<PromiseLike<unknown>>>(
   promises: T,
