@@ -77,7 +77,7 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
     timeliness: false,
 
     ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
-    dataAvailabilityStatus: DataAvailabilityStatus.preData,
+    dataAvailabilityStatus: DataAvailabilityStatus.PreData,
   };
 
   const shufflingCache = new ShufflingCache(null, null, {}, [

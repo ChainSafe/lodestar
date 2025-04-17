@@ -39,7 +39,7 @@ describe("Forkchoice", () => {
 
         executionPayloadBlockHash: null,
         executionStatus: ExecutionStatus.PreMerge,
-        dataAvailabilityStatus: DataAvailabilityStatus.preData,
+        dataAvailabilityStatus: DataAvailabilityStatus.PreData,
       } as Omit<ProtoBlock, "targetRoot">,
       genesisSlot
     );
@@ -102,7 +102,7 @@ describe("Forkchoice", () => {
       executionStatus: ExecutionStatus.PreMerge,
 
       timeliness: false,
-      dataAvailabilityStatus: DataAvailabilityStatus.preData,
+      dataAvailabilityStatus: DataAvailabilityStatus.PreData,
     };
   };
 

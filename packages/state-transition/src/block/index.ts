@@ -69,7 +69,7 @@ export function processBlock(
     processBlobKzgCommitments(externalData);
     // Only throw preDeneb so beacon can also sync/process blocks optimistically
     // and let forkChoice handle it
-    if (externalData.dataAvailabilityStatus === DataAvailabilityStatus.preData) {
+    if (externalData.dataAvailabilityStatus === DataAvailabilityStatus.PreData) {
       throw Error("dataAvailabilityStatus preDeneb");
     }
   }

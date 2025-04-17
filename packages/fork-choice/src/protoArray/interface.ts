@@ -46,7 +46,7 @@ export type BlockExtraMeta =
   | {
       executionPayloadBlockHash: null;
       executionStatus: ExecutionStatus.PreMerge;
-      dataAvailabilityStatus: DataAvailabilityStatus.preData;
+      dataAvailabilityStatus: DataAvailabilityStatus.PreData;
     };
 
 /**

@@ -1126,10 +1126,10 @@ export class ForkChoice implements IForkChoice {
     return executionStatus;
   }
 
-  private getPreMergeDataStatus(dataAvailabilityStatus: DataAvailabilityStatus): DataAvailabilityStatus.preData {
-    if (dataAvailabilityStatus !== DataAvailabilityStatus.preData)
+  private getPreMergeDataStatus(dataAvailabilityStatus: DataAvailabilityStatus): DataAvailabilityStatus.PreData {
+    if (dataAvailabilityStatus !== DataAvailabilityStatus.PreData)
       throw Error(
-        `Invalid pre-merge data status: expected: ${DataAvailabilityStatus.preData}, got ${dataAvailabilityStatus}`
+        `Invalid pre-merge data status: expected: ${DataAvailabilityStatus.PreData}, got ${dataAvailabilityStatus}`
       );
     return dataAvailabilityStatus;
   }

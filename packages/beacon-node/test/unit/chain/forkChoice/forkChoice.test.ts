@@ -49,7 +49,7 @@ describe("LodestarForkChoice", () => {
   justifiedBalances[1] = 2;
   justifiedBalances[2] = 3;
   const executionStatus = ExecutionStatus.PreMerge;
-  const dataAvailabilityStatus = DataAvailabilityStatus.preData;
+  const dataAvailabilityStatus = DataAvailabilityStatus.PreData;
   const blockDelaySec = 0;
 
   const hashBlock = (block: phase0.BeaconBlock): string => toHexString(ssz.phase0.BeaconBlock.hashTreeRoot(block));

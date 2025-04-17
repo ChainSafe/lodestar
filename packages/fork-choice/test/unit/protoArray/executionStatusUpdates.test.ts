@@ -85,13 +85,13 @@ function setupForkChoice(): ProtoArray {
         ? {
             executionPayloadBlockHash: null,
             executionStatus: ExecutionStatus.PreMerge,
-            dataAvailabilityStatus: DataAvailabilityStatus.preData,
+            dataAvailabilityStatus: DataAvailabilityStatus.PreData,
           }
         : {
             executionPayloadBlockHash: block.root,
             executionPayloadNumber: block.slot,
             executionStatus: block.executionStatus,
-            dataAvailabilityStatus: DataAvailabilityStatus.preData,
+            dataAvailabilityStatus: DataAvailabilityStatus.PreData,
           }
     ) as BlockExtraMeta;
     fc.onBlock(
