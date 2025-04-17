@@ -123,15 +123,15 @@ export function getExpectedWithdrawals(
       }
 
       const validator = validators.getReadonly(withdrawal.validatorIndex);
+      const totalWithdrawn = getWithdrawnBalance(withdrawals, withdrawal.validatorIndex);
+      const balance = state.balances.get(withdrawal.validatorIndex) - totalWithdrawn;
 
       if (
         validator.exitEpoch === FAR_FUTURE_EPOCH &&
         validator.effectiveBalance >= MIN_ACTIVATION_BALANCE &&
-        balances.get(withdrawal.validatorIndex) > MIN_ACTIVATION_BALANCE
+        balance > MIN_ACTIVATION_BALANCE
       ) {
-        const balanceOverMinActivationBalance = BigInt(
-          balances.get(withdrawal.validatorIndex) - MIN_ACTIVATION_BALANCE
-        );
+        const balanceOverMinActivationBalance = BigInt(balance - MIN_ACTIVATION_BALANCE);
         const withdrawableBalance =
           balanceOverMinActivationBalance < withdrawal.amount ? balanceOverMinActivationBalance : withdrawal.amount;
         withdrawals.push({
@@ -156,13 +156,14 @@ export function getExpectedWithdrawals(
 
     const validator = validators.getReadonly(validatorIndex);
     const balance = isPostElectra
-      ? balances.get(validatorIndex) - getPartiallyWithdrawnBalance(withdrawals, validatorIndex)
+      ? // Deduct partially withdrawn balance already queued above
+        balances.get(validatorIndex) - getWithdrawnBalance(withdrawals, validatorIndex)
       : balances.get(validatorIndex);
     const {withdrawableEpoch, withdrawalCredentials, effectiveBalance} = validator;
     const hasWithdrawableCredentials = isPostElectra
       ? hasExecutionWithdrawalCredential(withdrawalCredentials)
       : hasEth1WithdrawalCredential(withdrawalCredentials);
-    // early skip for balance = 0 as its now more likely that validator has exited/slahed with
+    // early skip for balance = 0 as its now more likely that validator has exited/slashed with
     // balance zero than not have withdrawal credentials set
     if (balance === 0 || !hasWithdrawableCredentials) {
       continue;
@@ -200,7 +201,7 @@ export function getExpectedWithdrawals(
   return {withdrawals, sampledValidators: n, processedPartialWithdrawalsCount};
 }
 
-function getPartiallyWithdrawnBalance(withdrawals: capella.Withdrawal[], validatorIndex: ValidatorIndex): number {
+function getWithdrawnBalance(withdrawals: capella.Withdrawal[], validatorIndex: ValidatorIndex): number {
   let total = BigInt(0);
   for (const withdrawal of withdrawals) {
     if (withdrawal.validatorIndex === validatorIndex) {
