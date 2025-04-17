@@ -17,7 +17,7 @@ export enum DataAvailabilityStatus {
   PreData = "PreData",
   /* validator activities can't be performed on out of range data */
   OutOfRange = "OutOfRange",
-  available = "Available",
+  Available = "Available",
 }
 
 export interface BlockExternalData {
