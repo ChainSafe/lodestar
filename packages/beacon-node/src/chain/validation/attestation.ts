@@ -605,7 +605,9 @@ export function verifyPropagationSlotRange(fork: ForkName, chain: IBeaconChain, 
     }
 
     // lower bound for previous epoch is same as epoch of earliestPermissibleSlot
-    const currentEpochWithPastTolerance = computeEpochAtSlot(chain.clock.slotWithPastTolerance(MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC));
+    const currentEpochWithPastTolerance = computeEpochAtSlot(
+      chain.clock.slotWithPastTolerance(MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC)
+    );
 
     const earliestPermissiblePreviousEpoch = Math.max(currentEpochWithPastTolerance - 1, 0);
     if (attestationEpoch < earliestPermissiblePreviousEpoch) {
