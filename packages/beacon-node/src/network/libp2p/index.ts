@@ -107,6 +107,7 @@ export async function createNodeJsLibp2p(
       enabled: false,
     },
     // for our purposes, we don't want peer store data to expire
+    // see https://github.com/libp2p/js-libp2p/pull/3019
     peerStore: {
       maxAddressAge: Infinity,
       maxPeerAge: Infinity,
