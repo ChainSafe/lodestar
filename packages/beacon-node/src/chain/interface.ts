@@ -2,6 +2,7 @@ import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {ForkPostBellatrix, ForkPreDeneb} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
@@ -9,8 +10,11 @@ import {
   Index2PubkeyCache,
 } from "@lodestar/state-transition";
 import {
+  BLSPubkey,
   BeaconBlock,
+  BeaconBlockBody,
   BlindedBeaconBlock,
+  BlindedBeaconBlockBody,
   Epoch,
   ExecutionPayload,
   Root,
@@ -43,7 +47,7 @@ import {LightClientServer} from "./lightClient/index.js";
 import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool.js";
 import {AttestationPool, OpPool, SyncCommitteeMessagePool, SyncContributionAndProofPool} from "./opPools/index.js";
 import {IChainOptions} from "./options.js";
-import {AssembledBlockType, BlockAttributes, BlockType} from "./produceBlock/produceBlockBody.js";
+import {BlockAttributes} from "./produceBlock/produceBlockBody.js";
 import {IStateRegenerator, RegenCaller} from "./regen/index.js";
 import {ReprocessController} from "./reprocess.js";
 import {AttestationsRewards} from "./rewards/attestationsRewards.js";
@@ -63,7 +67,6 @@ import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {ShufflingCache} from "./shufflingCache.js";
 import {ValidatorMonitor} from "./validatorMonitor.js";
 
-export {BlockType, type AssembledBlockType};
 export {type ProposerPreparationData};
 export type BlockHash = RootHex;
 
@@ -195,19 +198,50 @@ export interface IBeaconChain {
   ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null>;
 
   getContents(beaconBlock: deneb.BeaconBlock): deneb.Contents;
+  /**
+   * Produce the common portion of the block body, shared by both full
+   * and blinded blocks. When this function is used it implies user want to split
+   * operations of `produceBlock` or `produceBlindedBlock` into multiple steps,
+   * so to avoid state generation in multiple steps this function requires to provide state.
+   */
+  produceCommonBlockBody(
+    blockAttributes: BlockAttributes & {currentState: CachedBeaconStateAllForks}
+  ): Promise<CommonBlockBody>;
+  /**
+   * Produce the full beacon block body including the execution payload.
+   * Requires the current state to avoid redundant state regeneration.
+   *
+   * This is used for block proposal when not using a builder or when the
+   * builder fallback is triggered.
+   *
+   */
+  produceFullBlockBody(
+    blockAttributes: BlockAttributes & {currentState: CachedBeaconStateAllForks}
+  ): Promise<AssembledBlockBodyResponse<BlockType.Full>>;
+  /**
+   * Produce a blinded beacon block body (excludes execution payload).
+   * Used when the block is proposed via builder API (e.g., MEV-Boost).
+   *
+   * Requires the current state to avoid regenerating it during proposal flow.
+   */
+  produceBlindedBlockBody(
+    blockAttributes: BlockAttributes & {currentState: CachedBeaconStateAllForks}
+  ): Promise<AssembledBlockBodyResponse<BlockType.Blinded>>;
 
-  produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody>;
-  produceBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
-    block: BeaconBlock;
-    executionPayloadValue: Wei;
-    consensusBlockValue: Wei;
-    shouldOverrideBuilder?: boolean;
-  }>;
-  produceBlindedBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
-    block: BlindedBeaconBlock;
-    executionPayloadValue: Wei;
-    consensusBlockValue: Wei;
-  }>;
+  produceBlock(
+    blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}
+  ): Promise<AssembledBlockResponse<BlockType.Full>>;
+  produceBlindedBlock(
+    blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}
+  ): Promise<AssembledBlockResponse<BlockType.Blinded>>;
+
+  assembleBlockBody<T extends BlockType>(
+    blockType: T,
+    blockAttributes: BlockAttributes,
+    currentState: CachedBeaconStateAllForks,
+    commonBlockBody: CommonBlockBody,
+    assembledBlockBody: AssembledBlockBodyResponse<T>
+  ): Promise<AssembledBlockResponse<T>>;
 
   /** Process a block until complete */
   processBlock(block: BlockInput, opts?: ImportBlockOpts): Promise<void>;
@@ -272,3 +306,57 @@ export type SSZObjectType =
 export type CommonBlockBody = phase0.BeaconBlockBody &
   Pick<capella.BeaconBlockBody, "blsToExecutionChanges"> &
   Pick<altair.BeaconBlockBody, "syncAggregate">;
+
+export enum BlobsResultType {
+  preDeneb,
+  produced,
+  blinded,
+}
+
+export type BlobsResult =
+  | {type: BlobsResultType.preDeneb}
+  | {type: BlobsResultType.produced; contents: deneb.Contents; blockHash: RootHex}
+  | {type: BlobsResultType.blinded};
+
+export type ProduceBlockBodyAttrs = BlockAttributes & {
+  parentSlot: Slot;
+  proposerIndex: ValidatorIndex;
+  proposerPubKey: BLSPubkey;
+};
+
+export enum BlockType {
+  Full = "Full",
+  Blinded = "Blinded",
+}
+
+export type AssembledFullBlockBody<F extends ForkPreDeneb = ForkPreDeneb> = Omit<
+  BeaconBlockBody<F>,
+  keyof CommonBlockBody
+>;
+export type AssembledBlindedBlockBody<F extends ForkPostBellatrix = ForkPostBellatrix> = Omit<
+  BlindedBeaconBlockBody<F>,
+  keyof CommonBlockBody
+>;
+
+export type AssembledFullBlock<F extends ForkPreDeneb = ForkPreDeneb> = BeaconBlock<F>;
+export type AssembledBlindedBlock<F extends ForkPostBellatrix = ForkPostBellatrix> = BlindedBeaconBlock<F>;
+
+export type AssembledBlockBodyResponse<T extends BlockType> = {
+  body: T extends BlockType.Full ? AssembledFullBlockBody : AssembledBlindedBlockBody;
+  blobs: BlobsResult;
+  executionPayloadValue: Wei;
+  shouldOverrideBuilder?: boolean;
+};
+
+export type AssembledBlockResponse<T extends BlockType> = T extends BlockType.Full
+  ? {
+      block: AssembledFullBlock;
+      executionPayloadValue: Wei;
+      consensusBlockValue: Wei;
+      shouldOverrideBuilder?: boolean;
+    }
+  : {
+      block: AssembledBlindedBlock;
+      executionPayloadValue: Wei;
+      consensusBlockValue: Wei;
+    };
