@@ -67,10 +67,10 @@ export function processBlock(
 
   if (fork >= ForkSeq.deneb) {
     processBlobKzgCommitments(externalData);
-    // Only throw preDeneb so beacon can also sync/process blocks optimistically
+    // Only throw PreData so beacon can also sync/process blocks optimistically
     // and let forkChoice handle it
     if (externalData.dataAvailabilityStatus === DataAvailabilityStatus.PreData) {
-      throw Error("dataAvailabilityStatus preDeneb");
+      throw Error("dataAvailabilityStatus.PreData");
     }
   }
 }
