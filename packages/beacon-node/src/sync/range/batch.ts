@@ -124,7 +124,7 @@ export class Batch {
       return blocks;
     }
 
-    this.state = {status: BatchStatus.AwaitingDownload, partialDownload: {blocks, pendingDataColumns}};
+    this.state = {status: BatchStatus.AwaitingDownload, partialDownload: blocks.length === 0 ? null : {blocks, pendingDataColumns}};
     return null;
   }
 
