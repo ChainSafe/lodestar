@@ -50,6 +50,7 @@ import {
 } from "@lodestar/types";
 import {
   LogData,
+  PromiseResult,
   TimeoutError,
   formatWeiToEth,
   fromHex,
@@ -177,6 +178,20 @@ type BlockProductionOptions = {
   isBuilderEnabled: boolean;
   isEngineEnabled: boolean;
 };
+
+/**
+ * Dispatch table design to have fully type safe implementation for all possible cases of builder vs engine flow
+ */
+type EngineVsBuilderStatusMatrix<E extends PromiseResult<unknown>, B extends PromiseResult<unknown>, R> = {
+  [S1 in E["status"] as `engine_${S1}`]: {
+    [S2 in B["status"] as `builder_${S2}`]: (e: E & {status: S1}, b: B & {status: S2}) => Promise<R>;
+  };
+};
+
+// biome-ignore lint/suspicious/noExplicitAny: We need `any` type to reuse other types of objects defined in closure
+function executeMatrix(matrix: EngineVsBuilderStatusMatrix<any, any, any>, e: any, b: any): Promise<any> {
+  return matrix[`engine_${e.status}`][`builder_${b.status}`](e, b);
+}
 
 /**
  * Server implementation for handling validator duties.
@@ -612,90 +627,16 @@ export function getValidatorApi(
       ),
     ]);
 
-    if (builder.status === "pending" && engine.status === "pending") {
-      throw Error("Builder and engine both failed to produce the block within timeout");
-    }
-
-    if (builder.status === "rejected" && engine.status === "rejected") {
-      throw Error(
-        `${isBuilderEnabled && isEngineEnabled ? "Builder and engine both" : isBuilderEnabled ? "Builder" : "Engine"} failed to produce the block`
-      );
-    }
-
-    if (engine.status === "rejected") {
-      logger.warn(
-        "Engine failed to produce the block",
-        {
-          ...loggerContext,
-          durationMs: engine.durationMs,
-        },
-        engine.reason
-      );
-    }
-
-    if (engine.status === "pending") {
-      logger.warn("Engine failed to produce the block within cutoff time", {
-        ...loggerContext,
-        cutoffMs,
-      });
-    }
-
-    if (builder.status === "rejected") {
-      if (builder.reason instanceof NoBidReceived) {
-        logger.info("Builder did not provide a bid", {
-          ...loggerContext,
-          durationMs: builder.durationMs,
-        });
-      } else {
-        logger.warn("Builder failed to produce the block", {
-          ...loggerContext,
-          durationMs: builder.durationMs,
-        });
+    async function selectBuilderBlock(
+      reason: BuilderBlockSelectionReason,
+      {executionPayloadBlinded}: {executionPayloadBlinded: boolean}
+    ): Promise<
+      AssembledBlockResponse<BlockType> & {
+        executionPayloadBlinded: boolean;
+        executionPayloadSource: ProducedBlockSource;
       }
-    }
-
-    if (builder.status === "pending") {
-      logger.warn("Builder failed to produce the block within cutoff time", {
-        ...loggerContext,
-        cutoffMs,
-      });
-    }
-
-    if (engine.status === "fulfilled" && engine.value.shouldOverrideBuilder) {
-      const blockResp = await chain.assembleBlockBody(
-        BlockType.Full,
-        blockAttributes,
-        currentState,
-        commonBlockBody,
-        engine.value
-      );
-
-      logger.info("Selected engine block: censorship suspected in builder blocks", {
-        ...loggerContext,
-        durationMs: engine.durationMs,
-        shouldOverrideBuilder: engine.value.shouldOverrideBuilder,
-        ...getBlockValueLogInfo(blockResp),
-      });
-
-      metrics?.blockProductionSelectionResults.inc({
-        source: ProducedBlockSource.engine,
-        reason: EngineBlockSelectionReason.BuilderCensorship,
-      });
-
-      return {
-        ...blockResp,
-        executionPayloadBlinded: false,
-        executionPayloadSource: ProducedBlockSource.engine,
-      };
-    }
-
-    if (builder.status === "fulfilled" && engine.status !== "fulfilled") {
-      const reason =
-        isEngineEnabled === false
-          ? BuilderBlockSelectionReason.EngineDisabled
-          : engine.status === "pending"
-            ? BuilderBlockSelectionReason.EnginePending
-            : BuilderBlockSelectionReason.EngineError;
+    > {
+      if (builder.status !== "fulfilled") throw new Error("Cannot select builder block, builder not fulfilled");
 
       const blockResp = await chain.assembleBlockBody(
         BlockType.Blinded,
@@ -705,7 +646,7 @@ export function getValidatorApi(
         builder.value
       );
 
-      logger.info("Selected builder block: no engine block produced", {
+      logger.info("Selected builder block", {
         reason,
         ...loggerContext,
         durationMs: builder.durationMs,
@@ -719,30 +660,31 @@ export function getValidatorApi(
 
       return {
         ...blockResp,
-        executionPayloadBlinded: true,
+        executionPayloadBlinded,
         executionPayloadSource: ProducedBlockSource.builder,
       };
     }
 
-    if (engine.status === "fulfilled" && builder.status !== "fulfilled") {
-      const reason =
-        builder.status === "pending"
-          ? EngineBlockSelectionReason.BuilderPending
-          : builder.reason instanceof NoBidReceived
-            ? EngineBlockSelectionReason.BuilderNoBid
-            : builder.reason instanceof TimeoutError
-              ? EngineBlockSelectionReason.BuilderTimeout
-              : EngineBlockSelectionReason.BuilderError;
+    async function selectEngineBlock(
+      reason: EngineBlockSelectionReason,
+      {executionPayloadBlinded}: {executionPayloadBlinded: boolean}
+    ): Promise<
+      AssembledBlockResponse<BlockType> & {
+        executionPayloadBlinded: boolean;
+        executionPayloadSource: ProducedBlockSource;
+      }
+    > {
+      if (engine.status !== "fulfilled") throw new Error("Cannot select engine block, engine not fulfilled");
 
       const blockResp = await chain.assembleBlockBody(
-        BlockType.Full,
+        BlockType.Blinded,
         blockAttributes,
         currentState,
         commonBlockBody,
         engine.value
       );
 
-      logger.info("Selected engine block: no builder block produced", {
+      logger.info("Selected builder block", {
         reason,
         ...loggerContext,
         durationMs: engine.durationMs,
@@ -756,53 +698,93 @@ export function getValidatorApi(
 
       return {
         ...blockResp,
-        executionPayloadBlinded: false,
+        executionPayloadBlinded,
         executionPayloadSource: ProducedBlockSource.engine,
       };
     }
 
-    if (engine.status === "fulfilled" && builder.status === "fulfilled") {
-      // TODO: Due to logic of computing `consensusBlockValue` we have to assemble both bodies here
-      const [engineBlockResp, builderBlockResp] = await Promise.all([
-        chain.assembleBlockBody(BlockType.Full, blockAttributes, currentState, commonBlockBody, engine.value),
-        chain.assembleBlockBody(BlockType.Blinded, blockAttributes, currentState, commonBlockBody, builder.value),
-      ]);
-
-      const result = selectBlockProductionSource({
-        builderBlockValue: builder.value.executionPayloadValue + builderBlockResp.consensusBlockValue,
-        engineBlockValue: engine.value.executionPayloadValue + engineBlockResp.consensusBlockValue,
-        builderBoostFactor,
-        builderSelection,
-      });
-      const executionPayloadSource = result.source;
-
-      metrics?.blockProductionSelectionResults.inc(result);
-
-      logger.info(`Selected ${executionPayloadSource} block`, {
-        reason: result.reason,
-        ...loggerContext,
-        engineDurationMs: engine.durationMs,
-        ...getBlockValueLogInfo(engineBlockResp, ProducedBlockSource.engine),
-        builderDurationMs: builder.durationMs,
-        ...getBlockValueLogInfo(builderBlockResp, ProducedBlockSource.builder),
-      });
-
-      if (executionPayloadSource === ProducedBlockSource.engine) {
-        return {
-          ...engineBlockResp,
-          executionPayloadBlinded: false,
-          executionPayloadSource,
-        };
+    const engineVsBuilderMatrix: EngineVsBuilderStatusMatrix<
+      typeof engine,
+      typeof builder,
+      AssembledBlockResponse<BlockType> & {
+        executionPayloadBlinded: boolean;
+        executionPayloadSource: ProducedBlockSource;
       }
+    > = {
+      engine_pending: {
+        builder_pending: async (_e, _b) => {
+          throw Error("Builder and engine both failed to produce the block within timeout");
+        },
+        builder_rejected: async (_e, b) => {
+          if (b.reason instanceof TimeoutError) {
+            throw Error("Engine timed out while builder did not provide a bid");
+          }
+          throw new Error("Engine timed out while builder failed to produce the block");
+        },
+        builder_fulfilled: async () => {
+          const reason = BuilderBlockSelectionReason.EnginePending;
+          return selectBuilderBlock(reason, {executionPayloadBlinded: true});
+        },
+      },
+      engine_rejected: {
+        builder_pending: async () => {
+          throw Error("Builder timed out while engine failed to produce the block");
+        },
+        builder_rejected: async () => {
+          throw Error(
+            `${isBuilderEnabled && isEngineEnabled ? "Builder and engine both" : isBuilderEnabled ? "Builder" : "Engine"} failed to produce the block`
+          );
+        },
+        builder_fulfilled: async () => {
+          const reason = BuilderBlockSelectionReason.EngineError;
+          return selectBuilderBlock(reason, {executionPayloadBlinded: true});
+        },
+      },
+      engine_fulfilled: {
+        builder_pending: async () => {
+          const reason = EngineBlockSelectionReason.BuilderPending;
+          return selectEngineBlock(reason, {executionPayloadBlinded: false});
+        },
+        builder_rejected: async (_e, b) => {
+          const reason =
+            b.reason instanceof NoBidReceived
+              ? EngineBlockSelectionReason.BuilderNoBid
+              : b.reason instanceof TimeoutError
+                ? EngineBlockSelectionReason.BuilderTimeout
+                : EngineBlockSelectionReason.BuilderError;
 
-      return {
-        ...builderBlockResp,
-        executionPayloadBlinded: true,
-        executionPayloadSource,
-      };
-    }
+          return selectEngineBlock(reason, {executionPayloadBlinded: false});
+        },
+        builder_fulfilled: async (e, b) => {
+          if (e.value.shouldOverrideBuilder) {
+            const reason = EngineBlockSelectionReason.BuilderCensorship;
+            return selectEngineBlock(reason, {executionPayloadBlinded: false});
+          }
 
-    throw Error("Unreachable error occurred during the builder and execution block production");
+          // TODO: Due to logic of computing `consensusBlockValue` we have to assemble both bodies here
+          const [engineBlockResp, builderBlockResp] = await Promise.all([
+            chain.assembleBlockBody(BlockType.Full, blockAttributes, currentState, commonBlockBody, e.value),
+            chain.assembleBlockBody(BlockType.Blinded, blockAttributes, currentState, commonBlockBody, b.value),
+          ]);
+
+          const result = selectBlockProductionSource({
+            engineBlockValue: e.value.executionPayloadValue + engineBlockResp.consensusBlockValue,
+            builderBlockValue: b.value.executionPayloadValue + builderBlockResp.consensusBlockValue,
+            builderBoostFactor,
+            builderSelection,
+          });
+          const executionPayloadSource = result.source;
+
+          if (executionPayloadSource === ProducedBlockSource.engine) {
+            return selectEngineBlock(result.reason, {executionPayloadBlinded: false});
+          }
+
+          return selectBuilderBlock(result.reason, {executionPayloadBlinded: true});
+        },
+      },
+    };
+
+    return executeMatrix(engineVsBuilderMatrix, engine, builder);
   }
 
   async function produceEngineOrBuilderBlock({
