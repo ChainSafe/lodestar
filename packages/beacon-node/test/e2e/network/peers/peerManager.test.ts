@@ -44,12 +44,12 @@ describe("network / peers / PeerManager", () => {
       },
     });
     const beaconConfig = createBeaconConfig(config, state.genesisValidatorsRoot);
-    const networkConfig = new NetworkConfig(peerId1, beaconConfig);
+    const privateKey = await generateKeyPair("secp256k1");
+    const networkConfig = new NetworkConfig(privateKey, beaconConfig);
     const controller = new AbortController();
     const clock = new Clock({config: beaconConfig, genesisTime: 0, signal: controller.signal});
     const status = ssz.phase0.Status.defaultValue();
     const statusCache = new LocalStatusCache(status);
-    const privateKey = await generateKeyPair("secp256k1");
     const libp2p = await createNode("/ip4/127.0.0.1/tcp/0", privateKey);
 
     afterEachCallbacks.push(async () => {

@@ -1,3 +1,4 @@
+import {generateKeyPair} from "@libp2p/crypto/keys";
 import {createBeaconConfig} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
@@ -18,11 +19,10 @@ import {AttnetsService} from "../../../../src/network/subnets/attnetsService.js"
 import {CommitteeSubscription} from "../../../../src/network/subnets/interface.js";
 import {Clock, IClock} from "../../../../src/util/clock.js";
 import {testLogger} from "../../../utils/logger.js";
-import {getValidPeerId} from "../../../utils/peer.js";
 
 vi.mock("../../../../src/network/gossip/gossipsub.js");
 
-describe("AttnetsService", () => {
+describe("AttnetsService", async () => {
   const nodeId = bigIntToBytes(
     BigInt("88752428858350697756262172400162263450541348766581994718383409852729519486397"),
     32,
@@ -30,7 +30,7 @@ describe("AttnetsService", () => {
   );
   const ALTAIR_FORK_EPOCH = 100;
   const config = createBeaconConfig({ALTAIR_FORK_EPOCH}, ZERO_HASH);
-  const networkConfig = new NetworkConfig(getValidPeerId(), config);
+  const networkConfig = new NetworkConfig(await generateKeyPair("secp256k1"), config);
   // const {SECONDS_PER_SLOT} = config;
   let service: AttnetsService;
   let gossipStub: MockedObject<Eth2Gossipsub>;

@@ -136,7 +136,6 @@ export function overwriteEnrWithCliArgs(
  * Create new PeerId and ENR by default, unless persistNetworkIdentity is provided
  */
 export async function initPrivateKeyAndEnr(
-  config: ChainForkConfig,
   args: BeaconArgs,
   beaconDir: string,
   logger: Logger,

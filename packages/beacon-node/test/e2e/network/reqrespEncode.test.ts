@@ -1,4 +1,5 @@
 import {noise} from "@chainsafe/libp2p-noise";
+import {generateKeyPair} from "@libp2p/crypto/keys";
 import {mplex} from "@libp2p/mplex";
 import {tcp} from "@libp2p/tcp";
 import {createBeaconConfig} from "@lodestar/config";
@@ -60,7 +61,7 @@ describe("reqresp encoder", () => {
       };
 
     const config = createBeaconConfig({}, ZERO_HASH);
-    const networkConfig = new NetworkConfig(libp2p.peerId, config);
+    const networkConfig = new NetworkConfig(await generateKeyPair("secp256k1"), config);
     const modules: ReqRespBeaconNodeModules = {
       libp2p,
       peersData: new PeersData(),

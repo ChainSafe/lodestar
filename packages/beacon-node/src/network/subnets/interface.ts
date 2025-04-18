@@ -1,7 +1,7 @@
-import {PeerId, PrivateKey} from "@libp2p/interface";
-import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {getV4Crypto} from "@chainsafe/enr";
 import {fromHexString} from "@chainsafe/ssz";
+import {PeerId, PrivateKey} from "@libp2p/interface";
+import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {ForkName} from "@lodestar/params";
 import {Bytes32, Slot, SubnetID, ValidatorIndex} from "@lodestar/types";
 import {GossipTopic} from "../gossip/interface.js";

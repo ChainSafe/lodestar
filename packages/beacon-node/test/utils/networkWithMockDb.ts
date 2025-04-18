@@ -59,7 +59,7 @@ export async function getNetworkForTest(
       archiveMode: ArchiveMode.Frequency,
     },
     {
-      nodeId: Buffer.alloc(32, crypto.randomBytes(32)),
+      privateKey: await generateKeyPair("secp256k1"),
       config: beaconConfig,
       db,
       dataDir: ".",
@@ -86,7 +86,6 @@ export async function getNetworkForTest(
     metrics: null,
   };
 
-  const peerId = await createSecp256k1PeerId();
   const network = await Network.init({
     ...modules,
     privateKey: await generateKeyPair("secp256k1"),

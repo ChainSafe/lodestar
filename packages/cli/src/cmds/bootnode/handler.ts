@@ -180,13 +180,7 @@ export async function bootnodeHandlerInit(args: BootnodeArgs & GlobalArgs) {
   );
 
   const logger = initLogger(args, beaconPaths.dataDir, config, "bootnode.log");
-  const {privateKey, enr} = await initPrivateKeyAndEnr(
-    config,
-    args as unknown as BeaconArgs,
-    bootnodeDir,
-    logger,
-    true
-  );
+  const {privateKey, enr} = await initPrivateKeyAndEnr(args as unknown as BeaconArgs, bootnodeDir, logger, true);
 
   return {discv5Args, metricsArgs, bootnodeDir, network, version, commit, privateKey, enr, logger};
 }

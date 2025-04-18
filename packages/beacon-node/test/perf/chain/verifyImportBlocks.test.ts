@@ -1,5 +1,5 @@
-import crypto from "node:crypto";
 import {afterAll, beforeAll, bench, describe, setBenchOpts} from "@chainsafe/benchmark";
+import {generateKeyPair} from "@libp2p/crypto/keys";
 import {config} from "@lodestar/config/default";
 import {LevelDbController} from "@lodestar/db";
 import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY, SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -89,7 +89,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
           archiveMode: ArchiveMode.Frequency,
         },
         {
-          nodeId: Buffer.alloc(32, crypto.randomBytes(32)),
+          privateKey: await generateKeyPair("secp256k1"),
           config: state.config,
           db,
           dataDir: ".",

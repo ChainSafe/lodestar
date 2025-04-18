@@ -2,6 +2,7 @@ import fs from "node:fs";
 import {getV4Crypto} from "@chainsafe/enr";
 import {publicKeyToProtobuf} from "@libp2p/crypto/keys";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
+import {ChainForkConfig} from "@lodestar/config";
 import {fromHex} from "@lodestar/utils";
 import tmp from "tmp";
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
@@ -31,7 +32,7 @@ describe("initPeerIdAndEnr", () => {
     const peerId = peerIdFromPrivateKey(privateKey);
     expect(enr.peerId.toString()).toBe(peerId.toString());
     const nodeIdFromEnr = enr.nodeId;
-    const nodeIdFromPubkey = getV4Crypto().nodeId(peerId.publicKey.raw);
+    const nodeIdFromPubkey = getV4Crypto().nodeId(privateKey.publicKey.raw);
     expect(nodeIdFromPubkey).toEqual(nodeIdFromEnr);
     // const publicKey2 = publicKeyToProtobuf(privateKey.publicKey);
     // const nodeIdFromPublickey2 = getV4Crypto().nodeId(publicKey2);

@@ -1,6 +1,6 @@
-import crypto from "node:crypto";
 import path from "node:path";
 import {toHexString} from "@chainsafe/ssz";
+import {generateKeyPair} from "@libp2p/crypto/keys";
 import {createBeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
 import {ACTIVE_PRESET, ForkName, ForkSeq, isForkPostDeneb} from "@lodestar/params";
@@ -110,7 +110,7 @@ const forkChoiceTest =
             proposerBoostReorg: true,
           },
           {
-            nodeId: Buffer.alloc(32, crypto.randomBytes(32)),
+            privateKey: await generateKeyPair("secp256k1"),
             config: createBeaconConfig(config, state.genesisValidatorsRoot),
             db: getMockedBeaconDb(),
             dataDir: ".",
