@@ -228,12 +228,8 @@ export interface IBeaconChain {
     blockAttributes: BlockAttributes & {currentState: CachedBeaconStateAllForks}
   ): Promise<AssembledBlockBodyResponse<BlockType.Blinded>>;
 
-  produceBlock(
-    blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}
-  ): Promise<AssembledBlockResponse<BlockType.Full>>;
-  produceBlindedBlock(
-    blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}
-  ): Promise<AssembledBlockResponse<BlockType.Blinded>>;
+  produceBlock(blockAttributes: BlockAttributes): Promise<AssembledBlockResponse<BlockType.Full>>;
+  produceBlindedBlock(blockAttributes: BlockAttributes): Promise<AssembledBlockResponse<BlockType.Blinded>>;
 
   assembleBlockBody<T extends BlockType>(
     blockType: T,

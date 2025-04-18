@@ -679,9 +679,7 @@ export class BeaconChain implements IBeaconChain {
     });
   }
 
-  async produceBlock(
-    blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}
-  ): Promise<AssembledBlockResponse<BlockType.Full>> {
+  async produceBlock(blockAttributes: BlockAttributes): Promise<AssembledBlockResponse<BlockType.Full>> {
     const {parentBlockRoot, slot} = blockAttributes;
 
     const currentState = await this.regen.getBlockSlotState(
@@ -690,16 +688,16 @@ export class BeaconChain implements IBeaconChain {
       {dontTransferCache: true},
       RegenCaller.produceBlock
     );
-    const commonBlockBody =
-      blockAttributes.commonBlockBody ?? (await this.produceCommonBlockBody({...blockAttributes, currentState}));
-    const fullBlockBody = await this.produceFullBlockBody({...blockAttributes, currentState});
 
-    return this.assembleBlockBody(BlockType.Full, blockAttributes, currentState, commonBlockBody, fullBlockBody);
+    const [commonBlockBody, fullBlockBodyResp] = await Promise.all([
+      this.produceCommonBlockBody({...blockAttributes, currentState}),
+      this.produceBlindedBlockBody({...blockAttributes, currentState}),
+    ]);
+
+    return this.assembleBlockBody(BlockType.Full, blockAttributes, currentState, commonBlockBody, fullBlockBodyResp);
   }
 
-  async produceBlindedBlock(
-    blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}
-  ): Promise<AssembledBlockResponse<BlockType.Blinded>> {
+  async produceBlindedBlock(blockAttributes: BlockAttributes): Promise<AssembledBlockResponse<BlockType.Blinded>> {
     const {parentBlockRoot, slot} = blockAttributes;
 
     const currentState = await this.regen.getBlockSlotState(
@@ -709,11 +707,18 @@ export class BeaconChain implements IBeaconChain {
       RegenCaller.produceBlock
     );
 
-    const commonBlockBody =
-      blockAttributes.commonBlockBody ?? (await this.produceCommonBlockBody({...blockAttributes, currentState}));
-    const fullBlockBody = await this.produceBlindedBlockBody({...blockAttributes, currentState});
+    const [commonBlockBody, blindedBlockBodyResp] = await Promise.all([
+      this.produceCommonBlockBody({...blockAttributes, currentState}),
+      this.produceBlindedBlockBody({...blockAttributes, currentState}),
+    ]);
 
-    return this.assembleBlockBody(BlockType.Blinded, blockAttributes, currentState, commonBlockBody, fullBlockBody);
+    return this.assembleBlockBody(
+      BlockType.Blinded,
+      blockAttributes,
+      currentState,
+      commonBlockBody,
+      blindedBlockBodyResp
+    );
   }
 
   async assembleBlockBody<T extends BlockType>(
@@ -721,13 +726,13 @@ export class BeaconChain implements IBeaconChain {
     blockAttributes: BlockAttributes,
     currentState: CachedBeaconStateAllForks,
     commonBlockBody: CommonBlockBody,
-    assembledBlockBody: AssembledBlockBodyResponse<T>
+    assembleBlockBody: AssembledBlockBodyResponse<T>
   ): Promise<AssembledBlockResponse<T>> {
     return assembleBlockBodyToBlock.call(this, {
       blockType,
       blockAttributes,
       commonBlockBody,
-      assembledBlockBody,
+      assembleBlockBody,
       currentState,
       // TODO: Need to debug why we need `as` here
     }) as Promise<AssembledBlockResponse<T>>;
