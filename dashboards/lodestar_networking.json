@@ -51,14 +51,9 @@
       "url": ""
     }
   ],
-  "liveNow": false,
   "panels": [
     {
       "collapsed": false,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -67,15 +62,6 @@
       },
       "id": 510,
       "panels": [],
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "refId": "A"
-        }
-      ],
       "title": "Summary",
       "type": "row"
     },
@@ -96,6 +82,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 20,
             "gradientMode": "opacity",
@@ -144,11 +131,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "7.4.5",
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -184,6 +172,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -228,11 +217,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
-      "pluginVersion": "8.2.2",
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -267,6 +257,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -311,11 +302,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
-      "pluginVersion": "8.2.2",
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -350,6 +342,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -460,11 +453,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
-      "pluginVersion": "8.2.2",
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -531,6 +525,12 @@
       "id": 70,
       "options": {
         "displayMode": "lcd",
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
         "maxVizHeight": 300,
         "minVizHeight": 10,
         "minVizWidth": 0,
@@ -548,7 +548,7 @@
         "text": {},
         "valueMode": "color"
       },
-      "pluginVersion": "10.4.1",
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -589,6 +589,12 @@
       "id": 68,
       "options": {
         "displayMode": "lcd",
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
         "maxVizHeight": 300,
         "minVizHeight": 10,
         "minVizWidth": 0,
@@ -606,7 +612,7 @@
         "text": {},
         "valueMode": "color"
       },
-      "pluginVersion": "10.4.1",
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -640,6 +646,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -684,11 +691,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
-      "pluginVersion": "8.2.2",
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -722,6 +730,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -766,11 +775,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "8.2.2",
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -850,7 +860,7 @@
           "reverse": false
         }
       },
-      "pluginVersion": "10.4.1",
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -899,6 +909,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 23,
             "gradientMode": "opacity",
@@ -947,11 +958,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "7.4.5",
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -1015,6 +1027,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 23,
             "gradientMode": "opacity",
@@ -1063,11 +1076,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "7.4.5",
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -1114,10 +1128,6 @@
     },
     {
       "collapsed": false,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -1126,15 +1136,6 @@
       },
       "id": 28,
       "panels": [],
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "refId": "A"
-        }
-      ],
       "title": "Peer stats",
       "type": "row"
     },
@@ -1155,6 +1156,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 20,
             "gradientMode": "opacity",
@@ -1203,11 +1205,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "7.4.5",
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -1242,6 +1245,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 20,
             "gradientMode": "opacity",
@@ -1290,11 +1294,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "7.4.5",
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -1330,6 +1335,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 20,
             "gradientMode": "opacity",
@@ -1380,11 +1386,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "7.4.5",
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -1403,15 +1410,6 @@
       "type": "timeseries"
     },
     {
-      "cards": {},
-      "color": {
-        "cardColor": "#b4ff00",
-        "colorScale": "sqrt",
-        "colorScheme": "interpolateMagma",
-        "exponent": 0.5,
-        "mode": "spectrum"
-      },
-      "dataFormat": "tsbuckets",
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
@@ -1437,13 +1435,7 @@
         "x": 12,
         "y": 54
       },
-      "heatmap": {},
-      "hideZeroBuckets": false,
-      "highlightCards": true,
       "id": 503,
-      "legend": {
-        "show": false
-      },
       "options": {
         "calculate": false,
         "calculation": {},
@@ -1482,8 +1474,7 @@
           "unit": "short"
         }
       },
-      "pluginVersion": "10.4.1",
-      "reverseYBuckets": false,
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -1500,20 +1491,7 @@
         }
       ],
       "title": "Long lived attnets per peer",
-      "tooltip": {
-        "show": true,
-        "showHistogram": false
-      },
-      "type": "heatmap",
-      "xAxis": {
-        "show": true
-      },
-      "yAxis": {
-        "format": "short",
-        "logBase": 1,
-        "show": true
-      },
-      "yBucketBound": "auto"
+      "type": "heatmap"
     },
     {
       "datasource": {
@@ -1532,6 +1510,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 20,
             "gradientMode": "opacity",
@@ -1580,11 +1559,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "7.4.5",
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -1604,15 +1584,6 @@
       "type": "timeseries"
     },
     {
-      "cards": {},
-      "color": {
-        "cardColor": "#b4ff00",
-        "colorScale": "sqrt",
-        "colorScheme": "interpolateMagma",
-        "exponent": 0.5,
-        "mode": "spectrum"
-      },
-      "dataFormat": "tsbuckets",
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
@@ -1638,13 +1609,7 @@
         "x": 12,
         "y": 62
       },
-      "heatmap": {},
-      "hideZeroBuckets": false,
-      "highlightCards": true,
       "id": 504,
-      "legend": {
-        "show": false
-      },
       "options": {
         "calculate": false,
         "calculation": {},
@@ -1683,8 +1648,7 @@
           "unit": "short"
         }
       },
-      "pluginVersion": "10.4.1",
-      "reverseYBuckets": false,
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -1701,31 +1665,9 @@
         }
       ],
       "title": "Peer connection length",
-      "tooltip": {
-        "show": true,
-        "showHistogram": false
-      },
-      "type": "heatmap",
-      "xAxis": {
-        "show": true
-      },
-      "yAxis": {
-        "format": "short",
-        "logBase": 1,
-        "show": true
-      },
-      "yBucketBound": "auto"
+      "type": "heatmap"
     },
     {
-      "cards": {},
-      "color": {
-        "cardColor": "#b4ff00",
-        "colorScale": "sqrt",
-        "colorScheme": "interpolateMagma",
-        "exponent": 0.5,
-        "mode": "spectrum"
-      },
-      "dataFormat": "tsbuckets",
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
@@ -1751,13 +1693,7 @@
         "x": 0,
         "y": 70
       },
-      "heatmap": {},
-      "hideZeroBuckets": false,
-      "highlightCards": true,
       "id": 505,
-      "legend": {
-        "show": false
-      },
       "options": {
         "calculate": false,
         "calculation": {},
@@ -1796,8 +1732,7 @@
           "unit": "short"
         }
       },
-      "pluginVersion": "10.4.1",
-      "reverseYBuckets": false,
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -1814,20 +1749,7 @@
         }
       ],
       "title": "Score (app level, not gossip)",
-      "tooltip": {
-        "show": true,
-        "showHistogram": false
-      },
-      "type": "heatmap",
-      "xAxis": {
-        "show": true
-      },
-      "yAxis": {
-        "format": "short",
-        "logBase": 1,
-        "show": true
-      },
-      "yBucketBound": "auto"
+      "type": "heatmap"
     },
     {
       "datasource": {
@@ -1846,6 +1768,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 20,
             "gradientMode": "opacity",
@@ -1909,11 +1832,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "7.4.5",
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -1962,6 +1886,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "none",
@@ -2008,11 +1933,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "8.4.2",
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -2047,6 +1973,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 20,
             "gradientMode": "opacity",
@@ -2094,11 +2021,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "7.4.5",
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -2133,6 +2061,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -2177,10 +2106,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -2200,10 +2131,6 @@
     },
     {
       "collapsed": false,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -2212,67 +2139,80 @@
       },
       "id": 512,
       "panels": [],
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "refId": "A"
-        }
-      ],
       "title": "Peer requests to discovery",
       "type": "row"
     },
     {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
-          "links": []
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "unit": "short"
         },
         "overrides": []
       },
-      "fill": 1,
-      "fillGradient": 0,
       "gridPos": {
         "h": 7,
         "w": 12,
         "x": 0,
         "y": 94
       },
-      "hiddenSeries": false,
       "id": 294,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
+        "alertThreshold": true,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
+        }
       },
-      "percentage": false,
-      "pluginVersion": "10.4.1",
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -2302,229 +2242,8 @@
           "refId": "B"
         }
       ],
-      "thresholds": [],
-      "timeRegions": [],
       "title": "Requested peers to connect and disconnect (rate / min)",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "mode": "time",
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "$$hashKey": "object:430",
-          "format": "short",
-          "logBase": 1,
-          "show": true
-        },
-        {
-          "$$hashKey": "object:431",
-          "format": "short",
-          "logBase": 1,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "links": []
-        },
-        "overrides": []
-      },
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 7,
-        "w": 6,
-        "x": 12,
-        "y": 94
-      },
-      "hiddenSeries": false,
-      "id": 296,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "nullPointMode": "null",
-      "options": {
-        "alertThreshold": true
-      },
-      "percentage": false,
-      "pluginVersion": "10.4.1",
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "60*rate(lodestar_peers_requested_total_subnets_to_query[$rate_interval])",
-          "interval": "",
-          "legendFormat": "{{type}}",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeRegions": [],
-      "title": "Peer Manager - Requested subnets to query (rate / min)",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "mode": "time",
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "$$hashKey": "object:430",
-          "format": "short",
-          "logBase": 1,
-          "show": true
-        },
-        {
-          "$$hashKey": "object:431",
-          "format": "short",
-          "logBase": 1,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "links": []
-        },
-        "overrides": []
-      },
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 7,
-        "w": 6,
-        "x": 18,
-        "y": 94
-      },
-      "hiddenSeries": false,
-      "id": 297,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "nullPointMode": "null",
-      "options": {
-        "alertThreshold": true
-      },
-      "percentage": false,
-      "pluginVersion": "10.4.1",
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "60*rate(lodestar_peers_requested_total_subnets_peers_count[$rate_interval])",
-          "interval": "",
-          "legendFormat": "{{type}}",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeRegions": [],
-      "title": "Peer Manager - Requested total peers in subnets (rate / min)",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "mode": "time",
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "$$hashKey": "object:430",
-          "format": "short",
-          "logBase": 1,
-          "show": true
-        },
-        {
-          "$$hashKey": "object:431",
-          "format": "short",
-          "logBase": 1,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false
-      }
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -2543,6 +2262,185 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 12,
+        "y": 94
+      },
+      "id": 296,
+      "options": {
+        "alertThreshold": true,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.6.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "60*rate(lodestar_peers_requested_total_subnets_to_query[$rate_interval])",
+          "interval": "",
+          "legendFormat": "{{type}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Peer Manager - Requested subnets to query (rate / min)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 18,
+        "y": 94
+      },
+      "id": 297,
+      "options": {
+        "alertThreshold": true,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.6.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "60*rate(lodestar_peers_requested_total_subnets_peers_count[$rate_interval])",
+          "interval": "",
+          "legendFormat": "{{type}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Peer Manager - Requested total peers in subnets (rate / min)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -2587,10 +2485,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -2624,6 +2524,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -2693,10 +2594,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -2715,10 +2618,6 @@
     },
     {
       "collapsed": false,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -2727,15 +2626,6 @@
       },
       "id": 75,
       "panels": [],
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "refId": "A"
-        }
-      ],
       "title": "Gossip validation queues",
       "type": "row"
     },
@@ -2756,6 +2646,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "none",
@@ -2802,11 +2693,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "9.3.2",
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -2841,6 +2733,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "opacity",
@@ -2887,11 +2780,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "9.3.2",
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -2926,6 +2820,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "none",
@@ -2972,11 +2867,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "9.3.2",
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -3012,6 +2908,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 7,
             "gradientMode": "opacity",
@@ -3059,11 +2956,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "7.4.5",
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -3096,6 +2994,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "opacity",
@@ -3142,11 +3041,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "9.3.2",
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -3181,6 +3081,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "opacity",
@@ -3227,11 +3128,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "9.3.2",
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -3268,6 +3170,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -3313,10 +3216,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -3327,7 +3232,7 @@
           "exemplar": false,
           "expr": "(\n  rate(lodestar_gossip_block_elapsed_time_till_processed_sum[$rate_interval])\n  -\n  rate(lodestar_gossip_block_elapsed_time_till_received_sum[$rate_interval])\n)\n/\nrate(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval])",
           "interval": "",
-          "legendFormat": "processed minus received",
+          "legendFormat": "processed minus received {{source}}",
           "range": true,
           "refId": "A"
         },
@@ -3365,6 +3270,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -3411,20 +3317,24 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
           "exemplar": false,
           "expr": "rate(lodestar_gossip_block_elapsed_time_till_received_sum[$rate_interval])\n/\nrate(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval])",
           "interval": "",
-          "legendFormat": "till received",
+          "legendFormat": "till received {{source}}",
+          "range": true,
           "refId": "A"
         },
         {
@@ -3444,11 +3354,13 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
           "exemplar": false,
           "expr": "rate(lodestar_gossip_block_elapsed_time_till_become_head_sum[$rate_interval])\n/\nrate(lodestar_gossip_block_elapsed_time_till_become_head_count[$rate_interval])",
           "hide": false,
           "interval": "",
           "legendFormat": "till become head",
+          "range": true,
           "refId": "C"
         }
       ],
@@ -3485,6 +3397,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -3554,10 +3467,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -3615,6 +3530,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -3660,10 +3576,12 @@
           "showLegend": false
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -3697,6 +3615,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -3743,10 +3662,12 @@
           "showLegend": false
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -3825,7 +3746,7 @@
           "reverse": false
         }
       },
-      "pluginVersion": "10.4.1",
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -3861,6 +3782,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -3907,10 +3829,12 @@
           "showLegend": false
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -3945,6 +3869,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -3989,10 +3914,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -4039,6 +3966,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -4083,10 +4011,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -4120,6 +4050,7 @@
             "axisLabel": "",
             "axisPlacement": "left",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -4182,10 +4113,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -4231,6 +4164,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -4288,10 +4222,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -4337,6 +4273,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -4381,10 +4318,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -4418,6 +4357,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -4479,10 +4419,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -4528,6 +4470,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -4589,10 +4532,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -4638,6 +4583,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -4683,10 +4629,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -4721,6 +4669,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -4783,10 +4732,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -4844,6 +4795,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -4889,10 +4841,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -4970,7 +4924,7 @@
           "reverse": false
         }
       },
-      "pluginVersion": "10.4.1",
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -5007,6 +4961,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -5051,10 +5006,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -5089,6 +5046,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -5133,10 +5091,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -5184,6 +5144,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -5229,10 +5190,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -5314,6 +5277,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -5359,10 +5323,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -5370,8 +5336,9 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(lodestar_gossip_block_elapsed_time_till_received_bucket{le=\"0.5\"}[$rate_interval]))\n/\nsum(rate(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval]))",
-          "legendFormat": "<=0.5s",
+          "expr": "sum by (source)(rate(lodestar_gossip_block_elapsed_time_till_received_bucket{le=\"0.5\"}[$rate_interval]))\n/\nsum by (source)(rate(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval]))",
+          "interval": "",
+          "legendFormat": "<=0.5s {{source}}",
           "range": true,
           "refId": "A"
         },
@@ -5381,9 +5348,9 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(lodestar_gossip_block_elapsed_time_till_received_bucket{le=\"1\"}[$rate_interval]))\n/\nsum(rate(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval]))",
+          "expr": "sum by (source)(rate(lodestar_gossip_block_elapsed_time_till_received_bucket{le=\"1\"}[$rate_interval]))\n/\nsum by (source)(rate(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval]))",
           "hide": false,
-          "legendFormat": "<=1s",
+          "legendFormat": "<=1s {{source}}",
           "range": true,
           "refId": "B"
         },
@@ -5393,9 +5360,9 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(lodestar_gossip_block_elapsed_time_till_received_bucket{le=\"2\"}[$rate_interval]))\n/\nsum(rate(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval]))",
+          "expr": "sum by (source)(rate(lodestar_gossip_block_elapsed_time_till_received_bucket{le=\"2\"}[$rate_interval]))\n/\nsum by (source)(rate(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval]))",
           "hide": false,
-          "legendFormat": "<=2s",
+          "legendFormat": "<=2s {{source}}",
           "range": true,
           "refId": "C"
         },
@@ -5405,9 +5372,9 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(lodestar_gossip_block_elapsed_time_till_received_bucket{le=\"4\"}[$rate_interval]))\n/\nsum(rate(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval]))",
+          "expr": "sum by (source)(rate(lodestar_gossip_block_elapsed_time_till_received_bucket{le=\"4\"}[$rate_interval]))\n/\nsum by (source)(rate(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval]))",
           "hide": false,
-          "legendFormat": "<=4s",
+          "legendFormat": "<=4s {{source}}",
           "range": true,
           "refId": "D"
         },
@@ -5417,9 +5384,9 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(lodestar_gossip_block_elapsed_time_till_received_bucket{le=\"6\"}[$rate_interval]))\n/\nsum(rate(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval]))",
+          "expr": "sum by (source)(rate(lodestar_gossip_block_elapsed_time_till_received_bucket{le=\"6\"}[$rate_interval]))\n/\nsum by (source)(rate(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval]))",
           "hide": false,
-          "legendFormat": "<=6s",
+          "legendFormat": "<=6s {{source}}",
           "range": true,
           "refId": "E"
         }
@@ -5444,6 +5411,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -5513,10 +5481,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -5550,6 +5520,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -5594,10 +5565,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -5616,10 +5589,6 @@
     },
     {
       "collapsed": false,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -5628,15 +5597,6 @@
       },
       "id": 188,
       "panels": [],
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "refId": "A"
-        }
-      ],
       "title": "ReqResp metrics",
       "type": "row"
     },
@@ -5657,6 +5617,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -5702,10 +5663,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -5739,6 +5702,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -5785,10 +5749,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -5822,6 +5788,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -5868,10 +5835,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -5905,6 +5874,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -5951,10 +5921,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -5988,6 +5960,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -6034,10 +6007,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -6073,6 +6048,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -6119,10 +6095,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -6158,6 +6136,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -6204,10 +6183,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -6241,6 +6222,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -6287,10 +6269,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -6324,6 +6308,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -6370,10 +6355,12 @@
           "showLegend": false
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -6407,6 +6394,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -6453,10 +6441,12 @@
           "showLegend": false
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -6474,8 +6464,9 @@
       "type": "timeseries"
     }
   ],
+  "preload": false,
   "refresh": "10s",
-  "schemaVersion": 39,
+  "schemaVersion": 41,
   "tags": [
     "lodestar"
   ],
