@@ -349,21 +349,22 @@ export async function produceBlockBody<T extends BlockType>(
               throw Error(`Missing blobsBundle response from getPayload at fork=${fork}`);
             }
 
-            let contents: deneb.Contents | fulu.Contents & {cells?: fulu.Cell[][]} = {
-              kzgProofs: blobsBundle.proofs,
-              blobs: blobsBundle.blobs
-            };
-
+            let cells: fulu.Cell[][] | undefined;
             if (ForkSeq[fork] >= ForkSeq.fulu) {
-              const cells = blobsBundle.blobs.map((blob) => ckzg.computeCells(blob));
-              contents = {...contents, cells};
+              cells = blobsBundle.blobs.map((blob) => ckzg.computeCells(blob));
+            }
+
+            if (this.opts.sanityCheckExecutionEngineBlobs) {
               validateBlobsAndKzgCommitments(fork as ForkBlobs, executionPayload, blobsBundle, cells);
-            } else if (this.opts.sanityCheckExecutionEngineBlobs) {
-              validateBlobsAndKzgCommitments(fork as ForkBlobs, executionPayload, blobsBundle);
             }
 
             (blockBody as deneb.BeaconBlockBody).blobKzgCommitments = blobsBundle.commitments;
             const blockHash = toRootHex(executionPayload.blockHash);
+            const contents = {
+              kzgProofs: blobsBundle.proofs,
+              blobs: blobsBundle.blobs,
+              cells,
+            };
             blobsResult = {type: BlobsResultType.produced, contents, blockHash};
 
             Object.assign(logMeta, {blobs: blobsBundle.commitments.length});
