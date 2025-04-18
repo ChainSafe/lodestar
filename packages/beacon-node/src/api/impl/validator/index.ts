@@ -3,6 +3,7 @@ import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {DataAvailabilityStatus, ExecutionStatus} from "@lodestar/fork-choice";
 import {
+  ForkName,
   ForkPostBellatrix,
   ForkPostDeneb,
   ForkPreDeneb,
@@ -66,7 +67,6 @@ import {
   SyncCommitteeErrorCode,
 } from "../../../chain/errors/index.js";
 import {
-  AssembledBlindedBlockBody,
   AssembledBlockBodyResponse,
   AssembledBlockResponse,
   BlockType,
@@ -168,6 +168,15 @@ export type BlockSelectionResult =
       source: ProducedBlockSource.builder;
       reason: BuilderBlockSelectionReason;
     };
+
+type BlockProductionOptions = {
+  slot: Slot;
+  fork: ForkName;
+  builderSelection: routes.validator.BuilderSelection;
+  builderBoostFactor: bigint;
+  isBuilderEnabled: boolean;
+  isEngineEnabled: boolean;
+};
 
 /**
  * Server implementation for handling validator duties.
@@ -406,6 +415,52 @@ export function getValidatorApi(
       throw new NodeIsSyncing("Block's data is out of range and not validated");
   }
 
+  function normalizeBlockProductionOptions(opts: {
+    slot: Slot;
+    builderBoostFactor: bigint | undefined;
+    builderSelection: routes.validator.BuilderSelection | undefined;
+    forceBlockType?: BlockType;
+  }): BlockProductionOptions {
+    const {slot, forceBlockType, builderBoostFactor, builderSelection} = opts;
+    // set some sensible opts
+    // builderSelection will be deprecated and will run in mode MaxProfit if builder is enabled
+    // and the actual selection will be determined using builderBoostFactor passed by the validator
+    const selection = builderSelection ?? routes.validator.BuilderSelection.MaxProfit;
+    const boost = builderBoostFactor ?? BigInt(100);
+
+    if (boost > MAX_BUILDER_BOOST_FACTOR) {
+      throw new ApiError(400, `Invalid builderBoostFactor=${boost} > MAX_BUILDER_BOOST_FACTOR`);
+    }
+
+    const fork = config.getForkName(slot);
+    const isBuilderEnabled =
+      forceBlockType === BlockType.Blinded ||
+      (ForkSeq[fork] >= ForkSeq.bellatrix &&
+        chain.executionBuilder !== undefined &&
+        selection !== routes.validator.BuilderSelection.ExecutionOnly);
+
+    // At any point either the builder or execution or both flows should be active.
+    //
+    // Ideally such a scenario should be prevented on startup, but proposerSettingsFile or keymanager
+    // configurations could cause a validator pubkey to have builder disabled with builder selection builder only
+    // (TODO: independently make sure such an options update is not successful for a validator pubkey)
+    //
+    // So if builder is disabled ignore builder selection of builder only if caused by user mistake
+    // https://github.com/ChainSafe/lodestar/issues/6338
+    const isEngineEnabled =
+      forceBlockType === BlockType.Full ||
+      !isBuilderEnabled ||
+      selection !== routes.validator.BuilderSelection.BuilderOnly;
+
+    if (!isEngineEnabled && !isBuilderEnabled) {
+      throw Error(
+        `Internal error: neither builder nor execution proposal flow activated (builderSelection=${selection})`
+      );
+    }
+
+    return {slot, fork, builderSelection: selection, builderBoostFactor: boost, isBuilderEnabled, isEngineEnabled};
+  }
+
   async function produceCommonBlockBody(
     blockAttributes: BlockAttributes,
     currentState: CachedBeaconStateAllForks,
@@ -454,11 +509,7 @@ export function getValidatorApi(
 
   async function produceAssembledBlock(
     blockAttributes: BlockAttributes,
-    opts: {
-      builderBoostFactor: bigint;
-      builderSelection: routes.validator.BuilderSelection;
-      forceBlockType?: BlockType;
-    },
+    opts: BlockProductionOptions,
     loggerContext: Record<string, string | number | bigint | undefined | boolean>
   ): Promise<
     AssembledBlockResponse<BlockType> & {
@@ -467,8 +518,7 @@ export function getValidatorApi(
     }
   > {
     const {parentBlockRoot, slot} = blockAttributes;
-    const fork = config.getForkName(slot);
-    const {forceBlockType, builderBoostFactor, builderSelection} = opts;
+    const {isBuilderEnabled, isEngineEnabled, builderBoostFactor, builderSelection} = opts;
     const currentState = await chain.regen.getBlockSlotState(
       toRootHex(parentBlockRoot),
       slot,
@@ -476,37 +526,9 @@ export function getValidatorApi(
       RegenCaller.produceBlock
     );
 
-    const isBuilderEnabled =
-      ForkSeq[fork] >= ForkSeq.bellatrix &&
-      chain.executionBuilder !== undefined &&
-      builderSelection !== routes.validator.BuilderSelection.ExecutionOnly;
-
-    // At any point either the builder or execution or both flows should be active.
-    //
-    // Ideally such a scenario should be prevented on startup, but proposerSettingsFile or keymanager
-    // configurations could cause a validator pubkey to have builder disabled with builder selection builder only
-    // (TODO: independently make sure such an options update is not successful for a validator pubkey)
-    //
-    // So if builder is disabled ignore builder selection of builder only if caused by user mistake
-    // https://github.com/ChainSafe/lodestar/issues/6338
-    const isEngineEnabled = !isBuilderEnabled || builderSelection !== routes.validator.BuilderSelection.BuilderOnly;
     Object.assign(loggerContext, {isEngineEnabled, isBuilderEnabled});
 
-    /**
-     * | Engine/Builder | enabled | disabled |
-     * | enabled      |   1    |    2      |
-     * | disabled     |   3    |    4      |
-     */
-
-    // Case 4
-    if (!isEngineEnabled && !isBuilderEnabled) {
-      throw Error(
-        `Internal Error: Neither builder nor execution proposal flow activated isBuilderEnabled=${isBuilderEnabled} builderSelection=${builderSelection}`
-      );
-    }
-
-    // Case 2
-    if (forceBlockType === BlockType.Full || (isEngineEnabled && !isBuilderEnabled)) {
+    if (isEngineEnabled && !isBuilderEnabled) {
       const [commonBlockBody, engineBlockBodyResp] = await Promise.all([
         produceCommonBlockBody(blockAttributes, currentState, loggerContext),
         produceEngineBlockBody(blockAttributes, currentState, loggerContext),
@@ -528,7 +550,7 @@ export function getValidatorApi(
     }
 
     // Case 3
-    if (forceBlockType === BlockType.Blinded || (!isEngineEnabled && isBuilderEnabled)) {
+    if (!isEngineEnabled && isBuilderEnabled) {
       const [commonBlockBody, builderBlockBodyResp] = await Promise.all([
         produceCommonBlockBody(blockAttributes, currentState, loggerContext),
         produceBuilderBlockBody(blockAttributes, currentState, loggerContext),
@@ -741,21 +763,10 @@ export function getValidatorApi(
 
     if (engine.status === "fulfilled" && builder.status === "fulfilled") {
       // TODO: Due to logic of computing `consensusBlockValue` we have to assemble both bodies here
-      const engineBlockResp = await chain.assembleBlockBody(
-        BlockType.Full,
-        blockAttributes,
-        currentState,
-        commonBlockBody,
-        engine.value
-      );
-
-      const builderBlockResp = await chain.assembleBlockBody(
-        BlockType.Blinded,
-        blockAttributes,
-        currentState,
-        commonBlockBody,
-        builder.value
-      );
+      const [engineBlockResp, builderBlockResp] = await Promise.all([
+        chain.assembleBlockBody(BlockType.Full, blockAttributes, currentState, commonBlockBody, engine.value),
+        chain.assembleBlockBody(BlockType.Blinded, blockAttributes, currentState, commonBlockBody, builder.value),
+      ]);
 
       const result = selectBlockProductionSource({
         builderBlockValue: builder.value.executionPayloadValue + builderBlockResp.consensusBlockValue,
@@ -817,16 +828,7 @@ export function getValidatorApi(
 
     const parentBlockRoot = fromHex(chain.getProposerHead(slot).blockRoot);
     notOnOutOfRangeData(parentBlockRoot);
-    const fork = config.getForkName(slot);
-
-    // set some sensible opts
-    // builderSelection will be deprecated and will run in mode MaxProfit if builder is enabled
-    // and the actual selection will be determined using builderBoostFactor passed by the validator
-    builderSelection = builderSelection ?? routes.validator.BuilderSelection.MaxProfit;
-    builderBoostFactor = builderBoostFactor ?? BigInt(100);
-    if (builderBoostFactor > MAX_BUILDER_BOOST_FACTOR) {
-      throw new ApiError(400, `Invalid builderBoostFactor=${builderBoostFactor} > MAX_BUILDER_BOOST_FACTOR`);
-    }
+    const ctx = normalizeBlockProductionOptions({slot, builderBoostFactor, builderSelection, forceBlockType});
 
     const blockAttributes: BlockAttributes = {
       feeRecipient,
@@ -840,7 +842,7 @@ export function getValidatorApi(
 
     const loggerContext = {
       slot,
-      fork,
+      fork: ctx.fork,
       builderSelection,
       strictFeeRecipientCheck,
       // winston logger doesn't like bigint
@@ -850,11 +852,7 @@ export function getValidatorApi(
     // Starting the process of block production
     const blockProductionTimer = metrics?.blockProductionTime.startTimer();
     const {block, executionPayloadValue, consensusBlockValue, executionPayloadSource, executionPayloadBlinded} =
-      await produceAssembledBlock(
-        blockAttributes,
-        {builderBoostFactor, builderSelection, forceBlockType},
-        loggerContext
-      );
+      await produceAssembledBlock(blockAttributes, ctx, loggerContext);
     blockProductionTimer?.({source: executionPayloadSource});
 
     logger.verbose("Produced block", {
