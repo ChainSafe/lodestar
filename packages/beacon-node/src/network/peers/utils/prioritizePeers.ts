@@ -241,13 +241,15 @@ function requestSubnetPeers(
     }
   }
 
+  let groupIndex = 0;
   for (const group of samplingGroups ?? []) {
     const peersInGroup = peersPerGroup.get(group) ?? 0;
-    metrics?.peerCountPerSamplingGroup.set({group}, peersInGroup);
+    metrics?.peerCountPerSamplingGroup.set({groupIndex}, peersInGroup);
     if (peersInGroup < targetGroupPeers) {
       // We need more peers
       groupQueries.set(group, targetGroupPeers - peersInGroup);
     }
+    groupIndex++;
   }
 
   return {attnetQueries, syncnetQueries, groupQueries, dutiesByPeer};

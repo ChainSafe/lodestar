@@ -111,10 +111,10 @@ export function createNetworkCoreMetrics(register: RegistryMetricCreator) {
       help: "network.reportPeer count by reason",
       labelNames: ["reason"],
     }),
-    peerCountPerSamplingGroup: register.gauge<{group: CustodyIndex}>({
+    peerCountPerSamplingGroup: register.gauge<{groupIndex: number}>({
       name: "lodestar_peer_count_per_sampling_group",
       help: "Current count of peers per sampling group",
-      labelNames: ["group"],
+      labelNames: ["groupIndex"],
     }),
     peerManager: {
       heartbeatDuration: register.histogram({
