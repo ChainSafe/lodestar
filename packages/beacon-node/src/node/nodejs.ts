@@ -1,19 +1,19 @@
 import {setMaxListeners} from "node:events";
 import {Registry} from "prom-client";
 
-import {PeerId} from "@libp2p/interface";
+import {hasher} from "@chainsafe/persistent-merkle-tree";
+import {PrivateKey} from "@libp2p/interface";
 import {BeaconApiMethods} from "@lodestar/api/beacon/server";
 import {BeaconConfig} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {phase0} from "@lodestar/types";
-import {callFnWhenAwait, sleep} from "@lodestar/utils";
+import {sleep} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
 import {BeaconRestApiServer, getApi} from "../api/index.js";
-import {pruneHistory} from "../chain/archiver/pruneHistory.js";
-import {HistoricalStateRegen} from "../chain/historicalState/index.js";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
+import {ValidatorMonitor, createValidatorMonitor} from "../chain/validatorMonitor.js";
 import {IBeaconDb} from "../db/index.js";
 import {initializeEth1ForBlockProduction} from "../eth1/index.js";
 import {initializeExecutionBuilder, initializeExecutionEngine} from "../execution/index.js";
@@ -34,6 +34,7 @@ export type BeaconNodeModules = {
   config: BeaconConfig;
   db: IBeaconDb;
   metrics: Metrics | null;
+  validatorMonitor: ValidatorMonitor | null;
   network: Network;
   chain: IBeaconChain;
   api: BeaconApiMethods;
@@ -51,7 +52,7 @@ export type BeaconNodeInitModules = {
   db: IBeaconDb;
   logger: LoggerNode;
   processShutdownCallback: ProcessShutdownCallback;
-  peerId: PeerId;
+  privateKey: PrivateKey;
   dataDir: string;
   peerStoreDir?: string;
   anchorState: BeaconStateAllForks;
@@ -97,6 +98,7 @@ export class BeaconNode {
   metrics: Metrics | null;
   metricsServer: HttpMetricsServer | null;
   monitoring: MonitoringService | null;
+  validatorMonitor: ValidatorMonitor | null;
   network: Network;
   chain: IBeaconChain;
   api: BeaconApiMethods;
@@ -114,6 +116,7 @@ export class BeaconNode {
     metrics,
     metricsServer,
     monitoring,
+    validatorMonitor,
     network,
     chain,
     api,
@@ -127,6 +130,7 @@ export class BeaconNode {
     this.metrics = metrics;
     this.metricsServer = metricsServer;
     this.monitoring = monitoring;
+    this.validatorMonitor = validatorMonitor;
     this.db = db;
     this.chain = chain;
     this.api = api;
@@ -149,13 +153,17 @@ export class BeaconNode {
     db,
     logger,
     processShutdownCallback,
-    peerId,
+    privateKey,
     dataDir,
     peerStoreDir,
     anchorState,
     wsCheckpoint,
     metricsRegistries = [],
   }: BeaconNodeInitModules): Promise<T> {
+    if (hasher.name !== "hashtree") {
+      throw Error(`Loaded incorrect hasher ${hasher.name}, expected hashtree`);
+    }
+
     const controller = new AbortController();
     // We set infinity to prevent MaxListenersExceededWarning which get logged when listeners > 10
     // Since it is perfectly fine to have listeners > 10
@@ -174,35 +182,29 @@ export class BeaconNode {
       // monitoring relies on metrics data
       opts.monitoring.endpoint
     ) {
-      metrics = createMetrics(
-        opts.metrics,
-        config,
-        anchorState,
-        logger.child({module: LoggerModule.vmon}),
-        metricsRegistries
-      );
+      metrics = createMetrics(opts.metrics, anchorState.genesisTime, metricsRegistries);
       initBeaconMetrics(metrics, anchorState);
       // Since the db is instantiated before this, metrics must be injected manually afterwards
       db.setMetrics(metrics.db);
       signal.addEventListener("abort", metrics.close, {once: true});
     }
 
+    const validatorMonitor =
+      opts.metrics.enabled || opts.validatorMonitor.validatorMonitorLogs
+        ? createValidatorMonitor(
+            metrics,
+            config,
+            anchorState.genesisTime,
+            logger.child({module: LoggerModule.vmon}),
+            opts.validatorMonitor
+          )
+        : null;
+
     const clock = new Clock({config, genesisTime: anchorState.genesisTime, signal});
 
     // Prune hot db repos
     // TODO: Should this call be awaited?
     await db.pruneHotDb();
-
-    if (opts.chain.pruneHistory) {
-      // prune ALL stale data before starting
-      logger.info("Pruning historical data");
-      await callFnWhenAwait(
-        pruneHistory(config, db, logger, metrics, anchorState.finalizedCheckpoint.epoch, clock.currentEpoch),
-        () => logger.info("Still pruning historical data, please wait..."),
-        30_000,
-        signal
-      );
-    }
 
     const monitoring = opts.monitoring.endpoint
       ? new MonitoringService(
@@ -212,25 +214,16 @@ export class BeaconNode {
         )
       : null;
 
-    const historicalStateRegen = await HistoricalStateRegen.init({
-      opts: {
-        genesisTime: anchorState.genesisTime,
-        dbLocation: opts.db.name,
-      },
-      config,
-      metrics,
-      logger: logger.child({module: LoggerModule.chain}),
-      signal,
-    });
-
     const chain = new BeaconChain(opts.chain, {
       config,
       clock,
       dataDir,
       db,
+      dbName: opts.db.name,
       logger: logger.child({module: LoggerModule.chain}),
       processShutdownCallback,
       metrics,
+      validatorMonitor,
       anchorState,
       eth1: initializeEth1ForBlockProduction(opts.eth1, {
         config,
@@ -247,11 +240,10 @@ export class BeaconNode {
       executionBuilder: opts.executionBuilder.enabled
         ? initializeExecutionBuilder(opts.executionBuilder, config, metrics, logger)
         : undefined,
-      historicalStateRegen,
     });
 
     // Load persisted data from disk to in-memory caches
-    await chain.loadFromDisk();
+    await chain.init();
 
     // Network needs to be initialized before the sync
     // See https://github.com/ChainSafe/lodestar/issues/4543
@@ -262,7 +254,7 @@ export class BeaconNode {
       metrics,
       chain,
       db,
-      peerId,
+      privateKey,
       peerStoreDir,
       getReqRespHandler: getReqRespHandlers({db, chain}),
     });
@@ -306,7 +298,7 @@ export class BeaconNode {
     const metricsServer = opts.metrics.enabled
       ? await getHttpMetricsServer(opts.metrics, {
           register: (metrics as Metrics).register,
-          getOtherMetrics: async () => Promise.all([network.scrapeMetrics(), historicalStateRegen.scrapeMetrics()]),
+          getOtherMetrics: async () => Promise.all([network.scrapeMetrics(), chain.archiveStore.scrapeMetrics()]),
           logger: logger.child({module: LoggerModule.metrics}),
         })
       : null;
@@ -331,6 +323,7 @@ export class BeaconNode {
       metrics,
       metricsServer,
       monitoring,
+      validatorMonitor,
       network,
       chain,
       api,

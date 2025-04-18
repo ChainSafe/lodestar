@@ -35,6 +35,11 @@ export function processConsolidationRequest(
     return;
   }
 
+  // Verify that source != target, so a consolidation cannot be used as an exit.
+  if (sourceIndex === targetIndex) {
+    return;
+  }
+
   // If the pending consolidations queue is full, consolidation requests are ignored
   if (state.pendingConsolidations.length >= PENDING_CONSOLIDATIONS_LIMIT) {
     return;
@@ -44,25 +49,21 @@ export function processConsolidationRequest(
   if (getConsolidationChurnLimit(state.epochCtx) <= MIN_ACTIVATION_BALANCE) {
     return;
   }
-  // Verify that source != target, so a consolidation cannot be used as an exit.
-  if (sourceIndex === targetIndex) {
-    return;
-  }
 
   const sourceValidator = state.validators.get(sourceIndex);
   const targetValidator = state.validators.getReadonly(targetIndex);
   const sourceWithdrawalAddress = sourceValidator.withdrawalCredentials.subarray(12);
   const currentEpoch = state.epochCtx.epoch;
 
-  // Verify that target has compounding withdrawal credentials
-  if (!hasCompoundingWithdrawalCredential(targetValidator.withdrawalCredentials)) {
-    return;
-  }
-
   // Verify source withdrawal credentials
   const hasCorrectCredential = hasExecutionWithdrawalCredential(sourceValidator.withdrawalCredentials);
   const isCorrectSourceAddress = Buffer.compare(sourceWithdrawalAddress, sourceAddress) === 0;
   if (!(hasCorrectCredential && isCorrectSourceAddress)) {
+    return;
+  }
+
+  // Verify that target has compounding withdrawal credentials
+  if (!hasCompoundingWithdrawalCredential(targetValidator.withdrawalCredentials)) {
     return;
   }
 
@@ -86,6 +87,7 @@ export function processConsolidationRequest(
     return;
   }
 
+  // Initiate source validator exit and append pending consolidation
   // TODO Electra: See if we can get rid of big int
   const exitEpoch = computeConsolidationEpochAndUpdateChurn(state, BigInt(sourceValidator.effectiveBalance));
   sourceValidator.exitEpoch = exitEpoch;

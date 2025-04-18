@@ -9,7 +9,6 @@ import {
   RootHex,
   Slot,
   ValidatorIndex,
-  phase0,
 } from "@lodestar/types";
 import {
   DataAvailabilityStatus,

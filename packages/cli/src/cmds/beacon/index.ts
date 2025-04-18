@@ -9,8 +9,8 @@ export const beacon: CliCommand<BeaconArgs, GlobalArgs> = {
   docsFolder: "run/beacon-management",
   examples: [
     {
-      command: "beacon --network holesky",
-      description: "Run a beacon chain node and connect to the holesky testnet",
+      command: "beacon --network hoodi",
+      description: "Run a beacon chain node and connect to the hoodi testnet",
     },
   ],
   options: beaconOptions as CliCommandOptions<BeaconArgs>,

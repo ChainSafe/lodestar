@@ -8,7 +8,7 @@ import {
   createCachedBeaconState,
   stateTransition,
 } from "@lodestar/state-transition";
-import {IBeaconDb} from "../../db/index.js";
+import {IBeaconDb} from "../../../db/index.js";
 import {HistoricalStateRegenMetrics, RegenErrorType} from "./types.js";
 
 /**
@@ -88,7 +88,7 @@ export async function getHistoricalState(
           executionPayloadStatus: ExecutionPayloadStatus.valid,
           dataAvailableStatus: DataAvailableStatus.available,
         },
-        metrics
+        {metrics}
       );
     } catch (e) {
       metrics?.regenErrorCount.inc({reason: RegenErrorType.blockProcessing});

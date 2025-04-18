@@ -80,7 +80,7 @@ const sszStatic =
 specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
   ssz_static: {
     type: RunnerType.custom,
-    // starting from v1.4.0-beta.6, there is "whisk" fork in ssz_static tests but we ignore them
-    fn: sszStatic("whisk"),
+    // starting from v1.5.0-beta.3, there is "eip7441" fork in ssz_static tests but we ignore them
+    fn: sszStatic("eip7441"),
   },
 });

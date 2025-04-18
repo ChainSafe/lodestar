@@ -168,15 +168,14 @@ export function isValidLightClientHeader(config: ChainForkConfig, header: LightC
     );
   }
 
-  if (epoch < config.DENEB_FORK_EPOCH) {
-    if (
-      ((header as LightClientHeader<ForkName.deneb>).execution.blobGasUsed &&
-        (header as LightClientHeader<ForkName.deneb>).execution.blobGasUsed !== BigInt(0)) ||
+  if (
+    epoch < config.DENEB_FORK_EPOCH &&
+    (((header as LightClientHeader<ForkName.deneb>).execution.blobGasUsed &&
+      (header as LightClientHeader<ForkName.deneb>).execution.blobGasUsed !== BigInt(0)) ||
       ((header as LightClientHeader<ForkName.deneb>).execution.excessBlobGas &&
-        (header as LightClientHeader<ForkName.deneb>).execution.excessBlobGas !== BigInt(0))
-    ) {
-      return false;
-    }
+        (header as LightClientHeader<ForkName.deneb>).execution.excessBlobGas !== BigInt(0)))
+  ) {
+    return false;
   }
 
   return isValidMerkleBranch(
