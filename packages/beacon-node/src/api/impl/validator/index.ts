@@ -464,7 +464,6 @@ export function getValidatorApi(
     AssembledBlockResponse<BlockType> & {
       executionPayloadBlinded: boolean;
       executionPayloadSource: ProducedBlockSource;
-      shouldOverrideBuilder: boolean;
     }
   > {
     const {parentBlockRoot, slot} = blockAttributes;
@@ -493,9 +492,6 @@ export function getValidatorApi(
     const isEngineEnabled = !isBuilderEnabled || builderSelection !== routes.validator.BuilderSelection.BuilderOnly;
     Object.assign(loggerContext, {isEngineEnabled, isBuilderEnabled});
 
-    // We will update this in response of the engine block production
-    let shouldOverrideBuilder = false;
-
     /**
      * | Engine/Builder | enabled | disabled |
      * | enabled      |   1    |    2      |
@@ -511,24 +507,44 @@ export function getValidatorApi(
 
     // Case 2
     if (forceBlockType === BlockType.Full || (isEngineEnabled && !isBuilderEnabled)) {
-      const blockResp = await chain.produceBlock(blockAttributes);
+      const [commonBlockBody, engineBlockBodyResp] = await Promise.all([
+        produceCommonBlockBody(blockAttributes, currentState, loggerContext),
+        produceEngineBlockBody(blockAttributes, currentState, loggerContext),
+      ]);
+
+      const blockResp = await chain.assembleBlockBody(
+        BlockType.Full,
+        blockAttributes,
+        currentState,
+        commonBlockBody,
+        engineBlockBodyResp
+      );
 
       return {
         ...blockResp,
         executionPayloadBlinded: false,
         executionPayloadSource: ProducedBlockSource.engine,
-        shouldOverrideBuilder,
       };
     }
 
     // Case 3
     if (forceBlockType === BlockType.Blinded || (!isEngineEnabled && isBuilderEnabled)) {
-      const blockResp = await chain.produceBlindedBlock(blockAttributes);
+      const [commonBlockBody, builderBlockBodyResp] = await Promise.all([
+        produceCommonBlockBody(blockAttributes, currentState, loggerContext),
+        produceBuilderBlockBody(blockAttributes, currentState, loggerContext),
+      ]);
+
+      const blockResp = await chain.assembleBlockBody(
+        BlockType.Blinded,
+        blockAttributes,
+        currentState,
+        commonBlockBody,
+        builderBlockBodyResp
+      );
 
       return {
         ...blockResp,
         executionPayloadBlinded: true,
-        shouldOverrideBuilder,
         executionPayloadSource: ProducedBlockSource.builder,
       };
     }
@@ -561,7 +577,6 @@ export function getValidatorApi(
               builderBoostFactor === BigInt(0) ||
               builderSelection === routes.validator.BuilderSelection.ExecutionAlways
             ) {
-              shouldOverrideBuilder = true;
               controller.abort();
             }
             return engineBlockBody;
@@ -647,7 +662,6 @@ export function getValidatorApi(
 
       return {
         ...blockResp,
-        shouldOverrideBuilder,
         executionPayloadBlinded: false,
         executionPayloadSource: ProducedBlockSource.engine,
       };
@@ -683,7 +697,6 @@ export function getValidatorApi(
 
       return {
         ...blockResp,
-        shouldOverrideBuilder,
         executionPayloadBlinded: true,
         executionPayloadSource: ProducedBlockSource.builder,
       };
@@ -721,13 +734,13 @@ export function getValidatorApi(
 
       return {
         ...blockResp,
-        shouldOverrideBuilder,
         executionPayloadBlinded: false,
         executionPayloadSource: ProducedBlockSource.engine,
       };
     }
 
     if (engine.status === "fulfilled" && builder.status === "fulfilled") {
+      // TODO: Due to logic of computing `consensusBlockValue` we have to assemble both bodies here
       const engineBlockResp = await chain.assembleBlockBody(
         BlockType.Full,
         blockAttributes,
@@ -766,7 +779,6 @@ export function getValidatorApi(
       if (executionPayloadSource === ProducedBlockSource.engine) {
         return {
           ...engineBlockResp,
-          shouldOverrideBuilder,
           executionPayloadBlinded: false,
           executionPayloadSource,
         };
@@ -774,7 +786,6 @@ export function getValidatorApi(
 
       return {
         ...builderBlockResp,
-        shouldOverrideBuilder,
         executionPayloadBlinded: true,
         executionPayloadSource,
       };
@@ -911,13 +922,22 @@ export function getValidatorApi(
       return {data, meta};
     },
 
-    async produceBlockV3({slot, randaoReveal, graffiti, skipRandaoVerification, builderBoostFactor, ...opts}) {
+    async produceBlockV3({
+      slot,
+      randaoReveal,
+      graffiti,
+      skipRandaoVerification,
+      builderBoostFactor,
+      builderSelection,
+      ...opts
+    }) {
       const {data, ...meta} = await produceEngineOrBuilderBlock({
         slot,
         randaoReveal,
         graffiti,
         skipRandaoVerification,
         builderBoostFactor,
+        builderSelection,
       });
 
       if (opts.blindedLocal === true && ForkSeq[meta.version] >= ForkSeq.bellatrix) {

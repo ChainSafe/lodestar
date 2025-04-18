@@ -139,6 +139,9 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       pubkey2index: new PubkeyIndexMap(),
       index2pubkey: [],
       produceCommonBlockBody: vi.fn(),
+      produceBlindedBlockBody: vi.fn(),
+      produceFullBlockBody: vi.fn(),
+      assembleBlockBody: vi.fn(),
       getProposerHead: vi.fn(),
       produceBlock: vi.fn(),
       produceBlindedBlock: vi.fn(),
@@ -195,5 +198,5 @@ export function getMockedForkChoice(): MockedForkChoice {
 }
 
 // To avoid loading the package in test while mocked, exporting frequently used types and constants
-export type {ProtoBlock};
 export {EpochDifference};
+export type {ProtoBlock};
