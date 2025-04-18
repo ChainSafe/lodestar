@@ -1,5 +1,7 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {config} from "@lodestar/config/default";
+import {createChainForkConfig} from "@lodestar/config";
+import {config as defaultConfig} from "@lodestar/config/default";
+import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {archiveBlocks} from "../../../../src/chain/archiveStore/utils/archiveBlocks.js";
@@ -38,6 +40,7 @@ describe("block archiver task", () => {
   });
 
   it("should archive finalized blocks", async () => {
+    const config = defaultConfig;
     const blockBytes = ssz.phase0.SignedBeaconBlock.serialize(ssz.phase0.SignedBeaconBlock.defaultValue());
     vi.spyOn(dbStub.block, "getBinary").mockResolvedValue(Buffer.from(blockBytes));
     // block i has slot i+1
@@ -84,6 +87,11 @@ describe("block archiver task", () => {
   });
 
   it("should archive data column sidecars for finalized blocks", async () => {
+    const config = createChainForkConfig({
+      ...defaultConfig,
+      FULU_FORK_EPOCH: 0,
+      MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 1,
+    });
     const blockBytes = ssz.fulu.SignedBeaconBlock.serialize(ssz.fulu.SignedBeaconBlock.defaultValue());
     const dataColumnBytes = ssz.fulu.DataColumnSidecar.serialize(ssz.fulu.DataColumnSidecar.defaultValue());
     vi.spyOn(dbStub.block, "getBinary").mockResolvedValue(blockBytes);
@@ -91,18 +99,18 @@ describe("block archiver task", () => {
 
     // Create blocks after fulu fork
     const blocks = Array.from({length: 5}, (_, i) =>
-      generateProtoBlock({slot: i + 1 + config.FULU_FORK_EPOCH * 32, blockRoot: toHexString(Buffer.alloc(32, i + 1))})
+      generateProtoBlock({
+        slot: i + 1 + config.FULU_FORK_EPOCH * 32,
+        blockRoot: toHexString(Buffer.alloc(32, i + 1)),
+      })
     );
     const canonicalBlocks = [blocks[4], blocks[3], blocks[1], blocks[0]];
     const nonCanonicalBlocks = [blocks[2]];
-    const currentEpoch = config.FULU_FORK_EPOCH + 8;
+
+    const currentEpoch = 2;
 
     vi.spyOn(forkChoiceStub, "getAllAncestorBlocks").mockReturnValue(canonicalBlocks);
     vi.spyOn(forkChoiceStub, "getAllNonAncestorBlocks").mockReturnValue(nonCanonicalBlocks);
-
-    // Mock expired slots to be pruned
-    const expiredSlots = [1, 2, 3].map((slot) => slot + config.FULU_FORK_EPOCH * 32);
-    vi.spyOn(dbStub.dataColumnSidecarsArchive, "keys").mockResolvedValue(expiredSlots);
 
     await archiveBlocks(
       config,
@@ -110,7 +118,7 @@ describe("block archiver task", () => {
       forkChoiceStub,
       lightclientServer,
       logger,
-      {epoch: config.FULU_FORK_EPOCH + 5, rootHex: ZERO_HASH_HEX},
+      {epoch: config.FULU_FORK_EPOCH + 1, rootHex: ZERO_HASH_HEX},
       currentEpoch
     );
 
@@ -131,7 +139,8 @@ describe("block archiver task", () => {
       nonCanonicalBlocks.map((block) => fromHexString(block.blockRoot))
     );
 
-    // Verify expired data column sidecars are pruned
-    expect(dbStub.dataColumnSidecarsArchive.batchDelete).toHaveBeenCalledWith(expiredSlots);
+    expect(dbStub.dataColumnSidecarsArchive.keys).toBeCalledWith({
+      lt: computeStartSlotAtEpoch(currentEpoch - config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS),
+    });
   });
 });
