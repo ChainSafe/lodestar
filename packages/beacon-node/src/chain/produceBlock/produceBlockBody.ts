@@ -416,17 +416,17 @@ export async function assembleBlockBodyToBlock<T extends BlockType>(
     currentState: CachedBeaconStateAllForks;
     blockAttributes: BlockAttributes;
     commonBlockBody: CommonBlockBody;
-    assembledBlockBody: AssembledBlockBodyResponse<T>;
+    assembleBlockBody: AssembledBlockBodyResponse<T>;
   }
 ): Promise<AssembledBlockResponse<T>> {
-  const {blockType, blockAttributes, currentState, commonBlockBody, assembledBlockBody} = opts;
+  const {blockType, blockAttributes, currentState, commonBlockBody, assembleBlockBody} = opts;
   const {slot, parentBlockRoot} = blockAttributes;
-  const {blobs, executionPayloadValue, shouldOverrideBuilder} = assembledBlockBody;
+  const {blobs, executionPayloadValue, shouldOverrideBuilder} = assembleBlockBody;
   const proposerIndex = currentState.epochCtx.getBeaconProposer(slot);
 
   const body = {
     ...commonBlockBody,
-    ...assembledBlockBody.body,
+    ...assembleBlockBody.body,
   };
 
   // The hashtree root computed here for debug log will get cached and hence won't introduce additional delays
