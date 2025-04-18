@@ -93,6 +93,18 @@ export function getMetrics(register: MetricsRegister) {
       name: "lodestar_stfn_post_state_validators_nodes_populated_miss_total",
       help: "Total count state.validators nodesPopulated is false on stfn for post state",
     }),
+    newSeenAttestersPerBlock: register.gauge({
+      name: "lodestar_stfn_new_seen_attesters_per_block_total",
+      help: "Total count of new seen attesters per block",
+    }),
+    newSeenAttestersEffectiveBalancePerBlock: register.gauge({
+      name: "lodestar_stfn_new_seen_attesters_effective_balance_per_block_total",
+      help: "Total effective balance increment of new seen attesters per block",
+    }),
+    attestationsPerBlock: register.gauge({
+      name: "lodestar_stfn_attestations_per_block_total",
+      help: "Total count of attestations per block",
+    }),
   };
 }
 
