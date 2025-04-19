@@ -23,6 +23,8 @@ export type ForkConfig = {
   getForkInfo(slot: Slot): ForkInfo;
   /** Get the hard-fork info for the active fork at `epoch` */
   getForkInfoAtEpoch(epoch: Epoch): ForkInfo;
+  /** Get the hard-fork info for the fork */
+  getForkInfoFromFork(fork: ForkName): ForkInfo;
   /** Get the hard-fork name at a given slot */
   getForkName(slot: Slot): ForkName;
   /** Get the hard-fork sequence number at a given slot */

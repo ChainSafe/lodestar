@@ -1,5 +1,5 @@
 import {fromHex, toHex} from "@lodestar/utils";
-import {ChainConfig, SpecValue, SpecValueTypeName, chainConfigTypes} from "./types.js";
+import {BlobSchedule, ChainConfig, SpecValue, SpecValueTypeName, chainConfigTypes, isBlobSchedule} from "./types.js";
 
 const MAX_UINT64_JSON = "18446744073709551615";
 
@@ -76,6 +76,17 @@ export function serializeSpecValue(value: SpecValue, typeName: SpecValueTypeName
         throw Error(`Invalid value ${value.toString()} expected string`);
       }
       return value;
+    case "blob_schedule":
+      if (!isBlobSchedule(value)) {
+        throw Error(`Invalid value ${value.toString()} expected BlobSchedule`);
+      }
+
+      return JSON.stringify(value, (key, value) => {
+        if (key === "EPOCH" && value === Infinity) {
+          return MAX_UINT64_JSON;
+        }
+        return value;
+      });
   }
 }
 
@@ -99,5 +110,13 @@ export function deserializeSpecValue(valueStr: unknown, typeName: SpecValueTypeN
 
     case "string":
       return valueStr;
+
+    case "blob_schedule":
+      return JSON.parse(valueStr, (key, value) => {
+        if (key === "EPOCH" && value === MAX_UINT64_JSON) {
+          return Infinity;
+        }
+        return value;
+      }) as BlobSchedule;
   }
 }

@@ -78,10 +78,8 @@ export type ChainConfig = {
   MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: number;
   MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: number;
   BLOB_SIDECAR_SUBNET_COUNT: number;
-  MAX_BLOBS_PER_BLOCK: number;
   MAX_REQUEST_BLOB_SIDECARS: number;
   BLOB_SIDECAR_SUBNET_COUNT_ELECTRA: number;
-  MAX_BLOBS_PER_BLOCK_ELECTRA: number;
   MAX_REQUEST_BLOB_SIDECARS_ELECTRA: number;
 
   SAMPLES_PER_SLOT: number;
@@ -89,7 +87,7 @@ export type ChainConfig = {
   NODE_CUSTODY_REQUIREMENT: number;
   VALIDATOR_CUSTODY_REQUIREMENT: number;
   BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: number;
-  MAX_BLOBS_PER_BLOCK_FULU: number;
+  BLOB_SCHEDULE: BlobSchedule;
 };
 
 export const chainConfigTypes: SpecTypes<ChainConfig> = {
@@ -160,10 +158,8 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: "number",
   MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: "number",
   BLOB_SIDECAR_SUBNET_COUNT: "number",
-  MAX_BLOBS_PER_BLOCK: "number",
   MAX_REQUEST_BLOB_SIDECARS: "number",
   BLOB_SIDECAR_SUBNET_COUNT_ELECTRA: "number",
-  MAX_BLOBS_PER_BLOCK_ELECTRA: "number",
   MAX_REQUEST_BLOB_SIDECARS_ELECTRA: "number",
 
   SAMPLES_PER_SLOT: "number",
@@ -171,11 +167,32 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   NODE_CUSTODY_REQUIREMENT: "number",
   VALIDATOR_CUSTODY_REQUIREMENT: "number",
   BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: "number",
-  MAX_BLOBS_PER_BLOCK_FULU: "number",
+
+  BLOB_SCHEDULE: "blob_schedule",
 };
 
+type BlobScheduleEntry = {
+  EPOCH: number;
+  MAX_BLOBS_PER_BLOCK: number;
+};
+
+export type BlobSchedule = BlobScheduleEntry[];
+
+export function isBlobSchedule(value: unknown): value is BlobSchedule {
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (entry) =>
+        typeof entry === "object" &&
+        entry !== null &&
+        typeof entry.EPOCH === "number" &&
+        typeof entry.MAX_BLOBS_PER_BLOCK === "number"
+    )
+  );
+}
+
 /** Allows values in a Spec file */
-export type SpecValue = number | bigint | Uint8Array | string;
+export type SpecValue = number | bigint | Uint8Array | string | BlobSchedule;
 
 /** Type value name of each spec field. Numbers are ignored since they are the most common */
 export type SpecValueType<V extends SpecValue> = V extends number
@@ -186,7 +203,9 @@ export type SpecValueType<V extends SpecValue> = V extends number
       ? "bytes"
       : V extends string
         ? "string"
-        : never;
+        : V extends BlobSchedule
+          ? "blob_schedule"
+          : never;
 
 /** All possible type names for a SpecValue */
 export type SpecValueTypeName = SpecValueType<SpecValue>;
