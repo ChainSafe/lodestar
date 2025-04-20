@@ -45,6 +45,7 @@ export function toSpecValueTypeName(value: SpecValue): SpecValueTypeName {
   if (typeof value === "number") return "number";
   if (typeof value === "bigint") return "bigint";
   if (typeof value === "string") return "string";
+  if (isBlobSchedule(value)) return "blob_schedule";
   throw Error(`Unknown value type ${value}`);
 }
 
@@ -112,11 +113,20 @@ export function deserializeSpecValue(valueStr: unknown, typeName: SpecValueTypeN
       return valueStr;
 
     case "blob_schedule":
-      return JSON.parse(valueStr, (key, value) => {
-        if (key === "EPOCH" && value === MAX_UINT64_JSON) {
-          return Infinity;
+      const parsedJson = JSON.parse(valueStr, (key, value) => {
+        if (key === "EPOCH") {
+          if (value === MAX_UINT64_JSON) {
+            return Infinity;
+          } else {
+            parseInt(value, 10);
+          }
         }
         return value;
-      }) as BlobSchedule;
+      });
+
+      if (!isBlobSchedule(parsedJson)) {
+        throw Error(`Invalid blob schedule value ${valueStr as string} expected string`);
+      }
+      return parsedJson as BlobSchedule;
   }
 }
