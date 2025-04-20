@@ -83,8 +83,11 @@ export function serializeSpecValue(value: SpecValue, typeName: SpecValueTypeName
       }
 
       return JSON.stringify(value, (key, value) => {
-        if (key === "EPOCH" && value === Infinity) {
-          return MAX_UINT64_JSON;
+        if (key === "EPOCH" || key === "MAX_BLOBS_PER_BLOCK") {
+          if (value === Infinity) {
+            return MAX_UINT64_JSON;
+          }
+          return value.toString(10);
         }
         return value;
       });
@@ -112,21 +115,21 @@ export function deserializeSpecValue(valueStr: unknown, typeName: SpecValueTypeN
     case "string":
       return valueStr;
 
-    case "blob_schedule":
+    case "blob_schedule": {
       const parsedJson = JSON.parse(valueStr, (key, value) => {
-        if (key === "EPOCH") {
+        if (key === "EPOCH" || key === "MAX_BLOBS_PER_BLOCK") {
           if (value === MAX_UINT64_JSON) {
             return Infinity;
-          } else {
-            parseInt(value, 10);
           }
+          return parseInt(value, 10);
         }
         return value;
       });
 
       if (!isBlobSchedule(parsedJson)) {
-        throw Error(`Invalid blob schedule value ${valueStr as string} expected string`);
+        throw Error(`Invalid blob schedule value ${valueStr}`);
       }
       return parsedJson as BlobSchedule;
+    }
   }
 }
