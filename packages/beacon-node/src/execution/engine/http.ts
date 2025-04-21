@@ -417,20 +417,23 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   }> {
     let method: keyof EngineApiRpcReturnTypes;
     switch (fork) {
-      case ForkName.fulu:
-        method = "engine_getPayloadV5";
-        break;
-      case ForkName.electra:
-        method = "engine_getPayloadV4";
-        break;
-      case ForkName.deneb:
-        method = "engine_getPayloadV3";
+      case ForkName.phase0:
+      case ForkName.altair:
+      case ForkName.bellatrix:
+        method = "engine_getPayloadV1";
         break;
       case ForkName.capella:
         method = "engine_getPayloadV2";
         break;
+      case ForkName.deneb:
+        method = "engine_getPayloadV3";
+        break;
+      case ForkName.electra:
+        method = "engine_getPayloadV4";
+        break;
       default:
-        method = "engine_getPayloadV1";
+        method = "engine_getPayloadV5";
+        break;
     }
     const payloadResponse = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
