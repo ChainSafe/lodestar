@@ -2,7 +2,12 @@ import {ChainForkConfig} from "@lodestar/config";
 import {isForkPostDeneb} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Epoch, Slot} from "@lodestar/types";
-import {BlockInput, BlockInputBlobs, BlockInputColumns, BlockInputPreData} from "./blockInput.js";
+import {
+  BlockInput,
+  BlockInputBlobs,
+  // BlockInputColumns,
+  BlockInputPreData,
+} from "./blockInput.js";
 import {BlockInputType, DataAvailabilityStatus} from "./types.js";
 
 export function prettyPrintArray(arr: unknown[]): string {
@@ -16,9 +21,9 @@ export function isBlockInputBlobs(blockInput: BlockInput): blockInput is BlockIn
   return blockInput.type === BlockInputType.Blobs;
 }
 
-export function isBlockInputColumns(blockInput: BlockInput): blockInput is BlockInputColumns {
-  return blockInput.type === BlockInputType.Columns;
-}
+// export function isBlockInputColumns(blockInput: BlockInput): blockInput is BlockInputColumns {
+//   return blockInput.type === BlockInputType.Columns;
+// }
 
 export function getDataAvailabilityStatus(
   config: ChainForkConfig,

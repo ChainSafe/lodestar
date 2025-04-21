@@ -1,33 +1,46 @@
-import {ForkName, ForkPostDeneb, ForkPostElectra, ForkPreDeneb} from "@lodestar/params";
-import {BlobIndex, SignedBeaconBlock, Slot, deneb} from "@lodestar/types";
+import {
+  ForkName,
+  ForkPostDeneb,
+  ForkPostElectra,
+  // ForkPostFulu,
+  ForkPreDeneb,
+} from "@lodestar/params";
+import {
+  BlobIndex,
+  SignedBeaconBlock,
+  Slot,
+  deneb,
+  // fulu
+} from "@lodestar/types";
 import {prettyBytes, toHex, withTimeout} from "@lodestar/utils";
 import {VersionedHashes} from "../../../execution/index.js";
 import {kzgCommitmentToVersionedHash} from "../../../util/blobs.js";
 import {byteArrayEquals} from "../../../util/bytes.js";
+// import {CustodyConfig} from "../../../util/dataColumns.js";
 import {BlockInputError, BlockInputErrorCode} from "./errors.js";
 import {
   AddBlobProps,
   AddBlockProps,
+  // AddColumnProps,
   BlobMeta,
   BlobWithSource,
   BlockInputBaseProps,
   BlockInputBlobsProps,
-  BlockInputColumnsProps,
+  // BlockInputColumnsProps,
   BlockInputDataStatus,
   BlockInputPreDataProps,
   BlockInputType,
   BlockWithSource,
-  ColumnWithSource,
+  ColumnMeta,
+  // ColumnWithSource,
   DataAvailabilityStatus,
   LogMetaBasic,
   LogMetaBlobs,
-  LogMetaColumns,
+  // LogMetaColumns,
   PossibleDataTypes,
   PromiseParts,
 } from "./types.js";
 import {prettyPrintArray} from "./utils.js";
-
-type ColumnIndex = number;
 
 export interface BlockInput<
   BlockType extends SignedBeaconBlock = SignedBeaconBlock,
@@ -291,8 +304,18 @@ abstract class BlockInputData<BlockType extends SignedBeaconBlock<ForkPostDeneb>
 {
   protected versionHashes?: VersionedHashes;
 
-  getVersionHashes(): VersionedHashes {
+  addBlock(props: AddBlockProps<BlockType>): void {
+    this.versionHashes = props.block.message.body.blobKzgCommitments.map(kzgCommitmentToVersionedHash);
+    super.addBlock(props);
+  }
+
+  getVersionHashes(): VersionedHashes;
+  getVersionHashes(shouldError: false): undefined | VersionedHashes;
+  getVersionHashes(shouldError = true): undefined | VersionedHashes {
     if (!this.versionHashes || this.versionHashes.length !== this.numberOfBlobs()) {
+      if (!shouldError) {
+        return;
+      }
       throw new BlockInputError({
         code: BlockInputErrorCode.MISSING_VERSIONED_HASHES,
         blockRoot: this.prettyRootHex,
@@ -366,8 +389,8 @@ export class BlockInputBlobs<
         // this.logger?.error(`Removing blobIndex=${blobSidecar.index} from BlockInput`, {}, err);
       }
     }
+
     super.addBlock(props);
-    this.versionHashes = props.block.message.body.blobKzgCommitments.map(kzgCommitmentToVersionedHash);
   }
 
   hasBlob(blobIndex: BlobIndex): boolean {
@@ -422,25 +445,22 @@ export class BlockInputBlobs<
   }
 
   getMissingBlobMeta(): BlobMeta[];
-  getMissingBlobMeta(throwError: false): undefined | BlobMeta[];
-  getMissingBlobMeta(throwError = true): undefined | BlobMeta[] {
+  getMissingBlobMeta(shouldError: false): undefined | BlobMeta[];
+  getMissingBlobMeta(shouldError = true): undefined | BlobMeta[] {
     const blobMeta: BlobMeta[] = [];
-    try {
-      const versionHashes = this.getVersionHashes();
-      for (let index = 0; index < versionHashes.length; index++) {
-        if (!this.blobsCache.has(index)) {
-          blobMeta.push({
-            index,
-            blockRoot: this.blockRoot,
-            versionHash: versionHashes[index],
-          });
-        }
+    // The call would have succeeded against this implementation, but implementation
+    // signatures of overloads on extended classes are not externally visible. Need
+    // to cast `as false` to build
+    const versionHashes = this.getVersionHashes(shouldError as false);
+    if (!versionHashes) return;
+    for (let index = 0; index < versionHashes.length; index++) {
+      if (!this.blobsCache.has(index)) {
+        blobMeta.push({
+          index,
+          blockRoot: this.blockRoot,
+          versionHash: versionHashes[index],
+        });
       }
-    } catch (e) {
-      if (throwError) {
-        throw e;
-      }
-      return undefined;
     }
     return blobMeta;
   }
@@ -475,8 +495,9 @@ export class BlockInputBlobs<
         {
           code: BlockInputErrorCode.MISMATCHED_SLOT,
           blockRoot: this.prettyRootHex,
+          blockInputSlot: this.getSlot(false),
           blockSlot: block.message.slot,
-          mismatchedSlot: blobSidecar.signedBlockHeader.message.slot,
+          sidecarSlot: blobSidecar.signedBlockHeader.message.slot,
         },
         "Block and blob have mismatched slots"
       );
@@ -500,40 +521,205 @@ export class BlockInputBlobs<
 }
 
 // export class BlockInputColumns<
-//     BlockType extends SignedBeaconBlock<ForkPostElectra> = SignedBeaconBlock<ForkPostElectra>,
-//     DataType extends PossibleDataTypes = deneb.BlobSidecars,
+//     BlockType extends SignedBeaconBlock<ForkPostFulu> = SignedBeaconBlock<ForkPostFulu>,
+//     DataType extends PossibleDataTypes = fulu.DataColumnSidecars,
 //   >
 //   extends BlockInputData<BlockType, DataType>
 //   implements BlockInput<BlockType, DataType>
 // {
 //   type = BlockInputType.Columns;
 //   protected columnsCache = new Map<ColumnIndex, ColumnWithSource>();
+//   protected readonly custodyConfig: CustodyConfig;
 
 //   constructor(props: BlockInputColumnsProps<BlockType>) {
 //     super(props);
-//     this.type = BlockInputType.Columns;
+//     this.custodyConfig = props.custodyConfig;
 //   }
 
 //   getLogMeta(): LogMetaColumns {
 //     return {
 //       ...super.getLogMeta(),
-//       expectedColumns: `${this.blockWithSource?.block.message.body.blobKzgCommitments.length}`,
-//       receivedColumns: this.blobsCache.size,
+//       expectedColumns: this.custodyConfig.sampledColumns.length,
+//       receivedColumns: this.getSampledColumns(false).length,
 //     };
 //   }
 
 //   hasData(): boolean {
-//     return this.blobsCache.size !== 0;
+//     return this.columnsCache.size !== 0;
 //   }
 
 //   needsData(): boolean {
-//     return (
-//       this.dataAvailability === DataAvailabilityStatus.Available &&
-//       (!this.blockWithSource || this.columnsCache.size < this.custodyConfig.sampledColumns)
-//     );
+//     return this.dataAvailability === DataAvailabilityStatus.Available && !!this.getMissingColumnMeta().length;
 //   }
 
 //   addBlock(props: AddBlockProps<BlockType>): void {
+//     if (props.rootHex !== this.rootHex) {
+//       throw new BlockInputError(
+//         {
+//           code: BlockInputErrorCode.MISMATCHED_ROOT_HEX,
+//           blockInputRoot: this.rootHex,
+//           mismatchedRoot: props.rootHex,
+//           source: props.source,
+//           peerId: `${props.peerIdStr}`,
+//         },
+//         "addBlock rootHex does not match BlockInput.rootHex"
+//       );
+//     }
+
+//     for (const {columnSidecar} of this.columnsCache.values()) {
+//       const err = this.checkBlockAndColumnArePaired(props.block, columnSidecar);
+//       if (err) {
+//         this.columnsCache.delete(columnSidecar.index);
+//         // this.logger?.error(`Removing columnIndex=${columnSidecar.index} from BlockInput`, {}, err);
+//       }
+//     }
+
 //     super.addBlock(props);
+//   }
+
+//   addColumnSidecar({rootHex, columnSidecar, source, seenTimestampSec, peerIdStr}: AddColumnProps): void {
+//     if (rootHex !== this.rootHex) {
+//       throw new BlockInputError(
+//         {
+//           code: BlockInputErrorCode.MISMATCHED_ROOT_HEX,
+//           blockInputRoot: this.rootHex,
+//           mismatchedRoot: rootHex,
+//           source: source,
+//           peerId: `${peerIdStr}`,
+//         },
+//         "Column BeaconBlockHeader rootHex does not match BlockInput.rootHex"
+//       );
+//     }
+
+//     if (this.blockWithSource) {
+//       if (this.blockWithSource.block.message.body.blobKzgCommitments.length === 0) {
+//         throw new BlockInputError(
+//           {
+//             code: BlockInputErrorCode.MISMATCHED_KZG_COMMITMENT,
+//             blockRoot: this.rootHex,
+//             slot: this.getSlot(),
+//             sidecarIndex: columnSidecar.index,
+//           },
+//           "Block has no kzg commitments but DataColumnSidecar was received"
+//         );
+//       }
+
+//       const err = this.checkBlockAndColumnArePaired(this.blockWithSource.block, columnSidecar);
+//       if (err) {
+//         throw err;
+//       }
+//     }
+
+//     this.columnsCache.set(columnSidecar.index, {columnSidecar, source, seenTimestampSec, peerIdStr});
+
+//     if (this.getMissingColumnMeta().length === 0) {
+//       this.dataStatus = BlockInputDataStatus.CompleteData;
+//       // TODO: (@matthewkeil) should this resolve the sampled or custody columns?
+//       this.dataPromise.resolve(this.getSampledColumns() as DataType);
+//       if (this.hasBlock()) {
+//         this.timeCompleteSec = seenTimestampSec;
+//       }
+//     } else if (this.dataStatus === BlockInputDataStatus.NoData) {
+//       this.dataStatus = BlockInputDataStatus.IncompleteData;
+//     }
+//   }
+
+//   hasColumn(columnIndex: number): boolean {
+//     return this.columnsCache.has(columnIndex);
+//   }
+
+//   getCustodyColumns = this.makeColumnsGetter("custody").bind(this);
+
+//   getSampledColumns = this.makeColumnsGetter("sampled").bind(this);
+
+//   getAllColumnsWithSource(): ColumnWithSource[] {
+//     return [...this.columnsCache.values()];
+//   }
+
+//   getAllColumns(): fulu.DataColumnSidecars {
+//     return this.getAllColumnsWithSource().map(({columnSidecar}) => columnSidecar);
+//   }
+
+//   getMissingColumnMeta(): ColumnMeta[] {
+//     const needed: ColumnMeta[] = [];
+//     for (const index of this.custodyConfig.sampledColumns) {
+//       if (!this.columnsCache.has(index)) {
+//         needed.push({index, blockRoot: this.blockRoot});
+//       }
+//     }
+//     return needed;
+//   }
+
+//   private checkBlockAndColumnArePaired(block: BlockType, columnSidecar: fulu.DataColumnSidecar): void | Error {
+//     if (block.message.slot !== columnSidecar.signedBlockHeader.message.slot) {
+//       return new BlockInputError(
+//         {
+//           code: BlockInputErrorCode.MISMATCHED_SLOT,
+//           blockRoot: this.prettyRootHex,
+//           blockInputSlot: this.getSlot(false),
+//           blockSlot: block.message.slot,
+//           sidecarSlot: columnSidecar.signedBlockHeader.message.slot,
+//         },
+//         `Block and column have mismatched slots. blockSlot=${block.message.slot} columnSlot=${columnSidecar.signedBlockHeader.message.slot}`
+//       );
+//     }
+
+//     const expectedCommitments = block.message.body.blobKzgCommitments;
+
+//     // check for 0 length of sidecar commitments happens in `verifyDataColumnSidecar` when they are
+//     // received via gossip or reqresp
+//     if (expectedCommitments.length !== columnSidecar.kzgCommitments.length) {
+//       return new BlockInputError(
+//         {
+//           code: BlockInputErrorCode.MISMATCHED_KZG_COMMITMENT_LENGTH,
+//           blockRoot: this.rootHex,
+//           slot: this.getSlot(false),
+//           columnIndex: columnSidecar.index,
+//           blockCommitments: expectedCommitments.length,
+//           sidecarCommitments: columnSidecar.kzgCommitments.length,
+//         },
+//         "DataColumnSidecar commitment length does not match block commitment length"
+//       );
+//     }
+
+//     for (let index = 0; index < expectedCommitments.length; index++) {
+//       if (!byteArrayEquals(expectedCommitments[index], columnSidecar.kzgCommitments[index])) {
+//         return new BlockInputError(
+//           {
+//             code: BlockInputErrorCode.MISMATCHED_KZG_COMMITMENT,
+//             blockRoot: this.rootHex,
+//             slot: this.getSlot(false),
+//             sidecarIndex: columnSidecar.index,
+//             commitmentIndex: index,
+//           },
+//           "DataColumnsSidecar kzgCommitment does not match block kzgCommitment"
+//         );
+//       }
+//     }
+//   }
+
+//   private makeColumnsGetter(type: "custody" | "sampled"): (throwError?: boolean) => fulu.DataColumnSidecars {
+//     return (throwError = true) => {
+//       const requested: fulu.DataColumnSidecars = [];
+//       const missing: number[] = [];
+//       for (const index of this.custodyConfig[`${type}Columns`]) {
+//         const cachedColumn = this.columnsCache.get(index);
+//         if (cachedColumn) {
+//           requested.push(cachedColumn.columnSidecar);
+//         } else {
+//           missing.push(index);
+//         }
+//       }
+//       if (missing.length && throwError) {
+//         throw new BlockInputError(
+//           {
+//             code: BlockInputErrorCode.INCOMPLETE_DATA,
+//             ...this.getLogMeta(),
+//           },
+//           `Missing ${type} columns=${prettyPrintArray(missing)}`
+//         );
+//       }
+//       return requested;
+//     };
 //   }
 // }
