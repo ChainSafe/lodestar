@@ -1,5 +1,11 @@
 import {ForkName, ForkPostDeneb, ForkPostElectra, ForkPreDeneb} from "@lodestar/params";
-import {RootHex, SignedBeaconBlock, deneb} from "@lodestar/types";
+import {
+  RootHex,
+  SignedBeaconBlock,
+  deneb,
+  // fulu
+} from "@lodestar/types";
+// import {CustodyConfig} from "../../../util/dataColumns.js";
 import {PeerIdStr} from "../../../util/peerId.js";
 
 export enum DataAvailabilityStatus {
@@ -19,10 +25,10 @@ export enum BlockInputDataStatus {
 export enum BlockInputType {
   PreData = "pre-data",
   Blobs = "blobs",
-  Columns = "columns",
+  // Columns = "columns",
 }
 
-export type PossibleDataTypes = null | deneb.BlobSidecars;
+export type PossibleDataTypes = null | deneb.BlobSidecars; // | fulu.DataColumnSidecars
 
 /**
  * Represents were input originated. Blocks and Data can come from different
@@ -52,31 +58,24 @@ export type LogMetaBlobs = LogMetaBasic & {
   receivedBlobs: number;
 };
 
-export type LogMetaColumns = LogMetaBasic & {
-  expectedColumns: number;
-  receivedColumns: number;
+// export type LogMetaColumns = LogMetaBasic & {
+//   expectedColumns: number;
+//   receivedColumns: number;
+// };
+
+export type SourceMeta = {
+  source: BlockInputSource;
+  seenTimestampSec: number;
+  peerIdStr?: string;
 };
 
-export type BlockWithSource<BlockType extends SignedBeaconBlock> = {
+export type BlockWithSource<BlockType extends SignedBeaconBlock> = SourceMeta & {
   block: BlockType;
-  source: BlockInputSource;
-  seenTimestampSec: number;
-  peerIdStr?: string;
 };
 
-export type BlobWithSource = {
-  blobSidecar: deneb.BlobSidecar;
-  source: BlockInputSource;
-  seenTimestampSec: number;
-  peerIdStr?: string;
-};
+export type BlobWithSource = SourceMeta & {blobSidecar: deneb.BlobSidecar};
 
-export type ColumnWithSource = {
-  columnSidecar: deneb.BlobSidecar;
-  source: BlockInputSource;
-  seenTimestampSec: number;
-  peerIdStr?: string;
-};
+// export type ColumnWithSource = SourceMeta & {columnSidecar: fulu.DataColumnSidecar};
 
 export type AddBlockProps<BlockType extends SignedBeaconBlock> = BlockWithSource<BlockType> & {
   rootHex: string;
@@ -85,15 +84,9 @@ export type AddBlockProps<BlockType extends SignedBeaconBlock> = BlockWithSource
   dataAvailability: DataAvailabilityStatus;
 };
 
-export type AddBlobProps = {
-  rootHex: RootHex;
-  blobSidecar: deneb.BlobSidecar;
-  source: BlockInputSource;
-  seenTimestampSec: number;
-  peerIdStr: PeerIdStr;
-};
+export type AddBlobProps = BlobWithSource & {rootHex: RootHex};
 
-export type AddColumnProps = {};
+// export type AddColumnProps = ColumnWithSource & {rootHex: RootHex};
 
 export type BlobMeta = ColumnMeta & {versionHash: Uint8Array};
 
@@ -111,4 +104,6 @@ export type BlockInputPreDataProps<BlockType extends SignedBeaconBlock> = AddBlo
 
 export type BlockInputBlobsProps<BlockType extends SignedBeaconBlock> = BlockInputPreDataProps<BlockType> & {};
 
-export type BlockInputColumnsProps<BlockType extends SignedBeaconBlock> = BlockInputPreDataProps<BlockType> & {};
+// export type BlockInputColumnsProps<BlockType extends SignedBeaconBlock> = BlockInputPreDataProps<BlockType> & {
+//   custodyConfig: CustodyConfig;
+// };

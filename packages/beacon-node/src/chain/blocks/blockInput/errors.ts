@@ -1,7 +1,11 @@
 import {Slot} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 import {PeerIdStr} from "../../../util/peerId.js";
-import {BlockInputSource, LogMetaBlobs} from "./types.js";
+import {
+  BlockInputSource,
+  LogMetaBlobs,
+  //  LogMetaColumns
+} from "./types.js";
 
 export enum BlockInputErrorCode {
   // Missing args passed to a method
@@ -22,6 +26,7 @@ export enum BlockInputErrorCode {
   MISMATCHED_ROOT_HEX = "BLOCK_INPUT_ERROR_MISMATCHED_ROOT_HEX",
   MISMATCHED_SLOT = "BLOCK_INPUT_ERROR_MISMATCHED_SLOT",
   MISMATCHED_KZG_COMMITMENT = "BLOCK_INPUT_ERROR_MISMATCHED_KZG_COMMITMENT",
+  // MISMATCHED_KZG_COMMITMENT_LENGTH = "BLOCK_INPUT_ERROR_MISMATCHED_KZG_COMMITMENT_LENGTH",
 
   UNKNOWN_NUMBER_OF_BLOBS = "BLOCK_INPUT_ERROR_UNKNOWN_NUMBER_OF_BLOBS",
 
@@ -54,20 +59,31 @@ export type BlockInputErrorType =
   | {
       code: BlockInputErrorCode.MISMATCHED_SLOT;
       blockRoot: string;
+      blockInputSlot: undefined | Slot;
       blockSlot: number;
-      mismatchedSlot: number;
+      sidecarSlot: number;
     }
   | {
       code: BlockInputErrorCode.MISMATCHED_KZG_COMMITMENT;
       blockRoot: string;
-      slot: number;
+      slot: undefined | Slot;
       sidecarIndex: number;
+      commitmentIndex?: number;
     }
+  // | {
+  //     code: BlockInputErrorCode.MISMATCHED_KZG_COMMITMENT_LENGTH;
+  //     blockRoot: string;
+  //     slot: undefined | Slot;
+  //     columnIndex: number;
+  //     blockCommitments: number;
+  //     sidecarCommitments: number;
+  //   }
   | {
       code: BlockInputErrorCode.UNKNOWN_NUMBER_OF_BLOBS;
       blockRoot: string;
       slot: Slot | string;
     }
   | (LogMetaBlobs & {code: BlockInputErrorCode.INCOMPLETE_DATA});
+// | (LogMetaColumns & {code: BlockInputErrorCode.INCOMPLETE_DATA})
 
 export class BlockInputError extends LodestarError<BlockInputErrorType> {}
