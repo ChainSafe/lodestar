@@ -407,6 +407,7 @@ export class BlockInputBlobs<
   }
 
   addBlob({rootHex, blobSidecar, source, seenTimestampSec, peerIdStr}: AddBlobProps): void {
+    this.checkForUndefinedProps({rootHex, blobSidecar, source, seenTimestampSec});
     if (rootHex !== this.rootHex) {
       throw new BlockInputError(
         {
@@ -419,7 +420,6 @@ export class BlockInputBlobs<
         "Blob BeaconBlockHeader rootHex does not match BlockInput.rootHex"
       );
     }
-    this.checkForUndefinedProps({rootHex, blobSidecar, source, seenTimestampSec});
 
     if (this.blockWithSource) {
       const err = this.checkBlockAndBlobArePaired(this.blockWithSource.block, blobSidecar);
@@ -594,6 +594,7 @@ export class BlockInputBlobs<
 //   }
 
 //   addColumn({rootHex, columnSidecar, source, seenTimestampSec, peerIdStr}: AddColumnProps): void {
+//     this.checkForUndefinedProps({rootHex, columnSidecar, source, seenTimestampSec});
 //     if (rootHex !== this.rootHex) {
 //       throw new BlockInputError(
 //         {
@@ -606,7 +607,6 @@ export class BlockInputBlobs<
 //         "Column BeaconBlockHeader rootHex does not match BlockInput.rootHex"
 //       );
 //     }
-//     this.checkForUndefinedProps({rootHex, columnSidecar, source, seenTimestampSec});
 
 //     if (this.blockWithSource) {
 //       if (this.blockWithSource.block.message.body.blobKzgCommitments.length === 0) {
