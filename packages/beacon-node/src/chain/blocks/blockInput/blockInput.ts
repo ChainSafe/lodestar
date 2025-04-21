@@ -101,7 +101,10 @@ export class BlockInputPreData<
   }
 
   constructor(props: BlockInputPreDataProps<BlockType>) {
-    this.type = BlockInputType.PreData;
+    this.checkForUndefinedProps({
+      rootHex: props.rootHex,
+      blockRoot: props.blockRoot,
+    });
     this.rootHex = props.rootHex;
     this.blockRoot = props.blockRoot;
     if ("block" in props) {
@@ -416,6 +419,7 @@ export class BlockInputBlobs<
         "Blob BeaconBlockHeader rootHex does not match BlockInput.rootHex"
       );
     }
+    this.checkForUndefinedProps({rootHex, blobSidecar, source, seenTimestampSec});
 
     if (this.blockWithSource) {
       const err = this.checkBlockAndBlobArePaired(this.blockWithSource.block, blobSidecar);
@@ -602,6 +606,7 @@ export class BlockInputBlobs<
 //         "Column BeaconBlockHeader rootHex does not match BlockInput.rootHex"
 //       );
 //     }
+//     this.checkForUndefinedProps({rootHex, columnSidecar, source, seenTimestampSec});
 
 //     if (this.blockWithSource) {
 //       if (this.blockWithSource.block.message.body.blobKzgCommitments.length === 0) {
