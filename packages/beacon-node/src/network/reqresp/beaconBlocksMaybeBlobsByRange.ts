@@ -105,7 +105,8 @@ export async function beaconBlocksMaybeBlobsByRange(
 
     const dataColumnRequest = {...request, columns};
     const [allBlocks, allDataColumnSidecars] = await Promise.all([
-      partialDownload
+      // TODO-das: investigate why partialDownload blocks is empty here
+      partialDownload && partialDownload.blocks.length > 0
         ? partialDownload.blocks.map((blockInput) => ({data: blockInput.block}))
         : network.sendBeaconBlocksByRange(peerId, request),
       columns.length === 0 ? [] : network.sendDataColumnSidecarsByRange(peerId, dataColumnRequest),
@@ -323,7 +324,8 @@ export function matchBlockWithDataColumns(
       }
 
       let cachedData: CachedData;
-      if (prevPartialDownload !== null) {
+      // TODO-das: investigate why partialDownload blocks is empty here
+      if (prevPartialDownload !== null && prevPartialDownload.blocks.length > 0) {
         const prevBlockInput = prevPartialDownload.blocks[i];
         if (prevBlockInput.type !== BlockInputType.dataPromise) {
           throw Error(`prevBlockInput.type=${prevBlockInput.type} in prevPartialDownload`);
