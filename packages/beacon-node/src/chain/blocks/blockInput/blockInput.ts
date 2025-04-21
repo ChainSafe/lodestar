@@ -12,7 +12,7 @@ import {
   deneb,
   // fulu
 } from "@lodestar/types";
-import {prettyBytes, toHex, withTimeout} from "@lodestar/utils";
+import {fromHex, prettyBytes, toHex, withTimeout} from "@lodestar/utils";
 import {VersionedHashes} from "../../../execution/index.js";
 import {kzgCommitmentToVersionedHash} from "../../../util/blobs.js";
 import {byteArrayEquals} from "../../../util/bytes.js";
@@ -79,7 +79,7 @@ export class BlockInputPreData<
   DataType extends PossibleDataTypes = null,
 > implements BlockInput<BlockType, DataType>
 {
-  type: BlockInputType;
+  type = BlockInputType.PreData;
   rootHex: string;
   blockRoot: Uint8Array;
 
@@ -100,7 +100,7 @@ export class BlockInputPreData<
     return prettyBytes(this.rootHex);
   }
 
-  constructor(props: BlockInputBaseProps | BlockInputPreDataProps<BlockType>) {
+  constructor(props: BlockInputPreDataProps<BlockType>) {
     this.type = BlockInputType.PreData;
     this.rootHex = props.rootHex;
     this.blockRoot = props.blockRoot;
@@ -271,7 +271,7 @@ export class BlockInputPreData<
     return this;
   }
 
-  private createPromise<T>(): PromiseParts<T> {
+  protected createPromise<T>(): PromiseParts<T> {
     let resolve!: (value: T) => void;
     let reject!: (e: Error) => void;
     const promise = new Promise<T>((_resolve, _reject) => {
@@ -285,7 +285,7 @@ export class BlockInputPreData<
     };
   }
 
-  private checkForUndefinedProps(props: Record<string, unknown>): void {
+  protected checkForUndefinedProps(props: Record<string, unknown>): void {
     for (const [propName, value] of Object.entries(props)) {
       if (value === undefined) {
         throw new BlockInputError({
@@ -336,7 +336,7 @@ abstract class BlockInputData<BlockType extends SignedBeaconBlock<ForkPostDeneb>
 }
 
 export class BlockInputBlobs<
-    BlockType extends SignedBeaconBlock<ForkName.deneb> = SignedBeaconBlock<ForkName.deneb>,
+    BlockType extends SignedBeaconBlock<ForkPostDeneb> = SignedBeaconBlock<ForkPostDeneb>,
     DataType extends PossibleDataTypes = deneb.BlobSidecars,
   >
   extends BlockInputData<BlockType, DataType>
@@ -347,6 +347,12 @@ export class BlockInputBlobs<
 
   constructor(props: BlockInputBlobsProps<BlockType>) {
     super(props);
+    if ("block" in props && "blobSidecar" in props) {
+      throw new BlockInputError({code: BlockInputErrorCode.INVALID_CONSTRUCTION, blockRoot: this.prettyRootHex});
+    }
+    if ("blobSidecar" in props) {
+      this.addBlob(props);
+    }
   }
 
   getLogMeta(): LogMetaBlobs {
@@ -534,6 +540,12 @@ export class BlockInputBlobs<
 //   constructor(props: BlockInputColumnsProps<BlockType>) {
 //     super(props);
 //     this.custodyConfig = props.custodyConfig;
+//     if ("block" in props && "columnSidecar" in props) {
+//       throw new BlockInputError({code: BlockInputErrorCode.INVALID_CONSTRUCTION, blockRoot: this.prettyRootHex});
+//     }
+//     if ("columnSidecar" in props) {
+//       this.addColumn(props);
+//     }
 //   }
 
 //   getLogMeta(): LogMetaColumns {
@@ -577,7 +589,7 @@ export class BlockInputBlobs<
 //     super.addBlock(props);
 //   }
 
-//   addColumnSidecar({rootHex, columnSidecar, source, seenTimestampSec, peerIdStr}: AddColumnProps): void {
+//   addColumn({rootHex, columnSidecar, source, seenTimestampSec, peerIdStr}: AddColumnProps): void {
 //     if (rootHex !== this.rootHex) {
 //       throw new BlockInputError(
 //         {

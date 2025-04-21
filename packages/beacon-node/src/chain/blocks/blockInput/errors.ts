@@ -8,10 +8,11 @@ import {
 } from "./types.js";
 
 export enum BlockInputErrorCode {
-  // Missing args passed to a method
+  // Bad Arguments
   UNDEFINED_PROP = "BLOCK_INPUT_ERROR_UNDEFINED_PROP",
+  INVALID_CONSTRUCTION = "BLOCK_INPUT_ERROR_INVALID_CONSTRUCTION",
 
-  // attempt to get all data but some is missing
+  // Attempt to get all data but some is missing
   INCOMPLETE_DATA = "BLOCK_INPUT_ERROR_INCOMPLETE_DATA",
 
   // Missing class property values for getters
@@ -48,6 +49,10 @@ export type BlockInputErrorType =
       code: BlockInputErrorCode.UNDEFINED_PROP;
       blockRoot: string;
       propName: string;
+    }
+  | {
+      code: BlockInputErrorCode.INVALID_CONSTRUCTION;
+      blockRoot: string;
     }
   | {
       code: BlockInputErrorCode.MISMATCHED_ROOT_HEX;

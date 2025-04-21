@@ -100,10 +100,14 @@ export type BlockInputBaseProps = {
   blockRoot: Uint8Array;
 };
 
-export type BlockInputPreDataProps<BlockType extends SignedBeaconBlock> = AddBlockProps<BlockType> & {};
+export type BlockInputPreDataProps<BlockType extends SignedBeaconBlock> =
+  | BlockInputBaseProps
+  | AddBlockProps<BlockType>;
 
-export type BlockInputBlobsProps<BlockType extends SignedBeaconBlock> = BlockInputPreDataProps<BlockType> & {};
+export type BlockInputBlobsProps<BlockType extends SignedBeaconBlock> =
+  | BlockInputPreDataProps<BlockType>
+  | (AddBlobProps & {blockRoot: Uint8Array});
 
-// export type BlockInputColumnsProps<BlockType extends SignedBeaconBlock> = BlockInputPreDataProps<BlockType> & {
+// export type BlockInputColumnsProps<BlockType extends SignedBeaconBlock> = {
 //   custodyConfig: CustodyConfig;
-// };
+// } & (BlockInputPreDataProps<BlockType> | (AddColumnProps & {blockRoot: Uint8Array}));
