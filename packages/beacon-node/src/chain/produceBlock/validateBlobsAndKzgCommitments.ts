@@ -20,34 +20,35 @@ export function validateBlobsAndKzgCommitments(
     );
   }
 
-  if (ForkSeq[fork] >= ForkSeq.fulu) {
-    if (!cells) {
-      cells = blobsBundle.blobs.map((blob) => ckzg.computeCells(blob));
-    }
-
-    const expectedProofsLength = blobsBundle.blobs.length * CELLS_PER_EXT_BLOB;
-    if (blobsBundle.proofs.length !== expectedProofsLength) {
-      throw Error(
-        `Invalid proofs length for BlobsBundleV2 format: expected ${expectedProofsLength}, got ${blobsBundle.proofs.length}`
-      );
-    }
-
-    const commitmentBytes = blobsBundle.commitments.flatMap((commitment) => Array(CELLS_PER_EXT_BLOB).fill(commitment));
-    const cellIndices = Array.from({length: blobsBundle.blobs.length}).flatMap(() =>
-      Array.from({length: CELLS_PER_EXT_BLOB}, (_, i) => i)
-    );
-    const proofBytes = blobsBundle.proofs.flat();
-
-    try {
-      ckzg.verifyCellKzgProofBatch(commitmentBytes, cellIndices, cells.flat(), proofBytes);
-    } catch {
-      throw new Error("Error in verifyCellKzgProofBatch");
-    }
-  } else {
+  if (ForkSeq[fork] < ForkSeq.fulu) {
     if (blobsBundle.proofs.length !== blobsBundle.blobs.length) {
       throw new Error(
         `Invalid proofs length for BlobsBundleV1 format: expected ${blobsBundle.blobs.length}, got ${blobsBundle.proofs.length}`
       );
     }
+    return;
+  }
+
+  if (!cells) {
+    cells = blobsBundle.blobs.map((blob) => ckzg.computeCells(blob));
+  }
+
+  const expectedProofsLength = blobsBundle.blobs.length * CELLS_PER_EXT_BLOB;
+  if (blobsBundle.proofs.length !== expectedProofsLength) {
+    throw Error(
+      `Invalid proofs length for BlobsBundleV2 format: expected ${expectedProofsLength}, got ${blobsBundle.proofs.length}`
+    );
+  }
+
+  const commitmentBytes = blobsBundle.commitments.flatMap((commitment) => Array(CELLS_PER_EXT_BLOB).fill(commitment));
+  const cellIndices = Array.from({length: blobsBundle.blobs.length}).flatMap(() =>
+    Array.from({length: CELLS_PER_EXT_BLOB}, (_, i) => i)
+  );
+  const proofBytes = blobsBundle.proofs.flat();
+
+  try {
+    ckzg.verifyCellKzgProofBatch(commitmentBytes, cellIndices, cells.flat(), proofBytes);
+  } catch {
+    throw new Error("Error in verifyCellKzgProofBatch");
   }
 }
