@@ -13,6 +13,7 @@ import {
   // fulu
 } from "@lodestar/types";
 import {fromHex, prettyBytes, toHex, withTimeout} from "@lodestar/utils";
+import {prettyPrintArray} from "@lodestar/utils";
 import {VersionedHashes} from "../../../execution/index.js";
 import {kzgCommitmentToVersionedHash} from "../../../util/blobs.js";
 import {byteArrayEquals} from "../../../util/bytes.js";
@@ -40,7 +41,6 @@ import {
   PossibleDataTypes,
   PromiseParts,
 } from "./types.js";
-import {prettyPrintArray} from "./utils.js";
 
 export interface BlockInput<
   BlockType extends SignedBeaconBlock = SignedBeaconBlock,
