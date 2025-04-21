@@ -1,12 +1,11 @@
-import { TimeoutError } from "./errors.js";
-import { sleep } from "./sleep.js";
+import {TimeoutError} from "./errors.js";
+import {sleep} from "./sleep.js";
 
 export async function withTimeout<T>(
   asyncFn: (timeoutAndParentSignal?: AbortSignal) => Promise<T>,
   timeoutMs: number,
   signal?: AbortSignal
 ): Promise<T> {
-  
   if (signal?.aborted) {
     throw signal.reason || new Error("Aborted");
   }
@@ -15,21 +14,14 @@ export async function withTimeout<T>(
   const timeoutAndParentSignal = timeoutAbortController.signal;
 
   if (signal) {
-    signal.addEventListener(
-      "abort",
-      (reason) => timeoutAbortController.abort(reason),
-      { signal }
-    );
+    signal.addEventListener("abort", (reason) => timeoutAbortController.abort(reason), {signal});
   }
 
   async function timeoutPromise(): Promise<never> {
     await sleep(timeoutMs);
-    timeoutAbortController.abort(new TimeoutError()); 
+    timeoutAbortController.abort(new TimeoutError());
     throw new TimeoutError();
   }
 
-  return await Promise.race([
-    asyncFn(timeoutAndParentSignal),
-    timeoutPromise(),
-  ]);
+  return await Promise.race([asyncFn(timeoutAndParentSignal), timeoutPromise()]);
 }
