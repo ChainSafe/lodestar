@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkBlobs, ForkPostBellatrix, ForkSeq, isForkPostAltair, isForkPostBellatrix} from "@lodestar/params";
+import {ForkPostBellatrix, ForkPostDeneb, ForkSeq, isForkPostAltair, isForkPostBellatrix} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStateBellatrix,
@@ -355,7 +355,7 @@ export async function produceBlockBody<T extends BlockType>(
             }
 
             if (this.opts.sanityCheckExecutionEngineBlobs) {
-              validateBlobsAndKzgCommitments(fork as ForkBlobs, executionPayload, blobsBundle, cells);
+              validateBlobsAndKzgCommitments(fork as ForkPostDeneb, executionPayload, blobsBundle, cells);
             }
 
             (blockBody as deneb.BeaconBlockBody).blobKzgCommitments = blobsBundle.commitments;

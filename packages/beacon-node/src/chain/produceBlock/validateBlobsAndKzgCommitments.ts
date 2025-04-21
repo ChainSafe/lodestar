@@ -1,4 +1,4 @@
-import {CELLS_PER_EXT_BLOB, ForkBlobs, ForkSeq} from "@lodestar/params";
+import {CELLS_PER_EXT_BLOB, ForkPostDeneb, ForkSeq} from "@lodestar/params";
 import {ExecutionPayload, fulu} from "@lodestar/types";
 import {BlobsBundle} from "../../execution/index.js";
 import {ckzg} from "../../util/kzg.js";
@@ -9,7 +9,7 @@ import {ckzg} from "../../util/kzg.js";
  */
 
 export function validateBlobsAndKzgCommitments(
-  fork: ForkBlobs,
+  fork: ForkPostDeneb,
   _payload: ExecutionPayload,
   blobsBundle: BlobsBundle,
   cells?: fulu.Cell[][]
