@@ -10,10 +10,6 @@ import {
 } from "./blockInput.js";
 import {BlockInputType, DataAvailabilityStatus} from "./types.js";
 
-export function prettyPrintArray(arr: unknown[]): string {
-  return `[ ${arr.join(", ")} ]`;
-}
-
 export function isBlockInputPreDeneb(blockInput: BlockInput): blockInput is BlockInputPreData {
   return blockInput.type === BlockInputType.PreData;
 }
