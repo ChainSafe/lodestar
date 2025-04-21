@@ -49,7 +49,7 @@ export type IChainOptions = BlockProcessOpts &
     trustedSetup?: string;
     broadcastValidationStrictness?: string;
     minSameMessageSignatureSetsToBatch: number;
-    archiveBlobEpochs?: number;
+    archiveDateEpochs?: number;
     nHistoricalStates?: boolean;
     nHistoricalStatesFileDataStore?: boolean;
   };

@@ -35,7 +35,7 @@ export async function archiveBlocks(
   logger: Logger,
   finalizedCheckpoint: CheckpointHex,
   currentEpoch: Epoch,
-  archiveBlobEpochs?: number
+  archiveDataEpochs?: number
 ): Promise<void> {
   // Use fork choice to determine the blocks to archive and delete
   // getAllAncestorBlocks response includes the finalized block, so it's also moved to the cold db
@@ -92,11 +92,11 @@ export async function archiveBlocks(
   }
 
   // Delete expired blobs
-  // Keep only `[current_epoch - max(MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, archiveBlobEpochs)]
-  // if archiveBlobEpochs set to Infinity do not prune`
+  // Keep only `[current_epoch - max(MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, archiveDataEpochs)]`
+  // if archiveDataEpochs set to Infinity do not prune`
   if (finalizedPostDeneb) {
-    if (archiveBlobEpochs !== Infinity) {
-      const blobsArchiveWindow = Math.max(config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, archiveBlobEpochs ?? 0);
+    if (archiveDataEpochs !== Infinity) {
+      const blobsArchiveWindow = Math.max(config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, archiveDataEpochs ?? 0);
       const blobSidecarsMinEpoch = currentEpoch - blobsArchiveWindow;
       if (blobSidecarsMinEpoch >= config.DENEB_FORK_EPOCH) {
         const slotsToDelete = await db.blobSidecarsArchive.keys({lt: computeStartSlotAtEpoch(blobSidecarsMinEpoch)});
@@ -108,17 +108,17 @@ export async function archiveBlocks(
         }
       }
     } else {
-      logger.verbose("blobSidecars pruning skipped: archiveBlobEpochs set to Infinity");
+      logger.verbose("blobSidecars pruning skipped: archiveDataEpochs set to Infinity");
     }
   }
 
   // Delete expired data column sidecars
-  // Keep only `[current_epoch - max(MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS, archiveBlobEpochs)]`
+  // Keep only `[current_epoch - max(MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS, archiveDataEpochs)]`
   if (finalizedPostFulu) {
-    if (archiveBlobEpochs !== Infinity) {
+    if (archiveDataEpochs !== Infinity) {
       const dataColumnSidecarsArchiveWindow = Math.max(
         config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS,
-        archiveBlobEpochs ?? 0
+        archiveDataEpochs ?? 0
       );
       const dataColumnSidecarsMinEpoch = currentEpoch - dataColumnSidecarsArchiveWindow;
       if (dataColumnSidecarsMinEpoch >= config.FULU_FORK_EPOCH) {
@@ -133,7 +133,7 @@ export async function archiveBlocks(
         }
       }
     } else {
-      logger.verbose("dataColumnSidecars pruning skipped: archiveBlobEpochs set to Infinity");
+      logger.verbose("dataColumnSidecars pruning skipped: archiveDataEpochs set to Infinity");
     }
   }
 
