@@ -22,10 +22,11 @@ import {
   getBlockInputDataColumns,
 } from "../../chain/blocks/types.js";
 import {ChainEventEmitter} from "../../chain/emitter.js";
-import {BlockInputAvailabilitySource, getDataColumnsFromExecution} from "../../chain/seenCache/seenGossipBlockInput.js";
+import {BlockInputAvailabilitySource} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {IExecutionEngine} from "../../execution/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {computeInclusionProof, kzgCommitmentToVersionedHash} from "../../util/blobs.js";
+import {getDataColumnsFromExecution} from "../../util/dataColumns.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {INetwork} from "../interface.js";
 import {PartialDownload, matchBlockWithBlobs, matchBlockWithDataColumns} from "./beaconBlocksMaybeBlobsByRange.js";
