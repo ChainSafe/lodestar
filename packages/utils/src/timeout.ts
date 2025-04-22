@@ -1,3 +1,4 @@
+import {anySignal} from "any-signal";
 import {TimeoutError} from "./errors.js";
 import {sleep} from "./sleep.js";
 
@@ -6,22 +7,17 @@ export async function withTimeout<T>(
   timeoutMs: number,
   signal?: AbortSignal
 ): Promise<T> {
-  if (signal?.aborted) {
-    throw signal.reason || new Error("Aborted");
-  }
-
   const timeoutAbortController = new AbortController();
-  const timeoutAndParentSignal = timeoutAbortController.signal;
+  const timeoutAndParentSignal = anySignal([timeoutAbortController.signal, ...(signal ? [signal] : [])]);
 
-  if (signal) {
-    signal.addEventListener("abort", (reason) => timeoutAbortController.abort(reason), {signal});
-  }
-
-  async function timeoutPromise(): Promise<never> {
-    await sleep(timeoutMs);
-    timeoutAbortController.abort(new TimeoutError());
+  async function timeoutPromise(signal: AbortSignal): Promise<never> {
+    await sleep(timeoutMs, signal);
     throw new TimeoutError();
   }
 
-  return await Promise.race([asyncFn(timeoutAndParentSignal), timeoutPromise()]);
+  try {
+    return await Promise.race([asyncFn(timeoutAndParentSignal), timeoutPromise(timeoutAndParentSignal)]);
+  } finally {
+    timeoutAbortController.abort();
+  }
 }
