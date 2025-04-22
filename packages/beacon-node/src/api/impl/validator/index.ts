@@ -57,6 +57,7 @@ import {
   prettyWeiToEth,
   resolveOrRacePromises,
   toHex,
+  toHexString,
   toRootHex,
 } from "@lodestar/utils";
 import {MAX_BUILDER_BOOST_FACTOR} from "@lodestar/validator";
@@ -677,7 +678,7 @@ export function getValidatorApi(
       if (engine.status !== "fulfilled") throw new Error("Cannot select engine block, engine not fulfilled");
 
       const blockResp = await chain.assembleBlockBody(
-        BlockType.Blinded,
+        BlockType.Full,
         blockAttributes,
         currentState,
         commonBlockBody,
@@ -838,10 +839,10 @@ export function getValidatorApi(
     blockProductionTimer?.({source: executionPayloadSource});
 
     logger.verbose("Produced block", {
-      slot,
+      slot: block.slot,
       executionPayloadValue,
       consensusBlockValue,
-      root: toRootHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block)),
+      root: toRootHex(config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block)),
     });
 
     metrics?.blockProductionNumAggregated.observe({source: executionPayloadSource}, block.body.attestations.length);

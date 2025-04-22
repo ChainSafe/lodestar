@@ -2,9 +2,10 @@ import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ProtoBlock} from "@lodestar/fork-choice";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {debug, when} from "vitest-when";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
 import {
@@ -118,9 +119,10 @@ describe("api/validator - produceBlockV3", () => {
       modules.chain.produceCommonBlockBody.mockResolvedValue(commonBlockBody);
 
       if (enginePayloadValue !== null) {
-        const fullBlockBody: AssembledFullBlockBody = {
-          attestations: fullBlock.body.attestations,
+        const fullBlockBody: AssembledFullBlockBody<ForkName.bellatrix> = {
+          executionPayload: fullBlock.body.executionPayload,
         };
+
         modules.chain.produceFullBlockBody.mockResolvedValue({
           body: fullBlockBody,
           blobs: {type: BlobsResultType.preDeneb},
@@ -132,8 +134,12 @@ describe("api/validator - produceBlockV3", () => {
       }
 
       if (builderPayloadValue !== null) {
+        const blindedBlockBody: AssembledBlindedBlockBody<ForkName.bellatrix> = {
+          executionPayloadHeader: blindedBlock.body.executionPayloadHeader,
+        };
+
         modules.chain.produceBlindedBlockBody.mockResolvedValue({
-          body: blindedBlock.body,
+          body: blindedBlockBody,
           blobs: {type: BlobsResultType.preDeneb},
           executionPayloadValue: BigInt(builderPayloadValue),
         });
@@ -141,14 +147,22 @@ describe("api/validator - produceBlockV3", () => {
         modules.chain.produceBlindedBlockBody.mockRejectedValue(Error("not produced"));
       }
 
-      modules.chain.assembleBlockBody.mockResolvedValue({
-        block: fullBlock,
-        executionPayloadValue: BigInt(
-          enginePayloadValue ? enginePayloadValue : builderPayloadValue ? builderPayloadValue : BigInt(0)
-        ),
-        consensusBlockValue: BigInt(consensusBlockValue),
-        shouldOverrideBuilder,
-      });
+      when(modules.chain.assembleBlockBody)
+        .calledWith(BlockType.Full, expect.any(Object), undefined, expect.any(Object), expect.any(Object))
+        .thenResolve({
+          block: fullBlock,
+          executionPayloadValue: BigInt(enginePayloadValue ?? 0),
+          consensusBlockValue: BigInt(consensusBlockValue),
+          shouldOverrideBuilder,
+        });
+
+      when(modules.chain.assembleBlockBody)
+        .calledWith(BlockType.Blinded, expect.anything(), undefined, expect.anything(), expect.anything())
+        .thenResolve({
+          block: blindedBlock,
+          executionPayloadValue: BigInt(builderPayloadValue ?? 0),
+          consensusBlockValue: BigInt(consensusBlockValue),
+        });
 
       const _skipRandaoVerification = false;
       const produceBlockOpts = {
@@ -168,7 +182,7 @@ describe("api/validator - produceBlockV3", () => {
       const expectedBlock = finalSelection === "builder" ? blindedBlock : fullBlock;
       const expectedExecution = finalSelection === "builder";
 
-      // expect(block).toEqual(expectedBlock);
+      expect(block).toEqual(expectedBlock);
       expect(meta.executionPayloadBlinded).toEqual(expectedExecution);
 
       // check call counts
