@@ -2,12 +2,19 @@ import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ProtoBlock} from "@lodestar/fork-choice";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {when} from "vitest-when";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
-import {CommonBlockBody} from "../../../../../src/chain/interface.js";
+import {
+  AssembledBlindedBlockBody,
+  AssembledFullBlockBody,
+  BlobsResultType,
+  BlockType,
+  CommonBlockBody,
+} from "../../../../../src/chain/interface.js";
 import {SyncState} from "../../../../../src/sync/interface.js";
 import {ApiTestModules, getApiTestModules} from "../../../../utils/api.js";
 import {zeroProtoBlock} from "../../../../utils/state.js";
@@ -90,41 +97,64 @@ describe("api/validator - produceBlockV3", () => {
       modules.chain.getProposerHead.mockReturnValue({blockRoot: toHexString(fullBlock.parentRoot)} as ProtoBlock);
       modules.chain.forkChoice.getBlock.mockReturnValue(zeroProtoBlock);
 
+      const commonBlockBody: CommonBlockBody = {
+        attestations: fullBlock.body.attestations,
+        attesterSlashings: fullBlock.body.attesterSlashings,
+        deposits: fullBlock.body.deposits,
+        proposerSlashings: fullBlock.body.proposerSlashings,
+        eth1Data: fullBlock.body.eth1Data,
+        graffiti: fullBlock.body.graffiti,
+        randaoReveal: fullBlock.body.randaoReveal,
+        voluntaryExits: fullBlock.body.voluntaryExits,
+        blsToExecutionChanges: [],
+        syncAggregate: fullBlock.body.syncAggregate,
+      };
+      modules.chain.produceCommonBlockBody.mockResolvedValue(commonBlockBody);
+
       if (enginePayloadValue !== null) {
-        const commonBlockBody: CommonBlockBody = {
-          attestations: fullBlock.body.attestations,
-          attesterSlashings: fullBlock.body.attesterSlashings,
-          deposits: fullBlock.body.deposits,
-          proposerSlashings: fullBlock.body.proposerSlashings,
-          eth1Data: fullBlock.body.eth1Data,
-          graffiti: fullBlock.body.graffiti,
-          randaoReveal: fullBlock.body.randaoReveal,
-          voluntaryExits: fullBlock.body.voluntaryExits,
-          blsToExecutionChanges: [],
-          syncAggregate: fullBlock.body.syncAggregate,
+        const fullBlockBody: AssembledFullBlockBody<ForkName.bellatrix> = {
+          executionPayload: fullBlock.body.executionPayload,
         };
-
-        modules.chain.produceCommonBlockBody.mockResolvedValue(commonBlockBody);
-
-        modules.chain.produceBlock.mockResolvedValue({
-          block: fullBlock,
+        modules.chain.produceFullBlockBody.mockResolvedValue({
+          body: fullBlockBody,
           executionPayloadValue: BigInt(enginePayloadValue),
-          consensusBlockValue: BigInt(consensusBlockValue),
           shouldOverrideBuilder,
+          blobs: {type: BlobsResultType.preDeneb},
         });
       } else {
-        modules.chain.produceBlock.mockRejectedValue(Error("not produced"));
+        modules.chain.produceFullBlockBody.mockRejectedValue(Error("not produced"));
       }
 
       if (builderPayloadValue !== null) {
-        modules.chain.produceBlindedBlock.mockResolvedValue({
-          block: blindedBlock,
+        const blindedBlockBody: AssembledBlindedBlockBody<ForkName.bellatrix> = {
+          executionPayloadHeader: blindedBlock.body.executionPayloadHeader,
+        };
+        modules.chain.produceBlindedBlockBody.mockResolvedValue({
+          body: blindedBlockBody,
           executionPayloadValue: BigInt(builderPayloadValue),
-          consensusBlockValue: BigInt(consensusBlockValue),
+          shouldOverrideBuilder,
+          blobs: {type: BlobsResultType.preDeneb},
         });
       } else {
-        modules.chain.produceBlindedBlock.mockRejectedValue(Error("not produced"));
+        modules.chain.produceBlindedBlockBody.mockRejectedValue(Error("not produced"));
       }
+
+      when(modules.chain.assembleBlockBody)
+        .calledWith(BlockType.Full, expect.any(Object), undefined as any, expect.any(Object), expect.any(Object))
+        .thenResolve({
+          block: fullBlock,
+          executionPayloadValue: BigInt(enginePayloadValue ?? 0),
+          consensusBlockValue: BigInt(consensusBlockValue),
+        });
+
+      when(modules.chain.assembleBlockBody)
+        .calledWith(BlockType.Blinded, expect.any(Object), undefined as any, expect.any(Object), expect.any(Object))
+        .thenResolve({
+          block: blindedBlock,
+          executionPayloadValue: BigInt(builderPayloadValue ?? 0),
+          consensusBlockValue: BigInt(consensusBlockValue),
+        });
+
       const _skipRandaoVerification = false;
       const produceBlockOpts = {
         strictFeeRecipientCheck: false,
@@ -146,17 +176,19 @@ describe("api/validator - produceBlockV3", () => {
       expect(block).toEqual(expectedBlock);
       expect(meta.executionPayloadBlinded).toEqual(expectedExecution);
 
+      // expect(modules.chain.produceCommonBlockBody).toBeCalledTimes(1);
+
       // check call counts
       if (builderSelection === routes.validator.BuilderSelection.ExecutionOnly) {
-        expect(modules.chain.produceBlindedBlock).toBeCalledTimes(0);
+        expect(modules.chain.produceBlindedBlockBody).toBeCalledTimes(0);
       } else {
-        expect(modules.chain.produceBlindedBlock).toBeCalledTimes(1);
+        expect(modules.chain.produceBlindedBlockBody).toBeCalledTimes(1);
       }
 
       if (builderSelection === routes.validator.BuilderSelection.BuilderOnly) {
-        expect(modules.chain.produceBlock).toBeCalledTimes(0);
+        expect(modules.chain.produceFullBlockBody).toBeCalledTimes(0);
       } else {
-        expect(modules.chain.produceBlock).toBeCalledTimes(1);
+        expect(modules.chain.produceFullBlockBody).toBeCalledTimes(1);
       }
     });
   }
