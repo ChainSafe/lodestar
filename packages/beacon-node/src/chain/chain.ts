@@ -23,7 +23,6 @@ import {
 import {
   BeaconBlock,
   BlindedBeaconBlock,
-  BlindedBeaconBlockBody,
   Epoch,
   ExecutionPayload,
   Root,
@@ -32,13 +31,11 @@ import {
   Slot,
   UintNum64,
   ValidatorIndex,
-  Wei,
-  bellatrix,
   deneb,
   isBlindedBeaconBlock,
   phase0,
 } from "@lodestar/types";
-import {Logger, fromHex, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
+import {Logger, fromHex, isErrorAborted, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
 import {LoggerNode} from "@lodestar/logger/node";
@@ -61,7 +58,10 @@ import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from ".
 import {ChainEvent, ChainEventEmitter} from "./emitter.js";
 import {ForkchoiceCaller, initializeForkChoice} from "./forkChoice/index.js";
 import {
+  AssembledBlockBodyResponse,
+  AssembledBlockResponse,
   BlockHash,
+  BlockType,
   CommonBlockBody,
   FindHeadFnName,
   IBeaconChain,
@@ -78,9 +78,8 @@ import {
 } from "./opPools/index.js";
 import {IChainOptions} from "./options.js";
 import {PrepareNextSlotScheduler} from "./prepareNextSlot.js";
-import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
-import {AssembledBlockType, BlobsResultType, BlockType} from "./produceBlock/index.js";
-import {BlockAttributes, produceBlockBody, produceCommonBlockBody} from "./produceBlock/produceBlockBody.js";
+import {assembleBlockBodyToBlock, produceBlindedBlockBody, produceFullBlockBody} from "./produceBlock/index.js";
+import {BlockAttributes, produceCommonBlockBody} from "./produceBlock/produceBlockBody.js";
 import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
 import {ReprocessController} from "./reprocess.js";
 import {AttestationsRewards, computeAttestationsRewards} from "./rewards/attestationsRewards.js";
@@ -91,9 +90,9 @@ import {
   SeenAttesters,
   SeenBlockProposers,
   SeenContributionAndProof,
+  SeenGossipBlockInput,
   SeenSyncCommitteeMessages,
 } from "./seenCache/index.js";
-import {SeenGossipBlockInput} from "./seenCache/index.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
@@ -638,135 +637,105 @@ export class BeaconChain implements IBeaconChain {
     return data && {block: data, executionOptimistic: false, finalized: true};
   }
 
-  async produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody> {
-    const {slot, parentBlockRoot} = blockAttributes;
-    const state = await this.regen.getBlockSlotState(
-      toRootHex(parentBlockRoot),
-      slot,
-      {dontTransferCache: true},
-      RegenCaller.produceBlock
-    );
-
+  async produceCommonBlockBody(
+    blockAttributes: BlockAttributes & {currentState: CachedBeaconStateAllForks}
+  ): Promise<CommonBlockBody> {
     // TODO: To avoid breaking changes for metric define this attribute
     const blockType = BlockType.Full;
 
-    return produceCommonBlockBody.call(this, blockType, state, {
+    return produceCommonBlockBody.call(this, blockType, blockAttributes.currentState, {
       ...blockAttributes,
-      parentSlot: slot - 1,
+      parentSlot: blockAttributes.slot - 1,
     });
   }
 
-  produceBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
-    block: BeaconBlock;
-    executionPayloadValue: Wei;
-    consensusBlockValue: Wei;
-    shouldOverrideBuilder?: boolean;
-  }> {
-    return this.produceBlockWrapper<BlockType.Full>(BlockType.Full, blockAttributes);
+  async produceFullBlockBody(
+    blockAttributes: BlockAttributes & {currentState: CachedBeaconStateAllForks}
+  ): Promise<AssembledBlockBodyResponse<BlockType.Full>> {
+    const {slot, currentState} = blockAttributes;
+    const proposerIndex = currentState.epochCtx.getBeaconProposer(slot);
+    const proposerPubKey = currentState.epochCtx.index2pubkey[proposerIndex].toBytes();
+
+    return produceFullBlockBody.call(this, currentState, {
+      ...blockAttributes,
+      parentSlot: slot - 1,
+      proposerIndex,
+      proposerPubKey,
+    });
   }
 
-  produceBlindedBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
-    block: BlindedBeaconBlock;
-    executionPayloadValue: Wei;
-    consensusBlockValue: Wei;
-  }> {
-    return this.produceBlockWrapper<BlockType.Blinded>(BlockType.Blinded, blockAttributes);
+  async produceBlindedBlockBody(
+    blockAttributes: BlockAttributes & {currentState: CachedBeaconStateAllForks}
+  ): Promise<AssembledBlockBodyResponse<BlockType.Blinded>> {
+    const {currentState, slot} = blockAttributes;
+    const proposerIndex = currentState.epochCtx.getBeaconProposer(slot);
+    const proposerPubKey = currentState.epochCtx.index2pubkey[proposerIndex].toBytes();
+
+    return produceBlindedBlockBody.call(this, currentState, {
+      ...blockAttributes,
+      parentSlot: slot - 1,
+      proposerIndex,
+      proposerPubKey,
+    });
   }
 
-  async produceBlockWrapper<T extends BlockType>(
-    blockType: T,
-    {
-      randaoReveal,
-      graffiti,
-      slot,
-      feeRecipient,
-      commonBlockBody,
-      parentBlockRoot,
-    }: BlockAttributes & {commonBlockBody?: CommonBlockBody}
-  ): Promise<{
-    block: AssembledBlockType<T>;
-    executionPayloadValue: Wei;
-    consensusBlockValue: Wei;
-    shouldOverrideBuilder?: boolean;
-  }> {
-    const state = await this.regen.getBlockSlotState(
+  async produceBlock(blockAttributes: BlockAttributes): Promise<AssembledBlockResponse<BlockType.Full>> {
+    const {parentBlockRoot, slot} = blockAttributes;
+
+    const currentState = await this.regen.getBlockSlotState(
       toRootHex(parentBlockRoot),
       slot,
       {dontTransferCache: true},
       RegenCaller.produceBlock
     );
-    const proposerIndex = state.epochCtx.getBeaconProposer(slot);
-    const proposerPubKey = state.epochCtx.index2pubkey[proposerIndex].toBytes();
 
-    const {body, blobs, executionPayloadValue, shouldOverrideBuilder} = await produceBlockBody.call(
-      this,
-      blockType,
-      state,
-      {
-        randaoReveal,
-        graffiti,
-        slot,
-        feeRecipient,
-        parentSlot: slot - 1,
-        parentBlockRoot,
-        proposerIndex,
-        proposerPubKey,
-        commonBlockBody,
-      }
+    const [commonBlockBody, fullBlockBodyResp] = await Promise.all([
+      this.produceCommonBlockBody({...blockAttributes, currentState}),
+      this.produceBlindedBlockBody({...blockAttributes, currentState}),
+    ]);
+
+    return this.assembleBlockBody(BlockType.Full, blockAttributes, currentState, commonBlockBody, fullBlockBodyResp);
+  }
+
+  async produceBlindedBlock(blockAttributes: BlockAttributes): Promise<AssembledBlockResponse<BlockType.Blinded>> {
+    const {parentBlockRoot, slot} = blockAttributes;
+
+    const currentState = await this.regen.getBlockSlotState(
+      toRootHex(parentBlockRoot),
+      slot,
+      {dontTransferCache: true},
+      RegenCaller.produceBlock
     );
 
-    // The hashtree root computed here for debug log will get cached and hence won't introduce additional delays
-    const bodyRoot =
-      blockType === BlockType.Full
-        ? this.config.getForkTypes(slot).BeaconBlockBody.hashTreeRoot(body)
-        : this.config
-            .getPostBellatrixForkTypes(slot)
-            .BlindedBeaconBlockBody.hashTreeRoot(body as BlindedBeaconBlockBody);
-    this.logger.debug("Computing block post state from the produced body", {
-      slot,
-      bodyRoot: toRootHex(bodyRoot),
+    const [commonBlockBody, blindedBlockBodyResp] = await Promise.all([
+      this.produceCommonBlockBody({...blockAttributes, currentState}),
+      this.produceBlindedBlockBody({...blockAttributes, currentState}),
+    ]);
+
+    return this.assembleBlockBody(
+      BlockType.Blinded,
+      blockAttributes,
+      currentState,
+      commonBlockBody,
+      blindedBlockBodyResp
+    );
+  }
+
+  async assembleBlockBody<T extends BlockType>(
+    blockType: T,
+    blockAttributes: BlockAttributes,
+    currentState: CachedBeaconStateAllForks,
+    commonBlockBody: CommonBlockBody,
+    assembleBlockBody: AssembledBlockBodyResponse<T>
+  ): Promise<AssembledBlockResponse<T>> {
+    return assembleBlockBodyToBlock.call(this, {
       blockType,
-    });
-
-    const block = {
-      slot,
-      proposerIndex,
-      parentRoot: parentBlockRoot,
-      stateRoot: ZERO_HASH,
-      body,
-    } as AssembledBlockType<T>;
-
-    const {newStateRoot, proposerReward} = computeNewStateRoot(this.metrics, state, block);
-    block.stateRoot = newStateRoot;
-    const blockRoot =
-      blockType === BlockType.Full
-        ? this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block)
-        : this.config.getPostBellatrixForkTypes(slot).BlindedBeaconBlock.hashTreeRoot(block as BlindedBeaconBlock);
-    const blockRootHex = toRootHex(blockRoot);
-
-    // track the produced block for consensus broadcast validations
-    if (blockType === BlockType.Full) {
-      this.logger.debug("Setting executionPayload cache for produced block", {blockRootHex, slot, blockType});
-      this.producedBlockRoot.set(blockRootHex, (block as bellatrix.BeaconBlock).body.executionPayload ?? null);
-      this.metrics?.blockProductionCaches.producedBlockRoot.set(this.producedBlockRoot.size);
-    } else {
-      this.logger.debug("Tracking the produced blinded block", {blockRootHex, slot, blockType});
-      this.producedBlindedBlockRoot.add(blockRootHex);
-      this.metrics?.blockProductionCaches.producedBlindedBlockRoot.set(this.producedBlindedBlockRoot.size);
-    }
-
-    // Cache for latter broadcasting
-    //
-    // blinded blobs will be fetched and added to this cache later before finally
-    // publishing the blinded block's full version
-    if (blobs.type === BlobsResultType.produced) {
-      // body is of full type here
-      const {blockHash, contents} = blobs;
-      this.producedContentsCache.set(blockHash, contents);
-      this.metrics?.blockProductionCaches.producedContentsCache.set(this.producedContentsCache.size);
-    }
-
-    return {block, executionPayloadValue, consensusBlockValue: gweiToWei(proposerReward), shouldOverrideBuilder};
+      blockAttributes,
+      commonBlockBody,
+      assembleBlockBody,
+      currentState,
+      // TODO: Need to debug why we need `as` here
+    }) as Promise<AssembledBlockResponse<T>>;
   }
 
   /**
