@@ -6,8 +6,12 @@ import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@lodestar/params";
 import {CachedBeaconStateAltair} from "@lodestar/state-transition";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {generatePerfTestCachedStateAltair} from "../../../../../state-transition/test/perf/util.js";
-import {BeaconChain} from "../../../../src/chain/index.js";
-import {BlockType, produceBlockBody} from "../../../../src/chain/produceBlock/produceBlockBody.js";
+import {BeaconChain, BlockType} from "../../../../src/chain/index.js";
+import {
+  assembleBlockBodyToBlock,
+  produceCommonBlockBody,
+  produceFullBlockBody,
+} from "../../../../src/chain/produceBlock/index.js";
 import {Eth1ForBlockProductionDisabled} from "../../../../src/eth1/index.js";
 import {ExecutionEngineDisabled} from "../../../../src/execution/engine/index.js";
 import {ArchiveMode, BeaconDb} from "../../../../src/index.js";
@@ -75,7 +79,7 @@ describe("produceBlockBody", () => {
     fn: async ({chain, state, head, proposerIndex, proposerPubKey}) => {
       const slot = state.slot;
 
-      await produceBlockBody.call(chain, BlockType.Full, state, {
+      const attr = {
         parentSlot: slot,
         slot: slot + 1,
         graffiti: Buffer.alloc(32),
@@ -83,6 +87,19 @@ describe("produceBlockBody", () => {
         parentBlockRoot: fromHexString(head.blockRoot),
         proposerIndex,
         proposerPubKey,
+      };
+
+      const [commonBlockBody, fullBlockBody] = await Promise.all([
+        produceCommonBlockBody.call(chain, BlockType.Full, state, attr),
+        produceFullBlockBody.call(chain, state, attr),
+      ]);
+
+      await assembleBlockBodyToBlock.call(chain, {
+        blockAttributes: attr,
+        currentState: state,
+        blockType: BlockType.Full,
+        commonBlockBody,
+        assembleBlockBody: fullBlockBody,
       });
     },
   });
