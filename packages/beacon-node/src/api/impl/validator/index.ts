@@ -1,7 +1,7 @@
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {DataAvailabilityStatus, ExecutionStatus} from "@lodestar/fork-choice";
+import {ExecutionStatus} from "@lodestar/fork-choice";
 import {
   ForkName,
   ForkPostBellatrix,
@@ -18,6 +18,7 @@ import {
 } from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
+  DataAvailabilityStatus,
   attesterShufflingDecisionRoot,
   beaconBlockToBlinded,
   calculateCommitteeAssignments,
@@ -57,7 +58,6 @@ import {
   prettyWeiToEth,
   resolveOrRacePromises,
   toHex,
-  toHexString,
   toRootHex,
 } from "@lodestar/utils";
 import {MAX_BUILDER_BOOST_FACTOR} from "@lodestar/validator";
