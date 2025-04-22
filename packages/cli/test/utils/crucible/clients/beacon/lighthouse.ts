@@ -107,12 +107,12 @@ export const generateLighthouseBeaconNode: BeaconNodeGenerator<BeaconClient.Ligh
   ) as unknown as LighthouseAPI;
   api.lighthouse = {
     async getPeers() {
-      const response = await fetch(`http://127.0.0.1:${ports.beacon.httpPort}/lighthouse/peers`);
-      if (!response.ok) {
-        throw new Error(`Failed to get peers: ${response.status} ${response.statusText}`);
+      const res = await fetch(`http://127.0.0.1:${ports.beacon.httpPort}/lighthouse/peers`);
+      if (!res.ok) {
+        throw new Error(`Failed to get peers: ${res.status} ${res.statusText}`);
       }
-      const body = await response.json();
-      return {body, status: response.status};
+      const body = await res.json();
+      return {body, status: res.status};
     },
   };
 

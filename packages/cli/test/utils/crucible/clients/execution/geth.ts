@@ -154,7 +154,7 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
       stdoutFilePath: logFilePath,
     },
     health: async () => {
-      const response = await fetch(ethRpcPublicUrl, {
+      const res = await fetch(ethRpcPublicUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -167,11 +167,11 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
         }),
       });
 
-      if (!response.ok) {
-        throw new Error(`Health check failed: ${response.status} ${response.statusText}`);
+      if (!res.ok) {
+        throw new Error(`Health check failed: ${res.status} ${res.statusText}`);
       }
 
-      const json = await response.json();
+      const json = await res.json();
       if (json.error) {
         throw new Error(`JSON-RPC error: ${json.error.message}`);
       }

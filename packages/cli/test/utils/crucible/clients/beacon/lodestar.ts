@@ -94,9 +94,9 @@ export const generateLodestarBeaconNode: BeaconNodeGenerator<BeaconClient.Lodest
         stdoutFilePath: logFilePath,
       },
       health: async () => {
-        const response = await fetch(`http://${address}:${ports.beacon.httpPort}/eth/v1/node/health`);
-        if (!response.ok) {
-          throw new Error(`Health check failed: ${response.status} ${response.statusText}`);
+        const res = await fetch(`http://${address}:${ports.beacon.httpPort}/eth/v1/node/health`);
+        if (!res.ok) {
+          throw new Error(`Health check failed: ${res.status} ${res.statusText}`);
         }
       },
     },

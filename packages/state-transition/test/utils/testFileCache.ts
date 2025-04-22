@@ -99,11 +99,11 @@ async function downloadTestFile(fileId: string): Promise<Uint8Array> {
   console.log(`Downloading file ${fileUrl}`);
 
   try {
-    const response = await fetch(fileUrl);
-    if (!response.ok) {
-      throw new Error(`Error downloading ${fileUrl}: ${response.status} ${response.statusText}`);
+    const res = await fetch(fileUrl);
+    if (!res.ok) {
+      throw new Error(`Error downloading ${fileUrl}: ${res.status} ${res.statusText}`);
     }
-    return new Uint8Array(await response.arrayBuffer());
+    return new Uint8Array(await res.arrayBuffer());
   } catch (e) {
     const error = e as Error;
     error.message = `Error downloading ${fileUrl}: ${error.message}`;

@@ -129,16 +129,16 @@ export async function downloadOrCopyFile(pathDest: string, urlOrPathSrc: string)
 export async function downloadFile(pathDest: string, url: string): Promise<void> {
   if (!fs.existsSync(pathDest)) {
     mkdir(path.dirname(pathDest));
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Failed to download file from ${url}: ${response.status} ${response.statusText}`);
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`Failed to download file from ${url}: ${res.status} ${res.statusText}`);
     }
 
-    if (!response.body) {
+    if (!res.body) {
       throw new Error("Response body is null");
     }
 
-    await stream.pipeline(Readable.fromWeb(response.body as NodeReadableStream), fs.createWriteStream(pathDest));
+    await stream.pipeline(Readable.fromWeb(res.body as NodeReadableStream), fs.createWriteStream(pathDest));
   }
 }
 
@@ -148,11 +148,11 @@ export async function downloadFile(pathDest: string, url: string): Promise<void>
  */
 export async function downloadOrLoadFile(pathOrUrl: string): Promise<Uint8Array> {
   if (isUrl(pathOrUrl)) {
-    const response = await fetch(pathOrUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to download file from ${pathOrUrl}: ${response.status} ${response.statusText}`);
+    const res = await fetch(pathOrUrl);
+    if (!res.ok) {
+      throw new Error(`Failed to download file from ${pathOrUrl}: ${res.status} ${res.statusText}`);
     }
-    const arrayBuffer = await response.arrayBuffer();
+    const arrayBuffer = await res.arrayBuffer();
     return new Uint8Array(arrayBuffer);
   }
   return fs.promises.readFile(pathOrUrl);

@@ -68,9 +68,9 @@ export const generateLodestarValidatorNode: ValidatorNodeGenerator<ValidatorClie
         stdoutFilePath: logFilePath,
       },
       health: async () => {
-        const response = await fetch(`http://127.0.0.1:${ports.validator.keymanagerPort}/eth/v1/keystores`);
-        if (!response.ok) {
-          throw new Error(`Health check failed: ${response.status} ${response.statusText}`);
+        const res = await fetch(`http://127.0.0.1:${ports.validator.keymanagerPort}/eth/v1/keystores`);
+        if (!res.ok) {
+          throw new Error(`Health check failed: ${res.status} ${res.statusText}`);
         }
       },
     },
