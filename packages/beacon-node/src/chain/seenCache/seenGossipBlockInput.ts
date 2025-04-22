@@ -2,7 +2,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, NUMBER_OF_COLUMNS, isForkPostDeneb} from "@lodestar/params";
 import {RootHex, SignedBeaconBlock, deneb, fulu, ssz} from "@lodestar/types";
-import {pruneSetToMax} from "@lodestar/utils";
+import {Logger, pruneSetToMax} from "@lodestar/utils";
 
 import {IExecutionEngine} from "../../execution/index.js";
 import {Metrics} from "../../metrics/index.js";
@@ -84,11 +84,18 @@ export class SeenGossipBlockInput {
   private readonly custodyConfig: CustodyConfig;
   private readonly executionEngine: IExecutionEngine;
   private readonly emitter: ChainEventEmitter;
+  private readonly logger: Logger;
 
-  constructor(custodyConfig: CustodyConfig, executionEngine: IExecutionEngine, emitter: ChainEventEmitter) {
+  constructor(
+    custodyConfig: CustodyConfig,
+    executionEngine: IExecutionEngine,
+    emitter: ChainEventEmitter,
+    logger: Logger
+  ) {
     this.custodyConfig = custodyConfig;
     this.executionEngine = executionEngine;
     this.emitter = emitter;
+    this.logger = logger;
   }
   globalCacheId = 0;
 
@@ -161,8 +168,8 @@ export class SeenGossipBlockInput {
           .then((_success) => {
             // TODO: (@matthewkeil) add metrics collection point here
           })
-          .catch(() => {
-            // need to handle these errors so they don't percolate as uncaught and crash the node
+          .catch((error) => {
+            this.logger.error("Error getting data columns from execution", {blockHex}, error);
           });
       });
     }
