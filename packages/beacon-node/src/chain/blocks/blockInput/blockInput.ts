@@ -60,7 +60,6 @@ export interface BlockInput<
   needsData(): boolean;
   getDataStatus(): BlockInputDataStatus;
   isComplete(): boolean;
-  numberOfBlobs(): number;
 
   getLogMeta(): LogMetaBasic;
   getForkName(): ForkName;
@@ -85,137 +84,29 @@ export class BlockInputUnknown<
   rootHex: string;
   blockRoot: Uint8Array;
 
+  protected slot?: Slot;
+  protected forkName?: ForkName;
+  protected parentRootHex?: string;
+  protected blockWithSource?: BlockWithSource<BlockType>;
+  protected dataStatus: BlockInputDataStatus = BlockInputDataStatus.NoData;
+
+  protected timeCreatedSec?: number;
+  protected timeCompleteSec?: number;
+
+  protected blockPromise = this.createPromise<BlockType>();
+  protected dataPromise = this.createPromise<DataType>();
+
   get prettyRootHex(): string {
     return prettyBytes(this.rootHex);
   }
 
   constructor({rootHex, blockRoot}: BlockInputBaseProps) {
+    this.checkForUndefinedProps({
+      rootHex: rootHex,
+      blockRoot: blockRoot,
+    });
     this.rootHex = rootHex;
     this.blockRoot = blockRoot;
-  }
-
-  hasBlock(): boolean {
-    return false;
-  }
-
-  getBlock(): BlockType {
-    throw new BlockInputError({code: BlockInputErrorCode.MISSING_BLOCK, blockRoot: this.prettyRootHex});
-  }
-
-  getBlockWithSource(): BlockWithSource<BlockType> {
-    throw new BlockInputError({code: BlockInputErrorCode.MISSING_BLOCK, blockRoot: this.prettyRootHex});
-  }
-
-  addBlock(_props: AddBlockProps<BlockType>): void {
-    throw new BlockInputError({code: BlockInputErrorCode.MUST_UPGRADE_BLOCK_INPUT_TYPE, blockRoot: this.prettyRootHex});
-  }
-
-  removeBlock(): void {}
-
-  hasData(): boolean {
-    return false;
-  }
-
-  needsData(): boolean {
-    return false;
-  }
-
-  getDataStatus(): BlockInputDataStatus {
-    return BlockInputDataStatus.NoData;
-  }
-
-  isComplete(): boolean {
-    return false;
-  }
-
-  numberOfBlobs(): number {
-    throw new BlockInputError({
-      code: BlockInputErrorCode.UNKNOWN_NUMBER_OF_BLOBS,
-      ...this.getLogMeta(),
-    });
-  }
-
-  getLogMeta(): LogMetaBasic {
-    return {
-      blockRoot: this.prettyRootHex,
-      slot: "unknown",
-    };
-  }
-
-  getForkName(): ForkName {
-    throw new BlockInputError({code: BlockInputErrorCode.MISSING_FORK_NAME, blockRoot: this.prettyRootHex});
-  }
-
-  getSlot(): Slot;
-  getSlot(shouldError: false): Slot | undefined;
-  getSlot(_shouldError = true): Slot | undefined {
-    throw new BlockInputError({code: BlockInputErrorCode.MISSING_SLOT, blockRoot: this.prettyRootHex});
-  }
-
-  getParentRootHex(): string;
-  getParentRootHex(shouldError: false): string | undefined;
-  getParentRootHex(_shouldError = true): string | undefined {
-    throw new BlockInputError({code: BlockInputErrorCode.MISSING_PARENT_ROOT_HEX, blockRoot: this.prettyRootHex});
-  }
-
-  getTimeComplete(): number {
-    throw new BlockInputError({
-      code: BlockInputErrorCode.MISSING_TIME_COMPLETE,
-      blockRoot: this.prettyRootHex,
-    });
-  }
-
-  waitForBlock(_timeoutMs: number, _abortSignal?: AbortSignal): Promise<BlockType> {
-    return Promise.reject(new Error());
-  }
-  waitForData(_timeoutMs: number, _abortSignal?: AbortSignal): Promise<DataType> {
-    return Promise.reject(new Error());
-  }
-  waitForBlockAndData(_timeoutMs: number, _abortSignal?: AbortSignal): Promise<BlockInput> {
-    return Promise.reject(new Error());
-  }
-}
-
-export class BlockInputPreData<
-  BlockType extends SignedBeaconBlock<ForkPreDeneb> = SignedBeaconBlock<ForkPreDeneb>,
-  DataType extends PossibleDataTypes = null,
-> implements BlockInput<BlockType, DataType>
-{
-  type = BlockInputType.PreData;
-  rootHex: string;
-  blockRoot: Uint8Array;
-
-  protected slot?: Slot;
-  protected forkName?: ForkName;
-  protected parentRootHex?: string;
-  protected blockWithSource?: BlockWithSource<BlockType>;
-  protected dataAvailability: DataAvailabilityStatus = DataAvailabilityStatus.PreData;
-  protected dataStatus: BlockInputDataStatus = BlockInputDataStatus.NoData;
-
-  protected blockPromise = this.createPromise<BlockType>();
-  protected dataPromise = this.createPromise<DataType>();
-
-  protected timeCreatedSec?: number;
-  protected timeCompleteSec?: number;
-
-  get prettyRootHex(): string {
-    return prettyBytes(this.rootHex);
-  }
-
-  constructor(props: BlockInputPreDataProps<BlockType>) {
-    this.checkForUndefinedProps({
-      rootHex: props.rootHex,
-      blockRoot: props.blockRoot,
-    });
-    this.rootHex = props.rootHex;
-    this.blockRoot = props.blockRoot;
-    if ("block" in props) {
-      this.timeCreatedSec = props.seenTimestampSec;
-      this.addBlock(props);
-    } else {
-      this.timeCreatedSec = Date.now() / 1000;
-    }
-    this.dataPromise.resolve(null as DataType);
   }
 
   hasBlock(): boolean {
@@ -233,54 +124,8 @@ export class BlockInputPreData<
     return this.blockWithSource;
   }
 
-  addBlock({
-    rootHex,
-    blockRoot,
-    forkName,
-    dataAvailability,
-    block,
-    source,
-    seenTimestampSec,
-    peerIdStr,
-  }: AddBlockProps<BlockType>): void {
-    this.checkForUndefinedProps({
-      rootHex,
-      blockRoot,
-      forkName,
-      dataAvailability,
-      block,
-      source,
-      seenTimestampSec,
-    });
-    if (rootHex !== this.rootHex) {
-      throw new BlockInputError(
-        {
-          code: BlockInputErrorCode.MISMATCHED_ROOT_HEX,
-          blockInputRoot: this.rootHex,
-          mismatchedRoot: rootHex,
-          source,
-          peerId: `${peerIdStr}`,
-        },
-        "Cannot addBlock to BlockInput with a different rootHex"
-      );
-    }
-
-    this.forkName = forkName;
-    this.dataAvailability = dataAvailability;
-    this.blockWithSource = {
-      block,
-      source,
-      seenTimestampSec,
-      peerIdStr,
-    };
-    this.slot = block.message.slot;
-    this.parentRootHex = toHex(block.message.parentRoot);
-
-    this.blockPromise.resolve(block);
-
-    if (!this.needsData()) {
-      this.timeCompleteSec = Date.now();
-    }
+  addBlock(_: AddBlockProps<BlockType>): void {
+    throw new BlockInputError({code: BlockInputErrorCode.MUST_UPGRADE_BLOCK_INPUT_TYPE, blockRoot: this.prettyRootHex});
   }
 
   /**
@@ -307,6 +152,10 @@ export class BlockInputPreData<
     return this.hasBlock() && !this.needsData();
   }
 
+  getDataStatus(): BlockInputDataStatus {
+    return this.dataStatus;
+  }
+
   numberOfBlobs(): number {
     throw new BlockInputError({
       code: BlockInputErrorCode.UNKNOWN_NUMBER_OF_BLOBS,
@@ -314,14 +163,10 @@ export class BlockInputPreData<
     });
   }
 
-  getDataStatus(): BlockInputDataStatus {
-    return this.dataStatus;
-  }
-
   getLogMeta(): LogMetaBasic {
     return {
       blockRoot: this.prettyRootHex,
-      slot: this.slot ?? "unknown",
+      slot: "unknown",
     };
   }
 
@@ -403,6 +248,88 @@ export class BlockInputPreData<
   }
 }
 
+export class BlockInputPreData<
+    BlockType extends SignedBeaconBlock<ForkPreDeneb> = SignedBeaconBlock<ForkPreDeneb>,
+    DataType extends PossibleDataTypes = null,
+  >
+  extends BlockInputUnknown<BlockType, DataType>
+  implements BlockInput<BlockType, DataType>
+{
+  type = BlockInputType.PreData;
+
+  protected dataAvailability: DataAvailabilityStatus = DataAvailabilityStatus.PreData;
+
+  constructor(props: BlockInputPreDataProps<BlockType>) {
+    super(props);
+    this.blockPromise = this.createPromise<BlockType>();
+    this.dataPromise = this.createPromise<DataType>();
+    if ("block" in props) {
+      this.timeCreatedSec = props.seenTimestampSec;
+      this.addBlock(props);
+    } else {
+      this.timeCreatedSec = Date.now() / 1000;
+    }
+    this.dataPromise.resolve(null as DataType);
+  }
+
+  addBlock({
+    rootHex,
+    blockRoot,
+    forkName,
+    dataAvailability,
+    block,
+    source,
+    seenTimestampSec,
+    peerIdStr,
+  }: AddBlockProps<BlockType>): void {
+    this.checkForUndefinedProps({
+      rootHex,
+      blockRoot,
+      forkName,
+      dataAvailability,
+      block,
+      source,
+      seenTimestampSec,
+    });
+    if (rootHex !== this.rootHex) {
+      throw new BlockInputError(
+        {
+          code: BlockInputErrorCode.MISMATCHED_ROOT_HEX,
+          blockInputRoot: this.rootHex,
+          mismatchedRoot: rootHex,
+          source,
+          peerId: `${peerIdStr}`,
+        },
+        "Cannot addBlock to BlockInput with a different rootHex"
+      );
+    }
+
+    this.forkName = forkName;
+    this.dataAvailability = dataAvailability;
+    this.blockWithSource = {
+      block,
+      source,
+      seenTimestampSec,
+      peerIdStr,
+    };
+    this.slot = block.message.slot;
+    this.parentRootHex = toHex(block.message.parentRoot);
+
+    this.blockPromise.resolve(block);
+
+    if (!this.needsData()) {
+      this.timeCompleteSec = Date.now();
+    }
+  }
+
+  getLogMeta(): LogMetaBasic {
+    return {
+      blockRoot: this.prettyRootHex,
+      slot: this.slot ?? "unknown",
+    };
+  }
+}
+
 abstract class BlockInputData<BlockType extends SignedBeaconBlock<ForkPostDeneb>, DataType extends PossibleDataTypes>
   extends BlockInputPreData<BlockType, DataType>
   implements BlockInput<BlockType, DataType>
@@ -452,6 +379,7 @@ export class BlockInputBlobs<
 
   constructor(props: BlockInputBlobsProps<BlockType>) {
     super(props);
+    this.dataPromise = this.createPromise<DataType>();
     if ("block" in props && "blobSidecar" in props) {
       throw new BlockInputError({code: BlockInputErrorCode.INVALID_CONSTRUCTION, blockRoot: this.prettyRootHex});
     }
@@ -645,6 +573,7 @@ export class BlockInputBlobs<
 
 //   constructor(props: BlockInputColumnsProps<BlockType>) {
 //     super(props);
+//     this.dataPromise = this.createPromise<DataType>();
 //     this.custodyConfig = props.custodyConfig;
 //     if ("block" in props && "columnSidecar" in props) {
 //       throw new BlockInputError({code: BlockInputErrorCode.INVALID_CONSTRUCTION, blockRoot: this.prettyRootHex});
