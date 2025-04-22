@@ -94,17 +94,16 @@ export async function getNetworkCachedBlock(
   return config.getForkTypes(slot).SignedBeaconBlock.deserialize(blockSsz);
 }
 
-async function downloadTestFile(fileId: string): Promise<Buffer> {
+async function downloadTestFile(fileId: string): Promise<Uint8Array> {
   const fileUrl = `${TEST_FILES_BASE_URL}/${fileId}`;
   console.log(`Downloading file ${fileUrl}`);
 
   try {
     const response = await fetch(fileUrl);
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      throw new Error(`Error downloading ${fileUrl}: ${response.status} ${response.statusText}`);
     }
-    const arrayBuffer = await response.arrayBuffer();
-    return Buffer.from(arrayBuffer);
+    return new Uint8Array(await response.arrayBuffer());
   } catch (e) {
     const error = e as Error;
     error.message = `Error downloading ${fileUrl}: ${error.message}`;

@@ -135,7 +135,6 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
         throw new Error(`Health check failed: ${response.status} ${response.statusText}`);
       }
 
-      // Verify the response contains valid JSON-RPC response
       const json = await response.json();
       if (json.error) {
         throw new Error(`JSON-RPC error: ${json.error.message}`);

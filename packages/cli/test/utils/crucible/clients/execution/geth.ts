@@ -171,7 +171,6 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
         throw new Error(`Health check failed: ${response.status} ${response.statusText}`);
       }
 
-      // Optionally verify the response contains valid JSON-RPC response
       const json = await response.json();
       if (json.error) {
         throw new Error(`JSON-RPC error: ${json.error.message}`);
