@@ -21,14 +21,9 @@ export type BeaconStateTransitionMetrics = {
   postStateBalancesNodesPopulatedHit: Gauge;
   postStateValidatorsNodesPopulatedMiss: Gauge;
   postStateValidatorsNodesPopulatedHit: Gauge;
-  registerValidatorStatuses: (
-    currentEpoch: Epoch,
-    inclusionDelays: number[],
-    flags: number[],
-    isActiveCurrEpoch: boolean[],
-    isActivePrevEpoch: boolean[],
-    balances?: number[]
-  ) => void;
+  newSeenAttestersPerBlock: Gauge;
+  newSeenAttestersEffectiveBalancePerBlock: Gauge;
+  attestationsPerBlock: Gauge;
 };
 
 export function onStateCloneMetrics(

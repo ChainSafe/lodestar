@@ -2,6 +2,7 @@ import {ChainConfig, ChainForkConfig} from "@lodestar/config";
 import {INTERVALS_PER_SLOT, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
+  DataAvailabilityStatus,
   EffectiveBalanceIncrements,
   ZERO_HASH,
   computeEpochAtSlot,
@@ -31,7 +32,6 @@ import {Logger, MapDef, fromHex, toRootHex} from "@lodestar/utils";
 import {computeDeltas} from "../protoArray/computeDeltas.js";
 import {ProtoArrayError, ProtoArrayErrorCode} from "../protoArray/errors.js";
 import {
-  DataAvailabilityStatus,
   ExecutionStatus,
   HEX_ZERO_HASH,
   LVHExecResponse,

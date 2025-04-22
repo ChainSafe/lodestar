@@ -1,7 +1,7 @@
 import {setHasher} from "@chainsafe/persistent-merkle-tree";
 import {hasher} from "@chainsafe/persistent-merkle-tree/hasher/hashtree";
-import {PeerId} from "@libp2p/interface";
-import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
+import {generateKeyPair} from "@libp2p/crypto/keys";
+import {PrivateKey} from "@libp2p/interface";
 import {ChainConfig, createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config as minimalConfig} from "@lodestar/config/default";
 import {LevelDbController} from "@lodestar/db";
@@ -28,7 +28,7 @@ export async function getDevBeaconNode(
     options?: RecursivePartial<IBeaconNodeOptions>;
     validatorCount?: number;
     logger?: LoggerNode;
-    peerId?: PeerId;
+    privateKey?: PrivateKey;
     peerStoreDir?: string;
     anchorState?: BeaconStateAllForks;
     wsCheckpoint?: phase0.Checkpoint;
@@ -36,9 +36,9 @@ export async function getDevBeaconNode(
 ): Promise<BeaconNode> {
   setHasher(hasher);
   const {params, validatorCount = 8, peerStoreDir} = opts;
-  let {options = {}, logger, peerId} = opts;
+  let {options = {}, logger, privateKey} = opts;
 
-  if (!peerId) peerId = await createSecp256k1PeerId();
+  if (!privateKey) privateKey = await generateKeyPair("secp256k1");
   const tmpDir = tmp.dirSync({unsafeCleanup: true});
   const config = createChainForkConfig({...minimalConfig, ...params});
   logger = logger ?? testLogger();
@@ -96,7 +96,7 @@ export async function getDevBeaconNode(
     db,
     logger,
     processShutdownCallback: () => {},
-    peerId,
+    privateKey,
     dataDir: ".",
     peerStoreDir,
     anchorState,

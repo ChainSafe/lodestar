@@ -15,7 +15,7 @@ import {Epoch, Slot, ValidatorIndex} from "@lodestar/types";
 import {IndexedAttestation, SignedAggregateAndProof} from "@lodestar/types";
 import {LogData, LogHandler, LogLevel, Logger, MapDef, MapDefMax, toRootHex} from "@lodestar/utils";
 import {GENESIS_SLOT} from "../constants/constants.js";
-import {LodestarMetrics} from "./metrics/lodestar.js";
+import {Metrics} from "../metrics/index.js";
 
 /** The validator monitor collects per-epoch data about each monitored validator.
  * Historical data will be kept around for `HISTORIC_EPOCHS` before it is pruned.
@@ -27,7 +27,7 @@ const MAX_CACHED_DISTINCT_TARGETS = 4;
 const INTERVALS_LATE_ATTESTATION_SUBMISSION = 1.5;
 const INTERVALS_LATE_BLOCK_SUBMISSION = 0.75;
 
-const RETAIN_REGISTERED_VALIDATORS_MS = 12 * 3600 * 1000; // 12 hours
+const RETAIN_REGISTERED_VALIDATORS_MS = 1 * 3600 * 1000; // 1 hour
 
 type Seconds = number;
 export enum OpSource {
@@ -90,6 +90,10 @@ export type ValidatorMonitor = {
 export type ValidatorMonitorOpts = {
   /** Log validator monitor events as info */
   validatorMonitorLogs?: boolean;
+};
+
+export const defaultValidatorMonitorOpts: ValidatorMonitorOpts = {
+  validatorMonitorLogs: false,
 };
 
 /** Information required to reward some validator during the current and previous epoch. */
@@ -257,7 +261,7 @@ type MonitoredValidator = {
 };
 
 export function createValidatorMonitor(
-  metrics: LodestarMetrics,
+  metrics: Metrics | null,
   config: ChainForkConfig,
   genesisTime: number,
   logger: Logger,
@@ -329,28 +333,28 @@ export function createValidatorMonitor(
         );
 
         if (summary.isPrevSourceAttester) {
-          metrics.validatorMonitor.prevEpochOnChainSourceAttesterHit.inc();
+          metrics?.validatorMonitor.prevEpochOnChainSourceAttesterHit.inc();
         } else {
-          metrics.validatorMonitor.prevEpochOnChainSourceAttesterMiss.inc();
+          metrics?.validatorMonitor.prevEpochOnChainSourceAttesterMiss.inc();
         }
         if (summary.isPrevHeadAttester) {
-          metrics.validatorMonitor.prevEpochOnChainHeadAttesterHit.inc();
+          metrics?.validatorMonitor.prevEpochOnChainHeadAttesterHit.inc();
         } else {
-          metrics.validatorMonitor.prevEpochOnChainHeadAttesterMiss.inc();
+          metrics?.validatorMonitor.prevEpochOnChainHeadAttesterMiss.inc();
         }
         if (summary.isPrevTargetAttester) {
-          metrics.validatorMonitor.prevEpochOnChainTargetAttesterHit.inc();
+          metrics?.validatorMonitor.prevEpochOnChainTargetAttesterHit.inc();
         } else {
-          metrics.validatorMonitor.prevEpochOnChainTargetAttesterMiss.inc();
+          metrics?.validatorMonitor.prevEpochOnChainTargetAttesterMiss.inc();
         }
 
         const prevEpochSummary = monitoredValidator.summaries.get(previousEpoch);
         const attestationCorrectHead = prevEpochSummary?.attestationCorrectHead;
         if (attestationCorrectHead !== null && attestationCorrectHead !== undefined) {
           if (attestationCorrectHead) {
-            metrics.validatorMonitor.prevOnChainAttesterCorrectHead.inc();
+            metrics?.validatorMonitor.prevOnChainAttesterCorrectHead.inc();
           } else {
-            metrics.validatorMonitor.prevOnChainAttesterIncorrectHead.inc();
+            metrics?.validatorMonitor.prevOnChainAttesterIncorrectHead.inc();
           }
         }
 
@@ -365,15 +369,15 @@ export function createValidatorMonitor(
               : null;
 
         if (inclusionDistance !== null) {
-          metrics.validatorMonitor.prevEpochOnChainInclusionDistance.observe(inclusionDistance);
-          metrics.validatorMonitor.prevEpochOnChainAttesterHit.inc();
+          metrics?.validatorMonitor.prevEpochOnChainInclusionDistance.observe(inclusionDistance);
+          metrics?.validatorMonitor.prevEpochOnChainAttesterHit.inc();
         } else {
-          metrics.validatorMonitor.prevEpochOnChainAttesterMiss.inc();
+          metrics?.validatorMonitor.prevEpochOnChainAttesterMiss.inc();
         }
 
         const balance = balances?.[index];
         if (balance !== undefined) {
-          metrics.validatorMonitor.prevEpochOnChainBalance.set({index}, balance);
+          metrics?.validatorMonitor.prevEpochOnChainBalance.set({index}, balance);
         }
 
         if (!summary.isPrevSourceAttester || !summary.isPrevTargetAttester || !summary.isPrevHeadAttester) {
@@ -394,10 +398,10 @@ export function createValidatorMonitor(
       const validator = validators.get(block.proposerIndex);
       // Returns the delay between the start of `block.slot` and `seenTimestamp`.
       const delaySec = seenTimestampSec - (genesisTime + block.slot * config.SECONDS_PER_SLOT);
-      metrics.gossipBlock.elapsedTimeTillReceived.observe(delaySec);
+      metrics?.gossipBlock.elapsedTimeTillReceived.observe(delaySec);
       if (validator) {
-        metrics.validatorMonitor.beaconBlockTotal.inc({src});
-        metrics.validatorMonitor.beaconBlockDelaySeconds.observe({src}, delaySec);
+        metrics?.validatorMonitor.beaconBlockTotal.inc({src});
+        metrics?.validatorMonitor.beaconBlockDelaySeconds.observe({src}, delaySec);
 
         const summary = getEpochSummary(validator, computeEpochAtSlot(block.slot));
         summary.blockProposals.push({
@@ -416,7 +420,7 @@ export function createValidatorMonitor(
     registerImportedBlock(block, {proposerBalanceDelta}) {
       const validator = validators.get(block.proposerIndex);
       if (validator) {
-        metrics.validatorMonitor.proposerBalanceDeltaKnown.observe(proposerBalanceDelta);
+        metrics?.validatorMonitor.proposerBalanceDeltaKnown.observe(proposerBalanceDelta);
 
         // There should be alredy a summary for the block. Could be missing when using one VC multiple BNs
         const summary = getEpochSummary(validator, computeEpochAtSlot(block.slot));
@@ -441,8 +445,8 @@ export function createValidatorMonitor(
       for (const index of indexedAttestation.attestingIndices) {
         const validator = validators.get(index);
         if (validator) {
-          metrics.validatorMonitor.unaggregatedAttestationSubmittedSentPeers.observe(sentPeers);
-          metrics.validatorMonitor.unaggregatedAttestationDelaySeconds.observe({src: OpSource.api}, delaySec);
+          metrics?.validatorMonitor.unaggregatedAttestationSubmittedSentPeers.observe(sentPeers);
+          metrics?.validatorMonitor.unaggregatedAttestationDelaySeconds.observe({src: OpSource.api}, delaySec);
           log("Published unaggregated attestation", {
             validator: index,
             slot: data.slot,
@@ -475,8 +479,8 @@ export function createValidatorMonitor(
       for (const index of indexedAttestation.attestingIndices) {
         const validator = validators.get(index);
         if (validator) {
-          metrics.validatorMonitor.unaggregatedAttestationTotal.inc({src});
-          metrics.validatorMonitor.unaggregatedAttestationDelaySeconds.observe({src}, delaySec);
+          metrics?.validatorMonitor.unaggregatedAttestationTotal.inc({src});
+          metrics?.validatorMonitor.unaggregatedAttestationDelaySeconds.observe({src}, delaySec);
           const summary = getEpochSummary(validator, epoch);
           summary.attestations += 1;
           summary.attestationMinDelay = Math.min(delaySec, summary.attestationMinDelay ?? Infinity);
@@ -492,7 +496,7 @@ export function createValidatorMonitor(
       for (const index of indexedAttestation.attestingIndices) {
         const validator = validators.get(index);
         if (validator) {
-          metrics.validatorMonitor.aggregatedAttestationDelaySeconds.observe({src: OpSource.api}, delaySec);
+          metrics?.validatorMonitor.aggregatedAttestationDelaySeconds.observe({src: OpSource.api}, delaySec);
           log("Published aggregated attestation", {
             validator: index,
             slot: data.slot,
@@ -519,8 +523,8 @@ export function createValidatorMonitor(
       const aggregatorIndex = signedAggregateAndProof.message.aggregatorIndex;
       const validatorAggregator = validators.get(aggregatorIndex);
       if (validatorAggregator) {
-        metrics.validatorMonitor.aggregatedAttestationTotal.inc({src});
-        metrics.validatorMonitor.aggregatedAttestationDelaySeconds.observe({src}, delaySec);
+        metrics?.validatorMonitor.aggregatedAttestationTotal.inc({src});
+        metrics?.validatorMonitor.aggregatedAttestationDelaySeconds.observe({src}, delaySec);
         const summary = getEpochSummary(validatorAggregator, epoch);
         summary.aggregates += 1;
         summary.aggregateMinDelay = Math.min(delaySec, summary.aggregateMinDelay ?? Infinity);
@@ -529,8 +533,8 @@ export function createValidatorMonitor(
       for (const index of indexedAttestation.attestingIndices) {
         const validator = validators.get(index);
         if (validator) {
-          metrics.validatorMonitor.attestationInAggregateTotal.inc({src});
-          metrics.validatorMonitor.attestationInAggregateDelaySeconds.observe({src}, delaySec);
+          metrics?.validatorMonitor.attestationInAggregateTotal.inc({src});
+          metrics?.validatorMonitor.attestationInAggregateDelaySeconds.observe({src}, delaySec);
           const summary = getEpochSummary(validator, epoch);
           summary.attestationAggregateInclusions += 1;
           log("Attestation is included in aggregate", {
@@ -567,9 +571,9 @@ export function createValidatorMonitor(
       for (const index of indexedAttestation.attestingIndices) {
         const validator = validators.get(index);
         if (validator) {
-          metrics.validatorMonitor.attestationInBlockTotal.inc();
-          metrics.validatorMonitor.attestationInBlockDelaySlots.observe(delay);
-          metrics.validatorMonitor.attestationInBlockParticipants.observe(participants);
+          metrics?.validatorMonitor.attestationInBlockTotal.inc();
+          metrics?.validatorMonitor.attestationInBlockDelaySlots.observe(delay);
+          metrics?.validatorMonitor.attestationInBlockParticipants.observe(participants);
 
           const summary = getEpochSummary(validator, epoch);
           summary.attestationBlockInclusions += 1;
@@ -613,7 +617,7 @@ export function createValidatorMonitor(
       for (const index of syncCommitteeParticipantIndices) {
         const validator = validators.get(index);
         if (validator) {
-          metrics.validatorMonitor.syncSignatureInAggregateTotal.inc();
+          metrics?.validatorMonitor.syncSignatureInAggregateTotal.inc();
 
           const summary = getEpochSummary(validator, epoch);
           summary.syncSignatureAggregateInclusions += 1;
@@ -673,7 +677,7 @@ export function createValidatorMonitor(
           const flags = parseParticipationFlags(previousEpochParticipation.get(index));
           const attestationSummary = validator.attestations.get(prevEpoch)?.get(prevEpochTargetRoot);
           const summary = renderAttestationSummary(config, rootCache, attestationSummary, flags);
-          metrics.validatorMonitor.prevEpochAttestationSummary.inc({summary});
+          metrics?.validatorMonitor.prevEpochAttestationSummary.inc({summary});
           log("Previous epoch attestation", {
             validator: index,
             epoch: prevEpoch,
@@ -691,7 +695,7 @@ export function createValidatorMonitor(
             const epochSummary = validator.summaries.get(prevEpoch);
             const proposalSlot = SLOTS_PER_EPOCH * prevEpoch + slotIndex;
             const summary = renderBlockProposalSummary(config, rootCache, epochSummary, proposalSlot);
-            metrics.validatorMonitor.prevEpochBlockProposalSummary.inc({summary});
+            metrics?.validatorMonitor.prevEpochBlockProposalSummary.inc({summary});
             log("Previous epoch block proposal", {
               validator: validatorIndex,
               slot: proposalSlot,
@@ -708,7 +712,7 @@ export function createValidatorMonitor(
      * Should be called whenever Prometheus is scraping.
      */
     scrapeMetrics(slotClock) {
-      metrics.validatorMonitor.validatorsConnected.set(validators.size);
+      metrics?.validatorMonitor.validatorsConnected.set(validators.size);
 
       const epoch = computeEpochAtSlot(slotClock);
       const slotInEpoch = slotClock % SLOTS_PER_EPOCH;
@@ -725,12 +729,12 @@ export function createValidatorMonitor(
       const previousEpoch = slotInEpoch > MIN_ATTESTATION_INCLUSION_DELAY + 3 ? epoch - 1 : epoch - 2;
 
       // reset() to mimic the behaviour of an aggregated .set({index})
-      metrics.validatorMonitor.prevEpochAttestations.reset();
-      metrics.validatorMonitor.prevEpochAttestationsMinDelaySeconds.reset();
-      metrics.validatorMonitor.prevEpochAttestationAggregateInclusions.reset();
-      metrics.validatorMonitor.prevEpochAttestationBlockInclusions.reset();
-      metrics.validatorMonitor.prevEpochAttestationBlockMinInclusionDistance.reset();
-      metrics.validatorMonitor.prevEpochSyncSignatureAggregateInclusions.reset();
+      metrics?.validatorMonitor.prevEpochAttestations.reset();
+      metrics?.validatorMonitor.prevEpochAttestationsMinDelaySeconds.reset();
+      metrics?.validatorMonitor.prevEpochAttestationAggregateInclusions.reset();
+      metrics?.validatorMonitor.prevEpochAttestationBlockInclusions.reset();
+      metrics?.validatorMonitor.prevEpochAttestationBlockMinInclusionDistance.reset();
+      metrics?.validatorMonitor.prevEpochSyncSignatureAggregateInclusions.reset();
 
       let validatorsInSyncCommittee = 0;
       let prevEpochSyncCommitteeHits = 0;
@@ -750,28 +754,28 @@ export function createValidatorMonitor(
         }
 
         // Attestations
-        metrics.validatorMonitor.prevEpochAttestations.observe(summary.attestations);
+        metrics?.validatorMonitor.prevEpochAttestations.observe(summary.attestations);
         if (summary.attestationMinDelay !== null)
-          metrics.validatorMonitor.prevEpochAttestationsMinDelaySeconds.observe(summary.attestationMinDelay);
-        metrics.validatorMonitor.prevEpochAttestationAggregateInclusions.observe(
+          metrics?.validatorMonitor.prevEpochAttestationsMinDelaySeconds.observe(summary.attestationMinDelay);
+        metrics?.validatorMonitor.prevEpochAttestationAggregateInclusions.observe(
           summary.attestationAggregateInclusions
         );
-        metrics.validatorMonitor.prevEpochAttestationBlockInclusions.observe(summary.attestationBlockInclusions);
+        metrics?.validatorMonitor.prevEpochAttestationBlockInclusions.observe(summary.attestationBlockInclusions);
         if (summary.attestationMinBlockInclusionDistance !== null) {
-          metrics.validatorMonitor.prevEpochAttestationBlockMinInclusionDistance.observe(
+          metrics?.validatorMonitor.prevEpochAttestationBlockMinInclusionDistance.observe(
             summary.attestationMinBlockInclusionDistance
           );
         }
 
         // Blocks
-        metrics.validatorMonitor.prevEpochBeaconBlocks.observe(summary.blocks);
+        metrics?.validatorMonitor.prevEpochBeaconBlocks.observe(summary.blocks);
         if (summary.blockMinDelay !== null)
-          metrics.validatorMonitor.prevEpochBeaconBlocksMinDelaySeconds.observe(summary.blockMinDelay);
+          metrics?.validatorMonitor.prevEpochBeaconBlocksMinDelaySeconds.observe(summary.blockMinDelay);
 
         // Aggregates
-        metrics.validatorMonitor.prevEpochAggregatesTotal.observe(summary.aggregates);
+        metrics?.validatorMonitor.prevEpochAggregatesTotal.observe(summary.aggregates);
         if (summary.aggregateMinDelay !== null)
-          metrics.validatorMonitor.prevEpochAggregatesMinDelaySeconds.observe(summary.aggregateMinDelay);
+          metrics?.validatorMonitor.prevEpochAggregatesMinDelaySeconds.observe(summary.aggregateMinDelay);
 
         // Sync committee
         prevEpochSyncCommitteeHits += summary.syncCommitteeHits;
@@ -779,15 +783,15 @@ export function createValidatorMonitor(
 
         // Only observe if included in sync committee to prevent distorting metrics
         if (validatorInSyncCommittee) {
-          metrics.validatorMonitor.prevEpochSyncSignatureAggregateInclusions.observe(
+          metrics?.validatorMonitor.prevEpochSyncSignatureAggregateInclusions.observe(
             summary.syncSignatureAggregateInclusions
           );
         }
       }
 
-      metrics.validatorMonitor.validatorsInSyncCommittee.set(validatorsInSyncCommittee);
-      metrics.validatorMonitor.prevEpochSyncCommitteeHits.set(prevEpochSyncCommitteeHits);
-      metrics.validatorMonitor.prevEpochSyncCommitteeMisses.set(prevEpochSyncCommitteeMisses);
+      metrics?.validatorMonitor.validatorsInSyncCommittee.set(validatorsInSyncCommittee);
+      metrics?.validatorMonitor.prevEpochSyncCommitteeHits.set(prevEpochSyncCommitteeHits);
+      metrics?.validatorMonitor.prevEpochSyncCommitteeMisses.set(prevEpochSyncCommitteeMisses);
     },
   };
 }

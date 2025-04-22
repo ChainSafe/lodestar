@@ -3,12 +3,14 @@ import {BeaconState} from "@lodestar/types";
 import {BlobsSource, BlockSource} from "../../chain/blocks/types.js";
 import {JobQueueItemType} from "../../chain/bls/index.js";
 import {AttestationErrorCode, BlockErrorCode} from "../../chain/errors/index.js";
+import {ScannedSlotsTerminationReason} from "../../chain/opPools/aggregatedAttestationPool.js";
 import {InsertOutcome} from "../../chain/opPools/types.js";
 import {RegenCaller, RegenFnName} from "../../chain/regen/interface.js";
 import {ReprocessStatus} from "../../chain/reprocess.js";
 import {RejectReason} from "../../chain/seenCache/seenAttestationData.js";
 import {BlockInputAvailabilitySource} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {CacheItemType} from "../../chain/stateCache/types.js";
+import {OpSource} from "../../chain/validatorMonitor.js";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {GossipType} from "../../network/index.js";
 import {CannotAcceptWorkReason, ReprocessRejectReason} from "../../network/processor/index.js";
@@ -18,7 +20,6 @@ import {PeerSyncType, RangeSyncType} from "../../sync/utils/remoteSyncType.js";
 import {AllocSource} from "../../util/bufferPool.js";
 import {LodestarMetadata} from "../options.js";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
-import {OpSource} from "../validatorMonitor.js";
 
 export type LodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 
@@ -28,7 +29,7 @@ export type LodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 export function createLodestarMetrics(
   register: RegistryMetricCreator,
   metadata?: LodestarMetadata,
-  anchorState?: Pick<BeaconState, "genesisTime">
+  genesisTime?: number
 ) {
   if (metadata) {
     register.static<LodestarMetadata>({
@@ -39,13 +40,13 @@ export function createLodestarMetrics(
   }
 
   // Initial static metrics
-  if (anchorState) {
+  if (genesisTime) {
     register
       .gauge({
         name: "lodestar_genesis_time",
         help: "Genesis time in seconds",
       })
-      .set(anchorState.genesisTime);
+      .set(genesisTime);
   }
 
   return {
@@ -269,9 +270,10 @@ export function createLodestarMetrics(
       producedAggregateParticipants: register.histogram({
         name: "lodestar_produced_aggregate_participants",
         help: "API impl produced aggregates histogram of participants",
-        // We care more about tracking low quality aggregates with low participation
-        // Max committee sizes are: 0.5e6 vc: 244, 1e6 vc: 488
-        buckets: [1, 5, 20, 50, 100, 200, 400],
+        // We expect most aggregates to have 400-600 participants depending on the
+        // validator count of the network, anything lower than that is not acceptable
+        // Max committee sizes are: 1e6 vc: 488, 1.1e6 vc: 537, 1.4e6 vc: 683
+        buckets: [1, 25, 50, 100, 250, 400, 500, 600],
       }),
       producedSyncContributionParticipants: register.histogram({
         name: "lodestar_produced_sync_contribution_participants",
@@ -386,6 +388,18 @@ export function createLodestarMetrics(
     postStateValidatorsNodesPopulatedMiss: register.gauge({
       name: "lodestar_stfn_post_state_validators_nodes_populated_miss_total",
       help: "Total count state.validators nodesPopulated is false on stfn for post state",
+    }),
+    newSeenAttestersPerBlock: register.gauge({
+      name: "lodestar_stfn_new_seen_attesters_per_block_total",
+      help: "Total count of new seen attesters per block",
+    }),
+    newSeenAttestersEffectiveBalancePerBlock: register.gauge({
+      name: "lodestar_stfn_new_seen_attesters_effective_balance_per_block_total",
+      help: "Total effective balance increment of new seen attesters per block",
+    }),
+    attestationsPerBlock: register.gauge({
+      name: "lodestar_stfn_attestations_per_block_total",
+      help: "Total count of attestations per block",
     }),
 
     // BLS verifier thread pool and queue
@@ -850,31 +864,131 @@ export function createLodestarMetrics(
     },
 
     opPool: {
-      // Note: Current opPool metrics only track current size.
-      //       I don't believe tracking total add() count is relevant since that can be seen with gossip ACCEPTs
-      aggregatedAttestationPoolSize: register.gauge({
-        name: "lodestar_oppool_aggregated_attestation_pool_size",
-        help: "Current size of the AggregatedAttestationPool = total attestations",
-      }),
-      /** This metric helps view how many overlapping attestations we keep per data on average */
-      aggregatedAttestationPoolUniqueData: register.gauge({
-        name: "lodestar_oppool_aggregated_attestation_pool_unique_data_count",
-        help: "Current size of the AggregatedAttestationPool = total attestations unique by data",
-      }),
-      attestationPoolSize: register.gauge({
-        name: "lodestar_oppool_attestation_pool_size",
-        help: "Current size of the AttestationPool = total attestations unique by data and slot",
-      }),
-      attestationPoolGossipInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
-        name: "lodestar_attestation_pool_insert_outcome_total",
-        help: "Total number of InsertOutcome as a result of adding a gossip attestation in a pool",
-        labelNames: ["insertOutcome"],
-      }),
-      attestationPoolApiInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
-        name: "lodestar_attestation_pool_api_insert_outcome_total",
-        help: "Total number of InsertOutcome as a result of adding an attestation from api in a pool",
-        labelNames: ["insertOutcome"],
-      }),
+      aggregatedAttestationPool: {
+        size: register.gauge({
+          name: "lodestar_oppool_aggregated_attestation_pool_size",
+          help: "Current size of the AggregatedAttestationPool = total attestations",
+        }),
+        uniqueData: register.gauge({
+          name: "lodestar_oppool_aggregated_attestation_pool_unique_data_count",
+          help: "Current size of the AggregatedAttestationPool = total attestations unique by data",
+        }),
+        attDataPerSlot: register.gauge({
+          name: "lodestar_oppool_aggregated_attestation_pool_attestation_data_per_slot_total",
+          help: "Total number of attestation data per slot in AggregatedAttestationPool",
+        }),
+        committeesPerSlot: register.gauge({
+          name: "lodestar_oppool_aggregated_attestation_pool_committees_per_slot_total",
+          help: "Total number of committees per slot in AggregatedAttestationPool",
+        }),
+        // max number of attestations per committee will become number of consolidations
+        maxAttestationsPerCommittee: register.gauge({
+          name: "lodestar_oppool_aggregated_attestation_pool_max_attestations_per_committee",
+          help: "Max number of attestations per committee in AggregatedAttestationPool",
+        }),
+        attestationsPerCommittee: register.histogram({
+          name: "lodestar_oppool_aggregated_attestation_pool_attestations_per_committee",
+          help: "Number of attestations per committee in AggregatedAttestationPool",
+          buckets: [0, 2, 4, 8],
+        }),
+        gossipInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
+          name: "lodestar_oppool_aggregated_attestation_pool_gossip_insert_outcome_total",
+          help: "Total number of InsertOutcome as a result of adding an aggregated attestation from gossip in the pool",
+          labelNames: ["insertOutcome"],
+        }),
+        apiInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
+          name: "lodestar_oppool_aggregated_attestation_pool_api_insert_outcome_total",
+          help: "Total number of InsertOutcome as a result of adding an aggregated attestation from api in the pool",
+          labelNames: ["insertOutcome"],
+        }),
+        packedAttestations: {
+          committeeCount: register.gauge<{index: number}>({
+            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_committee_count",
+            help: "Total number of committees in packed attestation ${index}",
+            labelNames: ["index"],
+          }),
+          totalAttesters: register.gauge<{index: number}>({
+            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_attesters_total",
+            help: "Total number of attesters in packed attestation ${index}",
+            labelNames: ["index"],
+          }),
+          nonParticipation: register.gauge<{index: number}>({
+            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_non_participation_total",
+            help: "Total number of not seen attesters in packed attestation ${index}",
+            labelNames: ["index"],
+          }),
+          newSeenAttesters: register.gauge<{index: number}>({
+            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_new_seen_attesters_total",
+            help: "Total number of new seen attesters in packed attestation ${index}",
+            labelNames: ["index"],
+          }),
+          totalEffectiveBalance: register.gauge<{index: number}>({
+            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_effective_balance_total",
+            help: "Total effective balance of new seen attesters in packed attestation ${index}",
+            labelNames: ["index"],
+          }),
+          inclusionDistance: register.gauge<{index: number}>({
+            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_inclusion_distance_total",
+            help: "How far the packed attestation ${index} slot is from the block slot",
+            labelNames: ["index"],
+          }),
+          scannedSlots: register.gauge<{reason: ScannedSlotsTerminationReason}>({
+            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_scanned_slots_total",
+            help: "Total number of scanned slots to produce packed attestations",
+            labelNames: ["reason"],
+          }),
+          scannedAttestations: register.gauge<{inclusionDistance: number}>({
+            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_scanned_attestations_total",
+            help: "Total number of scanned attestations per scanned slot to produce packed attestations",
+            labelNames: ["inclusionDistance"],
+          }),
+          returnedAttestations: register.gauge<{inclusionDistance: number}>({
+            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_returned_attestations_total",
+            help: "Total number of returned attestations per scanned slot to produce packed attestations",
+            labelNames: ["inclusionDistance"],
+          }),
+          poolSlots: register.gauge({
+            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_pool_slots_total",
+            help: "Total number of slots in pool when producing packed attestations",
+          }),
+          totalConsolidations: register.gauge({
+            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_total_consolidations_total",
+            help: "Total number of consolidations before truncate",
+          }),
+          emptyAttestationData: register.gauge({
+            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_empty_attestation_data_total",
+            help: "Total number of attestation data with no group when producing packed attestation",
+          }),
+          invalidAttestationData: register.gauge({
+            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_invalid_attestation_data_total",
+            help: "Total number of invalid attestation data when producing packed attestation",
+          }),
+          seenCommittees: register.gauge({
+            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_seen_committees_total",
+            help: "Total number of committees for which all members are seen when producing packed attestations",
+          }),
+        },
+      },
+      attestationPool: {
+        size: register.gauge({
+          name: "lodestar_oppool_attestation_pool_size",
+          help: "Current size of the AttestationPool = total attestations unique by data and slot",
+        }),
+        gossipInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
+          name: "lodestar_oppool_attestation_pool_gossip_insert_outcome_total",
+          help: "Total number of InsertOutcome as a result of adding a single attestation from gossip to the pool",
+          labelNames: ["insertOutcome"],
+        }),
+        apiInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
+          name: "lodestar_oppool_attestation_pool_api_insert_outcome_total",
+          help: "Total number of InsertOutcome as a result of adding a single attestation from api to the pool",
+          labelNames: ["insertOutcome"],
+        }),
+        getAggregateCacheMisses: register.counter({
+          name: "lodestar_oppool_attestation_pool_get_aggregate_cache_misses_total",
+          help: "Total number of getAggregate calls with no aggregate for slot, attestation data root, and committee index",
+        }),
+      },
       attesterSlashingPoolSize: register.gauge({
         name: "lodestar_oppool_attester_slashing_pool_size",
         help: "Current size of the AttesterSlashingPool",
