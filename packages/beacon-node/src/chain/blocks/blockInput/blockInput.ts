@@ -69,9 +69,111 @@ export interface BlockInput<
   getParentRootHex(): string;
   getParentRootHex(shouldError: false): string | undefined;
 
+  getTimeComplete(): number;
+
   waitForBlock(timeoutMs: number, abortSignal?: AbortSignal): Promise<BlockType>;
   waitForData(timeoutMs: number, abortSignal?: AbortSignal): Promise<DataType>;
   waitForBlockAndData(timeoutMs: number, abortSignal?: AbortSignal): Promise<BlockInput>;
+}
+
+export class BlockInputUnknown<
+  BlockType extends SignedBeaconBlock = SignedBeaconBlock,
+  DataType extends PossibleDataTypes = PossibleDataTypes,
+> implements BlockInput<BlockType, DataType>
+{
+  type = BlockInputType.Unknown;
+  rootHex: string;
+  blockRoot: Uint8Array;
+
+  get prettyRootHex(): string {
+    return prettyBytes(this.rootHex);
+  }
+
+  constructor({rootHex, blockRoot}: BlockInputBaseProps) {
+    this.rootHex = rootHex;
+    this.blockRoot = blockRoot;
+  }
+
+  hasBlock(): boolean {
+    return false;
+  }
+
+  getBlock(): BlockType {
+    throw new BlockInputError({code: BlockInputErrorCode.MISSING_BLOCK, blockRoot: this.prettyRootHex});
+  }
+
+  getBlockWithSource(): BlockWithSource<BlockType> {
+    throw new BlockInputError({code: BlockInputErrorCode.MISSING_BLOCK, blockRoot: this.prettyRootHex});
+  }
+
+  addBlock(_props: AddBlockProps<BlockType>): void {
+    throw new BlockInputError({code: BlockInputErrorCode.MUST_UPGRADE_BLOCK_INPUT_TYPE, blockRoot: this.prettyRootHex});
+  }
+
+  removeBlock(): void {}
+
+  hasData(): boolean {
+    return false;
+  }
+
+  needsData(): boolean {
+    return false;
+  }
+
+  getDataStatus(): BlockInputDataStatus {
+    return BlockInputDataStatus.NoData;
+  }
+
+  isComplete(): boolean {
+    return false;
+  }
+
+  numberOfBlobs(): number {
+    throw new BlockInputError({
+      code: BlockInputErrorCode.UNKNOWN_NUMBER_OF_BLOBS,
+      ...this.getLogMeta(),
+    });
+  }
+
+  getLogMeta(): LogMetaBasic {
+    return {
+      blockRoot: this.prettyRootHex,
+      slot: "unknown",
+    };
+  }
+
+  getForkName(): ForkName {
+    throw new BlockInputError({code: BlockInputErrorCode.MISSING_FORK_NAME, blockRoot: this.prettyRootHex});
+  }
+
+  getSlot(): Slot;
+  getSlot(shouldError: false): Slot | undefined;
+  getSlot(_shouldError = true): Slot | undefined {
+    throw new BlockInputError({code: BlockInputErrorCode.MISSING_SLOT, blockRoot: this.prettyRootHex});
+  }
+
+  getParentRootHex(): string;
+  getParentRootHex(shouldError: false): string | undefined;
+  getParentRootHex(_shouldError = true): string | undefined {
+    throw new BlockInputError({code: BlockInputErrorCode.MISSING_PARENT_ROOT_HEX, blockRoot: this.prettyRootHex});
+  }
+
+  getTimeComplete(): number {
+    throw new BlockInputError({
+      code: BlockInputErrorCode.MISSING_TIME_COMPLETE,
+      blockRoot: this.prettyRootHex,
+    });
+  }
+
+  waitForBlock(_timeoutMs: number, _abortSignal?: AbortSignal): Promise<BlockType> {
+    return Promise.reject(new Error());
+  }
+  waitForData(_timeoutMs: number, _abortSignal?: AbortSignal): Promise<DataType> {
+    return Promise.reject(new Error());
+  }
+  waitForBlockAndData(_timeoutMs: number, _abortSignal?: AbortSignal): Promise<BlockInput> {
+    return Promise.reject(new Error());
+  }
 }
 
 export class BlockInputPreData<

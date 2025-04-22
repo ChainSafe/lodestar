@@ -11,6 +11,7 @@ export enum BlockInputErrorCode {
   // Bad Arguments
   UNDEFINED_PROP = "BLOCK_INPUT_ERROR_UNDEFINED_PROP",
   INVALID_CONSTRUCTION = "BLOCK_INPUT_ERROR_INVALID_CONSTRUCTION",
+  MUST_UPGRADE_BLOCK_INPUT_TYPE = "BLOCK_INPUT_ERROR_MUST_UPGRADE_BLOCK_INPUT_TYPE",
 
   // Attempt to get all data but some is missing
   INCOMPLETE_DATA = "BLOCK_INPUT_ERROR_INCOMPLETE_DATA",
@@ -30,8 +31,6 @@ export enum BlockInputErrorCode {
   // MISMATCHED_KZG_COMMITMENT_LENGTH = "BLOCK_INPUT_ERROR_MISMATCHED_KZG_COMMITMENT_LENGTH",
 
   UNKNOWN_NUMBER_OF_BLOBS = "BLOCK_INPUT_ERROR_UNKNOWN_NUMBER_OF_BLOBS",
-
-  Z = "BLOCK_INPUT_ERROR_Z",
 }
 
 export type BlockInputErrorType =
@@ -52,6 +51,10 @@ export type BlockInputErrorType =
     }
   | {
       code: BlockInputErrorCode.INVALID_CONSTRUCTION;
+      blockRoot: string;
+    }
+  | {
+      code: BlockInputErrorCode.MUST_UPGRADE_BLOCK_INPUT_TYPE;
       blockRoot: string;
     }
   | {

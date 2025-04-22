@@ -23,6 +23,7 @@ export enum BlockInputDataStatus {
 }
 
 export enum BlockInputType {
+  Unknown = "unknown",
   PreData = "pre-data",
   Blobs = "blobs",
   // Columns = "columns",
