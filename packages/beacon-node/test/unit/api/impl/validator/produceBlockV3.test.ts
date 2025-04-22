@@ -148,7 +148,7 @@ describe("api/validator - produceBlockV3", () => {
       }
 
       when(modules.chain.assembleBlockBody)
-        .calledWith(BlockType.Full, expect.any(Object), undefined, expect.any(Object), expect.any(Object))
+        .calledWith(BlockType.Full, expect.any(Object), undefined as any, expect.any(Object), expect.any(Object))
         .thenResolve({
           block: fullBlock,
           executionPayloadValue: BigInt(enginePayloadValue ?? 0),
@@ -157,7 +157,7 @@ describe("api/validator - produceBlockV3", () => {
         });
 
       when(modules.chain.assembleBlockBody)
-        .calledWith(BlockType.Blinded, expect.anything(), undefined, expect.anything(), expect.anything())
+        .calledWith(BlockType.Blinded, expect.anything(), undefined as any, expect.anything(), expect.anything())
         .thenResolve({
           block: blindedBlock,
           executionPayloadValue: BigInt(builderPayloadValue ?? 0),
