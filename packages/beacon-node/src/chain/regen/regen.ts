@@ -3,7 +3,7 @@ import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
-  DataAvailableStatus,
+  DataAvailabilityStatus,
   ExecutionPayloadStatus,
   StateHashTreeRootSource,
   computeEpochAtSlot,
@@ -261,7 +261,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
           {
             // Replay previously imported blocks, assume valid and available
             executionPayloadStatus: ExecutionPayloadStatus.valid,
-            dataAvailableStatus: DataAvailableStatus.available,
+            dataAvailabilityStatus: DataAvailabilityStatus.Available,
             verifyStateRoot: false,
             verifyProposer: false,
             verifySignatures: false,

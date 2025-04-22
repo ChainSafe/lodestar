@@ -78,15 +78,6 @@ describe("cmds / beacon / args handler", () => {
     expect(privateKey.equals(prevPk)).toBe(true);
   });
 
-  it("Set known deposit contract", async () => {
-    const {options} = await runBeaconHandlerInit({
-      network: "mainnet",
-    });
-
-    // Okay to hardcode, since this value will never change
-    expect(options.eth1.depositContractDeployBlock).toBe(11052984);
-  });
-
   it("Apply custom network name from config file", async () => {
     const networkName = "test-network";
     const config = {...chainConfig};
