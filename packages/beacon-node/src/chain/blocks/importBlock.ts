@@ -152,7 +152,7 @@ export async function importBlock(
           rootCache.getBlockRootAtSlot(attestation.data.slot - 1),
           rootCache.getBlockRootAtSlot(attestation.data.slot)
         );
-        this.metrics?.registerAttestationInBlock(
+        this.validatorMonitor?.registerAttestationInBlock(
           indexedAttestation,
           parentBlockSlot,
           correctHead,
@@ -442,9 +442,9 @@ export async function importBlock(
   // Register stat metrics about the block after importing it
   this.metrics?.parentBlockDistance.observe(blockSlot - parentBlockSlot);
   this.metrics?.proposerBalanceDeltaAny.observe(fullyVerifiedBlock.proposerBalanceDelta);
-  this.metrics?.registerImportedBlock(block.message, fullyVerifiedBlock);
+  this.validatorMonitor?.registerImportedBlock(block.message, fullyVerifiedBlock);
   if (this.config.getForkSeq(blockSlot) >= ForkSeq.altair) {
-    this.metrics?.registerSyncAggregateInBlock(
+    this.validatorMonitor?.registerSyncAggregateInBlock(
       blockEpoch,
       (block as altair.SignedBeaconBlock).message.body.syncAggregate,
       fullyVerifiedBlock.postState.epochCtx.currentSyncCommitteeIndexed.validatorIndices

@@ -73,7 +73,7 @@ describe("AttestationPool", () => {
     );
 
     expect(outcome).equal(InsertOutcome.NewData);
-    expect(pool.getAggregate(electraAttestationData.slot, committeeIndex, attDataRootHex)).toEqual(electraAttestation);
+    expect(pool.getAggregate(electraAttestationData.slot, attDataRootHex, committeeIndex)).toEqual(electraAttestation);
   });
 
   it("add correct phase0 attestation", () => {
@@ -82,10 +82,10 @@ describe("AttestationPool", () => {
     const outcome = pool.add(committeeIndex, phase0Attestation, attDataRootHex, committeeValidatorIndex, committeeSize);
 
     expect(outcome).equal(InsertOutcome.NewData);
-    expect(pool.getAggregate(phase0AttestationData.slot, committeeIndex, attDataRootHex)).toEqual(phase0Attestation);
-    expect(pool.getAggregate(phase0AttestationData.slot, 10, attDataRootHex)).toEqual(phase0Attestation);
-    expect(pool.getAggregate(phase0AttestationData.slot, 42, attDataRootHex)).toEqual(phase0Attestation);
-    expect(pool.getAggregate(phase0AttestationData.slot, null, attDataRootHex)).toEqual(phase0Attestation);
+    expect(pool.getAggregate(phase0AttestationData.slot, attDataRootHex, committeeIndex)).toEqual(phase0Attestation);
+    expect(pool.getAggregate(phase0AttestationData.slot, attDataRootHex, 10)).toEqual(phase0Attestation);
+    expect(pool.getAggregate(phase0AttestationData.slot, attDataRootHex, 42)).toEqual(phase0Attestation);
+    expect(pool.getAggregate(phase0AttestationData.slot, attDataRootHex, null)).toEqual(phase0Attestation);
   });
 
   it("add electra attestation without committee index", () => {
@@ -95,7 +95,7 @@ describe("AttestationPool", () => {
     expect(() =>
       pool.add(committeeIndex, electraSingleAttestation, attDataRootHex, committeeValidatorIndex, committeeSize)
     ).toThrow();
-    expect(pool.getAggregate(electraAttestationData.slot, committeeIndex, attDataRootHex)).toBeNull();
+    expect(pool.getAggregate(electraAttestationData.slot, attDataRootHex, committeeIndex)).toBeNull();
   });
 
   it("add phase0 attestation with committee index", () => {
@@ -104,10 +104,10 @@ describe("AttestationPool", () => {
     const outcome = pool.add(committeeIndex, phase0Attestation, attDataRootHex, committeeValidatorIndex, committeeSize);
 
     expect(outcome).equal(InsertOutcome.NewData);
-    expect(pool.getAggregate(phase0AttestationData.slot, committeeIndex, attDataRootHex)).toEqual(phase0Attestation);
-    expect(pool.getAggregate(phase0AttestationData.slot, 123, attDataRootHex)).toEqual(phase0Attestation);
-    expect(pool.getAggregate(phase0AttestationData.slot, 456, attDataRootHex)).toEqual(phase0Attestation);
-    expect(pool.getAggregate(phase0AttestationData.slot, null, attDataRootHex)).toEqual(phase0Attestation);
+    expect(pool.getAggregate(phase0AttestationData.slot, attDataRootHex, committeeIndex)).toEqual(phase0Attestation);
+    expect(pool.getAggregate(phase0AttestationData.slot, attDataRootHex, 123)).toEqual(phase0Attestation);
+    expect(pool.getAggregate(phase0AttestationData.slot, attDataRootHex, 456)).toEqual(phase0Attestation);
+    expect(pool.getAggregate(phase0AttestationData.slot, attDataRootHex, null)).toEqual(phase0Attestation);
   });
 
   it("add electra attestation with phase0 slot", () => {

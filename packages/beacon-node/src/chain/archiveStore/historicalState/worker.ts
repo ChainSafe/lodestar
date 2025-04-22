@@ -135,7 +135,6 @@ if (metricsRegister) {
       name: "lodestar_historical_state_stfn_attestations_per_block_total",
       help: "Count of attestations per block",
     }),
-    registerValidatorStatuses: () => {},
 
     // historical state regen metrics
     regenTime: metricsRegister.histogram({

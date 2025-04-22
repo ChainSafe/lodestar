@@ -7,12 +7,11 @@ import {
   ForkPostElectra,
   MAX_COMMITTEES_PER_SLOT,
   MAX_EFFECTIVE_BALANCE,
-  MAX_VALIDATORS_PER_COMMITTEE,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
 import {CachedBeaconStateAllForks, CachedBeaconStateElectra, newFilledArray} from "@lodestar/state-transition";
 import {CachedBeaconStateAltair} from "@lodestar/state-transition/src/types.js";
-import {Attestation, phase0, ssz} from "@lodestar/types";
+import {Attestation, electra, phase0, ssz} from "@lodestar/types";
 import {afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {
   AggregatedAttestationPool,
@@ -48,7 +47,8 @@ describe("AggregatedAttestationPool - Altair", () => {
 
   const committeeIndex = 0;
   const attestation = ssz.phase0.Attestation.defaultValue();
-  attestation.data.slot = currentSlot;
+  // state slot is (currentSlot + 1) so if set attestation slot to currentSlot, it will be included in the block
+  attestation.data.slot = currentSlot - 1;
   attestation.data.index = committeeIndex;
   attestation.data.target.epoch = currentEpoch;
   const attDataRootHex = toHexString(ssz.phase0.AttestationData.hashTreeRoot(attestation.data));
@@ -64,7 +64,7 @@ describe("AggregatedAttestationPool - Altair", () => {
   const committeeLength = 4;
   const validators = generateValidators(vc, validatorOpts);
   const originalState = generateCachedAltairState({slot: currentSlot + 1, validators}, altairForkEpoch);
-  const committee = originalState.epochCtx.getBeaconCommittee(currentSlot, committeeIndex);
+  const committee = originalState.epochCtx.getBeaconCommittee(currentSlot - 1, committeeIndex);
   expect(committee.length).toEqual(committeeLength);
   // 0 and 1 in committee are fully participated
   const epochParticipation = newFilledArray(vc, 0b111);
@@ -98,15 +98,10 @@ describe("AggregatedAttestationPool - Altair", () => {
     // previousEpochParticipation and currentEpochParticipation is created inside generateCachedState
     // 0 and 1 are fully participated
     const notSeenValidatorFn = getNotSeenValidatorsFn(altairState);
-    const participation = notSeenValidatorFn(currentEpoch, currentSlot, committeeIndex);
     // seen attesting indices are 0, 1 => not seen are 2, 3
-    expect(participation).toEqual(
-      // {
-      // validatorIndices: [null, null, committee[2], committee[3]],
-      // attestingIndices: new Set([2, 3]),
-      // }
-      new Set([2, 3])
-    );
+    expect(notSeenValidatorFn(currentEpoch, currentSlot - 1, committeeIndex)).toEqual(new Set([2, 3]));
+    // attestations in current slot are always included (since altairState.slot = currentSlot + 1)
+    expect(notSeenValidatorFn(currentEpoch, currentSlot, committeeIndex)).toEqual(new Set([0, 1, 2, 3]));
   });
 
   // previousEpochParticipation and currentEpochParticipation is created inside generateCachedState
@@ -160,7 +155,7 @@ describe("AggregatedAttestationPool - Altair", () => {
   });
 });
 
-describe("AggregatedAttestationPool - Electra", () => {
+describe("AggregatedAttestationPool - get packed attestations - Electra", () => {
   let pool: AggregatedAttestationPool;
   const fork = ForkName.electra;
   const electraForkEpoch = 2020;
@@ -177,7 +172,9 @@ describe("AggregatedAttestationPool - Electra", () => {
 
   const committeeIndices = [0, 1, 2, 3];
   const attestation = ssz.electra.Attestation.defaultValue();
-  attestation.data.slot = currentSlot;
+  // it will always include attestations for stateSlot - 1 which is currentSlot
+  // so we want attestation slot to be less than that to test epochParticipation
+  attestation.data.slot = currentSlot - 1;
   attestation.data.index = 0; // Must be zero post-electra
   attestation.data.target.epoch = currentEpoch;
   attestation.signature = validSignature;
@@ -196,17 +193,11 @@ describe("AggregatedAttestationPool - Electra", () => {
   const originalState = generateCachedElectraState({slot: currentSlot + 1, validators}, electraForkEpoch);
   expect(originalState.epochCtx.getCommitteeCountPerSlot(currentEpoch)).toEqual(committeeIndices.length);
 
-  const committees = originalState.epochCtx.getBeaconCommittees(currentSlot, committeeIndices);
-
-  const epochParticipation = newFilledArray(vc, 0b000);
+  const committees = originalState.epochCtx.getBeaconCommittees(attestation.data.slot, committeeIndices);
   for (const committee of committees) {
     expect(committee.length).toEqual(committeeLength);
   }
 
-  (originalState as CachedBeaconStateElectra).previousEpochParticipation =
-    ssz.altair.EpochParticipation.toViewDU(epochParticipation);
-  (originalState as CachedBeaconStateElectra).currentEpochParticipation =
-    ssz.altair.EpochParticipation.toViewDU(epochParticipation);
   originalState.commit();
   let electraState: CachedBeaconStateAllForks;
 
@@ -222,66 +213,180 @@ describe("AggregatedAttestationPool - Electra", () => {
     vi.clearAllMocks();
   });
 
-  it("Multiple attestations with same attestation data different committee", () => {
-    // Attestation from committee 0
-    const committeeBits0 = BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, 0);
+  const testCases: {
+    name: string;
+    // item i is for committee i, which contains array of attester indices that's not seen (seen by default)
+    notSeenInStateByCommittee: number[][];
+    // item i is for committee i, each item is number[][] which is the indices of validators not seen by the committee
+    // each item i also decides how many attestations added to the pool for that committee
+    attParticipationByCommittee: number[][][];
+    // expected committeeBits of packed attestations, item 0 is for returned attestation 0, ...
+    packedCommitteeBits: number[][];
+    // expected length of aggregationBits of packed attestations: item 0 is for returned attestation 0, ...
+    packedAggregationBitsLen: number[];
+    // expected backed Uint8Array of aggregationBits of packed attestations: item 0 is for returned attestation 0, ...
+    packedAggregationBitsUint8Array: Uint8Array[];
+  }[] = [
+    {
+      name: "Full participation",
+      notSeenInStateByCommittee: [
+        [0, 1, 2, 3],
+        [0, 1, 2, 3],
+        [0, 1, 2, 3],
+        [0, 1, 2, 3],
+      ],
+      // each committee has exactly 1 full attestations
+      attParticipationByCommittee: [[[]], [[]], [[]], [[]]],
+      // 1 full packed attestation
+      packedCommitteeBits: [[0, 1, 2, 3]],
+      packedAggregationBitsLen: [committeeLength * 4],
+      packedAggregationBitsUint8Array: [
+        new Uint8Array([255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]),
+      ],
+    },
+    {
+      name: "Full participation but all are seen in the state",
+      notSeenInStateByCommittee: [[], [], [], []],
+      // each committee has exactly 1 full attestations
+      attParticipationByCommittee: [[[]], [[]], [[]], [[]]],
+      // no packed attestation
+      packedCommitteeBits: [],
+      packedAggregationBitsLen: [],
+      packedAggregationBitsUint8Array: [],
+    },
+    {
+      name: "Committee 1 and 2 has 2 versions of aggregationBits",
+      notSeenInStateByCommittee: [
+        [0, 1, 2, 3],
+        [0, 1, 2, 3],
+        [0, 1, 2, 3],
+        [0, 1, 2, 3],
+      ],
+      // committee 1 has 2 attestations, one with no participation validator 0, one with no participation validator 1
+      // committee 2 has 2 attestations, one with no participation validator 1, one with no participation validator 2
+      // committee 0 and 3 has 1 attestation each, and all validators are seen
+      attParticipationByCommittee: [[[]], [[0], [1]], [[1], [2]], [[]]],
+      // 2nd packed attestation only has 2 committees: 1 and 2
+      packedCommitteeBits: [
+        [0, 1, 2, 3],
+        [1, 2],
+      ],
+      packedAggregationBitsLen: [committeeLength * 4, committeeLength * 2],
+      packedAggregationBitsUint8Array: [
+        new Uint8Array([255, 255, 255, 255, 0b11111110, 255, 255, 255, 0b11111101, 255, 255, 255, 255, 255, 255, 255]),
+        new Uint8Array([0b11111101, 255, 255, 255, 0b11111011, 255, 255, 255]),
+      ],
+    },
+    {
+      // same to above but no-participation validators are all seen in the state so only 1 attestation is returned
+      name: "Committee 1 and 2 has 2 versions of aggregationBits - only 1 attestation is included",
+      notSeenInStateByCommittee: [
+        [0, 1, 2, 3],
+        [2, 3],
+        [0, 1],
+        [0, 1, 2, 3],
+      ],
+      // committee 1 has 2 attestations, one with no participation validator 0, one with no participation validator 1
+      // committee 2 has 2 attestations, one with no participation validator 1, one with no participation validator 2
+      // committee 0 and 3 has 1 attestation each, and all validators are seen
+      attParticipationByCommittee: [[[]], [[0], [1]], [[1], [2]], [[]]],
+      packedCommitteeBits: [[0, 1, 2, 3]],
+      packedAggregationBitsLen: [committeeLength * 4],
+      packedAggregationBitsUint8Array: [
+        new Uint8Array([255, 255, 255, 255, 0b11111110, 255, 255, 255, 0b11111011, 255, 255, 255, 255, 255, 255, 255]),
+      ],
+    },
+    {
+      name: "Only committee 1 has 2 versions of aggregationBits",
+      notSeenInStateByCommittee: [
+        [0, 1, 2, 3],
+        [0, 1, 2, 3],
+        [0, 1, 2, 3],
+        [0, 1, 2, 3],
+      ],
+      // committee 1 has 2 attestations, one with no participation validator 0, one with no participation validator 1
+      // other committees have 1 attestation each, and all validators are seen
+      attParticipationByCommittee: [[[]], [[0], [1]], [[]], [[]]],
+      // 2nd packed attestation only has 1 committee
+      packedCommitteeBits: [[0, 1, 2, 3], [1]],
+      // 2nd packed attestation only has 1 committee
+      packedAggregationBitsLen: [committeeLength * 4, committeeLength],
+      packedAggregationBitsUint8Array: [
+        new Uint8Array([255, 255, 255, 255, 0b11111110, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]),
+        new Uint8Array([0b11111101, 255, 255, 255]),
+      ],
+    },
+  ];
 
-    const attestation0: Attestation<ForkPostElectra> = {
-      ...attestation,
-      aggregationBits: new BitArray(new Uint8Array(committeeLength / 8).fill(1), committeeLength),
-      committeeBits: committeeBits0,
-    };
+  for (const {
+    name,
+    notSeenInStateByCommittee,
+    attParticipationByCommittee,
+    packedCommitteeBits,
+    packedAggregationBitsLen,
+    packedAggregationBitsUint8Array,
+  } of testCases) {
+    it(name, () => {
+      // this is related to NotSeenValidatorsFn, all validators are seen by default
+      const epochParticipation = newFilledArray(vc, 0b111);
+      for (let i = 0; i < committeeIndices.length; i++) {
+        const committeeIndex = committeeIndices[i];
+        const notSeenValidators = notSeenInStateByCommittee[i];
+        const committee = committees[committeeIndex];
+        for (const notSeenValidator of notSeenValidators) {
+          const validatorIndex = committee[notSeenValidator];
+          epochParticipation[validatorIndex] = 0b000;
+        }
+      }
 
-    // Attestation from committee 1
-    const committeeBits1 = BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, 1);
+      (electraState as CachedBeaconStateElectra).previousEpochParticipation =
+        ssz.altair.EpochParticipation.toViewDU(epochParticipation);
+      (electraState as CachedBeaconStateElectra).currentEpochParticipation =
+        ssz.altair.EpochParticipation.toViewDU(epochParticipation);
+      electraState.commit();
 
-    const attestation1: Attestation<ForkPostElectra> = {
-      ...attestation,
-      aggregationBits: new BitArray(new Uint8Array(committeeLength / 8).fill(1), committeeLength),
-      committeeBits: committeeBits1,
-    };
-    // Attestation from committee 2
-    const committeeBits2 = BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, 2);
+      for (let i = 0; i < committeeIndices.length; i++) {
+        const committeeIndex = committeeIndices[i];
+        const committeeBits = BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, committeeIndex);
+        // same committee, each is by attestation
+        const notSeenValidatorsByAttestationIndex = attParticipationByCommittee[i];
+        for (const notSeenValidators of notSeenValidatorsByAttestationIndex) {
+          const aggregationBits = new BitArray(new Uint8Array(committeeLength / 8).fill(255), committeeLength);
+          for (const index of notSeenValidators) {
+            aggregationBits.set(index, false);
+          }
+          const attestationi: Attestation<ForkPostElectra> = {
+            ...attestation,
+            aggregationBits,
+            committeeBits,
+          };
 
-    const attestation2: Attestation<ForkPostElectra> = {
-      ...attestation,
-      aggregationBits: new BitArray(new Uint8Array(committeeLength / 8).fill(1), committeeLength),
-      committeeBits: committeeBits2,
-    };
+          pool.add(attestationi, attDataRootHex, aggregationBits.getTrueBitIndexes().length, committees[i]);
+        }
+      }
 
-    // Attestation from committee 3
-    const committeeBits3 = BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, 3);
+      forkchoiceStub.getBlockHex.mockReturnValue(generateProtoBlock());
+      forkchoiceStub.getDependentRoot.mockReturnValue(ZERO_HASH_HEX);
 
-    const attestation3: Attestation<ForkPostElectra> = {
-      ...attestation,
-      aggregationBits: new BitArray(new Uint8Array(committeeLength / 8).fill(1), committeeLength),
-      committeeBits: committeeBits3,
-    };
-
-    pool.add(attestation0, attDataRootHex, attestation0.aggregationBits.getTrueBitIndexes().length, committees[0]);
-
-    pool.add(attestation1, attDataRootHex, attestation1.aggregationBits.getTrueBitIndexes().length, committees[1]);
-
-    pool.add(attestation2, attDataRootHex, attestation2.aggregationBits.getTrueBitIndexes().length, committees[2]);
-
-    pool.add(attestation3, attDataRootHex, attestation3.aggregationBits.getTrueBitIndexes().length, committees[3]);
-
-    forkchoiceStub.getBlockHex.mockReturnValue(generateProtoBlock());
-    forkchoiceStub.getDependentRoot.mockReturnValue(ZERO_HASH_HEX);
-
-    const blockAttestations = pool.getAttestationsForBlock(fork, forkchoiceStub, electraState);
-
-    expect(blockAttestations.length).toBe(1); // Expect attestations from committee 0, 1, 2 and 3 to be aggregated into one
-    expect((blockAttestations[0] as Attestation<ForkPostElectra>).committeeBits.getTrueBitIndexes()).toStrictEqual(
-      committeeIndices
-    );
-    expect((blockAttestations[0] as Attestation<ForkPostElectra>).aggregationBits.bitLen).toStrictEqual(
-      committeeLength * 4
-    );
-  });
+      const blockAttestations = pool.getAttestationsForBlock(fork, forkchoiceStub, electraState);
+      // make sure test data is correct
+      expect(packedCommitteeBits.length).toBe(packedAggregationBitsLen.length);
+      expect(blockAttestations.length).toBe(packedCommitteeBits.length);
+      for (let attIndex = 0; attIndex < blockAttestations.length; attIndex++) {
+        const returnedAttestation = blockAttestations[attIndex] as Attestation<ForkPostElectra>;
+        expect(returnedAttestation.committeeBits.getTrueBitIndexes()).toStrictEqual(packedCommitteeBits[attIndex]);
+        expect(returnedAttestation.aggregationBits.bitLen).toStrictEqual(packedAggregationBitsLen[attIndex]);
+        expect(returnedAttestation.aggregationBits.uint8Array).toStrictEqual(packedAggregationBitsUint8Array[attIndex]);
+      }
+    });
+  }
 });
 
 describe("MatchingDataAttestationGroup.add()", () => {
+  const config = createChainForkConfig({
+    ...defaultChainConfig,
+  });
+
   const testCases: {id: string; attestationsToAdd: {bits: number[]; res: InsertOutcome; isKept: boolean}[]}[] = [
     {
       id: "2 intersecting",
@@ -320,7 +425,7 @@ describe("MatchingDataAttestationGroup.add()", () => {
 
   for (const {id, attestationsToAdd} of testCases) {
     it(id, () => {
-      const attestationGroup = new MatchingDataAttestationGroup(committee, attestationData);
+      const attestationGroup = new MatchingDataAttestationGroup(config, committee, attestationData);
 
       const attestations = attestationsToAdd.map(
         ({bits}): phase0.Attestation => ({
@@ -350,37 +455,144 @@ describe("MatchingDataAttestationGroup.add()", () => {
 });
 
 describe("MatchingDataAttestationGroup.getAttestationsForBlock", () => {
+  const config = createChainForkConfig({
+    ...defaultChainConfig,
+  });
+
+  const maxAttestations = 2;
   const testCases: {
     id: string;
     notSeenAttestingBits: number[];
-    attestationsToAdd: {bits: number[]; notSeenAttesterCount: number}[];
+    effectiveBalanceIncrements: Uint16Array;
+    attestationsToAdd: {
+      bits: number[];
+      newSeenEffectiveBalance: number;
+      newSeenAttesters: number;
+      notSeenCommitteeMembers: Set<number> | null;
+      // this comes from the find() api, -1 means not found
+      returnedIndex: number;
+    }[];
   }[] = [
     // Note: attestationsToAdd MUST intersect in order to not be aggregated and distort the results
     {
       id: "All have attested",
       // same to seenAttestingBits: [0b11111111],
       notSeenAttestingBits: [0b00000000],
+      effectiveBalanceIncrements: new Uint16Array(8).fill(32),
       attestationsToAdd: [
-        {bits: [0b11111110], notSeenAttesterCount: 0},
-        {bits: [0b00000011], notSeenAttesterCount: 0},
+        {
+          bits: [0b11111110],
+          newSeenEffectiveBalance: 0,
+          newSeenAttesters: 0,
+          notSeenCommitteeMembers: null,
+          returnedIndex: -1,
+        },
+        {
+          bits: [0b00000011],
+          newSeenEffectiveBalance: 0,
+          newSeenAttesters: 0,
+          notSeenCommitteeMembers: null,
+          returnedIndex: -1,
+        },
       ],
     },
     {
-      id: "Some have attested",
+      id: "Same effective balance - 2nd attestation is not valuable",
       // same to seenAttestingBits: [0b11110001]
       notSeenAttestingBits: [0b00001110],
+      effectiveBalanceIncrements: new Uint16Array(8).fill(32),
       attestationsToAdd: [
-        {bits: [0b11111110], notSeenAttesterCount: 3},
-        {bits: [0b00000011], notSeenAttesterCount: 1},
+        {
+          bits: [0b11111110],
+          newSeenEffectiveBalance: 3 * 32,
+          newSeenAttesters: 3,
+          notSeenCommitteeMembers: new Set([]),
+          returnedIndex: 0,
+        },
+        // not valuable because seen attestations are all included in attestation 0
+        {
+          bits: [0b00000011],
+          newSeenEffectiveBalance: 0,
+          newSeenAttesters: 0,
+          notSeenCommitteeMembers: null,
+          returnedIndex: -1,
+        },
+      ],
+    },
+    {
+      id: "Same effective balance - include both",
+      // same to seenAttestingBits: [0b11110001]
+      notSeenAttestingBits: [0b00001110],
+      effectiveBalanceIncrements: new Uint16Array(8).fill(32),
+      attestationsToAdd: [
+        {
+          bits: [0b11111010],
+          newSeenEffectiveBalance: 2 * 32,
+          newSeenAttesters: 2,
+          notSeenCommitteeMembers: new Set([2]),
+          returnedIndex: 0,
+        },
+        {
+          bits: [0b10000101],
+          newSeenEffectiveBalance: 1 * 32,
+          newSeenAttesters: 1,
+          notSeenCommitteeMembers: new Set(),
+          returnedIndex: 1,
+        },
+      ],
+    },
+    {
+      id: "Prioritize bigger effective balance",
+      notSeenAttestingBits: [0b11111111],
+      effectiveBalanceIncrements: new Uint16Array([32, 2048, 32, 32, 32, 32, 32, 32]),
+      attestationsToAdd: [
+        // newSeenEffectiveBalance is not 6 * 32 considering the 1st included attestation
+        {
+          bits: [0b11111001],
+          newSeenEffectiveBalance: 4 * 32,
+          newSeenAttesters: 4,
+          notSeenCommitteeMembers: new Set([2]),
+          returnedIndex: 1,
+        },
+        // although this has less not seen attesters, it has bigger effective balance so returned index is 0
+        {
+          bits: [0b10000011],
+          newSeenEffectiveBalance: 2048 + 2 * 32,
+          newSeenAttesters: 3,
+          notSeenCommitteeMembers: new Set([2, 3, 4, 5, 6]),
+          returnedIndex: 0,
+        },
+        // maxAttestation is only 2
+        {
+          bits: [0b00001101],
+          newSeenEffectiveBalance: 0,
+          newSeenAttesters: 0,
+          notSeenCommitteeMembers: null,
+          returnedIndex: -1,
+        },
       ],
     },
     {
       id: "Non have attested",
       // same to seenAttestingBits: [0b00000000],
       notSeenAttestingBits: [0b11111111],
+      effectiveBalanceIncrements: new Uint16Array(8).fill(32),
       attestationsToAdd: [
-        {bits: [0b11111110], notSeenAttesterCount: 7},
-        {bits: [0b00000011], notSeenAttesterCount: 2},
+        {
+          bits: [0b00111110],
+          newSeenEffectiveBalance: 5 * 32,
+          newSeenAttesters: 5,
+          notSeenCommitteeMembers: new Set([0, 6, 7]),
+          returnedIndex: 0,
+        },
+        // newSeenEffectiveBalance is not 3 * 32 considering the 1st included attestation already include attester 1
+        {
+          bits: [0b01000011],
+          newSeenEffectiveBalance: 2 * 32,
+          newSeenAttesters: 2,
+          notSeenCommitteeMembers: new Set([7]),
+          returnedIndex: 1,
+        },
       ],
     },
   ];
@@ -388,15 +600,17 @@ describe("MatchingDataAttestationGroup.getAttestationsForBlock", () => {
   const attestationData = ssz.phase0.AttestationData.defaultValue();
   const committee = Uint32Array.from(linspace(0, 7));
 
-  for (const {id, notSeenAttestingBits, attestationsToAdd} of testCases) {
+  for (const {id, notSeenAttestingBits, effectiveBalanceIncrements, attestationsToAdd} of testCases) {
+    // these are for electra attestations but it should work the same way to pre-electra
     it(id, () => {
-      const attestationGroup = new MatchingDataAttestationGroup(committee, attestationData);
+      const attestationGroup = new MatchingDataAttestationGroup(config, committee, attestationData);
 
       const attestations = attestationsToAdd.map(
-        ({bits}): phase0.Attestation => ({
+        ({bits}): electra.Attestation => ({
           data: attestationData,
           aggregationBits: new BitArray(new Uint8Array(bits), 8),
           signature: validSignature,
+          committeeBits: BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, 0),
         })
       );
 
@@ -405,24 +619,33 @@ describe("MatchingDataAttestationGroup.getAttestationsForBlock", () => {
       }
 
       const notSeenAggBits = new BitArray(new Uint8Array(notSeenAttestingBits), 8);
-      // const notSeenValidatorIndices: (ValidatorIndex | null)[] = [];
-      const notSeenAttestingIndices = new Set<number>();
+      const notSeenCommitteeMembers = new Set<number>();
       for (let i = 0; i < committee.length; i++) {
         // notSeenValidatorIndices.push(notSeenAggBits.get(i) ? committee[i] : null);
         if (notSeenAggBits.get(i)) {
-          notSeenAttestingIndices.add(i);
+          notSeenCommitteeMembers.add(i);
         }
       }
       const attestationsForBlock = attestationGroup.getAttestationsForBlock(
-        ForkName.phase0,
-        // notSeenValidatorIndices,
-        notSeenAttestingIndices
-      );
+        ForkName.electra,
+        effectiveBalanceIncrements,
+        notSeenCommitteeMembers,
+        maxAttestations
+      ).result;
 
-      for (const [i, {notSeenAttesterCount}] of attestationsToAdd.entries()) {
-        const attestation = attestationsForBlock.find((a) => a.attestation === attestations[i]);
+      for (const [
+        i,
+        {newSeenEffectiveBalance, newSeenAttesters, notSeenCommitteeMembers: notSeenAttendingIndices, returnedIndex},
+      ] of attestationsToAdd.entries()) {
+        const attestationIndex = attestationsForBlock.findIndex((a) => a.attestation === attestations[i]);
+        expect(attestationIndex).toBe(returnedIndex);
+        const attestation = attestationsForBlock[attestationIndex];
         // If notSeenAttesterCount === 0 the attestation is not returned
-        expect(attestation ? attestation.notSeenAttesterCount : 0).toBe(notSeenAttesterCount);
+        if (returnedIndex !== -1) {
+          expect(attestation ? attestation.newSeenEffectiveBalance : 0).toBe(newSeenEffectiveBalance);
+          expect(attestation ? attestation.newSeenAttesters : 0).toBe(newSeenAttesters);
+          expect(attestation ? attestation.notSeenCommitteeMembers : 0).toStrictEqual(notSeenAttendingIndices);
+        }
       }
     });
   }
@@ -497,25 +720,30 @@ describe("aggregateConsolidation", () => {
       const consolidation: AttestationsConsolidation = {
         byCommittee: new Map(),
         attData: attData,
-        totalNotSeenCount: 0,
+        totalNewSeenEffectiveBalance: 0,
+        totalAttesters: 32,
+        newSeenAttesters: 0,
+        notSeenAttesters: 0,
       };
       // to simplify, instead of signing the signingRoot, just sign the attData root
       const sigArr = skArr.map((sk) => sk.sign(ssz.phase0.AttestationData.hashTreeRoot(attData)));
       const attestationSeed = ssz.electra.Attestation.defaultValue();
       for (let i = 0; i < committeeIndices.length; i++) {
         const committeeIndex = committeeIndices[i];
-        const commiteeBits = BitArray.fromBoolArray(
+        const committeeBits = BitArray.fromBoolArray(
           Array.from({length: MAX_COMMITTEES_PER_SLOT}, (_, i) => i === committeeIndex)
         );
         const aggAttestation = {
           ...attestationSeed,
           aggregationBits: new BitArray(new Uint8Array(aggregationBitsArr[i]), 3),
-          committeeBits: commiteeBits,
+          committeeBits,
           signature: sigArr[i].toBytes(),
         };
         consolidation.byCommittee.set(committeeIndex, {
           attestation: aggAttestation,
-          notSeenAttesterCount: aggregationBitsArr[i].filter((item) => item).length,
+          newSeenEffectiveBalance: aggregationBitsArr[i].filter((item) => item).length * 32,
+          notSeenCommitteeMembers: new Set(),
+          newSeenAttesters: 0,
         });
       }
 
