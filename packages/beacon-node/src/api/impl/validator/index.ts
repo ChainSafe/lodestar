@@ -65,7 +65,7 @@ import {
   SyncCommitteeError,
   SyncCommitteeErrorCode,
 } from "../../../chain/errors/index.js";
-import {ChainEvent, CheckpointHex, CommonBlockBody} from "../../../chain/index.js";
+import {BlockType, ChainEvent, CheckpointHex} from "../../../chain/index.js";
 import {SCHEDULER_LOOKAHEAD_FACTOR} from "../../../chain/prepareNextSlot.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
 import {validateApiAggregateAndProof} from "../../../chain/validation/index.js";
@@ -404,18 +404,18 @@ export function getValidatorApi(
     // as of now fee recipient checks can not be performed because builder does not return bid recipient
     {
       skipHeadChecksAndUpdate,
-      commonBlockBody,
+      currentState,
       parentBlockRoot: inParentBlockRoot,
     }: Omit<routes.validator.ExtraProduceBlockOpts, "builderSelection"> &
       (
         | {
             skipHeadChecksAndUpdate: true;
-            commonBlockBody: CommonBlockBody;
+            currentState: CachedBeaconStateAllForks;
             parentBlockRoot: Root;
           }
         | {
             skipHeadChecksAndUpdate?: false | undefined;
-            commonBlockBody?: undefined;
+            currentState?: undefined;
             parentBlockRoot?: undefined;
           }
       ) = {}
@@ -437,7 +437,7 @@ export function getValidatorApi(
     }
 
     let parentBlockRoot: Root;
-    if (skipHeadChecksAndUpdate !== true) {
+    if (skipHeadChecksAndUpdate !== true || !inParentBlockRoot) {
       notWhileSyncing();
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
@@ -447,18 +447,37 @@ export function getValidatorApi(
     }
     notOnOutOfRangeData(parentBlockRoot);
 
+    currentState =
+      currentState ??
+      (await chain.regen.getBlockSlotState(
+        toRootHex(parentBlockRoot),
+        slot,
+        {dontTransferCache: true},
+        RegenCaller.produceBlock
+      ));
+
     let timer: undefined | ((opts: {source: ProducedBlockSource}) => number);
     try {
       timer = metrics?.blockProductionTime.startTimer();
-      const {block, executionPayloadValue, consensusBlockValue} = await chain.produceBlindedBlock({
+      const blockAttributes = {
         slot,
         parentBlockRoot,
         randaoReveal,
         graffiti: toGraffitiBuffer(
           graffiti ?? getDefaultGraffiti(getLodestarClientVersion(opts), chain.executionEngine.clientVersion, opts)
         ),
+      };
+      const [commonBlockBody, blindedBLockBody] = await Promise.all([
+        chain.produceCommonBlockBody({...blockAttributes, currentState}),
+        chain.produceBlindedBlockBody({...blockAttributes, currentState}),
+      ]);
+      const {block, executionPayloadValue, consensusBlockValue} = await chain.assembleBlockBody(
+        BlockType.Blinded,
+        blockAttributes,
+        currentState,
         commonBlockBody,
-      });
+        blindedBLockBody
+      );
 
       metrics?.blockProductionSuccess.inc({source});
       metrics?.blockProductionNumAggregated.observe({source}, block.body.attestations.length);
@@ -488,23 +507,23 @@ export function getValidatorApi(
       feeRecipient,
       strictFeeRecipientCheck,
       skipHeadChecksAndUpdate,
-      commonBlockBody,
+      currentState,
       parentBlockRoot: inParentBlockRoot,
     }: Omit<routes.validator.ExtraProduceBlockOpts, "builderSelection"> &
       (
         | {
             skipHeadChecksAndUpdate: true;
-            commonBlockBody: CommonBlockBody;
+            currentState: CachedBeaconStateAllForks;
             parentBlockRoot: Root;
           }
-        | {skipHeadChecksAndUpdate?: false | undefined; commonBlockBody?: undefined; parentBlockRoot?: undefined}
+        | {skipHeadChecksAndUpdate?: false | undefined; currentState?: undefined; parentBlockRoot?: undefined}
       ) = {}
   ): Promise<ProduceBlockOrContentsRes & {shouldOverrideBuilder?: boolean}> {
     const source = ProducedBlockSource.engine;
     metrics?.blockProductionRequests.inc({source});
 
     let parentBlockRoot: Root;
-    if (skipHeadChecksAndUpdate !== true) {
+    if (skipHeadChecksAndUpdate !== true || !inParentBlockRoot) {
       notWhileSyncing();
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
@@ -514,10 +533,19 @@ export function getValidatorApi(
     }
     notOnOutOfRangeData(parentBlockRoot);
 
+    currentState =
+      currentState ??
+      (await chain.regen.getBlockSlotState(
+        toRootHex(parentBlockRoot),
+        slot,
+        {dontTransferCache: true},
+        RegenCaller.produceBlock
+      ));
+
     let timer: undefined | ((opts: {source: ProducedBlockSource}) => number);
     try {
       timer = metrics?.blockProductionTime.startTimer();
-      const {block, executionPayloadValue, consensusBlockValue, shouldOverrideBuilder} = await chain.produceBlock({
+      const blockAttributes = {
         slot,
         parentBlockRoot,
         randaoReveal,
@@ -525,8 +553,18 @@ export function getValidatorApi(
           graffiti ?? getDefaultGraffiti(getLodestarClientVersion(opts), chain.executionEngine.clientVersion, opts)
         ),
         feeRecipient,
+      };
+      const [commonBlockBody, fullBlockBody] = await Promise.all([
+        chain.produceCommonBlockBody({...blockAttributes, currentState}),
+        chain.produceFullBlockBody({...blockAttributes, currentState}),
+      ]);
+      const {block, executionPayloadValue, consensusBlockValue, shouldOverrideBuilder} = await chain.assembleBlockBody(
+        BlockType.Full,
+        blockAttributes,
+        currentState,
         commonBlockBody,
-      });
+        fullBlockBody
+      );
       const version = config.getForkName(block.slot);
       if (strictFeeRecipientCheck && feeRecipient && isForkPostBellatrix(version)) {
         const blockFeeRecipient = toHex((block as bellatrix.BeaconBlock).body.executionPayload.feeRecipient);
@@ -627,14 +665,12 @@ export function getValidatorApi(
     };
 
     logger.verbose("Assembling block with produceEngineOrBuilderBlock", loggerContext);
-    const commonBlockBody = await chain.produceCommonBlockBody({
+    const currentState = await chain.regen.getBlockSlotState(
+      toRootHex(parentBlockRoot),
       slot,
-      parentBlockRoot,
-      randaoReveal,
-      graffiti: toGraffitiBuffer(
-        graffiti ?? getDefaultGraffiti(getLodestarClientVersion(opts), chain.executionEngine.clientVersion, opts)
-      ),
-    });
+      {dontTransferCache: true},
+      RegenCaller.produceBlock
+    );
     logger.debug("Produced common block body", loggerContext);
 
     // Calculate cutoff time based on start of the slot
@@ -658,7 +694,7 @@ export function getValidatorApi(
           strictFeeRecipientCheck: false,
           // skip checking and recomputing head in these individual produce calls
           skipHeadChecksAndUpdate: true,
-          commonBlockBody,
+          currentState,
           parentBlockRoot,
         })
       : Promise.reject(new Error("Builder disabled"));
@@ -669,7 +705,7 @@ export function getValidatorApi(
           strictFeeRecipientCheck,
           // skip checking and recomputing head in these individual produce calls
           skipHeadChecksAndUpdate: true,
-          commonBlockBody,
+          currentState,
           parentBlockRoot,
         }).then((engineBlock) => {
           // Once the engine returns a block, in the event of either:
