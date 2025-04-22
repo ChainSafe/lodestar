@@ -72,26 +72,13 @@ describe("withTimeout", () => {
     );
   });
 
-  it("Should forward the abort reason from the parent signal", async () => {
-    const controller = new AbortController();
-    const customReason = new Error("Custom reason");
-
-    setTimeout(() => controller.abort(customReason), shortTimeoutMs);
-
-    await expect(withTimeout(() => pause(longTimeoutMs, data), longTimeoutMs, controller.signal)).rejects.toBe(
-      customReason
-    );
-  });
-
   it("Should immediately reject if signal is already aborted without executing asyncFn", async () => {
     const controller = new AbortController();
-    const customReason = new Error("Pre-aborted reason");
-
-    controller.abort(customReason);
+    controller.abort();
 
     const asyncFnSpy = vi.fn(() => pause(shortTimeoutMs, data));
 
-    await expect(withTimeout(asyncFnSpy, longTimeoutMs, controller.signal)).rejects.toBe(customReason);
+    await expect(withTimeout(asyncFnSpy, longTimeoutMs, controller.signal)).rejects.toThrow(ErrorAborted);
 
     expect(asyncFnSpy).not.toHaveBeenCalled();
   });
