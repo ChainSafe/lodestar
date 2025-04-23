@@ -26,9 +26,7 @@ export async function callFnWhenAwait<T>(
   return t as T;
 }
 
-export type PromiseResult<T> = {
-  promise: Promise<T>;
-} & (
+export type PromiseRawResult<T> =
   | {
       status: "pending";
     }
@@ -41,8 +39,9 @@ export type PromiseResult<T> = {
       status: "rejected";
       reason: Error;
       durationMs: number;
-    }
-);
+    };
+
+export type PromiseResult<T> = {promise: Promise<T>} & PromiseRawResult<T>;
 export type PromiseFulfilledResult<T> = PromiseResult<T> & {status: "fulfilled"};
 export type PromiseRejectedResult<T> = PromiseResult<T> & {status: "rejected"};
 
