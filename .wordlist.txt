@@ -167,6 +167,7 @@ gpg
 heapdump
 heaptrack
 holesky
+hoodi
 interop
 js
 keymanager
@@ -208,6 +209,7 @@ produceBlockV
 protolambda
 prover
 pubsub
+rebased
 repo
 repos
 req

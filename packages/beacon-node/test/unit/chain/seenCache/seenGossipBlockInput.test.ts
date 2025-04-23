@@ -144,12 +144,13 @@ describe("SeenGossipBlockInput", () => {
             }
           }
         } catch (e) {
-          if (!(e as Error).message.includes("expected to fail with error")) {
-            if (!(expectedResponseType instanceof Error)) {
-              expect.fail(
-                `expected not to fail with response=${expectedResponseType} but errored: ${(e as Error).message}`
-              );
-            }
+          if (
+            !(e as Error).message.includes("expected to fail with error") &&
+            !(expectedResponseType instanceof Error)
+          ) {
+            expect.fail(
+              `expected not to fail with response=${expectedResponseType} but errored: ${(e as Error).message}`
+            );
           }
         }
       }

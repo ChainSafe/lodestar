@@ -2,7 +2,7 @@ import path from "node:path";
 import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {
   BeaconStateAllForks,
-  DataAvailableStatus,
+  DataAvailabilityStatus,
   ExecutionPayloadStatus,
   stateTransition,
 } from "@lodestar/state-transition";
@@ -26,7 +26,7 @@ const finality: TestRunnerFn<FinalityTestCase, BeaconStateAllForks> = (fork) => 
         state = stateTransition(state, signedBlock, {
           // Should assume payload valid and blob data available for this test
           executionPayloadStatus: ExecutionPayloadStatus.valid,
-          dataAvailableStatus: DataAvailableStatus.available,
+          dataAvailabilityStatus: DataAvailabilityStatus.Available,
           verifyStateRoot: false,
           verifyProposer: verify,
           verifySignatures: verify,

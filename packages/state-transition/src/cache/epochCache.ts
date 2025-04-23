@@ -1064,13 +1064,13 @@ export class EpochCache {
   }
 
   /** On processSyncCommitteeUpdates rotate next to current and set nextSyncCommitteeIndexed */
-  rotateSyncCommitteeIndexed(nextSyncCommitteeIndices: number[]): void {
+  rotateSyncCommitteeIndexed(nextSyncCommitteeIndices: Uint32Array): void {
     this.currentSyncCommitteeIndexed = this.nextSyncCommitteeIndexed;
     this.nextSyncCommitteeIndexed = getSyncCommitteeCache(nextSyncCommitteeIndices);
   }
 
   /** On phase0 -> altair fork, set both current and nextSyncCommitteeIndexed */
-  setSyncCommitteesIndexed(nextSyncCommitteeIndices: number[]): void {
+  setSyncCommitteesIndexed(nextSyncCommitteeIndices: Uint32Array): void {
     this.nextSyncCommitteeIndexed = getSyncCommitteeCache(nextSyncCommitteeIndices);
     this.currentSyncCommitteeIndexed = this.nextSyncCommitteeIndexed;
   }

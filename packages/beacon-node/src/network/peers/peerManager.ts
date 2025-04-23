@@ -1,5 +1,5 @@
 import {BitArray} from "@chainsafe/ssz";
-import {Connection, PeerId} from "@libp2p/interface";
+import {Connection, PeerId, PrivateKey} from "@libp2p/interface";
 import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
 import {SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
@@ -94,6 +94,7 @@ export interface IReqRespBeaconNodePeerManager {
 }
 
 export type PeerManagerModules = {
+  privateKey: PrivateKey;
   libp2p: Libp2p;
   logger: LoggerNode;
   metrics: NetworkCoreMetrics | null;
@@ -688,7 +689,7 @@ export class PeerManager {
     }
 
     for (const connections of getConnectionsMap(this.libp2p).values()) {
-      const openCnx = connections.find((cnx) => cnx.status === "open");
+      const openCnx = connections.value.find((cnx) => cnx.status === "open");
       if (openCnx) {
         const direction = openCnx.direction;
         peersByDirection.set(direction, 1 + (peersByDirection.get(direction) ?? 0));

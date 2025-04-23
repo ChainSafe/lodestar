@@ -9,8 +9,8 @@ export const lightclient: CliCommand<ILightClientArgs, GlobalArgs> = {
   docsFolder: "libraries/lightclient-prover",
   examples: [
     {
-      command: "lightclient --network holesky",
-      description: "Run lightclient with holesky network",
+      command: "lightclient --network hoodi",
+      description: "Run lightclient with hoodi network",
     },
   ],
   options: lightclientOptions,

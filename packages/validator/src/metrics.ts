@@ -131,7 +131,7 @@ export function getMetrics(register: MetricsRegisterExtra, gitData: LodestarGitD
     numParticipantsInAggregate: register.histogram({
       name: "vc_attestation_service_participants_in_aggregate_total",
       help: "Number of attestations in the published AggregatedAttestation",
-      buckets: [0, 50, 200, 500],
+      buckets: [1, 25, 50, 100, 250, 400, 500, 600],
     }),
 
     attestaterError: register.gauge<{error: "produce" | "sign" | "publish"}>({

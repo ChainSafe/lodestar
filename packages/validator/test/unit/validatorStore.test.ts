@@ -80,6 +80,7 @@ describe("ValidatorStore", () => {
       [valRegF10G200, "0x10", 200],
     ];
     for (const [valReg, feeRecipient, gasLimit] of testCases) {
+      vi.clearAllMocks();
       vi.spyOn(validatorStore, "signValidatorRegistration").mockResolvedValue(valReg);
 
       const val1 = await validatorStore.getValidatorRegistration(pubkeys[0], {feeRecipient, gasLimit}, slot++);
