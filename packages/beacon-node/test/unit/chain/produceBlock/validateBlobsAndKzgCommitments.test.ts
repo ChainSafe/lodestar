@@ -1,5 +1,5 @@
 import {CELLS_PER_EXT_BLOB, ForkName} from "@lodestar/params";
-import {deneb, ExecutionPayload, fulu} from "@lodestar/types";
+import {ExecutionPayload, deneb, fulu} from "@lodestar/types";
 import {beforeAll, describe, expect, it} from "vitest";
 import {validateBlobsAndKzgCommitments} from "../../../../src/chain/produceBlock/validateBlobsAndKzgCommitments.js";
 import {BlobsBundle} from "../../../../src/execution/index.js";
