@@ -128,18 +128,6 @@ export class BlockInputUnknown<
     throw new BlockInputError({code: BlockInputErrorCode.MUST_UPGRADE_BLOCK_INPUT_TYPE, blockRoot: this.prettyRootHex});
   }
 
-  /**
-   * Removes the block from the blockInput
-   *
-   * NOTE: It is best to run BlockInputCache.removeInvalidBlock instead of removeBlock
-   * directly. That will also prune empty BlockInputs from the cache
-   */
-  removeBlock(): void {
-    if (this.blockWithSource) {
-      this.blockWithSource = undefined;
-    }
-  }
-
   hasData(): boolean {
     return false;
   }
@@ -472,16 +460,6 @@ export class BlockInputBlobs<
     } else if (this.dataStatus === BlockInputDataStatus.NoData) {
       this.dataStatus = BlockInputDataStatus.IncompleteData;
     }
-  }
-
-  /**
-   * Removes a blob from the blockInput
-   *
-   * NOTE: It is best to run BlockInputCache.removeInvalidBlock instead of removeBlock
-   * directly. That will also prune empty BlockInputs from the cache
-   */
-  removeBlob(blobIndex: BlobIndex): void {
-    this.blobsCache.delete(blobIndex);
   }
 
   getMissingBlobMeta(): BlobMeta[];
