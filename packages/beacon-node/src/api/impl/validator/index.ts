@@ -499,7 +499,7 @@ export function getValidatorApi(
     }
   }
 
-  async function produceBuilderBlindedBlockBody(
+  async function produceBuilderBlockBody(
     // as of now fee recipient checks can not be performed because builder does not return bid recipient
     opts: {
       slot: Slot;
@@ -537,7 +537,7 @@ export function getValidatorApi(
     return resp;
   }
 
-  async function produceEngineFullBlockBody(
+  async function produceEngineBlockBody(
     opts: {
       slot: Slot;
       randaoReveal: BLSSignature;
@@ -562,7 +562,7 @@ export function getValidatorApi(
     return resp;
   }
 
-  async function assembleFullBlockResponse(
+  async function assembleEngineBlockResponse(
     blockAttributes: BlockAttributes,
     currentState: CachedBeaconStateAllForks,
     commonBlockBody: CommonBlockBody,
@@ -573,7 +573,7 @@ export function getValidatorApi(
     const source = ProducedBlockSource.engine;
 
     if (fullBlockBodyResp.status === "fulfilled") {
-      const {block, consensusBlockValue, executionPayloadValue, shouldOverrideBuilder} = await chain.assembleBlockBody(
+      const {block, consensusBlockValue, executionPayloadValue} = await chain.assembleBlockBody(
         BlockType.Full,
         blockAttributes,
         currentState,
@@ -646,7 +646,7 @@ export function getValidatorApi(
     };
   }
 
-  async function assembleBlindedBlockResponse(
+  async function assembleBuilderBlockResponse(
     blockAttributes: BlockAttributes,
     currentState: CachedBeaconStateAllForks,
     commonBlockBody: CommonBlockBody,
@@ -795,11 +795,11 @@ export function getValidatorApi(
     // Start calls for building execution and builder blocks
 
     const builderBodyPromise = isBuilderEnabled
-      ? produceBuilderBlindedBlockBody({...blockAttributes, currentState})
+      ? produceBuilderBlockBody({...blockAttributes, currentState})
       : Promise.reject(new Error("Builder disabled"));
 
     const engineBodyPromise = isEngineEnabled
-      ? produceEngineFullBlockBody({...blockAttributes, currentState}).then((engineBlockBody) => {
+      ? produceEngineBlockBody({...blockAttributes, currentState}).then((engineBlockBody) => {
           // Once the engine returns a block, in the event of either:
           // - suspected builder censorship
           // - builder boost factor set to 0 or builder selection `executionalways`
@@ -830,8 +830,8 @@ export function getValidatorApi(
         return [
           commonBlockBody,
           [
-            await assembleBlindedBlockResponse(blockAttributes, currentState, commonBlockBody, builderBlockBody),
-            await assembleFullBlockResponse(blockAttributes, currentState, commonBlockBody, engineBlockBody, {
+            await assembleBuilderBlockResponse(blockAttributes, currentState, commonBlockBody, builderBlockBody),
+            await assembleEngineBlockResponse(blockAttributes, currentState, commonBlockBody, engineBlockBody, {
               strictFeeRecipientCheck,
               feeRecipient,
             }),
