@@ -5,7 +5,7 @@ import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {ChainForkConfig} from "@lodestar/config";
 import {Repository} from "@lodestar/db";
-import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkName, ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateCapella, getLatestWeakSubjectivityCheckpointEpoch, loadState} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {toHex, toRootHex} from "@lodestar/utils";
@@ -195,7 +195,7 @@ export function getLodestarApi({
     },
 
     async getHistoricalSummaries({stateId}) {
-      const {state} = await getStateResponseWithRegen(chain, stateId);
+      const {state, executionOptimistic, finalized} = await getStateResponseWithRegen(chain, stateId);
 
       const stateView = (
         state instanceof Uint8Array ? loadState(config, chain.getHeadState(), state).state : state.clone()
@@ -210,10 +210,12 @@ export function getLodestarApi({
       const proof = new Tree(stateView.node).getSingleProof(gindex);
 
       return {
-        data: {
-          historicalSummaries: stateView.historicalSummaries.toValue(),
-          proof: proof,
+          data: {
+            slot: stateView.slot,
+            historicalSummaries: stateView.historicalSummaries.toValue(),
+            proof: proof,
         },
+        meta: {executionOptimistic, finalized, version: config.getForkName(stateView.slot)},
       };
     },
   };

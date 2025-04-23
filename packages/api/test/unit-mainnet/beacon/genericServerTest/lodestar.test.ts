@@ -9,6 +9,7 @@ import {AnyEndpoint} from "../../../../src/utils/codecs.js";
 import {FastifyRoute} from "../../../../src/utils/server/index.js";
 import {WireFormat} from "../../../../src/utils/wireFormat.js";
 import {getMockApi, getTestServer} from "../../../utils/utils.js";
+import { ForkName } from "@lodestar/params";
 
 describe("beacon / lodestar", () => {
   describe("get HistoricalSummaries as json", () => {
@@ -30,11 +31,13 @@ describe("beacon / lodestar", () => {
     });
 
     it("getHistoricalSummaries", async () => {
-      mockApi.getHistoricalSummaries.mockResolvedValue({
+        mockApi.getHistoricalSummaries.mockResolvedValue({
         data: {
+          slot: 0,
           historicalSummaries: [],
           proof: [],
         },
+        meta: {version: ForkName.electra, executionOptimistic: false, finalized: false},
       });
 
       const httpClient = new HttpClient({baseUrl});
