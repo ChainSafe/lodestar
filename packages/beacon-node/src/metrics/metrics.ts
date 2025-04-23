@@ -1,5 +1,4 @@
-import {BeaconStateTransitionMetrics} from "@lodestar/state-transition";
-import {getMetrics} from "@lodestar/state-transition/src/metrics.js";
+import {BeaconStateTransitionMetrics, getMetrics} from "@lodestar/state-transition";
 import {Metric, Registry} from "prom-client";
 import {BeaconMetrics, createBeaconMetrics} from "./metrics/beacon.js";
 import {LodestarMetrics, createLodestarMetrics} from "./metrics/lodestar.js";
@@ -8,8 +7,8 @@ import {MetricsOptions} from "./options.js";
 import {RegistryMetricCreator} from "./utils/registryMetricCreator.js";
 
 export type Metrics = BeaconMetrics &
-BeaconStateTransitionMetrics &
-LodestarMetrics & {register: RegistryMetricCreator; close: () => void};
+  BeaconStateTransitionMetrics &
+  LodestarMetrics & {register: RegistryMetricCreator; close: () => void};
 
 export function createMetrics(opts: MetricsOptions, genesisTime: number, externalRegistries: Registry[] = []): Metrics {
   const register = new RegistryMetricCreator();

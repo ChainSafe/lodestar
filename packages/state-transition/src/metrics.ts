@@ -1,4 +1,3 @@
-import {Epoch} from "@lodestar/types";
 import {MetricsRegister} from "@lodestar/utils";
 import {EpochTransitionStep} from "./epoch/index.js";
 import {StateCloneSource, StateHashTreeRootSource} from "./stateTransition.js";
