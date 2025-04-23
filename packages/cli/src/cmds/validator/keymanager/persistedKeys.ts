@@ -137,7 +137,7 @@ export class PersistedKeysBackend implements IPersistedKeysBackend {
 
     if (lockBeforeWrite) {
       // Lock before writing keystore
-      lockFilepath(keystoreFilepath);
+      lockFilepath(process.cwd());
     }
 
     writeFile600Perm(keystoreFilepath, keystoreStr);
