@@ -215,7 +215,7 @@ export function getLodestarApi({
             historicalSummaries: stateView.historicalSummaries.toValue(),
             proof: proof,
         },
-        meta: {executionOptimistic, finalized, version: config.getForkName(stateView.slot)},
+        meta: {executionOptimistic, finalized, version: fork},
       };
     },
   };

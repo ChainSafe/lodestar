@@ -410,7 +410,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       resp: JsonOnlyResponseCodec,
     },
     getHistoricalSummaries: {
-      url: "/eth/v1/lodestar/{state_id}/historical_summaries",
+      url: "/eth/v1/lodestar/states/{state_id}/historical_summaries",
       method: "GET",
       req: {
         writeReq: ({stateId}) => ({params: {state_id: stateId.toString()}}),
