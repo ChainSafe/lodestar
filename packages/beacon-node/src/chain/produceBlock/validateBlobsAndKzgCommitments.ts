@@ -26,6 +26,13 @@ export function validateBlobsAndKzgCommitments(
         `Invalid proofs length for BlobsBundleV1 format: expected ${blobsBundle.blobs.length}, got ${blobsBundle.proofs.length}`
       );
     }
+
+    try {
+      ckzg.verifyBlobKzgProofBatch(blobsBundle.blobs, blobsBundle.commitments, blobsBundle.proofs);
+    } catch {
+      throw new Error("Error in verifyBlobKzgProofBatch");
+    }
+
     return;
   }
 

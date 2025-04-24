@@ -14,8 +14,16 @@ describe("validateBlobsAndKzgCommitments", () => {
 
   it("should validate a valid V1 blobs bundle", () => {
     const blobs = [generateRandomBlob(), generateRandomBlob()];
-    const commitments = blobs.map((blob) => ckzg.blobToKzgCommitment(blob));
-    const proofs = blobs.map(() => new Uint8Array(48).fill(1));
+    const commitments = [];
+    const proofs = [];
+
+    for (const blob of blobs) {
+      const commitment = ckzg.blobToKzgCommitment(blob);
+      const proof = ckzg.computeBlobKzgProof(blob, commitment);
+
+      commitments.push(commitment);
+      proofs.push(proof);
+    }
 
     const blobsBundle: BlobsBundle = {
       commitments,
@@ -31,6 +39,29 @@ describe("validateBlobsAndKzgCommitments", () => {
     } as ExecutionPayload;
 
     expect(() => validateBlobsAndKzgCommitments(ForkName.deneb, mockPayload, blobsBundle)).not.toThrow();
+  });
+
+  it("should throw if V1 blobs bundle proof verification fails", () => {
+    const blobs = [generateRandomBlob(), generateRandomBlob()];
+    const commitments = blobs.map((blob) => ckzg.blobToKzgCommitment(blob));
+    const proofs = blobs.map(() => new Uint8Array(48).fill(1)); // filled with all ones which should fail verification
+
+    const blobsBundle: BlobsBundle = {
+      commitments,
+      blobs,
+      proofs,
+    };
+
+    // Create a mock ExecutionPayload
+    const mockPayload = {
+      blockNumber: 1,
+      blockHash: new Uint8Array(32),
+      parentHash: new Uint8Array(32),
+    } as ExecutionPayload;
+
+    expect(() => validateBlobsAndKzgCommitments(ForkName.deneb, mockPayload, blobsBundle)).toThrow(
+      "Error in verifyBlobKzgProofBatch"
+    );
   });
 
   it("should throw if commitments and blobs lengths don't match", () => {
