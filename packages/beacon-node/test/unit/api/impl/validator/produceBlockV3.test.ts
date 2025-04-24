@@ -5,7 +5,7 @@ import {ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {when} from "vitest-when";
+import {debug, when} from "vitest-when";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
 import {
@@ -80,10 +80,11 @@ describe("api/validator - produceBlockV3", () => {
     finalSelection,
   ] of testCases) {
     it(`produceBlockV3  - ${finalSelection} produces block`, async () => {
-      const fullBlock = ssz.bellatrix.BeaconBlock.defaultValue();
-      const blindedBlock = ssz.bellatrix.BlindedBeaconBlock.defaultValue();
-
       const slot = 1 * SLOTS_PER_EPOCH;
+
+      const fullBlock = {...ssz.bellatrix.BeaconBlock.defaultValue(), slot};
+      const blindedBlock = {...ssz.bellatrix.BlindedBeaconBlock.defaultValue(), slot};
+
       const randaoReveal = fullBlock.body.randaoReveal;
       const graffiti = "a".repeat(32);
       const feeRecipient = "0xccccccccccccccccccccccccccccccccccccccaa";
@@ -140,7 +141,11 @@ describe("api/validator - produceBlockV3", () => {
       }
 
       when(modules.chain.assembleBlockBody)
-        .calledWith(BlockType.Full, expect.any(Object), undefined as any, expect.any(Object), expect.any(Object))
+        .calledWith(
+          expect.objectContaining({
+            blockType: BlockType.Full,
+          })
+        )
         .thenResolve({
           block: fullBlock,
           executionPayloadValue: BigInt(enginePayloadValue ?? 0),
@@ -148,7 +153,11 @@ describe("api/validator - produceBlockV3", () => {
         });
 
       when(modules.chain.assembleBlockBody)
-        .calledWith(BlockType.Blinded, expect.any(Object), undefined as any, expect.any(Object), expect.any(Object))
+        .calledWith(
+          expect.objectContaining({
+            blockType: BlockType.Blinded,
+          })
+        )
         .thenResolve({
           block: blindedBlock,
           executionPayloadValue: BigInt(builderPayloadValue ?? 0),

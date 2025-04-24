@@ -570,8 +570,8 @@ export function getValidatorApi(
     {strictFeeRecipientCheck, feeRecipient}: {strictFeeRecipientCheck?: boolean; feeRecipient?: string}
   ): Promise<ProduceBlockOrContentsRes & {shouldOverrideBuilder?: boolean}> {
     const source = ProducedBlockSource.engine;
-
-    const {block, consensusBlockValue, executionPayloadValue, shouldOverrideBuilder} = await chain.assembleBlockBody({
+    const {shouldOverrideBuilder} = fullBlockBodyResp;
+    const {block, consensusBlockValue, executionPayloadValue} = await chain.assembleBlockBody({
       blockType: BlockType.Full,
       blockAttributes,
       currentState,
@@ -735,11 +735,6 @@ export function getValidatorApi(
       RegenCaller.produceBlock
     );
 
-    const commonBlockBodyPromise = chain.produceCommonBlockBody({...blockAttributes, currentState}).then((resp) => {
-      logger.debug("Produced common block body", loggerContext);
-      return resp;
-    });
-
     // Calculate cutoff time based on start of the slot
     const cutoffMs = Math.max(0, BLOCK_PRODUCTION_RACE_CUTOFF_MS - Math.round(chain.clock.secFromSlot(slot) * 1000));
 
@@ -754,6 +749,11 @@ export function getValidatorApi(
     const builderTimer = metrics?.blockProductionTime.startTimer();
     const engineTimer = metrics?.blockProductionTime.startTimer();
 
+    const commonBlockBodyPromise = chain.produceCommonBlockBody({...blockAttributes, currentState}).then((resp) => {
+      logger.debug("Produced common block body", loggerContext);
+      return resp;
+    });
+
     // Start calls for building execution and builder blocks
     const builderBodyPromise = isBuilderEnabled
       ? produceBuilderBlockBody({...blockAttributes, currentState})
@@ -767,26 +767,36 @@ export function getValidatorApi(
       : Promise.reject(new Error("Builder disabled"));
 
     const engineBodyPromise = isEngineEnabled
-      ? produceEngineBlockBody({...blockAttributes, currentState}).then(async (engineBlockBody) => {
-          const commonBlockBody = await commonBlockBodyPromise;
-          // Once the engine returns a block, in the event of either:
-          // - suspected builder censorship
-          // - builder boost factor set to 0 or builder selection `executionalways`
-          // we don't need to wait for builder block as engine block will always be selected
-          if (
-            engineBlockBody.shouldOverrideBuilder ||
-            builderBoostFactor === BigInt(0) ||
-            builderSelection === routes.validator.BuilderSelection.ExecutionAlways
-          ) {
-            controller.abort();
-          }
-          return assembleEngineBlockResponse(blockAttributes, currentState, commonBlockBody, engineBlockBody, {
-            strictFeeRecipientCheck,
-            feeRecipient,
-          }).finally(() => {
+      ? produceEngineBlockBody({...blockAttributes, currentState})
+          .then(async (engineBlockBody) => {
+            const commonBlockBody = await commonBlockBodyPromise;
+            const resp = await assembleEngineBlockResponse(
+              blockAttributes,
+              currentState,
+              commonBlockBody,
+              engineBlockBody,
+              {
+                strictFeeRecipientCheck,
+                feeRecipient,
+              }
+            );
+
+            // Once the engine returns a block, in the event of either:
+            // - suspected builder censorship
+            // - builder boost factor set to 0 or builder selection `execution-always`
+            // we don't need to wait for builder block as engine block will always be selected
+            if (
+              engineBlockBody.shouldOverrideBuilder ||
+              builderBoostFactor === BigInt(0) ||
+              builderSelection === routes.validator.BuilderSelection.ExecutionAlways
+            ) {
+              controller.abort();
+            }
+            return resp;
+          })
+          .finally(() => {
             if (engineTimer) engineTimer({source: ProducedBlockSource.engine});
-          });
-        })
+          })
       : Promise.reject(new Error("Engine disabled"));
 
     const [_, [builder, engine]] = await Promise.all([
