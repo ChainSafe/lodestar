@@ -235,7 +235,7 @@ export async function produceBlindedBlockBody(
     step: BlockProductionStep.executionPayload,
   });
 
-  this.logger.verbose("Produced beacon block body", logMeta);
+  this.logger.verbose("Produced partial beacon block body for builder flow", logMeta);
 
   return {
     body: blockBody,
@@ -399,7 +399,7 @@ export async function produceFullBlockBody(
   }
 
   Object.assign(logMeta, {executionPayloadValue});
-  this.logger.verbose("Produced beacon block body", logMeta);
+  this.logger.verbose("Produced partial beacon block body for engine flow", logMeta);
 
   return {
     body: blockBody,

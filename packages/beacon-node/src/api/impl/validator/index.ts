@@ -846,7 +846,7 @@ export function getValidatorApi(
       })
       .finally(() => {
         if (engineTimer) engineTimer({source: ProducedBlockSource.engine});
-        if (builderTimer) builderTimer({source: ProducedBlockSource.engine});
+        if (builderTimer) builderTimer({source: ProducedBlockSource.builder});
       });
 
     if (builder.status === "pending" && engine.status === "pending") {
