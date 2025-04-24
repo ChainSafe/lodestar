@@ -1,0 +1,119 @@
+Eph 1579004/1 1.070[]                 [32minfo[39m: Lodestar network=dev, version=v1.27.0/create-lock-file/399d38f, commit=399d38f6090f73a4dec4dbc36f17d740f9dc87f3
+Eph 1579004/1 1.072[]                 [32minfo[39m: ACTIVE_PRESET == minimal preset
+Eph 1579004/1 1.078[]                 [32minfo[39m: Connected to LevelDB database path=/Users/naynayu/.local/share/lodestar/dev/chain-db
+Eph 1579004/1 1.082[]                 [33mwarn[39m: Initializing from a stale checkpoint state vulnerable to long range attacks slot=0, epoch=0, stateRoot=0x597f3020344f21d80b7a55e14111001193146b8dcebb7b0fd84b168675eabb79, isWithinWeakSubjectivityPeriod=false
+Eph 1579004/1 1.083[]                 [33mwarn[39m: Checkpoint sync recommended, please use --help to see checkpoint sync options
+Eph 1579004/1 1.391[chain]            [32minfo[39m: Historical state worker started
+Eph 1579004/1 1.400[execution]        [32minfo[39m: Execution client urls=http://localhost:8551
+Eph 1579004/1 1.413[chain]            [32minfo[39m: Removed persisted checkpoint states from the last run count=0, maxEpochsInMemory=3
+Eph 1579004/1 1.417[network]          [32minfo[39m: running libp2p instance in worker thread
+Eph 1579004/1 2.133[network]          [32minfo[39m: libp2p worker started peer=16Uiu2HAmNQy78suTU6fwfFzqiQAPKfhBcKJEoHSGF9GyiwozXfsJ
+Eph 1579004/1 2.662[network]         [31merror[39m: PeerDiscovery: discv5 has no boot enr
+Eph 1579004/1 2.669[network]          [32minfo[39m: PeerId 16Uiu2HAmNQy78suTU6fwfFzqiQAPKfhBcKJEoHSGF9GyiwozXfsJ, Multiaddrs /ip4/0.0.0.0/tcp/9000
+Eph 1579004/1 2.661[network]          [32minfo[39m: discv5 worker started peerId=16Uiu2HAmNQy78suTU6fwfFzqiQAPKfhBcKJEoHSGF9GyiwozXfsJ, initialENR=enr:-Iu4QG93yQ95lwdDNizdeTWstVSxRnxJBAkjfgVfbhEYkjsXUcS7r3D-_4cEQ7nmM5-Al-tKb9Fmq8qf1NRBMZfXSswBgmlkgnY0gmlwhH8AAAGJc2VjcDI1NmsxoQOQ_VTRMdLZKZdpnv7LLvWScKsnTjX2UCJV-thGnrEYvYN0Y3CCIyiDdWRwgiMo, bindAddr4=/ip4/0.0.0.0/udp/9000
+Eph 1579004/1 2.893[rest]             [32minfo[39m: Started REST API server address=http://127.0.0.1:9596
+Eph 1579004/1 2.894[]                 [32minfo[39m: Searching peers - peers: 0 - slot: 12632033 - head: 0 0x42a0…b7df - finalized: 0x0000…0000:0
+Eph 1579004/1 2.924[]                 [32minfo[39m: Lodestar network=dev, version=v1.27.0/create-lock-file/399d38f, commit=399d38f6090f73a4dec4dbc36f17d740f9dc87f3
+Eph 1579004/1 2.925[]                 [32minfo[39m: Connecting to LevelDB database path=/Users/naynayu/.local/share/lodestar/dev/validator-db
+Eph 1579004/1 2.926[]                 [32minfo[39m: 8 local keystores
+Eph 1579004/1 2.926[]                 [32minfo[39m: 0xa99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b53359fe8b94a38e44c
+Eph 1579004/1 2.926[]                 [32minfo[39m: 0xb89bebc699769726a318c8e9971bd3171297c61aea4a6578a7a4f94b547dcba5bac16a89108b6b6a1fe3695d1a874a0b
+Eph 1579004/1 2.926[]                 [32minfo[39m: 0xa3a32b0f8b4ddb83f1a0a853d81dd725dfe577d4f4c3db8ece52ce2b026eca84815c1a7e8e92a4de3d755733bf7e4a9b
+Eph 1579004/1 2.926[]                 [32minfo[39m: 0x88c141df77cd9d8d7a71a75c826c41a9c9f03c6ee1b180f3e7852f6a280099ded351b58d66e653af8e42816a4d8f532e
+Eph 1579004/1 2.927[]                 [32minfo[39m: 0x81283b7a20e1ca460ebd9bbd77005d557370cabb1f9a44f530c4c4c66230f675f8df8b4c2818851aa7d77a80ca5a4a5e
+Eph 1579004/1 2.927[]                 [32minfo[39m: 0xab0bdda0f85f842f431beaccf1250bf1fd7ba51b4100fd64364b6401fda85bb0069b3e715b58819684e7fc0b10a72a34
+Eph 1579004/1 2.927[]                 [32minfo[39m: 0x9977f1c8b731a8d5558146bfb86caea26434f3c5878b589bf280a42c9159e700e9df0e4086296c20b011d2e78c27d373
+Eph 1579004/1 2.927[]                 [32minfo[39m: 0xa8d4c7c27795a725961317ef5953a7032ed6d83739db8b0e8a72353d1b8b4439427f7efa2c89caa03cc9f28f8cbab8ac
+Eph 1579004/1 2.932[]                 [32minfo[39m: Beacon node urls=http://127.0.0.1:9596, requestWireFormat=json, responseWireFormat=ssz
+Eph 1579004/1 2.961[]                 [32minfo[39m: Genesis fetched from the beacon node
+Eph 1579004/1 2.971[]                 [32minfo[39m: Verified connected beacon node and validator have same the config
+Eph 1579004/1 2.972[]                 [32minfo[39m: Persisted genesisValidatorRoot 0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69
+Eph 1579004/1 2.972[]                 [32minfo[39m: Persisted genesisTime 1669713528
+Eph 1579004/1 2.972[]                 [32minfo[39m: Verified connected beacon node and validator have the same genesisValidatorRoot
+Eph 1579004/1 2.973[]                 [32minfo[39m: Initializing validator useProduceBlockV3=deneb+, broadcastValidation=gossip, defaultBuilderSelection=executiononly, suggestedFeeRecipient=0x0000000000000000000000000000000000000000, strictFeeRecipientCheck=false
+Eph 1579004/1 3.003[]                 [33mwarn[39m: Low peer count peers=0
+Eph 1579004/1 3.003[]                 [32minfo[39m: Searching peers - peers: 0 - slot: 12632033 - head: 0 0x42a0…b7df - finalized: 0x0000…0000:0
+Eph 1579004/1 3.007[]                 [33mwarn[39m: Node is syncing slot=12632033, headSlot=0, syncDistance=12632033
+Eph 1579004/1 3.009[]                 [33mwarn[39m: Node is syncing - getProposerDuties failed with status 503: Node is syncing - waiting for peers
+Eph 1579004/1 3.018[]                 [32minfo[39m: Validator seen on beacon chain validatorIndex=0, pubKey=0xa99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b53359fe8b94a38e44c
+Eph 1579004/1 3.018[]                 [32minfo[39m: Validator seen on beacon chain validatorIndex=1, pubKey=0xb89bebc699769726a318c8e9971bd3171297c61aea4a6578a7a4f94b547dcba5bac16a89108b6b6a1fe3695d1a874a0b
+Eph 1579004/1 3.018[]                 [32minfo[39m: Validator seen on beacon chain validatorIndex=2, pubKey=0xa3a32b0f8b4ddb83f1a0a853d81dd725dfe577d4f4c3db8ece52ce2b026eca84815c1a7e8e92a4de3d755733bf7e4a9b
+Eph 1579004/1 3.018[]                 [32minfo[39m: Validator seen on beacon chain validatorIndex=3, pubKey=0x88c141df77cd9d8d7a71a75c826c41a9c9f03c6ee1b180f3e7852f6a280099ded351b58d66e653af8e42816a4d8f532e
+Eph 1579004/1 3.018[]                 [32minfo[39m: Validator seen on beacon chain validatorIndex=4, pubKey=0x81283b7a20e1ca460ebd9bbd77005d557370cabb1f9a44f530c4c4c66230f675f8df8b4c2818851aa7d77a80ca5a4a5e
+Eph 1579004/1 3.018[]                 [32minfo[39m: Validator seen on beacon chain validatorIndex=5, pubKey=0xab0bdda0f85f842f431beaccf1250bf1fd7ba51b4100fd64364b6401fda85bb0069b3e715b58819684e7fc0b10a72a34
+Eph 1579004/1 3.018[]                 [32minfo[39m: Validator seen on beacon chain validatorIndex=6, pubKey=0x9977f1c8b731a8d5558146bfb86caea26434f3c5878b589bf280a42c9159e700e9df0e4086296c20b011d2e78c27d373
+Eph 1579004/1 3.018[]                 [32minfo[39m: Validator seen on beacon chain validatorIndex=7, pubKey=0xa8d4c7c27795a725961317ef5953a7032ed6d83739db8b0e8a72353d1b8b4439427f7efa2c89caa03cc9f28f8cbab8ac
+Eph 1579004/1 3.018[]                 [32minfo[39m: Validator statuses active=8, total=8
+Eph 1579004/2 0.045[]                 [33mwarn[39m: Node is syncing slot=12632034, headSlot=0, syncDistance=12632034
+Eph 1579004/2 0.047[]                 [33mwarn[39m: Node is syncing - getProposerDuties failed with status 503: Node is syncing - waiting for peers
+Eph 1579004/2 3.001[]                 [32minfo[39m: Searching peers - peers: 0 - slot: 12632034 - head: 0 0x42a0…b7df - finalized: 0x0000…0000:0
+Eph 1579004/3 0.012[]                 [33mwarn[39m: Node is syncing slot=12632035, headSlot=0, syncDistance=12632035
+Eph 1579004/3 0.015[]                 [33mwarn[39m: Node is syncing - getProposerDuties failed with status 503: Node is syncing - waiting for peers
+Eph 1579004/3 3.007[]                 [32minfo[39m: Searching peers - peers: 0 - slot: 12632035 - head: 0 0x42a0…b7df - finalized: 0x0000…0000:0
+Eph 1579004/4 0.018[]                 [33mwarn[39m: Node is syncing slot=12632036, headSlot=0, syncDistance=12632036
+Eph 1579004/4 0.019[]                 [33mwarn[39m: Node is syncing - getProposerDuties failed with status 503: Node is syncing - waiting for peers
+Eph 1579004/4 3.002[]                 [32minfo[39m: Searching peers - peers: 0 - slot: 12632036 - head: 0 0x42a0…b7df - finalized: 0x0000…0000:0
+Eph 1579004/5 0.012[]                 [33mwarn[39m: Node is syncing slot=12632037, headSlot=0, syncDistance=12632037
+Eph 1579004/5 0.013[]                 [33mwarn[39m: Node is syncing - getProposerDuties failed with status 503: Node is syncing - waiting for peers
+Eph 1579004/5 3.003[]                 [32minfo[39m: Searching peers - peers: 0 - slot: 12632037 - head: 0 0x42a0…b7df - finalized: 0x0000…0000:0
+Eph 1579004/6 0.011[]                 [33mwarn[39m: Node is syncing slot=12632038, headSlot=0, syncDistance=12632038
+Eph 1579004/6 0.012[]                 [33mwarn[39m: Node is syncing - getProposerDuties failed with status 503: Node is syncing - waiting for peers
+Eph 1579004/6 3.002[]                 [32minfo[39m: Searching peers - peers: 0 - slot: 12632038 - head: 0 0x42a0…b7df - finalized: 0x0000…0000:0
+Eph 1579004/7 0.008[]                 [33mwarn[39m: Node is syncing slot=12632039, headSlot=0, syncDistance=12632039
+Eph 1579004/7 0.009[]                 [33mwarn[39m: Node is syncing - getProposerDuties failed with status 503: Node is syncing - waiting for peers
+Eph 1579004/7 3.005[]                 [32minfo[39m: Searching peers - peers: 0 - slot: 12632039 - head: 0 0x42a0…b7df - finalized: 0x0000…0000:0
+Eph 1579005/0 0.016[]                 [33mwarn[39m: Node is syncing - getAttesterDuties failed with status 503: Node is syncing - waiting for peers
+Eph 1579005/0 0.019[]                 [33mwarn[39m: Node is syncing slot=12632040, headSlot=0, syncDistance=12632040
+Eph 1579005/0 3.083[]                 [32minfo[39m: Searching peers - peers: 0 - slot: 12632040 - head: 0 0x42a0…b7df - finalized: 0x0000…0000:0
+Eph 1579005/1 0.020[]                 [33mwarn[39m: Node is syncing slot=12632041, headSlot=0, syncDistance=12632041
+Eph 1579005/1 0.021[]                 [33mwarn[39m: Node is syncing - getProposerDuties failed with status 503: Node is syncing - waiting for peers
+Eph 1579005/1 3.004[]                 [32minfo[39m: Searching peers - peers: 0 - slot: 12632041 - head: 0 0x42a0…b7df - finalized: 0x0000…0000:0
+Eph 1579005/2 0.014[]                 [33mwarn[39m: Node is syncing - getProposerDuties failed with status 503: Node is syncing - waiting for peers
+Eph 1579005/2 0.015[]                 [33mwarn[39m: Node is syncing slot=12632042, headSlot=0, syncDistance=12632042
+Eph 1579005/2 3.003[]                 [32minfo[39m: Searching peers - peers: 0 - slot: 12632042 - head: 0 0x42a0…b7df - finalized: 0x0000…0000:0
+Eph 1579005/3 0.019[]                 [33mwarn[39m: Node is syncing - getProposerDuties failed with status 503: Node is syncing - waiting for peers
+Eph 1579005/3 0.020[]                 [33mwarn[39m: Node is syncing slot=12632043, headSlot=0, syncDistance=12632043
+Eph 1579005/3 3.001[]                 [32minfo[39m: Searching peers - peers: 0 - slot: 12632043 - head: 0 0x42a0…b7df - finalized: 0x0000…0000:0
+Eph 1579005/4 0.038[]                 [33mwarn[39m: Node is syncing slot=12632044, headSlot=0, syncDistance=12632044
+Eph 1579005/4 0.040[]                 [33mwarn[39m: Node is syncing - getProposerDuties failed with status 503: Node is syncing - waiting for peers
+Eph 1579005/4 3.010[]                 [32minfo[39m: Searching peers - peers: 0 - slot: 12632044 - head: 0 0x42a0…b7df - finalized: 0x0000…0000:0
+Eph 1579005/5 0.012[]                 [33mwarn[39m: Node is syncing slot=12632045, headSlot=0, syncDistance=12632045
+Eph 1579005/5 0.013[]                 [33mwarn[39m: Node is syncing - getProposerDuties failed with status 503: Node is syncing - waiting for peers
+Eph 1579005/5 3.005[]                 [32minfo[39m: Searching peers - peers: 0 - slot: 12632045 - head: 0 0x42a0…b7df - finalized: 0x0000…0000:0
+Eph 1579005/6 0.013[]                 [33mwarn[39m: Node is syncing slot=12632046, headSlot=0, syncDistance=12632046
+Eph 1579005/6 0.014[]                 [33mwarn[39m: Node is syncing - getProposerDuties failed with status 503: Node is syncing - waiting for peers
+Eph 1579005/6 3.013[]                 [32minfo[39m: Searching peers - peers: 0 - slot: 12632046 - head: 0 0x42a0…b7df - finalized: 0x0000…0000:0
+Eph 1579005/7 0.004[]                 [33mwarn[39m: Node is syncing slot=12632047, headSlot=0, syncDistance=12632047
+Eph 1579005/7 0.004[]                 [33mwarn[39m: Node is syncing - getProposerDuties failed with status 503: Node is syncing - waiting for peers
+Eph 1579005/7 3.004[]                 [32minfo[39m: Searching peers - peers: 0 - slot: 12632047 - head: 0 0x42a0…b7df - finalized: 0x0000…0000:0
+Eph 1579006/0 0.022[]                 [33mwarn[39m: Node is syncing - getSyncCommitteeDuties failed with status 503: Node is syncing - waiting for peers
+Eph 1579006/0 0.023[]                 [33mwarn[39m: Node is syncing slot=12632048, headSlot=0, syncDistance=12632048
+Eph 1579006/0 3.005[]                 [32minfo[39m: Searching peers - peers: 0 - slot: 12632048 - head: 0 0x42a0…b7df - finalized: 0x0000…0000:0
+Eph 1579006/1 0.013[]                 [33mwarn[39m: Node is syncing slot=12632049, headSlot=0, syncDistance=12632049
+Eph 1579006/1 0.014[]                 [33mwarn[39m: Node is syncing - getProposerDuties failed with status 503: Node is syncing - waiting for peers
+Eph 1579006/1 3.001[]                 [32minfo[39m: Searching peers - peers: 0 - slot: 12632049 - head: 0 0x42a0…b7df - finalized: 0x0000…0000:0
+Eph 1579006/2 0.032[]                 [33mwarn[39m: Node is syncing slot=12632050, headSlot=0, syncDistance=12632050
+Eph 1579006/2 0.033[]                 [33mwarn[39m: Node is syncing - getProposerDuties failed with status 503: Node is syncing - waiting for peers
+Eph 1579006/2 3.004[]                 [32minfo[39m: Searching peers - peers: 0 - slot: 12632050 - head: 0 0x42a0…b7df - finalized: 0x0000…0000:0
+Eph 1579006/3 0.005[]                 [33mwarn[39m: Node is syncing slot=12632051, headSlot=0, syncDistance=12632051
+Eph 1579006/3 0.006[]                 [33mwarn[39m: Node is syncing - getProposerDuties failed with status 503: Node is syncing - waiting for peers
+Eph 1579006/3 3.018[]                 [32minfo[39m: Searching peers - peers: 0 - slot: 12632051 - head: 0 0x42a0…b7df - finalized: 0x0000…0000:0
+Eph 1579006/4 0.026[]                 [33mwarn[39m: Node is syncing slot=12632052, headSlot=0, syncDistance=12632052
+Eph 1579006/4 0.028[]                 [33mwarn[39m: Node is syncing - getProposerDuties failed with status 503: Node is syncing - waiting for peers
+Eph 1579006/4 3.006[]                 [32minfo[39m: Searching peers - peers: 0 - slot: 12632052 - head: 0 0x42a0…b7df - finalized: 0x0000…0000:0
+Eph 1579006/5 0.007[]                 [33mwarn[39m: Node is syncing slot=12632053, headSlot=0, syncDistance=12632053
+Eph 1579006/5 0.011[]                 [33mwarn[39m: Node is syncing - getProposerDuties failed with status 503: Node is syncing - waiting for peers
+Eph 1579006/5 3.001[]                 [32minfo[39m: Searching peers - peers: 0 - slot: 12632053 - head: 0 0x42a0…b7df - finalized: 0x0000…0000:0
+Eph 1579006/6 0.026[]                 [33mwarn[39m: Node is syncing slot=12632054, headSlot=0, syncDistance=12632054
+Eph 1579006/6 0.027[]                 [33mwarn[39m: Node is syncing - getProposerDuties failed with status 503: Node is syncing - waiting for peers
+Eph 1579006/6 3.002[]                 [32minfo[39m: Searching peers - peers: 0 - slot: 12632054 - head: 0 0x42a0…b7df - finalized: 0x0000…0000:0
+Eph 1579006/7 0.025[]                 [33mwarn[39m: Node is syncing - getProposerDuties failed with status 503: Node is syncing - waiting for peers
+Eph 1579006/7 0.025[]                 [33mwarn[39m: Node is syncing slot=12632055, headSlot=0, syncDistance=12632055
+Eph 1579006/7 3.001[]                 [32minfo[39m: Searching peers - peers: 0 - slot: 12632055 - head: 0 0x42a0…b7df - finalized: 0x0000…0000:0
+Eph 1579007/0 0.011[]                 [33mwarn[39m: Node is syncing - getAttesterDuties failed with status 503: Node is syncing - waiting for peers
+Eph 1579007/0 0.016[]                 [33mwarn[39m: Node is syncing slot=12632056, headSlot=0, syncDistance=12632056
+Eph 1579007/0 3.003[]                 [32minfo[39m: Searching peers - peers: 0 - slot: 12632056 - head: 0 0x42a0…b7df - finalized: 0x0000…0000:0
+Eph 1579007/1 0.016[]                 [33mwarn[39m: Node is syncing - getProposerDuties failed with status 503: Node is syncing - waiting for peers
+Eph 1579007/1 0.017[]                 [33mwarn[39m: Node is syncing slot=12632057, headSlot=0, syncDistance=12632057
+Eph 1579007/1 1.259[]                 [32minfo[39m: Stopping gracefully, use Ctrl+C again to force process exit
+Eph 1579007/1 1.266[]                 [32minfo[39m: Stopping gracefully, use Ctrl+C again to force process exit

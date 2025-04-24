@@ -26,7 +26,7 @@ Ethereum Foundation utility.",
 
   examples: [
     {
-      command: "validator import --network holesky --importKeystores .lock/staking-deposit-cli/validator_keys",
+      command: "validator import --network hoodi --importKeystores $HOME/staking-deposit-cli/validator_keys --keystoresLockFilePath $HOME/staking-deposit-cli/validator_keys.lock",
       description: "Import validator keystores generated with the Ethereum Foundation Staking Launchpad",
     },
   ],
@@ -43,7 +43,6 @@ Ethereum Foundation utility.",
 
   handler: async (args) => {
     const {network} = getBeaconConfigFromArgs(args);
-
     // This command takes: importKeystores, importKeystoresPassword
     //
     // - recursively finds keystores in importKeystores
@@ -93,6 +92,7 @@ Ethereum Foundation utility.",
         lockBeforeWrite: false,
         // Return duplicate status if already found
         persistIfDuplicate: false,
+        keystoreLockDir: args.keystoresLockFilePath,
       });
 
       if (didImportKey) {

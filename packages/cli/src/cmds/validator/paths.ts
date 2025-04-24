@@ -12,6 +12,7 @@ export type AccountPaths = {
   secretsDir: string;
   remoteKeysDir: string;
   proposerDir: string;
+  keystoresLockDir: string;
 };
 
 /**
@@ -79,6 +80,8 @@ export function getAccountPaths(
   const secretsDir = args.secretsDir || path.join(dataDir, "secrets");
   const remoteKeysDir = args.remoteKeysDir || path.join(dataDir, "remoteKeys");
   const proposerDir = args.proposerDir || path.join(dataDir, "proposerConfigs");
+  const keystoresLockDir = path.join(dataDir, "lock");
+
   return {
     ...globalPaths,
     cacheDir,
@@ -86,6 +89,7 @@ export function getAccountPaths(
     secretsDir,
     remoteKeysDir,
     proposerDir,
+    keystoresLockDir,
   };
 }
 

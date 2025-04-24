@@ -21,6 +21,7 @@ type PathArgs = {
   secretsDir: string;
   remoteKeysDir: string;
   proposerDir: string;
+  keystoresLockDir?: string;
 };
 
 /**
@@ -112,11 +113,13 @@ export class PersistedKeysBackend implements IPersistedKeysBackend {
     password,
     lockBeforeWrite,
     persistIfDuplicate,
+    keystoreLockDir,
   }: {
     keystoreStr: string;
     password: string;
     lockBeforeWrite: boolean;
     persistIfDuplicate: boolean;
+    keystoreLockDir?: string;
   }): boolean {
     // Validate Keystore JSON + pubkey format.
     // Note: while this is currently redundant, it's free to check that format is correct before writting
@@ -132,15 +135,16 @@ export class PersistedKeysBackend implements IPersistedKeysBackend {
     }
 
     // Make dirs before creating the lock
-    fs.mkdirSync(this.paths.secretsDir, {recursive: true});
+    const keystoresLockFilePath = keystoreLockDir && keystoreLockDir.length > 0 ? keystoreLockDir : this.paths.keystoresLockDir!;
+    fs.mkdirSync(keystoresLockFilePath, {recursive: true});
     fs.mkdirSync(dirpath, {recursive: true});
 
     if (lockBeforeWrite) {
       // Lock before writing keystore
-      lockFilepath(process.cwd());
+      lockFilepath(keystoreFilepath);
     }
 
-    writeFile600Perm(keystoreFilepath, keystoreStr);
+    writeFile600Perm(keystoresLockFilePath, keystoreStr);
     writeFile600Perm(passphraseFilepath, password);
 
     return true;

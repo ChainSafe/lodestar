@@ -57,6 +57,8 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     importKeystoresPassword?: string;
     disableKeystoresThreadPool?: boolean;
 
+    keystoresLockFilePath?: string;
+
     "http.requestWireFormat"?: string;
     "http.responseWireFormat"?: string;
 
@@ -211,34 +213,29 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
 
   afterBlockDelaySlotFraction: {
     hidden: true,
-    description:
-      "Delay before publishing attestations if block comes early, as a fraction of SECONDS_PER_SLOT (value is from 0 inclusive to 1 exclusive)",
+    description: "Delay before publishing attestations if block comes early, as a fraction of SECONDS_PER_SLOT (value is from 0 inclusive to 1 exclusive)",
     type: "number",
   },
 
   scAfterBlockDelaySlotFraction: {
     hidden: true,
-    description:
-      "Delay before publishing SyncCommitteeSignature if block comes early, as a fraction of SECONDS_PER_SLOT (value is from 0 inclusive to 1 exclusive)",
+    description: "Delay before publishing SyncCommitteeSignature if block comes early, as a fraction of SECONDS_PER_SLOT (value is from 0 inclusive to 1 exclusive)",
     type: "number",
   },
 
   disableAttestationGrouping: {
     hidden: true,
-    description:
-      "Disables attestation service grouping optimization, attestation tasks will be executed per committee instead of just once for all committees.",
+    description: "Disables attestation service grouping optimization, attestation tasks will be executed per committee instead of just once for all committees.",
     type: "boolean",
   },
 
   proposerSettingsFile: {
-    description:
-      "A yaml file to specify detailed default and per validator public key customized proposer configs. PS: This feature and its format is in alpha and subject to change",
+    description: "A yaml file to specify detailed default and per validator public key customized proposer configs. PS: This feature and its format is in alpha and subject to change",
     type: "string",
   },
 
   suggestedFeeRecipient: {
-    description:
-      "Specify fee recipient default for collecting the EL block fees and rewards (a hex string representing 20 bytes address: ^0x[a-fA-F0-9]{40}$). It would be possible (WIP) to override this per validator key using config or key manager API. Only used post merge.",
+    description: "Specify fee recipient default for collecting the EL block fees and rewards (a hex string representing 20 bytes address: ^0x[a-fA-F0-9]{40}$). It would be possible (WIP) to override this per validator key using config or key manager API. Only used post merge.",
     defaultDescription: defaultOptions.suggestedFeeRecipient,
     type: "string",
   },
@@ -262,16 +259,14 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
 
   "builder.selection": {
     type: "string",
-    description:
-      "Builder block selection strategy `default`, `maxprofit`, `builderalways`, `builderonly`, `executionalways`, or `executiononly`",
+    description: "Builder block selection strategy `default`, `maxprofit`, `builderalways`, `builderonly`, `executionalways`, or `executiononly`",
     defaultDescription: `${defaultOptions.builderSelection}`,
     group: "builder",
   },
 
   "builder.boostFactor": {
     type: "string",
-    description:
-      "Percentage multiplier the block producing beacon node must apply to boost (>100) or dampen (<100) builder block value for selection against execution block. The multiplier is ignored if `--builder.selection` is set to anything other than `maxprofit`",
+    description: "Percentage multiplier the block producing beacon node must apply to boost (>100) or dampen (<100) builder block value for selection against execution block. The multiplier is ignored if `--builder.selection` is set to anything other than `maxprofit`",
     defaultDescription: `${defaultOptions.builderBoostFactor}`,
     group: "builder",
   },
@@ -309,9 +304,14 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
 
   disableKeystoresThreadPool: {
     hidden: true,
-    description:
-      "Disable thread pool and instead use main thread to decrypt keystores. This can speed up decryption in testing environments like Kurtosis",
+    description: "Disable thread pool and instead use main thread to decrypt keystores. This can speed up decryption in testing environments like Kurtosis",
     type: "boolean",
+  },
+
+  keystoresLockFilePath: {
+    hidden: true,
+    description: "To create .lock file for Keystores files being read in ConfigMap",
+    type: "string",
   },
 
   doppelgangerProtection: {
@@ -336,7 +336,6 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
   },
 
   // External signer
-
   "externalSigner.url": {
     description: "URL to connect to an external signing server",
     type: "string",
@@ -345,8 +344,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
 
   "externalSigner.pubkeys": {
     implies: ["externalSigner.url"],
-    description:
-      "List of validator public keys used by an external signer. May also provide a single string of comma-separated public keys",
+    description: "List of validator public keys used by an external signer. May also provide a single string of comma-separated public keys",
     type: "array",
     string: true, // Ensures the pubkey string is not automatically converted to numbers
     coerce: (pubkeys: string[]): string[] =>
@@ -360,29 +358,25 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
   "externalSigner.fetch": {
     implies: ["externalSigner.url"],
     conflicts: ["externalSigner.pubkeys"],
-    description:
-      "Fetch the list of public keys to validate from an external signer. Cannot be used in combination with `--externalSigner.pubkeys`",
+    description: "Fetch the list of public keys to validate from an external signer. Cannot be used in combination with `--externalSigner.pubkeys`",
     type: "boolean",
     group: "externalSigner",
   },
 
   "externalSigner.fetchInterval": {
     implies: ["externalSigner.fetch"],
-    description:
-      "Interval in milliseconds between fetching the list of public keys from external signer, once per epoch by default",
+    description: "Interval in milliseconds between fetching the list of public keys from external signer, once per epoch by default",
     type: "number",
     group: "externalSigner",
   },
 
   // Distributed validator
-
   distributed: {
     description: "Enables specific features required to run as part of a distributed validator cluster",
     type: "boolean",
   },
 
   // Metrics
-
   metrics: {
     type: "boolean",
     description: "Enable the Prometheus metrics HTTP server",
@@ -405,11 +399,9 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
   },
 
   // Monitoring
-
   "monitoring.endpoint": {
     type: "string",
-    description:
-      "Enables monitoring service for sending clients stats to the specified endpoint of a remote service (e.g. beaconcha.in)",
+    description: "Enables monitoring service for sending clients stats to the specified endpoint of a remote service (e.g. beaconcha.in)",
     group: "monitoring",
   },
 
@@ -438,15 +430,13 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
 
   "monitoring.collectSystemStats": {
     type: "boolean",
-    description:
-      "Enable collecting system stats. This should only be enabled if validator client and beacon node are running on different hosts.",
+    description: "Enable collecting system stats. This should only be enabled if validator client and beacon node are running on different hosts.",
     defaultDescription: String(validatorMonitoringDefaultOptions.collectSystemStats),
     group: "monitoring",
     hidden: true,
   },
 
   // For testing only
-
   interopIndexes: {
     hidden: true,
     description: "Range (inclusive) of interop key indexes to validate with: 0..16",
@@ -464,4 +454,5 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     description: "UNSAFE. Range (inclusive) of mnemonic key indexes to validate with: 0..16",
     type: "string",
   },
+
 };
