@@ -252,7 +252,7 @@ export async function produceFullBlockBody(
 ): Promise<AssembledBlockBodyResponse<BlockType.Full>> {
   const {slot, proposerIndex, feeRecipient: requestedFeeRecipient, parentBlockRoot} = blockAttr;
   const fork = currentState.config.getForkName(slot);
-  const endExecutionPayload = this.metrics?.builderBlockProductionTimeSteps?.startTimer();
+  const endExecutionPayload = this.metrics?.executionBlockProductionTimeSteps?.startTimer();
   const blockBody = {} as AssembledFullBlockBody;
 
   // Type-safe for blobs variable. Translate 'null' value into 'preDeneb' enum
