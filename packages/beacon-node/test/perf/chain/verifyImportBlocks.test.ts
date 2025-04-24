@@ -11,7 +11,7 @@ import {AttestationImportOpt, BlockSource, getBlockInput} from "../../../src/cha
 import {BeaconChain} from "../../../src/chain/index.js";
 import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";
 import {ExecutionEngineDisabled} from "../../../src/execution/engine/index.js";
-import {BeaconDb, StateArchiveMode} from "../../../src/index.js";
+import {ArchiveMode, BeaconDb} from "../../../src/index.js";
 import {linspace} from "../../../src/util/numpy.js";
 import {testLogger} from "../../utils/logger.js";
 
@@ -85,15 +85,17 @@ describe.skip("verify+import blocks - range sync perf test", () => {
           skipCreateStateCacheIfAvailable: true,
           archiveStateEpochFrequency: 1024,
           minSameMessageSignatureSetsToBatch: 32,
-          stateArchiveMode: StateArchiveMode.Frequency,
+          archiveMode: ArchiveMode.Frequency,
         },
         {
           config: state.config,
           db,
           dataDir: ".",
+          dbName: ".",
           logger,
           processShutdownCallback: () => {},
           metrics: null,
+          validatorMonitor: null,
           anchorState: state,
           eth1: new Eth1ForBlockProductionDisabled(),
           executionEngine: new ExecutionEngineDisabled(),

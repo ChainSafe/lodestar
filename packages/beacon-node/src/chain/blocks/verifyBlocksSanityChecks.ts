@@ -81,10 +81,11 @@ export function verifyBlocksSanityChecks(
       throw new BlockError(block, {code: BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT, blockSlot, finalizedSlot});
     }
 
+    const relevantLastBlock = relevantBlocks.at(-1);
     let parentBlockSlot: Slot;
 
-    if (relevantBlocks.length > 0) {
-      parentBlockSlot = relevantBlocks[relevantBlocks.length - 1].block.message.slot;
+    if (relevantLastBlock) {
+      parentBlockSlot = relevantLastBlock.block.message.slot;
     } else {
       // When importing a block segment, only the first NON-IGNORED block must be known to the fork-choice.
       const parentRoot = toRootHex(block.message.parentRoot);

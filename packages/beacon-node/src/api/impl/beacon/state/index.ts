@@ -329,5 +329,21 @@ export function getBeaconStateApi({
         meta: {executionOptimistic, finalized, version: fork},
       };
     },
+
+    async getPendingConsolidations({stateId}, context) {
+      const {state, executionOptimistic, finalized} = await getState(stateId);
+      const fork = config.getForkName(state.slot);
+
+      if (!isForkPostElectra(fork)) {
+        throw new ApiError(400, `Cannot retrieve pending consolidations for pre-electra state fork=${fork}`);
+      }
+
+      const {pendingConsolidations} = state as BeaconStateElectra;
+
+      return {
+        data: context?.returnBytes ? pendingConsolidations.serialize() : pendingConsolidations.toValue(),
+        meta: {executionOptimistic, finalized, version: fork},
+      };
+    },
   };
 }

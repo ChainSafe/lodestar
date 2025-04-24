@@ -1,7 +1,9 @@
 import {bench, describe} from "@chainsafe/benchmark";
 import {noise} from "@chainsafe/libp2p-noise";
+import {generateKeyPair} from "@libp2p/crypto/keys";
+import {Upgrader} from "@libp2p/interface";
 import {defaultLogger} from "@libp2p/logger";
-import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
+import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import drain from "it-drain";
 import {duplexPair} from "it-pair/duplex";
 import {pipe} from "it-pipe";
@@ -24,15 +26,18 @@ describe("network / noise / sendData", () => {
     bench({
       id: `send data - ${numberOfMessages} ${messageLength}B messages`,
       beforeEach: async () => {
-        const peerA = await createSecp256k1PeerId();
-        const peerB = await createSecp256k1PeerId();
-        const noiseA = noise()({logger: defaultLogger()});
-        const noiseB = noise()({logger: defaultLogger()});
+        const privateKeyA = await generateKeyPair("secp256k1");
+        const privateKeyB = await generateKeyPair("secp256k1");
+        const peerA = peerIdFromPrivateKey(privateKeyA);
+        const peerB = peerIdFromPrivateKey(privateKeyB);
+        const upgrader = {getStreamMuxers: () => new Map()} as Upgrader;
+        const noiseA = noise()({logger: defaultLogger(), privateKey: privateKeyA, peerId: peerA, upgrader});
+        const noiseB = noise()({logger: defaultLogger(), privateKey: privateKeyB, peerId: peerB, upgrader});
 
         const [inboundConnection, outboundConnection] = duplexPair<Uint8Array | Uint8ArrayList>();
         const [outbound, inbound] = await Promise.all([
-          noiseA.secureOutbound(peerA, outboundConnection, peerB),
-          noiseB.secureInbound(peerB, inboundConnection, peerA),
+          noiseA.secureOutbound(outboundConnection, {remotePeer: peerB}),
+          noiseB.secureInbound(inboundConnection, {remotePeer: peerA}),
         ]);
 
         return {connA: outbound.conn, connB: inbound.conn, data: new Uint8Array(messageLength)};

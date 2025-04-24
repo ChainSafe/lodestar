@@ -1,5 +1,6 @@
+import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {describe, expect, it} from "vitest";
-import {DataAvailabilityStatus, ExecutionStatus, ProtoArray} from "../../../src/index.js";
+import {ExecutionStatus, ProtoArray} from "../../../src/index.js";
 
 describe("getCommonAncestor", () => {
   const blocks: {slot: number; root: string; parent: string}[] = [
@@ -91,7 +92,7 @@ describe("getCommonAncestor", () => {
   const deltas = Array.from({length: fc.nodes.length}, () => 0);
   fc.applyScoreChanges({
     deltas,
-    proposerBoost: {root: blocks[blocks.length - 1].root, score: 34},
+    proposerBoost: {root: blocks.at(-1)?.root as string, score: 34},
     justifiedEpoch: 0,
     justifiedRoot: "-",
     finalizedEpoch: 0,
@@ -103,7 +104,7 @@ describe("getCommonAncestor", () => {
   const deltasNew = Array.from({length: fc.nodes.length}, () => 0);
   fc.applyScoreChanges({
     deltas: deltasNew,
-    proposerBoost: {root: blocks[blocks.length - 1].root, score: 34},
+    proposerBoost: {root: blocks.at(-1)?.root as string, score: 34},
     justifiedEpoch: 0,
     justifiedRoot: "-",
     finalizedEpoch: 0,

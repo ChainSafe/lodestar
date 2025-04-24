@@ -275,5 +275,5 @@ export function committeeUpdateToLatestFinalizedHeadUpdate(
 export function lastInMap<T>(map: Map<unknown, T>): T {
   if (map.size === 0) throw Error("Empty map");
   const values = Array.from(map.values());
-  return values[values.length - 1];
+  return values.at(-1) as T;
 }

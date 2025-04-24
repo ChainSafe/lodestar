@@ -13,7 +13,7 @@ import {
 import {Slot} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {Logger, callFnWhenAwait, formatBytes, fromHex} from "@lodestar/utils";
-import got from "got";
+import {fetch} from "@lodestar/utils";
 import {parseBootnodesFile} from "../util/format.js";
 import * as chiado from "./chiado.js";
 import * as dev from "./dev.js";
@@ -100,7 +100,11 @@ export async function fetchBootnodes(network: NetworkName): Promise<string[]> {
     return [];
   }
 
-  const bootnodesFile = await got.get(bootnodesFileUrl).text();
+  const res = await fetch(bootnodesFileUrl);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch bootnodes: ${res.status} ${res.statusText}`);
+  }
+  const bootnodesFile = await res.text();
   return parseBootnodesFile(bootnodesFile);
 }
 

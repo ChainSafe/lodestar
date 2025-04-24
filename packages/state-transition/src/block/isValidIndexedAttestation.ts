@@ -61,7 +61,8 @@ export function isValidIndexedAttestationIndices(state: CachedBeaconStateAllFork
 
   // check if indices are out of bounds, by checking the highest index (since it is sorted)
   // TODO - SLOW CODE - Does this .length check the tree and is expensive?
-  if (indices[indices.length - 1] >= state.validators.length) {
+  const lastIndex = indices.at(-1);
+  if (lastIndex && lastIndex >= state.validators.length) {
     return false;
   }
 

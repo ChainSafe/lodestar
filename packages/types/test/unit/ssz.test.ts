@@ -6,8 +6,8 @@ describe("size", () => {
     const minSize = ssz.phase0.BeaconState.minSize;
     const maxSize = ssz.phase0.BeaconState.maxSize;
     // https://gist.github.com/protolambda/db75c7faa1e94f2464787a480e5d613e
-    expect(minSize).toBe(2687377);
-    expect(maxSize).toBe(141837543039377);
+    expect(minSize).toBe(7057);
+    expect(maxSize).toBe(141837537701009);
   });
 });
 

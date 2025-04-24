@@ -1760,10 +1760,12 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
           "exemplar": false,
           "expr": "rate(beacon_reqresp_outgoing_request_roundtrip_time_seconds_sum[$rate_interval])\n/\nrate(beacon_reqresp_outgoing_request_roundtrip_time_seconds_count[$rate_interval])",
           "interval": "",
-          "legendFormat": "reqresp_outgoing_roundtrip",
+          "legendFormat": "{{method}}",
+          "range": true,
           "refId": "A"
         },
         {
@@ -1877,9 +1879,11 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
       },
-      "pluginVersion": "10.1.1",
+      "pluginVersion": "10.4.1",
       "targets": [
         {
           "datasource": {
@@ -1929,9 +1933,11 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
       },
-      "pluginVersion": "10.1.1",
+      "pluginVersion": "10.4.1",
       "targets": [
         {
           "datasource": {
@@ -1981,9 +1987,11 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
       },
-      "pluginVersion": "10.1.1",
+      "pluginVersion": "10.4.1",
       "targets": [
         {
           "datasource": {
@@ -2033,9 +2041,11 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
       },
-      "pluginVersion": "10.1.1",
+      "pluginVersion": "10.4.1",
       "targets": [
         {
           "datasource": {
@@ -2085,9 +2095,11 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
       },
-      "pluginVersion": "10.1.1",
+      "pluginVersion": "10.4.1",
       "targets": [
         {
           "datasource": {
@@ -2150,9 +2162,11 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
       },
-      "pluginVersion": "10.1.1",
+      "pluginVersion": "10.4.1",
       "targets": [
         {
           "datasource": {
@@ -2180,6 +2194,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -2319,7 +2334,8 @@
         },
         "showValue": "never",
         "tooltip": {
-          "show": true,
+          "mode": "single",
+          "showColorScale": false,
           "yHistogram": false
         },
         "yAxis": {
@@ -2328,7 +2344,7 @@
           "unit": "short"
         }
       },
-      "pluginVersion": "10.1.1",
+      "pluginVersion": "10.4.1",
       "reverseYBuckets": false,
       "targets": [
         {

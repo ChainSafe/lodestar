@@ -26,7 +26,7 @@ Ethereum Foundation utility.",
 
   examples: [
     {
-      command: "validator import --network holesky --importKeystores $HOME/staking-deposit-cli/validator_keys",
+      command: "validator import --network hoodi --importKeystores $HOME/staking-deposit-cli/validator_keys",
       description: "Import validator keystores generated with the Ethereum Foundation Staking Launchpad",
     },
   ],

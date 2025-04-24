@@ -130,7 +130,7 @@ export function getBeaconPoolApi({
                 committeeSize,
                 priority
               );
-              metrics?.opPool.attestationPoolApiInsertOutcome.inc({insertOutcome});
+              metrics?.opPool.attestationPool.apiInsertOutcome.inc({insertOutcome});
             }
 
             if (isForkPostElectra(fork)) {
@@ -150,7 +150,12 @@ export function getBeaconPoolApi({
             }
 
             const sentPeers = await network.publishBeaconAttestation(attestation, subnet);
-            metrics?.onPoolSubmitUnaggregatedAttestation(seenTimestampSec, indexedAttestation, subnet, sentPeers);
+            chain.validatorMonitor?.onPoolSubmitUnaggregatedAttestation(
+              seenTimestampSec,
+              indexedAttestation,
+              subnet,
+              sentPeers
+            );
           } catch (e) {
             const logCtx = {slot: attestation.data.slot, index: attestation.data.index};
 
@@ -280,7 +285,7 @@ export function getBeaconPoolApi({
               chain.syncCommitteeMessagePool.add(subnet, signature, indexInSubcommittee, priority);
 
               // Cheap de-duplication code to avoid using a Set. indexesInCommittee is always sorted
-              if (subnets.length === 0 || subnets[subnets.length - 1] !== subnet) {
+              if (subnets.length === 0 || subnets.at(-1) !== subnet) {
                 subnets.push(subnet);
               }
             }
