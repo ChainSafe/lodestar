@@ -48,6 +48,7 @@ describe("beacon / lodestar", () => {
       expect(res.ok).toBe(true);
       expect(res.wireFormat()).toBe(WireFormat.json);
       expect(res.json().data).toStrictEqual({
+        slot: "0",
         historical_summaries: [],
         proof: [],
       });
