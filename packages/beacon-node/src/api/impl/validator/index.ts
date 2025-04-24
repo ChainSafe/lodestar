@@ -566,85 +566,62 @@ export function getValidatorApi(
     blockAttributes: BlockAttributes,
     currentState: CachedBeaconStateAllForks,
     commonBlockBody: CommonBlockBody,
-    fullBlockBodyResp: PromiseResult<AssembledBlockBodyResponse<BlockType.Full>>,
+    fullBlockBodyResp: AssembledBlockBodyResponse<BlockType.Full>,
     {strictFeeRecipientCheck, feeRecipient}: {strictFeeRecipientCheck?: boolean; feeRecipient?: string}
-  ): Promise<PromiseRawResult<ProduceBlockOrContentsRes & {shouldOverrideBuilder?: boolean}>> {
-    const startTime = Date.now();
+  ): Promise<ProduceBlockOrContentsRes & {shouldOverrideBuilder?: boolean}> {
     const source = ProducedBlockSource.engine;
 
-    if (fullBlockBodyResp.status === "fulfilled") {
-      const {block, consensusBlockValue, executionPayloadValue, shouldOverrideBuilder} = await chain.assembleBlockBody(
-        BlockType.Full,
-        blockAttributes,
-        currentState,
-        commonBlockBody,
-        fullBlockBodyResp.value
-      );
-      const version = config.getForkName(block.slot);
-      if (strictFeeRecipientCheck && feeRecipient && isForkPostBellatrix(version)) {
-        const blockFeeRecipient = toHex((block as bellatrix.BeaconBlock).body.executionPayload.feeRecipient);
-        if (blockFeeRecipient !== feeRecipient) {
-          throw Error(`Invalid feeRecipient set in engine block expected=${feeRecipient} actual=${blockFeeRecipient}`);
-        }
+    const {block, consensusBlockValue, executionPayloadValue, shouldOverrideBuilder} = await chain.assembleBlockBody(
+      BlockType.Full,
+      blockAttributes,
+      currentState,
+      commonBlockBody,
+      fullBlockBodyResp
+    );
+    const version = config.getForkName(block.slot);
+    if (strictFeeRecipientCheck && feeRecipient && isForkPostBellatrix(version)) {
+      const blockFeeRecipient = toHex((block as bellatrix.BeaconBlock).body.executionPayload.feeRecipient);
+      if (blockFeeRecipient !== feeRecipient) {
+        throw Error(`Invalid feeRecipient set in engine block expected=${feeRecipient} actual=${blockFeeRecipient}`);
       }
-
-      metrics?.blockProductionSuccess.inc({source});
-      metrics?.blockProductionNumAggregated.observe({source}, block.body.attestations.length);
-      metrics?.blockProductionExecutionPayloadValue.observe({source}, Number(formatWeiToEth(executionPayloadValue)));
-      logger.verbose("Produced execution block", {
-        slot: block.slot,
-        executionPayloadValue,
-        consensusBlockValue,
-        root: toRootHex(config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block)),
-      });
-
-      if (chain.opts.persistProducedBlocks) {
-        void chain.persistBlock(block, "produced_engine_block");
-      }
-
-      if (isForkPostDeneb(version)) {
-        const blockHash = toRootHex((block as bellatrix.BeaconBlock).body.executionPayload.blockHash);
-        const contents = chain.producedContentsCache.get(blockHash);
-        if (contents === undefined) {
-          throw Error("contents missing in cache");
-        }
-
-        return {
-          status: "fulfilled",
-          durationMs: fullBlockBodyResp.durationMs + (Date.now() - startTime),
-          value: {
-            consensusBlockValue,
-            executionPayloadValue,
-            shouldOverrideBuilder,
-            version,
-            data: {block, ...contents} as BlockContents,
-          },
-        };
-      }
-
-      return {
-        status: "fulfilled",
-        durationMs: fullBlockBodyResp.durationMs + (Date.now() - startTime),
-        value: {
-          consensusBlockValue,
-          executionPayloadValue,
-          shouldOverrideBuilder,
-          version,
-          data: block,
-        },
-      };
     }
 
-    if (fullBlockBodyResp.status === "rejected") {
+    metrics?.blockProductionSuccess.inc({source});
+    metrics?.blockProductionNumAggregated.observe({source}, block.body.attestations.length);
+    metrics?.blockProductionExecutionPayloadValue.observe({source}, Number(formatWeiToEth(executionPayloadValue)));
+    logger.verbose("Produced execution block", {
+      slot: block.slot,
+      executionPayloadValue,
+      consensusBlockValue,
+      root: toRootHex(config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block)),
+    });
+
+    if (chain.opts.persistProducedBlocks) {
+      void chain.persistBlock(block, "produced_engine_block");
+    }
+
+    if (isForkPostDeneb(version)) {
+      const blockHash = toRootHex((block as bellatrix.BeaconBlock).body.executionPayload.blockHash);
+      const contents = chain.producedContentsCache.get(blockHash);
+      if (contents === undefined) {
+        throw Error("contents missing in cache");
+      }
+
       return {
-        status: "rejected",
-        durationMs: fullBlockBodyResp.durationMs + (Date.now() - startTime),
-        reason: fullBlockBodyResp.reason,
+        consensusBlockValue,
+        executionPayloadValue,
+        shouldOverrideBuilder,
+        version,
+        data: {block, ...contents} as BlockContents,
       };
     }
 
     return {
-      status: "pending",
+      consensusBlockValue,
+      executionPayloadValue,
+      shouldOverrideBuilder,
+      version,
+      data: block,
     };
   }
 
@@ -652,58 +629,39 @@ export function getValidatorApi(
     blockAttributes: BlockAttributes,
     currentState: CachedBeaconStateAllForks,
     commonBlockBody: CommonBlockBody,
-    blindedBlockBodyResp: PromiseResult<AssembledBlockBodyResponse<BlockType.Blinded>>
-  ): Promise<PromiseRawResult<ProduceBlindedBlockRes & {shouldOverrideBuilder?: boolean}>> {
-    const startTime = Date.now();
+    blindedBlockBodyResp: AssembledBlockBodyResponse<BlockType.Blinded>
+  ): Promise<ProduceBlindedBlockRes & {shouldOverrideBuilder?: boolean}> {
     const source = ProducedBlockSource.builder;
 
-    if (blindedBlockBodyResp.status === "fulfilled") {
-      const {block, consensusBlockValue, executionPayloadValue} = await chain.assembleBlockBody(
-        BlockType.Blinded,
-        blockAttributes,
-        currentState,
-        commonBlockBody,
-        blindedBlockBodyResp.value
-      );
+    const {block, consensusBlockValue, executionPayloadValue} = await chain.assembleBlockBody(
+      BlockType.Blinded,
+      blockAttributes,
+      currentState,
+      commonBlockBody,
+      blindedBlockBodyResp
+    );
 
-      const version = config.getForkName(block.slot) as ForkPostBellatrix;
-      metrics?.blockProductionSuccess.inc({source});
-      metrics?.blockProductionNumAggregated.observe({source}, block.body.attestations.length);
-      metrics?.blockProductionExecutionPayloadValue.observe({source}, Number(formatWeiToEth(executionPayloadValue)));
+    const version = config.getForkName(block.slot) as ForkPostBellatrix;
+    metrics?.blockProductionSuccess.inc({source});
+    metrics?.blockProductionNumAggregated.observe({source}, block.body.attestations.length);
+    metrics?.blockProductionExecutionPayloadValue.observe({source}, Number(formatWeiToEth(executionPayloadValue)));
 
-      logger.verbose("Produced blinded block", {
-        slot: block.slot,
-        executionPayloadValue,
-        consensusBlockValue,
-        root: toRootHex(config.getPostBellatrixForkTypes(block.slot).BlindedBeaconBlock.hashTreeRoot(block)),
-      });
+    logger.verbose("Produced blinded block", {
+      slot: block.slot,
+      executionPayloadValue,
+      consensusBlockValue,
+      root: toRootHex(config.getPostBellatrixForkTypes(block.slot).BlindedBeaconBlock.hashTreeRoot(block)),
+    });
 
-      if (chain.opts.persistProducedBlocks) {
-        void chain.persistBlock(block, "produced_builder_block");
-      }
-
-      return {
-        status: "fulfilled",
-        durationMs: blindedBlockBodyResp.durationMs + (Date.now() - startTime),
-        value: {
-          consensusBlockValue,
-          executionPayloadValue,
-          version,
-          data: block,
-        },
-      };
-    }
-
-    if (blindedBlockBodyResp.status === "rejected") {
-      return {
-        status: "rejected",
-        durationMs: blindedBlockBodyResp.durationMs + (Date.now() - startTime),
-        reason: blindedBlockBodyResp.reason,
-      };
+    if (chain.opts.persistProducedBlocks) {
+      void chain.persistBlock(block, "produced_builder_block");
     }
 
     return {
-      status: "pending",
+      consensusBlockValue,
+      executionPayloadValue,
+      version,
+      data: block,
     };
   }
 
@@ -798,10 +756,18 @@ export function getValidatorApi(
 
     const builderBodyPromise = isBuilderEnabled
       ? produceBuilderBlockBody({...blockAttributes, currentState})
+          .then(async (builderBlockBody) => {
+            const commonBlockBody = await commonBlockBodyPromise;
+            return assembleBuilderBlockResponse(blockAttributes, currentState, commonBlockBody, builderBlockBody);
+          })
+          .finally(() => {
+            if (builderTimer) builderTimer({source: ProducedBlockSource.builder});
+          })
       : Promise.reject(new Error("Builder disabled"));
 
     const engineBodyPromise = isEngineEnabled
-      ? produceEngineBlockBody({...blockAttributes, currentState}).then((engineBlockBody) => {
+      ? produceEngineBlockBody({...blockAttributes, currentState}).then(async (engineBlockBody) => {
+          const commonBlockBody = await commonBlockBodyPromise;
           // Once the engine returns a block, in the event of either:
           // - suspected builder censorship
           // - builder boost factor set to 0 or builder selection `executionalways`
@@ -813,31 +779,24 @@ export function getValidatorApi(
           ) {
             controller.abort();
           }
-          return engineBlockBody;
+          return assembleEngineBlockResponse(blockAttributes, currentState, commonBlockBody, engineBlockBody, {
+            strictFeeRecipientCheck,
+            feeRecipient,
+          }).finally(() => {
+            if (engineTimer) engineTimer({source: ProducedBlockSource.engine});
+          });
         })
       : Promise.reject(new Error("Engine disabled"));
 
     const builderTimer = metrics?.blockProductionTime.startTimer();
     const engineTimer = metrics?.blockProductionTime.startTimer();
 
-    const [commonBlockBody, [builderBlockBody, engineBlockBody]] = await Promise.all([
+    const [_, [builder, engine]] = await Promise.all([
       commonBlockBodyPromise,
       resolveOrRacePromises([builderBodyPromise, engineBodyPromise], {
         resolveTimeoutMs: cutoffMs,
         raceTimeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
         signal: controller.signal,
-      }),
-    ]);
-
-    const [builder, engine] = await Promise.all([
-      assembleBuilderBlockResponse(blockAttributes, currentState, commonBlockBody, builderBlockBody).finally(() => {
-        if (builderTimer) builderTimer({source: ProducedBlockSource.builder});
-      }),
-      assembleEngineBlockResponse(blockAttributes, currentState, commonBlockBody, engineBlockBody, {
-        strictFeeRecipientCheck,
-        feeRecipient,
-      }).finally(() => {
-        if (engineTimer) engineTimer({source: ProducedBlockSource.engine});
       }),
     ]);
 
