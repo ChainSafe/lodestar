@@ -7,7 +7,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
 import {BeaconChain} from "../../../../../src/chain/index.js";
-import {BlockType, produceBlockBody} from "../../../../../src/chain/produceBlock/produceBlockBody.js";
+import {produceFullBlockBody} from "../../../../../src/chain/produceBlock/produceBlockBody.js";
 import {ZERO_HASH_HEX} from "../../../../../src/constants/index.js";
 import {PayloadIdCache} from "../../../../../src/execution/engine/payloadIdCache.js";
 import {SyncState} from "../../../../../src/sync/interface.js";
@@ -114,7 +114,7 @@ describe("api/validator - produceBlockV2", () => {
     });
 
     // use fee recipient passed in produceBlockBody call for payload gen in engine notifyForkchoiceUpdate
-    await produceBlockBody.call(modules.chain as unknown as BeaconChain, BlockType.Full, state, {
+    await produceFullBlockBody.call(modules.chain as unknown as BeaconChain, state, {
       randaoReveal,
       graffiti: toGraffitiBuffer(graffiti),
       slot,
@@ -139,7 +139,7 @@ describe("api/validator - produceBlockV2", () => {
 
     // use fee recipient set in beaconProposerCacheStub if none passed
     modules.chain["beaconProposerCache"].getOrDefault.mockReturnValue("0x fee recipient address");
-    await produceBlockBody.call(modules.chain as unknown as BeaconChain, BlockType.Full, state, {
+    await produceFullBlockBody.call(modules.chain as unknown as BeaconChain, state, {
       randaoReveal,
       graffiti: toGraffitiBuffer(graffiti),
       slot,
