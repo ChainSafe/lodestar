@@ -103,17 +103,15 @@ export class Eth1Provider implements IEth1Provider {
         this.state = Eth1ProviderState.AUTH_FAILED;
       }
 
-      if (this.state !== Eth1ProviderState.ONLINE) {
-        if (isOneMinutePassed()) {
-          this.logger?.error(
-            "Eth1 provider error",
-            {
-              state: this.state,
-              lastErrorAt: new Date(Date.now() - isOneMinutePassed.msSinceLastCall).toLocaleTimeString(),
-            },
-            error
-          );
-        }
+      if (this.state !== Eth1ProviderState.ONLINE && isOneMinutePassed()) {
+        this.logger?.error(
+          "Eth1 provider error",
+          {
+            state: this.state,
+            lastErrorAt: new Date(Date.now() - isOneMinutePassed.msSinceLastCall).toLocaleTimeString(),
+          },
+          error
+        );
       }
     });
   }

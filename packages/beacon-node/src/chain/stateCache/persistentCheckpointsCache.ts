@@ -474,8 +474,22 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
 
     const persistEpochs = sortedEpochs.slice(0, sortedEpochs.length - this.maxEpochsInMemory);
     for (const lowestEpoch of persistEpochs) {
-      // usually there is only 0 or 1 epoch to persist in this loop
-      persistCount += await this.processPastEpoch(blockRootHex, state, lowestEpoch);
+      try {
+        // getBlockRootAtSlot() may fail, see https://github.com/ChainSafe/lodestar/issues/7495
+        if (state.slot < computeStartSlotAtEpoch(lowestEpoch)) {
+          // there is no checkpoint states of epochs newer than this state
+          break;
+        }
+        // usually there is only 0 or 1 epoch to persist in this loop
+        persistCount += await this.processPastEpoch(blockRootHex, state, lowestEpoch);
+        this.logger.verbose("Processed past epoch", {epoch: lowestEpoch, slot: blockSlot, root: blockRootHex});
+      } catch (e) {
+        this.logger.debug(
+          "Error processing past epoch",
+          {epoch: lowestEpoch, slot: blockSlot, root: blockRootHex},
+          e as Error
+        );
+      }
     }
 
     if (persistCount > 0) {
@@ -510,6 +524,8 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     const maxEpoch = Math.max(...Array.from(this.epochIndex.keys()));
     const reloadedCpSlot = computeStartSlotAtEpoch(reloadedCp.epoch);
     let firstState: CachedBeaconStateAllForks | null = null;
+    const logCtx = {reloadedCpEpoch: reloadedCp.epoch, reloadedCpRoot: reloadedCp.rootHex};
+
     // no need to check epochs before `maxEpoch - this.maxEpochsInMemory + 1` before they are all persisted
     for (let epoch = maxEpoch - this.maxEpochsInMemory + 1; epoch <= maxEpoch; epoch++) {
       // if there's at least 1 state in memory in an epoch, just return the 1st one
@@ -529,20 +545,28 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
           if (firstState === null) {
             firstState = state;
           }
+          const cpLog = {cpEpoch: epoch, cpRoot: rootHex};
 
-          // amongst states of the same epoch, choose the one with the same view of reloadedCp
-          if (
-            reloadedCpSlot < state.slot &&
-            toRootHex(getBlockRootAtSlot(state, reloadedCpSlot)) === reloadedCp.rootHex
-          ) {
-            return state;
+          try {
+            // amongst states of the same epoch, choose the one with the same view of reloadedCp
+            if (
+              reloadedCpSlot < state.slot &&
+              toRootHex(getBlockRootAtSlot(state, reloadedCpSlot)) === reloadedCp.rootHex
+            ) {
+              this.logger.verbose("Reload: use checkpoint state as seed state", {...cpLog, ...logCtx});
+              return state;
+            }
+          } catch (e) {
+            // getBlockRootAtSlot may throw error
+            this.logger.debug("Error finding checkpoint state to reload", {...cpLog, ...logCtx}, e as Error);
           }
         }
       }
     }
 
+    // fallback to using the default seed state from block state cache
     const seedBlockState = this.blockStateCache.getSeedState();
-    this.logger.verbose("Reload: use block state as seed state", {slot: seedBlockState.slot});
+    this.logger.verbose("Reload: use default block state as seed state", {stateSlot: seedBlockState.slot, ...logCtx});
     return seedBlockState;
   }
 

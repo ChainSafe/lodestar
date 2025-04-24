@@ -76,7 +76,7 @@ export function pickEth1Vote(state: BeaconStateAllForks, votesToConsider: phase0
 
   // No votes, vote for the last valid vote
   if (eth1DataRootsMaxVotes.length === 0) {
-    return votesToConsider[votesToConsider.length - 1] ?? state.eth1Data;
+    return votesToConsider.at(-1) ?? state.eth1Data;
   }
 
   // If there's a single winning vote with a majority vote that one

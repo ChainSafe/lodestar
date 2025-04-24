@@ -1,4 +1,4 @@
-import {Identify} from "@chainsafe/libp2p-identify";
+import {Identify} from "@libp2p/identify";
 import {
   ComponentLogger,
   ConnectionGater,
@@ -10,6 +10,7 @@ import {
   PeerId,
   PeerRouting,
   PeerStore,
+  PrivateKey,
   TypedEventTarget,
   Upgrader,
 } from "@libp2p/interface";
@@ -96,6 +97,7 @@ export interface INetwork extends INetworkCorePublic {
 
 export type LodestarComponents = {
   peerId: PeerId;
+  privateKey: PrivateKey;
   nodeInfo: NodeInfo;
   logger: ComponentLogger;
   events: TypedEventTarget<Libp2pEvents>;

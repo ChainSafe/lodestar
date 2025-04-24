@@ -15,7 +15,7 @@ export function processExecutionPayload(
   fork: ForkSeq,
   state: CachedBeaconStateBellatrix | CachedBeaconStateCapella,
   body: BeaconBlockBody | BlindedBeaconBlockBody,
-  externalData: Omit<BlockExternalData, "dataAvailableStatus">
+  externalData: Omit<BlockExternalData, "dataAvailabilityStatus">
 ): void {
   const payload = getFullOrBlindedPayloadFromBody(body);
   const forkName = ForkName[ForkSeq[fork] as ForkName];

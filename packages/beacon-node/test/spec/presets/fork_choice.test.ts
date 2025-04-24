@@ -111,10 +111,13 @@ const forkChoiceTest =
           {
             config: createBeaconConfig(config, state.genesisValidatorsRoot),
             db: getMockedBeaconDb(),
+            dataDir: ".",
+            dbName: ",",
             logger,
             processShutdownCallback: () => {},
             clock,
             metrics: null,
+            validatorMonitor: null,
             anchorState,
             eth1,
             executionEngine,
@@ -361,6 +364,8 @@ const forkChoiceTest =
           const attestations = new Map<string, Attestation>();
           const attesterSlashings = new Map<string, AttesterSlashing>();
           for (const key in t) {
+            if (!Object.prototype.hasOwnProperty.call(t, key)) continue;
+
             const blockMatch = key.match(BLOCK_FILE_NAME);
             if (blockMatch) {
               blocks.set(key, t[key]);

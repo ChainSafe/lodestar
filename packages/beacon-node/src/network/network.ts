@@ -1,6 +1,7 @@
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
-import {PeerId} from "@libp2p/interface";
+import {PeerId, PrivateKey} from "@libp2p/interface";
+import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
@@ -55,7 +56,7 @@ import {isPublishToZeroPeersError} from "./util.js";
 
 type NetworkModules = {
   opts: NetworkOptions;
-  peerId: PeerId;
+  privateKey: PrivateKey;
   config: BeaconConfig;
   logger: LoggerNode;
   chain: IBeaconChain;
@@ -68,7 +69,7 @@ type NetworkModules = {
 export type NetworkInitModules = {
   opts: NetworkOptions;
   config: BeaconConfig;
-  peerId: PeerId;
+  privateKey: PrivateKey;
   peerStoreDir?: string;
   logger: LoggerNode;
   metrics: Metrics | null;
@@ -109,7 +110,7 @@ export class Network implements INetwork {
   private regossipBlsChangesPromise: Promise<void> | null = null;
 
   constructor(modules: NetworkModules) {
-    this.peerId = modules.peerId;
+    this.peerId = peerIdFromPrivateKey(modules.privateKey);
     this.config = modules.config;
     this.logger = modules.logger;
     this.chain = modules.chain;
@@ -139,7 +140,7 @@ export class Network implements INetwork {
     chain,
     db,
     gossipHandlers,
-    peerId,
+    privateKey,
     peerStoreDir,
     getReqRespHandler,
   }: NetworkInitModules): Promise<Network> {
@@ -164,7 +165,7 @@ export class Network implements INetwork {
             initialStatus,
           },
           config,
-          peerId,
+          privateKey,
           logger,
           events,
           metrics,
@@ -173,7 +174,7 @@ export class Network implements INetwork {
       : await NetworkCore.init({
           opts,
           config,
-          peerId,
+          privateKey,
           peerStoreDir,
           logger,
           clock: chain.clock,
@@ -190,11 +191,12 @@ export class Network implements INetwork {
     );
 
     const multiaddresses = opts.localMultiaddrs?.join(",");
+    const peerId = peerIdFromPrivateKey(privateKey);
     logger.info(`PeerId ${peerIdToString(peerId)}, Multiaddrs ${multiaddresses}`);
 
     return new Network({
       opts,
-      peerId,
+      privateKey,
       config,
       logger,
       chain,

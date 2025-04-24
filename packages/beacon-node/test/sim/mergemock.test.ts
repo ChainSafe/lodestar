@@ -22,7 +22,7 @@ import {logFilesDir} from "./params.js";
 import {shell} from "./shell.js";
 
 // NOTE: How to run
-// EL_BINARY_DIR=g11tech/mergemock:latest EL_SCRIPT_DIR=mergemock LODESTAR_PRESET=mainnet ETH_PORT=8661 ENGINE_PORT=8551 yarn vitest --run test/sim/mergemock.test.ts
+// EL_BINARY_DIR=g11tech/mergemock:latest EL_SCRIPT_DIR=mergemock LODESTAR_PRESET=mainnet ETH_PORT=8661 ENGINE_PORT=8551 yarn vitest run test/sim/mergemock.test.ts
 // ```
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention */
