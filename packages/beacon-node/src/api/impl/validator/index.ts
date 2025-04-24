@@ -568,12 +568,12 @@ export function getValidatorApi(
     commonBlockBody: CommonBlockBody,
     fullBlockBodyResp: PromiseResult<AssembledBlockBodyResponse<BlockType.Full>>,
     {strictFeeRecipientCheck, feeRecipient}: {strictFeeRecipientCheck?: boolean; feeRecipient?: string}
-  ): Promise<PromiseRawResult<ProduceBlockOrContentsRes>> {
+  ): Promise<PromiseRawResult<ProduceBlockOrContentsRes & {shouldOverrideBuilder?: boolean}>> {
     const startTime = Date.now();
     const source = ProducedBlockSource.engine;
 
     if (fullBlockBodyResp.status === "fulfilled") {
-      const {block, consensusBlockValue, executionPayloadValue} = await chain.assembleBlockBody(
+      const {block, consensusBlockValue, executionPayloadValue, shouldOverrideBuilder} = await chain.assembleBlockBody(
         BlockType.Full,
         blockAttributes,
         currentState,
@@ -615,6 +615,7 @@ export function getValidatorApi(
           value: {
             consensusBlockValue,
             executionPayloadValue,
+            shouldOverrideBuilder,
             version,
             data: {block, ...contents} as BlockContents,
           },
@@ -627,6 +628,7 @@ export function getValidatorApi(
         value: {
           consensusBlockValue,
           executionPayloadValue,
+          shouldOverrideBuilder,
           version,
           data: block,
         },
@@ -818,36 +820,26 @@ export function getValidatorApi(
     const builderTimer = metrics?.blockProductionTime.startTimer();
     const engineTimer = metrics?.blockProductionTime.startTimer();
 
-    const [_, [builder, engine]] = await Promise.all([
+    const [commonBlockBody, [builderBlockBody, engineBlockBody]] = await Promise.all([
       commonBlockBodyPromise,
       resolveOrRacePromises([builderBodyPromise, engineBodyPromise], {
         resolveTimeoutMs: cutoffMs,
         raceTimeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
         signal: controller.signal,
       }),
-    ])
-      .then(async ([commonBlockBody, [builderBlockBody, engineBlockBody]]) => {
-        return [
-          commonBlockBody,
-          [
-            await assembleBuilderBlockResponse(blockAttributes, currentState, commonBlockBody, builderBlockBody),
-            await assembleEngineBlockResponse(blockAttributes, currentState, commonBlockBody, engineBlockBody, {
-              strictFeeRecipientCheck,
-              feeRecipient,
-            }),
-          ],
-        ] as [
-          typeof commonBlockBody,
-          [
-            PromiseRawResult<ProduceBlindedBlockRes>,
-            PromiseRawResult<ProduceBlockOrContentsRes & {shouldOverrideBuilder?: boolean}>,
-          ],
-        ];
-      })
-      .finally(() => {
-        if (engineTimer) engineTimer({source: ProducedBlockSource.engine});
+    ]);
+
+    const [builder, engine] = await Promise.all([
+      assembleBuilderBlockResponse(blockAttributes, currentState, commonBlockBody, builderBlockBody).finally(() => {
         if (builderTimer) builderTimer({source: ProducedBlockSource.builder});
-      });
+      }),
+      assembleEngineBlockResponse(blockAttributes, currentState, commonBlockBody, engineBlockBody, {
+        strictFeeRecipientCheck,
+        feeRecipient,
+      }).finally(() => {
+        if (engineTimer) engineTimer({source: ProducedBlockSource.engine});
+      }),
+    ]);
 
     if (builder.status === "pending" && engine.status === "pending") {
       throw Error("Builder and engine both failed to produce the block within timeout");
