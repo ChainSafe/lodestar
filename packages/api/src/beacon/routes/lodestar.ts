@@ -5,19 +5,19 @@ import {
   ArrayOf,
   EmptyArgs,
   EmptyMeta,
-  EmptyMetaCodec,
   EmptyRequest,
   EmptyRequestCodec,
   EmptyResponseCodec,
   EmptyResponseData,
   JsonOnlyResponseCodec,
-  WithVersion,
 } from "../../utils/codecs.js";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
+import {
+  ExecutionOptimisticFinalizedAndVersionCodec,
+  ExecutionOptimisticFinalizedAndVersionMeta,
+} from "../../utils/metadata.js";
 import {StateArgs} from "./beacon/state.js";
 import {FilterGetPeers, NodePeer, PeerDirection, PeerState} from "./node.js";
-import { ExecutionOptimisticFinalizedAndVersionCodec, ExecutionOptimisticFinalizedAndVersionMeta } from "../../utils/metadata.js";
-import { isForkPostElectra } from "@lodestar/params";
 
 export type SyncChainDebugState = {
   targetRoot: string | null;
@@ -83,7 +83,7 @@ export type BlacklistedBlock = {root: RootHex; slot: Slot | null};
 export type LodestarThreadType = "main" | "network" | "discv5";
 
 const HistoricalSummariesResponseType = new ContainerType(
-{
+  {
     slot: ssz.Slot,
     historicalSummaries: ssz.capella.HistoricalSummaries,
     proof: ArrayOf(ssz.Bytes8),

@@ -210,10 +210,10 @@ export function getLodestarApi({
       const proof = new Tree(stateView.node).getSingleProof(gindex);
 
       return {
-          data: {
-            slot: stateView.slot,
-            historicalSummaries: stateView.historicalSummaries.toValue(),
-            proof: proof,
+        data: {
+          slot: stateView.slot,
+          historicalSummaries: stateView.historicalSummaries.toValue(),
+          proof: proof,
         },
         meta: {executionOptimistic, finalized, version: fork},
       };

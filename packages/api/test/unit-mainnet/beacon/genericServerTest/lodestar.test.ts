@@ -1,6 +1,7 @@
 import {config} from "@lodestar/config/default";
+import {ForkName} from "@lodestar/params";
 import {FastifyInstance} from "fastify";
-import {afterAll, beforeAll, describe, expect, it, vi} from "vitest";
+import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {getClient} from "../../../../src/beacon/client/lodestar.js";
 import {Endpoints, getDefinitions} from "../../../../src/beacon/routes/lodestar.js";
 import {getRoutes} from "../../../../src/beacon/server/lodestar.js";
@@ -9,7 +10,6 @@ import {AnyEndpoint} from "../../../../src/utils/codecs.js";
 import {FastifyRoute} from "../../../../src/utils/server/index.js";
 import {WireFormat} from "../../../../src/utils/wireFormat.js";
 import {getMockApi, getTestServer} from "../../../utils/utils.js";
-import { ForkName } from "@lodestar/params";
 
 describe("beacon / lodestar", () => {
   describe("get HistoricalSummaries as json", () => {
@@ -31,7 +31,7 @@ describe("beacon / lodestar", () => {
     });
 
     it("getHistoricalSummaries", async () => {
-        mockApi.getHistoricalSummaries.mockResolvedValue({
+      mockApi.getHistoricalSummaries.mockResolvedValue({
         data: {
           slot: 0,
           historicalSummaries: [],
