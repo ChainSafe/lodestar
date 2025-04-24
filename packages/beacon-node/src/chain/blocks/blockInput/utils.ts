@@ -1,37 +1,29 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {isForkPostDeneb} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Epoch, Slot} from "@lodestar/types";
 import {
   BlockInput,
   BlockInputBlobs,
-  // BlockInputColumns,
+  BlockInputColumns,
   BlockInputPreData,
+  DARequirement,
+  DAType,
 } from "./blockInput.js";
-import {BlockInputType, DataAvailabilityStatus} from "./types.js";
 
-export function isBlockInputPreDeneb(blockInput: BlockInput): blockInput is BlockInputPreData {
-  return blockInput.type === BlockInputType.PreData;
+export function isBlockInputPreData(blockInput: BlockInput): blockInput is BlockInputPreData {
+  return blockInput.type === DAType.PreData;
 }
 export function isBlockInputBlobs(blockInput: BlockInput): blockInput is BlockInputBlobs {
-  return blockInput.type === BlockInputType.Blobs;
+  return blockInput.type === DAType.Blobs;
 }
 
-// export function isBlockInputColumns(blockInput: BlockInput): blockInput is BlockInputColumns {
-//   return blockInput.type === BlockInputType.Columns;
-// }
+export function isBlockInputColumns(blockInput: BlockInput): blockInput is BlockInputColumns {
+  return blockInput.type === DAType.Columns;
+}
 
-export function getDataAvailabilityStatus(
-  config: ChainForkConfig,
-  blockSlot: Slot,
-  currentEpoch: Epoch
-): DataAvailabilityStatus {
-  const forkName = config.getForkName(blockSlot);
-  if (!isForkPostDeneb(forkName)) {
-    return DataAvailabilityStatus.PreData;
-  }
+export function getDARequirement(config: ChainForkConfig, blockSlot: Slot, currentEpoch: Epoch): DARequirement {
   if (computeEpochAtSlot(blockSlot) < currentEpoch - config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS) {
-    return DataAvailabilityStatus.OutOfRange;
+    return DARequirement.OutOfRange;
   }
-  return DataAvailabilityStatus.Available;
+  return DARequirement.Required;
 }
