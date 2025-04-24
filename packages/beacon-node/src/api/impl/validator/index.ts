@@ -751,9 +751,10 @@ export function getValidatorApi(
 
     // use abort controller to stop waiting for both block sources
     const controller = new AbortController();
+    const builderTimer = metrics?.blockProductionTime.startTimer();
+    const engineTimer = metrics?.blockProductionTime.startTimer();
 
     // Start calls for building execution and builder blocks
-
     const builderBodyPromise = isBuilderEnabled
       ? produceBuilderBlockBody({...blockAttributes, currentState})
           .then(async (builderBlockBody) => {
@@ -787,9 +788,6 @@ export function getValidatorApi(
           });
         })
       : Promise.reject(new Error("Engine disabled"));
-
-    const builderTimer = metrics?.blockProductionTime.startTimer();
-    const engineTimer = metrics?.blockProductionTime.startTimer();
 
     const [_, [builder, engine]] = await Promise.all([
       commonBlockBodyPromise,
