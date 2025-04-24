@@ -694,7 +694,13 @@ export class BeaconChain implements IBeaconChain {
       this.produceBlindedBlockBody({...blockAttributes, currentState}),
     ]);
 
-    return this.assembleBlockBody(BlockType.Full, blockAttributes, currentState, commonBlockBody, fullBlockBodyResp);
+    return this.assembleBlockBody({
+      blockType: BlockType.Full,
+      blockAttributes,
+      currentState,
+      commonBlockBody,
+      assembleBlockBody: fullBlockBodyResp,
+    });
   }
 
   async produceBlindedBlock(blockAttributes: BlockAttributes): Promise<AssembledBlockResponse<BlockType.Blinded>> {
@@ -712,30 +718,23 @@ export class BeaconChain implements IBeaconChain {
       this.produceBlindedBlockBody({...blockAttributes, currentState}),
     ]);
 
-    return this.assembleBlockBody(
-      BlockType.Blinded,
+    return this.assembleBlockBody({
+      blockType: BlockType.Blinded,
       blockAttributes,
       currentState,
       commonBlockBody,
-      blindedBlockBodyResp
-    );
+      assembleBlockBody: blindedBlockBodyResp,
+    });
   }
 
-  async assembleBlockBody<T extends BlockType>(
-    blockType: T,
-    blockAttributes: BlockAttributes,
-    currentState: CachedBeaconStateAllForks,
-    commonBlockBody: CommonBlockBody,
-    assembleBlockBody: AssembledBlockBodyResponse<T>
-  ): Promise<AssembledBlockResponse<T>> {
-    return assembleBlockBodyToBlock.call(this, {
-      blockType,
-      blockAttributes,
-      commonBlockBody,
-      assembleBlockBody,
-      currentState,
-      // TODO: Need to debug why we need `as` here
-    }) as Promise<AssembledBlockResponse<T>>;
+  async assembleBlockBody<T extends BlockType>(opts: {
+    blockType: T;
+    blockAttributes: BlockAttributes;
+    currentState: CachedBeaconStateAllForks;
+    commonBlockBody: CommonBlockBody;
+    assembleBlockBody: AssembledBlockBodyResponse<T>;
+  }): Promise<AssembledBlockResponse<T>> {
+    return assembleBlockBodyToBlock.call(this, opts) as Promise<AssembledBlockResponse<T>>;
   }
 
   /**

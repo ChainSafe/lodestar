@@ -571,13 +571,13 @@ export function getValidatorApi(
   ): Promise<ProduceBlockOrContentsRes & {shouldOverrideBuilder?: boolean}> {
     const source = ProducedBlockSource.engine;
 
-    const {block, consensusBlockValue, executionPayloadValue, shouldOverrideBuilder} = await chain.assembleBlockBody(
-      BlockType.Full,
+    const {block, consensusBlockValue, executionPayloadValue, shouldOverrideBuilder} = await chain.assembleBlockBody({
+      blockType: BlockType.Full,
       blockAttributes,
       currentState,
       commonBlockBody,
-      fullBlockBodyResp
-    );
+      assembleBlockBody: fullBlockBodyResp,
+    });
     const version = config.getForkName(block.slot);
     if (strictFeeRecipientCheck && feeRecipient && isForkPostBellatrix(version)) {
       const blockFeeRecipient = toHex((block as bellatrix.BeaconBlock).body.executionPayload.feeRecipient);
@@ -633,13 +633,13 @@ export function getValidatorApi(
   ): Promise<ProduceBlindedBlockRes & {shouldOverrideBuilder?: boolean}> {
     const source = ProducedBlockSource.builder;
 
-    const {block, consensusBlockValue, executionPayloadValue} = await chain.assembleBlockBody(
-      BlockType.Blinded,
+    const {block, consensusBlockValue, executionPayloadValue} = await chain.assembleBlockBody({
+      blockType: BlockType.Blinded,
       blockAttributes,
       currentState,
       commonBlockBody,
-      blindedBlockBodyResp
-    );
+      assembleBlockBody: blindedBlockBodyResp,
+    });
 
     const version = config.getForkName(block.slot) as ForkPostBellatrix;
     metrics?.blockProductionSuccess.inc({source});
