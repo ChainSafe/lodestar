@@ -42,7 +42,7 @@ export const DataColumnSidecar = new ContainerType(
     index: ColumnIndex,
     column: DataColumn,
     kzgCommitments: denebSsz.BlobKzgCommitments,
-    kzgProofs: KZGProofs,
+    kzgProofs: denebSsz.KZGProofs,
     signedBlockHeader: phase0Ssz.SignedBeaconBlockHeader,
     kzgCommitmentsInclusionProof: KzgCommitmentsInclusionProof,
   },
