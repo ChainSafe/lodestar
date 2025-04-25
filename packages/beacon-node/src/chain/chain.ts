@@ -166,6 +166,7 @@ export class BeaconChain implements IBeaconChain {
   /** Map keyed by executionPayload.blockHash of the block for those blobs */
   readonly producedContentsCache = new Map<BlockHash, deneb.Contents>();
 
+  // TODO: rephrase this
   // Cache payload from the local execution so that produceBlindedBlock or produceBlockV3 and
   // send and get signed/published blinded versions which beacon can assemble into full before
   // actual publish

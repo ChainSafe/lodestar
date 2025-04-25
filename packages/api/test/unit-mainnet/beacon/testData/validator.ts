@@ -42,22 +42,6 @@ export const testData: GenericServerTestCases<Endpoints> = {
       meta: {executionOptimistic: true},
     },
   },
-  produceBlockV2: {
-    args: {
-      slot: 32000,
-      randaoReveal,
-      graffiti,
-      feeRecipient,
-      builderSelection: BuilderSelection.ExecutionAlways,
-      strictFeeRecipientCheck: true,
-    },
-    res: {
-      data: ssz.electra.BlockContents.defaultValue(),
-      meta: {
-        version: ForkName.electra,
-      },
-    },
-  },
   produceBlockV3: {
     args: {
       slot: 32000,
@@ -78,15 +62,6 @@ export const testData: GenericServerTestCases<Endpoints> = {
         consensusBlockValue: ssz.Wei.defaultValue(),
         executionPayloadBlinded: false,
         executionPayloadSource: ProducedBlockSource.engine,
-      },
-    },
-  },
-  produceBlindedBlock: {
-    args: {slot: 32000, randaoReveal, graffiti},
-    res: {
-      data: ssz.electra.BlindedBeaconBlock.defaultValue(),
-      meta: {
-        version: ForkName.electra,
       },
     },
   },

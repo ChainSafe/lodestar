@@ -276,6 +276,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     group: "builder",
   },
 
+  // TODO: deprecate and make no-op
   useProduceBlockV3: {
     type: "boolean",
     description: "Enable/disable usage of produceBlockV3 for block production, is auto enabled on deneb+ blocks",
