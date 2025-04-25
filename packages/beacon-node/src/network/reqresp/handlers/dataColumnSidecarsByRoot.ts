@@ -1,5 +1,6 @@
 import {NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
+import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {RootHex, fulu, ssz} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
@@ -16,7 +17,14 @@ export async function* onDataColumnSidecarsByRoot(
   chain: IBeaconChain,
   db: IBeaconDb
 ): AsyncIterable<ResponseOutgoing> {
-  const finalizedSlot = chain.forkChoice.getFinalizedBlock().slot;
+  // SPEC: minimum_request_epoch = max(finalized_epoch, current_epoch - MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS, FULU_FORK_EPOCH)
+  const finalizedEpoch = chain.forkChoice.getFinalizedCheckpoint().epoch;
+  const currentEpoch = chain.clock.currentEpoch;
+  const minimumRequestEpoch = Math.max(
+    finalizedEpoch,
+    currentEpoch - chain.config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS,
+    chain.config.FULU_FORK_EPOCH
+  );
 
   // In sidecars by root request, it can be expected that sidecar requests will be come
   // clustured by blockroots, and this helps us save db lookups once we load sidecars
@@ -34,9 +42,11 @@ export async function* onDataColumnSidecarsByRoot(
     const block = chain.forkChoice.getBlockHex(blockRootHex);
 
     // NOTE: Only support non-finalized blocks.
-    // SPEC: Clients MUST support requesting blocks and sidecars since the latest finalized epoch.
-    // https://github.com/ethereum/consensus-specs/blob/11a037fd9227e29ee809c9397b09f8cc3383a8c0/specs/eip4844/p2p-interface.md#beaconblockandblobssidecarbyroot-v1
-    if (!block || block.slot <= finalizedSlot) {
+    // SPEC: Clients MUST support requesting sidecars since minimum_request_epoch.
+    // If any root in the request content references a block earlier than minimum_request_epoch, peers MAY respond with
+    // error code 3: ResourceUnavailable or not include the data column sidecar in the response.
+    // https://github.com/ethereum/consensus-specs/blob/1937aff86b41b5171a9bc3972515986f1bbbf303/specs/fulu/p2p-interface.md#datacolumnsidecarsbyroot-v1
+    if (!block || computeEpochAtSlot(block.slot) < minimumRequestEpoch) {
       continue;
     }
 

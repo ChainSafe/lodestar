@@ -3,6 +3,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {
   DATA_COLUMN_SIDECAR_SUBNET_COUNT,
   EFFECTIVE_BALANCE_INCREMENT,
+  ForkName,
   NUMBER_OF_COLUMNS,
   NUMBER_OF_CUSTODY_GROUPS,
 } from "@lodestar/params";
@@ -10,8 +11,19 @@ import {CachedBeaconStateAllForks, signedBlockToSignedHeader} from "@lodestar/st
 import {ColumnIndex, CustodyIndex, SignedBeaconBlockHeader, ValidatorIndex, deneb, fulu} from "@lodestar/types";
 import {ssz} from "@lodestar/types";
 import {bytesToBigInt} from "@lodestar/utils";
+import {
+  BlockInputDataColumns,
+  BlockSource,
+  DataColumnsCacheMap,
+  DataColumnsSource,
+  getBlockInput,
+  getBlockInputDataColumns,
+} from "../chain/blocks/types.js";
+import {ChainEvent, ChainEventEmitter} from "../chain/emitter.js";
+import {BlockInputCacheType} from "../chain/seenCache/seenGossipBlockInput.js";
+import {IExecutionEngine} from "../execution/engine/interface.js";
 import {NodeId} from "../network/subnets/index.js";
-import {computeKzgCommitmentsInclusionProof} from "./blobs.js";
+import {computeKzgCommitmentsInclusionProof, kzgCommitmentToVersionedHash} from "./blobs.js";
 import {ckzg} from "./kzg.js";
 
 export class CustodyConfig {
@@ -284,4 +296,114 @@ export function getDataColumnSidecarsFromColumnSidecar(
     sidecar.kzgCommitmentsInclusionProof,
     cellsAndKzgProofs
   );
+}
+
+export function hasSampledDataColumns(custodyConfig: CustodyConfig, dataColumnCache: DataColumnsCacheMap): boolean {
+  return (
+    dataColumnCache.size >= custodyConfig.sampledColumns.length &&
+    custodyConfig.sampledColumns.reduce((acc, columnIndex) => acc && dataColumnCache.has(columnIndex), true)
+  );
+}
+
+export async function getDataColumnsFromExecution(
+  config: ChainForkConfig,
+  custodyConfig: CustodyConfig,
+  executionEngine: IExecutionEngine,
+  emitter: ChainEventEmitter,
+  blockCache: BlockInputCacheType
+): Promise<boolean> {
+  if (blockCache.fork !== ForkName.fulu) {
+    return false;
+  }
+
+  if (!blockCache.cachedData) {
+    // this condition should never get hit... just a sanity check
+    throw new Error("invalid blockCache");
+  }
+
+  if (blockCache.cachedData.fork !== ForkName.fulu) {
+    return false;
+  }
+
+  // If already have all columns, exit
+  if (hasSampledDataColumns(custodyConfig, blockCache.cachedData.dataColumnsCache)) {
+    return true;
+  }
+
+  let commitments: undefined | Uint8Array[];
+  if (blockCache.block) {
+    const block = blockCache.block as fulu.SignedBeaconBlock;
+    commitments = block.message.body.blobKzgCommitments;
+  } else {
+    const firstSidecar = blockCache.cachedData.dataColumnsCache.values().next().value;
+    commitments = firstSidecar?.dataColumn.kzgCommitments;
+  }
+
+  if (!commitments) {
+    throw new Error("blockInputCache missing both block and cachedData");
+  }
+
+  // Return if block has no blobs
+  if (commitments.length === 0) {
+    return true;
+  }
+
+  // Process KZG commitments into versioned hashes
+  const versionedHashes: Uint8Array[] = commitments.map(kzgCommitmentToVersionedHash);
+
+  // Get blobs from execution engine
+  const blobs = await executionEngine.getBlobs(blockCache.fork, versionedHashes);
+
+  // Execution engine was unable to find one or more blobs
+  if (blobs === null) {
+    return false;
+  }
+
+  // Return if we received all data columns while waiting for getBlobs
+  if (hasSampledDataColumns(custodyConfig, blockCache.cachedData.dataColumnsCache)) {
+    return true;
+  }
+
+  let dataColumnSidecars: fulu.DataColumnSidecars;
+  const cellsAndProofs = getCellsAndProofs(blobs);
+  if (blockCache.block) {
+    dataColumnSidecars = getDataColumnSidecarsFromBlock(
+      config,
+      blockCache.block as fulu.SignedBeaconBlock,
+      cellsAndProofs
+    );
+  } else {
+    const firstSidecar = blockCache.cachedData.dataColumnsCache.values().next().value;
+    if (!firstSidecar) {
+      throw new Error("blockInputCache missing both block and data column sidecar");
+    }
+    dataColumnSidecars = getDataColumnSidecarsFromColumnSidecar(firstSidecar.dataColumn, cellsAndProofs);
+  }
+
+  // Publish columns if and only if subscribed to them
+  const sampledColumns = custodyConfig.sampledColumns.map((columnIndex) => dataColumnSidecars[columnIndex]);
+
+  emitter.emit(ChainEvent.publishDataColumns, sampledColumns);
+
+  for (const column of sampledColumns) {
+    blockCache.cachedData.dataColumnsCache.set(column.index, {dataColumn: column, dataColumnBytes: null});
+  }
+
+  const allDataColumns = getBlockInputDataColumns(blockCache.cachedData.dataColumnsCache, custodyConfig.sampledColumns);
+  // TODO: Add metrics
+  // metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.GOSSIP});
+  const blockData: BlockInputDataColumns = {
+    fork: blockCache.cachedData.fork,
+    ...allDataColumns,
+    dataColumnsSource: DataColumnsSource.gossip,
+  };
+  blockCache.cachedData.resolveAvailability(blockData);
+
+  if (blockCache.block !== undefined) {
+    const blockInput = getBlockInput.availableData(config, blockCache.block, BlockSource.gossip, blockData);
+
+    blockCache.resolveBlockInput(blockInput);
+  }
+
+  return true;
 }

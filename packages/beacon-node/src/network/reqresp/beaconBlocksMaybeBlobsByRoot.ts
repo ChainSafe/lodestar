@@ -1,4 +1,4 @@
-import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {toHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
@@ -21,10 +21,12 @@ import {
   getBlockInputBlobs,
   getBlockInputDataColumns,
 } from "../../chain/blocks/types.js";
+import {ChainEventEmitter} from "../../chain/emitter.js";
 import {BlockInputAvailabilitySource} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {IExecutionEngine} from "../../execution/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {computeInclusionProof, kzgCommitmentToVersionedHash} from "../../util/blobs.js";
+import {getDataColumnsFromExecution} from "../../util/dataColumns.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {INetwork} from "../interface.js";
 import {PartialDownload, matchBlockWithBlobs, matchBlockWithDataColumns} from "./beaconBlocksMaybeBlobsByRange.js";
@@ -188,6 +190,7 @@ export async function unavailableBeaconBlobsByRoot(
     logger?: Logger;
     metrics?: Metrics | null;
     executionEngine: IExecutionEngine;
+    emitter: ChainEventEmitter;
     engineGetBlobsCache?: Map<RootHex, BlobAndProof | null>;
     blockInputsRetryTrackerCache?: Set<RootHex>;
   }
@@ -235,6 +238,8 @@ export async function unavailableBeaconBlobsByRoot(
     cachedData,
     {
       metrics: opts.metrics,
+      executionEngine: opts.executionEngine,
+      emitter: opts.emitter,
       logger: opts.logger,
     }
   );
@@ -455,6 +460,8 @@ export async function unavailableBeaconBlobsByRootPostFulu(
   cachedData: NullBlockInput["cachedData"],
   opts: {
     metrics?: Metrics | null;
+    executionEngine: IExecutionEngine;
+    emitter: ChainEventEmitter;
     logger?: Logger;
   }
 ): Promise<BlockInput> {
@@ -510,8 +517,8 @@ export async function unavailableBeaconBlobsByRootPostFulu(
   const slot = block.message.slot;
   const blockRoot = config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message);
 
-  const blobKzgCommitmentsLen = (block.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length;
-  if (blobKzgCommitmentsLen === 0) {
+  const blobKzgCommitments = (block.message.body as deneb.BeaconBlockBody).blobKzgCommitments;
+  if (blobKzgCommitments.length === 0) {
     const blockData = {
       fork: cachedData.fork,
       dataColumns: [],
@@ -532,47 +539,73 @@ export async function unavailableBeaconBlobsByRootPostFulu(
     return acc;
   }, [] as number[]);
 
-  const peerColumns = network.getConnectedPeerCustody(peerId);
+  let resolveBlockInput: ((block: BlockInput) => void) | null = null;
+  const blockInputPromise = new Promise<BlockInput>((resolveCB) => {
+    resolveBlockInput = resolveCB;
+  });
+  if (resolveBlockInput === null) {
+    throw Error("Promise Constructor was not executed immediately");
+  }
 
-  // get match
-  const columns = peerColumns.reduce((acc, elem) => {
-    if (neededColumns.includes(elem)) {
-      acc.push(elem);
+  const gotColumnsFromExecution = await getDataColumnsFromExecution(
+    config,
+    network.custodyConfig,
+    opts.executionEngine,
+    opts.emitter,
+    {
+      fork: config.getForkName(block.message.slot),
+      block: block,
+      cachedData: cachedData,
+      blockInputPromise,
+      resolveBlockInput,
     }
-    return acc;
-  }, [] as number[]);
+  );
 
-  // this peer can't help fetching columns for this block
-  if (unavailableBlockInput.block !== null && columns.length === 0 && neededColumns.length > 0) {
-    return unavailableBlockInput;
-  }
+  if (!gotColumnsFromExecution) {
+    const peerColumns = network.getConnectedPeerCustody(peerId);
 
-  for (const columnIndex of columns) {
-    dataColumnIdentifiers.push({blockRoot, index: columnIndex});
-  }
+    // get match
+    const columns = peerColumns.reduce((acc, elem) => {
+      if (neededColumns.includes(elem)) {
+        acc.push(elem);
+      }
+      return acc;
+    }, [] as number[]);
 
-  let allDataColumnSidecars: fulu.DataColumnSidecar[];
-  if (dataColumnIdentifiers.length > 0) {
-    allDataColumnSidecars = await network.sendDataColumnSidecarsByRoot(peerId, dataColumnIdentifiers);
-  } else {
-    allDataColumnSidecars = [];
-  }
+    // this peer can't help fetching columns for this block
+    if (unavailableBlockInput.block !== null && columns.length === 0 && neededColumns.length > 0) {
+      return unavailableBlockInput;
+    }
 
-  const logCtx = {
-    slot: block.message.slot,
-    requestedColumns: columns.join(","),
-    respondedColumns: allDataColumnSidecars.map((dcs) => dcs.index).join(","),
-    peerClient,
-  };
+    for (const columnIndex of columns) {
+      dataColumnIdentifiers.push({blockRoot, index: columnIndex});
+    }
 
-  // the same to matchBlockWithDataColumns() without expecting requested data columns = responded data columns
-  // because at gossip time peer may not have enough column to return
-  for (const dataColumnSidecar of allDataColumnSidecars) {
-    dataColumnsCache.set(dataColumnSidecar.index, {
-      dataColumn: dataColumnSidecar,
-      // TODO: req/resp should return bytes here
-      dataColumnBytes: null,
-    });
+    let allDataColumnSidecars: fulu.DataColumnSidecar[];
+    if (dataColumnIdentifiers.length > 0) {
+      allDataColumnSidecars = await network.sendDataColumnSidecarsByRoot(peerId, dataColumnIdentifiers);
+    } else {
+      allDataColumnSidecars = [];
+    }
+
+    const logCtx = {
+      slot: block.message.slot,
+      requestedColumns: columns.join(","),
+      respondedColumns: allDataColumnSidecars.map((dcs) => dcs.index).join(","),
+      peerClient,
+    };
+
+    opts.logger?.verbose("unavailableBeaconBlobsByRootPostFulu: Requested data columns from peer", logCtx);
+
+    // the same to matchBlockWithDataColumns() without expecting requested data columns = responded data columns
+    // because at gossip time peer may not have enough column to return
+    for (const dataColumnSidecar of allDataColumnSidecars) {
+      dataColumnsCache.set(dataColumnSidecar.index, {
+        dataColumn: dataColumnSidecar,
+        // TODO: req/resp should return bytes here
+        dataColumnBytes: null,
+      });
+    }
   }
 
   // reevaluate needeColumns and resolve availability if possible
@@ -582,6 +615,12 @@ export async function unavailableBeaconBlobsByRootPostFulu(
     }
     return acc;
   }, [] as number[]);
+
+  const logCtx = {
+    slot: block.message.slot,
+    neededColumns: neededColumns.join(","),
+    sampledColumns: sampledColumns.join(","),
+  };
 
   if (neededColumns.length === 0) {
     const {dataColumns, dataColumnsBytes} = getBlockInputDataColumns(
@@ -603,7 +642,6 @@ export async function unavailableBeaconBlobsByRootPostFulu(
     );
     return getBlockInput.availableData(config, block, BlockSource.byRoot, blockData);
   }
-
   opts.logger?.verbose("unavailableBeaconBlobsByRootPostFulu: Still missing data columns for block", logCtx);
   return getBlockInput.dataPromise(config, block, BlockSource.byRoot, cachedData);
 }

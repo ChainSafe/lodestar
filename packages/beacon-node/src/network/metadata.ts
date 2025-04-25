@@ -5,6 +5,7 @@ import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, altair, fulu, phase0, ssz} from "@lodestar/types";
 import {intToBytes} from "@lodestar/utils";
 import {FAR_FUTURE_EPOCH} from "../constants/index.js";
+import {serializeCgc} from "../util/metadata.js";
 import {getCurrentAndNextFork} from "./forks.js";
 import {NetworkConfig} from "./networkConfig.js";
 export enum ENRKey {
@@ -61,12 +62,8 @@ export class MetadataController {
       this.onSetValue(ENRKey.syncnets, ssz.phase0.AttestationSubnets.serialize(this._metadata.syncnets));
     }
 
-    if (config.getForkSeq(computeStartSlotAtEpoch(currentEpoch)) >= ForkSeq.fulu) {
-      this.onSetValue(
-        ENRKey.cgc,
-        intToBytes(this._metadata.cgc, Math.ceil(Math.log2(this._metadata.cgc + 1) / 8), "be")
-      );
-    }
+    // Set CGC regardless of fork. It may be useful to clients before Fulu, and will be ignored otherwise.
+    this.onSetValue(ENRKey.cgc, serializeCgc(this._metadata.cgc));
   }
 
   get seqNumber(): bigint {
@@ -97,7 +94,10 @@ export class MetadataController {
   }
 
   set cgc(cgc: number) {
-    this.onSetValue(ENRKey.cgc, intToBytes(this._metadata.cgc, Math.ceil(Math.log2(this._metadata.cgc + 1) / 8), "be"));
+    if (cgc === this._metadata.cgc) {
+      return;
+    }
+    this.onSetValue(ENRKey.cgc, serializeCgc(cgc));
     this._metadata.cgc = cgc;
   }
 

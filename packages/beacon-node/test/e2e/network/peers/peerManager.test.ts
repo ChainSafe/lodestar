@@ -3,7 +3,7 @@ import {Connection} from "@libp2p/interface";
 import {CustomEvent} from "@libp2p/interface";
 import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
-import {altair, phase0, ssz} from "@lodestar/types";
+import {phase0, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {afterEach, describe, expect, it, vi} from "vitest";
 import {Eth2Gossipsub, NetworkEvent, NetworkEventBus, getConnectionsMap} from "../../../../src/network/index.js";
@@ -12,8 +12,9 @@ import {IReqRespBeaconNodePeerManager, PeerManager, PeerRpcScoreStore} from "../
 import {PeersData} from "../../../../src/network/peers/peersData.js";
 import {ReqRespMethod} from "../../../../src/network/reqresp/ReqRespBeaconNode.js";
 import {LocalStatusCache} from "../../../../src/network/statusCache.js";
-import {IAttnetsService} from "../../../../src/network/subnets/index.js";
+import {IAttnetsService, computeNodeId} from "../../../../src/network/subnets/index.js";
 import {Clock} from "../../../../src/util/clock.js";
+import {getCustodyGroups} from "../../../../src/util/dataColumns.js";
 import {waitForEvent} from "../../../utils/events/resolver.js";
 import {testLogger} from "../../../utils/logger.js";
 import {createNode} from "../../../utils/network.js";
@@ -187,7 +188,14 @@ describe("network / peers / PeerManager", () => {
 
     // Simulate peer1 returning a PING and STATUS message
     const remoteStatus = statusCache.get();
-    const remoteMetadata: altair.Metadata = {seqNumber: BigInt(1), attnets: getAttnets(), syncnets: getSyncnets()};
+    const cgc = config.CUSTODY_REQUIREMENT;
+    const remoteMetadata: NonNullable<ReturnType<PeerManager["connectedPeers"]["get"]>>["metadata"] = {
+      seqNumber: BigInt(1),
+      attnets: getAttnets(),
+      syncnets: getSyncnets(),
+      cgc,
+      custodyGroups: getCustodyGroups(computeNodeId(peerId1), cgc),
+    };
     reqResp.sendPing.mockResolvedValue(remoteMetadata.seqNumber);
     reqResp.sendStatus.mockResolvedValue(remoteStatus);
     reqResp.sendMetadata.mockResolvedValue(remoteMetadata);
@@ -209,7 +217,7 @@ describe("network / peers / PeerManager", () => {
     // 3. Receive ping result (1) and call reqResp.sendMetadata
     // 4. Receive status result (2) assert peer relevance and emit `PeerManagerEvent.peerConnected`
     expect(reqResp.sendPing).toHaveBeenCalledOnce();
-    expect(reqResp.sendStatus).toHaveBeenCalledOnce();
+    expect(reqResp.sendStatus).toHaveBeenCalledTimes(2);
     expect(reqResp.sendMetadata).toHaveBeenCalledOnce();
 
     expect(peerManager["connectedPeers"].get(peerId1.toString())?.metadata).toEqual(remoteMetadata);

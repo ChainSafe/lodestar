@@ -29,6 +29,7 @@ import {
 } from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {ChainEvent, IBeaconChain} from "../chain/index.js";
+import {computeSubnetForDataColumnSidecar} from "../chain/validation/dataColumnSidecar.js";
 import {IBeaconDb} from "../db/interface.js";
 import {Metrics, RegistryMetricCreator} from "../metrics/index.js";
 import {IClock} from "../util/clock.js";
@@ -362,9 +363,9 @@ export class Network implements INetwork {
   async publishDataColumnSidecar(dataColumnSidecar: fulu.DataColumnSidecar): Promise<number> {
     const slot = dataColumnSidecar.signedBlockHeader.message.slot;
     const fork = this.config.getForkName(slot);
-    const index = dataColumnSidecar.index % DATA_COLUMN_SIDECAR_SUBNET_COUNT;
+    const subnet = computeSubnetForDataColumnSidecar(dataColumnSidecar);
     return this.publishGossip<GossipType.data_column_sidecar>(
-      {type: GossipType.data_column_sidecar, fork, index},
+      {type: GossipType.data_column_sidecar, fork, subnet},
       dataColumnSidecar,
       {
         ignoreDuplicatePublishError: true,

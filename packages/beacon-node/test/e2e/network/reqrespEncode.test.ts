@@ -1,5 +1,6 @@
 import {noise} from "@chainsafe/libp2p-noise";
 import {mplex} from "@libp2p/mplex";
+import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {tcp} from "@libp2p/tcp";
 import {createBeaconConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
@@ -22,6 +23,7 @@ import {PeersData} from "../../../src/network/peers/peersData.js";
 import {GetReqRespHandlerFn} from "../../../src/network/reqresp/types.js";
 import {LocalStatusCache} from "../../../src/network/statusCache.js";
 import {testLogger} from "../../utils/logger.js";
+import {getValidPeerId, validPeerIdStr} from "../../utils/peer.js";
 
 /* eslint-disable require-yield */
 
@@ -38,6 +40,7 @@ describe("reqresp encoder", () => {
 
   async function getLibp2p() {
     const listen = `/ip4/127.0.0.1/tcp/${port++}`;
+    const peerId = await createSecp256k1PeerId();
     const libp2p = await createLibp2p({
       transports: [tcp()],
       streamMuxers: [mplex()],
@@ -45,6 +48,7 @@ describe("reqresp encoder", () => {
       addresses: {
         listen: [listen],
       },
+      peerId,
     });
     afterEachCallbacks.push(() => libp2p.stop());
     return {libp2p, multiaddr: multiaddr(`${listen}/p2p/${libp2p.peerId.toString()}`)};
