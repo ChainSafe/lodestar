@@ -54,7 +54,6 @@ type FullOrBlindedBlockWithContents =
 
 type DebugLogCtx = {debugLogCtx: Record<string, string | boolean | undefined>};
 type BlockProposalOpts = {
-  useProduceBlockV3?: boolean;
   broadcastValidation: routes.beacon.BroadcastValidation;
   blindedLocal: boolean;
 };
@@ -124,7 +123,6 @@ export class BlockProposingService {
         this.validatorStore.getBuilderSelectionParams(pubkeyHex);
       const feeRecipient = this.validatorStore.getFeeRecipient(pubkeyHex);
       const blindedLocal = this.opts.blindedLocal;
-      const useProduceBlockV3 = this.opts.useProduceBlockV3 ?? this.config.getForkSeq(slot) >= ForkSeq.deneb;
 
       this.logger.debug("Producing block", {
         ...debugLogCtx,
@@ -132,7 +130,6 @@ export class BlockProposingService {
         builderBoostFactor,
         feeRecipient,
         strictFeeRecipientCheck,
-        useProduceBlockV3,
         blindedLocal,
       });
       this.metrics?.proposerStepCallProduceBlock.observe(this.clock.secFromSlot(slot));

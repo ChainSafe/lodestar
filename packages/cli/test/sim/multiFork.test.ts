@@ -95,7 +95,6 @@ const env = await Simulation.initWithDefaults(
           // this builder selection will make it use produceBlindedBlockV2 and respond with blinded version
           // of local block and subsequent publishing via publishBlindedBlock
           clientOptions: {
-            useProduceBlockV3: false,
             "builder.selection": "default",
           },
         },
