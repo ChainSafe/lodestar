@@ -34,7 +34,6 @@ const env = await Simulation.initWithDefaults(
     forkConfig,
   },
   [
-    // TODO: what do we wanna test here?
     {
       id: "node-1",
       beacon: BeaconClient.Lodestar,
@@ -91,9 +90,8 @@ const env = await Simulation.initWithDefaults(
       validator: {
         type: ValidatorClient.Lodestar,
         options: {
-          // TODO: rephrase
-          // this builder selection will make it use produceBlindedBlockV2 and respond with blinded version
-          // of local block and subsequent publishing via publishBlindedBlock
+          // this builder selection will make it respond with blinded version
+          // of local block and subsequent publishing via publishBlindedBlockV2
           clientOptions: {
             "builder.selection": "default",
           },
