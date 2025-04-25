@@ -61,6 +61,7 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     "http.responseWireFormat"?: string;
 
     "externalSigner.url"?: string;
+    "externalSigner.urls"?: string[]; 
     "externalSigner.pubkeys"?: string[];
     "externalSigner.fetch"?: boolean;
     "externalSigner.fetchInterval"?: number;
@@ -335,44 +336,57 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     group: "http",
   },
 
-  // External signer
+  // External signers
 
-  "externalSigner.url": {
-    description: "URL to connect to an external signing server",
-    type: "string",
-    group: "externalSigner",
-  },
+ // External signer options (updated for multiple URLs)
+"externalSigner.url": {
+  description: "[DEPRECATED] URL for a single external signing server. Use --externalSigner.urls for multiple signers.",
+  type: "string",
+  group: "externalSigner",
+},
 
-  "externalSigner.pubkeys": {
-    implies: ["externalSigner.url"],
-    description:
-      "List of validator public keys used by an external signer. May also provide a single string of comma-separated public keys",
-    type: "array",
-    string: true, // Ensures the pubkey string is not automatically converted to numbers
-    coerce: (pubkeys: string[]): string[] =>
-      // Parse ["0x11,0x22"] to ["0x11", "0x22"]
-      pubkeys
-        .flatMap((item) => item.split(","))
-        .map(ensure0xPrefix),
-    group: "externalSigner",
+"externalSigner.urls": {
+  description: "URLs for external signing servers (comma-separated or repeated flag). Example: --externalSigner.urls=http://signer1,http://signer2",
+  type: "array",
+  string: true, // Ensures input is parsed as an array
+  group: "externalSigner",
+  coerce: (urls: string[]): string[] => {
+    // Parse both formats:
+    // 1. --externalSigner.urls=url1,url2
+    // 2. --externalSigner.urls=url1 --externalSigner.urls=url2
+    return urls
+      .flatMap((url) => url.split(","))
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0); // Remove empty strings
   },
+},
 
-  "externalSigner.fetch": {
-    implies: ["externalSigner.url"],
-    conflicts: ["externalSigner.pubkeys"],
-    description:
-      "Fetch the list of public keys to validate from an external signer. Cannot be used in combination with `--externalSigner.pubkeys`",
-    type: "boolean",
-    group: "externalSigner",
-  },
+"externalSigner.pubkeys": {
+  description: "List of validator public keys used by external signer(s). May be comma-separated.",
+  type: "array",
+  string: true,
+  implies: ["externalSigner.url", "externalSigner.urls"],  // Supports both old and new flags
+  coerce: (pubkeys: string[]): string[] =>
+    pubkeys
+      .flatMap((item) => item.split(","))
+      .map((pubkey) => ensure0xPrefix(pubkey)),
+  group: "externalSigner",
+},
 
-  "externalSigner.fetchInterval": {
-    implies: ["externalSigner.fetch"],
-    description:
-      "Interval in milliseconds between fetching the list of public keys from external signer, once per epoch by default",
-    type: "number",
-    group: "externalSigner",
-  },
+"externalSigner.fetch": {
+  description: "Fetch public keys from external signer(s). Cannot be used with --externalSigner.pubkeys.",
+  type: "boolean",
+  implies: ["externalSigner.url", "externalSigner.urls"], // Supports both old and new flags
+  conflicts: ["externalSigner.pubkeys"],
+  group: "externalSigner",
+},
+
+"externalSigner.fetchInterval": {
+  description: "Interval (ms) between fetching pubkeys from external signer(s). Default: once per epoch.",
+  type: "number",
+  implies: ["externalSigner.fetch"], 
+  group: "externalSigner",
+},
 
   // Distributed validator
 

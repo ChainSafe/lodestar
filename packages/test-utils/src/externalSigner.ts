@@ -41,18 +41,17 @@ export async function startExternalSigner({
     fs.writeFileSync(path.join(configDirPathHost, `keystore-${idx}.json`), keystoreString);
   }
   fs.writeFileSync(path.join(configDirPathHost, passwordFilename), password);
-  const port = 9000;
 
   const startedContainer = await new GenericContainer(`consensys/web3signer:${web3signerVersion}`)
     .withHealthCheck({
-      test: ["CMD-SHELL", `curl -f http://localhost:${port}/healthcheck || exit 1`],
-      interval: 1000,
-      timeout: 3000,
-      retries: 5,
-      startPeriod: 1000,
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/healthcheck || exit 1"],
+      interval: 2000,
+      timeout: 5000,
+      retries: 10,
+      startPeriod: 5000,
     })
     .withWaitStrategy(Wait.forHealthCheck())
-    .withExposedPorts(port)
+    .withExposedPorts(9000) // Internal port is always 9000
     .withBindMounts([{source: configDirPathHost, target: configDirPathContainer, mode: "ro"}])
     .withCommand([
       "eth2",
@@ -63,7 +62,7 @@ export async function startExternalSigner({
     ])
     .start();
 
-  const url = `http://localhost:${startedContainer.getMappedPort(port)}`;
+  const url = `http://localhost:${startedContainer.getMappedPort(9000)}`;
 
   const stream = await startedContainer.logs();
   stream

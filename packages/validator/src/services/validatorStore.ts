@@ -433,14 +433,30 @@ export class ValidatorStore {
     return this.validators.has(pubkeyHex);
   }
 
+  /**
+   * Get all public keys managed by a specific remote signer
+   */
   getRemoteSignerPubkeys(signerUrl: string): PubkeyHex[] {
-    const pubkeysHex = [];
-    for (const {signer} of this.validators.values()) {
-      if (signer.type === SignerType.Remote && signer.url === signerUrl) {
-        pubkeysHex.push(signer.pubkey);
+    const pubkeys: PubkeyHex[] = [];
+    for (const [pubkey, validator] of this.validators) {
+      if (validator.signer.type === SignerType.Remote && validator.signer.url === signerUrl) {
+        pubkeys.push(pubkey);
       }
     }
-    return pubkeysHex;
+    return pubkeys;
+  }
+
+  /**
+   * Get all public keys managed by any remote signer
+   */
+  getAllRemoteSignerPubkeys(): PubkeyHex[] {
+    const pubkeys: PubkeyHex[] = [];
+    for (const [pubkey, validator] of this.validators) {
+      if (validator.signer.type === SignerType.Remote) {
+        pubkeys.push(pubkey);
+      }
+    }
+    return pubkeys;
   }
 
   async signBlock(
