@@ -57,5 +57,24 @@ describe("network / metadata", () => {
       metadata.custodyGroupCount = 128;
       expect(onSetValue).toHaveBeenCalledWith(ENRKey.cgc, serializeCgc(128));
     });
+
+    it("should increment seqNumber when cgc is updated", () => {
+      const onSetValue = vi.fn();
+      const networkConfig = new NetworkConfig(getValidPeerId(), config);
+      const metadata = new MetadataController({}, {onSetValue, networkConfig});
+      const initialSeqNumber = metadata.seqNumber;
+      metadata.custodyGroupCount = 128;
+      expect(metadata.seqNumber).toBe(initialSeqNumber + 1n);
+    });
+
+    it("should not increment seqNumber when cgc is set to the same value", () => {
+      const onSetValue = vi.fn();
+      const networkConfig = new NetworkConfig(getValidPeerId(), config);
+      const metadata = new MetadataController({}, {onSetValue, networkConfig});
+      metadata.custodyGroupCount = 128;
+      const initialSeqNumber = metadata.seqNumber;
+      metadata.custodyGroupCount = 128;
+      expect(metadata.seqNumber).toBe(initialSeqNumber);
+    });
   });
 });

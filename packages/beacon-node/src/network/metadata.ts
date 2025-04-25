@@ -98,6 +98,7 @@ export class MetadataController {
       return;
     }
     this.onSetValue(ENRKey.cgc, serializeCgc(custodyGroupCount));
+    this._metadata.seqNumber++;
     this._metadata.custodyGroupCount = custodyGroupCount;
   }
 
