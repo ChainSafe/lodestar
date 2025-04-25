@@ -20,7 +20,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
         enr: "enr",
         p2pAddresses: ["p2pAddresses"],
         discoveryAddresses: ["discoveryAddresses"],
-        metadata: ssz.altair.Metadata.defaultValue(),
+        metadata: ssz.fulu.Metadata.defaultValue(),
       },
     },
   },

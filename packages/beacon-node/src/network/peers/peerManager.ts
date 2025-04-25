@@ -328,27 +328,28 @@ export class PeerManager {
     this.logger.warn("onMetadata", {
       peer: peer.toString(),
       peerData: peerData !== undefined,
-      cgc: (metadata as Partial<fulu.Metadata>).cgc,
+      custodyGroupCount: (metadata as Partial<fulu.Metadata>).custodyGroupCount,
     });
     if (peerData) {
       const oldMetadata = peerData.metadata;
-      const cgc = (metadata as Partial<fulu.Metadata>).cgc ?? this.config.CUSTODY_REQUIREMENT;
+      const custodyGroupCount =
+        (metadata as Partial<fulu.Metadata>).custodyGroupCount ?? this.config.CUSTODY_REQUIREMENT;
       const nodeId = peerData?.nodeId ?? computeNodeId(peer);
       const custodyGroups =
-        oldMetadata == null || oldMetadata.custodyGroups == null || cgc !== oldMetadata.cgc
-          ? getCustodyGroups(nodeId, cgc)
+        oldMetadata == null || oldMetadata.custodyGroups == null || custodyGroupCount !== oldMetadata.custodyGroupCount
+          ? getCustodyGroups(nodeId, custodyGroupCount)
           : oldMetadata.custodyGroups;
       peerData.metadata = {
         seqNumber: metadata.seqNumber,
         attnets: metadata.attnets,
         syncnets: (metadata as Partial<fulu.Metadata>).syncnets ?? BitArray.fromBitLen(SYNC_COMMITTEE_SUBNET_COUNT),
-        cgc:
-          (metadata as Partial<fulu.Metadata>).cgc ??
+        custodyGroupCount:
+          (metadata as Partial<fulu.Metadata>).custodyGroupCount ??
           // TODO: spec says that Clients MAY reject peers with a value less than CUSTODY_REQUIREMENT
           this.config.CUSTODY_REQUIREMENT,
         custodyGroups,
       };
-      if (oldMetadata === null || oldMetadata.cgc !== peerData.metadata.cgc) {
+      if (oldMetadata === null || oldMetadata.custodyGroupCount !== peerData.metadata.custodyGroupCount) {
         void this.requestStatus(peer, this.statusCache.get());
       }
     }
@@ -417,7 +418,7 @@ export class PeerManager {
     }
     if (getConnection(this.libp2p, peer.toString())) {
       const nodeId = peerData?.nodeId ?? computeNodeId(peer);
-      const custodyGroupCount = peerData?.metadata?.cgc;
+      const custodyGroupCount = peerData?.metadata?.custodyGroupCount;
 
       const peerCustodyGroupCount = custodyGroupCount ?? this.config.CUSTODY_REQUIREMENT;
       const dataColumns = getDataColumns(nodeId, peerCustodyGroupCount);
@@ -805,7 +806,7 @@ export class PeerManager {
 
         // TODO: Consider optimizing by doing observe in batch
         metrics.peerLongLivedAttnets.observe(attnets ? attnets.getTrueBitIndexes().length : 0);
-        metrics.peerColumnGroupCount.observe(peerData?.metadata?.cgc ?? 0);
+        metrics.peerColumnGroupCount.observe(peerData?.metadata?.custodyGroupCount ?? 0);
         metrics.peerScoreByClient.observe({client}, this.peerRpcScores.getScore(peerId));
         metrics.peerGossipScoreByClient.observe({client}, this.peerRpcScores.getGossipScore(peerId));
         metrics.peerConnectionLength.observe((now - openCnx.timeline.open) / 1000);

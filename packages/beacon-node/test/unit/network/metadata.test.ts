@@ -54,7 +54,7 @@ describe("network / metadata", () => {
       const onSetValue = vi.fn();
       const networkConfig = new NetworkConfig(getValidPeerId(), config);
       const metadata = new MetadataController({}, {onSetValue, networkConfig});
-      metadata.cgc = 128;
+      metadata.custodyGroupCount = 128;
       expect(onSetValue).toHaveBeenCalledWith(ENRKey.cgc, serializeCgc(128));
     });
   });

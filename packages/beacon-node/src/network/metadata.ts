@@ -44,7 +44,7 @@ export class MetadataController {
     this.onSetValue = modules.onSetValue;
     this._metadata = opts.metadata ?? {
       ...ssz.fulu.Metadata.defaultValue(),
-      cgc: modules.networkConfig.getCustodyConfig().advertisedCustodyGroupCount,
+      custodyGroupCount: modules.networkConfig.getCustodyConfig().advertisedCustodyGroupCount,
     };
   }
 
@@ -63,7 +63,7 @@ export class MetadataController {
     }
 
     // Set CGC regardless of fork. It may be useful to clients before Fulu, and will be ignored otherwise.
-    this.onSetValue(ENRKey.cgc, serializeCgc(this._metadata.cgc));
+    this.onSetValue(ENRKey.cgc, serializeCgc(this._metadata.custodyGroupCount));
   }
 
   get seqNumber(): bigint {
@@ -89,16 +89,16 @@ export class MetadataController {
     this._metadata.attnets = attnets;
   }
 
-  get cgc(): number {
-    return this._metadata.cgc;
+  get custodyGroupCount(): number {
+    return this._metadata.custodyGroupCount;
   }
 
-  set cgc(cgc: number) {
-    if (cgc === this._metadata.cgc) {
+  set custodyGroupCount(custodyGroupCount: number) {
+    if (custodyGroupCount === this._metadata.custodyGroupCount) {
       return;
     }
-    this.onSetValue(ENRKey.cgc, serializeCgc(cgc));
-    this._metadata.cgc = cgc;
+    this.onSetValue(ENRKey.cgc, serializeCgc(custodyGroupCount));
+    this._metadata.custodyGroupCount = custodyGroupCount;
   }
 
   /** Consumers that need the phase0.Metadata type can just ignore the .syncnets property */

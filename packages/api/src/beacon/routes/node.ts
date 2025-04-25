@@ -25,7 +25,7 @@ export const NetworkIdentityType = new ContainerType(
     p2pAddresses: ArrayOf(stringType),
     discoveryAddresses: ArrayOf(stringType),
     /** Based on Ethereum Consensus [Metadata object](https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#metadata) */
-    metadata: ssz.altair.Metadata,
+    metadata: ssz.fulu.Metadata,
   },
   {jsonCase: "eth2"}
 );
