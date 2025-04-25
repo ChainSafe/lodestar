@@ -1,7 +1,7 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, INTERVALS_PER_SLOT, NUMBER_OF_COLUMNS} from "@lodestar/params";
-import {Root, RootHex, deneb} from "@lodestar/types";
+import {ColumnIndex, Root, RootHex, deneb} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {Logger, fromHex, pruneSetToMax, toRootHex} from "@lodestar/utils";
 import {sleep} from "@lodestar/utils";
@@ -303,8 +303,8 @@ export class UnknownBlockSync {
       const {cachedData} = block.blockInput;
       if (cachedData.fork === ForkName.fulu) {
         const {dataColumnsCache} = cachedData as CachedDataColumns;
-        const {custodyConfig} = this.network;
-        const neededColumns = custodyConfig.sampledColumns.reduce((acc, elem) => {
+        const sampledColumns = this.network.custodyConfig.sampledColumns;
+        const neededColumns = sampledColumns.reduce((acc, elem) => {
           if (dataColumnsCache.get(elem) === undefined) {
             acc.push(elem);
           }
@@ -548,8 +548,7 @@ export class UnknownBlockSync {
     let lastError: Error | null = null;
     let partialDownload = null;
     let fetchedPeerId = null;
-    // TODO: should it be loop through MAX_ATTEMPTS_PER_BLOCK instead?
-    for (let i = 0; i < 1; i++) {
+    for (let i = 0; i < MAX_ATTEMPTS_PER_BLOCK; i++) {
       const peer = shuffledPeers[i % shuffledPeers.length];
       if (partialDownload !== null) {
         const [prevBlockInput] = partialDownload.blocks;
@@ -559,8 +558,8 @@ export class UnknownBlockSync {
         const {cachedData} = prevBlockInput;
         if (cachedData.fork === ForkName.fulu) {
           const {dataColumnsCache} = cachedData as CachedDataColumns;
-          const {custodyConfig} = this.network;
-          const neededColumns = custodyConfig.sampledColumns.reduce((acc, elem) => {
+          const sampledColumns = this.network.custodyConfig.sampledColumns;
+          const neededColumns = sampledColumns.reduce((acc, elem) => {
             if (dataColumnsCache.get(elem) === undefined) {
               acc.push(elem);
             }
@@ -655,6 +654,7 @@ export class UnknownBlockSync {
     let blobKzgCommitmentsLen: number | undefined;
     let blockRoot: Uint8Array;
     const dataMeta: Record<string, unknown> = {};
+    let sampledColumns: ColumnIndex[] = [];
 
     if (unavailableBlockInput.block === null) {
       blockRootHex = unavailableBlockInput.blockRootHex;
@@ -671,8 +671,8 @@ export class UnknownBlockSync {
         const pendingBlobs = blobKzgCommitmentsLen - cachedData.blobsCache.size;
         Object.assign(dataMeta, {pendingBlobs});
       } else if (cachedData.fork === ForkName.fulu) {
-        const pendingColumns =
-          this.network.custodyConfig.sampledColumns.length - (cachedData as CachedDataColumns).dataColumnsCache.size;
+        sampledColumns = this.network.custodyConfig.sampledColumns;
+        const pendingColumns = sampledColumns.length - (cachedData as CachedDataColumns).dataColumnsCache.size;
         Object.assign(dataMeta, {pendingColumns});
       }
     }
@@ -684,8 +684,7 @@ export class UnknownBlockSync {
         const {cachedData} = unavailableBlockInput;
         if (cachedData.fork === ForkName.fulu) {
           const {dataColumnsCache} = cachedData as CachedDataColumns;
-          const {custodyConfig} = this.network;
-          const neededColumns = custodyConfig.sampledColumns.reduce((acc, elem) => {
+          const neededColumns = sampledColumns.reduce((acc, elem) => {
             if (dataColumnsCache.get(elem) === undefined) {
               acc.push(elem);
             }
@@ -717,6 +716,7 @@ export class UnknownBlockSync {
             metrics: this.metrics,
             logger: this.logger,
             executionEngine: this.chain.executionEngine,
+            emitter: this.chain.emitter,
             blockInputsRetryTrackerCache: this.blockInputsRetryTrackerCache,
             engineGetBlobsCache: this.engineGetBlobsCache,
           }

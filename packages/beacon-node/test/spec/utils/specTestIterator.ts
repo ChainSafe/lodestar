@@ -67,6 +67,7 @@ export const defaultSkipOpts: SkipOpts = {
     /^capella\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
     /^deneb\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
     /^electra\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
+    /^fulu\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
     /^.+\/light_client\/data_collection\/.*/,
   ],
   skippedTests: [],

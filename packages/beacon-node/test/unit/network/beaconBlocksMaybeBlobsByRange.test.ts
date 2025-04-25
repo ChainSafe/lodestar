@@ -1,12 +1,13 @@
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {deneb, ssz} from "@lodestar/types";
-import {beforeAll, describe, expect, it} from "vitest";
+import {beforeAll, describe, expect, it, vi} from "vitest";
 
 import {BlobsSource, BlockSource, getBlockInput} from "../../../src/chain/blocks/types.js";
 import {ZERO_HASH} from "../../../src/constants/constants.js";
 import {INetwork} from "../../../src/network/interface.js";
 import {beaconBlocksMaybeBlobsByRange} from "../../../src/network/reqresp/index.js";
+import {CustodyConfig} from "../../../src/util/dataColumns.js";
 import {initCKZG, loadEthereumTrustedSetup} from "../../../src/util/kzg.js";
 
 describe.skip("beaconBlocksMaybeBlobsByRange", () => {
@@ -108,6 +109,9 @@ describe.skip("beaconBlocksMaybeBlobsByRange", () => {
         });
       });
 
+      const custodyConfig = new CustodyConfig(new Uint8Array(32), config);
+      custodyConfig.sampledColumns = [2, 4, 6, 8];
+
       const network = {
         sendBeaconBlocksByRange: async () =>
           blocks.map((data) => ({
@@ -115,12 +119,7 @@ describe.skip("beaconBlocksMaybeBlobsByRange", () => {
             bytes: ZERO_HASH,
           })),
         sendBlobSidecarsByRange: async () => blobSidecars,
-        custodyConfig: {
-          custodyColumns: [2, 4, 6, 8],
-          sampledColumns: [2, 4, 6, 8],
-          custodyColumnsIndex: Uint8Array.from(Buffer.alloc(128, 0)),
-          custodyColumnsLen: 4,
-        },
+        custodyConfig,
       } as Partial<INetwork> as INetwork;
 
       const response = await beaconBlocksMaybeBlobsByRange(

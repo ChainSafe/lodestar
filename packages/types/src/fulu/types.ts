@@ -1,6 +1,9 @@
 import {ValueOf} from "@chainsafe/ssz";
 import * as ssz from "./sszTypes.js";
 
+export type KZGProof = ValueOf<typeof ssz.KZGProof>;
+export type Blob = ValueOf<typeof ssz.Blob>;
+
 export type Metadata = ValueOf<typeof ssz.Metadata>;
 
 export type Cell = ValueOf<typeof ssz.Cell>;
@@ -44,3 +47,7 @@ export type LightClientStore = ValueOf<typeof ssz.LightClientStore>;
 export type BlockContents = ValueOf<typeof ssz.BlockContents>;
 export type SignedBlockContents = ValueOf<typeof ssz.SignedBlockContents>;
 export type Contents = Omit<BlockContents, "block">;
+export type BlobAndProofV2 = {
+  blob: Blob;
+  proofs: KZGProof[];
+};

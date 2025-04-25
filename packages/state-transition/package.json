@@ -58,9 +58,9 @@
   },
   "types": "lib/index.d.ts",
   "dependencies": {
-    "@chainsafe/as-sha256": "^1.0.0",
+    "@chainsafe/as-sha256": "^1.1.0",
     "@chainsafe/blst": "^2.1.0",
-    "@chainsafe/persistent-merkle-tree": "^1.0.1",
+    "@chainsafe/persistent-merkle-tree": "^1.1.0",
     "@chainsafe/persistent-ts": "^1.0.0",
     "@chainsafe/pubkey-index-map": "2.0.0",
     "@chainsafe/ssz": "^1.2.0",

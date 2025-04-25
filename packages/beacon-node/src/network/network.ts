@@ -28,12 +28,14 @@ import {
   phase0,
 } from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
-import {IBeaconChain} from "../chain/index.js";
+import {ChainEvent, IBeaconChain} from "../chain/index.js";
+import {computeSubnetForDataColumnSidecar} from "../chain/validation/dataColumnSidecar.js";
 import {IBeaconDb} from "../db/interface.js";
 import {Metrics, RegistryMetricCreator} from "../metrics/index.js";
 import {IClock} from "../util/clock.js";
 import {CustodyConfig} from "../util/dataColumns.js";
 import {PeerIdStr, peerIdToString} from "../util/peerId.js";
+import {promiseAllMaybeAsync} from "../util/promises.js";
 import {BlobSidecarsByRootRequest} from "../util/types.js";
 import {INetworkCore, NetworkCore, WorkerNetworkCore} from "./core/index.js";
 import {INetworkEventBus, NetworkEvent, NetworkEventBus, NetworkEventData} from "./events.js";
@@ -139,6 +141,9 @@ export class Network implements INetwork {
     this.chain.emitter.on(routes.events.EventType.lightClientOptimisticUpdate, ({data}) =>
       this.onLightClientOptimisticUpdate(data)
     );
+    this.chain.emitter.on(ChainEvent.updateTargetGroupCount, this.onTargetGroupCountUpdated);
+    this.chain.emitter.on(ChainEvent.updateAdvertisedGroupCount, this.onAdvertisedGroupCountUpdated);
+    this.chain.emitter.on(ChainEvent.publishDataColumns, this.onPublishDataColumns);
   }
 
   static async init({
@@ -232,6 +237,9 @@ export class Network implements INetwork {
     this.chain.emitter.off(routes.events.EventType.head, this.onHead);
     this.chain.emitter.off(routes.events.EventType.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
     this.chain.emitter.off(routes.events.EventType.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
+    this.chain.emitter.off(ChainEvent.updateTargetGroupCount, this.onTargetGroupCountUpdated);
+    this.chain.emitter.off(ChainEvent.updateAdvertisedGroupCount, this.onAdvertisedGroupCountUpdated);
+    this.chain.emitter.off(ChainEvent.publishDataColumns, this.onPublishDataColumns);
     await this.core.close();
     this.logger.debug("network core closed");
   }
@@ -355,9 +363,9 @@ export class Network implements INetwork {
   async publishDataColumnSidecar(dataColumnSidecar: fulu.DataColumnSidecar): Promise<number> {
     const slot = dataColumnSidecar.signedBlockHeader.message.slot;
     const fork = this.config.getForkName(slot);
-    const index = dataColumnSidecar.index % DATA_COLUMN_SIDECAR_SUBNET_COUNT;
+    const subnet = computeSubnetForDataColumnSidecar(dataColumnSidecar);
     return this.publishGossip<GossipType.data_column_sidecar>(
-      {type: GossipType.data_column_sidecar, fork, index},
+      {type: GossipType.data_column_sidecar, fork, subnet},
       dataColumnSidecar,
       {
         ignoreDuplicatePublishError: true,
@@ -706,5 +714,17 @@ export class Network implements INetwork {
 
   private onPeerDisconnected = (data: NetworkEventData[NetworkEvent.peerDisconnected]): void => {
     this.connectedPeers.delete(data.peer);
+  };
+
+  private onTargetGroupCountUpdated = (count: number): void => {
+    this.core.setTargetGroupCount(count);
+  };
+
+  private onAdvertisedGroupCountUpdated = (count: number): void => {
+    this.core.setAdvertisedGroupCount(count);
+  };
+
+  private onPublishDataColumns = (sidecars: fulu.DataColumnSidecar[]): Promise<number[]> => {
+    return promiseAllMaybeAsync(sidecars.map((sidecar) => () => this.publishDataColumnSidecar(sidecar)));
   };
 }

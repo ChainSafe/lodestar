@@ -69,7 +69,6 @@ function maybeUpdateEnr<T extends "ip" | "tcp" | "udp" | "ip6" | "tcp6" | "udp6"
 }
 
 export function overwriteEnrWithCliArgs(
-  config: ChainForkConfig,
   enr: SignableENR,
   args: BeaconArgs,
   logger: Logger,
@@ -86,10 +85,6 @@ export function overwriteEnrWithCliArgs(
     maybeUpdateEnr(enr, "tcp", args["enr.tcp"] ?? port ?? enr.tcp);
     maybeUpdateEnr(enr, "tcp6", args["enr.tcp6"] ?? port6 ?? enr.tcp6);
   }
-
-  // cgc is big ending but since 1 bytes suffices for now so its the same
-  const cgc = Math.max(config.CUSTODY_REQUIREMENT, config.NODE_CUSTODY_REQUIREMENT);
-  enr.set("cgc", intToBytes(cgc, Math.ceil(Math.log2(cgc + 1) / 8), "be"));
 
   function testMultiaddrForLocal(mu: Multiaddr, ip4: boolean): void {
     const isLocal = isLocalMultiAddr(mu);
@@ -142,7 +137,6 @@ export function overwriteEnrWithCliArgs(
  * Create new PeerId and ENR by default, unless persistNetworkIdentity is provided
  */
 export async function initPeerIdAndEnr(
-  config: ChainForkConfig,
   args: BeaconArgs,
   beaconDir: string,
   logger: Logger,
@@ -187,13 +181,11 @@ export async function initPeerIdAndEnr(
     return {peerId, enr, newEnr: false};
   };
 
-  console.log({persistNetworkIdentity});
-
   if (persistNetworkIdentity) {
     const enrFile = path.join(beaconDir, "enr");
     const peerIdFile = path.join(beaconDir, "peer-id.json");
     const {peerId, enr, newEnr} = await readPersistedPeerIdAndENR(peerIdFile, enrFile);
-    overwriteEnrWithCliArgs(config, enr, args, logger, {newEnr, bootnode});
+    overwriteEnrWithCliArgs(enr, args, logger, {newEnr, bootnode});
     // Re-persist peer-id and enr
     writeFile600Perm(peerIdFile, exportToJSON(peerId));
     writeFile600Perm(enrFile, enr.encodeTxt());
@@ -202,7 +194,7 @@ export async function initPeerIdAndEnr(
   }
 
   const {peerId, enr} = await newPeerIdAndENR();
-  overwriteEnrWithCliArgs(config, enr, args, logger, {newEnr: true, bootnode});
+  overwriteEnrWithCliArgs(enr, args, logger, {newEnr: true, bootnode});
   const nodeId = fromHex(enr.nodeId);
   return {peerId, enr, nodeId};
 }

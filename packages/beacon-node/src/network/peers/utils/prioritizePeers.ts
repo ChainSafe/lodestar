@@ -91,7 +91,7 @@ export function prioritizePeers(
   }[],
   activeAttnets: RequestedSubnet[],
   activeSyncnets: RequestedSubnet[],
-  samplingGroups: CustodyIndex[] = [],
+  samplingGroups: CustodyIndex[] | undefined,
   opts: PrioritizePeersOpts,
   metrics: NetworkCoreMetrics | null
 ): {
@@ -162,7 +162,7 @@ function requestSubnetPeers(
   connectedPeers: PeerInfo[],
   activeAttnets: RequestedSubnet[],
   activeSyncnets: RequestedSubnet[],
-  samplingGroups: CustodyIndex[] = [],
+  samplingGroups: CustodyIndex[] | undefined,
   opts: PrioritizePeersOpts,
   metrics: NetworkCoreMetrics | null
 ): {
@@ -241,13 +241,15 @@ function requestSubnetPeers(
     }
   }
 
-  for (const group of samplingGroups) {
+  let groupIndex = 0;
+  for (const group of samplingGroups ?? []) {
     const peersInGroup = peersPerGroup.get(group) ?? 0;
-    metrics?.peerCountPerSamplingGroup.set({group}, peersInGroup);
+    metrics?.peerCountPerSamplingGroup.set({groupIndex}, peersInGroup);
     if (peersInGroup < targetGroupPeers) {
       // We need more peers
       groupQueries.set(group, targetGroupPeers - peersInGroup);
     }
+    groupIndex++;
   }
 
   return {attnetQueries, syncnetQueries, groupQueries, dutiesByPeer};

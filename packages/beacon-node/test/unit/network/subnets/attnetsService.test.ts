@@ -13,10 +13,12 @@ import {bigIntToBytes} from "@lodestar/utils";
 import {MockedObject, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {Eth2Gossipsub} from "../../../../src/network/gossip/gossipsub.js";
 import {MetadataController} from "../../../../src/network/metadata.js";
+import {NetworkConfig} from "../../../../src/network/networkConfig.js";
 import {AttnetsService} from "../../../../src/network/subnets/attnetsService.js";
 import {CommitteeSubscription} from "../../../../src/network/subnets/interface.js";
 import {Clock, IClock} from "../../../../src/util/clock.js";
 import {testLogger} from "../../../utils/logger.js";
+import {getValidPeerId} from "../../../utils/peer.js";
 
 vi.mock("../../../../src/network/gossip/gossipsub.js");
 
@@ -28,6 +30,7 @@ describe("AttnetsService", () => {
   );
   const ALTAIR_FORK_EPOCH = 100;
   const config = createBeaconConfig({ALTAIR_FORK_EPOCH}, ZERO_HASH);
+  const networkConfig = new NetworkConfig(getValidPeerId(), config);
   // const {SECONDS_PER_SLOT} = config;
   let service: AttnetsService;
   let gossipStub: MockedObject<Eth2Gossipsub>;
@@ -51,7 +54,7 @@ describe("AttnetsService", () => {
 
     // load getCurrentSlot first, vscode not able to debug without this
     getCurrentSlot(config, Math.floor(Date.now() / 1000));
-    metadata = new MetadataController({}, {config, onSetValue: () => null});
+    metadata = new MetadataController({}, {networkConfig, onSetValue: () => null});
     service = new AttnetsService(config, clock, gossipStub, metadata, logger, null, nodeId, {
       slotsToSubscribeBeforeAggregatorDuty: 2,
     });

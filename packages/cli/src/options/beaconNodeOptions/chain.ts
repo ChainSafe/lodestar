@@ -11,6 +11,7 @@ export type ChainArgs = {
   "chain.disableBlsBatchVerify"?: boolean;
   "chain.persistProducedBlocks"?: boolean;
   "chain.persistInvalidSszObjects"?: boolean;
+  "chain.noValidatorCustody"?: boolean;
   // No need to define chain.persistInvalidSszObjects as part of ChainArgs
   // as this is defined as part of BeaconPaths
   // "chain.persistInvalidSszObjectsDir": string;
@@ -30,7 +31,7 @@ export type ChainArgs = {
   "chain.minSameMessageSignatureSetsToBatch"?: number;
   "chain.maxShufflingCacheEpochs"?: number;
   "chain.archiveStateEpochFrequency": number;
-  "chain.archiveBlobEpochs"?: number;
+  "chain.archiveDataEpochs"?: number;
   "chain.archiveMode": ArchiveMode;
   "chain.nHistoricalStates"?: boolean;
   "chain.nHistoricalStatesFileDataStore"?: boolean;
@@ -68,7 +69,7 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
       args["chain.minSameMessageSignatureSetsToBatch"] ?? defaultOptions.chain.minSameMessageSignatureSetsToBatch,
     maxShufflingCacheEpochs: args["chain.maxShufflingCacheEpochs"] ?? defaultOptions.chain.maxShufflingCacheEpochs,
     archiveStateEpochFrequency: args["chain.archiveStateEpochFrequency"],
-    archiveBlobEpochs: args["chain.archiveBlobEpochs"],
+    archiveDataEpochs: args["chain.archiveDataEpochs"],
     archiveMode: args["chain.archiveMode"] ?? defaultOptions.chain.archiveMode,
     nHistoricalStates: args["chain.nHistoricalStates"] ?? defaultOptions.chain.nHistoricalStates,
     nHistoricalStatesFileDataStore:
@@ -76,6 +77,7 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     maxBlockStates: args["chain.maxBlockStates"] ?? defaultOptions.chain.maxBlockStates,
     maxCPStateEpochsInMemory: args["chain.maxCPStateEpochsInMemory"] ?? defaultOptions.chain.maxCPStateEpochsInMemory,
     pruneHistory: args["chain.pruneHistory"],
+    noValidatorCustody: args["chain.noValidatorCustody"],
   };
 }
 
@@ -274,7 +276,7 @@ Will double processing times. Use only for debugging purposes.",
     group: "chain",
   },
 
-  "chain.archiveBlobEpochs": {
+  "chain.archiveDataEpochs": {
     description: "Number of epochs to retain finalized blobs (minimum of MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS)",
     type: "number",
     group: "chain",
@@ -318,6 +320,13 @@ Will double processing times. Use only for debugging purposes.",
     description: "Prune historical blocks and state",
     type: "boolean",
     default: defaultOptions.chain.pruneHistory,
+    group: "chain",
+  },
+
+  "chain.noValidatorCustody": {
+    type: "boolean",
+    description: "Disable dynamic updates to validator custody requirements",
+    defaultDescription: "false",
     group: "chain",
   },
 };

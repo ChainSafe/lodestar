@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import {ENR, SignableENR, createPrivateKeyFromPeerId} from "@chainsafe/enr";
 import {createFromJSON, createSecp256k1PeerId} from "@libp2p/peer-id-factory";
-import {chainConfigToJson, createChainForkConfig} from "@lodestar/config";
+import {chainConfigToJson} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {LogLevel} from "@lodestar/utils";
 import {multiaddr} from "@multiformats/multiaddr";
@@ -13,8 +13,6 @@ import {BeaconArgs} from "../../../src/cmds/beacon/options.js";
 import {exportToJSON} from "../../../src/config/peerId.js";
 import {GlobalArgs} from "../../../src/options/globalOptions.js";
 import {testFilesDir, testLogger} from "../../utils.js";
-
-const chainForkConfig = createChainForkConfig(chainConfig);
 
 describe("cmds / beacon / args handler", () => {
   // Make tests faster skipping a network call
@@ -120,13 +118,11 @@ describe("Test isLocalMultiAddr", () => {
 describe("initPeerIdAndEnr", () => {
   it("should not reuse peer id, persistNetworkIdentity=false", async () => {
     const {peerId: peerId1} = await initPeerIdAndEnr(
-      chainForkConfig,
       {persistNetworkIdentity: false} as BeaconArgs,
       testFilesDir,
       testLogger()
     );
     const {peerId: peerId2} = await initPeerIdAndEnr(
-      chainForkConfig,
       {persistNetworkIdentity: false} as BeaconArgs,
       testFilesDir,
       testLogger()
@@ -137,13 +133,11 @@ describe("initPeerIdAndEnr", () => {
 
   it("should reuse peer id, persistNetworkIdentity=true", async () => {
     const {peerId: peerId1} = await initPeerIdAndEnr(
-      chainForkConfig,
       {persistNetworkIdentity: true} as BeaconArgs,
       testFilesDir,
       testLogger()
     );
     const {peerId: peerId2} = await initPeerIdAndEnr(
-      chainForkConfig,
       {persistNetworkIdentity: true} as BeaconArgs,
       testFilesDir,
       testLogger()
@@ -157,7 +151,6 @@ describe("initPeerIdAndEnr", () => {
     const peerId1Str = "wrong peer id file content";
     fs.writeFileSync(peerIdFile, peerId1Str);
     const {peerId: peerId2} = await initPeerIdAndEnr(
-      chainForkConfig,
       {persistNetworkIdentity: true} as BeaconArgs,
       testFilesDir,
       testLogger()
@@ -173,7 +166,7 @@ describe("initPeerIdAndEnr", () => {
     const invalidEnr = "wrong enr file content";
     fs.writeFileSync(enrFilePath, invalidEnr);
 
-    await initPeerIdAndEnr(chainForkConfig, {persistNetworkIdentity: true} as BeaconArgs, testFilesDir, testLogger());
+    await initPeerIdAndEnr({persistNetworkIdentity: true} as BeaconArgs, testFilesDir, testLogger());
 
     const validEnr = fs.readFileSync(enrFilePath, "utf-8");
 
@@ -187,12 +180,7 @@ describe("initPeerIdAndEnr", () => {
     const otherEnrStr = otherEnr.encodeTxt();
     fs.writeFileSync(enrFilePath, otherEnrStr);
 
-    const {enr} = await initPeerIdAndEnr(
-      chainForkConfig,
-      {persistNetworkIdentity: true} as BeaconArgs,
-      testFilesDir,
-      testLogger()
-    );
+    const {enr} = await initPeerIdAndEnr({persistNetworkIdentity: true} as BeaconArgs, testFilesDir, testLogger());
 
     expect(enr.nodeId).not.toBe(otherEnr);
   });

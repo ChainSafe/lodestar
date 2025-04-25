@@ -4,7 +4,7 @@ import {StrictEventEmitter} from "strict-event-emitter-types";
 import {routes} from "@lodestar/api";
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {phase0} from "@lodestar/types";
+import {fulu, phase0} from "@lodestar/types";
 
 /**
  * Important chain events that occur during normal chain operation.
@@ -34,6 +34,19 @@ export enum ChainEvent {
    * This event is guaranteed to be triggered whenever the fork choice justified checkpoint is updated. This is in response to a newly processed block.
    */
   forkChoiceFinalized = "forkChoice:finalized",
+  /**
+   * This event signals that dependent services (e.g. custody sampling) should update to account for the new target group count.
+   */
+  updateTargetGroupCount = "updateTargetGroupCount",
+  /**
+   * This event signals that the chain is ready to advertise the given group count to the network.
+   */
+  updateAdvertisedGroupCount = "updateAdvertisedGroupCount",
+  /**
+   * This event signals that data columns have been fetched from the execution engine
+   * and are ready to be published.
+   */
+  publishDataColumns = "publishDataColumns",
 }
 
 export type HeadEventData = routes.events.EventData[routes.events.EventType.head];
@@ -47,6 +60,11 @@ export type IChainEvents = ApiEvents & {
 
   [ChainEvent.forkChoiceJustified]: (checkpoint: CheckpointWithHex) => void;
   [ChainEvent.forkChoiceFinalized]: (checkpoint: CheckpointWithHex) => void;
+
+  [ChainEvent.updateTargetGroupCount]: (targetGroupCount: number) => void;
+  [ChainEvent.updateAdvertisedGroupCount]: (advertisedGroupCount: number) => void;
+
+  [ChainEvent.publishDataColumns]: (sidecars: fulu.DataColumnSidecar[]) => void;
 };
 
 /**

@@ -1,37 +1,139 @@
 import {fromHexString} from "@chainsafe/ssz";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {NUMBER_OF_COLUMNS} from "@lodestar/params";
+import {ChainForkConfig} from "@lodestar/config";
+import {NUMBER_OF_COLUMNS, NUMBER_OF_CUSTODY_GROUPS} from "@lodestar/params";
+import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
+import {ValidatorIndex} from "@lodestar/types";
 import {bigIntToBytes} from "@lodestar/utils";
 /* eslint-disable @typescript-eslint/naming-convention */
-import {afterEach, beforeAll, describe, expect, it} from "vitest";
+import {afterEach, beforeAll, beforeEach, describe, expect, it} from "vitest";
 
 import {validateDataColumnsSidecars} from "../../../src/chain/validation/dataColumnSidecar.js";
 import {computeDataColumnSidecars} from "../../../src/util/blobs.js";
-import {computeCustodyConfig, getDataColumns} from "../../../src/util/dataColumns.js";
+import {CustodyConfig, getDataColumns, getValidatorsCustodyRequirement} from "../../../src/util/dataColumns.js";
 import {ckzg, initCKZG, loadEthereumTrustedSetup} from "../../../src/util/kzg.js";
 import {getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
 import {generateRandomBlob, transactionForKzgCommitment} from "../../utils/kzg.js";
 
-describe("getCustodyConfig", () => {
-  it("validateDataColumnsSidecars", () => {
-    const config = createChainForkConfig({
+describe("getValidatorsCustodyRequirement", () => {
+  let state: CachedBeaconStateAllForks;
+  let config: ChainForkConfig;
+
+  beforeEach(() => {
+    // Create a mock state with validators effective balance increments
+    state = {
+      epochCtx: {
+        effectiveBalanceIncrements: new Uint8Array(NUMBER_OF_CUSTODY_GROUPS + 1).fill(32), // Each validator has 32 ETH (1 increment)
+      },
+    } as unknown as CachedBeaconStateAllForks;
+
+    // Create a proper config using createChainForkConfig
+    config = createChainForkConfig({
+      ...defaultChainConfig,
       ALTAIR_FORK_EPOCH: 0,
       BELLATRIX_FORK_EPOCH: 0,
       CAPELLA_FORK_EPOCH: 0,
       DENEB_FORK_EPOCH: 0,
       ELECTRA_FORK_EPOCH: 0,
       FULU_FORK_EPOCH: Infinity,
+      BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: 32000000000, // 32 ETH per group
+      VALIDATOR_CUSTODY_REQUIREMENT: 8,
+      CUSTODY_REQUIREMENT: 4,
     });
-    const nodeId = fromHexString("cdbee32dc3c50e9711d22be5565c7e44ff6108af663b2dc5abd2df573d2fa83f");
-    const custodyConfig = computeCustodyConfig(nodeId, config);
-    const {custodyColumnsLen, custodyColumns, sampledColumns} = custodyConfig;
+  });
 
-    expect(custodyColumnsLen).toEqual(4);
+  it("should return minimum requirement when total balance is below the balance per additional custody group", () => {
+    const validatorIndices: ValidatorIndex[] = [0, 1]; // 2 validators with 32 ETH each = 64 ETH total
+    const result = getValidatorsCustodyRequirement(state, validatorIndices, config);
+    expect(result).toBe(config.VALIDATOR_CUSTODY_REQUIREMENT);
+  });
+
+  it("should calculate correct number of groups based on total balance", () => {
+    // Create a state with 10 validators with 32 ETH each = 320 ETH total
+    const validatorIndices: ValidatorIndex[] = Array.from({length: 10}, (_, i) => i as ValidatorIndex);
+    const result = getValidatorsCustodyRequirement(state, validatorIndices, config);
+    expect(result).toBe(10);
+  });
+
+  it("should cap at maximum number of custody groups", () => {
+    // Create a state with enough validators to exceed max groups
+    const validatorIndices: ValidatorIndex[] = Array.from(
+      {length: NUMBER_OF_CUSTODY_GROUPS + 1},
+      (_, i) => i as ValidatorIndex
+    );
+    const result = getValidatorsCustodyRequirement(state, validatorIndices, config);
+    expect(result).toBe(NUMBER_OF_CUSTODY_GROUPS);
+  });
+
+  it("should handle zero validators", () => {
+    const validatorIndices: ValidatorIndex[] = [];
+    const result = getValidatorsCustodyRequirement(state, validatorIndices, config);
+    expect(result).toBe(config.CUSTODY_REQUIREMENT);
+  });
+});
+
+describe("CustodyConfig", () => {
+  let config: ChainForkConfig;
+  const nodeId = fromHexString("cdbee32dc3c50e9711d22be5565c7e44ff6108af663b2dc5abd2df573d2fa83f");
+
+  beforeEach(() => {
+    // Create a proper config using createChainForkConfig
+    config = createChainForkConfig({
+      ...defaultChainConfig,
+      ALTAIR_FORK_EPOCH: 0,
+      BELLATRIX_FORK_EPOCH: 0,
+      CAPELLA_FORK_EPOCH: 0,
+      DENEB_FORK_EPOCH: 0,
+      ELECTRA_FORK_EPOCH: 0,
+      FULU_FORK_EPOCH: Infinity,
+      BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: 32000000000, // 32 ETH per group
+      VALIDATOR_CUSTODY_REQUIREMENT: 6,
+      CUSTODY_REQUIREMENT: 4,
+      SAMPLES_PER_SLOT: 8,
+    });
+  });
+
+  it("custody columns present in sampled columns", () => {
+    const custodyConfig = new CustodyConfig(nodeId, config);
+    const {custodyColumns} = custodyConfig;
+    const sampledColumns = custodyConfig.sampledColumns;
+
+    expect(custodyColumns.length).toEqual(4);
     expect(custodyColumns).toEqual([2, 80, 89, 118]);
     expect(sampledColumns.length).toEqual(8);
     const custodyPresentInSample = custodyColumns.reduce((acc, elem) => acc && sampledColumns.includes(elem), true);
     expect(custodyPresentInSample).toEqual(true);
+  });
+
+  describe("updateCustodyRequirement", () => {
+    it("should update target and sampled but not advertised", () => {
+      const custodyConfig = new CustodyConfig(nodeId, config);
+
+      expect(custodyConfig.sampledGroupCount).toBe(8);
+      expect(custodyConfig.targetCustodyGroupCount).toBe(4);
+      expect(custodyConfig.advertisedCustodyGroupCount).toBe(4);
+
+      custodyConfig.updateTargetCustodyGroupCount(6);
+
+      expect(custodyConfig.sampledGroupCount).toBe(8);
+      expect(custodyConfig.targetCustodyGroupCount).toBe(6);
+      expect(custodyConfig.advertisedCustodyGroupCount).toBe(4);
+    });
+
+    it("should update advertised but not target or sampled", () => {
+      const custodyConfig = new CustodyConfig(nodeId, config);
+
+      expect(custodyConfig.sampledGroupCount).toBe(8);
+      expect(custodyConfig.targetCustodyGroupCount).toBe(4);
+      expect(custodyConfig.advertisedCustodyGroupCount).toBe(4);
+
+      custodyConfig.updateAdvertisedCustodyGroupCount(3);
+
+      expect(custodyConfig.sampledGroupCount).toBe(8);
+      expect(custodyConfig.targetCustodyGroupCount).toBe(4);
+      expect(custodyConfig.advertisedCustodyGroupCount).toBe(3);
+    });
   });
 });
 
@@ -106,7 +208,7 @@ describe("data column sidecars", () => {
     expect(columnSidecars.length).toEqual(NUMBER_OF_COLUMNS);
     expect(columnSidecars[0].column.length).toEqual(blobs.length);
 
-    expect(validateDataColumnsSidecars(slot, blockRoot, kzgCommitments, columnSidecars)).toBeUndefined();
+    expect(validateDataColumnsSidecars(slot, blockRoot, kzgCommitments, columnSidecars, null)).toBeUndefined();
   });
 
   it("fail for no blob commitments in validateDataColumnsSidecars", () => {
@@ -144,7 +246,7 @@ describe("data column sidecars", () => {
     expect(columnSidecars.length).toEqual(NUMBER_OF_COLUMNS);
     expect(columnSidecars[0].column.length).toEqual(blobs.length);
 
-    expect(() => validateDataColumnsSidecars(slot, blockRoot, [], columnSidecars)).toThrow(
+    expect(() => validateDataColumnsSidecars(slot, blockRoot, [], columnSidecars, null)).toThrow(
       `Invalid data column sidecar slot=${slot}`
     );
   });

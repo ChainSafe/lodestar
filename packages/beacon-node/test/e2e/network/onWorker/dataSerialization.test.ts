@@ -151,6 +151,8 @@ describe("data serialization through worker boundary", () => {
     scrapeMetrics: [],
     writeProfile: [0, ""],
     writeDiscv5Profile: [0, ""],
+    setTargetGroupCount: [4],
+    setAdvertisedGroupCount: [4],
   };
 
   const lodestarPeer: routes.lodestar.LodestarNodePeer = {
@@ -214,6 +216,8 @@ describe("data serialization through worker boundary", () => {
     scrapeMetrics: "test-metrics",
     writeProfile: "",
     writeDiscv5Profile: "",
+    setAdvertisedGroupCount: null,
+    setTargetGroupCount: null,
   };
 
   type TestCase = {id: string; data: unknown; shouldFail?: boolean};

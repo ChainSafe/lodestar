@@ -17,6 +17,9 @@ import {ssz as primitiveSsz} from "../primitive/index.js";
 
 const {BLSSignature, Root, ColumnIndex, RowIndex, Bytes32, Slot, UintNum64} = primitiveSsz;
 
+export const KZGProof = denebSsz.KZGProof;
+export const Blob = denebSsz.Blob;
+
 export const Metadata = new ContainerType(
   {
     ...altariSsz.Metadata.fields,

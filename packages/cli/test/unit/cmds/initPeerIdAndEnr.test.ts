@@ -1,13 +1,9 @@
 import fs from "node:fs";
-import {createChainForkConfig} from "@lodestar/config";
-import {chainConfig} from "@lodestar/config/default";
 import tmp from "tmp";
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {initPeerIdAndEnr} from "../../../src/cmds/beacon/initPeerIdAndEnr.js";
 import {BeaconArgs} from "../../../src/cmds/beacon/options.js";
 import {testLogger} from "../../utils.js";
-
-const chainForkConfig = createChainForkConfig(chainConfig);
 
 describe("initPeerIdAndEnr", () => {
   let tmpDir: tmp.DirResult;
@@ -22,7 +18,6 @@ describe("initPeerIdAndEnr", () => {
 
   it("first time should create a new enr and peer id", async () => {
     const {enr, peerId} = await initPeerIdAndEnr(
-      chainForkConfig,
       {persistNetworkIdentity: true} as unknown as BeaconArgs,
       tmpDir.name,
       testLogger(),
@@ -35,9 +30,8 @@ describe("initPeerIdAndEnr", () => {
     expect(enr.tcp6).toBeUndefined();
   });
 
-  it("second time should use ths existing enr and peer id", async () => {
+  it("second time should use the existing enr and peer id", async () => {
     const run1 = await initPeerIdAndEnr(
-      chainForkConfig,
       {persistNetworkIdentity: true} as unknown as BeaconArgs,
       tmpDir.name,
       testLogger(),
@@ -45,7 +39,6 @@ describe("initPeerIdAndEnr", () => {
     );
 
     const run2 = await initPeerIdAndEnr(
-      chainForkConfig,
       {persistNetworkIdentity: true} as unknown as BeaconArgs,
       tmpDir.name,
       testLogger(),

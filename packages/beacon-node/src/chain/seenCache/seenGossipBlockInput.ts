@@ -1,19 +1,19 @@
 import {toHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {BLOBSIDECAR_FIXED_SIZE, ForkName, NUMBER_OF_COLUMNS, isForkPostDeneb} from "@lodestar/params";
+import {ForkName, NUMBER_OF_COLUMNS, isForkPostDeneb} from "@lodestar/params";
 import {RootHex, SignedBeaconBlock, deneb, fulu, ssz} from "@lodestar/types";
-import {pruneSetToMax, toRootHex} from "@lodestar/utils";
+import {Logger, pruneSetToMax} from "@lodestar/utils";
 
+import {IExecutionEngine} from "../../execution/index.js";
 import {Metrics} from "../../metrics/index.js";
-import {CustodyConfig} from "../../util/dataColumns.js";
-import {SerializedCache} from "../../util/serializedCache.js";
+import {CustodyConfig, getDataColumnsFromExecution, hasSampledDataColumns} from "../../util/dataColumns.js";
+import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {
   BlobsSource,
   BlockInput,
   BlockInputBlobs,
   BlockInputDataColumns,
   BlockSource,
-  CachedBlobs,
   CachedData,
   CachedDataColumns,
   DataColumnsSource,
@@ -23,6 +23,9 @@ import {
   getBlockInputBlobs,
   getBlockInputDataColumns,
 } from "../blocks/types.js";
+import {ChainEventEmitter} from "../emitter.js";
+import {DataColumnSidecarErrorCode, DataColumnSidecarGossipError} from "../errors/dataColumnSidecarError.js";
+import {GossipAction} from "../errors/gossipValidation.js";
 
 export enum BlockInputAvailabilitySource {
   GOSSIP = "gossip",
@@ -38,7 +41,7 @@ type GossipedBlockInput =
       dataColumnBytes: Uint8Array | null;
     };
 
-type BlockInputCacheType = {
+export type BlockInputCacheType = {
   fork: ForkName;
   block?: SignedBeaconBlock;
   cachedData?: CachedData;
@@ -79,10 +82,22 @@ const MAX_GOSSIPINPUT_CACHE = 5;
  * block are seen by SeenGossipBlockInput
  */
 export class SeenGossipBlockInput {
-  private blockInputCache = new Map<RootHex, BlockInputCacheType>();
-  custodyConfig: CustodyConfig;
-  constructor(custodyConfig: CustodyConfig) {
+  private readonly blockInputCache = new Map<RootHex, BlockInputCacheType>();
+  private readonly custodyConfig: CustodyConfig;
+  private readonly executionEngine: IExecutionEngine;
+  private readonly emitter: ChainEventEmitter;
+  private readonly logger: Logger;
+
+  constructor(
+    custodyConfig: CustodyConfig,
+    executionEngine: IExecutionEngine,
+    emitter: ChainEventEmitter,
+    logger: Logger
+  ) {
     this.custodyConfig = custodyConfig;
+    this.executionEngine = executionEngine;
+    this.emitter = emitter;
+    this.logger = logger;
   }
   globalCacheId = 0;
 
@@ -92,6 +107,34 @@ export class SeenGossipBlockInput {
 
   hasBlock(blockRoot: RootHex): boolean {
     return this.blockInputCache.has(blockRoot);
+  }
+
+  /**
+   * Intended to be used for gossip validation, specifically this check:
+   * [IGNORE] The sidecar is the first sidecar for the tuple (block_header.slot, block_header.proposer_index,
+   *          sidecar.index) with valid header signature, sidecar inclusion proof, and kzg proof
+   */
+  hasDataColumnSidecar(sidecar: fulu.DataColumnSidecar) {
+    const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(sidecar.signedBlockHeader.message);
+    const blockRootHex = toHexString(blockRoot);
+
+    const blockCache = this.blockInputCache.get(blockRootHex);
+    if (blockCache === undefined) {
+      return false;
+    }
+    if (blockCache.cachedData === undefined || blockCache.cachedData.fork !== ForkName.fulu) {
+      return false;
+    }
+    const existingSidecar = blockCache.cachedData.dataColumnsCache.get(sidecar.index);
+    if (!existingSidecar) {
+      return false;
+    }
+    return (
+      sidecar.signedBlockHeader.message.slot === existingSidecar.dataColumn.signedBlockHeader.message.slot &&
+      sidecar.index === existingSidecar.dataColumn.index &&
+      sidecar.signedBlockHeader.message.proposerIndex ===
+        existingSidecar.dataColumn.signedBlockHeader.message.proposerIndex
+    );
   }
 
   getGossipBlockInput(
@@ -134,11 +177,18 @@ export class SeenGossipBlockInput {
       blockHex = toHexString(blockRoot);
       blockCache = this.blockInputCache.get(blockHex) ?? getEmptyBlockInputCacheEntry(fork, ++this.globalCacheId);
       if (blockCache.cachedData?.fork !== ForkName.fulu) {
-        throw Error(`blob data at non fulu fork=${blockCache.fork}`);
+        throw Error(`data column data at non fulu fork=${blockCache.fork}`);
       }
 
-      // TODO: freetheblobs check if its the same blob or a duplicate and throw/take actions
-      (blockCache.cachedData as CachedDataColumns)?.dataColumnsCache.set(dataColumnSidecar.index, {
+      if (this.hasDataColumnSidecar(dataColumnSidecar)) {
+        throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
+          code: DataColumnSidecarErrorCode.ALREADY_KNOWN,
+          slot: dataColumnSidecar.signedBlockHeader.message.slot,
+          columnIdx: dataColumnSidecar.index,
+        });
+      }
+
+      blockCache.cachedData?.dataColumnsCache.set(dataColumnSidecar.index, {
         dataColumn: dataColumnSidecar,
         // easily splice out the unsigned message as blob is a fixed length type
         dataColumnBytes: dataColumnBytes?.slice(0, dataColumnBytes.length) ?? null,
@@ -150,6 +200,15 @@ export class SeenGossipBlockInput {
 
     if (!this.blockInputCache.has(blockHex)) {
       this.blockInputCache.set(blockHex, blockCache);
+      callInNextEventLoop(() => {
+        getDataColumnsFromExecution(config, this.custodyConfig, this.executionEngine, this.emitter, blockCache)
+          .then((_success) => {
+            // TODO: (@matthewkeil) add metrics collection point here
+          })
+          .catch((error) => {
+            this.logger.error("Error getting data columns from execution", {blockHex}, error);
+          });
+      });
     }
 
     const {block: signedBlock, blockInputPromise, resolveBlockInput, cachedData} = blockCache;
@@ -247,14 +306,7 @@ export class SeenGossipBlockInput {
           };
         }
 
-        const sampledIndexesPresent =
-          dataColumnsCache.size >= this.custodyConfig.sampledColumns.length &&
-          this.custodyConfig.sampledColumns.reduce(
-            (acc, columnIndex) => acc && dataColumnsCache.has(columnIndex),
-            true
-          );
-
-        if (sampledIndexesPresent) {
+        if (hasSampledDataColumns(this.custodyConfig, dataColumnsCache)) {
           const allDataColumns = getBlockInputDataColumns(dataColumnsCache, this.custodyConfig.sampledColumns);
           metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.GOSSIP});
           const {dataColumns} = allDataColumns;

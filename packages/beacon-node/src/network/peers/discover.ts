@@ -8,19 +8,19 @@ import {CustodyIndex, SubnetID} from "@lodestar/types";
 import {pruneSetToMax, sleep} from "@lodestar/utils";
 import {bytesToInt} from "@lodestar/utils";
 import {Multiaddr} from "@multiformats/multiaddr";
+import {IClock} from "../../util/clock.js";
 import {getCustodyGroups, getDataColumns} from "../../util/dataColumns.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
 import {Discv5Worker} from "../discv5/index.js";
 import {LodestarDiscv5Opts} from "../discv5/types.js";
 import {Libp2p} from "../interface.js";
 import {ENRKey, SubnetType} from "../metadata.js";
+import {NetworkConfig} from "../networkConfig.js";
 import {NodeId, computeNodeId} from "../subnets/interface.js";
 import {getConnectionsMap, prettyPrintPeerId} from "../util.js";
 import {IPeerRpcScoreStore, ScoreState} from "./score/index.js";
 import {deserializeEnrSubnets, zeroAttnets, zeroSyncnets} from "./utils/enrSubnetsDeserialize.js";
-import {type GroupQueries } from "./utils/prioritizePeers.js";
-import {IClock} from "../../util/clock.js";
-import {NetworkConfig} from "../networkConfig.js";
+import {type GroupQueries} from "./utils/prioritizePeers.js";
 
 /** Max number of cached ENRs after discovering a good peer */
 const MAX_CACHED_ENRS = 100;
@@ -108,10 +108,10 @@ export class PeerDiscovery {
   private readonly clock: IClock;
   // TODO-das: remove nodeId and sampleSubnets once we remove onlyConnect* flag
   private nodeId: NodeId;
-  private sampleSubnets: number[];
   private peerRpcScores: IPeerRpcScoreStore;
   private metrics: NetworkCoreMetrics | null;
   private logger: LoggerNode;
+  private networkConfig: NetworkConfig;
   private config: BeaconConfig;
   private cachedENRs = new Map<PeerIdStr, CachedENR>();
   private randomNodeQuery: QueryStatus = {code: QueryStatusCode.NotActive};
@@ -138,13 +138,11 @@ export class PeerDiscovery {
     this.peerRpcScores = peerRpcScores;
     this.metrics = metrics;
     this.logger = logger;
+    this.networkConfig = networkConfig;
     this.config = networkConfig.getConfig();
     this.discv5 = discv5;
     // TODO-das: remove
     this.nodeId = networkConfig.getNodeId();
-    // we will only connect to peers that can provide us custody
-    // TODO: @matthewkeil check if this needs to be updated for custody groups
-    this.sampleSubnets = networkConfig.getCustodyConfig().sampledSubnets;
     this.groupRequests = new Map();
 
     this.discv5StartMs = 0;
@@ -220,11 +218,7 @@ export class PeerDiscovery {
    * Request to find peers, both on specific subnets and in general
    * pre-fulu groupRequests is empty
    */
-  discoverPeers(
-    peersToConnect: number,
-    groupRequests: GroupQueries,
-    subnetRequests: SubnetDiscvQueryMs[] = []
-  ): void {
+  discoverPeers(peersToConnect: number, groupRequests: GroupQueries, subnetRequests: SubnetDiscvQueryMs[] = []): void {
     const subnetsToDiscoverPeers: SubnetDiscvQueryMs[] = [];
     const cachedENRsToDial = new Map<PeerIdStr, CachedENR>();
     // Iterate in reverse to consider first the most recent ENRs
@@ -259,7 +253,7 @@ export class PeerDiscovery {
       group: for (const [group, maxPeersToConnect] of groupRequests) {
         let cachedENRsInGroup = 0;
         for (const cachedENR of cachedENRsReverse) {
-          if (cachedENR.peerCustodyGroups && cachedENR.peerCustodyGroups.includes(group)) {
+          if (cachedENR.peerCustodyGroups?.includes(group)) {
             cachedENRsToDial.set(cachedENR.peerId.toString(), cachedENR);
 
             if (++cachedENRsInGroup >= maxPeersToConnect) {
@@ -427,14 +421,12 @@ export class PeerDiscovery {
     const syncnets = syncnetsBytes ? deserializeEnrSubnets(syncnetsBytes, SYNC_COMMITTEE_SUBNET_COUNT) : zeroSyncnets;
     const custodyGroupCount = custodyGroupCountBytes ? bytesToInt(custodyGroupCountBytes, "be") : undefined;
 
-    const status = this.handleDiscoveredPeer(
-      peerId,
-      multiaddrTCP,
-      attnets,
-      syncnets,
-      custodyGroupCount
-    );
-    this.logger.debug("Discovered peer via discv5", {peer: prettyPrintPeerId(peerId), status, custodySubnetCount: custodyGroupCount});
+    const status = this.handleDiscoveredPeer(peerId, multiaddrTCP, attnets, syncnets, custodyGroupCount);
+    this.logger.debug("Discovered peer via discv5", {
+      peer: prettyPrintPeerId(peerId),
+      status,
+      custodySubnetCount: custodyGroupCount,
+    });
     this.metrics?.discovery.discoveredStatus.inc({status});
   };
 
@@ -479,7 +471,10 @@ export class PeerDiscovery {
         subnets: {attnets, syncnets},
         addedUnixMs: Date.now(),
         // for pre-fulu, peerCustodyGroups is null
-        peerCustodyGroups: forkSeq >= ForkSeq.fulu ? getCustodyGroups(nodeId, custodySubnetCount ?? this.config.CUSTODY_REQUIREMENT) : null,
+        peerCustodyGroups:
+          forkSeq >= ForkSeq.fulu
+            ? getCustodyGroups(nodeId, custodySubnetCount ?? this.config.CUSTODY_REQUIREMENT)
+            : null,
       };
 
       // Only dial peer if necessary
@@ -508,11 +503,12 @@ export class PeerDiscovery {
       const peerCustodyGroupCount = peer.peerCustodyGroups.length;
       const peerCustodyColumns = getDataColumns(nodeId, peerCustodyGroupCount);
 
-      const matchingSubnetsNum = this.sampleSubnets.reduce(
+      const sampleSubnets = this.networkConfig.getCustodyConfig().sampledSubnets;
+      const matchingSubnetsNum = sampleSubnets.reduce(
         (acc, elem) => acc + (peerCustodyColumns.includes(elem) ? 1 : 0),
         0
       );
-      const hasAllColumns = matchingSubnetsNum === this.sampleSubnets.length;
+      const hasAllColumns = matchingSubnetsNum === sampleSubnets.length;
       const hasMinCustodyMatchingColumns = matchingSubnetsNum >= Math.max(this.config.CUSTODY_REQUIREMENT);
 
       this.logger.warn("peerCustodyColumns", {
@@ -521,7 +517,7 @@ export class PeerDiscovery {
         hasAllColumns,
         peerCustodyGroupCount,
         peerCustodyColumns: peerCustodyColumns.join(" "),
-        sampleSubnets: this.sampleSubnets.join(" "),
+        sampleSubnets: sampleSubnets.join(" "),
         nodeId: `${toHexString(this.nodeId)}`,
       });
       if (this.onlyConnectToBiggerDataNodes && !hasAllColumns) {

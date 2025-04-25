@@ -2,7 +2,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, ForkSeq, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {Epoch, SignedBeaconBlock, Slot, deneb, fulu, phase0, ssz} from "@lodestar/types";
+import {ColumnIndex, Epoch, SignedBeaconBlock, Slot, deneb, fulu, phase0, ssz} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {
   BlobsSource,
@@ -18,7 +18,6 @@ import {
   getBlockInputDataColumns,
 } from "../../chain/blocks/types.js";
 import {getEmptyBlockInputCacheEntry} from "../../chain/seenCache/seenGossipBlockInput.js";
-import {CustodyConfig} from "../../util/dataColumns.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {INetwork, WithOptionalBytes} from "../interface.js";
 import {computeNodeId} from "../subnets/index.js";
@@ -78,9 +77,9 @@ export async function beaconBlocksMaybeBlobsByRange(
       );
       return {blocks, pendingDataColumns: null};
     }
-    const {custodyConfig} = network;
     // get columns
-    const neededColumns = partialDownload ? partialDownload.pendingDataColumns : custodyConfig.sampledColumns;
+    const sampledColumns = network.custodyConfig.sampledColumns;
+    const neededColumns = partialDownload ? partialDownload.pendingDataColumns : sampledColumns;
     const peerColumns = network.getConnectedPeerCustody(peerId);
 
     // get match
@@ -106,7 +105,8 @@ export async function beaconBlocksMaybeBlobsByRange(
 
     const dataColumnRequest = {...request, columns};
     const [allBlocks, allDataColumnSidecars] = await Promise.all([
-      partialDownload
+      // TODO-das: investigate why partialDownload blocks is empty here
+      partialDownload && partialDownload.blocks.length > 0
         ? partialDownload.blocks.map((blockInput) => ({data: blockInput.block}))
         : network.sendBeaconBlocksByRange(peerId, request),
       columns.length === 0 ? [] : network.sendDataColumnSidecarsByRange(peerId, dataColumnRequest),
@@ -128,7 +128,7 @@ export async function beaconBlocksMaybeBlobsByRange(
       network,
       peerId,
       config,
-      custodyConfig,
+      sampledColumns,
       columns,
       allBlocks,
       allDataColumnSidecars,
@@ -230,7 +230,7 @@ export function matchBlockWithDataColumns(
   _network: INetwork,
   peerId: PeerIdStr,
   config: ChainForkConfig,
-  custodyConfig: CustodyConfig,
+  sampledColumns: ColumnIndex[],
   requestedColumns: number[],
   allBlocks: WithOptionalBytes<SignedBeaconBlock>[],
   allDataColumnSidecars: fulu.DataColumnSidecar[],
@@ -244,7 +244,6 @@ export function matchBlockWithDataColumns(
   const blockInputs: BlockInput[] = [];
   let dataColumnSideCarIndex = 0;
   let lastMatchedSlot = -1;
-  const {sampledColumns} = custodyConfig;
   const neededColumns = prevPartialDownload?.pendingDataColumns ?? sampledColumns;
   const shouldHaveAllData = neededColumns.reduce((acc, elem) => acc && requestedColumns.includes(elem), true);
 
@@ -262,12 +261,8 @@ export function matchBlockWithDataColumns(
       throw Error(`Invalid block forkSeq=${forkSeq} < ForSeq.fulu for matchBlockWithDataColumns`);
     }
     const dataColumnSidecars: fulu.DataColumnSidecar[] = [];
-    let dataColumnSidecar: fulu.DataColumnSidecar;
-    while (
-      (dataColumnSidecar = allDataColumnSidecars[dataColumnSideCarIndex])?.signedBlockHeader.message.slot ===
-      block.data.message.slot
-    ) {
-      dataColumnSidecars.push(dataColumnSidecar);
+    while (allDataColumnSidecars[dataColumnSideCarIndex]?.signedBlockHeader.message.slot === block.data.message.slot) {
+      dataColumnSidecars.push(allDataColumnSidecars[dataColumnSideCarIndex]);
       lastMatchedSlot = block.data.message.slot;
       dataColumnSideCarIndex++;
     }
@@ -330,7 +325,8 @@ export function matchBlockWithDataColumns(
       }
 
       let cachedData: CachedData;
-      if (prevPartialDownload !== null) {
+      // TODO-das: investigate why partialDownload blocks is empty here
+      if (prevPartialDownload !== null && prevPartialDownload.blocks.length > 0) {
         const prevBlockInput = prevPartialDownload.blocks[i];
         if (prevBlockInput.type !== BlockInputType.dataPromise) {
           throw Error(`prevBlockInput.type=${prevBlockInput.type} in prevPartialDownload`);

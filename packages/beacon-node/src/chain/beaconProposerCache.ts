@@ -40,4 +40,8 @@ export class BeaconProposerCache {
   get(proposerIndex: number): string | undefined {
     return this.feeRecipientByValidatorIndex.get(proposerIndex)?.feeRecipient;
   }
+
+  getValidatorIndices(): number[] {
+    return Array.from(this.feeRecipientByValidatorIndex.keys());
+  }
 }

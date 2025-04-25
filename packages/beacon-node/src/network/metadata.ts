@@ -6,7 +6,7 @@ import {Epoch, altair, fulu, phase0, ssz} from "@lodestar/types";
 import {intToBytes} from "@lodestar/utils";
 import {FAR_FUTURE_EPOCH} from "../constants/index.js";
 import {getCurrentAndNextFork} from "./forks.js";
-
+import {NetworkConfig} from "./networkConfig.js";
 export enum ENRKey {
   tcp = "tcp",
   eth2 = "eth2",
@@ -24,7 +24,7 @@ export type MetadataOpts = {
 };
 
 export type MetadataModules = {
-  config: BeaconConfig;
+  networkConfig: NetworkConfig;
   onSetValue: (key: string, value: Uint8Array) => void;
 };
 
@@ -35,16 +35,15 @@ export type MetadataModules = {
  */
 export class MetadataController {
   private onSetValue: (key: string, value: Uint8Array) => void;
-  private config: BeaconConfig;
+  private networkConfig: NetworkConfig;
   private _metadata: fulu.Metadata;
 
   constructor(opts: MetadataOpts, modules: MetadataModules) {
-    this.config = modules.config;
+    this.networkConfig = modules.networkConfig;
     this.onSetValue = modules.onSetValue;
     this._metadata = opts.metadata ?? {
       ...ssz.fulu.Metadata.defaultValue(),
-      // TODO: @matthewkeil check if this needs to be updated for custody groups
-      cgc: Math.max(this.config.CUSTODY_REQUIREMENT, this.config.NODE_CUSTODY_REQUIREMENT),
+      cgc: modules.networkConfig.getCustodyConfig().advertisedCustodyGroupCount,
     };
   }
 
@@ -54,18 +53,16 @@ export class MetadataController {
 
     this.onSetValue(ENRKey.attnets, ssz.phase0.AttestationSubnets.serialize(this._metadata.attnets));
 
-    if (this.config.getForkSeq(computeStartSlotAtEpoch(currentEpoch)) >= ForkSeq.altair) {
+    const config = this.networkConfig.getConfig();
+
+    if (config.getForkSeq(computeStartSlotAtEpoch(currentEpoch)) >= ForkSeq.altair) {
       // Only persist syncnets if altair fork is already activated. If currentFork is altair but head is phase0
       // adding syncnets to the ENR is not a problem, we will just have a useless field for a few hours.
       this.onSetValue(ENRKey.syncnets, ssz.phase0.AttestationSubnets.serialize(this._metadata.syncnets));
     }
 
-    if (this.config.getForkSeq(computeStartSlotAtEpoch(currentEpoch)) >= ForkSeq.fulu) {
-      this.onSetValue(
-        ENRKey.cgc,
-        intToBytes(this._metadata.cgc, Math.ceil(Math.log2(this._metadata.cgc + 1) / 8), "be")
-      );
-    }
+    // Set CGC regardless of fork. It may be useful to clients before Fulu, and will be ignored otherwise.
+    this.onSetValue(ENRKey.cgc, intToBytes(this._metadata.cgc, Math.ceil(Math.log2(this._metadata.cgc + 1) / 8), "be"));
   }
 
   get seqNumber(): bigint {
@@ -117,7 +114,7 @@ export class MetadataController {
    *    Current Clock implementation ensures no race conditions, epoch is correct if re-fetched
    */
   updateEth2Field(epoch: Epoch): Uint8Array {
-    const enrForkId = ssz.phase0.ENRForkID.serialize(getENRForkID(this.config, epoch));
+    const enrForkId = ssz.phase0.ENRForkID.serialize(getENRForkID(this.networkConfig.getConfig(), epoch));
     this.onSetValue(ENRKey.eth2, enrForkId);
     return enrForkId;
   }

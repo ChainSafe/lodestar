@@ -49,8 +49,8 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInput: BlockI
           root: blockRootHex,
         });
       } else {
-        const {custodyConfig} = this.seenGossipBlockInput;
-        const {custodyColumnsLen, custodyColumnsIndex, custodyColumns} = custodyConfig;
+        const {custodyConfig} = this;
+        const {custodyColumnsIndex, custodyColumns} = custodyConfig;
         const blobsLen = (block.message as fulu.BeaconBlock).body.blobKzgCommitments.length;
         let dataColumnsLen: number;
         let dataColumnsIndex: Uint8Array;
@@ -58,7 +58,7 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInput: BlockI
           dataColumnsLen = 0;
           dataColumnsIndex = new Uint8Array(NUMBER_OF_COLUMNS);
         } else {
-          dataColumnsLen = custodyColumnsLen;
+          dataColumnsLen = custodyColumns.length;
           dataColumnsIndex = custodyColumnsIndex;
         }
 
@@ -126,12 +126,9 @@ export async function removeEagerlyPersistedBlockInputs(this: BeaconChain, block
           const blobSidecars = blockData.blobs;
           blobsToRemove.push({blockRoot, slot, blobSidecars});
         } else {
-          const {custodyConfig} = this.seenGossipBlockInput;
-          const {
-            custodyColumnsLen: dataColumnsLen,
-            custodyColumnsIndex: dataColumnsIndex,
-            custodyColumns,
-          } = custodyConfig;
+          const {custodyConfig} = this;
+          const {custodyColumnsIndex: dataColumnsIndex, custodyColumns} = custodyConfig;
+          const dataColumnsLen = custodyColumns.length;
           const dataColumnSidecars = (blockData as BlockInputDataColumns).dataColumns.filter((dataColumnSidecar) =>
             custodyColumns.includes(dataColumnSidecar.index)
           );

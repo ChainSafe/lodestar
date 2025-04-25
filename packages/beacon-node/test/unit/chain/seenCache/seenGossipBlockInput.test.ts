@@ -2,11 +2,19 @@ import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lo
 import {ssz} from "@lodestar/types";
 import {describe, expect, it} from "vitest";
 
+import {ZERO_HASH_HEX} from "@lodestar/params";
 import {BlockInput, BlockInputType, GossipedInputType} from "../../../../src/chain/blocks/types.js";
+import {ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {
   BlockInputMetaPendingBlockWithBlobs,
   SeenGossipBlockInput,
 } from "../../../../src/chain/seenCache/seenGossipBlockInput.js";
+import {getExecutionEngineFromBackend} from "../../../../src/execution/engine/index.js";
+import {ExecutionEngineMockBackend} from "../../../../src/execution/engine/mock.js";
+import {computeNodeId} from "../../../../src/network/subnets/index.js";
+import {CustodyConfig} from "../../../../src/util/dataColumns.js";
+import {testLogger} from "../../../utils/logger.js";
+import {getValidPeerId} from "../../../utils/peer.js";
 
 describe("SeenGossipBlockInput", () => {
   const chainConfig = createChainForkConfig({
@@ -17,12 +25,27 @@ describe("SeenGossipBlockInput", () => {
   });
   const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
   const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
-  const seenGossipBlockInput = new SeenGossipBlockInput({
-    sampledColumns: [],
-    custodyColumns: [],
-    custodyColumnsIndex: Uint8Array.from([1, 2, 3]),
-    custodyColumnsLen: 0,
+  const nodeId = computeNodeId(getValidPeerId());
+
+  // Execution engine
+  const executionEngineBackend = new ExecutionEngineMockBackend({
+    onlyPredefinedResponses: false,
+    genesisBlockHash: ZERO_HASH_HEX,
   });
+  const controller = new AbortController();
+  const executionEngine = getExecutionEngineFromBackend(executionEngineBackend, {
+    signal: controller.signal,
+    logger: testLogger("executionEngine"),
+  });
+
+  const emitter = new ChainEventEmitter();
+
+  const seenGossipBlockInput = new SeenGossipBlockInput(
+    new CustodyConfig(nodeId, config),
+    executionEngine,
+    emitter,
+    testLogger("seenGossipBlockInput")
+  );
 
   // array of numBlobs, events where events are array of
   // [block|blob11|blob2, pd | bp | null | error string reflecting the expected result]

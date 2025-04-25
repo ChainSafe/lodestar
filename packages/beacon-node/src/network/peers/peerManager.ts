@@ -14,23 +14,23 @@ import {INetworkEventBus, NetworkEvent, NetworkEventData} from "../events.js";
 import {Eth2Gossipsub} from "../gossip/gossipsub.js";
 import {Libp2p} from "../interface.js";
 import {SubnetType} from "../metadata.js";
+import {NetworkConfig} from "../networkConfig.js";
 import {ReqRespMethod} from "../reqresp/ReqRespBeaconNode.js";
 import {StatusCache} from "../statusCache.js";
 import {NodeId, SubnetsService, computeNodeId} from "../subnets/index.js";
 import {getConnection, getConnectionsMap, prettyPrintPeerId} from "../util.js";
 import {ClientKind, getKnownClientFromAgentVersion} from "./client.js";
 import {PeerDiscovery, SubnetDiscvQueryMs} from "./discover.js";
+import {PeerData, PeersData} from "./peersData.js";
 import {IPeerRpcScoreStore, PeerAction, PeerScoreStats, ScoreState, updateGossipsubScores} from "./score/index.js";
-import {PeersData, PeerData} from "./peersData.js";
 import {
+  PrioritizePeersOpts,
   assertPeerRelevance,
   getConnectedPeerIds,
   hasSomeConnectedPeer,
   prioritizePeers,
   renderIrrelevantPeerType,
-  PrioritizePeersOpts,
 } from "./utils/index.js";
-import {NetworkConfig} from "../networkConfig.js";
 
 /** heartbeat performs regular updates such as updating reputations and performing discovery requests */
 const HEARTBEAT_INTERVAL_MS = 30 * 1000;
@@ -132,8 +132,6 @@ enum RelevantPeerStatus {
  */
 export class PeerManager {
   private nodeId: NodeId;
-  private sampleSubnets: number[];
-  private samplingGroups: CustodyIndex[];
   private readonly libp2p: Libp2p;
   private readonly logger: LoggerNode;
   private readonly metrics: NetworkCoreMetrics | null;
@@ -142,6 +140,7 @@ export class PeerManager {
   private readonly attnetsService: SubnetsService;
   private readonly syncnetsService: SubnetsService;
   private readonly clock: IClock;
+  private readonly networkConfig: NetworkConfig;
   private readonly config: BeaconConfig;
   private readonly peerRpcScores: IPeerRpcScoreStore;
   /** If null, discovery is disabled */
@@ -157,7 +156,6 @@ export class PeerManager {
 
   constructor(modules: PeerManagerModules, opts: PeerManagerOpts, discovery: PeerDiscovery | null) {
     const {networkConfig} = modules;
-    const custodyConfig = networkConfig.getCustodyConfig();
     this.libp2p = modules.libp2p;
     this.logger = modules.logger;
     this.metrics = modules.metrics;
@@ -167,6 +165,7 @@ export class PeerManager {
     this.syncnetsService = modules.syncnetsService;
     this.statusCache = modules.statusCache;
     this.clock = modules.clock;
+    this.networkConfig = networkConfig;
     this.config = networkConfig.getConfig();
     this.peerRpcScores = modules.peerRpcScores;
     this.networkEventBus = modules.events;
@@ -174,12 +173,6 @@ export class PeerManager {
     this.opts = opts;
     this.discovery = discovery;
     this.nodeId = networkConfig.getNodeId();
-    // we will only connect to peers that can provide us custody
-    // TODO: @matthewkeil check if this needs to be updated for custody groups
-    // TODO(das): may not need this, use `this.samplingGroups` instead
-    this.sampleSubnets = custodyConfig.sampledSubnets;
-    // TODO(das): get from custodyConfig or a centralized place every time, instead of computing once here
-    this.samplingGroups = custodyConfig.sampleGroups;
 
     const {metrics} = modules;
     if (metrics) {
@@ -341,7 +334,10 @@ export class PeerManager {
       const oldMetadata = peerData.metadata;
       const cgc = (metadata as Partial<fulu.Metadata>).cgc ?? this.config.CUSTODY_REQUIREMENT;
       const nodeId = peerData?.nodeId ?? computeNodeId(peer);
-      const custodyGroups = (oldMetadata == null || oldMetadata.custodyGroups == null || cgc !== oldMetadata.cgc) ? getCustodyGroups(nodeId, cgc) : oldMetadata.custodyGroups;
+      const custodyGroups =
+        oldMetadata == null || oldMetadata.custodyGroups == null || cgc !== oldMetadata.cgc
+          ? getCustodyGroups(nodeId, cgc)
+          : oldMetadata.custodyGroups;
       peerData.metadata = {
         seqNumber: metadata.seqNumber,
         attnets: metadata.attnets,
@@ -428,11 +424,9 @@ export class PeerManager {
       // on metadata, we should have custodyGroupss
       const peerCustodyGroups = peerData?.metadata?.custodyGroups ?? getCustodyGroups(nodeId, peerCustodyGroupCount);
 
-      const matchingSubnetsNum = this.sampleSubnets.reduce(
-        (acc, elem) => acc + (dataColumns.includes(elem) ? 1 : 0),
-        0
-      );
-      const hasAllColumns = matchingSubnetsNum === this.sampleSubnets.length;
+      const sampleSubnets = this.networkConfig.getCustodyConfig().sampledSubnets;
+      const matchingSubnetsNum = sampleSubnets.reduce((acc, elem) => acc + (dataColumns.includes(elem) ? 1 : 0), 0);
+      const hasAllColumns = matchingSubnetsNum === sampleSubnets.length;
       const hasMinCustodyMatchingColumns = matchingSubnetsNum >= this.config.CUSTODY_REQUIREMENT;
       const clientAgent = peerData?.agentClient ?? ClientKind.Unknown;
 
@@ -445,7 +439,7 @@ export class PeerManager {
         dataColumns: dataColumns.join(" "),
         matchingSubnetsNum,
         peerCustodyGroups: peerCustodyGroups.join(" "),
-        mySampleSubnets: this.sampleSubnets.join(" "),
+        mySampleSubnets: sampleSubnets.join(" "),
         clientAgent,
       });
 
@@ -562,7 +556,7 @@ export class PeerManager {
       this.attnetsService.getActiveSubnets(),
       this.syncnetsService.getActiveSubnets(),
       // ignore samplingGroups for pre-fulu forks
-      forkSeq >= ForkSeq.fulu ? this.samplingGroups : undefined,
+      forkSeq >= ForkSeq.fulu ? this.networkConfig.getCustodyConfig().sampleGroups : undefined,
       this.opts,
       this.metrics
     );

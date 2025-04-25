@@ -217,6 +217,15 @@ export class WorkerNetworkCore implements INetworkCore {
     return this.getApi().publishGossip(topic, data, opts);
   }
 
+  // Custody
+
+  setTargetGroupCount(count: number): Promise<void> {
+    return this.getApi().setTargetGroupCount(count);
+  }
+  setAdvertisedGroupCount(count: number): Promise<void> {
+    return this.getApi().setAdvertisedGroupCount(count);
+  }
+
   // Debug
 
   connectToPeer(peer: PeerIdStr, multiaddr: MultiaddrStr[]): Promise<void> {

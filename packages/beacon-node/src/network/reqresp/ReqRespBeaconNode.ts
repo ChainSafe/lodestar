@@ -226,9 +226,10 @@ export class ReqRespBeaconNode extends ReqResp {
       [protocols.Ping(fork, this.config), this.onPing.bind(this)],
       [protocols.Status(fork, this.config), this.onStatus.bind(this)],
       [protocols.Goodbye(fork, this.config), this.onGoodbye.bind(this)],
-      // Support V2 methods as soon as implemented (for altair)
+      // Support V3 methods as soon as implemented (for fulu)
+      // Follows pattern for altair:
       // Ref https://github.com/ethereum/consensus-specs/blob/v1.2.0/specs/altair/p2p-interface.md#transitioning-from-v1-to-v2
-      [protocols.MetadataV2(fork, this.config), this.onMetadata.bind(this)],
+      [protocols.MetadataV3(fork, this.config), this.onMetadata.bind(this)],
       [protocols.BeaconBlocksByRangeV2(fork, this.config), this.getHandler(ReqRespMethod.BeaconBlocksByRange)],
       [protocols.BeaconBlocksByRootV2(fork, this.config), this.getHandler(ReqRespMethod.BeaconBlocksByRoot)],
     ];
@@ -240,6 +241,11 @@ export class ReqRespBeaconNode extends ReqResp {
         [protocols.BeaconBlocksByRange(fork, this.config), this.getHandler(ReqRespMethod.BeaconBlocksByRange)],
         [protocols.BeaconBlocksByRoot(fork, this.config), this.getHandler(ReqRespMethod.BeaconBlocksByRoot)]
       );
+    }
+
+    if (ForkSeq[fork] < ForkSeq.fulu) {
+      // Unregister MetadataV2 at the fork boundary, so only declare for pre-fulu
+      protocolsAtFork.push([protocols.MetadataV2(fork, this.config), this.onMetadata.bind(this)]);
     }
 
     if (ForkSeq[fork] >= ForkSeq.altair && !this.disableLightClientServer) {
@@ -270,7 +276,6 @@ export class ReqRespBeaconNode extends ReqResp {
 
     if (ForkSeq[fork] >= ForkSeq.fulu) {
       protocolsAtFork.push(
-        [protocols.MetadataV3(fork, this.config), this.onMetadata.bind(this)],
         [
           protocols.DataColumnSidecarsByRoot(fork, this.config),
           this.getHandler(ReqRespMethod.DataColumnSidecarsByRoot),

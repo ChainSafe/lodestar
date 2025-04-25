@@ -266,10 +266,13 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
   async function validateBeaconDataColumn(
     dataColumnSidecar: fulu.DataColumnSidecar,
     dataColumnBytes: Uint8Array,
-    gossipIndex: number,
+    gossipSubnet: SubnetID,
     peerIdStr: string,
     seenTimestampSec: number
   ): Promise<BlockInput | NullBlockInput> {
+    metrics?.peerDas.dataColumnSidecarProcessingRequests.inc();
+    const verificationTimer = metrics?.peerDas.dataColumnSidecarGossipVerificationTime.startTimer();
+
     const dataColumnBlockHeader = dataColumnSidecar.signedBlockHeader.message;
     const slot = dataColumnBlockHeader.slot;
     const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(dataColumnBlockHeader);
@@ -289,10 +292,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     );
 
     try {
-      await validateGossipDataColumnSidecar(chain, dataColumnSidecar, gossipIndex);
+      await validateGossipDataColumnSidecar(chain, dataColumnSidecar, gossipSubnet);
       const recvToValidation = Date.now() / 1000 - seenTimestampSec;
       const validationTime = recvToValidation - recvToValLatency;
 
+      metrics?.peerDas.dataColumnSidecarProcessingSuccesses.inc();
       metrics?.gossipBlob.recvToValidation.observe(recvToValidation);
       metrics?.gossipBlob.validationTime.observe(validationTime);
 
@@ -302,7 +306,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         curentSlot: chain.clock.currentSlot,
         peerId: peerIdStr,
         delaySec,
-        gossipIndex,
+        gossipSubnet,
         columnIndex: dataColumnSidecar.index,
         ...blockInputMeta,
         recvToValLatency,
@@ -329,6 +333,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       }
 
       throw e;
+    } finally {
+      verificationTimer?.();
     }
   }
 
@@ -549,7 +555,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const blockInput = await validateBeaconDataColumn(
         dataColumnSidecar,
         serializedData,
-        topic.index,
+        topic.subnet,
         peerIdStr,
         seenTimestampSec
       );

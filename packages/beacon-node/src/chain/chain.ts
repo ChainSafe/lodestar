@@ -50,7 +50,7 @@ import {Metrics} from "../metrics/index.js";
 import {NodeId} from "../network/subnets/interface.js";
 import {BufferPool} from "../util/bufferPool.js";
 import {Clock, ClockEvent, IClock} from "../util/clock.js";
-import {CustodyConfig, computeCustodyConfig} from "../util/dataColumns.js";
+import {CustodyConfig, getValidatorsCustodyRequirement} from "../util/dataColumns.js";
 import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
 import {SerializedCache} from "../util/serializedCache.js";
@@ -122,8 +122,6 @@ export class BeaconChain implements IBeaconChain {
   readonly executionBuilder?: IExecutionBuilder;
   // Expose config for convenience in modularized functions
   readonly config: BeaconConfig;
-  // TODO - das: mutate custodyConfig due to VALIDATOR_CUSTODY_REQURIEMENT
-  // need to sync with networkConfig inside Network too
   readonly custodyConfig: CustodyConfig;
   readonly logger: Logger;
   readonly metrics: Metrics | null;
@@ -257,8 +255,8 @@ export class BeaconChain implements IBeaconChain {
     this.seenAggregatedAttestations = new SeenAggregatedAttestations(metrics);
     this.seenContributionAndProof = new SeenContributionAndProof(metrics);
     this.seenAttestationDatas = new SeenAttestationDatas(metrics, this.opts?.attDataCacheSlotDistance);
-    this.custodyConfig = computeCustodyConfig(nodeId, config);
-    this.seenGossipBlockInput = new SeenGossipBlockInput(this.custodyConfig);
+    this.custodyConfig = new CustodyConfig(nodeId, config);
+    this.seenGossipBlockInput = new SeenGossipBlockInput(this.custodyConfig, this.executionEngine, emitter, logger);
 
     this.beaconProposerCache = new BeaconProposerCache(opts);
     this.checkpointBalancesCache = new CheckpointBalancesCache();
@@ -1192,6 +1190,19 @@ export class BeaconChain implements IBeaconChain {
 
     if (headState) {
       this.opPool.pruneAll(headBlock, headState);
+
+      if (!this.opts.noValidatorCustody) {
+        // Update custody requirement based on finalized state
+        const validatorIndices = this.beaconProposerCache.getValidatorIndices();
+        const targetCustodyGroupCount = getValidatorsCustodyRequirement(headState, validatorIndices, this.config);
+        this.custodyConfig.updateTargetCustodyGroupCount(targetCustodyGroupCount);
+        this.emitter.emit(ChainEvent.updateTargetGroupCount, this.custodyConfig.targetCustodyGroupCount);
+
+        // TODO: If target group count increases, we should wait to update the advertised group until we've
+        // backfilled the new groups.
+        this.custodyConfig.updateAdvertisedCustodyGroupCount(targetCustodyGroupCount);
+        this.emitter.emit(ChainEvent.updateAdvertisedGroupCount, this.custodyConfig.advertisedCustodyGroupCount);
+      }
     }
 
     if (headState === null) {
