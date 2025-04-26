@@ -1,6 +1,6 @@
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {ssz, stringType, fulu} from "@lodestar/types";
+import {fulu, ssz, stringType} from "@lodestar/types";
 import {
   ArrayOf,
   EmptyArgs,
