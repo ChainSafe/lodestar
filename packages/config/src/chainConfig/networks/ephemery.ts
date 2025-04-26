@@ -40,6 +40,9 @@ const baseChainConfig: ChainConfig = {
   // Electra
   ELECTRA_FORK_VERSION: b("0x6000101b"),
   ELECTRA_FORK_EPOCH: 10,
+  // Fulu
+  FULU_FORK_VERSION: b("0x7000101b"),
+  FULU_FORK_EPOCH: Infinity,
 
   // Deposit contract
   // ---------------------------------------------------------------

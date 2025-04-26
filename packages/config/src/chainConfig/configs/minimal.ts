@@ -47,6 +47,9 @@ export const chainConfig: ChainConfig = {
   // ELECTRA
   ELECTRA_FORK_VERSION: b("0x05000001"),
   ELECTRA_FORK_EPOCH: Infinity,
+  // FULU
+  FULU_FORK_VERSION: b("0x06000001"),
+  FULU_FORK_EPOCH: Infinity,
 
   // Time parameters
   // ---------------------------------------------------------------

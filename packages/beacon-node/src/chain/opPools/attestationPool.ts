@@ -4,6 +4,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {MAX_COMMITTEES_PER_SLOT, isForkPostElectra} from "@lodestar/params";
 import {Attestation, RootHex, SingleAttestation, Slot, isElectraSingleAttestation} from "@lodestar/types";
 import {assert, MapDef} from "@lodestar/utils";
+import {Metrics} from "../../metrics/metrics.js";
 import {IClock} from "../../util/clock.js";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
 import {isElectraAggregate, pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
@@ -74,7 +75,8 @@ export class AttestationPool {
     private readonly config: ChainForkConfig,
     private readonly clock: IClock,
     private readonly cutOffSecFromSlot: number,
-    private readonly preaggregateSlotDistance = 0
+    private readonly preaggregateSlotDistance = 0,
+    private readonly metrics: Metrics | null = null
   ) {}
 
   /** Returns current count of pre-aggregated attestations with unique data */
@@ -110,7 +112,8 @@ export class AttestationPool {
     attestation: SingleAttestation,
     attDataRootHex: RootHex,
     committeeValidatorIndex: number,
-    committeeSize: number
+    committeeSize: number,
+    priority?: boolean
   ): InsertOutcome {
     const slot = attestation.data.slot;
     const fork = this.config.getForkName(slot);
@@ -121,8 +124,9 @@ export class AttestationPool {
       return InsertOutcome.Old;
     }
 
-    // Reject attestations in the current slot but come to this pool very late
-    if (this.clock.secFromSlot(slot) > this.cutOffSecFromSlot) {
+    // Reject gossip attestations in the current slot but come to this pool very late
+    // for api attestations, we allow them to be added to the pool
+    if (!priority && this.clock.secFromSlot(slot) > this.cutOffSecFromSlot) {
       return InsertOutcome.Late;
     }
 
@@ -160,14 +164,14 @@ export class AttestationPool {
   /**
    * For validator API to get an aggregate
    */
-  getAggregate(slot: Slot, committeeIndex: CommitteeIndex, dataRootHex: RootHex): Attestation | null {
+  getAggregate(slot: Slot, dataRootHex: RootHex, committeeIndex: CommitteeIndex): Attestation | null {
     const fork = this.config.getForkName(slot);
     const isPostElectra = isForkPostElectra(fork);
     committeeIndex = isPostElectra ? committeeIndex : null;
 
     const aggregate = this.aggregateByIndexByRootBySlot.get(slot)?.get(dataRootHex)?.get(committeeIndex);
     if (!aggregate) {
-      // TODO: Add metric for missing aggregates
+      this.metrics?.opPool.attestationPool.getAggregateCacheMisses.inc();
       return null;
     }
 

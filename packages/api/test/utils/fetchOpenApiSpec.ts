@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import {fetch} from "@lodestar/api";
+import {fetch} from "@lodestar/utils";
 import {OpenApiFile, OpenApiJson} from "./parseOpenApiSpec.js";
 
 /* eslint-disable no-console */

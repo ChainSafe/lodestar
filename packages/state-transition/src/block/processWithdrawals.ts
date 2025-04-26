@@ -10,7 +10,7 @@ import {
 } from "@lodestar/params";
 import {ValidatorIndex, capella, ssz} from "@lodestar/types";
 
-import {toRootHex} from "@lodestar/utils";
+import {MapDef, toRootHex} from "@lodestar/utils";
 import {CachedBeaconStateCapella, CachedBeaconStateElectra} from "../types.js";
 import {
   decreaseBalance,
@@ -64,15 +64,14 @@ export function processWithdrawals(
   }
 
   // Update the nextWithdrawalIndex
-  if (expectedWithdrawals.length > 0) {
-    const latestWithdrawal = expectedWithdrawals[expectedWithdrawals.length - 1];
+  const latestWithdrawal = expectedWithdrawals.at(-1);
+  if (latestWithdrawal) {
     state.nextWithdrawalIndex = latestWithdrawal.index + 1;
   }
 
   // Update the nextWithdrawalValidatorIndex
-  if (expectedWithdrawals.length === MAX_WITHDRAWALS_PER_PAYLOAD) {
+  if (latestWithdrawal && expectedWithdrawals.length === MAX_WITHDRAWALS_PER_PAYLOAD) {
     // All slots filled, nextWithdrawalValidatorIndex should be validatorIndex having next turn
-    const latestWithdrawal = expectedWithdrawals[expectedWithdrawals.length - 1];
     state.nextWithdrawalValidatorIndex = (latestWithdrawal.validatorIndex + 1) % state.validators.length;
   } else {
     // expected withdrawals came up short in the bound, so we move nextWithdrawalValidatorIndex to
@@ -99,6 +98,7 @@ export function getExpectedWithdrawals(
   const {validators, balances, nextWithdrawalValidatorIndex} = state;
 
   const withdrawals: capella.Withdrawal[] = [];
+  const withdrawnBalances = new MapDef<ValidatorIndex, number>(() => 0);
   const isPostElectra = fork >= ForkSeq.electra;
   // partialWithdrawalsCount is withdrawals coming from EL since electra (EIP-7002)
   let processedPartialWithdrawalsCount = 0;
@@ -124,15 +124,15 @@ export function getExpectedWithdrawals(
       }
 
       const validator = validators.getReadonly(withdrawal.validatorIndex);
+      const totalWithdrawn = withdrawnBalances.getOrDefault(withdrawal.validatorIndex);
+      const balance = state.balances.get(withdrawal.validatorIndex) - totalWithdrawn;
 
       if (
         validator.exitEpoch === FAR_FUTURE_EPOCH &&
         validator.effectiveBalance >= MIN_ACTIVATION_BALANCE &&
-        balances.get(withdrawal.validatorIndex) > MIN_ACTIVATION_BALANCE
+        balance > MIN_ACTIVATION_BALANCE
       ) {
-        const balanceOverMinActivationBalance = BigInt(
-          balances.get(withdrawal.validatorIndex) - MIN_ACTIVATION_BALANCE
-        );
+        const balanceOverMinActivationBalance = BigInt(balance - MIN_ACTIVATION_BALANCE);
         const withdrawableBalance =
           balanceOverMinActivationBalance < withdrawal.amount ? balanceOverMinActivationBalance : withdrawal.amount;
         withdrawals.push({
@@ -142,6 +142,7 @@ export function getExpectedWithdrawals(
           amount: withdrawableBalance,
         });
         withdrawalIndex++;
+        withdrawnBalances.set(withdrawal.validatorIndex, totalWithdrawn + Number(withdrawableBalance));
       }
       processedPartialWithdrawalsCount++;
     }
@@ -156,14 +157,16 @@ export function getExpectedWithdrawals(
     const validatorIndex = (nextWithdrawalValidatorIndex + n) % validators.length;
 
     const validator = validators.getReadonly(validatorIndex);
+    const withdrawnBalance = withdrawnBalances.getOrDefault(validatorIndex);
     const balance = isPostElectra
-      ? balances.get(validatorIndex) - getPartiallyWithdrawnBalance(withdrawals, validatorIndex)
+      ? // Deduct partially withdrawn balance already queued above
+        balances.get(validatorIndex) - withdrawnBalance
       : balances.get(validatorIndex);
     const {withdrawableEpoch, withdrawalCredentials, effectiveBalance} = validator;
     const hasWithdrawableCredentials = isPostElectra
       ? hasExecutionWithdrawalCredential(withdrawalCredentials)
       : hasEth1WithdrawalCredential(withdrawalCredentials);
-    // early skip for balance = 0 as its now more likely that validator has exited/slahed with
+    // early skip for balance = 0 as its now more likely that validator has exited/slashed with
     // balance zero than not have withdrawal credentials set
     if (balance === 0 || !hasWithdrawableCredentials) {
       continue;
@@ -178,18 +181,21 @@ export function getExpectedWithdrawals(
         amount: BigInt(balance),
       });
       withdrawalIndex++;
+      withdrawnBalances.set(validatorIndex, withdrawnBalance + balance);
     } else if (
       effectiveBalance === (isPostElectra ? getMaxEffectiveBalance(withdrawalCredentials) : MAX_EFFECTIVE_BALANCE) &&
       balance > effectiveBalance
     ) {
       // capella partial withdrawal
+      const partialAmount = balance - effectiveBalance;
       withdrawals.push({
         index: withdrawalIndex,
         validatorIndex,
         address: validator.withdrawalCredentials.subarray(12),
-        amount: BigInt(balance - effectiveBalance),
+        amount: BigInt(partialAmount),
       });
       withdrawalIndex++;
+      withdrawnBalances.set(validatorIndex, withdrawnBalance + partialAmount);
     }
 
     // Break if we have enough to pack the block
@@ -199,14 +205,4 @@ export function getExpectedWithdrawals(
   }
 
   return {withdrawals, sampledValidators: n, processedPartialWithdrawalsCount};
-}
-
-function getPartiallyWithdrawnBalance(withdrawals: capella.Withdrawal[], validatorIndex: ValidatorIndex): number {
-  let total = BigInt(0);
-  for (const withdrawal of withdrawals) {
-    if (withdrawal.validatorIndex === validatorIndex) {
-      total += withdrawal.amount;
-    }
-  }
-  return Number(total);
 }

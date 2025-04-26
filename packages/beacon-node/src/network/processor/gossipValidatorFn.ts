@@ -29,9 +29,8 @@ export function getGossipValidatorBatchFn(
   const {logger, metrics} = modules;
 
   return async function gossipValidatorBatchFn(messageInfos: GossipMessageInfo[]) {
-    // all messageInfos have same topic
-    const {topic} = messageInfos[0];
-    const type = topic.type;
+    // all messageInfos have same topic type
+    const type = messageInfos[0].topic.type;
     try {
       const results = await (gossipHandlers[type] as BatchGossipHandlerFn)(
         messageInfos.map((messageInfo) => ({
@@ -40,7 +39,7 @@ export function getGossipValidatorBatchFn(
             msgSlot: messageInfo.msgSlot,
             indexed: messageInfo.indexed,
           },
-          topic,
+          topic: messageInfo.topic,
           peerIdStr: messageInfo.propagationSource,
           seenTimestampSec: messageInfo.seenTimestampSec,
         }))
@@ -60,10 +59,13 @@ export function getGossipValidatorBatchFn(
         switch (e.action) {
           case GossipAction.IGNORE:
             metrics?.networkProcessor.gossipValidationIgnore.inc({topic: type});
+            // only beacon_attestation topic is validated in batch
+            metrics?.networkProcessor.gossipAttestationIgnoreByReason.inc({reason: e.type.code});
             return TopicValidatorResult.Ignore;
-
           case GossipAction.REJECT:
             metrics?.networkProcessor.gossipValidationReject.inc({topic: type});
+            // only beacon_attestation topic is validated in batch
+            metrics?.networkProcessor.gossipAttestationRejectByReason.inc({reason: e.type.code});
             logger.debug(`Gossip validation ${type} rejected`, {}, e);
             return TopicValidatorResult.Reject;
         }

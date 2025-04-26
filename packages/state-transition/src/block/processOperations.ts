@@ -1,6 +1,7 @@
 import {ForkSeq} from "@lodestar/params";
 import {BeaconBlockBody, capella, electra} from "@lodestar/types";
 
+import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateCapella, CachedBeaconStateElectra} from "../types.js";
 import {getEth1DepositCount} from "../util/deposit.js";
 import {processAttestations} from "./processAttestations.js";
@@ -30,7 +31,8 @@ export function processOperations(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
   body: BeaconBlockBody,
-  opts: ProcessBlockOpts = {verifySignatures: true}
+  opts: ProcessBlockOpts = {verifySignatures: true},
+  metrics?: BeaconStateTransitionMetrics | null
 ): void {
   // verify that outstanding deposits are processed up to the maximum number of deposits
   const maxDeposits = getEth1DepositCount(state);
@@ -47,7 +49,7 @@ export function processOperations(
     processAttesterSlashing(fork, state, attesterSlashing, opts.verifySignatures);
   }
 
-  processAttestations(fork, state, body.attestations, opts.verifySignatures);
+  processAttestations(fork, state, body.attestations, opts.verifySignatures, metrics);
 
   for (const deposit of body.deposits) {
     processDeposit(fork, state, deposit);
