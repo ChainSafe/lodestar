@@ -162,10 +162,10 @@ export interface IBlockInput<F extends ForkName = ForkName, TData extends DAData
 
   // block header metadata
 
-  forkName(): ForkName;
-  slot(): Slot;
-  blockRootHex(): string;
-  parentRootHex(): string;
+  forkName: ForkName;
+  slot: Slot;
+  blockRootHex: string;
+  parentRootHex: string;
 
   /** Whether the block has been seen. If true, `getBlock` is guaranteed to not throw */
   hasBlock(): boolean;
@@ -208,14 +208,6 @@ export function createPromise<T>(): PromiseParts<T> {
 
 // Pre-DA
 
-type BlockInputPreDataState = {
-  block: SignedBeaconBlock<ForkPreDeneb>;
-  source: SourceMeta;
-  forkName: ForkName;
-  blockRootHex: string;
-  parentRootHex: string;
-};
-
 /**
  * Pre-DA, BlockInput only has a single state.
  * - the block simply exists
@@ -223,25 +215,36 @@ type BlockInputPreDataState = {
 export class BlockInputPreData implements IBlockInput<ForkPreDeneb, null> {
   type = DAType.PreData as const;
 
-  private state: BlockInputPreDataState;
+  forkName: ForkName;
+  slot: Slot;
+  blockRootHex: string;
+  parentRootHex: string;
 
-  constructor(state: BlockInputPreDataState) {
-    this.state = state;
+  block: SignedBeaconBlock<ForkPreDeneb>;
+  source: SourceMeta;
+
+  constructor(block: SignedBeaconBlock<ForkPreDeneb>, source: SourceMeta, blockHeaderMeta: BlockHeaderMeta) {
+    this.block = block;
+    this.source = source;
+    this.forkName = blockHeaderMeta.forkName;
+    this.slot = blockHeaderMeta.slot;
+    this.blockRootHex = blockHeaderMeta.blockRootHex;
+    this.parentRootHex = blockHeaderMeta.parentRootHex;
   }
 
   static createFromBlock(props: AddBlock): BlockInputPreData {
-    const state: BlockInputPreDataState = {
-      block: props.block,
-      source: {
-        source: props.source,
-        seenTimestampSec: props.seenTimestampSec,
-        peerIdStr: props.peerIdStr,
-      },
+    const source: SourceMeta = {
+      source: props.source,
+      seenTimestampSec: props.seenTimestampSec,
+      peerIdStr: props.peerIdStr,
+    };
+    const meta: BlockHeaderMeta = {
       forkName: props.forkName,
+      slot: props.block.message.slot,
       blockRootHex: props.blockRootHex,
       parentRootHex: toHex(props.block.message.parentRoot),
     };
-    return new BlockInputPreData(state);
+    return new BlockInputPreData(props.block, source, meta);
   }
 
   hasBlock(): boolean {
@@ -249,18 +252,18 @@ export class BlockInputPreData implements IBlockInput<ForkPreDeneb, null> {
   }
 
   getBlock(): SignedBeaconBlock<ForkPreDeneb> {
-    return this.state.block;
+    return this.block;
   }
 
   getBlockSource(): SourceMeta {
-    return this.state.source;
+    return this.source;
   }
 
   addBlock(_: AddBlock): void {
     throw new BlockInputError(
       {
         code: BlockInputErrorCode.INVALID_CONSTRUCTION,
-        blockRoot: this.state.blockRootHex,
+        blockRoot: this.blockRootHex,
       },
       "Cannot addBlock to BlockInputPreData"
     );
@@ -276,37 +279,21 @@ export class BlockInputPreData implements IBlockInput<ForkPreDeneb, null> {
 
   getLogMeta(): LogMetaBasic {
     return {
-      blockRoot: prettyBytes(this.state.blockRootHex),
-      slot: this.state.block.message.slot,
+      blockRoot: prettyBytes(this.blockRootHex),
+      slot: this.slot,
     };
   }
 
-  slot(): Slot {
-    return this.state.block.message.slot;
-  }
-
-  forkName(): ForkPreDeneb {
-    return this.state.forkName as ForkPreDeneb;
-  }
-
-  blockRootHex(): string {
-    return this.state.blockRootHex;
-  }
-
-  parentRootHex(): string {
-    return this.state.parentRootHex;
-  }
-
   getTimeBegin(): number {
-    return this.state.source.seenTimestampSec;
+    return this.source.seenTimestampSec;
   }
 
   getTimeComplete(): number {
-    return this.state.source.seenTimestampSec;
+    return this.source.seenTimestampSec;
   }
 
   async waitForBlock(_: number, __?: AbortSignal): Promise<SignedBeaconBlock<ForkPreDeneb>> {
-    return this.state.block;
+    return this.block;
   }
 
   async waitForData(_: number, __?: AbortSignal): Promise<null> {
@@ -326,14 +313,8 @@ type BlockInputBlobsState =
   | {
       daRequirement: DARequirement;
       daStatus: DAStatus.CompleteData;
-
-      forkName: ForkName;
-      blockRootHex: string;
-      parentRootHex: string;
       versionHashes: VersionedHashes;
-
       block: SignedBeaconBlock<ForkBlobs>;
-
       blockSource: SourceMeta;
       timeBeginSec: number;
       timeCompleteSec: number;
@@ -341,26 +322,14 @@ type BlockInputBlobsState =
   | {
       daRequirement: DARequirement;
       daStatus: DAStatus.IncompleteData;
-
-      forkName: ForkName;
-      blockRootHex: string;
-      parentRootHex: string;
       versionHashes: VersionedHashes;
-
       block: SignedBeaconBlock<ForkBlobs>;
-
       blockSource: SourceMeta;
       timeBeginSec: number;
     }
   | {
       daRequirement: DARequirement.Required;
       daStatus: DAStatus.Unknown;
-
-      forkName: ForkName;
-      slot: Slot;
-      blockRootHex: string;
-      parentRootHex: string;
-
       timeBeginSec: number;
     };
 
@@ -372,14 +341,24 @@ type BlockInputBlobsState =
  */
 export class BlockInputBlobs implements IBlockInput<ForkBlobs, deneb.BlobSidecars> {
   type = DAType.Blobs as const;
+
+  forkName: ForkName;
+  slot: Slot;
+  blockRootHex: string;
+  parentRootHex: string;
+
   private blobsCache = new Map<BlobIndex, BlobWithSource>();
   private state: BlockInputBlobsState;
   private blockPromise = createPromise<SignedBeaconBlock<ForkBlobs>>();
   private dataPromise = createPromise<deneb.BlobSidecars>();
   private bothPromise = createPromise<this>();
 
-  constructor(props: BlockInputBlobsState) {
+  constructor(props: BlockInputBlobsState, blockHeaderMeta: BlockHeaderMeta) {
     this.state = props;
+    this.forkName = blockHeaderMeta.forkName;
+    this.slot = blockHeaderMeta.slot;
+    this.blockRootHex = blockHeaderMeta.blockRootHex;
+    this.parentRootHex = blockHeaderMeta.parentRootHex;
   }
 
   static createFromBlock(props: AddBlock<ForkBlobs> & {daRequirement: DARequirement}): BlockInputBlobs {
@@ -402,7 +381,13 @@ export class BlockInputBlobs implements IBlockInput<ForkBlobs, deneb.BlobSidecar
       timeBeginSec: props.seenTimestampSec,
       timeCompleteSec: completeData ? props.seenTimestampSec : undefined,
     } as BlockInputBlobsState;
-    const blockInput = new BlockInputBlobs(state);
+    const meta: BlockHeaderMeta = {
+      forkName: props.forkName,
+      slot: props.block.message.slot,
+      blockRootHex: props.blockRootHex,
+      parentRootHex: toHex(props.block.message.parentRoot),
+    };
+    const blockInput = new BlockInputBlobs(state, meta);
     blockInput.blockPromise.resolve(props.block);
     if (completeData) {
       blockInput.dataPromise.resolve([]);
@@ -415,13 +400,15 @@ export class BlockInputBlobs implements IBlockInput<ForkBlobs, deneb.BlobSidecar
     const state: BlockInputBlobsState = {
       daRequirement: DARequirement.Required,
       daStatus: DAStatus.Unknown,
+      timeBeginSec: props.seenTimestampSec,
+    };
+    const meta: BlockHeaderMeta = {
       forkName: props.forkName,
       blockRootHex: props.blockRootHex,
       parentRootHex: toHex(props.blobSidecar.signedBlockHeader.message.parentRoot),
       slot: props.blobSidecar.signedBlockHeader.message.slot,
-      timeBeginSec: props.seenTimestampSec,
     };
-    const blockInput = new BlockInputBlobs(state);
+    const blockInput = new BlockInputBlobs(state, meta);
     blockInput.blobsCache.set(props.blobSidecar.index, {
       blobSidecar: props.blobSidecar,
       source: props.source,
@@ -433,28 +420,12 @@ export class BlockInputBlobs implements IBlockInput<ForkBlobs, deneb.BlobSidecar
 
   getLogMeta(): LogMetaBlobs {
     return {
-      blockRoot: prettyBytes(this.state.blockRootHex),
-      slot: this.state.daStatus === DAStatus.Unknown ? this.state.slot : this.state.block.message.slot,
+      blockRoot: prettyBytes(this.blockRootHex),
+      slot: this.slot,
       expectedBlobs:
         this.state.daStatus !== DAStatus.Unknown ? this.state.block.message.body.blobKzgCommitments.length : "unknown",
       receivedBlobs: this.blobsCache.size,
     };
-  }
-
-  forkName(): ForkBlobs {
-    return this.state.forkName as ForkBlobs;
-  }
-
-  slot(): Slot {
-    return this.state.daStatus === DAStatus.Unknown ? this.state.slot : this.state.block.message.slot;
-  }
-
-  blockRootHex(): string {
-    return this.state.blockRootHex;
-  }
-
-  parentRootHex(): string {
-    return this.state.parentRootHex;
   }
 
   hasBlock(): boolean {
@@ -517,18 +488,18 @@ export class BlockInputBlobs implements IBlockInput<ForkBlobs, deneb.BlobSidecar
       throw new BlockInputError(
         {
           code: BlockInputErrorCode.INVALID_CONSTRUCTION,
-          blockRoot: this.state.blockRootHex,
+          blockRoot: this.blockRootHex,
         },
         "Cannot addBlock to BlockInputBlobs after it already has a block"
       );
     }
 
     // this check suffices for checking slot, parentRoot, and forkName
-    if (blockRootHex !== this.state.blockRootHex) {
+    if (blockRootHex !== this.blockRootHex) {
       throw new BlockInputError(
         {
           code: BlockInputErrorCode.MISMATCHED_ROOT_HEX,
-          blockInputRoot: this.state.blockRootHex,
+          blockInputRoot: this.blockRootHex,
           mismatchedRoot: blockRootHex,
           source: source,
           peerId: `${peerIdStr}`,
@@ -578,18 +549,18 @@ export class BlockInputBlobs implements IBlockInput<ForkBlobs, deneb.BlobSidecar
       throw new BlockInputError(
         {
           code: BlockInputErrorCode.INVALID_CONSTRUCTION,
-          blockRoot: this.state.blockRootHex,
+          blockRoot: this.blockRootHex,
         },
         "Cannot addBlob to BlockInputBlobs after it already is complete"
       );
     }
 
     // this check suffices for checking slot, parentRoot, and forkName
-    if (blockRootHex !== this.state.blockRootHex) {
+    if (blockRootHex !== this.blockRootHex) {
       throw new BlockInputError(
         {
           code: BlockInputErrorCode.MISMATCHED_ROOT_HEX,
-          blockInputRoot: this.state.blockRootHex,
+          blockInputRoot: this.blockRootHex,
           mismatchedRoot: blockRootHex,
           source: source,
           peerId: `${peerIdStr}`,
@@ -599,7 +570,7 @@ export class BlockInputBlobs implements IBlockInput<ForkBlobs, deneb.BlobSidecar
     }
 
     if (this.state.daStatus === DAStatus.IncompleteData) {
-      assertBlockAndBlobArePaired(this.state.blockRootHex, this.state.block, blobSidecar);
+      assertBlockAndBlobArePaired(this.blockRootHex, this.state.block, blobSidecar);
     }
 
     // TODO: (@matthewkeil) check for duplicates and add metric here
@@ -643,7 +614,7 @@ export class BlockInputBlobs implements IBlockInput<ForkBlobs, deneb.BlobSidecar
       if (!this.blobsCache.has(index)) {
         blobMeta.push({
           index,
-          blockRoot: fromHex(this.state.blockRootHex),
+          blockRoot: fromHex(this.blockRootHex),
           versionHash: versionHashes[index],
         });
       }
@@ -732,11 +703,6 @@ type BlockInputColumnsState =
       sampledStatus: DAStatus.CompleteData;
       custodyStatus: DAStatus;
       blockStatus: BlockStatus.HasBlock;
-
-      forkName: ForkName;
-      blockRootHex: string;
-      parentRootHex: string;
-
       block: SignedBeaconBlock<ForkPostFulu>;
       blockSource: SourceMeta;
       timeBeginSec: number;
@@ -747,11 +713,6 @@ type BlockInputColumnsState =
       sampledStatus: DAStatus.IncompleteData;
       custodyStatus: DAStatus;
       blockStatus: BlockStatus.HasBlock;
-
-      forkName: ForkName;
-      blockRootHex: string;
-      parentRootHex: string;
-
       block: SignedBeaconBlock<ForkPostFulu>;
       blockSource: SourceMeta;
       timeBeginSec: number;
@@ -761,12 +722,6 @@ type BlockInputColumnsState =
       sampledStatus: DAStatus.CompleteData;
       custodyStatus: DAStatus;
       blockStatus: BlockStatus.MissingBlock;
-
-      forkName: ForkName;
-      blockRootHex: string;
-      parentRootHex: string;
-      slot: Slot;
-
       timeBeginSec: number;
     }
   | {
@@ -774,12 +729,6 @@ type BlockInputColumnsState =
       sampledStatus: DAStatus.IncompleteData;
       custodyStatus: DAStatus;
       blockStatus: BlockStatus.MissingBlock;
-
-      forkName: ForkName;
-      blockRootHex: string;
-      parentRootHex: string;
-      slot: Slot;
-
       timeBeginSec: number;
     };
 /**
@@ -791,6 +740,12 @@ type BlockInputColumnsState =
  */
 export class BlockInputColumns implements IBlockInput<ForkPostFulu, fulu.DataColumnSidecars> {
   type = DAType.Columns as const;
+
+  forkName: ForkName;
+  slot: Slot;
+  blockRootHex: string;
+  parentRootHex: string;
+
   private columnsCache = new Map<ColumnIndex, ColumnWithSource>();
   private readonly custodyConfig: CustodyConfig;
   private state: BlockInputColumnsState;
@@ -800,9 +755,13 @@ export class BlockInputColumns implements IBlockInput<ForkPostFulu, fulu.DataCol
   /** both sampled and block promises */
   private bothPromise = createPromise<this>();
 
-  constructor(state: BlockInputColumnsState, custodyConfig: CustodyConfig) {
-    this.custodyConfig = custodyConfig;
+  constructor(state: BlockInputColumnsState, blockHeaderMeta: BlockHeaderMeta, custodyConfig: CustodyConfig) {
     this.state = state;
+    this.forkName = blockHeaderMeta.forkName;
+    this.slot = blockHeaderMeta.slot;
+    this.blockRootHex = blockHeaderMeta.blockRootHex;
+    this.parentRootHex = blockHeaderMeta.parentRootHex;
+    this.custodyConfig = custodyConfig;
   }
 
   static createFromBlock(
@@ -819,9 +778,6 @@ export class BlockInputColumns implements IBlockInput<ForkPostFulu, fulu.DataCol
       sampledStatus,
       custodyStatus,
       blockStatus: BlockStatus.HasBlock,
-      forkName: props.forkName,
-      blockRootHex: props.blockRootHex,
-      parentRootHex: toHex(props.block.message.parentRoot),
       block: props.block,
       blockSource: {
         source: props.source,
@@ -831,7 +787,13 @@ export class BlockInputColumns implements IBlockInput<ForkPostFulu, fulu.DataCol
       timeBeginSec: props.seenTimestampSec,
       timeCompleteSec: completeData ? props.seenTimestampSec : undefined,
     } as BlockInputColumnsState;
-    const blockInput = new BlockInputColumns(state, props.custodyConfig);
+    const meta: BlockHeaderMeta = {
+      forkName: props.forkName,
+      blockRootHex: props.blockRootHex,
+      parentRootHex: toHex(props.block.message.parentRoot),
+      slot: props.block.message.slot,
+    };
+    const blockInput = new BlockInputColumns(state, meta, props.custodyConfig);
 
     blockInput.blockPromise.resolve(props.block);
     if (sampledStatus === DAStatus.CompleteData) {
@@ -855,13 +817,15 @@ export class BlockInputColumns implements IBlockInput<ForkPostFulu, fulu.DataCol
       sampledStatus,
       custodyStatus,
       blockStatus: BlockStatus.MissingBlock,
+      timeBeginSec: props.seenTimestampSec,
+    };
+    const meta: BlockHeaderMeta = {
       forkName: props.forkName,
       blockRootHex: props.blockRootHex,
       parentRootHex: toHex(props.columnSidecar.signedBlockHeader.message.parentRoot),
       slot: props.columnSidecar.signedBlockHeader.message.slot,
-      timeBeginSec: props.seenTimestampSec,
     };
-    const blockInput = new BlockInputColumns(state, props.custodyConfig);
+    const blockInput = new BlockInputColumns(state, meta, props.custodyConfig);
     if (sampledStatus === DAStatus.CompleteData) {
       blockInput.sampledPromise.resolve([]);
     }
@@ -873,33 +837,14 @@ export class BlockInputColumns implements IBlockInput<ForkPostFulu, fulu.DataCol
 
   getLogMeta(): LogMetaColumns {
     return {
-      blockRoot: prettyBytes(this.state.blockRootHex),
-      slot: this.state.blockStatus === BlockStatus.HasBlock ? this.state.block.message.slot : this.state.slot,
+      blockRoot: prettyBytes(this.blockRootHex),
+      slot: this.slot,
       expectedColumns:
         this.state.blockStatus === BlockStatus.HasBlock && this.state.block.message.body.blobKzgCommitments.length === 0
           ? 0
           : this.custodyConfig.sampledColumns.length,
       receivedColumns: this.getSampledColumns(),
     };
-  }
-
-  slot(): Slot {
-    if (this.state.blockStatus === BlockStatus.HasBlock) {
-      return this.state.block.message.slot;
-    }
-    return this.state.slot;
-  }
-
-  forkName(): ForkPostFulu {
-    return this.state.forkName as ForkPostFulu;
-  }
-
-  blockRootHex(): string {
-    return this.state.blockRootHex;
-  }
-
-  parentRootHex(): string {
-    return this.state.parentRootHex;
   }
 
   hasBlock(): boolean {
@@ -911,7 +856,7 @@ export class BlockInputColumns implements IBlockInput<ForkPostFulu, fulu.DataCol
       throw new BlockInputError(
         {
           code: BlockInputErrorCode.MISSING_BLOCK,
-          blockRoot: this.state.blockRootHex,
+          blockRoot: this.blockRootHex,
         },
         "Cannot getBlock from BlockInputColumns without a block"
       );
@@ -924,7 +869,7 @@ export class BlockInputColumns implements IBlockInput<ForkPostFulu, fulu.DataCol
       throw new BlockInputError(
         {
           code: BlockInputErrorCode.MISSING_BLOCK,
-          blockRoot: this.state.blockRootHex,
+          blockRoot: this.blockRootHex,
         },
         "Cannot getBlockSource from BlockInputColumns without a block"
       );
@@ -949,7 +894,7 @@ export class BlockInputColumns implements IBlockInput<ForkPostFulu, fulu.DataCol
       throw new BlockInputError(
         {
           code: BlockInputErrorCode.MISSING_BLOCK,
-          blockRoot: this.state.blockRootHex,
+          blockRoot: this.blockRootHex,
         },
         "Cannot getTimeComplete from BlockInputColumns without a block"
       );
@@ -958,7 +903,7 @@ export class BlockInputColumns implements IBlockInput<ForkPostFulu, fulu.DataCol
       throw new BlockInputError(
         {
           code: BlockInputErrorCode.MISSING_TIME_COMPLETE,
-          blockRoot: this.state.blockRootHex,
+          blockRoot: this.blockRootHex,
         },
         "Cannot getTimeComplete from BlockInputColumns without sampled data"
       );
@@ -971,17 +916,17 @@ export class BlockInputColumns implements IBlockInput<ForkPostFulu, fulu.DataCol
       throw new BlockInputError(
         {
           code: BlockInputErrorCode.INVALID_CONSTRUCTION,
-          blockRoot: this.state.blockRootHex,
+          blockRoot: this.blockRootHex,
         },
         "Cannot addBlock to BlockInputColumns after it already has a block"
       );
     }
 
-    if (props.blockRootHex !== this.state.blockRootHex) {
+    if (props.blockRootHex !== this.blockRootHex) {
       throw new BlockInputError(
         {
           code: BlockInputErrorCode.MISMATCHED_ROOT_HEX,
-          blockInputRoot: this.state.blockRootHex,
+          blockInputRoot: this.blockRootHex,
           mismatchedRoot: props.blockRootHex,
           source: props.source,
           peerId: `${props.peerIdStr}`,
@@ -1027,11 +972,11 @@ export class BlockInputColumns implements IBlockInput<ForkPostFulu, fulu.DataCol
   }
 
   addColumn({blockRootHex, columnSidecar, source, seenTimestampSec, peerIdStr}: AddColumn): void {
-    if (blockRootHex !== this.state.blockRootHex) {
+    if (blockRootHex !== this.blockRootHex) {
       throw new BlockInputError(
         {
           code: BlockInputErrorCode.MISMATCHED_ROOT_HEX,
-          blockInputRoot: this.state.blockRootHex,
+          blockInputRoot: this.blockRootHex,
           mismatchedRoot: blockRootHex,
           source: source,
           peerId: `${peerIdStr}`,
@@ -1041,7 +986,7 @@ export class BlockInputColumns implements IBlockInput<ForkPostFulu, fulu.DataCol
     }
 
     if (this.state.blockStatus === BlockStatus.HasBlock) {
-      assertBlockAndColumnArePaired(this.state.blockRootHex, this.state.block, columnSidecar);
+      assertBlockAndColumnArePaired(this.blockRootHex, this.state.block, columnSidecar);
     }
 
     this.columnsCache.set(columnSidecar.index, {columnSidecar, source, seenTimestampSec, peerIdStr});
@@ -1139,7 +1084,7 @@ export class BlockInputColumns implements IBlockInput<ForkPostFulu, fulu.DataCol
     }
 
     const needed: ColumnMeta[] = [];
-    const blockRoot = fromHex(this.state.blockRootHex);
+    const blockRoot = fromHex(this.blockRootHex);
     for (const index of this.custodyConfig.sampledColumns) {
       if (!this.columnsCache.has(index)) {
         needed.push({index, blockRoot});
@@ -1154,7 +1099,7 @@ export class BlockInputColumns implements IBlockInput<ForkPostFulu, fulu.DataCol
     }
 
     const needed: ColumnMeta[] = [];
-    const blockRoot = fromHex(this.state.blockRootHex);
+    const blockRoot = fromHex(this.blockRootHex);
     for (const index of this.custodyConfig.custodyColumns) {
       if (!this.columnsCache.has(index)) {
         needed.push({index, blockRoot});
