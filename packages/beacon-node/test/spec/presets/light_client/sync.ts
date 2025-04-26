@@ -173,6 +173,8 @@ export const sync: TestRunnerFn<SyncTestCase, void> = (fork) => {
         // t has input file name as key
         const updates = new Map<string, Uint8Array>();
         for (const key in t) {
+          if (!Object.prototype.hasOwnProperty.call(t, key)) continue;
+
           const updateMatch = key.match(UPDATE_FILE_NAME);
           if (updateMatch) {
             updates.set(key, t[key]);

@@ -4991,12 +4991,176 @@
       "type": "heatmap"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 211
+      },
+      "id": 626,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(lodestar_gossip_attestation_reject_by_reason_total[$rate_interval])",
+          "instant": false,
+          "legendFormat": "{{reason}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Gossip Attestation Reject by Reason",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 211
+      },
+      "id": 627,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(lodestar_gossip_attestation_ignore_by_reason_total[$rate_interval])",
+          "instant": false,
+          "legendFormat": "{{reason}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Gossip Attestation Ignore by Reason",
+      "type": "timeseries"
+    },
+    {
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 211
+        "y": 219
       },
       "id": 600,
       "panels": [],
@@ -5054,7 +5218,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 212
+        "y": 220
       },
       "id": 602,
       "options": {
@@ -5184,7 +5348,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 212
+        "y": 220
       },
       "id": 604,
       "options": {
@@ -5338,7 +5502,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 220
+        "y": 228
       },
       "id": 603,
       "options": {
@@ -5419,7 +5583,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 220
+        "y": 228
       },
       "id": 601,
       "options": {
@@ -5460,7 +5624,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 228
+        "y": 236
       },
       "id": 188,
       "panels": [],
@@ -5527,7 +5691,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 229
+        "y": 237
       },
       "id": 180,
       "options": {
@@ -5610,7 +5774,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 229
+        "y": 237
       },
       "id": 176,
       "options": {
@@ -5693,7 +5857,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 237
+        "y": 245
       },
       "id": 182,
       "options": {
@@ -5776,7 +5940,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 237
+        "y": 245
       },
       "id": 178,
       "options": {
@@ -5859,7 +6023,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 245
+        "y": 253
       },
       "id": 605,
       "options": {
@@ -5944,7 +6108,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 245
+        "y": 253
       },
       "id": 606,
       "options": {
@@ -6029,7 +6193,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 253
+        "y": 261
       },
       "id": 498,
       "options": {
@@ -6112,7 +6276,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 253
+        "y": 261
       },
       "id": 500,
       "options": {
@@ -6195,7 +6359,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 261
+        "y": 269
       },
       "id": 184,
       "options": {
@@ -6278,7 +6442,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 261
+        "y": 269
       },
       "id": 501,
       "options": {

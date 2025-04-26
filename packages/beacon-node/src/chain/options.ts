@@ -1,24 +1,26 @@
 import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@lodestar/params";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
-import {DEFAULT_STATE_ARCHIVE_MODE} from "./archiver/archiver.js";
-import {ArchiverOpts} from "./archiver/interface.js";
+import {DEFAULT_ARCHIVE_MODE} from "./archiveStore/constants.js";
+import {ArchiveMode, ArchiveStoreOpts} from "./archiveStore/interface.js";
 import {ForkChoiceOpts} from "./forkChoice/index.js";
 import {LightClientServerOpts} from "./lightClient/index.js";
 import {ShufflingCacheOpts} from "./shufflingCache.js";
 import {DEFAULT_MAX_BLOCK_STATES, FIFOBlockStateCacheOpts} from "./stateCache/fifoBlockStateCache.js";
 import {PersistentCheckpointStateCacheOpts} from "./stateCache/persistentCheckpointsCache.js";
 import {DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY} from "./stateCache/persistentCheckpointsCache.js";
-export {StateArchiveMode} from "./archiver/interface.js";
-export {DEFAULT_STATE_ARCHIVE_MODE} from "./archiver/archiver.js";
+import {ValidatorMonitorOpts} from "./validatorMonitor.js";
+
+export {ArchiveMode, DEFAULT_ARCHIVE_MODE};
 
 export type IChainOptions = BlockProcessOpts &
   PoolOpts &
   SeenCacheOpts &
   ForkChoiceOpts &
-  ArchiverOpts &
+  ArchiveStoreOpts &
   FIFOBlockStateCacheOpts &
   PersistentCheckpointStateCacheOpts &
   ShufflingCacheOpts &
+  ValidatorMonitorOpts &
   LightClientServerOpts & {
     blsVerifyAllMainThread?: boolean;
     blsVerifyAllMultiThread?: boolean;
@@ -107,7 +109,7 @@ export const defaultChainOptions: IChainOptions = {
   suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
   assertCorrectProgressiveBalances: false,
   archiveStateEpochFrequency: 1024,
-  stateArchiveMode: DEFAULT_STATE_ARCHIVE_MODE,
+  archiveMode: DEFAULT_ARCHIVE_MODE,
   pruneHistory: false,
   emitPayloadAttributes: false,
   // for gossip block validation, it's unlikely we see a reorg with 32 slots

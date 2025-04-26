@@ -5,7 +5,7 @@ import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {ChainForkConfig} from "@lodestar/config";
 import {Repository} from "@lodestar/db";
-import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkName, ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateCapella, getLatestWeakSubjectivityCheckpointEpoch, loadState} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {toHex, toRootHex} from "@lodestar/utils";
@@ -181,11 +181,9 @@ export function getLodestarApi({
 
     async dumpDbBucketKeys({bucket}) {
       for (const repo of Object.values(db) as IBeaconDb[keyof IBeaconDb][]) {
-        if (repo instanceof Repository) {
-          // biome-ignore lint/complexity/useLiteralKeys: `bucket` is protected and `bucketId` is private
-          if (String(repo["bucket"]) === bucket || repo["bucketId"] === bucket) {
-            return {data: stringifyKeys(await repo.keys())};
-          }
+        // biome-ignore lint/complexity/useLiteralKeys: `bucket` is protected and `bucketId` is private
+        if (repo instanceof Repository && (String(repo["bucket"]) === bucket || repo["bucketId"] === bucket)) {
+          return {data: stringifyKeys(await repo.keys())};
         }
       }
 
@@ -197,7 +195,7 @@ export function getLodestarApi({
     },
 
     async getHistoricalSummaries({stateId}) {
-      const {state} = await getStateResponseWithRegen(chain, stateId);
+      const {state, executionOptimistic, finalized} = await getStateResponseWithRegen(chain, stateId);
 
       const stateView = (
         state instanceof Uint8Array ? loadState(config, chain.getHeadState(), state).state : state.clone()
@@ -213,9 +211,11 @@ export function getLodestarApi({
 
       return {
         data: {
+          slot: stateView.slot,
           historicalSummaries: stateView.historicalSummaries.toValue(),
           proof: proof,
         },
+        meta: {executionOptimistic, finalized, version: fork},
       };
     },
   };

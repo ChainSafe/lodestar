@@ -504,6 +504,12 @@ export function deserializeExecutionRequests(serialized: ExecutionRequestsRpc): 
 
     const requests = prefixedRequests.slice(2);
 
+    if (requests.length === 0) {
+      throw Error(
+        `Request with empty data must be excluded from execution requests currentRequestType=${currentRequestType}`
+      );
+    }
+
     if (prevRequestType !== undefined && prevRequestType >= currentRequestType) {
       throw Error(
         `Current request type must be larger than previous request type prevRequestType=${prevRequestType} currentRequestType=${currentRequestType}`

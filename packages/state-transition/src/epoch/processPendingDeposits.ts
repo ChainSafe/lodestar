@@ -1,5 +1,5 @@
 import {FAR_FUTURE_EPOCH, ForkSeq, GENESIS_SLOT, MAX_PENDING_DEPOSITS_PER_EPOCH} from "@lodestar/params";
-import {PendingDeposit} from "@lodestar/types/lib/electra/types.js";
+import {electra} from "@lodestar/types";
 import {addValidatorToRegistry, isValidDepositSignature} from "../block/processDeposit.js";
 import {CachedBeaconStateElectra, EpochTransitionCache} from "../types.js";
 import {increaseBalance} from "../util/balance.js";
@@ -106,7 +106,7 @@ export function processPendingDeposits(state: CachedBeaconStateElectra, cache: E
 
 function applyPendingDeposit(
   state: CachedBeaconStateElectra,
-  deposit: PendingDeposit,
+  deposit: electra.PendingDeposit,
   cache: EpochTransitionCache
 ): void {
   const validatorIndex = state.epochCtx.getValidatorIndex(deposit.pubkey);

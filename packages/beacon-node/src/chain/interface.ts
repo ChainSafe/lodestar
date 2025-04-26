@@ -32,6 +32,7 @@ import {Metrics} from "../metrics/metrics.js";
 import {BufferPool} from "../util/bufferPool.js";
 import {IClock} from "../util/clock.js";
 import {SerializedCache} from "../util/serializedCache.js";
+import {IArchiveStore} from "./archiveStore/interface.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache, ProposerPreparationData} from "./beaconProposerCache.js";
 import {BlockInput, ImportBlockOpts} from "./blocks/types.js";
@@ -60,6 +61,7 @@ import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {ShufflingCache} from "./shufflingCache.js";
+import {ValidatorMonitor} from "./validatorMonitor.js";
 
 export {BlockType, type AssembledBlockType};
 export {type ProposerPreparationData};
@@ -89,6 +91,7 @@ export interface IBeaconChain {
   readonly config: BeaconConfig;
   readonly logger: Logger;
   readonly metrics: Metrics | null;
+  readonly validatorMonitor: ValidatorMonitor | null;
   readonly bufferPool: BufferPool | null;
 
   /** The initial slot that the chain is started with */
@@ -103,6 +106,7 @@ export interface IBeaconChain {
   readonly reprocessController: ReprocessController;
   readonly pubkey2index: PubkeyIndexMap;
   readonly index2pubkey: Index2PubkeyCache;
+  readonly archiveStore: IArchiveStore;
 
   // Ops pool
   readonly attestationPool: AttestationPool;
@@ -135,6 +139,8 @@ export interface IBeaconChain {
 
   readonly opts: IChainOptions;
 
+  /** Start the processing of chain and load state from disk and related actions */
+  init(): Promise<void>;
   /** Stop beacon chain processing */
   close(): Promise<void>;
   /** Chain has seen the specified block root or not. The block may not be processed yet, use forkchoice.hasBlock to check it  */
