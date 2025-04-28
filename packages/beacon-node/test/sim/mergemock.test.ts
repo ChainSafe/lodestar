@@ -63,28 +63,25 @@ describe("executionEngine / ExecutionEngineHttp", () => {
     }
   });
 
-  for (const useProduceBlockV3 of [false, true]) {
-    it(`Test builder with useProduceBlockV3=${useProduceBlockV3}`, async () => {
-      console.log("\n\nPost-merge, run for a few blocks\n\n");
-      const {elClient, tearDownCallBack} = await runEL(
-        {...elSetupConfig, mode: ELStartMode.PostMerge},
-        {...elRunOptions, ttd: BigInt(0)},
-        controller.signal
-      );
-      afterEachCallbacks.push(() => tearDownCallBack());
+  it("Test builder flow", async () => {
+    console.log("\n\nPost-merge, run for a few blocks\n\n");
+    const {elClient, tearDownCallBack} = await runEL(
+      {...elSetupConfig, mode: ELStartMode.PostMerge},
+      {...elRunOptions, ttd: BigInt(0)},
+      controller.signal
+    );
+    afterEachCallbacks.push(() => tearDownCallBack());
 
-      await runNodeWithEL({
-        elClient,
-        bellatrixEpoch: 0,
-        testName: "post-merge",
-        useProduceBlockV3,
-      });
+    await runNodeWithEL({
+      elClient,
+      bellatrixEpoch: 0,
+      testName: "post-merge",
     });
-  }
+  });
 
-  type RunOpts = {elClient: ELClient; bellatrixEpoch: Epoch; testName: string; useProduceBlockV3: boolean};
+  type RunOpts = {elClient: ELClient; bellatrixEpoch: Epoch; testName: string};
 
-  async function runNodeWithEL({elClient, bellatrixEpoch, testName, useProduceBlockV3}: RunOpts): Promise<void> {
+  async function runNodeWithEL({elClient, bellatrixEpoch, testName}: RunOpts): Promise<void> {
     const {genesisBlockHash, ttd, engineRpcUrl, ethRpcUrl} = elClient;
     const validatorClientCount = 1;
     const validatorsPerClient = 32;
@@ -201,7 +198,6 @@ describe("executionEngine / ExecutionEngineHttp", () => {
       useRestApi: true,
       testLoggerOpts,
       valProposerConfig,
-      useProduceBlockV3,
     });
 
     afterEachCallbacks.push(async () => {

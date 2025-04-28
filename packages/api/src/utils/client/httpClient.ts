@@ -1,9 +1,9 @@
 import {ErrorAborted, Logger, MapDef, TimeoutError, isValidHttpUrl, retry, toPrintableUrl} from "@lodestar/utils";
+import {fetch, isFetchError} from "@lodestar/utils";
 import {mergeHeaders} from "../headers.js";
 import {HttpStatusCode} from "../httpStatusCode.js";
 import {Endpoint} from "../types.js";
 import {WireFormat} from "../wireFormat.js";
-import {fetch, isFetchError} from "./fetch.js";
 import {Metrics} from "./metrics.js";
 import {
   ApiRequestInit,

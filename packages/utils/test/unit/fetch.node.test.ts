@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import http from "node:http";
 import {afterEach, describe, expect, it} from "vitest";
-import {FetchError, FetchErrorType, fetch} from "../../../src/utils/client/fetch.js";
+import {FetchError, FetchErrorType, fetch} from "../../src/fetch.js";
 
 describe("FetchError", () => {
   const port = 37421;

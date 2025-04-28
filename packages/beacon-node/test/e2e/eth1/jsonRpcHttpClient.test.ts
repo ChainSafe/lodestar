@@ -1,7 +1,6 @@
 import crypto from "node:crypto";
 import http from "node:http";
-import {FetchError} from "@lodestar/api";
-import {sleep} from "@lodestar/utils";
+import {FetchError, sleep} from "@lodestar/utils";
 import {afterEach, describe, expect, it, vi} from "vitest";
 import {RpcPayload} from "../../../src/eth1/interface.js";
 import {JsonRpcHttpClient} from "../../../src/eth1/provider/jsonRpcHttpClient.js";
