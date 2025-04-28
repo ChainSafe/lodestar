@@ -562,7 +562,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     this.metrics?.blsThreadPool.sameMessageRetrySets.inc(job.sets.length);
   }
 
-  /** @ts-ignore: For testing */
+  /** @ts-expect-error: For testing */
   private async waitTillInitialized(): Promise<void> {
     await Promise.all(
       this.workers.map(async (worker) => {
