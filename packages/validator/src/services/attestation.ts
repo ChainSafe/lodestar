@@ -196,10 +196,11 @@ export class AttestationService {
     const signedAttestations: SingleAttestation[] = [];
     const headRootHex = toRootHex(attestationNoCommittee.beaconBlockRoot);
     const currentEpoch = computeEpochAtSlot(slot);
+    const isPostElectra = this.config.getForkSeq(slot) >= ForkSeq.electra;
 
     await Promise.all(
       duties.map(async ({duty}) => {
-        const index = this.config.getForkSeq(slot) >= ForkSeq.electra ? 0 : duty.committeeIndex;
+        const index = isPostElectra ? 0 : duty.committeeIndex;
         const attestationData: phase0.AttestationData = {...attestationNoCommittee, index};
         const logCtxValidator = {slot, index, head: headRootHex, validatorIndex: duty.validatorIndex};
 
