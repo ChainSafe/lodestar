@@ -36,7 +36,6 @@ import {
   BlindedBeaconBlock,
   BlockContents,
   CommitteeIndex,
-  Contents,
   Epoch,
   ProducedBlockSource,
   Root,
@@ -51,8 +50,7 @@ import {
   ssz,
 } from "@lodestar/types";
 import {
-  PromiseRawResult,
-  PromiseResult,
+  LogDataBasic,
   TimeoutError,
   formatWeiToEth,
   fromHex,
@@ -70,12 +68,7 @@ import {
   SyncCommitteeErrorCode,
 } from "../../../chain/errors/index.js";
 import {
-  AssembledBlindedBlock,
-  AssembledBlindedBlockBody,
   AssembledBlockBodyResponse,
-  AssembledBlockResponse,
-  AssembledFullBlock,
-  AssembledFullBlockBody,
   BlockType,
   ChainEvent,
   CheckpointHex,
@@ -508,9 +501,10 @@ export function getValidatorApi(
       graffiti: Buffer;
       parentBlockRoot: Root;
       currentState: CachedBeaconStateAllForks;
-    }
+    },
+    loggerContext: Record<string, LogDataBasic>
   ): Promise<AssembledBlockBodyResponse<BlockType.Blinded>> {
-    const {slot, version} = opts;
+    const {version} = opts;
     if (!isForkPostBellatrix(version)) {
       throw Error(`Invalid fork=${version} for produceBuilderBlindedBlockBody`);
     }
@@ -530,7 +524,7 @@ export function getValidatorApi(
 
     metrics?.blockProductionSuccess.inc({source});
     logger.verbose("Produced blinded block body", {
-      slot,
+      ...loggerContext,
       executionPayloadValue: resp.executionPayloadValue,
     });
 
@@ -545,9 +539,9 @@ export function getValidatorApi(
       version: ForkName;
       parentBlockRoot: Root;
       currentState: CachedBeaconStateAllForks;
-    } & Omit<routes.validator.ExtraProduceBlockOpts, "builderSelection">
+    } & Omit<routes.validator.ExtraProduceBlockOpts, "builderSelection">,
+    loggerContext: Record<string, LogDataBasic>
   ): Promise<AssembledBlockBodyResponse<BlockType.Full>> {
-    const {slot} = opts;
     const source = ProducedBlockSource.engine;
     metrics?.blockProductionRequests.inc({source});
 
@@ -555,7 +549,7 @@ export function getValidatorApi(
     metrics?.blockProductionSuccess.inc({source});
     metrics?.blockProductionExecutionPayloadValue.observe({source}, Number(formatWeiToEth(resp.executionPayloadValue)));
     logger.verbose("Produced execution block body", {
-      slot,
+      ...loggerContext,
       executionPayloadValue: resp.executionPayloadValue,
     });
 
@@ -711,7 +705,7 @@ export function getValidatorApi(
       );
     }
 
-    const loggerContext = {
+    const loggerContext: Record<string, LogDataBasic> = {
       slot,
       fork,
       builderSelection,
@@ -756,7 +750,7 @@ export function getValidatorApi(
 
     // Start calls for building execution and builder blocks
     const builderBodyPromise = isBuilderEnabled
-      ? produceBuilderBlockBody({...blockAttributes, currentState})
+      ? produceBuilderBlockBody({...blockAttributes, currentState}, loggerContext)
           .then(async (builderBlockBody) => {
             const commonBlockBody = await commonBlockBodyPromise;
             return assembleBuilderBlockResponse(blockAttributes, currentState, commonBlockBody, builderBlockBody);
@@ -767,7 +761,7 @@ export function getValidatorApi(
       : Promise.reject(new Error("Builder disabled"));
 
     const engineBodyPromise = isEngineEnabled
-      ? produceEngineBlockBody({...blockAttributes, currentState})
+      ? produceEngineBlockBody({...blockAttributes, currentState}, loggerContext)
           .then(async (engineBlockBody) => {
             const commonBlockBody = await commonBlockBodyPromise;
             const resp = await assembleEngineBlockResponse(
