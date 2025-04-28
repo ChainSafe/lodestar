@@ -4,11 +4,11 @@ title: Understanding Historical Sate Regeneration
 
 ## Understanding Historical Sate Regeneration
 
-To run a blockchain client and establish consensus we need latest headers and forkchoice data. This operation does not require to historical data, specially after the epochs which are finalized. Storing the full state information for the finalized slots increase the storage requirement a lot and not suitable for running the node for long time.
+To run a blockchain client and establish consensus we need the latest headers and forkchoice data. This operation does not involve historical data, specifically for periods that have already been finalized. Storing the full state information for the finalized slots increases the storage requirement significantly and is not suitable for running the node long-term.
 
 ### Solution
 
-To overcome the storage problem for the archive nodes we implemented following algorithm to store and fetch the historical sates.
+To overcome the storage problem for the archive nodes, we implemented the following algorithm that efficiently stores and fetches historical sates.
 
 #### Approach
 
@@ -45,10 +45,10 @@ To derive the right values for layers, we developed a mathematical approach that
 
 $$
 \begin{align*}
-Cost &= \frac{w_{s}* Storage + w_{b} \times Backup_Time + w_{r} \times Restore_Time}{(n \times T_{diff} + T_{full}) \times G_{max}} + (G_{min} \times T_{replay}) \\
-Total_Storage &= F \times S_{full} + \sum\limits_{i=1}^{n}D_{i}\times S_{diff}\\
-Backup_Time &= F \times T_{full} + \sum\limits_{i=1}^{n}D_{i} \times T_{diff}\\
-Restore_Time &= F \times R_{full} + \sum\limits_{i=1}^{n}D_{i} \times R_{diff}\\
+Cost &= \frac{w_{s}* Total\_Storage + w_{b} \times Backup\_Time + w_{r} \times Restore\_Time}{(n \times T_{diff} + T_{full}) \times G_{max}} + (G_{min} \times T_{replay}) \\
+Total\_Storage &= F \times S_{full} + \sum\limits_{i=1}^{n}D_{i}\times S_{diff}\\
+Backup\_Time &= F \times T_{full} + \sum\limits_{i=1}^{n}D_{i} \times T_{diff}\\
+Restore\_Time &= F \times R_{full} + \sum\limits_{i=1}^{n}D_{i} \times R_{diff}\\
 \\
 \text{Where as}\\
 \\
@@ -70,7 +70,7 @@ n &= \text{Number of differential layers}\\
 \end{align*}
 $$
 
-As there are lot of parameters in the system and we don't have accurate values for these so we started few possible estimates. Also as the chain is ever growing data structure the value for `F` is not finite. We decided to do this estimation based on 30 days time period and `mainnet` parameters.
+As there are lots of parameters in the system and we don't have accurate values for these, we started with a few possible estimates. Also as the chain is ever growing data structure the value for `F` is not finite. We decided to do this estimation based on 30 days time period and `mainnet` parameters.
 
 Based on these assumptions and system we decided for the following constants.
 
