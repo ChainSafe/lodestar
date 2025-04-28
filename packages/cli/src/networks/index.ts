@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import {ENR} from "@chainsafe/enr";
-import {HttpHeader, MediaType, WireFormat, getClient} from "@lodestar/api";
+import {WireFormat, getClient} from "@lodestar/api";
 import {getStateSlotFromBytes} from "@lodestar/beacon-node";
 import {ChainConfig, ChainForkConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
