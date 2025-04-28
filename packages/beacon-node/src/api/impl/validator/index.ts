@@ -743,16 +743,22 @@ export function getValidatorApi(
     const builderTimer = metrics?.blockProductionTime.startTimer();
     const engineTimer = metrics?.blockProductionTime.startTimer();
 
-    const commonBlockBodyPromise = chain.produceCommonBlockBody({...blockAttributes, currentState}).then((resp) => {
-      logger.debug("Produced common block body", loggerContext);
-      return resp;
-    });
+    let commonBlockBodyPromise: Promise<CommonBlockBody> | undefined = undefined;
+    const commonBlockBodyPromiseFn = () => {
+      if (!commonBlockBodyPromise) {
+        commonBlockBodyPromise = chain.produceCommonBlockBody({...blockAttributes, currentState}).then((resp) => {
+          logger.debug("Produced common block body", loggerContext);
+          return resp;
+        });
+      }
+      return commonBlockBodyPromise;
+    };
 
     // Start calls for building execution and builder blocks
     const builderBodyPromise = isBuilderEnabled
       ? produceBuilderBlockBody({...blockAttributes, currentState}, loggerContext)
           .then(async (builderBlockBody) => {
-            const commonBlockBody = await commonBlockBodyPromise;
+            const commonBlockBody = await commonBlockBodyPromiseFn();
             return assembleBuilderBlockResponse(blockAttributes, currentState, commonBlockBody, builderBlockBody);
           })
           .finally(() => {
@@ -763,7 +769,7 @@ export function getValidatorApi(
     const engineBodyPromise = isEngineEnabled
       ? produceEngineBlockBody({...blockAttributes, currentState}, loggerContext)
           .then(async (engineBlockBody) => {
-            const commonBlockBody = await commonBlockBodyPromise;
+            const commonBlockBody = await commonBlockBodyPromiseFn();
             const resp = await assembleEngineBlockResponse(
               blockAttributes,
               currentState,
@@ -794,7 +800,7 @@ export function getValidatorApi(
       : Promise.reject(new Error("Engine disabled"));
 
     const [_, [builder, engine]] = await Promise.all([
-      commonBlockBodyPromise,
+      commonBlockBodyPromiseFn(),
       resolveOrRacePromises([builderBodyPromise, engineBodyPromise], {
         resolveTimeoutMs: cutoffMs,
         raceTimeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
