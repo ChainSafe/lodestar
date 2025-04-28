@@ -5,10 +5,15 @@ import {BeaconState, Epoch, RootHex, Slot, phase0, ssz} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {beforeAll, describe, expect, it} from "vitest";
 import {IStateDiffCodec} from "../../../../../src/chain/archiveStore/interface.js";
-import {XDelta3Codec} from "../../../../../src/chain/archiveStore/utils/xdelta3.js";
+import {BinaryDiffCodec} from "../../../../../src/chain/archiveStore/utils/binaryDiffCodec.js";
 import {generateState} from "../../../../utils/state.js";
 
 const testsCases: {title: string; base: () => Uint8Array; changed: () => Uint8Array}[] = [
+  {
+    title: "No change",
+    base: () => Uint8Array.from(Buffer.from("Lodestar")),
+    changed: () => Uint8Array.from(Buffer.from("Lodestar")),
+  },
   {
     title: "Simple string",
     base: () => Uint8Array.from(Buffer.from("Lodestar")),
@@ -69,7 +74,7 @@ describe("BinaryDiffCodec", () => {
   let multiDiffData: Record<string, {value: Uint8Array; diff: Uint8Array}>;
 
   beforeAll(async () => {
-    codec = new XDelta3Codec();
+    codec = new BinaryDiffCodec();
 
     multiDiffData = {
       snapshot: {

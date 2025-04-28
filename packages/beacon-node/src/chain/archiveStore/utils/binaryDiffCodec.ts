@@ -1,7 +1,7 @@
 import {decodeSync, encodeSync} from "@chainsafe/xdelta3-node";
 import {IStateDiffCodec} from "../interface.js";
 
-export class XDelta3Codec implements IStateDiffCodec {
+export class BinaryDiffCodec implements IStateDiffCodec {
   compute(base: Uint8Array, changed: Uint8Array): Uint8Array {
     try {
       return encodeSync(base, changed);
