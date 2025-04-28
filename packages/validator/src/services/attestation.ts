@@ -1,6 +1,6 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkPreElectra, ForkSeq} from "@lodestar/params";
+import {ForkSeq} from "@lodestar/params";
 import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@lodestar/state-transition";
 import {BLSSignature, SignedAggregateAndProof, SingleAttestation, Slot, phase0, ssz} from "@lodestar/types";
 import {prettyBytes, sleep, toRootHex} from "@lodestar/utils";
