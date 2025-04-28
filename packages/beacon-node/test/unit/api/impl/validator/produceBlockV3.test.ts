@@ -231,7 +231,13 @@ describe("api/validator - produceBlockV3", () => {
       generateProtoBlock({blockRoot: toHexString(parentBlockRoot)})
     );
     modules.chain.forkChoice.getBlock.mockReturnValue(generateProtoBlock({blockRoot: toHexString(parentBlockRoot)}));
-    modules.chain.produceBlock.mockResolvedValue({
+    modules.chain.produceCommonBlockBody.mockResolvedValue({...fullBlock.body});
+    modules.chain.produceExecutionBlockBody.mockResolvedValue({
+      body: fullBlock.body,
+      blobs: {type: BlobsResultType.preDeneb},
+      executionPayloadValue,
+    });
+    modules.chain.assembleBlockBody.mockResolvedValue({
       block: fullBlock,
       executionPayloadValue,
       consensusBlockValue,
@@ -239,7 +245,18 @@ describe("api/validator - produceBlockV3", () => {
 
     // check if expectedFeeRecipient is passed to produceBlock
     await api.produceBlockV3({slot, randaoReveal, graffiti, feeRecipient});
-    expect(modules.chain.produceBlock).toBeCalledWith({
+    expect(modules.chain.produceCommonBlockBody).toBeCalledWith({
+      currentState: undefined,
+      version: ForkName.bellatrix,
+      randaoReveal,
+      graffiti: toGraffitiBuffer(graffiti),
+      slot,
+      parentBlockRoot,
+      feeRecipient,
+    });
+    expect(modules.chain.produceExecutionBlockBody).toBeCalledWith({
+      currentState: undefined,
+      version: ForkName.bellatrix,
       randaoReveal,
       graffiti: toGraffitiBuffer(graffiti),
       slot,
@@ -250,7 +267,18 @@ describe("api/validator - produceBlockV3", () => {
     // check that no feeRecipient is passed to produceBlock so that produceBlockBody will
     // pick it from beaconProposerCache
     await api.produceBlockV3({slot, randaoReveal, graffiti});
-    expect(modules.chain.produceBlock).toBeCalledWith({
+    expect(modules.chain.produceCommonBlockBody).toBeCalledWith({
+      currentState: undefined,
+      version: ForkName.bellatrix,
+      randaoReveal,
+      graffiti: toGraffitiBuffer(graffiti),
+      slot,
+      parentBlockRoot,
+      feeRecipient: undefined,
+    });
+    expect(modules.chain.produceExecutionBlockBody).toBeCalledWith({
+      currentState: undefined,
+      version: ForkName.bellatrix,
       randaoReveal,
       graffiti: toGraffitiBuffer(graffiti),
       slot,

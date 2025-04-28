@@ -721,7 +721,14 @@ export function getValidatorApi(
     const graffitiBuffer = toGraffitiBuffer(
       graffiti ?? getDefaultGraffiti(getLodestarClientVersion(opts), chain.executionEngine.clientVersion, opts)
     );
-    const blockAttributes = {slot, parentBlockRoot, randaoReveal, graffiti: graffitiBuffer, version};
+    const blockAttributes = {
+      slot,
+      parentBlockRoot,
+      randaoReveal,
+      graffiti: graffitiBuffer,
+      version,
+      feeRecipient,
+    };
     const currentState = await chain.regen.getBlockSlotState(
       toRootHex(parentBlockRoot),
       slot,
