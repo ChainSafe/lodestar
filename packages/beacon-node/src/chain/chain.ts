@@ -649,31 +649,49 @@ export class BeaconChain implements IBeaconChain {
     });
   }
 
-  async produceExecutionBlockBody(
-    blockAttributes: BlockAttributes & {currentState: CachedBeaconStateAllForks}
-  ): Promise<AssembledBlockBodyResponse<BlockType.Full>> {
-    const {slot, currentState} = blockAttributes;
+  async produceExecutionBlockBody({
+    randaoReveal,
+    graffiti,
+    feeRecipient,
+    slot,
+    parentBlockRoot,
+    currentState,
+  }: BlockAttributes & {currentState: CachedBeaconStateAllForks}): Promise<AssembledBlockBodyResponse<BlockType.Full>> {
     const proposerIndex = currentState.epochCtx.getBeaconProposer(slot);
     const proposerPubKey = currentState.epochCtx.index2pubkey[proposerIndex].toBytes();
 
     return produceExecutionBlockBody.call(this, currentState, {
-      ...blockAttributes,
+      randaoReveal,
+      graffiti,
+      slot,
+      feeRecipient,
       parentSlot: slot - 1,
+      parentBlockRoot,
       proposerIndex,
       proposerPubKey,
     });
   }
 
-  async produceBlindedBlockBody(
-    blockAttributes: BlockAttributes & {currentState: CachedBeaconStateAllForks}
-  ): Promise<AssembledBlockBodyResponse<BlockType.Blinded>> {
-    const {currentState, slot} = blockAttributes;
+  async produceBlindedBlockBody({
+    randaoReveal,
+    graffiti,
+    feeRecipient,
+    slot,
+    parentBlockRoot,
+    currentState,
+  }: BlockAttributes & {currentState: CachedBeaconStateAllForks}): Promise<
+    AssembledBlockBodyResponse<BlockType.Blinded>
+  > {
     const proposerIndex = currentState.epochCtx.getBeaconProposer(slot);
     const proposerPubKey = currentState.epochCtx.index2pubkey[proposerIndex].toBytes();
 
     return produceBlindedBlockBody.call(this, currentState, {
-      ...blockAttributes,
+      randaoReveal,
+      graffiti,
+      slot,
+      feeRecipient,
       parentSlot: slot - 1,
+      parentBlockRoot,
       proposerIndex,
       proposerPubKey,
     });
