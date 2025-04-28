@@ -1212,7 +1212,7 @@ export class BeaconChain implements IBeaconChain {
       const {faultInspectionWindow, allowedFaults} = executionBuilder;
       const slotsPresent = this.forkChoice.getSlotsPresent(clockSlot - faultInspectionWindow);
       const previousStatus = executionBuilder.status;
-      const shouldEnable = slotsPresent >= faultInspectionWindow - allowedFaults;
+      const shouldEnable = slotsPresent >= Math.min(faultInspectionWindow - allowedFaults, clockSlot);
 
       executionBuilder.updateStatus(shouldEnable);
       // The status changed we should log

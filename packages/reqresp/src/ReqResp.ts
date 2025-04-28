@@ -33,10 +33,6 @@ export interface ReqRespOpts extends SendRequestOpts, ReqRespRateLimiterOpts {
   getPeerLogMetadata?: (peerId: string) => string;
 }
 
-export interface ReqRespRegisterOpts {
-  ignoreIfDuplicate?: boolean;
-}
-
 /**
  * Implementation of Ethereum Consensus p2p Req/Resp domain.
  * For the spec that this code is based on, see:
@@ -87,27 +83,21 @@ export class ReqResp {
   /**
    * Register protocol as supported and to libp2p.
    * async because libp2p registrar persists the new protocol list in the peer-store.
-   * Throws if the same protocol is registered twice.
+   * Overrides handler and rate limits in case protocol is already registered.
    * Can be called at any time, no concept of started / stopped
    */
-  async registerProtocol(protocol: Protocol, opts?: ReqRespRegisterOpts): Promise<void> {
+  async registerProtocol(protocol: Protocol): Promise<void> {
     const protocolID = this.formatProtocolID(protocol);
     const {handler: _handler, inboundRateLimits, ...rest} = protocol;
-
-    if (inboundRateLimits) {
-      // Rate limits can change across hard forks and must always be updated
-      this.rateLimiter.setRateLimits(protocolID, inboundRateLimits);
-    }
-
-    // libp2p will throw if handler for protocol is already registered, allow to overwrite behavior
-    if (opts?.ignoreIfDuplicate && this.registeredProtocols.has(protocolID)) {
-      return;
-    }
 
     this.registerDialOnlyProtocol(rest);
     this.dialOnlyProtocols.set(protocolID, false);
 
-    return this.libp2p.handle(protocolID, this.getRequestHandler(protocol, protocolID));
+    if (inboundRateLimits) {
+      this.rateLimiter.setRateLimits(protocolID, inboundRateLimits);
+    }
+
+    return this.libp2p.handle(protocolID, this.getRequestHandler(protocol, protocolID), {force: true});
   }
 
   /**
