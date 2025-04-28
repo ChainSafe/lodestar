@@ -97,7 +97,7 @@ export class ReqResp {
       this.rateLimiter.setRateLimits(protocolID, inboundRateLimits);
     }
 
-    return this.libp2p.handle(protocolID, this.getRequestHandler(protocol, protocolID));
+    return this.libp2p.handle(protocolID, this.getRequestHandler(protocol, protocolID), {force: true});
   }
 
   /**
