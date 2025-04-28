@@ -31,6 +31,7 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInput: BlockI
     this.logger.debug("Persist block to hot DB", {
       slot: block.message.slot,
       root: blockRootHex,
+      inputType: blockInput.type,
     });
 
     if (blockInput.type === BlockInputType.availableData || blockInput.type === BlockInputType.dataPromise) {
