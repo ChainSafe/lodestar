@@ -231,7 +231,7 @@ describe("api/validator - produceBlockV3", () => {
       generateProtoBlock({blockRoot: toHexString(parentBlockRoot)})
     );
     modules.chain.forkChoice.getBlock.mockReturnValue(generateProtoBlock({blockRoot: toHexString(parentBlockRoot)}));
-    modules.chain.produceCommonBlockBody.mockResolvedValue({...fullBlock.body});
+    modules.chain.produceCommonBlockBody.mockResolvedValue({...fullBlock.body, blsToExecutionChanges: []});
     modules.chain.produceExecutionBlockBody.mockResolvedValue({
       body: fullBlock.body,
       blobs: {type: BlobsResultType.preDeneb},
