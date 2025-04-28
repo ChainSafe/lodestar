@@ -112,34 +112,24 @@ export type BlockHeaderMeta = {
   parentRootHex: string;
 };
 
+export type CreateBlockInputMeta = {
+  daRequirement: DARequirement;
+  forkName: ForkName;
+  blockRootHex: string;
+};
+
 export type AddBlock<F extends ForkName = ForkName> = {
   block: SignedBeaconBlock<F>;
-  forkName: F;
   blockRootHex: string;
-
-  source: BlockInputSource;
-  seenTimestampSec: number;
-  peerIdStr?: string;
+  source: SourceMeta;
 };
 
-export type AddBlob<F extends ForkName = ForkBlobs> = {
-  blobSidecar: deneb.BlobSidecar;
-  forkName: F;
+export type AddBlob = BlobWithSource & {
   blockRootHex: RootHex;
-
-  source: BlockInputSource;
-  seenTimestampSec: number;
-  peerIdStr?: string;
 };
 
-export type AddColumn<F extends ForkName = ForkPostFulu> = {
-  columnSidecar: fulu.DataColumnSidecar;
-  forkName: F;
+export type AddColumn = ColumnWithSource & {
   blockRootHex: RootHex;
-
-  source: BlockInputSource;
-  seenTimestampSec: number;
-  peerIdStr?: string;
 };
 
 export type BlobMeta = ColumnMeta & {versionHash: Uint8Array};
@@ -215,6 +205,7 @@ export function createPromise<T>(): PromiseParts<T> {
 export class BlockInputPreData implements IBlockInput<ForkPreDeneb, null> {
   type = DAType.PreData as const;
 
+  daRequirement: DARequirement;
   forkName: ForkName;
   slot: Slot;
   blockRootHex: string;
@@ -223,7 +214,13 @@ export class BlockInputPreData implements IBlockInput<ForkPreDeneb, null> {
   block: SignedBeaconBlock<ForkPreDeneb>;
   source: SourceMeta;
 
-  constructor(block: SignedBeaconBlock<ForkPreDeneb>, source: SourceMeta, blockHeaderMeta: BlockHeaderMeta) {
+  constructor(
+    daRequirement: DARequirement,
+    block: SignedBeaconBlock<ForkPreDeneb>,
+    source: SourceMeta,
+    blockHeaderMeta: BlockHeaderMeta
+  ) {
+    this.daRequirement = daRequirement;
     this.block = block;
     this.source = source;
     this.forkName = blockHeaderMeta.forkName;
@@ -232,19 +229,14 @@ export class BlockInputPreData implements IBlockInput<ForkPreDeneb, null> {
     this.parentRootHex = blockHeaderMeta.parentRootHex;
   }
 
-  static createFromBlock(props: AddBlock): BlockInputPreData {
-    const source: SourceMeta = {
-      source: props.source,
-      seenTimestampSec: props.seenTimestampSec,
-      peerIdStr: props.peerIdStr,
-    };
+  static createFromBlock(props: AddBlock & CreateBlockInputMeta): BlockInputPreData {
     const meta: BlockHeaderMeta = {
       forkName: props.forkName,
       slot: props.block.message.slot,
       blockRootHex: props.blockRootHex,
       parentRootHex: toHex(props.block.message.parentRoot),
     };
-    return new BlockInputPreData(props.block, source, meta);
+    return new BlockInputPreData(props.daRequirement, props.block, props.source, meta);
   }
 
   hasBlock(): boolean {
@@ -311,7 +303,6 @@ export type ForkBlobs = ForkName.deneb | ForkName.electra;
 
 type BlockInputBlobsState =
   | {
-      daRequirement: DARequirement;
       daStatus: DAStatus.CompleteData;
       versionHashes: VersionedHashes;
       block: SignedBeaconBlock<ForkBlobs>;
@@ -320,7 +311,6 @@ type BlockInputBlobsState =
       timeCompleteSec: number;
     }
   | {
-      daRequirement: DARequirement;
       daStatus: DAStatus.IncompleteData;
       versionHashes: VersionedHashes;
       block: SignedBeaconBlock<ForkBlobs>;
@@ -328,7 +318,6 @@ type BlockInputBlobsState =
       timeBeginSec: number;
     }
   | {
-      daRequirement: DARequirement.Required;
       daStatus: DAStatus.Unknown;
       timeBeginSec: number;
     };
@@ -342,6 +331,7 @@ type BlockInputBlobsState =
 export class BlockInputBlobs implements IBlockInput<ForkBlobs, deneb.BlobSidecars> {
   type = DAType.Blobs as const;
 
+  daRequirement: DARequirement;
   forkName: ForkName;
   slot: Slot;
   blockRootHex: string;
@@ -353,7 +343,8 @@ export class BlockInputBlobs implements IBlockInput<ForkBlobs, deneb.BlobSidecar
   private dataPromise = createPromise<deneb.BlobSidecars>();
   private bothPromise = createPromise<this>();
 
-  constructor(props: BlockInputBlobsState, blockHeaderMeta: BlockHeaderMeta) {
+  constructor(daRequirement: DARequirement, props: BlockInputBlobsState, blockHeaderMeta: BlockHeaderMeta) {
+    this.daRequirement = daRequirement;
     this.state = props;
     this.forkName = blockHeaderMeta.forkName;
     this.slot = blockHeaderMeta.slot;
@@ -361,25 +352,20 @@ export class BlockInputBlobs implements IBlockInput<ForkBlobs, deneb.BlobSidecar
     this.parentRootHex = blockHeaderMeta.parentRootHex;
   }
 
-  static createFromBlock(props: AddBlock<ForkBlobs> & {daRequirement: DARequirement}): BlockInputBlobs {
+  static createFromBlock(props: AddBlock<ForkBlobs> & CreateBlockInputMeta): BlockInputBlobs {
     const completeData =
       props.daRequirement === DARequirement.OutOfRange || props.block.message.body.blobKzgCommitments.length === 0;
 
     const state = {
-      daRequirement: props.daRequirement,
       daStatus: completeData ? DAStatus.CompleteData : DAStatus.IncompleteData,
       forkName: props.forkName,
       blockRootHex: props.blockRootHex,
       parentRootHex: toHex(props.block.message.parentRoot),
       versionHashes: getVersionHashes(props.block),
       block: props.block,
-      blockSource: {
-        source: props.source,
-        seenTimestampSec: props.seenTimestampSec,
-        peerIdStr: props.peerIdStr,
-      },
-      timeBeginSec: props.seenTimestampSec,
-      timeCompleteSec: completeData ? props.seenTimestampSec : undefined,
+      blockSource: props.source,
+      timeBeginSec: props.source.seenTimestampSec,
+      timeCompleteSec: completeData ? props.source.seenTimestampSec : undefined,
     } as BlockInputBlobsState;
     const meta: BlockHeaderMeta = {
       forkName: props.forkName,
@@ -387,7 +373,7 @@ export class BlockInputBlobs implements IBlockInput<ForkBlobs, deneb.BlobSidecar
       blockRootHex: props.blockRootHex,
       parentRootHex: toHex(props.block.message.parentRoot),
     };
-    const blockInput = new BlockInputBlobs(state, meta);
+    const blockInput = new BlockInputBlobs(props.daRequirement, state, meta);
     blockInput.blockPromise.resolve(props.block);
     if (completeData) {
       blockInput.dataPromise.resolve([]);
@@ -396,9 +382,8 @@ export class BlockInputBlobs implements IBlockInput<ForkBlobs, deneb.BlobSidecar
     return blockInput;
   }
 
-  static createFromBlob(props: AddBlob): BlockInputBlobs {
+  static createFromBlob(props: AddBlob & CreateBlockInputMeta): BlockInputBlobs {
     const state: BlockInputBlobsState = {
-      daRequirement: DARequirement.Required,
       daStatus: DAStatus.Unknown,
       timeBeginSec: props.seenTimestampSec,
     };
@@ -408,7 +393,7 @@ export class BlockInputBlobs implements IBlockInput<ForkBlobs, deneb.BlobSidecar
       parentRootHex: toHex(props.blobSidecar.signedBlockHeader.message.parentRoot),
       slot: props.blobSidecar.signedBlockHeader.message.slot,
     };
-    const blockInput = new BlockInputBlobs(state, meta);
+    const blockInput = new BlockInputBlobs(props.daRequirement, state, meta);
     blockInput.blobsCache.set(props.blobSidecar.index, {
       blobSidecar: props.blobSidecar,
       source: props.source,
@@ -483,7 +468,7 @@ export class BlockInputBlobs implements IBlockInput<ForkBlobs, deneb.BlobSidecar
     return this.state.timeCompleteSec;
   }
 
-  addBlock({blockRootHex, block, source, peerIdStr, seenTimestampSec}: AddBlock<ForkBlobs>): void {
+  addBlock({blockRootHex, block, source}: AddBlock<ForkBlobs>): void {
     if (this.state.daStatus !== DAStatus.Unknown) {
       throw new BlockInputError(
         {
@@ -501,8 +486,8 @@ export class BlockInputBlobs implements IBlockInput<ForkBlobs, deneb.BlobSidecar
           code: BlockInputErrorCode.MISMATCHED_ROOT_HEX,
           blockInputRoot: this.blockRootHex,
           mismatchedRoot: blockRootHex,
-          source: source,
-          peerId: `${peerIdStr}`,
+          source: source.source,
+          peerId: `${source.peerIdStr}`,
         },
         "addBlock blockRootHex does not match BlockInput.blockRootHex"
       );
@@ -526,12 +511,8 @@ export class BlockInputBlobs implements IBlockInput<ForkBlobs, deneb.BlobSidecar
       daStatus,
       block: block,
       versionHashes: getVersionHashes(block),
-      blockSource: {
-        source: source,
-        seenTimestampSec: seenTimestampSec,
-        peerIdStr: peerIdStr,
-      },
-      timeCompleteSec: daStatus === DAStatus.CompleteData ? seenTimestampSec : undefined,
+      blockSource: source,
+      timeCompleteSec: daStatus === DAStatus.CompleteData ? source.seenTimestampSec : undefined,
     } as BlockInputBlobsState;
     this.blockPromise.resolve(block);
     if (daStatus === DAStatus.CompleteData) {
@@ -765,7 +746,7 @@ export class BlockInputColumns implements IBlockInput<ForkPostFulu, fulu.DataCol
   }
 
   static createFromBlock(
-    props: AddBlock<ForkPostFulu> & {daRequirement: DARequirement; custodyConfig: CustodyConfig}
+    props: AddBlock<ForkPostFulu> & CreateBlockInputMeta & {custodyConfig: CustodyConfig}
   ): BlockInputColumns {
     const completeData =
       props.daRequirement === DARequirement.OutOfRange || props.block.message.body.blobKzgCommitments.length === 0;
@@ -774,18 +755,13 @@ export class BlockInputColumns implements IBlockInput<ForkPostFulu, fulu.DataCol
     const custodyStatus =
       completeData || props.custodyConfig.custodyColumns.length === 0 ? DAStatus.CompleteData : DAStatus.IncompleteData;
     const state = {
-      daRequirement: props.daRequirement,
       sampledStatus,
       custodyStatus,
       blockStatus: BlockStatus.HasBlock,
       block: props.block,
-      blockSource: {
-        source: props.source,
-        seenTimestampSec: props.seenTimestampSec,
-        peerIdStr: props.peerIdStr,
-      },
-      timeBeginSec: props.seenTimestampSec,
-      timeCompleteSec: completeData ? props.seenTimestampSec : undefined,
+      blockSource: props.source,
+      timeBeginSec: props.source.seenTimestampSec,
+      timeCompleteSec: completeData ? props.source.seenTimestampSec : undefined,
     } as BlockInputColumnsState;
     const meta: BlockHeaderMeta = {
       forkName: props.forkName,
@@ -807,7 +783,7 @@ export class BlockInputColumns implements IBlockInput<ForkPostFulu, fulu.DataCol
     return blockInput;
   }
 
-  static createFromColumn(props: AddColumn<ForkPostFulu> & {custodyConfig: CustodyConfig}): BlockInputColumns {
+  static createFromColumn(props: AddColumn & CreateBlockInputMeta & {custodyConfig: CustodyConfig}): BlockInputColumns {
     const sampledStatus =
       props.custodyConfig.sampledColumns.length === 0 ? DAStatus.CompleteData : DAStatus.IncompleteData;
     const custodyStatus =
@@ -928,8 +904,8 @@ export class BlockInputColumns implements IBlockInput<ForkPostFulu, fulu.DataCol
           code: BlockInputErrorCode.MISMATCHED_ROOT_HEX,
           blockInputRoot: this.blockRootHex,
           mismatchedRoot: props.blockRootHex,
-          source: props.source,
-          peerId: `${props.peerIdStr}`,
+          source: props.source.source,
+          peerId: `${props.source.peerIdStr}`,
         },
         "addBlock blockRootHex does not match BlockInput.blockRootHex"
       );
@@ -957,12 +933,8 @@ export class BlockInputColumns implements IBlockInput<ForkPostFulu, fulu.DataCol
       custodyStatus,
       blockStatus: BlockStatus.HasBlock,
       block: props.block,
-      blockSource: {
-        source: props.source,
-        seenTimestampSec: props.seenTimestampSec,
-        peerIdStr: props.peerIdStr,
-      },
-      timeCompleteSec: sampledStatus === DAStatus.CompleteData ? props.seenTimestampSec : undefined,
+      blockSource: props.source,
+      timeCompleteSec: sampledStatus === DAStatus.CompleteData ? props.source.seenTimestampSec : undefined,
     } as BlockInputColumnsState;
 
     this.blockPromise.resolve(props.block);

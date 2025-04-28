@@ -8,6 +8,7 @@ import {
   BlockInputBlobs,
   BlockInputColumns,
   BlockInputPreData,
+  CreateBlockInputMeta,
   CustodyConfig,
   DARequirement,
   DAType,
@@ -44,7 +45,7 @@ export class BlockInputCache {
     this.cache.clear();
   }
 
-  createFromBlock(props: AddBlock & {daRequirement: DARequirement}): BlockInput {
+  createFromBlock(props: AddBlock & CreateBlockInputMeta): BlockInput {
     let blockInput = this.get(props.blockRootHex);
     if (blockInput) {
       (blockInput as IBlockInput).addBlock(props);
@@ -65,7 +66,7 @@ export class BlockInputCache {
     return blockInput;
   }
 
-  createFromBlob(props: AddBlob): BlockInputBlobs {
+  createFromBlob(props: AddBlob & CreateBlockInputMeta): BlockInputBlobs {
     let blockInput = this.get(props.blockRootHex);
     if (blockInput) {
       if (blockInput.type !== DAType.Blobs) {
@@ -88,7 +89,7 @@ export class BlockInputCache {
     return blockInput;
   }
 
-  createFromColumn(props: AddColumn & {custodyConfig: CustodyConfig}): BlockInputColumns {
+  createFromColumn(props: AddColumn & CreateBlockInputMeta & {custodyConfig: CustodyConfig}): BlockInputColumns {
     let blockInput = this.get(props.blockRootHex);
     if (blockInput) {
       if (blockInput.type !== DAType.Columns) {
@@ -127,7 +128,7 @@ export function afterValidateBlock(
     blockRootHex,
     forkName,
     daRequirement: DARequirement.Required,
-    ...source,
+    source,
   });
 }
 
@@ -143,7 +144,6 @@ export function afterValidateBlob(
   if (blockInput?.type === DAType.Blobs) {
     blockInput.addBlob({
       blockRootHex,
-      forkName,
       blobSidecar,
       ...source,
     });
@@ -154,6 +154,7 @@ export function afterValidateBlob(
     blockRootHex,
     blobSidecar,
     forkName,
+    daRequirement: DARequirement.Required,
     ...source,
   });
 }
