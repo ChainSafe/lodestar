@@ -1,17 +1,17 @@
-import {itBench, setBenchOpts} from "@dapplion/benchmark";
+import {afterAll, beforeAll, bench, describe, setBenchOpts} from "@chainsafe/benchmark";
 import {config} from "@lodestar/config/default";
 import {LevelDbController} from "@lodestar/db";
 import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {sleep} from "@lodestar/utils";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {rangeSyncTest} from "../../../../state-transition/test/perf/params.js";
-import {beforeValue} from "../../../../state-transition/test/utils/beforeValueMocha.js";
+import {beforeValue} from "../../../../state-transition/test/utils/beforeValueBenchmark.js";
 import {getNetworkCachedBlock, getNetworkCachedState} from "../../../../state-transition/test/utils/testFileCache.js";
 import {AttestationImportOpt, BlockSource, getBlockInput} from "../../../src/chain/blocks/types.js";
 import {BeaconChain} from "../../../src/chain/index.js";
 import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";
 import {ExecutionEngineDisabled} from "../../../src/execution/engine/index.js";
-import {BeaconDb, StateArchiveMode} from "../../../src/index.js";
+import {ArchiveMode, BeaconDb} from "../../../src/index.js";
 import {linspace} from "../../../src/util/numpy.js";
 import {testLogger} from "../../utils/logger.js";
 
@@ -30,7 +30,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
 
   let db: BeaconDb;
 
-  before("Check correct params", async () => {
+  beforeAll(async () => {
     // Must start at the first slot of the epoch to have a proper checkpoint state.
     // Using `computeStartSlotAtEpoch(...) - 1` will cause the chain to initialize with a state that's not the checkpoint
     // state, so processing the first block of the epoch will cause error `BLOCK_ERROR_WOULD_REVERT_FINALIZED_SLOT`
@@ -41,7 +41,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
     db = new BeaconDb(config, await LevelDbController.create({name: ".tmpdb"}, {logger}));
   });
 
-  after(async () => {
+  afterAll(async () => {
     // If before blocks fail, db won't be declared
     if (db !== undefined) await db.close();
   });
@@ -66,7 +66,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
     return state;
   }, timeoutInfura);
 
-  itBench({
+  bench({
     id: `altair verifyImport ${network}_s${startSlot}:${slotCount}`,
     minRuns: 5,
     maxRuns: Infinity,
@@ -85,14 +85,17 @@ describe.skip("verify+import blocks - range sync perf test", () => {
           skipCreateStateCacheIfAvailable: true,
           archiveStateEpochFrequency: 1024,
           minSameMessageSignatureSetsToBatch: 32,
-          stateArchiveMode: StateArchiveMode.Frequency,
+          archiveMode: ArchiveMode.Frequency,
         },
         {
           config: state.config,
           db,
+          dataDir: ".",
+          dbName: ".",
           logger,
           processShutdownCallback: () => {},
           metrics: null,
+          validatorMonitor: null,
           anchorState: state,
           eth1: new Eth1ForBlockProductionDisabled(),
           executionEngine: new ExecutionEngineDisabled(),
@@ -105,9 +108,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
       return chain;
     },
     fn: async (chain) => {
-      const blocksImport = blocks.value.map((block) =>
-        getBlockInput.preData(chain.config, block, BlockSource.byRange, null)
-      );
+      const blocksImport = blocks.value.map((block) => getBlockInput.preData(chain.config, block, BlockSource.byRange));
 
       await chain.processChainSegment(blocksImport, {
         // Only skip importing attestations for finalized sync. For head sync attestation are valuable.

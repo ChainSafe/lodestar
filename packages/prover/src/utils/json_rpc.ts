@@ -86,9 +86,7 @@ export function isValidBatchResponse<R, E>(
   response: JsonRpcBatchResponse<R, E>
 ): response is JsonRpcBatchResponse<R, E> | JsonRpcResponseWithResultPayload<R>[] {
   for (const [index, req] of payload.entries()) {
-    if (isRequest(req)) {
-      if (response[index].id !== req.id || !isValidResponse(response[index])) return false;
-    }
+    if (isRequest(req) && (response[index].id !== req.id || !isValidResponse(response[index]))) return false;
   }
   return true;
 }

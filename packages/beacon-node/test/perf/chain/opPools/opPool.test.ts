@@ -1,4 +1,4 @@
-import {itBench} from "@dapplion/benchmark";
+import {beforeAll, bench, describe} from "@chainsafe/benchmark";
 import {
   ForkName,
   MAX_ATTESTER_SLASHINGS,
@@ -21,13 +21,14 @@ import {
 describe("opPool", () => {
   let originalState: CachedBeaconStateAltair;
 
-  before(function () {
-    this.timeout(2 * 60 * 1000); // Generating the states for the first time is very slow
+  beforeAll(
+    () => {
+      originalState = generatePerfTestCachedStateAltair({goBackOneSlot: true});
+    },
+    2 * 60 * 1000 // Generating the states for the first time is very slow
+  );
 
-    originalState = generatePerfTestCachedStateAltair({goBackOneSlot: true});
-  });
-
-  itBench({
+  bench({
     id: "getSlashingsAndExits - default max",
     beforeEach: () => {
       const pool = new OpPool();
@@ -43,7 +44,7 @@ describe("opPool", () => {
     },
   });
 
-  itBench({
+  bench({
     id: "getSlashingsAndExits - 2k",
     beforeEach: () => {
       const pool = new OpPool();

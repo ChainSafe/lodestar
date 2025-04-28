@@ -13,22 +13,24 @@ import {
 import {Slot} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {Logger, callFnWhenAwait, formatBytes, fromHex} from "@lodestar/utils";
-import got from "got";
+import {fetch} from "@lodestar/utils";
 import {parseBootnodesFile} from "../util/format.js";
 import * as chiado from "./chiado.js";
 import * as dev from "./dev.js";
 import * as ephemery from "./ephemery.js";
 import * as gnosis from "./gnosis.js";
 import * as holesky from "./holesky.js";
+import * as hoodi from "./hoodi.js";
 import * as mainnet from "./mainnet.js";
 import * as sepolia from "./sepolia.js";
 
-export type NetworkName = "mainnet" | "dev" | "gnosis" | "sepolia" | "holesky" | "chiado" | "ephemery";
+export type NetworkName = "mainnet" | "dev" | "gnosis" | "sepolia" | "holesky" | "hoodi" | "chiado" | "ephemery";
 export const networkNames: NetworkName[] = [
   "mainnet",
   "gnosis",
   "sepolia",
   "holesky",
+  "hoodi",
   "chiado",
   "ephemery",
 
@@ -66,6 +68,8 @@ export function getNetworkData(network: NetworkName): {
       return sepolia;
     case "holesky":
       return holesky;
+    case "hoodi":
+      return hoodi;
     case "chiado":
       return chiado;
     case "ephemery":
@@ -96,7 +100,11 @@ export async function fetchBootnodes(network: NetworkName): Promise<string[]> {
     return [];
   }
 
-  const bootnodesFile = await got.get(bootnodesFileUrl).text();
+  const res = await fetch(bootnodesFileUrl);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch bootnodes: ${res.status} ${res.statusText}`);
+  }
+  const bootnodesFile = await res.text();
   return parseBootnodesFile(bootnodesFile);
 }
 

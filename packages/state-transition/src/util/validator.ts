@@ -29,7 +29,7 @@ export function isSlashableValidator(validator: phase0.Validator, epoch: Epoch):
  *
  * NAIVE - SLOW CODE 🐢
  */
-export function getActiveValidatorIndices(state: BeaconStateAllForks, epoch: Epoch): ValidatorIndex[] {
+export function getActiveValidatorIndices(state: BeaconStateAllForks, epoch: Epoch): Uint32Array {
   const indices: ValidatorIndex[] = [];
 
   const validatorsArr = state.validators.getAllReadonlyValues();
@@ -39,7 +39,7 @@ export function getActiveValidatorIndices(state: BeaconStateAllForks, epoch: Epo
     }
   }
 
-  return indices;
+  return new Uint32Array(indices);
 }
 
 export function getActivationChurnLimit(config: ChainForkConfig, fork: ForkSeq, activeValidatorCount: number): number {
@@ -84,8 +84,7 @@ export function getMaxEffectiveBalance(withdrawalCredentials: Uint8Array): numbe
 
 export function getPendingBalanceToWithdraw(state: CachedBeaconStateElectra, validatorIndex: ValidatorIndex): number {
   let total = 0;
-  for (let i = 0; i < state.pendingPartialWithdrawals.length; i++) {
-    const item = state.pendingPartialWithdrawals.get(i);
+  for (const item of state.pendingPartialWithdrawals.getAllReadonly()) {
     if (item.validatorIndex === validatorIndex) {
       total += Number(item.amount);
     }

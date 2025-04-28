@@ -1,5 +1,5 @@
 import {BeaconConfig} from "@lodestar/config";
-import {GENESIS_SLOT, MAX_REQUEST_BLOCKS, MAX_REQUEST_BLOCKS_DENEB, isForkBlobs} from "@lodestar/params";
+import {GENESIS_SLOT, MAX_REQUEST_BLOCKS, MAX_REQUEST_BLOCKS_DENEB, isForkPostDeneb} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {deneb, phase0} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
@@ -86,7 +86,9 @@ export function validateBeaconBlocksByRangeRequest(
 
   // step > 1 is deprecated, see https://github.com/ethereum/consensus-specs/pull/2856
 
-  const maxRequestBlocks = isForkBlobs(config.getForkName(startSlot)) ? MAX_REQUEST_BLOCKS_DENEB : MAX_REQUEST_BLOCKS;
+  const maxRequestBlocks = isForkPostDeneb(config.getForkName(startSlot))
+    ? MAX_REQUEST_BLOCKS_DENEB
+    : MAX_REQUEST_BLOCKS;
 
   if (count > maxRequestBlocks) {
     count = maxRequestBlocks;

@@ -156,7 +156,7 @@ export class ReqRespBeaconNode extends ReqResp {
 
     // Overwrite placeholder requestData from main thread with correct sequenceNumber
     if (method === ReqRespMethod.Ping) {
-      requestData = requestSszTypeByMethod(this.config)[ReqRespMethod.Ping].serialize(
+      requestData = requestSszTypeByMethod(ForkName.phase0, this.config)[ReqRespMethod.Ping].serialize(
         this.metadataController.seqNumber
       );
     }
@@ -208,7 +208,7 @@ export class ReqRespBeaconNode extends ReqResp {
     request: Req
   ): AsyncIterable<ResponseIncoming> {
     const fork = ForkName[ForkSeq[this.currentRegisteredFork] as ForkName];
-    const requestType = requestSszTypeByMethod(this.config, fork)[method];
+    const requestType = requestSszTypeByMethod(fork, this.config)[method];
     const requestData = requestType ? requestType.serialize(request as never) : new Uint8Array();
     return this.sendRequestWithoutEncoding(peerId, method, versions, requestData);
   }

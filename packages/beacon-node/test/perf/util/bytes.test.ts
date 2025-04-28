@@ -1,25 +1,25 @@
-import {itBench} from "@dapplion/benchmark";
+import {beforeAll, bench, describe} from "@chainsafe/benchmark";
 
 describe("bytes utils", () => {
   const roots: Uint8Array[] = [];
   let buffers: Buffer[] = [];
   const count = 32;
-  before(function () {
-    this.timeout(60 * 1000);
+
+  beforeAll(() => {
     for (let i = 0; i < count; i++) {
       roots.push(new Uint8Array(Array.from({length: 32}, () => i)));
     }
     buffers = roots.map((root) => Buffer.from(root.buffer));
-  });
+  }, 60 * 1000);
 
-  itBench({
+  bench({
     id: `Buffer.concat ${count} items`,
     fn: () => {
       Buffer.concat(buffers);
     },
   });
 
-  itBench({
+  bench({
     id: `Uint8Array.set ${count} items`,
     fn: () => {
       let size = 0;
@@ -35,7 +35,7 @@ describe("bytes utils", () => {
     },
   });
 
-  itBench({
+  bench({
     id: "Buffer.copy",
     fn: () => {
       const arr = Buffer.alloc(32 * count);
@@ -47,7 +47,7 @@ describe("bytes utils", () => {
     },
   });
 
-  itBench({
+  bench({
     id: "Uint8Array.set - with subarray",
     fn: () => {
       const arr = new Uint8Array(32 * count);
@@ -59,7 +59,7 @@ describe("bytes utils", () => {
     },
   });
 
-  itBench({
+  bench({
     id: "Uint8Array.set - without subarray",
     fn: () => {
       const arr = new Uint8Array(32 * count);

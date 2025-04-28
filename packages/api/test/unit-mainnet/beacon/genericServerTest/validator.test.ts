@@ -1,0 +1,36 @@
+import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {describe} from "vitest";
+import {getClient} from "../../../../src/beacon/client/validator.js";
+import {Endpoints} from "../../../../src/beacon/routes/validator.js";
+import {getRoutes} from "../../../../src/beacon/server/validator.js";
+import {runGenericServerTest} from "../../../utils/genericServerTest.js";
+import {testData} from "../testData/validator.js";
+
+describe("beacon / validator", () => {
+  runGenericServerTest<Endpoints>(
+    createChainForkConfig({...defaultChainConfig, ELECTRA_FORK_EPOCH: 0}),
+    getClient,
+    getRoutes,
+    testData
+  );
+
+  // TODO: Extra tests to implement maybe
+
+  // getAttesterDuties
+  // - throw validation error on invalid epoch "a"
+  // - throw validation error on no validator indices
+  // - throw validation error on invalid validator index "a"
+
+  // getProposerDuties
+  // - throw validation error on invalid epoch "a"
+
+  // prepareBeaconCommitteeSubnet
+  // - throw validation error on missing param
+
+  // produceAttestationData
+  // - throw validation error on missing param
+
+  // produceBlock
+  // - throw validation error on missing randao reveal
+  // - throw validation error on invalid slot
+});

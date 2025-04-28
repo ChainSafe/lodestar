@@ -76,7 +76,7 @@ describe.skip("eth1 / Eth1Provider", () => {
 
   it("getBlocksByNumber: Should fetch a block range", async () => {
     const fromBlock = firstGoerliBlocks[0].blockNumber;
-    const toBlock = firstGoerliBlocks[firstGoerliBlocks.length - 1].blockNumber;
+    const toBlock = firstGoerliBlocks.at(-1)?.blockNumber as number;
     const blocks = await getEth1Provider().getBlocksByNumber(fromBlock, toBlock);
     expect(blocks.map(parseEth1Block)).toEqual(firstGoerliBlocks);
   });

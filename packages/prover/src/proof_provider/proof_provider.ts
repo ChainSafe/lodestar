@@ -3,7 +3,7 @@ import {ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
 import {Lightclient, LightclientEvent, RunStatusCode} from "@lodestar/light-client";
 import {LightClientRestTransport} from "@lodestar/light-client/transport";
-import {ForkName, isForkWithdrawals} from "@lodestar/params";
+import {ForkName, isForkPostCapella} from "@lodestar/params";
 import {ExecutionPayload, LightClientHeader} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {LCTransport, RootProviderInitOptions} from "../interfaces.js";
@@ -173,13 +173,13 @@ export class ProofProvider {
   async processLCHeader(lcHeader: LightClientHeader, finalized = false): Promise<void> {
     const fork = this.opts.config.getForkName(lcHeader.beacon.slot);
 
-    if (!isForkWithdrawals(fork)) {
+    if (!isForkPostCapella(fork)) {
       return;
     }
 
-    const sszType = this.opts.config.getExecutionForkTypes(lcHeader.beacon.slot).ExecutionPayloadHeader;
+    const sszType = this.opts.config.getPostBellatrixForkTypes(lcHeader.beacon.slot).ExecutionPayloadHeader;
     if (
-      isForkWithdrawals(fork) &&
+      isForkPostCapella(fork) &&
       (!("execution" in lcHeader) || sszType.equals(lcHeader.execution, sszType.defaultValue()))
     ) {
       throw new Error("Execution payload is required for execution fork");

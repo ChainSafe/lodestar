@@ -1,4 +1,4 @@
-import {itBench} from "@dapplion/benchmark";
+import {bench, describe} from "@chainsafe/benchmark";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, ForkSeq} from "@lodestar/params";
 import {processSyncCommitteeUpdates} from "../../../src/epoch/processSyncCommitteeUpdates.js";
 import {StateAltair} from "../types.js";
@@ -9,7 +9,7 @@ import {generatePerfTestCachedStateAltair, numValidators} from "../util.js";
 describe("altair processSyncCommitteeUpdates", () => {
   const vc = numValidators;
 
-  itBench<StateAltair, StateAltair>({
+  bench<StateAltair, StateAltair>({
     id: `altair processSyncCommitteeUpdates - ${vc}`,
     yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
     before: () => generatePerfTestCachedStateAltair({goBackOneSlot: true}),

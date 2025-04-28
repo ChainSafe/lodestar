@@ -193,7 +193,7 @@ describe("sync by UnknownBlockSync", () => {
       syncService.subscribeToNetwork();
       if (event === NetworkEvent.unknownBlockParent) {
         network.events?.emit(NetworkEvent.unknownBlockParent, {
-          blockInput: getBlockInput.preData(config, blockC, BlockSource.gossip, null),
+          blockInput: getBlockInput.preData(config, blockC, BlockSource.gossip),
           peer,
         });
       } else {

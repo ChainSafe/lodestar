@@ -1,13 +1,15 @@
 export function binarySearchLte<T>(items: T[], value: number, getter: (item: T) => number): T {
-  if (items.length === 0) {
+  const lastItem = items.at(-1);
+
+  if (!lastItem) {
     throw new ErrorNoValues();
   }
 
-  const maxValue = getter(items[items.length - 1]);
+  const maxValue = getter(lastItem);
   const minValue = getter(items[0]);
   // Shortcut for the actual value
   if (value >= maxValue) {
-    return items[items.length - 1];
+    return lastItem;
   }
   if (value < minValue) {
     throw new ErrorNoValueMinValue(value, minValue);

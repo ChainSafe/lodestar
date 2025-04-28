@@ -41,6 +41,9 @@ export type ChainConfig = {
   // ELECTRA
   ELECTRA_FORK_VERSION: Uint8Array;
   ELECTRA_FORK_EPOCH: number;
+  // FULU
+  FULU_FORK_VERSION: Uint8Array;
+  FULU_FORK_EPOCH: number;
 
   // Time parameters
   SECONDS_PER_SLOT: number;
@@ -71,6 +74,7 @@ export type ChainConfig = {
   DEPOSIT_CONTRACT_ADDRESS: Uint8Array;
 
   // Networking
+  MIN_EPOCHS_FOR_BLOCK_REQUESTS: number;
   MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: number;
   BLOB_SIDECAR_SUBNET_COUNT: number;
   MAX_BLOBS_PER_BLOCK: number;
@@ -111,6 +115,9 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   // ELECTRA
   ELECTRA_FORK_VERSION: "bytes",
   ELECTRA_FORK_EPOCH: "number",
+  // FULU
+  FULU_FORK_VERSION: "bytes",
+  FULU_FORK_EPOCH: "number",
 
   // Time parameters
   SECONDS_PER_SLOT: "number",
@@ -141,6 +148,7 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   DEPOSIT_CONTRACT_ADDRESS: "bytes",
 
   // Networking
+  MIN_EPOCHS_FOR_BLOCK_REQUESTS: "number",
   MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: "number",
   BLOB_SIDECAR_SUBNET_COUNT: "number",
   MAX_BLOBS_PER_BLOCK: "number",

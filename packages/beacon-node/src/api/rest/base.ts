@@ -143,7 +143,7 @@ export class RestApiServer {
       // See https://github.com/attestantio/go-eth2-client/issues/144
       if (
         // go-eth2-client supports handling SSZ data in response for these endpoints
-        !["produceBlindedBlock", "produceBlockV3", "getBlockV2", "getStateV2"].includes(operationId) &&
+        !["produceBlockV3", "getBlockV2", "getStateV2"].includes(operationId) &&
         // Only Vouch seems to override default header
         ["go-eth2-client", "Go-http-client", "Vouch"].includes(req.headers["user-agent"]?.split("/")[0] ?? "")
       ) {
@@ -189,8 +189,9 @@ export class RestApiServer {
   async listen(): Promise<void> {
     try {
       const host = this.opts.address;
-      const address = await this.server.listen({port: this.opts.port, host});
-      this.logger.info("Started REST API server", {address});
+      await this.server.listen({port: this.opts.port, host});
+      const {address, port} = this.server.addresses()[0];
+      this.logger.info("Started REST API server", {address: `http://${address}:${port}`});
       if (!host || !isLocalhostIP(host)) {
         this.logger.warn("REST API server is exposed, ensure untrusted traffic cannot reach this API");
       }

@@ -1,6 +1,6 @@
 import {config} from "@lodestar/config/default";
 import {ProtoBlock} from "@lodestar/fork-choice";
-import {ForkBlobs, ForkName} from "@lodestar/params";
+import {ForkName, ForkPostDeneb} from "@lodestar/params";
 import {SignedBeaconBlock, ssz} from "@lodestar/types";
 import {Mock, Mocked, beforeEach, describe, it, vi} from "vitest";
 import {BlockErrorCode} from "../../../../src/chain/errors/index.js";
@@ -206,7 +206,7 @@ describe("gossip block validation", () => {
     // Force proposer shuffling cache to return correct value
     vi.spyOn(state.epochCtx, "getBeaconProposer").mockReturnValue(proposerIndex + 1);
     // Add one extra kzg commitment in the block so it goes over the limit
-    (job as SignedBeaconBlock<ForkBlobs>).message.body.blobKzgCommitments.push(new Uint8Array([0]));
+    (job as SignedBeaconBlock<ForkPostDeneb>).message.body.blobKzgCommitments.push(new Uint8Array([0]));
 
     await expectRejectedWithLodestarError(
       validateGossipBlock(config, chain, job, ForkName.deneb),

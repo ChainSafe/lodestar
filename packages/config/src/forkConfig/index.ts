@@ -1,15 +1,15 @@
 import {
   ForkAll,
-  ForkBlobs,
-  ForkExecution,
-  ForkLightClient,
   ForkName,
+  ForkPostAltair,
+  ForkPostBellatrix,
+  ForkPostDeneb,
   ForkSeq,
   GENESIS_EPOCH,
   SLOTS_PER_EPOCH,
-  isForkBlobs,
-  isForkExecution,
-  isForkLightClient,
+  isForkPostAltair,
+  isForkPostBellatrix,
+  isForkPostDeneb,
   isForkPostElectra,
 } from "@lodestar/params";
 import {Epoch, SSZTypesFor, Slot, Version, sszTypesFor} from "@lodestar/types";
@@ -68,10 +68,18 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     prevVersion: config.DENEB_FORK_VERSION,
     prevForkName: ForkName.deneb,
   };
+  const fulu: ForkInfo = {
+    name: ForkName.fulu,
+    seq: ForkSeq.fulu,
+    epoch: config.FULU_FORK_EPOCH,
+    version: config.FULU_FORK_VERSION,
+    prevVersion: config.ELECTRA_FORK_VERSION,
+    prevForkName: ForkName.electra,
+  };
 
   /** Forks in order order of occurence, `phase0` first */
   // Note: Downstream code relies on proper ordering.
-  const forks = {phase0, altair, bellatrix, capella, deneb, electra};
+  const forks = {phase0, altair, bellatrix, capella, deneb, electra, fulu};
 
   // Prevents allocating an array on every getForkInfo() call
   const forksAscendingEpochOrder = Object.values(forks);
@@ -109,24 +117,24 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     getForkTypes<F extends ForkName = ForkAll>(slot: Slot): SSZTypesFor<F> {
       return sszTypesFor(this.getForkName(slot)) as SSZTypesFor<F>;
     },
-    getExecutionForkTypes(slot: Slot): SSZTypesFor<ForkExecution> {
+    getPostBellatrixForkTypes(slot: Slot): SSZTypesFor<ForkPostBellatrix> {
       const forkName = this.getForkName(slot);
-      if (!isForkExecution(forkName)) {
-        throw Error(`Invalid slot=${slot} fork=${forkName} for execution fork types`);
+      if (!isForkPostBellatrix(forkName)) {
+        throw Error(`Invalid slot=${slot} fork=${forkName} for post-bellatrix fork types`);
       }
       return sszTypesFor(forkName);
     },
-    getLightClientForkTypes(slot: Slot): SSZTypesFor<ForkLightClient> {
+    getPostAltairForkTypes(slot: Slot): SSZTypesFor<ForkPostAltair> {
       const forkName = this.getForkName(slot);
-      if (!isForkLightClient(forkName)) {
-        throw Error(`Invalid slot=${slot} fork=${forkName} for lightclient fork types`);
+      if (!isForkPostAltair(forkName)) {
+        throw Error(`Invalid slot=${slot} fork=${forkName} for post-altair fork types`);
       }
       return sszTypesFor(forkName);
     },
-    getBlobsForkTypes(slot: Slot): SSZTypesFor<ForkBlobs> {
+    getPostDenebForkTypes(slot: Slot): SSZTypesFor<ForkPostDeneb> {
       const forkName = this.getForkName(slot);
-      if (!isForkBlobs(forkName)) {
-        throw Error(`Invalid slot=${slot} fork=${forkName} for blobs fork types`);
+      if (!isForkPostDeneb(forkName)) {
+        throw Error(`Invalid slot=${slot} fork=${forkName} for post-deneb fork types`);
       }
       return sszTypesFor(forkName);
     },

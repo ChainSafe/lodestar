@@ -12,8 +12,6 @@ import {
 } from "../../utils/codecs.js";
 import {Endpoint, RouteDefinitions} from "../../utils/index.js";
 
-// See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
-
 export const DepositContractType = new ContainerType(
   {
     chainId: ssz.UintNum64,

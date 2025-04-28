@@ -1,8 +1,9 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {EPOCHS_PER_HISTORICAL_VECTOR} from "@lodestar/params";
+import {EPOCHS_PER_HISTORICAL_VECTOR, isForkPostElectra} from "@lodestar/params";
 import {
   BeaconStateAllForks,
+  BeaconStateElectra,
   CachedBeaconStateAltair,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
@@ -289,11 +290,59 @@ export function getBeaconStateApi({
 
       return {
         data: {
-          validators: syncCommitteeCache.validatorIndices,
+          validators: new Array(...syncCommitteeCache.validatorIndices),
           // TODO: This is not used by the validator and will be deprecated soon
           validatorAggregates: [],
         },
         meta: {executionOptimistic, finalized},
+      };
+    },
+
+    async getPendingDeposits({stateId}, context) {
+      const {state, executionOptimistic, finalized} = await getState(stateId);
+      const fork = config.getForkName(state.slot);
+
+      if (!isForkPostElectra(fork)) {
+        throw new ApiError(400, `Cannot retrieve pending deposits for pre-electra state fork=${fork}`);
+      }
+
+      const {pendingDeposits} = state as BeaconStateElectra;
+
+      return {
+        data: context?.returnBytes ? pendingDeposits.serialize() : pendingDeposits.toValue(),
+        meta: {executionOptimistic, finalized, version: fork},
+      };
+    },
+
+    async getPendingPartialWithdrawals({stateId}, context) {
+      const {state, executionOptimistic, finalized} = await getState(stateId);
+      const fork = config.getForkName(state.slot);
+
+      if (!isForkPostElectra(fork)) {
+        throw new ApiError(400, `Cannot retrieve pending partial withdrawals for pre-electra state fork=${fork}`);
+      }
+
+      const {pendingPartialWithdrawals} = state as BeaconStateElectra;
+
+      return {
+        data: context?.returnBytes ? pendingPartialWithdrawals.serialize() : pendingPartialWithdrawals.toValue(),
+        meta: {executionOptimistic, finalized, version: fork},
+      };
+    },
+
+    async getPendingConsolidations({stateId}, context) {
+      const {state, executionOptimistic, finalized} = await getState(stateId);
+      const fork = config.getForkName(state.slot);
+
+      if (!isForkPostElectra(fork)) {
+        throw new ApiError(400, `Cannot retrieve pending consolidations for pre-electra state fork=${fork}`);
+      }
+
+      const {pendingConsolidations} = state as BeaconStateElectra;
+
+      return {
+        data: context?.returnBytes ? pendingConsolidations.serialize() : pendingConsolidations.toValue(),
+        meta: {executionOptimistic, finalized, version: fork},
       };
     },
   };

@@ -1,4 +1,4 @@
-import {itBench} from "@dapplion/benchmark";
+import {bench, describe} from "@chainsafe/benchmark";
 import {OrderedSet} from "../../../src/util/set.js";
 
 enum DeleteType {
@@ -32,7 +32,7 @@ describe("OrderedSet vs Set", () => {
     for (const deleteType of [DeleteType.First, DeleteType.Last, DeleteType.Middle]) {
       for (const className of ["Set", "OrderedSet"]) {
         const runsFactor = 1000;
-        itBench({
+        bench({
           id: `${className} add up to ${length} items then delete ${deleteType}`,
           fn: () => {
             for (let i = 0; i < runsFactor; i++) {
