@@ -116,14 +116,14 @@ describe("api/validator - produceBlockV3", () => {
         const fullBlockBody: AssembledFullBlockBody<ForkName.bellatrix> = {
           executionPayload: fullBlock.body.executionPayload,
         };
-        modules.chain.produceFullBlockBody.mockResolvedValue({
+        modules.chain.produceExecutionBlockBody.mockResolvedValue({
           body: fullBlockBody,
           executionPayloadValue: BigInt(enginePayloadValue),
           shouldOverrideBuilder,
           blobs: {type: BlobsResultType.preDeneb},
         });
       } else {
-        modules.chain.produceFullBlockBody.mockRejectedValue(Error("not produced"));
+        modules.chain.produceExecutionBlockBody.mockRejectedValue(Error("not produced"));
       }
 
       if (builderPayloadValue !== null) {
@@ -195,9 +195,9 @@ describe("api/validator - produceBlockV3", () => {
       }
 
       if (builderSelection === routes.validator.BuilderSelection.BuilderOnly) {
-        expect(modules.chain.produceFullBlockBody).toBeCalledTimes(0);
+        expect(modules.chain.produceExecutionBlockBody).toBeCalledTimes(0);
       } else {
-        expect(modules.chain.produceFullBlockBody).toBeCalledTimes(1);
+        expect(modules.chain.produceExecutionBlockBody).toBeCalledTimes(1);
       }
     });
   }

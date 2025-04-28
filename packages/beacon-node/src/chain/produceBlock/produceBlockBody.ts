@@ -245,7 +245,7 @@ export async function produceBlindedBlockBody(
   };
 }
 
-export async function produceFullBlockBody(
+export async function produceExecutionBlockBody(
   this: BeaconChain,
   currentState: CachedBeaconStateAllForks,
   blockAttr: ProduceBlockBodyAttrs

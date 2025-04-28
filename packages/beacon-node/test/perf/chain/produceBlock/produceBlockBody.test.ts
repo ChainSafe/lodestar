@@ -7,7 +7,10 @@ import {CachedBeaconStateAltair} from "@lodestar/state-transition";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {generatePerfTestCachedStateAltair} from "../../../../../state-transition/test/perf/util.js";
 import {BeaconChain, BlockType} from "../../../../src/chain/index.js";
-import {produceCommonBlockBody, produceFullBlockBody} from "../../../../src/chain/produceBlock/produceBlockBody.js";
+import {
+  produceCommonBlockBody,
+  produceExecutionBlockBody,
+} from "../../../../src/chain/produceBlock/produceBlockBody.js";
 import {Eth1ForBlockProductionDisabled} from "../../../../src/eth1/index.js";
 import {ExecutionEngineDisabled} from "../../../../src/execution/engine/index.js";
 import {ArchiveMode, BeaconDb} from "../../../../src/index.js";
@@ -85,7 +88,7 @@ describe("produceBlockBody", () => {
       };
 
       await produceCommonBlockBody.call(chain, BlockType.Full, state, blockAttributes);
-      await produceFullBlockBody.call(chain, state, blockAttributes);
+      await produceExecutionBlockBody.call(chain, state, blockAttributes);
     },
   });
 });

@@ -78,7 +78,7 @@ import {
 } from "./opPools/index.js";
 import {IChainOptions} from "./options.js";
 import {PrepareNextSlotScheduler} from "./prepareNextSlot.js";
-import {assembleBlockBodyToBlock, produceBlindedBlockBody, produceFullBlockBody} from "./produceBlock/index.js";
+import {assembleBlockBodyToBlock, produceBlindedBlockBody, produceExecutionBlockBody} from "./produceBlock/index.js";
 import {BlockAttributes, produceCommonBlockBody} from "./produceBlock/produceBlockBody.js";
 import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
 import {ReprocessController} from "./reprocess.js";
@@ -649,14 +649,14 @@ export class BeaconChain implements IBeaconChain {
     });
   }
 
-  async produceFullBlockBody(
+  async produceExecutionBlockBody(
     blockAttributes: BlockAttributes & {currentState: CachedBeaconStateAllForks}
   ): Promise<AssembledBlockBodyResponse<BlockType.Full>> {
     const {slot, currentState} = blockAttributes;
     const proposerIndex = currentState.epochCtx.getBeaconProposer(slot);
     const proposerPubKey = currentState.epochCtx.index2pubkey[proposerIndex].toBytes();
 
-    return produceFullBlockBody.call(this, currentState, {
+    return produceExecutionBlockBody.call(this, currentState, {
       ...blockAttributes,
       parentSlot: slot - 1,
       proposerIndex,

@@ -545,7 +545,7 @@ export function getValidatorApi(
     const source = ProducedBlockSource.engine;
     metrics?.blockProductionRequests.inc({source});
 
-    const resp = await chain.produceFullBlockBody(opts);
+    const resp = await chain.produceExecutionBlockBody(opts);
     metrics?.blockProductionSuccess.inc({source});
     metrics?.blockProductionExecutionPayloadValue.observe({source}, Number(formatWeiToEth(resp.executionPayloadValue)));
     logger.verbose("Produced execution block body", {

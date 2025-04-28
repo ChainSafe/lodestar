@@ -215,7 +215,7 @@ export interface IBeaconChain {
    * builder fallback is triggered.
    *
    */
-  produceFullBlockBody(
+  produceExecutionBlockBody(
     blockAttributes: BlockAttributes & {currentState: CachedBeaconStateAllForks}
   ): Promise<AssembledBlockBodyResponse<BlockType.Full>>;
   /**

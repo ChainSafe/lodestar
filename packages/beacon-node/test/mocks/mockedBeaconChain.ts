@@ -143,7 +143,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       produceBlock: vi.fn(),
       produceBlindedBlock: vi.fn(),
       produceBlindedBlockBody: vi.fn(),
-      produceFullBlockBody: vi.fn(),
+      produceExecutionBlockBody: vi.fn(),
       assembleBlockBody: vi.fn(),
       getCanonicalBlockAtSlot: vi.fn(),
       recomputeForkChoiceHead: vi.fn(),
