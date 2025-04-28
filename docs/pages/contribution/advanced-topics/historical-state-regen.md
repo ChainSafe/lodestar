@@ -19,7 +19,7 @@ Assume we have following chain represents the state object every slot, with foll
 
 Please see the following table for more understanding of these layers.
 
-![historical-regen](docs/static/images/historical-regen/historical-regen.png)
+![historical-state-regen](docs/static/images/historical-state-regen/historical-regen.png)
 
 These are the rules we follow:
 
@@ -41,7 +41,7 @@ As you can see with this approach we can find a shorter paths with smaller numbe
 
 ### Constants
 
-To derive the right values for layers, we developed a mathematical approach that provides an estimation based on different parameters in the system.
+To derive the right values for layers, we developed a mathematical approach that provides an estimation based on different parameters in the system. We try to evaluate minimum `cost` involved by optimizing different input variables. We can fine tune number of layers, their frequencies along other assumptions needed.
 
 $$
 \begin{align*}
