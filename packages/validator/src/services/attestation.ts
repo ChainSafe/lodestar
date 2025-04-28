@@ -196,11 +196,10 @@ export class AttestationService {
     const signedAttestations: SingleAttestation[] = [];
     const headRootHex = toRootHex(attestationNoCommittee.beaconBlockRoot);
     const currentEpoch = computeEpochAtSlot(slot);
-    const isPostElectra = currentEpoch >= this.config.ELECTRA_FORK_EPOCH;
 
     await Promise.all(
       duties.map(async ({duty}) => {
-        const index = isPostElectra ? 0 : duty.committeeIndex;
+        const index = currentEpoch >= this.config.ELECTRA_FORK_EPOCH ? 0 : duty.committeeIndex;
         const attestationData: phase0.AttestationData = {...attestationNoCommittee, index};
         const logCtxValidator = {slot, index, head: headRootHex, validatorIndex: duty.validatorIndex};
 
@@ -236,15 +235,7 @@ export class AttestationService {
       ...(this.opts?.disableAttestationGrouping && {index: attestationNoCommittee.index}),
     };
     try {
-      if (isPostElectra) {
-        (await this.api.beacon.submitPoolAttestationsV2({signedAttestations})).assertOk();
-      } else {
-        (
-          await this.api.beacon.submitPoolAttestations({
-            signedAttestations: signedAttestations as SingleAttestation<ForkPreElectra>[],
-          })
-        ).assertOk();
-      }
+      (await this.api.beacon.submitPoolAttestationsV2({signedAttestations})).assertOk();
       this.logger.info("Published attestations", {
         ...logCtx,
         head: prettyBytes(headRootHex),
@@ -274,7 +265,6 @@ export class AttestationService {
     duties: AttDutyAndProof[]
   ): Promise<void> {
     const logCtx = {slot: attestation.slot, index: committeeIndex};
-    const isPostElectra = this.config.getForkSeq(attestation.slot) >= ForkSeq.electra;
 
     // No validator is aggregator, skip
     if (duties.every(({selectionProof}) => selectionProof === null)) {
@@ -282,17 +272,13 @@ export class AttestationService {
     }
 
     this.logger.verbose("Aggregating attestations", logCtx);
-    const res = isPostElectra
-      ? await this.api.validator.getAggregatedAttestationV2({
-          attestationDataRoot: ssz.phase0.AttestationData.hashTreeRoot(attestation),
-          slot: attestation.slot,
-          committeeIndex,
-        })
-      : await this.api.validator.getAggregatedAttestation({
-          attestationDataRoot: ssz.phase0.AttestationData.hashTreeRoot(attestation),
-          slot: attestation.slot,
-        });
-    const aggregate = res.value();
+    const aggregate = (
+      await this.api.validator.getAggregatedAttestationV2({
+        attestationDataRoot: ssz.phase0.AttestationData.hashTreeRoot(attestation),
+        slot: attestation.slot,
+        committeeIndex,
+      })
+    ).value();
     const participants = aggregate.aggregationBits.getTrueBitIndexes().length;
     this.metrics?.numParticipantsInAggregate.observe(participants);
 
@@ -319,11 +305,7 @@ export class AttestationService {
 
     if (signedAggregateAndProofs.length > 0) {
       try {
-        if (isPostElectra) {
-          (await this.api.validator.publishAggregateAndProofsV2({signedAggregateAndProofs})).assertOk();
-        } else {
-          (await this.api.validator.publishAggregateAndProofs({signedAggregateAndProofs})).assertOk();
-        }
+        (await this.api.validator.publishAggregateAndProofsV2({signedAggregateAndProofs})).assertOk();
         this.logger.info("Published aggregateAndProofs", {
           ...logCtx,
           participants,
