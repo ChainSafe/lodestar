@@ -1,6 +1,6 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, ForkPostBellatrix, ForkPostDeneb, ForkPreDeneb, ForkSeq} from "@lodestar/params";
+import {ForkName, ForkPostBellatrix, ForkPostDeneb, ForkPreDeneb} from "@lodestar/params";
 import {
   BLSPubkey,
   BLSSignature,

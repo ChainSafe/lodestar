@@ -190,7 +190,6 @@ export class PeerManager {
     // opts.discv5 === null, discovery is disabled
     const discovery = opts.discv5
       ? await PeerDiscovery.init(modules, {
-          maxPeers: opts.maxPeers,
           discv5FirstQueryDelayMs: opts.discv5FirstQueryDelayMs ?? DEFAULT_DISCV5_FIRST_QUERY_DELAY_MS,
           discv5: opts.discv5,
           connectToDiscv5Bootnodes: opts.connectToDiscv5Bootnodes,

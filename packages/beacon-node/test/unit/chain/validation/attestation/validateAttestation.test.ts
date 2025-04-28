@@ -1,6 +1,6 @@
 import {BitArray} from "@chainsafe/ssz";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {SubnetID, ssz} from "@lodestar/types";
+import {ssz} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 import {describe, expect, it} from "vitest";
 import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../../state-transition/test/perf/util.js";

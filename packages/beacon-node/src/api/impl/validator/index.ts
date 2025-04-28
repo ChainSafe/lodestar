@@ -43,7 +43,6 @@ import {
   Wei,
   bellatrix,
   getValidatorStatus,
-  isBlindedBeaconBlock,
   isBlockContents,
   phase0,
   ssz,

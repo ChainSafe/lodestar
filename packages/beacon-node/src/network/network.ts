@@ -107,7 +107,6 @@ export class Network implements INetwork {
 
   private subscribedToCoreTopics = false;
   private connectedPeers = new Set<PeerIdStr>();
-  private regossipBlsChangesPromise: Promise<void> | null = null;
 
   constructor(modules: NetworkModules) {
     this.peerId = peerIdFromPrivateKey(modules.privateKey);

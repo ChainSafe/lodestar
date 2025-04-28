@@ -32,7 +32,6 @@ export class ArchiveStore {
   private archiveMode: ArchiveMode;
   private jobQueue: JobItemQueue<[CheckpointWithHex], void>;
 
-  private prevFinalized: CheckpointWithHex;
   private archiveBlobEpochs?: number;
   private readonly statesArchiverStrategy: StateArchiveStrategy;
   private readonly chain: IBeaconChain;
@@ -53,7 +52,6 @@ export class ArchiveStore {
     this.signal = signal;
     this.archiveMode = opts.archiveMode;
     this.archiveBlobEpochs = opts.archiveBlobEpochs;
-    this.prevFinalized = this.chain.forkChoice.getFinalizedCheckpoint();
 
     this.jobQueue = new JobItemQueue<[CheckpointWithHex], void>(this.processFinalizedCheckpoint, {
       maxLength: PROCESS_FINALIZED_CHECKPOINT_QUEUE_LENGTH,
@@ -195,8 +193,6 @@ export class ArchiveStore {
           this.chain.clock.currentEpoch
         );
       }
-
-      this.prevFinalized = finalized;
 
       await this.statesArchiverStrategy.onFinalizedCheckpoint(finalized, this.metrics);
 

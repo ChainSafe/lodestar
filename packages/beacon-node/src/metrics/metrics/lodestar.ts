@@ -1,4 +1,3 @@
-import {BeaconState} from "@lodestar/types";
 import {BlobsSource, BlockSource} from "../../chain/blocks/types.js";
 import {JobQueueItemType} from "../../chain/bls/index.js";
 import {AttestationErrorCode, BlockErrorCode} from "../../chain/errors/index.js";

@@ -12,7 +12,7 @@ export class Runner implements IRunner {
   constructor({logger}: {logger: LoggerNode}) {
     this.logger = logger;
     this.runners = {
-      [RunnerType.ChildProcess]: new ChildProcessRunner({logger: this.logger.child({module: "cp"})}),
+      [RunnerType.ChildProcess]: new ChildProcessRunner(),
       [RunnerType.Docker]: new DockerRunner({logger: this.logger.child({module: "docker"})}),
     };
   }

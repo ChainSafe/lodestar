@@ -4,13 +4,7 @@ import {routes} from "@lodestar/api";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
-import {
-  BlockInput,
-  BlockInputDataBlobs,
-  BlockInputType,
-  BlockSource,
-  CachedData,
-} from "../../../../src/chain/blocks/types.js";
+import {BlockInput, BlockInputType, BlockSource, CachedData} from "../../../../src/chain/blocks/types.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../../../src/constants/constants.js";
 import {ReqRespBridgeEventData} from "../../../../src/network/core/events.js";
 import {ReqRespBridgeEvent} from "../../../../src/network/core/events.js";

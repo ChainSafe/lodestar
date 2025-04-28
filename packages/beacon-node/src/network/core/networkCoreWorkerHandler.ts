@@ -8,23 +8,21 @@ import {PrivateKey} from "@libp2p/interface";
 import {routes} from "@lodestar/api";
 import {BeaconConfig, chainConfigToJson} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
-import {ResponseIncoming, ResponseOutgoing} from "@lodestar/reqresp";
+import {ResponseIncoming} from "@lodestar/reqresp";
 import {phase0} from "@lodestar/types";
 import {Metrics} from "../../metrics/index.js";
-import {AsyncIterableBridgeCaller, AsyncIterableBridgeHandler} from "../../util/asyncIterableToEvents.js";
-import {peerIdFromString} from "../../util/peerId.js";
+import {AsyncIterableBridgeCaller} from "../../util/asyncIterableToEvents.js";
 import {terminateWorkerThread, wireEventsOnMainThread} from "../../util/workerEvents.js";
 import {NetworkEventBus, NetworkEventData, networkEventDirection} from "../events.js";
 import {NetworkOptions} from "../options.js";
 import {PeerAction, PeerScoreStats} from "../peers/index.js";
-import {GetReqRespHandlerFn, IncomingRequestArgs, OutgoingRequestArgs} from "../reqresp/types.js";
+import {GetReqRespHandlerFn, OutgoingRequestArgs} from "../reqresp/types.js";
 import {CommitteeSubscription} from "../subnets/interface.js";
 import {
   NetworkWorkerThreadEventType,
   ReqRespBridgeEventBus,
   ReqRespBridgeEventData,
   getReqRespBridgeReqEvents,
-  getReqRespBridgeRespEvents,
   reqRespBridgeEventDirection,
 } from "./events.js";
 import {INetworkCore, MultiaddrStr, NetworkWorkerApi, NetworkWorkerData, PeerIdStr} from "./types.js";
@@ -63,17 +61,11 @@ const NETWORK_WORKER_EXIT_RETRY_COUNT = 3;
  */
 export class WorkerNetworkCore implements INetworkCore {
   private readonly reqRespBridgeReqCaller: AsyncIterableBridgeCaller<OutgoingRequestArgs, ResponseIncoming>;
-  private readonly reqRespBridgeRespHandler: AsyncIterableBridgeHandler<IncomingRequestArgs, ResponseOutgoing>;
   private readonly reqRespBridgeEventBus = new ReqRespBridgeEventBus();
 
   constructor(private readonly modules: WorkerNetworkCoreModules) {
     // Get called from main thread to issue a ReqResp request, and emits event to worker
     this.reqRespBridgeReqCaller = new AsyncIterableBridgeCaller(getReqRespBridgeReqEvents(this.reqRespBridgeEventBus));
-    // Handles ReqResp response from worker and calls async generator in main thread
-    this.reqRespBridgeRespHandler = new AsyncIterableBridgeHandler(
-      getReqRespBridgeRespEvents(this.reqRespBridgeEventBus),
-      (data) => modules.getReqRespHandler(data.method)(data.req, peerIdFromString(data.peerId))
-    );
 
     wireEventsOnMainThread<NetworkEventData>(
       NetworkWorkerThreadEventType.networkEvent,

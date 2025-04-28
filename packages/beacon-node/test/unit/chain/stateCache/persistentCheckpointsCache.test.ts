@@ -4,7 +4,6 @@ import {RootHex, phase0} from "@lodestar/types";
 import {mapValues, toHexString} from "@lodestar/utils";
 import {beforeAll, beforeEach, describe, expect, it} from "vitest";
 import {FIFOBlockStateCache, toCheckpointHex} from "../../../../src/chain/index.js";
-import {ShufflingCache} from "../../../../src/chain/shufflingCache.js";
 import {checkpointToDatastoreKey} from "../../../../src/chain/stateCache/datastore/index.js";
 import {PersistentCheckpointStateCache} from "../../../../src/chain/stateCache/persistentCheckpointsCache.js";
 import {CheckpointHex} from "../../../../src/chain/stateCache/types.js";
