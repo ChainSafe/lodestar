@@ -274,11 +274,10 @@ export function createValidatorMonitor(
   const log: LogHandler = (message: string, context?: LogData) => {
     logger[logLevel](message, context);
   };
-  let validatorMonitorMetrics: ValidatorMonitorMetrics | null = null;
-  if (opts.validatorMonitorLogs) {
-    const register = new RegistryMetricCreator();
-    validatorMonitorMetrics = createValidatorMonitorMetrics(register);
-  }
+  let validatorMonitorMetrics: ValidatorMonitorMetrics | null =
+    metrics
+      ? createValidatorMonitorMetrics(metrics.register)
+      : null;
   /** The validators that require additional monitoring. */
   const validators = new MapDef<ValidatorIndex, MonitoredValidator>(() => ({
     summaries: new Map<Epoch, EpochSummary>(),
