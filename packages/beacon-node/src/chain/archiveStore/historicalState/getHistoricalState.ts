@@ -3,7 +3,7 @@ import {BeaconConfig} from "@lodestar/config";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
-  DataAvailableStatus,
+  DataAvailabilityStatus,
   ExecutionPayloadStatus,
   createCachedBeaconState,
   stateTransition,
@@ -86,7 +86,7 @@ export async function getHistoricalState(
           verifySignatures: false,
           verifyStateRoot: false,
           executionPayloadStatus: ExecutionPayloadStatus.valid,
-          dataAvailableStatus: DataAvailableStatus.available,
+          dataAvailabilityStatus: DataAvailabilityStatus.Available,
         },
         {metrics}
       );

@@ -21,7 +21,6 @@ export async function getAndInitDevValidators({
   externalSignerUrl,
   doppelgangerProtection = false,
   valProposerConfig,
-  useProduceBlockV3,
 }: {
   node: BeaconNode;
   logPrefix: string;
@@ -33,7 +32,6 @@ export async function getAndInitDevValidators({
   externalSignerUrl?: string;
   doppelgangerProtection?: boolean;
   valProposerConfig?: ValidatorProposerConfig;
-  useProduceBlockV3?: boolean;
 }): Promise<{validators: Validator[]; secretKeys: SecretKey[]}> {
   const validators: Promise<Validator>[] = [];
   const secretKeys: SecretKey[] = [];
@@ -79,7 +77,6 @@ export async function getAndInitDevValidators({
         signers,
         doppelgangerProtection,
         valProposerConfig,
-        useProduceBlockV3,
       })
     );
   }

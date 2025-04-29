@@ -32,11 +32,7 @@ const env = await Simulation.initWithDefaults(
       beacon: BeaconClient.Lodestar,
       validator: {
         type: ValidatorClient.Lodestar,
-        options: {
-          clientOptions: {
-            useProduceBlockV3: true,
-          },
-        },
+        options: {},
       },
       execution: ExecutionClient.Geth,
       keysCount: 32,
@@ -47,11 +43,7 @@ const env = await Simulation.initWithDefaults(
       beacon: BeaconClient.Lodestar,
       validator: {
         type: ValidatorClient.Lodestar,
-        options: {
-          clientOptions: {
-            useProduceBlockV3: true,
-          },
-        },
+        options: {},
       },
       execution: ExecutionClient.Geth,
       keysCount: 32,

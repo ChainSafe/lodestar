@@ -1,9 +1,9 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {DataAvailabilityStatus, ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
-  DataAvailableStatus,
+  DataAvailabilityStatus,
   computeEpochAtSlot,
   isStateValidatorsNodesPopulated,
 } from "@lodestar/state-transition";
@@ -116,7 +116,7 @@ export async function verifyBlocksInEpoch(
         preState0,
         blocksInput,
         // hack availability for state transition eval as availability is separately determined
-        blocks.map(() => DataAvailableStatus.available),
+        blocks.map(() => DataAvailabilityStatus.Available),
         this.logger,
         this.metrics,
         this.validatorMonitor,
