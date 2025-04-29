@@ -224,7 +224,7 @@ async function migrateBlobSidecarsFromHotToColdDb(
           return (
             forkSeq >= ForkSeq.deneb &&
             forkSeq < ForkSeq.fulu &&
-            // if block is out of WS period, its blobs was not downloaded so skip this step
+            // if block is out of ${config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS}, skip this step
             blockEpoch >= currentEpoch - config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS
           );
         })

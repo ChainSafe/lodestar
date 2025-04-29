@@ -143,12 +143,15 @@ export async function beaconBlocksMaybeBlobsByRange(
     return {blocks, pendingDataColumns: pendingDataColumns.length > 0 ? pendingDataColumns : null};
   }
 
-  logger?.verbose("Download range is out of WS period, skip Blobs and DataColumnSidecars download", {
-    startSlot,
-    endSlot,
-    startEpoch,
-    currentEpoch,
-  });
+  logger?.verbose(
+    `Download range is out of ${config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS} epochs, skip Blobs and DataColumnSidecars download`,
+    {
+      startEpoch,
+      startSlot,
+      endSlot,
+      currentEpoch,
+    }
+  );
 
   // Data is out of range, only request blocks
   const blocks = await network.sendBeaconBlocksByRange(peerId, request);
