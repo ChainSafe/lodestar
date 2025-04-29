@@ -71,6 +71,10 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     await connect(netA, netB);
     await connected;
 
+    // We see a lot of "Muxer already closed" in e2e tests on CI
+    // This is a way to give a grace period for connections to open
+    await sleep(50, controller.signal);
+
     return [netA, netB, await getPeerIdOf(netA), await getPeerIdOf(netB)];
   }
 
@@ -210,10 +214,6 @@ function runTests({useWorker}: {useWorker: boolean}): void {
           }
         }
     );
-
-    // We see a lot of "Muxer already closed" in e2e tests on CI
-    // This is a way to give a grace period for connections to open
-    await sleep(50, controller.signal);
 
     await expectRejectedWithLodestarError(
       netA.sendBeaconBlocksByRange(peerIdB, {startSlot: 0, step: 1, count: 3}),
