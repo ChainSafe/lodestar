@@ -51,6 +51,7 @@
       "url": ""
     }
   ],
+  "liveNow": false,
   "panels": [
     {
       "datasource": {
@@ -78,7 +79,6 @@
         "graphMode": "area",
         "justifyMode": "auto",
         "orientation": "auto",
-        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -86,12 +86,10 @@
           "fields": "",
           "values": false
         },
-        "showPercentChange": false,
         "text": {},
-        "textMode": "auto",
-        "wideLayout": true
+        "textMode": "auto"
       },
-      "pluginVersion": "11.6.1",
+      "pluginVersion": "10.1.1",
       "targets": [
         {
           "datasource": {
@@ -118,7 +116,7 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "mode": "continuous-GrYlRd"
           },
           "mappings": []
         },
@@ -133,16 +131,8 @@
       "id": 30,
       "options": {
         "displayMode": "basic",
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": false
-        },
-        "maxVizHeight": 300,
         "minVizHeight": 10,
         "minVizWidth": 0,
-        "namePlacement": "auto",
         "orientation": "horizontal",
         "reduceOptions": {
           "calcs": [
@@ -152,10 +142,9 @@
           "values": false
         },
         "showUnfilled": true,
-        "sizing": "auto",
         "valueMode": "color"
       },
-      "pluginVersion": "11.6.1",
+      "pluginVersion": "10.1.1",
       "targets": [
         {
           "datasource": {
@@ -170,6 +159,7 @@
         }
       ],
       "title": "Attestation performance summary (rate / epoch)",
+      "transformations": [],
       "type": "bargauge"
     },
     {
@@ -184,13 +174,11 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -235,12 +223,10 @@
           "showLegend": true
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.1",
       "targets": [
         {
           "datasource": {
@@ -298,7 +284,7 @@
         "frameIndex": 0,
         "showHeader": true
       },
-      "pluginVersion": "11.6.1",
+      "pluginVersion": "10.1.1",
       "targets": [
         {
           "datasource": {
@@ -397,8 +383,7 @@
           "layout": "auto"
         },
         "tooltip": {
-          "mode": "single",
-          "showColorScale": false,
+          "show": true,
           "yHistogram": false
         },
         "yAxis": {
@@ -407,7 +392,7 @@
           "unit": "s"
         }
       },
-      "pluginVersion": "11.6.1",
+      "pluginVersion": "10.1.1",
       "targets": [
         {
           "datasource": {
@@ -440,13 +425,11 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -492,12 +475,10 @@
           "showLegend": true
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.1",
       "targets": [
         {
           "datasource": {
@@ -526,13 +507,11 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -578,12 +557,10 @@
           "showLegend": false
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.1",
       "targets": [
         {
           "datasource": {
@@ -611,13 +588,11 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "none",
@@ -663,12 +638,11 @@
           "showLegend": false
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.1",
+      "pluginVersion": "8.4.0-beta1",
       "targets": [
         {
           "datasource": {
@@ -697,13 +671,11 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 17,
             "gradientMode": "opacity",
@@ -751,12 +723,11 @@
           "showLegend": true
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.1",
+      "pluginVersion": "7.4.5",
       "targets": [
         {
           "datasource": {
@@ -808,13 +779,11 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "none",
@@ -860,12 +829,11 @@
           "showLegend": false
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.1",
+      "pluginVersion": "8.4.0-beta1",
       "targets": [
         {
           "datasource": {
@@ -895,6 +863,15 @@
       "type": "timeseries"
     },
     {
+      "cards": {},
+      "color": {
+        "cardColor": "#b4ff00",
+        "colorScale": "sqrt",
+        "colorScheme": "interpolateMagma",
+        "exponent": 0.5,
+        "mode": "spectrum"
+      },
+      "dataFormat": "tsbuckets",
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
@@ -920,7 +897,13 @@
         "x": 0,
         "y": 33
       },
+      "heatmap": {},
+      "hideZeroBuckets": false,
+      "highlightCards": true,
       "id": 24,
+      "legend": {
+        "show": true
+      },
       "options": {
         "calculate": false,
         "calculation": {},
@@ -949,8 +932,7 @@
         },
         "showValue": "never",
         "tooltip": {
-          "mode": "single",
-          "showColorScale": false,
+          "show": true,
           "yHistogram": false
         },
         "yAxis": {
@@ -959,7 +941,8 @@
           "unit": "short"
         }
       },
-      "pluginVersion": "11.6.1",
+      "pluginVersion": "10.1.1",
+      "reverseYBuckets": false,
       "targets": [
         {
           "datasource": {
@@ -977,7 +960,20 @@
         }
       ],
       "title": "Inclusion distance distribution",
-      "type": "heatmap"
+      "tooltip": {
+        "show": true,
+        "showHistogram": false
+      },
+      "type": "heatmap",
+      "xAxis": {
+        "show": true
+      },
+      "yAxis": {
+        "format": "short",
+        "logBase": 1,
+        "show": true
+      },
+      "yBucketBound": "auto"
     },
     {
       "datasource": {
@@ -991,13 +987,11 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "none",
@@ -1043,12 +1037,11 @@
           "showLegend": true
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.1",
+      "pluginVersion": "8.4.0-beta1",
       "targets": [
         {
           "datasource": {
@@ -1090,6 +1083,15 @@
       "type": "timeseries"
     },
     {
+      "cards": {},
+      "color": {
+        "cardColor": "#b4ff00",
+        "colorScale": "sqrt",
+        "colorScheme": "interpolateMagma",
+        "exponent": 0.5,
+        "mode": "spectrum"
+      },
+      "dataFormat": "tsbuckets",
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
@@ -1115,7 +1117,13 @@
         "x": 0,
         "y": 41
       },
+      "heatmap": {},
+      "hideZeroBuckets": false,
+      "highlightCards": true,
       "id": 25,
+      "legend": {
+        "show": true
+      },
       "options": {
         "calculate": false,
         "calculation": {},
@@ -1144,8 +1152,7 @@
         },
         "showValue": "never",
         "tooltip": {
-          "mode": "single",
-          "showColorScale": false,
+          "show": true,
           "yHistogram": false
         },
         "yAxis": {
@@ -1154,7 +1161,8 @@
           "unit": "short"
         }
       },
-      "pluginVersion": "11.6.1",
+      "pluginVersion": "10.1.1",
+      "reverseYBuckets": false,
       "targets": [
         {
           "datasource": {
@@ -1172,7 +1180,20 @@
         }
       ],
       "title": "Inclusion distance distribution > 1",
-      "type": "heatmap"
+      "tooltip": {
+        "show": true,
+        "showHistogram": false
+      },
+      "type": "heatmap",
+      "xAxis": {
+        "show": true
+      },
+      "yAxis": {
+        "format": "short",
+        "logBase": 1,
+        "show": true
+      },
+      "yBucketBound": "auto"
     },
     {
       "datasource": {
@@ -1185,13 +1206,11 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "none",
@@ -1237,12 +1256,11 @@
           "showLegend": false
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.1",
+      "pluginVersion": "8.4.0-beta1",
       "targets": [
         {
           "datasource": {
@@ -1318,13 +1336,11 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 8,
             "gradientMode": "opacity",
@@ -1371,12 +1387,11 @@
           "showLegend": true
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.1",
+      "pluginVersion": "8.4.0-beta1",
       "targets": [
         {
           "datasource": {
@@ -1417,13 +1432,11 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 8,
             "gradientMode": "opacity",
@@ -1470,12 +1483,11 @@
           "showLegend": true
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.1",
+      "pluginVersion": "8.4.0-beta1",
       "targets": [
         {
           "datasource": {
@@ -1519,13 +1531,11 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -1571,12 +1581,11 @@
           "showLegend": true
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.1",
+      "pluginVersion": "9.3.2",
       "targets": [
         {
           "datasource": {
@@ -1605,13 +1614,11 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "Gwei",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 8,
             "gradientMode": "opacity",
@@ -1719,12 +1726,11 @@
           "showLegend": true
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.1",
+      "pluginVersion": "8.4.0-beta1",
       "targets": [
         {
           "datasource": {
@@ -1776,101 +1782,11 @@
       ],
       "title": "Block proposer balance delta",
       "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": []
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 65
-      },
-      "id": 34,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "11.6.1",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "disableTextWrap": false,
-          "editorMode": "code",
-          "expr": "384*rate(validator_monitor_prev_epoch_block_proposal_summary[$rate_interval])",
-          "fullMetaSearch": false,
-          "hide": false,
-          "includeNullMetadata": true,
-          "instant": false,
-          "legendFormat": "{{summary}}",
-          "range": true,
-          "refId": "A",
-          "useBackend": false
-        }
-      ],
-      "title": "Block Proposal Summary (rate / epoch)",
-      "type": "timeseries"
     }
   ],
-  "preload": false,
   "refresh": "10s",
-  "schemaVersion": 41,
+  "schemaVersion": 38,
+  "style": "dark",
   "tags": [
     "lodestar"
   ],

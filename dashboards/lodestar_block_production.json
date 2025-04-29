@@ -1413,38 +1413,14 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
           "exemplar": false,
-          "expr": "lodestar_attached_validators_total_count",
+          "expr": "384*rate(validator_monitor_prev_epoch_block_proposal_summary[$rate_interval])",
           "format": "time_series",
           "instant": false,
           "interval": "",
-          "legendFormat": "",
+          "legendFormat": "{{summary}}",
           "refId": "A"
-        },
-        {
-          "exemplar": false,
-          "expr": "lodestar_attached_validators_finalized_count",
-          "hide": false,
-          "instant": false,
-          "interval": "",
-          "legendFormat": "",
-          "refId": "B"
-        },
-        {
-          "exemplar": false,
-          "expr": "lodestar_attached_validators_missed_count",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "",
-          "refId": "C"
-        },
-        {
-          "exemplar": false,
-          "expr": "lodestar_attached_validators_orphaned_count",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "",
-          "refId": "E"
         }
       ],
       "title": "Attached Validators Block Proposal Data",
@@ -1574,10 +1550,16 @@
       "pluginVersion": "10.4.1",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
           "exemplar": false,
           "expr": "lodestar_finalized_attached_validators_count",
           "interval": "",
           "legendFormat": "",
+          "range": true,
           "refId": "A"
         }
       ],
