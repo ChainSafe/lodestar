@@ -1,5 +1,6 @@
+import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {describe, expect, it} from "vitest";
-import {DataAvailabilityStatus, ExecutionStatus, ProtoArray} from "../../../src/index.js";
+import {ExecutionStatus, ProtoArray} from "../../../src/index.js";
 
 describe("getCommonAncestor", () => {
   const blocks: {slot: number; root: string; parent: string}[] = [

@@ -1,7 +1,7 @@
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {DataAvailabilityStatus, ExecutionStatus} from "@lodestar/fork-choice";
+import {ExecutionStatus} from "@lodestar/fork-choice";
 import {
   ForkPostBellatrix,
   ForkPostDeneb,
@@ -17,6 +17,7 @@ import {
 } from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
+  DataAvailabilityStatus,
   attesterShufflingDecisionRoot,
   beaconBlockToBlinded,
   calculateCommitteeAssignments,
@@ -851,11 +852,6 @@ export function getValidatorApi(
   }
 
   return {
-    async produceBlockV2({slot, randaoReveal, graffiti, ...opts}) {
-      const {data, ...meta} = await produceEngineFullBlockOrContents(slot, randaoReveal, graffiti, opts);
-      return {data, meta};
-    },
-
     async produceBlockV3({slot, randaoReveal, graffiti, skipRandaoVerification, builderBoostFactor, ...opts}) {
       const {data, ...meta} = await produceEngineOrBuilderBlock(
         slot,
@@ -888,26 +884,6 @@ export function getValidatorApi(
       }
 
       return {data, meta};
-    },
-
-    async produceBlindedBlock({slot, randaoReveal, graffiti}) {
-      const {data, version} = await produceEngineOrBuilderBlock(slot, randaoReveal, graffiti);
-      if (!isForkPostBellatrix(version)) {
-        throw Error(`Invalid fork=${version} for produceBlindedBlock`);
-      }
-
-      if (isBlockContents(data)) {
-        const {block} = data;
-        const blindedBlock = beaconBlockToBlinded(config, block as BeaconBlock<ForkPostBellatrix>);
-        return {data: blindedBlock, meta: {version}};
-      }
-
-      if (isBlindedBeaconBlock(data)) {
-        return {data, meta: {version}};
-      }
-
-      const blindedBlock = beaconBlockToBlinded(config, data as BeaconBlock<ForkPostBellatrix>);
-      return {data: blindedBlock, meta: {version}};
     },
 
     async produceAttestationData({committeeIndex, slot}) {
@@ -1329,7 +1305,7 @@ export function getValidatorApi(
             metrics?.opPool.aggregatedAttestationPool.apiInsertOutcome.inc({insertOutcome});
 
             const sentPeers = await network.publishBeaconAggregateAndProof(signedAggregateAndProof);
-            metrics?.onPoolSubmitAggregatedAttestation(seenTimestampSec, indexedAttestation, sentPeers);
+            chain.validatorMonitor?.onPoolSubmitAggregatedAttestation(seenTimestampSec, indexedAttestation, sentPeers);
           } catch (e) {
             const logCtx = {
               slot: signedAggregateAndProof.message.aggregate.data.slot,
@@ -1435,7 +1411,7 @@ export function getValidatorApi(
 
       if (metrics) {
         for (const subscription of subscriptions) {
-          metrics.registerLocalValidator(subscription.validatorIndex);
+          chain.validatorMonitor?.registerLocalValidator(subscription.validatorIndex);
         }
       }
     },
@@ -1472,7 +1448,10 @@ export function getValidatorApi(
 
       if (metrics) {
         for (const subscription of subscriptions) {
-          metrics.registerLocalValidatorInSyncCommittee(subscription.validatorIndex, subscription.untilEpoch);
+          chain.validatorMonitor?.registerLocalValidatorInSyncCommittee(
+            subscription.validatorIndex,
+            subscription.untilEpoch
+          );
         }
       }
     },

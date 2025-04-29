@@ -3,7 +3,7 @@ import {BeaconBlock, BlindedBeaconBlock, altair, capella} from "@lodestar/types"
 import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateBellatrix, CachedBeaconStateCapella} from "../types.js";
 import {getFullOrBlindedPayload, isExecutionEnabled} from "../util/execution.js";
-import {BlockExternalData, DataAvailableStatus} from "./externalData.js";
+import {BlockExternalData, DataAvailabilityStatus} from "./externalData.js";
 import {processBlobKzgCommitments} from "./processBlobKzgCommitments.js";
 import {processBlockHeader} from "./processBlockHeader.js";
 import {processEth1Data} from "./processEth1Data.js";
@@ -67,10 +67,10 @@ export function processBlock(
 
   if (fork >= ForkSeq.deneb) {
     processBlobKzgCommitments(externalData);
-    // Only throw preDeneb so beacon can also sync/process blocks optimistically
+    // Only throw PreData so beacon can also sync/process blocks optimistically
     // and let forkChoice handle it
-    if (externalData.dataAvailableStatus === DataAvailableStatus.preDeneb) {
-      throw Error("dataAvailableStatus preDeneb");
+    if (externalData.dataAvailabilityStatus === DataAvailabilityStatus.PreData) {
+      throw Error("dataAvailabilityStatus.PreData");
     }
   }
 }

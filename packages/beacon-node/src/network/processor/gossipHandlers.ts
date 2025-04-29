@@ -51,8 +51,8 @@ import {
 } from "../../chain/validation/index.js";
 import {validateLightClientFinalityUpdate} from "../../chain/validation/lightClientFinalityUpdate.js";
 import {validateLightClientOptimisticUpdate} from "../../chain/validation/lightClientOptimisticUpdate.js";
+import {OpSource} from "../../chain/validatorMonitor.js";
 import {Metrics} from "../../metrics/index.js";
-import {OpSource} from "../../metrics/validatorMonitor.js";
 import {INetworkCore} from "../core/index.js";
 import {NetworkEvent, NetworkEventBus} from "../events.js";
 import {
@@ -260,7 +260,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
     // Handler - MUST NOT `await`, to allow validation result to be propagated
 
-    metrics?.registerBeaconBlock(OpSource.gossip, seenTimestampSec, signedBlock.message);
+    chain.validatorMonitor?.registerBeaconBlock(OpSource.gossip, seenTimestampSec, signedBlock.message);
     // if blobs are not yet fully available start an aggressive blob pull
     if (blockInput.type === BlockInputType.dataPromise) {
       events.emit(NetworkEvent.unknownBlockInput, {blockInput, peer: peerIdStr});
@@ -428,7 +428,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
       // Handler
       const {indexedAttestation, committeeIndices, attDataRootHex} = validationResult;
-      metrics?.registerGossipAggregatedAttestation(seenTimestampSec, signedAggregateAndProof, indexedAttestation);
+      chain.validatorMonitor?.registerGossipAggregatedAttestation(
+        seenTimestampSec,
+        signedAggregateAndProof,
+        indexedAttestation
+      );
       const aggregatedAttestation = signedAggregateAndProof.message.aggregate;
 
       const insertOutcome = chain.aggregatedAttestationPool.add(
@@ -527,7 +531,10 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       });
 
       // Handler
-      metrics?.registerGossipSyncContributionAndProof(contributionAndProof.message, syncCommitteeParticipantIndices);
+      chain.validatorMonitor?.registerGossipSyncContributionAndProof(
+        contributionAndProof.message,
+        syncCommitteeParticipantIndices
+      );
 
       try {
         chain.syncContributionAndProofPool.add(contributionAndProof.message, syncCommitteeParticipantIndices.length);
@@ -646,7 +653,10 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
           committeeValidatorIndex,
           committeeSize,
         } = validationResult.result;
-        metrics?.registerGossipUnaggregatedAttestation(gossipHandlerParams[i].seenTimestampSec, indexedAttestation);
+        chain.validatorMonitor?.registerGossipUnaggregatedAttestation(
+          gossipHandlerParams[i].seenTimestampSec,
+          indexedAttestation
+        );
 
         const {subnet} = validationResult.result;
         try {

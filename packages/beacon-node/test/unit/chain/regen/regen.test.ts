@@ -94,7 +94,7 @@ describe("regen", () => {
       // no state is persisted at the  beginning
       expect(fileApisBuffer.size).toEqual(0);
 
-      const modules = {checkpointStateCache: cache, metrics: null, emitter: null, logger: null};
+      const modules = {checkpointStateCache: cache, metrics: null, validatorMonitor: null, emitter: null, logger: null};
       const preState = states["cp1"];
       await processSlotsToNearestCheckpoint(modules, preState, startSlotEpoch22, RegenCaller.processBlocksInEpoch, {
         dontTransferCache: true,
@@ -114,7 +114,7 @@ describe("regen", () => {
       // no state is persisted at the  beginning
       expect(fileApisBuffer.size).toEqual(0);
 
-      const modules = {checkpointStateCache: cache, metrics: null, emitter: null, logger: null};
+      const modules = {checkpointStateCache: cache, metrics: null, validatorMonitor: null, emitter: null, logger: null};
       const preState = states["cp0b"];
       await processSlotsToNearestCheckpoint(modules, preState, startSlotEpoch22, RegenCaller.processBlocksInEpoch, {
         dontTransferCache: true,

@@ -1,5 +1,4 @@
 import {HttpMetricsServerOpts} from "./server/index.js";
-import {ValidatorMonitorOpts} from "./validatorMonitor.js";
 
 export type LodestarMetadata = {
   /** "v0.16.0/developer/feature-1/ac99f2b5" */
@@ -10,12 +9,11 @@ export type LodestarMetadata = {
   network: string;
 };
 
-export type MetricsOptions = ValidatorMonitorOpts &
-  HttpMetricsServerOpts & {
-    enabled: boolean;
-    /** Optional metadata to send to Prometheus */
-    metadata?: LodestarMetadata;
-  };
+export type MetricsOptions = HttpMetricsServerOpts & {
+  enabled: boolean;
+  /** Optional metadata to send to Prometheus */
+  metadata?: LodestarMetadata;
+};
 
 export const defaultMetricsOptions: MetricsOptions = {
   enabled: false,

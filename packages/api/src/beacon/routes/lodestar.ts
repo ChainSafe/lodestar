@@ -5,7 +5,6 @@ import {
   ArrayOf,
   EmptyArgs,
   EmptyMeta,
-  EmptyMetaCodec,
   EmptyRequest,
   EmptyRequestCodec,
   EmptyResponseCodec,
@@ -13,6 +12,10 @@ import {
   JsonOnlyResponseCodec,
 } from "../../utils/codecs.js";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
+import {
+  ExecutionOptimisticFinalizedAndVersionCodec,
+  ExecutionOptimisticFinalizedAndVersionMeta,
+} from "../../utils/metadata.js";
 import {StateArgs} from "./beacon/state.js";
 import {FilterGetPeers, NodePeer, PeerDirection, PeerState} from "./node.js";
 
@@ -81,6 +84,7 @@ export type LodestarThreadType = "main" | "network" | "discv5";
 
 const HistoricalSummariesResponseType = new ContainerType(
   {
+    slot: ssz.Slot,
     historicalSummaries: ssz.capella.HistoricalSummaries,
     proof: ArrayOf(ssz.Bytes8),
   },
@@ -245,7 +249,7 @@ export type Endpoints = {
     StateArgs,
     {params: {state_id: string}},
     HistoricalSummariesResponse,
-    EmptyMeta
+    ExecutionOptimisticFinalizedAndVersionMeta
   >;
 
   /** Dump Discv5 Kad values */
@@ -406,7 +410,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       resp: JsonOnlyResponseCodec,
     },
     getHistoricalSummaries: {
-      url: "/eth/v1/lodestar/historical_summaries/{state_id}",
+      url: "/eth/v1/lodestar/states/{state_id}/historical_summaries",
       method: "GET",
       req: {
         writeReq: ({stateId}) => ({params: {state_id: stateId.toString()}}),
@@ -417,7 +421,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       },
       resp: {
         data: HistoricalSummariesResponseType,
-        meta: EmptyMetaCodec,
+        meta: ExecutionOptimisticFinalizedAndVersionCodec,
       },
     },
     discv5GetKadValues: {

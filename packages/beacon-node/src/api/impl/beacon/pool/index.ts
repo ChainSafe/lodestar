@@ -150,7 +150,12 @@ export function getBeaconPoolApi({
             }
 
             const sentPeers = await network.publishBeaconAttestation(attestation, subnet);
-            metrics?.onPoolSubmitUnaggregatedAttestation(seenTimestampSec, indexedAttestation, subnet, sentPeers);
+            chain.validatorMonitor?.onPoolSubmitUnaggregatedAttestation(
+              seenTimestampSec,
+              indexedAttestation,
+              subnet,
+              sentPeers
+            );
           } catch (e) {
             const logCtx = {slot: attestation.data.slot, index: attestation.data.index};
 

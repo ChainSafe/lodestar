@@ -68,6 +68,7 @@ export async function getNetworkForTest(
       // mock timer does not work on worker thread
       clock: new ClockStatic(startSlot, Math.floor(Date.now() / 1000) - startSlot * beaconConfig.SECONDS_PER_SLOT),
       metrics: null,
+      validatorMonitor: null,
       anchorState: createCachedBeaconStateTest(state, beaconConfig),
       eth1: new Eth1ForBlockProductionDisabled(),
       executionEngine: new ExecutionEngineDisabled(),
