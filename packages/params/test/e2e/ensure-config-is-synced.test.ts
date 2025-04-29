@@ -63,7 +63,7 @@ async function downloadRemoteConfig(preset: "mainnet" | "minimal", commit: strin
 
     // We get error `Request failed with status code 429`
     // which is `Too Many Request` so we added a bit delay between each request
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await new Promise((resolve) => setTimeout(resolve, 200));
   }
 
   // Merge all the fetched yamls for the different forks
