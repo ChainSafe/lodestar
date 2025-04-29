@@ -473,6 +473,11 @@
     yaml "^2.7.0"
     yargs "^17.7.2"
 
+"@chainsafe/biomejs-config@^0.1.1":
+  version "0.1.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/biomejs-config/-/biomejs-config-0.1.1.tgz#891409051da78939467764ab99bd5b2a5ca83949"
+  integrity sha512-4GwwOp7KOwrVCfBz+1+WYXuX5BII2Rm56sLGVPYHxF4utts0CIJwkcrTePxRTciHr90Esbwc2fov75+FWbOKcA==
+
 "@chainsafe/bls-hd-key@^0.3.0":
   version "0.3.0"
   resolved "https://registry.npmjs.org/@chainsafe/bls-hd-key/-/bls-hd-key-0.3.0.tgz"
