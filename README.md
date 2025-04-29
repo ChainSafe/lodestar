@@ -42,7 +42,7 @@ yarn build
 ## Architecture Overview
 
 - :package: This mono-repository contains a suite of Ethereum Consensus packages.
-- :balance_scale: The mono-repository is released under [LGPLv3 license](./LICENSE). Note, that the packages contain their own licenses.
+- :balance_scale: The mono-repository is released under [LGPLv3 license](./LICENSE-LGPL). Note, that the packages contain their own licenses.
 
 | Package                                                     | Version                                                                                                                     | License                                                                                                               | Docs                                                                                      | Description                                                                    |
 | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
