@@ -3,8 +3,8 @@ APIs
 Andreas
 Antonopoulos
 AssemblyScript
-BackupTime
 BLS
+BackupTime
 BeaconNode
 Besu
 Buterin
@@ -100,9 +100,9 @@ SSZ
 Somer
 Stakehouse
 TOC
-TotalStorage
 TTD
 Teku
+TotalStorage
 TypeScript
 UI
 UID
