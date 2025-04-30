@@ -9,7 +9,7 @@ import {
   NUMBER_OF_COLUMNS,
 } from "@lodestar/params";
 
-import {ssz as altariSsz} from "../altair/index.js";
+import {ssz as altairSsz} from "../altair/index.js";
 import {ssz as denebSsz} from "../deneb/index.js";
 import {ssz as electraSsz} from "../electra/index.js";
 import {ssz as phase0Ssz} from "../phase0/index.js";
@@ -22,7 +22,7 @@ export const Blob = denebSsz.Blob;
 
 export const Metadata = new ContainerType(
   {
-    ...altariSsz.Metadata.fields,
+    ...altairSsz.Metadata.fields,
     custodyGroupCount: UintNum64,
   },
   {typeName: "Metadata", jsonCase: "eth2"}
