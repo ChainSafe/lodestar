@@ -2,7 +2,6 @@ import {describe, expect, it} from "vitest";
 import {
   ForkName,
   forkAll,
-  forkBlobs,
   forkPostAltair,
   forkPostBellatrix,
   forkPostCapella,
