@@ -11,6 +11,7 @@ import {
   phase0,
   ssz,
 } from "@lodestar/types";
+import {bigintToNumber} from "@lodestar/utils";
 import {
   ArrayOf,
   EmptyArgs,
@@ -399,7 +400,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       method: "POST",
       req: {
         writeReqJson: ({attesterSlashing}) => {
-          const fork = config.getForkName(Number(attesterSlashing.attestation1.data.slot));
+          const fork = config.getForkName(bigintToNumber(attesterSlashing.attestation1.data.slot));
           return {
             body: isForkPostElectra(fork)
               ? ssz.electra.AttesterSlashing.toJson(attesterSlashing)
@@ -416,7 +417,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           };
         },
         writeReqSsz: ({attesterSlashing}) => {
-          const fork = config.getForkName(Number(attesterSlashing.attestation1.data.slot));
+          const fork = config.getForkName(bigintToNumber(attesterSlashing.attestation1.data.slot));
           return {
             body: isForkPostElectra(fork)
               ? ssz.electra.AttesterSlashing.serialize(attesterSlashing as electra.AttesterSlashing)

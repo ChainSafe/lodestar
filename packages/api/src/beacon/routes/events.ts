@@ -198,7 +198,6 @@ export type TypeJson<T> = {
 };
 
 //converts bigint to number, throws an error if value is outside safe integer
-
 function bigintToNumber(bn: bigint): number {
   if (bn > BigInt(Number.MAX_SAFE_INTEGER) || bn < BigInt(Number.MIN_SAFE_INTEGER)) {
     throw new Error(`Cannot safely convert bigint ${bn} to number - value outside safe integer range`);
