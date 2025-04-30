@@ -48,3 +48,5 @@ export type ExecutionAddress = Bytes20;
 export type RootHex = string;
 /** Non-spec type to signal time is represented in seconds */
 export type TimeSeconds = number;
+export type ColumnIndex = UintNum64; // in reality this number is u8 and can be treated as a JS Number
+export type CustodyIndex = UintNum64; // in reality this number is u8 and can be treated as a JS Number
