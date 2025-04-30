@@ -4,7 +4,7 @@ import {isForkPostAltair} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {computeSyncPeriodAtSlot} from "@lodestar/state-transition";
 import {RootHex, Slot, altair, phase0, ssz, sszTypesFor} from "@lodestar/types";
-import {fromHex, toHex} from "@lodestar/utils";
+import {bigintToNumber, fromHex, toHex} from "@lodestar/utils";
 import {expect} from "vitest";
 import {testLogger} from "../../../utils/logger.js";
 import {TestRunnerFn} from "../../utils/types.js";
@@ -98,7 +98,7 @@ export const sync: TestRunnerFn<SyncTestCase, void> = (fork) => {
 
       function assertHeader(actualHeader: phase0.BeaconBlockHeader, expectedHeader: CheckHeader, msg: string): void {
         expect(toHeaderSummary(actualHeader)).deep.equals(
-          {root: expectedHeader.beacon_root, slot: Number(expectedHeader.slot as bigint)},
+          {root: expectedHeader.beacon_root, slot: bigintToNumber(expectedHeader.slot as bigint)},
           msg
         );
       }
