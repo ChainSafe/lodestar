@@ -119,7 +119,7 @@ export const sync: TestRunnerFn<SyncTestCase, void> = (fork) => {
       for (const [i, step] of testcase.steps.entries()) {
         try {
           if (isProcessUpdateStep(step)) {
-            const currentSlot = Number(step.process_update.current_slot as bigint);
+            const currentSlot = bigintToNumber(step.process_update.current_slot as bigint);
             logger.debug(`Step ${i}/${stepsLen} process_update`, renderSlot(currentSlot));
 
             const updateBytes = testcase.updates.get(step.process_update.update);
@@ -127,7 +127,7 @@ export const sync: TestRunnerFn<SyncTestCase, void> = (fork) => {
               throw Error(`update ${step.process_update.update} not found`);
             }
 
-            const headerSlot = Number(step.process_update.checks.optimistic_header.slot);
+            const headerSlot = bigintToNumber(step.process_update.checks.optimistic_header.slot);
             const update = config.getPostAltairForkTypes(headerSlot).LightClientUpdate.deserialize(updateBytes);
 
             logger.debug(`LightclientUpdateSummary: ${JSON.stringify(toLightClientUpdateSummary(update))}`);
@@ -138,7 +138,7 @@ export const sync: TestRunnerFn<SyncTestCase, void> = (fork) => {
 
           // force_update step
           else if (isForceUpdateStep(step)) {
-            const currentSlot = Number(step.force_update.current_slot as bigint);
+            const currentSlot = bigintToNumber(step.force_update.current_slot as bigint);
             logger.debug(`Step ${i}/${stepsLen} force_update`, renderSlot(currentSlot));
 
             // Simulate force_update()
