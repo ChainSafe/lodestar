@@ -38,7 +38,7 @@ import {
   isBlindedBeaconBlock,
   phase0,
 } from "@lodestar/types";
-import {Logger, fromHex, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
+import {Logger, bigintToNumber, fromHex, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
 import {LoggerNode} from "@lodestar/logger/node";
@@ -370,7 +370,7 @@ export class BeaconChain implements IBeaconChain {
     const anchorStateFork = this.config.getForkName(anchorState.slot);
     if (isForkPostElectra(anchorStateFork)) {
       const {eth1DepositIndex, depositRequestsStartIndex} = anchorState as BeaconStateElectra;
-      if (eth1DepositIndex === Number(depositRequestsStartIndex)) {
+      if (eth1DepositIndex === bigintToNumber(depositRequestsStartIndex)) {
         this.eth1.stopPollingEth1Data();
       }
     }
