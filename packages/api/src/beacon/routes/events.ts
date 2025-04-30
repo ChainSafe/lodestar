@@ -197,6 +197,19 @@ export type TypeJson<T> = {
   fromJson: (data: unknown) => T; // client
 };
 
+//converts bigint to number, throws an error if value is outside safe integer
+
+function bigintToNumber(bn: bigint): number {
+  if (bn > BigInt(Number.MAX_SAFE_INTEGER) || bn < BigInt(Number.MIN_SAFE_INTEGER)) {
+    throw new Error(`Cannot safely convert bigint ${bn} to number - value outside safe integer range`);
+  }
+  const num = Number(bn);
+  if (Number.isNaN(num)) {
+    throw new Error(`Cannot convert bigint ${bn} to number - conversion resulted in NaN`);
+  }
+  return num;
+}
+
 export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: TypeJson<EventData[K]>} {
   const WithVersion = <T>(getType: (fork: ForkName) => TypeJson<T>): TypeJson<{data: T; version: ForkName}> => {
     return {
@@ -259,11 +272,11 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
     [EventType.proposerSlashing]: ssz.phase0.ProposerSlashing,
     [EventType.attesterSlashing]: {
       toJson: (attesterSlashing) => {
-        const fork = config.getForkName(Number(attesterSlashing.attestation1.data.slot));
+        const fork = config.getForkName(bigintToNumber(attesterSlashing.attestation1.data.slot));
         return sszTypesFor(fork).AttesterSlashing.toJson(attesterSlashing);
       },
       fromJson: (attesterSlashing) => {
-        const fork = config.getForkName(Number((attesterSlashing as AttesterSlashing).attestation1.data.slot));
+        const fork = config.getForkName(bigintToNumber((attesterSlashing as AttesterSlashing).attestation1.data.slot));
         return sszTypesFor(fork).AttesterSlashing.fromJson(attesterSlashing);
       },
     },
