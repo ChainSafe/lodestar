@@ -45,10 +45,10 @@ To derive the right values for layers, we developed a mathematical approach that
 
 $$
 \begin{align*}
-Cost &= \frac{w_{s}* \mathit{Total\_Storage} + w_{b} \times \mathit{Backup\_Time} + w_{r} \times \mathit{Restore\_Time}}{(n \times T_{diff} + T_{full}) \times G_{max}} + (G_{min} \times T_{replay}) \\
-Total\_Storage &= F \times S_{full} + \sum\limits_{i=1}^{n}D_{i}\times S_{diff}\\
-Backup\_Time &= F \times T_{full} + \sum\limits_{i=1}^{n}D_{i} \times T_{diff}\\
-Restore\_Time &= F \times R_{full} + \sum\limits_{i=1}^{n}D_{i} \times R_{diff}\\
+Cost &= \frac{w_{s}* TotalStorage + w_{b} \times BackupTime + w_{r} \times RestoreTime}{(n \times T_{diff} + T_{full}) \times G_{max}} + (G_{min} \times T_{replay}) \\
+TotalStorage &= F \times S_{full} + \sum\limits_{i=1}^{n}D_{i}\times S_{diff}\\
+BackupTime &= F \times T_{full} + \sum\limits_{i=1}^{n}D_{i} \times T_{diff}\\
+RestoreTime &= F \times R_{full} + \sum\limits_{i=1}^{n}D_{i} \times R_{diff}\\
 \\
 \text{Where as}\\
 \\
