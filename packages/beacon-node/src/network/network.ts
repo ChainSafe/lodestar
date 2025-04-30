@@ -26,7 +26,7 @@ import {
   deneb,
   phase0,
 } from "@lodestar/types";
-import {sleep} from "@lodestar/utils";
+import {bigintToNumber, sleep} from "@lodestar/utils";
 import {IBeaconChain} from "../chain/index.js";
 import {IBeaconDb} from "../db/interface.js";
 import {Metrics, RegistryMetricCreator} from "../metrics/index.js";
@@ -369,7 +369,7 @@ export class Network implements INetwork {
   }
 
   async publishProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<number> {
-    const fork = this.config.getForkName(Number(proposerSlashing.signedHeader1.message.slot as bigint));
+    const fork = this.config.getForkName(bigintToNumber(proposerSlashing.signedHeader1.message.slot as bigint));
     return this.publishGossip<GossipType.proposer_slashing>(
       {type: GossipType.proposer_slashing, fork},
       proposerSlashing
@@ -377,7 +377,7 @@ export class Network implements INetwork {
   }
 
   async publishAttesterSlashing(attesterSlashing: AttesterSlashing): Promise<number> {
-    const fork = this.config.getForkName(Number(attesterSlashing.attestation1.data.slot as bigint));
+    const fork = this.config.getForkName(bigintToNumber(attesterSlashing.attestation1.data.slot as bigint));
     return this.publishGossip<GossipType.attester_slashing>(
       {type: GossipType.attester_slashing, fork},
       attesterSlashing
