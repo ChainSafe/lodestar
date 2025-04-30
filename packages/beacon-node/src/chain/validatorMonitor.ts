@@ -7,6 +7,7 @@ import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   getBlockRootAtSlot,
+  getCurrentSlot,
   parseAttesterFlags,
   parseParticipationFlags,
 } from "@lodestar/state-transition";
@@ -36,7 +37,6 @@ export enum OpSource {
 }
 
 export type ValidatorMonitor = {
-  validatorMonitorMetrics: ValidatorMonitorMetrics | null;
   registerLocalValidator(index: number): void;
   registerLocalValidatorInSyncCommittee(index: number, untilEpoch: Epoch): void;
   registerValidatorStatuses(
@@ -96,8 +96,6 @@ export type ValidatorMonitorOpts = {
 export const defaultValidatorMonitorOpts: ValidatorMonitorOpts = {
   validatorMonitorLogs: false,
 };
-
-type ValidatorMonitorMetrics = ReturnType<typeof createValidatorMonitorMetrics>;
 
 /** Information required to reward some validator during the current and previous epoch. */
 type ValidatorStatus = {
@@ -274,10 +272,7 @@ export function createValidatorMonitor(
   const log: LogHandler = (message: string, context?: LogData) => {
     logger[logLevel](message, context);
   };
-  let validatorMonitorMetrics: ValidatorMonitorMetrics | null =
-    metrics
-      ? createValidatorMonitorMetrics(metrics.register)
-      : null;
+
   /** The validators that require additional monitoring. */
   const validators = new MapDef<ValidatorIndex, MonitoredValidator>(() => ({
     summaries: new Map<Epoch, EpochSummary>(),
@@ -300,8 +295,9 @@ export function createValidatorMonitor(
 
   let lastRegisteredStatusEpoch = -1;
 
-  return {
-    validatorMonitorMetrics,
+  const validatorMonitorMetrics = metrics ? createValidatorMonitorMetrics(metrics.register) : null;
+
+  const validatorMonitor: ValidatorMonitor = {
     registerLocalValidator(index) {
       validators.getOrDefault(index).lastRegisteredTimeMs = Date.now();
     },
@@ -801,6 +797,16 @@ export function createValidatorMonitor(
       validatorMonitorMetrics?.prevEpochSyncCommitteeMisses.set(prevEpochSyncCommitteeMisses);
     },
   };
+
+  if (metrics) {
+    // Register a single collect() function to run all validatorMonitor metrics
+    validatorMonitorMetrics?.validatorsConnected.addCollect(() => {
+      const clockSlot = getCurrentSlot(config, genesisTime);
+      validatorMonitor.scrapeMetrics(clockSlot);
+    });
+  }
+
+  return validatorMonitor;
 }
 
 /**
