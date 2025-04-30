@@ -1,3 +1,4 @@
+import { bigintToNumber } from "@lodestar/utils";
 import {SIM_ENV_CHAIN_ID, SIM_ENV_NETWORK_ID} from "../constants.js";
 import {Eth1GenesisBlock, ExecutionGenesisOptions, ExecutionStartMode} from "../interfaces.js";
 
@@ -25,7 +26,7 @@ export const getGethGenesisBlock = (
       londonBlock: 0,
       shanghaiTime,
       cancunTime,
-      terminalTotalDifficulty: Number(ttd as bigint),
+      terminalTotalDifficulty: bigintToNumber(ttd as bigint),
       clique: {period: cliqueSealingPeriod, epoch: 30000},
     },
     nonce: "0x0",
