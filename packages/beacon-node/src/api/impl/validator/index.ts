@@ -51,7 +51,6 @@ import {
 import {
   TimeoutError,
   bigintToNumber,
-  formatWeiToEth,
   fromHex,
   prettyWeiToEth,
   resolveOrRacePromises,
@@ -463,10 +462,7 @@ export function getValidatorApi(
 
       metrics?.blockProductionSuccess.inc({source});
       metrics?.blockProductionNumAggregated.observe({source}, block.body.attestations.length);
-      metrics?.blockProductionExecutionPayloadValue.observe(
-        {source},
-        parseFloat(formatWeiToEth(executionPayloadValue))
-      );
+      metrics?.blockProductionExecutionPayloadValue.observe({source}, bigintToNumber(executionPayloadValue));
       logger.verbose("Produced blinded block", {
         slot,
         executionPayloadValue,
@@ -541,10 +537,7 @@ export function getValidatorApi(
 
       metrics?.blockProductionSuccess.inc({source});
       metrics?.blockProductionNumAggregated.observe({source}, block.body.attestations.length);
-      metrics?.blockProductionExecutionPayloadValue.observe(
-        {source},
-        parseFloat(formatWeiToEth(executionPayloadValue))
-      );
+      metrics?.blockProductionExecutionPayloadValue.observe({source}, bigintToNumber(executionPayloadValue));
       logger.verbose("Produced execution block", {
         slot,
         executionPayloadValue,
