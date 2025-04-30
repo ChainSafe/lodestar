@@ -33,7 +33,9 @@ export type GenesisData = {
   genesisValidatorsRoot: RootHex | Uint8Array;
 };
 
-export type LightclientOpts = ProcessUpdateOpts;
+export type LightclientOpts = ProcessUpdateOpts & {
+  allowForcedUpdates?: boolean;
+};
 
 export type LightclientInitArgs = {
   config: ChainForkConfig;
@@ -53,8 +55,6 @@ const LOOKAHEAD_EPOCHS_COMMITTEE_SYNC = Math.min(8, Math.ceil(EPOCHS_PER_SYNC_CO
 /** Prevent infinite loops caused by sync errors */
 const ON_ERROR_RETRY_MS = 1000;
 
-// TODO: Customize with option
-const ALLOW_FORCED_UPDATES = true;
 
 export enum RunStatusCode {
   uninitialized,
@@ -115,7 +115,7 @@ export class Lightclient {
 
   private runStatus: RunStatus = {code: RunStatusCode.stopped};
 
-  constructor({config, logger, genesisData, bootstrap, transport}: LightclientInitArgs) {
+  constructor({config, logger, genesisData, bootstrap, transport, opts}: LightclientInitArgs) {
     this.genesisTime = genesisData.genesisTime;
     this.genesisValidatorsRoot =
       typeof genesisData.genesisValidatorsRoot === "string"
@@ -127,10 +127,12 @@ export class Lightclient {
     this.transport = transport;
     this.runStatus = {code: RunStatusCode.uninitialized};
 
+    const allowForcedUpdates = opts?.allowForcedUpdates ?? true;
+
     this.lightclientSpec = new LightclientSpec(
       this.config,
       {
-        allowForcedUpdates: ALLOW_FORCED_UPDATES,
+        allowForcedUpdates,
         onSetFinalizedHeader: (header) => {
           this.emitter.emit(LightclientEvent.lightClientFinalityHeader, header);
           this.logger.debug("Updated state.finalizedHeader", {slot: header.beacon.slot});
