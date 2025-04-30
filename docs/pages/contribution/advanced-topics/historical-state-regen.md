@@ -19,7 +19,7 @@ Assume we have following chain represents the state object every slot, with foll
 
 Please see the following table for more understanding of these layers.
 
-![historical-state-regen](../../../docs/static/images/historical-state-regen/historical-regen.png)
+![historical-state-regen](../../../static/images/historical-state-regen/historical-regen.png)
 
 These are the rules we follow:
 
