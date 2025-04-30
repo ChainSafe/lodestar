@@ -11,14 +11,10 @@ import {
 
 import {ssz as altairSsz} from "../altair/index.js";
 import {ssz as denebSsz} from "../deneb/index.js";
-import {ssz as electraSsz} from "../electra/index.js";
 import {ssz as phase0Ssz} from "../phase0/index.js";
 import {ssz as primitiveSsz} from "../primitive/index.js";
 
 const {Root, ColumnIndex, RowIndex, Bytes32, Slot, UintNum64} = primitiveSsz;
-
-export const KZGProof = denebSsz.KZGProof;
-export const Blob = denebSsz.Blob;
 
 export const Metadata = new ContainerType(
   {
@@ -32,10 +28,6 @@ export const Cell = new ByteVectorType(BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_
 export const DataColumn = new ListCompositeType(Cell, MAX_BLOB_COMMITMENTS_PER_BLOCK);
 export const ExtendedMatrix = new ListCompositeType(Cell, MAX_BLOB_COMMITMENTS_PER_BLOCK * NUMBER_OF_COLUMNS);
 export const KzgCommitmentsInclusionProof = new VectorCompositeType(Bytes32, KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH);
-export const KZGProofs = new ListCompositeType(
-  denebSsz.KZGProof,
-  FIELD_ELEMENTS_PER_EXT_BLOB * MAX_BLOB_COMMITMENTS_PER_BLOCK
-);
 
 export const DataColumnSidecar = new ContainerType(
   {
