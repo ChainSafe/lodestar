@@ -101,6 +101,7 @@
     "@chainsafe/persistent-merkle-tree": "^1.1.0",
     "@chainsafe/prometheus-gc-stats": "^1.0.0",
     "@chainsafe/pubkey-index-map": "^3.0.0",
+    "@chainsafe/xdelta3-node": "^1.0.2",
     "@chainsafe/ssz": "^1.2.0",
     "@chainsafe/threads": "^1.11.1",
     "@ethersproject/abi": "^5.7.0",
