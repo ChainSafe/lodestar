@@ -5,7 +5,7 @@ import {ACTIVE_PRESET} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {verifyMerkleBranch} from "@lodestar/utils";
+import {bigintToNumber, verifyMerkleBranch} from "@lodestar/utils";
 import {expect} from "vitest";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
@@ -18,7 +18,7 @@ const merkle: TestRunnerFn<MerkleTestCase, IProof> = (fork) => {
       const stateRoot = state.hashTreeRoot();
       const leaf = fromHexString(specTestProof.leaf);
       const branch = specTestProof.branch.map((item) => fromHexString(item));
-      const leafIndex = Number(specTestProof.leaf_index);
+      const leafIndex = bigintToNumber(specTestProof.leaf_index);
       const depth = Math.floor(Math.log2(leafIndex));
       const verified = verifyMerkleBranch(leaf, branch, depth, leafIndex % 2 ** depth, stateRoot);
       expect(verified).toEqualWithMessage(true, "invalid merkle branch");
