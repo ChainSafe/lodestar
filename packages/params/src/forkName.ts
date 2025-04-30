@@ -96,6 +96,28 @@ export function isForkPostElectra(fork: ForkName): fork is ForkPostElectra {
   return isForkPostDeneb(fork) && fork !== ForkName.deneb;
 }
 
+export type ForkPreFulu = ForkPreElectra | ForkName.electra;
+export type ForkPostFulu = Exclude<ForkName, ForkPreFulu>;
+export const forkPostFulu = exclude(forkAll, [
+  ForkName.phase0,
+  ForkName.altair,
+  ForkName.bellatrix,
+  ForkName.capella,
+  ForkName.deneb,
+  ForkName.electra,
+]);
+export function isForkPostFulu(fork: ForkName): fork is ForkPostFulu {
+  return isForkPostElectra(fork) && fork !== ForkName.electra;
+}
+
+export type ForkPreBlobs = ForkPreDeneb;
+export type ForkPostBlobs = ForkPostFulu;
+export type ForkBlobs = ForkName.deneb | ForkName.electra;
+export const forkBlobs = [ForkName.deneb, ForkName.electra];
+export function isForkBlobs(fork: ForkName): fork is ForkBlobs {
+  return fork === ForkName.deneb || fork === ForkName.electra;
+}
+
 /*
  * Aliases only exported for backwards compatibility. This will be removed in
  * lodestar v2.0.  The types and guards above should be used in all places as
@@ -123,14 +145,6 @@ export type ForkPreWithdrawals = ForkPreCapella;
  */
 export type ForkWithdrawals = ForkPostCapella;
 /**
- * @deprecated Use `ForkPreDeneb` instead.
- */
-export type ForkPreBlobs = ForkPreDeneb;
-/**
- * @deprecated Use `ForkPostDeneb` instead.
- */
-export type ForkBlobs = ForkPostDeneb;
-/**
  * @deprecated Use `forkPostAltair` instead.
  */
 export const forkLightClient = forkPostAltair;
@@ -154,11 +168,3 @@ export const forkWithdrawals = forkPostCapella;
  * @deprecated Use `isForkPostCapella` instead.
  */
 export const isForkWithdrawals = isForkPostCapella;
-/**
- * @deprecated Use `forkPostDeneb` instead.
- */
-export const forkBlobs = forkPostDeneb;
-/**
- * @deprecated Use `isForkPostDeneb` instead.
- */
-export const isForkBlobs = isForkPostDeneb;
