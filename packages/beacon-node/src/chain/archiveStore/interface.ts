@@ -73,3 +73,14 @@ export interface IArchiveStore {
    */
   persistToDisk(): Promise<void>;
 }
+
+export interface IStateDiffCodec {
+  /**
+   * Compute the binary difference between `base` and `changed` state
+   */
+  compute(base: Uint8Array, changed: Uint8Array): Uint8Array;
+  /**
+   * Apply the `delta` to `base` which was computed with `compute` before
+   */
+  apply(base: Uint8Array, delta: Uint8Array): Uint8Array;
+}
