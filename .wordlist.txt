@@ -4,6 +4,7 @@ Andreas
 Antonopoulos
 AssemblyScript
 BLS
+BackupTime
 BeaconNode
 Besu
 Buterin
@@ -86,6 +87,7 @@ PoS
 Prysm
 Quickstart
 RPC
+RestoreTime
 Reth
 Ryzen
 SFTP
@@ -97,6 +99,7 @@ Stakehouse
 TOC
 TTD
 Teku
+TotalStorage
 TypeScript
 UI
 UID
