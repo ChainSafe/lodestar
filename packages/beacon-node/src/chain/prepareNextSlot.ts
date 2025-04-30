@@ -11,7 +11,7 @@ import {
   isExecutionStateType,
 } from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
-import {Logger, fromHex, isErrorAborted, sleep} from "@lodestar/utils";
+import {Logger, bigintToNumber, fromHex, isErrorAborted, sleep} from "@lodestar/utils";
 import {GENESIS_SLOT, ZERO_HASH_HEX} from "../constants/constants.js";
 import {Metrics} from "../metrics/index.js";
 import {ClockEvent} from "../util/clock.js";
@@ -260,7 +260,7 @@ export class PrepareNextSlotScheduler {
 
         if (
           finalizedState !== undefined &&
-          finalizedState.eth1DepositIndex === Number((finalizedState as BeaconStateElectra).depositRequestsStartIndex)
+          finalizedState.eth1DepositIndex === bigintToNumber((finalizedState as BeaconStateElectra).depositRequestsStartIndex)
         ) {
           // Signal eth1 to stop polling eth1Data
           this.chain.eth1.stopPollingEth1Data();
