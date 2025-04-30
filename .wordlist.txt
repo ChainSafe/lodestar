@@ -3,6 +3,7 @@ APIs
 Andreas
 Antonopoulos
 AssemblyScript
+BackupTime
 BLS
 BeaconNode
 Besu
@@ -89,6 +90,7 @@ PoS
 Prysm
 Quickstart
 RPC
+RestoreTime
 Reth
 Ryzen
 SFTP
@@ -98,6 +100,7 @@ SSZ
 Somer
 Stakehouse
 TOC
+TotalStorage
 TTD
 Teku
 TypeScript
