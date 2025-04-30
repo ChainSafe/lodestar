@@ -104,7 +104,7 @@ export const getNethermindChainSpec = (
       eip3198Transition: "0x0",
       eip3529Transition: "0x0",
       eip3541Transition: "0x0",
-      terminalTotalDifficulty: Number(ttd as bigint),
+      terminalTotalDifficulty: bigintToNumber(ttd as bigint),
       gasLimitBoundDivisor: "0x400",
       maxCodeSize: "0x6000",
       maxCodeSizeTransition: "0x0",
