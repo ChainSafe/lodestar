@@ -1,6 +1,7 @@
 import {config} from "@lodestar/config/default";
+import {ForkName} from "@lodestar/params";
 import {FastifyInstance} from "fastify";
-import {afterAll, beforeAll, describe, expect, it, vi} from "vitest";
+import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {getClient} from "../../../../src/beacon/client/lodestar.js";
 import {Endpoints, getDefinitions} from "../../../../src/beacon/routes/lodestar.js";
 import {getRoutes} from "../../../../src/beacon/server/lodestar.js";
@@ -32,9 +33,11 @@ describe("beacon / lodestar", () => {
     it("getHistoricalSummaries", async () => {
       mockApi.getHistoricalSummaries.mockResolvedValue({
         data: {
+          slot: 0,
           historicalSummaries: [],
           proof: [],
         },
+        meta: {version: ForkName.electra, executionOptimistic: false, finalized: false},
       });
 
       const httpClient = new HttpClient({baseUrl});
@@ -45,6 +48,7 @@ describe("beacon / lodestar", () => {
       expect(res.ok).toBe(true);
       expect(res.wireFormat()).toBe(WireFormat.json);
       expect(res.json().data).toStrictEqual({
+        slot: "0",
         historical_summaries: [],
         proof: [],
       });
