@@ -1,6 +1,6 @@
 import {ChainConfig} from "@lodestar/config";
 import {RootHex} from "@lodestar/types";
-import {bigintToNumber, Logger, pruneSetToMax, toRootHex} from "@lodestar/utils";
+import {Logger, bigintToNumber, pruneSetToMax, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../constants/index.js";
 import {Metrics} from "../metrics/index.js";
 import {enumToIndexMap} from "../util/enum.js";

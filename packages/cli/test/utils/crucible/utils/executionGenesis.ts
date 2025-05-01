@@ -1,4 +1,4 @@
-import { bigintToNumber } from "@lodestar/utils";
+import {bigintToNumber} from "@lodestar/utils";
 import {SIM_ENV_CHAIN_ID, SIM_ENV_NETWORK_ID} from "../constants.js";
 import {Eth1GenesisBlock, ExecutionGenesisOptions, ExecutionStartMode} from "../interfaces.js";
 

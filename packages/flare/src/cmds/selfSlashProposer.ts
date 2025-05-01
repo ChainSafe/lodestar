@@ -5,7 +5,7 @@ import {config as chainConfig} from "@lodestar/config/default";
 import {DOMAIN_BEACON_PROPOSER} from "@lodestar/params";
 import {computeSigningRoot} from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
-import {bigintToNumber, CliCommand, toPubkeyHex} from "@lodestar/utils";
+import {CliCommand, bigintToNumber, toPubkeyHex} from "@lodestar/utils";
 import {SecretKeysArgs, deriveSecretKeys, secretKeysOptions} from "../util/deriveSecretKeys.js";
 
 /* eslint-disable no-console */

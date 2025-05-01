@@ -1,6 +1,6 @@
 import {bench, describe} from "@chainsafe/benchmark";
+import {bigintToNumber} from "@lodestar/utils";
 import {FLAG_PREV_SOURCE_ATTESTER, FLAG_UNSLASHED} from "../../../src/index.js";
-import { bigintToNumber } from "@lodestar/utils";
 
 describe.skip("bit opts", () => {
   bench("Benchmark bitshift", () => {

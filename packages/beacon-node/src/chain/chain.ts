@@ -38,7 +38,16 @@ import {
   isBlindedBeaconBlock,
   phase0,
 } from "@lodestar/types";
-import {Logger, bigintToNumber, fromHex, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
+import {
+  Logger,
+  bigintToNumber,
+  fromHex,
+  gweiToWei,
+  isErrorAborted,
+  pruneSetToMax,
+  sleep,
+  toRootHex,
+} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
 import {LoggerNode} from "@lodestar/logger/node";

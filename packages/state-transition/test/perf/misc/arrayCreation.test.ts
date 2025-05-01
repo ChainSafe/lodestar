@@ -1,5 +1,5 @@
 import {bench, describe} from "@chainsafe/benchmark";
-import { bigintToNumber } from "@lodestar/utils";
+import {bigintToNumber} from "@lodestar/utils";
 
 describe.skip("array creation", () => {
   const testCases: {id: string; fn: (n: number) => void}[] = [

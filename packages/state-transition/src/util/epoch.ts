@@ -1,8 +1,8 @@
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, GENESIS_EPOCH, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconState, Epoch, Gwei, Slot, SyncPeriod} from "@lodestar/types";
+import {bigintToNumber} from "@lodestar/utils";
 import {CachedBeaconStateElectra} from "../types.js";
 import {getActivationExitChurnLimit, getConsolidationChurnLimit} from "./validator.js";
-import { bigintToNumber } from "@lodestar/utils";
 
 /**
  * Return the epoch number at the given slot.

@@ -1,8 +1,8 @@
 import {DOMAIN_BEACON_PROPOSER} from "@lodestar/params";
 import {SignedBeaconBlock, phase0, ssz} from "@lodestar/types";
+import {bigintToNumber} from "@lodestar/utils";
 import {CachedBeaconStateAllForks} from "../types.js";
 import {ISignatureSet, SignatureSetType, computeSigningRoot} from "../util/index.js";
-import { bigintToNumber } from "@lodestar/utils";
 
 /**
  * Extract signatures to allow validating all block signatures at once

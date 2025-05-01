@@ -1,5 +1,5 @@
 import {toBigIntBE, toBigIntLE, toBufferBE, toBufferLE} from "bigint-buffer";
-import { bigintToNumber } from "./bigint";
+import {bigintToNumber} from "./bigint.js";
 
 type Endianness = "le" | "be";
 

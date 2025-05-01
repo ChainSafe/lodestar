@@ -58,3 +58,23 @@ export function prettyMsToTime(timeMs: number): string {
 export function strip0xPrefix(hex: string): string {
   return hex.startsWith("0x") ? hex.slice(2) : hex;
 }
+
+/**
+ * Format a decimal number represented by a fraction (numerator/denominator) with a specific decimal factor.
+ * Example: formatBigDecimal(103797739275696858n, 1000000000000000000n, 100000n) => "0.10379"
+ */
+export function formatBigDecimal(numerator: bigint, denominator: bigint, decimalFactor: bigint): string {
+  const quotient = (numerator * decimalFactor) / denominator;
+  const integerPart = quotient / decimalFactor;
+  const decimalPart = quotient % decimalFactor;
+
+  // Convert decimal part to string and pad with leading zeros
+  let decimalStr = decimalPart.toString();
+  const targetLength = decimalFactor.toString().length - 1;
+  decimalStr = decimalStr.padStart(targetLength, "0");
+
+  // Remove trailing zeros
+  decimalStr = decimalStr.replace(/0+$/, "");
+
+  return `${integerPart}${decimalStr ? "." + decimalStr : ""}`;
+}
