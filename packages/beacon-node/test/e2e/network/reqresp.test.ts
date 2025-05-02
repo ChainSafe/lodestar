@@ -66,19 +66,21 @@ function runTests({useWorker}: {useWorker: boolean}): void {
       await closeA();
       await closeB();
     });
-
+    console.trace("Starting connecting nodes...");
     const connected = Promise.all([onPeerConnect(netA), onPeerConnect(netB)]);
     await connect(netA, netB);
     await connected;
+    console.trace("Nodes are connected...");
 
     // We see a lot of "Muxer already closed" in e2e tests on CI
     // This is a way to give a grace period for connections to open
     await sleep(50, controller.signal);
+    console.trace("Wait is finish...");
 
     return [netA, netB, await getPeerIdOf(netA), await getPeerIdOf(netB)];
   }
 
-  it("should send/receive signed blocks", async () => {
+  it.only("should send/receive signed blocks", async () => {
     const req: phase0.BeaconBlocksByRangeRequest = {startSlot: 0, step: 1, count: 2};
     const blocks: phase0.SignedBeaconBlock[] = [];
     for (let slot = req.startSlot; slot < req.count; slot++) {

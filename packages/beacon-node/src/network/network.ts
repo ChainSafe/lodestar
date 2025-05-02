@@ -221,6 +221,10 @@ export class Network implements INetwork {
     this.chain.emitter.off(routes.events.EventType.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
     this.chain.emitter.off(routes.events.EventType.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
     await this.core.close();
+
+    // Used only for sleep() statements
+    this.controller.abort();
+
     this.logger.debug("network core closed");
 
     // Used only for sleep() statements
