@@ -80,7 +80,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     return [netA, netB, await getPeerIdOf(netA), await getPeerIdOf(netB)];
   }
 
-  it.only("should send/receive signed blocks", async () => {
+  it("should send/receive signed blocks", async () => {
     const req: phase0.BeaconBlocksByRangeRequest = {startSlot: 0, step: 1, count: 2};
     const blocks: phase0.SignedBeaconBlock[] = [];
     for (let slot = req.startSlot; slot < req.count; slot++) {
