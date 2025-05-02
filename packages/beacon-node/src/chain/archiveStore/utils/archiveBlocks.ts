@@ -275,8 +275,8 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
           const blockEpoch = computeEpochAtSlot(blockSlot);
           return (
             config.getForkSeq(blockSlot) >= ForkSeq.fulu &&
-            // if block is out of ${config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS}, skip this step
-            blockEpoch >= currentEpoch - config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS
+            // if block is out of ${config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS}, skip this step
+            blockEpoch >= currentEpoch - config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS
           );
         })
         .map(async (block) => {
