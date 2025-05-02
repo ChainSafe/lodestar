@@ -19,9 +19,7 @@
     "enabled": true
   },
   "linter": {
-    "enabled": true,
     "rules": {
-      "recommended": true,
       "correctness": {
         "useImportExtensions": {
           "level": "error",
