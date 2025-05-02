@@ -77,6 +77,11 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     await sleep(50, controller.signal);
     console.trace("Wait is finish...");
 
+    controller.signal.addEventListener("abort", async () => {
+      await closeA();
+      await closeB();
+    });
+
     return [netA, netB, await getPeerIdOf(netA), await getPeerIdOf(netB)];
   }
 
