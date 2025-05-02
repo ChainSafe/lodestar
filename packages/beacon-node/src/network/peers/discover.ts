@@ -104,7 +104,6 @@ export class PeerDiscovery {
     syncnets: new Map(),
   };
 
-  /** The maximum number of peers we allow (exceptions for subnet peers) */
   private discv5StartMs: number;
   private discv5FirstQueryDelayMs: number;
 
