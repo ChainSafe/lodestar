@@ -483,21 +483,6 @@ export class NetworkCore implements INetworkCore {
           }
         }
       }
-
-      // TODO: Re-add regossipCachedBlsChanges()
-      // If we are subscribed and post capella fork epoch, try gossiping the cached bls changes
-      // if (
-      //   this.isSubscribedToGossipCoreTopics() &&
-      //   epoch >= this.config.CAPELLA_FORK_EPOCH &&
-      //   !this.regossipBlsChangesPromise
-      // ) {
-      //   this.regossipBlsChangesPromise = this.regossipCachedBlsChanges()
-      //     // If the processing fails for e.g. because of lack of peers set the promise
-      //     // to be null again to be retried
-      //     .catch((_e) => {
-      //       this.regossipBlsChangesPromise = null;
-      //     });
-      // }
     } catch (e) {
       this.logger.error("Error on BeaconGossipHandler.onEpoch", {epoch}, e as Error);
     }
