@@ -278,7 +278,7 @@ Will double processing times. Use only for debugging purposes.",
 
   "chain.archiveDataEpochs": {
     description:
-      "Number of epochs to retain finalized blobs (minimum of MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS/MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS)",
+      "Number of epochs to retain finalized blobs/columns (minimum of MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS/MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS)",
     type: "number",
     group: "chain",
   },
