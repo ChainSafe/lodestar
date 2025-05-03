@@ -7,6 +7,7 @@ import {Metrics} from "../../metrics/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {CheckpointHex, toCheckpointHex} from "../stateCache/index.js";
 import {BlockStateCache, CheckpointStateCache} from "../stateCache/types.js";
+import {ValidatorMonitor} from "../validatorMonitor.js";
 import {RegenError, RegenErrorCode} from "./errors.js";
 import {
   IStateRegenerator,
@@ -42,6 +43,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
   private readonly blockStateCache: BlockStateCache;
   private readonly checkpointStateCache: CheckpointStateCache;
   private readonly metrics: Metrics | null;
+  private readonly validatorMonitor: ValidatorMonitor | null;
   private readonly logger: Logger;
 
   constructor(modules: QueuedStateRegeneratorModules) {
@@ -55,6 +57,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     this.blockStateCache = modules.blockStateCache;
     this.checkpointStateCache = modules.checkpointStateCache;
     this.metrics = modules.metrics;
+    this.validatorMonitor = modules.validatorMonitor;
     this.logger = modules.logger;
   }
 
@@ -291,7 +294,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
 
   private jobQueueProcessor = async (regenRequest: RegenRequest): Promise<CachedBeaconStateAllForks> => {
     const metricsLabels = {
-      caller: regenRequest.args[regenRequest.args.length - 1] as RegenCaller,
+      caller: regenRequest.args.at(-1) as RegenCaller,
       entrypoint: regenRequest.key as RegenFnName,
     };
     let timer: (() => number) | undefined;

@@ -13,11 +13,9 @@ export function pruneOldFilesInDir(dirpath: string, maxAgeMs: number): number {
     const stat = fs.statSync(entryPath);
     if (stat.isDirectory()) {
       deletedFileCount += pruneOldFilesInDir(entryPath, maxAgeMs);
-    } else if (stat.isFile()) {
-      if (Date.now() - stat.mtimeMs > maxAgeMs) {
-        fs.unlinkSync(entryPath);
-        deletedFileCount += 1;
-      }
+    } else if (stat.isFile() && Date.now() - stat.mtimeMs > maxAgeMs) {
+      fs.unlinkSync(entryPath);
+      deletedFileCount += 1;
     }
   }
 

@@ -4,7 +4,7 @@ import {config} from "@lodestar/config/default";
 import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {
   BeaconStateAllForks,
-  DataAvailableStatus,
+  DataAvailabilityStatus,
   ExecutionPayloadStatus,
   stateTransition,
 } from "@lodestar/state-transition";
@@ -57,7 +57,7 @@ const transition =
           state = stateTransition(state, signedBlock, {
             // Assume valid and available for this test
             executionPayloadStatus: ExecutionPayloadStatus.valid,
-            dataAvailableStatus: DataAvailableStatus.available,
+            dataAvailabilityStatus: DataAvailabilityStatus.Available,
             verifyStateRoot: true,
             verifyProposer: false,
             verifySignatures: false,

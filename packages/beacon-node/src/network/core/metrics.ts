@@ -1,7 +1,8 @@
 import {SubnetID} from "@lodestar/types";
 import {RegistryMetricCreator} from "../../metrics/utils/registryMetricCreator.js";
+import {Libp2pError} from "../libp2p/error.js";
 import {SubnetType} from "../metadata.js";
-import {DiscoveredPeerStatus} from "../peers/discover.js";
+import {DiscoveredPeerStatus, NotDialReason} from "../peers/discover.js";
 import {SubnetSource} from "../subnets/attnetsService.js";
 
 export type NetworkCoreMetrics = ReturnType<typeof createNetworkCoreMetrics>;
@@ -111,6 +112,10 @@ export function createNetworkCoreMetrics(register: RegistryMetricCreator) {
         help: "Peer manager heartbeat function duration in seconds",
         buckets: [0.001, 0.01, 0.1, 1],
       }),
+      starved: register.gauge({
+        name: "lodestar_peer_manager_starved_bool",
+        help: "Whether lodestar is starved of data while syncing",
+      }),
     },
     leakedConnectionsCount: register.gauge({
       name: "lodestar_peer_manager_leaked_connections_count",
@@ -159,11 +164,21 @@ export function createNetworkCoreMetrics(register: RegistryMetricCreator) {
         name: "lodestar_discovery_total_dial_attempts",
         help: "Total dial attempts by peer discovery",
       }),
+      notDialReason: register.gauge<{reason: NotDialReason}>({
+        name: "lodestar_discovery_not_dial_reason_total_count",
+        help: "Total count of not dial reasons",
+        labelNames: ["reason"],
+      }),
       dialTime: register.histogram<{status: string}>({
         name: "lodestar_discovery_dial_time_seconds",
         help: "Time to dial peers in seconds",
         labelNames: ["status"],
         buckets: [0.1, 5, 60],
+      }),
+      dialError: register.gauge<{reason: Libp2pError}>({
+        name: "lodestar_discovery_dial_error_total_count",
+        help: "Total count of dial errors",
+        labelNames: ["reason"],
       }),
     },
 

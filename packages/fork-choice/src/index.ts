@@ -7,7 +7,6 @@ export type {
   LVHValidResponse,
   LVHInvalidResponse,
 } from "./protoArray/interface.js";
-export {DataAvailabilityStatus} from "./protoArray/interface.js";
 export {ExecutionStatus} from "./protoArray/interface.js";
 
 export {ForkChoice, type ForkChoiceOpts, UpdateHeadOpt, assertValidTerminalPowBlock} from "./forkChoice/forkChoice.js";
