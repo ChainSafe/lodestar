@@ -750,7 +750,7 @@
   resolved "https://registry.yarnpkg.com/@chainsafe/pubkey-index-map-win32-x64-msvc/-/pubkey-index-map-win32-x64-msvc-3.0.0.tgz#8a7d2821a43addf615b3485d6925e7558e42534b"
   integrity sha512-QemArQbgsLJ4eaM9S0Kdr3ucJUpZXTDfh3wTNp9eh7G3o1Y9O2Hp7G7BlEkF0cWU9ZsWe9YSzmeX24Uo5DNo4g==
 
-"@chainsafe/pubkey-index-map@3.0.0":
+"@chainsafe/pubkey-index-map@^3.0.0":
   version "3.0.0"
   resolved "https://registry.yarnpkg.com/@chainsafe/pubkey-index-map/-/pubkey-index-map-3.0.0.tgz#eca4a5c0f2c6721f9b57c5a0817474bce3e2a705"
   integrity sha512-KvWmKOG8WiVePHQDGyz+xo+RpsrmPEeipF8boqmXNYCLOGyVpkEXQk0IDVpnxngZziY6d97F9sml2vliDoyYyQ==
