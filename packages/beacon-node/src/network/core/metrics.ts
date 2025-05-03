@@ -112,6 +112,10 @@ export function createNetworkCoreMetrics(register: RegistryMetricCreator) {
         help: "Peer manager heartbeat function duration in seconds",
         buckets: [0.001, 0.01, 0.1, 1],
       }),
+      starved: register.gauge({
+        name: "lodestar_peer_manager_starved_bool",
+        help: "Whether lodestar is starved of data while syncing",
+      }),
     },
     leakedConnectionsCount: register.gauge({
       name: "lodestar_peer_manager_leaked_connections_count",

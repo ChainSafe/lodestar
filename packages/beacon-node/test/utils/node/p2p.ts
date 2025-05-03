@@ -13,5 +13,11 @@ export function lodestarNodePeer(
     enr: "",
     lastSeenP2pAddress: "",
     agentVersion: "",
+    status: null,
+    metadata: null,
+    agentClient: "",
+    lastReceivedMsgUnixTsMs: 0,
+    lastStatusUnixTsMs: 0,
+    connectedUnixTsMs: 0,
   };
 }
