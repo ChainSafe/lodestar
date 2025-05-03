@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import {ENR} from "@chainsafe/enr";
-import {HttpHeader, MediaType, WireFormat, getClient} from "@lodestar/api";
+import {WireFormat, getClient} from "@lodestar/api";
 import {getStateSlotFromBytes} from "@lodestar/beacon-node";
 import {ChainConfig, ChainForkConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -10,7 +10,7 @@ import {
   getLatestBlockRoot,
   loadState,
 } from "@lodestar/state-transition";
-import {Slot} from "@lodestar/types";
+import {Slot, sszTypesFor} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {Logger, callFnWhenAwait, formatBytes, fromHex} from "@lodestar/utils";
 import {fetch} from "@lodestar/utils";
@@ -173,38 +173,26 @@ export async function fetchWeakSubjectivityState(
     }
 
     // getStateV2 should be available for all forks including phase0
-    const getStatePromise = api.debug.getStateV2(
-      {stateId},
-      {
-        responseWireFormat: WireFormat.ssz,
-        headers: {
-          // Set Accept header explicitly to fix Checkpointz incompatibility
-          // See https://github.com/ethpandaops/checkpointz/issues/165
-          [HttpHeader.Accept]: MediaType.ssz,
-        },
-      }
-    );
+    const getStatePromise = api.debug.getStateV2({stateId}, {responseWireFormat: WireFormat.ssz});
 
-    const wsStateBytes = await callFnWhenAwait(
+    const {wsStateBytes, fork} = await callFnWhenAwait(
       getStatePromise,
       () => logger.info("Download in progress, please wait..."),
       GET_STATE_LOG_INTERVAL
     ).then((res) => {
-      return res.ssz();
+      return {wsStateBytes: res.ssz(), fork: res.meta().version};
     });
 
     const wsSlot = getStateSlotFromBytes(wsStateBytes);
     const logData = {stateId, size: formatBytes(wsStateBytes.length)};
     logger.info("Download completed", typeof stateId === "number" ? logData : {...logData, slot: wsSlot});
-    // It should not be required to get fork type from bytes but Checkpointz does not return
-    // Eth-Consensus-Version header, see https://github.com/ethpandaops/checkpointz/issues/164
+
     let wsState: BeaconStateAllForks;
     if (lastDbState && lastDbValidatorsBytes) {
       // use lastDbState to load wsState if possible to share the same state tree
       wsState = loadState(config, lastDbState, wsStateBytes, lastDbValidatorsBytes).state;
     } else {
-      const stateType = config.getForkTypes(wsSlot).BeaconState;
-      wsState = stateType.deserializeToViewDU(wsStateBytes);
+      wsState = sszTypesFor(fork).BeaconState.deserializeToViewDU(wsStateBytes);
     }
 
     return {

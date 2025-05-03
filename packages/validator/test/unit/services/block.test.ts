@@ -47,9 +47,7 @@ describe("BlockDutiesService", () => {
     );
 
     const clock = new ClockMock();
-    // use produceBlockV3
     const blockService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, null, {
-      useProduceBlockV3: true,
       broadcastValidation: routes.beacon.BroadcastValidation.consensus,
       blindedLocal: false,
     });
@@ -122,9 +120,7 @@ describe("BlockDutiesService", () => {
     );
 
     const clock = new ClockMock();
-    // use produceBlockV3
     const blockService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, null, {
-      useProduceBlockV3: true,
       broadcastValidation: routes.beacon.BroadcastValidation.consensus,
       blindedLocal: true,
     });

@@ -68,7 +68,7 @@ export async function getBlockResponse(
       : await chain.getCanonicalBlockAtSlot(rootOrSlot);
 
   if (!res) {
-    throw new ApiError(404, `No block found for id '${blockId}'`);
+    throw new ApiError(404, `Block not found for id '${blockId}'`);
   }
 
   return res;

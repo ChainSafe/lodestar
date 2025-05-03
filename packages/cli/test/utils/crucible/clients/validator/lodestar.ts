@@ -14,7 +14,7 @@ import {getNodePorts} from "../../utils/ports.js";
 export const generateLodestarValidatorNode: ValidatorNodeGenerator<ValidatorClient.Lodestar> = (opts, runner) => {
   const {paths, id, keys, forkConfig, genesisTime, nodeIndex, beaconUrls, clientOptions} = opts;
   const {rootDir, keystoresDir, keystoresSecretFilePath, logFilePath} = paths;
-  const {useProduceBlockV3, "builder.selection": builderSelection, blindedLocal} = clientOptions ?? {};
+  const {"builder.selection": builderSelection, blindedLocal} = clientOptions ?? {};
   const ports = getNodePorts(nodeIndex);
   const rcConfigPath = path.join(rootDir, "rc_config.json");
   const paramsPath = path.join(rootDir, "params.json");
@@ -38,7 +38,6 @@ export const generateLodestarValidatorNode: ValidatorNodeGenerator<ValidatorClie
     logFile: "none",
     importKeystores: keystoresDir,
     importKeystoresPassword: keystoresSecretFilePath,
-    useProduceBlockV3: useProduceBlockV3 ?? false,
     "builder.selection": builderSelection ?? defaultOptions.builderSelection,
     blindedLocal: blindedLocal ?? defaultOptions.blindedLocal,
   } as unknown as IValidatorCliArgs & GlobalArgs;
