@@ -243,6 +243,41 @@ describe("network / peers / priorization", async () => {
         syncnetQueries: [],
       },
     },
+    {
+      id: "Disconnect close to us peers before far ahead peers when starved",
+      connectedPeers: [
+        // CLOSE_TO_US peers
+        {id: peers[0], direction: null, syncnets: none, attnets: none, score: 0, status: null},
+        {id: peers[1], direction: null, syncnets: none, attnets: none, score: -1, status: null},
+        // FAR_AHEAD peer
+        {
+          id: peers[2],
+          direction: null,
+          syncnets: none,
+          attnets: none,
+          score: -2,
+          status: {...status, headSlot: defaultOpts.starvationThresholdSlots + 1},
+        },
+      ],
+      activeAttnets: [],
+      activeSyncnets: [],
+      opts: {
+        ...defaultOpts,
+        targetPeers: 2,
+        starved: true,
+        // prune one more peer due to being starved
+        starvationPruneRatio: 0.5,
+      },
+      expectedResult: {
+        peersToConnect: 0,
+        attnetQueries: [],
+        syncnetQueries: [],
+        peersToDisconnect: new Map<ExcessPeerDisconnectReason, PeerId[]>([
+          // only the two CLOSE_TO_US peers are disconnected; keep FAR_AHEAD peer
+          [ExcessPeerDisconnectReason.NO_LONG_LIVED_SUBNET, [peers[1], peers[0]]],
+        ]),
+      },
+    },
 
     // TODO: Add a test case with syncnets priorization
   ];
