@@ -72,8 +72,12 @@
     },
     {
       "id": "testName",
-      "type": "promptString",
-      "description": "Enter the test name to run, leave empty to run all"
+      "type": "command",
+      "command": "extension.commandvariable.promptStringRemember",
+      "args": {
+        "key": "testName",
+        "description": "Enter the test name to run, leave empty to run all"
+      }
     }
   ]
 }
