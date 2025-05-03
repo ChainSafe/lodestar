@@ -66,19 +66,22 @@ describe("ResResp", () => {
       expect(libp2p.handle).toHaveBeenCalledOnce();
     });
 
-    it("should not register handler twice for same protocol if ignoreIfDuplicate=true", async () => {
-      await reqresp.registerProtocol(numberToStringProtocol, {ignoreIfDuplicate: true});
+    it("should override existing handler if same protocol is registered multiple times", async () => {
+      await reqresp.registerProtocol(numberToStringProtocol);
       expect(libp2p.handle).toHaveBeenCalledOnce();
 
-      await reqresp.registerProtocol(numberToStringProtocol, {ignoreIfDuplicate: true});
-      expect(libp2p.handle).toHaveBeenCalledOnce();
+      await reqresp.registerProtocol(numberToStringProtocol);
+      expect(libp2p.handle).toHaveBeenCalledTimes(2);
+
+      await reqresp.registerProtocol(numberToStringProtocol);
+      expect(libp2p.handle).toHaveBeenCalledTimes(3);
     });
 
     it("should apply new rate limits if same protocol is registered with different limits", async () => {
       // Initial registration of protocol
       const {quota, quotaTimeMs} = numberToStringProtocol.inboundRateLimits?.byPeer as RateLimiterQuota;
       const initialMsPerToken = quotaTimeMs / quota;
-      await reqresp.registerProtocol(numberToStringProtocol, {ignoreIfDuplicate: true});
+      await reqresp.registerProtocol(numberToStringProtocol);
       const initialLimit = reqresp["rateLimiter"]["rateLimitersPerPeer"].get(
         "/eth2/beacon_chain/req/number_to_string/1/ssz_snappy"
       );
@@ -92,7 +95,7 @@ describe("ResResp", () => {
         inboundRateLimits: {byPeer: updatedQuota},
       };
       const updatedMsPerToken = updatedQuota.quotaTimeMs / updatedQuota.quota;
-      await reqresp.registerProtocol(updatedProtocol, {ignoreIfDuplicate: true});
+      await reqresp.registerProtocol(updatedProtocol);
       const updatedLimit = reqresp["rateLimiter"]["rateLimitersPerPeer"].get(
         "/eth2/beacon_chain/req/number_to_string/1/ssz_snappy"
       );

@@ -29,9 +29,10 @@ export async function computeSyncCommitteeRewards(
   const {syncCommitteeBits} = altairBlock.body.syncAggregate;
 
   // Use balance of each committee as starting point such that we cap the penalty to avoid balance dropping below 0
-  const balances: Map<ValidatorIndex, BalanceRecord> = new Map(
-    committeeIndices.map((i) => [i, {val: preStateAltair.balances.get(i)}])
-  );
+  const balances: Map<ValidatorIndex, BalanceRecord> = new Map();
+  for (const i of committeeIndices) {
+    balances.set(i, {val: preStateAltair.balances.get(i)});
+  }
 
   for (const i of committeeIndices) {
     const balanceRecord = balances.get(i) as BalanceRecord;

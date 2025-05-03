@@ -290,7 +290,7 @@ export function getBeaconStateApi({
 
       return {
         data: {
-          validators: syncCommitteeCache.validatorIndices,
+          validators: new Array(...syncCommitteeCache.validatorIndices),
           // TODO: This is not used by the validator and will be deprecated soon
           validatorAggregates: [],
         },
@@ -326,6 +326,22 @@ export function getBeaconStateApi({
 
       return {
         data: context?.returnBytes ? pendingPartialWithdrawals.serialize() : pendingPartialWithdrawals.toValue(),
+        meta: {executionOptimistic, finalized, version: fork},
+      };
+    },
+
+    async getPendingConsolidations({stateId}, context) {
+      const {state, executionOptimistic, finalized} = await getState(stateId);
+      const fork = config.getForkName(state.slot);
+
+      if (!isForkPostElectra(fork)) {
+        throw new ApiError(400, `Cannot retrieve pending consolidations for pre-electra state fork=${fork}`);
+      }
+
+      const {pendingConsolidations} = state as BeaconStateElectra;
+
+      return {
+        data: context?.returnBytes ? pendingConsolidations.serialize() : pendingConsolidations.toValue(),
         meta: {executionOptimistic, finalized, version: fork},
       };
     },

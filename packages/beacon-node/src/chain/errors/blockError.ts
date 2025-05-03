@@ -48,6 +48,8 @@ export enum BlockErrorCode {
   BEACON_CHAIN_ERROR = "BLOCK_ERROR_BEACON_CHAIN_ERROR",
   /** Block did not pass validation during block processing. */
   KNOWN_BAD_BLOCK = "BLOCK_ERROR_KNOWN_BAD_BLOCK",
+  /** Blacklisted blocks that should not pass processing */
+  BLACKLISTED_BLOCK = "BLOCK_ERROR_BLACKLISTED_BLOCK",
   // Merge p2p
   /** executionPayload.timestamp is not the expected value */
   INCORRECT_TIMESTAMP = "BLOCK_ERROR_INCORRECT_TIMESTAMP",
@@ -102,6 +104,7 @@ export type BlockErrorType =
   | {code: BlockErrorCode.PER_BLOCK_PROCESSING_ERROR; error: Error}
   | {code: BlockErrorCode.BEACON_CHAIN_ERROR; error: Error}
   | {code: BlockErrorCode.KNOWN_BAD_BLOCK}
+  | {code: BlockErrorCode.BLACKLISTED_BLOCK}
   | {code: BlockErrorCode.INCORRECT_TIMESTAMP; timestamp: number; expectedTimestamp: number}
   | {code: BlockErrorCode.TOO_MUCH_GAS_USED; gasUsed: number; gasLimit: number}
   | {code: BlockErrorCode.SAME_PARENT_HASH; blockHash: RootHex}

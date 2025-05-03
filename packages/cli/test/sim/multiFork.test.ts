@@ -34,8 +34,6 @@ const env = await Simulation.initWithDefaults(
     forkConfig,
   },
   [
-    // put 1 lodestar node on produceBlockV3, and 2nd on produceBlindedBlock and 3rd on produceBlockV2
-    // specifying the useProduceBlockV3 options despite whatever default is set
     {
       id: "node-1",
       beacon: BeaconClient.Lodestar,
@@ -45,7 +43,6 @@ const env = await Simulation.initWithDefaults(
           // this will cause race in beacon but since builder is not attached will
           // return with engine full block and publish via publishBlockV2
           clientOptions: {
-            useProduceBlockV3: true,
             "builder.selection": "default",
           },
         },
@@ -63,7 +60,6 @@ const env = await Simulation.initWithDefaults(
           // this will make the beacon respond with blinded version of the local block as no
           // builder is attached to beacon, and publish via publishBlindedBlockV2
           clientOptions: {
-            useProduceBlockV3: true,
             "builder.selection": "default",
             blindedLocal: true,
           },
@@ -79,9 +75,8 @@ const env = await Simulation.initWithDefaults(
       validator: {
         type: ValidatorClient.Lodestar,
         options: {
-          // this builder selection will make it use produceBlockV2 and respond with full block
+          // this builder selection will make it respond with full block
           clientOptions: {
-            useProduceBlockV3: false,
             "builder.selection": "executiononly",
           },
         },
@@ -95,10 +90,9 @@ const env = await Simulation.initWithDefaults(
       validator: {
         type: ValidatorClient.Lodestar,
         options: {
-          // this builder selection will make it use produceBlindedBlockV2 and respond with blinded version
-          // of local block and subsequent publishing via publishBlindedBlock
+          // this builder selection will make it respond with blinded version
+          // of local block and subsequent publishing via publishBlindedBlockV2
           clientOptions: {
-            useProduceBlockV3: false,
             "builder.selection": "default",
           },
         },

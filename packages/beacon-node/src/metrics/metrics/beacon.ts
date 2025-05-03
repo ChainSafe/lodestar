@@ -1,11 +1,7 @@
 import {UpdateHeadOpt} from "@lodestar/fork-choice";
-import {NotReorgedReason} from "@lodestar/fork-choice/lib/forkChoice/interface.js";
+import {NotReorgedReason} from "@lodestar/fork-choice";
 import {ProducedBlockSource} from "@lodestar/types";
-import {
-  BlockSelectionResult,
-  BuilderBlockSelectionReason,
-  EngineBlockSelectionReason,
-} from "../../api/impl/validator/index.js";
+import {BlockSelectionResult} from "../../api/impl/validator/index.js";
 import {BlockProductionStep, PayloadPreparationType} from "../../chain/produceBlock/index.js";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
 
@@ -166,7 +162,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
     blockProductionNumAggregated: register.histogram<{source: ProducedBlockSource}>({
       name: "beacon_block_production_num_aggregated_total",
       help: "Count of all aggregated attestations in our produced block",
-      buckets: [32, 64, 96, 128],
+      buckets: [1, 2, 4, 6, 8],
       labelNames: ["source"],
     }),
     blockProductionExecutionPayloadValue: register.histogram<{source: ProducedBlockSource}>({
