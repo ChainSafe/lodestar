@@ -77,7 +77,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
       const chain = new BeaconChain(
         {
           proposerBoost: true,
-          proposerBoostReorg: false,
+          proposerBoostReorg: true,
           computeUnrealized: false,
           safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
           disableArchiveOnCheckpoint: true,
