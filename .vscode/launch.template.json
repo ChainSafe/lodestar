@@ -49,8 +49,8 @@
         "-t",
         "${input:testName}",
         "--pool",
-        "threads",
-        "--poolOptions.threads.singleThread"
+        "forks",
+        "--poolOptions.forks.singleFork"
       ],
       "cwd": "${workspaceFolder}/${input:packageName}",
       "console": "integratedTerminal",
