@@ -76,6 +76,12 @@ export type StateCacheItem = {
 
 export type LodestarNodePeer = NodePeer & {
   agentVersion: string;
+  status: unknown | null;
+  metadata: unknown | null;
+  agentClient: string;
+  lastReceivedMsgUnixTsMs: number;
+  lastStatusUnixTsMs: number;
+  connectedUnixTsMs: number;
 };
 
 export type BlacklistedBlock = {root: RootHex; slot: Slot | null};
