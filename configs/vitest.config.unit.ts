@@ -21,9 +21,9 @@ export const unitTestMinimalProject = defineProject({
 
 export const unitTestMainnetProject = defineProject({
   test: {
-    // Preferable over `unit-minimal` to test against mainnet fixtures, only use `minimal` preset in unit tests
-    // if it has a significantly speeds up or simplifies test cases otherwise, eg. committee-based tests are
-    // a lot of the time easier write when using `minimal` preset due to reduced committee size and validator count.
+    // Preferable over `unit-minimal` to test against mainnet fixtures/data, only use `minimal` preset in unit tests
+    // if it significantly speeds up or simplifies test cases, eg. committee-based tests are a lot of the time easier
+    // to write and faster when using `minimal` preset due to reduced committee size which lowers validator count required.
     name: "unit-mainnet",
     include: ["**/test/unit/**/*.test.ts"],
     setupFiles,
