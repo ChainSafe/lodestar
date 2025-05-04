@@ -15,12 +15,12 @@ describe("forkName", () => {
     expect(forkAll).toMatchSnapshot();
   });
 
-  it("should have valid post-bellatrix forks", () => {
-    expect(forkPostBellatrix).toMatchSnapshot();
-  });
-
   it("should have valid post-altair forks", () => {
     expect(forkPostAltair).toMatchSnapshot();
+  });
+
+  it("should have valid post-bellatrix forks", () => {
+    expect(forkPostBellatrix).toMatchSnapshot();
   });
 
   it("should have valid post-capella forks", () => {
