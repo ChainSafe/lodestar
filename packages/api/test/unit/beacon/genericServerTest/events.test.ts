@@ -1,4 +1,6 @@
-import {config} from "@lodestar/config/default";
+import {createBeaconConfig} from "@lodestar/config";
+import {mainnetChainConfig} from "@lodestar/config/configs";
+import {ZERO_HASH} from "@lodestar/params";
 import {sleep} from "@lodestar/utils";
 import {FastifyInstance} from "fastify";
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it} from "vitest";
@@ -9,6 +11,7 @@ import {getMockApi, getTestServer} from "../../../utils/utils.js";
 import {eventTestData} from "../testData/events.js";
 
 describe("beacon / events", () => {
+  const config = createBeaconConfig(mainnetChainConfig, ZERO_HASH);
   const mockApi = getMockApi<Endpoints>(getDefinitions(config));
   let server: FastifyInstance;
   let baseUrl: string;

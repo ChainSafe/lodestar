@@ -7,16 +7,23 @@ const setupFiles = [
   path.join(import.meta.dirname, "../scripts/vitest/setupFiles/lodestarPreset.ts"),
 ];
 
-export const unitTestProject = defineProject({
+export const constantsTestMinimalProject = defineProject({
   test: {
-    name: "unit",
-    include: ["**/test/unit/**/*.test.ts"],
+    name: "constants-minimal",
+    include: ["**/test/constants/**/*.test.ts"],
     setupFiles,
-    // There are some tests which are taking huge time
-    // test/unit/chain/rewards/blockRewards.test.ts > chain / rewards / blockRewards > Normal case 73869ms
-    // for now I tried to identify such tests an increase the limit a bit higher
-    testTimeout: 20_000,
-    hookTimeout: 20_000,
+    pool: "forks",
+    env: {
+      LODESTAR_PRESET: "minimal",
+    },
+  },
+});
+
+export const constantsTestMainnetProject = defineProject({
+  test: {
+    name: "constants-mainnet",
+    include: ["**/test/constants/**/*.test.ts"],
+    setupFiles,
     pool: "forks",
     env: {
       LODESTAR_PRESET: "mainnet",

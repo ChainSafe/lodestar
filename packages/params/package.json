@@ -55,7 +55,7 @@
     "test": "yarn test:unit",
     "test:unit": "vitest run --project unit",
     "test:browsers": "vitest run --project browser",
-    "test:e2e": "vitest run --project e2e",
+    "test:e2e": "vitest run --project e2e-minimal",
     "check-readme": "typescript-docs-verifier"
   },
   "repository": {

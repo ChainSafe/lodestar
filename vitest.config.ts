@@ -1,10 +1,11 @@
 import path from "node:path";
 import {defineConfig} from "vitest/config";
 import {browserTestProject} from "./configs/vitest.config.browser.js";
-import {e2eMainnetProject, e2eProject} from "./configs/vitest.config.e2e.js";
+import {constantsTestMainnetProject, constantsTestMinimalProject} from "./configs/vitest.config.constants.js";
+import {e2eMainnetProject, e2eMinimalProject} from "./configs/vitest.config.e2e.js";
 import {specProjectMainnet, specProjectMinimal} from "./configs/vitest.config.spec.js";
 import {typesTestProject} from "./configs/vitest.config.types.js";
-import {unitTestMainnetProject, unitTestProject} from "./configs/vitest.config.unit.js";
+import {unitTestProject} from "./configs/vitest.config.unit.js";
 
 export default defineConfig({
   test: {
@@ -15,15 +16,11 @@ export default defineConfig({
       },
       {
         extends: true,
-        ...unitTestMainnetProject,
-      },
-      {
-        extends: true,
         ...browserTestProject,
       },
       {
         extends: true,
-        ...e2eProject,
+        ...e2eMinimalProject,
       },
       {
         extends: true,
@@ -36,6 +33,14 @@ export default defineConfig({
       {
         extends: true,
         ...specProjectMainnet,
+      },
+      {
+        extends: true,
+        ...constantsTestMinimalProject,
+      },
+      {
+        extends: true,
+        ...constantsTestMainnetProject,
       },
       {
         extends: true,

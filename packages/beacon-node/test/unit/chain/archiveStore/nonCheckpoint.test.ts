@@ -5,7 +5,7 @@ import {getNonCheckpointBlocks} from "../../../../src/chain/archiveStore/utils/a
 
 describe("chain / archive / getNonCheckpointBlocks", () => {
   beforeAll(() => {
-    expect(SLOTS_PER_EPOCH).toBe(8);
+    expect(SLOTS_PER_EPOCH).toBe(32);
   });
 
   const testCases: {id: string; blocks: Slot[]; maybeCheckpointSlots: Slot[]}[] = [
