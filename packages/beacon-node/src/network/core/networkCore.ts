@@ -5,7 +5,7 @@ import {Connection, PrivateKey} from "@libp2p/interface";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
-import {ForkName, ForkSeq} from "@lodestar/params";
+import {ForkName} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
 import {Epoch, phase0, ssz, sszTypesFor} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
