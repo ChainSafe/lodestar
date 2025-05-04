@@ -106,6 +106,9 @@ jobs:
           path: packages/validator/spec-tests
           key: spec-test-data-${{ hashFiles('packages/validator/test/spec/params.ts') }}
 
+      - name: Constants tests
+        run: yarn test:constants
+
       - name: Unit tests
         # id: unit_tests
         # Rever to "yarn test:unit" when finished debugging core dumps
