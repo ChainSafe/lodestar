@@ -1,5 +1,6 @@
 import {EpochTransitionStep, StateCloneSource, StateHashTreeRootSource} from "@lodestar/state-transition";
 import {BeaconState} from "@lodestar/types";
+import {BlockInputSyncSource} from "../../chain/blocks/blockInput/index.js";
 import {BlobsSource, BlockSource} from "../../chain/blocks/types.js";
 import {JobQueueItemType} from "../../chain/bls/index.js";
 import {AttestationErrorCode, BlockErrorCode} from "../../chain/errors/index.js";
@@ -574,6 +575,57 @@ export function createLodestarMetrics(
       syncChainHighestTargetSlotCompleted: register.gauge({
         name: "lodestar_sync_chain_highest_target_slot_completed",
         help: "Highest target slot completed by a sync chain",
+      }),
+    },
+
+    blockInputSync: {
+      pendingBlocks: register.gauge({
+        name: "lodestar_sync_block_input_sync_pending_blocks_size",
+        help: "Current size of BlockInputSync pending blocks cache",
+      }),
+      knownBadBlocks: register.gauge({
+        name: "lodestar_sync_block_input_sync_known_bad_blocks_size",
+        help: "Current size of BlockInputSync known bad blocks cache",
+      }),
+      removeBadBlocks: register.gauge({
+        name: "lodestar_block_input_sync_removed_bad_blocks_count",
+        help: "Number of bad blocks, with descendants that were removed from the sync cache",
+      }),
+      onBlockInput: register.gauge<{source: BlockInputSyncSource}>({
+        name: "lodestar_block_input_sync_on_block_input_source",
+        help: "Emission source for NetworkEvent.blockInput that triggered sync",
+        labelNames: ["source"],
+      }),
+      downloadSuccess: register.gauge({
+        name: "lodestar_block_input_sync_download_success",
+        help: "Total number of successful attempts downloading block in BlockInputSync",
+      }),
+      downloadError: register.gauge({
+        name: "lodestar_block_input_sync_download_error",
+        help: "Total number of errors when attempting to downloaded block in BlockInputSync",
+      }),
+      processSuccess: register.gauge({
+        name: "lodestar_block_input_sync_process_success",
+        help: "Total number of successful attempts processing block in BlockInputSync",
+      }),
+      processError: register.gauge({
+        name: "lodestar_block_input_sync_process_error",
+        help: "Total number of errors when attempting to processed block in BlockInputSync",
+      }),
+      timeToSyncSec: register.histogram({
+        name: "lodestar_block_input_sync_time_until_synced_seconds",
+        help: "Amount of time between block being added to BlockInputSync and download is completed",
+        buckets: [0.25, 0.5, 1, 2, 4],
+      }),
+      timeToProcessSec: register.histogram({
+        name: "lodestar_block_input_sync_time_until_processed_seconds",
+        help: "Amount of time between block being synced by BlockInputSync and processing is completed",
+        buckets: [0.1, 0.25, 0.5, 1],
+      }),
+      elapsedTimeTillReceived: register.histogram({
+        name: "lodestar_block_input_sync_elapsed_time_till_received",
+        help: "Time elapsed between start of slot and the time block and data is received",
+        buckets: [0.5, 1, 2, 4, 6, 12],
       }),
     },
 

@@ -1,3 +1,4 @@
+import {ChainForkConfig} from "@lodestar/config";
 import {
   ForkName,
   ForkPostDeneb,
@@ -17,6 +18,7 @@ import {prettyPrintArray} from "@lodestar/utils";
 import {VersionedHashes} from "../../../execution/index.js";
 import {kzgCommitmentToVersionedHash} from "../../../util/blobs.js";
 import {byteArrayEquals} from "../../../util/bytes.js";
+import {IClock} from "../../../util/clock.js";
 // import {CustodyConfig} from "../../../util/dataColumns.js";
 import {BlockInputError, BlockInputErrorCode} from "./errors.js";
 import {
@@ -41,6 +43,7 @@ import {
   PossibleDataTypes,
   PromiseParts,
 } from "./types.js";
+import {getDataAvailabilityStatus} from "./utils.js";
 
 export interface BlockInput<
   BlockType extends SignedBeaconBlock = SignedBeaconBlock,
@@ -49,6 +52,7 @@ export interface BlockInput<
   type: BlockInputType;
   rootHex: string;
   blockRoot: Uint8Array;
+  get prettyRootHex(): string;
 
   hasBlock(): boolean;
   getBlock(): BlockType;
@@ -59,6 +63,7 @@ export interface BlockInput<
   hasData(): boolean;
   needsData(): boolean;
   getDataStatus(): BlockInputDataStatus;
+  getDataAvailability(): DataAvailabilityStatus;
   isComplete(): boolean;
   numberOfBlobs(): number;
 
@@ -83,6 +88,9 @@ export class BlockInputPreData<
   rootHex: string;
   blockRoot: Uint8Array;
 
+  protected config: ChainForkConfig;
+  protected clock: IClock;
+
   protected slot?: Slot;
   protected forkName?: ForkName;
   protected parentRootHex?: string;
@@ -102,9 +110,13 @@ export class BlockInputPreData<
 
   constructor(props: BlockInputPreDataProps<BlockType>) {
     this.checkForUndefinedProps({
+      clock: props.clock,
+      config: props.config,
       rootHex: props.rootHex,
       blockRoot: props.blockRoot,
     });
+    this.clock = props.clock;
+    this.config = props.config;
     this.rootHex = props.rootHex;
     this.blockRoot = props.blockRoot;
     if ("block" in props) {
@@ -131,25 +143,15 @@ export class BlockInputPreData<
     return this.blockWithSource;
   }
 
-  addBlock({
-    rootHex,
-    blockRoot,
-    forkName,
-    dataAvailability,
-    block,
-    source,
-    seenTimestampSec,
-    peerIdStr,
-  }: AddBlockProps<BlockType>): void {
+  addBlock({block, source, seenTimestampSec, peerIdStr}: AddBlockProps<BlockType>): void {
     this.checkForUndefinedProps({
-      rootHex,
-      blockRoot,
-      forkName,
-      dataAvailability,
       block,
       source,
       seenTimestampSec,
     });
+
+    const blockRoot = this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
+    const rootHex = toHex(blockRoot);
     if (rootHex !== this.rootHex) {
       throw new BlockInputError(
         {
@@ -163,8 +165,8 @@ export class BlockInputPreData<
       );
     }
 
-    this.forkName = forkName;
-    this.dataAvailability = dataAvailability;
+    this.forkName = this.config.getForkName(block.message.slot);
+    this.dataAvailability = getDataAvailabilityStatus(this.config, block.message.slot, this.clock.currentEpoch);
     this.blockWithSource = {
       block,
       source,
@@ -214,6 +216,10 @@ export class BlockInputPreData<
 
   getDataStatus(): BlockInputDataStatus {
     return this.dataStatus;
+  }
+
+  getDataAvailability(): DataAvailabilityStatus {
+    return this.dataAvailability;
   }
 
   getLogMeta(): LogMetaBasic {
@@ -378,18 +384,8 @@ export class BlockInputBlobs<
   }
 
   addBlock(props: AddBlockProps<BlockType>): void {
-    if (props.rootHex !== this.rootHex) {
-      throw new BlockInputError(
-        {
-          code: BlockInputErrorCode.MISMATCHED_ROOT_HEX,
-          blockInputRoot: this.rootHex,
-          mismatchedRoot: props.rootHex,
-          source: props.source,
-          peerId: `${props.peerIdStr}`,
-        },
-        "addBlock rootHex does not match BlockInput.rootHex"
-      );
-    }
+    super.addBlock(props);
+
     for (const {blobSidecar} of this.blobsCache.values()) {
       const err = this.checkBlockAndBlobArePaired(props.block, blobSidecar);
       if (err) {
@@ -398,8 +394,6 @@ export class BlockInputBlobs<
         // this.logger?.error(`Removing blobIndex=${blobSidecar.index} from BlockInput`, {}, err);
       }
     }
-
-    super.addBlock(props);
   }
 
   hasBlob(blobIndex: BlobIndex): boolean {

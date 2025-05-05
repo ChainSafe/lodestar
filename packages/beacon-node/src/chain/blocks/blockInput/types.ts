@@ -1,3 +1,4 @@
+import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, ForkPostDeneb, ForkPostElectra, ForkPreDeneb} from "@lodestar/params";
 import {
   RootHex,
@@ -5,6 +6,7 @@ import {
   deneb,
   // fulu
 } from "@lodestar/types";
+import {IClock} from "../../../util/clock.js";
 // import {CustodyConfig} from "../../../util/dataColumns.js";
 import {PeerIdStr} from "../../../util/peerId.js";
 
@@ -26,6 +28,12 @@ export enum BlockInputType {
   PreData = "pre-data",
   Blobs = "blobs",
   // Columns = "columns",
+}
+
+export enum BlockInputSyncSource {
+  Api = "api",
+  Gossip = "gossip",
+  AttestationVerification = "attestation_verification",
 }
 
 export type PossibleDataTypes = null | deneb.BlobSidecars; // | fulu.DataColumnSidecars
@@ -78,10 +86,10 @@ export type BlobWithSource = SourceMeta & {blobSidecar: deneb.BlobSidecar};
 // export type ColumnWithSource = SourceMeta & {columnSidecar: fulu.DataColumnSidecar};
 
 export type AddBlockProps<BlockType extends SignedBeaconBlock> = BlockWithSource<BlockType> & {
-  rootHex: string;
-  blockRoot: Uint8Array;
-  forkName: ForkName;
-  dataAvailability: DataAvailabilityStatus;
+  // rootHex: string;
+  // blockRoot: Uint8Array;
+  // forkName: ForkName;
+  // dataAvailability: DataAvailabilityStatus;
 };
 
 export type AddBlobProps = BlobWithSource & {rootHex: RootHex};
@@ -96,17 +104,19 @@ export type ColumnMeta = {
 };
 
 export type BlockInputBaseProps = {
+  clock: IClock;
+  config: ChainForkConfig;
   rootHex: string;
   blockRoot: Uint8Array;
 };
 
 export type BlockInputPreDataProps<BlockType extends SignedBeaconBlock> =
   | BlockInputBaseProps
-  | AddBlockProps<BlockType>;
+  | (BlockInputBaseProps & AddBlockProps<BlockType>);
 
 export type BlockInputBlobsProps<BlockType extends SignedBeaconBlock> =
   | BlockInputPreDataProps<BlockType>
-  | (AddBlobProps & {blockRoot: Uint8Array});
+  | (BlockInputBaseProps & AddBlobProps);
 
 // export type BlockInputColumnsProps<BlockType extends SignedBeaconBlock> = {
 //   custodyConfig: CustodyConfig;
