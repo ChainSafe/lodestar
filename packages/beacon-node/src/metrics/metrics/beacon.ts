@@ -348,7 +348,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         name: "beacon_data_column_sidecar_gossip_verification_seconds",
         help: "Full runtime of data column sidecars gossip verification",
       }),
-      dataColumnSideCarComputationTime: register.histogram({
+      dataColumnSidecarComputationTime: register.histogram({
         name: "beacon_data_column_sidecar_computation_seconds",
         help: "Time taken to compute data column sidecar, including cells and inclusion proof",
       }),

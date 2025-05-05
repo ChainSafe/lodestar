@@ -89,7 +89,7 @@ export function getBeaconBlockApi({
       if (isForkPostFulu(fork)) {
         const cachedContents = chain.getContents(signedBlock.message as deneb.BeaconBlock);
 
-        const timer = metrics?.peerDas.dataColumnSideCarComputationTime.startTimer();
+        const timer = metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
         dataColumnSidecars = computeDataColumnSidecars(config, signedBlock, cachedContents ?? signedBlockOrContents);
         timer?.();
         blockData = {
