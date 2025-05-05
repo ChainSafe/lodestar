@@ -38,8 +38,9 @@ function runTests({useWorker}: {useWorker: boolean}): void {
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
 
   beforeEach(() => {
+    console.trace("%%%%%% beforeEach started...");
     controller = new AbortController();
-    afterEachCallbacks.push(async () => controller.abort());
+    // afterEachCallbacks.push(async () => controller.abort());
   });
 
   afterEach(async () => {
@@ -47,6 +48,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
       const callback = afterEachCallbacks.pop();
       if (callback) await callback();
     }
+    console.trace("%%%%%% afterEach finished...");
   });
 
   async function createAndConnectPeers(

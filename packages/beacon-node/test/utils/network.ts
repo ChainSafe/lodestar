@@ -42,7 +42,7 @@ export async function connect(netDial: INetworkDebug, netServer: INetworkDebug, 
 
   // We see a lot of "Muxer already closed" in e2e tests on CI
   // This is a way to give a grace period for connections to open and exchange metadata
-  await sleep(100, signal);
+  await sleep(50, signal);
 }
 
 export async function disconnect(network: INetworkDebug, peer: string): Promise<void> {
