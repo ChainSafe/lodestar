@@ -67,7 +67,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
       await closeB();
     });
     const connected = Promise.all([onPeerConnect(netA), onPeerConnect(netB)]);
-    await connect(netA, netB);
+    await connect(netA, netB, controller.signal);
     await connected;
 
     controller.signal.addEventListener("abort", async () => {
