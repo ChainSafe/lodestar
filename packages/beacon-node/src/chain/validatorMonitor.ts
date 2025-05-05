@@ -401,7 +401,7 @@ export function createValidatorMonitor(
       const validator = validators.get(block.proposerIndex);
       // Returns the delay between the start of `block.slot` and `seenTimestamp`.
       const delaySec = seenTimestampSec - (genesisTime + block.slot * config.SECONDS_PER_SLOT);
-      metrics?.gossipBlock.elapsedTimeTillReceived.observe(delaySec);
+      metrics?.gossipBlock.elapsedTimeTillReceived.observe({source: src}, delaySec);
       if (validator) {
         validatorMonitorMetrics?.beaconBlockTotal.inc({src});
         validatorMonitorMetrics?.beaconBlockDelaySeconds.observe({src}, delaySec);

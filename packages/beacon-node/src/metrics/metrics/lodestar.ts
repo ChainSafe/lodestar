@@ -604,9 +604,10 @@ export function createLodestarMetrics(
 
     // Gossip block
     gossipBlock: {
-      elapsedTimeTillReceived: register.histogram({
+      elapsedTimeTillReceived: register.histogram<{source: OpSource}>({
         name: "lodestar_gossip_block_elapsed_time_till_received",
         help: "Time elapsed between block slot time and the time block received via gossip",
+        labelNames: ["source"],
         buckets: [0.5, 1, 2, 4, 6, 12],
       }),
       elapsedTimeTillProcessed: register.histogram({
