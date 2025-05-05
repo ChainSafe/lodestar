@@ -596,6 +596,16 @@ export function createLodestarMetrics(
         help: "Emission source for NetworkEvent.blockInput that triggered sync",
         labelNames: ["source"],
       }),
+      onUnknownParent: register.gauge<{source: BlockInputSyncSource}>({
+        name: "lodestar_block_input_sync_on_unknown_parent_source",
+        help: "Emission source for NetworkEvent.unknownParent that triggered sync",
+        labelNames: ["source"],
+      }),
+      onUnknownBlockRoot: register.gauge<{source: BlockInputSyncSource}>({
+        name: "lodestar_block_input_sync_on_unknown_block_route_source",
+        help: "Emission source for NetworkEvent.unknownBlockRoot that triggered sync",
+        labelNames: ["source"],
+      }),
       downloadSuccess: register.gauge({
         name: "lodestar_block_input_sync_download_success",
         help: "Total number of successful attempts downloading block in BlockInputSync",

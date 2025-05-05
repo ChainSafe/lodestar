@@ -21,6 +21,7 @@ export enum NetworkEvent {
   unknownBlockInput = "unknownBlockInput",
 
   // New BlockInput sync event trigger
+  unknownBlockRoot = "unknownBlockRoot",
   blockInput = "blockInput",
   unknownParent = "unknownParent",
 
@@ -36,6 +37,7 @@ export type NetworkEventData = {
   [NetworkEvent.peerDisconnected]: {peer: PeerIdStr};
   [NetworkEvent.reqRespRequest]: {request: RequestTypedContainer; peer: PeerId};
   // new block input events
+  [NetworkEvent.unknownBlockRoot]: {rootHex: RootHex; peer?: PeerIdStr; source: BlockInputSyncSource};
   [NetworkEvent.blockInput]: {blockInput: BlockInputNew; peer: PeerIdStr; source: BlockInputSyncSource};
   [NetworkEvent.unknownParent]: {blockInput: BlockInputNew; peer: PeerIdStr; source: BlockInputSyncSource};
   // old unknownBlock blockInput events
@@ -55,13 +57,16 @@ export const networkEventDirection: Record<NetworkEvent, EventDirection> = {
   [NetworkEvent.peerConnected]: EventDirection.workerToMain,
   [NetworkEvent.peerDisconnected]: EventDirection.workerToMain,
   [NetworkEvent.reqRespRequest]: EventDirection.none, // Only used internally in NetworkCore
+  [NetworkEvent.pendingGossipsubMessage]: EventDirection.workerToMain,
+  [NetworkEvent.gossipMessageValidationResult]: EventDirection.mainToWorker,
+  // new block input events
+  [NetworkEvent.unknownBlockRoot]: EventDirection.workerToMain,
   [NetworkEvent.blockInput]: EventDirection.workerToMain,
   [NetworkEvent.unknownParent]: EventDirection.workerToMain,
+  // old unknownBlock blockInput events
   [NetworkEvent.unknownBlockParent]: EventDirection.workerToMain,
   [NetworkEvent.unknownBlock]: EventDirection.workerToMain,
   [NetworkEvent.unknownBlockInput]: EventDirection.workerToMain,
-  [NetworkEvent.pendingGossipsubMessage]: EventDirection.workerToMain,
-  [NetworkEvent.gossipMessageValidationResult]: EventDirection.mainToWorker,
 };
 
 export type INetworkEventBus = StrictEventEmitterSingleArg<NetworkEventData>;

@@ -1,7 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPostDeneb, INTERVALS_PER_SLOT} from "@lodestar/params";
 import {RootHex} from "@lodestar/types";
-import {LodestarError, Logger, fromHex, prettyPrintArray, pruneSetToMax, sleep} from "@lodestar/utils";
+import {LodestarError, Logger, fromHex, prettyBytes, prettyPrintArray, pruneSetToMax, sleep} from "@lodestar/utils";
 import {
   BlockInput,
   BlockInputBlobs,
@@ -41,11 +41,46 @@ export type PendingBlockInput = {
   downloadAttempts: number;
 };
 
+export type PendingRootHex = {
+  status: PendingBlockInputStatus;
+  rootHex: RootHex;
+  timeAddedSec: number;
+  timeSyncedSec?: number;
+  peerIdStrings: Set<string>;
+  downloadAttempts: number;
+};
+
+function isPendingBlockInput(pending: PendingBlockInput | PendingRootHex): pending is PendingBlockInput {
+  return "blockInput" in pending;
+}
+
+function getLogMeta(
+  block: PendingBlockInput | PendingRootHex,
+  pendingBlocks?: Map<RootHex, PendingBlockInput | PendingRootHex>
+): Record<string, string | number> {
+  const pendingBlocksLog: Record<string, number> = pendingBlocks ? {pendingBlocks: pendingBlocks.size} : {};
+  return isPendingBlockInput(block)
+    ? {
+        type: "pendingBlockInput",
+        ...pendingBlocksLog,
+        ...block.blockInput.getLogMeta(),
+      }
+    : {
+        type: "pendingRootHex",
+        ...pendingBlocksLog,
+        rootHex: prettyBytes(block.rootHex),
+      };
+}
+
+function getRootHex(block: PendingRootHex | PendingBlockInput): RootHex {
+  return isPendingBlockInput(block) ? block.blockInput.rootHex : block.rootHex;
+}
+
 export class BlockInputSync {
   /**
    * block RootHex -> PendingBlock. To avoid finding same root at the same time
    */
-  private readonly pendingBlocks = new Map<RootHex, PendingBlockInput>();
+  private readonly pendingBlocks = new Map<RootHex, PendingBlockInput | PendingRootHex>();
   private readonly knownBadBlocks = new Set<RootHex>();
   private readonly proposerBoostSecWindow: number;
   private readonly maxPendingBlocks;
@@ -77,6 +112,7 @@ export class BlockInputSync {
       this.logger.verbose("BlockInputSync enabled.");
       this.network.events.on(NetworkEvent.blockInput, this.onBlockInput);
       this.network.events.on(NetworkEvent.unknownParent, this.onUnknownParent);
+      this.network.events.on(NetworkEvent.unknownBlockRoot, this.onUnknownBlockRoot);
       this.network.events.on(NetworkEvent.peerConnected, this.triggerUnknownBlockSearch);
       this.subscribedToNetworkEvents = true;
     }
@@ -86,6 +122,7 @@ export class BlockInputSync {
     this.logger.verbose("BlockInputSync disabled.");
     this.network.events.off(NetworkEvent.blockInput, this.onBlockInput);
     this.network.events.off(NetworkEvent.unknownParent, this.onUnknownParent);
+    this.network.events.off(NetworkEvent.unknownBlockRoot, this.onUnknownBlockRoot);
     this.network.events.off(NetworkEvent.peerConnected, this.triggerUnknownBlockSearch);
     this.subscribedToNetworkEvents = false;
   }
@@ -120,22 +157,64 @@ export class BlockInputSync {
       this.addBlockInput(parentBlockInput, peer);
       this.addBlockInput(blockInput, peer);
       this.triggerUnknownBlockSearch();
-      this.metrics?.blockInputSync.onBlockInput.inc({source}, 2);
+      this.metrics?.blockInputSync.onUnknownParent.inc({source}, 2);
     } catch (e) {
       this.logger.debug("Error handling unknownParent event", {}, e as Error);
     }
   };
 
-  private addBlockInput(blockInput: BlockInput, peerIdStr?: string): PendingBlockInput {
-    let pendingBlock = this.pendingBlocks.get(blockInput.rootHex);
+  private onUnknownBlockRoot = (data: NetworkEventData[NetworkEvent.unknownBlockRoot]): void => {
+    try {
+      this.addUnknownBlockRoot(data.rootHex, data.peer);
+      this.triggerUnknownBlockSearch();
+      this.metrics?.blockInputSync.onUnknownBlockRoot.inc({source: data.source});
+    } catch (e) {
+      this.logger.debug("Error handling unknownBlockRoot event", data, e as Error);
+    }
+  };
+
+  private addUnknownBlockRoot = (rootHex: RootHex, peerIdStr?: PeerIdStr): PendingRootHex => {
+    let pendingBlock = this.pendingBlocks.get(rootHex) as PendingRootHex;
     if (!pendingBlock) {
+      pendingBlock = {
+        status: PendingBlockInputStatus.pending,
+        rootHex: rootHex,
+        peerIdStrings: new Set(),
+        downloadAttempts: 0,
+        timeAddedSec: Date.now() / 1000,
+      };
+      this.pendingBlocks.set(rootHex, pendingBlock);
+
+      this.logger.verbose("Added unknown rootHex to BlockInputSync.pendingBlocks", {
+        rootHex: pendingBlock.rootHex,
+        peerIdStr: peerIdStr ?? "unknown peer",
+      });
+    }
+
+    if (peerIdStr) {
+      pendingBlock.peerIdStrings.add(peerIdStr);
+    }
+
+    // TODO: check this prune methodology
+    // Limit pending blocks to prevent DOS attacks that cause OOM
+    const prunedItemCount = pruneSetToMax(this.pendingBlocks, this.maxPendingBlocks);
+    if (prunedItemCount > 0) {
+      this.logger.warn(`Pruned ${prunedItemCount} items from BlockInputSync.pendingBlocks`);
+    }
+
+    return pendingBlock;
+  };
+
+  private addBlockInput(blockInput: BlockInput, peerIdStr?: string): PendingBlockInput {
+    let pendingBlock = this.pendingBlocks.get(blockInput.rootHex) as PendingBlockInput;
+    if (!pendingBlock || !isPendingBlockInput(pendingBlock)) {
       pendingBlock = {
         status: PendingBlockInputStatus.pending,
         blockInput,
         peerIdStrings: new Set(),
         downloadAttempts: 0,
         timeAddedSec: Date.now() / 1000,
-      } as PendingBlockInput;
+      };
       this.pendingBlocks.set(blockInput.rootHex, pendingBlock);
 
       this.logger.verbose("Added blockInput to BlockInputSync.pendingBlocks", pendingBlock.blockInput.getLogMeta());
@@ -198,22 +277,22 @@ export class BlockInputSync {
     // most of the time there is exactly 1 unknown block
     for (const block of unknowns) {
       this.downloadBlock(block, connectedPeers).catch((e) => {
-        this.logger.debug("Unexpected error - downloadBlock", {root: block.blockInput.prettyRootHex}, e);
+        const rootHex = prettyBytes(isPendingBlockInput(block) ? block.blockInput.rootHex : block.rootHex);
+        this.logger.debug("Unexpected error - downloadBlock", {rootHex}, e);
       });
     }
   };
 
-  private downloadBlock = async (block: PendingBlockInput, connectedPeers: PeerIdStr[]): Promise<void> => {
+  private downloadBlock = async (
+    block: PendingRootHex | PendingBlockInput,
+    connectedPeers: PeerIdStr[]
+  ): Promise<void> => {
     if (block.status !== PendingBlockInputStatus.pending) {
       return;
     }
     block.status = PendingBlockInputStatus.fetching;
 
-    this.logger.verbose("BlockInputSync.downloadBlock", {
-      pendingBlocks: this.pendingBlocks.size,
-      blockInputType: block.blockInput.type,
-      ...block.blockInput.getLogMeta(),
-    });
+    this.logger.verbose("BlockInputSync.downloadBlock", getLogMeta(block, this.pendingBlocks));
 
     const res = await wrapError(this.downloadBlockInputByRoot(block, connectedPeers));
     // track number of attempts to download block and data
@@ -227,7 +306,7 @@ export class BlockInputSync {
         // Give up on this block and assume it does not exist, penalizing all peers as if it was a bad block
         this.logger.debug(
           `Ignoring block that cannot be correctly downloaded after ${block.downloadAttempts} failed attempts`,
-          block.blockInput.getLogMeta(),
+          getLogMeta(block, this.pendingBlocks),
           res.err
         );
         this.removeAndDownScoreAllDescendants(block);
@@ -235,7 +314,7 @@ export class BlockInputSync {
         // Try again when a new peer connects, its status changes, or a new unknownBlockParent event happens
         this.logger.debug(
           `Error attempt number ${block.downloadAttempts} downloading block and/or data`,
-          block.blockInput.getLogMeta(),
+          getLogMeta(block, this.pendingBlocks),
           res.err
         );
       }
@@ -245,22 +324,21 @@ export class BlockInputSync {
 
     this.metrics?.blockInputSync.downloadSuccess.inc();
 
-    block.status = PendingBlockInputStatus.downloaded;
-    block.timeSyncedSec = Date.now() / 1000;
+    res.result.status = PendingBlockInputStatus.downloaded;
+    res.result.timeSyncedSec = Date.now() / 1000;
 
-    const blockSlot = block.blockInput.getBlock().message.slot;
-    block.timeSyncedSec = Date.now() / 1000;
-    this.metrics?.blockInputSync.timeToSyncSec.observe(block.timeSyncedSec - block.timeAddedSec);
-    const delaySec = block.timeSyncedSec - (this.chain.genesisTime + blockSlot * this.config.SECONDS_PER_SLOT);
+    const blockSlot = res.result.blockInput.getBlock().message.slot;
+    this.metrics?.blockInputSync.timeToSyncSec.observe(res.result.timeSyncedSec - res.result.timeAddedSec);
+    const delaySec = res.result.timeSyncedSec - (this.chain.genesisTime + blockSlot * this.config.SECONDS_PER_SLOT);
     this.metrics?.blockInputSync.elapsedTimeTillReceived.observe(delaySec);
 
-    const parentRootHex = block.blockInput.getParentRootHex();
+    const parentRootHex = res.result.blockInput.getParentRootHex();
     const parentInForkChoice = this.chain.forkChoice.hasBlock(fromHex(parentRootHex));
     const finalizedSlot = this.chain.forkChoice.getFinalizedBlock().slot;
 
     if (parentInForkChoice) {
       // Bingo! Process block. Add to pending blocks anyway for recycle the cache that prevents duplicate processing
-      this.processBlock(block).catch((e) => {
+      this.processBlock(res.result).catch((e) => {
         this.logger.debug("Unexpected error - process newly downloaded block", {}, e);
       });
     } else if (blockSlot <= finalizedSlot) {
@@ -273,18 +351,18 @@ export class BlockInputSync {
         finalizedSlot,
         blockSlot,
         parentRootHex,
-        ...block.blockInput.getLogMeta(),
+        ...res.result.blockInput.getLogMeta(),
       });
       this.removeAndDownScoreAllDescendants(block);
     } else {
-      const parentBlockInput = this.chain.seenBlockInputCache.getBlockInputByRootHex({
-        rootHex: block.blockInput.getParentRootHex(),
-      });
-      this.addBlockInput(parentBlockInput);
+      this.addUnknownBlockRoot(res.result.blockInput.getParentRootHex());
     }
   };
 
-  private downloadBlockInputByRoot = async (block: PendingBlockInput, connectedPeers: PeerIdStr[]): Promise<void> => {
+  private downloadBlockInputByRoot = async (
+    block: PendingRootHex | PendingBlockInput,
+    connectedPeers: PeerIdStr[]
+  ): Promise<PendingBlockInput> => {
     const shuffledPeers = shuffle(connectedPeers);
 
     // TODO: (@matthewkeil) we are actually doing MAX_ATTEMPTS_PER_BLOCK^2 right now because this is checked both here
@@ -305,13 +383,9 @@ export class BlockInputSync {
           return;
         }
 
-        this.logger.debug(`Did not fully pull blockInput byRoot on attempt number ${i}`, block.blockInput.getLogMeta());
+        this.logger.debug(`Did not fully pull blockInput byRoot on attempt number ${i}`, getLogMeta(block));
       } catch (err) {
-        this.logger.debug(
-          `Error downloadBlockInputByRoot in attempt number ${i}`,
-          block.blockInput.getLogMeta(),
-          err as Error
-        );
+        this.logger.debug(`Error downloadBlockInputByRoot in attempt number ${i}`, getLogMeta(block), err as Error);
       }
     }
   };
@@ -450,40 +524,45 @@ export class BlockInputSync {
 
     // Send child blocks to the processor
     for (const descendantBlock of getDescendantBlocks(block.blockInput.rootHex, this.pendingBlocks)) {
-      this.processBlock(descendantBlock).catch((e) => {
-        this.logger.debug("Unexpected error - process descendant block", descendantBlock.blockInput.getLogMeta(), e);
-      });
+      if (isPendingBlockInput(descendantBlock)) {
+        this.processBlock(descendantBlock).catch((e) => {
+          this.logger.debug("Unexpected error - process descendant block", getLogMeta(descendantBlock), e);
+        });
+      }
     }
   };
 
-  private removeAllDescendants = (block: PendingBlockInput): PendingBlockInput[] => {
+  private removeAllDescendants = (
+    block: PendingRootHex | PendingBlockInput
+  ): (PendingRootHex | PendingBlockInput)[] => {
     // Get all blocks that are a descendant of this one
-    const badPendingBlocks = [block, ...getDescendantBlocks(block.blockInput.rootHex, this.pendingBlocks)];
+    const badPendingBlocks = [block, ...getDescendantBlocks(getRootHex(block), this.pendingBlocks)];
 
     this.metrics?.blockInputSync.removeBadBlocks.inc(badPendingBlocks.length);
 
-    for (const block of badPendingBlocks) {
-      this.pendingBlocks.delete(block.blockInput.rootHex);
+    for (const badBlock of badPendingBlocks) {
+      this.pendingBlocks.delete(getRootHex(badBlock));
       this.logger.debug("Removing badPendingBlock", {
-        root: block.blockInput.rootHex,
+        rootHex: getRootHex(badBlock),
       });
     }
 
     return badPendingBlocks;
   };
 
-  private removeAndDownScoreAllDescendants = (block: PendingBlockInput) => {
+  private removeAndDownScoreAllDescendants = (block: PendingRootHex | PendingBlockInput) => {
     // Get all blocks that are a descendant of this one
     const badPendingBlocks = this.removeAllDescendants(block);
 
     for (const block of badPendingBlocks) {
-      this.knownBadBlocks.add(block.blockInput.rootHex);
+      const rootHex = isPendingBlockInput(block) ? block.blockInput.rootHex : block.rootHex;
+      this.knownBadBlocks.add(rootHex);
       for (const peerIdStr of block.peerIdStrings) {
         // TODO: Refactor peerRpcScores to work with peerIdStr only
         this.network.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadBlockByRoot");
       }
       this.logger.debug("Banning knownBadBlock and down-scored peers", {
-        root: block.blockInput.rootHex,
+        root: rootHex,
         peerIdStrings: prettyPrintArray(Array.from(block.peerIdStrings)),
       });
     }
@@ -494,7 +573,7 @@ export class BlockInputSync {
 }
 
 type UnknownAndAncestorBlocks = {
-  unknowns: PendingBlockInput[];
+  unknowns: (PendingRootHex | PendingBlockInput)[];
   ancestors: PendingBlockInput[];
 };
 
@@ -505,11 +584,18 @@ type UnknownAndAncestorBlocks = {
  * Given this chain segment: downloaded block n => downloaded block n + 1 => downloaded block n + 2
  *   return {unknowns: [], ancestors: [n]}
  */
-function getUnknownAndAncestorBlocks(blocks: Map<RootHex, PendingBlockInput>): UnknownAndAncestorBlocks {
-  const unknowns: PendingBlockInput[] = [];
+function getUnknownAndAncestorBlocks(
+  blocks: Map<RootHex, PendingRootHex | PendingBlockInput>
+): UnknownAndAncestorBlocks {
+  const unknowns: (PendingRootHex | PendingBlockInput)[] = [];
   const ancestors: PendingBlockInput[] = [];
 
   for (const block of blocks.values()) {
+    if (!isPendingBlockInput(block)) {
+      unknowns.push(block);
+      continue;
+    }
+
     const parentHex = block.blockInput.getParentRootHex(false);
     if (
       block.status === PendingBlockInputStatus.pending &&
@@ -531,12 +617,12 @@ function getUnknownAndAncestorBlocks(blocks: Map<RootHex, PendingBlockInput>): U
 
 export function getDescendantBlocks(
   blockRootHex: RootHex,
-  blocks: Map<RootHex, PendingBlockInput>
-): PendingBlockInput[] {
-  const descendantBlocks: PendingBlockInput[] = [];
+  blocks: Map<RootHex, PendingRootHex | PendingBlockInput>
+): (PendingRootHex | PendingBlockInput)[] {
+  const descendantBlocks: (PendingRootHex | PendingBlockInput)[] = [];
 
   for (const block of blocks.values()) {
-    if (block.blockInput.getParentRootHex(false) === blockRootHex) {
+    if (isPendingBlockInput(block) && block.blockInput.getParentRootHex(false) === blockRootHex) {
       descendantBlocks.push(block);
     }
   }
