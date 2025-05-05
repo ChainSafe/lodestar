@@ -1,28 +1,31 @@
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
-import {ForkSeq, ZERO_HASH} from "@lodestar/params";
+import {ZERO_HASH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {describe, expect, it, vi} from "vitest";
 import {ENRKey, MetadataController, getENRForkID} from "../../../src/network/metadata.js";
 import {NetworkConfig} from "../../../src/network/networkConfig.js";
+import {serializeCgc} from "../../../src/util/metadata.js";
 import {config} from "../../utils/config.js";
 import {getValidPeerId} from "../../utils/peer.js";
 
 describe("network / metadata", () => {
-  // At 0, next fork is altair
-  const currentEpoch = 0;
-  const enrForkID = getENRForkID(config, currentEpoch);
+  describe("getENRForkID", () => {
+    // At 0, next fork is altair
+    const currentEpoch = 0;
+    const enrForkID = getENRForkID(config, currentEpoch);
 
-  it("enrForkID.nextForkVersion", () => {
-    expect(toHex(enrForkID.nextForkVersion)).toBe(toHex(config.ALTAIR_FORK_VERSION));
-  });
+    it("enrForkID.nextForkVersion", () => {
+      expect(toHex(enrForkID.nextForkVersion)).toBe(toHex(config.ALTAIR_FORK_VERSION));
+    });
 
-  it("enrForkID.nextForkEpoch", () => {
-    expect(enrForkID.nextForkEpoch).toBe(config.ALTAIR_FORK_EPOCH);
-  });
+    it("enrForkID.nextForkEpoch", () => {
+      expect(enrForkID.nextForkEpoch).toBe(config.ALTAIR_FORK_EPOCH);
+    });
 
-  it("it's possible to serialize enr fork id", () => {
-    ssz.phase0.ENRForkID.hashTreeRoot(enrForkID);
+    it("it's possible to serialize enr fork id", () => {
+      ssz.phase0.ENRForkID.hashTreeRoot(enrForkID);
+    });
   });
 
   describe("MetadataController", () => {
@@ -45,6 +48,33 @@ describe("network / metadata", () => {
       metadata.upstreamValues(0);
 
       expect(onSetValue).toHaveBeenCalledWith(ENRKey.cgc, expect.anything());
+    });
+
+    it("should call onSetValue with the correct cgc", () => {
+      const onSetValue = vi.fn();
+      const networkConfig = new NetworkConfig(getValidPeerId(), config);
+      const metadata = new MetadataController({}, {onSetValue, networkConfig});
+      metadata.custodyGroupCount = 128;
+      expect(onSetValue).toHaveBeenCalledWith(ENRKey.cgc, serializeCgc(128));
+    });
+
+    it("should increment seqNumber when cgc is updated", () => {
+      const onSetValue = vi.fn();
+      const networkConfig = new NetworkConfig(getValidPeerId(), config);
+      const metadata = new MetadataController({}, {onSetValue, networkConfig});
+      const initialSeqNumber = metadata.seqNumber;
+      metadata.custodyGroupCount = 128;
+      expect(metadata.seqNumber).toBe(initialSeqNumber + 1n);
+    });
+
+    it("should not increment seqNumber when cgc is set to the same value", () => {
+      const onSetValue = vi.fn();
+      const networkConfig = new NetworkConfig(getValidPeerId(), config);
+      const metadata = new MetadataController({}, {onSetValue, networkConfig});
+      metadata.custodyGroupCount = 128;
+      const initialSeqNumber = metadata.seqNumber;
+      metadata.custodyGroupCount = 128;
+      expect(metadata.seqNumber).toBe(initialSeqNumber);
     });
   });
 });

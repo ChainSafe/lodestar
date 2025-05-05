@@ -182,6 +182,12 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   // Add detailed version string for API node/version endpoint
   beaconNodeOptions.set({api: {commit, version}});
 
+  // Disable dynamic custody updates for supernodes since they must maintain custody
+  // of all custody groups regardless of validator effective balances
+  if (args.supernode) {
+    beaconNodeOptions.set({chain: {noValidatorCustody: true}});
+  }
+
   // Set known depositContractDeployBlock
   if (isKnownNetworkName(network)) {
     const {depositContractDeployBlock} = getNetworkData(network);

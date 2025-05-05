@@ -23,6 +23,7 @@ import {
   altair,
   capella,
   deneb,
+  fulu,
   phase0,
 } from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
@@ -129,7 +130,7 @@ export interface IBeaconChain {
 
   readonly beaconProposerCache: BeaconProposerCache;
   readonly checkpointBalancesCache: CheckpointBalancesCache;
-  readonly producedContentsCache: Map<BlockHash, deneb.Contents>;
+  readonly producedContentsCache: Map<BlockHash, deneb.Contents & {cells?: fulu.Cell[][]}>;
   readonly producedBlockRoot: Map<RootHex, ExecutionPayload | null>;
   readonly shufflingCache: ShufflingCache;
   readonly producedBlindedBlockRoot: Set<RootHex>;
@@ -194,7 +195,7 @@ export interface IBeaconChain {
     root: RootHex
   ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null>;
 
-  getContents(beaconBlock: deneb.BeaconBlock): deneb.Contents;
+  getContents(beaconBlock: deneb.BeaconBlock): deneb.Contents & {cells?: fulu.Cell[][]};
 
   produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody>;
   produceBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{

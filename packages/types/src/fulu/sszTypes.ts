@@ -2,6 +2,7 @@ import {ByteVectorType, ContainerType, ListBasicType, ListCompositeType, VectorC
 import {
   BYTES_PER_FIELD_ELEMENT,
   FIELD_ELEMENTS_PER_CELL,
+  FIELD_ELEMENTS_PER_EXT_BLOB,
   KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH,
   MAX_BLOB_COMMITMENTS_PER_BLOCK,
   MAX_REQUEST_DATA_COLUMN_SIDECARS,
@@ -22,7 +23,7 @@ export const Blob = denebSsz.Blob;
 export const Metadata = new ContainerType(
   {
     ...altariSsz.Metadata.fields,
-    cgc: UintNum64,
+    custodyGroupCount: UintNum64,
   },
   {typeName: "Metadata", jsonCase: "eth2"}
 );
@@ -31,6 +32,10 @@ export const Cell = new ByteVectorType(BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_
 export const DataColumn = new ListCompositeType(Cell, MAX_BLOB_COMMITMENTS_PER_BLOCK);
 export const ExtendedMatrix = new ListCompositeType(Cell, MAX_BLOB_COMMITMENTS_PER_BLOCK * NUMBER_OF_COLUMNS);
 export const KzgCommitmentsInclusionProof = new VectorCompositeType(Bytes32, KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH);
+export const KZGProofs = new ListCompositeType(
+  denebSsz.KZGProof,
+  FIELD_ELEMENTS_PER_EXT_BLOB * MAX_BLOB_COMMITMENTS_PER_BLOCK
+);
 
 export const DataColumnSidecar = new ContainerType(
   {
@@ -124,6 +129,15 @@ export const BlobSidecar = new ContainerType(
   {typeName: "BlobSidecar", jsonCase: "eth2"}
 );
 
+export const BlobsBundle = new ContainerType(
+  {
+    commitments: denebSsz.BlobKzgCommitments,
+    proofs: KZGProofs,
+    blobs: denebSsz.Blobs,
+  },
+  {typeName: "BlobsBundle", jsonCase: "eth2"}
+);
+
 export const BlindedBeaconBlockBody = new ContainerType(
   {
     ...electraSsz.BlindedBeaconBlockBody.fields,
@@ -163,7 +177,8 @@ export const SignedBuilderBid = new ContainerType(
 
 export const ExecutionPayloadAndBlobsBundle = new ContainerType(
   {
-    ...denebSsz.ExecutionPayloadAndBlobsBundle.fields,
+    executionPayload: ExecutionPayload,
+    blobsBundle: BlobsBundle,
   },
   {typeName: "ExecutionPayloadAndBlobsBundle", jsonCase: "eth2"}
 );
@@ -226,14 +241,18 @@ export const SSEPayloadAttributes = new ContainerType(
 
 export const BlockContents = new ContainerType(
   {
-    ...electraSsz.BlockContents.fields,
+    block: BeaconBlock,
+    kzgProofs: KZGProofs,
+    blobs: denebSsz.Blobs,
   },
   {typeName: "BlockContents", jsonCase: "eth2"}
 );
 
 export const SignedBlockContents = new ContainerType(
   {
-    ...electraSsz.SignedBlockContents.fields,
+    signedBlock: SignedBeaconBlock,
+    kzgProofs: KZGProofs,
+    blobs: denebSsz.Blobs,
   },
   {typeName: "SignedBlockContents", jsonCase: "eth2"}
 );

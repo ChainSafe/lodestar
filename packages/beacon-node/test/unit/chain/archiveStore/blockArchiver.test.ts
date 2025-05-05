@@ -90,7 +90,7 @@ describe("block archiver task", () => {
     const config = createChainForkConfig({
       ...defaultConfig,
       FULU_FORK_EPOCH: 0,
-      MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 1,
+      MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 2,
     });
     const blockBytes = ssz.fulu.SignedBeaconBlock.serialize(ssz.fulu.SignedBeaconBlock.defaultValue());
     const dataColumnBytes = ssz.fulu.DataColumnSidecar.serialize(ssz.fulu.DataColumnSidecar.defaultValue());

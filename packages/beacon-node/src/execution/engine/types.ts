@@ -63,6 +63,7 @@ export type EngineApiRpcParamTypes = {
   engine_getPayloadV2: [QUANTITY];
   engine_getPayloadV3: [QUANTITY];
   engine_getPayloadV4: [QUANTITY];
+  engine_getPayloadV5: [QUANTITY];
 
   /**
    * 1. Array of DATA - Array of block_hash field values of the ExecutionPayload structure
@@ -118,6 +119,7 @@ export type EngineApiRpcReturnTypes = {
   engine_getPayloadV2: ExecutionPayloadResponse;
   engine_getPayloadV3: ExecutionPayloadResponse;
   engine_getPayloadV4: ExecutionPayloadResponse;
+  engine_getPayloadV5: ExecutionPayloadResponse;
 
   engine_getPayloadBodiesByHashV1: (ExecutionPayloadBodyRpc | null)[];
 

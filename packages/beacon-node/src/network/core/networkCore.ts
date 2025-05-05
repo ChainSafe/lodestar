@@ -365,7 +365,7 @@ export class NetworkCore implements INetworkCore {
 
   async setAdvertisedGroupCount(count: number): Promise<void> {
     this.networkConfig.setAdvertisedGroupCount(count);
-    this.metadata.cgc = count;
+    this.metadata.custodyGroupCount = count;
   }
 
   // REST API queries

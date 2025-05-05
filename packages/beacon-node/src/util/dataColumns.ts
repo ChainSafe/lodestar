@@ -139,8 +139,19 @@ export function getValidatorsCustodyRequirement(
     return total + state.epochCtx.effectiveBalanceIncrements[validatorIndex] * EFFECTIVE_BALANCE_INCREMENT;
   }, 0);
 
-  const count = Math.floor(totalNodeEffectiveBalance / config.BALANCE_PER_ADDITIONAL_CUSTODY_GROUP);
-  return Math.min(Math.max(count, config.VALIDATOR_CUSTODY_REQUIREMENT), NUMBER_OF_CUSTODY_GROUPS);
+  // Must custody one group for every BALANCE_PER_ADDITIONAL_CUSTODY_GROUP of effective balance
+  let validatorsCustodyRequirement = Math.floor(
+    totalNodeEffectiveBalance / config.BALANCE_PER_ADDITIONAL_CUSTODY_GROUP
+  );
+
+  // Any node with at least 1 validator must custody at least VALIDATOR_CUSTODY_REQUIREMENT
+  validatorsCustodyRequirement = Math.max(validatorsCustodyRequirement, config.VALIDATOR_CUSTODY_REQUIREMENT);
+
+  // Cannot custody more than NUMBER_OF_CUSTODY_GROUPS
+  validatorsCustodyRequirement = Math.min(validatorsCustodyRequirement, NUMBER_OF_CUSTODY_GROUPS);
+
+  // Validators custody requirement must be at least configured node custody requirement
+  return Math.max(validatorsCustodyRequirement, config.NODE_CUSTODY_REQUIREMENT);
 }
 
 /**

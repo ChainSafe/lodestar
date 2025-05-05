@@ -60,12 +60,22 @@ export async function archiveBlocks(
     });
 
     if (finalizedPostDeneb) {
-      const migratedEntries = await migrateBlobSidecarsFromHotToColdDb(config, db, finalizedCanonicalBlockRoots);
+      const migratedEntries = await migrateBlobSidecarsFromHotToColdDb(
+        config,
+        db,
+        finalizedCanonicalBlockRoots,
+        currentEpoch
+      );
       logger.verbose("Migrated blobSidecars from hot DB to cold DB", {migratedEntries});
     }
 
     if (finalizedPostFulu) {
-      const migratedEntries = await migrateDataColumnSidecarsFromHotToColdDb(config, db, finalizedCanonicalBlockRoots);
+      const migratedEntries = await migrateDataColumnSidecarsFromHotToColdDb(
+        config,
+        db,
+        finalizedCanonicalBlockRoots,
+        currentEpoch
+      );
       logger.verbose("Migrated dataColumnSidecars from hot DB to cold DB", {migratedEntries});
     }
   }
@@ -198,7 +208,8 @@ async function migrateBlocksFromHotToColdDb(db: IBeaconDb, blocks: BlockRootSlot
 async function migrateBlobSidecarsFromHotToColdDb(
   config: ChainForkConfig,
   db: IBeaconDb,
-  blocks: BlockRootSlot[]
+  blocks: BlockRootSlot[],
+  currentEpoch: Epoch
 ): Promise<number> {
   let migratedWrappedBlobSidecars = 0;
   for (let i = 0; i < blocks.length; i += BLOB_SIDECAR_BATCH_SIZE) {
@@ -212,8 +223,15 @@ async function migrateBlobSidecarsFromHotToColdDb(
     const canonicalBlobSidecarsEntries: KeyValue<Slot, Uint8Array>[] = await Promise.all(
       canonicalBlocks
         .filter((block) => {
-          const blkSeq = config.getForkSeq(block.slot);
-          return blkSeq >= ForkSeq.deneb && blkSeq < ForkSeq.fulu;
+          const blockSlot = block.slot;
+          const blockEpoch = computeEpochAtSlot(blockSlot);
+          const forkSeq = config.getForkSeq(blockSlot);
+          return (
+            forkSeq >= ForkSeq.deneb &&
+            forkSeq < ForkSeq.fulu &&
+            // if block is out of ${config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS}, skip this step
+            blockEpoch >= currentEpoch - config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS
+          );
         })
         .map(async (block) => {
           const bytes = await db.blobSidecars.getBinary(block.root);
@@ -238,7 +256,8 @@ async function migrateBlobSidecarsFromHotToColdDb(
 async function migrateDataColumnSidecarsFromHotToColdDb(
   config: ChainForkConfig,
   db: IBeaconDb,
-  blocks: BlockRootSlot[]
+  blocks: BlockRootSlot[],
+  currentEpoch: Epoch
 ): Promise<number> {
   let migratedWrappedDataColumns = 0;
   for (let i = 0; i < blocks.length; i += BLOB_SIDECAR_BATCH_SIZE) {
@@ -251,7 +270,15 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
     // load Buffer instead of ssz deserialized to improve performance
     const canonicalDataColumnSidecarsEntries: KeyValue<Slot, Uint8Array>[] = await Promise.all(
       canonicalBlocks
-        .filter((block) => config.getForkSeq(block.slot) >= ForkSeq.fulu)
+        .filter((block) => {
+          const blockSlot = block.slot;
+          const blockEpoch = computeEpochAtSlot(blockSlot);
+          return (
+            config.getForkSeq(blockSlot) >= ForkSeq.fulu &&
+            // if block is out of ${config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS}, skip this step
+            blockEpoch >= currentEpoch - config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS
+          );
+        })
         .map(async (block) => {
           const bytes = await db.dataColumnSidecars.getBinary(block.root);
           if (!bytes) {
