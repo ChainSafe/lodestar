@@ -5,6 +5,7 @@ import {ensure0xPrefix} from "../../util/format.js";
 
 export type ChainArgs = {
   suggestedFeeRecipient: string;
+  serveHistoricalState?: boolean;
   "chain.blacklistedBlocks"?: string[];
   "chain.blsVerifyAllMultiThread"?: boolean;
   "chain.blsVerifyAllMainThread"?: boolean;
@@ -90,6 +91,14 @@ export const options: CliCommandOptions<ChainArgs> = {
     type: "boolean",
     defaultDescription: String(defaultOptions.chain.emitPayloadAttributes),
     description: "Flag to SSE emit execution `payloadAttributes` before every slot",
+    group: "chain",
+  },
+
+  serveHistoricalState: {
+    description:
+      "Enable regenerating and loading state to serve historical data. Fetching this data is expensive and may affect validator performance.",
+    type: "boolean",
+    default: defaultOptions.chain.serveHistoricalState,
     group: "chain",
   },
 

@@ -106,16 +106,18 @@ export class ArchiveStore {
       );
     }
 
-    this.historicalStateRegen = await HistoricalStateRegen.init({
-      opts: {
-        genesisTime: this.chain.clock.genesisTime,
-        dbLocation: this.opts.dbName,
-      },
-      config: this.chain.config,
-      metrics: this.metrics,
-      logger: this.logger,
-      signal: this.signal,
-    });
+    if (this.opts.serveHistoricalState) {
+      this.historicalStateRegen = await HistoricalStateRegen.init({
+        opts: {
+          genesisTime: this.chain.clock.genesisTime,
+          dbLocation: this.opts.dbName,
+        },
+        config: this.chain.config,
+        metrics: this.metrics,
+        logger: this.logger,
+        signal: this.signal,
+      });
+    }
   }
 
   async close(): Promise<void> {
