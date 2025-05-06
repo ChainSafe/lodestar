@@ -518,7 +518,6 @@ type BlockInputColumnsState =
   | {
       blockStatus: BlockStatus.HasBlock;
       daStatus: DAStatus.CompleteData;
-      custodyStatus: DAStatus;
       block: SignedBeaconBlock<ForkPostFulu>;
       source: SourceMeta;
       timeCompleteSec: number;
@@ -526,19 +525,16 @@ type BlockInputColumnsState =
   | {
       blockStatus: BlockStatus.HasBlock;
       daStatus: DAStatus.IncompleteData;
-      custodyStatus: DAStatus;
       block: SignedBeaconBlock<ForkPostFulu>;
       source: SourceMeta;
     }
   | {
       blockStatus: BlockStatus.MissingBlock;
       daStatus: DAStatus.CompleteData;
-      custodyStatus: DAStatus;
     }
   | {
       blockStatus: BlockStatus.MissingBlock;
       daStatus: DAStatus.IncompleteData;
-      custodyStatus: DAStatus;
     };
 /**
  * With columns, BlockInput has several states:
@@ -555,8 +551,6 @@ export class BlockInputColumns extends AbstractBlockInput<ForkPostFulu, fulu.Dat
   private columnsCache = new Map<ColumnIndex, ColumnWithSource>();
   private readonly custodyConfig: CustodyConfig;
 
-  private custodyPromise = createPromise<fulu.DataColumnSidecars>();
-
   constructor(init: BlockInputInit, state: BlockInputColumnsState, custodyConfig: CustodyConfig) {
     super(init);
     this.state = state;
@@ -570,12 +564,9 @@ export class BlockInputColumns extends AbstractBlockInput<ForkPostFulu, fulu.Dat
       props.daRequirement === DARequirement.OutOfRange || props.block.message.body.blobKzgCommitments.length === 0;
     const daStatus =
       completeData || props.custodyConfig.sampledColumns.length === 0 ? DAStatus.CompleteData : DAStatus.IncompleteData;
-    const custodyStatus =
-      completeData || props.custodyConfig.custodyColumns.length === 0 ? DAStatus.CompleteData : DAStatus.IncompleteData;
     const state = {
       blockStatus: BlockStatus.HasBlock,
       daStatus,
-      custodyStatus,
       block: props.block,
       source: props.source,
       timeCreated: props.source.seenTimestampSec,
@@ -595,21 +586,14 @@ export class BlockInputColumns extends AbstractBlockInput<ForkPostFulu, fulu.Dat
     if (daStatus === DAStatus.CompleteData) {
       blockInput.dataPromise.resolve([]);
     }
-    if (custodyStatus === DAStatus.CompleteData) {
-      blockInput.custodyPromise.resolve([]);
-    }
-
     return blockInput;
   }
 
   static createFromColumn(props: AddColumn & CreateBlockInputMeta & {custodyConfig: CustodyConfig}): BlockInputColumns {
     const daStatus = props.custodyConfig.sampledColumns.length === 0 ? DAStatus.CompleteData : DAStatus.IncompleteData;
-    const custodyStatus =
-      props.custodyConfig.custodyColumns.length === 0 ? DAStatus.CompleteData : DAStatus.IncompleteData;
     const state: BlockInputColumnsState = {
       blockStatus: BlockStatus.MissingBlock,
       daStatus,
-      custodyStatus,
     };
     const init: BlockInputInit = {
       daRequirement: DARequirement.Required,
@@ -622,9 +606,6 @@ export class BlockInputColumns extends AbstractBlockInput<ForkPostFulu, fulu.Dat
     const blockInput = new BlockInputColumns(init, state, props.custodyConfig);
     if (daStatus === DAStatus.CompleteData) {
       blockInput.dataPromise.resolve([]);
-    }
-    if (custodyStatus === DAStatus.CompleteData) {
-      blockInput.custodyPromise.resolve([]);
     }
     return blockInput;
   }
@@ -676,15 +657,10 @@ export class BlockInputColumns extends AbstractBlockInput<ForkPostFulu, fulu.Dat
       props.block.message.body.blobKzgCommitments.length === 0 || this.state.daStatus === DAStatus.CompleteData
         ? DAStatus.CompleteData
         : DAStatus.IncompleteData;
-    const custodyStatus =
-      props.block.message.body.blobKzgCommitments.length === 0 || this.state.custodyStatus === DAStatus.CompleteData
-        ? DAStatus.CompleteData
-        : DAStatus.IncompleteData;
 
     this.state = {
       ...this.state,
       daStatus,
-      custodyStatus,
       blockStatus: BlockStatus.HasBlock,
       block: props.block,
       source: props.source,
@@ -733,34 +709,14 @@ export class BlockInputColumns extends AbstractBlockInput<ForkPostFulu, fulu.Dat
       sampledComplete = true;
     }
 
-    let custodyComplete = this.state.custodyStatus === DAStatus.CompleteData;
-    let custodyColumns: fulu.DataColumnSidecars | null = null;
-    // biome-ignore lint/suspicious/noConfusingLabels: <explanation>
-    maybeCustodyComplete: if (!custodyComplete) {
-      custodyColumns = [];
-      for (const index of this.custodyConfig.custodyColumns) {
-        const column = this.columnsCache.get(index);
-        if (column) {
-          custodyColumns.push(column.columnSidecar);
-        } else {
-          break maybeCustodyComplete;
-        }
-      }
-      custodyComplete = true;
-    }
-
     this.state = {
       ...this.state,
       daStatus: sampledComplete ? DAStatus.CompleteData : this.state.daStatus,
-      custodyStatus: custodyComplete ? DAStatus.CompleteData : this.state.custodyStatus,
       timeCompleteSec: sampledComplete ? seenTimestampSec : undefined,
     } as BlockInputColumnsState;
 
     if (sampledComplete && sampledColumns !== null) {
       this.dataPromise.resolve(sampledColumns);
-    }
-    if (custodyComplete && custodyColumns !== null) {
-      this.custodyPromise.resolve(custodyColumns);
     }
   }
 
@@ -806,21 +762,6 @@ export class BlockInputColumns extends AbstractBlockInput<ForkPostFulu, fulu.Dat
     const needed: ColumnMeta[] = [];
     const blockRoot = fromHex(this.blockRootHex);
     for (const index of this.custodyConfig.sampledColumns) {
-      if (!this.columnsCache.has(index)) {
-        needed.push({index, blockRoot});
-      }
-    }
-    return needed;
-  }
-
-  getMissingCustodyColumnMeta(): ColumnMeta[] {
-    if (this.state.custodyStatus === DAStatus.CompleteData) {
-      return [];
-    }
-
-    const needed: ColumnMeta[] = [];
-    const blockRoot = fromHex(this.blockRootHex);
-    for (const index of this.custodyConfig.custodyColumns) {
       if (!this.columnsCache.has(index)) {
         needed.push({index, blockRoot});
       }
