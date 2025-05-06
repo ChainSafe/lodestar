@@ -92,12 +92,15 @@ export async function getNetworkForTest(
       maxPeers: 10,
       targetPeers: 1,
       bootMultiaddrs: [],
-      localMultiaddrs: opts?.opts?.localMultiaddrs ?? ["/ip4/0.0.0.0/tcp/0"],
+      localMultiaddrs: ["/ip4/0.0.0.0/tcp/0"],
       discv5FirstQueryDelayMs: 0,
       discv5: null,
       skipParamsLog: true,
       // Disable rate limiting
       rateLimitMultiplier: 0,
+      // Increase of following value is just to circumvent the following error in e2e tests
+      // > libp2p:mplex rate limit hit when receiving messages
+      disconnectThreshold: 255,
       ...opts.opts,
     },
     logger,
