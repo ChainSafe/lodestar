@@ -1,36 +1,13 @@
 import {ForkName} from "@lodestar/params";
 import {ColumnIndex, RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
 
+// TODO(peerDAS): This needs to be updated to the actual `CustodyConfig` object
 export type CustodyConfig = {
   custodyColumns: ColumnIndex[];
   custodyColumnsIndex: Uint8Array;
   custodyColumnsLen: number;
   sampledColumns: ColumnIndex[];
 };
-
-/** Whether a block has been seen and validated for a given BlockInput */
-export enum BlockStatus {
-  /** block has not been seen */
-  MissingBlock,
-  /** block has been seen and validated */
-  HasBlock,
-}
-
-/** Whether DA is required or not for a given BlockInput */
-export enum DARequirement {
-  /** Note: pre-DA, DA is assumed "required" even as no actual DA work is required */
-  Required = "required",
-  /* validator activities can't be performed on out of range data */
-  OutOfRange = "out_of_range",
-}
-
-/** The status of DA for a given BlockInput */
-export enum DAStatus {
-  /** not all DA data is present */
-  IncompleteData = "incomplete_data",
-  /** all DA data is present */
-  CompleteData = "complete_data",
-}
 
 export enum DAType {
   PreData = "pre-data",
@@ -91,13 +68,13 @@ export type BlockHeaderMeta = {
 };
 
 export type CreateBlockInputMeta = {
-  daRequirement: DARequirement;
+  daOutOfRange: boolean;
   forkName: ForkName;
   blockRootHex: string;
 };
 
 export type BlockInputInit = BlockHeaderMeta & {
-  daRequirement: DARequirement;
+  daOutOfRange: boolean;
   timeCreated: number;
 };
 
@@ -131,7 +108,9 @@ export type ColumnMeta = {
 export interface IBlockInput<F extends ForkName = ForkName, TData extends DAData = DAData> {
   type: DAType;
 
-  daRequirement: DARequirement;
+  /** validator activities can't be performed on out of range data */
+  daOutOfRange: boolean;
+
   timeCreated: number;
   // block header metadata
   forkName: ForkName;
@@ -145,21 +124,22 @@ export interface IBlockInput<F extends ForkName = ForkName, TData extends DAData
   getBlock(): SignedBeaconBlock<F>;
   getBlockSource(): SourceMeta;
 
-  /** Whether all DA data has been seen and validated. If true, `getData` is guaranteed not throw */
-  hasData(): boolean;
+  /** Whether all expected DA data has been seen and validated. */
+  hasAllData(): boolean;
 
   /**
    * Whether the block and all DA data retrieved.
    * If true, `getBlock` is guaranteed to not throw,
    * and `getDAStatus` is guaranteed to be DAStatus.Complete
    */
-  hasBlockAndData(): boolean;
+  hasBlockAndAllData(): boolean;
 
   getLogMeta(): LogMetaBasic;
-  /** Only safe to call when `hasBlockAndData` is true */
+
+  /** Only safe to call when `hasBlockAndAllData` is true */
   getTimeComplete(): number;
 
   waitForBlock(timeout: number, signal?: AbortSignal): Promise<SignedBeaconBlock<F>>;
-  waitForData(timeout: number, signal?: AbortSignal): Promise<TData>;
-  waitForBlockAndData(timeout: number, signal?: AbortSignal): Promise<this>;
+  waitForAllData(timeout: number, signal?: AbortSignal): Promise<TData>;
+  waitForBlockAndAllData(timeout: number, signal?: AbortSignal): Promise<this>;
 }

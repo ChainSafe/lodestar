@@ -11,16 +11,12 @@ import {
   AddColumn,
   BlobMeta,
   BlobWithSource,
-  BlockHeaderMeta,
   BlockInputInit,
-  BlockStatus,
   ColumnMeta,
   ColumnWithSource,
   CreateBlockInputMeta,
   CustodyConfig,
   DAData,
-  DARequirement,
-  DAStatus,
   DAType,
   IBlockInput,
   LogMetaBasic,
@@ -48,22 +44,22 @@ export function createPromise<T>(): PromiseParts<T> {
 
 type BlockInputState<F extends ForkName> =
   | {
-      blockStatus: BlockStatus.MissingBlock;
-      daStatus: DAStatus.IncompleteData;
+      hasBlock: false;
+      hasAllData: false;
     }
   | {
-      blockStatus: BlockStatus.MissingBlock;
-      daStatus: DAStatus.CompleteData;
+      hasBlock: false;
+      hasAllData: true;
     }
   | {
-      blockStatus: BlockStatus.HasBlock;
-      daStatus: DAStatus.IncompleteData;
+      hasBlock: true;
+      hasAllData: false;
       block: SignedBeaconBlock<F>;
       source: SourceMeta;
     }
   | {
-      blockStatus: BlockStatus.HasBlock;
-      daStatus: DAStatus.CompleteData;
+      hasBlock: true;
+      hasAllData: true;
       block: SignedBeaconBlock<F>;
       source: SourceMeta;
       timeCompleteSec: number;
@@ -73,7 +69,7 @@ abstract class AbstractBlockInput<F extends ForkName = ForkName, TData extends D
   implements IBlockInput<F, TData>
 {
   abstract type: DAType;
-  daRequirement: DARequirement;
+  daOutOfRange: boolean;
   timeCreated: number;
 
   forkName: ForkName;
@@ -87,7 +83,7 @@ abstract class AbstractBlockInput<F extends ForkName = ForkName, TData extends D
   protected dataPromise = createPromise<TData>();
 
   constructor(init: BlockInputInit) {
-    this.daRequirement = init.daRequirement;
+    this.daOutOfRange = init.daOutOfRange;
     this.timeCreated = init.timeCreated;
     this.forkName = init.forkName;
     this.slot = init.slot;
@@ -98,11 +94,11 @@ abstract class AbstractBlockInput<F extends ForkName = ForkName, TData extends D
   abstract addBlock(props: AddBlock<F>): void;
 
   hasBlock(): boolean {
-    return this.state.blockStatus === BlockStatus.HasBlock;
+    return this.state.hasBlock;
   }
 
   getBlock(): SignedBeaconBlock<F> {
-    if (this.state.blockStatus !== BlockStatus.HasBlock) {
+    if (!this.state.hasBlock) {
       throw new BlockInputError(
         {
           code: BlockInputErrorCode.MISSING_BLOCK,
@@ -115,7 +111,7 @@ abstract class AbstractBlockInput<F extends ForkName = ForkName, TData extends D
   }
 
   getBlockSource(): SourceMeta {
-    if (this.state.blockStatus !== BlockStatus.HasBlock) {
+    if (!this.state.hasBlock) {
       throw new BlockInputError(
         {
           code: BlockInputErrorCode.MISSING_BLOCK,
@@ -127,12 +123,12 @@ abstract class AbstractBlockInput<F extends ForkName = ForkName, TData extends D
     return this.state.source;
   }
 
-  hasData(): boolean {
-    return this.state.daStatus === DAStatus.CompleteData;
+  hasAllData(): boolean {
+    return this.state.hasAllData;
   }
 
-  hasBlockAndData(): boolean {
-    return this.state.blockStatus === BlockStatus.HasBlock && this.state.daStatus === DAStatus.CompleteData;
+  hasBlockAndAllData(): boolean {
+    return this.state.hasBlock && this.state.hasAllData;
   }
 
   getLogMeta(): LogMetaBasic {
@@ -143,7 +139,7 @@ abstract class AbstractBlockInput<F extends ForkName = ForkName, TData extends D
   }
 
   getTimeComplete(): number {
-    if (this.state.blockStatus !== BlockStatus.HasBlock || this.state.daStatus !== DAStatus.CompleteData) {
+    if (!this.state.hasBlock || !this.state.hasAllData) {
       throw new BlockInputError(
         {
           code: BlockInputErrorCode.MISSING_TIME_COMPLETE,
@@ -156,17 +152,17 @@ abstract class AbstractBlockInput<F extends ForkName = ForkName, TData extends D
   }
 
   waitForBlock(timeout: number, signal?: AbortSignal): Promise<SignedBeaconBlock<F>> {
-    if (this.state.blockStatus === BlockStatus.MissingBlock) {
+    if (!this.state.hasBlock) {
       return withTimeout(() => this.blockPromise.promise, timeout, signal);
     }
     return Promise.resolve(this.state.block);
   }
-  waitForData(timeout: number, signal?: AbortSignal): Promise<TData> {
+  waitForAllData(timeout: number, signal?: AbortSignal): Promise<TData> {
     return withTimeout(() => this.dataPromise.promise, timeout, signal);
   }
 
-  async waitForBlockAndData(timeout: number, signal?: AbortSignal): Promise<this> {
-    if (this.state.blockStatus === BlockStatus.MissingBlock || this.state.daStatus === DAStatus.IncompleteData) {
+  async waitForBlockAndAllData(timeout: number, signal?: AbortSignal): Promise<this> {
+    if (!this.state.hasBlock || !this.state.hasAllData) {
       await withTimeout(() => Promise.all([this.blockPromise.promise, this.dataPromise.promise]), timeout, signal);
     }
     return this;
@@ -176,8 +172,8 @@ abstract class AbstractBlockInput<F extends ForkName = ForkName, TData extends D
 // Pre-DA
 
 type BlockInputPreDataState = {
-  blockStatus: BlockStatus.HasBlock;
-  daStatus: DAStatus.CompleteData;
+  hasBlock: true;
+  hasAllData: true;
   block: SignedBeaconBlock<ForkPreDeneb>;
   source: SourceMeta;
   timeCompleteSec: number;
@@ -199,7 +195,7 @@ export class BlockInputPreData extends AbstractBlockInput<ForkPreDeneb, null> {
 
   static createFromBlock(props: AddBlock & CreateBlockInputMeta): BlockInputPreData {
     const init: BlockInputInit = {
-      daRequirement: props.daRequirement,
+      daOutOfRange: props.daOutOfRange,
       timeCreated: props.source.seenTimestampSec,
       forkName: props.forkName,
       slot: props.block.message.slot,
@@ -207,8 +203,8 @@ export class BlockInputPreData extends AbstractBlockInput<ForkPreDeneb, null> {
       parentRootHex: toHex(props.block.message.parentRoot),
     };
     const state: BlockInputPreDataState = {
-      blockStatus: BlockStatus.HasBlock,
-      daStatus: DAStatus.CompleteData,
+      hasBlock: true,
+      hasAllData: true,
       block: props.block,
       source: props.source,
       timeCompleteSec: props.source.seenTimestampSec,
@@ -233,23 +229,23 @@ export type ForkBlobs = ForkName.deneb | ForkName.electra;
 
 type BlockInputBlobsState =
   | {
-      blockStatus: BlockStatus.HasBlock;
-      daStatus: DAStatus.CompleteData;
+      hasBlock: true;
+      hasAllData: true;
       versionHashes: VersionedHashes;
       block: SignedBeaconBlock<ForkBlobs>;
       source: SourceMeta;
       timeCompleteSec: number;
     }
   | {
-      blockStatus: BlockStatus.HasBlock;
-      daStatus: DAStatus.IncompleteData;
+      hasBlock: true;
+      hasAllData: false;
       versionHashes: VersionedHashes;
       block: SignedBeaconBlock<ForkBlobs>;
       source: SourceMeta;
     }
   | {
-      blockStatus: BlockStatus.MissingBlock;
-      daStatus: DAStatus.IncompleteData;
+      hasBlock: false;
+      hasAllData: false;
     };
 
 /**
@@ -270,19 +266,18 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobs, deneb.BlobSid
   }
 
   static createFromBlock(props: AddBlock<ForkBlobs> & CreateBlockInputMeta): BlockInputBlobs {
-    const completeData =
-      props.daRequirement === DARequirement.OutOfRange || props.block.message.body.blobKzgCommitments.length === 0;
+    const hasAllData = props.daOutOfRange || props.block.message.body.blobKzgCommitments.length === 0;
 
     const state = {
-      blockStatus: BlockStatus.HasBlock,
-      daStatus: completeData ? DAStatus.CompleteData : DAStatus.IncompleteData,
+      hasBlock: true,
+      hasAllData,
       versionHashes: getVersionHashes(props.block),
       block: props.block,
       source: props.source,
-      timeCompleteSec: completeData ? props.source.seenTimestampSec : undefined,
+      timeCompleteSec: hasAllData ? props.source.seenTimestampSec : undefined,
     } as BlockInputBlobsState;
     const init: BlockInputInit = {
-      daRequirement: props.daRequirement,
+      daOutOfRange: props.daOutOfRange,
       timeCreated: props.source.seenTimestampSec,
       forkName: props.forkName,
       slot: props.block.message.slot,
@@ -291,7 +286,7 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobs, deneb.BlobSid
     };
     const blockInput = new BlockInputBlobs(init, state);
     blockInput.blockPromise.resolve(props.block);
-    if (completeData) {
+    if (hasAllData) {
       blockInput.dataPromise.resolve([]);
     }
     return blockInput;
@@ -299,11 +294,11 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobs, deneb.BlobSid
 
   static createFromBlob(props: AddBlob & CreateBlockInputMeta): BlockInputBlobs {
     const state: BlockInputBlobsState = {
-      blockStatus: BlockStatus.MissingBlock,
-      daStatus: DAStatus.IncompleteData,
+      hasBlock: false,
+      hasAllData: false,
     };
     const init: BlockInputInit = {
-      daRequirement: props.daRequirement,
+      daOutOfRange: props.daOutOfRange,
       timeCreated: props.seenTimestampSec,
       forkName: props.forkName,
       blockRootHex: props.blockRootHex,
@@ -324,16 +319,13 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobs, deneb.BlobSid
     return {
       blockRoot: prettyBytes(this.blockRootHex),
       slot: this.slot,
-      expectedBlobs:
-        this.state.blockStatus === BlockStatus.HasBlock
-          ? this.state.block.message.body.blobKzgCommitments.length
-          : "unknown",
+      expectedBlobs: this.state.hasBlock ? this.state.block.message.body.blobKzgCommitments.length : "unknown",
       receivedBlobs: this.blobsCache.size,
     };
   }
 
   addBlock({blockRootHex, block, source}: AddBlock<ForkBlobs>): void {
-    if (this.state.blockStatus !== BlockStatus.HasBlock) {
+    if (!this.state.hasBlock) {
       throw new BlockInputError(
         {
           code: BlockInputErrorCode.INVALID_CONSTRUCTION,
@@ -365,21 +357,18 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobs, deneb.BlobSid
       }
     }
 
-    const daStatus =
-      this.blobsCache.size === block.message.body.blobKzgCommitments.length
-        ? DAStatus.CompleteData
-        : DAStatus.IncompleteData;
+    const hasAllData = this.blobsCache.size === block.message.body.blobKzgCommitments.length;
 
     this.state = {
       ...this.state,
-      daStatus,
+      hasAllData,
       block,
       versionHashes: getVersionHashes(block),
       source,
-      timeCompleteSec: daStatus === DAStatus.CompleteData ? source.seenTimestampSec : undefined,
+      timeCompleteSec: hasAllData ? source.seenTimestampSec : undefined,
     } as BlockInputBlobsState;
     this.blockPromise.resolve(block);
-    if (daStatus === DAStatus.CompleteData) {
+    if (hasAllData) {
       this.dataPromise.resolve(this.getBlobs());
     }
   }
@@ -389,7 +378,7 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobs, deneb.BlobSid
   }
 
   addBlob({blockRootHex, blobSidecar, source, peerIdStr, seenTimestampSec}: AddBlob): void {
-    if (this.state.daStatus === DAStatus.CompleteData) {
+    if (this.state.hasAllData) {
       throw new BlockInputError(
         {
           code: BlockInputErrorCode.INVALID_CONSTRUCTION,
@@ -413,7 +402,7 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobs, deneb.BlobSid
       );
     }
 
-    if (this.state.blockStatus === BlockStatus.HasBlock) {
+    if (this.state.hasBlock) {
       assertBlockAndBlobArePaired(this.blockRootHex, this.state.block, blobSidecar);
     }
 
@@ -424,13 +413,10 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobs, deneb.BlobSid
 
     this.blobsCache.set(blobSidecar.index, {blobSidecar, source, seenTimestampSec, peerIdStr});
 
-    if (
-      this.state.blockStatus === BlockStatus.HasBlock &&
-      this.blobsCache.size === this.state.block.message.body.blobKzgCommitments.length
-    ) {
+    if (this.state.hasBlock && this.blobsCache.size === this.state.block.message.body.blobKzgCommitments.length) {
       this.state = {
         ...this.state,
-        daStatus: DAStatus.CompleteData,
+        hasAllData: true,
         timeCompleteSec: seenTimestampSec,
       };
       this.dataPromise.resolve([...this.blobsCache.values()].map(({blobSidecar}) => blobSidecar));
@@ -438,7 +424,7 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobs, deneb.BlobSid
   }
 
   getMissingBlobMeta(): BlobMeta[] {
-    if (this.state.blockStatus === BlockStatus.MissingBlock) {
+    if (!this.state.hasBlock) {
       throw new BlockInputError(
         {
           code: BlockInputErrorCode.INCOMPLETE_DATA,
@@ -447,7 +433,7 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobs, deneb.BlobSid
         "Cannot get missing blobs. Block is unknown"
       );
     }
-    if (this.state.daStatus === DAStatus.CompleteData) {
+    if (this.state.hasAllData) {
       return [];
     }
 
@@ -466,7 +452,7 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobs, deneb.BlobSid
   }
 
   getAllBlobsWithSource(): BlobWithSource[] {
-    if (this.state.daStatus !== DAStatus.CompleteData) {
+    if (!this.state.hasAllData) {
       throw new BlockInputError(
         {
           code: BlockInputErrorCode.INCOMPLETE_DATA,
@@ -516,25 +502,25 @@ function assertBlockAndBlobArePaired(
 
 type BlockInputColumnsState =
   | {
-      blockStatus: BlockStatus.HasBlock;
-      daStatus: DAStatus.CompleteData;
+      hasBlock: true;
+      hasAllData: true;
       block: SignedBeaconBlock<ForkPostFulu>;
       source: SourceMeta;
       timeCompleteSec: number;
     }
   | {
-      blockStatus: BlockStatus.HasBlock;
-      daStatus: DAStatus.IncompleteData;
+      hasBlock: true;
+      hasAllData: false;
       block: SignedBeaconBlock<ForkPostFulu>;
       source: SourceMeta;
     }
   | {
-      blockStatus: BlockStatus.MissingBlock;
-      daStatus: DAStatus.CompleteData;
+      hasBlock: false;
+      hasAllData: true;
     }
   | {
-      blockStatus: BlockStatus.MissingBlock;
-      daStatus: DAStatus.IncompleteData;
+      hasBlock: false;
+      hasAllData: false;
     };
 /**
  * With columns, BlockInput has several states:
@@ -560,20 +546,20 @@ export class BlockInputColumns extends AbstractBlockInput<ForkPostFulu, fulu.Dat
   static createFromBlock(
     props: AddBlock<ForkPostFulu> & CreateBlockInputMeta & {custodyConfig: CustodyConfig}
   ): BlockInputColumns {
-    const completeData =
-      props.daRequirement === DARequirement.OutOfRange || props.block.message.body.blobKzgCommitments.length === 0;
-    const daStatus =
-      completeData || props.custodyConfig.sampledColumns.length === 0 ? DAStatus.CompleteData : DAStatus.IncompleteData;
+    const hasAllData =
+      props.daOutOfRange ||
+      props.block.message.body.blobKzgCommitments.length === 0 ||
+      props.custodyConfig.sampledColumns.length === 0;
     const state = {
-      blockStatus: BlockStatus.HasBlock,
-      daStatus,
+      hasBlock: true,
+      hasAllData,
       block: props.block,
       source: props.source,
       timeCreated: props.source.seenTimestampSec,
-      timeCompleteSec: completeData ? props.source.seenTimestampSec : undefined,
+      timeCompleteSec: hasAllData ? props.source.seenTimestampSec : undefined,
     } as BlockInputColumnsState;
     const init: BlockInputInit = {
-      daRequirement: props.daRequirement,
+      daOutOfRange: props.daOutOfRange,
       timeCreated: props.source.seenTimestampSec,
       forkName: props.forkName,
       blockRootHex: props.blockRootHex,
@@ -583,20 +569,20 @@ export class BlockInputColumns extends AbstractBlockInput<ForkPostFulu, fulu.Dat
     const blockInput = new BlockInputColumns(init, state, props.custodyConfig);
 
     blockInput.blockPromise.resolve(props.block);
-    if (daStatus === DAStatus.CompleteData) {
+    if (hasAllData) {
       blockInput.dataPromise.resolve([]);
     }
     return blockInput;
   }
 
   static createFromColumn(props: AddColumn & CreateBlockInputMeta & {custodyConfig: CustodyConfig}): BlockInputColumns {
-    const daStatus = props.custodyConfig.sampledColumns.length === 0 ? DAStatus.CompleteData : DAStatus.IncompleteData;
+    const hasAllData = props.custodyConfig.sampledColumns.length === 0;
     const state: BlockInputColumnsState = {
-      blockStatus: BlockStatus.MissingBlock,
-      daStatus,
+      hasBlock: false,
+      hasAllData,
     };
     const init: BlockInputInit = {
-      daRequirement: DARequirement.Required,
+      daOutOfRange: false,
       timeCreated: props.seenTimestampSec,
       forkName: props.forkName,
       blockRootHex: props.blockRootHex,
@@ -604,7 +590,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkPostFulu, fulu.Dat
       slot: props.columnSidecar.signedBlockHeader.message.slot,
     };
     const blockInput = new BlockInputColumns(init, state, props.custodyConfig);
-    if (daStatus === DAStatus.CompleteData) {
+    if (hasAllData) {
       blockInput.dataPromise.resolve([]);
     }
     return blockInput;
@@ -615,7 +601,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkPostFulu, fulu.Dat
       blockRoot: prettyBytes(this.blockRootHex),
       slot: this.slot,
       expectedColumns:
-        this.state.blockStatus === BlockStatus.HasBlock && this.state.block.message.body.blobKzgCommitments.length === 0
+        this.state.hasBlock && this.state.block.message.body.blobKzgCommitments.length === 0
           ? 0
           : this.custodyConfig.sampledColumns.length,
       receivedColumns: this.getSampledColumns().length,
@@ -623,7 +609,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkPostFulu, fulu.Dat
   }
 
   addBlock(props: AddBlock<ForkPostFulu>): void {
-    if (this.state.blockStatus === BlockStatus.HasBlock) {
+    if (this.state.hasBlock) {
       throw new BlockInputError(
         {
           code: BlockInputErrorCode.INVALID_CONSTRUCTION,
@@ -653,18 +639,15 @@ export class BlockInputColumns extends AbstractBlockInput<ForkPostFulu, fulu.Dat
       }
     }
 
-    const daStatus =
-      props.block.message.body.blobKzgCommitments.length === 0 || this.state.daStatus === DAStatus.CompleteData
-        ? DAStatus.CompleteData
-        : DAStatus.IncompleteData;
+    const hasAllData = props.block.message.body.blobKzgCommitments.length === 0 || this.state.hasAllData;
 
     this.state = {
       ...this.state,
-      daStatus,
-      blockStatus: BlockStatus.HasBlock,
+      hasBlock: true,
+      hasAllData,
       block: props.block,
       source: props.source,
-      timeCompleteSec: daStatus === DAStatus.CompleteData ? props.source.seenTimestampSec : undefined,
+      timeCompleteSec: hasAllData ? props.source.seenTimestampSec : undefined,
     } as BlockInputColumnsState;
 
     this.blockPromise.resolve(props.block);
@@ -684,7 +667,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkPostFulu, fulu.Dat
       );
     }
 
-    if (this.state.blockStatus === BlockStatus.HasBlock) {
+    if (this.state.hasBlock) {
       assertBlockAndColumnArePaired(this.blockRootHex, this.state.block, columnSidecar);
     }
 
@@ -693,10 +676,10 @@ export class BlockInputColumns extends AbstractBlockInput<ForkPostFulu, fulu.Dat
     // check if we have freshly completed sampled or custody columns
     // eg: sampledComplete == true && sampledColumns !== null
 
-    let sampledComplete = this.state.daStatus === DAStatus.CompleteData;
+    let hasAllData = this.state.hasAllData;
     let sampledColumns: fulu.DataColumnSidecars | null = null;
     // biome-ignore lint/suspicious/noConfusingLabels: <explanation>
-    maybeSampleComplete: if (!sampledComplete) {
+    maybeSampleComplete: if (!hasAllData) {
       sampledColumns = [];
       for (const index of this.custodyConfig.sampledColumns) {
         const column = this.columnsCache.get(index);
@@ -706,16 +689,16 @@ export class BlockInputColumns extends AbstractBlockInput<ForkPostFulu, fulu.Dat
           break maybeSampleComplete;
         }
       }
-      sampledComplete = true;
+      hasAllData = true;
     }
 
     this.state = {
       ...this.state,
-      daStatus: sampledComplete ? DAStatus.CompleteData : this.state.daStatus,
-      timeCompleteSec: sampledComplete ? seenTimestampSec : undefined,
+      hasAllData: hasAllData || this.state.hasAllData,
+      timeCompleteSec: hasAllData ? seenTimestampSec : undefined,
     } as BlockInputColumnsState;
 
-    if (sampledComplete && sampledColumns !== null) {
+    if (hasAllData && sampledColumns !== null) {
       this.dataPromise.resolve(sampledColumns);
     }
   }
@@ -755,7 +738,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkPostFulu, fulu.Dat
   }
 
   getMissingSampledColumnMeta(): ColumnMeta[] {
-    if (this.state.daStatus === DAStatus.CompleteData) {
+    if (this.state.hasAllData) {
       return [];
     }
 
