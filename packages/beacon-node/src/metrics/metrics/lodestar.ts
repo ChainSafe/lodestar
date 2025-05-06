@@ -1573,6 +1573,28 @@ export function createLodestarMetrics(
           labelNames: ["reason"],
         }),
       },
+      blockInput: {
+        blockInputCount: register.gauge({
+          name: "lodestar_seen_block_input_cache_size",
+          help: "Number of cached BlockInputs",
+        }),
+        duplicateBlockCount: register.gauge({
+          name: "lodestar_seen_block_input_cache_duplicate_block_count",
+          help: "Total number of duplicate blocks that pass validation and attempt to be cached but are known",
+        }),
+        duplicateBlobCount: register.gauge({
+          name: "lodestar_seen_block_input_cache_duplicate_blob_count",
+          help: "Total number of duplicate blobs that pass validation and attempt to be cached but are known",
+        }),
+        createdByBlock: register.gauge({
+          name: "lodestar_seen_block_input_cache_items_created_by_block",
+          help: "Number of BlockInputs created via a block being seen first",
+        }),
+        createdByBlob: register.gauge({
+          name: "lodestar_seen_block_input_cache_items_created_by_blob",
+          help: "Number of BlockInputs created via a blob being seen first",
+        }),
+      },
     },
 
     regenFnCallTotal: register.gauge<{entrypoint: RegenFnName; caller: RegenCaller}>({

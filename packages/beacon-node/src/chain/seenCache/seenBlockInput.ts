@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, isForkPostDeneb} from "@lodestar/params";
+import {ForkName, ForkPostDeneb, isForkPostDeneb} from "@lodestar/params";
 import {RootHex, SignedBeaconBlock, Slot} from "@lodestar/types";
 import {LodestarError, Logger, toHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
@@ -12,9 +12,12 @@ import {
   BlockInputPreData,
   BlockInputType,
   DataAvailabilityStatus,
+  LogMetaBasic,
   getDataAvailabilityStatus,
   isBlockInputBlobs,
 } from "../blocks/blockInput/index.js";
+import {BlobSidecarErrorCode, BlobSidecarGossipError} from "../errors/blobSidecarError.js";
+import {GossipAction} from "../errors/gossipValidation.js";
 
 export type SeenBlockInputCacheModules = {
   config: ChainForkConfig;
@@ -24,13 +27,17 @@ export type SeenBlockInputCacheModules = {
   logger?: Logger;
 };
 
+export type GetByBlobOptions = {
+  throwGossipErrorIfAlreadyKnown?: boolean;
+};
+
 /**
  * Consumers that create BlockInputs or change types of old BlockInputs
  *
  * - gossipHandlers (block and blob)
  * - beaconBlocksMaybeBlobsByRange
  * - unavailableBeaconBlobsByRoot (beaconBlocksMaybeBlobsByRoot)
- * - publishBlock in the API
+ * - publishBlock in the beacon/blocks/index.ts API
  *   https://github.com/ChainSafe/lodestar/blob/unstable/packages/beacon-node/src/api/impl/beacon/blocks/index.ts#L62
  * - maybeValidateBlobs in verifyBlocksDataAvailability (is_data_available spec function)
  *   https://github.com/ChainSafe/lodestar/blob/unstable/packages/beacon-node/src/chain/blocks/verifyBlocksDataAvailability.ts#L111
@@ -48,6 +55,12 @@ export class SeenBlockInputCache {
     this.clock = clock;
     this.metrics = metrics;
     this.logger = logger;
+
+    if (metrics) {
+      metrics.seenCache.blockInput.blockInputCount.addCollect(() =>
+        metrics.seenCache.blockInput.blockInputCount.set(this.blockInputs.size)
+      );
+    }
   }
 
   hasBlock(rootHex: RootHex): boolean {
@@ -56,7 +69,6 @@ export class SeenBlockInputCache {
 
   getBlockInputByBlock({
     block,
-    blockRoot,
     seenTimestampSec,
     source,
     peerIdStr,
@@ -64,148 +76,106 @@ export class SeenBlockInputCache {
     AddBlockProps<SignedBeaconBlock>,
     "rootHex" | "forkName" | "dataAvailability"
   >): BlockInput {
-    const {rootHex, forkName, dataAvailability} = this.buildCommonProps(blockRoot, block.message.slot);
-
-    let blockInput = this.blockInputs.get(rootHex);
-    if (blockInput) {
-      if (!blockInput.hasBlock()) {
-        blockInput.addBlock({block, seenTimestampSec, source, peerIdStr});
-      } else {
-        // TODO: add a metric here
-      }
-      return blockInput;
-    }
-
-    if (!isForkPostDeneb()) {
-      blockInput = new BlockInputPreData({
-        block,
-        blockRoot,
-        dataAvailability,
-        forkName,
-        rootHex,
-        seenTimestampSec,
-        source,
-        peerIdStr,
-      });
-    }
-  }
-
-  getBlockInputByBlob({
-    blobSidecar,
-    blockRoot,
-    seenTimestampSec,
-    source,
-    peerIdStr,
-  }: Omit<AddBlobProps, "rootHex"> & {blockRoot: Uint8Array}): BlockInput {
-    const {rootHex, forkName, dataAvailability} = this.buildCommonProps(
-      blockRoot,
-      blobSidecar.signedBlockHeader.message.slot
-    );
+    const blockRoot = this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
+    const {rootHex, forkName} = this.buildCommonProps(blockRoot, block.message.slot);
 
     let blockInput = this.blockInputs.get(rootHex);
     if (!blockInput) {
+      if (!isForkPostDeneb(forkName)) {
+        blockInput = new BlockInputPreData({
+          config: this.config,
+          clock: this.clock,
+          block,
+          blockRoot,
+          rootHex,
+          seenTimestampSec,
+          source,
+          peerIdStr,
+        });
+      }
+      // else if (isForkPostFulu(forkName)) {
+      //   blockInput = new BlockInputColumns({})
+      // }
+      else {
+        blockInput = new BlockInputBlobs({
+          config: this.config,
+          clock: this.clock,
+          block: block as SignedBeaconBlock<ForkPostDeneb>,
+          blockRoot,
+          rootHex,
+          seenTimestampSec,
+          source,
+          peerIdStr,
+        });
+      }
+    }
+
+    if (!blockInput.hasBlock()) {
+      blockInput.addBlock({block, seenTimestampSec, source, peerIdStr});
+    } else {
+      this.logger?.debug("Attempt to cache block but is already cached on BlockInput", blockInput.getLogMeta());
+      this.metrics?.seenCache.blockInput.duplicateBlockCount.inc();
+    }
+
+    return blockInput;
+  }
+
+  getBlockInputByBlob(
+    {blobSidecar, seenTimestampSec, source, peerIdStr}: Omit<AddBlobProps, "rootHex"> & {blockRoot: Uint8Array},
+    opts: GetByBlobOptions = {}
+  ): BlockInput {
+    const blockRoot = this.config
+      .getForkTypes(blobSidecar.signedBlockHeader.message.slot)
+      .BeaconBlockHeader.hashTreeRoot(blobSidecar.signedBlockHeader.message);
+    const {rootHex} = this.buildCommonProps(blockRoot, blobSidecar.signedBlockHeader.message.slot);
+
+    let blockInput = this.blockInputs.get(rootHex);
+    if (!blockInput) {
+      // TODO(@matthewkeil): Need to update this to refactored BlockInput
       blockInput = new BlockInputBlobs({
+        config: this.config,
+        clock: this.clock,
         blobSidecar,
         blockRoot,
         rootHex,
-        dataAvailability,
-        forkName,
         seenTimestampSec,
         source,
         peerIdStr,
       });
+      this.metrics?.seenCache.blockInput.createdByBlob.inc();
       this.blockInputs.set(rootHex, blockInput);
-      return blockInput;
     }
 
     if (!isBlockInputBlobs(blockInput)) {
-      throw new BlockInputCacheError(
+      throw new SeenBlockInputCacheError(
         {
-          code: BlockInputCacheErrorCode.WRONG_BLOCK_INPUT_TYPE,
+          code: SeenBlockInputCacheErrorCode.WRONG_BLOCK_INPUT_TYPE,
           cachedType: blockInput.type,
           requestedType: BlockInputType.Blobs,
+          ...blockInput.getLogMeta(),
         },
-        `BlockInputType mismatch for blobIndex=${blobSidecar.index} slot=${blobSidecar.signedBlockHeader.message.slot} blockRoot=${rootHex}`
+        `BlockInputType mismatch adding blobIndex=${blobSidecar.index}`
       );
     }
 
     if (!blockInput.hasBlob(blobSidecar.index)) {
       blockInput.addBlob({blobSidecar, rootHex, seenTimestampSec, source, peerIdStr});
+    } else {
+      this.logger?.debug(
+        `Attempt to cache blob index #${blobSidecar.index} but is already cached on BlockInput`,
+        blockInput.getLogMeta()
+      );
+      this.metrics?.seenCache.blockInput.duplicateBlobCount.inc();
+      if (opts.throwGossipErrorIfAlreadyKnown) {
+        throw new BlobSidecarGossipError(GossipAction.IGNORE, {
+          code: BlobSidecarErrorCode.ALREADY_KNOWN,
+          root: rootHex,
+        });
+      }
     }
-    // else {
-    // TODO: not sure if this should throw here or maybe collect a metric. Saw a note about
-    //       handling this case but this is newly added
-    //
-    // TODO: add metrics here for duplicate blob
-    // }
 
     return blockInput;
   }
-
-  getBlockInputByColumn(): BlockInput {}
-
-  /**
-   * Removes block from BlockInput if it does not pass validation after gossip or reqresp checks.  If the blockInput does
-   * not yet have any data associated for that rootHex then the blockInput will be pruned from the cache.
-   */
-  removeBlockFromBlockInput(rootHex: RootHex): void {
-    const blockInput = this.blockInputs.get(rootHex);
-    if (!blockInput) {
-      return;
-    }
-    blockInput.removeBlock();
-    if (!blockInput.hasData()) {
-      this.blockInputs.delete(blockInput.rootHex);
-    }
-  }
-
-  /**
-   * Removes blob from BlockInput if it does not pass validation after gossip or reqresp checks.  If the blockInput does
-   * not yet have a block or any data associated for that rootHex then the blockInput will be pruned from the cache.
-   */
-  removeBlobsFromBlockInput(rootHex: RootHex, blobIndices: number[]): void {
-    const blockInput = this.blockInputs.get(rootHex);
-    if (!blockInput) {
-      return;
-    }
-    if (!isBlockInputBlobs(blockInput)) {
-      throw new SeenBlockInputCacheError({
-        code: SeenBlockInputCacheErrorCode.WRONG_BLOCK_INPUT_TYPE,
-        cachedType: blockInput.type,
-        requestedType: BlockInputType.Blobs,
-      });
-    }
-    for (const index of blobIndices) {
-      blockInput.removeBlob(index);
-    }
-    if (!(blockInput.hasData() && blockInput.hasBlock())) {
-      this.blockInputs.delete(blockInput.rootHex);
-    }
-  }
-
-  /**
-   * Removes blob from BlockInput if it does not pass validation after gossip or reqresp checks.  If the blockInput does
-   * not yet have a block or any data associated for that rootHex then the blockInput will be pruned from the cache.
-   */
-  // removeColumnsFromBlockInput(rootHex: RootHex, columnIndices: number[]): void {
-  //   const blockInput = this.blockInputs.get(rootHex);
-  //   if (!blockInput) {
-  //     return;
-  //   }
-  //   if (!isBlockInputColumns(blockInput)) {
-  //     throw new SeenBlockInputCacheError({
-  //       code: SeenBlockInputCacheErrorCode.WRONG_BLOCK_INPUT_TYPE,
-  //       cachedType: blockInput.type,
-  //       requestedType: BlockInputType.Columns,
-  //     });
-  //   }
-  //   for (const index of columnIndices) {
-  //     blockInput.removeColumn(index);
-  //   }
-  //   if (!(blockInput.hasData() && blockInput.hasBlock())) {
-  //     this.blockInputs.delete(blockInput.rootHex);
-  //   }
-  // }
 
   private buildCommonProps(
     blockRoot: Uint8Array,
@@ -229,11 +199,11 @@ enum SeenBlockInputCacheErrorCode {
 }
 
 type SeenBlockInputCacheErrorType =
-  | {
+  | (LogMetaBasic & {
       code: SeenBlockInputCacheErrorCode.WRONG_BLOCK_INPUT_TYPE;
       cachedType: BlockInputType;
       requestedType: BlockInputType;
-    }
+    })
   | {
       code: SeenBlockInputCacheErrorCode.SLOT_MISMATCH;
       blockInputSlot: Slot;
