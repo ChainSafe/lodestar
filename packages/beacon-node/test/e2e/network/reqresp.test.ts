@@ -57,11 +57,11 @@ function runTests({useWorker}: {useWorker: boolean}): void {
   ): Promise<[Network, Network, PeerIdStr, PeerIdStr]> {
     const [netA, closeA] = await getNetworkForTest(`reqresp-${useWorker ? "worker" : "main"}-A`, config, {
       getReqRespHandler,
-      opts: {...opts, useWorker},
+      opts: {...opts, useWorker, localMultiaddrs: ["/ip4/0.0.0.0/tcp/7771"]},
     });
     const [netB, closeB] = await getNetworkForTest(`reqresp-${useWorker ? "worker" : "main"}-B`, config, {
       getReqRespHandler,
-      opts: {...opts, useWorker},
+      opts: {...opts, useWorker, localMultiaddrs: ["/ip4/0.0.0.0/tcp/8881"]},
     });
 
     afterEachCallbacks.push(async () => {

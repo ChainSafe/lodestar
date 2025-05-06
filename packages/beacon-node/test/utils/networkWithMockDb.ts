@@ -89,10 +89,10 @@ export async function getNetworkForTest(
     privateKey: await generateKeyPair("secp256k1"),
     opts: {
       ...defaultNetworkOptions,
-      maxPeers: 1,
+      maxPeers: 10,
       targetPeers: 1,
       bootMultiaddrs: [],
-      localMultiaddrs: ["/ip4/127.0.0.1/tcp/0"],
+      localMultiaddrs: opts?.opts?.localMultiaddrs ?? ["/ip4/0.0.0.0/tcp/0"],
       discv5FirstQueryDelayMs: 0,
       discv5: null,
       skipParamsLog: true,
