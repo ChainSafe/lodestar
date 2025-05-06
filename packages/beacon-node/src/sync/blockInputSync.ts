@@ -51,6 +51,21 @@ function getLogMeta(
       };
 }
 
+/**
+ * Event sources for old UnknownBlock
+ *
+ * - publishBlock
+ * - gossipHandlers
+ * - searchUnknownSlotRoot
+ *    = produceSyncCommitteeContribution
+ *    = validateGossipFnRetryUnknownRoot
+ *        * submitPoolAttestationsV2
+ *        * publishAggregateAndProofsV2
+ *    = onPendingGossipsubMessage
+ *        * NetworkEvent.pendingGossipsubMessage
+ *            - onGossipsubMessage
+ */
+
 export class BlockInputSync {
   /**
    * block RootHex -> PendingBlock. To avoid finding same root at the same time

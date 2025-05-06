@@ -24,6 +24,18 @@ export type SeenBlockInputCacheModules = {
   logger?: Logger;
 };
 
+/**
+ * Consumers that create BlockInputs or change types of old BlockInputs
+ *
+ * - gossipHandlers (block and blob)
+ * - beaconBlocksMaybeBlobsByRange
+ * - unavailableBeaconBlobsByRoot (beaconBlocksMaybeBlobsByRoot)
+ * - publishBlock in the API
+ *   https://github.com/ChainSafe/lodestar/blob/unstable/packages/beacon-node/src/api/impl/beacon/blocks/index.ts#L62
+ * - maybeValidateBlobs in verifyBlocksDataAvailability (is_data_available spec function)
+ *   https://github.com/ChainSafe/lodestar/blob/unstable/packages/beacon-node/src/chain/blocks/verifyBlocksDataAvailability.ts#L111
+ */
+
 export class SeenBlockInputCache {
   private config: ChainForkConfig;
   private clock: IClock;
@@ -77,8 +89,6 @@ export class SeenBlockInputCache {
       });
     }
   }
-
-  getBlockInputByRootHex(_props: {rootHex: string}): BlockInput {}
 
   getBlockInputByBlob({
     blobSidecar,
