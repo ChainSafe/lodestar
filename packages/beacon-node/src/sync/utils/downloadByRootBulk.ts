@@ -279,9 +279,10 @@ export function cacheByRootResponses({
 }: {cache: SeenBlockInputCache; peerIdStr: PeerIdStr} & CacheByRootProps): Map<string, BlockInput> {
   const updated = new Map<string, BlockInput>();
   if (blockResponse) {
-    for (const {block} of blockResponse) {
+    for (const {block, blockRoot} of blockResponse) {
       const blockInput = cache.getBlockInputByBlock({
         block,
+        blockRoot,
         source: BlockInputSource.byRoot,
         seenTimestampSec: Date.now(),
         peerIdStr,
