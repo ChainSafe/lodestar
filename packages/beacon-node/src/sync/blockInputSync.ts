@@ -351,6 +351,9 @@ export class BlockInputSync {
           getLogMeta(pending)
         );
       } catch (err) {
+        // TODO(@matthewkeil): if block downloads but error happens in data the seenBlockInputCache will be updated to
+        //      include the block.  should we check for the block input in the cache and add it to pending so we dont
+        //      have to repull it if it was validly received?
         this.logger.debug(`Error downloadBlockInputByRoot in attempt number ${i}`, getLogMeta(pending), err as Error);
       }
     }
