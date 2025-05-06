@@ -214,8 +214,6 @@ export class Network implements INetwork {
   /** Destroy this instance. Can only be called once. */
   async close(): Promise<void> {
     if (this.closed) return;
-    // Used only for sleep() statements
-    this.controller.abort();
 
     this.events.off(NetworkEvent.peerConnected, this.onPeerConnected);
     this.events.off(NetworkEvent.peerDisconnected, this.onPeerDisconnected);
@@ -224,6 +222,9 @@ export class Network implements INetwork {
     this.chain.emitter.off(routes.events.EventType.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
     await this.core.close();
     this.logger.debug("network core closed");
+
+    // Used only for sleep() statements
+    this.controller.abort();
   }
 
   async scrapeMetrics(): Promise<string> {
