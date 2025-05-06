@@ -141,10 +141,7 @@ export class BlockInputSync {
   private onUnknownParent = (data: NetworkEventData[NetworkEvent.unknownParent]): void => {
     try {
       const {blockInput, source, peer} = data;
-      const parentBlockInput = this.chain.seenBlockInputCache.getBlockInputByRootHex({
-        rootHex: blockInput.getParentRootHex(),
-      });
-      this.addBlockInput(parentBlockInput, peer);
+      this.addUnknownBlockRoot(blockInput.getParentRootHex(), peer);
       this.addBlockInput(blockInput, peer);
       this.triggerUnknownBlockSearch();
       this.metrics?.blockInputSync.onUnknownParent.inc({source}, 2);
