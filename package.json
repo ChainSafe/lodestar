@@ -28,7 +28,6 @@
     "docs:lint": "prettier '**/*.md' --check",
     "docs:lint:fix": "prettier '**/*.md' --write",
     "test": "lerna run test --concurrency 1",
-    "test:constants": "vitest run --project constants-minimal --project constants-mainnet",
     "test:unit": "vitest run --project unit-minimal --project unit-mainnet",
     "test:browsers": "vitest run --project browser",
     "test:e2e": "vitest run --project e2e-minimal --project e2e-mainnet",
