@@ -74,7 +74,7 @@ abstract class AbstractBlockInput<F extends ForkName = ForkName, TData extends D
 {
   abstract type: DAType;
   daRequirement: DARequirement;
-  timeBeginSec: number;
+  timeCreated: number;
 
   forkName: ForkName;
   slot: Slot;
@@ -89,7 +89,7 @@ abstract class AbstractBlockInput<F extends ForkName = ForkName, TData extends D
 
   constructor(init: BlockInputInit) {
     this.daRequirement = init.daRequirement;
-    this.timeBeginSec = init.timeBeginSec;
+    this.timeCreated = init.timeCreated;
     this.forkName = init.forkName;
     this.slot = init.slot;
     this.blockRootHex = init.blockRootHex;
@@ -205,7 +205,7 @@ export class BlockInputPreData extends AbstractBlockInput<ForkPreDeneb, null> {
   static createFromBlock(props: AddBlock & CreateBlockInputMeta): BlockInputPreData {
     const init: BlockInputInit = {
       daRequirement: props.daRequirement,
-      timeBeginSec: props.source.seenTimestampSec,
+      timeCreated: props.source.seenTimestampSec,
       forkName: props.forkName,
       slot: props.block.message.slot,
       blockRootHex: props.blockRootHex,
@@ -288,7 +288,7 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobs, deneb.BlobSid
     } as BlockInputBlobsState;
     const init: BlockInputInit = {
       daRequirement: props.daRequirement,
-      timeBeginSec: props.source.seenTimestampSec,
+      timeCreated: props.source.seenTimestampSec,
       forkName: props.forkName,
       slot: props.block.message.slot,
       blockRootHex: props.blockRootHex,
@@ -310,7 +310,7 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobs, deneb.BlobSid
     };
     const init: BlockInputInit = {
       daRequirement: props.daRequirement,
-      timeBeginSec: props.seenTimestampSec,
+      timeCreated: props.seenTimestampSec,
       forkName: props.forkName,
       blockRootHex: props.blockRootHex,
       parentRootHex: toHex(props.blobSidecar.signedBlockHeader.message.parentRoot),
@@ -586,12 +586,12 @@ export class BlockInputColumns extends AbstractBlockInput<ForkPostFulu, fulu.Dat
       custodyStatus,
       block: props.block,
       source: props.source,
-      timeBeginSec: props.source.seenTimestampSec,
+      timeCreated: props.source.seenTimestampSec,
       timeCompleteSec: completeData ? props.source.seenTimestampSec : undefined,
     } as BlockInputColumnsState;
     const init: BlockInputInit = {
       daRequirement: props.daRequirement,
-      timeBeginSec: props.source.seenTimestampSec,
+      timeCreated: props.source.seenTimestampSec,
       forkName: props.forkName,
       blockRootHex: props.blockRootHex,
       parentRootHex: toHex(props.block.message.parentRoot),
@@ -622,7 +622,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkPostFulu, fulu.Dat
     };
     const init: BlockInputInit = {
       daRequirement: DARequirement.Required,
-      timeBeginSec: props.seenTimestampSec,
+      timeCreated: props.seenTimestampSec,
       forkName: props.forkName,
       blockRootHex: props.blockRootHex,
       parentRootHex: toHex(props.columnSidecar.signedBlockHeader.message.parentRoot),

@@ -98,7 +98,7 @@ export type CreateBlockInputMeta = {
 
 export type BlockInputInit = BlockHeaderMeta & {
   daRequirement: DARequirement;
-  timeBeginSec: number;
+  timeCreated: number;
 };
 
 export type AddBlock<F extends ForkName = ForkName> = {
@@ -132,7 +132,7 @@ export interface IBlockInput<F extends ForkName = ForkName, TData extends DAData
   type: DAType;
 
   daRequirement: DARequirement;
-  timeBeginSec: number;
+  timeCreated: number;
   // block header metadata
   forkName: ForkName;
   slot: Slot;
