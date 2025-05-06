@@ -19,44 +19,23 @@ import {PeerIdStr} from "../util/peerId.js";
 import {shuffle} from "../util/shuffle.js";
 import {wrapError} from "../util/wrapError.js";
 import {SyncOptions} from "./options.js";
+import {
+  BlockInputSyncCacheItem,
+  PendingBlockInput,
+  PendingBlockInputStatus,
+  PendingRootHex,
+  getBlockInputSyncCacheItemRootHex,
+  isPendingBlockInput,
+} from "./types.js";
 import {downloadBlockInputByRoot} from "./utils/downloadBlockInputByRoot.js";
 
 const MAX_ATTEMPTS_PER_BLOCK = 5;
 const MAX_PENDING_BLOCKS = 100;
 const MAX_KNOWN_BAD_BLOCKS = 500;
 
-export enum PendingBlockInputStatus {
-  pending = "pending",
-  fetching = "fetching",
-  downloaded = "downloaded",
-  processing = "processing",
-}
-
-export type PendingBlockInput = {
-  status: PendingBlockInputStatus;
-  blockInput: BlockInput;
-  timeAddedSec: number;
-  timeSyncedSec?: number;
-  peerIdStrings: Set<string>;
-  downloadAttempts: number;
-};
-
-export type PendingRootHex = {
-  status: PendingBlockInputStatus;
-  rootHex: RootHex;
-  timeAddedSec: number;
-  timeSyncedSec?: number;
-  peerIdStrings: Set<string>;
-  downloadAttempts: number;
-};
-
-function isPendingBlockInput(pending: PendingBlockInput | PendingRootHex): pending is PendingBlockInput {
-  return "blockInput" in pending;
-}
-
 function getLogMeta(
-  block: PendingBlockInput | PendingRootHex,
-  pendingBlocks?: Map<RootHex, PendingBlockInput | PendingRootHex>
+  block: BlockInputSyncCacheItem,
+  pendingBlocks?: Map<RootHex, BlockInputSyncCacheItem>
 ): Record<string, string | number> {
   const pendingBlocksLog: Record<string, number> = pendingBlocks ? {pendingBlocks: pendingBlocks.size} : {};
   return isPendingBlockInput(block)
@@ -72,15 +51,11 @@ function getLogMeta(
       };
 }
 
-function getRootHex(block: PendingRootHex | PendingBlockInput): RootHex {
-  return isPendingBlockInput(block) ? block.blockInput.rootHex : block.rootHex;
-}
-
 export class BlockInputSync {
   /**
    * block RootHex -> PendingBlock. To avoid finding same root at the same time
    */
-  private readonly pendingBlocks = new Map<RootHex, PendingBlockInput | PendingRootHex>();
+  private readonly pendingBlocks = new Map<RootHex, BlockInputSyncCacheItem>();
   private readonly knownBadBlocks = new Set<RootHex>();
   private readonly proposerBoostSecWindow: number;
   private readonly maxPendingBlocks;
@@ -180,7 +155,6 @@ export class BlockInputSync {
         status: PendingBlockInputStatus.pending,
         rootHex: rootHex,
         peerIdStrings: new Set(),
-        downloadAttempts: 0,
         timeAddedSec: Date.now() / 1000,
       };
       this.pendingBlocks.set(rootHex, pendingBlock);
@@ -212,7 +186,6 @@ export class BlockInputSync {
         status: PendingBlockInputStatus.pending,
         blockInput,
         peerIdStrings: new Set(),
-        downloadAttempts: 0,
         timeAddedSec: Date.now() / 1000,
       };
       this.pendingBlocks.set(blockInput.rootHex, pendingBlock);
@@ -283,10 +256,7 @@ export class BlockInputSync {
     }
   };
 
-  private downloadBlock = async (
-    block: PendingRootHex | PendingBlockInput,
-    connectedPeers: PeerIdStr[]
-  ): Promise<void> => {
+  private downloadBlock = async (block: BlockInputSyncCacheItem, connectedPeers: PeerIdStr[]): Promise<void> => {
     if (block.status !== PendingBlockInputStatus.pending) {
       return;
     }
@@ -295,44 +265,33 @@ export class BlockInputSync {
     this.logger.verbose("BlockInputSync.downloadBlock", getLogMeta(block, this.pendingBlocks));
 
     const res = await wrapError(this.downloadBlockInputByRoot(block, connectedPeers));
-    // track number of attempts to download block and data
-    block.downloadAttempts++;
 
     if (res.err) {
       this.metrics?.blockInputSync.downloadError.inc();
-      block.status = PendingBlockInputStatus.pending;
-
-      if (block.downloadAttempts > MAX_ATTEMPTS_PER_BLOCK) {
-        // Give up on this block and assume it does not exist, penalizing all peers as if it was a bad block
-        this.logger.debug(
-          `Ignoring block that cannot be correctly downloaded after ${block.downloadAttempts} failed attempts`,
-          getLogMeta(block, this.pendingBlocks),
-          res.err
-        );
-        this.removeAndDownScoreAllDescendants(block);
-      } else {
-        // Try again when a new peer connects, its status changes, or a new unknownBlockParent event happens
-        this.logger.debug(
-          `Error attempt number ${block.downloadAttempts} downloading block and/or data`,
-          getLogMeta(block, this.pendingBlocks),
-          res.err
-        );
-      }
-
+      // Give up on this block and assume it does not exist, penalizing all peers as if it was a bad block
+      this.logger.debug(
+        `Ignoring block that cannot be correctly downloaded after ${MAX_ATTEMPTS_PER_BLOCK} failed attempts`,
+        getLogMeta(block, this.pendingBlocks),
+        res.err
+      );
+      this.removeAndDownScoreAllDescendants(block);
       return;
     }
 
+    const pending = res.result;
+    const {blockInput} = pending;
+    this.pendingBlocks.set(blockInput.rootHex, pending);
     this.metrics?.blockInputSync.downloadSuccess.inc();
 
-    res.result.status = PendingBlockInputStatus.downloaded;
-    res.result.timeSyncedSec = Date.now() / 1000;
+    pending.status = PendingBlockInputStatus.downloaded;
+    pending.timeSyncedSec = Date.now() / 1000;
 
-    const blockSlot = res.result.blockInput.getBlock().message.slot;
-    this.metrics?.blockInputSync.timeToSyncSec.observe(res.result.timeSyncedSec - res.result.timeAddedSec);
-    const delaySec = res.result.timeSyncedSec - (this.chain.genesisTime + blockSlot * this.config.SECONDS_PER_SLOT);
+    const blockSlot = blockInput.getBlock().message.slot;
+    this.metrics?.blockInputSync.timeToSyncSec.observe(pending.timeSyncedSec - pending.timeAddedSec);
+    const delaySec = pending.timeSyncedSec - (this.chain.genesisTime + blockSlot * this.config.SECONDS_PER_SLOT);
     this.metrics?.blockInputSync.elapsedTimeTillReceived.observe(delaySec);
 
-    const parentRootHex = res.result.blockInput.getParentRootHex();
+    const parentRootHex = blockInput.getParentRootHex();
     const parentInForkChoice = this.chain.forkChoice.hasBlock(fromHex(parentRootHex));
     const finalizedSlot = this.chain.forkChoice.getFinalizedBlock().slot;
 
@@ -351,43 +310,55 @@ export class BlockInputSync {
         finalizedSlot,
         blockSlot,
         parentRootHex,
-        ...res.result.blockInput.getLogMeta(),
+        ...blockInput.getLogMeta(),
       });
       this.removeAndDownScoreAllDescendants(block);
     } else {
-      this.addUnknownBlockRoot(res.result.blockInput.getParentRootHex());
+      this.addUnknownBlockRoot(blockInput.getParentRootHex());
     }
   };
 
   private downloadBlockInputByRoot = async (
-    block: PendingRootHex | PendingBlockInput,
+    block: BlockInputSyncCacheItem,
     connectedPeers: PeerIdStr[]
   ): Promise<PendingBlockInput> => {
     const shuffledPeers = shuffle(connectedPeers);
+    let pending = block as PendingBlockInput;
 
-    // TODO: (@matthewkeil) we are actually doing MAX_ATTEMPTS_PER_BLOCK^2 right now because this is checked both here
-    //       and in downloadBlock where this function will get called MAX_ATTEMPTS_PER_BLOCK number of times... hmmmm
     for (let i = 0; i < MAX_ATTEMPTS_PER_BLOCK; i++) {
       const peerIdStr = shuffledPeers[i % shuffledPeers.length];
-      block.peerIdStrings.add(peerIdStr);
+      pending.peerIdStrings.add(peerIdStr);
       try {
-        await downloadBlockInputByRoot({
+        pending = await downloadBlockInputByRoot({
           config: this.config,
           network: this.network,
-          blockInput: block.blockInput,
-          peerIdStr,
+          cache: this.chain.seenBlockInputCache,
           executionEngine: this.chain.executionEngine,
+          pending,
+          peerIdStr,
         });
 
-        if (block.blockInput.isComplete()) {
-          return;
+        if (pending.blockInput.isComplete()) {
+          this.logger.debug(
+            `Successfully downloaded PendingBlockInput byRoot on attempt number ${i}`,
+            getLogMeta(pending)
+          );
+          return pending;
         }
 
-        this.logger.debug(`Did not fully pull blockInput byRoot on attempt number ${i}`, getLogMeta(block));
+        this.logger.debug(
+          `Unsuccessful/Partial download of PendingBlockInput byRoot on attempt number ${i}`,
+          getLogMeta(pending)
+        );
       } catch (err) {
-        this.logger.debug(`Error downloadBlockInputByRoot in attempt number ${i}`, getLogMeta(block), err as Error);
+        this.logger.debug(`Error downloadBlockInputByRoot in attempt number ${i}`, getLogMeta(pending), err as Error);
       }
     }
+
+    throw new BlockInputSyncError({
+      code: BlockInputSyncErrorCode.MAX_ATTEMPTS,
+      blockRoot: getBlockInputSyncCacheItemRootHex(pending),
+    });
   };
 
   private processBlock = async (block: PendingBlockInput): Promise<void> => {
@@ -532,37 +503,38 @@ export class BlockInputSync {
     }
   };
 
-  private removeAllDescendants = (
-    block: PendingRootHex | PendingBlockInput
-  ): (PendingRootHex | PendingBlockInput)[] => {
+  private removeAllDescendants = (block: BlockInputSyncCacheItem): BlockInputSyncCacheItem[] => {
     // Get all blocks that are a descendant of this one
-    const badPendingBlocks = [block, ...getDescendantBlocks(getRootHex(block), this.pendingBlocks)];
+    const badPendingBlocks = [
+      block,
+      ...getDescendantBlocks(getBlockInputSyncCacheItemRootHex(block), this.pendingBlocks),
+    ];
 
     this.metrics?.blockInputSync.removeBadBlocks.inc(badPendingBlocks.length);
 
     for (const badBlock of badPendingBlocks) {
-      this.pendingBlocks.delete(getRootHex(badBlock));
+      this.pendingBlocks.delete(getBlockInputSyncCacheItemRootHex(badBlock));
       this.logger.debug("Removing badPendingBlock", {
-        rootHex: getRootHex(badBlock),
+        rootHex: getBlockInputSyncCacheItemRootHex(badBlock),
       });
     }
 
     return badPendingBlocks;
   };
 
-  private removeAndDownScoreAllDescendants = (block: PendingRootHex | PendingBlockInput) => {
+  private removeAndDownScoreAllDescendants = (block: BlockInputSyncCacheItem) => {
     // Get all blocks that are a descendant of this one
     const badPendingBlocks = this.removeAllDescendants(block);
 
     for (const block of badPendingBlocks) {
-      const rootHex = isPendingBlockInput(block) ? block.blockInput.rootHex : block.rootHex;
+      const rootHex = getBlockInputSyncCacheItemRootHex(block);
       this.knownBadBlocks.add(rootHex);
       for (const peerIdStr of block.peerIdStrings) {
         // TODO: Refactor peerRpcScores to work with peerIdStr only
         this.network.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadBlockByRoot");
       }
       this.logger.debug("Banning knownBadBlock and down-scored peers", {
-        root: rootHex,
+        blocRoot: rootHex,
         peerIdStrings: prettyPrintArray(Array.from(block.peerIdStrings)),
       });
     }
@@ -573,7 +545,7 @@ export class BlockInputSync {
 }
 
 type UnknownAndAncestorBlocks = {
-  unknowns: (PendingRootHex | PendingBlockInput)[];
+  unknowns: BlockInputSyncCacheItem[];
   ancestors: PendingBlockInput[];
 };
 
@@ -584,10 +556,8 @@ type UnknownAndAncestorBlocks = {
  * Given this chain segment: downloaded block n => downloaded block n + 1 => downloaded block n + 2
  *   return {unknowns: [], ancestors: [n]}
  */
-function getUnknownAndAncestorBlocks(
-  blocks: Map<RootHex, PendingRootHex | PendingBlockInput>
-): UnknownAndAncestorBlocks {
-  const unknowns: (PendingRootHex | PendingBlockInput)[] = [];
+function getUnknownAndAncestorBlocks(blocks: Map<RootHex, BlockInputSyncCacheItem>): UnknownAndAncestorBlocks {
+  const unknowns: BlockInputSyncCacheItem[] = [];
   const ancestors: PendingBlockInput[] = [];
 
   for (const block of blocks.values()) {
@@ -617,9 +587,9 @@ function getUnknownAndAncestorBlocks(
 
 export function getDescendantBlocks(
   blockRootHex: RootHex,
-  blocks: Map<RootHex, PendingRootHex | PendingBlockInput>
-): (PendingRootHex | PendingBlockInput)[] {
-  const descendantBlocks: (PendingRootHex | PendingBlockInput)[] = [];
+  blocks: Map<RootHex, BlockInputSyncCacheItem>
+): BlockInputSyncCacheItem[] {
+  const descendantBlocks: BlockInputSyncCacheItem[] = [];
 
   for (const block of blocks.values()) {
     if (isPendingBlockInput(block) && block.blockInput.getParentRootHex(false) === blockRootHex) {
@@ -632,8 +602,16 @@ export function getDescendantBlocks(
 
 enum BlockInputSyncErrorCode {
   INVALID_CONVERSION_TO_OLD_BLOCK_INPUT = "BLOCK_INPUT_SYNC_ERROR_INVALID_CONVERSION_TO_OLD_BLOCK_INPUT",
+  MAX_ATTEMPTS = "BLOCK_INPUT_SYNC_ERROR_MAX_ATTEMPTS",
 
   Z = "BLOCK_INPUT_SYNC_ERROR_Z",
 }
-type BlockInputSyncErrorType = {code: BlockInputSyncErrorCode.INVALID_CONVERSION_TO_OLD_BLOCK_INPUT};
+type BlockInputSyncErrorType =
+  | {
+      code: BlockInputSyncErrorCode.INVALID_CONVERSION_TO_OLD_BLOCK_INPUT;
+    }
+  | {
+      code: BlockInputSyncErrorCode.MAX_ATTEMPTS;
+      blockRoot: RootHex;
+    };
 class BlockInputSyncError extends LodestarError<BlockInputSyncErrorType> {}

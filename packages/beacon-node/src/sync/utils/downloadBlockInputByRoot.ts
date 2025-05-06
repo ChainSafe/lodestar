@@ -1,7 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {deneb} from "@lodestar/types";
-import {LodestarError, toHex} from "@lodestar/utils";
+import {LodestarError, fromHex, toHex} from "@lodestar/utils";
 import {
   BlockInput,
   BlockInputDataStatus,
@@ -10,57 +10,90 @@ import {
   getDataAvailabilityStatus,
   isBlockInputBlobs,
 } from "../../chain/blocks/blockInput/index.js";
+import {SeenBlockInputCache} from "../../chain/seenCache/seenBlockInput.js";
 import {IExecutionEngine} from "../../execution/index.js";
 import {INetwork} from "../../network/index.js";
 import {computeInclusionProof} from "../../util/blobs.js";
 import {PeerIdStr} from "../../util/peerId.js";
+import {
+  BlockInputSyncCacheItem,
+  PendingBlockInput,
+  getBlockInputSyncCacheItemRootHex,
+  isPendingBlockInput,
+} from "../types.js";
 
 export type DownloadBlockInputByRootProps = {
   config: ChainForkConfig;
   network: INetwork;
+  cache: SeenBlockInputCache;
   executionEngine?: IExecutionEngine;
-  blockInput: BlockInput;
+  pending: BlockInputSyncCacheItem;
   peerIdStr: PeerIdStr;
 };
 
 export async function downloadBlockInputByRoot({
   config,
   network,
+  cache,
   executionEngine,
-  blockInput,
+  pending,
   peerIdStr,
-}: DownloadBlockInputByRootProps): Promise<void> {
-  if (!blockInput.hasBlock()) {
-    await downloadAndCacheBlock({
+}: DownloadBlockInputByRootProps): Promise<PendingBlockInput> {
+  if (!isPendingBlockInput(pending) || !pending.blockInput.hasBlock()) {
+    pending = await downloadAndCacheBlock({
       network,
-      blockInput,
+      cache,
+      pending,
       peerIdStr,
     });
   }
 
-  if (blockInput.needsData()) {
+  if (pending.blockInput.needsData()) {
     await downloadAndCacheData({
       config,
       network,
       executionEngine,
       peerIdStr,
-      blockInput,
+      blockInput: pending.blockInput,
     });
   }
+
+  return pending;
 }
 
 export async function downloadAndCacheBlock({
   network,
-  blockInput,
+  cache,
+  pending,
   peerIdStr,
-}: Omit<DownloadBlockInputByRootProps, "config" | "executionEngine">): Promise<void> {
-  const [response] = await network.sendBeaconBlocksByRoot(peerIdStr, [blockInput.blockRoot]);
-  blockInput.addBlock({
-    peerIdStr,
+}: Omit<DownloadBlockInputByRootProps, "config" | "executionEngine">): Promise<PendingBlockInput> {
+  const rootHex = getBlockInputSyncCacheItemRootHex(pending);
+  const blockRoot = fromHex(rootHex);
+  const [response] = await network.sendBeaconBlocksByRoot(peerIdStr, [blockRoot]);
+  if (isPendingBlockInput(pending)) {
+    pending.blockInput.addBlock({
+      peerIdStr,
+      block: response.data,
+      seenTimestampSec: Date.now(),
+      source: BlockInputSource.byRoot,
+    });
+    return pending;
+  }
+
+  const blockInput = cache.getBlockInputByBlock({
     block: response.data,
+    blockRoot,
     seenTimestampSec: Date.now(),
     source: BlockInputSource.byRoot,
+    peerIdStr,
   });
+  return {
+    status: pending.status,
+    blockInput,
+    timeAddedSec: pending.timeAddedSec,
+    peerIdStrings: pending.peerIdStrings,
+    timeSyncedSec: pending.timeSyncedSec,
+  };
 }
 
 export async function downloadAndCacheData({
@@ -69,7 +102,7 @@ export async function downloadAndCacheData({
   executionEngine,
   blockInput,
   peerIdStr,
-}: DownloadBlockInputByRootProps): Promise<void> {
+}: Omit<DownloadBlockInputByRootProps, "cache" | "pending"> & {blockInput: BlockInput}): Promise<void> {
   if (isBlockInputBlobs(blockInput)) {
     const missingBlobsMeta = blockInput.getMissingBlobMeta();
     if (executionEngine) {
@@ -138,14 +171,19 @@ export async function downloadAndCacheData({
 
 export enum DownloadByRootErrorCode {
   INVALID_BLOCK_INPUT_TYPE = "DOWNLOAD_BY_ROOT_ERROR_INVALID_BLOCK_INPUT_TYPE",
+  BLOCK_NOT_DOWNLOADED = "DOWNLOAD_BY_ROOT_ERROR_BLOCK_NOT_DOWNLOADED",
 
   Z = "DOWNLOAD_BY_ROOT_ERROR_Z",
 }
-
-export type DownloadByRootErrorType = {
-  code: DownloadByRootErrorCode.INVALID_BLOCK_INPUT_TYPE;
-  blockRoot: string;
-  type: BlockInputType;
-};
+export type DownloadByRootErrorType =
+  | {
+      code: DownloadByRootErrorCode.INVALID_BLOCK_INPUT_TYPE;
+      blockRoot: string;
+      type: BlockInputType;
+    }
+  | {
+      code: DownloadByRootErrorCode.BLOCK_NOT_DOWNLOADED;
+      blockRoot: string;
+    };
 
 export class DownloadByRootError extends LodestarError<DownloadByRootErrorType> {}
