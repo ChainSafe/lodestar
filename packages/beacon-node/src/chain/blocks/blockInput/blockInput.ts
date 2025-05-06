@@ -85,7 +85,6 @@ abstract class AbstractBlockInput<F extends ForkName = ForkName, TData extends D
 
   protected blockPromise = createPromise<SignedBeaconBlock<F>>();
   protected dataPromise = createPromise<TData>();
-  protected bothPromise = createPromise<this>();
 
   constructor(init: BlockInputInit) {
     this.daRequirement = init.daRequirement;
@@ -156,23 +155,19 @@ abstract class AbstractBlockInput<F extends ForkName = ForkName, TData extends D
     return this.state.timeCompleteSec;
   }
 
-  async waitForBlock(timeout: number, signal?: AbortSignal): Promise<SignedBeaconBlock<F>> {
+  waitForBlock(timeout: number, signal?: AbortSignal): Promise<SignedBeaconBlock<F>> {
     if (this.state.blockStatus === BlockStatus.MissingBlock) {
-      return await withTimeout(() => this.blockPromise.promise, timeout, signal);
+      return withTimeout(() => this.blockPromise.promise, timeout, signal);
     }
-    return this.state.block;
+    return Promise.resolve(this.state.block);
   }
-  async waitForData(timeout: number, signal?: AbortSignal): Promise<TData> {
-    if (this.state.daStatus === DAStatus.IncompleteData) {
-      await withTimeout(() => this.dataPromise.promise, timeout, signal);
-    }
-    // each BlockInput implementation maintains its own repr of data
-    // so we just return the promise
-    return this.dataPromise.promise;
+  waitForData(timeout: number, signal?: AbortSignal): Promise<TData> {
+    return withTimeout(() => this.dataPromise.promise, timeout, signal);
   }
+
   async waitForBlockAndData(timeout: number, signal?: AbortSignal): Promise<this> {
     if (this.state.blockStatus === BlockStatus.MissingBlock || this.state.daStatus === DAStatus.IncompleteData) {
-      return await withTimeout(() => this.bothPromise.promise, timeout, signal);
+      await withTimeout(() => Promise.all([this.blockPromise.promise, this.dataPromise.promise]), timeout, signal);
     }
     return this;
   }
@@ -298,7 +293,6 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobs, deneb.BlobSid
     blockInput.blockPromise.resolve(props.block);
     if (completeData) {
       blockInput.dataPromise.resolve([]);
-      blockInput.bothPromise.resolve(blockInput);
     }
     return blockInput;
   }
@@ -387,7 +381,6 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobs, deneb.BlobSid
     this.blockPromise.resolve(block);
     if (daStatus === DAStatus.CompleteData) {
       this.dataPromise.resolve(this.getBlobs());
-      this.bothPromise.resolve(this);
     }
   }
 
@@ -441,7 +434,6 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobs, deneb.BlobSid
         timeCompleteSec: seenTimestampSec,
       };
       this.dataPromise.resolve([...this.blobsCache.values()].map(({blobSidecar}) => blobSidecar));
-      this.bothPromise.resolve(this);
     }
   }
 
@@ -602,7 +594,6 @@ export class BlockInputColumns extends AbstractBlockInput<ForkPostFulu, fulu.Dat
     blockInput.blockPromise.resolve(props.block);
     if (daStatus === DAStatus.CompleteData) {
       blockInput.dataPromise.resolve([]);
-      blockInput.bothPromise.resolve(blockInput);
     }
     if (custodyStatus === DAStatus.CompleteData) {
       blockInput.custodyPromise.resolve([]);
@@ -701,9 +692,6 @@ export class BlockInputColumns extends AbstractBlockInput<ForkPostFulu, fulu.Dat
     } as BlockInputColumnsState;
 
     this.blockPromise.resolve(props.block);
-    if (daStatus === DAStatus.CompleteData) {
-      this.bothPromise.resolve(this);
-    }
   }
 
   addColumn({blockRootHex, columnSidecar, source, seenTimestampSec, peerIdStr}: AddColumn): void {
@@ -770,9 +758,6 @@ export class BlockInputColumns extends AbstractBlockInput<ForkPostFulu, fulu.Dat
 
     if (sampledComplete && sampledColumns !== null) {
       this.dataPromise.resolve(sampledColumns);
-      if (this.state.blockStatus === BlockStatus.HasBlock) {
-        this.bothPromise.resolve(this);
-      }
     }
     if (custodyComplete && custodyColumns !== null) {
       this.custodyPromise.resolve(custodyColumns);
