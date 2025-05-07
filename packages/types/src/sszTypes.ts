@@ -1,28 +1,39 @@
 import {CompositeType, CompositeView, CompositeViewDU, ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
-import {ssz as altair} from "./altair/index.js";
-import {ssz as bellatrix} from "./bellatrix/index.js";
-import {ssz as capella} from "./capella/index.js";
-import {ssz as deneb} from "./deneb/index.js";
-import {ssz as electra} from "./electra/index.js";
-import {ssz as phase0} from "./phase0/index.js";
+import {ssz as altairSsz} from "./altair/index.js";
+import {ssz as bellatrixSsz} from "./bellatrix/index.js";
+import {ssz as capellaSsz} from "./capella/index.js";
+import {ssz as denebSsz} from "./deneb/index.js";
+import {ssz as electraSsz} from "./electra/index.js";
+import {ssz as fuluSsz} from "./fulu/index.js";
+import {ssz as phase0Ssz} from "./phase0/index.js";
 
 export * from "./primitive/sszTypes.js";
-export {phase0, altair, bellatrix, capella, deneb, electra, electra as fulu};
 
 /**
  * Index the ssz types that differ by fork
  * A record of AllForksSSZTypes indexed by fork
  */
 const typesByFork = {
-  [ForkName.phase0]: {...phase0},
-  [ForkName.altair]: {...phase0, ...altair},
-  [ForkName.bellatrix]: {...phase0, ...altair, ...bellatrix},
-  [ForkName.capella]: {...phase0, ...altair, ...bellatrix, ...capella},
-  [ForkName.deneb]: {...phase0, ...altair, ...bellatrix, ...capella, ...deneb},
-  [ForkName.electra]: {...phase0, ...altair, ...bellatrix, ...capella, ...deneb, ...electra},
-  [ForkName.fulu]: {...phase0, ...altair, ...bellatrix, ...capella, ...deneb, ...electra},
+  [ForkName.phase0]: {...phase0Ssz},
+  [ForkName.altair]: {...phase0Ssz, ...altairSsz},
+  [ForkName.bellatrix]: {...phase0Ssz, ...altairSsz, ...bellatrixSsz},
+  [ForkName.capella]: {...phase0Ssz, ...altairSsz, ...bellatrixSsz, ...capellaSsz},
+  [ForkName.deneb]: {...phase0Ssz, ...altairSsz, ...bellatrixSsz, ...capellaSsz, ...denebSsz},
+  [ForkName.electra]: {...phase0Ssz, ...altairSsz, ...bellatrixSsz, ...capellaSsz, ...denebSsz, ...electraSsz},
+  [ForkName.fulu]: {...phase0Ssz, ...altairSsz, ...bellatrixSsz, ...capellaSsz, ...denebSsz, ...electraSsz, ...fuluSsz},
 };
+
+// Export these types to ensure that each fork is a superset of the previous one (with overridden types obviously)
+// This allows us to only declare types that change in each fork in each fork subdirectory
+
+export const phase0 = typesByFork[ForkName.phase0];
+export const altair = typesByFork[ForkName.altair];
+export const bellatrix = typesByFork[ForkName.bellatrix];
+export const capella = typesByFork[ForkName.capella];
+export const deneb = typesByFork[ForkName.deneb];
+export const electra = typesByFork[ForkName.electra];
+export const fulu = typesByFork[ForkName.fulu];
 
 /**
  * A type of union of forks must accept as any parameter the UNION of all fork types.
