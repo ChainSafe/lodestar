@@ -278,7 +278,7 @@ export class AttestationService {
         attestationDataRoot: ssz.phase0.AttestationData.hashTreeRoot(attestation),
         slot: attestation.slot,
         committeeIndex,
-      })
+      }, {timeoutMs: 2000})
     ).value();
     const participants = aggregate.aggregationBits.getTrueBitIndexes().length;
     this.metrics?.numParticipantsInAggregate.observe(participants);
