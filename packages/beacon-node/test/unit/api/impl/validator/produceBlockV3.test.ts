@@ -98,22 +98,22 @@ describe("api/validator - produceBlockV3", () => {
       modules.chain.getProposerHead.mockReturnValue({blockRoot: toHexString(fullBlock.parentRoot)} as ProtoBlock);
       modules.chain.forkChoice.getBlock.mockReturnValue(zeroProtoBlock);
 
+      const commonBlockBody: CommonBlockBody = {
+        attestations: fullBlock.body.attestations,
+        attesterSlashings: fullBlock.body.attesterSlashings,
+        deposits: fullBlock.body.deposits,
+        proposerSlashings: fullBlock.body.proposerSlashings,
+        eth1Data: fullBlock.body.eth1Data,
+        graffiti: fullBlock.body.graffiti,
+        randaoReveal: fullBlock.body.randaoReveal,
+        voluntaryExits: fullBlock.body.voluntaryExits,
+        blsToExecutionChanges: [],
+        syncAggregate: fullBlock.body.syncAggregate,
+      };
+
+      modules.chain.produceCommonBlockBody.mockResolvedValue(commonBlockBody);
+
       if (enginePayloadValue !== null) {
-        const commonBlockBody: CommonBlockBody = {
-          attestations: fullBlock.body.attestations,
-          attesterSlashings: fullBlock.body.attesterSlashings,
-          deposits: fullBlock.body.deposits,
-          proposerSlashings: fullBlock.body.proposerSlashings,
-          eth1Data: fullBlock.body.eth1Data,
-          graffiti: fullBlock.body.graffiti,
-          randaoReveal: fullBlock.body.randaoReveal,
-          voluntaryExits: fullBlock.body.voluntaryExits,
-          blsToExecutionChanges: [],
-          syncAggregate: fullBlock.body.syncAggregate,
-        };
-
-        modules.chain.produceCommonBlockBody.mockResolvedValue(commonBlockBody);
-
         modules.chain.produceBlock.mockResolvedValue({
           block: fullBlock,
           executionPayloadValue: BigInt(enginePayloadValue),
@@ -190,6 +190,19 @@ describe("api/validator - produceBlockV3", () => {
       generateProtoBlock({blockRoot: toHexString(parentBlockRoot)})
     );
     modules.chain.forkChoice.getBlock.mockReturnValue(generateProtoBlock({blockRoot: toHexString(parentBlockRoot)}));
+    const commonBlockBody: CommonBlockBody = {
+      attestations: fullBlock.body.attestations,
+      attesterSlashings: fullBlock.body.attesterSlashings,
+      deposits: fullBlock.body.deposits,
+      proposerSlashings: fullBlock.body.proposerSlashings,
+      eth1Data: fullBlock.body.eth1Data,
+      graffiti: fullBlock.body.graffiti,
+      randaoReveal: fullBlock.body.randaoReveal,
+      voluntaryExits: fullBlock.body.voluntaryExits,
+      blsToExecutionChanges: [],
+      syncAggregate: fullBlock.body.syncAggregate,
+    };
+    modules.chain.produceCommonBlockBody.mockResolvedValue(commonBlockBody);
     modules.chain.produceBlock.mockResolvedValue({
       block: fullBlock,
       executionPayloadValue,
@@ -204,6 +217,7 @@ describe("api/validator - produceBlockV3", () => {
       slot,
       parentBlockRoot,
       feeRecipient,
+      commonBlockBody,
     });
 
     // check that no feeRecipient is passed to produceBlock so that produceBlockBody will
@@ -215,6 +229,7 @@ describe("api/validator - produceBlockV3", () => {
       slot,
       parentBlockRoot,
       feeRecipient: undefined,
+      commonBlockBody,
     });
   });
 
