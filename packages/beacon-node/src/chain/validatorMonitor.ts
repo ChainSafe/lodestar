@@ -262,7 +262,7 @@ type MonitoredValidator = {
 };
 
 export function createValidatorMonitor(
-  metrics: Metrics | null,
+  metricsRegister: RegistryMetricCreator | null,
   config: ChainForkConfig,
   genesisTime: number,
   logger: Logger,
@@ -295,7 +295,7 @@ export function createValidatorMonitor(
 
   let lastRegisteredStatusEpoch = -1;
 
-  const validatorMonitorMetrics = metrics ? createValidatorMonitorMetrics(metrics.register) : null;
+  const validatorMonitorMetrics = metricsRegister ? createValidatorMonitorMetrics(metricsRegister) : null;
 
   const validatorMonitor: ValidatorMonitor = {
     registerLocalValidator(index) {
@@ -401,7 +401,6 @@ export function createValidatorMonitor(
       const validator = validators.get(block.proposerIndex);
       // Returns the delay between the start of `block.slot` and `seenTimestamp`.
       const delaySec = seenTimestampSec - (genesisTime + block.slot * config.SECONDS_PER_SLOT);
-      metrics?.gossipBlock.elapsedTimeTillReceived.observe({source: src}, delaySec);
       if (validator) {
         validatorMonitorMetrics?.beaconBlockTotal.inc({src});
         validatorMonitorMetrics?.beaconBlockDelaySeconds.observe({src}, delaySec);
@@ -798,7 +797,7 @@ export function createValidatorMonitor(
     },
   };
 
-  if (metrics) {
+  if (metricsRegister) {
     // Register a single collect() function to run all validatorMonitor metrics
     validatorMonitorMetrics?.validatorsConnected.addCollect(() => {
       const clockSlot = getCurrentSlot(config, genesisTime);
