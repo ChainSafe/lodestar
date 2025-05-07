@@ -58,7 +58,6 @@
         "useImportType": "off",
         // We prefer to auto-initialize enums
         "useEnumInitializers": "off",
-        "noNamespace": "error",
         "useNamingConvention": {
           "level": "error",
           "options": {
@@ -145,8 +144,7 @@
       },
       "suspicious": {
         // There is a lot of empty code blocks, should be enabled and clean up separately.
-        "noEmptyBlockStatements": "off",
-        "noConsoleLog": "error"
+        "noEmptyBlockStatements": "off"
       },
       "nursery": {
         // Need to enable this rule with exception to anonymous functions
@@ -161,7 +159,7 @@
       "linter": {
         "rules": {
           "suspicious": {
-            "noConsoleLog": "off"
+            "noConsole": "off"
           }
         }
       }
@@ -181,7 +179,7 @@
             // During testing we use `any` type for quick assignments
             "noExplicitAny": "off",
             // Console logging is often used in tests
-            "noConsoleLog": "off"
+            "noConsole": "off"
           }
         }
       }
