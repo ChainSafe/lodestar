@@ -22,8 +22,6 @@ import {HttpStatusCode} from "../../../src/utils/httpStatusCode.js";
 import {Endpoint, Schema} from "../../../src/utils/index.js";
 import {compileRouteUrlFormatter} from "../../../src/utils/urlFormat.js";
 
-/* eslint-disable @typescript-eslint/return-await */
-
 describe("httpClient json client", () => {
   const afterEachCallbacks: (() => Promise<any> | any)[] = [];
   afterEach(async () => {

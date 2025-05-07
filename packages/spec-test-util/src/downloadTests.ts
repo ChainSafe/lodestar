@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import fs from "node:fs";
 import path from "node:path";
 import stream from "node:stream";

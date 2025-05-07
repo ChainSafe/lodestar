@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import fs from "node:fs";
 
 const primitiveTypeof = ["number", "string", "bigint", "boolean"];

@@ -9,8 +9,6 @@ import {IValidatorCliArgs, validatorOptions} from "./options.js";
 import {getAccountPaths} from "./paths.js";
 import {importKeystoreDefinitionsFromExternalDir, readPassphraseOrPrompt} from "./signers/importExternalKeystores.js";
 
-/* eslint-disable no-console */
-
 type ValidatorImportArgs = Pick<IValidatorCliArgs, "importKeystores" | "importKeystoresPassword">;
 
 const {importKeystores, importKeystoresPassword} = validatorOptions;

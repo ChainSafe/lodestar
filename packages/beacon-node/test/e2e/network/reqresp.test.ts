@@ -13,8 +13,6 @@ import {expectRejectedWithLodestarError} from "../../utils/errors.js";
 import {connect, getPeerIdOf, onPeerConnect} from "../../utils/network.js";
 import {getNetworkForTest} from "../../utils/networkWithMockDb.js";
 
-/* eslint-disable require-yield, @typescript-eslint/naming-convention */
-
 describe("network / reqresp / main thread", () => {
   vi.setConfig({testTimeout: 3000});
 

@@ -7,8 +7,6 @@ import {interopSecretKey} from "@lodestar/state-transition";
 import {dumpYaml} from "@lodestar/utils";
 import {PersistedKeysBackend} from "../validator/keymanager/persistedKeys.js";
 
-/* eslint-disable no-console */
-
 export async function writeTestnetFiles(
   config: ChainForkConfig,
   targetDir: string,

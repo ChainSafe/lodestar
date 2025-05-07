@@ -3,8 +3,6 @@ import path from "node:path";
 import {fetch} from "@lodestar/utils";
 import {OpenApiFile, OpenApiJson} from "./parseOpenApiSpec.js";
 
-/* eslint-disable no-console */
-
 export async function fetchOpenApiSpec(openApiFile: OpenApiFile): Promise<OpenApiJson> {
   if (fs.existsSync(openApiFile.filepath)) {
     const openApiJson = JSON.parse(fs.readFileSync(openApiFile.filepath, "utf8")) as OpenApiJson;
