@@ -2,7 +2,7 @@ import {getClient, routes} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {genesisData} from "@lodestar/config/networks";
-import {ForkSeq} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkSeq, PresetName} from "@lodestar/params";
 import {computeStartSlotAtEpoch, interopSecretKey, interopSecretKeys} from "@lodestar/state-transition";
 import {StartedExternalSigner, getKeystoresStr, startExternalSigner} from "@lodestar/test-utils";
 import {ssz, sszTypesFor} from "@lodestar/types";
@@ -14,6 +14,10 @@ import {testLogger} from "../utils/logger.js";
 
 describe("web3signer signature test", () => {
   vi.setConfig({testTimeout: 60_000, hookTimeout: 60_000});
+
+  if (ACTIVE_PRESET !== PresetName.mainnet) {
+    throw Error(`ACTIVE_PRESET '${ACTIVE_PRESET}' must be mainnet`);
+  }
 
   const altairSlot = 2375711;
   const epoch = 0;

@@ -1,8 +1,3 @@
-/* eslint-disable no-console,
-  @typescript-eslint/explicit-function-return-type,
-  @typescript-eslint/no-var-requires,
-  @typescript-eslint/no-require-imports */
-
 // Script used in .github/workflows/release.yml to get the previous tag
 // to generate a changelog from 'prev_tag' to 'tag'
 // Returns the most recent tag that:

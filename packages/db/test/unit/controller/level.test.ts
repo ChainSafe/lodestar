@@ -138,7 +138,6 @@ describe("LevelDB controller", () => {
           return "gdu";
         }
       } catch (_e) {
-        /* eslint-disable no-console */
         console.error("Cannot find gdu command, falling back to du");
       }
     }

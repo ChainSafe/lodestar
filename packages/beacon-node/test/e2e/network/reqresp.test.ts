@@ -3,7 +3,7 @@ import {chainConfig} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
 import {RequestError, RequestErrorCode, ResponseOutgoing} from "@lodestar/reqresp";
 import {Root, SignedBeaconBlock, altair, phase0, ssz} from "@lodestar/types";
-import {sleep as _sleep} from "@lodestar/utils";
+import {sleep} from "@lodestar/utils";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {Network, ReqRespBeaconNodeOpts} from "../../../src/network/index.js";
 import {GetReqRespHandlerFn, ReqRespMethod} from "../../../src/network/reqresp/types.js";
@@ -12,8 +12,6 @@ import {arrToSource} from "../../unit/network/reqresp/utils.js";
 import {expectRejectedWithLodestarError} from "../../utils/errors.js";
 import {connect, getPeerIdOf, onPeerConnect} from "../../utils/network.js";
 import {getNetworkForTest} from "../../utils/networkWithMockDb.js";
-
-/* eslint-disable require-yield, @typescript-eslint/naming-convention */
 
 describe("network / reqresp / main thread", () => {
   vi.setConfig({testTimeout: 3000});
@@ -33,23 +31,20 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     ...chainConfig,
     ALTAIR_FORK_EPOCH: 0,
   });
+  let controller: AbortController;
 
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
+
+  beforeEach(() => {
+    controller = new AbortController();
+  });
+
   afterEach(async () => {
     while (afterEachCallbacks.length > 0) {
       const callback = afterEachCallbacks.pop();
       if (callback) await callback();
     }
   });
-
-  let controller: AbortController;
-  beforeEach(() => {
-    controller = new AbortController();
-  });
-  afterEach(() => controller.abort());
-  async function sleep(ms: number): Promise<void> {
-    await _sleep(ms, controller.signal);
-  }
 
   async function createAndConnectPeers(
     getReqRespHandler?: GetReqRespHandlerFn,
@@ -68,10 +63,14 @@ function runTests({useWorker}: {useWorker: boolean}): void {
       await closeA();
       await closeB();
     });
-
     const connected = Promise.all([onPeerConnect(netA), onPeerConnect(netB)]);
-    await connect(netA, netB);
+    await connect(netA, netB, controller.signal);
     await connected;
+
+    controller.signal.addEventListener("abort", async () => {
+      await closeA();
+      await closeB();
+    });
 
     return [netA, netB, await getPeerIdOf(netA), await getPeerIdOf(netB)];
   }
@@ -242,7 +241,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     );
   });
 
-  it("trigger a TTFB_TIMEOUT error", async () => {
+  it("should trigger TTFB_TIMEOUT error if first response is delayed", async () => {
     const ttfbTimeoutMs = 250;
 
     const [netA, _, _0, peerIdB] = await createAndConnectPeers(
@@ -250,7 +249,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
         async function* onRequest() {
           if (method === ReqRespMethod.BeaconBlocksByRange) {
             // Wait for too long before sending first response chunk
-            await sleep(ttfbTimeoutMs * 10);
+            await sleep(ttfbTimeoutMs * 10, controller.signal);
             yield wrapBlockAsEncodedPayload(config, config.getForkTypes(0).SignedBeaconBlock.defaultValue());
           }
         },
@@ -263,8 +262,9 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     );
   });
 
-  it("trigger a RESP_TIMEOUT error", async () => {
-    const respTimeoutMs = 250;
+  it("should trigger a RESP_TIMEOUT error if first byte is on time but later delayed", async () => {
+    const ttfbTimeoutMs = 250;
+    const respTimeoutMs = 300;
 
     const [netA, _, _0, peerIdB] = await createAndConnectPeers(
       (method) =>
@@ -272,11 +272,11 @@ function runTests({useWorker}: {useWorker: boolean}): void {
           if (method === ReqRespMethod.BeaconBlocksByRange) {
             yield getEmptyEncodedPayloadSignedBeaconBlock(config);
             // Wait for too long before sending second response chunk
-            await sleep(respTimeoutMs * 5);
+            await sleep(respTimeoutMs * 5, controller.signal);
             yield getEmptyEncodedPayloadSignedBeaconBlock(config);
           }
         },
-      {respTimeoutMs}
+      {ttfbTimeoutMs, respTimeoutMs}
     );
 
     await expectRejectedWithLodestarError(
@@ -285,16 +285,19 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     );
   });
 
-  it("Sleep infinite on first byte", async () => {
+  it("should trigger TTFB_TIMEOUT error if respTimeoutMs and ttfbTimeoutMs is the same", async () => {
+    const ttfbTimeoutMs = 250;
+    const respTimeoutMs = 250;
+
     const [netA, _, _0, peerIdB] = await createAndConnectPeers(
       (method) =>
         // biome-ignore lint/correctness/useYield: No need for yield in test context
         async function* onRequest() {
           if (method === ReqRespMethod.BeaconBlocksByRange) {
-            await sleep(100000000);
+            await sleep(100000000, controller.signal);
           }
         },
-      {respTimeoutMs: 250, ttfbTimeoutMs: 250}
+      {respTimeoutMs, ttfbTimeoutMs}
     );
 
     await expectRejectedWithLodestarError(
@@ -303,13 +306,13 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     );
   });
 
-  it("Sleep infinite on second response chunk", async () => {
+  it("should trigger a RESP_TIMEOUT error if first byte is on time but sleep infinite", async () => {
     const [netA, _, _0, peerIdB] = await createAndConnectPeers(
       (method) =>
         async function* onRequest() {
           if (method === ReqRespMethod.BeaconBlocksByRange) {
             yield getEmptyEncodedPayloadSignedBeaconBlock(config);
-            await sleep(100000000);
+            await sleep(100000000, controller.signal);
           }
         },
       {respTimeoutMs: 250, ttfbTimeoutMs: 250}

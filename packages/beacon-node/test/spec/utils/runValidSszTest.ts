@@ -8,8 +8,6 @@ type ValidTestCaseData = {
   jsonValue: unknown;
 };
 
-/* eslint-disable no-console */
-
 export function runValidSszTest(type: Type<unknown>, testData: ValidTestCaseData): void {
   const testDataRootHex = testData.root;
   const testDataSerialized =

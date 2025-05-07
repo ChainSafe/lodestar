@@ -1,11 +1,3 @@
-/* eslint-disable
-  no-console,
-  @typescript-eslint/no-unsafe-assignment,
-  @typescript-eslint/no-unsafe-member-access,
-  @typescript-eslint/no-unsafe-call,
-  import/no-extraneous-dependencies 
-*/
-
 import semver from "semver";
 
 import {

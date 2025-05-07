@@ -139,7 +139,14 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
       return sszTypesFor(forkName);
     },
     getMaxBlobsPerBlock(fork: ForkName): number {
-      return isForkPostElectra(fork) ? config.MAX_BLOBS_PER_BLOCK_ELECTRA : config.MAX_BLOBS_PER_BLOCK;
+      switch (fork) {
+        case ForkName.fulu:
+          return config.MAX_BLOBS_PER_BLOCK_FULU;
+        case ForkName.electra:
+          return config.MAX_BLOBS_PER_BLOCK_ELECTRA;
+        default:
+          return config.MAX_BLOBS_PER_BLOCK;
+      }
     },
     getMaxRequestBlobSidecars(fork: ForkName): number {
       return isForkPostElectra(fork) ? config.MAX_REQUEST_BLOB_SIDECARS_ELECTRA : config.MAX_REQUEST_BLOB_SIDECARS;

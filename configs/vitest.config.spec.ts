@@ -3,7 +3,7 @@ import {defineProject} from "vitest/config";
 
 export const specProjectMinimal = defineProject({
   test: {
-    name: "spec",
+    name: "spec-minimal",
     include: ["**/test/spec/**/*.test.ts"],
     setupFiles: [
       path.join(__dirname, "../scripts/vitest/setupFiles/customMatchers.ts"),

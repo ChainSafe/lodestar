@@ -1,11 +1,3 @@
-/* eslint-disable
-@typescript-eslint/no-var-requires,
-@typescript-eslint/no-require-imports,
-@typescript-eslint/no-unsafe-assignment,
-@typescript-eslint/explicit-function-return-type,
-no-console
-*/
-
 import {execSync} from "node:child_process";
 import fs from "node:fs";
 

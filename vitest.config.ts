@@ -1,17 +1,17 @@
 import path from "node:path";
 import {defineConfig} from "vitest/config";
 import {browserTestProject} from "./configs/vitest.config.browser.js";
-import {e2eMainnetProject, e2eProject} from "./configs/vitest.config.e2e.js";
+import {e2eMainnetProject, e2eMinimalProject} from "./configs/vitest.config.e2e.js";
 import {specProjectMainnet, specProjectMinimal} from "./configs/vitest.config.spec.js";
 import {typesTestProject} from "./configs/vitest.config.types.js";
-import {unitTestMainnetProject, unitTestProject} from "./configs/vitest.config.unit.js";
+import {unitTestMainnetProject, unitTestMinimalProject} from "./configs/vitest.config.unit.js";
 
 export default defineConfig({
   test: {
     workspace: [
       {
         extends: true,
-        ...unitTestProject,
+        ...unitTestMinimalProject,
       },
       {
         extends: true,
@@ -23,7 +23,7 @@ export default defineConfig({
       },
       {
         extends: true,
-        ...e2eProject,
+        ...e2eMinimalProject,
       },
       {
         extends: true,

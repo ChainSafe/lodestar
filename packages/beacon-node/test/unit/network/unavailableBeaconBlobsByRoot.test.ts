@@ -32,7 +32,6 @@ describe("unavailableBeaconBlobsByRoot", () => {
     loadEthereumTrustedSetup();
   });
 
-  /* eslint-disable @typescript-eslint/naming-convention */
   const chainConfig = createChainForkConfig({
     ...defaultChainConfig,
     ALTAIR_FORK_EPOCH: 0,
