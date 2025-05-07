@@ -3,7 +3,7 @@ import {chainConfig} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
 import {RequestError, RequestErrorCode, ResponseOutgoing} from "@lodestar/reqresp";
 import {Root, SignedBeaconBlock, altair, phase0, ssz} from "@lodestar/types";
-import {sleep as _sleep, sleep} from "@lodestar/utils";
+import {sleep} from "@lodestar/utils";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {Network, ReqRespBeaconNodeOpts} from "../../../src/network/index.js";
 import {GetReqRespHandlerFn, ReqRespMethod} from "../../../src/network/reqresp/types.js";
