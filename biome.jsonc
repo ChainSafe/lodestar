@@ -58,7 +58,6 @@
         "useImportType": "off",
         // We prefer to auto-initialize enums
         "useEnumInitializers": "off",
-        // Namespaces are deprecated way to organize modules in TS
         "noNamespace": "error",
         "useNamingConvention": {
           "level": "error",
