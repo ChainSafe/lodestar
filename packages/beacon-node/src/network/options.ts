@@ -23,6 +23,25 @@ export interface NetworkOptions
   useWorker?: boolean;
   maxYoungGenerationSizeMb?: number;
   disableLightClientServer?: boolean;
+
+  /**
+   * During E2E tests observe a lot of following `missing stream`:
+   *
+   * > libp2p:mplex receiver stream with id 2 and protocol /eth2/beacon_chain/req/metadata/2/ssz_snappy ended
+   * > libp2p:mplex initiator stream with id 4 and protocol /eth2/beacon_chain/req/metadata/2/ssz_snappy ended
+   * > libp2p:mplex initiator stream with id 2 and protocol /eth2/beacon_chain/req/metadata/2/ssz_snappy ended
+   * > libp2p:mplex missing stream 2 for message type CLOSE_INITIATOR
+   * > libp2p:mplex missing stream 2 for message type CLOSE_RECEIVER
+   * > libp2p:mplex missing stream 4 for message type CLOSE_INITIATOR
+   *
+   * which results in following rate-limit error and cause the connection to close and fail the e2e tests
+   * > libp2p:mplex rate limit hit when receiving messages for streams that do not exist - closing remote connection
+   * > libp2p:mplex:stream:initiator:3 abort with error Error: Too many messages for missing streams
+   *
+   * The default value for `disconnectThreshold` in libp2p is set to `5`.
+   * We need to increase this only for the testing purpose
+   */
+  disconnectThreshold?: number;
 }
 
 export const defaultNetworkOptions: NetworkOptions = {

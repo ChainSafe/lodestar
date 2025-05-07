@@ -7,7 +7,6 @@ import {ZERO_HASH} from "../../src/constants/index.js";
 import {Eth1Provider} from "../../src/index.js";
 import {shell} from "../sim/shell.js";
 
-/* eslint-disable no-console */
 let txRpcId = 1;
 
 export enum ELStartMode {

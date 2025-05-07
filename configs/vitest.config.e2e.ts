@@ -19,6 +19,10 @@ export const e2eProject = defineProject({
         singleFork: true,
       },
     },
+    sequence: {
+      concurrent: false,
+      shuffle: false,
+    },
   },
 });
 
@@ -40,6 +44,10 @@ export const e2eMainnetProject = defineProject({
       forks: {
         singleFork: true,
       },
+    },
+    sequence: {
+      concurrent: false,
+      shuffle: false,
     },
   },
 });

@@ -71,6 +71,7 @@ class BrowserConsole extends Transport {
 
     if (val <= this.levels[this.level as LogLevel]) {
       // @ts-expect-error
+      // biome-ignore lint/suspicious/noConsole: We want the explicit usage of console
       console[mappedMethod](message);
     }
 

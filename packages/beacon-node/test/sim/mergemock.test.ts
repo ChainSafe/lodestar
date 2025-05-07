@@ -25,8 +25,6 @@ import {shell} from "./shell.js";
 // EL_BINARY_DIR=g11tech/mergemock:latest EL_SCRIPT_DIR=mergemock LODESTAR_PRESET=mainnet ETH_PORT=8661 ENGINE_PORT=8551 yarn vitest run test/sim/mergemock.test.ts
 // ```
 
-/* eslint-disable no-console, @typescript-eslint/naming-convention */
-
 const jwtSecretHex = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
 
 describe("executionEngine / ExecutionEngineHttp", () => {
