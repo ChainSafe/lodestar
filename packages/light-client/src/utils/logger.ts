@@ -8,8 +8,6 @@ export type ILcLogger = {
   debug: LogHandler;
 };
 
-/* eslint-disable no-console */
-
 /**
  * With `console` module and ignoring debug logs
  */

@@ -40,7 +40,7 @@ describe("chain / opPools / SyncContributionAndProofPool", () => {
     const aggregate = cache.getAggregate(slot, beaconBlockRoot);
     expect(ssz.altair.SyncAggregate.equals(aggregate, ssz.altair.SyncAggregate.defaultValue())).toBe(false);
     // TODO Test it's correct. Modify the contributions above so they have 1 bit set to true
-    expect(aggregate.syncCommitteeBits.bitLen).toBe(32);
+    expect(aggregate.syncCommitteeBits.bitLen).toBe(512);
   });
 });
 
@@ -105,7 +105,7 @@ describe("aggregate", () => {
       const expectSyncCommittees = newFilledArray(SYNC_COMMITTEE_SIZE, false);
       for (let subnet = 0; subnet < numSubnet; subnet++) {
         // first participation of each subnet is true
-        expectSyncCommittees[subnet * 8] = true;
+        expectSyncCommittees[subnet * 128] = true;
       }
       expect(renderBitArray(syncAggregate.syncCommitteeBits)).toEqual(
         renderBitArray(BitArray.fromBoolArray(expectSyncCommittees))

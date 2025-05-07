@@ -16,8 +16,6 @@ import {RegenCaller} from "../../../src/chain/regen/index.js";
 import {BeaconNode} from "../../../src/index.js";
 import {linspace} from "../../../src/util/numpy.js";
 
-/* eslint-disable no-console */
-
 export function simTestInfoTracker(bn: BeaconNode, logger: Logger): () => void {
   let lastSeenEpoch = 0;
 

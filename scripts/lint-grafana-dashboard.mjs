@@ -6,14 +6,6 @@ import fs from "node:fs";
 //
 // >> FOR SCRIPT USE `scripts/lint-grafana-dashboards.mjs`
 
-/* eslint-disable
-@typescript-eslint/no-unsafe-assignment,
-@typescript-eslint/explicit-function-return-type,
-@typescript-eslint/naming-convention,
-quotes,
-no-console
-*/
-
 /**
  * @typedef {Object} Dashboard
  * @property {any} [__elements]

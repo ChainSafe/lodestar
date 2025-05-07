@@ -7,7 +7,7 @@ import {BeaconConfig} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {ForkName} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
-import {Epoch, phase0} from "@lodestar/types";
+import {Epoch, phase0, ssz} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {multiaddr} from "@multiformats/multiaddr";
 import {formatNodePeer} from "../../api/impl/node/utils.js";
@@ -387,18 +387,29 @@ export class NetworkCore implements INetworkCore {
     await this.libp2p.hangUp(peerIdFromString(peerIdStr));
   }
 
+  private _dumpPeer(peerIdStr: string, connections: Connection[]): routes.lodestar.LodestarNodePeer {
+    const peerData = this.peersData.connectedPeers.get(peerIdStr);
+    return {
+      ...formatNodePeer(peerIdStr, connections),
+      agentVersion: peerData?.agentVersion ?? "NA",
+      status: peerData?.status ? ssz.phase0.Status.toJson(peerData.status) : null,
+      metadata: peerData?.metadata ? ssz.altair.Metadata.toJson(peerData.metadata) : null,
+      agentClient: String(peerData?.agentClient ?? "Unknown"),
+      lastReceivedMsgUnixTsMs: peerData?.lastReceivedMsgUnixTsMs ?? 0,
+      lastStatusUnixTsMs: peerData?.lastStatusUnixTsMs ?? 0,
+      connectedUnixTsMs: peerData?.connectedUnixTsMs ?? 0,
+    };
+  }
+
   async dumpPeer(peerIdStr: string): Promise<routes.lodestar.LodestarNodePeer | undefined> {
     const connections = this.getConnectionsByPeer().get(peerIdStr);
-    return connections
-      ? {...formatNodePeer(peerIdStr, connections), agentVersion: this.peersData.getAgentVersion(peerIdStr)}
-      : undefined;
+    return connections ? this._dumpPeer(peerIdStr, connections) : undefined;
   }
 
   async dumpPeers(): Promise<routes.lodestar.LodestarNodePeer[]> {
-    return Array.from(this.getConnectionsByPeer().entries()).map(([peerIdStr, connections]) => ({
-      ...formatNodePeer(peerIdStr, connections),
-      agentVersion: this.peersData.getAgentVersion(peerIdStr),
-    }));
+    return Array.from(this.getConnectionsByPeer().entries()).map(([peerIdStr, connections]) =>
+      this._dumpPeer(peerIdStr, connections)
+    );
   }
 
   async dumpPeerScoreStats(): Promise<PeerScoreStats> {
