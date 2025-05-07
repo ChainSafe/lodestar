@@ -97,7 +97,7 @@ export const options: CliCommandOptions<ChainArgs> = {
 
   serveHistoricalState: {
     description:
-      "Enable regenerating and loading state to serve historical data. Fetching this data is expensive and may affect validator performance.",
+      "Enable regenerating finalized state to serve historical data. Fetching this data is expensive and may affect validator performance.",
     type: "boolean",
     default: defaultOptions.chain.serveHistoricalState,
     group: "chain",
