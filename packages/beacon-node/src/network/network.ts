@@ -224,11 +224,7 @@ export class Network implements INetwork {
 
     // Used only for sleep() statements
     this.controller.abort();
-
     this.logger.debug("network core closed");
-
-    // Used only for sleep() statements
-    this.controller.abort();
   }
 
   async scrapeMetrics(): Promise<string> {
