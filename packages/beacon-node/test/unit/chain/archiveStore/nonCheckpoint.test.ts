@@ -5,25 +5,33 @@ import {getNonCheckpointBlocks} from "../../../../src/chain/archiveStore/utils/a
 
 describe("chain / archive / getNonCheckpointBlocks", () => {
   beforeAll(() => {
-    expect(SLOTS_PER_EPOCH).toBe(8);
+    expect(SLOTS_PER_EPOCH).toBe(32);
   });
 
   const testCases: {id: string; blocks: Slot[]; maybeCheckpointSlots: Slot[]}[] = [
     {id: "empty", blocks: [], maybeCheckpointSlots: []},
-    {id: "one block", blocks: [4], maybeCheckpointSlots: [4]},
+    {id: "one block", blocks: [16], maybeCheckpointSlots: [16]},
     {id: "one block in first slot", blocks: [0], maybeCheckpointSlots: [0]},
-    {id: "one block per epoch", blocks: [4, 12, 20], maybeCheckpointSlots: [4, 12, 20]},
-    {id: "two blocks per epoch", blocks: [4, 5, 12, 13, 20, 21], maybeCheckpointSlots: [5, 13, 21]},
+    {id: "one block per epoch", blocks: [16, 48, 80], maybeCheckpointSlots: [16, 48, 80]},
+    {id: "two blocks per epoch", blocks: [16, 20, 48, 52, 80, 84], maybeCheckpointSlots: [20, 52, 84]},
     {
       id: "linear sequence of blocks",
-      blocks: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
-      maybeCheckpointSlots: [0, 8, 16, 17],
+      blocks: [
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
+        30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57,
+        58, 59, 60, 61, 62, 63, 64, 65,
+      ],
+      maybeCheckpointSlots: [0, 32, 64, 65],
     },
     {
       id: "linear sequence of blocks, first block skipped",
-      blocks: [0, 1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 17],
+      blocks: [
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
+        30, 31, /*32*/ 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56,
+        57, 58, 59, 60, 61, 62, 63, /*64*/ 65,
+      ],
       // Since the first blocks are skipped, now the last blocks of the epoch are the checkpoint blocks
-      maybeCheckpointSlots: [0, 7, 15, 17],
+      maybeCheckpointSlots: [0, 31, 63, 65],
     },
   ];
 

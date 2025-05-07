@@ -1,8 +1,11 @@
 import path from "node:path";
 import {defineProject} from "vitest/config";
 
-export const e2eProject = defineProject({
+export const e2eMinimalProject = defineProject({
   test: {
+    // Preferable over `e2e-mainnet` to speed up tests, only use `mainnet` preset in e2e tests
+    // if absolutely required for interop testing, eg. in case of web3signer we need to use
+    // `mainnet` preset to allow testing across multiple forks and ensure mainnet compatibility
     name: "e2e",
     include: ["**/test/e2e/**/*.test.ts"],
     setupFiles: [

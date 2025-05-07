@@ -1,4 +1,4 @@
-import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {ACTIVE_PRESET, PresetName, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {CachedBeaconStateAllForks, computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex, phase0} from "@lodestar/types";
 import {mapValues, toHexString} from "@lodestar/utils";
@@ -12,6 +12,10 @@ import {testLogger} from "../../../utils/logger.js";
 import {generateCachedState} from "../../../utils/state.js";
 
 describe("PersistentCheckpointStateCache", () => {
+  if (ACTIVE_PRESET !== PresetName.minimal) {
+    throw Error(`ACTIVE_PRESET '${ACTIVE_PRESET}' must be minimal`);
+  }
+
   let root0a: Buffer, root0b: Buffer, root1: Buffer, root2: Buffer;
   let cp0a: phase0.Checkpoint, cp0b: phase0.Checkpoint, cp1: phase0.Checkpoint, cp2: phase0.Checkpoint;
   let cp0aHex: CheckpointHex, cp0bHex: CheckpointHex, cp1Hex: CheckpointHex, cp2Hex: CheckpointHex;

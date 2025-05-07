@@ -17,7 +17,7 @@ describe("getCurrentAndNextFork", () => {
     expect(nextFork).toBeUndefined();
   });
 
-  it("should return altair as next fork", () => {
+  it("should return altair as next fork and then bellatrix", () => {
     config.forks.altair.epoch = 1000;
     let forks = getCurrentAndNextFork(config, 0);
     expect(forks.currentFork.name).toBe(ForkName.phase0);
@@ -29,7 +29,7 @@ describe("getCurrentAndNextFork", () => {
 
     forks = getCurrentAndNextFork(config, 1000);
     expect(forks.currentFork.name).toBe(ForkName.altair);
-    expect(forks.nextFork).toBeUndefined();
+    expect(forks.nextFork?.name).toBe(ForkName.bellatrix);
   });
 });
 

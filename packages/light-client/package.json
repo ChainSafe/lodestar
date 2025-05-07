@@ -65,7 +65,7 @@
     "lint": "biome check src/ test/",
     "lint:fix": "yarn run lint --write",
     "test": "yarn test:unit",
-    "test:unit": "vitest run --project unit",
+    "test:unit": "vitest run --project unit --project unit-minimal",
     "test:browsers": "yarn run build:bundle && vitest run --project browser",
     "check-readme": "typescript-docs-verifier"
   },
