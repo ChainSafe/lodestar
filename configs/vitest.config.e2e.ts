@@ -6,7 +6,7 @@ export const e2eMinimalProject = defineProject({
     // Preferable over `e2e-mainnet` to speed up tests, only use `mainnet` preset in e2e tests
     // if absolutely required for interop testing, eg. in case of web3signer we need to use
     // `mainnet` preset to allow testing across multiple forks and ensure mainnet compatibility
-    name: "e2e-minimal",
+    name: "e2e",
     include: ["**/test/e2e/**/*.test.ts"],
     setupFiles: [
       path.join(__dirname, "../scripts/vitest/setupFiles/customMatchers.ts"),
