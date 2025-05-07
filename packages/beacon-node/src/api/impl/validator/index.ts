@@ -404,18 +404,18 @@ export function getValidatorApi(
     // as of now fee recipient checks can not be performed because builder does not return bid recipient
     {
       skipHeadChecksAndUpdate,
-      commonBlockBody,
+      commonBlockBodyPromise,
       parentBlockRoot: inParentBlockRoot,
     }: Omit<routes.validator.ExtraProduceBlockOpts, "builderSelection"> &
       (
         | {
             skipHeadChecksAndUpdate: true;
-            commonBlockBody: CommonBlockBody;
+            commonBlockBodyPromise: Promise<CommonBlockBody>;
             parentBlockRoot: Root;
           }
         | {
             skipHeadChecksAndUpdate?: false | undefined;
-            commonBlockBody?: undefined;
+            commonBlockBodyPromise?: undefined;
             parentBlockRoot?: undefined;
           }
       ) = {}
@@ -457,7 +457,7 @@ export function getValidatorApi(
         graffiti: toGraffitiBuffer(
           graffiti ?? getDefaultGraffiti(getLodestarClientVersion(opts), chain.executionEngine.clientVersion, opts)
         ),
-        commonBlockBody,
+        commonBlockBody: await commonBlockBodyPromise,
       });
 
       metrics?.blockProductionSuccess.inc({source});
@@ -488,16 +488,16 @@ export function getValidatorApi(
       feeRecipient,
       strictFeeRecipientCheck,
       skipHeadChecksAndUpdate,
-      commonBlockBody,
+      commonBlockBodyPromise,
       parentBlockRoot: inParentBlockRoot,
     }: Omit<routes.validator.ExtraProduceBlockOpts, "builderSelection"> &
       (
         | {
             skipHeadChecksAndUpdate: true;
-            commonBlockBody: CommonBlockBody;
+            commonBlockBodyPromise: Promise<CommonBlockBody>;
             parentBlockRoot: Root;
           }
-        | {skipHeadChecksAndUpdate?: false | undefined; commonBlockBody?: undefined; parentBlockRoot?: undefined}
+        | {skipHeadChecksAndUpdate?: false | undefined; commonBlockBodyPromise?: undefined; parentBlockRoot?: undefined}
       ) = {}
   ): Promise<ProduceBlockOrContentsRes & {shouldOverrideBuilder?: boolean}> {
     const source = ProducedBlockSource.engine;
@@ -525,7 +525,7 @@ export function getValidatorApi(
           graffiti ?? getDefaultGraffiti(getLodestarClientVersion(opts), chain.executionEngine.clientVersion, opts)
         ),
         feeRecipient,
-        commonBlockBody,
+        commonBlockBody: await commonBlockBodyPromise,
       });
       const version = config.getForkName(block.slot);
       if (strictFeeRecipientCheck && feeRecipient && isForkPostBellatrix(version)) {
@@ -626,16 +626,28 @@ export function getValidatorApi(
       builderBoostFactor: `${builderBoostFactor}`,
     };
 
-    logger.verbose("Assembling block with produceEngineOrBuilderBlock", loggerContext);
-    const commonBlockBody = await chain.produceCommonBlockBody({
+    const blockAttributes = {
       slot,
       parentBlockRoot,
       randaoReveal,
       graffiti: toGraffitiBuffer(
         graffiti ?? getDefaultGraffiti(getLodestarClientVersion(opts), chain.executionEngine.clientVersion, opts)
       ),
-    });
-    logger.debug("Produced common block body", loggerContext);
+      version: config.getForkName(slot),
+      feeRecipient,
+    };
+
+    logger.verbose("Assembling block with produceEngineOrBuilderBlock", loggerContext);
+    let commonBlockBodyPromise: Promise<CommonBlockBody> | undefined = undefined;
+    const commonBlockBodyPromiseFn = () => {
+      if (!commonBlockBodyPromise) {
+        commonBlockBodyPromise = chain.produceCommonBlockBody(blockAttributes).then((resp) => {
+          logger.debug("Produced common block body", loggerContext);
+          return resp;
+        });
+      }
+      return commonBlockBodyPromise;
+    };
 
     // Calculate cutoff time based on start of the slot
     const cutoffMs = Math.max(0, BLOCK_PRODUCTION_RACE_CUTOFF_MS - Math.round(chain.clock.secFromSlot(slot) * 1000));
@@ -658,7 +670,7 @@ export function getValidatorApi(
           strictFeeRecipientCheck: false,
           // skip checking and recomputing head in these individual produce calls
           skipHeadChecksAndUpdate: true,
-          commonBlockBody,
+          commonBlockBodyPromise: commonBlockBodyPromiseFn(),
           parentBlockRoot,
         })
       : Promise.reject(new Error("Builder disabled"));
@@ -669,7 +681,7 @@ export function getValidatorApi(
           strictFeeRecipientCheck,
           // skip checking and recomputing head in these individual produce calls
           skipHeadChecksAndUpdate: true,
-          commonBlockBody,
+          commonBlockBodyPromise: commonBlockBodyPromiseFn(),
           parentBlockRoot,
         }).then((engineBlock) => {
           // Once the engine returns a block, in the event of either:
