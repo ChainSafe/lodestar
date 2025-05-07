@@ -50,7 +50,7 @@
     "lint": "biome check src/",
     "lint:fix": "yarn run lint --write",
     "test": "yarn test:unit",
-    "test:unit": "yarn vitest run --project unit",
+    "test:unit": "yarn vitest run --project unit --project unit-minimal",
     "check-readme": "typescript-docs-verifier"
   },
   "repository": {

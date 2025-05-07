@@ -34,12 +34,12 @@ describe("UpgradeLightClientHeader", () => {
 
     testSlots = {
       phase0: 0,
-      altair: 10,
-      bellatrix: 17,
-      capella: 25,
-      deneb: 33,
-      electra: 41,
-      fulu: 54,
+      altair: 40,
+      bellatrix: 68,
+      capella: 100,
+      deneb: 132,
+      electra: 164,
+      fulu: 216,
     };
   });
 

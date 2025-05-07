@@ -8,8 +8,6 @@ import {NetworkName} from "@lodestar/config/networks.js";
 // INFURA_ETH2_CREDENTIALS=<user>:<secret> ./node_modules/.bin/ts-node test/getGenesisData.ts
 // ```
 
-/* eslint-disable no-console */
-
 const networksInInfura: NetworkName[] = ["mainnet" /*"goerli"*/];
 
 async function getGenesisData(): Promise<void> {

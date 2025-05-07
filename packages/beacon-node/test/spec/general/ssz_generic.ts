@@ -28,7 +28,6 @@ export const sszGeneric =
           const type = getTestType(typeName, testCase);
           const testData = parseSszGenericInvalidTestcase(path.join(testSuiteDirpath, testCase));
 
-          /* eslint-disable no-console */
           if (process.env.DEBUG) {
             console.log({serialized: Buffer.from(testData.serialized).toString("hex")});
           }
