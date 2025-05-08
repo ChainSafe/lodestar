@@ -420,7 +420,7 @@ export function createLodestarMetrics(
       aggregateWithRandomnessAsyncDuration: register.histogram({
         name: "lodestar_bls_thread_pool_aggregate_with_randomness_async_time_seconds",
         help: "Total time performing aggregateWithRandomness on main thread",
-        buckets: [0.001, 0.005, 0.01, 0.1],
+        buckets: [0.001, 0.005, 0.01, 0.1, 0.3],
       }),
       pubkeysAggregationMainThreadDuration: register.histogram({
         name: "lodestar_bls_thread_pool_pubkeys_aggregation_main_thread_time_seconds",
