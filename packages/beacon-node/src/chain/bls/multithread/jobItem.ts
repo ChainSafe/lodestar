@@ -61,7 +61,7 @@ export async function jobItemWorkReq(job: JobQueueItem, metrics: Metrics | null)
         })),
       };
     case JobQueueItemType.sameMessage: {
-      const timer = metrics?.blsThreadPool.aggregateWithRandomnessMainThreadDuration.startTimer();
+      const timer = metrics?.blsThreadPool.aggregateWithRandomnessAsyncDuration.startTimer();
       const {pk, sig} = await asyncAggregateWithRandomness(
         job.sets.map((set) => ({pk: set.publicKey, sig: set.signature}))
       );

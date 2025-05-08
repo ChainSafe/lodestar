@@ -417,8 +417,8 @@ export function createLodestarMetrics(
         name: "lodestar_bls_thread_pool_batchable_sig_sets_total",
         help: "Count of total batchable signature sets",
       }),
-      aggregateWithRandomnessMainThreadDuration: register.histogram({
-        name: "lodestar_bls_thread_pool_aggregate_with_randomness_main_thread_time_seconds",
+      aggregateWithRandomnessAsyncDuration: register.histogram({
+        name: "lodestar_bls_thread_pool_aggregate_with_randomness_async_time_seconds",
         help: "Total time performing aggregateWithRandomness on main thread",
         buckets: [0.001, 0.005, 0.01, 0.1],
       }),
