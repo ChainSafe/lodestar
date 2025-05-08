@@ -1,4 +1,4 @@
-import {ForkName, ForkPostDeneb, ForkPostFulu, ForkPreDeneb} from "@lodestar/params";
+import {ForkName, ForkPostDeneb, ForkPreDeneb} from "@lodestar/params";
 import {BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
 import {fromHex, prettyBytes, toHex, withTimeout} from "@lodestar/utils";
 import {VersionedHashes} from "../../../execution/index.js";
@@ -225,14 +225,14 @@ export class BlockInputPreData extends AbstractBlockInput<ForkPreDeneb, null> {
 
 // Blobs DA
 
-export type ForkBlobs = ForkName.deneb | ForkName.electra;
+export type ForkBlobsDA = ForkName.deneb | ForkName.electra;
 
 type BlockInputBlobsState =
   | {
       hasBlock: true;
       hasAllData: true;
       versionHashes: VersionedHashes;
-      block: SignedBeaconBlock<ForkBlobs>;
+      block: SignedBeaconBlock<ForkBlobsDA>;
       source: SourceMeta;
       timeCompleteSec: number;
     }
@@ -240,7 +240,7 @@ type BlockInputBlobsState =
       hasBlock: true;
       hasAllData: false;
       versionHashes: VersionedHashes;
-      block: SignedBeaconBlock<ForkBlobs>;
+      block: SignedBeaconBlock<ForkBlobsDA>;
       source: SourceMeta;
     }
   | {
@@ -254,7 +254,7 @@ type BlockInputBlobsState =
  * - The block is seen and all blobs are not yet seen
  * - The block is yet not seen and its unknown if all blobs are seen
  */
-export class BlockInputBlobs extends AbstractBlockInput<ForkBlobs, deneb.BlobSidecars> {
+export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobSidecars> {
   type = DAType.Blobs as const;
 
   state: BlockInputBlobsState;
@@ -265,7 +265,7 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobs, deneb.BlobSid
     this.state = state;
   }
 
-  static createFromBlock(props: AddBlock<ForkBlobs> & CreateBlockInputMeta): BlockInputBlobs {
+  static createFromBlock(props: AddBlock<ForkBlobsDA> & CreateBlockInputMeta): BlockInputBlobs {
     const hasAllData = props.daOutOfRange || props.block.message.body.blobKzgCommitments.length === 0;
 
     const state = {
@@ -324,7 +324,7 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobs, deneb.BlobSid
     };
   }
 
-  addBlock({blockRootHex, block, source}: AddBlock<ForkBlobs>): void {
+  addBlock({blockRootHex, block, source}: AddBlock<ForkBlobsDA>): void {
     if (!this.state.hasBlock) {
       throw new BlockInputError(
         {
@@ -473,13 +473,13 @@ function getVersionHashes(block: SignedBeaconBlock<ForkPostDeneb>): VersionedHas
   return block.message.body.blobKzgCommitments.map(kzgCommitmentToVersionedHash);
 }
 
-function blockAndBlobArePaired(block: SignedBeaconBlock<ForkBlobs>, blobSidecar: deneb.BlobSidecar): boolean {
+function blockAndBlobArePaired(block: SignedBeaconBlock<ForkBlobsDA>, blobSidecar: deneb.BlobSidecar): boolean {
   return byteArrayEquals(block.message.body.blobKzgCommitments[blobSidecar.index], blobSidecar.kzgCommitment);
 }
 
 function assertBlockAndBlobArePaired(
   blockRootHex: string,
-  block: SignedBeaconBlock<ForkBlobs>,
+  block: SignedBeaconBlock<ForkBlobsDA>,
   blobSidecar: deneb.BlobSidecar
 ): void {
   if (!blockAndBlobArePaired(block, blobSidecar)) {
@@ -500,18 +500,20 @@ function assertBlockAndBlobArePaired(
 
 // Columns DA
 
+export type ForkColumnsDA = ForkName.fulu;
+
 type BlockInputColumnsState =
   | {
       hasBlock: true;
       hasAllData: true;
-      block: SignedBeaconBlock<ForkPostFulu>;
+      block: SignedBeaconBlock<ForkColumnsDA>;
       source: SourceMeta;
       timeCompleteSec: number;
     }
   | {
       hasBlock: true;
       hasAllData: false;
-      block: SignedBeaconBlock<ForkPostFulu>;
+      block: SignedBeaconBlock<ForkColumnsDA>;
       source: SourceMeta;
     }
   | {
@@ -529,7 +531,7 @@ type BlockInputColumnsState =
  * - The block is not yet seen and all required sampled columns are seen
  * - The block is not yet seen and all required sampled columns are not yet seen
  */
-export class BlockInputColumns extends AbstractBlockInput<ForkPostFulu, fulu.DataColumnSidecars> {
+export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.DataColumnSidecars> {
   type = DAType.Columns as const;
 
   state: BlockInputColumnsState;
@@ -544,7 +546,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkPostFulu, fulu.Dat
   }
 
   static createFromBlock(
-    props: AddBlock<ForkPostFulu> & CreateBlockInputMeta & {custodyConfig: CustodyConfig}
+    props: AddBlock<ForkColumnsDA> & CreateBlockInputMeta & {custodyConfig: CustodyConfig}
   ): BlockInputColumns {
     const hasAllData =
       props.daOutOfRange ||
@@ -608,7 +610,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkPostFulu, fulu.Dat
     };
   }
 
-  addBlock(props: AddBlock<ForkPostFulu>): void {
+  addBlock(props: AddBlock<ForkColumnsDA>): void {
     if (this.state.hasBlock) {
       throw new BlockInputError(
         {
@@ -754,7 +756,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkPostFulu, fulu.Dat
 }
 
 function blockAndColumnArePaired(
-  block: SignedBeaconBlock<ForkPostFulu>,
+  block: SignedBeaconBlock<ForkColumnsDA>,
   columnSidecar: fulu.DataColumnSidecar
 ): boolean {
   return (
@@ -767,7 +769,7 @@ function blockAndColumnArePaired(
 
 function assertBlockAndColumnArePaired(
   blockRootHex: string,
-  block: SignedBeaconBlock<ForkPostFulu>,
+  block: SignedBeaconBlock<ForkColumnsDA>,
   columnSidecar: fulu.DataColumnSidecar
 ): void {
   if (!blockAndColumnArePaired(block, columnSidecar)) {
