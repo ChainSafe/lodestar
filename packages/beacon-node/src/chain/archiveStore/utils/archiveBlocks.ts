@@ -134,7 +134,7 @@ async function migrateBlocksFromHotToColdDb(db: IBeaconDb, blocks: BlockRootSlot
       canonicalBlocks.map(async (block) => {
         const blockBuffer = await db.block.getBinary(block.root);
         if (!blockBuffer) {
-          throw Error(`No block found for slot ${block.slot} root ${toRootHex(block.root)}`);
+          throw Error(`Block not found for slot ${block.slot} root ${toRootHex(block.root)}`);
         }
         return {
           key: block.slot,

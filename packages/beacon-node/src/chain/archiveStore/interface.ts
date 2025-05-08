@@ -24,6 +24,7 @@ export type ArchiveStoreOpts = StatesArchiveOpts & {
   disableArchiveOnCheckpoint?: boolean;
   archiveBlobEpochs?: number;
   pruneHistory?: boolean;
+  serveHistoricalState?: boolean;
 };
 
 export type ProposalStats = {

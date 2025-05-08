@@ -14,8 +14,8 @@ import {
 } from "../../../utils/validationData/aggregateAndProof.js";
 
 describe("chain / validation / aggregateAndProof", () => {
-  const vc = 64;
-  const stateSlot = 100;
+  const vc = 8192;
+  const stateSlot = 400;
 
   const UNKNOWN_ROOT = Buffer.alloc(32, 1);
   const KNOWN_TARGET_ROOT = Buffer.alloc(32, 0xd0);
@@ -142,14 +142,14 @@ describe("chain / validation / aggregateAndProof", () => {
     const {aggregationBits} = signedAggregateAndProof.message.aggregate;
     signedAggregateAndProof.message.aggregate.aggregationBits = new BitArray(
       aggregationBits.uint8Array,
-      aggregationBits.bitLen + 1
+      aggregationBits.bitLen - 1
     );
 
     await expectError(chain, signedAggregateAndProof, AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS);
   });
 
   it("INVALID_SIGNATURE - selection proof sig", async () => {
-    const bitIndex = 1;
+    const bitIndex = 126;
     const {chain, signedAggregateAndProof} = getValidData({bitIndex});
     // Swap the selectionProof signature with the overall sig of the object
     signedAggregateAndProof.message.selectionProof = signedAggregateAndProof.signature;

@@ -1,6 +1,5 @@
 import path from "node:path";
 // We want to keep `winston` export as it's more readable and easier to understand
-/* eslint-disable import/no-named-as-default-member */
 import winston from "winston";
 import type {Logger as Winston} from "winston";
 import DailyRotateFile from "winston-daily-rotate-file";

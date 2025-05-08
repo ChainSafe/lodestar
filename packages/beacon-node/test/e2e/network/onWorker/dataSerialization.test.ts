@@ -160,6 +160,12 @@ describe("data serialization through worker boundary", () => {
     state: "connected",
     direction: "inbound",
     agentVersion: "test",
+    status: null,
+    metadata: null,
+    agentClient: "test",
+    lastReceivedMsgUnixTsMs: 0,
+    lastStatusUnixTsMs: 0,
+    connectedUnixTsMs: 0,
   };
 
   // If return type is void, set to null

@@ -1,8 +1,6 @@
-/* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import path from "node:path";
 import {Worker, spawn} from "@chainsafe/threads";
 // `threads` library creates self global variable which breaks `timeout-abort-controller` https://github.com/jacobheun/timeout-abort-controller/issues/9
-// Don't add an eslint disable here as a reminder that this has to be fixed eventually
 // @ts-ignore
 // biome-ignore lint/suspicious/noGlobalAssign: <explanation>
 self = undefined;

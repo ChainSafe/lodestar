@@ -27,9 +27,9 @@
     "check-types": "tsc",
     "lint": "biome check src/ test/",
     "lint:fix": "yarn run lint --write",
-    "test:unit": "vitest run --project unit --project unit-mainnet",
+    "test:unit": "vitest run --project unit --project unit-minimal",
     "test": "yarn test:unit && yarn test:e2e",
-    "test:spec": "vitest run --project spec",
+    "test:spec": "vitest run --project spec-minimal",
     "test:e2e": "vitest run --project e2e --project e2e-mainnet",
     "download-spec-tests": "node --loader=ts-node/esm test/spec/downloadTests.ts",
     "check-readme": "typescript-docs-verifier"
