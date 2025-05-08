@@ -47,7 +47,7 @@ export type ValidatorMonitor = {
     isActivePrevEpoch: boolean[],
     balances?: number[]
   ): void;
-  registerBeaconBlock(src: OpSource, seenTimestampSec: Seconds, block: BeaconBlock): void;
+  registerBeaconBlock(src: OpSource, delaySec: Seconds, block: BeaconBlock): void;
   registerBlobSidecar(src: OpSource, seenTimestampSec: Seconds, blob: deneb.BlobSidecar): void;
   registerImportedBlock(block: BeaconBlock, data: {proposerBalanceDelta: number}): void;
   onPoolSubmitUnaggregatedAttestation(
@@ -397,10 +397,9 @@ export function createValidatorMonitor(
       }
     },
 
-    registerBeaconBlock(src, seenTimestampSec, block) {
+    registerBeaconBlock(src, delaySec, block) {
       const validator = validators.get(block.proposerIndex);
       // Returns the delay between the start of `block.slot` and `seenTimestamp`.
-      const delaySec = seenTimestampSec - (genesisTime + block.slot * config.SECONDS_PER_SLOT);
       if (validator) {
         validatorMonitorMetrics?.beaconBlockTotal.inc({src});
         validatorMonitorMetrics?.beaconBlockDelaySeconds.observe({src}, delaySec);
@@ -797,13 +796,11 @@ export function createValidatorMonitor(
     },
   };
 
-  if (metricsRegister) {
-    // Register a single collect() function to run all validatorMonitor metrics
-    validatorMonitorMetrics?.validatorsConnected.addCollect(() => {
-      const clockSlot = getCurrentSlot(config, genesisTime);
-      validatorMonitor.scrapeMetrics(clockSlot);
-    });
-  }
+  // Register a single collect() function to run all validatorMonitor metrics
+  validatorMonitorMetrics?.validatorsConnected.addCollect(() => {
+    const clockSlot = getCurrentSlot(config, genesisTime);
+    validatorMonitor.scrapeMetrics(clockSlot);
+  });
 
   return validatorMonitor;
 }
