@@ -33,7 +33,7 @@ export type RestApiServerMetrics = SocketMetrics & {
 /**
  * Error response body format as defined in beacon-api spec
  *
- * See https://github.com/ethereum/beacon-APIs/blob/v2.5.0/types/http.yaml
+ * See https://github.com/ethereum/beacon-APIs/blob/v3.1.0/types/http.yaml
  */
 type ErrorResponse = {
   code: number;
