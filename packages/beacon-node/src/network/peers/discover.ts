@@ -22,7 +22,6 @@ const MAX_CACHED_ENRS = 100;
 const MAX_CACHED_ENR_AGE_MS = 5 * 60 * 1000;
 
 export type PeerDiscoveryOpts = {
-  maxPeers: number;
   discv5FirstQueryDelayMs: number;
   discv5: LodestarDiscv5Opts;
   connectToDiscv5Bootnodes?: boolean;
@@ -97,7 +96,6 @@ export class PeerDiscovery {
   private peerRpcScores: IPeerRpcScoreStore;
   private metrics: NetworkCoreMetrics | null;
   private logger: LoggerNode;
-  private config: BeaconConfig;
   private cachedENRs = new Map<PeerIdStr, CachedENR>();
   private randomNodeQuery: QueryStatus = {code: QueryStatusCode.NotActive};
   private peersToConnect = 0;
@@ -106,22 +104,18 @@ export class PeerDiscovery {
     syncnets: new Map(),
   };
 
-  /** The maximum number of peers we allow (exceptions for subnet peers) */
-  private maxPeers: number;
   private discv5StartMs: number;
   private discv5FirstQueryDelayMs: number;
 
   private connectToDiscv5BootnodesOnStart: boolean | undefined = false;
 
   constructor(modules: PeerDiscoveryModules, opts: PeerDiscoveryOpts, discv5: Discv5Worker) {
-    const {libp2p, peerRpcScores, metrics, logger, config} = modules;
+    const {libp2p, peerRpcScores, metrics, logger} = modules;
     this.libp2p = libp2p;
     this.peerRpcScores = peerRpcScores;
     this.metrics = metrics;
     this.logger = logger;
-    this.config = config;
     this.discv5 = discv5;
-    this.maxPeers = opts.maxPeers;
     this.discv5StartMs = 0;
     this.discv5StartMs = Date.now();
     this.discv5FirstQueryDelayMs = opts.discv5FirstQueryDelayMs;

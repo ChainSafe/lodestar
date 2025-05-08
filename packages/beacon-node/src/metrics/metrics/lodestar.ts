@@ -1,4 +1,3 @@
-import {BeaconState} from "@lodestar/types";
 import {BlobsSource, BlockSource} from "../../chain/blocks/types.js";
 import {JobQueueItemType} from "../../chain/bls/index.js";
 import {AttestationErrorCode, BlockErrorCode} from "../../chain/errors/index.js";
@@ -417,10 +416,10 @@ export function createLodestarMetrics(
         name: "lodestar_bls_thread_pool_batchable_sig_sets_total",
         help: "Count of total batchable signature sets",
       }),
-      aggregateWithRandomnessMainThreadDuration: register.histogram({
-        name: "lodestar_bls_thread_pool_aggregate_with_randomness_main_thread_time_seconds",
-        help: "Total time performing aggregateWithRandomness on main thread",
-        buckets: [0.001, 0.005, 0.01, 0.1],
+      aggregateWithRandomnessAsyncDuration: register.histogram({
+        name: "lodestar_bls_thread_pool_aggregate_with_randomness_async_time_seconds",
+        help: "Total time performing aggregateWithRandomness async",
+        buckets: [0.001, 0.005, 0.01, 0.1, 0.3],
       }),
       pubkeysAggregationMainThreadDuration: register.histogram({
         name: "lodestar_bls_thread_pool_pubkeys_aggregation_main_thread_time_seconds",

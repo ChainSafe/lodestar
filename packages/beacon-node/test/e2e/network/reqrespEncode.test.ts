@@ -22,8 +22,6 @@ import {GetReqRespHandlerFn} from "../../../src/network/reqresp/types.js";
 import {LocalStatusCache} from "../../../src/network/statusCache.js";
 import {testLogger} from "../../utils/logger.js";
 
-/* eslint-disable require-yield */
-
 describe("reqresp encoder", () => {
   let port = 60000;
 

@@ -5,7 +5,6 @@ import {
   COMPOUNDING_WITHDRAWAL_PREFIX,
   FAR_FUTURE_EPOCH,
   SLOTS_PER_EPOCH,
-  SYNC_COMMITTEE_SIZE,
 } from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {describe, expect, it} from "vitest";
@@ -15,17 +14,18 @@ import {generateValidators} from "../../utils/validator.js";
 
 describe("processConsolidationRequest", () => {
   it("rejects BLS withdrawal credentials", () => {
+    const vc = 32;
     const electraForkEpoch = 400000;
     const currentEpoch = electraForkEpoch + 10;
     const currentSlot = SLOTS_PER_EPOCH * currentEpoch;
 
-    const validators = generateValidators(SYNC_COMMITTEE_SIZE, {
+    const validators = generateValidators(vc, {
       activation: electraForkEpoch - 10000,
       withdrawableEpoch: FAR_FUTURE_EPOCH,
       exit: FAR_FUTURE_EPOCH,
     });
 
-    for (let i = 0; i < SYNC_COMMITTEE_SIZE; i++) {
+    for (let i = 0; i < vc; i++) {
       const buffer = Buffer.alloc(32, 0);
       buffer.writeInt16BE(i + 1, 30); // Offset to ensure the SK is less than the order
       const sk = bls.SecretKey.fromBytes(buffer);

@@ -13,7 +13,7 @@ export const browserTestProject = defineProject({
     exclude: ["**/*.node.test.ts"],
     setupFiles: [path.join(import.meta.dirname, "../scripts/vitest/setupFiles/customMatchers.ts")],
     env: {
-      LODESTAR_PRESET: "minimal",
+      LODESTAR_PRESET: "mainnet",
     },
     browser: {
       enabled: true,

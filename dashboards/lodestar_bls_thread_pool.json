@@ -1174,7 +1174,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(lodestar_bls_thread_pool_aggregate_with_randomness_main_thread_time_seconds_sum[$rate_interval]) * 384",
+          "expr": "rate(lodestar_bls_thread_pool_aggregate_with_randomness_async_time_seconds_sum[$rate_interval]) * 384",
           "instant": false,
           "legendFormat": "aggregate_with_randomness",
           "range": true,
@@ -1270,7 +1270,7 @@
           "disableTextWrap": false,
           "editorMode": "code",
           "exemplar": false,
-          "expr": "rate(lodestar_bls_thread_pool_aggregate_with_randomness_main_thread_time_seconds_bucket[$rate_interval])",
+          "expr": "rate(lodestar_bls_thread_pool_aggregate_with_randomness_async_time_seconds_bucket[$rate_interval])",
           "format": "heatmap",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
@@ -1281,7 +1281,7 @@
           "useBackend": false
         }
       ],
-      "title": "Main Thread AggregateWithRandomness Time",
+      "title": "Async AggregateWithRandomness Time",
       "type": "heatmap"
     },
     {

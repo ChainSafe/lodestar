@@ -47,8 +47,8 @@
     "lint": "biome check src/ test/",
     "lint:fix": "yarn run lint --write",
     "test": "yarn test:unit && yarn test:e2e",
-    "test:unit": "vitest run --project unit",
-    "test:e2e": "vitest run --project e2e",
+    "test:unit": "vitest run --project unit --project unit-minimal",
+    "test:e2e": "vitest run --project e2e --project e2e-mainnet",
     "check-readme": "typescript-docs-verifier"
   },
   "repository": {

@@ -2,8 +2,8 @@ import {beforeAll, bench, describe} from "@chainsafe/benchmark";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {PeerId} from "@libp2p/interface";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
-import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
-import {altair, phase0} from "@lodestar/types";
+import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+import {altair, phase0, ssz} from "@lodestar/types";
 import {defaultNetworkOptions} from "../../../../../src/network/options.js";
 import {RequestedSubnet, prioritizePeers} from "../../../../../src/network/peers/utils/index.js";
 import {getAttnets, getSyncnets} from "../../../../utils/network.js";
@@ -103,6 +103,7 @@ describe("prioritizePeers", () => {
             Array.from({length: Math.floor(syncnetPercentage * SYNC_COMMITTEE_SUBNET_COUNT)}, (_, i) => i)
           ),
           score: lowestScore + ((highestScore - lowestScore) * i) / defaultNetworkOptions.maxPeers,
+          status: ssz.phase0.Status.defaultValue(),
         }));
 
         const attnets: RequestedSubnet[] = [];
@@ -117,7 +118,13 @@ describe("prioritizePeers", () => {
         return {connectedPeers, attnets, syncnets};
       },
       fn: ({connectedPeers, attnets, syncnets}) => {
-        prioritizePeers(connectedPeers, attnets, syncnets, defaultNetworkOptions);
+        prioritizePeers(connectedPeers, attnets, syncnets, {
+          ...defaultNetworkOptions,
+          status: ssz.phase0.Status.defaultValue(),
+          starved: false,
+          starvationPruneRatio: 0.05,
+          starvationThresholdSlots: SLOTS_PER_EPOCH * 2,
+        });
       },
     });
   }

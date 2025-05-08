@@ -1,4 +1,3 @@
-/* eslint-disable import/no-extraneous-dependencies */
 import {UserConfig, ConfigEnv, Plugin} from "vite";
 
 export function buildTargetPlugin(target: string): Plugin {
