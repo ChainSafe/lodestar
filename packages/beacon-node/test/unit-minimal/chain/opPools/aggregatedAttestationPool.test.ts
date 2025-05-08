@@ -2,11 +2,13 @@ import {SecretKey, Signature, aggregateSignatures, fastAggregateVerify} from "@c
 import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {
+  ACTIVE_PRESET,
   FAR_FUTURE_EPOCH,
   ForkName,
   ForkPostElectra,
   MAX_COMMITTEES_PER_SLOT,
   MAX_EFFECTIVE_BALANCE,
+  PresetName,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
 import {CachedBeaconStateAllForks, CachedBeaconStateElectra, newFilledArray} from "@lodestar/state-transition";
@@ -36,6 +38,10 @@ const validSignature = fromHexString(
 );
 
 describe("AggregatedAttestationPool - Altair", () => {
+  if (ACTIVE_PRESET !== PresetName.minimal) {
+    throw Error(`ACTIVE_PRESET '${ACTIVE_PRESET}' must be minimal`);
+  }
+
   let pool: AggregatedAttestationPool;
   const fork = ForkName.altair;
   const config = createChainForkConfig({

@@ -31,8 +31,6 @@ import {shell} from "./shell.js";
 // DEV_RUN=true EL_BINARY_DIR=ethpandaops/ethereumjs:master-0e06ddf EL_SCRIPT_DIR=ethereumjsdocker yarn vitest run test/sim/electra-interop.test.ts
 // ```
 
-/* eslint-disable no-console, @typescript-eslint/naming-convention */
-
 const jwtSecretHex = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
 const retries = defaultExecutionEngineHttpOpts.retries;
 const retryDelay = defaultExecutionEngineHttpOpts.retryDelay;

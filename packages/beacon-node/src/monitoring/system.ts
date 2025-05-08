@@ -1,5 +1,4 @@
 // We want to keep `system` export to be used as namespace
-/* eslint-disable import/no-named-as-default-member */
 import os from "node:os";
 import path from "node:path";
 import {Logger} from "@lodestar/utils";

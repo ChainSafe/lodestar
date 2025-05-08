@@ -161,4 +161,3 @@ export type ELApiParams = {
 export type ELApiReturn = {
   [K in keyof ELApi]: ReturnType<ELApi[K]>;
 };
-/* eslint-enable @typescript-eslint/naming-convention */

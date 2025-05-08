@@ -4,8 +4,6 @@ import {RemoteServiceError} from "../../../src/monitoring/service.js";
 import {ProcessType} from "../../../src/monitoring/types.js";
 import {BEACON_NODE_STATS_SCHEMA, ClientStatsSchema, SYSTEM_STATS_SCHEMA, VALIDATOR_STATS_SCHEMA} from "./schemas.js";
 
-/* eslint-disable no-console */
-
 type ReceivedData = Record<string, unknown> & {process: ProcessType};
 
 export const remoteServiceRoutes = {

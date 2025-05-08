@@ -30,7 +30,7 @@
     "check-types": "tsc && vitest run --project types",
     "lint": "biome check src/ test/",
     "lint:fix": "yarn run lint --write",
-    "test:unit": "vitest run --project unit",
+    "test:unit": "vitest run --project unit --project unit-minimal",
     "test:browsers": "vitest run --project browser",
     "check-readme": "typescript-docs-verifier"
   },

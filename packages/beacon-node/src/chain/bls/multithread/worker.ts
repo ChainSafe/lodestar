@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import worker from "node:worker_threads";
 import {PublicKey} from "@chainsafe/blst";
 import {expose} from "@chainsafe/threads/worker";
