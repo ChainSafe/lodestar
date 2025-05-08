@@ -188,7 +188,7 @@ export class BlockInputPreData extends AbstractBlockInput<ForkPreDeneb, null> {
 
   state: BlockInputPreDataState;
 
-  constructor(init: BlockInputInit, state: BlockInputPreDataState) {
+  private constructor(init: BlockInputInit, state: BlockInputPreDataState) {
     super(init);
     this.state = state;
   }
@@ -260,7 +260,7 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
   state: BlockInputBlobsState;
   private blobsCache = new Map<BlobIndex, BlobWithSource>();
 
-  constructor(init: BlockInputInit, state: BlockInputBlobsState) {
+  private constructor(init: BlockInputInit, state: BlockInputBlobsState) {
     super(init);
     this.state = state;
   }
@@ -556,7 +556,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
   private columnsCache = new Map<ColumnIndex, ColumnWithSource>();
   private readonly custodyConfig: CustodyConfig;
 
-  constructor(init: BlockInputInit, state: BlockInputColumnsState, custodyConfig: CustodyConfig) {
+  private constructor(init: BlockInputInit, state: BlockInputColumnsState, custodyConfig: CustodyConfig) {
     super(init);
     this.state = state;
     this.custodyConfig = custodyConfig;
