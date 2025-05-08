@@ -55,7 +55,7 @@ export async function getStateResponse(
         : chain.getStateByCheckpoint(stateId);
 
   if (!res) {
-    throw new ApiError(404, `No state found for id '${inStateId}'`);
+    throw new ApiError(404, `State not found for id '${inStateId}'`);
   }
 
   return res;
@@ -77,7 +77,7 @@ export async function getStateResponseWithRegen(
         : await chain.getStateOrBytesByCheckpoint(stateId);
 
   if (!res) {
-    throw new ApiError(404, `No state found for id '${inStateId}'`);
+    throw new ApiError(404, `State not found for id '${inStateId}'`);
   }
 
   return res;

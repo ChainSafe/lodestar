@@ -127,5 +127,11 @@ describe("execution / engine / types", () => {
 
       expect(() => deserializeExecutionRequests(serializedWrongPrefix)).toThrow();
     });
+
+    it("should throw an error if execution request has no data", () => {
+      const serializedNoData = [serializedRequests[0], "0x01", serializedRequests[2]];
+
+      expect(() => deserializeExecutionRequests(serializedNoData)).toThrow();
+    });
   });
 });

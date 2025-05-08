@@ -9,7 +9,7 @@ The evolution of light clients is emblematic of the broader trajectory of Ethere
 ## Prerequisites
 
 [![Discord](https://img.shields.io/discord/593655374469660673.svg?label=Discord&logo=discord)](https://discord.gg/aMxzVcr)
-[![Eth Consensus Spec v1.4.0](https://img.shields.io/badge/ETH%20consensus--spec-1.4.0-blue)](https://github.com/ethereum/consensus-specs/releases/tag/v1.4.0)
+[![Eth Consensus Spec v1.5.0](https://img.shields.io/badge/ETH%20consensus--spec-1.5.0-blue)](https://github.com/ethereum/consensus-specs/releases/tag/v1.5.0)
 ![ES Version](https://img.shields.io/badge/ES-2021-yellow)
 ![Node Version](https://img.shields.io/badge/node-16.x-green)
 ![Yarn](https://img.shields.io/badge/yarn-%232C8EBB.svg?style=for-the-badge&logo=yarn&logoColor=white)
@@ -18,12 +18,12 @@ The evolution of light clients is emblematic of the broader trajectory of Ethere
 
 ## Requirements for Running a Light-Client
 
-Access to a beacon node that supports the light client specification is necessary. The client must support the following routes from the [consensus API spec](https://github.com/ethereum/beacon-APIs/tree/v2.5.0/apis/beacon/light_client):
+Access to a beacon node that supports the light client specification is necessary. The client must support the following routes from the [consensus API spec](https://github.com/ethereum/beacon-APIs/tree/v3.1.0/apis/beacon/light_client):
 
-- [`GET /eth/v1/beacon/light_client/updates`](https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.5.0#/Beacon/getLightClientUpdatesByRange)
-- [`GET /eth/v1/beacon/light_client/optimistic_update`](https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.5.0#/Beacon/getLightClientOptimisticUpdate)
-- [`GET /eth/v1/beacon/light_client/finality_update`](https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.5.0#/Beacon/getLightClientFinalityUpdate)
-- [`GET /eth/v1/beacon/light_client/bootstrap/{block_root}`](https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.5.0#/Beacon/getLightClientBootstrap)
+- [`GET /eth/v1/beacon/light_client/updates`](https://ethereum.github.io/beacon-APIs/?urls.primaryName=v3.1.0#/Beacon/getLightClientUpdatesByRange)
+- [`GET /eth/v1/beacon/light_client/optimistic_update`](https://ethereum.github.io/beacon-APIs/?urls.primaryName=v3.1.0#/Beacon/getLightClientOptimisticUpdate)
+- [`GET /eth/v1/beacon/light_client/finality_update`](https://ethereum.github.io/beacon-APIs/?urls.primaryName=v3.1.0#/Beacon/getLightClientFinalityUpdate)
+- [`GET /eth/v1/beacon/light_client/bootstrap/{block_root}`](https://ethereum.github.io/beacon-APIs/?urls.primaryName=v3.1.0#/Beacon/getLightClientBootstrap)
 
 System requirements are quite low so its possible to run a light client in the browser as part of a website. There are a few examples of this on github that you can use as reference, our [prover](https://chainsafe.github.io/lodestar/libraries/lightclient-prover/prover) being one of them.
 

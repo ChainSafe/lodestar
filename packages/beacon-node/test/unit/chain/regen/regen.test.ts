@@ -1,6 +1,6 @@
 import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {beforeAll, beforeEach, describe, expect, it} from "vitest";
+import {beforeEach, describe, expect, it} from "vitest";
 import {RegenCaller} from "../../../../src/chain/regen/interface.js";
 import {processSlotsToNearestCheckpoint} from "../../../../src/chain/regen/regen.js";
 import {FIFOBlockStateCache} from "../../../../src/chain/stateCache/fifoBlockStateCache.js";
@@ -94,7 +94,7 @@ describe("regen", () => {
       // no state is persisted at the  beginning
       expect(fileApisBuffer.size).toEqual(0);
 
-      const modules = {checkpointStateCache: cache, metrics: null, emitter: null, logger: null};
+      const modules = {checkpointStateCache: cache, metrics: null, validatorMonitor: null, emitter: null, logger: null};
       const preState = states["cp1"];
       await processSlotsToNearestCheckpoint(modules, preState, startSlotEpoch22, RegenCaller.processBlocksInEpoch, {
         dontTransferCache: true,
@@ -114,7 +114,7 @@ describe("regen", () => {
       // no state is persisted at the  beginning
       expect(fileApisBuffer.size).toEqual(0);
 
-      const modules = {checkpointStateCache: cache, metrics: null, emitter: null, logger: null};
+      const modules = {checkpointStateCache: cache, metrics: null, validatorMonitor: null, emitter: null, logger: null};
       const preState = states["cp0b"];
       await processSlotsToNearestCheckpoint(modules, preState, startSlotEpoch22, RegenCaller.processBlocksInEpoch, {
         dontTransferCache: true,

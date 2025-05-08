@@ -1,7 +1,6 @@
 import {routes} from "@lodestar/api";
 import {Epoch} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
-import {Metrics} from "../metrics/index.js";
 
 const PROPOSER_PRESERVE_EPOCHS = 2;
 
@@ -9,10 +8,7 @@ export type ProposerPreparationData = routes.validator.ProposerPreparationData;
 
 export class BeaconProposerCache {
   private readonly feeRecipientByValidatorIndex: MapDef<number, {epoch: Epoch; feeRecipient: string}>;
-  constructor(
-    opts: {suggestedFeeRecipient: string},
-    private readonly metrics?: Metrics | null
-  ) {
+  constructor(opts: {suggestedFeeRecipient: string}) {
     this.feeRecipientByValidatorIndex = new MapDef(() => ({
       epoch: 0,
       feeRecipient: opts.suggestedFeeRecipient,

@@ -1,9 +1,9 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {LevelDbController} from "@lodestar/db";
+import {KeyValue, LevelDbController} from "@lodestar/db";
 import {sleep} from "@lodestar/utils";
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
 
-import {ssz} from "@lodestar/types";
+import {phase0, ssz} from "@lodestar/types";
 import {BeaconDb} from "../../../src/db/index.js";
 import {Eth1ForBlockProduction} from "../../../src/eth1/index.js";
 import {Eth1Options} from "../../../src/eth1/options.js";
@@ -32,7 +32,6 @@ describe.skip("eth1 / Eth1Provider", () => {
   const logger = testLogger();
 
   let db: BeaconDb;
-  let interval: NodeJS.Timeout;
 
   beforeAll(async () => {
     // Nuke DB to make sure it's empty
@@ -42,7 +41,6 @@ describe.skip("eth1 / Eth1Provider", () => {
   });
 
   afterAll(async () => {
-    clearInterval(interval);
     controller.abort();
     await db.close();
     await LevelDbController.destroy(dbLocation);
@@ -80,7 +78,7 @@ describe.skip("eth1 / Eth1Provider", () => {
 
     // Generate mock state to query eth1 data for block proposing
     if (eth1Datas.length === 0) throw Error("No eth1Datas");
-    const {key: maxTimestamp, value: latestEth1Data} = eth1Datas[eth1Datas.length - 1];
+    const {key: maxTimestamp, value: latestEth1Data} = eth1Datas.at(-1) as KeyValue<number, phase0.Eth1DataOrdered>;
 
     const {SECONDS_PER_ETH1_BLOCK, ETH1_FOLLOW_DISTANCE} = config;
     // block.timestamp + SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE <= period_start && ...

@@ -1,5 +1,10 @@
 import {routes} from "@lodestar/api";
-import {ForkName, WHISTLEBLOWER_REWARD_QUOTIENT} from "@lodestar/params";
+import {
+  ForkName,
+  WHISTLEBLOWER_REWARD_QUOTIENT,
+  WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA,
+  isForkPostElectra,
+} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
@@ -42,8 +47,8 @@ export async function computeBlockRewards(
     syncAggregateReward = computeSyncAggregateReward(block as altair.BeaconBlock, preState as CachedBeaconStateAltair);
   }
 
-  const blockProposerSlashingReward = computeBlockProposerSlashingReward(block, preState);
-  const blockAttesterSlashingReward = computeBlockAttesterSlashingReward(block, preState);
+  const blockProposerSlashingReward = computeBlockProposerSlashingReward(fork, block, preState);
+  const blockAttesterSlashingReward = computeBlockAttesterSlashingReward(fork, block, preState);
 
   const total =
     blockAttestationReward + syncAggregateReward + blockProposerSlashingReward + blockAttesterSlashingReward;
@@ -99,14 +104,21 @@ function computeSyncAggregateReward(block: altair.BeaconBlock, preState: CachedB
  * Calculate rewards received by block proposer for including proposer slashings.
  * All proposer slashing rewards go to block proposer and none to whistleblower as of Deneb
  */
-function computeBlockProposerSlashingReward(block: BeaconBlock, state: CachedBeaconStateAllForks): SubRewardValue {
+function computeBlockProposerSlashingReward(
+  fork: ForkName,
+  block: BeaconBlock,
+  state: CachedBeaconStateAllForks
+): SubRewardValue {
   let proposerSlashingReward = 0;
 
   for (const proposerSlashing of block.body.proposerSlashings) {
     const offendingProposerIndex = proposerSlashing.signedHeader1.message.proposerIndex;
     const offendingProposerBalance = state.validators.getReadonly(offendingProposerIndex).effectiveBalance;
+    const whistleblowerRewardQuotient = isForkPostElectra(fork)
+      ? WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA
+      : WHISTLEBLOWER_REWARD_QUOTIENT;
 
-    proposerSlashingReward += Math.floor(offendingProposerBalance / WHISTLEBLOWER_REWARD_QUOTIENT);
+    proposerSlashingReward += Math.floor(offendingProposerBalance / whistleblowerRewardQuotient);
   }
 
   return proposerSlashingReward;
@@ -116,14 +128,21 @@ function computeBlockProposerSlashingReward(block: BeaconBlock, state: CachedBea
  * Calculate rewards received by block proposer for including attester slashings.
  * All attester slashing rewards go to block proposer and none to whistleblower as of Deneb
  */
-function computeBlockAttesterSlashingReward(block: BeaconBlock, preState: CachedBeaconStateAllForks): SubRewardValue {
+function computeBlockAttesterSlashingReward(
+  fork: ForkName,
+  block: BeaconBlock,
+  preState: CachedBeaconStateAllForks
+): SubRewardValue {
   let attesterSlashingReward = 0;
 
   for (const attesterSlashing of block.body.attesterSlashings) {
     for (const offendingAttesterIndex of getAttesterSlashableIndices(attesterSlashing)) {
       const offendingAttesterBalance = preState.validators.getReadonly(offendingAttesterIndex).effectiveBalance;
+      const whistleblowerRewardQuotient = isForkPostElectra(fork)
+        ? WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA
+        : WHISTLEBLOWER_REWARD_QUOTIENT;
 
-      attesterSlashingReward += Math.floor(offendingAttesterBalance / WHISTLEBLOWER_REWARD_QUOTIENT);
+      attesterSlashingReward += Math.floor(offendingAttesterBalance / whistleblowerRewardQuotient);
     }
   }
 

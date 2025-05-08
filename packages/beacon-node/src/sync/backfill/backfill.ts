@@ -568,34 +568,32 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
             `Invalid backfill sequence: expected a block at ${jumpBackTo} in blockArchive, ignoring the sequence`
           );
         }
-        if (anchorBlock && validSequence) {
-          if (this.prevFinalizedCheckpointBlock.slot >= jumpBackTo) {
-            this.logger.debug(
-              `Found a sequence going back to ${jumpBackTo} before the previous finalized or wsCheckpoint`,
-              {slot: this.prevFinalizedCheckpointBlock.slot}
-            );
+        if (anchorBlock && validSequence && this.prevFinalizedCheckpointBlock.slot >= jumpBackTo) {
+          this.logger.debug(
+            `Found a sequence going back to ${jumpBackTo} before the previous finalized or wsCheckpoint`,
+            {slot: this.prevFinalizedCheckpointBlock.slot}
+          );
 
-            // Everything saved in db between a backfilled range is a connected sequence
-            // we only need to check if prevFinalizedCheckpointBlock is in db
-            const prevBackfillCpBlock = await this.db.blockArchive.getByRoot(this.prevFinalizedCheckpointBlock.root);
-            if (
-              prevBackfillCpBlock != null &&
-              this.prevFinalizedCheckpointBlock.slot === prevBackfillCpBlock.message.slot
-            ) {
-              this.logger.verbose("Validated current prevFinalizedCheckpointBlock", {
-                root: toRootHex(this.prevFinalizedCheckpointBlock.root),
-                slot: prevBackfillCpBlock.message.slot,
-              });
-            } else {
-              validSequence = false;
-              this.logger.warn(
-                `Invalid backfill sequence: previous finalized or checkpoint block root=${toRootHex(
-                  this.prevFinalizedCheckpointBlock.root
-                )}, slot=${this.prevFinalizedCheckpointBlock.slot} ${
-                  prevBackfillCpBlock ? "found at slot=" + prevBackfillCpBlock.message.slot : "not found"
-                }, ignoring the sequence`
-              );
-            }
+          // Everything saved in db between a backfilled range is a connected sequence
+          // we only need to check if prevFinalizedCheckpointBlock is in db
+          const prevBackfillCpBlock = await this.db.blockArchive.getByRoot(this.prevFinalizedCheckpointBlock.root);
+          if (
+            prevBackfillCpBlock != null &&
+            this.prevFinalizedCheckpointBlock.slot === prevBackfillCpBlock.message.slot
+          ) {
+            this.logger.verbose("Validated current prevFinalizedCheckpointBlock", {
+              root: toRootHex(this.prevFinalizedCheckpointBlock.root),
+              slot: prevBackfillCpBlock.message.slot,
+            });
+          } else {
+            validSequence = false;
+            this.logger.warn(
+              `Invalid backfill sequence: previous finalized or checkpoint block root=${toRootHex(
+                this.prevFinalizedCheckpointBlock.root
+              )}, slot=${this.prevFinalizedCheckpointBlock.slot} ${
+                prevBackfillCpBlock ? "found at slot=" + prevBackfillCpBlock.message.slot : "not found"
+              }, ignoring the sequence`
+            );
           }
         }
 

@@ -1,8 +1,8 @@
 import {BitArray} from "@chainsafe/ssz";
-import {Connection, PeerId} from "@libp2p/interface";
+import {Connection, PeerId, PrivateKey} from "@libp2p/interface";
 import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
-import {SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+import {SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {Metadata, altair, phase0} from "@lodestar/types";
 import {withTimeout} from "@lodestar/utils";
 import {GOODBYE_KNOWN_CODES, GoodByeReasonCode, Libp2pEvent} from "../../constants/index.js";
@@ -53,6 +53,11 @@ const PEER_RELEVANT_TAG = "relevant";
 /** Tag value of PEER_RELEVANT_TAG */
 const PEER_RELEVANT_TAG_VALUE = 100;
 
+/** Change pruning behavior once the head falls behind */
+const STARVATION_THRESHOLD_SLOTS = SLOTS_PER_EPOCH * 2;
+/** Percentage of peers to attempt to prune when starvation threshold is met */
+const STARVATION_PRUNE_RATIO = 0.05;
+
 /**
  * Relative factor of peers that are allowed to have a negative gossipsub score without penalizing them in lodestar.
  */
@@ -94,6 +99,7 @@ export interface IReqRespBeaconNodePeerManager {
 }
 
 export type PeerManagerModules = {
+  privateKey: PrivateKey;
   libp2p: Libp2p;
   logger: LoggerNode;
   metrics: NetworkCoreMetrics | null;
@@ -140,6 +146,7 @@ export class PeerManager {
   private readonly discovery: PeerDiscovery | null;
   private readonly networkEventBus: INetworkEventBus;
   private readonly statusCache: StatusCache;
+  private lastStatus: phase0.Status;
 
   // A single map of connected peers with all necessary data to handle PINGs, STATUS, and metrics
   private connectedPeers: Map<PeerIdStr, PeerData>;
@@ -173,6 +180,8 @@ export class PeerManager {
     this.libp2p.services.components.events.addEventListener(Libp2pEvent.connectionClose, this.onLibp2pPeerDisconnect);
     this.networkEventBus.on(NetworkEvent.reqRespRequest, this.onRequest);
 
+    this.lastStatus = this.statusCache.get();
+
     // On start-up will connected to existing peers in libp2p.peerStore, same as autoDial behaviour
     this.heartbeat();
     this.intervals = [
@@ -189,7 +198,6 @@ export class PeerManager {
     // opts.discv5 === null, discovery is disabled
     const discovery = opts.discv5
       ? await PeerDiscovery.init(modules, {
-          maxPeers: opts.maxPeers,
           discv5FirstQueryDelayMs: opts.discv5FirstQueryDelayMs ?? DEFAULT_DISCV5_FIRST_QUERY_DELAY_MS,
           discv5: opts.discv5,
           connectToDiscv5Bootnodes: opts.connectToDiscv5Bootnodes,
@@ -341,7 +349,10 @@ export class PeerManager {
   private onStatus(peer: PeerId, status: phase0.Status): void {
     // reset the to-status timer of this peer
     const peerData = this.connectedPeers.get(peer.toString());
-    if (peerData) peerData.lastStatusUnixTsMs = Date.now();
+    if (peerData) {
+      peerData.lastStatusUnixTsMs = Date.now();
+      peerData.status = status;
+    }
 
     let isIrrelevant: boolean;
     try {
@@ -449,12 +460,22 @@ export class PeerManager {
       }
     }
 
+    const status = this.statusCache.get();
+    const starved =
+      // while syncing progress is happening, we aren't starved
+      this.lastStatus.headSlot === status.headSlot &&
+      // if the head falls behind the threshold, we are starved
+      this.clock.currentSlot - status.headSlot > STARVATION_THRESHOLD_SLOTS;
+    this.lastStatus = status;
+    this.metrics?.peerManager.starved.set(starved ? 1 : 0);
+
     const {peersToDisconnect, peersToConnect, attnetQueries, syncnetQueries} = prioritizePeers(
       connectedHealthyPeers.map((peer) => {
         const peerData = this.connectedPeers.get(peer.toString());
         return {
           id: peer,
           direction: peerData?.direction ?? null,
+          status: peerData?.status ?? null,
           attnets: peerData?.metadata?.attnets ?? null,
           syncnets: peerData?.metadata?.syncnets ?? null,
           score: this.peerRpcScores.getScore(peer),
@@ -463,7 +484,13 @@ export class PeerManager {
       // Collect subnets which we need peers for in the current slot
       this.attnetsService.getActiveSubnets(),
       this.syncnetsService.getActiveSubnets(),
-      this.opts
+      {
+        ...this.opts,
+        status,
+        starved,
+        starvationPruneRatio: STARVATION_PRUNE_RATIO,
+        starvationThresholdSlots: STARVATION_THRESHOLD_SLOTS,
+      }
     );
 
     const queriesMerged: SubnetDiscvQueryMs[] = [];
@@ -597,6 +624,7 @@ export class PeerManager {
       relevantStatus: RelevantPeerStatus.Unknown,
       direction,
       peerId: remotePeer,
+      status: null,
       metadata: null,
       agentVersion: null,
       agentClient: null,
@@ -688,7 +716,7 @@ export class PeerManager {
     }
 
     for (const connections of getConnectionsMap(this.libp2p).values()) {
-      const openCnx = connections.find((cnx) => cnx.status === "open");
+      const openCnx = connections.value.find((cnx) => cnx.status === "open");
       if (openCnx) {
         const direction = openCnx.direction;
         peersByDirection.set(direction, 1 + (peersByDirection.get(direction) ?? 0));

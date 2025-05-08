@@ -4,13 +4,6 @@ import {loadYaml} from "@lodestar/utils";
 import {uncompress} from "snappyjs";
 import {describe, expect, it, vi} from "vitest";
 
-/* eslint-disable
-  @typescript-eslint/no-unsafe-assignment,
-  @typescript-eslint/no-unsafe-member-access,
-  @typescript-eslint/no-unsafe-return,
-  @typescript-eslint/no-explicit-any,
-  func-names */
-
 export enum InputType {
   SSZ = "ssz",
   SSZ_SNAPPY = "ssz_snappy",

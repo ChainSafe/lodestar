@@ -2,7 +2,7 @@ import {writeFile} from "node:fs/promises";
 import path from "node:path";
 import {getClient} from "@lodestar/api/beacon";
 import {chainConfigToJson} from "@lodestar/config";
-import got, {RequestError} from "got";
+import {fetch} from "@lodestar/utils";
 import yaml from "js-yaml";
 import {BeaconClient, BeaconNodeGenerator, LighthouseAPI, RunnerType} from "../../interfaces.js";
 import {getNodeMountedPaths} from "../../utils/paths.js";
@@ -88,9 +88,11 @@ export const generateLighthouseBeaconNode: BeaconNodeGenerator<BeaconClient.Ligh
       },
       health: async () => {
         try {
-          await got.get(`http://127.0.0.1:${ports.beacon.httpPort}/eth/v1/node/health`);
+          await fetch(`http://127.0.0.1:${ports.beacon.httpPort}/eth/v1/node/health`);
+          // Lighthouse health endpoint returns 200 or throws, no need to check response.ok
         } catch (err) {
-          if (err instanceof RequestError && err.code !== "ECONNREFUSED") {
+          // Keep original behavior: if error is not connection refused, consider it healthy
+          if (err instanceof Error && (err as {code?: string}).code !== "ECONNREFUSED") {
             return;
           }
           throw err;
@@ -105,8 +107,12 @@ export const generateLighthouseBeaconNode: BeaconNodeGenerator<BeaconClient.Ligh
   ) as unknown as LighthouseAPI;
   api.lighthouse = {
     async getPeers() {
-      const res = await got(`http://127.0.0.1:${ports.beacon.httpPort}/lighthouse/peers`);
-      return {body: JSON.parse(res.body), status: res.statusCode};
+      const res = await fetch(`http://127.0.0.1:${ports.beacon.httpPort}/lighthouse/peers`);
+      if (!res.ok) {
+        throw new Error(`Failed to get peers: ${res.status} ${res.statusText}`);
+      }
+      const body = await res.json();
+      return {body, status: res.status};
     },
   };
 

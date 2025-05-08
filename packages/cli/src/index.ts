@@ -10,12 +10,10 @@ const lodestar = getLodestarCli();
 
 void lodestar
   .fail((msg, err) => {
-    if (msg) {
+    if (msg?.includes("Not enough non-option arguments")) {
       // Show command help message when no command is provided
-      if (msg.includes("Not enough non-option arguments")) {
-        yarg.showHelp();
-        console.log("\n");
-      }
+      yarg.showHelp();
+      console.log("\n");
     }
 
     const errorMessage =

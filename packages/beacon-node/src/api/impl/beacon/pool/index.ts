@@ -1,12 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {
-  ForkName,
-  ForkPostElectra,
-  ForkPreElectra,
-  SYNC_COMMITTEE_SUBNET_SIZE,
-  isForkPostElectra,
-} from "@lodestar/params";
+import {ForkPostElectra, ForkPreElectra, SYNC_COMMITTEE_SUBNET_SIZE, isForkPostElectra} from "@lodestar/params";
 import {Attestation, Epoch, SingleAttestation, isElectraAttestation, ssz} from "@lodestar/types";
 import {
   AttestationError,
@@ -104,6 +98,10 @@ export function getBeaconPoolApi({
     async submitPoolAttestationsV2({signedAttestations}) {
       const seenTimestampSec = Date.now() / 1000;
       const failures: FailureList = [];
+      // api attestation has high priority, we allow them to be added to pool even when it's late
+      // this is to prevent "No aggregated attestation for slot" issue
+      // see https://github.com/ChainSafe/lodestar/issues/7548
+      const priority = true;
 
       await Promise.all(
         signedAttestations.map(async (attestation, i) => {
@@ -123,9 +121,10 @@ export function getBeaconPoolApi({
                 attestation,
                 attDataRootHex,
                 committeeValidatorIndex,
-                committeeSize
+                committeeSize,
+                priority
               );
-              metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
+              metrics?.opPool.attestationPool.apiInsertOutcome.inc({insertOutcome});
             }
 
             if (isForkPostElectra(fork)) {
@@ -145,7 +144,12 @@ export function getBeaconPoolApi({
             }
 
             const sentPeers = await network.publishBeaconAttestation(attestation, subnet);
-            metrics?.onPoolSubmitUnaggregatedAttestation(seenTimestampSec, indexedAttestation, subnet, sentPeers);
+            chain.validatorMonitor?.onPoolSubmitUnaggregatedAttestation(
+              seenTimestampSec,
+              indexedAttestation,
+              subnet,
+              sentPeers
+            );
           } catch (e) {
             const logCtx = {slot: attestation.data.slot, index: attestation.data.index};
 
@@ -264,15 +268,18 @@ export function getBeaconPoolApi({
             // The same validator can appear multiple times in the sync committee. It can appear multiple times per
             // subnet even. First compute on which subnet the signature must be broadcasted to.
             const subnets: number[] = [];
+            // same to api attestation, we allow api SyncCommittee to be added to pool even when it's late
+            // see https://github.com/ChainSafe/lodestar/issues/7548
+            const priority = true;
 
             for (const indexInCommittee of indexesInCommittee) {
               // Sync committee subnet members are just sequential in the order they appear in SyncCommitteeIndexes array
               const subnet = Math.floor(indexInCommittee / SYNC_COMMITTEE_SUBNET_SIZE);
               const indexInSubcommittee = indexInCommittee % SYNC_COMMITTEE_SUBNET_SIZE;
-              chain.syncCommitteeMessagePool.add(subnet, signature, indexInSubcommittee);
+              chain.syncCommitteeMessagePool.add(subnet, signature, indexInSubcommittee, priority);
 
               // Cheap de-duplication code to avoid using a Set. indexesInCommittee is always sorted
-              if (subnets.length === 0 || subnets[subnets.length - 1] !== subnet) {
+              if (subnets.length === 0 || subnets.at(-1) !== subnet) {
                 subnets.push(subnet);
               }
             }

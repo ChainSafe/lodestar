@@ -2,7 +2,7 @@
 
 This is a step-by-step guide to utilize [@ChainSafe/lodestar-quickstart](https://github.com/ChainSafe/lodestar-quickstart) to setup a Ubuntu-based full Ethereum node using a local execution client and ChainSafe's Lodestar consensus client via Docker (the recommended method to use Lodestar for production environments). This is an adaptation of [Somer Esat's guides](https://someresat.medium.com/) for the Ethereum staking community.
 
-This guide will provide instructions which include running a local execution node. This guide uses Lodestar's `stable` release branch and supports **Holesky** testnet setups and **Mainnet**.
+This guide will provide instructions which include running a local execution node. This guide uses Lodestar's `stable` release branch and supports **Hoodi** testnet setups and **Mainnet**.
 
 :::info
 This guide specifically focuses on using Lodestar's Quickstart scripts which allows for near instant setup with the following technologies:
@@ -13,7 +13,7 @@ This guide specifically focuses on using Lodestar's Quickstart scripts which all
   - [Go-Ethereum (Geth)](https://geth.ethereum.org/) | [Github](https://github.com/ethereum/go-ethereum/releases/)
   - [Hyperledger Besu](https://www.hyperledger.org/) | [Github](https://github.com/hyperledger/besu)
   - [Nethermind](https://nethermind.io/) | [Github](https://github.com/NethermindEth/nethermind)
-  - [Rust](https://reth.rs) | [Github](https://github.com/paradigmxyz/reth)
+  - [Reth](https://reth.rs) | [Github](https://github.com/paradigmxyz/reth)
 - [ChainSafe's Lodestar Ethereum Consensus Client](https://lodestar.chainsafe.io/) | [Github](https://github.com/ChainSafe/lodestar)
 - [Docker Engine](https://docs.docker.com/engine/)
   :::
@@ -209,12 +209,12 @@ ls *.vars
 
 ### Select your Network
 
-Each network has specifics variables that you may want to setup for use. We will use `Holesky` to demonstrate connecting to a public testnet.
+Each network has specifics variables that you may want to setup for use. We will use `Hoodi` to demonstrate connecting to a public testnet.
 
-Open the `holesky.vars` file.
+Open the `hoodi.vars` file.
 
 ```bash
-nano holesky.vars
+nano hoodi.vars
 ```
 
 ### Configure MEV-boost relays
@@ -464,10 +464,10 @@ Optional: If you want to setup validators with your mnemonic. Otherwise, skip th
 
 #### Setup Mnemonic
 
-Select the `.vars` file corresponding to the network you want to run. For Holesky, select `holesky.vars`. Open the file with the `nano` text editor and edit the configuration:
+Select the `.vars` file corresponding to the network you want to run. For Hoodi, select `hoodi.vars`. Open the file with the `nano` text editor and edit the configuration:
 
 ```
-nano holesky.vars
+nano hoodi.vars
 ```
 
 We will modify the `LODESTAR_VALIDATOR_MNEMONIC_ARGS=`. Specifically, the mnemonic located after the `--fromMnemonic` flag.
@@ -510,10 +510,10 @@ The following are **_example commands_** as a template for initiating the quicks
 ./setup.sh --dataDir mainnet-data --elClient nethermind --network mainnet --dockerWithSudo --detached
 ```
 
-3. Startup Holesky beacon node with validator client (using mnemonic in /keystores) and Erigon execution client detached from containers:
+3. Startup Hoodi beacon node with validator client (using mnemonic in /keystores) and Erigon execution client detached from containers:
 
 ```
-./setup.sh --dataDir holesky-data --elClient erigon --network holesky --dockerWithSudo --detached --withValidatorMnemonic ~/lodestar-quickstart/
+./setup.sh --dataDir hoodi-data --elClient erigon --network hoodi --dockerWithSudo --detached --withValidatorMnemonic ~/lodestar-quickstart/
 ```
 
 4. Startup Mainnet beacon node with validator client (using keystores) with MEV-Boost and Hyperledger Besu execution client detached from containers:
@@ -522,10 +522,10 @@ The following are **_example commands_** as a template for initiating the quicks
 ./setup.sh --dataDir mainnet-data --elClient besu --network mainnet --dockerWithSudo --detached --withValidatorKeystore ~/lodestar-quickstart/ --withMevBoost
 ```
 
-5. Startup Holesky beacon node with validator client set one (using keystores) and execution client Geth detached from containers:
+5. Startup Hoodi beacon node with validator client set one (using keystores) and execution client Geth detached from containers:
 
 ```
-./setup.sh --dataDir holesky-data --elClient geth --network holesky --dockerWithSudo --detached --withValidatorKeystore ~/lodestar-quickstart/validatorset1
+./setup.sh --dataDir hoodi-data --elClient geth --network hoodi --dockerWithSudo --detached --withValidatorKeystore ~/lodestar-quickstart/validatorset1
 ```
 
 :::warning
@@ -535,7 +535,7 @@ You can only start up one set of validator keystores per validator client on the
 6. Startup validator client only with validator client set two (using keystores) and execution client Geth detached from containers:
 
 ```
-./setup.sh --dataDir holesky-data --elClient geth --network holesky --dockerWithSudo --detached --withValidatorKeystore ~/lodestar-quickstart/validatorset2 --justVC
+./setup.sh --dataDir hoodi-data --elClient geth --network hoodi --dockerWithSudo --detached --withValidatorKeystore ~/lodestar-quickstart/validatorset2 --justVC
 ```
 
 :::info
@@ -550,7 +550,7 @@ Configure the above commands with what you intend to run using the Quickstart Sc
 | ------------------------- | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `dataDir`                 | Required          | File location (volume) of the configuration & data for setup. This directory should be non-existent for the first run. If the directory exists, it will skip fetching the configuration, assuming it has been done previously. You can also clean individual directors of CL/EL between the re-runs.                                                                                                                       |
 | `elClient`                | Required          | The selected EL client you want to run with Lodestar. Options are `nethermind`, `besu`, `erigon` or `geth`.                                                                                                                                                                                                                                                                                                                |
-| `network`                 | Required          | The network/chain you want to load, reads the corresponding `.vars` (for e.g. `holesky.vars`) network configuration , like images, or urls for EL/CL to interact. Example: Default for Holesky is `--network holesky` using `holesky.vars`.                                                                                                                                                                                |
+| `network`                 | Required          | The network/chain you want to load, reads the corresponding `.vars` (for e.g. `hoodi.vars`) network configuration , like images, or urls for EL/CL to interact. Example: Default for Hoodi is `--network hoodi` using `hoodi.vars`.                                                                                                                                                                                        |
 | `dockerWithSudo`          | Optional          | Provide this argument if your Docker needs a `sudo` prefix.                                                                                                                                                                                                                                                                                                                                                                |
 | `--withTerminal`          | Optional\*        | Provide the terminal command prefix for CL and EL processes to run in your favourite terminal. You may use an alias or a terminal launching script as long as it waits for the command it runs till ends and then closes. If not provided, it will launch the docker processes in in-terminal mode.                                                                                                                        |
 | `--detached`              | Optional\*        | By default the script will wait for processes and use user input (ctrl +c) to end the processes, however you can pass this option to skip this behavior and just return, for e.g. in case you just want to leave it running.                                                                                                                                                                                               |
@@ -641,22 +641,25 @@ sudo docker logs goerli-validator
 You should see something similar to:
 
 ```
-Mar-01 03:06:35.048[]                 info: Lodestar network=holesky, version=v1.16.0/6ad9740, commit=6ad9740a085574306cf46c7642e749d6ec9a4264
-Mar-01 03:06:35.050[]                 info: Connecting to LevelDB database path=/keystoresDir/validator-db-holesky
-Mar-01 03:06:35.697[]                 info: 100% of keystores imported. current=2 total=2 rate=1318.68keys/m
-Mar-01 03:06:35.698[]                 info: 2 local keystores
-Mar-01 03:06:35.698[]                 info: 0xa6fcfca12e1db6c7341d82327010cd57224dc239d1c5e4fb18286cc32edb877d813c5af1c870d474aef7b3ff7ab927ea
-Mar-01 03:06:35.698[]                 info: 0x8f868e53bbe1451bcf6d42c9ab6d292cbd7fbfa09c59b6b99c1dd6a4977e2e7b4b752c328784ca2788dd6f63ffcbdb7e
-Mar-01 03:06:35.732[]                 info: Beacon node urls=http://127.0.0.1:9596
-Mar-01 03:09:23.813[]                 info: Genesis fetched from the beacon node
-Mar-01 03:09:23.816[]                 info: Verified connected beacon node and validator have same the config
-Mar-01 03:09:23.818[]                 info: Verified connected beacon node and validator have the same genesisValidatorRoot
-Mar-01 03:09:23.818[]                 info: Initializing validator useProduceBlockV3=deneb+, broadcastValidation=gossip, defaultBuilderSelection=executiononly, suggestedFeeRecipient=0xeeef273281fB83F56182eE960aA4bAfe7fE075DE, strictFeeRecipientCheck=false
-Mar-01 03:09:23.830[]                 info: Validator seen on beacon chain validatorIndex=1234567, pubKey=0xa6fcfca12e1db6c7341d82327010cd57224dc239d1c5e4fb18286cc32edb877d813c5af1c870d474aef7b3ff7ab927ea
-Mar-01 03:09:23.830[]                 info: Validator seen on beacon chain validatorIndex=1234568, pubKey=0x8f868e53bbe1451bcf6d42c9ab6d292cbd7fbfa09c59b6b99c1dd6a4977e2e7b4b752c328784ca2788dd6f63ffcbdb7e
-Mar-01 03:09:23.830[]                 info: Validator statuses active=2, total=2
-Mar-01 03:15:50.191[]                 info: Published attestations slot=1113379, count=1
-Mar-01 03:16:02.728[]                 info: Published attestations slot=1113380, count=1
+Mar-31 15:24:03.193[]                 info: Lodestar network=hoodi, version=v1.28.1/d565aac, commit=d565aac1d211c8de7d9805ca5f715dd02660d201
+Mar-31 15:24:03.194[]                 info: Connecting to LevelDB database path=/data/validator-db
+Mar-31 15:27:16.511[]                 info: 2 local keystores
+Mar-31 15:27:16.512[]                 info: 0xad3751569b3b7ee67d85e1440fcb954533146ee6545ec23ee78ad1fe680029e4a1869330c8f053ee0fcc0f71a60f9167
+Mar-31 15:27:16.512[]                 info: 0xa8a423cbeaca51064d7b5c04c10fdad0114d71a42786d3dbc835b5b00b481872c55af0cf2af10fb5412f2a66695b5aac
+Mar-31 15:27:20.843[]                 info: Started metrics HTTP server address=http://127.0.0.1:5064
+Mar-31 15:27:20.849[]                 info: Beacon node urls=http://127.0.0.1:9596, requestWireFormat=ssz, responseWireFormat=ssz
+Mar-31 15:27:20.867[]                 info: Genesis fetched from the beacon node
+Mar-31 15:27:20.872[]                 info: Verified connected beacon node and validator have same the config
+Mar-31 15:27:20.873[]                 info: Verified connected beacon node and validator have the same genesisValidatorRoot
+Mar-31 15:27:20.873[]                 info: Initializing validator useProduceBlockV3=deneb+, broadcastValidation=consensus, defaultBuilderSelection=default, suggestedFeeRecipient=0x64fdc5a178746d52a5b15e6ac5130b991abaf079, strictFeeRecipientCheck=false
+Mar-31 15:27:21.961[]                 info: Started REST API server address=http://127.0.0.1:5062
+Mar-31 15:27:21.961[]                 info: REST api server keymanager bearer access token located at: /data/validator-db/api-token.txt
+Mar-31 15:27:21.973[]                 info: Node is synced slot=3961036, headSlot=3961035, isOptimistic=false, elOffline=false
+Mar-31 15:27:22.230[]                 info: Validator seen on beacon chain validatorIndex=123456, pubKey=0xad3751569b3b6ee67d85e1440fcb954533156ee2560ec23ee78ad1fe680029e4a1869330c8f053ee0fcc0f71a60f9167
+Mar-31 15:27:22.230[]                 info: Validator seen on beacon chain validatorIndex=123457, pubKey=0xa8a423cfeaca52054d7b5c04c10fdad0116d71a42786d3dbc835b5b00b481872c55af0cf2af10fb5412f2a66695b5aac
+Mar-31 15:27:22.472[]                 info: Validator statuses active=2, total=2
+Mar-31 15:27:31.162[]                 info: Published attestations slot=3961037, head=0x2c06…feed, count=2
+Mar-31 15:27:38.865[]                 info: Published validator registrations to builder epoch=123782, count=2
 ```
 
 :::info

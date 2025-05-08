@@ -3,7 +3,7 @@ import path from "node:path";
 import {getClient} from "@lodestar/api/beacon";
 import {chainConfigToJson} from "@lodestar/config";
 import {LogLevel} from "@lodestar/utils";
-import got from "got";
+import {fetch} from "@lodestar/utils";
 import {BeaconArgs} from "../../../../../src/cmds/beacon/options.js";
 import {GlobalArgs} from "../../../../../src/options/globalOptions.js";
 import {LODESTAR_BINARY_PATH} from "../../constants.js";
@@ -94,7 +94,10 @@ export const generateLodestarBeaconNode: BeaconNodeGenerator<BeaconClient.Lodest
         stdoutFilePath: logFilePath,
       },
       health: async () => {
-        await got.get(`http://${address}:${ports.beacon.httpPort}/eth/v1/node/health`);
+        const res = await fetch(`http://${address}:${ports.beacon.httpPort}/eth/v1/node/health`);
+        if (!res.ok) {
+          throw new Error(`Health check failed: ${res.status} ${res.statusText}`);
+        }
       },
     },
   ]);

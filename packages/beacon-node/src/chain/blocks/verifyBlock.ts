@@ -1,9 +1,9 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {DataAvailabilityStatus, ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
-  DataAvailableStatus,
+  DataAvailabilityStatus,
   computeEpochAtSlot,
   isStateValidatorsNodesPopulated,
 } from "@lodestar/state-transition";
@@ -48,7 +48,8 @@ export async function verifyBlocksInEpoch(
   availableBlockInputs: BlockInput[];
 }> {
   const blocks = blocksInput.map(({block}) => block);
-  if (blocks.length === 0) {
+  const lastBlock = blocks.at(-1);
+  if (!lastBlock) {
     throw Error("Empty partiallyVerifiedBlocks");
   }
 
@@ -115,9 +116,10 @@ export async function verifyBlocksInEpoch(
         preState0,
         blocksInput,
         // hack availability for state transition eval as availability is separately determined
-        blocks.map(() => DataAvailableStatus.available),
+        blocks.map(() => DataAvailabilityStatus.Available),
         this.logger,
         this.metrics,
+        this.validatorMonitor,
         abortController.signal,
         opts
       ),
@@ -143,7 +145,7 @@ export async function verifyBlocksInEpoch(
       }
 
       const fromFork = this.config.getForkName(parentBlock.slot);
-      const toFork = this.config.getForkName(blocks[blocks.length - 1].message.slot);
+      const toFork = this.config.getForkName(lastBlock.message.slot);
 
       // If transition through toFork, note won't happen if ${toFork}_EPOCH = 0, will log double on re-org
       if (toFork !== fromFork) {
@@ -194,6 +196,12 @@ export async function verifyBlocksInEpoch(
           numBlobs,
         });
       }
+    } else {
+      this.logger.verbose(
+        "Block verification aborted due to execution payload",
+        {},
+        segmentExecStatus.execAborted.execError
+      );
     }
 
     return {postStates, dataAvailabilityStatuses, proposerBalanceDeltas, segmentExecStatus, availableBlockInputs};

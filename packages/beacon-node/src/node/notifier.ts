@@ -134,11 +134,9 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
 
       // Log important chain time-based events
       // Log sync committee change
-      if (clockEpoch > config.ALTAIR_FORK_EPOCH) {
-        if (clockSlot % SLOTS_PER_SYNC_COMMITTEE_PERIOD === 0) {
-          const period = Math.floor(clockEpoch / EPOCHS_PER_SYNC_COMMITTEE_PERIOD);
-          logger.info(`New sync committee period ${period}`);
-        }
+      if (clockEpoch > config.ALTAIR_FORK_EPOCH && clockSlot % SLOTS_PER_SYNC_COMMITTEE_PERIOD === 0) {
+        const period = Math.floor(clockEpoch / EPOCHS_PER_SYNC_COMMITTEE_PERIOD);
+        logger.info(`New sync committee period ${period}`);
       }
 
       // Log halfway through each slot

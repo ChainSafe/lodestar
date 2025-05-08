@@ -29,11 +29,9 @@ export async function collectSequentialBlocksInRange(
       throw new BlocksByRangeError({code: BlocksByRangeErrorCode.UNDER_START_SLOT});
     }
 
-    const prevBlock = blocks.length === 0 ? null : blocks[blocks.length - 1];
-    if (prevBlock) {
-      if (prevBlock.data.message.slot >= blockSlot) {
-        throw new BlocksByRangeError({code: BlocksByRangeErrorCode.BAD_SEQUENCE});
-      }
+    const prevBlock = blocks.at(-1);
+    if (prevBlock && prevBlock.data.message.slot >= blockSlot) {
+      throw new BlocksByRangeError({code: BlocksByRangeErrorCode.BAD_SEQUENCE});
     }
 
     blocks.push({data: block, bytes: chunk.data});
