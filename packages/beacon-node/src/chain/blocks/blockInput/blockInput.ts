@@ -231,7 +231,7 @@ type BlockInputBlobsState =
   | {
       hasBlock: true;
       hasAllData: true;
-      versionHashes: VersionedHashes;
+      versionedHashes: VersionedHashes;
       block: SignedBeaconBlock<ForkBlobsDA>;
       source: SourceMeta;
       timeCompleteSec: number;
@@ -239,7 +239,7 @@ type BlockInputBlobsState =
   | {
       hasBlock: true;
       hasAllData: false;
-      versionHashes: VersionedHashes;
+      versionedHashes: VersionedHashes;
       block: SignedBeaconBlock<ForkBlobsDA>;
       source: SourceMeta;
     }
@@ -271,7 +271,7 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
     const state = {
       hasBlock: true,
       hasAllData,
-      versionHashes: getVersionHashes(props.block),
+      versionedHashes: props.block.message.body.blobKzgCommitments.map(kzgCommitmentToVersionedHash),
       block: props.block,
       source: props.source,
       timeCompleteSec: hasAllData ? props.source.seenTimestampSec : undefined,
@@ -363,7 +363,7 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
       ...this.state,
       hasAllData,
       block,
-      versionHashes: getVersionHashes(block),
+      versionedHashes: block.message.body.blobKzgCommitments.map(kzgCommitmentToVersionedHash),
       source,
       timeCompleteSec: hasAllData ? source.seenTimestampSec : undefined,
     } as BlockInputBlobsState;
@@ -387,6 +387,15 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
         "Cannot addBlob to BlockInputBlobs after it already is complete"
       );
     }
+    if (this.blobsCache.has(blobSidecar.index)) {
+      throw new BlockInputError(
+        {
+          code: BlockInputErrorCode.INVALID_CONSTRUCTION,
+          blockRoot: this.blockRootHex,
+        },
+        "Cannot addBlob to BlockInputBlobs with duplicate blobIndex"
+      );
+    }
 
     // this check suffices for checking slot, parentRoot, and forkName
     if (blockRootHex !== this.blockRootHex) {
@@ -406,11 +415,6 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
       assertBlockAndBlobArePaired(this.blockRootHex, this.state.block, blobSidecar);
     }
 
-    // TODO: (@matthewkeil) check for duplicates and add metric here
-    // if (this.blobsCache.has(blobSidecar.index)) {
-    //   this.metrics.blockInput.duplicateBlob.inc()
-    // }
-
     this.blobsCache.set(blobSidecar.index, {blobSidecar, source, seenTimestampSec, peerIdStr});
 
     if (this.state.hasBlock && this.blobsCache.size === this.state.block.message.body.blobKzgCommitments.length) {
@@ -421,6 +425,19 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
       };
       this.dataPromise.resolve([...this.blobsCache.values()].map(({blobSidecar}) => blobSidecar));
     }
+  }
+
+  getVersionedHashes(): VersionedHashes {
+    if (!this.state.hasBlock) {
+      throw new BlockInputError(
+        {
+          code: BlockInputErrorCode.INCOMPLETE_DATA,
+          ...this.getLogMeta(),
+        },
+        "Cannot get versioned hashes. Block is unknown"
+      );
+    }
+    return this.state.versionedHashes;
   }
 
   getMissingBlobMeta(): BlobMeta[] {
@@ -438,13 +455,13 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
     }
 
     const blobMeta: BlobMeta[] = [];
-    const versionHashes = this.state.versionHashes;
-    for (let index = 0; index < versionHashes.length; index++) {
+    const versionedHashes = this.state.versionedHashes;
+    for (let index = 0; index < versionedHashes.length; index++) {
       if (!this.blobsCache.has(index)) {
         blobMeta.push({
           index,
           blockRoot: fromHex(this.blockRootHex),
-          versionHash: versionHashes[index],
+          versionHash: versionedHashes[index],
         });
       }
     }
@@ -467,10 +484,6 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
   getBlobs(): deneb.BlobSidecars {
     return this.getAllBlobsWithSource().map(({blobSidecar}) => blobSidecar);
   }
-}
-
-function getVersionHashes(block: SignedBeaconBlock<ForkPostDeneb>): VersionedHashes {
-  return block.message.body.blobKzgCommitments.map(kzgCommitmentToVersionedHash);
 }
 
 function blockAndBlobArePaired(block: SignedBeaconBlock<ForkBlobsDA>, blobSidecar: deneb.BlobSidecar): boolean {
@@ -506,6 +519,7 @@ type BlockInputColumnsState =
   | {
       hasBlock: true;
       hasAllData: true;
+      versionedHashes: VersionedHashes;
       block: SignedBeaconBlock<ForkColumnsDA>;
       source: SourceMeta;
       timeCompleteSec: number;
@@ -513,16 +527,19 @@ type BlockInputColumnsState =
   | {
       hasBlock: true;
       hasAllData: false;
+      versionedHashes: VersionedHashes;
       block: SignedBeaconBlock<ForkColumnsDA>;
       source: SourceMeta;
     }
   | {
       hasBlock: false;
       hasAllData: true;
+      versionedHashes: VersionedHashes;
     }
   | {
       hasBlock: false;
       hasAllData: false;
+      versionedHashes: VersionedHashes;
     };
 /**
  * With columns, BlockInput has several states:
@@ -555,6 +572,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     const state = {
       hasBlock: true,
       hasAllData,
+      versionedHashes: props.block.message.body.blobKzgCommitments.map(kzgCommitmentToVersionedHash),
       block: props.block,
       source: props.source,
       timeCreated: props.source.seenTimestampSec,
@@ -582,6 +600,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     const state: BlockInputColumnsState = {
       hasBlock: false,
       hasAllData,
+      versionedHashes: props.columnSidecar.kzgCommitments.map(kzgCommitmentToVersionedHash),
     };
     const init: BlockInputInit = {
       daOutOfRange: false,
@@ -675,24 +694,8 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
 
     this.columnsCache.set(columnSidecar.index, {columnSidecar, source, seenTimestampSec, peerIdStr});
 
-    // check if we have freshly completed sampled or custody columns
-    // eg: sampledComplete == true && sampledColumns !== null
-
-    let hasAllData = this.state.hasAllData;
-    let sampledColumns: fulu.DataColumnSidecars | null = null;
-    // biome-ignore lint/suspicious/noConfusingLabels: <explanation>
-    maybeSampleComplete: if (!hasAllData) {
-      sampledColumns = [];
-      for (const index of this.custodyConfig.sampledColumns) {
-        const column = this.columnsCache.get(index);
-        if (column) {
-          sampledColumns.push(column.columnSidecar);
-        } else {
-          break maybeSampleComplete;
-        }
-      }
-      hasAllData = true;
-    }
+    const sampledColumns = this.getSampledColumns();
+    const hasAllData = this.state.hasAllData || sampledColumns.length === this.custodyConfig.sampledColumns.length;
 
     this.state = {
       ...this.state,
@@ -707,6 +710,10 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
 
   hasColumn(columnIndex: number): boolean {
     return this.columnsCache.has(columnIndex);
+  }
+
+  getVersionedHashes(): VersionedHashes {
+    return this.state.versionedHashes;
   }
 
   getCustodyColumns(): fulu.DataColumnSidecars {
