@@ -1,5 +1,5 @@
 import {ForkName} from "@lodestar/params";
-import {ColumnIndex, RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
+import {RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
 
 export enum DAType {
   PreData = "pre-data",
