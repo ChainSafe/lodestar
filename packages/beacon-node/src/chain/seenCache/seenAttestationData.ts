@@ -1,4 +1,3 @@
-import {BitArray} from "@chainsafe/ssz";
 import {CommitteeIndex, RootHex, Slot, SubnetID, phase0} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";

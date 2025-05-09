@@ -110,7 +110,7 @@ jobs:
         # id: unit_tests
         # Rever to "yarn test:unit" when finished debugging core dumps
         # run: sudo sh -c "ulimit -c unlimited && /usr/bin/node-with-debug $(which yarn) test:unit"
-        run: yarn test:unit
+        run: yarn vitest run --project unit --project unit-minimal --coverage
 
       # # Remove when finished debugging core dumps
       # - uses: './.github/actions/core-dump'

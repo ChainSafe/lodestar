@@ -21,8 +21,6 @@ import {
 
 const workerData = worker.workerData as HistoricalStateWorkerData;
 
-// TODO: Pass options from main thread for logging
-// TODO: Logging won't be visible in file loggers
 const logger = getNodeLogger(workerData.loggerOpts);
 
 logger.info("Historical state worker started");

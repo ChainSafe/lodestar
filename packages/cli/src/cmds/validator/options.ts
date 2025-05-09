@@ -49,6 +49,7 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     "builder.selection"?: string;
     "builder.boostFactor"?: string;
 
+    /** @deprecated */
     useProduceBlockV3?: boolean;
     broadcastValidation?: string;
     blindedLocal?: boolean;
@@ -277,8 +278,9 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
   },
 
   useProduceBlockV3: {
+    hidden: true,
+    deprecated: true,
     type: "boolean",
-    description: "Enable/disable usage of produceBlockV3 for block production, is auto enabled on deneb+ blocks",
   },
 
   broadcastValidation: {

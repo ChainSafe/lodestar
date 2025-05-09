@@ -96,6 +96,20 @@ export function isForkPostElectra(fork: ForkName): fork is ForkPostElectra {
   return isForkPostDeneb(fork) && fork !== ForkName.deneb;
 }
 
+export type ForkPreFulu = ForkPreElectra | ForkName.electra;
+export type ForkPostFulu = Exclude<ForkName, ForkPreFulu>;
+export const forkPostFulu = exclude(forkAll, [
+  ForkName.phase0,
+  ForkName.altair,
+  ForkName.bellatrix,
+  ForkName.capella,
+  ForkName.deneb,
+  ForkName.electra,
+]);
+export function isForkPostFulu(fork: ForkName): fork is ForkPostFulu {
+  return isForkPostElectra(fork) && fork !== ForkName.electra;
+}
+
 /*
  * Aliases only exported for backwards compatibility. This will be removed in
  * lodestar v2.0.  The types and guards above should be used in all places as

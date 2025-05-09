@@ -152,8 +152,13 @@ export async function* sendRequest(
     const ttfbTimeoutController = new AbortController();
     const respTimeoutController = new AbortController();
 
-    const timeoutTTFB = setTimeout(() => ttfbTimeoutController.abort(), TTFB_TIMEOUT);
     let timeoutRESP: NodeJS.Timeout | null = null;
+
+    const timeoutTTFB = setTimeout(() => {
+      // If we abort on first byte delay, don't need to abort for response delay
+      if (timeoutRESP) clearTimeout(timeoutRESP);
+      ttfbTimeoutController.abort();
+    }, TTFB_TIMEOUT);
 
     const restartRespTimeout = (): void => {
       if (timeoutRESP) clearTimeout(timeoutRESP);

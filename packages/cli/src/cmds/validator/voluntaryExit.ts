@@ -17,8 +17,6 @@ import {YargsError, ensure0xPrefix, wrapError} from "../../util/index.js";
 import {IValidatorCliArgs} from "./options.js";
 import {getSignersFromArgs} from "./signers/index.js";
 
-/* eslint-disable no-console */
-
 type VoluntaryExitArgs = {
   exitEpoch?: number;
   pubkeys?: string[];

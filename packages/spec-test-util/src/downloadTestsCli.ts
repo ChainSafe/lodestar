@@ -2,8 +2,6 @@
 
 import {downloadTests} from "./downloadTests.js";
 
-/* eslint-disable no-console */
-
 async function downloadTestsCli(): Promise<void> {
   const [specVersion, outputDir, testsToDownloadCsv, specTestsRepoUrl] = process.argv.slice(2);
 

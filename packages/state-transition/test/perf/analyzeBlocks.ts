@@ -65,7 +65,6 @@ async function run(): Promise<void> {
       }
     }
 
-    /* eslint-disable no-console */
     console.log({
       slot,
       blocks,
