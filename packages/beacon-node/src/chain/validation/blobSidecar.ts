@@ -5,7 +5,11 @@ import {
   KZG_COMMITMENT_SUBTREE_INDEX0,
   isForkPostElectra,
 } from "@lodestar/params";
-import {computeEpochAtSlot, computeStartSlotAtEpoch, getBlockHeaderProposerSignatureSet} from "@lodestar/state-transition";
+import {
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
+  getBlockHeaderProposerSignatureSet,
+} from "@lodestar/state-transition";
 import {BlobIndex, Root, Slot, SubnetID, deneb, ssz} from "@lodestar/types";
 import {toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 
