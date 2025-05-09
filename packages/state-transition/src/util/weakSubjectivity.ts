@@ -131,10 +131,12 @@ export function computeWeakSubjectivityPeriodFromConstituentsPhase0(
 
 export function computeWeakSubjectivityPeriodFromConstituentsElectra(
   totalBalanceByIncrement: number,
-  balanceChurnLimit: number, // Note this is not the same as churnLimit in `computeWeakSubjectivityPeriodFromConstituentsPhase0`
+  // Note this is not the same as churnLimit in `computeWeakSubjectivityPeriodFromConstituentsPhase0`
+  balanceChurnLimit: number,
   minWithdrawabilityDelay: number
 ): number {
-  const t = totalBalanceByIncrement; // Keep t as increment for now. Multiply final result by EFFECTIVE_BALANCE_INCREMENT
+  // Keep t as increment for now. Multiply final result by EFFECTIVE_BALANCE_INCREMENT
+  const t = totalBalanceByIncrement;
   const delta = balanceChurnLimit;
   const epochsForValidatorSetChurn = Math.floor(((SAFETY_DECAY * t) / (2 * delta * 100)) * EFFECTIVE_BALANCE_INCREMENT);
 
