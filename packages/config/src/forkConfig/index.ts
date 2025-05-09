@@ -102,12 +102,6 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
       }
       return phase0;
     },
-    getForkInfoFromFork(fork: ForkName): ForkInfo {
-      for (const forkInfo of forksDescendingEpochOrder) {
-        if (forkInfo.name === fork) return forkInfo;
-      }
-      return phase0;
-    },
     getForkName(slot: Slot): ForkName {
       return this.getForkInfo(slot).name;
     },
@@ -144,24 +138,27 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
       }
       return sszTypesFor(forkName);
     },
-    getMaxBlobsPerBlock(fork: ForkName): number {
+    getMaxBlobsPerBlock(epoch: Epoch): number {
+      const fork = this.getForkInfoAtEpoch(epoch).name;
       if (!isForkPostDeneb(fork)) {
         throw Error(`getMaxBlobsPerBlock is not avaiable for fork ${fork}`);
       }
-      const forkEpoch = this.getForkInfoFromFork(fork).epoch;
-      const blobSchedule = config.BLOB_SCHEDULE;
+
+      // Sort by epoch in descending order
+      const blobSchedule = config.BLOB_SCHEDULE.sort((a, b) => b.EPOCH - a.EPOCH);
 
       if (blobSchedule.length === 0) {
         throw Error("Attempt to get MAX_BLOBS_PER_BLOCK from empty BLOB_SCHEDULE");
       }
 
-      for (const entry of config.BLOB_SCHEDULE) {
-        if (forkEpoch === entry.EPOCH) {
+      for (const entry of blobSchedule) {
+        if (epoch >= entry.EPOCH) {
           return entry.MAX_BLOBS_PER_BLOCK;
         }
       }
 
-      return config.BLOB_SCHEDULE[0].MAX_BLOBS_PER_BLOCK;
+      // Take the minimum MAX_BLOBS_PER_BLOCK if no matching entry
+      return Math.min(...config.BLOB_SCHEDULE.map((e) => e.MAX_BLOBS_PER_BLOCK));
     },
     getMaxRequestBlobSidecars(fork: ForkName): number {
       return isForkPostElectra(fork) ? config.MAX_REQUEST_BLOB_SIDECARS_ELECTRA : config.MAX_REQUEST_BLOB_SIDECARS;

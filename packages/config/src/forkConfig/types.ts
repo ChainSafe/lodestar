@@ -23,8 +23,6 @@ export type ForkConfig = {
   getForkInfo(slot: Slot): ForkInfo;
   /** Get the hard-fork info for the active fork at `epoch` */
   getForkInfoAtEpoch(epoch: Epoch): ForkInfo;
-  /** Get the hard-fork info for the fork */
-  getForkInfoFromFork(fork: ForkName): ForkInfo;
   /** Get the hard-fork name at a given slot */
   getForkName(slot: Slot): ForkName;
   /** Get the hard-fork sequence number at a given slot */
@@ -42,7 +40,7 @@ export type ForkConfig = {
   /** Get post-deneb SSZ types by hard-fork*/
   getPostDenebForkTypes(slot: Slot): SSZTypesFor<ForkPostDeneb>;
   /** Get max blobs per block by hard-fork */
-  getMaxBlobsPerBlock(fork: ForkName): number;
+  getMaxBlobsPerBlock(epoch: Epoch): number;
   /** Get max request blob sidecars by hard-fork */
   getMaxRequestBlobSidecars(fork: ForkName): number;
 };
