@@ -15,7 +15,6 @@ import {
   ColumnMeta,
   ColumnWithSource,
   CreateBlockInputMeta,
-  CustodyConfig,
   DAData,
   DAType,
   IBlockInput,
@@ -554,21 +553,29 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
   state: BlockInputColumnsState;
 
   private columnsCache = new Map<ColumnIndex, ColumnWithSource>();
-  private readonly custodyConfig: CustodyConfig;
+  private readonly sampledColumns: ColumnIndex[];
+  private readonly custodyColumns: ColumnIndex[];
 
-  private constructor(init: BlockInputInit, state: BlockInputColumnsState, custodyConfig: CustodyConfig) {
+  private constructor(
+    init: BlockInputInit,
+    state: BlockInputColumnsState,
+    sampledColumns: ColumnIndex[],
+    custodyColumns: ColumnIndex[]
+  ) {
     super(init);
     this.state = state;
-    this.custodyConfig = custodyConfig;
+    this.sampledColumns = sampledColumns;
+    this.custodyColumns = custodyColumns;
   }
 
   static createFromBlock(
-    props: AddBlock<ForkColumnsDA> & CreateBlockInputMeta & {custodyConfig: CustodyConfig}
+    props: AddBlock<ForkColumnsDA> &
+      CreateBlockInputMeta & {sampledColumns: ColumnIndex[]; custodyColumns: ColumnIndex[]}
   ): BlockInputColumns {
     const hasAllData =
       props.daOutOfRange ||
       props.block.message.body.blobKzgCommitments.length === 0 ||
-      props.custodyConfig.sampledColumns.length === 0;
+      props.sampledColumns.length === 0;
     const state = {
       hasBlock: true,
       hasAllData,
@@ -586,7 +593,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
       parentRootHex: toHex(props.block.message.parentRoot),
       slot: props.block.message.slot,
     };
-    const blockInput = new BlockInputColumns(init, state, props.custodyConfig);
+    const blockInput = new BlockInputColumns(init, state, props.sampledColumns, props.custodyColumns);
 
     blockInput.blockPromise.resolve(props.block);
     if (hasAllData) {
@@ -595,8 +602,10 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     return blockInput;
   }
 
-  static createFromColumn(props: AddColumn & CreateBlockInputMeta & {custodyConfig: CustodyConfig}): BlockInputColumns {
-    const hasAllData = props.custodyConfig.sampledColumns.length === 0;
+  static createFromColumn(
+    props: AddColumn & CreateBlockInputMeta & {sampledColumns: ColumnIndex[]; custodyColumns: ColumnIndex[]}
+  ): BlockInputColumns {
+    const hasAllData = props.sampledColumns.length === 0;
     const state: BlockInputColumnsState = {
       hasBlock: false,
       hasAllData,
@@ -610,7 +619,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
       parentRootHex: toHex(props.columnSidecar.signedBlockHeader.message.parentRoot),
       slot: props.columnSidecar.signedBlockHeader.message.slot,
     };
-    const blockInput = new BlockInputColumns(init, state, props.custodyConfig);
+    const blockInput = new BlockInputColumns(init, state, props.sampledColumns, props.custodyColumns);
     if (hasAllData) {
       blockInput.dataPromise.resolve([]);
     }
@@ -624,7 +633,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
       expectedColumns:
         this.state.hasBlock && this.state.block.message.body.blobKzgCommitments.length === 0
           ? 0
-          : this.custodyConfig.sampledColumns.length,
+          : this.sampledColumns.length,
       receivedColumns: this.getSampledColumns().length,
     };
   }
@@ -695,7 +704,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     this.columnsCache.set(columnSidecar.index, {columnSidecar, source, seenTimestampSec, peerIdStr});
 
     const sampledColumns = this.getSampledColumns();
-    const hasAllData = this.state.hasAllData || sampledColumns.length === this.custodyConfig.sampledColumns.length;
+    const hasAllData = this.state.hasAllData || sampledColumns.length === this.sampledColumns.length;
 
     this.state = {
       ...this.state,
@@ -718,7 +727,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
 
   getCustodyColumns(): fulu.DataColumnSidecars {
     const columns: fulu.DataColumnSidecars = [];
-    for (const index of this.custodyConfig.sampledColumns) {
+    for (const index of this.custodyColumns) {
       const column = this.columnsCache.get(index);
       if (column) {
         columns.push(column.columnSidecar);
@@ -729,7 +738,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
 
   getSampledColumns(): fulu.DataColumnSidecars {
     const columns: fulu.DataColumnSidecars = [];
-    for (const index of this.custodyConfig.sampledColumns) {
+    for (const index of this.sampledColumns) {
       const column = this.columnsCache.get(index);
       if (column) {
         columns.push(column.columnSidecar);
@@ -753,7 +762,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
 
     const needed: ColumnMeta[] = [];
     const blockRoot = fromHex(this.blockRootHex);
-    for (const index of this.custodyConfig.sampledColumns) {
+    for (const index of this.sampledColumns) {
       if (!this.columnsCache.has(index)) {
         needed.push({index, blockRoot});
       }

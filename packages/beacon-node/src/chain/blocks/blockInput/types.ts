@@ -1,14 +1,6 @@
 import {ForkName} from "@lodestar/params";
 import {ColumnIndex, RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
 
-// TODO(peerDAS): This needs to be updated to the actual `CustodyConfig` object
-export type CustodyConfig = {
-  custodyColumns: ColumnIndex[];
-  custodyColumnsIndex: Uint8Array;
-  custodyColumnsLen: number;
-  sampledColumns: ColumnIndex[];
-};
-
 export enum DAType {
   PreData = "pre-data",
   Blobs = "blobs",
