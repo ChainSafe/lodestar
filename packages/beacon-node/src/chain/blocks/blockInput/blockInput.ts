@@ -1,4 +1,4 @@
-import {ForkName, ForkPostDeneb, ForkPreDeneb} from "@lodestar/params";
+import {ForkName, ForkPreDeneb} from "@lodestar/params";
 import {BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
 import {fromHex, prettyBytes, toHex, withTimeout} from "@lodestar/utils";
 import {VersionedHashes} from "../../../execution/index.js";
