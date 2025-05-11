@@ -70,7 +70,7 @@ export async function downloadGenericSpecTests<TestNames extends string>(
             method: "get",
             url,
             responseType: "stream",
-            timeout: 30 * 60 * 1000,
+            timeout: 60 * 60 * 1000,
           });
 
           const totalSize = headers["content-length"] as string;
