@@ -1,9 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
-import stream from "node:stream";
-import {promisify} from "node:util";
-import {retry} from "@lodestar/utils";
-import axios from "axios";
+import {pipeline} from "node:stream/promises";
+import {ReadableStream as NodeReadableStream} from "node:stream/web";
+import {fetch, retry} from "@lodestar/utils";
 import {rimraf} from "rimraf";
 import {x as extractTar} from "tar";
 
@@ -63,23 +62,32 @@ export async function downloadGenericSpecTests<TestNames extends string>(
   await Promise.all(
     testsToDownload.map(async (test) => {
       const url = `${specTestsRepoUrl ?? defaultSpecTestsRepoUrl}/releases/download/${specVersion}/${test}.tar.gz`;
+      const tarball = path.join(outputDir, `${test}.tar.gz`);
 
       await retry(
         async () => {
-          const {data, headers} = await axios({
-            method: "get",
-            url,
-            responseType: "stream",
-            timeout: 30 * 60 * 1000,
-          });
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 30 * 60 * 1000);
 
-          const totalSize = headers["content-length"] as string;
+          const res = await fetch(url, {signal: controller.signal}).finally(() => clearTimeout(timeout));
+
+          if (!res.ok) {
+            throw new Error(`Failed to download file from ${url}: ${res.status} ${res.statusText}`);
+          }
+
+          if (!res.body) {
+            throw new Error("Response body is null");
+          }
+
+          const totalSize = res.headers.get("content-length") as string;
           log(`Downloading ${url} - ${totalSize} bytes`);
 
-          // extract tar into output directory
-          await promisify(stream.pipeline)(data, extractTar({cwd: outputDir}));
+          await pipeline(res.body as NodeReadableStream, fs.createWriteStream(tarball));
 
+          await extractTar({file: tarball, cwd: outputDir});
           log(`Downloaded  ${url}`);
+
+          fs.unlinkSync(tarball);
         },
         {
           retries: 3,
