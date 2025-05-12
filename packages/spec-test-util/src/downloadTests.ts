@@ -83,6 +83,7 @@ export async function downloadGenericSpecTests<TestNames extends string>(
           await pipeline(res.body as NodeReadableStream, fs.createWriteStream(tarball));
           log(`Downloaded ${url} - ${fs.statSync(tarball).size} bytes`);
 
+          // extract tar into output directory
           await promisify(execFile)(
             "tar",
             ["-xzf", tarball, "-C", outputDir, "--warning=no-unknown-keyword", "--exclude=._*", "--exclude=*/._*"],
@@ -101,6 +102,8 @@ export async function downloadGenericSpecTests<TestNames extends string>(
           },
         }
       );
+
+      // download tar
     })
   );
 
