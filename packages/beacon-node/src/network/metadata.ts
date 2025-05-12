@@ -5,6 +5,7 @@ import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, altair, fulu, phase0, ssz} from "@lodestar/types";
 import {intToBytes} from "@lodestar/utils";
 import {FAR_FUTURE_EPOCH} from "../constants/index.js";
+import {serializeCgc} from "../util/metadata.js";
 import {getCurrentAndNextFork} from "./forks.js";
 import {NetworkConfig} from "./networkConfig.js";
 export enum ENRKey {
@@ -43,7 +44,7 @@ export class MetadataController {
     this.onSetValue = modules.onSetValue;
     this._metadata = opts.metadata ?? {
       ...ssz.fulu.Metadata.defaultValue(),
-      cgc: modules.networkConfig.getCustodyConfig().advertisedCustodyGroupCount,
+      custodyGroupCount: modules.networkConfig.getCustodyConfig().advertisedCustodyGroupCount,
     };
   }
 
@@ -61,12 +62,8 @@ export class MetadataController {
       this.onSetValue(ENRKey.syncnets, ssz.phase0.AttestationSubnets.serialize(this._metadata.syncnets));
     }
 
-    if (config.getForkSeq(computeStartSlotAtEpoch(currentEpoch)) >= ForkSeq.fulu) {
-      this.onSetValue(
-        ENRKey.cgc,
-        intToBytes(this._metadata.cgc, Math.ceil(Math.log2(this._metadata.cgc + 1) / 8), "be")
-      );
-    }
+    // Set CGC regardless of fork. It may be useful to clients before Fulu, and will be ignored otherwise.
+    this.onSetValue(ENRKey.cgc, serializeCgc(this._metadata.custodyGroupCount));
   }
 
   get seqNumber(): bigint {
@@ -92,13 +89,17 @@ export class MetadataController {
     this._metadata.attnets = attnets;
   }
 
-  get cgc(): number {
-    return this._metadata.cgc;
+  get custodyGroupCount(): number {
+    return this._metadata.custodyGroupCount;
   }
 
-  set cgc(cgc: number) {
-    this.onSetValue(ENRKey.cgc, intToBytes(this._metadata.cgc, Math.ceil(Math.log2(this._metadata.cgc + 1) / 8), "be"));
-    this._metadata.cgc = cgc;
+  set custodyGroupCount(custodyGroupCount: number) {
+    if (custodyGroupCount === this._metadata.custodyGroupCount) {
+      return;
+    }
+    this.onSetValue(ENRKey.cgc, serializeCgc(custodyGroupCount));
+    this._metadata.seqNumber++;
+    this._metadata.custodyGroupCount = custodyGroupCount;
   }
 
   /** Consumers that need the phase0.Metadata type can just ignore the .syncnets property */

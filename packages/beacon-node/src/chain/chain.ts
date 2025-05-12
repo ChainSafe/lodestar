@@ -36,6 +36,7 @@ import {
   Wei,
   bellatrix,
   deneb,
+  fulu,
   isBlindedBeaconBlock,
   phase0,
 } from "@lodestar/types";
@@ -168,7 +169,7 @@ export class BeaconChain implements IBeaconChain {
   readonly checkpointBalancesCache: CheckpointBalancesCache;
   readonly shufflingCache: ShufflingCache;
   /** Map keyed by executionPayload.blockHash of the block for those blobs */
-  readonly producedContentsCache = new Map<BlockHash, deneb.Contents>();
+  readonly producedContentsCache = new Map<BlockHash, deneb.Contents & {cells?: fulu.Cell[][]}>();
 
   // Cache payload from the local execution so that produceBlindedBlock or produceBlockV3 and
   // send and get signed/published blinded versions which beacon can assemble into full before
@@ -264,7 +265,7 @@ export class BeaconChain implements IBeaconChain {
     this.seenAttestationDatas = new SeenAttestationDatas(metrics, this.opts?.attDataCacheSlotDistance);
     const nodeId = computeNodeIdFromPrivateKey(privateKey);
     this.custodyConfig = new CustodyConfig(nodeId, config);
-    this.seenGossipBlockInput = new SeenGossipBlockInput(this.custodyConfig, this.executionEngine, emitter);
+    this.seenGossipBlockInput = new SeenGossipBlockInput(this.custodyConfig, this.executionEngine, emitter, logger);
 
     this.beaconProposerCache = new BeaconProposerCache(opts);
     this.checkpointBalancesCache = new CheckpointBalancesCache();
@@ -788,7 +789,7 @@ export class BeaconChain implements IBeaconChain {
    *       kzg_aggregated_proof=compute_proof_from_blobs(blobs),
    *   )
    */
-  getContents(beaconBlock: deneb.BeaconBlock): deneb.Contents {
+  getContents(beaconBlock: deneb.BeaconBlock): deneb.Contents & {cells?: fulu.Cell[][]} {
     const blockHash = toRootHex(beaconBlock.body.executionPayload.blockHash);
     const contents = this.producedContentsCache.get(blockHash);
     if (!contents) {
@@ -1207,13 +1208,16 @@ export class BeaconChain implements IBeaconChain {
         // Update custody requirement based on finalized state
         const validatorIndices = this.beaconProposerCache.getValidatorIndices();
         const targetCustodyGroupCount = getValidatorsCustodyRequirement(headState, validatorIndices, this.config);
-        this.custodyConfig.updateTargetCustodyGroupCount(targetCustodyGroupCount);
-        this.emitter.emit(ChainEvent.updateTargetGroupCount, this.custodyConfig.targetCustodyGroupCount);
+        if (targetCustodyGroupCount !== this.custodyConfig.targetCustodyGroupCount) {
+          this.custodyConfig.updateTargetCustodyGroupCount(targetCustodyGroupCount);
+          this.logger.verbose(`Updated targetCustodyGroupCount=${this.custodyConfig.targetCustodyGroupCount}`);
+          this.emitter.emit(ChainEvent.updateTargetGroupCount, this.custodyConfig.targetCustodyGroupCount);
 
-        // TODO: If target group count increases, we should wait to update the advertised group until we've
-        // backfilled the new groups.
-        this.custodyConfig.updateAdvertisedCustodyGroupCount(targetCustodyGroupCount);
-        this.emitter.emit(ChainEvent.updateAdvertisedGroupCount, this.custodyConfig.advertisedCustodyGroupCount);
+          // TODO: If target group count increases, we should wait to update the advertised group until we've
+          // backfilled the new groups.
+          // this.custodyConfig.updateAdvertisedCustodyGroupCount(targetCustodyGroupCount);
+          // this.emitter.emit(ChainEvent.updateAdvertisedGroupCount, this.custodyConfig.advertisedCustodyGroupCount);
+        }
       }
     }
 

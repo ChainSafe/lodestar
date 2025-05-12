@@ -23,7 +23,7 @@ describe("network / gossip / topic", () => {
     ],
     [GossipType.data_column_sidecar]: [
       {
-        topic: {type: GossipType.data_column_sidecar, index: 1, fork: ForkName.fulu, encoding},
+        topic: {type: GossipType.data_column_sidecar, subnet: 1, fork: ForkName.fulu, encoding},
         topicStr: "/eth2/9eb2e7f0/data_column_sidecar_1/ssz_snappy",
       },
     ],

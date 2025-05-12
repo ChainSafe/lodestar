@@ -267,7 +267,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
   async function validateBeaconDataColumn(
     dataColumnSidecar: fulu.DataColumnSidecar,
     dataColumnBytes: Uint8Array,
-    gossipIndex: number,
+    gossipSubnet: SubnetID,
     peerIdStr: string,
     seenTimestampSec: number
   ): Promise<BlockInput | NullBlockInput> {
@@ -293,7 +293,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     );
 
     try {
-      await validateGossipDataColumnSidecar(chain, dataColumnSidecar, gossipIndex);
+      await validateGossipDataColumnSidecar(chain, dataColumnSidecar, gossipSubnet);
       const recvToValidation = Date.now() / 1000 - seenTimestampSec;
       const validationTime = recvToValidation - recvToValLatency;
 
@@ -307,7 +307,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         curentSlot: chain.clock.currentSlot,
         peerId: peerIdStr,
         delaySec,
-        gossipIndex,
+        gossipSubnet,
         columnIndex: dataColumnSidecar.index,
         ...blockInputMeta,
         recvToValLatency,
@@ -565,7 +565,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const blockInput = await validateBeaconDataColumn(
         dataColumnSidecar,
         serializedData,
-        topic.index,
+        topic.subnet,
         peerIdStr,
         seenTimestampSec
       );

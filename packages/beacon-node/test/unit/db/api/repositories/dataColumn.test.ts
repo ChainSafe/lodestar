@@ -50,6 +50,7 @@ describe("block archive repository", () => {
     const slot = dataColumn.signedBlockHeader.message.slot;
     const blob = ssz.deneb.Blob.defaultValue();
     const commitment = ssz.deneb.KZGCommitment.defaultValue();
+    const kzgProof = ssz.deneb.KZGProof.defaultValue();
     const singedBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
 
     singedBlock.message.body.blobKzgCommitments.push(commitment);
@@ -57,7 +58,7 @@ describe("block archive repository", () => {
     singedBlock.message.body.blobKzgCommitments.push(commitment);
     const allDataColumnSidecars = computeDataColumnSidecars(config, singedBlock, {
       blobs: [blob, blob, blob],
-      kzgProofs: [commitment, commitment, commitment],
+      kzgProofs: Array.from({length: 3 * NUMBER_OF_COLUMNS}, () => kzgProof),
     });
     for (let j = 0; j < allDataColumnSidecars.length; j++) {
       allDataColumnSidecars[j].index = j;

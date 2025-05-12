@@ -141,6 +141,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     // Networking (non-critical as those do not affect consensus)
     MIN_EPOCHS_FOR_BLOCK_REQUESTS: false,
     MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: false,
+    MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: false,
     BLOB_SIDECAR_SUBNET_COUNT: false,
     BLOB_SIDECAR_SUBNET_COUNT_ELECTRA: false,
     MAX_REQUEST_BLOB_SIDECARS: false,

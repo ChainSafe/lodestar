@@ -40,7 +40,12 @@ describe("SeenGossipBlockInput", () => {
 
   const emitter = new ChainEventEmitter();
 
-  const seenGossipBlockInput = new SeenGossipBlockInput(new CustodyConfig(nodeId, config), executionEngine, emitter);
+  const seenGossipBlockInput = new SeenGossipBlockInput(
+    new CustodyConfig(nodeId, config),
+    executionEngine,
+    emitter,
+    testLogger("seenGossipBlockInput")
+  );
 
   // array of numBlobs, events where events are array of
   // [block|blob11|blob2, pd | bp | null | error string reflecting the expected result]

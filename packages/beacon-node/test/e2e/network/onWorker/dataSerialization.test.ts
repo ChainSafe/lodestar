@@ -173,7 +173,7 @@ describe("data serialization through worker boundary", () => {
       enr: "test-enr",
       p2pAddresses: ["/ip4/1.2.3.4/tcp/0"],
       discoveryAddresses: ["/ip4/1.2.3.4/tcp/0"],
-      metadata: ssz.altair.Metadata.defaultValue(),
+      metadata: ssz.fulu.Metadata.defaultValue(),
     },
     subscribeGossipCoreTopics: null,
     unsubscribeGossipCoreTopics: null,

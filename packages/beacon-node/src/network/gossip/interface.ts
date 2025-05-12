@@ -59,7 +59,7 @@ export interface IGossipTopic {
 export type GossipTopicTypeMap = {
   [GossipType.beacon_block]: {type: GossipType.beacon_block};
   [GossipType.blob_sidecar]: {type: GossipType.blob_sidecar; subnet: SubnetID};
-  [GossipType.data_column_sidecar]: {type: GossipType.data_column_sidecar; index: number};
+  [GossipType.data_column_sidecar]: {type: GossipType.data_column_sidecar; subnet: SubnetID};
   [GossipType.beacon_aggregate_and_proof]: {type: GossipType.beacon_aggregate_and_proof};
   [GossipType.beacon_attestation]: {type: GossipType.beacon_attestation; subnet: SubnetID};
   [GossipType.voluntary_exit]: {type: GossipType.voluntary_exit};
