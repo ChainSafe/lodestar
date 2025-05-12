@@ -85,13 +85,9 @@ export async function downloadGenericSpecTests<TestNames extends string>(
           log(`Downloaded ${url} - ${fs.statSync(tarball).size} bytes`);
 
           // extract tar into output directory
-          await promisify(execFile)(
-            "tar",
-            ["-xzf", tarball, "-C", outputDir, "--warning=no-unknown-keyword", "--exclude=._*", "--exclude=*/._*"],
-            {
-              maxBuffer: 1000 * 1024 * 1024, // 1 GB
-            }
-          );
+          await promisify(execFile)("tar", ["-xzf", tarball, "-C", outputDir, "--exclude=._*", "--exclude=*/._*"], {
+            maxBuffer: 1000 * 1024 * 1024, // 1 GB
+          });
           log(`Extracted ${tarball} to ${outputDir}`);
 
           fs.unlinkSync(tarball);
