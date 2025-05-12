@@ -1,0 +1,38 @@
+name: Kurtosis sim tests
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 12 * * 6" # Runs at noon UTC every Saturday with unstable
+  push:
+    tags:
+      - v*
+
+jobs:
+  prepare-lodestar:
+    name: Build Lodestar image for Kurtosis use
+    runs-on: buildjet-4vcpu-ubuntu-2204
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build Docker image - local only
+        run: >
+          docker buildx build . --load \
+            --tag chainsafe/lodestar:kurtosis-ci \
+            --build-arg COMMIT=$(git rev-parse HEAD)
+
+  test:
+    timeout-minutes: 60
+    name: Run Kurtosis
+    runs-on: buildjet-4vcpu-ubuntu-2204
+    needs:
+      - prepare-lodestar
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Run test
+        uses: ethpandaops/kurtosis-assertoor-github-action@v1
+        with:
+          ethereum_package_args: '.github/workflows/assets/kurtosis_sim_test_config.yaml'
