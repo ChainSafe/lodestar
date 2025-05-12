@@ -9,11 +9,14 @@ on:
       - nc/kurtosis
 
 jobs:
-  prepare-lodestar:
-    name: Build Lodestar image for Kurtosis use
+  test:
+    timeout-minutes: 60
+    name: Build and run Kurtosis
     runs-on: buildjet-4vcpu-ubuntu-2204
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Build Docker image - local only
@@ -21,17 +24,6 @@ jobs:
           docker buildx build . --load \
             --tag chainsafe/lodestar:kurtosis-ci \
             --build-arg COMMIT=$(git rev-parse HEAD)
-
-  test:
-    timeout-minutes: 60
-    name: Run Kurtosis
-    runs-on: buildjet-4vcpu-ubuntu-2204
-    needs:
-      - prepare-lodestar
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - name: Run test
         uses: ethpandaops/kurtosis-assertoor-github-action@v1
         with:
