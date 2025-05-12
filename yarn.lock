@@ -19,14 +19,6 @@
     semver "^6.3.1"
     twirp-ts "^2.5.0"
 
-"@actions/core@^1.10.1":
-  version "1.10.1"
-  resolved "https://registry.yarnpkg.com/@actions/core/-/core-1.10.1.tgz#61108e7ac40acae95ee36da074fa5850ca4ced8a"
-  integrity sha512-3lBR9EDAY+iYIpTnTIXmWcNbX3T2kCkAEQGIQx4NVQ0575nk2k3GRZDTPQG+vVtS2izSLmINlxXf0uLtnrTP+g==
-  dependencies:
-    "@actions/http-client" "^2.0.1"
-    uuid "^8.3.2"
-
 "@actions/core@^1.11.1":
   version "1.11.1"
   resolved "https://registry.yarnpkg.com/@actions/core/-/core-1.11.1.tgz#ae683aac5112438021588030efb53b1adb86f172"
