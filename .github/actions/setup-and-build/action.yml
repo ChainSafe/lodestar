@@ -25,22 +25,14 @@ runs:
       id: cache-build-restore
       with:
         path: |
-          node_modules
-          packages/*/node_modules
           lib/
           packages/*/lib
           packages/*/.git-data.json
         key: ${{ runner.os }}-${{ runner.arch }}-node-${{ inputs.node }}-${{ github.sha }}
 
     - name: Install & build
-      if: steps.cache-build-restore.outputs.cache-hit != 'true'
       shell: bash
       run: yarn install --frozen-lockfile && yarn build
-
-    - name: Build
-      if: steps.cache-build-restore.outputs.cache-hit == 'true'
-      shell: bash
-      run: yarn build
 
     - name: Check Build
       shell: bash
