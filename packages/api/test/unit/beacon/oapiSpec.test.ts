@@ -63,13 +63,6 @@ const ignoredProperties: Record<string, IgnoredProperty> = {
    /query/syncing_status - must be integer
    */
   getHealth: {request: ["query.syncing_status"]},
-
-  /* 
-   https://github.com/ChainSafe/lodestar/issues/4638 
-   /query - must have required property 'skip_randao_verification'
-   */
-  produceBlockV2: {request: ["query.skip_randao_verification"]},
-  produceBlindedBlock: {request: ["query.skip_randao_verification"]},
 };
 
 const openApiJson = await fetchOpenApiSpec(openApiFile);

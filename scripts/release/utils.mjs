@@ -1,14 +1,3 @@
-/* eslint-disable
-  no-console,
-  @typescript-eslint/explicit-function-return-type,
-  @typescript-eslint/no-unsafe-assignment,
-  @typescript-eslint/no-unsafe-member-access,
-  @typescript-eslint/no-unsafe-call,
-  @typescript-eslint/no-unsafe-return,
-  @typescript-eslint/explicit-module-boundary-types,
-  import/no-extraneous-dependencies
-*/
-
 import child_process from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";

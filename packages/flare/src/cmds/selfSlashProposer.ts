@@ -8,8 +8,6 @@ import {phase0, ssz} from "@lodestar/types";
 import {CliCommand, toPubkeyHex} from "@lodestar/utils";
 import {SecretKeysArgs, deriveSecretKeys, secretKeysOptions} from "../util/deriveSecretKeys.js";
 
-/* eslint-disable no-console */
-
 type SelfSlashArgs = SecretKeysArgs & {
   server: string;
   slot: string;

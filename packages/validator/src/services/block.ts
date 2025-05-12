@@ -1,6 +1,6 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, ForkPostBellatrix, ForkPostDeneb, ForkPreDeneb, ForkSeq} from "@lodestar/params";
+import {ForkName, ForkPostBellatrix, ForkPostDeneb, ForkPreDeneb} from "@lodestar/params";
 import {
   BLSPubkey,
   BLSSignature,
@@ -54,7 +54,6 @@ type FullOrBlindedBlockWithContents =
 
 type DebugLogCtx = {debugLogCtx: Record<string, string | boolean | undefined>};
 type BlockProposalOpts = {
-  useProduceBlockV3?: boolean;
   broadcastValidation: routes.beacon.BroadcastValidation;
   blindedLocal: boolean;
 };
@@ -124,7 +123,6 @@ export class BlockProposingService {
         this.validatorStore.getBuilderSelectionParams(pubkeyHex);
       const feeRecipient = this.validatorStore.getFeeRecipient(pubkeyHex);
       const blindedLocal = this.opts.blindedLocal;
-      const useProduceBlockV3 = this.opts.useProduceBlockV3 ?? this.config.getForkSeq(slot) >= ForkSeq.deneb;
 
       this.logger.debug("Producing block", {
         ...debugLogCtx,
@@ -132,18 +130,16 @@ export class BlockProposingService {
         builderBoostFactor,
         feeRecipient,
         strictFeeRecipientCheck,
-        useProduceBlockV3,
         blindedLocal,
       });
       this.metrics?.proposerStepCallProduceBlock.observe(this.clock.secFromSlot(slot));
 
-      const produceBlockFn = useProduceBlockV3 ? this.produceBlockWrapper : this.produceBlockV2Wrapper;
       const produceOpts = {
         feeRecipient,
         strictFeeRecipientCheck,
         blindedLocal,
       };
-      const blockContents = await produceBlockFn(
+      const blockContents = await this.produceBlockWrapper(
         this.config,
         slot,
         randaoReveal,
@@ -237,45 +233,6 @@ export class BlockProposingService {
     };
 
     return parseProduceBlockResponse({data: res.value(), ...meta}, debugLogCtx, builderSelection);
-  };
-
-  /** a wrapper function used for backward compatibility with the clients who don't have v3 implemented yet */
-  private produceBlockV2Wrapper = async (
-    config: ChainForkConfig,
-    slot: Slot,
-    randaoReveal: BLSSignature,
-    graffiti: string | undefined,
-    _builderBoostFactor: bigint,
-    _opts: routes.validator.ExtraProduceBlockOpts,
-    builderSelection: routes.validator.BuilderSelection
-  ): Promise<FullOrBlindedBlockWithContents & DebugLogCtx> => {
-    // other clients have always implemented builder vs execution race in produce blinded block
-    // so if builderSelection is executiononly then only we call produceBlockV2 else produceBlockV3 always
-    const debugLogCtx = {builderSelection};
-    const fork = config.getForkName(slot);
-
-    if (ForkSeq[fork] < ForkSeq.bellatrix || builderSelection === routes.validator.BuilderSelection.ExecutionOnly) {
-      Object.assign(debugLogCtx, {api: "produceBlockV2"});
-      const res = await this.api.validator.produceBlockV2({slot, randaoReveal, graffiti});
-      const {version} = res.meta();
-      const executionPayloadSource = ProducedBlockSource.engine;
-
-      return parseProduceBlockResponse(
-        {data: res.value(), executionPayloadBlinded: false, executionPayloadSource, version},
-        debugLogCtx,
-        builderSelection
-      );
-    }
-    Object.assign(debugLogCtx, {api: "produceBlindedBlock"});
-    const res = await this.api.validator.produceBlindedBlock({slot, randaoReveal, graffiti});
-    const {version} = res.meta();
-    const executionPayloadSource = ProducedBlockSource.builder;
-
-    return parseProduceBlockResponse(
-      {data: res.value(), executionPayloadBlinded: true, executionPayloadSource, version},
-      debugLogCtx,
-      builderSelection
-    );
   };
 }
 

@@ -10,7 +10,6 @@ type TestCase = {
   output: {[P in LogFormat]: string};
 };
 
-/* eslint-disable quotes */
 export const formatsTestCases: (TestCase | (() => TestCase))[] = [
   {
     id: "regular log with metadata",

@@ -1,4 +1,3 @@
-/* eslint import/order: "off" */
 // This script is should be run in an e2e !!
 // It demostrates how to properly change the Lodestar preset safely
 
