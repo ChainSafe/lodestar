@@ -67,10 +67,7 @@ export async function downloadGenericSpecTests<TestNames extends string>(
 
       await retry(
         async () => {
-          const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), 30 * 60 * 1000);
-
-          const res = await fetch(url, {signal: controller.signal}).finally(() => clearTimeout(timeout));
+          const res = await fetch(url, {signal: AbortSignal.timeout(30 * 60 * 1000)});
 
           if (!res.ok) {
             throw new Error(`Failed to download file from ${url}: ${res.status} ${res.statusText}`);
