@@ -1,10 +1,11 @@
+import {exec} from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import {pipeline} from "node:stream/promises";
 import {ReadableStream as NodeReadableStream} from "node:stream/web";
+import {promisify} from "node:util";
 import {fetch, retry} from "@lodestar/utils";
 import {rimraf} from "rimraf";
-import {x as extractTar} from "tar";
 
 export const defaultSpecTestsRepoUrl = "https://github.com/ethereum/consensus-spec-tests";
 
@@ -85,8 +86,8 @@ export async function downloadGenericSpecTests<TestNames extends string>(
           await pipeline(res.body as NodeReadableStream, fs.createWriteStream(tarball));
           log(`Downloaded ${url} - ${fs.statSync(tarball).size} bytes`);
 
-          await extractTar({file: tarball, cwd: outputDir});
-          log(`Extracted  ${url}`);
+          await promisify(exec)(`tar -xzf ${tarball} -C ${outputDir}`);
+          log(`Extracted  ${tarball} to ${outputDir}`);
 
           fs.unlinkSync(tarball);
         },
@@ -97,8 +98,6 @@ export async function downloadGenericSpecTests<TestNames extends string>(
           },
         }
       );
-
-      // download tar
     })
   );
 
