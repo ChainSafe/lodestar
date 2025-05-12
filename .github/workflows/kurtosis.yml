@@ -5,8 +5,8 @@ on:
   schedule:
     - cron: "0 12 * * 6" # Runs at noon UTC every Saturday with unstable
   push:
-    tags:
-      - v*
+    branches:
+      - nc/kurtosis
 
 jobs:
   prepare-lodestar:
