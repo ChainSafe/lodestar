@@ -3,7 +3,7 @@ name: Kurtosis sim tests
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 12 * * *" # Runs at noon UTC every Saturday with unstable
+    - cron: "0 12 * * *" # Runs at noon UTC everyday
   push:
     branches:
       - nc/kurtosis
