@@ -39,16 +39,18 @@ export async function archiveBlocks(
 ): Promise<void> {
   // Use fork choice to determine the blocks to archive and delete
   // Use single function call for better performance
-  const {ancestorBlocks: finalizedCanonicalBlocks, nonAncestorBlocks: finalizedNonCanonicalBlocks} = 
+  const {ancestorBlocks: finalizedCanonicalBlocks, nonAncestorBlocks: finalizedNonCanonicalBlocks} =
     forkChoice.getAllAncestorAndNonAncestorBlocks(finalizedCheckpoint.rootHex);
 
   // NOTE: The finalized block will be exactly the first block of `epoch` or previous
   const finalizedPostDeneb = finalizedCheckpoint.epoch >= config.DENEB_FORK_EPOCH;
 
-  const finalizedCanonicalBlockRoots: BlockRootSlot[] = finalizedCanonicalBlocks.map((block: {slot: Slot; blockRoot: RootHex}) => ({
-    slot: block.slot,
-    root: fromHex(block.blockRoot),
-  }));
+  const finalizedCanonicalBlockRoots: BlockRootSlot[] = finalizedCanonicalBlocks.map(
+    (block: {slot: Slot; blockRoot: RootHex}) => ({
+      slot: block.slot,
+      root: fromHex(block.blockRoot),
+    })
+  );
 
   if (finalizedCanonicalBlockRoots.length > 0) {
     await migrateBlocksFromHotToColdDb(db, finalizedCanonicalBlockRoots);
@@ -67,7 +69,9 @@ export async function archiveBlocks(
   // deleteNonCanonicalBlocks
   // loop through forkchoice single time
 
-  const nonCanonicalBlockRoots = finalizedNonCanonicalBlocks.map((summary: {blockRoot: RootHex}) => fromHex(summary.blockRoot));
+  const nonCanonicalBlockRoots = finalizedNonCanonicalBlocks.map((summary: {blockRoot: RootHex}) =>
+    fromHex(summary.blockRoot)
+  );
   if (nonCanonicalBlockRoots.length > 0) {
     await db.block.batchDelete(nonCanonicalBlockRoots);
     logger.verbose("Deleted non canonical blocks from hot DB", {

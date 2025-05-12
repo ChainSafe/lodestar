@@ -222,7 +222,7 @@ export interface IForkChoice {
    * This is more efficient than calling getAllAncestorBlocks and getAllNonAncestorBlocks separately.
    */
   getAllAncestorAndNonAncestorBlocks(blockRoot: RootHex): {
-    ancestorBlocks: ProtoBlock[]; 
+    ancestorBlocks: ProtoBlock[];
     nonAncestorBlocks: ProtoBlock[];
   };
   getCanonicalBlockAtSlot(slot: Slot): ProtoBlock | null;

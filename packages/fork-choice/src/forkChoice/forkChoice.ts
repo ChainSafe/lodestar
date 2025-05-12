@@ -946,17 +946,16 @@ export class ForkChoice implements IForkChoice {
 
   /**
    * Returns both ancestor and non-ancestor blocks in a single traversal.
-   * 
    */
   getAllAncestorAndNonAncestorBlocks(blockRoot: RootHex): {
-    ancestorBlocks: ProtoBlock[]; 
+    ancestorBlocks: ProtoBlock[];
     nonAncestorBlocks: ProtoBlock[];
   } {
     const {ancestors, nonAncestors} = this.protoArray.getAllAncestorAndNonAncestorNodes(blockRoot);
     // Exclude the last node as before for ancestors.
     return {
       ancestorBlocks: ancestors.slice(0, ancestors.length - 1),
-      nonAncestorBlocks: nonAncestors
+      nonAncestorBlocks: nonAncestors,
     };
   }
 
