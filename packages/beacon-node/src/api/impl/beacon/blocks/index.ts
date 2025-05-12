@@ -65,6 +65,7 @@ export function getBeaconBlockApi({
   chain,
   config,
   network,
+  metrics,
   db,
 }: Pick<
   ApiModules,
