@@ -63,6 +63,7 @@ import {ForkchoiceCaller, initializeForkChoice} from "./forkChoice/index.js";
 import {
   BlockHash,
   CommonBlockBody,
+  CommonBlockBodyFn,
   FindHeadFnName,
   IBeaconChain,
   ProposerPreparationData,
@@ -660,7 +661,7 @@ export class BeaconChain implements IBeaconChain {
     });
   }
 
-  produceBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
+  produceBlock(blockAttributes: BlockAttributes & {commonBlockBodyFn?: CommonBlockBodyFn}): Promise<{
     block: BeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Wei;
@@ -669,7 +670,7 @@ export class BeaconChain implements IBeaconChain {
     return this.produceBlockWrapper<BlockType.Full>(BlockType.Full, blockAttributes);
   }
 
-  produceBlindedBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
+  produceBlindedBlock(blockAttributes: BlockAttributes & {commonBlockBodyFn?: CommonBlockBodyFn}): Promise<{
     block: BlindedBeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Wei;
@@ -684,9 +685,9 @@ export class BeaconChain implements IBeaconChain {
       graffiti,
       slot,
       feeRecipient,
-      commonBlockBody,
+      commonBlockBodyFn,
       parentBlockRoot,
-    }: BlockAttributes & {commonBlockBody?: CommonBlockBody}
+    }: BlockAttributes & {commonBlockBodyFn?: CommonBlockBodyFn}
   ): Promise<{
     block: AssembledBlockType<T>;
     executionPayloadValue: Wei;
@@ -715,7 +716,7 @@ export class BeaconChain implements IBeaconChain {
         parentBlockRoot,
         proposerIndex,
         proposerPubKey,
-        commonBlockBody,
+        commonBlockBodyFn,
       }
     );
 
