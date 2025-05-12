@@ -17,7 +17,7 @@ export const ethereumConsensusSpecsTests: DownloadTestsOptions = {
   specVersion: "v1.5.0",
   // Target directory is the host package root: 'packages/*/spec-tests'
   outputDir: path.join(__dirname, "../../spec-tests"),
-  specTestsRepoUrl: "https://github.com/ethereum/consensus-spec-tests",
+  specTestsRepoUrl: "https://lodestar-misc.fra1.cdn.digitaloceanspaces.com",
   testsToDownload: ["general", "mainnet", "minimal"],
 };
 
@@ -25,6 +25,6 @@ export const blsSpecTests: DownloadTestsOptions = {
   specVersion: "v0.1.1",
   // Target directory is the host package root: 'packages/*/spec-tests-bls'
   outputDir: path.join(__dirname, "../../spec-tests-bls"),
-  specTestsRepoUrl: "https://github.com/ethereum/bls12-381-tests",
+  specTestsRepoUrl: "https://lodestar-misc.fra1.cdn.digitaloceanspaces.com",
   testsToDownload: ["bls_tests_yaml"],
 };
