@@ -202,11 +202,15 @@ jobs:
       # Download spec tests with cache
       - name: Restore spec tests cache
         uses: actions/cache@main
+        env:
+          ACTIONS_STEP_DEBUG: true
         with:
           path: packages/beacon-node/spec-tests
           key: spec-test-data-${{ hashFiles('packages/beacon-node/test/spec/specTestVersioning.ts') }}
       - name: Download spec tests
         run: yarn download-spec-tests
+        env:
+          ACTIONS_STEP_DEBUG: true
       # Run them in different steps to quickly identifying which command failed
       # Otherwise just doing `yarn test:spec` you can't tell which specific suite failed
       # many of the suites have identical names for minimal and mainnet
