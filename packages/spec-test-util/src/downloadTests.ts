@@ -1,4 +1,4 @@
-import {exec} from "node:child_process";
+import {execFile} from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import {pipeline} from "node:stream/promises";
@@ -86,10 +86,11 @@ export async function downloadGenericSpecTests<TestNames extends string>(
           await pipeline(res.body as NodeReadableStream, fs.createWriteStream(tarball));
           log(`Downloaded ${url} - ${fs.statSync(tarball).size} bytes`);
 
-          await promisify(exec)(
-            `tar -xzf ${tarball} -C ${outputDir} --warning=no-unknown-keyword "--exclude=._*" "--exclude=*/._*"`,
+          await promisify(execFile)(
+            "tar",
+            ["-xzf", tarball, "-C", outputDir, "--warning=no-unknown-keyword", "--exclude=._*", "--exclude=*/._*"],
             {
-              maxBuffer: 1000 * 1024 * 1024,
+              maxBuffer: 1000 * 1024 * 1024, // 1 GB
             }
           );
           log(`Extracted ${tarball} to ${outputDir}`);
