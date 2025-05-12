@@ -15,7 +15,7 @@ import {
   LogMetaBasic,
   getDataAvailabilityStatus,
   isBlockInputBlobs,
-} from "../blocks/blockInput/index.js";
+} from "../blocks/blockInput-mkeil/index.js";
 import {BlobSidecarErrorCode, BlobSidecarGossipError} from "../errors/blobSidecarError.js";
 import {GossipAction} from "../errors/gossipValidation.js";
 

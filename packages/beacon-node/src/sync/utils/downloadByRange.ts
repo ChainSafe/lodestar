@@ -10,7 +10,7 @@ import {
   phase0,
 } from "@lodestar/types";
 import {LodestarError, prettyPrintArray} from "@lodestar/utils";
-import {BlockInput} from "../../chain/blocks/blockInput/index.js";
+import {BlockInput} from "../../chain/blocks/blockInput-mkeil/index.js";
 import {SeenBlockInputCache} from "../../chain/seenCache/seenBlockInput.js";
 import {INetwork} from "../../network/interface.js";
 import {prettyPrintPeerIdStr} from "../../network/util.js";

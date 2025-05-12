@@ -9,7 +9,7 @@ import {
   DataAvailabilityStatus,
   convertNewToOldBlobSource,
   convertNewToOldBlockSource,
-} from "../chain/blocks/blockInput/index.js";
+} from "../chain/blocks/blockInput-mkeil/index.js";
 import {BlockInput as BlockInputOld, getBlockInput} from "../chain/blocks/types.js";
 import {BlockError, BlockErrorCode} from "../chain/errors/blockError.js";
 import {IBeaconChain} from "../chain/index.js";

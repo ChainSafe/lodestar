@@ -9,7 +9,7 @@ import {
   BlockInputType,
   getDataAvailabilityStatus,
   isBlockInputBlobs,
-} from "../../chain/blocks/blockInput/index.js";
+} from "../../chain/blocks/blockInput-mkeil/index.js";
 import {SeenBlockInputCache} from "../../chain/seenCache/seenBlockInput.js";
 import {IExecutionEngine} from "../../execution/index.js";
 import {INetwork} from "../../network/index.js";

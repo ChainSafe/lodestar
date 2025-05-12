@@ -1,7 +1,7 @@
 import {EventEmitter} from "node:events";
 import {PeerId, TopicValidatorResult} from "@libp2p/interface";
 import {RootHex, phase0} from "@lodestar/types";
-import {BlockInput as BlockInputNew, BlockInputSyncSource} from "../chain/blocks/blockInput/index.js";
+import {BlockInput as BlockInputNew, BlockInputSyncSource} from "../chain/blocks/blockInput-mkeil/index.js";
 import {BlockInput, NullBlockInput} from "../chain/blocks/types.js";
 import {PeerIdStr} from "../util/peerId.js";
 import {StrictEventEmitterSingleArg} from "../util/strictEvents.js";

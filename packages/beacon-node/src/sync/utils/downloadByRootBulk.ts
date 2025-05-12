@@ -1,8 +1,8 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {SignedBeaconBlock, SignedBeaconBlockHeader, deneb} from "@lodestar/types";
 import {LodestarError, prettyBytes, prettyBytesShort, prettyPrintArray, toHex} from "@lodestar/utils";
-import {BlockInput} from "../../chain/blocks/blockInput/blockInput.js";
-import {BlockInputSource} from "../../chain/blocks/blockInput/types.js";
+import {BlockInput} from "../../chain/blocks/blockInput-mkeil/blockInput.js";
+import {BlockInputSource} from "../../chain/blocks/blockInput-mkeil/types.js";
 import {SeenBlockInputCache} from "../../chain/seenCache/seenBlockInput.js";
 import {INetwork} from "../../network/index.js";
 import {byteArrayEquals} from "../../util/bytes.js";

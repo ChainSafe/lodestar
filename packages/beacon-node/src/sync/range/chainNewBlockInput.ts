@@ -1,7 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {Epoch, Root, Slot, phase0} from "@lodestar/types";
 import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
-import {BlockInput} from "../../chain/blocks/blockInput/index.js";
+import {BlockInput} from "../../chain/blocks/blockInput-mkeil/index.js";
 import {BlockInput as BlockInputOld, BlockInputType as BlockInputTypeOld} from "../../chain/blocks/types.js";
 import {PeerAction, prettyPrintPeerIdStr} from "../../network/index.js";
 import {ItTrigger} from "../../util/itTrigger.js";

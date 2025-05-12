@@ -1,6 +1,6 @@
 import {EpochTransitionStep, StateCloneSource, StateHashTreeRootSource} from "@lodestar/state-transition";
 import {BeaconState} from "@lodestar/types";
-import {BlockInputSyncSource} from "../../chain/blocks/blockInput/index.js";
+import {BlockInputSyncSource} from "../../chain/blocks/blockInput-mkeil/index.js";
 import {BlobsSource, BlockSource} from "../../chain/blocks/types.js";
 import {JobQueueItemType} from "../../chain/bls/index.js";
 import {AttestationErrorCode, BlockErrorCode} from "../../chain/errors/index.js";

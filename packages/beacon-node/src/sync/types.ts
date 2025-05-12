@@ -1,5 +1,5 @@
 import {RootHex} from "@lodestar/types";
-import {BlockInput} from "../chain/blocks/blockInput/index.js";
+import {BlockInput} from "../chain/blocks/blockInput-mkeil/index.js";
 
 export enum PendingBlockInputStatus {
   pending = "pending",
