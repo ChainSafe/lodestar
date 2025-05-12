@@ -86,10 +86,13 @@ export async function downloadGenericSpecTests<TestNames extends string>(
           await pipeline(res.body as NodeReadableStream, fs.createWriteStream(tarball));
           log(`Downloaded ${url} - ${fs.statSync(tarball).size} bytes`);
 
-          await promisify(exec)(`tar -xzf ${tarball} -C ${outputDir} --warning=no-unknown-keyword`, {
-            maxBuffer: 1000 * 1024 * 1024,
-          });
-          log(`Extracted  ${tarball} to ${outputDir}`);
+          await promisify(exec)(
+            `tar -xzf ${tarball} -C ${outputDir} --warning=no-unknown-keyword "--exclude=._*" "--exclude=*/._*"`,
+            {
+              maxBuffer: 1000 * 1024 * 1024,
+            }
+          );
+          log(`Extracted ${tarball} to ${outputDir}`);
 
           fs.unlinkSync(tarball);
         },
