@@ -29,9 +29,7 @@ export function getConfig(fork: ForkName, forkEpoch = 0): ChainForkConfig {
         BELLATRIX_FORK_EPOCH: 0,
         CAPELLA_FORK_EPOCH: 0,
         DENEB_FORK_EPOCH: forkEpoch,
-        BLOB_SCHEDULE: [
-          {EPOCH: forkEpoch, MAX_BLOBS_PER_BLOCK: 6},
-        ],
+        BLOB_SCHEDULE: [{EPOCH: forkEpoch, MAX_BLOBS_PER_BLOCK: 6}],
       });
     case ForkName.electra:
       return createChainForkConfig({
