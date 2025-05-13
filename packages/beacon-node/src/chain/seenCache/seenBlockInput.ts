@@ -13,6 +13,7 @@ import {
   BlockInputPreData,
   CreateBlockInputMeta,
   DAType,
+  ForkBlobsDA,
   IBlockInput,
   LogMetaBasic,
   SourceMeta,
@@ -26,6 +27,8 @@ import {GossipAction} from "../errors/gossipValidation.js";
 export type SeenBlockInputCacheModules = {
   config: ChainForkConfig;
   clock: IClock;
+  chainEvents: ChainEventEmitter;
+  signal: AbortSignal;
   //   custodyConfig: CustodyConfig;
   metrics: Metrics | null;
   logger?: Logger;
@@ -48,17 +51,19 @@ export type GetByBlobOptions = {
  */
 
 export class SeenBlockInputCache {
-  private config: ChainForkConfig;
-  private clock: IClock;
-  private chainEvents: ChainEventEmitter;
+  private readonly config: ChainForkConfig;
+  private readonly clock: IClock;
+  private readonly chainEvents: ChainEventEmitter;
   private readonly signal: AbortSignal;
-  private metrics: Metrics | null;
-  private logger?: Logger;
+  private readonly metrics: Metrics | null;
+  private readonly logger?: Logger;
   private blockInputs = new Map<RootHex, IBlockInput>();
 
-  constructor({config, clock, metrics, logger}: SeenBlockInputCacheModules) {
+  constructor({config, clock, chainEvents, signal, metrics, logger}: SeenBlockInputCacheModules) {
     this.config = config;
     this.clock = clock;
+    this.chainEvents = chainEvents;
+    this.signal = signal;
     this.metrics = metrics;
     this.logger = logger;
 
@@ -106,7 +111,7 @@ export class SeenBlockInputCache {
     // TODO(peerDAS): Why is it necessary to static cast this here. All conditional paths result in a valid value so should be defined correctly below
     let blockInput = this.blockInputs.get(blockRootHex) as IBlockInput;
     if (!blockInput) {
-      const {forkName, daOutOfRange} = this.buildCommonProps(blockRoot, block.message.slot);
+      const {forkName, daOutOfRange} = this.buildCommonProps(block.message.slot);
       if (!isForkPostDeneb(forkName)) {
         blockInput = BlockInputPreData.createFromBlock({
           block,
@@ -136,8 +141,8 @@ export class SeenBlockInputCache {
       //   })
       // }
       else {
-        blockInput = new BlockInputBlobs.createFromBlock({
-          block,
+        blockInput = BlockInputBlobs.createFromBlock({
+          block: block as SignedBeaconBlock<ForkBlobsDA>,
           blockRootHex,
           daOutOfRange,
           forkName,
@@ -173,7 +178,7 @@ export class SeenBlockInputCache {
     let blockInput = this.blockInputs.get(blockRootHex) as IBlockInput;
     if (!blockInput) {
       const {forkName, daOutOfRange} = this.buildCommonProps(blobSidecar.signedBlockHeader.message.slot);
-      blockInput = new BlockInputBlobs.createFromBlob({
+      blockInput = BlockInputBlobs.createFromBlob({
         blobSidecar,
         blockRootHex,
         daOutOfRange,

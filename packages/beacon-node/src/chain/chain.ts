@@ -264,6 +264,8 @@ export class BeaconChain implements IBeaconChain {
     this.seenBlockInputCache = new SeenBlockInputCache({
       config,
       clock,
+      chainEvents: emitter,
+      signal,
       metrics,
       logger,
     });

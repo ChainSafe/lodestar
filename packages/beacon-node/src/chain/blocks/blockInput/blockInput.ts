@@ -55,14 +55,14 @@ export function getDaOutOfRange(
   return computeEpochAtSlot(blockSlot) < currentEpoch - config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS;
 }
 
-export function isBlockInputPreDeneb(blockInput: BlockInput): blockInput is BlockInputPreData {
+export function isBlockInputPreDeneb(blockInput: IBlockInput): blockInput is BlockInputPreData {
   return blockInput.type === DAType.PreData;
 }
-export function isBlockInputBlobs(blockInput: BlockInput): blockInput is BlockInputBlobs {
+export function isBlockInputBlobs(blockInput: IBlockInput): blockInput is BlockInputBlobs {
   return blockInput.type === DAType.Blobs;
 }
 
-export function isBlockInputColumns(blockInput: BlockInput): blockInput is BlockInputColumns {
+export function isBlockInputColumns(blockInput: IBlockInput): blockInput is BlockInputColumns {
   return blockInput.type === DAType.Columns;
 }
 
