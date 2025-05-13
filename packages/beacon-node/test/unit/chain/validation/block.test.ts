@@ -197,6 +197,8 @@ describe("gossip block validation", () => {
   });
 
   it("deneb - TOO_MANY_KZG_COMMITMENTS", async () => {
+    vi.spyOn(chain.config, "getForkInfoAtEpoch").mockReturnValue(chain.config.forks.deneb);
+
     // Return not known for proposed block
     forkChoice.getBlockHex.mockReturnValueOnce(null);
     // Returned parent block is latter than proposed block
@@ -218,6 +220,8 @@ describe("gossip block validation", () => {
   });
 
   it("deneb - valid", async () => {
+    vi.spyOn(chain.config, "getForkInfoAtEpoch").mockReturnValue(chain.config.forks.deneb);
+
     // Return not known for proposed block
     forkChoice.getBlockHex.mockReturnValueOnce(null);
     // Returned parent block is latter than proposed block
