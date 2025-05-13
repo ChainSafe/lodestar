@@ -1,4 +1,3 @@
-import {bigintToNumber} from "./bigint.js";
 import {toRootHex} from "./bytes/index.js";
 import {ETH_TO_WEI} from "./ethConversion.js";
 
@@ -31,10 +30,25 @@ export function truncBytes(root: Uint8Array | string): string {
 }
 
 /**
+ * Format a bigint value as a decimal string
+ */
+export function formatBigDecimal(numerator: bigint, denominator: bigint, maxDecimalFactor: bigint): string {
+  const full = numerator / denominator;
+  const fraction = ((numerator - full * denominator) * maxDecimalFactor) / denominator;
+
+  // zeros to be added post decimal are number of zeros in maxDecimalFactor - number of digits in fraction
+  const zerosPostDecimal = String(maxDecimalFactor).length - 1 - String(fraction).length;
+  return `${full}.${"0".repeat(zerosPostDecimal)}${fraction}`;
+}
+
+// display upto 5 decimal places
+const MAX_DECIMAL_FACTOR = BigInt("100000");
+
+/**
  * Format wei as ETH, with up to 5 decimals
  */
-export function formatWeiToEth(wei: bigint): number {
-  return bigintToNumber(wei / ETH_TO_WEI);
+export function formatWeiToEth(wei: bigint): string {
+  return formatBigDecimal(wei, ETH_TO_WEI, MAX_DECIMAL_FACTOR);
 }
 
 /**
@@ -57,24 +71,4 @@ export function prettyMsToTime(timeMs: number): string {
  */
 export function strip0xPrefix(hex: string): string {
   return hex.startsWith("0x") ? hex.slice(2) : hex;
-}
-
-/**
- * Format a decimal number represented by a fraction (numerator/denominator) with a specific decimal factor.
- * Example: formatBigDecimal(103797739275696858n, 1000000000000000000n, 100000n) => "0.10379"
- */
-export function formatBigDecimal(numerator: bigint, denominator: bigint, decimalFactor: bigint): string {
-  const quotient = (numerator * decimalFactor) / denominator;
-  const integerPart = quotient / decimalFactor;
-  const decimalPart = quotient % decimalFactor;
-
-  // Convert decimal part to string and pad with leading zeros
-  let decimalStr = decimalPart.toString();
-  const targetLength = decimalFactor.toString().length - 1;
-  decimalStr = decimalStr.padStart(targetLength, "0");
-
-  // Remove trailing zeros
-  decimalStr = decimalStr.replace(/0+$/, "");
-
-  return `${integerPart}${decimalStr ? "." + decimalStr : ""}`;
 }
