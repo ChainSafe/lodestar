@@ -4,6 +4,7 @@ import {Checkpoint} from "@lodestar/types/phase0";
 import {callFnWhenAwait} from "@lodestar/utils";
 import {IBeaconDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/metrics.js";
+import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {ChainEvent} from "../emitter.js";
 import {IBeaconChain} from "../interface.js";
@@ -141,7 +142,7 @@ export class ArchiveStore {
       return null;
     }
 
-    return {state: stateSerialized, executionOptimistic: false, finalized: true};
+    return {state: stateSerialized, executionOptimistic: isOptimisticBlock(finalizedBlock), finalized: true};
   }
 
   /**

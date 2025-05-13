@@ -1,6 +1,6 @@
 import {ContainerType, Type, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {isForkPostDeneb, isForkPostElectra} from "@lodestar/params";
+import {VALIDATOR_REGISTRY_LIMIT, isForkPostDeneb, isForkPostElectra} from "@lodestar/params";
 import {
   Attestation,
   BLSSignature,
@@ -44,6 +44,7 @@ import {
   VersionType,
 } from "../../utils/metadata.js";
 import {fromGraffitiHex, toBoolean, toGraffitiHex} from "../../utils/serdes.js";
+import {WireFormat} from "../../utils/wireFormat.js";
 
 export enum BuilderSelection {
   Default = "default",
@@ -209,7 +210,10 @@ export const ProposerPreparationDataListType = ArrayOf(ProposerPreparationDataTy
 export const BeaconCommitteeSelectionListType = ArrayOf(BeaconCommitteeSelectionType);
 export const SyncCommitteeSelectionListType = ArrayOf(SyncCommitteeSelectionType);
 export const LivenessResponseDataListType = ArrayOf(LivenessResponseDataType);
-export const SignedValidatorRegistrationV1ListType = ArrayOf(ssz.bellatrix.SignedValidatorRegistrationV1);
+export const SignedValidatorRegistrationV1ListType = ArrayOf(
+  ssz.bellatrix.SignedValidatorRegistrationV1,
+  VALIDATOR_REGISTRY_LIMIT
+);
 
 export type ValidatorIndices = ValueOf<typeof ValidatorIndicesType>;
 export type AttesterDuty = ValueOf<typeof AttesterDutyType>;
@@ -955,6 +959,9 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         },
       },
       resp: EmptyResponseCodec,
+      init: {
+        requestWireFormat: WireFormat.ssz,
+      },
     },
   };
 }

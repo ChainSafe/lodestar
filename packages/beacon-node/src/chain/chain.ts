@@ -16,7 +16,6 @@ import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   createCachedBeaconState,
-  getCurrentSlot,
   getEffectiveBalanceIncrementsZeroInactive,
   isCachedBeaconState,
 } from "@lodestar/state-transition";
@@ -382,11 +381,6 @@ export class BeaconChain implements IBeaconChain {
 
     if (metrics) {
       metrics.clockSlot.addCollect(() => this.onScrapeMetrics(metrics));
-      // Register a single collect() function to run all validatorMonitor metrics
-      metrics.validatorMonitor.validatorsConnected.addCollect(() => {
-        const clockSlot = getCurrentSlot(config, this.genesisTime);
-        this.validatorMonitor?.scrapeMetrics(clockSlot);
-      });
     }
 
     // Event handlers. emitter is created internally and dropped on close(). Not need to .removeListener()

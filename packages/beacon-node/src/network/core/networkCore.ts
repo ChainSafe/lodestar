@@ -7,7 +7,7 @@ import {BeaconConfig} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {ForkName} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
-import {Epoch, phase0, ssz} from "@lodestar/types";
+import {Epoch, phase0, ssz, sszTypesFor} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {multiaddr} from "@multiformats/multiaddr";
 import {formatNodePeer} from "../../api/impl/node/utils.js";
@@ -389,11 +389,12 @@ export class NetworkCore implements INetworkCore {
 
   private _dumpPeer(peerIdStr: string, connections: Connection[]): routes.lodestar.LodestarNodePeer {
     const peerData = this.peersData.connectedPeers.get(peerIdStr);
+    const fork = this.config.getForkName(this.clock.currentSlot);
     return {
       ...formatNodePeer(peerIdStr, connections),
       agentVersion: peerData?.agentVersion ?? "NA",
       status: peerData?.status ? ssz.phase0.Status.toJson(peerData.status) : null,
-      metadata: peerData?.metadata ? ssz.altair.Metadata.toJson(peerData.metadata) : null,
+      metadata: peerData?.metadata ? sszTypesFor(fork).Metadata.toJson(peerData.metadata) : null,
       agentClient: String(peerData?.agentClient ?? "Unknown"),
       lastReceivedMsgUnixTsMs: peerData?.lastReceivedMsgUnixTsMs ?? 0,
       lastStatusUnixTsMs: peerData?.lastStatusUnixTsMs ?? 0,

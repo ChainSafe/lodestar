@@ -1270,7 +1270,7 @@
           "disableTextWrap": false,
           "editorMode": "code",
           "exemplar": false,
-          "expr": "rate(lodestar_bls_thread_pool_aggregate_with_randomness_async_time_seconds_seconds_bucket[$rate_interval])",
+          "expr": "rate(lodestar_bls_thread_pool_aggregate_with_randomness_async_time_seconds_bucket[$rate_interval])",
           "format": "heatmap",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
@@ -1281,7 +1281,7 @@
           "useBackend": false
         }
       ],
-      "title": "Main Thread AggregateWithRandomness Time",
+      "title": "Async AggregateWithRandomness Time",
       "type": "heatmap"
     },
     {
