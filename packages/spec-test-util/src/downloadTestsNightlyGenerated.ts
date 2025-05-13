@@ -160,3 +160,27 @@ export async function downloadNightlyTests(
 
   fs.writeFileSync(versionFile, runNumber);
 }
+
+// Main function to execute the download
+async function main(): Promise<void> {
+  const log = (msg: string): void => {
+    console.log(msg);
+  };
+
+  try {
+    await downloadNightlyTests(
+      {
+        outputDir: "packages/spec-tests-nightly",
+        specTestsRepoUrl: defaultSpecTestsRepoUrl,
+        testsToDownload: ["general", "mainnet", "minimal"],
+      },
+      log
+    );
+  } catch (error) {
+    console.error("Failed to download nightly tests:", error);
+    process.exit(1);
+  }
+}
+
+// Execute the main function
+main();
