@@ -4,8 +4,8 @@ import stream from "node:stream";
 import {promisify} from "node:util";
 import {retry} from "@lodestar/utils";
 import axios from "axios";
-import {rimraf} from "rimraf";
 import extractZip from "extract-zip";
+import {rimraf} from "rimraf";
 
 export const defaultSpecTestsRepoUrl = "https://github.com/ethereum/consensus-specs";
 
@@ -39,9 +39,12 @@ function getGithubHeaders() {
 /**
  * Get the latest nightly build number and its artifacts from GitHub Actions
  */
-async function getLatestNightlyBuildInfo(repoUrl: string, log: (msg: string) => void): Promise<{runNumber: string; artifacts: {name: string; downloadUrl: string}[]}> {
+async function getLatestNightlyBuildInfo(
+  repoUrl: string,
+  log: (msg: string) => void
+): Promise<{runNumber: string; artifacts: {name: string; downloadUrl: string}[]}> {
   const apiUrl = repoUrl.replace("github.com", "api.github.com/repos");
-  
+
   // Get the latest successful run
   log(`Fetching workflow runs from ${apiUrl}/actions/workflows/generate_vectors.yml/runs`);
   const {data: runsData} = await axios.get(`${apiUrl}/actions/workflows/generate_vectors.yml/runs`, {
@@ -62,7 +65,9 @@ async function getLatestNightlyBuildInfo(repoUrl: string, log: (msg: string) => 
     headers: getGithubHeaders(),
   });
 
-  log(`Found ${artifactsData.artifacts.length} artifacts: ${artifactsData.artifacts.map((a: any) => a.name).join(", ")}`);
+  log(
+    `Found ${artifactsData.artifacts.length} artifacts: ${artifactsData.artifacts.map((a: any) => a.name).join(", ")}`
+  );
 
   return {
     runNumber: latestRun.run_number.toString(),
@@ -103,10 +108,10 @@ export async function downloadNightlyTests(
   fs.mkdirSync(opts.outputDir, {recursive: true});
 
   // Filter artifacts to only download requested tests
-  const artifactsToDownload = artifacts.filter((artifact) => 
-    opts.testsToDownload.some(testType => TEST_TYPE_TO_ARTIFACT_NAME[testType] === artifact.name)
+  const artifactsToDownload = artifacts.filter((artifact) =>
+    opts.testsToDownload.some((testType) => TEST_TYPE_TO_ARTIFACT_NAME[testType] === artifact.name)
   );
-  log(`Will download ${artifactsToDownload.length} artifacts: ${artifactsToDownload.map(a => a.name).join(", ")}`);
+  log(`Will download ${artifactsToDownload.length} artifacts: ${artifactsToDownload.map((a) => a.name).join(", ")}`);
 
   await Promise.all(
     artifactsToDownload.map(async (artifact) => {
@@ -132,7 +137,7 @@ export async function downloadNightlyTests(
           // Extract the ZIP file
           log(`Extracting ${artifact.name}...`);
           try {
-            await extractZip(zipPath, { dir: opts.outputDir });
+            await extractZip(zipPath, {dir: opts.outputDir});
             log(`Extraction of ${artifact.name} completed successfully.`);
           } catch (error: unknown) {
             if (error instanceof Error) {
