@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.28.1",
+  "version": "1.29.0",
   "type": "module",
   "exports": "./lib/index.js",
   "types": "./lib/index.d.ts",
@@ -32,16 +32,16 @@
     "lint": "biome check src/ test/",
     "lint:fix": "yarn run lint --write",
     "test": "yarn test:unit",
-    "test:unit": "vitest run --min-workers=1 --max-workers=1 --dir test/unit/",
+    "test:unit": "vitest run --project unit --project unit-minimal",
     "check-readme": "typescript-docs-verifier"
   },
   "dependencies": {
     "@chainsafe/ssz": "^1.2.0",
-    "@lodestar/config": "^1.28.1",
-    "@lodestar/params": "^1.28.1",
-    "@lodestar/state-transition": "^1.28.1",
-    "@lodestar/types": "^1.28.1",
-    "@lodestar/utils": "^1.28.1"
+    "@lodestar/config": "^1.29.0",
+    "@lodestar/params": "^1.29.0",
+    "@lodestar/state-transition": "^1.29.0",
+    "@lodestar/types": "^1.29.0",
+    "@lodestar/utils": "^1.29.0"
   },
   "keywords": [
     "ethereum",

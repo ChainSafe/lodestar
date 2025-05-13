@@ -7,8 +7,8 @@ import {BeaconConfig} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {ForkName} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
-import {Epoch, phase0} from "@lodestar/types";
-import {fromHex, withTimeout} from "@lodestar/utils";
+import {Epoch, phase0, ssz, sszTypesFor} from "@lodestar/types";
+import {fromHex} from "@lodestar/utils";
 import {multiaddr} from "@multiformats/multiaddr";
 import {formatNodePeer} from "../../api/impl/node/utils.js";
 import {RegistryMetricCreator} from "../../metrics/index.js";
@@ -266,10 +266,7 @@ export class NetworkCore implements INetworkCore {
     this.logger.debug("network reqResp closed");
     this.attnetsService.close();
     this.syncnetsService.close();
-    // In some cases, `libp2p.stop` never resolves, it is required
-    // to wrap the call with a timeout to allow for a timely shutdown
-    // See https://github.com/ChainSafe/lodestar/issues/6053
-    await withTimeout(async () => this.libp2p.stop(), 5000);
+    await this.libp2p.stop();
     this.logger.debug("network lib2p closed");
 
     this.closed = true;
@@ -390,18 +387,30 @@ export class NetworkCore implements INetworkCore {
     await this.libp2p.hangUp(peerIdFromString(peerIdStr));
   }
 
+  private _dumpPeer(peerIdStr: string, connections: Connection[]): routes.lodestar.LodestarNodePeer {
+    const peerData = this.peersData.connectedPeers.get(peerIdStr);
+    const fork = this.config.getForkName(this.clock.currentSlot);
+    return {
+      ...formatNodePeer(peerIdStr, connections),
+      agentVersion: peerData?.agentVersion ?? "NA",
+      status: peerData?.status ? ssz.phase0.Status.toJson(peerData.status) : null,
+      metadata: peerData?.metadata ? sszTypesFor(fork).Metadata.toJson(peerData.metadata) : null,
+      agentClient: String(peerData?.agentClient ?? "Unknown"),
+      lastReceivedMsgUnixTsMs: peerData?.lastReceivedMsgUnixTsMs ?? 0,
+      lastStatusUnixTsMs: peerData?.lastStatusUnixTsMs ?? 0,
+      connectedUnixTsMs: peerData?.connectedUnixTsMs ?? 0,
+    };
+  }
+
   async dumpPeer(peerIdStr: string): Promise<routes.lodestar.LodestarNodePeer | undefined> {
     const connections = this.getConnectionsByPeer().get(peerIdStr);
-    return connections
-      ? {...formatNodePeer(peerIdStr, connections), agentVersion: this.peersData.getAgentVersion(peerIdStr)}
-      : undefined;
+    return connections ? this._dumpPeer(peerIdStr, connections) : undefined;
   }
 
   async dumpPeers(): Promise<routes.lodestar.LodestarNodePeer[]> {
-    return Array.from(this.getConnectionsByPeer().entries()).map(([peerIdStr, connections]) => ({
-      ...formatNodePeer(peerIdStr, connections),
-      agentVersion: this.peersData.getAgentVersion(peerIdStr),
-    }));
+    return Array.from(this.getConnectionsByPeer().entries()).map(([peerIdStr, connections]) =>
+      this._dumpPeer(peerIdStr, connections)
+    );
   }
 
   async dumpPeerScoreStats(): Promise<PeerScoreStats> {
@@ -486,21 +495,6 @@ export class NetworkCore implements INetworkCore {
           }
         }
       }
-
-      // TODO: Re-add regossipCachedBlsChanges()
-      // If we are subscribed and post capella fork epoch, try gossiping the cached bls changes
-      // if (
-      //   this.isSubscribedToGossipCoreTopics() &&
-      //   epoch >= this.config.CAPELLA_FORK_EPOCH &&
-      //   !this.regossipBlsChangesPromise
-      // ) {
-      //   this.regossipBlsChangesPromise = this.regossipCachedBlsChanges()
-      //     // If the processing fails for e.g. because of lack of peers set the promise
-      //     // to be null again to be retried
-      //     .catch((_e) => {
-      //       this.regossipBlsChangesPromise = null;
-      //     });
-      // }
     } catch (e) {
       this.logger.error("Error on BeaconGossipHandler.onEpoch", {epoch}, e as Error);
     }

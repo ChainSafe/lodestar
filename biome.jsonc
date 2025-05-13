@@ -1,32 +1,26 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "extends": [
+    "@chainsafe/biomejs-config",
+    "@chainsafe/biomejs-config/recommended",
+    "@chainsafe/biomejs-config/nodejs",
+    "@chainsafe/biomejs-config/esm"
+  ],
   "vcs": {
-    "clientKind": "git",
-    "enabled": true,
-    "useIgnoreFile": true,
     "defaultBranch": "unstable"
   },
   "files": {
-    "include": ["packages/*/src/**/*.ts", "packages/*/test/**/*.ts", "configs/**/*.ts"]
+    "include": ["packages/*/src/**/*.ts", "packages/*/test/**/*.ts", "configs/**/*.ts", "./vitest.config.ts"]
   },
   "formatter": {
-    "enabled": true,
-    "formatWithErrors": true,
-    "useEditorconfig": true,
-    "lineWidth": 120,
-    "attributePosition": "auto",
-    "bracketSpacing": false,
     "ignore": ["**/lib", "**/.nyc_output", "./packages/*/spec-tests", "**/node_modules", "./packages/*/node_modules/**"]
   },
   "organizeImports": {
     "enabled": true
   },
   "linter": {
-    "enabled": true,
     "rules": {
-      "recommended": true,
       "correctness": {
-        "noUnusedVariables": "error",
         "useImportExtensions": {
           "level": "error",
           "options": {
@@ -37,11 +31,7 @@
               }
             }
           }
-        },
-        "useArrayLiterals": "error",
-        "noUndeclaredVariables": "error",
-        // TODO: We want this rule but it's not working properly with mono repos
-        "noUndeclaredDependencies": "off"
+        }
       },
       "performance": {
         // This rule should be enabled but with considerations and careful review
@@ -58,24 +48,16 @@
             "deniedGlobals": ["fetch"]
           }
         },
-        // We prefer to use `Math.pow` over `**` operator
-        "useExponentiationOperator": "off",
         // In some cases the enums are initialized with values of other enums
         "useLiteralEnumMembers": "off",
-        // We prefer to have multiple declarations lines
-        "useSingleVarDeclarator": "off",
         // We use `+` operator for string concatenation a lot
         "useTemplate": "off",
         // We use to export types and object without differentiating
         "useExportType": "off",
         // We use to import types and object without differentiating
         "useImportType": "off",
-        // It's nice to use `Number` namespace but should be done in a separate PR
-        "useNumberNamespace": "off",
         // We prefer to auto-initialize enums
         "useEnumInitializers": "off",
-        // Namespaces are deprecated way to organize modules in TS
-        "noNamespace": "error",
         "useNamingConvention": {
           "level": "error",
           "options": {
@@ -100,12 +82,6 @@
                   "kind": "typeLike"
                 },
                 "formats": ["camelCase", "snake_case", "PascalCase", "CONSTANT_CASE"]
-              },
-              {
-                "selector": {
-                  "kind": "enum"
-                },
-                "formats": ["PascalCase"]
               },
               {
                 "selector": {
@@ -167,68 +143,14 @@
         }
       },
       "suspicious": {
-        // `void` as type is useful in our case when used as generic constraint e.g. K extends number | void
-        "noConfusingVoidType": "off",
         // There is a lot of empty code blocks, should be enabled and clean up separately.
-        "noEmptyBlockStatements": "off",
-        "noConsoleLog": "error"
+        "noEmptyBlockStatements": "off"
       },
       "nursery": {
-        "useConsistentMemberAccessibility": {
-          "level": "error",
-          "options": {
-            "accessibility": "noPublic"
-          }
-        },
-        "noCommonJs": "error",
-        "noRestrictedImports": {
-          "level": "error",
-          "options": {
-            "paths": {
-              "child_process": "Please use node:child_process instead.",
-              "crypto": "Please use node:crypto instead.",
-              "fs": "Please use node:fs instead.",
-              "http": "Please use node:https instead.",
-              "net": "Please use node:net instead.",
-              "os": "Please use node:os instead.",
-              "path": "Please use node:path instead.",
-              "stream": "Please use node:stream instead.",
-              "util": "Please use node:util instead.",
-              "url": "Please use node:url instead.",
-              "worker_threads": "Please use node:worker_threads instead."
-            }
-          }
-        },
-        "noDuplicateElseIf": "error",
-        "noUselessEscapeInRegex": "error",
-        "noIrregularWhitespace": "error",
-        "noOctalEscape": "error",
         // Need to enable this rule with exception to anonymous functions
-        "useExplicitType": "off",
-        "useGuardForIn": "error",
-        "noDuplicateProperties": "error",
-        "useAtIndex": "error",
-        "useCollapsedIf": "error"
+        "useExplicitType": "off"
       }
     }
-  },
-  "javascript": {
-    "formatter": {
-      "jsxQuoteStyle": "double",
-      "quoteProperties": "asNeeded",
-      "trailingCommas": "es5",
-      "semicolons": "always",
-      "arrowParentheses": "always",
-      "bracketSpacing": false,
-      "bracketSameLine": false,
-      "quoteStyle": "double",
-      "attributePosition": "auto",
-      "enabled": true
-    },
-    "linter": {
-      "enabled": true
-    },
-    "globals": ["BigInt"]
   },
   "overrides": [
     // Code using console output
@@ -237,7 +159,7 @@
       "linter": {
         "rules": {
           "suspicious": {
-            "noConsoleLog": "off"
+            "noConsole": "off"
           }
         }
       }
@@ -257,7 +179,7 @@
             // During testing we use `any` type for quick assignments
             "noExplicitAny": "off",
             // Console logging is often used in tests
-            "noConsoleLog": "off"
+            "noConsole": "off"
           }
         }
       }

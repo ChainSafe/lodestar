@@ -1,10 +1,9 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {BLOBSIDECAR_FIXED_SIZE, ForkName, isForkPostDeneb} from "@lodestar/params";
+import {ForkName, isForkPostDeneb} from "@lodestar/params";
 import {RootHex, SignedBeaconBlock, deneb, ssz} from "@lodestar/types";
 import {pruneSetToMax, toRootHex} from "@lodestar/utils";
 
 import {Metrics} from "../../metrics/index.js";
-import {SerializedCache} from "../../util/serializedCache.js";
 import {
   BlobsSource,
   BlockInput,

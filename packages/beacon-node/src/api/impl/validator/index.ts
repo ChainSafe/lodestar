@@ -1,7 +1,7 @@
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {DataAvailabilityStatus, ExecutionStatus} from "@lodestar/fork-choice";
+import {ExecutionStatus} from "@lodestar/fork-choice";
 import {
   ForkPostBellatrix,
   ForkPostDeneb,
@@ -17,6 +17,7 @@ import {
 } from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
+  DataAvailabilityStatus,
   attesterShufflingDecisionRoot,
   beaconBlockToBlinded,
   calculateCommitteeAssignments,
@@ -42,7 +43,6 @@ import {
   Wei,
   bellatrix,
   getValidatorStatus,
-  isBlindedBeaconBlock,
   isBlockContents,
   phase0,
   ssz,
@@ -851,11 +851,6 @@ export function getValidatorApi(
   }
 
   return {
-    async produceBlockV2({slot, randaoReveal, graffiti, ...opts}) {
-      const {data, ...meta} = await produceEngineFullBlockOrContents(slot, randaoReveal, graffiti, opts);
-      return {data, meta};
-    },
-
     async produceBlockV3({slot, randaoReveal, graffiti, skipRandaoVerification, builderBoostFactor, ...opts}) {
       const {data, ...meta} = await produceEngineOrBuilderBlock(
         slot,
@@ -888,26 +883,6 @@ export function getValidatorApi(
       }
 
       return {data, meta};
-    },
-
-    async produceBlindedBlock({slot, randaoReveal, graffiti}) {
-      const {data, version} = await produceEngineOrBuilderBlock(slot, randaoReveal, graffiti);
-      if (!isForkPostBellatrix(version)) {
-        throw Error(`Invalid fork=${version} for produceBlindedBlock`);
-      }
-
-      if (isBlockContents(data)) {
-        const {block} = data;
-        const blindedBlock = beaconBlockToBlinded(config, block as BeaconBlock<ForkPostBellatrix>);
-        return {data: blindedBlock, meta: {version}};
-      }
-
-      if (isBlindedBeaconBlock(data)) {
-        return {data, meta: {version}};
-      }
-
-      const blindedBlock = beaconBlockToBlinded(config, data as BeaconBlock<ForkPostBellatrix>);
-      return {data: blindedBlock, meta: {version}};
     },
 
     async produceAttestationData({committeeIndex, slot}) {

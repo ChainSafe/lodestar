@@ -572,18 +572,18 @@ export function verifyPropagationSlotRange(fork: ForkName, chain: IBeaconChain, 
     });
   }
 
-  const earliestPermissibleSlot = Math.max(
-    // slot with past tolerance of MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC
-    // ATTESTATION_PROPAGATION_SLOT_RANGE = SLOTS_PER_EPOCH
-    chain.clock.slotWithPastTolerance(MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC) - SLOTS_PER_EPOCH,
-    0
-  );
-
   // Post deneb the attestations are valid for current as well as previous epoch
   // while pre deneb they are valid for ATTESTATION_PROPAGATION_SLOT_RANGE
   //
   // see: https://github.com/ethereum/consensus-specs/pull/3360
   if (ForkSeq[fork] < ForkSeq.deneb) {
+    const earliestPermissibleSlot = Math.max(
+      // slot with past tolerance of MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC
+      // ATTESTATION_PROPAGATION_SLOT_RANGE = SLOTS_PER_EPOCH
+      chain.clock.slotWithPastTolerance(MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC) - SLOTS_PER_EPOCH,
+      0
+    );
+
     if (attestationSlot < earliestPermissibleSlot) {
       throw new AttestationError(GossipAction.IGNORE, {
         code: AttestationErrorCode.PAST_SLOT,
@@ -605,7 +605,11 @@ export function verifyPropagationSlotRange(fork: ForkName, chain: IBeaconChain, 
     }
 
     // lower bound for previous epoch is same as epoch of earliestPermissibleSlot
-    const earliestPermissiblePreviousEpoch = computeEpochAtSlot(earliestPermissibleSlot);
+    const currentEpochWithPastTolerance = computeEpochAtSlot(
+      chain.clock.slotWithPastTolerance(MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC)
+    );
+
+    const earliestPermissiblePreviousEpoch = Math.max(currentEpochWithPastTolerance - 1, 0);
     if (attestationEpoch < earliestPermissiblePreviousEpoch) {
       throw new AttestationError(GossipAction.IGNORE, {
         code: AttestationErrorCode.PAST_EPOCH,

@@ -8,7 +8,7 @@ import {loadConfigYaml} from "../yaml.js";
 // Not e2e, but slow. Run with e2e tests
 
 /** https://github.com/ethereum/consensus-specs/releases */
-const specConfigCommit = "v1.5.0-beta.5";
+const specConfigCommit = "v1.5.0";
 /**
  * Fields that we filter from local config when doing comparison.
  * Ideally this should be empty as it is not spec compliant
@@ -52,17 +52,19 @@ function assertCorrectPreset(localPreset: BeaconPreset, remotePreset: BeaconPres
 }
 
 async function downloadRemoteConfig(preset: "mainnet" | "minimal", commit: string): Promise<BeaconPreset> {
-  const downloadedParams = await Promise.all(
-    Object.values(ForkName)
-      // TODO Fulu: check against remote presets
-      .filter((forkName) => forkName !== ForkName.fulu)
-      .map((forkName) =>
-        axios({
-          url: `https://raw.githubusercontent.com/ethereum/consensus-specs/${commit}/presets/${preset}/${forkName}.yaml`,
-          timeout: 30 * 1000,
-        }).then((response) => loadConfigYaml(response.data))
-      )
-  );
+  const downloadedParams: Record<string, unknown>[] = [];
+
+  for (const forkName of Object.values(ForkName)) {
+    const response = await axios({
+      url: `https://raw.githubusercontent.com/ethereum/consensus-specs/${commit}/presets/${preset}/${forkName}.yaml`,
+      timeout: 30 * 1000,
+    });
+    downloadedParams.push(loadConfigYaml(response.data));
+
+    // We get error `Request failed with status code 429`
+    // which is `Too Many Request` so we added a bit delay between each request
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
 
   // Merge all the fetched yamls for the different forks
   const beaconPresetRaw: Record<string, unknown> = Object.assign(

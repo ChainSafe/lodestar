@@ -1,7 +1,7 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Epoch, SignedBeaconBlock, SignedBlindedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {BlockExternalData, DataAvailableStatus, ExecutionPayloadStatus} from "./block/externalData.js";
+import {BlockExternalData, DataAvailabilityStatus, ExecutionPayloadStatus} from "./block/externalData.js";
 import {processBlock} from "./block/index.js";
 import {ProcessBlockOpts} from "./block/types.js";
 import {EpochTransitionCache, EpochTransitionCacheOpts, beforeProcessEpoch} from "./cache/epochTransitionCache.js";
@@ -85,7 +85,7 @@ export function stateTransition(
   options: StateTransitionOpts = {
     // Assume default to be valid and available
     executionPayloadStatus: ExecutionPayloadStatus.valid,
-    dataAvailableStatus: DataAvailableStatus.available,
+    dataAvailabilityStatus: DataAvailabilityStatus.Available,
   },
   {metrics, validatorMonitor}: StateTransitionModules = {}
 ): CachedBeaconStateAllForks {

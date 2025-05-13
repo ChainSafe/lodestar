@@ -1,7 +1,7 @@
 import {SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
-  DataAvailableStatus,
+  DataAvailabilityStatus,
   ExecutionPayloadStatus,
   stateTransition,
 } from "@lodestar/state-transition";
@@ -114,7 +114,7 @@ describe("chain / rewards / blockRewards", () => {
 
       const postState = stateTransition(state as CachedBeaconStateAllForks, block, {
         executionPayloadStatus: ExecutionPayloadStatus.valid,
-        dataAvailableStatus: DataAvailableStatus.available,
+        dataAvailabilityStatus: DataAvailabilityStatus.Available,
         verifyProposer: false,
         verifySignatures: false,
         verifyStateRoot: false,
@@ -142,7 +142,7 @@ describe("chain / rewards / blockRewards", () => {
 
     const postState = stateTransition(preState as CachedBeaconStateAllForks, block, {
       executionPayloadStatus: ExecutionPayloadStatus.valid,
-      dataAvailableStatus: DataAvailableStatus.available,
+      dataAvailabilityStatus: DataAvailabilityStatus.Available,
       verifyProposer: false,
       verifySignatures: false,
       verifyStateRoot: false,

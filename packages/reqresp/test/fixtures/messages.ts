@@ -159,9 +159,9 @@ export const sszSnappySignedBeaconBlockAltair: MessageFixture = {
     protocolVersion: 2,
   },
   asyncChunks: [
-    "0xf803", // length prefix
+    "0xb404", // length prefix
     "0xff060000734e61507059", // snappy frames header
-    "0x003f0000ee14ab0df8031064000000dafe01007a01000c995f0100010100090105ee70000d700054ee44000d44fe0100fecc0011cc0c400100003e0400fe01008e0100",
+    "0x00420000bab7f8feb4041064000000dafe01007a01000c995f0100010100090105ee70000d700054ee44000d44fe0100fecc0011cc0c7c0100003e0400fe0100fe01007e0100",
   ].map((d) => fromHexString(d)),
   chunks: [
     "0xb404",

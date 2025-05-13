@@ -1,12 +1,6 @@
 import {toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {
-  BYTES_PER_FIELD_ELEMENT,
-  FIELD_ELEMENTS_PER_BLOB,
-  ForkName,
-  ForkPostDeneb,
-  isForkPostDeneb,
-} from "@lodestar/params";
+import {BYTES_PER_FIELD_ELEMENT, FIELD_ELEMENTS_PER_BLOB, ForkName, isForkPostDeneb} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {SignedBeaconBlock, deneb, ssz} from "@lodestar/types";
 import {beforeAll, describe, expect, it, vi} from "vitest";
@@ -32,7 +26,6 @@ describe("unavailableBeaconBlobsByRoot", () => {
     loadEthereumTrustedSetup();
   });
 
-  /* eslint-disable @typescript-eslint/naming-convention */
   const chainConfig = createChainForkConfig({
     ...defaultChainConfig,
     ALTAIR_FORK_EPOCH: 0,

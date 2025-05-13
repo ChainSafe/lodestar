@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.28.1",
+  "version": "1.29.0",
   "type": "module",
   "exports": {
     ".": {
@@ -62,16 +62,14 @@
     "lint": "biome check src/ test/",
     "lint:fix": "yarn run lint --write",
     "test": "yarn test:unit",
-    "test:constants:minimal": "LODESTAR_PRESET=minimal vitest run --dir test/constants/",
-    "test:constants:mainnet": "LODESTAR_PRESET=mainnet vitest run --dir test/constants/",
-    "test:unit": "wrapper() { yarn test:constants:minimal $@ && yarn test:constants:mainnet $@ && LODESTAR_PRESET=mainnet vitest run --dir test/unit/ $@; }; wrapper",
-    "test:browsers": "vitest run --config ./vitest.browser.config.ts --dir test/unit",
+    "test:unit": "vitest run --project unit --project unit-minimal",
+    "test:browsers": "vitest run --project browser",
     "check-readme": "typescript-docs-verifier"
   },
   "types": "lib/index.d.ts",
   "dependencies": {
     "@chainsafe/ssz": "^1.2.0",
-    "@lodestar/params": "^1.28.1",
+    "@lodestar/params": "^1.29.0",
     "ethereum-cryptography": "^2.0.0"
   },
   "keywords": [

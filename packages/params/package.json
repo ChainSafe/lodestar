@@ -1,6 +1,6 @@
 {
   "name": "@lodestar/params",
-  "version": "1.28.1",
+  "version": "1.29.0",
   "description": "Chain parameters required for lodestar",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
@@ -53,9 +53,9 @@
     "lint": "biome check src/ test/",
     "lint:fix": "yarn run lint --write",
     "test": "yarn test:unit",
-    "test:unit": "vitest run --dir test/unit/",
-    "test:browsers": "vitest run --config ./vitest.browser.config.ts --dir test/unit",
-    "test:e2e": "vitest run --config vitest.e2e.config.ts --dir test/e2e/",
+    "test:unit": "vitest run --project unit --project unit-minimal",
+    "test:browsers": "vitest run --project browser",
+    "test:e2e": "vitest run --project e2e --project e2e-mainnet",
     "check-readme": "typescript-docs-verifier"
   },
   "repository": {

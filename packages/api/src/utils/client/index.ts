@@ -1,4 +1,3 @@
-export * from "./fetch.js";
 export * from "./httpClient.js";
 export * from "./method.js";
 export * from "./metrics.js";

@@ -3,7 +3,7 @@ import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
-  DataAvailableStatus,
+  DataAvailabilityStatus,
   ExecutionPayloadStatus,
   StateHashTreeRootSource,
   computeEpochAtSlot,
@@ -11,7 +11,7 @@ import {
   processSlots,
   stateTransition,
 } from "@lodestar/state-transition";
-import {BeaconBlock, RootHex, SignedBeaconBlock, Slot, phase0, ssz} from "@lodestar/types";
+import {BeaconBlock, RootHex, SignedBeaconBlock, Slot, phase0} from "@lodestar/types";
 import {Logger, fromHex, toRootHex} from "@lodestar/utils";
 import {IBeaconDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/index.js";
@@ -261,7 +261,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
           {
             // Replay previously imported blocks, assume valid and available
             executionPayloadStatus: ExecutionPayloadStatus.valid,
-            dataAvailableStatus: DataAvailableStatus.available,
+            dataAvailabilityStatus: DataAvailabilityStatus.Available,
             verifyStateRoot: false,
             verifyProposer: false,
             verifySignatures: false,

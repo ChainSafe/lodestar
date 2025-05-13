@@ -195,7 +195,7 @@ export function getLodestarApi({
     },
 
     async getHistoricalSummaries({stateId}) {
-      const {state} = await getStateResponseWithRegen(chain, stateId);
+      const {state, executionOptimistic, finalized} = await getStateResponseWithRegen(chain, stateId);
 
       const stateView = (
         state instanceof Uint8Array ? loadState(config, chain.getHeadState(), state).state : state.clone()
@@ -211,9 +211,11 @@ export function getLodestarApi({
 
       return {
         data: {
+          slot: stateView.slot,
           historicalSummaries: stateView.historicalSummaries.toValue(),
           proof: proof,
         },
+        meta: {executionOptimistic, finalized, version: fork},
       };
     },
   };

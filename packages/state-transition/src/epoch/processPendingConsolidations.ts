@@ -1,7 +1,6 @@
 import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {CachedBeaconStateElectra, EpochTransitionCache} from "../types.js";
 import {decreaseBalance, increaseBalance} from "../util/balance.js";
-import {getMaxEffectiveBalance} from "../util/validator.js";
 
 /**
  * Starting from Electra:

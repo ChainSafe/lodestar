@@ -16,7 +16,6 @@ import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   createCachedBeaconState,
-  getCurrentSlot,
   getEffectiveBalanceIncrementsZeroInactive,
   isCachedBeaconState,
 } from "@lodestar/state-transition";
@@ -166,9 +165,9 @@ export class BeaconChain implements IBeaconChain {
   /** Map keyed by executionPayload.blockHash of the block for those blobs */
   readonly producedContentsCache = new Map<BlockHash, deneb.Contents>();
 
-  // Cache payload from the local execution so that produceBlindedBlock or produceBlockV3 and
-  // send and get signed/published blinded versions which beacon can assemble into full before
-  // actual publish
+  // Cache payloads from the local execution so that we can send
+  // and get signed/published blinded versions which beacon node can
+  // assemble into full blocks before publishing to the network.
   readonly producedBlockRoot = new Map<RootHex, ExecutionPayload | null>();
   readonly producedBlindedBlockRoot = new Set<RootHex>();
   readonly blacklistedBlocks: Map<RootHex, Slot | null>;
@@ -382,11 +381,6 @@ export class BeaconChain implements IBeaconChain {
 
     if (metrics) {
       metrics.clockSlot.addCollect(() => this.onScrapeMetrics(metrics));
-      // Register a single collect() function to run all validatorMonitor metrics
-      metrics.validatorMonitor.validatorsConnected.addCollect(() => {
-        const clockSlot = getCurrentSlot(config, this.genesisTime);
-        this.validatorMonitor?.scrapeMetrics(clockSlot);
-      });
     }
 
     // Event handlers. emitter is created internally and dropped on close(). Not need to .removeListener()
@@ -526,6 +520,10 @@ export class BeaconChain implements IBeaconChain {
   async getHistoricalStateBySlot(
     slot: number
   ): Promise<{state: Uint8Array; executionOptimistic: boolean; finalized: boolean} | null> {
+    if (!this.opts.serveHistoricalState) {
+      throw Error("Historical state regen is not enabled, set --serveHistoricalState to fetch this data");
+    }
+
     return this.archiveStore.getHistoricalStateBySlot(slot);
   }
 
@@ -1212,7 +1210,7 @@ export class BeaconChain implements IBeaconChain {
       const {faultInspectionWindow, allowedFaults} = executionBuilder;
       const slotsPresent = this.forkChoice.getSlotsPresent(clockSlot - faultInspectionWindow);
       const previousStatus = executionBuilder.status;
-      const shouldEnable = slotsPresent >= faultInspectionWindow - allowedFaults;
+      const shouldEnable = slotsPresent >= Math.min(faultInspectionWindow - allowedFaults, clockSlot);
 
       executionBuilder.updateStatus(shouldEnable);
       // The status changed we should log
