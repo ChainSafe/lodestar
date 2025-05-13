@@ -1,5 +1,7 @@
-import {ForkName, ForkPreDeneb} from "@lodestar/params";
-import {BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
+import {ChainForkConfig} from "@lodestar/config";
+import {ForkName, ForkPreDeneb, isForkPostDeneb} from "@lodestar/params";
+import {computeEpochAtSlot} from "@lodestar/state-transition";
+import {BlobIndex, ColumnIndex, Epoch, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
 import {fromHex, prettyBytes, toHex, withTimeout} from "@lodestar/utils";
 import {VersionedHashes} from "../../../execution/index.js";
 import {kzgCommitmentToVersionedHash} from "../../../util/blobs.js";
@@ -39,6 +41,29 @@ export function createPromise<T>(): PromiseParts<T> {
     resolve,
     reject,
   };
+}
+
+export function getDaOutOfRange(
+  config: ChainForkConfig,
+  forkName: ForkName,
+  blockSlot: Slot,
+  currentEpoch: Epoch
+): boolean {
+  if (!isForkPostDeneb(forkName)) {
+    return true;
+  }
+  return computeEpochAtSlot(blockSlot) < currentEpoch - config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS;
+}
+
+export function isBlockInputPreDeneb(blockInput: BlockInput): blockInput is BlockInputPreData {
+  return blockInput.type === DAType.PreData;
+}
+export function isBlockInputBlobs(blockInput: BlockInput): blockInput is BlockInputBlobs {
+  return blockInput.type === DAType.Blobs;
+}
+
+export function isBlockInputColumns(blockInput: BlockInput): blockInput is BlockInputColumns {
+  return blockInput.type === DAType.Columns;
 }
 
 type BlockInputState<F extends ForkName> =
