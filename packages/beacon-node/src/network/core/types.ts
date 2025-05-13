@@ -10,7 +10,6 @@ import {OutgoingRequestArgs} from "../reqresp/types.js";
 import {CommitteeSubscription} from "../subnets/interface.js";
 
 export type MultiaddrStr = string;
-// TODO (@matthewkeil) deduplicate this and use from beacon-node/src/util/peerId.ts
 export type PeerIdStr = string;
 
 // Interface shared by main Network class, and all backends

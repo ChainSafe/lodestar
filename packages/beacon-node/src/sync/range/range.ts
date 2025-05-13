@@ -13,8 +13,6 @@ import {PeerIdStr} from "../../util/peerId.js";
 import {RangeSyncType, getRangeSyncTarget, rangeSyncTypes} from "../utils/remoteSyncType.js";
 import {ChainTarget, SyncChain, SyncChainDebugState, SyncChainFns} from "./chain.js";
 import {updateChains} from "./utils/index.js";
-import {SyncChainNewBlockInputFns} from "./chainNewBlockInput.js";
-import {downloadBlockInputByRange} from "../utils/downloadByRange.js";
 
 export enum RangeSyncEvent {
   completedChain = "RangeSync-completedChain",
@@ -203,11 +201,6 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
   /** Convenience method for `SyncChain` */
   private downloadBeaconBlocksByRange: SyncChainFns["downloadBeaconBlocksByRange"] = async (peerId, request) => {
     return beaconBlocksMaybeBlobsByRange(this.config, this.network, peerId, request, this.chain.clock.currentEpoch);
-  };
-
-  private downloadBlockInputByRange: SyncChainNewBlockInputFns["downloadBlockInputByRange"] = async (request) => {
-    const {} = request;
-    return downloadBlockInputByRange({});
   };
 
   /** Convenience method for `SyncChain` */
