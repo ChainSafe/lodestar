@@ -21,7 +21,7 @@ runs:
       run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT
 
     - name: Restore build
-      uses: actions/cache/restore@4
+      uses: actions/cache/restore@v4
       id: cache-build-restore
       with:
         path: |
@@ -55,7 +55,7 @@ runs:
       run: yarn check-bundle
 
     - name: Cache build artifacts
-      uses: actions/cache@4
+      uses: actions/cache@v4
       with:
         path: |
           node_modules
