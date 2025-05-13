@@ -65,11 +65,7 @@
     "@lodestar/utils": "^1.29.0",
     "rimraf": "^4.4.1",
     "snappyjs": "^0.7.0",
-    "tar": "^6.1.13",
     "vitest": "^3.0.6"
-  },
-  "devDependencies": {
-    "@types/tar": "^6.1.4"
   },
   "peerDependencies": {
     "vitest": "^3.0.6"
