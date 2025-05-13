@@ -32,6 +32,7 @@
     "test:browsers": "vitest run --project browser",
     "test:e2e": "vitest run --project e2e --project e2e-mainnet",
     "download-spec-tests": "lerna run download-spec-tests",
+    "download-spec-tests-nightly": "yarn workspace @lodestar/spec-test-util download-spec-tests-nightly",
     "test:spec": "vitest run --project spec-minimal --project spec-mainnet",
     "benchmark": "yarn benchmark:files 'packages/*/test/perf/**/*.test.ts'",
     "benchmark:files": "NODE_OPTIONS='--max-old-space-size=4096 --loader=ts-node/esm' benchmark --config .benchrc.yaml --defaultBranch unstable",
