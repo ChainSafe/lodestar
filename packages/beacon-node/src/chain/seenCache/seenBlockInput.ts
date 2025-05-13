@@ -1,21 +1,25 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, ForkPostDeneb, isForkPostDeneb} from "@lodestar/params";
-import {RootHex, SignedBeaconBlock, Slot} from "@lodestar/types";
+import {CheckpointWithHex} from "@lodestar/fork-choice";
+import {ForkName, ForkPostDeneb, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
+import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {RootHex, SignedBeaconBlock, Slot, deneb} from "@lodestar/types";
 import {LodestarError, Logger, toHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {IClock} from "../../util/clock.js";
 import {
-  AddBlobProps,
-  AddBlockProps,
-  BlockInput,
+  AddBlock,
   BlockInputBlobs,
+  BlockInputColumns,
   BlockInputPreData,
-  BlockInputType,
-  DataAvailabilityStatus,
+  CreateBlockInputMeta,
+  DAType,
+  IBlockInput,
   LogMetaBasic,
-  getDataAvailabilityStatus,
+  SourceMeta,
+  getDaOutOfRange,
   isBlockInputBlobs,
-} from "../blocks/blockInput-mkeil/index.js";
+} from "../blocks/blockInput/index.js";
+import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 import {BlobSidecarErrorCode, BlobSidecarGossipError} from "../errors/blobSidecarError.js";
 import {GossipAction} from "../errors/gossipValidation.js";
 
@@ -46,9 +50,11 @@ export type GetByBlobOptions = {
 export class SeenBlockInputCache {
   private config: ChainForkConfig;
   private clock: IClock;
+  private chainEvents: ChainEventEmitter;
+  private readonly signal: AbortSignal;
   private metrics: Metrics | null;
   private logger?: Logger;
-  private blockInputs = new Map<RootHex, BlockInput>();
+  private blockInputs = new Map<RootHex, IBlockInput>();
 
   constructor({config, clock, metrics, logger}: SeenBlockInputCacheModules) {
     this.config = config;
@@ -61,57 +67,91 @@ export class SeenBlockInputCache {
         metrics.seenCache.blockInput.blockInputCount.set(this.blockInputs.size)
       );
     }
+
+    this.chainEvents.on(ChainEvent.forkChoiceFinalized, this.onFinalized);
+    this.signal.addEventListener("abort", () => {
+      this.chainEvents.off(ChainEvent.forkChoiceFinalized, this.onFinalized);
+    });
   }
 
   hasBlock(rootHex: RootHex): boolean {
     return this.blockInputs.has(rootHex);
   }
 
+  removeBlock(rootHex: RootHex): void {
+    this.blockInputs.delete(rootHex);
+  }
+
+  onFinalized(checkpoint: CheckpointWithHex) {
+    const cutoffSlot = computeStartSlotAtEpoch(checkpoint.epoch);
+    for (const [rootHex, blockInput] of this.blockInputs) {
+      if (blockInput.slot < cutoffSlot) {
+        this.blockInputs.delete(rootHex);
+      }
+    }
+  }
+
+  // TODO(peerDAS): need to look at more robust pruning for periods of non-finality
+  prune(): void {}
+
   getBlockInputByBlock({
     block,
-    seenTimestampSec,
     source,
+    seenTimestampSec,
     peerIdStr,
-  }: {blockRoot: Uint8Array} & Omit<
-    AddBlockProps<SignedBeaconBlock>,
-    "rootHex" | "forkName" | "dataAvailability"
-  >): BlockInput {
+  }: SourceMeta & {block: SignedBeaconBlock}): IBlockInput {
     const blockRoot = this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
-    const {rootHex, forkName} = this.buildCommonProps(blockRoot, block.message.slot);
+    const blockRootHex = toHex(blockRoot);
 
-    let blockInput = this.blockInputs.get(rootHex);
+    // TODO(peerDAS): Why is it necessary to static cast this here. All conditional paths result in a valid value so should be defined correctly below
+    let blockInput = this.blockInputs.get(blockRootHex) as IBlockInput;
     if (!blockInput) {
+      const {forkName, daOutOfRange} = this.buildCommonProps(blockRoot, block.message.slot);
       if (!isForkPostDeneb(forkName)) {
-        blockInput = new BlockInputPreData({
-          config: this.config,
-          clock: this.clock,
+        blockInput = BlockInputPreData.createFromBlock({
           block,
-          blockRoot,
-          rootHex,
-          seenTimestampSec,
-          source,
-          peerIdStr,
+          blockRootHex,
+          daOutOfRange,
+          forkName,
+          source: {
+            source,
+            seenTimestampSec,
+            peerIdStr,
+          },
         });
       }
       // else if (isForkPostFulu(forkName)) {
-      //   blockInput = new BlockInputColumns({})
+      //   blockInput = new BlockInputColumns.createFromBlock({
+      //     block,
+      //     blockRootHex,
+      //     daOutOfRange,
+      //     forkName,
+      //     custodyColumns: this.custodyConfig.custodyColumns,
+      //     sampledColumns: this.custodyConfig.sampledColumns,
+      //     source: {
+      //       source,
+      //       seenTimestampSec,
+      //       peerIdStr
+      //     }
+      //   })
       // }
       else {
-        blockInput = new BlockInputBlobs({
-          config: this.config,
-          clock: this.clock,
-          block: block as SignedBeaconBlock<ForkPostDeneb>,
-          blockRoot,
-          rootHex,
-          seenTimestampSec,
-          source,
-          peerIdStr,
+        blockInput = new BlockInputBlobs.createFromBlock({
+          block,
+          blockRootHex,
+          daOutOfRange,
+          forkName,
+          source: {
+            source,
+            seenTimestampSec,
+            peerIdStr,
+          },
         });
       }
     }
 
     if (!blockInput.hasBlock()) {
-      blockInput.addBlock({block, seenTimestampSec, source, peerIdStr});
+      blockInput.addBlock({block, blockRootHex, source: {source, seenTimestampSec, peerIdStr}});
     } else {
       this.logger?.debug("Attempt to cache block but is already cached on BlockInput", blockInput.getLogMeta());
       this.metrics?.seenCache.blockInput.duplicateBlockCount.inc();
@@ -121,29 +161,29 @@ export class SeenBlockInputCache {
   }
 
   getBlockInputByBlob(
-    {blobSidecar, seenTimestampSec, source, peerIdStr}: Omit<AddBlobProps, "rootHex"> & {blockRoot: Uint8Array},
+    {blobSidecar, source, seenTimestampSec, peerIdStr}: SourceMeta & {blobSidecar: deneb.BlobSidecar},
     opts: GetByBlobOptions = {}
-  ): BlockInput {
+  ): IBlockInput {
     const blockRoot = this.config
       .getForkTypes(blobSidecar.signedBlockHeader.message.slot)
       .BeaconBlockHeader.hashTreeRoot(blobSidecar.signedBlockHeader.message);
-    const {rootHex} = this.buildCommonProps(blockRoot, blobSidecar.signedBlockHeader.message.slot);
+    const blockRootHex = toHex(blockRoot);
 
-    let blockInput = this.blockInputs.get(rootHex);
+    // TODO(peerDAS): Why is it necessary to static cast this here. All conditional paths result in a valid value so should be defined correctly below
+    let blockInput = this.blockInputs.get(blockRootHex) as IBlockInput;
     if (!blockInput) {
-      // TODO(@matthewkeil): Need to update this to refactored BlockInput
-      blockInput = new BlockInputBlobs({
-        config: this.config,
-        clock: this.clock,
+      const {forkName, daOutOfRange} = this.buildCommonProps(blobSidecar.signedBlockHeader.message.slot);
+      blockInput = new BlockInputBlobs.createFromBlob({
         blobSidecar,
-        blockRoot,
-        rootHex,
-        seenTimestampSec,
+        blockRootHex,
+        daOutOfRange,
+        forkName,
         source,
+        seenTimestampSec,
         peerIdStr,
       });
       this.metrics?.seenCache.blockInput.createdByBlob.inc();
-      this.blockInputs.set(rootHex, blockInput);
+      this.blockInputs.set(blockRootHex, blockInput);
     }
 
     if (!isBlockInputBlobs(blockInput)) {
@@ -151,7 +191,7 @@ export class SeenBlockInputCache {
         {
           code: SeenBlockInputCacheErrorCode.WRONG_BLOCK_INPUT_TYPE,
           cachedType: blockInput.type,
-          requestedType: BlockInputType.Blobs,
+          requestedType: DAType.Blobs,
           ...blockInput.getLogMeta(),
         },
         `BlockInputType mismatch adding blobIndex=${blobSidecar.index}`
@@ -159,7 +199,7 @@ export class SeenBlockInputCache {
     }
 
     if (!blockInput.hasBlob(blobSidecar.index)) {
-      blockInput.addBlob({blobSidecar, rootHex, seenTimestampSec, source, peerIdStr});
+      blockInput.addBlob({blobSidecar, blockRootHex, source, seenTimestampSec, peerIdStr});
     } else {
       this.logger?.debug(
         `Attempt to cache blob index #${blobSidecar.index} but is already cached on BlockInput`,
@@ -169,7 +209,7 @@ export class SeenBlockInputCache {
       if (opts.throwGossipErrorIfAlreadyKnown) {
         throw new BlobSidecarGossipError(GossipAction.IGNORE, {
           code: BlobSidecarErrorCode.ALREADY_KNOWN,
-          root: rootHex,
+          root: blockRootHex,
         });
       }
     }
@@ -177,18 +217,14 @@ export class SeenBlockInputCache {
     return blockInput;
   }
 
-  private buildCommonProps(
-    blockRoot: Uint8Array,
-    slot: Slot
-  ): {
-    dataAvailability: DataAvailabilityStatus;
+  private buildCommonProps(slot: Slot): {
+    daOutOfRange: boolean;
     forkName: ForkName;
-    rootHex: string;
   } {
+    const forkName = this.config.getForkName(slot);
     return {
-      rootHex: toHex(blockRoot),
-      forkName: this.config.getForkName(slot),
-      dataAvailability: getDataAvailabilityStatus(this.config, slot, this.clock.currentEpoch),
+      forkName,
+      daOutOfRange: getDaOutOfRange(this.config, forkName, slot, this.clock.currentEpoch),
     };
   }
 }
@@ -201,8 +237,8 @@ enum SeenBlockInputCacheErrorCode {
 type SeenBlockInputCacheErrorType =
   | (LogMetaBasic & {
       code: SeenBlockInputCacheErrorCode.WRONG_BLOCK_INPUT_TYPE;
-      cachedType: BlockInputType;
-      requestedType: BlockInputType;
+      cachedType: DAType;
+      requestedType: DAType;
     })
   | {
       code: SeenBlockInputCacheErrorCode.SLOT_MISMATCH;
