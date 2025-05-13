@@ -931,7 +931,7 @@ export class ForkChoice implements IForkChoice {
    * Return only the non-finalized blocks.
    */
   getAllAncestorBlocks(blockRoot: RootHex): ProtoBlock[] {
-    const {ancestors} = this.protoArray.getAllAncestorAndNonAncestorNodes(blockRoot);
+    const ancestors = this.protoArray.getAllAncestorNodes(blockRoot);
     // Exclude the last node as before
     return ancestors.slice(0, ancestors.length - 1);
   }
@@ -940,8 +940,7 @@ export class ForkChoice implements IForkChoice {
    * The same to iterateAncestorBlocks but this gets non-ancestor nodes instead of ancestor nodes.
    */
   getAllNonAncestorBlocks(blockRoot: RootHex): ProtoBlock[] {
-    const {nonAncestors} = this.protoArray.getAllAncestorAndNonAncestorNodes(blockRoot);
-    return nonAncestors;
+    return this.protoArray.getAllNonAncestorNodes(blockRoot);
   }
 
   /**

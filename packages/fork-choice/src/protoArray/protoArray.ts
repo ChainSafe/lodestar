@@ -490,7 +490,7 @@ export class ProtoArray {
      * blocks = get_filtered_block_tree(store)
      * head = store.justified_checkpoint.root
      */
-    if (bestDescendantIndex !== justifiedIndex && !this.nodeIsViableForHead(bestNode, currentSlot)) {
+    if (bestDescendantIndex !== justifiedIndex && !this.nodeLeadsToViableHead(bestNode, currentSlot)) {
       throw new ProtoArrayError({
         code: ProtoArrayErrorCode.INVALID_BEST_NODE,
         startRoot: justifiedRoot,
@@ -881,6 +881,67 @@ export class ProtoArray {
     nonAncestors.push(...this.getNodesBetween(nodeIndex, 0));
 
     return {ancestors, nonAncestors};
+  }
+
+  /**
+   * Get only ancestor nodes from a block root backwards
+   */
+  getAllAncestorNodes(blockRoot: RootHex): ProtoNode[] {
+    const startIndex = this.indices.get(blockRoot);
+    if (startIndex === undefined) {
+      return [];
+    }
+
+    let node = this.nodes[startIndex];
+    if (node === undefined) {
+      throw new ProtoArrayError({
+        code: ProtoArrayErrorCode.INVALID_NODE_INDEX,
+        index: startIndex,
+      });
+    }
+
+    const ancestors: ProtoNode[] = [];
+
+    while (node.parent !== undefined) {
+      ancestors.push(node);
+      node = this.getNodeFromIndex(node.parent);
+    }
+
+    ancestors.push(node);
+    return ancestors;
+  }
+
+  /**
+   * Get only non-ancestor nodes 
+   */
+  getAllNonAncestorNodes(blockRoot: RootHex): ProtoNode[] {
+    const startIndex = this.indices.get(blockRoot);
+    if (startIndex === undefined) {
+      return [];
+    }
+
+    let node = this.nodes[startIndex];
+    if (node === undefined) {
+      throw new ProtoArrayError({
+        code: ProtoArrayErrorCode.INVALID_NODE_INDEX,
+        index: startIndex,
+      });
+    }
+
+    const nonAncestors: ProtoNode[] = [];
+
+    let nodeIndex = startIndex;
+    while (node.parent !== undefined) {
+      const parentIndex = node.parent;
+      node = this.getNodeFromIndex(parentIndex);
+
+      // Nodes between nodeIndex and parentIndex are non-ancestor nodes
+      nonAncestors.push(...this.getNodesBetween(nodeIndex, parentIndex));
+      nodeIndex = parentIndex;
+    }
+
+    nonAncestors.push(...this.getNodesBetween(nodeIndex, 0));
+    return nonAncestors;
   }
 
   hasBlock(blockRoot: RootHex): boolean {
