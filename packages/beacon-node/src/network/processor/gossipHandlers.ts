@@ -351,7 +351,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     } else if (blockInput.type === BlockInputType.availableData) {
       metrics?.blockInputFetchStats.totalDataAvailableBlockInputs.inc();
       metrics?.blockInputFetchStats.totalDataAvailableBlockInputBlobs.inc(
-        (blockInput.blockData as BlockInputBlobs).blobs.length
+        (blockInput.block.message as deneb.BeaconBlock).body.blobKzgCommitments.length
       );
     }
 
