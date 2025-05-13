@@ -19,6 +19,7 @@ import {
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
+import {bigintToNumber} from "@lodestar/utils";
 
 import {EmptyMeta, EmptyResponseCodec, EmptyResponseData} from "../../utils/codecs.js";
 import {getPostAltairForkTypes, getPostBellatrixForkTypes} from "../../utils/fork.js";
@@ -196,18 +197,6 @@ export type TypeJson<T> = {
   toJson: (data: T) => unknown; // server
   fromJson: (data: unknown) => T; // client
 };
-
-//converts bigint to number, throws an error if value is outside safe integer
-function bigintToNumber(bn: bigint): number {
-  if (bn > BigInt(Number.MAX_SAFE_INTEGER) || bn < BigInt(Number.MIN_SAFE_INTEGER)) {
-    throw new Error(`Cannot safely convert bigint ${bn} to number - value outside safe integer range`);
-  }
-  const num = Number(bn);
-  if (Number.isNaN(num)) {
-    throw new Error(`Cannot convert bigint ${bn} to number - conversion resulted in NaN`);
-  }
-  return num;
-}
 
 export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: TypeJson<EventData[K]>} {
   const WithVersion = <T>(getType: (fork: ForkName) => TypeJson<T>): TypeJson<{data: T; version: ForkName}> => {
