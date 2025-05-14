@@ -11,13 +11,11 @@ export const defaultSpecTestsRepoUrl = "https://github.com/ethereum/consensus-sp
 
 const logEmpty = (): void => {};
 
-export type DownloadNightlyTestsOptions = {
+export interface DownloadNightlyTestsOptions {
   outputDir: string;
-  /** Root Github URL `https://github.com/ethereum/consensus-specs` */
   specTestsRepoUrl: string;
-  /** Release files names to download without prefix `["general", "mainnet", "minimal"]` */
   testsToDownload: string[];
-};
+}
 
 // Map of test types to their artifact names in GitHub Actions
 const TEST_TYPE_TO_ARTIFACT_NAME: Record<string, string> = {
@@ -36,9 +34,7 @@ function getGithubHeaders() {
   return headers;
 }
 
-/**
- * Get the latest nightly build number and its artifacts from GitHub Actions
- */
+// Get the latest nightly build number and its artifacts from GitHub Actions
 async function getLatestNightlyBuildInfo(
   repoUrl: string,
   log: (msg: string) => void
@@ -78,9 +74,7 @@ async function getLatestNightlyBuildInfo(
   };
 }
 
-/**
- * Download nightly generated spec tests
- */
+// Download nightly generated spec tests
 export async function downloadNightlyTests(
   opts: DownloadNightlyTestsOptions,
   log: (msg: string) => void = logEmpty
@@ -187,5 +181,4 @@ async function main(): Promise<void> {
   }
 }
 
-// Execute the main function
 main();

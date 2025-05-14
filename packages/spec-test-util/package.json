@@ -50,7 +50,7 @@
     "test:unit": "vitest run --project unit --project unit-minimal",
     "test:e2e": "vitest run --project e2e --project e2e-mainnet",
     "check-readme": "typescript-docs-verifier",
-    "download-spec-tests-nightly": "NODE_OPTIONS='--loader ts-node/esm' node src/downloadTestsNightlyGenerated.ts"
+    "download-spec-tests-nightly": "NODE_OPTIONS='--loader ts-node/esm' node src/downloadSpecTestsNightly.ts"
   },
   "repository": {
     "type": "git",
