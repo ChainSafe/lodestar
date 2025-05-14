@@ -89,6 +89,9 @@ export class HierarchicalLayers {
     return new HierarchicalLayers(layersEpochNumbers);
   }
 
+  /**
+   * Returns a string representation of the layers in the format compatible with `fromString`.
+   */
   toString(): string {
     return `${this.diffEverySlot
       .reverse()
@@ -96,16 +99,21 @@ export class HierarchicalLayers {
       .join(",")},${this.snapshotEverySlot / SLOTS_PER_EPOCH}`;
   }
 
+  /**
+   * Returns the total number of layers, including the snapshot layer.
+   */
   get totalLayers(): number {
     return this.diffEverySlot.length + 1;
   }
 
+  /**
+   * For specific archive mode, return the type of state storage for given slot.
+   *
+   * `ArchiveMode.Frequency` is used for full archive mode, where all states are stored as snapshot.
+   * for other modes the storage is based on the layer which is extracted from the slot number.
+   */
   getStorageType(slot: Slot, archiveMode: ArchiveMode): HistoricalStateStorageType {
     if (archiveMode === ArchiveMode.Frequency) return HistoricalStateStorageType.Full;
-
-    if (slot === 0) {
-      return HistoricalStateStorageType.Snapshot;
-    }
 
     if (slot % this.snapshotEverySlot === 0) return HistoricalStateStorageType.Snapshot;
     if (this.diffEverySlot.some((s) => slot % s === 0)) return HistoricalStateStorageType.Diff;
@@ -113,6 +121,11 @@ export class HierarchicalLayers {
     return HistoricalStateStorageType.BlockReplay;
   }
 
+  /**
+   * Returns the layers for a given slot including the snapshot layer and all diff layers.
+   * e.g. For slot `0` it will return `{snapshotSlot: 0, diffSlots: []}` meant that
+   * there is snapshot available at slot `0` and no diff layers.
+   */
   getArchiveLayers(slot: Slot): Layers {
     const path: Slot[] = [];
     let lastSlot: number | undefined = undefined;
@@ -129,7 +142,10 @@ export class HierarchicalLayers {
     const snapshotSlot = diffSlots.shift();
 
     if (snapshotSlot == null) {
-      throw new Error(`Can not find snapshot layer for slot=${slot}`);
+      throw new HierarchicalLayersError(
+        {code: HierarchicalLayersErrorCode.NoSnapshot},
+        `Cannot find snapshot layer for slot=${slot}`
+      );
     }
 
     return {
@@ -138,21 +154,36 @@ export class HierarchicalLayers {
     };
   }
 
+  /**
+   * Returns the previous slot for the given layer index, starting from the given `slot`
+   *
+   * @param slot - The slot for which to find the previous slot for the given layer.
+   * @param layer - The layer number (0-indexed) for which to find the previous slot. `0` is the snapshot layer, `1` is the lowest diff layer, and so on.
+   *
+   */
   getPreviousSlotForLayer(slot: Slot, layer: number): Slot {
-    if (layer < 0 || layer > this.totalLayers) {
-      throw new Error(`Invalid layer number. Must be between 0-${this.totalLayers - 1}`);
+    if (layer < 0 || layer > this.totalLayers - 1) {
+      throw new HierarchicalLayersError(
+        {code: HierarchicalLayersErrorCode.InvalidLayerIndex},
+        `Invalid layer number. Must be between 0-${this.totalLayers - 1}`
+      );
     }
 
+    // Snapshot layer
     if (layer === 0) {
+      // If the current `slot` user specified is already a snapshot slot at snapshot layer, return it
       if (slot % this.snapshotEverySlot === 0) return slot;
 
+      // otherwise if it's in the middle of two snapshots then return the previous snapshot slot
       return Math.max(0, slot - (slot % this.snapshotEverySlot));
     }
 
     const diffEverySlot = this.diffEverySlot[layer - 1];
 
+    // If the current `slot` user specified is already a diff slot for that layer, return it
     if (slot % diffEverySlot === 0) return slot;
 
+    // otherwise it's in middle of two diff slots on that layer, so return the previous diff slot`
     return Math.max(0, slot - (slot % diffEverySlot));
   }
 }
