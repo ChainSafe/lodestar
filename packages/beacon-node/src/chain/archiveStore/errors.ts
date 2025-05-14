@@ -5,6 +5,7 @@ export enum HierarchicalLayersErrorCode {
   InvalidOrder = "ERROR_INVALID_ORDER",
   EmptyEpochs = "ERROR_EMPTY_EPOCHS",
   DuplicateEpochs = "ERROR_DUPLICATE_EPOCHS",
+  MinLayers = "ERROR_MIN_LAYERS",
 }
 
 export type HierarchicalLayersErrorType = {
