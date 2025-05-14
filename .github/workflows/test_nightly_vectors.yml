@@ -1,0 +1,53 @@
+name: Nightly Tests
+
+on:
+  schedule:
+    # Run daily at 03:00 UTC
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  nightly-tests:
+    name: Nightly Tests
+    runs-on: buildjet-4vcpu-ubuntu-2204
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: "./.github/actions/setup-and-build"
+        with:
+          node: ${{ matrix.node }}
+
+      # Download nightly test vectors
+      - name: Download nightly test vectors
+        run: yarn download-spec-tests-nightly
+        env:
+          # @REVIEWER: A new GH token needs to be added to the GitHub Actions secret vault
+          GITHUB_TOKEN: ${{ secrets.CONSENSUS_SPECS_TOKEN }}
+        continue-on-error: true
+
+      # Verify test vectors were downloaded
+      - name: Verify test vectors
+        run: |
+          if [ ! -f "packages/spec-tests-nightly/version.txt" ]; then
+            echo "::error::Failed to download nightly test vectors"
+            exit 1
+          fi
+          echo "Using test vectors version: $(cat packages/spec-tests-nightly/version.txt)"
+
+      # Run spec tests against the nightly vectors
+      - name: Spec tests general
+        run: yarn test:spec:general
+        working-directory: packages/beacon-node
+
+      - name: Spec tests minimal
+        run: yarn test:spec:minimal
+        working-directory: packages/beacon-node
+
+      - name: Spec tests mainnet
+        run: NODE_OPTIONS='--max-old-space-size=4096' yarn test:spec:mainnet
+        working-directory: packages/beacon-node
