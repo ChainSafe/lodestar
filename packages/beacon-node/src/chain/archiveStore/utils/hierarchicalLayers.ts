@@ -1,5 +1,6 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Epoch, Slot} from "@lodestar/types";
+import {HierarchicalLayersError, HierarchicalLayersErrorCode} from "../errors.js";
 import {ArchiveMode, HistoricalStateStorageType} from "../interface.js";
 
 /*
@@ -21,12 +22,7 @@ export class HierarchicalLayers {
   private snapshotEverySlot: number;
   private diffEverySlot: number[];
 
-  /**
-   * Initialized with the comma separated values in ascending order e.g. 2,4,6,10
-   * These values will represent every nth epoch and each consider as a layer
-   * The last value which should be highest should be consider as snapshot layer.
-   */
-  constructor(epochs: Epoch[]) {
+  private constructor(epochs: Epoch[]) {
     const lastEpoch = epochs.at(-1);
     if (!lastEpoch) throw new Error("Must provide a list of epochs");
     this.snapshotEverySlot = lastEpoch * SLOTS_PER_EPOCH;
@@ -38,25 +34,51 @@ export class HierarchicalLayers {
       .map((s) => s * SLOTS_PER_EPOCH);
   }
 
+  /**
+   * Initialized with the comma separated values in ascending order e.g. 2,4,6,10
+   * These values will represent every nth epoch and each consider as a layer
+   * The last value which should be highest should be consider as snapshot layer.
+   */
   static fromString(layers: string = DEFAULT_DIFF_LAYERS) {
-    const layerEpochs = [
-      ...new Set(
-        layers
-          .split(",")
-          .map((s) => s.trim())
-          .map((n) => parseInt(n))
-      ),
-    ];
+    const layerEpochs = [...new Set(layers.split(",").map((s) => s.trim()))];
+
+    if (layerEpochs.length === 1 && layerEpochs[0] === "") {
+      throw new HierarchicalLayersError({code: HierarchicalLayersErrorCode.EmptyEpochs});
+    }
+
+    for (const epoch of layerEpochs) {
+      if (parseFloat(epoch) !== parseInt(epoch, 10)) {
+        throw new HierarchicalLayersError(
+          {code: HierarchicalLayersErrorCode.InvalidLayerEpoch},
+          "Please provide integer values for epoch"
+        );
+      }
+
+      if (parseInt(epoch, 10) <= 0) {
+        throw new HierarchicalLayersError(
+          {code: HierarchicalLayersErrorCode.InvalidLayerEpoch},
+          "Please provide positive values for epoch"
+        );
+      }
+    }
 
     if (layerEpochs.length !== layers.split(",").length) {
-      throw new Error(`Please provide unique epoch intervals. Given = ${layers}`);
+      throw new HierarchicalLayersError(
+        {code: HierarchicalLayersErrorCode.DuplicateEpochs},
+        "Please provide unique epoch intervals"
+      );
     }
 
-    if ([...layerEpochs].sort((a, b) => a - b).join(",") !== layerEpochs.join(",")) {
-      throw new Error(`Please provide diff layers in ascending order. Given = ${layers}`);
+    const layersEpochNumbers = layerEpochs.map((s) => parseInt(s, 10));
+
+    if ([...layersEpochNumbers].sort((a, b) => a - b).join(",") !== layersEpochNumbers.join(",")) {
+      throw new HierarchicalLayersError(
+        {code: HierarchicalLayersErrorCode.InvalidOrder},
+        `Please provide diff layers in ascending order. Given = ${layers}`
+      );
     }
 
-    return new HierarchicalLayers(layerEpochs);
+    return new HierarchicalLayers(layersEpochNumbers);
   }
 
   toString(): string {

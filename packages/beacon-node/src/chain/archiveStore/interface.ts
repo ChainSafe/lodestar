@@ -74,7 +74,6 @@ export interface IArchiveStore {
   persistToDisk(): Promise<void>;
 }
 
-
 export enum HistoricalStateStorageType {
   /**
    * Used to refer to full archive in `ArchiveMode.Frequency`

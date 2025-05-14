@@ -1,8 +1,47 @@
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {describe, expect, it} from "vitest";
+import {HierarchicalLayersErrorCode} from "../../../../../src/chain/archiveStore/errors.js";
 import {HierarchicalLayers, Layers} from "../../../../../src/chain/archiveStore/utils/hierarchicalLayers.js";
 
 describe("HierarchicalLayers", () => {
+  describe("fromString", () => {
+    it("should create a HierarchicalLayers instance from a string", () => {
+      const hierarchicalLayers = HierarchicalLayers.fromString("1,3,5,7");
+      expect(hierarchicalLayers).toBeInstanceOf(HierarchicalLayers);
+      expect(hierarchicalLayers.toString()).toEqual("1,3,5,7");
+    });
+
+    it("should throw an error for invalid string format", () => {
+      expect(() => HierarchicalLayers.fromString("1,3,5,a")).toThrowLodestarError({
+        code: HierarchicalLayersErrorCode.InvalidLayerEpoch,
+      });
+    });
+
+    it("should throw an error for empty string", () => {
+      expect(() => HierarchicalLayers.fromString("")).toThrowLodestarError({
+        code: HierarchicalLayersErrorCode.EmptyEpochs,
+      });
+    });
+
+    it("should throw an error for negative layer epoch", () => {
+      expect(() => HierarchicalLayers.fromString("1,3,5,-7")).toThrowLodestarError({
+        code: HierarchicalLayersErrorCode.InvalidLayerEpoch,
+      });
+    });
+
+    it("should throw an error for zero layer epoch", () => {
+      expect(() => HierarchicalLayers.fromString("0,1,3,5")).toThrowLodestarError({
+        code: HierarchicalLayersErrorCode.InvalidLayerEpoch,
+      });
+    });
+
+    it("should throw an error for non-integer layer epoch", () => {
+      expect(() => HierarchicalLayers.fromString("1,3,5,7.5")).toThrowLodestarError({
+        code: HierarchicalLayersErrorCode.InvalidLayerEpoch,
+      });
+    });
+  });
+
   describe("toString", () => {
     it("should be same as initialized string", () => {
       const hierarchicalLayers = HierarchicalLayers.fromString("1,3,5,7");
