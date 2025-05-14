@@ -4,8 +4,8 @@ import stream from "node:stream";
 import {promisify} from "node:util";
 import {retry} from "@lodestar/utils";
 import axios from "axios";
-import extractZip from "extract-zip";
 import {rimraf} from "rimraf";
+import {execFile} from "node:child_process";
 
 export const defaultSpecTestsRepoUrl = "https://github.com/ethereum/consensus-specs";
 
@@ -74,6 +74,19 @@ async function getLatestNightlyBuildInfo(
   };
 }
 
+// Helper to extract ZIP using system 'unzip' command
+async function extractZipSys(zipPath: string, outDir: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    execFile("unzip", ["-o", zipPath, "-d", outDir], (error, stdout, stderr) => {
+      if (error) {
+        reject(new Error(`Failed to extract zip: ${stderr || error.message}`));
+      } else {
+        resolve();
+      }
+    });
+  });
+}
+
 // Download nightly generated spec tests
 export async function downloadNightlyTests(
   opts: DownloadNightlyTestsOptions,
@@ -131,7 +144,7 @@ export async function downloadNightlyTests(
           // Extract the ZIP file
           log(`Extracting ${artifact.name}...`);
           try {
-            await extractZip(zipPath, {dir: opts.outputDir});
+            await extractZipSys(zipPath, opts.outputDir);
             log(`Extraction of ${artifact.name} completed successfully.`);
           } catch (error: unknown) {
             if (error instanceof Error) {
@@ -144,6 +157,27 @@ export async function downloadNightlyTests(
 
           // Clean up the temporary ZIP file
           fs.unlinkSync(zipPath);
+
+          // Extract the .tar.gz file that was inside the zip
+          const tarFiles = fs.readdirSync(opts.outputDir).filter(f => f.endsWith('.tar.gz'));
+          if (tarFiles.length !== 1) {
+            throw new Error(`Expected 1 .tar.gz file after zip extraction, found ${tarFiles.length}`);
+          }
+          const tarPath = path.join(opts.outputDir, tarFiles[0]);
+          
+          log(`Extracting tar.gz file: ${tarPath}`);
+          await new Promise<void>((resolve, reject) => {
+            execFile('tar', ['xzf', tarPath, '-C', opts.outputDir], (error, stdout, stderr) => {
+              if (error) {
+                reject(new Error(`Failed to extract tar.gz: ${stderr || error.message}`));
+              } else {
+                resolve();
+              }
+            });
+          });
+          
+          // Clean up the .tar.gz file
+          fs.unlinkSync(tarPath);
 
           log(`Downloaded and extracted ${artifact.name}`);
         },
