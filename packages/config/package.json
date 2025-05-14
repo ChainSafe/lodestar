@@ -1,6 +1,6 @@
 {
   "name": "@lodestar/config",
-  "version": "1.28.1",
+  "version": "1.29.0",
   "description": "Chain configuration required for lodestar",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
@@ -50,7 +50,7 @@
     "lint": "biome check src/",
     "lint:fix": "yarn run lint --write",
     "test": "yarn test:unit",
-    "test:unit": "yarn vitest run --dir test/unit/",
+    "test:unit": "yarn vitest run --project unit --project unit-minimal",
     "check-readme": "typescript-docs-verifier"
   },
   "repository": {
@@ -65,8 +65,8 @@
   ],
   "dependencies": {
     "@chainsafe/ssz": "^1.2.0",
-    "@lodestar/params": "^1.28.1",
-    "@lodestar/types": "^1.28.1",
-    "@lodestar/utils": "^1.28.1"
+    "@lodestar/params": "^1.29.0",
+    "@lodestar/types": "^1.29.0",
+    "@lodestar/utils": "^1.29.0"
   }
 }

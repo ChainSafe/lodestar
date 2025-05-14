@@ -1,12 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {
-  ForkName,
-  ForkPostElectra,
-  ForkPreElectra,
-  SYNC_COMMITTEE_SUBNET_SIZE,
-  isForkPostElectra,
-} from "@lodestar/params";
+import {ForkPostElectra, ForkPreElectra, SYNC_COMMITTEE_SUBNET_SIZE, isForkPostElectra} from "@lodestar/params";
 import {Attestation, Epoch, SingleAttestation, isElectraAttestation, ssz} from "@lodestar/types";
 import {
   AttestationError,
@@ -130,7 +124,7 @@ export function getBeaconPoolApi({
                 committeeSize,
                 priority
               );
-              metrics?.opPool.attestationPoolApiInsertOutcome.inc({insertOutcome});
+              metrics?.opPool.attestationPool.apiInsertOutcome.inc({insertOutcome});
             }
 
             if (isForkPostElectra(fork)) {
@@ -150,7 +144,12 @@ export function getBeaconPoolApi({
             }
 
             const sentPeers = await network.publishBeaconAttestation(attestation, subnet);
-            metrics?.onPoolSubmitUnaggregatedAttestation(seenTimestampSec, indexedAttestation, subnet, sentPeers);
+            chain.validatorMonitor?.onPoolSubmitUnaggregatedAttestation(
+              seenTimestampSec,
+              indexedAttestation,
+              subnet,
+              sentPeers
+            );
           } catch (e) {
             const logCtx = {slot: attestation.data.slot, index: attestation.data.index};
 

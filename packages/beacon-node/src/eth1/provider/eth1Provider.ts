@@ -1,9 +1,16 @@
 import {ChainConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/logger";
 import {phase0} from "@lodestar/types";
-import {createElapsedTimeTracker, fromHex, isErrorAborted, toHex, toPrintableUrl} from "@lodestar/utils";
+import {
+  FetchError,
+  createElapsedTimeTracker,
+  fromHex,
+  isErrorAborted,
+  isFetchError,
+  toHex,
+  toPrintableUrl,
+} from "@lodestar/utils";
 
-import {FetchError, isFetchError} from "@lodestar/api";
 import {HTTP_CONNECTION_ERROR_CODES, HTTP_FATAL_ERROR_CODES} from "../../execution/engine/utils.js";
 import {isValidAddress} from "../../util/address.js";
 import {linspace} from "../../util/numpy.js";

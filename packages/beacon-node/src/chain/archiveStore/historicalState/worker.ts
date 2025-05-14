@@ -21,8 +21,6 @@ import {
 
 const workerData = worker.workerData as HistoricalStateWorkerData;
 
-// TODO: Pass options from main thread for logging
-// TODO: Logging won't be visible in file loggers
 const logger = getNodeLogger(workerData.loggerOpts);
 
 logger.info("Historical state worker started");
@@ -135,7 +133,6 @@ if (metricsRegister) {
       name: "lodestar_historical_state_stfn_attestations_per_block_total",
       help: "Count of attestations per block",
     }),
-    registerValidatorStatuses: () => {},
 
     // historical state regen metrics
     regenTime: metricsRegister.histogram({

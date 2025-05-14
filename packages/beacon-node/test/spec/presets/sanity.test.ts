@@ -3,7 +3,7 @@ import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {
   BeaconStateAllForks,
-  DataAvailableStatus,
+  DataAvailabilityStatus,
   ExecutionPayloadStatus,
   processSlots,
   stateTransition,
@@ -67,7 +67,7 @@ const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllForks> = (f
         wrappedState = stateTransition(wrappedState, signedBlock, {
           // Assume valid and available for this test
           executionPayloadStatus: ExecutionPayloadStatus.valid,
-          dataAvailableStatus: DataAvailableStatus.available,
+          dataAvailabilityStatus: DataAvailabilityStatus.Available,
           verifyStateRoot: verify,
           verifyProposer: verify,
           verifySignatures: verify,

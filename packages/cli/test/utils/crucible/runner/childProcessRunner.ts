@@ -5,7 +5,7 @@ import {Job, JobOptions, RunnerEnv, RunnerType} from "../interfaces.js";
 
 export class ChildProcessRunner implements RunnerEnv<RunnerType.ChildProcess> {
   type = RunnerType.ChildProcess as const;
-  private logger: Logger;
+  protected logger: Logger;
 
   constructor(opts: {logger: Logger}) {
     this.logger = opts.logger;

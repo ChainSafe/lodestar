@@ -10,6 +10,7 @@ import {IBeaconDb} from "../../db/interface.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {ClockEvent} from "../../util/clock.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
+import {PeerIdStr} from "../../util/peerId.js";
 import {NetworkEvent, NetworkEventBus} from "../events.js";
 import {
   GossipHandlers,
@@ -18,7 +19,6 @@ import {
   GossipValidatorBatchFn,
   GossipValidatorFn,
 } from "../gossip/interface.js";
-import {PeerIdStr} from "../peers/index.js";
 import {createExtractBlockSlotRootFns} from "./extractSlotRootFns.js";
 import {GossipHandlerOpts, ValidatorFnsModules, getGossipHandlers} from "./gossipHandlers.js";
 import {createGossipQueues} from "./gossipQueues/index.js";

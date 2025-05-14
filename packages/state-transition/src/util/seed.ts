@@ -291,7 +291,7 @@ export function getComputeShuffledIndexFn(indexCount: number, seed: Bytes32): Co
     assert.lt(index, indexCount, "indexCount must be less than index");
     assert.lte(indexCount, 2 ** 40, "indexCount too big");
     let permuted = index;
-    const _seed = seed;
+    // const _seed = seed;
     for (let i = 0; i < SHUFFLE_ROUND_COUNT; i++) {
       // optimized version of the below naive code
       // const pivot = Number(

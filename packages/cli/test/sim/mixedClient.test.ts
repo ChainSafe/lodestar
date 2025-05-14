@@ -44,11 +44,7 @@ const env = await Simulation.initWithDefaults(
       beacon: BeaconClient.Lighthouse,
       validator: {
         type: ValidatorClient.Lodestar,
-        options: {
-          clientOptions: {
-            useProduceBlockV3: true,
-          },
-        },
+        options: {},
       },
     },
   ]

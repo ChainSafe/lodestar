@@ -3,8 +3,8 @@ import path from "node:path";
 import {getClient as keyManagerGetClient} from "@lodestar/api/keymanager";
 import {chainConfigToJson} from "@lodestar/config";
 import {LogLevel} from "@lodestar/utils";
+import {fetch} from "@lodestar/utils";
 import {defaultOptions} from "@lodestar/validator";
-import got from "got";
 import {IValidatorCliArgs} from "../../../../../src/cmds/validator/options.js";
 import {GlobalArgs} from "../../../../../src/options/globalOptions.js";
 import {LODESTAR_BINARY_PATH} from "../../constants.js";
@@ -14,7 +14,7 @@ import {getNodePorts} from "../../utils/ports.js";
 export const generateLodestarValidatorNode: ValidatorNodeGenerator<ValidatorClient.Lodestar> = (opts, runner) => {
   const {paths, id, keys, forkConfig, genesisTime, nodeIndex, beaconUrls, clientOptions} = opts;
   const {rootDir, keystoresDir, keystoresSecretFilePath, logFilePath} = paths;
-  const {useProduceBlockV3, "builder.selection": builderSelection, blindedLocal} = clientOptions ?? {};
+  const {"builder.selection": builderSelection, blindedLocal} = clientOptions ?? {};
   const ports = getNodePorts(nodeIndex);
   const rcConfigPath = path.join(rootDir, "rc_config.json");
   const paramsPath = path.join(rootDir, "params.json");
@@ -38,7 +38,6 @@ export const generateLodestarValidatorNode: ValidatorNodeGenerator<ValidatorClie
     logFile: "none",
     importKeystores: keystoresDir,
     importKeystoresPassword: keystoresSecretFilePath,
-    useProduceBlockV3: useProduceBlockV3 ?? false,
     "builder.selection": builderSelection ?? defaultOptions.builderSelection,
     blindedLocal: blindedLocal ?? defaultOptions.blindedLocal,
   } as unknown as IValidatorCliArgs & GlobalArgs;
@@ -68,7 +67,10 @@ export const generateLodestarValidatorNode: ValidatorNodeGenerator<ValidatorClie
         stdoutFilePath: logFilePath,
       },
       health: async () => {
-        await got.get(`http://127.0.0.1:${ports.validator.keymanagerPort}/eth/v1/keystores`);
+        const res = await fetch(`http://127.0.0.1:${ports.validator.keymanagerPort}/eth/v1/keystores`);
+        if (!res.ok) {
+          throw new Error(`Health check failed: ${res.status} ${res.statusText}`);
+        }
       },
     },
   ]);

@@ -3,8 +3,6 @@ import path from "node:path";
 import {loadYaml} from "@lodestar/utils";
 import {uncompress} from "snappyjs";
 
-/* eslint-disable @typescript-eslint/explicit-function-return-type */
-
 export type ValidTestCaseData = {
   root: string;
   serialized: Uint8Array;

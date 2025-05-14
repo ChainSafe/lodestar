@@ -1,7 +1,7 @@
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {DataAvailabilityStatus, ExecutionStatus} from "@lodestar/fork-choice";
+import {ExecutionStatus} from "@lodestar/fork-choice";
 import {
   ForkPostBellatrix,
   ForkPostDeneb,
@@ -17,6 +17,7 @@ import {
 } from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
+  DataAvailabilityStatus,
   attesterShufflingDecisionRoot,
   beaconBlockToBlinded,
   calculateCommitteeAssignments,
@@ -42,7 +43,6 @@ import {
   Wei,
   bellatrix,
   getValidatorStatus,
-  isBlindedBeaconBlock,
   isBlockContents,
   phase0,
   ssz,
@@ -851,11 +851,6 @@ export function getValidatorApi(
   }
 
   return {
-    async produceBlockV2({slot, randaoReveal, graffiti, ...opts}) {
-      const {data, ...meta} = await produceEngineFullBlockOrContents(slot, randaoReveal, graffiti, opts);
-      return {data, meta};
-    },
-
     async produceBlockV3({slot, randaoReveal, graffiti, skipRandaoVerification, builderBoostFactor, ...opts}) {
       const {data, ...meta} = await produceEngineOrBuilderBlock(
         slot,
@@ -888,26 +883,6 @@ export function getValidatorApi(
       }
 
       return {data, meta};
-    },
-
-    async produceBlindedBlock({slot, randaoReveal, graffiti}) {
-      const {data, version} = await produceEngineOrBuilderBlock(slot, randaoReveal, graffiti);
-      if (!isForkPostBellatrix(version)) {
-        throw Error(`Invalid fork=${version} for produceBlindedBlock`);
-      }
-
-      if (isBlockContents(data)) {
-        const {block} = data;
-        const blindedBlock = beaconBlockToBlinded(config, block as BeaconBlock<ForkPostBellatrix>);
-        return {data: blindedBlock, meta: {version}};
-      }
-
-      if (isBlindedBeaconBlock(data)) {
-        return {data, meta: {version}};
-      }
-
-      const blindedBlock = beaconBlockToBlinded(config, data as BeaconBlock<ForkPostBellatrix>);
-      return {data: blindedBlock, meta: {version}};
     },
 
     async produceAttestationData({committeeIndex, slot}) {
@@ -1248,7 +1223,7 @@ export function getValidatorApi(
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
       const dataRootHex = toRootHex(attestationDataRoot);
-      const aggregate = chain.attestationPool.getAggregate(slot, null, dataRootHex);
+      const aggregate = chain.attestationPool.getAggregate(slot, dataRootHex, null);
       const fork = chain.config.getForkName(slot);
 
       if (isForkPostElectra(fork)) {
@@ -1275,12 +1250,12 @@ export function getValidatorApi(
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
       const dataRootHex = toRootHex(attestationDataRoot);
-      const aggregate = chain.attestationPool.getAggregate(slot, committeeIndex, dataRootHex);
+      const aggregate = chain.attestationPool.getAggregate(slot, dataRootHex, committeeIndex);
 
       if (!aggregate) {
         throw new ApiError(
           404,
-          `No aggregated attestation for slot=${slot}, committeeIndex=${committeeIndex}, dataRoot=${dataRootHex}`
+          `No aggregated attestation for slot=${slot}, dataRoot=${dataRootHex}, committeeIndex=${committeeIndex}`
         );
       }
 
@@ -1320,14 +1295,16 @@ export function getValidatorApi(
               beaconBlockRoot
             );
 
-            chain.aggregatedAttestationPool.add(
+            const insertOutcome = chain.aggregatedAttestationPool.add(
               signedAggregateAndProof.message.aggregate,
               attDataRootHex,
               indexedAttestation.attestingIndices.length,
               committeeIndices
             );
+            metrics?.opPool.aggregatedAttestationPool.apiInsertOutcome.inc({insertOutcome});
+
             const sentPeers = await network.publishBeaconAggregateAndProof(signedAggregateAndProof);
-            metrics?.onPoolSubmitAggregatedAttestation(seenTimestampSec, indexedAttestation, sentPeers);
+            chain.validatorMonitor?.onPoolSubmitAggregatedAttestation(seenTimestampSec, indexedAttestation, sentPeers);
           } catch (e) {
             const logCtx = {
               slot: signedAggregateAndProof.message.aggregate.data.slot,
@@ -1433,7 +1410,7 @@ export function getValidatorApi(
 
       if (metrics) {
         for (const subscription of subscriptions) {
-          metrics.registerLocalValidator(subscription.validatorIndex);
+          chain.validatorMonitor?.registerLocalValidator(subscription.validatorIndex);
         }
       }
     },
@@ -1470,7 +1447,10 @@ export function getValidatorApi(
 
       if (metrics) {
         for (const subscription of subscriptions) {
-          metrics.registerLocalValidatorInSyncCommittee(subscription.validatorIndex, subscription.untilEpoch);
+          chain.validatorMonitor?.registerLocalValidatorInSyncCommittee(
+            subscription.validatorIndex,
+            subscription.untilEpoch
+          );
         }
       }
     },

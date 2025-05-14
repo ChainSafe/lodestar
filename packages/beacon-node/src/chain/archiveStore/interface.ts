@@ -24,6 +24,7 @@ export type ArchiveStoreOpts = StatesArchiveOpts & {
   disableArchiveOnCheckpoint?: boolean;
   archiveBlobEpochs?: number;
   pruneHistory?: boolean;
+  serveHistoricalState?: boolean;
 };
 
 export type ProposalStats = {
@@ -73,6 +74,7 @@ export interface IArchiveStore {
   persistToDisk(): Promise<void>;
 }
 
+
 export enum HistoricalStateStorageType {
   /**
    * Used to refer to full archive in `ArchiveMode.Frequency`
@@ -90,4 +92,15 @@ export enum HistoricalStateStorageType {
    * Refer to the slots with skipped backups during differential backup
    */
   BlockReplay = "blockReplay",
+}
+
+export interface IStateDiffCodec {
+  /**
+   * Compute the binary difference between `base` and `changed` state
+   */
+  compute(base: Uint8Array, changed: Uint8Array): Uint8Array;
+  /**
+   * Apply the `delta` to `base` which was computed with `compute` before
+   */
+  apply(base: Uint8Array, delta: Uint8Array): Uint8Array;
 }

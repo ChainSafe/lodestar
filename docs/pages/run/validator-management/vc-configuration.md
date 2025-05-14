@@ -82,7 +82,7 @@ If you would like to set unique proposer metadata (e.g. fee recipient address) f
 
 If you are running a beacon node with connected builder relays, you may use these validator configurations to signal which block (builder vs. local execution) the beacon node should produce.
 
-With produceBlockV3 (enabled automatically after the Deneb hard fork), the [`--builder.boostFactor`](./validator-cli.md#--builderboostfactor) is a percentage multiplier the block producing beacon node must apply to boost (&gt;100) or dampen (&lt;100) builder block value for selection against execution block. The multiplier is ignored if [`--builder.selection`](./validator-cli.md#--builderselection) is set to anything other than `maxprofit`. Even though this is set on the validator client, the calculation is requested and applied on the beacon node itself. For more information, see the [produceBlockV3 Beacon API](https://ethereum.github.io/beacon-APIs/#/ValidatorRequiredApi/produceBlockV3).
+With produceBlockV3 introduced in Deneb hard fork, the [`--builder.boostFactor`](./validator-cli.md#--builderboostfactor) is a percentage multiplier the block producing beacon node must apply to boost (&gt;100) or dampen (&lt;100) builder block value for selection against execution block. The multiplier is ignored if [`--builder.selection`](./validator-cli.md#--builderselection) is set to anything other than `maxprofit`. Even though this is set on the validator client, the calculation is requested and applied on the beacon node itself. For more information, see the [produceBlockV3 Beacon API](https://ethereum.github.io/beacon-APIs/#/ValidatorRequiredApi/produceBlockV3).
 
 With Lodestar's [`--builder.selection`](./validator-cli.md#--builderselection) validator options, you can select:
 
@@ -118,15 +118,19 @@ Please use the official Ethereum Launchpad to perform your deposits. Ensure your
 - [Ethereum Mainnet Launchpad](https://launchpad.ethereum.org)
 - [Beacon Chain Deposit Contract](https://etherscan.io/address/0x00000000219ab540356cbb839cbe05303d7705fa) `0x00000000219ab540356cBB839Cbe05303d7705Fa`
 
-#### Holesky Testnet
+#### Hoodi Testnet
 
-- [Ethereum Holesky Testnet Launchpad](https://holesky.launchpad.ethereum.org)
-- [Holesky Beacon Chain Deposit Contract](https://holesky.etherscan.io/address/0x4242424242424242424242424242424242424242) `0x4242424242424242424242424242424242424242`
+- [Ethereum Hoodi Testnet Launchpad](https://hoodi.launchpad.ethereum.org)
+- [Hoodi Beacon Chain Deposit Contract](https://hoodi.etherscan.io/address/0x00000000219ab540356cBB839Cbe05303d7705Fa) `0x00000000219ab540356cBB839Cbe05303d7705Fa`
 
 #### Ephemery Testnet
 
 - [Ethereum Ephemery Testnet Launchpad](https://launchpad.ephemery.dev/)
 - [Ephemeral Testnet Resources](https://ephemery.dev/)
+
+### Slashing protection
+
+Slashing protection is enabled by default and cannot be disabled by the user. The slashing protection database is stored in non human-readable format in the `validator-db` folder, which can be found in the root data directory (see `--dataDir` flag). If you migrate to or from a different client, please use the [slashing protection import](./validator-cli.md#validator-slashing-protection-import) or [export](./validator-cli.md#validator-slashing-protection-export) commands to transfer your data.
 
 ## Run the validator
 
@@ -139,20 +143,23 @@ To start a Lodestar validator run the command:
 You should see confirmation that modules have started.
 
 ```txt
-Mar-01 03:06:35.048[]                 info: Lodestar network=holesky, version=v1.16.0/6ad9740, commit=6ad9740a085574306cf46c7642e749d6ec9a4264
-Mar-01 03:06:35.050[]                 info: Connecting to LevelDB database path=/keystoresDir/validator-db-holesky
-Mar-01 03:06:35.697[]                 info: 100% of keystores imported. current=2 total=2 rate=1318.68keys/m
-Mar-01 03:06:35.698[]                 info: 2 local keystores
-Mar-01 03:06:35.698[]                 info: 0xa6fcfca12e1db6c7341d82327010cd57224dc239d1c5e4fb18286cc32edb877d813c5af1c870d474aef7b3ff7ab927ea
-Mar-01 03:06:35.698[]                 info: 0x8f868e53bbe1451bcf6d42c9ab6d292cbd7fbfa09c59b6b99c1dd6a4977e2e7b4b752c328784ca2788dd6f63ffcbdb7e
-Mar-01 03:06:35.732[]                 info: Beacon node urls=http://127.0.0.1:9596
-Mar-01 03:09:23.813[]                 info: Genesis fetched from the beacon node
-Mar-01 03:09:23.816[]                 info: Verified connected beacon node and validator have same the config
-Mar-01 03:09:23.818[]                 info: Verified connected beacon node and validator have the same genesisValidatorRoot
-Mar-01 03:09:23.818[]                 info: Initializing validator useProduceBlockV3=deneb+, broadcastValidation=gossip, defaultBuilderSelection=executiononly, suggestedFeeRecipient=0xeeef273281fB83F56182eE960aA4bAfe7fE075DE, strictFeeRecipientCheck=false
-Mar-01 03:09:23.830[]                 info: Validator seen on beacon chain validatorIndex=1234567, pubKey=0xa6fcfca12e1db6c7341d82327010cd57224dc239d1c5e4fb18286cc32edb877d813c5af1c870d474aef7b3ff7ab927ea
-Mar-01 03:09:23.830[]                 info: Validator seen on beacon chain validatorIndex=1234568, pubKey=0x8f868e53bbe1451bcf6d42c9ab6d292cbd7fbfa09c59b6b99c1dd6a4977e2e7b4b752c328784ca2788dd6f63ffcbdb7e
-Mar-01 03:09:23.830[]                 info: Validator statuses active=2, total=2
-Mar-01 03:15:50.191[]                 info: Published attestations slot=1113379, count=1
-Mar-01 03:16:02.728[]                 info: Published attestations slot=1113380, count=1
+Mar-31 15:24:03.193[]                 info: Lodestar network=hoodi, version=v1.28.1/d565aac, commit=d565aac1d211c8de7d9805ca5f715dd02660d201
+Mar-31 15:24:03.194[]                 info: Connecting to LevelDB database path=/data/validator-db
+Mar-31 15:27:16.511[]                 info: 2 local keystores
+Mar-31 15:27:16.512[]                 info: 0xad3751569b3b7ee67d85e1440fcb954533146ee6545ec23ee78ad1fe680029e4a1869330c8f053ee0fcc0f71a60f9167
+Mar-31 15:27:16.512[]                 info: 0xa8a423cbeaca51064d7b5c04c10fdad0114d71a42786d3dbc835b5b00b481872c55af0cf2af10fb5412f2a66695b5aac
+Mar-31 15:27:20.843[]                 info: Started metrics HTTP server address=http://127.0.0.1:5064
+Mar-31 15:27:20.849[]                 info: Beacon node urls=http://127.0.0.1:9596, requestWireFormat=ssz, responseWireFormat=ssz
+Mar-31 15:27:20.867[]                 info: Genesis fetched from the beacon node
+Mar-31 15:27:20.872[]                 info: Verified connected beacon node and validator have same the config
+Mar-31 15:27:20.873[]                 info: Verified connected beacon node and validator have the same genesisValidatorRoot
+Mar-31 15:27:20.873[]                 info: Initializing validator useProduceBlockV3=deneb+, broadcastValidation=consensus, defaultBuilderSelection=default, suggestedFeeRecipient=0x64fdc5a178746d52a5b15e6ac5130b991abaf079, strictFeeRecipientCheck=false
+Mar-31 15:27:21.961[]                 info: Started REST API server address=http://127.0.0.1:5062
+Mar-31 15:27:21.961[]                 info: REST api server keymanager bearer access token located at: /data/validator-db/api-token.txt
+Mar-31 15:27:21.973[]                 info: Node is synced slot=3961036, headSlot=3961035, isOptimistic=false, elOffline=false
+Mar-31 15:27:22.230[]                 info: Validator seen on beacon chain validatorIndex=123456, pubKey=0xad3751569b3b6ee67d85e1440fcb954533156ee2560ec23ee78ad1fe680029e4a1869330c8f053ee0fcc0f71a60f9167
+Mar-31 15:27:22.230[]                 info: Validator seen on beacon chain validatorIndex=123457, pubKey=0xa8a423cfeaca52054d7b5c04c10fdad0116d71a42786d3dbc835b5b00b481872c55af0cf2af10fb5412f2a66695b5aac
+Mar-31 15:27:22.472[]                 info: Validator statuses active=2, total=2
+Mar-31 15:27:31.162[]                 info: Published attestations slot=3961037, head=0x2c06…feed, count=2
+Mar-31 15:27:38.865[]                 info: Published validator registrations to builder epoch=123782, count=2
 ```
