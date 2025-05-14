@@ -46,6 +46,14 @@ export class HierarchicalLayers {
       throw new HierarchicalLayersError({code: HierarchicalLayersErrorCode.EmptyEpochs});
     }
 
+    // For now we enforce minimum 2 layers, one for snapshot and one for diff
+    if (layerEpochs.length < 2) {
+      throw new HierarchicalLayersError(
+        {code: HierarchicalLayersErrorCode.MinLayers},
+        "Must provide at least 2 layers"
+      );
+    }
+
     for (const epoch of layerEpochs) {
       if (parseFloat(epoch) !== parseInt(epoch, 10)) {
         throw new HierarchicalLayersError(

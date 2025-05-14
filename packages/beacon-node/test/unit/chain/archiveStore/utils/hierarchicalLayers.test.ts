@@ -23,6 +23,12 @@ describe("HierarchicalLayers", () => {
       });
     });
 
+    it("should throw an error for minimum epoch", () => {
+      expect(() => HierarchicalLayers.fromString("1")).toThrowLodestarError({
+        code: HierarchicalLayersErrorCode.MinLayers,
+      });
+    });
+
     it("should throw an error for negative layer epoch", () => {
       expect(() => HierarchicalLayers.fromString("1,3,5,-7")).toThrowLodestarError({
         code: HierarchicalLayersErrorCode.InvalidLayerEpoch,
@@ -38,6 +44,12 @@ describe("HierarchicalLayers", () => {
     it("should throw an error for non-integer layer epoch", () => {
       expect(() => HierarchicalLayers.fromString("1,3,5,7.5")).toThrowLodestarError({
         code: HierarchicalLayersErrorCode.InvalidLayerEpoch,
+      });
+    });
+
+    it("should throw an error for invalid order of epochs", () => {
+      expect(() => HierarchicalLayers.fromString("5,3,7")).toThrowLodestarError({
+        code: HierarchicalLayersErrorCode.InvalidOrder,
       });
     });
   });
