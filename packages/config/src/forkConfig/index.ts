@@ -145,7 +145,12 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
       }
 
       // Sort by epoch in descending order
-      const blobSchedule = [...config.BLOB_SCHEDULE].sort((a, b) => b.EPOCH - a.EPOCH);
+      const blobSchedule = [...config.BLOB_SCHEDULE].sort((a, b) => {
+        if (a.EPOCH !== b.EPOCH) {
+          return b.EPOCH - a.EPOCH;
+        }
+        return b.MAX_BLOBS_PER_BLOCK - a.MAX_BLOBS_PER_BLOCK;
+      });
 
       if (blobSchedule.length === 0) {
         throw Error("Attempt to get MAX_BLOBS_PER_BLOCK from empty BLOB_SCHEDULE");
