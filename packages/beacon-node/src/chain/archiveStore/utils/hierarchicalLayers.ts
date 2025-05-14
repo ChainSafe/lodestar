@@ -93,7 +93,7 @@ export class HierarchicalLayers {
    * Returns a string representation of the layers in the format compatible with `fromString`.
    */
   toString(): string {
-    return `${this.diffEverySlot
+    return `${[...this.diffEverySlot]
       .reverse()
       .map((s) => s / SLOTS_PER_EPOCH)
       .join(",")},${this.snapshotEverySlot / SLOTS_PER_EPOCH}`;

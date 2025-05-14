@@ -70,7 +70,8 @@ describe("HierarchicalLayers", () => {
   });
 
   describe("getArchiveLayers", () => {
-    // Considering that there are 8 slots per epoch and we are using 1,3,5,7 epoch as layers
+    // As we are using `computeStartSlotAtEpoch` function so it will respect the current preset in the tests
+    const layers = "1,3,5,7";
     const overlappingEpochs: {title: string; slot: number; output: Layers}[] = [
       {title: "genesis slot", slot: 0, output: {snapshotSlot: 0, diffSlots: []}},
       {title: "slot after genesis slot", slot: 5, output: {snapshotSlot: 0, diffSlots: []}},
@@ -154,12 +155,12 @@ describe("HierarchicalLayers", () => {
     ];
 
     it.each(overlappingEpochs)("$title", ({slot, output}) => {
-      const hierarchicalLayers = HierarchicalLayers.fromString("1,3,5,7");
+      const hierarchicalLayers = HierarchicalLayers.fromString(layers);
 
       expect(hierarchicalLayers.getArchiveLayers(slot)).toEqual(output);
     });
 
-    // Considering that there are 8 slots per epoch and we are using 3,5,7 epoch as layers
+    const nonOverlappingLayers = "3,5,7";
     const nonOverlappingEpochs: {title: string; slot: number; output: Layers}[] = [
       {title: "genesis slot", slot: 0, output: {snapshotSlot: 0, diffSlots: []}},
       {title: "slot after genesis slot", slot: 5, output: {snapshotSlot: 0, diffSlots: []}},
@@ -208,10 +209,22 @@ describe("HierarchicalLayers", () => {
         slot: computeStartSlotAtEpoch(7) + 1,
         output: {snapshotSlot: computeStartSlotAtEpoch(7), diffSlots: []},
       },
+      {
+        title: "at start of the 12 epoch",
+        slot: computeStartSlotAtEpoch(12),
+        output: {
+          // Snapshots will be at start of epoch 0, 7, 14, so for epoch 12 nearest snapshot will be at start of epoch 7
+          snapshotSlot: computeStartSlotAtEpoch(7),
+          // Diff for layer 1, will be at 0, 5, 10, 16 epoch
+          // Diff for layer 2, will be at 0, 3, 6, 9, 12, 15 epoch
+          // So we will pick nearest diff from each layer
+          diffSlots: [computeStartSlotAtEpoch(10), computeStartSlotAtEpoch(12)],
+        },
+      },
     ];
 
     it.each(nonOverlappingEpochs)("$title", ({slot, output}) => {
-      const hierarchicalLayers = HierarchicalLayers.fromString("3,5,7");
+      const hierarchicalLayers = HierarchicalLayers.fromString(nonOverlappingLayers);
 
       expect(hierarchicalLayers.getArchiveLayers(slot)).toEqual(output);
     });
