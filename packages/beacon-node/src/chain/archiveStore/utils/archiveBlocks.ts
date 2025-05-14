@@ -38,7 +38,7 @@ export async function archiveBlocks(
   archiveBlobEpochs?: number
 ): Promise<void> {
   // Use fork choice to determine the blocks to archive and delete
-  // Use single function call for better performance
+  // getAllAncestorBlocks response includes the finalized block, so it's also moved to the cold db
   const {ancestorBlocks: finalizedCanonicalBlocks, nonAncestorBlocks: finalizedNonCanonicalBlocks} =
     forkChoice.getAllAncestorAndNonAncestorBlocks(finalizedCheckpoint.rootHex);
 

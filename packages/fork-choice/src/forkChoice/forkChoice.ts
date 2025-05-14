@@ -932,7 +932,7 @@ export class ForkChoice implements IForkChoice {
    */
   getAllAncestorBlocks(blockRoot: RootHex): ProtoBlock[] {
     const ancestors = this.protoArray.getAllAncestorNodes(blockRoot);
-    // Exclude the last node as before
+    // the last node is the previous finalized one, it's there to check onBlock finalized checkpoint only.
     return ancestors.slice(0, ancestors.length - 1);
   }
 
