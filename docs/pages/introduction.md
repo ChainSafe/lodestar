@@ -31,5 +31,5 @@ The [non-finality event of May 2023](https://medium.com/offchainlabs/post-mortem
 - [Upgrading Ethereum](https://eth2book.info/capella/) by Ben Edgington
 - [Ethereum Book](https://github.com/ethereumbook/ethereumbook) by Andreas M. Antonopoulos and Gavin Wood
 - [Ethereum Consensus Specification](https://github.com/ethereum/consensus-specs)
-- [Casper the Friendly Finality Gadget](https://browse.arxiv.org/pdf/1710.09437.pdf) by Vitalik Buterin and Virgil Griffith
+- [Casper the Friendly Finality Gadget](https://arxiv.org/pdf/1710.09437) by Vitalik Buterin and Virgil Griffith
 - [LMD Ghost](https://github.com/protolambda/lmd-ghost) by protolambda
