@@ -24,5 +24,5 @@ export * from "./verifyMerkleBranch.js";
 export * from "./promise.js";
 export * from "./waitFor.js";
 export * from "./ethConversion.js";
-export {bigintToNumber} from "./bigint.js";
-
+export * from "./fetch.js";
+export * from "./bigint.js";
