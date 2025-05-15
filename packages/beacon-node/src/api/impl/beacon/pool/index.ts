@@ -8,6 +8,7 @@ import {
   isForkPostElectra,
 } from "@lodestar/params";
 import {Attestation, Epoch, SingleAttestation, isElectraAttestation, ssz} from "@lodestar/types";
+import {bigintToNumber} from "@lodestar/utils";
 import {
   AttestationError,
   AttestationErrorCode,
@@ -23,21 +24,6 @@ import {validateApiVoluntaryExit} from "../../../../chain/validation/voluntaryEx
 import {validateGossipFnRetryUnknownRoot} from "../../../../network/processor/gossipHandlers.js";
 import {ApiError, FailureList, IndexedError} from "../../errors.js";
 import {ApiModules} from "../../types.js";
-
-/**
- * Safely converts a bigint to number, throwing an error if the conversion would result in loss of precision
- * or if the value is outside the safe integer range.
- */
-function bigintToNumber(bn: bigint): number {
-  if (bn > BigInt(Number.MAX_SAFE_INTEGER) || bn < BigInt(Number.MIN_SAFE_INTEGER)) {
-    throw new Error(`Cannot safely convert bigint ${bn} to number - value outside safe integer range`);
-  }
-  const num = Number(bn);
-  if (Number.isNaN(num)) {
-    throw new Error(`Cannot convert bigint ${bn} to number - conversion resulted in NaN`);
-  }
-  return num;
-}
 
 export function getBeaconPoolApi({
   chain,
