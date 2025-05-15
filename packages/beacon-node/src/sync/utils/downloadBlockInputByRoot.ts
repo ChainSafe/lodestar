@@ -1,15 +1,8 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {deneb} from "@lodestar/types";
-import {LodestarError, fromHex, toHex} from "@lodestar/utils";
-import {
-  BlockInput,
-  BlockInputDataStatus,
-  BlockInputSource,
-  BlockInputType,
-  getDataAvailabilityStatus,
-  isBlockInputBlobs,
-} from "../../chain/blocks/blockInput-mkeil/index.js";
+import {LodestarError, fromHex, prettyBytes, toHex} from "@lodestar/utils";
+import {BlockInputSource, DAType, IBlockInput, isBlockInputBlobs} from "../../chain/blocks/blockInput/index.js";
 import {SeenBlockInputCache} from "../../chain/seenCache/seenBlockInput.js";
 import {IExecutionEngine} from "../../execution/index.js";
 import {INetwork} from "../../network/index.js";
@@ -48,7 +41,7 @@ export async function downloadBlockInputByRoot({
     });
   }
 
-  if (pending.blockInput.needsData()) {
+  if (!pending.blockInput.hasAllData()) {
     await downloadAndCacheData({
       config,
       network,
@@ -67,24 +60,26 @@ export async function downloadAndCacheBlock({
   pending,
   peerIdStr,
 }: Omit<DownloadBlockInputByRootProps, "config" | "executionEngine">): Promise<PendingBlockInput> {
-  const rootHex = getBlockInputSyncCacheItemRootHex(pending);
-  const blockRoot = fromHex(rootHex);
+  const blockRootHex = getBlockInputSyncCacheItemRootHex(pending);
+  const blockRoot = fromHex(blockRootHex);
   const [response] = await network.sendBeaconBlocksByRoot(peerIdStr, [blockRoot]);
   if (isPendingBlockInput(pending)) {
     pending.blockInput.addBlock({
-      peerIdStr,
+      blockRootHex,
       block: response.data,
-      seenTimestampSec: Date.now(),
-      source: BlockInputSource.byRoot,
+      source: {
+        seenTimestampSec: Date.now(),
+        source: BlockInputSource.byRoot,
+        peerIdStr,
+      },
     });
     return pending;
   }
 
   const blockInput = cache.getBlockInputByBlock({
     block: response.data,
-    blockRoot,
-    seenTimestampSec: Date.now(),
     source: BlockInputSource.byRoot,
+    seenTimestampSec: Date.now(),
     peerIdStr,
   });
   return {
@@ -102,11 +97,11 @@ export async function downloadAndCacheData({
   executionEngine,
   blockInput,
   peerIdStr,
-}: Omit<DownloadBlockInputByRootProps, "cache" | "pending"> & {blockInput: BlockInput}): Promise<void> {
+}: Omit<DownloadBlockInputByRootProps, "cache" | "pending"> & {blockInput: IBlockInput}): Promise<void> {
   if (isBlockInputBlobs(blockInput)) {
     const missingBlobsMeta = blockInput.getMissingBlobMeta();
     if (executionEngine) {
-      const forkName = blockInput.getForkName();
+      const forkName = blockInput.forkName;
       const response = await executionEngine.getBlobs(
         forkName,
         missingBlobsMeta.map(({versionHash}) => versionHash)
@@ -128,14 +123,14 @@ export async function downloadAndCacheData({
           };
           blockInput.addBlob({
             blobSidecar,
-            rootHex: blockInput.rootHex,
+            blockRootHex: blockInput.blockRootHex,
             seenTimestampSec: Date.now(),
             source: BlockInputSource.engine,
           });
         }
       }
 
-      if (!blockInput.needsData()) {
+      if (blockInput.hasAllData()) {
         return;
       }
     }
@@ -151,10 +146,10 @@ export async function downloadAndCacheData({
         .getForkTypes(blobSidecar.signedBlockHeader.message.slot)
         .BeaconBlockHeader.hashTreeRoot(blobSidecar.signedBlockHeader.message);
       blockInput.addBlob({
-        peerIdStr,
         blobSidecar,
+        peerIdStr,
         seenTimestampSec,
-        rootHex: toHex(blockRoot),
+        blockRootHex: toHex(blockRoot),
         source: BlockInputSource.byRoot,
       });
     }
@@ -164,7 +159,7 @@ export async function downloadAndCacheData({
 
   throw new DownloadByRootError({
     code: DownloadByRootErrorCode.INVALID_BLOCK_INPUT_TYPE,
-    blockRoot: blockInput.prettyRootHex,
+    blockRoot: prettyBytes(blockInput.blockRootHex),
     type: blockInput.type,
   });
 }
@@ -179,7 +174,7 @@ export type DownloadByRootErrorType =
   | {
       code: DownloadByRootErrorCode.INVALID_BLOCK_INPUT_TYPE;
       blockRoot: string;
-      type: BlockInputType;
+      type: DAType;
     }
   | {
       code: DownloadByRootErrorCode.BLOCK_NOT_DOWNLOADED;
