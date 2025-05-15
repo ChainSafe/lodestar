@@ -3,14 +3,13 @@ import {ForkPostDeneb, INTERVALS_PER_SLOT} from "@lodestar/params";
 import {RootHex} from "@lodestar/types";
 import {LodestarError, Logger, fromHex, prettyBytes, prettyPrintArray, pruneSetToMax, sleep} from "@lodestar/utils";
 import {
-  BlockInput,
   BlockInputBlobs,
-  BlockInputDataStatus,
-  DataAvailabilityStatus,
+  IBlockInput,
   convertNewToOldBlobSource,
   convertNewToOldBlockSource,
-} from "../chain/blocks/blockInput-mkeil/index.js";
-import {BlockInput as BlockInputOld, getBlockInput} from "../chain/blocks/types.js";
+  isBlockInputPreDeneb,
+} from "../chain/blocks/blockInput/index.js";
+import {BlockInput as BlockInputOld, getBlockInput as getBlockInputOld} from "../chain/blocks/types.js";
 import {BlockError, BlockErrorCode} from "../chain/errors/blockError.js";
 import {IBeaconChain} from "../chain/index.js";
 import {Metrics} from "../metrics/index.js";
@@ -141,7 +140,7 @@ export class BlockInputSync {
   private onUnknownParent = (data: NetworkEventData[NetworkEvent.unknownParent]): void => {
     try {
       const {blockInput, source, peer} = data;
-      this.addUnknownBlockRoot(blockInput.getParentRootHex(), peer);
+      this.addUnknownBlockRoot(blockInput.parentRootHex, peer);
       this.addBlockInput(blockInput, peer);
       this.triggerUnknownBlockSearch();
       this.metrics?.blockInputSync.onUnknownParent.inc({source}, 2);
@@ -191,8 +190,8 @@ export class BlockInputSync {
     return pendingBlock;
   };
 
-  private addBlockInput(blockInput: BlockInput, peerIdStr?: string): PendingBlockInput {
-    let pendingBlock = this.pendingBlocks.get(blockInput.rootHex) as PendingBlockInput;
+  private addBlockInput(blockInput: IBlockInput, peerIdStr?: string): PendingBlockInput {
+    let pendingBlock = this.pendingBlocks.get(blockInput.blockRootHex) as PendingBlockInput;
     if (!pendingBlock || !isPendingBlockInput(pendingBlock)) {
       pendingBlock = {
         status: PendingBlockInputStatus.pending,
@@ -200,7 +199,7 @@ export class BlockInputSync {
         peerIdStrings: new Set(),
         timeAddedSec: Date.now() / 1000,
       };
-      this.pendingBlocks.set(blockInput.rootHex, pendingBlock);
+      this.pendingBlocks.set(blockInput.blockRootHex, pendingBlock);
 
       this.logger.verbose("Added blockInput to BlockInputSync.pendingBlocks", pendingBlock.blockInput.getLogMeta());
     }
@@ -243,7 +242,7 @@ export class BlockInputSync {
 
       for (const block of ancestors) {
         // when this happens, it's likely the block and parent block are processed by head sync
-        if (this.chain.forkChoice.hasBlockHex(block.blockInput.getParentRootHex())) {
+        if (this.chain.forkChoice.hasBlockHex(block.blockInput.parentRootHex)) {
           processedBlocks++;
           this.processBlock(block).catch((e) => {
             this.logger.debug("Unexpected error - process old downloaded block", {}, e);
@@ -262,7 +261,7 @@ export class BlockInputSync {
     // most of the time there is exactly 1 unknown block
     for (const block of unknowns) {
       this.downloadBlock(block, connectedPeers).catch((e) => {
-        const rootHex = prettyBytes(isPendingBlockInput(block) ? block.blockInput.rootHex : block.rootHex);
+        const rootHex = prettyBytes(isPendingBlockInput(block) ? block.blockInput.blockRootHex : block.rootHex);
         this.logger.debug("Unexpected error - downloadBlock", {rootHex}, e);
       });
     }
@@ -292,7 +291,7 @@ export class BlockInputSync {
 
     const pending = res.result;
     const {blockInput} = pending;
-    this.pendingBlocks.set(blockInput.rootHex, pending);
+    this.pendingBlocks.set(blockInput.blockRootHex, pending);
     this.metrics?.blockInputSync.downloadSuccess.inc();
 
     pending.status = PendingBlockInputStatus.downloaded;
@@ -303,7 +302,7 @@ export class BlockInputSync {
     const delaySec = pending.timeSyncedSec - (this.chain.genesisTime + blockSlot * this.config.SECONDS_PER_SLOT);
     this.metrics?.blockInputSync.elapsedTimeTillReceived.observe(delaySec);
 
-    const parentRootHex = blockInput.getParentRootHex();
+    const parentRootHex = blockInput.parentRootHex;
     const parentInForkChoice = this.chain.forkChoice.hasBlock(fromHex(parentRootHex));
     const finalizedSlot = this.chain.forkChoice.getFinalizedBlock().slot;
 
@@ -326,7 +325,7 @@ export class BlockInputSync {
       });
       this.removeAndDownScoreAllDescendants(block);
     } else {
-      this.addUnknownBlockRoot(blockInput.getParentRootHex());
+      this.addUnknownBlockRoot(blockInput.parentRootHex);
     }
   };
 
@@ -350,7 +349,7 @@ export class BlockInputSync {
           peerIdStr,
         });
 
-        if (pending.blockInput.isComplete()) {
+        if (pending.blockInput.hasBlockAndAllData()) {
           this.logger.debug(
             `Successfully downloaded PendingBlockInput byRoot on attempt number ${i}`,
             getLogMeta(pending)
@@ -393,9 +392,8 @@ export class BlockInputSync {
       // proposer is known by a gossip block already, wait a bit to make sure this block is not
       // eligible for proposer boost to prevent un-bundling attack
       this.logger.verbose("Avoid proposer boost for this block of known proposer", {
-        blockSlot,
         proposerIndex,
-        blockRoot: block.blockInput.prettyRootHex,
+        ...block.blockInput.getLogMeta(),
       });
       await sleep(this.proposerBoostSecWindow * 1000);
     }
@@ -404,41 +402,33 @@ export class BlockInputSync {
      * This whole conversion is only to get this to build.  Once the process pipeline is updated this code segment will
      * all go away (along with the helper functions).
      */
-    const blockWithSource = block.blockInput.getBlockWithSource();
+    const signedBeaconBlock = block.blockInput.getBlock();
+    const blockSource = block.blockInput.getBlockSource();
     let blockInputOld: BlockInputOld;
-    switch (block.blockInput.getDataAvailability()) {
-      case DataAvailabilityStatus.Available: {
-        const blobsWithSource = (block.blockInput as BlockInputBlobs).getAllBlobsWithSource();
-        blockInputOld = getBlockInput.availableData(
-          this.config,
-          blockWithSource.block,
-          convertNewToOldBlockSource(blockWithSource.source),
-          {
-            blobs: blobsWithSource.map(({blobSidecar}) => blobSidecar),
-            blobsSource: convertNewToOldBlobSource(blobsWithSource[0].source),
-            fork: block.blockInput.getForkName() as ForkPostDeneb,
-          }
-        );
-        break;
-      }
-      case DataAvailabilityStatus.OutOfRange:
-        blockInputOld = getBlockInput.outOfRangeData(
-          this.config,
-          blockWithSource.block,
-          convertNewToOldBlockSource(blockWithSource.source)
-        );
-        break;
-      case DataAvailabilityStatus.PreData:
-        blockInputOld = getBlockInput.preData(
-          this.config,
-          blockWithSource.block,
-          convertNewToOldBlockSource(blockWithSource.source)
-        );
-        break;
-      default:
-        throw new BlockInputSyncError({
-          code: BlockInputSyncErrorCode.INVALID_CONVERSION_TO_OLD_BLOCK_INPUT,
-        });
+    if (isBlockInputPreDeneb(block.blockInput)) {
+      blockInputOld = getBlockInputOld.preData(
+        this.config,
+        signedBeaconBlock,
+        convertNewToOldBlockSource(blockSource.source)
+      );
+    } else if (block.blockInput.daOutOfRange) {
+      blockInputOld = getBlockInputOld.outOfRangeData(
+        this.config,
+        signedBeaconBlock,
+        convertNewToOldBlockSource(blockSource.source)
+      );
+    } else {
+      const blobsWithSource = (block.blockInput as BlockInputBlobs).getAllBlobsWithSource();
+      blockInputOld = getBlockInputOld.availableData(
+        this.config,
+        signedBeaconBlock,
+        convertNewToOldBlockSource(blockSource.source),
+        {
+          blobs: blobsWithSource.map(({blobSidecar}) => blobSidecar),
+          blobsSource: convertNewToOldBlobSource(blobsWithSource[0].source),
+          fork: block.blockInput.forkName as ForkPostDeneb,
+        }
+      );
     }
 
     // At gossip time, it's critical to keep a good number of mesh peers.
@@ -506,10 +496,10 @@ export class BlockInputSync {
 
     this.metrics?.blockInputSync.processSuccess.inc();
     // no need to update status to "processed", delete anyway
-    this.pendingBlocks.delete(block.blockInput.rootHex);
+    this.pendingBlocks.delete(block.blockInput.blockRootHex);
 
     // Send child blocks to the processor
-    for (const descendantBlock of getDescendantBlocks(block.blockInput.rootHex, this.pendingBlocks)) {
+    for (const descendantBlock of getDescendantBlocks(block.blockInput.blockRootHex, this.pendingBlocks)) {
       if (isPendingBlockInput(descendantBlock)) {
         this.processBlock(descendantBlock).catch((e) => {
           this.logger.debug("Unexpected error - process descendant block", getLogMeta(descendantBlock), e);
@@ -581,10 +571,10 @@ function getUnknownAndAncestorBlocks(blocks: Map<RootHex, BlockInputSyncCacheIte
       continue;
     }
 
-    const parentHex = block.blockInput.getParentRootHex(false);
+    const parentHex = block.blockInput.parentRootHex;
     if (
       block.status === PendingBlockInputStatus.pending &&
-      (!block.blockInput.hasBlock() || block.blockInput.needsData())
+      (!block.blockInput.hasBlock() || !block.blockInput.hasAllData())
       // && !parentHex
       // TODO: (@matthewkeil) Does this condition need to be here still? The
       //       parentHex will be known if any data or if the block has arrived
@@ -607,7 +597,7 @@ export function getDescendantBlocks(
   const descendantBlocks: BlockInputSyncCacheItem[] = [];
 
   for (const block of blocks.values()) {
-    if (isPendingBlockInput(block) && block.blockInput.getParentRootHex(false) === blockRootHex) {
+    if (isPendingBlockInput(block) && block.blockInput.parentRootHex === blockRootHex) {
       descendantBlocks.push(block);
     }
   }
@@ -616,17 +606,12 @@ export function getDescendantBlocks(
 }
 
 enum BlockInputSyncErrorCode {
-  INVALID_CONVERSION_TO_OLD_BLOCK_INPUT = "BLOCK_INPUT_SYNC_ERROR_INVALID_CONVERSION_TO_OLD_BLOCK_INPUT",
   MAX_ATTEMPTS = "BLOCK_INPUT_SYNC_ERROR_MAX_ATTEMPTS",
 
   Z = "BLOCK_INPUT_SYNC_ERROR_Z",
 }
-type BlockInputSyncErrorType =
-  | {
-      code: BlockInputSyncErrorCode.INVALID_CONVERSION_TO_OLD_BLOCK_INPUT;
-    }
-  | {
-      code: BlockInputSyncErrorCode.MAX_ATTEMPTS;
-      blockRoot: RootHex;
-    };
+type BlockInputSyncErrorType = {
+  code: BlockInputSyncErrorCode.MAX_ATTEMPTS;
+  blockRoot: RootHex;
+};
 class BlockInputSyncError extends LodestarError<BlockInputSyncErrorType> {}

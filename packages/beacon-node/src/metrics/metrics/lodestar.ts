@@ -19,7 +19,7 @@ import {AllocSource} from "../../util/bufferPool.js";
 import {LodestarMetadata} from "../options.js";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
 
-import {BlockInputSyncSource} from "../../chain/blocks/blockInput-mkeil/index.js";
+import {BlockInputSource} from "../../chain/blocks/blockInput/index.js";
 
 export type LodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 
@@ -486,29 +486,34 @@ export function createLodestarMetrics(
     },
 
     blockInputSync: {
+      switchNetworkSubscriptions: register.gauge<{action: string}>({
+        name: "lodestar_block_input_sync_network_subscriptions_count",
+        help: "Switch network subscriptions on/off",
+        labelNames: ["action"],
+      }),
       pendingBlocks: register.gauge({
-        name: "lodestar_sync_block_input_sync_pending_blocks_size",
+        name: "lodestar_block_input_sync_pending_blocks_size",
         help: "Current size of BlockInputSync pending blocks cache",
       }),
       knownBadBlocks: register.gauge({
-        name: "lodestar_sync_block_input_sync_known_bad_blocks_size",
+        name: "lodestar_block_input_sync_known_bad_blocks_size",
         help: "Current size of BlockInputSync known bad blocks cache",
       }),
       removeBadBlocks: register.gauge({
         name: "lodestar_block_input_sync_removed_bad_blocks_count",
         help: "Number of bad blocks, with descendants that were removed from the sync cache",
       }),
-      onBlockInput: register.gauge<{source: BlockInputSyncSource}>({
+      onBlockInput: register.gauge<{source: BlockInputSource}>({
         name: "lodestar_block_input_sync_on_block_input_source",
         help: "Emission source for NetworkEvent.blockInput that triggered sync",
         labelNames: ["source"],
       }),
-      onUnknownParent: register.gauge<{source: BlockInputSyncSource}>({
+      onUnknownParent: register.gauge<{source: BlockInputSource}>({
         name: "lodestar_block_input_sync_on_unknown_parent_source",
         help: "Emission source for NetworkEvent.unknownParent that triggered sync",
         labelNames: ["source"],
       }),
-      onUnknownBlockRoot: register.gauge<{source: BlockInputSyncSource}>({
+      onUnknownBlockRoot: register.gauge<{source: BlockInputSource}>({
         name: "lodestar_block_input_sync_on_unknown_block_route_source",
         help: "Emission source for NetworkEvent.unknownBlockRoot that triggered sync",
         labelNames: ["source"],
