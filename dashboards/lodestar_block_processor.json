@@ -7,6 +7,13 @@
       "pluginId": "prometheus",
       "pluginName": "Prometheus",
       "type": "datasource"
+    },
+    {
+      "description": "",
+      "label": "Beacon node job name",
+      "name": "VAR_BEACON_JOB",
+      "type": "constant",
+      "value": "beacon"
     }
   ],
   "annotations": {
@@ -4849,6 +4856,7 @@
           "expr": "rate(lodestar_gossip_block_elapsed_time_till_received_sum[$rate_interval]) / rate(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval])",
           "format": "heatmap",
           "instant": false,
+          "interval": "",
           "legendFormat": "{{source}}",
           "range": true,
           "refId": "A"
@@ -7077,7 +7085,8 @@
             }
           },
           "mappings": [],
-          "unit": "percentunit"
+          "unit": "percentunit",
+          "unitScale": true
         },
         "overrides": []
       },
@@ -7291,7 +7300,8 @@
             }
           },
           "mappings": [],
-          "unit": "percentunit"
+          "unit": "percentunit",
+          "unitScale": true
         },
         "overrides": []
       },
@@ -7489,7 +7499,8 @@
             }
           },
           "mappings": [],
-          "unit": "percentunit"
+          "unit": "percentunit",
+          "unitScale": true
         },
         "overrides": []
       },
@@ -7623,7 +7634,8 @@
             }
           },
           "mappings": [],
-          "unit": "percentunit"
+          "unit": "percentunit",
+          "unitScale": true
         },
         "overrides": []
       },
@@ -7740,7 +7752,8 @@
               "mode": "off"
             }
           },
-          "mappings": []
+          "mappings": [],
+          "unitScale": true
         },
         "overrides": []
       },
@@ -7841,7 +7854,8 @@
               "mode": "off"
             }
           },
-          "mappings": []
+          "mappings": [],
+          "unitScale": true
         },
         "overrides": []
       },
@@ -8024,14 +8038,14 @@
       {
         "current": {
           "selected": false,
-          "text": "beacon",
-          "value": "beacon"
+          "text": "${VAR_BEACON_JOB}",
+          "value": "${VAR_BEACON_JOB}"
         },
         "description": "Job name used in Prometheus config to scrape Beacon node",
         "hide": 2,
         "label": "Beacon node job name",
         "name": "beacon_job",
-        "query": "beacon",
+        "query": "${VAR_BEACON_JOB}",
         "skipUrlSync": false,
         "type": "constant"
       }
