@@ -573,7 +573,7 @@ export function getValidatorApi(
       );
     }
 
-    const graffitiBuffer = toGraffitiBuffer(
+    const graffitiBytes = toGraffitiBuffer(
       graffiti ?? getDefaultGraffiti(getLodestarClientVersion(opts), chain.executionEngine.clientVersion, opts)
     );
 
@@ -593,9 +593,7 @@ export function getValidatorApi(
       slot,
       parentBlockRoot,
       randaoReveal,
-      graffiti: toGraffitiBuffer(
-        graffiti ?? getDefaultGraffiti(getLodestarClientVersion(opts), chain.executionEngine.clientVersion, opts)
-      ),
+      graffiti: graffitiBytes,
     });
     logger.debug("Produced common block body", loggerContext);
 
@@ -614,7 +612,7 @@ export function getValidatorApi(
     // Start calls for building execution and builder blocks
 
     const builderPromise = isBuilderEnabled
-      ? produceBuilderBlindedBlock(slot, randaoReveal, graffitiBuffer, {
+      ? produceBuilderBlindedBlock(slot, randaoReveal, graffitiBytes, {
           feeRecipient,
           // can't do fee recipient checks as builder bid doesn't return feeRecipient as of now
           strictFeeRecipientCheck: false,
@@ -624,7 +622,7 @@ export function getValidatorApi(
       : Promise.reject(new Error("Builder disabled"));
 
     const enginePromise = isEngineEnabled
-      ? produceEngineFullBlockOrContents(slot, randaoReveal, graffitiBuffer, {
+      ? produceEngineFullBlockOrContents(slot, randaoReveal, graffitiBytes, {
           feeRecipient,
           strictFeeRecipientCheck,
           commonBlockBody,
