@@ -13,7 +13,7 @@ import {CommonBlockBody} from "../../../../../src/chain/interface.js";
 import {BlockType, produceBlockBody} from "../../../../../src/chain/produceBlock/index.js";
 import {PayloadIdCache} from "../../../../../src/execution/index.js";
 import {SyncState} from "../../../../../src/sync/interface.js";
-import {toGraffitiBuffer} from "../../../../../src/util/graffiti.js";
+import {toGraffitiBytes} from "../../../../../src/util/graffiti.js";
 import {ApiTestModules, getApiTestModules} from "../../../../utils/api.js";
 import {generateCachedBellatrixState, zeroProtoBlock} from "../../../../utils/state.js";
 import {generateProtoBlock} from "../../../../utils/typeGenerator.js";
@@ -200,7 +200,7 @@ describe("api/validator - produceBlockV3", () => {
     await api.produceBlockV3({slot, randaoReveal, graffiti, feeRecipient});
     expect(modules.chain.produceBlock).toBeCalledWith({
       randaoReveal,
-      graffiti: toGraffitiBuffer(graffiti),
+      graffiti: toGraffitiBytes(graffiti),
       slot,
       parentBlockRoot,
       feeRecipient,
@@ -211,7 +211,7 @@ describe("api/validator - produceBlockV3", () => {
     await api.produceBlockV3({slot, randaoReveal, graffiti});
     expect(modules.chain.produceBlock).toBeCalledWith({
       randaoReveal,
-      graffiti: toGraffitiBuffer(graffiti),
+      graffiti: toGraffitiBytes(graffiti),
       slot,
       parentBlockRoot,
       feeRecipient: undefined,
@@ -253,7 +253,7 @@ describe("api/validator - produceBlockV3", () => {
     // use fee recipient passed in produceBlockBody call for payload gen in engine notifyForkchoiceUpdate
     await produceBlockBody.call(modules.chain as unknown as BeaconChain, BlockType.Full, state, {
       randaoReveal,
-      graffiti: toGraffitiBuffer(graffiti),
+      graffiti: toGraffitiBytes(graffiti),
       slot,
       feeRecipient,
       parentSlot: slot - 1,
@@ -278,7 +278,7 @@ describe("api/validator - produceBlockV3", () => {
     modules.chain["beaconProposerCache"].getOrDefault.mockReturnValue("0x fee recipient address");
     await produceBlockBody.call(modules.chain as unknown as BeaconChain, BlockType.Full, state, {
       randaoReveal,
-      graffiti: toGraffitiBuffer(graffiti),
+      graffiti: toGraffitiBytes(graffiti),
       slot,
       parentSlot: slot - 1,
       parentBlockRoot: fromHexString(ZERO_HASH_HEX),
