@@ -24,7 +24,7 @@ export const ForkListType = ArrayOf(ssz.phase0.Fork);
 
 export type DepositContract = ValueOf<typeof DepositContractType>;
 export type ForkList = ValueOf<typeof ForkListType>;
-export type Spec = Record<string, string>;
+export type Spec = Record<string, string | Record<string, string>[]>;
 
 export type Endpoints = {
   /**

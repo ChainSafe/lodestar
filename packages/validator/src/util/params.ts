@@ -20,7 +20,10 @@ type ConfigWithPreset = ChainConfig & BeaconPreset;
  * So this check only compares a specific list of parameters that are consensus critical, ignoring the rest. Typed
  * config and preset ensure new parameters are labeled critical or ignore, facilitating maintenance of the list.
  */
-export function assertEqualParams(localConfig: ChainConfig, externalSpecJson: Record<string, string>): void {
+export function assertEqualParams(
+  localConfig: ChainConfig,
+  externalSpecJson: Record<string, string | Record<string, string>[]>
+): void {
   // Before comparing, add preset which is bundled in api impl config route.
   // config and preset must be serialized to JSON for safe comparisions.
   const localSpecJson = {

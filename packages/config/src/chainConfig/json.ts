@@ -3,8 +3,8 @@ import {BlobSchedule, ChainConfig, SpecValue, SpecValueTypeName, chainConfigType
 
 const MAX_UINT64_JSON = "18446744073709551615";
 
-export function chainConfigToJson(config: ChainConfig): Record<string, string> {
-  const json: Record<string, string> = {};
+export function chainConfigToJson(config: ChainConfig): Record<string, string | Record<string, string>[]> {
+  const json: Record<string, string | Record<string, string>[]> = {};
 
   for (const key of Object.keys(chainConfigTypes) as (keyof ChainConfig)[]) {
     const value = config[key];
@@ -29,8 +29,8 @@ export function chainConfigFromJson(json: Record<string, unknown>): ChainConfig 
   return config;
 }
 
-export function specValuesToJson(spec: Record<string, SpecValue>): Record<string, string> {
-  const json: Record<string, string> = {};
+export function specValuesToJson(spec: Record<string, SpecValue>): Record<string, string | Record<string, string>[]> {
+  const json: Record<string, string | Record<string, string>[]> = {};
 
   for (const key of Object.keys(spec)) {
     json[key] = serializeSpecValue(spec[key], toSpecValueTypeName(spec[key]));
@@ -49,7 +49,7 @@ export function toSpecValueTypeName(value: SpecValue): SpecValueTypeName {
   throw Error(`Unknown value type ${value}`);
 }
 
-export function serializeSpecValue(value: SpecValue, typeName: SpecValueTypeName): string {
+export function serializeSpecValue(value: SpecValue, typeName: SpecValueTypeName): string | Record<string, string>[] {
   switch (typeName) {
     case "number":
       if (typeof value !== "number") {
@@ -82,21 +82,43 @@ export function serializeSpecValue(value: SpecValue, typeName: SpecValueTypeName
         throw Error(`Invalid value ${value.toString()} expected BlobSchedule`);
       }
 
-      return JSON.stringify(value, (key, value) => {
-        if (key === "EPOCH" || key === "MAX_BLOBS_PER_BLOCK") {
-          if (value === Infinity) {
-            return MAX_UINT64_JSON;
-          }
-          return value.toString(10);
-        }
-        return value;
-      });
+      return value.map(({EPOCH, MAX_BLOBS_PER_BLOCK}) => ({
+        EPOCH: EPOCH === Infinity ? MAX_UINT64_JSON : EPOCH.toString(10),
+        MAX_BLOBS_PER_BLOCK: MAX_BLOBS_PER_BLOCK === Infinity ? MAX_UINT64_JSON : MAX_BLOBS_PER_BLOCK.toString(10),
+      }));
   }
 }
 
 export function deserializeSpecValue(valueStr: unknown, typeName: SpecValueTypeName, keyName: string): SpecValue {
+  if (typeName === "blob_schedule") {
+    if (!Array.isArray(valueStr)) {
+      throw Error("Invalid blob schedule must be an array");
+    }
+
+    const blobSchedule = valueStr.map((entry) => {
+      if (typeof entry !== "object" || entry === null) {
+        throw Error(`Invalid blob schedule entry ${entry}`);
+      }
+
+      const out: Record<string, unknown> = {...entry};
+
+      for (const key of ["EPOCH", "MAX_BLOBS_PER_BLOCK"]) {
+        const raw = entry[key];
+        if (raw === MAX_UINT64_JSON) {
+          out[key] = Infinity;
+        } else {
+          out[key] = parseInt(raw, 10);
+        }
+      }
+
+      return out;
+    });
+
+    return blobSchedule as BlobSchedule;
+  }
+
   if (typeof valueStr !== "string") {
-    throw Error(`Invalid ${keyName} value ${valueStr as string} expected string`);
+    throw Error(`Invalid ${keyName} value ${valueStr} expected string`);
   }
 
   switch (typeName) {
@@ -114,22 +136,5 @@ export function deserializeSpecValue(valueStr: unknown, typeName: SpecValueTypeN
 
     case "string":
       return valueStr;
-
-    case "blob_schedule": {
-      const parsedJson = JSON.parse(valueStr, (key, value) => {
-        if (key === "EPOCH" || key === "MAX_BLOBS_PER_BLOCK") {
-          if (value === MAX_UINT64_JSON) {
-            return Infinity;
-          }
-          return parseInt(value, 10);
-        }
-        return value;
-      });
-
-      if (!isBlobSchedule(parsedJson)) {
-        throw Error(`Invalid blob schedule value ${valueStr}`);
-      }
-      return parsedJson as BlobSchedule;
-    }
   }
 }

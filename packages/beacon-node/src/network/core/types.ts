@@ -73,7 +73,7 @@ export interface INetworkCore extends INetworkCorePublic {
 export type NetworkWorkerData = {
   // TODO: Review if NetworkOptions is safe for passing
   opts: NetworkOptions;
-  chainConfigJson: Record<string, string>;
+  chainConfigJson: Record<string, string | Record<string, string>[]>;
   genesisValidatorsRoot: Uint8Array;
   genesisTime: number;
   activeValidatorCount: number;

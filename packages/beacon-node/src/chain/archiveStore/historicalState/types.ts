@@ -20,7 +20,7 @@ export type HistoricalStateRegenModules = HistoricalStateRegenInitModules & {
 };
 
 export type HistoricalStateWorkerData = {
-  chainConfigJson: Record<string, string>;
+  chainConfigJson: Record<string, string | Record<string, string>[]>;
   genesisValidatorsRoot: Uint8Array;
   genesisTime: number;
   maxConcurrency: number;
