@@ -51,9 +51,14 @@
       "url": ""
     }
   ],
+  "liveNow": false,
   "panels": [
     {
       "collapsed": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -62,6 +67,15 @@
       },
       "id": 25,
       "panels": [],
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "A"
+        }
+      ],
       "title": "Block processor",
       "type": "row"
     },
@@ -82,7 +96,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "opacity",
@@ -128,12 +141,11 @@
           "showLegend": false
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "8.4.0-beta1",
       "targets": [
         {
           "datasource": {
@@ -167,7 +179,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 30,
             "gradientMode": "opacity",
@@ -215,12 +226,11 @@
           "showLegend": false
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "7.4.5",
       "targets": [
         {
           "datasource": {
@@ -255,7 +265,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 30,
             "gradientMode": "opacity",
@@ -303,12 +312,11 @@
           "showLegend": false
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "7.4.5",
       "targets": [
         {
           "datasource": {
@@ -342,7 +350,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 30,
             "gradientMode": "opacity",
@@ -390,12 +397,11 @@
           "showLegend": false
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "7.4.5",
       "targets": [
         {
           "datasource": {
@@ -429,7 +435,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 30,
             "gradientMode": "opacity",
@@ -477,12 +482,11 @@
           "showLegend": false
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "7.4.5",
       "targets": [
         {
           "datasource": {
@@ -516,7 +520,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 30,
             "gradientMode": "opacity",
@@ -564,12 +567,11 @@
           "showLegend": false
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "7.4.5",
       "targets": [
         {
           "datasource": {
@@ -603,7 +605,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -648,12 +649,10 @@
           "showLegend": true
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -767,7 +766,7 @@
           "reverse": false
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "10.4.1",
       "targets": [
         {
           "datasource": {
@@ -787,6 +786,10 @@
     },
     {
       "collapsed": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -795,6 +798,15 @@
       },
       "id": 108,
       "panels": [],
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "A"
+        }
+      ],
       "title": "Beacon state transition",
       "type": "row"
     },
@@ -859,7 +871,7 @@
           "reverse": false
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "10.4.1",
       "targets": [
         {
           "datasource": {
@@ -940,7 +952,7 @@
           "reverse": false
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "10.4.1",
       "targets": [
         {
           "datasource": {
@@ -977,7 +989,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 22,
             "gradientMode": "opacity",
@@ -1025,12 +1036,11 @@
           "showLegend": false
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "7.4.5",
       "targets": [
         {
           "datasource": {
@@ -1066,7 +1076,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 22,
             "gradientMode": "opacity",
@@ -1114,12 +1123,11 @@
           "showLegend": false
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "7.4.5",
       "targets": [
         {
           "datasource": {
@@ -1154,7 +1162,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -1200,12 +1207,10 @@
           "showLegend": true
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -1240,7 +1245,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 22,
             "gradientMode": "opacity",
@@ -1288,12 +1292,11 @@
           "showLegend": false
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "7.4.5",
       "targets": [
         {
           "datasource": {
@@ -1328,7 +1331,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 22,
             "gradientMode": "opacity",
@@ -1376,12 +1378,11 @@
           "showLegend": false
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "7.4.5",
       "targets": [
         {
           "datasource": {
@@ -1417,7 +1418,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 22,
             "gradientMode": "opacity",
@@ -1481,12 +1481,11 @@
           "showLegend": false
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "7.4.5",
       "targets": [
         {
           "datasource": {
@@ -1520,7 +1519,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 22,
             "gradientMode": "opacity",
@@ -1584,12 +1582,11 @@
           "showLegend": false
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "7.4.5",
       "targets": [
         {
           "datasource": {
@@ -1623,7 +1620,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 22,
             "gradientMode": "opacity",
@@ -1687,12 +1683,11 @@
           "showLegend": false
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "7.4.5",
       "targets": [
         {
           "datasource": {
@@ -1726,7 +1721,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 22,
             "gradientMode": "opacity",
@@ -1791,12 +1785,11 @@
           "showLegend": false
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "7.4.5",
       "targets": [
         {
           "datasource": {
@@ -1830,7 +1823,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 22,
             "gradientMode": "opacity",
@@ -1878,12 +1870,11 @@
           "showLegend": true
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "7.4.5",
       "targets": [
         {
           "datasource": {
@@ -1955,7 +1946,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -2000,12 +1990,10 @@
           "showLegend": true
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -2040,7 +2028,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 22,
             "gradientMode": "opacity",
@@ -2088,12 +2075,11 @@
           "showLegend": false
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "7.4.5",
       "targets": [
         {
           "datasource": {
@@ -2173,7 +2159,7 @@
           "reverse": false
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "10.4.1",
       "targets": [
         {
           "datasource": {
@@ -2194,6 +2180,10 @@
     },
     {
       "collapsed": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -2202,13 +2192,22 @@
       },
       "id": 92,
       "panels": [],
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "A"
+        }
+      ],
       "title": "BLS worker pool",
       "type": "row"
     },
     {
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
       },
       "gridPos": {
         "h": 3,
@@ -2226,7 +2225,19 @@
         "content": "Verifies signature sets in a thread pool of workers. Must ensure that signatures are verified fast and efficiently.",
         "mode": "markdown"
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(lodestar_bls_thread_pool_time_seconds_sum[$rate_interval])",
+          "interval": "",
+          "legendFormat": "{{workerId}}",
+          "refId": "A"
+        }
+      ],
       "title": "About",
       "type": "text"
     },
@@ -2248,7 +2259,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "none",
@@ -2294,12 +2304,11 @@
           "showLegend": true
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "8.4.0-beta1",
       "targets": [
         {
           "datasource": {
@@ -2332,7 +2341,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -2377,12 +2385,10 @@
           "showLegend": true
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -2417,7 +2423,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 23,
             "gradientMode": "opacity",
@@ -2465,7 +2470,6 @@
           "showLegend": false
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         },
@@ -2473,7 +2477,7 @@
           "mode": "multi"
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "7.4.5",
       "targets": [
         {
           "datasource": {
@@ -2507,7 +2511,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 23,
             "gradientMode": "opacity",
@@ -2555,7 +2558,6 @@
           "showLegend": false
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         },
@@ -2563,7 +2565,7 @@
           "mode": "multi"
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "7.4.5",
       "targets": [
         {
           "datasource": {
@@ -2597,7 +2599,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "opacity",
@@ -2645,7 +2646,6 @@
           "showLegend": false
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         },
@@ -2653,7 +2653,7 @@
           "mode": "multi"
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "7.4.5",
       "targets": [
         {
           "datasource": {
@@ -2687,7 +2687,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "opacity",
@@ -2735,7 +2734,6 @@
           "showLegend": false
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         },
@@ -2743,7 +2741,7 @@
           "mode": "multi"
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "7.4.5",
       "targets": [
         {
           "datasource": {
@@ -2777,7 +2775,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 23,
             "gradientMode": "opacity",
@@ -2826,12 +2823,11 @@
           "showLegend": true
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "7.4.5",
       "targets": [
         {
           "datasource": {
@@ -2878,7 +2874,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "opacity",
@@ -2926,7 +2921,6 @@
           "showLegend": false
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         },
@@ -2934,7 +2928,7 @@
           "mode": "multi"
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "7.4.5",
       "targets": [
         {
           "datasource": {
@@ -2968,7 +2962,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 19,
             "gradientMode": "opacity",
@@ -3016,12 +3009,11 @@
           "showLegend": false
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "7.4.5",
       "targets": [
         {
           "datasource": {
@@ -3055,7 +3047,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "none",
@@ -3117,12 +3108,11 @@
           "showLegend": true
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "8.4.0-beta1",
       "targets": [
         {
           "datasource": {
@@ -3169,7 +3159,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 17,
             "gradientMode": "opacity",
@@ -3217,12 +3206,11 @@
           "showLegend": false
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "7.4.5",
       "targets": [
         {
           "datasource": {
@@ -3240,6 +3228,10 @@
     },
     {
       "collapsed": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -3248,6 +3240,15 @@
       },
       "id": 309,
       "panels": [],
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "A"
+        }
+      ],
       "title": "Precompute Epoch Transition",
       "type": "row"
     },
@@ -3268,7 +3269,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -3344,12 +3344,10 @@
           "showLegend": true
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -3384,7 +3382,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -3445,12 +3442,10 @@
           "showLegend": true
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -3496,7 +3491,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -3541,12 +3535,10 @@
           "showLegend": true
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -3592,7 +3584,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -3637,12 +3628,10 @@
           "showLegend": false
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -3676,7 +3665,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -3722,12 +3710,10 @@
           "showLegend": true
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -3806,7 +3792,7 @@
           "reverse": false
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "10.4.1",
       "targets": [
         {
           "datasource": {
@@ -3886,7 +3872,7 @@
           "reverse": false
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "10.4.1",
       "targets": [
         {
           "datasource": {
@@ -3907,6 +3893,10 @@
     },
     {
       "collapsed": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -3915,6 +3905,15 @@
       },
       "id": 136,
       "panels": [],
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "A"
+        }
+      ],
       "title": "Fork-Choice Stats",
       "type": "row"
     },
@@ -3936,7 +3935,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 28,
             "gradientMode": "opacity",
@@ -3983,7 +3981,6 @@
           "showLegend": true
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         },
@@ -3991,7 +3988,6 @@
           "mode": "single"
         }
       },
-      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -4027,7 +4023,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -4089,7 +4084,6 @@
           "showLegend": false
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         },
@@ -4097,7 +4091,7 @@
           "mode": "single"
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "8.0.0",
       "targets": [
         {
           "datasource": {
@@ -4133,7 +4127,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -4196,7 +4189,6 @@
           "showLegend": false
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         },
@@ -4204,7 +4196,6 @@
           "mode": "single"
         }
       },
-      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -4266,7 +4257,6 @@
             "axisLabel": "",
             "axisPlacement": "left",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 20,
             "gradientMode": "opacity",
@@ -4332,7 +4322,6 @@
           "showLegend": true
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         },
@@ -4340,7 +4329,7 @@
           "mode": "single"
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "8.0.0",
       "targets": [
         {
           "datasource": {
@@ -4387,7 +4376,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -4457,12 +4445,10 @@
           "showLegend": true
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -4532,7 +4518,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -4577,12 +4562,10 @@
           "showLegend": true
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -4687,7 +4670,7 @@
           "unit": "s"
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "10.4.1",
       "targets": [
         {
           "datasource": {
@@ -4698,7 +4681,6 @@
           "expr": "rate(lodestar_gossip_block_elapsed_time_till_received_bucket[$rate_interval])",
           "format": "heatmap",
           "instant": false,
-          "interval": "",
           "legendFormat": "{{le}}",
           "range": true,
           "refId": "A"
@@ -4770,7 +4752,7 @@
           "unit": "s"
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "10.4.1",
       "targets": [
         {
           "datasource": {
@@ -4807,7 +4789,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -4853,12 +4834,11 @@
           "showLegend": true
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "10.4.1",
       "targets": [
         {
           "datasource": {
@@ -4895,7 +4875,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -4941,12 +4920,11 @@
           "showLegend": false
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "10.4.1",
       "targets": [
         {
           "datasource": {
@@ -5034,7 +5012,7 @@
           "reverse": false
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "10.4.1",
       "targets": [
         {
           "datasource": {
@@ -5116,7 +5094,7 @@
           "unit": "s"
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "10.4.1",
       "targets": [
         {
           "datasource": {
@@ -5153,7 +5131,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -5199,12 +5176,11 @@
           "showLegend": false
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "10.4.1",
       "targets": [
         {
           "datasource": {
@@ -5241,7 +5217,6 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -5287,12 +5262,11 @@
           "showLegend": false
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "10.4.1",
       "targets": [
         {
           "datasource": {
@@ -5381,7 +5355,7 @@
           "unit": "s"
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "10.4.1",
       "targets": [
         {
           "datasource": {
@@ -5470,7 +5444,7 @@
           "unit": "s"
         }
       },
-      "pluginVersion": "11.6.0",
+      "pluginVersion": "10.4.1",
       "targets": [
         {
           "datasource": {
@@ -7103,8 +7077,7 @@
             }
           },
           "mappings": [],
-          "unit": "percentunit",
-          "unitScale": true
+          "unit": "percentunit"
         },
         "overrides": []
       },
@@ -7318,8 +7291,7 @@
             }
           },
           "mappings": [],
-          "unit": "percentunit",
-          "unitScale": true
+          "unit": "percentunit"
         },
         "overrides": []
       },
@@ -7517,8 +7489,7 @@
             }
           },
           "mappings": [],
-          "unit": "percentunit",
-          "unitScale": true
+          "unit": "percentunit"
         },
         "overrides": []
       },
@@ -7652,8 +7623,7 @@
             }
           },
           "mappings": [],
-          "unit": "percentunit",
-          "unitScale": true
+          "unit": "percentunit"
         },
         "overrides": []
       },
@@ -7770,8 +7740,7 @@
               "mode": "off"
             }
           },
-          "mappings": [],
-          "unitScale": true
+          "mappings": []
         },
         "overrides": []
       },
@@ -7872,8 +7841,7 @@
               "mode": "off"
             }
           },
-          "mappings": [],
-          "unitScale": true
+          "mappings": []
         },
         "overrides": []
       },
@@ -7934,9 +7902,8 @@
       "type": "timeseries"
     }
   ],
-  "preload": false,
   "refresh": "10s",
-  "schemaVersion": 41,
+  "schemaVersion": 39,
   "tags": [
     "lodestar"
   ],
@@ -8056,6 +8023,7 @@
       },
       {
         "current": {
+          "selected": false,
           "text": "beacon",
           "value": "beacon"
         },
@@ -8064,7 +8032,7 @@
         "label": "Beacon node job name",
         "name": "beacon_job",
         "query": "beacon",
-        "skipUrlSync": true,
+        "skipUrlSync": false,
         "type": "constant"
       }
     ]
