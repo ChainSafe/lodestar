@@ -76,7 +76,7 @@ import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossi
 import {CommitteeSubscription} from "../../../network/subnets/index.js";
 import {SyncState} from "../../../sync/index.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
-import {getDefaultGraffiti, toGraffitiBuffer} from "../../../util/graffiti.js";
+import {getDefaultGraffiti, toGraffitiBytes} from "../../../util/graffiti.js";
 import {getLodestarClientVersion} from "../../../util/metadata.js";
 import {ApiOptions} from "../../options.js";
 import {getStateResponseWithRegen} from "../beacon/state/utils.js";
@@ -573,7 +573,7 @@ export function getValidatorApi(
       );
     }
 
-    const graffitiBytes = toGraffitiBuffer(
+    const graffitiBytes = toGraffitiBytes(
       graffiti ?? getDefaultGraffiti(getLodestarClientVersion(opts), chain.executionEngine.clientVersion, opts)
     );
 
