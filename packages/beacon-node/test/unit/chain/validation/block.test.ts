@@ -1,6 +1,6 @@
 import {config} from "@lodestar/config/default";
 import {ProtoBlock} from "@lodestar/fork-choice";
-import {ForkName, ForkPostDeneb} from "@lodestar/params";
+import {ForkName, ForkPostDeneb, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {SignedBeaconBlock, ssz} from "@lodestar/types";
 import {Mock, Mocked, beforeEach, describe, it, vi} from "vitest";
 import {BlockErrorCode} from "../../../../src/chain/errors/index.js";
@@ -19,7 +19,7 @@ describe("gossip block validation", () => {
   let verifySignature: Mock<() => boolean>;
   let job: SignedBeaconBlock;
   const proposerIndex = 0;
-  const clockSlot = 32;
+  const clockSlot = config.BLOB_SCHEDULE[0].EPOCH * SLOTS_PER_EPOCH;
   const block = ssz.deneb.BeaconBlock.defaultValue();
   block.slot = clockSlot;
   const signature = EMPTY_SIGNATURE;
@@ -197,8 +197,6 @@ describe("gossip block validation", () => {
   });
 
   it("deneb - TOO_MANY_KZG_COMMITMENTS", async () => {
-    vi.spyOn(chain.config, "getForkInfoAtEpoch").mockReturnValue(chain.config.forks.deneb);
-
     // Return not known for proposed block
     forkChoice.getBlockHex.mockReturnValueOnce(null);
     // Returned parent block is latter than proposed block
@@ -220,8 +218,6 @@ describe("gossip block validation", () => {
   });
 
   it("deneb - valid", async () => {
-    vi.spyOn(chain.config, "getForkInfoAtEpoch").mockReturnValue(chain.config.forks.deneb);
-
     // Return not known for proposed block
     forkChoice.getBlockHex.mockReturnValueOnce(null);
     // Returned parent block is latter than proposed block
