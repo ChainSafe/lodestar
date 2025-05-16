@@ -12,7 +12,7 @@ export function toGraffitiBytes(graffiti: string): Bytes32 {
 /**
  * Converts a graffiti from 32 bytes buffer back to a UTF-8 string
  */
-export function fromGraffitiBytes(graffiti: Uint8Array): string {
+export function fromGraffitiBytes(graffiti: Bytes32): string {
   return Buffer.from(graffiti.buffer, graffiti.byteOffset, graffiti.byteLength)
     .toString("utf8")
     .replaceAll("\u0000", "");
