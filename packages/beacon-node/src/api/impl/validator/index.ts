@@ -34,6 +34,7 @@ import {
   BeaconBlock,
   BlindedBeaconBlock,
   BlockContents,
+  Bytes32,
   CommitteeIndex,
   Epoch,
   ProducedBlockSource,
@@ -399,7 +400,7 @@ export function getValidatorApi(
   async function produceBuilderBlindedBlock(
     slot: Slot,
     randaoReveal: BLSSignature,
-    graffiti: Buffer,
+    graffiti: Bytes32,
     // as of now fee recipient checks can not be performed because builder does not return bid recipient
     {
       commonBlockBody,
@@ -459,7 +460,7 @@ export function getValidatorApi(
   async function produceEngineFullBlockOrContents(
     slot: Slot,
     randaoReveal: BLSSignature,
-    graffiti: Buffer,
+    graffiti: Bytes32,
     {
       feeRecipient,
       strictFeeRecipientCheck,
