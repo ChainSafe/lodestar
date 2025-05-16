@@ -11,6 +11,7 @@ import {
 import {ValidatorIndex, capella, ssz} from "@lodestar/types";
 
 import {MapDef, toRootHex} from "@lodestar/utils";
+import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {CachedBeaconStateCapella, CachedBeaconStateElectra} from "../types.js";
 import {
   decreaseBalance,
