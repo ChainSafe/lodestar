@@ -4,9 +4,6 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "0 0 * * *" # Runs at midnight UTC everyday
-  push:
-    branches:
-      - nc/kurtosis
 
 jobs:
   test:
