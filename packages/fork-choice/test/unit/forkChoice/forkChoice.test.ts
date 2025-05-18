@@ -139,14 +139,14 @@ describe("Forkchoice", () => {
 
     const forkchoice = new ForkChoice(config, fcStore, protoArr);
 
-    // Test with a block from the main chain
-    const mainBlockRoot = getBlockRoot(genesisSlot + 3);
-    const mainAncestorBlocks = forkchoice.getAllAncestorBlocks(mainBlockRoot);
-    const mainNonAncestorBlocks = forkchoice.getAllNonAncestorBlocks(mainBlockRoot);
-    const mainCombined = forkchoice.getAllAncestorAndNonAncestorBlocks(mainBlockRoot);
+    // Test with a block from the canonical chain
+    const canonicalBlockRoot = getBlockRoot(genesisSlot + 3);
+    const canonicalAncestorBlocks = forkchoice.getAllAncestorBlocks(canonicalBlockRoot);
+    const canonicalNonAncestorBlocks = forkchoice.getAllNonAncestorBlocks(canonicalBlockRoot);
+    const canonicalCombined = forkchoice.getAllAncestorAndNonAncestorBlocks(canonicalBlockRoot);
 
-    expect(mainCombined.ancestorBlocks).toEqual(mainAncestorBlocks);
-    expect(mainCombined.nonAncestorBlocks).toEqual(mainNonAncestorBlocks);
+    expect(canonicalCombined.ancestors).toEqual(canonicalAncestorBlocks);
+    expect(canonicalCombined.nonAncestors).toEqual(canonicalNonAncestorBlocks);
 
     // Test with a block from the fork chain
     const forkBlockRoot = getBlockRoot(genesisSlot + 10);
@@ -154,8 +154,8 @@ describe("Forkchoice", () => {
     const forkNonAncestorBlocks = forkchoice.getAllNonAncestorBlocks(forkBlockRoot);
     const forkCombined = forkchoice.getAllAncestorAndNonAncestorBlocks(forkBlockRoot);
 
-    expect(forkCombined.ancestorBlocks).toEqual(forkAncestorBlocks);
-    expect(forkCombined.nonAncestorBlocks).toEqual(forkNonAncestorBlocks);
+    expect(forkCombined.ancestors).toEqual(forkAncestorBlocks);
+    expect(forkCombined.nonAncestors).toEqual(forkNonAncestorBlocks);
   });
 
   beforeAll(() => {

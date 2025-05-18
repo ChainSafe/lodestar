@@ -931,9 +931,9 @@ export class ForkChoice implements IForkChoice {
    * Return only the non-finalized blocks.
    */
   getAllAncestorBlocks(blockRoot: RootHex): ProtoBlock[] {
-    const ancestors = this.protoArray.getAllAncestorNodes(blockRoot);
+    const blocks = this.protoArray.getAllAncestorNodes(blockRoot);
     // the last node is the previous finalized one, it's there to check onBlock finalized checkpoint only.
-    return ancestors.slice(0, ancestors.length - 1);
+    return blocks.slice(0, blocks.length - 1);
   }
 
   /**
@@ -946,15 +946,13 @@ export class ForkChoice implements IForkChoice {
   /**
    * Returns both ancestor and non-ancestor blocks in a single traversal.
    */
-  getAllAncestorAndNonAncestorBlocks(blockRoot: RootHex): {
-    ancestorBlocks: ProtoBlock[];
-    nonAncestorBlocks: ProtoBlock[];
-  } {
+  getAllAncestorAndNonAncestorBlocks(blockRoot: RootHex): {ancestors: ProtoBlock[]; nonAncestors: ProtoBlock[]} {
     const {ancestors, nonAncestors} = this.protoArray.getAllAncestorAndNonAncestorNodes(blockRoot);
-    // Exclude the last node as before for ancestors.
+
     return {
-      ancestorBlocks: ancestors.slice(0, ancestors.length - 1),
-      nonAncestorBlocks: nonAncestors,
+      // the last node is the previous finalized one, it's there to check onBlock finalized checkpoint only.
+      ancestors: ancestors.slice(0, ancestors.length - 1),
+      nonAncestors,
     };
   }
 
