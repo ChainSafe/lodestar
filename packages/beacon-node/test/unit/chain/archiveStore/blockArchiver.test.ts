@@ -43,8 +43,8 @@ describe("block archiver task", () => {
     vi.spyOn(forkChoiceStub, "getAllAncestorBlocks").mockReturnValue(canonicalBlocks);
     vi.spyOn(forkChoiceStub, "getAllNonAncestorBlocks").mockReturnValue(nonCanonicalBlocks);
     vi.spyOn(forkChoiceStub, "getAllAncestorAndNonAncestorBlocks").mockReturnValue({
-      ancestorBlocks: canonicalBlocks,
-      nonAncestorBlocks: nonCanonicalBlocks,
+      ancestors: canonicalBlocks,
+      nonAncestors: nonCanonicalBlocks,
     });
     await archiveBlocks(
       config,
