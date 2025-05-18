@@ -2,6 +2,7 @@ export {sepoliaChainConfig as chainConfig} from "@lodestar/config/networks";
 
 export const depositContractDeployBlock = 1273020;
 export const genesisFileUrl = "https://github.com/eth-clients/sepolia/raw/main/metadata/genesis.ssz";
+export const genesisStateRoot = null;
 export const bootnodesFileUrl =
   "https://raw.githubusercontent.com/eth-clients/sepolia/main/metadata/bootstrap_nodes.yaml";
 

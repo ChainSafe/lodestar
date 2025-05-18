@@ -3,6 +3,7 @@ export {mainnetChainConfig as chainConfig} from "@lodestar/config/networks";
 export const depositContractDeployBlock = 11052984;
 export const genesisFileUrl =
   "https://raw.githubusercontent.com/eth-clients/mainnet/refs/heads/main/metadata/genesis.ssz";
+export const genesisStateRoot = null;
 export const bootnodesFileUrl =
   "https://raw.githubusercontent.com/eth-clients/mainnet/refs/heads/main/metadata/bootstrap_nodes.yaml";
 

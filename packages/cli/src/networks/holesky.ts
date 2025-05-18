@@ -2,6 +2,7 @@ export {holeskyChainConfig as chainConfig} from "@lodestar/config/networks";
 
 export const depositContractDeployBlock = 0;
 export const genesisFileUrl = "https://media.githubusercontent.com/media/eth-clients/holesky/main/metadata/genesis.ssz";
+export const genesisStateRoot = null;
 export const bootnodesFileUrl =
   "https://raw.githubusercontent.com/eth-clients/holesky/main/metadata/bootstrap_nodes.yaml";
 
