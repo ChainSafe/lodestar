@@ -81,7 +81,7 @@ export class BlockInputSync {
     private readonly chain: IBeaconChain,
     private readonly logger: Logger,
     private readonly metrics: Metrics | null,
-    private readonly opts?: SyncOptions
+    opts?: SyncOptions
   ) {
     this.maxPendingBlocks = opts?.maxPendingBlocks ?? MAX_PENDING_BLOCKS;
     this.proposerBoostSecWindow = this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT;

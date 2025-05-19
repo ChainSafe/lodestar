@@ -3,7 +3,7 @@ import {ForkName, isForkPostDeneb} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Epoch, Slot} from "@lodestar/types";
 import {BlobsSource, BlockSource as BlockSourceOld} from "../types.js";
-import {BlockInputSource as BlockSource, IBlockInput} from "./types.js";
+import {BlockInputSource as BlockSource} from "./types.js";
 
 export function getDaOutOfRange(
   config: ChainForkConfig,

@@ -1,6 +1,5 @@
-import {ForkName, ForkPreDeneb, isForkPostDeneb} from "@lodestar/params";
-import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {BlobIndex, ColumnIndex, Epoch, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
+import {ForkName, ForkPreDeneb} from "@lodestar/params";
+import {BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
 import {fromHex, prettyBytes, toHex, withTimeout} from "@lodestar/utils";
 import {VersionedHashes} from "../../../execution/index.js";
 import {kzgCommitmentToVersionedHash} from "../../../util/blobs.js";

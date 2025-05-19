@@ -1,17 +1,14 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {CheckpointWithHex} from "@lodestar/fork-choice";
-import {ForkName, ForkPostDeneb, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
+import {ForkName, isForkPostDeneb} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex, SignedBeaconBlock, Slot, deneb} from "@lodestar/types";
 import {LodestarError, Logger, toHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {IClock} from "../../util/clock.js";
 import {
-  AddBlock,
   BlockInputBlobs,
-  BlockInputColumns,
   BlockInputPreData,
-  CreateBlockInputMeta,
   DAType,
   ForkBlobsDA,
   IBlockInput,
@@ -96,8 +93,15 @@ export class SeenBlockInputCache {
     }
   }
 
-  // TODO(peerDAS): need to look at more robust pruning for periods of non-finality
-  prune(): void {}
+  prune(rootHex: RootHex): void {
+    let blockInput = this.blockInputs.get(rootHex);
+    let parentRootHex = blockInput?.parentRootHex;
+    while (blockInput) {
+      this.blockInputs.delete(blockInput.blockRootHex);
+      blockInput = this.blockInputs.get(parentRootHex ?? "");
+      parentRootHex = blockInput?.parentRootHex;
+    }
+  }
 
   getBlockInputByBlock({
     block,

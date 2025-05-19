@@ -1,7 +1,7 @@
 import {EventEmitter} from "node:events";
 import {PeerId, TopicValidatorResult} from "@libp2p/interface";
 import {RootHex, phase0} from "@lodestar/types";
-import {BlockInput as BlockInputNew, BlockInputSource} from "../chain/blocks/blockInput/index.js";
+import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/index.js";
 import {BlockInput, NullBlockInput} from "../chain/blocks/types.js";
 import {PeerIdStr} from "../util/peerId.js";
 import {StrictEventEmitterSingleArg} from "../util/strictEvents.js";
@@ -38,8 +38,8 @@ export type NetworkEventData = {
   [NetworkEvent.reqRespRequest]: {request: RequestTypedContainer; peer: PeerId};
   // new block input events
   [NetworkEvent.unknownBlockRoot]: {rootHex: RootHex; peer?: PeerIdStr; source: BlockInputSource};
-  [NetworkEvent.blockInput]: {blockInput: BlockInputNew; peer: PeerIdStr; source: BlockInputSource};
-  [NetworkEvent.unknownParent]: {blockInput: BlockInputNew; peer: PeerIdStr; source: BlockInputSource};
+  [NetworkEvent.blockInput]: {blockInput: IBlockInput; peer: PeerIdStr; source: BlockInputSource};
+  [NetworkEvent.unknownParent]: {blockInput: IBlockInput; peer: PeerIdStr; source: BlockInputSource};
   // old unknownBlock blockInput events
   [NetworkEvent.unknownBlockParent]: {blockInput: BlockInput; peer: PeerIdStr};
   [NetworkEvent.unknownBlock]: {rootHex: RootHex; peer?: PeerIdStr};
