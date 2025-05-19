@@ -1,7 +1,7 @@
 import {Epoch, ValidatorIndex} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
 
-// How many *non future* epoch we intend to keep for SeenAttesters.
+// How many *non future* epochs we intend to keep for SeenAttesters.
 // Pre and post deneb specs require us to accept attestations from current and
 // previous epoch.
 //
