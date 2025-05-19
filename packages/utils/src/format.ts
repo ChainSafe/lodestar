@@ -72,3 +72,10 @@ export function prettyMsToTime(timeMs: number): string {
 export function strip0xPrefix(hex: string): string {
   return hex.startsWith("0x") ? hex.slice(2) : hex;
 }
+
+/**
+ * Stringify an array for logging purposes
+ */
+export function prettyPrintArray(arr: unknown[]): string {
+  return `[ ${arr.join(",")} ]`;
+}

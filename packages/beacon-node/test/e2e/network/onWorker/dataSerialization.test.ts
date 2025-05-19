@@ -3,8 +3,15 @@ import {TopicValidatorResult} from "@libp2p/interface";
 import {routes} from "@lodestar/api";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
+import {toHex} from "@lodestar/utils";
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
-import {BlockInput, BlockInputType, BlockSource, CachedData} from "../../../../src/chain/blocks/types.js";
+import {BlockInputPreData, BlockInputSource, IBlockInput} from "../../../../src/chain/blocks/blockInput/index.js";
+import {
+  BlockInput as BlockInputOld,
+  BlockInputType,
+  BlockSource,
+  CachedData,
+} from "../../../../src/chain/blocks/types.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../../../src/constants/constants.js";
 import {ReqRespBridgeEventData} from "../../../../src/network/core/events.js";
 import {ReqRespBridgeEvent} from "../../../../src/network/core/events.js";
@@ -78,6 +85,23 @@ describe("data serialization through worker boundary", () => {
       request: {method: ReqRespMethod.Status, body: statusZero},
       peer: getValidPeerId(),
     },
+    // New BlockInput events
+    [NetworkEvent.unknownBlockRoot]: {
+      rootHex: toHex(bytes),
+      source: BlockInputSource.gossip,
+      peer,
+    },
+    [NetworkEvent.blockInput]: {
+      peer,
+      source: BlockInputSource.gossip,
+      blockInput: getIBlockInput(peer),
+    },
+    [NetworkEvent.unknownParent]: {
+      peer,
+      source: BlockInputSource.gossip,
+      blockInput: getIBlockInput(peer),
+    },
+    // Old BlockInput events
     [NetworkEvent.unknownBlockParent]: {
       blockInput: {
         type: BlockInputType.preData,
@@ -249,7 +273,7 @@ describe("data serialization through worker boundary", () => {
 
 type Resolves<T extends Promise<unknown>> = T extends Promise<infer U> ? (U extends void ? null : U) : never;
 
-function getEmptyBlockInput(): BlockInput {
+function getEmptyBlockInput(): BlockInputOld {
   const cachedData = {
     fork: ForkName.deneb,
     blobsCache: new Map(),
@@ -266,4 +290,19 @@ function getEmptyBlockInput(): BlockInput {
     source: BlockSource.gossip,
     cachedData,
   };
+}
+
+function getIBlockInput(peerIdStr: string): IBlockInput {
+  const block = ssz.capella.SignedBeaconBlock.defaultValue();
+  return BlockInputPreData.createFromBlock({
+    block,
+    forkName: ForkName.capella,
+    blockRootHex: toHex(ssz.capella.SignedBeaconBlock.hashTreeRoot(block)),
+    daOutOfRange: true,
+    source: {
+      peerIdStr,
+      seenTimestampSec: Date.now(),
+      source: BlockInputSource.gossip,
+    },
+  });
 }
