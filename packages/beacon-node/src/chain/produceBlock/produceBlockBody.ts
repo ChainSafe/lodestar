@@ -109,7 +109,7 @@ type BlockAttrsForBlockBody = BlockAttributes & {
   commonBlockBody?: CommonBlockBody;
 };
 
-export async function produceBlockBody2<T extends BlockType>(
+export async function produceBlockBody<T extends BlockType>(
   this: BeaconChain,
   blockType: T,
   currentState: CachedBeaconStateAllForks,
