@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkPostBellatrix, ForkSeq, isForkPostAltair, isForkPostBellatrix} from "@lodestar/params";
+import {ForkName, ForkPostBellatrix, ForkSeq, isForkPostAltair, isForkPostBellatrix} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStateBellatrix,
@@ -159,9 +159,10 @@ export async function produceBlockBody<T extends BlockType>(
   if (!isForkPostBellatrix(fork)) {
     const executionPayloadValue = BigInt(0);
     const blobsResult: BlobsResult = {type: BlobsResultType.preDeneb};
-
-    Object.assign(logMeta, {executionPayloadValue: BigInt(0)});
-    this.logger.verbose("Produced beacon block body", logMeta);
+    this.logger.verbose("Produced beacon block body", {
+      ...logMeta,
+      executionPayloadValue,
+    });
 
     return {body: blockBody as AssembledBodyType<T>, blobs: blobsResult, executionPayloadValue};
   }
@@ -182,12 +183,13 @@ export async function produceBlockBody<T extends BlockType>(
     blobKzgCommitments,
     blobsResult,
     shouldOverrideBuilder,
-    logMeta: updatedLogMeta,
+    payloadPreparationType,
     executionPayload,
     executionPayloadHeader,
-  } = blockType === BlockType.Blinded
-    ? await await handleBlindedExecutionPayload.call(this, fork, currentState, {...blockAttr, feeRecipient}, logMeta)
-    : await handleFullExecutionPayload.call(this, fork, currentState, {...blockAttr, feeRecipient}, logMeta);
+  } =
+    blockType === BlockType.Blinded
+      ? await await handleBlindedExecutionPayload.call(this, fork, currentState, {...blockAttr, feeRecipient})
+      : await handleFullExecutionPayload.call(this, fork, currentState, {...blockAttr, feeRecipient});
 
   if (blockType === BlockType.Full && executionPayload) {
     (blockBody as BeaconBlockBody<ForkPostBellatrix>).executionPayload = executionPayload;
@@ -199,13 +201,26 @@ export async function produceBlockBody<T extends BlockType>(
     step: BlockProductionStep.executionPayload,
   });
 
-  Object.assign(logMeta, {
-    ...updatedLogMeta,
-    executionPayloadValue,
-  });
+  if (ForkSeq[fork] >= ForkSeq.electra) {
+    if (executionRequests === undefined) {
+      throw Error(`Invalid builder getHeader response for fork=${fork}, missing executionRequests`);
+    }
 
-  if (blobsResult.type !== BlobsResultType.preDeneb) {
+    Object.assign(logMeta, {
+      consolidationsRequests: executionRequests.consolidations.length,
+      depositsRequests: executionRequests.deposits.length,
+      withdrawalRequests: executionRequests.withdrawals.length,
+    });
+    (blockBody as electra.BlindedBeaconBlockBody).executionRequests = executionRequests;
+  }
+
+  if (ForkSeq[fork] >= ForkSeq[ForkName.deneb]) {
+    if (blobKzgCommitments === undefined) {
+      throw Error(`Invalid builder getHeader response for fork=${fork}, missing blobKzgCommitments`);
+    }
+
     Object.assign(logMeta, {blobs: blobKzgCommitments?.length});
+    (blockBody as deneb.BlindedBeaconBlockBody).blobKzgCommitments = blobKzgCommitments;
   }
 
   if (ForkSeq[fork] >= ForkSeq.capella) {
@@ -213,7 +228,7 @@ export async function produceBlockBody<T extends BlockType>(
       blsToExecutionChanges: blockBody.blsToExecutionChanges.length,
     });
 
-    // withdrawals are only available in full body
+    // Withdrawals are only available in full body
     if (blockType === BlockType.Full) {
       Object.assign(logMeta, {
         withdrawals: (blockBody as capella.BeaconBlockBody).executionPayload.withdrawals.length,
@@ -221,20 +236,22 @@ export async function produceBlockBody<T extends BlockType>(
     }
   }
 
-  if (ForkSeq[fork] >= ForkSeq.deneb) {
-    if (blobKzgCommitments === undefined) {
-      throw Error(`Invalid builder getHeader response for fork=${fork}, missing blobKzgCommitments`);
+  if (ForkSeq[fork] >= ForkSeq.bellatrix) {
+    if (blockType === BlockType.Full) {
+      Object.assign(logMeta, {
+        transactions: executionPayload?.transactions.length,
+        shouldOverrideBuilder,
+        payloadPreparationType,
+        executionPayloadValue,
+      });
     }
 
-    (blockBody as deneb.BlindedBeaconBlockBody).blobKzgCommitments = blobKzgCommitments;
-  }
-
-  if (ForkSeq[fork] >= ForkSeq.electra) {
-    if (executionRequests === undefined) {
-      throw Error(`Invalid builder getHeader response for fork=${fork}, missing executionRequests`);
+    if (blockType === BlockType.Blinded) {
+      Object.assign(logMeta, {
+        builderPayloadPrepType: PayloadPreparationType.Blinded,
+        executionPayloadValue,
+      });
     }
-
-    (blockBody as electra.BlindedBeaconBlockBody).executionRequests = executionRequests;
   }
 
   this.logger.verbose("Produced beacon block body", logMeta);
@@ -246,20 +263,17 @@ async function handleFullExecutionPayload(
   this: BeaconChain,
   fork: ForkPostBellatrix,
   state: CachedBeaconStateAllForks,
-  blockAttr: RequiredSelective<BlockAttrsForBlockBody, "feeRecipient">,
-  currentLogMeta: LogMeta
+  blockAttr: RequiredSelective<BlockAttrsForBlockBody, "feeRecipient">
 ): Promise<{
   executionPayloadValue: Wei;
   blobKzgCommitments?: deneb.BlobKzgCommitments;
   executionRequests?: electra.ExecutionRequests;
   blobsResult: BlobsResult;
   shouldOverrideBuilder?: boolean;
-  logMeta: LogMeta;
+  payloadPreparationType?: PayloadPreparationType;
   executionPayload: ExecutionPayload;
   executionPayloadHeader?: never;
 }> {
-  // Don't want to change the function parameters
-  const logMeta = {...currentLogMeta};
   const {parentBlockRoot, slot: blockSlot, feeRecipient} = blockAttr;
 
   const safeBlockHash = this.forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
@@ -285,14 +299,11 @@ async function handleFullExecutionPayload(
       return {
         executionPayloadValue: BigInt(0),
         blobsResult: {type: BlobsResultType.preDeneb},
-        logMeta,
         executionPayload: sszTypesFor(fork).ExecutionPayload.defaultValue(),
       };
     }
 
     const {prepType, payloadId} = prepareRes;
-    Object.assign(logMeta, {executionPayloadPrepType: prepType});
-
     if (prepType !== PayloadPreparationType.Cached) {
       // Wait for 500ms to allow EL to add some txs to the payload
       // the pitfalls of this have been put forward here, but 500ms delay for block proposal
@@ -305,7 +316,6 @@ async function handleFullExecutionPayload(
     const {executionPayload, blobsBundle, executionRequests, shouldOverrideBuilder, executionPayloadValue} =
       await this.executionEngine.getPayload(fork, payloadId);
 
-    Object.assign(logMeta, {transactions: executionPayload.transactions.length, shouldOverrideBuilder});
     const fetchedTime = Date.now() / 1000 - computeTimeAtSlot(this.config, blockSlot, this.genesisTime);
     this.metrics?.blockPayload.payloadFetchedTime.observe({prepType}, fetchedTime);
     this.logger.verbose("Fetched execution payload from engine", {
@@ -326,8 +336,8 @@ async function handleFullExecutionPayload(
         executionPayloadValue,
         executionRequests,
         blobsResult: {type: BlobsResultType.preDeneb},
-        logMeta,
         executionPayload,
+        payloadPreparationType: prepType,
       };
     }
 
@@ -349,7 +359,7 @@ async function handleFullExecutionPayload(
       executionPayloadValue,
       executionRequests,
       shouldOverrideBuilder,
-      logMeta,
+      payloadPreparationType: prepType,
       executionPayload,
     };
   } catch (e) {
@@ -368,7 +378,6 @@ async function handleFullExecutionPayload(
       blobsResult: {type: BlobsResultType.preDeneb},
       executionPayloadValue: BigInt(0),
       executionPayload: sszTypesFor(fork).ExecutionPayload.defaultValue(),
-      logMeta,
     };
   }
 }
@@ -377,20 +386,17 @@ async function handleBlindedExecutionPayload(
   this: BeaconChain,
   fork: ForkPostBellatrix,
   state: CachedBeaconStateAllForks,
-  blockAttr: RequiredSelective<BlockAttrsForBlockBody, "feeRecipient">,
-  currentLogMeta: LogMeta
+  blockAttr: RequiredSelective<BlockAttrsForBlockBody, "feeRecipient">
 ): Promise<{
   executionPayloadValue: Wei;
   blobsResult: BlobsResult;
   shouldOverrideBuilder?: boolean;
-  logMeta: LogMeta;
   blobKzgCommitments?: deneb.BlobKzgCommitments;
   executionRequests?: electra.ExecutionRequests;
   executionPayloadHeader: ExecutionPayloadHeader;
   executionPayload?: never;
+  payloadPreparationType: PayloadPreparationType;
 }> {
-  // Don't want to change the function parameters
-  const logMeta = {...currentLogMeta};
   const {proposerIndex, proposerPubKey, parentBlockRoot, slot: blockSlot} = blockAttr;
 
   const safeBlockHash = this.forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
@@ -426,6 +432,7 @@ async function handleBlindedExecutionPayload(
 
   const fetchedTime = Date.now() / 1000 - computeTimeAtSlot(this.config, blockSlot, this.genesisTime);
   const prepType = PayloadPreparationType.Blinded;
+
   this.metrics?.blockPayload.payloadFetchedTime.observe({prepType}, fetchedTime);
   this.logger.verbose("Fetched execution payload header from builder", {
     slot: blockSlot,
@@ -473,8 +480,8 @@ async function handleBlindedExecutionPayload(
       blobsResult: {
         type: BlobsResultType.preDeneb,
       },
-      logMeta,
       executionPayloadHeader,
+      payloadPreparationType: PayloadPreparationType.Blinded,
     };
   }
 
@@ -485,8 +492,8 @@ async function handleBlindedExecutionPayload(
     blobsResult: {
       type: BlobsResultType.blinded,
     },
-    logMeta,
     executionPayloadHeader,
+    payloadPreparationType: PayloadPreparationType.Blinded,
   };
 }
 
