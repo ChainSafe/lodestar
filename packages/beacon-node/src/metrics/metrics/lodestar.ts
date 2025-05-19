@@ -19,6 +19,8 @@ import {AllocSource} from "../../util/bufferPool.js";
 import {LodestarMetadata} from "../options.js";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
 
+import {BlockInputSource} from "../../chain/blocks/blockInput/index.js";
+
 export type LodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 
 /**
