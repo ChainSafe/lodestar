@@ -92,7 +92,8 @@ export function getGenesisFileUrl(network: NetworkName): string | null {
 }
 
 /**
- * Get expected genesisStateRoot for validation. Returns null if not available
+ * Get expected genesisStateRoot for validation. Returns null if not available.
+ * For example, this returns null for Ephemery, since its genesis state root changes with each iteration and we don't know the permanent state root.
  */
 export function getGenesisStateRoot(network: NetworkName): string | null {
   return getNetworkData(network).genesisStateRoot;
