@@ -16,8 +16,10 @@ import {MapDef} from "@lodestar/utils";
 // previous, current and future epoch. This constant is solely used to calculate `lowestPermissibleEpoch`
 // which prunes anything older than it.
 //
-// assuming we're at epoch 100 while all other nodes at epoch 99, they all accept attestations at epoch 98, 99. If MAX_RETAINED_EPOCH = 2 then our lowestPermissibleEpoch is 98 which is fine
-// assuming we're at epoch 99 while all other nodes at epoch 100, they all accept attestations at epoch 99, 100. If MAX_RETAINED_EPOCH = 2 then lowestPermissibleEpoch is 97 which is more than enough
+// Assuming we're at epoch 100 while all other nodes at epoch 99, they all accept attestations at epoch 98, 99. 
+// If MAX_RETAINED_EPOCH = 2 then our lowestPermissibleEpoch is 98 which is fine
+// Assuming we're at epoch 99 while all other nodes at epoch 100, they all accept attestations at epoch 99, 100.
+// If MAX_RETAINED_EPOCH = 2 then lowestPermissibleEpoch is 97 which is more than enough
 const EPOCH_LOOKBACK_LIMIT = 2;
 
 /**
