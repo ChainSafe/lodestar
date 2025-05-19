@@ -8,7 +8,6 @@ import {Metrics} from "../metrics/index.js";
 import {INetwork, NetworkEvent, NetworkEventData} from "../network/index.js";
 import {ClockEvent} from "../util/clock.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
-import {BlockInputSync} from "./blockInputSync.js";
 import {MIN_EPOCH_TO_START_GOSSIP} from "./constants.js";
 import {IBeaconSync, SyncModules, SyncingStatus} from "./interface.js";
 import {SyncChainDebugState, SyncState, syncStateMetric} from "./interface.js";
@@ -26,7 +25,6 @@ export class BeaconSync implements IBeaconSync {
 
   private readonly rangeSync: RangeSync;
   private readonly unknownBlockSync: UnknownBlockSync;
-  private readonly blockInputSync: BlockInputSync;
 
   /** For metrics only */
   private readonly peerSyncType = new Map<string, PeerSyncType>();
@@ -41,7 +39,6 @@ export class BeaconSync implements IBeaconSync {
     this.logger = logger;
     this.rangeSync = new RangeSync(modules, opts);
     this.unknownBlockSync = new UnknownBlockSync(config, network, chain, logger, metrics, opts);
-    this.blockInputSync = new BlockInputSync(config, network, chain, logger, metrics, opts);
     this.slotImportTolerance = opts.slotImportTolerance ?? SLOTS_PER_EPOCH;
 
     // Subscribe to RangeSync completing a SyncChain and recompute sync state
@@ -55,8 +52,6 @@ export class BeaconSync implements IBeaconSync {
     } else {
       // test code, this is needed for Unknown block sync sim test
       this.unknownBlockSync.subscribeToNetwork();
-      this.blockInputSync.subscribeToNetwork();
-      this.metrics?.blockInputSync.switchNetworkSubscriptions.inc({action: "subscribed"});
       this.logger.debug("RangeSync disabled.");
 
       // In case node is started with `rangeSync` disabled and `unknownBlockSync` is enabled.
@@ -89,7 +84,6 @@ export class BeaconSync implements IBeaconSync {
     this.chain.clock.off(ClockEvent.epoch, this.onClockEpoch);
     this.rangeSync.close();
     this.unknownBlockSync.close();
-    this.blockInputSync.close();
   }
 
   getSyncStatus(): SyncingStatus {
@@ -240,11 +234,6 @@ export class BeaconSync implements IBeaconSync {
         this.unknownBlockSync.subscribeToNetwork();
         this.metrics?.syncUnknownBlock.switchNetworkSubscriptions.inc({action: "subscribed"});
       }
-
-      if (!this.blockInputSync.isSubscribedToNetwork()) {
-        this.blockInputSync.subscribeToNetwork();
-        this.metrics?.blockInputSync.switchNetworkSubscriptions.inc({action: "subscribed"});
-      }
     }
 
     // If we stopped being synced and fallen significantly behind, stop gossip
@@ -268,10 +257,6 @@ export class BeaconSync implements IBeaconSync {
         if (this.unknownBlockSync.isSubscribedToNetwork()) {
           this.unknownBlockSync.unsubscribeFromNetwork();
           this.metrics?.syncUnknownBlock.switchNetworkSubscriptions.inc({action: "unsubscribed"});
-        }
-        if (this.blockInputSync.isSubscribedToNetwork()) {
-          this.blockInputSync.unsubscribeFromNetwork();
-          this.metrics?.blockInputSync.switchNetworkSubscriptions.inc({action: "unsubscribed"});
         }
       }
     }
