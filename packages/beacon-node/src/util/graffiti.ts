@@ -1,17 +1,18 @@
+import {Bytes32} from "@lodestar/types";
 import {GRAFFITI_SIZE} from "../constants/index.js";
 import {ClientVersion} from "../execution/index.js";
 
 /**
  * Parses a graffiti UTF8 string and returns a 32 bytes buffer right padded with zeros
  */
-export function toGraffitiBuffer(graffiti: string): Buffer {
+export function toGraffitiBytes(graffiti: string): Bytes32 {
   return Buffer.concat([Buffer.from(graffiti, "utf8"), Buffer.alloc(GRAFFITI_SIZE, 0)], GRAFFITI_SIZE);
 }
 
 /**
  * Converts a graffiti from 32 bytes buffer back to a UTF-8 string
  */
-export function fromGraffitiBuffer(graffiti: Uint8Array): string {
+export function fromGraffitiBytes(graffiti: Bytes32): string {
   return Buffer.from(graffiti.buffer, graffiti.byteOffset, graffiti.byteLength)
     .toString("utf8")
     .replaceAll("\u0000", "");

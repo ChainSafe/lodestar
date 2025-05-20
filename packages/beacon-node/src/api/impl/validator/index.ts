@@ -34,6 +34,7 @@ import {
   BeaconBlock,
   BlindedBeaconBlock,
   BlockContents,
+  Bytes32,
   CommitteeIndex,
   Epoch,
   ProducedBlockSource,
@@ -75,7 +76,7 @@ import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossi
 import {CommitteeSubscription} from "../../../network/subnets/index.js";
 import {SyncState} from "../../../sync/index.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
-import {getDefaultGraffiti, toGraffitiBuffer} from "../../../util/graffiti.js";
+import {getDefaultGraffiti, toGraffitiBytes} from "../../../util/graffiti.js";
 import {getLodestarClientVersion} from "../../../util/metadata.js";
 import {ApiOptions} from "../../options.js";
 import {getStateResponseWithRegen} from "../beacon/state/utils.js";
@@ -399,25 +400,15 @@ export function getValidatorApi(
   async function produceBuilderBlindedBlock(
     slot: Slot,
     randaoReveal: BLSSignature,
-    graffiti?: string,
+    graffiti: Bytes32,
     // as of now fee recipient checks can not be performed because builder does not return bid recipient
     {
-      skipHeadChecksAndUpdate,
       commonBlockBody,
-      parentBlockRoot: inParentBlockRoot,
-    }: Omit<routes.validator.ExtraProduceBlockOpts, "builderSelection"> &
-      (
-        | {
-            skipHeadChecksAndUpdate: true;
-            commonBlockBody: CommonBlockBody;
-            parentBlockRoot: Root;
-          }
-        | {
-            skipHeadChecksAndUpdate?: false | undefined;
-            commonBlockBody?: undefined;
-            parentBlockRoot?: undefined;
-          }
-      ) = {}
+      parentBlockRoot,
+    }: Omit<routes.validator.ExtraProduceBlockOpts, "builderSelection"> & {
+      commonBlockBody: CommonBlockBody;
+      parentBlockRoot: Root;
+    }
   ): Promise<ProduceBlindedBlockRes> {
     const version = config.getForkName(slot);
     if (!isForkPostBellatrix(version)) {
@@ -435,17 +426,6 @@ export function getValidatorApi(
       throw Error("Execution builder disabled");
     }
 
-    let parentBlockRoot: Root;
-    if (skipHeadChecksAndUpdate !== true) {
-      notWhileSyncing();
-      await waitForSlot(slot); // Must never request for a future slot > currentSlot
-
-      parentBlockRoot = fromHex(chain.getProposerHead(slot).blockRoot);
-    } else {
-      parentBlockRoot = inParentBlockRoot;
-    }
-    notOnOutOfRangeData(parentBlockRoot);
-
     let timer: undefined | ((opts: {source: ProducedBlockSource}) => number);
     try {
       timer = metrics?.blockProductionTime.startTimer();
@@ -453,9 +433,7 @@ export function getValidatorApi(
         slot,
         parentBlockRoot,
         randaoReveal,
-        graffiti: toGraffitiBuffer(
-          graffiti ?? getDefaultGraffiti(getLodestarClientVersion(opts), chain.executionEngine.clientVersion, opts)
-        ),
+        graffiti,
         commonBlockBody,
       });
 
@@ -482,36 +460,19 @@ export function getValidatorApi(
   async function produceEngineFullBlockOrContents(
     slot: Slot,
     randaoReveal: BLSSignature,
-    graffiti?: string,
+    graffiti: Bytes32,
     {
       feeRecipient,
       strictFeeRecipientCheck,
-      skipHeadChecksAndUpdate,
       commonBlockBody,
-      parentBlockRoot: inParentBlockRoot,
-    }: Omit<routes.validator.ExtraProduceBlockOpts, "builderSelection"> &
-      (
-        | {
-            skipHeadChecksAndUpdate: true;
-            commonBlockBody: CommonBlockBody;
-            parentBlockRoot: Root;
-          }
-        | {skipHeadChecksAndUpdate?: false | undefined; commonBlockBody?: undefined; parentBlockRoot?: undefined}
-      ) = {}
+      parentBlockRoot,
+    }: Omit<routes.validator.ExtraProduceBlockOpts, "builderSelection"> & {
+      commonBlockBody: CommonBlockBody;
+      parentBlockRoot: Root;
+    }
   ): Promise<ProduceBlockOrContentsRes & {shouldOverrideBuilder?: boolean}> {
     const source = ProducedBlockSource.engine;
     metrics?.blockProductionRequests.inc({source});
-
-    let parentBlockRoot: Root;
-    if (skipHeadChecksAndUpdate !== true) {
-      notWhileSyncing();
-      await waitForSlot(slot); // Must never request for a future slot > currentSlot
-
-      parentBlockRoot = fromHex(chain.getProposerHead(slot).blockRoot);
-    } else {
-      parentBlockRoot = inParentBlockRoot;
-    }
-    notOnOutOfRangeData(parentBlockRoot);
 
     let timer: undefined | ((opts: {source: ProducedBlockSource}) => number);
     try {
@@ -520,9 +481,7 @@ export function getValidatorApi(
         slot,
         parentBlockRoot,
         randaoReveal,
-        graffiti: toGraffitiBuffer(
-          graffiti ?? getDefaultGraffiti(getLodestarClientVersion(opts), chain.executionEngine.clientVersion, opts)
-        ),
+        graffiti,
         feeRecipient,
         commonBlockBody,
       });
@@ -614,6 +573,10 @@ export function getValidatorApi(
       );
     }
 
+    const graffitiBytes = toGraffitiBytes(
+      graffiti ?? getDefaultGraffiti(getLodestarClientVersion(opts), chain.executionEngine.clientVersion, opts)
+    );
+
     const loggerContext = {
       slot,
       fork,
@@ -630,9 +593,7 @@ export function getValidatorApi(
       slot,
       parentBlockRoot,
       randaoReveal,
-      graffiti: toGraffitiBuffer(
-        graffiti ?? getDefaultGraffiti(getLodestarClientVersion(opts), chain.executionEngine.clientVersion, opts)
-      ),
+      graffiti: graffitiBytes,
     });
     logger.debug("Produced common block body", loggerContext);
 
@@ -651,23 +612,19 @@ export function getValidatorApi(
     // Start calls for building execution and builder blocks
 
     const builderPromise = isBuilderEnabled
-      ? produceBuilderBlindedBlock(slot, randaoReveal, graffiti, {
+      ? produceBuilderBlindedBlock(slot, randaoReveal, graffitiBytes, {
           feeRecipient,
           // can't do fee recipient checks as builder bid doesn't return feeRecipient as of now
           strictFeeRecipientCheck: false,
-          // skip checking and recomputing head in these individual produce calls
-          skipHeadChecksAndUpdate: true,
           commonBlockBody,
           parentBlockRoot,
         })
       : Promise.reject(new Error("Builder disabled"));
 
     const enginePromise = isEngineEnabled
-      ? produceEngineFullBlockOrContents(slot, randaoReveal, graffiti, {
+      ? produceEngineFullBlockOrContents(slot, randaoReveal, graffitiBytes, {
           feeRecipient,
           strictFeeRecipientCheck,
-          // skip checking and recomputing head in these individual produce calls
-          skipHeadChecksAndUpdate: true,
           commonBlockBody,
           parentBlockRoot,
         }).then((engineBlock) => {

@@ -18,6 +18,7 @@ import {
   createCachedBeaconState,
   getEffectiveBalanceIncrementsZeroInactive,
   isCachedBeaconState,
+  processSlots,
 } from "@lodestar/state-transition";
 import {
   BeaconBlock,
@@ -1230,11 +1231,13 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async getBlockRewards(block: BeaconBlock | BlindedBeaconBlock): Promise<BlockRewards> {
-    const preState = this.regen.getPreStateSync(block);
+    let preState = this.regen.getPreStateSync(block);
 
     if (preState === null) {
       throw Error(`Pre-state is unavailable given block's parent root ${toRootHex(block.parentRoot)}`);
     }
+
+    preState = processSlots(preState, block.slot); // Dial preState's slot to block.slot
 
     const postState = this.regen.getStateSync(toRootHex(block.stateRoot)) ?? undefined;
 
@@ -1271,11 +1274,13 @@ export class BeaconChain implements IBeaconChain {
     block: BeaconBlock | BlindedBeaconBlock,
     validatorIds?: (ValidatorIndex | string)[]
   ): Promise<SyncCommitteeRewards> {
-    const preState = this.regen.getPreStateSync(block);
+    let preState = this.regen.getPreStateSync(block);
 
     if (preState === null) {
       throw Error(`Pre-state is unavailable given block's parent root ${toRootHex(block.parentRoot)}`);
     }
+
+    preState = processSlots(preState, block.slot); // Dial preState's slot to block.slot
 
     return computeSyncCommitteeRewards(block, preState.clone(), validatorIds);
   }
