@@ -172,6 +172,7 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   VALIDATOR_CUSTODY_REQUIREMENT: "number",
   BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: "number",
 
+  // Blob Scheduling
   BLOB_SCHEDULE: "blob_schedule",
 };
 

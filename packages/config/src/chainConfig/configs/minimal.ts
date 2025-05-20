@@ -99,10 +99,6 @@ export const chainConfig: ChainConfig = {
   // ---------------------------------------------------------------
   // [customized] `MIN_VALIDATOR_WITHDRAWABILITY_DELAY + CHURN_LIMIT_QUOTIENT // 2` (= 272)
   MIN_EPOCHS_FOR_BLOCK_REQUESTS: 272,
-  BLOB_SCHEDULE: [
-    {EPOCH: Infinity, MAX_BLOBS_PER_BLOCK: 6}, // Deneb
-    {EPOCH: Infinity, MAX_BLOBS_PER_BLOCK: 9}, // Electra
-  ],
 
   // Deneb
   // `2**12` (= 4096 epochs, ~18 days)
@@ -130,4 +126,13 @@ export const chainConfig: ChainConfig = {
   NODE_CUSTODY_REQUIREMENT: 1,
   VALIDATOR_CUSTODY_REQUIREMENT: 8,
   BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: 32000000000,
+
+  // Blob Scheduling
+  // ---------------------------------------------------------------
+  BLOB_SCHEDULE: [
+    // Deneb
+    {EPOCH: Infinity, MAX_BLOBS_PER_BLOCK: 6},
+    // Electra
+    {EPOCH: Infinity, MAX_BLOBS_PER_BLOCK: 9},
+  ],
 };

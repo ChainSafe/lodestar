@@ -33,11 +33,6 @@ export const gnosisChainConfig: ChainConfig = {
   // Networking
   MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: 16384,
 
-  BLOB_SCHEDULE: [
-    {EPOCH: 889856, MAX_BLOBS_PER_BLOCK: 2}, // Deneb
-    {EPOCH: 1337856, MAX_BLOBS_PER_BLOCK: 2}, // Electra
-  ],
-
   // Dec 8, 2021, 13:00 UTC
   MIN_GENESIS_TIME: 1638968400,
   MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: 4096,
@@ -73,4 +68,10 @@ export const gnosisChainConfig: ChainConfig = {
   MAX_BLOBS_PER_BLOCK_ELECTRA: 2,
   // MAX_REQUEST_BLOCKS_DENEB * BLOB_SCHEDULE[1].MAX_BLOBS_PER_BLOCK
   MAX_REQUEST_BLOB_SIDECARS_ELECTRA: 256,
+
+  // Blob Scheduling
+  BLOB_SCHEDULE: [
+    {EPOCH: 889856, MAX_BLOBS_PER_BLOCK: 2}, // Deneb
+    {EPOCH: 1337856, MAX_BLOBS_PER_BLOCK: 2}, // Electra
+  ],
 };
