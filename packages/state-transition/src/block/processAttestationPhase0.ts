@@ -82,7 +82,7 @@ export function validateAttestation(fork: ForkSeq, state: CachedBeaconStateAllFo
     const windowEnd = fork >= ForkSeq.deneb ? computeEndSlotAtEpoch(computedEpoch + 1) : data.slot + SLOTS_PER_EPOCH;
 
     throw new Error(
-      "Attestation slot not within inclusion window: " + `slot=${data.slot} window=${windowStart}..${windowEnd}`
+      `Attestation slot not within inclusion window: slot=${data.slot} window=${windowStart}..${windowEnd}`
     );
   }
 
