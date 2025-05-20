@@ -1,6 +1,7 @@
 import {fromHex, toHex} from "@lodestar/utils";
 import {
   BlobSchedule,
+  BlobScheduleEntry,
   ChainConfig,
   SpecJson,
   SpecValue,
@@ -85,6 +86,7 @@ export function serializeSpecValue(value: SpecValue, typeName: SpecValueTypeName
         throw Error(`Invalid value ${value.toString()} expected string`);
       }
       return value;
+
     case "blob_schedule":
       if (!isBlobSchedule(value)) {
         throw Error(`Invalid value ${value.toString()} expected BlobSchedule`);
@@ -100,29 +102,38 @@ export function serializeSpecValue(value: SpecValue, typeName: SpecValueTypeName
 export function deserializeSpecValue(valueStr: unknown, typeName: SpecValueTypeName, keyName: string): SpecValue {
   if (typeName === "blob_schedule") {
     if (!Array.isArray(valueStr)) {
-      throw Error("Invalid blob schedule must be an array");
+      throw Error(`Invalid BLOB_SCHEDULE value ${valueStr} expected array`);
     }
 
-    const blobSchedule = valueStr.map((entry) => {
+    const blobSchedule = valueStr.map((entry, i) => {
       if (typeof entry !== "object" || entry === null) {
-        throw Error(`Invalid blob schedule entry ${entry}`);
+        throw Error(`Invalid BLOB_SCHEDULE[${i}] entry ${entry} expected object`);
       }
 
-      const out: Record<string, unknown> = {...entry};
+      const out = {} as BlobScheduleEntry;
 
-      for (const key of ["EPOCH", "MAX_BLOBS_PER_BLOCK"]) {
-        const raw = entry[key];
-        if (raw === MAX_UINT64_JSON) {
+      for (const key of ["EPOCH", "MAX_BLOBS_PER_BLOCK"] as const) {
+        const value = entry[key];
+
+        if (value === undefined) {
+          throw Error(`Invalid BLOB_SCHEDULE[${i}] entry ${entry} missing value for ${key}`);
+        }
+
+        if (typeof value !== "string") {
+          throw Error(`Invalid BLOB_SCHEDULE[${i}].${key} value ${value} expected string`);
+        }
+
+        if (value === MAX_UINT64_JSON) {
           out[key] = Infinity;
         } else {
-          out[key] = parseInt(raw, 10);
+          out[key] = parseInt(value, 10);
         }
       }
 
       return out;
     });
 
-    return blobSchedule as BlobSchedule;
+    return blobSchedule;
   }
 
   if (typeof valueStr !== "string") {

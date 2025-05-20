@@ -178,7 +178,7 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   BLOB_SCHEDULE: "blob_schedule",
 };
 
-type BlobScheduleEntry = {
+export type BlobScheduleEntry = {
   EPOCH: number;
   MAX_BLOBS_PER_BLOCK: number;
 };

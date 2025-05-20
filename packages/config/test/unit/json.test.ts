@@ -9,6 +9,7 @@ describe("chainConfig JSON", () => {
 
     expect(chainConfigRes).toEqual(chainConfig);
   });
+
   it("Custom blob schedule", () => {
     const blobSchedule: BlobSchedule = [
       {EPOCH: 0, MAX_BLOBS_PER_BLOCK: 10},
