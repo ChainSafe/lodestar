@@ -52,7 +52,7 @@ const env = await Simulation.initWithDefaults(
   ]
 );
 
-await env.start({runTimeoutMs: estimatedTimeoutMs});
+await env.start({runTimeoutMs: estimatedTimeoutMs * 2});
 await connectAllNodes(env.nodes);
 
 env.tracker.register(

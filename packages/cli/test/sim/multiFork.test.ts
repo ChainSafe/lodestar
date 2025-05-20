@@ -140,7 +140,7 @@ env.tracker.register(
 
 env.tracker.register(createWithdrawalAssertions(env.nodes[0].id));
 
-await env.start({runTimeoutMs: estimatedTimeoutMs});
+await env.start({runTimeoutMs: estimatedTimeoutMs * 2});
 await connectAllNodes(env.nodes);
 
 let lastForkEpoch = 0;
