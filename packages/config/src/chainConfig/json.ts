@@ -1,6 +1,5 @@
 import {fromHex, toHex} from "@lodestar/utils";
 import {
-  BlobSchedule,
   BlobScheduleEntry,
   ChainConfig,
   SpecJson,
