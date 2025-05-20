@@ -335,7 +335,7 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
   }
 
   addBlock({blockRootHex, block, source}: AddBlock<ForkBlobsDA>): void {
-    if (!this.state.hasBlock) {
+    if (this.state.hasBlock) {
       throw new BlockInputError(
         {
           code: BlockInputErrorCode.INVALID_CONSTRUCTION,
