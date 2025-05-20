@@ -143,11 +143,6 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
         throw Error("Attempt to get MAX_BLOBS_PER_BLOCK from empty BLOB_SCHEDULE");
       }
 
-      const minEpoch = Math.min(...config.BLOB_SCHEDULE.map((e) => e.EPOCH));
-      if (epoch < minEpoch) {
-        throw Error(`Epoch ${epoch} is below minimum epoch ${minEpoch} in BLOB_SCHEDULE`);
-      }
-
       // Sort by epoch in descending order
       const blobSchedule = [...config.BLOB_SCHEDULE].sort((a, b) => {
         if (a.EPOCH !== b.EPOCH) {
@@ -162,8 +157,7 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
         }
       }
 
-      // Unreachable as min epoch is already checked above
-      throw Error(`No matching BLOB_SCHEDULE entry found for epoch ${epoch}`);
+      return Math.min(...blobSchedule.map((e) => e.MAX_BLOBS_PER_BLOCK));
     },
     getMaxRequestBlobSidecars(fork: ForkName): number {
       return isForkPostElectra(fork) ? config.MAX_REQUEST_BLOB_SIDECARS_ELECTRA : config.MAX_REQUEST_BLOB_SIDECARS;
