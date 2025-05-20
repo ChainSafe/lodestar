@@ -5,10 +5,16 @@ import {Metrics} from "../../metrics/index.js";
 import {isSuperSetOrEqual} from "../../util/bitArray.js";
 
 /**
- * With this gossip validation condition: [IGNORE] aggregate.data.slot is within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
- * Since ATTESTATION_PROPAGATION_SLOT_RANGE is 32, we keep seen AggregateAndProof in the last 2 epochs.
+ * With this gossip validation condition:
+ * pre-deneb:
+ * - [IGNORE] aggregate.data.slot is within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
+ * post-deneb:
+ * - [IGNORE] the epoch of `aggregate.data.slot` is either the current or previous epoch
+ * - [IGNORE] `aggregate.data.slot` is equal to or earlier than the `current_slot` (with a `MAXIMUM_GOSSIP_CLOCK_DISPARITY` allowance)
+ *
+ * We keep seen AggregateAndProof in the last 2 epochs pre and post deneb.
  */
-const MAX_EPOCHS_IN_CACHE = 2;
+const EPOCH_LOOKBACK_LIMIT = 2;
 
 export type AggregationInfo = {
   aggregationBits: BitArray;
@@ -64,7 +70,7 @@ export class SeenAggregatedAttestations {
   }
 
   prune(currentEpoch: Epoch): void {
-    this.lowestPermissibleEpoch = Math.max(currentEpoch - MAX_EPOCHS_IN_CACHE, 0);
+    this.lowestPermissibleEpoch = Math.max(currentEpoch - EPOCH_LOOKBACK_LIMIT, 0);
     for (const epoch of this.aggregateRootsByEpoch.keys()) {
       if (epoch < this.lowestPermissibleEpoch) {
         this.aggregateRootsByEpoch.delete(epoch);
