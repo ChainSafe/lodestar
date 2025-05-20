@@ -76,11 +76,11 @@ export class SeenBlockInputCache {
     });
   }
 
-  hasBlock(rootHex: RootHex): boolean {
+  has(rootHex: RootHex): boolean {
     return this.blockInputs.has(rootHex);
   }
 
-  removeBlock(rootHex: RootHex): void {
+  remove(rootHex: RootHex): void {
     this.blockInputs.delete(rootHex);
   }
 
@@ -103,12 +103,7 @@ export class SeenBlockInputCache {
     }
   }
 
-  getBlockInputByBlock({
-    block,
-    source,
-    seenTimestampSec,
-    peerIdStr,
-  }: SourceMeta & {block: SignedBeaconBlock}): IBlockInput {
+  getByBlock({block, source, seenTimestampSec, peerIdStr}: SourceMeta & {block: SignedBeaconBlock}): IBlockInput {
     const blockRoot = this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
     const blockRootHex = toHex(blockRoot);
 
@@ -169,7 +164,7 @@ export class SeenBlockInputCache {
     return blockInput;
   }
 
-  getBlockInputByBlob(
+  getByBlob(
     {blobSidecar, source, seenTimestampSec, peerIdStr}: SourceMeta & {blobSidecar: deneb.BlobSidecar},
     opts: GetByBlobOptions = {}
   ): IBlockInput {
