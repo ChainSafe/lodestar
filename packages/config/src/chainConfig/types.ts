@@ -217,3 +217,5 @@ export type SpecValueTypeName = SpecValueType<SpecValue>;
 export type SpecTypes<Spec extends Record<string, SpecValue>> = {
   [K in keyof Spec]: SpecValueType<Spec[K]>;
 };
+
+export type SpecJson = Record<string, string | Record<string, string>[]>;

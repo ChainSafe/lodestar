@@ -1,10 +1,18 @@
 import {fromHex, toHex} from "@lodestar/utils";
-import {BlobSchedule, ChainConfig, SpecValue, SpecValueTypeName, chainConfigTypes, isBlobSchedule} from "./types.js";
+import {
+  BlobSchedule,
+  ChainConfig,
+  SpecJson,
+  SpecValue,
+  SpecValueTypeName,
+  chainConfigTypes,
+  isBlobSchedule,
+} from "./types.js";
 
 const MAX_UINT64_JSON = "18446744073709551615";
 
-export function chainConfigToJson(config: ChainConfig): Record<string, string | Record<string, string>[]> {
-  const json: Record<string, string | Record<string, string>[]> = {};
+export function chainConfigToJson(config: ChainConfig): SpecJson {
+  const json: SpecJson = {};
 
   for (const key of Object.keys(chainConfigTypes) as (keyof ChainConfig)[]) {
     const value = config[key];
@@ -29,8 +37,8 @@ export function chainConfigFromJson(json: Record<string, unknown>): ChainConfig 
   return config;
 }
 
-export function specValuesToJson(spec: Record<string, SpecValue>): Record<string, string | Record<string, string>[]> {
-  const json: Record<string, string | Record<string, string>[]> = {};
+export function specValuesToJson(spec: Record<string, SpecValue>): SpecJson {
+  const json: SpecJson = {};
 
   for (const key of Object.keys(spec)) {
     json[key] = serializeSpecValue(spec[key], toSpecValueTypeName(spec[key]));
