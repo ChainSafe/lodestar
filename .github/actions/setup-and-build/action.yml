@@ -20,6 +20,11 @@ runs:
       shell: bash
       run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT
 
+    - name: Create cache key
+      id: build-cache
+      shell: bash
+      run: echo "key=build-cache-${{ runner.os }}-${{ runner.arch }}-node-${{ inputs.node }}-${{ github.sha }}" >> $GITHUB_OUTPUT
+
     - name: Restore build
       uses: actions/cache/restore@v4
       id: cache-build-restore
@@ -28,7 +33,7 @@ runs:
           lib/
           packages/*/lib
           packages/*/.git-data.json
-        key: ${{ runner.os }}-${{ runner.arch }}-node-${{ inputs.node }}-${{ github.sha }}
+        key: ${{ steps.build-cache.outputs.key }}
 
     - name: Install & build
       shell: bash
@@ -50,9 +55,7 @@ runs:
       uses: actions/cache@master
       with:
         path: |
-          node_modules
-          packages/*/node_modules
           lib/
           packages/*/lib
           packages/*/.git-data.json
-        key: ${{ runner.os }}-${{ runner.arch }}-node-${{ inputs.node }}-${{ github.sha }}
+        key: ${{ steps.build-cache.outputs.key }}
