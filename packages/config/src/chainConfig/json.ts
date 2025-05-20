@@ -118,7 +118,7 @@ export function deserializeSpecValue(valueStr: unknown, typeName: SpecValueTypeN
         const value = entry[key];
 
         if (value === undefined) {
-          throw Error(`Invalid BLOB_SCHEDULE[${i}] entry ${entry} missing value for ${key}`);
+          throw Error(`Invalid BLOB_SCHEDULE[${i}] entry ${JSON.stringify(entry)} missing ${key}`);
         }
 
         if (typeof value !== "string") {
@@ -128,7 +128,13 @@ export function deserializeSpecValue(valueStr: unknown, typeName: SpecValueTypeN
         if (value === MAX_UINT64_JSON) {
           out[key] = Infinity;
         } else {
-          out[key] = parseInt(value, 10);
+          const parsed = parseInt(value, 10);
+
+          if (Number.isNaN(parsed)) {
+            throw Error(`Invalid BLOB_SCHEDULE[${i}].${key} value ${value} expected number`);
+          }
+
+          out[key] = parsed;
         }
       }
 
