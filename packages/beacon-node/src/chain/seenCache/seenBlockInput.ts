@@ -3,7 +3,7 @@ import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {ForkName, isForkPostDeneb} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex, SignedBeaconBlock, Slot, deneb} from "@lodestar/types";
-import {LodestarError, Logger, toHex} from "@lodestar/utils";
+import {LodestarError, Logger, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {IClock} from "../../util/clock.js";
 import {
@@ -105,7 +105,7 @@ export class SeenBlockInputCache {
 
   getByBlock({block, source, seenTimestampSec, peerIdStr}: SourceMeta & {block: SignedBeaconBlock}): IBlockInput {
     const blockRoot = this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
-    const blockRootHex = toHex(blockRoot);
+    const blockRootHex = toRootHex(blockRoot);
 
     // TODO(peerDAS): Why is it necessary to static cast this here. All conditional paths result in a valid value so should be defined correctly below
     let blockInput = this.blockInputs.get(blockRootHex) as IBlockInput;
@@ -171,7 +171,7 @@ export class SeenBlockInputCache {
     const blockRoot = this.config
       .getForkTypes(blobSidecar.signedBlockHeader.message.slot)
       .BeaconBlockHeader.hashTreeRoot(blobSidecar.signedBlockHeader.message);
-    const blockRootHex = toHex(blockRoot);
+    const blockRootHex = toRootHex(blockRoot);
 
     // TODO(peerDAS): Why is it necessary to static cast this here. All conditional paths result in a valid value so should be defined correctly below
     let blockInput = this.blockInputs.get(blockRootHex) as IBlockInput;

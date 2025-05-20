@@ -1,6 +1,6 @@
 import {ForkName, ForkPreDeneb} from "@lodestar/params";
 import {BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
-import {fromHex, prettyBytes, toHex, withTimeout} from "@lodestar/utils";
+import {fromHex, prettyBytes, toRootHex, withTimeout} from "@lodestar/utils";
 import {VersionedHashes} from "../../../execution/index.js";
 import {kzgCommitmentToVersionedHash} from "../../../util/blobs.js";
 import {byteArrayEquals} from "../../../util/bytes.js";
@@ -210,7 +210,7 @@ export class BlockInputPreData extends AbstractBlockInput<ForkPreDeneb, null> {
       forkName: props.forkName,
       slot: props.block.message.slot,
       blockRootHex: props.blockRootHex,
-      parentRootHex: toHex(props.block.message.parentRoot),
+      parentRootHex: toRootHex(props.block.message.parentRoot),
     };
     const state: BlockInputPreDataState = {
       hasBlock: true,
@@ -292,7 +292,7 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
       forkName: props.forkName,
       slot: props.block.message.slot,
       blockRootHex: props.blockRootHex,
-      parentRootHex: toHex(props.block.message.parentRoot),
+      parentRootHex: toRootHex(props.block.message.parentRoot),
     };
     const blockInput = new BlockInputBlobs(init, state);
     blockInput.blockPromise.resolve(props.block);
@@ -312,7 +312,7 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
       timeCreated: props.seenTimestampSec,
       forkName: props.forkName,
       blockRootHex: props.blockRootHex,
-      parentRootHex: toHex(props.blobSidecar.signedBlockHeader.message.parentRoot),
+      parentRootHex: toRootHex(props.blobSidecar.signedBlockHeader.message.parentRoot),
       slot: props.blobSidecar.signedBlockHeader.message.slot,
     };
     const blockInput = new BlockInputBlobs(init, state);
@@ -601,7 +601,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
       timeCreated: props.source.seenTimestampSec,
       forkName: props.forkName,
       blockRootHex: props.blockRootHex,
-      parentRootHex: toHex(props.block.message.parentRoot),
+      parentRootHex: toRootHex(props.block.message.parentRoot),
       slot: props.block.message.slot,
     };
     const blockInput = new BlockInputColumns(init, state, props.sampledColumns, props.custodyColumns);
@@ -627,7 +627,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
       timeCreated: props.seenTimestampSec,
       forkName: props.forkName,
       blockRootHex: props.blockRootHex,
-      parentRootHex: toHex(props.columnSidecar.signedBlockHeader.message.parentRoot),
+      parentRootHex: toRootHex(props.columnSidecar.signedBlockHeader.message.parentRoot),
       slot: props.columnSidecar.signedBlockHeader.message.slot,
     };
     const blockInput = new BlockInputColumns(init, state, props.sampledColumns, props.custodyColumns);
