@@ -53,6 +53,7 @@ const IDENTITY_PEER_ID = ""; // TODO: Compute identity keypair
 export function getBeaconBlockApi({
   chain,
   config,
+  metrics,
   network,
   db,
 }: Pick<
@@ -201,7 +202,11 @@ export function getBeaconBlockApi({
     chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRoot});
 
     // TODO: Validate block
-    chain.validatorMonitor?.registerBeaconBlock(OpSource.api, seenTimestampSec, blockForImport.block.message);
+    const delaySec =
+      seenTimestampSec - (chain.genesisTime + blockForImport.block.message.slot * config.SECONDS_PER_SLOT);
+    metrics?.gossipBlock.elapsedTimeTillReceived.observe({source: OpSource.api}, delaySec);
+    chain.validatorMonitor?.registerBeaconBlock(OpSource.api, delaySec, blockForImport.block.message);
+
     chain.logger.info("Publishing block", valLogMeta);
     const publishPromises = [
       // Send the block, regardless of whether or not it is valid. The API

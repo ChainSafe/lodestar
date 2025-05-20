@@ -1,5 +1,6 @@
 {
   "extends": "../../tsconfig.json",
   "include": ["src", "test"],
-  "exclude": ["src/index.browser.ts", "test/unit/webEsmBundle.browser.test.ts"]
+  // These files to be excluded in case we run `check-types` before `build:bundle`
+  "exclude": ["test/unit/webEsmBundle.browser.test.ts", "test/browser/webEsmBundle.browser.test.ts"]
 }
