@@ -57,7 +57,10 @@ export function toSpecValueTypeName(value: SpecValue): SpecValueTypeName {
   throw Error(`Unknown value type ${value}`);
 }
 
-export function serializeSpecValue(value: SpecValue, typeName: SpecValueTypeName): string | Record<string, string>[] {
+export function serializeSpecValue(
+  value: SpecValue,
+  typeName: SpecValueTypeName
+): string | Record<keyof BlobScheduleEntry, string>[] {
   switch (typeName) {
     case "number":
       if (typeof value !== "number") {
@@ -111,7 +114,7 @@ export function deserializeSpecValue(valueStr: unknown, typeName: SpecValueTypeN
 
       const out = {} as BlobScheduleEntry;
 
-      for (const key of ["EPOCH", "MAX_BLOBS_PER_BLOCK"] as const) {
+      for (const key of ["EPOCH", "MAX_BLOBS_PER_BLOCK"] as Array<keyof BlobScheduleEntry>) {
         const value = entry[key];
 
         if (value === undefined) {
