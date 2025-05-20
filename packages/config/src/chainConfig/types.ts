@@ -89,6 +89,8 @@ export type ChainConfig = {
   NODE_CUSTODY_REQUIREMENT: number;
   VALIDATOR_CUSTODY_REQUIREMENT: number;
   BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: number;
+
+  // Blob Scheduling
   BLOB_SCHEDULE: BlobSchedule;
 };
 

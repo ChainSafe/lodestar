@@ -71,7 +71,9 @@ export const gnosisChainConfig: ChainConfig = {
 
   // Blob Scheduling
   BLOB_SCHEDULE: [
-    {EPOCH: 889856, MAX_BLOBS_PER_BLOCK: 2}, // Deneb
-    {EPOCH: 1337856, MAX_BLOBS_PER_BLOCK: 2}, // Electra
+    // Deneb
+    {EPOCH: 889856, MAX_BLOBS_PER_BLOCK: 2},
+    // Electra
+    {EPOCH: 1337856, MAX_BLOBS_PER_BLOCK: 2},
   ],
 };
