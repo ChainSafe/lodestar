@@ -157,6 +157,7 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
         }
       }
 
+      // Only for testing. Should never reach this in the real world.
       return Math.min(...blobSchedule.map((e) => e.MAX_BLOBS_PER_BLOCK));
     },
     getMaxRequestBlobSidecars(fork: ForkName): number {
