@@ -13,6 +13,8 @@ runs:
       with:
         node-version: ${{inputs.node}}
         check-latest: true
+        # The hash of yarn.lock file will be used as cache key
+        # So unless our dependencies change, we can reuse the cache
         cache: yarn
 
     - name: Node.js version
@@ -23,6 +25,7 @@ runs:
     - name: Create cache key
       id: build-cache
       shell: bash
+      # This build cache will be per github commits and reused among different jobs on same PRs
       run: echo "key=build-cache-${{ runner.os }}-${{ runner.arch }}-node-${{ inputs.node }}-${{ github.sha }}" >> $GITHUB_OUTPUT
 
     - name: Restore build
