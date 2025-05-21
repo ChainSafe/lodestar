@@ -950,6 +950,22 @@ export function createLodestarMetrics(
           help: "Total number of participations per block root in SyncContributionAndProofPool",
           labelNames: ["index"],
         }),
+        getAggregateRoots: register.gauge({
+          name: "lodestar_oppool_sync_contribution_and_proof_pool_get_aggregate_roots_total",
+          help: "Total number of block roots in SyncContributionAndProofPool.getAggregate(slot)",
+        }),
+        getAggregateSubnets: register.gauge({
+          name: "lodestar_oppool_sync_contribution_and_proof_pool_get_aggregate_subnets_total",
+          help: "Total number of subnets in SyncContributionAndProofPool.getAggregate(slot, root)",
+        }),
+        getAggregateParticipations: register.gauge({
+          name: "lodestar_oppool_sync_contribution_and_proof_pool_get_aggregate_participations_total",
+          help: "Total number of participations in SyncContributionAndProofPool.getAggregate(slot, root)",
+        }),
+        getAggregateReturnsEmpty: register.gauge({
+          name: "lodestar_oppool_sync_contribution_and_proof_pool_get_aggregate_returns_empty_total",
+          help: "Total number of empty returns in SyncContributionAndProofPool.getAggregate(slot, root)",
+        }),
       }
     },
 

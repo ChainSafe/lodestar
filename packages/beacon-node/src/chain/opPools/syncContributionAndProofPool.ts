@@ -50,7 +50,7 @@ export class SyncContributionAndProofPool {
 
   private lowestPermissibleSlot = 0;
 
-  constructor(private readonly clock: IClock, metrics: Metrics | null = null) {
+  constructor(private readonly clock: IClock, private readonly metrics: Metrics | null = null) {
     // Param guarantee for optimizations below that merge syncSubcommitteeBits as bytes
     if (SYNC_COMMITTEE_SUBNET_SIZE % 8 !== 0) {
       throw Error("SYNC_COMMITTEE_SUBNET_SIZE must be multiple of 8");
@@ -108,9 +108,14 @@ export class SyncContributionAndProofPool {
    * This is for producing blocks, the same to process_sync_committee_contributions in the spec.
    */
   getAggregate(slot: Slot, prevBlockRoot: Root): altair.SyncAggregate {
-    const bestContributionBySubnet = this.bestContributionBySubnetRootBySlot.get(slot)?.get(toRootHex(prevBlockRoot));
-    if (!bestContributionBySubnet || bestContributionBySubnet.size === 0) {
-      // TODO: Add metric for missing SyncAggregate
+    const opPoolMetrics = this.metrics?.opPool.syncContributionAndProofPool;
+    const bestContributionBySubnetByRoot = this.bestContributionBySubnetRootBySlot.get(slot) ?? new Map();
+    opPoolMetrics?.getAggregateRoots.set(bestContributionBySubnetByRoot.size);
+    const bestContributionBySubnet = bestContributionBySubnetByRoot.get(toRootHex(prevBlockRoot)) ?? new Map();
+    opPoolMetrics?.getAggregateSubnets.set(bestContributionBySubnet.size);
+
+    if (bestContributionBySubnet.size === 0) {
+      opPoolMetrics?.getAggregateReturnsEmpty.inc();
       // Must return signature as G2_POINT_AT_INFINITY when participating bits are empty
       // https://github.com/ethereum/consensus-specs/blob/30f2a076377264677e27324a8c3c78c590ae5e20/specs/altair/bls.md#eth2_fast_aggregate_verify
       return {
@@ -119,7 +124,7 @@ export class SyncContributionAndProofPool {
       };
     }
 
-    return aggregate(bestContributionBySubnet);
+    return aggregate(bestContributionBySubnet, this.metrics);
   }
 
   /**
@@ -191,12 +196,14 @@ export function contributionToFast(
  * Aggregate best contributions of each subnet into SyncAggregate
  * @returns SyncAggregate to be included in block body.
  */
-export function aggregate(bestContributionBySubnet: Map<number, SyncContributionFast>): altair.SyncAggregate {
+export function aggregate(bestContributionBySubnet: Map<number, SyncContributionFast>, metrics: Metrics | null = null): altair.SyncAggregate {
   // check for empty/undefined bestContributionBySubnet earlier
   const syncCommitteeBits = BitArray.fromBitLen(SYNC_COMMITTEE_SIZE);
 
   const signatures: Signature[] = [];
+  let participationCount = 0;
   for (const [subnet, bestContribution] of bestContributionBySubnet.entries()) {
+    participationCount += bestContribution.numParticipants;
     const byteOffset = subnet * SYNC_COMMITTEE_SUBNET_BYTES;
 
     for (let i = 0; i < SYNC_COMMITTEE_SUBNET_BYTES; i++) {
@@ -205,6 +212,8 @@ export function aggregate(bestContributionBySubnet: Map<number, SyncContribution
 
     signatures.push(signatureFromBytesNoCheck(bestContribution.syncSubcommitteeSignature));
   }
+
+  metrics?.opPool.syncContributionAndProofPool.getAggregateParticipations.set(participationCount);
   return {
     syncCommitteeBits,
     syncCommitteeSignature: aggregateSignatures(signatures).toBytes(),
