@@ -140,9 +140,7 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     },
     getMaxBlobsPerBlock(epoch: Epoch): number {
       // TODO Fulu: Max blobs of Deneb and Electra are hardcoded for fusaka devnet-0. Remove this for devnet-1
-      const fork = this.getForkInfoAtEpoch(epoch).name;
-
-      switch (fork) {
+      switch (this.getForkInfoAtEpoch(epoch).name) {
         case ForkName.electra:
           return config.MAX_BLOBS_PER_BLOCK_ELECTRA;
         case ForkName.deneb:
