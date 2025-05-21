@@ -17,8 +17,9 @@ describe("getMaxBlobsPerBlock", () => {
       DENEB_FORK_EPOCH: 0,
       ELECTRA_FORK_EPOCH: 0,
       FULU_FORK_EPOCH: 0,
-    }
-  })
+    };
+  });
+
   it("should throw an error if BLOB_SCHEDULE is empty", () => {
     const config = createForkConfig({...defaultConfig, BLOB_SCHEDULE: []});
 
