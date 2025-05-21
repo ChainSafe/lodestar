@@ -497,7 +497,11 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
 }
 
 function blockAndBlobArePaired(block: SignedBeaconBlock<ForkBlobsDA>, blobSidecar: deneb.BlobSidecar): boolean {
-  return byteArrayEquals(block.message.body.blobKzgCommitments[blobSidecar.index], blobSidecar.kzgCommitment);
+  const blockCommitment = block.message.body.blobKzgCommitments[blobSidecar.index];
+  if (!blockCommitment || !blobSidecar.kzgCommitment) {
+    return false;
+  }
+  return byteArrayEquals(blockCommitment, blobSidecar.kzgCommitment);
 }
 
 function assertBlockAndBlobArePaired(
