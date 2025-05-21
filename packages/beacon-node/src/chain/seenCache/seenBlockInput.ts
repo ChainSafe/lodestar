@@ -156,6 +156,7 @@ export class SeenBlockInputCache {
           },
         });
       }
+      this.blockInputs.set(blockInput.blockRootHex, blockInput);
     }
 
     if (!blockInput.hasBlock()) {
