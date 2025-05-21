@@ -252,7 +252,7 @@ export class BeaconChain implements IBeaconChain {
       preAggregateCutOffTime,
       this.opts?.preaggregateSlotDistance
     );
-    this.syncContributionAndProofPool = new SyncContributionAndProofPool(clock, metrics);
+    this.syncContributionAndProofPool = new SyncContributionAndProofPool(clock, metrics, logger);
 
     this.seenAggregatedAttestations = new SeenAggregatedAttestations(metrics);
     this.seenContributionAndProof = new SeenContributionAndProof(metrics);

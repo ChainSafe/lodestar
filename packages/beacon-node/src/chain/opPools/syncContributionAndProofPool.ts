@@ -3,7 +3,7 @@ import {BitArray} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {G2_POINT_AT_INFINITY} from "@lodestar/state-transition";
 import {Root, Slot, SubnetID, altair, ssz} from "@lodestar/types";
-import {MapDef, toRootHex} from "@lodestar/utils";
+import {Logger, MapDef, toRootHex} from "@lodestar/utils";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants/constants.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {IClock} from "../../util/clock.js";
@@ -52,7 +52,8 @@ export class SyncContributionAndProofPool {
 
   constructor(
     private readonly clock: IClock,
-    private readonly metrics: Metrics | null = null
+    private readonly metrics: Metrics | null = null,
+    private logger: Logger | null = null
   ) {
     // Param guarantee for optimizations below that merge syncSubcommitteeBits as bytes
     if (SYNC_COMMITTEE_SUBNET_SIZE % 8 !== 0) {
@@ -118,11 +119,19 @@ export class SyncContributionAndProofPool {
     const opPoolMetrics = this.metrics?.opPool.syncContributionAndProofPool;
     const bestContributionBySubnetByRoot = this.bestContributionBySubnetRootBySlot.get(slot) ?? new Map();
     opPoolMetrics?.getAggregateRoots.set(bestContributionBySubnetByRoot.size);
-    const bestContributionBySubnet = bestContributionBySubnetByRoot.get(toRootHex(prevBlockRoot)) ?? new Map();
+    const prevBlockRootHex = toRootHex(prevBlockRoot);
+    const bestContributionBySubnet = bestContributionBySubnetByRoot.get(prevBlockRootHex) ?? new Map();
     opPoolMetrics?.getAggregateSubnets.set(bestContributionBySubnet.size);
 
     if (bestContributionBySubnet.size === 0) {
       opPoolMetrics?.getAggregateReturnsEmpty.inc();
+      // this may happen, see https://github.com/ChainSafe/lodestar/issues/7299
+      const availableRoots = Array.from(bestContributionBySubnetByRoot.keys()).join(",");
+      this.logger?.warn("SyncContributionAndProofPool.getAggregate: no contributions for root", {
+        slot,
+        root: bestContributionBySubnet,
+        availableRoots,
+      });
       // Must return signature as G2_POINT_AT_INFINITY when participating bits are empty
       // https://github.com/ethereum/consensus-specs/blob/30f2a076377264677e27324a8c3c78c590ae5e20/specs/altair/bls.md#eth2_fast_aggregate_verify
       return {
