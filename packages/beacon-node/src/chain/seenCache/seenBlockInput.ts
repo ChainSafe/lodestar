@@ -98,14 +98,14 @@ export class SeenBlockInputCache {
     }
   }
 
-  onFinalized(checkpoint: CheckpointWithHex) {
+  onFinalized = (checkpoint: CheckpointWithHex) => {
     const cutoffSlot = computeStartSlotAtEpoch(checkpoint.epoch);
     for (const [rootHex, blockInput] of this.blockInputs) {
       if (blockInput.slot < cutoffSlot) {
         this.blockInputs.delete(rootHex);
       }
     }
-  }
+  };
 
   getByBlock({block, source, seenTimestampSec, peerIdStr}: SourceMeta & {block: SignedBeaconBlock}): IBlockInput {
     const blockRoot = this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
