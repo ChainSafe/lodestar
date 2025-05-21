@@ -1312,10 +1312,11 @@ export function getValidatorApi(
               contributionAndProof,
               true // skip known participants check
             );
-            chain.syncContributionAndProofPool.add(
+            const insertOutcome = chain.syncContributionAndProofPool.add(
               contributionAndProof.message,
               syncCommitteeParticipantIndices.length
             );
+            metrics?.opPool.syncContributionAndProofPool.apiInsertOutcome.inc({insertOutcome});
             await network.publishContributionAndProof(contributionAndProof);
           } catch (e) {
             const logCtx = {

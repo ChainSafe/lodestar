@@ -95,7 +95,7 @@ export class SyncContributionAndProofPool {
   }
 
   /**
-   * This is for the block factory, the same to process_sync_committee_contributions in the spec.
+   * This is for producing blocks, the same to process_sync_committee_contributions in the spec.
    */
   getAggregate(slot: Slot, prevBlockRoot: Root): altair.SyncAggregate {
     const bestContributionBySubnet = this.bestContributionBySubnetRootBySlot.get(slot)?.get(toRootHex(prevBlockRoot));
