@@ -324,9 +324,12 @@ describe("SeenBlockInputCache", () => {
     it("should return the correct BlockInput for a BlockInput created by blob", () => {
       const block = ssz.deneb.SignedBeaconBlock.defaultValue();
       block.message.slot = denebSlot;
+      const commitment = Buffer.alloc(48, 0x77);
+      block.message.body.blobKzgCommitments = [commitment];
       const signedBlockHeader = signedBlockToSignedHeader(config, block);
       const blobSidecar = ssz.deneb.BlobSidecar.defaultValue();
       blobSidecar.signedBlockHeader = signedBlockHeader;
+      blobSidecar.kzgCommitment = commitment;
 
       const blockInput1 = cache.getByBlob({
         blobSidecar,
