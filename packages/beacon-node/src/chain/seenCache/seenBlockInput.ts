@@ -172,7 +172,7 @@ export class SeenBlockInputCache {
   getByBlob(
     {blobSidecar, source, seenTimestampSec, peerIdStr}: SourceMeta & {blobSidecar: deneb.BlobSidecar},
     opts: GetByBlobOptions = {}
-  ): IBlockInput {
+  ): BlockInputBlobs {
     const blockRoot = this.config
       .getForkTypes(blobSidecar.signedBlockHeader.message.slot)
       .BeaconBlockHeader.hashTreeRoot(blobSidecar.signedBlockHeader.message);
@@ -180,7 +180,9 @@ export class SeenBlockInputCache {
 
     // TODO(peerDAS): Why is it necessary to static cast this here. All conditional paths result in a valid value so should be defined correctly below
     let blockInput = this.blockInputs.get(blockRootHex) as IBlockInput;
+    let created = false;
     if (!blockInput) {
+      created = true;
       const {forkName, daOutOfRange} = this.buildCommonProps(blobSidecar.signedBlockHeader.message.slot);
       blockInput = BlockInputBlobs.createFromBlob({
         blobSidecar,
@@ -209,7 +211,7 @@ export class SeenBlockInputCache {
 
     if (!blockInput.hasBlob(blobSidecar.index)) {
       blockInput.addBlob({blobSidecar, blockRootHex, source, seenTimestampSec, peerIdStr});
-    } else {
+    } else if (!created) {
       this.logger?.debug(
         `Attempt to cache blob index #${blobSidecar.index} but is already cached on BlockInput`,
         blockInput.getLogMeta()
