@@ -8,6 +8,7 @@ import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
 import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
 import { IClock } from "../../util/clock.js";
 import { MAXIMUM_GOSSIP_CLOCK_DISPARITY } from "../../constants/constants.js";
+import { Metrics } from "../../metrics/metrics.js";
 
 /**
  * SyncCommittee aggregates are only useful for the next block they have signed.
@@ -49,11 +50,12 @@ export class SyncContributionAndProofPool {
 
   private lowestPermissibleSlot = 0;
 
-  constructor(private readonly clock: IClock) {
+  constructor(private readonly clock: IClock, metrics: Metrics | null = null) {
     // Param guarantee for optimizations below that merge syncSubcommitteeBits as bytes
     if (SYNC_COMMITTEE_SUBNET_SIZE % 8 !== 0) {
       throw Error("SYNC_COMMITTEE_SUBNET_SIZE must be multiple of 8");
     }
+    metrics?.opPool.syncContributionAndProofPool.size.addCollect(() => this.onScrapeMetrics(metrics));
   }
 
   /** Returns current count of unique SyncContributionFast by block root and subnet */
@@ -128,6 +130,24 @@ export class SyncContributionAndProofPool {
   prune(headSlot: Slot): void {
     pruneBySlot(this.bestContributionBySubnetRootBySlot, headSlot, SLOTS_RETAINED);
     this.lowestPermissibleSlot = Math.max(headSlot - SLOTS_RETAINED, 0);
+  }
+
+  private onScrapeMetrics(metrics: Metrics): void {
+    const poolMetrics = metrics.opPool.syncContributionAndProofPool;
+    poolMetrics.size.set(this.size);
+    const previousSlot = this.clock.currentSlot - 1;
+    const contributionBySubnetByBlockRoot = this.bestContributionBySubnetRootBySlot.get(previousSlot) ?? new Map();
+    poolMetrics.blockRootsPerSlot.set(contributionBySubnetByBlockRoot.size);
+    let index = 0;
+    for (const contributionsBySubnet of contributionBySubnetByBlockRoot.values()) {
+      let participationCount = 0;
+      for (const contribution of contributionsBySubnet.values()) {
+        participationCount += contribution.numParticipants;
+      }
+      poolMetrics.subnetsByBlockRoot.set({index}, contributionsBySubnet.size);
+      poolMetrics.participationsByBlockRoot.set({index}, participationCount);
+      index++;
+    }
   }
 }
 
