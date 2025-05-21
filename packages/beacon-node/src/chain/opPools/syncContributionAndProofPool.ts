@@ -6,6 +6,8 @@ import {Root, Slot, SubnetID, altair, ssz} from "@lodestar/types";
 import {MapDef, toRootHex} from "@lodestar/utils";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
 import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
+import { IClock } from "../../util/clock.js";
+import { MAXIMUM_GOSSIP_CLOCK_DISPARITY } from "../../constants/constants.js";
 
 /**
  * SyncCommittee aggregates are only useful for the next block they have signed.
@@ -47,7 +49,7 @@ export class SyncContributionAndProofPool {
 
   private lowestPermissibleSlot = 0;
 
-  constructor() {
+  constructor(private readonly clock: IClock) {
     // Param guarantee for optimizations below that merge syncSubcommitteeBits as bytes
     if (SYNC_COMMITTEE_SUBNET_SIZE % 8 !== 0) {
       throw Error("SYNC_COMMITTEE_SUBNET_SIZE must be multiple of 8");
@@ -68,7 +70,7 @@ export class SyncContributionAndProofPool {
   /**
    * Only call this once we pass all validation.
    */
-  add(contributionAndProof: altair.ContributionAndProof, syncCommitteeParticipants: number): InsertOutcome {
+  add(contributionAndProof: altair.ContributionAndProof, syncCommitteeParticipants: number, priority?: boolean): InsertOutcome {
     const {contribution} = contributionAndProof;
     const {slot, beaconBlockRoot} = contribution;
     const rootHex = toRootHex(beaconBlockRoot);
@@ -76,6 +78,12 @@ export class SyncContributionAndProofPool {
     // Reject if too old.
     if (slot < this.lowestPermissibleSlot) {
       return InsertOutcome.Old;
+    }
+
+    // Reject ContributionAndProofs of previous slots
+    // for api ContributionAndProofs, we allow them to be added to the pool
+    if (!priority && slot < this.clock.slotWithPastTolerance(MAXIMUM_GOSSIP_CLOCK_DISPARITY)) {
+      return InsertOutcome.Late;
     }
 
     // Limit object per slot

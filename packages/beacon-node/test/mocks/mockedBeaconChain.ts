@@ -113,15 +113,15 @@ vi.mock("../../src/chain/opPools/index.js", async (importActual) => {
 vi.mock("../../src/chain/chain.js", async (importActual) => {
   const mod = await importActual<typeof import("../../src/chain/chain.js")>();
 
-  const BeaconChain = vi.fn().mockImplementation(({clock, genesisTime, config}: MockedBeaconChainOptions) => {
+  const BeaconChain = vi.fn().mockImplementation(({clock: clockParam, genesisTime, config}: MockedBeaconChainOptions) => {
     const logger = getMockedLogger();
+    const clock = clockParam === "real" ? new Clock({config, genesisTime, signal: new AbortController().signal}) : getMockedClock();
 
     return {
       config,
       opts: {},
       genesisTime,
-      clock:
-        clock === "real" ? new Clock({config, genesisTime, signal: new AbortController().signal}) : getMockedClock(),
+      clock,
       forkChoice: getMockedForkChoice(),
       executionEngine: {
         notifyForkchoiceUpdate: vi.fn(),
@@ -133,7 +133,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       eth1: new Eth1ForBlockProduction(),
       opPool: new OpPool(),
       aggregatedAttestationPool: new AggregatedAttestationPool(config),
-      syncContributionAndProofPool: new SyncContributionAndProofPool(),
+      syncContributionAndProofPool: new SyncContributionAndProofPool(clock),
       // @ts-expect-error
       beaconProposerCache: new BeaconProposerCache(),
       shufflingCache: new ShufflingCache(),
