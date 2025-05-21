@@ -201,7 +201,7 @@ export class SeenGossipBlockInput {
     if (!this.blockInputCache.has(blockHex)) {
       this.blockInputCache.set(blockHex, blockCache);
       callInNextEventLoop(() => {
-        getDataColumnsFromExecution(config, this.custodyConfig, this.executionEngine, this.emitter, blockCache)
+        getDataColumnsFromExecution(config, this.custodyConfig, this.executionEngine, this.emitter, blockCache, metrics)
           .then((_success) => {
             // TODO: (@matthewkeil) add metrics collection point here
           })
