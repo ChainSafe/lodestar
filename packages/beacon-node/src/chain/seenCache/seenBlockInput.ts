@@ -80,17 +80,12 @@ export class SeenBlockInputCache {
     return this.blockInputs.has(rootHex);
   }
 
-  remove(rootHex: RootHex): void {
-    this.blockInputs.delete(rootHex);
+  get(rootHex: RootHex): IBlockInput | undefined {
+    return this.blockInputs.get(rootHex);
   }
 
-  onFinalized(checkpoint: CheckpointWithHex) {
-    const cutoffSlot = computeStartSlotAtEpoch(checkpoint.epoch);
-    for (const [rootHex, blockInput] of this.blockInputs) {
-      if (blockInput.slot < cutoffSlot) {
-        this.blockInputs.delete(rootHex);
-      }
-    }
+  remove(rootHex: RootHex): void {
+    this.blockInputs.delete(rootHex);
   }
 
   prune(rootHex: RootHex): void {
@@ -100,6 +95,15 @@ export class SeenBlockInputCache {
       this.blockInputs.delete(blockInput.blockRootHex);
       blockInput = this.blockInputs.get(parentRootHex ?? "");
       parentRootHex = blockInput?.parentRootHex;
+    }
+  }
+
+  onFinalized(checkpoint: CheckpointWithHex) {
+    const cutoffSlot = computeStartSlotAtEpoch(checkpoint.epoch);
+    for (const [rootHex, blockInput] of this.blockInputs) {
+      if (blockInput.slot < cutoffSlot) {
+        this.blockInputs.delete(rootHex);
+      }
     }
   }
 
