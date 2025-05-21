@@ -242,19 +242,12 @@ export class SeenBlockInputCache {
 
 enum SeenBlockInputCacheErrorCode {
   WRONG_BLOCK_INPUT_TYPE = "BLOCK_INPUT_CACHE_ERROR_WRONG_BLOCK_INPUT_TYPE",
-  SLOT_MISMATCH = "BLOCK_INPUT_CACHE_ERROR_SLOT_MISMATCH",
 }
 
-type SeenBlockInputCacheErrorType =
-  | (LogMetaBasic & {
-      code: SeenBlockInputCacheErrorCode.WRONG_BLOCK_INPUT_TYPE;
-      cachedType: DAType;
-      requestedType: DAType;
-    })
-  | {
-      code: SeenBlockInputCacheErrorCode.SLOT_MISMATCH;
-      blockInputSlot: Slot;
-      slot: Slot | string;
-    };
+type SeenBlockInputCacheErrorType = LogMetaBasic & {
+  code: SeenBlockInputCacheErrorCode.WRONG_BLOCK_INPUT_TYPE;
+  cachedType: DAType;
+  requestedType: DAType;
+};
 
 class SeenBlockInputCacheError extends LodestarError<SeenBlockInputCacheErrorType> {}
