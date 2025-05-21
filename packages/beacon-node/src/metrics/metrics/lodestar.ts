@@ -966,7 +966,7 @@ export function createLodestarMetrics(
           name: "lodestar_oppool_sync_contribution_and_proof_pool_get_aggregate_returns_empty_total",
           help: "Total number of empty returns in SyncContributionAndProofPool.getAggregate(slot, root)",
         }),
-      }
+      },
     },
 
     chain: {

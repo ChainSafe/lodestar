@@ -4,11 +4,11 @@ import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params"
 import {G2_POINT_AT_INFINITY} from "@lodestar/state-transition";
 import {Root, Slot, SubnetID, altair, ssz} from "@lodestar/types";
 import {MapDef, toRootHex} from "@lodestar/utils";
+import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants/constants.js";
+import {Metrics} from "../../metrics/metrics.js";
+import {IClock} from "../../util/clock.js";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
 import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
-import { IClock } from "../../util/clock.js";
-import { MAXIMUM_GOSSIP_CLOCK_DISPARITY } from "../../constants/constants.js";
-import { Metrics } from "../../metrics/metrics.js";
 
 /**
  * SyncCommittee aggregates are only useful for the next block they have signed.
@@ -50,7 +50,10 @@ export class SyncContributionAndProofPool {
 
   private lowestPermissibleSlot = 0;
 
-  constructor(private readonly clock: IClock, private readonly metrics: Metrics | null = null) {
+  constructor(
+    private readonly clock: IClock,
+    private readonly metrics: Metrics | null = null
+  ) {
     // Param guarantee for optimizations below that merge syncSubcommitteeBits as bytes
     if (SYNC_COMMITTEE_SUBNET_SIZE % 8 !== 0) {
       throw Error("SYNC_COMMITTEE_SUBNET_SIZE must be multiple of 8");
@@ -72,7 +75,11 @@ export class SyncContributionAndProofPool {
   /**
    * Only call this once we pass all validation.
    */
-  add(contributionAndProof: altair.ContributionAndProof, syncCommitteeParticipants: number, priority?: boolean): InsertOutcome {
+  add(
+    contributionAndProof: altair.ContributionAndProof,
+    syncCommitteeParticipants: number,
+    priority?: boolean
+  ): InsertOutcome {
     const {contribution} = contributionAndProof;
     const {slot, beaconBlockRoot} = contribution;
     const rootHex = toRootHex(beaconBlockRoot);
@@ -196,7 +203,10 @@ export function contributionToFast(
  * Aggregate best contributions of each subnet into SyncAggregate
  * @returns SyncAggregate to be included in block body.
  */
-export function aggregate(bestContributionBySubnet: Map<number, SyncContributionFast>, metrics: Metrics | null = null): altair.SyncAggregate {
+export function aggregate(
+  bestContributionBySubnet: Map<number, SyncContributionFast>,
+  metrics: Metrics | null = null
+): altair.SyncAggregate {
   // check for empty/undefined bestContributionBySubnet earlier
   const syncCommitteeBits = BitArray.fromBitLen(SYNC_COMMITTEE_SIZE);
 

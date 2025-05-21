@@ -12,9 +12,9 @@ import {
 } from "../../../../src/chain/opPools/syncContributionAndProofPool.js";
 import {InsertOutcome} from "../../../../src/chain/opPools/types.js";
 import {EMPTY_SIGNATURE} from "../../../../src/constants/index.js";
+import {getMockedClock} from "../../../mocks/clock.js";
 import {renderBitArray} from "../../../utils/render.js";
 import {VALID_BLS_SIGNATURE_RAND} from "../../../utils/typeGenerator.js";
-import { getMockedClock } from "../../../mocks/clock.js";
 
 describe("chain / opPools / SyncContributionAndProofPool", () => {
   let cache: SyncContributionAndProofPool;
