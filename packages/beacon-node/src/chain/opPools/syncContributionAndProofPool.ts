@@ -129,7 +129,7 @@ export class SyncContributionAndProofPool {
       const availableRoots = Array.from(bestContributionBySubnetByRoot.keys()).join(",");
       this.logger?.warn("SyncContributionAndProofPool.getAggregate: no contributions for root", {
         slot,
-        root: bestContributionBySubnet,
+        root: prevBlockRootHex,
         availableRoots,
       });
       // Must return signature as G2_POINT_AT_INFINITY when participating bits are empty
