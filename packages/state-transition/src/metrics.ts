@@ -51,13 +51,17 @@ export function getMetrics(register: MetricsRegister) {
       name: "lodestar_stfn_effective_balance_updates_count",
       help: "Total count of effective balance updates",
     }),
-    validatorsInQueueToActive: register.gauge({
-      name: "lodestar_stfn_validators_in_queue_to_active_total",
-      help: "Total count of validators in the queue to active",
+    validatorsInActivationQueue: register.gauge({
+      name: "lodestar_stfn_validators_in_activation_queue_total",
+      help: "Total count of validators in the activation queue",
     }),
-    validatorsInQueueToExit: register.gauge({
-      name: "lodestar_stfn_validators_in_queue_to_exit_total",
-      help: "Total count of validators in the queue to exit",
+    validatorsInExitQueue: register.gauge({
+      name: "lodestar_stfn_validators_in_exit_queue_total",
+      help: "Total count of validators in the exit queue",
+    }),
+    pendingDeposits: register.gauge({
+      name: "lodestar_stfn_pending_deposits_total",
+      help: "Total count of pending deposits",
     }),
     pendingConsolidations: register.gauge({
       name: "lodestar_stfn_pending_consolidations_total",

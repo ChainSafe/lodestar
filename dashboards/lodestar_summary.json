@@ -2173,14 +2173,16 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
           "exemplar": false,
-          "expr": "beacon_processed_deposits_total",
+          "expr": "beacon_pending_deposits_total",
           "interval": "",
           "legendFormat": "",
+          "range": true,
           "refId": "A"
         }
       ],
-      "title": "processed deposits",
+      "title": "pending deposits",
       "type": "stat"
     },
     {
@@ -2230,14 +2232,14 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "lodestar_stfn_validators_in_queue_to_active_total",
+          "expr": "lodestar_stfn_validators_in_activation_queue_total",
           "interval": "",
           "legendFormat": "",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "validators in the queue to active",
+      "title": "validators in the activation queue",
       "type": "stat"
     },
     {
@@ -2287,14 +2289,14 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "lodestar_stfn_validators_in_queue_to_exit_total",
+          "expr": "lodestar_stfn_validators_in_exit_queue_total",
           "interval": "",
           "legendFormat": "",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "validators in the queue to exit",
+      "title": "validators in the exit queue",
       "type": "stat"
     },
     {

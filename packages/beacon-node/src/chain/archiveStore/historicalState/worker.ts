@@ -80,13 +80,17 @@ if (metricsRegister) {
       name: "lodestar_historical_state_stfn_num_effective_balance_updates_count",
       help: "Count of effective balance updates in epoch transition",
     }),
-    validatorsInQueueToActive: metricsRegister.gauge({
-      name: "lodestar_historical_state_stfn_validators_in_queue_to_active_total",
-      help: "Total count of validators in the queue to active",
+    validatorsInActivationQueue: metricsRegister.gauge({
+      name: "lodestar_historical_state_stfn_validators_in_activation_queue_total",
+      help: "Total count of validators in the activation queue",
     }),
-    validatorsInQueueToExit: metricsRegister.gauge({
-      name: "lodestar_historical_state_stfn_validators_in_queue_to_exit_total",
-      help: "Total count of validators in the queue to exit",
+    validatorsInExitQueue: metricsRegister.gauge({
+      name: "lodestar_historical_state_stfn_validators_in_exit_queue_total",
+      help: "Total count of validators in the exit queue",
+    }),
+    pendingDeposits: metricsRegister.gauge({
+      name: "lodestar_historical_state_stfn_pending_deposits_total",
+      help: "Total count of pending deposits",
     }),
     pendingConsolidations: metricsRegister.gauge({
       name: "lodestar_historical_state_stfn_pending_consolidations_total",

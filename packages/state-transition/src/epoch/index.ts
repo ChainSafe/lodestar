@@ -133,7 +133,7 @@ export function processEpoch(
       const timer = metrics?.epochTransitionStepTime.startTimer({
         step: EpochTransitionStep.processPendingDeposits,
       });
-      processPendingDeposits(stateElectra, cache);
+      processPendingDeposits(stateElectra, cache, metrics);
       timer?.();
     }
 
