@@ -5,7 +5,7 @@ import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
 } from "@lodestar/state-transition";
-import {SignedBeaconBlock} from "@lodestar/types";
+import {SignedBeaconBlock, ssz} from "@lodestar/types";
 import {Logger, toHex, toRootHex} from "@lodestar/utils";
 import {GENESIS_SLOT} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
@@ -40,6 +40,15 @@ export async function persistAnchorState(
 ): Promise<void> {
   if (anchorState.slot === GENESIS_SLOT) {
     const genesisBlock = createGenesisBlock(config, anchorState);
+    const blockRoot = config.getForkTypes(GENESIS_SLOT).BeaconBlock.hashTreeRoot(genesisBlock.message);
+    const latestBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(anchorState.latestBlockHeader);
+
+    if (Buffer.compare(blockRoot, latestBlockRoot) !== 0) {
+      throw Error(
+        `Genesis block root ${toRootHex(blockRoot)} does not match genesis state latest block root ${toRootHex(latestBlockRoot)}`
+      );
+    }
+
     await Promise.all([
       db.blockArchive.add(genesisBlock),
       db.block.add(genesisBlock),
