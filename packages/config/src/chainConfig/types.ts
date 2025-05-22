@@ -82,6 +82,7 @@ export type ChainConfig = {
   MAX_REQUEST_BLOB_SIDECARS: number;
   BLOB_SIDECAR_SUBNET_COUNT_ELECTRA: number;
   MAX_BLOBS_PER_BLOCK_ELECTRA: number;
+  MAX_BLOBS_PER_BLOCK_FULU: number;
   MAX_REQUEST_BLOB_SIDECARS_ELECTRA: number;
 
   SAMPLES_PER_SLOT: number;
@@ -166,6 +167,7 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   MAX_REQUEST_BLOB_SIDECARS: "number",
   BLOB_SIDECAR_SUBNET_COUNT_ELECTRA: "number",
   MAX_BLOBS_PER_BLOCK_ELECTRA: "number",
+  MAX_BLOBS_PER_BLOCK_FULU: "number",
   MAX_REQUEST_BLOB_SIDECARS_ELECTRA: "number",
 
   SAMPLES_PER_SLOT: "number",

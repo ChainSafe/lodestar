@@ -147,6 +147,8 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
           return config.MAX_BLOBS_PER_BLOCK_ELECTRA;
         case ForkName.deneb:
           return config.MAX_BLOBS_PER_BLOCK;
+        case ForkName.fulu:
+          return config.MAX_BLOBS_PER_BLOCK_FULU;
       }
 
       if (config.BLOB_SCHEDULE.length === 0) {
