@@ -1,5 +1,5 @@
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {ForkName, ForkPostDeneb} from "@lodestar/params";
+import {ForkName, ForkPostCapella, ForkPostDeneb} from "@lodestar/params";
 import {computeStartSlotAtEpoch, signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {SignedBeaconBlock, deneb, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
@@ -8,7 +8,6 @@ import {
   BlockInputSource,
   IBlockInput,
   isBlockInputBlobs,
-  isBlockInputColumns,
   isBlockInputPreDeneb,
 } from "../../../../src/chain/blocks/blockInput/index.js";
 import {ChainEvent, ChainEventEmitter} from "../../../../src/chain/emitter.js";
@@ -33,23 +32,23 @@ describe("SeenBlockInputCache", () => {
     FULU_FORK_EPOCH,
   });
 
-  const slots: Record<ForkName, number> = {
+  const slots: Record<ForkPostCapella, number> = {
     capella: computeStartSlotAtEpoch(CAPELLA_FORK_EPOCH),
     deneb: computeStartSlotAtEpoch(DENEB_FORK_EPOCH),
     electra: computeStartSlotAtEpoch(ELECTRA_FORK_EPOCH),
     fulu: computeStartSlotAtEpoch(FULU_FORK_EPOCH),
   };
 
-  type BlockTestSet<F extends ForkName> = {
+  type BlockTestSet<F extends ForkPostCapella> = {
     block: SignedBeaconBlock<F>;
     blockRoot: Uint8Array;
     rootHex: string;
   };
 
-  function buildBlockTestSet<F extends ForkName = ForkName>(forkName: F): BlockTestSet<F> {
+  function buildBlockTestSet<F extends ForkPostCapella = ForkPostCapella>(forkName: F): BlockTestSet<F> {
     const block = ssz[forkName].SignedBeaconBlock.defaultValue();
     block.message.slot = slots[forkName];
-    const blockRoot = ssz[forkName].BeaconBlock.hashTreeRoot(block.message);
+    const blockRoot = ssz[forkName].BeaconBlock.hashTreeRoot(block.message as any);
     const rootHex = toRootHex(blockRoot);
     return {
       block,
@@ -58,7 +57,7 @@ describe("SeenBlockInputCache", () => {
     };
   }
 
-  type ParentAndChildBlockTestSet<F extends ForkName> = {
+  type ParentAndChildBlockTestSet<F extends ForkPostCapella> = {
     parentBlock: SignedBeaconBlock<F>;
     parentBlockRoot: Uint8Array;
     parentRootHex: string;
@@ -66,7 +65,9 @@ describe("SeenBlockInputCache", () => {
     childBlockRoot: Uint8Array;
     childRootHex: string;
   };
-  function buildParentAndChildBlockTestSet<F extends ForkName = ForkName>(forkName: F): ParentAndChildBlockTestSet<F> {
+  function buildParentAndChildBlockTestSet<F extends ForkPostCapella = ForkPostCapella>(
+    forkName: F
+  ): ParentAndChildBlockTestSet<F> {
     const {block: parentBlock, blockRoot: parentBlockRoot, rootHex: parentRootHex} = buildBlockTestSet(forkName);
     const {block: childBlock, blockRoot: childBlockRoot, rootHex: childRootHex} = buildBlockTestSet(forkName);
     childBlock.message.slot = parentBlock.message.slot + 1;
