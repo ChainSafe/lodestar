@@ -4,6 +4,14 @@ participants:
     cl_image: chainsafe/lodestar:kurtosis-ci
   - el_type: geth
     cl_type: lighthouse
+  - el_type: nethermind
+    cl_type: lodestar
+    cl_image: chainsafe/lodestar:kurtosis-ci
+    vc_type: teku
+  - el_type: besu
+    cl_type: teku
+    vc_type: lodestar
+    vc_image: chainsafe/lodestar:kurtosis-ci
 additional_services:
   - assertoor
 assertoor_params:
