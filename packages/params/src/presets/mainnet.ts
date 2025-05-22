@@ -11,6 +11,7 @@ export const mainnetPreset: BeaconPreset = {
   // 2**7 (= 128)
   TARGET_COMMITTEE_SIZE: 128,
   // 2**11 (= 2,048)
+  // <spec preset_var="MAX_VALIDATORS_PER_COMMITTEE" preset="mainnet" fork="deneb" style="hash" hash="900abcb2" />
   MAX_VALIDATORS_PER_COMMITTEE: 2048,
   // See issue 563
   SHUFFLE_ROUND_COUNT: 90,
@@ -26,6 +27,7 @@ export const mainnetPreset: BeaconPreset = {
   // 2**0 * 10**9 (= 1,000,000,000) Gwei
   MIN_DEPOSIT_AMOUNT: 1000000000,
   // 2**5 * 10**9 (= 32,000,000,000) Gwei
+  // <spec preset_var="MAX_EFFECTIVE_BALANCE" preset="mainnet" fork="deneb" style="hash" hash="13dd1310" />
   MAX_EFFECTIVE_BALANCE: 32000000000,
   // 2**0 * 10**9 (= 1,000,000,000) Gwei
   EFFECTIVE_BALANCE_INCREMENT: 1000000000,

@@ -23,6 +23,8 @@ import {decreaseBalance} from "../util/index.js";
  *   committees to sign slashable attestations.
  * - On normal mainnet conditions indicesToSlash = 0
  *
+ * <spec fn="process_slashings" fork="deneb" style="hash" hash="2933bad9" />
+ *
  * @returns slashing penalties to be applied in processRewardsAndPenalties()
  */
 export function processSlashings(

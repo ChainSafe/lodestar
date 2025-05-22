@@ -74,6 +74,9 @@ export enum EpochTransitionStep {
   processPendingConsolidations = "processPendingConsolidations",
 }
 
+/**
+ * <spec fn="process_epoch" fork="deneb" style="hash" hash="5fb03e76" />
+ */
 export function processEpoch(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,

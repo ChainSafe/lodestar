@@ -8,6 +8,7 @@ import {computeEpochAtSlot, getBlockRoot} from "../util/index.js";
  * Update justified and finalized checkpoints depending on network participation.
  *
  * PERF: Very low (constant) cost. Persist small objects to the tree.
+ * <spec fn="process_justification_and_finalization" fork="deneb" style="hash" hash="1abbff4b" />
  */
 export function processJustificationAndFinalization(
   state: CachedBeaconStateAllForks,
