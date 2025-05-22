@@ -48,4 +48,13 @@ export const hoodiChainConfig: ChainConfig = {
   // ---------------------------------------------------------------
   DEPOSIT_CHAIN_ID: 560048,
   DEPOSIT_NETWORK_ID: 560048,
+
+  // Blob Scheduling
+  // ---------------------------------------------------------------
+  BLOB_SCHEDULE: [
+    // Deneb
+    {EPOCH: 0, MAX_BLOBS_PER_BLOCK: 6},
+    // Electra
+    {EPOCH: 2048, MAX_BLOBS_PER_BLOCK: 9},
+  ],
 };
