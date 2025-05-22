@@ -80,7 +80,7 @@ type TopicScoreInput = {
 export function computeGossipPeerScoreParams({
   config,
   eth2Context,
-}: Pick<Eth2GossipsubModules, "config" | "eth2Context">): Partial<PeerScoreParams> {
+}: {config: BeaconConfig; eth2Context: Eth2Context}): Partial<PeerScoreParams> {
   const decayIntervalMs = config.SECONDS_PER_SLOT * 1000;
   const decayToZero = 0.01;
   const epochDurationMs = config.SECONDS_PER_SLOT * SLOTS_PER_EPOCH * 1000;
