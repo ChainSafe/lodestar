@@ -363,11 +363,11 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       }),
       getBlobsV2Requests: register.counter({
         name: "beacon_engine_getBlobsV2_requests_total",
-        help: "Total number of engine_getBlobsV2 requests to an execution layer",
+        help: "Total number of engine_getBlobsV2 requests sent",
       }),
       getBlobsV2Responses: register.counter({
         name: "beacon_engine_getBlobsV2_responses_total",
-        help: "Total number of `engine_getBlobsV2` successful responses from an execution layer",
+        help: "Total number of engine_getBlobsV2 successful responses received",
       }),
       getBlobsV2Runtime: register.histogram({
         name: "beacon_engine_getBlobsV2_runtime_seconds",
