@@ -1,6 +1,7 @@
 import {COMPOUNDING_WITHDRAWAL_PREFIX, GENESIS_SLOT, MIN_ACTIVATION_BALANCE} from "@lodestar/params";
 import {ValidatorIndex, ssz} from "@lodestar/types";
 import {G2_POINT_AT_INFINITY} from "../constants/constants.js";
+import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {CachedBeaconStateElectra} from "../types.js";
 import {hasEth1WithdrawalCredential} from "./capella.js";
 
@@ -14,7 +15,11 @@ export function hasExecutionWithdrawalCredential(withdrawalCredentials: Uint8Arr
   );
 }
 
-export function switchToCompoundingValidator(state: CachedBeaconStateElectra, index: ValidatorIndex): void {
+export function switchToCompoundingValidator(
+  state: CachedBeaconStateElectra,
+  index: ValidatorIndex,
+  metrics: BeaconStateTransitionMetrics | null
+): void {
   const validator = state.validators.get(index);
 
   // directly modifying the byte leads to ssz missing the modification resulting into
@@ -27,10 +32,14 @@ export function switchToCompoundingValidator(state: CachedBeaconStateElectra, in
   );
   newWithdrawalCredentials[0] = COMPOUNDING_WITHDRAWAL_PREFIX;
   validator.withdrawalCredentials = newWithdrawalCredentials;
-  queueExcessActiveBalance(state, index);
+  queueExcessActiveBalance(state, index, metrics);
 }
 
-export function queueExcessActiveBalance(state: CachedBeaconStateElectra, index: ValidatorIndex): void {
+export function queueExcessActiveBalance(
+  state: CachedBeaconStateElectra,
+  index: ValidatorIndex,
+  metrics: BeaconStateTransitionMetrics | null
+): void {
   const balance = state.balances.get(index);
   if (balance > MIN_ACTIVATION_BALANCE) {
     const validator = state.validators.getReadonly(index);
@@ -47,6 +56,7 @@ export function queueExcessActiveBalance(state: CachedBeaconStateElectra, index:
       slot: GENESIS_SLOT,
     });
     state.pendingDeposits.push(pendingDeposit);
+    metrics?.pendingDeposits.set(state.pendingDeposits.length);
   }
 }
 

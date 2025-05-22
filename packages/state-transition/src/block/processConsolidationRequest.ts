@@ -32,7 +32,7 @@ export function processConsolidationRequest(
   }
 
   if (isValidSwitchToCompoundRequest(state, consolidationRequest)) {
-    switchToCompoundingValidator(state, sourceIndex);
+    switchToCompoundingValidator(state, sourceIndex, metrics ?? null);
     // Early return since we have already switched validator to compounding
     return;
   }

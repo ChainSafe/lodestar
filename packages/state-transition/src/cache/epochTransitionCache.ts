@@ -336,7 +336,7 @@ export function beforeProcessEpoch(
       validator.effectiveBalance >= MIN_ACTIVATION_BALANCE
     ) {
       indicesEligibleForActivationQueue.push(i);
-      metrics?.validatorsInQueueToActive.set(indicesEligibleForActivationQueue.length);
+      metrics?.validatorsInActivationQueue.set(indicesEligibleForActivationQueue.length);
     }
 
     // To optimize process_registry_updates():
@@ -372,7 +372,7 @@ export function beforeProcessEpoch(
       validator.effectiveBalance <= config.EJECTION_BALANCE
     ) {
       indicesToEject.push(i);
-      metrics?.validatorsInQueueToExit.set(indicesToEject.length);
+      metrics?.validatorsInExitQueue.set(indicesToEject.length);
     }
 
     if (!isActiveNext) {

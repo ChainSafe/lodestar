@@ -70,11 +70,11 @@ export function processOperations(
     const bodyElectra = body as electra.BeaconBlockBody;
 
     for (const depositRequest of bodyElectra.executionRequests.deposits) {
-      processDepositRequest(stateElectra, depositRequest);
+      processDepositRequest(stateElectra, depositRequest, metrics);
     }
 
     for (const elWithdrawalRequest of bodyElectra.executionRequests.withdrawals) {
-      processWithdrawalRequest(fork, stateElectra, elWithdrawalRequest);
+      processWithdrawalRequest(fork, stateElectra, elWithdrawalRequest, metrics);
     }
 
     for (const elConsolidationRequest of bodyElectra.executionRequests.consolidations) {

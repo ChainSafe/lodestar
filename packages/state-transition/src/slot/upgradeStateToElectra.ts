@@ -2,6 +2,7 @@ import {FAR_FUTURE_EPOCH, GENESIS_SLOT, UNSET_DEPOSIT_REQUESTS_START_INDEX} from
 import {ValidatorIndex, ssz} from "@lodestar/types";
 import {CachedBeaconStateElectra, getCachedBeaconState} from "../cache/stateCache.js";
 import {G2_POINT_AT_INFINITY} from "../constants/constants.js";
+import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {CachedBeaconStateDeneb} from "../types.js";
 import {hasCompoundingWithdrawalCredential, queueExcessActiveBalance} from "../util/electra.js";
 import {computeActivationExitEpoch} from "../util/epoch.js";
@@ -10,7 +11,10 @@ import {getActivationExitChurnLimit, getConsolidationChurnLimit} from "../util/v
 /**
  * Upgrade a state from Deneb to Electra.
  */
-export function upgradeStateToElectra(stateDeneb: CachedBeaconStateDeneb): CachedBeaconStateElectra {
+export function upgradeStateToElectra(
+  stateDeneb: CachedBeaconStateDeneb,
+  metrics: BeaconStateTransitionMetrics | null
+): CachedBeaconStateElectra {
   const {config} = stateDeneb;
 
   ssz.deneb.BeaconState.commitViewDU(stateDeneb);
@@ -111,7 +115,7 @@ export function upgradeStateToElectra(stateDeneb: CachedBeaconStateDeneb): Cache
     // [EIP-7251]: Ensure early adopters of compounding credentials go through the activation churn
     const withdrawalCredential = validator.withdrawalCredentials;
     if (hasCompoundingWithdrawalCredential(withdrawalCredential)) {
-      queueExcessActiveBalance(stateElectraView as CachedBeaconStateElectra, i);
+      queueExcessActiveBalance(stateElectraView as CachedBeaconStateElectra, i, metrics);
     }
   }
 
