@@ -1,6 +1,7 @@
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {ForkName, ForkPostDeneb} from "@lodestar/params";
 import {computeStartSlotAtEpoch, signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {ssz} from "@lodestar/types";
+import {SignedBeaconBlock, deneb, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {beforeEach, describe, expect, it} from "vitest";
 import {
@@ -32,10 +33,73 @@ describe("SeenBlockInputCache", () => {
     FULU_FORK_EPOCH,
   });
 
-  const capellaSlot = computeStartSlotAtEpoch(CAPELLA_FORK_EPOCH);
-  const denebSlot = computeStartSlotAtEpoch(DENEB_FORK_EPOCH);
-  const electraSlot = computeStartSlotAtEpoch(ELECTRA_FORK_EPOCH);
-  const fuluSlot = computeStartSlotAtEpoch(FULU_FORK_EPOCH);
+  const slots: Record<ForkName, number> = {
+    capella: computeStartSlotAtEpoch(CAPELLA_FORK_EPOCH),
+    deneb: computeStartSlotAtEpoch(DENEB_FORK_EPOCH),
+    electra: computeStartSlotAtEpoch(ELECTRA_FORK_EPOCH),
+    fulu: computeStartSlotAtEpoch(FULU_FORK_EPOCH),
+  };
+
+  type BlockTestSet<F extends ForkName> = {
+    block: SignedBeaconBlock<F>;
+    blockRoot: Uint8Array;
+    rootHex: string;
+  };
+
+  function buildBlockTestSet<F extends ForkName = ForkName>(forkName: F): BlockTestSet<F> {
+    const block = ssz[forkName].SignedBeaconBlock.defaultValue();
+    block.message.slot = slots[forkName];
+    const blockRoot = ssz[forkName].BeaconBlock.hashTreeRoot(block.message);
+    const rootHex = toRootHex(blockRoot);
+    return {
+      block,
+      blockRoot,
+      rootHex,
+    };
+  }
+
+  type ParentAndChildBlockTestSet<F extends ForkName> = {
+    parentBlock: SignedBeaconBlock<F>;
+    parentBlockRoot: Uint8Array;
+    parentRootHex: string;
+    childBlock: SignedBeaconBlock<F>;
+    childBlockRoot: Uint8Array;
+    childRootHex: string;
+  };
+  function buildParentAndChildBlockTestSet<F extends ForkName = ForkName>(forkName: F): ParentAndChildBlockTestSet<F> {
+    const {block: parentBlock, blockRoot: parentBlockRoot, rootHex: parentRootHex} = buildBlockTestSet(forkName);
+    const {block: childBlock, blockRoot: childBlockRoot, rootHex: childRootHex} = buildBlockTestSet(forkName);
+    childBlock.message.slot = parentBlock.message.slot + 1;
+    childBlock.message.parentRoot = parentBlockRoot;
+    return {
+      parentBlock,
+      parentBlockRoot,
+      parentRootHex,
+      childBlock,
+      childBlockRoot,
+      childRootHex,
+    };
+  }
+
+  type BlockAndBlobTestSet<F extends ForkPostDeneb = ForkPostDeneb> = BlockTestSet<F> & {
+    blobSidecar: deneb.BlobSidecar;
+  };
+  function buildBlockAndBlobTestSet(forkName: ForkPostDeneb): BlockAndBlobTestSet<ForkPostDeneb> {
+    const {block, blockRoot, rootHex} = buildBlockTestSet<ForkPostDeneb>(forkName);
+    const commitment = Buffer.alloc(48, 0x77);
+    block.message.body.blobKzgCommitments = [commitment];
+    const signedBlockHeader = signedBlockToSignedHeader(config, block);
+    const blobSidecar = ssz[forkName].BlobSidecar.defaultValue();
+    blobSidecar.signedBlockHeader = signedBlockHeader;
+    blobSidecar.kzgCommitment = commitment;
+
+    return {
+      block,
+      blockRoot,
+      rootHex,
+      blobSidecar,
+    };
+  }
 
   const logger = testLogger();
   beforeEach(() => {
@@ -54,26 +118,22 @@ describe("SeenBlockInputCache", () => {
   });
   describe("has()", () => {
     it("should return true if in cache", () => {
-      const block = ssz.capella.SignedBeaconBlock.defaultValue();
-      block.message.slot = capellaSlot;
+      const {block, rootHex} = buildBlockTestSet(ForkName.capella);
       cache.getByBlock({
         block,
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now(),
       });
-      const blockRoot = ssz.capella.BeaconBlock.hashTreeRoot(block.message);
-      expect(cache.has(toRootHex(blockRoot))).toBeTruthy();
+      expect(cache.has(rootHex)).toBeTruthy();
     });
     it("should return false if not in cache", () => {
-      const block = ssz.capella.SignedBeaconBlock.defaultValue();
-      block.message.slot = capellaSlot;
+      const {block, blockRoot, rootHex} = buildBlockTestSet(ForkName.capella);
       cache.getByBlock({
         block,
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now(),
       });
-      const blockRoot = ssz.capella.BeaconBlock.hashTreeRoot(block.message);
-      expect(cache.has(toRootHex(blockRoot))).toBeTruthy();
+      expect(cache.has(rootHex)).toBeTruthy();
       blockRoot[0] = (blockRoot[0] + 1) % 255;
       blockRoot[1] = (blockRoot[1] + 1) % 255;
       blockRoot[2] = (blockRoot[2] + 1) % 255;
@@ -82,26 +142,22 @@ describe("SeenBlockInputCache", () => {
   });
   describe("get()", () => {
     it("should return BlockInput if in cache", () => {
-      const block = ssz.capella.SignedBeaconBlock.defaultValue();
-      block.message.slot = capellaSlot;
+      const {block, rootHex} = buildBlockTestSet(ForkName.capella);
       const blockInput = cache.getByBlock({
         block,
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now(),
       });
-      const blockRoot = ssz.capella.BeaconBlock.hashTreeRoot(block.message);
-      expect(cache.get(toRootHex(blockRoot))).toBe(blockInput);
+      expect(cache.get(rootHex)).toBe(blockInput);
     });
     it("should return undefined if not in cache", () => {
-      const block = ssz.capella.SignedBeaconBlock.defaultValue();
-      block.message.slot = capellaSlot;
+      const {block, blockRoot, rootHex} = buildBlockTestSet(ForkName.capella);
       const blockInput = cache.getByBlock({
         block,
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now(),
       });
-      const blockRoot = ssz.capella.BeaconBlock.hashTreeRoot(block.message);
-      expect(cache.get(toRootHex(blockRoot))).toBe(blockInput);
+      expect(cache.get(rootHex)).toBe(blockInput);
       blockRoot[0] = (blockRoot[0] + 1) % 255;
       blockRoot[1] = (blockRoot[1] + 1) % 255;
       blockRoot[2] = (blockRoot[2] + 1) % 255;
@@ -110,74 +166,58 @@ describe("SeenBlockInputCache", () => {
   });
   describe("remove()", () => {
     it("should remove a BlockInput", () => {
-      const block = ssz.capella.SignedBeaconBlock.defaultValue();
-      block.message.slot = capellaSlot;
+      const {block, rootHex} = buildBlockTestSet(ForkName.capella);
       const blockInput = cache.getByBlock({
         block,
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now(),
       });
-      const blockRoot = ssz.capella.BeaconBlock.hashTreeRoot(block.message);
-      const rootHex = toRootHex(blockRoot);
       expect(cache.get(rootHex)).toBe(blockInput);
       cache.remove(rootHex);
       expect(cache.get(rootHex)).toBeUndefined();
     });
     it("should not throw an error if BlockInput not in cache", () => {
-      const block = ssz.capella.SignedBeaconBlock.defaultValue();
-      block.message.slot = capellaSlot;
+      const {block, blockRoot, rootHex} = buildBlockTestSet(ForkName.capella);
       const blockInput = cache.getByBlock({
         block,
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now(),
       });
-      const blockRoot = ssz.capella.BeaconBlock.hashTreeRoot(block.message);
-      const rootHex = toRootHex(blockRoot);
       expect(cache.get(rootHex)).toBe(blockInput);
       blockRoot[0] = (blockRoot[0] + 1) % 255;
       blockRoot[1] = (blockRoot[1] + 1) % 255;
       blockRoot[2] = (blockRoot[2] + 1) % 255;
       expect(() => cache.remove(toRootHex(blockRoot))).not.toThrow();
-      expect(cache.get(rootHex)).toBe(blockInput);
+      expect(cache.has(rootHex)).toBeTruthy();
     });
   });
   describe("prune()", () => {
     it("should remove a BlockInput", () => {
-      const block = ssz.capella.SignedBeaconBlock.defaultValue();
-      block.message.slot = capellaSlot;
+      const {block, rootHex} = buildBlockTestSet(ForkName.capella);
       const blockInput = cache.getByBlock({
         block,
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now(),
       });
-      const blockRoot = ssz.capella.BeaconBlock.hashTreeRoot(block.message);
-      const rootHex = toRootHex(blockRoot);
       expect(cache.get(rootHex)).toBe(blockInput);
       cache.prune(rootHex);
       expect(cache.get(rootHex)).toBeUndefined();
     });
     it("should remove all ancestors of a BlockInput", () => {
-      const parentBlock = ssz.capella.SignedBeaconBlock.defaultValue();
-      parentBlock.message.slot = capellaSlot;
-      const parentBlockRoot = ssz.capella.BeaconBlock.hashTreeRoot(parentBlock.message);
+      const {parentBlock, parentRootHex, childBlock, childRootHex} = buildParentAndChildBlockTestSet(ForkName.capella);
+
       const parentBlockInput = cache.getByBlock({
         block: parentBlock,
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now(),
       });
-      const parentRootHex = toRootHex(parentBlockRoot);
       expect(cache.get(parentRootHex)).toBe(parentBlockInput);
 
-      const childBlock = ssz.capella.SignedBeaconBlock.defaultValue();
-      childBlock.message.slot = capellaSlot + 1;
-      childBlock.message.parentRoot = parentBlockRoot;
-      const childBlockRoot = ssz.capella.BeaconBlock.hashTreeRoot(childBlock.message);
       const childBlockInput = cache.getByBlock({
         block: childBlock,
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now(),
       });
-      const childRootHex = toRootHex(childBlockRoot);
       expect(cache.get(childRootHex)).toBe(childBlockInput);
 
       cache.prune(childRootHex);
@@ -190,46 +230,46 @@ describe("SeenBlockInputCache", () => {
     let childBlockInput: IBlockInput;
     let parentRootHex: string;
     let parentBlockInput: IBlockInput;
+    const root = Buffer.alloc(32, 0xff);
+    const rootHex = toRootHex(root);
     beforeEach(() => {
-      const parentBlock = ssz.capella.SignedBeaconBlock.defaultValue();
-      parentBlock.message.slot = capellaSlot;
-      const parentBlockRoot = ssz.capella.BeaconBlock.hashTreeRoot(parentBlock.message);
+      const {
+        parentBlock,
+        parentRootHex: parentRoot,
+        childBlock,
+        childRootHex: childRoot,
+      } = buildParentAndChildBlockTestSet(ForkName.capella);
+      parentRootHex = parentRoot;
+      childRootHex = childRoot;
+
       parentBlockInput = cache.getByBlock({
         block: parentBlock,
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now(),
       });
-      parentRootHex = toRootHex(parentBlockRoot);
       expect(cache.get(parentRootHex)).toBe(parentBlockInput);
 
-      const childBlock = ssz.capella.SignedBeaconBlock.defaultValue();
-      childBlock.message.slot = capellaSlot + 1;
-      childBlock.message.parentRoot = parentBlockRoot;
-      const childBlockRoot = ssz.capella.BeaconBlock.hashTreeRoot(childBlock.message);
       childBlockInput = cache.getByBlock({
         block: childBlock,
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now(),
       });
-      childRootHex = toRootHex(childBlockRoot);
       expect(cache.get(childRootHex)).toBe(childBlockInput);
     });
     it("should remove all BlockInputs in slots before the checkpoint", () => {
-      const root = Buffer.alloc(32, 0xff);
       chainEvents.emit(ChainEvent.forkChoiceFinalized, {
         epoch: DENEB_FORK_EPOCH,
         root,
-        rootHex: toRootHex(root),
+        rootHex,
       });
       expect(cache.get(childRootHex)).toBeUndefined();
       expect(cache.get(parentRootHex)).toBeUndefined();
     });
     it("should not remove BlockInputs in slots after the checkpoint", () => {
-      const root = Buffer.alloc(32, 0xff);
       chainEvents.emit(ChainEvent.forkChoiceFinalized, {
         epoch: CAPELLA_FORK_EPOCH,
         root,
-        rootHex: toRootHex(root),
+        rootHex,
       });
       expect(cache.get(childRootHex)).toBe(childBlockInput);
       expect(cache.get(parentRootHex)).toBe(parentBlockInput);
@@ -237,21 +277,18 @@ describe("SeenBlockInputCache", () => {
   });
   describe("getByBlock()", () => {
     it("should return a new BlockInput for a new block root", () => {
-      const block = ssz.capella.SignedBeaconBlock.defaultValue();
-      block.message.slot = capellaSlot;
-      const blockRoot = ssz.capella.BeaconBlock.hashTreeRoot(block.message);
-      expect(cache.get(toRootHex(blockRoot))).toBeUndefined();
+      const {block, rootHex} = buildBlockTestSet(ForkName.capella);
+      expect(cache.get(rootHex)).toBeUndefined();
       const blockInput = cache.getByBlock({
         block,
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now(),
       });
-      expect(cache.get(toRootHex(blockRoot))).toBe(blockInput);
+      expect(cache.get(rootHex)).toBe(blockInput);
     });
     describe("should return the correct type of BlockInput for a given block root", () => {
       it("should return a BlockInputPreDeneb", () => {
-        const block = ssz.capella.SignedBeaconBlock.defaultValue();
-        block.message.slot = capellaSlot;
+        const {block} = buildBlockTestSet(ForkName.capella);
         const blockInput = cache.getByBlock({
           block,
           source: BlockInputSource.gossip,
@@ -260,8 +297,7 @@ describe("SeenBlockInputCache", () => {
         expect(isBlockInputPreDeneb(blockInput)).toBeTruthy();
       });
       it("should return a BlockInputBlobs", () => {
-        const block = ssz.deneb.SignedBeaconBlock.defaultValue();
-        block.message.slot = denebSlot;
+        const {block} = buildBlockTestSet(ForkName.deneb);
         const blockInput = cache.getByBlock({
           block,
           source: BlockInputSource.gossip,
@@ -270,27 +306,24 @@ describe("SeenBlockInputCache", () => {
         expect(isBlockInputBlobs(blockInput)).toBeTruthy();
       });
       // TODO(fulu): need to turn this on once we have custodyConfig available with peerDAS branch
-      it.skip("should return a BlockInputColumns", () => {
-        const block = ssz.fulu.SignedBeaconBlock.defaultValue();
-        block.message.slot = fuluSlot;
-        const blockInput = cache.getByBlock({
-          block,
-          source: BlockInputSource.gossip,
-          seenTimestampSec: Date.now(),
-        });
-        expect(isBlockInputColumns(blockInput)).toBeTruthy();
-      });
+      //   it("should return a BlockInputColumns", () => {
+      //     const {block} = buildBlockTestSet(ForkName.fulu);
+      //     const blockInput = cache.getByBlock({
+      //       block,
+      //       source: BlockInputSource.gossip,
+      //       seenTimestampSec: Date.now(),
+      //     });
+      //     expect(isBlockInputColumns(blockInput)).toBeTruthy();
+      //   });
     });
     it("should return the same BlockInput for an existing block root", () => {
-      const block = ssz.capella.SignedBeaconBlock.defaultValue();
-      block.message.slot = capellaSlot;
-      const blockRoot = ssz.capella.BeaconBlock.hashTreeRoot(block.message);
+      const {block, rootHex} = buildBlockTestSet(ForkName.capella);
       const blockInput1 = cache.getByBlock({
         block,
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now(),
       });
-      expect(cache.get(toRootHex(blockRoot))).toBe(blockInput1);
+      expect(cache.get(rootHex)).toBe(blockInput1);
       const blockInput2 = cache.getByBlock({
         block,
         source: BlockInputSource.gossip,
@@ -299,19 +332,16 @@ describe("SeenBlockInputCache", () => {
       expect(blockInput1).toBe(blockInput2);
     });
     it("should not throw for a BlockInput with an existing block", () => {
-      const block = ssz.capella.SignedBeaconBlock.defaultValue();
-      block.message.slot = capellaSlot;
-      const blockRoot = ssz.capella.BeaconBlock.hashTreeRoot(block.message);
+      const {block, rootHex} = buildBlockTestSet(ForkName.capella);
       const blockInput = cache.getByBlock({
         block,
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now(),
       });
-      const blockRootHex = toRootHex(blockRoot);
       expect(() =>
         blockInput.addBlock({
           block,
-          blockRootHex,
+          blockRootHex: rootHex,
           source: {source: BlockInputSource.gossip, seenTimestampSec: Date.now()},
         })
       ).toThrow();
@@ -324,14 +354,7 @@ describe("SeenBlockInputCache", () => {
       ).not.toThrow();
     });
     it("should return the correct BlockInput for a BlockInput created by blob", () => {
-      const block = ssz.deneb.SignedBeaconBlock.defaultValue();
-      block.message.slot = denebSlot;
-      const commitment = Buffer.alloc(48, 0x77);
-      block.message.body.blobKzgCommitments = [commitment];
-      const signedBlockHeader = signedBlockToSignedHeader(config, block);
-      const blobSidecar = ssz.deneb.BlobSidecar.defaultValue();
-      blobSidecar.signedBlockHeader = signedBlockHeader;
-      blobSidecar.kzgCommitment = commitment;
+      const {block, blobSidecar} = buildBlockAndBlobTestSet(ForkName.deneb);
 
       const blockInput1 = cache.getByBlob({
         blobSidecar,
@@ -349,35 +372,24 @@ describe("SeenBlockInputCache", () => {
   });
   describe("getByBlob()", () => {
     it("should return a new BlockInput for a new block root", () => {
-      const block = ssz.electra.SignedBeaconBlock.defaultValue();
-      block.message.slot = electraSlot;
-      const blockRoot = ssz.electra.BeaconBlock.hashTreeRoot(block.message);
-      const signedBlockHeader = signedBlockToSignedHeader(config, block);
-      const blobSidecar = ssz.electra.BlobSidecar.defaultValue();
-      blobSidecar.signedBlockHeader = signedBlockHeader;
-
-      expect(cache.get(toRootHex(blockRoot))).toBeUndefined();
+      const {rootHex, blobSidecar} = buildBlockAndBlobTestSet(ForkName.electra);
+      expect(cache.get(rootHex)).toBeUndefined();
       const blockInput = cache.getByBlob({
         blobSidecar,
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now(),
       });
-      expect(cache.get(toRootHex(blockRoot))).toBe(blockInput);
+      expect(cache.get(rootHex)).toBe(blockInput);
     });
     it("should return the same BlockInput for an existing block root", () => {
-      const block = ssz.electra.SignedBeaconBlock.defaultValue();
-      block.message.slot = electraSlot;
-      const blockRoot = ssz.electra.BeaconBlock.hashTreeRoot(block.message);
-      const signedBlockHeader = signedBlockToSignedHeader(config, block);
-      const blobSidecar = ssz.electra.BlobSidecar.defaultValue();
-      blobSidecar.signedBlockHeader = signedBlockHeader;
+      const {rootHex, blobSidecar} = buildBlockAndBlobTestSet(ForkName.electra);
 
       const blockInput1 = cache.getByBlob({
         blobSidecar,
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now(),
       });
-      expect(cache.get(toRootHex(blockRoot))).toBe(blockInput1);
+      expect(cache.get(rootHex)).toBe(blockInput1);
       const blockInput2 = cache.getByBlob({
         blobSidecar,
         source: BlockInputSource.gossip,
@@ -386,8 +398,7 @@ describe("SeenBlockInputCache", () => {
       expect(blockInput1).toBe(blockInput2);
     });
     it("should throw if attempting to add a blob to wrong type of BlockInput", () => {
-      const block = ssz.capella.SignedBeaconBlock.defaultValue();
-      block.message.slot = capellaSlot;
+      const {block} = buildBlockTestSet(ForkName.capella);
       const blockInput = cache.getByBlock({
         block,
         source: BlockInputSource.gossip,
@@ -395,23 +406,14 @@ describe("SeenBlockInputCache", () => {
       });
       expect(isBlockInputPreDeneb(blockInput)).toBeTruthy();
 
-      const signedBlockHeader = signedBlockToSignedHeader(config, block);
-      const blobSidecar = ssz.deneb.BlobSidecar.defaultValue();
-      blobSidecar.signedBlockHeader = signedBlockHeader;
-
+      const {blobSidecar} = buildBlockAndBlobTestSet(ForkName.electra);
+      blobSidecar.signedBlockHeader = signedBlockToSignedHeader(config, block);
       expect(() =>
         cache.getByBlob({blobSidecar, source: BlockInputSource.gossip, seenTimestampSec: Date.now()})
       ).toThrow();
     });
     it("should add blob to an existing BlockInput", () => {
-      const block = ssz.deneb.SignedBeaconBlock.defaultValue();
-      block.message.slot = denebSlot;
-      const commitment = Buffer.alloc(48, 0x77);
-      block.message.body.blobKzgCommitments = [commitment];
-      const signedBlockHeader = signedBlockToSignedHeader(config, block);
-      const blobSidecar = ssz.deneb.BlobSidecar.defaultValue();
-      blobSidecar.signedBlockHeader = signedBlockHeader;
-      blobSidecar.kzgCommitment = commitment;
+      const {block, blobSidecar} = buildBlockAndBlobTestSet(ForkName.electra);
 
       const blockInput1 = cache.getByBlock({
         block,
@@ -428,27 +430,21 @@ describe("SeenBlockInputCache", () => {
       expect(blockInput2.getBlobs()[0]).toBe(blobSidecar);
     });
     it("should not throw for a BlockInput with an existing blob", () => {
-      const block = ssz.electra.SignedBeaconBlock.defaultValue();
-      block.message.slot = electraSlot;
-      const blockRoot = ssz.electra.BeaconBlock.hashTreeRoot(block.message);
-      const blockRootHex = toRootHex(blockRoot);
-      const signedBlockHeader = signedBlockToSignedHeader(config, block);
-      const blobSidecar = ssz.electra.BlobSidecar.defaultValue();
-      blobSidecar.signedBlockHeader = signedBlockHeader;
+      const {rootHex, blobSidecar} = buildBlockAndBlobTestSet(ForkName.electra);
 
-      expect(cache.get(toRootHex(blockRoot))).toBeUndefined();
+      expect(cache.get(rootHex)).toBeUndefined();
       const blockInput = cache.getByBlob({
         blobSidecar,
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now(),
       });
-      expect(cache.get(blockRootHex)).toBe(blockInput);
+      expect(cache.get(rootHex)).toBe(blockInput);
       expect(() =>
         blockInput.addBlob({
           blobSidecar,
           source: BlockInputSource.gossip,
           seenTimestampSec: Date.now(),
-          blockRootHex,
+          blockRootHex: rootHex,
         })
       ).toThrow();
       expect(() =>
@@ -460,15 +456,9 @@ describe("SeenBlockInputCache", () => {
       ).not.toThrow();
     });
     it("should throw for an existing blob with opts.throwGossipErrorIfAlreadyKnown", () => {
-      const block = ssz.electra.SignedBeaconBlock.defaultValue();
-      block.message.slot = electraSlot;
-      const blockRoot = ssz.electra.BeaconBlock.hashTreeRoot(block.message);
-      const blockRootHex = toRootHex(blockRoot);
-      const signedBlockHeader = signedBlockToSignedHeader(config, block);
-      const blobSidecar = ssz.electra.BlobSidecar.defaultValue();
-      blobSidecar.signedBlockHeader = signedBlockHeader;
+      const {rootHex, blobSidecar} = buildBlockAndBlobTestSet(ForkName.electra);
 
-      expect(cache.get(toRootHex(blockRoot))).toBeUndefined();
+      expect(cache.get(rootHex)).toBeUndefined();
       const blockInput = cache.getByBlob(
         {
           blobSidecar,
@@ -477,7 +467,7 @@ describe("SeenBlockInputCache", () => {
         },
         {throwGossipErrorIfAlreadyKnown: true}
       );
-      expect(cache.get(blockRootHex)).toBe(blockInput);
+      expect(cache.get(rootHex)).toBe(blockInput);
       expect(() =>
         cache.getByBlob(
           {
