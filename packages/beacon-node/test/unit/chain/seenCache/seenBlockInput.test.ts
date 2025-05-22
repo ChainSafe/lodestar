@@ -215,19 +215,21 @@ describe("SeenBlockInputCache", () => {
       expect(cache.get(childRootHex)).toBe(childBlockInput);
     });
     it("should remove all BlockInputs in slots before the checkpoint", () => {
+      const root = Buffer.alloc(32, 0xff);
       chainEvents.emit(ChainEvent.forkChoiceFinalized, {
         epoch: DENEB_FORK_EPOCH,
-        root: Buffer.alloc(32, 0xff),
-        rootHex: Buffer.alloc(32, 0xff),
+        root,
+        rootHex: toRootHex(root),
       });
       expect(cache.get(childRootHex)).toBeUndefined();
       expect(cache.get(parentRootHex)).toBeUndefined();
     });
     it("should not remove BlockInputs in slots after the checkpoint", () => {
+      const root = Buffer.alloc(32, 0xff);
       chainEvents.emit(ChainEvent.forkChoiceFinalized, {
         epoch: CAPELLA_FORK_EPOCH,
-        root: Buffer.alloc(32, 0xff),
-        rootHex: Buffer.alloc(32, 0xff),
+        root,
+        rootHex: toRootHex(root),
       });
       expect(cache.get(childRootHex)).toBe(childBlockInput);
       expect(cache.get(parentRootHex)).toBe(parentBlockInput);
