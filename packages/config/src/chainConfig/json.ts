@@ -129,12 +129,12 @@ export function deserializeSpecValue(valueStr: unknown, typeName: SpecValueTypeN
   }
 }
 
-export function deserializeBlobSchedule(value: unknown): BlobSchedule {
-  if (!Array.isArray(value)) {
-    throw Error(`Invalid BLOB_SCHEDULE value ${value} expected array`);
+export function deserializeBlobSchedule(input: unknown): BlobSchedule {
+  if (!Array.isArray(input)) {
+    throw Error(`Invalid BLOB_SCHEDULE value ${input} expected array`);
   }
 
-  const blobSchedule = value.map((entry, i) => {
+  const blobSchedule = input.map((entry, i) => {
     if (typeof entry !== "object" || entry === null) {
       throw Error(`Invalid BLOB_SCHEDULE[${i}] entry ${entry} expected object`);
     }
