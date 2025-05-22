@@ -63,8 +63,7 @@ export function assertEqualParams(localConfig: ChainConfig, externalSpecJson: Sp
         continue;
       }
 
-      const len = Math.min(localBlobSchedule.length, remoteBlobSchedule.length);
-      for (let i = 0; i < len; i++) {
+      for (let i = 0; i < localBlobSchedule.length; i++) {
         const localEntry = localBlobSchedule[i];
         const remoteEntry = remoteBlobSchedule[i];
 
