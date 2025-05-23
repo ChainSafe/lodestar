@@ -25,7 +25,7 @@ runs:
     - name: Create cache key
       id: build-cache
       shell: bash
-      # This build cache will be per github commits and reused among different jobs on same PRs
+      # This build cache will be reused among different jobs for the same commit
       run: echo "key=build-cache-${{ runner.os }}-${{ runner.arch }}-node-${{ inputs.node }}-${{ github.sha }}" >> $GITHUB_OUTPUT
 
     - name: Restore build
