@@ -1,6 +1,5 @@
 import crypto from "node:crypto";
 import {bench, describe} from "@chainsafe/benchmark";
-import {byteArrayEquals} from "@chainsafe/ssz";
 import {generateState} from "../../utils/state.js";
 import {generateValidators} from "../../utils/validator.js";
 
@@ -35,10 +34,10 @@ describe("compare Uint8Array using byteArrayEquals() vs Buffer.compare()", () =>
       const bytes = stateBytes.subarray(0, length);
       const bytes2 = bytes.slice();
       bench({
-        id: `byteArrayEquals ${length}`,
+        id: `Buffer.compare ${length}`,
         fn: () => {
           for (let i = 0; i < runsFactor; i++) {
-            byteArrayEquals(bytes, bytes2);
+            Buffer.compare(bytes, bytes2) === 0;
           }
         },
         runsFactor,
@@ -63,10 +62,10 @@ describe("compare Uint8Array using byteArrayEquals() vs Buffer.compare()", () =>
       const bytes2 = bytes.slice();
       bytes2[bytes2.length - 1] = (bytes2.at(-1) as number) + 1;
       bench({
-        id: `byteArrayEquals ${length} - diff last byte`,
+        id: `Buffer.compare ${length} - diff last byte`,
         fn: () => {
           for (let i = 0; i < runsFactor; i++) {
-            byteArrayEquals(bytes, bytes2);
+            Buffer.compare(bytes, bytes2) === 0;
           }
         },
         runsFactor,
@@ -91,10 +90,10 @@ describe("compare Uint8Array using byteArrayEquals() vs Buffer.compare()", () =>
       const bytes2 = crypto.randomBytes(length);
 
       bench({
-        id: `byteArrayEquals ${length} - random bytes`,
+        id: `Buffer.compare ${length} - random bytes`,
         fn: () => {
           for (let i = 0; i < runsFactor; i++) {
-            byteArrayEquals(bytes, bytes2);
+            Buffer.compare(bytes, bytes2) === 0;
           }
         },
         runsFactor,

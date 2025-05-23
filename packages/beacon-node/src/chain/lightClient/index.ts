@@ -50,7 +50,6 @@ import {ZERO_HASH} from "../../constants/index.js";
 import {IBeaconDb} from "../../db/index.js";
 import {NUM_WITNESS, NUM_WITNESS_ELECTRA} from "../../db/repositories/lightclientSyncCommitteeWitness.js";
 import {Metrics} from "../../metrics/index.js";
-import {byteArrayEquals} from "../../util/bytes.js";
 import {ChainEventEmitter} from "../emitter.js";
 import {LightClientServerError, LightClientServerErrorCode} from "../errors/lightClientError.js";
 import {
@@ -443,7 +442,7 @@ export class LightClientServer {
       // If finalizedCheckpoint is zeroed, consider not finalized (ignore) since there won't exist a
       // finalized header for that root
       finalizedCheckpoint.epoch !== 0 &&
-      !byteArrayEquals(finalizedCheckpoint.root, ZERO_HASH);
+      Buffer.compare(finalizedCheckpoint.root, ZERO_HASH) !== 0;
 
     this.prevHeadData.set(
       blockRootHex,

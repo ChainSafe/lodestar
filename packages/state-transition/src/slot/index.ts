@@ -1,4 +1,3 @@
-import {byteArrayEquals} from "@chainsafe/ssz";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {ZERO_HASH} from "../constants/index.js";
 import {CachedBeaconStateAllForks} from "../types.js";
@@ -20,7 +19,7 @@ export function processSlot(state: CachedBeaconStateAllForks): void {
   state.stateRoots.set(state.slot % SLOTS_PER_HISTORICAL_ROOT, previousStateRoot);
 
   // Cache latest block header state root
-  if (byteArrayEquals(state.latestBlockHeader.stateRoot, ZERO_HASH)) {
+  if (Buffer.compare(state.latestBlockHeader.stateRoot, ZERO_HASH) === 0) {
     state.latestBlockHeader.stateRoot = previousStateRoot;
   }
 

@@ -1,4 +1,3 @@
-import {byteArrayEquals} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {isForkPostElectra} from "@lodestar/params";
 import {LightClientBootstrap, Root, ssz} from "@lodestar/types";
@@ -23,7 +22,7 @@ export function validateLightClientBootstrap(
     throw Error("Bootstrap Header is not Valid Light Client Header");
   }
 
-  if (!byteArrayEquals(headerRoot, trustedBlockRoot)) {
+  if (Buffer.compare(headerRoot, trustedBlockRoot)!== 0) {
     throw Error(`bootstrap header root ${toHex(headerRoot)} != trusted root ${toHex(trustedBlockRoot)}`);
   }
 

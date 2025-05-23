@@ -1,4 +1,3 @@
-import {byteArrayEquals} from "@chainsafe/ssz";
 import {ForkName, ForkSeq, isForkPostDeneb} from "@lodestar/params";
 import {BeaconBlockBody, BlindedBeaconBlockBody, deneb, isExecutionPayload} from "@lodestar/types";
 import {toHex, toRootHex} from "@lodestar/utils";
@@ -23,7 +22,7 @@ export function processExecutionPayload(
   // with respect to the previous execution payload header
   if (isMergeTransitionComplete(state)) {
     const {latestExecutionPayloadHeader} = state;
-    if (!byteArrayEquals(payload.parentHash, latestExecutionPayloadHeader.blockHash)) {
+    if (Buffer.compare(payload.parentHash, latestExecutionPayloadHeader.blockHash) !== 0) {
       throw Error(
         `Invalid execution payload parentHash ${toRootHex(payload.parentHash)} latest blockHash ${toRootHex(
           latestExecutionPayloadHeader.blockHash
@@ -34,7 +33,7 @@ export function processExecutionPayload(
 
   // Verify random
   const expectedRandom = getRandaoMix(state, state.epochCtx.epoch);
-  if (!byteArrayEquals(payload.prevRandao, expectedRandom)) {
+  if (Buffer.compare(payload.prevRandao, expectedRandom) !== 0) {
     throw Error(`Invalid execution payload random ${toHex(payload.prevRandao)} expected=${toHex(expectedRandom)}`);
   }
 

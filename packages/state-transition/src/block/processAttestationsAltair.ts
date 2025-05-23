@@ -1,4 +1,3 @@
-import {byteArrayEquals} from "@chainsafe/ssz";
 import {Attestation, Epoch, phase0} from "@lodestar/types";
 import {intSqrt} from "@lodestar/utils";
 
@@ -166,11 +165,11 @@ export function getAttestationParticipationStatus(
     );
   }
 
-  const isMatchingTarget = byteArrayEquals(data.target.root, rootCache.getBlockRoot(data.target.epoch));
+  const isMatchingTarget = Buffer.compare(data.target.root, rootCache.getBlockRoot(data.target.epoch)) === 0;
 
   // a timely head is only be set if the target is _also_ matching
   const isMatchingHead =
-    isMatchingTarget && byteArrayEquals(data.beaconBlockRoot, rootCache.getBlockRootAtSlot(data.slot));
+    isMatchingTarget && Buffer.compare(data.beaconBlockRoot, rootCache.getBlockRootAtSlot(data.slot)) === 0;
 
   let flags = 0;
   if (isMatchingSource && inclusionDelay <= SLOTS_PER_EPOCH_SQRT) flags |= TIMELY_SOURCE;
@@ -181,5 +180,5 @@ export function getAttestationParticipationStatus(
 }
 
 export function checkpointValueEquals(cp1: phase0.Checkpoint, cp2: phase0.Checkpoint): boolean {
-  return cp1.epoch === cp2.epoch && byteArrayEquals(cp1.root, cp2.root);
+  return cp1.epoch === cp2.epoch && Buffer.compare(cp1.root, cp2.root) === 0;
 }

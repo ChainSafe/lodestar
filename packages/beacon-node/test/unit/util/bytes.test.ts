@@ -1,7 +1,6 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {describe, expect, it} from "vitest";
 
-import {byteArrayEquals} from "../../../src/util/bytes.js";
 
 /** Reference implementation of byteArrayConcat */
 function byteArrayConcat(bytesArr: Uint8Array[]): Uint8Array {
@@ -24,7 +23,7 @@ describe("util / bytes", () => {
     }
   });
 
-  describe("byteArrayEquals", () => {
+  describe("Buffer.compare()", () => {
     const testCases: {hex1: string; hex2: string; isEqual: boolean}[] = [
       {hex1: "0x00", hex2: "0x00", isEqual: true},
       {hex1: "0x00", hex2: "0x01", isEqual: false},
@@ -34,7 +33,7 @@ describe("util / bytes", () => {
 
     for (const {hex1, hex2, isEqual} of testCases) {
       it(`${hex1} == ${hex2} -> ${isEqual}`, () => {
-        expect(byteArrayEquals(fromHexString(hex1), fromHexString(hex2))).toBe(isEqual);
+        expect(Buffer.compare(fromHexString(hex1), fromHexString(hex2)) === 0).toBe(isEqual);
       });
     }
   });

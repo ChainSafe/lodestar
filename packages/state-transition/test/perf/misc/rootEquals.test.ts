@@ -1,5 +1,5 @@
 import {bench, describe, setBenchOpts} from "@chainsafe/benchmark";
-import {byteArrayEquals, fromHexString} from "@chainsafe/ssz";
+import {fromHexString} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
 
 // As of Sep 2023
@@ -27,10 +27,10 @@ describe("root equals", () => {
   });
 
   bench({
-    id: "byteArrayEquals",
+    id: "Buffer.compare",
     fn: () => {
       for (let i = 0; i < runsFactor; i++) {
-        byteArrayEquals(rootTree, stateRoot);
+        Buffer.compare(rootTree, stateRoot) === 0;
       }
     },
     runsFactor,

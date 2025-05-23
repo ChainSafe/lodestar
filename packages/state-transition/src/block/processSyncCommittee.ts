@@ -1,4 +1,3 @@
-import {byteArrayEquals} from "@chainsafe/ssz";
 import {DOMAIN_SYNC_COMMITTEE, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {altair, ssz} from "@lodestar/types";
 import {G2_POINT_AT_INFINITY} from "../constants/index.js";
@@ -94,7 +93,7 @@ export function getSyncCommitteeSignatureSet(
   if (participantIndices.length === 0) {
     // Must set signature as G2_POINT_AT_INFINITY when participating bits are empty
     // https://github.com/ethereum/eth2.0-specs/blob/30f2a076377264677e27324a8c3c78c590ae5e20/specs/altair/bls.md#eth2_fast_aggregate_verify
-    if (byteArrayEquals(signature, G2_POINT_AT_INFINITY)) {
+    if (Buffer.compare(signature, G2_POINT_AT_INFINITY) !== 0) {
       return null;
     }
     throw Error("Empty sync committee signature is not infinity");

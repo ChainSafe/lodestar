@@ -1,4 +1,3 @@
-import {byteArrayEquals} from "@chainsafe/ssz";
 import {Epoch, phase0} from "@lodestar/types";
 import {CachedBeaconStatePhase0} from "../types.js";
 import {computeStartSlotAtEpoch, getBlockRootAtSlot} from "../util/index.js";
@@ -31,9 +30,6 @@ export function processPendingAttestations(
     return;
   }
 
-  // Prevent frequent object get of external CommonJS dependencies
-  const byteArrayEqualsFn = byteArrayEquals;
-
   const actualTargetBlockRoot = getBlockRootAtSlot(state, computeStartSlotAtEpoch(epoch));
 
   for (const att of attestations) {
@@ -47,9 +43,9 @@ export function processPendingAttestations(
     const inclusionDelay = att.inclusionDelay;
     const proposerIndex = att.proposerIndex;
     const attSlot = attData.slot;
-    const attVotedTargetRoot = byteArrayEqualsFn(attData.target.root, actualTargetBlockRoot);
+    const attVotedTargetRoot = Buffer.compare(attData.target.root, actualTargetBlockRoot) === 0;
     const attVotedHeadRoot =
-      attSlot < stateSlot && byteArrayEqualsFn(attData.beaconBlockRoot, getBlockRootAtSlot(state, attSlot));
+      attSlot < stateSlot && Buffer.compare(attData.beaconBlockRoot, getBlockRootAtSlot(state, attSlot)) === 0;
     const committee = epochCtx.getBeaconCommittee(attSlot, attData.index);
     const participants = att.aggregationBits.intersectValues(committee);
 

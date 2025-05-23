@@ -13,7 +13,6 @@ import {
 import {BlobIndex, Root, Slot, SubnetID, deneb, ssz} from "@lodestar/types";
 import {toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 
-import {byteArrayEquals} from "../../util/bytes.js";
 import {ckzg} from "../../util/kzg.js";
 import {BlobSidecarErrorCode, BlobSidecarGossipError} from "../errors/blobSidecarError.js";
 import {GossipAction} from "../errors/gossipValidation.js";
@@ -199,9 +198,9 @@ export function validateBlobSidecars(
       const blobBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blobBlockHeader);
       if (
         blobBlockHeader.slot !== blockSlot ||
-        !byteArrayEquals(blobBlockRoot, blockRoot) ||
+        Buffer.compare(blobBlockRoot, blockRoot) !== 0 ||
         blobSidecar.index !== index ||
-        !byteArrayEquals(expectedKzgCommitments[index], blobSidecar.kzgCommitment)
+        Buffer.compare(expectedKzgCommitments[index], blobSidecar.kzgCommitment) !== 0
       ) {
         throw new Error(
           `Invalid blob with slot=${blobBlockHeader.slot} blobBlockRoot=${toRootHex(blobBlockRoot)} index=${

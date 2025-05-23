@@ -1,4 +1,3 @@
-import {byteArrayEquals} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {FilterOptions} from "@lodestar/db";
 import {phase0, ssz} from "@lodestar/types";
@@ -81,7 +80,7 @@ export class Eth1DepositsCache {
             throw new Eth1Error({code: Eth1ErrorCode.MISSING_DEPOSIT_LOG, newIndex, lastLogIndex});
           }
           const serializedEvent = ssz.phase0.DepositEvent.serialize(depositEvent);
-          if (!byteArrayEquals(prevDBSerializedEvent, serializedEvent)) {
+          if (Buffer.compare(prevDBSerializedEvent, serializedEvent) !== 0) {
             throw new Eth1Error({code: Eth1ErrorCode.DUPLICATE_DISTINCT_LOG, newIndex, lastLogIndex});
           }
         }

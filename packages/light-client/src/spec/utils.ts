@@ -1,4 +1,4 @@
-import {BitArray, byteArrayEquals} from "@chainsafe/ssz";
+import {BitArray} from "@chainsafe/ssz";
 
 import {ChainForkConfig} from "@lodestar/config";
 import {
@@ -63,7 +63,7 @@ export function isSyncCommitteeUpdate(update: LightClientUpdate): boolean {
     // Fast return for when constructing full LightClientUpdate from partial updates
     update.nextSyncCommitteeBranch !==
       getZeroSyncCommitteeBranch(isElectraLightClientUpdate(update) ? ForkName.electra : ForkName.altair) &&
-    update.nextSyncCommitteeBranch.some((branch) => !byteArrayEquals(branch, ZERO_HASH))
+    update.nextSyncCommitteeBranch.some((branch) => Buffer.compare(branch, ZERO_HASH) === 0)
   );
 }
 
@@ -72,18 +72,18 @@ export function isFinalityUpdate(update: LightClientUpdate): boolean {
     // Fast return for when constructing full LightClientUpdate from partial updates
     update.finalityBranch !==
       getZeroFinalityBranch(isElectraLightClientUpdate(update) ? ForkName.electra : ForkName.altair) &&
-    update.finalityBranch.some((branch) => !byteArrayEquals(branch, ZERO_HASH))
+    update.finalityBranch.some((branch) => Buffer.compare(branch, ZERO_HASH)!== 0)
   );
 }
 
 export function isZeroedHeader(header: BeaconBlockHeader): boolean {
   // Fast return for when constructing full LightClientUpdate from partial updates
-  return header === ZERO_HEADER || byteArrayEquals(header.bodyRoot, ZERO_HASH);
+  return header === ZERO_HEADER || Buffer.compare(header.bodyRoot, ZERO_HASH) === 0;
 }
 
 export function isZeroedSyncCommittee(syncCommittee: SyncCommittee): boolean {
   // Fast return for when constructing full LightClientUpdate from partial updates
-  return syncCommittee === ZERO_SYNC_COMMITTEE || byteArrayEquals(syncCommittee.pubkeys[0], ZERO_PUBKEY);
+  return syncCommittee === ZERO_SYNC_COMMITTEE || Buffer.compare(syncCommittee.pubkeys[0], ZERO_PUBKEY) === 0;
 }
 
 export function upgradeLightClientHeader(

@@ -1,4 +1,3 @@
-import {byteArrayEquals} from "@chainsafe/ssz";
 import {
   FAR_FUTURE_EPOCH,
   ForkSeq,
@@ -32,7 +31,7 @@ export function processWithdrawals(
   if (isCapellaPayloadHeader(payload)) {
     const expectedWithdrawalsRoot = ssz.capella.Withdrawals.hashTreeRoot(expectedWithdrawals);
     const actualWithdrawalsRoot = payload.withdrawalsRoot;
-    if (!byteArrayEquals(expectedWithdrawalsRoot, actualWithdrawalsRoot)) {
+    if (Buffer.compare(expectedWithdrawalsRoot, actualWithdrawalsRoot) !== 0) {
       throw Error(
         `Invalid withdrawalsRoot of executionPayloadHeader, expected=${toRootHex(
           expectedWithdrawalsRoot

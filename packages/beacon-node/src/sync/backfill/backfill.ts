@@ -11,7 +11,6 @@ import {GENESIS_SLOT, ZERO_HASH} from "../../constants/index.js";
 import {IBeaconDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {INetwork, NetworkEvent, NetworkEventData, PeerAction} from "../../network/index.js";
-import {byteArrayEquals} from "../../util/bytes.js";
 import {ItTrigger} from "../../util/itTrigger.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {shuffleOne} from "../../util/shuffle.js";
@@ -335,7 +334,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
 
         if (this.syncAnchor.lastBackSyncedBlock.slot === this.prevFinalizedCheckpointBlock.slot) {
           // Okay! we backfilled successfully till prevFinalizedCheckpointBlock
-          if (!byteArrayEquals(this.syncAnchor.lastBackSyncedBlock.root, this.prevFinalizedCheckpointBlock.root)) {
+          if (Buffer.compare(this.syncAnchor.lastBackSyncedBlock.root, this.prevFinalizedCheckpointBlock.root) !== 0) {
             this.logger.error(
               `Invalid root synced at a previous finalized or wsCheckpoint, slot=${
                 this.prevFinalizedCheckpointBlock.slot
@@ -375,7 +374,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
         }
 
         if (this.syncAnchor.lastBackSyncedBlock.slot === GENESIS_SLOT) {
-          if (!byteArrayEquals(this.syncAnchor.lastBackSyncedBlock.block.message.parentRoot, ZERO_HASH)) {
+          if (Buffer.compare(this.syncAnchor.lastBackSyncedBlock.block.message.parentRoot, ZERO_HASH) !== 0) {
             Error(
               `Invalid Gensis Block with non zero parentRoot=${toRootHex(
                 this.syncAnchor.lastBackSyncedBlock.block.message.parentRoot
@@ -693,7 +692,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       if (anchorBlock.message.slot === this.prevFinalizedCheckpointBlock.slot) {
         if (
           !isPrevFinWsConfirmedAnchorParent &&
-          !byteArrayEquals(anchorBlockRoot, this.prevFinalizedCheckpointBlock.root)
+          Buffer.compare(anchorBlockRoot, this.prevFinalizedCheckpointBlock.root) !== 0
         ) {
           throw Error(
             `Invalid root for prevFinalizedCheckpointBlock at slot=${

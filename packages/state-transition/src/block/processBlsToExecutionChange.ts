@@ -1,5 +1,4 @@
 import {digest} from "@chainsafe/as-sha256";
-import {byteArrayEquals} from "@chainsafe/ssz";
 import {BLS_WITHDRAWAL_PREFIX, ETH1_ADDRESS_WITHDRAWAL_PREFIX} from "@lodestar/params";
 import {capella} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
@@ -57,7 +56,7 @@ export function isValidBlsToExecutionChange(
   const digestCredentials = digest(addressChange.fromBlsPubkey);
   // Set the BLS_WITHDRAWAL_PREFIX on the digestCredentials for direct match
   digestCredentials[0] = BLS_WITHDRAWAL_PREFIX;
-  if (!byteArrayEquals(withdrawalCredentials, digestCredentials)) {
+  if (Buffer.compare(withdrawalCredentials, digestCredentials) !== 0) {
     return {
       valid: false,
       error: Error(

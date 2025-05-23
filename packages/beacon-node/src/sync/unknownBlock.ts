@@ -13,7 +13,6 @@ import {
   beaconBlocksMaybeBlobsByRoot,
   unavailableBeaconBlobsByRoot,
 } from "../network/reqresp/beaconBlocksMaybeBlobsByRoot.js";
-import {byteArrayEquals} from "../util/bytes.js";
 import {PeerIdStr} from "../util/peerId.js";
 import {shuffle} from "../util/shuffle.js";
 import {Result, wrapError} from "../util/wrapError.js";
@@ -483,7 +482,7 @@ export class UnknownBlockSync {
         // Verify block root is correct
         const block = blockInput.block.message;
         const receivedBlockRoot = this.config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block);
-        if (!byteArrayEquals(receivedBlockRoot, blockRoot)) {
+        if (Buffer.compare(receivedBlockRoot, blockRoot) !== 0) {
           throw Error(`Wrong block received by peer, got ${toRootHex(receivedBlockRoot)} expected ${blockRootHex}`);
         }
 
@@ -552,7 +551,7 @@ export class UnknownBlockSync {
         const block = blockInput.block.message;
         const receivedBlockRoot = this.config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block);
 
-        if (!byteArrayEquals(receivedBlockRoot, blockRoot)) {
+        if (Buffer.compare(receivedBlockRoot, blockRoot) !== 0) {
           throw Error(`Wrong block received by peer, got ${toRootHex(receivedBlockRoot)} expected ${blockRootHex}`);
         }
         if (unavailableBlockInput.block === null) {

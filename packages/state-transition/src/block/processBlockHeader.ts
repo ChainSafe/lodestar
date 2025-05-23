@@ -1,4 +1,3 @@
-import {byteArrayEquals} from "@chainsafe/ssz";
 import {BeaconBlock, BlindedBeaconBlock, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {ZERO_HASH} from "../constants/index.js";
@@ -31,7 +30,7 @@ export function processBlockHeader(state: CachedBeaconStateAllForks, block: Beac
   }
 
   // verify that the parent matches
-  if (!byteArrayEquals(block.parentRoot, ssz.phase0.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader))) {
+  if (Buffer.compare(block.parentRoot, ssz.phase0.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader)) === 0) {
     throw new Error(
       `Block parent root ${toRootHex(block.parentRoot)} does not match state latest block, block slot=${slot}`
     );

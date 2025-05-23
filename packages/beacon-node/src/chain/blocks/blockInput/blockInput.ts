@@ -3,7 +3,6 @@ import {BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu} from "@lod
 import {fromHex, prettyBytes, toHex, withTimeout} from "@lodestar/utils";
 import {VersionedHashes} from "../../../execution/index.js";
 import {kzgCommitmentToVersionedHash} from "../../../util/blobs.js";
-import {byteArrayEquals} from "../../../util/bytes.js";
 import {BlockInputError, BlockInputErrorCode} from "./errors.js";
 import {
   AddBlob,
@@ -486,7 +485,7 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
 }
 
 function blockAndBlobArePaired(block: SignedBeaconBlock<ForkBlobsDA>, blobSidecar: deneb.BlobSidecar): boolean {
-  return byteArrayEquals(block.message.body.blobKzgCommitments[blobSidecar.index], blobSidecar.kzgCommitment);
+  return Buffer.compare(block.message.body.blobKzgCommitments[blobSidecar.index], blobSidecar.kzgCommitment) === 0;
 }
 
 function assertBlockAndBlobArePaired(
@@ -778,7 +777,7 @@ function blockAndColumnArePaired(
   return (
     block.message.body.blobKzgCommitments.length === columnSidecar.kzgCommitments.length &&
     block.message.body.blobKzgCommitments.every((commitment, index) =>
-      byteArrayEquals(commitment, columnSidecar.kzgCommitments[index])
+      Buffer.compare(commitment, columnSidecar.kzgCommitments[index]) === 0
     )
   );
 }

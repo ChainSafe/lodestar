@@ -36,7 +36,7 @@ export function isExecutionEnabled(state: BeaconStateExecutions, block: BeaconBl
   const payload = getFullOrBlindedPayload(block);
   // Note: spec says to check all payload is zero-ed. However a state-root cannot be zero for any non-empty payload
   // TODO: Consider comparing with the payload root if this assumption is not correct.
-  // return !byteArrayEquals(payload.stateRoot, ZERO_HASH);
+  // return Buffer.compare(payload.stateRoot, ZERO_HASH) !== 0;
 
   // UPDATE: stateRoot comparision should have been enough with zero hash, but spec tests were failing
   // Revisit this later to fix specs and make this efficient

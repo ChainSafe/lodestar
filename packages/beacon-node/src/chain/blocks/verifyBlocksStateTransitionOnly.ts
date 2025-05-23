@@ -7,7 +7,6 @@ import {
 } from "@lodestar/state-transition";
 import {ErrorAborted, Logger} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
-import {byteArrayEquals} from "../../util/bytes.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
@@ -69,7 +68,7 @@ export async function verifyBlocksStateTransitionOnly(
     hashTreeRootTimer?.();
 
     // Check state root matches
-    if (!byteArrayEquals(block.message.stateRoot, stateRoot)) {
+    if (Buffer.compare(block.message.stateRoot, stateRoot) !== 0) {
       throw new BlockError(block, {
         code: BlockErrorCode.INVALID_STATE_ROOT,
         root: postState.hashTreeRoot(),
