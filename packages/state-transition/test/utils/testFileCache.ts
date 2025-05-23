@@ -4,7 +4,7 @@ import {getClient} from "@lodestar/api";
 import {ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
 import {SignedBeaconBlock} from "@lodestar/types";
-import got from "got";
+import {fetch} from "@lodestar/utils";
 import {CachedBeaconStateAllForks} from "../../src/index.js";
 import {testCachePath} from "../cache.js";
 import {createCachedBeaconStateTest} from "../utils/state.js";
@@ -94,15 +94,21 @@ export async function getNetworkCachedBlock(
   return config.getForkTypes(slot).SignedBeaconBlock.deserialize(blockSsz);
 }
 
-async function downloadTestFile(fileId: string): Promise<Buffer> {
+async function downloadTestFile(fileId: string): Promise<Uint8Array> {
   const fileUrl = `${TEST_FILES_BASE_URL}/${fileId}`;
   console.log(`Downloading file ${fileUrl}`);
 
-  const res = await got(fileUrl, {responseType: "buffer"}).catch((e: Error) => {
-    e.message = `Error downloading ${fileUrl}: ${e.message}`;
-    throw e;
-  });
-  return res.body;
+  try {
+    const res = await fetch(fileUrl);
+    if (!res.ok) {
+      throw new Error(`Error downloading ${fileUrl}: ${res.status} ${res.statusText}`);
+    }
+    return new Uint8Array(await res.arrayBuffer());
+  } catch (e) {
+    const error = e as Error;
+    error.message = `Error downloading ${fileUrl}: ${error.message}`;
+    throw error;
+  }
 }
 
 async function tryEach<T>(promises: (() => Promise<T>)[]): Promise<T> {

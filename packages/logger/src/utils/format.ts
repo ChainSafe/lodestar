@@ -73,7 +73,7 @@ function jsonLogFormat(opts: LoggerOptions): Format {
  */
 
 // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-function humanReadableTemplateFn(_info: {[key: string]: any; level: string; message: string}): string {
+function humanReadableTemplateFn(_info: {[key: string]: any; level: string; message: unknown}): string {
   const info = _info as WinstonInfoArg;
 
   const paddingBetweenInfo = 30;

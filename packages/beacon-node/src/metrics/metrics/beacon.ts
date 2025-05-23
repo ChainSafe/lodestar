@@ -1,11 +1,7 @@
 import {UpdateHeadOpt} from "@lodestar/fork-choice";
-import {NotReorgedReason} from "@lodestar/fork-choice/lib/forkChoice/interface.js";
+import {NotReorgedReason} from "@lodestar/fork-choice";
 import {ProducedBlockSource} from "@lodestar/types";
-import {
-  BlockSelectionResult,
-  BuilderBlockSelectionReason,
-  EngineBlockSelectionReason,
-} from "../../api/impl/validator/index.js";
+import {BlockSelectionResult} from "../../api/impl/validator/index.js";
 import {BlockProductionStep, PayloadPreparationType} from "../../chain/produceBlock/index.js";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
 
@@ -166,7 +162,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
     blockProductionNumAggregated: register.histogram<{source: ProducedBlockSource}>({
       name: "beacon_block_production_num_aggregated_total",
       help: "Count of all aggregated attestations in our produced block",
-      buckets: [32, 64, 96, 128],
+      buckets: [1, 2, 4, 6, 8],
       labelNames: ["source"],
     }),
     blockProductionExecutionPayloadValue: register.histogram<{source: ProducedBlockSource}>({
@@ -215,16 +211,12 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
 
     blockInputFetchStats: {
       // of already available blocks which didn't have to go through blobs pull
-      totalDataAvailableBlockInputs: register.gauge({
-        name: "beacon_blockinputs_already_available_total",
-        help: "Total number of block inputs whose blobs were already available",
-      }),
       totalDataAvailableBlockInputBlobs: register.gauge({
         name: "beacon_blockinput_blobs_already_available_total",
         help: "Total number of block input blobs that of already available blocks",
       }),
 
-      // of those which need to be fetched
+      // blobs resolution stats
       dataPromiseBlobsAlreadyAvailable: register.gauge({
         name: "beacon_datapromise_blockinput_blobs_already_available_total",
         help: "Count of data promise blocks' blobs that were already available in blockinput cache via gossip",
@@ -277,25 +269,6 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         name: "beacon_datapromise_blockinput_blobs_finally_resolved_from_network_total",
         help: "Number of blobs successfully fetched from the network",
       }),
-
-      totalDataPromiseBlockInputsAvailableUsingGetBlobs: register.gauge({
-        name: "beacon_datapromise_blockinputs_available_using_getblobs_total",
-        help: "Count of block inputs that became available using non-null get blobs requests",
-      }),
-      totalDataPromiseBlockInputsTried: register.gauge({
-        name: "beacon_datapromise_blockinputs_tried_for_blobs_pull_total",
-        help: "Total number of block inputs that were tried to resolve",
-      }),
-      totalDataPromiseBlockInputsResolvedAvailable: register.gauge({
-        name: "beacon_datapromise_blockinputs_available_post_blobs_pull_total",
-        help: "Total number of block inputs that were successfully resolved as available on blobs pull",
-      }),
-
-      // retry counts
-      totalDataPromiseBlockInputsReTried: register.gauge({
-        name: "beacon_datapromise_blockinputs_retried_for_blobs_pull_total",
-        help: "Total number of block inputs that were retried for blobs pull from network",
-      }),
       dataPromiseBlobsRetriedFromNetwork: register.gauge({
         name: "beacon_datapromise_blockinput_blobs_retried_from_network_total",
         help: "Number of blob requests required from the network on retries",
@@ -304,9 +277,43 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         name: "beacon_datapromise_blockinput_blobs_retried_and_resolved_from_network_total",
         help: "Number of blobs successfully fetched from the network on retries",
       }),
+
+      // blockinput resolution stats
+      totalDataAvailableBlockInputs: register.gauge({
+        name: "beacon_blockinputs_already_available_total",
+        help: "Total number of block inputs whose blobs were already available",
+      }),
+      totalDataPromiseBlockInputsAvailableUsingGetBlobs: register.gauge({
+        name: "beacon_datapromise_blockinputs_available_using_getblobs_total",
+        help: "Count of block inputs that became available using non-null get blobs requests",
+      }),
+      totalDataPromiseBlockInputsAvailableFromGetBlobs: register.gauge({
+        name: "beacon_datapromise_blockinputs_available_from_getblobs_total",
+        help: "Count of block inputs that became available from non-null get blobs requests",
+      }),
+      totalDataPromiseBlockInputsFinallyAvailableFromNetworkReqResp: register.gauge({
+        name: "beacon_datapromise_blockinputs_finally_available_from_reqresp_total",
+        help: "Count of block inputs that became available using the req/resp from network",
+      }),
+      totalDataPromiseBlockInputsTriedBlobsPull: register.gauge({
+        name: "beacon_datapromise_blockinputs_tried_for_blobs_pull_total",
+        help: "Total number of block inputs that were tried to resolve",
+      }),
+      totalDataPromiseBlockInputsTriedGetBlobs: register.gauge({
+        name: "beacon_datapromise_blockinputs_tried_for_getblobs_pull_total",
+        help: "Total number of block inputs that were tried to resolve",
+      }),
+      totalDataPromiseBlockInputsResolvedAvailable: register.gauge({
+        name: "beacon_datapromise_blockinputs_available_post_blobs_pull_total",
+        help: "Total number of block inputs that were successfully resolved as available on blobs pull",
+      }),
       totalDataPromiseBlockInputsRetriedAvailableFromNetwork: register.gauge({
         name: "beacon_datapromise_blockinputs_retried_and_resolved_from_network_total",
         help: "Number of blockinputs successfully resolved from the network on retries",
+      }),
+      totalDataPromiseBlockInputsReTriedBlobsPull: register.gauge({
+        name: "beacon_datapromise_blockinputs_retried_for_blobs_pull_total",
+        help: "Total number of block inputs that were retried for blobs pull from network",
       }),
 
       // some caches stats

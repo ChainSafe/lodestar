@@ -3,6 +3,7 @@ import {generateKeyPair} from "@libp2p/crypto/keys";
 import {PrivateKey} from "@libp2p/interface";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {SubnetID} from "@lodestar/types";
+import {sleep} from "@lodestar/utils";
 import {INetwork, Network, NetworkEvent} from "../../src/network/index.js";
 import {Libp2p} from "../../src/network/interface.js";
 import {createNodeJsLibp2p} from "../../src/network/libp2p/index.js";
@@ -35,9 +36,13 @@ type INetworkDebug = Pick<INetwork, "connectToPeer" | "disconnectPeer" | "getNet
 
 // Helpers to manipulate network's libp2p instance for testing only
 
-export async function connect(netDial: INetworkDebug, netServer: INetworkDebug): Promise<void> {
+export async function connect(netDial: INetworkDebug, netServer: INetworkDebug, signal?: AbortSignal): Promise<void> {
   const netServerId = await netServer.getNetworkIdentity();
   await netDial.connectToPeer(netServerId.peerId, netServerId.p2pAddresses);
+
+  // We see a lot of "Muxer already closed" in e2e tests on CI
+  // This is a way to give a grace period for connections to open and exchange metadata
+  await sleep(50, signal);
 }
 
 export async function disconnect(network: INetworkDebug, peer: string): Promise<void> {

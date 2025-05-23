@@ -1,4 +1,4 @@
-import {itBench} from "@dapplion/benchmark";
+import {bench, describe} from "@chainsafe/benchmark";
 import {processSlot} from "../../../src/slot/index.js";
 import {State} from "../types.js";
 import {generatePerfTestCachedStatePhase0} from "../util.js";
@@ -7,7 +7,7 @@ import {generatePerfTestCachedStatePhase0} from "../util.js";
 
 describe("processSlot", () => {
   for (const slotCount of [1, 32]) {
-    itBench<State, State>({
+    bench<State, State>({
       id: `processSlot - ${slotCount} slots`,
       before: () => generatePerfTestCachedStatePhase0({goBackOneSlot: true}) as State,
       beforeEach: (state) => state.clone(),

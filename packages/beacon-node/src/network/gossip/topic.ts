@@ -4,7 +4,7 @@ import {
   ForkName,
   ForkSeq,
   SYNC_COMMITTEE_SUBNET_COUNT,
-  isForkLightClient,
+  isForkPostAltair,
   isForkPostElectra,
 } from "@lodestar/params";
 import {Attestation, SingleAttestation, ssz, sszTypesFor} from "@lodestar/types";
@@ -100,11 +100,11 @@ export function getGossipSSZType(topic: GossipTopic) {
     case GossipType.sync_committee:
       return ssz.altair.SyncCommitteeMessage;
     case GossipType.light_client_optimistic_update:
-      return isForkLightClient(topic.fork)
+      return isForkPostAltair(topic.fork)
         ? sszTypesFor(topic.fork).LightClientOptimisticUpdate
         : ssz.altair.LightClientOptimisticUpdate;
     case GossipType.light_client_finality_update:
-      return isForkLightClient(topic.fork)
+      return isForkPostAltair(topic.fork)
         ? sszTypesFor(topic.fork).LightClientFinalityUpdate
         : ssz.altair.LightClientFinalityUpdate;
     case GossipType.bls_to_execution_change:

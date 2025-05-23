@@ -42,22 +42,6 @@ export const testData: GenericServerTestCases<Endpoints> = {
       meta: {executionOptimistic: true},
     },
   },
-  produceBlockV2: {
-    args: {
-      slot: 32000,
-      randaoReveal,
-      graffiti,
-      feeRecipient,
-      builderSelection: BuilderSelection.ExecutionAlways,
-      strictFeeRecipientCheck: true,
-    },
-    res: {
-      data: ssz.altair.BeaconBlock.defaultValue(),
-      meta: {
-        version: ForkName.altair,
-      },
-    },
-  },
   produceBlockV3: {
     args: {
       slot: 32000,
@@ -71,22 +55,13 @@ export const testData: GenericServerTestCases<Endpoints> = {
       blindedLocal: false,
     },
     res: {
-      data: ssz.altair.BeaconBlock.defaultValue(),
+      data: ssz.electra.BlockContents.defaultValue(),
       meta: {
-        version: ForkName.altair,
+        version: ForkName.electra,
         executionPayloadValue: ssz.Wei.defaultValue(),
         consensusBlockValue: ssz.Wei.defaultValue(),
         executionPayloadBlinded: false,
         executionPayloadSource: ProducedBlockSource.engine,
-      },
-    },
-  },
-  produceBlindedBlock: {
-    args: {slot: 32000, randaoReveal, graffiti},
-    res: {
-      data: ssz.bellatrix.BlindedBeaconBlock.defaultValue(),
-      meta: {
-        version: ForkName.bellatrix,
       },
     },
   },
@@ -111,7 +86,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
     res: undefined,
   },
   publishAggregateAndProofsV2: {
-    args: {signedAggregateAndProofs: [ssz.phase0.SignedAggregateAndProof.defaultValue()]},
+    args: {signedAggregateAndProofs: [ssz.electra.SignedAggregateAndProof.defaultValue()]},
     res: undefined,
   },
   publishContributionAndProofs: {

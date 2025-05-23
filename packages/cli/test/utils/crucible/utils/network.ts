@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import {SignedBeaconBlock, Slot} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {BeaconClient, BeaconNode, ExecutionClient, ExecutionNode, NodePair} from "../interfaces.js";

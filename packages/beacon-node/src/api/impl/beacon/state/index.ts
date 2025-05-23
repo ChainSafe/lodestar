@@ -1,19 +1,26 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {EPOCHS_PER_HISTORICAL_VECTOR} from "@lodestar/params";
+import {EPOCHS_PER_HISTORICAL_VECTOR, isForkPostElectra} from "@lodestar/params";
 import {
   BeaconStateAllForks,
+  BeaconStateElectra,
   CachedBeaconStateAltair,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   getCurrentEpoch,
   getRandaoMix,
+  loadState,
 } from "@lodestar/state-transition";
 import {getValidatorStatus} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {ApiError} from "../../errors.js";
 import {ApiModules} from "../../types.js";
-import {filterStateValidatorsByStatus, getStateResponse, getStateValidatorIndex, toValidatorResponse} from "./utils.js";
+import {
+  filterStateValidatorsByStatus,
+  getStateResponseWithRegen,
+  getStateValidatorIndex,
+  toValidatorResponse,
+} from "./utils.js";
 
 export function getBeaconStateApi({
   chain,
@@ -22,7 +29,13 @@ export function getBeaconStateApi({
   async function getState(
     stateId: routes.beacon.StateId
   ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean}> {
-    return getStateResponse(chain, stateId);
+    const {state, executionOptimistic, finalized} = await getStateResponseWithRegen(chain, stateId);
+
+    return {
+      state: state instanceof Uint8Array ? loadState(config, chain.getHeadState(), state).state : state,
+      executionOptimistic,
+      finalized,
+    };
   }
 
   return {
@@ -72,7 +85,7 @@ export function getBeaconStateApi({
     },
 
     async getStateValidators({stateId, validatorIds = [], statuses = []}) {
-      const {state, executionOptimistic, finalized} = await getStateResponse(chain, stateId);
+      const {state, executionOptimistic, finalized} = await getState(stateId);
       const currentEpoch = getCurrentEpoch(state);
       const {validators, balances} = state; // Get the validators sub tree once for all the loop
       const {pubkey2index} = chain.getHeadState().epochCtx;
@@ -129,7 +142,7 @@ export function getBeaconStateApi({
     },
 
     async postStateValidatorIdentities({stateId, validatorIds = []}) {
-      const {state, executionOptimistic, finalized} = await getStateResponse(chain, stateId);
+      const {state, executionOptimistic, finalized} = await getState(stateId);
       const {pubkey2index} = chain.getHeadState().epochCtx;
 
       let validatorIdentities: routes.beacon.ValidatorIdentities;
@@ -160,7 +173,7 @@ export function getBeaconStateApi({
     },
 
     async getStateValidator({stateId, validatorId}) {
-      const {state, executionOptimistic, finalized} = await getStateResponse(chain, stateId);
+      const {state, executionOptimistic, finalized} = await getState(stateId);
       const {pubkey2index} = chain.getHeadState().epochCtx;
 
       const resp = getStateValidatorIndex(validatorId, state, pubkey2index);
@@ -181,7 +194,7 @@ export function getBeaconStateApi({
     },
 
     async getStateValidatorBalances({stateId, validatorIds = []}) {
-      const {state, executionOptimistic, finalized} = await getStateResponse(chain, stateId);
+      const {state, executionOptimistic, finalized} = await getState(stateId);
 
       if (validatorIds.length) {
         const headState = chain.getHeadState();
@@ -222,7 +235,7 @@ export function getBeaconStateApi({
     },
 
     async getEpochCommittees({stateId, ...filters}) {
-      const {state, executionOptimistic, finalized} = await getStateResponse(chain, stateId);
+      const {state, executionOptimistic, finalized} = await getState(stateId);
 
       const stateCached = state as CachedBeaconStateAltair;
       if (stateCached.epochCtx === undefined) {
@@ -271,7 +284,7 @@ export function getBeaconStateApi({
      */
     async getEpochSyncCommittees({stateId, epoch}) {
       // TODO: Should pick a state with the provided epoch too
-      const {state, executionOptimistic, finalized} = await getStateResponse(chain, stateId);
+      const {state, executionOptimistic, finalized} = await getState(stateId);
 
       // TODO: If possible compute the syncCommittees in advance of the fork and expose them here.
       // So the validators can prepare and potentially attest the first block. Not critical tho, it's very unlikely
@@ -289,11 +302,59 @@ export function getBeaconStateApi({
 
       return {
         data: {
-          validators: syncCommitteeCache.validatorIndices,
+          validators: new Array(...syncCommitteeCache.validatorIndices),
           // TODO: This is not used by the validator and will be deprecated soon
           validatorAggregates: [],
         },
         meta: {executionOptimistic, finalized},
+      };
+    },
+
+    async getPendingDeposits({stateId}, context) {
+      const {state, executionOptimistic, finalized} = await getState(stateId);
+      const fork = config.getForkName(state.slot);
+
+      if (!isForkPostElectra(fork)) {
+        throw new ApiError(400, `Cannot retrieve pending deposits for pre-electra state fork=${fork}`);
+      }
+
+      const {pendingDeposits} = state as BeaconStateElectra;
+
+      return {
+        data: context?.returnBytes ? pendingDeposits.serialize() : pendingDeposits.toValue(),
+        meta: {executionOptimistic, finalized, version: fork},
+      };
+    },
+
+    async getPendingPartialWithdrawals({stateId}, context) {
+      const {state, executionOptimistic, finalized} = await getState(stateId);
+      const fork = config.getForkName(state.slot);
+
+      if (!isForkPostElectra(fork)) {
+        throw new ApiError(400, `Cannot retrieve pending partial withdrawals for pre-electra state fork=${fork}`);
+      }
+
+      const {pendingPartialWithdrawals} = state as BeaconStateElectra;
+
+      return {
+        data: context?.returnBytes ? pendingPartialWithdrawals.serialize() : pendingPartialWithdrawals.toValue(),
+        meta: {executionOptimistic, finalized, version: fork},
+      };
+    },
+
+    async getPendingConsolidations({stateId}, context) {
+      const {state, executionOptimistic, finalized} = await getState(stateId);
+      const fork = config.getForkName(state.slot);
+
+      if (!isForkPostElectra(fork)) {
+        throw new ApiError(400, `Cannot retrieve pending consolidations for pre-electra state fork=${fork}`);
+      }
+
+      const {pendingConsolidations} = state as BeaconStateElectra;
+
+      return {
+        data: context?.returnBytes ? pendingConsolidations.serialize() : pendingConsolidations.toValue(),
+        meta: {executionOptimistic, finalized, version: fork},
       };
     },
   };

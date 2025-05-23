@@ -1,4 +1,4 @@
-import {fetch} from "@lodestar/api";
+import {fetch} from "@lodestar/utils";
 import {afterAll, describe, it} from "vitest";
 import {HttpMetricsServer, getHttpMetricsServer} from "../../../../src/metrics/index.js";
 import {testLogger} from "../../../utils/logger.js";

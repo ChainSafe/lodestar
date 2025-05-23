@@ -41,6 +41,9 @@ export type ChainConfig = {
   // ELECTRA
   ELECTRA_FORK_VERSION: Uint8Array;
   ELECTRA_FORK_EPOCH: number;
+  // FULU
+  FULU_FORK_VERSION: Uint8Array;
+  FULU_FORK_EPOCH: number;
 
   // Time parameters
   SECONDS_PER_SLOT: number;
@@ -71,13 +74,22 @@ export type ChainConfig = {
   DEPOSIT_CONTRACT_ADDRESS: Uint8Array;
 
   // Networking
+  MIN_EPOCHS_FOR_BLOCK_REQUESTS: number;
   MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: number;
+  MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: number;
   BLOB_SIDECAR_SUBNET_COUNT: number;
   MAX_BLOBS_PER_BLOCK: number;
   MAX_REQUEST_BLOB_SIDECARS: number;
   BLOB_SIDECAR_SUBNET_COUNT_ELECTRA: number;
   MAX_BLOBS_PER_BLOCK_ELECTRA: number;
   MAX_REQUEST_BLOB_SIDECARS_ELECTRA: number;
+
+  SAMPLES_PER_SLOT: number;
+  CUSTODY_REQUIREMENT: number;
+  NODE_CUSTODY_REQUIREMENT: number;
+  VALIDATOR_CUSTODY_REQUIREMENT: number;
+  BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: number;
+  MAX_BLOBS_PER_BLOCK_FULU: number;
 };
 
 export const chainConfigTypes: SpecTypes<ChainConfig> = {
@@ -111,6 +123,9 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   // ELECTRA
   ELECTRA_FORK_VERSION: "bytes",
   ELECTRA_FORK_EPOCH: "number",
+  // FULU
+  FULU_FORK_VERSION: "bytes",
+  FULU_FORK_EPOCH: "number",
 
   // Time parameters
   SECONDS_PER_SLOT: "number",
@@ -141,13 +156,22 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   DEPOSIT_CONTRACT_ADDRESS: "bytes",
 
   // Networking
+  MIN_EPOCHS_FOR_BLOCK_REQUESTS: "number",
   MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: "number",
+  MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: "number",
   BLOB_SIDECAR_SUBNET_COUNT: "number",
   MAX_BLOBS_PER_BLOCK: "number",
   MAX_REQUEST_BLOB_SIDECARS: "number",
   BLOB_SIDECAR_SUBNET_COUNT_ELECTRA: "number",
   MAX_BLOBS_PER_BLOCK_ELECTRA: "number",
   MAX_REQUEST_BLOB_SIDECARS_ELECTRA: "number",
+
+  SAMPLES_PER_SLOT: "number",
+  CUSTODY_REQUIREMENT: "number",
+  NODE_CUSTODY_REQUIREMENT: "number",
+  VALIDATOR_CUSTODY_REQUIREMENT: "number",
+  BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: "number",
+  MAX_BLOBS_PER_BLOCK_FULU: "number",
 };
 
 /** Allows values in a Spec file */

@@ -1,4 +1,4 @@
-import {itBench, setBenchOpts} from "@dapplion/benchmark";
+import {bench, describe, setBenchOpts} from "@chainsafe/benchmark";
 import {ForkSeq} from "@lodestar/params";
 import {processEpoch} from "../../../src/epoch/index.js";
 import {processEffectiveBalanceUpdates} from "../../../src/epoch/processEffectiveBalanceUpdates.js";
@@ -19,7 +19,7 @@ import {
   beforeProcessEpoch,
   computeStartSlotAtEpoch,
 } from "../../../src/index.js";
-import {LazyValue, beforeValue} from "../../utils/beforeValueMocha.js";
+import {LazyValue, beforeValue} from "../../utils/beforeValueBenchmark.js";
 import {getNetworkCachedState} from "../../utils/testFileCache.js";
 import {capellaState} from "../params.js";
 import {StateEpoch} from "../types.js";
@@ -39,7 +39,7 @@ describe(`capella processEpoch - ${stateId}`, () => {
     return state;
   }, 300_000);
 
-  itBench({
+  bench({
     id: `capella processEpoch - ${stateId}`,
     yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
     beforeEach: () => stateOg.value.clone(),
@@ -71,40 +71,40 @@ function benchmarkAltairEpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>
   //   return state;
   // };
 
-  itBench({
+  bench({
     id: `${stateId} - capella beforeProcessEpoch`,
     fn: () => {
       beforeProcessEpoch(stateOg.value);
     },
   });
 
-  itBench({
+  bench({
     id: `${stateId} - capella processJustificationAndFinalization`,
     beforeEach: () => stateOg.value.clone(),
     fn: (state) => processJustificationAndFinalization(state, cache.value),
   });
 
-  itBench({
+  bench({
     id: `${stateId} - capella processInactivityUpdates`,
     beforeEach: () => stateOg.value.clone() as CachedBeaconStateAltair,
     fn: (state) => processInactivityUpdates(state, cache.value),
   });
 
-  itBench({
+  bench({
     id: `${stateId} - capella processRewardsAndPenalties`,
     beforeEach: () => stateOg.value.clone() as CachedBeaconStateCapella,
     fn: (state) => processRewardsAndPenalties(state, cache.value),
   });
 
   // TODO: Needs a better state to test with, current does not include enough actions: 17.715 us/op
-  itBench({
+  bench({
     id: `${stateId} - capella processRegistryUpdates`,
     beforeEach: () => stateOg.value.clone(),
     fn: (state) => processRegistryUpdates(ForkSeq.capella, state, cache.value),
   });
 
   // TODO: Needs a better state to test with, current does not include enough actions: 39.985 us/op
-  itBench({
+  bench({
     id: `${stateId} - capella processSlashings`,
     beforeEach: () => stateOg.value.clone() as CachedBeaconStateCapella,
     fn: (state) => {
@@ -112,13 +112,13 @@ function benchmarkAltairEpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>
     },
   });
 
-  itBench({
+  bench({
     id: `${stateId} - capella processEth1DataReset`,
     beforeEach: () => stateOg.value.clone(),
     fn: (state) => processEth1DataReset(state, cache.value),
   });
 
-  itBench({
+  bench({
     id: `${stateId} - capella processEffectiveBalanceUpdates`,
     beforeEach: () => stateOg.value.clone(),
     fn: (state) => {
@@ -126,31 +126,31 @@ function benchmarkAltairEpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>
     },
   });
 
-  itBench({
+  bench({
     id: `${stateId} - capella processSlashingsReset`,
     beforeEach: () => stateOg.value.clone(),
     fn: (state) => processSlashingsReset(state, cache.value),
   });
 
-  itBench({
+  bench({
     id: `${stateId} - capella processRandaoMixesReset`,
     beforeEach: () => stateOg.value.clone(),
     fn: (state) => processRandaoMixesReset(state, cache.value),
   });
 
-  itBench({
+  bench({
     id: `${stateId} - capella processHistoricalRootsUpdate`,
     beforeEach: () => stateOg.value.clone(),
     fn: (state) => processHistoricalRootsUpdate(state, cache.value),
   });
 
-  itBench({
+  bench({
     id: `${stateId} - capella processParticipationFlagUpdates`,
     beforeEach: () => stateOg.value.clone() as CachedBeaconStateAltair,
     fn: (state) => processParticipationFlagUpdates(state),
   });
 
-  itBench<StateEpoch, StateEpoch>({
+  bench<StateEpoch, StateEpoch>({
     id: `${stateId} - capella afterProcessEpoch`,
     // Compute a state and cache after running processEpoch() since those values are mutated
     before: () => {

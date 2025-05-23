@@ -1,8 +1,6 @@
-/* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import path from "node:path";
 import {Worker, spawn} from "@chainsafe/threads";
 // `threads` library creates self global variable which breaks `timeout-abort-controller` https://github.com/jacobheun/timeout-abort-controller/issues/9
-// Don't add an eslint disable here as a reminder that this has to be fixed eventually
 // @ts-ignore
 // biome-ignore lint/suspicious/noGlobalAssign: <explanation>
 self = undefined;
@@ -394,7 +392,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         try {
           // Note: This can throw, must be handled per-job.
           // Pubkey and signature aggregation is defered here
-          workReq = jobItemWorkReq(job, this.metrics);
+          workReq = await jobItemWorkReq(job, this.metrics);
         } catch (e) {
           this.metrics?.blsThreadPool.errorAggregateSignatureSetsCount.inc({type: job.type});
 
@@ -563,7 +561,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   }
 
   /** For testing */
-  private async waitTillInitialized(): Promise<void> {
+  protected async waitTillInitialized(): Promise<void> {
     await Promise.all(
       this.workers.map(async (worker) => {
         if (worker.status.code === WorkerStatusCode.initializing) {

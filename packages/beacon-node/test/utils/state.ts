@@ -10,11 +10,12 @@ import {
   CachedBeaconStateAllForks,
   CachedBeaconStateBellatrix,
   CachedBeaconStateElectra,
+  DataAvailabilityStatus,
   createCachedBeaconState,
 } from "@lodestar/state-transition";
 import {BeaconState, altair, bellatrix, electra, ssz} from "@lodestar/types";
 
-import {DataAvailabilityStatus, ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ZERO_HASH_HEX} from "../../src/constants/constants.js";
 import {getConfig} from "./config.js";
 import {generateValidator, generateValidators} from "./validator.js";
@@ -150,8 +151,8 @@ export function generateCachedBellatrixState(opts?: TestBeaconState): CachedBeac
 /**
  * This generates state with default pubkey
  */
-export function generateCachedElectraState(opts?: TestBeaconState): CachedBeaconStateElectra {
-  const config = getConfig(ForkName.electra);
+export function generateCachedElectraState(opts?: TestBeaconState, electraForkEpoch = 0): CachedBeaconStateElectra {
+  const config = getConfig(ForkName.electra, electraForkEpoch);
   const state = generateState(opts, config);
   return createCachedBeaconState(state as BeaconStateElectra, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),

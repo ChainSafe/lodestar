@@ -1,7 +1,6 @@
-import {DataAvailabilityStatus, ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
-import {Slot} from "@lodestar/types";
-import {phase0} from "@lodestar/types";
-import {ssz} from "@lodestar/types";
+import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {DataAvailabilityStatus} from "@lodestar/state-transition";
+import {Slot, phase0, ssz} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../src/constants/index.js";
 

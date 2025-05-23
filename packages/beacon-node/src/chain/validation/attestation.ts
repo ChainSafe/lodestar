@@ -86,6 +86,7 @@ export type GossipAttestation = {
   attSlot: Slot;
   // for indexed gossip queue we have attDataBase64
   attDataBase64: SeenAttDataKey;
+  subnet: SubnetID;
 };
 
 export type Step0Result = AttestationValidationResult & {
@@ -103,7 +104,6 @@ export async function validateGossipAttestationsSameAttData(
   fork: ForkName,
   chain: IBeaconChain,
   attestationOrBytesArr: GossipAttestation[],
-  subnet: SubnetID,
   // for unit test, consumers do not need to pass this
   step0ValidationFn = validateAttestationNoSignatureCheck
 ): Promise<BatchResult> {
@@ -117,6 +117,7 @@ export async function validateGossipAttestationsSameAttData(
   // for unseen AttestationData, the 1st call will be cached and the rest will be fast
   const step0ResultOrErrors: Result<Step0Result>[] = [];
   for (const attestationOrBytes of attestationOrBytesArr) {
+    const {subnet} = attestationOrBytes;
     const resultOrError = await wrapError(step0ValidationFn(fork, chain, attestationOrBytes, subnet));
     step0ResultOrErrors.push(resultOrError);
   }
@@ -500,7 +501,11 @@ async function validateAttestationNoSignatureCheck(
     // add cached attestation data before verifying signature
     attDataRootHex = toRootHex(ssz.phase0.AttestationData.hashTreeRoot(attData));
     if (attDataKey) {
-      chain.seenAttestationDatas.add(attSlot, committeeIndex, attDataKey, {
+      // for pre-electra, committee index key is 0. See SeenAttestationDatas.add() documentation
+      const committeeIndexKey = isForkPostElectra(fork)
+        ? committeeIndex
+        : PRE_ELECTRA_SINGLE_ATTESTATION_COMMITTEE_INDEX;
+      chain.seenAttestationDatas.add(attSlot, committeeIndexKey, attDataKey, {
         committeeValidatorIndices,
         committeeIndex,
         signingRoot: signatureSet.signingRoot,
@@ -567,18 +572,18 @@ export function verifyPropagationSlotRange(fork: ForkName, chain: IBeaconChain, 
     });
   }
 
-  const earliestPermissibleSlot = Math.max(
-    // slot with past tolerance of MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC
-    // ATTESTATION_PROPAGATION_SLOT_RANGE = SLOTS_PER_EPOCH
-    chain.clock.slotWithPastTolerance(MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC) - SLOTS_PER_EPOCH,
-    0
-  );
-
   // Post deneb the attestations are valid for current as well as previous epoch
   // while pre deneb they are valid for ATTESTATION_PROPAGATION_SLOT_RANGE
   //
   // see: https://github.com/ethereum/consensus-specs/pull/3360
   if (ForkSeq[fork] < ForkSeq.deneb) {
+    const earliestPermissibleSlot = Math.max(
+      // slot with past tolerance of MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC
+      // ATTESTATION_PROPAGATION_SLOT_RANGE = SLOTS_PER_EPOCH
+      chain.clock.slotWithPastTolerance(MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC) - SLOTS_PER_EPOCH,
+      0
+    );
+
     if (attestationSlot < earliestPermissibleSlot) {
       throw new AttestationError(GossipAction.IGNORE, {
         code: AttestationErrorCode.PAST_SLOT,
@@ -600,7 +605,11 @@ export function verifyPropagationSlotRange(fork: ForkName, chain: IBeaconChain, 
     }
 
     // lower bound for previous epoch is same as epoch of earliestPermissibleSlot
-    const earliestPermissiblePreviousEpoch = computeEpochAtSlot(earliestPermissibleSlot);
+    const currentEpochWithPastTolerance = computeEpochAtSlot(
+      chain.clock.slotWithPastTolerance(MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC)
+    );
+
+    const earliestPermissiblePreviousEpoch = Math.max(currentEpochWithPastTolerance - 1, 0);
     if (attestationEpoch < earliestPermissiblePreviousEpoch) {
       throw new AttestationError(GossipAction.IGNORE, {
         code: AttestationErrorCode.PAST_EPOCH,

@@ -791,16 +791,6 @@ export class ValidatorStore {
     }
   }
 
-  private getSignerAndPubkeyHex(pubkey: BLSPubkeyMaybeHex): [Signer, string] {
-    // TODO: Refactor indexing to not have to run toHex() on the pubkey every time
-    const pubkeyHex = typeof pubkey === "string" ? pubkey : toPubkeyHex(pubkey);
-    const signer = this.validators.get(pubkeyHex)?.signer;
-    if (!signer) {
-      throw Error(`Validator pubkey ${pubkeyHex} not known`);
-    }
-    return [signer, pubkeyHex];
-  }
-
   /** Prevent signing bad data sent by the Beacon node */
   private validateAttestationDuty(duty: routes.validator.AttesterDuty, data: phase0.AttestationData): void {
     if (duty.slot !== data.slot) {

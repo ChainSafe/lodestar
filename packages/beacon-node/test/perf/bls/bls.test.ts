@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import {bench, describe} from "@chainsafe/benchmark";
 import {
   PublicKey,
   SecretKey,
@@ -8,7 +9,6 @@ import {
   verify,
   verifyMultipleAggregateSignatures,
 } from "@chainsafe/blst";
-import {itBench} from "@dapplion/benchmark";
 import {linspace} from "../../../src/util/numpy.js";
 
 describe("BLS ops", () => {
@@ -60,7 +60,7 @@ describe("BLS ops", () => {
   }
 
   // Note: getSet() caches the value, does not re-compute every time
-  itBench({id: "BLS verify - blst", beforeEach: () => getSet(0)}, (set) => {
+  bench({id: "BLS verify - blst", beforeEach: () => getSet(0)}, (set) => {
     const isValid = verify(set.message, set.publicKey, Signature.fromBytes(set.signature));
     if (!isValid) throw Error("Invalid");
   });
@@ -68,7 +68,7 @@ describe("BLS ops", () => {
   // An aggregate and proof object has 3 signatures.
   // We may want to bundle up to 32 sets in a single batch.
   for (const count of [3, 8, 32, 64, 128]) {
-    itBench({
+    bench({
       id: `BLS verifyMultipleSignatures ${count} - blst`,
       beforeEach: () => linspace(0, count - 1).map((i) => getSet(i)),
       fn: (sets) => {
@@ -88,7 +88,7 @@ describe("BLS ops", () => {
   // ideally we want to track 700_000, 1_400_000, 2_100_000 validators but it takes too long
   for (const numValidators of [10_000, 100_000]) {
     const signatures = linspace(0, numValidators - 1).map((i) => getSet(i % 256).signature);
-    itBench({
+    bench({
       id: `BLS deserializing ${numValidators} signatures`,
       fn: () => {
         for (const signature of signatures) {
@@ -103,7 +103,7 @@ describe("BLS ops", () => {
   // We may want to bundle up to 32 sets in a single batch.
   // TODO: figure out why it does not work with 256 or more
   for (const count of [3, 8, 32, 64, 128]) {
-    itBench({
+    bench({
       id: `BLS verifyMultipleSignatures - same message - ${count} - blst`,
       beforeEach: () => linspace(0, count - 1).map((i) => getSetSameMessage(i)),
       fn: (sets) => {
@@ -118,7 +118,7 @@ describe("BLS ops", () => {
 
   // Attestations in Mainnet contain 128 max on average
   for (const count of [32, 128]) {
-    itBench({
+    bench({
       id: `BLS aggregatePubkeys ${count} - blst`,
       beforeEach: () => linspace(0, count - 1).map((i) => getKeypair(i).publicKey),
       fn: (pubkeys) => {

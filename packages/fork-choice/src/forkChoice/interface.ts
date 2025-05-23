@@ -1,13 +1,16 @@
-import {EffectiveBalanceIncrements} from "@lodestar/state-transition";
+import {DataAvailabilityStatus, EffectiveBalanceIncrements} from "@lodestar/state-transition";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {BeaconBlock, Epoch, IndexedAttestation, Root, RootHex, Slot, ValidatorIndex, phase0} from "@lodestar/types";
 import {
-  DataAvailabilityStatus,
-  LVHExecResponse,
-  MaybeValidExecutionStatus,
-  ProtoBlock,
-  ProtoNode,
-} from "../protoArray/interface.js";
+  AttesterSlashing,
+  BeaconBlock,
+  Epoch,
+  IndexedAttestation,
+  Root,
+  RootHex,
+  Slot,
+  ValidatorIndex,
+} from "@lodestar/types";
+import {LVHExecResponse, MaybeValidExecutionStatus, ProtoBlock, ProtoNode} from "../protoArray/interface.js";
 import {UpdateAndGetHeadOpt} from "./forkChoice.js";
 import {CheckpointWithHex} from "./store.js";
 
@@ -164,7 +167,7 @@ export interface IForkChoice {
    *
    * https://github.com/ethereum/consensus-specs/blob/v1.2.0-rc.3/specs/phase0/fork-choice.md#on_attester_slashing
    */
-  onAttesterSlashing(slashing: phase0.AttesterSlashing): void;
+  onAttesterSlashing(slashing: AttesterSlashing): void;
   getLatestMessage(validatorIndex: ValidatorIndex): LatestMessage | undefined;
   /**
    * Call `onTick` for all slots between `fcStore.getCurrentSlot()` and the provided `currentSlot`.

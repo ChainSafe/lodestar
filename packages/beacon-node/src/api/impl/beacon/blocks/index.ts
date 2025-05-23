@@ -1,6 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ApiError, ApplicationMethods} from "@lodestar/api/server";
-import {ForkExecution, SLOTS_PER_HISTORICAL_ROOT, isForkExecution, isForkPostElectra} from "@lodestar/params";
+import {ForkPostBellatrix, SLOTS_PER_HISTORICAL_ROOT, isForkPostBellatrix, isForkPostElectra} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   computeTimeAtSlot,
@@ -29,7 +29,7 @@ import {verifyBlocksInEpoch} from "../../../../chain/blocks/verifyBlock.js";
 import {BeaconChain} from "../../../../chain/chain.js";
 import {BlockError, BlockErrorCode, BlockGossipError} from "../../../../chain/errors/index.js";
 import {validateGossipBlock} from "../../../../chain/validation/block.js";
-import {OpSource} from "../../../../metrics/validatorMonitor.js";
+import {OpSource} from "../../../../chain/validatorMonitor.js";
 import {NetworkEvent} from "../../../../network/index.js";
 import {computeBlobSidecars} from "../../../../util/blobs.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
@@ -53,7 +53,6 @@ const IDENTITY_PEER_ID = ""; // TODO: Compute identity keypair
 export function getBeaconBlockApi({
   chain,
   config,
-  metrics,
   network,
   db,
 }: Pick<
@@ -62,7 +61,7 @@ export function getBeaconBlockApi({
 >): ApplicationMethods<routes.beacon.block.Endpoints> {
   const publishBlock: ApplicationMethods<routes.beacon.block.Endpoints>["publishBlockV2"] = async (
     {signedBlockOrContents, broadcastValidation},
-    context,
+    _context,
     opts: PublishBlockOpts = {}
   ) => {
     const seenTimestampSec = Date.now() / 1000;
@@ -75,20 +74,12 @@ export function getBeaconBlockApi({
         fork: config.getForkName(signedBlock.message.slot),
         blobs: blobSidecars,
         blobsSource: BlobsSource.api,
-        blobsBytes: blobSidecars.map(() => null),
       } as BlockInputDataBlobs;
-      blockForImport = getBlockInput.availableData(
-        config,
-        signedBlock,
-        BlockSource.api,
-        // don't bundle any bytes for block and blobs
-        null,
-        blockData
-      );
+      blockForImport = getBlockInput.availableData(config, signedBlock, BlockSource.api, blockData);
     } else {
       signedBlock = signedBlockOrContents;
       blobSidecars = [];
-      blockForImport = getBlockInput.preData(config, signedBlock, BlockSource.api, context?.sszBytes ?? null);
+      blockForImport = getBlockInput.preData(config, signedBlock, BlockSource.api);
     }
 
     // check what validations have been requested before broadcasting and publishing the block
@@ -207,8 +198,10 @@ export function getBeaconBlockApi({
       await sleep(msToBlockSlot);
     }
 
+    chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRoot});
+
     // TODO: Validate block
-    metrics?.registerBeaconBlock(OpSource.api, seenTimestampSec, blockForImport.block.message);
+    chain.validatorMonitor?.registerBeaconBlock(OpSource.api, seenTimestampSec, blockForImport.block.message);
     chain.logger.info("Publishing block", valLogMeta);
     const publishPromises = [
       // Send the block, regardless of whether or not it is valid. The API
@@ -246,7 +239,7 @@ export function getBeaconBlockApi({
     const slot = signedBlindedBlock.message.slot;
     const blockRoot = toRootHex(
       chain.config
-        .getExecutionForkTypes(signedBlindedBlock.message.slot)
+        .getPostBellatrixForkTypes(signedBlindedBlock.message.slot)
         .BlindedBeaconBlock.hashTreeRoot(signedBlindedBlock.message)
     );
 
@@ -398,8 +391,8 @@ export function getBeaconBlockApi({
       const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
       const fork = config.getForkName(block.message.slot);
       return {
-        data: isForkExecution(fork)
-          ? signedBeaconBlockToBlinded(config, block as SignedBeaconBlock<ForkExecution>)
+        data: isForkPostBellatrix(fork)
+          ? signedBeaconBlockToBlinded(config, block as SignedBeaconBlock<ForkPostBellatrix>)
           : block,
         meta: {
           executionOptimistic,

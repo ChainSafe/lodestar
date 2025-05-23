@@ -1,4 +1,4 @@
-import {itBench} from "@dapplion/benchmark";
+import {bench, describe} from "@chainsafe/benchmark";
 import {toHex} from "@lodestar/utils";
 
 /**
@@ -12,7 +12,7 @@ describe("encoding", () => {
   const msgId = Uint8Array.from(Array.from({length: 20}, (_, i) => i));
 
   const runsFactor = 1000;
-  itBench({
+  bench({
     id: "toHex",
     fn: () => {
       for (let i = 0; i < runsFactor; i++) {
@@ -22,7 +22,7 @@ describe("encoding", () => {
     runsFactor,
   });
 
-  itBench({
+  bench({
     id: "Buffer.from",
     fn: () => {
       for (let i = 0; i < runsFactor; i++) {
@@ -33,7 +33,7 @@ describe("encoding", () => {
   });
 
   const sharedBuf = Buffer.from(msgId);
-  itBench({
+  bench({
     id: "shared Buffer",
     fn: () => {
       for (let i = 0; i < runsFactor; i++) {

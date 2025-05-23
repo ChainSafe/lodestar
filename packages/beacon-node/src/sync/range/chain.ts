@@ -2,7 +2,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {Epoch, Root, Slot, phase0} from "@lodestar/types";
 import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
 import {BlockInput, BlockInputType} from "../../chain/blocks/types.js";
-import {PeerAction} from "../../network/index.js";
+import {PeerAction, prettyPrintPeerIdStr} from "../../network/index.js";
 import {ItTrigger} from "../../util/itTrigger.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {wrapError} from "../../util/wrapError.js";
@@ -410,10 +410,19 @@ export class SyncChain {
         if (hasPostDenebBlocks) {
           Object.assign(downloadInfo, {blobs});
         }
-        this.logger.debug("Downloaded batch", {id: this.logId, ...batch.getMetadata(), ...downloadInfo});
+        this.logger.debug("Downloaded batch", {
+          id: this.logId,
+          ...batch.getMetadata(),
+          ...downloadInfo,
+          peer: prettyPrintPeerIdStr(peer),
+        });
         this.triggerBatchProcessor();
       } else {
-        this.logger.verbose("Batch download error", {id: this.logId, ...batch.getMetadata()}, res.err);
+        this.logger.verbose(
+          "Batch download error",
+          {id: this.logId, ...batch.getMetadata(), peer: prettyPrintPeerIdStr(peer)},
+          res.err
+        );
         batch.downloadingError(); // Throws after MAX_DOWNLOAD_ATTEMPTS
       }
 

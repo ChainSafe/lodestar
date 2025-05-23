@@ -1,6 +1,6 @@
 import {routes} from "@lodestar/api";
 import {AncestorStatus, EpochDifference, ForkChoiceError, ForkChoiceErrorCode} from "@lodestar/fork-choice";
-import {ForkLightClient, ForkSeq, INTERVALS_PER_SLOT, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkPostAltair, ForkSeq, INTERVALS_PER_SLOT, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   CachedBeaconStateAltair,
   RootCache,
@@ -152,7 +152,7 @@ export async function importBlock(
           rootCache.getBlockRootAtSlot(attestation.data.slot - 1),
           rootCache.getBlockRootAtSlot(attestation.data.slot)
         );
-        this.metrics?.registerAttestationInBlock(
+        this.validatorMonitor?.registerAttestationInBlock(
           indexedAttestation,
           parentBlockSlot,
           correctHead,
@@ -216,15 +216,20 @@ export async function importBlock(
     // Set head state as strong reference
     this.regen.updateHeadState(newHead, postState);
 
-    this.emitter.emit(routes.events.EventType.head, {
-      block: newHead.blockRoot,
-      epochTransition: computeStartSlotAtEpoch(computeEpochAtSlot(newHead.slot)) === newHead.slot,
-      slot: newHead.slot,
-      state: newHead.stateRoot,
-      previousDutyDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.previous),
-      currentDutyDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.current),
-      executionOptimistic: isOptimisticBlock(newHead),
-    });
+    try {
+      this.emitter.emit(routes.events.EventType.head, {
+        block: newHead.blockRoot,
+        epochTransition: computeStartSlotAtEpoch(computeEpochAtSlot(newHead.slot)) === newHead.slot,
+        slot: newHead.slot,
+        state: newHead.stateRoot,
+        previousDutyDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.previous),
+        currentDutyDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.current),
+        executionOptimistic: isOptimisticBlock(newHead),
+      });
+    } catch (e) {
+      // getDependentRoot() may fail with error: "No block for root" as we can see in holesky non-finality issue
+      this.logger.debug("Error emitting head event", {slot: newHead.slot, root: newHead.blockRoot}, e as Error);
+    }
 
     const delaySec = this.clock.secFromSlot(newHead.slot);
     this.logger.verbose("New chain head", {
@@ -279,7 +284,7 @@ export async function importBlock(
       callInNextEventLoop(() => {
         try {
           this.lightClientServer?.onImportBlockHead(
-            block.message as BeaconBlock<ForkLightClient>,
+            block.message as BeaconBlock<ForkPostAltair>,
             postState as CachedBeaconStateAltair,
             parentBlockSlot
           );
@@ -437,9 +442,9 @@ export async function importBlock(
   // Register stat metrics about the block after importing it
   this.metrics?.parentBlockDistance.observe(blockSlot - parentBlockSlot);
   this.metrics?.proposerBalanceDeltaAny.observe(fullyVerifiedBlock.proposerBalanceDelta);
-  this.metrics?.registerImportedBlock(block.message, fullyVerifiedBlock);
+  this.validatorMonitor?.registerImportedBlock(block.message, fullyVerifiedBlock);
   if (this.config.getForkSeq(blockSlot) >= ForkSeq.altair) {
-    this.metrics?.registerSyncAggregateInBlock(
+    this.validatorMonitor?.registerSyncAggregateInBlock(
       blockEpoch,
       (block as altair.SignedBeaconBlock).message.body.syncAggregate,
       fullyVerifiedBlock.postState.epochCtx.currentSyncCommitteeIndexed.validatorIndices

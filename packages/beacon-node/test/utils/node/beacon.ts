@@ -1,3 +1,5 @@
+import {setHasher} from "@chainsafe/persistent-merkle-tree";
+import {hasher} from "@chainsafe/persistent-merkle-tree/hasher/hashtree";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {PrivateKey} from "@libp2p/interface";
 import {ChainConfig, createBeaconConfig, createChainForkConfig} from "@lodestar/config";
@@ -32,6 +34,7 @@ export async function getDevBeaconNode(
     wsCheckpoint?: phase0.Checkpoint;
   } & InteropStateOpts
 ): Promise<BeaconNode> {
+  setHasher(hasher);
   const {params, validatorCount = 8, peerStoreDir} = opts;
   let {options = {}, logger, privateKey} = opts;
 
@@ -94,6 +97,7 @@ export async function getDevBeaconNode(
     logger,
     processShutdownCallback: () => {},
     privateKey,
+    dataDir: ".",
     peerStoreDir,
     anchorState,
     wsCheckpoint: opts.wsCheckpoint,

@@ -1,10 +1,3 @@
-/* eslint-disable
-  @typescript-eslint/explicit-function-return-type,
-  @typescript-eslint/naming-convention,
-  import/no-extraneous-dependencies,
-  no-console
-*/
-
 import fs from "node:fs";
 import path from "node:path";
 import axios from "axios";

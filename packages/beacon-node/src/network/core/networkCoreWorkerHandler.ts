@@ -63,7 +63,7 @@ const NETWORK_WORKER_EXIT_RETRY_COUNT = 3;
  */
 export class WorkerNetworkCore implements INetworkCore {
   private readonly reqRespBridgeReqCaller: AsyncIterableBridgeCaller<OutgoingRequestArgs, ResponseIncoming>;
-  private readonly reqRespBridgeRespHandler: AsyncIterableBridgeHandler<IncomingRequestArgs, ResponseOutgoing>;
+  protected readonly reqRespBridgeRespHandler: AsyncIterableBridgeHandler<IncomingRequestArgs, ResponseOutgoing>;
   private readonly reqRespBridgeEventBus = new ReqRespBridgeEventBus();
 
   constructor(private readonly modules: WorkerNetworkCoreModules) {

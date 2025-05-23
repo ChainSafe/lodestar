@@ -2,7 +2,7 @@ import path from "node:path";
 import {toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
-import {ACTIVE_PRESET, ForkName, ForkSeq, isForkBlobs} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkName, ForkSeq, isForkPostDeneb} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {BeaconStateAllForks, isExecutionStateType, signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {
@@ -61,7 +61,7 @@ const forkChoiceTest =
   (fork) => {
     return {
       testFunction: async (testcase) => {
-        if (isForkBlobs(fork)) {
+        if (isForkPostDeneb(fork)) {
           await initCKZG();
           loadEthereumTrustedSetup();
         }
@@ -111,10 +111,13 @@ const forkChoiceTest =
           {
             config: createBeaconConfig(config, state.genesisValidatorsRoot),
             db: getMockedBeaconDb(),
+            dataDir: ".",
+            dbName: ",",
             logger,
             processShutdownCallback: () => {},
             clock,
             metrics: null,
+            validatorMonitor: null,
             anchorState,
             eth1,
             executionEngine,
@@ -223,14 +226,13 @@ const forkChoiceTest =
                     };
                   });
 
-                  blockImport = getBlockInput.availableData(config, signedBlock, BlockSource.gossip, null, {
+                  blockImport = getBlockInput.availableData(config, signedBlock, BlockSource.gossip, {
                     fork: ForkName.deneb,
                     blobs: blobSidecars,
-                    blobsBytes: [null],
                     blobsSource: BlobsSource.gossip,
                   });
                 } else {
-                  blockImport = getBlockInput.preData(config, signedBlock, BlockSource.gossip, null);
+                  blockImport = getBlockInput.preData(config, signedBlock, BlockSource.gossip);
                 }
 
                 await chain.processBlock(blockImport, {
@@ -362,6 +364,8 @@ const forkChoiceTest =
           const attestations = new Map<string, Attestation>();
           const attesterSlashings = new Map<string, AttesterSlashing>();
           for (const key in t) {
+            if (!Object.prototype.hasOwnProperty.call(t, key)) continue;
+
             const blockMatch = key.match(BLOCK_FILE_NAME);
             if (blockMatch) {
               blocks.set(key, t[key]);

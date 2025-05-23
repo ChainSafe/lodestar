@@ -23,7 +23,7 @@ export class BestLightClientUpdateRepository extends Repository<SyncPeriod, Ligh
     // prefix by attestedHeader's slot bytes
     const slotBytes = ssz.Slot.serialize(value.attestedHeader.beacon.slot);
     const valueBytes = this.config
-      .getLightClientForkTypes(value.attestedHeader.beacon.slot)
+      .getPostAltairForkTypes(value.attestedHeader.beacon.slot)
       .LightClientUpdate.serialize(value);
 
     const prefixedData = new Uint8Array(SLOT_BYTE_COUNT + valueBytes.length);
@@ -36,6 +36,6 @@ export class BestLightClientUpdateRepository extends Repository<SyncPeriod, Ligh
   decodeValue(data: Uint8Array): LightClientUpdate {
     // First slot is written
     const slot = ssz.Slot.deserialize(data.subarray(0, SLOT_BYTE_COUNT));
-    return this.config.getLightClientForkTypes(slot).LightClientUpdate.deserialize(data.subarray(SLOT_BYTE_COUNT));
+    return this.config.getPostAltairForkTypes(slot).LightClientUpdate.deserialize(data.subarray(SLOT_BYTE_COUNT));
   }
 }

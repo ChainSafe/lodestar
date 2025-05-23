@@ -1,4 +1,4 @@
-import {itBench} from "@dapplion/benchmark";
+import {bench, describe} from "@chainsafe/benchmark";
 import {config} from "@lodestar/config/default";
 import {ForkSeq} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
@@ -30,7 +30,7 @@ describe("phase0 processEffectiveBalanceUpdates", () => {
   // which will it update validators tree
 
   for (const {id, changeRatio} of testCases) {
-    itBench<StateEpoch, StateEpoch>({
+    bench<StateEpoch, StateEpoch>({
       id: `phase0 processEffectiveBalanceUpdates - ${vc} ${id}`,
       yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
       minRuns: 5, // Worst case is very slow

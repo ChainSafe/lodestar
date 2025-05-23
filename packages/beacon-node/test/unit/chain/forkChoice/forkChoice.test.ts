@@ -1,15 +1,17 @@
 import {toHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
-import {CheckpointWithHex, DataAvailabilityStatus, ExecutionStatus, ForkChoice} from "@lodestar/fork-choice";
+import {CheckpointWithHex, ExecutionStatus, ForkChoice} from "@lodestar/fork-choice";
 import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
+  DataAvailabilityStatus,
   computeAnchorCheckpoint,
   computeEpochAtSlot,
   getEffectiveBalanceIncrementsZeroed,
+  getTemporaryBlockHeader,
+  processSlots,
 } from "@lodestar/state-transition";
-import {getTemporaryBlockHeader, processSlots} from "@lodestar/state-transition";
-import {Slot, ValidatorIndex, phase0, ssz} from "@lodestar/types";
+import {IndexedAttestation, Slot, ValidatorIndex, phase0, ssz} from "@lodestar/types";
 import {beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {ChainEventEmitter, initializeForkChoice} from "../../../../src/chain/index.js";
 import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
@@ -418,7 +420,7 @@ function createIndexedAttestation(
   target: phase0.SignedBeaconBlock,
   block: phase0.SignedBeaconBlock,
   validatorIndex: ValidatorIndex
-): phase0.IndexedAttestation {
+): IndexedAttestation {
   return {
     attestingIndices: [validatorIndex],
     data: {

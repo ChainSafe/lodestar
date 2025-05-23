@@ -1,5 +1,6 @@
 import path from "node:path";
 import {getHeapStatistics} from "node:v8";
+import {hasher} from "@chainsafe/persistent-merkle-tree";
 import {BeaconDb, BeaconNode, bucketNames} from "@lodestar/beacon-node";
 import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {BunSqliteController, DatabaseController, LevelDbController} from "@lodestar/db";
@@ -35,6 +36,10 @@ const EIGHT_GB = 8 * 1024 * 1024 * 1024;
  */
 export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void> {
   const {config, options, beaconPaths, network, version, commit, privateKey, logger} = await beaconHandlerInit(args);
+
+  if (hasher.name !== "hashtree") {
+    throw Error(`Loaded incorrect hasher ${hasher.name}, expected hashtree`);
+  }
 
   const heapSizeLimit = getHeapStatistics().heap_size_limit;
   if (heapSizeLimit < EIGHT_GB) {
@@ -91,6 +96,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
       logger,
       processShutdownCallback,
       privateKey,
+      dataDir: beaconPaths.dataDir,
       peerStoreDir: beaconPaths.peerStoreDir,
       anchorState,
       wsCheckpoint,
@@ -177,10 +183,14 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   const beaconPaths = getBeaconPaths(args, network);
   // TODO: Rename db.name to db.path or db.location
   beaconNodeOptions.set({db: {name: beaconPaths.dbDir}});
-  beaconNodeOptions.set({chain: {persistInvalidSszObjectsDir: beaconPaths.persistInvalidSszObjectsDir}});
+  beaconNodeOptions.set({
+    chain: {
+      validatorMonitorLogs: args.validatorMonitorLogs,
+      persistInvalidSszObjectsDir: beaconPaths.persistInvalidSszObjectsDir,
+    },
+  });
   // Add metrics metadata to show versioning + network info in Prometheus + Grafana
   beaconNodeOptions.set({metrics: {metadata: {version, commit, network}}});
-  beaconNodeOptions.set({metrics: {validatorMonitorLogs: args.validatorMonitorLogs}});
   // Add detailed version string for API node/version endpoint
   beaconNodeOptions.set({api: {commit, version}});
 

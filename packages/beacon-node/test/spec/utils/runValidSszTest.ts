@@ -8,8 +8,6 @@ type ValidTestCaseData = {
   jsonValue: unknown;
 };
 
-/* eslint-disable no-console */
-
 export function runValidSszTest(type: Type<unknown>, testData: ValidTestCaseData): void {
   const testDataRootHex = testData.root;
   const testDataSerialized =
@@ -37,7 +35,7 @@ export function runValidSszTest(type: Type<unknown>, testData: ValidTestCaseData
   const testDataJson = wrapErr(() => type.toJson(testDataValue), "type.toJson()");
 
   function assertBytes(bytes: Uint8Array, msg: string): void {
-    expect(toHexString(bytes)).to.equal(testDataSerializedStr, `Wrong serialized - ${msg}`);
+    expect(toHexString(bytes)).toEqualWithMessage(testDataSerializedStr, `Wrong serialized - ${msg}`);
   }
 
   function assertValue(value: unknown, msg: string): void {
@@ -45,23 +43,23 @@ export function runValidSszTest(type: Type<unknown>, testData: ValidTestCaseData
   }
 
   function assertRoot(root: Uint8Array, msg: string): void {
-    expect(toHexString(root)).to.equal(testDataRootHex, `Wrong root - ${msg}`);
+    expect(toHexString(root)).toEqualWithMessage(testDataRootHex, `Wrong root - ${msg}`);
   }
 
   function assertNode(node: Node, msg: string): void {
-    expect(toHexString(node.root)).to.equal(testDataRootHex, `Wrong node - ${msg}`);
+    expect(toHexString(node.root)).toEqualWithMessage(testDataRootHex, `Wrong node - ${msg}`);
   }
 
   {
     // value - equals
     const isEqual = wrapErr(() => type.equals(testDataValue, testDataValue), "type.equals()");
-    expect(isEqual).to.equal(true, "Value is not equal to itself");
+    expect(isEqual).toEqualWithMessage(true, "Value is not equal to itself");
   }
 
   {
     // value - clone
     const isEqual = wrapErr(() => type.equals(type.clone(testDataValue), testDataValue), "type.clone()");
-    expect(isEqual).to.equal(true, "Cloned value is not equal to itself");
+    expect(isEqual).toEqualWithMessage(true, "Cloned value is not equal to itself");
   }
 
   // value -> bytes - serialize()
@@ -81,13 +79,10 @@ export function runValidSszTest(type: Type<unknown>, testData: ValidTestCaseData
   // 0x0000000000000000000000000000000000000000000000000000000000000000
   if (process.env.RENDER_ROOTS) {
     if (type.isBasic) {
-      console.log("ROOTS Basic", toHexString(type.serialize(testDataValue)));
+      console.log("Chunk Basic", toHexString(type.serialize(testDataValue)));
     } else {
-      const roots = (type as CompositeType<unknown, unknown, unknown>)["getRoots"](testDataValue);
-      console.log(
-        "ROOTS Composite",
-        roots.map((root) => toHexString(root))
-      );
+      const blockBytes = (type as CompositeType<unknown, unknown, unknown>)["getBlocksBytes"](testDataValue);
+      console.log("chunkBytes Composite", toHexString(blockBytes));
     }
   }
 
@@ -103,7 +98,7 @@ export function runValidSszTest(type: Type<unknown>, testData: ValidTestCaseData
 
   // To print a tree a single test you are debugging do
   //
-  // $ RENDER_TREE=true ONLY_ID="4 arrays" ../../node_modules/.bin/vitest --run test/unit/byType/vector/valid.test.ts
+  // $ RENDER_TREE=true ONLY_ID="4 arrays" ../../node_modules/.bin/vitest run test/unit/byType/vector/valid.test.ts
   //
   // '1000' => '0x0000000000000000000000000000000000000000000000000000000000000000',
   // '1001' => '0x0000000000000000000000000000000000000000000000000000000000000000',

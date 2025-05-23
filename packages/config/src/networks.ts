@@ -3,8 +3,8 @@ import {chiadoChainConfig} from "./chainConfig/networks/chiado.js";
 import {ephemeryChainConfig} from "./chainConfig/networks/ephemery.js";
 import {gnosisChainConfig} from "./chainConfig/networks/gnosis.js";
 import {holeskyChainConfig} from "./chainConfig/networks/holesky.js";
+import {hoodiChainConfig} from "./chainConfig/networks/hoodi.js";
 import {mainnetChainConfig} from "./chainConfig/networks/mainnet.js";
-import {mekongChainConfig} from "./chainConfig/networks/mekong.js";
 import {sepoliaChainConfig} from "./chainConfig/networks/sepolia.js";
 
 export {
@@ -12,20 +12,20 @@ export {
   gnosisChainConfig,
   sepoliaChainConfig,
   holeskyChainConfig,
+  hoodiChainConfig,
   chiadoChainConfig,
   ephemeryChainConfig,
-  mekongChainConfig,
 };
 
-export type NetworkName = "mainnet" | "gnosis" | "sepolia" | "holesky" | "chiado" | "ephemery" | "mekong";
+export type NetworkName = "mainnet" | "gnosis" | "sepolia" | "holesky" | "hoodi" | "chiado" | "ephemery";
 export const networksChainConfig: Record<NetworkName, ChainConfig> = {
   mainnet: mainnetChainConfig,
   gnosis: gnosisChainConfig,
   sepolia: sepoliaChainConfig,
   holesky: holeskyChainConfig,
+  hoodi: hoodiChainConfig,
   chiado: chiadoChainConfig,
   ephemery: ephemeryChainConfig,
-  mekong: mekongChainConfig,
 };
 
 export type GenesisData = {
@@ -50,6 +50,10 @@ export const genesisData: Record<NetworkName, GenesisData> = {
     genesisTime: 1695902400,
     genesisValidatorsRoot: "0x9143aa7c615a7f7115e2b6aac319c03529df8242ae705fba9df39b79c59fa8b1",
   },
+  hoodi: {
+    genesisTime: 1742213400,
+    genesisValidatorsRoot: "0x212f13fc4df078b6cb7db228f1c8307566dcecf900867401a92023d7ba99cb5f",
+  },
   chiado: {
     genesisTime: 1665396300,
     genesisValidatorsRoot: "0x9d642dac73058fbf39c0ae41ab1e34e4d889043cb199851ded7095bc99eb4c1e",
@@ -57,9 +61,5 @@ export const genesisData: Record<NetworkName, GenesisData> = {
   ephemery: {
     genesisTime: ephemeryChainConfig.MIN_GENESIS_TIME + ephemeryChainConfig.GENESIS_DELAY,
     genesisValidatorsRoot: "0x0000000000000000000000000000000000000000000000000000000000000000",
-  },
-  mekong: {
-    genesisTime: 1730372340,
-    genesisValidatorsRoot: "0x9838240bca889c52818d7502179b393a828f61f15119d9027827c36caeb67db7",
   },
 };

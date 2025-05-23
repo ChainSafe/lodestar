@@ -28,7 +28,7 @@ export class ReqRespRateLimiter {
     return this.rateLimitMultiplier > 0;
   }
 
-  initRateLimits(protocolID: ProtocolID, rateLimits: InboundRateLimitQuota): void {
+  setRateLimits(protocolID: ProtocolID, rateLimits: InboundRateLimitQuota): void {
     if (!this.enabled) {
       return;
     }

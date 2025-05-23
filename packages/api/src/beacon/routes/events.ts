@@ -21,11 +21,9 @@ import {
 } from "@lodestar/types";
 
 import {EmptyMeta, EmptyResponseCodec, EmptyResponseData} from "../../utils/codecs.js";
-import {getExecutionForkTypes, getLightClientForkTypes} from "../../utils/fork.js";
+import {getPostAltairForkTypes, getPostBellatrixForkTypes} from "../../utils/fork.js";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {VersionType} from "../../utils/metadata.js";
-
-// See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
 const stringType = new StringType();
 export const blobSidecarSSE = new ContainerType(
@@ -48,8 +46,10 @@ export enum EventType {
    * Both dependent roots use the genesis block root in the case of underflow.
    */
   head = "head",
-  /** The node has received a valid block (from P2P or API) */
+  /** The node has received a block (from P2P or API) that is successfully imported on the fork-choice `on_block` handler */
   block = "block",
+  /** The node has received a block (from P2P or API) that passes validation rules of the `beacon_block` topic */
+  blockGossip = "block_gossip",
   /** The node has received a valid attestation (from P2P or API) */
   attestation = "attestation",
   /** The node has received a valid SingleAttestation (from P2P or API) */
@@ -81,6 +81,7 @@ export enum EventType {
 export const eventTypes: {[K in EventType]: K} = {
   [EventType.head]: EventType.head,
   [EventType.block]: EventType.block,
+  [EventType.blockGossip]: EventType.blockGossip,
   [EventType.attestation]: EventType.attestation,
   [EventType.singleAttestation]: EventType.singleAttestation,
   [EventType.voluntaryExit]: EventType.voluntaryExit,
@@ -110,6 +111,10 @@ export type EventData = {
     slot: Slot;
     block: RootHex;
     executionOptimistic: boolean;
+  };
+  [EventType.blockGossip]: {
+    slot: Slot;
+    block: RootHex;
   };
   [EventType.attestation]: Attestation;
   [EventType.singleAttestation]: electra.SingleAttestation;
@@ -231,6 +236,13 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
       },
       {jsonCase: "eth2"}
     ),
+    [EventType.blockGossip]: new ContainerType(
+      {
+        slot: ssz.Slot,
+        block: stringType,
+      },
+      {jsonCase: "eth2"}
+    ),
 
     [EventType.attestation]: {
       toJson: (attestation) => {
@@ -282,14 +294,14 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
     ),
 
     [EventType.contributionAndProof]: ssz.altair.SignedContributionAndProof,
-    [EventType.payloadAttributes]: WithVersion((fork) => getExecutionForkTypes(fork).SSEPayloadAttributes),
+    [EventType.payloadAttributes]: WithVersion((fork) => getPostBellatrixForkTypes(fork).SSEPayloadAttributes),
     [EventType.blobSidecar]: blobSidecarSSE,
 
     [EventType.lightClientOptimisticUpdate]: WithVersion(
-      (fork) => getLightClientForkTypes(fork).LightClientOptimisticUpdate
+      (fork) => getPostAltairForkTypes(fork).LightClientOptimisticUpdate
     ),
     [EventType.lightClientFinalityUpdate]: WithVersion(
-      (fork) => getLightClientForkTypes(fork).LightClientFinalityUpdate
+      (fork) => getPostAltairForkTypes(fork).LightClientFinalityUpdate
     ),
   };
 }

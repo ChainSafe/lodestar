@@ -1,3 +1,5 @@
+import {bench, describe} from "@chainsafe/benchmark";
+
 describe.skip("array creation", () => {
   const testCases: {id: string; fn: (n: number) => void}[] = [
     {
@@ -26,7 +28,7 @@ describe.skip("array creation", () => {
   ];
 
   for (const {id, fn} of testCases) {
-    it(id, () => {
+    bench(id, () => {
       const opsRun = 10;
       const elem = 200_000;
 

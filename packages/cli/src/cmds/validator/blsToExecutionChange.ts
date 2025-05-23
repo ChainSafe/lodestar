@@ -10,8 +10,6 @@ import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {GlobalArgs} from "../../options/index.js";
 import {IValidatorCliArgs} from "./options.js";
 
-/* eslint-disable no-console */
-
 type BlsToExecutionChangeArgs = {
   publicKey: string;
   fromBlsPrivkey: string;

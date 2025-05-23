@@ -26,6 +26,7 @@ prometheus.yml
 
 # Docker
 Dockerfile
+Dockerfile.dev
 docker-compose.yml
 
 # Tests

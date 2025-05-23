@@ -78,31 +78,29 @@ export function getSyncCommitteeAtPeriod(
   }
 
   const bestValidUpdate = store.bestValidUpdates.get(period - 1);
-  if (bestValidUpdate) {
-    if (isSafeLightClientUpdate(bestValidUpdate.summary) || opts.allowForcedUpdates) {
-      const {update} = bestValidUpdate;
-      const syncCommittee = deserializeSyncCommittee(update.nextSyncCommittee);
-      store.syncCommittees.set(period, syncCommittee);
-      pruneSetToMax(store.syncCommittees, MAX_SYNC_PERIODS_CACHE);
-      store.bestValidUpdates.delete(period - 1);
+  if (bestValidUpdate && (isSafeLightClientUpdate(bestValidUpdate.summary) || opts.allowForcedUpdates)) {
+    const {update} = bestValidUpdate;
+    const syncCommittee = deserializeSyncCommittee(update.nextSyncCommittee);
+    store.syncCommittees.set(period, syncCommittee);
+    pruneSetToMax(store.syncCommittees, MAX_SYNC_PERIODS_CACHE);
+    store.bestValidUpdates.delete(period - 1);
 
-      if (opts.updateHeadersOnForcedUpdate) {
-        // From https://github.com/ethereum/consensus-specs/blob/a57e15636013eeba3610ff3ade41781dba1bb0cd/specs/altair/light-client/sync-protocol.md?plain=1#L403
-        if (update.finalizedHeader.beacon.slot <= store.finalizedHeader.beacon.slot) {
-          update.finalizedHeader = update.attestedHeader;
-        }
-
-        // From https://github.com/ethereum/consensus-specs/blob/a57e15636013eeba3610ff3ade41781dba1bb0cd/specs/altair/light-client/sync-protocol.md?plain=1#L374
-        if (update.finalizedHeader.beacon.slot > store.finalizedHeader.beacon.slot) {
-          store.finalizedHeader = update.finalizedHeader;
-        }
-        if (store.finalizedHeader.beacon.slot > store.optimisticHeader.beacon.slot) {
-          store.optimisticHeader = store.finalizedHeader;
-        }
+    if (opts.updateHeadersOnForcedUpdate) {
+      // From https://github.com/ethereum/consensus-specs/blob/a57e15636013eeba3610ff3ade41781dba1bb0cd/specs/altair/light-client/sync-protocol.md?plain=1#L403
+      if (update.finalizedHeader.beacon.slot <= store.finalizedHeader.beacon.slot) {
+        update.finalizedHeader = update.attestedHeader;
       }
 
-      return syncCommittee;
+      // From https://github.com/ethereum/consensus-specs/blob/a57e15636013eeba3610ff3ade41781dba1bb0cd/specs/altair/light-client/sync-protocol.md?plain=1#L374
+      if (update.finalizedHeader.beacon.slot > store.finalizedHeader.beacon.slot) {
+        store.finalizedHeader = update.finalizedHeader;
+      }
+      if (store.finalizedHeader.beacon.slot > store.optimisticHeader.beacon.slot) {
+        store.optimisticHeader = store.finalizedHeader;
+      }
     }
+
+    return syncCommittee;
   }
 
   const availableSyncCommittees = Array.from(store.syncCommittees.keys());
