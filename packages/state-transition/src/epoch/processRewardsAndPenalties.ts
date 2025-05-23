@@ -17,8 +17,6 @@ const balances = new Array<number>();
  * Iterate over all validator and compute rewards and penalties to apply to balances.
  *
  * PERF: Cost = 'proportional' to $VALIDATOR_COUNT. Extra work is done per validator the more status flags are set
- *
- * <spec fn="process_rewards_and_penalties" fork="deneb" style="hash" hash="66affb5e" />
  */
 export function processRewardsAndPenalties(
   state: CachedBeaconStateAllForks,

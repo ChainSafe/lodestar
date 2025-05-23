@@ -16,8 +16,6 @@ import {computeActivationExitEpoch} from "../util/index.js";
  *   - indicesEligibleForActivation: ~4000
  *   - indicesEligibleForActivationQueue: 0
  *   - indicesToEject: 0
- *
- * <spec fn="process_registry_updates" fork="deneb" style="hash" hash="ead65fa4" />
  */
 export function processRegistryUpdates(
   fork: ForkSeq,

@@ -27,9 +27,6 @@ export function processJustificationAndFinalization(
   );
 }
 
-/**
- * Updates `state` checkpoints based on previous and current target balance
- */
 export function weighJustificationAndFinalization(
   state: CachedBeaconStateAllForks,
   totalActiveBalance: number,
