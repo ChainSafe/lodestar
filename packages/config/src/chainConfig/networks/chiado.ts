@@ -43,4 +43,12 @@ export const chiadoChainConfig: ChainConfig = {
   // Fulu
   FULU_FORK_VERSION: b("0x0600006f"),
   FULU_FORK_EPOCH: Infinity,
+
+  // Blob Scheduling
+  BLOB_SCHEDULE: [
+    // Deneb
+    {EPOCH: 516608, MAX_BLOBS_PER_BLOCK: 2},
+    // Electra
+    {EPOCH: 948224, MAX_BLOBS_PER_BLOCK: 2},
+  ],
 };

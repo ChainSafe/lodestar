@@ -45,4 +45,13 @@ export const sepoliaChainConfig: ChainConfig = {
   DEPOSIT_CHAIN_ID: 11155111,
   DEPOSIT_NETWORK_ID: 11155111,
   DEPOSIT_CONTRACT_ADDRESS: b("0x7f02C3E3c98b133055B8B348B2Ac625669Ed295D"),
+
+  // Blob Scheduling
+  // ---------------------------------------------------------------
+  BLOB_SCHEDULE: [
+    // Deneb
+    {EPOCH: 132608, MAX_BLOBS_PER_BLOCK: 6},
+    // Electra
+    {EPOCH: 222464, MAX_BLOBS_PER_BLOCK: 9},
+  ],
 };

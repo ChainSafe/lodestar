@@ -51,6 +51,15 @@ const baseChainConfig: ChainConfig = {
   DEPOSIT_CONTRACT_ADDRESS: b("0x4242424242424242424242424242424242424242"),
 
   ETH1_FOLLOW_DISTANCE: 12,
+
+  // Blob Scheduling
+  // ---------------------------------------------------------------
+  BLOB_SCHEDULE: [
+    // Deneb
+    {EPOCH: 0, MAX_BLOBS_PER_BLOCK: 6},
+    // Electra
+    {EPOCH: 10, MAX_BLOBS_PER_BLOCK: 9},
+  ],
 };
 
 // Reset interval (7 days) in milliseconds, based on ephemery-genesis values.env:

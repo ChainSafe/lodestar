@@ -13,6 +13,8 @@ runs:
       with:
         node-version: ${{inputs.node}}
         check-latest: true
+        # The hash of yarn.lock file will be used as cache key
+        # So unless our dependencies change, we can reuse the cache
         cache: yarn
 
     - name: Node.js version
@@ -20,27 +22,25 @@ runs:
       shell: bash
       run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT
 
+    - name: Create cache key
+      id: build-cache
+      shell: bash
+      # This build cache will be reused among different jobs for the same commit
+      run: echo "key=build-cache-${{ runner.os }}-${{ runner.arch }}-node-${{ inputs.node }}-${{ github.sha }}" >> $GITHUB_OUTPUT
+
     - name: Restore build
       uses: actions/cache/restore@v4
       id: cache-build-restore
       with:
         path: |
-          node_modules
-          packages/*/node_modules
           lib/
           packages/*/lib
           packages/*/.git-data.json
-        key: ${{ runner.os }}-${{ runner.arch }}-node-${{ inputs.node }}-${{ github.sha }}
+        key: ${{ steps.build-cache.outputs.key }}
 
     - name: Install & build
-      if: steps.cache-build-restore.outputs.cache-hit != 'true'
       shell: bash
       run: yarn install --frozen-lockfile && yarn build
-
-    - name: Build
-      if: steps.cache-build-restore.outputs.cache-hit == 'true'
-      shell: bash
-      run: yarn build
 
     - name: Check Build
       shell: bash
@@ -58,9 +58,7 @@ runs:
       uses: actions/cache@v4
       with:
         path: |
-          node_modules
-          packages/*/node_modules
           lib/
           packages/*/lib
           packages/*/.git-data.json
-        key: ${{ runner.os }}-${{ runner.arch }}-node-${{ inputs.node }}-${{ github.sha }}
+        key: ${{ steps.build-cache.outputs.key }}
