@@ -279,20 +279,20 @@ export async function importBlock(
     // Lightclient server support (only after altair)
     // - Persist state witness
     // - Use block's syncAggregate
-    if (blockEpoch >= this.config.ALTAIR_FORK_EPOCH) {
-      // we want to import block asap so do this in the next event loop
-      callInNextEventLoop(() => {
-        try {
-          this.lightClientServer?.onImportBlockHead(
-            block.message as BeaconBlock<ForkPostAltair>,
-            postState as CachedBeaconStateAltair,
-            parentBlockSlot
-          );
-        } catch (e) {
-          this.logger.verbose("Error lightClientServer.onImportBlock", {slot: blockSlot}, e as Error);
-        }
-      });
-    }
+    // if (blockEpoch >= this.config.ALTAIR_FORK_EPOCH) {
+    //   // we want to import block asap so do this in the next event loop
+    //   callInNextEventLoop(() => {
+    //     try {
+    //       this.lightClientServer?.onImportBlockHead(
+    //         block.message as BeaconBlock<ForkPostAltair>,
+    //         postState as CachedBeaconStateAltair,
+    //         parentBlockSlot
+    //       );
+    //     } catch (e) {
+    //       this.logger.verbose("Error lightClientServer.onImportBlock", {slot: blockSlot}, e as Error);
+    //     }
+    //   });
+    // }
   }
 
   // 6. Queue notifyForkchoiceUpdate to engine api

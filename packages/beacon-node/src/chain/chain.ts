@@ -68,7 +68,7 @@ import {
   ProposerPreparationData,
   StateGetOpts,
 } from "./interface.js";
-import {LightClientServer} from "./lightClient/index.js";
+// import {LightClientServer} from "./lightClient/index.js";
 import {
   AggregatedAttestationPool,
   AttestationPool,
@@ -133,7 +133,7 @@ export class BeaconChain implements IBeaconChain {
   readonly clock: IClock;
   readonly emitter: ChainEventEmitter;
   readonly regen: QueuedStateRegenerator;
-  readonly lightClientServer?: LightClientServer;
+  // readonly lightClientServer?: LightClientServer;
   readonly reprocessController: ReprocessController;
   readonly archiveStore: ArchiveStore;
 
@@ -344,9 +344,9 @@ export class BeaconChain implements IBeaconChain {
       signal,
     });
 
-    if (!opts.disableLightClientServer) {
-      this.lightClientServer = new LightClientServer(opts, {config, db, metrics, emitter, logger});
-    }
+    // if (!opts.disableLightClientServer) {
+      // this.lightClientServer = new LightClientServer(opts, {config, db, metrics, emitter, logger});
+    // }
 
     this.reprocessController = new ReprocessController(this.metrics);
 
