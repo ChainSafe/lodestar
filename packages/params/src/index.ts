@@ -122,15 +122,10 @@ export const {
 
 // Misc
 
-// <spec constant_var="GENESIS_SLOT" fork="deneb" style="hash" hash="2d6f8884" />
 export const GENESIS_SLOT = 0;
-// <spec constant_var="GENESIS_EPOCH" fork="deneb" style="hash" hash="56876077" />
 export const GENESIS_EPOCH = 0;
-// <spec constant_var="FAR_FUTURE_EPOCH" fork="deneb" style="hash" hash="b11f052e" />
 export const FAR_FUTURE_EPOCH = Infinity;
-// <spec constant_var="BASE_REWARDS_PER_EPOCH" fork="deneb" style="hash" hash="395f7528" />
 export const BASE_REWARDS_PER_EPOCH = 4;
-// <spec constant_var="DEPOSIT_CONTRACT_TREE_DEPTH" fork="deneb" style="hash" hash="5763e551" />
 export const DEPOSIT_CONTRACT_TREE_DEPTH = 2 ** 5; // 32
 export const JUSTIFICATION_BITS_LENGTH = 4;
 export const ZERO_HASH = Buffer.alloc(32, 0);
