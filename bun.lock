@@ -155,7 +155,6 @@
         "@lodestar/beacon-node": "^1.30.0",
         "@lodestar/config": "^1.30.0",
         "@lodestar/db": "^1.30.0",
-        "@lodestar/light-client": "^1.30.0",
         "@lodestar/logger": "^1.30.0",
         "@lodestar/params": "^1.30.0",
         "@lodestar/state-transition": "^1.30.0",
