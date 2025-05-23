@@ -27,7 +27,7 @@ describe("root equals", () => {
   });
 
   bench({
-    id: "Buffer.compare",
+    id: "byteArrayEquals",
     fn: () => {
       for (let i = 0; i < runsFactor; i++) {
         Buffer.compare(rootTree, stateRoot) === 0;
