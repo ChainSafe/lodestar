@@ -681,7 +681,8 @@ export class BeaconChain implements IBeaconChain {
       feeRecipient,
       commonBlockBody,
       parentBlockRoot,
-    }: BlockAttributes & {commonBlockBody?: CommonBlockBody}
+      skipRandaoVerification,
+    }: BlockAttributes & {commonBlockBody?: CommonBlockBody; skipRandaoVerification?: boolean}
   ): Promise<{
     block: AssembledBlockType<T>;
     executionPayloadValue: Wei;
@@ -735,7 +736,7 @@ export class BeaconChain implements IBeaconChain {
       body,
     } as AssembledBlockType<T>;
 
-    const {newStateRoot, proposerReward} = computeNewStateRoot(this.metrics, state, block);
+    const {newStateRoot, proposerReward} = computeNewStateRoot(this.metrics, state, block, skipRandaoVerification);
     block.stateRoot = newStateRoot;
     const blockRoot =
       blockType === BlockType.Full

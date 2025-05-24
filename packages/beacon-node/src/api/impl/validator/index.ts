@@ -405,9 +405,11 @@ export function getValidatorApi(
     {
       commonBlockBody,
       parentBlockRoot,
+      skipRandaoVerification,
     }: Omit<routes.validator.ExtraProduceBlockOpts, "builderSelection"> & {
       commonBlockBody: CommonBlockBody;
       parentBlockRoot: Root;
+      skipRandaoVerification?: boolean;
     }
   ): Promise<ProduceBlindedBlockRes> {
     const version = config.getForkName(slot);
@@ -435,6 +437,7 @@ export function getValidatorApi(
         randaoReveal,
         graffiti,
         commonBlockBody,
+        skipRandaoVerification,
       });
 
       metrics?.blockProductionSuccess.inc({source});
@@ -466,9 +469,11 @@ export function getValidatorApi(
       strictFeeRecipientCheck,
       commonBlockBody,
       parentBlockRoot,
+      skipRandaoVerification,
     }: Omit<routes.validator.ExtraProduceBlockOpts, "builderSelection"> & {
       commonBlockBody: CommonBlockBody;
       parentBlockRoot: Root;
+      skipRandaoVerification?: boolean;
     }
   ): Promise<ProduceBlockOrContentsRes & {shouldOverrideBuilder?: boolean}> {
     const source = ProducedBlockSource.engine;
@@ -484,6 +489,7 @@ export function getValidatorApi(
         graffiti,
         feeRecipient,
         commonBlockBody,
+        skipRandaoVerification,
       });
       const version = config.getForkName(block.slot);
       if (strictFeeRecipientCheck && feeRecipient && isForkPostBellatrix(version)) {
@@ -531,8 +537,7 @@ export function getValidatorApi(
     slot: Slot,
     randaoReveal: BLSSignature,
     graffiti?: string,
-    // TODO deneb: skip randao verification
-    _skipRandaoVerification?: boolean,
+    skipRandaoVerification?: boolean,
     builderBoostFactor?: bigint,
     {feeRecipient, builderSelection, strictFeeRecipientCheck}: routes.validator.ExtraProduceBlockOpts = {}
   ): Promise<ProduceFullOrBlindedBlockOrContentsRes> {
@@ -618,7 +623,9 @@ export function getValidatorApi(
           strictFeeRecipientCheck: false,
           commonBlockBody,
           parentBlockRoot,
-        })
+          skipRandaoVerification,
+        }
+      )
       : Promise.reject(new Error("Builder disabled"));
 
     const enginePromise = isEngineEnabled
@@ -627,6 +634,7 @@ export function getValidatorApi(
           strictFeeRecipientCheck,
           commonBlockBody,
           parentBlockRoot,
+          skipRandaoVerification,
         }).then((engineBlock) => {
           // Once the engine returns a block, in the event of either:
           // - suspected builder censorship

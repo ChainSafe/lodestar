@@ -17,7 +17,8 @@ import {Metrics} from "../../metrics/index.js";
 export function computeNewStateRoot(
   metrics: Metrics | null,
   state: CachedBeaconStateAllForks,
-  block: BeaconBlock | BlindedBeaconBlock
+  block: BeaconBlock | BlindedBeaconBlock,
+  skipRandaoVerification?: boolean
 ): {newStateRoot: Root; proposerReward: Gwei} {
   // Set signature to zero to re-use stateTransition() function which requires the SignedBeaconBlock type
   const blockEmptySig = {message: block, signature: ZERO_HASH};
@@ -35,7 +36,7 @@ export function computeNewStateRoot(
       // verifyProposer: false   | as the block signature is zero-ed
       verifyProposer: false,
       // verifySignatures: false | since the data to assemble the block is trusted
-      verifySignatures: false,
+      verifySignatures: skipRandaoVerification ?? false,
       // Preserve cache in source state, since the resulting state is not added to the state cache
       dontTransferCache: true,
     },

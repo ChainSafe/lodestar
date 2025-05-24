@@ -197,13 +197,13 @@ export interface IBeaconChain {
   getContents(beaconBlock: deneb.BeaconBlock): deneb.Contents;
 
   produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody>;
-  produceBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
+  produceBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody; skipRandaoVerification?: boolean}): Promise<{
     block: BeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Wei;
     shouldOverrideBuilder?: boolean;
   }>;
-  produceBlindedBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
+  produceBlindedBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody; skipRandaoVerification?: boolean}): Promise<{
     block: BlindedBeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Wei;
