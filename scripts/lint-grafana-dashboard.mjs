@@ -111,7 +111,10 @@ export function lintGrafanaDashboard(json) {
           type: "constant",
           value: "beacon",
         });
-        item.current.text = item.current.value = item.query = "${VAR_BEACON_JOB}";
+        if (item.current) {
+          item.current.text = item.current.value = "${VAR_BEACON_JOB}";
+        }
+        item.query = "${VAR_BEACON_JOB}";
       } else if (item.query === "${VAR_VALIDATOR_JOB}" || item.query === "validator") {
         inputs.push({
           description: "",
@@ -120,7 +123,10 @@ export function lintGrafanaDashboard(json) {
           type: "constant",
           value: "validator",
         });
-        item.current.text = item.current.value = item.query = "${VAR_VALIDATOR_JOB}";
+        if (item.current) {
+          item.current.text = item.current.value = "${VAR_VALIDATOR_JOB}";
+        }
+        item.query = "${VAR_VALIDATOR_JOB}";
       }
     }
   }
