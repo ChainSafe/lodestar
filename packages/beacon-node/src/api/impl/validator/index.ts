@@ -624,8 +624,7 @@ export function getValidatorApi(
           commonBlockBody,
           parentBlockRoot,
           skipRandaoVerification,
-        }
-      )
+        })
       : Promise.reject(new Error("Builder disabled"));
 
     const enginePromise = isEngineEnabled
