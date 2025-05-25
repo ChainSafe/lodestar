@@ -72,6 +72,7 @@ import fs from "node:fs";
  * @typedef {Object} TemplatingListItem
  * @property {string} name
  * @property {string} query
+ * @property {{text: string; value: string}} current
  */
 
 const variableNameDatasource = "DS_PROMETHEUS";
@@ -102,7 +103,7 @@ export function lintGrafanaDashboard(json) {
   // Add job names to __inputs if used by dashboard
   if (json.templating && json.templating.list) {
     for (const item of json.templating.list) {
-      if (item.query === "${VAR_BEACON_JOB}") {
+      if (item.query === "${VAR_BEACON_JOB}" || item.query === "beacon") {
         inputs.push({
           description: "",
           label: "Beacon node job name",
@@ -110,7 +111,8 @@ export function lintGrafanaDashboard(json) {
           type: "constant",
           value: "beacon",
         });
-      } else if (item.query === "${VAR_VALIDATOR_JOB}") {
+        item.current.text = item.current.value = item.query = "${VAR_BEACON_JOB}";
+      } else if (item.query === "${VAR_VALIDATOR_JOB}" || item.query === "validator") {
         inputs.push({
           description: "",
           label: "Validator client job name",
@@ -118,6 +120,7 @@ export function lintGrafanaDashboard(json) {
           type: "constant",
           value: "validator",
         });
+        item.current.text = item.current.value = item.query = "${VAR_VALIDATOR_JOB}";
       }
     }
   }
