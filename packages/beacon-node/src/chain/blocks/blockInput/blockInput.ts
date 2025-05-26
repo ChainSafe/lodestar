@@ -80,7 +80,7 @@ abstract class AbstractBlockInput<F extends ForkName = ForkName, TData extends D
 {
   abstract type: DAType;
   daOutOfRange: boolean;
-  timeCreated: number;
+  timeCreatedSec: number;
 
   forkName: ForkName;
   slot: Slot;
@@ -94,7 +94,7 @@ abstract class AbstractBlockInput<F extends ForkName = ForkName, TData extends D
 
   constructor(init: BlockInputInit) {
     this.daOutOfRange = init.daOutOfRange;
-    this.timeCreated = init.timeCreated;
+    this.timeCreatedSec = init.timeCreated;
     this.forkName = init.forkName;
     this.slot = init.slot;
     this.blockRootHex = init.blockRootHex;
@@ -145,6 +145,7 @@ abstract class AbstractBlockInput<F extends ForkName = ForkName, TData extends D
     return {
       blockRoot: prettyBytes(this.blockRootHex),
       slot: this.slot,
+      timeCreatedSec: this.timeCreatedSec,
     };
   }
 
@@ -329,6 +330,7 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
     return {
       blockRoot: prettyBytes(this.blockRootHex),
       slot: this.slot,
+      timeCreatedSec: this.timeCreatedSec,
       expectedBlobs: this.state.hasBlock ? this.state.block.message.body.blobKzgCommitments.length : "unknown",
       receivedBlobs: this.blobsCache.size,
     };
@@ -645,6 +647,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     return {
       blockRoot: prettyBytes(this.blockRootHex),
       slot: this.slot,
+      timeCreatedSec: this.timeCreatedSec,
       expectedColumns:
         this.state.hasBlock && this.state.block.message.body.blobKzgCommitments.length === 0
           ? 0
