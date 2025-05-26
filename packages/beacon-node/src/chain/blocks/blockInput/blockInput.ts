@@ -501,7 +501,7 @@ function blockAndBlobArePaired(block: SignedBeaconBlock<ForkBlobsDA>, blobSideca
   if (!blockCommitment || !blobSidecar.kzgCommitment) {
     return false;
   }
-  return byteArrayEquals(blockCommitment, blobSidecar.kzgCommitment);
+  return Buffer.compare(blockCommitment, blobSidecar.kzgCommitment);
 }
 
 function assertBlockAndBlobArePaired(
@@ -793,7 +793,7 @@ function blockAndColumnArePaired(
   return (
     block.message.body.blobKzgCommitments.length === columnSidecar.kzgCommitments.length &&
     block.message.body.blobKzgCommitments.every((commitment, index) =>
-      byteArrayEquals(commitment, columnSidecar.kzgCommitments[index])
+      Buffer.compare(commitment, columnSidecar.kzgCommitments[index])
     )
   );
 }
