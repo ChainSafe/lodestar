@@ -31,6 +31,10 @@ interface CustomMatchers<R = unknown> {
    * where you don't need message to explain assertion
    * */
   toEqualWithMessage(expected: unknown, message: string): R;
+  /**
+   * Matches LodestarError with the given metadata
+   */
+  toThrowLodestarError<T extends {code: string}>(expected: T, message?: string): R;
 }
 
 interface CustomAsymmetricMatchers<R = unknown> extends CustomMatchers<R> {

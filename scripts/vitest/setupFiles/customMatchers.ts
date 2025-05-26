@@ -1,4 +1,5 @@
 import {expect} from "vitest";
+import {LodestarError} from "@lodestar/utils";
 
 expect.extend({
   toBeValidEpochCommittee(
@@ -81,4 +82,48 @@ expect.extend({
       expected,
     };
   },
+  toThrowLodestarError<T extends {code: string}>(received: Function, expected: T, message?: string) {
+    try {
+      received();
+
+      return {
+        pass: false,
+        message: () => "Received value did not throw any error",
+      };
+    } catch (error) {      
+      if (!(error instanceof LodestarError)) {
+        return {
+          message: () => "Received value did not throw LodestarError",
+          pass: false,
+          actual: error,
+          expected: LodestarError,
+        };
+      }
+      const errorMeta = (error as unknown as LodestarError<T>).getMetadata();
+      const errorMessage = (error as unknown as LodestarError<T>).message;
+
+      if (this.equals(errorMeta, expected)) {
+        if(message && errorMessage !== message) {
+          return {
+            message: () => "Received value error message does not match",
+            pass: false,
+            actual: errorMessage,
+            expected: message,
+          };
+        }
+
+        return {
+          message: () => "Received value threw valid error",
+          pass: true,
+        };
+      }
+
+      return {
+        message: () => `Received error does not match. Expected ${expected.code}, but got ${(error as unknown as LodestarError<T>).type.code}`,
+        pass: false,
+        actual: errorMeta,
+        expected: expected
+      };
+    }
+  }
 });
