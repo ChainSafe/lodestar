@@ -12,8 +12,10 @@ import {
   CheckpointHeaderRepository,
   DepositDataRootRepository,
   DepositEventRepository,
+  DifferentialStateArchiveRepository,
   Eth1DataRepository,
   ProposerSlashingRepository,
+  SnapshotStateArchiveRepository,
   StateArchiveRepository,
   SyncCommitteeRepository,
   SyncCommitteeWitnessRepository,
@@ -39,6 +41,10 @@ export interface IBeaconDb {
   stateArchive: StateArchiveRepository;
   // checkpoint states
   checkpointState: CheckpointStateRepository;
+
+  // Differential States
+  snapshotStateArchive: SnapshotStateArchiveRepository;
+  differentialStateArchive: DifferentialStateArchiveRepository;
 
   // op pool
   voluntaryExit: VoluntaryExitRepository;
