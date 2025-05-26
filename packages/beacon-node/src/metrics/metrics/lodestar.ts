@@ -1,3 +1,4 @@
+import {BlockInputSource} from "../../chain/blocks/blockInput/index.js";
 import {BlobsSource, BlockSource} from "../../chain/blocks/types.js";
 import {JobQueueItemType} from "../../chain/bls/index.js";
 import {AttestationErrorCode, BlockErrorCode} from "../../chain/errors/index.js";
@@ -1422,11 +1423,12 @@ export function createLodestarMetrics(
           name: "lodestar_seen_block_input_cache_size",
           help: "Number of cached BlockInputs",
         }),
-        duplicateBlockCount: register.gauge({
+        duplicateBlockCount: register.gauge<{source: BlockInputSource}>({
           name: "lodestar_seen_block_input_cache_duplicate_block_count",
           help: "Total number of duplicate blocks that pass validation and attempt to be cached but are known",
+          labelNames: ["source"],
         }),
-        duplicateBlobCount: register.gauge({
+        duplicateBlobCount: register.gauge<{source: BlockInputSource}>({
           name: "lodestar_seen_block_input_cache_duplicate_blob_count",
           help: "Total number of duplicate blobs that pass validation and attempt to be cached but are known",
         }),

@@ -173,7 +173,7 @@ export class SeenBlockInputCache {
       blockInput.addBlock({block, blockRootHex, source: {source, seenTimestampSec, peerIdStr}});
     } else {
       this.logger?.debug("Attempt to cache block but is already cached on BlockInput", blockInput.getLogMeta());
-      this.metrics?.seenCache.blockInput.duplicateBlockCount.inc();
+      this.metrics?.seenCache.blockInput.duplicateBlockCount.inc({source});
     }
 
     return blockInput;
@@ -226,7 +226,7 @@ export class SeenBlockInputCache {
         `Attempt to cache blob index #${blobSidecar.index} but is already cached on BlockInput`,
         blockInput.getLogMeta()
       );
-      this.metrics?.seenCache.blockInput.duplicateBlobCount.inc();
+      this.metrics?.seenCache.blockInput.duplicateBlobCount.inc({source});
       if (opts.throwGossipErrorIfAlreadyKnown) {
         throw new BlobSidecarGossipError(GossipAction.IGNORE, {
           code: BlobSidecarErrorCode.ALREADY_KNOWN,
