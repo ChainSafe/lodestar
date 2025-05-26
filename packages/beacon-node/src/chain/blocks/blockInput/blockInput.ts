@@ -3,7 +3,6 @@ import {BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu} from "@lod
 import {fromHex, prettyBytes, toRootHex, withTimeout} from "@lodestar/utils";
 import {VersionedHashes} from "../../../execution/index.js";
 import {kzgCommitmentToVersionedHash} from "../../../util/blobs.js";
-import {byteArrayEquals} from "../../../util/bytes.js";
 import {BlockInputError, BlockInputErrorCode} from "./errors.js";
 import {
   AddBlob,
@@ -503,7 +502,7 @@ function blockAndBlobArePaired(block: SignedBeaconBlock<ForkBlobsDA>, blobSideca
   if (!blockCommitment || !blobSidecar.kzgCommitment) {
     return false;
   }
-  return Buffer.compare(blockCommitment, blobSidecar.kzgCommitment);
+  return Buffer.compare(blockCommitment, blobSidecar.kzgCommitment) === 0;
 }
 
 function assertBlockAndBlobArePaired(

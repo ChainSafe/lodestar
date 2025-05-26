@@ -3,7 +3,7 @@ import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {ForkName, isForkPostDeneb} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex, SignedBeaconBlock, Slot, deneb} from "@lodestar/types";
-import {LodestarError, Logger, pruneSetToMax, toRootHex} from "@lodestar/utils";
+import {LodestarError, Logger, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {IClock} from "../../util/clock.js";
 import {
@@ -257,7 +257,7 @@ export class SeenBlockInputCache {
 
     if (itemsToDelete > 0) {
       const sorted = [...this.blockInputs.entries()].sort((a, b) => b[1].slot - a[1].slot);
-      for (const rootHex of sorted) {
+      for (const [rootHex] of sorted) {
         this.blockInputs.delete(rootHex);
         itemsToDelete--;
         if (itemsToDelete <= 0) return;

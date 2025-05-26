@@ -1431,6 +1431,7 @@ export function createLodestarMetrics(
         duplicateBlobCount: register.gauge<{source: BlockInputSource}>({
           name: "lodestar_seen_block_input_cache_duplicate_blob_count",
           help: "Total number of duplicate blobs that pass validation and attempt to be cached but are known",
+          labelNames: ["source"],
         }),
         createdByBlock: register.gauge({
           name: "lodestar_seen_block_input_cache_items_created_by_block",
