@@ -1,6 +1,6 @@
-import {describe, it, expect} from "vitest";
-import {ApiError} from "../../../../src/api/impl/errors.js";
-import ensureUniqueItemsOrThrow from "../../../../src/api/impl/utils.js";
+import {describe, expect, it} from "vitest";
+import {ApiInputDuplicateItemsError} from "../../../../src/api/impl/errors.js";
+import {ensureUniqueItemsOrThrow} from "../../../../src/api/impl/utils.js";
 
 describe("api / impl / utils", () => {
   describe("ensureUniqueItemsOrThrow", () => {
@@ -20,20 +20,16 @@ describe("api / impl / utils", () => {
 
     it("should throw ApiError for array with duplicate values", () => {
       const errorMessage = "Duplicate values found";
-      expect(() => ensureUniqueItemsOrThrow([1, 2, 1], errorMessage))
-        .toThrow(ApiError);
-      expect(() => ensureUniqueItemsOrThrow([1, 2, 1], errorMessage))
-        .toThrow(errorMessage);
+      const errorMessageFn = (duplicateItems: unknown[]) =>
+        `${errorMessage} (Duplicate Items: ${duplicateItems.join(", ")})`;
+      expect(() => ensureUniqueItemsOrThrow([1, 2, 1], errorMessage)).toThrow(ApiInputDuplicateItemsError);
+      expect(() => ensureUniqueItemsOrThrow([1, 2, 1], errorMessage)).toThrow(errorMessageFn([1]));
 
-      expect(() => ensureUniqueItemsOrThrow(["a", "b", "a"], errorMessage))
-        .toThrow(ApiError);
-      expect(() => ensureUniqueItemsOrThrow(["a", "b", "a"], errorMessage))
-        .toThrow(errorMessage);
+      expect(() => ensureUniqueItemsOrThrow(["a", "b", "a"], errorMessage)).toThrow(ApiInputDuplicateItemsError);
+      expect(() => ensureUniqueItemsOrThrow(["a", "b", "a"], errorMessage)).toThrow(errorMessageFn(["a"]));
 
-      expect(() => ensureUniqueItemsOrThrow([true, true], errorMessage))
-        .toThrow(ApiError);
-      expect(() => ensureUniqueItemsOrThrow([true, true], errorMessage))
-        .toThrow(errorMessage);
+      expect(() => ensureUniqueItemsOrThrow([true, true], errorMessage)).toThrow(ApiInputDuplicateItemsError);
+      expect(() => ensureUniqueItemsOrThrow([true, true], errorMessage)).toThrow(errorMessageFn([true]));
     });
   });
 });

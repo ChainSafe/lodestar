@@ -1,7 +1,7 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {ApiModules} from "../../types.js";
-import ensureUniqueItemsOrThrow from "../../utils.js";
+import {ensureUniqueItemsOrThrow} from "../../utils.js";
 import {getBlockResponse} from "../blocks/utils.js";
 
 export function getBeaconRewardsApi({

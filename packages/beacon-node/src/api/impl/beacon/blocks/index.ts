@@ -35,7 +35,7 @@ import {computeBlobSidecars} from "../../../../util/blobs.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {ApiModules} from "../../types.js";
-import ensureUniqueItemsOrThrow from "../../utils.js";
+import {ensureUniqueItemsOrThrow} from "../../utils.js";
 import {getBlockResponse, toBeaconHeaderResponse} from "./utils.js";
 
 type PublishBlockOpts = ImportBlockOpts;

@@ -47,4 +47,17 @@ export class IndexedError extends ApiError {
   }
 }
 
+/**
+ * Error thrown when an array input to an API (e.g. its body, params, etc.)
+ * contains duplicate items.
+ */
+export class ApiInputDuplicateItemsError<T> extends ApiError {
+  duplicateItems: T[];
+
+  constructor(message: string, duplicates: T[]) {
+    super(400, `${message} (Duplicate Items: ${duplicates.join(", ")})`);
+    this.duplicateItems = duplicates;
+  }
+}
+
 export type FailureList = {index: number; message: string}[];

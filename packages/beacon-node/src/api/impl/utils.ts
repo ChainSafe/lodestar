@@ -1,4 +1,4 @@
-import {ApiError} from "./errors.js";
+import {ApiInputDuplicateItemsError} from "./errors.js";
 
 /**
  * Ensures that the array contains unique values, and throws an ApiError
@@ -7,16 +7,19 @@ import {ApiError} from "./errors.js";
  * @param message - The message to put in the ApiError if the array contains
  * duplicates.
  */
-const ensureUniqueItemsOrThrow = (array: unknown[] | undefined, message: string) => {
+export function ensureUniqueItemsOrThrow(array: unknown[] | undefined, message: string): void {
   if (!array) {
     return;
   }
 
-  const containsDuplicates = new Set(array).size !== array.length;
+  const duplicateItems = array.reduce((partialDuplicateItems: unknown[], item, index) => {
+    if (array.indexOf(item) !== index && !partialDuplicateItems.includes(item)) {
+      return partialDuplicateItems.concat(item);
+    }
+    return partialDuplicateItems;
+  }, []);
 
-  if (containsDuplicates) {
-    throw new ApiError(400, message);
+  if (duplicateItems.length) {
+    throw new ApiInputDuplicateItemsError(message, duplicateItems);
   }
-};
-
-export default ensureUniqueItemsOrThrow;
+}
