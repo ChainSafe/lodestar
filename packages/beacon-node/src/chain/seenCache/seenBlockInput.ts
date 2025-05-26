@@ -14,8 +14,8 @@ import {
   IBlockInput,
   LogMetaBasic,
   SourceMeta,
-  getDaOutOfRange,
   isBlockInputBlobs,
+  isDaOutOfRange,
 } from "../blocks/blockInput/index.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 import {BlobSidecarErrorCode, BlobSidecarGossipError} from "../errors/blobSidecarError.js";
@@ -245,7 +245,7 @@ export class SeenBlockInputCache {
     const forkName = this.config.getForkName(slot);
     return {
       forkName,
-      daOutOfRange: getDaOutOfRange(this.config, forkName, slot, this.clock.currentEpoch),
+      daOutOfRange: isDaOutOfRange(this.config, forkName, slot, this.clock.currentEpoch),
     };
   }
 

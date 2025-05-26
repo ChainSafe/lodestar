@@ -5,7 +5,7 @@ import {Epoch, Slot} from "@lodestar/types";
 import {BlobsSource, BlockSource as BlockSourceOld} from "../types.js";
 import {BlockInputSource as BlockSource} from "./types.js";
 
-export function getDaOutOfRange(
+export function isDaOutOfRange(
   config: ChainForkConfig,
   forkName: ForkName,
   blockSlot: Slot,
