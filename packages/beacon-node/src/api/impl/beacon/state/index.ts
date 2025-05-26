@@ -15,6 +15,7 @@ import {getValidatorStatus} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {ApiError} from "../../errors.js";
 import {ApiModules} from "../../types.js";
+import ensureUniqueItemsOrThrow from "../../utils.js";
 import {
   filterStateValidatorsByStatus,
   getStateResponseWithRegen,
@@ -85,6 +86,9 @@ export function getBeaconStateApi({
     },
 
     async getStateValidators({stateId, validatorIds = [], statuses = []}) {
+      ensureUniqueItemsOrThrow(validatorIds, "Duplicate validator IDs provided");
+      ensureUniqueItemsOrThrow(statuses, "Duplicate statuses provided");
+
       const {state, executionOptimistic, finalized} = await getState(stateId);
       const currentEpoch = getCurrentEpoch(state);
       const {validators, balances} = state; // Get the validators sub tree once for all the loop
@@ -142,6 +146,8 @@ export function getBeaconStateApi({
     },
 
     async postStateValidatorIdentities({stateId, validatorIds = []}) {
+      ensureUniqueItemsOrThrow(validatorIds, "Duplicate validator IDs provided");
+
       const {state, executionOptimistic, finalized} = await getState(stateId);
       const {pubkey2index} = chain.getHeadState().epochCtx;
 
@@ -194,6 +200,8 @@ export function getBeaconStateApi({
     },
 
     async getStateValidatorBalances({stateId, validatorIds = []}) {
+      ensureUniqueItemsOrThrow(validatorIds, "Duplicate validator IDs provided");
+
       const {state, executionOptimistic, finalized} = await getState(stateId);
 
       if (validatorIds.length) {
@@ -231,6 +239,8 @@ export function getBeaconStateApi({
     },
 
     async postStateValidatorBalances(args, context) {
+      ensureUniqueItemsOrThrow(args.validatorIds, "Duplicate validator IDs provided");
+
       return this.getStateValidatorBalances(args, context);
     },
 
