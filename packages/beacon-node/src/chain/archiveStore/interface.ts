@@ -1,5 +1,5 @@
 import {CheckpointWithHex} from "@lodestar/fork-choice";
-import {RootHex} from "@lodestar/types";
+import {RootHex, Slot} from "@lodestar/types";
 import {Metrics} from "../../metrics/metrics.js";
 
 export enum ArchiveMode {
@@ -102,4 +102,13 @@ export enum HistoricalStateStorageType {
    * Refer to the slots with skipped backups during differential backup
    */
   BlockReplay = "blockReplay",
+}
+
+export interface DifferentialStateOperation {
+  snapshotSlot: Slot;
+  diffSlots: Slot[];
+  blockReplay?: {
+    fromSlot: Slot;
+    tillSlot: Slot;
+  };
 }
