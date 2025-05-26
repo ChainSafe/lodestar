@@ -13,13 +13,12 @@ import {
   ForkBlobsDA,
   IBlockInput,
   LogMetaBasic,
+  LogMetaBlobs,
   SourceMeta,
   isBlockInputBlobs,
   isDaOutOfRange,
 } from "../blocks/blockInput/index.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
-import {BlobSidecarErrorCode, BlobSidecarGossipError} from "../errors/blobSidecarError.js";
-import {GossipAction} from "../errors/gossipValidation.js";
 
 const MAX_BLOCK_INPUT_CACHE_SIZE = 5;
 
@@ -34,7 +33,7 @@ export type SeenBlockInputCacheModules = {
 };
 
 export type GetByBlobOptions = {
-  throwGossipErrorIfAlreadyKnown?: boolean;
+  throwErrorIfAlreadyKnown?: boolean;
 };
 
 /**
@@ -227,10 +226,10 @@ export class SeenBlockInputCache {
         blockInput.getLogMeta()
       );
       this.metrics?.seenCache.blockInput.duplicateBlobCount.inc({source});
-      if (opts.throwGossipErrorIfAlreadyKnown) {
-        throw new BlobSidecarGossipError(GossipAction.IGNORE, {
-          code: BlobSidecarErrorCode.ALREADY_KNOWN,
-          root: blockRootHex,
+      if (opts.throwErrorIfAlreadyKnown) {
+        throw new SeenBlockInputCacheError({
+          code: SeenBlockInputCacheErrorCode.GOSSIP_BLOB_ALREADY_KNOWN,
+          ...blockInput.getLogMeta(),
         });
       }
     }
@@ -269,12 +268,17 @@ export class SeenBlockInputCache {
 
 enum SeenBlockInputCacheErrorCode {
   WRONG_BLOCK_INPUT_TYPE = "BLOCK_INPUT_CACHE_ERROR_WRONG_BLOCK_INPUT_TYPE",
+  GOSSIP_BLOB_ALREADY_KNOWN = "BLOCK_INPUT_CACHE_ERROR_GOSSIP_BLOB_ALREADY_KNOWN",
 }
 
-type SeenBlockInputCacheErrorType = LogMetaBasic & {
-  code: SeenBlockInputCacheErrorCode.WRONG_BLOCK_INPUT_TYPE;
-  cachedType: DAType;
-  requestedType: DAType;
-};
+type SeenBlockInputCacheErrorType =
+  | (LogMetaBasic & {
+      code: SeenBlockInputCacheErrorCode.WRONG_BLOCK_INPUT_TYPE;
+      cachedType: DAType;
+      requestedType: DAType;
+    })
+  | (LogMetaBlobs & {
+      code: SeenBlockInputCacheErrorCode.GOSSIP_BLOB_ALREADY_KNOWN;
+    });
 
 class SeenBlockInputCacheError extends LodestarError<SeenBlockInputCacheErrorType> {}

@@ -466,7 +466,7 @@ describe("SeenBlockInputCache", () => {
           source: BlockInputSource.gossip,
           seenTimestampSec: Date.now(),
         },
-        {throwGossipErrorIfAlreadyKnown: true}
+        {throwErrorIfAlreadyKnown: true}
       );
       expect(cache.get(rootHex)).toBe(blockInput);
       expect(() =>
@@ -476,7 +476,7 @@ describe("SeenBlockInputCache", () => {
             source: BlockInputSource.gossip,
             seenTimestampSec: Date.now(),
           },
-          {throwGossipErrorIfAlreadyKnown: true}
+          {throwErrorIfAlreadyKnown: true}
         )
       ).toThrow();
     });
