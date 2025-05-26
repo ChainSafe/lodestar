@@ -831,10 +831,10 @@
     "@chainsafe/swap-or-not-shuffle-win32-arm64-msvc" "1.2.1"
     "@chainsafe/swap-or-not-shuffle-win32-x64-msvc" "1.2.1"
 
-"@chainsafe/threads@^1.11.1":
-  version "1.11.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/threads/-/threads-1.11.1.tgz#0b3b8c76f5875043ef6d47aeeb681dc80378f205"
-  integrity sha512-ejkB0eVcM0k2E8n5ZqOGt//ZEWU+c431QS3e/WfjLKxhw/fwZpvYhUOxBA8u3lJmAKLGziIcXjOoTnPwMPhkcQ==
+"@chainsafe/threads@^1.11.2":
+  version "1.11.2"
+  resolved "https://registry.yarnpkg.com/@chainsafe/threads/-/threads-1.11.2.tgz#fc400efdfec2d246e5054e3521a9066dc2dc45af"
+  integrity sha512-qd5mSYWyIgK+G4LQTLhJhO4IUda4eydYhZsT6AadALFUKs5WrHaFtAf7sLol6JjgWG7wwgznUs7FFyBl0xPmoQ==
   dependencies:
     callsites "^3.1.0"
     debug "^4.2.0"
