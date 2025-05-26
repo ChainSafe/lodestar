@@ -3,7 +3,7 @@ import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {ForkName, isForkPostDeneb} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex, SignedBeaconBlock, Slot, deneb} from "@lodestar/types";
-import {LodestarError, Logger, toRootHex} from "@lodestar/utils";
+import {LodestarError, Logger, pruneSetToMax, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {IClock} from "../../util/clock.js";
 import {
@@ -20,6 +20,8 @@ import {
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 import {BlobSidecarErrorCode, BlobSidecarGossipError} from "../errors/blobSidecarError.js";
 import {GossipAction} from "../errors/gossipValidation.js";
+
+const MAX_BLOCK_INPUT_CACHE_SIZE = 5;
 
 export type SeenBlockInputCacheModules = {
   config: ChainForkConfig;
@@ -84,10 +86,16 @@ export class SeenBlockInputCache {
     return this.blockInputs.get(rootHex);
   }
 
+  /**
+   * Removes the single BlockInput from the cache
+   */
   remove(rootHex: RootHex): void {
     this.blockInputs.delete(rootHex);
   }
 
+  /**
+   * Removes a processed BlockInput from the cache and also removes any ancestors of processed blocks
+   */
   prune(rootHex: RootHex): void {
     let blockInput = this.blockInputs.get(rootHex);
     let parentRootHex = blockInput?.parentRootHex;
@@ -96,6 +104,7 @@ export class SeenBlockInputCache {
       blockInput = this.blockInputs.get(parentRootHex ?? "");
       parentRootHex = blockInput?.parentRootHex;
     }
+    this.pruneToMaxSize();
   }
 
   onFinalized = (checkpoint: CheckpointWithHex) => {
@@ -105,6 +114,7 @@ export class SeenBlockInputCache {
         this.blockInputs.delete(rootHex);
       }
     }
+    this.pruneToMaxSize();
   };
 
   getByBlock({block, source, seenTimestampSec, peerIdStr}: SourceMeta & {block: SignedBeaconBlock}): IBlockInput {
@@ -237,6 +247,23 @@ export class SeenBlockInputCache {
       forkName,
       daOutOfRange: getDaOutOfRange(this.config, forkName, slot, this.clock.currentEpoch),
     };
+  }
+
+  /**
+   * Use custom implementation of pruneSetToMax to allow for sorting by slot
+   * and deleting via key/rootHex
+   */
+  private pruneToMaxSize() {
+    let itemsToDelete = this.blockInputs.size - MAX_BLOCK_INPUT_CACHE_SIZE;
+
+    if (itemsToDelete > 0) {
+      const sorted = [...this.blockInputs.entries()].sort((a, b) => b[1].slot - a[1].slot);
+      for (const rootHex of sorted) {
+        this.blockInputs.delete(rootHex);
+        itemsToDelete--;
+        if (itemsToDelete <= 0) return;
+      }
+    }
   }
 }
 
