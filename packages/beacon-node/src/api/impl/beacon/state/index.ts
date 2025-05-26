@@ -138,6 +138,27 @@ export function getBeaconStateApi({
     },
 
     async postStateValidators(args, context) {
+      /**
+       * Uniqueness is checked at the schema level, but because the schema
+       * definition for the body of this endpoint is marked as `Schema.Object`
+       * we have to check it at the implementation level. Check the schema
+       * definition for more details.
+       * https://github.com/ChainSafe/lodestar/blob/ac2653dd8b767a24f9b1580977f8f560b1e3352d/packages/api/src/beacon/routes/beacon/state.ts#L459
+       */
+      const {validatorIds = [], statuses = []} = args;
+      const containsDuplicateStatuses = new Set(statuses).size !== statuses.length;
+      const containsDuplicateValidatorIds = new Set(validatorIds).size !== validatorIds.length;
+
+      if (containsDuplicateStatuses || containsDuplicateValidatorIds) {
+        const message =
+          containsDuplicateStatuses && containsDuplicateValidatorIds
+            ? "Duplicate validator IDs and statuses provided"
+            : containsDuplicateStatuses
+              ? "Duplicate statuses provided"
+              : "Duplicate validator IDs provided";
+        throw new ApiError(400, message);
+      }
+
       return this.getStateValidators(args, context);
     },
 

@@ -429,7 +429,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         parseReq: ({params, query}) => ({stateId: params.state_id, validatorIds: query.id, statuses: query.status}),
         schema: {
           params: {state_id: Schema.StringRequired},
-          query: {id: Schema.UintOrStringArray, status: Schema.StringArray},
+          query: {id: Schema.UintOrStringArrayUnique, status: Schema.StringArrayUnique},
         },
       },
       resp: {
@@ -479,7 +479,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         }),
         schema: {
           params: {state_id: Schema.StringRequired},
-          body: Schema.UintOrStringArray,
+          body: Schema.UintOrStringArrayUnique,
         },
       }),
       resp: {
@@ -495,7 +495,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         parseReq: ({params, query}) => ({stateId: params.state_id, validatorIds: query.id}),
         schema: {
           params: {state_id: Schema.StringRequired},
-          query: {id: Schema.UintOrStringArray},
+          query: {id: Schema.UintOrStringArrayUnique},
         },
       },
       resp: {
@@ -517,7 +517,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         }),
         schema: {
           params: {state_id: Schema.StringRequired},
-          body: Schema.UintOrStringArray,
+          body: Schema.UintOrStringArrayUnique,
         },
       }),
       resp: {

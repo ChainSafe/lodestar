@@ -544,7 +544,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       req: {
         writeReq: ({blockId, indices}) => ({params: {block_id: blockId.toString()}, query: {indices}}),
         parseReq: ({params, query}) => ({blockId: params.block_id, indices: query.indices}),
-        schema: {params: {block_id: Schema.StringRequired}, query: {indices: Schema.UintArray}},
+        schema: {params: {block_id: Schema.StringRequired}, query: {indices: Schema.UintArrayUnique}},
       },
       resp: {
         data: ssz.deneb.BlobSidecars,

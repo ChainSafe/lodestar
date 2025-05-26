@@ -183,7 +183,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         }),
         schema: {
           params: {epoch: Schema.UintRequired},
-          body: Schema.UintOrStringArray,
+          body: Schema.UintOrStringArrayUnique,
         },
       }),
       resp: {
@@ -205,7 +205,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         }),
         schema: {
           params: {block_id: Schema.StringRequired},
-          body: Schema.UintOrStringArray,
+          body: Schema.UintOrStringArrayUnique,
         },
       }),
       resp: {
