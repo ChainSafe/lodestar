@@ -37,7 +37,7 @@ describe("upgradeState", () => {
       },
       {skipSyncCommitteeCache: true}
     );
-    const newState = upgradeStateToElectra(stateView, null);
+    const newState = upgradeStateToElectra(stateView);
     expect(() => newState.toValue()).not.toThrow();
   });
 });

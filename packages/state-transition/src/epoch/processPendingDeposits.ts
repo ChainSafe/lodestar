@@ -1,7 +1,6 @@
 import {FAR_FUTURE_EPOCH, ForkSeq, GENESIS_SLOT, MAX_PENDING_DEPOSITS_PER_EPOCH} from "@lodestar/params";
 import {electra} from "@lodestar/types";
 import {addValidatorToRegistry, isValidDepositSignature} from "../block/processDeposit.js";
-import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {CachedBeaconStateElectra, EpochTransitionCache} from "../types.js";
 import {increaseBalance} from "../util/balance.js";
 import {hasCompoundingWithdrawalCredential, isValidatorKnown} from "../util/electra.js";
@@ -10,18 +9,14 @@ import {getActivationExitChurnLimit} from "../util/validator.js";
 
 /**
  * Starting from Electra:
- * Process pending balance deposits from state subject to churn limit and depsoitBalanceToConsume.
+ * Process pending balance deposits from state subject to churn limit and depositBalanceToConsume.
  * For each eligible `deposit`, call `increaseBalance()`.
  * Remove the processed deposits from `state.pendingDeposits`.
  * Update `state.depositBalanceToConsume` for the next epoch
  *
  * TODO Electra: Update ssz library to support batch push to `pendingDeposits`
  */
-export function processPendingDeposits(
-  state: CachedBeaconStateElectra,
-  cache: EpochTransitionCache,
-  metrics?: BeaconStateTransitionMetrics | null
-): void {
+export function processPendingDeposits(state: CachedBeaconStateElectra, cache: EpochTransitionCache): void {
   const nextEpoch = state.epochCtx.epoch + 1;
   const availableForProcessing = state.depositBalanceToConsume + BigInt(getActivationExitChurnLimit(state.epochCtx));
   let processedAmount = 0;
@@ -99,7 +94,6 @@ export function processPendingDeposits(
   // TODO Electra: add a function in ListCompositeTreeView to support batch push operation
   for (const deposit of depositsToPostpone) {
     state.pendingDeposits.push(deposit);
-    metrics?.pendingDeposits.set(state.pendingDeposits.length);
   }
 
   // Accumulate churn only if the churn limit has been hit.
