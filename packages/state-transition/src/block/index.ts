@@ -51,8 +51,7 @@ export function processBlock(
       processWithdrawals(
         fork,
         state as CachedBeaconStateCapella,
-        fullOrBlindedPayload as capella.FullOrBlindedExecutionPayload,
-        metrics
+        fullOrBlindedPayload as capella.FullOrBlindedExecutionPayload
       );
     }
 

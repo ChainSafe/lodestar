@@ -11,7 +11,6 @@ import {
 import {ValidatorIndex, capella, ssz} from "@lodestar/types";
 
 import {MapDef, toRootHex} from "@lodestar/utils";
-import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {CachedBeaconStateCapella, CachedBeaconStateElectra} from "../types.js";
 import {
   decreaseBalance,
@@ -24,8 +23,7 @@ import {
 export function processWithdrawals(
   fork: ForkSeq,
   state: CachedBeaconStateCapella | CachedBeaconStateElectra,
-  payload: capella.FullOrBlindedExecutionPayload,
-  metrics?: BeaconStateTransitionMetrics | null
+  payload: capella.FullOrBlindedExecutionPayload
 ): void {
   // processedPartialWithdrawalsCount is withdrawals coming from EL since electra (EIP-7002)
   const {withdrawals: expectedWithdrawals, processedPartialWithdrawalsCount} = getExpectedWithdrawals(fork, state);
@@ -63,7 +61,6 @@ export function processWithdrawals(
     stateElectra.pendingPartialWithdrawals = stateElectra.pendingPartialWithdrawals.sliceFrom(
       processedPartialWithdrawalsCount
     );
-    metrics?.pendingPartialWithdrawals.set(stateElectra.pendingPartialWithdrawals.length);
   }
 
   // Update the nextWithdrawalIndex
