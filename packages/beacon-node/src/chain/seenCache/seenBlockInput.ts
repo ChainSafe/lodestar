@@ -46,6 +46,26 @@ export type GetByBlobOptions = {
  *   https://github.com/ChainSafe/lodestar/blob/unstable/packages/beacon-node/src/api/impl/beacon/blocks/index.ts#L62
  * - maybeValidateBlobs in verifyBlocksDataAvailability (is_data_available spec function)
  *   https://github.com/ChainSafe/lodestar/blob/unstable/packages/beacon-node/src/chain/blocks/verifyBlocksDataAvailability.ts#L111
+ *
+ *
+ * Pruning management for SeenBlockInputCache
+ * ------------------------------------------
+ * There are four cases for how pruning needs to be handled
+ * - Normal operation following head via gossip (and/or reqresp). For this situation the consumer (process pipeline or
+ *   caller of processBlock) will call the `prune` method to remove any processed BlockInputs from the cache. This will
+ *   also remove any ancestors of the processed BlockInput as that will also need to have been successfully processed
+ *   for import to work correctly
+ * - onFinalized event handler will help to prune any non-canonical forks once the chain finalizes. Any block-slots that
+ *   are before the finalized checkpoint will be pruned.
+ * - Range-sync periods.  The range process uses this cache to store and sync blocks with DA data as the chain is pulled
+ *   from peers.  We pull batches, by epoch, so 32 slots are pulled at a time and several batches are pulled concurrently.
+ *   It is important to set the MAX_BLOCK_INPUT_CACHE_SIZE high enough to support range sync activities.  Currently the
+ *   value is set for 5 batches of 32 slots.  As process block is called (similar to following head) the BlockInput and
+ *   its ancestors will be pruned.
+ * - Non-Finality times.  This is a bit more tricky.  There can be long periods of non-finality and storing everything
+ *   will cause OOM.  The pruneToMax will help ensure a hard limit on the number of stored blocks (with DA) that are held
+ *   in memory at any one time.  The value for MAX_BLOCK_INPUT_CACHE_SIZE is set to accommodate range-sync but in
+ *   practice this value may need to be massaged in the future if we find issues when debugging non-finality
  */
 
 export class SeenBlockInputCache {
