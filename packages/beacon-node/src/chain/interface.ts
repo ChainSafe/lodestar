@@ -218,6 +218,12 @@ export interface IBeaconChain {
 
   recomputeForkChoiceHead(caller: ForkchoiceCaller): ProtoBlock;
 
+  /**
+   * When proposerBoostReorg is enabled, this is called during gossip block import to see
+   * if we want to suppress fcu call
+   */
+  shouldOverrideForkChoiceUpdate(slot: Slot, block: RootHex): boolean;
+
   /** When proposerBoostReorg is enabled, this is called at slot n-1 to predict the head block to build on if we are proposing at slot n */
   predictProposerHead(slot: Slot): ProtoBlock;
 

@@ -827,6 +827,10 @@ export class BeaconChain implements IBeaconChain {
     }
   }
 
+  shouldOverrideForkChoiceUpdate(slot: Slot, block: RootHex): boolean {
+    return this.forkChoice.shouldOverrideForkChoiceUpdate(slot, block).shouldOverrideFcu;
+  }
+
   predictProposerHead(slot: Slot): ProtoBlock {
     this.metrics?.forkChoice.requests.inc();
     const timer = this.metrics?.forkChoice.findHead.startTimer({caller: FindHeadFnName.predictProposerHead});

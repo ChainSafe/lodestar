@@ -6,6 +6,7 @@ import {
   RootCache,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
+  isExecutionStateType,
   isStateValidatorsNodesPopulated,
 } from "@lodestar/state-transition";
 import {BeaconBlock, altair, capella, ssz} from "@lodestar/types";
@@ -212,6 +213,28 @@ export async function importBlock(
   const newHead = this.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
   const currFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
 
+  // Suppress fcu call if this is true
+  let shouldOverrideFcu = false;
+
+  if (opts.isGossipBlock && isExecutionStateType(postState)) {
+    const proposerIndex = postState.epochCtx.getBeaconProposer(blockSlot + 1);
+    const feeRecipient = this.beaconProposerCache.get(proposerIndex);
+
+    if (feeRecipient) {
+      // We would set this to true if
+      //  1) This is a gossip block
+      //  2) We are proposer of next slot
+      //  3) Proposer boost reorg related flag is turned on (this is checked inside the function)
+      //  4) Block meets the criteria of being re-orged out (this is also checked inside the function)
+      shouldOverrideFcu = this.shouldOverrideForkChoiceUpdate(this.clock.currentSlot, blockSummary.blockRoot);
+    }
+  }
+
+  if (shouldOverrideFcu) {
+    this.logger.info("Weak block detected. Skip fcu call in importBlock");
+  }
+
+  // TODO: Skip this too when shouldOverrideFcu == true?
   if (newHead.blockRoot !== oldHead.blockRoot) {
     // Set head state as strong reference
     this.regen.updateHeadState(newHead, postState);
@@ -303,7 +326,8 @@ export async function importBlock(
   // slot via PrepareNextSlotScheduler. There is no harm updating the ELs with same data, it will just ignore it.
   if (
     !this.opts.disableImportExecutionFcU &&
-    (newHead.blockRoot !== oldHead.blockRoot || currFinalizedEpoch !== prevFinalizedEpoch)
+    (newHead.blockRoot !== oldHead.blockRoot || currFinalizedEpoch !== prevFinalizedEpoch) &&
+    !shouldOverrideFcu
   ) {
     /**
      * On post BELLATRIX_EPOCH but pre TTD, blocks include empty execution payload with a zero block hash.

@@ -52,6 +52,7 @@ import {
   LatestMessage,
   NotReorgedReason,
   PowBlockHex,
+  ShouldOverrideForkChoiceUpdateResult,
 } from "./interface.js";
 import {CheckpointWithHex, IForkChoiceStore, JustifiedBalances, toCheckpointWithHex} from "./store.js";
 
@@ -223,6 +224,46 @@ export class ForkChoice implements IForkChoice {
     }
   }
 
+  // Basically calls `predictProposerHead`. If the result is not same as blockRoot's block, return true else false
+  // See https://github.com/ethereum/consensus-specs/blob/a94d85bb3b33f84a5830eb98945b790b02ae80e8/specs/bellatrix/fork-choice.md#should_override_forkchoice_update
+  // Return true if the given block passes all criteria to be re-orged out
+  // Return false otherwise.
+  // Note when proposer boost reorg is disabled, it always returns false
+  shouldOverrideForkChoiceUpdate(currentSlot: Slot, blockRoot: RootHex): ShouldOverrideForkChoiceUpdateResult {
+    const headBlock = this.getBlockHex(blockRoot);
+    if (headBlock === null) {
+      // should not happen beacause this block just got imported. Fall back to no-reorg.
+      return {shouldOverrideFcu: false};
+    }
+    // Skip re-org attempt if proposer boost (reorg) are disabled
+    if (!this.opts?.proposerBoost || !this.opts?.proposerBoostReorg) {
+      this.logger?.verbose("Skip shouldOverrideForkChoiceUpdate check since the related flags are disabled");
+      return {shouldOverrideFcu: false};
+    }
+
+    const parentBlock = this.protoArray.getBlock(headBlock.parentRoot);
+    const proposalSlot = headBlock.slot + 1;
+
+    // No reorg if parentBlock isn't available
+    if (parentBlock === undefined) {
+      return {shouldOverrideFcu: false};
+    }
+
+    const {prelimProposerHead} = this.getPreliminaryProposerHead(headBlock, parentBlock, proposalSlot);
+
+    if (prelimProposerHead === headBlock) {
+      return {shouldOverrideFcu: false};
+    }
+
+    const currentTimeOk = headBlock.slot === currentSlot;
+    if (!currentTimeOk) {
+      return {shouldOverrideFcu: false};
+    }
+
+    this.logger?.info(`Block ${blockRoot} is weak. Should override forkchoice update`);
+    return {shouldOverrideFcu: true, parentBlock};
+  }
+
   /**
    * Get the proposer boost root
    */
@@ -239,7 +280,6 @@ export class ForkChoice implements IForkChoice {
    *
    * By calling this function, we assume we are the proposer of next slot
    *
-   * https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/bellatrix/fork-choice.md#should_override_forkchoice_update
    */
   predictProposerHead(headBlock: ProtoBlock, currentSlot?: Slot): ProtoBlock {
     // Skip re-org attempt if proposer boost (reorg) are disabled
@@ -248,28 +288,24 @@ export class ForkChoice implements IForkChoice {
       return headBlock;
     }
 
-    const parentBlock = this.protoArray.getBlock(headBlock.parentRoot);
-    const proposalSlot = headBlock.slot + 1;
+    if (headBlock.slot === currentSlot) {
+      // If head block aka the head cache is current, that means `updateHead` is called during gossip handling,
+      // that can only happen if shouldOverrideForkChoiceUpdate = false so no reorg
+      return headBlock;
+    }
+
     currentSlot = currentSlot ?? this.fcStore.currentSlot;
 
-    // No reorg if parentBlock isn't available
-    if (parentBlock === undefined) {
-      return headBlock;
+    // TODO: Maybe add a transcient flag in ProtoBlock to flag `shouldOverrideFcu` block when importing
+    // so we don't need to call shouldOverrideForkChoiceUpdate again.
+    const result = this.shouldOverrideForkChoiceUpdate(currentSlot, headBlock.blockRoot);
+
+    if (result.shouldOverrideFcu) {
+      this.logger?.info("Current head is weak. Predicting next block to be built on parent of head");
+      return result.parentBlock;
     }
 
-    const {prelimProposerHead} = this.getPreliminaryProposerHead(headBlock, parentBlock, proposalSlot);
-
-    if (prelimProposerHead === headBlock) {
-      return headBlock;
-    }
-
-    const currentTimeOk = headBlock.slot === currentSlot;
-    if (!currentTimeOk) {
-      return headBlock;
-    }
-
-    this.logger?.info("Current head is weak. Predicting next block to be built on parent of head");
-    return parentBlock;
+    return headBlock;
   }
 
   /**

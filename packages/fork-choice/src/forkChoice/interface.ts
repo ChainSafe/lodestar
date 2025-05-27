@@ -76,6 +76,10 @@ export type ForkChoiceMetrics = {
   indices: number;
 };
 
+export type ShouldOverrideForkChoiceUpdateResult =
+  | {shouldOverrideFcu: true; parentBlock: ProtoBlock}
+  | {shouldOverrideFcu: false};
+
 export interface IForkChoice {
   irrecoverableError?: Error;
 
@@ -107,6 +111,7 @@ export interface IForkChoice {
     isHeadTimely?: boolean;
     notReorgedReason?: NotReorgedReason;
   };
+  shouldOverrideForkChoiceUpdate(slot: Slot, blockRoot: RootHex): ShouldOverrideForkChoiceUpdateResult;
   /**
    * Retrieves all possible chain heads (leaves of fork choice tree).
    */
