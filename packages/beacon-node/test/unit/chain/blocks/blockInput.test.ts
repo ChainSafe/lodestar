@@ -2,9 +2,8 @@ import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ForkName, ForkPostCapella, ForkPostDeneb} from "@lodestar/params";
 import {computeStartSlotAtEpoch, signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {SignedBeaconBlock, deneb, ssz} from "@lodestar/types";
-import {KZGCommitment} from "@lodestar/types/lib/deneb/sszTypes";
 import {toRootHex} from "@lodestar/utils";
-import {beforeAll, describe, expect, it} from "vitest";
+import {describe, expect, it} from "vitest";
 import {
   AddBlob,
   AddBlock,
@@ -55,7 +54,7 @@ type BlockAndBlobTestSet<F extends ForkPostDeneb = ForkPostDeneb> = BlockTestSet
 };
 function buildBlockAndBlobsTestSet(forkName: ForkPostDeneb, numberOfBlobs: number): BlockAndBlobTestSet<ForkPostDeneb> {
   const {block, blockRoot, rootHex} = buildBlockTestSet<ForkPostDeneb>(forkName);
-  const commitments = Array.from({length: numberOfBlobs}, Buffer.alloc(48, 0x77));
+  const commitments = Array.from({length: numberOfBlobs}, () => Buffer.alloc(48, 0x77));
   block.message.body.blobKzgCommitments = commitments;
   const signedBlockHeader = signedBlockToSignedHeader(config, block);
   const blobSidecars: deneb.BlobSidecars = [];
@@ -118,7 +117,7 @@ describe("BlockInput", () => {
         const testArray: TestCaseArray[] = [];
         for (let i = 0; i < blobsBeforeBlock; i++) {
           const blobSidecar = blobSidecars.shift();
-          if (blobSidecar) throw new Error("must have blobSidecar to add to TestCaseArray");
+          if (!blobSidecar) throw new Error("must have blobSidecar to add to TestCaseArray");
           testArray.push({
             blobSidecar,
             blockRootHex: rootHex,
@@ -133,7 +132,10 @@ describe("BlockInput", () => {
           blockRootHex: rootHex,
           daOutOfRange: false,
           forkName: ForkName.deneb,
-          source: BlockInputSource.gossip,
+          source: {
+            source: BlockInputSource.gossip,
+            seenTimestampSec: Date.now(),
+          },
         } as AddBlock<ForkBlobsDA> & CreateBlockInputMeta);
         for (const blobSidecar of blobSidecars) {
           testArray.push({
@@ -148,20 +150,22 @@ describe("BlockInput", () => {
 
         let blockInput: BlockInputBlobs;
         let testCaseEntry = testArray.shift();
+        if (!testCaseEntry) throw new Error("undefined testCaseEntry state. debug unit test");
         if ("block" in testCaseEntry) {
           blockInput = BlockInputBlobs.createFromBlock(testCaseEntry);
           expect(blockInput.hasBlock()).toBeTruthy();
           expect(blockInput.hasBlob(0)).toBeFalsy();
-          expect(blockInput.hasAllData()).toBeFalsy();
-        } else {
-          blockInput = BlockInputBlobs.createFromBlob(testCaseEntry as AddBlob & CreateBlockInputMeta);
-          expect(blockInput.hasBlock()).toBeFalsy();
-          expect(blockInput.hasBlob(0)).toBeTruthy();
-          if (blobCount === 1) {
+          if (blobCount === 0) {
             expect(blockInput.hasAllData()).toBeTruthy();
           } else {
             expect(blockInput.hasAllData()).toBeFalsy();
           }
+        } else {
+          blockInput = BlockInputBlobs.createFromBlob(testCaseEntry as AddBlob & CreateBlockInputMeta);
+          expect(blockInput.hasBlock()).toBeFalsy();
+          expect(blockInput.hasBlob(0)).toBeTruthy();
+          // expect falsy here because block/blobCount not known yet
+          expect(blockInput.hasAllData()).toBeFalsy();
         }
 
         for (testCaseEntry of testArray) {

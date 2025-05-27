@@ -372,6 +372,7 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
 
     this.state = {
       ...this.state,
+      hasBlock: true,
       hasAllData,
       block,
       versionedHashes: block.message.body.blobKzgCommitments.map(kzgCommitmentToVersionedHash),
