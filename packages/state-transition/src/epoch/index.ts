@@ -138,6 +138,7 @@ export function processEpoch(
       processPendingDeposits(stateElectra, cache);
       timer?.();
     }
+    metrics?.pendingDeposits.set(stateElectra.pendingDeposits.length);
 
     {
       const timer = metrics?.epochTransitionStepTime.startTimer({
@@ -146,6 +147,7 @@ export function processEpoch(
       processPendingConsolidations(stateElectra, cache);
       timer?.();
     }
+    metrics?.pendingConsolidations.set(stateElectra.pendingConsolidations.length);
   }
 
   {
