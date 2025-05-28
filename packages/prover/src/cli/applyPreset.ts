@@ -1,10 +1,23 @@
 // MUST import this file first before anything and not import any Lodestar code.
-
 import {setHasher} from "@chainsafe/persistent-merkle-tree";
-import {hasher} from "@chainsafe/persistent-merkle-tree/hasher/hashtree";
+import {hasher as asSha256Hasher} from "@chainsafe/persistent-merkle-tree/hasher/as-sha256";
+import {hasher as hashtreeHasher} from "@chainsafe/persistent-merkle-tree/hasher/hashtree";
+import CpuFeatures from "cpu-features";
 
 // without setting this first, persistent-merkle-tree will use noble instead
-setHasher(hasher);
+const cpuFeatures = CpuFeatures();
+if (
+  cpuFeatures.arch === "x86" &&
+  !(cpuFeatures.flags.avx || cpuFeatures.flags.avx2 || cpuFeatures.flags.avx512f || cpuFeatures.flags.avx512vl)
+) {
+  // biome-ignore lint/suspicious/noConsole: let consumer know that the default hasher is not supported
+  console.log(
+    "Hashtree hasher is preferred but the CPU architecture does not support AVX, AVX2 or the correct AVX512 instruction sets. Falling back to as-sha256 hasher instead."
+  );
+  setHasher(asSha256Hasher);
+} else {
+  setHasher(hashtreeHasher);
+}
 
 //
 // ## Rationale
