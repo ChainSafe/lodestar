@@ -19,6 +19,12 @@ export function renderJsonSpec(config: ChainConfig): routes.config.Spec {
   const configJson = chainConfigToJson(config);
   const presetJson = presetToJson(activePreset);
   const constantsJson = specValuesToJson(specConstants);
+
+  // TODO Fulu: remove this check once interop issues are resolved
+  if (config.FULU_FORK_EPOCH === Infinity) {
+    delete configJson.BLOB_SCHEDULE;
+  }
+
   return {...configJson, ...presetJson, ...constantsJson};
 }
 

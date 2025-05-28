@@ -29,7 +29,6 @@ export function getConfig(fork: ForkName, forkEpoch = 0): ChainForkConfig {
         BELLATRIX_FORK_EPOCH: 0,
         CAPELLA_FORK_EPOCH: 0,
         DENEB_FORK_EPOCH: forkEpoch,
-        BLOB_SCHEDULE: [{EPOCH: forkEpoch, MAX_BLOBS_PER_BLOCK: 6}],
       });
     case ForkName.electra:
       return createChainForkConfig({
@@ -38,10 +37,6 @@ export function getConfig(fork: ForkName, forkEpoch = 0): ChainForkConfig {
         CAPELLA_FORK_EPOCH: 0,
         DENEB_FORK_EPOCH: 0,
         ELECTRA_FORK_EPOCH: forkEpoch,
-        BLOB_SCHEDULE: [
-          {EPOCH: 0, MAX_BLOBS_PER_BLOCK: 6},
-          {EPOCH: forkEpoch, MAX_BLOBS_PER_BLOCK: 9},
-        ],
       });
     case ForkName.fulu:
       return createChainForkConfig({
@@ -51,10 +46,7 @@ export function getConfig(fork: ForkName, forkEpoch = 0): ChainForkConfig {
         DENEB_FORK_EPOCH: 0,
         ELECTRA_FORK_EPOCH: 0,
         FULU_FORK_EPOCH: forkEpoch,
-        BLOB_SCHEDULE: [
-          {EPOCH: 0, MAX_BLOBS_PER_BLOCK: 6},
-          {EPOCH: 0, MAX_BLOBS_PER_BLOCK: 9},
-        ],
+        BLOB_SCHEDULE: [],
       });
   }
 }

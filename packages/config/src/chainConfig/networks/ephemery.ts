@@ -54,12 +54,7 @@ const baseChainConfig: ChainConfig = {
 
   // Blob Scheduling
   // ---------------------------------------------------------------
-  BLOB_SCHEDULE: [
-    // Deneb
-    {EPOCH: 0, MAX_BLOBS_PER_BLOCK: 6},
-    // Electra
-    {EPOCH: 10, MAX_BLOBS_PER_BLOCK: 9},
-  ],
+  BLOB_SCHEDULE: [],
 };
 
 // Reset interval (7 days) in milliseconds, based on ephemery-genesis values.env:
