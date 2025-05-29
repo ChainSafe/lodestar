@@ -1,11 +1,10 @@
 import {BitVectorType, ContainerType, ListBasicType, ListCompositeType, VectorCompositeType} from "@chainsafe/ssz";
 import {
+  CURRENT_SYNC_COMMITTEE_GINDEX,
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
   FINALIZED_ROOT_GINDEX,
-  FINALIZED_ROOT_DEPTH,
-  CURRENT_SYNC_COMMITTEE_GINDEX,
-  NEXT_SYNC_COMMITTEE_GINDEX,
   HISTORICAL_ROOTS_LIMIT,
+  NEXT_SYNC_COMMITTEE_GINDEX,
   SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SIZE,
   SYNC_COMMITTEE_SUBNET_COUNT,
@@ -22,7 +21,7 @@ const {
   SubcommitteeIndex,
   ValidatorIndex,
   Root,
-  BLSPubkey,  
+  BLSPubkey,
   BLSSignature,
   ParticipationFlags,
 } = primitiveSsz;
@@ -37,10 +36,10 @@ export const FinalityBranch = new VectorCompositeType(Bytes32, floorlog2(FINALIZ
 
 export const CurrentSyncCommitteeBranch = new VectorCompositeType(Bytes32, floorlog2(CURRENT_SYNC_COMMITTEE_GINDEX));
 
-export const NextSyncCommitteeBranch = new VectorCompositeType(Bytes32,floorlog2(NEXT_SYNC_COMMITTEE_GINDEX));
+export const NextSyncCommitteeBranch = new VectorCompositeType(Bytes32, floorlog2(NEXT_SYNC_COMMITTEE_GINDEX));
 
 export const Metadata = new ContainerType(
-  { 
+  {
     seqNumber: UintBn64,
     attnets: phase0Ssz.AttestationSubnets,
     syncnets: SyncSubnets,

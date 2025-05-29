@@ -1,11 +1,11 @@
 import {ContainerType, ListCompositeType, VectorCompositeType} from "@chainsafe/ssz";
 import {
+  BLOCK_BODY_EXECUTION_PAYLOAD_GINDEX,
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
   HISTORICAL_ROOTS_LIMIT,
   MAX_BLS_TO_EXECUTION_CHANGES,
   MAX_WITHDRAWALS_PER_PAYLOAD,
   SLOTS_PER_EPOCH,
-  BLOCK_BODY_EXECUTION_PAYLOAD_GINDEX,
 } from "@lodestar/params";
 import {ssz as altairSsz} from "../altair/index.js";
 import {ssz as bellatrixSsz} from "../bellatrix/index.js";
@@ -25,7 +25,6 @@ const {
   UintBn256,
   Bytes32,
 } = primitiveSsz;
-
 
 function floorlog2(num: number): number {
   return Math.floor(Math.log2(num));
