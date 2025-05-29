@@ -1,4 +1,4 @@
-import {digest} from "@chainsafe/as-sha256";
+import crypto from "node:crypto";
 import {RPC} from "@chainsafe/libp2p-gossipsub/message";
 import {DataTransform} from "@chainsafe/libp2p-gossipsub/types";
 import {Message} from "@libp2p/interface";
@@ -63,7 +63,7 @@ export function msgIdFn(gossipTopicCache: GossipTopicCache, msg: Message): Uint8
     vec = [MESSAGE_DOMAIN_VALID_SNAPPY, intToBytes(msg.topic.length, 8), Buffer.from(msg.topic), msg.data];
   }
 
-  return digest(Buffer.concat(vec)).subarray(0, 20);
+  return crypto.createHash("sha256").update(Buffer.concat(vec)).digest().subarray(0, 20);
 }
 
 export class DataTransformSnappy implements DataTransform {
