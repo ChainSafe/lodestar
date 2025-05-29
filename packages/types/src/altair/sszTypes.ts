@@ -2,6 +2,7 @@ import {BitVectorType, ContainerType, ListBasicType, ListCompositeType, VectorCo
 import {
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
   FINALIZED_ROOT_GINDEX,
+  FINALIZED_ROOT_DEPTH,
   CURRENT_SYNC_COMMITTEE_GINDEX,
   NEXT_SYNC_COMMITTEE_GINDEX,
   HISTORICAL_ROOTS_LIMIT,
@@ -26,13 +27,17 @@ const {
   ParticipationFlags,
 } = primitiveSsz;
 
+function floorlog2(num: number): number {
+  return Math.floor(Math.log2(num));
+}
+
 export const SyncSubnets = new BitVectorType(SYNC_COMMITTEE_SUBNET_COUNT);
 
-export const FinalityBranch = new VectorCompositeType(Bytes32, FINALIZED_ROOT_GINDEX);
+export const FinalityBranch = new VectorCompositeType(Bytes32, floorlog2(FINALIZED_ROOT_GINDEX));
 
-export const CurrentSyncCommitteeBranch = new VectorCompositeType(Bytes32, CURRENT_SYNC_COMMITTEE_GINDEX);
+export const CurrentSyncCommitteeBranch = new VectorCompositeType(Bytes32, floorlog2(CURRENT_SYNC_COMMITTEE_GINDEX));
 
-export const NextSyncCommitteeBranch = new VectorCompositeType(Bytes32, NEXT_SYNC_COMMITTEE_GINDEX);
+export const NextSyncCommitteeBranch = new VectorCompositeType(Bytes32,floorlog2(NEXT_SYNC_COMMITTEE_GINDEX));
 
 export const Metadata = new ContainerType(
   { 

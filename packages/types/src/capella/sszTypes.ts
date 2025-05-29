@@ -5,7 +5,7 @@ import {
   MAX_BLS_TO_EXECUTION_CHANGES,
   MAX_WITHDRAWALS_PER_PAYLOAD,
   SLOTS_PER_EPOCH,
-  EXECUTION_PAYLOAD_GINDEX,
+  BLOCK_BODY_EXECUTION_PAYLOAD_GINDEX,
 } from "@lodestar/params";
 import {ssz as altairSsz} from "../altair/index.js";
 import {ssz as bellatrixSsz} from "../bellatrix/index.js";
@@ -26,7 +26,12 @@ const {
   Bytes32,
 } = primitiveSsz;
 
-export const ExecutionBranch = new VectorCompositeType(Bytes32, EXECUTION_PAYLOAD_GINDEX);
+
+function floorlog2(num: number): number {
+  return Math.floor(Math.log2(num));
+}
+
+export const ExecutionBranch = new VectorCompositeType(Bytes32, floorlog2(BLOCK_BODY_EXECUTION_PAYLOAD_GINDEX));
 
 export const Withdrawal = new ContainerType(
   {

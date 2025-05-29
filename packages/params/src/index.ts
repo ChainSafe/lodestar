@@ -233,6 +233,13 @@ export const BLOCK_BODY_EXECUTION_PAYLOAD_INDEX = 9;
 
 /**
  * ```ts
+ * config.types.altair.BeaconState.getPathGindex(["currentSyncCommittee"])
+ * ```
+ */
+export const CURRENT_SYNC_COMMITTEE_GINDEX = 54;
+
+/**
+ * ```ts
  * config.types.altair.BeaconState.getPathGindex(["nextSyncCommittee"])
  * ```
  */
