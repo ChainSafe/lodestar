@@ -593,6 +593,7 @@ export function getValidatorApi(
 
     // Defer common block body production to make sure we sent async builder and engine requests before
     const deferredBlockBody = defer<CommonBlockBody>();
+    const commonBlockBodyPromise = deferredBlockBody.promise;
 
     // Calculate cutoff time based on start of the slot
     const cutoffMs = Math.max(0, BLOCK_PRODUCTION_RACE_CUTOFF_MS - Math.round(chain.clock.secFromSlot(slot) * 1000));
@@ -613,7 +614,7 @@ export function getValidatorApi(
           feeRecipient,
           // can't do fee recipient checks as builder bid doesn't return feeRecipient as of now
           strictFeeRecipientCheck: false,
-          commonBlockBodyPromise: deferredBlockBody.promise,
+          commonBlockBodyPromise,
           parentBlockRoot,
         })
       : Promise.reject(new Error("Builder disabled"));
@@ -622,7 +623,7 @@ export function getValidatorApi(
       ? produceEngineFullBlockOrContents(slot, randaoReveal, graffitiBytes, {
           feeRecipient,
           strictFeeRecipientCheck,
-          commonBlockBodyPromise: deferredBlockBody.promise,
+          commonBlockBodyPromise,
           parentBlockRoot,
         }).then((engineBlock) => {
           // Once the engine returns a block, in the event of either:
@@ -648,8 +649,8 @@ export function getValidatorApi(
       }),
       chain
         .produceCommonBlockBody({slot, parentBlockRoot, randaoReveal, graffiti: graffitiBytes})
-        .then((body) => {
-          deferredBlockBody.resolve(body);
+        .then((commonBlockBody) => {
+          deferredBlockBody.resolve(commonBlockBody);
           logger.debug("Produced common block body", loggerContext);
         })
         .catch(deferredBlockBody.reject),
