@@ -166,7 +166,7 @@ export class SyncContributionAndProofPool {
         participationCount += contribution.numParticipants;
       }
       poolMetrics.subnetsByBlockRoot.set({index}, contributionsBySubnet.size);
-      poolMetrics.participationsByBlockRoot.set({index}, participationCount);
+      poolMetrics.participantsByBlockRoot.set({index}, participationCount);
       index++;
     }
   }
@@ -232,7 +232,7 @@ export function aggregate(
     signatures.push(signatureFromBytesNoCheck(bestContribution.syncSubcommitteeSignature));
   }
 
-  metrics?.opPool.syncContributionAndProofPool.getAggregateParticipations.set(participationCount);
+  metrics?.opPool.syncContributionAndProofPool.getAggregateParticipants.set(participationCount);
   return {
     syncCommitteeBits,
     syncCommitteeSignature: aggregateSignatures(signatures).toBytes(),

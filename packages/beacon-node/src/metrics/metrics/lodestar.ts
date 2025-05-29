@@ -945,9 +945,9 @@ export function createLodestarMetrics(
           help: "Total number of subnets per block root in SyncContributionAndProofPool",
           labelNames: ["index"],
         }),
-        participationsByBlockRoot: register.gauge<{index: number}>({
-          name: "lodestar_oppool_sync_contribution_and_proof_pool_participations_by_block_root_total",
-          help: "Total number of participations per block root in SyncContributionAndProofPool",
+        participantsByBlockRoot: register.gauge<{index: number}>({
+          name: "lodestar_oppool_sync_contribution_and_proof_pool_participants_by_block_root_total",
+          help: "Total number of participants per block root in SyncContributionAndProofPool",
           labelNames: ["index"],
         }),
         getAggregateRoots: register.gauge({
@@ -958,9 +958,9 @@ export function createLodestarMetrics(
           name: "lodestar_oppool_sync_contribution_and_proof_pool_get_aggregate_subnets_total",
           help: "Total number of subnets in SyncContributionAndProofPool.getAggregate(slot, root)",
         }),
-        getAggregateParticipations: register.gauge({
-          name: "lodestar_oppool_sync_contribution_and_proof_pool_get_aggregate_participations_total",
-          help: "Total number of participations in SyncContributionAndProofPool.getAggregate(slot, root)",
+        getAggregateParticipants: register.gauge({
+          name: "lodestar_oppool_sync_contribution_and_proof_pool_get_aggregate_participants_total",
+          help: "Total number of participants in SyncContributionAndProofPool.getAggregate(slot, root)",
         }),
         getAggregateReturnsEmpty: register.gauge({
           name: "lodestar_oppool_sync_contribution_and_proof_pool_get_aggregate_returns_empty_total",
