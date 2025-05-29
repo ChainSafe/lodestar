@@ -117,7 +117,7 @@ export class SyncContributionAndProofPool {
    */
   getAggregate(slot: Slot, prevBlockRoot: Root): altair.SyncAggregate {
     const opPoolMetrics = this.metrics?.opPool.syncContributionAndProofPool;
-    const bestContributionBySubnetByRoot = this.bestContributionBySubnetRootBySlot.get(slot) ?? new Map();
+    const bestContributionBySubnetByRoot = this.bestContributionBySubnetRootBySlot.getOrDefault(slot);
     opPoolMetrics?.getAggregateRoots.set(bestContributionBySubnetByRoot.size);
     const prevBlockRootHex = toRootHex(prevBlockRoot);
     const bestContributionBySubnet = bestContributionBySubnetByRoot.get(prevBlockRootHex) ?? new Map();

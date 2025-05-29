@@ -923,7 +923,7 @@ export function createLodestarMetrics(
       }),
       syncContributionAndProofPool: {
         size: register.gauge({
-          name: "lodestar_oppool_sync_contribution_and_proof_pool_pool_size",
+          name: "lodestar_oppool_sync_contribution_and_proof_pool_size",
           help: "Current size of the SyncContributionAndProofPool unique by slot subnet and block root",
         }),
         gossipInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
