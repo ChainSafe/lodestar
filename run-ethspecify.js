@@ -58,6 +58,19 @@ while ((match = entryRegex.exec(specRefContent)) !== null) {
   });
 }
 
+// Add validation for @SPEC tags
+const missingSpecTags = [];
+specRefEntries.forEach(ref => {
+  if (!specReferencesContent.includes(`@SPEC ${ref.component}`)) {
+    missingSpecTags.push(ref.component);
+  }
+});
+
+if (missingSpecTags.length > 0) {
+  console.log('\nWarning: Missing @SPEC tags for:');
+  missingSpecTags.forEach(component => console.log(`- ${component}`));
+}
+
 // Add each spec reference to the HTML content
 specRefEntries.forEach(ref => {
   htmlContent += `
@@ -86,34 +99,42 @@ console.log(`Created temporary HTML file with ${specRefEntries.length} spec refe
 try {
   console.log('Running ethspecify...');
   // Make sure the virtual environment is activated if needed
-  const ethspecifyCommand = `source ethspecify_env/bin/activate && ethspecify --path "${tempDir}"`;
+  const ethspecifyCommand = `source ethspecify_env/bin/activate && ethspecify process --path "${tempDir}"`;
   const stdout = execSync(ethspecifyCommand, { stdio: 'inherit' });
-  
+
   // Read the updated HTML file to extract updated spec tags
   const updatedHtml = fs.readFileSync(tempHtmlPath, 'utf8');
-  
+
   // Extract updated spec tags using regex
   const updatedTags = [];
   const tagRegex = /<spec[^>]*>/g;
   let tagMatch;
-  
+
   while ((tagMatch = tagRegex.exec(updatedHtml)) !== null) {
     updatedTags.push(tagMatch[0]);
   }
-  
+
   console.log('\nUpdated spec tags:');
   updatedTags.forEach(tag => {
     console.log(tag);
   });
-  
+
   // Generate a report of changes
   console.log('\nSpec Reference Report:');
   console.log('======================');
   console.log(`Total references: ${specRefEntries.length}`);
   console.log(`Updated tags: ${updatedTags.length}`);
-  
-  // TODO: Update the spec-references.ts file with the new hash values if needed
-  
+
+  // @SPEC Tag Validation
+  console.log('\n@SPEC Tag Validation:');
+  console.log('=====================');
+  if (missingSpecTags.length === 0) {
+    console.log('All components have @SPEC tags');
+  } else {
+    console.log(`Missing @SPEC tags for ${missingSpecTags.length} components`);
+  }
+
+
 } catch (error) {
   console.error(`Error running ethspecify: ${error}`);
 } finally {
