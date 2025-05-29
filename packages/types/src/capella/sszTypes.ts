@@ -1,11 +1,11 @@
 import {ContainerType, ListCompositeType, VectorCompositeType} from "@chainsafe/ssz";
 import {
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
-  BLOCK_BODY_EXECUTION_PAYLOAD_DEPTH as EXECUTION_PAYLOAD_DEPTH,
   HISTORICAL_ROOTS_LIMIT,
   MAX_BLS_TO_EXECUTION_CHANGES,
   MAX_WITHDRAWALS_PER_PAYLOAD,
   SLOTS_PER_EPOCH,
+  EXECUTION_PAYLOAD_GINDEX,
 } from "@lodestar/params";
 import {ssz as altairSsz} from "../altair/index.js";
 import {ssz as bellatrixSsz} from "../bellatrix/index.js";
@@ -25,6 +25,8 @@ const {
   UintBn256,
   Bytes32,
 } = primitiveSsz;
+
+export const ExecutionBranch = new VectorCompositeType(Bytes32, EXECUTION_PAYLOAD_GINDEX);
 
 export const Withdrawal = new ContainerType(
   {
@@ -206,7 +208,7 @@ export const LightClientHeader = new ContainerType(
   {
     beacon: phase0Ssz.BeaconBlockHeader,
     execution: ExecutionPayloadHeader,
-    executionBranch: new VectorCompositeType(Bytes32, EXECUTION_PAYLOAD_DEPTH),
+    executionBranch: ExecutionBranch,
   },
   {typeName: "LightClientHeader", jsonCase: "eth2"}
 );
