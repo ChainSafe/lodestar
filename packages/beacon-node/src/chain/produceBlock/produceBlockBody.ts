@@ -159,10 +159,11 @@ export async function produceBlockBody<T extends BlockType>(
         : "default";
 
     Object.assign(logMeta, {feeRecipientType, feeRecipient});
-    if (!this.executionBuilder) throw Error("Execution Builder not available");
-    const executionBuilder = this.executionBuilder;
 
     if (blockType === BlockType.Blinded) {
+      if (!this.executionBuilder) throw Error("Execution Builder not available");
+      const executionBuilder = this.executionBuilder;
+
       const builderPromise = (async () => {
         // This path will not be used in the production, but is here just for merge mock
         // tests because merge-mock requires an fcU to be issued prior to fetch payload
