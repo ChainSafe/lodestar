@@ -68,7 +68,6 @@ import {
 } from "../../../chain/errors/index.js";
 import {ChainEvent, CheckpointHex, CommonBlockBody, CommonBlockBodyFn} from "../../../chain/index.js";
 import {SCHEDULER_LOOKAHEAD_FACTOR} from "../../../chain/prepareNextSlot.js";
-import {BlockAttributes} from "../../../chain/produceBlock/index.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
 import {validateApiAggregateAndProof} from "../../../chain/validation/index.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
