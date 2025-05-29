@@ -1,5 +1,11 @@
 import {routes} from "@lodestar/api";
-import {AncestorStatus, EpochDifference, ForkChoiceError, ForkChoiceErrorCode} from "@lodestar/fork-choice";
+import {
+  AncestorStatus,
+  EpochDifference,
+  ForkChoiceError,
+  ForkChoiceErrorCode,
+  NotReorgedReason,
+} from "@lodestar/fork-choice";
 import {ForkPostAltair, ForkSeq, INTERVALS_PER_SLOT, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   CachedBeaconStateAltair,
@@ -215,23 +221,39 @@ export async function importBlock(
 
   // Suppress fcu call if this is true
   let shouldOverrideFcu = false;
+  let shouldOverrideFcuReason = NotReorgedReason.Unknown;
 
   if (opts.isGossipBlock && isExecutionStateType(postState)) {
-    const proposerIndex = postState.epochCtx.getBeaconProposer(blockSlot + 1);
-    const feeRecipient = this.beaconProposerCache.get(proposerIndex);
+    try {
+      const proposerIndex = postState.epochCtx.getBeaconProposer(blockSlot + 1);
+      const feeRecipient = this.beaconProposerCache.get(proposerIndex);
 
-    if (feeRecipient) {
-      // We would set this to true if
-      //  1) This is a gossip block
-      //  2) We are proposer of next slot
-      //  3) Proposer boost reorg related flag is turned on (this is checked inside the function)
-      //  4) Block meets the criteria of being re-orged out (this is also checked inside the function)
-      shouldOverrideFcu = this.shouldOverrideForkChoiceUpdate(this.clock.currentSlot, blockSummary.blockRoot);
+      if (feeRecipient) {
+        // We would set this to true if
+        //  1) This is a gossip block
+        //  2) We are proposer of next slot
+        //  3) Proposer boost reorg related flag is turned on (this is checked inside the function)
+        //  4) Block meets the criteria of being re-orged out (this is also checked inside the function)
+        const result = this.forkChoice.shouldOverrideForkChoiceUpdate(this.clock.currentSlot, blockSummary.blockRoot);
+        shouldOverrideFcu = result.shouldOverrideFcu;
+        if (!result.shouldOverrideFcu) {
+          shouldOverrideFcuReason = result.reason;
+        }
+      }
+    } catch (e) {
+      this.logger.warn("Unable to get beacon proposer. Do not override fcu.", {slot: blockSlot + 1}, e as Error);
     }
   }
 
   if (shouldOverrideFcu) {
-    this.logger.verbose("Weak block detected. Skip fcu call in importBlock", {blockRoot: blockRootHex});
+    if (this.metrics) {
+      this.metrics.importBlock.notOverrideFcuReason.inc({reason: shouldOverrideFcuReason});
+    } else {
+      this.logger.verbose("Weak block detected. Skip fcu call in importBlock", {
+        blockRoot: blockRootHex,
+        reason: shouldOverrideFcuReason,
+      });
+    }
   }
 
   if (newHead.blockRoot !== oldHead.blockRoot) {

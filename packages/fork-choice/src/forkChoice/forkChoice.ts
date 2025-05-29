@@ -233,12 +233,12 @@ export class ForkChoice implements IForkChoice {
     const headBlock = this.getBlockHex(blockRoot);
     if (headBlock === null) {
       // should not happen beacause this block just got imported. Fall back to no-reorg.
-      return {shouldOverrideFcu: false};
+      return {shouldOverrideFcu: false, reason: NotReorgedReason.HeadBlockNotAvailable};
     }
     // Skip re-org attempt if proposer boost (reorg) are disabled
     if (!this.opts?.proposerBoost || !this.opts?.proposerBoostReorg) {
       this.logger?.verbose("Skip shouldOverrideForkChoiceUpdate check since the related flags are disabled");
-      return {shouldOverrideFcu: false};
+      return {shouldOverrideFcu: false, reason: NotReorgedReason.ProposerBoostReorgDisabled};
     }
 
     const parentBlock = this.protoArray.getBlock(headBlock.parentRoot);
@@ -246,18 +246,22 @@ export class ForkChoice implements IForkChoice {
 
     // No reorg if parentBlock isn't available
     if (parentBlock === undefined) {
-      return {shouldOverrideFcu: false};
+      return {shouldOverrideFcu: false, reason: NotReorgedReason.ParentBlockNotAvailable};
     }
 
-    const {prelimProposerHead} = this.getPreliminaryProposerHead(headBlock, parentBlock, proposalSlot);
+    const {prelimProposerHead, prelimNotReorgedReason} = this.getPreliminaryProposerHead(
+      headBlock,
+      parentBlock,
+      proposalSlot
+    );
 
     if (prelimProposerHead === headBlock) {
-      return {shouldOverrideFcu: false};
+      return {shouldOverrideFcu: false, reason: prelimNotReorgedReason ?? NotReorgedReason.Unknown};
     }
 
     const currentTimeOk = headBlock.slot === currentSlot;
     if (!currentTimeOk) {
-      return {shouldOverrideFcu: false};
+      return {shouldOverrideFcu: false, reason: NotReorgedReason.ReorgMoreThanOneSlot};
     }
 
     this.logger?.verbose("Block is weak. Should override forkchoice update", {blockRoot});
