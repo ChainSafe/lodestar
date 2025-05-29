@@ -212,7 +212,7 @@ describe("api/validator - produceBlockV3", () => {
       slot,
       parentBlockRoot,
       feeRecipient,
-      commonBlockBodyFn: expect.any(Function),
+      commonBlockBodyPromise: expect.any(Object),
     });
 
     // check that no feeRecipient is passed to produceBlock so that produceBlockBody will
@@ -224,7 +224,7 @@ describe("api/validator - produceBlockV3", () => {
       slot,
       parentBlockRoot,
       feeRecipient: undefined,
-      commonBlockBodyFn: expect.any(Function),
+      commonBlockBodyPromise: expect.any(Object),
     });
   });
 

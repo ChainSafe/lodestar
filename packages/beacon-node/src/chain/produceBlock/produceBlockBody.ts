@@ -46,7 +46,7 @@ import {
 } from "../../execution/index.js";
 import {fromGraffitiBytes} from "../../util/graffiti.js";
 import type {BeaconChain} from "../chain.js";
-import {CommonBlockBody, CommonBlockBodyFn} from "../interface.js";
+import {CommonBlockBody} from "../interface.js";
 import {validateBlobsAndKzgCommitments} from "./validateBlobsAndKzgCommitments.js";
 
 // Time to provide the EL to generate a payload from new payload id
@@ -109,7 +109,7 @@ export async function produceBlockBody<T extends BlockType>(
     parentSlot: Slot;
     proposerIndex: ValidatorIndex;
     proposerPubKey: BLSPubkey;
-    commonBlockBodyFn?: CommonBlockBodyFn;
+    commonBlockBodyPromise?: Promise<CommonBlockBody>;
   }
 ): Promise<{
   body: AssembledBodyType<T>;
@@ -123,7 +123,7 @@ export async function produceBlockBody<T extends BlockType>(
     parentBlockRoot,
     proposerIndex,
     proposerPubKey,
-    commonBlockBodyFn,
+    commonBlockBodyPromise,
   } = blockAttr;
   // Type-safe for blobs variable. Translate 'null' value into 'preDeneb' enum
   // TODO: Not ideal, but better than just using null.
@@ -188,7 +188,7 @@ export async function produceBlockBody<T extends BlockType>(
 
       const [builderRes, commonBlockBody] = await Promise.all([
         builderPromise,
-        commonBlockBodyFn?.() ?? produceCommonBlockBody.call(this, blockType, currentState, blockAttr),
+        commonBlockBodyPromise ?? produceCommonBlockBody.call(this, blockType, currentState, blockAttr),
       ]);
       blockBody = Object.assign({}, commonBlockBody) as AssembledBodyType<BlockType.Blinded>;
 
@@ -325,7 +325,7 @@ export async function produceBlockBody<T extends BlockType>(
 
       const [engineRes, commonBlockBody] = await Promise.all([
         enginePromise,
-        commonBlockBodyFn?.() ?? produceCommonBlockBody.call(this, blockType, currentState, blockAttr),
+        commonBlockBodyPromise ?? produceCommonBlockBody.call(this, blockType, currentState, blockAttr),
       ]);
       blockBody = Object.assign({}, commonBlockBody) as AssembledBodyType<BlockType.Blinded>;
 
@@ -383,7 +383,7 @@ export async function produceBlockBody<T extends BlockType>(
       }
     }
   } else {
-    const commonBlockBody = await (commonBlockBodyFn?.() ??
+    const commonBlockBody = await (commonBlockBodyPromise ??
       produceCommonBlockBody.call(this, blockType, currentState, blockAttr));
     blockBody = Object.assign({}, commonBlockBody) as AssembledBodyType<T>;
     blobsResult = {type: BlobsResultType.preDeneb};

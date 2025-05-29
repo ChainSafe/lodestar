@@ -199,13 +199,13 @@ export interface IBeaconChain {
   getContents(beaconBlock: deneb.BeaconBlock): deneb.Contents;
 
   produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody>;
-  produceBlock(blockAttributes: BlockAttributes & {commonBlockBodyFn?: CommonBlockBodyFn}): Promise<{
+  produceBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise?: Promise<CommonBlockBody>}): Promise<{
     block: BeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Wei;
     shouldOverrideBuilder?: boolean;
   }>;
-  produceBlindedBlock(blockAttributes: BlockAttributes & {commonBlockBodyFn?: CommonBlockBodyFn}): Promise<{
+  produceBlindedBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise?: Promise<CommonBlockBody>}): Promise<{
     block: BlindedBeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Wei;
@@ -274,4 +274,3 @@ export type SSZObjectType =
 export type CommonBlockBody = phase0.BeaconBlockBody &
   Pick<capella.BeaconBlockBody, "blsToExecutionChanges"> &
   Pick<altair.BeaconBlockBody, "syncAggregate">;
-export type CommonBlockBodyFn = () => Promise<CommonBlockBody>;

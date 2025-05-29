@@ -66,7 +66,7 @@ import {
   SyncCommitteeError,
   SyncCommitteeErrorCode,
 } from "../../../chain/errors/index.js";
-import {ChainEvent, CheckpointHex, CommonBlockBody, CommonBlockBodyFn} from "../../../chain/index.js";
+import {ChainEvent, CheckpointHex, CommonBlockBody} from "../../../chain/index.js";
 import {SCHEDULER_LOOKAHEAD_FACTOR} from "../../../chain/prepareNextSlot.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
 import {validateApiAggregateAndProof} from "../../../chain/validation/index.js";
@@ -404,10 +404,10 @@ export function getValidatorApi(
     graffiti: Bytes32,
     // as of now fee recipient checks can not be performed because builder does not return bid recipient
     {
-      commonBlockBodyFn,
+      commonBlockBodyPromise,
       parentBlockRoot,
     }: Omit<routes.validator.ExtraProduceBlockOpts, "builderSelection"> & {
-      commonBlockBodyFn: CommonBlockBodyFn;
+      commonBlockBodyPromise: Promise<CommonBlockBody>;
       parentBlockRoot: Root;
     }
   ): Promise<ProduceBlindedBlockRes> {
@@ -435,7 +435,7 @@ export function getValidatorApi(
         parentBlockRoot,
         randaoReveal,
         graffiti,
-        commonBlockBodyFn,
+        commonBlockBodyPromise,
       });
 
       metrics?.blockProductionSuccess.inc({source});
@@ -465,10 +465,10 @@ export function getValidatorApi(
     {
       feeRecipient,
       strictFeeRecipientCheck,
-      commonBlockBodyFn,
+      commonBlockBodyPromise,
       parentBlockRoot,
     }: Omit<routes.validator.ExtraProduceBlockOpts, "builderSelection"> & {
-      commonBlockBodyFn: CommonBlockBodyFn;
+      commonBlockBodyPromise: Promise<CommonBlockBody>;
       parentBlockRoot: Root;
     }
   ): Promise<ProduceBlockOrContentsRes & {shouldOverrideBuilder?: boolean}> {
@@ -484,7 +484,7 @@ export function getValidatorApi(
         randaoReveal,
         graffiti,
         feeRecipient,
-        commonBlockBodyFn,
+        commonBlockBodyPromise,
       });
       const version = config.getForkName(block.slot);
       if (strictFeeRecipientCheck && feeRecipient && isForkPostBellatrix(version)) {
@@ -593,7 +593,6 @@ export function getValidatorApi(
 
     // Defer common block body production to make sure we sent async builder and engine requests before
     const deferredBlockBody = defer<CommonBlockBody>();
-    const commonBlockBodyFn: CommonBlockBodyFn = () => deferredBlockBody.promise;
 
     // Calculate cutoff time based on start of the slot
     const cutoffMs = Math.max(0, BLOCK_PRODUCTION_RACE_CUTOFF_MS - Math.round(chain.clock.secFromSlot(slot) * 1000));
@@ -614,7 +613,7 @@ export function getValidatorApi(
           feeRecipient,
           // can't do fee recipient checks as builder bid doesn't return feeRecipient as of now
           strictFeeRecipientCheck: false,
-          commonBlockBodyFn,
+          commonBlockBodyPromise: deferredBlockBody.promise,
           parentBlockRoot,
         })
       : Promise.reject(new Error("Builder disabled"));
@@ -623,7 +622,7 @@ export function getValidatorApi(
       ? produceEngineFullBlockOrContents(slot, randaoReveal, graffitiBytes, {
           feeRecipient,
           strictFeeRecipientCheck,
-          commonBlockBodyFn,
+          commonBlockBodyPromise: deferredBlockBody.promise,
           parentBlockRoot,
         }).then((engineBlock) => {
           // Once the engine returns a block, in the event of either:
