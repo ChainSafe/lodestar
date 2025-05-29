@@ -1,5 +1,6 @@
 import {fromHex, toHex} from "@lodestar/utils";
 import {
+  BlobSchedule,
   BlobScheduleEntry,
   ChainConfig,
   SpecJson,
@@ -103,45 +104,7 @@ export function serializeSpecValue(
 
 export function deserializeSpecValue(valueStr: unknown, typeName: SpecValueTypeName, keyName: string): SpecValue {
   if (typeName === "blob_schedule") {
-    if (!Array.isArray(valueStr)) {
-      throw Error(`Invalid BLOB_SCHEDULE value ${valueStr} expected array`);
-    }
-
-    const blobSchedule = valueStr.map((entry, i) => {
-      if (typeof entry !== "object" || entry === null) {
-        throw Error(`Invalid BLOB_SCHEDULE[${i}] entry ${entry} expected object`);
-      }
-
-      const out = {} as BlobScheduleEntry;
-
-      for (const key of ["EPOCH", "MAX_BLOBS_PER_BLOCK"] as Array<keyof BlobScheduleEntry>) {
-        const value = entry[key];
-
-        if (value === undefined) {
-          throw Error(`Invalid BLOB_SCHEDULE[${i}] entry ${JSON.stringify(entry)} missing ${key}`);
-        }
-
-        if (typeof value !== "string") {
-          throw Error(`Invalid BLOB_SCHEDULE[${i}].${key} value ${value} expected string`);
-        }
-
-        if (value === MAX_UINT64_JSON) {
-          out[key] = Infinity;
-        } else {
-          const parsed = parseInt(value, 10);
-
-          if (Number.isNaN(parsed)) {
-            throw Error(`Invalid BLOB_SCHEDULE[${i}].${key} value ${value} expected number`);
-          }
-
-          out[key] = parsed;
-        }
-      }
-
-      return out;
-    });
-
-    return blobSchedule;
+    return deserializeBlobSchedule(valueStr);
   }
 
   if (typeof valueStr !== "string") {
@@ -164,4 +127,46 @@ export function deserializeSpecValue(valueStr: unknown, typeName: SpecValueTypeN
     case "string":
       return valueStr;
   }
+}
+
+export function deserializeBlobSchedule(input: unknown): BlobSchedule {
+  if (!Array.isArray(input)) {
+    throw Error(`Invalid BLOB_SCHEDULE value ${input} expected array`);
+  }
+
+  const blobSchedule = input.map((entry, i) => {
+    if (typeof entry !== "object" || entry === null) {
+      throw Error(`Invalid BLOB_SCHEDULE[${i}] entry ${entry} expected object`);
+    }
+
+    const out = {} as BlobScheduleEntry;
+
+    for (const key of ["EPOCH", "MAX_BLOBS_PER_BLOCK"] as Array<keyof BlobScheduleEntry>) {
+      const value = entry[key];
+
+      if (value === undefined) {
+        throw Error(`Invalid BLOB_SCHEDULE[${i}] entry ${JSON.stringify(entry)} missing ${key}`);
+      }
+
+      if (typeof value !== "string") {
+        throw Error(`Invalid BLOB_SCHEDULE[${i}].${key} value ${value} expected string`);
+      }
+
+      if (value === MAX_UINT64_JSON) {
+        out[key] = Infinity;
+      } else {
+        const parsed = parseInt(value, 10);
+
+        if (Number.isNaN(parsed)) {
+          throw Error(`Invalid BLOB_SCHEDULE[${i}].${key} value ${value} expected number`);
+        }
+
+        out[key] = parsed;
+      }
+    }
+
+    return out;
+  });
+
+  return blobSchedule;
 }

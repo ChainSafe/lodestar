@@ -102,7 +102,7 @@
     "@chainsafe/prometheus-gc-stats": "^1.0.0",
     "@chainsafe/pubkey-index-map": "^3.0.0",
     "@chainsafe/ssz": "^1.2.0",
-    "@chainsafe/threads": "^1.11.1",
+    "@chainsafe/threads": "^1.11.2",
     "@ethersproject/abi": "^5.7.0",
     "@fastify/bearer-auth": "^10.0.1",
     "@fastify/cors": "^10.0.1",

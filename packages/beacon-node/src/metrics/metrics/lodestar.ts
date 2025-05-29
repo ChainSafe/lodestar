@@ -1,3 +1,4 @@
+import {BlockInputSource} from "../../chain/blocks/blockInput/index.js";
 import {BlobsSource, BlockSource} from "../../chain/blocks/types.js";
 import {JobQueueItemType} from "../../chain/bls/index.js";
 import {AttestationErrorCode, BlockErrorCode} from "../../chain/errors/index.js";
@@ -1198,6 +1199,30 @@ export function createLodestarMetrics(
           name: "lodestar_seen_cache_attestation_data_reject_total",
           help: "Total number of attestation data rejected in SeenAttestationData",
           labelNames: ["reason"],
+        }),
+      },
+      blockInput: {
+        blockInputCount: register.gauge({
+          name: "lodestar_seen_block_input_cache_size",
+          help: "Number of cached BlockInputs",
+        }),
+        duplicateBlockCount: register.gauge<{source: BlockInputSource}>({
+          name: "lodestar_seen_block_input_cache_duplicate_block_count",
+          help: "Total number of duplicate blocks that pass validation and attempt to be cached but are known",
+          labelNames: ["source"],
+        }),
+        duplicateBlobCount: register.gauge<{source: BlockInputSource}>({
+          name: "lodestar_seen_block_input_cache_duplicate_blob_count",
+          help: "Total number of duplicate blobs that pass validation and attempt to be cached but are known",
+          labelNames: ["source"],
+        }),
+        createdByBlock: register.gauge({
+          name: "lodestar_seen_block_input_cache_items_created_by_block",
+          help: "Number of BlockInputs created via a block being seen first",
+        }),
+        createdByBlob: register.gauge({
+          name: "lodestar_seen_block_input_cache_items_created_by_blob",
+          help: "Number of BlockInputs created via a blob being seen first",
         }),
       },
     },
