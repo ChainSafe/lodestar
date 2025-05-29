@@ -50,6 +50,7 @@ import {
 } from "@lodestar/types";
 import {
   TimeoutError,
+  defer,
   formatWeiToEth,
   fromHex,
   prettyWeiToEth,
@@ -590,22 +591,10 @@ export function getValidatorApi(
     };
 
     logger.verbose("Assembling block with produceEngineOrBuilderBlock", loggerContext);
-    let commonBlockBodyPromise: Promise<CommonBlockBody> | null = null;
-    const commonBlockBodyFn: CommonBlockBodyFn = () => {
-      if (!commonBlockBodyPromise) {
-        const blockAttributes: BlockAttributes = {
-          slot,
-          parentBlockRoot,
-          randaoReveal,
-          graffiti: graffitiBytes,
-        };
-        commonBlockBodyPromise = chain.produceCommonBlockBody(blockAttributes).then((resp) => {
-          logger.debug("Produced common block body", loggerContext);
-          return resp;
-        });
-      }
-      return commonBlockBodyPromise;
-    };
+
+    // Defer common block body production to make sure we sent async builder and engine requests before
+    const deferredBlockBody = defer<CommonBlockBody>();
+    const commonBlockBodyFn: CommonBlockBodyFn = () => deferredBlockBody.promise;
 
     // Calculate cutoff time based on start of the slot
     const cutoffMs = Math.max(0, BLOCK_PRODUCTION_RACE_CUTOFF_MS - Math.round(chain.clock.secFromSlot(slot) * 1000));
@@ -653,11 +642,20 @@ export function getValidatorApi(
         })
       : Promise.reject(new Error("Engine disabled"));
 
-    const [builder, engine] = await resolveOrRacePromises([builderPromise, enginePromise], {
-      resolveTimeoutMs: cutoffMs,
-      raceTimeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
-      signal: controller.signal,
-    });
+    const [[builder, engine]] = await Promise.all([
+      resolveOrRacePromises([builderPromise, enginePromise], {
+        resolveTimeoutMs: cutoffMs,
+        raceTimeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
+        signal: controller.signal,
+      }),
+      chain
+        .produceCommonBlockBody({slot, parentBlockRoot, randaoReveal, graffiti: graffitiBytes})
+        .then((body) => {
+          deferredBlockBody.resolve(body);
+          logger.debug("Produced common block body", loggerContext);
+        })
+        .catch(deferredBlockBody.reject),
+    ]);
 
     if (builder.status === "pending" && engine.status === "pending") {
       throw Error("Builder and engine both failed to produce the block within timeout");
