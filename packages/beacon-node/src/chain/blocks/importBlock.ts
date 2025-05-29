@@ -13,6 +13,7 @@ import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   isExecutionStateType,
+  isStartSlotOfEpoch,
   isStateValidatorsNodesPopulated,
 } from "@lodestar/state-transition";
 import {BeaconBlock, altair, capella, ssz} from "@lodestar/types";
@@ -241,7 +242,11 @@ export async function importBlock(
         }
       }
     } catch (e) {
-      this.logger.warn("Unable to get beacon proposer. Do not override fcu.", {slot: blockSlot + 1}, e as Error);
+      if (isStartSlotOfEpoch(blockSlot + 1)) {
+        shouldOverrideFcuReason = NotReorgedReason.NotShufflingStable;
+      } else {
+        this.logger.warn("Unable to get beacon proposer. Do not override fcu.", {slot: blockSlot + 1}, e as Error);
+      }
     }
   }
 
