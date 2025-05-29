@@ -13,7 +13,7 @@ import {multiaddr} from "@multiformats/multiaddr";
 import {formatNodePeer} from "../../api/impl/node/utils.js";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {ClockEvent, IClock} from "../../util/clock.js";
-import {peerIdFromString, peerIdToString} from "../../util/peerId.js";
+import {PeerIdStr, peerIdFromString, peerIdToString} from "../../util/peerId.js";
 import {Discv5Worker} from "../discv5/index.js";
 import {NetworkEventBus} from "../events.js";
 import {FORK_EPOCH_LOOKAHEAD, getActiveForks} from "../forks.js";
@@ -33,7 +33,7 @@ import {CommitteeSubscription, IAttnetsService} from "../subnets/interface.js";
 import {SyncnetsService} from "../subnets/syncnetsService.js";
 import {getConnectionsMap} from "../util.js";
 import {NetworkCoreMetrics, createNetworkCoreMetrics} from "./metrics.js";
-import {INetworkCore, MultiaddrStr, PeerIdStr} from "./types.js";
+import {INetworkCore, MultiaddrStr} from "./types.js";
 
 type Mods = {
   libp2p: Libp2p;

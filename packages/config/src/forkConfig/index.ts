@@ -138,15 +138,32 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
       }
       return sszTypesFor(forkName);
     },
-    getMaxBlobsPerBlock(fork: ForkName): number {
+    getMaxBlobsPerBlock(epoch: Epoch): number {
+      const fork = this.getForkInfoAtEpoch(epoch).name;
+
       switch (fork) {
-        case ForkName.fulu:
-          return config.MAX_BLOBS_PER_BLOCK_FULU;
         case ForkName.electra:
           return config.MAX_BLOBS_PER_BLOCK_ELECTRA;
-        default:
+        case ForkName.deneb:
           return config.MAX_BLOBS_PER_BLOCK;
       }
+
+      // Sort by epoch in descending order to find the latest applicable value
+      const blobSchedule = [...config.BLOB_SCHEDULE].sort((a, b) => {
+        if (a.EPOCH !== b.EPOCH) {
+          return b.EPOCH - a.EPOCH;
+        }
+        return b.MAX_BLOBS_PER_BLOCK - a.MAX_BLOBS_PER_BLOCK;
+      });
+
+      for (const entry of blobSchedule) {
+        if (epoch >= entry.EPOCH) {
+          return entry.MAX_BLOBS_PER_BLOCK;
+        }
+      }
+
+      // Only for testing. Should never reach this line on a public network.
+      return config.MAX_BLOBS_PER_BLOCK_ELECTRA;
     },
     getMaxRequestBlobSidecars(fork: ForkName): number {
       return isForkPostElectra(fork) ? config.MAX_REQUEST_BLOB_SIDECARS_ELECTRA : config.MAX_REQUEST_BLOB_SIDECARS;

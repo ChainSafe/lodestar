@@ -192,7 +192,7 @@ export class BeaconNode {
     const validatorMonitor =
       opts.metrics.enabled || opts.validatorMonitor.validatorMonitorLogs
         ? createValidatorMonitor(
-            metrics,
+            metrics?.register ?? null,
             config,
             anchorState.genesisTime,
             logger.child({module: LoggerModule.vmon}),

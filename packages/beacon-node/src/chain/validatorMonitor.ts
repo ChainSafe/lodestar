@@ -7,6 +7,7 @@ import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   getBlockRootAtSlot,
+  getCurrentSlot,
   parseAttesterFlags,
   parseParticipationFlags,
 } from "@lodestar/state-transition";
@@ -15,7 +16,7 @@ import {Epoch, Slot, ValidatorIndex} from "@lodestar/types";
 import {IndexedAttestation, SignedAggregateAndProof} from "@lodestar/types";
 import {LogData, LogHandler, LogLevel, Logger, MapDef, MapDefMax, toRootHex} from "@lodestar/utils";
 import {GENESIS_SLOT} from "../constants/constants.js";
-import {Metrics} from "../metrics/index.js";
+import {RegistryMetricCreator} from "../metrics/index.js";
 
 /** The validator monitor collects per-epoch data about each monitored validator.
  * Historical data will be kept around for `HISTORIC_EPOCHS` before it is pruned.
@@ -46,7 +47,7 @@ export type ValidatorMonitor = {
     isActivePrevEpoch: boolean[],
     balances?: number[]
   ): void;
-  registerBeaconBlock(src: OpSource, seenTimestampSec: Seconds, block: BeaconBlock): void;
+  registerBeaconBlock(src: OpSource, delaySec: Seconds, block: BeaconBlock): void;
   registerBlobSidecar(src: OpSource, seenTimestampSec: Seconds, blob: deneb.BlobSidecar): void;
   registerImportedBlock(block: BeaconBlock, data: {proposerBalanceDelta: number}): void;
   onPoolSubmitUnaggregatedAttestation(
@@ -261,7 +262,7 @@ type MonitoredValidator = {
 };
 
 export function createValidatorMonitor(
-  metrics: Metrics | null,
+  metricsRegister: RegistryMetricCreator | null,
   config: ChainForkConfig,
   genesisTime: number,
   logger: Logger,
@@ -294,7 +295,9 @@ export function createValidatorMonitor(
 
   let lastRegisteredStatusEpoch = -1;
 
-  return {
+  const validatorMonitorMetrics = metricsRegister ? createValidatorMonitorMetrics(metricsRegister) : null;
+
+  const validatorMonitor: ValidatorMonitor = {
     registerLocalValidator(index) {
       validators.getOrDefault(index).lastRegisteredTimeMs = Date.now();
     },
@@ -333,28 +336,28 @@ export function createValidatorMonitor(
         );
 
         if (summary.isPrevSourceAttester) {
-          metrics?.validatorMonitor.prevEpochOnChainSourceAttesterHit.inc();
+          validatorMonitorMetrics?.prevEpochOnChainSourceAttesterHit.inc();
         } else {
-          metrics?.validatorMonitor.prevEpochOnChainSourceAttesterMiss.inc();
+          validatorMonitorMetrics?.prevEpochOnChainSourceAttesterMiss.inc();
         }
         if (summary.isPrevHeadAttester) {
-          metrics?.validatorMonitor.prevEpochOnChainHeadAttesterHit.inc();
+          validatorMonitorMetrics?.prevEpochOnChainHeadAttesterHit.inc();
         } else {
-          metrics?.validatorMonitor.prevEpochOnChainHeadAttesterMiss.inc();
+          validatorMonitorMetrics?.prevEpochOnChainHeadAttesterMiss.inc();
         }
         if (summary.isPrevTargetAttester) {
-          metrics?.validatorMonitor.prevEpochOnChainTargetAttesterHit.inc();
+          validatorMonitorMetrics?.prevEpochOnChainTargetAttesterHit.inc();
         } else {
-          metrics?.validatorMonitor.prevEpochOnChainTargetAttesterMiss.inc();
+          validatorMonitorMetrics?.prevEpochOnChainTargetAttesterMiss.inc();
         }
 
         const prevEpochSummary = monitoredValidator.summaries.get(previousEpoch);
         const attestationCorrectHead = prevEpochSummary?.attestationCorrectHead;
         if (attestationCorrectHead !== null && attestationCorrectHead !== undefined) {
           if (attestationCorrectHead) {
-            metrics?.validatorMonitor.prevOnChainAttesterCorrectHead.inc();
+            validatorMonitorMetrics?.prevOnChainAttesterCorrectHead.inc();
           } else {
-            metrics?.validatorMonitor.prevOnChainAttesterIncorrectHead.inc();
+            validatorMonitorMetrics?.prevOnChainAttesterIncorrectHead.inc();
           }
         }
 
@@ -369,15 +372,15 @@ export function createValidatorMonitor(
               : null;
 
         if (inclusionDistance !== null) {
-          metrics?.validatorMonitor.prevEpochOnChainInclusionDistance.observe(inclusionDistance);
-          metrics?.validatorMonitor.prevEpochOnChainAttesterHit.inc();
+          validatorMonitorMetrics?.prevEpochOnChainInclusionDistance.observe(inclusionDistance);
+          validatorMonitorMetrics?.prevEpochOnChainAttesterHit.inc();
         } else {
-          metrics?.validatorMonitor.prevEpochOnChainAttesterMiss.inc();
+          validatorMonitorMetrics?.prevEpochOnChainAttesterMiss.inc();
         }
 
         const balance = balances?.[index];
         if (balance !== undefined) {
-          metrics?.validatorMonitor.prevEpochOnChainBalance.set({index}, balance);
+          validatorMonitorMetrics?.prevEpochOnChainBalance.set({index}, balance);
         }
 
         if (!summary.isPrevSourceAttester || !summary.isPrevTargetAttester || !summary.isPrevHeadAttester) {
@@ -394,14 +397,12 @@ export function createValidatorMonitor(
       }
     },
 
-    registerBeaconBlock(src, seenTimestampSec, block) {
+    registerBeaconBlock(src, delaySec, block) {
       const validator = validators.get(block.proposerIndex);
       // Returns the delay between the start of `block.slot` and `seenTimestamp`.
-      const delaySec = seenTimestampSec - (genesisTime + block.slot * config.SECONDS_PER_SLOT);
-      metrics?.gossipBlock.elapsedTimeTillReceived.observe(delaySec);
       if (validator) {
-        metrics?.validatorMonitor.beaconBlockTotal.inc({src});
-        metrics?.validatorMonitor.beaconBlockDelaySeconds.observe({src}, delaySec);
+        validatorMonitorMetrics?.beaconBlockTotal.inc({src});
+        validatorMonitorMetrics?.beaconBlockDelaySeconds.observe({src}, delaySec);
 
         const summary = getEpochSummary(validator, computeEpochAtSlot(block.slot));
         summary.blockProposals.push({
@@ -420,7 +421,7 @@ export function createValidatorMonitor(
     registerImportedBlock(block, {proposerBalanceDelta}) {
       const validator = validators.get(block.proposerIndex);
       if (validator) {
-        metrics?.validatorMonitor.proposerBalanceDeltaKnown.observe(proposerBalanceDelta);
+        validatorMonitorMetrics?.proposerBalanceDeltaKnown.observe(proposerBalanceDelta);
 
         // There should be alredy a summary for the block. Could be missing when using one VC multiple BNs
         const summary = getEpochSummary(validator, computeEpochAtSlot(block.slot));
@@ -445,8 +446,8 @@ export function createValidatorMonitor(
       for (const index of indexedAttestation.attestingIndices) {
         const validator = validators.get(index);
         if (validator) {
-          metrics?.validatorMonitor.unaggregatedAttestationSubmittedSentPeers.observe(sentPeers);
-          metrics?.validatorMonitor.unaggregatedAttestationDelaySeconds.observe({src: OpSource.api}, delaySec);
+          validatorMonitorMetrics?.unaggregatedAttestationSubmittedSentPeers.observe(sentPeers);
+          validatorMonitorMetrics?.unaggregatedAttestationDelaySeconds.observe({src: OpSource.api}, delaySec);
           log("Published unaggregated attestation", {
             validator: index,
             slot: data.slot,
@@ -479,8 +480,8 @@ export function createValidatorMonitor(
       for (const index of indexedAttestation.attestingIndices) {
         const validator = validators.get(index);
         if (validator) {
-          metrics?.validatorMonitor.unaggregatedAttestationTotal.inc({src});
-          metrics?.validatorMonitor.unaggregatedAttestationDelaySeconds.observe({src}, delaySec);
+          validatorMonitorMetrics?.unaggregatedAttestationTotal.inc({src});
+          validatorMonitorMetrics?.unaggregatedAttestationDelaySeconds.observe({src}, delaySec);
           const summary = getEpochSummary(validator, epoch);
           summary.attestations += 1;
           summary.attestationMinDelay = Math.min(delaySec, summary.attestationMinDelay ?? Infinity);
@@ -496,7 +497,7 @@ export function createValidatorMonitor(
       for (const index of indexedAttestation.attestingIndices) {
         const validator = validators.get(index);
         if (validator) {
-          metrics?.validatorMonitor.aggregatedAttestationDelaySeconds.observe({src: OpSource.api}, delaySec);
+          validatorMonitorMetrics?.aggregatedAttestationDelaySeconds.observe({src: OpSource.api}, delaySec);
           log("Published aggregated attestation", {
             validator: index,
             slot: data.slot,
@@ -523,8 +524,8 @@ export function createValidatorMonitor(
       const aggregatorIndex = signedAggregateAndProof.message.aggregatorIndex;
       const validatorAggregator = validators.get(aggregatorIndex);
       if (validatorAggregator) {
-        metrics?.validatorMonitor.aggregatedAttestationTotal.inc({src});
-        metrics?.validatorMonitor.aggregatedAttestationDelaySeconds.observe({src}, delaySec);
+        validatorMonitorMetrics?.aggregatedAttestationTotal.inc({src});
+        validatorMonitorMetrics?.aggregatedAttestationDelaySeconds.observe({src}, delaySec);
         const summary = getEpochSummary(validatorAggregator, epoch);
         summary.aggregates += 1;
         summary.aggregateMinDelay = Math.min(delaySec, summary.aggregateMinDelay ?? Infinity);
@@ -533,8 +534,8 @@ export function createValidatorMonitor(
       for (const index of indexedAttestation.attestingIndices) {
         const validator = validators.get(index);
         if (validator) {
-          metrics?.validatorMonitor.attestationInAggregateTotal.inc({src});
-          metrics?.validatorMonitor.attestationInAggregateDelaySeconds.observe({src}, delaySec);
+          validatorMonitorMetrics?.attestationInAggregateTotal.inc({src});
+          validatorMonitorMetrics?.attestationInAggregateDelaySeconds.observe({src}, delaySec);
           const summary = getEpochSummary(validator, epoch);
           summary.attestationAggregateInclusions += 1;
           log("Attestation is included in aggregate", {
@@ -571,9 +572,9 @@ export function createValidatorMonitor(
       for (const index of indexedAttestation.attestingIndices) {
         const validator = validators.get(index);
         if (validator) {
-          metrics?.validatorMonitor.attestationInBlockTotal.inc();
-          metrics?.validatorMonitor.attestationInBlockDelaySlots.observe(delay);
-          metrics?.validatorMonitor.attestationInBlockParticipants.observe(participants);
+          validatorMonitorMetrics?.attestationInBlockTotal.inc();
+          validatorMonitorMetrics?.attestationInBlockDelaySlots.observe(delay);
+          validatorMonitorMetrics?.attestationInBlockParticipants.observe(participants);
 
           const summary = getEpochSummary(validator, epoch);
           summary.attestationBlockInclusions += 1;
@@ -617,7 +618,7 @@ export function createValidatorMonitor(
       for (const index of syncCommitteeParticipantIndices) {
         const validator = validators.get(index);
         if (validator) {
-          metrics?.validatorMonitor.syncSignatureInAggregateTotal.inc();
+          validatorMonitorMetrics?.syncSignatureInAggregateTotal.inc();
 
           const summary = getEpochSummary(validator, epoch);
           summary.syncSignatureAggregateInclusions += 1;
@@ -677,7 +678,7 @@ export function createValidatorMonitor(
           const flags = parseParticipationFlags(previousEpochParticipation.get(index));
           const attestationSummary = validator.attestations.get(prevEpoch)?.get(prevEpochTargetRoot);
           const summary = renderAttestationSummary(config, rootCache, attestationSummary, flags);
-          metrics?.validatorMonitor.prevEpochAttestationSummary.inc({summary});
+          validatorMonitorMetrics?.prevEpochAttestationSummary.inc({summary});
           log("Previous epoch attestation", {
             validator: index,
             epoch: prevEpoch,
@@ -695,7 +696,7 @@ export function createValidatorMonitor(
             const epochSummary = validator.summaries.get(prevEpoch);
             const proposalSlot = SLOTS_PER_EPOCH * prevEpoch + slotIndex;
             const summary = renderBlockProposalSummary(config, rootCache, epochSummary, proposalSlot);
-            metrics?.validatorMonitor.prevEpochBlockProposalSummary.inc({summary});
+            validatorMonitorMetrics?.prevEpochBlockProposalSummary.inc({summary});
             log("Previous epoch block proposal", {
               validator: validatorIndex,
               slot: proposalSlot,
@@ -712,7 +713,7 @@ export function createValidatorMonitor(
      * Should be called whenever Prometheus is scraping.
      */
     scrapeMetrics(slotClock) {
-      metrics?.validatorMonitor.validatorsConnected.set(validators.size);
+      validatorMonitorMetrics?.validatorsConnected.set(validators.size);
 
       const epoch = computeEpochAtSlot(slotClock);
       const slotInEpoch = slotClock % SLOTS_PER_EPOCH;
@@ -729,12 +730,12 @@ export function createValidatorMonitor(
       const previousEpoch = slotInEpoch > MIN_ATTESTATION_INCLUSION_DELAY + 3 ? epoch - 1 : epoch - 2;
 
       // reset() to mimic the behaviour of an aggregated .set({index})
-      metrics?.validatorMonitor.prevEpochAttestations.reset();
-      metrics?.validatorMonitor.prevEpochAttestationsMinDelaySeconds.reset();
-      metrics?.validatorMonitor.prevEpochAttestationAggregateInclusions.reset();
-      metrics?.validatorMonitor.prevEpochAttestationBlockInclusions.reset();
-      metrics?.validatorMonitor.prevEpochAttestationBlockMinInclusionDistance.reset();
-      metrics?.validatorMonitor.prevEpochSyncSignatureAggregateInclusions.reset();
+      validatorMonitorMetrics?.prevEpochAttestations.reset();
+      validatorMonitorMetrics?.prevEpochAttestationsMinDelaySeconds.reset();
+      validatorMonitorMetrics?.prevEpochAttestationAggregateInclusions.reset();
+      validatorMonitorMetrics?.prevEpochAttestationBlockInclusions.reset();
+      validatorMonitorMetrics?.prevEpochAttestationBlockMinInclusionDistance.reset();
+      validatorMonitorMetrics?.prevEpochSyncSignatureAggregateInclusions.reset();
 
       let validatorsInSyncCommittee = 0;
       let prevEpochSyncCommitteeHits = 0;
@@ -754,28 +755,28 @@ export function createValidatorMonitor(
         }
 
         // Attestations
-        metrics?.validatorMonitor.prevEpochAttestations.observe(summary.attestations);
+        validatorMonitorMetrics?.prevEpochAttestations.observe(summary.attestations);
         if (summary.attestationMinDelay !== null)
-          metrics?.validatorMonitor.prevEpochAttestationsMinDelaySeconds.observe(summary.attestationMinDelay);
-        metrics?.validatorMonitor.prevEpochAttestationAggregateInclusions.observe(
+          validatorMonitorMetrics?.prevEpochAttestationsMinDelaySeconds.observe(summary.attestationMinDelay);
+        validatorMonitorMetrics?.prevEpochAttestationAggregateInclusions.observe(
           summary.attestationAggregateInclusions
         );
-        metrics?.validatorMonitor.prevEpochAttestationBlockInclusions.observe(summary.attestationBlockInclusions);
+        validatorMonitorMetrics?.prevEpochAttestationBlockInclusions.observe(summary.attestationBlockInclusions);
         if (summary.attestationMinBlockInclusionDistance !== null) {
-          metrics?.validatorMonitor.prevEpochAttestationBlockMinInclusionDistance.observe(
+          validatorMonitorMetrics?.prevEpochAttestationBlockMinInclusionDistance.observe(
             summary.attestationMinBlockInclusionDistance
           );
         }
 
         // Blocks
-        metrics?.validatorMonitor.prevEpochBeaconBlocks.observe(summary.blocks);
+        validatorMonitorMetrics?.prevEpochBeaconBlocks.observe(summary.blocks);
         if (summary.blockMinDelay !== null)
-          metrics?.validatorMonitor.prevEpochBeaconBlocksMinDelaySeconds.observe(summary.blockMinDelay);
+          validatorMonitorMetrics?.prevEpochBeaconBlocksMinDelaySeconds.observe(summary.blockMinDelay);
 
         // Aggregates
-        metrics?.validatorMonitor.prevEpochAggregatesTotal.observe(summary.aggregates);
+        validatorMonitorMetrics?.prevEpochAggregatesTotal.observe(summary.aggregates);
         if (summary.aggregateMinDelay !== null)
-          metrics?.validatorMonitor.prevEpochAggregatesMinDelaySeconds.observe(summary.aggregateMinDelay);
+          validatorMonitorMetrics?.prevEpochAggregatesMinDelaySeconds.observe(summary.aggregateMinDelay);
 
         // Sync committee
         prevEpochSyncCommitteeHits += summary.syncCommitteeHits;
@@ -783,17 +784,25 @@ export function createValidatorMonitor(
 
         // Only observe if included in sync committee to prevent distorting metrics
         if (validatorInSyncCommittee) {
-          metrics?.validatorMonitor.prevEpochSyncSignatureAggregateInclusions.observe(
+          validatorMonitorMetrics?.prevEpochSyncSignatureAggregateInclusions.observe(
             summary.syncSignatureAggregateInclusions
           );
         }
       }
 
-      metrics?.validatorMonitor.validatorsInSyncCommittee.set(validatorsInSyncCommittee);
-      metrics?.validatorMonitor.prevEpochSyncCommitteeHits.set(prevEpochSyncCommitteeHits);
-      metrics?.validatorMonitor.prevEpochSyncCommitteeMisses.set(prevEpochSyncCommitteeMisses);
+      validatorMonitorMetrics?.validatorsInSyncCommittee.set(validatorsInSyncCommittee);
+      validatorMonitorMetrics?.prevEpochSyncCommitteeHits.set(prevEpochSyncCommitteeHits);
+      validatorMonitorMetrics?.prevEpochSyncCommitteeMisses.set(prevEpochSyncCommitteeMisses);
     },
   };
+
+  // Register a single collect() function to run all validatorMonitor metrics
+  validatorMonitorMetrics?.validatorsConnected.addCollect(() => {
+    const clockSlot = getCurrentSlot(config, genesisTime);
+    validatorMonitor.scrapeMetrics(clockSlot);
+  });
+
+  return validatorMonitor;
 }
 
 /**
@@ -1060,4 +1069,222 @@ export class RootHexCache {
     }
     return root;
   }
+}
+
+function createValidatorMonitorMetrics(register: RegistryMetricCreator) {
+  return {
+    validatorsConnected: register.gauge({
+      name: "validator_monitor_validators",
+      help: "Count of validators that are specifically monitored by this beacon node",
+    }),
+
+    validatorsInSyncCommittee: register.gauge({
+      name: "validator_monitor_validators_in_sync_committee",
+      help: "Count of validators monitored by this beacon node that are part of sync committee",
+    }),
+
+    // Validator Monitor Metrics (per-epoch summaries)
+    // Only track prevEpochOnChainBalance per index
+    prevEpochOnChainBalance: register.gauge<{index: number}>({
+      name: "validator_monitor_prev_epoch_on_chain_balance",
+      help: "Balance of validator after an epoch",
+      labelNames: ["index"],
+    }),
+    prevEpochOnChainAttesterHit: register.gauge({
+      name: "validator_monitor_prev_epoch_on_chain_attester_hit_total",
+      help: "Incremented if validator's submitted attestation is included in some blocks",
+    }),
+    prevEpochOnChainAttesterMiss: register.gauge({
+      name: "validator_monitor_prev_epoch_on_chain_attester_miss_total",
+      help: "Incremented if validator's submitted attestation is not included in any blocks",
+    }),
+    prevEpochOnChainSourceAttesterHit: register.gauge({
+      name: "validator_monitor_prev_epoch_on_chain_source_attester_hit_total",
+      help: "Incremented if the validator is flagged as a previous epoch source attester during per epoch processing",
+    }),
+    prevEpochOnChainSourceAttesterMiss: register.gauge({
+      name: "validator_monitor_prev_epoch_on_chain_source_attester_miss_total",
+      help: "Incremented if the validator is not flagged as a previous epoch source attester during per epoch processing",
+    }),
+    prevEpochOnChainHeadAttesterHit: register.gauge({
+      name: "validator_monitor_prev_epoch_on_chain_head_attester_hit_total",
+      help: "Incremented if the validator is flagged as a previous epoch head attester during per epoch processing",
+    }),
+    prevEpochOnChainHeadAttesterMiss: register.gauge({
+      name: "validator_monitor_prev_epoch_on_chain_head_attester_miss_total",
+      help: "Incremented if the validator is not flagged as a previous epoch head attester during per epoch processing",
+    }),
+    prevOnChainAttesterCorrectHead: register.gauge({
+      name: "validator_monitor_prev_epoch_on_chain_attester_correct_head_total",
+      help: "Total count of times a validator votes correct head",
+    }),
+    prevOnChainAttesterIncorrectHead: register.gauge({
+      name: "validator_monitor_prev_epoch_on_chain_attester_incorrect_head_total",
+      help: "Total count of times a validator votes incorrect head",
+    }),
+    prevEpochOnChainTargetAttesterHit: register.gauge({
+      name: "validator_monitor_prev_epoch_on_chain_target_attester_hit_total",
+      help: "Incremented if the validator is flagged as a previous epoch target attester during per epoch processing",
+    }),
+    prevEpochOnChainTargetAttesterMiss: register.gauge({
+      name: "validator_monitor_prev_epoch_on_chain_target_attester_miss_total",
+      help: "Incremented if the validator is not flagged as a previous epoch target attester during per epoch processing",
+    }),
+    prevEpochOnChainInclusionDistance: register.histogram({
+      name: "validator_monitor_prev_epoch_on_chain_inclusion_distance",
+      help: "The attestation inclusion distance calculated during per epoch processing",
+      // min inclusion distance is 1, usual values are 1,2,3 max is 32 (1 epoch)
+      buckets: [1, 2, 3, 5, 10, 32],
+    }),
+    prevEpochAttestations: register.histogram({
+      name: "validator_monitor_prev_epoch_attestations",
+      help: "The number of unagg. attestations seen in the previous epoch",
+      buckets: [0, 1, 2, 3],
+    }),
+    prevEpochAttestationsMinDelaySeconds: register.histogram({
+      name: "validator_monitor_prev_epoch_attestations_min_delay_seconds",
+      help: "The min delay between when the validator should send the attestation and when it was received",
+      buckets: [0.1, 0.25, 0.5, 1, 2, 5, 10],
+    }),
+    prevEpochAttestationAggregateInclusions: register.histogram({
+      name: "validator_monitor_prev_epoch_attestation_aggregate_inclusions",
+      help: "The count of times an attestation was seen inside an aggregate",
+      buckets: [0, 1, 2, 3, 5, 10],
+    }),
+    prevEpochAttestationBlockInclusions: register.histogram({
+      name: "validator_monitor_prev_epoch_attestation_block_inclusions",
+      help: "The count of times an attestation was seen inside a block",
+      buckets: [0, 1, 2, 3, 5],
+    }),
+    prevEpochAttestationBlockMinInclusionDistance: register.histogram({
+      name: "validator_monitor_prev_epoch_attestation_block_min_inclusion_distance",
+      help: "The minimum inclusion distance observed for the inclusion of an attestation in a block",
+      buckets: [1, 2, 3, 5, 10, 32],
+    }),
+    prevEpochBeaconBlocks: register.histogram({
+      name: "validator_monitor_prev_epoch_beacon_blocks",
+      help: "The number of beacon_blocks seen in the previous epoch",
+      buckets: [0, 1, 2, 3, 5, 10],
+    }),
+    prevEpochBeaconBlocksMinDelaySeconds: register.histogram({
+      name: "validator_monitor_prev_epoch_beacon_blocks_min_delay_seconds",
+      help: "The min delay between when the validator should send the block and when it was received",
+      buckets: [0.1, 0.25, 0.5, 1, 2, 5, 10],
+    }),
+    prevEpochAggregatesTotal: register.histogram({
+      name: "validator_monitor_prev_epoch_aggregates",
+      help: "The number of aggregates seen in the previous epoch",
+      buckets: [0, 1, 2, 3, 5, 10],
+    }),
+    prevEpochAggregatesMinDelaySeconds: register.histogram({
+      name: "validator_monitor_prev_epoch_aggregates_min_delay_seconds",
+      help: "The min delay between when the validator should send the aggregate and when it was received",
+      buckets: [0.1, 0.25, 0.5, 1, 2, 5, 10],
+    }),
+    prevEpochSyncCommitteeHits: register.gauge({
+      name: "validator_monitor_prev_epoch_sync_committee_hits",
+      help: "Count of times in prev epoch connected validators participated in imported block's syncAggregate",
+    }),
+    prevEpochSyncCommitteeMisses: register.gauge({
+      name: "validator_monitor_prev_epoch_sync_committee_misses",
+      help: "Count of times in prev epoch connected validators fail to participate in imported block's syncAggregate",
+    }),
+    prevEpochSyncSignatureAggregateInclusions: register.histogram({
+      name: "validator_monitor_prev_epoch_sync_signature_aggregate_inclusions",
+      help: "The count of times a sync signature was seen inside an aggregate",
+      buckets: [0, 1, 2, 3, 5, 10],
+    }),
+    prevEpochAttestationSummary: register.gauge<{summary: string}>({
+      name: "validator_monitor_prev_epoch_attestation_summary",
+      help: "Best guess of the node of the result of previous epoch validators attestation actions and causality",
+      labelNames: ["summary"],
+    }),
+    prevEpochBlockProposalSummary: register.gauge<{summary: string}>({
+      name: "validator_monitor_prev_epoch_block_proposal_summary",
+      help: "Best guess of the node of the result of previous epoch validators block proposal actions and causality",
+      labelNames: ["summary"],
+    }),
+
+    // Validator Monitor Metrics (real-time)
+
+    unaggregatedAttestationTotal: register.gauge<{src: OpSource}>({
+      name: "validator_monitor_unaggregated_attestation_total",
+      help: "Number of unaggregated attestations seen",
+      labelNames: ["src"],
+    }),
+    unaggregatedAttestationDelaySeconds: register.histogram<{src: OpSource}>({
+      name: "validator_monitor_unaggregated_attestation_delay_seconds",
+      help: "The delay between when the validator should send the attestation and when it was received",
+      labelNames: ["src"],
+      buckets: [0.1, 0.25, 0.5, 1, 2, 5, 10],
+    }),
+    unaggregatedAttestationSubmittedSentPeers: register.histogram({
+      name: "validator_monitor_unaggregated_attestation_submitted_sent_peers_count",
+      help: "Number of peers that an unaggregated attestation sent to",
+      // as of Apr 2022, most of the time we sent to >30 peers per attestations
+      // these bucket values just base on that fact to get equal range
+      // refine if we want more reasonable values
+      buckets: [0, 10, 20, 30],
+    }),
+    aggregatedAttestationTotal: register.gauge<{src: OpSource}>({
+      name: "validator_monitor_aggregated_attestation_total",
+      help: "Number of aggregated attestations seen",
+      labelNames: ["src"],
+    }),
+    aggregatedAttestationDelaySeconds: register.histogram<{src: OpSource}>({
+      name: "validator_monitor_aggregated_attestation_delay_seconds",
+      help: "The delay between then the validator should send the aggregate and when it was received",
+      labelNames: ["src"],
+      buckets: [0.1, 0.25, 0.5, 1, 2, 5, 10],
+    }),
+    attestationInAggregateTotal: register.gauge<{src: OpSource}>({
+      name: "validator_monitor_attestation_in_aggregate_total",
+      help: "Number of times an attestation has been seen in an aggregate",
+      labelNames: ["src"],
+    }),
+    attestationInAggregateDelaySeconds: register.histogram<{src: OpSource}>({
+      name: "validator_monitor_attestation_in_aggregate_delay_seconds",
+      help: "The delay between when the validator should send the aggregate and when it was received",
+      labelNames: ["src"],
+      buckets: [0.1, 0.25, 0.5, 1, 2, 5, 10],
+    }),
+    attestationInBlockTotal: register.gauge({
+      name: "validator_monitor_attestation_in_block_total",
+      help: "Number of times an attestation has been seen in a block",
+    }),
+    attestationInBlockDelaySlots: register.histogram({
+      name: "validator_monitor_attestation_in_block_delay_slots",
+      help: "The excess slots (beyond the minimum delay) between the attestation slot and the block slot",
+      buckets: [0.1, 0.25, 0.5, 1, 2, 5, 10],
+    }),
+    attestationInBlockParticipants: register.histogram({
+      name: "validator_monitor_attestation_in_block_participants",
+      help: "The total participants in attestations of monitored validators included in blocks",
+      buckets: [1, 5, 20, 50, 100, 200],
+    }),
+    syncSignatureInAggregateTotal: register.gauge({
+      name: "validator_monitor_sync_signature_in_aggregate_total",
+      help: "Number of times a sync signature has been seen in an aggregate",
+    }),
+    beaconBlockTotal: register.gauge<{src: OpSource}>({
+      name: "validator_monitor_beacon_block_total",
+      help: "Total number of beacon blocks seen",
+      labelNames: ["src"],
+    }),
+    beaconBlockDelaySeconds: register.histogram<{src: OpSource}>({
+      name: "validator_monitor_beacon_block_delay_seconds",
+      help: "The delay between when the validator should send the block and when it was received",
+      labelNames: ["src"],
+      // we also want other nodes to received our published before 4s so add bucket 3 and 3.5
+      buckets: [0.1, 0.25, 0.5, 1, 2, 3, 4, 6, 10],
+    }),
+
+    // Only for known
+    proposerBalanceDeltaKnown: register.histogram({
+      name: "validator_monitor_proposer_balance_delta_known_gwei",
+      help: "Balance delta of known block proposer after importing a valid block",
+      // Jul22 mainnet block reward is consistently between 29,000,000-28,000,000 GWei
+      buckets: [10_000, 100_000, 1e6, 10e6, 20e6, 50e6, 100e6, 1000e6],
+    }),
+  };
 }

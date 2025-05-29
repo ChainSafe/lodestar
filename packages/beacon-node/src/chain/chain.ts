@@ -16,9 +16,9 @@ import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   createCachedBeaconState,
-  getCurrentSlot,
   getEffectiveBalanceIncrementsZeroInactive,
   isCachedBeaconState,
+  processSlots,
 } from "@lodestar/state-transition";
 import {
   BeaconBlock,
@@ -98,6 +98,7 @@ import {SeenGossipBlockInput} from "./seenCache/index.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
+import {SeenBlockInputCache} from "./seenCache/seenBlockInput.js";
 import {ShufflingCache} from "./shufflingCache.js";
 import {BlockStateCacheImpl} from "./stateCache/blockStateCacheImpl.js";
 import {DbCPStateDatastore} from "./stateCache/datastore/db.js";
@@ -154,6 +155,7 @@ export class BeaconChain implements IBeaconChain {
   readonly seenContributionAndProof: SeenContributionAndProof;
   readonly seenAttestationDatas: SeenAttestationDatas;
   readonly seenGossipBlockInput = new SeenGossipBlockInput();
+  readonly seenBlockInputCache: SeenBlockInputCache;
   // Seen cache for liveness checks
   readonly seenBlockAttesters = new SeenBlockAttesters();
 
@@ -260,6 +262,14 @@ export class BeaconChain implements IBeaconChain {
 
     this.beaconProposerCache = new BeaconProposerCache(opts);
     this.checkpointBalancesCache = new CheckpointBalancesCache();
+    this.seenBlockInputCache = new SeenBlockInputCache({
+      config,
+      clock,
+      chainEvents: emitter,
+      signal,
+      metrics,
+      logger,
+    });
 
     // Restore state caches
     // anchorState may already by a CachedBeaconState. If so, don't create the cache again, since deserializing all
@@ -383,11 +393,6 @@ export class BeaconChain implements IBeaconChain {
 
     if (metrics) {
       metrics.clockSlot.addCollect(() => this.onScrapeMetrics(metrics));
-      // Register a single collect() function to run all validatorMonitor metrics
-      metrics.validatorMonitor.validatorsConnected.addCollect(() => {
-        const clockSlot = getCurrentSlot(config, this.genesisTime);
-        this.validatorMonitor?.scrapeMetrics(clockSlot);
-      });
     }
 
     // Event handlers. emitter is created internally and dropped on close(). Not need to .removeListener()
@@ -1237,11 +1242,13 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async getBlockRewards(block: BeaconBlock | BlindedBeaconBlock): Promise<BlockRewards> {
-    const preState = this.regen.getPreStateSync(block);
+    let preState = this.regen.getPreStateSync(block);
 
     if (preState === null) {
       throw Error(`Pre-state is unavailable given block's parent root ${toRootHex(block.parentRoot)}`);
     }
+
+    preState = processSlots(preState, block.slot); // Dial preState's slot to block.slot
 
     const postState = this.regen.getStateSync(toRootHex(block.stateRoot)) ?? undefined;
 
@@ -1278,11 +1285,13 @@ export class BeaconChain implements IBeaconChain {
     block: BeaconBlock | BlindedBeaconBlock,
     validatorIds?: (ValidatorIndex | string)[]
   ): Promise<SyncCommitteeRewards> {
-    const preState = this.regen.getPreStateSync(block);
+    let preState = this.regen.getPreStateSync(block);
 
     if (preState === null) {
       throw Error(`Pre-state is unavailable given block's parent root ${toRootHex(block.parentRoot)}`);
     }
+
+    preState = processSlots(preState, block.slot); // Dial preState's slot to block.slot
 
     return computeSyncCommitteeRewards(block, preState.clone(), validatorIds);
   }

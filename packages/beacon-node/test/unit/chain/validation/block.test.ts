@@ -27,7 +27,10 @@ describe("gossip block validation", () => {
 
   beforeEach(() => {
     // Fill up with kzg commitments
-    block.body.blobKzgCommitments = Array.from({length: config.MAX_BLOBS_PER_BLOCK}, () => new Uint8Array([0]));
+    block.body.blobKzgCommitments = Array.from(
+      {length: config.getMaxBlobsPerBlock(clockSlot)},
+      () => new Uint8Array([0])
+    );
 
     chain = getMockedBeaconChain();
     vi.spyOn(chain.clock, "currentSlotWithGossipDisparity", "get").mockReturnValue(clockSlot);

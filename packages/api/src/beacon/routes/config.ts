@@ -1,5 +1,5 @@
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
-import {ChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig, SpecJson} from "@lodestar/config";
 import {ssz} from "@lodestar/types";
 import {
   ArrayOf,
@@ -24,7 +24,7 @@ export const ForkListType = ArrayOf(ssz.phase0.Fork);
 
 export type DepositContract = ValueOf<typeof DepositContractType>;
 export type ForkList = ValueOf<typeof ForkListType>;
-export type Spec = Record<string, string>;
+export type Spec = SpecJson;
 
 export type Endpoints = {
   /**

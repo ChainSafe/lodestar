@@ -19,14 +19,6 @@
     semver "^6.3.1"
     twirp-ts "^2.5.0"
 
-"@actions/core@^1.10.1":
-  version "1.10.1"
-  resolved "https://registry.yarnpkg.com/@actions/core/-/core-1.10.1.tgz#61108e7ac40acae95ee36da074fa5850ca4ced8a"
-  integrity sha512-3lBR9EDAY+iYIpTnTIXmWcNbX3T2kCkAEQGIQx4NVQ0575nk2k3GRZDTPQG+vVtS2izSLmINlxXf0uLtnrTP+g==
-  dependencies:
-    "@actions/http-client" "^2.0.1"
-    uuid "^8.3.2"
-
 "@actions/core@^1.11.1":
   version "1.11.1"
   resolved "https://registry.yarnpkg.com/@actions/core/-/core-1.11.1.tgz#ae683aac5112438021588030efb53b1adb86f172"
@@ -839,10 +831,10 @@
     "@chainsafe/swap-or-not-shuffle-win32-arm64-msvc" "1.2.1"
     "@chainsafe/swap-or-not-shuffle-win32-x64-msvc" "1.2.1"
 
-"@chainsafe/threads@^1.11.1":
-  version "1.11.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/threads/-/threads-1.11.1.tgz#0b3b8c76f5875043ef6d47aeeb681dc80378f205"
-  integrity sha512-ejkB0eVcM0k2E8n5ZqOGt//ZEWU+c431QS3e/WfjLKxhw/fwZpvYhUOxBA8u3lJmAKLGziIcXjOoTnPwMPhkcQ==
+"@chainsafe/threads@^1.11.2":
+  version "1.11.2"
+  resolved "https://registry.yarnpkg.com/@chainsafe/threads/-/threads-1.11.2.tgz#fc400efdfec2d246e5054e3521a9066dc2dc45af"
+  integrity sha512-qd5mSYWyIgK+G4LQTLhJhO4IUda4eydYhZsT6AadALFUKs5WrHaFtAf7sLol6JjgWG7wwgznUs7FFyBl0xPmoQ==
   dependencies:
     callsites "^3.1.0"
     debug "^4.2.0"
@@ -12103,7 +12095,7 @@ tar@6.1.11:
     mkdirp "^1.0.3"
     yallist "^4.0.0"
 
-tar@^6.0.2, tar@^6.1.11, tar@^6.1.13, tar@^6.1.2:
+tar@^6.0.2, tar@^6.1.11, tar@^6.1.2:
   version "6.2.1"
   resolved "https://registry.yarnpkg.com/tar/-/tar-6.2.1.tgz#717549c541bc3c2af15751bea94b1dd068d4b03a"
   integrity sha512-DZ4yORTwrbTj/7MZYq2w+/ZFdI6OZ/f9SFHR+71gIVUZhOQPHzVCLpvRnPgyaMpfWxxk/4ONva3GQSyNIKRv6A==

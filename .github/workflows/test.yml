@@ -101,7 +101,7 @@ jobs:
 
       # Cache validator slashing protection data tests
       - name: Restore spec tests cache
-        uses: actions/cache@master
+        uses: actions/cache@v4
         with:
           path: packages/validator/spec-tests
           key: spec-test-data-${{ hashFiles('packages/validator/test/spec/params.ts') }}
@@ -201,7 +201,7 @@ jobs:
 
       # Download spec tests with cache
       - name: Restore spec tests cache
-        uses: actions/cache@master
+        uses: actions/cache@v4
         with:
           path: packages/beacon-node/spec-tests
           key: spec-test-data-${{ hashFiles('packages/beacon-node/test/spec/specTestVersioning.ts') }}

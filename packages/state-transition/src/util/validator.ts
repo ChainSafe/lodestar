@@ -56,22 +56,34 @@ export function getChurnLimit(config: ChainForkConfig, activeValidatorCount: num
 /**
  * Get combined churn limit of activation-exit and consolidation
  */
-export function getBalanceChurnLimit(epochCtx: EpochCache): number {
+export function getBalanceChurnLimit(
+  totalActiveBalanceIncrements: number,
+  churnLimitQuotient: number,
+  minPerEpochChurnLimit: number
+): number {
   const churnLimitByTotalActiveBalance = Math.floor(
-    (epochCtx.totalActiveBalanceIncrements / epochCtx.config.CHURN_LIMIT_QUOTIENT) * EFFECTIVE_BALANCE_INCREMENT
-  ); // TODO Electra: verify calculation
+    (totalActiveBalanceIncrements / churnLimitQuotient) * EFFECTIVE_BALANCE_INCREMENT
+  );
 
-  const churn = Math.max(churnLimitByTotalActiveBalance, epochCtx.config.MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA);
+  const churn = Math.max(churnLimitByTotalActiveBalance, minPerEpochChurnLimit);
 
   return churn - (churn % EFFECTIVE_BALANCE_INCREMENT);
 }
 
+export function getBalanceChurnLimitFromCache(epochCtx: EpochCache): number {
+  return getBalanceChurnLimit(
+    epochCtx.totalActiveBalanceIncrements,
+    epochCtx.config.CHURN_LIMIT_QUOTIENT,
+    epochCtx.config.MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA
+  );
+}
+
 export function getActivationExitChurnLimit(epochCtx: EpochCache): number {
-  return Math.min(epochCtx.config.MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT, getBalanceChurnLimit(epochCtx));
+  return Math.min(epochCtx.config.MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT, getBalanceChurnLimitFromCache(epochCtx));
 }
 
 export function getConsolidationChurnLimit(epochCtx: EpochCache): number {
-  return getBalanceChurnLimit(epochCtx) - getActivationExitChurnLimit(epochCtx);
+  return getBalanceChurnLimitFromCache(epochCtx) - getActivationExitChurnLimit(epochCtx);
 }
 
 export function getMaxEffectiveBalance(withdrawalCredentials: Uint8Array): number {
