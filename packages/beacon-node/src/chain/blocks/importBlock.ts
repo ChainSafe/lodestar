@@ -231,10 +231,9 @@ export async function importBlock(
   }
 
   if (shouldOverrideFcu) {
-    this.logger.info("Weak block detected. Skip fcu call in importBlock");
+    this.logger.verbose("Weak block detected. Skip fcu call in importBlock", {blockRoot: blockRootHex});
   }
 
-  // TODO: Skip this too when shouldOverrideFcu == true?
   if (newHead.blockRoot !== oldHead.blockRoot) {
     // Set head state as strong reference
     this.regen.updateHeadState(newHead, postState);

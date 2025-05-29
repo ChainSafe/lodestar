@@ -260,7 +260,7 @@ export class ForkChoice implements IForkChoice {
       return {shouldOverrideFcu: false};
     }
 
-    this.logger?.info(`Block ${blockRoot} is weak. Should override forkchoice update`);
+    this.logger?.verbose("Block is weak. Should override forkchoice update", {blockRoot});
     return {shouldOverrideFcu: true, parentBlock};
   }
 
@@ -298,10 +298,11 @@ export class ForkChoice implements IForkChoice {
 
     // TODO: Maybe add a transcient flag in ProtoBlock to flag `shouldOverrideFcu` block when importing
     // so we don't need to call shouldOverrideForkChoiceUpdate again.
-    const result = this.shouldOverrideForkChoiceUpdate(currentSlot, headBlock.blockRoot);
+    const blockRoot = headBlock.blockRoot;
+    const result = this.shouldOverrideForkChoiceUpdate(currentSlot, blockRoot);
 
     if (result.shouldOverrideFcu) {
-      this.logger?.info("Current head is weak. Predicting next block to be built on parent of head");
+      this.logger?.verbose("Current head is weak. Predicting next block to be built on parent of head.", {blockRoot});
       return result.parentBlock;
     }
 
