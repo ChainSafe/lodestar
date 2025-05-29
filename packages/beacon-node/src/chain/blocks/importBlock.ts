@@ -1,7 +1,14 @@
 import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {AncestorStatus, EpochDifference, ForkChoiceError, ForkChoiceErrorCode} from "@lodestar/fork-choice";
-import {ForkPostAltair, ForkSeq, INTERVALS_PER_SLOT, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {
+  ForkPostAltair,
+  ForkPostElectra,
+  ForkSeq,
+  INTERVALS_PER_SLOT,
+  MAX_SEED_LOOKAHEAD,
+  SLOTS_PER_EPOCH,
+} from "@lodestar/params";
 import {
   CachedBeaconStateAltair,
   EpochCache,
@@ -10,7 +17,7 @@ import {
   computeStartSlotAtEpoch,
   isStateValidatorsNodesPopulated,
 } from "@lodestar/state-transition";
-import {BeaconBlock, altair, capella, electra, phase0, ssz} from "@lodestar/types";
+import {Attestation, BeaconBlock, altair, capella, electra, phase0, ssz} from "@lodestar/types";
 import {isErrorAborted, toHex, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
@@ -134,7 +141,7 @@ export async function importBlock(
           postState.epochCtx,
           target,
           attDataRoot,
-          attestation as electra.Attestation,
+          attestation as Attestation<ForkPostElectra>,
           indexedAttestation
         );
         // Duplicated logic from fork-choice onAttestation validation logic.
@@ -495,7 +502,7 @@ export function addAttestationPreElectra(
   _: EpochCache,
   target: phase0.Checkpoint,
   attDataRoot: string,
-  attestation: phase0.Attestation,
+  attestation: Attestation,
   indexedAttestation: phase0.IndexedAttestation
 ): void {
   this.seenAggregatedAttestations.add(
@@ -512,7 +519,7 @@ export function addAttestationPostElectra(
   epochCtx: EpochCache,
   target: phase0.Checkpoint,
   attDataRoot: string,
-  attestation: electra.Attestation,
+  attestation: Attestation<ForkPostElectra>,
   indexedAttestation: electra.IndexedAttestation
 ): void {
   const committeeIndices = attestation.committeeBits.getTrueBitIndexes();
