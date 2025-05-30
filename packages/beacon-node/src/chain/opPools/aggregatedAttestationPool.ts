@@ -287,7 +287,7 @@ export class AggregatedAttestationPool {
             continue;
           }
 
-          if (validateAttestationDataFn(attestationGroup.data) != null) {
+          if (validateAttestationDataFn(attestationGroup.data) !== null) {
             continue;
           }
 
