@@ -2,7 +2,10 @@ import {BlockInputSource} from "../../chain/blocks/blockInput/index.js";
 import {BlobsSource, BlockSource} from "../../chain/blocks/types.js";
 import {JobQueueItemType} from "../../chain/bls/index.js";
 import {AttestationErrorCode, BlockErrorCode} from "../../chain/errors/index.js";
-import {ScannedSlotsTerminationReason} from "../../chain/opPools/aggregatedAttestationPool.js";
+import {
+  type InvalidAttestationData,
+  ScannedSlotsTerminationReason,
+} from "../../chain/opPools/aggregatedAttestationPool.js";
 import {InsertOutcome} from "../../chain/opPools/types.js";
 import {RegenCaller, RegenFnName} from "../../chain/regen/interface.js";
 import {ReprocessStatus} from "../../chain/reprocess.js";
@@ -867,9 +870,10 @@ export function createLodestarMetrics(
             name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_empty_attestation_data_total",
             help: "Total number of attestation data with no group when producing packed attestation",
           }),
-          invalidAttestationData: register.gauge({
+          invalidAttestationData: register.gauge<{reason: InvalidAttestationData}>({
             name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_invalid_attestation_data_total",
             help: "Total number of invalid attestation data when producing packed attestation",
+            labelNames: ["reason"],
           }),
           seenCommittees: register.gauge({
             name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_seen_committees_total",
