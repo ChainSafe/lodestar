@@ -745,7 +745,7 @@ export function createLodestarMetrics(
         help: "Total number of imported blobs by source",
         labelNames: ["blobsSource"],
       }),
-      notOverrideFcuReason: register.gauge<{reason: NotReorgedReason}>({
+      notOverrideFcuReason: register.counter<{reason: NotReorgedReason}>({
         name: "beacon_import_block_not_override_fcu_reason_total",
         help: "Reason why the fcu call is not suppressed during block import",
         labelNames: ["reason"],
