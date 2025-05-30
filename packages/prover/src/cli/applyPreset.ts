@@ -8,7 +8,11 @@ import CpuFeatures from "cpu-features";
 const cpuFeatures = CpuFeatures();
 if (
   cpuFeatures.arch === "x86" &&
-  !(cpuFeatures.flags.avx || cpuFeatures.flags.avx2 || cpuFeatures.flags.avx512f || cpuFeatures.flags.avx512vl)
+  !(
+    (cpuFeatures.flags.avx512f && cpuFeatures.flags.avx512vl) ||
+    (cpuFeatures.flags.avx2 && cpuFeatures.flags.bmi2) ||
+    (cpuFeatures.flags.avx && cpuFeatures.flags.sha)
+  )
 ) {
   // biome-ignore lint/suspicious/noConsole: let consumer know that the default hasher is not supported
   console.log(
