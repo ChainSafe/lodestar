@@ -51,10 +51,5 @@ export const holeskyChainConfig: ChainConfig = {
 
   // Blob Scheduling
   // ---------------------------------------------------------------
-  BLOB_SCHEDULE: [
-    // Deneb
-    {EPOCH: 29696, MAX_BLOBS_PER_BLOCK: 6},
-    // Electra
-    {EPOCH: 115968, MAX_BLOBS_PER_BLOCK: 9},
-  ],
+  BLOB_SCHEDULE: [],
 };

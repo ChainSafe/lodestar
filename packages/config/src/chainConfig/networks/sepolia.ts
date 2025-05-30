@@ -48,10 +48,5 @@ export const sepoliaChainConfig: ChainConfig = {
 
   // Blob Scheduling
   // ---------------------------------------------------------------
-  BLOB_SCHEDULE: [
-    // Deneb
-    {EPOCH: 132608, MAX_BLOBS_PER_BLOCK: 6},
-    // Electra
-    {EPOCH: 222464, MAX_BLOBS_PER_BLOCK: 9},
-  ],
+  BLOB_SCHEDULE: [],
 };

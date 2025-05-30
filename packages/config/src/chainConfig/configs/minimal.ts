@@ -105,7 +105,7 @@ export const chainConfig: ChainConfig = {
   MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: 4096,
   BLOB_SIDECAR_SUBNET_COUNT: 6,
   MAX_BLOBS_PER_BLOCK: 6,
-  // MAX_REQUEST_BLOCKS_DENEB * BLOB_SCHEDULE[0].MAX_BLOBS_PER_BLOCK
+  // MAX_REQUEST_BLOCKS_DENEB * MAX_BLOBS_PER_BLOCK
   MAX_REQUEST_BLOB_SIDECARS: 768,
 
   // Electra
@@ -115,7 +115,7 @@ export const chainConfig: ChainConfig = {
   MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA: 64000000000,
   BLOB_SIDECAR_SUBNET_COUNT_ELECTRA: 9,
   MAX_BLOBS_PER_BLOCK_ELECTRA: 9,
-  // MAX_REQUEST_BLOCKS_DENEB * BLOB_SCHEDULE[1].MAX_BLOBS_PER_BLOCK
+  // MAX_REQUEST_BLOCKS_DENEB * MAX_BLOBS_PER_BLOCK_ELECTRA
   MAX_REQUEST_BLOB_SIDECARS_ELECTRA: 1152,
 
   // Fulu
@@ -129,10 +129,5 @@ export const chainConfig: ChainConfig = {
 
   // Blob Scheduling
   // ---------------------------------------------------------------
-  BLOB_SCHEDULE: [
-    // Deneb
-    {EPOCH: Infinity, MAX_BLOBS_PER_BLOCK: 6},
-    // Electra
-    {EPOCH: Infinity, MAX_BLOBS_PER_BLOCK: 9},
-  ],
+  BLOB_SCHEDULE: [],
 };
