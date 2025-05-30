@@ -6,7 +6,10 @@ import {
   KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH,
   MAX_BLOB_COMMITMENTS_PER_BLOCK,
   MAX_REQUEST_BLOCKS_DENEB,
+  MAX_REQUEST_DATA_COLUMN_SIDECARS,
+  MIN_SEED_LOOKAHEAD,
   NUMBER_OF_COLUMNS,
+  SLOTS_PER_EPOCH,
 } from "@lodestar/params";
 
 import {ssz as altairSsz} from "../altair/index.js";
@@ -14,6 +17,7 @@ import {ssz as denebSsz} from "../deneb/index.js";
 import {ssz as electraSsz} from "../electra/index.js";
 import {ssz as phase0Ssz} from "../phase0/index.js";
 import {ssz as primitiveSsz} from "../primitive/index.js";
+import { ValidatorIndex } from "../sszTypes.js";
 
 const {BLSSignature, Root, ColumnIndex, RowIndex, Bytes32, Slot, UintNum64} = primitiveSsz;
 
@@ -186,6 +190,7 @@ export const ExecutionPayloadAndBlobsBundle = new ContainerType(
 export const BeaconState = new ContainerType(
   {
     ...electraSsz.BeaconState.fields,
+    proposerLookahead: new ListBasicType(ValidatorIndex, (MIN_SEED_LOOKAHEAD + 1) * SLOTS_PER_EPOCH) // New in FULU:EIP7917
   },
   {typeName: "BeaconState", jsonCase: "eth2"}
 );

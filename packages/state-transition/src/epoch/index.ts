@@ -30,6 +30,7 @@ import {processRewardsAndPenalties} from "./processRewardsAndPenalties.js";
 import {processSlashings} from "./processSlashings.js";
 import {processSlashingsReset} from "./processSlashingsReset.js";
 import {processSyncCommitteeUpdates} from "./processSyncCommitteeUpdates.js";
+import {processProposerLookahead} from "./processProposerLookahead.js";
 
 // For spec tests
 export {getRewardsAndPenalties} from "./processRewardsAndPenalties.js";
@@ -50,6 +51,7 @@ export {
   processHistoricalSummariesUpdate,
   processPendingDeposits,
   processPendingConsolidations,
+  processProposerLookahead,
 };
 
 export {computeUnrealizedCheckpoints} from "./computeUnrealizedCheckpoints.js";
@@ -72,6 +74,7 @@ export enum EpochTransitionStep {
   processSyncCommitteeUpdates = "processSyncCommitteeUpdates",
   processPendingDeposits = "processPendingDeposits",
   processPendingConsolidations = "processPendingConsolidations",
+  processProposerLookahead = "processProposerLookahead",
 }
 
 export function processEpoch(
@@ -183,4 +186,5 @@ export function processEpoch(
       timer?.();
     }
   }
+  // TODO FULU: Add processProposerLookahead here
 }
