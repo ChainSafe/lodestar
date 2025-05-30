@@ -930,9 +930,9 @@ export function extractParticipationPhase0(
 }
 
 /**
- * This returns a function to validate if an attestation data is compatible to a state,
- * it's an optimized version of isValidAttestationData().
- * Atttestation data is validated by:
+ * This returns a function to validate if an attestation data is compatible to a state.
+ *
+ * Attestation data is validated by:
  * - Validate the source checkpoint
  * - Validate shuffling using beacon block root and target epoch
  *
@@ -971,7 +971,7 @@ export function getValidateAttestationDataFn(
       return null;
     }
 
-    // the isValidAttestationData does not depend on slot and index
+    // valid attestation data does not depend on slot and index
     const beaconBlockRootHex = toRootHex(attData.beaconBlockRoot);
     const cacheKey = beaconBlockRootHex + targetEpoch;
     let invalidReasonOrNull = cachedValidatedAttestationData.get(cacheKey);
