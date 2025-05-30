@@ -397,7 +397,7 @@ export class AggregatedAttestationPool {
         }
 
         const invalidAttDataReason = validateAttestationDataFn(allAttestationGroups[0].data);
-        if (invalidAttDataReason != null) {
+        if (invalidAttDataReason !== null) {
           this.metrics?.opPool.aggregatedAttestationPool.packedAttestations.invalidAttestationData.inc({
             reason: invalidAttDataReason,
           });
