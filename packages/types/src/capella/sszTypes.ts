@@ -1,6 +1,6 @@
 import {ContainerType, ListCompositeType, VectorCompositeType} from "@chainsafe/ssz";
 import {
-  BLOCK_BODY_EXECUTION_PAYLOAD_GINDEX,
+  BLOCK_BODY_EXECUTION_PAYLOAD_DEPTH,
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
   HISTORICAL_ROOTS_LIMIT,
   MAX_BLS_TO_EXECUTION_CHANGES,
@@ -26,11 +26,7 @@ const {
   Bytes32,
 } = primitiveSsz;
 
-function floorlog2(num: number): number {
-  return Math.floor(Math.log2(num));
-}
-
-export const ExecutionBranch = new VectorCompositeType(Bytes32, floorlog2(BLOCK_BODY_EXECUTION_PAYLOAD_GINDEX));
+export const ExecutionBranch = new VectorCompositeType(Bytes32, BLOCK_BODY_EXECUTION_PAYLOAD_DEPTH);
 
 export const Withdrawal = new ContainerType(
   {
