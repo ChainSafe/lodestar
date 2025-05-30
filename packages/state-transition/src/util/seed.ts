@@ -25,6 +25,7 @@ import {computeEpochAtSlot} from "./epoch.js";
 /**
  * Compute proposer indices for an epoch
  */
+// TODO fulu: Updated this
 export function computeProposers(
   fork: ForkSeq,
   epochSeed: Uint8Array,

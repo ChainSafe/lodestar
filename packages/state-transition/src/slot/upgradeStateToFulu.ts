@@ -18,6 +18,7 @@ export function upgradeStateToFulu(stateElectra: CachedBeaconStateElectra): Cach
     currentVersion: config.FULU_FORK_VERSION,
     epoch: stateElectra.epochCtx.epoch,
   });
+  // TODO FULU: Populate proposer_lookahead here
 
   stateFulu.commit();
   // Clear cache to ensure the cache of capella fields is not used by new deneb fields
