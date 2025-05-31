@@ -44,46 +44,32 @@ Our `spec-references.ts` file contains all the specification references in a str
  */
 
 export const SpecReferences = [
-  // Preset Variables
-  {
-    component: "SLOTS_PER_EPOCH",
-    filePath: "packages/params/src/index.ts",
-    specTag: `<spec preset_var="SLOTS_PER_EPOCH" fork="deneb" style="hash" hash="cb41af43" />`,
-  },
-
-  // Constants
-  {
-    component: "GENESIS_SLOT",
-    filePath: "packages/params/src/index.ts",
-    specTag: `<spec constant_var="GENESIS_SLOT" fork="deneb" style="hash" hash="2d6f8884" />`,
-  },
-
   // Functions
   {
     component: "process_epoch",
     filePath: "packages/state-transition/src/epoch/index.ts",
-    specTag: `<spec fn="process_epoch" fork="deneb" style="hash" hash="5fb03e76" />`,
+    specTag: `<spec fn="process_epoch" hash="771a9cad" />`,
   },
 
   // SSZ Objects
   {
     component: "BeaconState",
     filePath: "packages/types/src/altair/sszTypes.ts",
-    specTag: `<spec ssz_object="BeaconState" fork="deneb" style="hash" hash="2c98ea31" />`,
+    specTag: `<spec ssz_object="BeaconState" hash="910d0f39" />`,
   },
 
   // Custom Types
   {
     component: "Slot",
     filePath: "packages/types/src/primitive/types.ts",
-    specTag: `<spec custom_type="Slot" fork="deneb" style="hash" hash="3e079f92" />`,
+    specTag: `<spec custom_type="Slot" hash="3e079f92" />`,
   },
 
-  // Track different forks
+  // SSZ Objects
   {
-    component: "BeaconState_electra",
-    filePath: "packages/types/src/altair/sszTypes.ts",
-    specTag: `<spec ssz_object="BeaconState" fork="electra" style="hash" hash="e4c02e51" />`,
+    component: "ExecutionPayload",
+    filePath: "packages/types/src/bellatrix/sszTypes.ts",
+    specTag: `<spec ssz_object="ExecutionPayload" hash="3c96a4a7" />`,
   },
 ];
 ```
@@ -120,12 +106,12 @@ We use custom `@SPEC` tags in JSDoc comments to link specification references to
 
 ```typescript
 /**
- * @SPEC SLOTS_PER_EPOCH
+ *  @SPEC compute_fork_digest
  */
 {
-  component: "SLOTS_PER_EPOCH",
-  filePath: "packages/params/src/index.ts",
-  specTag: `<spec preset_var="SLOTS_PER_EPOCH" fork="deneb" style="hash" hash="cb41af43" />`
+  component: "REORG_PARENT_WEIGHT_THRESHOLD",
+  filePath: "packages/params/src/presets/mainnet.ts",
+  specTag: `<spec config_var="REORG_PARENT_WEIGHT_THRESHOLD" hash="cb81e3da" />`
 }
 ```
 
