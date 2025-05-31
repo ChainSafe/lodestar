@@ -295,6 +295,19 @@ export type Endpoints = {
     electra.PendingPartialWithdrawals,
     ExecutionOptimisticFinalizedAndVersionMeta
   >;
+
+  /**
+   * Get State Pending Consolidations
+   *
+   * Returns pending consolidations for state with given 'stateId'.
+   */
+  getPendingConsolidations: Endpoint<
+    "GET",
+    StateArgs,
+    {params: {state_id: string}},
+    electra.PendingConsolidations,
+    ExecutionOptimisticFinalizedAndVersionMeta
+  >;
 };
 
 // biome-ignore lint/suspicious/noExplicitAny: <explanation>
@@ -527,6 +540,15 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       req: stateIdOnlyReq,
       resp: {
         data: ssz.electra.PendingPartialWithdrawals,
+        meta: ExecutionOptimisticFinalizedAndVersionCodec,
+      },
+    },
+    getPendingConsolidations: {
+      url: "/eth/v1/beacon/states/{state_id}/pending_consolidations",
+      method: "GET",
+      req: stateIdOnlyReq,
+      resp: {
+        data: ssz.electra.PendingConsolidations,
         meta: ExecutionOptimisticFinalizedAndVersionCodec,
       },
     },

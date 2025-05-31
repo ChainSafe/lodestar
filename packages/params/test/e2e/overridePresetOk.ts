@@ -1,6 +1,5 @@
 import assert from "node:assert";
 
-/* eslint import/order: "off" */
 // This script is should be run in an e2e !!
 // It demonstrates how to properly change the Lodestar preset safely
 

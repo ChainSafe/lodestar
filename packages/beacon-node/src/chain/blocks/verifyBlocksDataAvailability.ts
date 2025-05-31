@@ -1,7 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {DataAvailabilityStatus} from "@lodestar/fork-choice";
 import {ForkName} from "@lodestar/params";
-import {computeTimeAtSlot} from "@lodestar/state-transition";
+import {DataAvailabilityStatus, computeTimeAtSlot} from "@lodestar/state-transition";
 import {UintNum64, deneb} from "@lodestar/types";
 import {ErrorAborted, Logger} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";

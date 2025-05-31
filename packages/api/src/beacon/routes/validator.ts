@@ -1,6 +1,6 @@
 import {ContainerType, Type, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {isForkPostDeneb, isForkPostElectra} from "@lodestar/params";
+import {VALIDATOR_REGISTRY_LIMIT, isForkPostDeneb, isForkPostElectra} from "@lodestar/params";
 import {
   Attestation,
   BLSSignature,
@@ -44,6 +44,7 @@ import {
   VersionType,
 } from "../../utils/metadata.js";
 import {fromGraffitiHex, toBoolean, toGraffitiHex} from "../../utils/serdes.js";
+import {WireFormat} from "../../utils/wireFormat.js";
 
 export enum BuilderSelection {
   Default = "default",
@@ -209,7 +210,10 @@ export const ProposerPreparationDataListType = ArrayOf(ProposerPreparationDataTy
 export const BeaconCommitteeSelectionListType = ArrayOf(BeaconCommitteeSelectionType);
 export const SyncCommitteeSelectionListType = ArrayOf(SyncCommitteeSelectionType);
 export const LivenessResponseDataListType = ArrayOf(LivenessResponseDataType);
-export const SignedValidatorRegistrationV1ListType = ArrayOf(ssz.bellatrix.SignedValidatorRegistrationV1);
+export const SignedValidatorRegistrationV1ListType = ArrayOf(
+  ssz.bellatrix.SignedValidatorRegistrationV1,
+  VALIDATOR_REGISTRY_LIMIT
+);
 
 export type ValidatorIndices = ValueOf<typeof ValidatorIndicesType>;
 export type AttesterDuty = ValueOf<typeof AttesterDutyType>;
@@ -291,35 +295,6 @@ export type Endpoints = {
    * Metadata in the response indicates the type of block produced, and the supported types of block
    * will be added to as forks progress.
    */
-  produceBlockV2: Endpoint<
-    "GET",
-    {
-      /** The slot for which the block should be proposed */
-      slot: Slot;
-      /** The validator's randao reveal value */
-      randaoReveal: BLSSignature;
-      /** Arbitrary data validator wants to include in block */
-      graffiti?: string;
-    } & Omit<ExtraProduceBlockOpts, "blindedLocal">,
-    {
-      params: {slot: number};
-      query: {
-        randao_reveal: string;
-        graffiti?: string;
-        fee_recipient?: string;
-        builder_selection?: string;
-        strict_fee_recipient_check?: boolean;
-      };
-    },
-    BeaconBlockOrContents,
-    VersionMeta
-  >;
-
-  /**
-   * Requests a beacon node to produce a valid block, which can then be signed by a validator.
-   * Metadata in the response indicates the type of block produced, and the supported types of block
-   * will be added to as forks progress.
-   */
   produceBlockV3: Endpoint<
     "GET",
     {
@@ -349,18 +324,6 @@ export type Endpoints = {
     ProduceBlockV3Meta
   >;
 
-  produceBlindedBlock: Endpoint<
-    "GET",
-    {
-      slot: Slot;
-      randaoReveal: BLSSignature;
-      graffiti?: string;
-    },
-    {params: {slot: number}; query: {randao_reveal: string; graffiti?: string}},
-    BlindedBeaconBlock,
-    VersionMeta
-  >;
-
   /**
    * Produce an attestation data
    * Requests that the beacon node produce an AttestationData.
@@ -369,11 +332,11 @@ export type Endpoints = {
     "GET",
     {
       /** The committee index for which an attestation data should be created */
-      committeeIndex: CommitteeIndex;
+      committeeIndex?: CommitteeIndex;
       /** The slot for which an attestation data should be created */
       slot: Slot;
     },
-    {query: {slot: number; committee_index: number}},
+    {query: {slot: number; committee_index?: number}},
     phase0.AttestationData,
     EmptyMeta
   >;
@@ -614,49 +577,6 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         meta: ExecutionOptimisticCodec,
       },
     },
-    produceBlockV2: {
-      url: "/eth/v2/validator/blocks/{slot}",
-      method: "GET",
-      req: {
-        writeReq: ({slot, randaoReveal, graffiti, feeRecipient, builderSelection, strictFeeRecipientCheck}) => ({
-          params: {slot},
-          query: {
-            randao_reveal: toHex(randaoReveal),
-            graffiti: toGraffitiHex(graffiti),
-            fee_recipient: feeRecipient,
-            builder_selection: builderSelection,
-            strict_fee_recipient_check: strictFeeRecipientCheck,
-          },
-        }),
-        parseReq: ({params, query}) => ({
-          slot: params.slot,
-          randaoReveal: fromHex(query.randao_reveal),
-          graffiti: fromGraffitiHex(query.graffiti),
-          feeRecipient: query.fee_recipient,
-          builderSelection: query.builder_selection as BuilderSelection,
-          strictFeeRecipientCheck: query.strict_fee_recipient_check,
-        }),
-        schema: {
-          params: {slot: Schema.UintRequired},
-          query: {
-            randao_reveal: Schema.StringRequired,
-            graffiti: Schema.String,
-            fee_recipient: Schema.String,
-            builder_selection: Schema.String,
-            strict_fee_recipient_check: Schema.Boolean,
-          },
-        },
-      },
-      resp: {
-        data: WithVersion(
-          (fork) =>
-            (isForkPostDeneb(fork)
-              ? sszTypesFor(fork).BlockContents
-              : ssz[fork].BeaconBlock) as Type<BeaconBlockOrContents>
-        ),
-        meta: VersionCodec,
-      },
-    },
     produceBlockV3: {
       url: "/eth/v3/validator/blocks/{slot}",
       method: "GET",
@@ -759,32 +679,6 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         },
       },
     },
-    produceBlindedBlock: {
-      url: "/eth/v1/validator/blinded_blocks/{slot}",
-      method: "GET",
-      req: {
-        writeReq: ({slot, randaoReveal, graffiti}) => ({
-          params: {slot},
-          query: {randao_reveal: toHex(randaoReveal), graffiti: toGraffitiHex(graffiti)},
-        }),
-        parseReq: ({params, query}) => ({
-          slot: params.slot,
-          randaoReveal: fromHex(query.randao_reveal),
-          graffiti: fromGraffitiHex(query.graffiti),
-        }),
-        schema: {
-          params: {slot: Schema.UintRequired},
-          query: {
-            randao_reveal: Schema.StringRequired,
-            graffiti: Schema.String,
-          },
-        },
-      },
-      resp: {
-        data: WithVersion((fork) => getPostBellatrixForkTypes(fork).BlindedBeaconBlock),
-        meta: VersionCodec,
-      },
-    },
     produceAttestationData: {
       url: "/eth/v1/validator/attestation_data",
       method: "GET",
@@ -792,7 +686,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         writeReq: ({committeeIndex, slot}) => ({query: {slot, committee_index: committeeIndex}}),
         parseReq: ({query}) => ({committeeIndex: query.committee_index, slot: query.slot}),
         schema: {
-          query: {slot: Schema.UintRequired, committee_index: Schema.UintRequired},
+          query: {slot: Schema.UintRequired, committee_index: Schema.Uint},
         },
       },
       resp: {
@@ -1065,6 +959,9 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         },
       },
       resp: EmptyResponseCodec,
+      init: {
+        requestWireFormat: WireFormat.ssz,
+      },
     },
   };
 }

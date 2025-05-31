@@ -1,8 +1,7 @@
-import {ByteVectorType} from "@chainsafe/ssz";
 import {createChainForkConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db";
 import {NUMBER_OF_COLUMNS} from "@lodestar/params";
-import {fulu, ssz} from "@lodestar/types";
+import {ssz} from "@lodestar/types";
 import {rimraf} from "rimraf";
 import {afterEach, beforeAll, beforeEach, describe, expect, it} from "vitest";
 

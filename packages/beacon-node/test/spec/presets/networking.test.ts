@@ -1,9 +1,7 @@
 import path from "node:path";
-import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {ACTIVE_PRESET} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {bigIntToBytes} from "@lodestar/utils";
-import {expect} from "vitest";
 import {computeColumnsForCustodyGroup, getCustodyGroups} from "../../../src/util/dataColumns.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {specTestIterator} from "../utils/specTestIterator.js";

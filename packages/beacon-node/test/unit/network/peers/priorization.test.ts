@@ -1,7 +1,9 @@
 import {BitArray} from "@chainsafe/ssz";
+import {generateKeyPair} from "@libp2p/crypto/keys";
 import {PeerId} from "@libp2p/interface";
-import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
-import {ATTESTATION_SUBNET_COUNT} from "@lodestar/params";
+import {peerIdFromPrivateKey} from "@libp2p/peer-id";
+import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ssz} from "@lodestar/types";
 import {describe, expect, it} from "vitest";
 import {RequestedSubnet} from "../../../../src/network/peers/utils/index.js";
 import {
@@ -17,11 +19,23 @@ type Result = ReturnType<typeof prioritizePeers>;
 describe("network / peers / priorization", async () => {
   const peers: PeerId[] = [];
   for (let i = 0; i < 8; i++) {
-    const peer = await createSecp256k1PeerId();
+    const pk = await generateKeyPair("secp256k1");
+    const peer = peerIdFromPrivateKey(pk);
     peer.toString = () => `peer-${i}`;
     peers.push(peer);
   }
   const none = BitArray.fromBitLen(ATTESTATION_SUBNET_COUNT);
+  const status = ssz.phase0.Status.defaultValue();
+  const defaultOpts: PrioritizePeersOpts = {
+    targetPeers: 1,
+    maxPeers: 1,
+    targetGroupPeers: 1,
+    targetSubnetPeers: 1,
+    status,
+    starved: false,
+    starvationPruneRatio: 0.05,
+    starvationThresholdSlots: SLOTS_PER_EPOCH * 2,
+  };
 
   const testCases: {
     id: string;
@@ -37,7 +51,7 @@ describe("network / peers / priorization", async () => {
       connectedPeers: [],
       activeAttnets: [3],
       activeSyncnets: [],
-      opts: {targetPeers: 1, maxPeers: 1, targetSubnetPeers: 1, targetGroupPeers: 0},
+      opts: defaultOpts,
       expectedResult: {
         peersToDisconnect: new Map(),
         peersToConnect: 1,
@@ -49,11 +63,19 @@ describe("network / peers / priorization", async () => {
     {
       id: "Don't request a subnet query when enough peers are connected to it",
       connectedPeers: [
-        {id: peers[0], direction: null, syncnets: none, attnets: getAttnets([3]), custodyGroups: null, score: 0},
+        {
+          id: peers[0],
+          direction: null,
+          syncnets: none,
+          attnets: getAttnets([3]),
+          custodyGroups: null,
+          score: 0,
+          status,
+        },
       ],
       activeAttnets: [3],
       activeSyncnets: [],
-      opts: {targetPeers: 1, maxPeers: 1, targetSubnetPeers: 1, targetGroupPeers: 0},
+      opts: defaultOpts,
       expectedResult: {
         peersToDisconnect: new Map(),
         peersToConnect: 0,
@@ -65,9 +87,33 @@ describe("network / peers / priorization", async () => {
     {
       id: "Disconnect low score peers without duty",
       connectedPeers: [
-        {id: peers[0], direction: null, syncnets: none, attnets: getAttnets([3]), custodyGroups: null, score: 0},
-        {id: peers[1], direction: null, syncnets: none, attnets: getAttnets([5]), custodyGroups: null, score: -5},
-        {id: peers[2], direction: null, syncnets: none, attnets: getAttnets([5]), custodyGroups: null, score: -10},
+        {
+          id: peers[0],
+          direction: null,
+          syncnets: none,
+          attnets: getAttnets([3]),
+          custodyGroups: null,
+          score: 0,
+          status,
+        },
+        {
+          id: peers[1],
+          direction: null,
+          syncnets: none,
+          attnets: getAttnets([5]),
+          custodyGroups: null,
+          score: -5,
+          status,
+        },
+        {
+          id: peers[2],
+          direction: null,
+          syncnets: none,
+          attnets: getAttnets([5]),
+          custodyGroups: null,
+          score: -10,
+          status,
+        },
         {
           id: peers[3],
           direction: null,
@@ -75,11 +121,12 @@ describe("network / peers / priorization", async () => {
           attnets: getAttnets([5, 6, 7]),
           custodyGroups: null,
           score: -19,
+          status,
         },
       ],
       activeAttnets: [3],
       activeSyncnets: [],
-      opts: {targetPeers: 1, maxPeers: 1, targetSubnetPeers: 1, targetGroupPeers: 0},
+      opts: defaultOpts,
       expectedResult: {
         // Peers sorted by score, excluding with future duties
         peersToDisconnect: new Map<ExcessPeerDisconnectReason, PeerId[]>([
@@ -95,14 +142,22 @@ describe("network / peers / priorization", async () => {
     {
       id: "Disconnect no long-lived-subnet peers without duty",
       connectedPeers: [
-        {id: peers[0], direction: null, syncnets: none, attnets: getAttnets([3]), custodyGroups: null, score: 0},
-        {id: peers[1], direction: null, syncnets: none, attnets: none, custodyGroups: null, score: -0.1},
-        {id: peers[2], direction: null, syncnets: none, attnets: none, custodyGroups: null, score: -0.2},
-        {id: peers[3], direction: null, syncnets: none, attnets: none, custodyGroups: null, score: -0.3},
+        {
+          id: peers[0],
+          direction: null,
+          syncnets: none,
+          attnets: getAttnets([3]),
+          custodyGroups: null,
+          score: 0,
+          status,
+        },
+        {id: peers[1], direction: null, syncnets: none, attnets: none, custodyGroups: null, score: -0.1, status},
+        {id: peers[2], direction: null, syncnets: none, attnets: none, custodyGroups: null, score: -0.2, status},
+        {id: peers[3], direction: null, syncnets: none, attnets: none, custodyGroups: null, score: -0.3, status},
       ],
       activeAttnets: [3],
       activeSyncnets: [],
-      opts: {targetPeers: 1, maxPeers: 1, targetSubnetPeers: 1, targetGroupPeers: 0},
+      opts: defaultOpts,
       expectedResult: {
         // Peers sorted by score, excluding with future duties
         peersToDisconnect: new Map<ExcessPeerDisconnectReason, PeerId[]>([
@@ -118,11 +173,43 @@ describe("network / peers / priorization", async () => {
       id: "Disconnect no-duty peers that's too grouped in a subnet",
       connectedPeers: [
         // should not drop this peer or duty peers drop below min value
-        {id: peers[0], direction: null, syncnets: none, attnets: getAttnets([1, 3]), custodyGroups: null, score: 0},
+        {
+          id: peers[0],
+          direction: null,
+          syncnets: none,
+          attnets: getAttnets([1, 3]),
+          custodyGroups: null,
+          score: 0,
+          status,
+        },
         // below peers are too grouped into subnet 1
-        {id: peers[1], direction: null, syncnets: none, attnets: getAttnets([1, 4, 6]), custodyGroups: null, score: 0},
-        {id: peers[2], direction: null, syncnets: none, attnets: getAttnets([1, 4]), custodyGroups: null, score: 0},
-        {id: peers[3], direction: null, syncnets: none, attnets: getAttnets([1]), custodyGroups: null, score: 0},
+        {
+          id: peers[1],
+          direction: null,
+          syncnets: none,
+          attnets: getAttnets([1, 4, 6]),
+          custodyGroups: null,
+          score: 0,
+          status,
+        },
+        {
+          id: peers[2],
+          direction: null,
+          syncnets: none,
+          attnets: getAttnets([1, 4]),
+          custodyGroups: null,
+          score: 0,
+          status,
+        },
+        {
+          id: peers[3],
+          direction: null,
+          syncnets: none,
+          attnets: getAttnets([1]),
+          custodyGroups: null,
+          score: 0,
+          status,
+        },
         // should not remove this peer due or syncnet peers would drop below min value
         {
           id: peers[4],
@@ -131,11 +218,12 @@ describe("network / peers / priorization", async () => {
           attnets: getAttnets([1]),
           custodyGroups: null,
           score: 0,
+          status,
         },
       ],
       activeAttnets: [3],
       activeSyncnets: [2],
-      opts: {targetPeers: 2, maxPeers: 2, targetSubnetPeers: 1, targetGroupPeers: 0},
+      opts: {...defaultOpts, targetPeers: 2, maxPeers: 2},
       expectedResult: {
         // Peers sorted by long lived subnets
         peersToDisconnect: new Map<ExcessPeerDisconnectReason, PeerId[]>([
@@ -151,7 +239,15 @@ describe("network / peers / priorization", async () => {
       id: "Disconnect no-duty peers that's too grouped in a subnet - ignore maxPeersSubnet",
       connectedPeers: [
         // should not drop this peer or duty peers drop below min value
-        {id: peers[0], direction: null, syncnets: none, attnets: getAttnets([1, 3]), custodyGroups: null, score: 0},
+        {
+          id: peers[0],
+          direction: null,
+          syncnets: none,
+          attnets: getAttnets([1, 3]),
+          custodyGroups: null,
+          score: 0,
+          status,
+        },
         // below peers are too grouped into subnet 1
         // but cannot remove them due to syncnet requirement
         {
@@ -161,6 +257,7 @@ describe("network / peers / priorization", async () => {
           attnets: getAttnets([1, 4, 6]),
           custodyGroups: null,
           score: 0,
+          status,
         },
         {
           id: peers[2],
@@ -169,16 +266,33 @@ describe("network / peers / priorization", async () => {
           attnets: getAttnets([1, 4]),
           custodyGroups: null,
           score: 0,
+          status,
         },
         // biggest maxPeerSubnet is 1 (3 peers) but cannot remove all of them
         // 2nd biggest maxPeerSubnet is 7, should remove peers from that subnet
-        {id: peers[3], direction: null, syncnets: none, attnets: getAttnets([7]), custodyGroups: null, score: 0},
+        {
+          id: peers[3],
+          direction: null,
+          syncnets: none,
+          attnets: getAttnets([7]),
+          custodyGroups: null,
+          score: 0,
+          status,
+        },
         // peer 4 has more long lived subnets than peer 3, should not remove it
-        {id: peers[4], direction: null, syncnets: none, attnets: getAttnets([7, 8]), custodyGroups: null, score: 0},
+        {
+          id: peers[4],
+          direction: null,
+          syncnets: none,
+          attnets: getAttnets([7, 8]),
+          custodyGroups: null,
+          score: 0,
+          status,
+        },
       ],
       activeAttnets: [3],
       activeSyncnets: [2],
-      opts: {targetPeers: 4, maxPeers: 4, targetSubnetPeers: 1, targetGroupPeers: 0},
+      opts: {...defaultOpts, targetPeers: 4, maxPeers: 4},
       expectedResult: {
         // Peers sorted by long lived subnets
         peersToDisconnect: new Map<ExcessPeerDisconnectReason, PeerId[]>([
@@ -193,15 +307,55 @@ describe("network / peers / priorization", async () => {
     {
       id: "Ensure to prune to target peers",
       connectedPeers: [
-        {id: peers[0], direction: null, syncnets: none, attnets: getAttnets([1, 2, 3]), custodyGroups: null, score: 0},
-        {id: peers[1], direction: null, syncnets: none, attnets: getAttnets([1, 2]), custodyGroups: null, score: -1.9},
-        {id: peers[2], direction: null, syncnets: none, attnets: getAttnets([3, 4]), custodyGroups: null, score: -1.8},
-        {id: peers[3], direction: null, syncnets: none, attnets: getAttnets([4]), custodyGroups: null, score: -1},
-        {id: peers[4], direction: null, syncnets: none, attnets: getAttnets([5]), custodyGroups: null, score: -1.5},
+        {
+          id: peers[0],
+          direction: null,
+          syncnets: none,
+          attnets: getAttnets([1, 2, 3]),
+          custodyGroups: null,
+          score: 0,
+          status,
+        },
+        {
+          id: peers[1],
+          direction: null,
+          syncnets: none,
+          attnets: getAttnets([1, 2]),
+          custodyGroups: null,
+          score: -1.9,
+          status,
+        },
+        {
+          id: peers[2],
+          direction: null,
+          syncnets: none,
+          attnets: getAttnets([3, 4]),
+          custodyGroups: null,
+          score: -1.8,
+          status,
+        },
+        {
+          id: peers[3],
+          direction: null,
+          syncnets: none,
+          attnets: getAttnets([4]),
+          custodyGroups: null,
+          score: -1,
+          status,
+        },
+        {
+          id: peers[4],
+          direction: null,
+          syncnets: none,
+          attnets: getAttnets([5]),
+          custodyGroups: null,
+          score: -1.5,
+          status,
+        },
       ],
       activeAttnets: [1, 2, 3],
       activeSyncnets: [],
-      opts: {targetPeers: 1, maxPeers: 1, targetSubnetPeers: 2, targetGroupPeers: 0},
+      opts: {...defaultOpts, targetSubnetPeers: 2},
       expectedResult: {
         peersToDisconnect: new Map<ExcessPeerDisconnectReason, PeerId[]>([
           // the order is based on sortPeers() logic
@@ -219,10 +373,42 @@ describe("network / peers / priorization", async () => {
         // Peers with a least one attnet, distributed such that 1 peer / subnet.
         // Target to disconnect 4 of them, while keeping 25% outbound = 2.
         // So should disconnect 4 peers with worse score while keeping 2 outbound with best score.
-        {id: peers[0], direction: "inbound", syncnets: none, attnets: getAttnets([0]), custodyGroups: null, score: 0},
-        {id: peers[1], direction: "inbound", syncnets: none, attnets: getAttnets([1]), custodyGroups: null, score: -10},
-        {id: peers[2], direction: "inbound", syncnets: none, attnets: getAttnets([2]), custodyGroups: null, score: -20},
-        {id: peers[3], direction: "inbound", syncnets: none, attnets: getAttnets([3]), custodyGroups: null, score: -30},
+        {
+          id: peers[0],
+          direction: "inbound",
+          syncnets: none,
+          attnets: getAttnets([0]),
+          custodyGroups: null,
+          score: 0,
+          status,
+        },
+        {
+          id: peers[1],
+          direction: "inbound",
+          syncnets: none,
+          attnets: getAttnets([1]),
+          custodyGroups: null,
+          score: -10,
+          status,
+        },
+        {
+          id: peers[2],
+          direction: "inbound",
+          syncnets: none,
+          attnets: getAttnets([2]),
+          custodyGroups: null,
+          score: -20,
+          status,
+        },
+        {
+          id: peers[3],
+          direction: "inbound",
+          syncnets: none,
+          attnets: getAttnets([3]),
+          custodyGroups: null,
+          score: -30,
+          status,
+        },
         {
           id: peers[4],
           direction: "outbound",
@@ -230,6 +416,7 @@ describe("network / peers / priorization", async () => {
           attnets: getAttnets([4]),
           custodyGroups: null,
           score: -40,
+          status,
         },
         {
           id: peers[5],
@@ -238,6 +425,7 @@ describe("network / peers / priorization", async () => {
           attnets: getAttnets([5]),
           custodyGroups: null,
           score: -50,
+          status,
         },
         {
           id: peers[6],
@@ -246,6 +434,7 @@ describe("network / peers / priorization", async () => {
           attnets: getAttnets([6]),
           custodyGroups: null,
           score: -60,
+          status,
         },
         {
           id: peers[7],
@@ -254,11 +443,12 @@ describe("network / peers / priorization", async () => {
           attnets: getAttnets([7]),
           custodyGroups: null,
           score: -70,
+          status,
         },
       ],
       activeAttnets: [],
       activeSyncnets: [],
-      opts: {targetPeers: 4, maxPeers: 4, targetSubnetPeers: 1, targetGroupPeers: 0, outboundPeersRatio: 2 / 8},
+      opts: {...defaultOpts, targetPeers: 4, maxPeers: 4, outboundPeersRatio: 2 / 8},
       expectedResult: {
         // Peers sorted by score, excluding with future duties
         peersToDisconnect: new Map<ExcessPeerDisconnectReason, PeerId[]>([
@@ -274,7 +464,15 @@ describe("network / peers / priorization", async () => {
     {
       id: "Complete example: Disconnect peers and request a subnet query",
       connectedPeers: [
-        {id: peers[0], direction: null, syncnets: none, attnets: getAttnets([0, 1, 2]), custodyGroups: null, score: 0},
+        {
+          id: peers[0],
+          direction: null,
+          syncnets: none,
+          attnets: getAttnets([0, 1, 2]),
+          custodyGroups: null,
+          score: 0,
+          status,
+        },
         {
           id: peers[1],
           direction: null,
@@ -282,17 +480,66 @@ describe("network / peers / priorization", async () => {
           attnets: getAttnets([0, 1, 2]),
           custodyGroups: null,
           score: -10,
+          status,
         },
-        {id: peers[2], direction: null, syncnets: none, attnets: getAttnets([0, 1]), custodyGroups: null, score: 0},
-        {id: peers[3], direction: null, syncnets: none, attnets: getAttnets([0]), custodyGroups: null, score: -10},
-        {id: peers[4], direction: null, syncnets: none, attnets: getAttnets([2]), custodyGroups: null, score: 0},
-        {id: peers[5], direction: null, syncnets: none, attnets: getAttnets([0, 2]), custodyGroups: null, score: -20},
-        {id: peers[6], direction: null, syncnets: none, attnets: getAttnets([1, 2, 3]), custodyGroups: null, score: 0},
-        {id: peers[7], direction: null, syncnets: none, attnets: getAttnets([1, 2]), custodyGroups: null, score: -10},
+        {
+          id: peers[2],
+          direction: null,
+          syncnets: none,
+          attnets: getAttnets([0, 1]),
+          custodyGroups: null,
+          score: 0,
+          status,
+        },
+        {
+          id: peers[3],
+          direction: null,
+          syncnets: none,
+          attnets: getAttnets([0]),
+          custodyGroups: null,
+          score: -10,
+          status,
+        },
+        {
+          id: peers[4],
+          direction: null,
+          syncnets: none,
+          attnets: getAttnets([2]),
+          custodyGroups: null,
+          score: 0,
+          status,
+        },
+        {
+          id: peers[5],
+          direction: null,
+          syncnets: none,
+          attnets: getAttnets([0, 2]),
+          custodyGroups: null,
+          score: -20,
+          status,
+        },
+        {
+          id: peers[6],
+          direction: null,
+          syncnets: none,
+          attnets: getAttnets([1, 2, 3]),
+          custodyGroups: null,
+          score: 0,
+          status,
+        },
+        {
+          id: peers[7],
+          direction: null,
+          syncnets: none,
+          attnets: getAttnets([1, 2]),
+          custodyGroups: null,
+          score: -10,
+          status,
+        },
       ],
       activeAttnets: [1, 3],
       activeSyncnets: [],
-      opts: {targetPeers: 6, maxPeers: 6, targetSubnetPeers: 2, targetGroupPeers: 0},
+      opts: {...defaultOpts, targetPeers: 6, maxPeers: 6, targetSubnetPeers: 2},
       expectedResult: {
         // Peers sorted by score, excluding with future duties
         peersToDisconnect: new Map<ExcessPeerDisconnectReason, PeerId[]>([
@@ -302,6 +549,43 @@ describe("network / peers / priorization", async () => {
         peersToConnect: 0,
         attnetQueries: [{subnet: 3, maxPeersToDiscover: 1, toSlot: 0}],
         syncnetQueries: [],
+        groupQueries: new Map(),
+      },
+    },
+    {
+      id: "Disconnect close to us peers before far ahead peers when starved",
+      connectedPeers: [
+        // CLOSE_TO_US peers
+        {id: peers[0], direction: null, syncnets: none, attnets: none, custodyGroups: null, score: 0, status: null},
+        {id: peers[1], direction: null, syncnets: none, attnets: none, custodyGroups: null, score: -1, status: null},
+        // FAR_AHEAD peer
+        {
+          id: peers[2],
+          direction: null,
+          syncnets: none,
+          attnets: none,
+          custodyGroups: null,
+          score: -2,
+          status: {...status, headSlot: defaultOpts.starvationThresholdSlots + 1},
+        },
+      ],
+      activeAttnets: [],
+      activeSyncnets: [],
+      opts: {
+        ...defaultOpts,
+        targetPeers: 2,
+        starved: true,
+        // prune one more peer due to being starved
+        starvationPruneRatio: 0.5,
+      },
+      expectedResult: {
+        peersToConnect: 0,
+        attnetQueries: [],
+        syncnetQueries: [],
+        peersToDisconnect: new Map<ExcessPeerDisconnectReason, PeerId[]>([
+          // only the two CLOSE_TO_US peers are disconnected; keep FAR_AHEAD peer
+          [ExcessPeerDisconnectReason.NO_LONG_LIVED_SUBNET, [peers[1], peers[0]]],
+        ]),
         groupQueries: new Map(),
       },
     },
@@ -348,7 +632,8 @@ describe("network / peers / priorization", async () => {
 describe("sortPeersToPrune", async () => {
   const peers: PeerId[] = [];
   for (let i = 0; i < 8; i++) {
-    const peer = await createSecp256k1PeerId();
+    const pk = await generateKeyPair("secp256k1");
+    const peer = peerIdFromPrivateKey(pk);
     peer.toString = () => `peer-${i}`;
     peers.push(peer);
   }
@@ -356,10 +641,42 @@ describe("sortPeersToPrune", async () => {
 
   it("should sort peers by dutied subnets then long lived subnets then score", () => {
     const connectedPeers = [
-      {id: peers[3], direction: null, syncnets: none, attnets: getAttnets([0, 4]), score: -1, custodyGroups: []},
-      {id: peers[2], direction: null, syncnets: none, attnets: getAttnets([2, 3, 5]), score: 0, custodyGroups: []},
-      {id: peers[1], direction: null, syncnets: none, attnets: getAttnets([3, 5]), score: -1, custodyGroups: []},
-      {id: peers[0], direction: null, syncnets: none, attnets: getAttnets([6, 7]), score: -1.9, custodyGroups: []},
+      {
+        id: peers[3],
+        direction: null,
+        syncnets: none,
+        attnets: getAttnets([0, 4]),
+        score: -1,
+        custodyGroups: [],
+        statusScore: -1,
+      },
+      {
+        id: peers[2],
+        direction: null,
+        syncnets: none,
+        attnets: getAttnets([2, 3, 5]),
+        score: 0,
+        custodyGroups: [],
+        statusScore: -1,
+      },
+      {
+        id: peers[1],
+        direction: null,
+        syncnets: none,
+        attnets: getAttnets([3, 5]),
+        score: -1,
+        custodyGroups: [],
+        statusScore: -1,
+      },
+      {
+        id: peers[0],
+        direction: null,
+        syncnets: none,
+        attnets: getAttnets([6, 7]),
+        score: -1.9,
+        custodyGroups: [],
+        statusScore: -1,
+      },
     ].map((p) => ({
       ...p,
       attnetsTrueBitIndices: p.attnets?.getTrueBitIndexes() ?? [],

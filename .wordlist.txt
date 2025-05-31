@@ -209,6 +209,7 @@ produceBlockV
 protolambda
 prover
 pubsub
+rebased
 repo
 repos
 req

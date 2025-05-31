@@ -18,6 +18,7 @@ import {
   createCachedBeaconState,
   getEffectiveBalanceIncrementsZeroInactive,
   isCachedBeaconState,
+  processSlots,
 } from "@lodestar/state-transition";
 import {
   BeaconBlock,
@@ -41,13 +42,14 @@ import {
 import {Logger, fromHex, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
+import {PrivateKey} from "@libp2p/interface";
 import {LoggerNode} from "@lodestar/logger/node";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
 import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
-import {NodeId} from "../network/subnets/interface.js";
+import {computeNodeIdFromPrivateKey} from "../network/subnets/interface.js";
 import {BufferPool} from "../util/bufferPool.js";
 import {Clock, ClockEvent, IClock} from "../util/clock.js";
 import {CustodyConfig, getValidatorsCustodyRequirement} from "../util/dataColumns.js";
@@ -106,6 +108,7 @@ import {FileCPStateDatastore} from "./stateCache/datastore/file.js";
 import {FIFOBlockStateCache} from "./stateCache/fifoBlockStateCache.js";
 import {InMemoryCheckpointStateCache} from "./stateCache/inMemoryCheckpointsCache.js";
 import {PersistentCheckpointStateCache} from "./stateCache/persistentCheckpointsCache.js";
+import {ValidatorMonitor} from "./validatorMonitor.js";
 
 /**
  * Arbitrary constants, blobs and payloads should be consumed immediately in the same slot
@@ -125,6 +128,7 @@ export class BeaconChain implements IBeaconChain {
   readonly custodyConfig: CustodyConfig;
   readonly logger: Logger;
   readonly metrics: Metrics | null;
+  readonly validatorMonitor: ValidatorMonitor | null;
   readonly bufferPool: BufferPool | null;
 
   readonly anchorStateLatestBlockSlot: Slot;
@@ -167,9 +171,9 @@ export class BeaconChain implements IBeaconChain {
   /** Map keyed by executionPayload.blockHash of the block for those blobs */
   readonly producedContentsCache = new Map<BlockHash, deneb.Contents & {cells?: fulu.Cell[][]}>();
 
-  // Cache payload from the local execution so that produceBlindedBlock or produceBlockV3 and
-  // send and get signed/published blinded versions which beacon can assemble into full before
-  // actual publish
+  // Cache payloads from the local execution so that we can send
+  // and get signed/published blinded versions which beacon node can
+  // assemble into full blocks before publishing to the network.
   readonly producedBlockRoot = new Map<RootHex, ExecutionPayload | null>();
   readonly producedBlindedBlockRoot = new Set<RootHex>();
   readonly blacklistedBlocks: Map<RootHex, Slot | null>;
@@ -186,7 +190,7 @@ export class BeaconChain implements IBeaconChain {
   constructor(
     opts: IChainOptions,
     {
-      nodeId,
+      privateKey,
       config,
       db,
       dbName,
@@ -195,12 +199,13 @@ export class BeaconChain implements IBeaconChain {
       processShutdownCallback,
       clock,
       metrics,
+      validatorMonitor,
       anchorState,
       eth1,
       executionEngine,
       executionBuilder,
     }: {
-      nodeId: NodeId;
+      privateKey: PrivateKey;
       config: BeaconConfig;
       db: IBeaconDb;
       dbName: string;
@@ -210,6 +215,7 @@ export class BeaconChain implements IBeaconChain {
       /** Used for testing to supply fake clock */
       clock?: IClock;
       metrics: Metrics | null;
+      validatorMonitor: ValidatorMonitor | null;
       anchorState: BeaconStateAllForks;
       eth1: IEth1ForBlockProduction;
       executionEngine: IExecutionEngine;
@@ -222,6 +228,7 @@ export class BeaconChain implements IBeaconChain {
     this.logger = logger;
     this.processShutdownCallback = processShutdownCallback;
     this.metrics = metrics;
+    this.validatorMonitor = validatorMonitor;
     this.genesisTime = anchorState.genesisTime;
     this.anchorStateLatestBlockSlot = anchorState.latestBlockHeader.slot;
     this.genesisValidatorsRoot = anchorState.genesisValidatorsRoot;
@@ -243,9 +250,10 @@ export class BeaconChain implements IBeaconChain {
       config,
       clock,
       preAggregateCutOffTime,
-      this.opts?.preaggregateSlotDistance
+      this.opts?.preaggregateSlotDistance,
+      metrics
     );
-    this.aggregatedAttestationPool = new AggregatedAttestationPool(this.config);
+    this.aggregatedAttestationPool = new AggregatedAttestationPool(this.config, metrics);
     this.syncCommitteeMessagePool = new SyncCommitteeMessagePool(
       clock,
       preAggregateCutOffTime,
@@ -255,6 +263,7 @@ export class BeaconChain implements IBeaconChain {
     this.seenAggregatedAttestations = new SeenAggregatedAttestations(metrics);
     this.seenContributionAndProof = new SeenContributionAndProof(metrics);
     this.seenAttestationDatas = new SeenAttestationDatas(metrics, this.opts?.attDataCacheSlotDistance);
+    const nodeId = computeNodeIdFromPrivateKey(privateKey);
     this.custodyConfig = new CustodyConfig(nodeId, config);
     this.seenGossipBlockInput = new SeenGossipBlockInput(this.custodyConfig, this.executionEngine, emitter, logger);
 
@@ -339,6 +348,7 @@ export class BeaconChain implements IBeaconChain {
       checkpointStateCache,
       db,
       metrics,
+      validatorMonitor,
       logger,
       emitter,
       signal,
@@ -381,7 +391,7 @@ export class BeaconChain implements IBeaconChain {
     }
 
     if (metrics) {
-      metrics.opPool.aggregatedAttestationPoolSize.addCollect(() => this.onScrapeMetrics(metrics));
+      metrics.clockSlot.addCollect(() => this.onScrapeMetrics(metrics));
     }
 
     // Event handlers. emitter is created internally and dropped on close(). Not need to .removeListener()
@@ -521,6 +531,10 @@ export class BeaconChain implements IBeaconChain {
   async getHistoricalStateBySlot(
     slot: number
   ): Promise<{state: Uint8Array; executionOptimistic: boolean; finalized: boolean} | null> {
+    if (!this.opts.serveHistoricalState) {
+      throw Error("Historical state regen is not enabled, set --serveHistoricalState to fetch this data");
+    }
+
     return this.archiveStore.getHistoricalStateBySlot(slot);
   }
 
@@ -1084,10 +1098,8 @@ export class BeaconChain implements IBeaconChain {
   }
 
   private onScrapeMetrics(metrics: Metrics): void {
-    const {attestationCount, attestationDataCount} = this.aggregatedAttestationPool.getAttestationCount();
-    metrics.opPool.aggregatedAttestationPoolSize.set(attestationCount);
-    metrics.opPool.aggregatedAttestationPoolUniqueData.set(attestationDataCount);
-    metrics.opPool.attestationPoolSize.set(this.attestationPool.getAttestationCount());
+    // aggregatedAttestationPool tracks metrics on its own
+    metrics.opPool.attestationPool.size.set(this.attestationPool.getAttestationCount());
     metrics.opPool.attesterSlashingPoolSize.set(this.opPool.attesterSlashingsSize);
     metrics.opPool.proposerSlashingPoolSize.set(this.opPool.proposerSlashingsSize);
     metrics.opPool.voluntaryExitPoolSize.set(this.opPool.voluntaryExitsSize);
@@ -1139,7 +1151,7 @@ export class BeaconChain implements IBeaconChain {
     if (metrics && (slot + 1) % SLOTS_PER_EPOCH === 0) {
       // On the last slot of the epoch
       sleep((1000 * this.config.SECONDS_PER_SLOT) / 2)
-        .then(() => metrics.onceEveryEndOfEpoch(this.getHeadState()))
+        .then(() => this.validatorMonitor?.onceEveryEndOfEpoch(this.getHeadState()))
         .catch((e) => {
           if (!isErrorAborted(e)) this.logger.error("Error on validator monitor onceEveryEndOfEpoch", {slot}, e);
         });
@@ -1225,7 +1237,7 @@ export class BeaconChain implements IBeaconChain {
       const {faultInspectionWindow, allowedFaults} = executionBuilder;
       const slotsPresent = this.forkChoice.getSlotsPresent(clockSlot - faultInspectionWindow);
       const previousStatus = executionBuilder.status;
-      const shouldEnable = slotsPresent >= faultInspectionWindow - allowedFaults;
+      const shouldEnable = slotsPresent >= Math.min(faultInspectionWindow - allowedFaults, clockSlot);
 
       executionBuilder.updateStatus(shouldEnable);
       // The status changed we should log
@@ -1245,11 +1257,13 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async getBlockRewards(block: BeaconBlock | BlindedBeaconBlock): Promise<BlockRewards> {
-    const preState = this.regen.getPreStateSync(block);
+    let preState = this.regen.getPreStateSync(block);
 
     if (preState === null) {
       throw Error(`Pre-state is unavailable given block's parent root ${toRootHex(block.parentRoot)}`);
     }
+
+    preState = processSlots(preState, block.slot); // Dial preState's slot to block.slot
 
     const postState = this.regen.getStateSync(toRootHex(block.stateRoot)) ?? undefined;
 
@@ -1286,11 +1300,13 @@ export class BeaconChain implements IBeaconChain {
     block: BeaconBlock | BlindedBeaconBlock,
     validatorIds?: (ValidatorIndex | string)[]
   ): Promise<SyncCommitteeRewards> {
-    const preState = this.regen.getPreStateSync(block);
+    let preState = this.regen.getPreStateSync(block);
 
     if (preState === null) {
       throw Error(`Pre-state is unavailable given block's parent root ${toRootHex(block.parentRoot)}`);
     }
+
+    preState = processSlots(preState, block.slot); // Dial preState's slot to block.slot
 
     return computeSyncCommitteeRewards(block, preState.clone(), validatorIds);
   }

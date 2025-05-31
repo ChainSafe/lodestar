@@ -8,6 +8,7 @@ import {ShufflingCacheOpts} from "./shufflingCache.js";
 import {DEFAULT_MAX_BLOCK_STATES, FIFOBlockStateCacheOpts} from "./stateCache/fifoBlockStateCache.js";
 import {PersistentCheckpointStateCacheOpts} from "./stateCache/persistentCheckpointsCache.js";
 import {DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY} from "./stateCache/persistentCheckpointsCache.js";
+import {ValidatorMonitorOpts} from "./validatorMonitor.js";
 
 export {ArchiveMode, DEFAULT_ARCHIVE_MODE};
 
@@ -19,6 +20,7 @@ export type IChainOptions = BlockProcessOpts &
   FIFOBlockStateCacheOpts &
   PersistentCheckpointStateCacheOpts &
   ShufflingCacheOpts &
+  ValidatorMonitorOpts &
   LightClientServerOpts & {
     blsVerifyAllMainThread?: boolean;
     blsVerifyAllMultiThread?: boolean;
@@ -115,6 +117,7 @@ export const defaultChainOptions: IChainOptions = {
   computeUnrealized: true,
   safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
   suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
+  serveHistoricalState: false,
   assertCorrectProgressiveBalances: false,
   archiveStateEpochFrequency: 1024,
   archiveMode: DEFAULT_ARCHIVE_MODE,

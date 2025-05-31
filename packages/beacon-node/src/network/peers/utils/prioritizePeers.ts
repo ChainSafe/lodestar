@@ -45,9 +45,50 @@ type SubnetDiscvQuery = {subnet: SubnetID; toSlot: number; maxPeersToDiscover: n
  */
 export type GroupQueries = Map<CustodyIndex, number>;
 
+/**
+ * Comparison of our status vs a peer's status.
+ *
+ * The main usage of this score is to feed into peer priorization during syncing, and especially when the node is having trouble finding data during syncing
+ *
+ * For network stability, we DON'T distinguish peers that are far behind us vs peers that are close to us.
+ */
+enum StatusScore {
+  /** The peer is close to our chain */
+  CLOSE_TO_US = -1,
+  /** The peer is far ahead of chain */
+  FAR_AHEAD = 0,
+}
+
+/**
+ * In practice, this score only tracks if the peer is far ahead of us or not during syncing.
+ * When the node is synced, the peer is always CLOSE_TO_US.
+ */
+function computeStatusScore(ours: phase0.Status, theirs: phase0.Status | null, opts: PrioritizePeersOpts): StatusScore {
+  if (theirs === null) {
+    return StatusScore.CLOSE_TO_US;
+  }
+
+  if (theirs.finalizedEpoch > ours.finalizedEpoch) {
+    return StatusScore.FAR_AHEAD;
+  }
+
+  if (theirs.headSlot > ours.headSlot + opts.starvationThresholdSlots) {
+    return StatusScore.FAR_AHEAD;
+  }
+
+  // It's dangerous to downscore peers that are far behind.
+  // This means we'd be more likely to disconnect peers that are attempting to sync, which would affect network stability.
+  // if (ours.headSlot > theirs.headSlot + opts.starvationThresholdSlots) {
+  //   return StatusScore.FAR_BEHIND;
+  // }
+
+  return StatusScore.CLOSE_TO_US;
+}
+
 type PeerInfo = {
   id: PeerId;
   direction: Direction | null;
+  statusScore: StatusScore;
   attnets: phase0.AttestationSubnets;
   syncnets: altair.SyncSubnets;
   custodyGroups: CustodyIndex[];
@@ -60,6 +101,10 @@ export type PrioritizePeersOpts = {
   targetPeers: number;
   maxPeers: number;
   targetGroupPeers: number;
+  status: phase0.Status;
+  starved: boolean;
+  starvationPruneRatio: number;
+  starvationThresholdSlots: number;
   outboundPeersRatio?: number;
   targetSubnetPeers?: number;
 };
@@ -74,6 +119,7 @@ export enum ExcessPeerDisconnectReason {
 /**
  * Prioritize which peers to disconect and which to connect. Conditions:
  * - Reach `targetPeers`
+ *   - If we're starved for data, prune additional peers
  * - Don't exceed `maxPeers`
  * - Ensure there are enough peers per active subnet
  * - Prioritize peers with good score
@@ -84,6 +130,7 @@ export function prioritizePeers(
   connectedPeersInfo: {
     id: PeerId;
     direction: Direction | null;
+    status: phase0.Status | null;
     attnets: phase0.AttestationSubnets | null;
     syncnets: altair.SyncSubnets | null;
     custodyGroups: CustodyIndex[] | null;
@@ -111,6 +158,7 @@ export function prioritizePeers(
     (peer): PeerInfo => ({
       id: peer.id,
       direction: peer.direction,
+      statusScore: computeStatusScore(opts.status, peer.status, opts),
       attnets: peer.attnets ?? attnetsZero,
       syncnets: peer.syncnets ?? syncnetsZero,
       custodyGroups: peer.custodyGroups ?? [],
@@ -297,6 +345,11 @@ function pruneExcessPeers(
         return false;
       }
 
+      // Peers far ahead when we're starved for data are not eligible for pruning
+      if (opts.starved && peer.statusScore === StatusScore.FAR_AHEAD) {
+        return false;
+      }
+
       // outbound peers up to OUTBOUND_PEER_RATIO sorted by highest score and not eligible for pruning
       if (peer.direction === "outbound") {
         if (outboundPeers - outboundPeersEligibleForPruning > outboundPeersTarget) {
@@ -312,7 +365,9 @@ function pruneExcessPeers(
   let peersToDisconnectCount = 0;
   const noLongLivedSubnetPeersToDisconnect: PeerId[] = [];
 
-  const peersToDisconnectTarget = connectedPeerCount - targetPeers;
+  const peersToDisconnectTarget =
+    // if we're starved for data, prune additional peers
+    connectedPeerCount - targetPeers + (opts.starved ? targetPeers * opts.starvationPruneRatio : 0);
 
   // 1. Lodestar prefers disconnecting peers that does not have long lived subnets
   // See https://github.com/ChainSafe/lodestar/issues/3940
@@ -430,7 +485,7 @@ function pruneExcessPeers(
 /**
  * Sort peers ascending, peer-0 has the most chance to prune, peer-n has the least.
  * Shuffling first to break ties.
- * prefer sorting by dutied subnets first then number of long lived subnets,
+ * prefer sorting by status score (applicable during syncing), then dutied subnets, then number of long lived subnets, then peer score
  * peer score is the last criteria since they are supposed to be in the same score range,
  * bad score peers are removed by peer manager anyway
  */
@@ -439,6 +494,10 @@ export function sortPeersToPrune(connectedPeers: PeerInfo[], dutiesByPeer: Map<P
     const dutiedSubnet1 = dutiesByPeer.get(p1) ?? 0;
     const dutiedSubnet2 = dutiesByPeer.get(p2) ?? 0;
     if (dutiedSubnet1 === dutiedSubnet2) {
+      const statusScore = p1.statusScore - p2.statusScore;
+      if (statusScore !== 0) {
+        return statusScore;
+      }
       const [longLivedSubnets1, longLivedSubnets2] = [p1, p2].map(
         (p) => p.attnetsTrueBitIndices.length + p.syncnetsTrueBitIndices.length
       );

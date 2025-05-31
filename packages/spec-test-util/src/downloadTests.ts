@@ -1,12 +1,11 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+import {execFile} from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import stream from "node:stream";
+import {pipeline} from "node:stream/promises";
+import {ReadableStream as NodeReadableStream} from "node:stream/web";
 import {promisify} from "node:util";
-import {retry} from "@lodestar/utils";
-import axios from "axios";
+import {fetch, retry} from "@lodestar/utils";
 import {rimraf} from "rimraf";
-import {x as extractTar} from "tar";
 
 export const defaultSpecTestsRepoUrl = "https://github.com/ethereum/consensus-spec-tests";
 
@@ -64,23 +63,34 @@ export async function downloadGenericSpecTests<TestNames extends string>(
   await Promise.all(
     testsToDownload.map(async (test) => {
       const url = `${specTestsRepoUrl ?? defaultSpecTestsRepoUrl}/releases/download/${specVersion}/${test}.tar.gz`;
+      const tarball = path.join(outputDir, `${test}.tar.gz`);
 
       await retry(
         async () => {
-          const {data, headers} = await axios({
-            method: "get",
-            url,
-            responseType: "stream",
-            timeout: 30 * 60 * 1000,
-          });
+          const res = await fetch(url, {signal: AbortSignal.timeout(30 * 60 * 1000)});
 
-          const totalSize = headers["content-length"] as string;
+          if (!res.ok) {
+            throw new Error(`Failed to download file from ${url}: ${res.status} ${res.statusText}`);
+          }
+
+          if (!res.body) {
+            throw new Error("Response body is null");
+          }
+
+          const totalSize = res.headers.get("content-length");
           log(`Downloading ${url} - ${totalSize} bytes`);
 
-          // extract tar into output directory
-          await promisify(stream.pipeline)(data, extractTar({cwd: outputDir}));
+          // stream download to local .tar.gz file
+          await pipeline(res.body as NodeReadableStream, fs.createWriteStream(tarball));
+          log(`Downloaded ${url} - ${fs.statSync(tarball).size} bytes`);
 
-          log(`Downloaded  ${url}`);
+          // extract tar into output directory
+          await promisify(execFile)("tar", ["-xzf", tarball, "-C", outputDir, "--exclude=._*", "--exclude=*/._*"], {
+            maxBuffer: 1000 * 1024 * 1024, // 1 GB
+          });
+          log(`Extracted ${tarball} to ${outputDir}`);
+
+          fs.unlinkSync(tarball);
         },
         {
           retries: 3,

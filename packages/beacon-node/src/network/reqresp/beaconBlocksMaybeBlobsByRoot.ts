@@ -2,7 +2,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {RootHex, SignedBeaconBlock, deneb, fulu, phase0, ssz} from "@lodestar/types";
+import {RootHex, SignedBeaconBlock, deneb, fulu, phase0} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {fromHex} from "@lodestar/utils";
 import {Logger} from "@lodestar/utils";

@@ -50,3 +50,4 @@ export type RootHex = string;
 export type TimeSeconds = number;
 export type ColumnIndex = UintNum64; // in reality this number is u8 and can be treated as a JS Number
 export type CustodyIndex = UintNum64; // in reality this number is u8 and can be treated as a JS Number
+export type RowIndex = UintNum64;

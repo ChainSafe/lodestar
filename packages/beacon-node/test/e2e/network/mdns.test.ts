@@ -1,6 +1,6 @@
 import {SignableENR} from "@chainsafe/enr";
-import {PeerId} from "@libp2p/interface";
-import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
+import {generateKeyPair} from "@libp2p/crypto/keys";
+import {PrivateKey} from "@libp2p/interface";
 import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
@@ -10,7 +10,6 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {GossipHandlers} from "../../../src/network/gossip/index.js";
 import {Network, NetworkInitModules, getReqRespHandlers} from "../../../src/network/index.js";
 import {NetworkOptions, defaultNetworkOptions} from "../../../src/network/options.js";
-import {computeNodeId} from "../../../src/network/subnets/index.js";
 import {getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
 import {memoOnce} from "../../utils/cache.js";
@@ -36,9 +35,9 @@ describe.skip("mdns", () => {
     controller.abort();
   });
 
-  async function getOpts(peerId: PeerId): Promise<NetworkOptions> {
+  async function getOpts(privateKey: PrivateKey): Promise<NetworkOptions> {
     const bindAddrUdp = `/ip4/0.0.0.0/udp/${port++}`;
-    const enr = SignableENR.createFromPeerId(peerId);
+    const enr = SignableENR.createFromPrivateKey(privateKey);
     enr.setLocationMultiaddr(multiaddr(bindAddrUdp));
 
     return {
@@ -82,12 +81,12 @@ describe.skip("mdns", () => {
     const db = getMockedBeaconDb();
     const gossipHandlers = {} as GossipHandlers;
 
-    const peerId = await createSecp256k1PeerId();
+    const privateKey = await generateKeyPair("secp256k1");
     const logger = testLogger(nodeName);
 
-    const opts = await getOpts(peerId);
+    const opts = await getOpts(privateKey);
 
-    const modules: Omit<NetworkInitModules, "opts" | "peerId" | "logger" | "nodeId"> = {
+    const modules: Omit<NetworkInitModules, "opts" | "privateKey" | "logger"> = {
       config,
       chain,
       db,
@@ -98,8 +97,7 @@ describe.skip("mdns", () => {
 
     const network = await Network.init({
       ...modules,
-      ...(await createNetworkModules(mu, peerId, {...opts, mdns: true})),
-      nodeId: computeNodeId(peerId),
+      ...(await createNetworkModules(mu, privateKey, {...opts, mdns: true})),
       logger,
     });
 

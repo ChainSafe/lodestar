@@ -1,11 +1,10 @@
-import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {BLOB_TX_TYPE, BYTES_PER_FIELD_ELEMENT} from "@lodestar/params";
+import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {deneb, ssz} from "@lodestar/types";
 import {afterEach, beforeAll, describe, expect, it} from "vitest";
 import {validateBlobSidecars, validateGossipBlobSidecar} from "../../../src/chain/validation/blobSidecar.js";
 import {computeBlobSidecars, computeDataColumnSidecars} from "../../../src/util/blobs.js";
-import {FIELD_ELEMENTS_PER_BLOB_MAINNET, ckzg, initCKZG, loadEthereumTrustedSetup} from "../../../src/util/kzg.js";
+import {ckzg, initCKZG, loadEthereumTrustedSetup} from "../../../src/util/kzg.js";
 import {getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
 import {getBlobCellAndProofs} from "../../utils/getBlobCellAndProofs.js";
 import {generateRandomBlob, transactionForKzgCommitment} from "../../utils/kzg.js";

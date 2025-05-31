@@ -1,14 +1,8 @@
 import {fromHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
+import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {computeTotalBalance} from "../../../src/forkChoice/store.js";
-import {
-  DataAvailabilityStatus,
-  ExecutionStatus,
-  ForkChoice,
-  IForkChoiceStore,
-  ProtoArray,
-  ProtoBlock,
-} from "../../../src/index.js";
+import {ExecutionStatus, ForkChoice, IForkChoiceStore, ProtoArray, ProtoBlock} from "../../../src/index.js";
 
 const genesisSlot = 0;
 const genesisEpoch = 0;

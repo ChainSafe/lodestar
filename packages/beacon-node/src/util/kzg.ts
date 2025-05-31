@@ -37,10 +37,8 @@ export let ckzg: {
 };
 
 export async function initCKZG(): Promise<void> {
-  /* eslint-disable @typescript-eslint/ban-ts-comment */
   // @ts-ignore
   ckzg = (await import("c-kzg")).default as typeof ckzg;
-  /* eslint-enable @typescript-eslint/ban-ts-comment */
 }
 
 /**

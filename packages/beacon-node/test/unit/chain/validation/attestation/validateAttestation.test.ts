@@ -1,6 +1,6 @@
 import {BitArray} from "@chainsafe/ssz";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {SubnetID, ssz} from "@lodestar/types";
+import {ssz} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 import {describe, expect, it} from "vitest";
 import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../../state-transition/test/perf/util.js";
@@ -21,8 +21,8 @@ import {AttestationValidDataOpts, getAttestationValidData} from "../../../../uti
 
 // TODO: more tests for electra
 describe("validateAttestation", () => {
-  const vc = 64;
-  const stateSlot = 100;
+  const vc = 8192;
+  const stateSlot = 400;
 
   const UNKNOWN_ROOT = Buffer.alloc(32, 1);
   const KNOWN_TARGET_ROOT = Buffer.alloc(32, 0xd0);
@@ -212,7 +212,7 @@ describe("validateAttestation", () => {
     // Increase the length of aggregationBits beyond the committee size
     attestation.aggregationBits = new BitArray(
       attestation.aggregationBits.uint8Array,
-      attestation.aggregationBits.bitLen + 1
+      attestation.aggregationBits.bitLen - 1
     );
     const serializedData = ssz.phase0.Attestation.serialize(attestation);
 

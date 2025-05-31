@@ -9,7 +9,7 @@ import {BlockInput, BlockInputType, CachedDataColumns, NullBlockInput} from "../
 import {BlockError, BlockErrorCode} from "../chain/errors/index.js";
 import {IBeaconChain} from "../chain/index.js";
 import {Metrics} from "../metrics/index.js";
-import {INetwork, NetworkEvent, NetworkEventData, PeerAction} from "../network/index.js";
+import {INetwork, NetworkEvent, NetworkEventData} from "../network/index.js";
 import {
   beaconBlocksMaybeBlobsByRoot,
   unavailableBeaconBlobsByRoot,

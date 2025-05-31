@@ -1,6 +1,6 @@
 import {PublicKey} from "@chainsafe/blst";
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
-import {ValidatorIndex, phase0} from "@lodestar/types";
+import {phase0} from "@lodestar/types";
 
 export type Index2PubkeyCache = PublicKey[];
 

@@ -4,13 +4,7 @@ import {routes} from "@lodestar/api";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
-import {
-  BlockInput,
-  BlockInputBlobs,
-  BlockInputType,
-  BlockSource,
-  CachedData,
-} from "../../../../src/chain/blocks/types.js";
+import {BlockInput, BlockInputType, BlockSource, DataColumnsSource} from "../../../../src/chain/blocks/types.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../../../src/constants/constants.js";
 import {ReqRespBridgeEventData} from "../../../../src/network/core/events.js";
 import {ReqRespBridgeEvent} from "../../../../src/network/core/events.js";
@@ -162,6 +156,12 @@ describe("data serialization through worker boundary", () => {
     state: "connected",
     direction: "inbound",
     agentVersion: "test",
+    status: null,
+    metadata: null,
+    agentClient: "test",
+    lastReceivedMsgUnixTsMs: 0,
+    lastStatusUnixTsMs: 0,
+    connectedUnixTsMs: 0,
   };
 
   // If return type is void, set to null
@@ -254,26 +254,16 @@ describe("data serialization through worker boundary", () => {
 type Resolves<T extends Promise<unknown>> = T extends Promise<infer U> ? (U extends void ? null : U) : never;
 
 function getEmptyBlockInput(): BlockInput {
-  let resolveAvailability: ((blobs: BlockInputBlobs) => void) | null = null;
-  const availabilityPromise = new Promise<BlockInputBlobs>((resolveCB) => {
-    resolveAvailability = resolveCB;
-  });
-  if (resolveAvailability === null) {
-    throw Error("Promise Constructor was not executed immediately");
-  }
-  const blobsCache = new Map();
-
-  const cachedData = {
-    fork: ForkName.deneb,
-    blobsCache,
-    availabilityPromise,
-    resolveAvailability,
-    cacheId: 18,
-  } as CachedData;
+  // cannot return BlockInputType.dataPromise because it cannot be cloned through worker boundary
   return {
-    type: BlockInputType.dataPromise,
-    block: ssz.deneb.SignedBeaconBlock.defaultValue(),
+    block: ssz.fulu.SignedBeaconBlock.defaultValue(),
     source: BlockSource.gossip,
-    cachedData,
+    type: BlockInputType.availableData,
+    blockData: {
+      fork: ForkName.fulu,
+      dataColumns: ssz.fulu.DataColumnSidecars.defaultValue(),
+      dataColumnsBytes: [],
+      dataColumnsSource: DataColumnsSource.gossip,
+    },
   };
 }

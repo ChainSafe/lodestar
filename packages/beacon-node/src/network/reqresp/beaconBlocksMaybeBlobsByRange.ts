@@ -1,6 +1,5 @@
-import {toHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, ForkSeq, NUMBER_OF_COLUMNS} from "@lodestar/params";
+import {ForkName, ForkSeq} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {ColumnIndex, Epoch, SignedBeaconBlock, Slot, deneb, fulu, phase0, ssz} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
@@ -20,7 +19,6 @@ import {
 import {getEmptyBlockInputCacheEntry} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {INetwork, WithOptionalBytes} from "../interface.js";
-import {computeNodeId} from "../subnets/index.js";
 
 export type PartialDownload = null | {blocks: BlockInput[]; pendingDataColumns: number[]};
 export async function beaconBlocksMaybeBlobsByRange(
@@ -324,7 +322,6 @@ export function matchBlockWithDataColumns(
             allBlocks: allBlocks.length,
             allDataColumnSidecars: allDataColumnSidecars.length,
             peerId,
-            nodeId: toHexString(computeNodeId(peerId)),
             blobKzgCommitmentsLen,
             peerClient,
           }

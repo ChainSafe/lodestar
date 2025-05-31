@@ -2,7 +2,18 @@
 
 This section of the documentation will cover common questions and common encounters by users and developers.
 
-## Tooling
+## Developer Tooling
+
+### Python Distutils
+
+:::note "MacOS: ModuleNotFoundError: No module named 'distutils'"
+When using the `yarn` command, some MacOS users may experience this error if they are running Python 3.12+. The `distutils` module has been removed from the standard Python library via PEP 632 which deprecates and eliminates `distutils` in favor of other tools like `setuptools`.
+
+For MacOS, there is no direct equivalent package to Linux's `python3-distutils`. Therefore, the solution is to install the `python-setuptools` package via Homebrew: `brew install python-setuptools`
+
+:::
+
+### Yarn Package Manager
 
 :::note "Package manager issues"
 

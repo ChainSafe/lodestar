@@ -1,8 +1,9 @@
 import {beforeAll, bench, describe} from "@chainsafe/benchmark";
+import {generateKeyPair} from "@libp2p/crypto/keys";
 import {PeerId} from "@libp2p/interface";
-import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
-import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
-import {altair, phase0} from "@lodestar/types";
+import {peerIdFromPrivateKey} from "@libp2p/peer-id";
+import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+import {altair, phase0, ssz} from "@lodestar/types";
 import {defaultNetworkOptions} from "../../../../../src/network/options.js";
 import {RequestedSubnet, prioritizePeers} from "../../../../../src/network/peers/utils/index.js";
 import {getAttnets, getSyncnets} from "../../../../utils/network.js";
@@ -12,7 +13,8 @@ describe("prioritizePeers", () => {
 
   beforeAll(async () => {
     for (let i = 0; i < defaultNetworkOptions.maxPeers; i++) {
-      const peer = await createSecp256k1PeerId();
+      const pk = await generateKeyPair("secp256k1");
+      const peer = peerIdFromPrivateKey(pk);
       peer.toString = () => `peer-${i}`;
       seedPeers.push({
         id: peer,
@@ -102,6 +104,7 @@ describe("prioritizePeers", () => {
           ),
           score: lowestScore + ((highestScore - lowestScore) * i) / defaultNetworkOptions.maxPeers,
           custodyGroups: [],
+          status: ssz.phase0.Status.defaultValue(),
         }));
 
         const attnets: RequestedSubnet[] = [];
@@ -116,7 +119,20 @@ describe("prioritizePeers", () => {
         return {connectedPeers, attnets, syncnets, samplingGroups: []};
       },
       fn: ({connectedPeers, attnets, syncnets, samplingGroups}) => {
-        prioritizePeers(connectedPeers, attnets, syncnets, samplingGroups, defaultNetworkOptions, null);
+        prioritizePeers(
+          connectedPeers,
+          attnets,
+          syncnets,
+          samplingGroups,
+          {
+            ...defaultNetworkOptions,
+            status: ssz.phase0.Status.defaultValue(),
+            starved: false,
+            starvationPruneRatio: 0.05,
+            starvationThresholdSlots: SLOTS_PER_EPOCH * 2,
+          },
+          null
+        );
       },
     });
   }

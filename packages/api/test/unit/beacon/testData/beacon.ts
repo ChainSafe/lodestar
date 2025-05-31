@@ -238,6 +238,13 @@ export const testData: GenericServerTestCases<Endpoints> = {
       meta: {executionOptimistic: true, finalized: false, version: ForkName.electra},
     },
   },
+  getPendingConsolidations: {
+    args: {stateId: "head"},
+    res: {
+      data: [ssz.electra.PendingConsolidation.defaultValue()],
+      meta: {executionOptimistic: true, finalized: false, version: ForkName.electra},
+    },
+  },
 
   // rewards
 

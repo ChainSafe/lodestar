@@ -1,5 +1,5 @@
 import {ModuleThread} from "@chainsafe/threads";
-import {BeaconConfig} from "@lodestar/config";
+import {BeaconConfig, SpecJson} from "@lodestar/config";
 import {LoggerNode, LoggerNodeOpts} from "@lodestar/logger/node";
 import {BeaconStateTransitionMetrics} from "@lodestar/state-transition";
 import {Gauge, Histogram} from "@lodestar/utils";
@@ -20,7 +20,7 @@ export type HistoricalStateRegenModules = HistoricalStateRegenInitModules & {
 };
 
 export type HistoricalStateWorkerData = {
-  chainConfigJson: Record<string, string>;
+  chainConfigJson: SpecJson;
   genesisValidatorsRoot: Uint8Array;
   genesisTime: number;
   maxConcurrency: number;

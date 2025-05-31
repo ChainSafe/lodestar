@@ -1,6 +1,6 @@
 import {
   CachedBeaconStateAllForks,
-  DataAvailableStatus,
+  DataAvailabilityStatus,
   ExecutionPayloadStatus,
   StateHashTreeRootSource,
   stateTransition,
@@ -11,6 +11,7 @@ import {byteArrayEquals} from "../../util/bytes.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
+import {ValidatorMonitor} from "../validatorMonitor.js";
 import {BlockInput, ImportBlockOpts} from "./types.js";
 
 /**
@@ -24,9 +25,10 @@ import {BlockInput, ImportBlockOpts} from "./types.js";
 export async function verifyBlocksStateTransitionOnly(
   preState0: CachedBeaconStateAllForks,
   blocks: BlockInput[],
-  dataAvailabilityStatuses: DataAvailableStatus[],
+  dataAvailabilityStatuses: DataAvailabilityStatus[],
   logger: Logger,
   metrics: Metrics | null,
+  validatorMonitor: ValidatorMonitor | null,
   signal: AbortSignal,
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<{postStates: CachedBeaconStateAllForks[]; proposerBalanceDeltas: number[]; verifyStateTime: number}> {
@@ -38,7 +40,7 @@ export async function verifyBlocksStateTransitionOnly(
     const {validProposerSignature, validSignatures} = opts;
     const {block} = blocks[i];
     const preState = i === 0 ? preState0 : postStates[i - 1];
-    const dataAvailableStatus = dataAvailabilityStatuses[i];
+    const dataAvailabilityStatus = dataAvailabilityStatuses[i];
 
     // STFN - per_slot_processing() + per_block_processing()
     // NOTE: `regen.getPreState()` should have dialed forward the state already caching checkpoint states
@@ -50,14 +52,14 @@ export async function verifyBlocksStateTransitionOnly(
         // NOTE: Assume valid for now while sending payload to execution engine in parallel
         // Latter verifyBlocksInEpoch() will make sure that payload is indeed valid
         executionPayloadStatus: ExecutionPayloadStatus.valid,
-        dataAvailableStatus,
+        dataAvailabilityStatus,
         // false because it's verified below with better error typing
         verifyStateRoot: false,
         // if block is trusted don't verify proposer or op signature
         verifyProposer: !useBlsBatchVerify && !validSignatures && !validProposerSignature,
         verifySignatures: !useBlsBatchVerify && !validSignatures,
       },
-      metrics
+      {metrics, validatorMonitor}
     );
 
     const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({

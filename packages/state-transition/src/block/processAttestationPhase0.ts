@@ -3,7 +3,7 @@ import {Attestation, Slot, electra, phase0, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {assert} from "@lodestar/utils";
 import {CachedBeaconStateAllForks, CachedBeaconStatePhase0} from "../types.js";
-import {computeEpochAtSlot} from "../util/index.js";
+import {computeEndSlotAtEpoch, computeEpochAtSlot} from "../util/index.js";
 import {isValidIndexedAttestation} from "./index.js";
 
 /**
@@ -78,9 +78,11 @@ export function validateAttestation(fork: ForkSeq, state: CachedBeaconStateAllFo
 
   // post deneb, the attestations are valid till end of next epoch
   if (!(data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= slot && isTimelyTarget(fork, slot - data.slot))) {
+    const windowStart = data.slot + MIN_ATTESTATION_INCLUSION_DELAY;
+    const windowEnd = fork >= ForkSeq.deneb ? computeEndSlotAtEpoch(computedEpoch + 1) : data.slot + SLOTS_PER_EPOCH;
+
     throw new Error(
-      "Attestation slot not within inclusion window: " +
-        `slot=${data.slot} window=${data.slot + MIN_ATTESTATION_INCLUSION_DELAY}..${data.slot + SLOTS_PER_EPOCH}`
+      `Attestation slot not within inclusion window: slot=${data.slot} window=${windowStart}..${windowEnd}`
     );
   }
 

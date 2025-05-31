@@ -1,26 +1,17 @@
 import {toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {
-  BYTES_PER_FIELD_ELEMENT,
-  FIELD_ELEMENTS_PER_BLOB,
-  ForkName,
-  ForkPostDeneb,
-  isForkPostDeneb,
-} from "@lodestar/params";
+import {BYTES_PER_FIELD_ELEMENT, FIELD_ELEMENTS_PER_BLOB, ForkName} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {SignedBeaconBlock, Uint8, deneb, ssz} from "@lodestar/types";
+import {deneb, ssz} from "@lodestar/types";
 import {BlobAndProofV2} from "@lodestar/types/lib/fulu/types.js";
 import {beforeAll, describe, expect, it, vi} from "vitest";
 import {
   BlobsSource,
   BlockInput,
   BlockInputAvailableData,
-  BlockInputBlobs,
-  BlockInputDataColumns,
   BlockInputType,
   BlockSource,
   CachedData,
-  DataColumnsSource,
   getBlockInput,
 } from "../../../src/chain/blocks/types.js";
 import {ChainEventEmitter} from "../../../src/chain/emitter.js";
@@ -34,7 +25,7 @@ import {
   computeKzgCommitmentsInclusionProof,
   kzgCommitmentToVersionedHash,
 } from "../../../src/util/blobs.js";
-import {CustodyConfig, getCellsAndProofs, getDataColumnSidecars} from "../../../src/util/dataColumns.js";
+import {CustodyConfig, getDataColumnSidecars} from "../../../src/util/dataColumns.js";
 import {ckzg} from "../../../src/util/kzg.js";
 import {initCKZG, loadEthereumTrustedSetup} from "../../../src/util/kzg.js";
 import {getValidPeerId} from "../../utils/peer.js";

@@ -1,12 +1,13 @@
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
-import {PeerId} from "@libp2p/interface";
+import {PeerId, PrivateKey} from "@libp2p/interface";
+import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
-import {DATA_COLUMN_SIDECAR_SUBNET_COUNT, ForkSeq, NUMBER_OF_COLUMNS} from "@lodestar/params";
+import {ForkSeq, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
-import {computeStartSlotAtEpoch, computeTimeAtSlot} from "@lodestar/state-transition";
+import {computeEpochAtSlot, computeStartSlotAtEpoch, computeTimeAtSlot} from "@lodestar/state-transition";
 import {
   AttesterSlashing,
   ColumnIndex,
@@ -55,13 +56,12 @@ import {
   collectMaxResponseTypedWithBytes,
 } from "./reqresp/utils/collect.js";
 import {collectSequentialBlocksInRange} from "./reqresp/utils/collectSequentialBlocksInRange.js";
-import {CommitteeSubscription, NodeId} from "./subnets/index.js";
+import {CommitteeSubscription} from "./subnets/index.js";
 import {isPublishToZeroPeersError} from "./util.js";
 
 type NetworkModules = {
   opts: NetworkOptions;
-  peerId: PeerId;
-  nodeId: NodeId;
+  privateKey: PrivateKey;
   config: BeaconConfig;
   logger: LoggerNode;
   chain: IBeaconChain;
@@ -74,8 +74,7 @@ type NetworkModules = {
 export type NetworkInitModules = {
   opts: NetworkOptions;
   config: BeaconConfig;
-  peerId: PeerId;
-  nodeId: NodeId;
+  privateKey: PrivateKey;
   peerStoreDir?: string;
   logger: LoggerNode;
   metrics: Metrics | null;
@@ -96,7 +95,6 @@ export type NetworkInitModules = {
  */
 export class Network implements INetwork {
   readonly peerId: PeerId;
-  readonly nodeId: NodeId;
   readonly custodyConfig: CustodyConfig;
   // TODO: Make private
   readonly events: INetworkEventBus;
@@ -116,11 +114,9 @@ export class Network implements INetwork {
   private subscribedToCoreTopics = false;
   private connectedPeers = new Map<PeerIdStr, ColumnIndex[]>();
   private connectedPeerClients = new Map<PeerIdStr, string>();
-  private regossipBlsChangesPromise: Promise<void> | null = null;
 
   constructor(modules: NetworkModules) {
-    this.peerId = modules.peerId;
-    this.nodeId = modules.nodeId;
+    this.peerId = peerIdFromPrivateKey(modules.privateKey);
     this.config = modules.config;
     this.custodyConfig = modules.chain.custodyConfig;
     this.logger = modules.logger;
@@ -154,8 +150,7 @@ export class Network implements INetwork {
     chain,
     db,
     gossipHandlers,
-    peerId,
-    nodeId,
+    privateKey,
     peerStoreDir,
     getReqRespHandler,
   }: NetworkInitModules): Promise<Network> {
@@ -180,7 +175,7 @@ export class Network implements INetwork {
             initialStatus,
           },
           config,
-          peerId,
+          privateKey,
           logger,
           events,
           metrics,
@@ -189,7 +184,7 @@ export class Network implements INetwork {
       : await NetworkCore.init({
           opts,
           config,
-          peerId,
+          privateKey,
           peerStoreDir,
           logger,
           clock: chain.clock,
@@ -206,12 +201,12 @@ export class Network implements INetwork {
     );
 
     const multiaddresses = opts.localMultiaddrs?.join(",");
+    const peerId = peerIdFromPrivateKey(privateKey);
     logger.info(`PeerId ${peerIdToString(peerId)}, Multiaddrs ${multiaddresses}`);
 
     return new Network({
       opts,
-      peerId,
-      nodeId,
+      privateKey,
       config,
       logger,
       chain,
@@ -229,8 +224,6 @@ export class Network implements INetwork {
   /** Destroy this instance. Can only be called once. */
   async close(): Promise<void> {
     if (this.closed) return;
-    // Used only for sleep() statements
-    this.controller.abort();
 
     this.events.off(NetworkEvent.peerConnected, this.onPeerConnected);
     this.events.off(NetworkEvent.peerDisconnected, this.onPeerDisconnected);
@@ -241,6 +234,9 @@ export class Network implements INetwork {
     this.chain.emitter.off(ChainEvent.updateAdvertisedGroupCount, this.onAdvertisedGroupCountUpdated);
     this.chain.emitter.off(ChainEvent.publishDataColumns, this.onPublishDataColumns);
     await this.core.close();
+
+    // Used only for sleep() statements
+    this.controller.abort();
     this.logger.debug("network core closed");
   }
 
@@ -554,11 +550,11 @@ export class Network implements INetwork {
     peerId: PeerIdStr,
     request: deneb.BlobSidecarsByRangeRequest
   ): Promise<deneb.BlobSidecar[]> {
-    const fork = this.config.getForkName(request.startSlot);
+    const epoch = computeEpochAtSlot(request.startSlot);
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.BlobSidecarsByRange, [Version.V1], request),
       // request's count represent the slots, so the actual max count received could be slots * blobs per slot
-      request.count * this.config.getMaxBlobsPerBlock(fork),
+      request.count * this.config.getMaxBlobsPerBlock(epoch),
       responseSszTypeByMethod[ReqRespMethod.BlobSidecarsByRange]
     );
   }

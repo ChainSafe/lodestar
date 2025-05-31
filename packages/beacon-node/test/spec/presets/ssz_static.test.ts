@@ -42,7 +42,6 @@ const sszStatic =
       return;
     }
 
-    /* eslint-disable @typescript-eslint/strict-boolean-expressions */
     const sszType =
       (sszTypesFor(fork) as Types)[typeName] ||
       (ssz.fulu as Types)[typeName] ||

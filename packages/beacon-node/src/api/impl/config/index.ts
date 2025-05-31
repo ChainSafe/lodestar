@@ -15,7 +15,7 @@ import {specConstants} from "./constants.js";
  *    [altair](https://github.com/ethereum/consensus.0-specs/blob/v1.1.10/presets/mainnet/altair.yaml) values
  *  - Configuration for the beacon node, for example the [mainnet](https://github.com/ethereum/consensus-specs/blob/v1.1.10/configs/mainnet.yaml) values
  */
-export function renderJsonSpec(config: ChainConfig): Record<string, string> {
+export function renderJsonSpec(config: ChainConfig): routes.config.Spec {
   const configJson = chainConfigToJson(config);
   const presetJson = presetToJson(activePreset);
   const constantsJson = specValuesToJson(specConstants);

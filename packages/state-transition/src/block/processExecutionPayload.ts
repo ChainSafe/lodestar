@@ -8,14 +8,14 @@ import {
   getFullOrBlindedPayloadFromBody,
   isMergeTransitionComplete,
 } from "../util/execution.js";
-import {getRandaoMix} from "../util/index.js";
+import {computeEpochAtSlot, getRandaoMix} from "../util/index.js";
 import {BlockExternalData, ExecutionPayloadStatus} from "./externalData.js";
 
 export function processExecutionPayload(
   fork: ForkSeq,
   state: CachedBeaconStateBellatrix | CachedBeaconStateCapella,
   body: BeaconBlockBody | BlindedBeaconBlockBody,
-  externalData: Omit<BlockExternalData, "dataAvailableStatus">
+  externalData: Omit<BlockExternalData, "dataAvailabilityStatus">
 ): void {
   const payload = getFullOrBlindedPayloadFromBody(body);
   const forkName = ForkName[ForkSeq[fork] as ForkName];
@@ -49,7 +49,7 @@ export function processExecutionPayload(
   }
 
   if (isForkPostDeneb(forkName)) {
-    const maxBlobsPerBlock = state.config.getMaxBlobsPerBlock(forkName);
+    const maxBlobsPerBlock = state.config.getMaxBlobsPerBlock(computeEpochAtSlot(state.slot));
     const blobKzgCommitmentsLen = (body as deneb.BeaconBlockBody).blobKzgCommitments?.length ?? 0;
     if (blobKzgCommitmentsLen > maxBlobsPerBlock) {
       throw Error(`blobKzgCommitmentsLen of ${blobKzgCommitmentsLen} exceeds limit=${maxBlobsPerBlock}`);

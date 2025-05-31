@@ -1,6 +1,6 @@
-import {fetch} from "@lodestar/api";
 import {chainConfig} from "@lodestar/config/default";
 import {ForkName, activePreset} from "@lodestar/params";
+import {fetch} from "@lodestar/utils";
 import {describe, it} from "vitest";
 import {specConstants} from "../../../../src/api/impl/config/constants.js";
 import {ethereumConsensusSpecsTests} from "../../../spec/specTestVersioning.js";
@@ -12,6 +12,8 @@ const CONSTANT_NAMES_SKIP_LIST = new Set([
   "PARTICIPATION_FLAG_WEIGHTS",
   // TODO Fulu: remove skipped constant
   "MAX_BLOBS_PER_BLOCK_FULU",
+  "VALIDATOR_CUSTODY_REQUIREMENT",
+  "BALANCE_PER_ADDITIONAL_CUSTODY_GROUP",
 ]);
 
 describe("api / impl / config", () => {

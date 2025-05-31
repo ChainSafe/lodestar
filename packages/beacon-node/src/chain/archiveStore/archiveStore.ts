@@ -4,6 +4,7 @@ import {Checkpoint} from "@lodestar/types/phase0";
 import {callFnWhenAwait} from "@lodestar/utils";
 import {IBeaconDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/metrics.js";
+import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {ChainEvent} from "../emitter.js";
 import {IBeaconChain} from "../interface.js";
@@ -32,7 +33,6 @@ export class ArchiveStore {
   private archiveMode: ArchiveMode;
   private jobQueue: JobItemQueue<[CheckpointWithHex], void>;
 
-  private prevFinalized: CheckpointWithHex;
   private archiveDataEpochs?: number;
   private readonly statesArchiverStrategy: StateArchiveStrategy;
   private readonly chain: IBeaconChain;
@@ -53,7 +53,6 @@ export class ArchiveStore {
     this.signal = signal;
     this.archiveMode = opts.archiveMode;
     this.archiveDataEpochs = opts.archiveDataEpochs;
-    this.prevFinalized = this.chain.forkChoice.getFinalizedCheckpoint();
 
     this.jobQueue = new JobItemQueue<[CheckpointWithHex], void>(this.processFinalizedCheckpoint, {
       maxLength: PROCESS_FINALIZED_CHECKPOINT_QUEUE_LENGTH,
@@ -106,16 +105,18 @@ export class ArchiveStore {
       );
     }
 
-    this.historicalStateRegen = await HistoricalStateRegen.init({
-      opts: {
-        genesisTime: this.chain.clock.genesisTime,
-        dbLocation: this.opts.dbName,
-      },
-      config: this.chain.config,
-      metrics: this.metrics,
-      logger: this.logger,
-      signal: this.signal,
-    });
+    if (this.opts.serveHistoricalState) {
+      this.historicalStateRegen = await HistoricalStateRegen.init({
+        opts: {
+          genesisTime: this.chain.clock.genesisTime,
+          dbLocation: this.opts.dbName,
+        },
+        config: this.chain.config,
+        metrics: this.metrics,
+        logger: this.logger,
+        signal: this.signal,
+      });
+    }
   }
 
   async close(): Promise<void> {
@@ -141,7 +142,7 @@ export class ArchiveStore {
       return null;
     }
 
-    return {state: stateSerialized, executionOptimistic: false, finalized: true};
+    return {state: stateSerialized, executionOptimistic: isOptimisticBlock(finalizedBlock), finalized: true};
   }
 
   /**
@@ -195,8 +196,6 @@ export class ArchiveStore {
           this.chain.clock.currentEpoch
         );
       }
-
-      this.prevFinalized = finalized;
 
       await this.statesArchiverStrategy.onFinalizedCheckpoint(finalized, this.metrics);
 

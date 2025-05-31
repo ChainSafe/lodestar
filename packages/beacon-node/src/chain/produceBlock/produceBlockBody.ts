@@ -44,7 +44,7 @@ import {
   PayloadId,
   getExpectedGasLimit,
 } from "../../execution/index.js";
-import {fromGraffitiBuffer} from "../../util/graffiti.js";
+import {fromGraffitiBytes} from "../../util/graffiti.js";
 import {ckzg} from "../../util/kzg.js";
 import type {BeaconChain} from "../chain.js";
 import {CommonBlockBody} from "../interface.js";
@@ -163,7 +163,7 @@ export async function produceBlockBody<T extends BlockType>(
   } = blockBody;
 
   Object.assign(logMeta, {
-    graffiti: fromGraffitiBuffer(graffiti),
+    graffiti: fromGraffitiBytes(graffiti),
     attestations: attestations.length,
     deposits: deposits.length,
     voluntaryExits: voluntaryExits.length,

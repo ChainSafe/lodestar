@@ -4,7 +4,6 @@ import {ChainForkConfig} from "@lodestar/config";
 import {
   ForkAll,
   ForkName,
-  ForkPostDeneb,
   KZG_COMMITMENTS_GINDEX,
   KZG_COMMITMENT_GINDEX0,
   NUMBER_OF_COLUMNS,

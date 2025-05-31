@@ -1,7 +1,7 @@
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {deneb, ssz} from "@lodestar/types";
-import {beforeAll, describe, expect, it, vi} from "vitest";
+import {beforeAll, describe, expect, it} from "vitest";
 
 import {BlobsSource, BlockSource, getBlockInput} from "../../../src/chain/blocks/types.js";
 import {ZERO_HASH} from "../../../src/constants/constants.js";

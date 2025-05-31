@@ -1,6 +1,6 @@
 import {ENR} from "@chainsafe/enr";
 import {toHexString} from "@chainsafe/ssz";
-import type {PeerId, PeerInfo} from "@libp2p/interface";
+import type {PeerId, PeerInfo, PrivateKey} from "@libp2p/interface";
 import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
 import {ATTESTATION_SUBNET_COUNT, ForkSeq, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
@@ -14,6 +14,7 @@ import {NetworkCoreMetrics} from "../core/metrics.js";
 import {Discv5Worker} from "../discv5/index.js";
 import {LodestarDiscv5Opts} from "../discv5/types.js";
 import {Libp2p} from "../interface.js";
+import {getLibp2pError} from "../libp2p/error.js";
 import {ENRKey, SubnetType} from "../metadata.js";
 import {NetworkConfig} from "../networkConfig.js";
 import {NodeId, computeNodeId} from "../subnets/interface.js";
@@ -28,7 +29,6 @@ const MAX_CACHED_ENRS = 100;
 const MAX_CACHED_ENR_AGE_MS = 5 * 60 * 1000;
 
 export type PeerDiscoveryOpts = {
-  maxPeers: number;
   discv5FirstQueryDelayMs: number;
   discv5: LodestarDiscv5Opts;
   connectToDiscv5Bootnodes?: boolean;
@@ -39,6 +39,7 @@ export type PeerDiscoveryOpts = {
 };
 
 export type PeerDiscoveryModules = {
+  privateKey: PrivateKey;
   networkConfig: NetworkConfig;
   libp2p: Libp2p;
   clock: IClock;
@@ -69,6 +70,7 @@ export enum DiscoveredPeerStatus {
 export enum NotDialReason {
   not_contain_requested_sampling_groups = "not_contain_requested_sampling_groups",
   not_contain_requested_attnet_syncnet_subnets = "not_contain_requested_attnet_syncnet_subnets",
+  no_multiaddrs = "no_multiaddrs",
 }
 
 type UnixMs = number;
@@ -199,7 +201,7 @@ export class PeerDiscovery {
   static async init(modules: PeerDiscoveryModules, opts: PeerDiscoveryOpts): Promise<PeerDiscovery> {
     const discv5 = await Discv5Worker.init({
       discv5: opts.discv5,
-      peerId: modules.libp2p.peerId,
+      privateKey: modules.privateKey,
       metrics: modules.metrics ?? undefined,
       logger: modules.logger,
       config: modules.networkConfig.getConfig(),
@@ -396,8 +398,7 @@ export class PeerDiscovery {
     if (this.randomNodeQuery.code === QueryStatusCode.Active) {
       this.randomNodeQuery.count++;
     }
-    // async due to some crypto that's no longer necessary
-    const peerId = await enr.peerId();
+    const peerId = enr.peerId;
     // tcp multiaddr is known to be be present, checked inside the worker
     const multiaddrTCP = enr.getLocationMultiaddr(ENRKey.tcp);
     if (!multiaddrTCP) {
@@ -601,7 +602,11 @@ export class PeerDiscovery {
 
     // Must add the multiaddrs array to the address book before dialing
     // https://github.com/libp2p/js-libp2p/blob/aec8e3d3bb1b245051b60c2a890550d262d5b062/src/index.js#L638
-    await this.libp2p.peerStore.merge(peerId, {multiaddrs: [multiaddrTCP]});
+    const peer = await this.libp2p.peerStore.merge(peerId, {multiaddrs: [multiaddrTCP]});
+    if (peer.addresses.length === 0) {
+      this.metrics?.discovery.notDialReason.inc({reason: NotDialReason.no_multiaddrs});
+      return;
+    }
 
     // Note: PeerDiscovery adds the multiaddrTCP beforehand
     const peerIdShort = prettyPrintPeerId(peerId);
@@ -619,6 +624,7 @@ export class PeerDiscovery {
     } catch (e) {
       timer?.({status: "error"});
       formatLibp2pDialError(e as Error);
+      this.metrics?.discovery.dialError.inc({reason: getLibp2pError(e as Error)});
       this.logger.debug("Error dialing discovered peer", {peer: peerIdShort}, e as Error);
     }
   }
@@ -626,7 +632,7 @@ export class PeerDiscovery {
   /** Check if there is 1+ open connection with this peer */
   private isPeerConnected(peerIdStr: PeerIdStr): boolean {
     const connections = getConnectionsMap(this.libp2p).get(peerIdStr);
-    return Boolean(connections?.some((connection) => connection.status === "open"));
+    return Boolean(connections?.value.some((connection) => connection.status === "open"));
   }
 }
 
