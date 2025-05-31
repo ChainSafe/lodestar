@@ -142,7 +142,7 @@ export class BeaconChain implements IBeaconChain {
   readonly attestationPool: AttestationPool;
   readonly aggregatedAttestationPool: AggregatedAttestationPool;
   readonly syncCommitteeMessagePool: SyncCommitteeMessagePool;
-  readonly syncContributionAndProofPool = new SyncContributionAndProofPool();
+  readonly syncContributionAndProofPool;
   readonly opPool = new OpPool();
 
   // Gossip seen cache
@@ -254,6 +254,7 @@ export class BeaconChain implements IBeaconChain {
       preAggregateCutOffTime,
       this.opts?.preaggregateSlotDistance
     );
+    this.syncContributionAndProofPool = new SyncContributionAndProofPool(clock, metrics, logger);
 
     this.seenAggregatedAttestations = new SeenAggregatedAttestations(metrics);
     this.seenContributionAndProof = new SeenContributionAndProof(metrics);
@@ -1104,7 +1105,7 @@ export class BeaconChain implements IBeaconChain {
     metrics.opPool.proposerSlashingPoolSize.set(this.opPool.proposerSlashingsSize);
     metrics.opPool.voluntaryExitPoolSize.set(this.opPool.voluntaryExitsSize);
     metrics.opPool.syncCommitteeMessagePoolSize.set(this.syncCommitteeMessagePool.size);
-    metrics.opPool.syncContributionAndProofPoolSize.set(this.syncContributionAndProofPool.size);
+    // syncContributionAndProofPool tracks metrics on its own
     metrics.opPool.blsToExecutionChangePoolSize.set(this.opPool.blsToExecutionChangeSize);
     metrics.chain.blacklistedBlocks.set(this.blacklistedBlocks.size);
 

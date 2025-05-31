@@ -13,7 +13,7 @@ export enum InsertOutcome {
   Old = "Old",
   /** The pool has reached its limit. No changes were made. */
   ReachLimit = "ReachLimit",
-  /** Attestation comes to the pool at > 2/3 of slot. No changes were made */
+  /** Messages don't bring any value, for example attestations come to the pool at > 2/3 of slot. No changes were made */
   Late = "Late",
   /** The data is know, and the new participants have been added to the aggregated signature */
   Aggregated = "Aggregated",

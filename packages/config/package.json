@@ -64,7 +64,7 @@
     "blockchain"
   ],
   "dependencies": {
-    "@chainsafe/ssz": "^1.2.0",
+    "@chainsafe/ssz": "^1.2.1",
     "@lodestar/params": "^1.30.0",
     "@lodestar/types": "^1.30.0",
     "@lodestar/utils": "^1.30.0"
