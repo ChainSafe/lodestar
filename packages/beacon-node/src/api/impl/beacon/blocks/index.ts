@@ -35,7 +35,7 @@ import {computeBlobSidecars} from "../../../../util/blobs.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {ApiModules} from "../../types.js";
-import {ensureUniqueItemsOrThrow} from "../../utils.js";
+import {assertUniqueItems} from "../../utils.js";
 import {getBlockResponse, toBeaconHeaderResponse} from "./utils.js";
 
 type PublishBlockOpts = ImportBlockOpts;
@@ -484,7 +484,7 @@ export function getBeaconBlockApi({
     },
 
     async getBlobSidecars({blockId, indices}) {
-      ensureUniqueItemsOrThrow(indices, "Duplicate indices provided");
+      assertUniqueItems(indices, "Duplicate indices provided");
 
       const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
       const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);

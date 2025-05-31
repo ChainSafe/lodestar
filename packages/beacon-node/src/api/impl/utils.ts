@@ -7,7 +7,7 @@ import {ApiError} from "./errors.js";
  * @param message - The message to put in the ApiError if the array contains
  * duplicates.
  */
-export function ensureUniqueItemsOrThrow(array: unknown[] | undefined, message: string): void {
+export function assertUniqueItems(array: unknown[] | undefined, message: string): void {
   if (!array) {
     return;
   }
