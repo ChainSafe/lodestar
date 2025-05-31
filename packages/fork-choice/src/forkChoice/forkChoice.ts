@@ -300,8 +300,6 @@ export class ForkChoice implements IForkChoice {
 
     currentSlot = currentSlot ?? this.fcStore.currentSlot;
 
-    // TODO: Maybe add a transcient flag in ProtoBlock to flag `shouldOverrideFcu` block when importing
-    // so we don't need to call shouldOverrideForkChoiceUpdate again.
     const blockRoot = headBlock.blockRoot;
     const result = this.shouldOverrideForkChoiceUpdate(currentSlot, blockRoot);
 
