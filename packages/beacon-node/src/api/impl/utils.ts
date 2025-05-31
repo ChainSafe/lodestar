@@ -20,6 +20,6 @@ export function ensureUniqueItemsOrThrow(array: unknown[] | undefined, message: 
   }, []);
 
   if (duplicateItems.length) {
-    throw new ApiError(400, `${message} (Duplicate Items: ${duplicateItems.join(", ")})`);
+    throw new ApiError(400, `${message}: ${duplicateItems.join(", ")}`);
   }
 }
