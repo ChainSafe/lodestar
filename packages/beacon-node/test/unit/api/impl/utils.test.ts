@@ -20,8 +20,7 @@ describe("api / impl / utils", () => {
 
     it("should throw ApiError for array with duplicate values", () => {
       const errorMessage = "Duplicate values found";
-      const errorMessageFn = (duplicateItems: unknown[]) =>
-        `${errorMessage}: ${duplicateItems.join(", ")}`;
+      const errorMessageFn = (duplicateItems: unknown[]) => `${errorMessage}: ${duplicateItems.join(", ")}`;
       expect(() => assertUniqueItems([1, 2, 1], errorMessage)).toThrow(ApiError);
       expect(() => assertUniqueItems([1, 2, 1], errorMessage)).toThrow(errorMessageFn([1]));
 
