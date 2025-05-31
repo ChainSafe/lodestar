@@ -1,4 +1,4 @@
-import {ApiInputDuplicateItemsError} from "./errors.js";
+import {ApiError} from "./errors.js";
 
 /**
  * Ensures that the array contains unique values, and throws an ApiError
@@ -20,6 +20,6 @@ export function ensureUniqueItemsOrThrow(array: unknown[] | undefined, message: 
   }, []);
 
   if (duplicateItems.length) {
-    throw new ApiInputDuplicateItemsError(message, duplicateItems);
+    throw new ApiError(400, `${message} (Duplicate Items: ${duplicateItems.join(", ")})`);
   }
 }
