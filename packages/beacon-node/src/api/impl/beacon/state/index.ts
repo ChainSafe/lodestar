@@ -145,14 +145,14 @@ export function getBeaconStateApi({
     },
 
     async postStateValidatorIdentities({stateId, validatorIds = []}) {
-      assertUniqueItems(validatorIds, "Duplicate validator IDs provided");
-
       const {state, executionOptimistic, finalized} = await getState(stateId);
       const {pubkey2index} = chain.getHeadState().epochCtx;
 
       let validatorIdentities: routes.beacon.ValidatorIdentities;
 
       if (validatorIds.length) {
+        assertUniqueItems(validatorIds, "Duplicate validator IDs provided");
+
         validatorIdentities = [];
         for (const id of validatorIds) {
           const resp = getStateValidatorIndex(id, state, pubkey2index);
@@ -199,11 +199,11 @@ export function getBeaconStateApi({
     },
 
     async getStateValidatorBalances({stateId, validatorIds = []}) {
-      assertUniqueItems(validatorIds, "Duplicate validator IDs provided");
-
       const {state, executionOptimistic, finalized} = await getState(stateId);
 
       if (validatorIds.length) {
+        assertUniqueItems(validatorIds, "Duplicate validator IDs provided");
+
         const headState = chain.getHeadState();
         const balances: routes.beacon.ValidatorBalance[] = [];
         for (const id of validatorIds) {
@@ -238,8 +238,6 @@ export function getBeaconStateApi({
     },
 
     async postStateValidatorBalances(args, context) {
-      assertUniqueItems(args.validatorIds, "Duplicate validator IDs provided");
-
       return this.getStateValidatorBalances(args, context);
     },
 
