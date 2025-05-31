@@ -124,7 +124,6 @@ const getPayloadOpts: ReqOpts = {routeId: "getPayload"};
  */
 export class ExecutionEngineHttp implements IExecutionEngine {
   private logger: Logger;
-  private readonly metrics: Metrics | null;
   private lastGetBlobsV1ErrorTime = 0;
 
   // The default state is ONLINE, it will be updated to SYNCING once we receive the first payload
@@ -165,7 +164,6 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       metrics?.engineHttpProcessorQueue
     );
     this.logger = logger;
-    this.metrics = metrics ?? null;
 
     this.rpc.emitter.on(JsonRpcHttpClientEvent.ERROR, ({error}) => {
       this.updateEngineState(getExecutionEngineState({payloadError: error, oldState: this.state}));
@@ -517,9 +515,6 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
     assertReqSizeLimit(versionedHashes.length, MAX_VERSIONED_HASHES);
     const versionedHashesHex = versionedHashes.map(bytesToData);
-    if (method === "engine_getBlobsV2") {
-      this.metrics?.peerDas.getBlobsV2Requests.inc();
-    }
     const response = await this.rpc
       .fetchWithRetries<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>({
         method,
@@ -562,7 +557,6 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         const castResponse = response as EngineApiRpcReturnTypes[typeof method];
         // TODO: Spec says to return null if any blob is not found, but reth and nethermind return empty arrays as of peerdas-devnet-6
         if (castResponse === null || castResponse.length === 0) return null;
-        this.metrics?.peerDas.getBlobsV2Responses.inc();
         return castResponse.map(deserializeBlobAndProofsV2);
       }
     }

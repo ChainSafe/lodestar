@@ -365,6 +365,7 @@ export async function getDataColumnsFromExecution(
   const versionedHashes: Uint8Array[] = commitments.map(kzgCommitmentToVersionedHash);
 
   // Get blobs from execution engine
+  metrics?.peerDas.getBlobsV2Requests.inc();
   const timer = metrics?.peerDas.getBlobsV2Runtime.startTimer();
   const blobs = await executionEngine.getBlobs(blockCache.fork, versionedHashes);
   timer?.();
@@ -373,6 +374,7 @@ export async function getDataColumnsFromExecution(
   if (blobs === null) {
     return false;
   }
+  metrics?.peerDas.getBlobsV2Responses.inc();
 
   // Return if we received all data columns while waiting for getBlobs
   if (hasSampledDataColumns(custodyConfig, blockCache.cachedData.dataColumnsCache)) {
