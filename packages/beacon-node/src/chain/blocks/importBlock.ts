@@ -233,47 +233,6 @@ export async function importBlock(
   const newHead = this.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
   const currFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
 
-  // Suppress fcu call if this is true
-  let shouldOverrideFcu = false;
-  let shouldOverrideFcuReason = NotReorgedReason.Unknown;
-
-  if (opts.isGossipBlock && isExecutionStateType(postState)) {
-    try {
-      const proposerIndex = postState.epochCtx.getBeaconProposer(blockSlot + 1);
-      const feeRecipient = this.beaconProposerCache.get(proposerIndex);
-
-      if (feeRecipient) {
-        // We would set this to true if
-        //  1) This is a gossip block
-        //  2) We are proposer of next slot
-        //  3) Proposer boost reorg related flag is turned on (this is checked inside the function)
-        //  4) Block meets the criteria of being re-orged out (this is also checked inside the function)
-        const result = this.forkChoice.shouldOverrideForkChoiceUpdate(this.clock.currentSlot, blockSummary.blockRoot);
-        shouldOverrideFcu = result.shouldOverrideFcu;
-        if (!result.shouldOverrideFcu) {
-          shouldOverrideFcuReason = result.reason;
-        }
-      }
-    } catch (e) {
-      if (isStartSlotOfEpoch(blockSlot + 1)) {
-        shouldOverrideFcuReason = NotReorgedReason.NotShufflingStable;
-      } else {
-        this.logger.warn("Unable to get beacon proposer. Do not override fcu.", {slot: blockSlot + 1}, e as Error);
-      }
-    }
-  }
-
-  if (shouldOverrideFcu) {
-    if (this.metrics) {
-      this.metrics.importBlock.notOverrideFcuReason.inc({reason: shouldOverrideFcuReason});
-    } else {
-      this.logger.verbose("Weak block detected. Skip fcu call in importBlock", {
-        blockRoot: blockRootHex,
-        reason: shouldOverrideFcuReason,
-      });
-    }
-  }
-
   if (newHead.blockRoot !== oldHead.blockRoot) {
     // Set head state as strong reference
     this.regen.updateHeadState(newHead, postState);
@@ -363,6 +322,48 @@ export async function importBlock(
   // Notifying EL of head and finalized updates as below is usually done within the 1st 4s of the slot.
   // If there is an advanced payload generation in the next slot, we'll notify EL again 4s before next
   // slot via PrepareNextSlotScheduler. There is no harm updating the ELs with same data, it will just ignore it.
+
+  // Suppress fcu call if this is true
+  let shouldOverrideFcu = false;
+  let shouldOverrideFcuReason = NotReorgedReason.Unknown;
+
+  if (opts.isGossipBlock && isExecutionStateType(postState)) {
+    try {
+      const proposerIndex = postState.epochCtx.getBeaconProposer(blockSlot + 1);
+      const feeRecipient = this.beaconProposerCache.get(proposerIndex);
+
+      if (feeRecipient) {
+        // We would set this to true if
+        //  1) This is a gossip block
+        //  2) We are proposer of next slot
+        //  3) Proposer boost reorg related flag is turned on (this is checked inside the function)
+        //  4) Block meets the criteria of being re-orged out (this is also checked inside the function)
+        const result = this.forkChoice.shouldOverrideForkChoiceUpdate(this.clock.currentSlot, blockSummary.blockRoot);
+        shouldOverrideFcu = result.shouldOverrideFcu;
+        if (!result.shouldOverrideFcu) {
+          shouldOverrideFcuReason = result.reason;
+        }
+      }
+    } catch (e) {
+      if (isStartSlotOfEpoch(blockSlot + 1)) {
+        shouldOverrideFcuReason = NotReorgedReason.NotShufflingStable;
+      } else {
+        this.logger.warn("Unable to get beacon proposer. Do not override fcu.", {slot: blockSlot + 1}, e as Error);
+      }
+    }
+  }
+
+  if (shouldOverrideFcu) {
+    if (this.metrics) {
+      this.metrics.importBlock.notOverrideFcuReason.inc({reason: shouldOverrideFcuReason});
+    } else {
+      this.logger.verbose("Weak block detected. Skip fcu call in importBlock", {
+        blockRoot: blockRootHex,
+        reason: shouldOverrideFcuReason,
+      });
+    }
+  }
+
   if (
     !this.opts.disableImportExecutionFcU &&
     (newHead.blockRoot !== oldHead.blockRoot || currFinalizedEpoch !== prevFinalizedEpoch) &&
