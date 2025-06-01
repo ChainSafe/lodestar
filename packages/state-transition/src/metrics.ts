@@ -51,26 +51,6 @@ export function getMetrics(register: MetricsRegister) {
       name: "lodestar_stfn_effective_balance_updates_count",
       help: "Total count of effective balance updates",
     }),
-    validatorsInActivationQueue: register.gauge({
-      name: "lodestar_stfn_validators_in_activation_queue_length",
-      help: "Total count of validators in the activation queue",
-    }),
-    validatorsInExitQueue: register.gauge({
-      name: "lodestar_stfn_validators_in_exit_queue_length",
-      help: "Total count of validators in the exit queue",
-    }),
-    pendingDeposits: register.gauge({
-      name: "lodestar_stfn_pending_deposits_length",
-      help: "Total count of pending deposits",
-    }),
-    pendingConsolidations: register.gauge({
-      name: "lodestar_stfn_pending_consolidations_length",
-      help: "Total count of pending consolidations",
-    }),
-    pendingPartialWithdrawals: register.gauge({
-      name: "lodestar_stfn_pending_partial_withdrawals_length",
-      help: "Total count of pending partial withdrawals",
-    }),
     preStateBalancesNodesPopulatedMiss: register.gauge<{source: StateCloneSource}>({
       name: "lodestar_stfn_balances_nodes_populated_miss_total",
       help: "Total count state.balances nodesPopulated is false on stfn",

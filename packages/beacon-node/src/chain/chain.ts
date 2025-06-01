@@ -3,7 +3,14 @@ import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
-import {ForkSeq, GENESIS_SLOT, SLOTS_PER_EPOCH, isForkPostElectra} from "@lodestar/params";
+import {
+  FAR_FUTURE_EPOCH,
+  ForkSeq,
+  GENESIS_SLOT,
+  MIN_ACTIVATION_BALANCE,
+  SLOTS_PER_EPOCH,
+  isForkPostElectra,
+} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   BeaconStateElectra,
@@ -1104,6 +1111,35 @@ export class BeaconChain implements IBeaconChain {
     metrics.forkChoice.balancesLength.set(forkChoiceMetrics.balancesLength);
     metrics.forkChoice.nodes.set(forkChoiceMetrics.nodes);
     metrics.forkChoice.indices.set(forkChoiceMetrics.indices);
+
+    const fork = this.config.getForkName(this.clock.currentSlot);
+    if (isForkPostElectra(fork)) {
+      const headStateElectra = this.getHeadState() as BeaconStateElectra;
+      metrics.validatorActivity.pendingDeposits.set(headStateElectra.pendingDeposits.length);
+      metrics.validatorActivity.pendingPartialWithdrawals.set(headStateElectra.pendingPartialWithdrawals.length);
+      metrics.validatorActivity.pendingConsolidations.set(headStateElectra.pendingConsolidations.length);
+
+      const state = this.getHeadState();
+      let validatorsInActivationQueue = 0;
+      let validatorsInExitQueue = 0;
+      state.validators.forEachValue((validator) => {
+        if (
+          validator.activationEligibilityEpoch === FAR_FUTURE_EPOCH &&
+          validator.effectiveBalance >= MIN_ACTIVATION_BALANCE
+        ) {
+          validatorsInActivationQueue += 1;
+        } else if (
+          validator.activationEpoch <= this.clock.currentEpoch &&
+          this.clock.currentEpoch < validator.exitEpoch &&
+          validator.exitEpoch === FAR_FUTURE_EPOCH &&
+          validator.effectiveBalance <= this.config.EJECTION_BALANCE
+        ) {
+          validatorsInExitQueue += 1;
+        }
+      });
+      metrics.validatorActivity.validatorsInActivationQueue.set(validatorsInActivationQueue);
+      metrics.validatorActivity.validatorsInExitQueue.set(validatorsInExitQueue);
+    }
   }
 
   private onClockSlot(slot: Slot): void {

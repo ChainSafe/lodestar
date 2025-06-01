@@ -109,8 +109,6 @@ export function processEpoch(
     const timer = metrics?.epochTransitionStepTime.startTimer({step: EpochTransitionStep.processRegistryUpdates});
     processRegistryUpdates(fork, state, cache);
     timer?.();
-    metrics?.validatorsInActivationQueue.set(cache.indicesEligibleForActivationQueue.length);
-    metrics?.validatorsInExitQueue.set(cache.indicesToEject.length);
   }
 
   // accumulate slashing penalties and only update balances once in processRewardsAndPenalties()
@@ -138,7 +136,6 @@ export function processEpoch(
       processPendingDeposits(stateElectra, cache);
       timer?.();
     }
-    metrics?.pendingDeposits.set(stateElectra.pendingDeposits.length);
 
     {
       const timer = metrics?.epochTransitionStepTime.startTimer({
@@ -147,7 +144,6 @@ export function processEpoch(
       processPendingConsolidations(stateElectra, cache);
       timer?.();
     }
-    metrics?.pendingConsolidations.set(stateElectra.pendingConsolidations.length);
   }
 
   {

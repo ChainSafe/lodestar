@@ -1648,5 +1648,29 @@ export function createLodestarMetrics(
         buckets: [0.001, 0.01, 0.1, 1],
       }),
     },
+
+    // Validator activity metrics
+    validatorActivity: {
+      validatorsInActivationQueue: register.gauge({
+        name: "lodestar_validators_in_activation_queue_length",
+        help: "Total count of validators in the activation queue",
+      }),
+      validatorsInExitQueue: register.gauge({
+        name: "lodestar_validators_in_exit_queue_length",
+        help: "Total count of validators in the exit queue",
+      }),
+      pendingDeposits: register.gauge({
+        name: "lodestar_pending_deposits_length",
+        help: "Total count of pending deposits",
+      }),
+      pendingConsolidations: register.gauge({
+        name: "lodestar_pending_consolidations_length",
+        help: "Total count of pending consolidations",
+      }),
+      pendingPartialWithdrawals: register.gauge({
+        name: "lodestar_pending_partial_withdrawals_length",
+        help: "Total count of pending partial withdrawals",
+      }),
+    },
   };
 }

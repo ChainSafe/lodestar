@@ -72,16 +72,13 @@ export function processOperations(
     for (const depositRequest of bodyElectra.executionRequests.deposits) {
       processDepositRequest(stateElectra, depositRequest);
     }
-    metrics?.pendingDeposits.set(stateElectra.pendingDeposits.length);
 
     for (const elWithdrawalRequest of bodyElectra.executionRequests.withdrawals) {
       processWithdrawalRequest(fork, stateElectra, elWithdrawalRequest);
     }
-    metrics?.pendingPartialWithdrawals.set(stateElectra.pendingPartialWithdrawals.length);
 
     for (const elConsolidationRequest of bodyElectra.executionRequests.consolidations) {
       processConsolidationRequest(stateElectra, elConsolidationRequest);
     }
-    metrics?.pendingConsolidations.set(stateElectra.pendingConsolidations.length);
   }
 }
