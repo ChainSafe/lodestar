@@ -1,14 +1,23 @@
+import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {AncestorStatus, EpochDifference, ForkChoiceError, ForkChoiceErrorCode} from "@lodestar/fork-choice";
-import {ForkPostAltair, ForkSeq, INTERVALS_PER_SLOT, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {
+  ForkPostAltair,
+  ForkPostElectra,
+  ForkSeq,
+  INTERVALS_PER_SLOT,
+  MAX_SEED_LOOKAHEAD,
+  SLOTS_PER_EPOCH,
+} from "@lodestar/params";
 import {
   CachedBeaconStateAltair,
+  EpochCache,
   RootCache,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   isStateValidatorsNodesPopulated,
 } from "@lodestar/state-transition";
-import {BeaconBlock, altair, capella, ssz} from "@lodestar/types";
+import {Attestation, BeaconBlock, altair, capella, electra, phase0, ssz} from "@lodestar/types";
 import {isErrorAborted, toHex, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
@@ -118,6 +127,8 @@ export async function importBlock(
     const rootCache = new RootCache(postState);
     const invalidAttestationErrorsByCode = new Map<string, {error: Error; count: number}>();
 
+    const addAttestation = fork >= ForkSeq.electra ? addAttestationPostElectra : addAttestationPreElectra;
+
     for (const attestation of attestations) {
       try {
         // TODO Electra: figure out how to reuse the attesting indices computed from state transition
@@ -125,11 +136,13 @@ export async function importBlock(
         const {target, beaconBlockRoot} = attestation.data;
 
         const attDataRoot = toRootHex(ssz.phase0.AttestationData.hashTreeRoot(indexedAttestation.data));
-        this.seenAggregatedAttestations.add(
-          target.epoch,
+        addAttestation.call(
+          this,
+          postState.epochCtx,
+          target,
           attDataRoot,
-          {aggregationBits: attestation.aggregationBits, trueBitCount: indexedAttestation.attestingIndices.length},
-          true
+          attestation as Attestation<ForkPostElectra>,
+          indexedAttestation
         );
         // Duplicated logic from fork-choice onAttestation validation logic.
         // Attestations outside of this range will be dropped as Errors, so no need to import
@@ -481,4 +494,59 @@ export async function importBlock(
     root: blockRootHex,
     delaySec: this.clock.secFromSlot(blockSlot),
   });
+}
+
+export function addAttestationPreElectra(
+  this: BeaconChain,
+  // added to have the same signature as addAttestationPostElectra
+  _: EpochCache,
+  target: phase0.Checkpoint,
+  attDataRoot: string,
+  attestation: Attestation,
+  indexedAttestation: phase0.IndexedAttestation
+): void {
+  this.seenAggregatedAttestations.add(
+    target.epoch,
+    attestation.data.index,
+    attDataRoot,
+    {aggregationBits: attestation.aggregationBits, trueBitCount: indexedAttestation.attestingIndices.length},
+    true
+  );
+}
+
+export function addAttestationPostElectra(
+  this: BeaconChain,
+  epochCtx: EpochCache,
+  target: phase0.Checkpoint,
+  attDataRoot: string,
+  attestation: Attestation<ForkPostElectra>,
+  indexedAttestation: electra.IndexedAttestation
+): void {
+  const committeeIndices = attestation.committeeBits.getTrueBitIndexes();
+  if (committeeIndices.length === 1) {
+    this.seenAggregatedAttestations.add(
+      target.epoch,
+      committeeIndices[0],
+      attDataRoot,
+      {aggregationBits: attestation.aggregationBits, trueBitCount: indexedAttestation.attestingIndices.length},
+      true
+    );
+  } else {
+    const committees = epochCtx.getBeaconCommittees(attestation.data.slot, committeeIndices);
+    const aggregationBools = attestation.aggregationBits.toBoolArray();
+    let offset = 0;
+    for (let i = 0; i < committees.length; i++) {
+      const committee = committees[i];
+      const aggregationBits = BitArray.fromBoolArray(aggregationBools.slice(offset, offset + committee.length));
+      const trueBitCount = aggregationBits.getTrueBitIndexes().length;
+      offset += committee.length;
+      this.seenAggregatedAttestations.add(
+        target.epoch,
+        committeeIndices[i],
+        attDataRoot,
+        {aggregationBits, trueBitCount},
+        true
+      );
+    }
+  }
 }

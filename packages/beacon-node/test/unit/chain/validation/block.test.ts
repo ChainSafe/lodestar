@@ -28,7 +28,7 @@ describe("gossip block validation", () => {
   beforeEach(() => {
     // Fill up with kzg commitments
     block.body.blobKzgCommitments = Array.from(
-      {length: config.BLOB_SCHEDULE[0].MAX_BLOBS_PER_BLOCK},
+      {length: config.getMaxBlobsPerBlock(clockSlot)},
       () => new Uint8Array([0])
     );
 

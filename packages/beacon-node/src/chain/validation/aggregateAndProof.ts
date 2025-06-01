@@ -136,7 +136,7 @@ async function validateAggregateAndProof(
     : toRootHex(ssz.phase0.AttestationData.hashTreeRoot(attData));
   if (
     !skipValidationKnownAttesters &&
-    chain.seenAggregatedAttestations.isKnown(targetEpoch, attDataRootHex, aggregationBits)
+    chain.seenAggregatedAttestations.isKnown(targetEpoch, attIndex, attDataRootHex, aggregationBits)
   ) {
     throw new AttestationError(GossipAction.IGNORE, {
       code: AttestationErrorCode.ATTESTERS_ALREADY_KNOWN,
@@ -248,6 +248,7 @@ async function validateAggregateAndProof(
   chain.seenAggregators.add(targetEpoch, aggregatorIndex);
   chain.seenAggregatedAttestations.add(
     targetEpoch,
+    attIndex,
     attDataRootHex,
     {aggregationBits, trueBitCount: attestingIndices.length},
     false
