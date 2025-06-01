@@ -115,7 +115,7 @@
     "@libp2p/mdns": "^11.0.32",
     "@libp2p/mplex": "^11.0.32",
     "@libp2p/peer-id": "^5.1.0",
-    "@libp2p/prometheus-metrics": "^4.3.15",
+    "@libp2p/prometheus-metrics": "https://github.com/ChainSafe/js-libp2p/raw/refs/heads/bun/packages/metrics-prometheus/libp2p-prometheus-metrics-4.3.0.tgz",
     "@libp2p/tcp": "^10.1.8",
     "@lodestar/api": "^1.30.0",
     "@lodestar/config": "^1.30.0",
