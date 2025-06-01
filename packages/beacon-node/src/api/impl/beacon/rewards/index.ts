@@ -21,6 +21,7 @@ export function getBeaconRewardsApi({
     },
     async getSyncCommitteeRewards({blockId, validatorIds}) {
       assertUniqueItems(validatorIds, "Duplicate validator IDs provided");
+
       const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
       const data = await chain.getSyncCommitteeRewards(block.message, validatorIds);
       return {data, meta: {executionOptimistic, finalized}};

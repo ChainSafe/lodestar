@@ -94,6 +94,7 @@ export function getBeaconStateApi({
       const validatorResponses: routes.beacon.ValidatorResponse[] = [];
       if (validatorIds.length) {
         assertUniqueItems(validatorIds, "Duplicate validator IDs provided");
+
         for (const id of validatorIds) {
           const resp = getStateValidatorIndex(id, state, pubkey2index);
           if (resp.valid) {
@@ -119,6 +120,7 @@ export function getBeaconStateApi({
 
       if (statuses.length) {
         assertUniqueItems(statuses, "Duplicate statuses provided");
+
         const validatorsByStatus = filterStateValidatorsByStatus(statuses, state, pubkey2index, currentEpoch);
         return {
           data: validatorsByStatus,

@@ -18,16 +18,17 @@ describe("api / impl / utils", () => {
       expect(() => assertUniqueItems([true, false], "test message")).not.toThrow();
     });
 
-    it("should throw ApiError for array with duplicate values", () => {
+    it("should throw ApiError if array contains duplicate values", () => {
+      expect(() => assertUniqueItems([1, 2, 1], "Duplicate values found")).toThrowError(ApiError);
+    });
+
+    it("should throw if array contains duplicate values and list duplicates", () => {
       const errorMessage = "Duplicate values found";
       const errorMessageFn = (duplicateItems: unknown[]) => `${errorMessage}: ${duplicateItems.join(", ")}`;
-      expect(() => assertUniqueItems([1, 2, 1], errorMessage)).toThrow(ApiError);
+
       expect(() => assertUniqueItems([1, 2, 1], errorMessage)).toThrow(errorMessageFn([1]));
-
-      expect(() => assertUniqueItems(["a", "b", "a"], errorMessage)).toThrow(ApiError);
+      expect(() => assertUniqueItems([1, 2, 1, 2], errorMessage)).toThrow(errorMessageFn([1, 2]));
       expect(() => assertUniqueItems(["a", "b", "a"], errorMessage)).toThrow(errorMessageFn(["a"]));
-
-      expect(() => assertUniqueItems([true, true], errorMessage)).toThrow(ApiError);
       expect(() => assertUniqueItems([true, true], errorMessage)).toThrow(errorMessageFn([true]));
     });
   });
