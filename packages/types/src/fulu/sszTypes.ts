@@ -1,4 +1,4 @@
-import {ByteVectorType, ContainerType, ListBasicType, ListCompositeType, VectorCompositeType} from "@chainsafe/ssz";
+import {ByteVectorType, ContainerType, ListBasicType, ListCompositeType, VectorBasicType, VectorCompositeType} from "@chainsafe/ssz";
 import {
   BYTES_PER_FIELD_ELEMENT,
   FIELD_ELEMENTS_PER_CELL,
@@ -81,6 +81,6 @@ export const DataColumnSidecarsByRangeRequest = new ContainerType(
 export const BeaconState = new ContainerType (
   {
     ...electraSsz.BeaconState.fields,
-    proposerLookahead: new ListBasicType(ValidatorIndex, (MIN_SEED_LOOKAHEAD + 1) * SLOTS_PER_EPOCH) // New in FULU:EIP7917
+    proposerLookahead: new VectorBasicType(ValidatorIndex, (MIN_SEED_LOOKAHEAD + 1) * SLOTS_PER_EPOCH) // New in FULU:EIP7917
   }
 )
