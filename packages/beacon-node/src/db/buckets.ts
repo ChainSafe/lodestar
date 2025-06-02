@@ -63,8 +63,8 @@ export enum Bucket {
   lightClient_bestLightClientUpdate = 56, // SyncPeriod -> [Slot, LightClientUpdate]
 
   // Differential State Storage
-  allForks_snapshotStateArchive = 57, // Slot -> BeaconStateAllForks
-  allForks_differentialStateArchive = 58, // Slot -> UInt8Array
+  allForks_beaconStateSnapshotArchive = 57, // Slot -> BeaconStateAllForks
+  allForks_beaconStateDifferentialArchive = 58, // Slot -> UInt8Array
 }
 
 export function getBucketNameByValue<T extends Bucket>(enumValue: T): keyof typeof Bucket {

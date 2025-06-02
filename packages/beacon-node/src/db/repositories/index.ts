@@ -5,8 +5,8 @@ export {BlockRepository} from "./block.js";
 export {BlockArchiveRepository} from "./blockArchive.js";
 export type {BlockArchiveBatchPutBinaryItem, BlockFilterOptions} from "./blockArchive.js";
 export {StateArchiveRepository} from "./stateArchive.js";
-export {SnapshotStateArchiveRepository} from "./snapshotStateArchive.js";
-export {DifferentialStateArchiveRepository} from "./differentialStateArchive.js";
+export {BeaconStateSnapshotArchiveRepository} from "./beaconStateSnapshotArchive.js";
+export {BeaconStateDifferentialArchiveRepository} from "./beaconStateDifferentialArchive.js";
 
 export {AttesterSlashingRepository} from "./attesterSlashing.js";
 export {ProposerSlashingRepository} from "./proposerSlashing.js";
