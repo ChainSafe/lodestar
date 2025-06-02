@@ -161,7 +161,7 @@ export class BeaconNode {
     metricsRegistries = [],
   }: BeaconNodeInitModules): Promise<T> {
     if (hasher.name !== "hashtree") {
-      logger.warn("hashtree is not supported, using hasher", {hasher: hasher.name});
+      logger.warn(`hashtree is not supported, using hasher ${hasher.name}`);
     }
 
     const controller = new AbortController();
