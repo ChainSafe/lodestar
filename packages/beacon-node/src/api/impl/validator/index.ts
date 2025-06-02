@@ -592,8 +592,8 @@ export function getValidatorApi(
     logger.verbose("Assembling block with produceEngineOrBuilderBlock", loggerContext);
 
     // Defer common block body production to make sure we sent async builder and engine requests before
-    const deferredBlockBody = defer<CommonBlockBody>();
-    const commonBlockBodyPromise = deferredBlockBody.promise;
+    const deferredCommonBlockBody = defer<CommonBlockBody>();
+    const commonBlockBodyPromise = deferredCommonBlockBody.promise;
 
     // Calculate cutoff time based on start of the slot
     const cutoffMs = Math.max(0, BLOCK_PRODUCTION_RACE_CUTOFF_MS - Math.round(chain.clock.secFromSlot(slot) * 1000));
@@ -650,10 +650,10 @@ export function getValidatorApi(
       chain
         .produceCommonBlockBody({slot, parentBlockRoot, randaoReveal, graffiti: graffitiBytes})
         .then((commonBlockBody) => {
-          deferredBlockBody.resolve(commonBlockBody);
+          deferredCommonBlockBody.resolve(commonBlockBody);
           logger.debug("Produced common block body", loggerContext);
         })
-        .catch(deferredBlockBody.reject),
+        .catch(deferredCommonBlockBody.reject),
     ]);
 
     if (builder.status === "pending" && engine.status === "pending") {
