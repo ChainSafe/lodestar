@@ -1,7 +1,10 @@
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {describe, expect, it} from "vitest";
+import {
+  HierarchicalLayers,
+  Layers,
+} from "../../../../../src/chain/archiveStore/differentialState/hierarchicalLayers.js";
 import {HierarchicalLayersErrorCode} from "../../../../../src/chain/archiveStore/errors.js";
-import {HierarchicalLayers, Layers} from "../../../../../src/chain/archiveStore/utils/hierarchicalLayers.js";
 
 describe("HierarchicalLayers", () => {
   describe("fromString", () => {
