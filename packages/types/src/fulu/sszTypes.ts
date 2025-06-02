@@ -22,9 +22,8 @@ import {ssz as denebSsz} from "../deneb/index.js";
 import {ssz as electraSsz} from "../electra/index.js";
 import {ssz as phase0Ssz} from "../phase0/index.js";
 import {ssz as primitiveSsz} from "../primitive/index.js";
-import {ValidatorIndex} from "../sszTypes.js";
 
-const {Root, ColumnIndex, RowIndex, Bytes32, Slot, UintNum64} = primitiveSsz;
+const {Root, ColumnIndex, RowIndex, Bytes32, Slot, UintNum64, ValidatorIndex} = primitiveSsz;
 
 export const Metadata = new ContainerType(
   {
