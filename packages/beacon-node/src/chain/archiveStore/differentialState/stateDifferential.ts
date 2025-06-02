@@ -26,6 +26,7 @@ export function computeStateDifferential(
 
   return {
     slot: target.slot,
+    baseSlot: base.slot,
     stateDiffBytes,
     balancesDiffBytes,
   };

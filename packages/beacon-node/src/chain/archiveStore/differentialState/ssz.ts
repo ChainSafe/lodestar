@@ -9,6 +9,7 @@ const STORAGE_LIMITS = {
 export const BeaconStateDifferentialType = new ContainerType(
   {
     slot: ssz.Slot,
+    baseSlot: ssz.Slot,
     stateDiffBytes: new ByteListType(STORAGE_LIMITS.STATE_DIFF_MAX_BYTES, {typeName: "StateDiff"}),
     balancesDiffBytes: new ByteListType(STORAGE_LIMITS.BALANCES_DIFF_MAX_BYTES, {typeName: "BalancesDiff"}),
   },
