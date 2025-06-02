@@ -86,7 +86,10 @@ export const DataColumnSidecarsByRangeRequest = new ContainerType(
   {typeName: "DataColumnSidecarsByRangeRequest", jsonCase: "eth2"}
 );
 
-export const BeaconState = new ContainerType({
-  ...electraSsz.BeaconState.fields,
-  proposerLookahead: ProposerLookahead, // New in FULU:EIP7917
-});
+export const BeaconState = new ContainerType(
+  {
+    ...electraSsz.BeaconState.fields,
+    proposerLookahead: ProposerLookahead, // New in FULU:EIP7917
+  },
+  {typeName: "BeaconState", jsonCase: "eth2"}
+);
