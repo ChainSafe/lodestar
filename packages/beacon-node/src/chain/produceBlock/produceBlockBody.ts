@@ -142,12 +142,7 @@ export async function produceBlockBody<T extends BlockType>(
     slot: blockSlot,
   };
   this.logger.verbose("Producing beacon block body", logMeta);
-  const stepsMetrics =
-    blockType === BlockType.Full
-      ? this.metrics?.executionBlockProductionTimeSteps
-      : this.metrics?.builderBlockProductionTimeSteps;
 
-  const endExecutionPayload = stepsMetrics?.startTimer();
   if (isForkPostBellatrix(fork)) {
     const safeBlockHash = this.forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
@@ -165,6 +160,7 @@ export async function produceBlockBody<T extends BlockType>(
       const executionBuilder = this.executionBuilder;
 
       const builderPromise = (async () => {
+        const endExecutionPayloadHeader = this.metrics?.builderBlockProductionTimeSteps.startTimer();
         // This path will not be used in the production, but is here just for merge mock
         // tests because merge-mock requires an fcU to be issued prior to fetch payload
         // header.
@@ -184,7 +180,18 @@ export async function produceBlockBody<T extends BlockType>(
         // For MeV boost integration, this is where the execution header will be
         // fetched from the payload id and a blinded block will be produced instead of
         // fullblock for the validator to sign
-        return prepareExecutionPayloadHeader(this, fork, currentState as CachedBeaconStateBellatrix, proposerPubKey);
+        const headerRes = prepareExecutionPayloadHeader(
+          this,
+          fork,
+          currentState as CachedBeaconStateBellatrix,
+          proposerPubKey
+        );
+
+        endExecutionPayloadHeader?.({
+          step: BlockProductionStep.executionPayload,
+        });
+
+        return headerRes;
       })();
 
       const [builderRes, commonBlockBody] = await Promise.all([
@@ -264,6 +271,7 @@ export async function produceBlockBody<T extends BlockType>(
     // blockType === BlockType.Full
     else {
       const enginePromise = (async () => {
+        const endExecutionPayload = this.metrics?.executionBlockProductionTimeSteps.startTimer();
         // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/validator.md#constructing-the-beaconblockbody
         const prepareRes = await prepareExecutionPayload(
           this,
@@ -297,6 +305,10 @@ export async function produceBlockBody<T extends BlockType>(
         }
 
         const payloadRes = await this.executionEngine.getPayload(fork, payloadId);
+
+        endExecutionPayload?.({
+          step: BlockProductionStep.executionPayload,
+        });
 
         return {...prepareRes, ...payloadRes};
       })().catch((e) => {
@@ -390,9 +402,6 @@ export async function produceBlockBody<T extends BlockType>(
     blobsResult = {type: BlobsResultType.preDeneb};
     executionPayloadValue = BigInt(0);
   }
-  endExecutionPayload?.({
-    step: BlockProductionStep.executionPayload,
-  });
 
   const {graffiti, attestations, deposits, voluntaryExits, attesterSlashings, proposerSlashings} = blockBody;
 
