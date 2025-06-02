@@ -140,10 +140,14 @@ export function computeProposerIndex(
  * Return the proposer indices for the given ``epoch``.
  * A more generic version of `computeProposers`
  */
-export function computeProposerIndices(fork: ForkSeq, state: CachedBeaconStateAllForks, epoch: Epoch): ValidatorIndex[] {
+export function computeProposerIndices(
+  fork: ForkSeq,
+  state: CachedBeaconStateAllForks,
+  epoch: Epoch
+): ValidatorIndex[] {
   const startSlot = computeStartSlotAtEpoch(epoch);
   const proposers = [];
-  const epochSeed = getSeed(state, epoch, DOMAIN_BEACON_PROPOSER); 
+  const epochSeed = getSeed(state, epoch, DOMAIN_BEACON_PROPOSER);
   const shuffling = state.epochCtx.getShufflingAtEpoch(epoch);
 
   for (let slot = startSlot; slot < startSlot + SLOTS_PER_EPOCH; slot++) {

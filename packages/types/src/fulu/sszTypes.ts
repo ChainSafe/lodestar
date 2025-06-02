@@ -1,4 +1,11 @@
-import {ByteVectorType, ContainerType, ListBasicType, ListCompositeType, VectorBasicType, VectorCompositeType} from "@chainsafe/ssz";
+import {
+  ByteVectorType,
+  ContainerType,
+  ListBasicType,
+  ListCompositeType,
+  VectorBasicType,
+  VectorCompositeType,
+} from "@chainsafe/ssz";
 import {
   BYTES_PER_FIELD_ELEMENT,
   FIELD_ELEMENTS_PER_CELL,
@@ -17,7 +24,7 @@ import {ssz as denebSsz} from "../deneb/index.js";
 import {ssz as electraSsz} from "../electra/index.js";
 import {ssz as phase0Ssz} from "../phase0/index.js";
 import {ssz as primitiveSsz} from "../primitive/index.js";
-import { ValidatorIndex } from "../sszTypes.js";
+import {ValidatorIndex} from "../sszTypes.js";
 
 const {BLSSignature, Root, ColumnIndex, RowIndex, Bytes32, Slot, UintNum64} = primitiveSsz;
 
