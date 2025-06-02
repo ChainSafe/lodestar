@@ -9,7 +9,7 @@ import {
   stateTransition,
 } from "@lodestar/state-transition";
 import {IBeaconDb} from "../../../db/index.js";
-import {HistoricalStateRegenMetrics} from "../metrics/historicalStateMetrics.js";
+import {HistoricalStateRegenMetrics} from "./metrics.js";
 import {RegenErrorType} from "./types.js";
 
 /**

@@ -8,12 +8,12 @@ import {BeaconDb} from "../../../db/index.js";
 import {RegistryMetricCreator, collectNodeJSMetrics} from "../../../metrics/index.js";
 import {JobFnQueue} from "../../../util/queue/fnQueue.js";
 import {QueueMetrics} from "../../../util/queue/options.js";
+import {getHistoricalState} from "./getHistoricalState.js";
 import {
   HistoricalStateRegenMetrics,
   createHistoricalStateQueueMetrics,
   createHistoricalStateRegenMetrics,
-} from "../metrics/historicalStateMetrics.js";
-import {getHistoricalState} from "./getHistoricalState.js";
+} from "./metrics.js";
 import {HistoricalStateWorkerApi, HistoricalStateWorkerData} from "./types.js";
 
 // most of this setup copied from networkCoreWorker.ts
