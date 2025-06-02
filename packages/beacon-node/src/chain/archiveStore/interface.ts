@@ -103,12 +103,3 @@ export enum HistoricalStateStorageType {
    */
   BlockReplay = "blockReplay",
 }
-
-export interface DifferentialStateOperation {
-  snapshotSlot: Slot;
-  diffSlots: Slot[];
-  blockReplay?: {
-    fromSlot: Slot;
-    tillSlot: Slot;
-  };
-}
