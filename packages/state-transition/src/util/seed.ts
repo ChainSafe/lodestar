@@ -4,6 +4,7 @@ import {
   computeSyncCommitteeIndices as nativeComputeSyncCommitteeIndices,
 } from "@chainsafe/swap-or-not-shuffle";
 import {
+  DOMAIN_BEACON_PROPOSER,
   DOMAIN_SYNC_COMMITTEE,
   EFFECTIVE_BALANCE_INCREMENT,
   EPOCHS_PER_HISTORICAL_VECTOR,
@@ -18,14 +19,13 @@ import {
 import {Bytes32, DomainType, Epoch, ValidatorIndex} from "@lodestar/types";
 import {assert, bytesToBigInt, bytesToInt, intToBytes} from "@lodestar/utils";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
-import {BeaconStateAllForks} from "../types.js";
+import {BeaconStateAllForks, CachedBeaconStateAllForks} from "../types.js";
 import {computeStartSlotAtEpoch} from "./epoch.js";
 import {computeEpochAtSlot} from "./epoch.js";
 
 /**
  * Compute proposer indices for an epoch
  */
-// TODO fulu: Updated this
 export function computeProposers(
   fork: ForkSeq,
   epochSeed: Uint8Array,
@@ -134,6 +134,29 @@ export function computeProposerIndex(
     EFFECTIVE_BALANCE_INCREMENT,
     SHUFFLE_ROUND_COUNT
   );
+}
+
+/**
+ * Return the proposer indices for the given ``epoch``.
+ * A more generic version of `computeProposers`
+ */
+export function computeProposerIndices(fork: ForkSeq, state: CachedBeaconStateAllForks, epoch: Epoch): ValidatorIndex[] {
+  const startSlot = computeStartSlotAtEpoch(epoch);
+  const proposers = [];
+  const epochSeed = getSeed(state, epoch, DOMAIN_BEACON_PROPOSER); 
+  const shuffling = state.epochCtx.getShufflingAtEpoch(epoch);
+
+  for (let slot = startSlot; slot < startSlot + SLOTS_PER_EPOCH; slot++) {
+    proposers.push(
+      computeProposerIndex(
+        fork,
+        state.epochCtx.effectiveBalanceIncrements,
+        shuffling.activeIndices,
+        digest(Buffer.concat([epochSeed, intToBytes(slot, 8)]))
+      )
+    );
+  }
+  return proposers;
 }
 
 /**
