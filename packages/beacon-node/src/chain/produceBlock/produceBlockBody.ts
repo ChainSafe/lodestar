@@ -109,7 +109,7 @@ export async function produceBlockBody<T extends BlockType>(
     parentSlot: Slot;
     proposerIndex: ValidatorIndex;
     proposerPubKey: BLSPubkey;
-    commonBlockBodyPromise: Promise<CommonBlockBody>;
+    commonBlockBodyPromise?: Promise<CommonBlockBody>;
   }
 ): Promise<{
   body: AssembledBodyType<T>;
@@ -194,7 +194,10 @@ export async function produceBlockBody<T extends BlockType>(
         return headerRes;
       })();
 
-      const [builderRes, commonBlockBody] = await Promise.all([builderPromise, commonBlockBodyPromise]);
+      const [builderRes, commonBlockBody] = await Promise.all([
+        builderPromise,
+        commonBlockBodyPromise ?? produceCommonBlockBody.call(this, blockType, currentState, blockAttr),
+      ]);
       blockBody = Object.assign({}, commonBlockBody) as AssembledBodyType<BlockType.Blinded>;
 
       (blockBody as BlindedBeaconBlockBody).executionPayloadHeader = builderRes.header;
@@ -333,7 +336,10 @@ export async function produceBlockBody<T extends BlockType>(
         throw e;
       });
 
-      const [engineRes, commonBlockBody] = await Promise.all([enginePromise, commonBlockBodyPromise]);
+      const [engineRes, commonBlockBody] = await Promise.all([
+        enginePromise,
+        commonBlockBodyPromise ?? produceCommonBlockBody.call(this, blockType, currentState, blockAttr),
+      ]);
       blockBody = Object.assign({}, commonBlockBody) as AssembledBodyType<BlockType.Blinded>;
 
       if (engineRes.isPremerge) {
@@ -390,7 +396,8 @@ export async function produceBlockBody<T extends BlockType>(
       }
     }
   } else {
-    const commonBlockBody = await commonBlockBodyPromise;
+    const commonBlockBody = await (commonBlockBodyPromise ??
+      produceCommonBlockBody.call(this, blockType, currentState, blockAttr));
     blockBody = Object.assign({}, commonBlockBody) as AssembledBodyType<T>;
     blobsResult = {type: BlobsResultType.preDeneb};
     executionPayloadValue = BigInt(0);

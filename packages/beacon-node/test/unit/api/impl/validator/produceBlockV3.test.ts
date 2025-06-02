@@ -9,7 +9,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
 import {BeaconChain} from "../../../../../src/chain/chain.js";
-import {BlockAttributes, BlockType, produceBlockBody} from "../../../../../src/chain/produceBlock/index.js";
+import {BlockType, produceBlockBody} from "../../../../../src/chain/produceBlock/index.js";
 import {PayloadIdCache} from "../../../../../src/execution/index.js";
 import {SyncState} from "../../../../../src/sync/interface.js";
 import {toGraffitiBytes} from "../../../../../src/util/graffiti.js";
@@ -235,12 +235,6 @@ describe("api/validator - produceBlockV3", () => {
     const randaoReveal = fullBlock.body.randaoReveal;
     const graffiti = "a".repeat(32);
     const feeRecipient = "0xccccccccccccccccccccccccccccccccccccccaa";
-    const blockAttr: BlockAttributes = {
-      randaoReveal,
-      graffiti: toGraffitiBytes(graffiti),
-      slot,
-      parentBlockRoot: fromHexString(ZERO_HASH_HEX),
-    };
 
     const headSlot = 0;
     modules.chain.getProposerHead.mockReturnValue(generateProtoBlock({slot: headSlot}));
@@ -268,12 +262,14 @@ describe("api/validator - produceBlockV3", () => {
 
     // use fee recipient passed in produceBlockBody call for payload gen in engine notifyForkchoiceUpdate
     await produceBlockBody.call(modules.chain as unknown as BeaconChain, BlockType.Full, state, {
-      ...blockAttr,
+      randaoReveal,
+      graffiti: toGraffitiBytes(graffiti),
+      slot,
       feeRecipient,
       parentSlot: slot - 1,
+      parentBlockRoot: fromHexString(ZERO_HASH_HEX),
       proposerIndex: 0,
       proposerPubKey: new Uint8Array(32).fill(1),
-      commonBlockBodyPromise: modules.chain.produceCommonBlockBody(blockAttr),
     });
 
     expect(modules.chain["executionEngine"].notifyForkchoiceUpdate).toBeCalledWith(
@@ -291,11 +287,13 @@ describe("api/validator - produceBlockV3", () => {
     // use fee recipient set in beaconProposerCacheStub if none passed
     modules.chain["beaconProposerCache"].getOrDefault.mockReturnValue("0x fee recipient address");
     await produceBlockBody.call(modules.chain as unknown as BeaconChain, BlockType.Full, state, {
-      ...blockAttr,
+      randaoReveal,
+      graffiti: toGraffitiBytes(graffiti),
+      slot,
       parentSlot: slot - 1,
+      parentBlockRoot: fromHexString(ZERO_HASH_HEX),
       proposerIndex: 0,
       proposerPubKey: new Uint8Array(32).fill(1),
-      commonBlockBodyPromise: modules.chain.produceCommonBlockBody(blockAttr),
     });
 
     expect(modules.chain["executionEngine"].notifyForkchoiceUpdate).toBeCalledWith(
