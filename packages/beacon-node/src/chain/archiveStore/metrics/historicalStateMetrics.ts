@@ -1,11 +1,17 @@
-import {BeaconStateTransitionMetrics} from "@lodestar/state-transition";
-import {getMetrics} from "@lodestar/state-transition";
+import {
+  BeaconStateTransitionMetrics,
+  EpochTransitionStep,
+  StateCloneSource,
+  StateHashTreeRootSource,
+} from "@lodestar/state-transition";
 import {Gauge, Histogram} from "@lodestar/utils";
 import {RegistryMetricCreator} from "../../../metrics/index.js";
 import {QueueMetrics} from "../../../util/queue/options.js";
 import {RegenErrorType} from "../historicalState/types.js";
 
-export type HistoricalStateRegenMetrics = BeaconStateTransitionMetrics & {
+export type HistoricalStateTransitionMetrics = BeaconStateTransitionMetrics;
+
+export type HistoricalStateRegenMetrics = HistoricalStateTransitionMetrics & {
   regenTime: Histogram;
   loadStateTime: Histogram;
   stateTransitionTime: Histogram;
@@ -16,9 +22,109 @@ export type HistoricalStateRegenMetrics = BeaconStateTransitionMetrics & {
   regenErrorCount: Gauge<{reason: RegenErrorType}>;
 };
 
+export function createHistoricalStateTransitionMetrics(
+  metricsRegister: RegistryMetricCreator
+): HistoricalStateTransitionMetrics {
+  return {
+    // state transition metrics
+    epochTransitionTime: metricsRegister.histogram({
+      name: "lodestar_historical_state_stfn_epoch_transition_seconds",
+      help: "Time to process a single epoch transition in seconds",
+      // Epoch transitions are 100ms on very fast clients, and average 800ms on heavy networks
+      buckets: [0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1, 1.25, 1.5, 3, 10],
+    }),
+    epochTransitionCommitTime: metricsRegister.histogram({
+      name: "lodestar_historical_state_stfn_epoch_transition_commit_seconds",
+      help: "Time to call commit after process a single epoch transition in seconds",
+      buckets: [0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1],
+    }),
+    epochTransitionStepTime: metricsRegister.histogram<{step: EpochTransitionStep}>({
+      name: "lodestar_historical_state_stfn_epoch_transition_step_seconds",
+      help: "Time to call each step of epoch transition in seconds",
+      labelNames: ["step"],
+      buckets: [0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1],
+    }),
+    processBlockTime: metricsRegister.histogram({
+      name: "lodestar_historical_state_stfn_process_block_seconds",
+      help: "Time to process a single block in seconds",
+      // TODO: Add metrics for each step
+      // Block processing can take 5-40ms, 100ms max
+      buckets: [0.005, 0.01, 0.02, 0.05, 0.1, 1],
+    }),
+    processBlockCommitTime: metricsRegister.histogram({
+      name: "lodestar_historical_state_stfn_process_block_commit_seconds",
+      help: "Time to call commit after process a single block in seconds",
+      buckets: [0.005, 0.01, 0.02, 0.05, 0.1, 1],
+    }),
+    stateHashTreeRootTime: metricsRegister.histogram<{source: StateHashTreeRootSource}>({
+      name: "lodestar_historical_state_stfn_hash_tree_root_seconds",
+      help: "Time to compute the hash tree root of a post state in seconds",
+      buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5],
+      labelNames: ["source"],
+    }),
+    numEffectiveBalanceUpdates: metricsRegister.gauge({
+      name: "lodestar_historical_state_stfn_num_effective_balance_updates_count",
+      help: "Count of effective balance updates in epoch transition",
+    }),
+    preStateBalancesNodesPopulatedMiss: metricsRegister.gauge<{source: StateCloneSource}>({
+      name: "lodestar_historical_state_stfn_balances_nodes_populated_miss_total",
+      help: "Total count state.balances nodesPopulated is false on stfn",
+      labelNames: ["source"],
+    }),
+    preStateBalancesNodesPopulatedHit: metricsRegister.gauge<{source: StateCloneSource}>({
+      name: "lodestar_historical_state_stfn_balances_nodes_populated_hit_total",
+      help: "Total count state.balances nodesPopulated is true on stfn",
+      labelNames: ["source"],
+    }),
+    preStateValidatorsNodesPopulatedMiss: metricsRegister.gauge<{source: StateCloneSource}>({
+      name: "lodestar_historical_state_stfn_validators_nodes_populated_miss_total",
+      help: "Total count state.validators nodesPopulated is false on stfn",
+      labelNames: ["source"],
+    }),
+    preStateValidatorsNodesPopulatedHit: metricsRegister.gauge<{source: StateCloneSource}>({
+      name: "lodestar_historical_state_stfn_validators_nodes_populated_hit_total",
+      help: "Total count state.validators nodesPopulated is true on stfn",
+      labelNames: ["source"],
+    }),
+    preStateClonedCount: metricsRegister.histogram({
+      name: "lodestar_historical_state_stfn_state_cloned_count",
+      help: "Histogram of cloned count per state every time state.clone() is called",
+      buckets: [1, 2, 5, 10, 50, 250],
+    }),
+    postStateBalancesNodesPopulatedHit: metricsRegister.gauge({
+      name: "lodestar_historical_state_stfn_post_state_balances_nodes_populated_hit_total",
+      help: "Total count state.validators nodesPopulated is true on stfn for post state",
+    }),
+    postStateBalancesNodesPopulatedMiss: metricsRegister.gauge({
+      name: "lodestar_historical_state_stfn_post_state_balances_nodes_populated_miss_total",
+      help: "Total count state.validators nodesPopulated is false on stfn for post state",
+    }),
+    postStateValidatorsNodesPopulatedHit: metricsRegister.gauge({
+      name: "lodestar_historical_state_stfn_post_state_validators_nodes_populated_hit_total",
+      help: "Total count state.validators nodesPopulated is true on stfn for post state",
+    }),
+    postStateValidatorsNodesPopulatedMiss: metricsRegister.gauge({
+      name: "lodestar_historical_state_stfn_post_state_validators_nodes_populated_miss_total",
+      help: "Total count state.validators nodesPopulated is false on stfn for post state",
+    }),
+    newSeenAttestersPerBlock: metricsRegister.gauge({
+      name: "lodestar_historical_state_stfn_new_seen_attesters_per_block_total",
+      help: "Count of new seen attesters in epoch transition",
+    }),
+    newSeenAttestersEffectiveBalancePerBlock: metricsRegister.gauge({
+      name: "lodestar_historical_state_stfn_new_seen_attesters_effective_balance_per_block_total",
+      help: "Total effective balance increment of new seen attesters per block",
+    }),
+    attestationsPerBlock: metricsRegister.gauge({
+      name: "lodestar_historical_state_stfn_attestations_per_block_total",
+      help: "Count of attestations per block",
+    }),
+  };
+}
+
 export function createHistoricalStateRegenMetrics(metricsRegister: RegistryMetricCreator): HistoricalStateRegenMetrics {
   return {
-    ...getMetrics(metricsRegister),
+    ...createHistoricalStateTransitionMetrics(metricsRegister),
     // historical state regen metrics
     regenTime: metricsRegister.histogram({
       name: "lodestar_historical_state_regen_time_seconds",
