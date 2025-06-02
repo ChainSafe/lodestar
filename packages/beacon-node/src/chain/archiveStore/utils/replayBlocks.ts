@@ -9,6 +9,7 @@ import {
   stateTransition,
 } from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
+import {toHex} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/index.js";
 
 /**
@@ -84,7 +85,9 @@ export async function replayBlocks(
     }
     blockCount++;
     if (Buffer.compare(state.hashTreeRoot(), block.message.stateRoot) !== 0) {
-      // Add metrics for error
+      throw new Error(
+        `State-root mismatch at slot ${block.message.slot}: block=${toHex(block.message.stateRoot)} state=${toHex(state.hashTreeRoot())}`
+      );
     }
   }
 

@@ -106,7 +106,7 @@ export async function processDifferentialOperation(
     stateBytes,
   });
 
-  return beaconStateBytesToSnapshot({config}, lastDiffSlot, stateWithBlockReplay);
+  return beaconStateBytesToSnapshot({config}, blockReplay.tillSlot, stateWithBlockReplay);
 }
 
 /**

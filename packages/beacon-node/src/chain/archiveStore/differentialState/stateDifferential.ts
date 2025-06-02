@@ -14,19 +14,20 @@ export function computeStateDifferential(
   target: BeaconStateSnapshot
 ): BeaconStateDifferential {
   const {codec, config} = modules;
+  const state = config.getForkTypes(base.slot).BeaconState.clone(base);
 
-  const baseBalances = [...base.balances];
-  base.balances = [];
+  const balances = [...state.balances];
+  state.balances = [];
 
   const stateDiffBytes = codec.compute(config.getForkTypes(base.slot).BeaconState.serialize(base), target.stateBytes);
   const balancesDiffBytes = codec.compute(
-    config.getForkTypes(base.slot).Balances.serialize(baseBalances),
+    config.getForkTypes(base.slot).Balances.serialize(balances),
     target.balancesBytes
   );
 
   return {
     slot: target.slot,
-    baseSlot: base.slot,
+    baseSlot: state.slot,
     stateDiffBytes,
     balancesDiffBytes,
   };

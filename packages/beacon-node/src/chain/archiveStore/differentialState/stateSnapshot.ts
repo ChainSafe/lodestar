@@ -40,11 +40,12 @@ export function snapshotToBeaconStateBytes(
  */
 export function beaconStateToSnapshot(modules: {config: ChainForkConfig}, base: BeaconState): BeaconStateSnapshot {
   const {config} = modules;
+  const state = config.getForkTypes(base.slot).BeaconState.clone(base);
 
-  const baseBalances = [...base.balances];
-  base.balances = [];
-  const stateBytes = config.getForkTypes(base.slot).BeaconState.serialize(base);
-  const balancesBytes = config.getForkTypes(base.slot).Balances.serialize(baseBalances);
+  const balances = [...state.balances];
+  state.balances = [];
+  const stateBytes = config.getForkTypes(base.slot).BeaconState.serialize(state);
+  const balancesBytes = config.getForkTypes(base.slot).Balances.serialize(balances);
 
   return {
     slot: base.slot,
@@ -80,7 +81,7 @@ export async function getStateSnapshot(
   // is not persisted on expected slot
   const lastSnapshotSlot = await db.beaconStateSnapshotArchive.lastKey();
   if (lastSnapshotSlot && lastSnapshotSlot !== slot) {
-    return getStateSnapshot(modules, {slot, fallback});
+    return getStateSnapshot(modules, {slot: lastSnapshotSlot, fallback});
   }
 
   return null;

@@ -127,18 +127,7 @@ export class HierarchicalLayers {
    * there is snapshot available at slot `0` and no diff layers.
    */
   getArchiveLayers(slot: Slot): Layers {
-    const path: Slot[] = [];
-    let lastSlot: number | undefined = undefined;
-
-    for (let layer = 0; layer < this.totalLayers; layer++) {
-      const newSlot = this.getPreviousSlotForLayer(slot, layer);
-      if (lastSlot === undefined || newSlot > lastSlot) {
-        lastSlot = newSlot;
-        path.push(newSlot);
-      }
-    }
-
-    const diffSlots = [...new Set(path)];
+    const diffSlots = this.computeSlotPath(slot);
     const snapshotSlot = diffSlots.shift();
 
     if (snapshotSlot == null) {

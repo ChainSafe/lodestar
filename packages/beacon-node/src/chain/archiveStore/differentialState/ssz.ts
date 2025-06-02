@@ -32,4 +32,4 @@ export const BeaconStateSnapshotType = new ContainerType(
   {typeName: "BeaconStateSnapshot", jsonCase: "eth2"}
 );
 
-export type BeaconStateSnapshot = {slot: Slot; stateBytes: Uint8Array; balancesBytes: Uint8Array};
+export type BeaconStateSnapshot = ValueOf<typeof BeaconStateSnapshotType>;
