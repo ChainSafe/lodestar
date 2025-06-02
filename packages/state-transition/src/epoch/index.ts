@@ -25,13 +25,13 @@ import {processParticipationFlagUpdates} from "./processParticipationFlagUpdates
 import {processParticipationRecordUpdates} from "./processParticipationRecordUpdates.js";
 import {processPendingConsolidations} from "./processPendingConsolidations.js";
 import {processPendingDeposits} from "./processPendingDeposits.js";
+import {processProposerLookahead} from "./processProposerLookahead.js";
 import {processRandaoMixesReset} from "./processRandaoMixesReset.js";
 import {processRegistryUpdates} from "./processRegistryUpdates.js";
 import {processRewardsAndPenalties} from "./processRewardsAndPenalties.js";
 import {processSlashings} from "./processSlashings.js";
 import {processSlashingsReset} from "./processSlashingsReset.js";
 import {processSyncCommitteeUpdates} from "./processSyncCommitteeUpdates.js";
-import {processProposerLookahead} from "./processProposerLookahead.js";
 
 // For spec tests
 export {getRewardsAndPenalties} from "./processRewardsAndPenalties.js";
