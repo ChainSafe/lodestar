@@ -11,6 +11,7 @@ import {
   CachedBeaconStateAltair,
   CachedBeaconStateCapella,
   CachedBeaconStateElectra,
+  CachedBeaconStateFulu,
   CachedBeaconStatePhase0,
   EpochTransitionCache,
 } from "../types.js";
@@ -186,5 +187,7 @@ export function processEpoch(
       timer?.();
     }
   }
-  // TODO FULU: Add processProposerLookahead here
+  if (fork >= ForkSeq.fulu) {
+    processProposerLookahead(fork, state as CachedBeaconStateFulu);
+  }
 }
