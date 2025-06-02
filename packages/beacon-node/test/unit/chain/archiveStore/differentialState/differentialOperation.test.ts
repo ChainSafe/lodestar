@@ -1,6 +1,6 @@
 import {describe, expect, it} from "vitest";
+import {getDifferentialOperation} from "../../../../../src/chain/archiveStore/differentialState/differentialOperation.js";
 import {HierarchicalLayers} from "../../../../../src/chain/archiveStore/differentialState/hierarchicalLayers.js";
-import {getOperation} from "../../../../../src/chain/archiveStore/differentialState/operation.js";
 import {allLayerTests} from "../../../../fixtures/differentialState/hierarchicalLayers.js";
 
 describe("differential state / operations", () => {
@@ -20,6 +20,6 @@ describe("differential state / operations", () => {
           ? {fromSlot: snapshotSlot + 1, tillSlot: slot}
           : undefined;
 
-    expect(getOperation({layers: hLayers}, slot)).toEqual({snapshotSlot, diffSlots, blockReplay});
+    expect(getDifferentialOperation({layers: hLayers}, slot)).toEqual({snapshotSlot, diffSlots, blockReplay});
   });
 });

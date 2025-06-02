@@ -19,7 +19,7 @@ interface DifferentialStateOperation {
   };
 }
 
-export async function processOperation(
+export async function processDifferentialOperation(
   modules: {
     pubkey2index: PubkeyIndexMap;
     logger?: Logger;
@@ -113,7 +113,10 @@ export async function processOperation(
  * Get the operation required to reach a target slot
  * @internal
  */
-export function getOperation(modules: {layers: HierarchicalLayers}, slot: Slot): DifferentialStateOperation {
+export function getDifferentialOperation(
+  modules: {layers: HierarchicalLayers},
+  slot: Slot
+): DifferentialStateOperation {
   const {layers} = modules;
 
   const path = layers.computeSlotPath(slot);
