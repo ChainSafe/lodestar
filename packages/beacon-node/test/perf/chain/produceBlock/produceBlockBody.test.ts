@@ -7,7 +7,7 @@ import {CachedBeaconStateAltair} from "@lodestar/state-transition";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {generatePerfTestCachedStateAltair} from "../../../../../state-transition/test/perf/util.js";
 import {BeaconChain} from "../../../../src/chain/index.js";
-import {BlockType, produceBlockBody} from "../../../../src/chain/produceBlock/produceBlockBody.js";
+import {BlockAttributes, BlockType, produceBlockBody} from "../../../../src/chain/produceBlock/produceBlockBody.js";
 import {Eth1ForBlockProductionDisabled} from "../../../../src/eth1/index.js";
 import {ExecutionEngineDisabled} from "../../../../src/execution/engine/index.js";
 import {ArchiveMode, BeaconDb} from "../../../../src/index.js";
@@ -74,15 +74,19 @@ describe("produceBlockBody", () => {
     },
     fn: async ({chain, state, head, proposerIndex, proposerPubKey}) => {
       const slot = state.slot;
+      const blockAttr: BlockAttributes = {
+        randaoReveal: Buffer.alloc(96),
+        graffiti: Buffer.alloc(32),
+        slot: slot + 1,
+        parentBlockRoot: fromHexString(head.blockRoot),
+      };
 
       await produceBlockBody.call(chain, BlockType.Full, state, {
+        ...blockAttr,
         parentSlot: slot,
-        slot: slot + 1,
-        graffiti: Buffer.alloc(32),
-        randaoReveal: Buffer.alloc(96),
-        parentBlockRoot: fromHexString(head.blockRoot),
         proposerIndex,
         proposerPubKey,
+        commonBlockBodyPromise: chain.produceCommonBlockBody(blockAttr),
       });
     },
   });
