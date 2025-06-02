@@ -40,6 +40,7 @@ export const KZGProofs = new ListCompositeType(
   denebSsz.KZGProof,
   FIELD_ELEMENTS_PER_EXT_BLOB * MAX_BLOB_COMMITMENTS_PER_BLOCK
 );
+export const ProposerLookahead = new VectorBasicType(ValidatorIndex, (MIN_SEED_LOOKAHEAD + 1) * SLOTS_PER_EPOCH);
 
 export const DataColumnSidecar = new ContainerType(
   {
@@ -190,7 +191,7 @@ export const ExecutionPayloadAndBlobsBundle = new ContainerType(
 export const BeaconState = new ContainerType(
   {
     ...electraSsz.BeaconState.fields,
-    proposerLookahead: new VectorBasicType(ValidatorIndex, (MIN_SEED_LOOKAHEAD + 1) * SLOTS_PER_EPOCH) // New in FULU:EIP7917
+    proposerLookahead: ProposerLookahead // New in FULU:EIP7917
   },
   {typeName: "BeaconState", jsonCase: "eth2"}
 );

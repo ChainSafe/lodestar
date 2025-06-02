@@ -51,3 +51,4 @@ export type BlobAndProofV2 = {
   blob: Blob;
   proofs: KZGProof[];
 };
+export type ProposerLookahead = ValueOf<typeof ssz.ProposerLookahead>;

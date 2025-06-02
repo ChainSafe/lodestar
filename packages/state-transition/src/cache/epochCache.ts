@@ -795,6 +795,8 @@ export class EpochCache {
     return (committeesSinceEpochStart + committeeIndex) % ATTESTATION_SUBNET_COUNT;
   }
 
+  // TODO FULU: Read from state.proposer_lookahead instead.
+  // See https://github.com/ethereum/consensus-specs/blob/e9266b2145c09b63ba0039a9f477cfe8a629c78b/specs/fulu/beacon-chain.md#modified-get_beacon_proposer_index
   getBeaconProposer(slot: Slot): ValidatorIndex {
     const epoch = computeEpochAtSlot(slot);
     if (epoch !== this.currentShuffling.epoch) {
