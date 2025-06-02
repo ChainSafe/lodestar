@@ -31,6 +31,7 @@ export const Cell = new ByteVectorType(BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_
 export const DataColumn = new ListCompositeType(Cell, MAX_BLOB_COMMITMENTS_PER_BLOCK);
 export const ExtendedMatrix = new ListCompositeType(Cell, MAX_BLOB_COMMITMENTS_PER_BLOCK * NUMBER_OF_COLUMNS);
 export const KzgCommitmentsInclusionProof = new VectorCompositeType(Bytes32, KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH);
+export const ProposerLookahead = new VectorBasicType(ValidatorIndex, (MIN_SEED_LOOKAHEAD + 1) * SLOTS_PER_EPOCH);
 
 export const DataColumnSidecar = new ContainerType(
   {
@@ -81,6 +82,6 @@ export const DataColumnSidecarsByRangeRequest = new ContainerType(
 export const BeaconState = new ContainerType (
   {
     ...electraSsz.BeaconState.fields,
-    proposerLookahead: new VectorBasicType(ValidatorIndex, (MIN_SEED_LOOKAHEAD + 1) * SLOTS_PER_EPOCH) // New in FULU:EIP7917
+    proposerLookahead: ProposerLookahead // New in FULU:EIP7917
   }
 )
