@@ -129,9 +129,12 @@ export class EpochCache {
    *
    * 32 x Number
    */
+  // TODO FULU: This is no longer needed since EIP-7917
   proposers: ValidatorIndex[];
 
   /** Proposers for previous epoch, initialized to null in first epoch */
+  // TODO FULU: This is no longer needed since EIP-7917. Need to find a way to deal with
+  // getProposerDuties requests with previous epoch
   proposersPrevEpoch: ValidatorIndex[] | null;
 
   /**
@@ -139,6 +142,7 @@ export class EpochCache {
    * getBeaconProposersNextEpoch because it needs state as input and all data needed by getBeaconProposersNextEpoch
    * should be in the epoch context.
    */
+  // TODO FULU: This is no longer needed since EIP-7917
   proposersNextEpoch: ProposersDeferred;
 
   /**
@@ -848,6 +852,7 @@ export class EpochCache {
    * balances are sampled to adjust the probability of the next selection (32 per epoch on average). So to invalidate
    * the prediction the effective of one of those 32 samples should change and change the random_byte inequality.
    */
+  // TODO Fulu: We can't do lazy compute anymore post EIP-7917. Since we need them to compute state.proposerLookahead
   getBeaconProposersNextEpoch(): ValidatorIndex[] {
     if (!this.proposersNextEpoch.computed) {
       const indexes = computeProposers(
