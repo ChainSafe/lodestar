@@ -69,7 +69,7 @@
     "winston-transport": "^4.5.0"
   },
   "devDependencies": {
-    "@chainsafe/threads": "^1.11.1",
+    "@chainsafe/threads": "^1.11.2",
     "@lodestar/test-utils": "^1.30.0",
     "@types/triple-beam": "^1.3.2",
     "triple-beam": "^1.3.0"

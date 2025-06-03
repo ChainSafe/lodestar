@@ -1,6 +1,7 @@
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {routes} from "@lodestar/api";
+import {SpecJson} from "@lodestar/config";
 import {LoggerNodeOpts} from "@lodestar/logger/node";
 import {ResponseIncoming} from "@lodestar/reqresp";
 import {phase0} from "@lodestar/types";
@@ -73,7 +74,7 @@ export interface INetworkCore extends INetworkCorePublic {
 export type NetworkWorkerData = {
   // TODO: Review if NetworkOptions is safe for passing
   opts: NetworkOptions;
-  chainConfigJson: Record<string, string>;
+  chainConfigJson: SpecJson;
   genesisValidatorsRoot: Uint8Array;
   genesisTime: number;
   activeValidatorCount: number;

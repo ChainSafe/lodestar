@@ -67,7 +67,22 @@ export type AttestationsConsolidation = {
  */
 type GetNotSeenValidatorsFn = (epoch: Epoch, slot: Slot, committeeIndex: number) => Set<number> | null;
 
-type ValidateAttestationDataFn = (attData: phase0.AttestationData) => boolean;
+/**
+ * Invalid attestation data reasons, this is useful to track in metrics.
+ */
+export enum InvalidAttestationData {
+  InvalidTargetEpoch = "invalid_target_epoch",
+  InvalidSourceCheckPoint = "invalid_source_checkpoint",
+  BlockNotInForkChoice = "block_not_in_fork_choice",
+  CannotGetShufflingDependentRoot = "cannot_get_shuffling_dependent_root",
+  IncorrectDependentRoot = "incorrect_dependent_root",
+}
+
+/**
+ * Validate attestation data for inclusion in a block.
+ * Returns InvalidAttestationData if attestation data is invalid, null otherwise.
+ */
+type ValidateAttestationDataFn = (attData: phase0.AttestationData) => InvalidAttestationData | null;
 
 /**
  * Limit the max attestations with the same AttestationData.
@@ -272,7 +287,7 @@ export class AggregatedAttestationPool {
             continue;
           }
 
-          if (!validateAttestationDataFn(attestationGroup.data)) {
+          if (validateAttestationDataFn(attestationGroup.data) !== null) {
             continue;
           }
 
@@ -381,8 +396,11 @@ export class AggregatedAttestationPool {
           continue;
         }
 
-        if (!validateAttestationDataFn(allAttestationGroups[0].data)) {
-          this.metrics?.opPool.aggregatedAttestationPool.packedAttestations.invalidAttestationData.inc();
+        const invalidAttDataReason = validateAttestationDataFn(allAttestationGroups[0].data);
+        if (invalidAttDataReason !== null) {
+          this.metrics?.opPool.aggregatedAttestationPool.packedAttestations.invalidAttestationData.inc({
+            reason: invalidAttDataReason,
+          });
           continue;
         }
 
@@ -912,20 +930,22 @@ export function extractParticipationPhase0(
 }
 
 /**
- * This returns a function to validate if an attestation data is compatible to a state,
- * it's an optimized version of isValidAttestationData().
- * Atttestation data is validated by:
+ * This returns a function to validate if an attestation data is compatible to a state.
+ *
+ * Attestation data is validated by:
  * - Validate the source checkpoint
  * - Validate shuffling using beacon block root and target epoch
  *
  * Here we always validate the source checkpoint, and cache beacon block root + target epoch
  * to avoid running the same shuffling validation multiple times.
+ *
+ * See also: https://github.com/ChainSafe/lodestar/issues/4333
  */
 export function getValidateAttestationDataFn(
   forkChoice: IForkChoice,
   state: CachedBeaconStateAllForks
 ): ValidateAttestationDataFn {
-  const cachedValidatedAttestationData = new Map<string, boolean>();
+  const cachedValidatedAttestationData = new Map<string, InvalidAttestationData | null>();
   const {previousJustifiedCheckpoint, currentJustifiedCheckpoint} = state;
   const stateEpoch = state.epochCtx.epoch;
   return (attData: phase0.AttestationData) => {
@@ -937,75 +957,42 @@ export function getValidateAttestationDataFn(
     } else if (targetEpoch === stateEpoch - 1) {
       justifiedCheckpoint = previousJustifiedCheckpoint;
     } else {
-      return false;
+      return InvalidAttestationData.InvalidTargetEpoch;
     }
 
     if (!ssz.phase0.Checkpoint.equals(attData.source, justifiedCheckpoint)) {
-      return false;
+      return InvalidAttestationData.InvalidSourceCheckPoint;
     }
 
     // Shuffling can't have changed if we're in the first few epochs
     // Also we can't look back 2 epochs if target epoch is 1 or less
     if (stateEpoch < 2 || targetEpoch < 2) {
-      return true;
+      // null means valid
+      return null;
     }
 
-    // the isValidAttestationData does not depend on slot and index
+    // valid attestation data does not depend on slot and index
     const beaconBlockRootHex = toRootHex(attData.beaconBlockRoot);
     const cacheKey = beaconBlockRootHex + targetEpoch;
-    let isValid = cachedValidatedAttestationData.get(cacheKey);
-    if (isValid === undefined) {
-      isValid = isValidShuffling(forkChoice, state, beaconBlockRootHex, targetEpoch);
-      cachedValidatedAttestationData.set(cacheKey, isValid);
+    let invalidReasonOrNull = cachedValidatedAttestationData.get(cacheKey);
+    if (invalidReasonOrNull === undefined) {
+      invalidReasonOrNull = isValidShuffling(forkChoice, state, beaconBlockRootHex, targetEpoch);
+      cachedValidatedAttestationData.set(cacheKey, invalidReasonOrNull);
     }
-    return isValid;
+    return invalidReasonOrNull;
   };
 }
 
 /**
- * A straight forward version to validate attestation data. We don't use it, but keep it here for reference.
- *   - Validate the source checkpoint
- *   - Since we validated attestation's signature in gossip validation function,
- *     we only need to validate the shuffling of attestation
- *     is compatible to this state.
- *     (see https://github.com/ChainSafe/lodestar/issues/4333)
- * @returns
+ * Validate the shuffling of an attestation data against the current state.
+ * Return `null` if the shuffling is valid, otherwise return an `InvalidAttestationData` reason.
  */
-export function isValidAttestationData(
-  forkChoice: IForkChoice,
-  state: CachedBeaconStateAllForks,
-  data: phase0.AttestationData
-): boolean {
-  const {previousJustifiedCheckpoint, currentJustifiedCheckpoint} = state;
-  let justifiedCheckpoint: phase0.Checkpoint;
-  const stateEpoch = state.epochCtx.epoch;
-  const targetEpoch = data.target.epoch;
-
-  if (targetEpoch === stateEpoch) {
-    justifiedCheckpoint = currentJustifiedCheckpoint;
-  } else if (targetEpoch === stateEpoch - 1) {
-    justifiedCheckpoint = previousJustifiedCheckpoint;
-  } else {
-    return false;
-  }
-
-  if (!ssz.phase0.Checkpoint.equals(data.source, justifiedCheckpoint)) return false;
-
-  // Shuffling can't have changed if we're in the first few epochs
-  // Also we can't look back 2 epochs if target epoch is 1 or less
-  if (stateEpoch < 2 || targetEpoch < 2) {
-    return true;
-  }
-  const beaconBlockRootHex = toRootHex(data.beaconBlockRoot);
-  return isValidShuffling(forkChoice, state, beaconBlockRootHex, targetEpoch);
-}
-
 function isValidShuffling(
   forkChoice: IForkChoice,
   state: CachedBeaconStateAllForks,
   blockRootHex: RootHex,
   targetEpoch: Epoch
-): boolean {
+): InvalidAttestationData | null {
   // Otherwise the shuffling is determined by the block at the end of the target epoch
   // minus the shuffling lookahead (usually 2). We call this the "pivot".
   const pivotSlot = computeStartSlotAtEpoch(targetEpoch - 1) - 1;
@@ -1018,7 +1005,7 @@ function isValidShuffling(
   const beaconBlockRootHex = blockRootHex;
   const beaconBlock = forkChoice.getBlockHex(beaconBlockRootHex);
   if (!beaconBlock) {
-    throw Error(`Attestation data.beaconBlockRoot ${beaconBlockRootHex} not found in forkchoice`);
+    return InvalidAttestationData.BlockNotInForkChoice;
   }
 
   let attestationDependentRoot: string;
@@ -1035,7 +1022,13 @@ function isValidShuffling(
     // getDependent root may throw error if the dependent root of attestation data is prior to finalized slot
     // ignore this attestation data in that case since we're not sure it's compatible to the state
     // see https://github.com/ChainSafe/lodestar/issues/4743
-    return false;
+    return InvalidAttestationData.CannotGetShufflingDependentRoot;
   }
-  return attestationDependentRoot === stateDependentRoot;
+
+  if (attestationDependentRoot !== stateDependentRoot) {
+    return InvalidAttestationData.IncorrectDependentRoot;
+  }
+
+  // If the dependent root matches, then the shuffling is valid.
+  return null;
 }

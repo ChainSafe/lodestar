@@ -7,7 +7,7 @@ import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
 import {ForkSeq} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
-import {computeStartSlotAtEpoch, computeTimeAtSlot} from "@lodestar/state-transition";
+import {computeEpochAtSlot, computeStartSlotAtEpoch, computeTimeAtSlot} from "@lodestar/state-transition";
 import {
   AttesterSlashing,
   LightClientBootstrap,
@@ -505,11 +505,11 @@ export class Network implements INetwork {
     peerId: PeerIdStr,
     request: deneb.BlobSidecarsByRangeRequest
   ): Promise<deneb.BlobSidecar[]> {
-    const fork = this.config.getForkName(request.startSlot);
+    const epoch = computeEpochAtSlot(request.startSlot);
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.BlobSidecarsByRange, [Version.V1], request),
       // request's count represent the slots, so the actual max count received could be slots * blobs per slot
-      request.count * this.config.getMaxBlobsPerBlock(fork),
+      request.count * this.config.getMaxBlobsPerBlock(epoch),
       responseSszTypeByMethod[ReqRespMethod.BlobSidecarsByRange]
     );
   }

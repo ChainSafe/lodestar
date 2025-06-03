@@ -39,8 +39,8 @@ export async function archiveBlocks(
 ): Promise<void> {
   // Use fork choice to determine the blocks to archive and delete
   // getAllAncestorBlocks response includes the finalized block, so it's also moved to the cold db
-  const finalizedCanonicalBlocks = forkChoice.getAllAncestorBlocks(finalizedCheckpoint.rootHex);
-  const finalizedNonCanonicalBlocks = forkChoice.getAllNonAncestorBlocks(finalizedCheckpoint.rootHex);
+  const {ancestors: finalizedCanonicalBlocks, nonAncestors: finalizedNonCanonicalBlocks} =
+    forkChoice.getAllAncestorAndNonAncestorBlocks(finalizedCheckpoint.rootHex);
 
   // NOTE: The finalized block will be exactly the first block of `epoch` or previous
   const finalizedPostDeneb = finalizedCheckpoint.epoch >= config.DENEB_FORK_EPOCH;

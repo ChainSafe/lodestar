@@ -73,6 +73,7 @@ describe("chain / validation / aggregateAndProof", () => {
     // Register attester as already seen
     chain.seenAggregatedAttestations.add(
       attData.target.epoch,
+      attData.index,
       toHexString(ssz.phase0.AttestationData.hashTreeRoot(attData)),
       {aggregationBits, trueBitCount: aggregationBits.getTrueBitIndexes().length},
       false

@@ -5,7 +5,11 @@ import {
   KZG_COMMITMENT_SUBTREE_INDEX0,
   isForkPostElectra,
 } from "@lodestar/params";
-import {computeStartSlotAtEpoch, getBlockHeaderProposerSignatureSet} from "@lodestar/state-transition";
+import {
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
+  getBlockHeaderProposerSignatureSet,
+} from "@lodestar/state-transition";
 import {BlobIndex, Root, Slot, SubnetID, deneb, ssz} from "@lodestar/types";
 import {toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 
@@ -25,7 +29,7 @@ export async function validateGossipBlobSidecar(
   const blobSlot = blobSidecar.signedBlockHeader.message.slot;
 
   // [REJECT] The sidecar's index is consistent with `MAX_BLOBS_PER_BLOCK` -- i.e. `blob_sidecar.index < MAX_BLOBS_PER_BLOCK`.
-  const maxBlobsPerBlock = chain.config.getMaxBlobsPerBlock(fork);
+  const maxBlobsPerBlock = chain.config.getMaxBlobsPerBlock(computeEpochAtSlot(blobSlot));
   if (blobSidecar.index >= maxBlobsPerBlock) {
     throw new BlobSidecarGossipError(GossipAction.REJECT, {
       code: BlobSidecarErrorCode.INDEX_TOO_LARGE,
