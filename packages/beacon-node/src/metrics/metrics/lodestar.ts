@@ -1651,14 +1651,6 @@ export function createLodestarMetrics(
 
     // Validator activity metrics
     validatorActivity: {
-      validatorsInActivationQueue: register.gauge({
-        name: "lodestar_validators_in_activation_queue_length",
-        help: "Total count of validators in the activation queue",
-      }),
-      validatorsInExitQueue: register.gauge({
-        name: "lodestar_validators_in_exit_queue_length",
-        help: "Total count of validators in the exit queue",
-      }),
       pendingDeposits: register.gauge({
         name: "lodestar_pending_deposits_length",
         help: "Total count of pending deposits",
