@@ -3,7 +3,7 @@ import {BitArray} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {newFilledArray} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {beforeAll, beforeEach, describe, expect, it} from "vitest";
+import {beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {
   SyncContributionAndProofPool,
   SyncContributionFast,
@@ -12,6 +12,7 @@ import {
 } from "../../../../src/chain/opPools/syncContributionAndProofPool.js";
 import {InsertOutcome} from "../../../../src/chain/opPools/types.js";
 import {EMPTY_SIGNATURE} from "../../../../src/constants/index.js";
+import {getMockedClock} from "../../../mocks/clock.js";
 import {renderBitArray} from "../../../utils/render.js";
 import {VALID_BLS_SIGNATURE_RAND} from "../../../utils/typeGenerator.js";
 
@@ -24,9 +25,11 @@ describe("chain / opPools / SyncContributionAndProofPool", () => {
   contributionAndProof.contribution.slot = slot;
   contributionAndProof.contribution.beaconBlockRoot = beaconBlockRoot;
   contributionAndProof.contribution.signature = VALID_BLS_SIGNATURE_RAND;
+  const clockStub = getMockedClock();
 
   beforeEach(() => {
-    cache = new SyncContributionAndProofPool();
+    vi.spyOn(clockStub, "slotWithPastTolerance").mockReturnValue(slot);
+    cache = new SyncContributionAndProofPool(clockStub);
     cache.add(contributionAndProof, syncCommitteeParticipants);
   });
 
@@ -41,6 +44,15 @@ describe("chain / opPools / SyncContributionAndProofPool", () => {
     expect(ssz.altair.SyncAggregate.equals(aggregate, ssz.altair.SyncAggregate.defaultValue())).toBe(false);
     // TODO Test it's correct. Modify the contributions above so they have 1 bit set to true
     expect(aggregate.syncCommitteeBits.bitLen).toBe(512);
+  });
+
+  it("should reject SyncCommitteeContribution of previous slots", () => {
+    const newContributionAndProof = ssz.altair.ContributionAndProof.defaultValue();
+    // previous slot
+    newContributionAndProof.contribution.slot = slot - 1;
+    expect(cache.add(newContributionAndProof, syncCommitteeParticipants)).toEqual(InsertOutcome.Late);
+    // but a priority ContributionAndProof should work
+    expect(cache.add(newContributionAndProof, syncCommitteeParticipants, true)).toEqual(InsertOutcome.NewData);
   });
 });
 

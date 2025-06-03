@@ -30,6 +30,7 @@ export type PromiseParts<T> = {
 export type LogMetaBasic = {
   slot: number;
   blockRoot: string;
+  timeCreatedSec: number;
 };
 
 export type LogMetaBlobs = LogMetaBasic & {
@@ -103,7 +104,7 @@ export interface IBlockInput<F extends ForkName = ForkName, TData extends DAData
   /** validator activities can't be performed on out of range data */
   daOutOfRange: boolean;
 
-  timeCreated: number;
+  timeCreatedSec: number;
   // block header metadata
   forkName: ForkName;
   slot: Slot;

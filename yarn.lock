@@ -431,10 +431,10 @@
   resolved "https://registry.yarnpkg.com/@chainsafe/as-chacha20poly1305/-/as-chacha20poly1305-0.1.0.tgz#7da6f8796f9b42dac6e830a086d964f1f9189e09"
   integrity sha512-BpNcL8/lji/GM3+vZ/bgRWqJ1q5kwvTFmGPk7pxm/QQZDbaMI98waOHjEymTjq2JmdD/INdNBFOVSyJofXg7ew==
 
-"@chainsafe/as-sha256@1.1.0", "@chainsafe/as-sha256@^1.1.0":
-  version "1.1.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/as-sha256/-/as-sha256-1.1.0.tgz#949082ab96e0b266484f01f59a71930761afc6c4"
-  integrity sha512-pLlxYtfYy2YW5GN+7d946UAjBOS9VOFulkfFN6Z+84ZhMP0Ey8XsCG21CZTczwq1C8J7/4z8LGzmrAtmQ37VCQ==
+"@chainsafe/as-sha256@1.2.0", "@chainsafe/as-sha256@^1.2.0":
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/as-sha256/-/as-sha256-1.2.0.tgz#5764ac9959e147fe0908dd0f66c0cce525a633b3"
+  integrity sha512-H2BNHQ5C3RS+H0ZvOdovK6GjFAyq5T6LClad8ivwj9Oaiy28uvdsGVS7gNJKuZmg0FGHAI+n7F0Qju6U0QkKDA==
 
 "@chainsafe/as-sha256@^0.4.1":
   version "0.4.1"
@@ -680,12 +680,12 @@
   dependencies:
     "@chainsafe/is-ip" "^2.0.1"
 
-"@chainsafe/persistent-merkle-tree@1.1.0", "@chainsafe/persistent-merkle-tree@^1.1.0":
-  version "1.1.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/persistent-merkle-tree/-/persistent-merkle-tree-1.1.0.tgz#d10d9e926f2c5751d02a188b8fb6823821572aca"
-  integrity sha512-UIcKEGkEGghTXbFTvKqIiN2iljg2f6c2Y8GxdQEyle5UI6YIB8d3ACYTkAhrHSB4YsNlG9pc/A0NGJw/3Hf9wQ==
+"@chainsafe/persistent-merkle-tree@1.2.0", "@chainsafe/persistent-merkle-tree@^1.2.0":
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/persistent-merkle-tree/-/persistent-merkle-tree-1.2.0.tgz#a402debcae6b386c51564c8cbacc9b0d56f64486"
+  integrity sha512-Ng2eqd6OPvFPPuroQ659ZrFMHtc44LxUfK7K2WkoBhlQ3hrvIn3UTQNKc77xUCU40xjeBGSxAfz+MSV256i+/g==
   dependencies:
-    "@chainsafe/as-sha256" "1.1.0"
+    "@chainsafe/as-sha256" "1.2.0"
     "@chainsafe/hashtree" "1.0.1"
     "@noble/hashes" "^1.3.0"
 
@@ -769,13 +769,13 @@
     "@chainsafe/as-sha256" "^0.4.1"
     "@chainsafe/persistent-merkle-tree" "^0.6.1"
 
-"@chainsafe/ssz@^1.2.0":
-  version "1.2.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-1.2.0.tgz#7201cc885460bfd4cf991791070100c3512aba1e"
-  integrity sha512-fsFFBfT5JPCypyzENDg6srd6woNMj0+x6OLR5X1di+IK5mYlxBiAVsH/bYVj/u5DE3nanAgPZOc5KSszoDBRvw==
+"@chainsafe/ssz@^1.2.1":
+  version "1.2.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-1.2.1.tgz#a9a89c9706de33444c0ee64fbc461ae6001132af"
+  integrity sha512-rchrNF+tJ1yOMZS5CQK3bK5UZC1vQP8ANxW4McRedvBls5b9Mvn+LtbOE4wffrVMOxQzOXcBGZDoCPPJYX76Rg==
   dependencies:
-    "@chainsafe/as-sha256" "1.1.0"
-    "@chainsafe/persistent-merkle-tree" "1.1.0"
+    "@chainsafe/as-sha256" "1.2.0"
+    "@chainsafe/persistent-merkle-tree" "1.2.0"
 
 "@chainsafe/swap-or-not-shuffle-darwin-arm64@1.2.1":
   version "1.2.1"
@@ -831,10 +831,10 @@
     "@chainsafe/swap-or-not-shuffle-win32-arm64-msvc" "1.2.1"
     "@chainsafe/swap-or-not-shuffle-win32-x64-msvc" "1.2.1"
 
-"@chainsafe/threads@^1.11.1":
-  version "1.11.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/threads/-/threads-1.11.1.tgz#0b3b8c76f5875043ef6d47aeeb681dc80378f205"
-  integrity sha512-ejkB0eVcM0k2E8n5ZqOGt//ZEWU+c431QS3e/WfjLKxhw/fwZpvYhUOxBA8u3lJmAKLGziIcXjOoTnPwMPhkcQ==
+"@chainsafe/threads@^1.11.2":
+  version "1.11.2"
+  resolved "https://registry.yarnpkg.com/@chainsafe/threads/-/threads-1.11.2.tgz#fc400efdfec2d246e5054e3521a9066dc2dc45af"
+  integrity sha512-qd5mSYWyIgK+G4LQTLhJhO4IUda4eydYhZsT6AadALFUKs5WrHaFtAf7sLol6JjgWG7wwgznUs7FFyBl0xPmoQ==
   dependencies:
     callsites "^3.1.0"
     debug "^4.2.0"
@@ -3357,6 +3357,11 @@
   resolved "https://registry.yarnpkg.com/@types/cookie/-/cookie-0.6.0.tgz#eac397f28bf1d6ae0ae081363eca2f425bedf0d5"
   integrity sha512-4Kh9a6B2bQciAhf7FSuMRRkUWecJgJu9nPnx3yzpsfXX/c50REIqpHY4C82bXP90qrLtXtkDxTZosYO3UpOwlA==
 
+"@types/cpu-features@^0.0.3":
+  version "0.0.3"
+  resolved "https://registry.yarnpkg.com/@types/cpu-features/-/cpu-features-0.0.3.tgz#a2bec076eb5dc95e0a6c23d1f8d389be4109b309"
+  integrity sha512-W/Ep+LDZoxMbCcH7LHRB3RN+TY4gbHl3u4uRq4XsxOh1gnpf5Lkwy5xWTBKSaJYQuMLW2XPAmRWA5Ucsy2EGVQ==
+
 "@types/datastore-level@^3.0.0":
   version "3.0.0"
   resolved "https://registry.npmjs.org/@types/datastore-level/-/datastore-level-3.0.0.tgz"
@@ -5379,6 +5384,14 @@ cosmiconfig@^8.2.0:
     js-yaml "^4.1.0"
     parse-json "^5.2.0"
     path-type "^4.0.0"
+
+cpu-features@^0.0.10:
+  version "0.0.10"
+  resolved "https://registry.yarnpkg.com/cpu-features/-/cpu-features-0.0.10.tgz#9aae536db2710c7254d7ed67cb3cbc7d29ad79c5"
+  integrity sha512-9IkYqtX3YHPCzoVg1Py+o9057a3i0fp7S530UWokCSaFVTc7CwXPRiOjRjBQQ18ZCNafx78YfnG+HALxtVmOGA==
+  dependencies:
+    buildcheck "~0.0.6"
+    nan "^2.19.0"
 
 cpu-features@~0.0.4:
   version "0.0.8"

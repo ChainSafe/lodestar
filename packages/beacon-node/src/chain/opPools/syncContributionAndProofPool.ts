@@ -3,7 +3,10 @@ import {BitArray} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {G2_POINT_AT_INFINITY} from "@lodestar/state-transition";
 import {Root, Slot, SubnetID, altair, ssz} from "@lodestar/types";
-import {MapDef, toRootHex} from "@lodestar/utils";
+import {Logger, MapDef, toRootHex} from "@lodestar/utils";
+import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants/constants.js";
+import {Metrics} from "../../metrics/metrics.js";
+import {IClock} from "../../util/clock.js";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
 import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
 
@@ -47,11 +50,16 @@ export class SyncContributionAndProofPool {
 
   private lowestPermissibleSlot = 0;
 
-  constructor() {
+  constructor(
+    private readonly clock: IClock,
+    private readonly metrics: Metrics | null = null,
+    private logger: Logger | null = null
+  ) {
     // Param guarantee for optimizations below that merge syncSubcommitteeBits as bytes
     if (SYNC_COMMITTEE_SUBNET_SIZE % 8 !== 0) {
       throw Error("SYNC_COMMITTEE_SUBNET_SIZE must be multiple of 8");
     }
+    metrics?.opPool.syncContributionAndProofPool.size.addCollect(() => this.onScrapeMetrics(metrics));
   }
 
   /** Returns current count of unique SyncContributionFast by block root and subnet */
@@ -68,7 +76,11 @@ export class SyncContributionAndProofPool {
   /**
    * Only call this once we pass all validation.
    */
-  add(contributionAndProof: altair.ContributionAndProof, syncCommitteeParticipants: number): InsertOutcome {
+  add(
+    contributionAndProof: altair.ContributionAndProof,
+    syncCommitteeParticipants: number,
+    priority?: boolean
+  ): InsertOutcome {
     const {contribution} = contributionAndProof;
     const {slot, beaconBlockRoot} = contribution;
     const rootHex = toRootHex(beaconBlockRoot);
@@ -76,6 +88,12 @@ export class SyncContributionAndProofPool {
     // Reject if too old.
     if (slot < this.lowestPermissibleSlot) {
       return InsertOutcome.Old;
+    }
+
+    // Reject ContributionAndProofs of previous slots
+    // for api ContributionAndProofs, we allow them to be added to the pool
+    if (!priority && slot < this.clock.slotWithPastTolerance(MAXIMUM_GOSSIP_CLOCK_DISPARITY)) {
+      return InsertOutcome.Late;
     }
 
     // Limit object per slot
@@ -95,12 +113,25 @@ export class SyncContributionAndProofPool {
   }
 
   /**
-   * This is for the block factory, the same to process_sync_committee_contributions in the spec.
+   * This is for producing blocks, the same to process_sync_committee_contributions in the spec.
    */
   getAggregate(slot: Slot, prevBlockRoot: Root): altair.SyncAggregate {
-    const bestContributionBySubnet = this.bestContributionBySubnetRootBySlot.get(slot)?.get(toRootHex(prevBlockRoot));
-    if (!bestContributionBySubnet || bestContributionBySubnet.size === 0) {
-      // TODO: Add metric for missing SyncAggregate
+    const opPoolMetrics = this.metrics?.opPool.syncContributionAndProofPool;
+    const bestContributionBySubnetByRoot = this.bestContributionBySubnetRootBySlot.getOrDefault(slot);
+    opPoolMetrics?.getAggregateRoots.set(bestContributionBySubnetByRoot.size);
+    const prevBlockRootHex = toRootHex(prevBlockRoot);
+    const bestContributionBySubnet = bestContributionBySubnetByRoot.getOrDefault(prevBlockRootHex);
+    opPoolMetrics?.getAggregateSubnets.set(bestContributionBySubnet.size);
+
+    if (bestContributionBySubnet.size === 0) {
+      opPoolMetrics?.getAggregateReturnsEmpty.inc();
+      // this may happen, see https://github.com/ChainSafe/lodestar/issues/7299
+      const availableRoots = Array.from(bestContributionBySubnetByRoot.keys()).join(",");
+      this.logger?.warn("SyncContributionAndProofPool.getAggregate: no contributions for root", {
+        slot,
+        root: prevBlockRootHex,
+        availableRoots,
+      });
       // Must return signature as G2_POINT_AT_INFINITY when participating bits are empty
       // https://github.com/ethereum/consensus-specs/blob/30f2a076377264677e27324a8c3c78c590ae5e20/specs/altair/bls.md#eth2_fast_aggregate_verify
       return {
@@ -109,7 +140,7 @@ export class SyncContributionAndProofPool {
       };
     }
 
-    return aggregate(bestContributionBySubnet);
+    return aggregate(bestContributionBySubnet, this.metrics);
   }
 
   /**
@@ -120,6 +151,24 @@ export class SyncContributionAndProofPool {
   prune(headSlot: Slot): void {
     pruneBySlot(this.bestContributionBySubnetRootBySlot, headSlot, SLOTS_RETAINED);
     this.lowestPermissibleSlot = Math.max(headSlot - SLOTS_RETAINED, 0);
+  }
+
+  private onScrapeMetrics(metrics: Metrics): void {
+    const poolMetrics = metrics.opPool.syncContributionAndProofPool;
+    poolMetrics.size.set(this.size);
+    const previousSlot = this.clock.currentSlot - 1;
+    const contributionBySubnetByBlockRoot = this.bestContributionBySubnetRootBySlot.getOrDefault(previousSlot);
+    poolMetrics.blockRootsPerSlot.set(contributionBySubnetByBlockRoot.size);
+    let index = 0;
+    for (const contributionsBySubnet of contributionBySubnetByBlockRoot.values()) {
+      let participationCount = 0;
+      for (const contribution of contributionsBySubnet.values()) {
+        participationCount += contribution.numParticipants;
+      }
+      poolMetrics.subnetsByBlockRoot.set({index}, contributionsBySubnet.size);
+      poolMetrics.participantsByBlockRoot.set({index}, participationCount);
+      index++;
+    }
   }
 }
 
@@ -163,12 +212,17 @@ export function contributionToFast(
  * Aggregate best contributions of each subnet into SyncAggregate
  * @returns SyncAggregate to be included in block body.
  */
-export function aggregate(bestContributionBySubnet: Map<number, SyncContributionFast>): altair.SyncAggregate {
+export function aggregate(
+  bestContributionBySubnet: Map<number, SyncContributionFast>,
+  metrics: Metrics | null = null
+): altair.SyncAggregate {
   // check for empty/undefined bestContributionBySubnet earlier
   const syncCommitteeBits = BitArray.fromBitLen(SYNC_COMMITTEE_SIZE);
 
   const signatures: Signature[] = [];
+  let participationCount = 0;
   for (const [subnet, bestContribution] of bestContributionBySubnet.entries()) {
+    participationCount += bestContribution.numParticipants;
     const byteOffset = subnet * SYNC_COMMITTEE_SUBNET_BYTES;
 
     for (let i = 0; i < SYNC_COMMITTEE_SUBNET_BYTES; i++) {
@@ -177,6 +231,8 @@ export function aggregate(bestContributionBySubnet: Map<number, SyncContribution
 
     signatures.push(signatureFromBytesNoCheck(bestContribution.syncSubcommitteeSignature));
   }
+
+  metrics?.opPool.syncContributionAndProofPool.getAggregateParticipants.set(participationCount);
   return {
     syncCommitteeBits,
     syncCommitteeSignature: aggregateSignatures(signatures).toBytes(),
