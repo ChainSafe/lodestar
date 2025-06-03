@@ -1,5 +1,5 @@
 import {ByteListType, ContainerType, ValueOf} from "@chainsafe/ssz";
-import {Slot, ssz} from "@lodestar/types";
+import {ssz} from "@lodestar/types";
 
 const STORAGE_LIMITS = {
   STATE_DIFF_MAX_BYTES: 2 * 1024 * 1024 * 1024, // 2 GiB
