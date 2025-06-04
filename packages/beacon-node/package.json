@@ -1,7 +1,7 @@
 {
   "name": "@lodestar/beacon-node",
   "description": "A Typescript implementation of the beacon chain",
-  "license": "LGPL-3.0",
+  "license": "Apache-2.0",
   "author": "ChainSafe Systems",
   "homepage": "https://github.com/ChainSafe/lodestar#readme",
   "repository": {
