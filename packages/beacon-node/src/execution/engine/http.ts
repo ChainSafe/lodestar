@@ -557,7 +557,8 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         const castResponse = response as EngineApiRpcReturnTypes[typeof method];
         // TODO(fulu): Spec says to return null if any blob is not found, but reth and nethermind return empty arrays as of peerdas-devnet-6
         // TODO(fulu): Erigon returns array with `null` values
-        if (castResponse === null || castResponse.length === 0 || castResponse?.includes(null)) return null;
+        // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+        if (castResponse === null || castResponse.length === 0 || castResponse?.includes(null as any)) return null;
         return castResponse.map(deserializeBlobAndProofsV2);
       }
     }
