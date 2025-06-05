@@ -46,10 +46,6 @@ const epochTransitionFns: Record<string, EpochTransitionFn> = {
   historical_summaries_update: epochFns.processHistoricalSummariesUpdate as EpochTransitionFn,
   pending_deposits: epochFns.processPendingDeposits as EpochTransitionFn,
   pending_consolidations: epochFns.processPendingConsolidations as EpochTransitionFn,
-  process_proposer_lookahead: (state, _) => {
-    const fork = state.config.getForkSeq(state.slot);
-    epochFns.processProposerLookahead(fork, state as CachedBeaconStateFulu);
-  },
 };
 
 /**
