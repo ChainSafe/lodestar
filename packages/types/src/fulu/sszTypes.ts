@@ -13,7 +13,6 @@ import {
   KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH,
   MAX_BLOB_COMMITMENTS_PER_BLOCK,
   MAX_REQUEST_BLOCKS_DENEB,
-  MAX_REQUEST_DATA_COLUMN_SIDECARS,
   MIN_SEED_LOOKAHEAD,
   NUMBER_OF_COLUMNS,
   SLOTS_PER_EPOCH,
@@ -197,7 +196,7 @@ export const ExecutionPayloadAndBlobsBundle = new ContainerType(
 export const BeaconState = new ContainerType(
   {
     ...electraSsz.BeaconState.fields,
-    proposerLookahead: ProposerLookahead // New in FULU:EIP7917
+    proposerLookahead: ProposerLookahead, // New in FULU:EIP7917
   },
   {typeName: "BeaconState", jsonCase: "eth2"}
 );
