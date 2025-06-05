@@ -202,7 +202,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "lodestar_oppool_aggregated_attestation_pool_attestations_per_committee",
+          "expr": "rate(lodestar_oppool_aggregated_attestation_pool_attestations_per_committee_sum[$rate_interval])\n/\nrate(lodestar_oppool_aggregated_attestation_pool_attestations_per_committee_count[$rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "attestations_per_committee",
