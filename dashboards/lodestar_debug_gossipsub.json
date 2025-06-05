@@ -2697,6 +2697,88 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 94
+      },
+      "id": 507,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(lodestar_gossip_validation_error_total{topic=\"beacon_aggregate_and_proof\"}[$rate_interval])",
+          "instant": false,
+          "legendFormat": "{{error}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Gossip Aggregate And Proof Error",
+      "type": "timeseries"
+    },
+    {
       "collapsed": false,
       "datasource": {
         "type": "prometheus",
@@ -2706,7 +2788,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 94
+        "y": 102
       },
       "id": 388,
       "panels": [],
@@ -2727,7 +2809,7 @@
         "h": 2,
         "w": 24,
         "x": 0,
-        "y": 95
+        "y": 103
       },
       "id": 421,
       "options": {
@@ -2792,7 +2874,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 97
+        "y": 105
       },
       "id": 414,
       "options": {
@@ -2874,7 +2956,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 97
+        "y": 105
       },
       "id": 416,
       "options": {
@@ -2957,7 +3039,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 105
+        "y": 113
       },
       "id": 411,
       "options": {
@@ -3039,7 +3121,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 105
+        "y": 113
       },
       "id": 412,
       "options": {
@@ -3121,7 +3203,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 113
+        "y": 121
       },
       "id": 418,
       "options": {
@@ -3203,7 +3285,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 113
+        "y": 121
       },
       "id": 419,
       "options": {
@@ -3244,7 +3326,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 121
+        "y": 129
       },
       "id": 457,
       "panels": [],
@@ -3310,7 +3392,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 122
+        "y": 130
       },
       "id": 445,
       "options": {
@@ -3457,7 +3539,7 @@
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 122
+        "y": 130
       },
       "id": 447,
       "options": {
@@ -3564,7 +3646,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 131
+        "y": 139
       },
       "id": 449,
       "options": {
@@ -3645,7 +3727,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 131
+        "y": 139
       },
       "id": 450,
       "options": {
@@ -3727,7 +3809,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 139
+        "y": 147
       },
       "id": 452,
       "options": {
@@ -3809,7 +3891,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 139
+        "y": 147
       },
       "id": 451,
       "options": {
@@ -3890,7 +3972,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 147
+        "y": 155
       },
       "id": 454,
       "options": {
@@ -3973,7 +4055,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 147
+        "y": 155
       },
       "id": 455,
       "options": {
@@ -4016,7 +4098,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 155
+        "y": 163
       },
       "id": 506,
       "panels": [],
@@ -4037,7 +4119,7 @@
         "h": 4,
         "w": 12,
         "x": 0,
-        "y": 156
+        "y": 164
       },
       "id": 503,
       "options": {
@@ -4057,7 +4139,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 156
+        "y": 164
       },
       "id": 504,
       "options": {
@@ -4122,7 +4204,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 160
+        "y": 168
       },
       "id": 493,
       "options": {
@@ -4271,7 +4353,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 160
+        "y": 168
       },
       "id": 494,
       "options": {
@@ -4354,7 +4436,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 168
+        "y": 176
       },
       "id": 490,
       "options": {
@@ -4436,7 +4518,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 168
+        "y": 176
       },
       "id": 491,
       "options": {
@@ -4518,7 +4600,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 176
+        "y": 184
       },
       "id": 501,
       "options": {
@@ -4632,7 +4714,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 176
+        "y": 184
       },
       "heatmap": {},
       "hideZeroBuckets": false,
@@ -4722,7 +4804,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 184
+        "y": 192
       },
       "id": 443,
       "panels": [],
@@ -4743,7 +4825,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 185
+        "y": 193
       },
       "id": 464,
       "options": {
@@ -4874,7 +4956,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 185
+        "y": 193
       },
       "id": 468,
       "options": {
@@ -4982,7 +5064,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 193
+        "y": 201
       },
       "id": 459,
       "options": {
@@ -5129,7 +5211,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 193
+        "y": 201
       },
       "id": 475,
       "options": {
@@ -5167,7 +5249,7 @@
         "h": 2,
         "w": 24,
         "x": 0,
-        "y": 201
+        "y": 209
       },
       "id": 474,
       "options": {
@@ -5266,7 +5348,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 203
+        "y": 211
       },
       "id": 460,
       "options": {
@@ -5361,7 +5443,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 203
+        "y": 211
       },
       "id": 477,
       "options": {
@@ -5503,7 +5585,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 211
+        "y": 219
       },
       "id": 478,
       "options": {
@@ -5581,7 +5663,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 211
+        "y": 219
       },
       "heatmap": {},
       "hideZeroBuckets": false,
@@ -5666,7 +5748,7 @@
         "h": 2,
         "w": 24,
         "x": 0,
-        "y": 219
+        "y": 227
       },
       "id": 476,
       "options": {
@@ -5774,7 +5856,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 221
+        "y": 229
       },
       "id": 462,
       "options": {
@@ -5925,7 +6007,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 221
+        "y": 229
       },
       "id": 470,
       "options": {
@@ -6038,7 +6120,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 229
+        "y": 237
       },
       "id": 472,
       "options": {
@@ -6152,7 +6234,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 229
+        "y": 237
       },
       "heatmap": {},
       "hideZeroBuckets": false,
@@ -6248,6 +6330,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -6261,6 +6344,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -6286,7 +6370,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 237
+        "y": 245
       },
       "id": 479,
       "options": {
@@ -6377,6 +6461,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -6390,6 +6475,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -6415,7 +6501,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 237
+        "y": 245
       },
       "id": 471,
       "options": {
@@ -6505,7 +6591,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 245
+        "y": 253
       },
       "id": 488,
       "panels": [],
@@ -6532,6 +6618,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -6545,6 +6632,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -6570,7 +6658,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 246
+        "y": 254
       },
       "id": 481,
       "options": {
@@ -6612,6 +6700,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -6625,6 +6714,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -6675,7 +6765,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 246
+        "y": 254
       },
       "id": 482,
       "options": {
@@ -6717,6 +6807,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -6730,6 +6821,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -6755,7 +6847,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 254
+        "y": 262
       },
       "id": 483,
       "options": {
@@ -6797,6 +6889,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -6810,6 +6903,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -6835,7 +6929,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 254
+        "y": 262
       },
       "id": 484,
       "options": {
@@ -6877,6 +6971,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -6890,6 +6985,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -6915,7 +7011,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 262
+        "y": 270
       },
       "id": 485,
       "options": {
@@ -6957,6 +7053,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -6970,6 +7067,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -7042,7 +7140,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 262
+        "y": 270
       },
       "id": 486,
       "options": {
@@ -7096,7 +7194,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 270
+        "y": 278
       },
       "id": 429,
       "panels": [],
@@ -7123,6 +7221,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -7136,6 +7235,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -7161,7 +7261,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 271
+        "y": 279
       },
       "id": 385,
       "options": {
@@ -7228,6 +7328,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -7241,6 +7342,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -7266,7 +7368,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 271
+        "y": 279
       },
       "id": 391,
       "options": {
@@ -7321,6 +7423,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -7334,6 +7437,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -7359,7 +7463,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 279
+        "y": 287
       },
       "id": 436,
       "options": {
@@ -7402,6 +7506,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -7415,6 +7520,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -7441,7 +7547,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 279
+        "y": 287
       },
       "id": 437,
       "options": {
@@ -7483,6 +7589,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -7496,6 +7603,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -7538,7 +7646,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 287
+        "y": 295
       },
       "id": 440,
       "options": {
@@ -7604,6 +7712,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -7617,6 +7726,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -7643,7 +7753,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 287
+        "y": 295
       },
       "id": 441,
       "options": {
@@ -7708,7 +7818,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 295
+        "y": 303
       },
       "id": 409,
       "panels": [],
@@ -7729,7 +7839,7 @@
         "h": 4,
         "w": 24,
         "x": 0,
-        "y": 296
+        "y": 304
       },
       "id": 423,
       "options": {
@@ -7741,7 +7851,7 @@
         "content": "**Detailed stats about RPC recv / sent**\n\n- Big asymmetries between recv and sent indicate that our node this node is behaving too differently from its peers. RPC behaviour _should_ be mostly symmetrical.\n- As of Apr 2022, Lodestar seem to sends more GRAFTs than receives and receives more PRUNE than it sends. This indicates issues to maintain mesh peers.",
         "mode": "markdown"
       },
-      "pluginVersion": "9.3.2",
+      "pluginVersion": "10.4.1",
       "type": "text"
     },
     {
@@ -7755,6 +7865,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -7768,6 +7879,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -7793,7 +7905,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 300
+        "y": 308
       },
       "id": 396,
       "options": {
@@ -7847,6 +7959,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -7860,6 +7973,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -7885,7 +7999,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 300
+        "y": 308
       },
       "id": 397,
       "options": {
@@ -7939,6 +8053,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -7952,6 +8067,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -7977,7 +8093,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 308
+        "y": 316
       },
       "id": 398,
       "options": {
@@ -8031,6 +8147,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -8044,6 +8161,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -8069,7 +8187,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 308
+        "y": 316
       },
       "id": 399,
       "options": {
@@ -8123,6 +8241,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -8136,6 +8255,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -8161,7 +8281,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 316
+        "y": 324
       },
       "id": 401,
       "options": {
@@ -8215,6 +8335,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -8228,6 +8349,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -8253,7 +8375,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 316
+        "y": 324
       },
       "id": 402,
       "options": {
@@ -8307,6 +8429,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -8320,6 +8443,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -8345,7 +8469,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 324
+        "y": 332
       },
       "id": 403,
       "options": {
@@ -8399,6 +8523,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -8412,6 +8537,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -8437,7 +8563,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 324
+        "y": 332
       },
       "id": 404,
       "options": {
@@ -8491,6 +8617,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -8504,6 +8631,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -8529,7 +8657,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 332
+        "y": 340
       },
       "id": 405,
       "options": {
@@ -8583,6 +8711,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -8596,6 +8725,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -8621,7 +8751,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 332
+        "y": 340
       },
       "id": 406,
       "options": {
@@ -8675,6 +8805,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -8688,6 +8819,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -8713,7 +8845,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 340
+        "y": 348
       },
       "id": 400,
       "options": {
@@ -8767,6 +8899,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -8780,6 +8913,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -8805,7 +8939,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 340
+        "y": 348
       },
       "id": 407,
       "options": {

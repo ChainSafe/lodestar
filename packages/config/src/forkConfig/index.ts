@@ -162,7 +162,6 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
         }
       }
 
-      // Only for testing. Should never reach this line on a public network.
       return config.MAX_BLOBS_PER_BLOCK_ELECTRA;
     },
     getMaxRequestBlobSidecars(fork: ForkName): number {
