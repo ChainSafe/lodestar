@@ -349,5 +349,21 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       name: "beacon_weak_head_detected_total",
       help: "Detected current head block is weak. May reorg it out when proposing next slot. See proposer boost reorg for more",
     }),
+
+    // Validator activity metrics
+    validatorActivity: {
+      pendingDeposits: register.gauge({
+        name: "beacon_pending_deposits",
+        help: "Total count of pending deposits",
+      }),
+      pendingConsolidations: register.gauge({
+        name: "beacon_pending_consolidations",
+        help: "Total count of pending consolidations",
+      }),
+      pendingPartialWithdrawals: register.gauge({
+        name: "beacon_pending_partial_withdrawals",
+        help: "Total count of pending partial withdrawals",
+      }),
+    },
   };
 }
