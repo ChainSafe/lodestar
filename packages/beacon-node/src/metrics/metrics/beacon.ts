@@ -165,6 +165,12 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       buckets: [1, 2, 4, 6, 8],
       labelNames: ["source"],
     }),
+    blockProductionConsensusBlockValue: register.histogram<{source: ProducedBlockSource}>({
+      name: "beacon_block_production_consensus_block_value",
+      help: "Consensus block value denominated in ETH of produced blocks",
+      buckets: [0.001, 0.005, 0.01, 0.03, 0.05, 0.07, 0.1],
+      labelNames: ["source"],
+    }),
     blockProductionExecutionPayloadValue: register.histogram<{source: ProducedBlockSource}>({
       name: "beacon_block_production_execution_payload_value",
       help: "Execution payload value denominated in ETH of produced blocks",
