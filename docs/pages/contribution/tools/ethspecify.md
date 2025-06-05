@@ -1,10 +1,15 @@
-# Ethereum Specification Verification with ethspecify
+---
+id: ethspecify
+title: Ethspecify
+---
+
+# Ethereum Specification Verification with Ethspecify
 
 This document describes our centralized approach for using ethspecify in the Lodestar codebase to track changes in the Ethereum consensus specifications.
 
-## What is ethspecify?
+## What is Ethspecify?
 
-[ethspecify](https://github.com/jtraglia/ethspecify) is a tool that helps detect changes in the Ethereum consensus specifications. Our centralized approach improves on the traditional method by keeping all specification references in a single file.
+[Ethspecify](https://github.com/jtraglia/ethspecify) is a tool that helps detect changes in the Ethereum consensus specifications. Our centralized approach improves on the traditional method by keeping all specification references in a single file.
 
 ## Installation
 

@@ -17,7 +17,7 @@ export const SpecReferences = [
    */
   {
     component: "compute_fork_digest",
-    filePath: "packages/state-transition/src/util/fork.ts",
+    filePath: "packages/config/src/genesisConfig/index.ts",
     specTag: `<spec fn="compute_fork_digest" hash="8b33f64d" />`,
   },
   /**
@@ -25,7 +25,7 @@ export const SpecReferences = [
    */
   {
     component: "compute_fork_version",
-    filePath: "packages/state-transition/src/util/fork.ts",
+    filePath: "packages/state-transition/src/util/domain.ts",
     specTag: `<spec fn="compute_fork_version" hash="6d472038" />`,
   },
   /**
@@ -33,7 +33,7 @@ export const SpecReferences = [
    */
   {
     component: "compute_proposer_index",
-    filePath: "packages/state-transition/src/util/validator.ts",
+    filePath: "packages/state-transition/src/util/seed.ts",
     specTag: `<spec fn="compute_proposer_index" hash="74c8109d" />`,
   },
   /**
@@ -41,7 +41,7 @@ export const SpecReferences = [
    */
   {
     component: "get_attesting_indices",
-    filePath: "packages/state-transition/src/util/validator.ts",
+    filePath: "packages/state-transition/src/cache/epochCache.ts",
     specTag: `<spec fn="get_attesting_indices" hash="3304d67e" />`,
   },
   /**
@@ -49,7 +49,7 @@ export const SpecReferences = [
    */
   {
     component: "get_beacon_committee",
-    filePath: "packages/state-transition/src/util/validator.ts",
+    filePath: "packages/state-transition/src/cache/epochCache.ts",
     specTag: `<spec fn="get_beacon_committee" hash="f04db100" />`,
   },
   /**
@@ -57,7 +57,7 @@ export const SpecReferences = [
    */
   {
     component: "get_max_blobs_per_block",
-    filePath: "packages/state-transition/src/util/blobs.ts",
+    filePath: "packages/config/src/forkConfig/index.ts",
     specTag: `<spec fn="get_max_blobs_per_block" hash="3521ad35" />`,
   },
   /**
@@ -73,7 +73,7 @@ export const SpecReferences = [
    */
   {
     component: "prepare_execution_payload",
-    filePath: "packages/state-transition/src/block/execution.ts",
+    filePath: "packages/beacon-node/src/chain/produceBlock/produceBlockBody.ts",
     specTag: `<spec fn="prepare_execution_payload" hash="ea67dc0d" />`,
   },
   /**
@@ -81,7 +81,7 @@ export const SpecReferences = [
    */
   {
     component: "process_attestation",
-    filePath: "packages/state-transition/src/block/processAttestation.ts",
+    filePath: "packages/state-transition/src/block/processAttestations.ts",
     specTag: `<spec fn="process_attestation" hash="ac9b7566" />`,
   },
   /**
@@ -169,7 +169,7 @@ export const SpecReferences = [
    */
   {
     component: "process_light_client_finality_update",
-    filePath: "packages/state-transition/src/block/processLightClientFinalityUpdate.ts",
+    filePath: "packages/light-client/src/spec/processLightClientUpdate.ts",
     specTag: `<spec fn="process_light_client_finality_update" hash="387eeb1d" />`,
   },
   /**
@@ -177,7 +177,7 @@ export const SpecReferences = [
    */
   {
     component: "process_light_client_optimistic_update",
-    filePath: "packages/state-transition/src/block/processLightClientOptimisticUpdate.ts",
+    filePath: "packages/light-client/src/spec/index.ts",
     specTag: `<spec fn="process_light_client_optimistic_update" hash="088e97c1" />`,
   },
   /**
@@ -185,7 +185,7 @@ export const SpecReferences = [
    */
   {
     component: "process_light_client_store_force_update",
-    filePath: "packages/state-transition/src/block/processLightClientStoreForceUpdate.ts",
+    filePath: "packages/light-client/src/spec/index.ts",
     specTag: `<spec fn="process_light_client_store_force_update" hash="2e537c22" />`,
   },
   /**
@@ -193,7 +193,7 @@ export const SpecReferences = [
    */
   {
     component: "process_light_client_update",
-    filePath: "packages/state-transition/src/block/processLightClientUpdate.ts",
+    filePath: "packages/light-client/src/spec/processLightClientUpdate.ts",
     specTag: `<spec fn="process_light_client_update" hash="0e9d049d" />`,
   },
   /**
@@ -209,7 +209,7 @@ export const SpecReferences = [
    */
   {
     component: "process_pending_consolidations",
-    filePath: "packages/state-transition/src/block/processPendingConsolidations.ts",
+    filePath: "packages/state-transition/src/epoch/processPendingConsolidations.ts",
     specTag: `<spec fn="process_pending_consolidations" hash="1d328e17" />`,
   },
   /**
@@ -217,7 +217,7 @@ export const SpecReferences = [
    */
   {
     component: "process_pending_deposits",
-    filePath: "packages/state-transition/src/block/processPendingDeposits.ts",
+    filePath: "packages/state-transition/src/epoch/processPendingDeposits.ts",
     specTag: `<spec fn="process_pending_deposits" hash="773298bd" />`,
   },
   /**
@@ -265,7 +265,7 @@ export const SpecReferences = [
    */
   {
     component: "process_slot",
-    filePath: "packages/state-transition/src/block/processSlot.ts",
+    filePath: "packages/state-transition/src/slot/index.ts",
     specTag: `<spec fn="process_slot" hash="fd0bdca5" />`,
   },
   /**
@@ -281,7 +281,7 @@ export const SpecReferences = [
    */
   {
     component: "process_sync_committee_contributions",
-    filePath: "packages/state-transition/src/block/processSyncCommitteeContributions.ts",
+    filePath: "packages/state-transition/src/block/processSyncCommittee.ts",
     specTag: `<spec fn="process_sync_committee_contributions" hash="cc848e7c" />`,
   },
   /**
@@ -321,7 +321,7 @@ export const SpecReferences = [
    */
   {
     component: "state_transition",
-    filePath: "packages/state-transition/src/index.ts",
+    filePath: "packages/state-transition/src/stateTransition.ts",
     specTag: `<spec fn="state_transition" hash="356909b9" />`,
   },
 
@@ -331,7 +331,7 @@ export const SpecReferences = [
    */
   {
     component: "AggregateAndProof",
-    filePath: "packages/types/src/altair/sszTypes.ts",
+    filePath: "packages/types/src/electra/sszTypes.ts",
     specTag: `<spec ssz_object="AggregateAndProof" hash="a218764f" />`,
   },
   /**
@@ -347,7 +347,7 @@ export const SpecReferences = [
    */
   {
     component: "BeaconBlock",
-    filePath: "packages/types/src/altair/sszTypes.ts",
+    filePath: "packages/types/src/electra/sszTypes.ts",
     specTag: `<spec ssz_object="BeaconBlock" hash="79909f0a" />`,
   },
   /**
@@ -355,7 +355,7 @@ export const SpecReferences = [
    */
   {
     component: "BeaconBlockBody",
-    filePath: "packages/types/src/altair/sszTypes.ts",
+    filePath: "packages/types/src/electra/sszTypes.ts",
     specTag: `<spec ssz_object="BeaconBlockBody" hash="7c054a64" />`,
   },
   /**
@@ -371,7 +371,7 @@ export const SpecReferences = [
    */
   {
     component: "BeaconState",
-    filePath: "packages/types/src/altair/sszTypes.ts",
+    filePath: "packages/types/src/electra/sszTypes.ts",
     specTag: `<spec ssz_object="BeaconState" hash="910d0f39" />`,
   },
   /**
@@ -379,7 +379,7 @@ export const SpecReferences = [
    */
   {
     component: "ExecutionPayload",
-    filePath: "packages/types/src/bellatrix/sszTypes.ts",
+    filePath: "packages/types/src/electra/sszTypes.ts",
     specTag: `<spec ssz_object="ExecutionPayload" hash="3c96a4a7" />`,
   },
   /**
@@ -387,7 +387,7 @@ export const SpecReferences = [
    */
   {
     component: "ExecutionPayloadHeader",
-    filePath: "packages/types/src/bellatrix/sszTypes.ts",
+    filePath: "packages/types/src/electra/sszTypes.ts",
     specTag: `<spec ssz_object="ExecutionPayloadHeader" hash="438d9b8b" />`,
   },
   /**
@@ -403,7 +403,7 @@ export const SpecReferences = [
    */
   {
     component: "LightClientBootstrap",
-    filePath: "packages/types/src/altair/sszTypes.ts",
+    filePath: "packages/types/src/electra/sszTypes.ts",
     specTag: `<spec ssz_object="LightClientBootstrap" hash="1e7a218b" />`,
   },
   /**
@@ -411,7 +411,7 @@ export const SpecReferences = [
    */
   {
     component: "LightClientFinalityUpdate",
-    filePath: "packages/types/src/altair/sszTypes.ts",
+    filePath: "packages/types/src/electra/sszTypes.ts",
     specTag: `<spec ssz_object="LightClientFinalityUpdate" hash="85006d6b" />`,
   },
   /**
@@ -427,7 +427,7 @@ export const SpecReferences = [
    */
   {
     component: "LightClientOptimisticUpdate",
-    filePath: "packages/types/src/altair/sszTypes.ts",
+    filePath: "packages/types/src/electra/sszTypes.ts",
     specTag: `<spec ssz_object="LightClientOptimisticUpdate" hash="c5493784" />`,
   },
   /**
@@ -435,7 +435,7 @@ export const SpecReferences = [
    */
   {
     component: "LightClientUpdate",
-    filePath: "packages/types/src/altair/sszTypes.ts",
+    filePath: "packages/types/src/electra/sszTypes.ts",
     specTag: `<spec ssz_object="LightClientUpdate" hash="9c59b062" />`,
   },
   /**
@@ -443,7 +443,7 @@ export const SpecReferences = [
    */
   {
     component: "SingleAttestation",
-    filePath: "packages/types/src/altair/sszTypes.ts",
+    filePath: "packages/types/src/electra/sszTypes.ts",
     specTag: `<spec ssz_object="SingleAttestation" hash="f67f746a" />`,
   },
   /**
@@ -489,27 +489,11 @@ export const SpecReferences = [
 
   // Config Variables
   /**
-   * @spec BLOB_SCHEDULE
-   */
-  // {
-  //   component: "BLOB_SCHEDULE",
-  //   filePath: "packages/params/src/presets/mainnet.ts",
-  //   specTag: `<spec config_var="BLOB_SCHEDULE" />`
-  // },
-  /**
-   * @spec MAX_PAYLOAD_SIZE
-   */
-  {
-    component: "MAX_PAYLOAD_SIZE",
-    filePath: "packages/params/src/presets/mainnet.ts",
-    specTag: `<spec config_var="MAX_PAYLOAD_SIZE" hash="7f1566fb" />`,
-  },
-  /**
    * @spec PROPOSER_SCORE_BOOST
    */
   {
     component: "PROPOSER_SCORE_BOOST",
-    filePath: "packages/params/src/presets/mainnet.ts",
+    filePath: "packages/config/src/chainConfig/configs/mainnet.ts",
     specTag: `<spec config_var="PROPOSER_SCORE_BOOST" hash="fbc878c6" />`,
   },
   /**
@@ -517,7 +501,7 @@ export const SpecReferences = [
    */
   {
     component: "REORG_HEAD_WEIGHT_THRESHOLD",
-    filePath: "packages/params/src/presets/mainnet.ts",
+    filePath: "packages/config/src/chainConfig/configs/mainnet.ts",
     specTag: `<spec config_var="REORG_HEAD_WEIGHT_THRESHOLD" hash="d4ecaa84" />`,
   },
   /**
@@ -525,7 +509,7 @@ export const SpecReferences = [
    */
   {
     component: "REORG_MAX_EPOCHS_SINCE_FINALIZATION",
-    filePath: "packages/params/src/presets/mainnet.ts",
+    filePath: "packages/config/src/chainConfig/configs/mainnet.ts",
     specTag: `<spec config_var="REORG_MAX_EPOCHS_SINCE_FINALIZATION" hash="8567706e" />`,
   },
   /**
@@ -533,7 +517,7 @@ export const SpecReferences = [
    */
   {
     component: "REORG_PARENT_WEIGHT_THRESHOLD",
-    filePath: "packages/params/src/presets/mainnet.ts",
+    filePath: "packages/config/src/chainConfig/configs/mainnet.ts",
     specTag: `<spec config_var="REORG_PARENT_WEIGHT_THRESHOLD" hash="cb81e3da" />`,
   },
 ];
