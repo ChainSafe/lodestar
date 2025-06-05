@@ -22,7 +22,7 @@ import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "../types.js";
 import {computeStartSlotAtEpoch} from "./epoch.js";
 import {computeEpochAtSlot} from "./epoch.js";
-import { computeEpochShuffling } from "./epochShuffling.js";
+import { computeEpochShuffling, EpochShuffling } from "./epochShuffling.js";
 import { getActiveValidatorIndices } from "./validator.js";
 
 /**
@@ -152,7 +152,14 @@ export function computeProposerIndices(
   const epochSeed = getSeed(state, epoch, DOMAIN_BEACON_PROPOSER);
   // TODO FULU: Compute shuffling if shuffling cache miss is a temporary workaround. 
   // EpochCache needs to cache shuffling for nextEpoch + 1 too.
-  const shuffling = state.epochCtx.getShufflingAtEpoch(epoch) ?? computeEpochShuffling(state, getActiveValidatorIndices(state, epoch), epoch);
+  let shuffling: EpochShuffling;
+  try {
+    shuffling = state.epochCtx.getShufflingAtEpoch(epoch);
+  } catch (e) {
+    state.epochCtx.shufflingCache?.logger?.verbose(`Shuffling cache miss for epoch ${epoch}. Current epoch ${state.epochCtx.epoch}, computing shuffling...`, {}, e as Error);
+    state.commit();
+    shuffling = computeEpochShuffling(state, getActiveValidatorIndices(state, epoch), epoch);
+  }
 
   for (let slot = startSlot; slot < startSlot + SLOTS_PER_EPOCH; slot++) {
     proposers.push(
