@@ -42,6 +42,10 @@ export function bigIntToBytes(value: bigint, length: number, endianness: Endiann
 }
 
 export function bytesToBigInt(value: Uint8Array, endianness: Endianness = "le"): bigint {
+  if (!(value instanceof Uint8Array)) {
+    throw new TypeError("expected a Uint8Array");
+  }
+
   if (endianness === "le") {
     return toBigIntLE(value as Buffer);
   }
