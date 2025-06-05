@@ -221,8 +221,6 @@ function deserializeInputFile<TestCase extends {meta?: any}, Result>(
 
     let sszType: SszTypeGeneric | undefined;
     for (const key of Object.keys(sszTypes)) {
-      // Sometimes the inputName is in snake_case, but we want to match camelCase
-      inputName = inputName.replace(/_([a-z])/g, (_, char) => char.toUpperCase());
       // most tests configure with exact match
       // fork_choice tests configure with regex
       if ((key.startsWith("^") && inputName.match(key)) || inputName === key) {
