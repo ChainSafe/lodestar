@@ -7258,9 +7258,9 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "rate(gossipsub_idontwant_rcv_msgids_total[$rate_interval])",
+          "expr": "rate(gossipsub_rpc_sent_idontwant_total[$rate_interval])",
           "interval": "",
-          "legendFormat": "received",
+          "legendFormat": "sent",
           "range": true,
           "refId": "A"
         },
@@ -7270,15 +7270,15 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(gossipsub_rpc_sent_idontwant_total[$rate_interval])",
+          "expr": "rate(gossipsub_idontwant_rcv_msgids_total[$rate_interval])",
           "hide": false,
           "instant": false,
-          "legendFormat": "sent",
+          "legendFormat": "received",
           "range": true,
           "refId": "B"
         }
       ],
-      "title": "IDONTWANT messages",
+      "title": "IDONTWANT sent / received",
       "type": "timeseries"
     },
     {
