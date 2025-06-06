@@ -550,6 +550,7 @@ export function getValidatorApi(
     const {blockRoot: parentBlockRootHex, slot: parentSlot} = chain.getProposerHead(slot);
     const parentBlockRoot = fromHex(parentBlockRootHex);
     notOnOutOfRangeData(parentBlockRoot);
+    metrics?.blockProductionSlotDelta.set(slot - parentSlot);
 
     const fork = config.getForkName(slot);
     // set some sensible opts
@@ -588,6 +589,8 @@ export function getValidatorApi(
 
     const loggerContext = {
       slot,
+      parentSlot,
+      parentBlockRoot: parentBlockRootHex,
       fork,
       builderSelection,
       isBuilderEnabled,
