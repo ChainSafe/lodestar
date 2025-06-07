@@ -309,6 +309,59 @@ export function getDataColumnSidecarsFromColumnSidecar(
   );
 }
 
+/**
+ * If we receive more than half of DATA_COLUMN_SIDECAR_SUBNET_COUNT (64) we should recover all remaining columns
+ * If we have less than that, return false and do nothing
+ * If we have all columns, return false and do nothing
+ */
+export function recoverDataColumnSidecars(dataColumnCache: DataColumnsCacheMap): boolean {
+  const columnCount = dataColumnCache.size;
+  if (columnCount >= DATA_COLUMN_SIDECAR_SUBNET_COUNT) {
+    // We have all columns
+    return true;
+  }
+
+  if (columnCount < DATA_COLUMN_SIDECAR_SUBNET_COUNT / 2) {
+    // We don't have enough columns to recover
+    return false;
+  }
+
+  // recover uzing c-kzg
+  const cellIndices: number[] = [];
+  const cells: Uint8Array[] = [];
+  for (const [columnIndex, {dataColumn}] of dataColumnCache.entries()) {
+    cellIndices.push(...Array.from({length: dataColumn.kzgCommitments.length}, () => columnIndex));
+    cells.push(...dataColumn.column);
+  }
+
+  const [recoveredCells, recoveredProofs] = ckzg.recoverCellsAndKzgProofs(cellIndices, cells);
+  const firstDataColumn = dataColumnCache.get(cellIndices[0])?.dataColumn;
+  if (firstDataColumn == null) {
+    // should not happen because we check the size of the cache before this
+    throw new Error("No data column found in cache to recover from");
+  }
+  const blobCount = firstDataColumn.kzgCommitments.length;
+  for (let i = 0; i < DATA_COLUMN_SIDECAR_SUBNET_COUNT; i++) {
+    if (dataColumnCache.has(i)) {
+      // We already have this column
+      continue;
+    }
+
+    const columnIndex = i;
+    const dataColumn: fulu.DataColumnSidecar = {
+      index: columnIndex,
+      column: recoveredCells.slice(i * blobCount, (i + 1) * blobCount),
+      kzgCommitments: firstDataColumn.kzgCommitments,
+      kzgProofs: recoveredProofs.slice(i * blobCount, (i + 1) * blobCount),
+      signedBlockHeader: firstDataColumn.signedBlockHeader,
+      kzgCommitmentsInclusionProof: firstDataColumn.kzgCommitmentsInclusionProof,
+    };
+    dataColumnCache.set(columnIndex, {dataColumn, dataColumnBytes: null});
+  }
+
+  return true;
+}
+
 export function hasSampledDataColumns(custodyConfig: CustodyConfig, dataColumnCache: DataColumnsCacheMap): boolean {
   return (
     dataColumnCache.size >= custodyConfig.sampledColumns.length &&

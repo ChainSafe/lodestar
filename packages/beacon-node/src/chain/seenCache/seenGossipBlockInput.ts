@@ -6,7 +6,12 @@ import {Logger, pruneSetToMax} from "@lodestar/utils";
 
 import {IExecutionEngine} from "../../execution/index.js";
 import {Metrics} from "../../metrics/index.js";
-import {CustodyConfig, getDataColumnsFromExecution, hasSampledDataColumns} from "../../util/dataColumns.js";
+import {
+  CustodyConfig,
+  getDataColumnsFromExecution,
+  hasSampledDataColumns,
+  recoverDataColumnSidecars,
+} from "../../util/dataColumns.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {
   BlobsSource,
@@ -29,6 +34,7 @@ import {GossipAction} from "../errors/gossipValidation.js";
 
 export enum BlockInputAvailabilitySource {
   GOSSIP = "gossip",
+  RECOVERED = "recovered",
   UNKNOWN_SYNC = "unknown_sync",
 }
 
@@ -306,9 +312,13 @@ export class SeenGossipBlockInput {
           };
         }
 
+        const recovered = recoverDataColumnSidecars(dataColumnsCache);
         if (hasSampledDataColumns(this.custodyConfig, dataColumnsCache)) {
           const allDataColumns = getBlockInputDataColumns(dataColumnsCache, this.custodyConfig.sampledColumns);
-          metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.GOSSIP});
+          // TODO(das): should not use syncUnknownBlock metrics here
+          metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({
+            source: recovered ? BlockInputAvailabilitySource.RECOVERED : BlockInputAvailabilitySource.GOSSIP,
+          });
           const {dataColumns} = allDataColumns;
           const blockData: BlockInputDataColumns = {
             fork: cachedData.fork,
