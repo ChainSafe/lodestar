@@ -315,10 +315,6 @@ export class SeenGossipBlockInput {
         const recovered = recoverDataColumnSidecars(dataColumnsCache);
         if (hasSampledDataColumns(this.custodyConfig, dataColumnsCache)) {
           const allDataColumns = getBlockInputDataColumns(dataColumnsCache, this.custodyConfig.sampledColumns);
-          // TODO(das): should not use syncUnknownBlock metrics here
-          metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({
-            source: recovered ? BlockInputAvailabilitySource.RECOVERED : BlockInputAvailabilitySource.GOSSIP,
-          });
           const {dataColumns} = allDataColumns;
           const blockData: BlockInputDataColumns = {
             fork: cachedData.fork,
@@ -326,7 +322,9 @@ export class SeenGossipBlockInput {
             dataColumnsSource: DataColumnsSource.gossip,
           };
           resolveAvailability(blockData);
-          metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.GOSSIP});
+          // TODO(das): should not use syncUnknownBlock metrics here
+          const source = recovered ? BlockInputAvailabilitySource.RECOVERED : BlockInputAvailabilitySource.GOSSIP;
+          metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source});
 
           const blockInput = getBlockInput.availableData(config, signedBlock, BlockSource.gossip, blockData);
 
