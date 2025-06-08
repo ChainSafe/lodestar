@@ -312,7 +312,7 @@ export class SeenGossipBlockInput {
           };
         }
 
-        const recovered = recoverDataColumnSidecars(dataColumnsCache);
+        const recovered = recoverDataColumnSidecars(dataColumnsCache, metrics);
         if (hasSampledDataColumns(this.custodyConfig, dataColumnsCache)) {
           const allDataColumns = getBlockInputDataColumns(dataColumnsCache, this.custodyConfig.sampledColumns);
           const {dataColumns} = allDataColumns;

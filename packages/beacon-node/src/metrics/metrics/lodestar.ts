@@ -716,6 +716,17 @@ export function createLodestarMetrics(
         buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
       }),
     },
+    gossipDataColumnSidecar: {
+      recoverTime: register.histogram({
+        name: "lodestar_gossip_data_column_sidecar_recover_time_seconds",
+        help: "Time elapsed to recover data column sidecar",
+        buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
+      }),
+      recoverFailed: register.gauge({
+        name: "lodestar_gossip_data_column_sidecar_recover_failed_total",
+        help: "Total count of failed recoveries of data column sidecars",
+      }),
+    },
     importBlock: {
       persistBlockNoSerializedDataCount: register.gauge({
         name: "lodestar_import_block_persist_block_no_serialized_data_count",

@@ -8,7 +8,7 @@ import {
   NUMBER_OF_CUSTODY_GROUPS,
 } from "@lodestar/params";
 import {CachedBeaconStateAllForks, signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {ColumnIndex, CustodyIndex, SignedBeaconBlockHeader, ValidatorIndex, deneb, fulu} from "@lodestar/types";
+import {ColumnIndex, CustodyIndex, SignedBeaconBlockHeader, Uint8, ValidatorIndex, deneb, fulu} from "@lodestar/types";
 import {ssz} from "@lodestar/types";
 import {bytesToBigInt} from "@lodestar/utils";
 import {
@@ -22,8 +22,13 @@ import {
 import {ChainEvent, ChainEventEmitter} from "../chain/emitter.js";
 import {BlockInputCacheType} from "../chain/seenCache/seenGossipBlockInput.js";
 import {IExecutionEngine} from "../execution/engine/interface.js";
+import {Metrics} from "../metrics/index.js";
 import {NodeId} from "../network/subnets/index.js";
-import {computeKzgCommitmentsInclusionProof, kzgCommitmentToVersionedHash} from "./blobs.js";
+import {
+  computeKzgCommitmentsInclusionProof,
+  kzgCommitmentToVersionedHash,
+  recoverDataColumnSidecars as recover,
+} from "./blobs.js";
 import {ckzg} from "./kzg.js";
 
 export class CustodyConfig {
@@ -314,7 +319,7 @@ export function getDataColumnSidecarsFromColumnSidecar(
  * If we have less than that, return false and do nothing
  * If we have all columns, return false and do nothing
  */
-export function recoverDataColumnSidecars(dataColumnCache: DataColumnsCacheMap): boolean {
+export function recoverDataColumnSidecars(dataColumnCache: DataColumnsCacheMap, metric: Metrics | null): boolean {
   const columnCount = dataColumnCache.size;
   if (columnCount >= DATA_COLUMN_SIDECAR_SUBNET_COUNT) {
     // We have all columns
@@ -326,37 +331,35 @@ export function recoverDataColumnSidecars(dataColumnCache: DataColumnsCacheMap):
     return false;
   }
 
-  // recover uzing c-kzg
-  const cellIndices: number[] = [];
-  const cells: Uint8Array[] = [];
+  const timer = metric?.gossipDataColumnSidecar.recoverTime.startTimer();
+  const partialSidecars = new Map<number, fulu.DataColumnSidecar>();
   for (const [columnIndex, {dataColumn}] of dataColumnCache.entries()) {
-    cellIndices.push(...Array.from({length: dataColumn.kzgCommitments.length}, () => columnIndex));
-    cells.push(...dataColumn.column);
+    partialSidecars.set(columnIndex, dataColumn);
+  }
+  const fullSidecars = recover(partialSidecars);
+  if (fullSidecars == null) {
+    const firstDataColumn = dataColumnCache.values().next().value?.dataColumn;
+    if (firstDataColumn == null) {
+      metric?.gossipDataColumnSidecar.recoverFailed.inc();
+      // should not happen because we check the size of the cache before this
+      throw new Error("No data column found in cache to recover from");
+    }
+    throw Error(`Cannot recover sidecar for slot ${firstDataColumn.signedBlockHeader.message.slot}`);
   }
 
-  const [recoveredCells, recoveredProofs] = ckzg.recoverCellsAndKzgProofs(cellIndices, cells);
-  const firstDataColumn = dataColumnCache.get(cellIndices[0])?.dataColumn;
-  if (firstDataColumn == null) {
-    // should not happen because we check the size of the cache before this
-    throw new Error("No data column found in cache to recover from");
-  }
-  const blobCount = firstDataColumn.kzgCommitments.length;
-  for (let i = 0; i < DATA_COLUMN_SIDECAR_SUBNET_COUNT; i++) {
-    if (dataColumnCache.has(i)) {
+  timer?.();
+
+  for (let columnIndex = 0; columnIndex < DATA_COLUMN_SIDECAR_SUBNET_COUNT; columnIndex++) {
+    if (dataColumnCache.has(columnIndex)) {
       // We already have this column
       continue;
     }
 
-    const columnIndex = i;
-    const dataColumn: fulu.DataColumnSidecar = {
-      index: columnIndex,
-      column: recoveredCells.slice(i * blobCount, (i + 1) * blobCount),
-      kzgCommitments: firstDataColumn.kzgCommitments,
-      kzgProofs: recoveredProofs.slice(i * blobCount, (i + 1) * blobCount),
-      signedBlockHeader: firstDataColumn.signedBlockHeader,
-      kzgCommitmentsInclusionProof: firstDataColumn.kzgCommitmentsInclusionProof,
-    };
-    dataColumnCache.set(columnIndex, {dataColumn, dataColumnBytes: null});
+    const sidecar = fullSidecars[columnIndex];
+    if (sidecar === undefined) {
+      throw new Error(`full sidecars is undefined at index ${columnIndex}`);
+    }
+    dataColumnCache.set(columnIndex, {dataColumn: sidecar, dataColumnBytes: null});
   }
 
   return true;
