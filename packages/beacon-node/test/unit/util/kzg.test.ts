@@ -83,7 +83,8 @@ describe("KZG", () => {
     const signedBeaconBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
     const mocks = getBlobCellAndProofs();
     const blobs = mocks.map(({blob}) => blob);
-    const kzgCommitments = blobs.map(kzg.blobToKzgCommitment);
+    console.log(blobs);
+    const kzgCommitments = blobs.map((blob) => kzg.blobToKzgCommitment(blob));
     const kzgProofs = blobs.flatMap((blob) => kzg.computeCellsAndKzgProofs(blob).proofs);
     for (const commitment of kzgCommitments) {
       signedBeaconBlock.message.body.executionPayload.transactions.push(transactionForKzgCommitment(commitment));
