@@ -20,6 +20,7 @@ import {BackfillSyncMethod} from "../../sync/backfill/backfill.js";
 import {PendingBlockType} from "../../sync/index.js";
 import {PeerSyncType, RangeSyncType} from "../../sync/utils/remoteSyncType.js";
 import {AllocSource} from "../../util/bufferPool.js";
+import {RecoverResult} from "../../util/dataColumns.js";
 import {LodestarMetadata} from "../options.js";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
 
@@ -716,15 +717,21 @@ export function createLodestarMetrics(
         buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
       }),
     },
-    gossipDataColumnSidecar: {
+    recoverDataColumnSidecars: {
+      secFromSlot: register.histogram({
+        name: "lodestar_recover_data_column_sidecar_recover_timer_from_slot",
+        help: "Time elapsed between block slot time and the time data column sidecar recovered",
+        buckets: [2, 4, 6, 8, 10, 12],
+      }),
       recoverTime: register.histogram({
-        name: "lodestar_gossip_data_column_sidecar_recover_time_seconds",
+        name: "lodestar_recover_data_column_sidecar_recover_time_seconds",
         help: "Time elapsed to recover data column sidecar",
         buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
       }),
-      recoverFailed: register.gauge({
-        name: "lodestar_gossip_data_column_sidecar_recover_failed_total",
-        help: "Total count of failed recoveries of data column sidecars",
+      result: register.gauge<{result: RecoverResult}>({
+        name: "lodestar_recover_data_column_sidecar_recover_result_total",
+        help: "Total count of recover result of data column sidecars",
+        labelNames: ["result"],
       }),
     },
     importBlock: {

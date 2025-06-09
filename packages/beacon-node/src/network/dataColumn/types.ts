@@ -6,7 +6,6 @@ import {Metrics} from "../../metrics/index.js";
 export type DataColumnRecoverInitModules = {
   logger: LoggerNode;
   metrics: Metrics | null;
-  signal?: AbortSignal;
 };
 
 export type DataColumnRecoverModules = DataColumnRecoverInitModules & {

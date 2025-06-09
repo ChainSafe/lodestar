@@ -8,7 +8,7 @@ import {
   NUMBER_OF_CUSTODY_GROUPS,
 } from "@lodestar/params";
 import {CachedBeaconStateAllForks, signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {ColumnIndex, CustodyIndex, SignedBeaconBlockHeader, Uint8, ValidatorIndex, deneb, fulu} from "@lodestar/types";
+import {ColumnIndex, CustodyIndex, SignedBeaconBlockHeader, ValidatorIndex, deneb, fulu} from "@lodestar/types";
 import {ssz} from "@lodestar/types";
 import {bytesToBigInt} from "@lodestar/utils";
 import {
@@ -23,13 +23,20 @@ import {ChainEvent, ChainEventEmitter} from "../chain/emitter.js";
 import {BlockInputCacheType} from "../chain/seenCache/seenGossipBlockInput.js";
 import {IExecutionEngine} from "../execution/engine/interface.js";
 import {Metrics} from "../metrics/index.js";
+import {DataColumnRecover} from "../network/dataColumn/index.js";
 import {NodeId} from "../network/subnets/index.js";
-import {
-  computeKzgCommitmentsInclusionProof,
-  kzgCommitmentToVersionedHash,
-  recoverDataColumnSidecars as recover,
-} from "./blobs.js";
+import {computeKzgCommitmentsInclusionProof, kzgCommitmentToVersionedHash} from "./blobs.js";
+import {IClock} from "./clock.js";
 import {ckzg} from "./kzg.js";
+
+export enum RecoverResult {
+  // the recover is a success and it helps resolve availability
+  SuccessResolved = "success_resolved",
+  // the redover is a success but it's late, availability is already resolved by either gossip or getBlobsV2
+  SuccessLater = "success_later",
+  // the recover failed
+  Failed = "failed",
+}
 
 export class CustodyConfig {
   /**
@@ -316,38 +323,56 @@ export function getDataColumnSidecarsFromColumnSidecar(
 
 /**
  * If we receive more than half of DATA_COLUMN_SIDECAR_SUBNET_COUNT (64) we should recover all remaining columns
- * If we have less than that, return false and do nothing
- * If we have all columns, return false and do nothing
+ *   - return true if we successfully recovered and it helps resolve availability
+ *   - return false if we successfully recovered but it does not help resolve availability
+ *   - return null if we failed to recover or we don't attempt to recover
  */
-export function recoverDataColumnSidecars(dataColumnCache: DataColumnsCacheMap, metric: Metrics | null): boolean {
+export async function recoverDataColumnSidecars(
+  dataColumnCache: DataColumnsCacheMap,
+  dataColumnRecover: DataColumnRecover,
+  clock: IClock,
+  metric: Metrics | null
+): Promise<boolean | null> {
   const columnCount = dataColumnCache.size;
   if (columnCount >= DATA_COLUMN_SIDECAR_SUBNET_COUNT) {
     // We have all columns
-    return true;
+    return null;
   }
 
   if (columnCount < DATA_COLUMN_SIDECAR_SUBNET_COUNT / 2) {
     // We don't have enough columns to recover
-    return false;
+    return null;
   }
 
-  const timer = metric?.gossipDataColumnSidecar.recoverTime.startTimer();
+  const timer = metric?.recoverDataColumnSidecars.recoverTime.startTimer();
   const partialSidecars = new Map<number, fulu.DataColumnSidecar>();
   for (const [columnIndex, {dataColumn}] of dataColumnCache.entries()) {
     partialSidecars.set(columnIndex, dataColumn);
   }
-  const fullSidecars = recover(partialSidecars);
+  const fullSidecars = await dataColumnRecover?.recoverDataColumnSidecars(partialSidecars);
   if (fullSidecars == null) {
-    const firstDataColumn = dataColumnCache.values().next().value?.dataColumn;
-    if (firstDataColumn == null) {
-      metric?.gossipDataColumnSidecar.recoverFailed.inc();
-      // should not happen because we check the size of the cache before this
-      throw new Error("No data column found in cache to recover from");
-    }
-    throw Error(`Cannot recover sidecar for slot ${firstDataColumn.signedBlockHeader.message.slot}`);
+    metric?.recoverDataColumnSidecars.result.inc({result: RecoverResult.Failed});
+    return null;
+  }
+  timer?.();
+
+  const firstDataColumn = dataColumnCache.values().next().value?.dataColumn;
+  if (firstDataColumn == null) {
+    // should not happen because we check the size of the cache before this
+    throw new Error("No data column found in cache to recover from");
+  }
+  const slot = firstDataColumn.signedBlockHeader.message.slot;
+  const secFromSlot = clock.secFromSlot(slot);
+  metric?.recoverDataColumnSidecars.secFromSlot.observe(secFromSlot);
+
+  if (dataColumnCache.size === NUMBER_OF_COLUMNS) {
+    // either gossip or getBlobsV2 resolved availability while we were recovering
+    metric?.recoverDataColumnSidecars.result.inc({result: RecoverResult.SuccessLater});
+    return false;
   }
 
-  timer?.();
+  // We successfully recovered the data columns, update the cache
+  metric?.recoverDataColumnSidecars.result.inc({result: RecoverResult.SuccessResolved});
 
   for (let columnIndex = 0; columnIndex < DATA_COLUMN_SIDECAR_SUBNET_COUNT; columnIndex++) {
     if (dataColumnCache.has(columnIndex)) {

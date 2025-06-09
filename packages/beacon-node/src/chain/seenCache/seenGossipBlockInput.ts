@@ -6,6 +6,8 @@ import {Logger, pruneSetToMax} from "@lodestar/utils";
 
 import {IExecutionEngine} from "../../execution/index.js";
 import {Metrics} from "../../metrics/index.js";
+import {DataColumnRecover} from "../../network/dataColumn/index.js";
+import {IClock} from "../../util/clock.js";
 import {
   CustodyConfig,
   getDataColumnsFromExecution,
@@ -91,6 +93,7 @@ export class SeenGossipBlockInput {
   private readonly blockInputCache = new Map<RootHex, BlockInputCacheType>();
   private readonly custodyConfig: CustodyConfig;
   private readonly executionEngine: IExecutionEngine;
+  private readonly clock: IClock;
   private readonly emitter: ChainEventEmitter;
   private readonly logger: Logger;
 
@@ -98,10 +101,12 @@ export class SeenGossipBlockInput {
     custodyConfig: CustodyConfig,
     executionEngine: IExecutionEngine,
     emitter: ChainEventEmitter,
+    clock: IClock,
     logger: Logger
   ) {
     this.custodyConfig = custodyConfig;
     this.executionEngine = executionEngine;
+    this.clock = clock;
     this.emitter = emitter;
     this.logger = logger;
   }
@@ -146,6 +151,7 @@ export class SeenGossipBlockInput {
   getGossipBlockInput(
     config: ChainForkConfig,
     gossipedInput: GossipedBlockInput,
+    dataColumnRecover: DataColumnRecover | null,
     metrics: Metrics | null
   ): GossipBlockInputResponse {
     let blockHex: RootHex;
@@ -312,10 +318,8 @@ export class SeenGossipBlockInput {
           };
         }
 
-        const recovered = recoverDataColumnSidecars(dataColumnsCache, metrics);
-        if (hasSampledDataColumns(this.custodyConfig, dataColumnsCache)) {
+        const resolveAvailabilityAndBlockInput = (source: BlockInputAvailabilitySource) => {
           const allDataColumns = getBlockInputDataColumns(dataColumnsCache, this.custodyConfig.sampledColumns);
-          const {dataColumns} = allDataColumns;
           const blockData: BlockInputDataColumns = {
             fork: cachedData.fork,
             ...allDataColumns,
@@ -323,12 +327,48 @@ export class SeenGossipBlockInput {
           };
           resolveAvailability(blockData);
           // TODO(das): should not use syncUnknownBlock metrics here
-          const source = recovered ? BlockInputAvailabilitySource.RECOVERED : BlockInputAvailabilitySource.GOSSIP;
           metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source});
 
           const blockInput = getBlockInput.availableData(config, signedBlock, BlockSource.gossip, blockData);
-
           resolveBlockInput(blockInput);
+          return blockInput;
+        };
+
+        // const recovered = recoverDataColumnSidecars(dataColumnsCache, metrics);
+        if (dataColumnsCache.size >= NUMBER_OF_COLUMNS / 2) {
+          callInNextEventLoop(async () => {
+            const logCtx = {
+              blockHex,
+              slot,
+              dataColumns: dataColumnsCache.size,
+            };
+            if (dataColumnRecover == null) {
+              this.logger.debug("No data column recover configured, skipping recovery", logCtx);
+              return;
+            }
+            const shouldResolve = await recoverDataColumnSidecars(
+              dataColumnsCache,
+              dataColumnRecover,
+              this.clock,
+              metrics
+            );
+            if (shouldResolve) {
+              resolveAvailabilityAndBlockInput(BlockInputAvailabilitySource.RECOVERED);
+              this.logger.verbose("Recovered data column sidecars and resolved availability", logCtx);
+            } else {
+              if (shouldResolve === false) {
+                this.logger.verbose("Recovered data column sidecars but it's late to resolve availability", logCtx);
+              } else {
+                // shouldResolve is null
+                this.logger.verbose("Failed or did not attempt to recover data column sidecars", logCtx);
+              }
+            }
+          });
+        }
+        if (hasSampledDataColumns(this.custodyConfig, dataColumnsCache)) {
+          const blockInput = resolveAvailabilityAndBlockInput(BlockInputAvailabilitySource.GOSSIP);
+          const allDataColumns = getBlockInputDataColumns(dataColumnsCache, this.custodyConfig.sampledColumns);
+          const {dataColumns} = allDataColumns;
           return {
             blockInput,
             blockInputMeta: {

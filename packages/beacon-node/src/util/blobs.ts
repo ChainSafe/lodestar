@@ -2,7 +2,6 @@ import {digest as sha256Digest} from "@chainsafe/as-sha256";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {ChainForkConfig} from "@lodestar/config";
 import {
-  DATA_COLUMN_SIDECAR_SUBNET_COUNT,
   ForkAll,
   ForkName,
   KZG_COMMITMENTS_GINDEX,

@@ -19,7 +19,6 @@ export class DataColumnRecover implements DataColumnRecoverWorkerApi {
   constructor(modules: DataColumnRecoverModules) {
     this.api = modules.api;
     this.logger = modules.logger;
-    modules.signal?.addEventListener("abort", () => this.close(), {once: true});
   }
 
   static async init(modules: DataColumnRecoverInitModules): Promise<DataColumnRecover> {

@@ -15,6 +15,7 @@ import {computeNodeId} from "../../../../src/network/subnets/index.js";
 import {CustodyConfig} from "../../../../src/util/dataColumns.js";
 import {testLogger} from "../../../utils/logger.js";
 import {getValidPeerId} from "../../../utils/peer.js";
+import { IClock } from "../../../../src/util/clock.js";
 
 describe("SeenGossipBlockInput", () => {
   const chainConfig = createChainForkConfig({
@@ -39,11 +40,14 @@ describe("SeenGossipBlockInput", () => {
   });
 
   const emitter = new ChainEventEmitter();
+  // Not used in this test, but required by the constructor
+  const unusedClock = {} as unknown as IClock;
 
   const seenGossipBlockInput = new SeenGossipBlockInput(
     new CustodyConfig(nodeId, config),
     executionEngine,
     emitter,
+    unusedClock,
     testLogger("seenGossipBlockInput")
   );
 
@@ -141,6 +145,7 @@ describe("SeenGossipBlockInput", () => {
                 type: GossipedInputType.block,
                 signedBlock,
               },
+              null,
               null
             );
 
@@ -162,6 +167,7 @@ describe("SeenGossipBlockInput", () => {
                 type: GossipedInputType.blob,
                 blobSidecar,
               },
+              null,
               null
             );
 
