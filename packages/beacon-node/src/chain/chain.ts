@@ -267,7 +267,7 @@ export class BeaconChain implements IBeaconChain {
     this.seenContributionAndProof = new SeenContributionAndProof(metrics);
     this.seenAttestationDatas = new SeenAttestationDatas(metrics, this.opts?.attDataCacheSlotDistance);
     const nodeId = computeNodeIdFromPrivateKey(privateKey);
-    this.custodyConfig = new CustodyConfig(nodeId, config);
+    this.custodyConfig = new CustodyConfig(nodeId, config, metrics);
     this.seenGossipBlockInput = new SeenGossipBlockInput(this.custodyConfig, this.executionEngine, emitter, logger);
 
     this.beaconProposerCache = new BeaconProposerCache(opts);

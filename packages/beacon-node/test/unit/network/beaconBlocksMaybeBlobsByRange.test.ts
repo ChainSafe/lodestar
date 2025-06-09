@@ -109,7 +109,7 @@ describe.skip("beaconBlocksMaybeBlobsByRange", () => {
         });
       });
 
-      const custodyConfig = new CustodyConfig(new Uint8Array(32), config);
+      const custodyConfig = new CustodyConfig(new Uint8Array(32), config, null);
       custodyConfig.sampledColumns = [2, 4, 6, 8];
 
       const network = {

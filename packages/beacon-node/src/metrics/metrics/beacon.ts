@@ -374,6 +374,10 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         help: "Full runtime of engine_getBlobsV2 requests",
         buckets: [0.001, 0.0025, 0.005, 0.0075, 0.01, 0.025, 0.05, 0.75, 0.1, 0.5, 1, 1.5, 2, 5, 10],
       }),
+      custodyGroupCount: register.gauge({
+        name: "beacon_custody_groups",
+        help: "Total number of custody groups within a node",
+      }),
     },
 
     // Non-spec'ed
