@@ -33,7 +33,7 @@ export enum RecoverResult {
   // the recover is a success and it helps resolve availability
   SuccessResolved = "success_resolved",
   // the redover is a success but it's late, availability is already resolved by either gossip or getBlobsV2
-  SuccessLater = "success_later",
+  SuccessLate = "success_late",
   // the recover failed
   Failed = "failed",
 }
@@ -367,7 +367,7 @@ export async function recoverDataColumnSidecars(
 
   if (dataColumnCache.size === NUMBER_OF_COLUMNS) {
     // either gossip or getBlobsV2 resolved availability while we were recovering
-    metric?.recoverDataColumnSidecars.result.inc({result: RecoverResult.SuccessLater});
+    metric?.recoverDataColumnSidecars.result.inc({result: RecoverResult.SuccessLate});
     return false;
   }
 
