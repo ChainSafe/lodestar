@@ -9,7 +9,7 @@ import {getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
 import {getBlobCellAndProofs} from "../../utils/getBlobCellAndProofs.js";
 import {generateRandomBlob, transactionForKzgCommitment} from "../../utils/kzg.js";
 
-describe("C-KZG", () => {
+describe("KZG", () => {
   const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];
   afterEach(async () => {
     while (afterEachCallbacks.length > 0) {
@@ -59,7 +59,7 @@ describe("C-KZG", () => {
     expect(blobSidecars.length).toBe(2);
 
     // Full validation
-    validateBlobSidecars(slot, blockRoot, kzgCommitments, blobSidecars);
+    await validateBlobSidecars(slot, blockRoot, kzgCommitments, blobSidecars);
 
     for (const blobSidecar of blobSidecars) {
       try {
