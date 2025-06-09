@@ -441,7 +441,7 @@ export class EpochCache {
     const currentProposerSeed = getSeed(state, currentEpoch, DOMAIN_BEACON_PROPOSER);
 
     let proposers: number[];
-    if ((state as CachedBeaconStateFulu).proposerLookahead !== undefined) {
+    if (currentEpoch >= config.FULU_FORK_EPOCH) {
       // Overwrite proposers with state.proposerLookahead
       proposers = (state as CachedBeaconStateFulu).proposerLookahead.getAll().slice(0, SLOTS_PER_EPOCH);
     } else {
@@ -626,7 +626,6 @@ export class EpochCache {
     // epochAfterUpcoming for the same reason to help minimize confusion.
     const upcomingEpoch = this.nextEpoch;
     const epochAfterUpcoming = upcomingEpoch + 1;
-    const isForkPostFulu = (state as CachedBeaconStateFulu).proposerLookahead !== undefined;
 
     // move current to previous
     this.previousShuffling = this.currentShuffling;
@@ -651,7 +650,7 @@ export class EpochCache {
         // so should be taken into account when structuring tests.  Should not affect unit or other tests though
         computeEpochShuffling(state, this.nextActiveIndices, upcomingEpoch);
     }
-    if (isForkPostFulu) {
+    if (upcomingEpoch >= this.config.FULU_FORK_EPOCH) {
       // Populate proposer cache with lookahead from state
       const proposerLookahead = (state as CachedBeaconStateFulu).proposerLookahead.getAll();
       this.proposers = proposerLookahead.slice(0, SLOTS_PER_EPOCH);

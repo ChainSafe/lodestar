@@ -139,7 +139,7 @@ export function computeProposerIndex(
 }
 
 /**
- * Return the proposer indices for the given ``epoch``.
+ * Return the proposer indices for the given `epoch`.
  * A more generic version of `computeProposers`
  */
 export function computeProposerIndices(
