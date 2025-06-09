@@ -1,25 +1,20 @@
 import {CELLS_PER_EXT_BLOB, ForkName} from "@lodestar/params";
 import {ExecutionPayload, deneb, fulu} from "@lodestar/types";
-import {beforeAll, describe, expect, it} from "vitest";
+import {describe, expect, it} from "vitest";
 import {validateBlobsAndKzgCommitments} from "../../../../src/chain/produceBlock/validateBlobsAndKzgCommitments.js";
 import {BlobsBundle} from "../../../../src/execution/index.js";
-import {ckzg, initCKZG, loadEthereumTrustedSetup} from "../../../../src/util/kzg.js";
+import {kzg} from "../../../../src/util/kzg.js";
 import {generateRandomBlob} from "../../../utils/kzg.js";
 
 describe("validateBlobsAndKzgCommitments", () => {
-  beforeAll(async () => {
-    await initCKZG();
-    loadEthereumTrustedSetup();
-  });
-
   it("should validate a valid V1 blobs bundle", () => {
     const blobs = [generateRandomBlob(), generateRandomBlob()];
     const commitments = [];
     const proofs = [];
 
     for (const blob of blobs) {
-      const commitment = ckzg.blobToKzgCommitment(blob);
-      const proof = ckzg.computeBlobKzgProof(blob, commitment);
+      const commitment = kzg.blobToKzgCommitment(blob);
+      const proof = kzg.computeBlobKzgProof(blob, commitment);
 
       commitments.push(commitment);
       proofs.push(proof);
@@ -43,7 +38,7 @@ describe("validateBlobsAndKzgCommitments", () => {
 
   it("should throw if V1 blobs bundle proof verification fails", () => {
     const blobs = [generateRandomBlob(), generateRandomBlob()];
-    const commitments = blobs.map((blob) => ckzg.blobToKzgCommitment(blob));
+    const commitments = blobs.map((blob) => kzg.blobToKzgCommitment(blob));
     const proofs = blobs.map(() => new Uint8Array(48).fill(1)); // filled with all ones which should fail verification
 
     const blobsBundle: BlobsBundle = {
@@ -85,7 +80,7 @@ describe("validateBlobsAndKzgCommitments", () => {
 
   it("should throw if V1 proofs length is incorrect", () => {
     const blobs = [generateRandomBlob()];
-    const commitments = blobs.map((blob) => ckzg.blobToKzgCommitment(blob));
+    const commitments = blobs.map((blob) => kzg.blobToKzgCommitment(blob));
     const blobsBundle: BlobsBundle = {
       commitments,
       blobs,
@@ -106,7 +101,7 @@ describe("validateBlobsAndKzgCommitments", () => {
 
   it("should throw if V2 proofs length is incorrect", () => {
     const blobs = [generateRandomBlob()];
-    const commitments = blobs.map((blob) => ckzg.blobToKzgCommitment(blob));
+    const commitments = blobs.map((blob) => kzg.blobToKzgCommitment(blob));
     const blobsBundle: BlobsBundle = {
       commitments,
       blobs,
@@ -127,8 +122,8 @@ describe("validateBlobsAndKzgCommitments", () => {
 
   it("should throw if V2 cell proofs verification fails", () => {
     const blobs = [generateRandomBlob()];
-    const commitments = blobs.map((blob) => ckzg.blobToKzgCommitment(blob));
-    const cells = blobs.flatMap((blob) => ckzg.computeCells(blob));
+    const commitments = blobs.map((blob) => kzg.blobToKzgCommitment(blob));
+    const cells = blobs.flatMap((blob) => kzg.computeCells(blob));
     const proofs = cells.map(() => new Uint8Array(48).fill(0)); // filled with all zeros which should fail verification
 
     const blobsBundle: BlobsBundle = {
@@ -157,9 +152,9 @@ describe("validateBlobsAndKzgCommitments", () => {
     const cells: fulu.Cell[][] = [];
     const proofs: deneb.KZGProof[] = [];
     blobs.map((blob) => {
-      commitments.push(ckzg.blobToKzgCommitment(blob));
+      commitments.push(kzg.blobToKzgCommitment(blob));
 
-      const [blobCells, blobProofs] = ckzg.computeCellsAndKzgProofs(blob);
+      const {cells: blobCells, proofs: blobProofs} = kzg.computeCellsAndKzgProofs(blob);
       cells.push(blobCells);
       proofs.push(...blobProofs);
     });
@@ -187,9 +182,9 @@ describe("validateBlobsAndKzgCommitments", () => {
     const commitments: deneb.KZGCommitment[] = [];
     const proofs: deneb.KZGProof[] = [];
     blobs.map((blob) => {
-      commitments.push(ckzg.blobToKzgCommitment(blob));
+      commitments.push(kzg.blobToKzgCommitment(blob));
 
-      const [_, blobProofs] = ckzg.computeCellsAndKzgProofs(blob);
+      const {proofs: blobProofs} = kzg.computeCellsAndKzgProofs(blob);
       proofs.push(...blobProofs);
     });
 

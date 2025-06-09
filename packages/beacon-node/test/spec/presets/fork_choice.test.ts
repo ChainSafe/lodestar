@@ -3,7 +3,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {createBeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
-import {ACTIVE_PRESET, ForkName, ForkSeq, isForkPostDeneb} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkName, ForkSeq} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {BeaconStateAllForks, isExecutionStateType, signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {
@@ -36,7 +36,6 @@ import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js"
 import {getExecutionEngineFromBackend} from "../../../src/execution/index.js";
 import {computeInclusionProof} from "../../../src/util/blobs.js";
 import {ClockEvent} from "../../../src/util/clock.js";
-import {initCKZG, loadEthereumTrustedSetup} from "../../../src/util/kzg.js";
 import {ClockStopped} from "../../mocks/clock.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
@@ -62,11 +61,6 @@ const forkChoiceTest =
   (fork) => {
     return {
       testFunction: async (testcase) => {
-        if (isForkPostDeneb(fork)) {
-          await initCKZG();
-          loadEthereumTrustedSetup();
-        }
-
         const {steps, anchorState} = testcase;
         const currentSlot = anchorState.slot;
         const config = getConfig(fork);

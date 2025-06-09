@@ -3,7 +3,7 @@ import {LevelDbController} from "@lodestar/db";
 import {NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {rimraf} from "rimraf";
-import {afterEach, beforeAll, beforeEach, describe, expect, it} from "vitest";
+import {afterEach, beforeEach, describe, expect, it} from "vitest";
 
 import {
   COLUMN_SIZE_IN_WRAPPER_INDEX,
@@ -14,7 +14,6 @@ import {
   dataColumnSidecarsWrapperSsz,
 } from "../../../../../src/db/repositories/dataColumnSidecars.js";
 import {computeDataColumnSidecars} from "../../../../../src/util/blobs.js";
-import {initCKZG, loadEthereumTrustedSetup} from "../../../../../src/util/kzg.js";
 import {testLogger} from "../../../../utils/logger.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -36,11 +35,6 @@ describe("block archive repository", () => {
   afterEach(async () => {
     await db.close();
     rimraf.sync(testDir);
-  });
-
-  beforeAll(async () => {
-    await initCKZG();
-    loadEthereumTrustedSetup();
   });
 
   it("should get block by parent root", async () => {

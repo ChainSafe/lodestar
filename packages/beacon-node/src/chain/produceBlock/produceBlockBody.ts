@@ -45,7 +45,7 @@ import {
   getExpectedGasLimit,
 } from "../../execution/index.js";
 import {fromGraffitiBytes} from "../../util/graffiti.js";
-import {ckzg} from "../../util/kzg.js";
+import {kzg} from "../../util/kzg.js";
 import type {BeaconChain} from "../chain.js";
 import {CommonBlockBody} from "../interface.js";
 import {validateBlobsAndKzgCommitments} from "./validateBlobsAndKzgCommitments.js";
@@ -351,7 +351,7 @@ export async function produceBlockBody<T extends BlockType>(
 
             let cells: fulu.Cell[][] | undefined;
             if (ForkSeq[fork] >= ForkSeq.fulu) {
-              cells = blobsBundle.blobs.map((blob) => ckzg.computeCells(blob));
+              cells = blobsBundle.blobs.map((blob) => kzg.computeCells(blob));
             }
 
             if (this.opts.sanityCheckExecutionEngineBlobs) {

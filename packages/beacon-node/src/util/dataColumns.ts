@@ -24,7 +24,7 @@ import {BlockInputCacheType} from "../chain/seenCache/seenGossipBlockInput.js";
 import {IExecutionEngine} from "../execution/engine/interface.js";
 import {NodeId} from "../network/subnets/index.js";
 import {computeKzgCommitmentsInclusionProof, kzgCommitmentToVersionedHash} from "./blobs.js";
-import {ckzg} from "./kzg.js";
+import {kzg} from "./kzg.js";
 
 export class CustodyConfig {
   /**
@@ -225,10 +225,10 @@ export function getDataColumns(nodeId: NodeId, custodyGroupCount: number): Colum
  * SPEC FUNCTION (note: spec currently computes proofs, but we already have them)
  * https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/das-core.md#compute_matrix
  */
-export function getCellsAndProofs(blobBundles: fulu.BlobAndProofV2[]): [Uint8Array[], Uint8Array[]][] {
-  return blobBundles.map(({blob, proofs: cellProofs}) => {
-    const cells = ckzg.computeCells(blob);
-    return [cells, cellProofs];
+export function getCellsAndProofs(blobBundles: fulu.BlobAndProofV2[]): {cells: Uint8Array[]; proofs: Uint8Array[]}[] {
+  return blobBundles.map(({blob, proofs}) => {
+    const cells = kzg.computeCells(blob);
+    return {cells, proofs};
   });
 }
 
@@ -243,7 +243,7 @@ export function getDataColumnSidecars(
   signedBlockHeader: SignedBeaconBlockHeader,
   kzgCommitments: deneb.KZGCommitment[],
   kzgCommitmentsInclusionProof: fulu.KzgCommitmentsInclusionProof,
-  cellsAndKzgProofs: [Uint8Array[], Uint8Array[]][]
+  cellsAndKzgProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[]
 ): fulu.DataColumnSidecars {
   if (cellsAndKzgProofs.length !== kzgCommitments.length) {
     throw Error("Invalid cellsAndKzgProofs length for getDataColumnSidecars");
@@ -253,7 +253,7 @@ export function getDataColumnSidecars(
   for (let columnIndex = 0; columnIndex < NUMBER_OF_COLUMNS; columnIndex++) {
     const columnCells = [];
     const columnProofs = [];
-    for (const [cells, proofs] of cellsAndKzgProofs) {
+    for (const {cells, proofs} of cellsAndKzgProofs) {
       columnCells.push(cells[columnIndex]);
       columnProofs.push(proofs[columnIndex]);
     }
@@ -279,7 +279,7 @@ export function getDataColumnSidecars(
 export function getDataColumnSidecarsFromBlock(
   config: ChainForkConfig,
   signedBlock: fulu.SignedBeaconBlock,
-  cellsAndKzgProofs: [Uint8Array[], Uint8Array[]][]
+  cellsAndKzgProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[]
 ): fulu.DataColumnSidecars {
   const blobKzgCommitments = signedBlock.message.body.blobKzgCommitments;
   const fork = config.getForkName(signedBlock.message.slot);
@@ -299,7 +299,7 @@ export function getDataColumnSidecarsFromBlock(
  */
 export function getDataColumnSidecarsFromColumnSidecar(
   sidecar: fulu.DataColumnSidecar,
-  cellsAndKzgProofs: [Uint8Array[], Uint8Array[]][]
+  cellsAndKzgProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[]
 ): fulu.DataColumnSidecars {
   return getDataColumnSidecars(
     sidecar.signedBlockHeader,

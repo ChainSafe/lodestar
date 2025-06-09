@@ -14,7 +14,7 @@ import {BlobIndex, Root, Slot, SubnetID, deneb, ssz} from "@lodestar/types";
 import {toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 
 import {byteArrayEquals} from "../../util/bytes.js";
-import {ckzg} from "../../util/kzg.js";
+import {kzg} from "../../util/kzg.js";
 import {BlobSidecarErrorCode, BlobSidecarGossipError} from "../errors/blobSidecarError.js";
 import {GossipAction} from "../errors/gossipValidation.js";
 import {IBeaconChain} from "../interface.js";
@@ -227,7 +227,7 @@ function validateBlobsAndProofs(
   // assert verify_aggregate_kzg_proof(blobs, expected_kzg_commitments, kzg_aggregated_proof)
   let isProofValid: boolean;
   try {
-    isProofValid = ckzg.verifyBlobKzgProofBatch(blobs, expectedKzgCommitments, proofs);
+    isProofValid = kzg.verifyBlobKzgProofBatch(blobs, expectedKzgCommitments, proofs);
   } catch (e) {
     (e as Error).message = `Error on verifyBlobKzgProofBatch: ${(e as Error).message}`;
     throw e;

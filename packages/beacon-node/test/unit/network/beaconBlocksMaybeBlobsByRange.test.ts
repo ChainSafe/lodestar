@@ -1,21 +1,15 @@
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {deneb, ssz} from "@lodestar/types";
-import {beforeAll, describe, expect, it} from "vitest";
+import {describe, expect, it} from "vitest";
 
 import {BlobsSource, BlockSource, getBlockInput} from "../../../src/chain/blocks/types.js";
 import {ZERO_HASH} from "../../../src/constants/constants.js";
 import {INetwork} from "../../../src/network/interface.js";
 import {beaconBlocksMaybeBlobsByRange} from "../../../src/network/reqresp/index.js";
 import {CustodyConfig} from "../../../src/util/dataColumns.js";
-import {initCKZG, loadEthereumTrustedSetup} from "../../../src/util/kzg.js";
 
 describe.skip("beaconBlocksMaybeBlobsByRange", () => {
-  beforeAll(async () => {
-    await initCKZG();
-    loadEthereumTrustedSetup();
-  });
-
   const peerId = "Qma9T5YraSnpRDZqRR4krcSJabThc8nwZuJV3LercPHufi";
 
   const chainConfig = createChainForkConfig({

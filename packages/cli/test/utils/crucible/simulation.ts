@@ -3,7 +3,6 @@ import {mkdir, writeFile} from "node:fs/promises";
 import path from "node:path";
 import {fromHexString} from "@chainsafe/ssz";
 import {nodeUtils} from "@lodestar/beacon-node";
-import {initCKZG, loadEthereumTrustedSetup} from "@lodestar/beacon-node/util";
 import {ChainForkConfig} from "@lodestar/config";
 import {LogLevel, TimestampFormatCode} from "@lodestar/logger";
 import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
@@ -115,11 +114,6 @@ export class Simulation {
         currentTime
       ).toISOString()} simulationTimeout=${prettyMsToTime(opts.runTimeoutMs)} rootDir=${this.options.rootDir}`
     );
-
-    if (this.options.trustedSetup) {
-      await initCKZG();
-      loadEthereumTrustedSetup();
-    }
 
     if (opts.runTimeoutMs > 0) {
       this.runTimeout = setTimeout(() => {

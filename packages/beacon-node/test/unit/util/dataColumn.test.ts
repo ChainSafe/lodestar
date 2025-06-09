@@ -6,13 +6,12 @@ import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {ValidatorIndex} from "@lodestar/types";
 import {bigIntToBytes} from "@lodestar/utils";
-/* eslint-disable @typescript-eslint/naming-convention */
-import {afterEach, beforeAll, beforeEach, describe, expect, it} from "vitest";
+import {afterEach, beforeEach, describe, expect, it} from "vitest";
 
 import {validateDataColumnsSidecars} from "../../../src/chain/validation/dataColumnSidecar.js";
 import {computeDataColumnSidecars} from "../../../src/util/blobs.js";
 import {CustodyConfig, getDataColumns, getValidatorsCustodyRequirement} from "../../../src/util/dataColumns.js";
-import {ckzg, initCKZG, loadEthereumTrustedSetup} from "../../../src/util/kzg.js";
+import {kzg} from "../../../src/util/kzg.js";
 import {getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
 import {generateRandomBlob, transactionForKzgCommitment} from "../../utils/kzg.js";
 
@@ -190,11 +189,6 @@ describe("data column sidecars", () => {
     }
   });
 
-  beforeAll(async () => {
-    await initCKZG();
-    loadEthereumTrustedSetup();
-  });
-
   it("validateDataColumnsSidecars", () => {
     const chainConfig = createChainForkConfig({
       ALTAIR_FORK_EPOCH: 0,
@@ -212,8 +206,8 @@ describe("data column sidecars", () => {
 
     const slot = 0;
     const blobs = [generateRandomBlob(), generateRandomBlob()];
-    const kzgCommitments = blobs.map((blob) => ckzg.blobToKzgCommitment(blob));
-    const kzgProofs = blobs.flatMap((blob) => ckzg.computeCellsAndKzgProofs(blob)[1]);
+    const kzgCommitments = blobs.map((blob) => kzg.blobToKzgCommitment(blob));
+    const kzgProofs = blobs.flatMap((blob) => kzg.computeCellsAndKzgProofs(blob).proofs);
 
     const signedBeaconBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
 
@@ -250,8 +244,8 @@ describe("data column sidecars", () => {
 
     const slot = 0;
     const blobs = [generateRandomBlob(), generateRandomBlob()];
-    const kzgCommitments = blobs.map((blob) => ckzg.blobToKzgCommitment(blob));
-    const kzgProofs = blobs.flatMap((blob) => ckzg.computeCellsAndKzgProofs(blob)[1]);
+    const kzgCommitments = blobs.map((blob) => kzg.blobToKzgCommitment(blob));
+    const kzgProofs = blobs.flatMap((blob) => kzg.computeCellsAndKzgProofs(blob).proofs);
 
     const signedBeaconBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
 

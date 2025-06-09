@@ -4,7 +4,7 @@ import {BYTES_PER_FIELD_ELEMENT, FIELD_ELEMENTS_PER_BLOB, ForkName} from "@lodes
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {deneb, ssz} from "@lodestar/types";
 import {BlobAndProofV2} from "@lodestar/types/lib/fulu/types.js";
-import {beforeAll, describe, expect, it, vi} from "vitest";
+import {describe, expect, it, vi} from "vitest";
 import {
   BlobsSource,
   BlockInput,
@@ -26,16 +26,10 @@ import {
   kzgCommitmentToVersionedHash,
 } from "../../../src/util/blobs.js";
 import {CustodyConfig, getDataColumnSidecars} from "../../../src/util/dataColumns.js";
-import {ckzg} from "../../../src/util/kzg.js";
-import {initCKZG, loadEthereumTrustedSetup} from "../../../src/util/kzg.js";
+import {kzg} from "../../../src/util/kzg.js";
 import {getValidPeerId} from "../../utils/peer.js";
 
 describe("unavailableBeaconBlobsByRoot", () => {
-  beforeAll(async () => {
-    await initCKZG();
-    loadEthereumTrustedSetup();
-  });
-
   describe("blobs", () => {
     const chainConfig = createChainForkConfig({
       ...defaultChainConfig,
@@ -241,7 +235,7 @@ describe("unavailableBeaconBlobsByRoot", () => {
 
       const blobAndProof: BlobAndProofV2[] = blobscommitmentsandproofs.map((b) => ({
         blob: b.blob,
-        proofs: b.cellsAndProofs[1],
+        proofs: b.cellsAndProofs.proofs,
       }));
 
       // Mock execution engine to return all blobs
@@ -289,9 +283,9 @@ function generateBlobs(count: number): {
   kzgProofs: Uint8Array[];
 } {
   const blobs = Array.from({length: count}, (_, index) => generateRandomBlob(index));
-  const kzgCommitments = blobs.map((blob) => ckzg.blobToKzgCommitment(blob));
+  const kzgCommitments = blobs.map((blob) => kzg.blobToKzgCommitment(blob));
   const versionedHash = kzgCommitments.map((kzgCommitment) => kzgCommitmentToVersionedHash(kzgCommitment));
-  const kzgProofs = blobs.map((blob, index) => ckzg.computeBlobKzgProof(blob, kzgCommitments[index]));
+  const kzgProofs = blobs.map((blob, index) => kzg.computeBlobKzgProof(blob, kzgCommitments[index]));
 
   return {
     blobs,
@@ -303,13 +297,13 @@ function generateBlobs(count: number): {
 
 function generateBlobsWithCellProofs(
   count: number
-): {blob: Uint8Array; cellsAndProofs: [Uint8Array[], Uint8Array[]]; kzgCommitment: Uint8Array}[] {
+): {blob: Uint8Array; cellsAndProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}; kzgCommitment: Uint8Array}[] {
   const blobs = Array.from({length: count}, (_, index) => generateRandomBlob(index));
 
   return blobs.map((blob) => ({
     blob,
-    cellsAndProofs: ckzg.computeCellsAndKzgProofs(blob),
-    kzgCommitment: ckzg.blobToKzgCommitment(blob),
+    cellsAndProofs: kzg.computeCellsAndKzgProofs(blob),
+    kzgCommitment: kzg.blobToKzgCommitment(blob),
   }));
 }
 
