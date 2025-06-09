@@ -51,12 +51,18 @@ const module: DataColumnRecoverWorkerApi = {
   recoverDataColumnSidecars: (
     partialSidecars: Map<number, fulu.DataColumnSidecar>
   ): Promise<fulu.DataColumnSidecars | null> => {
+    logger.verbose("data_column_recover worker: recovering data column sidecars", {
+      partialSidecars: partialSidecars.size,
+    });
     partialDataColumnCount?.set(partialSidecars.size);
     const timer = recoverTime?.startTimer();
     const result = recoverDataColumnSidecars(partialSidecars);
     timer?.();
     if (result == null) {
+      logger.debug("data_column_recover worker: failed to recover data column sidecars");
       recoverFailed?.inc();
+    } else {
+      logger.verbose("data_column_recover worker: recovered data column sidecars", {fullSidecars: result.length});
     }
     return Promise.resolve(result);
   },

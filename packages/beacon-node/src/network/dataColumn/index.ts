@@ -44,14 +44,7 @@ export class DataColumnRecover implements DataColumnRecoverWorkerApi {
   async recoverDataColumnSidecars(
     partialSidecars: Map<number, fulu.DataColumnSidecar>
   ): Promise<fulu.DataColumnSidecars | null> {
-    this.logger.verbose("Recovering data column sidecars", {partialSidecars: partialSidecars.size});
-    const result = await this.api.recoverDataColumnSidecars(partialSidecars);
-    if (result == null) {
-      this.logger.warn("Failed to recover data column sidecars");
-    } else {
-      this.logger.verbose("Recovered data column sidecars", {fullSidecars: result.length});
-    }
-    return result;
+    return this.api.recoverDataColumnSidecars(partialSidecars);
   }
 
   async close(): Promise<void> {
