@@ -25,6 +25,8 @@ export class DataColumnRecover implements DataColumnRecoverWorkerApi {
     const workerData: DataColumnWorkerData = {
       loggerOpts: modules.logger.toOpts(),
       metrics: Boolean(modules.metrics),
+      trustedSetupPrecompute: modules.trustedSetupPrecompute,
+      trustedSetup: modules.trustedSetup,
     };
     const worker = new Worker(path.join(WORKER_DIR, "worker.js"), {
       workerData,

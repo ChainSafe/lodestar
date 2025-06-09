@@ -6,6 +6,16 @@ import {Metrics} from "../../metrics/index.js";
 export type DataColumnRecoverInitModules = {
   logger: LoggerNode;
   metrics: Metrics | null;
+  /*
+   * This is the window size for the windowed multiplication in proof
+   * generation. The larger wbits is, the faster the MSM will be, but the
+   * size of the precomputed table will grow exponentially. With 8 bits, the
+   * tables are 96 MiB; with 9 bits, the tables are 192 MiB and so forth.
+   * From our testing, there are diminishing returns after 8 bits.
+   */
+  trustedSetupPrecompute?: number;
+  /** Option to load a custom kzg trusted setup in txt format */
+  trustedSetup?: string;
 };
 
 export type DataColumnRecoverModules = DataColumnRecoverInitModules & {
@@ -18,6 +28,16 @@ export type DataColumnRecoverModules = DataColumnRecoverInitModules & {
 export interface DataColumnWorkerData {
   metrics: boolean;
   loggerOpts: LoggerNodeOpts;
+  /*
+   * This is the window size for the windowed multiplication in proof
+   * generation. The larger wbits is, the faster the MSM will be, but the
+   * size of the precomputed table will grow exponentially. With 8 bits, the
+   * tables are 96 MiB; with 9 bits, the tables are 192 MiB and so forth.
+   * From our testing, there are diminishing returns after 8 bits.
+   */
+  trustedSetupPrecompute?: number;
+  /** Option to load a custom kzg trusted setup in txt format */
+  trustedSetup?: string;
 }
 
 /**

@@ -204,6 +204,8 @@ export class Network implements INetwork {
       dataColumnRecover = await DataColumnRecover.init({
         logger,
         metrics,
+        trustedSetupPrecompute: chain.opts.trustedSetupPrecompute,
+        trustedSetup: chain.opts.trustedSetup,
       });
       logger.verbose("DataColumnRecover worker initialized", {
         sampledColumns: chain.custodyConfig.sampledColumns.length,

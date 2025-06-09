@@ -7,13 +7,20 @@ import {fulu} from "@lodestar/types";
 import {Gauge, Histogram} from "@lodestar/utils";
 import {RegistryMetricCreator, collectNodeJSMetrics} from "../../metrics/index.js";
 import {recoverDataColumnSidecars} from "../../util/blobs.js";
+import {initCKZG, loadEthereumTrustedSetup} from "../../util/kzg.js";
 import {profileNodeJS, writeHeapSnapshot} from "../../util/profile.js";
 import {DataColumnRecoverWorkerApi, DataColumnWorkerData} from "./types.js";
 
 const workerData = worker.workerData as DataColumnWorkerData;
+const {loggerOpts, trustedSetupPrecompute, trustedSetup} = workerData;
 
-const logger = getNodeLogger(workerData.loggerOpts);
+const logger = getNodeLogger(loggerOpts);
 const abortController = new AbortController();
+
+await initCKZG();
+loadEthereumTrustedSetup(trustedSetupPrecompute, trustedSetup);
+
+logger.info("data_column worker thread: loaded c-kzg trusted setup the same to main thread");
 
 // Set up metrics
 let metricsRegistry: RegistryMetricCreator | undefined;
