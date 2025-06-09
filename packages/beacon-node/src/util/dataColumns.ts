@@ -22,6 +22,7 @@ import {
 import {ChainEvent, ChainEventEmitter} from "../chain/emitter.js";
 import {BlockInputCacheType} from "../chain/seenCache/seenGossipBlockInput.js";
 import {IExecutionEngine} from "../execution/engine/interface.js";
+import {Metrics} from "../metrics/metrics.js";
 import {NodeId} from "../network/subnets/index.js";
 import {computeKzgCommitmentsInclusionProof, kzgCommitmentToVersionedHash} from "./blobs.js";
 import {ckzg} from "./kzg.js";
@@ -321,7 +322,8 @@ export async function getDataColumnsFromExecution(
   custodyConfig: CustodyConfig,
   executionEngine: IExecutionEngine,
   emitter: ChainEventEmitter,
-  blockCache: BlockInputCacheType
+  blockCache: BlockInputCacheType,
+  metrics: Metrics | null
 ): Promise<boolean> {
   if (blockCache.fork !== ForkName.fulu) {
     return false;
@@ -363,12 +365,17 @@ export async function getDataColumnsFromExecution(
   const versionedHashes: Uint8Array[] = commitments.map(kzgCommitmentToVersionedHash);
 
   // Get blobs from execution engine
+  metrics?.peerDas.getBlobsV2Requests.inc();
+  const timer = metrics?.peerDas.getBlobsV2Runtime.startTimer();
   const blobs = await executionEngine.getBlobs(blockCache.fork, versionedHashes);
+  timer?.();
 
   // Execution engine was unable to find one or more blobs
   if (blobs === null) {
     return false;
   }
+
+  metrics?.peerDas.getBlobsV2Responses.inc();
 
   // Return if we received all data columns while waiting for getBlobs
   if (hasSampledDataColumns(custodyConfig, blockCache.cachedData.dataColumnsCache)) {
