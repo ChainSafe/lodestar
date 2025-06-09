@@ -263,7 +263,13 @@ export class Network implements INetwork {
   }
 
   async scrapeMetrics(): Promise<string> {
-    return this.core.scrapeMetrics();
+    const coreMetrics = await this.core.scrapeMetrics();
+    if (this.dataColumnRecover) {
+      const dataColumnRecoverMetrics = await this.dataColumnRecover.scrapeMetrics();
+      return `${coreMetrics}\n\n${dataColumnRecoverMetrics}`;
+    }
+
+    return coreMetrics;
   }
 
   /**

@@ -12,10 +12,10 @@ import {
 import {getExecutionEngineFromBackend} from "../../../../src/execution/engine/index.js";
 import {ExecutionEngineMockBackend} from "../../../../src/execution/engine/mock.js";
 import {computeNodeId} from "../../../../src/network/subnets/index.js";
+import {IClock} from "../../../../src/util/clock.js";
 import {CustodyConfig} from "../../../../src/util/dataColumns.js";
 import {testLogger} from "../../../utils/logger.js";
 import {getValidPeerId} from "../../../utils/peer.js";
-import { IClock } from "../../../../src/util/clock.js";
 
 describe("SeenGossipBlockInput", () => {
   const chainConfig = createChainForkConfig({

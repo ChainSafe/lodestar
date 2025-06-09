@@ -1,5 +1,5 @@
 import path from "node:path";
-import {ModuleThread, Worker, Thread, spawn} from "@chainsafe/threads";
+import {ModuleThread, Thread, Worker, spawn} from "@chainsafe/threads";
 import {LoggerNode} from "@lodestar/logger/node";
 import {fulu} from "@lodestar/types";
 import {
@@ -42,7 +42,14 @@ export class DataColumnRecover implements DataColumnRecoverWorkerApi {
   async recoverDataColumnSidecars(
     partialSidecars: Map<number, fulu.DataColumnSidecar>
   ): Promise<fulu.DataColumnSidecars | null> {
-    return this.api.recoverDataColumnSidecars(partialSidecars);
+    this.logger.verbose("Recovering data column sidecars", {partialSidecars: partialSidecars.size});
+    const result = await this.api.recoverDataColumnSidecars(partialSidecars);
+    if (result == null) {
+      this.logger.warn("Failed to recover data column sidecars");
+    } else {
+      this.logger.verbose("Recovered data column sidecars", {fullSidecars: result.length});
+    }
+    return result;
   }
 
   async close(): Promise<void> {
