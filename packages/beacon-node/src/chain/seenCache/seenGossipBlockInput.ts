@@ -30,7 +30,7 @@ import {
   getBlockInputBlobs,
   getBlockInputDataColumns,
 } from "../blocks/types.js";
-import {ChainEventEmitter} from "../emitter.js";
+import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 import {DataColumnSidecarErrorCode, DataColumnSidecarGossipError} from "../errors/dataColumnSidecarError.js";
 import {GossipAction} from "../errors/gossipValidation.js";
 
@@ -344,7 +344,7 @@ export class SeenGossipBlockInput {
               dataColumns: dataColumnsCache.size,
             };
             if (dataColumnRecover == null) {
-              this.logger.debug("No data column recover configured, skipping recovery", logCtx);
+              this.logger.debug("No data column recover configured, skipping recover", logCtx);
               return;
             }
             const shouldResolve = await recoverDataColumnSidecars(
@@ -355,6 +355,16 @@ export class SeenGossipBlockInput {
             );
             if (shouldResolve) {
               resolveAvailabilityAndBlockInput(BlockInputAvailabilitySource.RECOVERED);
+              // Publish columns if and only if subscribed to them
+              const sampledColumns = this.custodyConfig.sampledColumns.map((columnIndex) => {
+                const dataColumn = dataColumnsCache.get(columnIndex)?.dataColumn;
+                if (!dataColumn) {
+                  throw Error(`After recover, missing data column for index=${columnIndex} in cache`);
+                }
+                return dataColumn;
+              });
+
+              this.emitter.emit(ChainEvent.publishDataColumns, sampledColumns);
               this.logger.verbose("Recovered data column sidecars and resolved availability", logCtx);
             } else {
               if (shouldResolve === false) {
