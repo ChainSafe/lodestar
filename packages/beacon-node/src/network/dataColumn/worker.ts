@@ -35,7 +35,7 @@ if (workerData.metrics) {
     help: "Total count of failed recoveries of data column sidecars",
   });
   partialDataColumnCount = metricsRegistry.gauge({
-    name: "lodestar_data_column_partial_data_column_count",
+    name: "lodestar_data_column_sidecar_recover_partial_data_column_count",
     help: "Total partial data columns per call",
   });
 }

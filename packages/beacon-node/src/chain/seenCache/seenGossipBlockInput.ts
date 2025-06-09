@@ -285,7 +285,7 @@ export class SeenGossipBlockInput {
       }
 
       if (cachedData.fork === ForkName.fulu) {
-        const {dataColumnsCache, resolveAvailability} = cachedData as CachedDataColumns;
+        const {dataColumnsCache, resolveAvailability, calledRecover} = cachedData as CachedDataColumns;
 
         // block is available, check if all blobs have shown up
         const {slot} = signedBlock.message;
@@ -334,8 +334,9 @@ export class SeenGossipBlockInput {
           return blockInput;
         };
 
-        // const recovered = recoverDataColumnSidecars(dataColumnsCache, metrics);
-        if (dataColumnsCache.size >= NUMBER_OF_COLUMNS / 2) {
+        if (dataColumnsCache.size >= NUMBER_OF_COLUMNS / 2 && !calledRecover) {
+          // should call once per slot
+          cachedData.calledRecover = true;
           callInNextEventLoop(async () => {
             const logCtx = {
               blockHex,
@@ -506,6 +507,7 @@ export function getEmptyBlockInputCacheEntry(fork: ForkName, globalCacheId: numb
       availabilityPromise,
       resolveAvailability,
       cacheId: ++globalCacheId,
+      calledRecover: false,
     };
     return {fork, blockInputPromise, resolveBlockInput, cachedData};
   }
