@@ -361,6 +361,10 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         help: "Runtime of batched data column kzg verification",
         buckets: [0.002, 0.004, 0.006, 0.008, 0.01, 0.012, 0.015, 0.02, 0.03, 0.05, 0.07],
       }),
+      custodyGroupCount: register.gauge({
+        name: "beacon_custody_groups",
+        help: "Total number of custody groups within a node",
+      }),
     },
 
     // Non-spec'ed

@@ -15,7 +15,7 @@ export class NetworkConfig {
   constructor(peerId: PeerId, config: BeaconConfig) {
     this.nodeId = computeNodeId(peerId);
     this.config = config;
-    this.custodyConfig = new CustodyConfig(this.nodeId, config);
+    this.custodyConfig = new CustodyConfig(this.nodeId, config, null);
   }
 
   getConfig(): BeaconConfig {
