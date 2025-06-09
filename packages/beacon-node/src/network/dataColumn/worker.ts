@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import worker from "node:worker_threads";
-import {expose} from "@chainsafe/threads";
+import {expose} from "@chainsafe/threads/worker";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {fulu} from "@lodestar/types";
 import {Gauge, Histogram} from "@lodestar/utils";
