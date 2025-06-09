@@ -1,5 +1,5 @@
 import path from "node:path";
-import {ModuleThread, Thread, spawn} from "@chainsafe/threads";
+import {ModuleThread, Worker, Thread, spawn} from "@chainsafe/threads";
 import {LoggerNode} from "@lodestar/logger/node";
 import {fulu} from "@lodestar/types";
 import {
