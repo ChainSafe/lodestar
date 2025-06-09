@@ -402,7 +402,7 @@ const forkChoiceTest =
         // as testId for the entire directory is same : `deneb/fork_choice/on_block/pyspec_tests` and
         // we just want to skip this one particular test because we don't have minimal kzg lib integrated
         //
-        // This skip can be removed once c-kzg lib with run-time minimal blob size setup is released and
+        // This skip can be removed once a kzg lib with run-time minimal blob size setup is released and
         // integrated
         shouldSkip: (_testcase, name, _index) => name.includes("invalid_incorrect_proof"),
       },
