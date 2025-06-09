@@ -189,7 +189,7 @@ describe("data column sidecars", () => {
     }
   });
 
-  it("validateDataColumnsSidecars", () => {
+  it("validateDataColumnsSidecars", async () => {
     const chainConfig = createChainForkConfig({
       ALTAIR_FORK_EPOCH: 0,
       BELLATRIX_FORK_EPOCH: 0,
@@ -224,10 +224,12 @@ describe("data column sidecars", () => {
     expect(columnSidecars.length).toEqual(NUMBER_OF_COLUMNS);
     expect(columnSidecars[0].column.length).toEqual(blobs.length);
 
-    expect(validateDataColumnsSidecars(slot, blockRoot, kzgCommitments, columnSidecars, null)).toBeUndefined();
+    await expect(
+      validateDataColumnsSidecars(slot, blockRoot, kzgCommitments, columnSidecars, null)
+    ).resolves.toBeUndefined();
   });
 
-  it("fail for no blob commitments in validateDataColumnsSidecars", () => {
+  it("fail for no blob commitments in validateDataColumnsSidecars", async () => {
     const chainConfig = createChainForkConfig({
       ALTAIR_FORK_EPOCH: 0,
       BELLATRIX_FORK_EPOCH: 0,
@@ -262,7 +264,7 @@ describe("data column sidecars", () => {
     expect(columnSidecars.length).toEqual(NUMBER_OF_COLUMNS);
     expect(columnSidecars[0].column.length).toEqual(blobs.length);
 
-    expect(() => validateDataColumnsSidecars(slot, blockRoot, [], columnSidecars, null)).toThrow(
+    await expect(validateDataColumnsSidecars(slot, blockRoot, [], columnSidecars, null)).rejects.toThrow(
       `Invalid data column sidecar slot=${slot}`
     );
   });

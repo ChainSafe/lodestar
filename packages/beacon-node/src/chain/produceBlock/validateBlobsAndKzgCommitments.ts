@@ -8,12 +8,12 @@ import {kzg} from "../../util/kzg.js";
  * https://github.com/ethereum/consensus-specs/blob/11a037fd9227e29ee809c9397b09f8cc3383a8c0/specs/eip4844/validator.md#blob-kzg-commitments
  */
 
-export function validateBlobsAndKzgCommitments(
+export async function validateBlobsAndKzgCommitments(
   fork: ForkPostDeneb,
   _payload: ExecutionPayload,
   blobsBundle: BlobsBundle,
   cells?: fulu.Cell[][]
-): void {
+): Promise<void> {
   if (blobsBundle.blobs.length !== blobsBundle.commitments.length) {
     throw Error(
       `Blobs bundle blobs len ${blobsBundle.blobs.length} != commitments len ${blobsBundle.commitments.length}`
@@ -27,7 +27,7 @@ export function validateBlobsAndKzgCommitments(
       );
     }
 
-    if (!kzg.verifyBlobKzgProofBatch(blobsBundle.blobs, blobsBundle.commitments, blobsBundle.proofs)) {
+    if (!(await kzg.asyncVerifyBlobKzgProofBatch(blobsBundle.blobs, blobsBundle.commitments, blobsBundle.proofs))) {
       throw new Error("Error in verifyBlobKzgProofBatch");
     }
 
@@ -51,7 +51,7 @@ export function validateBlobsAndKzgCommitments(
   );
   const proofBytes = blobsBundle.proofs.flat();
 
-  if (!kzg.verifyCellKzgProofBatch(commitmentBytes, cellIndices, cells.flat(), proofBytes)) {
+  if (!(await kzg.asyncVerifyCellKzgProofBatch(commitmentBytes, cellIndices, cells.flat(), proofBytes))) {
     throw new Error("Error in verifyCellKzgProofBatch");
   }
 }
