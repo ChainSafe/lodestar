@@ -650,7 +650,7 @@ export class EpochCache {
         // so should be taken into account when structuring tests.  Should not affect unit or other tests though
         computeEpochShuffling(state, this.nextActiveIndices, upcomingEpoch);
     }
-    if (upcomingEpoch >= this.config.FULU_FORK_EPOCH) {
+    if (this.epoch >= this.config.FULU_FORK_EPOCH) {
       // Populate proposer cache with lookahead from state
       const proposerLookahead = (state as CachedBeaconStateFulu).proposerLookahead.getAll();
       this.proposers = proposerLookahead.slice(0, SLOTS_PER_EPOCH);
