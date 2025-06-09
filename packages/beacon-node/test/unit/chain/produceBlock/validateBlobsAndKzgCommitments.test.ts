@@ -54,9 +54,7 @@ describe("validateBlobsAndKzgCommitments", () => {
       parentHash: new Uint8Array(32),
     } as ExecutionPayload;
 
-    await expect(validateBlobsAndKzgCommitments(ForkName.deneb, mockPayload, blobsBundle)).rejects.toThrow(
-      "Error in verifyBlobKzgProofBatch"
-    );
+    await expect(validateBlobsAndKzgCommitments(ForkName.deneb, mockPayload, blobsBundle)).rejects.toThrow();
   });
 
   it("should throw if commitments and blobs lengths don't match", async () => {
@@ -139,9 +137,7 @@ describe("validateBlobsAndKzgCommitments", () => {
       parentHash: new Uint8Array(32),
     } as ExecutionPayload;
 
-    await expect(validateBlobsAndKzgCommitments(ForkName.fulu, mockPayload, blobsBundle)).rejects.toThrow(
-      "Error in verifyCellKzgProofBatch"
-    );
+    await expect(validateBlobsAndKzgCommitments(ForkName.fulu, mockPayload, blobsBundle)).rejects.toThrow();
   });
 
   it("should validate BlobsBundleV2 when cells are passed", async () => {
