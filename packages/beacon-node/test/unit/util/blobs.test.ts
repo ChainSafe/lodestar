@@ -1,17 +1,12 @@
 import {createChainForkConfig} from "@lodestar/config";
 import {NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {deneb, fulu, ssz} from "@lodestar/types";
-import {beforeAll, describe, expect, it} from "vitest";
+import {describe, expect, it} from "vitest";
 import {computeDataColumnSidecars} from "../../../src/util/blobs.js";
-import {ckzg, initCKZG, loadEthereumTrustedSetup} from "../../../src/util/kzg.js";
+import {kzg} from "../../../src/util/kzg.js";
 import {generateRandomBlob} from "../../utils/kzg.js";
 
 describe("computeDataColumnSidecars", () => {
-  beforeAll(async () => {
-    await initCKZG();
-    loadEthereumTrustedSetup();
-  });
-
   const config = createChainForkConfig({
     ALTAIR_FORK_EPOCH: 0,
     BELLATRIX_FORK_EPOCH: 0,
@@ -30,11 +25,11 @@ describe("computeDataColumnSidecars", () => {
     const cells: fulu.Cell[][] = [];
     const kzgProofs: deneb.KZGProof[] = [];
     blobs.map((blob) => {
-      kzgCommitments.push(ckzg.blobToKzgCommitment(blob));
+      kzgCommitments.push(kzg.blobToKzgCommitment(blob));
 
-      const [blobCells, blobProofs] = ckzg.computeCellsAndKzgProofs(blob);
+      const {cells: blobCells, proofs} = kzg.computeCellsAndKzgProofs(blob);
       cells.push(blobCells);
-      kzgProofs.push(...blobProofs);
+      kzgProofs.push(...proofs);
     });
 
     // Create a test block with the commitments
@@ -66,11 +61,11 @@ describe("computeDataColumnSidecars", () => {
     const cells: fulu.Cell[][] = [];
     const kzgProofs: deneb.KZGProof[] = [];
     blobs.map((blob) => {
-      kzgCommitments.push(ckzg.blobToKzgCommitment(blob));
+      kzgCommitments.push(kzg.blobToKzgCommitment(blob));
 
-      const [blobCells, blobProofs] = ckzg.computeCellsAndKzgProofs(blob);
+      const {cells: blobCells, proofs} = kzg.computeCellsAndKzgProofs(blob);
       cells.push(blobCells);
-      kzgProofs.push(...blobProofs);
+      kzgProofs.push(...proofs);
     });
 
     // Create a test block with the commitments
@@ -97,7 +92,7 @@ describe("computeDataColumnSidecars", () => {
   it("should throw error when block is missing blobKzgCommitments", () => {
     const signedBeaconBlock = ssz.phase0.SignedBeaconBlock.defaultValue() as any;
     const blobs = [generateRandomBlob()];
-    const kzgProofs = blobs.flatMap((blob) => ckzg.computeCellsAndKzgProofs(blob)[1]);
+    const kzgProofs = blobs.flatMap((blob) => kzg.computeCellsAndKzgProofs(blob).proofs);
 
     expect(() =>
       computeDataColumnSidecars(config, signedBeaconBlock, {

@@ -10,7 +10,7 @@ import {toHex, toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 import {computeStartSlotAtEpoch, getBlockHeaderProposerSignatureSet} from "@lodestar/state-transition";
 import {Metrics} from "../../metrics/metrics.js";
 import {byteArrayEquals} from "../../util/bytes.js";
-import {ckzg} from "../../util/kzg.js";
+import {kzg} from "../../util/kzg.js";
 import {DataColumnSidecarErrorCode, DataColumnSidecarGossipError} from "../errors/dataColumnSidecarError.js";
 import {GossipAction} from "../errors/gossipValidation.js";
 import {IBeaconChain} from "../interface.js";
@@ -135,9 +135,9 @@ export async function validateGossipDataColumnSidecar(
 
   // 11) [REJECT] The sidecar's column data is valid as verified by verify_data_column_sidecar_kzg_proofs
   try {
-    verifyDataColumnSidecarKzgProofs(
+    await verifyDataColumnSidecarKzgProofs(
       dataColumnSidecar.kzgCommitments,
-      Array.from({length: dataColumnSidecar.column.length}, () => dataColumnSidecar.index),
+      Array.from({length: dataColumnSidecar.column.length}, () => BigInt(dataColumnSidecar.index)),
       dataColumnSidecar.column,
       dataColumnSidecar.kzgProofs
     );
@@ -170,16 +170,16 @@ export async function validateGossipDataColumnSidecar(
   }
 }
 
-export function validateDataColumnsSidecars(
+export async function validateDataColumnsSidecars(
   blockSlot: Slot,
   blockRoot: Root,
   blockKzgCommitments: deneb.BlobKzgCommitments,
   dataColumnSidecars: fulu.DataColumnSidecars,
   metrics: Metrics | null,
   opts: {skipProofsCheck: boolean} = {skipProofsCheck: false}
-): void {
+): Promise<void> {
   const commitmentBytes: Uint8Array[] = [];
-  const cellIndices: number[] = [];
+  const cellIndices: bigint[] = [];
   const cells: Uint8Array[] = [];
   const proofBytes: Uint8Array[] = [];
 
@@ -216,7 +216,7 @@ export function validateDataColumnsSidecars(
     }
 
     commitmentBytes.push(...kzgCommitments);
-    cellIndices.push(...Array.from({length: column.length}, () => columnIndex));
+    cellIndices.push(...Array.from({length: column.length}, () => BigInt(columnIndex)));
     cells.push(...column);
     proofBytes.push(...kzgProofs);
   }
@@ -228,7 +228,7 @@ export function validateDataColumnsSidecars(
   let valid: boolean;
   try {
     const timer = metrics?.peerDas.kzgVerificationDataColumnBatchTime.startTimer();
-    valid = ckzg.verifyCellKzgProofBatch(commitmentBytes, cellIndices, cells, proofBytes);
+    valid = await kzg.asyncVerifyCellKzgProofBatch(commitmentBytes, cellIndices, cells, proofBytes);
     timer?.();
   } catch (err) {
     (err as Error).message = `Error in verifyCellKzgProofBatch for slot=${blockSlot} blockRoot=${toHex(blockRoot)}`;
@@ -276,15 +276,15 @@ export function verifyDataColumnSidecar(dataColumnSidecar: fulu.DataColumnSideca
  * SPEC FUNCTION
  * https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/p2p-interface.md#verify_data_column_sidecar_kzg_proofs
  */
-export function verifyDataColumnSidecarKzgProofs(
+export async function verifyDataColumnSidecarKzgProofs(
   commitments: Uint8Array[],
-  cellIndices: number[],
+  cellIndices: bigint[],
   cells: Uint8Array[],
   proofs: Uint8Array[]
-): void {
+): Promise<void> {
   let valid: boolean;
   try {
-    valid = ckzg.verifyCellKzgProofBatch(commitments, cellIndices, cells, proofs);
+    valid = await kzg.verifyCellKzgProofBatch(commitments, cellIndices, cells, proofs);
   } catch (e) {
     (e as Error).message = `Error on verifyCellKzgProofBatch: ${(e as Error).message}`;
     throw e;

@@ -15,6 +15,7 @@ import {getValidatorStatus} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {ApiError} from "../../errors.js";
 import {ApiModules} from "../../types.js";
+import {assertUniqueItems} from "../../utils.js";
 import {
   filterStateValidatorsByStatus,
   getStateResponseWithRegen,
@@ -92,6 +93,8 @@ export function getBeaconStateApi({
 
       const validatorResponses: routes.beacon.ValidatorResponse[] = [];
       if (validatorIds.length) {
+        assertUniqueItems(validatorIds, "Duplicate validator IDs provided");
+
         for (const id of validatorIds) {
           const resp = getStateValidatorIndex(id, state, pubkey2index);
           if (resp.valid) {
@@ -116,6 +119,8 @@ export function getBeaconStateApi({
       }
 
       if (statuses.length) {
+        assertUniqueItems(statuses, "Duplicate statuses provided");
+
         const validatorsByStatus = filterStateValidatorsByStatus(statuses, state, pubkey2index, currentEpoch);
         return {
           data: validatorsByStatus,
@@ -148,6 +153,8 @@ export function getBeaconStateApi({
       let validatorIdentities: routes.beacon.ValidatorIdentities;
 
       if (validatorIds.length) {
+        assertUniqueItems(validatorIds, "Duplicate validator IDs provided");
+
         validatorIdentities = [];
         for (const id of validatorIds) {
           const resp = getStateValidatorIndex(id, state, pubkey2index);
@@ -197,6 +204,8 @@ export function getBeaconStateApi({
       const {state, executionOptimistic, finalized} = await getState(stateId);
 
       if (validatorIds.length) {
+        assertUniqueItems(validatorIds, "Duplicate validator IDs provided");
+
         const headState = chain.getHeadState();
         const balances: routes.beacon.ValidatorBalance[] = [];
         for (const id of validatorIds) {

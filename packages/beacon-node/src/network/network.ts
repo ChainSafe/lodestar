@@ -585,7 +585,7 @@ export class Network implements INetwork {
   ): Promise<fulu.DataColumnSidecar[]> {
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.DataColumnSidecarsByRoot, [Version.V1], request),
-      request.length,
+      request.reduce((total, {columns}) => total + columns.length, 0),
       responseSszTypeByMethod[ReqRespMethod.DataColumnSidecarsByRoot]
     );
   }

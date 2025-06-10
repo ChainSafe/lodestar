@@ -11,6 +11,7 @@ import {
   CachedBeaconStateAltair,
   CachedBeaconStateCapella,
   CachedBeaconStateElectra,
+  CachedBeaconStateFulu,
   CachedBeaconStatePhase0,
   EpochTransitionCache,
 } from "../types.js";
@@ -24,6 +25,7 @@ import {processParticipationFlagUpdates} from "./processParticipationFlagUpdates
 import {processParticipationRecordUpdates} from "./processParticipationRecordUpdates.js";
 import {processPendingConsolidations} from "./processPendingConsolidations.js";
 import {processPendingDeposits} from "./processPendingDeposits.js";
+import {processProposerLookahead} from "./processProposerLookahead.js";
 import {processRandaoMixesReset} from "./processRandaoMixesReset.js";
 import {processRegistryUpdates} from "./processRegistryUpdates.js";
 import {processRewardsAndPenalties} from "./processRewardsAndPenalties.js";
@@ -50,6 +52,7 @@ export {
   processHistoricalSummariesUpdate,
   processPendingDeposits,
   processPendingConsolidations,
+  processProposerLookahead,
 };
 
 export {computeUnrealizedCheckpoints} from "./computeUnrealizedCheckpoints.js";
@@ -72,6 +75,7 @@ export enum EpochTransitionStep {
   processSyncCommitteeUpdates = "processSyncCommitteeUpdates",
   processPendingDeposits = "processPendingDeposits",
   processPendingConsolidations = "processPendingConsolidations",
+  processProposerLookahead = "processProposerLookahead",
 }
 
 export function processEpoch(
@@ -182,5 +186,9 @@ export function processEpoch(
       processSyncCommitteeUpdates(fork, state as CachedBeaconStateAltair);
       timer?.();
     }
+  }
+
+  if (fork >= ForkSeq.fulu) {
+    processProposerLookahead(fork, state as CachedBeaconStateFulu);
   }
 }

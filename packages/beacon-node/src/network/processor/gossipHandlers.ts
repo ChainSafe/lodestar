@@ -756,9 +756,12 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         contributionAndProof.message,
         syncCommitteeParticipantIndices
       );
-
       try {
-        chain.syncContributionAndProofPool.add(contributionAndProof.message, syncCommitteeParticipantIndices.length);
+        const insertOutcome = chain.syncContributionAndProofPool.add(
+          contributionAndProof.message,
+          syncCommitteeParticipantIndices.length
+        );
+        metrics?.opPool.syncContributionAndProofPool.gossipInsertOutcome.inc({insertOutcome});
       } catch (e) {
         logger.error("Error adding to contributionAndProof pool", {}, e as Error);
       }

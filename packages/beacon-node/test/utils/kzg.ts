@@ -1,7 +1,10 @@
-import {BLOB_TX_TYPE, BYTES_PER_FIELD_ELEMENT} from "@lodestar/params";
+import {
+  BLOB_TX_TYPE,
+  BYTES_PER_FIELD_ELEMENT,
+  FIELD_ELEMENTS_PER_BLOB as FIELD_ELEMENTS_PER_BLOB_MAINNET,
+} from "@lodestar/params";
 import {bellatrix, deneb} from "@lodestar/types";
 import {kzgCommitmentToVersionedHash} from "../../src/util/blobs.js";
-import {FIELD_ELEMENTS_PER_BLOB_MAINNET} from "../../src/util/kzg.js";
 
 export function transactionForKzgCommitment(kzgCommitment: deneb.KZGCommitment): bellatrix.Transaction {
   // Just use versionedHash as the transaction encoding to mock newPayloadV3 verification

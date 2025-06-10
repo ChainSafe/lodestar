@@ -25,7 +25,7 @@ import {IExecutionEngine} from "../execution/engine/interface.js";
 import {Metrics} from "../metrics/metrics.js";
 import {NodeId} from "../network/subnets/index.js";
 import {computeKzgCommitmentsInclusionProof, kzgCommitmentToVersionedHash} from "./blobs.js";
-import {ckzg} from "./kzg.js";
+import {kzg} from "./kzg.js";
 
 export class CustodyConfig {
   /**
@@ -75,13 +75,17 @@ export class CustodyConfig {
   private config: ChainForkConfig;
   private nodeId: NodeId;
 
-  constructor(nodeId: NodeId, config: ChainForkConfig) {
+  private readonly metrics: Metrics | null;
+
+  constructor(nodeId: NodeId, config: ChainForkConfig, metrics: Metrics | null) {
     this.config = config;
     this.nodeId = nodeId;
+    this.metrics = metrics;
     this.targetCustodyGroupCount = Math.max(config.CUSTODY_REQUIREMENT, config.NODE_CUSTODY_REQUIREMENT);
     this.custodyColumns = getDataColumns(this.nodeId, this.targetCustodyGroupCount);
     this.custodyColumnsIndex = this.getCustodyColumnsIndex(this.custodyColumns);
     this.advertisedCustodyGroupCount = this.targetCustodyGroupCount;
+    this.metrics?.peerDas.custodyGroupCount.set(this.advertisedCustodyGroupCount);
     this.sampledGroupCount = Math.max(this.targetCustodyGroupCount, this.config.SAMPLES_PER_SLOT);
     this.sampleGroups = getCustodyGroups(this.nodeId, this.sampledGroupCount);
     this.sampledColumns = getDataColumns(this.nodeId, this.sampledGroupCount);
@@ -102,6 +106,7 @@ export class CustodyConfig {
 
   updateAdvertisedCustodyGroupCount(advertisedCustodyGroupCount: number) {
     this.advertisedCustodyGroupCount = advertisedCustodyGroupCount;
+    this.metrics?.peerDas.custodyGroupCount.set(this.advertisedCustodyGroupCount);
   }
 
   private getCustodyColumnsIndex(custodyColumns: ColumnIndex[]): Uint8Array {
@@ -226,10 +231,10 @@ export function getDataColumns(nodeId: NodeId, custodyGroupCount: number): Colum
  * SPEC FUNCTION (note: spec currently computes proofs, but we already have them)
  * https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/das-core.md#compute_matrix
  */
-export function getCellsAndProofs(blobBundles: fulu.BlobAndProofV2[]): [Uint8Array[], Uint8Array[]][] {
-  return blobBundles.map(({blob, proofs: cellProofs}) => {
-    const cells = ckzg.computeCells(blob);
-    return [cells, cellProofs];
+export function getCellsAndProofs(blobBundles: fulu.BlobAndProofV2[]): {cells: Uint8Array[]; proofs: Uint8Array[]}[] {
+  return blobBundles.map(({blob, proofs}) => {
+    const cells = kzg.computeCells(blob);
+    return {cells, proofs};
   });
 }
 
@@ -244,7 +249,7 @@ export function getDataColumnSidecars(
   signedBlockHeader: SignedBeaconBlockHeader,
   kzgCommitments: deneb.KZGCommitment[],
   kzgCommitmentsInclusionProof: fulu.KzgCommitmentsInclusionProof,
-  cellsAndKzgProofs: [Uint8Array[], Uint8Array[]][]
+  cellsAndKzgProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[]
 ): fulu.DataColumnSidecars {
   if (cellsAndKzgProofs.length !== kzgCommitments.length) {
     throw Error("Invalid cellsAndKzgProofs length for getDataColumnSidecars");
@@ -254,7 +259,7 @@ export function getDataColumnSidecars(
   for (let columnIndex = 0; columnIndex < NUMBER_OF_COLUMNS; columnIndex++) {
     const columnCells = [];
     const columnProofs = [];
-    for (const [cells, proofs] of cellsAndKzgProofs) {
+    for (const {cells, proofs} of cellsAndKzgProofs) {
       columnCells.push(cells[columnIndex]);
       columnProofs.push(proofs[columnIndex]);
     }
@@ -280,7 +285,7 @@ export function getDataColumnSidecars(
 export function getDataColumnSidecarsFromBlock(
   config: ChainForkConfig,
   signedBlock: fulu.SignedBeaconBlock,
-  cellsAndKzgProofs: [Uint8Array[], Uint8Array[]][]
+  cellsAndKzgProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[]
 ): fulu.DataColumnSidecars {
   const blobKzgCommitments = signedBlock.message.body.blobKzgCommitments;
   const fork = config.getForkName(signedBlock.message.slot);
@@ -300,7 +305,7 @@ export function getDataColumnSidecarsFromBlock(
  */
 export function getDataColumnSidecarsFromColumnSidecar(
   sidecar: fulu.DataColumnSidecar,
-  cellsAndKzgProofs: [Uint8Array[], Uint8Array[]][]
+  cellsAndKzgProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[]
 ): fulu.DataColumnSidecars {
   return getDataColumnSidecars(
     sidecar.signedBlockHeader,

@@ -11,7 +11,7 @@ import {
 } from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {BeaconBlockBody, SSZTypesFor, SignedBeaconBlock, deneb, fulu, ssz} from "@lodestar/types";
-import {ckzg} from "./kzg.js";
+import {kzg} from "./kzg.js";
 
 type VersionHash = Uint8Array;
 
@@ -88,7 +88,7 @@ export function computeDataColumnSidecars(
     contents.kzgCommitmentsInclusionProof ?? computeKzgCommitmentsInclusionProof(fork, signedBlock.message.body);
   const {blobs, kzgProofs} = contents;
   const cellsAndProofs = Array.from({length: blobs.length}, (_, rowNumber) => {
-    const cells = contents.cells?.[rowNumber] ?? ckzg.computeCells(blobs[rowNumber]);
+    const cells = contents.cells?.[rowNumber] ?? kzg.computeCells(blobs[rowNumber]);
     const proofs = kzgProofs.slice(rowNumber * NUMBER_OF_COLUMNS, (rowNumber + 1) * NUMBER_OF_COLUMNS);
     return {cells, proofs};
   });

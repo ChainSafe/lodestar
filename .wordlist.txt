@@ -7,7 +7,6 @@ BLS
 BeaconNode
 Besu
 Buterin
-CLA
 CLI
 CTRL
 Casper
@@ -62,8 +61,6 @@ JWT
 KDE
 Kubernetes
 Kurtosis
-LGPL
-LGPLv
 LMD
 LPoS
 LTS

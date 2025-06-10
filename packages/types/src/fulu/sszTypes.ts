@@ -1,4 +1,11 @@
-import {ByteVectorType, ContainerType, ListBasicType, ListCompositeType, VectorCompositeType} from "@chainsafe/ssz";
+import {
+  ByteVectorType,
+  ContainerType,
+  ListBasicType,
+  ListCompositeType,
+  VectorBasicType,
+  VectorCompositeType,
+} from "@chainsafe/ssz";
 import {
   BYTES_PER_FIELD_ELEMENT,
   FIELD_ELEMENTS_PER_CELL,
@@ -6,7 +13,9 @@ import {
   KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH,
   MAX_BLOB_COMMITMENTS_PER_BLOCK,
   MAX_REQUEST_BLOCKS_DENEB,
+  MIN_SEED_LOOKAHEAD,
   NUMBER_OF_COLUMNS,
+  SLOTS_PER_EPOCH,
 } from "@lodestar/params";
 
 import {ssz as altairSsz} from "../altair/index.js";
@@ -15,7 +24,7 @@ import {ssz as electraSsz} from "../electra/index.js";
 import {ssz as phase0Ssz} from "../phase0/index.js";
 import {ssz as primitiveSsz} from "../primitive/index.js";
 
-const {BLSSignature, Root, ColumnIndex, RowIndex, Bytes32, Slot, UintNum64} = primitiveSsz;
+const {BLSSignature, Root, ColumnIndex, RowIndex, Bytes32, Slot, UintNum64, ValidatorIndex} = primitiveSsz;
 
 export const KZGProof = denebSsz.KZGProof;
 export const Blob = denebSsz.Blob;
@@ -36,6 +45,7 @@ export const KZGProofs = new ListCompositeType(
   denebSsz.KZGProof,
   FIELD_ELEMENTS_PER_EXT_BLOB * MAX_BLOB_COMMITMENTS_PER_BLOCK
 );
+export const ProposerLookahead = new VectorBasicType(ValidatorIndex, (MIN_SEED_LOOKAHEAD + 1) * SLOTS_PER_EPOCH);
 
 export const DataColumnSidecar = new ContainerType(
   {
@@ -186,6 +196,7 @@ export const ExecutionPayloadAndBlobsBundle = new ContainerType(
 export const BeaconState = new ContainerType(
   {
     ...electraSsz.BeaconState.fields,
+    proposerLookahead: ProposerLookahead, // New in FULU:EIP7917
   },
   {typeName: "BeaconState", jsonCase: "eth2"}
 );

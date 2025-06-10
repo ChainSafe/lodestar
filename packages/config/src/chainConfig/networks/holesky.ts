@@ -48,4 +48,8 @@ export const holeskyChainConfig: ChainConfig = {
   DEPOSIT_CHAIN_ID: 17000,
   DEPOSIT_NETWORK_ID: 17000,
   DEPOSIT_CONTRACT_ADDRESS: b("0x4242424242424242424242424242424242424242"),
+
+  // Blob Scheduling
+  // ---------------------------------------------------------------
+  BLOB_SCHEDULE: [],
 };
