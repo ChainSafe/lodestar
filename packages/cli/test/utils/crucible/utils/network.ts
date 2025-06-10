@@ -78,7 +78,7 @@ export async function waitForNodeSyncStatus(env: Simulation, node: NodePair): Pr
     if (!result.isSyncing) {
       break;
     }
-    await sleep(1000, env.options.controller.signal);
+    await sleep(1000, env.controller.signal);
   }
 }
 

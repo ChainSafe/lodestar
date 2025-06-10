@@ -2,13 +2,7 @@ import {writeFile} from "node:fs/promises";
 import path from "node:path";
 import {fetch} from "@lodestar/utils";
 import {Web3} from "web3";
-import {
-  EL_GENESIS_ACCOUNT,
-  EL_GENESIS_PASSWORD,
-  EL_GENESIS_SECRET_KEY,
-  SHARED_JWT_SECRET,
-  SIM_ENV_NETWORK_ID,
-} from "../../constants.js";
+import {SIM_ENV_NETWORK_ID} from "../../constants.js";
 import {ExecutionClient, ExecutionNodeGenerator, ExecutionStartMode, JobOptions, RunnerType} from "../../interfaces.js";
 import {getNodeMountedPaths} from "../../utils/paths.js";
 import {getNodePorts} from "../../utils/ports.js";
@@ -19,16 +13,12 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
     throw new Error("GETH_BINARY_DIR or GETH_DOCKER_IMAGE must be provided");
   }
 
-  const {id, mode, ttd, address, mining, clientOptions, nodeIndex} = opts;
+  const {id, mode, address, mining, clientOptions, nodeIndex} = opts;
   const ports = getNodePorts(nodeIndex);
 
   const isDocker = !!process.env.GETH_DOCKER_IMAGE;
   const binaryPath = isDocker ? "" : `${process.env.GETH_BINARY_DIR}/geth`;
-  const {rootDir, rootDirMounted, genesisFilePathMounted, logFilePath, jwtsecretFilePathMounted} = getNodeMountedPaths(
-    opts.paths,
-    "/data",
-    isDocker
-  );
+  const {rootDir, rootDirMounted, logFilePath} = getNodeMountedPaths(opts.paths, "/data", isDocker);
   const engineRpcPublicUrl = `http://127.0.0.1:${ports.execution.enginePort}`;
   const engineRpcPrivateUrl = `http://${address}:${ports.execution.enginePort}`;
   const ethRpcPublicUrl = `http://127.0.0.1:${ports.execution.httpPort}`;

@@ -1,64 +1,41 @@
-import {writeFile} from "node:fs/promises";
-import {CLIQUE_SEALING_PERIOD, SHARED_JWT_SECRET} from "../../constants.js";
 import {
-  AtLeast,
   ExecutionClient,
   ExecutionGeneratorOptions,
-  ExecutionGenesisOptions,
   ExecutionNode,
+  ExecutionNodeDefinitionOptions,
   ExecutionStartMode,
+  GeneratorOptions,
 } from "../../interfaces.js";
-import {getGethGenesisBlock} from "../../utils/executionGenesis.js";
-import {getEstimatedForkTime} from "../../utils/index.js";
-import {ensureDirectories} from "../../utils/paths.js";
+import {ensureDirectories, getNodePaths} from "../../utils/paths.js";
 import {generateGethNode} from "./geth.js";
 import {generateMockNode} from "./mock.js";
 import {generateNethermindNode} from "./nethermind.js";
 
 export async function createExecutionNode<E extends ExecutionClient>(
   client: E,
-  options: AtLeast<ExecutionGeneratorOptions<E>, "genesisTime" | "paths" | "nodeIndex" | "forkConfig" | "runner">
+  options: ExecutionNodeDefinitionOptions<E> & GeneratorOptions
 ): Promise<ExecutionNode> {
   const {forkConfig, runner} = options;
   const elId = `${options.id}-${client}`;
 
-  const genesisOptions: ExecutionGenesisOptions<E> = {
-    ...options,
-    ttd: options.ttd ?? forkConfig.TERMINAL_TOTAL_DIFFICULTY,
-    cliqueSealingPeriod: options.cliqueSealingPeriod ?? CLIQUE_SEALING_PERIOD,
-    shanghaiTime:
-      options.shanghaiTime ??
-      getEstimatedForkTime({
-        forkEpoch: forkConfig.CAPELLA_FORK_EPOCH,
-        genesisTime: options.genesisTime,
-        secondsPerSlot: forkConfig.SECONDS_PER_SLOT,
-        additionalSlots: 0,
-      }),
-    cancunTime:
-      options.cancunTime ??
-      getEstimatedForkTime({
-        forkEpoch: forkConfig.DENEB_FORK_EPOCH,
-        genesisTime: options.genesisTime,
-        secondsPerSlot: forkConfig.SECONDS_PER_SLOT,
-        additionalSlots: 0,
-      }),
-    clientOptions: options.clientOptions ?? [],
-  };
-
   const opts: ExecutionGeneratorOptions<E> = {
     ...options,
-    ...genesisOptions,
-    id: elId,
+    id: options.id,
     mode:
       options.mode ??
       (forkConfig.BELLATRIX_FORK_EPOCH > 0 ? ExecutionStartMode.PreMerge : ExecutionStartMode.PostMerge),
     address: runner.getNextIp(),
     mining: options.mining ?? false,
+    clientOptions: options.clientOptions ?? [],
+    paths: getNodePaths({
+      root: options.rootDir,
+      id: elId,
+      client,
+      logsDir: options.logsDir,
+    }),
   };
 
   await ensureDirectories(opts.paths);
-  await writeFile(opts.paths.jwtsecretFilePath, SHARED_JWT_SECRET);
-  await writeFile(opts.paths.genesisFilePath, JSON.stringify(getGethGenesisBlock(opts.mode, genesisOptions)));
 
   switch (client) {
     case ExecutionClient.Mock: {

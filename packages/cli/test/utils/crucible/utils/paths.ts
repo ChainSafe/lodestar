@@ -3,9 +3,8 @@ import {mkdir} from "node:fs/promises";
 import path from "node:path";
 import {
   BeaconClient,
-  BeaconPaths,
+  CommonPaths,
   ExecutionClient,
-  ExecutionPaths,
   MountedPaths,
   ValidatorClient,
   ValidatorPaths,
@@ -13,7 +12,7 @@ import {
 
 export function getNodePaths<
   C extends BeaconClient | ValidatorClient | ExecutionClient,
-  R = C extends BeaconClient ? BeaconPaths : C extends ValidatorClient ? ValidatorPaths : ExecutionPaths,
+  R = C extends BeaconClient ? CommonPaths : C extends ValidatorClient ? ValidatorPaths : CommonPaths,
   // Mount path will be used when running the node in docker
 >(opts: {root: string; id: string; logsDir: string; client: C; mountPath?: string}): R {
   const {root, id, client, logsDir, mountPath} = opts;
@@ -73,7 +72,7 @@ export const ensureDirectories = async <T extends object>(paths: T): Promise<T> 
   return paths;
 };
 
-export const getNodeMountedPaths = <T extends ExecutionPaths | BeaconPaths | ValidatorPaths>(
+export const getNodeMountedPaths = <T extends CommonPaths | ValidatorPaths>(
   paths: T,
   mountPath: string,
   mount: boolean

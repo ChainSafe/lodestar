@@ -12,7 +12,7 @@ import {RunnerType, ValidatorClient, ValidatorNodeGenerator} from "../../interfa
 import {getNodePorts} from "../../utils/ports.js";
 
 export const generateLodestarValidatorNode: ValidatorNodeGenerator<ValidatorClient.Lodestar> = (opts, runner) => {
-  const {paths, id, keys, forkConfig, genesisTime, nodeIndex, beaconUrls, clientOptions} = opts;
+  const {paths, id, keys, forkConfig, genesisInfo, nodeIndex, beaconUrls, clientOptions} = opts;
   const {rootDir, keystoresDir, keystoresSecretFilePath, logFilePath} = paths;
   const {"builder.selection": builderSelection, blindedLocal} = clientOptions ?? {};
   const ports = getNodePorts(nodeIndex);
@@ -33,7 +33,7 @@ export const generateLodestarValidatorNode: ValidatorNodeGenerator<ValidatorClie
     "keymanager.address": "127.0.0.1",
     "keymanager.port": ports.validator.keymanagerPort,
     logPrefix: id,
-    logFormatGenesisTime: `${genesisTime}`,
+    logFormatGenesisTime: `${genesisInfo.genesisTime}`,
     logLevel: LogLevel.debug,
     logFile: "none",
     importKeystores: keystoresDir,

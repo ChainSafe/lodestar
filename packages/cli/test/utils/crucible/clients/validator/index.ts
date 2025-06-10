@@ -1,27 +1,32 @@
 import {writeFile} from "node:fs/promises";
-import {BN_REST_BASE_PORT, SHARED_JWT_SECRET, SHARED_VALIDATOR_PASSWORD} from "../../constants.js";
-import {AtLeast, BeaconClient, ValidatorClient, ValidatorGeneratorOptions, ValidatorNode} from "../../interfaces.js";
+import {BN_REST_BASE_PORT, SHARED_VALIDATOR_PASSWORD} from "../../constants.js";
+import {
+  BeaconClient,
+  GeneratorOptions,
+  ValidatorClient,
+  ValidatorGeneratorOptions,
+  ValidatorNode,
+  ValidatorNodeDefinitionOptions,
+} from "../../interfaces.js";
 import {makeUniqueArray} from "../../utils/index.js";
 import {createKeystores} from "../../utils/keys.js";
-import {ensureDirectories} from "../../utils/paths.js";
+import {ensureDirectories, getNodePaths} from "../../utils/paths.js";
 import {generateLighthouseValidatorNode} from "./lighthouse.js";
 import {generateLodestarValidatorNode} from "./lodestar.js";
 
 export async function createValidatorNode<V extends ValidatorClient>(
   client: V,
-  options: AtLeast<
-    ValidatorGeneratorOptions<V>,
-    "id" | "paths" | "forkConfig" | "nodeIndex" | "genesisTime" | "runner" | "beaconUrls"
-  >
+  options: ValidatorNodeDefinitionOptions<V> & GeneratorOptions
 ): Promise<ValidatorNode> {
   const {runner} = options;
   const clId = `${options.id}-${client}`;
 
   const opts: ValidatorGeneratorOptions = {
     ...options,
+    paths: getNodePaths({id: options.id, logsDir: options.logsDir, client, root: options.rootDir}),
+    beaconUrls: options.beaconUrls ?? [],
     id: clId,
     keys: options.keys ?? {type: "no-keys"},
-    genesisTime: options.genesisTime,
     clientOptions: options.clientOptions ?? {},
     address: "127.0.0.1",
   };
@@ -37,7 +42,6 @@ export async function createValidatorNode<V extends ValidatorClient>(
 
   await ensureDirectories(opts.paths);
   await createKeystores(opts.paths, opts.keys);
-  await writeFile(opts.paths.jwtsecretFilePath, SHARED_JWT_SECRET);
   await writeFile(opts.paths.keystoresSecretFilePath, SHARED_VALIDATOR_PASSWORD);
 
   switch (client) {

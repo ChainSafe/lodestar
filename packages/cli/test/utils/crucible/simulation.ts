@@ -1,26 +1,24 @@
 import fs from "node:fs";
-import {mkdir, writeFile} from "node:fs/promises";
+import {mkdir} from "node:fs/promises";
 import path from "node:path";
-import {fromHexString} from "@chainsafe/ssz";
-import {nodeUtils} from "@lodestar/beacon-node";
 import {initCKZG, loadEthereumTrustedSetup} from "@lodestar/beacon-node/util";
 import {ChainForkConfig} from "@lodestar/config";
 import {LogLevel, TimestampFormatCode} from "@lodestar/logger";
 import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
 import {activePreset} from "@lodestar/params";
-import {BeaconStateAllForks, interopSecretKey} from "@lodestar/state-transition";
+import {interopSecretKey} from "@lodestar/state-transition";
 import {prettyMsToTime} from "@lodestar/utils";
 import tmp from "tmp";
 import {createBeaconNode} from "./clients/beacon/index.js";
 import {createExecutionNode} from "./clients/execution/index.js";
 import {createValidatorNode, getValidatorForBeaconNode} from "./clients/validator/index.js";
-import {MOCK_ETH1_GENESIS_HASH} from "./constants.js";
 import {EpochClock, MS_IN_SEC} from "./epochClock.js";
 import {ExternalSignerServer} from "./externalSignerServer.js";
 import {
   BeaconClient,
   ExecutionClient,
   GeneratorOptions,
+  GenesisInfo,
   IRunner,
   NodePair,
   NodePairDefinition,
@@ -31,8 +29,8 @@ import {
 } from "./interfaces.js";
 import {Runner} from "./runner/index.js";
 import {SimulationTracker} from "./simulationTracker.js";
+import {generateGenesisData} from "./utils/genesis.js";
 import {registerProcessHandler, replaceIpFromUrl} from "./utils/index.js";
-import {getNodePaths} from "./utils/paths.js";
 
 interface StartOpts {
   runTimeoutMs: number;
@@ -45,60 +43,86 @@ export class Simulation {
   readonly runner: IRunner;
   readonly externalSigner: ExternalSignerServer;
   readonly logger: LoggerNode;
-
+  readonly id: string;
+  readonly rootDir: string;
+  readonly logsDir: string;
+  readonly controller: AbortController;
   readonly forkConfig: ChainForkConfig;
-  readonly options: SimulationOptions;
 
   private keysCount = 0;
   private nodePairCount = 0;
-  private genesisState?: BeaconStateAllForks;
   private runTimeout?: NodeJS.Timeout;
+  private genesisInfo: GenesisInfo;
+  private trustedSetup?: boolean;
 
-  private constructor(forkConfig: ChainForkConfig, options: SimulationOptions) {
-    this.forkConfig = forkConfig;
-    this.options = options;
+  private constructor(options: SimulationOptions) {
+    this.id = options.id;
+    this.rootDir = options.rootDir;
+    this.logsDir = options.logsDir;
+    this.forkConfig = options.forkConfig;
+    this.logger = options.logger;
+    this.genesisInfo = options.genesisInfo;
+    this.controller = options.controller;
+    this.trustedSetup = options.trustedSetup;
+    this.runner = options.runner;
 
-    this.logger = getNodeLogger({
-      level: LogLevel.debug,
-      module: `sim-${this.options.id}`,
-      timestampFormat: {
-        format: TimestampFormatCode.DateRegular,
-      },
-      file: {
-        level: options.logLevel ?? LogLevel.debug,
-        filepath: path.join(options.logsDir, `simulation-${this.options.id}.log`),
-      },
-    });
     this.clock = new EpochClock({
-      genesisTime: this.options.genesisTime + this.forkConfig.GENESIS_DELAY,
+      genesisTime: options.genesisInfo.genesisTime,
       secondsPerSlot: this.forkConfig.SECONDS_PER_SLOT,
       slotsPerEpoch: activePreset.SLOTS_PER_EPOCH,
-      signal: this.options.controller.signal,
+      signal: this.controller.signal,
     });
 
     this.externalSigner = new ExternalSignerServer([]);
-    this.runner = new Runner({logger: this.logger});
     this.tracker = SimulationTracker.initWithDefaults({
       logsDir: options.logsDir,
       logger: this.logger,
       nodes: [],
       config: this.forkConfig,
       clock: this.clock,
-      signal: this.options.controller.signal,
+      signal: this.controller.signal,
     });
   }
 
   static async initWithDefaults(
-    {forkConfig, logsDir, id, trustedSetup}: SimulationInitOptions,
+    {forkConfig, logsDir, id, trustedSetup, logLevel}: SimulationInitOptions,
     clients: NodePairDefinition[]
   ): Promise<Simulation> {
-    const env = new Simulation(forkConfig, {
+    const logger = getNodeLogger({
+      level: LogLevel.debug,
+      module: `sim-${id}`,
+      timestampFormat: {
+        format: TimestampFormatCode.DateRegular,
+      },
+      file: {
+        level: logLevel ?? LogLevel.debug,
+        filepath: path.join(logsDir, `simulation-${id}.log`),
+      },
+    });
+
+    const runner = new Runner({logger});
+
+    logger.info("Generating genesis bootstrap files");
+
+    const rootDir = path.join(tmp.dirSync({unsafeCleanup: true, tmpdir: "/tmp", template: "sim-XXXXXX"}).name, id);
+    const genesisTime = Math.floor(Date.now() / 1000);
+
+    const genesisInfo = await generateGenesisData(
+      runner,
+      {...forkConfig, genesisTime: genesisTime},
+      path.join(rootDir, "genesis")
+    );
+
+    const env = new Simulation({
+      runner,
+      forkConfig,
       logsDir,
       id,
-      genesisTime: Math.floor(Date.now() / 1000),
+      genesisInfo,
       controller: new AbortController(),
       trustedSetup,
-      rootDir: path.join(tmp.dirSync({unsafeCleanup: true, tmpdir: "/tmp", template: "sim-XXXXXX"}).name, id),
+      rootDir,
+      logger,
     });
 
     for (const client of clients) {
@@ -111,12 +135,12 @@ export class Simulation {
   async start(opts: StartOpts): Promise<void> {
     const currentTime = Date.now();
     this.logger.info(
-      `Starting simulation environment "${this.options.id}". currentTime=${new Date(
+      `Starting simulation environment "${this.id}". currentTime=${new Date(
         currentTime
-      ).toISOString()} simulationTimeout=${prettyMsToTime(opts.runTimeoutMs)} rootDir=${this.options.rootDir}`
+      ).toISOString()} simulationTimeout=${prettyMsToTime(opts.runTimeoutMs)} rootDir=${this.rootDir}`
     );
 
-    if (this.options.trustedSetup) {
+    if (this.trustedSetup) {
       await initCKZG();
       loadEthereumTrustedSetup();
     }
@@ -147,8 +171,8 @@ export class Simulation {
 
     try {
       registerProcessHandler(this);
-      if (!fs.existsSync(this.options.rootDir)) {
-        await mkdir(this.options.rootDir);
+      if (!fs.existsSync(this.rootDir)) {
+        await mkdir(this.rootDir);
       }
 
       this.logger.info("Starting the simulation runner");
@@ -156,12 +180,6 @@ export class Simulation {
 
       this.logger.info("Starting execution nodes");
       await Promise.all(this.nodes.map((node) => node.execution.job.start()));
-
-      this.logger.info("Initializing genesis state for beacon nodes");
-      await this.initGenesisState();
-      if (!this.genesisState) {
-        throw new Error("The genesis state for CL clients is not defined.");
-      }
 
       this.logger.info("Starting beacon nodes");
       await Promise.all(this.nodes.map((node) => node.beacon.job.start()));
@@ -202,14 +220,14 @@ export class Simulation {
     process.removeAllListeners("uncaughtException");
     process.removeAllListeners("SIGTERM");
     process.removeAllListeners("SIGINT");
-    this.logger.info(`Simulation environment "${this.options.id}" is stopping: ${message}`);
+    this.logger.info(`Simulation environment "${this.id}" is stopping: ${message}`);
     await this.tracker.stop({dumpStores: true});
     await Promise.all(this.nodes.map((node) => node.validator?.job.stop()));
     await Promise.all(this.nodes.map((node) => node.beacon.job.stop()));
     await Promise.all(this.nodes.map((node) => node.execution.job.stop()));
     await this.externalSigner.stop();
     await this.runner.stop();
-    this.options.controller.abort();
+    this.controller.abort();
 
     if (this.runTimeout) {
       clearTimeout(this.runTimeout);
@@ -232,7 +250,11 @@ export class Simulation {
     remote,
     mining,
   }: NodePairDefinition<B, E, V>): Promise<NodePair> {
-    if (this.genesisState && keysCount > 0) {
+    if (!this.genesisInfo) {
+      throw new Error("No genesis info created");
+    }
+
+    if (this.genesisInfo && keysCount > 0) {
       throw new Error("Genesis state already initialized. Can not add more keys to it.");
     }
     const interopKeys = Array.from({length: keysCount}, (_, vi) => {
@@ -253,7 +275,9 @@ export class Simulation {
       forkConfig: this.forkConfig,
       runner: this.runner,
       address: "0.0.0.0",
-      genesisTime: this.options.genesisTime + this.forkConfig.GENESIS_DELAY,
+      genesisInfo: this.genesisInfo,
+      rootDir: this.rootDir,
+      logsDir: this.logsDir,
     };
 
     // Execution Node
@@ -262,13 +286,8 @@ export class Simulation {
     const executionNode = await createExecutionNode(executionType, {
       ...executionOptions,
       ...commonOptions,
+      clientOptions: executionOptions.clientOptions,
       mining,
-      paths: getNodePaths({
-        root: this.options.rootDir,
-        id,
-        client: executionType,
-        logsDir: this.options.logsDir,
-      }),
     });
 
     // Beacon Node
@@ -282,9 +301,7 @@ export class Simulation {
     const beaconNode = await createBeaconNode(beaconType, {
       ...beaconOptions,
       ...commonOptions,
-      genesisState: this.genesisState,
       engineUrls,
-      paths: getNodePaths({id, logsDir: this.options.logsDir, client: beaconType, root: this.options.rootDir}),
     });
 
     if (keys.type === "no-keys") {
@@ -313,44 +330,10 @@ export class Simulation {
       ...commonOptions,
       keys,
       beaconUrls,
-      paths: getNodePaths({id, logsDir: this.options.logsDir, client: validatorType, root: this.options.rootDir}),
     });
 
     this.nodePairCount += 1;
 
     return {id, execution: executionNode, beacon: beaconNode, validator: validatorNode};
-  }
-
-  private async initGenesisState(): Promise<void> {
-    for (let i = 0; i < this.nodes.length; i++) {
-      // Get genesis block hash
-      const el = this.nodes[i].execution;
-
-      // If eth1 is mock then genesis hash would be empty
-      const eth1Genesis = el.provider === null ? {hash: MOCK_ETH1_GENESIS_HASH} : await el.provider?.eth.getBlock(0);
-
-      if (!eth1Genesis.hash) {
-        throw new Error(`Eth1 genesis not found for node "${this.nodes[i].id}"`);
-      }
-
-      const genesisState = nodeUtils.initDevState(this.forkConfig, this.keysCount, {
-        genesisTime: this.options.genesisTime + this.forkConfig.GENESIS_DELAY,
-        eth1BlockHash: fromHexString(eth1Genesis.hash),
-        withEth1Credentials: true,
-      }).state;
-
-      this.genesisState = genesisState;
-
-      // Write the genesis state for all nodes
-      for (const node of this.nodes) {
-        const {genesisFilePath} = getNodePaths({
-          root: this.options.rootDir,
-          id: node.id,
-          logsDir: this.options.logsDir,
-          client: node.beacon.client,
-        });
-        await writeFile(genesisFilePath, this.genesisState.serialize());
-      }
-    }
   }
 }

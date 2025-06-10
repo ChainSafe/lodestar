@@ -1,10 +1,7 @@
-import {writeFile} from "node:fs/promises";
 import path from "node:path";
 import {fetch} from "@lodestar/utils";
 import {Web3} from "web3";
-import {SHARED_JWT_SECRET} from "../../constants.js";
 import {ExecutionClient, ExecutionNodeGenerator, JobOptions, RunnerType} from "../../interfaces.js";
-import {getNethermindChainSpec} from "../../utils/executionGenesis.js";
 import {getNodeMountedPaths} from "../../utils/paths.js";
 import {getNodePorts} from "../../utils/ports.js";
 import {registerWeb3JsPlugins} from "../../web3js/plugins/index.js";
@@ -14,26 +11,10 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
     throw Error(`EL ENV must be provided, NETHERMIND_DOCKER_IMAGE: ${process.env.NETHERMIND_DOCKER_IMAGE}`);
   }
 
-  const {
-    id,
-    mode,
-    ttd,
-    address,
-    mining,
-    clientOptions,
-    nodeIndex,
-    cliqueSealingPeriod,
-    shanghaiTime,
-    cancunTime,
-    genesisTime,
-  } = opts;
+  const {id, genesisInfo, address, mining, clientOptions, nodeIndex} = opts;
   const ports = getNodePorts(nodeIndex);
 
-  const {rootDir, rootDirMounted, logFilePath, jwtsecretFilePathMounted} = getNodeMountedPaths(
-    opts.paths,
-    "/data",
-    true
-  );
+  const {rootDir, rootDirMounted, logFilePath} = getNodeMountedPaths(opts.paths, "/data", true);
 
   // Docker will be executed on entrypoint automatically
   const binaryPath = "";
@@ -42,7 +23,6 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
   const ethRpcPublicUrl = `http://127.0.0.1:${ports.execution.httpPort}`;
   const ethRpcPrivateUrl = `http://${address}:${ports.execution.httpPort}`;
 
-  const chainSpecPath = path.join(rootDir, "chain.json");
   const chainSpecContainerPath = path.join(rootDirMounted, "chain.json");
 
   const startJobOptions: JobOptions<RunnerType.Docker> = {
@@ -54,26 +34,11 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
       exposePorts: [ports.execution.enginePort, ports.execution.httpPort, ports.execution.p2pPort],
       dockerNetworkIp: address,
     },
-    bootstrap: async () => {
-      await writeFile(
-        chainSpecPath,
-        JSON.stringify(
-          getNethermindChainSpec(mode, {
-            ttd,
-            cliqueSealingPeriod,
-            shanghaiTime,
-            cancunTime,
-            genesisTime,
-            clientOptions: [],
-          })
-        )
-      );
-    },
     cli: {
       command: binaryPath,
       args: [
         "--JsonRpc.JwtSecretFile",
-        jwtsecretFilePathMounted,
+        genesisInfo.jwtSecretPath,
         "--JsonRpc.Enabled",
         "true",
         "--JsonRpc.Host",
@@ -154,8 +119,6 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
     engineRpcPrivateUrl,
     ethRpcPublicUrl,
     ethRpcPrivateUrl,
-    ttd,
-    jwtSecretHex: SHARED_JWT_SECRET,
     provider,
     job,
   };

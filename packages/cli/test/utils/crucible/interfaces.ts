@@ -4,6 +4,7 @@ import {ApiClient} from "@lodestar/api";
 import {ApiClient as KeyManagerApi} from "@lodestar/api/keymanager";
 import {ChainForkConfig} from "@lodestar/config";
 import {LogLevel, Logger} from "@lodestar/logger";
+import {LoggerNode} from "@lodestar/logger/node";
 import {ForkName} from "@lodestar/params";
 import {Epoch, SignedBeaconBlock, Slot} from "@lodestar/types";
 import {Web3} from "web3";
@@ -19,6 +20,7 @@ export type SimulationInitOptions = {
   logsDir: string;
   forkConfig: ChainForkConfig;
   trustedSetup?: boolean;
+  logLevel?: LogLevel;
 };
 
 export type SimulationOptions = {
@@ -26,9 +28,11 @@ export type SimulationOptions = {
   logsDir: string;
   rootDir: string;
   controller: AbortController;
-  genesisTime: number;
+  genesisInfo: GenesisInfo;
   trustedSetup?: boolean;
-  logLevel?: LogLevel;
+  logger: LoggerNode;
+  forkConfig: ChainForkConfig;
+  runner: IRunner;
 };
 
 export enum BeaconClient {
@@ -68,13 +72,30 @@ export type ExecutionClientsOptions = {
   [ExecutionClient.Nethermind]: string[];
 };
 
+export type ExecutionNodeDefinitionOptions<E extends ExecutionClient> = {
+  clientOptions?: ExecutionClientsOptions[E];
+  mining?: boolean;
+  mode?: ExecutionStartMode;
+};
 export type ExecutionNodeDefinition<E extends ExecutionClient> =
   | E
-  | {type: E; options: Partial<ExecutionGenesisOptions<E>>};
-export type BeaconNodeDefinition<E extends BeaconClient> = E | {type: E; options: Partial<BeaconGeneratorOptions<E>>};
+  | {type: E; options: ExecutionNodeDefinitionOptions<E>};
+
+export type BeaconNodeDefinitionOptions<E extends BeaconClient> = {
+  clientOptions?: BeaconClientsOptions[E];
+  engineMock?: boolean;
+  engineUrls?: string[];
+};
+export type BeaconNodeDefinition<E extends BeaconClient> = E | {type: E; options: BeaconNodeDefinitionOptions<E>};
+
+export type ValidatorNodeDefinitionOptions<E extends ValidatorClient> = {
+  clientOptions?: ValidatorClientsOptions[E];
+  keys?: ValidatorClientKeys;
+  beaconUrls?: string[];
+};
 export type ValidatorNodeDefinition<E extends ValidatorClient> =
   | E
-  | {type: E; options: Partial<ValidatorGeneratorOptions<E>>};
+  | {type: E; options: ValidatorNodeDefinitionOptions<E>};
 
 export interface NodePairDefinition<
   B extends BeaconClient = BeaconClient,
@@ -100,12 +121,14 @@ export interface GeneratorOptions {
   nodeIndex: number;
   address: string;
   forkConfig: ChainForkConfig;
-  genesisTime: number;
+  genesisInfo: GenesisInfo;
+  rootDir: string;
+  logsDir: string;
   runner: IRunner;
 }
 
 export interface BeaconGeneratorOptions<C extends BeaconClient = BeaconClient> extends GeneratorOptions {
-  paths: BeaconPaths;
+  paths: CommonPaths;
   engineUrls: string[];
   engineMock: boolean;
   clientOptions: BeaconClientsOptions[C];
@@ -126,21 +149,10 @@ export interface ValidatorGeneratorOptions<V extends ValidatorClient = Validator
   };
 }
 
-export interface ExecutionGenesisOptions<E extends ExecutionClient = ExecutionClient> {
-  ttd: bigint;
-  cliqueSealingPeriod: number;
-  shanghaiTime: number;
-  cancunTime: number;
-  genesisTime: number;
-  clientOptions: ExecutionClientsOptions[E];
-}
-
-export interface ExecutionGeneratorOptions<E extends ExecutionClient = ExecutionClient>
-  extends ExecutionGenesisOptions<E>,
-    GeneratorOptions {
+export interface ExecutionGeneratorOptions<E extends ExecutionClient = ExecutionClient> extends GeneratorOptions {
   mode: ExecutionStartMode;
   mining: boolean;
-  paths: ExecutionPaths;
+  paths: CommonPaths;
   clientOptions: ExecutionClientsOptions[E];
 }
 
@@ -192,7 +204,6 @@ export interface ValidatorNode<C extends ValidatorClient = ValidatorClient> {
 export interface ExecutionNode<E extends ExecutionClient = ExecutionClient> {
   readonly client: E;
   readonly id: string;
-  readonly ttd: bigint;
   /**
    * Engine URL accessible form the host machine if the process is running in private network inside docker
    */
@@ -209,7 +220,6 @@ export interface ExecutionNode<E extends ExecutionClient = ExecutionClient> {
    * RPC URL accessible within private network inside docker
    */
   readonly ethRpcPrivateUrl: string;
-  readonly jwtSecretHex: string;
   readonly provider: E extends ExecutionClient.Mock ? null : Web3;
   readonly job: Job;
 }
@@ -283,7 +293,7 @@ export type RunnerOptions = {
   [RunnerType.ChildProcess]: never;
   [RunnerType.Docker]: {
     image: string;
-    mounts?: [[string, string]];
+    mounts?: [string, string][];
     exposePorts?: number[];
     dockerNetworkIp?: string;
   };
@@ -415,12 +425,7 @@ export abstract class SimulationReporter<T extends Assertion[]> {
 export interface CommonPaths {
   rootDir: string;
   dataDir: string;
-  jwtsecretFilePath: string;
   logFilePath: string;
-}
-
-export interface BeaconPaths extends CommonPaths {
-  genesisFilePath: string;
 }
 
 export interface ValidatorPaths extends CommonPaths {
@@ -431,10 +436,17 @@ export interface ValidatorPaths extends CommonPaths {
   validatorsDefinitionFilePath: string;
 }
 
-export interface ExecutionPaths extends CommonPaths {
-  genesisFilePath: string;
-}
-
 export type MountedPaths<T> = T & {
   [P in keyof T as `${string & P}Mounted`]: T[P];
+};
+
+export type GenesisInfo = {
+  genesisTime: number;
+  jwtSecretPath: string;
+  genesisJsonPath: string;
+  genesisSSZPath: string;
+  genesisValidatorRootPath: string;
+  configPath: string;
+  chainSpecPath: string;
+  mnemonicsPath: string;
 };
