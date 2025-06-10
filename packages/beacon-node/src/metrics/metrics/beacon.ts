@@ -359,7 +359,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       kzgVerificationDataColumnBatchTime: register.histogram({
         name: "beacon_kzg_verification_data_column_batch_seconds",
         help: "Runtime of batched data column kzg verification",
-        buckets: [0.1, 0.2, 0.3, 0.4, 0.5, 0.75, 1, 2],
+        buckets: [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 1, 2, 5],
       }),
       getBlobsV2Requests: register.counter({
         name: "beacon_engine_getBlobsV2_requests_total",
@@ -370,7 +370,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         help: "Total number of engine_getBlobsV2 successful responses received",
       }),
       getBlobsV2Runtime: register.histogram({
-        name: "beacon_engine_getBlobsV2_runtime_seconds",
+        name: "beacon_engine_getBlobsV2_request_duration_seconds",
         help: "Full runtime of engine_getBlobsV2 requests",
         buckets: [0.01, 0.05, 0.1, 0.5, 1, 2.5, 5, 7.5],
       }),
