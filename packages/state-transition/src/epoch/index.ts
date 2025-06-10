@@ -189,6 +189,6 @@ export function processEpoch(
   }
 
   if (fork >= ForkSeq.fulu) {
-    processProposerLookahead(fork, state as CachedBeaconStateFulu);
+    processProposerLookahead(fork, state as CachedBeaconStateFulu, cache);
   }
 }
