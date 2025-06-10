@@ -13,7 +13,9 @@ export function initializeProposerLookahead(state: CachedBeaconStateElectra): Va
   const lookahead: ValidatorIndex[] = [];
 
   for (let i = 0; i < MIN_SEED_LOOKAHEAD + 1; i++) {
-    lookahead.push(...computeProposerIndices(ForkSeq.fulu, state, currentEpoch + i));
+    const epoch = currentEpoch + i;
+    const shuffling = state.epochCtx.getShufflingAtEpoch(epoch);
+    lookahead.push(...computeProposerIndices(ForkSeq.fulu, state, shuffling, epoch));
   }
 
   return lookahead;
