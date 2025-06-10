@@ -66,7 +66,7 @@ export const MatrixEntry = new ContainerType(
 export const DataColumnIdentifier = new ContainerType(
   {
     blockRoot: Root,
-    index: ColumnIndex,
+    columns: new ListBasicType(ColumnIndex, NUMBER_OF_COLUMNS),
   },
   {typeName: "DataColumnIdentifier", jsonCase: "eth2"}
 );
