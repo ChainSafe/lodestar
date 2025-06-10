@@ -252,8 +252,31 @@ export function getBeaconStateApi({
       }
 
       const epoch = filters.epoch ?? computeEpochAtSlot(state.slot);
+      const currentEpoch = computeEpochAtSlot(state.slot);
+      if (filters.slot !== undefined) {
+        const epochStartSlot = computeStartSlotAtEpoch(epoch);
+        const epochEndSlot = epochStartSlot + 32 - 1;
+
+        if (filters.slot < epochStartSlot || filters.slot > epochEndSlot) {
+          throw new ApiError(400, `Slot ${filters.slot} is not in epoch ${epoch}`);
+        }
+      }
+      if (Math.abs(epoch - currentEpoch) > 2) {
+        throw new ApiError(400, `Invalid epoch value: epoch ${epoch} is out of range`);
+      }
       const startSlot = computeStartSlotAtEpoch(epoch);
-      const decisionRoot = stateCached.epochCtx.getShufflingDecisionRoot(epoch);
+      let decisionRoot: string;
+      try {
+        decisionRoot = stateCached.epochCtx.getShufflingDecisionRoot(epoch);
+      } catch (error) {
+        if (error instanceof Error && error.message?.includes("EPOCH_CONTEXT_ERROR_DECISION_ROOT_EPOCH_OUT_OF_RANGE")) {
+          throw new ApiError(400, `Invalid epoch value: epoch ${epoch} is out of range`);
+        }
+        if (typeof error === "string" && error.includes("EPOCH_CONTEXT_ERROR_DECISION_ROOT_EPOCH_OUT_OF_RANGE")) {
+          throw new ApiError(400, `Invalid epoch value: epoch ${epoch} is out of range`);
+        }
+        throw error; // Re-throw other unexpected errors
+      }
       const shuffling = await chain.shufflingCache.get(epoch, decisionRoot);
       if (!shuffling) {
         throw new ApiError(
