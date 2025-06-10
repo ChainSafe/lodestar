@@ -380,9 +380,9 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         name: "beacon_engine_getBlobsV2_responses_total",
         help: "Total number of engine_getBlobsV2 successful responses received",
       }),
-      getBlobsV2Runtime: register.histogram({
+      getBlobsV2RequestDuration: register.histogram({
         name: "beacon_engine_getBlobsV2_request_duration_seconds",
-        help: "Full runtime of engine_getBlobsV2 requests",
+        help: "Duration of engine_getBlobsV2 requests",
         buckets: [0.01, 0.05, 0.1, 0.5, 1, 2.5, 5, 7.5],
       }),
       custodyGroupCount: register.gauge({

@@ -371,7 +371,7 @@ export async function getDataColumnsFromExecution(
 
   // Get blobs from execution engine
   metrics?.peerDas.getBlobsV2Requests.inc();
-  const timer = metrics?.peerDas.getBlobsV2Runtime.startTimer();
+  const timer = metrics?.peerDas.getBlobsV2RequestDuration.startTimer();
   const blobs = await executionEngine.getBlobs(blockCache.fork, versionedHashes);
   timer?.();
 
