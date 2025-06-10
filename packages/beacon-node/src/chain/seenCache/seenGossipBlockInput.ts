@@ -49,6 +49,9 @@ type GossipedBlockInput =
       dataColumnBytes: Uint8Array | null;
     };
 
+// TODO(das): dedup with gossipHandlers.ts
+const BLOCK_AVAILABILITY_CUTOFF_MS = 3_000;
+
 export type BlockInputCacheType = {
   fork: ForkName;
   block?: SignedBeaconBlock;
@@ -333,7 +336,16 @@ export class SeenGossipBlockInput {
           return blockInput;
         };
 
-        if (dataColumnsCache.size >= NUMBER_OF_COLUMNS / 2 && !calledRecover) {
+        const columnCount = dataColumnsCache.size;
+        if (
+          // only try to recover all columns with "--supernode"
+          this.custodyConfig.sampledColumns.length === NUMBER_OF_COLUMNS &&
+          columnCount >= NUMBER_OF_COLUMNS / 2 &&
+          columnCount < NUMBER_OF_COLUMNS &&
+          !calledRecover &&
+          // doing recover right away is not efficient because it may delay data_column_sidecar validation
+          this.clock.secFromSlot(slot) * 1000 >= BLOCK_AVAILABILITY_CUTOFF_MS
+        ) {
           // should call once per slot
           cachedData.calledRecover = true;
           callInNextEventLoop(async () => {
