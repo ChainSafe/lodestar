@@ -189,6 +189,10 @@ export function processEpoch(
   }
 
   if (fork >= ForkSeq.fulu) {
+    const timer = metrics?.epochTransitionStepTime.startTimer({
+      step: EpochTransitionStep.processProposerLookahead,
+    });
     processProposerLookahead(fork, state as CachedBeaconStateFulu);
+    timer?.();
   }
 }
