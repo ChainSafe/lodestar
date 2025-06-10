@@ -341,11 +341,7 @@ export class SeenGossipBlockInput {
               slot,
               dataColumns: dataColumnsCache.size,
             };
-            const shouldResolve = await recoverDataColumnSidecars(
-              dataColumnsCache,
-              this.clock,
-              metrics
-            );
+            const shouldResolve = await recoverDataColumnSidecars(dataColumnsCache, this.clock, metrics);
             if (shouldResolve) {
               resolveAvailabilityAndBlockInput(BlockInputAvailabilitySource.RECOVERED);
               // Publish columns if and only if subscribed to them

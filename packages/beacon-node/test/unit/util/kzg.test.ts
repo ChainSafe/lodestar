@@ -73,7 +73,7 @@ describe("KZG", () => {
     }
   });
 
-  it("DataColumnSidecars", () => {
+  it("DataColumnSidecars", async () => {
     const config = createChainForkConfig({
       ALTAIR_FORK_EPOCH: 0,
       BELLATRIX_FORK_EPOCH: 0,
@@ -137,7 +137,7 @@ describe("KZG", () => {
       }
     }
 
-    const recoveredSidecars = recoverDataColumnSidecars(shuffledPartial);
+    const recoveredSidecars = await recoverDataColumnSidecars(shuffledPartial);
     expect(recoveredSidecars !== null).toBeTruthy();
     if (recoveredSidecars == null) {
       // should not happen

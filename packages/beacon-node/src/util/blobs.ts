@@ -1,5 +1,6 @@
 import {digest as sha256Digest} from "@chainsafe/as-sha256";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
+import {CellsAndProofs} from "@crate-crypto/node-eth-kzg";
 import {ChainForkConfig} from "@lodestar/config";
 import {
   ForkAll,
@@ -115,9 +116,9 @@ export function computeDataColumnSidecars(
  * If the node obtains 50%+ of all the columns, it SHOULD reconstruct the full data matrix via the recover_matrix helper
  * See https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/das-core.md#recover_matrix
  */
-export function recoverDataColumnSidecars(
+export async function recoverDataColumnSidecars(
   partialSidecars: Map<number, fulu.DataColumnSidecar>
-): fulu.DataColumnSidecars | null {
+): Promise<fulu.DataColumnSidecars | null> {
   const columnCount = partialSidecars.size;
   if (columnCount < NUMBER_OF_COLUMNS / 2) {
     // We don't have enough columns to recover
@@ -143,24 +144,26 @@ export function recoverDataColumnSidecars(
   const blobProofs: Array<Uint8Array[]> = Array.from({length: blobCount});
   try {
     // https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/das-core.md#recover_matrix
-    for (let blobIndex = 0; blobIndex < blobCount; blobIndex++) {
-      const cellIndices: bigint[] = [];
-      const cells: Uint8Array[] = [];
-      for (const [columnIndex, dataColumn] of partialSidecars.entries()) {
-        cellIndices.push(BigInt(columnIndex));
-        cells.push(dataColumn.column[blobIndex]);
-      }
-      // recovered cells and proofs are of the same row/blob, their length should be NUMBER_OF_COLUMNS
-      const {cells: recoveredCells, proofs: recoveredProofs} = kzg.recoverCellsAndKzgProofs(cellIndices, cells);
-      if (recoveredCells.length !== NUMBER_OF_COLUMNS || recoveredProofs.length !== NUMBER_OF_COLUMNS) {
-        // recovered cells or proofs is not of the expected length, we cannot recover
-        return null;
-      }
+    const blobIndices = Array.from({length: blobCount}, (_, i) => i);
+    const cellsAndProofs = await Promise.all(
+      blobIndices.map((blobIndex) => {
+        const cellIndices: bigint[] = [];
+        const cells: Uint8Array[] = [];
+        for (const [columnIndex, dataColumn] of partialSidecars.entries()) {
+          cellIndices.push(BigInt(columnIndex));
+          cells.push(dataColumn.column[blobIndex]);
+        }
+        // recovered cells and proofs are of the same row/blob, their length should be NUMBER_OF_COLUMNS
+        return kzg.asyncRecoverCellsAndKzgProofs(cellIndices, cells);
+      })
+    );
 
+    for (let blobIndex = 0; blobIndex < blobCount; blobIndex++) {
+      const recoveredCells = cellsAndProofs[blobIndex].cells;
+      blobProofs[blobIndex] = cellsAndProofs[blobIndex].proofs;
       for (let columnIndex = 0; columnIndex < NUMBER_OF_COLUMNS; columnIndex++) {
         fullColumns[columnIndex][blobIndex] = recoveredCells[columnIndex];
       }
-      blobProofs[blobIndex] = recoveredProofs;
     }
   } catch (_e) {
     return null;

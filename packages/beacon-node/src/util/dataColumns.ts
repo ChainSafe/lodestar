@@ -24,7 +24,11 @@ import {BlockInputCacheType} from "../chain/seenCache/seenGossipBlockInput.js";
 import {IExecutionEngine} from "../execution/engine/interface.js";
 import {Metrics} from "../metrics/metrics.js";
 import {NodeId} from "../network/subnets/index.js";
-import {computeKzgCommitmentsInclusionProof, kzgCommitmentToVersionedHash, recoverDataColumnSidecars as recover} from "./blobs.js";
+import {
+  computeKzgCommitmentsInclusionProof,
+  kzgCommitmentToVersionedHash,
+  recoverDataColumnSidecars as recover,
+} from "./blobs.js";
 import {IClock} from "./clock.js";
 import {kzg} from "./kzg.js";
 
@@ -347,23 +351,26 @@ export async function recoverDataColumnSidecars(
     return null;
   }
 
-  const timer = metric?.recoverDataColumnSidecars.recoverTime.startTimer();
   const partialSidecars = new Map<number, fulu.DataColumnSidecar>();
   for (const [columnIndex, {dataColumn}] of dataColumnCache.entries()) {
     partialSidecars.set(columnIndex, dataColumn);
   }
-  const fullSidecars = recover(partialSidecars);
+
+  const timer = metric?.recoverDataColumnSidecars.recoverTime.startTimer();
+  // this function should never throw, we catched all errors inside
+  const fullSidecars = await recover(partialSidecars);
+  timer?.();
   if (fullSidecars == null) {
     metric?.recoverDataColumnSidecars.result.inc({result: RecoverResult.Failed});
     return null;
   }
-  timer?.();
 
   const firstDataColumn = dataColumnCache.values().next().value?.dataColumn;
   if (firstDataColumn == null) {
-    // should not happen because we check the size of the cache before this
+    // should not happen because we checked the size of the cache before this
     throw new Error("No data column found in cache to recover from");
   }
+
   const slot = firstDataColumn.signedBlockHeader.message.slot;
   const secFromSlot = clock.secFromSlot(slot);
   metric?.recoverDataColumnSidecars.secFromSlot.observe(secFromSlot);
