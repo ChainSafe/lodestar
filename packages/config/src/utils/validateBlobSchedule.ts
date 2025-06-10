@@ -12,16 +12,18 @@ export function validateBlobSchedule(blobSchedule: BlobSchedule): void {
     if (previousEpoch !== undefined) {
       if (entry.EPOCH < previousEpoch) {
         throw Error(
-          `Blob schedule entries must be in ascending order by EPOCH, ${entry.EPOCH} < ${previousEpoch} at index ${i}`
+          `Invalid BLOB_SCHEDULE expected entries to be sorted by EPOCH in ascending order, ${entry.EPOCH} < ${previousEpoch} at index ${i}`
         );
       }
       if (entry.EPOCH === previousEpoch) {
-        throw Error(`Duplicate entries found for epoch ${entry.EPOCH} at ${i - 1} and ${i}`);
+        throw Error(
+          `Invalid BLOB_SCHEDULE[${i}] entry with the same epoch value ${entry.EPOCH} as previous BLOB_SCHEDULE[${i - 1}] entry`
+        );
       }
     }
     if (entry.MAX_BLOBS_PER_BLOCK > MAX_BLOB_COMMITMENTS_PER_BLOCK) {
       throw Error(
-        `Max blobs value exceeds error at ${i}. Value ${entry.MAX_BLOBS_PER_BLOCK} limit ${MAX_BLOB_COMMITMENTS_PER_BLOCK}`
+        `Invalid BLOB_SCHEDULE[${i}].MAX_BLOBS_PER_BLOCK value ${entry.MAX_BLOBS_PER_BLOCK} exceeds limit ${MAX_BLOB_COMMITMENTS_PER_BLOCK}`
       );
     }
 

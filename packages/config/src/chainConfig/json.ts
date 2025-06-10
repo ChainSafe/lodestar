@@ -170,5 +170,6 @@ export function deserializeBlobSchedule(input: unknown): BlobSchedule {
   });
 
   validateBlobSchedule(blobSchedule);
+
   return blobSchedule;
 }

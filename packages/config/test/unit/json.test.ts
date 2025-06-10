@@ -25,7 +25,7 @@ describe("chainConfig JSON", () => {
     expect(chainConfigRes).toEqual(configWithCustomBlobSchedule);
   });
 
-  it("Blob schedule max blobs exceed limit", () => {
+  it("Blob schedule max blobs exceeds limit", () => {
     const blobSchedule: BlobSchedule = [{EPOCH: 0, MAX_BLOBS_PER_BLOCK: MAX_BLOB_COMMITMENTS_PER_BLOCK + 1}];
     const configWithCustomBlobSchedule = {...chainConfig, BLOB_SCHEDULE: blobSchedule};
 
@@ -48,7 +48,7 @@ describe("chainConfig JSON", () => {
     expect(() => chainConfigFromJson(json)).toThrow();
   });
 
-  it("Blob schedule duplicated epoch entries", () => {
+  it("Blob schedule entries with the same epoch value", () => {
     const blobSchedule: BlobSchedule = [
       {EPOCH: 0, MAX_BLOBS_PER_BLOCK: 10},
       {EPOCH: 10, MAX_BLOBS_PER_BLOCK: 15},
