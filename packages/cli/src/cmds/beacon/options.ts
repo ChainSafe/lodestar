@@ -23,6 +23,7 @@ type BeaconExtraArgs = {
   validatorMonitorLogs?: boolean;
   attachToGlobalThis?: boolean;
   disableLightClientServer?: boolean;
+  persistOrphanedBlocksDir?: string;
 };
 
 export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
@@ -142,6 +143,13 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
   disableLightClientServer: {
     description: "Disable light client server.",
     type: "boolean",
+  },
+
+  persistOrphanedBlocksDir: {
+    description: "Enable and specify a directory to persist orphaned blocks",
+    defaultDescription: defaultBeaconPaths.persistOrphanedBlocksDir,
+    hidden: true,
+    type: "string",
   },
 };
 
