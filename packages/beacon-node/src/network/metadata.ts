@@ -1,5 +1,5 @@
 import {BitArray} from "@chainsafe/ssz";
-import {BeaconConfig} from "@lodestar/config";
+import {BeaconConfig, ForkInfo} from "@lodestar/config";
 import {ForkSeq} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, altair, phase0, ssz} from "@lodestar/types";
@@ -11,6 +11,7 @@ export enum ENRKey {
   eth2 = "eth2",
   attnets = "attnets",
   syncnets = "syncnets",
+  nfd = "nfd",
 }
 export enum SubnetType {
   attnets = "attnets",
@@ -44,7 +45,7 @@ export class MetadataController {
 
   upstreamValues(currentEpoch: Epoch): void {
     // updateEth2Field() MUST be called with clock epoch
-    this.updateEth2Field(currentEpoch);
+    this.updateForkFields(currentEpoch);
 
     this.onSetValue(ENRKey.attnets, ssz.phase0.AttestationSubnets.serialize(this._metadata.attnets));
 
@@ -94,16 +95,32 @@ export class MetadataController {
    * 2. Network MUST call this method on fork transition.
    *    Current Clock implementation ensures no race conditions, epoch is correct if re-fetched
    */
-  updateEth2Field(epoch: Epoch): Uint8Array {
-    const enrForkId = ssz.phase0.ENRForkID.serialize(getENRForkID(this.config, epoch));
+  updateForkFields(epoch: Epoch): {enrForkId: Uint8Array; nextForkDigest?: Uint8Array} {
+    const config = this.config;
+    const {currentFork, nextFork} = getCurrentAndNextFork(config, epoch);
+
+    const enrForkId = ssz.phase0.ENRForkID.serialize(getENRForkID(config, currentFork, nextFork));
     this.onSetValue(ENRKey.eth2, enrForkId);
-    return enrForkId;
+
+    let nextForkDigest: Uint8Array | undefined;
+    if (epoch >= config.FULU_FORK_EPOCH) {
+      if (nextFork !== undefined) {
+        nextForkDigest = config.forkName2ForkDigest(nextFork.name);
+        this.onSetValue(ENRKey.nfd, nextForkDigest);
+      } else {
+        nextForkDigest = ssz.ForkDigest.defaultValue();
+      }
+    }
+
+    return {enrForkId, nextForkDigest};
   }
 }
 
-export function getENRForkID(config: BeaconConfig, clockEpoch: Epoch): phase0.ENRForkID {
-  const {currentFork, nextFork} = getCurrentAndNextFork(config, clockEpoch);
-
+export function getENRForkID(
+  config: BeaconConfig,
+  currentFork: ForkInfo,
+  nextFork: ForkInfo | undefined
+): phase0.ENRForkID {
   return {
     // Current fork digest
     forkDigest: config.forkName2ForkDigest(currentFork.name),

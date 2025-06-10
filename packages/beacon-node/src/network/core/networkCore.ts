@@ -482,7 +482,7 @@ export class NetworkCore implements INetworkCore {
           // On fork transition
           if (epoch === forkEpoch) {
             // updateEth2Field() MUST be called with clock epoch, onEpoch event is emitted in response to clock events
-            this.metadata.updateEth2Field(epoch);
+            this.metadata.updateForkFields(epoch);
             this.reqResp.registerProtocolsAtFork(nextFork);
           }
 
