@@ -6,7 +6,6 @@ import {Logger, pruneSetToMax} from "@lodestar/utils";
 
 import {IExecutionEngine} from "../../execution/index.js";
 import {Metrics} from "../../metrics/index.js";
-import {DataColumnRecover} from "../../network/dataColumn/index.js";
 import {IClock} from "../../util/clock.js";
 import {
   CustodyConfig,
@@ -151,7 +150,6 @@ export class SeenGossipBlockInput {
   getGossipBlockInput(
     config: ChainForkConfig,
     gossipedInput: GossipedBlockInput,
-    dataColumnRecover: DataColumnRecover | null,
     metrics: Metrics | null
   ): GossipBlockInputResponse {
     let blockHex: RootHex;
@@ -343,13 +341,8 @@ export class SeenGossipBlockInput {
               slot,
               dataColumns: dataColumnsCache.size,
             };
-            if (dataColumnRecover == null) {
-              this.logger.debug("No data column recover configured, skipping recover", logCtx);
-              return;
-            }
             const shouldResolve = await recoverDataColumnSidecars(
               dataColumnsCache,
-              dataColumnRecover,
               this.clock,
               metrics
             );

@@ -23,9 +23,8 @@ import {ChainEvent, ChainEventEmitter} from "../chain/emitter.js";
 import {BlockInputCacheType} from "../chain/seenCache/seenGossipBlockInput.js";
 import {IExecutionEngine} from "../execution/engine/interface.js";
 import {Metrics} from "../metrics/metrics.js";
-import {DataColumnRecover} from "../network/dataColumn/index.js";
 import {NodeId} from "../network/subnets/index.js";
-import {computeKzgCommitmentsInclusionProof, kzgCommitmentToVersionedHash} from "./blobs.js";
+import {computeKzgCommitmentsInclusionProof, kzgCommitmentToVersionedHash, recoverDataColumnSidecars as recover} from "./blobs.js";
 import {IClock} from "./clock.js";
 import {kzg} from "./kzg.js";
 
@@ -334,7 +333,6 @@ export function getDataColumnSidecarsFromColumnSidecar(
  */
 export async function recoverDataColumnSidecars(
   dataColumnCache: DataColumnsCacheMap,
-  dataColumnRecover: DataColumnRecover,
   clock: IClock,
   metric: Metrics | null
 ): Promise<boolean | null> {
@@ -354,7 +352,7 @@ export async function recoverDataColumnSidecars(
   for (const [columnIndex, {dataColumn}] of dataColumnCache.entries()) {
     partialSidecars.set(columnIndex, dataColumn);
   }
-  const fullSidecars = await dataColumnRecover?.recoverDataColumnSidecars(partialSidecars);
+  const fullSidecars = recover(partialSidecars);
   if (fullSidecars == null) {
     metric?.recoverDataColumnSidecars.result.inc({result: RecoverResult.Failed});
     return null;

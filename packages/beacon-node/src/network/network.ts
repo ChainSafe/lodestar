@@ -39,7 +39,6 @@ import {PeerIdStr, peerIdToString} from "../util/peerId.js";
 import {promiseAllMaybeAsync} from "../util/promises.js";
 import {BlobSidecarsByRootRequest} from "../util/types.js";
 import {INetworkCore, NetworkCore, WorkerNetworkCore} from "./core/index.js";
-import {DataColumnRecover} from "./dataColumn/index.js";
 import {INetworkEventBus, NetworkEvent, NetworkEventBus, NetworkEventData} from "./events.js";
 import {getActiveForks} from "./forks.js";
 import {GossipHandlers, GossipTopicMap, GossipType, GossipTypeMap} from "./gossip/index.js";
@@ -70,7 +69,6 @@ type NetworkModules = {
   aggregatorTracker: AggregatorTracker;
   networkProcessor: NetworkProcessor;
   core: INetworkCore;
-  dataColumnRecover: DataColumnRecover | null;
 };
 
 export type NetworkInitModules = {
@@ -112,7 +110,6 @@ export class Network implements INetwork {
   private readonly networkProcessor: NetworkProcessor;
   private readonly core: INetworkCore;
   private readonly aggregatorTracker: AggregatorTracker;
-  private readonly dataColumnRecover: DataColumnRecover | null;
 
   private subscribedToCoreTopics = false;
   private connectedPeers = new Map<PeerIdStr, ColumnIndex[]>();
@@ -130,7 +127,6 @@ export class Network implements INetwork {
     this.networkProcessor = modules.networkProcessor;
     this.core = modules.core;
     this.aggregatorTracker = modules.aggregatorTracker;
-    this.dataColumnRecover = modules.dataColumnRecover;
 
     this.events.on(NetworkEvent.peerConnected, this.onPeerConnected);
     this.events.on(NetworkEvent.peerDisconnected, this.onPeerDisconnected);
@@ -199,23 +195,8 @@ export class Network implements INetwork {
           activeValidatorCount,
         });
 
-    let dataColumnRecover: DataColumnRecover | null = null;
-    if (chain.custodyConfig.sampledColumns.length > NUMBER_OF_COLUMNS / 2) {
-      dataColumnRecover = await DataColumnRecover.init({
-        logger,
-        metrics,
-      });
-      logger.verbose("DataColumnRecover worker initialized", {
-        sampledColumns: chain.custodyConfig.sampledColumns.length,
-      });
-    } else {
-      logger.verbose("DataColumnRecover worker not initialized", {
-        sampledColumns: chain.custodyConfig.sampledColumns.length,
-      });
-    }
-
     const networkProcessor = new NetworkProcessor(
-      {chain, db, config, logger, metrics, events, gossipHandlers, core, aggregatorTracker, dataColumnRecover},
+      {chain, db, config, logger, metrics, events, gossipHandlers, core, aggregatorTracker},
       opts
     );
 
@@ -233,7 +214,6 @@ export class Network implements INetwork {
       aggregatorTracker,
       networkProcessor,
       core,
-      dataColumnRecover,
     });
   }
 
@@ -253,7 +233,6 @@ export class Network implements INetwork {
     this.chain.emitter.off(ChainEvent.updateTargetGroupCount, this.onTargetGroupCountUpdated);
     this.chain.emitter.off(ChainEvent.updateAdvertisedGroupCount, this.onAdvertisedGroupCountUpdated);
     this.chain.emitter.off(ChainEvent.publishDataColumns, this.onPublishDataColumns);
-    await this.dataColumnRecover?.close();
     this.logger.debug("data column recover worker closed");
     await this.core.close();
 
@@ -263,13 +242,7 @@ export class Network implements INetwork {
   }
 
   async scrapeMetrics(): Promise<string> {
-    const coreMetrics = await this.core.scrapeMetrics();
-    if (this.dataColumnRecover) {
-      const dataColumnRecoverMetrics = await this.dataColumnRecover.scrapeMetrics();
-      return `${coreMetrics}\n\n${dataColumnRecoverMetrics}`;
-    }
-
-    return coreMetrics;
+    return this.core.scrapeMetrics();
   }
 
   /**
