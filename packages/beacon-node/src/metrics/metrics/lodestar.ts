@@ -726,7 +726,11 @@ export function createLodestarMetrics(
       recoverTime: register.histogram({
         name: "lodestar_recover_data_column_sidecar_recover_time_seconds",
         help: "Time elapsed to recover data column sidecar",
-        buckets: [1, 2, 4, 6, 8],
+        buckets: [0.5, 1, 2, 3, 4],
+      }),
+      partialColumns: register.gauge({
+        name: "lodestar_recover_data_column_sidecar_partial_columns_total",
+        help: "Total number of partial columns being recovered",
       }),
       result: register.gauge<{result: RecoverResult}>({
         name: "lodestar_recover_data_column_sidecar_recover_result_total",

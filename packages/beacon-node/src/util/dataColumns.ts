@@ -357,6 +357,7 @@ export async function recoverDataColumnSidecars(
     partialSidecars.set(columnIndex, dataColumn);
   }
 
+  metrics?.recoverDataColumnSidecars.partialColumns.set(partialSidecars.size);
   const timer = metrics?.recoverDataColumnSidecars.recoverTime.startTimer();
   // this function should never throw, we catched all errors inside
   const fullSidecars = await recover(partialSidecars);
