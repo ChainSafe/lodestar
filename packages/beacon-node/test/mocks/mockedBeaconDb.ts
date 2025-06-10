@@ -8,6 +8,8 @@ import {
   BlobSidecarsRepository,
   BlockArchiveRepository,
   BlockRepository,
+  DataColumnSidecarsArchiveRepository,
+  DataColumnSidecarsRepository,
   DepositDataRootRepository,
   DepositEventRepository,
   Eth1DataRepository,
@@ -22,6 +24,9 @@ export type MockedBeaconDb = Mocked<BeaconDb> & {
 
   blobSidecars: Mocked<BlobSidecarsRepository>;
   blobSidecarsArchive: Mocked<BlobSidecarsArchiveRepository>;
+
+  dataColumnSidecars: Mocked<DataColumnSidecarsRepository>;
+  dataColumnSidecarsArchive: Mocked<DataColumnSidecarsArchiveRepository>;
 
   stateArchive: Mocked<StateArchiveRepository>;
 
