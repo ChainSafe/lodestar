@@ -9,6 +9,7 @@ import {Metrics} from "../../metrics/index.js";
 import {IClock} from "../../util/clock.js";
 import {
   CustodyConfig,
+  RecoverResult,
   getDataColumnsFromExecution,
   hasSampledDataColumns,
   recoverDataColumnSidecars,
@@ -341,27 +342,38 @@ export class SeenGossipBlockInput {
               slot,
               dataColumns: dataColumnsCache.size,
             };
-            const shouldResolve = await recoverDataColumnSidecars(dataColumnsCache, this.clock, metrics);
-            if (shouldResolve) {
-              resolveAvailabilityAndBlockInput(BlockInputAvailabilitySource.RECOVERED);
-              // Publish columns if and only if subscribed to them
-              const sampledColumns = this.custodyConfig.sampledColumns.map((columnIndex) => {
-                const dataColumn = dataColumnsCache.get(columnIndex)?.dataColumn;
-                if (!dataColumn) {
-                  throw Error(`After recover, missing data column for index=${columnIndex} in cache`);
-                }
-                return dataColumn;
-              });
+            const recoverResult = await recoverDataColumnSidecars(dataColumnsCache, this.clock, metrics);
+            metrics?.recoverDataColumnSidecars.result.inc({result: recoverResult});
+            switch (recoverResult) {
+              case RecoverResult.SuccessResolved: {
+                resolveAvailabilityAndBlockInput(BlockInputAvailabilitySource.RECOVERED);
+                // Publish columns if and only if subscribed to them
+                const sampledColumns = this.custodyConfig.sampledColumns.map((columnIndex) => {
+                  const dataColumn = dataColumnsCache.get(columnIndex)?.dataColumn;
+                  if (!dataColumn) {
+                    throw Error(`After recover, missing data column for index=${columnIndex} in cache`);
+                  }
+                  return dataColumn;
+                });
 
-              this.emitter.emit(ChainEvent.publishDataColumns, sampledColumns);
-              this.logger.verbose("Recovered data column sidecars and resolved availability", logCtx);
-            } else {
-              if (shouldResolve === false) {
-                this.logger.verbose("Recovered data column sidecars but it's late to resolve availability", logCtx);
-              } else {
-                // shouldResolve is null
-                this.logger.verbose("Failed or did not attempt to recover data column sidecars", logCtx);
+                this.emitter.emit(ChainEvent.publishDataColumns, sampledColumns);
+                this.logger.verbose("Recovered data column sidecars and resolved availability", logCtx);
+                break;
               }
+              case RecoverResult.SuccessLate:
+                this.logger.verbose("Recovered data column sidecars but it's late to resolve availability", logCtx);
+                break;
+              case RecoverResult.Failed:
+                this.logger.verbose("Failed to recover data column sidecars", logCtx);
+                break;
+              case RecoverResult.NotAttemptedFull:
+                this.logger.verbose("Did not attempt because we have full column sidecars", logCtx);
+                break;
+              case RecoverResult.NotAttemptedLessThanHalf:
+                this.logger.verbose("Did not attempt because we have too few column sidecars", logCtx);
+                break;
+              default:
+                break;
             }
           });
         }

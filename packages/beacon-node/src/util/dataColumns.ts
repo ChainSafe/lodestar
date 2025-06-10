@@ -33,6 +33,10 @@ import {IClock} from "./clock.js";
 import {kzg} from "./kzg.js";
 
 export enum RecoverResult {
+  // the recover is not attempted because we have less than `NUMBER_OF_COLUMNS / 2` columns
+  NotAttemptedLessThanHalf = "not_attempted_less_than_half",
+  // the recover is not attempted because it has full data columns
+  NotAttemptedFull = "not_attempted_full",
   // the recover is a success and it helps resolve availability
   SuccessResolved = "success_resolved",
   // the redover is a success but it's late, availability is already resolved by either gossip or getBlobsV2
@@ -331,24 +335,21 @@ export function getDataColumnSidecarsFromColumnSidecar(
 
 /**
  * If we receive more than half of DATA_COLUMN_SIDECAR_SUBNET_COUNT (64) we should recover all remaining columns
- *   - return true if we successfully recovered and it helps resolve availability
- *   - return false if we successfully recovered but it does not help resolve availability
- *   - return null if we failed to recover or we don't attempt to recover
  */
 export async function recoverDataColumnSidecars(
   dataColumnCache: DataColumnsCacheMap,
   clock: IClock,
-  metric: Metrics | null
-): Promise<boolean | null> {
+  metrics: Metrics | null
+): Promise<RecoverResult> {
   const columnCount = dataColumnCache.size;
   if (columnCount >= DATA_COLUMN_SIDECAR_SUBNET_COUNT) {
     // We have all columns
-    return null;
+    return RecoverResult.NotAttemptedFull;
   }
 
   if (columnCount < DATA_COLUMN_SIDECAR_SUBNET_COUNT / 2) {
     // We don't have enough columns to recover
-    return null;
+    return RecoverResult.NotAttemptedLessThanHalf;
   }
 
   const partialSidecars = new Map<number, fulu.DataColumnSidecar>();
@@ -356,13 +357,12 @@ export async function recoverDataColumnSidecars(
     partialSidecars.set(columnIndex, dataColumn);
   }
 
-  const timer = metric?.recoverDataColumnSidecars.recoverTime.startTimer();
+  const timer = metrics?.recoverDataColumnSidecars.recoverTime.startTimer();
   // this function should never throw, we catched all errors inside
   const fullSidecars = await recover(partialSidecars);
   timer?.();
   if (fullSidecars == null) {
-    metric?.recoverDataColumnSidecars.result.inc({result: RecoverResult.Failed});
-    return null;
+    return RecoverResult.Failed;
   }
 
   const firstDataColumn = dataColumnCache.values().next().value?.dataColumn;
@@ -373,17 +373,14 @@ export async function recoverDataColumnSidecars(
 
   const slot = firstDataColumn.signedBlockHeader.message.slot;
   const secFromSlot = clock.secFromSlot(slot);
-  metric?.recoverDataColumnSidecars.secFromSlot.observe(secFromSlot);
+  metrics?.recoverDataColumnSidecars.secFromSlot.observe(secFromSlot);
 
   if (dataColumnCache.size === NUMBER_OF_COLUMNS) {
     // either gossip or getBlobsV2 resolved availability while we were recovering
-    metric?.recoverDataColumnSidecars.result.inc({result: RecoverResult.SuccessLate});
-    return false;
+    return RecoverResult.SuccessLate;
   }
 
   // We successfully recovered the data columns, update the cache
-  metric?.recoverDataColumnSidecars.result.inc({result: RecoverResult.SuccessResolved});
-
   for (let columnIndex = 0; columnIndex < DATA_COLUMN_SIDECAR_SUBNET_COUNT; columnIndex++) {
     if (dataColumnCache.has(columnIndex)) {
       // We already have this column
@@ -397,7 +394,7 @@ export async function recoverDataColumnSidecars(
     dataColumnCache.set(columnIndex, {dataColumn: sidecar, dataColumnBytes: null});
   }
 
-  return true;
+  return RecoverResult.SuccessResolved;
 }
 
 export function hasSampledDataColumns(custodyConfig: CustodyConfig, dataColumnCache: DataColumnsCacheMap): boolean {
