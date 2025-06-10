@@ -8,7 +8,7 @@ export function validateBlobSchedule(blobSchedule: BlobSchedule): void {
 
   let previousEpoch: number | undefined;
 
-  blobSchedule.forEach((entry, i) => {
+  for (const [i, entry] of blobSchedule.entries()) {
     if (previousEpoch !== undefined) {
       if (entry.EPOCH < previousEpoch) {
         throw Error(
@@ -26,5 +26,5 @@ export function validateBlobSchedule(blobSchedule: BlobSchedule): void {
     }
 
     previousEpoch = entry.EPOCH;
-  });
+  }
 }
