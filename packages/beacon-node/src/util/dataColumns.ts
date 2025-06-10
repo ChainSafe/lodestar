@@ -334,7 +334,7 @@ export function getDataColumnSidecarsFromColumnSidecar(
 }
 
 /**
- * If we receive more than half of DATA_COLUMN_SIDECAR_SUBNET_COUNT (64) we should recover all remaining columns
+ * If we receive more than half of NUMBER_OF_COLUMNS (64) we should recover all remaining columns
  */
 export async function recoverDataColumnSidecars(
   dataColumnCache: DataColumnsCacheMap,
@@ -342,22 +342,26 @@ export async function recoverDataColumnSidecars(
   metrics: Metrics | null
 ): Promise<RecoverResult> {
   const columnCount = dataColumnCache.size;
-  if (columnCount >= DATA_COLUMN_SIDECAR_SUBNET_COUNT) {
+  if (columnCount >= NUMBER_OF_COLUMNS) {
     // We have all columns
     return RecoverResult.NotAttemptedFull;
   }
 
-  if (columnCount < DATA_COLUMN_SIDECAR_SUBNET_COUNT / 2) {
+  if (columnCount < NUMBER_OF_COLUMNS / 2) {
     // We don't have enough columns to recover
     return RecoverResult.NotAttemptedLessThanHalf;
   }
 
+  metrics?.recoverDataColumnSidecars.partialColumns.set(dataColumnCache.size);
   const partialSidecars = new Map<number, fulu.DataColumnSidecar>();
   for (const [columnIndex, {dataColumn}] of dataColumnCache.entries()) {
+    // the more columns we put, the slower the recover
+    if (partialSidecars.size >= NUMBER_OF_COLUMNS / 2) {
+      break;
+    }
     partialSidecars.set(columnIndex, dataColumn);
   }
 
-  metrics?.recoverDataColumnSidecars.partialColumns.set(partialSidecars.size);
   const timer = metrics?.recoverDataColumnSidecars.recoverTime.startTimer();
   // this function should never throw, we catched all errors inside
   const fullSidecars = await recover(partialSidecars);
