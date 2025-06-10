@@ -1,6 +1,5 @@
 import {digest as sha256Digest} from "@chainsafe/as-sha256";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
-import {CellsAndProofs} from "@crate-crypto/node-eth-kzg";
 import {ChainForkConfig} from "@lodestar/config";
 import {
   ForkAll,

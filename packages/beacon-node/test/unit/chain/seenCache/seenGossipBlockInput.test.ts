@@ -145,7 +145,6 @@ describe("SeenGossipBlockInput", () => {
                 type: GossipedInputType.block,
                 signedBlock,
               },
-              null,
               null
             );
 
@@ -167,7 +166,6 @@ describe("SeenGossipBlockInput", () => {
                 type: GossipedInputType.blob,
                 blobSidecar,
               },
-              null,
               null
             );
 
