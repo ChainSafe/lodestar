@@ -12,6 +12,7 @@ import {
   SignedBeaconBlock,
   altair,
   deneb,
+  fulu,
   phase0,
   ssz,
   sszTypesFor,
@@ -31,6 +32,8 @@ export enum ReqRespMethod {
   BeaconBlocksByRoot = "beacon_blocks_by_root",
   BlobSidecarsByRange = "blob_sidecars_by_range",
   BlobSidecarsByRoot = "blob_sidecars_by_root",
+  DataColumnSidecarsByRange = "data_column_sidecars_by_range",
+  DataColumnSidecarsByRoot = "data_column_sidecars_by_root",
   LightClientBootstrap = "light_client_bootstrap",
   LightClientUpdatesByRange = "light_client_updates_by_range",
   LightClientFinalityUpdate = "light_client_finality_update",
@@ -47,6 +50,8 @@ export type RequestBodyByMethod = {
   [ReqRespMethod.BeaconBlocksByRoot]: phase0.BeaconBlocksByRootRequest;
   [ReqRespMethod.BlobSidecarsByRange]: deneb.BlobSidecarsByRangeRequest;
   [ReqRespMethod.BlobSidecarsByRoot]: BlobSidecarsByRootRequest;
+  [ReqRespMethod.DataColumnSidecarsByRange]: fulu.DataColumnSidecarsByRangeRequest;
+  [ReqRespMethod.DataColumnSidecarsByRoot]: fulu.DataColumnSidecarsByRootRequest;
   [ReqRespMethod.LightClientBootstrap]: Root;
   [ReqRespMethod.LightClientUpdatesByRange]: altair.LightClientUpdatesByRange;
   [ReqRespMethod.LightClientFinalityUpdate]: null;
@@ -63,6 +68,8 @@ type ResponseBodyByMethod = {
   [ReqRespMethod.BeaconBlocksByRoot]: SignedBeaconBlock;
   [ReqRespMethod.BlobSidecarsByRange]: deneb.BlobSidecar;
   [ReqRespMethod.BlobSidecarsByRoot]: deneb.BlobSidecar;
+  [ReqRespMethod.DataColumnSidecarsByRange]: fulu.DataColumnSidecar;
+  [ReqRespMethod.DataColumnSidecarsByRoot]: fulu.DataColumnSidecar;
   [ReqRespMethod.LightClientBootstrap]: LightClientBootstrap;
   [ReqRespMethod.LightClientUpdatesByRange]: LightClientUpdate;
   [ReqRespMethod.LightClientFinalityUpdate]: LightClientFinalityUpdate;
@@ -84,6 +91,8 @@ export const requestSszTypeByMethod: (
   [ReqRespMethod.BeaconBlocksByRoot]: ssz.phase0.BeaconBlocksByRootRequest,
   [ReqRespMethod.BlobSidecarsByRange]: ssz.deneb.BlobSidecarsByRangeRequest,
   [ReqRespMethod.BlobSidecarsByRoot]: BlobSidecarsByRootRequestType(fork, config),
+  [ReqRespMethod.DataColumnSidecarsByRange]: ssz.fulu.DataColumnSidecarsByRangeRequest,
+  [ReqRespMethod.DataColumnSidecarsByRoot]: ssz.fulu.DataColumnSidecarsByRootRequest,
   [ReqRespMethod.LightClientBootstrap]: ssz.Root,
   [ReqRespMethod.LightClientUpdatesByRange]: ssz.altair.LightClientUpdatesByRange,
   [ReqRespMethod.LightClientFinalityUpdate]: null,
@@ -109,6 +118,8 @@ export const responseSszTypeByMethod: {[K in ReqRespMethod]: ResponseTypeGetter<
   [ReqRespMethod.BeaconBlocksByRoot]: blocksResponseType,
   [ReqRespMethod.BlobSidecarsByRange]: () => ssz.deneb.BlobSidecar,
   [ReqRespMethod.BlobSidecarsByRoot]: () => ssz.deneb.BlobSidecar,
+  [ReqRespMethod.DataColumnSidecarsByRange]: () => ssz.fulu.DataColumnSidecar,
+  [ReqRespMethod.DataColumnSidecarsByRoot]: () => ssz.fulu.DataColumnSidecar,
   [ReqRespMethod.LightClientBootstrap]: (fork) => sszTypesFor(onlyPostAltairFork(fork)).LightClientBootstrap,
   [ReqRespMethod.LightClientUpdatesByRange]: (fork) => sszTypesFor(onlyPostAltairFork(fork)).LightClientUpdate,
   [ReqRespMethod.LightClientFinalityUpdate]: (fork) => sszTypesFor(onlyPostAltairFork(fork)).LightClientFinalityUpdate,

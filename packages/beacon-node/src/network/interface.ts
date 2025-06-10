@@ -29,6 +29,7 @@ import {
   altair,
   capella,
   deneb,
+  fulu,
   phase0,
 } from "@lodestar/types";
 import type {Datastore} from "interface-datastore";
@@ -72,6 +73,14 @@ export interface INetwork extends INetworkCorePublic {
   ): Promise<WithBytes<SignedBeaconBlock>[]>;
   sendBlobSidecarsByRange(peerId: PeerIdStr, request: deneb.BlobSidecarsByRangeRequest): Promise<deneb.BlobSidecar[]>;
   sendBlobSidecarsByRoot(peerId: PeerIdStr, request: BlobSidecarsByRootRequest): Promise<deneb.BlobSidecar[]>;
+  sendDataColumnSidecarsByRange(
+    peerId: PeerIdStr,
+    request: fulu.DataColumnSidecarsByRangeRequest
+  ): Promise<fulu.DataColumnSidecar[]>;
+  sendDataColumnSidecarsByRoot(
+    peerId: PeerIdStr,
+    request: fulu.DataColumnSidecarsByRootRequest
+  ): Promise<fulu.DataColumnSidecar[]>;
 
   // Gossip
   publishBeaconBlock(signedBlock: SignedBeaconBlock): Promise<number>;

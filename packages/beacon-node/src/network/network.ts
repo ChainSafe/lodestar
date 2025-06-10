@@ -5,7 +5,7 @@ import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
-import {ForkSeq} from "@lodestar/params";
+import {ForkSeq, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
 import {computeEpochAtSlot, computeStartSlotAtEpoch, computeTimeAtSlot} from "@lodestar/state-transition";
 import {
@@ -24,6 +24,7 @@ import {
   altair,
   capella,
   deneb,
+  fulu,
   phase0,
 } from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
@@ -519,6 +520,29 @@ export class Network implements INetwork {
       this.sendReqRespRequest(peerId, ReqRespMethod.BlobSidecarsByRoot, [Version.V1], request),
       request.length,
       responseSszTypeByMethod[ReqRespMethod.BlobSidecarsByRoot]
+    );
+  }
+
+  async sendDataColumnSidecarsByRange(
+    peerId: PeerIdStr,
+    request: fulu.DataColumnSidecarsByRangeRequest
+  ): Promise<fulu.DataColumnSidecar[]> {
+    return collectMaxResponseTyped(
+      this.sendReqRespRequest(peerId, ReqRespMethod.DataColumnSidecarsByRange, [Version.V1], request),
+      // request's count represent the slots, so the actual max count received could be slots * blobs per slot
+      request.count * NUMBER_OF_COLUMNS,
+      responseSszTypeByMethod[ReqRespMethod.DataColumnSidecarsByRange]
+    );
+  }
+
+  async sendDataColumnSidecarsByRoot(
+    peerId: PeerIdStr,
+    request: fulu.DataColumnSidecarsByRootRequest
+  ): Promise<fulu.DataColumnSidecar[]> {
+    return collectMaxResponseTyped(
+      this.sendReqRespRequest(peerId, ReqRespMethod.DataColumnSidecarsByRoot, [Version.V1], request),
+      request.reduce((total, {columns}) => total + columns.length, 0),
+      responseSszTypeByMethod[ReqRespMethod.DataColumnSidecarsByRoot]
     );
   }
 
