@@ -59,6 +59,7 @@ import {validateLightClientOptimisticUpdate} from "../../chain/validation/lightC
 import {OpSource} from "../../chain/validatorMonitor.js";
 import {Metrics} from "../../metrics/index.js";
 import {INetworkCore} from "../core/index.js";
+import {DataColumnRecover} from "../dataColumn/index.js";
 import {NetworkEvent, NetworkEventBus} from "../events.js";
 import {
   BatchGossipHandlers,
@@ -88,6 +89,7 @@ export type ValidatorFnsModules = {
   events: NetworkEventBus;
   aggregatorTracker: AggregatorTracker;
   core: INetworkCore;
+  dataColumnRecover: DataColumnRecover | null;
 };
 
 const MAX_UNKNOWN_BLOCK_ROOT_RETRIES = 1;
@@ -116,7 +118,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
  * We only have a choice to do batch validation for beacon_attestation topic.
  */
 function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): SequentialGossipHandlers {
-  const {chain, config, metrics, events, logger, core} = modules;
+  const {chain, config, metrics, events, logger, core, dataColumnRecover} = modules;
 
   async function validateBeaconBlock(
     signedBlock: SignedBeaconBlock,
@@ -138,6 +140,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         type: GossipedInputType.block,
         signedBlock,
       },
+      dataColumnRecover,
       metrics
     );
     const blockInput = blockInputRes.blockInput;
@@ -214,6 +217,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         type: GossipedInputType.blob,
         blobSidecar,
       },
+      dataColumnRecover,
       metrics
     );
 
@@ -285,6 +289,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         dataColumnSidecar,
         dataColumnBytes,
       },
+      dataColumnRecover,
       metrics
     );
 

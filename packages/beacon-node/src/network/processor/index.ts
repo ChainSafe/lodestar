@@ -11,6 +11,7 @@ import {Metrics} from "../../metrics/metrics.js";
 import {ClockEvent} from "../../util/clock.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {PeerIdStr} from "../../util/peerId.js";
+import {DataColumnRecover} from "../dataColumn/index.js";
 import {NetworkEvent, NetworkEventBus} from "../events.js";
 import {
   GossipHandlers,
@@ -34,6 +35,7 @@ export type NetworkProcessorModules = ValidatorFnsModules &
     events: NetworkEventBus;
     logger: Logger;
     metrics: Metrics | null;
+    dataColumnRecover: DataColumnRecover | null;
     // Optionally pass custom GossipHandlers, for testing
     gossipHandlers?: GossipHandlers;
   };

@@ -110,3 +110,82 @@ export function computeDataColumnSidecars(
     };
   });
 }
+
+/**
+ * If the node obtains 50%+ of all the columns, it SHOULD reconstruct the full data matrix via the recover_matrix helper
+ * See https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/das-core.md#recover_matrix
+ */
+export function recoverDataColumnSidecars(
+  partialSidecars: Map<number, fulu.DataColumnSidecar>
+): fulu.DataColumnSidecars | null {
+  const columnCount = partialSidecars.size;
+  if (columnCount < NUMBER_OF_COLUMNS / 2) {
+    // We don't have enough columns to recover
+    return null;
+  }
+
+  if (columnCount === NUMBER_OF_COLUMNS) {
+    // full columns, no need to recover
+    return Array.from(partialSidecars.values());
+  }
+
+  const firstDataColumn = partialSidecars.values().next().value;
+  if (firstDataColumn == null) {
+    // should not happen because we check the size of the cache before this
+    throw new Error("No data column found in cache to recover from");
+  }
+  const blobCount = firstDataColumn.kzgCommitments.length;
+
+  const fullColumns: Array<Uint8Array[]> = Array.from(
+    {length: NUMBER_OF_COLUMNS},
+    () => new Array<Uint8Array>(blobCount)
+  );
+  const blobProofs: Array<Uint8Array[]> = Array.from({length: blobCount});
+  try {
+    // https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/das-core.md#recover_matrix
+    for (let blobIndex = 0; blobIndex < blobCount; blobIndex++) {
+      const cellIndices: bigint[] = [];
+      const cells: Uint8Array[] = [];
+      for (const [columnIndex, dataColumn] of partialSidecars.entries()) {
+        cellIndices.push(BigInt(columnIndex));
+        cells.push(dataColumn.column[blobIndex]);
+      }
+      // recovered cells and proofs are of the same row/blob, their length should be NUMBER_OF_COLUMNS
+      const {cells: recoveredCells, proofs: recoveredProofs} = kzg.recoverCellsAndKzgProofs(cellIndices, cells);
+      if (recoveredCells.length !== NUMBER_OF_COLUMNS || recoveredProofs.length !== NUMBER_OF_COLUMNS) {
+        // recovered cells or proofs is not of the expected length, we cannot recover
+        return null;
+      }
+
+      for (let columnIndex = 0; columnIndex < NUMBER_OF_COLUMNS; columnIndex++) {
+        fullColumns[columnIndex][blobIndex] = recoveredCells[columnIndex];
+      }
+      blobProofs[blobIndex] = recoveredProofs;
+    }
+  } catch (_e) {
+    return null;
+  }
+
+  const result: fulu.DataColumnSidecars = new Array(NUMBER_OF_COLUMNS);
+
+  for (let columnIndex = 0; columnIndex < NUMBER_OF_COLUMNS; columnIndex++) {
+    let sidecar = partialSidecars.get(columnIndex);
+    if (sidecar) {
+      // We already have this column
+      result[columnIndex] = sidecar;
+      continue;
+    }
+
+    sidecar = {
+      index: columnIndex,
+      column: fullColumns[columnIndex],
+      kzgCommitments: firstDataColumn.kzgCommitments,
+      kzgProofs: Array.from({length: blobCount}, (_, rowIndex) => blobProofs[rowIndex][columnIndex]),
+      signedBlockHeader: firstDataColumn.signedBlockHeader,
+      kzgCommitmentsInclusionProof: firstDataColumn.kzgCommitmentsInclusionProof,
+    };
+    result[columnIndex] = sidecar;
+  }
+
+  return result;
+}

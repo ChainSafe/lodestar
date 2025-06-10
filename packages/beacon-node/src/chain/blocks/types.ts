@@ -90,6 +90,7 @@ export type CachedDataColumns = CachedDataItem &
   ForkDataColumnsInfo &
   Availability<BlockInputDataColumns> & {
     dataColumnsCache: DataColumnsCacheMap;
+    calledRecover: boolean;
   };
 
 /**

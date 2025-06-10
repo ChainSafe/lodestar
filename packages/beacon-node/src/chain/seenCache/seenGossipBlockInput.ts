@@ -6,7 +6,14 @@ import {Logger, pruneSetToMax} from "@lodestar/utils";
 
 import {IExecutionEngine} from "../../execution/index.js";
 import {Metrics} from "../../metrics/index.js";
-import {CustodyConfig, getDataColumnsFromExecution, hasSampledDataColumns} from "../../util/dataColumns.js";
+import {DataColumnRecover} from "../../network/dataColumn/index.js";
+import {IClock} from "../../util/clock.js";
+import {
+  CustodyConfig,
+  getDataColumnsFromExecution,
+  hasSampledDataColumns,
+  recoverDataColumnSidecars,
+} from "../../util/dataColumns.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {
   BlobsSource,
@@ -23,12 +30,13 @@ import {
   getBlockInputBlobs,
   getBlockInputDataColumns,
 } from "../blocks/types.js";
-import {ChainEventEmitter} from "../emitter.js";
+import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 import {DataColumnSidecarErrorCode, DataColumnSidecarGossipError} from "../errors/dataColumnSidecarError.js";
 import {GossipAction} from "../errors/gossipValidation.js";
 
 export enum BlockInputAvailabilitySource {
   GOSSIP = "gossip",
+  RECOVERED = "recovered",
   UNKNOWN_SYNC = "unknown_sync",
 }
 
@@ -85,6 +93,7 @@ export class SeenGossipBlockInput {
   private readonly blockInputCache = new Map<RootHex, BlockInputCacheType>();
   private readonly custodyConfig: CustodyConfig;
   private readonly executionEngine: IExecutionEngine;
+  private readonly clock: IClock;
   private readonly emitter: ChainEventEmitter;
   private readonly logger: Logger;
 
@@ -92,10 +101,12 @@ export class SeenGossipBlockInput {
     custodyConfig: CustodyConfig,
     executionEngine: IExecutionEngine,
     emitter: ChainEventEmitter,
+    clock: IClock,
     logger: Logger
   ) {
     this.custodyConfig = custodyConfig;
     this.executionEngine = executionEngine;
+    this.clock = clock;
     this.emitter = emitter;
     this.logger = logger;
   }
@@ -140,6 +151,7 @@ export class SeenGossipBlockInput {
   getGossipBlockInput(
     config: ChainForkConfig,
     gossipedInput: GossipedBlockInput,
+    dataColumnRecover: DataColumnRecover | null,
     metrics: Metrics | null
   ): GossipBlockInputResponse {
     let blockHex: RootHex;
@@ -273,7 +285,7 @@ export class SeenGossipBlockInput {
       }
 
       if (cachedData.fork === ForkName.fulu) {
-        const {dataColumnsCache, resolveAvailability} = cachedData as CachedDataColumns;
+        const {dataColumnsCache, resolveAvailability, calledRecover} = cachedData as CachedDataColumns;
 
         // block is available, check if all blobs have shown up
         const {slot} = signedBlock.message;
@@ -306,21 +318,68 @@ export class SeenGossipBlockInput {
           };
         }
 
-        if (hasSampledDataColumns(this.custodyConfig, dataColumnsCache)) {
+        const resolveAvailabilityAndBlockInput = (source: BlockInputAvailabilitySource) => {
           const allDataColumns = getBlockInputDataColumns(dataColumnsCache, this.custodyConfig.sampledColumns);
-          metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.GOSSIP});
-          const {dataColumns} = allDataColumns;
           const blockData: BlockInputDataColumns = {
             fork: cachedData.fork,
             ...allDataColumns,
             dataColumnsSource: DataColumnsSource.gossip,
           };
           resolveAvailability(blockData);
-          metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.GOSSIP});
+          // TODO(das): should not use syncUnknownBlock metrics here
+          metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source});
 
           const blockInput = getBlockInput.availableData(config, signedBlock, BlockSource.gossip, blockData);
-
           resolveBlockInput(blockInput);
+          return blockInput;
+        };
+
+        if (dataColumnsCache.size >= NUMBER_OF_COLUMNS / 2 && !calledRecover) {
+          // should call once per slot
+          cachedData.calledRecover = true;
+          callInNextEventLoop(async () => {
+            const logCtx = {
+              blockHex,
+              slot,
+              dataColumns: dataColumnsCache.size,
+            };
+            if (dataColumnRecover == null) {
+              this.logger.debug("No data column recover configured, skipping recover", logCtx);
+              return;
+            }
+            const shouldResolve = await recoverDataColumnSidecars(
+              dataColumnsCache,
+              dataColumnRecover,
+              this.clock,
+              metrics
+            );
+            if (shouldResolve) {
+              resolveAvailabilityAndBlockInput(BlockInputAvailabilitySource.RECOVERED);
+              // Publish columns if and only if subscribed to them
+              const sampledColumns = this.custodyConfig.sampledColumns.map((columnIndex) => {
+                const dataColumn = dataColumnsCache.get(columnIndex)?.dataColumn;
+                if (!dataColumn) {
+                  throw Error(`After recover, missing data column for index=${columnIndex} in cache`);
+                }
+                return dataColumn;
+              });
+
+              this.emitter.emit(ChainEvent.publishDataColumns, sampledColumns);
+              this.logger.verbose("Recovered data column sidecars and resolved availability", logCtx);
+            } else {
+              if (shouldResolve === false) {
+                this.logger.verbose("Recovered data column sidecars but it's late to resolve availability", logCtx);
+              } else {
+                // shouldResolve is null
+                this.logger.verbose("Failed or did not attempt to recover data column sidecars", logCtx);
+              }
+            }
+          });
+        }
+        if (hasSampledDataColumns(this.custodyConfig, dataColumnsCache)) {
+          const blockInput = resolveAvailabilityAndBlockInput(BlockInputAvailabilitySource.GOSSIP);
+          const allDataColumns = getBlockInputDataColumns(dataColumnsCache, this.custodyConfig.sampledColumns);
+          const {dataColumns} = allDataColumns;
           return {
             blockInput,
             blockInputMeta: {
@@ -458,6 +517,7 @@ export function getEmptyBlockInputCacheEntry(fork: ForkName, globalCacheId: numb
       availabilityPromise,
       resolveAvailability,
       cacheId: ++globalCacheId,
+      calledRecover: false,
     };
     return {fork, blockInputPromise, resolveBlockInput, cachedData};
   }
