@@ -23,10 +23,12 @@ export const dataColumnSidecarsWrapperSsz = new ContainerType(
 export type DataColumnSidecarsWrapper = ValueOf<typeof dataColumnSidecarsWrapperSsz>;
 export const COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_BLOCK_ROOT = 0;
 export const COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_SLOT = 32;
-export const COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_NUM_COLUMNS = 40;
+export const COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_NUM_OF_COLUMNS = 40;
 export const COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_COLUMN_SIZE = 41;
 export const COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_CUSTODY_INDEX = 49;
 export const SSZ_OFFSET_BYTES_FOR_LIST_TYPE = 4;
+// dataColumnSidecars is a variable length container so there is a byte offset to the beginning
+// of the container before the container itself.
 export const COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_TO_FIRST_SIDECAR =
   COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_CUSTODY_INDEX + NUMBER_OF_COLUMNS + SSZ_OFFSET_BYTES_FOR_LIST_TYPE;
 

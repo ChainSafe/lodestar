@@ -8,7 +8,7 @@ import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {
   COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_COLUMN_SIZE,
   COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_CUSTODY_INDEX,
-  COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_NUM_COLUMNS,
+  COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_NUM_OF_COLUMNS,
   COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_TO_FIRST_SIDECAR,
   DataColumnSidecarsRepository,
   dataColumnSidecarsWrapperSsz,
@@ -89,7 +89,7 @@ describe("block archive repository", () => {
 
     const retrivedColumnsLen = ssz.Uint8.deserialize(
       retrievedBinary.slice(
-        COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_NUM_COLUMNS,
+        COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_NUM_OF_COLUMNS,
         COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_COLUMN_SIZE
       )
     );

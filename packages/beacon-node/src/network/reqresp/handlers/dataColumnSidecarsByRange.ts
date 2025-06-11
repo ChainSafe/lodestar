@@ -7,7 +7,7 @@ import {IBeaconDb} from "../../../db/index.js";
 import {
   COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_COLUMN_SIZE,
   COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_CUSTODY_INDEX,
-  COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_NUM_COLUMNS,
+  COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_NUM_OF_COLUMNS,
   COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_TO_FIRST_SIDECAR,
 } from "../../../db/repositories/dataColumnSidecars.js";
 
@@ -89,7 +89,7 @@ export function* iterateDataColumnBytesFromWrapper(
 ): Iterable<ResponseOutgoing> {
   const retrivedColumnsLen = ssz.Uint8.deserialize(
     dataColumnSidecarsBytesWrapped.slice(
-      COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_NUM_COLUMNS,
+      COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_NUM_OF_COLUMNS,
       COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_COLUMN_SIZE
     )
   );
