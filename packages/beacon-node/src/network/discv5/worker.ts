@@ -13,10 +13,10 @@ import {Gauge} from "@lodestar/utils";
 import {Multiaddr, multiaddr} from "@multiformats/multiaddr";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {collectNodeJSMetrics} from "../../metrics/nodeJsMetrics.js";
+import {Clock} from "../../util/clock.js";
 import {profileNodeJS, writeHeapSnapshot} from "../../util/profile.js";
 import {Discv5WorkerApi, Discv5WorkerData} from "./types.js";
 import {ENRRelevance, enrRelevance} from "./utils.js";
-import { Clock } from "../../util/clock.js";
 
 // This discv5 worker will start discv5 on initialization (there is no `start` function to call)
 // A consumer _should_ call `close` before terminating the worker to cleanly exit discv5 before destroying the thread

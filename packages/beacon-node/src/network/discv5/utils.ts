@@ -1,7 +1,7 @@
 import {ENR} from "@chainsafe/enr";
 import {BeaconConfig} from "@lodestar/config";
+import {IClock} from "../../util/clock.js";
 import {ENRKey} from "../metadata.js";
-import { IClock } from "../../util/clock.js";
 
 export enum ENRRelevance {
   no_tcp = "no_tcp",

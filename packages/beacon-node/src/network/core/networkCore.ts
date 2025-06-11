@@ -217,7 +217,8 @@ export class NetworkCore implements INetworkCore {
         peersData,
         statusCache,
       },
-      opts
+      opts,
+      genesisTime
     );
 
     // Network spec decides version changes based on clock fork, not head fork

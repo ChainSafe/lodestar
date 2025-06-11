@@ -6,6 +6,7 @@ import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/p
 import {SubnetID} from "@lodestar/types";
 import {pruneSetToMax, sleep} from "@lodestar/utils";
 import {Multiaddr} from "@multiformats/multiaddr";
+import {IClock} from "../../util/clock.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
 import {Discv5Worker} from "../discv5/index.js";
 import {LodestarDiscv5Opts} from "../discv5/types.js";
@@ -15,7 +16,6 @@ import {ENRKey, SubnetType} from "../metadata.js";
 import {getConnectionsMap, prettyPrintPeerId} from "../util.js";
 import {IPeerRpcScoreStore, ScoreState} from "./score/index.js";
 import {deserializeEnrSubnets, zeroAttnets, zeroSyncnets} from "./utils/enrSubnetsDeserialize.js";
-import { IClock } from "../../util/clock.js";
 
 /** Max number of cached ENRs after discovering a good peer */
 const MAX_CACHED_ENRS = 100;
@@ -160,7 +160,11 @@ export class PeerDiscovery {
     }
   }
 
-  static async init(modules: PeerDiscoveryModules, opts: PeerDiscoveryOpts, genesisTime: number): Promise<PeerDiscovery> {
+  static async init(
+    modules: PeerDiscoveryModules,
+    opts: PeerDiscoveryOpts,
+    genesisTime: number
+  ): Promise<PeerDiscovery> {
     const discv5 = await Discv5Worker.init({
       discv5: opts.discv5,
       privateKey: modules.privateKey,
