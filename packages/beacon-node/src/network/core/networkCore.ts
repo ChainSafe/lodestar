@@ -64,6 +64,7 @@ export type BaseNetworkInit = {
   getReqRespHandler: GetReqRespHandlerFn;
   activeValidatorCount: number;
   initialStatus: phase0.Status;
+  genesisTime: number;
 };
 
 /**
@@ -135,6 +136,7 @@ export class NetworkCore implements INetworkCore {
     getReqRespHandler,
     activeValidatorCount,
     initialStatus,
+    genesisTime,
   }: BaseNetworkInit): Promise<NetworkCore> {
     const libp2p = await createNodeJsLibp2p(privateKey, opts, {
       peerStoreDir,

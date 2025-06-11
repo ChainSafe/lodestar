@@ -16,6 +16,7 @@ import {collectNodeJSMetrics} from "../../metrics/nodeJsMetrics.js";
 import {profileNodeJS, writeHeapSnapshot} from "../../util/profile.js";
 import {Discv5WorkerApi, Discv5WorkerData} from "./types.js";
 import {ENRRelevance, enrRelevance} from "./utils.js";
+import { Clock } from "../../util/clock.js";
 
 // This discv5 worker will start discv5 on initialization (there is no `start` function to call)
 // A consumer _should_ call `close` before terminating the worker to cleanly exit discv5 before destroying the thread
@@ -68,8 +69,12 @@ for (const bootEnr of workerData.bootEnrs) {
 /** Used to push discovered ENRs */
 const subject = new Subject<ENRData>();
 
+/** Define a new clock */
+const abortController = new AbortController();
+const clock = new Clock({config, genesisTime: workerData.genesisTime, signal: abortController.signal});
+
 const onDiscovered = (enr: ENR): void => {
-  const status = enrRelevance(enr, config);
+  const status = enrRelevance(enr, config, clock);
   enrRelevanceMetric?.inc({status});
   if (status === ENRRelevance.relevant) {
     subject.next(enr.toObject());

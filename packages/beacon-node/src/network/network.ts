@@ -182,6 +182,7 @@ export class Network implements INetwork {
           metricsRegistry: metrics ? new RegistryMetricCreator() : null,
           initialStatus,
           activeValidatorCount,
+          genesisTime: chain.genesisTime,
         });
 
     const networkProcessor = new NetworkProcessor(
