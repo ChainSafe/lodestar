@@ -14,7 +14,7 @@ import {
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
-import {LogLevel, Logger, prettyBytes, toRootHex} from "@lodestar/utils";
+import {LogLevel, Logger, prettyBytes, toHex, toRootHex} from "@lodestar/utils";
 import {
   BlobSidecarValidation,
   BlockInput,
@@ -58,6 +58,7 @@ import {validateLightClientFinalityUpdate} from "../../chain/validation/lightCli
 import {validateLightClientOptimisticUpdate} from "../../chain/validation/lightClientOptimisticUpdate.js";
 import {OpSource} from "../../chain/validatorMonitor.js";
 import {Metrics} from "../../metrics/index.js";
+import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {INetworkCore} from "../core/index.js";
 import {NetworkEvent, NetworkEventBus} from "../events.js";
 import {
@@ -310,6 +311,18 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         recvToValidation,
         validationTime,
       });
+
+      // Emit data column sidecar event for successfully validated gossip data column
+      if (chain.emitter.listenerCount(routes.events.EventType.dataColumnSidecar)) {
+        const {index, kzgCommitments} = dataColumnSidecar;
+        chain.emitter.emit(routes.events.EventType.dataColumnSidecar, {
+          blockRoot: blockHex,
+          slot: slot,
+          index,
+          kzgCommitments: kzgCommitments.map(toHex),
+          versionedHashes: kzgCommitments.map((commitment) => toHex(kzgCommitmentToVersionedHash(commitment))),
+        });
+      }
 
       return blockInput;
     } catch (e) {
