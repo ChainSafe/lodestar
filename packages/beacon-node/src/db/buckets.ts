@@ -62,8 +62,8 @@ export enum Bucket {
   // lightClient_bestLightClientUpdate = 55, // SyncPeriod -> LightClientUpdate // DEPRECATED on v1.5.0
   lightClient_bestLightClientUpdate = 56, // SyncPeriod -> [Slot, LightClientUpdate]
 
-  allForks_dataColumnSidecars = 57, // FULU BeaconBlockRoot -> DataColumnSidecars
-  allForks_dataColumnSidecarsArchive = 58, // FULU BeaconBlockSlot -> DataColumnSidecars
+  fulu_dataColumnSidecars = 57, // FULU BeaconBlockRoot -> DataColumnSidecars
+  fulu_dataColumnSidecarsArchive = 58, // FULU BeaconBlockSlot -> DataColumnSidecars
 }
 
 export function getBucketNameByValue<T extends Bucket>(enumValue: T): keyof typeof Bucket {
