@@ -15,7 +15,6 @@ import {
   sszTypesFor,
 } from "@lodestar/types";
 import {LogLevel, Logger, prettyBytes, toRootHex} from "@lodestar/utils";
-import {emitDataColumnSidecar} from "../../chain/blocks/blockInput/utils.js";
 import {
   BlobSidecarValidation,
   BlockInput,
@@ -311,9 +310,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         recvToValidation,
         validationTime,
       });
-
-      // Emit data column sidecar event for successfully validated gossip data column
-      emitDataColumnSidecar(chain.emitter, blockInput, blockRoot);
 
       return blockInput;
     } catch (e) {

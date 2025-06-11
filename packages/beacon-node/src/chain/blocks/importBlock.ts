@@ -9,7 +9,6 @@ import {
   INTERVALS_PER_SLOT,
   MAX_SEED_LOOKAHEAD,
   SLOTS_PER_EPOCH,
-  isForkPostFulu,
 } from "@lodestar/params";
 import {
   CachedBeaconStateAltair,
@@ -20,7 +19,7 @@ import {
   isStateValidatorsNodesPopulated,
 } from "@lodestar/state-transition";
 import {Attestation, BeaconBlock, altair, capella, electra, phase0, ssz} from "@lodestar/types";
-import {isErrorAborted, toRootHex} from "@lodestar/utils";
+import {isErrorAborted, toHex, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
@@ -31,7 +30,6 @@ import {ChainEvent, ReorgEventData} from "../emitter.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
 import {toCheckpointHex} from "../stateCache/index.js";
-import {emitDataColumnSidecar} from "./blockInput/utils.js";
 import {AttestationImportOpt, BlockInputType, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {getCheckpointFromState} from "./utils/checkpoint.js";
 import {writeBlockInputToDb} from "./writeBlockInputToDb.js";
@@ -140,8 +138,20 @@ export async function importBlock(
             versionedHash: toHexString(kzgCommitmentToVersionedHash(kzgCommitment)),
           });
         }
-      } else if (isForkPostFulu(blockData.fork)) {
-        emitDataColumnSidecar(this.emitter, blockInput, blockRoot);
+      } else if (blockData.fork === ForkName.fulu) {
+        const {dataColumns} = blockData;
+
+        for (const dataColumnSidecar of dataColumns) {
+          const {index, kzgCommitments} = dataColumnSidecar;
+
+          this.emitter.emit(routes.events.EventType.dataColumnSidecar, {
+            blockRoot: blockRootHex,
+            slot: blockSlot,
+            index,
+            kzgCommitments: kzgCommitments.map(toHex),
+            versionedHashes: kzgCommitments.map((commitment) => toHex(kzgCommitmentToVersionedHash(commitment))),
+          });
+        }
       }
     }
   });
@@ -486,8 +496,25 @@ export async function importBlock(
           });
         }
       }
+      if (
+        blockInput.type === BlockInputType.availableData &&
+        this.emitter.listenerCount(routes.events.EventType.dataColumnSidecar) &&
+        blockInput.blockData.fork === ForkName.fulu
+      ) {
+        const {dataColumns} = blockInput.blockData;
 
-      emitDataColumnSidecar(this.emitter, blockInput, blockRoot);
+        for (const dataColumnSidecar of dataColumns) {
+          const {index, kzgCommitments} = dataColumnSidecar;
+
+          this.emitter.emit(routes.events.EventType.dataColumnSidecar, {
+            blockRoot: blockRootHex,
+            slot: blockSlot,
+            index,
+            kzgCommitments: kzgCommitments.map(toHex),
+            versionedHashes: kzgCommitments.map((commitment) => toHex(kzgCommitmentToVersionedHash(commitment))),
+          });
+        }
+      }
     });
   }
 
