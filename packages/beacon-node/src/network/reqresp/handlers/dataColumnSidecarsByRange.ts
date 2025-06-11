@@ -45,39 +45,40 @@ export async function* onDataColumnSidecarsByRange(
     }
   }
 
-  // Non-finalized range of blobs
-  if (endSlot > finalizedSlot) {
-    // console.log(`serving onDataColumnSidecarsByRange unfinalized endSlot=${endSlot} finalizedSlot=${finalizedSlot}`);
+  if (endSlot < finalizedSlot) {
+    return;
+  }
 
-    const headRoot = chain.forkChoice.getHeadRoot();
-    // TODO DENEB: forkChoice should mantain an array of canonical blocks, and change only on reorg
-    const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot);
+  // Non-finalized range of columns
+  const headRoot = chain.forkChoice.getHeadRoot();
+  // TODO DENEB: forkChoice should maintain an array of canonical blocks, and change only on reorg
+  const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot);
 
-    // Iterate head chain with ascending block numbers
-    for (let i = headChain.length - 1; i >= 0; i--) {
-      const block = headChain[i];
+  // TODO(fulu): This may cause a lot of overhead in long periods of non-finality.  Need to tune this further
+  // Iterate head chain with ascending block numbers
+  for (let i = headChain.length - 1; i >= 0; i--) {
+    const block = headChain[i];
 
-      // Must include only blobs in the range requested
-      if (block.slot >= startSlot && block.slot < endSlot) {
-        // Note: Here the forkChoice head may change due to a re-org, so the headChain reflects the canonical chain
-        // at the time of the start of the request. Spec is clear the chain of blobs must be consistent, but on
-        // re-org there's no need to abort the request
-        // Spec: https://github.com/ethereum/consensus-specs/blob/a1e46d1ae47dd9d097725801575b46907c12a1f8/specs/eip4844/p2p-interface.md#blobssidecarsbyrange-v1
+    // Must include only blobs in the range requested
+    if (block.slot >= startSlot && block.slot < endSlot) {
+      // Note: Here the forkChoice head may change due to a re-org, so the headChain reflects the canonical chain
+      // at the time of the start of the request. Spec is clear the chain of blobs must be consistent, but on
+      // re-org there's no need to abort the request
+      // Spec: https://github.com/ethereum/consensus-specs/blob/a1e46d1ae47dd9d097725801575b46907c12a1f8/specs/eip4844/p2p-interface.md#blobssidecarsbyrange-v1
 
-        const blobSideCarsBytesWrapped = await unfinalized.getBinary(fromHex(block.blockRoot));
-        if (!blobSideCarsBytesWrapped) {
-          // console.log(`error onDataColumnSidecarsByRange No item for root ${block.blockRoot} slot ${block.slot}`);
-          // Handle the same to onBeaconBlocksByRange
-          throw new ResponseError(RespStatus.SERVER_ERROR, `No item for root ${block.blockRoot} slot ${block.slot}`);
-        }
-        yield* iterateDataColumnBytesFromWrapper(chain, blobSideCarsBytesWrapped, block.slot, columns);
+      const blobSideCarsBytesWrapped = await unfinalized.getBinary(fromHex(block.blockRoot));
+      if (!blobSideCarsBytesWrapped) {
+        // console.log(`error onDataColumnSidecarsByRange No item for root ${block.blockRoot} slot ${block.slot}`);
+        // Handle the same to onBeaconBlocksByRange
+        throw new ResponseError(RespStatus.SERVER_ERROR, `No item for root ${block.blockRoot} slot ${block.slot}`);
       }
+      yield* iterateDataColumnBytesFromWrapper(chain, blobSideCarsBytesWrapped, block.slot, columns);
+    }
 
-      // If block is after endSlot, stop iterating
-      else if (block.slot >= endSlot) {
-        // console.log(`breaking away onDataColumnSidecarsByRange block.slot=${block.slot} endSlot=${endSlot}`);
-        break;
-      }
+    // If block is after endSlot, stop iterating
+    else if (block.slot >= endSlot) {
+      // console.log(`breaking away onDataColumnSidecarsByRange block.slot=${block.slot} endSlot=${endSlot}`);
+      break;
     }
   }
 }
