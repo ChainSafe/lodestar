@@ -1,18 +1,10 @@
-import {NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {fulu, ssz} from "@lodestar/types";
+import {fulu} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
-import {
-  COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_COLUMN_SIZE,
-  COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_CUSTODY_INDEX,
-  COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_NUM_OF_COLUMNS,
-  COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_TO_FIRST_SIDECAR,
-  SSZ_OFFSET_BYTES_FOR_LIST_TYPE,
-  parseWrappedColumnSidecars,
-} from "../../../db/repositories/dataColumnSidecars.js";
+import {parseWrappedColumnSidecars} from "../../../db/repositories/dataColumnSidecars.js";
 
 export async function* onDataColumnSidecarsByRoot(
   requestBody: fulu.DataColumnSidecarsByRootRequest,
@@ -63,7 +55,7 @@ export async function* onDataColumnSidecarsByRoot(
       );
       if (dataColumnSidecarBytes.length !== columnSizeInBytes) {
         throw Error(
-          `Inconsistent state, dataColumnSidecar blockRoot=${blockRootHex} index=${index} dataColumnSidecarBytes=${dataColumnSidecarBytes.length} expected=${columnsSizeInBytes}`
+          `Inconsistent state, dataColumnSidecar blockRoot=${blockRootHex} index=${index} dataColumnSidecarBytes=${dataColumnSidecarBytes.length} expected=${columnSizeInBytes}`
         );
       }
 

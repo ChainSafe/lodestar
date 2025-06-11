@@ -73,7 +73,7 @@ export function parseWrappedColumnSidecars(wrapped: Uint8Array): {
  */
 export class DataColumnSidecarsRepository extends Repository<Uint8Array, DataColumnSidecarsWrapper> {
   constructor(config: ChainForkConfig, db: Db) {
-    const bucket = Bucket.allForks_dataColumnSidecars;
+    const bucket = Bucket.fulu_dataColumnSidecars;
     super(config, db, bucket, dataColumnSidecarsWrapperSsz, getBucketNameByValue(bucket));
   }
 

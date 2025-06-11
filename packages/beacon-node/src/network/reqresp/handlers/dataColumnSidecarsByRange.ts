@@ -1,16 +1,10 @@
 import {GENESIS_SLOT, MAX_REQUEST_BLOCKS_DENEB, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
-import {ColumnIndex, Slot, fulu, ssz} from "@lodestar/types";
+import {ColumnIndex, Slot, fulu} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
-import {
-  COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_COLUMN_SIZE,
-  COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_CUSTODY_INDEX,
-  COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_NUM_OF_COLUMNS,
-  COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_TO_FIRST_SIDECAR,
-  parseWrappedColumnSidecars,
-} from "../../../db/repositories/dataColumnSidecars.js";
+import {parseWrappedColumnSidecars} from "../../../db/repositories/dataColumnSidecars.js";
 
 export async function* onDataColumnSidecarsByRange(
   request: fulu.DataColumnSidecarsByRangeRequest,
@@ -115,7 +109,7 @@ export function* iterateDataColumnBytesFromWrapper(
     if (dataColumnSidecarBytes.length !== columnSizeInBytes) {
       throw new ResponseError(
         RespStatus.SERVER_ERROR,
-        `Invalid dataColumnSidecar index=${index} dataIndex=${dataIndex} bytes length=${dataColumnSidecarBytes.length} expected=${columnsSize} for slot ${blockSlot} blobsLen=${columnsLen}`
+        `Invalid dataColumnSidecar index=${index} dataIndex=${dataIndex} bytes length=${dataColumnSidecarBytes.length} expected=${columnSizeInBytes} for slot ${blockSlot}`
       );
     }
     // console.log(`iterate onDataColumnSidecarsByRange blockSlot=${blockSlot} index=${index} dataIndex=${dataIndex}`);

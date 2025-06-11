@@ -12,7 +12,7 @@ import {DataColumnSidecarsWrapper, dataColumnSidecarsWrapperSsz} from "./dataCol
  */
 export class DataColumnSidecarsArchiveRepository extends Repository<Slot, DataColumnSidecarsWrapper> {
   constructor(config: ChainForkConfig, db: Db) {
-    const bucket = Bucket.allForks_dataColumnSidecarsArchive;
+    const bucket = Bucket.fulu_dataColumnSidecarsArchive;
     super(config, db, bucket, dataColumnSidecarsWrapperSsz, getBucketNameByValue(bucket));
   }
 
