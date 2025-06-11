@@ -164,7 +164,7 @@ Will double processing times. Use only for debugging purposes.",
   "chain.persistOrphanedBlocks": {
     hidden: true,
     type: "boolean",
-    description: "Whether to persist orphaned blocks ",
+    description: "Whether to persist orphaned blocks",
     group: "chain",
   },
 
