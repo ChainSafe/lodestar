@@ -15,6 +15,7 @@ import {
   sszTypesFor,
 } from "@lodestar/types";
 import {LogLevel, Logger, prettyBytes, toHex, toRootHex} from "@lodestar/utils";
+import {emitDataColumnSidecar} from "../../chain/blocks/blockInput/utils.js";
 import {
   BlobSidecarValidation,
   BlockInput,
@@ -313,17 +314,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       });
 
       // Emit data column sidecar event for successfully validated gossip data column
-      if (chain.emitter.listenerCount(routes.events.EventType.dataColumnSidecar)) {
-        const {index, kzgCommitments} = dataColumnSidecar;
-        const blockRootHex = toRootHex(blockRoot);
-        chain.emitter.emit(routes.events.EventType.dataColumnSidecar, {
-          blockRoot: blockRootHex,
-          slot: slot,
-          index,
-          kzgCommitments: kzgCommitments.map(toHex),
-          versionedHashes: kzgCommitments.map((commitment) => toHex(kzgCommitmentToVersionedHash(commitment))),
-        });
-      }
+      emitDataColumnSidecar(chain.emitter, blockInput, blockRoot);
 
       return blockInput;
     } catch (e) {

@@ -30,6 +30,7 @@ import {ChainEvent, ReorgEventData} from "../emitter.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
 import {toCheckpointHex} from "../stateCache/index.js";
+import {emitDataColumnSidecar} from "./blockInput/utils.js";
 import {AttestationImportOpt, BlockInputType, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {getCheckpointFromState} from "./utils/checkpoint.js";
 import {writeBlockInputToDb} from "./writeBlockInputToDb.js";
@@ -139,17 +140,7 @@ export async function importBlock(
           });
         }
       } else if (blockData.fork === ForkName.fulu) {
-        const {dataColumns} = blockData;
-        for (const dataColumnSidecar of dataColumns) {
-          const {index, kzgCommitments} = dataColumnSidecar;
-          this.emitter.emit(routes.events.EventType.dataColumnSidecar, {
-            blockRoot: blockRootHex,
-            slot: blockSlot,
-            index,
-            kzgCommitments: kzgCommitments.map(toHexString),
-            versionedHashes: kzgCommitments.map((commitment) => toHexString(kzgCommitmentToVersionedHash(commitment))),
-          });
-        }
+        emitDataColumnSidecar(this.emitter, blockInput, blockRoot);
       }
     }
   });
@@ -495,23 +486,7 @@ export async function importBlock(
         }
       }
 
-      if (
-        blockInput.type === BlockInputType.availableData &&
-        this.emitter.listenerCount(routes.events.EventType.dataColumnSidecar) &&
-        blockInput.blockData.fork === ForkName.fulu
-      ) {
-        const {dataColumns} = blockInput.blockData;
-        for (const dataColumnSidecar of dataColumns) {
-          const {index, kzgCommitments} = dataColumnSidecar;
-          this.emitter.emit(routes.events.EventType.dataColumnSidecar, {
-            blockRoot: blockRootHex,
-            slot: blockSlot,
-            index,
-            kzgCommitments: kzgCommitments.map(toHexString),
-            versionedHashes: kzgCommitments.map((commitment) => toHexString(kzgCommitmentToVersionedHash(commitment))),
-          });
-        }
-      }
+      emitDataColumnSidecar(this.emitter, blockInput, blockRoot);
     });
   }
 
