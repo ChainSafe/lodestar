@@ -62,6 +62,9 @@ vi.mock("../../src/db/index.js", async (importActual) => {
 
       blobSidecars: vi.mocked(new BlobSidecarsRepository({} as any, {} as any)),
       blobSidecarsArchive: vi.mocked(new BlobSidecarsArchiveRepository({} as any, {} as any)),
+
+      dataColumnSidecars: vi.mocked(DataColumnSidecarsRepository({} as any, {} as any)),
+      dataColumnSidecarsArchive: vi.mocked(DataColumnSidecarsArchiveRepository({} as any, {} as any)),
     };
   });
 
