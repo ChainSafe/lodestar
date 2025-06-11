@@ -1,13 +1,14 @@
 import {ForkName} from "@lodestar/params";
 import {DomainType, ForkDigest, Root, Slot} from "@lodestar/types";
+import { BlobScheduleEntry } from "../chainConfig";
 
 export type ForkDigestHex = string;
 
 export type ForkDigestContext = {
   forkDigest2ForkName(forkDigest: ForkDigest | ForkDigestHex): ForkName;
   forkDigest2ForkNameOption(forkDigest: ForkDigest | ForkDigestHex): ForkName | null;
-  forkName2ForkDigest(forkName: ForkName): ForkDigest;
-  forkName2ForkDigestHex(forkName: ForkName): ForkDigestHex;
+  forkName2ForkDigest(forkName: ForkName, blobSchedule: BlobScheduleEntry | null): ForkDigest;
+  forkName2ForkDigestHex(forkName: ForkName, blobSchedule: BlobScheduleEntry | null): ForkDigestHex;
 };
 
 export interface CachedGenesis extends ForkDigestContext {
