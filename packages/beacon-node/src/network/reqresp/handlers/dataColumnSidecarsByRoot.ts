@@ -6,10 +6,10 @@ import {fromHex, toHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {
-  COLUMN_SIZE_IN_WRAPPER_INDEX,
-  CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX,
-  DATA_COLUMN_SIDECARS_IN_WRAPPER_INDEX,
-  NUM_COLUMNS_IN_WRAPPER_INDEX,
+  COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_COLUMN_SIZE,
+  COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_CUSTODY_INDEX,
+  COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_NUM_COLUMNS,
+  COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_TO_FIRST_SIDECAR,
 } from "../../../db/repositories/dataColumnSidecars.js";
 
 export async function* onDataColumnSidecarsByRoot(
@@ -47,20 +47,23 @@ export async function* onDataColumnSidecarsByRoot(
     }
 
     const retrivedColumnsLen = ssz.Uint8.deserialize(
-      dataColumnSidecarsBytesWrapped.slice(NUM_COLUMNS_IN_WRAPPER_INDEX, COLUMN_SIZE_IN_WRAPPER_INDEX)
+      dataColumnSidecarsBytesWrapped.slice(
+        COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_NUM_COLUMNS,
+        COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_COLUMN_SIZE
+      )
     );
     const retrievedColumnsSizeBytes = dataColumnSidecarsBytesWrapped.slice(
-      COLUMN_SIZE_IN_WRAPPER_INDEX,
-      CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX
+      COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_COLUMN_SIZE,
+      COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_CUSTODY_INDEX
     );
     const columnsSize = ssz.UintNum64.deserialize(retrievedColumnsSizeBytes);
     const dataColumnSidecarsBytes = dataColumnSidecarsBytesWrapped.slice(
-      DATA_COLUMN_SIDECARS_IN_WRAPPER_INDEX + 4 * retrivedColumnsLen
+      COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_TO_FIRST_SIDECAR + 4 * retrivedColumnsLen
     );
 
     const dataColumnsIndex = dataColumnSidecarsBytesWrapped.slice(
-      CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX,
-      CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX + NUMBER_OF_COLUMNS
+      COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_CUSTODY_INDEX,
+      COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_CUSTODY_INDEX + NUMBER_OF_COLUMNS
     );
 
     // const storedColumns = Array.from({length: NUMBER_OF_COLUMNS}, (_v, i) => i).filter(

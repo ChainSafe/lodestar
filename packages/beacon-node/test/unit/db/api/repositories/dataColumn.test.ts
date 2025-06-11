@@ -6,11 +6,11 @@ import {rimraf} from "rimraf";
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
 
 import {
-  COLUMN_SIZE_IN_WRAPPER_INDEX,
-  CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX,
-  DATA_COLUMN_SIDECARS_IN_WRAPPER_INDEX,
+  COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_COLUMN_SIZE,
+  COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_CUSTODY_INDEX,
+  COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_NUM_COLUMNS,
+  COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_TO_FIRST_SIDECAR,
   DataColumnSidecarsRepository,
-  NUM_COLUMNS_IN_WRAPPER_INDEX,
   dataColumnSidecarsWrapperSsz,
 } from "../../../../../src/db/repositories/dataColumnSidecars.js";
 import {computeDataColumnSidecars} from "../../../../../src/util/blobs.js";
@@ -88,19 +88,22 @@ describe("block archive repository", () => {
     expect(dataColumnSidecarsWrapperSsz.equals(retrieved, writeData)).toBe(true);
 
     const retrivedColumnsLen = ssz.Uint8.deserialize(
-      retrievedBinary.slice(NUM_COLUMNS_IN_WRAPPER_INDEX, COLUMN_SIZE_IN_WRAPPER_INDEX)
+      retrievedBinary.slice(
+        COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_NUM_COLUMNS,
+        COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_COLUMN_SIZE
+      )
     );
     expect(retrivedColumnsLen === dataColumnsLen).toBe(true);
 
     const retrievedColumnsSizeBytes = retrievedBinary.slice(
-      COLUMN_SIZE_IN_WRAPPER_INDEX,
-      CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX
+      COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_COLUMN_SIZE,
+      COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_CUSTODY_INDEX
     );
 
     const retrievedColumnsSize = ssz.UintNum64.deserialize(retrievedColumnsSizeBytes);
     expect(retrievedColumnsSize === columnsSize).toBe(true);
     const dataColumnSidecarsBytes = retrievedBinary.slice(
-      DATA_COLUMN_SIDECARS_IN_WRAPPER_INDEX + 4 * retrivedColumnsLen
+      COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_TO_FIRST_SIDECAR + 4 * retrivedColumnsLen
     );
     // console.log({dataColumnSidecarsBytes: dataColumnSidecarsBytes.length, computeLen: dataColumnSidecarsBytes.length/columnsSize, dataColumnsLen, dataColumnSidecars: dataColumnSidecars.length, retrievedColumnsSize, columnsSize, allDataColumnSidecars: allDataColumnSidecars.length, lastIndex, DATA_COLUMN_SIDECARS_IN_WRAPPER_INDEX, retrivedColumnsLen})
     expect(dataColumnSidecarsBytes.length === columnsSize * dataColumnsLen).toBe(true);
