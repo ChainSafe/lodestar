@@ -28,10 +28,12 @@ import {
   getBlockRootFromSingleAttestationSerialized,
   getCommitteeBitsFromSignedAggregateAndProofElectra,
   getCommitteeIndexFromSingleAttestationSerialized,
+  getDataColumnSidecarIndex,
   getSignatureFromAttestationSerialized,
   getSignatureFromSingleAttestationSerialized,
   getSlotFromAttestationSerialized,
   getSlotFromBlobSidecarSerialized,
+  getSlotFromDataColumnSidecarSerialized,
   getSlotFromSignedAggregateAndProofSerialized,
   getSlotFromSignedBeaconBlockSerialized,
   getSlotFromSingleAttestationSerialized,
@@ -319,6 +321,49 @@ describe("BlobSidecar SSZ serialized picking", () => {
   });
 });
 
+describe("DataColumnSidecar SSZ serialized picking", () => {
+  const slot = 1_000_000;
+  const proposerIndex = 123;
+  const parentRoot = new Uint8Array(32).fill(0x01);
+  const stateRoot = new Uint8Array(32).fill(0x02);
+  const bodyRoot = new Uint8Array(32).fill(0x03);
+  const testCases = [
+    ssz.fulu.DataColumnSidecar.defaultValue(),
+    dataColumnSidecarFromValues(slot, proposerIndex, parentRoot, stateRoot, bodyRoot),
+  ];
+
+  it("getSlotFromDataColumnSidecarSerialized", () => {
+    for (const dataColumnSidecar of testCases) {
+      const bytes = ssz.fulu.DataColumnSidecar.serialize(dataColumnSidecar);
+      expect(getSlotFromDataColumnSidecarSerialized(bytes)).toBe(dataColumnSidecar.signedBlockHeader.message.slot);
+    }
+  });
+
+  it("getSlotFromDataColumnSidecarSerialized - invalid data", () => {
+    const invalidDataSizes = [0, 20];
+    for (const size of invalidDataSizes) {
+      expect(getSlotFromDataColumnSidecarSerialized(Buffer.alloc(size))).toBeNull();
+    }
+  });
+
+  it("getDataColumnSidecarIndexStr", () => {
+    for (const dataColumnSidecar of testCases) {
+      const bytes = ssz.fulu.DataColumnSidecar.serialize(dataColumnSidecar);
+      const indexStr = Buffer.from(
+        ssz.phase0.SignedBeaconBlockHeader.serialize(dataColumnSidecar.signedBlockHeader)
+      ).toString("base64");
+      expect(getDataColumnSidecarIndex(bytes)).toBe(indexStr);
+    }
+  });
+
+  it("getDataColumnSidecarIndexStr - invalid data", () => {
+    const invalidDataSizes = [0, 20, 40];
+    for (const size of invalidDataSizes) {
+      expect(getDataColumnSidecarIndex(Buffer.alloc(size))).toBeNull();
+    }
+  });
+});
+
 function phase0SingleAttestationFromValues(
   slot: Slot,
   blockRoot: RootHex,
@@ -390,4 +435,28 @@ function blobSidecarFromValues(slot: Slot): deneb.BlobSidecar {
   const blobSidecar = ssz.deneb.BlobSidecar.defaultValue();
   blobSidecar.signedBlockHeader.message.slot = slot;
   return blobSidecar;
+}
+
+function dataColumnSidecarFromValues(
+  slot: Slot,
+  proposerIndex?: number,
+  parentRoot?: Uint8Array,
+  stateRoot?: Uint8Array,
+  bodyRoot?: Uint8Array
+) {
+  const dataColumnSidecar = ssz.fulu.DataColumnSidecar.defaultValue();
+  dataColumnSidecar.signedBlockHeader.message.slot = slot;
+  if (proposerIndex !== undefined) {
+    dataColumnSidecar.signedBlockHeader.message.proposerIndex = proposerIndex;
+  }
+  if (parentRoot !== undefined) {
+    dataColumnSidecar.signedBlockHeader.message.parentRoot = parentRoot;
+  }
+  if (stateRoot !== undefined) {
+    dataColumnSidecar.signedBlockHeader.message.stateRoot = stateRoot;
+  }
+  if (bodyRoot !== undefined) {
+    dataColumnSidecar.signedBlockHeader.message.bodyRoot = bodyRoot;
+  }
+  return dataColumnSidecar;
 }

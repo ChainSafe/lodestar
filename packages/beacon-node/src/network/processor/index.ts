@@ -13,11 +13,12 @@ import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {NetworkEvent, NetworkEventBus} from "../events.js";
 import {
+  BatchGossipMessageInfo,
   GossipHandlers,
-  GossipMessageInfo,
   GossipType,
   GossipValidatorBatchFn,
   GossipValidatorFn,
+  SequentialGossipMessageInfo,
 } from "../gossip/interface.js";
 import {createExtractBlockSlotRootFns} from "./extractSlotRootFns.js";
 import {GossipHandlerOpts, ValidatorFnsModules, getGossipHandlers} from "./gossipHandlers.js";
@@ -195,10 +196,13 @@ export class NetworkProcessor {
           metrics.gossipValidationQueue.concurrency.set({topic}, this.gossipTopicConcurrency[topic]);
         }
         metrics.reprocessGossipAttestations.countPerSlot.set(this.unknownBlockGossipsubMessagesCount);
-        // specific metric for beacon_attestation topic
+        // specific metric for beacon_attestation topic and data_column_sidecar topic
         metrics.gossipValidationQueue.keyAge.reset();
         for (const ageMs of this.gossipQueues.beacon_attestation.getDataAgeMs()) {
-          metrics.gossipValidationQueue.keyAge.observe(ageMs / 1000);
+          metrics.gossipValidationQueue.keyAge.observe({topic: GossipType.beacon_attestation}, ageMs / 1000);
+        }
+        for (const ageMs of this.gossipQueues.data_column_sidecar.getDataAgeMs()) {
+          metrics.gossipValidationQueue.keyAge.observe({topic: GossipType.data_column_sidecar}, ageMs / 1000);
         }
       });
     }
@@ -414,7 +418,10 @@ export class NetworkProcessor {
       for (const msg of messageOrArray) {
         msg.startProcessUnixSec = nowSec;
         if (msg.queueAddedMs !== undefined) {
-          this.metrics?.gossipValidationQueue.queueTime.observe(nowSec - msg.queueAddedMs / 1000);
+          this.metrics?.gossipValidationQueue.queueTime.observe(
+            {topic: msg.topic.type},
+            nowSec - msg.queueAddedMs / 1000
+          );
         }
       }
     } else {
@@ -423,12 +430,14 @@ export class NetworkProcessor {
     }
 
     const acceptanceArr = Array.isArray(messageOrArray)
-      ? // for beacon_attestation topic, process attestations with same attestation data
-        // we always have msgSlot in beaccon_attestation topic so the type conversion is safe
-        await this.gossipValidatorBatchFn(messageOrArray as GossipMessageInfo[])
+      ? // for beacon_attestation and data_column_sidecar topics
+        await this.gossipValidatorBatchFn(messageOrArray as BatchGossipMessageInfo[])
       : [
           // for other topics
-          await this.gossipValidatorFn({...messageOrArray, msgSlot: messageOrArray.msgSlot ?? null}),
+          await this.gossipValidatorFn({
+            ...messageOrArray,
+            msgSlot: messageOrArray.msgSlot ?? null,
+          } as SequentialGossipMessageInfo),
         ];
 
     if (Array.isArray(messageOrArray)) {

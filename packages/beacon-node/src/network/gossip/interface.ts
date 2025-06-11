@@ -18,8 +18,8 @@ import {
 } from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {Libp2p} from "libp2p";
-import {AttestationError, AttestationErrorType} from "../../chain/errors/attestationError.js";
-import {GossipActionError} from "../../chain/errors/gossipValidation.js";
+import {AttestationError} from "../../chain/errors/attestationError.js";
+import {DataColumnSidecarGossipError} from "../../chain/errors/dataColumnSidecarError.js";
 import {IBeaconChain} from "../../chain/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {SubscribeBoundary} from "../core/types.js";
@@ -40,8 +40,8 @@ export enum GossipType {
   bls_to_execution_change = "bls_to_execution_change",
 }
 
-export type SequentialGossipType = Exclude<GossipType, GossipType.beacon_attestation>;
-export type BatchGossipType = GossipType.beacon_attestation;
+export type BatchGossipType = GossipType.beacon_attestation | GossipType.data_column_sidecar;
+export type SequentialGossipType = Exclude<GossipType, BatchGossipType>;
 
 export enum GossipEncoding {
   ssz_snappy = "ssz_snappy",
@@ -147,8 +147,8 @@ export type GossipModules = {
  *
  * js-libp2p-gossipsub expects validation functions that look like this
  */
-export type GossipMessageInfo = {
-  topic: GossipTopic;
+export type GossipMessageInfo<T extends GossipType> = {
+  topic: GossipTopicMap[T];
   msg: Message;
   propagationSource: PeerIdStr;
   seenTimestampSec: number;
@@ -156,9 +156,13 @@ export type GossipMessageInfo = {
   indexed?: string;
 };
 
-export type GossipValidatorFn = (messageInfo: GossipMessageInfo) => Promise<TopicValidatorResult>;
+export type SequentialGossipMessageInfo<T extends SequentialGossipType = SequentialGossipType> = GossipMessageInfo<T>;
 
-export type GossipValidatorBatchFn = (messageInfos: GossipMessageInfo[]) => Promise<TopicValidatorResult[]>;
+export type BatchGossipMessageInfo<T extends BatchGossipType = BatchGossipType> = GossipMessageInfo<T>;
+
+export type GossipValidatorFn = (messageInfo: SequentialGossipMessageInfo) => Promise<TopicValidatorResult>;
+
+export type GossipValidatorBatchFn = (messageInfos: BatchGossipMessageInfo[]) => Promise<TopicValidatorResult[]>;
 
 export type ValidatorFnsByType = {[K in GossipType]: GossipValidatorFn};
 
@@ -172,16 +176,7 @@ export type GossipData = {
   indexed?: string;
 };
 
-export type GossipHandlerParam = {
-  gossipData: GossipData;
-  topic: GossipTopicMap[GossipType];
-  peerIdStr: string;
-  seenTimestampSec: number;
-};
-
-export type GossipHandlerFn = (gossipHandlerParam: GossipHandlerParam) => Promise<void>;
-
-export type BatchGossipHandlerFn = (gossipHandlerParam: GossipHandlerParam[]) => Promise<(null | AttestationError)[]>;
+export type GossipHandlerFn = (gossipHandlerParam: GossipHandlerParamGeneric<SequentialGossipType>) => Promise<void>;
 
 export type GossipHandlerParamGeneric<T extends GossipType> = {
   gossipData: GossipData;
@@ -190,11 +185,11 @@ export type GossipHandlerParamGeneric<T extends GossipType> = {
   seenTimestampSec: number;
 };
 
-export type GossipHandlers = {
-  [K in GossipType]: SequentialGossipHandler<K> | BatchGossipHandler<K>;
-};
+export type BatchGossipHandlerParamGeneric<T extends BatchGossipType> = GossipHandlerParamGeneric<T>;
 
-export type SequentialGossipHandler<K extends GossipType> = (
+export type GossipHandlers = SequentialGossipHandlers & BatchGossipHandlers;
+
+export type SequentialGossipHandler<K extends SequentialGossipType> = (
   gossipHandlerParam: GossipHandlerParamGeneric<K>
 ) => Promise<void>;
 
@@ -206,9 +201,14 @@ export type BatchGossipHandlers = {
   [K in BatchGossipType]: BatchGossipHandler<K>;
 };
 
-export type BatchGossipHandler<K extends GossipType> = (
-  gossipHandlerParams: GossipHandlerParamGeneric<K>[]
-) => Promise<(null | GossipActionError<AttestationErrorType>)[]>;
+export type BatchGossipActionErrorGeneric = {
+  [GossipType.beacon_attestation]: AttestationError;
+  [GossipType.data_column_sidecar]: DataColumnSidecarGossipError;
+};
+
+export type BatchGossipHandler<K extends BatchGossipType> = (
+  gossipHandlerParams: BatchGossipHandlerParamGeneric<K>[]
+) => Promise<(null | BatchGossipActionErrorGeneric[K])[]>;
 
 // biome-ignore lint/suspicious/noExplicitAny: <explanation>
 export type ResolvedType<F extends (...args: any) => Promise<any>> = F extends (...args: any) => Promise<infer T>

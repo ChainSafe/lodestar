@@ -9,8 +9,10 @@ type QueueItem<T> = {
 
 /**
  * Enforce minimum wait time for each key. On a mainnet node, wait time for beacon_attestation
- * is more than 500ms, it's worth to take 1/10 of that to help batch more items.
+ * is more than 500ms without using this queue, it's worth to take 1/10 of that to help batch more items.
  * This is only needed for key item < minChunkSize.
+ * Starting from peerDAS, we also use this queue for data_column_sidecar topic
+ * without using this queue, total job time + job wait time is almost 500ms in fulu-devnet-0 so the constant still makes sense.
  */
 const MINIMUM_WAIT_TIME_MS = 50;
 
@@ -25,7 +27,7 @@ const MINIMUM_WAIT_TIME_MS = 50;
  *   - On next pick the last key with minChunksize
  *     - if there is no key with minChunkSize, pop the last item of the last key
  *
- * This is a special gossip queue for beacon_attestation topic
+ * This is a special gossip queue for beacon_attestation and data_column_sidecar topic
  */
 export class IndexedGossipQueueMinSize<T extends {indexed?: string; queueAddedMs?: number}> implements GossipQueue<T> {
   private _length = 0;

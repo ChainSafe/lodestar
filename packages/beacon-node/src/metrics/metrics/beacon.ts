@@ -3,6 +3,7 @@ import {NotReorgedReason} from "@lodestar/fork-choice";
 import {ProducedBlockSource} from "@lodestar/types";
 import {BlockSelectionResult} from "../../api/impl/validator/index.js";
 import {BlockProductionStep, PayloadPreparationType} from "../../chain/produceBlock/index.js";
+import {type VerificationDataColumnBatchSource} from "../../chain/validation/dataColumnSidecar.js";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
 
 export type BeaconMetrics = ReturnType<typeof createBeaconMetrics>;
@@ -386,10 +387,11 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         help: "Time taken to verify data_column sidecar inclusion proof",
         buckets: [0.002, 0.004, 0.006, 0.008, 0.01, 0.05, 1, 2],
       }),
-      kzgVerificationDataColumnBatchTime: register.histogram({
+      kzgVerificationDataColumnBatchTime: register.histogram<{source: VerificationDataColumnBatchSource}>({
         name: "beacon_kzg_verification_data_column_batch_seconds",
         help: "Runtime of batched data column kzg verification",
         buckets: [0.025, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 1, 2, 5],
+        labelNames: ["source"],
       }),
       getBlobsV2Requests: register.counter({
         name: "beacon_engine_getBlobsV2_requests_total",
@@ -407,6 +409,10 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       custodyGroupCount: register.gauge({
         name: "beacon_custody_groups",
         help: "Total number of custody groups within a node",
+      }),
+      kzgVerificationDataColumnBatchReverify: register.gauge({
+        name: "beacon_kzg_verification_data_column_batch_reverify_total",
+        help: "Count of re-verifications of data column kzg proofs",
       }),
     },
 

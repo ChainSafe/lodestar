@@ -406,13 +406,36 @@ export function getSlotFromBlobSidecarSerialized(data: Uint8Array): Slot | null 
   }
  */
 
-const SLOT_BYTES_POSITION_IN_SIGNED_DATA_COLUMN_SIDECAR = 20;
-export function getSlotFromDataColumnSidecarSerialized(data: Uint8Array): Slot | null {
-  if (data.length < SLOT_BYTES_POSITION_IN_SIGNED_DATA_COLUMN_SIDECAR + SLOT_SIZE) {
+// slot = 8 bytes, proposerIndex = 8 bytes, parentRoot = 32 bytes, stateRoot = 32 bytes, bodyRoot = 32 bytes
+// signature = 96 bytes
+const SIGNED_BEACON_BLOCK_HEADER_SIZE = 208;
+const signBlockHeaderBuf = Buffer.alloc(SIGNED_BEACON_BLOCK_HEADER_SIZE);
+// index = 8 bytes, column = 4 bytes, kzgCommitments = bytes, kzgProofs = 4 bytes;
+const DATA_COLUMN_SIDECAR_BLOCK_HEADER_OFFSET = 20;
+type SignedBeaconHeaderBase64 = string;
+
+export function getDataColumnSidecarIndex(data: Uint8Array): SignedBeaconHeaderBase64 | null {
+  if (data.length < DATA_COLUMN_SIDECAR_BLOCK_HEADER_OFFSET + SIGNED_BEACON_BLOCK_HEADER_SIZE) {
     return null;
   }
 
-  return getSlotFromOffset(data, SLOT_BYTES_POSITION_IN_SIGNED_DATA_COLUMN_SIDECAR);
+  signBlockHeaderBuf.set(
+    data.subarray(
+      DATA_COLUMN_SIDECAR_BLOCK_HEADER_OFFSET,
+      DATA_COLUMN_SIDECAR_BLOCK_HEADER_OFFSET + SIGNED_BEACON_BLOCK_HEADER_SIZE
+    )
+  );
+
+  // base64 is a bit efficient than hex
+  return signBlockHeaderBuf.toString("base64");
+}
+
+export function getSlotFromDataColumnSidecarSerialized(data: Uint8Array): Slot | null {
+  if (data.length < DATA_COLUMN_SIDECAR_BLOCK_HEADER_OFFSET + SLOT_SIZE) {
+    return null;
+  }
+
+  return getSlotFromOffset(data, DATA_COLUMN_SIDECAR_BLOCK_HEADER_OFFSET);
 }
 
 /**

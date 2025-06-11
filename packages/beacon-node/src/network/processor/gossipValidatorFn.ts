@@ -1,13 +1,20 @@
 import {TopicValidatorResult} from "@libp2p/interface";
 import {ChainForkConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
-import {AttestationError, GossipAction, GossipActionError} from "../../chain/errors/index.js";
+import {
+  AttestationErrorCode,
+  DataColumnSidecarGossipError,
+  GossipAction,
+  GossipActionError,
+} from "../../chain/errors/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {
-  BatchGossipHandlerFn,
+  BatchGossipHandlers,
+  BatchGossipMessageInfo,
+  BatchGossipType,
   GossipHandlerFn,
   GossipHandlers,
-  GossipMessageInfo,
+  GossipType,
   GossipValidatorBatchFn,
   GossipValidatorFn,
 } from "../gossip/interface.js";
@@ -23,16 +30,17 @@ export type ValidatorFnModules = {
  * with the same attestation data
  */
 export function getGossipValidatorBatchFn(
-  gossipHandlers: GossipHandlers,
+  gossipHandlers: BatchGossipHandlers,
   modules: ValidatorFnModules
 ): GossipValidatorBatchFn {
   const {logger, metrics} = modules;
 
-  return async function gossipValidatorBatchFn(messageInfos: GossipMessageInfo[]) {
+  return async function gossipValidatorBatchFn<T extends BatchGossipType>(messageInfos: BatchGossipMessageInfo<T>[]) {
     // all messageInfos have same topic type
-    const type = messageInfos[0].topic.type;
+    const type = messageInfos[0].topic.type as T;
+    const handler = gossipHandlers[type];
     try {
-      const results = await (gossipHandlers[type] as BatchGossipHandlerFn)(
+      const results = await handler(
         messageInfos.map((messageInfo) => ({
           gossipData: {
             serializedData: messageInfo.msg.data,
@@ -50,8 +58,8 @@ export function getGossipValidatorBatchFn(
           return TopicValidatorResult.Accept;
         }
 
-        if (!(e instanceof AttestationError)) {
-          logger.debug(`Gossip batch validation ${type} threw a non-AttestationError`, {}, e as Error);
+        if (!(e instanceof GossipActionError)) {
+          logger.debug(`Gossip batch validation ${type} threw a non-GossipActionError`, {}, e as Error);
           metrics?.networkProcessor.gossipValidationIgnore.inc({topic: type});
           return TopicValidatorResult.Ignore;
         }
@@ -59,13 +67,37 @@ export function getGossipValidatorBatchFn(
         switch (e.action) {
           case GossipAction.IGNORE:
             metrics?.networkProcessor.gossipValidationIgnore.inc({topic: type});
-            // only beacon_attestation topic is validated in batch
-            metrics?.networkProcessor.gossipAttestationIgnoreByReason.inc({reason: e.type.code});
+            switch (type) {
+              case GossipType.beacon_attestation:
+                metrics?.networkProcessor.gossipAttestationIgnoreByReason.inc({
+                  reason: e.type.code as AttestationErrorCode,
+                });
+                break;
+              case GossipType.data_column_sidecar:
+                if (e instanceof DataColumnSidecarGossipError) {
+                  metrics?.networkProcessor.gossipDataColumnSidecarIgnoreByReason.inc({reason: e.type.code});
+                }
+                break;
+              default:
+                throw new Error(`Unexpected batch gossip type ${type} for IGNORE action`);
+            }
             return TopicValidatorResult.Ignore;
           case GossipAction.REJECT:
             metrics?.networkProcessor.gossipValidationReject.inc({topic: type});
-            // only beacon_attestation topic is validated in batch
-            metrics?.networkProcessor.gossipAttestationRejectByReason.inc({reason: e.type.code});
+            switch (type) {
+              case GossipType.beacon_attestation:
+                metrics?.networkProcessor.gossipAttestationRejectByReason.inc({
+                  reason: e.type.code as AttestationErrorCode,
+                });
+                break;
+              case GossipType.data_column_sidecar:
+                if (e instanceof DataColumnSidecarGossipError) {
+                  metrics?.networkProcessor.gossipDataColumnSidecarRejectByReason.inc({reason: e.type.code});
+                }
+                break;
+              default:
+                throw new Error(`Unexpected batch gossip type ${type} for REJECT action`);
+            }
             logger.debug(`Gossip validation ${type} rejected`, {}, e);
             return TopicValidatorResult.Reject;
         }

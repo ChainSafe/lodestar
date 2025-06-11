@@ -1,7 +1,7 @@
 import {BlockInputSource} from "../../chain/blocks/blockInput/index.js";
 import {BlobsSource, BlockSource} from "../../chain/blocks/types.js";
 import {JobQueueItemType} from "../../chain/bls/index.js";
-import {AttestationErrorCode, BlockErrorCode} from "../../chain/errors/index.js";
+import {AttestationErrorCode, BlockErrorCode, DataColumnSidecarErrorCode} from "../../chain/errors/index.js";
 import {
   type InvalidAttestationData,
   ScannedSlotsTerminationReason,
@@ -86,16 +86,17 @@ export function createLodestarMetrics(
         help: "Current count of jobs being run on network processor for topic",
         labelNames: ["topic"],
       }),
-      // this metric links to the beacon_attestation topic only as this is the only topics that are batch
-      keyAge: register.histogram({
+      keyAge: register.histogram<{topic: GossipType}>({
         name: "lodestar_gossip_validation_queue_key_age_seconds",
         help: "Age of the first item of each key in the indexed queues in seconds",
         buckets: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 5],
+        labelNames: ["topic"],
       }),
-      queueTime: register.histogram({
+      queueTime: register.histogram<{topic: GossipType}>({
         name: "lodestar_gossip_validation_queue_time_seconds",
         help: "Total time an item stays in queue until it is processed in seconds",
         buckets: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 5],
+        labelNames: ["topic"],
       }),
     },
 
@@ -128,6 +129,16 @@ export function createLodestarMetrics(
       gossipAttestationRejectByReason: register.gauge<{reason: AttestationErrorCode}>({
         name: "lodestar_gossip_attestation_reject_by_reason_total",
         help: "Count of total gossip attestation reject by reason",
+        labelNames: ["reason"],
+      }),
+      gossipDataColumnSidecarIgnoreByReason: register.gauge<{reason: DataColumnSidecarErrorCode}>({
+        name: "lodestar_gossip_data_column_sidecar_ignore_by_reason_total",
+        help: "Count of total gossip data column sidecar ignore by reason",
+        labelNames: ["reason"],
+      }),
+      gossipDataColumnSidecarRejectByReason: register.gauge<{reason: DataColumnSidecarErrorCode}>({
+        name: "lodestar_gossip_data_column_sidecar_reject_by_reason_total",
+        help: "Count of total gossip data column sidecar reject by reason",
         labelNames: ["reason"],
       }),
       executeWorkCalls: register.gauge({
@@ -603,6 +614,23 @@ export function createLodestarMetrics(
       attestationNonBatchCount: register.gauge({
         name: "lodestar_gossip_attestation_verified_non_batch_count",
         help: "Count of attestations NOT verified in batch",
+      }),
+    },
+
+    gossipDataColumnSidecar: {
+      sidecarSlotToClockSlot: register.histogram({
+        name: "lodestar_gossip_data_column_sidecar_sidecar_slot_to_clock_slot",
+        help: "Slot distance between clock slot and sidecar slot",
+        buckets: [0, 1, 2, 4],
+      }),
+      batchHistogram: register.histogram({
+        name: "lodestar_gossip_data_column_sidecar_verified_in_batch_histogram",
+        help: "Number of data column sidecars verified in batch",
+        buckets: [2, 4, 8, 16, 32],
+      }),
+      nonBatchCount: register.gauge({
+        name: "lodestar_gossip_data_column_sidecar_verified_non_batch_count",
+        help: "Count of data column sidecars NOT verified in batch",
       }),
     },
 

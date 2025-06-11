@@ -1,5 +1,5 @@
 import {mapValues} from "@lodestar/utils";
-import {getBeaconAttestationGossipIndex} from "../../../util/sszBytes.js";
+import {getBeaconAttestationGossipIndex, getDataColumnSidecarIndex} from "../../../util/sszBytes.js";
 import {BatchGossipType, GossipType, SequentialGossipType} from "../../gossip/interface.js";
 import {PendingGossipsubMessage} from "../types.js";
 import {IndexedGossipQueueMinSize} from "./indexed.js";
@@ -18,6 +18,19 @@ const MAX_GOSSIP_ATTESTATION_BATCH_SIZE = 128;
 export const MIN_SIGNATURE_SETS_TO_BATCH_VERIFY = 32;
 
 /**
+ * As tested in `fulu-devnet-0` we can batch up to 16 data column sidecars per slot.
+ * This constant is opinionated, may need to be adjusted in the future.
+ */
+const MIN_DATA_COLUMN_SIDECAR_BATCH_SIZE = 16;
+
+/**
+ * With DATA_COLUMN_SIDECAR_SUBNET_COUNT = 128, it can take at least 2 trips to verify all of them per slot for
+ * a node subscribing to all data column subnets.
+ * This constant is opinionated, may need to be adjusted in the future.
+ */
+const MAX_DATA_COLUMN_SIDECAR_BATCH_SIZE = 64;
+
+/**
  * Numbers from https://github.com/sigp/lighthouse/blob/b34a79dc0b02e04441ba01fd0f304d1e203d877d/beacon_node/network/src/beacon_processor/mod.rs#L69
  */
 const linearGossipQueueOpts: {
@@ -27,11 +40,6 @@ const linearGossipQueueOpts: {
   [GossipType.beacon_block]: {maxLength: 1024, type: QueueType.FIFO, dropOpts: {type: DropType.count, count: 1}},
   // gossip length for blob is beacon block length * max blobs per block = 4096
   [GossipType.blob_sidecar]: {
-    maxLength: 4096,
-    type: QueueType.FIFO,
-    dropOpts: {type: DropType.count, count: 1},
-  },
-  [GossipType.data_column_sidecar]: {
     maxLength: 4096,
     type: QueueType.FIFO,
     dropOpts: {type: DropType.count, count: 1},
@@ -81,6 +89,16 @@ const indexedGossipQueueOpts: {
     },
     minChunkSize: MIN_SIGNATURE_SETS_TO_BATCH_VERIFY,
     maxChunkSize: MAX_GOSSIP_ATTESTATION_BATCH_SIZE,
+  },
+  [GossipType.data_column_sidecar]: {
+    // with max DATA_COLUMN_SIDECAR_SUBNET_COUNT = 128 items per slot, it's really bad to see more than 5x128 items in the queue
+    // drop them if we have more than 640 items in the queue will signal the node is overloaded
+    maxLength: 640,
+    indexFn: (item: PendingGossipsubMessage) => {
+      return getDataColumnSidecarIndex(item.msg.data);
+    },
+    minChunkSize: MIN_DATA_COLUMN_SIDECAR_BATCH_SIZE,
+    maxChunkSize: MAX_DATA_COLUMN_SIDECAR_BATCH_SIZE,
   },
 };
 
