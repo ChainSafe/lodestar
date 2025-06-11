@@ -315,8 +315,9 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       // Emit data column sidecar event for successfully validated gossip data column
       if (chain.emitter.listenerCount(routes.events.EventType.dataColumnSidecar)) {
         const {index, kzgCommitments} = dataColumnSidecar;
+        const blockRootHex = toRootHex(blockRoot);
         chain.emitter.emit(routes.events.EventType.dataColumnSidecar, {
-          blockRoot: blockHex,
+          blockRoot: blockRootHex,
           slot: slot,
           index,
           kzgCommitments: kzgCommitments.map(toHex),
