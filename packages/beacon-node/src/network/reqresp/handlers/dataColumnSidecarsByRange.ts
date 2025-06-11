@@ -9,6 +9,7 @@ import {
   COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_CUSTODY_INDEX,
   COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_NUM_OF_COLUMNS,
   COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_TO_FIRST_SIDECAR,
+  parseWrappedColumnSidecars,
 } from "../../../db/repositories/dataColumnSidecars.js";
 
 export async function* onDataColumnSidecarsByRange(
@@ -16,7 +17,7 @@ export async function* onDataColumnSidecarsByRange(
   chain: IBeaconChain,
   db: IBeaconDb
 ): AsyncIterable<ResponseOutgoing> {
-  // Non-finalized range of blobs
+  // Non-finalized range of columns
   const {startSlot, count, columns} = validateDataColumnSidecarsByRangeRequest(request);
   const endSlot = startSlot + count;
 
@@ -27,10 +28,10 @@ export async function* onDataColumnSidecarsByRange(
   //   `incoming onDataColumnSidecarsByRange startSlot=${startSlot}, count=${count}, columns=${columns.join(" ")} finalizedSlot=${finalizedSlot} endSlot=${endSlot}`
   // );
 
-  // Finalized range of blobs
+  // Finalized range of columns
   if (startSlot <= finalizedSlot) {
     // console.log(`serving onDataColumnSidecarsByRange finalized startSlot=${startSlot} finalizedSlot=${finalizedSlot}`);
-    // Chain of blobs won't change
+    // Chain of columns won't change
     for await (const {key, value: dataColumnSideCarsBytesWrapped} of finalized.binaryEntriesStream({
       gte: startSlot,
       lt: endSlot,
@@ -87,34 +88,11 @@ export function* iterateDataColumnBytesFromWrapper(
   blockSlot: Slot,
   columns: ColumnIndex[]
 ): Iterable<ResponseOutgoing> {
-  const retrivedColumnsLen = ssz.Uint8.deserialize(
-    dataColumnSidecarsBytesWrapped.slice(
-      COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_NUM_OF_COLUMNS,
-      COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_COLUMN_SIZE
-    )
-  );
-  const retrievedColumnsSizeBytes = dataColumnSidecarsBytesWrapped.slice(
-    COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_COLUMN_SIZE,
-    COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_CUSTODY_INDEX
-  );
-  const columnsSize = ssz.UintNum64.deserialize(retrievedColumnsSizeBytes);
-  const dataColumnsIndex = dataColumnSidecarsBytesWrapped.slice(
-    COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_CUSTODY_INDEX,
-    COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_CUSTODY_INDEX + NUMBER_OF_COLUMNS
-  );
-  const allDataColumnSidecarsBytes = dataColumnSidecarsBytesWrapped.slice(
-    COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_TO_FIRST_SIDECAR + 4 * retrivedColumnsLen
-  );
-
-  const columnsLen = allDataColumnSidecarsBytes.length / columnsSize;
-
-  // const storedColumns = Array.from({length: NUMBER_OF_COLUMNS}, (_v, i) => i).filter((i) => dataColumnsIndex[i] > 0);
-  // console.log(
-  //   `onDataColumnSidecarsByRange: slot=${blockSlot} columnsSize=${columnsSize} columnsLen=${columnsLen} retrivedColumnsLen=${retrivedColumnsLen} toredColumnsNum=${allDataColumnSidecarsBytes.length / columnsSize}, storedColumns=${storedColumns.join(" ")}`
-  // );
+  const {columnSizeInBytes, custodyIndex, serializedColumnSidecars} =
+    parseWrappedColumnSidecars(dataColumnSidecarsBytesWrapped);
 
   // no columns possibly no blob
-  if (columnsLen === 0) {
+  if (serializedColumnSidecars.length === 0) {
     return;
   }
 
@@ -122,18 +100,18 @@ export function* iterateDataColumnBytesFromWrapper(
 
   for (const index of columns) {
     // get the index at which the column is
-    const dataIndex = (dataColumnsIndex[index] ?? 0) - 1;
+    const dataIndex = (custodyIndex[index] ?? 0) - 1;
     if (dataIndex < 0) {
       throw new ResponseError(
         RespStatus.SERVER_ERROR,
         `dataColumnSidecar index=${index} dataIndex=${dataIndex} not custodied`
       );
     }
-    const dataColumnSidecarBytes = allDataColumnSidecarsBytes.slice(
-      dataIndex * columnsSize,
-      (dataIndex + 1) * columnsSize
+    const dataColumnSidecarBytes = serializedColumnSidecars.slice(
+      dataIndex * columnSizeInBytes,
+      (dataIndex + 1) * columnSizeInBytes
     );
-    if (dataColumnSidecarBytes.length !== columnsSize) {
+    if (dataColumnSidecarBytes.length !== columnSizeInBytes) {
       throw new ResponseError(
         RespStatus.SERVER_ERROR,
         `Invalid dataColumnSidecar index=${index} dataIndex=${dataIndex} bytes length=${dataColumnSidecarBytes.length} expected=${columnsSize} for slot ${blockSlot} blobsLen=${columnsLen}`
@@ -151,6 +129,15 @@ export function validateDataColumnSidecarsByRangeRequest(
   request: fulu.DataColumnSidecarsByRangeRequest
 ): fulu.DataColumnSidecarsByRangeRequest {
   const {startSlot, columns} = request;
+
+  if (!columns || columns.length === 0) {
+    throw new ResponseError(RespStatus.INVALID_REQUEST, "columns array is empty");
+  }
+
+  if (columns.length > NUMBER_OF_COLUMNS) {
+    throw new ResponseError(RespStatus.INVALID_REQUEST, "requested more than NUMBER_OF_COLUMNS");
+  }
+
   let {count} = request;
 
   if (count < 1) {

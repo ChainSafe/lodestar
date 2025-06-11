@@ -8,9 +8,10 @@ import {IBeaconDb} from "../../../db/index.js";
 import {
   COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_COLUMN_SIZE,
   COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_CUSTODY_INDEX,
-  COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_NUM_COLUMNS,
+  COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_NUM_OF_COLUMNS,
   COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_TO_FIRST_SIDECAR,
   SSZ_OFFSET_BYTES_FOR_LIST_TYPE,
+  parseWrappedColumnSidecars,
 } from "../../../db/repositories/dataColumnSidecars.js";
 
 export async function* onDataColumnSidecarsByRoot(
@@ -47,31 +48,8 @@ export async function* onDataColumnSidecarsByRoot(
       throw new ResponseError(RespStatus.SERVER_ERROR, `No item for root ${block.blockRoot} slot ${block.slot}`);
     }
 
-    const numberOfColumns = ssz.Uint8.deserialize(
-      dataColumnSidecarsBytesWrapped.slice(
-        COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_NUM_COLUMNS,
-        COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_COLUMN_SIZE
-      )
-    );
-
-    const columnsSizeInBytes = ssz.UintNum64.deserialize(
-      dataColumnSidecarsBytesWrapped.slice(
-        COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_COLUMN_SIZE,
-        COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_CUSTODY_INDEX
-      )
-    );
-
-    const custodyIndex = dataColumnSidecarsBytesWrapped.slice(
-      COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_CUSTODY_INDEX,
-      COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_CUSTODY_INDEX + NUMBER_OF_COLUMNS
-    );
-
-    // each dataColumnSidecar element int he dataColumnSidecars list is itself a variable length
-    // container so there is an offset for each element at the beginning of the container. need
-    // to slice those off to get to the actual elements
-    const dataColumnSidecarsBytes = dataColumnSidecarsBytesWrapped.slice(
-      COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_TO_FIRST_SIDECAR + SSZ_OFFSET_BYTES_FOR_LIST_TYPE * numberOfColumns
-    );
+    const {columnSizeInBytes, custodyIndex, serializedColumnSidecars} =
+      parseWrappedColumnSidecars(dataColumnSidecarsBytesWrapped);
 
     for (const index of columns) {
       const dataIndex = (custodyIndex[index] ?? 0) - 1;
@@ -79,11 +57,11 @@ export async function* onDataColumnSidecarsByRoot(
         throw new ResponseError(RespStatus.SERVER_ERROR, `dataColumnSidecar index=${index} not custodied`);
       }
 
-      const dataColumnSidecarBytes = dataColumnSidecarsBytes.slice(
-        dataIndex * columnsSizeInBytes,
-        (dataIndex + 1) * columnsSizeInBytes
+      const dataColumnSidecarBytes = serializedColumnSidecars.slice(
+        dataIndex * columnSizeInBytes,
+        (dataIndex + 1) * columnSizeInBytes
       );
-      if (dataColumnSidecarBytes.length !== columnsSizeInBytes) {
+      if (dataColumnSidecarBytes.length !== columnSizeInBytes) {
         throw Error(
           `Inconsistent state, dataColumnSidecar blockRoot=${blockRootHex} index=${index} dataColumnSidecarBytes=${dataColumnSidecarBytes.length} expected=${columnsSizeInBytes}`
         );
