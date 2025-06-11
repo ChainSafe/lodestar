@@ -35,7 +35,6 @@ export type PeerDiscoveryModules = {
   metrics: NetworkCoreMetrics | null;
   logger: LoggerNode;
   config: BeaconConfig;
-  clock: IClock;
 };
 
 type PeerIdStr = string;
