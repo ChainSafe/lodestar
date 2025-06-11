@@ -215,9 +215,16 @@ export function getBeaconStateApi({
             }
             balances.push({index: id, balance: state.balances.get(id)});
           } else {
-            const index = headState.epochCtx.pubkey2index.get(fromHex(id));
-            if (index != null && index <= state.validators.length) {
-              balances.push({index, balance: state.balances.get(index)});
+            if (id.startsWith("0x")) {
+              const index = headState.epochCtx.pubkey2index.get(fromHex(id));
+              if (index != null && index <= state.validators.length) {
+                balances.push({index, balance: state.balances.get(index)});
+              }
+            } else {
+              const validatorIndex = parseInt(id, 10);
+              if (!Number.isNaN(validatorIndex) && validatorIndex >= 0 && validatorIndex < state.validators.length) {
+                balances.push({index: validatorIndex, balance: state.balances.get(validatorIndex)});
+              }
             }
           }
         }
