@@ -165,6 +165,6 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
         }
       }
       return null;
-    }
+    },
   };
 }

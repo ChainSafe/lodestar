@@ -1,6 +1,6 @@
 import {ForkAll, ForkName, ForkPostAltair, ForkPostBellatrix, ForkPostDeneb, ForkSeq} from "@lodestar/params";
 import {Epoch, SSZTypesFor, Slot, Version} from "@lodestar/types";
-import { BlobScheduleEntry } from "../chainConfig/types.js";
+import {BlobScheduleEntry} from "../chainConfig/types.js";
 
 export type ForkInfo = {
   name: ForkName;

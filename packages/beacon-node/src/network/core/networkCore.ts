@@ -535,8 +535,6 @@ export class NetworkCore implements INetworkCore {
           }
         }
       }
-
-
     } catch (e) {
       this.logger.error("Error on BeaconGossipHandler.onEpoch", {epoch}, e as Error);
     }
@@ -547,7 +545,9 @@ export class NetworkCore implements INetworkCore {
     this.subscribedBoundaries.add(boundary);
     const {subscribeAllSubnets, disableLightClientServer} = this.opts;
 
-    const fork = Object.values(ForkName).includes(boundary as ForkName) ? boundary as ForkName : config.getForkName((boundary as BlobScheduleEntry).EPOCH);
+    const fork = Object.values(ForkName).includes(boundary as ForkName)
+      ? (boundary as ForkName)
+      : config.getForkName((boundary as BlobScheduleEntry).EPOCH);
 
     for (const topic of getCoreTopicsAtFork(config, fork, {
       subscribeAllSubnets,
@@ -562,7 +562,9 @@ export class NetworkCore implements INetworkCore {
     this.subscribedBoundaries.delete(boundary);
     const {subscribeAllSubnets, disableLightClientServer} = this.opts;
 
-    const fork = Object.values(ForkName).includes(boundary as ForkName) ? boundary as ForkName : config.getForkName((boundary as BlobScheduleEntry).EPOCH);
+    const fork = Object.values(ForkName).includes(boundary as ForkName)
+      ? (boundary as ForkName)
+      : config.getForkName((boundary as BlobScheduleEntry).EPOCH);
 
     for (const topic of getCoreTopicsAtFork(config, fork, {
       subscribeAllSubnets,

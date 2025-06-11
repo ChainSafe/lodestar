@@ -1,6 +1,6 @@
 import {ForkName} from "@lodestar/params";
 import {DomainType, ForkDigest, Root, Slot} from "@lodestar/types";
-import { BlobScheduleEntry } from "../chainConfig";
+import {BlobScheduleEntry} from "../chainConfig/types.js";
 
 export type ForkDigestHex = string;
 
