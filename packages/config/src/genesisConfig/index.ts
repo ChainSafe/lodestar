@@ -1,8 +1,11 @@
-import {DOMAIN_VOLUNTARY_EXIT, ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {DOMAIN_VOLUNTARY_EXIT, ForkName, isForkPostFulu, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {DomainType, ForkDigest, Root, Slot, Version, phase0, ssz} from "@lodestar/types";
-import {strip0xPrefix, toHex} from "@lodestar/utils";
+import {intToBytes, strip0xPrefix, toHex} from "@lodestar/utils";
 import {ChainForkConfig} from "../beaconConfig.js";
 import {CachedGenesis, ForkDigestHex} from "./types.js";
+import { BlobScheduleEntry } from "../index.js";
+import { xor } from "../utils/bytes.js";
+import {digest} from "@chainsafe/as-sha256";
 export type {ForkDigestContext} from "./types.js";
 
 type ForkDigestId = ForkName | `${ForkName}-${number}`;
@@ -173,6 +176,15 @@ function computeForkDataRoot(currentVersion: Version, genesisValidatorsRoot: Roo
 
 function toHexStringNoPrefix(hex: string | Uint8Array): string {
   return strip0xPrefix(typeof hex === "string" ? hex : toHex(hex));
+}
+
+function computeForkDigest(currentVersion: Version, genesisValidatorsRoot: Root, blobSchedule: BlobScheduleEntry | null): ForkDigest {
+  const baseDigest = computeForkDataRoot(currentVersion, genesisValidatorsRoot);
+  if (blobSchedule === null) { 
+    return baseDigest.slice(0, 4);
+  }
+
+  return xor(baseDigest, digest(Buffer.concat([intToBytes(blobSchedule.EPOCH, 8, "le"), intToBytes(blobSchedule.MAX_BLOBS_PER_BLOCK, 8, "le")]))).slice(0, 4);
 }
 
 function forkDigestIdToForkName(forkDigestId: ForkDigestId): ForkName {
