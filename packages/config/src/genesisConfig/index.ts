@@ -5,20 +5,24 @@ import {ChainForkConfig} from "../beaconConfig.js";
 import {CachedGenesis, ForkDigestHex} from "./types.js";
 export type {ForkDigestContext} from "./types.js";
 
+type ForkDigestId = ForkName | `${ForkName}-${number}`;
+
 export function createCachedGenesis(chainForkConfig: ChainForkConfig, genesisValidatorsRoot: Root): CachedGenesis {
   const domainCache = new Map<ForkName, Map<DomainType, Uint8Array>>();
 
-  const forkDigestByForkName = new Map<ForkName, ForkDigest>();
-  const forkDigestHexByForkName = new Map<ForkName, ForkDigestHex>();
+  const forkDigestById = new Map<ForkDigestId, ForkDigest>();
+  const forkDigestHexById = new Map<ForkDigestId, ForkDigestHex>();
   /** Map of ForkDigest in hex format without prefix: `0011aabb` */
-  const forkNameByForkDigest = new Map<ForkDigestHex, ForkName>();
+  const forkDigestIdByForkDigest = new Map<ForkDigestHex, ForkDigestId>();
 
   for (const fork of Object.values(chainForkConfig.forks)) {
-    const forkDigest = computeForkDigest(fork.version, genesisValidatorsRoot);
+    let forkDigest: ForkDigest;
+    let forkDigestId: ForkDigestId;
+
     const forkDigestHex = toHexStringNoPrefix(forkDigest);
-    forkNameByForkDigest.set(forkDigestHex, fork.name);
-    forkDigestByForkName.set(fork.name, forkDigest);
-    forkDigestHexByForkName.set(fork.name, forkDigestHex);
+    forkDigestIdByForkDigest.set(forkDigestHex, forkDigestId);
+    forkDigestById.set(forkDigestId, forkDigest);
+    forkDigestHexById.set(forkDigestId, forkDigestHex);
   }
 
   return {
@@ -88,32 +92,33 @@ export function createCachedGenesis(chainForkConfig: ChainForkConfig, genesisVal
 
     forkDigest2ForkName(forkDigest: ForkDigest | ForkDigestHex): ForkName {
       const forkDigestHex = toHexStringNoPrefix(forkDigest);
-      const forkName = forkNameByForkDigest.get(forkDigestHex);
-      if (forkName == null) {
+      const forkDigestId = forkDigestIdByForkDigest.get(forkDigestHex);
+      if (forkDigestId == null) {
         throw Error(`Unknown forkDigest ${forkDigestHex}`);
       }
-      return forkName;
+      return forkDigestIdToForkName(forkDigestId);
     },
 
     forkDigest2ForkNameOption(forkDigest: ForkDigest | ForkDigestHex): ForkName | null {
       const forkDigestHex = toHexStringNoPrefix(forkDigest);
-      const forkName = forkNameByForkDigest.get(forkDigestHex);
-      if (forkName == null) {
+      const forkDigestId = forkDigestIdByForkDigest.get(forkDigestHex);
+      if (forkDigestId == null) {
         return null;
       }
-      return forkName;
+
+      return forkDigestIdToForkName(forkDigestId);
     },
 
-    forkName2ForkDigest(forkName: ForkName): ForkDigest {
-      const forkDigest = forkDigestByForkName.get(forkName);
+    forkName2ForkDigest(forkName: ForkName, blobSchedule: BlobScheduleEntry | null): ForkDigest {
+      const forkDigest = forkDigestById.get(toForkDigestId(forkName, blobSchedule));
       if (!forkDigest) {
         throw Error(`No precomputed forkDigest for ${forkName}`);
       }
       return forkDigest;
     },
 
-    forkName2ForkDigestHex(forkName: ForkName): ForkDigestHex {
-      const forkDigestHex = forkDigestHexByForkName.get(forkName);
+    forkName2ForkDigestHex(forkName: ForkName, blobSchedule: BlobScheduleEntry | null): ForkDigestHex {
+      const forkDigestHex = forkDigestHexById.get(toForkDigestId(forkName, blobSchedule));
       if (!forkDigestHex) {
         throw Error(`No precomputed forkDigest for ${forkName}`);
       }
@@ -142,6 +147,15 @@ function toHexStringNoPrefix(hex: string | Uint8Array): string {
   return strip0xPrefix(typeof hex === "string" ? hex : toHex(hex));
 }
 
-function computeForkDigest(currentVersion: Version, genesisValidatorsRoot: Root): ForkDigest {
-  return computeForkDataRoot(currentVersion, genesisValidatorsRoot).slice(0, 4);
+function forkDigestIdToForkName(forkDigestId: ForkDigestId): ForkName {
+  if (Object.values(ForkName).includes(forkDigestId as ForkName)) {
+    return forkDigestId as ForkName;
+  }
+
+  const [forkPart] = forkDigestId.split("-");
+  return forkPart as ForkName;
+}
+
+function toForkDigestId(fork: ForkName, blobSchedule: BlobScheduleEntry | null): ForkDigestId {
+  return blobSchedule !== null ? `${fork}-${blobSchedule.EPOCH}` : fork;
 }
