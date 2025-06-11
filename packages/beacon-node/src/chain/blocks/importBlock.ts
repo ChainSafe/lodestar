@@ -139,7 +139,17 @@ export async function importBlock(
           });
         }
       } else if (blockData.fork === ForkName.fulu) {
-        // TODO peerDAS build and emit the event for the datacolumns
+        const {dataColumns} = blockData;
+        for (const dataColumnSidecar of dataColumns) {
+          const {index, kzgCommitments} = dataColumnSidecar;
+          this.emitter.emit(routes.events.EventType.dataColumnSidecar, {
+            blockRoot: blockRootHex,
+            slot: blockSlot,
+            index,
+            kzgCommitments: kzgCommitments.map(toHexString),
+            versionedHashes: kzgCommitments.map((commitment) => toHexString(kzgCommitmentToVersionedHash(commitment))),
+          });
+        }
       }
     }
   });
@@ -483,8 +493,18 @@ export async function importBlock(
               versionedHash: toHexString(kzgCommitmentToVersionedHash(kzgCommitment)),
             });
           }
-        } else {
-          // TODO add event for datacolumns
+        } else if (blockInput.blockData.fork === ForkName.fulu) {
+          const {dataColumns} = blockInput.blockData;
+          for (const dataColumnSidecar of dataColumns) {
+            const {index, kzgCommitments} = dataColumnSidecar;
+            this.emitter.emit(routes.events.EventType.dataColumnSidecar, {
+              blockRoot: blockRootHex,
+              slot: blockSlot,
+              index,
+              kzgCommitments: kzgCommitments.map(toHexString),
+              versionedHashes: kzgCommitments.map((commitment) => toHexString(kzgCommitmentToVersionedHash(commitment))),
+            });
+          }
         }
       }
     });
