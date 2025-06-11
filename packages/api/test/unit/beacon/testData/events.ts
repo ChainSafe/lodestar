@@ -1,6 +1,12 @@
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {Endpoints, EventData, EventType, blobSidecarSSE, dataColumnSidecarSSE} from "../../../../src/beacon/routes/events.js";
+import {
+  Endpoints,
+  EventData,
+  EventType,
+  blobSidecarSSE,
+  dataColumnSidecarSSE,
+} from "../../../../src/beacon/routes/events.js";
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 
 const abortController = new AbortController();

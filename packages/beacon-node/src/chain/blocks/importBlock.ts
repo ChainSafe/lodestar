@@ -9,6 +9,7 @@ import {
   INTERVALS_PER_SLOT,
   MAX_SEED_LOOKAHEAD,
   SLOTS_PER_EPOCH,
+  isForkPostFulu,
 } from "@lodestar/params";
 import {
   CachedBeaconStateAltair,
@@ -139,7 +140,7 @@ export async function importBlock(
             versionedHash: toHexString(kzgCommitmentToVersionedHash(kzgCommitment)),
           });
         }
-      } else if (blockData.fork === ForkName.fulu) {
+      } else if (isForkPostFulu(blockData.fork)) {
         emitDataColumnSidecar(this.emitter, blockInput, blockRoot);
       }
     }

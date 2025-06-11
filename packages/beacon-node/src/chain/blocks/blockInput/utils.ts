@@ -3,7 +3,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, isForkPostDeneb} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Epoch, Slot} from "@lodestar/types";
-import {toHex, toHexString} from "@lodestar/utils";
+import {toHex} from "@lodestar/utils";
 import {toRootHex} from "@lodestar/utils/lib/bytes/browser.js";
 import {kzgCommitmentToVersionedHash} from "../../../util/blobs.js";
 import {ChainEventEmitter} from "../../emitter.js";

@@ -14,7 +14,7 @@ import {
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
-import {LogLevel, Logger, prettyBytes, toHex, toRootHex} from "@lodestar/utils";
+import {LogLevel, Logger, prettyBytes, toRootHex} from "@lodestar/utils";
 import {emitDataColumnSidecar} from "../../chain/blocks/blockInput/utils.js";
 import {
   BlobSidecarValidation,
@@ -59,7 +59,6 @@ import {validateLightClientFinalityUpdate} from "../../chain/validation/lightCli
 import {validateLightClientOptimisticUpdate} from "../../chain/validation/lightClientOptimisticUpdate.js";
 import {OpSource} from "../../chain/validatorMonitor.js";
 import {Metrics} from "../../metrics/index.js";
-import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {INetworkCore} from "../core/index.js";
 import {NetworkEvent, NetworkEventBus} from "../events.js";
 import {

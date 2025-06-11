@@ -1,6 +1,6 @@
 import {ContainerType, ListBasicType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName} from "@lodestar/params";
+import {ForkName, MAX_BLOB_COMMITMENTS_PER_BLOCK} from "@lodestar/params";
 import {
   Attestation,
   AttesterSlashing,
@@ -19,7 +19,6 @@ import {
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
-import {MAX_BLOB_COMMITMENTS_PER_BLOCK} from "@lodestar/params";
 
 import {EmptyMeta, EmptyResponseCodec, EmptyResponseData} from "../../utils/codecs.js";
 import {getPostAltairForkTypes, getPostBellatrixForkTypes} from "../../utils/fork.js";
