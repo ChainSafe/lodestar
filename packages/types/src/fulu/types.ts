@@ -17,3 +17,6 @@ export type DataColumnSidecarsByRangeRequest = ValueOf<typeof ssz.DataColumnSide
 
 export type BeaconState = ValueOf<typeof ssz.BeaconState>;
 export type ProposerLookahead = ValueOf<typeof ssz.ProposerLookahead>;
+
+export type BlockContents = ValueOf<typeof ssz.BlockContents>;
+export type Contents = Omit<BlockContents, "block">;

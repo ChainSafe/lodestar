@@ -9,6 +9,7 @@ import {
 import {
   BYTES_PER_FIELD_ELEMENT,
   FIELD_ELEMENTS_PER_CELL,
+  FIELD_ELEMENTS_PER_EXT_BLOB,
   KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH,
   MAX_BLOB_COMMITMENTS_PER_BLOCK,
   MAX_REQUEST_DATA_COLUMN_SIDECARS,
@@ -37,6 +38,10 @@ export const Cell = new ByteVectorType(BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_
 export const DataColumn = new ListCompositeType(Cell, MAX_BLOB_COMMITMENTS_PER_BLOCK);
 export const ExtendedMatrix = new ListCompositeType(Cell, MAX_BLOB_COMMITMENTS_PER_BLOCK * NUMBER_OF_COLUMNS);
 export const KzgCommitmentsInclusionProof = new VectorCompositeType(Bytes32, KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH);
+export const KZGProofs = new ListCompositeType(
+  denebSsz.KZGProof,
+  FIELD_ELEMENTS_PER_EXT_BLOB * MAX_BLOB_COMMITMENTS_PER_BLOCK
+);
 export const ProposerLookahead = new VectorBasicType(ValidatorIndex, (MIN_SEED_LOOKAHEAD + 1) * SLOTS_PER_EPOCH);
 
 export const DataColumnSidecar = new ContainerType(
@@ -91,4 +96,20 @@ export const BeaconState = new ContainerType(
     proposerLookahead: ProposerLookahead, // New in FULU:EIP7917
   },
   {typeName: "BeaconState", jsonCase: "eth2"}
+);
+
+export const BeaconBlock = new ContainerType(
+  {
+    ...electraSsz.BeaconBlock.fields,
+  },
+  {typeName: "BeaconBlock", jsonCase: "eth2", cachePermanentRootStruct: true}
+);
+
+export const BlockContents = new ContainerType(
+  {
+    block: BeaconBlock,
+    kzgProofs: KZGProofs,
+    blobs: denebSsz.Blobs,
+  },
+  {typeName: "BlockContents", jsonCase: "eth2"}
 );
