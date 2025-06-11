@@ -148,14 +148,14 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
           return config.MAX_BLOBS_PER_BLOCK;
       }
 
-      const blobSchedule = this.getBlobSchedule(epoch);
+      const blobSchedule = this.getBlobParameters(epoch);
 
       return blobSchedule !== null ? blobSchedule.MAX_BLOBS_PER_BLOCK : config.MAX_BLOBS_PER_BLOCK_ELECTRA;
     },
     getMaxRequestBlobSidecars(fork: ForkName): number {
       return isForkPostElectra(fork) ? config.MAX_REQUEST_BLOB_SIDECARS_ELECTRA : config.MAX_REQUEST_BLOB_SIDECARS;
     },
-    getBlobSchedule(epoch: Epoch): BlobScheduleEntry | null {
+    getBlobParameters(epoch: Epoch): BlobScheduleEntry | null {
       // Sort by epoch in descending order to find the latest applicable value
       const blobSchedule = [...config.BLOB_SCHEDULE].sort((a, b) => b.EPOCH - a.EPOCH);
 

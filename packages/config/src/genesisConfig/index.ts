@@ -24,7 +24,7 @@ export function createCachedGenesis(chainForkConfig: ChainForkConfig, genesisVal
 
     if (isForkPostFulu(fork.name)) {
       // For post-fulu forks, we need to pass the blob schedule to compute the fork digest
-      const blobSchedule = chainForkConfig.getBlobSchedule(fork.epoch);
+      const blobSchedule = chainForkConfig.getBlobParameters(fork.epoch);
       forkDigest = computeForkDigest(fork.version, genesisValidatorsRoot, blobSchedule);
       forkDigestId = blobSchedule !== null ? `${fork.name}-${blobSchedule.EPOCH}` : fork.name;
     } else {

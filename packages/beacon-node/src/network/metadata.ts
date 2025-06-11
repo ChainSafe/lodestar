@@ -103,10 +103,11 @@ export class MetadataController {
 
 export function getENRForkID(config: BeaconConfig, clockEpoch: Epoch): phase0.ENRForkID {
   const {currentFork, nextFork} = getCurrentAndNextFork(config, clockEpoch);
+  const blobSchedule = config.getBlobParameters(clockEpoch);
 
   return {
     // Current fork digest
-    forkDigest: config.forkName2ForkDigest(currentFork.name),
+    forkDigest: config.forkName2ForkDigest(currentFork.name, blobSchedule),
     // next planned fork versin
     nextForkVersion: nextFork ? nextFork.version : currentFork.version,
     // next fork epoch
