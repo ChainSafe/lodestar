@@ -1,4 +1,4 @@
-import {ChainForkConfig, ForkInfo} from "@lodestar/config";
+import {BlobScheduleEntry, ChainForkConfig, ForkInfo} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {Epoch} from "@lodestar/types";
 
@@ -52,6 +52,19 @@ export function getActiveForks(config: ChainForkConfig, epoch: Epoch): ForkName[
   }
 
   return activeForks;
+}
+
+export function getActiveBlobSchedule(config: ChainForkConfig, epoch: Epoch): BlobScheduleEntry[] {
+  const activeBlobSchedule = new Set<BlobScheduleEntry>();
+
+  for (let i = epoch - FORK_EPOCH_LOOKAHEAD; i <= epoch + FORK_EPOCH_LOOKAHEAD; i++) {
+    const blobSchedule = config.getBlobParameters(i);
+    if (blobSchedule !== null) {
+      activeBlobSchedule.add(blobSchedule);
+    }
+  }
+
+  return [...activeBlobSchedule];
 }
 
 /**
