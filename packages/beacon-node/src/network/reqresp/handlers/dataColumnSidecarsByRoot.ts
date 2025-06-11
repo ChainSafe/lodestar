@@ -10,6 +10,7 @@ import {
   COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_CUSTODY_INDEX,
   COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_NUM_COLUMNS,
   COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_TO_FIRST_SIDECAR,
+  SSZ_OFFSET_BYTES_FOR_LIST_TYPE,
 } from "../../../db/repositories/dataColumnSidecars.js";
 
 export async function* onDataColumnSidecarsByRoot(
@@ -46,47 +47,45 @@ export async function* onDataColumnSidecarsByRoot(
       throw new ResponseError(RespStatus.SERVER_ERROR, `No item for root ${block.blockRoot} slot ${block.slot}`);
     }
 
-    const retrivedColumnsLen = ssz.Uint8.deserialize(
+    const numberOfColumns = ssz.Uint8.deserialize(
       dataColumnSidecarsBytesWrapped.slice(
         COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_NUM_COLUMNS,
         COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_COLUMN_SIZE
       )
     );
-    const retrievedColumnsSizeBytes = dataColumnSidecarsBytesWrapped.slice(
-      COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_COLUMN_SIZE,
-      COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_CUSTODY_INDEX
-    );
-    const columnsSize = ssz.UintNum64.deserialize(retrievedColumnsSizeBytes);
-    const dataColumnSidecarsBytes = dataColumnSidecarsBytesWrapped.slice(
-      COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_TO_FIRST_SIDECAR + 4 * retrivedColumnsLen
+
+    const columnsSizeInBytes = ssz.UintNum64.deserialize(
+      dataColumnSidecarsBytesWrapped.slice(
+        COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_COLUMN_SIZE,
+        COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_CUSTODY_INDEX
+      )
     );
 
-    const dataColumnsIndex = dataColumnSidecarsBytesWrapped.slice(
+    const custodyIndex = dataColumnSidecarsBytesWrapped.slice(
       COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_CUSTODY_INDEX,
       COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_CUSTODY_INDEX + NUMBER_OF_COLUMNS
     );
 
-    // const storedColumns = Array.from({length: NUMBER_OF_COLUMNS}, (_v, i) => i).filter(
-    //   (i) => dataColumnsIndex[i] > 0
-    // );
-    // const columnsLen = dataColumnSidecarsBytes.length / columnsSize;
-    // console.log(
-    //   `onDataColumnSidecarsByRoot: slot=${block.slot} columnsSize=${columnsSize} storedColumnsLen=${columnsLen} retrivedColumnsLen=${retrivedColumnsLen} dataColumnSidecarsBytesWrapped=${dataColumnSidecarsBytesWrapped.length} storedColumns=${storedColumns.join(" ")}`
-    // );
+    // each dataColumnSidecar element int he dataColumnSidecars list is itself a variable length
+    // container so there is an offset for each element at the beginning of the container. need
+    // to slice those off to get to the actual elements
+    const dataColumnSidecarsBytes = dataColumnSidecarsBytesWrapped.slice(
+      COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_TO_FIRST_SIDECAR + SSZ_OFFSET_BYTES_FOR_LIST_TYPE * numberOfColumns
+    );
 
     for (const index of columns) {
-      const dataIndex = (dataColumnsIndex[index] ?? 0) - 1;
+      const dataIndex = (custodyIndex[index] ?? 0) - 1;
       if (dataIndex < 0) {
         throw new ResponseError(RespStatus.SERVER_ERROR, `dataColumnSidecar index=${index} not custodied`);
       }
 
       const dataColumnSidecarBytes = dataColumnSidecarsBytes.slice(
-        dataIndex * columnsSize,
-        (dataIndex + 1) * columnsSize
+        dataIndex * columnsSizeInBytes,
+        (dataIndex + 1) * columnsSizeInBytes
       );
-      if (dataColumnSidecarBytes.length !== columnsSize) {
+      if (dataColumnSidecarBytes.length !== columnsSizeInBytes) {
         throw Error(
-          `Inconsistent state, dataColumnSidecar blockRoot=${blockRootHex} index=${index} dataColumnSidecarBytes=${dataColumnSidecarBytes.length} expected=${columnsSize}`
+          `Inconsistent state, dataColumnSidecar blockRoot=${blockRootHex} index=${index} dataColumnSidecarBytes=${dataColumnSidecarBytes.length} expected=${columnsSizeInBytes}`
         );
       }
 
