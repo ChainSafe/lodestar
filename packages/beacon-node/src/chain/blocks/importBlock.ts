@@ -436,19 +436,22 @@ export async function importBlock(
       }
       if (
         blockInput.type === BlockInputType.availableData &&
-        this.emitter.listenerCount(routes.events.EventType.blobSidecar) &&
-        (blockInput.blockData.fork === ForkName.deneb || blockInput.blockData.fork === ForkName.electra)
+        this.emitter.listenerCount(routes.events.EventType.blobSidecar)
       ) {
-        const {blobs} = blockInput.blockData;
-        for (const blobSidecar of blobs) {
-          const {index, kzgCommitment} = blobSidecar;
-          this.emitter.emit(routes.events.EventType.blobSidecar, {
-            blockRoot: blockRootHex,
-            slot: blockSlot,
-            index,
-            kzgCommitment: toHexString(kzgCommitment),
-            versionedHash: toHexString(kzgCommitmentToVersionedHash(kzgCommitment)),
-          });
+        if (blockInput.blockData.fork === ForkName.deneb || blockInput.blockData.fork === ForkName.electra) {
+          const {blobs} = blockInput.blockData;
+          for (const blobSidecar of blobs) {
+            const {index, kzgCommitment} = blobSidecar;
+            this.emitter.emit(routes.events.EventType.blobSidecar, {
+              blockRoot: blockRootHex,
+              slot: blockSlot,
+              index,
+              kzgCommitment: toHexString(kzgCommitment),
+              versionedHash: toHexString(kzgCommitmentToVersionedHash(kzgCommitment)),
+            });
+          }
+        } else {
+          // TODO add event for datacolumns
         }
       }
     });
