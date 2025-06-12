@@ -1221,10 +1221,15 @@ export class BeaconChain implements IBeaconChain {
           this.logger.verbose(`Updated targetCustodyGroupCount=${this.custodyConfig.targetCustodyGroupCount}`);
           this.emitter.emit(ChainEvent.updateTargetGroupCount, this.custodyConfig.targetCustodyGroupCount);
 
-          // TODO: If target group count increases, we should wait to update the advertised group until we've
+          // Need to update advertised custody prior to fulu transition so that we can serve columns we have for
+          // validators that are attached prior to the fork transition.
+          //
+          // TODO(fulu): If target group count increases, we should wait to update the advertised group until we've
           // backfilled the new groups.
-          // this.custodyConfig.updateAdvertisedCustodyGroupCount(targetCustodyGroupCount);
-          // this.emitter.emit(ChainEvent.updateAdvertisedGroupCount, this.custodyConfig.advertisedCustodyGroupCount);
+          if (this.config.getForkSeq(slot) < ForkSeq.fulu) {
+            this.custodyConfig.updateAdvertisedCustodyGroupCount(targetCustodyGroupCount);
+            this.emitter.emit(ChainEvent.updateAdvertisedGroupCount, this.custodyConfig.advertisedCustodyGroupCount);
+          }
         }
       }
     }
