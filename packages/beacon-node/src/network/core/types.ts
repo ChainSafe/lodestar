@@ -14,14 +14,7 @@ import { ForkName } from "@lodestar/params";
 
 export type MultiaddrStr = string;
 // Boundary of network subscription. We subscribe/unsubscribe during fork and blob schedule transitions
-export type SubscribeBoundary = {fork: ForkName; epoch?: Epoch}| BlobScheduleEntry;
-
-export function isBlobScheduleBoundary(
-  boundary: SubscribeBoundary
-): boundary is BlobScheduleEntry {
-  return (boundary as BlobScheduleEntry).MAX_BLOBS_PER_BLOCK !== undefined;
-}
-
+export type SubscribeBoundary = {fork: ForkName; epoch?: Epoch} | {fork: ForkName} & BlobScheduleEntry;
 
 // Interface shared by main Network class, and all backends
 export interface INetworkCorePublic {

@@ -26,6 +26,7 @@ import {
   computeGossipPeerScoreParams,
   gossipScoreThresholds,
 } from "./scoringParameters.js";
+import { isBlobScheduleBoundary } from "../subscribeBoundary.js";
 
 /** As specified in https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md */
 const GOSSIPSUB_HEARTBEAT_INTERVAL = 0.7 * 1000;
@@ -199,6 +200,7 @@ export class Eth2Gossipsub extends GossipSub {
     ]) {
       // Pre-aggregate results by fork so we can fill the remaining metrics with 0
       const peersByTypeByFork = new Map2d<ForkName, GossipType, number>();
+      // TODO: This shouldnt be by fork, but by boundary
       const peersByBeaconAttSubnetByFork = new Map2dArr<ForkName, number>();
       const peersByBeaconSyncSubnetByFork = new Map2dArr<ForkName, number>();
 
@@ -211,12 +213,14 @@ export class Eth2Gossipsub extends GossipSub {
         // for example in prater: /eth2/82f4a72b/optimistic_light_client_update_v0/ssz_snappy
         const topic = this.gossipTopicCache.getKnownTopic(topicString);
         if (topic !== undefined) {
+          const boundary = topic.boundary;
+          const fork = isBlobScheduleBoundary(boundary) ? this.config.getForkInfoAtEpoch(boundary.EPOCH).name : boundary.fork;
           if (topic.type === GossipType.beacon_attestation) {
-            peersByBeaconAttSubnetByFork.set(topic.fork, topic.subnet, peers.size);
+            peersByBeaconAttSubnetByFork.set(fork, topic.subnet, peers.size);
           } else if (topic.type === GossipType.sync_committee) {
-            peersByBeaconSyncSubnetByFork.set(topic.fork, topic.subnet, peers.size);
+            peersByBeaconSyncSubnetByFork.set(fork, topic.subnet, peers.size);
           } else {
-            peersByTypeByFork.set(topic.fork, topic.type, peers.size);
+            peersByTypeByFork.set(fork, topic.type, peers.size);
           }
         }
 
@@ -339,8 +343,20 @@ function getMetricsTopicStrToLabel(config: BeaconConfig, opts: {disableLightClie
       disableLightClientServer: opts.disableLightClientServer,
     });
     for (const topic of topics) {
-      metricsTopicStrToLabel.set(stringifyGossipTopic(config, {...topic, fork}), topic.type);
+      metricsTopicStrToLabel.set(stringifyGossipTopic(config, {...topic, boundary: {fork}}), topic.type);
     }
   }
+
+  for (const entry of config.BLOB_SCHEDULE) {
+    const fork = config.getForkInfoAtEpoch(entry.EPOCH).name;
+    const topics = getCoreTopicsAtFork(config, fork, {
+      subscribeAllSubnets: true,
+      disableLightClientServer: opts.disableLightClientServer,
+    });
+    for (const topic of topics) {
+      metricsTopicStrToLabel.set(stringifyGossipTopic(config, {...topic, boundary: {...entry, fork}}), topic.type);
+    }
+  }
+
   return metricsTopicStrToLabel;
 }

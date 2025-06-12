@@ -75,18 +75,18 @@ export class SyncnetsService implements SubnetsService {
 
   /** Call ONLY ONCE: Two epoch before the fork, re-subscribe all existing random subscriptions to the new fork  */
   subscribeSubnetsAfterBoundary(boundary: SubscribeBoundary): void {
-    this.logger.info("Subscribing to random attnets to next fork", {nextFork: boundary});
+    this.logger.info("Subscribing to random attnets to next fork", boundary);
     for (const subnet of this.subscriptionsCommittee.getAll()) {
-      this.gossip.subscribeTopic({type: gossipType, fork: boundary, subnet});
+      this.gossip.subscribeTopic({type: gossipType, boundary, subnet});
     }
   }
 
   /** Call  ONLY ONCE: Two epochs after the fork, un-subscribe all subnets from the old fork */
-  unsubscribeSubnetsBeforeBoundary(prevFork: SubscribeBoundary): void {
-    this.logger.info("Unsubscribing to random attnets from prev fork", {prevFork});
+  unsubscribeSubnetsBeforeBoundary(boundary: SubscribeBoundary): void {
+    this.logger.info("Unsubscribing to random attnets from prev fork", boundary);
     for (let subnet = 0; subnet < SYNC_COMMITTEE_SUBNET_COUNT; subnet++) {
       if (!this.opts?.subscribeAllSubnets) {
-        this.gossip.unsubscribeTopic({type: gossipType, fork: prevFork, subnet});
+        this.gossip.unsubscribeTopic({type: gossipType, boundary, subnet});
       }
     }
   }

@@ -12,7 +12,8 @@ import {Attestation, SingleAttestation, ssz, sszTypesFor} from "@lodestar/types"
 import {GossipAction, GossipActionError, GossipErrorCode} from "../../chain/errors/gossipValidation.js";
 import {DEFAULT_ENCODING} from "./constants.js";
 import {GossipEncoding, GossipTopic, GossipTopicTypeMap, GossipType, SSZTypeOfGossipTopic} from "./interface.js";
-import { isBlobScheduleBoundary } from "../core/index.js";
+import { isBlobScheduleBoundary } from "../subscribeBoundary.js";
+import { SubscribeBoundary } from "../core/index.js";
 
 export interface IGossipTopicCache {
   getTopic(topicStr: string): GossipTopic;
@@ -21,7 +22,8 @@ export interface IGossipTopicCache {
 export class GossipTopicCache implements IGossipTopicCache {
   private topicsByTopicStr = new Map<string, Required<GossipTopic>>();
 
-  constructor(private readonly forkDigestContext: ForkDigestContext) {}
+  // TODO: Switch forkDigestContext back to forkDigestContext type
+  constructor(private readonly forkDigestContext: BeaconConfig) {}
 
   /** Returns cached GossipTopic, otherwise attempts to parse it from the str */
   getTopic(topicStr: string): GossipTopic {
@@ -84,20 +86,21 @@ function stringifyGossipTopicType(topic: GossipTopic): string {
 }
 
 export function getGossipSSZType(topic: GossipTopic) {
+  const fork = topic.boundary.fork;
   switch (topic.type) {
     case GossipType.beacon_block:
       // beacon_block is updated in altair to support the updated SignedBeaconBlock type
-      return ssz[topic.fork].SignedBeaconBlock;
+      return ssz[fork].SignedBeaconBlock;
     case GossipType.blob_sidecar:
       return ssz.deneb.BlobSidecar;
     case GossipType.beacon_aggregate_and_proof:
-      return sszTypesFor(topic.fork).SignedAggregateAndProof;
+      return sszTypesFor(fork).SignedAggregateAndProof;
     case GossipType.beacon_attestation:
-      return sszTypesFor(topic.fork).SingleAttestation;
+      return sszTypesFor(fork).SingleAttestation;
     case GossipType.proposer_slashing:
       return ssz.phase0.ProposerSlashing;
     case GossipType.attester_slashing:
-      return sszTypesFor(topic.fork).AttesterSlashing;
+      return sszTypesFor(fork).AttesterSlashing;
     case GossipType.voluntary_exit:
       return ssz.phase0.SignedVoluntaryExit;
     case GossipType.sync_committee_contribution_and_proof:
@@ -105,12 +108,12 @@ export function getGossipSSZType(topic: GossipTopic) {
     case GossipType.sync_committee:
       return ssz.altair.SyncCommitteeMessage;
     case GossipType.light_client_optimistic_update:
-      return isForkPostAltair(topic.fork)
-        ? sszTypesFor(topic.fork).LightClientOptimisticUpdate
+      return isForkPostAltair(fork)
+        ? sszTypesFor(fork).LightClientOptimisticUpdate
         : ssz.altair.LightClientOptimisticUpdate;
     case GossipType.light_client_finality_update:
-      return isForkPostAltair(topic.fork)
-        ? sszTypesFor(topic.fork).LightClientFinalityUpdate
+      return isForkPostAltair(fork)
+        ? sszTypesFor(fork).LightClientFinalityUpdate
         : ssz.altair.LightClientFinalityUpdate;
     case GossipType.bls_to_execution_change:
       return ssz.capella.SignedBLSToExecutionChange;
@@ -167,7 +170,7 @@ const gossipTopicRegex = /^\/eth2\/(\w+)\/(\w+)\/(\w+)/;
  * /eth2/$FORK_DIGEST/$GOSSIP_TYPE/$ENCODING
  * ```
  */
-export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr: string): Required<GossipTopic> {
+export function parseGossipTopic(forkDigestContext: BeaconConfig, topicStr: string): Required<GossipTopic> {
   try {
     const matches = topicStr.match(gossipTopicRegex);
     if (matches === null) {
@@ -176,7 +179,8 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
 
     const [, forkDigestHexNoPrefix, gossipTypeStr, encodingStr] = matches;
 
-    const fork = forkDigestContext.forkDigest2ForkName(forkDigestHexNoPrefix);
+    const {fork, epoch} = forkDigestContext.forkDigest2ForkNameWithEpoch(forkDigestHexNoPrefix);
+    const boundary: SubscribeBoundary = epoch === null ? {fork} : {...forkDigestContext.getBlobParameters(epoch), fork};
     const encoding = parseEncodingStr(encodingStr);
 
     // Inline-d the parseGossipTopicType() function since spreading the resulting object x4 the time to parse a topicStr
@@ -190,7 +194,7 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
       case GossipType.light_client_finality_update:
       case GossipType.light_client_optimistic_update:
       case GossipType.bls_to_execution_change:
-        return {type: gossipTypeStr, fork, encoding};
+        return {type: gossipTypeStr, boundary, encoding};
     }
 
     for (const gossipType of [GossipType.beacon_attestation as const, GossipType.sync_committee as const]) {
@@ -198,7 +202,7 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
         const subnetStr = gossipTypeStr.slice(gossipType.length + 1); // +1 for '_' concatenating the topic name and the subnet
         const subnet = parseInt(subnetStr, 10);
         if (Number.isNaN(subnet)) throw Error(`Subnet ${subnetStr} is not a number`);
-        return {type: gossipType, subnet, fork, encoding};
+        return {type: gossipType, subnet, boundary, encoding};
       }
     }
 
@@ -206,7 +210,7 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
       const subnetStr = gossipTypeStr.slice(GossipType.blob_sidecar.length + 1); // +1 for '_' concatenating the topic name and the subnet
       const subnet = parseInt(subnetStr, 10);
       if (Number.isNaN(subnet)) throw Error(`subnet ${subnetStr} is not a number`);
-      return {type: GossipType.blob_sidecar, subnet, fork, encoding};
+      return {type: GossipType.blob_sidecar, subnet, boundary, encoding};
     }
 
     throw Error(`Unknown gossip type ${gossipTypeStr}`);

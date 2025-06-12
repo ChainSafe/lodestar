@@ -8,6 +8,7 @@ import {compress, uncompress} from "snappyjs";
 import xxhashFactory from "xxhash-wasm";
 import {MESSAGE_DOMAIN_VALID_SNAPPY} from "./constants.js";
 import {GossipTopicCache, getGossipSSZType} from "./topic.js";
+import {isBlobScheduleBoundary} from "../subscribeBoundary.js";
 
 // Load WASM
 const xxhash = await xxhashFactory();
@@ -40,10 +41,11 @@ export function msgIdToStrFn(msgId: Uint8Array): string {
  */
 export function msgIdFn(gossipTopicCache: GossipTopicCache, msg: Message): Uint8Array {
   const topic = gossipTopicCache.getTopic(msg.topic);
+  const boundary = topic.boundary;
 
   let vec: Uint8Array[];
 
-  if (topic.fork === ForkName.phase0) {
+  if (!isBlobScheduleBoundary(boundary) && boundary.fork === ForkName.phase0) {
     // message id for phase0.
     // ```
     // SHA256(MESSAGE_DOMAIN_VALID_SNAPPY + snappy_decompress(message.data))[:20]

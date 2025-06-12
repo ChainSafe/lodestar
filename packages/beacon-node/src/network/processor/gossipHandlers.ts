@@ -349,7 +349,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const {serializedData} = gossipData;
 
       const signedBlock = sszDeserialize(topic, serializedData);
-      const blockInput = await validateBeaconBlock(signedBlock, topic.fork, peerIdStr, seenTimestampSec);
+      const blockInput = await validateBeaconBlock(signedBlock, topic.boundary.fork, peerIdStr, seenTimestampSec);
       chain.serializedCache.set(signedBlock, serializedData);
       handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
     },
@@ -413,7 +413,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const {serializedData} = gossipData;
       let validationResult: AggregateAndProofValidationResult;
       const signedAggregateAndProof = sszDeserialize(topic, serializedData);
-      const {fork} = topic;
+      const {fork} = topic.boundary;
 
       try {
         validationResult = await validateGossipAggregateAndProof(fork, chain, signedAggregateAndProof, serializedData);
@@ -465,7 +465,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       topic,
     }: GossipHandlerParamGeneric<GossipType.attester_slashing>) => {
       const {serializedData} = gossipData;
-      const {fork} = topic;
+      const {fork} = topic.boundary;
       const attesterSlashing = sszDeserialize(topic, serializedData);
       await validateGossipAttesterSlashing(chain, attesterSlashing);
 
@@ -628,7 +628,7 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
         return results;
       }
       // all attestations should have same attestation data as filtered by network processor
-      const {fork} = gossipHandlerParams[0].topic;
+      const {fork} = gossipHandlerParams[0].topic.boundary;
       const validationParams = gossipHandlerParams.map((param) => ({
         attestation: null,
         serializedData: param.gossipData.serializedData,

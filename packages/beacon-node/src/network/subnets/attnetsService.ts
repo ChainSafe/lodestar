@@ -374,7 +374,8 @@ export class AttnetsService implements IAttnetsService {
     const currentSlot = this.clock.currentSlot;
     const epoch = computeEpochAtSlot(currentSlot);
     const blobSchedule = this.config.getBlobParameters(epoch);
-    const boundary = blobSchedule !== null ? blobSchedule : {fork: this.config.getForkInfoAtEpoch(epoch).name}
+    const fork = this.config.getForkInfoAtEpoch(epoch).name;
+    const boundary = blobSchedule !== null ? {...blobSchedule, fork} : {fork}
     
 
     for (const {subnet} of this.shortLivedSubscriptions.getActiveTtl(currentSlot)) {

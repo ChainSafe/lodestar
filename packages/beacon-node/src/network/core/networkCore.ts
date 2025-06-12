@@ -32,7 +32,8 @@ import {CommitteeSubscription, IAttnetsService} from "../subnets/interface.js";
 import {SyncnetsService} from "../subnets/syncnetsService.js";
 import {getConnectionsMap} from "../util.js";
 import {NetworkCoreMetrics, createNetworkCoreMetrics} from "./metrics.js";
-import {INetworkCore, isBlobScheduleBoundary, MultiaddrStr, SubscribeBoundary} from "./types.js";
+import {INetworkCore, MultiaddrStr, SubscribeBoundary} from "./types.js";
+import { isBlobScheduleBoundary } from "../subscribeBoundary.js";
 
 type Mods = {
   libp2p: Libp2p;

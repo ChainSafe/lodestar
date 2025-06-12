@@ -74,7 +74,7 @@ export function getActiveSubscribeBoundaries(config: ChainForkConfig, epoch: Epo
 
   // If we have completely entered blob schedule stage, use activeBlobSchedule
   if (config.getBlobParameters(epoch - FORK_EPOCH_LOOKAHEAD) !== null) {
-    return activeBlobSchedule;
+    return activeBlobSchedule.map((entry) => ({...entry, fork: config.getForkInfoAtEpoch(entry.EPOCH).name}));
   }
 
   // If we have not entered at least the first blob schedule, use activeForks
@@ -87,7 +87,7 @@ export function getActiveSubscribeBoundaries(config: ChainForkConfig, epoch: Epo
   // TODO: There is an unhandled corner case where first blob schedule collides with fork boundary
   // in that case, we will subscribe to wrong topics in additional to the correct topics for 
   // maximum of FORK_EPOCH_LOOKAHEAD * 2 epochs. 
-  return [...activeForks.map((fork) => ({fork})), ...activeBlobSchedule];
+  return [...activeForks.map((fork) => ({fork})), ...activeBlobSchedule.map((entry) => ({...entry, fork: config.getForkInfoAtEpoch(entry.EPOCH).name}))];
 
 }
 
