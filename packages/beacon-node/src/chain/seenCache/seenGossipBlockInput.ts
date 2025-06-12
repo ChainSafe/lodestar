@@ -49,7 +49,7 @@ type GossipedBlockInput =
       dataColumnBytes: Uint8Array | null;
     };
 
-// TODO(das): dedup with gossipHandlers.ts
+// TODO(fulu): dedup with gossipHandlers.ts
 const BLOCK_AVAILABILITY_CUTOFF_MS = 3_000;
 
 export type BlockInputCacheType = {
@@ -354,7 +354,10 @@ export class SeenGossipBlockInput {
               slot,
               dataColumns: dataColumnsCache.size,
             };
-            const recoverResult = await recoverDataColumnSidecars(dataColumnsCache, this.clock, metrics);
+            const recoverResult = await recoverDataColumnSidecars(dataColumnsCache, this.clock, metrics).catch((e) => {
+              this.logger.error("Error recovering data column sidecars", logCtx, e);
+              return RecoverResult.Failed;
+            });
             metrics?.recoverDataColumnSidecars.result.inc({result: recoverResult});
             switch (recoverResult) {
               case RecoverResult.SuccessResolved: {
@@ -368,6 +371,7 @@ export class SeenGossipBlockInput {
                   return dataColumn;
                 });
 
+                // for columns that we already seen, it will be ignored through `ignoreDuplicatePublishError` gossip option
                 this.emitter.emit(ChainEvent.publishDataColumns, sampledColumns);
                 this.logger.verbose("Recovered data column sidecars and resolved availability", logCtx);
                 break;

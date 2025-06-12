@@ -141,31 +141,26 @@ export async function recoverDataColumnSidecars(
     () => new Array<Uint8Array>(blobCount)
   );
   const blobProofs: Array<Uint8Array[]> = Array.from({length: blobCount});
-  try {
-    // https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/das-core.md#recover_matrix
-    const blobIndices = Array.from({length: blobCount}, (_, i) => i);
-    const cellsAndProofs = await Promise.all(
-      blobIndices.map((blobIndex) => {
-        const cellIndices: bigint[] = [];
-        const cells: Uint8Array[] = [];
-        for (const [columnIndex, dataColumn] of partialSidecars.entries()) {
-          cellIndices.push(BigInt(columnIndex));
-          cells.push(dataColumn.column[blobIndex]);
-        }
-        // recovered cells and proofs are of the same row/blob, their length should be NUMBER_OF_COLUMNS
-        return kzg.asyncRecoverCellsAndKzgProofs(cellIndices, cells);
-      })
-    );
-
-    for (let blobIndex = 0; blobIndex < blobCount; blobIndex++) {
-      const recoveredCells = cellsAndProofs[blobIndex].cells;
-      blobProofs[blobIndex] = cellsAndProofs[blobIndex].proofs;
-      for (let columnIndex = 0; columnIndex < NUMBER_OF_COLUMNS; columnIndex++) {
-        fullColumns[columnIndex][blobIndex] = recoveredCells[columnIndex];
+  // https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/das-core.md#recover_matrix
+  const cellsAndProofs = await Promise.all(
+    blobProofs.map((_, blobIndex) => {
+      const cellIndices: bigint[] = [];
+      const cells: Uint8Array[] = [];
+      for (const [columnIndex, dataColumn] of partialSidecars.entries()) {
+        cellIndices.push(BigInt(columnIndex));
+        cells.push(dataColumn.column[blobIndex]);
       }
+      // recovered cells and proofs are of the same row/blob, their length should be NUMBER_OF_COLUMNS
+      return kzg.asyncRecoverCellsAndKzgProofs(cellIndices, cells);
+    })
+  );
+
+  for (let blobIndex = 0; blobIndex < blobCount; blobIndex++) {
+    const recoveredCells = cellsAndProofs[blobIndex].cells;
+    blobProofs[blobIndex] = cellsAndProofs[blobIndex].proofs;
+    for (let columnIndex = 0; columnIndex < NUMBER_OF_COLUMNS; columnIndex++) {
+      fullColumns[columnIndex][blobIndex] = recoveredCells[columnIndex];
     }
-  } catch (_e) {
-    return null;
   }
 
   const result: fulu.DataColumnSidecars = new Array(NUMBER_OF_COLUMNS);

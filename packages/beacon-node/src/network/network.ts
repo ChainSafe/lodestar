@@ -233,7 +233,6 @@ export class Network implements INetwork {
     this.chain.emitter.off(ChainEvent.updateTargetGroupCount, this.onTargetGroupCountUpdated);
     this.chain.emitter.off(ChainEvent.updateAdvertisedGroupCount, this.onAdvertisedGroupCountUpdated);
     this.chain.emitter.off(ChainEvent.publishDataColumns, this.onPublishDataColumns);
-    this.logger.debug("data column recover worker closed");
     await this.core.close();
 
     // Used only for sleep() statements

@@ -363,7 +363,7 @@ export async function recoverDataColumnSidecars(
   }
 
   const timer = metrics?.recoverDataColumnSidecars.recoverTime.startTimer();
-  // this function should never throw, we catched all errors inside
+  // if this function throws, we catch at the consumer side
   const fullSidecars = await recover(partialSidecars);
   timer?.();
   if (fullSidecars == null) {
@@ -386,7 +386,7 @@ export async function recoverDataColumnSidecars(
   }
 
   // We successfully recovered the data columns, update the cache
-  for (let columnIndex = 0; columnIndex < DATA_COLUMN_SIDECAR_SUBNET_COUNT; columnIndex++) {
+  for (let columnIndex = 0; columnIndex < NUMBER_OF_COLUMNS; columnIndex++) {
     if (dataColumnCache.has(columnIndex)) {
       // We already have this column
       continue;
@@ -487,6 +487,7 @@ export async function getDataColumnsFromExecution(
   // Publish columns if and only if subscribed to them
   const sampledColumns = custodyConfig.sampledColumns.map((columnIndex) => dataColumnSidecars[columnIndex]);
 
+  // for columns that we already seen, it will be ignored through `ignoreDuplicatePublishError` gossip option
   emitter.emit(ChainEvent.publishDataColumns, sampledColumns);
 
   for (const column of sampledColumns) {
