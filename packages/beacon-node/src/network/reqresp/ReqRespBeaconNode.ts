@@ -1,6 +1,6 @@
 import {PeerId} from "@libp2p/interface";
 import {BeaconConfig} from "@lodestar/config";
-import {ForkName, ForkSeq} from "@lodestar/params";
+import {ForkName, ForkSeq, isForkPostFulu} from "@lodestar/params";
 import {
   Encoding,
   ProtocolDescriptor,
@@ -12,7 +12,7 @@ import {
   ResponseIncoming,
   ResponseOutgoing,
 } from "@lodestar/reqresp";
-import {Metadata, phase0, ssz} from "@lodestar/types";
+import {Metadata, Status, phase0, ssz} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {Libp2p} from "libp2p";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
@@ -173,9 +173,14 @@ export class ReqRespBeaconNode extends ReqResp {
     );
   }
 
-  async sendStatus(peerId: PeerId, request: phase0.Status): Promise<phase0.Status> {
+  async sendStatus(peerId: PeerId, request: Status): Promise<phase0.Status> {
     return collectExactOneTyped(
-      this.sendReqRespRequest(peerId, ReqRespMethod.Status, [Version.V1], request),
+      this.sendReqRespRequest(
+        peerId,
+        ReqRespMethod.Status,
+        this.currentRegisteredFork >= ForkSeq.fulu ? [Version.V2] : [Version.V1],
+        request
+      ),
       responseSszTypeByMethod[ReqRespMethod.Status]
     );
   }
@@ -224,7 +229,7 @@ export class ReqRespBeaconNode extends ReqResp {
   private getProtocolsAtFork(fork: ForkName): [ProtocolNoHandler, ProtocolHandler][] {
     const protocolsAtFork: [ProtocolNoHandler, ProtocolHandler][] = [
       [protocols.Ping(fork, this.config), this.onPing.bind(this)],
-      [protocols.Status(fork, this.config), this.onStatus.bind(this)],
+      [protocols.StatusV2(fork, this.config), this.onStatus.bind(this)],
       [protocols.Goodbye(fork, this.config), this.onGoodbye.bind(this)],
       // Support V3 methods as soon as implemented (for fulu)
       // Follows pattern for altair:
@@ -245,7 +250,10 @@ export class ReqRespBeaconNode extends ReqResp {
 
     if (ForkSeq[fork] < ForkSeq.fulu) {
       // Unregister MetadataV2 at the fork boundary, so only declare for pre-fulu
-      protocolsAtFork.push([protocols.MetadataV2(fork, this.config), this.onMetadata.bind(this)]);
+      protocolsAtFork.push(
+        [protocols.Status(fork, this.config), this.onStatus.bind(this)],
+        [protocols.MetadataV2(fork, this.config), this.onMetadata.bind(this)]
+      );
     }
 
     if (ForkSeq[fork] >= ForkSeq.altair && !this.disableLightClientServer) {
@@ -312,13 +320,15 @@ export class ReqRespBeaconNode extends ReqResp {
   }
 
   private async *onStatus(req: ReqRespRequest, peerId: PeerId): AsyncIterable<ResponseOutgoing> {
-    const body = ssz.phase0.Status.deserialize(req.data);
+    const fork = this.currentRegisteredFork >= ForkSeq.fulu ? ForkName.fulu : ForkName.phase0;
+    const type = isForkPostFulu(fork) ? ssz.fulu.Status : ssz.phase0.Status;
+    const body = type.deserialize(req.data);
     this.onIncomingRequestBody({method: ReqRespMethod.Status, body}, peerId);
 
+    const status = this.statusCache.get();
     yield {
-      data: ssz.phase0.Status.serialize(this.statusCache.get()),
-      // Status topic is fork-agnostic
-      fork: ForkName.phase0,
+      fork,
+      data: type.serialize(status),
     };
   }
 
@@ -347,6 +357,8 @@ export class ReqRespBeaconNode extends ReqResp {
     this.onIncomingRequestBody({method: ReqRespMethod.Metadata, body: null}, peerId);
 
     const metadata = this.metadataController.json;
+
+    // TODO(fulu): is this still correct?  there are three versions of Metadata now...
     // Metadata topic is fork-agnostic
     const fork = ForkName.phase0;
     const type = responseSszTypeByMethod[ReqRespMethod.Metadata](fork, req.version);

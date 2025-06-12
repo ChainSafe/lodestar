@@ -110,7 +110,7 @@ const blocksResponseType: ResponseTypeGetter<SignedBeaconBlock> = (fork, version
 };
 
 export const responseSszTypeByMethod: {[K in ReqRespMethod]: ResponseTypeGetter<ResponseBodyByMethod[K]>} = {
-  [ReqRespMethod.Status]: (_, version) => (version === Version.V1 ? ssz.fulu.Status : ssz.phase0.Status),
+  [ReqRespMethod.Status]: (_, version) => (version === Version.V2 ? ssz.fulu.Status : ssz.phase0.Status),
   [ReqRespMethod.Goodbye]: () => ssz.phase0.Goodbye,
   [ReqRespMethod.Ping]: () => ssz.phase0.Ping,
   [ReqRespMethod.Metadata]: (_, version) =>
