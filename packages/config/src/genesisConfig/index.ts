@@ -1,6 +1,6 @@
 import {digest} from "@chainsafe/as-sha256";
 import {DOMAIN_VOLUNTARY_EXIT, ForkName, SLOTS_PER_EPOCH, isForkPostFulu} from "@lodestar/params";
-import {DomainType, ForkDigest, Root, Slot, Version, phase0, ssz} from "@lodestar/types";
+import {DomainType, Epoch, ForkDigest, Root, Slot, Version, phase0, ssz} from "@lodestar/types";
 import {intToBytes, strip0xPrefix, toHex} from "@lodestar/utils";
 import {ChainForkConfig} from "../beaconConfig.js";
 import {BlobScheduleEntry} from "../index.js";
@@ -130,6 +130,15 @@ export function createCachedGenesis(chainForkConfig: ChainForkConfig, genesisVal
       return forkDigestIdToForkName(forkDigestId);
     },
 
+    forkDigest2ForkNameWithEpoch(forkDigest: ForkDigest | ForkDigestHex): {fork: ForkName; epoch: Epoch | null} {
+      const forkDigestHex = toHexStringNoPrefix(forkDigest);
+      const forkDigestId = forkDigestIdByForkDigest.get(forkDigestHex);
+      if (forkDigestId == null) {
+        throw Error(`Unknown forkDigest ${forkDigestHex}`);
+      }
+      return {fork: forkDigestIdToForkName(forkDigestId), epoch: forkDigestIdToEpoch(forkDigestId)};
+    },
+
     forkDigest2ForkNameOption(forkDigest: ForkDigest | ForkDigestHex): ForkName | null {
       const forkDigestHex = toHexStringNoPrefix(forkDigest);
       const forkDigestId = forkDigestIdByForkDigest.get(forkDigestHex);
@@ -203,6 +212,14 @@ function forkDigestIdToForkName(forkDigestId: ForkDigestId): ForkName {
 
   const [forkPart] = forkDigestId.split("-");
   return forkPart as ForkName;
+}
+
+function forkDigestIdToEpoch(forkDigestId: ForkDigestId): Epoch | null{
+  if (Object.values(ForkName).includes(forkDigestId as ForkName)) {
+    return null;
+  }
+
+  return Number(forkDigestId.split("-")[1]);
 }
 
 function toForkDigestId(fork: ForkName, blobSchedule: BlobScheduleEntry | null): ForkDigestId {
