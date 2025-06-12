@@ -1,7 +1,7 @@
 import {routes} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
-import {toHexString} from "@lodestar/utils";
+import {toHex} from "@lodestar/utils";
 import {MockedObject, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {getEventsApi} from "../../../../../src/api/impl/events/index.js";
 import {BeaconChain, ChainEventEmitter, HeadEventData} from "../../../../../src/chain/index.js";
@@ -72,14 +72,14 @@ describe("Events api impl", () => {
       expect(events[0].message).not.toBeNull();
     });
 
-    it("should emit dataColumnSidecar event", async () => {
+    it("should emit data_column_sidecar event", async () => {
       const events = getEvents([routes.events.EventType.dataColumnSidecar]);
 
       const mockDataColumnSidecarEvent = {
         blockRoot: ZERO_HASH_HEX,
         slot: 123,
         index: 1,
-        kzgCommitments: [toHexString(ssz.deneb.KZGCommitment.defaultValue())],
+        kzgCommitments: [toHex(ssz.deneb.KZGCommitment.defaultValue())],
         versionedHashes: [ZERO_HASH_HEX],
       };
 
