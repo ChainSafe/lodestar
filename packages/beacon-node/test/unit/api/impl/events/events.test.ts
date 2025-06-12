@@ -77,8 +77,8 @@ describe("Events api impl", () => {
 
       const mockDataColumnSidecarEvent = {
         blockRoot: ZERO_HASH_HEX,
-        slot: 123,
         index: 1,
+        slot: 123,
         kzgCommitments: [toHex(ssz.deneb.KZGCommitment.defaultValue())],
       };
 

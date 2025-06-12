@@ -24,13 +24,14 @@ import {
   fulu,
   isSignedBlockContents,
 } from "@lodestar/types";
-import {fromHex, sleep, toRootHex} from "@lodestar/utils";
+import {fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
 import {
   BlobsSource,
   BlockInput,
   BlockInputAvailableData,
   BlockInputBlobs,
   BlockInputDataColumns,
+  BlockInputType,
   BlockSource,
   DataColumnsSource,
   ImportBlockOpts,
@@ -240,6 +241,21 @@ export function getBeaconBlockApi({
     }
 
     chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRoot});
+
+    if (blockForImport.type === BlockInputType.availableData && blockForImport.blockData.fork === ForkName.fulu) {
+      const {dataColumns} = blockForImport.blockData;
+
+      for (const dataColumnSidecar of dataColumns) {
+        const {index, kzgCommitments} = dataColumnSidecar;
+
+        chain.emitter.emit(routes.events.EventType.dataColumnSidecar, {
+          blockRoot: blockRoot,
+          slot,
+          index,
+          kzgCommitments: kzgCommitments.map(toHex),
+        });
+      }
+    }
 
     // TODO: Validate block
     const delaySec =

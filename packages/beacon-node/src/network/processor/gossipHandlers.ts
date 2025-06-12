@@ -14,7 +14,7 @@ import {
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
-import {LogLevel, Logger, prettyBytes, toRootHex} from "@lodestar/utils";
+import {LogLevel, Logger, prettyBytes, toHex, toRootHex} from "@lodestar/utils";
 import {
   BlobSidecarValidation,
   BlockInput,
@@ -297,10 +297,17 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       metrics?.gossipBlob.recvToValidation.observe(recvToValidation);
       metrics?.gossipBlob.validationTime.observe(validationTime);
 
+      chain.emitter.emit(routes.events.EventType.dataColumnSidecar, {
+        blockRoot: blockHex,
+        slot,
+        index: dataColumnSidecar.index,
+        kzgCommitments: dataColumnSidecar.kzgCommitments.map(toHex),
+      });
+
       logger.debug("Received gossip dataColumn", {
         slot: slot,
         root: blockHex,
-        curentSlot: chain.clock.currentSlot,
+        currentSlot: chain.clock.currentSlot,
         peerId: peerIdStr,
         delaySec,
         gossipSubnet,

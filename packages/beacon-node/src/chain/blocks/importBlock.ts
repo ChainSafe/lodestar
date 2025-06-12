@@ -451,24 +451,6 @@ export async function importBlock(
           });
         }
       }
-      if (
-        blockInput.type === BlockInputType.availableData &&
-        this.emitter.listenerCount(routes.events.EventType.dataColumnSidecar) &&
-        blockInput.blockData.fork === ForkName.fulu
-      ) {
-        const {dataColumns} = blockInput.blockData;
-
-        for (const dataColumnSidecar of dataColumns) {
-          const {index, kzgCommitments} = dataColumnSidecar;
-
-          this.emitter.emit(routes.events.EventType.dataColumnSidecar, {
-            blockRoot: blockRootHex,
-            slot: blockSlot,
-            index,
-            kzgCommitments: kzgCommitments.map(toHex),
-          });
-        }
-      }
     });
   }
 
