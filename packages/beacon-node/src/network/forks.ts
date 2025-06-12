@@ -1,6 +1,7 @@
 import {BlobScheduleEntry, ChainForkConfig, ForkInfo} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {Epoch} from "@lodestar/types";
+import { SubscribeBoundary } from "./core";
 
 /**
  * Subscribe topics to the new fork N epochs before the fork. Remove all subscriptions N epochs after the fork
@@ -54,7 +55,7 @@ export function getActiveForks(config: ChainForkConfig, epoch: Epoch): ForkName[
   return activeForks;
 }
 
-export function getActiveBlobSchedule(config: ChainForkConfig, epoch: Epoch): BlobScheduleEntry[] {
+function getActiveBlobSchedule(config: ChainForkConfig, epoch: Epoch): BlobScheduleEntry[] {
   const activeBlobSchedule = new Set<BlobScheduleEntry>();
 
   for (let i = epoch - FORK_EPOCH_LOOKAHEAD; i <= epoch + FORK_EPOCH_LOOKAHEAD; i++) {
@@ -65,6 +66,29 @@ export function getActiveBlobSchedule(config: ChainForkConfig, epoch: Epoch): Bl
   }
 
   return [...activeBlobSchedule];
+}
+
+export function getActiveSubscribeBoundaries(config: ChainForkConfig, epoch: Epoch): SubscribeBoundary[] {
+  const activeForks = getActiveForks(config, epoch);
+  const activeBlobSchedule = getActiveBlobSchedule(config, epoch);
+
+  // If we have completely entered blob schedule stage, use activeBlobSchedule
+  if (config.getBlobParameters(epoch - FORK_EPOCH_LOOKAHEAD) !== null) {
+    return activeBlobSchedule;
+  }
+
+  // If we have not entered at least the first blob schedule, use activeForks
+  if (config.getBlobParameters(epoch + FORK_EPOCH_LOOKAHEAD) === null) {
+    return activeForks.map((fork) => ({fork}));
+  }
+
+
+  // If we are partially entering first blob schedule, usually we use both
+  // TODO: There is an unhandled corner case where first blob schedule collides with fork boundary
+  // in that case, we will subscribe to wrong topics in additional to the correct topics for 
+  // maximum of FORK_EPOCH_LOOKAHEAD * 2 epochs. 
+  return [...activeForks.map((fork) => ({fork})), ...activeBlobSchedule];
+
 }
 
 /**

@@ -1,15 +1,16 @@
 import {BeaconConfig} from "@lodestar/config";
-import {ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+import {SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, ssz} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {ClockEvent, IClock} from "../../util/clock.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
-import {getActiveForks} from "../forks.js";
+import {getActiveSubscribeBoundaries} from "../forks.js";
 import {GossipType} from "../gossip/index.js";
 import {MetadataController} from "../metadata.js";
 import {RequestedSubnet, SubnetMap} from "../peers/utils/index.js";
 import {CommitteeSubscription, GossipSubscriber, SubnetsService, SubnetsServiceOpts} from "./interface.js";
+import { SubscribeBoundary } from "../core/types.js";
 
 const gossipType = GossipType.sync_committee;
 
@@ -73,15 +74,15 @@ export class SyncnetsService implements SubnetsService {
   }
 
   /** Call ONLY ONCE: Two epoch before the fork, re-subscribe all existing random subscriptions to the new fork  */
-  subscribeSubnetsToNextFork(nextFork: ForkName): void {
-    this.logger.info("Subscribing to random attnets to next fork", {nextFork});
+  subscribeSubnetsAfterBoundary(boundary: SubscribeBoundary): void {
+    this.logger.info("Subscribing to random attnets to next fork", {nextFork: boundary});
     for (const subnet of this.subscriptionsCommittee.getAll()) {
-      this.gossip.subscribeTopic({type: gossipType, fork: nextFork, subnet});
+      this.gossip.subscribeTopic({type: gossipType, fork: boundary, subnet});
     }
   }
 
   /** Call  ONLY ONCE: Two epochs after the fork, un-subscribe all subnets from the old fork */
-  unsubscribeSubnetsFromPrevFork(prevFork: ForkName): void {
+  unsubscribeSubnetsBeforeBoundary(prevFork: SubscribeBoundary): void {
     this.logger.info("Unsubscribing to random attnets from prev fork", {prevFork});
     for (let subnet = 0; subnet < SYNC_COMMITTEE_SUBNET_COUNT; subnet++) {
       if (!this.opts?.subscribeAllSubnets) {
@@ -118,11 +119,11 @@ export class SyncnetsService implements SubnetsService {
 
   /** Tigger a gossip subcription only if not already subscribed */
   private subscribeToSubnets(subnets: number[]): void {
-    const forks = getActiveForks(this.config, this.clock.currentEpoch);
+    const boundaries = getActiveSubscribeBoundaries(this.config, this.clock.currentEpoch);
     for (const subnet of subnets) {
       if (!this.subscriptionsCommittee.has(subnet)) {
-        for (const fork of forks) {
-          this.gossip.subscribeTopic({type: gossipType, fork, subnet});
+        for (const boundary of boundaries) {
+          this.gossip.subscribeTopic({type: gossipType, boundary, subnet});
         }
         this.metrics?.syncnetsService.subscribeSubnets.inc({subnet});
       }
@@ -131,12 +132,12 @@ export class SyncnetsService implements SubnetsService {
 
   /** Trigger a gossip un-subscrition only if no-one is still subscribed */
   private unsubscribeSubnets(subnets: number[]): void {
-    const forks = getActiveForks(this.config, this.clock.currentEpoch);
+    const boundaries = getActiveSubscribeBoundaries(this.config, this.clock.currentEpoch);
     for (const subnet of subnets) {
       // No need to check if active in subscriptionsCommittee since we only have a single SubnetMap
       if (!this.opts?.subscribeAllSubnets) {
-        for (const fork of forks) {
-          this.gossip.unsubscribeTopic({type: gossipType, fork, subnet});
+        for (const boundary of boundaries) {
+          this.gossip.unsubscribeTopic({type: gossipType, boundary, subnet});
         }
         this.metrics?.syncnetsService.unsubscribeSubnets.inc({subnet});
       }

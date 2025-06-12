@@ -1,4 +1,4 @@
-import {ChainConfig, ForkDigestContext} from "@lodestar/config";
+import {BeaconConfig, ChainConfig, ForkDigestContext} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
   ForkName,
@@ -12,6 +12,7 @@ import {Attestation, SingleAttestation, ssz, sszTypesFor} from "@lodestar/types"
 import {GossipAction, GossipActionError, GossipErrorCode} from "../../chain/errors/gossipValidation.js";
 import {DEFAULT_ENCODING} from "./constants.js";
 import {GossipEncoding, GossipTopic, GossipTopicTypeMap, GossipType, SSZTypeOfGossipTopic} from "./interface.js";
+import { isBlobScheduleBoundary } from "../core/index.js";
 
 export interface IGossipTopicCache {
   getTopic(topicStr: string): GossipTopic;
@@ -48,8 +49,12 @@ export class GossipTopicCache implements IGossipTopicCache {
 /**
  * Stringify a GossipTopic into a spec-ed formated topic string
  */
-export function stringifyGossipTopic(forkDigestContext: ForkDigestContext, topic: GossipTopic): string {
-  const forkDigestHexNoPrefix = forkDigestContext.forkName2ForkDigestHex(topic.fork);
+export function stringifyGossipTopic(forkDigestContext: BeaconConfig, topic: GossipTopic): string {
+  const boundary = topic.boundary;
+
+  const fork = isBlobScheduleBoundary(boundary) ? forkDigestContext.getForkInfoAtEpoch(boundary.EPOCH).name : boundary.fork;
+
+  const forkDigestHexNoPrefix = forkDigestContext.forkName2ForkDigestHex(fork, isBlobScheduleBoundary(boundary) ? boundary : null);
   const topicType = stringifyGossipTopicType(topic);
   const encoding = topic.encoding ?? DEFAULT_ENCODING;
   return `/eth2/${forkDigestHexNoPrefix}/${topicType}/${encoding}`;
