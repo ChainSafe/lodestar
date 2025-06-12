@@ -5,12 +5,12 @@ import {Epoch, ssz} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {ClockEvent, IClock} from "../../util/clock.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
+import {SubscribeBoundary} from "../core/types.js";
 import {getActiveSubscribeBoundaries} from "../forks.js";
 import {GossipType} from "../gossip/index.js";
 import {MetadataController} from "../metadata.js";
 import {RequestedSubnet, SubnetMap} from "../peers/utils/index.js";
 import {CommitteeSubscription, GossipSubscriber, SubnetsService, SubnetsServiceOpts} from "./interface.js";
-import { SubscribeBoundary } from "../core/types.js";
 
 const gossipType = GossipType.sync_committee;
 

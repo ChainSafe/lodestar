@@ -1,7 +1,7 @@
 import {BlobScheduleEntry, ChainForkConfig, ForkInfo} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {Epoch} from "@lodestar/types";
-import { SubscribeBoundary } from "./core";
+import {SubscribeBoundary} from "./core/types.js";
 
 /**
  * Subscribe topics to the new fork N epochs before the fork. Remove all subscriptions N epochs after the fork
@@ -82,13 +82,14 @@ export function getActiveSubscribeBoundaries(config: ChainForkConfig, epoch: Epo
     return activeForks.map((fork) => ({fork}));
   }
 
-
   // If we are partially entering first blob schedule, usually we use both
   // TODO: There is an unhandled corner case where first blob schedule collides with fork boundary
-  // in that case, we will subscribe to wrong topics in additional to the correct topics for 
-  // maximum of FORK_EPOCH_LOOKAHEAD * 2 epochs. 
-  return [...activeForks.map((fork) => ({fork})), ...activeBlobSchedule.map((entry) => ({...entry, fork: config.getForkInfoAtEpoch(entry.EPOCH).name}))];
-
+  // in that case, we will subscribe to wrong topics in additional to the correct topics for
+  // maximum of FORK_EPOCH_LOOKAHEAD * 2 epochs.
+  return [
+    ...activeForks.map((fork) => ({fork})),
+    ...activeBlobSchedule.map((entry) => ({...entry, fork: config.getForkInfoAtEpoch(entry.EPOCH).name})),
+  ];
 }
 
 /**

@@ -3,6 +3,7 @@ import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {routes} from "@lodestar/api";
 import {BlobScheduleEntry, SpecJson} from "@lodestar/config";
 import {LoggerNodeOpts} from "@lodestar/logger/node";
+import {ForkName} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
 import {Epoch, phase0} from "@lodestar/types";
 import {PeerIdStr} from "../../util/peerId.js";
@@ -10,11 +11,10 @@ import {NetworkOptions} from "../options.js";
 import {PeerAction, PeerScoreStats} from "../peers/index.js";
 import {OutgoingRequestArgs} from "../reqresp/types.js";
 import {CommitteeSubscription} from "../subnets/interface.js";
-import { ForkName } from "@lodestar/params";
 
 export type MultiaddrStr = string;
 // Boundary of network subscription. We subscribe/unsubscribe during fork and blob schedule transitions
-export type SubscribeBoundary = {fork: ForkName; epoch?: Epoch} | {fork: ForkName} & BlobScheduleEntry;
+export type SubscribeBoundary = {fork: ForkName; epoch?: Epoch} | ({fork: ForkName} & BlobScheduleEntry);
 
 // Interface shared by main Network class, and all backends
 export interface INetworkCorePublic {

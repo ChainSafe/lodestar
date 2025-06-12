@@ -214,7 +214,7 @@ function forkDigestIdToForkName(forkDigestId: ForkDigestId): ForkName {
   return forkPart as ForkName;
 }
 
-function forkDigestIdToEpoch(forkDigestId: ForkDigestId): Epoch | null{
+function forkDigestIdToEpoch(forkDigestId: ForkDigestId): Epoch | null {
   if (Object.values(ForkName).includes(forkDigestId as ForkName)) {
     return null;
   }

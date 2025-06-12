@@ -133,7 +133,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
             for (const [i, update] of data.entries()) {
               const version = meta.versions[i];
               const epoch = Math.floor(update.signatureSlot / SLOTS_PER_EPOCH);
-              const blobSchedule = cachedBeaconConfig().getBlobParameters(epoch)
+              const blobSchedule = cachedBeaconConfig().getBlobParameters(epoch);
               const forkDigest = cachedBeaconConfig().forkName2ForkDigest(version, blobSchedule);
               const serialized = getPostAltairForkTypes(version).LightClientUpdate.serialize(update);
               const length = ssz.UintNum64.serialize(4 + serialized.length);

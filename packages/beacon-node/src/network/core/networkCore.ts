@@ -30,10 +30,10 @@ import {LocalStatusCache} from "../statusCache.js";
 import {AttnetsService} from "../subnets/attnetsService.js";
 import {CommitteeSubscription, IAttnetsService} from "../subnets/interface.js";
 import {SyncnetsService} from "../subnets/syncnetsService.js";
+import {isBlobScheduleBoundary} from "../subscribeBoundary.js";
 import {getConnectionsMap} from "../util.js";
 import {NetworkCoreMetrics, createNetworkCoreMetrics} from "./metrics.js";
 import {INetworkCore, MultiaddrStr, SubscribeBoundary} from "./types.js";
-import { isBlobScheduleBoundary } from "../subscribeBoundary.js";
 
 type Mods = {
   libp2p: Libp2p;
@@ -464,7 +464,9 @@ export class NetworkCore implements INetworkCore {
         if (activeBoundaries[i + 1] !== undefined) {
           const prevBoundary = activeBoundaries[i];
           const nextBoundary = activeBoundaries[i + 1];
-          const nextBoundaryEpoch = isBlobScheduleBoundary(nextBoundary) ? nextBoundary.EPOCH : this.config.forks[nextBoundary.fork].epoch;
+          const nextBoundaryEpoch = isBlobScheduleBoundary(nextBoundary)
+            ? nextBoundary.EPOCH
+            : this.config.forks[nextBoundary.fork].epoch;
 
           // Before fork transition
           if (epoch === nextBoundaryEpoch - FORK_EPOCH_LOOKAHEAD) {

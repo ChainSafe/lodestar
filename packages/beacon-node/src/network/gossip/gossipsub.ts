@@ -19,6 +19,7 @@ import {GossipTopic, GossipType} from "./interface.js";
 import {Eth2GossipsubMetrics, createEth2GossipsubMetrics} from "./metrics.js";
 import {GossipTopicCache, getCoreTopicsAtFork, stringifyGossipTopic} from "./topic.js";
 
+import {isBlobScheduleBoundary} from "../subscribeBoundary.js";
 import {
   GOSSIP_D,
   GOSSIP_D_HIGH,
@@ -26,7 +27,6 @@ import {
   computeGossipPeerScoreParams,
   gossipScoreThresholds,
 } from "./scoringParameters.js";
-import { isBlobScheduleBoundary } from "../subscribeBoundary.js";
 
 /** As specified in https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md */
 const GOSSIPSUB_HEARTBEAT_INTERVAL = 0.7 * 1000;
@@ -214,7 +214,9 @@ export class Eth2Gossipsub extends GossipSub {
         const topic = this.gossipTopicCache.getKnownTopic(topicString);
         if (topic !== undefined) {
           const boundary = topic.boundary;
-          const fork = isBlobScheduleBoundary(boundary) ? this.config.getForkInfoAtEpoch(boundary.EPOCH).name : boundary.fork;
+          const fork = isBlobScheduleBoundary(boundary)
+            ? this.config.getForkInfoAtEpoch(boundary.EPOCH).name
+            : boundary.fork;
           if (topic.type === GossipType.beacon_attestation) {
             peersByBeaconAttSubnetByFork.set(fork, topic.subnet, peers.size);
           } else if (topic.type === GossipType.sync_committee) {

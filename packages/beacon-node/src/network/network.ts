@@ -52,8 +52,8 @@ import {
 } from "./reqresp/utils/collect.js";
 import {collectSequentialBlocksInRange} from "./reqresp/utils/collectSequentialBlocksInRange.js";
 import {CommitteeSubscription} from "./subnets/index.js";
+import {getSubscribeBoundary} from "./subscribeBoundary.js";
 import {isPublishToZeroPeersError} from "./util.js";
-import { getSubscribeBoundary, isBlobScheduleBoundary } from "./subscribeBoundary.js";
 
 type NetworkModules = {
   opts: NetworkOptions;
@@ -404,9 +404,13 @@ export class Network implements INetwork {
     const epoch = computeEpochAtSlot(signature.slot);
     const boundary = getSubscribeBoundary(this.config, epoch);
 
-    return this.publishGossip<GossipType.sync_committee>({type: GossipType.sync_committee, boundary, subnet}, signature, {
-      ignoreDuplicatePublishError: true,
-    });
+    return this.publishGossip<GossipType.sync_committee>(
+      {type: GossipType.sync_committee, boundary, subnet},
+      signature,
+      {
+        ignoreDuplicatePublishError: true,
+      }
+    );
   }
 
   async publishContributionAndProof(contributionAndProof: altair.SignedContributionAndProof): Promise<number> {

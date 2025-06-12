@@ -130,7 +130,7 @@ function getAllTopicsScoreParams(
     topicsParams[
       stringifyGossipTopic(config, {
         type: GossipType.voluntary_exit,
-        boundary
+        boundary,
       })
     ] = getTopicScoreParams(config, precomputedParams, {
       topicWeight: VOLUNTARY_EXIT_WEIGHT,
@@ -141,7 +141,7 @@ function getAllTopicsScoreParams(
     topicsParams[
       stringifyGossipTopic(config, {
         type: GossipType.bls_to_execution_change,
-        boundary
+        boundary,
       })
     ] = getTopicScoreParams(config, precomputedParams, {
       topicWeight: BLS_TO_EXECUTION_CHANGE_WEIGHT,
@@ -152,7 +152,7 @@ function getAllTopicsScoreParams(
     topicsParams[
       stringifyGossipTopic(config, {
         type: GossipType.attester_slashing,
-        boundary
+        boundary,
       })
     ] = getTopicScoreParams(config, precomputedParams, {
       topicWeight: ATTESTER_SLASHING_WEIGHT,
@@ -162,7 +162,7 @@ function getAllTopicsScoreParams(
     topicsParams[
       stringifyGossipTopic(config, {
         type: GossipType.proposer_slashing,
-        boundary
+        boundary,
       })
     ] = getTopicScoreParams(config, precomputedParams, {
       topicWeight: PROPOSER_SLASHING_WEIGHT,
@@ -174,7 +174,7 @@ function getAllTopicsScoreParams(
     topicsParams[
       stringifyGossipTopic(config, {
         type: GossipType.beacon_block,
-        boundary
+        boundary,
       })
     ] = getTopicScoreParams(config, precomputedParams, {
       topicWeight: BEACON_BLOCK_WEIGHT,
@@ -201,7 +201,7 @@ function getAllTopicsScoreParams(
     topicsParams[
       stringifyGossipTopic(config, {
         type: GossipType.beacon_aggregate_and_proof,
-        boundary
+        boundary,
       })
     ] = getTopicScoreParams(config, precomputedParams, {
       topicWeight: BEACON_AGGREGATE_PROOF_WEIGHT,
@@ -232,7 +232,7 @@ function getAllTopicsScoreParams(
       const topicStr = stringifyGossipTopic(config, {
         type: GossipType.beacon_attestation,
         subnet,
-        boundary
+        boundary,
       });
       topicsParams[topicStr] = beaconAttestationParams;
     }

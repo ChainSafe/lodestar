@@ -6,9 +6,9 @@ import {ForkName} from "@lodestar/params";
 import {intToBytes} from "@lodestar/utils";
 import {compress, uncompress} from "snappyjs";
 import xxhashFactory from "xxhash-wasm";
+import {isBlobScheduleBoundary} from "../subscribeBoundary.js";
 import {MESSAGE_DOMAIN_VALID_SNAPPY} from "./constants.js";
 import {GossipTopicCache, getGossipSSZType} from "./topic.js";
-import {isBlobScheduleBoundary} from "../subscribeBoundary.js";
 
 // Load WASM
 const xxhash = await xxhashFactory();

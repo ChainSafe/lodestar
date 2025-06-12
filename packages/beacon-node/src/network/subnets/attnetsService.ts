@@ -1,13 +1,11 @@
 import {BeaconConfig} from "@lodestar/config";
-import {
-  ATTESTATION_SUBNET_COUNT,
-  EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION,
-  SLOTS_PER_EPOCH,
-} from "@lodestar/params";
+import {ATTESTATION_SUBNET_COUNT, EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Epoch, Slot, SubnetID, ssz} from "@lodestar/types";
 import {Logger, MapDef} from "@lodestar/utils";
 import {ClockEvent, IClock} from "../../util/clock.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
+import {SubscribeBoundary} from "../core/types.js";
 import {getActiveSubscribeBoundaries} from "../forks.js";
 import {GossipType} from "../gossip/index.js";
 import {GOSSIP_D_LOW} from "../gossip/scoringParameters.js";
@@ -16,8 +14,6 @@ import {MetadataController} from "../metadata.js";
 import {RequestedSubnet, SubnetMap} from "../peers/utils/index.js";
 import {CommitteeSubscription, GossipSubscriber, IAttnetsService, NodeId, SubnetsServiceOpts} from "./interface.js";
 import {computeSubscribedSubnet} from "./util.js";
-import { SubscribeBoundary } from "../core/types.js";
-import { computeEpochAtSlot } from "@lodestar/state-transition";
 
 const gossipType = GossipType.beacon_attestation;
 
@@ -336,7 +332,6 @@ export class AttnetsService implements IAttnetsService {
   private subscribeToSubnets(subnets: number[], src: SubnetSource): void {
     const boundaries = getActiveSubscribeBoundaries(this.config, this.clock.currentEpoch);
 
-
     for (const subnet of subnets) {
       if (!this.shortLivedSubscriptions.has(subnet) && !this.longLivedSubscriptions.has(subnet)) {
         for (const boundary of boundaries) {
@@ -375,14 +370,13 @@ export class AttnetsService implements IAttnetsService {
     const epoch = computeEpochAtSlot(currentSlot);
     const blobSchedule = this.config.getBlobParameters(epoch);
     const fork = this.config.getForkInfoAtEpoch(epoch).name;
-    const boundary = blobSchedule !== null ? {...blobSchedule, fork} : {fork}
-    
+    const boundary = blobSchedule !== null ? {...blobSchedule, fork} : {fork};
 
     for (const {subnet} of this.shortLivedSubscriptions.getActiveTtl(currentSlot)) {
       const topicStr = stringifyGossipTopic(this.config, {
         type: gossipType,
         subnet,
-        boundary
+        boundary,
       });
       const numMeshPeers = this.gossip.mesh.get(topicStr)?.size ?? 0;
       metrics.attnetsService.subscriptionsCommitteeMeshPeers.observe({subnet}, numMeshPeers);
