@@ -111,39 +111,6 @@ export async function importBlock(
   this.metrics?.importBlock.bySource.inc({source});
   this.logger.verbose("Added block to forkchoice and state cache", {slot: blockSlot, root: blockRootHex});
 
-  // We want to import block asap so call all event handler in the next event loop
-  callInNextEventLoop(async () => {
-    this.emitter.emit(routes.events.EventType.block, {
-      block: blockRootHex,
-      slot: blockSlot,
-      executionOptimistic: blockSummary != null && isOptimisticBlock(blockSummary),
-    });
-
-    // dataPromise will not end up here, but preDeneb could. In future we might also allow syncing
-    // out of data range blocks and import then in forkchoice although one would not be able to
-    // attest and propose with such head similar to optimistic sync
-    if (blockInput.type === BlockInputType.availableData) {
-      const {blockData} = blockInput;
-      if (blockData.fork === ForkName.deneb || blockData.fork === ForkName.electra) {
-        const {blobsSource, blobs} = blockData;
-
-        this.metrics?.importBlock.blobsBySource.inc({blobsSource});
-        for (const blobSidecar of blobs) {
-          const {index, kzgCommitment} = blobSidecar;
-          this.emitter.emit(routes.events.EventType.blobSidecar, {
-            blockRoot: blockRootHex,
-            slot: blockSlot,
-            index,
-            kzgCommitment: toHexString(kzgCommitment),
-            versionedHash: toHexString(kzgCommitmentToVersionedHash(kzgCommitment)),
-          });
-        }
-      } else if (blockData.fork === ForkName.fulu) {
-        // TODO peerDAS build and emit the event for the datacolumns
-      }
-    }
-  });
-
   // 3. Import attestations to fork choice
   //
   // - For each attestation
