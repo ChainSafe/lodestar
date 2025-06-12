@@ -1,4 +1,4 @@
-import {BeaconConfig, ChainConfig, ForkDigestContext} from "@lodestar/config";
+import {BeaconConfig, ChainConfig} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
   ForkName,

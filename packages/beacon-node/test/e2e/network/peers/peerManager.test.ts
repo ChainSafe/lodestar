@@ -63,8 +63,8 @@ describe("network / peers / PeerManager", () => {
       shouldProcess: () => true,
       addCommitteeSubscriptions: () => {},
       close: () => {},
-      subscribeSubnetsToNextFork: () => {},
-      unsubscribeSubnetsFromPrevFork: () => {},
+      subscribeSubnetsAfterBoundary: () => {},
+      unsubscribeSubnetsBeforeBoundary: () => {},
     };
 
     const peerManager = new PeerManager(

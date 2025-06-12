@@ -95,7 +95,7 @@ describe("data serialization through worker boundary", () => {
       peer,
     },
     [NetworkEvent.pendingGossipsubMessage]: {
-      topic: {type: GossipType.beacon_block, fork: ForkName.altair},
+      topic: {type: GossipType.beacon_block, boundary: {fork: ForkName.altair}},
       msg: {
         type: "unsigned",
         topic: "test-topic",

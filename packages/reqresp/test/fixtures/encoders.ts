@@ -97,7 +97,7 @@ export const responseEncodersTestCases: {
   },
   {
     id: "altair metadata",
-    protocol: customProtocol({version: 2}),
+    protocol: customProtocol({version: 2, fork: ForkName.altair}),
     responseChunks: [
       {
         status: RespStatus.SUCCESS,
@@ -135,20 +135,20 @@ export const responseEncodersTestCases: {
       // <result>
       Buffer.from([RespStatus.SUCCESS]),
       // <context-bytes>
-      beaconConfig.forkName2ForkDigest(ForkName.phase0),
+      beaconConfig.forkName2ForkDigest(ForkName.phase0, null),
       // <encoding-dependent-header> | <encoded-payload>
       ...sszSnappySignedBeaconBlockPhase0.chunks,
     ],
   },
   {
     id: "block v2 with <context-bytes> altair",
-    protocol: customProtocol({contextBytesType: ContextBytesType.ForkDigest, version: 2}),
+    protocol: customProtocol({contextBytesType: ContextBytesType.ForkDigest, version: 2, fork: ForkName.altair}),
     responseChunks: [{status: RespStatus.SUCCESS, payload: sszSnappySignedBeaconBlockAltair.binaryPayload}],
     chunks: [
       // <result>
       Buffer.from([RespStatus.SUCCESS]),
       // <context-bytes>
-      beaconConfig.forkName2ForkDigest(ForkName.altair),
+      beaconConfig.forkName2ForkDigest(ForkName.altair, null),
       // <encoding-dependent-header> | <encoded-payload>
       ...sszSnappySignedBeaconBlockAltair.chunks,
     ],
@@ -203,6 +203,7 @@ export const responseEncodersTestCases: {
     skipEncoding: true,
   },
   {
+    // TODO: Monitor this. SHould fail
     id: "Decode blocks v2 through a fork with multiple types",
     protocol: customProtocol({contextBytesType: ContextBytesType.ForkDigest, version: 2}),
     responseChunks: [
@@ -212,11 +213,11 @@ export const responseEncodersTestCases: {
     chunks: [
       // Chunk 0 - success block in phase0 with context bytes
       Buffer.from([RespStatus.SUCCESS]),
-      beaconConfig.forkName2ForkDigest(ForkName.phase0),
+      beaconConfig.forkName2ForkDigest(ForkName.phase0, null),
       ...sszSnappySignedBeaconBlockPhase0.chunks,
       // Chunk 1 - success block in altair with context bytes
       Buffer.from([RespStatus.SUCCESS]),
-      beaconConfig.forkName2ForkDigest(ForkName.altair),
+      beaconConfig.forkName2ForkDigest(ForkName.altair, null),
       ...sszSnappySignedBeaconBlockAltair.chunks,
     ],
   },
@@ -241,13 +242,13 @@ export const responseEncodersErrorTestCases: {
   },
   {
     id: "block v2 with <context-bytes> altair",
-    protocol: customProtocol({contextBytesType: ContextBytesType.ForkDigest, version: 2}),
+    protocol: customProtocol({contextBytesType: ContextBytesType.ForkDigest, version: 2, fork: ForkName.altair}),
     responseChunks: [{status: RespStatus.SUCCESS, payload: sszSnappySignedBeaconBlockAltair.binaryPayload}],
     chunks: [
       // <result>
       Buffer.from([RespStatus.SUCCESS]),
       // <context-bytes>
-      beaconConfig.forkName2ForkDigest(ForkName.altair),
+      beaconConfig.forkName2ForkDigest(ForkName.altair, null),
       // <encoding-dependent-header> | <encoded-payload>
       ...sszSnappySignedBeaconBlockAltair.chunks,
     ],
