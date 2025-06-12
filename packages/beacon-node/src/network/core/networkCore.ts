@@ -220,8 +220,12 @@ export class NetworkCore implements INetworkCore {
 
     // Network spec decides version changes based on clock fork, not head fork
     const forkCurrentSlot = config.getForkName(clock.currentSlot);
+    const blobSchedule = config.getBlobParameters(clock.currentEpoch);
+
+    const boundary = blobSchedule === null ? {fork: forkCurrentSlot} : {...blobSchedule, fork: forkCurrentSlot};
+
     // Register only ReqResp protocols relevant to clock's fork
-    reqResp.registerProtocolsAtFork(forkCurrentSlot);
+    reqResp.registerProtocolsAtBoundary(boundary);
 
     // Bind discv5's ENR to local metadata
     // biome-ignore lint/complexity/useLiteralKeys: `discovery` is a private attribute
@@ -485,7 +489,7 @@ export class NetworkCore implements INetworkCore {
           if (epoch === nextBoundaryEpoch) {
             // updateEth2Field() MUST be called with clock epoch, onEpoch event is emitted in response to clock events
             this.metadata.updateEth2Field(epoch);
-            this.reqResp.registerProtocolsAtFork(nextBoundary);
+            this.reqResp.registerProtocolsAtBoundary(nextBoundary);
           }
 
           // After fork transition

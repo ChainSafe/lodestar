@@ -34,6 +34,7 @@ import {
   responseSszTypeByMethod,
 } from "./types.js";
 import {collectExactOneTyped} from "./utils/collect.js";
+import { SubscribeBoundary } from "../core/types.js";
 
 export {getReqRespHandlers} from "./handlers/index.js";
 export {ReqRespMethod, type RequestTypedContainer} from "./types.js";
@@ -119,10 +120,10 @@ export class ReqRespBeaconNode extends ReqResp {
   // pruneOnPeerDisconnect(peerId: PeerId): void {
   //   this.rateLimiter.prune(peerId);
 
-  registerProtocolsAtFork(fork: ForkName): void {
-    this.currentRegisteredFork = ForkSeq[fork];
+  registerProtocolsAtBoundary(boundary: SubscribeBoundary): void {
+    this.currentRegisteredFork = ForkSeq[boundary.fork];
 
-    const mustSubscribeProtocols = this.getProtocolsAtFork(fork);
+    const mustSubscribeProtocols = this.getProtocolsAtFork(boundary);
     const mustSubscribeProtocolIDs = new Set(
       mustSubscribeProtocols.map(([protocol]) => this.formatProtocolID(protocol))
     );
@@ -217,50 +218,50 @@ export class ReqRespBeaconNode extends ReqResp {
    * Returns the list of protocols that must be subscribed during a specific fork.
    * Any protocol not in this list must be un-subscribed.
    */
-  private getProtocolsAtFork(fork: ForkName): [ProtocolNoHandler, ProtocolHandler][] {
+  private getProtocolsAtFork(boundary: SubscribeBoundary): [ProtocolNoHandler, ProtocolHandler][] {
     const protocolsAtFork: [ProtocolNoHandler, ProtocolHandler][] = [
-      [protocols.Ping(fork, this.config), this.onPing.bind(this)],
-      [protocols.Status(fork, this.config), this.onStatus.bind(this)],
-      [protocols.Goodbye(fork, this.config), this.onGoodbye.bind(this)],
+      [protocols.Ping(boundary, this.config), this.onPing.bind(this)],
+      [protocols.Status(boundary, this.config), this.onStatus.bind(this)],
+      [protocols.Goodbye(boundary, this.config), this.onGoodbye.bind(this)],
       // Support V2 methods as soon as implemented (for altair)
       // Ref https://github.com/ethereum/consensus-specs/blob/v1.2.0/specs/altair/p2p-interface.md#transitioning-from-v1-to-v2
-      [protocols.MetadataV2(fork, this.config), this.onMetadata.bind(this)],
-      [protocols.BeaconBlocksByRangeV2(fork, this.config), this.getHandler(ReqRespMethod.BeaconBlocksByRange)],
-      [protocols.BeaconBlocksByRootV2(fork, this.config), this.getHandler(ReqRespMethod.BeaconBlocksByRoot)],
+      [protocols.MetadataV2(boundary, this.config), this.onMetadata.bind(this)],
+      [protocols.BeaconBlocksByRangeV2(boundary, this.config), this.getHandler(ReqRespMethod.BeaconBlocksByRange)],
+      [protocols.BeaconBlocksByRootV2(boundary, this.config), this.getHandler(ReqRespMethod.BeaconBlocksByRoot)],
     ];
 
-    if (ForkSeq[fork] < ForkSeq.altair) {
+    if (ForkSeq[boundary.fork] < ForkSeq.altair) {
       // Unregister V1 topics at the fork boundary, so only declare for pre-altair
       protocolsAtFork.push(
-        [protocols.Metadata(fork, this.config), this.onMetadata.bind(this)],
-        [protocols.BeaconBlocksByRange(fork, this.config), this.getHandler(ReqRespMethod.BeaconBlocksByRange)],
-        [protocols.BeaconBlocksByRoot(fork, this.config), this.getHandler(ReqRespMethod.BeaconBlocksByRoot)]
+        [protocols.Metadata(boundary, this.config), this.onMetadata.bind(this)],
+        [protocols.BeaconBlocksByRange(boundary, this.config), this.getHandler(ReqRespMethod.BeaconBlocksByRange)],
+        [protocols.BeaconBlocksByRoot(boundary, this.config), this.getHandler(ReqRespMethod.BeaconBlocksByRoot)]
       );
     }
 
-    if (ForkSeq[fork] >= ForkSeq.altair && !this.disableLightClientServer) {
+    if (ForkSeq[boundary.fork] >= ForkSeq.altair && !this.disableLightClientServer) {
       // Should be okay to enable before altair, but for consistency only enable afterwards
       protocolsAtFork.push(
-        [protocols.LightClientBootstrap(fork, this.config), this.getHandler(ReqRespMethod.LightClientBootstrap)],
+        [protocols.LightClientBootstrap(boundary, this.config), this.getHandler(ReqRespMethod.LightClientBootstrap)],
         [
-          protocols.LightClientFinalityUpdate(fork, this.config),
+          protocols.LightClientFinalityUpdate(boundary, this.config),
           this.getHandler(ReqRespMethod.LightClientFinalityUpdate),
         ],
         [
-          protocols.LightClientOptimisticUpdate(fork, this.config),
+          protocols.LightClientOptimisticUpdate(boundary, this.config),
           this.getHandler(ReqRespMethod.LightClientOptimisticUpdate),
         ],
         [
-          protocols.LightClientUpdatesByRange(fork, this.config),
+          protocols.LightClientUpdatesByRange(boundary, this.config),
           this.getHandler(ReqRespMethod.LightClientUpdatesByRange),
         ]
       );
     }
 
-    if (ForkSeq[fork] >= ForkSeq.deneb) {
+    if (ForkSeq[boundary.fork] >= ForkSeq.deneb) {
       protocolsAtFork.push(
-        [protocols.BlobSidecarsByRoot(fork, this.config), this.getHandler(ReqRespMethod.BlobSidecarsByRoot)],
-        [protocols.BlobSidecarsByRange(fork, this.config), this.getHandler(ReqRespMethod.BlobSidecarsByRange)]
+        [protocols.BlobSidecarsByRoot(boundary, this.config), this.getHandler(ReqRespMethod.BlobSidecarsByRoot)],
+        [protocols.BlobSidecarsByRange(boundary, this.config), this.getHandler(ReqRespMethod.BlobSidecarsByRange)]
       );
     }
 
