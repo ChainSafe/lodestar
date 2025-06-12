@@ -267,3 +267,11 @@ export const SignedBlockContents = new ContainerType(
   },
   {typeName: "SignedBlockContents", jsonCase: "eth2"}
 );
+
+export const Status = new ContainerType(
+  {
+    ...phase0Ssz.Status.fields,
+    earliestAvailableSlot: Slot,
+  },
+  {typeName: "Status", jsonCase: "eth2"}
+);

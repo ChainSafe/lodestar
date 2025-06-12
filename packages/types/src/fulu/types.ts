@@ -53,3 +53,5 @@ export type BlobAndProofV2 = {
   blob: Blob;
   proofs: KZGProof[];
 };
+
+export type Status = ValueOf<typeof ssz.Status>;
