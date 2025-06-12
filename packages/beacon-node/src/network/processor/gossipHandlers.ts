@@ -272,8 +272,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
     const dataColumnBlockHeader = dataColumnSidecar.signedBlockHeader.message;
     const slot = dataColumnBlockHeader.slot;
-    const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(dataColumnBlockHeader);
-    const blockHex = prettyBytes(blockRoot);
+    const blockRootHex = toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(dataColumnBlockHeader));
+    const blockShortHex = prettyBytes(blockRootHex);
 
     const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
     const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
@@ -298,7 +298,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       metrics?.gossipBlob.validationTime.observe(validationTime);
 
       chain.emitter.emit(routes.events.EventType.dataColumnSidecar, {
-        blockRoot: blockHex,
+        blockRoot: blockRootHex,
         slot,
         index: dataColumnSidecar.index,
         kzgCommitments: dataColumnSidecar.kzgCommitments.map(toHex),
@@ -306,7 +306,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
       logger.debug("Received gossip dataColumn", {
         slot: slot,
-        root: blockHex,
+        root: blockShortHex,
         currentSlot: chain.clock.currentSlot,
         peerId: peerIdStr,
         delaySec,
@@ -323,7 +323,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       if (e instanceof DataColumnSidecarGossipError) {
         // Don't trigger this yet if full block and blobs haven't arrived yet
         if (e.type.code === DataColumnSidecarErrorCode.PARENT_UNKNOWN && blockInput.block !== null) {
-          logger.debug("Gossip dataColumn has error", {slot, root: blockHex, code: e.type.code});
+          logger.debug("Gossip dataColumn has error", {slot, root: blockShortHex, code: e.type.code});
           events.emit(NetworkEvent.unknownBlockParent, {blockInput, peer: peerIdStr});
         }
 

@@ -246,13 +246,11 @@ export function getBeaconBlockApi({
       const {dataColumns} = blockForImport.blockData;
 
       for (const dataColumnSidecar of dataColumns) {
-        const {index, kzgCommitments} = dataColumnSidecar;
-
         chain.emitter.emit(routes.events.EventType.dataColumnSidecar, {
-          blockRoot: blockRoot,
+          blockRoot,
           slot,
-          index,
-          kzgCommitments: kzgCommitments.map(toHex),
+          index: dataColumnSidecar.index,
+          kzgCommitments: dataColumnSidecar.kzgCommitments.map(toHex),
         });
       }
     }
