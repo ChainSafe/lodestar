@@ -19,7 +19,7 @@ import {
   isStateValidatorsNodesPopulated,
 } from "@lodestar/state-transition";
 import {Attestation, BeaconBlock, altair, capella, electra, phase0, ssz} from "@lodestar/types";
-import {isErrorAborted, toHex, toRootHex} from "@lodestar/utils";
+import {isErrorAborted, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
