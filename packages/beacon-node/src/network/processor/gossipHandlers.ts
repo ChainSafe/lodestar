@@ -278,18 +278,18 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
     const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
 
-    const {blockInput, blockInputMeta} = chain.seenGossipBlockInput.getGossipBlockInput(
-      config,
-      {
-        type: GossipedInputType.dataColumn,
-        dataColumnSidecar,
-        dataColumnBytes,
-      },
-      metrics
-    );
-
     try {
       await validateGossipDataColumnSidecar(chain, dataColumnSidecar, gossipSubnet, metrics);
+      const {blockInput, blockInputMeta} = chain.seenGossipBlockInput.getGossipBlockInput(
+        config,
+        {
+          type: GossipedInputType.dataColumn,
+          dataColumnSidecar,
+          dataColumnBytes,
+        },
+        metrics
+      );
+
       const recvToValidation = Date.now() / 1000 - seenTimestampSec;
       const validationTime = recvToValidation - recvToValLatency;
 
@@ -320,20 +320,12 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
       return blockInput;
     } catch (e) {
-      if (e instanceof DataColumnSidecarGossipError) {
-        // Don't trigger this yet if full block and blobs haven't arrived yet
-        if (e.type.code === DataColumnSidecarErrorCode.PARENT_UNKNOWN && blockInput.block !== null) {
-          logger.debug("Gossip dataColumn has error", {slot, root: blockShortHex, code: e.type.code});
-          events.emit(NetworkEvent.unknownBlockParent, {blockInput, peer: peerIdStr});
-        }
-
-        if (e.action === GossipAction.REJECT) {
-          chain.persistInvalidSszValue(
-            ssz.fulu.DataColumnSidecar,
-            dataColumnSidecar,
-            `gossip_reject_slot_${slot}_index_${dataColumnSidecar.index}`
-          );
-        }
+      if (e instanceof DataColumnSidecarGossipError && e.action === GossipAction.REJECT) {
+        chain.persistInvalidSszValue(
+          ssz.fulu.DataColumnSidecar,
+          dataColumnSidecar,
+          `gossip_reject_slot_${slot}_index_${dataColumnSidecar.index}`
+        );
       }
 
       throw e;
