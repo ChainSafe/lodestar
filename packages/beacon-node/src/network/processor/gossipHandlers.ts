@@ -31,7 +31,6 @@ import {
   BlockError,
   BlockErrorCode,
   BlockGossipError,
-  DataColumnSidecarErrorCode,
   DataColumnSidecarGossipError,
   GossipAction,
   GossipActionError,
