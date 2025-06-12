@@ -415,6 +415,8 @@ export class BeaconChain implements IBeaconChain {
   async init(): Promise<void> {
     await this.archiveStore.init();
     await this.loadFromDisk();
+    const checkpointState = await this.regen.getCheckpointState();
+    this.emitter.emit(ChainEvent.updateLowestSlot, checkpointState.slot);
   }
 
   async close(): Promise<void> {
