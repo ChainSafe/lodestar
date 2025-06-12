@@ -1,5 +1,5 @@
 import {PeerId} from "@libp2p/interface";
-import {BeaconConfig, ForkDigestContext} from "@lodestar/config";
+import {BeaconConfig, BlobScheduleEntry, ForkDigestContext} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {LodestarError} from "@lodestar/utils";
 import {RateLimiterQuota} from "./rate_limiter/rateLimiterGRCA.js";
@@ -129,7 +129,7 @@ export type HandlerTypeFromMessage<T> = T extends ProtocolGenerator ? ProtocolHa
 
 export type ContextBytesFactory =
   | {type: ContextBytesType.Empty}
-  | {type: ContextBytesType.ForkDigest; forkDigestContext: ForkDigestContext};
+  | {type: ContextBytesType.ForkDigest; forkDigestContext: ForkDigestContext; fork: ForkName; blobSchedule: BlobScheduleEntry | null};
 
 export type ContextBytes = {type: ContextBytesType.Empty} | {type: ContextBytesType.ForkDigest; fork: ForkName};
 

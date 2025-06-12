@@ -3,6 +3,8 @@ import {ForkName} from "@lodestar/params";
 import {ContextBytesFactory, ContextBytesType, Encoding} from "@lodestar/reqresp";
 import {rateLimitQuotas} from "./rateLimit.js";
 import {ProtocolNoHandler, ReqRespMethod, Version, requestSszTypeByMethod, responseSszTypeByMethod} from "./types.js";
+import { SubscribeBoundary } from "../core/types.js";
+import { isBlobScheduleBoundary } from "../subscribeBoundary.js";
 
 export const Goodbye = toProtocol({
   method: ReqRespMethod.Goodbye,
@@ -101,22 +103,22 @@ type ProtocolSummary = {
 };
 
 function toProtocol(protocol: ProtocolSummary) {
-  return (fork: ForkName, config: BeaconConfig): ProtocolNoHandler => ({
+  return (boundary: SubscribeBoundary, config: BeaconConfig): ProtocolNoHandler => ({
     method: protocol.method,
     version: protocol.version,
     encoding: Encoding.SSZ_SNAPPY,
-    contextBytes: toContextBytes(protocol.contextBytesType, config),
-    inboundRateLimits: rateLimitQuotas(fork, config)[protocol.method],
-    requestSizes: requestSszTypeByMethod(fork, config)[protocol.method],
+    contextBytes: toContextBytes(protocol.contextBytesType, boundary, config),
+    inboundRateLimits: rateLimitQuotas(boundary.fork, config)[protocol.method],
+    requestSizes: requestSszTypeByMethod(boundary.fork, config)[protocol.method],
     responseSizes: (fork) => responseSszTypeByMethod[protocol.method](fork, protocol.version),
   });
 }
 
-function toContextBytes(type: ContextBytesType, config: ForkDigestContext): ContextBytesFactory {
+function toContextBytes(type: ContextBytesType, boundary: SubscribeBoundary, config: ForkDigestContext): ContextBytesFactory {
   switch (type) {
     case ContextBytesType.Empty:
       return {type: ContextBytesType.Empty};
     case ContextBytesType.ForkDigest:
-      return {type: ContextBytesType.ForkDigest, forkDigestContext: config};
+      return isBlobScheduleBoundary(boundary) ? {type: ContextBytesType.ForkDigest, forkDigestContext: config, fork: boundary.fork, blobSchedule: boundary } : {type: ContextBytesType.ForkDigest, forkDigestContext: config, fork: boundary.fork, blobSchedule: null};
   }
 }
