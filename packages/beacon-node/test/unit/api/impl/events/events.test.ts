@@ -80,7 +80,6 @@ describe("Events api impl", () => {
         slot: 123,
         index: 1,
         kzgCommitments: [toHex(ssz.deneb.KZGCommitment.defaultValue())],
-        versionedHashes: [ZERO_HASH_HEX],
       };
 
       chainEventEmmitter.emit(routes.events.EventType.dataColumnSidecar, mockDataColumnSidecarEvent);

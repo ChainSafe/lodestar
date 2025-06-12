@@ -44,7 +44,6 @@ export const dataColumnSidecarSSE = new ContainerType(
     index: ssz.ColumnIndex,
     slot: ssz.Slot,
     kzgCommitments: new ListBasicType(stringType, MAX_BLOB_COMMITMENTS_PER_BLOCK),
-    versionedHashes: new ListBasicType(stringType, MAX_BLOB_COMMITMENTS_PER_BLOCK),
   },
   {typeName: "DataColumnSidecarSSE", jsonCase: "eth2"}
 );
@@ -88,7 +87,7 @@ export enum EventType {
   payloadAttributes = "payload_attributes",
   /** The node has received a valid blobSidecar (from P2P or API) */
   blobSidecar = "blob_sidecar",
-  /** The node has received a valid DataColumnSidecar (from P2P or API) that passes all gossip validations */
+  /** The node has received a valid DataColumnSidecar (from P2P or API) */
   dataColumnSidecar = "data_column_sidecar",
 }
 

@@ -149,7 +149,6 @@ export async function importBlock(
             slot: blockSlot,
             index,
             kzgCommitments: kzgCommitments.map(toHex),
-            versionedHashes: kzgCommitments.map((commitment) => toHex(kzgCommitmentToVersionedHash(commitment))),
           });
         }
       }
@@ -511,7 +510,6 @@ export async function importBlock(
             slot: blockSlot,
             index,
             kzgCommitments: kzgCommitments.map(toHex),
-            versionedHashes: kzgCommitments.map((commitment) => toHex(kzgCommitmentToVersionedHash(commitment))),
           });
         }
       }
