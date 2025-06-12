@@ -10,6 +10,7 @@ import all from "it-all";
 import {Libp2p, createLibp2p} from "libp2p";
 import {afterEach, describe, expect, it} from "vitest";
 import {ZERO_HASH} from "../../../src/constants/constants.js";
+import {SubscribeBoundary} from "../../../src/network/core/types.js";
 import {
   NetworkEventBus,
   PeerRpcScoreStore,
@@ -21,7 +22,6 @@ import {PeersData} from "../../../src/network/peers/peersData.js";
 import {GetReqRespHandlerFn} from "../../../src/network/reqresp/types.js";
 import {LocalStatusCache} from "../../../src/network/statusCache.js";
 import {testLogger} from "../../utils/logger.js";
-import { SubscribeBoundary } from "../../../src/network/core/types.js";
 
 describe("reqresp encoder", () => {
   let port = 60000;

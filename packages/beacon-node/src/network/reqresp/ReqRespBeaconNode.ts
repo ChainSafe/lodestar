@@ -17,6 +17,7 @@ import {Logger} from "@lodestar/utils";
 import {Libp2p} from "libp2p";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
+import {SubscribeBoundary} from "../core/types.js";
 import {INetworkEventBus, NetworkEvent} from "../events.js";
 import {MetadataController} from "../metadata.js";
 import {PeersData} from "../peers/peersData.js";
@@ -34,7 +35,6 @@ import {
   responseSszTypeByMethod,
 } from "./types.js";
 import {collectExactOneTyped} from "./utils/collect.js";
-import { SubscribeBoundary } from "../core/types.js";
 
 export {getReqRespHandlers} from "./handlers/index.js";
 export {ReqRespMethod, type RequestTypedContainer} from "./types.js";

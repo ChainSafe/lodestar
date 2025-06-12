@@ -47,13 +47,13 @@ describe("network / gossip / topic", () => {
     ],
     [GossipType.proposer_slashing]: [
       {
-        topic: {type: GossipType.proposer_slashing,boundary: {fork: ForkName.phase0} , encoding},
+        topic: {type: GossipType.proposer_slashing, boundary: {fork: ForkName.phase0}, encoding},
         topicStr: "/eth2/f5a5fd42/proposer_slashing/ssz_snappy",
       },
     ],
     [GossipType.attester_slashing]: [
       {
-        topic: {type: GossipType.attester_slashing, boundary: {fork: ForkName.phase0} , encoding},
+        topic: {type: GossipType.attester_slashing, boundary: {fork: ForkName.phase0}, encoding},
         topicStr: "/eth2/f5a5fd42/attester_slashing/ssz_snappy",
       },
     ],

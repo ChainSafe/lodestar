@@ -1,10 +1,10 @@
 import {ContainerType, ListBasicType, UintNumberType, ValueOf} from "@chainsafe/ssz";
+import {BlobScheduleEntry} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {ContextBytesType, DialOnlyProtocol, Encoding, Protocol, ProtocolHandler} from "../../src/types.js";
 import {getEmptyHandler} from "./messages.js";
 import {beaconConfig} from "./messages.js";
-import { BlobScheduleEntry } from "@lodestar/config";
 
 const NumToStrReq = new ContainerType(
   {
@@ -74,7 +74,12 @@ export function customProtocol(opts: ProtocolOptions): Protocol {
     responseSizes: () => ({minSize: 0, maxSize: Infinity}),
     contextBytes:
       opts.contextBytesType === ContextBytesType.ForkDigest
-        ? {type: ContextBytesType.ForkDigest, forkDigestContext: beaconConfig, fork: opts.fork ?? ForkName.phase0, blobSchedule: opts.blobSchedule ?? null}
+        ? {
+            type: ContextBytesType.ForkDigest,
+            forkDigestContext: beaconConfig,
+            fork: opts.fork ?? ForkName.phase0,
+            blobSchedule: opts.blobSchedule ?? null,
+          }
         : {type: ContextBytesType.Empty},
     method: "req/test",
     version: opts.version ?? 1,

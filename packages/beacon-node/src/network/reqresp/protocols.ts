@@ -1,9 +1,9 @@
 import {BeaconConfig, ForkDigestContext} from "@lodestar/config";
 import {ContextBytesFactory, ContextBytesType, Encoding} from "@lodestar/reqresp";
+import {SubscribeBoundary} from "../core/types.js";
+import {isBlobScheduleBoundary} from "../subscribeBoundary.js";
 import {rateLimitQuotas} from "./rateLimit.js";
 import {ProtocolNoHandler, ReqRespMethod, Version, requestSszTypeByMethod, responseSszTypeByMethod} from "./types.js";
-import { SubscribeBoundary } from "../core/types.js";
-import { isBlobScheduleBoundary } from "../subscribeBoundary.js";
 
 export const Goodbye = toProtocol({
   method: ReqRespMethod.Goodbye,
@@ -113,11 +113,17 @@ function toProtocol(protocol: ProtocolSummary) {
   });
 }
 
-function toContextBytes(type: ContextBytesType, boundary: SubscribeBoundary, config: ForkDigestContext): ContextBytesFactory {
+function toContextBytes(
+  type: ContextBytesType,
+  boundary: SubscribeBoundary,
+  config: ForkDigestContext
+): ContextBytesFactory {
   switch (type) {
     case ContextBytesType.Empty:
       return {type: ContextBytesType.Empty};
     case ContextBytesType.ForkDigest:
-      return isBlobScheduleBoundary(boundary) ? {type: ContextBytesType.ForkDigest, forkDigestContext: config, fork: boundary.fork, blobSchedule: boundary } : {type: ContextBytesType.ForkDigest, forkDigestContext: config, fork: boundary.fork, blobSchedule: null};
+      return isBlobScheduleBoundary(boundary)
+        ? {type: ContextBytesType.ForkDigest, forkDigestContext: config, fork: boundary.fork, blobSchedule: boundary}
+        : {type: ContextBytesType.ForkDigest, forkDigestContext: config, fork: boundary.fork, blobSchedule: null};
   }
 }
