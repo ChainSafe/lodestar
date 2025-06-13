@@ -1226,7 +1226,7 @@ export class BeaconChain implements IBeaconChain {
           //
           // TODO(fulu): If target group count increases, we should wait to update the advertised group until we've
           // backfilled the new groups.
-          if (this.config.getForkSeq(slot) < ForkSeq.fulu) {
+          if (this.config.FULU_FORK_EPOCH !== Infinity && this.config.getForkSeq(slot) < ForkSeq.fulu) {
             this.custodyConfig.updateAdvertisedCustodyGroupCount(targetCustodyGroupCount);
             this.emitter.emit(ChainEvent.updateAdvertisedGroupCount, this.custodyConfig.advertisedCustodyGroupCount);
           }
