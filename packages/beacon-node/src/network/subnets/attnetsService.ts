@@ -220,7 +220,10 @@ export class AttnetsService implements IAttnetsService {
           const topicStr = stringifyGossipTopic(this.config, {
             type: gossipType,
             subnet,
-            boundary: {fork: this.config.getForkName(dutiedSlot)},
+            boundary: {
+              fork: this.config.getForkName(dutiedSlot),
+              ...this.config.getBlobParameters(computeEpochAtSlot(dutiedSlot)),
+            },
           });
           const numMeshPeers = this.gossip.mesh.get(topicStr)?.size ?? 0;
           if (numMeshPeers >= GOSSIP_D_LOW) {
@@ -370,7 +373,7 @@ export class AttnetsService implements IAttnetsService {
     const epoch = computeEpochAtSlot(currentSlot);
     const blobSchedule = this.config.getBlobParameters(epoch);
     const fork = this.config.getForkInfoAtEpoch(epoch).name;
-    const boundary = blobSchedule !== null ? {...blobSchedule, fork} : {fork};
+    const boundary = {...blobSchedule, fork};
 
     for (const {subnet} of this.shortLivedSubscriptions.getActiveTtl(currentSlot)) {
       const topicStr = stringifyGossipTopic(this.config, {

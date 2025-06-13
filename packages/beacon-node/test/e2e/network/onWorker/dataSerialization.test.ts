@@ -1,6 +1,7 @@
 import {BitArray} from "@chainsafe/ssz";
 import {TopicValidatorResult} from "@libp2p/interface";
 import {routes} from "@lodestar/api";
+import {defaultBlobSchedule} from "@lodestar/config/default.js";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
@@ -95,7 +96,7 @@ describe("data serialization through worker boundary", () => {
       peer,
     },
     [NetworkEvent.pendingGossipsubMessage]: {
-      topic: {type: GossipType.beacon_block, boundary: {fork: ForkName.altair}},
+      topic: {type: GossipType.beacon_block, boundary: {fork: ForkName.altair, ...defaultBlobSchedule}},
       msg: {
         type: "unsigned",
         topic: "test-topic",

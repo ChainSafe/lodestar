@@ -2,6 +2,7 @@ import {noise} from "@chainsafe/libp2p-noise";
 import {mplex} from "@libp2p/mplex";
 import {tcp} from "@libp2p/tcp";
 import {createBeaconConfig} from "@lodestar/config";
+import {defaultBlobSchedule} from "@lodestar/config/default.js";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {fromHex, sleep, toHex} from "@lodestar/utils";
@@ -100,7 +101,7 @@ describe("reqresp encoder", () => {
 
   it("assert correct handler switch between metadata v2 and v1", async () => {
     const {multiaddr: serverMultiaddr, reqresp} = await getReqResp();
-    const boundary: SubscribeBoundary = {fork: ForkName.phase0};
+    const boundary: SubscribeBoundary = {fork: ForkName.phase0, ...defaultBlobSchedule};
     reqresp.registerProtocolsAtBoundary(boundary);
     await sleep(0); // Sleep to resolve register handler promises
 
@@ -136,7 +137,7 @@ describe("reqresp encoder", () => {
           };
         }
     );
-    const boundary: SubscribeBoundary = {fork: ForkName.phase0};
+    const boundary: SubscribeBoundary = {fork: ForkName.phase0, ...defaultBlobSchedule};
     reqresp.registerProtocolsAtBoundary(boundary);
     await sleep(0); // Sleep to resolve register handler promises
 

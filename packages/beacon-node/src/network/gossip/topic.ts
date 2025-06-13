@@ -11,7 +11,6 @@ import {Attestation, SingleAttestation, ssz, sszTypesFor} from "@lodestar/types"
 
 import {GossipAction, GossipActionError, GossipErrorCode} from "../../chain/errors/gossipValidation.js";
 import {SubscribeBoundary} from "../core/index.js";
-import {isBlobScheduleBoundary} from "../subscribeBoundary.js";
 import {DEFAULT_ENCODING} from "./constants.js";
 import {GossipEncoding, GossipTopic, GossipTopicTypeMap, GossipType, SSZTypeOfGossipTopic} from "./interface.js";
 
@@ -54,14 +53,7 @@ export class GossipTopicCache implements IGossipTopicCache {
 export function stringifyGossipTopic(forkDigestContext: BeaconConfig, topic: GossipTopic): string {
   const boundary = topic.boundary;
 
-  const fork = isBlobScheduleBoundary(boundary)
-    ? forkDigestContext.getForkInfoAtEpoch(boundary.EPOCH).name
-    : boundary.fork;
-
-  const forkDigestHexNoPrefix = forkDigestContext.forkName2ForkDigestHex(
-    fork,
-    isBlobScheduleBoundary(boundary) ? boundary : null
-  );
+  const forkDigestHexNoPrefix = forkDigestContext.forkName2ForkDigestHex(boundary.fork, boundary);
   const topicType = stringifyGossipTopicType(topic);
   const encoding = topic.encoding ?? DEFAULT_ENCODING;
   return `/eth2/${forkDigestHexNoPrefix}/${topicType}/${encoding}`;
@@ -185,7 +177,8 @@ export function parseGossipTopic(forkDigestContext: BeaconConfig, topicStr: stri
     const [, forkDigestHexNoPrefix, gossipTypeStr, encodingStr] = matches;
 
     const {fork, epoch} = forkDigestContext.forkDigest2ForkNameWithEpoch(forkDigestHexNoPrefix);
-    const boundary: SubscribeBoundary = epoch === null ? {fork} : {...forkDigestContext.getBlobParameters(epoch), fork};
+    // If epoch is null, that means it is pre-fulu. We set epoch to 0 in this case to get the default blob parameters
+    const boundary: SubscribeBoundary = {...forkDigestContext.getBlobParameters(epoch ?? 0), fork};
     const encoding = parseEncodingStr(encodingStr);
 
     // Inline-d the parseGossipTopicType() function since spreading the resulting object x4 the time to parse a topicStr

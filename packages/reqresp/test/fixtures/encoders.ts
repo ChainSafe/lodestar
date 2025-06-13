@@ -17,6 +17,10 @@ import {
 import {customProtocol, pingProtocol} from "./protocols.js";
 
 const pingNoHandler = pingProtocol(getEmptyHandler());
+const DEFAULT_BLOB_SCHEDULE = {
+  EPOCH: beaconConfig.ELECTRA_FORK_EPOCH,
+  MAX_BLOBS_PER_BLOCK: beaconConfig.MAX_BLOBS_PER_BLOCK_ELECTRA,
+};
 
 export const requestEncodersCases: {
   id: string;
@@ -135,7 +139,7 @@ export const responseEncodersTestCases: {
       // <result>
       Buffer.from([RespStatus.SUCCESS]),
       // <context-bytes>
-      beaconConfig.forkName2ForkDigest(ForkName.phase0, null),
+      beaconConfig.forkName2ForkDigest(ForkName.phase0, DEFAULT_BLOB_SCHEDULE),
       // <encoding-dependent-header> | <encoded-payload>
       ...sszSnappySignedBeaconBlockPhase0.chunks,
     ],
@@ -148,7 +152,7 @@ export const responseEncodersTestCases: {
       // <result>
       Buffer.from([RespStatus.SUCCESS]),
       // <context-bytes>
-      beaconConfig.forkName2ForkDigest(ForkName.altair, null),
+      beaconConfig.forkName2ForkDigest(ForkName.altair, DEFAULT_BLOB_SCHEDULE),
       // <encoding-dependent-header> | <encoded-payload>
       ...sszSnappySignedBeaconBlockAltair.chunks,
     ],
@@ -249,7 +253,7 @@ export const responseEncodersErrorTestCases: {
       // <result>
       Buffer.from([RespStatus.SUCCESS]),
       // <context-bytes>
-      beaconConfig.forkName2ForkDigest(ForkName.altair, null),
+      beaconConfig.forkName2ForkDigest(ForkName.altair, DEFAULT_BLOB_SCHEDULE),
       // <encoding-dependent-header> | <encoded-payload>
       ...sszSnappySignedBeaconBlockAltair.chunks,
     ],

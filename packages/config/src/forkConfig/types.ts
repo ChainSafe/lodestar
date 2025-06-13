@@ -45,5 +45,5 @@ export type ForkConfig = {
   /** Get max request blob sidecars by hard-fork */
   getMaxRequestBlobSidecars(fork: ForkName): number;
   /** Get blob schedule by epoch */
-  getBlobParameters(epoch: Epoch): BlobScheduleEntry | null;
+  getBlobParameters(epoch: Epoch): BlobScheduleEntry;
 };

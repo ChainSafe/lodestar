@@ -1,7 +1,6 @@
 import {BeaconConfig, ForkDigestContext} from "@lodestar/config";
 import {ContextBytesFactory, ContextBytesType, Encoding} from "@lodestar/reqresp";
 import {SubscribeBoundary} from "../core/types.js";
-import {isBlobScheduleBoundary} from "../subscribeBoundary.js";
 import {rateLimitQuotas} from "./rateLimit.js";
 import {ProtocolNoHandler, ReqRespMethod, Version, requestSszTypeByMethod, responseSszTypeByMethod} from "./types.js";
 
@@ -122,8 +121,11 @@ function toContextBytes(
     case ContextBytesType.Empty:
       return {type: ContextBytesType.Empty};
     case ContextBytesType.ForkDigest:
-      return isBlobScheduleBoundary(boundary)
-        ? {type: ContextBytesType.ForkDigest, forkDigestContext: config, fork: boundary.fork, blobSchedule: boundary}
-        : {type: ContextBytesType.ForkDigest, forkDigestContext: config, fork: boundary.fork, blobSchedule: null};
+      return {
+        type: ContextBytesType.ForkDigest,
+        forkDigestContext: config,
+        fork: boundary.fork,
+        blobSchedule: boundary,
+      };
   }
 }

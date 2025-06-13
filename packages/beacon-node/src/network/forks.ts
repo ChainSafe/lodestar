@@ -1,5 +1,5 @@
 import {BlobScheduleEntry, ChainForkConfig, ForkInfo} from "@lodestar/config";
-import {ForkName} from "@lodestar/params";
+import {ForkName, isForkPostFulu} from "@lodestar/params";
 import {Epoch} from "@lodestar/types";
 import {SubscribeBoundary} from "./core/types.js";
 
@@ -31,7 +31,7 @@ import {SubscribeBoundary} from "./core/types.js";
 export const FORK_EPOCH_LOOKAHEAD = 2;
 
 /**
- * Return the list of `ForkName`s meant to be active at `epoch`
+ * Return the list of `ForkName`s meant to be active at `epoch` up to Electra
  * @see FORK_EPOCH_LOOKAHEAD for details on when forks are considered 'active'
  */
 export function getActiveForks(config: ChainForkConfig, epoch: Epoch): ForkName[] {
@@ -47,7 +47,12 @@ export function getActiveForks(config: ChainForkConfig, epoch: Epoch): ForkName[
       continue;
     }
 
-    if (epoch >= currForkEpoch - FORK_EPOCH_LOOKAHEAD && epoch <= nextForkEpoch + FORK_EPOCH_LOOKAHEAD) {
+    const fork = forks[i].name;
+    if (
+      epoch >= currForkEpoch - FORK_EPOCH_LOOKAHEAD &&
+      epoch <= nextForkEpoch + FORK_EPOCH_LOOKAHEAD &&
+      !isForkPostFulu(fork)
+    ) {
       activeForks.push(forks[i].name);
     }
   }
@@ -56,6 +61,10 @@ export function getActiveForks(config: ChainForkConfig, epoch: Epoch): ForkName[
 }
 
 function getActiveBlobSchedule(config: ChainForkConfig, epoch: Epoch): BlobScheduleEntry[] {
+  // Blob schedule is ignored pre-fulu
+  if (epoch < config.FULU_FORK_EPOCH) {
+    return [];
+  }
   const activeBlobSchedule = new Set<BlobScheduleEntry>();
 
   for (let i = epoch - FORK_EPOCH_LOOKAHEAD; i <= epoch + FORK_EPOCH_LOOKAHEAD; i++) {
@@ -71,23 +80,24 @@ function getActiveBlobSchedule(config: ChainForkConfig, epoch: Epoch): BlobSched
 export function getActiveSubscribeBoundaries(config: ChainForkConfig, epoch: Epoch): SubscribeBoundary[] {
   const activeForks = getActiveForks(config, epoch);
   const activeBlobSchedule = getActiveBlobSchedule(config, epoch);
+  const defaultBlobSchedule = config.getBlobParameters(0); // blob schedule used when we are pre-fulu
 
-  // If we have completely entered blob schedule stage, use activeBlobSchedule
-  if (config.getBlobParameters(epoch - FORK_EPOCH_LOOKAHEAD) !== null) {
+  // If we have completely entered fulu, use activeBlobSchedule
+  if (epoch - FORK_EPOCH_LOOKAHEAD >= config.FULU_FORK_EPOCH) {
     return activeBlobSchedule.map((entry) => ({...entry, fork: config.getForkInfoAtEpoch(entry.EPOCH).name}));
   }
 
   // If we have not entered at least the first blob schedule, use activeForks
-  if (config.getBlobParameters(epoch + FORK_EPOCH_LOOKAHEAD) === null) {
-    return activeForks.map((fork) => ({fork}));
+  if (epoch + FORK_EPOCH_LOOKAHEAD < config.FULU_FORK_EPOCH) {
+    return activeForks.map((fork) => ({...defaultBlobSchedule, fork}));
   }
 
-  // If we are partially entering first blob schedule, usually we use both
+  // If we are partially entering fulu, usually we use both
   // TODO: There is an unhandled corner case where first blob schedule collides with fork boundary
   // in that case, we will subscribe to wrong topics in additional to the correct topics for
   // maximum of FORK_EPOCH_LOOKAHEAD * 2 epochs.
   return [
-    ...activeForks.map((fork) => ({fork})),
+    ...activeForks.map((fork) => ({...defaultBlobSchedule, fork})),
     ...activeBlobSchedule.map((entry) => ({...entry, fork: config.getForkInfoAtEpoch(entry.EPOCH).name})),
   ];
 }

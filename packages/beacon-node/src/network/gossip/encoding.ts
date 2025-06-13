@@ -6,7 +6,6 @@ import {ForkName} from "@lodestar/params";
 import {intToBytes} from "@lodestar/utils";
 import {compress, uncompress} from "snappyjs";
 import xxhashFactory from "xxhash-wasm";
-import {isBlobScheduleBoundary} from "../subscribeBoundary.js";
 import {MESSAGE_DOMAIN_VALID_SNAPPY} from "./constants.js";
 import {GossipTopicCache, getGossipSSZType} from "./topic.js";
 
@@ -45,7 +44,7 @@ export function msgIdFn(gossipTopicCache: GossipTopicCache, msg: Message): Uint8
 
   let vec: Uint8Array[];
 
-  if (!isBlobScheduleBoundary(boundary) && boundary.fork === ForkName.phase0) {
+  if (boundary.fork === ForkName.phase0) {
     // message id for phase0.
     // ```
     // SHA256(MESSAGE_DOMAIN_VALID_SNAPPY + snappy_decompress(message.data))[:20]

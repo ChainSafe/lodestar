@@ -141,21 +141,17 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     getMaxBlobsPerBlock(epoch: Epoch): number {
       const fork = this.getForkInfoAtEpoch(epoch).name;
 
-      switch (fork) {
-        case ForkName.electra:
-          return config.MAX_BLOBS_PER_BLOCK_ELECTRA;
-        case ForkName.deneb:
-          return config.MAX_BLOBS_PER_BLOCK;
+      if (fork === ForkName.deneb) {
+        return config.MAX_BLOBS_PER_BLOCK;
       }
 
-      const blobSchedule = this.getBlobParameters(epoch);
-
-      return blobSchedule !== null ? blobSchedule.MAX_BLOBS_PER_BLOCK : config.MAX_BLOBS_PER_BLOCK_ELECTRA;
+      return this.getBlobParameters(epoch).MAX_BLOBS_PER_BLOCK;
     },
     getMaxRequestBlobSidecars(fork: ForkName): number {
       return isForkPostElectra(fork) ? config.MAX_REQUEST_BLOB_SIDECARS_ELECTRA : config.MAX_REQUEST_BLOB_SIDECARS;
     },
-    getBlobParameters(epoch: Epoch): BlobScheduleEntry | null {
+    // Only call this post-fulu
+    getBlobParameters(epoch: Epoch): BlobScheduleEntry {
       // Sort by epoch in descending order to find the latest applicable value
       const blobSchedule = [...config.BLOB_SCHEDULE].sort((a, b) => b.EPOCH - a.EPOCH);
 
@@ -164,7 +160,8 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
           return entry;
         }
       }
-      return null;
+
+      return {EPOCH: config.ELECTRA_FORK_EPOCH, MAX_BLOBS_PER_BLOCK: config.MAX_BLOBS_PER_BLOCK_ELECTRA};
     },
   };
 }

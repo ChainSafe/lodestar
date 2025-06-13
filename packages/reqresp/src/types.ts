@@ -133,7 +133,7 @@ export type ContextBytesFactory =
       type: ContextBytesType.ForkDigest;
       forkDigestContext: ForkDigestContext;
       fork: ForkName;
-      blobSchedule: BlobScheduleEntry | null;
+      blobSchedule: BlobScheduleEntry;
     };
 
 export type ContextBytes = {type: ContextBytesType.Empty} | {type: ContextBytesType.ForkDigest; fork: ForkName};

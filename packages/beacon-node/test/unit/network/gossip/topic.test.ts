@@ -1,3 +1,4 @@
+import {defaultBlobSchedule} from "@lodestar/config/default.js";
 import {ForkName} from "@lodestar/params";
 import {describe, expect, it} from "vitest";
 import {GossipEncoding, GossipTopicMap, GossipType} from "../../../../src/network/gossip/index.js";
@@ -11,73 +12,116 @@ describe("network / gossip / topic", () => {
   const testCases: {[K in GossipType]: {topic: GossipTopicMap[K]; topicStr: string}[]} = {
     [GossipType.beacon_block]: [
       {
-        topic: {type: GossipType.beacon_block, boundary: {fork: ForkName.phase0}, encoding},
+        topic: {type: GossipType.beacon_block, boundary: {fork: ForkName.phase0, ...defaultBlobSchedule}, encoding},
         topicStr: "/eth2/f5a5fd42/beacon_block/ssz_snappy",
       },
     ],
     [GossipType.blob_sidecar]: [
       {
-        topic: {type: GossipType.blob_sidecar, subnet: 1, boundary: {fork: ForkName.deneb}, encoding},
+        topic: {
+          type: GossipType.blob_sidecar,
+          subnet: 1,
+          boundary: {fork: ForkName.deneb, ...defaultBlobSchedule},
+          encoding,
+        },
         topicStr: "/eth2/d6e497b8/blob_sidecar_1/ssz_snappy",
       },
     ],
     [GossipType.beacon_aggregate_and_proof]: [
       {
-        topic: {type: GossipType.beacon_aggregate_and_proof, boundary: {fork: ForkName.phase0}, encoding},
+        topic: {
+          type: GossipType.beacon_aggregate_and_proof,
+          boundary: {fork: ForkName.phase0, ...defaultBlobSchedule},
+          encoding,
+        },
         topicStr: "/eth2/f5a5fd42/beacon_aggregate_and_proof/ssz_snappy",
       },
     ],
     [GossipType.beacon_attestation]: [
       {
-        topic: {type: GossipType.beacon_attestation, boundary: {fork: ForkName.phase0}, subnet: 5, encoding},
+        topic: {
+          type: GossipType.beacon_attestation,
+          boundary: {fork: ForkName.phase0, ...defaultBlobSchedule},
+          subnet: 5,
+          encoding,
+        },
         topicStr: "/eth2/f5a5fd42/beacon_attestation_5/ssz_snappy",
       },
     ],
     [GossipType.voluntary_exit]: [
       {
-        topic: {type: GossipType.voluntary_exit, boundary: {fork: ForkName.phase0}, encoding},
+        topic: {type: GossipType.voluntary_exit, boundary: {fork: ForkName.phase0, ...defaultBlobSchedule}, encoding},
         topicStr: "/eth2/f5a5fd42/voluntary_exit/ssz_snappy",
       },
     ],
     [GossipType.bls_to_execution_change]: [
       {
-        topic: {type: GossipType.bls_to_execution_change, boundary: {fork: ForkName.capella}, encoding},
+        topic: {
+          type: GossipType.bls_to_execution_change,
+          boundary: {fork: ForkName.capella, ...defaultBlobSchedule},
+          encoding,
+        },
         topicStr: "/eth2/e7b4bb67/bls_to_execution_change/ssz_snappy",
       },
     ],
     [GossipType.proposer_slashing]: [
       {
-        topic: {type: GossipType.proposer_slashing, boundary: {fork: ForkName.phase0}, encoding},
+        topic: {
+          type: GossipType.proposer_slashing,
+          boundary: {fork: ForkName.phase0, ...defaultBlobSchedule},
+          encoding,
+        },
         topicStr: "/eth2/f5a5fd42/proposer_slashing/ssz_snappy",
       },
     ],
     [GossipType.attester_slashing]: [
       {
-        topic: {type: GossipType.attester_slashing, boundary: {fork: ForkName.phase0}, encoding},
+        topic: {
+          type: GossipType.attester_slashing,
+          boundary: {fork: ForkName.phase0, ...defaultBlobSchedule},
+          encoding,
+        },
         topicStr: "/eth2/f5a5fd42/attester_slashing/ssz_snappy",
       },
     ],
     [GossipType.sync_committee_contribution_and_proof]: [
       {
-        topic: {type: GossipType.sync_committee_contribution_and_proof, boundary: {fork: ForkName.altair}, encoding},
+        topic: {
+          type: GossipType.sync_committee_contribution_and_proof,
+          boundary: {fork: ForkName.altair, ...defaultBlobSchedule},
+          encoding,
+        },
         topicStr: "/eth2/16abab34/sync_committee_contribution_and_proof/ssz_snappy",
       },
     ],
     [GossipType.sync_committee]: [
       {
-        topic: {type: GossipType.sync_committee, boundary: {fork: ForkName.altair}, subnet: 5, encoding},
+        topic: {
+          type: GossipType.sync_committee,
+          boundary: {fork: ForkName.altair, ...defaultBlobSchedule},
+          subnet: 5,
+          encoding,
+        },
         topicStr: "/eth2/16abab34/sync_committee_5/ssz_snappy",
       },
     ],
     [GossipType.light_client_finality_update]: [
       {
-        topic: {type: GossipType.light_client_finality_update, boundary: {fork: ForkName.altair}, encoding},
+        topic: {
+          type: GossipType.light_client_finality_update,
+          boundary: {fork: ForkName.altair, ...defaultBlobSchedule},
+          encoding,
+        },
         topicStr: "/eth2/16abab34/light_client_finality_update/ssz_snappy",
       },
     ],
     [GossipType.light_client_optimistic_update]: [
       {
-        topic: {type: GossipType.light_client_optimistic_update, boundary: {fork: ForkName.altair}, encoding},
+        topic: {
+          type: GossipType.light_client_optimistic_update,
+          boundary: {fork: ForkName.altair, ...defaultBlobSchedule},
+          encoding,
+        },
         topicStr: "/eth2/16abab34/light_client_optimistic_update/ssz_snappy",
       },
     ],

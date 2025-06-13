@@ -8,8 +8,8 @@ export type ForkDigestContext = {
   forkDigest2ForkName(forkDigest: ForkDigest | ForkDigestHex): ForkName;
   forkDigest2ForkNameWithEpoch(forkDigest: ForkDigest | ForkDigestHex): {fork: ForkName; epoch: Epoch | null};
   forkDigest2ForkNameOption(forkDigest: ForkDigest | ForkDigestHex): ForkName | null;
-  forkName2ForkDigest(forkName: ForkName, blobSchedule: BlobScheduleEntry | null): ForkDigest;
-  forkName2ForkDigestHex(forkName: ForkName, blobSchedule: BlobScheduleEntry | null): ForkDigestHex;
+  forkName2ForkDigest(forkName: ForkName, blobSchedule: BlobScheduleEntry): ForkDigest;
+  forkName2ForkDigestHex(forkName: ForkName, blobSchedule: BlobScheduleEntry): ForkDigestHex;
 };
 
 export interface CachedGenesis extends ForkDigestContext {

@@ -78,7 +78,10 @@ export function customProtocol(opts: ProtocolOptions): Protocol {
             type: ContextBytesType.ForkDigest,
             forkDigestContext: beaconConfig,
             fork: opts.fork ?? ForkName.phase0,
-            blobSchedule: opts.blobSchedule ?? null,
+            blobSchedule: opts.blobSchedule ?? {
+              EPOCH: beaconConfig.ELECTRA_FORK_EPOCH,
+              MAX_BLOBS_PER_BLOCK: beaconConfig.MAX_BLOBS_PER_BLOCK_ELECTRA,
+            },
           }
         : {type: ContextBytesType.Empty},
     method: "req/test",

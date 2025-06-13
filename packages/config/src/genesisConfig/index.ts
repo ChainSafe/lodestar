@@ -19,19 +19,10 @@ export function createCachedGenesis(chainForkConfig: ChainForkConfig, genesisVal
   const forkDigestIdByForkDigest = new Map<ForkDigestHex, ForkDigestId>();
 
   for (const fork of Object.values(chainForkConfig.forks)) {
-    let forkDigest: ForkDigest;
-    let forkDigestId: ForkDigestId;
-
-    if (isForkPostFulu(fork.name)) {
-      // For post-fulu forks, we need to pass the blob schedule to compute the fork digest
-      const blobSchedule = chainForkConfig.getBlobParameters(fork.epoch);
-      forkDigest = computeForkDigest(fork.version, genesisValidatorsRoot, blobSchedule);
-      forkDigestId = blobSchedule !== null ? `${fork.name}-${blobSchedule.EPOCH}` : fork.name;
-    } else {
-      // For pre-fulu forks, we can compute the fork digest without the blob schedule
-      forkDigest = computeForkDigest(fork.version, genesisValidatorsRoot, null);
-      forkDigestId = fork.name;
-    }
+    // Pre-fulu we calculate blob schedule but it will not be used to calculate fork digest
+    const blobSchedule = chainForkConfig.getBlobParameters(fork.epoch);
+    const forkDigestId = toForkDigestId(fork.name, blobSchedule);
+    const forkDigest = computeForkDigest(chainForkConfig, fork.version, genesisValidatorsRoot, blobSchedule);
 
     const forkDigestHex = toHexStringNoPrefix(forkDigest);
     forkDigestIdByForkDigest.set(forkDigestHex, forkDigestId);
@@ -46,7 +37,7 @@ export function createCachedGenesis(chainForkConfig: ChainForkConfig, genesisVal
     // We only add fork digest if entry's epoch is different than a fork activation epoch
     // because former is already added above
     if (fork.epoch !== entry.EPOCH) {
-      const forkDigest = computeForkDigest(fork.version, genesisValidatorsRoot, entry);
+      const forkDigest = computeForkDigest(chainForkConfig, fork.version, genesisValidatorsRoot, entry);
       const forkDigestId: ForkDigestId = `${fork.name}-${entry.EPOCH}`;
       const forkDigestHex = toHexStringNoPrefix(forkDigest);
 
@@ -130,6 +121,7 @@ export function createCachedGenesis(chainForkConfig: ChainForkConfig, genesisVal
       return forkDigestIdToForkName(forkDigestId);
     },
 
+    // Epoch returned will be null if fork is pre-fulu
     forkDigest2ForkNameWithEpoch(forkDigest: ForkDigest | ForkDigestHex): {fork: ForkName; epoch: Epoch | null} {
       const forkDigestHex = toHexStringNoPrefix(forkDigest);
       const forkDigestId = forkDigestIdByForkDigest.get(forkDigestHex);
@@ -149,7 +141,7 @@ export function createCachedGenesis(chainForkConfig: ChainForkConfig, genesisVal
       return forkDigestIdToForkName(forkDigestId);
     },
 
-    forkName2ForkDigest(forkName: ForkName, blobSchedule: BlobScheduleEntry | null): ForkDigest {
+    forkName2ForkDigest(forkName: ForkName, blobSchedule: BlobScheduleEntry): ForkDigest {
       const forkDigest = forkDigestById.get(toForkDigestId(forkName, blobSchedule));
       if (!forkDigest) {
         throw Error(`No precomputed forkDigest for ${forkName}`);
@@ -157,7 +149,7 @@ export function createCachedGenesis(chainForkConfig: ChainForkConfig, genesisVal
       return forkDigest;
     },
 
-    forkName2ForkDigestHex(forkName: ForkName, blobSchedule: BlobScheduleEntry | null): ForkDigestHex {
+    forkName2ForkDigestHex(forkName: ForkName, blobSchedule: BlobScheduleEntry): ForkDigestHex {
       const forkDigestHex = forkDigestHexById.get(toForkDigestId(forkName, blobSchedule));
       if (!forkDigestHex) {
         throw Error(`No precomputed forkDigest for ${forkName}`);
@@ -188,12 +180,14 @@ function toHexStringNoPrefix(hex: string | Uint8Array): string {
 }
 
 function computeForkDigest(
+  chainForkConfig: ChainForkConfig,
   currentVersion: Version,
   genesisValidatorsRoot: Root,
-  blobSchedule: BlobScheduleEntry | null
+  blobSchedule: BlobScheduleEntry
 ): ForkDigest {
   const baseDigest = computeForkDataRoot(currentVersion, genesisValidatorsRoot);
-  if (blobSchedule === null) {
+
+  if (currentVersion < chainForkConfig.FULU_FORK_VERSION) {
     return baseDigest.slice(0, 4);
   }
 
@@ -222,6 +216,6 @@ function forkDigestIdToEpoch(forkDigestId: ForkDigestId): Epoch | null {
   return Number(forkDigestId.split("-")[1]);
 }
 
-function toForkDigestId(fork: ForkName, blobSchedule: BlobScheduleEntry | null): ForkDigestId {
-  return blobSchedule !== null ? `${fork}-${blobSchedule.EPOCH}` : fork;
+function toForkDigestId(fork: ForkName, blobSchedule: BlobScheduleEntry): ForkDigestId {
+  return isForkPostFulu(fork) ? `${fork}-${blobSchedule.EPOCH}` : fork;
 }

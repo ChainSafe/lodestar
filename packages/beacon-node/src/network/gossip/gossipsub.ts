@@ -3,7 +3,13 @@ import {MetricsRegister, TopicLabel, TopicStrToLabel} from "@chainsafe/libp2p-go
 import {PeerScoreParams} from "@chainsafe/libp2p-gossipsub/score";
 import {SignaturePolicy, TopicStr} from "@chainsafe/libp2p-gossipsub/types";
 import {BeaconConfig} from "@lodestar/config";
-import {ATTESTATION_SUBNET_COUNT, ForkName, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+import {
+  ATTESTATION_SUBNET_COUNT,
+  ForkName,
+  SLOTS_PER_EPOCH,
+  SYNC_COMMITTEE_SUBNET_COUNT,
+  isForkPostFulu,
+} from "@lodestar/params";
 import {SubnetID} from "@lodestar/types";
 import {Logger, Map2d, Map2dArr} from "@lodestar/utils";
 
@@ -19,7 +25,6 @@ import {GossipTopic, GossipType} from "./interface.js";
 import {Eth2GossipsubMetrics, createEth2GossipsubMetrics} from "./metrics.js";
 import {GossipTopicCache, getCoreTopicsAtFork, stringifyGossipTopic} from "./topic.js";
 
-import {isBlobScheduleBoundary} from "../subscribeBoundary.js";
 import {
   GOSSIP_D,
   GOSSIP_D_HIGH,
@@ -213,10 +218,7 @@ export class Eth2Gossipsub extends GossipSub {
         // for example in prater: /eth2/82f4a72b/optimistic_light_client_update_v0/ssz_snappy
         const topic = this.gossipTopicCache.getKnownTopic(topicString);
         if (topic !== undefined) {
-          const boundary = topic.boundary;
-          const fork = isBlobScheduleBoundary(boundary)
-            ? this.config.getForkInfoAtEpoch(boundary.EPOCH).name
-            : boundary.fork;
+          const fork = topic.boundary.fork;
           if (topic.type === GossipType.beacon_attestation) {
             peersByBeaconAttSubnetByFork.set(fork, topic.subnet, peers.size);
           } else if (topic.type === GossipType.sync_committee) {
@@ -338,14 +340,21 @@ function attSubnetLabel(subnet: SubnetID): string {
 
 function getMetricsTopicStrToLabel(config: BeaconConfig, opts: {disableLightClientServer: boolean}): TopicStrToLabel {
   const metricsTopicStrToLabel = new Map<TopicStr, TopicLabel>();
+  const defaultBlobSchedule = config.getBlobParameters(0); // Default blob schedule used for pre-fulu
 
   for (const {name: fork} of config.forksAscendingEpochOrder) {
+    if (isForkPostFulu(fork)) {
+      break;
+    }
     const topics = getCoreTopicsAtFork(config, fork, {
       subscribeAllSubnets: true,
       disableLightClientServer: opts.disableLightClientServer,
     });
     for (const topic of topics) {
-      metricsTopicStrToLabel.set(stringifyGossipTopic(config, {...topic, boundary: {fork}}), topic.type);
+      metricsTopicStrToLabel.set(
+        stringifyGossipTopic(config, {...topic, boundary: {...defaultBlobSchedule, fork}}),
+        topic.type
+      );
     }
   }
 
