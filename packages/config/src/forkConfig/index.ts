@@ -85,6 +85,8 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
   const forksAscendingEpochOrder = Object.values(forks);
   const forksDescendingEpochOrder = Object.values(forks).reverse();
 
+  const blobScheduleDescendingEpochOrder = [...config.BLOB_SCHEDULE].sort((a, b) => b.EPOCH - a.EPOCH);
+
   return {
     forks,
     forksAscendingEpochOrder,
@@ -153,9 +155,7 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     // Only call this post-fulu
     getBlobParameters(epoch: Epoch): BlobScheduleEntry {
       // Sort by epoch in descending order to find the latest applicable value
-      const blobSchedule = [...config.BLOB_SCHEDULE].sort((a, b) => b.EPOCH - a.EPOCH);
-
-      for (const entry of blobSchedule) {
+      for (const entry of blobScheduleDescendingEpochOrder) {
         if (epoch >= entry.EPOCH) {
           return entry;
         }
