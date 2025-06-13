@@ -1,4 +1,4 @@
-import {ForkDigest, Root, Slot, phase0, ssz} from "@lodestar/types";
+import {ForkDigest, Root, Slot, Status, ssz} from "@lodestar/types";
 import {toHex, toRootHex} from "@lodestar/utils";
 
 // TODO: Why this value? (From Lighthouse)
@@ -19,11 +19,7 @@ type IrrelevantPeerType =
  * Process a `Status` message to determine if a peer is relevant to us. If the peer is
  * irrelevant the reason is returned.
  */
-export function assertPeerRelevance(
-  remote: phase0.Status,
-  local: phase0.Status,
-  currentSlot: Slot
-): IrrelevantPeerType | null {
+export function assertPeerRelevance(remote: Status, local: Status, currentSlot: Slot): IrrelevantPeerType | null {
   // The node is on a different network/fork
   if (!ssz.ForkDigest.equals(local.forkDigest, remote.forkDigest)) {
     return {

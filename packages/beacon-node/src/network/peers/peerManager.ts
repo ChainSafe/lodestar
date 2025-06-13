@@ -3,7 +3,7 @@ import {Connection, PeerId, PrivateKey} from "@libp2p/interface";
 import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
 import {ForkSeq, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
-import {Metadata, fulu, phase0} from "@lodestar/types";
+import {Metadata, Status, fulu, phase0} from "@lodestar/types";
 import {withTimeout} from "@lodestar/utils";
 import {GOODBYE_KNOWN_CODES, GoodByeReasonCode, Libp2pEvent} from "../../constants/index.js";
 import {IClock} from "../../util/clock.js";
@@ -158,7 +158,7 @@ export class PeerManager {
   private readonly discovery: PeerDiscovery | null;
   private readonly networkEventBus: INetworkEventBus;
   private readonly statusCache: StatusCache;
-  private lastStatus: phase0.Status;
+  private lastStatus: Status;
 
   // A single map of connected peers with all necessary data to handle PINGs, STATUS, and metrics
   private connectedPeers: Map<PeerIdStr, PeerData>;
@@ -509,7 +509,7 @@ export class PeerManager {
     }
   }
 
-  private async requestStatus(peer: PeerId, localStatus: phase0.Status): Promise<void> {
+  private async requestStatus(peer: PeerId, localStatus: Status): Promise<void> {
     try {
       this.onStatus(peer, await this.reqResp.sendStatus(peer, localStatus));
     } catch (_e) {
