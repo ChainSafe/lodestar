@@ -1,7 +1,8 @@
 import {ChainForkConfig, createChainForkConfig} from "@lodestar/config";
-import {chainConfig} from "@lodestar/config/default";
+import {chainConfig, defaultBlobSchedule} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
 import {RequestError, RequestErrorCode, ResponseOutgoing} from "@lodestar/reqresp";
+import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Root, SignedBeaconBlock, altair, phase0, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
@@ -116,6 +117,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
             yield {
               data: ssz.altair.LightClientBootstrap.serialize(expectedValue),
               fork: ForkName.altair,
+              blobSchedule: defaultBlobSchedule,
             };
           }
         }
@@ -137,6 +139,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
             yield {
               data: ssz.altair.LightClientOptimisticUpdate.serialize(expectedValue),
               fork: ForkName.altair,
+              blobSchedule: defaultBlobSchedule,
             };
           }
         }
@@ -158,6 +161,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
             yield {
               data: ssz.altair.LightClientFinalityUpdate.serialize(expectedValue),
               fork: ForkName.altair,
+              blobSchedule: defaultBlobSchedule,
             };
           }
         }
@@ -178,6 +182,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
       lightClientUpdates.push({
         data: ssz.altair.LightClientUpdate.serialize(update),
         fork: ForkName.altair,
+        blobSchedule: defaultBlobSchedule,
       });
     }
 
@@ -333,5 +338,6 @@ function wrapBlockAsEncodedPayload(config: ChainForkConfig, block: SignedBeaconB
   return {
     data: config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block),
     fork: config.getForkName(block.message.slot),
+    blobSchedule: config.getBlobParameters(computeEpochAtSlot(block.message.slot)),
   };
 }
