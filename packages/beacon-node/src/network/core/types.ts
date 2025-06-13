@@ -4,7 +4,7 @@ import {routes} from "@lodestar/api";
 import {SpecJson} from "@lodestar/config";
 import {LoggerNodeOpts} from "@lodestar/logger/node";
 import {ResponseIncoming} from "@lodestar/reqresp";
-import {phase0} from "@lodestar/types";
+import {Status, phase0} from "@lodestar/types";
 import {PeerIdStr} from "../../util/peerId.js";
 import {NetworkOptions} from "../options.js";
 import {PeerAction, PeerScoreStats} from "../peers/index.js";
@@ -53,7 +53,9 @@ export interface INetworkCore extends INetworkCorePublic {
   getConnectedPeerCount(): Promise<number>;
 
   /** Chain must push status updates to the network core */
-  updateStatus(status: phase0.Status): Promise<void>;
+  updateStatus(status: Status): Promise<void>;
+
+  // updateLowestSlot(number: Slot): Promise<void>;
 
   setTargetGroupCount(count: number): Promise<void>;
   setAdvertisedGroupCount(count: number): Promise<void>;
@@ -102,7 +104,7 @@ export type NetworkWorkerApi = INetworkCorePublic & {
   // TODO: Duplicated methods with INetwork interface
   getConnectedPeers(): Promise<PeerIdStr[]>;
   getConnectedPeerCount(): Promise<number>;
-  updateStatus(status: phase0.Status): Promise<void>;
+  updateStatus(status: Status): Promise<void>;
 
   setTargetGroupCount(count: number): Promise<void>;
   setAdvertisedGroupCount(count: number): Promise<void>;

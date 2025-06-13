@@ -7,7 +7,7 @@ import {BeaconConfig} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {ForkName} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
-import {Epoch, phase0, ssz, sszTypesFor} from "@lodestar/types";
+import {Epoch, Status, phase0, ssz, sszTypesFor} from "@lodestar/types";
 import {multiaddr} from "@multiformats/multiaddr";
 import {formatNodePeer} from "../../api/impl/node/utils.js";
 import {RegistryMetricCreator} from "../../metrics/index.js";
@@ -299,7 +299,7 @@ export class NetworkCore implements INetworkCore {
       .join("\n\n");
   }
 
-  async updateStatus(status: phase0.Status): Promise<void> {
+  async updateStatus(status: Status): Promise<void> {
     this.statusCache.update(status);
   }
   async reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): Promise<void> {

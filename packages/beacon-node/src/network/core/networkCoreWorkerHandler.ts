@@ -9,7 +9,7 @@ import {routes} from "@lodestar/api";
 import {BeaconConfig, chainConfigToJson} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {ResponseIncoming, ResponseOutgoing} from "@lodestar/reqresp";
-import {phase0} from "@lodestar/types";
+import {Status, phase0} from "@lodestar/types";
 import {Metrics} from "../../metrics/index.js";
 import {AsyncIterableBridgeCaller, AsyncIterableBridgeHandler} from "../../util/asyncIterableToEvents.js";
 import {PeerIdStr, peerIdFromString} from "../../util/peerId.js";
@@ -172,7 +172,7 @@ export class WorkerNetworkCore implements INetworkCore {
     return this.getApi().scrapeMetrics();
   }
 
-  updateStatus(status: phase0.Status): Promise<void> {
+  updateStatus(status: Status): Promise<void> {
     return this.getApi().updateStatus(status);
   }
   reStatusPeers(peers: PeerIdStr[]): Promise<void> {

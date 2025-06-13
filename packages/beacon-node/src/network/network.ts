@@ -19,6 +19,7 @@ import {
   SignedAggregateAndProof,
   SignedBeaconBlock,
   SingleAttestation,
+  Slot,
   SlotRootHex,
   SubnetID,
   WithBytes,
@@ -140,6 +141,7 @@ export class Network implements INetwork {
     this.chain.emitter.on(ChainEvent.updateTargetGroupCount, this.onTargetGroupCountUpdated);
     this.chain.emitter.on(ChainEvent.updateAdvertisedGroupCount, this.onAdvertisedGroupCountUpdated);
     this.chain.emitter.on(ChainEvent.publishDataColumns, this.onPublishDataColumns);
+    this.chain.emitter.on(ChainEvent.updateStatus, this.onUpdateStatus);
   }
 
   static async init({
@@ -699,7 +701,7 @@ export class Network implements INetwork {
   };
 
   private onHead = async (): Promise<void> => {
-    await this.core.updateStatus(this.chain.getStatus());
+    await this.onUpdateStatus();
   };
 
   private onPeerConnected = (data: NetworkEventData[NetworkEvent.peerConnected]): void => {
@@ -722,5 +724,9 @@ export class Network implements INetwork {
 
   private onPublishDataColumns = (sidecars: fulu.DataColumnSidecar[]): Promise<number[]> => {
     return promiseAllMaybeAsync(sidecars.map((sidecar) => () => this.publishDataColumnSidecar(sidecar)));
+  };
+
+  private onUpdateStatus = async (): Promise<void> => {
+    await this.core.updateStatus(this.chain.getStatus());
   };
 }
