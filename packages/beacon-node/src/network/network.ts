@@ -19,7 +19,6 @@ import {
   SignedAggregateAndProof,
   SignedBeaconBlock,
   SingleAttestation,
-  Slot,
   SlotRootHex,
   SubnetID,
   WithBytes,
