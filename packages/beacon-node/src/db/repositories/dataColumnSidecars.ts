@@ -6,6 +6,8 @@ import {ssz} from "@lodestar/types";
 
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 
+// NOTE: If you change the order of these fields or add/remove anything you must
+//       update the byte offsets below to match the container.
 export const dataColumnSidecarsWrapperSsz = new ContainerType(
   {
     blockRoot: ssz.Root,
