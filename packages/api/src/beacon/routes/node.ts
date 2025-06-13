@@ -198,15 +198,18 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
           ...JsonOnlyResponseCodec.data,
           toJson: (data) => {
             const json = NetworkIdentityType.toJson(data);
-            (json as {metadata: {custody_group_count: number | undefined}}).metadata.custody_group_count =
-              data.metadata.custodyGroupCount;
+            const {custodyGroupCount} = data.metadata;
+            (json as {metadata: {custody_group_count: string | undefined}}).metadata.custody_group_count =
+              custodyGroupCount !== undefined ? String(custodyGroupCount) : undefined;
             return json;
           },
           fromJson: (json) => {
             const data = NetworkIdentityType.fromJson(json);
-            (data.metadata as Partial<fulu.Metadata>).custodyGroupCount = (
-              json as {metadata: {custody_group_count: number | undefined}}
-            ).metadata.custody_group_count;
+            const {
+              metadata: {custody_group_count},
+            } = json as {metadata: {custody_group_count: string | undefined}};
+            (data.metadata as Partial<fulu.Metadata>).custodyGroupCount =
+              custody_group_count !== undefined ? parseInt(custody_group_count) : undefined;
             return data;
           },
         },
