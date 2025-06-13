@@ -4,6 +4,7 @@ import {toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {getSlotFromSignedBeaconBlockSerialized} from "../../../util/sszBytes.js";
+import { computeEndSlotAtEpoch } from "@lodestar/state-transition";
 
 export async function* onBeaconBlocksByRoot(
   requestBody: phase0.BeaconBlocksByRootRequest,
@@ -41,6 +42,7 @@ export async function* onBeaconBlocksByRoot(
       yield {
         data: blockBytes,
         fork: chain.config.getForkName(slot),
+        blobSchedule: chain.config.getBlobParameters(computeEndSlotAtEpoch(slot)),
       };
     }
   }

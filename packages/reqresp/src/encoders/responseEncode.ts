@@ -68,7 +68,7 @@ export async function* responseEncodeError(
  * Yields byte chunks for a `<context-bytes>`. See `ContextBytesType` for possible types.
  * This item is mandatory but may be empty.
  */
-function getContextBytes(contextBytes: ContextBytesFactory, _chunk: ResponseOutgoing): Uint8Array | null {
+function getContextBytes(contextBytes: ContextBytesFactory, chunk: ResponseOutgoing): Uint8Array | null {
   switch (contextBytes.type) {
     // Yield nothing
     case ContextBytesType.Empty:
@@ -76,8 +76,6 @@ function getContextBytes(contextBytes: ContextBytesFactory, _chunk: ResponseOutg
 
     // Yield a fixed-width 4 byte chunk, set to the `ForkDigest`
     case ContextBytesType.ForkDigest:
-      // We use Protocol's contextBytes (which comes from clock) to determine fork digest instead of chunk's fork
-      // Revert this change if deemed incorrect.
-      return contextBytes.forkDigestContext.forkName2ForkDigest(contextBytes.fork, contextBytes.blobSchedule) as Buffer;
+      return contextBytes.forkDigestContext.forkName2ForkDigest(chunk.fork, chunk.blobSchedule) as Buffer;
   }
 }

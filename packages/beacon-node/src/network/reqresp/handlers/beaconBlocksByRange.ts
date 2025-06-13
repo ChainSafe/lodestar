@@ -5,6 +5,7 @@ import {deneb, phase0} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
+import { computeEpochAtSlot } from "@lodestar/state-transition";
 
 // TODO: Unit test
 
@@ -24,9 +25,11 @@ export async function* onBeaconBlocksByRange(
   if (startSlot <= finalizedSlot) {
     // Chain of blobs won't change
     for await (const {key, value} of finalized.binaryEntriesStream({gte: startSlot, lt: endSlot})) {
+      const slot = finalized.decodeKey(key);
       yield {
         data: value,
-        fork: chain.config.getForkName(finalized.decodeKey(key)),
+        fork: chain.config.getForkName(slot),
+        blobSchedule: chain.config.getBlobParameters(computeEpochAtSlot(slot)),
       };
     }
   }
@@ -58,6 +61,7 @@ export async function* onBeaconBlocksByRange(
         yield {
           data: blockBytes,
           fork: chain.config.getForkName(block.slot),
+          blobSchedule: chain.config.getBlobParameters(computeEpochAtSlot(block.slot)),
         };
       }
 

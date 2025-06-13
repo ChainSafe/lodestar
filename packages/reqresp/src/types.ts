@@ -28,6 +28,7 @@ export type ResponseIncoming = {
 export type ResponseOutgoing = {
   data: Uint8Array;
   fork: ForkName;
+  blobSchedule: BlobScheduleEntry;
 };
 
 /**

@@ -6,6 +6,7 @@ import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../../../db/repositories/blobSidecars.js";
+import { computeEpochAtSlot } from "@lodestar/state-transition";
 
 export async function* onBlobSidecarsByRange(
   request: deneb.BlobSidecarsByRangeRequest,
@@ -86,6 +87,7 @@ export function* iterateBlobBytesFromWrapper(
     yield {
       data: blobSideCarBytes,
       fork: chain.config.getForkName(blockSlot),
+      blobSchedule: chain.config.getBlobParameters(computeEpochAtSlot(blockSlot)),
     };
   }
 }

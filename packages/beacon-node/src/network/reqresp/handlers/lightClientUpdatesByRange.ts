@@ -10,6 +10,7 @@ import {altair} from "@lodestar/types";
 import {IBeaconChain} from "../../../chain/index.js";
 import {assertLightClientServer} from "../../../node/utils/lightclient.js";
 import {ReqRespMethod, responseSszTypeByMethod} from "../types.js";
+import { computeEpochAtSlot } from "@lodestar/state-transition";
 
 export async function* onLightClientUpdatesByRange(
   requestBody: altair.LightClientUpdatesByRange,
@@ -22,11 +23,13 @@ export async function* onLightClientUpdatesByRange(
     try {
       const update = await chain.lightClientServer.getUpdate(period);
       const fork = chain.config.getForkName(update.signatureSlot);
+      const blobSchedule = chain.config.getBlobParameters(computeEpochAtSlot(update.signatureSlot));
       const type = responseSszTypeByMethod[ReqRespMethod.LightClientUpdatesByRange](fork, 0);
 
       yield {
         data: type.serialize(update),
         fork,
+        blobSchedule,
       };
     } catch (e) {
       if ((e as LightClientServerError).type?.code === LightClientServerErrorCode.RESOURCE_UNAVAILABLE) {

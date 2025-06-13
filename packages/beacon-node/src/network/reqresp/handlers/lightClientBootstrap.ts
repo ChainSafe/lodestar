@@ -9,17 +9,21 @@ import {Root} from "@lodestar/types";
 import {IBeaconChain} from "../../../chain/index.js";
 import {assertLightClientServer} from "../../../node/utils/lightclient.js";
 import {ReqRespMethod, responseSszTypeByMethod} from "../types.js";
+import { computeEpochAtSlot } from "@lodestar/state-transition";
 
 export async function* onLightClientBootstrap(requestBody: Root, chain: IBeaconChain): AsyncIterable<ResponseOutgoing> {
   assertLightClientServer(chain.lightClientServer);
 
   try {
     const bootstrap = await chain.lightClientServer.getBootstrap(requestBody);
-    const fork = chain.config.getForkName(bootstrap.header.beacon.slot);
+    const slot = bootstrap.header.beacon.slot;
+    const fork = chain.config.getForkName(slot);
+    const blobSchedule = chain.config.getBlobParameters(computeEpochAtSlot(slot));
     const type = responseSszTypeByMethod[ReqRespMethod.LightClientBootstrap](fork, 0);
     yield {
       data: type.serialize(bootstrap),
       fork,
+      blobSchedule,
     };
   } catch (e) {
     if ((e as LightClientServerError).type?.code === LightClientServerErrorCode.RESOURCE_UNAVAILABLE) {

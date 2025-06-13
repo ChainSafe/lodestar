@@ -6,6 +6,7 @@ import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../../../db/repositories/blobSidecars.js";
 import {BlobSidecarsByRootRequest} from "../../../util/types.js";
+import { computeEpochAtSlot } from "@lodestar/state-transition";
 
 export async function* onBlobSidecarsByRoot(
   requestBody: BlobSidecarsByRootRequest,
@@ -56,6 +57,7 @@ export async function* onBlobSidecarsByRoot(
     yield {
       data: blobSidecarBytes,
       fork: chain.config.getForkName(block.slot),
+      blobSchedule: chain.config.getBlobParameters(computeEpochAtSlot(block.slot)),
     };
   }
 }

@@ -12,9 +12,11 @@ export async function* onLightClientOptimisticUpdate(chain: IBeaconChain): Async
   }
 
   const fork = chain.config.getForkName(update.signatureSlot);
+  const blobSchedule = chain.config.getBlobParameters(update.signatureSlot);
   const type = responseSszTypeByMethod[ReqRespMethod.LightClientOptimisticUpdate](fork, 0);
   yield {
     data: type.serialize(update),
     fork,
+    blobSchedule,
   };
 }
