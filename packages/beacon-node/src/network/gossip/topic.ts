@@ -176,7 +176,8 @@ export function parseGossipTopic(forkDigestContext: BeaconConfig, topicStr: stri
 
     const [, forkDigestHexNoPrefix, gossipTypeStr, encodingStr] = matches;
 
-    const {fork, epoch} = forkDigestContext.forkDigest2ForkNameWithEpoch(forkDigestHexNoPrefix);
+    const epoch = forkDigestContext.forkDigest2Epoch(forkDigestHexNoPrefix);
+    const fork = forkDigestContext.forkDigest2ForkName(forkDigestHexNoPrefix);
     // If epoch is null, that means it is pre-fulu. We set epoch to 0 in this case to get the default blob parameters
     const boundary: SubscribeBoundary = {...forkDigestContext.getBlobParameters(epoch ?? 0), fork};
     const encoding = parseEncodingStr(encodingStr);

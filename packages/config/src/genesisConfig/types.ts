@@ -6,7 +6,7 @@ export type ForkDigestHex = string;
 
 export type ForkDigestContext = {
   forkDigest2ForkName(forkDigest: ForkDigest | ForkDigestHex): ForkName;
-  forkDigest2ForkNameWithEpoch(forkDigest: ForkDigest | ForkDigestHex): {fork: ForkName; epoch: Epoch | null};
+  forkDigest2Epoch(forkDigest: ForkDigest | ForkDigestHex): Epoch;
   forkDigest2ForkNameOption(forkDigest: ForkDigest | ForkDigestHex): ForkName | null;
   forkName2ForkDigest(forkName: ForkName, blobSchedule: BlobScheduleEntry): ForkDigest;
   forkName2ForkDigestHex(forkName: ForkName, blobSchedule: BlobScheduleEntry): ForkDigestHex;
