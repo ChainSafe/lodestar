@@ -207,29 +207,6 @@ export function getBeaconBlockApi({
       await sleep(msToBlockSlot);
     }
 
-    if (chain.emitter.listenerCount(routes.events.EventType.blockGossip)) {
-      chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRoot});
-    }
-
-    if (
-      chain.emitter.listenerCount(routes.events.EventType.blobSidecar) &&
-      blockForImport.type === BlockInputType.availableData &&
-      (blockForImport.blockData.fork === ForkName.deneb || blockForImport.blockData.fork === ForkName.electra)
-    ) {
-      const {blobs} = blockForImport.blockData;
-
-      for (const blobSidecar of blobs) {
-        const {index, kzgCommitment} = blobSidecar;
-        chain.emitter.emit(routes.events.EventType.blobSidecar, {
-          blockRoot,
-          slot,
-          index,
-          kzgCommitment: toHex(kzgCommitment),
-          versionedHash: toHex(kzgCommitmentToVersionedHash(kzgCommitment)),
-        });
-      }
-    }
-
     // TODO: Validate block
     const delaySec =
       seenTimestampSec - (chain.genesisTime + blockForImport.block.message.slot * config.SECONDS_PER_SLOT);
@@ -263,6 +240,29 @@ export function getBeaconBlockApi({
           }),
     ];
     await promiseAllMaybeAsync(publishPromises);
+
+    if (chain.emitter.listenerCount(routes.events.EventType.blockGossip)) {
+      chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRoot});
+    }
+
+    if (
+      chain.emitter.listenerCount(routes.events.EventType.blobSidecar) &&
+      blockForImport.type === BlockInputType.availableData &&
+      (blockForImport.blockData.fork === ForkName.deneb || blockForImport.blockData.fork === ForkName.electra)
+    ) {
+      const {blobs} = blockForImport.blockData;
+
+      for (const blobSidecar of blobs) {
+        const {index, kzgCommitment} = blobSidecar;
+        chain.emitter.emit(routes.events.EventType.blobSidecar, {
+          blockRoot,
+          slot,
+          index,
+          kzgCommitment: toHex(kzgCommitment),
+          versionedHash: toHex(kzgCommitmentToVersionedHash(kzgCommitment)),
+        });
+      }
+    }
   };
 
   const publishBlindedBlock: ApplicationMethods<routes.beacon.block.Endpoints>["publishBlindedBlock"] = async (
