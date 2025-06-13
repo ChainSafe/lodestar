@@ -1,10 +1,10 @@
 import {ResponseOutgoing} from "@lodestar/reqresp";
+import {computeEndSlotAtEpoch} from "@lodestar/state-transition";
 import {Slot, phase0} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {getSlotFromSignedBeaconBlockSerialized} from "../../../util/sszBytes.js";
-import { computeEndSlotAtEpoch } from "@lodestar/state-transition";
 
 export async function* onBeaconBlocksByRoot(
   requestBody: phase0.BeaconBlocksByRootRequest,

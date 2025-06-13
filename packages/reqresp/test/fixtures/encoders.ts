@@ -1,3 +1,4 @@
+import {defaultBlobSchedule} from "@lodestar/config/default.js";
 import {ForkName} from "@lodestar/params";
 import {LodestarError} from "@lodestar/utils";
 import {SszSnappyError, SszSnappyErrorCode} from "../../src/encodingStrategies/sszSnappy/index.js";
@@ -206,26 +207,24 @@ export const responseEncodersTestCases: {
     // It's not able to produce a single concatenated chunk with our encoder
     skipEncoding: true,
   },
-  // TODO: Determine if this test case is necessary. Seems very complicate for small gain
-  // especially post-fulu where digest is mixed with blob schedule
-  // {
-  //   id: "Decode blocks v2 through a fork with multiple types",
-  //   protocol: customProtocol({contextBytesType: ContextBytesType.ForkDigest, version: 2}),
-  //   responseChunks: [
-  //     {status: RespStatus.SUCCESS, payload: sszSnappySignedBeaconBlockPhase0.binaryPayload},
-  //     {status: RespStatus.SUCCESS, payload: sszSnappySignedBeaconBlockAltair.binaryPayload},
-  //   ],
-  //   chunks: [
-  //     // Chunk 0 - success block in phase0 with context bytes
-  //     Buffer.from([RespStatus.SUCCESS]),
-  //     beaconConfig.forkName2ForkDigest(ForkName.phase0, null),
-  //     ...sszSnappySignedBeaconBlockPhase0.chunks,
-  //     // Chunk 1 - success block in altair with context bytes
-  //     Buffer.from([RespStatus.SUCCESS]),
-  //     beaconConfig.forkName2ForkDigest(ForkName.altair, null),
-  //     ...sszSnappySignedBeaconBlockAltair.chunks,
-  //   ],
-  // },
+  {
+    id: "Decode blocks v2 through a fork with multiple types",
+    protocol: customProtocol({contextBytesType: ContextBytesType.ForkDigest, version: 2}),
+    responseChunks: [
+      {status: RespStatus.SUCCESS, payload: sszSnappySignedBeaconBlockPhase0.binaryPayload},
+      {status: RespStatus.SUCCESS, payload: sszSnappySignedBeaconBlockAltair.binaryPayload},
+    ],
+    chunks: [
+      // Chunk 0 - success block in phase0 with context bytes
+      Buffer.from([RespStatus.SUCCESS]),
+      beaconConfig.forkName2ForkDigest(ForkName.phase0, defaultBlobSchedule),
+      ...sszSnappySignedBeaconBlockPhase0.chunks,
+      // Chunk 1 - success block in altair with context bytes
+      Buffer.from([RespStatus.SUCCESS]),
+      beaconConfig.forkName2ForkDigest(ForkName.altair, defaultBlobSchedule),
+      ...sszSnappySignedBeaconBlockAltair.chunks,
+    ],
+  },
 ];
 
 export const responseEncodersErrorTestCases: {

@@ -1,5 +1,6 @@
 import {ContainerType, ListBasicType, UintNumberType, ValueOf} from "@chainsafe/ssz";
 import {BlobScheduleEntry} from "@lodestar/config";
+import {defaultBlobSchedule} from "@lodestar/config/default.js";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {ContextBytesType, DialOnlyProtocol, Encoding, Protocol, ProtocolHandler} from "../../src/types.js";
@@ -42,6 +43,7 @@ export const numberToStringProtocol: Protocol = {
     yield {
       data: Buffer.from(req.data.toString(), "utf8"),
       fork: ForkName.phase0,
+      blobSchedule: defaultBlobSchedule,
     };
   },
 };
@@ -77,11 +79,6 @@ export function customProtocol(opts: ProtocolOptions): Protocol {
         ? {
             type: ContextBytesType.ForkDigest,
             forkDigestContext: beaconConfig,
-            fork: opts.fork ?? ForkName.phase0,
-            blobSchedule: opts.blobSchedule ?? {
-              EPOCH: beaconConfig.ELECTRA_FORK_EPOCH,
-              MAX_BLOBS_PER_BLOCK: beaconConfig.MAX_BLOBS_PER_BLOCK_ELECTRA,
-            },
           }
         : {type: ContextBytesType.Empty},
     method: "req/test",

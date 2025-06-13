@@ -5,11 +5,11 @@ import {
   ResponseError,
   ResponseOutgoing,
 } from "@lodestar/reqresp";
+import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Root} from "@lodestar/types";
 import {IBeaconChain} from "../../../chain/index.js";
 import {assertLightClientServer} from "../../../node/utils/lightclient.js";
 import {ReqRespMethod, responseSszTypeByMethod} from "../types.js";
-import { computeEpochAtSlot } from "@lodestar/state-transition";
 
 export async function* onLightClientBootstrap(requestBody: Root, chain: IBeaconChain): AsyncIterable<ResponseOutgoing> {
   assertLightClientServer(chain.lightClientServer);

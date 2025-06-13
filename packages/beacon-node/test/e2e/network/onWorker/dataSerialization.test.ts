@@ -48,7 +48,7 @@ describe("data serialization through worker boundary", () => {
     [ReqRespBridgeEvent.outgoingResponse]: {
       type: IteratorEventType.next,
       id: 0,
-      item: {data: bytes, fork: ForkName.altair},
+      item: {data: bytes, fork: ForkName.altair, blobSchedule: defaultBlobSchedule},
     },
     [ReqRespBridgeEvent.incomingRequest]: {id: 0, callArgs: {method, req: {data: bytes, version: 1}, peerId}},
     [ReqRespBridgeEvent.incomingResponse]: {
