@@ -1,9 +1,9 @@
 import {digest} from "@chainsafe/as-sha256";
-import {DOMAIN_VOLUNTARY_EXIT, ForkName, SLOTS_PER_EPOCH, isForkPostFulu} from "@lodestar/params";
+import {DOMAIN_VOLUNTARY_EXIT, ForkName, ForkSeq, SLOTS_PER_EPOCH, isForkPostFulu} from "@lodestar/params";
 import {DomainType, Epoch, ForkDigest, Root, Slot, Version, phase0, ssz} from "@lodestar/types";
 import {intToBytes, strip0xPrefix, toHex} from "@lodestar/utils";
 import {ChainForkConfig} from "../beaconConfig.js";
-import {BlobScheduleEntry} from "../index.js";
+import {BlobScheduleEntry, ForkInfo} from "../index.js";
 import {xor} from "../utils/bytes.js";
 import {CachedGenesis, ForkDigestHex} from "./types.js";
 export type {ForkDigestContext} from "./types.js";
@@ -22,7 +22,7 @@ export function createCachedGenesis(chainForkConfig: ChainForkConfig, genesisVal
   for (const fork of Object.values(chainForkConfig.forks)) {
     // Pre-fulu we calculate blob schedule but it will not be used to calculate fork digest
     const blobSchedule = chainForkConfig.getBlobParameters(fork.epoch);
-    const forkDigest = computeForkDigest(chainForkConfig, fork.version, genesisValidatorsRoot, blobSchedule);
+    const forkDigest = computeForkDigest(fork, genesisValidatorsRoot, blobSchedule);
 
     const forkDigestHex = toHexStringNoPrefix(forkDigest);
     epochByForkDigest.set(forkDigestHex, fork.epoch);
@@ -37,7 +37,7 @@ export function createCachedGenesis(chainForkConfig: ChainForkConfig, genesisVal
     // We only add fork digest if entry's epoch is different than a fork activation epoch
     // because former is already added above
     if (fork.epoch !== entry.EPOCH) {
-      const forkDigest = computeForkDigest(chainForkConfig, fork.version, genesisValidatorsRoot, entry);
+      const forkDigest = computeForkDigest(fork, genesisValidatorsRoot, entry);
       const forkDigestHex = toHexStringNoPrefix(forkDigest);
 
       epochByForkDigest.set(forkDigestHex, entry.EPOCH);
@@ -183,14 +183,13 @@ function toHexStringNoPrefix(hex: string | Uint8Array): string {
 }
 
 function computeForkDigest(
-  chainForkConfig: ChainForkConfig,
-  currentVersion: Version,
+  currentFork: ForkInfo,
   genesisValidatorsRoot: Root,
   blobSchedule: BlobScheduleEntry
 ): ForkDigest {
-  const baseDigest = computeForkDataRoot(currentVersion, genesisValidatorsRoot);
+  const baseDigest = computeForkDataRoot(currentFork.version, genesisValidatorsRoot);
 
-  if (currentVersion < chainForkConfig.FULU_FORK_VERSION) {
+  if (currentFork.seq < ForkSeq.fulu) {
     return baseDigest.slice(0, 4);
   }
 
