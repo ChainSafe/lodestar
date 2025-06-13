@@ -207,9 +207,12 @@ export function getBeaconBlockApi({
       await sleep(msToBlockSlot);
     }
 
-    chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRoot});
+    if (chain.emitter.listenerCount(routes.events.EventType.blockGossip)) {
+      chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRoot});
+    }
 
     if (
+      chain.emitter.listenerCount(routes.events.EventType.blobSidecar) &&
       blockForImport.type === BlockInputType.availableData &&
       (blockForImport.blockData.fork === ForkName.deneb || blockForImport.blockData.fork === ForkName.electra)
     ) {
