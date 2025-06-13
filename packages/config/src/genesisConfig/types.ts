@@ -4,6 +4,7 @@ import {BlobScheduleEntry} from "../chainConfig/types.js";
 
 export type ForkDigestHex = string;
 
+// TODO: Simplify this api to accept and return SubscribeBoundary
 export type ForkDigestContext = {
   forkDigest2ForkName(forkDigest: ForkDigest | ForkDigestHex): ForkName;
   forkDigest2Epoch(forkDigest: ForkDigest | ForkDigestHex): Epoch;

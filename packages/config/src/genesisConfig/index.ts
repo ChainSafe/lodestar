@@ -11,6 +11,9 @@ export type {ForkDigestContext} from "./types.js";
 export function createCachedGenesis(chainForkConfig: ChainForkConfig, genesisValidatorsRoot: Root): CachedGenesis {
   const domainCache = new Map<ForkName, Map<DomainType, Uint8Array>>();
 
+  // TODO: The Epoch here is identical to `SubscribeBoundary.EPOCH`.
+  // When we make `type SubscribeBoundary = Epoch` in the future,
+  // this can be redefined as SubscribeBoundary
   const forkDigestByEpoch = new Map<Epoch, ForkDigest>();
   const forkDigestHexByEpoch = new Map<Epoch, ForkDigestHex>();
   /** Map of ForkDigest in hex format without prefix: `0011aabb` */
