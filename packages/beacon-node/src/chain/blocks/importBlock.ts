@@ -433,22 +433,6 @@ export async function importBlock(
           this.emitter.emit(routes.events.EventType.proposerSlashing, proposerSlashing);
         }
       }
-      if (
-        blockInput.type === BlockInputType.availableData &&
-        this.emitter.listenerCount(routes.events.EventType.blobSidecar)
-      ) {
-        const {blobs} = blockInput.blockData;
-        for (const blobSidecar of blobs) {
-          const {index, kzgCommitment} = blobSidecar;
-          this.emitter.emit(routes.events.EventType.blobSidecar, {
-            blockRoot: blockRootHex,
-            slot: blockSlot,
-            index,
-            kzgCommitment: toHex(kzgCommitment),
-            versionedHash: toHex(kzgCommitmentToVersionedHash(kzgCommitment)),
-          });
-        }
-      }
     });
   }
 
