@@ -9,7 +9,7 @@ import {routes} from "@lodestar/api";
 import {BeaconConfig, chainConfigToJson} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {ResponseIncoming, ResponseOutgoing} from "@lodestar/reqresp";
-import {Status, phase0} from "@lodestar/types";
+import {Status} from "@lodestar/types";
 import {Metrics} from "../../metrics/index.js";
 import {AsyncIterableBridgeCaller, AsyncIterableBridgeHandler} from "../../util/asyncIterableToEvents.js";
 import {PeerIdStr, peerIdFromString} from "../../util/peerId.js";
@@ -37,7 +37,7 @@ export type WorkerNetworkCoreOpts = NetworkOptions & {
   peerStoreDir?: string;
   activeValidatorCount: number;
   genesisTime: number;
-  initialStatus: phase0.Status;
+  initialStatus: Status;
 };
 
 export type WorkerNetworkCoreInitModules = {

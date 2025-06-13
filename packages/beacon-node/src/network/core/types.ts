@@ -4,7 +4,7 @@ import {routes} from "@lodestar/api";
 import {SpecJson} from "@lodestar/config";
 import {LoggerNodeOpts} from "@lodestar/logger/node";
 import {ResponseIncoming} from "@lodestar/reqresp";
-import {Status, phase0} from "@lodestar/types";
+import {Status} from "@lodestar/types";
 import {PeerIdStr} from "../../util/peerId.js";
 import {NetworkOptions} from "../options.js";
 import {PeerAction, PeerScoreStats} from "../peers/index.js";
@@ -80,7 +80,7 @@ export type NetworkWorkerData = {
   genesisValidatorsRoot: Uint8Array;
   genesisTime: number;
   activeValidatorCount: number;
-  initialStatus: phase0.Status;
+  initialStatus: Status;
   privateKeyProto: Uint8Array;
   localMultiaddrs: string[];
   metricsEnabled: boolean;

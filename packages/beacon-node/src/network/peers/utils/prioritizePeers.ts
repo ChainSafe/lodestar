@@ -1,7 +1,7 @@
 import {BitArray} from "@chainsafe/ssz";
 import {Direction, PeerId} from "@libp2p/interface";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
-import {CustodyIndex, SubnetID, altair, phase0} from "@lodestar/types";
+import {CustodyIndex, Status, SubnetID, altair, phase0} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
 import {shuffle} from "../../../util/shuffle.js";
 import {sortBy} from "../../../util/sortBy.js";
@@ -63,7 +63,7 @@ enum StatusScore {
  * In practice, this score only tracks if the peer is far ahead of us or not during syncing.
  * When the node is synced, the peer is always CLOSE_TO_US.
  */
-function computeStatusScore(ours: phase0.Status, theirs: phase0.Status | null, opts: PrioritizePeersOpts): StatusScore {
+function computeStatusScore(ours: Status, theirs: Status | null, opts: PrioritizePeersOpts): StatusScore {
   if (theirs === null) {
     return StatusScore.CLOSE_TO_US;
   }
@@ -101,7 +101,7 @@ export type PrioritizePeersOpts = {
   targetPeers: number;
   maxPeers: number;
   targetGroupPeers: number;
-  status: phase0.Status;
+  status: Status;
   starved: boolean;
   starvationPruneRatio: number;
   starvationThresholdSlots: number;
@@ -130,7 +130,7 @@ export function prioritizePeers(
   connectedPeersInfo: {
     id: PeerId;
     direction: Direction | null;
-    status: phase0.Status | null;
+    status: Status | null;
     attnets: phase0.AttestationSubnets | null;
     syncnets: altair.SyncSubnets | null;
     custodyGroups: CustodyIndex[] | null;

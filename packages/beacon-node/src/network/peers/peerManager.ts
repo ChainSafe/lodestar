@@ -101,7 +101,7 @@ export type PeerManagerOpts = {
  */
 export interface IReqRespBeaconNodePeerManager {
   sendPing(peerId: PeerId): Promise<phase0.Ping>;
-  sendStatus(peerId: PeerId, request: phase0.Status): Promise<phase0.Status>;
+  sendStatus(peerId: PeerId, request: Status): Promise<Status>;
   sendGoodbye(peerId: PeerId, request: phase0.Goodbye): Promise<void>;
   sendMetadata(peerId: PeerId): Promise<Metadata>;
 }
@@ -389,7 +389,7 @@ export class PeerManager {
   /**
    * Handle a STATUS request + response (rpc handler responds with STATUS automatically)
    */
-  private onStatus(peer: PeerId, status: phase0.Status): void {
+  private onStatus(peer: PeerId, status: Status): void {
     // reset the to-status timer of this peer
     const peerData = this.connectedPeers.get(peer.toString());
     if (peerData) {

@@ -1,6 +1,6 @@
 import {EventEmitter} from "node:events";
 import {PeerId, TopicValidatorResult} from "@libp2p/interface";
-import {ColumnIndex, RootHex, phase0} from "@lodestar/types";
+import {ColumnIndex, RootHex, Status} from "@lodestar/types";
 import {BlockInput, NullBlockInput} from "../chain/blocks/types.js";
 import {PeerIdStr} from "../util/peerId.js";
 import {StrictEventEmitterSingleArg} from "../util/strictEvents.js";
@@ -29,7 +29,7 @@ export enum NetworkEvent {
 export type NetworkEventData = {
   [NetworkEvent.peerConnected]: {
     peer: PeerIdStr;
-    status: phase0.Status;
+    status: Status;
     dataColumns: ColumnIndex[];
     clientAgent: string;
   };

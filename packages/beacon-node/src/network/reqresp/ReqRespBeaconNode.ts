@@ -173,7 +173,7 @@ export class ReqRespBeaconNode extends ReqResp {
     );
   }
 
-  async sendStatus(peerId: PeerId, request: Status): Promise<phase0.Status> {
+  async sendStatus(peerId: PeerId, request: Status): Promise<Status> {
     return collectExactOneTyped(
       this.sendReqRespRequest(
         peerId,
