@@ -3,7 +3,7 @@ import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
-import {ForkSeq, GENESIS_SLOT, SLOTS_PER_EPOCH, isForkPostElectra} from "@lodestar/params";
+import {ForkSeq, GENESIS_SLOT, SLOTS_PER_EPOCH, isForkPostElectra, isForkPostFulu} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   BeaconStateElectra,
@@ -30,6 +30,7 @@ import {
   RootHex,
   SignedBeaconBlock,
   Slot,
+  Status,
   UintNum64,
   ValidatorIndex,
   Wei,
@@ -37,7 +38,6 @@ import {
   deneb,
   fulu,
   isBlindedBeaconBlock,
-  phase0,
 } from "@lodestar/types";
 import {Logger, fromHex, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
@@ -188,6 +188,16 @@ export class BeaconChain implements IBeaconChain {
   protected readonly db: IBeaconDb;
   private abortController = new AbortController();
   private processShutdownCallback: ProcessShutdownCallback;
+  private _earliestSlotAvailable: Slot;
+
+  get earliestSlotAvailable(): Slot {
+    return this._earliestSlotAvailable;
+  }
+
+  set earliestSlotAvailable(slot: Slot) {
+    this._earliestSlotAvailable = slot;
+    this.emitter.emit(ChainEvent.updateStatus);
+  }
 
   constructor(
     opts: IChainOptions,
@@ -294,6 +304,7 @@ export class BeaconChain implements IBeaconChain {
             pubkey2index: new PubkeyIndexMap(),
             index2pubkey: [],
           });
+    this._earliestSlotAvailable = cachedState.slot;
 
     this.shufflingCache = cachedState.epochCtx.shufflingCache = new ShufflingCache(metrics, logger, this.opts, [
       {
@@ -415,8 +426,6 @@ export class BeaconChain implements IBeaconChain {
   async init(): Promise<void> {
     await this.archiveStore.init();
     await this.loadFromDisk();
-    const checkpointState = await this.regen.getCheckpointState();
-    this.emitter.emit(ChainEvent.updateLowestSlot, checkpointState.slot);
   }
 
   async close(): Promise<void> {
@@ -817,14 +826,15 @@ export class BeaconChain implements IBeaconChain {
     return this.blockProcessor.processBlocksJob(blocks, opts);
   }
 
-  getStatus(): phase0.Status {
+  getStatus(): Status {
     const head = this.forkChoice.getHead();
     const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
-    return {
+    const forkName = this.config.getForkName(this.clock.currentSlot);
+    const status = {
       // fork_digest: The node's ForkDigest (compute_fork_digest(current_fork_version, genesis_validators_root)) where
       // - current_fork_version is the fork version at the node's current epoch defined by the wall-clock time (not necessarily the epoch to which the node is sync)
       // - genesis_validators_root is the static Root found in state.genesis_validators_root
-      forkDigest: this.config.forkName2ForkDigest(this.config.getForkName(this.clock.currentSlot)),
+      forkDigest: this.config.forkName2ForkDigest(forkName),
       // finalized_root: state.finalized_checkpoint.root for the state corresponding to the head block (Note this defaults to Root(b'\x00' * 32) for the genesis finalized checkpoint).
       finalizedRoot: finalizedCheckpoint.epoch === GENESIS_EPOCH ? ZERO_HASH : finalizedCheckpoint.root,
       finalizedEpoch: finalizedCheckpoint.epoch,
@@ -832,6 +842,12 @@ export class BeaconChain implements IBeaconChain {
       headRoot: fromHex(head.blockRoot),
       headSlot: head.slot,
     };
+
+    if (isForkPostFulu(forkName)) {
+      (status as fulu.Status).earliestAvailableSlot = this._earliestSlotAvailable;
+    }
+
+    return status;
   }
 
   recomputeForkChoiceHead(caller: ForkchoiceCaller): ProtoBlock {

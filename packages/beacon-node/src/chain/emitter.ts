@@ -48,9 +48,9 @@ export enum ChainEvent {
    */
   publishDataColumns = "publishDataColumns",
   /**
-   * Emit the lowest slot that is available for reqresp by peers.  Announced via status messages
+   * Trigger an update of status so reqresp by peers have current earliestAvailableSlot
    */
-  updateLowestSlot = "updateLowestSlot",
+  updateStatus = "updateStatus",
 }
 
 export type HeadEventData = routes.events.EventData[routes.events.EventType.head];
@@ -70,7 +70,7 @@ export type IChainEvents = ApiEvents & {
 
   [ChainEvent.publishDataColumns]: (sidecars: fulu.DataColumnSidecar[]) => void;
 
-  [ChainEvent.updateLowestSlot]: (slot: number) => void;
+  [ChainEvent.updateStatus]: () => void;
 };
 
 /**

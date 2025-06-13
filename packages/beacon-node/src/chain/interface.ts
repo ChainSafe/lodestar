@@ -17,6 +17,7 @@ import {
   RootHex,
   SignedBeaconBlock,
   Slot,
+  Status,
   UintNum64,
   ValidatorIndex,
   Wei,
@@ -219,7 +220,7 @@ export interface IBeaconChain {
   /** Process a chain of blocks until complete */
   processChainSegment(blocks: BlockInput[], opts?: ImportBlockOpts): Promise<void>;
 
-  getStatus(): phase0.Status;
+  getStatus(): Status;
 
   recomputeForkChoiceHead(caller: ForkchoiceCaller): ProtoBlock;
 
