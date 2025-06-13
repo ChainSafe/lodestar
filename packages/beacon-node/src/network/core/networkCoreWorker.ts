@@ -104,7 +104,6 @@ const core = await NetworkCore.init({
     reqRespBridgeRespCaller.getAsyncIterable({method, req, peerId: peerIdToString(peerId)}),
   activeValidatorCount: workerData.activeValidatorCount,
   initialStatus: workerData.initialStatus,
-  genesisTime: workerData.genesisTime,
 });
 
 wireEventsOnWorkerThread<NetworkEventData>(

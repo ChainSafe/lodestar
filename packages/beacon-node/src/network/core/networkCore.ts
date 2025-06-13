@@ -64,7 +64,6 @@ export type BaseNetworkInit = {
   getReqRespHandler: GetReqRespHandlerFn;
   activeValidatorCount: number;
   initialStatus: phase0.Status;
-  genesisTime: number;
 };
 
 /**
@@ -136,7 +135,6 @@ export class NetworkCore implements INetworkCore {
     getReqRespHandler,
     activeValidatorCount,
     initialStatus,
-    genesisTime,
   }: BaseNetworkInit): Promise<NetworkCore> {
     const libp2p = await createNodeJsLibp2p(privateKey, opts, {
       peerStoreDir,
@@ -217,8 +215,7 @@ export class NetworkCore implements INetworkCore {
         peersData,
         statusCache,
       },
-      opts,
-      genesisTime
+      opts
     );
 
     // Network spec decides version changes based on clock fork, not head fork

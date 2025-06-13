@@ -31,6 +31,7 @@ export type PeerDiscoveryOpts = {
 export type PeerDiscoveryModules = {
   privateKey: PrivateKey;
   libp2p: Libp2p;
+  clock: IClock;
   peerRpcScores: IPeerRpcScoreStore;
   metrics: NetworkCoreMetrics | null;
   logger: LoggerNode;
@@ -159,18 +160,14 @@ export class PeerDiscovery {
     }
   }
 
-  static async init(
-    modules: PeerDiscoveryModules,
-    opts: PeerDiscoveryOpts,
-    genesisTime: number
-  ): Promise<PeerDiscovery> {
+  static async init(modules: PeerDiscoveryModules, opts: PeerDiscoveryOpts): Promise<PeerDiscovery> {
     const discv5 = await Discv5Worker.init({
       discv5: opts.discv5,
       privateKey: modules.privateKey,
       metrics: modules.metrics ?? undefined,
       logger: modules.logger,
       config: modules.config,
-      genesisTime,
+      genesisTime: modules.clock.genesisTime,
     });
 
     return new PeerDiscovery(modules, opts, discv5);

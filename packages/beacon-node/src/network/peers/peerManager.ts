@@ -194,18 +194,14 @@ export class PeerManager {
     ];
   }
 
-  static async init(modules: PeerManagerModules, opts: PeerManagerOpts, genesisTime: number): Promise<PeerManager> {
+  static async init(modules: PeerManagerModules, opts: PeerManagerOpts): Promise<PeerManager> {
     // opts.discv5 === null, discovery is disabled
     const discovery = opts.discv5
-      ? await PeerDiscovery.init(
-          modules,
-          {
-            discv5FirstQueryDelayMs: opts.discv5FirstQueryDelayMs ?? DEFAULT_DISCV5_FIRST_QUERY_DELAY_MS,
-            discv5: opts.discv5,
-            connectToDiscv5Bootnodes: opts.connectToDiscv5Bootnodes,
-          },
-          genesisTime
-        )
+      ? await PeerDiscovery.init(modules, {
+          discv5FirstQueryDelayMs: opts.discv5FirstQueryDelayMs ?? DEFAULT_DISCV5_FIRST_QUERY_DELAY_MS,
+          discv5: opts.discv5,
+          connectToDiscv5Bootnodes: opts.connectToDiscv5Bootnodes,
+        })
       : null;
 
     return new PeerManager(modules, opts, discovery);
