@@ -55,8 +55,6 @@ export interface INetworkCore extends INetworkCorePublic {
   /** Chain must push status updates to the network core */
   updateStatus(status: Status): Promise<void>;
 
-  // updateLowestSlot(number: Slot): Promise<void>;
-
   setTargetGroupCount(count: number): Promise<void>;
   setAdvertisedGroupCount(count: number): Promise<void>;
   /** Opens stream to handle ReqResp outgoing request */
