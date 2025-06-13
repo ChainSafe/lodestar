@@ -130,12 +130,7 @@ export type HandlerTypeFromMessage<T> = T extends ProtocolGenerator ? ProtocolHa
 
 export type ContextBytesFactory =
   | {type: ContextBytesType.Empty}
-  | {
-      type: ContextBytesType.ForkDigest;
-      forkDigestContext: ForkDigestContext;
-      fork: ForkName;
-      blobSchedule: BlobScheduleEntry;
-    };
+  | {type: ContextBytesType.ForkDigest; forkDigestContext: ForkDigestContext};
 
 export type ContextBytes = {type: ContextBytesType.Empty} | {type: ContextBytesType.ForkDigest; fork: ForkName};
 
