@@ -5,7 +5,6 @@ import {Connection, PrivateKey} from "@libp2p/interface";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
-import {ForkName} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
 import {Epoch, phase0, ssz, sszTypesFor} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
@@ -16,7 +15,7 @@ import {ClockEvent, IClock} from "../../util/clock.js";
 import {PeerIdStr, peerIdFromString, peerIdToString} from "../../util/peerId.js";
 import {Discv5Worker} from "../discv5/index.js";
 import {NetworkEventBus} from "../events.js";
-import {FORK_EPOCH_LOOKAHEAD, getActiveForks} from "../forks.js";
+import {FORK_EPOCH_LOOKAHEAD, getActiveSubscribeBoundaries} from "../forks.js";
 import {Eth2Gossipsub, getCoreTopicsAtFork} from "../gossip/index.js";
 import {Libp2p} from "../interface.js";
 import {createNodeJsLibp2p} from "../libp2p/index.js";
@@ -33,7 +32,7 @@ import {CommitteeSubscription, IAttnetsService} from "../subnets/interface.js";
 import {SyncnetsService} from "../subnets/syncnetsService.js";
 import {getConnectionsMap} from "../util.js";
 import {NetworkCoreMetrics, createNetworkCoreMetrics} from "./metrics.js";
-import {INetworkCore, MultiaddrStr} from "./types.js";
+import {INetworkCore, MultiaddrStr, SubscribeBoundary} from "./types.js";
 
 type Mods = {
   libp2p: Libp2p;
@@ -101,7 +100,7 @@ export class NetworkCore implements INetworkCore {
   private readonly opts: NetworkOptions;
 
   // Internal state
-  private readonly subscribedForks = new Set<ForkName>();
+  private readonly subscribedBoundaries = new Set<SubscribeBoundary>();
   private closed = false;
 
   constructor(modules: Mods) {
@@ -220,8 +219,11 @@ export class NetworkCore implements INetworkCore {
 
     // Network spec decides version changes based on clock fork, not head fork
     const forkCurrentSlot = config.getForkName(clock.currentSlot);
+
+    const boundary = {fork: forkCurrentSlot};
+
     // Register only ReqResp protocols relevant to clock's fork
-    reqResp.registerProtocolsAtFork(forkCurrentSlot);
+    reqResp.registerProtocolsAtBoundary(boundary);
 
     // Bind discv5's ENR to local metadata
     // biome-ignore lint/complexity/useLiteralKeys: `discovery` is a private attribute
@@ -313,8 +315,8 @@ export class NetworkCore implements INetworkCore {
       this.logger.info("Subscribed gossip core topics");
     }
 
-    for (const fork of getActiveForks(this.config, this.clock.currentEpoch)) {
-      this.subscribeCoreTopicsAtFork(this.config, fork);
+    for (const boundary of getActiveSubscribeBoundaries(this.config, this.clock.currentEpoch)) {
+      this.subscribeCoreTopicsAtBoundary(this.config, boundary);
     }
   }
 
@@ -322,13 +324,13 @@ export class NetworkCore implements INetworkCore {
    * Unsubscribe from all gossip events. Safe to call multiple times
    */
   async unsubscribeGossipCoreTopics(): Promise<void> {
-    for (const fork of this.subscribedForks.values()) {
-      this.unsubscribeCoreTopicsAtFork(this.config, fork);
+    for (const fork of this.subscribedBoundaries.values()) {
+      this.unsubscribeCoreTopicsAtBoundary(this.config, fork);
     }
   }
 
   async isSubscribedToGossipCoreTopics(): Promise<boolean> {
-    return this.subscribedForks.size > 0;
+    return this.subscribedBoundaries.size > 0;
   }
 
   sendReqRespRequest(data: OutgoingRequestArgs): AsyncIterable<ResponseIncoming> {
@@ -458,40 +460,40 @@ export class NetworkCore implements INetworkCore {
   private onEpoch = async (epoch: Epoch): Promise<void> => {
     try {
       // Compute prev and next fork shifted, so next fork is still next at forkEpoch + FORK_EPOCH_LOOKAHEAD
-      const activeForks = getActiveForks(this.config, epoch);
-      for (let i = 0; i < activeForks.length; i++) {
+      const activeBoundaries = getActiveSubscribeBoundaries(this.config, epoch);
+      for (let i = 0; i < activeBoundaries.length; i++) {
         // Only when a new fork is scheduled post this one
-        if (activeForks[i + 1] !== undefined) {
-          const prevFork = activeForks[i];
-          const nextFork = activeForks[i + 1];
-          const forkEpoch = this.config.forks[nextFork].epoch;
+        if (activeBoundaries[i + 1] !== undefined) {
+          const prevBoundary = activeBoundaries[i];
+          const nextBoundary = activeBoundaries[i + 1];
+          const nextBoundaryEpoch = this.config.forks[nextBoundary.fork].epoch;
 
           // Before fork transition
-          if (epoch === forkEpoch - FORK_EPOCH_LOOKAHEAD) {
+          if (epoch === nextBoundaryEpoch - FORK_EPOCH_LOOKAHEAD) {
             // Don't subscribe to new fork if the node is not subscribed to any topic
             if (await this.isSubscribedToGossipCoreTopics()) {
-              this.subscribeCoreTopicsAtFork(this.config, nextFork);
-              this.logger.info("Subscribing gossip topics before fork", {nextFork});
+              this.subscribeCoreTopicsAtBoundary(this.config, nextBoundary);
+              this.logger.info("Subscribing gossip topics before boundary", nextBoundary);
             } else {
-              this.logger.info("Skipping subscribing gossip topics before fork", {nextFork});
+              this.logger.info("Skipping subscribing gossip topics before boundary", nextBoundary);
             }
-            this.attnetsService.subscribeSubnetsToNextFork(nextFork);
-            this.syncnetsService.subscribeSubnetsToNextFork(nextFork);
+            this.attnetsService.subscribeSubnetsAfterBoundary(nextBoundary);
+            this.syncnetsService.subscribeSubnetsAfterBoundary(nextBoundary);
           }
 
           // On fork transition
-          if (epoch === forkEpoch) {
+          if (epoch === nextBoundaryEpoch) {
             // updateEth2Field() MUST be called with clock epoch, onEpoch event is emitted in response to clock events
             this.metadata.updateEth2Field(epoch);
-            this.reqResp.registerProtocolsAtFork(nextFork);
+            this.reqResp.registerProtocolsAtBoundary(nextBoundary);
           }
 
           // After fork transition
-          if (epoch === forkEpoch + FORK_EPOCH_LOOKAHEAD) {
-            this.logger.info("Unsubscribing gossip topics from prev fork", {prevFork});
-            this.unsubscribeCoreTopicsAtFork(this.config, prevFork);
-            this.attnetsService.unsubscribeSubnetsFromPrevFork(prevFork);
-            this.syncnetsService.unsubscribeSubnetsFromPrevFork(prevFork);
+          if (epoch === nextBoundaryEpoch + FORK_EPOCH_LOOKAHEAD) {
+            this.logger.info("Unsubscribing gossip topics from prev fork", prevBoundary);
+            this.unsubscribeCoreTopicsAtBoundary(this.config, prevBoundary);
+            this.attnetsService.unsubscribeSubnetsBeforeBoundary(prevBoundary);
+            this.syncnetsService.unsubscribeSubnetsBeforeBoundary(prevBoundary);
           }
         }
       }
@@ -500,29 +502,29 @@ export class NetworkCore implements INetworkCore {
     }
   };
 
-  private subscribeCoreTopicsAtFork(config: BeaconConfig, fork: ForkName): void {
-    if (this.subscribedForks.has(fork)) return;
-    this.subscribedForks.add(fork);
+  private subscribeCoreTopicsAtBoundary(config: BeaconConfig, boundary: SubscribeBoundary): void {
+    if (this.subscribedBoundaries.has(boundary)) return;
+    this.subscribedBoundaries.add(boundary);
     const {subscribeAllSubnets, disableLightClientServer} = this.opts;
 
-    for (const topic of getCoreTopicsAtFork(config, fork, {
+    for (const topic of getCoreTopicsAtFork(config, boundary.fork, {
       subscribeAllSubnets,
       disableLightClientServer,
     })) {
-      this.gossip.subscribeTopic({...topic, fork});
+      this.gossip.subscribeTopic({...topic, fork: boundary.fork});
     }
   }
 
-  private unsubscribeCoreTopicsAtFork(config: BeaconConfig, fork: ForkName): void {
-    if (!this.subscribedForks.has(fork)) return;
-    this.subscribedForks.delete(fork);
+  private unsubscribeCoreTopicsAtBoundary(config: BeaconConfig, boundary: SubscribeBoundary): void {
+    if (!this.subscribedBoundaries.has(boundary)) return;
+    this.subscribedBoundaries.delete(boundary);
     const {subscribeAllSubnets, disableLightClientServer} = this.opts;
 
-    for (const topic of getCoreTopicsAtFork(config, fork, {
+    for (const topic of getCoreTopicsAtFork(config, boundary.fork, {
       subscribeAllSubnets,
       disableLightClientServer,
     })) {
-      this.gossip.unsubscribeTopic({...topic, fork});
+      this.gossip.unsubscribeTopic({...topic, fork: boundary.fork});
     }
   }
 }

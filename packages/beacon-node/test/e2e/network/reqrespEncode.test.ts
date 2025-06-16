@@ -10,6 +10,7 @@ import all from "it-all";
 import {Libp2p, createLibp2p} from "libp2p";
 import {afterEach, describe, expect, it} from "vitest";
 import {ZERO_HASH} from "../../../src/constants/constants.js";
+import {SubscribeBoundary} from "../../../src/network/core/types.js";
 import {
   NetworkEventBus,
   PeerRpcScoreStore,
@@ -99,7 +100,8 @@ describe("reqresp encoder", () => {
 
   it("assert correct handler switch between metadata v2 and v1", async () => {
     const {multiaddr: serverMultiaddr, reqresp} = await getReqResp();
-    reqresp.registerProtocolsAtFork(ForkName.phase0);
+    const boundary: SubscribeBoundary = {fork: ForkName.phase0};
+    reqresp.registerProtocolsAtBoundary(boundary);
     await sleep(0); // Sleep to resolve register handler promises
 
     reqresp["metadataController"].attnets.set(0, true);
@@ -134,7 +136,8 @@ describe("reqresp encoder", () => {
           };
         }
     );
-    reqresp.registerProtocolsAtFork(ForkName.altair);
+    const boundary: SubscribeBoundary = {fork: ForkName.phase0};
+    reqresp.registerProtocolsAtBoundary(boundary);
     await sleep(0); // Sleep to resolve register handler promises
 
     const {libp2p: dialer} = await getLibp2p();
