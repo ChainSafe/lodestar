@@ -13,10 +13,7 @@ import {OutgoingRequestArgs} from "../reqresp/types.js";
 import {CommitteeSubscription} from "../subnets/interface.js";
 
 export type MultiaddrStr = string;
-// Boundary of network subscription. We subscribe/unsubscribe during fork and blob schedule transitions
-// TODO: We can actually make `type SubscribeBoundary = Epoch` and rely on the callers to decode it
-// as fork or blob schedule as needed. However it takes some sizable refactor give every callers access
-// to beacon config
+// Boundary of network subscription. We subscribe/unsubscribe during fork transition
 export type SubscribeBoundary = {fork: ForkName};
 
 // Interface shared by main Network class, and all backends
