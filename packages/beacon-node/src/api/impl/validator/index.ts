@@ -405,9 +405,11 @@ export function getValidatorApi(
     {
       commonBlockBody,
       parentBlockRoot,
+      parentSlot,
     }: Omit<routes.validator.ExtraProduceBlockOpts, "builderSelection"> & {
       commonBlockBody: CommonBlockBody;
       parentBlockRoot: Root;
+      parentSlot: Slot;
     }
   ): Promise<ProduceBlindedBlockRes> {
     const version = config.getForkName(slot);
@@ -432,6 +434,7 @@ export function getValidatorApi(
       const {block, executionPayloadValue, consensusBlockValue} = await chain.produceBlindedBlock({
         slot,
         parentBlockRoot,
+        parentSlot,
         randaoReveal,
         graffiti,
         commonBlockBody,
@@ -467,9 +470,11 @@ export function getValidatorApi(
       strictFeeRecipientCheck,
       commonBlockBody,
       parentBlockRoot,
+      parentSlot,
     }: Omit<routes.validator.ExtraProduceBlockOpts, "builderSelection"> & {
       commonBlockBody: CommonBlockBody;
       parentBlockRoot: Root;
+      parentSlot: Slot;
     }
   ): Promise<ProduceBlockOrContentsRes & {shouldOverrideBuilder?: boolean}> {
     const source = ProducedBlockSource.engine;
@@ -481,6 +486,7 @@ export function getValidatorApi(
       const {block, executionPayloadValue, consensusBlockValue, shouldOverrideBuilder} = await chain.produceBlock({
         slot,
         parentBlockRoot,
+        parentSlot,
         randaoReveal,
         graffiti,
         feeRecipient,
@@ -541,8 +547,10 @@ export function getValidatorApi(
     notWhileSyncing();
     await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
-    const parentBlockRoot = fromHex(chain.getProposerHead(slot).blockRoot);
+    const {blockRoot: parentBlockRootHex, slot: parentSlot} = chain.getProposerHead(slot);
+    const parentBlockRoot = fromHex(parentBlockRootHex);
     notOnOutOfRangeData(parentBlockRoot);
+    metrics?.blockProductionSlotDelta.set(slot - parentSlot);
 
     const fork = config.getForkName(slot);
     // set some sensible opts
@@ -581,6 +589,8 @@ export function getValidatorApi(
 
     const loggerContext = {
       slot,
+      parentSlot,
+      parentBlockRoot: parentBlockRootHex,
       fork,
       builderSelection,
       isBuilderEnabled,
@@ -594,6 +604,7 @@ export function getValidatorApi(
     const commonBlockBody = await chain.produceCommonBlockBody({
       slot,
       parentBlockRoot,
+      parentSlot,
       randaoReveal,
       graffiti: graffitiBytes,
     });
@@ -620,6 +631,7 @@ export function getValidatorApi(
           strictFeeRecipientCheck: false,
           commonBlockBody,
           parentBlockRoot,
+          parentSlot,
         })
       : Promise.reject(new Error("Builder disabled"));
 
@@ -629,6 +641,7 @@ export function getValidatorApi(
           strictFeeRecipientCheck,
           commonBlockBody,
           parentBlockRoot,
+          parentSlot,
         }).then((engineBlock) => {
           // Once the engine returns a block, in the event of either:
           // - suspected builder censorship

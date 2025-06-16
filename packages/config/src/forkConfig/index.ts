@@ -149,12 +149,7 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
       }
 
       // Sort by epoch in descending order to find the latest applicable value
-      const blobSchedule = [...config.BLOB_SCHEDULE].sort((a, b) => {
-        if (a.EPOCH !== b.EPOCH) {
-          return b.EPOCH - a.EPOCH;
-        }
-        return b.MAX_BLOBS_PER_BLOCK - a.MAX_BLOBS_PER_BLOCK;
-      });
+      const blobSchedule = [...config.BLOB_SCHEDULE].sort((a, b) => b.EPOCH - a.EPOCH);
 
       for (const entry of blobSchedule) {
         if (epoch >= entry.EPOCH) {
