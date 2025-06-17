@@ -539,6 +539,7 @@ export class UnknownBlockSync {
         const blockInput = await unavailableBeaconBlobsByRoot(this.config, this.network, peer, unavailableBlockInput, {
           metrics: this.metrics,
           executionEngine: this.chain.executionEngine,
+          emitter: this.chain.emitter,
           engineGetBlobsCache: this.engineGetBlobsCache,
           blockInputsRetryTrackerCache: this.blockInputsRetryTrackerCache,
         });
