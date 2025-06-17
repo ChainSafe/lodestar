@@ -704,6 +704,7 @@ export function getValidatorApi(
           );
         }
       } else if (builder.status === "pending") {
+        //
         logger.warn("Builder failed to produce the block within cutoff time", {
           ...loggerContext,
           cutoffMs,
