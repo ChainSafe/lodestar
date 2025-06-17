@@ -17,6 +17,11 @@ jobs:
     name: Unit Tests Bun
     runs-on: buildjet-4vcpu-ubuntu-2204
     steps:
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
