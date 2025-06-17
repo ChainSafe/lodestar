@@ -34,7 +34,9 @@ jobs:
         run: yarn build
       - name: Unit Tests
         run: |
-          foreach test in packages/; do
-          echo "Running tests in $test"
-          cd ${{github.workspace}}/test && bun run --bun test:unit
+          foreach package in packages/; do
+            echo "Running tests in $package"
+            cd "$package" && bun run --bun test:unit
+            cd ${{github.workspace}}
+          done
         shell: bash
