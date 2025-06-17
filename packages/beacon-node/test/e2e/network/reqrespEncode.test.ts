@@ -136,7 +136,7 @@ describe("reqresp encoder", () => {
           };
         }
     );
-    const boundary: SubscribeBoundary = {fork: ForkName.phase0};
+    const boundary: SubscribeBoundary = {fork: ForkName.altair};
     reqresp.registerProtocolsAtBoundary(boundary);
     await sleep(0); // Sleep to resolve register handler promises
 
