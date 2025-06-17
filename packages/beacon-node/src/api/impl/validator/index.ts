@@ -104,11 +104,11 @@ export const SYNC_TOLERANCE_EPOCHS = 1;
  * Cutoff time to wait from start of the slot for execution and builder block production apis to resolve
  * Post this time, race execution and builder to pick whatever resolves first
  *
- * Empirically the builder block resolves in ~1.5+ seconds, and execution should resolve <1 sec.
- * So lowering the cutoff to 2.5 sec from 3 seconds to publish faster for successful proposal
+ * Empirically the builder block resolves in ~1 second, and execution should resolve <1 sec.
+ * So lowering the cutoff to 2 seconds from 3 seconds to publish faster for successful proposal
  * as proposals post 4 seconds into the slot will likely be orphaned due to proposer boost reorg.
  */
-const BLOCK_PRODUCTION_RACE_CUTOFF_MS = 2_500;
+const BLOCK_PRODUCTION_RACE_CUTOFF_MS = 2_000;
 /** Overall timeout for execution and block production apis */
 const BLOCK_PRODUCTION_RACE_TIMEOUT_MS = 12_000;
 
