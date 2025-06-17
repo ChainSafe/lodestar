@@ -323,9 +323,10 @@ export async function importBlock(
   // If there is an advanced payload generation in the next slot, we'll notify EL again 4s before next
   // slot via PrepareNextSlotScheduler. There is no harm updating the ELs with same data, it will just ignore it.
 
-  // Suppress fcu call if this is true
+  // Suppress fcu call if shouldOverrideFcu is true. This only happens if we have proposer boost reorg enabled
+  // and the block is weak and can potentially be reorged out.
   let shouldOverrideFcu = false;
-  let shouldOverrideFcuReason = NotReorgedReason.Unknown;
+  let notOverrideFcuReason = NotReorgedReason.Unknown;
 
   if (opts.isGossipBlock && isExecutionStateType(postState)) {
     try {
@@ -341,12 +342,12 @@ export async function importBlock(
         const result = this.forkChoice.shouldOverrideForkChoiceUpdate(this.clock.currentSlot, blockSummary.blockRoot);
         shouldOverrideFcu = result.shouldOverrideFcu;
         if (!result.shouldOverrideFcu) {
-          shouldOverrideFcuReason = result.reason;
+          notOverrideFcuReason = result.reason;
         }
       }
     } catch (e) {
       if (isStartSlotOfEpoch(blockSlot + 1)) {
-        shouldOverrideFcuReason = NotReorgedReason.NotShufflingStable;
+        notOverrideFcuReason = NotReorgedReason.NotShufflingStable;
       } else {
         this.logger.warn("Unable to get beacon proposer. Do not override fcu.", {slot: blockSlot + 1}, e as Error);
       }
@@ -355,13 +356,12 @@ export async function importBlock(
 
   if (shouldOverrideFcu) {
     if (this.metrics) {
-      this.metrics.importBlock.notOverrideFcuReason.inc({reason: shouldOverrideFcuReason});
-    } else {
-      this.logger.verbose("Weak block detected. Skip fcu call in importBlock", {
-        blockRoot: blockRootHex,
-        reason: shouldOverrideFcuReason,
-      });
+      this.metrics.importBlock.notOverrideFcuReason.inc({reason: notOverrideFcuReason});
     }
+    this.logger.verbose("Weak block detected. Skip fcu call in importBlock", {
+      blockRoot: blockRootHex,
+      reason: notOverrideFcuReason,
+    });
   }
 
   if (
