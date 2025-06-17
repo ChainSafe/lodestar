@@ -63,7 +63,7 @@ export enum NotReorgedReason {
   ReorgMoreThanOneSlot = "reorgMoreThanOneSlot",
   ProposerBoostNotWornOff = "proposerBoostNotWornOff",
   HeadBlockNotWeak = "headBlockNotWeak",
-  ParentBlockNotStrong = "ParentBlockNotStrong",
+  ParentBlockNotStrong = "parentBlockNotStrong",
   NotProposingOnTime = "notProposingOnTime",
   HeadBlockNotAvailable = "headBlockNotAvailable", // Should not happen because head block should be in cache
   Unknown = "unknown", // A placeholder in case reason is not provided
