@@ -120,7 +120,7 @@ export class SyncContributionAndProofPool {
     const bestContributionBySubnetByRoot = this.bestContributionBySubnetRootBySlot.getOrDefault(slot);
     opPoolMetrics?.getAggregateRoots.set(bestContributionBySubnetByRoot.size);
     const prevBlockRootHex = toRootHex(prevBlockRoot);
-    const bestContributionBySubnet = bestContributionBySubnetByRoot.getOrDefault(prevBlockRootHex);
+    const bestContributionBySubnet = bestContributionBySubnetByRoot.get(prevBlockRootHex) ?? new Map();
     opPoolMetrics?.getAggregateSubnets.set(bestContributionBySubnet.size);
 
     if (bestContributionBySubnet.size === 0) {

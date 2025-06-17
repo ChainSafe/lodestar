@@ -181,7 +181,9 @@ describe("api/validator - produceBlockV3", () => {
     const graffiti = "a".repeat(32);
     const feeRecipient = "0xcccccccccccccccccccccccccccccccccccccccc";
 
-    modules.chain.getProposerHead.mockReturnValue(generateProtoBlock({blockRoot: toHexString(parentBlockRoot)}));
+    modules.chain.getProposerHead.mockReturnValue(
+      generateProtoBlock({blockRoot: toHexString(parentBlockRoot), slot: currentSlot - 1})
+    );
     modules.chain.recomputeForkChoiceHead.mockReturnValue(
       generateProtoBlock({blockRoot: toHexString(parentBlockRoot)})
     );
@@ -211,6 +213,7 @@ describe("api/validator - produceBlockV3", () => {
       graffiti: toGraffitiBytes(graffiti),
       slot,
       parentBlockRoot,
+      parentSlot: currentSlot - 1,
       feeRecipient,
       commonBlockBodyPromise: expect.any(Promise),
     });
@@ -223,6 +226,7 @@ describe("api/validator - produceBlockV3", () => {
       graffiti: toGraffitiBytes(graffiti),
       slot,
       parentBlockRoot,
+      parentSlot: currentSlot - 1,
       feeRecipient: undefined,
       commonBlockBodyPromise: expect.any(Promise),
     });

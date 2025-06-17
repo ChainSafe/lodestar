@@ -6,6 +6,7 @@ import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/p
 import {SubnetID} from "@lodestar/types";
 import {pruneSetToMax, sleep} from "@lodestar/utils";
 import {Multiaddr} from "@multiformats/multiaddr";
+import {IClock} from "../../util/clock.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
 import {Discv5Worker} from "../discv5/index.js";
 import {LodestarDiscv5Opts} from "../discv5/types.js";
@@ -30,6 +31,7 @@ export type PeerDiscoveryOpts = {
 export type PeerDiscoveryModules = {
   privateKey: PrivateKey;
   libp2p: Libp2p;
+  clock: IClock;
   peerRpcScores: IPeerRpcScoreStore;
   metrics: NetworkCoreMetrics | null;
   logger: LoggerNode;
@@ -165,6 +167,7 @@ export class PeerDiscovery {
       metrics: modules.metrics ?? undefined,
       logger: modules.logger,
       config: modules.config,
+      genesisTime: modules.clock.genesisTime,
     });
 
     return new PeerDiscovery(modules, opts, discv5);

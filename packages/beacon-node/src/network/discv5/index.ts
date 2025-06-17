@@ -14,6 +14,7 @@ export type Discv5Opts = {
   discv5: LodestarDiscv5Opts;
   logger: LoggerNode;
   config: BeaconConfig;
+  genesisTime: number;
   metrics?: NetworkCoreMetrics;
 };
 
@@ -48,6 +49,7 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
       chainConfig: chainConfigFromJson(chainConfigToJson(opts.config)),
       genesisValidatorsRoot: opts.config.genesisValidatorsRoot,
       loggerOpts: opts.logger.toOpts(),
+      genesisTime: opts.genesisTime,
     };
     const worker = new Worker("./worker.js", {workerData} as ConstructorParameters<typeof Worker>[1]);
 
