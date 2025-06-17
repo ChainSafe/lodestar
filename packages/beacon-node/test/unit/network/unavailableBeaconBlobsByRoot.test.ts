@@ -122,6 +122,7 @@ describe("unavailableBeaconBlobsByRoot", () => {
       {
         executionEngine: executionEngine as unknown as IExecutionEngine,
         metrics: null,
+        emitter: null,
         engineGetBlobsCache,
       }
     );

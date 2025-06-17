@@ -71,8 +71,8 @@ export async function unavailableBeaconBlobsByRoot(
   unavailableBlockInput: BlockInput | NullBlockInput,
   opts: {
     metrics: Metrics | null;
+    emitter: ChainEventEmitter | null;
     executionEngine: IExecutionEngine;
-    emitter: ChainEventEmitter;
     engineGetBlobsCache?: Map<RootHex, BlobAndProof | null>;
     blockInputsRetryTrackerCache?: Set<RootHex>;
   }
@@ -185,7 +185,7 @@ export async function unavailableBeaconBlobsByRoot(
         // verifyBlocksDataAvailability
         blobsCache.set(blobSidecar.index, blobSidecar);
 
-        if (emitter.listenerCount(routes.events.EventType.blobSidecar)) {
+        if (emitter?.listenerCount(routes.events.EventType.blobSidecar)) {
           emitter.emit(routes.events.EventType.blobSidecar, {
             blockRoot: blockRootHex,
             slot,
@@ -258,7 +258,7 @@ export async function unavailableBeaconBlobsByRoot(
   for (const blobSidecar of networkResBlobSidecars) {
     blobsCache.set(blobSidecar.index, blobSidecar);
 
-    if (emitter.listenerCount(routes.events.EventType.blobSidecar)) {
+    if (emitter?.listenerCount(routes.events.EventType.blobSidecar)) {
       emitter.emit(routes.events.EventType.blobSidecar, {
         blockRoot: blockRootHex,
         slot,
