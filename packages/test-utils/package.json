@@ -44,6 +44,7 @@
     "check-types": "tsc",
     "lint": "biome check src/",
     "lint:fix": "yarn run lint --write",
+    "test:unit": "echo 'No unit tests for @lodestar/test-utils'",
     "check-readme": "typescript-docs-verifier"
   },
   "repository": {
