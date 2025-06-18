@@ -13,7 +13,7 @@ import {OutgoingRequestArgs} from "../reqresp/types.js";
 import {CommitteeSubscription} from "../subnets/interface.js";
 
 export type MultiaddrStr = string;
-// Boundary of network subscription. We subscribe/unsubscribe during fork transition
+/* Boundary of network subscription. We subscribe/unsubscribe during fork transition */
 export type SubscribeBoundary = {fork: ForkName};
 
 // Interface shared by main Network class, and all backends

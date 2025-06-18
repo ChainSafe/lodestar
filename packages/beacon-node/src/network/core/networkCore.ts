@@ -455,22 +455,22 @@ export class NetworkCore implements INetworkCore {
   }
 
   /**
-   * Handle subscriptions through fork transitions, @see FORK_EPOCH_LOOKAHEAD
+   * Handle subscriptions through subscribe boundary transitions, @see FORK_EPOCH_LOOKAHEAD
    */
   private onEpoch = async (epoch: Epoch): Promise<void> => {
     try {
       // Compute prev and next fork shifted, so next fork is still next at forkEpoch + FORK_EPOCH_LOOKAHEAD
       const activeBoundaries = getActiveSubscribeBoundaries(this.config, epoch);
       for (let i = 0; i < activeBoundaries.length; i++) {
-        // Only when a new fork is scheduled post this one
+        // Only when a new subscribe boundary is scheduled post this one
         if (activeBoundaries[i + 1] !== undefined) {
           const prevBoundary = activeBoundaries[i];
           const nextBoundary = activeBoundaries[i + 1];
           const nextBoundaryEpoch = this.config.forks[nextBoundary.fork].epoch;
 
-          // Before fork transition
+          // Before subscribe boundary transition
           if (epoch === nextBoundaryEpoch - FORK_EPOCH_LOOKAHEAD) {
-            // Don't subscribe to new fork if the node is not subscribed to any topic
+            // Don't subscribe to new boundary if the node is not subscribed to any topic
             if (await this.isSubscribedToGossipCoreTopics()) {
               this.subscribeCoreTopicsAtBoundary(this.config, nextBoundary);
               this.logger.info("Subscribing gossip topics before boundary", nextBoundary);
@@ -481,16 +481,16 @@ export class NetworkCore implements INetworkCore {
             this.syncnetsService.subscribeSubnetsAfterBoundary(nextBoundary);
           }
 
-          // On fork transition
+          // On boundary transition
           if (epoch === nextBoundaryEpoch) {
             // updateEth2Field() MUST be called with clock epoch, onEpoch event is emitted in response to clock events
             this.metadata.updateEth2Field(epoch);
             this.reqResp.registerProtocolsAtBoundary(nextBoundary);
           }
 
-          // After fork transition
+          // After boundary transition
           if (epoch === nextBoundaryEpoch + FORK_EPOCH_LOOKAHEAD) {
-            this.logger.info("Unsubscribing gossip topics from prev fork", prevBoundary);
+            this.logger.info("Unsubscribing gossip topics before boundary", prevBoundary);
             this.unsubscribeCoreTopicsAtBoundary(this.config, prevBoundary);
             this.attnetsService.unsubscribeSubnetsBeforeBoundary(prevBoundary);
             this.syncnetsService.unsubscribeSubnetsBeforeBoundary(prevBoundary);
