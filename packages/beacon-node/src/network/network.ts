@@ -10,7 +10,6 @@ import {ResponseIncoming} from "@lodestar/reqresp";
 import {computeEpochAtSlot, computeStartSlotAtEpoch, computeTimeAtSlot} from "@lodestar/state-transition";
 import {
   AttesterSlashing,
-  ColumnIndex,
   LightClientBootstrap,
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
@@ -46,6 +45,7 @@ import {getGossipSSZType, gossipTopicIgnoreDuplicatePublishError, stringifyGossi
 import {INetwork} from "./interface.js";
 import {NetworkOptions} from "./options.js";
 import {PeerAction, PeerScoreStats} from "./peers/index.js";
+import {PeerSyncMeta} from "./peers/peersData.js";
 import {AggregatorTracker} from "./processor/aggregatorTracker.js";
 import {NetworkProcessor, PendingGossipsubMessage} from "./processor/index.js";
 import {ReqRespMethod} from "./reqresp/index.js";
@@ -57,7 +57,7 @@ import {
 } from "./reqresp/utils/collect.js";
 import {collectSequentialBlocksInRange} from "./reqresp/utils/collectSequentialBlocksInRange.js";
 import {CommitteeSubscription} from "./subnets/index.js";
-import {isPublishToZeroPeersError} from "./util.js";
+import {isPublishToZeroPeersError, prettyPrintPeerIdStr} from "./util.js";
 
 type NetworkModules = {
   opts: NetworkOptions;
@@ -112,8 +112,7 @@ export class Network implements INetwork {
   private readonly aggregatorTracker: AggregatorTracker;
 
   private subscribedToCoreTopics = false;
-  private connectedPeers = new Map<PeerIdStr, ColumnIndex[]>();
-  private connectedPeerClients = new Map<PeerIdStr, string>();
+  private connectedPeersSyncMeta = new Map<PeerIdStr, Omit<PeerSyncMeta, "peerId">>();
 
   constructor(modules: NetworkModules) {
     this.peerId = peerIdFromPrivateKey(modules.privateKey);
@@ -280,28 +279,19 @@ export class Network implements INetwork {
 
   // REST API queries
   getConnectedPeers(): PeerIdStr[] {
-    return Array.from(this.connectedPeers.keys());
+    return Array.from(this.connectedPeersSyncMeta.keys());
   }
 
-  // TODO: @matthewkeil check if this needs to be updated for custody groups
-  getConnectedPeerCustody(peerId: PeerIdStr): number[] {
-    const columns = this.connectedPeers.get(peerId);
-    if (columns === undefined) {
-      throw Error("peerId not in connectedPeers");
+  getConnectedPeerSyncMeta(peerId: PeerIdStr): PeerSyncMeta {
+    const syncMeta = this.connectedPeersSyncMeta.get(peerId);
+    if (!syncMeta) {
+      throw new Error(`peerId=${prettyPrintPeerIdStr(peerId)} not in connectedPeerSyncMeta`);
     }
-
-    return columns;
+    return {peerId, ...syncMeta};
   }
-  getConnectedPeerClientAgent(peerId: PeerIdStr): string {
-    const clientAgent = this.connectedPeerClients.get(peerId);
-    if (clientAgent === undefined) {
-      throw Error("clientAgent not in connectedPeerClients");
-    }
 
-    return clientAgent;
-  }
   getConnectedPeerCount(): number {
-    return this.connectedPeers.size;
+    return this.connectedPeersSyncMeta.size;
   }
 
   async getNetworkIdentity(): Promise<routes.node.NetworkIdentity> {
@@ -704,13 +694,21 @@ export class Network implements INetwork {
   };
 
   private onPeerConnected = (data: NetworkEventData[NetworkEvent.peerConnected]): void => {
-    this.logger.warn("onPeerConnected", {peer: data.peer, dataColumns: data.dataColumns.join(" ")});
-    this.connectedPeers.set(data.peer, data.dataColumns);
-    this.connectedPeerClients.set(data.peer, data.clientAgent);
+    const earliestAvailableSlot = (data.status as fulu.Status).earliestAvailableSlot;
+    this.logger.warn("onPeerConnected", {
+      peer: data.peer,
+      dataColumns: data.dataColumns.join(" "),
+      earliestAvailableSlot: earliestAvailableSlot ?? "pre-fulu",
+    });
+    this.connectedPeersSyncMeta.set(data.peer, {
+      client: data.clientAgent,
+      custodyGroups: data.dataColumns,
+      earliestAvailableSlot, // can be undefined pre-fulu
+    });
   };
 
   private onPeerDisconnected = (data: NetworkEventData[NetworkEvent.peerDisconnected]): void => {
-    this.connectedPeers.delete(data.peer);
+    this.connectedPeersSyncMeta.delete(data.peer);
   };
 
   private onTargetGroupCountUpdated = (count: number): void => {
