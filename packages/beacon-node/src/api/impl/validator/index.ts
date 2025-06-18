@@ -105,7 +105,7 @@ export const SYNC_TOLERANCE_EPOCHS = 1;
  * Post this time, race execution and builder to pick whatever resolves first.
  *
  * Empirically the builder block resolves in ~1 second, and execution block resolves in <500 ms.
- * A cutoff of 2 seconds is usually enough time and if there are unexpected delays it ensures we publish
+ * A cutoff of 2 seconds gives enough time and if there are unexpected delays it ensures we publish
  * in time as proposals post 4 seconds into the slot will likely be orphaned due to proposer boost reorg.
  */
 const BLOCK_PRODUCTION_RACE_CUTOFF_MS = 2_000;
