@@ -601,26 +601,16 @@ export function getValidatorApi(
       builderBoostFactor: `${builderBoostFactor}`,
     };
 
-    logger.verbose("Assembling block with produceEngineOrBuilderBlock", loggerContext);
+    logger.debug("Assembling block with produceEngineOrBuilderBlock", loggerContext);
 
     // Defer common block body production to make sure we sent async builder and engine requests before
     const deferredCommonBlockBody = defer<CommonBlockBody>();
     const commonBlockBodyPromise = deferredCommonBlockBody.promise;
 
-    // Calculate cutoff time based on start of the slot
-    const cutoffMs = Math.max(0, BLOCK_PRODUCTION_RACE_CUTOFF_MS - Math.round(chain.clock.secFromSlot(slot) * 1000));
-
-    logger.verbose("Block production race (builder vs execution) starting", {
-      ...loggerContext,
-      cutoffMs,
-      timeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
-    });
-
     // use abort controller to stop waiting for both block sources
     const controller = new AbortController();
 
     // Start calls for building execution and builder blocks
-
     const builderPromise = isBuilderEnabled
       ? produceBuilderBlindedBlock(slot, randaoReveal, graffitiBytes, {
           feeRecipient,
@@ -655,26 +645,38 @@ export function getValidatorApi(
         })
       : Promise.reject(new Error("Engine disabled"));
 
-    const [[builder, engine]] = await Promise.all([
-      resolveOrRacePromises([builderPromise, enginePromise], {
-        resolveTimeoutMs: cutoffMs,
-        raceTimeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
-        signal: controller.signal,
-      }),
-      chain
-        .produceCommonBlockBody({
-          slot,
-          parentBlockRoot,
-          parentSlot,
-          randaoReveal,
-          graffiti: graffitiBytes,
-        })
-        .then((commonBlockBody) => {
-          deferredCommonBlockBody.resolve(commonBlockBody);
-          logger.debug("Produced common block body", loggerContext);
-        })
-        .catch(deferredCommonBlockBody.reject),
-    ]);
+    // Calculate cutoff time based on start of the slot
+    const cutoffMs = Math.max(0, BLOCK_PRODUCTION_RACE_CUTOFF_MS - Math.round(chain.clock.secFromSlot(slot) * 1000));
+
+    logger.debug("Block production race (builder vs execution) starting", {
+      ...loggerContext,
+      cutoffMs,
+      timeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
+    });
+
+    const blockProductionRacePromise = resolveOrRacePromises([builderPromise, enginePromise], {
+      resolveTimeoutMs: cutoffMs,
+      raceTimeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
+      signal: controller.signal,
+    });
+
+    logger.debug("Producing common block body", loggerContext);
+
+    const produceCommonBlockBodyPromise = chain
+      .produceCommonBlockBody({
+        slot,
+        parentBlockRoot,
+        parentSlot,
+        randaoReveal,
+        graffiti: graffitiBytes,
+      })
+      .then((commonBlockBody) => {
+        deferredCommonBlockBody.resolve(commonBlockBody);
+        logger.debug("Produced common block body", loggerContext);
+      })
+      .catch(deferredCommonBlockBody.reject);
+
+    const [[builder, engine]] = await Promise.all([blockProductionRacePromise, produceCommonBlockBodyPromise]);
 
     if (builder.status === "pending" && engine.status === "pending") {
       throw Error("Builder and engine both failed to produce the block within timeout");
