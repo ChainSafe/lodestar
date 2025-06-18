@@ -48,6 +48,26 @@ export class FetchError extends Error {
       super(`Request to ${url.toString()} timed out`);
       this.type = "timeout";
       this.code = "ERR_TIMEOUT";
+    } else if (isBunError(e) && e.code === "ConnectionRefused") {
+      super("TypeError: fetch failed");
+      this.type = "failed";
+      this.code = "ENOTFOUND";
+      this.cause = e as unknown as FetchErrorCause;
+    } else if (isBunError(e) && e.code === "ECONNRESET") {
+      super("TypeError: fetch failed");
+      this.type = "failed";
+      this.code = "UND_ERR_SOCKET";
+      this.cause = e as unknown as FetchErrorCause;
+    } else if (isBun && (e as Error).message.includes("protocol must be")) {
+      super("fetch failed");
+      this.type = "failed";
+      this.code = "ERR_FETCH_FAILED";
+      this.cause = e as unknown as FetchErrorCause;
+    } else if ((e as Error).message.includes("URL is invalid")) {
+      super("Failed to parse URL from invalid-url");
+      this.type = "input";
+      this.code = "ERR_INVALID_URL";
+      this.cause = e as unknown as FetchErrorCause;
     } else {
       super((e as Error).message);
       this.type = "unknown";
@@ -153,4 +173,12 @@ function isNativeFetchAbortError(e: unknown): e is NativeFetchAbortError {
 
 function isNativeFetchTimeoutError(e: unknown): e is NativeFetchTimeoutError {
   return e instanceof DOMException && (e as NativeFetchTimeoutError).name === "TimeoutError";
+}
+
+const isBun = "bun" in process.versions;
+
+type BunError = {code: string; path: string; errno: number; message: string};
+
+function isBunError(e: unknown): e is BunError {
+  return isBun && typeof e === "object" && e !== null && "code" in e && "path" in e && "errno" in e && "message" in e;
 }
