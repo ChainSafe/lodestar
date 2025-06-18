@@ -220,10 +220,8 @@ export class NetworkCore implements INetworkCore {
     // Network spec decides version changes based on clock fork, not head fork
     const forkCurrentSlot = config.getForkName(clock.currentSlot);
 
-    const boundary = {fork: forkCurrentSlot};
-
     // Register only ReqResp protocols relevant to clock's fork
-    reqResp.registerProtocolsAtBoundary(boundary);
+    reqResp.registerProtocolsAtBoundary({fork: forkCurrentSlot});
 
     // Bind discv5's ENR to local metadata
     // biome-ignore lint/complexity/useLiteralKeys: `discovery` is a private attribute
