@@ -661,6 +661,7 @@ export function getValidatorApi(
     });
 
     logger.debug("Producing common block body", loggerContext);
+    const commonBlockBodyStartedAt = Date.now();
 
     const produceCommonBlockBodyPromise = chain
       .produceCommonBlockBody({
@@ -672,7 +673,10 @@ export function getValidatorApi(
       })
       .then((commonBlockBody) => {
         deferredCommonBlockBody.resolve(commonBlockBody);
-        logger.debug("Produced common block body", loggerContext);
+        logger.debug("Produced common block body", {
+          ...loggerContext,
+          durationMs: Date.now() - commonBlockBodyStartedAt,
+        });
       })
       .catch(deferredCommonBlockBody.reject);
 
