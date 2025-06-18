@@ -19,18 +19,19 @@ import {
 import {getEmptyBlockInputCacheEntry} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {INetwork, WithOptionalBytes} from "../interface.js";
+import {PeerSyncMeta} from "../peers/peersData.js";
 
 export type PartialDownload = null | {blocks: BlockInput[]; pendingDataColumns: number[]};
 export async function beaconBlocksMaybeBlobsByRange(
   config: ChainForkConfig,
   network: INetwork,
-  peerId: PeerIdStr,
+  peer: PeerSyncMeta,
   request: phase0.BeaconBlocksByRangeRequest,
   currentEpoch: Epoch,
   partialDownload: PartialDownload,
-  peerClient: string,
   logger?: Logger
 ): Promise<{blocks: BlockInput[]; pendingDataColumns: null | number[]}> {
+  const {peerId, client: peerClient, custodyGroups: peerColumns, earliestAvailableSlot} = peer;
   // Code below assumes the request is in the same epoch
   // Range sync satisfies this condition, but double check here for sanity
   const {startSlot, count} = request;
@@ -78,7 +79,12 @@ export async function beaconBlocksMaybeBlobsByRange(
     // get columns
     const sampledColumns = network.custodyConfig.sampledColumns;
     const neededColumns = partialDownload ? partialDownload.pendingDataColumns : sampledColumns;
-    const peerColumns = network.getConnectedPeerCustody(peerId);
+
+    if ((earliestAvailableSlot ?? 0) > startSlot) {
+      throw new Error(
+        `earliestAvailableSlot=${earliestAvailableSlot} not respected for ByRange startSlot=${startSlot}`
+      );
+    }
 
     // get match
     const columns = peerColumns.reduce((acc, elem) => {

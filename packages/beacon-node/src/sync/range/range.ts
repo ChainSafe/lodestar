@@ -201,19 +201,17 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
 
   /** Convenience method for `SyncChain` */
   private downloadBeaconBlocksByRange: SyncChainFns["downloadBeaconBlocksByRange"] = async (
-    peerId,
+    peer,
     request,
-    partialDownload,
-    peerClient
+    partialDownload
   ) => {
     return beaconBlocksMaybeBlobsByRange(
       this.config,
       this.network,
-      peerId,
+      peer,
       request,
       this.chain.clock.currentEpoch,
       partialDownload,
-      peerClient,
       this.logger
     );
   };
@@ -221,6 +219,10 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
   /** Convenience method for `SyncChain` */
   private reportPeer: SyncChainFns["reportPeer"] = (peer, action, actionName) => {
     this.network.reportPeer(peer, action, actionName);
+  };
+
+  private getConnectedPeerSyncMeta: SyncChainFns["getConnectedPeerSyncMeta"] = (peerId) => {
+    return this.network.getConnectedPeerSyncMeta(peerId);
   };
 
   /** Convenience method for `SyncChain` */
@@ -244,6 +246,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
           processChainSegment: this.processChainSegment,
           downloadBeaconBlocksByRange: this.downloadBeaconBlocksByRange,
           reportPeer: this.reportPeer,
+          getConnectedPeerSyncMeta: this.getConnectedPeerSyncMeta,
           onEnd: this.onSyncChainEnd,
         },
         {config: this.config, logger: this.logger}
@@ -259,12 +262,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
       });
     }
 
-    syncChain.addPeer(
-      peer,
-      target,
-      this.network.getConnectedPeerCustody(peer),
-      this.network.getConnectedPeerClientAgent(peer)
-    );
+    syncChain.addPeer(peer, target);
   }
 
   private update(localFinalizedEpoch: Epoch): void {

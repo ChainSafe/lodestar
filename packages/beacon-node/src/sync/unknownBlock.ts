@@ -315,7 +315,7 @@ export class UnknownBlockSync {
           neededColumns.length <= 0
             ? allPeers
             : allPeers.filter((peer) => {
-                const peerColumns = this.network.getConnectedPeerCustody(peer);
+                const {custodyGroups: peerColumns} = this.network.getConnectedPeerSyncMeta(peer);
                 const columns = peerColumns.reduce((acc, elem) => {
                   if (neededColumns.includes(elem)) {
                     acc.push(elem);
@@ -549,7 +549,8 @@ export class UnknownBlockSync {
     let partialDownload = null;
     let fetchedPeerId = null;
     for (let i = 0; i < MAX_ATTEMPTS_PER_BLOCK; i++) {
-      const peer = shuffledPeers[i % shuffledPeers.length];
+      const peerId = shuffledPeers[i % shuffledPeers.length];
+      const {custodyGroups: peerColumns, client: peerClient} = this.network.getConnectedPeerSyncMeta(peerId);
       if (partialDownload !== null) {
         const [prevBlockInput] = partialDownload.blocks;
         if (prevBlockInput === undefined || prevBlockInput.type !== BlockInputType.dataPromise) {
@@ -565,7 +566,6 @@ export class UnknownBlockSync {
             }
             return acc;
           }, [] as number[]);
-          const peerColumns = this.network.getConnectedPeerCustody(peer);
           const columns = peerColumns.reduce((acc, elem) => {
             if (neededColumns.includes(elem)) {
               acc.push(elem);
@@ -580,14 +580,13 @@ export class UnknownBlockSync {
       }
 
       try {
-        const peerClient = this.network.getConnectedPeerClientAgent(peer);
         const {
           blocks: [blockInput],
           pendingDataColumns,
         } = await beaconBlocksMaybeBlobsByRoot(
           this.config,
           this.network,
-          peer,
+          peerId,
           [blockRoot],
           partialDownload,
           peerClient,
@@ -601,7 +600,7 @@ export class UnknownBlockSync {
 
         if (pendingDataColumns !== null) {
           partialDownload = {blocks: [blockInput], pendingDataColumns};
-          fetchedPeerId = peer;
+          fetchedPeerId = peerId;
           continue;
         }
 
@@ -612,9 +611,9 @@ export class UnknownBlockSync {
           throw Error(`Wrong block received by peer, got ${toRootHex(receivedBlockRoot)} expected ${blockRootHex}`);
         }
 
-        return {blockInput, peerIdStr: peer};
+        return {blockInput, peerIdStr: peerId};
       } catch (e) {
-        this.logger.debug("Error fetching UnknownBlockRoot", {attempt: i, blockRootHex, peer}, e as Error);
+        this.logger.debug("Error fetching UnknownBlockRoot", {attempt: i, blockRootHex, peer: peerId}, e as Error);
         lastError = e as Error;
       }
     }
@@ -679,7 +678,8 @@ export class UnknownBlockSync {
 
     let lastError: Error | null = null;
     for (let i = 0; i < MAX_ATTEMPTS_PER_BLOCK; i++) {
-      const peer = shuffledPeers[i % shuffledPeers.length];
+      const peerId = shuffledPeers[i % shuffledPeers.length];
+      const {custodyGroups: peerColumns, client: peerClient} = this.network.getConnectedPeerSyncMeta(peerId);
       if (unavailableBlockInput.block !== null) {
         const {cachedData} = unavailableBlockInput;
         if (cachedData.fork === ForkName.fulu) {
@@ -690,7 +690,6 @@ export class UnknownBlockSync {
             }
             return acc;
           }, [] as number[]);
-          const peerColumns = this.network.getConnectedPeerCustody(peer);
           const columns = peerColumns.reduce((acc, elem) => {
             if (neededColumns.includes(elem)) {
               acc.push(elem);
@@ -705,11 +704,10 @@ export class UnknownBlockSync {
       }
 
       try {
-        const peerClient = this.network.getConnectedPeerClientAgent(peer);
         const blockInput = await unavailableBeaconBlobsByRoot(
           this.config,
           this.network,
-          peer,
+          peerId,
           peerClient,
           unavailableBlockInput,
           {
@@ -746,9 +744,9 @@ export class UnknownBlockSync {
           this.logger.debug("Fetched UnavailableBlockInput", {attempts: i, ...dataMeta, blobKzgCommitmentsLen});
         }
 
-        return {blockInput, peerIdStr: peer};
+        return {blockInput, peerIdStr: peerId};
       } catch (e) {
-        this.logger.debug("Error fetching UnavailableBlockInput", {attempt: i, blockRootHex, peer}, e as Error);
+        this.logger.debug("Error fetching UnavailableBlockInput", {attempt: i, blockRootHex, peer: peerId}, e as Error);
         lastError = e as Error;
       }
     }

@@ -58,6 +58,13 @@ describe("sync / range / chain", () => {
   const interval: NodeJS.Timeout | null = null;
 
   const reportPeer: SyncChainFns["reportPeer"] = () => {};
+  const getConnectedPeerSyncMeta: SyncChainFns["getConnectedPeerSyncMeta"] = (peerId) => {
+    return {
+      peerId,
+      client: "CLIENT_AGENT",
+      custodyGroups: [],
+    };
+  };
 
   afterEach(() => {
     if (interval !== null) clearInterval(interval);
@@ -109,12 +116,18 @@ describe("sync / range / chain", () => {
           startEpoch,
           target,
           syncType,
-          logSyncChainFns(logger, {processChainSegment, downloadBeaconBlocksByRange, reportPeer, onEnd}),
+          logSyncChainFns(logger, {
+            processChainSegment,
+            downloadBeaconBlocksByRange,
+            getConnectedPeerSyncMeta,
+            reportPeer,
+            onEnd,
+          }),
           {config, logger}
         );
 
         const peers = [peer];
-        for (const peer of peers) initialSync.addPeer(peer, target, [], "CLIENT_AGENT");
+        for (const peer of peers) initialSync.addPeer(peer, target);
 
         initialSync.startSyncing(startEpoch);
       });
@@ -157,13 +170,19 @@ describe("sync / range / chain", () => {
         startEpoch,
         target,
         syncType,
-        logSyncChainFns(logger, {processChainSegment, downloadBeaconBlocksByRange, reportPeer, onEnd}),
+        logSyncChainFns(logger, {
+          processChainSegment,
+          downloadBeaconBlocksByRange,
+          reportPeer,
+          getConnectedPeerSyncMeta,
+          onEnd,
+        }),
         {config, logger}
       );
 
       // Add peers after some time
       setTimeout(() => {
-        for (const peer of peers) initialSync.addPeer(peer, target, [], "CLIENT_AGENT");
+        for (const peer of peers) initialSync.addPeer(peer, target);
       }, 20);
 
       initialSync.startSyncing(startEpoch);
@@ -189,7 +208,11 @@ function logSyncChainFns(logger: Logger, fns: SyncChainFns): SyncChainFns {
     },
     downloadBeaconBlocksByRange(peer, request, _partialDownload) {
       logger.debug("mock downloadBeaconBlocksByRange", request);
-      return fns.downloadBeaconBlocksByRange(peer, request, null, "CLIENT_AGENT");
+      return fns.downloadBeaconBlocksByRange(peer, request, _partialDownload);
+    },
+    getConnectedPeerSyncMeta(peerId) {
+      logger.debug("mock getConnectedPeerSyncMeta", peerId);
+      return fns.getConnectedPeerSyncMeta(peerId);
     },
     reportPeer(peer, action, actionName) {
       logger.debug("mock reportPeer", {peer: peer.toString(), action, actionName});
