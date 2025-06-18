@@ -302,9 +302,11 @@ export class NetworkCore implements INetworkCore {
   async updateStatus(status: Status): Promise<void> {
     this.statusCache.update(status);
   }
+
   async reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): Promise<void> {
     this.peerManager.reportPeer(peerIdFromString(peer), action, actionName);
   }
+
   async reStatusPeers(peers: PeerIdStr[]): Promise<void> {
     this.peerManager.reStatusPeers(peers);
   }
@@ -352,6 +354,7 @@ export class NetworkCore implements INetworkCore {
     const peerId = peerIdFromString(data.peerId);
     return this.reqResp.sendRequestWithoutEncoding(peerId, data.method, data.versions, data.requestData);
   }
+
   async publishGossip(topic: string, data: Uint8Array, opts?: PublishOpts | undefined): Promise<number> {
     const {recipients} = await this.gossip.publish(topic, data, opts);
     return recipients.length;

@@ -127,6 +127,7 @@ export type PeerRequestedSubnetType = SubnetType | "column";
 
 type PeerIdStr = string;
 
+// TODO(fulu): dedupe with network/peers/peerData.ts
 enum RelevantPeerStatus {
   Unknown = "unknown",
   relevant = "relevant",
@@ -348,6 +349,7 @@ export class PeerManager {
       const custodyGroupCount =
         (metadata as Partial<fulu.Metadata>).custodyGroupCount ?? this.config.CUSTODY_REQUIREMENT;
       const nodeId = peerData?.nodeId ?? computeNodeId(peer);
+      // TODO(fulu): this should be columns not groups.  need to change everywhere
       const custodyGroups =
         oldMetadata == null || oldMetadata.custodyGroups == null || custodyGroupCount !== oldMetadata.custodyGroupCount
           ? getCustodyGroups(nodeId, custodyGroupCount)
