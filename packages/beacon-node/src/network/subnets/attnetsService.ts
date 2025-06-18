@@ -1,6 +1,5 @@
 import {BeaconConfig} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Epoch, Slot, SubnetID, ssz} from "@lodestar/types";
 import {Logger, MapDef} from "@lodestar/utils";
 import {ClockEvent, IClock} from "../../util/clock.js";
