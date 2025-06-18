@@ -109,7 +109,7 @@ export async function produceBlockBody<T extends BlockType>(
   blockAttr: BlockAttributes & {
     proposerIndex: ValidatorIndex;
     proposerPubKey: BLSPubkey;
-    // TODO: make `commonBlockBodyPromise` required and remove call to `produceCommonBlockBody` below
+    // TODO: make `commonBlockBodyPromise` required and remove calls to `produceCommonBlockBody` below
     commonBlockBodyPromise?: Promise<CommonBlockBody>;
   }
 ): Promise<{
