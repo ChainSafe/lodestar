@@ -100,7 +100,7 @@ export class NetworkCore implements INetworkCore {
   private readonly opts: NetworkOptions;
 
   // Internal state
-  private readonly subscribedBoundaries = new Set<SubscribeBoundary>();
+  private readonly subscribedBoundariesByEpoch = new Map<Epoch, SubscribeBoundary>();
   private closed = false;
 
   constructor(modules: Mods) {
@@ -322,13 +322,13 @@ export class NetworkCore implements INetworkCore {
    * Unsubscribe from all gossip events. Safe to call multiple times
    */
   async unsubscribeGossipCoreTopics(): Promise<void> {
-    for (const fork of this.subscribedBoundaries.values()) {
-      this.unsubscribeCoreTopicsAtBoundary(this.config, fork);
+    for (const boundary of this.subscribedBoundariesByEpoch.values()) {
+      this.unsubscribeCoreTopicsAtBoundary(this.config, boundary);
     }
   }
 
   async isSubscribedToGossipCoreTopics(): Promise<boolean> {
-    return this.subscribedBoundaries.size > 0;
+    return this.subscribedBoundariesByEpoch.size > 0;
   }
 
   sendReqRespRequest(data: OutgoingRequestArgs): AsyncIterable<ResponseIncoming> {
@@ -501,8 +501,9 @@ export class NetworkCore implements INetworkCore {
   };
 
   private subscribeCoreTopicsAtBoundary(config: BeaconConfig, boundary: SubscribeBoundary): void {
-    if (this.subscribedBoundaries.has(boundary)) return;
-    this.subscribedBoundaries.add(boundary);
+    const epoch = config.forks[boundary.fork].epoch;
+    if (this.subscribedBoundariesByEpoch.has(epoch)) return;
+    this.subscribedBoundariesByEpoch.set(epoch, boundary);
     const {subscribeAllSubnets, disableLightClientServer} = this.opts;
 
     for (const topic of getCoreTopicsAtFork(config, boundary.fork, {
@@ -514,8 +515,9 @@ export class NetworkCore implements INetworkCore {
   }
 
   private unsubscribeCoreTopicsAtBoundary(config: BeaconConfig, boundary: SubscribeBoundary): void {
-    if (!this.subscribedBoundaries.has(boundary)) return;
-    this.subscribedBoundaries.delete(boundary);
+    const epoch = config.forks[boundary.fork].epoch;
+    if (!this.subscribedBoundariesByEpoch.has(epoch)) return;
+    this.subscribedBoundariesByEpoch.delete(epoch);
     const {subscribeAllSubnets, disableLightClientServer} = this.opts;
 
     for (const topic of getCoreTopicsAtFork(config, boundary.fork, {
