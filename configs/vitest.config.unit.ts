@@ -13,6 +13,7 @@ export const unitTestMinimalProject = defineProject({
   test: {
     name: "unit-minimal",
     include: ["**/test/unit-minimal/**/*.test.ts"],
+    exclude: isBun ? ["**/test/unit/**/fetch.node.test.ts", "**/light-client/test/**/*"] : [],
     setupFiles,
     pool: isBun ? "vitest-in-process-pool" : "forks",
     poolOptions: {
@@ -31,6 +32,7 @@ export const unitTestMainnetProject = defineProject({
     // to write and faster when using `minimal` preset due to reduced committee size which lowers validator count required.
     name: "unit",
     include: ["**/test/unit/**/*.test.ts"],
+    exclude: isBun ? ["**/test/unit/**/fetch.node.test.ts", "**/light-client/test/**/*"] : [],
     setupFiles,
     // There are some tests which are taking huge time
     // test/unit/chain/rewards/blockRewards.test.ts > chain / rewards / blockRewards > Normal case 73869ms
