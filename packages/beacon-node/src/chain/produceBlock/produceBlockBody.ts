@@ -196,6 +196,7 @@ export async function produceBlockBody<T extends BlockType>(
 
       const [builderRes, commonBlockBody] = await Promise.all([
         builderPromise,
+        // TODO: make `commonBlockBodyPromise` required and remove call to `produceCommonBlockBody` here
         commonBlockBodyPromise ?? produceCommonBlockBody.call(this, blockType, currentState, blockAttr),
       ]);
       blockBody = Object.assign({}, commonBlockBody) as AssembledBodyType<BlockType.Blinded>;
