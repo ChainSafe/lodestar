@@ -601,7 +601,7 @@ export function getValidatorApi(
       builderBoostFactor: `${builderBoostFactor}`,
     };
 
-    logger.debug("Assembling block with produceEngineOrBuilderBlock", loggerContext);
+    logger.verbose("Assembling block with produceEngineOrBuilderBlock", loggerContext);
 
     // Defer common block body production to make sure we sent async builder and engine requests before
     const deferredCommonBlockBody = defer<CommonBlockBody>();
@@ -648,7 +648,7 @@ export function getValidatorApi(
     // Calculate cutoff time based on start of the slot
     const cutoffMs = Math.max(0, BLOCK_PRODUCTION_RACE_CUTOFF_MS - Math.round(chain.clock.secFromSlot(slot) * 1000));
 
-    logger.debug("Block production race (builder vs execution) starting", {
+    logger.verbose("Block production race (builder vs execution) starting", {
       ...loggerContext,
       cutoffMs,
       timeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
@@ -660,7 +660,7 @@ export function getValidatorApi(
       signal: controller.signal,
     });
 
-    logger.debug("Producing common block body", loggerContext);
+    logger.verbose("Producing common block body", loggerContext);
     const commonBlockBodyStartedAt = Date.now();
 
     const produceCommonBlockBodyPromise = chain
@@ -673,7 +673,7 @@ export function getValidatorApi(
       })
       .then((commonBlockBody) => {
         deferredCommonBlockBody.resolve(commonBlockBody);
-        logger.debug("Produced common block body", {
+        logger.verbose("Produced common block body", {
           ...loggerContext,
           durationMs: Date.now() - commonBlockBodyStartedAt,
         });
