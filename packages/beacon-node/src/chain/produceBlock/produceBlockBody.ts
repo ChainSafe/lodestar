@@ -180,6 +180,10 @@ export async function produceBlockBody<T extends BlockType>(
         // For MeV boost integration, this is where the execution header will be
         // fetched from the payload id and a blinded block will be produced instead of
         // fullblock for the validator to sign
+        this.logger.verbose("Fetching execution payload header from builder", {
+          slot: blockSlot,
+          proposerPubKey: toHex(proposerPubKey),
+        });
         const headerRes = prepareExecutionPayloadHeader(
           this,
           fork,
@@ -273,6 +277,12 @@ export async function produceBlockBody<T extends BlockType>(
     else {
       const enginePromise = (async () => {
         const endExecutionPayload = this.metrics?.executionBlockProductionTimeSteps.startTimer();
+
+        this.logger.verbose("Preparing execution payload from engine", {
+          slot: blockSlot,
+          parentBlockRoot: toRootHex(parentBlockRoot),
+          feeRecipient,
+        });
         // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/validator.md#constructing-the-beaconblockbody
         const prepareRes = await prepareExecutionPayload(
           this,
@@ -305,6 +315,7 @@ export async function produceBlockBody<T extends BlockType>(
           await sleep(PAYLOAD_GENERATION_TIME_MS);
         }
 
+        this.logger.verbose("Fetching execution payload from engine", {slot: blockSlot, payloadId});
         const payloadRes = await this.executionEngine.getPayload(fork, payloadId);
 
         endExecutionPayload?.({
