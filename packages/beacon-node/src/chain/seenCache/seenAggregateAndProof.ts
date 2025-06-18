@@ -1,5 +1,5 @@
 import {BitArray} from "@chainsafe/ssz";
-import {Epoch, RootHex} from "@lodestar/types";
+import {CommitteeIndex, Epoch, RootHex} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {isSuperSetOrEqual} from "../../util/bitArray.js";
@@ -36,15 +36,29 @@ export class SeenAggregatedAttestations {
    * Array of AttestingIndices by same attestation data root by epoch.
    * Note that there are at most TARGET_AGGREGATORS_PER_COMMITTEE (16) per attestation data.
    * */
-  private readonly aggregateRootsByEpoch = new MapDef<Epoch, MapDef<RootHex, AggregationInfo[]>>(
-    () => new MapDef<RootHex, AggregationInfo[]>(() => [])
+  private readonly aggregateRootsByEpoch = new MapDef<
+    Epoch,
+    MapDef<CommitteeIndex, MapDef<RootHex, AggregationInfo[]>>
+  >(
+    () =>
+      new MapDef<CommitteeIndex, MapDef<RootHex, AggregationInfo[]>>(
+        () => new MapDef<RootHex, AggregationInfo[]>(() => [])
+      )
   );
   private lowestPermissibleEpoch: Epoch = 0;
 
   constructor(private readonly metrics: Metrics | null) {}
 
-  isKnown(targetEpoch: Epoch, attDataRoot: RootHex, aggregationBits: BitArray): boolean {
-    const seenAggregationInfoArr = this.aggregateRootsByEpoch.getOrDefault(targetEpoch).getOrDefault(attDataRoot);
+  isKnown(
+    targetEpoch: Epoch,
+    committeeIndex: CommitteeIndex,
+    attDataRoot: RootHex,
+    aggregationBits: BitArray
+  ): boolean {
+    const seenAggregationInfoArr = this.aggregateRootsByEpoch
+      .getOrDefault(targetEpoch)
+      .getOrDefault(committeeIndex)
+      .getOrDefault(attDataRoot);
     this.metrics?.seenCache.aggregatedAttestations.isKnownCalls.inc();
 
     for (let i = 0; i < seenAggregationInfoArr.length; i++) {
@@ -59,13 +73,22 @@ export class SeenAggregatedAttestations {
     return false;
   }
 
-  add(targetEpoch: Epoch, attDataRoot: RootHex, newItem: AggregationInfo, checkIsKnown: boolean): void {
+  add(
+    targetEpoch: Epoch,
+    committeeIndex: CommitteeIndex,
+    attDataRoot: RootHex,
+    newItem: AggregationInfo,
+    checkIsKnown: boolean
+  ): void {
     const {aggregationBits} = newItem;
-    if (checkIsKnown && this.isKnown(targetEpoch, attDataRoot, aggregationBits)) {
+    if (checkIsKnown && this.isKnown(targetEpoch, committeeIndex, attDataRoot, aggregationBits)) {
       return;
     }
 
-    const seenAggregationInfoArr = this.aggregateRootsByEpoch.getOrDefault(targetEpoch).getOrDefault(attDataRoot);
+    const seenAggregationInfoArr = this.aggregateRootsByEpoch
+      .getOrDefault(targetEpoch)
+      .getOrDefault(committeeIndex)
+      .getOrDefault(attDataRoot);
     insertDesc(seenAggregationInfoArr, newItem);
   }
 
