@@ -1,7 +1,7 @@
 import {ContainerType, ListCompositeType, VectorCompositeType} from "@chainsafe/ssz";
 import {
-  BLOCK_BODY_EXECUTION_PAYLOAD_DEPTH,
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
+  BLOCK_BODY_EXECUTION_PAYLOAD_DEPTH as EXECUTION_PAYLOAD_DEPTH,
   HISTORICAL_ROOTS_LIMIT,
   MAX_BLS_TO_EXECUTION_CHANGES,
   MAX_WITHDRAWALS_PER_PAYLOAD,
@@ -26,7 +26,7 @@ const {
   Bytes32,
 } = primitiveSsz;
 
-export const ExecutionBranch = new VectorCompositeType(Bytes32, BLOCK_BODY_EXECUTION_PAYLOAD_DEPTH);
+export const ExecutionBranch = new VectorCompositeType(Bytes32, EXECUTION_PAYLOAD_DEPTH);
 
 export const Withdrawal = new ContainerType(
   {
