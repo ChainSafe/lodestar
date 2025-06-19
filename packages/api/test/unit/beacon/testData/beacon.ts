@@ -245,6 +245,13 @@ export const testData: GenericServerTestCases<Endpoints> = {
       meta: {executionOptimistic: true, finalized: false, version: ForkName.electra},
     },
   },
+  getProposerLookahead: {
+    args: {stateId: "head"},
+    res: {
+      data: ssz.fulu.ProposerLookahead.defaultValue(),
+      meta: {executionOptimistic: true, finalized: false, version: ForkName.fulu},
+    },
+  },
 
   // rewards
 

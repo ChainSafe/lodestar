@@ -1,5 +1,7 @@
 import {ENR} from "@chainsafe/enr";
 import {BeaconConfig} from "@lodestar/config";
+import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants/constants.js";
+import {IClock} from "../../util/clock.js";
 import {ENRKey} from "../metadata.js";
 
 export enum ENRRelevance {
@@ -7,10 +9,11 @@ export enum ENRRelevance {
   no_eth2 = "no_eth2",
   // biome-ignore lint/style/useNamingConvention: Need to use the this name for network convention
   unknown_forkDigest = "unknown_forkDigest",
+  current_fork_mismatch = "current_fork_mismatch",
   relevant = "relevant",
 }
 
-export function enrRelevance(enr: ENR, config: BeaconConfig): ENRRelevance {
+export function enrRelevance(enr: ENR, config: BeaconConfig, clock: IClock): ENRRelevance {
   // We are not interested in peers that don't advertise their tcp addr
   const multiaddrTCP = enr.getLocationMultiaddr(ENRKey.tcp);
   if (!multiaddrTCP) {
@@ -31,7 +34,16 @@ export function enrRelevance(enr: ENR, config: BeaconConfig): ENRRelevance {
     return ENRRelevance.unknown_forkDigest;
   }
 
-  // TODO: Then check if the next fork info matches ours
+  // Check if fork digest's fork matches ours
+  const currentSlot = clock.slotWithFutureTolerance(MAXIMUM_GOSSIP_CLOCK_DISPARITY);
+  const localForkInfo = config.getForkInfo(currentSlot);
+  // We only connect if the ENR's fork matches our current fork.
+  // We also allow it to be the previous fork due to delay and infrequent update of DHT.
+  if (forkName !== localForkInfo.name && forkName !== localForkInfo.prevForkName) {
+    return ENRRelevance.current_fork_mismatch;
+  }
+
+  // TODO: If we have next fork scheduled, check if next fork info matches ours
   // const enrForkId = ssz.phase0.ENRForkID.deserialize(eth2);
 
   return ENRRelevance.relevant;

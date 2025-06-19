@@ -17,6 +17,7 @@ import {Logger} from "@lodestar/utils";
 import {Libp2p} from "libp2p";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
+import {SubscribeBoundary} from "../core/types.js";
 import {INetworkEventBus, NetworkEvent} from "../events.js";
 import {MetadataController} from "../metadata.js";
 import {PeersData} from "../peers/peersData.js";
@@ -119,10 +120,10 @@ export class ReqRespBeaconNode extends ReqResp {
   // pruneOnPeerDisconnect(peerId: PeerId): void {
   //   this.rateLimiter.prune(peerId);
 
-  registerProtocolsAtFork(fork: ForkName): void {
-    this.currentRegisteredFork = ForkSeq[fork];
+  registerProtocolsAtBoundary(boundary: SubscribeBoundary): void {
+    this.currentRegisteredFork = ForkSeq[boundary.fork];
 
-    const mustSubscribeProtocols = this.getProtocolsAtFork(fork);
+    const mustSubscribeProtocols = this.getProtocolsAtBoundary(boundary);
     const mustSubscribeProtocolIDs = new Set(
       mustSubscribeProtocols.map(([protocol]) => this.formatProtocolID(protocol))
     );
@@ -217,7 +218,8 @@ export class ReqRespBeaconNode extends ReqResp {
    * Returns the list of protocols that must be subscribed during a specific fork.
    * Any protocol not in this list must be un-subscribed.
    */
-  private getProtocolsAtFork(fork: ForkName): [ProtocolNoHandler, ProtocolHandler][] {
+  private getProtocolsAtBoundary(boundary: SubscribeBoundary): [ProtocolNoHandler, ProtocolHandler][] {
+    const fork = boundary.fork;
     const protocolsAtFork: [ProtocolNoHandler, ProtocolHandler][] = [
       [protocols.Ping(fork, this.config), this.onPing.bind(this)],
       [protocols.Status(fork, this.config), this.onStatus.bind(this)],

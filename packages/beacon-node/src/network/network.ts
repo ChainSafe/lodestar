@@ -35,7 +35,7 @@ import {PeerIdStr, peerIdToString} from "../util/peerId.js";
 import {BlobSidecarsByRootRequest} from "../util/types.js";
 import {INetworkCore, NetworkCore, WorkerNetworkCore} from "./core/index.js";
 import {INetworkEventBus, NetworkEvent, NetworkEventBus, NetworkEventData} from "./events.js";
-import {getActiveForks} from "./forks.js";
+import {getActiveSubscribeBoundaries} from "./forks.js";
 import {GossipHandlers, GossipTopicMap, GossipType, GossipTypeMap} from "./gossip/index.js";
 import {getGossipSSZType, gossipTopicIgnoreDuplicatePublishError, stringifyGossipTopic} from "./gossip/topic.js";
 import {INetwork} from "./interface.js";
@@ -351,10 +351,12 @@ export class Network implements INetwork {
 
   async publishBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange): Promise<number> {
     const publishChanges = [];
-    for (const fork of getActiveForks(this.config, this.clock.currentEpoch)) {
-      if (ForkSeq[fork] >= ForkSeq.capella) {
+    for (const boundary of getActiveSubscribeBoundaries(this.config, this.clock.currentEpoch)) {
+      const fork = ForkSeq[boundary.fork];
+
+      if (fork >= ForkSeq.capella) {
         const publishPromise = this.publishGossip<GossipType.bls_to_execution_change>(
-          {type: GossipType.bls_to_execution_change, fork},
+          {type: GossipType.bls_to_execution_change, fork: boundary.fork},
           blsToExecutionChange,
           {ignoreDuplicatePublishError: true}
         );
