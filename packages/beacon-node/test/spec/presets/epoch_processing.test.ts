@@ -4,6 +4,7 @@ import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
+  CachedBeaconStateFulu,
   EpochTransitionCache,
   beforeProcessEpoch,
 } from "@lodestar/state-transition";
@@ -46,6 +47,10 @@ const epochTransitionFns: Record<string, EpochTransitionFn> = {
   historical_summaries_update: epochFns.processHistoricalSummariesUpdate as EpochTransitionFn,
   pending_deposits: epochFns.processPendingDeposits as EpochTransitionFn,
   pending_consolidations: epochFns.processPendingConsolidations as EpochTransitionFn,
+  proposer_lookahead: (state, _) => {
+    const fork = state.config.getForkSeq(state.slot);
+    epochFns.processProposerLookahead(fork, state as CachedBeaconStateFulu);
+  },
 };
 
 /**
