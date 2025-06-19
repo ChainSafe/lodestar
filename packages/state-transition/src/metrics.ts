@@ -52,12 +52,12 @@ export function getMetrics(register: MetricsRegister) {
       help: "Total count of effective balance updates",
     }),
     validatorsInActivationQueue: register.gauge({
-      name: "lodestar_stfn_validators_in_activation_queue_length",
-      help: "Total count of validators in the activation queue",
+      name: "lodestar_stfn_validators_in_activation_queue",
+      help: "Current number of validators in the activation queue",
     }),
     validatorsInExitQueue: register.gauge({
-      name: "lodestar_stfn_validators_in_exit_queue_length",
-      help: "Total count of validators in the exit queue",
+      name: "lodestar_stfn_validators_in_exit_queue",
+      help: "Current number of validators in the exit queue",
     }),
     preStateBalancesNodesPopulatedMiss: register.gauge<{source: StateCloneSource}>({
       name: "lodestar_stfn_balances_nodes_populated_miss_total",
