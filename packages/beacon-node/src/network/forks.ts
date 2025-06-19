@@ -1,6 +1,7 @@
 import {ChainForkConfig, ForkInfo} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {Epoch} from "@lodestar/types";
+import {SubscribeBoundary} from "./core/types.js";
 
 /**
  * Subscribe topics to the new fork N epochs before the fork. Remove all subscriptions N epochs after the fork
@@ -52,6 +53,12 @@ export function getActiveForks(config: ChainForkConfig, epoch: Epoch): ForkName[
   }
 
   return activeForks;
+}
+
+export function getActiveSubscribeBoundaries(config: ChainForkConfig, epoch: Epoch): SubscribeBoundary[] {
+  const activeForks = getActiveForks(config, epoch);
+
+  return activeForks.map((fork) => ({fork}));
 }
 
 /**

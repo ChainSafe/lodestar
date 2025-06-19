@@ -89,7 +89,9 @@ export type ChainConfig = {
   NODE_CUSTODY_REQUIREMENT: number;
   VALIDATOR_CUSTODY_REQUIREMENT: number;
   BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: number;
-  MAX_BLOBS_PER_BLOCK_FULU: number;
+
+  // Blob Scheduling
+  BLOB_SCHEDULE: BlobSchedule;
 };
 
 export const chainConfigTypes: SpecTypes<ChainConfig> = {
@@ -171,11 +173,33 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   NODE_CUSTODY_REQUIREMENT: "number",
   VALIDATOR_CUSTODY_REQUIREMENT: "number",
   BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: "number",
-  MAX_BLOBS_PER_BLOCK_FULU: "number",
+
+  // Blob Scheduling
+  BLOB_SCHEDULE: "blob_schedule",
 };
 
+export type BlobScheduleEntry = {
+  EPOCH: number;
+  MAX_BLOBS_PER_BLOCK: number;
+};
+
+export type BlobSchedule = BlobScheduleEntry[];
+
+export function isBlobSchedule(value: unknown): value is BlobSchedule {
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (entry) =>
+        typeof entry === "object" &&
+        entry !== null &&
+        typeof entry.EPOCH === "number" &&
+        typeof entry.MAX_BLOBS_PER_BLOCK === "number"
+    )
+  );
+}
+
 /** Allows values in a Spec file */
-export type SpecValue = number | bigint | Uint8Array | string;
+export type SpecValue = number | bigint | Uint8Array | string | BlobSchedule;
 
 /** Type value name of each spec field. Numbers are ignored since they are the most common */
 export type SpecValueType<V extends SpecValue> = V extends number
@@ -186,7 +210,9 @@ export type SpecValueType<V extends SpecValue> = V extends number
       ? "bytes"
       : V extends string
         ? "string"
-        : never;
+        : V extends BlobSchedule
+          ? "blob_schedule"
+          : never;
 
 /** All possible type names for a SpecValue */
 export type SpecValueTypeName = SpecValueType<SpecValue>;
@@ -194,3 +220,5 @@ export type SpecValueTypeName = SpecValueType<SpecValue>;
 export type SpecTypes<Spec extends Record<string, SpecValue>> = {
   [K in keyof Spec]: SpecValueType<Spec[K]>;
 };
+
+export type SpecJson = Record<string, string | Record<string, string>[]>;

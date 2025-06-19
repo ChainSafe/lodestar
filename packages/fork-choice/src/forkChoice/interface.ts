@@ -217,6 +217,10 @@ export interface IForkChoice {
    * The same to iterateAncestorBlocks but this gets non-ancestor nodes instead of ancestor nodes.
    */
   getAllNonAncestorBlocks(blockRoot: RootHex): ProtoBlock[];
+  /**
+   * Returns both ancestor and non-ancestor blocks in a single traversal.
+   */
+  getAllAncestorAndNonAncestorBlocks(blockRoot: RootHex): {ancestors: ProtoBlock[]; nonAncestors: ProtoBlock[]};
   getCanonicalBlockAtSlot(slot: Slot): ProtoBlock | null;
   getCanonicalBlockClosestLteSlot(slot: Slot): ProtoBlock | null;
   /**

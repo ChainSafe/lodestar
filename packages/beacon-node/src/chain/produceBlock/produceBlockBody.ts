@@ -78,6 +78,7 @@ export type BlockAttributes = {
   graffiti: Bytes32;
   slot: Slot;
   parentBlockRoot: Root;
+  parentSlot: Slot;
   feeRecipient?: string;
 };
 

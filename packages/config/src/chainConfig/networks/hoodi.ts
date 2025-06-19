@@ -48,4 +48,8 @@ export const hoodiChainConfig: ChainConfig = {
   // ---------------------------------------------------------------
   DEPOSIT_CHAIN_ID: 560048,
   DEPOSIT_NETWORK_ID: 560048,
+
+  // Blob Scheduling
+  // ---------------------------------------------------------------
+  BLOB_SCHEDULE: [],
 };

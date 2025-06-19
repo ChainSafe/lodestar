@@ -97,6 +97,7 @@ import {SeenGossipBlockInput} from "./seenCache/index.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
+import {SeenBlockInputCache} from "./seenCache/seenBlockInput.js";
 import {ShufflingCache} from "./shufflingCache.js";
 import {BlockStateCacheImpl} from "./stateCache/blockStateCacheImpl.js";
 import {DbCPStateDatastore} from "./stateCache/datastore/db.js";
@@ -141,7 +142,7 @@ export class BeaconChain implements IBeaconChain {
   readonly attestationPool: AttestationPool;
   readonly aggregatedAttestationPool: AggregatedAttestationPool;
   readonly syncCommitteeMessagePool: SyncCommitteeMessagePool;
-  readonly syncContributionAndProofPool = new SyncContributionAndProofPool();
+  readonly syncContributionAndProofPool;
   readonly opPool = new OpPool();
 
   // Gossip seen cache
@@ -153,6 +154,7 @@ export class BeaconChain implements IBeaconChain {
   readonly seenContributionAndProof: SeenContributionAndProof;
   readonly seenAttestationDatas: SeenAttestationDatas;
   readonly seenGossipBlockInput = new SeenGossipBlockInput();
+  readonly seenBlockInputCache: SeenBlockInputCache;
   // Seen cache for liveness checks
   readonly seenBlockAttesters = new SeenBlockAttesters();
 
@@ -252,6 +254,7 @@ export class BeaconChain implements IBeaconChain {
       preAggregateCutOffTime,
       this.opts?.preaggregateSlotDistance
     );
+    this.syncContributionAndProofPool = new SyncContributionAndProofPool(clock, metrics, logger);
 
     this.seenAggregatedAttestations = new SeenAggregatedAttestations(metrics);
     this.seenContributionAndProof = new SeenContributionAndProof(metrics);
@@ -259,6 +262,14 @@ export class BeaconChain implements IBeaconChain {
 
     this.beaconProposerCache = new BeaconProposerCache(opts);
     this.checkpointBalancesCache = new CheckpointBalancesCache();
+    this.seenBlockInputCache = new SeenBlockInputCache({
+      config,
+      clock,
+      chainEvents: emitter,
+      signal,
+      metrics,
+      logger,
+    });
 
     // Restore state caches
     // anchorState may already by a CachedBeaconState. If so, don't create the cache again, since deserializing all
@@ -649,10 +660,7 @@ export class BeaconChain implements IBeaconChain {
     // TODO: To avoid breaking changes for metric define this attribute
     const blockType = BlockType.Full;
 
-    return produceCommonBlockBody.call(this, blockType, state, {
-      ...blockAttributes,
-      parentSlot: slot - 1,
-    });
+    return produceCommonBlockBody.call(this, blockType, state, blockAttributes);
   }
 
   produceBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
@@ -681,6 +689,7 @@ export class BeaconChain implements IBeaconChain {
       feeRecipient,
       commonBlockBody,
       parentBlockRoot,
+      parentSlot,
     }: BlockAttributes & {commonBlockBody?: CommonBlockBody}
   ): Promise<{
     block: AssembledBlockType<T>;
@@ -706,7 +715,7 @@ export class BeaconChain implements IBeaconChain {
         graffiti,
         slot,
         feeRecipient,
-        parentSlot: slot - 1,
+        parentSlot,
         parentBlockRoot,
         proposerIndex,
         proposerPubKey,
@@ -1094,7 +1103,7 @@ export class BeaconChain implements IBeaconChain {
     metrics.opPool.proposerSlashingPoolSize.set(this.opPool.proposerSlashingsSize);
     metrics.opPool.voluntaryExitPoolSize.set(this.opPool.voluntaryExitsSize);
     metrics.opPool.syncCommitteeMessagePoolSize.set(this.syncCommitteeMessagePool.size);
-    metrics.opPool.syncContributionAndProofPoolSize.set(this.syncContributionAndProofPool.size);
+    // syncContributionAndProofPool tracks metrics on its own
     metrics.opPool.blsToExecutionChangePoolSize.set(this.opPool.blsToExecutionChangeSize);
     metrics.chain.blacklistedBlocks.set(this.blacklistedBlocks.size);
 
