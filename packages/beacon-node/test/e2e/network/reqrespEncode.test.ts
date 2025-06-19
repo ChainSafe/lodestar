@@ -99,7 +99,7 @@ describe("reqresp encoder", () => {
 
   it("assert correct handler switch between metadata v2 and v1", async () => {
     const {multiaddr: serverMultiaddr, reqresp} = await getReqResp();
-    reqresp.registerProtocolsAtFork(ForkName.phase0);
+    reqresp.registerProtocolsAtBoundary({fork: ForkName.phase0});
     await sleep(0); // Sleep to resolve register handler promises
 
     reqresp["metadataController"].attnets.set(0, true);
@@ -134,7 +134,7 @@ describe("reqresp encoder", () => {
           };
         }
     );
-    reqresp.registerProtocolsAtFork(ForkName.altair);
+    reqresp.registerProtocolsAtBoundary({fork: ForkName.altair});
     await sleep(0); // Sleep to resolve register handler promises
 
     const {libp2p: dialer} = await getLibp2p();
