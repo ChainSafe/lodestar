@@ -1862,7 +1862,7 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 5,
+        "w": 6,
         "x": 0,
         "y": 39
       },
@@ -1916,8 +1916,8 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 5,
-        "x": 5,
+        "w": 6,
+        "x": 6,
         "y": 39
       },
       "id": 492,
@@ -1970,8 +1970,8 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 5,
-        "x": 10,
+        "w": 6,
+        "x": 12,
         "y": 39
       },
       "id": 484,
@@ -2024,8 +2024,8 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 5,
-        "x": 15,
+        "w": 6,
+        "x": 18,
         "y": 39
       },
       "id": 483,
@@ -2079,8 +2079,8 @@
       "gridPos": {
         "h": 3,
         "w": 4,
-        "x": 20,
-        "y": 39
+        "x": 0,
+        "y": 42
       },
       "id": 485,
       "options": {
@@ -2146,8 +2146,8 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 5,
-        "x": 0,
+        "w": 4,
+        "x": 4,
         "y": 42
       },
       "id": 539,
@@ -2176,7 +2176,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "lodestar_stfn_validators_in_activation_queue_length",
+          "expr": "lodestar_stfn_validators_in_activation_queue",
           "interval": "",
           "legendFormat": "",
           "range": true,
@@ -2203,8 +2203,8 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 5,
-        "x": 5,
+        "w": 4,
+        "x": 8,
         "y": 42
       },
       "id": 540,
@@ -2233,7 +2233,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "lodestar_stfn_validators_in_exit_queue_length",
+          "expr": "lodestar_stfn_validators_in_exit_queue",
           "interval": "",
           "legendFormat": "",
           "range": true,
@@ -2259,8 +2259,8 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 5,
-        "x": 10,
+        "w": 4,
+        "x": 12,
         "y": 42
       },
       "id": 488,
@@ -2316,8 +2316,8 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 5,
-        "x": 15,
+        "w": 4,
+        "x": 16,
         "y": 42
       },
       "id": 542,
