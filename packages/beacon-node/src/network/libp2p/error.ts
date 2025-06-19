@@ -51,5 +51,6 @@ export enum Libp2pError {
 }
 
 export function getLibp2pError(error: Error): Libp2pError {
-  return Libp2pError[(error as unknown as {name: string}).name as keyof typeof Libp2pError] ?? Libp2pError.OtherError;
+  const errorName = error.name as keyof typeof Libp2pError;
+  return Libp2pError[errorName] ?? Libp2pError.OtherError;
 }
