@@ -115,7 +115,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
           if (method === ReqRespMethod.LightClientBootstrap) {
             yield {
               data: ssz.altair.LightClientBootstrap.serialize(expectedValue),
-              fork: ForkName.altair,
+              boundary: {fork: ForkName.altair},
             };
           }
         }
@@ -136,7 +136,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
           if (method === ReqRespMethod.LightClientOptimisticUpdate) {
             yield {
               data: ssz.altair.LightClientOptimisticUpdate.serialize(expectedValue),
-              fork: ForkName.altair,
+              boundary: {fork: ForkName.altair},
             };
           }
         }
@@ -157,7 +157,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
           if (method === ReqRespMethod.LightClientFinalityUpdate) {
             yield {
               data: ssz.altair.LightClientFinalityUpdate.serialize(expectedValue),
-              fork: ForkName.altair,
+              boundary: {fork: ForkName.altair},
             };
           }
         }
@@ -177,7 +177,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
       update.signatureSlot = slot;
       lightClientUpdates.push({
         data: ssz.altair.LightClientUpdate.serialize(update),
-        fork: ForkName.altair,
+        boundary: {fork: ForkName.altair},
       });
     }
 
@@ -332,6 +332,6 @@ function getEmptyEncodedPayloadSignedBeaconBlock(config: ChainForkConfig): Respo
 function wrapBlockAsEncodedPayload(config: ChainForkConfig, block: SignedBeaconBlock): ResponseOutgoing {
   return {
     data: config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block),
-    fork: config.getForkName(block.message.slot),
+    boundary: {fork: config.getForkName(block.message.slot)},
   };
 }

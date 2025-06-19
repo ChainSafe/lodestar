@@ -26,7 +26,7 @@ export async function* onLightClientUpdatesByRange(
 
       yield {
         data: type.serialize(update),
-        fork,
+        boundary: {fork},
       };
     } catch (e) {
       if ((e as LightClientServerError).type?.code === LightClientServerErrorCode.RESOURCE_UNAVAILABLE) {

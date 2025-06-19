@@ -55,7 +55,7 @@ export async function* onBlobSidecarsByRoot(
 
     yield {
       data: blobSidecarBytes,
-      fork: chain.config.getForkName(block.slot),
+      boundary: {fork: chain.config.getForkName(block.slot)},
     };
   }
 }

@@ -40,7 +40,7 @@ export async function* onBeaconBlocksByRoot(
 
       yield {
         data: blockBytes,
-        fork: chain.config.getForkName(slot),
+        boundary: {fork: chain.config.getForkName(slot)},
       };
     }
   }
