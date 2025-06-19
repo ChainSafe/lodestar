@@ -75,8 +75,8 @@ describe("AttnetsService", () => {
   });
 
   it("should subscribe to new fork 2 epochs before ALTAIR_FORK_EPOCH", () => {
-    expect(gossipStub.subscribeTopic).toBeCalledWith(expect.objectContaining({fork: ForkName.phase0}));
-    expect(gossipStub.subscribeTopic).not.toBeCalledWith({fork: ForkName.altair});
+    expect(gossipStub.subscribeTopic).toBeCalledWith(expect.objectContaining({boundary: {fork: ForkName.phase0}}));
+    expect(gossipStub.subscribeTopic).not.toBeCalledWith({boundary: {fork: ForkName.altair}});
     expect(gossipStub.subscribeTopic).toBeCalledTimes(2);
     const firstSubnet = (gossipStub.subscribeTopic.mock.calls[0][0] as unknown as {subnet: SubnetID}).subnet;
     const secondSubnet = (gossipStub.subscribeTopic.mock.calls[1][0] as unknown as {subnet: SubnetID}).subnet;
@@ -86,20 +86,20 @@ describe("AttnetsService", () => {
     // SUBNETS_PER_NODE = 2 => 2 more calls
     // same subnets were called
     expect(gossipStub.subscribeTopic).toHaveBeenCalledWith(
-      expect.objectContaining({fork: ForkName.altair, subnet: firstSubnet})
+      expect.objectContaining({boundary: {fork: ForkName.altair}, subnet: firstSubnet})
     );
     expect(gossipStub.subscribeTopic).toHaveBeenCalledWith(
-      expect.objectContaining({fork: ForkName.altair, subnet: secondSubnet})
+      expect.objectContaining({boundary: {fork: ForkName.altair}, subnet: secondSubnet})
     );
     expect(gossipStub.subscribeTopic).toBeCalledTimes(2 * SUBNETS_PER_NODE);
     // 2 epochs after the fork
     vi.advanceTimersByTime(config.SECONDS_PER_SLOT * 4 * 1000);
     service.unsubscribeSubnetsBeforeBoundary({fork: ForkName.phase0});
     expect(gossipStub.unsubscribeTopic).toHaveBeenCalledWith(
-      expect.objectContaining({fork: ForkName.phase0, subnet: firstSubnet})
+      expect.objectContaining({boundary: {fork: ForkName.phase0}, subnet: firstSubnet})
     );
     expect(gossipStub.unsubscribeTopic).toHaveBeenCalledWith(
-      expect.objectContaining({fork: ForkName.phase0, subnet: secondSubnet})
+      expect.objectContaining({boundary: {fork: ForkName.phase0}, subnet: secondSubnet})
     );
     expect(gossipStub.unsubscribeTopic).toBeCalledTimes(ATTESTATION_SUBNET_COUNT);
   });
