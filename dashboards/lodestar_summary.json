@@ -2106,11 +2106,14 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
           "exemplar": false,
           "expr": "beacon_current_validators{status=\"active\"}",
           "hide": false,
+          "instant": true,
           "interval": "",
           "legendFormat": "",
+          "range": false,
           "refId": "B"
         },
         {
@@ -2177,9 +2180,10 @@
           "editorMode": "code",
           "exemplar": false,
           "expr": "lodestar_stfn_validators_in_activation_queue",
+          "instant": true,
           "interval": "",
           "legendFormat": "",
-          "range": true,
+          "range": false,
           "refId": "A"
         }
       ],
@@ -2234,9 +2238,10 @@
           "editorMode": "code",
           "exemplar": false,
           "expr": "lodestar_stfn_validators_in_exit_queue",
+          "instant": true,
           "interval": "",
           "legendFormat": "",
-          "range": true,
+          "range": false,
           "refId": "A"
         }
       ],
@@ -2290,9 +2295,10 @@
           "editorMode": "code",
           "exemplar": false,
           "expr": "beacon_pending_deposits",
+          "instant": true,
           "interval": "",
           "legendFormat": "",
-          "range": true,
+          "range": false,
           "refId": "A"
         }
       ],
@@ -2347,9 +2353,10 @@
           "editorMode": "code",
           "exemplar": false,
           "expr": "beacon_pending_partial_withdrawals",
+          "instant": true,
           "interval": "",
           "legendFormat": "",
-          "range": true,
+          "range": false,
           "refId": "A"
         }
       ],
@@ -2404,9 +2411,10 @@
           "editorMode": "code",
           "exemplar": false,
           "expr": "beacon_pending_consolidations",
+          "instant": true,
           "interval": "",
           "legendFormat": "",
-          "range": true,
+          "range": false,
           "refId": "A"
         }
       ],
