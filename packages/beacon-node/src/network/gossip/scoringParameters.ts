@@ -126,12 +126,11 @@ function getAllTopicsScoreParams(
   const boundaries = getActiveSubscribeBoundaries(config, epoch);
   const beaconAttestationSubnetWeight = 1 / ATTESTATION_SUBNET_COUNT;
   for (const boundary of boundaries) {
-    const fork = boundary.fork;
     //first all fixed topics
     topicsParams[
       stringifyGossipTopic(config, {
         type: GossipType.voluntary_exit,
-        fork,
+        boundary,
       })
     ] = getTopicScoreParams(config, precomputedParams, {
       topicWeight: VOLUNTARY_EXIT_WEIGHT,
@@ -142,7 +141,7 @@ function getAllTopicsScoreParams(
     topicsParams[
       stringifyGossipTopic(config, {
         type: GossipType.bls_to_execution_change,
-        fork,
+        boundary,
       })
     ] = getTopicScoreParams(config, precomputedParams, {
       topicWeight: BLS_TO_EXECUTION_CHANGE_WEIGHT,
@@ -153,7 +152,7 @@ function getAllTopicsScoreParams(
     topicsParams[
       stringifyGossipTopic(config, {
         type: GossipType.attester_slashing,
-        fork,
+        boundary,
       })
     ] = getTopicScoreParams(config, precomputedParams, {
       topicWeight: ATTESTER_SLASHING_WEIGHT,
@@ -163,7 +162,7 @@ function getAllTopicsScoreParams(
     topicsParams[
       stringifyGossipTopic(config, {
         type: GossipType.proposer_slashing,
-        fork,
+        boundary,
       })
     ] = getTopicScoreParams(config, precomputedParams, {
       topicWeight: PROPOSER_SLASHING_WEIGHT,
@@ -175,7 +174,7 @@ function getAllTopicsScoreParams(
     topicsParams[
       stringifyGossipTopic(config, {
         type: GossipType.beacon_block,
-        fork,
+        boundary,
       })
     ] = getTopicScoreParams(config, precomputedParams, {
       topicWeight: BEACON_BLOCK_WEIGHT,
@@ -202,7 +201,7 @@ function getAllTopicsScoreParams(
     topicsParams[
       stringifyGossipTopic(config, {
         type: GossipType.beacon_aggregate_and_proof,
-        fork,
+        boundary,
       })
     ] = getTopicScoreParams(config, precomputedParams, {
       topicWeight: BEACON_AGGREGATE_PROOF_WEIGHT,
@@ -232,8 +231,8 @@ function getAllTopicsScoreParams(
     for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
       const topicStr = stringifyGossipTopic(config, {
         type: GossipType.beacon_attestation,
-        fork,
         subnet,
+        boundary,
       });
       topicsParams[topicStr] = beaconAttestationParams;
     }

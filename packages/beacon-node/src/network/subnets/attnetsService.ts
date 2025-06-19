@@ -138,7 +138,7 @@ export class AttnetsService implements IAttnetsService {
       subnets: Array.from(this.longLivedSubscriptions).join(","),
     });
     for (const subnet of this.longLivedSubscriptions) {
-      this.gossip.subscribeTopic({type: gossipType, subnet, fork: boundary.fork});
+      this.gossip.subscribeTopic({type: gossipType, subnet, boundary});
     }
   }
 
@@ -150,7 +150,7 @@ export class AttnetsService implements IAttnetsService {
     this.logger.info("Unsubscribing to long lived attnets before boundary", {...boundary});
     for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
       if (!this.opts.subscribeAllSubnets) {
-        this.gossip.unsubscribeTopic({type: gossipType, subnet, fork: boundary.fork});
+        this.gossip.unsubscribeTopic({type: gossipType, subnet, boundary});
       }
     }
   }
@@ -218,7 +218,7 @@ export class AttnetsService implements IAttnetsService {
         if (timeToFormMesh === null) {
           const topicStr = stringifyGossipTopic(this.config, {
             type: gossipType,
-            fork: this.config.getForkName(dutiedSlot),
+            boundary: {fork: this.config.getForkName(dutiedSlot)},
             subnet,
           });
           const numMeshPeers = this.gossip.mesh.get(topicStr)?.size ?? 0;
@@ -334,7 +334,7 @@ export class AttnetsService implements IAttnetsService {
     for (const subnet of subnets) {
       if (!this.shortLivedSubscriptions.has(subnet) && !this.longLivedSubscriptions.has(subnet)) {
         for (const boundary of boundaries) {
-          this.gossip.subscribeTopic({type: gossipType, subnet, fork: boundary.fork});
+          this.gossip.subscribeTopic({type: gossipType, subnet, boundary});
         }
         this.metrics?.attnetsService.subscribeSubnets.inc({subnet, src});
       }
@@ -354,7 +354,7 @@ export class AttnetsService implements IAttnetsService {
     for (const subnet of subnets) {
       if (!this.shortLivedSubscriptions.isActiveAtSlot(subnet, slot) && !this.longLivedSubscriptions.has(subnet)) {
         for (const boundary of boundaries) {
-          this.gossip.unsubscribeTopic({type: gossipType, subnet, fork: boundary.fork});
+          this.gossip.unsubscribeTopic({type: gossipType, subnet, boundary});
         }
         this.metrics?.attnetsService.unsubscribeSubnets.inc({subnet, src});
       }
@@ -369,7 +369,7 @@ export class AttnetsService implements IAttnetsService {
     for (const {subnet} of this.shortLivedSubscriptions.getActiveTtl(currentSlot)) {
       const topicStr = stringifyGossipTopic(this.config, {
         type: gossipType,
-        fork: this.config.getForkName(currentSlot),
+        boundary: {fork: this.config.getForkName(currentSlot)},
         subnet,
       });
       const numMeshPeers = this.gossip.mesh.get(topicStr)?.size ?? 0;

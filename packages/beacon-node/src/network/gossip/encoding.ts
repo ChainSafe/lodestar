@@ -43,7 +43,7 @@ export function msgIdFn(gossipTopicCache: GossipTopicCache, msg: Message): Uint8
 
   let vec: Uint8Array[];
 
-  if (topic.fork === ForkName.phase0) {
+  if (topic.boundary.fork === ForkName.phase0) {
     // message id for phase0.
     // ```
     // SHA256(MESSAGE_DOMAIN_VALID_SNAPPY + snappy_decompress(message.data))[:20]

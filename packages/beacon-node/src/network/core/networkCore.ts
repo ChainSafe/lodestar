@@ -510,7 +510,7 @@ export class NetworkCore implements INetworkCore {
       subscribeAllSubnets,
       disableLightClientServer,
     })) {
-      this.gossip.subscribeTopic({...topic, fork: boundary.fork});
+      this.gossip.subscribeTopic({...topic, boundary});
     }
   }
 
@@ -524,7 +524,7 @@ export class NetworkCore implements INetworkCore {
       subscribeAllSubnets,
       disableLightClientServer,
     })) {
-      this.gossip.unsubscribeTopic({...topic, fork: boundary.fork});
+      this.gossip.unsubscribeTopic({...topic, boundary});
     }
   }
 }
