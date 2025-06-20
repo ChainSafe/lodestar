@@ -41,8 +41,7 @@ export async function* onBeaconBlocksByRoot(
 
       yield {
         data: blockBytes,
-        fork: chain.config.getForkName(slot),
-        blobSchedule: chain.config.getBlobParameters(computeEndSlotAtEpoch(slot)),
+        boundary: {fork: chain.config.getForkName(slot), ...chain.config.getBlobParameters(computeEndSlotAtEpoch(slot))},
       };
     }
   }

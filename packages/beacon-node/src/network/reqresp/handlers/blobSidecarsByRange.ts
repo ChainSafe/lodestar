@@ -86,8 +86,7 @@ export function* iterateBlobBytesFromWrapper(
     }
     yield {
       data: blobSideCarBytes,
-      fork: chain.config.getForkName(blockSlot),
-      blobSchedule: chain.config.getBlobParameters(computeEpochAtSlot(blockSlot)),
+      boundary: {fork: chain.config.getForkName(blockSlot), chain.config.getBlobParameters(computeEpochAtSlot(blockSlot))},
     };
   }
 }

@@ -16,7 +16,6 @@ export async function* onLightClientFinalityUpdate(chain: IBeaconChain): AsyncIt
   const type = responseSszTypeByMethod[ReqRespMethod.LightClientFinalityUpdate](fork, 0);
   yield {
     data: type.serialize(update),
-    fork,
-    blobSchedule,
+    boundary: {fork, ...blobSchedule},
   };
 }

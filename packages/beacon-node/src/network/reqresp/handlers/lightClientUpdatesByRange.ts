@@ -28,8 +28,7 @@ export async function* onLightClientUpdatesByRange(
 
       yield {
         data: type.serialize(update),
-        fork,
-        blobSchedule,
+        boundary: {fork, ...blobSchedule},
       };
     } catch (e) {
       if ((e as LightClientServerError).type?.code === LightClientServerErrorCode.RESOURCE_UNAVAILABLE) {

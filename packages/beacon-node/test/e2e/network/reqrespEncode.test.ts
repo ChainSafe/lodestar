@@ -133,8 +133,7 @@ describe("reqresp encoder", () => {
             data: ssz.altair.LightClientOptimisticUpdate.serialize(
               ssz.altair.LightClientOptimisticUpdate.defaultValue()
             ),
-            fork: ForkName.phase0, // Aware that phase0 does not makes sense here, but it's just to pick a fork digest
-            blobSchedule: defaultBlobSchedule,
+            boundary: {fork: ForkName.phase0, ...defaultBlobSchedule}, // Aware that phase0 does not makes sense here, but it's just to pick a fork digest
           };
         }
     );

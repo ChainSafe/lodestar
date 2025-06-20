@@ -663,7 +663,7 @@ export class BeaconChain implements IBeaconChain {
     return produceCommonBlockBody.call(this, blockType, state, blockAttributes);
   }
 
-  produceBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
+  produceBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise?: Promise<CommonBlockBody>}): Promise<{
     block: BeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Wei;
@@ -672,7 +672,7 @@ export class BeaconChain implements IBeaconChain {
     return this.produceBlockWrapper<BlockType.Full>(BlockType.Full, blockAttributes);
   }
 
-  produceBlindedBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
+  produceBlindedBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise?: Promise<CommonBlockBody>}): Promise<{
     block: BlindedBeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Wei;
@@ -687,10 +687,10 @@ export class BeaconChain implements IBeaconChain {
       graffiti,
       slot,
       feeRecipient,
-      commonBlockBody,
+      commonBlockBodyPromise,
       parentBlockRoot,
       parentSlot,
-    }: BlockAttributes & {commonBlockBody?: CommonBlockBody}
+    }: BlockAttributes & {commonBlockBodyPromise?: Promise<CommonBlockBody>}
   ): Promise<{
     block: AssembledBlockType<T>;
     executionPayloadValue: Wei;
@@ -719,7 +719,7 @@ export class BeaconChain implements IBeaconChain {
         parentBlockRoot,
         proposerIndex,
         proposerPubKey,
-        commonBlockBody,
+        commonBlockBodyPromise,
       }
     );
 

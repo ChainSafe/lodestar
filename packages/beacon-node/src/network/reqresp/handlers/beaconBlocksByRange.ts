@@ -28,8 +28,7 @@ export async function* onBeaconBlocksByRange(
       const slot = finalized.decodeKey(key);
       yield {
         data: value,
-        fork: chain.config.getForkName(slot),
-        blobSchedule: chain.config.getBlobParameters(computeEpochAtSlot(slot)),
+        boundary: {fork: chain.config.getForkName(finalized.decodeKey(key)), ...chain.config.getBlobParameters(computeEpochAtSlot(slot)) },
       };
     }
   }
@@ -60,8 +59,7 @@ export async function* onBeaconBlocksByRange(
 
         yield {
           data: blockBytes,
-          fork: chain.config.getForkName(block.slot),
-          blobSchedule: chain.config.getBlobParameters(computeEpochAtSlot(block.slot)),
+          boundary: {fork: chain.config.getForkName(block.slot), ...chain.config.getBlobParameters(computeEpochAtSlot(block.slot))},
         };
       }
 

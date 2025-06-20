@@ -22,8 +22,7 @@ export async function* onLightClientBootstrap(requestBody: Root, chain: IBeaconC
     const type = responseSszTypeByMethod[ReqRespMethod.LightClientBootstrap](fork, 0);
     yield {
       data: type.serialize(bootstrap),
-      fork,
-      blobSchedule,
+      boundary: {fork, ...blobSchedule},
     };
   } catch (e) {
     if ((e as LightClientServerError).type?.code === LightClientServerErrorCode.RESOURCE_UNAVAILABLE) {

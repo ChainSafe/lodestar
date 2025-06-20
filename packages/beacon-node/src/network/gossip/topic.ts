@@ -83,7 +83,7 @@ function stringifyGossipTopicType(topic: GossipTopic): string {
 }
 
 export function getGossipSSZType(topic: GossipTopic) {
-  const fork = topic.boundary.fork;
+  const {fork} = topic.boundary;
   switch (topic.type) {
     case GossipType.beacon_block:
       // beacon_block is updated in altair to support the updated SignedBeaconBlock type

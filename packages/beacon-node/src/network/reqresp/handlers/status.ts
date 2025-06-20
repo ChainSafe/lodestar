@@ -8,7 +8,6 @@ export async function* onStatus(chain: IBeaconChain): AsyncIterable<ResponseOutg
   yield {
     data: ssz.phase0.Status.serialize(status),
     // Status topic is fork-agnostic
-    fork: ForkName.phase0,
-    blobSchedule: chain.config.getBlobParameters(0),
+    boundary: {fork: ForkName.phase0, ...chain.config.getBlobParameters(0)},
   };
 }

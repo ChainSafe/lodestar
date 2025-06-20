@@ -42,8 +42,7 @@ export const numberToStringProtocol: Protocol = {
   handler: async function* handler(req) {
     yield {
       data: Buffer.from(req.data.toString(), "utf8"),
-      fork: ForkName.phase0,
-      blobSchedule: defaultBlobSchedule,
+      boundary: {fork: ForkName.phase0, ...defaultBlobSchedule},
     };
   },
 };

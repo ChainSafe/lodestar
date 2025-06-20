@@ -9,8 +9,9 @@ import {arrToSource} from "../utils/index.js";
 export async function* responseEncode(responseChunks: ResponseChunk[], protocol: Protocol): AsyncIterable<Buffer> {
   for (const chunk of responseChunks) {
     if (chunk.status === RespStatus.SUCCESS) {
+      const payload = chunk.payload;
       yield* pipe(
-        arrToSource([{...chunk.payload, blobSchedule: defaultBlobSchedule}]),
+        arrToSource([{...payload, boundary: {fork: payload.fork, ...defaultBlobSchedule}}]),
         responseEncodeSuccess(protocol, {onChunk: () => {}})
       );
     } else {

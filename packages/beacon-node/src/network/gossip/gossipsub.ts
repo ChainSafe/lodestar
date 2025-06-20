@@ -218,7 +218,7 @@ export class Eth2Gossipsub extends GossipSub {
         // for example in prater: /eth2/82f4a72b/optimistic_light_client_update_v0/ssz_snappy
         const topic = this.gossipTopicCache.getKnownTopic(topicString);
         if (topic !== undefined) {
-          const fork = topic.boundary.fork;
+          const {fork} = topic.boundary;
           if (topic.type === GossipType.beacon_attestation) {
             peersByBeaconAttSubnetByFork.set(fork, topic.subnet, peers.size);
           } else if (topic.type === GossipType.sync_committee) {

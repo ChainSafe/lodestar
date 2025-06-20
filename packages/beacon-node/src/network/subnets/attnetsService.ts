@@ -372,14 +372,12 @@ export class AttnetsService implements IAttnetsService {
     const currentSlot = this.clock.currentSlot;
     const epoch = computeEpochAtSlot(currentSlot);
     const blobSchedule = this.config.getBlobParameters(epoch);
-    const fork = this.config.getForkInfoAtEpoch(epoch).name;
-    const boundary = {...blobSchedule, fork};
 
     for (const {subnet} of this.shortLivedSubscriptions.getActiveTtl(currentSlot)) {
       const topicStr = stringifyGossipTopic(this.config, {
         type: gossipType,
+        boundary: {fork: this.config.getForkName(currentSlot), ...blobSchedule},
         subnet,
-        boundary,
       });
       const numMeshPeers = this.gossip.mesh.get(topicStr)?.size ?? 0;
       metrics.attnetsService.subscriptionsCommitteeMeshPeers.observe({subnet}, numMeshPeers);
