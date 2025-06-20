@@ -126,16 +126,9 @@ export async function validateGossipDataColumnSidecar(
   // 10) [REJECT] The sidecar's kzg_commitments field inclusion proof is valid as verified by
   //              verify_data_column_sidecar_inclusion_proof
   //              TODO: Can cache result on (commitments, proof, header) in the future
-  let valid: boolean;
-  try {
-    const timer = metrics?.peerDas.dataColumnSidecarInclusionProofVerificationTime.startTimer();
-    valid = verifyDataColumnSidecarInclusionProof(dataColumnSidecar);
-    timer?.();
-  } catch (err) {
-    (err as Error).message =
-      `Error in verifyDataColumnSidecarInclusionProof for slot=${blockHeader.slot} parentRoot=${toHex(blockHeader.parentRoot)}`;
-    throw err;
-  }
+  const timer = metrics?.peerDas.dataColumnSidecarInclusionProofVerificationTime.startTimer();
+  const valid = verifyDataColumnSidecarInclusionProof(dataColumnSidecar);
+  timer?.();
 
   if (!valid) {
     throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
