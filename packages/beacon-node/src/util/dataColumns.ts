@@ -70,6 +70,39 @@ export function parseWrappedColumnSidecars(wrapped: Uint8Array): {
   };
 }
 
+// TOOO(fulu): will be implemented in writeBlockInputToDb.ts
+// export function buildDataColumnSidecarsDbWrapper(
+//   custodyConfig: CustodyConfig,
+//   block: SignedBeaconBlock,
+//   blockRoot: Uint8Array,
+//   dataColumnSidecars: fulu.DataColumnSidecars
+// ): DataColumnSidecarsDbWrapper {
+//   const commitmentsLength = (block.message as fulu.BeaconBlock).body.blobKzgCommitments.length;
+
+//   let dataColumnsLen: number;
+//   let dataColumnsIndex: Uint8Array;
+//   if (commitmentsLength === 0) {
+//     dataColumnsLen = 0;
+//     dataColumnsIndex = new Uint8Array(NUMBER_OF_COLUMNS);
+//   } else {
+//     dataColumnsLen = custodyConfig.custodyColumns.length;
+//     dataColumnsIndex = custodyConfig.custodyColumnsIndex;
+//   }
+
+//   const dataColumnsSize =
+//     ssz.fulu.DataColumnSidecar.minSize +
+//     commitmentsLength * (ssz.fulu.Cell.fixedSize + ssz.deneb.KZGCommitment.fixedSize + ssz.deneb.KZGProof.fixedSize);
+
+//   return {
+//     slot: block.message.slot,
+//     blockRoot,
+//     dataColumnsLen,
+//     dataColumnsSize,
+//     dataColumnsIndex,
+//     dataColumnSidecars,
+//   };
+// }
+
 /**
  * CustodyIndex is a Unit8Array for representing which ColumnIndex is stored in the db and at which
  * 0-indexed array position the column can be found in the stored data.  The Custody index is structured
