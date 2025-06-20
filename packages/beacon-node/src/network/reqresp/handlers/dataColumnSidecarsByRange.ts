@@ -4,7 +4,7 @@ import {ColumnIndex, Slot, fulu} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
-import {getIndexOfSidecarInWrapper, parseWrappedColumnSidecars} from "../../../db/repositories/dataColumnSidecars.js";
+import {getIndexOfSidecarInWrapper, parseWrappedColumnSidecars} from "../../../util/dataColumns.js";
 
 export async function* onDataColumnSidecarsByRange(
   request: fulu.DataColumnSidecarsByRangeRequest,

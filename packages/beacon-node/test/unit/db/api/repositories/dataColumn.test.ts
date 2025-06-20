@@ -5,15 +5,15 @@ import {ssz} from "@lodestar/types";
 import {rimraf} from "rimraf";
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
 
+import {DataColumnSidecarsRepository} from "../../../../../src/db/repositories/dataColumnSidecars.js";
 import {
   COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_COLUMN_SIZE,
   COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_CUSTODY_INDEX,
   COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_NUM_OF_COLUMNS,
   COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_TO_FIRST_SIDECAR,
-  DataColumnSidecarsRepository,
+  computeDataColumnSidecars,
   dataColumnSidecarsDbWrapperSsz,
-} from "../../../../../src/db/repositories/dataColumnSidecars.js";
-import {computeDataColumnSidecars} from "../../../../../src/util/blobs.js";
+} from "../../../../../src/util/dataColumns.js";
 import {testLogger} from "../../../../utils/logger.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
