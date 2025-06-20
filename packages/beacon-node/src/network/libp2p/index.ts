@@ -5,6 +5,8 @@ import {bootstrap} from "@libp2p/bootstrap";
 import {identify} from "@libp2p/identify";
 import {PrivateKey} from "@libp2p/interface";
 import {mdns} from "@libp2p/mdns";
+import {mplex} from "@libp2p/mplex";
+import {prometheusMetrics} from "@libp2p/prometheus-metrics";
 import {tcp} from "@libp2p/tcp";
 import {Libp2pInit, createLibp2p} from "libp2p";
 import {Registry} from "prom-client";
