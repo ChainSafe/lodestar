@@ -93,7 +93,7 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     listenAddress6: listenAddress6 ? `/ip6/${listenAddress6}` : undefined,
     port6: listenAddress6 ? `/tcp/${port6}` : undefined,
     discoveryPort6: listenAddress6 ? `/udp/${discoveryPort6}` : undefined,
-    quicPort6: listenAddress ? `/udp/${quicPort6}/quic-v1` : undefined,
+    quicPort6: listenAddress6 ? `/udp/${quicPort6}/quic-v1` : undefined,
   };
 
   for (const key of [
