@@ -680,7 +680,7 @@
 
 "@chainsafe/libp2p-quic@https://github.com/chainsafe/js-libp2p-quic/raw/cayman/fix-segfault/package.tgz":
   version "1.1.1"
-  resolved "https://github.com/chainsafe/js-libp2p-quic/raw/cayman/fix-segfault/package.tgz#cda0382e0fb132a576b069558826525f8a5d0cc0"
+  resolved "https://github.com/chainsafe/js-libp2p-quic/raw/cayman/fix-segfault/package.tgz#8921f9e256ca61ad2bde13f0d154f734e7220d56"
   dependencies:
     "@libp2p/crypto" "^5.0.12"
     "@libp2p/interface" "^2.6.0"
