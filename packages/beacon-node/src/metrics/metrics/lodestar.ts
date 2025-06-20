@@ -1,7 +1,11 @@
+import {BlockInputSource} from "../../chain/blocks/blockInput/index.js";
 import {BlobsSource, BlockSource} from "../../chain/blocks/types.js";
 import {JobQueueItemType} from "../../chain/bls/index.js";
 import {AttestationErrorCode, BlockErrorCode} from "../../chain/errors/index.js";
-import {ScannedSlotsTerminationReason} from "../../chain/opPools/aggregatedAttestationPool.js";
+import {
+  type InvalidAttestationData,
+  ScannedSlotsTerminationReason,
+} from "../../chain/opPools/aggregatedAttestationPool.js";
 import {InsertOutcome} from "../../chain/opPools/types.js";
 import {RegenCaller, RegenFnName} from "../../chain/regen/interface.js";
 import {ReprocessStatus} from "../../chain/reprocess.js";
@@ -866,9 +870,10 @@ export function createLodestarMetrics(
             name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_empty_attestation_data_total",
             help: "Total number of attestation data with no group when producing packed attestation",
           }),
-          invalidAttestationData: register.gauge({
+          invalidAttestationData: register.gauge<{reason: InvalidAttestationData}>({
             name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_invalid_attestation_data_total",
             help: "Total number of invalid attestation data when producing packed attestation",
+            labelNames: ["reason"],
           }),
           seenCommittees: register.gauge({
             name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_seen_committees_total",
@@ -921,10 +926,52 @@ export function createLodestarMetrics(
         help: "Total number of InsertOutcome as a result of adding a SyncCommitteeMessage to pool",
         labelNames: ["insertOutcome"],
       }),
-      syncContributionAndProofPoolSize: register.gauge({
-        name: "lodestar_oppool_sync_contribution_and_proof_pool_pool_size",
-        help: "Current size of the SyncContributionAndProofPool unique by slot subnet and block root",
-      }),
+      syncContributionAndProofPool: {
+        size: register.gauge({
+          name: "lodestar_oppool_sync_contribution_and_proof_pool_size",
+          help: "Current size of the SyncContributionAndProofPool unique by slot subnet and block root",
+        }),
+        gossipInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
+          name: "lodestar_oppool_sync_contribution_and_proof_pool_gossip_insert_outcome_total",
+          help: "Total number of InsertOutcome as a result of adding a ContributionAndProof from gossip into the pool",
+          labelNames: ["insertOutcome"],
+        }),
+        apiInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
+          name: "lodestar_oppool_sync_contribution_and_proof_pool_api_insert_outcome_total",
+          help: "Total number of InsertOutcome as a result of adding a ContributionAndProof from api into the pool",
+          labelNames: ["insertOutcome"],
+        }),
+        blockRootsPerSlot: register.gauge({
+          name: "lodestar_oppool_sync_contribution_and_proof_pool_block_roots_per_slot_total",
+          help: "Total number of block roots per slot in SyncContributionAndProofPool",
+        }),
+        subnetsByBlockRoot: register.gauge<{index: number}>({
+          name: "lodestar_oppool_sync_contribution_and_proof_pool_subnets_by_block_root_total",
+          help: "Total number of subnets per block root in SyncContributionAndProofPool",
+          labelNames: ["index"],
+        }),
+        participantsByBlockRoot: register.gauge<{index: number}>({
+          name: "lodestar_oppool_sync_contribution_and_proof_pool_participants_by_block_root_total",
+          help: "Total number of participants per block root in SyncContributionAndProofPool",
+          labelNames: ["index"],
+        }),
+        getAggregateRoots: register.gauge({
+          name: "lodestar_oppool_sync_contribution_and_proof_pool_get_aggregate_roots_total",
+          help: "Total number of block roots in SyncContributionAndProofPool.getAggregate(slot)",
+        }),
+        getAggregateSubnets: register.gauge({
+          name: "lodestar_oppool_sync_contribution_and_proof_pool_get_aggregate_subnets_total",
+          help: "Total number of subnets in SyncContributionAndProofPool.getAggregate(slot, root)",
+        }),
+        getAggregateParticipants: register.gauge({
+          name: "lodestar_oppool_sync_contribution_and_proof_pool_get_aggregate_participants_total",
+          help: "Total number of participants in SyncContributionAndProofPool.getAggregate(slot, root)",
+        }),
+        getAggregateReturnsEmpty: register.gauge({
+          name: "lodestar_oppool_sync_contribution_and_proof_pool_get_aggregate_returns_empty_total",
+          help: "Total number of empty returns in SyncContributionAndProofPool.getAggregate(slot, root)",
+        }),
+      },
     },
 
     chain: {
@@ -1198,6 +1245,30 @@ export function createLodestarMetrics(
           name: "lodestar_seen_cache_attestation_data_reject_total",
           help: "Total number of attestation data rejected in SeenAttestationData",
           labelNames: ["reason"],
+        }),
+      },
+      blockInput: {
+        blockInputCount: register.gauge({
+          name: "lodestar_seen_block_input_cache_size",
+          help: "Number of cached BlockInputs",
+        }),
+        duplicateBlockCount: register.gauge<{source: BlockInputSource}>({
+          name: "lodestar_seen_block_input_cache_duplicate_block_count",
+          help: "Total number of duplicate blocks that pass validation and attempt to be cached but are known",
+          labelNames: ["source"],
+        }),
+        duplicateBlobCount: register.gauge<{source: BlockInputSource}>({
+          name: "lodestar_seen_block_input_cache_duplicate_blob_count",
+          help: "Total number of duplicate blobs that pass validation and attempt to be cached but are known",
+          labelNames: ["source"],
+        }),
+        createdByBlock: register.gauge({
+          name: "lodestar_seen_block_input_cache_items_created_by_block",
+          help: "Number of BlockInputs created via a block being seen first",
+        }),
+        createdByBlob: register.gauge({
+          name: "lodestar_seen_block_input_cache_items_created_by_blob",
+          help: "Number of BlockInputs created via a blob being seen first",
         }),
       },
     },

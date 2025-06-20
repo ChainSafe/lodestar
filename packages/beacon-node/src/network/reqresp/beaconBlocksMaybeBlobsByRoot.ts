@@ -562,7 +562,8 @@ export async function unavailableBeaconBlobsByRootPostFulu(
       cachedData: cachedData,
       blockInputPromise,
       resolveBlockInput,
-    }
+    },
+    opts.metrics ?? null
   );
 
   if (!gotColumnsFromExecution) {

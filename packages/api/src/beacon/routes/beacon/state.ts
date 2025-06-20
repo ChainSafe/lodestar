@@ -1,7 +1,18 @@
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {MAX_VALIDATORS_PER_COMMITTEE} from "@lodestar/params";
-import {CommitteeIndex, Epoch, RootHex, Slot, StringType, ValidatorStatus, electra, phase0, ssz} from "@lodestar/types";
+import {
+  CommitteeIndex,
+  Epoch,
+  RootHex,
+  Slot,
+  StringType,
+  ValidatorStatus,
+  electra,
+  fulu,
+  phase0,
+  ssz,
+} from "@lodestar/types";
 import {ArrayOf, JsonOnlyReq} from "../../../utils/codecs.js";
 import {Endpoint, RequestCodec, RouteDefinitions, Schema} from "../../../utils/index.js";
 import {
@@ -308,6 +319,19 @@ export type Endpoints = {
     electra.PendingConsolidations,
     ExecutionOptimisticFinalizedAndVersionMeta
   >;
+
+  /**
+   * Get State Proposer Lookahead
+   *
+   * Returns proposer lookahead for state with given 'stateId'.
+   */
+  getProposerLookahead: Endpoint<
+    "GET",
+    StateArgs,
+    {params: {state_id: string}},
+    fulu.ProposerLookahead,
+    ExecutionOptimisticFinalizedAndVersionMeta
+  >;
 };
 
 // biome-ignore lint/suspicious/noExplicitAny: <explanation>
@@ -549,6 +573,15 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       req: stateIdOnlyReq,
       resp: {
         data: ssz.electra.PendingConsolidations,
+        meta: ExecutionOptimisticFinalizedAndVersionCodec,
+      },
+    },
+    getProposerLookahead: {
+      url: "/eth/v1/beacon/states/{state_id}/proposer_lookahead",
+      method: "GET",
+      req: stateIdOnlyReq,
+      resp: {
+        data: ssz.fulu.ProposerLookahead,
         meta: ExecutionOptimisticFinalizedAndVersionCodec,
       },
     },

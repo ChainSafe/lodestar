@@ -1,5 +1,5 @@
 import {digest as sha256Digest} from "@chainsafe/as-sha256";
-import {ckzg} from "@lodestar/beacon-node/util";
+import {kzg} from "@lodestar/beacon-node/util";
 import {BYTES_PER_FIELD_ELEMENT, FIELD_ELEMENTS_PER_BLOB, VERSIONED_HASH_VERSION_KZG} from "@lodestar/params";
 import {deneb} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
@@ -11,9 +11,9 @@ export function generateBlobsForTransaction(count: number): {
   kzgProofs: string[];
 } {
   const blobs = Array.from({length: count}, () => generateRandomBlob());
-  const kzgCommitments = blobs.map((blob) => ckzg.blobToKzgCommitment(blob));
+  const kzgCommitments = blobs.map((blob) => kzg.blobToKzgCommitment(blob));
   const versionedHash = kzgCommitments.map((kzgCommitment) => kzgCommitmentToVersionedHash(kzgCommitment));
-  const kzgProofs = blobs.map((blob, index) => ckzg.computeBlobKzgProof(blob, kzgCommitments[index]));
+  const kzgProofs = blobs.map((blob, index) => kzg.computeBlobKzgProof(blob, kzgCommitments[index]));
 
   return {
     blobs: blobs.map((blob) => toHex(blob)),

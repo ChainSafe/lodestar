@@ -19,6 +19,13 @@ export function renderJsonSpec(config: ChainConfig): routes.config.Spec {
   const configJson = chainConfigToJson(config);
   const presetJson = presetToJson(activePreset);
   const constantsJson = specValuesToJson(specConstants);
+
+  // TODO Fulu: remove this check once interop issues are resolved
+  // see https://github.com/attestantio/go-eth2-client/issues/230
+  if (config.FULU_FORK_EPOCH === Infinity) {
+    delete configJson.BLOB_SCHEDULE;
+  }
+
   return {...configJson, ...presetJson, ...constantsJson};
 }
 

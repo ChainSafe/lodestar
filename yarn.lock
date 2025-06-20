@@ -431,10 +431,10 @@
   resolved "https://registry.yarnpkg.com/@chainsafe/as-chacha20poly1305/-/as-chacha20poly1305-0.1.0.tgz#7da6f8796f9b42dac6e830a086d964f1f9189e09"
   integrity sha512-BpNcL8/lji/GM3+vZ/bgRWqJ1q5kwvTFmGPk7pxm/QQZDbaMI98waOHjEymTjq2JmdD/INdNBFOVSyJofXg7ew==
 
-"@chainsafe/as-sha256@1.1.0", "@chainsafe/as-sha256@^1.1.0":
-  version "1.1.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/as-sha256/-/as-sha256-1.1.0.tgz#949082ab96e0b266484f01f59a71930761afc6c4"
-  integrity sha512-pLlxYtfYy2YW5GN+7d946UAjBOS9VOFulkfFN6Z+84ZhMP0Ey8XsCG21CZTczwq1C8J7/4z8LGzmrAtmQ37VCQ==
+"@chainsafe/as-sha256@1.2.0", "@chainsafe/as-sha256@^1.2.0":
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/as-sha256/-/as-sha256-1.2.0.tgz#5764ac9959e147fe0908dd0f66c0cce525a633b3"
+  integrity sha512-H2BNHQ5C3RS+H0ZvOdovK6GjFAyq5T6LClad8ivwj9Oaiy28uvdsGVS7gNJKuZmg0FGHAI+n7F0Qju6U0QkKDA==
 
 "@chainsafe/as-sha256@^0.4.1":
   version "0.4.1"
@@ -680,12 +680,12 @@
   dependencies:
     "@chainsafe/is-ip" "^2.0.1"
 
-"@chainsafe/persistent-merkle-tree@1.1.0", "@chainsafe/persistent-merkle-tree@^1.1.0":
-  version "1.1.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/persistent-merkle-tree/-/persistent-merkle-tree-1.1.0.tgz#d10d9e926f2c5751d02a188b8fb6823821572aca"
-  integrity sha512-UIcKEGkEGghTXbFTvKqIiN2iljg2f6c2Y8GxdQEyle5UI6YIB8d3ACYTkAhrHSB4YsNlG9pc/A0NGJw/3Hf9wQ==
+"@chainsafe/persistent-merkle-tree@1.2.0", "@chainsafe/persistent-merkle-tree@^1.2.0":
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/persistent-merkle-tree/-/persistent-merkle-tree-1.2.0.tgz#a402debcae6b386c51564c8cbacc9b0d56f64486"
+  integrity sha512-Ng2eqd6OPvFPPuroQ659ZrFMHtc44LxUfK7K2WkoBhlQ3hrvIn3UTQNKc77xUCU40xjeBGSxAfz+MSV256i+/g==
   dependencies:
-    "@chainsafe/as-sha256" "1.1.0"
+    "@chainsafe/as-sha256" "1.2.0"
     "@chainsafe/hashtree" "1.0.1"
     "@noble/hashes" "^1.3.0"
 
@@ -769,13 +769,13 @@
     "@chainsafe/as-sha256" "^0.4.1"
     "@chainsafe/persistent-merkle-tree" "^0.6.1"
 
-"@chainsafe/ssz@^1.2.0":
-  version "1.2.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-1.2.0.tgz#7201cc885460bfd4cf991791070100c3512aba1e"
-  integrity sha512-fsFFBfT5JPCypyzENDg6srd6woNMj0+x6OLR5X1di+IK5mYlxBiAVsH/bYVj/u5DE3nanAgPZOc5KSszoDBRvw==
+"@chainsafe/ssz@^1.2.1":
+  version "1.2.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-1.2.1.tgz#a9a89c9706de33444c0ee64fbc461ae6001132af"
+  integrity sha512-rchrNF+tJ1yOMZS5CQK3bK5UZC1vQP8ANxW4McRedvBls5b9Mvn+LtbOE4wffrVMOxQzOXcBGZDoCPPJYX76Rg==
   dependencies:
-    "@chainsafe/as-sha256" "1.1.0"
-    "@chainsafe/persistent-merkle-tree" "1.1.0"
+    "@chainsafe/as-sha256" "1.2.0"
+    "@chainsafe/persistent-merkle-tree" "1.2.0"
 
 "@chainsafe/swap-or-not-shuffle-darwin-arm64@1.2.1":
   version "1.2.1"
@@ -831,10 +831,10 @@
     "@chainsafe/swap-or-not-shuffle-win32-arm64-msvc" "1.2.1"
     "@chainsafe/swap-or-not-shuffle-win32-x64-msvc" "1.2.1"
 
-"@chainsafe/threads@^1.11.1":
-  version "1.11.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/threads/-/threads-1.11.1.tgz#0b3b8c76f5875043ef6d47aeeb681dc80378f205"
-  integrity sha512-ejkB0eVcM0k2E8n5ZqOGt//ZEWU+c431QS3e/WfjLKxhw/fwZpvYhUOxBA8u3lJmAKLGziIcXjOoTnPwMPhkcQ==
+"@chainsafe/threads@^1.11.2":
+  version "1.11.2"
+  resolved "https://registry.yarnpkg.com/@chainsafe/threads/-/threads-1.11.2.tgz#fc400efdfec2d246e5054e3521a9066dc2dc45af"
+  integrity sha512-qd5mSYWyIgK+G4LQTLhJhO4IUda4eydYhZsT6AadALFUKs5WrHaFtAf7sLol6JjgWG7wwgznUs7FFyBl0xPmoQ==
   dependencies:
     callsites "^3.1.0"
     debug "^4.2.0"
@@ -847,6 +847,48 @@
   version "1.5.0"
   resolved "https://registry.yarnpkg.com/@colors/colors/-/colors-1.5.0.tgz#bb504579c1cae923e6576a4f5da43d25f97bdbd9"
   integrity sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ==
+
+"@crate-crypto/node-eth-kzg-darwin-arm64@0.7.1":
+  version "0.7.1"
+  resolved "https://registry.yarnpkg.com/@crate-crypto/node-eth-kzg-darwin-arm64/-/node-eth-kzg-darwin-arm64-0.7.1.tgz#1fd9fcc58051a7de306ffc1328b80c0da521fa7e"
+  integrity sha512-t0VJCpkz1wYlCnm7USrRtiAS+j74C0xnEuqy+nOLmFIG/zEjHy0QW5/t42mfMo+wgejhhtG0iT/x0efgC6eNyA==
+
+"@crate-crypto/node-eth-kzg-darwin-x64@0.7.1":
+  version "0.7.1"
+  resolved "https://registry.yarnpkg.com/@crate-crypto/node-eth-kzg-darwin-x64/-/node-eth-kzg-darwin-x64-0.7.1.tgz#e1514e51061cd69b8c7dd85cdd02ce60b9ce9e48"
+  integrity sha512-0fQfHPEMO94cpFaeCU57tDSCLoQh6W9jX7WoC6XUhrlCwgmlvb7k6qk2+S+0U/kaSaNTr+/ISD+9a4oCZlnG3Q==
+
+"@crate-crypto/node-eth-kzg-linux-arm64-gnu@0.7.1":
+  version "0.7.1"
+  resolved "https://registry.yarnpkg.com/@crate-crypto/node-eth-kzg-linux-arm64-gnu/-/node-eth-kzg-linux-arm64-gnu-0.7.1.tgz#5c70d17483be6780615f83282c2dbf4b200e4a2d"
+  integrity sha512-SDH6mvQpHnCHFpStUJdeuOayO13v437Sdf9iq6ThSyHypAiMv1YUYPs9IrBRzNoKN8yESZJyHsPzLWtskbpQZA==
+
+"@crate-crypto/node-eth-kzg-linux-x64-gnu@0.7.1":
+  version "0.7.1"
+  resolved "https://registry.yarnpkg.com/@crate-crypto/node-eth-kzg-linux-x64-gnu/-/node-eth-kzg-linux-x64-gnu-0.7.1.tgz#a355a5b306300fc2f0afc2b9871ba2b8b12718c2"
+  integrity sha512-w0klnqWdA55TSTl21dsj3vVjpvByamFN9JEF83T2Q/YFANo0ki9rlAG+f3Ki0OtROjJzUNJQoHmcjl7+BAhP8Q==
+
+"@crate-crypto/node-eth-kzg-win32-arm64-msvc@0.7.1":
+  version "0.7.1"
+  resolved "https://registry.yarnpkg.com/@crate-crypto/node-eth-kzg-win32-arm64-msvc/-/node-eth-kzg-win32-arm64-msvc-0.7.1.tgz#2b153424b7643983e8d3fb151fa115510889fea4"
+  integrity sha512-cmfoFHwuaD5+Iy003BxDroACiOFEYsfaZHUohHorv+tIGg02NIA5cBtOcWbAkmAGbnhNNA3853v+2AHqbQ/6Eg==
+
+"@crate-crypto/node-eth-kzg-win32-x64-msvc@0.7.1":
+  version "0.7.1"
+  resolved "https://registry.yarnpkg.com/@crate-crypto/node-eth-kzg-win32-x64-msvc/-/node-eth-kzg-win32-x64-msvc-0.7.1.tgz#712c215667b27819ff7071b897939e4c73c2243c"
+  integrity sha512-3CVmBK8AQJuyrBP907AXDDMAmR4Q8lgeN+hz7JRQRsJpmbO5hazRPZP2zaNOcisYENzN3i2btmiNJvDXwEAGew==
+
+"@crate-crypto/node-eth-kzg@^0.7.1":
+  version "0.7.1"
+  resolved "https://registry.yarnpkg.com/@crate-crypto/node-eth-kzg/-/node-eth-kzg-0.7.1.tgz#b157803aefa6c598fad7329b9d2a73142ded79a5"
+  integrity sha512-JEAqTVtWc+POsRFJh6sR4IRsVK9YuCZ3loHq7jfDDh0k4O5xhoArjJUymP6Fp3g4x9/PcGds/528t+qXHEjhhQ==
+  optionalDependencies:
+    "@crate-crypto/node-eth-kzg-darwin-arm64" "0.7.1"
+    "@crate-crypto/node-eth-kzg-darwin-x64" "0.7.1"
+    "@crate-crypto/node-eth-kzg-linux-arm64-gnu" "0.7.1"
+    "@crate-crypto/node-eth-kzg-linux-x64-gnu" "0.7.1"
+    "@crate-crypto/node-eth-kzg-win32-arm64-msvc" "0.7.1"
+    "@crate-crypto/node-eth-kzg-win32-x64-msvc" "0.7.1"
 
 "@cspotcode/source-map-support@^0.8.0":
   version "0.8.1"
@@ -3357,6 +3399,11 @@
   resolved "https://registry.yarnpkg.com/@types/cookie/-/cookie-0.6.0.tgz#eac397f28bf1d6ae0ae081363eca2f425bedf0d5"
   integrity sha512-4Kh9a6B2bQciAhf7FSuMRRkUWecJgJu9nPnx3yzpsfXX/c50REIqpHY4C82bXP90qrLtXtkDxTZosYO3UpOwlA==
 
+"@types/cpu-features@^0.0.3":
+  version "0.0.3"
+  resolved "https://registry.yarnpkg.com/@types/cpu-features/-/cpu-features-0.0.3.tgz#a2bec076eb5dc95e0a6c23d1f8d389be4109b309"
+  integrity sha512-W/Ep+LDZoxMbCcH7LHRB3RN+TY4gbHl3u4uRq4XsxOh1gnpf5Lkwy5xWTBKSaJYQuMLW2XPAmRWA5Ucsy2EGVQ==
+
 "@types/datastore-level@^3.0.0":
   version "3.0.0"
   resolved "https://registry.npmjs.org/@types/datastore-level/-/datastore-level-3.0.0.tgz"
@@ -4493,7 +4540,7 @@ bigint-crypto-utils@^3.2.2:
   resolved "https://registry.yarnpkg.com/bigint-crypto-utils/-/bigint-crypto-utils-3.2.2.tgz#e30a49ec38357c6981cd3da5aaa6480b1f752ee4"
   integrity sha512-U1RbE3aX9ayCUVcIPHuPDPKcK3SFOXf93J1UK/iHlJuQB7bhagPIX06/CLpLEsDThJ7KA4Dhrnzynl+d2weTiw==
 
-bindings@^1.3.0, bindings@^1.5.0:
+bindings@^1.3.0:
   version "1.5.0"
   resolved "https://registry.npmjs.org/bindings/-/bindings-1.5.0.tgz"
   integrity sha512-p2q/t/mhvuOj/UeLlV6566GD/guowlr0hHxClI0W9m7MWYkL1F0hLo+0Aexs9HSPCtR1SXQ0TD3MMKrXZajbiQ==
@@ -4734,14 +4781,6 @@ byte-size@8.1.1:
   version "8.1.1"
   resolved "https://registry.yarnpkg.com/byte-size/-/byte-size-8.1.1.tgz#3424608c62d59de5bfda05d31e0313c6174842ae"
   integrity sha512-tUkzZWK0M/qdoLEqikxBWe4kumyuwjl3HO6zHTr4yEI23EojPtLYXdG1+AQY7MN0cGyNDvEaJ8wiYQm6P2bPxg==
-
-c-kzg@^4.1.0:
-  version "4.1.0"
-  resolved "https://registry.yarnpkg.com/c-kzg/-/c-kzg-4.1.0.tgz#56b8499c9c9c0d94a0831ce0dad32bb6bdb280e9"
-  integrity sha512-eliOBB2GKoT5Nk4LwN418O8kWfXCwepHj3kd6z0zKrzIdJbry0Y8IDPYzE5Dxw/fs386PGO6zQRqy8LSVtR5tQ==
-  dependencies:
-    bindings "^1.5.0"
-    node-addon-api "^8.3.1"
 
 cac@^6.7.14:
   version "6.7.14"
@@ -5379,6 +5418,14 @@ cosmiconfig@^8.2.0:
     js-yaml "^4.1.0"
     parse-json "^5.2.0"
     path-type "^4.0.0"
+
+cpu-features@^0.0.10:
+  version "0.0.10"
+  resolved "https://registry.yarnpkg.com/cpu-features/-/cpu-features-0.0.10.tgz#9aae536db2710c7254d7ed67cb3cbc7d29ad79c5"
+  integrity sha512-9IkYqtX3YHPCzoVg1Py+o9057a3i0fp7S530UWokCSaFVTc7CwXPRiOjRjBQQ18ZCNafx78YfnG+HALxtVmOGA==
+  dependencies:
+    buildcheck "~0.0.6"
+    nan "^2.19.0"
 
 cpu-features@~0.0.4:
   version "0.0.8"
@@ -9495,11 +9542,6 @@ node-addon-api@^3.2.1:
   version "3.2.1"
   resolved "https://registry.yarnpkg.com/node-addon-api/-/node-addon-api-3.2.1.tgz#81325e0a2117789c0128dab65e7e38f07ceba161"
   integrity sha512-mmcei9JghVNDYydghQmeDX8KoAm0FAiYyIcUt/N4nhyAipB17pllZQDOJD2fotxABnt4Mdz+dKTO7eftLg4d0A==
-
-node-addon-api@^8.3.1:
-  version "8.3.1"
-  resolved "https://registry.yarnpkg.com/node-addon-api/-/node-addon-api-8.3.1.tgz#53bc8a4f8dbde3de787b9828059da94ba9fd4eed"
-  integrity sha512-lytcDEdxKjGJPTLEfW4mYMigRezMlyJY8W4wxJK8zE533Jlb8L8dRuObJFWg2P+AuOIxoCgKF+2Oq4d4Zd0OUA==
 
 node-domexception@^1.0.0:
   version "1.0.0"

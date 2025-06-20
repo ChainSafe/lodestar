@@ -24,13 +24,14 @@ import {
   fulu,
   isSignedBlockContents,
 } from "@lodestar/types";
-import {fromHex, sleep, toRootHex} from "@lodestar/utils";
+import {fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
 import {
   BlobsSource,
   BlockInput,
   BlockInputAvailableData,
   BlockInputBlobs,
   BlockInputDataColumns,
+  BlockInputType,
   BlockSource,
   DataColumnsSource,
   ImportBlockOpts,
@@ -46,6 +47,7 @@ import {computeBlobSidecars, computeDataColumnSidecars} from "../../../../util/b
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {ApiModules} from "../../types.js";
+import {assertUniqueItems} from "../../utils.js";
 import {getBlockResponse, toBeaconHeaderResponse} from "./utils.js";
 
 type PublishBlockOpts = ImportBlockOpts;
@@ -239,6 +241,19 @@ export function getBeaconBlockApi({
     }
 
     chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRoot});
+
+    if (blockForImport.type === BlockInputType.availableData && blockForImport.blockData.fork === ForkName.fulu) {
+      const {dataColumns} = blockForImport.blockData;
+
+      for (const dataColumnSidecar of dataColumns) {
+        chain.emitter.emit(routes.events.EventType.dataColumnSidecar, {
+          blockRoot,
+          slot,
+          index: dataColumnSidecar.index,
+          kzgCommitments: dataColumnSidecar.kzgCommitments.map(toHex),
+        });
+      }
+    }
 
     // TODO: Validate block
     const delaySec =
@@ -523,6 +538,8 @@ export function getBeaconBlockApi({
     },
 
     async getBlobSidecars({blockId, indices}) {
+      assertUniqueItems(indices, "Duplicate indices provided");
+
       const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
       const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
 

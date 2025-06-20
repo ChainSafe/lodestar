@@ -139,7 +139,6 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
       return sszTypesFor(forkName);
     },
     getMaxBlobsPerBlock(epoch: Epoch): number {
-      // TODO Fulu: Max blobs of Deneb and Electra are hardcoded for fusaka devnet-0. Remove this for devnet-1
       const fork = this.getForkInfoAtEpoch(epoch).name;
 
       switch (fork) {
@@ -149,17 +148,8 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
           return config.MAX_BLOBS_PER_BLOCK;
       }
 
-      if (config.BLOB_SCHEDULE.length === 0) {
-        throw Error("Attempt to get MAX_BLOBS_PER_BLOCK from empty BLOB_SCHEDULE");
-      }
-
       // Sort by epoch in descending order to find the latest applicable value
-      const blobSchedule = [...config.BLOB_SCHEDULE].sort((a, b) => {
-        if (a.EPOCH !== b.EPOCH) {
-          return b.EPOCH - a.EPOCH;
-        }
-        return b.MAX_BLOBS_PER_BLOCK - a.MAX_BLOBS_PER_BLOCK;
-      });
+      const blobSchedule = [...config.BLOB_SCHEDULE].sort((a, b) => b.EPOCH - a.EPOCH);
 
       for (const entry of blobSchedule) {
         if (epoch >= entry.EPOCH) {
@@ -167,8 +157,7 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
         }
       }
 
-      // Only for testing. Should never reach this line on a public network.
-      return Math.min(...blobSchedule.map((e) => e.MAX_BLOBS_PER_BLOCK));
+      return config.MAX_BLOBS_PER_BLOCK_ELECTRA;
     },
     getMaxRequestBlobSidecars(fork: ForkName): number {
       return isForkPostElectra(fork) ? config.MAX_REQUEST_BLOB_SIDECARS_ELECTRA : config.MAX_REQUEST_BLOB_SIDECARS;

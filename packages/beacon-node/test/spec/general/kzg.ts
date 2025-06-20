@@ -1,9 +1,9 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {DasContextJs} from "@crate-crypto/node-eth-kzg";
 import {InputType} from "@lodestar/spec-test-util";
-import * as ckzg from "c-kzg";
 import {TestRunnerFn} from "../utils/types.js";
 
-ckzg.loadTrustedSetup(8);
+const kzg = DasContextJs.create({usePrecomp: true});
 
 const testFnByType: Record<string, (input: any, output?: any) => any> = {
   blob_to_kzg_commitment: blobToKzgCommitment,
@@ -50,7 +50,7 @@ type BlobToKzgCommitmentInput = {
 function blobToKzgCommitment(input: BlobToKzgCommitmentInput): string | null {
   const blob = fromHexString(input.blob);
   try {
-    return toHexString(ckzg.blobToKzgCommitment(blob));
+    return toHexString(kzg.blobToKzgCommitment(blob));
   } catch {
     return null;
   }
@@ -64,7 +64,7 @@ function computeKzgProof(input: ComputeKzgProofInput): string[] | null {
   const blob = fromHexString(input.blob);
   const z = fromHexString(input.z);
   try {
-    const [proof, polynomialResult] = ckzg.computeKzgProof(blob, z);
+    const [proof, polynomialResult] = kzg.computeKzgProof(blob, z);
     return [toHexString(proof), toHexString(polynomialResult)];
   } catch {
     return null;
@@ -79,7 +79,7 @@ function computeBlobKzgProof(input: ComputeBlobKzgProofInput): string | null {
   const blob = fromHexString(input.blob);
   const commitment = fromHexString(input.commitment);
   try {
-    return toHexString(ckzg.computeBlobKzgProof(blob, commitment));
+    return toHexString(kzg.computeBlobKzgProof(blob, commitment));
   } catch {
     return null;
   }
@@ -98,7 +98,7 @@ function verifyKzgProof(input: VerifyKzgProofInput): boolean | null {
   const proof = fromHexString(input.proof);
 
   try {
-    return ckzg.verifyKzgProof(commitment, z, y, proof);
+    return kzg.verifyKzgProof(commitment, z, y, proof);
   } catch {
     return null;
   }
@@ -115,7 +115,7 @@ function verifyBlobKzgProof(input: VerifyBlobKzgProofInput): boolean | null {
   const proof = fromHexString(input.proof);
 
   try {
-    return ckzg.verifyBlobKzgProof(blob, commitment, proof);
+    return kzg.verifyBlobKzgProof(blob, commitment, proof);
   } catch {
     return null;
   }
@@ -132,7 +132,7 @@ function verifyBlobKzgProofBatch(input: VerifyBlobKzgProofBatchInput): boolean |
   const proofs = input.proofs.map(fromHexString);
 
   try {
-    return ckzg.verifyBlobKzgProofBatch(blobs, commitments, proofs);
+    return kzg.verifyBlobKzgProofBatch(blobs, commitments, proofs);
   } catch {
     return null;
   }
@@ -144,7 +144,7 @@ type ComputeCellsInput = {
 function computeCells(input: ComputeCellsInput): string[] | null {
   const blob = fromHexString(input.blob);
   try {
-    const cells = ckzg.computeCells(blob);
+    const cells = kzg.computeCells(blob);
     return cells.map(toHexString);
   } catch {
     return null;
@@ -157,7 +157,7 @@ type ComputeCellsAndKzgProofsInput = {
 function computeCellsAndKzgProofs(input: ComputeCellsAndKzgProofsInput): [string[], string[]] | null {
   const blob = fromHexString(input.blob);
   try {
-    const [cells, proofs] = ckzg.computeCellsAndKzgProofs(blob);
+    const {cells, proofs} = kzg.computeCellsAndKzgProofs(blob);
     return [cells.map(toHexString), proofs.map(toHexString)];
   } catch {
     return null;
@@ -169,10 +169,10 @@ type RecoverCellsAndKzgProofsInput = {
   cells: string[];
 };
 function recoverCellsAndKzgProofs(input: RecoverCellsAndKzgProofsInput): [string[], string[]] | null {
-  const cellIndices = input.cell_indices.map(Number);
+  const cellIndices = input.cell_indices.map(BigInt);
   const cells = input.cells.map(fromHexString);
   try {
-    const [recoveredCells, recoveredProofs] = ckzg.recoverCellsAndKzgProofs(cellIndices, cells);
+    const {cells: recoveredCells, proofs: recoveredProofs} = kzg.recoverCellsAndKzgProofs(cellIndices, cells);
     return [recoveredCells.map(toHexString), recoveredProofs.map(toHexString)];
   } catch {
     return null;
@@ -187,11 +187,11 @@ type VerifyCellKzgProofBatchInput = {
 };
 function verifyCellKzgProofBatch(input: VerifyCellKzgProofBatchInput): boolean | null {
   const commitments = input.commitments.map(fromHexString);
-  const cellIndices = input.cell_indices.map(Number);
+  const cellIndices = input.cell_indices.map(BigInt);
   const cells = input.cells.map(fromHexString);
   const proofs = input.proofs.map(fromHexString);
   try {
-    return ckzg.verifyCellKzgProofBatch(commitments, cellIndices, cells, proofs);
+    return kzg.verifyCellKzgProofBatch(commitments, cellIndices, cells, proofs);
   } catch {
     return null;
   }

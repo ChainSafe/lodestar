@@ -7,8 +7,6 @@ describe("getMaxBlobsPerBlock", () => {
 
   beforeAll(() => {
     // Force tests to run on fulu fork
-    // TODO Fulu: getMaxBlobsPerBlock's result is hardcoded for deneb and electra in fusaka devnet-0. So we need to define
-    // defaultConfig to force tests to run on fulu to get expected result. Remove this after devnet-0.
     defaultConfig = {
       ...chainConfig,
       ALTAIR_FORK_EPOCH: 0,
@@ -20,10 +18,10 @@ describe("getMaxBlobsPerBlock", () => {
     };
   });
 
-  it("should throw an error if BLOB_SCHEDULE is empty", () => {
+  it("should return MAX_BLOBS_PER_BLOCK_ELECTRA if BLOB_SCHEDULE is empty", () => {
     const config = createForkConfig({...defaultConfig, BLOB_SCHEDULE: []});
 
-    expect(() => config.getMaxBlobsPerBlock(0)).toThrowError();
+    expect(config.getMaxBlobsPerBlock(0)).toEqual(defaultConfig.MAX_BLOBS_PER_BLOCK_ELECTRA);
   });
 
   it("should return same value for passed epochs if there is only a single BLOB_SCHEDULE entry", () => {
@@ -64,7 +62,7 @@ describe("getMaxBlobsPerBlock", () => {
         {EPOCH: 10, MAX_BLOBS_PER_BLOCK: 5},
       ],
     });
-    expect(config.getMaxBlobsPerBlock(0)).toEqual(1);
+    expect(config.getMaxBlobsPerBlock(5)).toEqual(3);
     expect(config.getMaxBlobsPerBlock(6)).toEqual(3);
     expect(config.getMaxBlobsPerBlock(10)).toEqual(5);
     expect(config.getMaxBlobsPerBlock(14)).toEqual(5);
@@ -72,7 +70,7 @@ describe("getMaxBlobsPerBlock", () => {
     expect(config.getMaxBlobsPerBlock(16)).toEqual(1);
   });
 
-  it("should return minimum value if epoch is below lowest configured BLOB_SCHEDULE epoch", () => {
+  it("should return MAX_BLOBS_PER_BLOCK_ELECTRA if epoch is below lowest configured BLOB_SCHEDULE epoch", () => {
     const config = createForkConfig({
       ...defaultConfig,
       BLOB_SCHEDULE: [
@@ -81,6 +79,6 @@ describe("getMaxBlobsPerBlock", () => {
         {EPOCH: 15, MAX_BLOBS_PER_BLOCK: 2},
       ],
     });
-    expect(config.getMaxBlobsPerBlock(0)).toEqual(2);
+    expect(config.getMaxBlobsPerBlock(0)).toEqual(defaultConfig.MAX_BLOBS_PER_BLOCK_ELECTRA);
   });
 });

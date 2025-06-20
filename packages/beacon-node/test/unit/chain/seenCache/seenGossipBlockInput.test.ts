@@ -41,7 +41,7 @@ describe("SeenGossipBlockInput", () => {
   const emitter = new ChainEventEmitter();
 
   const seenGossipBlockInput = new SeenGossipBlockInput(
-    new CustodyConfig(nodeId, config),
+    new CustodyConfig(nodeId, config, null),
     executionEngine,
     emitter,
     testLogger("seenGossipBlockInput")

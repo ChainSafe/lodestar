@@ -126,6 +126,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       buckets: [1, 2, 3, 5, 7, 10, 20, 30, 50, 100],
     }),
 
+    // TODO: wrap to blockProduction
     blockProductionTime: register.histogram<{source: ProducedBlockSource}>({
       name: "beacon_block_production_seconds",
       help: "Full runtime of block production",
@@ -164,6 +165,16 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       help: "Count of all aggregated attestations in our produced block",
       buckets: [1, 2, 4, 6, 8],
       labelNames: ["source"],
+    }),
+    blockProductionConsensusBlockValue: register.histogram<{source: ProducedBlockSource}>({
+      name: "beacon_block_production_consensus_block_value",
+      help: "Consensus block value denominated in ETH of produced blocks",
+      buckets: [0.001, 0.005, 0.01, 0.03, 0.05, 0.07, 0.1],
+      labelNames: ["source"],
+    }),
+    blockProductionSlotDelta: register.gauge({
+      name: "beacon_block_production_slot_delta",
+      help: "Slot delta of produced slot compared to parent slot",
     }),
     blockProductionExecutionPayloadValue: register.histogram<{source: ProducedBlockSource}>({
       name: "beacon_block_production_execution_payload_value",
@@ -359,7 +370,24 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       kzgVerificationDataColumnBatchTime: register.histogram({
         name: "beacon_kzg_verification_data_column_batch_seconds",
         help: "Runtime of batched data column kzg verification",
-        buckets: [0.002, 0.004, 0.006, 0.008, 0.01, 0.012, 0.015, 0.02, 0.03, 0.05, 0.07],
+        buckets: [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 1, 2, 5],
+      }),
+      getBlobsV2Requests: register.counter({
+        name: "beacon_engine_getBlobsV2_requests_total",
+        help: "Total number of engine_getBlobsV2 requests sent",
+      }),
+      getBlobsV2Responses: register.counter({
+        name: "beacon_engine_getBlobsV2_responses_total",
+        help: "Total number of engine_getBlobsV2 successful responses received",
+      }),
+      getBlobsV2RequestDuration: register.histogram({
+        name: "beacon_engine_getBlobsV2_request_duration_seconds",
+        help: "Duration of engine_getBlobsV2 requests",
+        buckets: [0.01, 0.05, 0.1, 0.5, 1, 2.5, 5, 7.5],
+      }),
+      custodyGroupCount: register.gauge({
+        name: "beacon_custody_groups",
+        help: "Total number of custody groups within a node",
       }),
     },
 

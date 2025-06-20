@@ -6,13 +6,12 @@ import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {ValidatorIndex} from "@lodestar/types";
 import {bigIntToBytes} from "@lodestar/utils";
-/* eslint-disable @typescript-eslint/naming-convention */
-import {afterEach, beforeAll, beforeEach, describe, expect, it} from "vitest";
+import {afterEach, beforeEach, describe, expect, it} from "vitest";
 
 import {validateDataColumnsSidecars} from "../../../src/chain/validation/dataColumnSidecar.js";
 import {computeDataColumnSidecars} from "../../../src/util/blobs.js";
 import {CustodyConfig, getDataColumns, getValidatorsCustodyRequirement} from "../../../src/util/dataColumns.js";
-import {ckzg, initCKZG, loadEthereumTrustedSetup} from "../../../src/util/kzg.js";
+import {kzg} from "../../../src/util/kzg.js";
 import {getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
 import {generateRandomBlob, transactionForKzgCommitment} from "../../utils/kzg.js";
 
@@ -117,7 +116,7 @@ describe("CustodyConfig", () => {
   });
 
   it("custody columns present in sampled columns", () => {
-    const custodyConfig = new CustodyConfig(nodeId, config);
+    const custodyConfig = new CustodyConfig(nodeId, config, null);
     const {custodyColumns} = custodyConfig;
     const sampledColumns = custodyConfig.sampledColumns;
 
@@ -130,7 +129,7 @@ describe("CustodyConfig", () => {
 
   describe("updateCustodyRequirement", () => {
     it("should update target and sampled but not advertised", () => {
-      const custodyConfig = new CustodyConfig(nodeId, config);
+      const custodyConfig = new CustodyConfig(nodeId, config, null);
 
       expect(custodyConfig.sampledGroupCount).toBe(8);
       expect(custodyConfig.targetCustodyGroupCount).toBe(4);
@@ -144,7 +143,7 @@ describe("CustodyConfig", () => {
     });
 
     it("should update advertised but not target or sampled", () => {
-      const custodyConfig = new CustodyConfig(nodeId, config);
+      const custodyConfig = new CustodyConfig(nodeId, config, null);
 
       expect(custodyConfig.sampledGroupCount).toBe(8);
       expect(custodyConfig.targetCustodyGroupCount).toBe(4);
@@ -190,12 +189,7 @@ describe("data column sidecars", () => {
     }
   });
 
-  beforeAll(async () => {
-    await initCKZG();
-    loadEthereumTrustedSetup();
-  });
-
-  it("validateDataColumnsSidecars", () => {
+  it("validateDataColumnsSidecars", async () => {
     const chainConfig = createChainForkConfig({
       ALTAIR_FORK_EPOCH: 0,
       BELLATRIX_FORK_EPOCH: 0,
@@ -212,8 +206,8 @@ describe("data column sidecars", () => {
 
     const slot = 0;
     const blobs = [generateRandomBlob(), generateRandomBlob()];
-    const kzgCommitments = blobs.map((blob) => ckzg.blobToKzgCommitment(blob));
-    const kzgProofs = blobs.flatMap((blob) => ckzg.computeCellsAndKzgProofs(blob)[1]);
+    const kzgCommitments = blobs.map((blob) => kzg.blobToKzgCommitment(blob));
+    const kzgProofs = blobs.flatMap((blob) => kzg.computeCellsAndKzgProofs(blob).proofs);
 
     const signedBeaconBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
 
@@ -230,10 +224,12 @@ describe("data column sidecars", () => {
     expect(columnSidecars.length).toEqual(NUMBER_OF_COLUMNS);
     expect(columnSidecars[0].column.length).toEqual(blobs.length);
 
-    expect(validateDataColumnsSidecars(slot, blockRoot, kzgCommitments, columnSidecars, null)).toBeUndefined();
+    await expect(
+      validateDataColumnsSidecars(slot, blockRoot, kzgCommitments, columnSidecars, null)
+    ).resolves.toBeUndefined();
   });
 
-  it("fail for no blob commitments in validateDataColumnsSidecars", () => {
+  it("fail for no blob commitments in validateDataColumnsSidecars", async () => {
     const chainConfig = createChainForkConfig({
       ALTAIR_FORK_EPOCH: 0,
       BELLATRIX_FORK_EPOCH: 0,
@@ -250,8 +246,8 @@ describe("data column sidecars", () => {
 
     const slot = 0;
     const blobs = [generateRandomBlob(), generateRandomBlob()];
-    const kzgCommitments = blobs.map((blob) => ckzg.blobToKzgCommitment(blob));
-    const kzgProofs = blobs.flatMap((blob) => ckzg.computeCellsAndKzgProofs(blob)[1]);
+    const kzgCommitments = blobs.map((blob) => kzg.blobToKzgCommitment(blob));
+    const kzgProofs = blobs.flatMap((blob) => kzg.computeCellsAndKzgProofs(blob).proofs);
 
     const signedBeaconBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
 
@@ -268,7 +264,7 @@ describe("data column sidecars", () => {
     expect(columnSidecars.length).toEqual(NUMBER_OF_COLUMNS);
     expect(columnSidecars[0].column.length).toEqual(blobs.length);
 
-    expect(() => validateDataColumnsSidecars(slot, blockRoot, [], columnSidecars, null)).toThrow(
+    await expect(validateDataColumnsSidecars(slot, blockRoot, [], columnSidecars, null)).rejects.toThrow(
       `Invalid data column sidecar slot=${slot}`
     );
   });

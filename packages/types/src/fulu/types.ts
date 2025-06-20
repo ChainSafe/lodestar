@@ -14,6 +14,8 @@ export type DataColumnSidecar = ValueOf<typeof ssz.DataColumnSidecar>;
 export type DataColumnSidecars = ValueOf<typeof ssz.DataColumnSidecars>;
 export type MatrixEntry = ValueOf<typeof ssz.MatrixEntry>;
 
+export type ProposerLookahead = ValueOf<typeof ssz.ProposerLookahead>;
+
 export type DataColumnsByRootIdentifier = ValueOf<typeof ssz.DataColumnsByRootIdentifier>;
 export type DataColumnSidecarsByRootRequest = ValueOf<typeof ssz.DataColumnSidecarsByRootRequest>;
 export type DataColumnSidecarsByRangeRequest = ValueOf<typeof ssz.DataColumnSidecarsByRangeRequest>;
