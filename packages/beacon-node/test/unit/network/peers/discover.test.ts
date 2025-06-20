@@ -1,6 +1,6 @@
-import {describe, it, expect} from "vitest";
-import {getValidPeerId} from "../../../utils/peer.js";
+import {describe, expect, it} from "vitest";
 import {peerIdFromString} from "../../../../src/util/peerId.js";
+import {getValidPeerId} from "../../../utils/peer.js";
 
 describe("network / peers / discover", () => {
   it("PeerId API", () => {

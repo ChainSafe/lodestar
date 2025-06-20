@@ -1,16 +1,16 @@
-import {toGindex, Tree} from "@chainsafe/persistent-merkle-tree";
-import {BitArray} from "@chainsafe/ssz";
 import {SecretKey} from "@chainsafe/blst";
-import {altair, phase0, ssz} from "@lodestar/types";
-import {DOMAIN_DEPOSIT, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
+import {Tree, toGindex} from "@chainsafe/persistent-merkle-tree";
+import {BitArray} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
+import {DOMAIN_DEPOSIT, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
+import {altair, phase0, ssz} from "@lodestar/types";
 import {
+  CachedBeaconStateAllForks,
+  CachedBeaconStateAltair,
+  ZERO_HASH,
   computeDomain,
   computeEpochAtSlot,
   computeSigningRoot,
-  ZERO_HASH,
-  CachedBeaconStateAllForks,
-  CachedBeaconStateAltair,
 } from "../../../src/index.js";
 import {getBlockRoot, getBlockRootAtSlot} from "../../../src/index.js";
 
@@ -206,9 +206,7 @@ function getDeposits(preState: CachedBeaconStateAllForks, count: number): phase0
 
   // Fill depositRootViewDU up to depositCount
   // Instead of actually filling it, just mutate the length to allow .set()
-  // biome-ignore lint/complexity/useLiteralKeys: It is a protected attribute
   depositRootViewDU["_length"] = depositCount + count;
-  // biome-ignore lint/complexity/useLiteralKeys: It is a protected attribute
   depositRootViewDU["dirtyLength"] = true;
 
   for (let i = 0; i < count; i++) {

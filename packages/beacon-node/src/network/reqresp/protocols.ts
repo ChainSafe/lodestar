@@ -1,7 +1,8 @@
+import {BeaconConfig, ForkDigestContext} from "@lodestar/config";
+import {ForkName} from "@lodestar/params";
 import {ContextBytesFactory, ContextBytesType, Encoding} from "@lodestar/reqresp";
-import {ForkDigestContext} from "@lodestar/config";
-import {ProtocolNoHandler, ReqRespMethod, Version, requestSszTypeByMethod, responseSszTypeByMethod} from "./types.js";
 import {rateLimitQuotas} from "./rateLimit.js";
+import {ProtocolNoHandler, ReqRespMethod, Version, requestSszTypeByMethod, responseSszTypeByMethod} from "./types.js";
 
 export const Goodbye = toProtocol({
   method: ReqRespMethod.Goodbye,
@@ -100,13 +101,13 @@ type ProtocolSummary = {
 };
 
 function toProtocol(protocol: ProtocolSummary) {
-  return (config: ForkDigestContext): ProtocolNoHandler => ({
+  return (fork: ForkName, config: BeaconConfig): ProtocolNoHandler => ({
     method: protocol.method,
     version: protocol.version,
     encoding: Encoding.SSZ_SNAPPY,
     contextBytes: toContextBytes(protocol.contextBytesType, config),
-    inboundRateLimits: rateLimitQuotas[protocol.method],
-    requestSizes: requestSszTypeByMethod[protocol.method],
+    inboundRateLimits: rateLimitQuotas(fork, config)[protocol.method],
+    requestSizes: requestSszTypeByMethod(fork, config)[protocol.method],
     responseSizes: (fork) => responseSszTypeByMethod[protocol.method](fork, protocol.version),
   });
 }

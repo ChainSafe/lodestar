@@ -1,7 +1,7 @@
 import {writeEncodedPayload} from "../encodingStrategies/index.js";
-import {encodeErrorMessage} from "../utils/index.js";
-import {ContextBytesType, ContextBytesFactory, MixedProtocol, Protocol, ResponseOutgoing} from "../types.js";
 import {RespStatus, RpcResponseStatusError} from "../interface.js";
+import {ContextBytesFactory, ContextBytesType, MixedProtocol, Protocol, ResponseOutgoing} from "../types.js";
+import {encodeErrorMessage} from "../utils/index.js";
 
 const SUCCESS_BUFFER = Buffer.from([RespStatus.SUCCESS]);
 

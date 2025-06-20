@@ -4,10 +4,10 @@ import {config} from "@lodestar/config/default";
 import {NetworkName} from "@lodestar/config/networks.js";
 import {phase0, ssz} from "@lodestar/types";
 import {
-  computeEpochAtSlot,
-  computeStartSlotAtEpoch,
   AttesterFlags,
   beforeProcessEpoch,
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
   parseAttesterFlags,
   processSlots,
 } from "../../src/index.js";
@@ -152,7 +152,7 @@ async function analyzeEpochs(network: NetworkName, fromEpoch?: number): Promise<
     // processSlashingsAllForks: function of process.indicesToSlash
     // processSlashingsReset: free
     // -- electra
-    // processPendingBalanceDeposits: -
+    // processPendingDeposits: -
     // processPendingConsolidations: -
     // -- altair
     // processInactivityUpdates: -

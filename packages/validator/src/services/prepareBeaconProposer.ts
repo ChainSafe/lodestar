@@ -1,10 +1,10 @@
-import {Epoch, bellatrix} from "@lodestar/types";
 import {ApiClient, routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {Epoch, bellatrix} from "@lodestar/types";
 
-import {IClock, LoggerVc, batchItems} from "../util/index.js";
 import {Metrics} from "../metrics.js";
+import {IClock, LoggerVc, batchItems} from "../util/index.js";
 import {ValidatorStore} from "./validatorStore.js";
 
 const REGISTRATION_CHUNK_SIZE = 512;

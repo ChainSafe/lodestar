@@ -1,10 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
-import {beforeAll, afterAll} from "vitest";
 import {ContainerType, Type} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
-import {describeDirectorySpecTest, InputType, loadYamlFile} from "../../../src/single.js";
+import {afterAll, beforeAll} from "vitest";
+import {InputType, describeDirectorySpecTest, loadYamlFile} from "../../../src/single.js";
 
 // Global variable __dirname no longer available in ES6 modules.
 // Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules

@@ -1,8 +1,8 @@
-import {expect} from "vitest";
-import {SSZTypesFor, ssz} from "@lodestar/types";
 import {ForkAll, ForkName} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
+import {SSZTypesFor, ssz} from "@lodestar/types";
+import {expect} from "vitest";
 
 /** Compare each field in BeaconState to help debug failed test easier. */
 export function expectEqualBeaconState(
@@ -16,8 +16,7 @@ export function expectEqualBeaconState(
 
   const stateType = ssz[fork].BeaconState as SSZTypesFor<ForkAll, "BeaconState">;
   if (!stateType.equals(actual, expected)) {
-    expect(stateType.toJson(actual)).to.deep.equal(stateType.toJson(expected));
-    throw Error("Wrong state");
+    expect(stateType.toJson(actual)).toEqualWithMessage(stateType.toJson(expected), "Wrong state");
   }
 }
 

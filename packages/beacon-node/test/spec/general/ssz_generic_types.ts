@@ -1,12 +1,12 @@
 import {
-  Type,
-  BooleanType,
-  UintBigintType,
-  UintNumberType,
-  BitVectorType,
   BitListType,
+  BitVectorType,
+  BooleanType,
   ContainerType,
   ListBasicType,
+  Type,
+  UintBigintType,
+  UintNumberType,
   VectorBasicType,
   VectorCompositeType,
 } from "@chainsafe/ssz";

@@ -1,6 +1,6 @@
 import {fromHex as b} from "@lodestar/utils";
-import {ChainConfig} from "../types.js";
 import {chainConfig as mainnet} from "../configs/mainnet.js";
+import {ChainConfig} from "../types.js";
 
 // Sepolia beacon chain config:
 // https://github.com/eth-clients/sepolia/blob/main/metadata/config.yaml
@@ -33,10 +33,20 @@ export const sepoliaChainConfig: ChainConfig = {
   // Deneb
   DENEB_FORK_VERSION: b("0x90000073"),
   DENEB_FORK_EPOCH: 132608,
+  // Electra
+  ELECTRA_FORK_VERSION: b("0x90000074"),
+  ELECTRA_FORK_EPOCH: 222464,
+  // Fulu
+  FULU_FORK_VERSION: b("0x90000075"),
+  FULU_FORK_EPOCH: Infinity,
 
   // Deposit contract
   // ---------------------------------------------------------------
   DEPOSIT_CHAIN_ID: 11155111,
   DEPOSIT_NETWORK_ID: 11155111,
   DEPOSIT_CONTRACT_ADDRESS: b("0x7f02C3E3c98b133055B8B348B2Ac625669Ed295D"),
+
+  // Blob Scheduling
+  // ---------------------------------------------------------------
+  BLOB_SCHEDULE: [],
 };

@@ -1,11 +1,11 @@
-import {capella} from "@lodestar/types";
 import {
-  isValidBlsToExecutionChange,
-  getBlsToExecutionChangeSignatureSet,
   CachedBeaconStateCapella,
+  getBlsToExecutionChangeSignatureSet,
+  isValidBlsToExecutionChange,
 } from "@lodestar/state-transition";
-import {IBeaconChain} from "../index.js";
+import {capella} from "@lodestar/types";
 import {BlsToExecutionChangeError, BlsToExecutionChangeErrorCode, GossipAction} from "../errors/index.js";
+import {IBeaconChain} from "../index.js";
 
 export async function validateApiBlsToExecutionChange(
   chain: IBeaconChain,

@@ -1,4 +1,4 @@
-import {describe, it, expect, beforeAll} from "vitest";
+import {beforeAll, describe, expect, it} from "vitest";
 import {Metrics} from "../../../src/metrics/index.js";
 import {DynamicProperty, MetricProperty, StaticProperty} from "../../../src/monitoring/properties.js";
 import {JsonType} from "../../../src/monitoring/types.js";

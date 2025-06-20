@@ -1,8 +1,8 @@
-import {expect} from "vitest";
-import {LightClientUpdate, altair, ssz, sszTypesFor} from "@lodestar/types";
-import {isForkLightClient} from "@lodestar/params";
+import {LightClientUpdateSummary, isBetterUpdate, toLightClientUpdateSummary} from "@lodestar/light-client/spec";
+import {isForkPostAltair} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
-import {isBetterUpdate, LightClientUpdateSummary, toLightClientUpdateSummary} from "@lodestar/light-client/spec";
+import {LightClientUpdate, altair, ssz, sszTypesFor} from "@lodestar/types";
+import {expect} from "vitest";
 import {TestRunnerFn} from "../../utils/types.js";
 
 // https://github.com/ethereum/consensus-specs/blob/da3f5af919be4abb5a6db5a80b235deb8b4b5cba/tests/formats/light_client/update_ranking.md
@@ -51,7 +51,7 @@ newUpdate = ${renderUpdate(newUpdate)}
         meta: InputType.YAML,
       },
       sszTypes: {
-        [UPDATES_FILE_NAME]: isForkLightClient(fork)
+        [UPDATES_FILE_NAME]: isForkPostAltair(fork)
           ? sszTypesFor(fork).LightClientUpdate
           : ssz.altair.LightClientUpdate,
       },

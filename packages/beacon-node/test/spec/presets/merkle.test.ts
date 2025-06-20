@@ -1,15 +1,15 @@
 import path from "node:path";
-import {expect} from "vitest";
 import {ProofType, SingleProof, Tree} from "@chainsafe/persistent-merkle-tree";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {ssz} from "@lodestar/types";
-import {BeaconStateAllForks} from "@lodestar/state-transition";
-import {InputType} from "@lodestar/spec-test-util";
-import {verifyMerkleBranch} from "@lodestar/utils";
 import {ACTIVE_PRESET} from "@lodestar/params";
-import {RunnerType, TestRunnerFn} from "../utils/types.js";
+import {InputType} from "@lodestar/spec-test-util";
+import {BeaconStateAllForks} from "@lodestar/state-transition";
+import {ssz} from "@lodestar/types";
+import {verifyMerkleBranch} from "@lodestar/utils";
+import {expect} from "vitest";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
+import {RunnerType, TestRunnerFn} from "../utils/types.js";
 
 const merkle: TestRunnerFn<MerkleTestCase, IProof> = (fork) => {
   return {

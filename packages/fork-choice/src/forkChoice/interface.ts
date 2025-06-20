@@ -1,15 +1,18 @@
-import {EffectiveBalanceIncrements} from "@lodestar/state-transition";
+import {DataAvailabilityStatus, EffectiveBalanceIncrements} from "@lodestar/state-transition";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {Epoch, Slot, ValidatorIndex, phase0, Root, RootHex, BeaconBlock, IndexedAttestation} from "@lodestar/types";
 import {
-  ProtoBlock,
-  MaybeValidExecutionStatus,
-  LVHExecResponse,
-  ProtoNode,
-  DataAvailabilityStatus,
-} from "../protoArray/interface.js";
-import {CheckpointWithHex} from "./store.js";
+  AttesterSlashing,
+  BeaconBlock,
+  Epoch,
+  IndexedAttestation,
+  Root,
+  RootHex,
+  Slot,
+  ValidatorIndex,
+} from "@lodestar/types";
+import {LVHExecResponse, MaybeValidExecutionStatus, ProtoBlock, ProtoNode} from "../protoArray/interface.js";
 import {UpdateAndGetHeadOpt} from "./forkChoice.js";
+import {CheckpointWithHex} from "./store.js";
 
 export type CheckpointHex = {
   epoch: Epoch;
@@ -164,7 +167,7 @@ export interface IForkChoice {
    *
    * https://github.com/ethereum/consensus-specs/blob/v1.2.0-rc.3/specs/phase0/fork-choice.md#on_attester_slashing
    */
-  onAttesterSlashing(slashing: phase0.AttesterSlashing): void;
+  onAttesterSlashing(slashing: AttesterSlashing): void;
   getLatestMessage(validatorIndex: ValidatorIndex): LatestMessage | undefined;
   /**
    * Call `onTick` for all slots between `fcStore.getCurrentSlot()` and the provided `currentSlot`.
@@ -214,6 +217,10 @@ export interface IForkChoice {
    * The same to iterateAncestorBlocks but this gets non-ancestor nodes instead of ancestor nodes.
    */
   getAllNonAncestorBlocks(blockRoot: RootHex): ProtoBlock[];
+  /**
+   * Returns both ancestor and non-ancestor blocks in a single traversal.
+   */
+  getAllAncestorAndNonAncestorBlocks(blockRoot: RootHex): {ancestors: ProtoBlock[]; nonAncestors: ProtoBlock[]};
   getCanonicalBlockAtSlot(slot: Slot): ProtoBlock | null;
   getCanonicalBlockClosestLteSlot(slot: Slot): ProtoBlock | null;
   /**

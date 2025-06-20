@@ -1,6 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {chainConfigToJson, ChainConfig, specValuesToJson} from "@lodestar/config";
+import {ChainConfig, chainConfigToJson, specValuesToJson} from "@lodestar/config";
 import {activePreset, presetToJson} from "@lodestar/params";
 import {ApiModules} from "../types.js";
 import {specConstants} from "./constants.js";
@@ -15,10 +15,17 @@ import {specConstants} from "./constants.js";
  *    [altair](https://github.com/ethereum/consensus.0-specs/blob/v1.1.10/presets/mainnet/altair.yaml) values
  *  - Configuration for the beacon node, for example the [mainnet](https://github.com/ethereum/consensus-specs/blob/v1.1.10/configs/mainnet.yaml) values
  */
-export function renderJsonSpec(config: ChainConfig): Record<string, string> {
+export function renderJsonSpec(config: ChainConfig): routes.config.Spec {
   const configJson = chainConfigToJson(config);
   const presetJson = presetToJson(activePreset);
   const constantsJson = specValuesToJson(specConstants);
+
+  // TODO Fulu: remove this check once interop issues are resolved
+  // see https://github.com/attestantio/go-eth2-client/issues/230
+  if (config.FULU_FORK_EPOCH === Infinity) {
+    delete configJson.BLOB_SCHEDULE;
+  }
+
   return {...configJson, ...presetJson, ...constantsJson};
 }
 

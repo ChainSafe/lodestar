@@ -1,28 +1,26 @@
-import {describe, it, afterEach, expect} from "vitest";
-import all from "it-all";
-import {Libp2p, createLibp2p} from "libp2p";
-import {tcp} from "@libp2p/tcp";
-import {mplex} from "@libp2p/mplex";
-import {Multiaddr, multiaddr} from "@multiformats/multiaddr";
 import {noise} from "@chainsafe/libp2p-noise";
-import {ssz} from "@lodestar/types";
+import {mplex} from "@libp2p/mplex";
+import {tcp} from "@libp2p/tcp";
 import {createBeaconConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
+import {ssz} from "@lodestar/types";
 import {fromHex, sleep, toHex} from "@lodestar/utils";
+import {Multiaddr, multiaddr} from "@multiformats/multiaddr";
+import all from "it-all";
+import {Libp2p, createLibp2p} from "libp2p";
+import {afterEach, describe, expect, it} from "vitest";
+import {ZERO_HASH} from "../../../src/constants/constants.js";
 import {
   NetworkEventBus,
   PeerRpcScoreStore,
   ReqRespBeaconNode,
   ReqRespBeaconNodeModules,
 } from "../../../src/network/index.js";
-import {PeersData} from "../../../src/network/peers/peersData.js";
-import {ZERO_HASH} from "../../../src/constants/constants.js";
 import {MetadataController} from "../../../src/network/metadata.js";
-import {testLogger} from "../../utils/logger.js";
+import {PeersData} from "../../../src/network/peers/peersData.js";
 import {GetReqRespHandlerFn} from "../../../src/network/reqresp/types.js";
 import {LocalStatusCache} from "../../../src/network/statusCache.js";
-
-/* eslint-disable require-yield */
+import {testLogger} from "../../utils/logger.js";
 
 describe("reqresp encoder", () => {
   let port = 60000;
@@ -101,7 +99,7 @@ describe("reqresp encoder", () => {
 
   it("assert correct handler switch between metadata v2 and v1", async () => {
     const {multiaddr: serverMultiaddr, reqresp} = await getReqResp();
-    reqresp.registerProtocolsAtFork(ForkName.phase0);
+    reqresp.registerProtocolsAtBoundary({fork: ForkName.phase0});
     await sleep(0); // Sleep to resolve register handler promises
 
     reqresp["metadataController"].attnets.set(0, true);
@@ -136,7 +134,7 @@ describe("reqresp encoder", () => {
           };
         }
     );
-    reqresp.registerProtocolsAtFork(ForkName.altair);
+    reqresp.registerProtocolsAtBoundary({fork: ForkName.altair});
     await sleep(0); // Sleep to resolve register handler promises
 
     const {libp2p: dialer} = await getLibp2p();

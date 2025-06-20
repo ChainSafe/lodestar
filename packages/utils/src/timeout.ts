@@ -1,5 +1,5 @@
 import {anySignal} from "any-signal";
-import {TimeoutError} from "./errors.js";
+import {ErrorAborted, TimeoutError} from "./errors.js";
 import {sleep} from "./sleep.js";
 
 export async function withTimeout<T>(
@@ -7,6 +7,10 @@ export async function withTimeout<T>(
   timeoutMs: number,
   signal?: AbortSignal
 ): Promise<T> {
+  if (signal?.aborted) {
+    throw new ErrorAborted();
+  }
+
   const timeoutAbortController = new AbortController();
   const timeoutAndParentSignal = anySignal([timeoutAbortController.signal, ...(signal ? [signal] : [])]);
 

@@ -1,9 +1,9 @@
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {Root} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
-import {IEth1ForBlockProduction, Eth1DataAndDeposits, IEth1Provider, PowMergeBlock, TDProgress} from "./interface.js";
 import {Eth1DepositDataTracker, Eth1DepositDataTrackerModules} from "./eth1DepositDataTracker.js";
 import {Eth1MergeBlockTracker, Eth1MergeBlockTrackerModules} from "./eth1MergeBlockTracker.js";
+import {Eth1DataAndDeposits, IEth1ForBlockProduction, IEth1Provider, PowMergeBlock, TDProgress} from "./interface.js";
 import {Eth1Options} from "./options.js";
 import {Eth1Provider} from "./provider/eth1Provider.js";
 export {Eth1Provider};
@@ -105,6 +105,10 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
     this.eth1MergeBlockTracker.startPollingMergeBlock();
   }
 
+  isPollingEth1Data(): boolean {
+    return this.eth1DepositDataTracker?.isPollingEth1Data() ?? false;
+  }
+
   stopPollingEth1Data(): void {
     this.eth1DepositDataTracker?.stopPollingEth1Data();
   }
@@ -137,6 +141,10 @@ export class Eth1ForBlockProductionDisabled implements IEth1ForBlockProduction {
 
   getTDProgress(): TDProgress | null {
     return null;
+  }
+
+  isPollingEth1Data(): boolean {
+    return false;
   }
 
   startPollingMergeBlock(): void {

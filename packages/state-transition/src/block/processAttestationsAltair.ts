@@ -1,8 +1,9 @@
 import {byteArrayEquals} from "@chainsafe/ssz";
-import {Epoch, Attestation, phase0} from "@lodestar/types";
+import {Attestation, Epoch, phase0} from "@lodestar/types";
 import {intSqrt} from "@lodestar/utils";
 
 import {
+  ForkSeq,
   MIN_ATTESTATION_INCLUSION_DELAY,
   PROPOSER_WEIGHT,
   SLOTS_PER_EPOCH,
@@ -13,12 +14,12 @@ import {
   TIMELY_TARGET_FLAG_INDEX,
   TIMELY_TARGET_WEIGHT,
   WEIGHT_DENOMINATOR,
-  ForkSeq,
 } from "@lodestar/params";
-import {increaseBalance, verifySignatureSet} from "../util/index.js";
-import {CachedBeaconStateAltair} from "../types.js";
-import {RootCache} from "../util/rootCache.js";
+import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {getAttestationWithIndicesSignatureSet} from "../signatureSets/indexedAttestation.js";
+import {CachedBeaconStateAltair} from "../types.js";
+import {increaseBalance, verifySignatureSet} from "../util/index.js";
+import {RootCache} from "../util/rootCache.js";
 import {checkpointToStr, isTimelyTarget, validateAttestation} from "./processAttestationPhase0.js";
 
 const PROPOSER_REWARD_DOMINATOR = ((WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIGHT_DENOMINATOR) / PROPOSER_WEIGHT;
@@ -33,7 +34,8 @@ export function processAttestationsAltair(
   fork: ForkSeq,
   state: CachedBeaconStateAltair,
   attestations: Attestation[],
-  verifySignature = true
+  verifySignature = true,
+  metrics?: BeaconStateTransitionMetrics | null
 ): void {
   const {epochCtx} = state;
   const {effectiveBalanceIncrements} = epochCtx;
@@ -43,6 +45,8 @@ export function processAttestationsAltair(
 
   // Process all attestations first and then increase the balance of the proposer once
   let proposerReward = 0;
+  let newSeenAttesters = 0;
+  let newSeenAttestersEffectiveBalance = 0;
   for (const attestation of attestations) {
     const data = attestation.data;
 
@@ -76,19 +80,23 @@ export function processAttestationsAltair(
     // In epoch processing, this participation info is used to calculate balance updates
     let totalBalanceIncrementsWithWeight = 0;
     const validators = state.validators;
-    for (const index of attestingIndices) {
-      const flags = epochParticipation.get(index);
+    for (const validatorIndex of attestingIndices) {
+      const flags = epochParticipation.get(validatorIndex);
 
       // For normal block, > 90% of attestations belong to current epoch
       // At epoch boundary, 100% of attestations belong to previous epoch
       // so we want to update the participation flag tree in batch
 
       // Note ParticipationFlags type uses option {setBitwiseOR: true}, .set() does a |= operation
-      epochParticipation.set(index, flagsAttestation);
+      epochParticipation.set(validatorIndex, flagsAttestation);
       // epochParticipation.setStatus(index, newStatus);
 
       // Returns flags that are NOT set before (~ bitwise NOT) AND are set after
       const flagsNewSet = ~flags & flagsAttestation;
+      if (flagsNewSet !== 0) {
+        newSeenAttesters++;
+        newSeenAttestersEffectiveBalance += effectiveBalanceIncrements[validatorIndex];
+      }
 
       // Spec:
       // baseReward = state.validators[index].effectiveBalance / EFFECTIVE_BALANCE_INCREMENT * baseRewardPerIncrement;
@@ -99,18 +107,18 @@ export function processAttestationsAltair(
       if ((flagsNewSet & TIMELY_HEAD) === TIMELY_HEAD) totalWeight += TIMELY_HEAD_WEIGHT;
 
       if (totalWeight > 0) {
-        totalBalanceIncrementsWithWeight += effectiveBalanceIncrements[index] * totalWeight;
+        totalBalanceIncrementsWithWeight += effectiveBalanceIncrements[validatorIndex] * totalWeight;
       }
 
       // TODO: describe issue. Compute progressive target balances
       // When processing each attestation, increase the cummulative target balance. Only applies post-altair
       if ((flagsNewSet & TIMELY_TARGET) === TIMELY_TARGET) {
-        const validator = validators.getReadonly(index);
+        const validator = validators.getReadonly(validatorIndex);
         if (!validator.slashed) {
           if (inCurrentEpoch) {
-            epochCtx.currentTargetUnslashedBalanceIncrements += effectiveBalanceIncrements[index];
+            epochCtx.currentTargetUnslashedBalanceIncrements += effectiveBalanceIncrements[validatorIndex];
           } else {
-            epochCtx.previousTargetUnslashedBalanceIncrements += effectiveBalanceIncrements[index];
+            epochCtx.previousTargetUnslashedBalanceIncrements += effectiveBalanceIncrements[validatorIndex];
           }
         }
       }
@@ -121,6 +129,10 @@ export function processAttestationsAltair(
     const proposerRewardNumerator = totalIncrements * state.epochCtx.baseRewardPerIncrement;
     proposerReward += Math.floor(proposerRewardNumerator / PROPOSER_REWARD_DOMINATOR);
   }
+
+  metrics?.newSeenAttestersPerBlock.set(newSeenAttesters);
+  metrics?.newSeenAttestersEffectiveBalancePerBlock.set(newSeenAttestersEffectiveBalance);
+  metrics?.attestationsPerBlock.set(attestations.length);
 
   increaseBalance(state, epochCtx.getBeaconProposer(state.slot), proposerReward);
   state.proposerRewards.attestations = proposerReward;

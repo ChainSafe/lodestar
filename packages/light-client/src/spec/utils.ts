@@ -1,30 +1,30 @@
 import {BitArray, byteArrayEquals} from "@chainsafe/ssz";
 
+import {ChainForkConfig} from "@lodestar/config";
 import {
-  FINALIZED_ROOT_DEPTH,
-  NEXT_SYNC_COMMITTEE_DEPTH,
-  ForkSeq,
-  ForkName,
   BLOCK_BODY_EXECUTION_PAYLOAD_DEPTH as EXECUTION_PAYLOAD_DEPTH,
   BLOCK_BODY_EXECUTION_PAYLOAD_INDEX as EXECUTION_PAYLOAD_INDEX,
+  FINALIZED_ROOT_DEPTH,
+  FINALIZED_ROOT_DEPTH_ELECTRA,
+  ForkName,
+  ForkSeq,
+  NEXT_SYNC_COMMITTEE_DEPTH,
   NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA,
   isForkPostElectra,
-  FINALIZED_ROOT_DEPTH_ELECTRA,
 } from "@lodestar/params";
 import {
-  ssz,
-  Slot,
+  BeaconBlockHeader,
   LightClientFinalityUpdate,
   LightClientHeader,
   LightClientOptimisticUpdate,
   LightClientUpdate,
-  BeaconBlockHeader,
+  Slot,
   SyncCommittee,
   isElectraLightClientUpdate,
+  ssz,
 } from "@lodestar/types";
-import {ChainForkConfig} from "@lodestar/config";
 
-import {isValidMerkleBranch, computeEpochAtSlot, computeSyncPeriodAtSlot} from "../utils/index.js";
+import {computeEpochAtSlot, computeSyncPeriodAtSlot, isValidMerkleBranch} from "../utils/index.js";
 import {normalizeMerkleBranch} from "../utils/normalizeMerkleBranch.js";
 import {LightClientStore} from "./store.js";
 
@@ -33,7 +33,6 @@ export const ZERO_HASH = new Uint8Array(32);
 export const ZERO_PUBKEY = new Uint8Array(48);
 export const ZERO_SYNC_COMMITTEE = ssz.altair.SyncCommittee.defaultValue();
 export const ZERO_HEADER = ssz.phase0.BeaconBlockHeader.defaultValue();
-export const ZERO_FINALITY_BRANCH = Array.from({length: FINALIZED_ROOT_DEPTH}, () => ZERO_HASH);
 /** From https://notes.ethereum.org/@vbuterin/extended_light_client_protocol#Optimistic-head-determining-function */
 const SAFETY_THRESHOLD_FACTOR = 2;
 
@@ -53,6 +52,12 @@ export function getZeroSyncCommitteeBranch(fork: ForkName): Uint8Array[] {
   return Array.from({length: nextSyncCommitteeDepth}, () => ZERO_HASH);
 }
 
+export function getZeroFinalityBranch(fork: ForkName): Uint8Array[] {
+  const finalizedRootDepth = isForkPostElectra(fork) ? FINALIZED_ROOT_DEPTH_ELECTRA : FINALIZED_ROOT_DEPTH;
+
+  return Array.from({length: finalizedRootDepth}, () => ZERO_HASH);
+}
+
 export function isSyncCommitteeUpdate(update: LightClientUpdate): boolean {
   return (
     // Fast return for when constructing full LightClientUpdate from partial updates
@@ -65,7 +70,8 @@ export function isSyncCommitteeUpdate(update: LightClientUpdate): boolean {
 export function isFinalityUpdate(update: LightClientUpdate): boolean {
   return (
     // Fast return for when constructing full LightClientUpdate from partial updates
-    update.finalityBranch !== ZERO_FINALITY_BRANCH &&
+    update.finalityBranch !==
+      getZeroFinalityBranch(isElectraLightClientUpdate(update) ? ForkName.electra : ForkName.altair) &&
     update.finalityBranch.some((branch) => !byteArrayEquals(branch, ZERO_HASH))
   );
 }
@@ -128,11 +134,18 @@ export function upgradeLightClientHeader(
       // Break if no further upgradation is required else fall through
       if (ForkSeq[targetFork] <= ForkSeq.deneb) break;
 
+    // biome-ignore lint/suspicious/noFallthroughSwitchClause: We need fall-through behavior here
     case ForkName.electra:
       // No changes to LightClientHeader in Electra
 
       // Break if no further upgrades is required else fall through
       if (ForkSeq[targetFork] <= ForkSeq.electra) break;
+
+    case ForkName.fulu:
+      // No changes to LightClientHeader in Electra
+
+      // Break if no further upgrades is required else fall through
+      if (ForkSeq[targetFork] <= ForkSeq.fulu) break;
   }
   return upgradedHeader;
 }
@@ -155,20 +168,19 @@ export function isValidLightClientHeader(config: ChainForkConfig, header: LightC
     );
   }
 
-  if (epoch < config.DENEB_FORK_EPOCH) {
-    if (
-      ((header as LightClientHeader<ForkName.deneb>).execution.blobGasUsed &&
-        (header as LightClientHeader<ForkName.deneb>).execution.blobGasUsed !== BigInt(0)) ||
+  if (
+    epoch < config.DENEB_FORK_EPOCH &&
+    (((header as LightClientHeader<ForkName.deneb>).execution.blobGasUsed &&
+      (header as LightClientHeader<ForkName.deneb>).execution.blobGasUsed !== BigInt(0)) ||
       ((header as LightClientHeader<ForkName.deneb>).execution.excessBlobGas &&
-        (header as LightClientHeader<ForkName.deneb>).execution.excessBlobGas !== BigInt(0))
-    ) {
-      return false;
-    }
+        (header as LightClientHeader<ForkName.deneb>).execution.excessBlobGas !== BigInt(0)))
+  ) {
+    return false;
   }
 
   return isValidMerkleBranch(
     config
-      .getExecutionForkTypes(header.beacon.slot)
+      .getPostBellatrixForkTypes(header.beacon.slot)
       .ExecutionPayloadHeader.hashTreeRoot((header as LightClientHeader<ForkName.capella>).execution),
     (header as LightClientHeader<ForkName.capella>).executionBranch,
     EXECUTION_PAYLOAD_DEPTH,

@@ -1,9 +1,9 @@
-import {itBench} from "@dapplion/benchmark";
+import {bench, describe} from "@chainsafe/benchmark";
 import {ForkSeq} from "@lodestar/params";
-import {CachedBeaconStateCapella} from "../../../src/index.js";
 import {getExpectedWithdrawals} from "../../../src/block/processWithdrawals.js";
+import {CachedBeaconStateCapella} from "../../../src/index.js";
+import {WithdrawalOpts, getExpectedWithdrawalsTestData} from "../../utils/capella.js";
 import {numValidators} from "../util.js";
-import {getExpectedWithdrawalsTestData, WithdrawalOpts} from "../../utils/capella.js";
 
 // PERF: Fixed cost for MAX_WITHDRAWALS_PER_PAYLOAD probes
 //  + cost 'proportional' to $VALIDATOR_COUNT with balances under MAX_EFFECTIVE_BALANCE or
@@ -54,7 +54,7 @@ describe("getExpectedWithdrawals", () => {
       .filter((str) => str)
       .join(",");
 
-    itBench<CachedBeaconStateCapella, CachedBeaconStateCapella>({
+    bench<CachedBeaconStateCapella, CachedBeaconStateCapella>({
       id: `getExpectedWithdrawals ${vc} ${caseID}`,
       yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
       before: () => {

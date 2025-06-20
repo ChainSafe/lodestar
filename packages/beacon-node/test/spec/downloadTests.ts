@@ -1,7 +1,5 @@
 import {downloadTests} from "@lodestar/spec-test-util/downloadTests";
-import {ethereumConsensusSpecsTests, blsSpecTests} from "./specTestVersioning.js";
-
-/* eslint-disable no-console */
+import {blsSpecTests, ethereumConsensusSpecsTests} from "./specTestVersioning.js";
 
 for (const downloadTestOpts of [ethereumConsensusSpecsTests, blsSpecTests]) {
   downloadTests(downloadTestOpts, console.log).catch((e: Error) => {

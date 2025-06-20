@@ -4,8 +4,8 @@ import {
   ContainerType,
   ListBasicType,
   ListCompositeType,
-  VectorBasicType,
   ListUintNum64Type,
+  VectorBasicType,
   VectorCompositeType,
 } from "@chainsafe/ssz";
 import {
@@ -315,6 +315,8 @@ export const Attestation = new ContainerType(
   },
   {typeName: "Attestation", jsonCase: "eth2"}
 );
+
+export const SingleAttestation = Attestation;
 
 export const AttesterSlashing = new ContainerType(
   {

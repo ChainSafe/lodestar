@@ -1,9 +1,9 @@
 import {routes} from "@lodestar/api";
+import {ForkPostDeneb} from "@lodestar/params";
 import {SignedBeaconBlock, Slot} from "@lodestar/types";
 import {sleep, toHex} from "@lodestar/utils";
-import {ForkBlobs} from "@lodestar/params";
-import type {Simulation} from "../simulation.js";
 import {BeaconClient, ExecutionClient, NodePair} from "../interfaces.js";
+import type {Simulation} from "../simulation.js";
 import {connectNewCLNode, connectNewELNode, connectNewNode, waitForHead, waitForSlot} from "./network.js";
 
 export async function assertRangeSync(env: Simulation): Promise<void> {
@@ -132,7 +132,7 @@ export async function assertUnknownBlockSync(env: Simulation): Promise<void> {
     (
       await unknownBlockSync.beacon.api.beacon.publishBlockV2({
         signedBlockOrContents: {
-          signedBlock: currentHead as SignedBeaconBlock<ForkBlobs>,
+          signedBlock: currentHead as SignedBeaconBlock<ForkPostDeneb>,
           blobs: currentSidecars.map((b) => b.blob),
           kzgProofs: currentSidecars.map((b) => b.kzgProof),
         },

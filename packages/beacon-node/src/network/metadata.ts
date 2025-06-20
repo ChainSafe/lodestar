@@ -1,8 +1,8 @@
 import {BitArray} from "@chainsafe/ssz";
+import {BeaconConfig} from "@lodestar/config";
 import {ForkSeq} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {altair, Epoch, phase0, ssz} from "@lodestar/types";
-import {BeaconConfig} from "@lodestar/config";
+import {Epoch, altair, phase0, ssz} from "@lodestar/types";
 import {FAR_FUTURE_EPOCH} from "../constants/index.js";
 import {getCurrentAndNextFork} from "./forks.js";
 

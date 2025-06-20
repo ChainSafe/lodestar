@@ -1,7 +1,7 @@
-import {ssz} from "@lodestar/types";
 import {chainConfigToJson} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {activePreset, presetToJson} from "@lodestar/params";
+import {ssz} from "@lodestar/types";
 import {Endpoints} from "../../../../src/beacon/routes/config.js";
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 

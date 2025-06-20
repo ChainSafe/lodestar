@@ -1,15 +1,13 @@
 import fs from "node:fs";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {CliCommand} from "@lodestar/utils";
-import {YargsError, getPubkeyHexFromKeystore} from "../../util/index.js";
 import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
 import {GlobalArgs} from "../../options/index.js";
-import {validatorOptions, IValidatorCliArgs} from "./options.js";
+import {YargsError, getPubkeyHexFromKeystore} from "../../util/index.js";
+import {PersistedKeysBackend} from "./keymanager/persistedKeys.js";
+import {IValidatorCliArgs, validatorOptions} from "./options.js";
 import {getAccountPaths} from "./paths.js";
 import {importKeystoreDefinitionsFromExternalDir, readPassphraseOrPrompt} from "./signers/importExternalKeystores.js";
-import {PersistedKeysBackend} from "./keymanager/persistedKeys.js";
-
-/* eslint-disable no-console */
 
 type ValidatorImportArgs = Pick<IValidatorCliArgs, "importKeystores" | "importKeystoresPassword">;
 
@@ -26,7 +24,7 @@ Ethereum Foundation utility.",
 
   examples: [
     {
-      command: "validator import --network holesky --importKeystores $HOME/staking-deposit-cli/validator_keys",
+      command: "validator import --network hoodi --importKeystores $HOME/staking-deposit-cli/validator_keys",
       description: "Import validator keystores generated with the Ethereum Foundation Staking Launchpad",
     },
   ],

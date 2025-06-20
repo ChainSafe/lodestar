@@ -1,24 +1,23 @@
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
-import {fetch} from "@lodestar/api";
+import {BeaconConfig} from "@lodestar/config";
+import {ForkPreBellatrix, ForkSeq} from "@lodestar/params";
+import {blindedOrFullBlockToHeader, computeEpochAtSlot} from "@lodestar/state-transition";
 import {
-  phase0,
-  altair,
-  capella,
+  AggregateAndProof,
   BeaconBlock,
   BlindedBeaconBlock,
-  AggregateAndProof,
-  sszTypesFor,
-  ssz,
-  Slot,
   Epoch,
-  RootHex,
   Root,
+  RootHex,
+  Slot,
+  altair,
+  capella,
+  phase0,
+  ssz,
+  sszTypesFor,
 } from "@lodestar/types";
-import {ForkPreExecution, ForkSeq} from "@lodestar/params";
 import {ValidatorRegistrationV1} from "@lodestar/types/bellatrix";
-import {BeaconConfig} from "@lodestar/config";
-import {computeEpochAtSlot, blindedOrFullBlockToHeader} from "@lodestar/state-transition";
-import {toHex, toRootHex} from "@lodestar/utils";
+import {fetch, toHex, toRootHex} from "@lodestar/utils";
 import {PubkeyHex} from "../types.js";
 
 export enum SignableMessageType {
@@ -76,7 +75,7 @@ export type SignableMessage =
   | {type: SignableMessageType.AGGREGATE_AND_PROOF; data: phase0.AggregateAndProof}
   | {type: SignableMessageType.AGGREGATE_AND_PROOF_V2; data: AggregateAndProof}
   | {type: SignableMessageType.ATTESTATION; data: phase0.AttestationData}
-  | {type: SignableMessageType.BLOCK_V2; data: BeaconBlock<ForkPreExecution> | BlindedBeaconBlock}
+  | {type: SignableMessageType.BLOCK_V2; data: BeaconBlock<ForkPreBellatrix> | BlindedBeaconBlock}
   | {type: SignableMessageType.DEPOSIT; data: ValueOf<typeof DepositType>}
   | {type: SignableMessageType.RANDAO_REVEAL; data: {epoch: Epoch}}
   | {type: SignableMessageType.VOLUNTARY_EXIT; data: phase0.VoluntaryExit}

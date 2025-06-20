@@ -1,53 +1,58 @@
-import {PeerId, PrivateKey} from "@libp2p/interface";
-import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
+import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
+import {PeerId, PrivateKey} from "@libp2p/interface";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
+import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
-import {sleep} from "@lodestar/utils";
 import {LoggerNode} from "@lodestar/logger/node";
-import {computeStartSlotAtEpoch, computeTimeAtSlot} from "@lodestar/state-transition";
+import {ForkSeq} from "@lodestar/params";
+import {ResponseIncoming} from "@lodestar/reqresp";
+import {computeEpochAtSlot, computeStartSlotAtEpoch, computeTimeAtSlot} from "@lodestar/state-transition";
 import {
-  phase0,
-  deneb,
-  altair,
-  Root,
-  capella,
-  SlotRootHex,
-  SignedBeaconBlock,
+  AttesterSlashing,
   LightClientBootstrap,
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
   LightClientUpdate,
+  Root,
   SignedAggregateAndProof,
+  SignedBeaconBlock,
+  SingleAttestation,
+  SlotRootHex,
+  SubnetID,
+  WithBytes,
+  altair,
+  capella,
+  deneb,
+  phase0,
 } from "@lodestar/types";
-import {routes} from "@lodestar/api";
-import {ResponseIncoming} from "@lodestar/reqresp";
-import {ForkSeq, MAX_BLOBS_PER_BLOCK} from "@lodestar/params";
-import {Metrics, RegistryMetricCreator} from "../metrics/index.js";
+import {sleep} from "@lodestar/utils";
 import {IBeaconChain} from "../chain/index.js";
 import {IBeaconDb} from "../db/interface.js";
-import {PeerIdStr, peerIdToString} from "../util/peerId.js";
+import {Metrics, RegistryMetricCreator} from "../metrics/index.js";
 import {IClock} from "../util/clock.js";
-import {NetworkOptions} from "./options.js";
-import {WithBytes, INetwork} from "./interface.js";
-import {ReqRespMethod} from "./reqresp/index.js";
-import {GossipHandlers, GossipTopicMap, GossipType, GossipTypeMap} from "./gossip/index.js";
-import {PeerAction, PeerScoreStats} from "./peers/index.js";
-import {INetworkEventBus, NetworkEvent, NetworkEventBus, NetworkEventData} from "./events.js";
-import {CommitteeSubscription} from "./subnets/index.js";
-import {isPublishToZeroPeersError} from "./util.js";
-import {NetworkProcessor, PendingGossipsubMessage} from "./processor/index.js";
+import {PeerIdStr, peerIdToString} from "../util/peerId.js";
+import {BlobSidecarsByRootRequest} from "../util/types.js";
 import {INetworkCore, NetworkCore, WorkerNetworkCore} from "./core/index.js";
+import {INetworkEventBus, NetworkEvent, NetworkEventBus, NetworkEventData} from "./events.js";
+import {getActiveSubscribeBoundaries} from "./forks.js";
+import {GossipHandlers, GossipTopicMap, GossipType, GossipTypeMap} from "./gossip/index.js";
+import {getGossipSSZType, gossipTopicIgnoreDuplicatePublishError, stringifyGossipTopic} from "./gossip/topic.js";
+import {INetwork} from "./interface.js";
+import {NetworkOptions} from "./options.js";
+import {PeerAction, PeerScoreStats} from "./peers/index.js";
+import {AggregatorTracker} from "./processor/aggregatorTracker.js";
+import {NetworkProcessor, PendingGossipsubMessage} from "./processor/index.js";
+import {ReqRespMethod} from "./reqresp/index.js";
+import {GetReqRespHandlerFn, Version, requestSszTypeByMethod, responseSszTypeByMethod} from "./reqresp/types.js";
 import {
   collectExactOneTyped,
   collectMaxResponseTyped,
   collectMaxResponseTypedWithBytes,
 } from "./reqresp/utils/collect.js";
-import {GetReqRespHandlerFn, Version, requestSszTypeByMethod, responseSszTypeByMethod} from "./reqresp/types.js";
 import {collectSequentialBlocksInRange} from "./reqresp/utils/collectSequentialBlocksInRange.js";
-import {getGossipSSZType, gossipTopicIgnoreDuplicatePublishError, stringifyGossipTopic} from "./gossip/topic.js";
-import {AggregatorTracker} from "./processor/aggregatorTracker.js";
-import {getActiveForks} from "./forks.js";
+import {CommitteeSubscription} from "./subnets/index.js";
+import {isPublishToZeroPeersError} from "./util.js";
 
 type NetworkModules = {
   opts: NetworkOptions;
@@ -102,7 +107,6 @@ export class Network implements INetwork {
 
   private subscribedToCoreTopics = false;
   private connectedPeers = new Set<PeerIdStr>();
-  private regossipBlsChangesPromise: Promise<void> | null = null;
 
   constructor(modules: NetworkModules) {
     this.peerId = peerIdFromPrivateKey(modules.privateKey);
@@ -209,8 +213,6 @@ export class Network implements INetwork {
   /** Destroy this instance. Can only be called once. */
   async close(): Promise<void> {
     if (this.closed) return;
-    // Used only for sleep() statements
-    this.controller.abort();
 
     this.events.off(NetworkEvent.peerConnected, this.onPeerConnected);
     this.events.off(NetworkEvent.peerDisconnected, this.onPeerDisconnected);
@@ -218,6 +220,9 @@ export class Network implements INetwork {
     this.chain.emitter.off(routes.events.EventType.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
     this.chain.emitter.off(routes.events.EventType.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
     await this.core.close();
+
+    // Used only for sleep() statements
+    this.controller.abort();
     this.logger.debug("network core closed");
   }
 
@@ -296,7 +301,7 @@ export class Network implements INetwork {
     return this.subscribedToCoreTopics;
   }
 
-  shouldAggregate(subnet: number, slot: number): boolean {
+  shouldAggregate(subnet: SubnetID, slot: number): boolean {
     return this.aggregatorTracker.shouldAggregate(subnet, slot);
   }
 
@@ -312,9 +317,9 @@ export class Network implements INetwork {
   async publishBlobSidecar(blobSidecar: deneb.BlobSidecar): Promise<number> {
     const slot = blobSidecar.signedBlockHeader.message.slot;
     const fork = this.config.getForkName(slot);
-    const index = blobSidecar.index;
+    const subnet = blobSidecar.index;
 
-    return this.publishGossip<GossipType.blob_sidecar>({type: GossipType.blob_sidecar, fork, index}, blobSidecar, {
+    return this.publishGossip<GossipType.blob_sidecar>({type: GossipType.blob_sidecar, fork, subnet}, blobSidecar, {
       ignoreDuplicatePublishError: true,
     });
   }
@@ -328,7 +333,7 @@ export class Network implements INetwork {
     );
   }
 
-  async publishBeaconAttestation(attestation: phase0.Attestation, subnet: number): Promise<number> {
+  async publishBeaconAttestation(attestation: SingleAttestation, subnet: SubnetID): Promise<number> {
     const fork = this.config.getForkName(attestation.data.slot);
     return this.publishGossip<GossipType.beacon_attestation>(
       {type: GossipType.beacon_attestation, fork, subnet},
@@ -346,10 +351,12 @@ export class Network implements INetwork {
 
   async publishBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange): Promise<number> {
     const publishChanges = [];
-    for (const fork of getActiveForks(this.config, this.clock.currentEpoch)) {
-      if (ForkSeq[fork] >= ForkSeq.capella) {
+    for (const boundary of getActiveSubscribeBoundaries(this.config, this.clock.currentEpoch)) {
+      const fork = ForkSeq[boundary.fork];
+
+      if (fork >= ForkSeq.capella) {
         const publishPromise = this.publishGossip<GossipType.bls_to_execution_change>(
-          {type: GossipType.bls_to_execution_change, fork},
+          {type: GossipType.bls_to_execution_change, fork: boundary.fork},
           blsToExecutionChange,
           {ignoreDuplicatePublishError: true}
         );
@@ -371,7 +378,7 @@ export class Network implements INetwork {
     );
   }
 
-  async publishAttesterSlashing(attesterSlashing: phase0.AttesterSlashing): Promise<number> {
+  async publishAttesterSlashing(attesterSlashing: AttesterSlashing): Promise<number> {
     const fork = this.config.getForkName(Number(attesterSlashing.attestation1.data.slot as bigint));
     return this.publishGossip<GossipType.attester_slashing>(
       {type: GossipType.attester_slashing, fork},
@@ -379,7 +386,7 @@ export class Network implements INetwork {
     );
   }
 
-  async publishSyncCommitteeSignature(signature: altair.SyncCommitteeMessage, subnet: number): Promise<number> {
+  async publishSyncCommitteeSignature(signature: altair.SyncCommitteeMessage, subnet: SubnetID): Promise<number> {
     const fork = this.config.getForkName(signature.slot);
     return this.publishGossip<GossipType.sync_committee>({type: GossipType.sync_committee, fork, subnet}, signature, {
       ignoreDuplicatePublishError: true,
@@ -500,18 +507,16 @@ export class Network implements INetwork {
     peerId: PeerIdStr,
     request: deneb.BlobSidecarsByRangeRequest
   ): Promise<deneb.BlobSidecar[]> {
+    const epoch = computeEpochAtSlot(request.startSlot);
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.BlobSidecarsByRange, [Version.V1], request),
       // request's count represent the slots, so the actual max count received could be slots * blobs per slot
-      request.count * MAX_BLOBS_PER_BLOCK,
+      request.count * this.config.getMaxBlobsPerBlock(epoch),
       responseSszTypeByMethod[ReqRespMethod.BlobSidecarsByRange]
     );
   }
 
-  async sendBlobSidecarsByRoot(
-    peerId: PeerIdStr,
-    request: deneb.BlobSidecarsByRootRequest
-  ): Promise<deneb.BlobSidecar[]> {
+  async sendBlobSidecarsByRoot(peerId: PeerIdStr, request: BlobSidecarsByRootRequest): Promise<deneb.BlobSidecar[]> {
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.BlobSidecarsByRoot, [Version.V1], request),
       request.length,
@@ -525,7 +530,8 @@ export class Network implements INetwork {
     versions: number[],
     request: Req
   ): AsyncIterable<ResponseIncoming> {
-    const requestType = requestSszTypeByMethod[method];
+    const fork = this.config.getForkName(this.clock.currentSlot);
+    const requestType = requestSszTypeByMethod(fork, this.config)[method];
     const requestData = requestType ? requestType.serialize(request as never) : new Uint8Array();
 
     // ReqResp outgoing request, emit from main thread to worker

@@ -1,9 +1,7 @@
-import {describe, it, expect, beforeAll, vi} from "vitest";
 import bls from "@chainsafe/bls";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
-import {altair, ssz} from "@lodestar/types";
-import {chainConfig} from "@lodestar/config/default";
 import {createBeaconConfig} from "@lodestar/config";
+import {chainConfig} from "@lodestar/config/default";
 import {
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
   FINALIZED_ROOT_GINDEX,
@@ -11,8 +9,10 @@ import {
   SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SIZE,
 } from "@lodestar/params";
-import {assertValidLightClientUpdate} from "../../src/validation.js";
+import {altair, ssz} from "@lodestar/types";
+import {beforeAll, describe, expect, it, vi} from "vitest";
 import {LightClientSnapshotFast, SyncCommitteeFast} from "../../src/types.js";
+import {assertValidLightClientUpdate} from "../../src/validation.js";
 import {defaultBeaconBlockHeader, getSyncAggregateSigningRoot, signAndAggregate} from "../utils/utils.js";
 
 describe("validation", () => {

@@ -1,3 +1,14 @@
+import {Id, Repository} from "@lodestar/db";
+import {
+  BLS_WITHDRAWAL_PREFIX,
+  ForkName,
+  ForkSeq,
+  MAX_ATTESTER_SLASHINGS,
+  MAX_ATTESTER_SLASHINGS_ELECTRA,
+  MAX_BLS_TO_EXECUTION_CHANGES,
+  MAX_PROPOSER_SLASHINGS,
+  MAX_VOLUNTARY_EXITS,
+} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   computeEpochAtSlot,
@@ -5,28 +16,26 @@ import {
   getAttesterSlashableIndices,
   isValidVoluntaryExit,
 } from "@lodestar/state-transition";
-import {Repository, Id} from "@lodestar/db";
 import {
-  MAX_PROPOSER_SLASHINGS,
-  MAX_VOLUNTARY_EXITS,
-  MAX_BLS_TO_EXECUTION_CHANGES,
-  BLS_WITHDRAWAL_PREFIX,
-  MAX_ATTESTER_SLASHINGS,
-  ForkSeq,
-  MAX_ATTESTER_SLASHINGS_ELECTRA,
-} from "@lodestar/params";
+  AttesterSlashing,
+  Epoch,
+  SignedBeaconBlock,
+  ValidatorIndex,
+  capella,
+  phase0,
+  sszTypesFor,
+} from "@lodestar/types";
 import {fromHex, toHex, toRootHex} from "@lodestar/utils";
-import {Epoch, phase0, capella, ssz, ValidatorIndex, SignedBeaconBlock, AttesterSlashing} from "@lodestar/types";
 import {IBeaconDb} from "../../db/index.js";
+import {Metrics} from "../../metrics/metrics.js";
 import {SignedBLSToExecutionChangeVersioned} from "../../util/types.js";
 import {BlockType} from "../interface.js";
-import {Metrics} from "../../metrics/metrics.js";
 import {BlockProductionStep} from "../produceBlock/produceBlockBody.js";
 import {isValidBlsToExecutionChangeForBlockInclusion} from "./utils.js";
 
 type HexRoot = string;
 type AttesterSlashingCached = {
-  attesterSlashing: phase0.AttesterSlashing;
+  attesterSlashing: AttesterSlashing;
   intersectingIndices: number[];
 };
 
@@ -66,7 +75,7 @@ export class OpPool {
     ]);
 
     for (const attesterSlashing of attesterSlashings) {
-      this.insertAttesterSlashing(attesterSlashing.value, attesterSlashing.key);
+      this.insertAttesterSlashing(ForkName.electra, attesterSlashing.value, attesterSlashing.key);
     }
     for (const proposerSlashing of proposerSlashings) {
       this.insertProposerSlashing(proposerSlashing);
@@ -132,8 +141,11 @@ export class OpPool {
   }
 
   /** Must be validated beforehand */
-  insertAttesterSlashing(attesterSlashing: phase0.AttesterSlashing, rootHash?: Uint8Array): void {
-    if (!rootHash) rootHash = ssz.phase0.AttesterSlashing.hashTreeRoot(attesterSlashing);
+  insertAttesterSlashing(fork: ForkName, attesterSlashing: AttesterSlashing, rootHash?: Uint8Array): void {
+    if (!rootHash) {
+      rootHash = sszTypesFor(fork).AttesterSlashing.hashTreeRoot(attesterSlashing);
+    }
+
     // TODO: Do once and cache attached to the AttesterSlashing object
     const intersectingIndices = getAttesterSlashableIndices(attesterSlashing);
     this.attesterSlashings.set(toRootHex(rootHash), {
@@ -247,7 +259,7 @@ export class OpPool {
     for (const voluntaryExit of this.voluntaryExits.values()) {
       if (
         !toBeSlashedIndices.has(voluntaryExit.message.validatorIndex) &&
-        isValidVoluntaryExit(state, voluntaryExit, false) &&
+        isValidVoluntaryExit(stateFork, state, voluntaryExit, false) &&
         // Signature validation is skipped in `isValidVoluntaryExit(,,false)` since it was already validated in gossip
         // However we must make sure that the signature fork is the same, or it will become invalid if included through
         // a future fork.
@@ -284,8 +296,7 @@ export class OpPool {
   }
 
   /** For beacon pool API */
-  // TODO Electra: Update to adapt electra.AttesterSlashing
-  getAllAttesterSlashings(): phase0.AttesterSlashing[] {
+  getAllAttesterSlashings(): AttesterSlashing[] {
     return Array.from(this.attesterSlashings.values()).map((attesterSlashings) => attesterSlashings.attesterSlashing);
   }
 

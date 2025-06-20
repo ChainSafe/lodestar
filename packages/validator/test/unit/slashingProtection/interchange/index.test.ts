@@ -1,6 +1,6 @@
-import {describe, it, expect} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {Root, ssz} from "@lodestar/types";
+import {describe, expect, it} from "vitest";
 import {
   Interchange,
   parseInterchange,

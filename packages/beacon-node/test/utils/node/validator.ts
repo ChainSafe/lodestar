@@ -1,14 +1,14 @@
-import tmp from "tmp";
-import {vi} from "vitest";
 import {SecretKey} from "@chainsafe/blst";
+import {ApiClient, ApiError, ApiResponse, HttpStatusCode} from "@lodestar/api";
+import {BeaconApiMethods} from "@lodestar/api/beacon/server";
 import {LevelDbController} from "@lodestar/db";
 import {interopSecretKey} from "@lodestar/state-transition";
-import {SlashingProtection, Validator, Signer, SignerType, ValidatorProposerConfig} from "@lodestar/validator";
-import {ApiClient, ApiError, HttpStatusCode, ApiResponse} from "@lodestar/api";
-import {BeaconApiMethods} from "@lodestar/api/beacon/server";
 import {mapValues} from "@lodestar/utils";
+import {Signer, SignerType, SlashingProtection, Validator, ValidatorProposerConfig} from "@lodestar/validator";
+import tmp from "tmp";
+import {vi} from "vitest";
 import {BeaconNode} from "../../../src/index.js";
-import {testLogger, TestLoggerOpts} from "../logger.js";
+import {TestLoggerOpts, testLogger} from "../logger.js";
 
 export async function getAndInitDevValidators({
   node,
@@ -21,7 +21,6 @@ export async function getAndInitDevValidators({
   externalSignerUrl,
   doppelgangerProtection = false,
   valProposerConfig,
-  useProduceBlockV3,
 }: {
   node: BeaconNode;
   logPrefix: string;
@@ -33,7 +32,6 @@ export async function getAndInitDevValidators({
   externalSignerUrl?: string;
   doppelgangerProtection?: boolean;
   valProposerConfig?: ValidatorProposerConfig;
-  useProduceBlockV3?: boolean;
 }): Promise<{validators: Validator[]; secretKeys: SecretKey[]}> {
   const validators: Promise<Validator>[] = [];
   const secretKeys: SecretKey[] = [];
@@ -79,7 +77,6 @@ export async function getAndInitDevValidators({
         signers,
         doppelgangerProtection,
         valProposerConfig,
-        useProduceBlockV3,
       })
     );
   }

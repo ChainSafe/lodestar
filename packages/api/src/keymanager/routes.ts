@@ -1,19 +1,19 @@
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {Epoch, phase0, ssz, stringType} from "@lodestar/types";
-import {Schema, Endpoint, RouteDefinitions} from "../utils/index.js";
-import {WireFormat} from "../utils/wireFormat.js";
 import {
   EmptyArgs,
-  EmptyRequestCodec,
   EmptyMeta,
   EmptyMetaCodec,
   EmptyRequest,
+  EmptyRequestCodec,
   EmptyResponseCodec,
   EmptyResponseData,
   JsonOnlyReq,
   JsonOnlyResponseCodec,
 } from "../utils/codecs.js";
+import {Endpoint, RouteDefinitions, Schema} from "../utils/index.js";
+import {WireFormat} from "../utils/wireFormat.js";
 
 export enum ImportStatus {
   /** Keystore successfully decrypted and imported to keymanager permanent storage */
@@ -108,6 +108,17 @@ export type SignerDefinition = {
 };
 
 export type RemoteSignerDefinition = Pick<SignerDefinition, "pubkey" | "url">;
+
+export type ProposerConfigResponse = {
+  graffiti?: string;
+  strictFeeRecipientCheck?: boolean;
+  feeRecipient?: string;
+  builder?: {
+    gasLimit?: number;
+    selection?: string;
+    boostFactor?: string;
+  };
+};
 
 /**
  * JSON serialized representation of a single keystore in EIP-2335: BLS12-381 Keystore format.
@@ -353,6 +364,15 @@ export type Endpoints = {
     {pubkey: PubkeyHex},
     {params: {pubkey: string}},
     EmptyResponseData,
+    EmptyMeta
+  >;
+
+  getProposerConfig: Endpoint<
+    // ⏎
+    "GET",
+    {pubkey: PubkeyHex},
+    {params: {pubkey: string}},
+    ProposerConfigResponse,
     EmptyMeta
   >;
 
@@ -633,6 +653,19 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         },
       },
       resp: EmptyResponseCodec,
+    },
+
+    getProposerConfig: {
+      url: "/eth/v0/validator/{pubkey}/proposer_config",
+      method: "GET",
+      req: {
+        writeReq: ({pubkey}) => ({params: {pubkey}}),
+        parseReq: ({params: {pubkey}}) => ({pubkey}),
+        schema: {
+          params: {pubkey: Schema.StringRequired},
+        },
+      },
+      resp: JsonOnlyResponseCodec,
     },
 
     signVoluntaryExit: {

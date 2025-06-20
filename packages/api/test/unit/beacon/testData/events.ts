@@ -1,5 +1,5 @@
-import {ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
+import {ssz} from "@lodestar/types";
 import {Endpoints, EventData, EventType, blobSidecarSSE} from "../../../../src/beacon/routes/events.js";
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 
@@ -29,10 +29,12 @@ export const eventTestData: EventData = {
     block: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
     executionOptimistic: false,
   },
-  [EventType.attestation]: ssz.phase0.Attestation.fromJson({
+  [EventType.blockGossip]: {
+    slot: 10,
+    block: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
+  },
+  [EventType.attestation]: ssz.electra.Attestation.fromJson({
     aggregation_bits: "0x01",
-    signature:
-      "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
     data: {
       slot: "1",
       index: "1",
@@ -40,6 +42,22 @@ export const eventTestData: EventData = {
       source: {epoch: "1", root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"},
       target: {epoch: "1", root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"},
     },
+    signature:
+      "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
+    committee_bits: "0x0000000000000001",
+  }),
+  [EventType.singleAttestation]: ssz.electra.SingleAttestation.fromJson({
+    committee_index: "1",
+    attester_index: "1",
+    data: {
+      slot: "1",
+      index: "1",
+      beacon_block_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+      source: {epoch: "1", root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"},
+      target: {epoch: "1", root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"},
+    },
+    signature:
+      "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
   }),
   [EventType.voluntaryExit]: ssz.phase0.SignedVoluntaryExit.fromJson({
     message: {epoch: "1", validator_index: "1"},

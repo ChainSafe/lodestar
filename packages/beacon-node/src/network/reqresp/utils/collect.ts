@@ -1,7 +1,7 @@
 import {Type} from "@chainsafe/ssz";
-import {ResponseIncoming, RequestErrorCode, RequestError} from "@lodestar/reqresp";
+import {RequestError, RequestErrorCode, ResponseIncoming} from "@lodestar/reqresp";
+import {WithBytes} from "@lodestar/types";
 import {ResponseTypeGetter} from "../types.js";
-import {WithBytes} from "../../interface.js";
 
 /**
  * Sink for `<response_chunk>*`, from

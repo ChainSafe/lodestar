@@ -1,7 +1,5 @@
 import Case from "case";
 
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-
 export type KeyCase =
   | "snake"
   | "constant"

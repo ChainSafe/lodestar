@@ -1,15 +1,15 @@
-import {altair} from "@lodestar/types";
 import {MAX_REQUEST_LIGHT_CLIENT_UPDATES} from "@lodestar/params";
 import {
-  ResponseOutgoing,
   LightClientServerError,
   LightClientServerErrorCode,
-  ResponseError,
   RespStatus,
+  ResponseError,
+  ResponseOutgoing,
 } from "@lodestar/reqresp";
+import {altair} from "@lodestar/types";
 import {IBeaconChain} from "../../../chain/index.js";
-import {ReqRespMethod, responseSszTypeByMethod} from "../types.js";
 import {assertLightClientServer} from "../../../node/utils/lightclient.js";
+import {ReqRespMethod, responseSszTypeByMethod} from "../types.js";
 
 export async function* onLightClientUpdatesByRange(
   requestBody: altair.LightClientUpdatesByRange,

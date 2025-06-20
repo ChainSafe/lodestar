@@ -1,16 +1,16 @@
 import {ContainerType, ListCompositeType, VectorCompositeType} from "@chainsafe/ssz";
 import {
-  HISTORICAL_ROOTS_LIMIT,
-  MAX_WITHDRAWALS_PER_PAYLOAD,
-  MAX_BLS_TO_EXECUTION_CHANGES,
-  BLOCK_BODY_EXECUTION_PAYLOAD_DEPTH as EXECUTION_PAYLOAD_DEPTH,
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
+  BLOCK_BODY_EXECUTION_PAYLOAD_DEPTH as EXECUTION_PAYLOAD_DEPTH,
+  HISTORICAL_ROOTS_LIMIT,
+  MAX_BLS_TO_EXECUTION_CHANGES,
+  MAX_WITHDRAWALS_PER_PAYLOAD,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
-import {ssz as primitiveSsz} from "../primitive/index.js";
-import {ssz as phase0Ssz} from "../phase0/index.js";
 import {ssz as altairSsz} from "../altair/index.js";
 import {ssz as bellatrixSsz} from "../bellatrix/index.js";
+import {ssz as phase0Ssz} from "../phase0/index.js";
+import {ssz as primitiveSsz} from "../primitive/index.js";
 
 const {
   UintNum64,
@@ -25,6 +25,8 @@ const {
   UintBn256,
   Bytes32,
 } = primitiveSsz;
+
+export const ExecutionBranch = new VectorCompositeType(Bytes32, EXECUTION_PAYLOAD_DEPTH);
 
 export const Withdrawal = new ContainerType(
   {
@@ -125,6 +127,10 @@ export const HistoricalSummary = new ContainerType(
   {typeName: "HistoricalSummary", jsonCase: "eth2"}
 );
 
+export const HistoricalSummaries = new ListCompositeType(HistoricalSummary, HISTORICAL_ROOTS_LIMIT, {
+  typeName: "HistoricalSummaries",
+});
+
 // we don't reuse bellatrix.BeaconState fields since we need to replace some keys
 // and we cannot keep order doing that
 export const BeaconState = new ContainerType(
@@ -168,7 +174,7 @@ export const BeaconState = new ContainerType(
     nextWithdrawalIndex: WithdrawalIndex, // [New in Capella]
     nextWithdrawalValidatorIndex: ValidatorIndex, // [New in Capella]
     // Deep history valid from Capella onwards
-    historicalSummaries: new ListCompositeType(HistoricalSummary, HISTORICAL_ROOTS_LIMIT), // [New in Capella]
+    historicalSummaries: HistoricalSummaries, // [New in Capella]
   },
   {typeName: "BeaconState", jsonCase: "eth2"}
 );
@@ -202,7 +208,7 @@ export const LightClientHeader = new ContainerType(
   {
     beacon: phase0Ssz.BeaconBlockHeader,
     execution: ExecutionPayloadHeader,
-    executionBranch: new VectorCompositeType(Bytes32, EXECUTION_PAYLOAD_DEPTH),
+    executionBranch: ExecutionBranch,
   },
   {typeName: "LightClientHeader", jsonCase: "eth2"}
 );

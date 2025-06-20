@@ -1,15 +1,21 @@
-import {phase0, Slot, RootHex, Epoch, BeaconBlock} from "@lodestar/types";
-import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {CachedBeaconStateAllForks, UnfinalizedPubkeyIndexMap, computeEpochAtSlot} from "@lodestar/state-transition";
-import {Logger, toRootHex} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
-import {CheckpointHex, toCheckpointHex} from "../stateCache/index.js";
+import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
+import {BeaconBlock, Epoch, RootHex, Slot, phase0} from "@lodestar/types";
+import {Logger, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
+import {CheckpointHex, toCheckpointHex} from "../stateCache/index.js";
 import {BlockStateCache, CheckpointStateCache} from "../stateCache/types.js";
-import {IStateRegenerator, IStateRegeneratorInternal, RegenCaller, RegenFnName, StateCloneOpts} from "./interface.js";
-import {StateRegenerator, RegenModules} from "./regen.js";
 import {RegenError, RegenErrorCode} from "./errors.js";
+import {
+  IStateRegenerator,
+  IStateRegeneratorInternal,
+  RegenCaller,
+  RegenFnName,
+  StateRegenerationOpts,
+} from "./interface.js";
+import {RegenModules, StateRegenerator} from "./regen.js";
 
 const REGEN_QUEUE_MAX_LEN = 256;
 // TODO: Should this constant be lower than above? 256 feels high
@@ -86,7 +92,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
    */
   getPreStateSync(
     block: BeaconBlock,
-    opts: StateCloneOpts = {dontTransferCache: true}
+    opts: StateRegenerationOpts = {dontTransferCache: true}
   ): CachedBeaconStateAllForks | null {
     const parentRoot = toRootHex(block.parentRoot);
     const parentBlock = this.forkChoice.getBlockHex(parentRoot);
@@ -207,60 +213,12 @@ export class QueuedStateRegenerator implements IStateRegenerator {
   }
 
   /**
-   * Remove `validators` from all unfinalized cache's epochCtx.UnfinalizedPubkey2Index,
-   * and add them to epochCtx.pubkey2index and epochCtx.index2pubkey
-   */
-  updateUnfinalizedPubkeys(validators: UnfinalizedPubkeyIndexMap): void {
-    let numStatesUpdated = 0;
-    const states = this.blockStateCache.getStates();
-    const cpStates = this.checkpointStateCache.getStates();
-
-    // Add finalized pubkeys to all states.
-    const addTimer = this.metrics?.regenFnAddPubkeyTime.startTimer();
-
-    // We only need to add pubkeys to any one of the states since the finalized caches is shared globally across all states
-    const firstState = (states.next().value ?? cpStates.next().value) as CachedBeaconStateAllForks | undefined;
-
-    if (firstState !== undefined) {
-      firstState.epochCtx.addFinalizedPubkeys(validators, this.metrics?.epochCache ?? undefined);
-    } else {
-      this.logger.warn("Attempt to delete finalized pubkey from unfinalized pubkey cache. But no state is available");
-    }
-
-    addTimer?.();
-
-    // Delete finalized pubkeys from unfinalized pubkey cache for all states
-    const deleteTimer = this.metrics?.regenFnDeletePubkeyTime.startTimer();
-    const pubkeysToDelete = Array.from(validators.keys());
-
-    for (const s of states) {
-      s.epochCtx.deleteUnfinalizedPubkeys(pubkeysToDelete);
-      numStatesUpdated++;
-    }
-
-    for (const s of cpStates) {
-      s.epochCtx.deleteUnfinalizedPubkeys(pubkeysToDelete);
-      numStatesUpdated++;
-    }
-
-    // Since first state is consumed from the iterator. Will need to perform delete explicitly
-    if (firstState !== undefined) {
-      firstState?.epochCtx.deleteUnfinalizedPubkeys(pubkeysToDelete);
-      numStatesUpdated++;
-    }
-
-    deleteTimer?.();
-
-    this.metrics?.regenFnNumStatesUpdated.observe(numStatesUpdated);
-  }
-
-  /**
    * Get the state to run with `block`.
    * - State after `block.parentRoot` dialed forward to block.slot
    */
   async getPreState(
     block: BeaconBlock,
-    opts: StateCloneOpts,
+    opts: StateRegenerationOpts,
     rCaller: RegenCaller
   ): Promise<CachedBeaconStateAllForks> {
     this.metrics?.regenFnCallTotal.inc({caller: rCaller, entrypoint: RegenFnName.getPreState});
@@ -279,7 +237,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
 
   async getCheckpointState(
     cp: phase0.Checkpoint,
-    opts: StateCloneOpts,
+    opts: StateRegenerationOpts,
     rCaller: RegenCaller
   ): Promise<CachedBeaconStateAllForks> {
     this.metrics?.regenFnCallTotal.inc({caller: rCaller, entrypoint: RegenFnName.getCheckpointState});
@@ -304,7 +262,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
   async getBlockSlotState(
     blockRoot: RootHex,
     slot: Slot,
-    opts: StateCloneOpts,
+    opts: StateRegenerationOpts,
     rCaller: RegenCaller
   ): Promise<CachedBeaconStateAllForks> {
     this.metrics?.regenFnCallTotal.inc({caller: rCaller, entrypoint: RegenFnName.getBlockSlotState});
@@ -316,7 +274,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
   async getState(
     stateRoot: RootHex,
     rCaller: RegenCaller,
-    opts: StateCloneOpts = {dontTransferCache: true}
+    opts: StateRegenerationOpts = {dontTransferCache: true}
   ): Promise<CachedBeaconStateAllForks> {
     this.metrics?.regenFnCallTotal.inc({caller: rCaller, entrypoint: RegenFnName.getState});
 
@@ -333,7 +291,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
 
   private jobQueueProcessor = async (regenRequest: RegenRequest): Promise<CachedBeaconStateAllForks> => {
     const metricsLabels = {
-      caller: regenRequest.args[regenRequest.args.length - 1] as RegenCaller,
+      caller: regenRequest.args.at(-1) as RegenCaller,
       entrypoint: regenRequest.key as RegenFnName,
     };
     let timer: (() => number) | undefined;

@@ -1,9 +1,9 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {LightClientFinalityUpdate} from "@lodestar/types";
-import {IBeaconChain} from "../interface.js";
-import {LightClientError, LightClientErrorCode} from "../errors/lightClientError.js";
-import {GossipAction} from "../errors/index.js";
 import {assertLightClientServer} from "../../node/utils/lightclient.js";
+import {GossipAction} from "../errors/index.js";
+import {LightClientError, LightClientErrorCode} from "../errors/lightClientError.js";
+import {IBeaconChain} from "../interface.js";
 import {updateReceivedTooEarly} from "./lightClientOptimisticUpdate.js";
 
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#light_client_finality_update
@@ -34,7 +34,7 @@ export function validateLightClientFinalityUpdate(
   }
 
   // [IGNORE] The received finality_update matches the locally computed one exactly
-  const sszType = config.getLightClientForkTypes(
+  const sszType = config.getPostAltairForkTypes(
     gossipedFinalityUpdate.attestedHeader.beacon.slot
   ).LightClientFinalityUpdate;
   if (localFinalityUpdate === null || !sszType.equals(gossipedFinalityUpdate, localFinalityUpdate)) {

@@ -2,7 +2,7 @@ import bls from "@chainsafe/bls";
 import type {PublicKey} from "@chainsafe/bls/types";
 import {BitArray} from "@chainsafe/ssz";
 import {ApiClient} from "@lodestar/api";
-import {altair, Bytes32, Root, ssz} from "@lodestar/types";
+import {Bytes32, Root, altair, ssz} from "@lodestar/types";
 import {BeaconBlockHeader} from "@lodestar/types/phase0";
 import {GenesisData} from "../index.js";
 import {SyncCommitteeFast} from "../types.js";

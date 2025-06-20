@@ -1,18 +1,18 @@
 import {EventEmitter} from "node:events";
-import {StrictEventEmitter} from "strict-event-emitter-types";
-import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
+import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, phase0} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
+import {StrictEventEmitter} from "strict-event-emitter-types";
+import {AttestationImportOpt, ImportBlockOpts} from "../../chain/blocks/index.js";
 import {IBeaconChain} from "../../chain/index.js";
-import {INetwork} from "../../network/index.js";
 import {Metrics} from "../../metrics/index.js";
-import {RangeSyncType, rangeSyncTypes, getRangeSyncTarget} from "../utils/remoteSyncType.js";
-import {PeerIdStr} from "../../util/peerId.js";
-import {ImportBlockOpts, AttestationImportOpt} from "../../chain/blocks/index.js";
+import {INetwork} from "../../network/index.js";
 import {beaconBlocksMaybeBlobsByRange} from "../../network/reqresp/beaconBlocksMaybeBlobsByRange.js";
+import {PeerIdStr} from "../../util/peerId.js";
+import {RangeSyncType, getRangeSyncTarget, rangeSyncTypes} from "../utils/remoteSyncType.js";
+import {ChainTarget, SyncChain, SyncChainDebugState, SyncChainFns} from "./chain.js";
 import {updateChains} from "./utils/index.js";
-import {ChainTarget, SyncChainFns, SyncChain, SyncChainDebugState} from "./chain.js";
 
 export enum RangeSyncEvent {
   completedChain = "RangeSync-completedChain",

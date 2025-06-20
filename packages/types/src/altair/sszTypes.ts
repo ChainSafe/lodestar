@@ -1,13 +1,14 @@
 import {BitVectorType, ContainerType, ListBasicType, ListCompositeType, VectorCompositeType} from "@chainsafe/ssz";
 import {
-  FINALIZED_ROOT_DEPTH,
-  NEXT_SYNC_COMMITTEE_DEPTH,
-  SYNC_COMMITTEE_SUBNET_COUNT,
-  SYNC_COMMITTEE_SIZE,
-  HISTORICAL_ROOTS_LIMIT,
-  VALIDATOR_REGISTRY_LIMIT,
+  CURRENT_SYNC_COMMITTEE_DEPTH,
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
+  FINALIZED_ROOT_DEPTH,
+  HISTORICAL_ROOTS_LIMIT,
+  NEXT_SYNC_COMMITTEE_DEPTH,
   SLOTS_PER_EPOCH,
+  SYNC_COMMITTEE_SIZE,
+  SYNC_COMMITTEE_SUBNET_COUNT,
+  VALIDATOR_REGISTRY_LIMIT,
 } from "@lodestar/params";
 import * as phase0Ssz from "../phase0/sszTypes.js";
 import * as primitiveSsz from "../primitive/sszTypes.js";
@@ -26,6 +27,12 @@ const {
 } = primitiveSsz;
 
 export const SyncSubnets = new BitVectorType(SYNC_COMMITTEE_SUBNET_COUNT);
+
+export const FinalityBranch = new VectorCompositeType(Bytes32, FINALIZED_ROOT_DEPTH);
+
+export const CurrentSyncCommitteeBranch = new VectorCompositeType(Bytes32, CURRENT_SYNC_COMMITTEE_DEPTH);
+
+export const NextSyncCommitteeBranch = new VectorCompositeType(Bytes32, NEXT_SYNC_COMMITTEE_DEPTH);
 
 export const Metadata = new ContainerType(
   {
@@ -181,7 +188,7 @@ export const LightClientBootstrap = new ContainerType(
   {
     header: LightClientHeader,
     currentSyncCommittee: SyncCommittee,
-    currentSyncCommitteeBranch: new VectorCompositeType(Bytes32, NEXT_SYNC_COMMITTEE_DEPTH),
+    currentSyncCommitteeBranch: CurrentSyncCommitteeBranch,
   },
   {typeName: "LightClientBootstrap", jsonCase: "eth2"}
 );
@@ -190,9 +197,9 @@ export const LightClientUpdate = new ContainerType(
   {
     attestedHeader: LightClientHeader,
     nextSyncCommittee: SyncCommittee,
-    nextSyncCommitteeBranch: new VectorCompositeType(Bytes32, NEXT_SYNC_COMMITTEE_DEPTH),
+    nextSyncCommitteeBranch: NextSyncCommitteeBranch,
     finalizedHeader: LightClientHeader,
-    finalityBranch: new VectorCompositeType(Bytes32, FINALIZED_ROOT_DEPTH),
+    finalityBranch: FinalityBranch,
     syncAggregate: SyncAggregate,
     signatureSlot: Slot,
   },
@@ -203,7 +210,7 @@ export const LightClientFinalityUpdate = new ContainerType(
   {
     attestedHeader: LightClientHeader,
     finalizedHeader: LightClientHeader,
-    finalityBranch: new VectorCompositeType(Bytes32, FINALIZED_ROOT_DEPTH),
+    finalityBranch: FinalityBranch,
     syncAggregate: SyncAggregate,
     signatureSlot: Slot,
   },

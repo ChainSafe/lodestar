@@ -1,9 +1,9 @@
+import {ForkSeq, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {Attestation, Slot, electra, phase0, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {Slot, Attestation, electra, phase0, ssz} from "@lodestar/types";
-import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH, ForkSeq} from "@lodestar/params";
 import {assert} from "@lodestar/utils";
-import {computeEpochAtSlot} from "../util/index.js";
-import {CachedBeaconStatePhase0, CachedBeaconStateAllForks} from "../types.js";
+import {CachedBeaconStateAllForks, CachedBeaconStatePhase0} from "../types.js";
+import {computeEndSlotAtEpoch, computeEpochAtSlot} from "../util/index.js";
 import {isValidIndexedAttestation} from "./index.js";
 
 /**
@@ -78,9 +78,11 @@ export function validateAttestation(fork: ForkSeq, state: CachedBeaconStateAllFo
 
   // post deneb, the attestations are valid till end of next epoch
   if (!(data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= slot && isTimelyTarget(fork, slot - data.slot))) {
+    const windowStart = data.slot + MIN_ATTESTATION_INCLUSION_DELAY;
+    const windowEnd = fork >= ForkSeq.deneb ? computeEndSlotAtEpoch(computedEpoch + 1) : data.slot + SLOTS_PER_EPOCH;
+
     throw new Error(
-      "Attestation slot not within inclusion window: " +
-        `slot=${data.slot} window=${data.slot + MIN_ATTESTATION_INCLUSION_DELAY}..${data.slot + SLOTS_PER_EPOCH}`
+      `Attestation slot not within inclusion window: slot=${data.slot} window=${windowStart}..${windowEnd}`
     );
   }
 
@@ -89,26 +91,41 @@ export function validateAttestation(fork: ForkSeq, state: CachedBeaconStateAllFo
     const attestationElectra = attestation as electra.Attestation;
     const committeeIndices = attestationElectra.committeeBits.getTrueBitIndexes();
 
-    if (committeeIndices.length === 0) {
+    const lastCommitteeIndex = committeeIndices.at(-1);
+    if (lastCommitteeIndex === undefined) {
       throw Error("Attestation should have at least one committee bit set");
     }
 
-    const lastCommitteeIndex = committeeIndices[committeeIndices.length - 1];
     if (lastCommitteeIndex >= committeeCount) {
       throw new Error(
         `Attestation committee index exceeds committee count: lastCommitteeIndex=${lastCommitteeIndex} numCommittees=${committeeCount}`
       );
     }
 
-    // Get total number of attestation participant of every committee specified
-    const participantCount = committeeIndices
-      .map((committeeIndex) => epochCtx.getBeaconCommittee(data.slot, committeeIndex).length)
-      .reduce((acc, committeeSize) => acc + committeeSize, 0);
+    const validatorsByCommittee = epochCtx.getBeaconCommittees(data.slot, committeeIndices);
+    const aggregationBitsArray = attestationElectra.aggregationBits.toBoolArray();
 
+    // Total number of attestation participants of every committee specified
+    let committeeOffset = 0;
+    for (const committeeValidators of validatorsByCommittee) {
+      const committeeAggregationBits = aggregationBitsArray.slice(
+        committeeOffset,
+        committeeOffset + committeeValidators.length
+      );
+
+      // Assert aggregation bits in this committee have at least one true bit
+      if (committeeAggregationBits.every((bit) => !bit)) {
+        throw new Error("Every committee in aggregation bits must have at least one attester");
+      }
+
+      committeeOffset += committeeValidators.length;
+    }
+
+    // Bitfield length matches total number of participants
     assert.equal(
       attestationElectra.aggregationBits.bitLen,
-      participantCount,
-      `Attestation aggregation bits length does not match total number of committee participant aggregationBitsLength=${attestation.aggregationBits.bitLen} participantCount=${participantCount}`
+      committeeOffset,
+      `Attestation aggregation bits length does not match total number of committee participants aggregationBitsLength=${attestation.aggregationBits.bitLen} participantCount=${committeeOffset}`
     );
   } else {
     if (!(data.index < committeeCount)) {

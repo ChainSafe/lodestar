@@ -1,5 +1,5 @@
-import type * as fastify from "fastify";
 import {mapValues} from "@lodestar/utils";
+import type * as fastify from "fastify";
 import {getFastifySchema} from "../schema.js";
 import {Endpoint, RouteDefinition, RouteDefinitions} from "../types.js";
 import {toColonNotationPath} from "../urlFormat.js";

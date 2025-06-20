@@ -1,13 +1,13 @@
 import {
-  defaultTopicScoreParams,
   PeerScoreParams,
-  TopicScoreParams,
   PeerScoreThresholds,
+  TopicScoreParams,
+  defaultTopicScoreParams,
 } from "@chainsafe/libp2p-gossipsub/score";
-import {computeCommitteeCount} from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, TARGET_AGGREGATORS_PER_COMMITTEE} from "@lodestar/params";
-import {getActiveForks} from "../forks.js";
+import {computeCommitteeCount} from "@lodestar/state-transition";
+import {getActiveSubscribeBoundaries} from "../forks.js";
 import {Eth2Context, Eth2GossipsubModules} from "./gossipsub.js";
 import {GossipType} from "./interface.js";
 import {stringifyGossipTopic} from "./topic.js";
@@ -123,9 +123,10 @@ function getAllTopicsScoreParams(
   const {epochDurationMs, slotDurationMs} = precomputedParams;
   const epoch = eth2Context.currentEpoch;
   const topicsParams: Record<string, TopicScoreParams> = {};
-  const forks = getActiveForks(config, epoch);
+  const boundaries = getActiveSubscribeBoundaries(config, epoch);
   const beaconAttestationSubnetWeight = 1 / ATTESTATION_SUBNET_COUNT;
-  for (const fork of forks) {
+  for (const boundary of boundaries) {
+    const fork = boundary.fork;
     //first all fixed topics
     topicsParams[
       stringifyGossipTopic(config, {

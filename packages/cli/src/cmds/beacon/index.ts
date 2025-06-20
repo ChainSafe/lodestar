@@ -1,7 +1,7 @@
 import {CliCommand, CliCommandOptions} from "@lodestar/utils";
 import {GlobalArgs} from "../../options/index.js";
-import {beaconOptions, BeaconArgs} from "./options.js";
 import {beaconHandler} from "./handler.js";
+import {BeaconArgs, beaconOptions} from "./options.js";
 
 export const beacon: CliCommand<BeaconArgs, GlobalArgs> = {
   command: "beacon",
@@ -9,8 +9,8 @@ export const beacon: CliCommand<BeaconArgs, GlobalArgs> = {
   docsFolder: "run/beacon-management",
   examples: [
     {
-      command: "beacon --network holesky",
-      description: "Run a beacon chain node and connect to the holesky testnet",
+      command: "beacon --network hoodi",
+      description: "Run a beacon chain node and connect to the hoodi testnet",
     },
   ],
   options: beaconOptions as CliCommandOptions<BeaconArgs>,

@@ -1,9 +1,9 @@
-import {ForkName} from "@lodestar/params";
-import {KZGCommitment, Blob, KZGProof} from "@lodestar/types/deneb";
-import {Root, RootHex, capella, Wei, ExecutionPayload, ExecutionRequests} from "@lodestar/types";
+import {CONSOLIDATION_REQUEST_TYPE, DEPOSIT_REQUEST_TYPE, ForkName, WITHDRAWAL_REQUEST_TYPE} from "@lodestar/params";
+import {ExecutionPayload, ExecutionRequests, Root, RootHex, Wei, capella} from "@lodestar/types";
+import {Blob, BlobAndProof, KZGCommitment, KZGProof} from "@lodestar/types/deneb";
 
 import {DATA} from "../../eth1/provider/utils.js";
-import {PayloadIdCache, PayloadId, WithdrawalV1} from "./payloadIdCache.js";
+import {PayloadId, PayloadIdCache, WithdrawalV1} from "./payloadIdCache.js";
 import {ExecutionPayloadBody} from "./types.js";
 
 export {PayloadIdCache, type PayloadId, type WithdrawalV1};
@@ -56,6 +56,15 @@ export enum ClientCode {
   PM = "PM", // prysm
   RH = "RH", // reth
   XX = "XX", // unknown
+}
+
+export type ExecutionRequestType =
+  | typeof DEPOSIT_REQUEST_TYPE
+  | typeof WITHDRAWAL_REQUEST_TYPE
+  | typeof CONSOLIDATION_REQUEST_TYPE;
+
+export function isExecutionRequestType(type: number): type is ExecutionRequestType {
+  return type === DEPOSIT_REQUEST_TYPE || type === WITHDRAWAL_REQUEST_TYPE || type === CONSOLIDATION_REQUEST_TYPE;
 }
 
 export type ExecutePayloadResponse =
@@ -179,4 +188,6 @@ export interface IExecutionEngine {
   getPayloadBodiesByHash(fork: ForkName, blockHash: DATA[]): Promise<(ExecutionPayloadBody | null)[]>;
 
   getPayloadBodiesByRange(fork: ForkName, start: number, count: number): Promise<(ExecutionPayloadBody | null)[]>;
+
+  getBlobs(fork: ForkName, versionedHashes: VersionedHashes): Promise<(BlobAndProof | null)[]>;
 }

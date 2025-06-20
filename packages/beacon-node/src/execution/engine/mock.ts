@@ -1,30 +1,30 @@
 import crypto from "node:crypto";
-import {bellatrix, deneb, RootHex, ssz} from "@lodestar/types";
-import {fromHex, toHex} from "@lodestar/utils";
 import {
+  BLOB_TX_TYPE,
   BYTES_PER_FIELD_ELEMENT,
   FIELD_ELEMENTS_PER_BLOB,
-  ForkSeq,
-  ForkExecution,
   ForkName,
-  BLOB_TX_TYPE,
+  ForkPostBellatrix,
+  ForkSeq,
 } from "@lodestar/params";
+import {RootHex, bellatrix, deneb, ssz} from "@lodestar/types";
+import {fromHex, toHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
-import {ckzg} from "../../util/kzg.js";
-import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {quantityToNum} from "../../eth1/provider/utils.js";
+import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
+import {ckzg} from "../../util/kzg.js";
+import {ClientCode, ExecutionPayloadStatus, PayloadIdCache} from "./interface.js";
 import {
+  BlobsBundleRpc,
   EngineApiRpcParamTypes,
   EngineApiRpcReturnTypes,
-  deserializePayloadAttributes,
+  ExecutionPayloadBodyRpc,
+  ExecutionPayloadRpc,
   PayloadStatus,
+  deserializePayloadAttributes,
   serializeBlobsBundle,
   serializeExecutionPayload,
-  ExecutionPayloadRpc,
-  BlobsBundleRpc,
-  ExecutionPayloadBodyRpc,
 } from "./types.js";
-import {ClientCode, ExecutionPayloadStatus, PayloadIdCache} from "./interface.js";
 import {JsonRpcBackend} from "./utils.js";
 
 const INTEROP_GAS_LIMIT = 30e6;
@@ -99,6 +99,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       engine_getPayloadBodiesByHashV1: this.getPayloadBodiesByHash.bind(this),
       engine_getPayloadBodiesByRangeV1: this.getPayloadBodiesByRange.bind(this),
       engine_getClientVersionV1: this.getClientVersionV1.bind(this),
+      engine_getBlobsV1: this.getBlobs.bind(this),
     };
   }
 
@@ -397,7 +398,13 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
     return [{code: ClientCode.XX, name: "mock", version: "", commit: ""}];
   }
 
-  private timestampToFork(timestamp: number): ForkExecution {
+  private getBlobs(
+    versionedHashes: EngineApiRpcParamTypes["engine_getBlobsV1"][0]
+  ): EngineApiRpcReturnTypes["engine_getBlobsV1"] {
+    return versionedHashes.map((_vh) => null);
+  }
+
+  private timestampToFork(timestamp: number): ForkPostBellatrix {
     if (timestamp > (this.opts.electraForkTimestamp ?? Infinity)) return ForkName.electra;
     if (timestamp > (this.opts.denebForkTimestamp ?? Infinity)) return ForkName.deneb;
     if (timestamp > (this.opts.capellaForkTimestamp ?? Infinity)) return ForkName.capella;

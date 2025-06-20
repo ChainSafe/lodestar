@@ -1,9 +1,7 @@
-import {fromHexString} from "@chainsafe/ssz";
-import {fastify, FastifyInstance} from "fastify";
 import {SecretKey} from "@chainsafe/blst";
+import {fromHexString} from "@chainsafe/ssz";
+import {FastifyInstance, fastify} from "fastify";
 import {EXTERNAL_SIGNER_BASE_PORT} from "./constants.js";
-
-/* eslint-disable no-console */
 
 export class ExternalSignerServer {
   static totalProcessCount = 0;

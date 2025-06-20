@@ -1,13 +1,13 @@
-import {expect, describe, it} from "vitest";
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
-import {ssz} from "@lodestar/types";
-import {ForkName} from "@lodestar/params";
-import {createBeaconConfig, ChainForkConfig, createChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig, createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config as chainConfig} from "@lodestar/config/default";
+import {ForkName} from "@lodestar/params";
+import {ssz} from "@lodestar/types";
+import {describe, expect, it} from "vitest";
 
+import {createCachedBeaconState} from "../../src/cache/stateCache.js";
 import {upgradeStateToDeneb} from "../../src/slot/upgradeStateToDeneb.js";
 import {upgradeStateToElectra} from "../../src/slot/upgradeStateToElectra.js";
-import {createCachedBeaconState} from "../../src/cache/stateCache.js";
 
 describe("upgradeState", () => {
   it("upgradeStateToDeneb", () => {
@@ -77,6 +77,15 @@ function getConfig(fork: ForkName, forkEpoch = 0): ChainForkConfig {
         CAPELLA_FORK_EPOCH: 0,
         DENEB_FORK_EPOCH: 0,
         ELECTRA_FORK_EPOCH: forkEpoch,
+      });
+    case ForkName.fulu:
+      return createChainForkConfig({
+        ALTAIR_FORK_EPOCH: 0,
+        BELLATRIX_FORK_EPOCH: 0,
+        CAPELLA_FORK_EPOCH: 0,
+        DENEB_FORK_EPOCH: 0,
+        ELECTRA_FORK_EPOCH: 0,
+        FULU_FORK_EPOCH: forkEpoch,
       });
   }
 }

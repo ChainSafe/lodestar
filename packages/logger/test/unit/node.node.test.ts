@@ -1,11 +1,12 @@
-import {describe, it, expect, vi, afterEach, Mock} from "vitest";
 import {LogLevel} from "@lodestar/utils";
+import {Mock, afterEach, describe, expect, it, vi} from "vitest";
 import {TimestampFormatCode, logFormats} from "../../src/index.js";
 import {getNodeLogger} from "../../src/node.js";
 import {formatsTestCases} from "../fixtures/loggerFormats.js";
 
 // Node.js maps `process.stdout` to `console._stdout`.
 // spy does not work on `process.stdout` directly.
+// biome-ignore lint/style/useNamingConvention: Need property name _stdout for testing
 type TestConsole = typeof console & {_stdout: {write: Mock}};
 
 describe("node logger", () => {

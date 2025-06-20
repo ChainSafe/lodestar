@@ -1,21 +1,22 @@
-import worker from "node:worker_threads";
-import path from "node:path";
 import fs from "node:fs";
-import {Multiaddr, multiaddr} from "@multiformats/multiaddr";
-import {expose} from "@chainsafe/threads/worker";
-import {Observable, Subject} from "@chainsafe/threads/observable";
+import path from "node:path";
+import worker from "node:worker_threads";
 import {Discv5} from "@chainsafe/discv5";
 import {ENR, ENRData, SignableENR, SignableENRData} from "@chainsafe/enr";
+import {Observable, Subject} from "@chainsafe/threads/observable";
+import {expose} from "@chainsafe/threads/worker";
 import {privateKeyFromProtobuf} from "@libp2p/crypto/keys";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {createBeaconConfig} from "@lodestar/config";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {Gauge} from "@lodestar/utils";
+import {Multiaddr, multiaddr} from "@multiformats/multiaddr";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {collectNodeJSMetrics} from "../../metrics/nodeJsMetrics.js";
+import {Clock} from "../../util/clock.js";
 import {profileNodeJS, writeHeapSnapshot} from "../../util/profile.js";
 import {Discv5WorkerApi, Discv5WorkerData} from "./types.js";
-import {enrRelevance, ENRRelevance} from "./utils.js";
+import {ENRRelevance, enrRelevance} from "./utils.js";
 
 // This discv5 worker will start discv5 on initialization (there is no `start` function to call)
 // A consumer _should_ call `close` before terminating the worker to cleanly exit discv5 before destroying the thread
@@ -68,8 +69,12 @@ for (const bootEnr of workerData.bootEnrs) {
 /** Used to push discovered ENRs */
 const subject = new Subject<ENRData>();
 
+/** Define a new clock */
+const abortController = new AbortController();
+const clock = new Clock({config, genesisTime: workerData.genesisTime, signal: abortController.signal});
+
 const onDiscovered = (enr: ENR): void => {
-  const status = enrRelevance(enr, config);
+  const status = enrRelevance(enr, config, clock);
   enrRelevanceMetric?.inc({status});
   if (status === ENRRelevance.relevant) {
     subject.next(enr.toObject());

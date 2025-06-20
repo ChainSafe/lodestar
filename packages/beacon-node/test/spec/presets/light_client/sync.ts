@@ -1,13 +1,13 @@
-import {expect} from "vitest";
-import {isForkLightClient} from "@lodestar/params";
-import {altair, phase0, RootHex, Slot, ssz, sszTypesFor} from "@lodestar/types";
-import {InputType} from "@lodestar/spec-test-util";
-import {createBeaconConfig, ChainConfig} from "@lodestar/config";
-import {fromHex, toHex} from "@lodestar/utils";
+import {ChainConfig, createBeaconConfig} from "@lodestar/config";
 import {LightclientSpec, toLightClientUpdateSummary} from "@lodestar/light-client/spec";
+import {isForkPostAltair} from "@lodestar/params";
+import {InputType} from "@lodestar/spec-test-util";
 import {computeSyncPeriodAtSlot} from "@lodestar/state-transition";
-import {TestRunnerFn} from "../../utils/types.js";
+import {RootHex, Slot, altair, phase0, ssz, sszTypesFor} from "@lodestar/types";
+import {fromHex, toHex} from "@lodestar/utils";
+import {expect} from "vitest";
 import {testLogger} from "../../../utils/logger.js";
+import {TestRunnerFn} from "../../utils/types.js";
 
 // https://github.com/ethereum/consensus-specs/blob/da3f5af919be4abb5a6db5a80b235deb8b4b5cba/tests/formats/light_client/single_merkle_proof.md
 type SyncTestCase = {
@@ -128,7 +128,7 @@ export const sync: TestRunnerFn<SyncTestCase, void> = (fork) => {
             }
 
             const headerSlot = Number(step.process_update.checks.optimistic_header.slot);
-            const update = config.getLightClientForkTypes(headerSlot).LightClientUpdate.deserialize(updateBytes);
+            const update = config.getPostAltairForkTypes(headerSlot).LightClientUpdate.deserialize(updateBytes);
 
             logger.debug(`LightclientUpdateSummary: ${JSON.stringify(toLightClientUpdateSummary(update))}`);
 
@@ -165,7 +165,7 @@ export const sync: TestRunnerFn<SyncTestCase, void> = (fork) => {
         config: InputType.YAML,
       },
       sszTypes: {
-        bootstrap: isForkLightClient(fork) ? sszTypesFor(fork).LightClientBootstrap : ssz.altair.LightClientBootstrap,
+        bootstrap: isForkPostAltair(fork) ? sszTypesFor(fork).LightClientBootstrap : ssz.altair.LightClientBootstrap,
         // The updates are multifork and need config and step info to be deserialized within the test
         [UPDATE_FILE_NAME]: {typeName: "LightClientUpdate", deserialize: (bytes: Uint8Array) => bytes},
       },
@@ -173,6 +173,8 @@ export const sync: TestRunnerFn<SyncTestCase, void> = (fork) => {
         // t has input file name as key
         const updates = new Map<string, Uint8Array>();
         for (const key in t) {
+          if (!Object.prototype.hasOwnProperty.call(t, key)) continue;
+
           const updateMatch = key.match(UPDATE_FILE_NAME);
           if (updateMatch) {
             updates.set(key, t[key]);

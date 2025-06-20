@@ -1,4 +1,3 @@
-import {phase0, ssz} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {
   BeaconStateAllForks,
@@ -6,19 +5,20 @@ import {
   CachedBeaconStateElectra,
   becomesNewEth1Data,
 } from "@lodestar/state-transition";
-import {ErrorAborted, TimeoutError, fromHex, Logger, isErrorAborted, sleep} from "@lodestar/utils";
+import {phase0, ssz} from "@lodestar/types";
+import {ErrorAborted, Logger, TimeoutError, fromHex, isErrorAborted, sleep} from "@lodestar/utils";
 
 import {IBeaconDb} from "../db/index.js";
 import {Metrics} from "../metrics/index.js";
-import {Eth1DepositsCache} from "./eth1DepositsCache.js";
 import {Eth1DataCache} from "./eth1DataCache.js";
-import {getEth1VotesToConsider, pickEth1Vote} from "./utils/eth1Vote.js";
-import {getDeposits} from "./utils/deposits.js";
+import {Eth1DepositsCache} from "./eth1DepositsCache.js";
 import {Eth1DataAndDeposits, EthJsonRpcBlockRaw, IEth1Provider} from "./interface.js";
 import {Eth1Options} from "./options.js";
-import {HttpRpcError} from "./provider/jsonRpcHttpClient.js";
 import {parseEth1Block} from "./provider/eth1Provider.js";
+import {HttpRpcError} from "./provider/jsonRpcHttpClient.js";
 import {isJsonRpcTruncatedError} from "./provider/utils.js";
+import {getDeposits} from "./utils/deposits.js";
+import {getEth1VotesToConsider, pickEth1Vote} from "./utils/eth1Vote.js";
 
 const MAX_BLOCKS_PER_BLOCK_QUERY = 1000;
 const MIN_BLOCKS_PER_BLOCK_QUERY = 10;
@@ -88,7 +88,6 @@ export class Eth1DepositDataTracker {
     this.depositsCache = new Eth1DepositsCache(opts, config, db);
     this.eth1DataCache = new Eth1DataCache(config, db);
     this.eth1FollowDistance = config.ETH1_FOLLOW_DISTANCE;
-    // TODO Electra: fix scenario where node starts post-Electra and `stopPolling` will always be false
     this.stopPolling = false;
 
     this.forcedEth1DataVote = opts.forcedEth1DataVote
@@ -118,7 +117,10 @@ export class Eth1DepositDataTracker {
     }
   }
 
-  // TODO Electra: Figure out how an elegant way to stop eth1data polling
+  isPollingEth1Data(): boolean {
+    return !this.stopPolling;
+  }
+
   stopPollingEth1Data(): void {
     this.stopPolling = true;
   }
@@ -225,7 +227,7 @@ export class Eth1DepositDataTracker {
 
     // If remoteFollowBlock is not at or beyond deployBlock, there is no need to
     // fetch and track any deposit data yet
-    if (remoteFollowBlock < this.eth1Provider.deployBlock ?? 0) return true;
+    if (remoteFollowBlock < (this.eth1Provider.deployBlock ?? 0)) return true;
 
     const hasCaughtUpDeposits = await this.updateDepositCache(remoteFollowBlock);
     const hasCaughtUpBlocks = await this.updateBlockCache(remoteFollowBlock);
@@ -335,8 +337,9 @@ export class Eth1DepositDataTracker {
     this.logger.verbose("Fetched eth1 blocks", {blockCount: blocks.length, fromBlock, toBlock});
     this.metrics?.eth1.blocksFetched.inc(blocks.length);
     this.metrics?.eth1.lastFetchedBlockBlockNumber.set(toBlock);
-    if (blocks.length > 0) {
-      this.metrics?.eth1.lastFetchedBlockTimestamp.set(blocks[blocks.length - 1].timestamp);
+    const lastBlock = blocks.at(-1);
+    if (lastBlock) {
+      this.metrics?.eth1.lastFetchedBlockTimestamp.set(lastBlock.timestamp);
     }
 
     const eth1Datas = await this.depositsCache.getEth1DataForBlocks(blocks, lastProcessedDepositBlockNumber);
@@ -364,7 +367,7 @@ export class Eth1DepositDataTracker {
       return false;
     }
 
-    if (blocks.length === 0) {
+    if (!lastBlock) {
       return true;
     }
 
@@ -375,7 +378,6 @@ export class Eth1DepositDataTracker {
     if (blockAfterTargetTimestamp) {
       // Catched up to target timestamp, increase eth1FollowDistance. Limit max config.ETH1_FOLLOW_DISTANCE.
       // If the block that's right above the timestamp has been fetched now, use it to compute the precise delta.
-      const lastBlock = blocks[blocks.length - 1];
       const delta = Math.max(lastBlock.blockNumber - blockAfterTargetTimestamp.blockNumber, 1);
       this.eth1FollowDistance = Math.min(this.eth1FollowDistance + delta, this.config.ETH1_FOLLOW_DISTANCE);
 

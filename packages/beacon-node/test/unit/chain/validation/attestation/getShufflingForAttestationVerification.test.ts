@@ -1,11 +1,11 @@
-import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-// We need to import the mock before the packages
-import {MockedBeaconChain, getMockedBeaconChain} from "../../../../mocks/mockedBeaconChain.js";
-import {EpochShuffling, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {EpochDifference, ProtoBlock} from "@lodestar/fork-choice";
+import {EpochShuffling, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {RegenCaller} from "../../../../../src/chain/regen/interface.js";
 import {getShufflingForAttestationVerification} from "../../../../../src/chain/validation/index.js";
 import {ZERO_HASH_HEX} from "../../../../../src/constants/constants.js";
+// We need to import the mock before the packages
+import {MockedBeaconChain, getMockedBeaconChain} from "../../../../mocks/mockedBeaconChain.js";
 
 describe("getShufflingForAttestationVerification", () => {
   let chain: MockedBeaconChain;

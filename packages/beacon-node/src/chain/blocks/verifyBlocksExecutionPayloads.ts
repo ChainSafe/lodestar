@@ -1,32 +1,32 @@
+import {ChainForkConfig} from "@lodestar/config";
+import {
+  ExecutionStatus,
+  IForkChoice,
+  LVHInvalidResponse,
+  LVHValidResponse,
+  MaybeValidExecutionStatus,
+  ProtoBlock,
+  assertValidTerminalPowBlock,
+} from "@lodestar/fork-choice";
+import {ForkSeq, SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
-  isExecutionStateType,
   isExecutionBlockBodyType,
-  isMergeTransitionBlock as isMergeTransitionBlockFn,
   isExecutionEnabled,
+  isExecutionStateType,
+  isMergeTransitionBlock as isMergeTransitionBlockFn,
 } from "@lodestar/state-transition";
-import {bellatrix, Slot, deneb, SignedBeaconBlock, electra} from "@lodestar/types";
-import {
-  IForkChoice,
-  assertValidTerminalPowBlock,
-  ProtoBlock,
-  ExecutionStatus,
-  MaybeValidExecutionStatus,
-  LVHValidResponse,
-  LVHInvalidResponse,
-} from "@lodestar/fork-choice";
-import {ChainForkConfig} from "@lodestar/config";
+import {SignedBeaconBlock, Slot, bellatrix, deneb, electra} from "@lodestar/types";
 import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
-import {ForkSeq, SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@lodestar/params";
 
-import {IExecutionEngine} from "../../execution/engine/interface.js";
-import {BlockError, BlockErrorCode} from "../errors/index.js";
-import {IClock} from "../../util/clock.js";
-import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
-import {BlockProcessOpts} from "../options.js";
-import {ExecutionPayloadStatus} from "../../execution/engine/interface.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
+import {IExecutionEngine} from "../../execution/engine/interface.js";
+import {ExecutionPayloadStatus} from "../../execution/engine/interface.js";
 import {Metrics} from "../../metrics/metrics.js";
+import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
+import {IClock} from "../../util/clock.js";
+import {BlockError, BlockErrorCode} from "../errors/index.js";
+import {BlockProcessOpts} from "../options.js";
 import {ImportBlockOpts} from "./types.js";
 
 export type VerifyBlockExecutionPayloadModules = {
@@ -75,9 +75,10 @@ export async function verifyBlocksExecutionPayload(
   const executionStatuses: MaybeValidExecutionStatus[] = [];
   let mergeBlockFound: bellatrix.BeaconBlock | null = null;
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
+  const lastBlock = blocks.at(-1);
 
   // Error in the same way as verifyBlocksSanityChecks if empty blocks
-  if (blocks.length === 0) {
+  if (!lastBlock) {
     throw Error("Empty partiallyVerifiedBlocks");
   }
 
@@ -141,8 +142,6 @@ export async function verifyBlocksExecutionPayload(
   //   We are optimistically safe with respect to this entire block segment if:
   //    - all the blocks are way behind the current slot
   //    - or we have already imported a post-merge parent of first block of this chain in forkchoice
-  const lastBlock = blocks[blocks.length - 1];
-
   const currentSlot = chain.clock.currentSlot;
   const safeSlotsToImportOptimistically = opts.safeSlotsToImportOptimistically ?? SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY;
   let isOptimisticallySafe =

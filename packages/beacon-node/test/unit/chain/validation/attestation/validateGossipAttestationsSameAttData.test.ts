@@ -1,8 +1,8 @@
-import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {PublicKey, SecretKey} from "@chainsafe/blst";
 import {ForkName} from "@lodestar/params";
 import {SignatureSetType} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {BlsSingleThreadVerifier} from "../../../../../src/chain/bls/singleThread.js";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../../../../../src/chain/errors/index.js";
 import {IBeaconChain} from "../../../../../src/chain/index.js";
@@ -113,7 +113,7 @@ describe("validateGossipAttestationsSameAttData", () => {
         callIndex++;
         return result;
       };
-      await validateGossipAttestationsSameAttData(ForkName.phase0, chain, new Array(5).fill({}), 0, phase0ValidationFn);
+      await validateGossipAttestationsSameAttData(ForkName.phase0, chain, new Array(5).fill({}), phase0ValidationFn);
       for (let validatorIndex = 0; validatorIndex < phase0Result.length; validatorIndex++) {
         if (seenAttesters.includes(validatorIndex)) {
           expect(chain.seenAttesters.isKnown(0, validatorIndex)).toBe(true);

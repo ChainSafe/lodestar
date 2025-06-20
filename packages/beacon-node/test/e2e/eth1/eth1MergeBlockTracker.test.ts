@@ -1,14 +1,14 @@
-import {describe, it, beforeAll, expect, beforeEach, afterEach} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
 import {ChainConfig} from "@lodestar/config";
 import {sleep} from "@lodestar/utils";
-import {Eth1Provider, IEth1Provider} from "../../../src/index.js";
+import {afterEach, beforeAll, beforeEach, describe, expect, it} from "vitest";
+import {ZERO_HASH} from "../../../src/constants/index.js";
 import {Eth1MergeBlockTracker, StatusCode} from "../../../src/eth1/eth1MergeBlockTracker.js";
 import {Eth1Options} from "../../../src/eth1/options.js";
-import {testLogger} from "../../utils/logger.js";
 import {quantityToBigint} from "../../../src/eth1/provider/utils.js";
-import {ZERO_HASH} from "../../../src/constants/index.js";
+import {Eth1Provider, IEth1Provider} from "../../../src/index.js";
 import {getGoerliRpcUrl} from "../../testParams.js";
+import {testLogger} from "../../utils/logger.js";
 
 // This test is constantly failing. We must unblock PR so this issue is a TODO to debug it and re-enable latter.
 // It's OKAY to disable temporarily since this functionality is tested indirectly by the sim merge tests.

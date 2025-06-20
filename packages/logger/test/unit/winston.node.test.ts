@@ -1,13 +1,14 @@
 import fs from "node:fs";
 import path from "node:path";
-import {describe, it, expect, beforeAll, afterAll, afterEach, vi, Mock} from "vitest";
 import {LogLevel} from "@lodestar/utils";
+import {Mock, afterAll, afterEach, beforeAll, describe, expect, it, vi} from "vitest";
 import {TimestampFormatCode} from "../../src/index.js";
 import {getNodeLogger} from "../../src/node.js";
 import {readFileWhenExists} from "../utils/files.js";
 
 // Node.js maps `process.stdout` to `console._stdout`.
 // spy does not work on `process.stdout` directly.
+// biome-ignore lint/style/useNamingConvention: Need property name _stdout for testing
 type TestConsole = typeof console & {_stdout: {write: Mock}};
 
 describe("winston logger", () => {

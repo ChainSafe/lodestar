@@ -1,20 +1,20 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkExecution, ForkSeq} from "@lodestar/params";
+import {ForkPostBellatrix, ForkSeq} from "@lodestar/params";
 import {
-  Root,
-  isBlindedBeaconBlock,
-  isExecutionPayloadAndBlobsBundle,
   BeaconBlock,
   BeaconBlockHeader,
-  SignedBeaconBlock,
+  BlindedBeaconBlock,
+  BlobsBundle,
+  Contents,
   ExecutionPayload,
   ExecutionPayloadAndBlobsBundle,
-  BlobsBundle,
-  SignedBeaconBlockOrContents,
-  Contents,
-  SignedBlindedBeaconBlock,
-  BlindedBeaconBlock,
   ExecutionPayloadHeader,
+  Root,
+  SignedBeaconBlock,
+  SignedBeaconBlockOrContents,
+  SignedBlindedBeaconBlock,
+  isBlindedBeaconBlock,
+  isExecutionPayloadAndBlobsBundle,
 } from "@lodestar/types";
 
 import {executionPayloadToPayloadHeader} from "./execution.js";
@@ -26,7 +26,7 @@ export function blindedOrFullBlockHashTreeRoot(
   return isBlindedBeaconBlock(blindedOrFull)
     ? // Blinded
       config
-        .getExecutionForkTypes(blindedOrFull.slot)
+        .getPostBellatrixForkTypes(blindedOrFull.slot)
         .BlindedBeaconBlock.hashTreeRoot(blindedOrFull)
     : // Full
       config
@@ -41,7 +41,7 @@ export function blindedOrFullBlockToHeader(
   const bodyRoot = isBlindedBeaconBlock(blindedOrFull)
     ? // Blinded
       config
-        .getExecutionForkTypes(blindedOrFull.slot)
+        .getPostBellatrixForkTypes(blindedOrFull.slot)
         .BlindedBeaconBlockBody.hashTreeRoot(blindedOrFull.body)
     : // Full
       config
@@ -57,7 +57,10 @@ export function blindedOrFullBlockToHeader(
   };
 }
 
-export function beaconBlockToBlinded(config: ChainForkConfig, block: BeaconBlock<ForkExecution>): BlindedBeaconBlock {
+export function beaconBlockToBlinded(
+  config: ChainForkConfig,
+  block: BeaconBlock<ForkPostBellatrix>
+): BlindedBeaconBlock {
   const fork = config.getForkName(block.slot);
   const executionPayloadHeader = executionPayloadToPayloadHeader(ForkSeq[fork], block.body.executionPayload);
   const blindedBlock: BlindedBeaconBlock = {...block, body: {...block.body, executionPayloadHeader}};
@@ -66,7 +69,7 @@ export function beaconBlockToBlinded(config: ChainForkConfig, block: BeaconBlock
 
 export function signedBeaconBlockToBlinded(
   config: ChainForkConfig,
-  signedBlock: SignedBeaconBlock<ForkExecution>
+  signedBlock: SignedBeaconBlock<ForkPostBellatrix>
 ): SignedBlindedBeaconBlock {
   return {
     message: beaconBlockToBlinded(config, signedBlock.message),

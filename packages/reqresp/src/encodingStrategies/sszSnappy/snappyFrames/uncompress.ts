@@ -1,6 +1,6 @@
 import {uncompress} from "snappyjs";
 import {Uint8ArrayList} from "uint8arraylist";
-import {ChunkType, IDENTIFIER} from "./common.js";
+import {ChunkType, IDENTIFIER, UNCOMPRESSED_CHUNK_SIZE, crc} from "./common.js";
 
 export class SnappyFramesUncompress {
   private buffer = new Uint8ArrayList();
@@ -21,32 +21,55 @@ export class SnappyFramesUncompress {
       if (this.buffer.length < 4) break;
 
       const type = getChunkType(this.buffer.get(0));
+
+      if (!this.state.foundIdentifier && type !== ChunkType.IDENTIFIER) {
+        throw "malformed input: must begin with an identifier";
+      }
+
       const frameSize = getFrameSize(this.buffer, 1);
 
       if (this.buffer.length - 4 < frameSize) {
         break;
       }
 
-      const data = this.buffer.subarray(4, 4 + frameSize);
+      const frame = this.buffer.subarray(4, 4 + frameSize);
       this.buffer.consume(4 + frameSize);
 
-      if (!this.state.foundIdentifier && type !== ChunkType.IDENTIFIER) {
-        throw "malformed input: must begin with an identifier";
-      }
-
-      if (type === ChunkType.IDENTIFIER) {
-        if (!Buffer.prototype.equals.call(data, IDENTIFIER)) {
-          throw "malformed input: bad identifier";
+      switch (type) {
+        case ChunkType.IDENTIFIER: {
+          if (!Buffer.prototype.equals.call(frame, IDENTIFIER)) {
+            throw "malformed input: bad identifier";
+          }
+          this.state.foundIdentifier = true;
+          continue;
         }
-        this.state.foundIdentifier = true;
-        continue;
-      }
+        case ChunkType.PADDING:
+        case ChunkType.SKIPPABLE:
+          continue;
+        case ChunkType.COMPRESSED: {
+          const checksum = frame.subarray(0, 4);
+          const data = frame.subarray(4);
 
-      if (type === ChunkType.COMPRESSED) {
-        result.append(uncompress(data.subarray(4)));
-      }
-      if (type === ChunkType.UNCOMPRESSED) {
-        result.append(data.subarray(4));
+          const uncompressed = uncompress(data, UNCOMPRESSED_CHUNK_SIZE);
+          if (crc(uncompressed).compare(checksum) !== 0) {
+            throw "malformed input: bad checksum";
+          }
+          result.append(uncompressed);
+          break;
+        }
+        case ChunkType.UNCOMPRESSED: {
+          const checksum = frame.subarray(0, 4);
+          const uncompressed = frame.subarray(4);
+
+          if (uncompressed.length > UNCOMPRESSED_CHUNK_SIZE) {
+            throw "malformed input: too large";
+          }
+          if (crc(uncompressed).compare(checksum) !== 0) {
+            throw "malformed input: bad checksum";
+          }
+          result.append(uncompressed);
+          break;
+        }
       }
     }
     if (result.length === 0) {
@@ -82,6 +105,10 @@ function getChunkType(value: number): ChunkType {
     case ChunkType.PADDING:
       return ChunkType.PADDING;
     default:
+      // https://github.com/google/snappy/blob/main/framing_format.txt#L129
+      if (value >= 0x80 && value <= 0xfd) {
+        return ChunkType.SKIPPABLE;
+      }
       throw new Error("Unsupported snappy chunk type");
   }
 }

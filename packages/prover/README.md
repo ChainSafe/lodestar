@@ -1,7 +1,7 @@
 # Lodestar Prover
 
 [![Discord](https://img.shields.io/discord/593655374469660673.svg?label=Discord&logo=discord)](https://discord.gg/aMxzVcr)
-[![ETH Beacon APIs Spec v2.5.0](https://img.shields.io/badge/ETH%20beacon--APIs-2.5.0-blue)](https://github.com/ethereum/beacon-APIs/releases/tag/v2.5.0)
+[![ETH Beacon APIs Spec v3.1.0](https://img.shields.io/badge/ETH%20beacon--APIs-3.1.0-blue)](https://github.com/ethereum/beacon-APIs/releases/tag/v3.1.0)
 ![ES Version](https://img.shields.io/badge/ES-2021-yellow)
 ![Node Version](https://img.shields.io/badge/node-22.x-green)
 
@@ -14,7 +14,7 @@ A set of tools allowing to verify EL client JSON-RPC calls.
 You can use the `@lodestar/prover` in two ways, as a Web3 Provider and as proxy. For prover use case see below example.
 
 ```ts
-import Web3 from "web3";
+import {Web3} from "web3";
 import {createVerifiedExecutionProvider, LCTransport} from "@lodestar/prover";
 
 const httpProvider = new Web3.providers.HttpProvider("https://lodestar-sepoliarpc.chainsafe.io");
@@ -38,7 +38,7 @@ In this scenario the actual provider is mutated to handle the RPC requests and v
 For some scenarios when you don't want to mutate the provider you can pass an option `mutateProvider` as `false`. In this scenario the object `httpProvider` is not mutated and you get a new object `provider`. This is useful when your provider object does not allow mutation, e.g. Metamask provider accessible through `window.ethereum`. If not provided `mutateProvider` is considered as `true` by default. In coming releases we will switch its default behavior to `false`.
 
 ```ts
-import Web3 from "web3";
+import {Web3} from "web3";
 import {createVerifiedExecutionProvider, LCTransport} from "@lodestar/prover";
 
 const httpProvider = new Web3.providers.HttpProvider("https://lodestar-sepoliarpc.chainsafe.io");
@@ -51,7 +51,7 @@ const {provider, proofProvider} = createVerifiedExecutionProvider(httpProvider, 
   mutateProvider: false,
 });
 
-const web3 = new Web3(provider);
+const web3 = new Web3(httpProvider);
 
 const address = "0xf97e180c050e5Ab072211Ad2C213Eb5AEE4DF134";
 const balance = await web3.eth.getBalance(address, "latest");
@@ -152,8 +152,8 @@ You will need to go over the [specification](https://github.com/ethereum/beacon-
 
 ## Getting started
 
-- Follow the [installation guide](https://chainsafe.github.io/lodestar/getting-started/installation) to install Lodestar.
-- Quickly try out the whole stack by [starting a local testnet](https://chainsafe.github.io/lodestar/advanced-topics/setting-up-a-testnet).
+- Follow the [installation guide](https://chainsafe.github.io/lodestar/run/getting-started/installation) to install Lodestar.
+- Quickly try out the whole stack by [starting a local testnet](https://chainsafe.github.io/lodestar/contribution/advanced-topics/setting-up-a-testnet).
 
 ## Contributors
 

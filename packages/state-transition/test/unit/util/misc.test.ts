@@ -1,7 +1,7 @@
-import {describe, it, expect} from "vitest";
+import {describe, expect, it} from "vitest";
 
-import {toBigIntLE} from "bigint-buffer";
 import {GENESIS_SLOT, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {toBigIntLE} from "bigint-buffer";
 import {getBlockRoot} from "../../../src/util/index.js";
 import {generateState} from "../../utils/state.js";
 
@@ -17,10 +17,10 @@ describe("getBlockRoot", () => {
   });
   it("should fail if slot is current slot", () => {
     const state = generateState({slot: GENESIS_SLOT});
-    expect(() => getBlockRoot(state, GENESIS_SLOT)).toThrow("");
+    expect(() => getBlockRoot(state, GENESIS_SLOT)).toThrow();
   });
   it("should fail if slot is not within SLOTS_PER_HISTORICAL_ROOT of current slot", () => {
     const state = generateState({slot: GENESIS_SLOT + SLOTS_PER_HISTORICAL_ROOT + 1});
-    expect(() => getBlockRoot(state, GENESIS_SLOT)).toThrow("");
+    expect(() => getBlockRoot(state, GENESIS_SLOT)).toThrow();
   });
 });

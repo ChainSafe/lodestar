@@ -1,7 +1,7 @@
 import {Root, phase0} from "@lodestar/types";
+import {DepositTree} from "../../db/repositories/depositDataRoot.js";
 import {binarySearchLte} from "../../util/binarySearch.js";
 import {Eth1Error, Eth1ErrorCode} from "../errors.js";
-import {DepositTree} from "../../db/repositories/depositDataRoot.js";
 import {Eth1Block} from "../interface.js";
 
 type BlockNumber = number;
@@ -28,7 +28,7 @@ export async function getEth1DataForBlocks(
 
   // Collect the latest deposit of each blockNumber in a block number range
   const fromBlock = blocks[0].blockNumber;
-  const toBlock = blocks[blocks.length - 1].blockNumber;
+  const toBlock = blocks.at(-1)?.blockNumber as number;
   const depositsByBlockNumber = await getDepositsByBlockNumber(fromBlock, toBlock, depositDescendingStream);
   if (depositsByBlockNumber.length === 0) {
     throw new Eth1Error({code: Eth1ErrorCode.NO_DEPOSITS_FOR_BLOCK_RANGE, fromBlock, toBlock});

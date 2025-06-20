@@ -1,9 +1,9 @@
 import {digest} from "@chainsafe/as-sha256";
-import {BeaconBlock} from "@lodestar/types";
 import {EPOCHS_PER_HISTORICAL_VECTOR} from "@lodestar/params";
-import {getRandaoMix} from "../util/index.js";
+import {BeaconBlock} from "@lodestar/types";
 import {verifyRandaoSignature} from "../signatureSets/index.js";
 import {CachedBeaconStateAllForks} from "../types.js";
+import {getRandaoMix} from "../util/index.js";
 
 /**
  * Commit a randao reveal to generate pseudorandomness seeds
@@ -16,10 +16,8 @@ export function processRandao(state: CachedBeaconStateAllForks, block: BeaconBlo
   const randaoReveal = block.body.randaoReveal;
 
   // verify RANDAO reveal
-  if (verifySignature) {
-    if (!verifyRandaoSignature(state, block)) {
-      throw new Error("RANDAO reveal is an invalid signature");
-    }
+  if (verifySignature && !verifyRandaoSignature(state, block)) {
+    throw new Error("RANDAO reveal is an invalid signature");
   }
 
   // mix in RANDAO reveal

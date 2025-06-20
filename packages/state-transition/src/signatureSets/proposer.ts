@@ -1,8 +1,8 @@
 import {DOMAIN_BEACON_PROPOSER} from "@lodestar/params";
 import {SignedBeaconBlock, SignedBlindedBeaconBlock, isBlindedBeaconBlock, phase0, ssz} from "@lodestar/types";
+import {CachedBeaconStateAllForks} from "../types.js";
 import {computeSigningRoot} from "../util/index.js";
 import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../util/signatureSets.js";
-import {CachedBeaconStateAllForks} from "../types.js";
 
 export function verifyProposerSignature(
   state: CachedBeaconStateAllForks,
@@ -20,7 +20,7 @@ export function getBlockProposerSignatureSet(
   const domain = config.getDomain(state.slot, DOMAIN_BEACON_PROPOSER, signedBlock.message.slot);
 
   const blockType = isBlindedBeaconBlock(signedBlock.message)
-    ? config.getExecutionForkTypes(signedBlock.message.slot).BlindedBeaconBlock
+    ? config.getPostBellatrixForkTypes(signedBlock.message.slot).BlindedBeaconBlock
     : config.getForkTypes(signedBlock.message.slot).BeaconBlock;
 
   return {

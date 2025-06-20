@@ -1,5 +1,5 @@
 import {JobItemQueue} from "./itemQueue.js";
-import {QueueMetrics, JobQueueOpts} from "./options.js";
+import {JobQueueOpts, QueueMetrics} from "./options.js";
 
 // biome-ignore lint/suspicious/noExplicitAny: <explanation>
 type Fn<R> = (...args: any) => Promise<R>;

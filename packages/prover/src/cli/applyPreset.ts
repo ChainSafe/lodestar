@@ -1,10 +1,23 @@
 // MUST import this file first before anything and not import any Lodestar code.
-
-import {hasher} from "@chainsafe/persistent-merkle-tree/lib/hasher/as-sha256.js";
-import {setHasher} from "@chainsafe/persistent-merkle-tree/lib/hasher/index.js";
+import {setHasher} from "@chainsafe/persistent-merkle-tree";
+import {hasher as asSha256Hasher} from "@chainsafe/persistent-merkle-tree/hasher/as-sha256";
+import {hasher as hashtreeHasher} from "@chainsafe/persistent-merkle-tree/hasher/hashtree";
+import CpuFeatures from "cpu-features";
 
 // without setting this first, persistent-merkle-tree will use noble instead
-setHasher(hasher);
+const cpuFeatures = CpuFeatures();
+if (
+  cpuFeatures.arch === "x86" &&
+  !(
+    (cpuFeatures.flags.avx512f && cpuFeatures.flags.avx512vl) ||
+    (cpuFeatures.flags.avx2 && cpuFeatures.flags.bmi2) ||
+    (cpuFeatures.flags.avx && cpuFeatures.flags.sha)
+  )
+) {
+  setHasher(asSha256Hasher);
+} else {
+  setHasher(hashtreeHasher);
+}
 
 //
 // ## Rationale
@@ -21,7 +34,7 @@ setHasher(hasher);
 // set LODESTAR_PRESET manually every time.
 
 // IMPORTANT: only import Lodestar code here which does not import any other Lodestar libraries
-import {setActivePreset, presetFromJson, PresetName} from "@lodestar/params/setPreset";
+import {PresetName, presetFromJson, setActivePreset} from "@lodestar/params/setPreset";
 import {readFile} from "../utils/file.js";
 
 const network = valueOfArg("network");

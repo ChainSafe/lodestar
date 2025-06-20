@@ -1,24 +1,25 @@
+import {routes} from "@lodestar/api";
+import {ChainForkConfig} from "@lodestar/config";
+import {ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH, isForkPostElectra} from "@lodestar/params";
 import {
-  computeEpochAtSlot,
-  isExecutionStateType,
-  computeTimeAtSlot,
+  BeaconStateElectra,
+  CachedBeaconStateAllForks,
   CachedBeaconStateExecutions,
   StateHashTreeRootSource,
-  CachedBeaconStateAllForks,
+  computeEpochAtSlot,
+  computeTimeAtSlot,
+  isExecutionStateType,
 } from "@lodestar/state-transition";
-import {ChainForkConfig} from "@lodestar/config";
-import {ForkSeq, SLOTS_PER_EPOCH, ForkExecution} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
-import {Logger, sleep, fromHex, isErrorAborted} from "@lodestar/utils";
-import {routes} from "@lodestar/api";
+import {Logger, fromHex, isErrorAborted, sleep} from "@lodestar/utils";
 import {GENESIS_SLOT, ZERO_HASH_HEX} from "../constants/constants.js";
 import {Metrics} from "../metrics/index.js";
 import {ClockEvent} from "../util/clock.js";
 import {isQueueErrorAborted} from "../util/queue/index.js";
-import {prepareExecutionPayload, getPayloadAttributesForSSE} from "./produceBlock/produceBlockBody.js";
-import {IBeaconChain} from "./interface.js";
-import {RegenCaller} from "./regen/index.js";
 import {ForkchoiceCaller} from "./forkChoice/index.js";
+import {IBeaconChain} from "./interface.js";
+import {getPayloadAttributesForSSE, prepareExecutionPayload} from "./produceBlock/produceBlockBody.js";
+import {RegenCaller} from "./regen/index.js";
 
 /* With 12s slot times, this scheduler will run 4s before the start of each slot (`12 / 3 = 4`). */
 export const SCHEDULER_LOOKAHEAD_FACTOR = 3;
@@ -114,7 +115,12 @@ export class PrepareNextSlotScheduler {
         // the slot 0 of next epoch will likely use this Previous Root Checkpoint state for state transition so we transfer cache here
         // the resulting state with cache will be cached in Checkpoint State Cache which is used for the upcoming block processing
         // for other slots dontTransferCached=true because we don't run state transition on this state
-        {dontTransferCache: !isEpochTransition},
+        //
+        // Shuffling calculation will be done asynchronously when passing asyncShufflingCalculation=true.  Shuffling will be queued in
+        // beforeProcessEpoch and should theoretically be ready immediately after the synchronous epoch transition finished and the
+        // event loop is free.  In long periods of non-finality too many forks will cause the shufflingCache to throw an error for
+        // too many queued shufflings so only run async during normal epoch transition. See issue ChainSafe/lodestar#7244
+        {dontTransferCache: !isEpochTransition, asyncShufflingCalculation: true},
         RegenCaller.precomputeEpoch
       );
 
@@ -167,7 +173,7 @@ export class PrepareNextSlotScheduler {
           await prepareExecutionPayload(
             this.chain,
             this.logger,
-            fork as ForkExecution, // State is of execution type
+            fork as ForkPostBellatrix, // State is of execution type
             fromHex(updatedHeadRoot),
             safeBlockHash,
             finalizedBlockHash,
@@ -185,7 +191,7 @@ export class PrepareNextSlotScheduler {
 
         // If emitPayloadAttributes is true emit a SSE payloadAttributes event
         if (this.chain.opts.emitPayloadAttributes === true) {
-          const data = await getPayloadAttributesForSSE(fork as ForkExecution, this.chain, {
+          const data = await getPayloadAttributesForSSE(fork as ForkPostBellatrix, this.chain, {
             prepareState: updatedPrepareState,
             prepareSlot,
             parentBlockRoot: fromHex(headRoot),
@@ -209,6 +215,10 @@ export class PrepareNextSlotScheduler {
           this.metrics?.precomputeNextEpochTransition.waste.inc();
         }
         this.metrics?.precomputeNextEpochTransition.hits.set(previousHits ?? 0);
+
+        // Check if we can stop polling eth1 data
+        this.stopEth1Polling();
+
         this.logger.verbose("Completed PrepareNextSlotScheduler epoch transition", {
           nextEpoch,
           headSlot,
@@ -234,5 +244,28 @@ export class PrepareNextSlotScheduler {
     });
     state.hashTreeRoot();
     hashTreeRootTimer?.();
+  }
+
+  /**
+   * Stop eth1 data polling after eth1_deposit_index has reached deposit_requests_start_index in Electra as described in EIP-6110
+   */
+  stopEth1Polling(): void {
+    // Only continue if eth1 is still polling and finalized checkpoint is in Electra. State regen is expensive
+    if (this.chain.eth1.isPollingEth1Data()) {
+      const finalizedCheckpoint = this.chain.forkChoice.getFinalizedCheckpoint();
+      const checkpointFork = this.config.getForkInfoAtEpoch(finalizedCheckpoint.epoch).name;
+
+      if (isForkPostElectra(checkpointFork)) {
+        const finalizedState = this.chain.getStateByCheckpoint(finalizedCheckpoint)?.state;
+
+        if (
+          finalizedState !== undefined &&
+          finalizedState.eth1DepositIndex === Number((finalizedState as BeaconStateElectra).depositRequestsStartIndex)
+        ) {
+          // Signal eth1 to stop polling eth1Data
+          this.chain.eth1.stopPollingEth1Data();
+        }
+      }
+    }
   }
 }

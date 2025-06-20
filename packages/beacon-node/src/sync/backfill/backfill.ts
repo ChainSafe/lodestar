@@ -1,22 +1,22 @@
 import {EventEmitter} from "node:events";
-import {StrictEventEmitter} from "strict-event-emitter-types";
-import {BeaconStateAllForks, blockToHeader, computeAnchorCheckpoint} from "@lodestar/state-transition";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
-import {phase0, Root, SignedBeaconBlock, Slot, ssz} from "@lodestar/types";
+import {BeaconStateAllForks, blockToHeader, computeAnchorCheckpoint} from "@lodestar/state-transition";
+import {Root, SignedBeaconBlock, Slot, phase0, ssz} from "@lodestar/types";
 import {ErrorAborted, Logger, sleep, toRootHex} from "@lodestar/utils";
+import {StrictEventEmitter} from "strict-event-emitter-types";
 
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {IBeaconChain} from "../../chain/index.js";
 import {GENESIS_SLOT, ZERO_HASH} from "../../constants/index.js";
 import {IBeaconDb} from "../../db/index.js";
+import {Metrics} from "../../metrics/metrics.js";
 import {INetwork, NetworkEvent, NetworkEventData, PeerAction} from "../../network/index.js";
+import {byteArrayEquals} from "../../util/bytes.js";
 import {ItTrigger} from "../../util/itTrigger.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {shuffleOne} from "../../util/shuffle.js";
-import {Metrics} from "../../metrics/metrics.js";
-import {byteArrayEquals} from "../../util/bytes.js";
-import {verifyBlockProposerSignature, verifyBlockSequence, BackfillBlockHeader, BackfillBlock} from "./verify.js";
 import {BackfillSyncError, BackfillSyncErrorCode} from "./errors.js";
+import {BackfillBlock, BackfillBlockHeader, verifyBlockProposerSignature, verifyBlockSequence} from "./verify.js";
 /**
  * Timeout in ms to take a break from reading a backfillBatchSize from db, as just yielding
  * to sync loop gives hardly any.
@@ -568,34 +568,32 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
             `Invalid backfill sequence: expected a block at ${jumpBackTo} in blockArchive, ignoring the sequence`
           );
         }
-        if (anchorBlock && validSequence) {
-          if (this.prevFinalizedCheckpointBlock.slot >= jumpBackTo) {
-            this.logger.debug(
-              `Found a sequence going back to ${jumpBackTo} before the previous finalized or wsCheckpoint`,
-              {slot: this.prevFinalizedCheckpointBlock.slot}
-            );
+        if (anchorBlock && validSequence && this.prevFinalizedCheckpointBlock.slot >= jumpBackTo) {
+          this.logger.debug(
+            `Found a sequence going back to ${jumpBackTo} before the previous finalized or wsCheckpoint`,
+            {slot: this.prevFinalizedCheckpointBlock.slot}
+          );
 
-            // Everything saved in db between a backfilled range is a connected sequence
-            // we only need to check if prevFinalizedCheckpointBlock is in db
-            const prevBackfillCpBlock = await this.db.blockArchive.getByRoot(this.prevFinalizedCheckpointBlock.root);
-            if (
-              prevBackfillCpBlock != null &&
-              this.prevFinalizedCheckpointBlock.slot === prevBackfillCpBlock.message.slot
-            ) {
-              this.logger.verbose("Validated current prevFinalizedCheckpointBlock", {
-                root: toRootHex(this.prevFinalizedCheckpointBlock.root),
-                slot: prevBackfillCpBlock.message.slot,
-              });
-            } else {
-              validSequence = false;
-              this.logger.warn(
-                `Invalid backfill sequence: previous finalized or checkpoint block root=${toRootHex(
-                  this.prevFinalizedCheckpointBlock.root
-                )}, slot=${this.prevFinalizedCheckpointBlock.slot} ${
-                  prevBackfillCpBlock ? "found at slot=" + prevBackfillCpBlock.message.slot : "not found"
-                }, ignoring the sequence`
-              );
-            }
+          // Everything saved in db between a backfilled range is a connected sequence
+          // we only need to check if prevFinalizedCheckpointBlock is in db
+          const prevBackfillCpBlock = await this.db.blockArchive.getByRoot(this.prevFinalizedCheckpointBlock.root);
+          if (
+            prevBackfillCpBlock != null &&
+            this.prevFinalizedCheckpointBlock.slot === prevBackfillCpBlock.message.slot
+          ) {
+            this.logger.verbose("Validated current prevFinalizedCheckpointBlock", {
+              root: toRootHex(this.prevFinalizedCheckpointBlock.root),
+              slot: prevBackfillCpBlock.message.slot,
+            });
+          } else {
+            validSequence = false;
+            this.logger.warn(
+              `Invalid backfill sequence: previous finalized or checkpoint block root=${toRootHex(
+                this.prevFinalizedCheckpointBlock.root
+              )}, slot=${this.prevFinalizedCheckpointBlock.slot} ${
+                prevBackfillCpBlock ? "found at slot=" + prevBackfillCpBlock.message.slot : "not found"
+              }, ignoring the sequence`
+            );
           }
         }
 

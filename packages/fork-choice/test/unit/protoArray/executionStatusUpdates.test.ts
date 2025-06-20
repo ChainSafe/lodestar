@@ -1,13 +1,13 @@
-import {describe, it, expect} from "vitest";
+import {DataAvailabilityStatus} from "@lodestar/state-transition";
+import {describe, expect, it} from "vitest";
 import {
-  ProtoBlock,
-  ProtoArray,
+  BlockExtraMeta,
   ExecutionStatus,
   MaybeValidExecutionStatus,
-  BlockExtraMeta,
+  ProtoArray,
+  ProtoBlock,
 } from "../../../src/index.js";
 import {LVHExecErrorCode} from "../../../src/protoArray/errors.js";
-import {DataAvailabilityStatus} from "../../../src/protoArray/interface.js";
 
 type ValidationTestCase = {
   root: string;

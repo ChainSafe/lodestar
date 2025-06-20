@@ -1,4 +1,4 @@
-import {itBench} from "@dapplion/benchmark";
+import {bench, describe} from "@chainsafe/benchmark";
 import {
   ACTIVE_PRESET,
   MAX_ATTESTATIONS,
@@ -8,9 +8,9 @@ import {
   MAX_VOLUNTARY_EXITS,
   PresetName,
 } from "@lodestar/params";
-import {DataAvailableStatus, ExecutionPayloadStatus, stateTransition} from "../../../src/index.js";
-import {generatePerfTestCachedStatePhase0, perfStateId} from "../util.js";
+import {DataAvailabilityStatus, ExecutionPayloadStatus, stateTransition} from "../../../src/index.js";
 import {StateBlock} from "../types.js";
+import {generatePerfTestCachedStatePhase0, perfStateId} from "../util.js";
 import {BlockOpts, getBlockPhase0} from "./util.js";
 
 // As of Jun 12 2021
@@ -98,7 +98,7 @@ describe("phase0 processBlock", () => {
   ];
 
   for (const {id, opts} of testCases) {
-    itBench<StateBlock, StateBlock>({
+    bench<StateBlock, StateBlock>({
       id: `phase0 processBlock - ${perfStateId} ${id}`,
       before: () => {
         const state = generatePerfTestCachedStatePhase0();
@@ -110,7 +110,7 @@ describe("phase0 processBlock", () => {
       fn: ({state, block}) => {
         stateTransition(state, block, {
           executionPayloadStatus: ExecutionPayloadStatus.valid,
-          dataAvailableStatus: DataAvailableStatus.available,
+          dataAvailabilityStatus: DataAvailabilityStatus.Available,
           verifyProposer: false,
           verifySignatures: false,
           verifyStateRoot: false,

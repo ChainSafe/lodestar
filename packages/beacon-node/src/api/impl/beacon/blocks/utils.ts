@@ -1,12 +1,12 @@
 import {routes} from "@lodestar/api";
-import {blockToHeader} from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
-import {RootHex, SignedBeaconBlock, Slot} from "@lodestar/types";
 import {IForkChoice} from "@lodestar/fork-choice";
-import {GENESIS_SLOT} from "../../../../constants/index.js";
-import {ApiError, ValidationError} from "../../errors.js";
+import {blockToHeader} from "@lodestar/state-transition";
+import {RootHex, SignedBeaconBlock, Slot} from "@lodestar/types";
 import {IBeaconChain} from "../../../../chain/interface.js";
+import {GENESIS_SLOT} from "../../../../constants/index.js";
 import {rootHexRegex} from "../../../../eth1/provider/utils.js";
+import {ApiError, ValidationError} from "../../errors.js";
 
 export function toBeaconHeaderResponse(
   config: ChainForkConfig,
@@ -68,7 +68,7 @@ export async function getBlockResponse(
       : await chain.getCanonicalBlockAtSlot(rootOrSlot);
 
   if (!res) {
-    throw new ApiError(404, `No block found for id '${blockId}'`);
+    throw new ApiError(404, `Block not found for id '${blockId}'`);
   }
 
   return res;

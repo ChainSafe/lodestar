@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.22.0",
+  "version": "1.31.0",
   "type": "module",
   "exports": {
     ".": {
@@ -53,24 +53,23 @@
     "lint": "biome check src/ test/",
     "lint:fix": "yarn run lint --write",
     "test": "yarn test:unit",
-    "test:unit": "vitest --run --dir test/unit/",
+    "test:unit": "vitest run --project unit --project unit-minimal",
     "check-readme": "typescript-docs-verifier"
   },
   "types": "lib/index.d.ts",
   "dependencies": {
-    "@chainsafe/as-sha256": "^0.5.0",
-    "@chainsafe/blst": "^2.0.3",
-    "@chainsafe/persistent-merkle-tree": "^0.8.0",
-    "@chainsafe/persistent-ts": "^0.19.1",
-    "@chainsafe/ssz": "^0.17.1",
-    "@chainsafe/swap-or-not-shuffle": "^0.0.2",
-    "@lodestar/config": "^1.22.0",
-    "@lodestar/params": "^1.22.0",
-    "@lodestar/types": "^1.22.0",
-    "@chainsafe/pubkey-index-map": "2.0.0",
-    "@lodestar/utils": "^1.22.0",
-    "bigint-buffer": "^1.1.5",
-    "immutable": "^4.3.2"
+    "@chainsafe/as-sha256": "^1.2.0",
+    "@chainsafe/blst": "^2.2.0",
+    "@chainsafe/persistent-merkle-tree": "^1.2.0",
+    "@chainsafe/persistent-ts": "^1.0.0",
+    "@chainsafe/pubkey-index-map": "^3.0.0",
+    "@chainsafe/ssz": "^1.2.1",
+    "@chainsafe/swap-or-not-shuffle": "^1.2.1",
+    "@lodestar/config": "^1.31.0",
+    "@lodestar/params": "^1.31.0",
+    "@lodestar/types": "^1.31.0",
+    "@lodestar/utils": "^1.31.0",
+    "bigint-buffer": "^1.1.5"
   },
   "keywords": [
     "ethereum",

@@ -1,8 +1,8 @@
 import {aggregateSerializedPublicKeys} from "@chainsafe/blst";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, ForkSeq} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {getNextSyncCommitteeIndices} from "../util/seed.js";
 import {CachedBeaconStateAltair} from "../types.js";
+import {getNextSyncCommitteeIndices} from "../util/seed.js";
 
 /**
  * Rotate nextSyncCommittee to currentSyncCommittee if sync committee period is over.
@@ -26,7 +26,10 @@ export function processSyncCommitteeUpdates(fork: ForkSeq, state: CachedBeaconSt
     const validators = state.validators;
 
     // Using the index2pubkey cache is slower because it needs the serialized pubkey.
-    const nextSyncCommitteePubkeys = nextSyncCommitteeIndices.map((index) => validators.getReadonly(index).pubkey);
+    const nextSyncCommitteePubkeys = [];
+    for (const index of nextSyncCommitteeIndices) {
+      nextSyncCommitteePubkeys.push(validators.getReadonly(index).pubkey);
+    }
 
     // Rotate syncCommittee in state
     state.currentSyncCommittee = state.nextSyncCommittee;

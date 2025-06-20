@@ -1,6 +1,6 @@
 import {PeerId} from "@libp2p/interface";
-import {LodestarError} from "@lodestar/utils";
 import {Root} from "@lodestar/types";
+import {LodestarError} from "@lodestar/utils";
 
 export enum BackfillSyncErrorCode {
   /** fetched block doesn't connect to anchor block */

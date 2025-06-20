@@ -1,7 +1,7 @@
-import path from "node:path";
 import fs from "node:fs";
+import path from "node:path";
 import {fileURLToPath} from "node:url";
-import {fromHex, toHex} from "@lodestar/utils";
+import {fromHex, strip0xPrefix, toHex} from "@lodestar/utils";
 
 // "c-kzg" has hardcoded the mainnet value, do not use params
 export const FIELD_ELEMENTS_PER_BLOB_MAINNET = 4096;
@@ -41,10 +41,8 @@ const G2POINT_COUNT = 65;
 const TOTAL_SIZE = 2 * POINT_COUNT_BYTES + G1POINT_BYTES * G1POINT_COUNT + G2POINT_BYTES * G2POINT_COUNT;
 
 export async function initCKZG(): Promise<void> {
-  /* eslint-disable @typescript-eslint/ban-ts-comment */
   // @ts-ignore
   ckzg = (await import("c-kzg")).default as typeof ckzg;
-  /* eslint-enable @typescript-eslint/ban-ts-comment */
 }
 
 export enum TrustedFileMode {
@@ -86,7 +84,9 @@ export function loadEthereumTrustedSetup(mode: TrustedFileMode = TrustedFileMode
 }
 
 export interface TrustedSetupJSON {
+  // biome-ignore lint/style/useNamingConvention: Need to be consistent with KZG pattern
   setup_G1: string[];
+  // biome-ignore lint/style/useNamingConvention: Need to be consistent with KZG pattern
   setup_G2: string[];
 }
 
@@ -120,7 +120,9 @@ export function trustedSetupJsonToBin(data: TrustedSetupJSON): TrustedSetupBin {
 
 export function trustedSetupBinToJson(bytes: TrustedSetupBin): TrustedSetupJSON {
   const data: TrustedSetupJSON = {
+    // biome-ignore lint/style/useNamingConvention: Need to be consistent with KZG pattern
     setup_G1: [],
+    // biome-ignore lint/style/useNamingConvention: Need to be consistent with KZG pattern
     setup_G2: [],
   };
 
@@ -149,11 +151,4 @@ export function trustedSetupJsonToTxt(data: TrustedSetupJSON): TrustedSetupTXT {
     ...data.setup_G1.map(strip0xPrefix),
     ...data.setup_G2.map(strip0xPrefix),
   ].join("\n");
-}
-
-function strip0xPrefix(hex: string): string {
-  if (hex.startsWith("0x")) {
-    return hex.slice(2);
-  }
-  return hex;
 }

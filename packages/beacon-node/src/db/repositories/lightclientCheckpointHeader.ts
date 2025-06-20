@@ -1,8 +1,8 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {DatabaseController, Repository} from "@lodestar/db";
 import {LightClientHeader, ssz} from "@lodestar/types";
-import {Bucket, getBucketNameByValue} from "../buckets.js";
 import {getLightClientHeaderTypeFromBytes} from "../../util/multifork.js";
+import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 /**
  * Block headers by block root. Until finality includes all headers seen by this node. After finality,
@@ -19,7 +19,7 @@ export class CheckpointHeaderRepository extends Repository<Uint8Array, LightClie
 
   // Overrides for multi-fork
   encodeValue(value: LightClientHeader): Uint8Array {
-    return this.config.getLightClientForkTypes(value.beacon.slot).LightClientHeader.serialize(value);
+    return this.config.getPostAltairForkTypes(value.beacon.slot).LightClientHeader.serialize(value);
   }
 
   decodeValue(data: Uint8Array): LightClientHeader {
@@ -27,6 +27,6 @@ export class CheckpointHeaderRepository extends Repository<Uint8Array, LightClie
   }
 
   getId(value: LightClientHeader): Uint8Array {
-    return this.config.getLightClientForkTypes(value.beacon.slot).LightClientHeader.hashTreeRoot(value);
+    return this.config.getPostAltairForkTypes(value.beacon.slot).LightClientHeader.hashTreeRoot(value);
   }
 }

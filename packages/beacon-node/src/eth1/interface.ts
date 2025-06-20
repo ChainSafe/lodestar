@@ -1,6 +1,6 @@
 import {BeaconConfig} from "@lodestar/config";
-import {phase0, Root, RootHex} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
+import {Root, RootHex, phase0} from "@lodestar/types";
 
 export type EthJsonRpcBlockRaw = {
   /** the block number. null when its pending block. `"0x1b4"` */
@@ -62,6 +62,8 @@ export interface IEth1ForBlockProduction {
    * - head state not isMergeTransitionComplete
    */
   startPollingMergeBlock(): void;
+
+  isPollingEth1Data(): boolean;
 
   /**
    * Should stop polling eth1Data after a Electra block is finalized AND deposit_requests_start_index is reached

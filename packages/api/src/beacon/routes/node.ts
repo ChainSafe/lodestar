@@ -1,22 +1,20 @@
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {ssz, stringType} from "@lodestar/types";
-import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {
   ArrayOf,
   EmptyArgs,
-  EmptyRequestCodec,
   EmptyMeta,
   EmptyMetaCodec,
   EmptyRequest,
+  EmptyRequestCodec,
   EmptyResponseCodec,
   EmptyResponseData,
   JsonOnlyResponseCodec,
 } from "../../utils/codecs.js";
 import {HttpStatusCode} from "../../utils/httpStatusCode.js";
+import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {WireFormat} from "../../utils/wireFormat.js";
-
-// See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
 export const NetworkIdentityType = new ContainerType(
   {

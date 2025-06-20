@@ -1,15 +1,15 @@
-import {describe, it, expect} from "vitest";
-import {phase0, ssz} from "@lodestar/types";
-import {MAX_DEPOSITS, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {verifyMerkleBranch} from "@lodestar/utils";
 import {createChainForkConfig} from "@lodestar/config";
-import {filterBy} from "../../../utils/db.js";
-import {Eth1ErrorCode} from "../../../../src/eth1/errors.js";
-import {generateState} from "../../../utils/state.js";
-import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
-import {getDeposits, getDepositsWithProofs, DepositGetter} from "../../../../src/eth1/utils/deposits.js";
+import {MAX_DEPOSITS, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {phase0, ssz} from "@lodestar/types";
+import {verifyMerkleBranch} from "@lodestar/utils";
+import {describe, expect, it} from "vitest";
 import {DepositTree} from "../../../../src/db/repositories/depositDataRoot.js";
+import {Eth1ErrorCode} from "../../../../src/eth1/errors.js";
+import {DepositGetter, getDeposits, getDepositsWithProofs} from "../../../../src/eth1/utils/deposits.js";
 import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
+import {filterBy} from "../../../utils/db.js";
+import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
+import {generateState} from "../../../utils/state.js";
 
 describe("eth1 / util / deposits", () => {
   describe("getDeposits", () => {

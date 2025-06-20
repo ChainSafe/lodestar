@@ -84,6 +84,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -177,7 +178,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "(sum(nodejs_heap_size_total_bytes) + sum(discv5_worker_nodejs_heap_size_total_bytes) + sum(network_worker_nodejs_heap_size_total_bytes) + sum(lodestar_historical_state_worker_nodejs_heap_size_total_bytes))\nor\n(sum(nodejs_heap_size_total_bytes) + sum(discv5_worker_nodejs_heap_size_total_bytes) + sum(lodestar_historical_state_worker_nodejs_heap_size_total_bytes))",
+          "expr": "(sum(nodejs_heap_size_total_bytes) + sum(discv5_worker_nodejs_heap_size_total_bytes) + sum(network_worker_nodejs_heap_size_total_bytes) + sum(lodestar_historical_state_worker_nodejs_heap_size_total_bytes or vector(0)))\nor\n(sum(nodejs_heap_size_total_bytes) + sum(discv5_worker_nodejs_heap_size_total_bytes) + sum(lodestar_historical_state_worker_nodejs_heap_size_total_bytes or vector(0)))",
           "hide": false,
           "interval": "",
           "legendFormat": "node allocated heap",
@@ -191,7 +192,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "(sum(nodejs_heap_size_used_bytes) + sum(discv5_worker_nodejs_heap_size_used_bytes) + sum(network_worker_nodejs_heap_size_used_bytes) + sum(lodestar_historical_state_worker_nodejs_heap_size_used_bytes)) \nor\n(sum(nodejs_heap_size_used_bytes) + sum(discv5_worker_nodejs_heap_size_used_bytes) + sum(lodestar_historical_state_worker_nodejs_heap_size_used_bytes)) ",
+          "expr": "(sum(nodejs_heap_size_used_bytes) + sum(discv5_worker_nodejs_heap_size_used_bytes) + sum(network_worker_nodejs_heap_size_used_bytes) + sum(lodestar_historical_state_worker_nodejs_heap_size_used_bytes or vector(0))) \nor\n(sum(nodejs_heap_size_used_bytes) + sum(discv5_worker_nodejs_heap_size_used_bytes) + sum(lodestar_historical_state_worker_nodejs_heap_size_used_bytes or vector(0))) ",
           "hide": false,
           "interval": "",
           "legendFormat": "node used heap",
@@ -205,7 +206,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "(sum(nodejs_external_memory_bytes) + sum(discv5_worker_nodejs_external_memory_bytes) + sum(network_worker_nodejs_external_memory_bytes) + sum(lodestar_historical_state_worker_nodejs_external_memory_bytes))\nor\n(sum(nodejs_external_memory_bytes) + sum(discv5_worker_nodejs_external_memory_bytes) + sum(lodestar_historical_state_worker_nodejs_external_memory_bytes))",
+          "expr": "(sum(nodejs_external_memory_bytes) + sum(discv5_worker_nodejs_external_memory_bytes) + sum(network_worker_nodejs_external_memory_bytes) + sum(lodestar_historical_state_worker_nodejs_external_memory_bytes or vector(0)))\nor\n(sum(nodejs_external_memory_bytes) + sum(discv5_worker_nodejs_external_memory_bytes) + sum(lodestar_historical_state_worker_nodejs_external_memory_bytes or vector(0)))",
           "hide": false,
           "interval": "",
           "legendFormat": "node external memory",
@@ -227,6 +228,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -291,7 +293,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum by (space) ({__name__=~\"nodejs_heap_space_size_used_bytes|network_worker_nodejs_heap_space_size_used_bytes|discv5_worker_nodejs_heap_space_size_used_bytes|lodestar_historical_state_worker_nodejs_heap_space_size_used_bytes\")",
+          "expr": "sum by (space) ({__name__=~\"nodejs_heap_space_size_used_bytes|network_worker_nodejs_heap_space_size_used_bytes|discv5_worker_nodejs_heap_space_size_used_bytes|lodestar_historical_state_worker_nodejs_heap_space_size_used_bytes\"})",
           "hide": false,
           "interval": "",
           "legendFormat": "{{space}}",
@@ -305,7 +307,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "(nodejs_external_memory_bytes{job=~\"$beacon_job|beacon\"} + discv5_worker_nodejs_external_memory_bytes{job=~\"$beacon_job|beacon\"} + network_worker_nodejs_external_memory_bytes{job=~\"$beacon_job|beacon\"} + lodestar_historical_state_worker_nodejs_external_memory_bytes{job=~\"$beacon_job|beacon\"})\nor\n(nodejs_external_memory_bytes{job=~\"$beacon_job|beacon\"} + discv5_worker_nodejs_external_memory_bytes{job=~\"$beacon_job|beacon\"} + lodestar_historical_state_worker_nodejs_external_memory_bytes{job=~\"$beacon_job|beacon\"})",
+          "expr": "(sum(nodejs_external_memory_bytes{job=~\"$beacon_job|beacon\"}) + sum(discv5_worker_nodejs_external_memory_bytes{job=~\"$beacon_job|beacon\"}) + sum(network_worker_nodejs_external_memory_bytes{job=~\"$beacon_job|beacon\"}) + sum(lodestar_historical_state_worker_nodejs_external_memory_bytes{job=~\"$beacon_job|beacon\"} or vector(0)))\nor\nsum(nodejs_external_memory_bytes{job=~\"$validator_job|validator\"})",
           "hide": false,
           "interval": "",
           "legendFormat": "external_memory",
@@ -340,6 +342,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -439,6 +442,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "GC Time",
@@ -556,6 +560,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -655,6 +660,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "GC Time",
@@ -1190,7 +1196,7 @@
           "refId": "C"
         }
       ],
-      "title": "HIstorical State Worker Thread - GC pause time rate + reclaimed bytes",
+      "title": "Historical State Worker Thread - GC pause time rate + reclaimed bytes",
       "type": "timeseries"
     },
     {
@@ -3747,7 +3753,6 @@
         "y": 105
       },
       "id": 359,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [],
@@ -5813,8 +5818,7 @@
   ],
   "refresh": "10s",
   "revision": 1,
-  "schemaVersion": 38,
-  "style": "dark",
+  "schemaVersion": 39,
   "tags": [
     "lodestar"
   ],

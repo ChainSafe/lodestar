@@ -1,18 +1,16 @@
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
-import {ChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig, SpecJson} from "@lodestar/config";
 import {ssz} from "@lodestar/types";
 import {
   ArrayOf,
   EmptyArgs,
-  EmptyRequestCodec,
   EmptyMeta,
   EmptyMetaCodec,
   EmptyRequest,
+  EmptyRequestCodec,
   JsonOnlyResp,
 } from "../../utils/codecs.js";
 import {Endpoint, RouteDefinitions} from "../../utils/index.js";
-
-// See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
 export const DepositContractType = new ContainerType(
   {
@@ -26,7 +24,7 @@ export const ForkListType = ArrayOf(ssz.phase0.Fork);
 
 export type DepositContract = ValueOf<typeof DepositContractType>;
 export type ForkList = ValueOf<typeof ForkListType>;
-export type Spec = Record<string, string>;
+export type Spec = SpecJson;
 
 export type Endpoints = {
   /**

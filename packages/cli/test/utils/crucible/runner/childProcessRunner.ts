@@ -1,11 +1,11 @@
 import {ChildProcess} from "node:child_process";
-import {spawnChildProcess, stopChildProcess, SpawnChildProcessOptions, ChildProcessResolve} from "@lodestar/test-utils";
 import {Logger} from "@lodestar/logger";
+import {ChildProcessResolve, SpawnChildProcessOptions, spawnChildProcess, stopChildProcess} from "@lodestar/test-utils";
 import {Job, JobOptions, RunnerEnv, RunnerType} from "../interfaces.js";
 
 export class ChildProcessRunner implements RunnerEnv<RunnerType.ChildProcess> {
   type = RunnerType.ChildProcess as const;
-  private logger: Logger;
+  protected logger: Logger;
 
   constructor(opts: {logger: Logger}) {
     this.logger = opts.logger;

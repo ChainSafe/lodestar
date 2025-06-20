@@ -1,11 +1,11 @@
-import {describe, it, expect, afterEach, beforeAll} from "vitest";
-import {bellatrix, deneb, ssz} from "@lodestar/types";
-import {BYTES_PER_FIELD_ELEMENT, BLOB_TX_TYPE} from "@lodestar/params";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
-import {computeBlobSidecars, kzgCommitmentToVersionedHash} from "../../../src/util/blobs.js";
-import {loadEthereumTrustedSetup, initCKZG, ckzg, FIELD_ELEMENTS_PER_BLOB_MAINNET} from "../../../src/util/kzg.js";
+import {BLOB_TX_TYPE, BYTES_PER_FIELD_ELEMENT} from "@lodestar/params";
+import {bellatrix, deneb, ssz} from "@lodestar/types";
+import {afterEach, beforeAll, describe, expect, it} from "vitest";
 import {validateBlobSidecars, validateGossipBlobSidecar} from "../../../src/chain/validation/blobSidecar.js";
+import {computeBlobSidecars, kzgCommitmentToVersionedHash} from "../../../src/util/blobs.js";
+import {FIELD_ELEMENTS_PER_BLOB_MAINNET, ckzg, initCKZG, loadEthereumTrustedSetup} from "../../../src/util/kzg.js";
+import {getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
 
 describe("C-KZG", () => {
   const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];
@@ -45,6 +45,7 @@ describe("C-KZG", () => {
     afterEachCallbacks.push(() => chain.close());
 
     const slot = 0;
+    const fork = config.getForkName(slot);
     const blobs = [generateRandomBlob(), generateRandomBlob()];
     const kzgCommitments = blobs.map((blob) => ckzg.blobToKzgCommitment(blob));
 
@@ -65,7 +66,7 @@ describe("C-KZG", () => {
 
     for (const blobSidecar of blobSidecars) {
       try {
-        await validateGossipBlobSidecar(chain, blobSidecar, blobSidecar.index);
+        await validateGossipBlobSidecar(fork, chain, blobSidecar, blobSidecar.index);
       } catch (_e) {
         // We expect some error from here
         // console.log(error);

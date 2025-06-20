@@ -1,13 +1,14 @@
 import {byteArrayEquals} from "@chainsafe/ssz";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
-import {CachedBeaconStateAllForks} from "../types.js";
 import {ZERO_HASH} from "../constants/index.js";
+import {CachedBeaconStateAllForks} from "../types.js";
 
 export {upgradeStateToAltair} from "./upgradeStateToAltair.js";
 export {upgradeStateToBellatrix} from "./upgradeStateToBellatrix.js";
 export {upgradeStateToCapella} from "./upgradeStateToCapella.js";
 export {upgradeStateToDeneb} from "./upgradeStateToDeneb.js";
 export {upgradeStateToElectra} from "./upgradeStateToElectra.js";
+export {upgradeStateToFulu} from "./upgradeStateToFulu.js";
 
 /**
  * Dial state to next slot. Common for all forks

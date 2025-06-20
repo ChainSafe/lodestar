@@ -1,4 +1,4 @@
-import {describe, it, expect} from "vitest";
+import {describe, expect, it} from "vitest";
 import {AllocSource, BufferPool} from "../../../src/util/bufferPool.js";
 
 describe("BufferPool", () => {

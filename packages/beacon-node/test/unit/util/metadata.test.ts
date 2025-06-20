@@ -1,6 +1,6 @@
-import {describe, it, expect} from "vitest";
-import {getLodestarClientVersion} from "../../../src/util/metadata.js";
+import {describe, expect, it} from "vitest";
 import {ClientCode} from "../../../src/execution/index.js";
+import {getLodestarClientVersion} from "../../../src/util/metadata.js";
 
 describe("util / metadata", () => {
   describe("getLodestarClientVersion", () => {

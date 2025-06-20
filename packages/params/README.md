@@ -2,7 +2,7 @@
 
 [![npm](https://img.shields.io/npm/v/@lodestar/types)](https://www.npmjs.com/package/@lodestar/types)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Eth Consensus Spec v1.4.0](https://img.shields.io/badge/ETH%20consensus--spec-1.4.0-blue)](https://github.com/ethereum/consensus-specs/releases/tag/v1.4.0)
+[![Eth Consensus Spec v1.5.0](https://img.shields.io/badge/ETH%20consensus--spec-1.5.0-blue)](https://github.com/ethereum/consensus-specs/releases/tag/v1.5.0)
 ![ES Version](https://img.shields.io/badge/ES-2021-yellow)
 ![Node Version](https://img.shields.io/badge/node-22.x-green)
 
@@ -70,7 +70,7 @@ Important Notes:
 - Interacting with and understanding the active preset is only necessary in very limited testing environments, like for ephemeral testnets
 - The `minimal` preset is NOT compatible with the `mainnet` preset.
 - using `setActivePreset` may be dangerous, and only should be run once before loading any other libraries. All downstream Lodestar libraries expect the active preset to never change.
-- Preset values can be overriden by executing `setActivePreset(presetName: PresetName, overrides?: Partial<BeaconPreset>)` and supplying values to override.
+- Preset values can be overridden by executing `setActivePreset(presetName: PresetName, overrides?: Partial<BeaconPreset>)` and supplying values to override.
 - The Lodestar CLI exposes `setActivePreset` through `--presetFile` flag which allows to override the active preset with custom values from file.
 
 ## License

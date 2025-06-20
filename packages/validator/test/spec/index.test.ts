@@ -1,12 +1,12 @@
-import {expect, describe, it, beforeAll, afterAll} from "vitest";
-import {rimraf} from "rimraf";
 import {LevelDbController} from "@lodestar/db";
+import {rimraf} from "rimraf";
+import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {
-  SlashingProtection,
-  SlashingProtectionBlock,
-  SlashingProtectionAttestation,
-  InvalidBlockError,
   InvalidAttestationError,
+  InvalidBlockError,
+  SlashingProtection,
+  SlashingProtectionAttestation,
+  SlashingProtectionBlock,
 } from "../../src/slashingProtection/index.js";
 import {testLogger} from "../utils/logger.js";
 

@@ -1,11 +1,11 @@
 import {toHexString} from "@chainsafe/ssz";
-import {describe, it, expect, beforeEach, afterEach} from "vitest";
 import {ChainConfig} from "@lodestar/config";
 import {sleep} from "@lodestar/utils";
-import {IEth1Provider} from "../../../src/index.js";
+import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {ZERO_HASH} from "../../../src/constants/index.js";
 import {Eth1MergeBlockTracker, StatusCode, toPowBlock} from "../../../src/eth1/eth1MergeBlockTracker.js";
 import {Eth1ProviderState, EthJsonRpcBlockRaw} from "../../../src/eth1/interface.js";
+import {IEth1Provider} from "../../../src/index.js";
 import {testLogger} from "../../utils/logger.js";
 
 describe("eth1 / Eth1MergeBlockTracker", () => {
@@ -133,7 +133,7 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
       getState: () => Eth1ProviderState.ONLINE,
     };
 
-    await runFindMergeBlockTest(eth1Provider, blocks[blocks.length - 1]);
+    await runFindMergeBlockTest(eth1Provider, blocks.at(-1) as EthJsonRpcBlockRaw);
   });
 
   it("Should find terminal pow block fetching past blocks", async () => {
@@ -203,7 +203,7 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
       getBlockNumber: async () => 0,
       getBlockByNumber: async (blockNumber) => {
         // Always return the same block with totalDifficulty > TTD and unknown parent
-        if (blockNumber === "latest") return blocks[blocks.length - 1];
+        if (blockNumber === "latest") return blocks.at(-1) as EthJsonRpcBlockRaw;
         return blocks[blockNumber];
       },
       getBlockByHash: async (blockHashHex) => blocksByHash.get(blockHashHex) ?? null,

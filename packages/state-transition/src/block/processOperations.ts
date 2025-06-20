@@ -1,18 +1,19 @@
-import {BeaconBlockBody, capella, electra} from "@lodestar/types";
 import {ForkSeq} from "@lodestar/params";
+import {BeaconBlockBody, capella, electra} from "@lodestar/types";
 
+import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateCapella, CachedBeaconStateElectra} from "../types.js";
 import {getEth1DepositCount} from "../util/deposit.js";
 import {processAttestations} from "./processAttestations.js";
-import {processProposerSlashing} from "./processProposerSlashing.js";
 import {processAttesterSlashing} from "./processAttesterSlashing.js";
-import {processDeposit} from "./processDeposit.js";
-import {processVoluntaryExit} from "./processVoluntaryExit.js";
 import {processBlsToExecutionChange} from "./processBlsToExecutionChange.js";
-import {processWithdrawalRequest} from "./processWithdrawalRequest.js";
-import {processDepositRequest} from "./processDepositRequest.js";
-import {ProcessBlockOpts} from "./types.js";
 import {processConsolidationRequest} from "./processConsolidationRequest.js";
+import {processDeposit} from "./processDeposit.js";
+import {processDepositRequest} from "./processDepositRequest.js";
+import {processProposerSlashing} from "./processProposerSlashing.js";
+import {processVoluntaryExit} from "./processVoluntaryExit.js";
+import {processWithdrawalRequest} from "./processWithdrawalRequest.js";
+import {ProcessBlockOpts} from "./types.js";
 
 export {
   processProposerSlashing,
@@ -30,7 +31,8 @@ export function processOperations(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
   body: BeaconBlockBody,
-  opts: ProcessBlockOpts = {verifySignatures: true}
+  opts: ProcessBlockOpts = {verifySignatures: true},
+  metrics?: BeaconStateTransitionMetrics | null
 ): void {
   // verify that outstanding deposits are processed up to the maximum number of deposits
   const maxDeposits = getEth1DepositCount(state);
@@ -47,7 +49,7 @@ export function processOperations(
     processAttesterSlashing(fork, state, attesterSlashing, opts.verifySignatures);
   }
 
-  processAttestations(fork, state, body.attestations, opts.verifySignatures);
+  processAttestations(fork, state, body.attestations, opts.verifySignatures, metrics);
 
   for (const deposit of body.deposits) {
     processDeposit(fork, state, deposit);
@@ -68,7 +70,7 @@ export function processOperations(
     const bodyElectra = body as electra.BeaconBlockBody;
 
     for (const depositRequest of bodyElectra.executionRequests.deposits) {
-      processDepositRequest(fork, stateElectra, depositRequest);
+      processDepositRequest(stateElectra, depositRequest);
     }
 
     for (const elWithdrawalRequest of bodyElectra.executionRequests.withdrawals) {

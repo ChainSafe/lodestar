@@ -1,7 +1,7 @@
-import {SignedBeaconBlock, ssz, AttesterSlashing, IndexedAttestationBigint} from "@lodestar/types";
 import {DOMAIN_BEACON_ATTESTER} from "@lodestar/params";
-import {computeSigningRoot, computeStartSlotAtEpoch, ISignatureSet, SignatureSetType} from "../util/index.js";
+import {AttesterSlashing, IndexedAttestationBigint, SignedBeaconBlock, ssz} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "../types.js";
+import {ISignatureSet, SignatureSetType, computeSigningRoot, computeStartSlotAtEpoch} from "../util/index.js";
 
 /** Get signature sets from all AttesterSlashing objects in a block */
 export function getAttesterSlashingsSignatureSets(

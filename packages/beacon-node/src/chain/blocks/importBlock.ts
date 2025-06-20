@@ -1,26 +1,35 @@
-import {capella, ssz, altair, BeaconBlock} from "@lodestar/types";
-import {ForkLightClient, ForkSeq, INTERVALS_PER_SLOT, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {BitArray} from "@chainsafe/ssz";
+import {routes} from "@lodestar/api";
+import {AncestorStatus, EpochDifference, ForkChoiceError, ForkChoiceErrorCode} from "@lodestar/fork-choice";
+import {
+  ForkPostAltair,
+  ForkPostElectra,
+  ForkSeq,
+  INTERVALS_PER_SLOT,
+  MAX_SEED_LOOKAHEAD,
+  SLOTS_PER_EPOCH,
+} from "@lodestar/params";
 import {
   CachedBeaconStateAltair,
+  EpochCache,
+  RootCache,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   isStateValidatorsNodesPopulated,
-  RootCache,
 } from "@lodestar/state-transition";
-import {routes} from "@lodestar/api";
-import {ForkChoiceError, ForkChoiceErrorCode, EpochDifference, AncestorStatus} from "@lodestar/fork-choice";
+import {Attestation, BeaconBlock, altair, capella, electra, phase0, ssz} from "@lodestar/types";
 import {isErrorAborted, toHex, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
-import {toCheckpointHex} from "../stateCache/index.js";
+import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
+import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
-import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
-import {ChainEvent, ReorgEventData} from "../emitter.js";
-import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
 import type {BeaconChain} from "../chain.js";
-import {callInNextEventLoop} from "../../util/eventLoop.js";
+import {ChainEvent, ReorgEventData} from "../emitter.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
-import {FullyVerifiedBlock, ImportBlockOpts, AttestationImportOpt, BlockInputType} from "./types.js";
+import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
+import {toCheckpointHex} from "../stateCache/index.js";
+import {AttestationImportOpt, BlockInputType, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {getCheckpointFromState} from "./utils/checkpoint.js";
 import {writeBlockInputToDb} from "./writeBlockInputToDb.js";
 
@@ -118,6 +127,8 @@ export async function importBlock(
     const rootCache = new RootCache(postState);
     const invalidAttestationErrorsByCode = new Map<string, {error: Error; count: number}>();
 
+    const addAttestation = fork >= ForkSeq.electra ? addAttestationPostElectra : addAttestationPreElectra;
+
     for (const attestation of attestations) {
       try {
         // TODO Electra: figure out how to reuse the attesting indices computed from state transition
@@ -125,11 +136,13 @@ export async function importBlock(
         const {target, beaconBlockRoot} = attestation.data;
 
         const attDataRoot = toRootHex(ssz.phase0.AttestationData.hashTreeRoot(indexedAttestation.data));
-        this.seenAggregatedAttestations.add(
-          target.epoch,
+        addAttestation.call(
+          this,
+          postState.epochCtx,
+          target,
           attDataRoot,
-          {aggregationBits: attestation.aggregationBits, trueBitCount: indexedAttestation.attestingIndices.length},
-          true
+          attestation as Attestation<ForkPostElectra>,
+          indexedAttestation
         );
         // Duplicated logic from fork-choice onAttestation validation logic.
         // Attestations outside of this range will be dropped as Errors, so no need to import
@@ -152,7 +165,7 @@ export async function importBlock(
           rootCache.getBlockRootAtSlot(attestation.data.slot - 1),
           rootCache.getBlockRootAtSlot(attestation.data.slot)
         );
-        this.metrics?.registerAttestationInBlock(
+        this.validatorMonitor?.registerAttestationInBlock(
           indexedAttestation,
           parentBlockSlot,
           correctHead,
@@ -216,15 +229,20 @@ export async function importBlock(
     // Set head state as strong reference
     this.regen.updateHeadState(newHead, postState);
 
-    this.emitter.emit(routes.events.EventType.head, {
-      block: newHead.blockRoot,
-      epochTransition: computeStartSlotAtEpoch(computeEpochAtSlot(newHead.slot)) === newHead.slot,
-      slot: newHead.slot,
-      state: newHead.stateRoot,
-      previousDutyDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.previous),
-      currentDutyDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.current),
-      executionOptimistic: isOptimisticBlock(newHead),
-    });
+    try {
+      this.emitter.emit(routes.events.EventType.head, {
+        block: newHead.blockRoot,
+        epochTransition: computeStartSlotAtEpoch(computeEpochAtSlot(newHead.slot)) === newHead.slot,
+        slot: newHead.slot,
+        state: newHead.stateRoot,
+        previousDutyDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.previous),
+        currentDutyDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.current),
+        executionOptimistic: isOptimisticBlock(newHead),
+      });
+    } catch (e) {
+      // getDependentRoot() may fail with error: "No block for root" as we can see in holesky non-finality issue
+      this.logger.debug("Error emitting head event", {slot: newHead.slot, root: newHead.blockRoot}, e as Error);
+    }
 
     const delaySec = this.clock.secFromSlot(newHead.slot);
     this.logger.verbose("New chain head", {
@@ -279,7 +297,7 @@ export async function importBlock(
       callInNextEventLoop(() => {
         try {
           this.lightClientServer?.onImportBlockHead(
-            block.message as BeaconBlock<ForkLightClient>,
+            block.message as BeaconBlock<ForkPostAltair>,
             postState as CachedBeaconStateAltair,
             parentBlockSlot
           );
@@ -437,9 +455,9 @@ export async function importBlock(
   // Register stat metrics about the block after importing it
   this.metrics?.parentBlockDistance.observe(blockSlot - parentBlockSlot);
   this.metrics?.proposerBalanceDeltaAny.observe(fullyVerifiedBlock.proposerBalanceDelta);
-  this.metrics?.registerImportedBlock(block.message, fullyVerifiedBlock);
+  this.validatorMonitor?.registerImportedBlock(block.message, fullyVerifiedBlock);
   if (this.config.getForkSeq(blockSlot) >= ForkSeq.altair) {
-    this.metrics?.registerSyncAggregateInBlock(
+    this.validatorMonitor?.registerSyncAggregateInBlock(
       blockEpoch,
       (block as altair.SignedBeaconBlock).message.body.syncAggregate,
       fullyVerifiedBlock.postState.epochCtx.currentSyncCommitteeIndexed.validatorIndices
@@ -476,4 +494,59 @@ export async function importBlock(
     root: blockRootHex,
     delaySec: this.clock.secFromSlot(blockSlot),
   });
+}
+
+export function addAttestationPreElectra(
+  this: BeaconChain,
+  // added to have the same signature as addAttestationPostElectra
+  _: EpochCache,
+  target: phase0.Checkpoint,
+  attDataRoot: string,
+  attestation: Attestation,
+  indexedAttestation: phase0.IndexedAttestation
+): void {
+  this.seenAggregatedAttestations.add(
+    target.epoch,
+    attestation.data.index,
+    attDataRoot,
+    {aggregationBits: attestation.aggregationBits, trueBitCount: indexedAttestation.attestingIndices.length},
+    true
+  );
+}
+
+export function addAttestationPostElectra(
+  this: BeaconChain,
+  epochCtx: EpochCache,
+  target: phase0.Checkpoint,
+  attDataRoot: string,
+  attestation: Attestation<ForkPostElectra>,
+  indexedAttestation: electra.IndexedAttestation
+): void {
+  const committeeIndices = attestation.committeeBits.getTrueBitIndexes();
+  if (committeeIndices.length === 1) {
+    this.seenAggregatedAttestations.add(
+      target.epoch,
+      committeeIndices[0],
+      attDataRoot,
+      {aggregationBits: attestation.aggregationBits, trueBitCount: indexedAttestation.attestingIndices.length},
+      true
+    );
+  } else {
+    const committees = epochCtx.getBeaconCommittees(attestation.data.slot, committeeIndices);
+    const aggregationBools = attestation.aggregationBits.toBoolArray();
+    let offset = 0;
+    for (let i = 0; i < committees.length; i++) {
+      const committee = committees[i];
+      const aggregationBits = BitArray.fromBoolArray(aggregationBools.slice(offset, offset + committee.length));
+      const trueBitCount = aggregationBits.getTrueBitIndexes().length;
+      offset += committee.length;
+      this.seenAggregatedAttestations.add(
+        target.epoch,
+        committeeIndices[i],
+        attDataRoot,
+        {aggregationBits, trueBitCount},
+        true
+      );
+    }
+  }
 }

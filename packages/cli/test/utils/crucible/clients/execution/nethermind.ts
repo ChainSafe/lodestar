@@ -1,13 +1,13 @@
 import {writeFile} from "node:fs/promises";
 import path from "node:path";
-import got from "got";
+import {fetch} from "@lodestar/utils";
 import {Web3} from "web3";
-import {registerWeb3JsPlugins} from "../../web3js/plugins/index.js";
+import {SHARED_JWT_SECRET} from "../../constants.js";
 import {ExecutionClient, ExecutionNodeGenerator, JobOptions, RunnerType} from "../../interfaces.js";
 import {getNethermindChainSpec} from "../../utils/executionGenesis.js";
 import {getNodeMountedPaths} from "../../utils/paths.js";
-import {SHARED_JWT_SECRET} from "../../constants.js";
 import {getNodePorts} from "../../utils/ports.js";
+import {registerWeb3JsPlugins} from "../../web3js/plugins/index.js";
 
 export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Nethermind> = (opts, runner) => {
   if (!process.env.NETHERMIND_DOCKER_IMAGE) {
@@ -118,7 +118,27 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
       stdoutFilePath: logFilePath,
     },
     health: async () => {
-      await got.post(ethRpcPublicUrl, {json: {jsonrpc: "2.0", method: "net_version", params: [], id: 67}});
+      const res = await fetch(ethRpcPublicUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          method: "net_version",
+          params: [],
+          id: 67,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Health check failed: ${res.status} ${res.statusText}`);
+      }
+
+      const json = await res.json();
+      if (json.error) {
+        throw new Error(`JSON-RPC error: ${json.error.message}`);
+      }
     },
   };
 

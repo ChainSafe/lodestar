@@ -1,17 +1,17 @@
-import path from "node:path";
 import fs from "node:fs";
-import {describe, it, expect} from "vitest";
-import {multiaddr} from "@multiformats/multiaddr";
+import path from "node:path";
 import {ENR, SignableENR} from "@chainsafe/enr";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
-import {chainConfig} from "@lodestar/config/default";
 import {chainConfigToJson} from "@lodestar/config";
+import {chainConfig} from "@lodestar/config/default";
 import {LogLevel} from "@lodestar/utils";
-import {createFromJSON, exportToJSON} from "../../../src/config/peerId.js";
+import {multiaddr} from "@multiformats/multiaddr";
+import {describe, expect, it} from "vitest";
 import {beaconHandlerInit} from "../../../src/cmds/beacon/handler.js";
 import {initPrivateKeyAndEnr, isLocalMultiAddr} from "../../../src/cmds/beacon/initPeerIdAndEnr.js";
 import {BeaconArgs} from "../../../src/cmds/beacon/options.js";
+import {createFromJSON, exportToJSON} from "../../../src/config/peerId.js";
 import {GlobalArgs} from "../../../src/options/globalOptions.js";
 import {testFilesDir, testLogger} from "../../utils.js";
 

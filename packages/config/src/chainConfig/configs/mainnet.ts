@@ -1,5 +1,5 @@
-import {fromHex as b} from "@lodestar/utils";
 import {PresetName} from "@lodestar/params";
+import {fromHex as b} from "@lodestar/utils";
 import {ChainConfig} from "../types.js";
 
 // Mainnet config
@@ -50,7 +50,11 @@ export const chainConfig: ChainConfig = {
 
   // ELECTRA
   ELECTRA_FORK_VERSION: b("0x05000000"),
-  ELECTRA_FORK_EPOCH: Infinity,
+  ELECTRA_FORK_EPOCH: 364032, // May 7, 2025, 10:05:11am UTC
+
+  // FULU
+  FULU_FORK_VERSION: b("0x06000000"),
+  FULU_FORK_EPOCH: Infinity,
 
   // Time parameters
   // ---------------------------------------------------------------
@@ -97,14 +101,37 @@ export const chainConfig: ChainConfig = {
 
   // Networking
   // ---------------------------------------------------------------
+  // `MIN_VALIDATOR_WITHDRAWABILITY_DELAY + CHURN_LIMIT_QUOTIENT // 2` (= 33024, ~5 months)
+  MIN_EPOCHS_FOR_BLOCK_REQUESTS: 33024,
 
   // Deneb
   // `2**12` (= 4096 epochs, ~18 days)
   MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: 4096,
+  BLOB_SIDECAR_SUBNET_COUNT: 6,
+  MAX_BLOBS_PER_BLOCK: 6,
+  // MAX_REQUEST_BLOCKS_DENEB * MAX_BLOBS_PER_BLOCK
+  MAX_REQUEST_BLOB_SIDECARS: 768,
 
   // Electra
   // 2**8 * 10**9 (= 256,000,000,000)
   MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT: 256000000000,
-  // 2*7 * 10**9 (= 128,000,000,000)
+  // 2**7 * 10**9 (= 128,000,000,000)
   MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA: 128000000000,
+  BLOB_SIDECAR_SUBNET_COUNT_ELECTRA: 9,
+  MAX_BLOBS_PER_BLOCK_ELECTRA: 9,
+  // MAX_REQUEST_BLOCKS_DENEB * MAX_BLOBS_PER_BLOCK_ELECTRA
+  MAX_REQUEST_BLOB_SIDECARS_ELECTRA: 1152,
+
+  // Fulu
+  // `2**12` (= 4096 epochs, ~18 days)
+  MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 4096,
+  SAMPLES_PER_SLOT: 8,
+  CUSTODY_REQUIREMENT: 4,
+  NODE_CUSTODY_REQUIREMENT: 1,
+  VALIDATOR_CUSTODY_REQUIREMENT: 8,
+  BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: 32000000000,
+
+  // Blob Scheduling
+  // ---------------------------------------------------------------
+  BLOB_SCHEDULE: [],
 };

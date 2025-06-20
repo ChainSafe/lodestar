@@ -1,6 +1,6 @@
 import {writeFile} from "node:fs/promises";
 import path from "node:path";
-import got from "got";
+import {fetch} from "@lodestar/utils";
 import {Web3} from "web3";
 import {
   EL_GENESIS_ACCOUNT,
@@ -9,10 +9,10 @@ import {
   SHARED_JWT_SECRET,
   SIM_ENV_NETWORK_ID,
 } from "../../constants.js";
-import {registerWeb3JsPlugins} from "../../web3js/plugins/index.js";
 import {ExecutionClient, ExecutionNodeGenerator, ExecutionStartMode, JobOptions, RunnerType} from "../../interfaces.js";
 import {getNodeMountedPaths} from "../../utils/paths.js";
 import {getNodePorts} from "../../utils/ports.js";
+import {registerWeb3JsPlugins} from "../../web3js/plugins/index.js";
 
 export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (opts, runner) => {
   if (!process.env.GETH_BINARY_DIR && !process.env.GETH_DOCKER_IMAGE) {
@@ -154,7 +154,27 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
       stdoutFilePath: logFilePath,
     },
     health: async () => {
-      await got.post(ethRpcPublicUrl, {json: {jsonrpc: "2.0", method: "net_version", params: [], id: 67}});
+      const res = await fetch(ethRpcPublicUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          method: "net_version",
+          params: [],
+          id: 67,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Health check failed: ${res.status} ${res.statusText}`);
+      }
+
+      const json = await res.json();
+      if (json.error) {
+        throw new Error(`JSON-RPC error: ${json.error.message}`);
+      }
     },
   };
 

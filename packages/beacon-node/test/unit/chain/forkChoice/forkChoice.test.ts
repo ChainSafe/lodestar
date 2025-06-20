@@ -1,20 +1,22 @@
 import {toHexString} from "@chainsafe/ssz";
-import {describe, it, expect, beforeEach, beforeAll, vi} from "vitest";
 import {config} from "@lodestar/config/default";
-import {CheckpointWithHex, ExecutionStatus, ForkChoice, DataAvailabilityStatus} from "@lodestar/fork-choice";
+import {CheckpointWithHex, ExecutionStatus, ForkChoice} from "@lodestar/fork-choice";
 import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
+  DataAvailabilityStatus,
   computeAnchorCheckpoint,
   computeEpochAtSlot,
   getEffectiveBalanceIncrementsZeroed,
+  getTemporaryBlockHeader,
+  processSlots,
 } from "@lodestar/state-transition";
-import {phase0, Slot, ssz, ValidatorIndex} from "@lodestar/types";
-import {getTemporaryBlockHeader, processSlots} from "@lodestar/state-transition";
+import {IndexedAttestation, Slot, ValidatorIndex, phase0, ssz} from "@lodestar/types";
+import {beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {ChainEventEmitter, initializeForkChoice} from "../../../../src/chain/index.js";
-import {generateSignedBlockAtSlot} from "../../../utils/typeGenerator.js";
 import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
 import {generateState} from "../../../utils/state.js";
+import {generateSignedBlockAtSlot} from "../../../utils/typeGenerator.js";
 import {generateValidators} from "../../../utils/validator.js";
 
 // We mock this package globally
@@ -418,7 +420,7 @@ function createIndexedAttestation(
   target: phase0.SignedBeaconBlock,
   block: phase0.SignedBeaconBlock,
   validatorIndex: ValidatorIndex
-): phase0.IndexedAttestation {
+): IndexedAttestation {
   return {
     attestingIndices: [validatorIndex],
     data: {

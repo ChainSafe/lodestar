@@ -1,18 +1,18 @@
-import {describe, it, expect, afterEach, vi} from "vitest";
-import {JsonPath, toHexString, fromHexString} from "@chainsafe/ssz";
 import {CompactMultiProof, computeDescriptor} from "@chainsafe/persistent-merkle-tree";
+import {JsonPath, fromHexString, toHexString} from "@chainsafe/ssz";
+import {ApiClient, getClient, routes} from "@lodestar/api";
 import {ChainConfig} from "@lodestar/config";
-import {ssz, altair} from "@lodestar/types";
+import {Lightclient} from "@lodestar/light-client";
+import {LightClientRestTransport} from "@lodestar/light-client/transport";
 import {TimestampFormatCode} from "@lodestar/logger";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {Lightclient} from "@lodestar/light-client";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {LightClientRestTransport} from "@lodestar/light-client/transport";
-import {ApiClient, getClient, routes} from "@lodestar/api";
-import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger.js";
+import {altair, ssz} from "@lodestar/types";
+import {afterEach, describe, expect, it, vi} from "vitest";
+import {HeadEventData} from "../../../src/chain/index.js";
+import {LogLevel, TestLoggerOpts, testLogger} from "../../utils/logger.js";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
-import {HeadEventData} from "../../../src/chain/index.js";
 
 describe("chain / lightclient", () => {
   vi.setConfig({testTimeout: 600_000});

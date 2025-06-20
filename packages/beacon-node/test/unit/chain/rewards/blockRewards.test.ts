@@ -1,23 +1,24 @@
-import {describe, it, expect} from "vitest";
 import {SYNC_COMMITTEE_SIZE} from "@lodestar/params";
-import {ssz} from "@lodestar/types";
 import {
   CachedBeaconStateAllForks,
-  DataAvailableStatus,
+  DataAvailabilityStatus,
   ExecutionPayloadStatus,
   stateTransition,
 } from "@lodestar/state-transition";
-import {
-  generatePerfTestCachedStateAltair,
-  cachedStateAltairPopulateCaches,
-} from "../../../../../state-transition/test/perf/util.js";
+import {ssz} from "@lodestar/types";
+import {describe, expect, it, vi} from "vitest";
 import {BlockAltairOpts, getBlockAltair} from "../../../../../state-transition/test/perf/block/util.js";
+import {
+  cachedStateAltairPopulateCaches,
+  generatePerfTestCachedStateAltair,
+} from "../../../../../state-transition/test/perf/util.js";
 import {computeBlockRewards} from "../../../../src/chain/rewards/blockRewards.js";
 
 describe("chain / rewards / blockRewards", () => {
-  const testCases: {id: string; opts: BlockAltairOpts}[] = [
+  const testCases: {id: string; timeout?: number; opts: BlockAltairOpts}[] = [
     {
       id: "Normal case",
+      timeout: 90_000,
       opts: {
         proposerSlashingLen: 1,
         attesterSlashingLen: 2,
@@ -78,7 +79,11 @@ describe("chain / rewards / blockRewards", () => {
     },
   ];
 
-  for (const {id, opts} of testCases) {
+  for (const {id, timeout, opts} of testCases) {
+    if (timeout) {
+      vi.setConfig({testTimeout: timeout, hookTimeout: timeout});
+    }
+
     it(`${id}`, async () => {
       const state = generatePerfTestCachedStateAltair();
       const block = getBlockAltair(state, opts);
@@ -109,7 +114,7 @@ describe("chain / rewards / blockRewards", () => {
 
       const postState = stateTransition(state as CachedBeaconStateAllForks, block, {
         executionPayloadStatus: ExecutionPayloadStatus.valid,
-        dataAvailableStatus: DataAvailableStatus.available,
+        dataAvailabilityStatus: DataAvailabilityStatus.Available,
         verifyProposer: false,
         verifySignatures: false,
         verifyStateRoot: false,
@@ -137,7 +142,7 @@ describe("chain / rewards / blockRewards", () => {
 
     const postState = stateTransition(preState as CachedBeaconStateAllForks, block, {
       executionPayloadStatus: ExecutionPayloadStatus.valid,
-      dataAvailableStatus: DataAvailableStatus.available,
+      dataAvailabilityStatus: DataAvailabilityStatus.Available,
       verifyProposer: false,
       verifySignatures: false,
       verifyStateRoot: false,

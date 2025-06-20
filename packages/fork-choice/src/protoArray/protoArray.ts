@@ -1,11 +1,11 @@
-import {Epoch, RootHex, Slot} from "@lodestar/types";
-import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {GENESIS_EPOCH} from "@lodestar/params";
+import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {Epoch, RootHex, Slot} from "@lodestar/types";
 
 import {toRootHex} from "@lodestar/utils";
 import {ForkChoiceError, ForkChoiceErrorCode} from "../forkChoice/errors.js";
-import {ProtoBlock, ProtoNode, HEX_ZERO_HASH, ExecutionStatus, LVHExecResponse} from "./interface.js";
-import {ProtoArrayError, ProtoArrayErrorCode, LVHExecError, LVHExecErrorCode} from "./errors.js";
+import {LVHExecError, LVHExecErrorCode, ProtoArrayError, ProtoArrayErrorCode} from "./errors.js";
+import {ExecutionStatus, HEX_ZERO_HASH, LVHExecResponse, ProtoBlock, ProtoNode} from "./interface.js";
 
 export const DEFAULT_PRUNE_THRESHOLD = 0;
 type ProposerBoost = {root: RootHex; score: number};
@@ -901,6 +901,44 @@ export class ProtoArray {
     }
     result.push(...this.getNodesBetween(nodeIndex, 0));
     return result;
+  }
+
+  /**
+   * Returns both ancestor and non-ancestor nodes in a single traversal.
+   */
+  getAllAncestorAndNonAncestorNodes(blockRoot: RootHex): {ancestors: ProtoNode[]; nonAncestors: ProtoNode[]} {
+    const startIndex = this.indices.get(blockRoot);
+    if (startIndex === undefined) {
+      return {ancestors: [], nonAncestors: []};
+    }
+
+    let node = this.nodes[startIndex];
+    if (node === undefined) {
+      throw new ProtoArrayError({
+        code: ProtoArrayErrorCode.INVALID_NODE_INDEX,
+        index: startIndex,
+      });
+    }
+
+    const ancestors: ProtoNode[] = [];
+    const nonAncestors: ProtoNode[] = [];
+
+    let nodeIndex = startIndex;
+    while (node.parent !== undefined) {
+      ancestors.push(node);
+
+      const parentIndex = node.parent;
+      node = this.getNodeFromIndex(parentIndex);
+
+      // Nodes between nodeIndex and parentIndex are non-ancestor nodes
+      nonAncestors.push(...this.getNodesBetween(nodeIndex, parentIndex));
+      nodeIndex = parentIndex;
+    }
+
+    ancestors.push(node);
+    nonAncestors.push(...this.getNodesBetween(nodeIndex, 0));
+
+    return {ancestors, nonAncestors};
   }
 
   hasBlock(blockRoot: RootHex): boolean {

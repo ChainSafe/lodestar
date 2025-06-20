@@ -10,18 +10,18 @@ import {
   MAX_EFFECTIVE_BALANCE,
   UNSET_DEPOSIT_REQUESTS_START_INDEX,
 } from "@lodestar/params";
-import {Bytes32, phase0, Root, ssz, TimeSeconds} from "@lodestar/types";
+import {Bytes32, Root, TimeSeconds, phase0, ssz} from "@lodestar/types";
 
-import {CachedBeaconStateAllForks, BeaconStateAllForks, CachedBeaconStateElectra} from "../types.js";
-import {createCachedBeaconState} from "../cache/stateCache.js";
-import {EpochCacheImmutableData} from "../cache/epochCache.js";
 import {processDeposit} from "../block/processDeposit.js";
+import {EpochCacheImmutableData} from "../cache/epochCache.js";
+import {createCachedBeaconState} from "../cache/stateCache.js";
 import {increaseBalance} from "../index.js";
-import {computeEpochAtSlot} from "./epoch.js";
-import {getActiveValidatorIndices, getMaxEffectiveBalance} from "./validator.js";
-import {getTemporaryBlockHeader} from "./blockRoot.js";
+import {BeaconStateAllForks, CachedBeaconStateAllForks, CachedBeaconStateElectra} from "../types.js";
 import {newFilledArray} from "./array.js";
+import {getTemporaryBlockHeader} from "./blockRoot.js";
+import {computeEpochAtSlot} from "./epoch.js";
 import {getNextSyncCommittee} from "./syncCommittee.js";
+import {getActiveValidatorIndices, getMaxEffectiveBalance} from "./validator.js";
 
 type DepositDataRootListType = ListCompositeType<typeof ssz.Root>;
 type DepositDataRootViewDU = CompositeViewDU<DepositDataRootListType>;
@@ -171,10 +171,15 @@ export function applyDeposits(
   if (fork >= ForkSeq.electra) {
     const stateElectra = state as CachedBeaconStateElectra;
     stateElectra.commit();
-    for (const {index: validatorIndex, amount} of stateElectra.pendingBalanceDeposits.getAllReadonly()) {
-      increaseBalance(state, validatorIndex, Number(amount));
+    for (const {pubkey, amount} of stateElectra.pendingDeposits.getAllReadonly()) {
+      const validatorIndex = state.epochCtx.getValidatorIndex(pubkey);
+      if (validatorIndex === null) {
+        // Should not happen if the gensis state is correct
+        continue;
+      }
+      increaseBalance(state, validatorIndex, amount);
     }
-    stateElectra.pendingBalanceDeposits = ssz.electra.PendingBalanceDeposits.defaultViewDU();
+    stateElectra.pendingDeposits = ssz.electra.PendingDeposits.defaultViewDU();
   }
 
   // Process activations
@@ -313,6 +318,15 @@ export function initializeBeaconStateFromEth1(
       (executionPayloadHeader as CompositeViewDU<typeof ssz.electra.ExecutionPayloadHeader>) ??
       ssz.electra.ExecutionPayloadHeader.defaultViewDU();
     stateElectra.depositRequestsStartIndex = UNSET_DEPOSIT_REQUESTS_START_INDEX;
+  }
+
+  if (fork >= ForkSeq.fulu) {
+    const stateFulu = state as CompositeViewDU<typeof ssz.fulu.BeaconState>;
+    stateFulu.fork.previousVersion = config.FULU_FORK_VERSION;
+    stateFulu.fork.currentVersion = config.FULU_FORK_VERSION;
+    stateFulu.latestExecutionPayloadHeader =
+      (executionPayloadHeader as CompositeViewDU<typeof ssz.fulu.ExecutionPayloadHeader>) ??
+      ssz.fulu.ExecutionPayloadHeader.defaultViewDU();
   }
 
   state.commit();

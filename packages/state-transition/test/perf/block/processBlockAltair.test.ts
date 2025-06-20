@@ -1,5 +1,4 @@
-import {itBench} from "@dapplion/benchmark";
-import {ssz} from "@lodestar/types";
+import {bench, describe} from "@chainsafe/benchmark";
 import {
   ACTIVE_PRESET,
   MAX_ATTESTATIONS,
@@ -10,14 +9,15 @@ import {
   PresetName,
   SYNC_COMMITTEE_SIZE,
 } from "@lodestar/params";
+import {ssz} from "@lodestar/types";
 import {
   CachedBeaconStateAltair,
-  DataAvailableStatus,
+  DataAvailabilityStatus,
   ExecutionPayloadStatus,
   stateTransition,
 } from "../../../src/index.js";
-import {cachedStateAltairPopulateCaches, generatePerfTestCachedStateAltair, perfStateId} from "../util.js";
 import {StateBlock} from "../types.js";
+import {cachedStateAltairPopulateCaches, generatePerfTestCachedStateAltair, perfStateId} from "../util.js";
 import {BlockAltairOpts, getBlockAltair} from "./util.js";
 
 // As of Jun 12 2021
@@ -106,7 +106,7 @@ describe("altair processBlock", () => {
 
   for (const {id, opts} of testCases) {
     for (const hashState of [false, true]) {
-      itBench<StateBlock, StateBlock>({
+      bench<StateBlock, StateBlock>({
         id: `altair processBlock - ${perfStateId} ${id}` + (hashState ? " hashState" : ""),
         before: () => {
           const state = generatePerfTestCachedStateAltair();
@@ -126,7 +126,7 @@ describe("altair processBlock", () => {
         fn: ({state, block}) => {
           const postState = stateTransition(state, block, {
             executionPayloadStatus: ExecutionPayloadStatus.valid,
-            dataAvailableStatus: DataAvailableStatus.available,
+            dataAvailabilityStatus: DataAvailabilityStatus.Available,
             verifyProposer: false,
             verifySignatures: false,
             verifyStateRoot: false,

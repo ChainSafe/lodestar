@@ -1,6 +1,6 @@
-import {describe, it, expect} from "vitest";
-import {goerliTestnetLogs, goerliTestnetDepositEvents} from "../../../utils/testnet.js";
+import {describe, expect, it} from "vitest";
 import {parseDepositLog} from "../../../../src/eth1/utils/depositContract.js";
+import {goerliTestnetDepositEvents, goerliTestnetLogs} from "../../../utils/testnet.js";
 
 describe("eth1 / util / depositContract", () => {
   it("Should parse a raw deposit log", () => {

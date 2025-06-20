@@ -1,7 +1,7 @@
-import {EPOCHS_PER_ETH1_VOTING_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
-import {phase0, RootHex} from "@lodestar/types";
-import {BeaconStateAllForks, computeTimeAtSlot} from "@lodestar/state-transition";
+import {EPOCHS_PER_ETH1_VOTING_PERIOD, SLOTS_PER_EPOCH, isForkPostElectra} from "@lodestar/params";
+import {BeaconStateAllForks, BeaconStateElectra, computeTimeAtSlot} from "@lodestar/state-transition";
+import {RootHex, phase0} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 
 export type Eth1DataGetter = ({
@@ -15,6 +15,14 @@ export async function getEth1VotesToConsider(
   state: BeaconStateAllForks,
   eth1DataGetter: Eth1DataGetter
 ): Promise<phase0.Eth1Data[]> {
+  const fork = config.getForkName(state.slot);
+  if (isForkPostElectra(fork)) {
+    const {eth1DepositIndex, depositRequestsStartIndex} = state as BeaconStateElectra;
+    if (eth1DepositIndex === Number(depositRequestsStartIndex)) {
+      return state.eth1DataVotes.getAllReadonly();
+    }
+  }
+
   const periodStart = votingPeriodStartTime(config, state);
   const {SECONDS_PER_ETH1_BLOCK, ETH1_FOLLOW_DISTANCE} = config;
 
@@ -68,7 +76,7 @@ export function pickEth1Vote(state: BeaconStateAllForks, votesToConsider: phase0
 
   // No votes, vote for the last valid vote
   if (eth1DataRootsMaxVotes.length === 0) {
-    return votesToConsider[votesToConsider.length - 1] ?? state.eth1Data;
+    return votesToConsider.at(-1) ?? state.eth1Data;
   }
 
   // If there's a single winning vote with a majority vote that one

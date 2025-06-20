@@ -1,14 +1,14 @@
 import path from "node:path";
-import {Match, BeaconClient, ExecutionClient, ValidatorClient} from "../utils/crucible/interfaces.js";
+import {createAccountBalanceAssertion} from "../utils/crucible/assertions/accountBalanceAssertion.js";
+import {createExecutionHeadAssertion} from "../utils/crucible/assertions/executionHeadAssertion.js";
+import {createForkAssertion} from "../utils/crucible/assertions/forkAssertion.js";
+import {mergeAssertion} from "../utils/crucible/assertions/mergeAssertion.js";
+import {nodeAssertion} from "../utils/crucible/assertions/nodeAssertion.js";
+import {createWithdrawalAssertions} from "../utils/crucible/assertions/withdrawalsAssertion.js";
+import {BeaconClient, ExecutionClient, Match, ValidatorClient} from "../utils/crucible/interfaces.js";
 import {Simulation} from "../utils/crucible/simulation.js";
 import {defineSimTestConfig, logFilesDir} from "../utils/crucible/utils/index.js";
 import {connectAllNodes, waitForSlot} from "../utils/crucible/utils/network.js";
-import {nodeAssertion} from "../utils/crucible/assertions/nodeAssertion.js";
-import {mergeAssertion} from "../utils/crucible/assertions/mergeAssertion.js";
-import {createForkAssertion} from "../utils/crucible/assertions/forkAssertion.js";
-import {createAccountBalanceAssertion} from "../utils/crucible/assertions/accountBalanceAssertion.js";
-import {createExecutionHeadAssertion} from "../utils/crucible/assertions/executionHeadAssertion.js";
-import {createWithdrawalAssertions} from "../utils/crucible/assertions/withdrawalsAssertion.js";
 import {assertCheckpointSync, assertRangeSync, assertUnknownBlockSync} from "../utils/crucible/utils/syncing.js";
 
 const altairForkEpoch = 2;
@@ -34,8 +34,6 @@ const env = await Simulation.initWithDefaults(
     forkConfig,
   },
   [
-    // put 1 lodestar node on produceBlockV3, and 2nd on produceBlindedBlock and 3rd on produceBlockV2
-    // specifying the useProduceBlockV3 options despite whatever default is set
     {
       id: "node-1",
       beacon: BeaconClient.Lodestar,
@@ -45,7 +43,6 @@ const env = await Simulation.initWithDefaults(
           // this will cause race in beacon but since builder is not attached will
           // return with engine full block and publish via publishBlockV2
           clientOptions: {
-            useProduceBlockV3: true,
             "builder.selection": "default",
           },
         },
@@ -63,7 +60,6 @@ const env = await Simulation.initWithDefaults(
           // this will make the beacon respond with blinded version of the local block as no
           // builder is attached to beacon, and publish via publishBlindedBlockV2
           clientOptions: {
-            useProduceBlockV3: true,
             "builder.selection": "default",
             blindedLocal: true,
           },
@@ -79,9 +75,8 @@ const env = await Simulation.initWithDefaults(
       validator: {
         type: ValidatorClient.Lodestar,
         options: {
-          // this builder selection will make it use produceBlockV2 and respond with full block
+          // this builder selection will make it respond with full block
           clientOptions: {
-            useProduceBlockV3: false,
             "builder.selection": "executiononly",
           },
         },
@@ -95,10 +90,9 @@ const env = await Simulation.initWithDefaults(
       validator: {
         type: ValidatorClient.Lodestar,
         options: {
-          // this builder selection will make it use produceBlindedBlockV2 and respond with blinded version
-          // of local block and subsequent publishing via publishBlindedBlock
+          // this builder selection will make it respond with blinded version
+          // of local block and subsequent publishing via publishBlindedBlockV2
           clientOptions: {
-            useProduceBlockV3: false,
             "builder.selection": "default",
           },
         },

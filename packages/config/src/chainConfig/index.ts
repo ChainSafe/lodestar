@@ -1,8 +1,8 @@
 import {ACTIVE_PRESET} from "@lodestar/params";
-import {ChainConfig} from "./types.js";
 import {defaultChainConfig} from "./default.js";
+import {ChainConfig} from "./types.js";
 
-export {chainConfigToJson, chainConfigFromJson, specValuesToJson} from "./json.js";
+export {chainConfigToJson, chainConfigFromJson, specValuesToJson, deserializeBlobSchedule} from "./json.js";
 export * from "./types.js";
 export * from "./default.js";
 

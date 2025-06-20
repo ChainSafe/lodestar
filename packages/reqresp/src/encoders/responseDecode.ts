@@ -1,16 +1,16 @@
-import {Uint8ArrayList} from "uint8arraylist";
 import {ForkName} from "@lodestar/params";
-import {BufferedSource, decodeErrorMessage} from "../utils/index.js";
+import {Uint8ArrayList} from "uint8arraylist";
 import {readEncodedPayload} from "../encodingStrategies/index.js";
+import {RespStatus} from "../interface.js";
 import {ResponseError} from "../response/index.js";
 import {
-  ContextBytesType,
   CONTEXT_BYTES_FORK_DIGEST_LENGTH,
   ContextBytesFactory,
+  ContextBytesType,
   MixedProtocol,
   ResponseIncoming,
 } from "../types.js";
-import {RespStatus} from "../interface.js";
+import {BufferedSource, decodeErrorMessage} from "../utils/index.js";
 
 /**
  * Internal helper type to signal stream ended early

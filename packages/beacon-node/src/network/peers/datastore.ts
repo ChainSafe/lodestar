@@ -1,7 +1,7 @@
 import {AbortOptions} from "@libp2p/interface";
 import {BaseDatastore} from "datastore-core";
 import {LevelDatastore} from "datastore-level";
-import {Key, KeyQuery, Query, Pair} from "interface-datastore";
+import {Key, KeyQuery, Pair, Query} from "interface-datastore";
 
 type MemoryItem = {
   lastAccessedMs: number;

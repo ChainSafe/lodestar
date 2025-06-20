@@ -1,19 +1,21 @@
 import fs from "node:fs";
 import path from "node:path";
+import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {Repository} from "@lodestar/db";
-import {toHex, toRootHex} from "@lodestar/utils";
-import {getLatestWeakSubjectivityCheckpointEpoch} from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
+import {Repository} from "@lodestar/db";
+import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {BeaconStateCapella, getLatestWeakSubjectivityCheckpointEpoch, loadState} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {toHex, toRootHex} from "@lodestar/utils";
 import {BeaconChain} from "../../../chain/index.js";
 import {QueuedStateRegenerator, RegenRequest} from "../../../chain/regen/index.js";
-import {GossipType} from "../../../network/index.js";
 import {IBeaconDb} from "../../../db/interface.js";
-import {ApiModules} from "../types.js";
+import {GossipType} from "../../../network/index.js";
 import {profileNodeJS, writeHeapSnapshot} from "../../../util/profile.js";
+import {getStateResponseWithRegen} from "../beacon/state/utils.js";
+import {ApiModules} from "../types.js";
 
 export function getLodestarApi({
   chain,
@@ -165,6 +167,12 @@ export function getLodestarApi({
       };
     },
 
+    async getBlacklistedBlocks() {
+      return {
+        data: Array.from(chain.blacklistedBlocks.entries()).map(([root, slot]) => ({root, slot})),
+      };
+    },
+
     async discv5GetKadValues() {
       return {
         data: await network.dumpDiscv5KadValues(),
@@ -173,11 +181,9 @@ export function getLodestarApi({
 
     async dumpDbBucketKeys({bucket}) {
       for (const repo of Object.values(db) as IBeaconDb[keyof IBeaconDb][]) {
-        if (repo instanceof Repository) {
-          // biome-ignore lint/complexity/useLiteralKeys: `bucket` is protected and `bucketId` is private
-          if (String(repo["bucket"]) === bucket || repo["bucketId"] === bucket) {
-            return {data: stringifyKeys(await repo.keys())};
-          }
+        // biome-ignore lint/complexity/useLiteralKeys: `bucket` is protected and `bucketId` is private
+        if (repo instanceof Repository && (String(repo["bucket"]) === bucket || repo["bucketId"] === bucket)) {
+          return {data: stringifyKeys(await repo.keys())};
         }
       }
 
@@ -186,6 +192,31 @@ export function getLodestarApi({
 
     async dumpDbStateIndex() {
       return {data: await db.stateArchive.dumpRootIndexEntries()};
+    },
+
+    async getHistoricalSummaries({stateId}) {
+      const {state, executionOptimistic, finalized} = await getStateResponseWithRegen(chain, stateId);
+
+      const stateView = (
+        state instanceof Uint8Array ? loadState(config, chain.getHeadState(), state).state : state.clone()
+      ) as BeaconStateCapella;
+
+      const fork = config.getForkName(stateView.slot);
+      if (ForkSeq[fork] < ForkSeq.capella) {
+        throw new Error("Historical summaries are not supported before Capella");
+      }
+
+      const {gindex} = ssz[fork].BeaconState.getPathInfo(["historicalSummaries"]);
+      const proof = new Tree(stateView.node).getSingleProof(gindex);
+
+      return {
+        data: {
+          slot: stateView.slot,
+          historicalSummaries: stateView.historicalSummaries.toValue(),
+          proof: proof,
+        },
+        meta: {executionOptimistic, finalized, version: fork},
+      };
     },
   };
 }

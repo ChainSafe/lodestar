@@ -1,8 +1,8 @@
-import {describe, it, expect, beforeEach} from "vitest";
-import {LightClientHeader, ssz} from "@lodestar/types";
-import {ForkName, ForkSeq} from "@lodestar/params";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {upgradeLightClientHeader} from "@lodestar/light-client/spec";
+import {ForkName, ForkSeq} from "@lodestar/params";
+import {LightClientHeader, ssz} from "@lodestar/types";
+import {beforeEach, describe, expect, it} from "vitest";
 
 describe("UpgradeLightClientHeader", () => {
   let lcHeaderByFork: Record<ForkName, LightClientHeader>;
@@ -15,6 +15,7 @@ describe("UpgradeLightClientHeader", () => {
     CAPELLA_FORK_EPOCH: 3,
     DENEB_FORK_EPOCH: 4,
     ELECTRA_FORK_EPOCH: 5,
+    FULU_FORK_EPOCH: 6,
   });
 
   const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
@@ -28,15 +29,17 @@ describe("UpgradeLightClientHeader", () => {
       bellatrix: ssz.altair.LightClientHeader.defaultValue(),
       deneb: ssz.deneb.LightClientHeader.defaultValue(),
       electra: ssz.deneb.LightClientHeader.defaultValue(),
+      fulu: ssz.deneb.LightClientHeader.defaultValue(),
     };
 
     testSlots = {
       phase0: 0,
-      altair: 10,
-      bellatrix: 17,
-      capella: 25,
-      deneb: 33,
-      electra: 41,
+      altair: 40,
+      bellatrix: 68,
+      capella: 100,
+      deneb: 132,
+      electra: 164,
+      fulu: 216,
     };
   });
 

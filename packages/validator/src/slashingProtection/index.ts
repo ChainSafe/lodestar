@@ -1,23 +1,23 @@
 import {BLSPubkey, Epoch, Root} from "@lodestar/types";
 import {Logger, toPubkeyHex} from "@lodestar/utils";
-import {LodestarValidatorDatabaseController} from "../types.js";
 import {uniqueVectorArr} from "../slashingProtection/utils.js";
-import {BlockBySlotRepository, SlashingProtectionBlockService} from "./block/index.js";
+import {LodestarValidatorDatabaseController} from "../types.js";
 import {
   AttestationByTargetRepository,
   AttestationLowerBoundRepository,
   SlashingProtectionAttestationService,
 } from "./attestation/index.js";
-import {ISlashingProtection} from "./interface.js";
+import {BlockBySlotRepository, SlashingProtectionBlockService} from "./block/index.js";
 import {
-  InterchangeLodestar,
   Interchange,
   InterchangeFormatVersion,
+  InterchangeLodestar,
   parseInterchange,
   serializeInterchange,
 } from "./interchange/index.js";
-import {MinMaxSurround, DistanceStoreRepository} from "./minMaxSurround/index.js";
-import {SlashingProtectionBlock, SlashingProtectionAttestation} from "./types.js";
+import {ISlashingProtection} from "./interface.js";
+import {DistanceStoreRepository, MinMaxSurround} from "./minMaxSurround/index.js";
+import {SlashingProtectionAttestation, SlashingProtectionBlock} from "./types.js";
 
 export {InvalidAttestationError, InvalidAttestationErrorCode} from "./attestation/index.js";
 export {InvalidBlockError, InvalidBlockErrorCode} from "./block/index.js";

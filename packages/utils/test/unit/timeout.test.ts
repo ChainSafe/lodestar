@@ -1,6 +1,6 @@
-import {describe, it, expect, afterEach} from "vitest";
-import {withTimeout} from "../../src/timeout.js";
+import {afterEach, describe, expect, it, vi} from "vitest";
 import {ErrorAborted, TimeoutError} from "../../src/errors.js";
+import {withTimeout} from "../../src/timeout.js";
 
 describe("withTimeout", () => {
   const data = "DATA";
@@ -70,5 +70,16 @@ describe("withTimeout", () => {
     await expect(withTimeout(() => pause(shortTimeoutMs, data), shortTimeoutMs, controller.signal)).rejects.toThrow(
       ErrorAborted
     );
+  });
+
+  it("Should immediately reject if signal is already aborted without executing asyncFn", async () => {
+    const controller = new AbortController();
+    controller.abort();
+
+    const asyncFnSpy = vi.fn(() => pause(shortTimeoutMs, data));
+
+    await expect(withTimeout(asyncFnSpy, longTimeoutMs, controller.signal)).rejects.toThrow(ErrorAborted);
+
+    expect(asyncFnSpy).not.toHaveBeenCalled();
   });
 });

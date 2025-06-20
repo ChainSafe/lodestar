@@ -1,7 +1,7 @@
-import {describe, it, expect} from "vitest";
 import {generateKeyPair} from "@libp2p/crypto/keys";
+import {describe, expect, it} from "vitest";
+import {readPrivateKey, writePrivateKey} from "../../../src/config/index.js";
 import {getTestdirPath} from "../../utils.js";
-import {writePrivateKey, readPrivateKey} from "../../../src/config/index.js";
 
 describe("config / peerId", () => {
   const peerIdFilepath = getTestdirPath("./test-peer-id.json");

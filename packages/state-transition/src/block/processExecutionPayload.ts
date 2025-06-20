@@ -1,23 +1,24 @@
 import {byteArrayEquals} from "@chainsafe/ssz";
+import {ForkName, ForkSeq, isForkPostDeneb} from "@lodestar/params";
 import {BeaconBlockBody, BlindedBeaconBlockBody, deneb, isExecutionPayload} from "@lodestar/types";
-import {ForkSeq, MAX_BLOBS_PER_BLOCK} from "@lodestar/params";
 import {toHex, toRootHex} from "@lodestar/utils";
 import {CachedBeaconStateBellatrix, CachedBeaconStateCapella} from "../types.js";
-import {getRandaoMix} from "../util/index.js";
 import {
-  isMergeTransitionComplete,
-  getFullOrBlindedPayloadFromBody,
   executionPayloadToPayloadHeader,
+  getFullOrBlindedPayloadFromBody,
+  isMergeTransitionComplete,
 } from "../util/execution.js";
+import {computeEpochAtSlot, getRandaoMix} from "../util/index.js";
 import {BlockExternalData, ExecutionPayloadStatus} from "./externalData.js";
 
 export function processExecutionPayload(
   fork: ForkSeq,
   state: CachedBeaconStateBellatrix | CachedBeaconStateCapella,
   body: BeaconBlockBody | BlindedBeaconBlockBody,
-  externalData: Omit<BlockExternalData, "dataAvailableStatus">
+  externalData: Omit<BlockExternalData, "dataAvailabilityStatus">
 ): void {
   const payload = getFullOrBlindedPayloadFromBody(body);
+  const forkName = ForkName[ForkSeq[fork] as ForkName];
   // Verify consistency of the parent hash, block number, base fee per gas and gas limit
   // with respect to the previous execution payload header
   if (isMergeTransitionComplete(state)) {
@@ -47,10 +48,11 @@ export function processExecutionPayload(
     throw Error(`Invalid timestamp ${payload.timestamp} genesisTime=${state.genesisTime} slot=${state.slot}`);
   }
 
-  if (fork >= ForkSeq.deneb) {
+  if (isForkPostDeneb(forkName)) {
+    const maxBlobsPerBlock = state.config.getMaxBlobsPerBlock(computeEpochAtSlot(state.slot));
     const blobKzgCommitmentsLen = (body as deneb.BeaconBlockBody).blobKzgCommitments?.length ?? 0;
-    if (blobKzgCommitmentsLen > MAX_BLOBS_PER_BLOCK) {
-      throw Error(`blobKzgCommitmentsLen exceeds limit=${MAX_BLOBS_PER_BLOCK}`);
+    if (blobKzgCommitmentsLen > maxBlobsPerBlock) {
+      throw Error(`blobKzgCommitmentsLen exceeds limit=${maxBlobsPerBlock}`);
     }
   }
 
@@ -77,6 +79,6 @@ export function processExecutionPayload(
   // TODO Deneb: Types are not happy by default. Since it's a generic type going through ViewDU
   // transformation then into all forks compatible probably some weird intersection incompatibility happens
   state.latestExecutionPayloadHeader = state.config
-    .getExecutionForkTypes(state.slot)
+    .getPostBellatrixForkTypes(state.slot)
     .ExecutionPayloadHeader.toViewDU(payloadHeader) as typeof state.latestExecutionPayloadHeader;
 }

@@ -1,16 +1,10 @@
-import {BitArray} from "@chainsafe/ssz";
 import {SecretKey} from "@chainsafe/blst";
-import {
-  computeEpochAtSlot,
-  computeSigningRoot,
-  computeStartSlotAtEpoch,
-  computeDomain,
-  ZERO_HASH,
-  blindedOrFullBlockHashTreeRoot,
-} from "@lodestar/state-transition";
+import {BitArray} from "@chainsafe/ssz";
+import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {
   DOMAIN_AGGREGATE_AND_PROOF,
+  DOMAIN_APPLICATION_BUILDER,
   DOMAIN_BEACON_ATTESTER,
   DOMAIN_BEACON_PROPOSER,
   DOMAIN_CONTRIBUTION_AND_PROOF,
@@ -18,39 +12,45 @@ import {
   DOMAIN_SELECTION_PROOF,
   DOMAIN_SYNC_COMMITTEE,
   DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF,
-  DOMAIN_APPLICATION_BUILDER,
   ForkSeq,
-  MAX_COMMITTEES_PER_SLOT,
 } from "@lodestar/params";
 import {
-  altair,
-  BeaconBlock,
-  bellatrix,
-  BlindedBeaconBlock,
+  ZERO_HASH,
+  blindedOrFullBlockHashTreeRoot,
+  computeDomain,
+  computeEpochAtSlot,
+  computeSigningRoot,
+  computeStartSlotAtEpoch,
+} from "@lodestar/state-transition";
+import {
+  AggregateAndProof,
+  Attestation,
   BLSPubkey,
   BLSSignature,
+  BeaconBlock,
+  BlindedBeaconBlock,
   Epoch,
-  phase0,
   Root,
+  SignedAggregateAndProof,
   SignedBeaconBlock,
   SignedBlindedBeaconBlock,
+  SingleAttestation,
   Slot,
-  ssz,
   ValidatorIndex,
-  Attestation,
-  AggregateAndProof,
-  SignedAggregateAndProof,
+  altair,
+  bellatrix,
+  phase0,
+  ssz,
 } from "@lodestar/types";
-import {routes} from "@lodestar/api";
 import {fromHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
+import {Metrics} from "../metrics.js";
 import {ISlashingProtection} from "../slashingProtection/index.js";
 import {PubkeyHex} from "../types.js";
-import {externalSignerPostSignature, SignableMessageType, SignableMessage} from "../util/externalSignerClient.js";
-import {Metrics} from "../metrics.js";
+import {SignableMessage, SignableMessageType, externalSignerPostSignature} from "../util/externalSignerClient.js";
 import {isValidatePubkeyHex} from "../util/format.js";
 import {LoggerVc} from "../util/logger.js";
-import {IndicesService} from "./indices.js";
 import {DoppelgangerService} from "./doppelgangerService.js";
+import {IndicesService} from "./indices.js";
 
 type BLSPubkeyMaybeHex = BLSPubkey | PubkeyHex;
 type Eth1Address = string;
@@ -131,7 +131,7 @@ type ValidatorData = ProposerConfig & {
 
 export const defaultOptions = {
   suggestedFeeRecipient: "0x0000000000000000000000000000000000000000",
-  defaultGasLimit: 30_000_000,
+  defaultGasLimit: 36_000_000,
   builderSelection: routes.validator.BuilderSelection.ExecutionOnly,
   builderAliasSelection: routes.validator.BuilderSelection.Default,
   builderBoostFactor: BigInt(100),
@@ -251,7 +251,11 @@ export class ValidatorStore {
   }
 
   getGraffiti(pubkeyHex: PubkeyHex): string | undefined {
-    return this.validators.get(pubkeyHex)?.graffiti ?? this.defaultProposerConfig.graffiti;
+    const validatorData = this.validators.get(pubkeyHex);
+    if (validatorData === undefined) {
+      throw Error(`Validator pubkey ${pubkeyHex} not known`);
+    }
+    return validatorData.graffiti ?? this.defaultProposerConfig.graffiti;
   }
 
   setGraffiti(pubkeyHex: PubkeyHex, graffiti: string): void {
@@ -377,7 +381,9 @@ export class ValidatorStore {
       graffiti !== undefined ||
       strictFeeRecipientCheck !== undefined ||
       feeRecipient !== undefined ||
-      builder?.gasLimit !== undefined
+      builder?.gasLimit !== undefined ||
+      builder?.selection !== undefined ||
+      builder?.boostFactor !== undefined
     ) {
       proposerConfig = {graffiti, strictFeeRecipientCheck, feeRecipient, builder};
     }
@@ -499,7 +505,7 @@ export class ValidatorStore {
     duty: routes.validator.AttesterDuty,
     attestationData: phase0.AttestationData,
     currentEpoch: Epoch
-  ): Promise<Attestation> {
+  ): Promise<SingleAttestation> {
     // Make sure the target epoch is not higher than the current epoch to avoid potential attacks.
     if (attestationData.target.epoch > currentEpoch) {
       throw Error(
@@ -533,10 +539,10 @@ export class ValidatorStore {
 
     if (this.config.getForkSeq(signingSlot) >= ForkSeq.electra) {
       return {
-        aggregationBits: BitArray.fromSingleBit(duty.committeeLength, duty.validatorCommitteeIndex),
+        committeeIndex: duty.committeeIndex,
+        attesterIndex: duty.validatorIndex,
         data: attestationData,
         signature: await this.getSignature(duty.pubkey, signingRoot, signingSlot, signableMessage),
-        committeeBits: BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, duty.committeeIndex),
       };
     }
 
@@ -783,16 +789,6 @@ export class ValidatorStore {
         }
       }
     }
-  }
-
-  private getSignerAndPubkeyHex(pubkey: BLSPubkeyMaybeHex): [Signer, string] {
-    // TODO: Refactor indexing to not have to run toHex() on the pubkey every time
-    const pubkeyHex = typeof pubkey === "string" ? pubkey : toPubkeyHex(pubkey);
-    const signer = this.validators.get(pubkeyHex)?.signer;
-    if (!signer) {
-      throw Error(`Validator pubkey ${pubkeyHex} not known`);
-    }
-    return [signer, pubkeyHex];
   }
 
   /** Prevent signing bad data sent by the Beacon node */

@@ -1,6 +1,6 @@
 import {BLSPubkey} from "@lodestar/types";
-import {IMinMaxSurround, DistanceEntry, IDistanceStore, MinMaxSurroundAttestation} from "./interface.js";
 import {SurroundAttestationError, SurroundAttestationErrorCode} from "./errors.js";
+import {DistanceEntry, IDistanceStore, IMinMaxSurround, MinMaxSurroundAttestation} from "./interface.js";
 
 // surround vote checking with min-max surround
 // https://github.com/protolambda/eth2-surround#min-max-surround

@@ -2,11 +2,11 @@ import {
   PublicKey,
   SecretKey,
   Signature,
+  verify as _verify,
   aggregateSignatures,
   aggregateVerify,
   fastAggregateVerify,
   verifyMultipleAggregateSignatures,
-  verify as _verify,
 } from "@chainsafe/blst";
 import {fromHexString} from "@chainsafe/ssz";
 

@@ -1,9 +1,7 @@
-import path from "node:path";
 import fs from "node:fs";
-import {uncompress} from "snappyjs";
+import path from "node:path";
 import {loadYaml} from "@lodestar/utils";
-
-/* eslint-disable @typescript-eslint/explicit-function-return-type */
+import {uncompress} from "snappyjs";
 
 export type ValidTestCaseData = {
   root: string;

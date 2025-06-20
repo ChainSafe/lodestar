@@ -1,5 +1,5 @@
+import {ChainForkConfig, createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config as chainConfig} from "@lodestar/config/default";
-import {createBeaconConfig, ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {ZERO_HASH} from "../../src/constants/index.js";
 
@@ -37,6 +37,16 @@ export function getConfig(fork: ForkName, forkEpoch = 0): ChainForkConfig {
         CAPELLA_FORK_EPOCH: 0,
         DENEB_FORK_EPOCH: 0,
         ELECTRA_FORK_EPOCH: forkEpoch,
+      });
+    case ForkName.fulu:
+      return createChainForkConfig({
+        ALTAIR_FORK_EPOCH: 0,
+        BELLATRIX_FORK_EPOCH: 0,
+        CAPELLA_FORK_EPOCH: 0,
+        DENEB_FORK_EPOCH: 0,
+        ELECTRA_FORK_EPOCH: 0,
+        FULU_FORK_EPOCH: forkEpoch,
+        BLOB_SCHEDULE: [],
       });
   }
 }

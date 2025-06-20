@@ -1,4 +1,4 @@
-import {itBench} from "@dapplion/benchmark";
+import {bench, describe} from "@chainsafe/benchmark";
 import {beforeProcessEpoch} from "../../../src/index.js";
 import {State} from "../types.js";
 import {generatePerfTestCachedStatePhase0, perfStateId} from "../util.js";
@@ -9,7 +9,7 @@ import {generatePerfTestCachedStatePhase0, perfStateId} from "../util.js";
 // 3. Iterate over status to compute total balances. Cost = 'proportional' to $VALIDATOR_COUNT not network conditions
 
 describe("phase0 beforeProcessEpoch", () => {
-  itBench<State, State>({
+  bench<State, State>({
     id: `phase0 beforeProcessEpoch - ${perfStateId}`,
     yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
     before: () => generatePerfTestCachedStatePhase0({goBackOneSlot: true}),

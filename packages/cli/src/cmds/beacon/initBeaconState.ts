@@ -1,30 +1,30 @@
-import {ssz} from "@lodestar/types";
-import {createBeaconConfig, BeaconConfig, ChainForkConfig} from "@lodestar/config";
-import {Logger, formatBytes} from "@lodestar/utils";
-import {
-  isWithinWeakSubjectivityPeriod,
-  ensureWithinWeakSubjectivityPeriod,
-  BeaconStateAllForks,
-  loadState,
-  loadStateAndValidators,
-} from "@lodestar/state-transition";
 import {
   IBeaconDb,
   IBeaconNodeOptions,
   checkAndPersistAnchorState,
-  initStateFromEth1,
   getStateTypeFromBytes,
+  initStateFromEth1,
 } from "@lodestar/beacon-node";
+import {BeaconConfig, ChainForkConfig, createBeaconConfig} from "@lodestar/config";
+import {
+  BeaconStateAllForks,
+  ensureWithinWeakSubjectivityPeriod,
+  isWithinWeakSubjectivityPeriod,
+  loadState,
+  loadStateAndValidators,
+} from "@lodestar/state-transition";
+import {ssz} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";
+import {Logger, formatBytes} from "@lodestar/utils";
 
-import {downloadOrLoadFile, wrapFnError} from "../../util/index.js";
-import {defaultNetwork, GlobalArgs} from "../../options/globalOptions.js";
 import {
   fetchWeakSubjectivityState,
   getCheckpointFromArg,
-  getGenesisFileUrl,
   getCheckpointFromState,
+  getGenesisFileUrl,
 } from "../../networks/index.js";
+import {GlobalArgs, defaultNetwork} from "../../options/globalOptions.js";
+import {downloadOrLoadFile, wrapFnError} from "../../util/index.js";
 import {BeaconArgs} from "./options.js";
 
 type StateWithBytes = {state: BeaconStateAllForks; stateBytes: Uint8Array};
@@ -104,7 +104,9 @@ export async function initBeaconState(
   //   i)  used directly as the anchor state
   //   ii) used to load and verify a weak subjectivity state,
   const lastDbSlot = await db.stateArchive.lastKey();
-  const stateBytes = lastDbSlot !== null ? await db.stateArchive.getBinary(lastDbSlot) : null;
+  let stateBytes = lastDbSlot !== null ? await db.stateArchive.getBinary(lastDbSlot) : null;
+  // Convert to `Uint8Array` to avoid unexpected behavior such as `Buffer.prototype.slice` not copying memory
+  stateBytes = stateBytes ? new Uint8Array(stateBytes.buffer, stateBytes.byteOffset, stateBytes.byteLength) : null;
   let lastDbState: BeaconStateAllForks | null = null;
   let lastDbValidatorsBytes: Uint8Array | null = null;
   let lastDbStateWithBytes: StateWithBytes | null = null;
@@ -181,7 +183,9 @@ export async function initBeaconState(
 
   const genesisStateFile = args.genesisStateFile || getGenesisFileUrl(args.network || defaultNetwork);
   if (genesisStateFile && !args.forceGenesis) {
-    const stateBytes = await downloadOrLoadFile(genesisStateFile);
+    let stateBytes = await downloadOrLoadFile(genesisStateFile);
+    // Convert to `Uint8Array` to avoid unexpected behavior such as `Buffer.prototype.slice` not copying memory
+    stateBytes = new Uint8Array(stateBytes.buffer, stateBytes.byteOffset, stateBytes.byteLength);
     const anchorState = getStateTypeFromBytes(chainForkConfig, stateBytes).deserializeToViewDU(stateBytes);
     const config = createBeaconConfig(chainForkConfig, anchorState.genesisValidatorsRoot);
     const wssCheck = isWithinWeakSubjectivityPeriod(config, anchorState, getCheckpointFromState(anchorState));

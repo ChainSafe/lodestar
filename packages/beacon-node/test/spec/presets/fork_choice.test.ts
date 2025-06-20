@@ -1,50 +1,50 @@
 import path from "node:path";
-import {expect} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
-import {BeaconStateAllForks, isExecutionStateType, signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {InputType} from "@lodestar/spec-test-util";
+import {createBeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
+import {ACTIVE_PRESET, ForkName, ForkSeq, isForkPostDeneb} from "@lodestar/params";
+import {InputType} from "@lodestar/spec-test-util";
+import {BeaconStateAllForks, isExecutionStateType, signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {
-  bellatrix,
-  ssz,
-  RootHex,
-  deneb,
-  BeaconBlock,
-  SignedBeaconBlock,
-  sszTypesFor,
   Attestation,
   AttesterSlashing,
+  BeaconBlock,
+  RootHex,
+  SignedBeaconBlock,
+  bellatrix,
+  deneb,
+  ssz,
+  sszTypesFor,
 } from "@lodestar/types";
 import {bnToNum, fromHex} from "@lodestar/utils";
-import {createBeaconConfig} from "@lodestar/config";
-import {ACTIVE_PRESET, ForkSeq, isForkBlobs, ForkName} from "@lodestar/params";
-import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
-import {ClockEvent} from "../../../src/util/clock.js";
-import {computeInclusionProof} from "../../../src/util/blobs.js";
-import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
-import {testLogger} from "../../utils/logger.js";
-import {getConfig} from "../../utils/config.js";
-import {RunnerType, TestRunnerFn} from "../utils/types.js";
-import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";
-import {getExecutionEngineFromBackend} from "../../../src/execution/index.js";
-import {ExecutionPayloadStatus} from "../../../src/execution/engine/interface.js";
-import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js";
-import {defaultChainOptions} from "../../../src/chain/options.js";
-import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
-import {ClockStopped} from "../../mocks/clock.js";
+import {expect} from "vitest";
 import {
-  getBlockInput,
   AttestationImportOpt,
-  BlockSource,
   BlobSidecarValidation,
   BlobsSource,
+  BlockSource,
+  getBlockInput,
 } from "../../../src/chain/blocks/types.js";
+import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
+import {defaultChainOptions} from "../../../src/chain/options.js";
 import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
+import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";
 import {PowMergeBlock} from "../../../src/eth1/interface.js";
-import {assertCorrectProgressiveBalances} from "../config.js";
+import {ExecutionPayloadStatus} from "../../../src/execution/engine/interface.js";
+import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js";
+import {getExecutionEngineFromBackend} from "../../../src/execution/index.js";
+import {computeInclusionProof} from "../../../src/util/blobs.js";
+import {ClockEvent} from "../../../src/util/clock.js";
 import {initCKZG, loadEthereumTrustedSetup} from "../../../src/util/kzg.js";
+import {ClockStopped} from "../../mocks/clock.js";
+import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
+import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
+import {getConfig} from "../../utils/config.js";
+import {testLogger} from "../../utils/logger.js";
+import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
+import {RunnerType, TestRunnerFn} from "../utils/types.js";
 
 const ANCHOR_STATE_FILE_NAME = "anchor_state";
 const ANCHOR_BLOCK_FILE_NAME = "anchor_block";
@@ -61,7 +61,7 @@ const forkChoiceTest =
   (fork) => {
     return {
       testFunction: async (testcase) => {
-        if (isForkBlobs(fork)) {
+        if (isForkPostDeneb(fork)) {
           await initCKZG();
           loadEthereumTrustedSetup();
         }
@@ -111,10 +111,13 @@ const forkChoiceTest =
           {
             config: createBeaconConfig(config, state.genesisValidatorsRoot),
             db: getMockedBeaconDb(),
+            dataDir: ".",
+            dbName: ",",
             logger,
             processShutdownCallback: () => {},
             clock,
             metrics: null,
+            validatorMonitor: null,
             anchorState,
             eth1,
             executionEngine,
@@ -223,14 +226,13 @@ const forkChoiceTest =
                     };
                   });
 
-                  blockImport = getBlockInput.availableData(config, signedBlock, BlockSource.gossip, null, {
+                  blockImport = getBlockInput.availableData(config, signedBlock, BlockSource.gossip, {
                     fork: ForkName.deneb,
                     blobs: blobSidecars,
-                    blobsBytes: [null],
                     blobsSource: BlobsSource.gossip,
                   });
                 } else {
-                  blockImport = getBlockInput.preData(config, signedBlock, BlockSource.gossip, null);
+                  blockImport = getBlockInput.preData(config, signedBlock, BlockSource.gossip);
                 }
 
                 await chain.processBlock(blockImport, {
@@ -362,6 +364,8 @@ const forkChoiceTest =
           const attestations = new Map<string, Attestation>();
           const attesterSlashings = new Map<string, AttesterSlashing>();
           for (const key in t) {
+            if (!Object.prototype.hasOwnProperty.call(t, key)) continue;
+
             const blockMatch = key.match(BLOCK_FILE_NAME);
             if (blockMatch) {
               blocks.set(key, t[key]);

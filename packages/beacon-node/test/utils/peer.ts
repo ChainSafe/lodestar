@@ -1,6 +1,6 @@
+import {generateKeyPair, publicKeyFromProtobuf} from "@libp2p/crypto/keys";
 import {PeerId} from "@libp2p/interface";
 import {peerIdFromPrivateKey, peerIdFromPublicKey} from "@libp2p/peer-id";
-import {generateKeyPair, publicKeyFromProtobuf} from "@libp2p/crypto/keys";
 import {peerIdToString} from "../../src/util/peerId.js";
 
 /**

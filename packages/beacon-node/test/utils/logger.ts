@@ -1,6 +1,6 @@
-import {LogLevel} from "@lodestar/utils";
-import {getNodeLogger, LoggerNode, LoggerNodeOpts} from "@lodestar/logger/node";
 import {getEnvLogLevel} from "@lodestar/logger/env";
+import {LoggerNode, LoggerNodeOpts, getNodeLogger} from "@lodestar/logger/node";
+import {LogLevel} from "@lodestar/utils";
 export {LogLevel};
 
 export type TestLoggerOpts = LoggerNodeOpts;

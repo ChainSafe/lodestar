@@ -1,5 +1,6 @@
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {config as minimalConfig} from "@lodestar/config/default";
+import {config} from "@lodestar/config/default";
 import {
   EPOCHS_PER_HISTORICAL_VECTOR,
   EPOCHS_PER_SLASHINGS_VECTOR,
@@ -8,20 +9,19 @@ import {
   SLOTS_PER_HISTORICAL_ROOT,
 } from "@lodestar/params";
 import {phase0, ssz} from "@lodestar/types";
-import {config} from "@lodestar/config/default";
 
-import {createBeaconConfig, ChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {ZERO_HASH} from "../../src/constants/index.js";
 import {newZeroedArray} from "../../src/util/index.js";
 
+import {EpochCacheOpts} from "../../src/cache/epochCache.js";
+import {BeaconStateCache} from "../../src/cache/stateCache.js";
 import {
+  BeaconStateAllForks,
   BeaconStatePhase0,
   CachedBeaconStateAllForks,
-  BeaconStateAllForks,
   createCachedBeaconState,
 } from "../../src/index.js";
-import {BeaconStateCache} from "../../src/cache/stateCache.js";
-import {EpochCacheOpts} from "../../src/cache/epochCache.js";
 
 /**
  * Copy of BeaconState, but all fields are marked optional to allow for swapping out variables as needed.

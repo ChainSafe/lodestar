@@ -1,12 +1,12 @@
-import {describe, it, expect, afterEach, vi} from "vitest";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {sleep} from "@lodestar/utils";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
+import {sleep} from "@lodestar/utils";
+import {afterEach, describe, expect, it, vi} from "vitest";
+import {GossipHandlerParamGeneric, GossipHandlers, GossipType} from "../../../src/network/gossip/index.js";
 import {Network} from "../../../src/network/index.js";
-import {GossipType, GossipHandlers, GossipHandlerParamGeneric} from "../../../src/network/gossip/index.js";
-import {getNetworkForTest} from "../../utils/networkWithMockDb.js";
 import {connect, onPeerConnect} from "../../utils/network.js";
+import {getNetworkForTest} from "../../utils/networkWithMockDb.js";
 
 describe("gossipsub / main thread", () => {
   vi.setConfig({testTimeout: 3000});

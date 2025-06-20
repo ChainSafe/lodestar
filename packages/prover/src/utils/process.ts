@@ -1,17 +1,17 @@
 import {Logger} from "@lodestar/logger";
 import {ELVerifiedRequestHandler} from "../interfaces.js";
 import {ProofProvider} from "../proof_provider/proof_provider.js";
-import {JsonRpcRequestOrBatch, JsonRpcBatchRequest, JsonRpcResponseOrBatch, JsonRpcBatchResponse} from "../types.js";
+import {JsonRpcBatchRequest, JsonRpcBatchResponse, JsonRpcRequestOrBatch, JsonRpcResponseOrBatch} from "../types.js";
+import {eth_call} from "../verified_requests/eth_call.js";
+import {eth_estimateGas} from "../verified_requests/eth_estimateGas.js";
 import {eth_getBalance} from "../verified_requests/eth_getBalance.js";
-import {eth_getTransactionCount} from "../verified_requests/eth_getTransactionCount.js";
 import {eth_getBlockByHash} from "../verified_requests/eth_getBlockByHash.js";
 import {eth_getBlockByNumber} from "../verified_requests/eth_getBlockByNumber.js";
 import {eth_getCode} from "../verified_requests/eth_getCode.js";
-import {eth_call} from "../verified_requests/eth_call.js";
-import {eth_estimateGas} from "../verified_requests/eth_estimateGas.js";
+import {eth_getTransactionCount} from "../verified_requests/eth_getTransactionCount.js";
 import {getResponseForRequest, isBatchRequest, isRequest} from "./json_rpc.js";
-import {isNullish} from "./validation.js";
 import {ELRpcProvider} from "./rpc_provider.js";
+import {isNullish} from "./validation.js";
 
 // biome-ignore lint/suspicious/noExplicitAny: <explanation>
 export const verifiableMethodHandlers: Record<string, ELVerifiedRequestHandler<any, any>> = {

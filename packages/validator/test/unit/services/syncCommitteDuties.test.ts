@@ -1,24 +1,24 @@
-import {describe, it, expect, beforeAll, beforeEach, afterEach, vi} from "vitest";
-import {when} from "vitest-when";
-import {toBufferBE} from "bigint-buffer";
-import {toHexString} from "@chainsafe/ssz";
 import {SecretKey} from "@chainsafe/blst";
+import {toHexString} from "@chainsafe/ssz";
+import {routes} from "@lodestar/api";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as mainnetConfig} from "@lodestar/config/default";
-import {routes} from "@lodestar/api";
 import {ssz} from "@lodestar/types";
+import {toBufferBE} from "bigint-buffer";
+import {afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
+import {when} from "vitest-when";
 import {
   SyncCommitteeDutiesService,
   SyncDutyAndProofs,
   SyncDutySubnet,
 } from "../../../src/services/syncCommitteeDuties.js";
-import {ValidatorStore} from "../../../src/services/validatorStore.js";
 import {SyncingStatusTracker} from "../../../src/services/syncingStatusTracker.js";
-import {getApiClientStub, mockApiResponse} from "../../utils/apiStub.js";
-import {loggerVc} from "../../utils/logger.js";
-import {ClockMock} from "../../utils/clock.js";
-import {initValidatorStore} from "../../utils/validatorStore.js";
 import {syncCommitteeIndicesToSubnets} from "../../../src/services/utils.js";
+import {ValidatorStore} from "../../../src/services/validatorStore.js";
+import {getApiClientStub, mockApiResponse} from "../../utils/apiStub.js";
+import {ClockMock} from "../../utils/clock.js";
+import {loggerVc} from "../../utils/logger.js";
+import {initValidatorStore} from "../../utils/validatorStore.js";
 
 describe("SyncCommitteeDutiesService", () => {
   const api = getApiClientStub();

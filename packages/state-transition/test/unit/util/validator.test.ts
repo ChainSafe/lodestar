@@ -1,16 +1,16 @@
-import {describe, it, expect, beforeEach} from "vitest";
+import {beforeEach, describe, expect, it} from "vitest";
 
 import {phase0, ssz} from "@lodestar/types";
 
 import {getActiveValidatorIndices, isActiveValidator, isSlashableValidator} from "../../../src/util/index.js";
 
 import {randBetween} from "../../utils/misc.js";
-import {generateValidator} from "../../utils/validator.js";
 import {generateState} from "../../utils/state.js";
+import {generateValidator} from "../../utils/validator.js";
 
 describe("getActiveValidatorIndices", () => {
   it("empty list of validators should return no indices (empty list)", () => {
-    expect(getActiveValidatorIndices(generateState(), randBetween(0, 4))).toStrictEqual([]);
+    expect(getActiveValidatorIndices(generateState(), randBetween(0, 4))).toStrictEqual(new Uint32Array([]));
   });
   it("list of cloned validators should return all or none", () => {
     const state = generateState();
@@ -20,8 +20,8 @@ describe("getActiveValidatorIndices", () => {
       Array.from({length: 10}, () => generateValidator({activation: activationEpoch, exit: exitEpoch}))
     );
 
-    const allActiveIndices = state.validators.getAllReadonlyValues().map((_, i) => i);
-    const allInactiveIndices: any = [];
+    const allActiveIndices = new Uint32Array(state.validators.getAllReadonlyValues().map((_, i) => i));
+    const allInactiveIndices: any = new Uint32Array([]);
     expect(getActiveValidatorIndices(state, activationEpoch)).toStrictEqual(allActiveIndices);
     expect(getActiveValidatorIndices(state, exitEpoch)).toStrictEqual(allInactiveIndices);
   });

@@ -1,18 +1,16 @@
-import {PrivateKey} from "@libp2p/interface";
-import {Registry} from "prom-client";
 import {ENR} from "@chainsafe/enr";
-import {identify} from "@libp2p/identify";
-import {bootstrap} from "@libp2p/bootstrap";
-import {mdns} from "@libp2p/mdns";
-import {createLibp2p, Libp2pInit} from "libp2p";
-import {mplex} from "@libp2p/mplex";
-import {prometheusMetrics} from "@libp2p/prometheus-metrics";
-import {tcp} from "@libp2p/tcp";
-import {quic} from "@chainsafe/libp2p-quic";
 import {noise} from "@chainsafe/libp2p-noise";
-import {defaultNetworkOptions, NetworkOptions} from "../options.js";
-import {Eth2PeerDataStore} from "../peers/datastore.js";
+import {quic} from "@chainsafe/libp2p-quic";
+import {bootstrap} from "@libp2p/bootstrap";
+import {identify} from "@libp2p/identify";
+import {PrivateKey} from "@libp2p/interface";
+import {mdns} from "@libp2p/mdns";
+import {tcp} from "@libp2p/tcp";
+import {Libp2pInit, createLibp2p} from "libp2p";
+import {Registry} from "prom-client";
 import {Libp2p, LodestarComponents} from "../interface.js";
+import {NetworkOptions, defaultNetworkOptions} from "../options.js";
+import {Eth2PeerDataStore} from "../peers/datastore.js";
 
 export type NodeJsLibp2pOpts = {
   peerStoreDir?: string;
@@ -99,7 +97,7 @@ export async function createNodeJsLibp2p(
     },
     connectionEncrypters: [noise()],
     transports,
-    streamMuxers: [mplex({maxInboundStreams: 256})],
+    streamMuxers: [mplex({maxInboundStreams: 256, disconnectThreshold: networkOpts.disconnectThreshold})],
     peerDiscovery,
     metrics: nodeJsLibp2pOpts.metrics
       ? prometheusMetrics({
@@ -120,6 +118,12 @@ export async function createNodeJsLibp2p(
     // rely on lodestar's peer manager to ping peers
     connectionMonitor: {
       enabled: false,
+    },
+    // for our purposes, we don't want peer store data to expire
+    // see https://github.com/libp2p/js-libp2p/pull/3019
+    peerStore: {
+      maxAddressAge: Infinity,
+      maxPeerAge: Infinity,
     },
     datastore,
     services: {

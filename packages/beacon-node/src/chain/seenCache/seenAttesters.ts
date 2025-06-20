@@ -1,18 +1,27 @@
 import {Epoch, ValidatorIndex} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
 
-// The next, current and previous epochs. We require the next epoch due to the
-// `MAXIMUM_GOSSIP_CLOCK_DISPARITY`. We require the previous epoch since the
-// specification delcares:
+// How many *non future* epochs we intend to keep for SeenAttesters.
+// Pre and post deneb specs require us to accept attestations from current and
+// previous epoch.
 //
-// ```
-// aggregate.data.slot + ATTESTATION_PROPAGATION_SLOT_RANGE
-//      >= current_slot >= aggregate.data.slot
-// ```
+// Pre-deneb:
+// - `attestation.data.slot + ATTESTATION_PROPAGATION_SLOT_RANGE >= current_slot >= attestation.data.slot`
 //
-// This means that during the current epoch we will always accept an attestation
-// from at least one slot in the previous epoch.
-const MAX_EPOCHS = 3;
+// Post-deneb:
+// - `attestation.data.slot <= current_slot`
+// - `compute_epoch_at_slot(attestation.data.slot) in (get_previous_epoch(state), get_current_epoch(state))`
+//
+// When factored in MAXIMUM_GOSSIP_CLOCK_DISPARITY, it is possible we keep 3 epochs of SeenAttesters:
+// previous, current and future epoch. This constant is solely used to calculate `lowestPermissibleEpoch`
+// which prunes anything older than it.
+//
+// Assuming we're at epoch 100 while all other nodes at epoch 99, they all accept attestations at epoch 98, 99.
+// If MAX_RETAINED_EPOCH = 2 then our lowestPermissibleEpoch is 98 which is fine
+//
+// Assuming we're at epoch 99 while all other nodes at epoch 100, they all accept attestations at epoch 99, 100.
+// If MAX_RETAINED_EPOCH = 2 then lowestPermissibleEpoch is 97 which is more than enough
+const EPOCH_LOOKBACK_LIMIT = 2;
 
 /**
  * Keeps a cache to filter unaggregated attestations from the same validator in the same epoch.
@@ -34,7 +43,7 @@ export class SeenAttesters {
   }
 
   prune(currentEpoch: Epoch): void {
-    this.lowestPermissibleEpoch = Math.max(currentEpoch - MAX_EPOCHS, 0);
+    this.lowestPermissibleEpoch = Math.max(currentEpoch - EPOCH_LOOKBACK_LIMIT, 0);
     for (const epoch of this.validatorIndexesByEpoch.keys()) {
       if (epoch < this.lowestPermissibleEpoch) {
         this.validatorIndexesByEpoch.delete(epoch);

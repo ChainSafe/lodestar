@@ -1,9 +1,9 @@
-import {itBench} from "@dapplion/benchmark";
+import {bench, describe} from "@chainsafe/benchmark";
 import {processRewardsAndPenalties} from "../../../src/epoch/processRewardsAndPenalties.js";
-import {generatePerfTestCachedStateAltair, numValidators} from "../util.js";
 import {StateAltairEpoch} from "../types.js";
-import {FlagFactors, generateBalanceDeltasEpochTransitionCache} from "./utilPhase0.js";
+import {generatePerfTestCachedStateAltair, numValidators} from "../util.js";
 import {mutateInactivityScores} from "./util.js";
+import {FlagFactors, generateBalanceDeltasEpochTransitionCache} from "./utilPhase0.js";
 
 // PERF: Cost = 'proportional' to $VALIDATOR_COUNT. Extra work is done per validator the more status flags are set
 
@@ -38,7 +38,7 @@ describe("altair processRewardsAndPenalties", () => {
   ];
 
   for (const {id, isInInactivityLeak, flagFactors, factorWithPositive} of testCases) {
-    itBench<StateAltairEpoch, StateAltairEpoch>({
+    bench<StateAltairEpoch, StateAltairEpoch>({
       id: `altair processRewardsAndPenalties - ${vc} ${id}`,
       yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
       before: () => {

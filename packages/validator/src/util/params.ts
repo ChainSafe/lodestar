@@ -1,5 +1,5 @@
-import {ChainConfig, chainConfigToJson} from "@lodestar/config";
-import {activePreset, BeaconPreset, presetToJson} from "@lodestar/params";
+import {BlobScheduleEntry, ChainConfig, SpecJson, chainConfigToJson, deserializeBlobSchedule} from "@lodestar/config";
+import {BeaconPreset, activePreset, presetToJson} from "@lodestar/params";
 
 export class NotEqualParamsError extends Error {}
 
@@ -20,7 +20,7 @@ type ConfigWithPreset = ChainConfig & BeaconPreset;
  * So this check only compares a specific list of parameters that are consensus critical, ignoring the rest. Typed
  * config and preset ensure new parameters are labeled critical or ignore, facilitating maintenance of the list.
  */
-export function assertEqualParams(localConfig: ChainConfig, externalSpecJson: Record<string, string>): void {
+export function assertEqualParams(localConfig: ChainConfig, externalSpecJson: SpecJson): void {
   // Before comparing, add preset which is bundled in api impl config route.
   // config and preset must be serialized to JSON for safe comparisions.
   const localSpecJson = {
@@ -52,6 +52,35 @@ export function assertEqualParams(localConfig: ChainConfig, externalSpecJson: Re
       continue;
     }
 
+    if (key === "BLOB_SCHEDULE") {
+      const localBlobSchedule = deserializeBlobSchedule(localSpecJson[key]).sort((a, b) => a.EPOCH - b.EPOCH);
+      const remoteBlobSchedule = deserializeBlobSchedule(externalSpecJson[key]).sort((a, b) => a.EPOCH - b.EPOCH);
+
+      if (localBlobSchedule.length !== remoteBlobSchedule.length) {
+        errors.push(`BLOB_SCHEDULE different length: ${localBlobSchedule.length} != ${remoteBlobSchedule.length}`);
+
+        // Skip per entry comparison
+        continue;
+      }
+
+      for (let i = 0; i < localBlobSchedule.length; i++) {
+        const localEntry = localBlobSchedule[i];
+        const remoteEntry = remoteBlobSchedule[i];
+
+        for (const entryKey of ["EPOCH", "MAX_BLOBS_PER_BLOCK"] as Array<keyof BlobScheduleEntry>) {
+          const localValue = String(localEntry[entryKey]);
+          const remoteValue = String(remoteEntry[entryKey]);
+
+          if (localValue !== remoteValue) {
+            errors.push(`BLOB_SCHEDULE[${i}].${entryKey} different value: ${localValue} != ${remoteValue}`);
+          }
+        }
+      }
+
+      // Skip generic string comparison
+      continue;
+    }
+
     // Must compare JSON serialized specs, to ensure all strings are rendered in the same way
     // Must compare as lowercase to ensure checksum addresses and names have same capilatization
     const localValue = String(localSpecJson[key]).toLocaleLowerCase();
@@ -72,6 +101,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
   const capellaForkRelevant = localConfig.CAPELLA_FORK_EPOCH < Infinity;
   const denebForkRelevant = localConfig.DENEB_FORK_EPOCH < Infinity;
   const electraForkRelevant = localConfig.ELECTRA_FORK_EPOCH < Infinity;
+  const fuluForkRelevant = localConfig.FULU_FORK_EPOCH < Infinity;
 
   return {
     // # Config
@@ -107,6 +137,9 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     // electra
     ELECTRA_FORK_VERSION: electraForkRelevant,
     ELECTRA_FORK_EPOCH: electraForkRelevant,
+    // fulu
+    FULU_FORK_VERSION: fuluForkRelevant,
+    FULU_FORK_EPOCH: fuluForkRelevant,
 
     // Time parameters
     SECONDS_PER_SLOT: true,
@@ -135,7 +168,13 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     DEPOSIT_CONTRACT_ADDRESS: true,
 
     // Networking (non-critical as those do not affect consensus)
+    MIN_EPOCHS_FOR_BLOCK_REQUESTS: false,
     MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: false,
+    MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: false,
+    BLOB_SIDECAR_SUBNET_COUNT: false,
+    BLOB_SIDECAR_SUBNET_COUNT_ELECTRA: false,
+    MAX_REQUEST_BLOB_SIDECARS: false,
+    MAX_REQUEST_BLOB_SIDECARS_ELECTRA: false,
 
     // # Phase0Preset
     /////////////////
@@ -216,9 +255,9 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     // # DenebPreset
     /////////////////
     FIELD_ELEMENTS_PER_BLOB: denebForkRelevant,
-    MAX_BLOBS_PER_BLOCK: denebForkRelevant,
     MAX_BLOB_COMMITMENTS_PER_BLOCK: denebForkRelevant,
     KZG_COMMITMENT_INCLUSION_PROOF_DEPTH: denebForkRelevant,
+    MAX_BLOBS_PER_BLOCK: denebForkRelevant,
 
     // ELECTRA
     MAX_DEPOSIT_REQUESTS_PER_PAYLOAD: electraForkRelevant,
@@ -226,15 +265,29 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     MAX_ATTESTER_SLASHINGS_ELECTRA: electraForkRelevant,
     MAX_ATTESTATIONS_ELECTRA: electraForkRelevant,
     MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP: electraForkRelevant,
+    MAX_PENDING_DEPOSITS_PER_EPOCH: electraForkRelevant,
     MAX_EFFECTIVE_BALANCE_ELECTRA: electraForkRelevant,
     MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA: electraForkRelevant,
     MIN_ACTIVATION_BALANCE: electraForkRelevant,
-    PENDING_BALANCE_DEPOSITS_LIMIT: electraForkRelevant,
+    PENDING_DEPOSITS_LIMIT: electraForkRelevant,
     PENDING_PARTIAL_WITHDRAWALS_LIMIT: electraForkRelevant,
     PENDING_CONSOLIDATIONS_LIMIT: electraForkRelevant,
     MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD: electraForkRelevant,
     WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA: electraForkRelevant,
     MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT: electraForkRelevant,
     MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA: electraForkRelevant,
+    MAX_BLOBS_PER_BLOCK_ELECTRA: electraForkRelevant,
+
+    // FULU
+    /////////////////
+    FIELD_ELEMENTS_PER_CELL: fuluForkRelevant,
+    FIELD_ELEMENTS_PER_EXT_BLOB: fuluForkRelevant,
+    KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH: fuluForkRelevant,
+    SAMPLES_PER_SLOT: fuluForkRelevant,
+    CUSTODY_REQUIREMENT: fuluForkRelevant,
+    NODE_CUSTODY_REQUIREMENT: false,
+    VALIDATOR_CUSTODY_REQUIREMENT: fuluForkRelevant,
+    BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: fuluForkRelevant,
+    BLOB_SCHEDULE: fuluForkRelevant,
   };
 }

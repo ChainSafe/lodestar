@@ -1,6 +1,6 @@
 import {fromHex as b} from "@lodestar/utils";
-import {ChainConfig} from "../types.js";
 import {chainConfig as mainnet} from "../configs/mainnet.js";
+import {ChainConfig} from "../types.js";
 
 // Ephemery dynamic beacon chain config:
 // https://github.com/ephemery-testnet/ephemery-genesis/blob/master/cl-config.yaml
@@ -36,7 +36,13 @@ const baseChainConfig: ChainConfig = {
   CAPELLA_FORK_EPOCH: 0,
   // Deneb
   DENEB_FORK_VERSION: b("0x5000101b"),
-  DENEB_FORK_EPOCH: 5,
+  DENEB_FORK_EPOCH: 0,
+  // Electra
+  ELECTRA_FORK_VERSION: b("0x6000101b"),
+  ELECTRA_FORK_EPOCH: 10,
+  // Fulu
+  FULU_FORK_VERSION: b("0x7000101b"),
+  FULU_FORK_EPOCH: Infinity,
 
   // Deposit contract
   // ---------------------------------------------------------------
@@ -45,6 +51,10 @@ const baseChainConfig: ChainConfig = {
   DEPOSIT_CONTRACT_ADDRESS: b("0x4242424242424242424242424242424242424242"),
 
   ETH1_FOLLOW_DISTANCE: 12,
+
+  // Blob Scheduling
+  // ---------------------------------------------------------------
+  BLOB_SCHEDULE: [],
 };
 
 // Reset interval (7 days) in milliseconds, based on ephemery-genesis values.env:

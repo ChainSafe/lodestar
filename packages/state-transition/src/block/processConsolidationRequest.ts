@@ -1,15 +1,45 @@
-import {electra, ssz} from "@lodestar/types";
 import {FAR_FUTURE_EPOCH, MIN_ACTIVATION_BALANCE, PENDING_CONSOLIDATIONS_LIMIT} from "@lodestar/params";
+import {electra, ssz} from "@lodestar/types";
 
 import {CachedBeaconStateElectra} from "../types.js";
-import {getConsolidationChurnLimit, isActiveValidator} from "../util/validator.js";
-import {hasExecutionWithdrawalCredential} from "../util/electra.js";
+import {hasEth1WithdrawalCredential} from "../util/capella.js";
+import {
+  hasCompoundingWithdrawalCredential,
+  hasExecutionWithdrawalCredential,
+  isPubkeyKnown,
+  switchToCompoundingValidator,
+} from "../util/electra.js";
 import {computeConsolidationEpochAndUpdateChurn} from "../util/epoch.js";
+import {getConsolidationChurnLimit, getPendingBalanceToWithdraw, isActiveValidator} from "../util/validator.js";
 
+// TODO Electra: Clean up necessary as there is a lot of overlap with isValidSwitchToCompoundRequest
 export function processConsolidationRequest(
   state: CachedBeaconStateElectra,
   consolidationRequest: electra.ConsolidationRequest
 ): void {
+  const {sourcePubkey, targetPubkey, sourceAddress} = consolidationRequest;
+  if (!isPubkeyKnown(state, sourcePubkey) || !isPubkeyKnown(state, targetPubkey)) {
+    return;
+  }
+
+  const sourceIndex = state.epochCtx.getValidatorIndex(sourcePubkey);
+  const targetIndex = state.epochCtx.getValidatorIndex(targetPubkey);
+
+  if (sourceIndex === null || targetIndex === null) {
+    return;
+  }
+
+  if (isValidSwitchToCompoundRequest(state, consolidationRequest)) {
+    switchToCompoundingValidator(state, sourceIndex);
+    // Early return since we have already switched validator to compounding
+    return;
+  }
+
+  // Verify that source != target, so a consolidation cannot be used as an exit.
+  if (sourceIndex === targetIndex) {
+    return;
+  }
+
   // If the pending consolidations queue is full, consolidation requests are ignored
   if (state.pendingConsolidations.length >= PENDING_CONSOLIDATIONS_LIMIT) {
     return;
@@ -20,33 +50,20 @@ export function processConsolidationRequest(
     return;
   }
 
-  const {sourcePubkey, targetPubkey} = consolidationRequest;
-  const sourceIndex = state.epochCtx.getValidatorIndex(sourcePubkey);
-  const targetIndex = state.epochCtx.getValidatorIndex(targetPubkey);
-
-  if (sourceIndex === null || targetIndex === null) {
-    return;
-  }
-
-  // Verify that source != target, so a consolidation cannot be used as an exit.
-  if (sourceIndex === targetIndex) {
-    return;
-  }
-
   const sourceValidator = state.validators.get(sourceIndex);
   const targetValidator = state.validators.getReadonly(targetIndex);
   const sourceWithdrawalAddress = sourceValidator.withdrawalCredentials.subarray(12);
   const currentEpoch = state.epochCtx.epoch;
 
-  // Verify withdrawal credentials
-  if (
-    !hasExecutionWithdrawalCredential(sourceValidator.withdrawalCredentials) ||
-    !hasExecutionWithdrawalCredential(targetValidator.withdrawalCredentials)
-  ) {
+  // Verify source withdrawal credentials
+  const hasCorrectCredential = hasExecutionWithdrawalCredential(sourceValidator.withdrawalCredentials);
+  const isCorrectSourceAddress = Buffer.compare(sourceWithdrawalAddress, sourceAddress) === 0;
+  if (!(hasCorrectCredential && isCorrectSourceAddress)) {
     return;
   }
 
-  if (Buffer.compare(sourceWithdrawalAddress, consolidationRequest.sourceAddress) !== 0) {
+  // Verify that target has compounding withdrawal credentials
+  if (!hasCompoundingWithdrawalCredential(targetValidator.withdrawalCredentials)) {
     return;
   }
 
@@ -60,6 +77,17 @@ export function processConsolidationRequest(
     return;
   }
 
+  // Verify the source has been active long enough
+  if (currentEpoch < sourceValidator.activationEpoch + state.config.SHARD_COMMITTEE_PERIOD) {
+    return;
+  }
+
+  // Verify the source has no pending withdrawals in the queue
+  if (getPendingBalanceToWithdraw(state, sourceIndex) > 0) {
+    return;
+  }
+
+  // Initiate source validator exit and append pending consolidation
   // TODO Electra: See if we can get rid of big int
   const exitEpoch = computeConsolidationEpochAndUpdateChurn(state, BigInt(sourceValidator.effectiveBalance));
   sourceValidator.exitEpoch = exitEpoch;
@@ -70,4 +98,51 @@ export function processConsolidationRequest(
     targetIndex,
   });
   state.pendingConsolidations.push(pendingConsolidation);
+}
+
+/**
+ * Determine if we should set consolidation target validator to compounding credential
+ */
+function isValidSwitchToCompoundRequest(
+  state: CachedBeaconStateElectra,
+  consolidationRequest: electra.ConsolidationRequest
+): boolean {
+  const {sourcePubkey, targetPubkey, sourceAddress} = consolidationRequest;
+  const sourceIndex = state.epochCtx.getValidatorIndex(sourcePubkey);
+  const targetIndex = state.epochCtx.getValidatorIndex(targetPubkey);
+
+  // Verify pubkey exists
+  if (sourceIndex === null) {
+    // this check is mainly to make the compiler happy, pubkey is checked by the consumer already
+    return false;
+  }
+
+  // Switch to compounding requires source and target be equal
+  if (sourceIndex !== targetIndex) {
+    return false;
+  }
+
+  const sourceValidator = state.validators.getReadonly(sourceIndex);
+  const sourceWithdrawalAddress = sourceValidator.withdrawalCredentials.subarray(12);
+  // Verify request has been authorized
+  if (Buffer.compare(sourceWithdrawalAddress, sourceAddress) !== 0) {
+    return false;
+  }
+
+  // Verify source withdrawal credentials
+  if (!hasEth1WithdrawalCredential(sourceValidator.withdrawalCredentials)) {
+    return false;
+  }
+
+  // Verify the source is active
+  if (!isActiveValidator(sourceValidator, state.epochCtx.epoch)) {
+    return false;
+  }
+
+  // Verify exit for source has not been initiated
+  if (sourceValidator.exitEpoch !== FAR_FUTURE_EPOCH) {
+    return false;
+  }
+
+  return true;
 }

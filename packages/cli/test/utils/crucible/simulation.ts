@@ -1,36 +1,36 @@
 import fs from "node:fs";
 import {mkdir, writeFile} from "node:fs/promises";
 import path from "node:path";
-import tmp from "tmp";
 import {fromHexString} from "@chainsafe/ssz";
 import {nodeUtils} from "@lodestar/beacon-node";
-import {loadEthereumTrustedSetup, initCKZG} from "@lodestar/beacon-node/util";
+import {initCKZG, loadEthereumTrustedSetup} from "@lodestar/beacon-node/util";
 import {ChainForkConfig} from "@lodestar/config";
+import {LogLevel, TimestampFormatCode} from "@lodestar/logger";
+import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
 import {activePreset} from "@lodestar/params";
 import {BeaconStateAllForks, interopSecretKey} from "@lodestar/state-transition";
 import {prettyMsToTime} from "@lodestar/utils";
-import {LogLevel, TimestampFormatCode} from "@lodestar/logger";
-import {getNodeLogger, LoggerNode} from "@lodestar/logger/node";
-import {EpochClock, MS_IN_SEC} from "./epochClock.js";
-import {ExternalSignerServer} from "./externalSignerServer.js";
-import {SimulationTracker} from "./simulationTracker.js";
+import tmp from "tmp";
 import {createBeaconNode} from "./clients/beacon/index.js";
+import {createExecutionNode} from "./clients/execution/index.js";
 import {createValidatorNode, getValidatorForBeaconNode} from "./clients/validator/index.js";
 import {MOCK_ETH1_GENESIS_HASH} from "./constants.js";
-import {createExecutionNode} from "./clients/execution/index.js";
+import {EpochClock, MS_IN_SEC} from "./epochClock.js";
+import {ExternalSignerServer} from "./externalSignerServer.js";
 import {
   BeaconClient,
-  ValidatorClientKeys,
   ExecutionClient,
+  GeneratorOptions,
   IRunner,
   NodePair,
   NodePairDefinition,
   SimulationInitOptions,
   SimulationOptions,
   ValidatorClient,
-  GeneratorOptions,
+  ValidatorClientKeys,
 } from "./interfaces.js";
 import {Runner} from "./runner/index.js";
+import {SimulationTracker} from "./simulationTracker.js";
 import {registerProcessHandler, replaceIpFromUrl} from "./utils/index.js";
 import {getNodePaths} from "./utils/paths.js";
 

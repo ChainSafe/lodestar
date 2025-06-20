@@ -1,7 +1,6 @@
-/* eslint-disable no-console */
+import {ChainConfig, ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {activePreset} from "@lodestar/params";
 import {Epoch} from "@lodestar/types";
-import {ChainConfig, ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {
   CLIQUE_SEALING_PERIOD,
   ETH_TTD_INCREMENT,
@@ -83,7 +82,6 @@ export function defineSimTestConfig(
     SECONDS_PER_ETH1_BLOCK: opts.cliqueSealingPeriod ?? CLIQUE_SEALING_PERIOD,
     ETH1_FOLLOW_DISTANCE: 1,
   });
-  /* eslint-enable @typescript-eslint/naming-convention */
 
   return {
     estimatedTimeoutMs,

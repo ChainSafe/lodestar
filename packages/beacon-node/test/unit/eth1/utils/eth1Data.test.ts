@@ -1,16 +1,16 @@
-import {describe, it, expect} from "vitest";
 import {Root, phase0, ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
-import {iteratorFromArray} from "../../../utils/interator.js";
-import {
-  getEth1DataForBlocks,
-  getDepositsByBlockNumber,
-  getDepositRootByDepositCount,
-} from "../../../../src/eth1/utils/eth1Data.js";
-import {Eth1Block} from "../../../../src/eth1/interface.js";
-import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
-import {Eth1ErrorCode} from "../../../../src/eth1/errors.js";
+import {describe, expect, it} from "vitest";
 import {DepositTree} from "../../../../src/db/repositories/depositDataRoot.js";
+import {Eth1ErrorCode} from "../../../../src/eth1/errors.js";
+import {Eth1Block} from "../../../../src/eth1/interface.js";
+import {
+  getDepositRootByDepositCount,
+  getDepositsByBlockNumber,
+  getEth1DataForBlocks,
+} from "../../../../src/eth1/utils/eth1Data.js";
+import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
+import {iteratorFromArray} from "../../../utils/interator.js";
 
 describe("eth1 / util / getEth1DataForBlocks", () => {
   type TestCase = {
@@ -41,11 +41,11 @@ describe("eth1 / util / getEth1DataForBlocks", () => {
       const deposits: phase0.DepositEvent[] = expectedEth1Data.map(({blockNumber, depositCount}) =>
         getMockDeposit({blockNumber, index: depositCount - 1})
       );
-      const lastProcessedDepositBlockNumber = expectedEth1Data[expectedEth1Data.length - 1].blockNumber;
+      const lastProcessedDepositBlockNumber = expectedEth1Data.at(-1)?.blockNumber as number;
 
       // Pre-fill the depositTree with roots for all deposits
       const depositRootTree = ssz.phase0.DepositDataRootList.toViewDU(
-        Array.from({length: deposits[deposits.length - 1].index + 1}, (_, i) => Buffer.alloc(32, i))
+        Array.from({length: (deposits.at(-1)?.index as number) + 1}, (_, i) => Buffer.alloc(32, i))
       );
 
       return {

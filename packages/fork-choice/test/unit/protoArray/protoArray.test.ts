@@ -1,7 +1,7 @@
-import {describe, it, expect} from "vitest";
+import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {RootHex} from "@lodestar/types";
-
-import {ProtoArray, ExecutionStatus, DataAvailabilityStatus} from "../../../src/index.js";
+import {describe, expect, it} from "vitest";
+import {ExecutionStatus, ProtoArray} from "../../../src/index.js";
 
 describe("ProtoArray", () => {
   it("finalized descendant", () => {

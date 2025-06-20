@@ -1,6 +1,6 @@
+import {publicKeyFromProtobuf} from "@libp2p/crypto/keys";
 import {PeerId} from "@libp2p/interface";
 import {peerIdFromPublicKey} from "@libp2p/peer-id";
-import {publicKeyFromProtobuf} from "@libp2p/crypto/keys";
 
 /**
  * Returns a valid PeerId with opts `bits: 256, keyType: "secp256k1"`

@@ -1,10 +1,10 @@
 import {CachedBeaconStateAllForks, getBlockSignatureSets} from "@lodestar/state-transition";
-import {Logger} from "@lodestar/utils";
 import {SignedBeaconBlock} from "@lodestar/types";
+import {Logger} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
+import {nextEventLoop} from "../../util/eventLoop.js";
 import {IBlsVerifier} from "../bls/index.js";
 import {BlockError, BlockErrorCode} from "../errors/blockError.js";
-import {nextEventLoop} from "../../util/eventLoop.js";
 import {ImportBlockOpts} from "./types.js";
 
 /**

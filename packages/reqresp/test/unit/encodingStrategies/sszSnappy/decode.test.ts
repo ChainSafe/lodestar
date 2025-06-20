@@ -1,6 +1,6 @@
-import {describe, it, expect} from "vitest";
-import {Uint8ArrayList} from "uint8arraylist";
 import {encode as varintEncode} from "uint8-varint";
+import {Uint8ArrayList} from "uint8arraylist";
+import {describe, expect, it} from "vitest";
 import {readSszSnappyPayload} from "../../../../src/encodingStrategies/sszSnappy/index.js";
 import {BufferedSource} from "../../../../src/utils/index.js";
 import {

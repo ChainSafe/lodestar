@@ -1,14 +1,14 @@
-import {isErrorAborted, toRootHex} from "@lodestar/utils";
 import {SignedBeaconBlock} from "@lodestar/types";
-import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
+import {isErrorAborted, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
+import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
+import type {BeaconChain} from "../chain.js";
 import {BlockError, BlockErrorCode, isBlockErrorAborted} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
-import type {BeaconChain} from "../chain.js";
-import {verifyBlocksInEpoch} from "./verifyBlock.js";
 import {importBlock} from "./importBlock.js";
-import {assertLinearChainSegment} from "./utils/chainSegment.js";
 import {BlockInput, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
+import {assertLinearChainSegment} from "./utils/chainSegment.js";
+import {verifyBlocksInEpoch} from "./verifyBlock.js";
 import {verifyBlocksSanityChecks} from "./verifyBlocksSanityChecks.js";
 import {removeEagerlyPersistedBlockInputs} from "./writeBlockInputToDb.js";
 export {type ImportBlockOpts, AttestationImportOpt} from "./types.js";
@@ -128,13 +128,15 @@ export async function processBlocks(
         const {signedBlock} = err;
         const blockSlot = signedBlock.message.slot;
         const {preState, postState} = err.type;
-        const forkTypes = this.config.getForkTypes(blockSlot);
-        const invalidRoot = toRootHex(postState.hashTreeRoot());
-
-        const suffix = `slot_${blockSlot}_invalid_state_root_${invalidRoot}`;
-        this.persistInvalidSszValue(forkTypes.SignedBeaconBlock, signedBlock, suffix);
-        this.persistInvalidSszView(preState, `${suffix}_preState`);
-        this.persistInvalidSszView(postState, `${suffix}_postState`);
+        const preRoot = preState.hashTreeRoot();
+        const postRoot = postState.hashTreeRoot();
+        this.persistInvalidStateRoot(preState, postState, signedBlock).catch((e) => {
+          this.logger.error(
+            "Error persisting invalid state root objects",
+            {slot: blockSlot, preStateRoot: toRootHex(preRoot), postStateRoot: toRootHex(postRoot)},
+            e
+          );
+        });
       }
     }
 

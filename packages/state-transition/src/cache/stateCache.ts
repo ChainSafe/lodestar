@@ -2,17 +2,18 @@ import {PublicKey} from "@chainsafe/blst";
 import {BeaconConfig} from "@lodestar/config";
 import {loadState} from "../util/loadState/loadState.js";
 import {EpochCache, EpochCacheImmutableData, EpochCacheOpts} from "./epochCache.js";
+import {RewardCache, createEmptyRewardCache} from "./rewardCache.js";
 import {
   BeaconStateAllForks,
-  BeaconStateExecutions,
-  BeaconStatePhase0,
   BeaconStateAltair,
   BeaconStateBellatrix,
   BeaconStateCapella,
   BeaconStateDeneb,
   BeaconStateElectra,
+  BeaconStateExecutions,
+  BeaconStateFulu,
+  BeaconStatePhase0,
 } from "./types.js";
-import {RewardCache, createEmptyRewardCache} from "./rewardCache.js";
 
 export type BeaconStateCache = {
   config: BeaconConfig;
@@ -132,6 +133,7 @@ export type CachedBeaconStateBellatrix = CachedBeaconState<BeaconStateBellatrix>
 export type CachedBeaconStateCapella = CachedBeaconState<BeaconStateCapella>;
 export type CachedBeaconStateDeneb = CachedBeaconState<BeaconStateDeneb>;
 export type CachedBeaconStateElectra = CachedBeaconState<BeaconStateElectra>;
+export type CachedBeaconStateFulu = CachedBeaconState<BeaconStateFulu>;
 
 export type CachedBeaconStateAllForks = CachedBeaconState<BeaconStateAllForks>;
 export type CachedBeaconStateExecutions = CachedBeaconState<BeaconStateExecutions>;

@@ -1,26 +1,27 @@
+import {ChainForkConfig} from "@lodestar/config";
+import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {ForkName} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
+  DataAvailabilityStatus,
   computeEpochAtSlot,
   isStateValidatorsNodesPopulated,
-  DataAvailableStatus,
 } from "@lodestar/state-transition";
 import {bellatrix, deneb} from "@lodestar/types";
-import {ForkName} from "@lodestar/params";
-import {ProtoBlock, ExecutionStatus, DataAvailabilityStatus} from "@lodestar/fork-choice";
-import {ChainForkConfig} from "@lodestar/config";
 import {Logger, toRootHex} from "@lodestar/utils";
+import type {BeaconChain} from "../chain.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {RegenCaller} from "../regen/index.js";
-import type {BeaconChain} from "../chain.js";
-import {BlockInput, ImportBlockOpts, BlockInputType} from "./types.js";
-import {POS_PANDA_MERGE_TRANSITION_BANNER} from "./utils/pandaMergeTransitionBanner.js";
-import {CAPELLA_OWL_BANNER} from "./utils/ownBanner.js";
+import {BlockInput, BlockInputType, ImportBlockOpts} from "./types.js";
 import {DENEB_BLOWFISH_BANNER} from "./utils/blowfishBanner.js";
-import {verifyBlocksStateTransitionOnly} from "./verifyBlocksStateTransitionOnly.js";
-import {verifyBlocksSignatures} from "./verifyBlocksSignatures.js";
-import {verifyBlocksExecutionPayload, SegmentExecStatus} from "./verifyBlocksExecutionPayloads.js";
+import {ELECTRA_GIRAFFE_BANNER} from "./utils/giraffeBanner.js";
+import {CAPELLA_OWL_BANNER} from "./utils/ownBanner.js";
+import {POS_PANDA_MERGE_TRANSITION_BANNER} from "./utils/pandaMergeTransitionBanner.js";
 import {verifyBlocksDataAvailability} from "./verifyBlocksDataAvailability.js";
+import {SegmentExecStatus, verifyBlocksExecutionPayload} from "./verifyBlocksExecutionPayloads.js";
+import {verifyBlocksSignatures} from "./verifyBlocksSignatures.js";
+import {verifyBlocksStateTransitionOnly} from "./verifyBlocksStateTransitionOnly.js";
 import {writeBlockInputToDb} from "./writeBlockInputToDb.js";
 
 /**
@@ -47,7 +48,8 @@ export async function verifyBlocksInEpoch(
   availableBlockInputs: BlockInput[];
 }> {
   const blocks = blocksInput.map(({block}) => block);
-  if (blocks.length === 0) {
+  const lastBlock = blocks.at(-1);
+  if (!lastBlock) {
     throw Error("Empty partiallyVerifiedBlocks");
   }
 
@@ -106,7 +108,7 @@ export async function verifyBlocksInEpoch(
           } as SegmentExecStatus),
 
       // data availability for the blobs
-      verifyBlocksDataAvailability(this, blocksInput, opts),
+      verifyBlocksDataAvailability(this, blocksInput, abortController.signal, opts),
 
       // Run state transition only
       // TODO: Ensure it yields to allow flushing to workers and engine API
@@ -114,9 +116,10 @@ export async function verifyBlocksInEpoch(
         preState0,
         blocksInput,
         // hack availability for state transition eval as availability is separately determined
-        blocks.map(() => DataAvailableStatus.available),
+        blocks.map(() => DataAvailabilityStatus.Available),
         this.logger,
         this.metrics,
+        this.validatorMonitor,
         abortController.signal,
         opts
       ),
@@ -142,7 +145,7 @@ export async function verifyBlocksInEpoch(
       }
 
       const fromFork = this.config.getForkName(parentBlock.slot);
-      const toFork = this.config.getForkName(blocks[blocks.length - 1].message.slot);
+      const toFork = this.config.getForkName(lastBlock.message.slot);
 
       // If transition through toFork, note won't happen if ${toFork}_EPOCH = 0, will log double on re-org
       if (toFork !== fromFork) {
@@ -155,6 +158,11 @@ export async function verifyBlocksInEpoch(
           case ForkName.deneb:
             this.logger.info(DENEB_BLOWFISH_BANNER);
             this.logger.info("Activating blobs", {epoch: this.config.DENEB_FORK_EPOCH});
+            break;
+
+          case ForkName.electra:
+            this.logger.info(ELECTRA_GIRAFFE_BANNER);
+            this.logger.info("Activating maxEB", {epoch: this.config.ELECTRA_FORK_EPOCH});
             break;
 
           default:
@@ -188,6 +196,12 @@ export async function verifyBlocksInEpoch(
           numBlobs,
         });
       }
+    } else {
+      this.logger.verbose(
+        "Block verification aborted due to execution payload",
+        {},
+        segmentExecStatus.execAborted.execError
+      );
     }
 
     return {postStates, dataAvailabilityStatuses, proposerBalanceDeltas, segmentExecStatus, availableBlockInputs};

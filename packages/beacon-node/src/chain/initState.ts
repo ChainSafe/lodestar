@@ -1,17 +1,18 @@
+import {ChainForkConfig} from "@lodestar/config";
+import {ZERO_HASH} from "@lodestar/params";
 import {
-  computeEpochAtSlot,
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
+  computeEpochAtSlot,
   computeStartSlotAtEpoch,
 } from "@lodestar/state-transition";
-import {SignedBeaconBlock} from "@lodestar/types";
-import {ChainForkConfig} from "@lodestar/config";
+import {SignedBeaconBlock, ssz} from "@lodestar/types";
 import {Logger, toHex, toRootHex} from "@lodestar/utils";
 import {GENESIS_SLOT} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {Eth1Provider} from "../eth1/index.js";
-import {Metrics} from "../metrics/index.js";
 import {Eth1Options} from "../eth1/options.js";
+import {Metrics} from "../metrics/index.js";
 import {GenesisBuilder} from "./genesis/genesis.js";
 import {GenesisResult} from "./genesis/interface.js";
 
@@ -40,6 +41,22 @@ export async function persistAnchorState(
 ): Promise<void> {
   if (anchorState.slot === GENESIS_SLOT) {
     const genesisBlock = createGenesisBlock(config, anchorState);
+    const blockRoot = config.getForkTypes(GENESIS_SLOT).BeaconBlock.hashTreeRoot(genesisBlock.message);
+
+    const latestBlockHeader = ssz.phase0.BeaconBlockHeader.clone(anchorState.latestBlockHeader);
+
+    if (ssz.Root.equals(latestBlockHeader.stateRoot, ZERO_HASH)) {
+      latestBlockHeader.stateRoot = anchorState.hashTreeRoot();
+    }
+
+    const latestBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(latestBlockHeader);
+
+    if (Buffer.compare(blockRoot, latestBlockRoot) !== 0) {
+      throw Error(
+        `Genesis block root ${toRootHex(blockRoot)} does not match genesis state latest block root ${toRootHex(latestBlockRoot)}`
+      );
+    }
+
     await Promise.all([
       db.blockArchive.add(genesisBlock),
       db.block.add(genesisBlock),

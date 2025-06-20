@@ -1,21 +1,21 @@
 import path from "node:path";
-import {describe, it, beforeAll, afterAll, vi, onTestFinished} from "vitest";
-import {retry} from "@lodestar/utils";
 import {getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {interopSecretKey, interopSecretKeys} from "@lodestar/state-transition";
 import {
-  spawnCliCommand,
-  execCliCommand,
-  startExternalSigner,
   StartedExternalSigner,
+  execCliCommand,
   getKeystoresStr,
+  spawnCliCommand,
+  startExternalSigner,
   stopChildProcess,
 } from "@lodestar/test-utils";
+import {retry} from "@lodestar/utils";
+import {afterAll, beforeAll, describe, it, onTestFinished, vi} from "vitest";
 import {testFilesDir} from "../utils.js";
 
 describe("voluntaryExit using remote signer", () => {
-  vi.setConfig({testTimeout: 30_000});
+  vi.setConfig({testTimeout: 30_000, hookTimeout: 30_000});
 
   let externalSigner: StartedExternalSigner;
 
@@ -31,7 +31,9 @@ describe("voluntaryExit using remote signer", () => {
   });
 
   afterAll(async () => {
-    await externalSigner.container.stop();
+    if (externalSigner) {
+      await externalSigner.container.stop();
+    }
   });
 
   it("Perform a voluntary exit", async () => {

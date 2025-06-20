@@ -1,12 +1,12 @@
-import {describe, it, expect} from "vitest";
 import {createForkConfig} from "@lodestar/config";
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
+import {describe, expect, it} from "vitest";
 import {VERIFICATION_FAILED_RESPONSE_CODE} from "../../../src/constants.js";
-import {eth_getBalance} from "../../../src/verified_requests/eth_getBalance.js";
-import ethGetBalanceEoa from "../../fixtures/sepolia/eth_getBalance_eoa.json" assert {type: "json"};
-import ethGetBalanceContract from "../../fixtures/sepolia/eth_getBalance_contract.json" assert {type: "json"};
-import {cloneTestFixture, generateReqHandlerOptionsMock} from "../../mocks/request_handler.js";
 import {getVerificationFailedMessage} from "../../../src/utils/json_rpc.js";
+import {eth_getBalance} from "../../../src/verified_requests/eth_getBalance.js";
+import ethGetBalanceContract from "../../fixtures/sepolia/eth_getBalance_contract.json" assert {type: "json"};
+import ethGetBalanceEoa from "../../fixtures/sepolia/eth_getBalance_eoa.json" assert {type: "json"};
+import {cloneTestFixture, generateReqHandlerOptionsMock} from "../../mocks/request_handler.js";
 
 const testCases = [ethGetBalanceEoa, ethGetBalanceContract];
 

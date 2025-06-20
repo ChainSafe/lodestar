@@ -1,21 +1,21 @@
 import path from "node:path";
+import {ChainConfig, createChainForkConfig} from "@lodestar/config";
+import {config} from "@lodestar/config/default";
+import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {
   BeaconStateAllForks,
-  DataAvailableStatus,
+  DataAvailabilityStatus,
   ExecutionPayloadStatus,
   stateTransition,
 } from "@lodestar/state-transition";
 import {SignedBeaconBlock, ssz} from "@lodestar/types";
-import {createChainForkConfig, ChainConfig} from "@lodestar/config";
-import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {bnToNum} from "@lodestar/utils";
-import {config} from "@lodestar/config/default";
-import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
-import {RunnerType, TestRunnerFn} from "../utils/types.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
+import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
+import {RunnerType, TestRunnerFn} from "../utils/types.js";
 import {getPreviousFork} from "./fork.test.js";
 
 const transition =
@@ -57,7 +57,7 @@ const transition =
           state = stateTransition(state, signedBlock, {
             // Assume valid and available for this test
             executionPayloadStatus: ExecutionPayloadStatus.valid,
-            dataAvailableStatus: DataAvailableStatus.available,
+            dataAvailabilityStatus: DataAvailabilityStatus.Available,
             verifyStateRoot: true,
             verifyProposer: false,
             verifySignatures: false,
@@ -107,6 +107,15 @@ function getTransitionConfig(fork: ForkName, forkEpoch: number): Partial<ChainCo
         CAPELLA_FORK_EPOCH: 0,
         DENEB_FORK_EPOCH: 0,
         ELECTRA_FORK_EPOCH: forkEpoch,
+      };
+    case ForkName.fulu:
+      return {
+        ALTAIR_FORK_EPOCH: 0,
+        BELLATRIX_FORK_EPOCH: 0,
+        CAPELLA_FORK_EPOCH: 0,
+        DENEB_FORK_EPOCH: 0,
+        ELECTRA_FORK_EPOCH: 0,
+        FULU_FORK_EPOCH: forkEpoch,
       };
   }
 }
