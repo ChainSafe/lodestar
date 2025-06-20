@@ -4,7 +4,7 @@ import {ColumnIndex, Slot, fulu} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
-import {parseWrappedColumnSidecars} from "../../../db/repositories/dataColumnSidecars.js";
+import {getIndexOfSidecarInWrapper, parseWrappedColumnSidecars} from "../../../db/repositories/dataColumnSidecars.js";
 
 export async function* onDataColumnSidecarsByRange(
   request: fulu.DataColumnSidecarsByRangeRequest,
@@ -18,13 +18,9 @@ export async function* onDataColumnSidecarsByRange(
   const finalized = db.dataColumnSidecarsArchive;
   const unfinalized = db.dataColumnSidecars;
   const finalizedSlot = chain.forkChoice.getFinalizedBlock().slot;
-  // console.log(
-  //   `incoming onDataColumnSidecarsByRange startSlot=${startSlot}, count=${count}, columns=${columns.join(" ")} finalizedSlot=${finalizedSlot} endSlot=${endSlot}`
-  // );
 
   // Finalized range of columns
   if (startSlot <= finalizedSlot) {
-    // console.log(`serving onDataColumnSidecarsByRange finalized startSlot=${startSlot} finalizedSlot=${finalizedSlot}`);
     // Chain of columns won't change
     for await (const {key, value: dataColumnSideCarsBytesWrapped} of finalized.binaryEntriesStream({
       gte: startSlot,
@@ -71,7 +67,6 @@ export async function* onDataColumnSidecarsByRange(
 
     // If block is after endSlot, stop iterating
     else if (block.slot >= endSlot) {
-      // console.log(`breaking away onDataColumnSidecarsByRange block.slot=${block.slot} endSlot=${endSlot}`);
       break;
     }
   }
@@ -93,15 +88,8 @@ export function* iterateDataColumnBytesFromWrapper(
 
   const fork = chain.config.getForkName(blockSlot);
 
-  for (const index of columns) {
-    // get the index at which the column is
-    const dataIndex = (custodyIndex[index] ?? 0) - 1;
-    if (dataIndex < 0) {
-      throw new ResponseError(
-        RespStatus.SERVER_ERROR,
-        `dataColumnSidecar index=${index} dataIndex=${dataIndex} not custodied`
-      );
-    }
+  for (const columnIndex of columns) {
+    const dataIndex = getIndexOfSidecarInWrapper(custodyIndex, columnIndex);
     const dataColumnSidecarBytes = serializedColumnSidecars.slice(
       dataIndex * columnSizeInBytes,
       (dataIndex + 1) * columnSizeInBytes
@@ -109,10 +97,9 @@ export function* iterateDataColumnBytesFromWrapper(
     if (dataColumnSidecarBytes.length !== columnSizeInBytes) {
       throw new ResponseError(
         RespStatus.SERVER_ERROR,
-        `Invalid dataColumnSidecar index=${index} dataIndex=${dataIndex} bytes length=${dataColumnSidecarBytes.length} expected=${columnSizeInBytes} for slot ${blockSlot}`
+        `Invalid dataColumnSidecar columnIndex=${columnIndex} dataIndex=${dataIndex} bytes length=${dataColumnSidecarBytes.length} expected=${columnSizeInBytes} for slot ${blockSlot}`
       );
     }
-    // console.log(`iterate onDataColumnSidecarsByRange blockSlot=${blockSlot} index=${index} dataIndex=${dataIndex}`);
     yield {
       data: dataColumnSidecarBytes,
       fork,

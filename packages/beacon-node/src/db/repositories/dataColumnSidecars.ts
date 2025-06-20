@@ -2,8 +2,9 @@ import {ByteVectorType, ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {Db, Repository} from "@lodestar/db";
 import {NUMBER_OF_COLUMNS} from "@lodestar/params";
-import {ssz} from "@lodestar/types";
+import {ColumnIndex, ssz} from "@lodestar/types";
 
+import {RespStatus, ResponseError} from "@lodestar/reqresp";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 // NOTE: If you change the order of these fields or add/remove anything you must
@@ -41,7 +42,7 @@ export function parseWrappedColumnSidecars(wrapped: Uint8Array): {
   serializedColumnSidecars: Uint8Array;
 } {
   const numberOfColumns = ssz.Uint8.deserialize(
-    wrapped.slice(COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_NUM_OF_COLUMNS, COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_COLUMN_SIZE)
+    wrapped.subarray(COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_NUM_OF_COLUMNS, COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_COLUMN_SIZE)
   );
 
   const columnSizeInBytes = ssz.UintNum64.deserialize(
@@ -67,6 +68,47 @@ export function parseWrappedColumnSidecars(wrapped: Uint8Array): {
     serializedColumnSidecars,
   };
 }
+
+/**
+ * CustodyIndex is a Unit8Array for representing which ColumnIndex is stored in the db and at which
+ * 0-indexed array position the column can be found in the stored data.  The Custody index is structured
+ * such that each byte is either 0 for non-custody or a 1-indexed array position for the location in
+ * the serialized data the column sidecar can be found.
+ *
+ * NOTE that the custody index is 1-indexed but JS arrays are 0-indexed so this must be accounted
+ * for in getIndexOfSidecarInWrapper
+ *
+ * NOTE this heuristic does not work if the MAX_NUMBER_OF_COLUMNS exceeds 255
+ */
+export function buildCustodyIndex(columnIndices: ColumnIndex[]): Uint8Array {
+  // custody columns map which column maps to which index in the array of columns custodied
+  // with zero representing it is not custodied
+  const custodyIndex = new Uint8Array(NUMBER_OF_COLUMNS);
+  let custodyAtIndex = 1;
+  for (const columnIndex of columnIndices) {
+    custodyIndex[columnIndex] = custodyAtIndex;
+    custodyAtIndex++;
+  }
+  return custodyIndex;
+}
+
+/**
+ * Get the 1-indexed array index from the custody index and convert to 0-indexed array index for
+ * slicing a column from the serialized array of sidecars.  See note on buildCustodyIndex for more
+ * details
+ */
+export function getIndexOfSidecarInWrapper(custodyIndex: Uint8Array, columnIndex: number): number {
+  const offsetIndex = (custodyIndex[columnIndex] ?? 0) - 1;
+  if (offsetIndex < 0) {
+    throw new ResponseError(
+      RespStatus.SERVER_ERROR,
+      `dataColumnSidecar columnIndex=${columnIndex} offsetIndex=${offsetIndex} not custodied`
+    );
+  }
+  return offsetIndex;
+}
+
+export function getSidecarFromWrapper(): Uint8Array {}
 
 /**
  * dataColumnSidecarsWrapper by block root (= hash_tree_root(SignedBeaconBlock.message))
