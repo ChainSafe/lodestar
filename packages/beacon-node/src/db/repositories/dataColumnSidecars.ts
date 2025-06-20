@@ -9,7 +9,7 @@ import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 // NOTE: If you change the order of these fields or add/remove anything you must
 //       update the byte offsets below to match the container.
-export const dataColumnSidecarsWrapperSsz = new ContainerType(
+export const dataColumnSidecarsDbWrapperSsz = new ContainerType(
   {
     blockRoot: ssz.Root,
     slot: ssz.Slot,
@@ -23,7 +23,8 @@ export const dataColumnSidecarsWrapperSsz = new ContainerType(
   {typeName: "DataColumnSidecarsWrapper", jsonCase: "eth2"}
 );
 
-export type DataColumnSidecarsWrapper = ValueOf<typeof dataColumnSidecarsWrapperSsz>;
+export type DataColumnSidecarsDbWrapper = ValueOf<typeof dataColumnSidecarsDbWrapperSsz>;
+
 export const COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_BLOCK_ROOT = 0;
 export const COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_SLOT = 32;
 export const COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_NUM_OF_COLUMNS = 40;
@@ -115,16 +116,16 @@ export function getSidecarFromWrapper(): Uint8Array {}
  *
  * Used to store unfinalized DataColumnSidecars
  */
-export class DataColumnSidecarsRepository extends Repository<Uint8Array, DataColumnSidecarsWrapper> {
+export class DataColumnSidecarsRepository extends Repository<Uint8Array, DataColumnSidecarsDbWrapper> {
   constructor(config: ChainForkConfig, db: Db) {
     const bucket = Bucket.fulu_dataColumnSidecars;
-    super(config, db, bucket, dataColumnSidecarsWrapperSsz, getBucketNameByValue(bucket));
+    super(config, db, bucket, dataColumnSidecarsDbWrapperSsz, getBucketNameByValue(bucket));
   }
 
   /**
    * Id is hashTreeRoot of unsigned BeaconBlock
    */
-  getId(value: DataColumnSidecarsWrapper): Uint8Array {
+  getId(value: DataColumnSidecarsDbWrapper): Uint8Array {
     const {blockRoot} = value;
     return blockRoot;
   }

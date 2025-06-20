@@ -11,7 +11,7 @@ import {
   COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_NUM_OF_COLUMNS,
   COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_TO_FIRST_SIDECAR,
   DataColumnSidecarsRepository,
-  dataColumnSidecarsWrapperSsz,
+  dataColumnSidecarsDbWrapperSsz,
 } from "../../../../../src/db/repositories/dataColumnSidecars.js";
 import {computeDataColumnSidecars} from "../../../../../src/util/blobs.js";
 import {testLogger} from "../../../../utils/logger.js";
@@ -84,8 +84,8 @@ describe("block archive repository", () => {
     const retrievedBinary = await dataColumnRepo.getBinary(blockRoot);
     if (!retrievedBinary) throw Error("get by root returned null");
 
-    const retrieved = dataColumnSidecarsWrapperSsz.deserialize(retrievedBinary);
-    expect(dataColumnSidecarsWrapperSsz.equals(retrieved, writeData)).toBe(true);
+    const retrieved = dataColumnSidecarsDbWrapperSsz.deserialize(retrievedBinary);
+    expect(dataColumnSidecarsDbWrapperSsz.equals(retrieved, writeData)).toBe(true);
 
     const retrivedColumnsLen = ssz.Uint8.deserialize(
       retrievedBinary.slice(
