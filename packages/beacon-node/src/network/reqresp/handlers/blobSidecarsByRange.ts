@@ -1,11 +1,13 @@
 import {BeaconConfig} from "@lodestar/config";
 import {BLOBSIDECAR_FIXED_SIZE, GENESIS_SLOT} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
+import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Slot, deneb} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../../../db/repositories/blobSidecars.js";
+import {getSubscribeBoundary} from "../../subscribeBoundary.js";
 
 export async function* onBlobSidecarsByRange(
   request: deneb.BlobSidecarsByRangeRequest,
@@ -85,7 +87,7 @@ export function* iterateBlobBytesFromWrapper(
     }
     yield {
       data: blobSideCarBytes,
-      boundary: {fork: chain.config.getForkName(blockSlot)},
+      boundary: getSubscribeBoundary(chain.config, computeEpochAtSlot(blockSlot)),
     };
   }
 }

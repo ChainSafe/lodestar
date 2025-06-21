@@ -1,9 +1,9 @@
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {routes} from "@lodestar/api";
-import {SpecJson} from "@lodestar/config";
+import {BlobScheduleEntry, SpecJson} from "@lodestar/config";
 import {LoggerNodeOpts} from "@lodestar/logger/node";
-import {ForkName} from "@lodestar/params";
+import {ForkPostFulu, ForkPreFulu} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
 import {phase0} from "@lodestar/types";
 import {PeerIdStr} from "../../util/peerId.js";
@@ -13,8 +13,11 @@ import {OutgoingRequestArgs} from "../reqresp/types.js";
 import {CommitteeSubscription} from "../subnets/interface.js";
 
 export type MultiaddrStr = string;
-/* Boundary of network subscription. We subscribe/unsubscribe during fork transition */
-export type SubscribeBoundary = {fork: ForkName};
+// Boundary of network subscription. We subscribe/unsubscribe during fork and blob schedule transitions
+// TODO: We can actually make `type SubscribeBoundary = Epoch` and rely on the callers to decode it
+// as fork or blob schedule as needed. However it takes some sizable refactor give every callers access
+// to beacon config
+export type SubscribeBoundary = {fork: ForkPreFulu} | ({fork: ForkPostFulu} & BlobScheduleEntry);
 
 // Interface shared by main Network class, and all backends
 export interface INetworkCorePublic {

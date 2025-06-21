@@ -3,7 +3,13 @@ import {MetricsRegister, TopicLabel, TopicStrToLabel} from "@chainsafe/libp2p-go
 import {PeerScoreParams} from "@chainsafe/libp2p-gossipsub/score";
 import {SignaturePolicy, TopicStr} from "@chainsafe/libp2p-gossipsub/types";
 import {BeaconConfig} from "@lodestar/config";
-import {ATTESTATION_SUBNET_COUNT, ForkName, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+import {
+  ATTESTATION_SUBNET_COUNT,
+  ForkName,
+  SLOTS_PER_EPOCH,
+  SYNC_COMMITTEE_SUBNET_COUNT,
+  isForkPostFulu,
+} from "@lodestar/params";
 import {SubnetID} from "@lodestar/types";
 import {Logger, Map2d, Map2dArr} from "@lodestar/utils";
 
@@ -336,6 +342,9 @@ function getMetricsTopicStrToLabel(config: BeaconConfig, opts: {disableLightClie
   const metricsTopicStrToLabel = new Map<TopicStr, TopicLabel>();
 
   for (const {name: fork} of config.forksAscendingEpochOrder) {
+    if (isForkPostFulu(fork)) {
+      break;
+    }
     const topics = getCoreTopicsAtFork(config, fork, {
       subscribeAllSubnets: true,
       disableLightClientServer: opts.disableLightClientServer,
@@ -344,5 +353,30 @@ function getMetricsTopicStrToLabel(config: BeaconConfig, opts: {disableLightClie
       metricsTopicStrToLabel.set(stringifyGossipTopic(config, {...topic, boundary: {fork}}), topic.type);
     }
   }
+
+  for (const entry of config.BLOB_SCHEDULE) {
+    const fork = config.getForkInfoAtEpoch(entry.EPOCH).name;
+    const topics = getCoreTopicsAtFork(config, fork, {
+      subscribeAllSubnets: true,
+      disableLightClientServer: opts.disableLightClientServer,
+    });
+    for (const topic of topics) {
+      metricsTopicStrToLabel.set(stringifyGossipTopic(config, {...topic, boundary: {...entry, fork}}), topic.type);
+    }
+  }
+
+  // An edge case where fulu is activated, but has not reached the first bpo fork
+  const defaultBlobSchedule = config.getBlobParameters(0);
+  const topics = getCoreTopicsAtFork(config, ForkName.fulu, {
+    subscribeAllSubnets: true,
+    disableLightClientServer: opts.disableLightClientServer,
+  });
+  for (const topic of topics) {
+    metricsTopicStrToLabel.set(
+      stringifyGossipTopic(config, {...topic, boundary: {...defaultBlobSchedule, fork: ForkName.fulu}}),
+      topic.type
+    );
+  }
+
   return metricsTopicStrToLabel;
 }

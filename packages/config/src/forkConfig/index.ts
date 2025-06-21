@@ -13,7 +13,7 @@ import {
   isForkPostElectra,
 } from "@lodestar/params";
 import {Epoch, SSZTypesFor, Slot, Version, sszTypesFor} from "@lodestar/types";
-import {ChainConfig} from "../chainConfig/index.js";
+import {BlobScheduleEntry, ChainConfig} from "../chainConfig/index.js";
 import {ForkConfig, ForkInfo} from "./types.js";
 
 export * from "./types.js";
@@ -85,6 +85,8 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
   const forksAscendingEpochOrder = Object.values(forks);
   const forksDescendingEpochOrder = Object.values(forks).reverse();
 
+  const blobScheduleDescendingEpochOrder = [...config.BLOB_SCHEDULE].sort((a, b) => b.EPOCH - a.EPOCH);
+
   return {
     forks,
     forksAscendingEpochOrder,
@@ -141,26 +143,25 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     getMaxBlobsPerBlock(epoch: Epoch): number {
       const fork = this.getForkInfoAtEpoch(epoch).name;
 
-      switch (fork) {
-        case ForkName.electra:
-          return config.MAX_BLOBS_PER_BLOCK_ELECTRA;
-        case ForkName.deneb:
-          return config.MAX_BLOBS_PER_BLOCK;
+      if (fork === ForkName.deneb) {
+        return config.MAX_BLOBS_PER_BLOCK;
       }
 
-      // Sort by epoch in descending order to find the latest applicable value
-      const blobSchedule = [...config.BLOB_SCHEDULE].sort((a, b) => b.EPOCH - a.EPOCH);
-
-      for (const entry of blobSchedule) {
-        if (epoch >= entry.EPOCH) {
-          return entry.MAX_BLOBS_PER_BLOCK;
-        }
-      }
-
-      return config.MAX_BLOBS_PER_BLOCK_ELECTRA;
+      return this.getBlobParameters(epoch).MAX_BLOBS_PER_BLOCK;
     },
     getMaxRequestBlobSidecars(fork: ForkName): number {
       return isForkPostElectra(fork) ? config.MAX_REQUEST_BLOB_SIDECARS_ELECTRA : config.MAX_REQUEST_BLOB_SIDECARS;
+    },
+    // Only call this post-fulu
+    getBlobParameters(epoch: Epoch): BlobScheduleEntry {
+      // Sort by epoch in descending order to find the latest applicable value
+      for (const entry of blobScheduleDescendingEpochOrder) {
+        if (epoch >= entry.EPOCH) {
+          return entry;
+        }
+      }
+
+      return {EPOCH: config.ELECTRA_FORK_EPOCH, MAX_BLOBS_PER_BLOCK: config.MAX_BLOBS_PER_BLOCK_ELECTRA};
     },
   };
 }

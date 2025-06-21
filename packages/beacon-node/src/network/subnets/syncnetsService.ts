@@ -77,7 +77,7 @@ export class SyncnetsService implements SubnetsService {
   subscribeSubnetsAfterBoundary(boundary: SubscribeBoundary): void {
     this.logger.info("Subscribing to random attnets after boundary", boundary);
     for (const subnet of this.subscriptionsCommittee.getAll()) {
-      this.gossip.subscribeTopic({type: gossipType, boundary: {fork: boundary.fork}, subnet});
+      this.gossip.subscribeTopic({type: gossipType, boundary, subnet});
     }
   }
 
@@ -86,7 +86,7 @@ export class SyncnetsService implements SubnetsService {
     this.logger.info("Unsubscribing to random attnets before boundary", boundary);
     for (let subnet = 0; subnet < SYNC_COMMITTEE_SUBNET_COUNT; subnet++) {
       if (!this.opts?.subscribeAllSubnets) {
-        this.gossip.unsubscribeTopic({type: gossipType, boundary: {fork: boundary.fork}, subnet});
+        this.gossip.unsubscribeTopic({type: gossipType, boundary, subnet});
       }
     }
   }

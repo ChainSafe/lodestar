@@ -1,9 +1,11 @@
 import {ResponseOutgoing} from "@lodestar/reqresp";
+import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Slot, phase0} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {getSlotFromSignedBeaconBlockSerialized} from "../../../util/sszBytes.js";
+import {getSubscribeBoundary} from "../../subscribeBoundary.js";
 
 export async function* onBeaconBlocksByRoot(
   requestBody: phase0.BeaconBlocksByRootRequest,
@@ -40,7 +42,7 @@ export async function* onBeaconBlocksByRoot(
 
       yield {
         data: blockBytes,
-        boundary: {fork: chain.config.getForkName(slot)},
+        boundary: getSubscribeBoundary(chain.config, computeEpochAtSlot(slot)),
       };
     }
   }

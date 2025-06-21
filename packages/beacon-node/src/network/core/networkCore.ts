@@ -30,6 +30,7 @@ import {LocalStatusCache} from "../statusCache.js";
 import {AttnetsService} from "../subnets/attnetsService.js";
 import {CommitteeSubscription, IAttnetsService} from "../subnets/interface.js";
 import {SyncnetsService} from "../subnets/syncnetsService.js";
+import {getSubscribeBoundary} from "../subscribeBoundary.js";
 import {getConnectionsMap} from "../util.js";
 import {NetworkCoreMetrics, createNetworkCoreMetrics} from "./metrics.js";
 import {INetworkCore, MultiaddrStr, SubscribeBoundary} from "./types.js";
@@ -217,11 +218,8 @@ export class NetworkCore implements INetworkCore {
       opts
     );
 
-    // Network spec decides version changes based on clock fork, not head fork
-    const forkCurrentSlot = config.getForkName(clock.currentSlot);
-
-    // Register only ReqResp protocols relevant to clock's fork
-    reqResp.registerProtocolsAtBoundary({fork: forkCurrentSlot});
+    // Register only ReqResp protocols relevant to clock's epoch
+    reqResp.registerProtocolsAtBoundary(getSubscribeBoundary(config, clock.currentEpoch));
 
     // Bind discv5's ENR to local metadata
     // biome-ignore lint/complexity/useLiteralKeys: `discovery` is a private attribute
@@ -464,7 +462,9 @@ export class NetworkCore implements INetworkCore {
         if (activeBoundaries[i + 1] !== undefined) {
           const prevBoundary = activeBoundaries[i];
           const nextBoundary = activeBoundaries[i + 1];
-          const nextBoundaryEpoch = this.config.forks[nextBoundary.fork].epoch;
+          // If EPOCH does not exist, that means next boundary is still pre-fulu
+          const nextBoundaryEpoch =
+            "EPOCH" in nextBoundary ? nextBoundary.EPOCH : this.config.forks[nextBoundary.fork].epoch;
 
           // Before subscribe boundary transition
           if (epoch === nextBoundaryEpoch - FORK_EPOCH_LOOKAHEAD) {
