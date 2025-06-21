@@ -61,7 +61,7 @@ describe("KZG", () => {
     expect(blobSidecars.length).toBe(2);
 
     // Full validation
-    validateBlobSidecars(slot, blockRoot, kzgCommitments, blobSidecars);
+    await validateBlobSidecars(slot, blockRoot, kzgCommitments, blobSidecars);
 
     for (const blobSidecar of blobSidecars) {
       try {
