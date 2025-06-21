@@ -1,4 +1,3 @@
-import * as path from "node:path";
 import {ArchiveMode, DEFAULT_ARCHIVE_MODE, IBeaconNodeOptions, defaultOptions} from "@lodestar/beacon-node";
 import {CliCommandOptions} from "@lodestar/utils";
 import {ensure0xPrefix} from "../../util/format.js";
