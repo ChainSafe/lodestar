@@ -1,6 +1,6 @@
 import {PeerId} from "@libp2p/interface";
 import {BeaconConfig} from "@lodestar/config";
-import {ForkName, ForkSeq, isForkPostFulu} from "@lodestar/params";
+import {ForkName, ForkSeq} from "@lodestar/params";
 import {
   Encoding,
   ProtocolDescriptor,
