@@ -5,9 +5,9 @@ import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
-import {ForkName, isForkPostFulu} from "@lodestar/params";
+import {ForkName} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
-import {Epoch, Status, fulu, ssz, sszTypesFor} from "@lodestar/types";
+import {Epoch, Status, sszTypesFor} from "@lodestar/types";
 import {multiaddr} from "@multiformats/multiaddr";
 import {formatNodePeer} from "../../api/impl/node/utils.js";
 import {RegistryMetricCreator} from "../../metrics/index.js";
@@ -419,14 +419,9 @@ export class NetworkCore implements INetworkCore {
   private _dumpPeer(peerIdStr: string, connections: Connection[]): routes.lodestar.LodestarNodePeer {
     const peerData = this.peersData.connectedPeers.get(peerIdStr);
     const fork = this.config.getForkName(this.clock.currentSlot);
-    const status = !peerData?.status
-      ? null
-      : isForkPostFulu(fork)
-        ? ssz.fulu.Status.toJson(peerData.status as fulu.Status)
-        : ssz.phase0.Status.toJson(peerData.status);
     return {
       ...formatNodePeer(peerIdStr, connections),
-      status,
+      status: peerData?.status ? sszTypesFor(fork).Status.toJson(peerData.status) : null,
       agentVersion: peerData?.agentVersion ?? "NA",
       metadata: peerData?.metadata ? sszTypesFor(fork).Metadata.toJson(peerData.metadata) : null,
       agentClient: String(peerData?.agentClient ?? "Unknown"),

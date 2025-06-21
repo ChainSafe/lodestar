@@ -1,6 +1,6 @@
 import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {ForkName, ForkPostAltair, isForkPostAltair, isForkPostFulu} from "@lodestar/params";
+import {ForkName, ForkPostAltair, isForkPostAltair} from "@lodestar/params";
 import {Protocol, ProtocolHandler, ReqRespRequest} from "@lodestar/reqresp";
 import {
   Metadata,
@@ -81,7 +81,7 @@ export const requestSszTypeByMethod: (
 ) => {
   [K in ReqRespMethod]: RequestBodyByMethod[K] extends null ? null : Type<RequestBodyByMethod[K]>;
 } = (fork, config) => ({
-  [ReqRespMethod.Status]: isForkPostFulu(fork) ? ssz.fulu.Status : ssz.phase0.Status,
+  [ReqRespMethod.Status]: sszTypesFor(fork).Status,
   [ReqRespMethod.Goodbye]: ssz.phase0.Goodbye,
   [ReqRespMethod.Ping]: ssz.phase0.Ping,
   [ReqRespMethod.Metadata]: null,
