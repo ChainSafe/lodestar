@@ -419,14 +419,9 @@ export class NetworkCore implements INetworkCore {
   private _dumpPeer(peerIdStr: string, connections: Connection[]): routes.lodestar.LodestarNodePeer {
     const peerData = this.peersData.connectedPeers.get(peerIdStr);
     const fork = this.config.getForkName(this.clock.currentSlot);
-    const status = !peerData?.status
-      ? null
-      : isForkPostFulu(fork)
-        ? ssz.fulu.Status.toJson(peerData.status as fulu.Status)
-        : ssz.phase0.Status.toJson(peerData.status);
     return {
       ...formatNodePeer(peerIdStr, connections),
-      status,
+      status: peerData?.status ? sszTypesFor(fork).Status.toJson(peerData.status) : null,
       agentVersion: peerData?.agentVersion ?? "NA",
       metadata: peerData?.metadata ? sszTypesFor(fork).Metadata.toJson(peerData.metadata) : null,
       agentClient: String(peerData?.agentClient ?? "Unknown"),

@@ -12,7 +12,7 @@ import {
   ResponseIncoming,
   ResponseOutgoing,
 } from "@lodestar/reqresp";
-import {Metadata, Status, fulu, phase0, ssz} from "@lodestar/types";
+import {Metadata, Status, fulu, phase0, ssz, sszTypesFor} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {Libp2p} from "libp2p";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
@@ -320,8 +320,8 @@ export class ReqRespBeaconNode extends ReqResp {
   }
 
   private async *onStatus(req: ReqRespRequest, peerId: PeerId): AsyncIterable<ResponseOutgoing> {
-    const fork = this.currentRegisteredFork >= ForkSeq.fulu ? ForkName.fulu : ForkName.phase0;
-    const type = isForkPostFulu(fork) ? ssz.fulu.Status : ssz.phase0.Status;
+    const fork = ForkName[ForkSeq[this.currentRegisteredFork] as ForkName];
+    const type = sszTypesFor(fork).Status;
     const body = type.deserialize(req.data);
     this.onIncomingRequestBody({method: ReqRespMethod.Status, body}, peerId);
 
