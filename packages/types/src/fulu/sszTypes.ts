@@ -36,7 +36,6 @@ export const Metadata = new ContainerType(
   },
   {typeName: "Metadata", jsonCase: "eth2"}
 );
-
 export const Status = new ContainerType(
   {
     ...phase0Ssz.Status.fields,
