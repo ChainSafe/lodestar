@@ -5,6 +5,7 @@ export type KZGProof = ValueOf<typeof ssz.KZGProof>;
 export type Blob = ValueOf<typeof ssz.Blob>;
 
 export type Metadata = ValueOf<typeof ssz.Metadata>;
+export type Status = ValueOf<typeof ssz.Status>;
 
 export type Cell = ValueOf<typeof ssz.Cell>;
 export type DataColumn = ValueOf<typeof ssz.DataColumn>;
@@ -53,5 +54,3 @@ export type BlobAndProofV2 = {
   blob: Blob;
   proofs: KZGProof[];
 };
-
-export type Status = ValueOf<typeof ssz.Status>;
