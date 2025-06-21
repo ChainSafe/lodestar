@@ -27,7 +27,6 @@ export type SimulationOptions = {
   rootDir: string;
   controller: AbortController;
   genesisTime: number;
-  trustedSetup?: boolean;
   logLevel?: LogLevel;
 };
 

@@ -3,7 +3,7 @@ import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lo
 import {BYTES_PER_FIELD_ELEMENT, FIELD_ELEMENTS_PER_BLOB, ForkName, isForkPostDeneb} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {SignedBeaconBlock, deneb, ssz} from "@lodestar/types";
-import {beforeAll, describe, expect, it, vi} from "vitest";
+import {describe, expect, it, vi} from "vitest";
 import {
   BlobsSource,
   BlockInput,
@@ -17,15 +17,9 @@ import {IExecutionEngine} from "../../../src/execution/index.js";
 import {INetwork} from "../../../src/network/interface.js";
 import {unavailableBeaconBlobsByRoot} from "../../../src/network/reqresp/index.js";
 import {computeInclusionProof, kzgCommitmentToVersionedHash} from "../../../src/util/blobs.js";
-import {ckzg} from "../../../src/util/kzg.js";
-import {initCKZG, loadEthereumTrustedSetup} from "../../../src/util/kzg.js";
+import {kzg} from "../../../src/util/kzg.js";
 
 describe("unavailableBeaconBlobsByRoot", () => {
-  beforeAll(async () => {
-    await initCKZG();
-    loadEthereumTrustedSetup();
-  });
-
   const chainConfig = createChainForkConfig({
     ...defaultChainConfig,
     ALTAIR_FORK_EPOCH: 0,
@@ -230,9 +224,9 @@ function generateBlobs(count: number): {
   kzgProofs: Uint8Array[];
 } {
   const blobs = Array.from({length: count}, (_, index) => generateRandomBlob(index));
-  const kzgCommitments = blobs.map((blob) => ckzg.blobToKzgCommitment(blob));
+  const kzgCommitments = blobs.map((blob) => kzg.blobToKzgCommitment(blob));
   const versionedHash = kzgCommitments.map((kzgCommitment) => kzgCommitmentToVersionedHash(kzgCommitment));
-  const kzgProofs = blobs.map((blob, index) => ckzg.computeBlobKzgProof(blob, kzgCommitments[index]));
+  const kzgProofs = blobs.map((blob, index) => kzg.computeBlobKzgProof(blob, kzgCommitments[index]));
 
   return {
     blobs,
