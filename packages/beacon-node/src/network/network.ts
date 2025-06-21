@@ -695,7 +695,7 @@ export class Network implements INetwork {
 
   private onPeerConnected = (data: NetworkEventData[NetworkEvent.peerConnected]): void => {
     const earliestAvailableSlot = (data.status as fulu.Status).earliestAvailableSlot;
-    this.logger.warn("onPeerConnected", {
+    this.logger.verbose("onPeerConnected", {
       peer: data.peer,
       dataColumns: data.dataColumns.join(" "),
       earliestAvailableSlot: earliestAvailableSlot ?? "pre-fulu",
