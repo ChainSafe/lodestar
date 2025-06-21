@@ -18,7 +18,6 @@ export type SimulationInitOptions = {
   id: string;
   logsDir: string;
   forkConfig: ChainForkConfig;
-  trustedSetup?: boolean;
 };
 
 export type SimulationOptions = {
