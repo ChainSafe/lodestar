@@ -218,6 +218,7 @@ export class NetworkCore implements INetworkCore {
       opts
     );
 
+    // Network spec decides version changes based on clock fork, not head fork
     // Register only ReqResp protocols relevant to clock's epoch
     reqResp.registerProtocolsAtBoundary(getSubscribeBoundary(config, clock.currentEpoch));
 

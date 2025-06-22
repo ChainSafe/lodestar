@@ -341,19 +341,29 @@ function attSubnetLabel(subnet: SubnetID): string {
 function getMetricsTopicStrToLabel(config: BeaconConfig, opts: {disableLightClientServer: boolean}): TopicStrToLabel {
   const metricsTopicStrToLabel = new Map<TopicStr, TopicLabel>();
 
+  // Hard forks
   for (const {name: fork} of config.forksAscendingEpochOrder) {
-    if (isForkPostFulu(fork)) {
-      break;
-    }
     const topics = getCoreTopicsAtFork(config, fork, {
       subscribeAllSubnets: true,
       disableLightClientServer: opts.disableLightClientServer,
     });
-    for (const topic of topics) {
-      metricsTopicStrToLabel.set(stringifyGossipTopic(config, {...topic, boundary: {fork}}), topic.type);
+    if (!isForkPostFulu(fork)) {
+      for (const topic of topics) {
+        metricsTopicStrToLabel.set(stringifyGossipTopic(config, {...topic, boundary: {fork}}), topic.type);
+      }
+    } else {
+      // Post fulu fork activations require blob schedule to calculate gossip topic
+      const blobSchedule = config.getBlobParameters(config.forks[fork].epoch);
+      for (const topic of topics) {
+        metricsTopicStrToLabel.set(
+          stringifyGossipTopic(config, {...topic, boundary: {...blobSchedule, fork}}),
+          topic.type
+        );
+      }
     }
   }
 
+  // BPO forks
   for (const entry of config.BLOB_SCHEDULE) {
     const fork = config.getForkInfoAtEpoch(entry.EPOCH).name;
     const topics = getCoreTopicsAtFork(config, fork, {
@@ -363,19 +373,6 @@ function getMetricsTopicStrToLabel(config: BeaconConfig, opts: {disableLightClie
     for (const topic of topics) {
       metricsTopicStrToLabel.set(stringifyGossipTopic(config, {...topic, boundary: {...entry, fork}}), topic.type);
     }
-  }
-
-  // An edge case where fulu is activated, but has not reached the first bpo fork
-  const defaultBlobSchedule = config.getBlobParameters(0);
-  const topics = getCoreTopicsAtFork(config, ForkName.fulu, {
-    subscribeAllSubnets: true,
-    disableLightClientServer: opts.disableLightClientServer,
-  });
-  for (const topic of topics) {
-    metricsTopicStrToLabel.set(
-      stringifyGossipTopic(config, {...topic, boundary: {...defaultBlobSchedule, fork: ForkName.fulu}}),
-      topic.type
-    );
   }
 
   return metricsTopicStrToLabel;

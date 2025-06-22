@@ -149,10 +149,6 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
 
       return this.getBlobParameters(epoch).MAX_BLOBS_PER_BLOCK;
     },
-    getMaxRequestBlobSidecars(fork: ForkName): number {
-      return isForkPostElectra(fork) ? config.MAX_REQUEST_BLOB_SIDECARS_ELECTRA : config.MAX_REQUEST_BLOB_SIDECARS;
-    },
-    // Only call this post-fulu
     getBlobParameters(epoch: Epoch): BlobScheduleEntry {
       // Sort by epoch in descending order to find the latest applicable value
       for (const entry of blobScheduleDescendingEpochOrder) {
@@ -162,6 +158,9 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
       }
 
       return {EPOCH: config.ELECTRA_FORK_EPOCH, MAX_BLOBS_PER_BLOCK: config.MAX_BLOBS_PER_BLOCK_ELECTRA};
+    },
+    getMaxRequestBlobSidecars(fork: ForkName): number {
+      return isForkPostElectra(fork) ? config.MAX_REQUEST_BLOB_SIDECARS_ELECTRA : config.MAX_REQUEST_BLOB_SIDECARS;
     },
   };
 }
