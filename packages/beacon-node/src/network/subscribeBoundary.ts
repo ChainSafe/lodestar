@@ -1,4 +1,4 @@
-import {BeaconConfig} from "@lodestar/config";
+import {BeaconConfig, BlobScheduleEntry, ForkInfo} from "@lodestar/config";
 import {isForkPostFulu} from "@lodestar/params";
 import {Epoch} from "@lodestar/types";
 import {SubscribeBoundary} from "./core/types.js";
@@ -12,4 +12,10 @@ export function getSubscribeBoundary(config: BeaconConfig, epoch: Epoch): Subscr
   }
 
   return {fork};
+}
+
+export function isBlobScheduleSubscribeBoundary(
+  forkBlobSchedule: ForkInfo | BlobScheduleEntry
+): forkBlobSchedule is BlobScheduleEntry {
+  return "EPOCH" in forkBlobSchedule;
 }

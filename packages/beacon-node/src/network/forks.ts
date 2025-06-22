@@ -2,6 +2,7 @@ import {ChainForkConfig, ForkInfo} from "@lodestar/config";
 import {ForkName, isForkPostFulu} from "@lodestar/params";
 import {Epoch} from "@lodestar/types";
 import {SubscribeBoundary} from "./core/types.js";
+import {isBlobScheduleSubscribeBoundary} from "./subscribeBoundary.js";
 
 /**
  * Subscribe topics to the new fork N epochs before the fork. Remove all subscriptions N epochs after the fork
@@ -56,40 +57,45 @@ export function getActiveForks(config: ChainForkConfig, epoch: Epoch): ForkName[
 }
 
 export function getActiveSubscribeBoundaries(config: ChainForkConfig, epoch: Epoch): SubscribeBoundary[] {
-  const activeBoundaries = new Set<SubscribeBoundary>();
-  const forks = config.forksAscendingEpochOrder;
+  const activeBoundaries: SubscribeBoundary[] = [];
+  const forksBlobSchedule = config.forksBlobScheduleAscendingEpochOrder;
 
-  // Hard fork boundaries
-  for (let i = 0; i < forks.length; i++) {
-    const currForkEpoch = forks[i].epoch;
-    const nextForkEpoch = i >= forks.length - 1 ? Infinity : forks[i + 1].epoch;
+  for (let i = 0; i < forksBlobSchedule.length; i++) {
+    const currForkBlobSchedule = forksBlobSchedule[i];
+    const nextForkBlobSchedule = forksBlobSchedule[i + 1];
+
+    const currForkBlobScheduleEpoch = isBlobScheduleSubscribeBoundary(currForkBlobSchedule)
+      ? currForkBlobSchedule.EPOCH
+      : currForkBlobSchedule.epoch;
+    const nextForkBlobScheduleEpoch =
+      nextForkBlobSchedule === undefined
+        ? Infinity
+        : isBlobScheduleSubscribeBoundary(nextForkBlobSchedule)
+          ? nextForkBlobSchedule.EPOCH
+          : nextForkBlobSchedule.epoch;
 
     // Edge case: If multiple forks start at the same epoch, only consider the latest one
-    if (currForkEpoch === nextForkEpoch) {
+    if (currForkBlobScheduleEpoch === nextForkBlobScheduleEpoch) {
       continue;
     }
 
-    if (epoch >= currForkEpoch - FORK_EPOCH_LOOKAHEAD && epoch <= nextForkEpoch + FORK_EPOCH_LOOKAHEAD) {
-      const fork = forks[i].name;
-      activeBoundaries.add(isForkPostFulu(fork) ? {fork, ...config.getBlobParameters(epoch)} : {fork});
-    }
-  }
-
-  // BPO fork boundaries
-  for (let i = 0; i < config.BLOB_SCHEDULE.length; i++) {
-    const currBlobScheduleEpoch = config.BLOB_SCHEDULE[i].EPOCH;
-    const nextBlobScheduleEpoch = i >= config.BLOB_SCHEDULE.length - 1 ? Infinity : config.BLOB_SCHEDULE[i + 1].EPOCH;
-
     if (
-      epoch >= currBlobScheduleEpoch - FORK_EPOCH_LOOKAHEAD &&
-      epoch <= nextBlobScheduleEpoch + FORK_EPOCH_LOOKAHEAD
+      epoch >= currForkBlobScheduleEpoch - FORK_EPOCH_LOOKAHEAD &&
+      epoch <= nextForkBlobScheduleEpoch + FORK_EPOCH_LOOKAHEAD
     ) {
-      const fork = config.getForkInfoAtEpoch(epoch).name;
-      activeBoundaries.add({fork, ...config.getBlobParameters(epoch)});
+      if (isBlobScheduleSubscribeBoundary(currForkBlobSchedule)) {
+        const fork = config.getForkInfoAtEpoch(epoch).name;
+        activeBoundaries.push({fork, ...currForkBlobSchedule});
+      } else {
+        const fork = currForkBlobSchedule.name;
+        activeBoundaries.push(
+          isForkPostFulu(fork) ? {fork, ...config.getBlobParameters(currForkBlobScheduleEpoch)} : {fork}
+        );
+      }
     }
   }
 
-  return [...activeBoundaries];
+  return activeBoundaries;
 }
 
 /**

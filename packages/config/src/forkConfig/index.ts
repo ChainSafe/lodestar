@@ -87,10 +87,21 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
 
   const blobScheduleDescendingEpochOrder = [...config.BLOB_SCHEDULE].sort((a, b) => b.EPOCH - a.EPOCH);
 
+  const forkBlobScheduleByEpoch = new Map<Epoch, ForkInfo | BlobScheduleEntry>();
+  for (const fork of forksAscendingEpochOrder) {
+    forkBlobScheduleByEpoch.set(fork.epoch, fork);
+  }
+  for (const entry of blobScheduleDescendingEpochOrder) {
+    forkBlobScheduleByEpoch.set(entry.EPOCH, entry);
+  }
+
   return {
     forks,
     forksAscendingEpochOrder,
     forksDescendingEpochOrder,
+    forksBlobScheduleAscendingEpochOrder: [...forkBlobScheduleByEpoch.entries()]
+      .sort(([k1], [k2]) => k1 - k2)
+      .map(([, v]) => v),
 
     // Fork convenience methods
     getForkInfo(slot: Slot): ForkInfo {
