@@ -80,6 +80,7 @@ export async function beaconBlocksMaybeBlobsByRange(
     const sampledColumns = network.custodyConfig.sampledColumns;
     const neededColumns = partialDownload ? partialDownload.pendingDataColumns : sampledColumns;
 
+    // This should never throw. Already checking for this in ChainPeerBalancer when selecting the peer
     if ((earliestAvailableSlot ?? 0) > startSlot) {
       throw new Error(
         `earliestAvailableSlot=${earliestAvailableSlot} not respected for ByRange startSlot=${startSlot}`
