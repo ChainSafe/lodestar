@@ -3,8 +3,7 @@ import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/dist/src/score/pee
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {Connection, PrivateKey} from "@libp2p/interface";
 import {routes} from "@lodestar/api";
-import {BeaconConfig, SubscribeBoundary} from "@lodestar/config";
-import {isSubscribeBoundaryPostFulu} from "@lodestar/config/lib/genesisConfig/types.js";
+import {BeaconConfig, SubscribeBoundary, isSubscribeBoundaryPostFulu} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {ResponseIncoming} from "@lodestar/reqresp";
 import {Epoch, phase0, ssz, sszTypesFor} from "@lodestar/types";
