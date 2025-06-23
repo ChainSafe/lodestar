@@ -160,7 +160,7 @@
           "refId": "A"
         }
       ],
-      "title": "Data column sidecars submitted for gossip verification",
+      "title": "Number of data column sidecars submitted for gossip verification",
       "type": "timeseries"
     },
     {
@@ -250,7 +250,7 @@
           "refId": "A"
         }
       ],
-      "title": "Data column sidecars verified for gossip",
+      "title": "Number of data column sidecars verified for gossip",
       "type": "timeseries"
     },
     {
@@ -340,7 +340,7 @@
           "refId": "A"
         }
       ],
-      "title": "Column processing failures",
+      "title": "Data column sidecars gossip verification failures",
       "type": "timeseries"
     },
     {
@@ -738,7 +738,7 @@
           "refId": "A"
         }
       ],
-      "title": "Unsuccessful engine_getBlobsV2 request rate (%)",
+      "title": "Unsuccessful engine_getBlobsV2 requests rate (%)",
       "type": "timeseries"
     },
     {
@@ -1298,7 +1298,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(beacon_data_availability_reconstructed_columns_total[$rate_interval])",
+          "expr": "avg_over_time(\n  (rate(beacon_data_availability_reconstructed_columns_total[1m]) * 12 > 0)[$rate_interval:]\n)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
