@@ -44,7 +44,7 @@ export type GaugeConfig<Labels extends LabelsGeneric> = {
 } & (NoLabels extends Labels ? {labelNames?: never} : {labelNames: NonEmptyArray<LabelKeys<Labels>>});
 
 export type HistogramConfig<Labels extends LabelsGeneric> = GaugeConfig<Labels> & {
-  buckets?: number[];
+  buckets: number[];
 };
 
 export type AvgMinMaxConfig<Labels extends LabelsGeneric> = GaugeConfig<Labels>;

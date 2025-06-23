@@ -24,8 +24,26 @@ import {BlockInputCacheType} from "../chain/seenCache/seenGossipBlockInput.js";
 import {IExecutionEngine} from "../execution/engine/interface.js";
 import {Metrics} from "../metrics/metrics.js";
 import {NodeId} from "../network/subnets/index.js";
-import {computeKzgCommitmentsInclusionProof, kzgCommitmentToVersionedHash} from "./blobs.js";
+import {
+  computeKzgCommitmentsInclusionProof,
+  kzgCommitmentToVersionedHash,
+  recoverDataColumnSidecars as recover,
+} from "./blobs.js";
+import {IClock} from "./clock.js";
 import {kzg} from "./kzg.js";
+
+export enum RecoverResult {
+  // the recover is not attempted because we have less than `NUMBER_OF_COLUMNS / 2` columns
+  NotAttemptedLessThanHalf = "not_attempted_less_than_half",
+  // the recover is not attempted because it has full data columns
+  NotAttemptedFull = "not_attempted_full",
+  // the recover is a success and it helps resolve availability
+  SuccessResolved = "success_resolved",
+  // the redover is a success but it's late, availability is already resolved by either gossip or getBlobsV2
+  SuccessLate = "success_late",
+  // the recover failed
+  Failed = "failed",
+}
 
 export class CustodyConfig {
   /**
@@ -315,6 +333,75 @@ export function getDataColumnSidecarsFromColumnSidecar(
   );
 }
 
+/**
+ * If we receive more than half of NUMBER_OF_COLUMNS (64) we should recover all remaining columns
+ */
+export async function recoverDataColumnSidecars(
+  dataColumnCache: DataColumnsCacheMap,
+  clock: IClock,
+  metrics: Metrics | null
+): Promise<RecoverResult> {
+  const columnCount = dataColumnCache.size;
+  if (columnCount >= NUMBER_OF_COLUMNS) {
+    // We have all columns
+    return RecoverResult.NotAttemptedFull;
+  }
+
+  if (columnCount < NUMBER_OF_COLUMNS / 2) {
+    // We don't have enough columns to recover
+    return RecoverResult.NotAttemptedLessThanHalf;
+  }
+
+  metrics?.recoverDataColumnSidecars.partialColumns.set(dataColumnCache.size);
+  const partialSidecars = new Map<number, fulu.DataColumnSidecar>();
+  for (const [columnIndex, {dataColumn}] of dataColumnCache.entries()) {
+    // the more columns we put, the slower the recover
+    if (partialSidecars.size >= NUMBER_OF_COLUMNS / 2) {
+      break;
+    }
+    partialSidecars.set(columnIndex, dataColumn);
+  }
+
+  const timer = metrics?.recoverDataColumnSidecars.recoverTime.startTimer();
+  // if this function throws, we catch at the consumer side
+  const fullSidecars = await recover(partialSidecars);
+  timer?.();
+  if (fullSidecars == null) {
+    return RecoverResult.Failed;
+  }
+
+  const firstDataColumn = dataColumnCache.values().next().value?.dataColumn;
+  if (firstDataColumn == null) {
+    // should not happen because we checked the size of the cache before this
+    throw new Error("No data column found in cache to recover from");
+  }
+
+  const slot = firstDataColumn.signedBlockHeader.message.slot;
+  const secFromSlot = clock.secFromSlot(slot);
+  metrics?.recoverDataColumnSidecars.secFromSlot.observe(secFromSlot);
+
+  if (dataColumnCache.size === NUMBER_OF_COLUMNS) {
+    // either gossip or getBlobsV2 resolved availability while we were recovering
+    return RecoverResult.SuccessLate;
+  }
+
+  // We successfully recovered the data columns, update the cache
+  for (let columnIndex = 0; columnIndex < NUMBER_OF_COLUMNS; columnIndex++) {
+    if (dataColumnCache.has(columnIndex)) {
+      // We already have this column
+      continue;
+    }
+
+    const sidecar = fullSidecars[columnIndex];
+    if (sidecar === undefined) {
+      throw new Error(`full sidecars is undefined at index ${columnIndex}`);
+    }
+    dataColumnCache.set(columnIndex, {dataColumn: sidecar, dataColumnBytes: null});
+  }
+
+  return RecoverResult.SuccessResolved;
+}
+
 export function hasSampledDataColumns(custodyConfig: CustodyConfig, dataColumnCache: DataColumnsCacheMap): boolean {
   return (
     dataColumnCache.size >= custodyConfig.sampledColumns.length &&
@@ -405,6 +492,7 @@ export async function getDataColumnsFromExecution(
   // Publish columns if and only if subscribed to them
   const sampledColumns = custodyConfig.sampledColumns.map((columnIndex) => dataColumnSidecars[columnIndex]);
 
+  // for columns that we already seen, it will be ignored through `ignoreDuplicatePublishError` gossip option
   emitter.emit(ChainEvent.publishDataColumns, sampledColumns);
 
   for (const column of sampledColumns) {

@@ -88,7 +88,7 @@ export class Simulation {
   }
 
   static async initWithDefaults(
-    {forkConfig, logsDir, id, trustedSetup}: SimulationInitOptions,
+    {forkConfig, logsDir, id}: SimulationInitOptions,
     clients: NodePairDefinition[]
   ): Promise<Simulation> {
     const env = new Simulation(forkConfig, {
@@ -96,7 +96,6 @@ export class Simulation {
       id,
       genesisTime: Math.floor(Date.now() / 1000),
       controller: new AbortController(),
-      trustedSetup,
       rootDir: path.join(tmp.dirSync({unsafeCleanup: true, tmpdir: "/tmp", template: "sim-XXXXXX"}).name, id),
     });
 

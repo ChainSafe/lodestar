@@ -55,339 +55,15 @@
   "panels": [
     {
       "collapsed": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
         "y": 0
-      },
-      "id": 550,
-      "panels": [],
-      "title": "Aggregated Attestation Pool",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": []
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 1
-      },
-      "id": 551,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "lodestar_oppool_aggregated_attestation_pool_size",
-          "instant": false,
-          "legendFormat": "size",
-          "range": true,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "lodestar_oppool_aggregated_attestation_pool_unique_data_count",
-          "hide": false,
-          "instant": false,
-          "legendFormat": "unique_data",
-          "range": true,
-          "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "lodestar_oppool_aggregated_attestation_pool_attestation_data_per_slot_total",
-          "hide": false,
-          "instant": false,
-          "legendFormat": "att_data_per_slot",
-          "range": true,
-          "refId": "C"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "lodestar_oppool_aggregated_attestation_pool_committees_per_slot_total",
-          "hide": false,
-          "instant": false,
-          "legendFormat": "committees_per_slot",
-          "range": true,
-          "refId": "D"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "lodestar_oppool_aggregated_attestation_pool_max_attestations_per_committee",
-          "hide": false,
-          "instant": false,
-          "legendFormat": "max_attestations_per_committee",
-          "range": true,
-          "refId": "E"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "lodestar_oppool_aggregated_attestation_pool_attestations_per_committee",
-          "hide": false,
-          "instant": false,
-          "legendFormat": "attestations_per_committee",
-          "range": true,
-          "refId": "F"
-        }
-      ],
-      "title": "Aggregated Attestation Pool",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": []
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 1
-      },
-      "id": 552,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "rate(lodestar_oppool_aggregated_attestation_pool_gossip_insert_outcome_total[$rate_interval])",
-          "instant": false,
-          "legendFormat": "{{insertOutcome}}",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Gossip Insert Outcome",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": []
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 9
-      },
-      "id": 553,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "rate(lodestar_oppool_aggregated_attestation_pool_api_insert_outcome_total[$rate_interval])",
-          "instant": false,
-          "legendFormat": "{{insertOutcome}}",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Api Insert Outcome",
-      "type": "timeseries"
-    },
-    {
-      "collapsed": false,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 17
       },
       "id": 166,
       "panels": [],
@@ -454,7 +130,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 18
+        "y": 1
       },
       "id": 546,
       "options": {
@@ -630,7 +306,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 18
+        "y": 1
       },
       "id": 547,
       "options": {
@@ -872,7 +548,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 26
+        "y": 9
       },
       "id": 168,
       "options": {
@@ -997,7 +673,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 26
+        "y": 9
       },
       "id": 170,
       "options": {
@@ -1081,7 +757,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 34
+        "y": 17
       },
       "id": 528,
       "options": {
@@ -1145,7 +821,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 34
+        "y": 17
       },
       "heatmap": {},
       "hideZeroBuckets": false,
@@ -1274,7 +950,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 42
+        "y": 25
       },
       "id": 511,
       "options": {
@@ -1441,7 +1117,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 42
+        "y": 25
       },
       "id": 378,
       "options": {
@@ -1527,7 +1203,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 50
+        "y": 33
       },
       "id": 376,
       "options": {
@@ -1612,7 +1288,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 50
+        "y": 33
       },
       "id": 532,
       "options": {
@@ -1715,7 +1391,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 58
+        "y": 41
       },
       "id": 531,
       "options": {
@@ -1800,7 +1476,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 58
+        "y": 41
       },
       "id": 534,
       "options": {
@@ -1851,7 +1527,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 65
+        "y": 48
       },
       "id": 535,
       "options": {
@@ -1965,7 +1641,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 65
+        "y": 48
       },
       "id": 537,
       "options": {
@@ -2058,7 +1734,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 71
+        "y": 54
       },
       "id": 548,
       "options": {
@@ -2142,7 +1818,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 73
+        "y": 56
       },
       "id": 549,
       "options": {
@@ -2182,7 +1858,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 81
+        "y": 64
       },
       "id": 541,
       "panels": [],
@@ -2213,7 +1889,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 82
+        "y": 65
       },
       "id": 543,
       "options": {
@@ -2292,7 +1968,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 82
+        "y": 65
       },
       "id": 545,
       "options": {
@@ -2397,7 +2073,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 90
+        "y": 73
       },
       "id": 539,
       "options": {
@@ -2491,7 +2167,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 90
+        "y": 73
       },
       "id": 564,
       "options": {
@@ -2529,7 +2205,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 98
+        "y": 81
       },
       "id": 555,
       "panels": [],
@@ -2586,7 +2262,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 99
+        "y": 82
       },
       "id": 554,
       "options": {
@@ -2682,7 +2358,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 99
+        "y": 82
       },
       "id": 556,
       "options": {
@@ -2777,7 +2453,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 107
+        "y": 90
       },
       "id": 563,
       "options": {
@@ -2859,7 +2535,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 107
+        "y": 90
       },
       "id": 560,
       "options": {
@@ -2941,7 +2617,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 115
+        "y": 98
       },
       "id": 558,
       "options": {
@@ -3023,7 +2699,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 115
+        "y": 98
       },
       "id": 559,
       "options": {
@@ -3105,7 +2781,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 123
+        "y": 106
       },
       "id": 557,
       "options": {
@@ -3200,7 +2876,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 123
+        "y": 106
       },
       "id": 562,
       "options": {
@@ -3282,7 +2958,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 131
+        "y": 114
       },
       "id": 561,
       "options": {
@@ -3312,6 +2988,330 @@
         }
       ],
       "title": "Scanned Attestations by slot delta",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 122
+      },
+      "id": 550,
+      "panels": [],
+      "title": "Aggregated Attestation Pool",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 123
+      },
+      "id": 551,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "lodestar_oppool_aggregated_attestation_pool_size",
+          "instant": false,
+          "legendFormat": "size",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "lodestar_oppool_aggregated_attestation_pool_unique_data_count",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "unique_data",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "lodestar_oppool_aggregated_attestation_pool_attestation_data_per_slot_total",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "att_data_per_slot",
+          "range": true,
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "lodestar_oppool_aggregated_attestation_pool_committees_per_slot_total",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "committees_per_slot",
+          "range": true,
+          "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "lodestar_oppool_aggregated_attestation_pool_max_attestations_per_committee",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "max_attestations_per_committee",
+          "range": true,
+          "refId": "E"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(lodestar_oppool_aggregated_attestation_pool_attestations_per_committee_sum[$rate_interval])\n/\nrate(lodestar_oppool_aggregated_attestation_pool_attestations_per_committee_count[$rate_interval])",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "attestations_per_committee",
+          "range": true,
+          "refId": "F"
+        }
+      ],
+      "title": "Aggregated Attestation Pool",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 123
+      },
+      "id": 552,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(lodestar_oppool_aggregated_attestation_pool_gossip_insert_outcome_total[$rate_interval])",
+          "instant": false,
+          "legendFormat": "{{insertOutcome}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Gossip Insert Outcome",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 131
+      },
+      "id": 553,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(lodestar_oppool_aggregated_attestation_pool_api_insert_outcome_total[$rate_interval])",
+          "instant": false,
+          "legendFormat": "{{insertOutcome}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Api Insert Outcome",
       "type": "timeseries"
     },
     {

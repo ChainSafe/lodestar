@@ -12,6 +12,7 @@ import {
 import {getExecutionEngineFromBackend} from "../../../../src/execution/engine/index.js";
 import {ExecutionEngineMockBackend} from "../../../../src/execution/engine/mock.js";
 import {computeNodeId} from "../../../../src/network/subnets/index.js";
+import {IClock} from "../../../../src/util/clock.js";
 import {CustodyConfig} from "../../../../src/util/dataColumns.js";
 import {testLogger} from "../../../utils/logger.js";
 import {getValidPeerId} from "../../../utils/peer.js";
@@ -39,11 +40,14 @@ describe("SeenGossipBlockInput", () => {
   });
 
   const emitter = new ChainEventEmitter();
+  // Not used in this test, but required by the constructor
+  const unusedClock = {} as unknown as IClock;
 
   const seenGossipBlockInput = new SeenGossipBlockInput(
     new CustodyConfig(nodeId, config, null),
     executionEngine,
     emitter,
+    unusedClock,
     testLogger("seenGossipBlockInput")
   );
 

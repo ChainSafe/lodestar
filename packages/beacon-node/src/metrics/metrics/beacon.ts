@@ -56,6 +56,21 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       help: "number of validators in current epoch",
     }),
 
+    pendingDeposits: register.gauge({
+      name: "beacon_pending_deposits",
+      help: "Current number of pending deposits",
+    }),
+
+    pendingConsolidations: register.gauge({
+      name: "beacon_pending_consolidations",
+      help: "Current number of pending consolidations",
+    }),
+
+    pendingPartialWithdrawals: register.gauge({
+      name: "beacon_pending_partial_withdrawals",
+      help: "Current number of pending partial withdrawals",
+    }),
+
     // Non-spec'ed
 
     forkChoice: {
@@ -208,6 +223,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         name: "beacon_block_payload_fetched_time",
         help: "Time to fetch the payload from EL",
         labelNames: ["prepType"],
+        buckets: [0.1, 0.2, 0.3, 0.5, 0.7, 1, 2],
       }),
       emptyPayloads: register.gauge<{prepType: PayloadPreparationType}>({
         name: "beacon_block_payload_empty_total",
@@ -358,19 +374,22 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       dataColumnSidecarGossipVerificationTime: register.histogram({
         name: "beacon_data_column_sidecar_gossip_verification_seconds",
         help: "Full runtime of data column sidecars gossip verification",
+        buckets: [0.025, 0.05, 0.1, 0.5, 1, 2, 5],
       }),
       dataColumnSidecarComputationTime: register.histogram({
         name: "beacon_data_column_sidecar_computation_seconds",
         help: "Time taken to compute data column sidecars, including cells and inclusion proof",
+        buckets: [0.1, 0.25, 0.5, 0.75, 1, 2, 5],
       }),
       dataColumnSidecarInclusionProofVerificationTime: register.histogram({
         name: "beacon_data_column_sidecar_inclusion_proof_verification_seconds",
         help: "Time taken to verify data_column sidecar inclusion proof",
+        buckets: [0.002, 0.004, 0.006, 0.008, 0.01, 0.05, 1, 2],
       }),
       kzgVerificationDataColumnBatchTime: register.histogram({
         name: "beacon_kzg_verification_data_column_batch_seconds",
         help: "Runtime of batched data column kzg verification",
-        buckets: [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 1, 2, 5],
+        buckets: [0.025, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 1, 2, 5],
       }),
       getBlobsV2Requests: register.counter({
         name: "beacon_engine_getBlobsV2_requests_total",

@@ -24,7 +24,6 @@ const env = await Simulation.initWithDefaults(
     id: "deneb",
     logsDir: path.join(logFilesDir, "deneb"),
     forkConfig,
-    trustedSetup: true,
   },
   [
     {

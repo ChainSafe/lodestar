@@ -118,7 +118,7 @@ async function maybeValidateBlobs(
       if (blockData.fork === ForkName.deneb || blockData.fork === ForkName.electra) {
         const {blobs} = blockData;
 
-        // if the blob siddecars have been individually verified then we can skip kzg proof check
+        // if the blob sidecars have been individually verified then we can skip kzg proof check
         // but other checks to match blobs with block data still need to be performed
         const skipProofsCheck = opts.validBlobSidecars === BlobSidecarValidation.Individual;
         await validateBlobSidecars(blockSlot, beaconBlockRoot, blobKzgCommitments, blobs, {skipProofsCheck});

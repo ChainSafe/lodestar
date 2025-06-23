@@ -21,7 +21,8 @@ import {RegenCaller} from "../regen/interface.js";
 export async function validateGossipDataColumnSidecar(
   chain: IBeaconChain,
   dataColumnSidecar: fulu.DataColumnSidecar,
-  gossipSubnet: SubnetID
+  gossipSubnet: SubnetID,
+  metrics: Metrics | null
 ): Promise<void> {
   const blockHeader = dataColumnSidecar.signedBlockHeader.message;
 
@@ -125,7 +126,11 @@ export async function validateGossipDataColumnSidecar(
   // 10) [REJECT] The sidecar's kzg_commitments field inclusion proof is valid as verified by
   //              verify_data_column_sidecar_inclusion_proof
   //              TODO: Can cache result on (commitments, proof, header) in the future
-  if (!verifyDataColumnSidecarInclusionProof(dataColumnSidecar)) {
+  const timer = metrics?.peerDas.dataColumnSidecarInclusionProofVerificationTime.startTimer();
+  const valid = verifyDataColumnSidecarInclusionProof(dataColumnSidecar);
+  timer?.();
+
+  if (!valid) {
     throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
       code: DataColumnSidecarErrorCode.INCLUSION_PROOF_INVALID,
       slot: dataColumnSidecar.signedBlockHeader.message.slot,

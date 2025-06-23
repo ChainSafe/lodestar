@@ -21,8 +21,9 @@ const testCases: {
   {
     id: "Yield two chunks, then throw",
     protocol: pingProtocol(async function* () {
-      yield sszSnappyPing.binaryPayload;
-      yield sszSnappyPing.binaryPayload;
+      const payload = sszSnappyPing.binaryPayload;
+      yield {...payload, boundary: {fork: payload.fork}};
+      yield {...payload, boundary: {fork: payload.fork}};
       throw new LodestarError({code: "TEST_ERROR"});
     }),
     requestChunks: sszSnappyPing.chunks, // Request Ping: BigInt(1)

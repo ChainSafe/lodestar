@@ -1,10 +1,12 @@
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
+import {NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {deneb, ssz} from "@lodestar/types";
+import {deneb, fulu, ssz} from "@lodestar/types";
 import {afterEach, describe, expect, it} from "vitest";
 import {validateBlobSidecars, validateGossipBlobSidecar} from "../../../src/chain/validation/blobSidecar.js";
-import {computeBlobSidecars, computeDataColumnSidecars} from "../../../src/util/blobs.js";
+import {computeBlobSidecars, computeDataColumnSidecars, recoverDataColumnSidecars} from "../../../src/util/blobs.js";
 import {kzg} from "../../../src/util/kzg.js";
+import {shuffle} from "../../../src/util/shuffle.js";
 import {getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
 import {getBlobCellAndProofs} from "../../utils/getBlobCellAndProofs.js";
 import {generateRandomBlob, transactionForKzgCommitment} from "../../utils/kzg.js";
@@ -71,7 +73,7 @@ describe("KZG", () => {
     }
   });
 
-  it("DataColumnSidecars", () => {
+  it("DataColumnSidecars", async () => {
     const config = createChainForkConfig({
       ALTAIR_FORK_EPOCH: 0,
       BELLATRIX_FORK_EPOCH: 0,
@@ -117,5 +119,31 @@ describe("KZG", () => {
         )
       ).toBeTruthy();
     });
+
+    const partialSidecars = new Map<number, fulu.DataColumnSidecar>();
+    for (let i = 0; i < NUMBER_OF_COLUMNS; i++) {
+      if (i % 2 === 0) {
+        // skip every second column to simulate partial sidecars
+        continue;
+      }
+      partialSidecars.set(i, sidecars[i]);
+    }
+    const shuffled = shuffle(Array.from(partialSidecars.keys()));
+    const shuffledPartial = new Map<number, fulu.DataColumnSidecar>();
+    for (const columnIndex of shuffled) {
+      const sidecar = partialSidecars.get(columnIndex);
+      if (sidecar) {
+        shuffledPartial.set(columnIndex, sidecar);
+      }
+    }
+
+    const recoveredSidecars = await recoverDataColumnSidecars(shuffledPartial);
+    expect(recoveredSidecars !== null).toBeTruthy();
+    if (recoveredSidecars == null) {
+      // should not happen
+      throw new Error("Recovered sidecars should not be null");
+    }
+    expect(recoveredSidecars.length).toBe(NUMBER_OF_COLUMNS);
+    expect(ssz.fulu.DataColumnSidecars.equals(recoveredSidecars, sidecars)).toBeTruthy();
   });
 });

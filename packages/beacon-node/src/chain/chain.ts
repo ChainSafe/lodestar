@@ -280,7 +280,13 @@ export class BeaconChain implements IBeaconChain {
     this.seenAttestationDatas = new SeenAttestationDatas(metrics, this.opts?.attDataCacheSlotDistance);
     const nodeId = computeNodeIdFromPrivateKey(privateKey);
     this.custodyConfig = new CustodyConfig(nodeId, config, metrics);
-    this.seenGossipBlockInput = new SeenGossipBlockInput(this.custodyConfig, this.executionEngine, emitter, logger);
+    this.seenGossipBlockInput = new SeenGossipBlockInput(
+      this.custodyConfig,
+      this.executionEngine,
+      emitter,
+      clock,
+      logger
+    );
 
     this.beaconProposerCache = new BeaconProposerCache(opts);
     this.checkpointBalancesCache = new CheckpointBalancesCache();
@@ -686,7 +692,7 @@ export class BeaconChain implements IBeaconChain {
     return produceCommonBlockBody.call(this, blockType, state, blockAttributes);
   }
 
-  produceBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
+  produceBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise?: Promise<CommonBlockBody>}): Promise<{
     block: BeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Wei;
@@ -695,7 +701,7 @@ export class BeaconChain implements IBeaconChain {
     return this.produceBlockWrapper<BlockType.Full>(BlockType.Full, blockAttributes);
   }
 
-  produceBlindedBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
+  produceBlindedBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise?: Promise<CommonBlockBody>}): Promise<{
     block: BlindedBeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Wei;
@@ -710,10 +716,10 @@ export class BeaconChain implements IBeaconChain {
       graffiti,
       slot,
       feeRecipient,
-      commonBlockBody,
+      commonBlockBodyPromise,
       parentBlockRoot,
       parentSlot,
-    }: BlockAttributes & {commonBlockBody?: CommonBlockBody}
+    }: BlockAttributes & {commonBlockBodyPromise?: Promise<CommonBlockBody>}
   ): Promise<{
     block: AssembledBlockType<T>;
     executionPayloadValue: Wei;
@@ -742,7 +748,7 @@ export class BeaconChain implements IBeaconChain {
         parentBlockRoot,
         proposerIndex,
         proposerPubKey,
-        commonBlockBody,
+        commonBlockBodyPromise,
       }
     );
 
@@ -1144,6 +1150,14 @@ export class BeaconChain implements IBeaconChain {
     metrics.forkChoice.balancesLength.set(forkChoiceMetrics.balancesLength);
     metrics.forkChoice.nodes.set(forkChoiceMetrics.nodes);
     metrics.forkChoice.indices.set(forkChoiceMetrics.indices);
+
+    const fork = this.config.getForkName(this.clock.currentSlot);
+    if (isForkPostElectra(fork)) {
+      const headStateElectra = this.getHeadState() as BeaconStateElectra;
+      metrics.pendingDeposits.set(headStateElectra.pendingDeposits.length);
+      metrics.pendingPartialWithdrawals.set(headStateElectra.pendingPartialWithdrawals.length);
+      metrics.pendingConsolidations.set(headStateElectra.pendingConsolidations.length);
+    }
   }
 
   private onClockSlot(slot: Slot): void {
@@ -1241,10 +1255,15 @@ export class BeaconChain implements IBeaconChain {
           this.logger.verbose(`Updated targetCustodyGroupCount=${this.custodyConfig.targetCustodyGroupCount}`);
           this.emitter.emit(ChainEvent.updateTargetGroupCount, this.custodyConfig.targetCustodyGroupCount);
 
-          // TODO: If target group count increases, we should wait to update the advertised group until we've
+          // Need to update advertised custody prior to fulu transition so that we can serve columns we have for
+          // validators that are attached prior to the fork transition.
+          //
+          // TODO(fulu): If target group count increases, we should wait to update the advertised group until we've
           // backfilled the new groups.
-          // this.custodyConfig.updateAdvertisedCustodyGroupCount(targetCustodyGroupCount);
-          // this.emitter.emit(ChainEvent.updateAdvertisedGroupCount, this.custodyConfig.advertisedCustodyGroupCount);
+          if (this.config.FULU_FORK_EPOCH !== Infinity && this.config.getForkSeq(slot) < ForkSeq.fulu) {
+            this.custodyConfig.updateAdvertisedCustodyGroupCount(targetCustodyGroupCount);
+            this.emitter.emit(ChainEvent.updateAdvertisedGroupCount, this.custodyConfig.advertisedCustodyGroupCount);
+          }
         }
       }
     }

@@ -205,6 +205,7 @@ export class PeerDiscovery {
       metrics: modules.metrics ?? undefined,
       logger: modules.logger,
       config: modules.networkConfig.getConfig(),
+      genesisTime: modules.clock.genesisTime,
     });
 
     return new PeerDiscovery(modules, opts, discv5);

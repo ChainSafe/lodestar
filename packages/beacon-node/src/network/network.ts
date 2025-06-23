@@ -7,7 +7,7 @@ import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
 import {ForkSeq, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
-import {computeEpochAtSlot, computeStartSlotAtEpoch, computeTimeAtSlot} from "@lodestar/state-transition";
+import {computeEpochAtSlot, computeTimeAtSlot} from "@lodestar/state-transition";
 import {
   AttesterSlashing,
   LightClientBootstrap,
@@ -39,7 +39,7 @@ import {promiseAllMaybeAsync} from "../util/promises.js";
 import {BlobSidecarsByRootRequest} from "../util/types.js";
 import {INetworkCore, NetworkCore, WorkerNetworkCore} from "./core/index.js";
 import {INetworkEventBus, NetworkEvent, NetworkEventBus, NetworkEventData} from "./events.js";
-import {getActiveForks} from "./forks.js";
+import {getActiveSubscribeBoundaries} from "./forks.js";
 import {GossipHandlers, GossipTopicMap, GossipType, GossipTypeMap} from "./gossip/index.js";
 import {getGossipSSZType, gossipTopicIgnoreDuplicatePublishError, stringifyGossipTopic} from "./gossip/topic.js";
 import {INetwork} from "./interface.js";
@@ -57,6 +57,7 @@ import {
 } from "./reqresp/utils/collect.js";
 import {collectSequentialBlocksInRange} from "./reqresp/utils/collectSequentialBlocksInRange.js";
 import {CommitteeSubscription} from "./subnets/index.js";
+import {getSubscribeBoundary} from "./subscribeBoundary.js";
 import {isPublishToZeroPeersError, prettyPrintPeerIdStr} from "./util.js";
 
 type NetworkModules = {
@@ -331,28 +332,32 @@ export class Network implements INetwork {
   // Gossip
 
   async publishBeaconBlock(signedBlock: SignedBeaconBlock): Promise<number> {
-    const fork = this.config.getForkName(signedBlock.message.slot);
-    return this.publishGossip<GossipType.beacon_block>({type: GossipType.beacon_block, fork}, signedBlock, {
+    const epoch = computeEpochAtSlot(signedBlock.message.slot);
+    const boundary = getSubscribeBoundary(this.config, epoch);
+
+    return this.publishGossip<GossipType.beacon_block>({type: GossipType.beacon_block, boundary}, signedBlock, {
       ignoreDuplicatePublishError: true,
     });
   }
 
   async publishBlobSidecar(blobSidecar: deneb.BlobSidecar): Promise<number> {
-    const slot = blobSidecar.signedBlockHeader.message.slot;
-    const fork = this.config.getForkName(slot);
+    const epoch = computeEpochAtSlot(blobSidecar.signedBlockHeader.message.slot);
+    const boundary = getSubscribeBoundary(this.config, epoch);
+
     const subnet = blobSidecar.index;
 
-    return this.publishGossip<GossipType.blob_sidecar>({type: GossipType.blob_sidecar, fork, subnet}, blobSidecar, {
+    return this.publishGossip<GossipType.blob_sidecar>({type: GossipType.blob_sidecar, boundary, subnet}, blobSidecar, {
       ignoreDuplicatePublishError: true,
     });
   }
 
   async publishDataColumnSidecar(dataColumnSidecar: fulu.DataColumnSidecar): Promise<number> {
-    const slot = dataColumnSidecar.signedBlockHeader.message.slot;
-    const fork = this.config.getForkName(slot);
+    const epoch = computeEpochAtSlot(dataColumnSidecar.signedBlockHeader.message.slot);
+    const boundary = getSubscribeBoundary(this.config, epoch);
+
     const subnet = computeSubnetForDataColumnSidecar(dataColumnSidecar);
     return this.publishGossip<GossipType.data_column_sidecar>(
-      {type: GossipType.data_column_sidecar, fork, subnet},
+      {type: GossipType.data_column_sidecar, boundary, subnet},
       dataColumnSidecar,
       {
         ignoreDuplicatePublishError: true,
@@ -361,36 +366,44 @@ export class Network implements INetwork {
   }
 
   async publishBeaconAggregateAndProof(aggregateAndProof: SignedAggregateAndProof): Promise<number> {
-    const fork = this.config.getForkName(aggregateAndProof.message.aggregate.data.slot);
+    const epoch = computeEpochAtSlot(aggregateAndProof.message.aggregate.data.slot);
+    const boundary = getSubscribeBoundary(this.config, epoch);
+
     return this.publishGossip<GossipType.beacon_aggregate_and_proof>(
-      {type: GossipType.beacon_aggregate_and_proof, fork},
+      {type: GossipType.beacon_aggregate_and_proof, boundary},
       aggregateAndProof,
       {ignoreDuplicatePublishError: true}
     );
   }
 
   async publishBeaconAttestation(attestation: SingleAttestation, subnet: SubnetID): Promise<number> {
-    const fork = this.config.getForkName(attestation.data.slot);
+    const epoch = computeEpochAtSlot(attestation.data.slot);
+    const boundary = getSubscribeBoundary(this.config, epoch);
+
     return this.publishGossip<GossipType.beacon_attestation>(
-      {type: GossipType.beacon_attestation, fork, subnet},
+      {type: GossipType.beacon_attestation, boundary, subnet},
       attestation,
       {ignoreDuplicatePublishError: true}
     );
   }
 
   async publishVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<number> {
-    const fork = this.config.getForkName(computeStartSlotAtEpoch(voluntaryExit.message.epoch));
-    return this.publishGossip<GossipType.voluntary_exit>({type: GossipType.voluntary_exit, fork}, voluntaryExit, {
+    const epoch = voluntaryExit.message.epoch;
+    const boundary = getSubscribeBoundary(this.config, epoch);
+
+    return this.publishGossip<GossipType.voluntary_exit>({type: GossipType.voluntary_exit, boundary}, voluntaryExit, {
       ignoreDuplicatePublishError: true,
     });
   }
 
   async publishBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange): Promise<number> {
     const publishChanges = [];
-    for (const fork of getActiveForks(this.config, this.clock.currentEpoch)) {
-      if (ForkSeq[fork] >= ForkSeq.capella) {
+    for (const boundary of getActiveSubscribeBoundaries(this.config, this.clock.currentEpoch)) {
+      const fork = ForkSeq[boundary.fork];
+
+      if (fork >= ForkSeq.capella) {
         const publishPromise = this.publishGossip<GossipType.bls_to_execution_change>(
-          {type: GossipType.bls_to_execution_change, fork},
+          {type: GossipType.bls_to_execution_change, boundary},
           blsToExecutionChange,
           {ignoreDuplicatePublishError: true}
         );
@@ -405,49 +418,65 @@ export class Network implements INetwork {
   }
 
   async publishProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<number> {
-    const fork = this.config.getForkName(Number(proposerSlashing.signedHeader1.message.slot as bigint));
+    const epoch = computeEpochAtSlot(Number(proposerSlashing.signedHeader1.message.slot as bigint));
+    const boundary = getSubscribeBoundary(this.config, epoch);
+
     return this.publishGossip<GossipType.proposer_slashing>(
-      {type: GossipType.proposer_slashing, fork},
+      {type: GossipType.proposer_slashing, boundary},
       proposerSlashing
     );
   }
 
   async publishAttesterSlashing(attesterSlashing: AttesterSlashing): Promise<number> {
-    const fork = this.config.getForkName(Number(attesterSlashing.attestation1.data.slot as bigint));
+    const epoch = computeEpochAtSlot(Number(attesterSlashing.attestation1.data.slot as bigint));
+    const boundary = getSubscribeBoundary(this.config, epoch);
+
     return this.publishGossip<GossipType.attester_slashing>(
-      {type: GossipType.attester_slashing, fork},
+      {type: GossipType.attester_slashing, boundary},
       attesterSlashing
     );
   }
 
   async publishSyncCommitteeSignature(signature: altair.SyncCommitteeMessage, subnet: SubnetID): Promise<number> {
-    const fork = this.config.getForkName(signature.slot);
-    return this.publishGossip<GossipType.sync_committee>({type: GossipType.sync_committee, fork, subnet}, signature, {
-      ignoreDuplicatePublishError: true,
-    });
+    const epoch = computeEpochAtSlot(signature.slot);
+    const boundary = getSubscribeBoundary(this.config, epoch);
+
+    return this.publishGossip<GossipType.sync_committee>(
+      {type: GossipType.sync_committee, boundary, subnet},
+      signature,
+      {
+        ignoreDuplicatePublishError: true,
+      }
+    );
   }
 
   async publishContributionAndProof(contributionAndProof: altair.SignedContributionAndProof): Promise<number> {
-    const fork = this.config.getForkName(contributionAndProof.message.contribution.slot);
+    const epoch = computeEpochAtSlot(contributionAndProof.message.contribution.slot);
+    const boundary = getSubscribeBoundary(this.config, epoch);
+
     return this.publishGossip<GossipType.sync_committee_contribution_and_proof>(
-      {type: GossipType.sync_committee_contribution_and_proof, fork},
+      {type: GossipType.sync_committee_contribution_and_proof, boundary},
       contributionAndProof,
       {ignoreDuplicatePublishError: true}
     );
   }
 
   async publishLightClientFinalityUpdate(update: LightClientFinalityUpdate): Promise<number> {
-    const fork = this.config.getForkName(update.signatureSlot);
+    const epoch = computeEpochAtSlot(update.signatureSlot);
+    const boundary = getSubscribeBoundary(this.config, epoch);
+
     return this.publishGossip<GossipType.light_client_finality_update>(
-      {type: GossipType.light_client_finality_update, fork},
+      {type: GossipType.light_client_finality_update, boundary},
       update
     );
   }
 
   async publishLightClientOptimisticUpdate(update: LightClientOptimisticUpdate): Promise<number> {
-    const fork = this.config.getForkName(update.signatureSlot);
+    const epoch = computeEpochAtSlot(update.signatureSlot);
+    const boundary = getSubscribeBoundary(this.config, epoch);
+
     return this.publishGossip<GossipType.light_client_optimistic_update>(
-      {type: GossipType.light_client_optimistic_update, fork},
+      {type: GossipType.light_client_optimistic_update, boundary},
       update
     );
   }

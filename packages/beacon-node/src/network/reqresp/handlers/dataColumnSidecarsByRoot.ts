@@ -89,7 +89,7 @@ export async function* onDataColumnSidecarsByRoot(
 
       yield {
         data: dataColumnSidecarBytes,
-        fork: chain.config.getForkName(block.slot),
+        boundary: {fork: chain.config.getForkName(block.slot)},
       };
     }
   }

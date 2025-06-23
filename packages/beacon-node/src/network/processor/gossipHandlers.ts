@@ -14,7 +14,7 @@ import {
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
-import {LogLevel, Logger, prettyBytes, toRootHex} from "@lodestar/utils";
+import {LogLevel, Logger, prettyBytes, toHex, toRootHex} from "@lodestar/utils";
 import {
   BlobSidecarValidation,
   BlockInput,
@@ -58,6 +58,7 @@ import {validateLightClientFinalityUpdate} from "../../chain/validation/lightCli
 import {validateLightClientOptimisticUpdate} from "../../chain/validation/lightClientOptimisticUpdate.js";
 import {OpSource} from "../../chain/validatorMonitor.js";
 import {Metrics} from "../../metrics/index.js";
+import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {INetworkCore} from "../core/index.js";
 import {NetworkEvent, NetworkEventBus} from "../events.js";
 import {
@@ -173,7 +174,9 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
       logger.debug("Validated gossip block", {...logCtx, recvToValidation, validationTime});
 
-      chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRootHex});
+      if (chain.emitter.listenerCount(routes.events.EventType.blockGossip)) {
+        chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRootHex});
+      }
 
       return blockInput;
     } catch (e) {
@@ -202,8 +205,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     const blobBlockHeader = blobSidecar.signedBlockHeader.message;
     const slot = blobBlockHeader.slot;
     const fork = config.getForkName(slot);
-    const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blobBlockHeader);
-    const blockHex = prettyBytes(blockRoot);
+    const blockRootHex = toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(blobBlockHeader));
+    const blockShortHex = prettyBytes(blockRootHex);
 
     const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
     const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
@@ -225,9 +228,19 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       metrics?.gossipBlob.recvToValidation.observe(recvToValidation);
       metrics?.gossipBlob.validationTime.observe(validationTime);
 
+      if (chain.emitter.listenerCount(routes.events.EventType.blobSidecar)) {
+        chain.emitter.emit(routes.events.EventType.blobSidecar, {
+          blockRoot: blockRootHex,
+          slot,
+          index: blobSidecar.index,
+          kzgCommitment: toHex(blobSidecar.kzgCommitment),
+          versionedHash: toHex(kzgCommitmentToVersionedHash(blobSidecar.kzgCommitment)),
+        });
+      }
+
       logger.debug("Received gossip blob", {
         slot: slot,
-        root: blockHex,
+        root: blockShortHex,
         currentSlot: chain.clock.currentSlot,
         peerId: peerIdStr,
         delaySec,
@@ -243,7 +256,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       if (e instanceof BlobSidecarGossipError) {
         // Don't trigger this yet if full block and blobs haven't arrived yet
         if (e.type.code === BlobSidecarErrorCode.PARENT_UNKNOWN && blockInput.block !== null) {
-          logger.debug("Gossip blob has error", {slot, root: blockHex, code: e.type.code});
+          logger.debug("Gossip blob has error", {slot, root: blockShortHex, code: e.type.code});
           events.emit(NetworkEvent.unknownBlockParent, {blockInput, peer: peerIdStr});
         }
 
@@ -272,8 +285,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
     const dataColumnBlockHeader = dataColumnSidecar.signedBlockHeader.message;
     const slot = dataColumnBlockHeader.slot;
-    const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(dataColumnBlockHeader);
-    const blockHex = prettyBytes(blockRoot);
+    const blockRootHex = toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(dataColumnBlockHeader));
+    const blockShortHex = prettyBytes(blockRootHex);
 
     const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
     const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
@@ -289,7 +302,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     );
 
     try {
-      await validateGossipDataColumnSidecar(chain, dataColumnSidecar, gossipSubnet);
+      await validateGossipDataColumnSidecar(chain, dataColumnSidecar, gossipSubnet, metrics);
       const recvToValidation = Date.now() / 1000 - seenTimestampSec;
       const validationTime = recvToValidation - recvToValLatency;
 
@@ -297,10 +310,17 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       metrics?.gossipBlob.recvToValidation.observe(recvToValidation);
       metrics?.gossipBlob.validationTime.observe(validationTime);
 
+      chain.emitter.emit(routes.events.EventType.dataColumnSidecar, {
+        blockRoot: blockRootHex,
+        slot,
+        index: dataColumnSidecar.index,
+        kzgCommitments: dataColumnSidecar.kzgCommitments.map(toHex),
+      });
+
       logger.debug("Received gossip dataColumn", {
         slot: slot,
-        root: blockHex,
-        curentSlot: chain.clock.currentSlot,
+        root: blockShortHex,
+        currentSlot: chain.clock.currentSlot,
         peerId: peerIdStr,
         delaySec,
         gossipSubnet,
@@ -316,7 +336,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       if (e instanceof DataColumnSidecarGossipError) {
         // Don't trigger this yet if full block and blobs haven't arrived yet
         if (e.type.code === DataColumnSidecarErrorCode.PARENT_UNKNOWN && blockInput.block !== null) {
-          logger.debug("Gossip dataColumn has error", {slot, root: blockHex, code: e.type.code});
+          logger.debug("Gossip dataColumn has error", {slot, root: blockShortHex, code: e.type.code});
           events.emit(NetworkEvent.unknownBlockParent, {blockInput, peer: peerIdStr});
         }
 
@@ -459,7 +479,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const {serializedData} = gossipData;
 
       const signedBlock = sszDeserialize(topic, serializedData);
-      const blockInput = await validateBeaconBlock(signedBlock, topic.fork, peerIdStr, seenTimestampSec);
+      const blockInput = await validateBeaconBlock(signedBlock, topic.boundary.fork, peerIdStr, seenTimestampSec);
       chain.serializedCache.set(signedBlock, serializedData);
       handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
     },
@@ -632,7 +652,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const {serializedData} = gossipData;
       let validationResult: AggregateAndProofValidationResult;
       const signedAggregateAndProof = sszDeserialize(topic, serializedData);
-      const {fork} = topic;
+      const {fork} = topic.boundary;
 
       try {
         validationResult = await validateGossipAggregateAndProof(fork, chain, signedAggregateAndProof, serializedData);
@@ -684,7 +704,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       topic,
     }: GossipHandlerParamGeneric<GossipType.attester_slashing>) => {
       const {serializedData} = gossipData;
-      const {fork} = topic;
+      const {fork} = topic.boundary;
       const attesterSlashing = sszDeserialize(topic, serializedData);
       await validateGossipAttesterSlashing(chain, attesterSlashing);
 
@@ -847,7 +867,7 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
         return results;
       }
       // all attestations should have same attestation data as filtered by network processor
-      const {fork} = gossipHandlerParams[0].topic;
+      const {fork} = gossipHandlerParams[0].topic.boundary;
       const validationParams = gossipHandlerParams.map((param) => ({
         attestation: null,
         serializedData: param.gossipData.serializedData,
