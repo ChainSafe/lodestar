@@ -220,11 +220,11 @@ const testScenarios: {
 for (const testScenario of testScenarios) {
   const {altair, bellatrix, capella, deneb, electra, fulu, blobSchedule, testCases} = testScenario;
 
-  describe("network", () => {
+  describe("network / forks / getActiveSubscribeBoundaries", () => {
     const forkConfig = getForkConfig({altair, bellatrix, capella, deneb, electra, fulu, blobSchedule});
     for (const testCase of testCases) {
       const {epoch, activeBoundaries} = testCase;
-      it(` on epoch ${epoch} should return getActiveSubscribeBoundaries: ${JSON.stringify(activeBoundaries)}`, () => {
+      it(` on epoch ${epoch} should return ${JSON.stringify(activeBoundaries)}`, () => {
         expect(getActiveSubscribeBoundaries(forkConfig, epoch)).toEqual(activeBoundaries);
       });
     }
