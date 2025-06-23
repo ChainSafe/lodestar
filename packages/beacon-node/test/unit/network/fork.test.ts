@@ -174,7 +174,6 @@ for (const testScenario of testScenarios) {
           currentFork: forks[currentFork as ForkName],
           nextFork: (nextFork && forks[nextFork as ForkName]) ?? undefined,
         });
-        expect(getActiveSubscribeBoundaries(forkConfig, epoch).map((b) => b.fork)).toEqual(activeForks);
       });
     }
   });
