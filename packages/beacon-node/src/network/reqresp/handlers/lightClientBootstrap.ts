@@ -17,9 +17,7 @@ export async function* onLightClientBootstrap(requestBody: Root, chain: IBeaconC
 
   try {
     const bootstrap = await chain.lightClientServer.getBootstrap(requestBody);
-    const slot = bootstrap.header.beacon.slot;
-    const fork = chain.config.getForkName(slot);
-    const blobSchedule = chain.config.getBlobParameters(computeEpochAtSlot(slot));
+    const fork = chain.config.getForkName(bootstrap.header.beacon.slot);
     const type = responseSszTypeByMethod[ReqRespMethod.LightClientBootstrap](fork, 0);
     yield {
       data: type.serialize(bootstrap),

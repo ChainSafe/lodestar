@@ -26,7 +26,6 @@ export async function* onBeaconBlocksByRange(
   if (startSlot <= finalizedSlot) {
     // Chain of blobs won't change
     for await (const {key, value} of finalized.binaryEntriesStream({gte: startSlot, lt: endSlot})) {
-      const slot = finalized.decodeKey(key);
       yield {
         data: value,
         boundary: getSubscribeBoundary(chain.config, computeEpochAtSlot(finalized.decodeKey(key))),

@@ -24,7 +24,6 @@ export async function* onLightClientUpdatesByRange(
     try {
       const update = await chain.lightClientServer.getUpdate(period);
       const fork = chain.config.getForkName(update.signatureSlot);
-      const blobSchedule = chain.config.getBlobParameters(computeEpochAtSlot(update.signatureSlot));
       const type = responseSszTypeByMethod[ReqRespMethod.LightClientUpdatesByRange](fork, 0);
 
       yield {

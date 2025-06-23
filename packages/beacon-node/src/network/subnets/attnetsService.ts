@@ -368,9 +368,6 @@ export class AttnetsService implements IAttnetsService {
     metrics.attnetsService.subscriptionsCommittee.set(this.shortLivedSubscriptions.size);
     // track short lived subnet status, >= 6 (Dlo) means healthy, otherwise unhealthy
     const currentSlot = this.clock.currentSlot;
-    const epoch = computeEpochAtSlot(currentSlot);
-    const blobSchedule = this.config.getBlobParameters(epoch);
-
     for (const {subnet} of this.shortLivedSubscriptions.getActiveTtl(currentSlot)) {
       const topicStr = stringifyGossipTopic(this.config, {
         type: gossipType,

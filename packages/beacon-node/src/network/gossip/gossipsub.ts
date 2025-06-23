@@ -340,7 +340,6 @@ function attSubnetLabel(subnet: SubnetID): string {
 
 function getMetricsTopicStrToLabel(config: BeaconConfig, opts: {disableLightClientServer: boolean}): TopicStrToLabel {
   const metricsTopicStrToLabel = new Map<TopicStr, TopicLabel>();
-  const defaultBlobSchedule = config.getBlobParameters(0); // Default blob schedule used for pre-fulu
 
   // Hard forks
   for (const {name: fork} of config.forksAscendingEpochOrder) {

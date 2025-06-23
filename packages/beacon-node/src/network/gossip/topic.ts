@@ -11,7 +11,6 @@ import {Attestation, SingleAttestation, ssz, sszTypesFor} from "@lodestar/types"
 
 import {GossipAction, GossipActionError, GossipErrorCode} from "../../chain/errors/gossipValidation.js";
 import {getSubscribeBoundary} from "../subscribeBoundary.js";
-import {SubscribeBoundary} from "../core/index.js";
 import {DEFAULT_ENCODING} from "./constants.js";
 import {GossipEncoding, GossipTopic, GossipTopicTypeMap, GossipType, SSZTypeOfGossipTopic} from "./interface.js";
 
@@ -177,7 +176,6 @@ export function parseGossipTopic(forkDigestContext: BeaconConfig, topicStr: stri
 
     const [, forkDigestHexNoPrefix, gossipTypeStr, encodingStr] = matches;
 
-    const epoch = forkDigestContext.forkDigest2Epoch(forkDigestHexNoPrefix);
     const fork = forkDigestContext.forkDigest2ForkName(forkDigestHexNoPrefix);
     // TODO: This epoch is just an approximate. Will update in the next PR
     const epoch = forkDigestContext.forks[fork].epoch;

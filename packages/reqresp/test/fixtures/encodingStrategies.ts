@@ -1,7 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
-import {defaultBlobSchedule} from "@lodestar/config/default.js";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {encode as varintEncode} from "uint8-varint";
@@ -35,7 +34,7 @@ export const goerliShadowForkBlock13249: SszSnappyTestBlockData = {
   type: ssz.bellatrix.SignedBeaconBlock,
   payload: {
     data: fs.readFileSync(path.join(__dirname, "/goerliShadowForkBlock.13249/serialized.ssz")),
-    boundary: {fork: ForkName.altair, ...defaultBlobSchedule},
+    boundary: {fork: ForkName.altair},
   },
   streamedBody: fs.readFileSync(path.join(__dirname, "/goerliShadowForkBlock.13249/streamed.snappy")),
 };

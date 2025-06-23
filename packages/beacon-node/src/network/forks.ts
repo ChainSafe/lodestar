@@ -32,7 +32,7 @@ import {isBlobScheduleSubscribeBoundary} from "./subscribeBoundary.js";
 export const FORK_EPOCH_LOOKAHEAD = 2;
 
 /**
- * Return the list of `ForkName`s meant to be active at `epoch` up to Electra
+ * Return the list of `ForkName`s meant to be active at `epoch`
  * @see FORK_EPOCH_LOOKAHEAD for details on when forks are considered 'active'
  */
 export function getActiveForks(config: ChainForkConfig, epoch: Epoch): ForkName[] {
@@ -48,34 +48,12 @@ export function getActiveForks(config: ChainForkConfig, epoch: Epoch): ForkName[
       continue;
     }
 
-    const fork = forks[i].name;
-    if (
-      epoch >= currForkEpoch - FORK_EPOCH_LOOKAHEAD &&
-      epoch <= nextForkEpoch + FORK_EPOCH_LOOKAHEAD &&
-      !isForkPostFulu(fork)
-    ) {
+    if (epoch >= currForkEpoch - FORK_EPOCH_LOOKAHEAD && epoch <= nextForkEpoch + FORK_EPOCH_LOOKAHEAD) {
       activeForks.push(forks[i].name);
     }
   }
 
   return activeForks;
-}
-
-function getActiveBlobSchedule(config: ChainForkConfig, epoch: Epoch): BlobScheduleEntry[] {
-  // Blob schedule is ignored pre-fulu
-  if (epoch < config.FULU_FORK_EPOCH) {
-    return [];
-  }
-  const activeBlobSchedule = new Set<BlobScheduleEntry>();
-
-  for (let i = epoch - FORK_EPOCH_LOOKAHEAD; i <= epoch + FORK_EPOCH_LOOKAHEAD; i++) {
-    const blobSchedule = config.getBlobParameters(i);
-    if (blobSchedule !== null) {
-      activeBlobSchedule.add(blobSchedule);
-    }
-  }
-
-  return [...activeBlobSchedule];
 }
 
 export function getActiveSubscribeBoundaries(config: ChainForkConfig, epoch: Epoch): SubscribeBoundary[] {

@@ -40,7 +40,6 @@ export function msgIdToStrFn(msgId: Uint8Array): string {
  */
 export function msgIdFn(gossipTopicCache: GossipTopicCache, msg: Message): Uint8Array {
   const topic = gossipTopicCache.getTopic(msg.topic);
-  const boundary = topic.boundary;
 
   let vec: Uint8Array[];
 

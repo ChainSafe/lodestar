@@ -1,8 +1,7 @@
 import {ChainForkConfig, createChainForkConfig} from "@lodestar/config";
-import {chainConfig, defaultBlobSchedule} from "@lodestar/config/default";
+import {chainConfig} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
 import {RequestError, RequestErrorCode, ResponseOutgoing} from "@lodestar/reqresp";
-import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Root, SignedBeaconBlock, altair, phase0, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
@@ -116,7 +115,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
           if (method === ReqRespMethod.LightClientBootstrap) {
             yield {
               data: ssz.altair.LightClientBootstrap.serialize(expectedValue),
-              boundary: {fork: ForkName.altair, ...defaultBlobSchedule},
+              boundary: {fork: ForkName.altair},
             };
           }
         }
@@ -137,7 +136,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
           if (method === ReqRespMethod.LightClientOptimisticUpdate) {
             yield {
               data: ssz.altair.LightClientOptimisticUpdate.serialize(expectedValue),
-              boundary: {fork: ForkName.altair, ...defaultBlobSchedule},
+              boundary: {fork: ForkName.altair},
             };
           }
         }
@@ -158,7 +157,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
           if (method === ReqRespMethod.LightClientFinalityUpdate) {
             yield {
               data: ssz.altair.LightClientFinalityUpdate.serialize(expectedValue),
-              boundary: {fork: ForkName.altair, ...defaultBlobSchedule},
+              boundary: {fork: ForkName.altair},
             };
           }
         }
@@ -178,7 +177,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
       update.signatureSlot = slot;
       lightClientUpdates.push({
         data: ssz.altair.LightClientUpdate.serialize(update),
-        boundary: {fork: ForkName.altair, ...defaultBlobSchedule},
+        boundary: {fork: ForkName.altair},
       });
     }
 
@@ -333,6 +332,6 @@ function getEmptyEncodedPayloadSignedBeaconBlock(config: ChainForkConfig): Respo
 function wrapBlockAsEncodedPayload(config: ChainForkConfig, block: SignedBeaconBlock): ResponseOutgoing {
   return {
     data: config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block),
-    boundary: {fork: config.getForkName(block.message.slot), ...config.getBlobParameters(computeEpochAtSlot(block.message.slot))},
+    boundary: {fork: config.getForkName(block.message.slot)},
   };
 }

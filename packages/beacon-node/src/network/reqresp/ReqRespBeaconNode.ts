@@ -297,8 +297,7 @@ export class ReqRespBeaconNode extends ReqResp {
     yield {
       data: ssz.phase0.Status.serialize(this.statusCache.get()),
       // Status topic is fork-agnostic
-      fork: ForkName.phase0,
-      blobSchedule: this.config.getBlobParameters(0),
+      boundary: {fork: ForkName.phase0},
     };
   }
 
@@ -309,8 +308,7 @@ export class ReqRespBeaconNode extends ReqResp {
     yield {
       data: ssz.phase0.Goodbye.serialize(BigInt(0)),
       // Goodbye topic is fork-agnostic
-      fork: ForkName.phase0,
-      blobSchedule: this.config.getBlobParameters(0),
+      boundary: {fork: ForkName.phase0},
     };
   }
 
@@ -320,8 +318,7 @@ export class ReqRespBeaconNode extends ReqResp {
     yield {
       data: ssz.phase0.Ping.serialize(this.metadataController.seqNumber),
       // Ping topic is fork-agnostic
-      fork: ForkName.phase0,
-      blobSchedule: this.config.getBlobParameters(0),
+      boundary: {fork: ForkName.phase0},
     };
   }
 
@@ -335,8 +332,7 @@ export class ReqRespBeaconNode extends ReqResp {
 
     yield {
       data: type.serialize(metadata),
-      fork,
-      blobSchedule: this.config.getBlobParameters(0),
+      boundary: {fork},
     };
   }
 }
