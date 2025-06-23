@@ -399,9 +399,16 @@ export class PeerManager {
       peerData.status = status;
     }
 
+    const forkName = this.config.getForkName(this.clock.currentSlot);
+
     let isIrrelevant: boolean;
     try {
-      const irrelevantReasonType = assertPeerRelevance(status, this.statusCache.get(), this.clock.currentSlot);
+      const irrelevantReasonType = assertPeerRelevance(
+        status,
+        this.statusCache.get(),
+        this.clock.currentSlot,
+        forkName
+      );
       if (irrelevantReasonType === null) {
         isIrrelevant = false;
       } else {
