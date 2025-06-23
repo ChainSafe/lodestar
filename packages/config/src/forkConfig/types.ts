@@ -43,7 +43,7 @@ export type ForkConfig = {
   getPostDenebForkTypes(slot: Slot): SSZTypesFor<ForkPostDeneb>;
   /** Get max blobs per block at a given epoch */
   getMaxBlobsPerBlock(epoch: Epoch): number;
-  /** Get blob schedule by epoch */
+  /** Get blob schedule entry at a given epoch */
   getBlobParameters(epoch: Epoch): BlobScheduleEntry;
   /** Get max request blob sidecars by hard-fork */
   getMaxRequestBlobSidecars(fork: ForkName): number;
