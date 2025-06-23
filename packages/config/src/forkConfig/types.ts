@@ -19,7 +19,7 @@ export type ForkConfig = {
   forks: {[K in ForkName]: ForkInfo};
   forksAscendingEpochOrder: ForkInfo[];
   forksDescendingEpochOrder: ForkInfo[];
-  forksBlobScheduleAscendingEpochOrder: (ForkInfo | BlobScheduleEntry)[];
+  forkOrBlobScheduleAscendingEpochOrder: (ForkInfo | BlobScheduleEntry)[];
 
   /** Get the hard-fork info for the active fork at `slot` */
   getForkInfo(slot: Slot): ForkInfo;
