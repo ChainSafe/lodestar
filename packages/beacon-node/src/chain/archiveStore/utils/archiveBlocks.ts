@@ -97,19 +97,14 @@ export async function archiveBlocks(
         nonCanonicalBlockRoots.map(async (root, index) => {
           const block = finalizedNonCanonicalBlocks[index];
           const blockBytes = await db.block.getBinary(root);
+          const logCtx = {slot: block.slot, root: block.blockRoot};
           if (blockBytes) {
             await persistOrphanedBlock(block.slot, block.blockRoot, blockBytes, {
               persistOrphanedBlocksDir: persistOrphanedBlocksDir ?? "orphaned_blocks",
             });
-            logger.verbose("Persisted orphaned block", {
-              slot: block.slot,
-              root: block.blockRoot,
-            });
+            logger.verbose("Persisted orphaned block", logCtx);
           } else {
-            logger.warn("Tried to persist orphaned block but no block found", {
-              slot: block.slot,
-              root: block.blockRoot,
-            });
+            logger.warn("Tried to persist orphaned block but no block found", logCtx);
           }
         })
       );

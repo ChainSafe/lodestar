@@ -17,13 +17,13 @@ type BeaconExtraArgs = {
   dbDir?: string;
   persistInvalidSszObjectsDir?: string;
   persistInvalidSszObjectsRetentionHours?: number;
+  persistOrphanedBlocksDir?: string;
   peerStoreDir?: string;
   persistNetworkIdentity?: boolean;
   private?: boolean;
   validatorMonitorLogs?: boolean;
   attachToGlobalThis?: boolean;
   disableLightClientServer?: boolean;
-  persistOrphanedBlocksDir?: string;
 };
 
 export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
@@ -111,6 +111,13 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
     type: "number",
   },
 
+  persistOrphanedBlocksDir: {
+    description: "Enable and specify a directory to persist orphaned blocks",
+    defaultDescription: defaultBeaconPaths.persistOrphanedBlocksDir,
+    hidden: true,
+    type: "string",
+  },
+
   peerStoreDir: {
     hidden: true,
     description: "Peer store directory",
@@ -143,13 +150,6 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
   disableLightClientServer: {
     description: "Disable light client server.",
     type: "boolean",
-  },
-
-  persistOrphanedBlocksDir: {
-    description: "Enable and specify a directory to persist orphaned blocks",
-    defaultDescription: defaultBeaconPaths.persistOrphanedBlocksDir,
-    hidden: true,
-    type: "string",
   },
 };
 
