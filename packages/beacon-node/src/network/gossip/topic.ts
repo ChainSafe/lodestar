@@ -1,4 +1,4 @@
-import {BeaconConfig, ChainConfig, ForkDigestContext} from "@lodestar/config";
+import {BeaconConfig, ChainConfig} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
   ForkName,
@@ -50,9 +50,7 @@ export class GossipTopicCache implements IGossipTopicCache {
  * Stringify a GossipTopic into a spec-ed formated topic string
  */
 export function stringifyGossipTopic(forkDigestContext: BeaconConfig, topic: GossipTopic): string {
-  const boundary = topic.boundary;
-
-  const forkDigestHexNoPrefix = forkDigestContext.forkName2ForkDigestHex(boundary.fork, boundary);
+  const forkDigestHexNoPrefix = forkDigestContext.boundary2ForkDigestHex(topic.boundary);
   const topicType = stringifyGossipTopicType(topic);
   const encoding = topic.encoding ?? DEFAULT_ENCODING;
   return `/eth2/${forkDigestHexNoPrefix}/${topicType}/${encoding}`;

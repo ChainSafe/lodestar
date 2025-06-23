@@ -1,5 +1,5 @@
 import {ForkName, ForkPostFulu, ForkPreFulu} from "@lodestar/params";
-import {DomainType, Epoch, ForkDigest, Root, Slot} from "@lodestar/types";
+import {DomainType, ForkDigest, Root, Slot} from "@lodestar/types";
 import {BlobScheduleEntry} from "../chainConfig/types.js";
 
 export type ForkDigestHex = string;
@@ -7,15 +7,15 @@ export type ForkDigestHex = string;
 // TODO: We can actually make `type SubscribeBoundary = Epoch` and rely on the callers to decode it
 // as fork or blob schedule as needed. However it takes some sizable refactor give every callers access
 // to beacon config
-export type SubscribeBoundary = {fork: ForkPreFulu} | ({fork: ForkPostFulu} & BlobScheduleEntry);
+type SubscribeBoundaryPreFulu = {fork: ForkPreFulu};
+type SubscribeBoundaryPostFulu = {fork: ForkPostFulu} & BlobScheduleEntry;
+export type SubscribeBoundary = SubscribeBoundaryPreFulu | SubscribeBoundaryPostFulu;
 
-// TODO: Simplify this api to accept and return SubscribeBoundary
 export type ForkDigestContext = {
   forkDigest2ForkName(forkDigest: ForkDigest | ForkDigestHex): ForkName;
-  forkDigest2Epoch(forkDigest: ForkDigest | ForkDigestHex): Epoch;
   forkDigest2ForkNameOption(forkDigest: ForkDigest | ForkDigestHex): ForkName | null;
-  forkName2ForkDigest(forkName: ForkName, blobSchedule: BlobScheduleEntry): ForkDigest;
-  forkName2ForkDigestHex(forkName: ForkName, blobSchedule: BlobScheduleEntry): ForkDigestHex;
+  boundary2ForkDigest(boundary: SubscribeBoundary): ForkDigest;
+  boundary2ForkDigestHex(boundary: SubscribeBoundary): ForkDigestHex;
 };
 
 export interface CachedGenesis extends ForkDigestContext {
@@ -33,4 +33,8 @@ export interface CachedGenesis extends ForkDigestContext {
   getDomainForVoluntaryExit(stateSlot: Slot, messageSlot?: Slot): Uint8Array;
 
   readonly genesisValidatorsRoot: Root;
+}
+
+export function isSubscribeBoundaryPostFulu(boundary: SubscribeBoundary): boundary is SubscribeBoundaryPostFulu {
+  return "EPOCH" in boundary;
 }

@@ -4,6 +4,7 @@ import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {Connection, PrivateKey} from "@libp2p/interface";
 import {routes} from "@lodestar/api";
 import {BeaconConfig, SubscribeBoundary} from "@lodestar/config";
+import {isSubscribeBoundaryPostFulu} from "@lodestar/config/lib/genesisConfig/types.js";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {ResponseIncoming} from "@lodestar/reqresp";
 import {Epoch, phase0, ssz, sszTypesFor} from "@lodestar/types";
@@ -464,8 +465,9 @@ export class NetworkCore implements INetworkCore {
           const prevBoundary = activeBoundaries[i];
           const nextBoundary = activeBoundaries[i + 1];
           // If EPOCH does not exist, that means next boundary is still pre-fulu
-          const nextBoundaryEpoch =
-            "EPOCH" in nextBoundary ? nextBoundary.EPOCH : this.config.forks[nextBoundary.fork].epoch;
+          const nextBoundaryEpoch = isSubscribeBoundaryPostFulu(nextBoundary)
+            ? nextBoundary.EPOCH
+            : this.config.forks[nextBoundary.fork].epoch;
 
           // Before subscribe boundary transition
           if (epoch === nextBoundaryEpoch - FORK_EPOCH_LOOKAHEAD) {

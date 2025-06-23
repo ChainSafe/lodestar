@@ -135,7 +135,7 @@ export const responseEncodersTestCases: {
       // <result>
       Buffer.from([RespStatus.SUCCESS]),
       // <context-bytes>
-      beaconConfig.forkName2ForkDigest(ForkName.phase0),
+      beaconConfig.boundary2ForkDigest({fork: ForkName.phase0}),
       // <encoding-dependent-header> | <encoded-payload>
       ...sszSnappySignedBeaconBlockPhase0.chunks,
     ],
@@ -148,7 +148,7 @@ export const responseEncodersTestCases: {
       // <result>
       Buffer.from([RespStatus.SUCCESS]),
       // <context-bytes>
-      beaconConfig.forkName2ForkDigest(ForkName.altair),
+      beaconConfig.boundary2ForkDigest({fork: ForkName.altair}),
       // <encoding-dependent-header> | <encoded-payload>
       ...sszSnappySignedBeaconBlockAltair.chunks,
     ],
@@ -212,11 +212,11 @@ export const responseEncodersTestCases: {
     chunks: [
       // Chunk 0 - success block in phase0 with context bytes
       Buffer.from([RespStatus.SUCCESS]),
-      beaconConfig.forkName2ForkDigest(ForkName.phase0),
+      beaconConfig.boundary2ForkDigest({fork: ForkName.phase0}),
       ...sszSnappySignedBeaconBlockPhase0.chunks,
       // Chunk 1 - success block in altair with context bytes
       Buffer.from([RespStatus.SUCCESS]),
-      beaconConfig.forkName2ForkDigest(ForkName.altair),
+      beaconConfig.boundary2ForkDigest({fork: ForkName.altair}),
       ...sszSnappySignedBeaconBlockAltair.chunks,
     ],
   },
@@ -247,7 +247,7 @@ export const responseEncodersErrorTestCases: {
       // <result>
       Buffer.from([RespStatus.SUCCESS]),
       // <context-bytes>
-      beaconConfig.forkName2ForkDigest(ForkName.altair),
+      beaconConfig.boundary2ForkDigest({fork: ForkName.altair}),
       // <encoding-dependent-header> | <encoded-payload>
       ...sszSnappySignedBeaconBlockAltair.chunks,
     ],
