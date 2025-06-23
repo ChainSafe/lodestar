@@ -195,8 +195,10 @@ export class BeaconChain implements IBeaconChain {
   }
 
   set earliestSlotAvailable(slot: Slot) {
-    this._earliestSlotAvailable = slot;
-    this.emitter.emit(ChainEvent.updateStatus);
+    if (this._earliestSlotAvailable !== slot) {
+      this._earliestSlotAvailable = slot;
+      this.emitter.emit(ChainEvent.updateStatus);
+    }
   }
 
   constructor(
