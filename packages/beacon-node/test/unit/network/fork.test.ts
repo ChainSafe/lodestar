@@ -1,4 +1,4 @@
-import {BeaconConfig, BlobSchedule, ForkInfo} from "@lodestar/config";
+import {BeaconConfig, ForkInfo} from "@lodestar/config";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {describe, expect, it} from "vitest";
 import {getActiveSubscribeBoundaries, getCurrentAndNextFork} from "../../../src/network/forks.js";

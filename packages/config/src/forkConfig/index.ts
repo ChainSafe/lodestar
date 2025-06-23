@@ -154,14 +154,21 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     getMaxBlobsPerBlock(epoch: Epoch): number {
       const fork = this.getForkInfoAtEpoch(epoch).name;
 
-      if (fork === ForkName.deneb) {
-        return config.MAX_BLOBS_PER_BLOCK;
+      switch (fork) {
+        case ForkName.electra:
+          return config.MAX_BLOBS_PER_BLOCK_ELECTRA;
+        case ForkName.deneb:
+          return config.MAX_BLOBS_PER_BLOCK;
       }
 
       return this.getBlobParameters(epoch).MAX_BLOBS_PER_BLOCK;
     },
     getBlobParameters(epoch: Epoch): BlobScheduleEntry {
-      // Sort by epoch in descending order to find the latest applicable value
+      if (epoch < config.FULU_FORK_EPOCH) {
+        throw Error(`getBlobParameters is not available pre-fulu epoch=${epoch}`);
+      }
+
+      // Find the latest applicable value from blob schedule
       for (const entry of blobScheduleDescendingEpochOrder) {
         if (epoch >= entry.EPOCH) {
           return entry;

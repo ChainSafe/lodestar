@@ -219,8 +219,9 @@ export class NetworkCore implements INetworkCore {
     );
 
     // Network spec decides version changes based on clock fork, not head fork
+    const boundary = getSubscribeBoundary(config, clock.currentEpoch);
     // Register only ReqResp protocols relevant to clock's epoch
-    reqResp.registerProtocolsAtBoundary(getSubscribeBoundary(config, clock.currentEpoch));
+    reqResp.registerProtocolsAtBoundary(boundary);
 
     // Bind discv5's ENR to local metadata
     // biome-ignore lint/complexity/useLiteralKeys: `discovery` is a private attribute
