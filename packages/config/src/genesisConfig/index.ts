@@ -3,7 +3,7 @@ import {DomainType, ForkDigest, Root, Slot, Version, phase0, ssz} from "@lodesta
 import {strip0xPrefix, toHex} from "@lodestar/utils";
 import {ChainForkConfig} from "../beaconConfig.js";
 import {CachedGenesis, ForkDigestHex} from "./types.js";
-export type {ForkDigestContext} from "./types.js";
+export type {ForkDigestContext, SubscribeBoundary} from "./types.js";
 
 export function createCachedGenesis(chainForkConfig: ChainForkConfig, genesisValidatorsRoot: Root): CachedGenesis {
   const domainCache = new Map<ForkName, Map<DomainType, Uint8Array>>();

@@ -1,11 +1,10 @@
-import {BeaconConfig} from "@lodestar/config";
+import {BeaconConfig, SubscribeBoundary} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Epoch, Slot, SubnetID, ssz} from "@lodestar/types";
 import {Logger, MapDef} from "@lodestar/utils";
 import {ClockEvent, IClock} from "../../util/clock.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
-import {SubscribeBoundary} from "../core/types.js";
 import {getActiveSubscribeBoundaries} from "../forks.js";
 import {GossipType} from "../gossip/index.js";
 import {GOSSIP_D_LOW} from "../gossip/scoringParameters.js";

@@ -1,12 +1,10 @@
 import {PeerId} from "@libp2p/interface";
-import {BeaconConfig, BlobScheduleEntry, ForkDigestContext} from "@lodestar/config";
-import {ForkName, ForkPostFulu, ForkPreFulu} from "@lodestar/params";
+import {BeaconConfig, ForkDigestContext, SubscribeBoundary} from "@lodestar/config";
+import {ForkName} from "@lodestar/params";
 import {LodestarError} from "@lodestar/utils";
 import {RateLimiterQuota} from "./rate_limiter/rateLimiterGRCA.js";
 
 export const protocolPrefix = "/eth2/beacon_chain/req";
-
-export type SubscribeBoundary = {fork: ForkPreFulu} | ({fork: ForkPostFulu} & BlobScheduleEntry);
 
 /**
  * Available request/response encoding strategies:

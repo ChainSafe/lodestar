@@ -3,7 +3,7 @@ import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/dist/src/score/pee
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {Connection, PrivateKey} from "@libp2p/interface";
 import {routes} from "@lodestar/api";
-import {BeaconConfig} from "@lodestar/config";
+import {BeaconConfig, SubscribeBoundary} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {ResponseIncoming} from "@lodestar/reqresp";
 import {Epoch, phase0, ssz, sszTypesFor} from "@lodestar/types";
@@ -33,7 +33,7 @@ import {SyncnetsService} from "../subnets/syncnetsService.js";
 import {getSubscribeBoundary} from "../subscribeBoundary.js";
 import {getConnectionsMap} from "../util.js";
 import {NetworkCoreMetrics, createNetworkCoreMetrics} from "./metrics.js";
-import {INetworkCore, MultiaddrStr, SubscribeBoundary} from "./types.js";
+import {INetworkCore, MultiaddrStr} from "./types.js";
 
 type Mods = {
   libp2p: Libp2p;

@@ -1,7 +1,6 @@
-import {BlobScheduleEntry, ForkConfig, ForkInfo} from "@lodestar/config";
+import {BlobScheduleEntry, ForkConfig, ForkInfo, SubscribeBoundary} from "@lodestar/config";
 import {isForkPostFulu} from "@lodestar/params";
 import {Epoch} from "@lodestar/types";
-import {SubscribeBoundary} from "./core/types.js";
 
 export function getSubscribeBoundary(config: ForkConfig, epoch: Epoch): SubscribeBoundary {
   const fork = config.getForkInfoAtEpoch(epoch).name;

@@ -1,7 +1,6 @@
-import {ChainForkConfig, ForkInfo} from "@lodestar/config";
+import {ChainForkConfig, ForkInfo, SubscribeBoundary} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {Epoch} from "@lodestar/types";
-import {SubscribeBoundary} from "./core/types.js";
 import {getSubscribeBoundary, isBlobScheduleSubscribeBoundary} from "./subscribeBoundary.js";
 
 /**
