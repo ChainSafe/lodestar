@@ -1,3 +1,5 @@
+import {config} from "@lodestar/config/default.js";
+import {isForkPostFulu} from "@lodestar/params";
 import {pipe} from "it-pipe";
 import {responseEncodeError, responseEncodeSuccess} from "../../src/encoders/responseEncode.js";
 import {RespStatus} from "../../src/interface.js";
@@ -9,8 +11,16 @@ export async function* responseEncode(responseChunks: ResponseChunk[], protocol:
   for (const chunk of responseChunks) {
     if (chunk.status === RespStatus.SUCCESS) {
       const payload = chunk.payload;
+      const fork = payload.fork;
       yield* pipe(
-        arrToSource([{...payload, boundary: {fork: payload.fork}}]),
+        arrToSource([
+          {
+            ...payload,
+            boundary: isForkPostFulu(fork)
+              ? {fork, EPOCH: config.ELECTRA_FORK_EPOCH, MAX_BLOBS_PER_BLOCK: config.MAX_BLOBS_PER_BLOCK_ELECTRA}
+              : {fork},
+          },
+        ]),
         responseEncodeSuccess(protocol, {onChunk: () => {}})
       );
     } else {
