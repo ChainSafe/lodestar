@@ -229,12 +229,13 @@ export class ReqRespBeaconNode extends ReqResp {
   private getProtocolsAtFork(fork: ForkName): [ProtocolNoHandler, ProtocolHandler][] {
     const protocolsAtFork: [ProtocolNoHandler, ProtocolHandler][] = [
       [protocols.Ping(fork, this.config), this.onPing.bind(this)],
-      [protocols.StatusV2(fork, this.config), this.onStatus.bind(this)],
       [protocols.Goodbye(fork, this.config), this.onGoodbye.bind(this)],
       // Support V3 methods as soon as implemented (for fulu)
       // Follows pattern for altair:
       // Ref https://github.com/ethereum/consensus-specs/blob/v1.2.0/specs/altair/p2p-interface.md#transitioning-from-v1-to-v2
       [protocols.MetadataV3(fork, this.config), this.onMetadata.bind(this)],
+      // Similar reasoning to the above
+      [protocols.StatusV2(fork, this.config), this.onStatus.bind(this)],
       [protocols.BeaconBlocksByRangeV2(fork, this.config), this.getHandler(ReqRespMethod.BeaconBlocksByRange)],
       [protocols.BeaconBlocksByRootV2(fork, this.config), this.getHandler(ReqRespMethod.BeaconBlocksByRoot)],
     ];
