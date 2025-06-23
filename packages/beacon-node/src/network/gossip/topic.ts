@@ -1,4 +1,4 @@
-import {BeaconConfig, ChainConfig} from "@lodestar/config";
+import {BeaconConfig, ChainConfig, ForkDigestContext} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
   ForkName,
@@ -10,6 +10,7 @@ import {
 import {Attestation, SingleAttestation, ssz, sszTypesFor} from "@lodestar/types";
 
 import {GossipAction, GossipActionError, GossipErrorCode} from "../../chain/errors/gossipValidation.js";
+import {getSubscribeBoundary} from "../subscribeBoundary.js";
 import {SubscribeBoundary} from "../core/index.js";
 import {DEFAULT_ENCODING} from "./constants.js";
 import {GossipEncoding, GossipTopic, GossipTopicTypeMap, GossipType, SSZTypeOfGossipTopic} from "./interface.js";
@@ -178,8 +179,9 @@ export function parseGossipTopic(forkDigestContext: BeaconConfig, topicStr: stri
 
     const epoch = forkDigestContext.forkDigest2Epoch(forkDigestHexNoPrefix);
     const fork = forkDigestContext.forkDigest2ForkName(forkDigestHexNoPrefix);
-    // If epoch is null, that means it is pre-fulu. We set epoch to 0 in this case to get the default blob parameters
-    const boundary: SubscribeBoundary = {...forkDigestContext.getBlobParameters(epoch ?? 0), fork};
+    // TODO: This epoch is just an approximate. Will update in the next PR
+    const epoch = forkDigestContext.forks[fork].epoch;
+    const boundary = getSubscribeBoundary(forkDigestContext, epoch);
     const encoding = parseEncodingStr(encodingStr);
 
     // Inline-d the parseGossipTopicType() function since spreading the resulting object x4 the time to parse a topicStr

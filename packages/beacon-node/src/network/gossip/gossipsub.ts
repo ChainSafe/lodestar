@@ -342,22 +342,29 @@ function getMetricsTopicStrToLabel(config: BeaconConfig, opts: {disableLightClie
   const metricsTopicStrToLabel = new Map<TopicStr, TopicLabel>();
   const defaultBlobSchedule = config.getBlobParameters(0); // Default blob schedule used for pre-fulu
 
+  // Hard forks
   for (const {name: fork} of config.forksAscendingEpochOrder) {
-    if (isForkPostFulu(fork)) {
-      break;
-    }
     const topics = getCoreTopicsAtFork(config, fork, {
       subscribeAllSubnets: true,
       disableLightClientServer: opts.disableLightClientServer,
     });
-    for (const topic of topics) {
-      metricsTopicStrToLabel.set(
-        stringifyGossipTopic(config, {...topic, boundary: {...defaultBlobSchedule, fork}}),
-        topic.type
-      );
+    if (!isForkPostFulu(fork)) {
+      for (const topic of topics) {
+        metricsTopicStrToLabel.set(stringifyGossipTopic(config, {...topic, boundary: {fork}}), topic.type);
+      }
+    } else {
+      // Post fulu fork activations require blob schedule to calculate gossip topic
+      const blobSchedule = config.getBlobParameters(config.forks[fork].epoch);
+      for (const topic of topics) {
+        metricsTopicStrToLabel.set(
+          stringifyGossipTopic(config, {...topic, boundary: {...blobSchedule, fork}}),
+          topic.type
+        );
+      }
     }
   }
 
+  // BPO forks
   for (const entry of config.BLOB_SCHEDULE) {
     const fork = config.getForkInfoAtEpoch(entry.EPOCH).name;
     const topics = getCoreTopicsAtFork(config, fork, {

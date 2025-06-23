@@ -1,7 +1,8 @@
-import {BlobScheduleEntry, ChainForkConfig, ForkInfo} from "@lodestar/config";
+import {ChainForkConfig, ForkInfo} from "@lodestar/config";
 import {ForkName, isForkPostFulu} from "@lodestar/params";
 import {Epoch} from "@lodestar/types";
 import {SubscribeBoundary} from "./core/types.js";
+import {isBlobScheduleSubscribeBoundary} from "./subscribeBoundary.js";
 
 /**
  * Subscribe topics to the new fork N epochs before the fork. Remove all subscriptions N epochs after the fork
@@ -78,28 +79,45 @@ function getActiveBlobSchedule(config: ChainForkConfig, epoch: Epoch): BlobSched
 }
 
 export function getActiveSubscribeBoundaries(config: ChainForkConfig, epoch: Epoch): SubscribeBoundary[] {
-  const activeForks = getActiveForks(config, epoch);
-  const activeBlobSchedule = getActiveBlobSchedule(config, epoch);
-  const defaultBlobSchedule = config.getBlobParameters(0); // blob schedule used when we are pre-fulu
+  const activeBoundaries: SubscribeBoundary[] = [];
+  const forksBlobSchedule = config.forksBlobScheduleAscendingEpochOrder;
 
-  // If we have completely entered fulu, use activeBlobSchedule
-  if (epoch - FORK_EPOCH_LOOKAHEAD >= config.FULU_FORK_EPOCH) {
-    return activeBlobSchedule.map((entry) => ({...entry, fork: config.getForkInfoAtEpoch(entry.EPOCH).name}));
+  for (let i = 0; i < forksBlobSchedule.length; i++) {
+    const currForkBlobSchedule = forksBlobSchedule[i];
+    const nextForkBlobSchedule = forksBlobSchedule[i + 1];
+
+    const currForkBlobScheduleEpoch = isBlobScheduleSubscribeBoundary(currForkBlobSchedule)
+      ? currForkBlobSchedule.EPOCH
+      : currForkBlobSchedule.epoch;
+    const nextForkBlobScheduleEpoch =
+      nextForkBlobSchedule === undefined
+        ? Infinity
+        : isBlobScheduleSubscribeBoundary(nextForkBlobSchedule)
+          ? nextForkBlobSchedule.EPOCH
+          : nextForkBlobSchedule.epoch;
+
+    // Edge case: If multiple forks start at the same epoch, only consider the latest one
+    if (currForkBlobScheduleEpoch === nextForkBlobScheduleEpoch) {
+      continue;
+    }
+
+    if (
+      epoch >= currForkBlobScheduleEpoch - FORK_EPOCH_LOOKAHEAD &&
+      epoch <= nextForkBlobScheduleEpoch + FORK_EPOCH_LOOKAHEAD
+    ) {
+      if (isBlobScheduleSubscribeBoundary(currForkBlobSchedule)) {
+        const fork = config.getForkInfoAtEpoch(epoch).name;
+        activeBoundaries.push({fork, ...currForkBlobSchedule});
+      } else {
+        const fork = currForkBlobSchedule.name;
+        activeBoundaries.push(
+          isForkPostFulu(fork) ? {fork, ...config.getBlobParameters(currForkBlobScheduleEpoch)} : {fork}
+        );
+      }
+    }
   }
 
-  // If we have not entered at least the first blob schedule, use activeForks
-  if (epoch + FORK_EPOCH_LOOKAHEAD < config.FULU_FORK_EPOCH) {
-    return activeForks.map((fork) => ({...defaultBlobSchedule, fork}));
-  }
-
-  // If we are partially entering fulu, usually we use both
-  // TODO: There is an unhandled corner case where first blob schedule collides with fork boundary
-  // in that case, we will subscribe to wrong topics in additional to the correct topics for
-  // maximum of FORK_EPOCH_LOOKAHEAD * 2 epochs.
-  return [
-    ...activeForks.map((fork) => ({...defaultBlobSchedule, fork})),
-    ...activeBlobSchedule.map((entry) => ({...entry, fork: config.getForkInfoAtEpoch(entry.EPOCH).name})),
-  ];
+  return activeBoundaries;
 }
 
 /**

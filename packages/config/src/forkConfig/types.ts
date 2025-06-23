@@ -19,6 +19,7 @@ export type ForkConfig = {
   forks: {[K in ForkName]: ForkInfo};
   forksAscendingEpochOrder: ForkInfo[];
   forksDescendingEpochOrder: ForkInfo[];
+  forksBlobScheduleAscendingEpochOrder: (ForkInfo | BlobScheduleEntry)[];
 
   /** Get the hard-fork info for the active fork at `slot` */
   getForkInfo(slot: Slot): ForkInfo;
@@ -42,6 +43,8 @@ export type ForkConfig = {
   getPostDenebForkTypes(slot: Slot): SSZTypesFor<ForkPostDeneb>;
   /** Get max blobs per block at a given epoch */
   getMaxBlobsPerBlock(epoch: Epoch): number;
+  /** Get blob schedule entry at a given epoch */
+  getBlobParameters(epoch: Epoch): BlobScheduleEntry;
   /** Get max request blob sidecars by hard-fork */
   getMaxRequestBlobSidecars(fork: ForkName): number;
   /** Get blob schedule by epoch */

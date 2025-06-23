@@ -87,10 +87,21 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
 
   const blobScheduleDescendingEpochOrder = [...config.BLOB_SCHEDULE].sort((a, b) => b.EPOCH - a.EPOCH);
 
+  const forkBlobScheduleByEpoch = new Map<Epoch, ForkInfo | BlobScheduleEntry>();
+  for (const fork of forksAscendingEpochOrder) {
+    forkBlobScheduleByEpoch.set(fork.epoch, fork);
+  }
+  for (const entry of blobScheduleDescendingEpochOrder) {
+    forkBlobScheduleByEpoch.set(entry.EPOCH, entry);
+  }
+
   return {
     forks,
     forksAscendingEpochOrder,
     forksDescendingEpochOrder,
+    forksBlobScheduleAscendingEpochOrder: [...forkBlobScheduleByEpoch.entries()]
+      .sort(([k1], [k2]) => k1 - k2)
+      .map(([, v]) => v),
 
     // Fork convenience methods
     getForkInfo(slot: Slot): ForkInfo {
@@ -149,12 +160,12 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
 
       return this.getBlobParameters(epoch).MAX_BLOBS_PER_BLOCK;
     },
-    getMaxRequestBlobSidecars(fork: ForkName): number {
-      return isForkPostElectra(fork) ? config.MAX_REQUEST_BLOB_SIDECARS_ELECTRA : config.MAX_REQUEST_BLOB_SIDECARS;
-    },
-    // Only call this post-fulu
     getBlobParameters(epoch: Epoch): BlobScheduleEntry {
-      // Sort by epoch in descending order to find the latest applicable value
+      if (epoch < config.FULU_FORK_EPOCH) {
+        throw Error(`getBlobParameters is not available pre-fulu epoch=${epoch}`);
+      }
+
+      // Find the latest applicable value from blob schedule
       for (const entry of blobScheduleDescendingEpochOrder) {
         if (epoch >= entry.EPOCH) {
           return entry;
@@ -162,6 +173,9 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
       }
 
       return {EPOCH: config.ELECTRA_FORK_EPOCH, MAX_BLOBS_PER_BLOCK: config.MAX_BLOBS_PER_BLOCK_ELECTRA};
+    },
+    getMaxRequestBlobSidecars(fork: ForkName): number {
+      return isForkPostElectra(fork) ? config.MAX_REQUEST_BLOB_SIDECARS_ELECTRA : config.MAX_REQUEST_BLOB_SIDECARS;
     },
   };
 }

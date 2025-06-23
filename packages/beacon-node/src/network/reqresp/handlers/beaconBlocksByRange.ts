@@ -6,6 +6,7 @@ import {deneb, phase0} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
+import {getSubscribeBoundary} from "../../subscribeBoundary.js";
 
 // TODO: Unit test
 
@@ -28,7 +29,7 @@ export async function* onBeaconBlocksByRange(
       const slot = finalized.decodeKey(key);
       yield {
         data: value,
-        boundary: {fork: chain.config.getForkName(finalized.decodeKey(key)), ...chain.config.getBlobParameters(computeEpochAtSlot(slot)) },
+        boundary: getSubscribeBoundary(chain.config, computeEpochAtSlot(finalized.decodeKey(key))),
       };
     }
   }
@@ -59,7 +60,7 @@ export async function* onBeaconBlocksByRange(
 
         yield {
           data: blockBytes,
-          boundary: {fork: chain.config.getForkName(block.slot), ...chain.config.getBlobParameters(computeEpochAtSlot(block.slot))},
+          boundary: getSubscribeBoundary(chain.config, computeEpochAtSlot(block.slot)),
         };
       }
 
