@@ -37,6 +37,8 @@ export class ChainPeersBalancer {
     const failedPeers = new Set(batch.getFailedPeers());
     const sortedBestPeers = sortBy(
       this.peers.filter(({earliestAvailableSlot, custodyGroups}) => {
+        // TODO(fulu): this is a bug and is prioritizing peers that do not announce
+        //     an earliestAvailableSlot. Need to refactor this logic
         const earliestSlot = earliestAvailableSlot ?? 0;
         const peerColumns = custodyGroups ?? [];
 
