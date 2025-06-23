@@ -11,9 +11,11 @@ import {
   isForkPostBellatrix,
   isForkPostDeneb,
   isForkPostElectra,
+  isForkPostFulu,
 } from "@lodestar/params";
 import {Epoch, SSZTypesFor, Slot, Version, sszTypesFor} from "@lodestar/types";
 import {BlobScheduleEntry, ChainConfig} from "../chainConfig/index.js";
+import {SubscribeBoundary} from "../genesisConfig/types.js";
 import {ForkConfig, ForkInfo} from "./types.js";
 
 export * from "./types.js";
@@ -87,19 +89,19 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
 
   const blobScheduleDescendingEpochOrder = [...config.BLOB_SCHEDULE].sort((a, b) => b.EPOCH - a.EPOCH);
 
-  const forkBlobScheduleByEpoch = new Map<Epoch, ForkInfo | BlobScheduleEntry>();
+  const forkOrBlobScheduleByEpoch = new Map<Epoch, ForkInfo | BlobScheduleEntry>();
   for (const fork of forksAscendingEpochOrder) {
-    forkBlobScheduleByEpoch.set(fork.epoch, fork);
+    forkOrBlobScheduleByEpoch.set(fork.epoch, fork);
   }
   for (const entry of blobScheduleDescendingEpochOrder) {
-    forkBlobScheduleByEpoch.set(entry.EPOCH, entry);
+    forkOrBlobScheduleByEpoch.set(entry.EPOCH, entry);
   }
 
   return {
     forks,
     forksAscendingEpochOrder,
     forksDescendingEpochOrder,
-    forksBlobScheduleAscendingEpochOrder: [...forkBlobScheduleByEpoch.entries()]
+    forkOrBlobScheduleAscendingEpochOrder: [...forkOrBlobScheduleByEpoch.entries()]
       .sort(([k1], [k2]) => k1 - k2)
       .map(([, v]) => v),
 
@@ -173,6 +175,16 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
       }
 
       return {EPOCH: config.ELECTRA_FORK_EPOCH, MAX_BLOBS_PER_BLOCK: config.MAX_BLOBS_PER_BLOCK_ELECTRA};
+    },
+    getSubscribeBoundary(epoch: Epoch): SubscribeBoundary {
+      const fork = this.getForkInfoAtEpoch(epoch).name;
+
+      if (isForkPostFulu(fork)) {
+        const blobSchedule = this.getBlobParameters(epoch);
+        return {...blobSchedule, fork};
+      }
+
+      return {fork};
     },
     getMaxRequestBlobSidecars(fork: ForkName): number {
       return isForkPostElectra(fork) ? config.MAX_REQUEST_BLOB_SIDECARS_ELECTRA : config.MAX_REQUEST_BLOB_SIDECARS;

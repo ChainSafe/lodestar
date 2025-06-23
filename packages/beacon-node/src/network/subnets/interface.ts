@@ -1,5 +1,5 @@
+import {SubscribeBoundary} from "@lodestar/config";
 import {Bytes32, Slot, SubnetID, ValidatorIndex} from "@lodestar/types";
-import {SubscribeBoundary} from "../core/types.js";
 import {GossipTopic} from "../gossip/interface.js";
 import {RequestedSubnet} from "../peers/utils/index.js";
 

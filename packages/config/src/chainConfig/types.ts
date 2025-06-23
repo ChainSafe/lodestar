@@ -185,7 +185,7 @@ export type BlobScheduleEntry = {
 
 export type BlobSchedule = BlobScheduleEntry[];
 
-export function isBlobSchedule(value: unknown): value is BlobSchedule {
+export function isBlobScheduleConfig(value: unknown): value is BlobSchedule {
   return (
     Array.isArray(value) &&
     value.every(

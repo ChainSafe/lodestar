@@ -84,7 +84,7 @@ function getForkConfig({
     forks,
     forksAscendingEpochOrder,
     forksDescendingEpochOrder,
-    forksBlobScheduleAscendingEpochOrder: forksAscendingEpochOrder,
+    forkOrBlobScheduleAscendingEpochOrder: forksAscendingEpochOrder,
   } as BeaconConfig;
 }
 

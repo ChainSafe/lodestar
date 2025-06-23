@@ -2,7 +2,6 @@ import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {IBeaconChain} from "../../../chain/index.js";
 import {assertLightClientServer} from "../../../node/utils/lightclient.js";
-import {getSubscribeBoundary} from "../../subscribeBoundary.js";
 import {ReqRespMethod, responseSszTypeByMethod} from "../types.js";
 
 export async function* onLightClientFinalityUpdate(chain: IBeaconChain): AsyncIterable<ResponseOutgoing> {
@@ -17,6 +16,6 @@ export async function* onLightClientFinalityUpdate(chain: IBeaconChain): AsyncIt
   const type = responseSszTypeByMethod[ReqRespMethod.LightClientFinalityUpdate](fork, 0);
   yield {
     data: type.serialize(update),
-    boundary: getSubscribeBoundary(chain.config, computeEpochAtSlot(update.signatureSlot)),
+    boundary: chain.config.getSubscribeBoundary(computeEpochAtSlot(update.signatureSlot)),
   };
 }

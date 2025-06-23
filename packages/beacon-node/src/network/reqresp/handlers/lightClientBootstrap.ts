@@ -9,7 +9,6 @@ import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Root} from "@lodestar/types";
 import {IBeaconChain} from "../../../chain/index.js";
 import {assertLightClientServer} from "../../../node/utils/lightclient.js";
-import {getSubscribeBoundary} from "../../subscribeBoundary.js";
 import {ReqRespMethod, responseSszTypeByMethod} from "../types.js";
 
 export async function* onLightClientBootstrap(requestBody: Root, chain: IBeaconChain): AsyncIterable<ResponseOutgoing> {
@@ -21,7 +20,7 @@ export async function* onLightClientBootstrap(requestBody: Root, chain: IBeaconC
     const type = responseSszTypeByMethod[ReqRespMethod.LightClientBootstrap](fork, 0);
     yield {
       data: type.serialize(bootstrap),
-      boundary: getSubscribeBoundary(chain.config, computeEpochAtSlot(bootstrap.header.beacon.slot)),
+      boundary: chain.config.getSubscribeBoundary(computeEpochAtSlot(bootstrap.header.beacon.slot)),
     };
   } catch (e) {
     if ((e as LightClientServerError).type?.code === LightClientServerErrorCode.RESOURCE_UNAVAILABLE) {
