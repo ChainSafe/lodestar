@@ -1,6 +1,6 @@
 import {ForkName, ForkPostFulu, ForkPreFulu} from "@lodestar/params";
 import {DomainType, ForkDigest, Root, Slot} from "@lodestar/types";
-import { BlobScheduleEntry } from "../chainConfig";
+import {BlobScheduleEntry} from "../chainConfig/types.js";
 
 export type ForkDigestHex = string;
 // Boundary of network subscription. We subscribe/unsubscribe during fork and blob schedule transitions

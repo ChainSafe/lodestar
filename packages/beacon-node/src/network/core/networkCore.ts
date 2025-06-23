@@ -30,7 +30,6 @@ import {LocalStatusCache} from "../statusCache.js";
 import {AttnetsService} from "../subnets/attnetsService.js";
 import {CommitteeSubscription, IAttnetsService} from "../subnets/interface.js";
 import {SyncnetsService} from "../subnets/syncnetsService.js";
-import {getSubscribeBoundary} from "../subscribeBoundary.js";
 import {getConnectionsMap} from "../util.js";
 import {NetworkCoreMetrics, createNetworkCoreMetrics} from "./metrics.js";
 import {INetworkCore, MultiaddrStr} from "./types.js";
@@ -219,7 +218,7 @@ export class NetworkCore implements INetworkCore {
     );
 
     // Network spec decides version changes based on clock fork, not head fork
-    const boundary = getSubscribeBoundary(config, clock.currentEpoch);
+    const boundary = config.getSubscribeBoundary(clock.currentEpoch);
     // Register only ReqResp protocols relevant to clock's epoch
     reqResp.registerProtocolsAtBoundary(boundary);
 

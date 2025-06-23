@@ -5,7 +5,6 @@ import {toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {getSlotFromSignedBeaconBlockSerialized} from "../../../util/sszBytes.js";
-import {getSubscribeBoundary} from "../../subscribeBoundary.js";
 
 export async function* onBeaconBlocksByRoot(
   requestBody: phase0.BeaconBlocksByRootRequest,
@@ -42,7 +41,7 @@ export async function* onBeaconBlocksByRoot(
 
       yield {
         data: blockBytes,
-        boundary: getSubscribeBoundary(chain.config, computeEpochAtSlot(slot)),
+        boundary: chain.config.getSubscribeBoundary(computeEpochAtSlot(slot)),
       };
     }
   }

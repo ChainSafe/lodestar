@@ -11,9 +11,11 @@ import {
   isForkPostBellatrix,
   isForkPostDeneb,
   isForkPostElectra,
+  isForkPostFulu,
 } from "@lodestar/params";
 import {Epoch, SSZTypesFor, Slot, Version, sszTypesFor} from "@lodestar/types";
 import {BlobScheduleEntry, ChainConfig} from "../chainConfig/index.js";
+import {SubscribeBoundary} from "../genesisConfig/types.js";
 import {ForkConfig, ForkInfo} from "./types.js";
 
 export * from "./types.js";
@@ -176,6 +178,16 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
       }
 
       return {EPOCH: config.ELECTRA_FORK_EPOCH, MAX_BLOBS_PER_BLOCK: config.MAX_BLOBS_PER_BLOCK_ELECTRA};
+    },
+    getSubscribeBoundary(epoch: Epoch): SubscribeBoundary {
+      const fork = this.getForkInfoAtEpoch(epoch).name;
+
+      if (isForkPostFulu(fork)) {
+        const blobSchedule = this.getBlobParameters(epoch);
+        return {...blobSchedule, fork};
+      }
+
+      return {fork};
     },
     getMaxRequestBlobSidecars(fork: ForkName): number {
       return isForkPostElectra(fork) ? config.MAX_REQUEST_BLOB_SIDECARS_ELECTRA : config.MAX_REQUEST_BLOB_SIDECARS;

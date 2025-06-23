@@ -1,4 +1,4 @@
-import {BlobSchedule, ChainConfig, ChainForkConfig, createChainForkConfig, SubscribeBoundary} from "@lodestar/config";
+import {BlobSchedule, ChainConfig, ChainForkConfig, SubscribeBoundary, createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
 import {describe, expect, it} from "vitest";

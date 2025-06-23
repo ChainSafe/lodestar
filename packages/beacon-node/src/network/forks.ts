@@ -1,7 +1,6 @@
-import {ChainForkConfig, ForkInfo, SubscribeBoundary} from "@lodestar/config";
+import {ChainForkConfig, ForkInfo, SubscribeBoundary, isBlobSchedule} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {Epoch} from "@lodestar/types";
-import {getSubscribeBoundary, isBlobScheduleSubscribeBoundary} from "./subscribeBoundary.js";
 
 /**
  * Subscribe topics to the new fork N epochs before the fork. Remove all subscriptions N epochs after the fork
@@ -63,13 +62,13 @@ export function getActiveSubscribeBoundaries(config: ChainForkConfig, epoch: Epo
     const currForkOrBlobSchedule = forkOrBlobScheduleList[i];
     const nextForkOrBlobSchedule = forkOrBlobScheduleList[i + 1];
 
-    const currEpoch = isBlobScheduleSubscribeBoundary(currForkOrBlobSchedule)
+    const currEpoch = isBlobSchedule(currForkOrBlobSchedule)
       ? currForkOrBlobSchedule.EPOCH
       : currForkOrBlobSchedule.epoch;
     const nextEpoch =
       nextForkOrBlobSchedule === undefined
         ? Infinity
-        : isBlobScheduleSubscribeBoundary(nextForkOrBlobSchedule)
+        : isBlobSchedule(nextForkOrBlobSchedule)
           ? nextForkOrBlobSchedule.EPOCH
           : nextForkOrBlobSchedule.epoch;
 
@@ -79,7 +78,7 @@ export function getActiveSubscribeBoundaries(config: ChainForkConfig, epoch: Epo
     }
 
     if (epoch >= currEpoch - FORK_EPOCH_LOOKAHEAD && epoch <= nextEpoch + FORK_EPOCH_LOOKAHEAD) {
-      activeBoundaries.push(getSubscribeBoundary(config, currEpoch));
+      activeBoundaries.push(config.getSubscribeBoundary(currEpoch));
     }
   }
 

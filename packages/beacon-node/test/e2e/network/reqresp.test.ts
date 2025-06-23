@@ -8,7 +8,6 @@ import {sleep} from "@lodestar/utils";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {Network, ReqRespBeaconNodeOpts} from "../../../src/network/index.js";
 import {GetReqRespHandlerFn, ReqRespMethod} from "../../../src/network/reqresp/types.js";
-import {getSubscribeBoundary} from "../../../src/network/subscribeBoundary.js";
 import {PeerIdStr} from "../../../src/util/peerId.js";
 import {arrToSource} from "../../unit/network/reqresp/utils.js";
 import {expectRejectedWithLodestarError} from "../../utils/errors.js";
@@ -334,6 +333,6 @@ function getEmptyEncodedPayloadSignedBeaconBlock(config: ChainForkConfig): Respo
 function wrapBlockAsEncodedPayload(config: ChainForkConfig, block: SignedBeaconBlock): ResponseOutgoing {
   return {
     data: config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block),
-    boundary: getSubscribeBoundary(config, computeEpochAtSlot(block.message.slot)),
+    boundary: config.getSubscribeBoundary(computeEpochAtSlot(block.message.slot)),
   };
 }
