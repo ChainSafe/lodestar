@@ -177,7 +177,7 @@ function toHexStringNoPrefix(hex: string | Uint8Array): string {
   return strip0xPrefix(typeof hex === "string" ? hex : toHex(hex));
 }
 
-function computeForkDigest(
+export function computeForkDigest(
   currentFork: ForkInfo,
   genesisValidatorsRoot: Root,
   blobSchedule?: BlobScheduleEntry
