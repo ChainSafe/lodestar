@@ -1,5 +1,5 @@
 import {PeerId} from "@libp2p/interface";
-import {config} from "@lodestar/config/default.js";
+import {config} from "@lodestar/config/default";
 import {getEmptyLogger} from "@lodestar/logger/empty";
 import {isForkPostFulu} from "@lodestar/params";
 import {LodestarError, fromHex} from "@lodestar/utils";
