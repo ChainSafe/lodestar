@@ -1,5 +1,5 @@
 import {BlockInputSource} from "../../chain/blocks/blockInput/index.js";
-import {BlobsSource, BlockSource} from "../../chain/blocks/types.js";
+import {BlobsSource, BlockSource, DataColumnsSource} from "../../chain/blocks/types.js";
 import {JobQueueItemType} from "../../chain/bls/index.js";
 import {AttestationErrorCode, BlockErrorCode} from "../../chain/errors/index.js";
 import {
@@ -718,25 +718,32 @@ export function createLodestarMetrics(
       }),
     },
     recoverDataColumnSidecars: {
-      secFromSlot: register.histogram({
-        name: "lodestar_recover_data_column_sidecar_recover_timer_from_slot",
+      elapsedTimeTillRecovered: register.histogram({
+        name: "lodestar_data_column_sidecar_elapsed_time_till_recovered",
         help: "Time elapsed between block slot time and the time data column sidecar recovered",
         buckets: [2, 4, 6, 8, 10, 12],
       }),
-      recoverTime: register.histogram({
-        name: "lodestar_recover_data_column_sidecar_recover_time_seconds",
-        help: "Time elapsed to recover data column sidecar",
-        // this data comes from 20 blobs in `fusaka-devnet-1`, need to reevaluate in the future
-        buckets: [0.4, 0.6, 0.8, 1.0, 1.2],
-      }),
       partialColumns: register.gauge({
-        name: "lodestar_recover_data_column_sidecar_partial_columns_total",
-        help: "Total number of partial columns being recovered",
+        name: "lodestar_recover_data_column_sidecar_partial_columns_cached_total",
+        help: "Total number of partial columns cached before recovery",
       }),
       result: register.gauge<{result: RecoverResult}>({
-        name: "lodestar_recover_data_column_sidecar_recover_result_total",
+        name: "lodestar_data_column_sidecar_recover_result_total",
         help: "Total count of recover result of data column sidecars",
         labelNames: ["result"],
+      }),
+    },
+    dataColumns: {
+      bySource: register.gauge<{source: DataColumnsSource}>({
+        name: "lodestar_data_columns_by_source_total",
+        help: "Total number of received data columns by source",
+        labelNames: ["source"],
+      }),
+      elapsedTimeTillReceived: register.histogram<{source: DataColumnsSource}>({
+        name: "lodestar_data_column_elapsed_time_till_received",
+        help: "Time elapsed between block slot time and the time data column received",
+        labelNames: ["source"],
+        buckets: [0.5, 1, 2, 4, 6, 12],
       }),
     },
     importBlock: {

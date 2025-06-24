@@ -352,7 +352,8 @@ export async function recoverDataColumnSidecars(
     return RecoverResult.NotAttemptedLessThanHalf;
   }
 
-  metrics?.recoverDataColumnSidecars.partialColumns.set(dataColumnCache.size);
+  const partialColumns = dataColumnCache.size;
+  metrics?.recoverDataColumnSidecars.partialColumns.set(partialColumns);
   const partialSidecars = new Map<number, fulu.DataColumnSidecar>();
   for (const [columnIndex, {dataColumn}] of dataColumnCache.entries()) {
     // the more columns we put, the slower the recover
@@ -362,7 +363,7 @@ export async function recoverDataColumnSidecars(
     partialSidecars.set(columnIndex, dataColumn);
   }
 
-  const timer = metrics?.recoverDataColumnSidecars.recoverTime.startTimer();
+  const timer = metrics?.peerDas.dataColumnsReconstructionTime.startTimer();
   // if this function throws, we catch at the consumer side
   const fullSidecars = await recover(partialSidecars);
   timer?.();
@@ -377,8 +378,8 @@ export async function recoverDataColumnSidecars(
   }
 
   const slot = firstDataColumn.signedBlockHeader.message.slot;
-  const secFromSlot = clock.secFromSlot(slot);
-  metrics?.recoverDataColumnSidecars.secFromSlot.observe(secFromSlot);
+  const delaySec = clock.secFromSlot(slot);
+  metrics?.recoverDataColumnSidecars.elapsedTimeTillRecovered.observe(delaySec);
 
   if (dataColumnCache.size === NUMBER_OF_COLUMNS) {
     // either gossip or getBlobsV2 resolved availability while we were recovering
@@ -397,6 +398,7 @@ export async function recoverDataColumnSidecars(
       throw new Error(`full sidecars is undefined at index ${columnIndex}`);
     }
     dataColumnCache.set(columnIndex, {dataColumn: sidecar, dataColumnBytes: null});
+    metrics?.peerDas.reconstructedColumns.inc(NUMBER_OF_COLUMNS - partialColumns);
   }
 
   return RecoverResult.SuccessResolved;
@@ -508,6 +510,7 @@ export async function getDataColumnsFromExecution(
     dataColumnsSource: DataColumnsSource.gossip,
   };
   blockCache.cachedData.resolveAvailability(blockData);
+  metrics?.dataColumns.bySource.inc({source: blockData.dataColumnsSource}, blockData.dataColumns.length);
 
   if (blockCache.block !== undefined) {
     const blockInput = getBlockInput.availableData(config, blockCache.block, BlockSource.gossip, blockData);

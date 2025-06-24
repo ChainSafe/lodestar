@@ -591,6 +591,7 @@ export class UnknownBlockSync {
           [blockRoot],
           partialDownload,
           peerClient,
+          this.metrics,
           this.logger
         );
 

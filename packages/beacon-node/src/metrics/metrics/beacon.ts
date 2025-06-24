@@ -392,6 +392,16 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         name: "beacon_custody_groups",
         help: "Total number of custody groups within a node",
       }),
+      reconstructedColumns: register.counter({
+        name: "beacon_data_availability_reconstructed_columns_total",
+        help: "Total count of reconstructed columns",
+      }),
+      dataColumnsReconstructionTime: register.histogram({
+        name: "beacon_data_availability_reconstruction_time_seconds",
+        help: "Time taken to reconstruct columns",
+        // this data comes from 20 blobs in `fusaka-devnet-1`, need to reevaluate in the future
+        buckets: [0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 2, 5],
+      }),
     },
 
     // Non-spec'ed

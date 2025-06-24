@@ -20,6 +20,7 @@ import {
   BlockInput,
   BlockInputAvailableData,
   BlockInputType,
+  DataColumnsSource,
   GossipedInputType,
   NullBlockInput,
 } from "../../chain/blocks/types.js";
@@ -567,6 +568,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       if (config.getForkSeq(blobSlot) < ForkSeq.deneb) {
         throw new GossipActionError(GossipAction.REJECT, {code: "PRE_DENEB_BLOCK"});
       }
+      const delaySec = chain.clock.secFromSlot(blobSlot, seenTimestampSec);
+      metrics?.dataColumns.elapsedTimeTillReceived.observe({source: DataColumnsSource.gossip}, delaySec);
       const blockInput = await validateBeaconDataColumn(
         dataColumnSidecar,
         serializedData,

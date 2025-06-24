@@ -42,6 +42,7 @@ export async function beaconBlocksMaybeBlobsByRoot(
   request: phase0.BeaconBlocksByRootRequest,
   partialDownload: null | PartialDownload,
   peerClient: string,
+  metrics?: Metrics | null,
   logger?: Logger
 ): Promise<{blocks: BlockInput[]; pendingDataColumns: null | number[]}> {
   // console.log("beaconBlocksMaybeBlobsByRoot", request);
@@ -174,6 +175,7 @@ export async function beaconBlocksMaybeBlobsByRoot(
       DataColumnsSource.byRoot,
       partialDownload,
       peerClient,
+      metrics,
       logger
     );
     blockInputs = [...blockInputs, ...blockInputWithBlobs];
@@ -637,6 +639,7 @@ export async function unavailableBeaconBlobsByRootPostFulu(
       dataColumnsSource: DataColumnsSource.byRoot,
     } as BlockInputDataColumns;
     resolveAvailability(blockData);
+    opts.metrics?.dataColumns.bySource.inc({source: blockData.dataColumnsSource}, blockData.dataColumns.length);
     opts.logger?.verbose(
       "unavailableBeaconBlobsByRootPostFulu: Resolved availability for block with all data columns",
       logCtx

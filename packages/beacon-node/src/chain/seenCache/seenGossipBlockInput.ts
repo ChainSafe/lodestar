@@ -310,6 +310,7 @@ export class SeenGossipBlockInput {
           };
           resolveAvailability(blockData);
           metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.GOSSIP});
+          metrics?.dataColumns.bySource.inc({source: blockData.dataColumnsSource}, blockData.dataColumns.length);
 
           const blockInput = getBlockInput.availableData(config, signedBlock, BlockSource.gossip, blockData);
 
@@ -330,6 +331,7 @@ export class SeenGossipBlockInput {
           resolveAvailability(blockData);
           // TODO(das): should not use syncUnknownBlock metrics here
           metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source});
+          metrics?.dataColumns.bySource.inc({source: blockData.dataColumnsSource}, blockData.dataColumns.length);
 
           const blockInput = getBlockInput.availableData(config, signedBlock, BlockSource.gossip, blockData);
           resolveBlockInput(blockInput);
