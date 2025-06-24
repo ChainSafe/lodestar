@@ -6,7 +6,8 @@ import {ChainForkConfig} from "../beaconConfig.js";
 import {BlobScheduleEntry, ForkInfo, isBlobSchedule} from "../index.js";
 import {xor} from "../utils/bytes.js";
 import {CachedGenesis, ForkDigestHex, SubscribeBoundary, isSubscribeBoundaryPostFulu} from "./types.js";
-export {type ForkDigestContext, type SubscribeBoundary, isSubscribeBoundaryPostFulu} from "./types.js";
+export type {ForkDigestContext, SubscribeBoundary} from "./types.js";
+export {isSubscribeBoundaryPostFulu} from "./types.js";
 
 export function createCachedGenesis(chainForkConfig: ChainForkConfig, genesisValidatorsRoot: Root): CachedGenesis {
   const domainCache = new Map<ForkName, Map<DomainType, Uint8Array>>();
