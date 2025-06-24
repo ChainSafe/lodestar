@@ -1,4 +1,4 @@
-import {ForkName} from "@lodestar/params";
+import {ForkName, ForkPreFulu} from "@lodestar/params";
 import {describe, expect, it} from "vitest";
 import {GossipEncoding, GossipTopicMap, GossipType} from "../../../../src/network/gossip/index.js";
 import {parseGossipTopic, stringifyGossipTopic} from "../../../../src/network/gossip/topic.js";
@@ -28,7 +28,12 @@ describe("network / gossip / topic", () => {
     ],
     [GossipType.data_column_sidecar]: [
       {
-        topic: {type: GossipType.data_column_sidecar, subnet: 1, boundary: {fork: ForkName.fulu}, encoding},
+        topic: {
+          type: GossipType.data_column_sidecar,
+          subnet: 1,
+          boundary: {fork: ForkName.fulu as ForkPreFulu},
+          encoding,
+        },
         topicStr: "/eth2/0570c363/data_column_sidecar_1/ssz_snappy",
       },
     ],
