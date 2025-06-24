@@ -459,7 +459,7 @@ export class NetworkCore implements INetworkCore {
       // Compute prev and next fork shifted, so next fork is still next at forkEpoch + FORK_EPOCH_LOOKAHEAD
       const activeBoundaries = getActiveSubscribeBoundaries(this.config, epoch);
       for (let i = 0; i < activeBoundaries.length; i++) {
-        // Only when a new fork is scheduled post this one
+        // Only when a new subscribe boundary is scheduled post this one
         if (activeBoundaries[i + 1] !== undefined) {
           const prevBoundary = activeBoundaries[i];
           const nextBoundary = activeBoundaries[i + 1];

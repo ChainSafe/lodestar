@@ -156,8 +156,11 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     getMaxBlobsPerBlock(epoch: Epoch): number {
       const fork = this.getForkInfoAtEpoch(epoch).name;
 
-      if (fork === ForkName.deneb) {
-        return config.MAX_BLOBS_PER_BLOCK;
+      switch (fork) {
+        case ForkName.electra:
+          return config.MAX_BLOBS_PER_BLOCK_ELECTRA;
+        case ForkName.deneb:
+          return config.MAX_BLOBS_PER_BLOCK;
       }
 
       return this.getBlobParameters(epoch).MAX_BLOBS_PER_BLOCK;
