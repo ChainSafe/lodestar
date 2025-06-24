@@ -1,5 +1,7 @@
 import {ForkAll, ForkName, ForkPostAltair, ForkPostBellatrix, ForkPostDeneb, ForkSeq} from "@lodestar/params";
 import {Epoch, SSZTypesFor, Slot, Version} from "@lodestar/types";
+import {BlobScheduleEntry} from "../chainConfig/types.js";
+import {SubscribeBoundary} from "../genesisConfig/types.js";
 
 export type ForkInfo = {
   name: ForkName;
@@ -18,6 +20,7 @@ export type ForkConfig = {
   forks: {[K in ForkName]: ForkInfo};
   forksAscendingEpochOrder: ForkInfo[];
   forksDescendingEpochOrder: ForkInfo[];
+  forkOrBlobScheduleAscendingEpochOrder: (ForkInfo | BlobScheduleEntry)[];
 
   /** Get the hard-fork info for the active fork at `slot` */
   getForkInfo(slot: Slot): ForkInfo;
@@ -41,6 +44,16 @@ export type ForkConfig = {
   getPostDenebForkTypes(slot: Slot): SSZTypesFor<ForkPostDeneb>;
   /** Get max blobs per block at a given epoch */
   getMaxBlobsPerBlock(epoch: Epoch): number;
+  /** Get blob schedule entry at a given epoch */
+  getBlobParameters(epoch: Epoch): BlobScheduleEntry;
+  /** Get subscribe boundary at a given epoch */
+  getSubscribeBoundary(epoch: Epoch): SubscribeBoundary;
   /** Get max request blob sidecars by hard-fork */
   getMaxRequestBlobSidecars(fork: ForkName): number;
 };
+
+export function isBlobSchedule(
+  forkOrBlobSchedule: ForkConfig["forkOrBlobScheduleAscendingEpochOrder"][number]
+): forkOrBlobSchedule is BlobScheduleEntry {
+  return "EPOCH" in forkOrBlobSchedule;
+}

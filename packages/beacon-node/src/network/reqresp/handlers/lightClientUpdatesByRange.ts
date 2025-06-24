@@ -6,9 +6,11 @@ import {
   ResponseError,
   ResponseOutgoing,
 } from "@lodestar/reqresp";
+import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {altair} from "@lodestar/types";
 import {IBeaconChain} from "../../../chain/index.js";
 import {assertLightClientServer} from "../../../node/utils/lightclient.js";
+
 import {ReqRespMethod, responseSszTypeByMethod} from "../types.js";
 
 export async function* onLightClientUpdatesByRange(
@@ -26,7 +28,7 @@ export async function* onLightClientUpdatesByRange(
 
       yield {
         data: type.serialize(update),
-        boundary: {fork},
+        boundary: chain.config.getSubscribeBoundary(computeEpochAtSlot(update.signatureSlot)),
       };
     } catch (e) {
       if ((e as LightClientServerError).type?.code === LightClientServerErrorCode.RESOURCE_UNAVAILABLE) {

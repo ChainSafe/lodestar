@@ -3,7 +3,7 @@ import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {Connection, PrivateKey} from "@libp2p/interface";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {routes} from "@lodestar/api";
-import {BeaconConfig} from "@lodestar/config";
+import {BeaconConfig, SubscribeBoundary, isSubscribeBoundaryPostFulu} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {ResponseIncoming} from "@lodestar/reqresp";
 import {Epoch, Status, sszTypesFor} from "@lodestar/types";
@@ -32,7 +32,7 @@ import {CommitteeSubscription, IAttnetsService} from "../subnets/interface.js";
 import {SyncnetsService} from "../subnets/syncnetsService.js";
 import {getConnectionsMap} from "../util.js";
 import {NetworkCoreMetrics, createNetworkCoreMetrics} from "./metrics.js";
-import {INetworkCore, MultiaddrStr, SubscribeBoundary} from "./types.js";
+import {INetworkCore, MultiaddrStr} from "./types.js";
 
 type Mods = {
   libp2p: Libp2p;
@@ -230,10 +230,9 @@ export class NetworkCore implements INetworkCore {
     );
 
     // Network spec decides version changes based on clock fork, not head fork
-    const forkCurrentSlot = config.getForkName(clock.currentSlot);
-
-    // Register only ReqResp protocols relevant to clock's fork
-    reqResp.registerProtocolsAtBoundary({fork: forkCurrentSlot});
+    const boundary = config.getSubscribeBoundary(clock.currentEpoch);
+    // Register only ReqResp protocols relevant to clock's epoch
+    reqResp.registerProtocolsAtBoundary(boundary);
 
     // Bind discv5's ENR to local metadata
     // biome-ignore lint/complexity/useLiteralKeys: `discovery` is a private attribute
@@ -493,7 +492,10 @@ export class NetworkCore implements INetworkCore {
         if (activeBoundaries[i + 1] !== undefined) {
           const prevBoundary = activeBoundaries[i];
           const nextBoundary = activeBoundaries[i + 1];
-          const nextBoundaryEpoch = this.config.forks[nextBoundary.fork].epoch;
+          // If EPOCH does not exist, that means next boundary is still pre-fulu
+          const nextBoundaryEpoch = isSubscribeBoundaryPostFulu(nextBoundary)
+            ? nextBoundary.EPOCH
+            : this.config.forks[nextBoundary.fork].epoch;
 
           // Before subscribe boundary transition
           if (epoch === nextBoundaryEpoch - FORK_EPOCH_LOOKAHEAD) {

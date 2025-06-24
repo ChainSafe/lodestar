@@ -8,7 +8,7 @@ import {
   SpecValue,
   SpecValueTypeName,
   chainConfigTypes,
-  isBlobSchedule,
+  isBlobScheduleConfig,
 } from "./types.js";
 
 const MAX_UINT64_JSON = "18446744073709551615";
@@ -55,7 +55,7 @@ export function toSpecValueTypeName(value: SpecValue): SpecValueTypeName {
   if (typeof value === "number") return "number";
   if (typeof value === "bigint") return "bigint";
   if (typeof value === "string") return "string";
-  if (isBlobSchedule(value)) return "blob_schedule";
+  if (isBlobScheduleConfig(value)) return "blob_schedule";
   throw Error(`Unknown value type ${value}`);
 }
 
@@ -92,7 +92,7 @@ export function serializeSpecValue(
       return value;
 
     case "blob_schedule":
-      if (!isBlobSchedule(value)) {
+      if (!isBlobScheduleConfig(value)) {
         throw Error(`Invalid value ${value.toString()} expected BlobSchedule`);
       }
 

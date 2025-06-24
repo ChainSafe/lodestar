@@ -1,7 +1,6 @@
-import {ChainForkConfig, ForkInfo} from "@lodestar/config";
+import {ChainForkConfig, ForkInfo, SubscribeBoundary, isBlobSchedule} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {Epoch} from "@lodestar/types";
-import {SubscribeBoundary} from "./core/types.js";
 
 /**
  * Subscribe topics to the new fork N epochs before the fork. Remove all subscriptions N epochs after the fork
@@ -56,9 +55,34 @@ export function getActiveForks(config: ChainForkConfig, epoch: Epoch): ForkName[
 }
 
 export function getActiveSubscribeBoundaries(config: ChainForkConfig, epoch: Epoch): SubscribeBoundary[] {
-  const activeForks = getActiveForks(config, epoch);
+  const activeBoundaries: SubscribeBoundary[] = [];
+  const forkOrBlobScheduleList = config.forkOrBlobScheduleAscendingEpochOrder;
 
-  return activeForks.map((fork) => ({fork}));
+  for (let i = 0; i < forkOrBlobScheduleList.length; i++) {
+    const currForkOrBlobSchedule = forkOrBlobScheduleList[i];
+    const nextForkOrBlobSchedule = forkOrBlobScheduleList[i + 1];
+
+    const currEpoch = isBlobSchedule(currForkOrBlobSchedule)
+      ? currForkOrBlobSchedule.EPOCH
+      : currForkOrBlobSchedule.epoch;
+    const nextEpoch =
+      nextForkOrBlobSchedule === undefined
+        ? Infinity
+        : isBlobSchedule(nextForkOrBlobSchedule)
+          ? nextForkOrBlobSchedule.EPOCH
+          : nextForkOrBlobSchedule.epoch;
+
+    // Edge case: If multiple fork/blob schedule start at the same epoch, only consider the latest one
+    if (currEpoch === nextEpoch) {
+      continue;
+    }
+
+    if (epoch >= currEpoch - FORK_EPOCH_LOOKAHEAD && epoch <= nextEpoch + FORK_EPOCH_LOOKAHEAD) {
+      activeBoundaries.push(config.getSubscribeBoundary(currEpoch));
+    }
+  }
+
+  return activeBoundaries;
 }
 
 /**

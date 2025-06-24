@@ -1,5 +1,7 @@
 import {PeerId} from "@libp2p/interface";
+import {config} from "@lodestar/config/default.js";
 import {getEmptyLogger} from "@lodestar/logger/empty";
+import {isForkPostFulu} from "@lodestar/params";
 import {LodestarError, fromHex} from "@lodestar/utils";
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {Protocol, RespStatus} from "../../../src/index.js";
@@ -22,8 +24,19 @@ const testCases: {
     id: "Yield two chunks, then throw",
     protocol: pingProtocol(async function* () {
       const payload = sszSnappyPing.binaryPayload;
-      yield {...payload, boundary: {fork: payload.fork}};
-      yield {...payload, boundary: {fork: payload.fork}};
+      const fork = payload.fork;
+      yield {
+        ...payload,
+        boundary: isForkPostFulu(fork)
+          ? {fork, EPOCH: config.ELECTRA_FORK_EPOCH, MAX_BLOBS_PER_BLOCK: config.MAX_BLOBS_PER_BLOCK_ELECTRA}
+          : {fork},
+      };
+      yield {
+        ...payload,
+        boundary: isForkPostFulu(fork)
+          ? {fork, EPOCH: config.ELECTRA_FORK_EPOCH, MAX_BLOBS_PER_BLOCK: config.MAX_BLOBS_PER_BLOCK_ELECTRA}
+          : {fork},
+      };
       throw new LodestarError({code: "TEST_ERROR"});
     }),
     requestChunks: sszSnappyPing.chunks, // Request Ping: BigInt(1)

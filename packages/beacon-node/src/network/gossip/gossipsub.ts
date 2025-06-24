@@ -3,7 +3,13 @@ import {MetricsRegister, TopicLabel, TopicStrToLabel} from "@chainsafe/libp2p-go
 import {PeerScoreParams} from "@chainsafe/libp2p-gossipsub/score";
 import {SignaturePolicy, TopicStr} from "@chainsafe/libp2p-gossipsub/types";
 import {BeaconConfig} from "@lodestar/config";
-import {ATTESTATION_SUBNET_COUNT, ForkName, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+import {
+  ATTESTATION_SUBNET_COUNT,
+  ForkName,
+  SLOTS_PER_EPOCH,
+  SYNC_COMMITTEE_SUBNET_COUNT,
+  isForkPostFulu,
+} from "@lodestar/params";
 import {SubnetID} from "@lodestar/types";
 import {Logger, Map2d, Map2dArr} from "@lodestar/utils";
 
@@ -335,14 +341,39 @@ function attSubnetLabel(subnet: SubnetID): string {
 function getMetricsTopicStrToLabel(config: BeaconConfig, opts: {disableLightClientServer: boolean}): TopicStrToLabel {
   const metricsTopicStrToLabel = new Map<TopicStr, TopicLabel>();
 
+  // Hard forks
   for (const {name: fork} of config.forksAscendingEpochOrder) {
     const topics = getCoreTopicsAtFork(config, fork, {
       subscribeAllSubnets: true,
       disableLightClientServer: opts.disableLightClientServer,
     });
-    for (const topic of topics) {
-      metricsTopicStrToLabel.set(stringifyGossipTopic(config, {...topic, boundary: {fork}}), topic.type);
+    if (!isForkPostFulu(fork)) {
+      for (const topic of topics) {
+        metricsTopicStrToLabel.set(stringifyGossipTopic(config, {...topic, boundary: {fork}}), topic.type);
+      }
+    } else {
+      // Post fulu fork activations require blob schedule to calculate gossip topic
+      const blobSchedule = config.getBlobParameters(config.forks[fork].epoch);
+      for (const topic of topics) {
+        metricsTopicStrToLabel.set(
+          stringifyGossipTopic(config, {...topic, boundary: {...blobSchedule, fork}}),
+          topic.type
+        );
+      }
     }
   }
+
+  // BPO forks
+  for (const entry of config.BLOB_SCHEDULE) {
+    const fork = config.getForkInfoAtEpoch(entry.EPOCH).name;
+    const topics = getCoreTopicsAtFork(config, fork, {
+      subscribeAllSubnets: true,
+      disableLightClientServer: opts.disableLightClientServer,
+    });
+    for (const topic of topics) {
+      metricsTopicStrToLabel.set(stringifyGossipTopic(config, {...topic, boundary: {...entry, fork}}), topic.type);
+    }
+  }
+
   return metricsTopicStrToLabel;
 }

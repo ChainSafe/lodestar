@@ -11,9 +11,11 @@ import {
   isForkPostBellatrix,
   isForkPostDeneb,
   isForkPostElectra,
+  isForkPostFulu,
 } from "@lodestar/params";
 import {Epoch, SSZTypesFor, Slot, Version, sszTypesFor} from "@lodestar/types";
-import {ChainConfig} from "../chainConfig/index.js";
+import {BlobScheduleEntry, ChainConfig} from "../chainConfig/index.js";
+import {SubscribeBoundary} from "../genesisConfig/types.js";
 import {ForkConfig, ForkInfo} from "./types.js";
 
 export * from "./types.js";
@@ -85,10 +87,23 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
   const forksAscendingEpochOrder = Object.values(forks);
   const forksDescendingEpochOrder = Object.values(forks).reverse();
 
+  const blobScheduleDescendingEpochOrder = [...config.BLOB_SCHEDULE].sort((a, b) => b.EPOCH - a.EPOCH);
+
+  const forkOrBlobScheduleByEpoch = new Map<Epoch, ForkInfo | BlobScheduleEntry>();
+  for (const fork of forksAscendingEpochOrder) {
+    forkOrBlobScheduleByEpoch.set(fork.epoch, fork);
+  }
+  for (const entry of blobScheduleDescendingEpochOrder) {
+    forkOrBlobScheduleByEpoch.set(entry.EPOCH, entry);
+  }
+
   return {
     forks,
     forksAscendingEpochOrder,
     forksDescendingEpochOrder,
+    forkOrBlobScheduleAscendingEpochOrder: [...forkOrBlobScheduleByEpoch.entries()]
+      .sort(([k1], [k2]) => k1 - k2)
+      .map(([, v]) => v),
 
     // Fork convenience methods
     getForkInfo(slot: Slot): ForkInfo {
@@ -148,16 +163,31 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
           return config.MAX_BLOBS_PER_BLOCK;
       }
 
-      // Sort by epoch in descending order to find the latest applicable value
-      const blobSchedule = [...config.BLOB_SCHEDULE].sort((a, b) => b.EPOCH - a.EPOCH);
+      return this.getBlobParameters(epoch).MAX_BLOBS_PER_BLOCK;
+    },
+    getBlobParameters(epoch: Epoch): BlobScheduleEntry {
+      if (epoch < config.FULU_FORK_EPOCH) {
+        throw Error(`getBlobParameters is not available pre-fulu epoch=${epoch}`);
+      }
 
-      for (const entry of blobSchedule) {
+      // Find the latest applicable value from blob schedule
+      for (const entry of blobScheduleDescendingEpochOrder) {
         if (epoch >= entry.EPOCH) {
-          return entry.MAX_BLOBS_PER_BLOCK;
+          return entry;
         }
       }
 
-      return config.MAX_BLOBS_PER_BLOCK_ELECTRA;
+      return {EPOCH: config.ELECTRA_FORK_EPOCH, MAX_BLOBS_PER_BLOCK: config.MAX_BLOBS_PER_BLOCK_ELECTRA};
+    },
+    getSubscribeBoundary(epoch: Epoch): SubscribeBoundary {
+      const fork = this.getForkInfoAtEpoch(epoch).name;
+
+      if (isForkPostFulu(fork)) {
+        const blobSchedule = this.getBlobParameters(epoch);
+        return {...blobSchedule, fork};
+      }
+
+      return {fork};
     },
     getMaxRequestBlobSidecars(fork: ForkName): number {
       return isForkPostElectra(fork) ? config.MAX_REQUEST_BLOB_SIDECARS_ELECTRA : config.MAX_REQUEST_BLOB_SIDECARS;

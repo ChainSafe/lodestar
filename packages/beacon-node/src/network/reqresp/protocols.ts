@@ -141,6 +141,9 @@ function toContextBytes(type: ContextBytesType, config: ForkDigestContext): Cont
     case ContextBytesType.Empty:
       return {type: ContextBytesType.Empty};
     case ContextBytesType.ForkDigest:
-      return {type: ContextBytesType.ForkDigest, forkDigestContext: config};
+      return {
+        type: ContextBytesType.ForkDigest,
+        forkDigestContext: config,
+      };
   }
 }
