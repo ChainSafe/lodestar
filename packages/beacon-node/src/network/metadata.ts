@@ -13,6 +13,7 @@ export enum ENRKey {
   attnets = "attnets",
   syncnets = "syncnets",
   cgc = "cgc",
+  nfd = "nfd",
 }
 export enum SubnetType {
   attnets = "attnets",
@@ -118,9 +119,16 @@ export class MetadataController {
    *    Current Clock implementation ensures no race conditions, epoch is correct if re-fetched
    */
   updateEth2Field(epoch: Epoch): Uint8Array {
-    const enrForkId = ssz.phase0.ENRForkID.serialize(getENRForkID(this.networkConfig.getConfig(), epoch));
-    this.onSetValue(ENRKey.eth2, enrForkId);
-    return enrForkId;
+    const config = this.networkConfig.getConfig();
+    const enrForkId = getENRForkID(config, epoch);
+    const enrForkIdBytes = ssz.phase0.ENRForkID.serialize(enrForkId);
+    this.onSetValue(ENRKey.eth2, enrForkIdBytes);
+    const nextForkDigest =
+      enrForkId.nextForkEpoch !== FAR_FUTURE_EPOCH
+        ? config.boundary2ForkDigest(config.getSubscribeBoundary(enrForkId.nextForkEpoch))
+        : ssz.ForkDigest.defaultValue();
+    this.onSetValue(ENRKey.nfd, nextForkDigest);
+    return enrForkIdBytes;
   }
 }
 
