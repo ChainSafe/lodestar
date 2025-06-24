@@ -494,6 +494,8 @@ export class NetworkCore implements INetworkCore {
           const nextBoundary = activeBoundaries[i + 1];
 
           const forkEpoch = this.config.forks[nextBoundary.fork].epoch;
+          const blobScheduleEpoch = isSubscribeBoundaryPostFulu(nextBoundary) ? nextBoundary.EPOCH : -1;
+          const nextBoundaryEpoch = Math.max(forkEpoch, blobScheduleEpoch);
           // If EPOCH does not exist, that means next boundary is still pre-fulu
           const nextBoundaryEpoch = isSubscribeBoundaryPostFulu(nextBoundary)
             ? nextBoundary.EPOCH < forkEpoch
