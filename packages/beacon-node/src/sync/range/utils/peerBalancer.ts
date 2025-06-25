@@ -43,43 +43,51 @@ export class ChainPeersBalancer {
     const {partialDownload} = batch.state;
 
     const failedPeers = new Set(batch.getFailedPeers());
+    const eligiblePeers: {syncInfo: PeerSyncInfo; columns: number}[] = [];
+    for (const peer of this.peers) {
+      const {earliestAvailableSlot, custodyGroups, target} = peer;
+      if (!batch.isFulu()) {
+        eligiblePeers.push({syncInfo: peer, columns: 0});
+        continue;
+      }
+
+      // TODO(fulu): this is a bug and is prioritizing peers that do not announce
+      //     an earliestAvailableSlot. Need to refactor this logic
+      const earliestSlot = earliestAvailableSlot ?? 0;
+      const peerColumns = custodyGroups;
+
+      if (earliestSlot > batch.request.startSlot) {
+        continue;
+      }
+
+      if (target.slot < batch.request.startSlot) {
+        continue;
+      }
+
+      const pendingDataColumns = partialDownload
+        ? partialDownload.pendingDataColumns
+        : this.custodyConfig.sampledColumns;
+
+      const columns = peerColumns.reduce((acc, elem) => {
+        if (pendingDataColumns.includes(elem)) {
+          acc.push(elem);
+        }
+        return acc;
+      }, [] as number[]);
+
+      if (columns.length > 0) {
+        eligiblePeers.push({syncInfo: peer, columns: columns.length});
+      }
+    }
+
     const sortedBestPeers = sortBy(
-      this.peers.filter(({earliestAvailableSlot, custodyGroups, target}) => {
-        if (!batch.isFulu()) {
-          return true;
-        }
-
-        // TODO(fulu): this is a bug and is prioritizing peers that do not announce
-        //     an earliestAvailableSlot. Need to refactor this logic
-        const earliestSlot = earliestAvailableSlot ?? 0;
-        const peerColumns = custodyGroups;
-
-        if (earliestSlot > batch.request.startSlot) {
-          return false;
-        }
-
-        if (target.slot < batch.request.startSlot) {
-          return false;
-        }
-
-        const pendingDataColumns = partialDownload
-          ? partialDownload.pendingDataColumns
-          : this.custodyConfig.sampledColumns;
-
-        const columns = peerColumns.reduce((acc, elem) => {
-          if (pendingDataColumns.includes(elem)) {
-            acc.push(elem);
-          }
-          return acc;
-        }, [] as number[]);
-
-        return columns.length > 0;
-      }),
-      ({peerId}) => (failedPeers.has(peerId) ? 1 : 0), // Sort by no failed first = 0
-      ({peerId}) => this.activeRequestsByPeer.get(peerId) ?? 0 // Sort by least active req
+      eligiblePeers,
+      ({syncInfo}) => (failedPeers.has(syncInfo.peerId) ? 1 : 0), // Sort by no failed first = 0
+      ({syncInfo}) => this.activeRequestsByPeer.get(syncInfo.peerId) ?? 0, // Sort by least active req
+      ({columns}) => -1 * columns // Sort by most columns we need
     );
 
-    return sortedBestPeers[0];
+    return sortedBestPeers[0].syncInfo;
   }
 
   /**

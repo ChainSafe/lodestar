@@ -15,51 +15,55 @@ describe("sync / range / peerBalancer", () => {
   const custodyConfig = {sampledColumns: [0, 1, 2, 3]} as CustodyConfig;
 
   describe("bestPeerToRetryBatch", async () => {
-    const peer1 = await getRandPeerSyncMeta();
-    const peer2 = await getRandPeerSyncMeta();
-    const peer3 = await getRandPeerSyncMeta();
-    const peers = [peer1, peer2, peer3];
+    const peer1 = await getRandPeerSyncMeta("peer-1");
+    const peer2 = await getRandPeerSyncMeta("peer-2");
+    const peer3 = await getRandPeerSyncMeta("peer-3");
+    const peer4 = await getRandPeerSyncMeta("peer-4");
+    const peers = [peer1, peer2, peer3, peer4];
 
     const testCases: {isFulu: boolean; custodyColumns: number[][]; targetEpochs: number[]; expected: PeerIdStr}[] = [
       {
         isFulu: true,
-        // peer3 is free and has full custody columns and has the greater target epoch
-        custodyColumns: [[], [0, 1, 2, 3], [0, 1, 2, 3]],
-        targetEpochs: [1, 2, 3],
+        // peer3 and peer 4 are free and has some/all custody columns and has the greater target epoch
+        // pick peer4 because it has more custody columns
+        // test column sort condition
+        custodyColumns: [[], [0, 1], [0, 1, 2, 3]],
+        targetEpochs: [1, 2, 3, 4],
         expected: peer3.peerId,
       },
       {
         isFulu: true,
         // peer3 is free and has partial custody columns (0) and has the greater target epoch
-        custodyColumns: [[], [0, 1, 2, 3], [0]],
-        targetEpochs: [1, 2, 3],
-        expected: peer3.peerId,
-      },
-      {
-        isFulu: true,
-        // peer3 is free and has partial custody columns (3) and has the greater target epoch
-        custodyColumns: [[], [0, 1, 2, 3], [3]],
-        targetEpochs: [1, 2, 3],
+        // peer 4 has unrelated custody column
+        // test target epoch condition
+        custodyColumns: [[], [0, 1, 2, 3], [0], [100]],
+        targetEpochs: [1, 2, 3, 4],
         expected: peer3.peerId,
       },
       {
         isFulu: true,
         // peer3 is free and has full custody columns, but don't have greater target epoch
-        custodyColumns: [[], [0, 1, 2, 3], [0, 1, 2, 3]],
-        targetEpochs: [1, 2, 0],
+        // peer 4 has unrelated custody column
+        // test target epoch condition
+        custodyColumns: [[], [0, 1, 2, 3], [0, 1, 2, 3], [100]],
+        targetEpochs: [1, 2, 0, 4],
         expected: peer2.peerId,
       },
       {
         isFulu: true,
         // peer3 is free but don't have any custody columns, have greater target epoch
-        custodyColumns: [[], [0, 1, 2, 3], [4, 5, 6, 7]],
-        targetEpochs: [1, 2, 3],
+        // peer 4 has unrelated custody column
+        // test custody columns condition
+        custodyColumns: [[], [0, 1, 2, 3], [4, 5, 6, 7], [100]],
+        targetEpochs: [1, 2, 3, 4],
         expected: peer2.peerId,
       },
       {
         isFulu: false,
         // pre-fulu, same to the the above, pick peer3 because it's free
-        custodyColumns: [[], [0, 1, 2, 3], [4, 5, 6, 7]],
+        // this test case could pick either peer3 or peer4
+        // test pre-fulu condition
+        custodyColumns: [[], [0, 1, 2, 3], [4, 5, 6, 7], [100]],
         targetEpochs: [1, 2, 3],
         expected: peer3.peerId,
       },
@@ -103,10 +107,10 @@ describe("sync / range / peerBalancer", () => {
   });
 
   describe("idlePeerForBatch", async () => {
-    const peer1 = await getRandPeerSyncMeta();
-    const peer2 = await getRandPeerSyncMeta();
-    const peer3 = await getRandPeerSyncMeta();
-    const peer4 = await getRandPeerSyncMeta();
+    const peer1 = await getRandPeerSyncMeta("peer-1");
+    const peer2 = await getRandPeerSyncMeta("peer-2");
+    const peer3 = await getRandPeerSyncMeta("peer-3");
+    const peer4 = await getRandPeerSyncMeta("peer-4");
     const peers = [peer1, peer2, peer3, peer4];
 
     const testCases: {
