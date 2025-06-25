@@ -1,7 +1,7 @@
 import {BeaconConfig, ForkInfo} from "@lodestar/config";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {describe, expect, it} from "vitest";
-import {getCurrentAndNextFork} from "../../../src/network/forks.js";
+import {getCurrentAndNextBoundary} from "../../../src/network/forks.js";
 
 function getForkConfig({
   phase0,
@@ -170,7 +170,7 @@ for (const testScenario of testScenarios) {
         currentFork,
         nextFork,
       })}, getActiveForks: ${activeForks.join(",")}`, () => {
-        expect(getCurrentAndNextFork(forkConfig, epoch)).toEqual({
+        expect(getCurrentAndNextBoundary(forkConfig, epoch)).toEqual({
           currentFork: forks[currentFork as ForkName],
           nextFork: (nextFork && forks[nextFork as ForkName]) ?? undefined,
         });
