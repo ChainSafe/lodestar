@@ -1,4 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
+import {ForkSeq} from "@lodestar/params";
 import {Epoch, RootHex, phase0} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 import {BlockInput} from "../../chain/blocks/types.js";
@@ -211,6 +212,10 @@ export class Batch {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.AwaitingValidation));
     }
     return this.state.attempt;
+  }
+
+  isFulu(): boolean {
+    return this.config.getForkSeq(this.request.startSlot) >= ForkSeq.fulu;
   }
 
   private onExecutionEngineError(attempt: Attempt): void {
