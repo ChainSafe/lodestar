@@ -1,10 +1,10 @@
 import {config} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
 import {afterEach, describe, expect, it} from "vitest";
-import {getCurrentAndNextFork} from "../../../src/network/forks.js";
+import {getCurrentAndNextBoundary} from "../../../src/network/forks.js";
 import {getDiscv5Multiaddrs} from "../../../src/network/libp2p/index.js";
 
-describe("getCurrentAndNextFork", () => {
+describe("getCurrentAndNextBoundary", () => {
   const altairEpoch = config.forks.altair.epoch;
   afterEach(() => {
     config.forks.altair.epoch = altairEpoch;
@@ -12,24 +12,24 @@ describe("getCurrentAndNextFork", () => {
 
   it("should return no next fork if altair epoch is infinity", () => {
     config.forks.altair.epoch = Infinity;
-    const {currentFork, nextFork} = getCurrentAndNextFork(config, 0);
-    expect(currentFork.name).toBe(ForkName.phase0);
-    expect(nextFork).toBeUndefined();
+    const {currentBoundary, nextBoundary} = getCurrentAndNextBoundary(config, 0);
+    expect(currentBoundary.fork).toBe(ForkName.phase0);
+    expect(nextBoundary).toBeUndefined();
   });
 
   it("should return altair as next fork and then bellatrix", () => {
     config.forks.altair.epoch = 1000;
-    let forks = getCurrentAndNextFork(config, 0);
-    expect(forks.currentFork.name).toBe(ForkName.phase0);
-    if (forks.nextFork) {
-      expect(forks.nextFork.name).toBe(ForkName.altair);
+    let forks = getCurrentAndNextBoundary(config, 0);
+    expect(forks.currentBoundary.fork).toBe(ForkName.phase0);
+    if (forks.nextBoundary) {
+      expect(forks.nextBoundary.fork).toBe(ForkName.altair);
     } else {
       expect.fail("No next fork");
     }
 
-    forks = getCurrentAndNextFork(config, 1000);
-    expect(forks.currentFork.name).toBe(ForkName.altair);
-    expect(forks.nextFork?.name).toBe(ForkName.bellatrix);
+    forks = getCurrentAndNextBoundary(config, 1000);
+    expect(forks.currentBoundary.fork).toBe(ForkName.altair);
+    expect(forks.nextBoundary?.fork).toBe(ForkName.bellatrix);
   });
 });
 

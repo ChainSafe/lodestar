@@ -86,38 +86,48 @@ export function getActiveSubscribeBoundaries(config: ChainForkConfig, epoch: Epo
 }
 
 /**
- * Return the currentFork and nextFork given a fork schedule and `epoch`
+ * Return the currentBoundary and nextBoundary given a fork/BPO schedule and `epoch`
  */
-export function getCurrentAndNextFork(
+export function getCurrentAndNextBoundary(
   config: ChainForkConfig,
   epoch: Epoch
-): {currentFork: ForkInfo; nextFork: ForkInfo | undefined} {
-  if (epoch < 0) {
-    epoch = 0;
+): {currentBoundary: SubscribeBoundary; nextBoundary?: SubscribeBoundary} {
+  // normalize negative epochs to zero
+  if (epoch < 0) epoch = 0;
+
+  const schedule = config.forkOrBlobScheduleAscendingEpochOrder;
+  let currIdx = -1;
+
+  // find the last schedule whose start‐epoch ≤ our epoch
+  for (let i = 0; i < schedule.length; i++) {
+    const entry = schedule[i];
+    const e = isBlobSchedule(entry) ? entry.EPOCH : entry.epoch;
+    if (epoch >= e) currIdx = i;
   }
 
-  // NOTE: forks are sorted by ascending epoch, phase0 first
-  const forks = config.forksAscendingEpochOrder;
-  let currentForkIdx = -1;
-  // findLastIndex
-  for (let i = 0; i < forks.length; i++) {
-    if (epoch >= forks[i].epoch) currentForkIdx = i;
+  // if we never found one, fall back to the very first
+  if (currIdx === -1) currIdx = 0;
+
+  const currSchedule = schedule[currIdx];
+  const currEpoch = isBlobSchedule(currSchedule) ? currSchedule.EPOCH : currSchedule.epoch;
+  const currentBoundary = config.getSubscribeBoundary(currEpoch);
+
+  // find the next schedule whose epoch > our epoch
+  let nextIdx = currIdx + 1;
+  let entry = schedule[nextIdx];
+  while (nextIdx < schedule.length && (isBlobSchedule(entry) ? entry.EPOCH : entry.epoch) === currEpoch) {
+    // skip any that have the same epoch
+    nextIdx++;
+    entry = schedule[nextIdx];
   }
 
-  let nextForkIdx = currentForkIdx + 1;
-  const hasNextFork = forks[nextForkIdx] !== undefined && forks[nextForkIdx].epoch !== Infinity;
-  // Keep moving the needle of nextForkIdx if there the higher fork also exists on same epoch
-  // for e.g. altair and bellatrix are on same epoch 6, next fork should be bellatrix
-  if (hasNextFork) {
-    for (let i = nextForkIdx + 1; i < forks.length; i++) {
-      // If the fork's epoch is same as nextForkIdx (which is not equal to infinity),
-      // update nextForkIdx to the same
-      if (forks[i].epoch === forks[nextForkIdx].epoch) nextForkIdx = i;
-    }
+  if (nextIdx >= schedule.length) {
+    return {currentBoundary, nextBoundary: undefined};
   }
 
-  return {
-    currentFork: forks[currentForkIdx] || forks[0],
-    nextFork: hasNextFork ? forks[nextForkIdx] : undefined,
-  };
+  const nextSchedule = schedule[nextIdx];
+  const nextEpoch = isBlobSchedule(nextSchedule) ? nextSchedule.EPOCH : nextSchedule.epoch;
+  const nextBoundary = config.getSubscribeBoundary(nextEpoch);
+
+  return {currentBoundary, nextBoundary};
 }
