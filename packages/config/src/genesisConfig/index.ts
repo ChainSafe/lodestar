@@ -139,7 +139,10 @@ export function createCachedGenesis(chainForkConfig: ChainForkConfig, genesisVal
     },
 
     boundary2ForkDigest(boundary: SubscribeBoundary): ForkDigest {
-      const epoch = isSubscribeBoundaryPostFulu(boundary) ? boundary.EPOCH : chainForkConfig.forks[boundary.fork].epoch;
+      const epoch = Math.max(
+        chainForkConfig.forks[boundary.fork].epoch,
+        isSubscribeBoundaryPostFulu(boundary) ? boundary.EPOCH : -1
+      );
       const forkDigest = forkDigestByEpoch.get(epoch);
       if (!forkDigest) {
         throw Error(`No precomputed forkDigest for ${epoch}`);
@@ -148,7 +151,10 @@ export function createCachedGenesis(chainForkConfig: ChainForkConfig, genesisVal
     },
 
     boundary2ForkDigestHex(boundary: SubscribeBoundary): ForkDigestHex {
-      const epoch = isSubscribeBoundaryPostFulu(boundary) ? boundary.EPOCH : chainForkConfig.forks[boundary.fork].epoch;
+      const epoch = Math.max(
+        chainForkConfig.forks[boundary.fork].epoch,
+        isSubscribeBoundaryPostFulu(boundary) ? boundary.EPOCH : -1
+      );
       const forkDigestHex = forkDigestHexByEpoch.get(epoch);
       if (!forkDigestHex) {
         throw Error(`No precomputed forkDigest for ${epoch}`);
