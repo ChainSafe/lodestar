@@ -1,6 +1,6 @@
 import {PeerId} from "@libp2p/interface";
 import {BeaconConfig, SubscribeBoundary} from "@lodestar/config";
-import {ForkName, ForkPreFulu, ForkSeq} from "@lodestar/params";
+import {ForkName, ForkSeq} from "@lodestar/params";
 import {
   Encoding,
   ProtocolDescriptor,
@@ -12,6 +12,7 @@ import {
   ResponseIncoming,
   ResponseOutgoing,
 } from "@lodestar/reqresp";
+import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Metadata, Status, fulu, phase0, ssz, sszTypesFor} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {Libp2p} from "libp2p";
@@ -330,7 +331,7 @@ export class ReqRespBeaconNode extends ReqResp {
     const status = this.statusCache.get();
     yield {
       data: type.serialize(status as fulu.Status),
-      boundary: {fork: fork as ForkPreFulu},
+      boundary: this.config.getSubscribeBoundary(computeEpochAtSlot(body.headSlot)),
     };
   }
 
