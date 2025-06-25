@@ -1,4 +1,4 @@
-import {ChainForkConfig, ForkInfo, SubscribeBoundary, isBlobSchedule} from "@lodestar/config";
+import {ChainForkConfig, SubscribeBoundary, isBlobSchedule} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {Epoch} from "@lodestar/types";
 
