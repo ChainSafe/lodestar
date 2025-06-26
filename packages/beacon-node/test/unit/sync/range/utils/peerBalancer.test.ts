@@ -3,7 +3,6 @@ import {chainConfig} from "@lodestar/config/default";
 import {ZERO_HASH} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {describe, expect, it} from "vitest";
-import {PeerSyncMeta} from "../../../../../src/network/peers/peersData.js";
 import {Batch} from "../../../../../src/sync/range/batch.js";
 import {ChainTarget} from "../../../../../src/sync/range/chain.js";
 import {ChainPeersBalancer, PeerSyncInfo} from "../../../../../src/sync/range/utils/peerBalancer.js";
