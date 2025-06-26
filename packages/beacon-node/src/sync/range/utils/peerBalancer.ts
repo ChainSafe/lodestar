@@ -10,7 +10,7 @@ export type PeerSyncInfo = PeerSyncMeta & {
   target: ChainTarget;
 };
 
-type PeerInfoColumn = {syncInfo: PeerSyncInfo; columns: number};
+type PeerInfoColumn = {syncInfo: PeerSyncInfo; columns: number; hasEarliestAvailableSlots: boolean};
 
 /**
  * Balance and organize peers to perform requests with a SyncChain
@@ -49,9 +49,10 @@ export class ChainPeersBalancer {
     const failedPeers = new Set(batch.getFailedPeers());
     const sortedBestPeers = sortBy(
       eligiblePeers,
-      ({syncInfo}) => (failedPeers.has(syncInfo.peerId) ? 1 : 0), // Sort by no failed first = 0
-      ({syncInfo}) => this.activeRequestsByPeer.get(syncInfo.peerId) ?? 0, // Sort by least active req
-      ({columns}) => -1 * columns // Sort by most columns we need
+      ({syncInfo}) => (failedPeers.has(syncInfo.peerId) ? 1 : 0), // prefer peers without failed requests
+      ({syncInfo}) => this.activeRequestsByPeer.get(syncInfo.peerId) ?? 0, // prefer peers with least active req
+      ({hasEarliestAvailableSlots}) => (hasEarliestAvailableSlots ? 0 : 1), // prefer peers with earliestAvailableSlots defined
+      ({columns}) => -1 * columns // prefer peers with the most columns
     );
 
     return sortedBestPeers[0].syncInfo;
@@ -63,12 +64,19 @@ export class ChainPeersBalancer {
   idlePeerForBatch(batch: Batch): PeerSyncInfo | undefined {
     const eligiblePeers = this.filterPeers(batch, this.custodyConfig.sampledColumns, true);
 
-    // pick idle peer that has the most columns we need, for pre-fulu they are always 0
-    const mostColumnsPeer = eligiblePeers.sort((a, b) => b.columns - a.columns)[0];
-    if (mostColumnsPeer != null) {
+    // pick idle peer that has (for pre-fulu they are the same)
+    // - earliestAvailableSlot defined
+    // - the most columns we need
+    const sortedBestPeers = sortBy(
+      eligiblePeers,
+      ({hasEarliestAvailableSlots}) => (hasEarliestAvailableSlots ? 0 : 1), // prefer peers with earliestAvailableSlots defined
+      ({columns}) => -1 * columns // prefer peers with most columns we need
+    );
+    const bestPeer = sortedBestPeers[0];
+    if (bestPeer != null) {
       // we will use this peer for batch in SyncChain right after this call
-      this.activeRequestsByPeer.set(mostColumnsPeer.syncInfo.peerId, 1);
-      return mostColumnsPeer.syncInfo;
+      this.activeRequestsByPeer.set(bestPeer.syncInfo.peerId, 1);
+      return bestPeer.syncInfo;
     }
 
     return undefined;
@@ -90,13 +98,13 @@ export class ChainPeersBalancer {
       }
 
       if (!batch.isFulu()) {
-        // pre-fulu logic
-        eligiblePeers.push({syncInfo: peer, columns: 0});
+        // pre-fulu logic, we don't care columns and earliestAvailableSlot
+        eligiblePeers.push({syncInfo: peer, columns: 0, hasEarliestAvailableSlots: false});
         continue;
       }
 
-      // TODO(fulu): this is a bug and is prioritizing peers that do not announce
-      //     an earliestAvailableSlot. Need to refactor this logic
+      // for devnet, we optimistically assume peers without earliestAvailableSlot, but don't prioritize them
+      // TODO(fulu): consider do not accept these peers
       const earliestSlot = earliestAvailableSlot ?? 0;
       const peerColumns = custodyGroups;
 
@@ -112,7 +120,11 @@ export class ChainPeersBalancer {
       }, [] as number[]);
 
       if (columns.length > 0) {
-        eligiblePeers.push({syncInfo: peer, columns: columns.length});
+        eligiblePeers.push({
+          syncInfo: peer,
+          columns: columns.length,
+          hasEarliestAvailableSlots: earliestAvailableSlot != null,
+        });
       }
     }
 

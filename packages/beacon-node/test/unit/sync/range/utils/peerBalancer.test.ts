@@ -21,7 +21,13 @@ describe("sync / range / peerBalancer", () => {
     const peer4 = await getRandPeerSyncMeta("peer-4");
     const peers = [peer1, peer2, peer3, peer4];
 
-    const testCases: {isFulu: boolean; custodyColumns: number[][]; targetEpochs: number[]; expected: PeerIdStr}[] = [
+    const testCases: {
+      isFulu: boolean;
+      custodyColumns: number[][];
+      targetEpochs: number[];
+      earliestAvailableSlots: (number | undefined | null)[];
+      expected: PeerIdStr;
+    }[] = [
       {
         isFulu: true,
         // peer3 and peer 4 are free and has some/all custody columns and has the greater target epoch
@@ -29,6 +35,7 @@ describe("sync / range / peerBalancer", () => {
         // test column sort condition
         custodyColumns: [[], [0, 1], [0, 1, 2, 3]],
         targetEpochs: [1, 2, 3, 4],
+        earliestAvailableSlots: [0, 0, 0, 0],
         expected: peer3.peerId,
       },
       {
@@ -38,6 +45,7 @@ describe("sync / range / peerBalancer", () => {
         // test target epoch condition
         custodyColumns: [[], [0, 1, 2, 3], [0], [100]],
         targetEpochs: [1, 2, 3, 4],
+        earliestAvailableSlots: [0, 0, 0, 0],
         expected: peer3.peerId,
       },
       {
@@ -47,28 +55,48 @@ describe("sync / range / peerBalancer", () => {
         // test target epoch condition
         custodyColumns: [[], [0, 1, 2, 3], [0, 1, 2, 3], [100]],
         targetEpochs: [1, 2, 0, 4],
+        earliestAvailableSlots: [0, 0, 0, 0],
         expected: peer2.peerId,
       },
       {
         isFulu: true,
-        // peer3 is free but don't have any custody columns, have greater target epoch
+        // peer3 is free but don't have any custody columns
         // peer 4 has unrelated custody column
         // test custody columns condition
         custodyColumns: [[], [0, 1, 2, 3], [4, 5, 6, 7], [100]],
         targetEpochs: [1, 2, 3, 4],
+        earliestAvailableSlots: [0, 0, 0, 0],
         expected: peer2.peerId,
       },
       {
+        isFulu: true,
+        // peer3 and peer4 are free but peer4 has more clumns
+        // test custody columns condition
+        custodyColumns: [[], [0, 1, 2, 3], [2, 3, 4, 5], [1, 2, 3, 4]],
+        targetEpochs: [1, 2, 3, 4],
+        earliestAvailableSlots: [0, 0, 0, 0],
+        expected: peer4.peerId,
+      },
+      {
+        isFulu: true,
+        // peer3 is free and has all columns but pick peer4 because it has earliestAvailableSlot
+        // test earliestAvailableSlots condition
+        custodyColumns: [[], [0, 1, 2, 3], [0, 1, 2, 3], [0]],
+        targetEpochs: [1, 2, 3, 4],
+        earliestAvailableSlots: [0, 0, undefined, 0],
+        expected: peer4.peerId,
+      },
+      {
         isFulu: false,
-        // pre-fulu, same to the the above, pick peer3 because it's free
-        // this test case could pick either peer3 or peer4
+        // pre-fulu, same to the the above, pick peer3 because has good target epoch
         // test pre-fulu condition
         custodyColumns: [[], [0, 1, 2, 3], [4, 5, 6, 7], [100]],
-        targetEpochs: [1, 2, 3],
+        targetEpochs: [1, 2, 3, 0],
+        earliestAvailableSlots: [null, null, null, null],
         expected: peer3.peerId,
       },
     ];
-    for (const [i, {isFulu, custodyColumns, targetEpochs, expected}] of testCases.entries()) {
+    for (const [i, {isFulu, custodyColumns, targetEpochs, earliestAvailableSlots, expected}] of testCases.entries()) {
       it(`test case ${i}`, async () => {
         const columnsByPeer = new Map<PeerIdStr, {custodyColumns: number[]}>();
         for (const [i, custody] of custodyColumns.entries()) {
@@ -80,10 +108,16 @@ describe("sync / range / peerBalancer", () => {
           targetByPeer.set(peers[i].peerId, {slot: computeStartSlotAtEpoch(targetEpoch), root: ZERO_HASH});
         }
 
+        const earliestAvailableSlotByPeers = new Map<PeerIdStr, number | undefined | null>();
+        for (const [i, earliestAvailableSlot] of earliestAvailableSlots.entries()) {
+          earliestAvailableSlotByPeers.set(peers[i].peerId, earliestAvailableSlot);
+        }
+
         const peerInfos: PeerSyncInfo[] = peers.map((p) => ({
           ...p,
           custodyGroups: columnsByPeer.get(p.peerId)?.custodyColumns ?? [],
           target: targetByPeer.get(p.peerId) ?? ({slot: 0, root: ZERO_HASH} as ChainTarget),
+          earliestAvailableSlot: earliestAvailableSlotByPeers.get(p.peerId) ?? undefined,
         }));
 
         const config = isFulu
@@ -117,6 +151,7 @@ describe("sync / range / peerBalancer", () => {
       isFulu: boolean;
       custodyColumns: number[][];
       targetEpochs: number[];
+      earliestAvailableSlots: (number | undefined | null)[];
       expected: string | undefined;
     }[] = [
       {
@@ -124,13 +159,23 @@ describe("sync / range / peerBalancer", () => {
         // peer3 and peer4 are free and have greater target epoch, pick peer3 because it has more custody columns
         custodyColumns: [[], [], [0, 1, 2, 3], [0]],
         targetEpochs: [1, 2, 4, 4],
+        earliestAvailableSlots: [0, 0, 0, 0],
         expected: peer3.peerId,
+      },
+      {
+        isFulu: true,
+        // peer3 and peer4 are free and have greater target epoch, pick peer4 because it available slots
+        custodyColumns: [[], [], [0, 1, 2, 3], [0]],
+        targetEpochs: [1, 2, 4, 4],
+        earliestAvailableSlots: [0, 0, undefined, 0],
+        expected: peer4.peerId,
       },
       {
         isFulu: true,
         // peer3 and peer4 are free, peer3 does not have greater epoch, peer4 has full custody columns, pick peer4
         custodyColumns: [[], [], [0, 1, 2, 3], [0, 1, 2, 3]],
         targetEpochs: [1, 2, 2, 4],
+        earliestAvailableSlots: [0, 0, 0, 0],
         expected: peer4.peerId,
       },
       {
@@ -138,6 +183,7 @@ describe("sync / range / peerBalancer", () => {
         // peer3 and peer4 are free, peer3 does not have greater epoch, peer4 has partial custody columns, pick peer4
         custodyColumns: [[], [], [0, 1, 2, 3], [3]],
         targetEpochs: [1, 2, 2, 4],
+        earliestAvailableSlots: [0, 0, 0, 0],
         expected: peer4.peerId,
       },
       {
@@ -145,6 +191,7 @@ describe("sync / range / peerBalancer", () => {
         // peer3 and peer4 are free, peer3 does not have greater epoch, peer4 does not have custody columns we need, pick nothing
         custodyColumns: [[], [], [0, 1, 2, 3], []],
         targetEpochs: [1, 2, 2, 4],
+        earliestAvailableSlots: [0, 0, 0, 0],
         expected: undefined,
       },
       {
@@ -152,11 +199,12 @@ describe("sync / range / peerBalancer", () => {
         // pre-fulu, same to the above, pick peer4 because we don't care about custody columns
         custodyColumns: [[], [], [0, 1, 2, 3], []],
         targetEpochs: [1, 2, 2, 4],
+        earliestAvailableSlots: [undefined, undefined, undefined, undefined],
         expected: peer4.peerId,
       },
     ];
 
-    for (const [i, {isFulu, custodyColumns, targetEpochs, expected}] of testCases.entries()) {
+    for (const [i, {isFulu, custodyColumns, targetEpochs, earliestAvailableSlots, expected}] of testCases.entries()) {
       it(`test case ${i}`, async () => {
         const columnsByPeer = new Map<PeerIdStr, {custodyColumns: number[]}>();
         for (const [i, custody] of custodyColumns.entries()) {
@@ -168,10 +216,16 @@ describe("sync / range / peerBalancer", () => {
           targetByPeer.set(peers[i].peerId, {slot: computeStartSlotAtEpoch(targetEpoch), root: ZERO_HASH});
         }
 
+        const earliestAvailableSlotByPeers = new Map<PeerIdStr, number | undefined | null>();
+        for (const [i, earliestAvailableSlot] of earliestAvailableSlots.entries()) {
+          earliestAvailableSlotByPeers.set(peers[i].peerId, earliestAvailableSlot);
+        }
+
         const peerInfos: PeerSyncInfo[] = peers.map((p) => ({
           ...p,
           custodyGroups: columnsByPeer.get(p.peerId)?.custodyColumns ?? [],
           target: targetByPeer.get(p.peerId) ?? {slot: 0, root: ZERO_HASH},
+          earliestAvailableSlot: earliestAvailableSlotByPeers.get(p.peerId) ?? undefined,
         }));
 
         const config = isFulu
