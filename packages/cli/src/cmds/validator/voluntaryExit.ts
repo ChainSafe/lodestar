@@ -21,6 +21,7 @@ type VoluntaryExitArgs = {
   exitEpoch?: number;
   pubkeys?: string[];
   yes?: boolean;
+  saveToFile?: string;
 };
 
 export const voluntaryExit: CliCommand<VoluntaryExitArgs, IValidatorCliArgs & GlobalArgs> = {
@@ -65,9 +66,14 @@ If no `pubkeys` are provided, it will exit all validators that have been importe
       description: "Skip confirmation prompt",
       type: "boolean",
     },
+
+    saveToFile: {
+      description: "Path to file where signed voluntary exit(s) will be saved as JSON instead of being published to the network.",
+      type: "string",
+    },
   },
 
-  handler: async (args) => {
+  handler: async (args: VoluntaryExitArgs & IValidatorCliArgs & GlobalArgs) => {
     // Fetch genesisValidatorsRoot always from beacon node
     // Do not use known networks cache, it defaults to mainnet for devnets
     const {config: chainForkConfig, network} = getBeaconConfigFromArgs(args);
@@ -111,13 +117,19 @@ ${validatorsToExit.map((v) => `${v.pubkey} ${v.index} ${v.status}`).join("\n")}`
     }
 
     const alreadySubmitted = [];
+    const signedExits = [];
     for (const [i, validatorToExit] of validatorsToExit.entries()) {
-      const {err} = await wrapError(processVoluntaryExit({config, client}, exitEpoch, validatorToExit));
+      const {result, err} = await wrapError(signAndMaybeSubmitVoluntaryExit({config, client}, exitEpoch, validatorToExit, !args.saveToFile));
       const {pubkey, index} = validatorToExit;
       if (err === null) {
-        console.log(`Submitted voluntary exit for ${pubkey} (${index}) ${i + 1}/${signersToExit.length}`);
+        if (args.saveToFile) {
+          signedExits.push(result.signedVoluntaryExit);
+          console.log(`Prepared signed voluntary exit for ${pubkey} (${index}) ${i + 1}/${signersToExit.length}`);
+        } else {
+          console.log(`Submitted voluntary exit for ${pubkey} (${index}) ${i + 1}/${signersToExit.length}`);
+        }
       } else {
-        if (err.message.includes("ALREADY_EXISTS")) {
+        if (err.message && err.message.includes("ALREADY_EXISTS")) {
           alreadySubmitted.push(validatorToExit);
         } else {
           console.log(
@@ -125,6 +137,13 @@ ${validatorsToExit.map((v) => `${v.pubkey} ${v.index} ${v.status}`).join("\n")}`
           );
         }
       }
+    }
+
+    if (args.saveToFile && signedExits.length > 0) {
+      // Write all signed voluntary exits to the specified file as a JSON array
+      const {writeFile} = await import("../../util/file.js");
+      writeFile(args.saveToFile, signedExits);
+      console.log(`Saved ${signedExits.length} signed voluntary exit(s) to file: ${args.saveToFile}`);
     }
 
     if (alreadySubmitted.length > 0) {
@@ -137,11 +156,12 @@ ${validatorsToExit.map((v) => `${v.pubkey} ${v.index} ${v.status}`).join("\n")}`
   },
 };
 
-async function processVoluntaryExit(
+async function signAndMaybeSubmitVoluntaryExit(
   {config, client}: {config: BeaconConfig; client: ApiClient},
   exitEpoch: Epoch,
-  validatorToExit: {index: ValidatorIndex; signer: Signer; pubkey: string}
-): Promise<void> {
+  validatorToExit: {index: ValidatorIndex; signer: Signer; pubkey: string},
+  shouldSubmit: boolean
+): Promise<{signedVoluntaryExit: phase0.SignedVoluntaryExit; err: Error | null}> {
   const {index, signer, pubkey} = validatorToExit;
   const slot = computeStartSlotAtEpoch(exitEpoch);
   const domain = config.getDomainForVoluntaryExit(slot);
@@ -162,7 +182,7 @@ async function processVoluntaryExit(
       break;
     }
     default:
-      throw new YargsError(`Unexpected signer type for ${pubkey}`);
+      return {signedVoluntaryExit: null as any, err: new YargsError(`Unexpected signer type for ${pubkey}`)};
   }
 
   const signedVoluntaryExit: phase0.SignedVoluntaryExit = {
@@ -170,7 +190,16 @@ async function processVoluntaryExit(
     signature: signature.toBytes(),
   };
 
-  (await client.beacon.submitPoolVoluntaryExit({signedVoluntaryExit})).assertOk();
+  if (shouldSubmit) {
+    try {
+      (await client.beacon.submitPoolVoluntaryExit({signedVoluntaryExit})).assertOk();
+      return {signedVoluntaryExit, err: null};
+    } catch (err) {
+      return {signedVoluntaryExit, err: err as Error};
+    }
+  } else {
+    return {signedVoluntaryExit, err: null};
+  }
 }
 
 type SignerPubkey = {signer: Signer; pubkey: string};
