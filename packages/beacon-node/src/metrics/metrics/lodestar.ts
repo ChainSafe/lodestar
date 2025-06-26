@@ -718,32 +718,32 @@ export function createLodestarMetrics(
       }),
     },
     recoverDataColumnSidecars: {
-      elapsedTimeTillRecovered: register.histogram({
-        name: "lodestar_data_column_sidecar_elapsed_time_till_recovered",
-        help: "Time elapsed between block slot time and the time data column sidecar recovered",
+      elapsedTimeTillReconstructed: register.histogram({
+        name: "lodestar_data_column_sidecar_elapsed_time_till_reconstructed",
+        help: "Time elapsed between block slot time and the time data column sidecar reconstructed",
         buckets: [2, 4, 6, 8, 10, 12],
       }),
-      partialColumns: register.gauge({
-        name: "lodestar_recover_data_column_sidecar_partial_columns_cached_total",
-        help: "Total number of partial columns cached before recovery",
+      custodyBeforeReconstruction: register.gauge({
+        name: "lodestar_data_columns_in_custody_before_reconstruction",
+        help: "Number of data columns in custody before reconstruction",
       }),
-      result: register.gauge<{result: RecoverResult}>({
-        name: "lodestar_data_column_sidecar_recover_result_total",
-        help: "Total count of recover result of data column sidecars",
+      reconstructionResult: register.gauge<{result: RecoverResult}>({
+        name: "lodestar_data_column_sidecars_reconstruction_result",
+        help: "Data column sidecars reconstruction result",
         labelNames: ["result"],
       }),
     },
     dataColumns: {
       bySource: register.gauge<{source: DataColumnsSource}>({
-        name: "lodestar_data_columns_by_source_total",
-        help: "Total number of received data columns by source",
+        name: "lodestar_data_columns_by_source",
+        help: "Number of received data columns by source",
         labelNames: ["source"],
       }),
       elapsedTimeTillReceived: register.histogram<{source: DataColumnsSource}>({
         name: "lodestar_data_column_elapsed_time_till_received",
         help: "Time elapsed between block slot time and the time data column received",
         labelNames: ["source"],
-        buckets: [0.5, 1, 2, 4, 6, 12],
+        buckets: [1, 2, 3, 4, 6, 12],
       }),
     },
     importBlock: {

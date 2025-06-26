@@ -310,7 +310,6 @@ export class SeenGossipBlockInput {
           };
           resolveAvailability(blockData);
           metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.GOSSIP});
-          metrics?.dataColumns.bySource.inc({source: blockData.dataColumnsSource}, blockData.dataColumns.length);
 
           const blockInput = getBlockInput.availableData(config, signedBlock, BlockSource.gossip, blockData);
 
@@ -331,7 +330,7 @@ export class SeenGossipBlockInput {
           resolveAvailability(blockData);
           // TODO(das): should not use syncUnknownBlock metrics here
           metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source});
-          metrics?.dataColumns.bySource.inc({source: blockData.dataColumnsSource}, blockData.dataColumns.length);
+          metrics?.dataColumns.bySource.inc({source: DataColumnsSource.gossip});
 
           const blockInput = getBlockInput.availableData(config, signedBlock, BlockSource.gossip, blockData);
           resolveBlockInput(blockInput);
@@ -360,7 +359,7 @@ export class SeenGossipBlockInput {
               this.logger.error("Error recovering data column sidecars", logCtx, e);
               return RecoverResult.Failed;
             });
-            metrics?.recoverDataColumnSidecars.result.inc({result: recoverResult});
+            metrics?.recoverDataColumnSidecars.reconstructionResult.inc({result: recoverResult});
             switch (recoverResult) {
               case RecoverResult.SuccessResolved: {
                 resolveAvailabilityAndBlockInput(BlockInputAvailabilitySource.RECOVERED);

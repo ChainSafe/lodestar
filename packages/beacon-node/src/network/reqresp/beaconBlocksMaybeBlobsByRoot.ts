@@ -587,6 +587,7 @@ export async function unavailableBeaconBlobsByRootPostFulu(
     let allDataColumnSidecars: fulu.DataColumnSidecar[];
     if (columns.length > 0) {
       allDataColumnSidecars = await network.sendDataColumnSidecarsByRoot(peerId, [{blockRoot, columns}]);
+      opts.metrics?.dataColumns.bySource.inc({source: DataColumnsSource.byRoot}, allDataColumnSidecars.length);
     } else {
       allDataColumnSidecars = [];
     }
@@ -639,7 +640,6 @@ export async function unavailableBeaconBlobsByRootPostFulu(
       dataColumnsSource: DataColumnsSource.byRoot,
     } as BlockInputDataColumns;
     resolveAvailability(blockData);
-    opts.metrics?.dataColumns.bySource.inc({source: blockData.dataColumnsSource}, blockData.dataColumns.length);
     opts.logger?.verbose(
       "unavailableBeaconBlobsByRootPostFulu: Resolved availability for block with all data columns",
       logCtx

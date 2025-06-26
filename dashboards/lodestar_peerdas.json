@@ -237,7 +237,7 @@
           "refId": "A"
         }
       ],
-      "title": "Data columns received delay",
+      "title": "Data columns receiving delay",
       "type": "timeseries"
     },
     {
@@ -1579,7 +1579,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Total number of partial columns cached before recovery",
+      "description": "Number of columns in custody before reconstruction",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1647,14 +1647,14 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(lodestar_recover_data_column_sidecar_partial_columns_cached_total[$rate_interval]) * 12",
+          "expr": "rate(lodestar_data_columns_in_custody_before_reconstruction[$rate_interval]) * 12",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Partial columns cached before recovery",
+      "title": "Data columns in custody before reconstruction",
       "type": "timeseries"
     },
     {
@@ -1662,7 +1662,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Total count of recover result of data column sidecars",
+      "description": "Data column sidecars reconstruction result ",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1730,14 +1730,14 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(lodestar_data_column_sidecar_recover_result_total[$rate_interval]) * 12",
+          "expr": "rate(lodestar_data_column_sidecars_reconstruction_result[$rate_interval]) * 12",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Recover result",
+      "title": "Reconstruction result",
       "type": "timeseries"
     },
     {
@@ -1745,7 +1745,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Time elapsed between block slot time and the time data column sidecar recovered",
+      "description": "Time elapsed between block slot time and the time data column sidecar reconstructed",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1813,14 +1813,14 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(lodestar_data_column_sidecar_elapsed_time_till_recovered_sum[$rate_interval])\n/\nrate(lodestar_data_column_sidecar_elapsed_time_till_recovered_count[$rate_interval])",
+          "expr": "rate(lodestar_data_column_sidecar_elapsed_time_till_reconstructed_sum[$rate_interval])\n/\nrate(lodestar_data_column_sidecar_elapsed_time_till_reconstructed_count[$rate_interval])",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Data columns recovered delay",
+      "title": "Data columns reconstruction delay",
       "type": "timeseries"
     }
   ],

@@ -353,7 +353,7 @@ export async function recoverDataColumnSidecars(
   }
 
   const partialColumns = dataColumnCache.size;
-  metrics?.recoverDataColumnSidecars.partialColumns.set(partialColumns);
+  metrics?.recoverDataColumnSidecars.custodyBeforeReconstruction.set(partialColumns);
   const partialSidecars = new Map<number, fulu.DataColumnSidecar>();
   for (const [columnIndex, {dataColumn}] of dataColumnCache.entries()) {
     // the more columns we put, the slower the recover
@@ -378,8 +378,8 @@ export async function recoverDataColumnSidecars(
   }
 
   const slot = firstDataColumn.signedBlockHeader.message.slot;
-  const delaySec = clock.secFromSlot(slot);
-  metrics?.recoverDataColumnSidecars.elapsedTimeTillRecovered.observe(delaySec);
+  const secFromSlot = clock.secFromSlot(slot);
+  metrics?.recoverDataColumnSidecars.elapsedTimeTillReconstructed.observe(secFromSlot);
 
   if (dataColumnCache.size === NUMBER_OF_COLUMNS) {
     // either gossip or getBlobsV2 resolved availability while we were recovering
@@ -507,10 +507,11 @@ export async function getDataColumnsFromExecution(
   const blockData: BlockInputDataColumns = {
     fork: blockCache.cachedData.fork,
     ...allDataColumns,
-    dataColumnsSource: DataColumnsSource.gossip,
+    dataColumnsSource: DataColumnsSource.api,
   };
+  const partialColumns = blockCache.cachedData.dataColumnsCache.size;
   blockCache.cachedData.resolveAvailability(blockData);
-  metrics?.dataColumns.bySource.inc({source: blockData.dataColumnsSource}, blockData.dataColumns.length);
+  metrics?.dataColumns.bySource.inc({source: DataColumnsSource.api}, NUMBER_OF_COLUMNS - partialColumns);
 
   if (blockCache.block !== undefined) {
     const blockInput = getBlockInput.availableData(config, blockCache.block, BlockSource.gossip, blockData);
