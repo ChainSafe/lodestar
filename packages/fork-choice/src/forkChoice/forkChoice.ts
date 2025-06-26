@@ -237,7 +237,9 @@ export class ForkChoice implements IForkChoice {
     }
     // Skip re-org attempt if proposer boost (reorg) are disabled
     if (!this.opts?.proposerBoost || !this.opts?.proposerBoostReorg) {
-      this.logger?.verbose("Skip shouldOverrideForkChoiceUpdate check since the related flags are disabled");
+      this.logger?.verbose("Skip shouldOverrideForkChoiceUpdate check since the related flags are disabled", {
+        slot: currentSlot,
+      });
       return {shouldOverrideFcu: false, reason: NotReorgedReason.ProposerBoostReorgDisabled};
     }
 
@@ -264,7 +266,7 @@ export class ForkChoice implements IForkChoice {
       return {shouldOverrideFcu: false, reason: NotReorgedReason.ReorgMoreThanOneSlot};
     }
 
-    this.logger?.verbose("Block is weak. Should override forkchoice update", {blockRoot});
+    this.logger?.verbose("Block is weak. Should override forkchoice update", {blockRoot, slot: currentSlot});
     return {shouldOverrideFcu: true, parentBlock};
   }
 
@@ -304,7 +306,10 @@ export class ForkChoice implements IForkChoice {
     const result = this.shouldOverrideForkChoiceUpdate(currentSlot, blockRoot);
 
     if (result.shouldOverrideFcu) {
-      this.logger?.verbose("Current head is weak. Predicting next block to be built on parent of head.", {blockRoot});
+      this.logger?.verbose("Current head is weak. Predicting next block to be built on parent of head.", {
+        blockRoot,
+        slot: currentSlot,
+      });
       return result.parentBlock;
     }
 

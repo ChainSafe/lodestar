@@ -360,6 +360,7 @@ export async function importBlock(
     }
     this.logger.verbose("Weak block detected. Skip fcu call in importBlock", {
       blockRoot: blockRootHex,
+      slot: blockSlot,
       reason: notOverrideFcuReason,
     });
   }
