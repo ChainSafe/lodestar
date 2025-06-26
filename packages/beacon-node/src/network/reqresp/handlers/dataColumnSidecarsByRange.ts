@@ -139,7 +139,7 @@ export function* iterateDataColumnBytesFromWrapper(
     // console.log(`iterate onDataColumnSidecarsByRange blockSlot=${blockSlot} index=${index} dataIndex=${dataIndex}`);
     yield {
       data: dataColumnSidecarBytes,
-      fork,
+      boundary: {fork},
     };
   }
 }

@@ -2,7 +2,18 @@ import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {ForkName, ForkPostAltair, isForkPostAltair} from "@lodestar/params";
 import {Protocol, ProtocolHandler, ReqRespRequest} from "@lodestar/reqresp";
-import {Metadata, Root, SignedBeaconBlock, altair, deneb, fulu, phase0, ssz, sszTypesFor} from "@lodestar/types";
+import {
+  Metadata,
+  Root,
+  SignedBeaconBlock,
+  Status,
+  altair,
+  deneb,
+  fulu,
+  phase0,
+  ssz,
+  sszTypesFor,
+} from "@lodestar/types";
 import {BlobSidecarsByRootRequest, BlobSidecarsByRootRequestType} from "../../util/types.js";
 
 export type ProtocolNoHandler = Omit<Protocol, "handler">;
@@ -28,7 +39,7 @@ export enum ReqRespMethod {
 
 // To typesafe events to network
 export type RequestBodyByMethod = {
-  [ReqRespMethod.Status]: phase0.Status;
+  [ReqRespMethod.Status]: Status;
   [ReqRespMethod.Goodbye]: phase0.Goodbye;
   [ReqRespMethod.Ping]: phase0.Ping;
   [ReqRespMethod.Metadata]: null;
@@ -45,7 +56,7 @@ export type RequestBodyByMethod = {
 };
 
 type ResponseBodyByMethod = {
-  [ReqRespMethod.Status]: phase0.Status;
+  [ReqRespMethod.Status]: Status;
   [ReqRespMethod.Goodbye]: phase0.Goodbye;
   [ReqRespMethod.Ping]: phase0.Ping;
   [ReqRespMethod.Metadata]: Metadata;
@@ -70,7 +81,7 @@ export const requestSszTypeByMethod: (
 ) => {
   [K in ReqRespMethod]: RequestBodyByMethod[K] extends null ? null : Type<RequestBodyByMethod[K]>;
 } = (fork, config) => ({
-  [ReqRespMethod.Status]: ssz.phase0.Status,
+  [ReqRespMethod.Status]: sszTypesFor(fork).Status,
   [ReqRespMethod.Goodbye]: ssz.phase0.Goodbye,
   [ReqRespMethod.Ping]: ssz.phase0.Ping,
   [ReqRespMethod.Metadata]: null,
@@ -99,7 +110,7 @@ const blocksResponseType: ResponseTypeGetter<SignedBeaconBlock> = (fork, version
 };
 
 export const responseSszTypeByMethod: {[K in ReqRespMethod]: ResponseTypeGetter<ResponseBodyByMethod[K]>} = {
-  [ReqRespMethod.Status]: () => ssz.phase0.Status,
+  [ReqRespMethod.Status]: (_, version) => (version === Version.V2 ? ssz.fulu.Status : ssz.phase0.Status),
   [ReqRespMethod.Goodbye]: () => ssz.phase0.Goodbye,
   [ReqRespMethod.Ping]: () => ssz.phase0.Ping,
   [ReqRespMethod.Metadata]: (_, version) =>

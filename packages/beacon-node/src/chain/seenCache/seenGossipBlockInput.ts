@@ -177,8 +177,8 @@ export class SeenGossipBlockInput {
 
       blockHex = toHexString(blockRoot);
       blockCache = this.blockInputCache.get(blockHex) ?? getEmptyBlockInputCacheEntry(fork, ++this.globalCacheId);
-      if (blockCache.cachedData?.fork !== ForkName.deneb) {
-        throw Error(`blob data at non deneb fork=${blockCache.fork}`);
+      if (blockCache.cachedData?.fork !== ForkName.deneb && blockCache.cachedData?.fork !== ForkName.electra) {
+        throw Error(`blob data at non deneb/electra fork=${blockCache.fork}`);
       }
 
       // TODO: freetheblobs check if its the same blob or a duplicate and throw/take actions

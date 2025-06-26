@@ -1,7 +1,7 @@
 import {EventEmitter} from "node:events";
 import {BeaconConfig} from "@lodestar/config";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {Epoch, phase0} from "@lodestar/types";
+import {Epoch, Status, fulu} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
 import {StrictEventEmitter} from "strict-event-emitter-types";
 import {AttestationImportOpt, ImportBlockOpts} from "../../chain/blocks/index.js";
@@ -111,7 +111,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
    * A peer with a relevant STATUS message has been found, which also is advanced from us.
    * Add this peer to an existing chain or create a new one. The update the chains status.
    */
-  addPeer(peerId: PeerIdStr, localStatus: phase0.Status, peerStatus: phase0.Status): void {
+  addPeer(peerId: PeerIdStr, localStatus: Status, peerStatus: Status): void {
     // Compute if we should do a Finalized or Head sync with this peer
     const {syncType, startEpoch, target} = getRangeSyncTarget(localStatus, peerStatus, this.chain.forkChoice);
     this.logger.debug("Sync peer joined", {
@@ -120,6 +120,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
       startEpoch,
       targetSlot: target.slot,
       targetRoot: toRootHex(target.root),
+      earliestAvailableSlot: (peerStatus as fulu.Status).earliestAvailableSlot ?? Infinity,
     });
 
     // If the peer existed in any other chain, remove it.
@@ -200,19 +201,17 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
 
   /** Convenience method for `SyncChain` */
   private downloadBeaconBlocksByRange: SyncChainFns["downloadBeaconBlocksByRange"] = async (
-    peerId,
+    peer,
     request,
-    partialDownload,
-    peerClient
+    partialDownload
   ) => {
     return beaconBlocksMaybeBlobsByRange(
       this.config,
       this.network,
-      peerId,
+      peer,
       request,
       this.chain.clock.currentEpoch,
       partialDownload,
-      peerClient,
       this.metrics,
       this.logger
     );
@@ -221,6 +220,10 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
   /** Convenience method for `SyncChain` */
   private reportPeer: SyncChainFns["reportPeer"] = (peer, action, actionName) => {
     this.network.reportPeer(peer, action, actionName);
+  };
+
+  private getConnectedPeerSyncMeta: SyncChainFns["getConnectedPeerSyncMeta"] = (peerId) => {
+    return this.network.getConnectedPeerSyncMeta(peerId);
   };
 
   /** Convenience method for `SyncChain` */
@@ -244,6 +247,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
           processChainSegment: this.processChainSegment,
           downloadBeaconBlocksByRange: this.downloadBeaconBlocksByRange,
           reportPeer: this.reportPeer,
+          getConnectedPeerSyncMeta: this.getConnectedPeerSyncMeta,
           onEnd: this.onSyncChainEnd,
         },
         {config: this.config, logger: this.logger}
@@ -259,12 +263,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
       });
     }
 
-    syncChain.addPeer(
-      peer,
-      target,
-      this.network.getConnectedPeerCustody(peer),
-      this.network.getConnectedPeerClientAgent(peer)
-    );
+    syncChain.addPeer(peer, target);
   }
 
   private update(localFinalizedEpoch: Epoch): void {

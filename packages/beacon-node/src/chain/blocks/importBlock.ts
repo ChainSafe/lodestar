@@ -1,4 +1,4 @@
-import {BitArray, toHexString} from "@chainsafe/ssz";
+import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {AncestorStatus, EpochDifference, ForkChoiceError, ForkChoiceErrorCode} from "@lodestar/fork-choice";
 import {
@@ -21,7 +21,6 @@ import {
 import {Attestation, BeaconBlock, altair, capella, electra, phase0, ssz} from "@lodestar/types";
 import {isErrorAborted, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
-import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
@@ -432,26 +431,6 @@ export async function importBlock(
       if (this.emitter.listenerCount(routes.events.EventType.proposerSlashing)) {
         for (const proposerSlashing of block.message.body.proposerSlashings) {
           this.emitter.emit(routes.events.EventType.proposerSlashing, proposerSlashing);
-        }
-      }
-      if (
-        blockInput.type === BlockInputType.availableData &&
-        this.emitter.listenerCount(routes.events.EventType.blobSidecar)
-      ) {
-        if (blockInput.blockData.fork === ForkName.deneb || blockInput.blockData.fork === ForkName.electra) {
-          const {blobs} = blockInput.blockData;
-          for (const blobSidecar of blobs) {
-            const {index, kzgCommitment} = blobSidecar;
-            this.emitter.emit(routes.events.EventType.blobSidecar, {
-              blockRoot: blockRootHex,
-              slot: blockSlot,
-              index,
-              kzgCommitment: toHexString(kzgCommitment),
-              versionedHash: toHexString(kzgCommitmentToVersionedHash(kzgCommitment)),
-            });
-          }
-        } else {
-          // TODO add event for datacolumns
         }
       }
     });

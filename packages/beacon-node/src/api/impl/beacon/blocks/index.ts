@@ -43,7 +43,7 @@ import {BlockError, BlockErrorCode, BlockGossipError} from "../../../../chain/er
 import {validateGossipBlock} from "../../../../chain/validation/block.js";
 import {OpSource} from "../../../../chain/validatorMonitor.js";
 import {NetworkEvent} from "../../../../network/index.js";
-import {computeBlobSidecars, computeDataColumnSidecars} from "../../../../util/blobs.js";
+import {computeBlobSidecars, computeDataColumnSidecars, kzgCommitmentToVersionedHash} from "../../../../util/blobs.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {ApiModules} from "../../types.js";
@@ -240,21 +240,6 @@ export function getBeaconBlockApi({
       await sleep(msToBlockSlot);
     }
 
-    chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRoot});
-
-    if (blockForImport.type === BlockInputType.availableData && blockForImport.blockData.fork === ForkName.fulu) {
-      const {dataColumns} = blockForImport.blockData;
-
-      for (const dataColumnSidecar of dataColumns) {
-        chain.emitter.emit(routes.events.EventType.dataColumnSidecar, {
-          blockRoot,
-          slot,
-          index: dataColumnSidecar.index,
-          kzgCommitments: dataColumnSidecar.kzgCommitments.map(toHex),
-        });
-      }
-    }
-
     // TODO: Validate block
     const delaySec =
       seenTimestampSec - (chain.genesisTime + blockForImport.block.message.slot * config.SECONDS_PER_SLOT);
@@ -289,6 +274,44 @@ export function getBeaconBlockApi({
           }),
     ];
     await promiseAllMaybeAsync(publishPromises);
+
+    if (chain.emitter.listenerCount(routes.events.EventType.blockGossip)) {
+      chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRoot});
+    }
+
+    if (blockForImport.type === BlockInputType.availableData) {
+      if (
+        chain.emitter.listenerCount(routes.events.EventType.blobSidecar) &&
+        (blockForImport.blockData.fork === ForkName.deneb || blockForImport.blockData.fork === ForkName.electra)
+      ) {
+        const {blobs} = blockForImport.blockData;
+
+        for (const blobSidecar of blobs) {
+          const {index, kzgCommitment} = blobSidecar;
+          chain.emitter.emit(routes.events.EventType.blobSidecar, {
+            blockRoot,
+            slot,
+            index,
+            kzgCommitment: toHex(kzgCommitment),
+            versionedHash: toHex(kzgCommitmentToVersionedHash(kzgCommitment)),
+          });
+        }
+      } else if (
+        chain.emitter.listenerCount(routes.events.EventType.dataColumnSidecar) &&
+        blockForImport.blockData.fork === ForkName.fulu
+      ) {
+        const {dataColumns} = blockForImport.blockData;
+
+        for (const dataColumnSidecar of dataColumns) {
+          chain.emitter.emit(routes.events.EventType.dataColumnSidecar, {
+            blockRoot,
+            slot,
+            index: dataColumnSidecar.index,
+            kzgCommitments: dataColumnSidecar.kzgCommitments.map(toHex),
+          });
+        }
+      }
+    }
   };
 
   const publishBlindedBlock: ApplicationMethods<routes.beacon.block.Endpoints>["publishBlindedBlock"] = async (

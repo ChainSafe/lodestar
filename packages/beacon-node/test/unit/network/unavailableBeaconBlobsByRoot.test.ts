@@ -2,8 +2,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {BYTES_PER_FIELD_ELEMENT, FIELD_ELEMENTS_PER_BLOB, ForkName} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {deneb, ssz} from "@lodestar/types";
-import {BlobAndProofV2} from "@lodestar/types/lib/fulu/types.js";
+import {deneb, fulu, ssz} from "@lodestar/types";
 import {describe, expect, it, vi} from "vitest";
 import {
   BlobsSource,
@@ -233,14 +232,14 @@ describe("unavailableBeaconBlobsByRoot", () => {
         cachedData: getEmptyBlockInputCacheEntry(ForkName.fulu, 1).cachedData as CachedData,
       };
 
-      const blobAndProof: BlobAndProofV2[] = blobscommitmentsandproofs.map((b) => ({
+      const blobAndProof: fulu.BlobAndProofV2[] = blobscommitmentsandproofs.map((b) => ({
         blob: b.blob,
         proofs: b.cellsAndProofs.proofs,
       }));
 
       // Mock execution engine to return all blobs
       executionEngine.getBlobs.mockImplementationOnce(
-        (): Promise<BlobAndProofV2[] | null> => Promise.resolve(blobAndProof)
+        (): Promise<fulu.BlobAndProofV2[] | null> => Promise.resolve(blobAndProof)
       );
 
       const result = await unavailableBeaconBlobsByRoot(

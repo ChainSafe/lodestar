@@ -28,6 +28,8 @@ export type IChainOptions = BlockProcessOpts &
     persistProducedBlocks?: boolean;
     persistInvalidSszObjects?: boolean;
     persistInvalidSszObjectsDir?: string;
+    persistOrphanedBlocks?: boolean;
+    persistOrphanedBlocksDir?: string;
     skipCreateStateCacheIfAvailable?: boolean;
     suggestedFeeRecipient: string;
     maxSkipSlots?: number;
@@ -47,8 +49,6 @@ export type IChainOptions = BlockProcessOpts &
      * From our testing, there are diminishing returns after 8 bits.
      */
     trustedSetupPrecompute?: number;
-    /** Option to load a custom kzg trusted setup in txt format */
-    trustedSetup?: string;
     broadcastValidationStrictness?: string;
     minSameMessageSignatureSetsToBatch: number;
     archiveDateEpochs?: number;

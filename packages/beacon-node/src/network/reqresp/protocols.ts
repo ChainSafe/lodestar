@@ -40,6 +40,12 @@ export const Status = toProtocol({
   contextBytesType: ContextBytesType.Empty,
 });
 
+export const StatusV2 = toProtocol({
+  method: ReqRespMethod.Status,
+  version: Version.V2,
+  contextBytesType: ContextBytesType.Empty,
+});
+
 export const BeaconBlocksByRange = toProtocol({
   method: ReqRespMethod.BeaconBlocksByRange,
   version: Version.V1,

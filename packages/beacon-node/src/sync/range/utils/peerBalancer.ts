@@ -1,3 +1,4 @@
+import {PeerSyncMeta} from "../../../network/peers/peersData.js";
 import {PeerIdStr} from "../../../util/peerId.js";
 import {shuffle} from "../../../util/shuffle.js";
 import {sortBy} from "../../../util/sortBy.js";
@@ -8,14 +9,12 @@ import {Batch, BatchStatus} from "../batch.js";
  * Shuffles peers only once on instantiation
  */
 export class ChainPeersBalancer {
-  private peers: PeerIdStr[];
-  private peerset: Map<PeerIdStr, {custodyColumns: number[]}>;
+  private peers: PeerSyncMeta[];
   private activeRequestsByPeer = new Map<PeerIdStr, number>();
 
   // TODO: @matthewkeil check if this needs to be updated for custody groups
-  constructor(peers: PeerIdStr[], peerset: Map<PeerIdStr, {custodyColumns: number[]}>, batches: Batch[]) {
+  constructor(peers: PeerSyncMeta[], batches: Batch[]) {
     this.peers = shuffle(peers);
-    this.peerset = peerset;
 
     // Compute activeRequestsByPeer from all batches internal states
     for (const batch of batches) {
@@ -29,7 +28,7 @@ export class ChainPeersBalancer {
    * Return the most suitable peer to retry
    * Sort peers by (1) no failed request (2) less active requests, then pick first
    */
-  bestPeerToRetryBatch(batch: Batch): PeerIdStr | undefined {
+  bestPeerToRetryBatch(batch: Batch): PeerSyncMeta | undefined {
     if (batch.state.status !== BatchStatus.AwaitingDownload) {
       return;
     }
@@ -37,12 +36,20 @@ export class ChainPeersBalancer {
 
     const failedPeers = new Set(batch.getFailedPeers());
     const sortedBestPeers = sortBy(
-      this.peers.filter((peerId) => {
+      this.peers.filter(({earliestAvailableSlot, custodyGroups}) => {
+        // TODO(fulu): this is a bug and is prioritizing peers that do not announce
+        //     an earliestAvailableSlot. Need to refactor this logic
+        const earliestSlot = earliestAvailableSlot ?? 0;
+        const peerColumns = custodyGroups ?? [];
+
+        if (earliestSlot > batch.request.startSlot) {
+          return false;
+        }
+
         if (partialDownload === null) {
           return true;
         }
 
-        const peerColumns = this.peerset.get(peerId)?.custodyColumns ?? [];
         const columns = peerColumns.reduce((acc, elem) => {
           if (partialDownload.pendingDataColumns.includes(elem)) {
             acc.push(elem);
@@ -52,18 +59,19 @@ export class ChainPeersBalancer {
 
         return columns.length > 0;
       }),
-      (peer) => (failedPeers.has(peer) ? 1 : 0), // Sort by no failed first = 0
-      (peer) => this.activeRequestsByPeer.get(peer) ?? 0 // Sort by least active req
+      ({peerId}) => (failedPeers.has(peerId) ? 1 : 0), // Sort by no failed first = 0
+      ({peerId}) => this.activeRequestsByPeer.get(peerId) ?? 0 // Sort by least active req
     );
+
     return sortedBestPeers[0];
   }
 
   /**
    * Return peers with 0 or no active requests
    */
-  idlePeers(): PeerIdStr[] {
-    return this.peers.filter((peer) => {
-      const activeRequests = this.activeRequestsByPeer.get(peer);
+  idlePeers(): PeerSyncMeta[] {
+    return this.peers.filter(({peerId}) => {
+      const activeRequests = this.activeRequestsByPeer.get(peerId);
       return activeRequests === undefined || activeRequests === 0;
     });
   }

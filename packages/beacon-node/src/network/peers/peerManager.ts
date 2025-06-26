@@ -3,7 +3,7 @@ import {Connection, PeerId, PrivateKey} from "@libp2p/interface";
 import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
 import {ForkSeq, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
-import {Metadata, fulu, phase0} from "@lodestar/types";
+import {Metadata, Status, fulu, phase0} from "@lodestar/types";
 import {withTimeout} from "@lodestar/utils";
 import {GOODBYE_KNOWN_CODES, GoodByeReasonCode, Libp2pEvent} from "../../constants/index.js";
 import {IClock} from "../../util/clock.js";
@@ -101,7 +101,7 @@ export type PeerManagerOpts = {
  */
 export interface IReqRespBeaconNodePeerManager {
   sendPing(peerId: PeerId): Promise<phase0.Ping>;
-  sendStatus(peerId: PeerId, request: phase0.Status): Promise<phase0.Status>;
+  sendStatus(peerId: PeerId, request: Status): Promise<Status>;
   sendGoodbye(peerId: PeerId, request: phase0.Goodbye): Promise<void>;
   sendMetadata(peerId: PeerId): Promise<Metadata>;
 }
@@ -127,6 +127,7 @@ export type PeerRequestedSubnetType = SubnetType | "column";
 
 type PeerIdStr = string;
 
+// TODO(fulu): dedupe with network/peers/peerData.ts
 enum RelevantPeerStatus {
   Unknown = "unknown",
   relevant = "relevant",
@@ -158,7 +159,7 @@ export class PeerManager {
   private readonly discovery: PeerDiscovery | null;
   private readonly networkEventBus: INetworkEventBus;
   private readonly statusCache: StatusCache;
-  private lastStatus: phase0.Status;
+  private lastStatus: Status;
 
   // A single map of connected peers with all necessary data to handle PINGs, STATUS, and metrics
   private connectedPeers: Map<PeerIdStr, PeerData>;
@@ -348,6 +349,7 @@ export class PeerManager {
       const custodyGroupCount =
         (metadata as Partial<fulu.Metadata>).custodyGroupCount ?? this.config.CUSTODY_REQUIREMENT;
       const nodeId = peerData?.nodeId ?? computeNodeId(peer);
+      // TODO(fulu): this should be columns not groups.  need to change everywhere
       const custodyGroups =
         oldMetadata == null || oldMetadata.custodyGroups == null || custodyGroupCount !== oldMetadata.custodyGroupCount
           ? getCustodyGroups(nodeId, custodyGroupCount)
@@ -389,7 +391,7 @@ export class PeerManager {
   /**
    * Handle a STATUS request + response (rpc handler responds with STATUS automatically)
    */
-  private onStatus(peer: PeerId, status: phase0.Status): void {
+  private onStatus(peer: PeerId, status: Status): void {
     // reset the to-status timer of this peer
     const peerData = this.connectedPeers.get(peer.toString());
     if (peerData) {
@@ -397,9 +399,16 @@ export class PeerManager {
       peerData.status = status;
     }
 
+    const forkName = this.config.getForkName(this.clock.currentSlot);
+
     let isIrrelevant: boolean;
     try {
-      const irrelevantReasonType = assertPeerRelevance(status, this.statusCache.get(), this.clock.currentSlot);
+      const irrelevantReasonType = assertPeerRelevance(
+        status,
+        this.statusCache.get(),
+        this.clock.currentSlot,
+        forkName
+      );
       if (irrelevantReasonType === null) {
         isIrrelevant = false;
       } else {
@@ -509,7 +518,7 @@ export class PeerManager {
     }
   }
 
-  private async requestStatus(peer: PeerId, localStatus: phase0.Status): Promise<void> {
+  private async requestStatus(peer: PeerId, localStatus: Status): Promise<void> {
     try {
       this.onStatus(peer, await this.reqResp.sendStatus(peer, localStatus));
     } catch (_e) {

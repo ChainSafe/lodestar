@@ -1,7 +1,6 @@
 import {PeerIdStr} from "@chainsafe/libp2p-gossipsub/types";
 import {Message, TopicValidatorResult} from "@libp2p/interface";
 import {BeaconConfig} from "@lodestar/config";
-import {ForkName} from "@lodestar/params";
 import {
   AttesterSlashing,
   LightClientFinalityUpdate,
@@ -23,6 +22,7 @@ import {AttestationError, AttestationErrorType} from "../../chain/errors/attesta
 import {GossipActionError} from "../../chain/errors/gossipValidation.js";
 import {IBeaconChain} from "../../chain/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
+import {SubscribeBoundary} from "../core/types.js";
 
 export enum GossipType {
   beacon_block = "beacon_block",
@@ -52,7 +52,7 @@ export enum GossipEncoding {
  */
 export interface IGossipTopic {
   type: GossipType;
-  fork: ForkName;
+  boundary: SubscribeBoundary;
   encoding?: GossipEncoding;
 }
 

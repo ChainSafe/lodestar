@@ -1,11 +1,11 @@
 import {toHexString} from "@chainsafe/ssz";
+import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {RootHex, SignedBeaconBlock, deneb, fulu, phase0} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
-import {fromHex} from "@lodestar/utils";
-import {Logger} from "@lodestar/utils";
+import {Logger, fromHex, toHex} from "@lodestar/utils";
 import {
   BlobsSource,
   BlockInput,
@@ -58,7 +58,7 @@ export async function beaconBlocksMaybeBlobsByRoot(
 
   const sampledColumns = network.custodyConfig.sampledColumns;
   const neededColumns = partialDownload ? partialDownload.pendingDataColumns : sampledColumns;
-  const peerColumns = network.getConnectedPeerCustody(peerId);
+  const {custodyGroups: peerColumns} = network.getConnectedPeerSyncMeta(peerId);
 
   // get match
   const columns = peerColumns.reduce((acc, elem) => {
@@ -261,12 +261,13 @@ export async function unavailableBeaconBlobsByRootPreFulu(
   cachedData: CachedBlobs,
   opts: {
     metrics?: Metrics | null;
+    emitter: ChainEventEmitter;
     executionEngine: IExecutionEngine;
     engineGetBlobsCache?: Map<RootHex, BlobAndProof | null>;
     blockInputsRetryTrackerCache?: Set<RootHex>;
   }
 ): Promise<BlockInput> {
-  const {executionEngine, metrics, engineGetBlobsCache, blockInputsRetryTrackerCache} = opts;
+  const {executionEngine, metrics, emitter, engineGetBlobsCache, blockInputsRetryTrackerCache} = opts;
   if (unavailableBlockInput.block !== null && unavailableBlockInput.type !== BlockInputType.dataPromise) {
     return unavailableBlockInput;
   }
@@ -340,8 +341,9 @@ export async function unavailableBeaconBlobsByRootPreFulu(
 
   for (let j = 0; j < versionedHashes.length; j++) {
     const blobAndProof = blobAndProofs[j] ?? null;
+    const versionedHash = versionedHashes[j];
     // save to cache for future reference
-    engineGetBlobsCache?.set(toHexString(versionedHashes[j]), blobAndProof);
+    engineGetBlobsCache?.set(toHexString(versionedHash), blobAndProof);
     if (blobAndProof !== null) {
       metrics?.blockInputFetchStats.dataPromiseBlobsEngineGetBlobsApiNotNull.inc();
 
@@ -357,6 +359,16 @@ export async function unavailableBeaconBlobsByRootPreFulu(
         // for e.g. a blockInput that might be awaiting blobs promise fullfillment in
         // verifyBlocksDataAvailability
         cachedData.blobsCache.set(blobSidecar.index, blobSidecar);
+
+        if (emitter.listenerCount(routes.events.EventType.blobSidecar)) {
+          emitter.emit(routes.events.EventType.blobSidecar, {
+            blockRoot: blockRootHex,
+            slot,
+            index,
+            kzgCommitment: toHex(kzgCommitment),
+            versionedHash: toHex(versionedHash),
+          });
+        }
       } else {
         metrics?.blockInputFetchStats.dataPromiseBlobsDelayedGossipAvailable.inc();
         metrics?.blockInputFetchStats.dataPromiseBlobsDelayedGossipAvailableSavedGetBlobsCompute.inc();
@@ -420,6 +432,16 @@ export async function unavailableBeaconBlobsByRootPreFulu(
   // verifyBlocksDataAvailability
   for (const blobSidecar of networkResBlobSidecars) {
     cachedData.blobsCache.set(blobSidecar.index, blobSidecar);
+
+    if (emitter.listenerCount(routes.events.EventType.blobSidecar)) {
+      emitter.emit(routes.events.EventType.blobSidecar, {
+        blockRoot: blockRootHex,
+        slot,
+        index: blobSidecar.index,
+        kzgCommitment: toHex(blobSidecar.kzgCommitment),
+        versionedHash: toHex(kzgCommitmentToVersionedHash(blobSidecar.kzgCommitment)),
+      });
+    }
   }
 
   // check and see if all blobs are now available and in that case resolve availability
@@ -569,7 +591,7 @@ export async function unavailableBeaconBlobsByRootPostFulu(
   );
 
   if (!gotColumnsFromExecution) {
-    const peerColumns = network.getConnectedPeerCustody(peerId);
+    const {custodyGroups: peerColumns} = network.getConnectedPeerSyncMeta(peerId);
 
     // get match
     const columns = peerColumns.reduce((acc, elem) => {

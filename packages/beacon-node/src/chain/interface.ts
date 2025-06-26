@@ -17,6 +17,7 @@ import {
   RootHex,
   SignedBeaconBlock,
   Slot,
+  Status,
   UintNum64,
   ValidatorIndex,
   Wei,
@@ -202,13 +203,13 @@ export interface IBeaconChain {
   getContents(beaconBlock: deneb.BeaconBlock): deneb.Contents & {cells?: fulu.Cell[][]};
 
   produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody>;
-  produceBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
+  produceBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise?: Promise<CommonBlockBody>}): Promise<{
     block: BeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Wei;
     shouldOverrideBuilder?: boolean;
   }>;
-  produceBlindedBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
+  produceBlindedBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise?: Promise<CommonBlockBody>}): Promise<{
     block: BlindedBeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Wei;
@@ -219,7 +220,7 @@ export interface IBeaconChain {
   /** Process a chain of blocks until complete */
   processChainSegment(blocks: BlockInput[], opts?: ImportBlockOpts): Promise<void>;
 
-  getStatus(): phase0.Status;
+  getStatus(): Status;
 
   recomputeForkChoiceHead(caller: ForkchoiceCaller): ProtoBlock;
 

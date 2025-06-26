@@ -1,4 +1,5 @@
-import {ForkDigest, Root, Slot, phase0, ssz} from "@lodestar/types";
+import {ForkName, isForkPostFulu} from "@lodestar/params";
+import {ForkDigest, Root, Slot, Status, fulu, ssz} from "@lodestar/types";
 import {toHex, toRootHex} from "@lodestar/utils";
 
 // TODO: Why this value? (From Lighthouse)
@@ -8,11 +9,13 @@ export enum IrrelevantPeerCode {
   INCOMPATIBLE_FORKS = "IRRELEVANT_PEER_INCOMPATIBLE_FORKS",
   DIFFERENT_CLOCKS = "IRRELEVANT_PEER_DIFFERENT_CLOCKS",
   DIFFERENT_FINALIZED = "IRRELEVANT_PEER_DIFFERENT_FINALIZED",
+  NO_EARLIEST_AVAILABLE_SLOT = "NO_EARLIEST_AVAILABLE_SLOT",
 }
 
 type IrrelevantPeerType =
   | {code: IrrelevantPeerCode.INCOMPATIBLE_FORKS; ours: ForkDigest; theirs: ForkDigest}
   | {code: IrrelevantPeerCode.DIFFERENT_CLOCKS; slotDiff: number}
+  | {code: IrrelevantPeerCode.NO_EARLIEST_AVAILABLE_SLOT}
   | {code: IrrelevantPeerCode.DIFFERENT_FINALIZED; expectedRoot: Root; remoteRoot: Root};
 
 /**
@@ -20,9 +23,10 @@ type IrrelevantPeerType =
  * irrelevant the reason is returned.
  */
 export function assertPeerRelevance(
-  remote: phase0.Status,
-  local: phase0.Status,
-  currentSlot: Slot
+  remote: Status,
+  local: Status,
+  currentSlot: Slot,
+  forkName: ForkName
 ): IrrelevantPeerType | null {
   // The node is on a different network/fork
   if (!ssz.ForkDigest.equals(local.forkDigest, remote.forkDigest)) {
@@ -66,6 +70,12 @@ export function assertPeerRelevance(
     }
   }
 
+  if (isForkPostFulu(forkName) && (remote as fulu.Status).earliestAvailableSlot === undefined) {
+    return {
+      code: IrrelevantPeerCode.NO_EARLIEST_AVAILABLE_SLOT,
+    };
+  }
+
   // Note: Accept request status finalized checkpoint in the future, we do not know if it is a true finalized root
   return null;
 }
@@ -83,5 +93,7 @@ export function renderIrrelevantPeerType(type: IrrelevantPeerType): string {
       return `DIFFERENT_CLOCKS slotDiff: ${type.slotDiff}`;
     case IrrelevantPeerCode.DIFFERENT_FINALIZED:
       return `DIFFERENT_FINALIZED root: ${toRootHex(type.remoteRoot)} expected: ${toRootHex(type.expectedRoot)}`;
+    case IrrelevantPeerCode.NO_EARLIEST_AVAILABLE_SLOT:
+      return "No earliestAvailableSlot announced via peer Status";
   }
 }

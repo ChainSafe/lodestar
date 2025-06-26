@@ -41,6 +41,7 @@ import {INetworkCorePublic} from "./core/types.js";
 import {INetworkEventBus} from "./events.js";
 import {GossipType} from "./gossip/interface.js";
 import {PeerAction} from "./peers/index.js";
+import {PeerSyncMeta} from "./peers/peersData.js";
 import {PendingGossipsubMessage} from "./processor/types.js";
 
 export type WithOptionalBytes<T> = {data: T; bytes?: Uint8Array | null};
@@ -61,8 +62,7 @@ export interface INetwork extends INetworkCorePublic {
   events: INetworkEventBus;
 
   getConnectedPeers(): PeerIdStr[];
-  getConnectedPeerCustody(peerId: PeerIdStr): number[];
-  getConnectedPeerClientAgent(peerId: PeerIdStr): string;
+  getConnectedPeerSyncMeta(peerId: PeerIdStr): PeerSyncMeta;
   getConnectedPeerCount(): number;
   isSubscribedToGossipCoreTopics(): boolean;
   reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): void;

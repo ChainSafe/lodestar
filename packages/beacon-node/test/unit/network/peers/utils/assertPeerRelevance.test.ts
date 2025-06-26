@@ -1,3 +1,4 @@
+import {ForkName} from "@lodestar/params";
 import {phase0} from "@lodestar/types";
 import {describe, expect, it} from "vitest";
 import {IrrelevantPeerCode, assertPeerRelevance} from "../../../../../src/network/peers/utils/assertPeerRelevance.js";
@@ -13,6 +14,7 @@ describe("network / peers / utils / assertPeerRelevance", () => {
     remote: phase0.Status;
     currentSlot?: number;
     irrelevantType: ReturnType<typeof assertPeerRelevance>;
+    forkName?: ForkName;
   }[] = [
     {
       id: "Reject incompatible forks",
@@ -75,9 +77,21 @@ describe("network / peers / utils / assertPeerRelevance", () => {
       currentSlot: -50,
       irrelevantType: null,
     },
+    {
+      id: "No earliestAvailableSlot post fulu",
+      remote: {
+        forkDigest: correctForkDigest,
+        finalizedRoot: ZERO_HASH,
+        finalizedEpoch: 0,
+        headRoot: ZERO_HASH,
+        headSlot: 0,
+      },
+      forkName: ForkName.fulu,
+      irrelevantType: {code: IrrelevantPeerCode.NO_EARLIEST_AVAILABLE_SLOT},
+    },
   ];
 
-  for (const {id, remote, currentSlot, irrelevantType} of testCases) {
+  for (const {id, remote, currentSlot, irrelevantType, forkName} of testCases) {
     it(id, async () => {
       const local = {
         forkDigest: correctForkDigest,
@@ -87,7 +101,9 @@ describe("network / peers / utils / assertPeerRelevance", () => {
         headSlot: 0,
       };
 
-      expect(assertPeerRelevance(remote, local, currentSlot ?? 0)).toEqual(irrelevantType);
+      expect(assertPeerRelevance(remote, local, currentSlot ?? 0, forkName ?? ForkName.electra)).toEqual(
+        irrelevantType
+      );
     });
   }
 });

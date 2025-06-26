@@ -76,6 +76,6 @@ function getContextBytes(contextBytes: ContextBytesFactory, chunk: ResponseOutgo
 
     // Yield a fixed-width 4 byte chunk, set to the `ForkDigest`
     case ContextBytesType.ForkDigest:
-      return contextBytes.forkDigestContext.forkName2ForkDigest(chunk.fork) as Buffer;
+      return contextBytes.forkDigestContext.forkName2ForkDigest(chunk.boundary.fork) as Buffer;
   }
 }

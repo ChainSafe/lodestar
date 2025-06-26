@@ -1,11 +1,17 @@
 import {PeerId} from "@libp2p/interface";
 import {Encoding} from "@lodestar/reqresp";
-import {CustodyIndex, fulu, phase0} from "@lodestar/types";
+import {CustodyIndex, Slot, Status, fulu} from "@lodestar/types";
 import {NodeId} from "../subnets/interface.js";
 import {ClientKind} from "./client.js";
 
 type PeerIdStr = string;
 type Metadata = fulu.Metadata & {custodyGroups: CustodyIndex[]};
+export type PeerSyncMeta = {
+  peerId: PeerIdStr;
+  client: string;
+  custodyGroups: CustodyIndex[];
+  earliestAvailableSlot?: Slot;
+};
 
 export enum RelevantPeerStatus {
   Unknown = "unknown",
@@ -22,7 +28,7 @@ export type PeerData = {
   peerId: PeerId;
   nodeId: NodeId | null;
   metadata: Metadata | null;
-  status: phase0.Status | null;
+  status: Status | null;
   agentVersion: string | null;
   agentClient: ClientKind | null;
   encodingPreference: Encoding | null;

@@ -119,11 +119,10 @@ describe.skip("beaconBlocksMaybeBlobsByRange", () => {
       const response = await beaconBlocksMaybeBlobsByRange(
         config,
         network,
-        peerId,
+        {peerId, client: "PEER_CLIENT", custodyGroups: []},
         rangeRequest,
         0,
-        null,
-        "PEER_CLIENT"
+        null
       );
       expect(response).toEqual(expectedResponse);
     });

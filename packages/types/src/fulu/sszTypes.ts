@@ -36,6 +36,13 @@ export const Metadata = new ContainerType(
   },
   {typeName: "Metadata", jsonCase: "eth2"}
 );
+export const Status = new ContainerType(
+  {
+    ...phase0Ssz.Status.fields,
+    earliestAvailableSlot: Slot,
+  },
+  {typeName: "Status", jsonCase: "eth2"}
+);
 
 export const Cell = new ByteVectorType(BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_CELL);
 export const DataColumn = new ListCompositeType(Cell, MAX_BLOB_COMMITMENTS_PER_BLOCK);

@@ -50,7 +50,7 @@ export class GossipTopicCache implements IGossipTopicCache {
  * Stringify a GossipTopic into a spec-ed formated topic string
  */
 export function stringifyGossipTopic(forkDigestContext: ForkDigestContext, topic: GossipTopic): string {
-  const forkDigestHexNoPrefix = forkDigestContext.forkName2ForkDigestHex(topic.fork);
+  const forkDigestHexNoPrefix = forkDigestContext.forkName2ForkDigestHex(topic.boundary.fork);
   const topicType = stringifyGossipTopicType(topic);
   const encoding = topic.encoding ?? DEFAULT_ENCODING;
   return `/eth2/${forkDigestHexNoPrefix}/${topicType}/${encoding}`;
@@ -82,22 +82,23 @@ function stringifyGossipTopicType(topic: GossipTopic): string {
 }
 
 export function getGossipSSZType(topic: GossipTopic) {
+  const {fork} = topic.boundary;
   switch (topic.type) {
     case GossipType.beacon_block:
       // beacon_block is updated in altair to support the updated SignedBeaconBlock type
-      return ssz[topic.fork].SignedBeaconBlock;
+      return ssz[fork].SignedBeaconBlock;
     case GossipType.blob_sidecar:
       return ssz.deneb.BlobSidecar;
     case GossipType.data_column_sidecar:
       return ssz.fulu.DataColumnSidecar;
     case GossipType.beacon_aggregate_and_proof:
-      return sszTypesFor(topic.fork).SignedAggregateAndProof;
+      return sszTypesFor(fork).SignedAggregateAndProof;
     case GossipType.beacon_attestation:
-      return sszTypesFor(topic.fork).SingleAttestation;
+      return sszTypesFor(fork).SingleAttestation;
     case GossipType.proposer_slashing:
       return ssz.phase0.ProposerSlashing;
     case GossipType.attester_slashing:
-      return sszTypesFor(topic.fork).AttesterSlashing;
+      return sszTypesFor(fork).AttesterSlashing;
     case GossipType.voluntary_exit:
       return ssz.phase0.SignedVoluntaryExit;
     case GossipType.sync_committee_contribution_and_proof:
@@ -105,12 +106,12 @@ export function getGossipSSZType(topic: GossipTopic) {
     case GossipType.sync_committee:
       return ssz.altair.SyncCommitteeMessage;
     case GossipType.light_client_optimistic_update:
-      return isForkPostAltair(topic.fork)
-        ? sszTypesFor(topic.fork).LightClientOptimisticUpdate
+      return isForkPostAltair(fork)
+        ? sszTypesFor(fork).LightClientOptimisticUpdate
         : ssz.altair.LightClientOptimisticUpdate;
     case GossipType.light_client_finality_update:
-      return isForkPostAltair(topic.fork)
-        ? sszTypesFor(topic.fork).LightClientFinalityUpdate
+      return isForkPostAltair(fork)
+        ? sszTypesFor(fork).LightClientFinalityUpdate
         : ssz.altair.LightClientFinalityUpdate;
     case GossipType.bls_to_execution_change:
       return ssz.capella.SignedBLSToExecutionChange;
@@ -190,7 +191,7 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
       case GossipType.light_client_finality_update:
       case GossipType.light_client_optimistic_update:
       case GossipType.bls_to_execution_change:
-        return {type: gossipTypeStr, fork, encoding};
+        return {type: gossipTypeStr, boundary: {fork}, encoding};
     }
 
     for (const gossipType of [GossipType.beacon_attestation as const, GossipType.sync_committee as const]) {
@@ -198,7 +199,7 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
         const subnetStr = gossipTypeStr.slice(gossipType.length + 1); // +1 for '_' concatenating the topic name and the subnet
         const subnet = parseInt(subnetStr, 10);
         if (Number.isNaN(subnet)) throw Error(`Subnet ${subnetStr} is not a number`);
-        return {type: gossipType, subnet, fork, encoding};
+        return {type: gossipType, subnet, boundary: {fork}, encoding};
       }
     }
 
@@ -206,14 +207,14 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
       const subnetStr = gossipTypeStr.slice(GossipType.blob_sidecar.length + 1); // +1 for '_' concatenating the topic name and the subnet
       const subnet = parseInt(subnetStr, 10);
       if (Number.isNaN(subnet)) throw Error(`subnet ${subnetStr} is not a number`);
-      return {type: GossipType.blob_sidecar, subnet, fork, encoding};
+      return {type: GossipType.blob_sidecar, subnet, boundary: {fork}, encoding};
     }
 
     if (gossipTypeStr.startsWith(GossipType.data_column_sidecar)) {
       const subnetStr = gossipTypeStr.slice(GossipType.data_column_sidecar.length + 1); // +1 for '_' concatenating the topic name and the subnet
       const subnet = parseInt(subnetStr, 10);
       if (Number.isNaN(subnet)) throw Error(`subnet ${subnetStr} is not a number`);
-      return {type: GossipType.data_column_sidecar, subnet, fork, encoding};
+      return {type: GossipType.data_column_sidecar, subnet, boundary: {fork}, encoding};
     }
 
     throw Error(`Unknown gossip type ${gossipTypeStr}`);

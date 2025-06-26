@@ -15,6 +15,6 @@ export async function* onLightClientOptimisticUpdate(chain: IBeaconChain): Async
   const type = responseSszTypeByMethod[ReqRespMethod.LightClientOptimisticUpdate](fork, 0);
   yield {
     data: type.serialize(update),
-    fork,
+    boundary: {fork},
   };
 }

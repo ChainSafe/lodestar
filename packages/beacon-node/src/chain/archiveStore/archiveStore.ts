@@ -184,7 +184,9 @@ export class ArchiveStore {
         this.logger,
         finalized,
         this.chain.clock.currentEpoch,
-        this.archiveDataEpochs
+        this.archiveDataEpochs,
+        this.chain.opts.persistOrphanedBlocks,
+        this.chain.opts.persistOrphanedBlocksDir
       );
       if (this.opts.pruneHistory) {
         await pruneHistory(

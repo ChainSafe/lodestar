@@ -2,8 +2,8 @@ import {getV4Crypto} from "@chainsafe/enr";
 import {fromHexString} from "@chainsafe/ssz";
 import type {PeerId, PrivateKey} from "@libp2p/interface";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
-import {ForkName} from "@lodestar/params";
 import {Bytes32, Slot, SubnetID, ValidatorIndex} from "@lodestar/types";
+import {SubscribeBoundary} from "../core/types.js";
 import {GossipTopic} from "../gossip/interface.js";
 import {RequestedSubnet} from "../peers/utils/index.js";
 
@@ -19,8 +19,8 @@ export type SubnetsService = {
   close(): void;
   addCommitteeSubscriptions(subscriptions: CommitteeSubscription[]): void;
   getActiveSubnets(): RequestedSubnet[];
-  subscribeSubnetsToNextFork(nextFork: ForkName): void;
-  unsubscribeSubnetsFromPrevFork(prevFork: ForkName): void;
+  subscribeSubnetsAfterBoundary(boundary: SubscribeBoundary): void;
+  unsubscribeSubnetsBeforeBoundary(prevFork: SubscribeBoundary): void;
 };
 
 export interface IAttnetsService extends SubnetsService {
