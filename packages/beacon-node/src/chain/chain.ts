@@ -1,7 +1,7 @@
 import path from "node:path";
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
-import {BeaconConfig} from "@lodestar/config";
+import {BeaconConfig, createSubscribeBoundary} from "@lodestar/config";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
 import {ForkSeq, GENESIS_SLOT, SLOTS_PER_EPOCH, isForkPostElectra, isForkPostFulu} from "@lodestar/params";
 import {
@@ -842,7 +842,7 @@ export class BeaconChain implements IBeaconChain {
       // fork_digest: The node's ForkDigest (compute_fork_digest(current_fork_version, genesis_validators_root)) where
       // - current_fork_version is the fork version at the node's current epoch defined by the wall-clock time (not necessarily the epoch to which the node is sync)
       // - genesis_validators_root is the static Root found in state.genesis_validators_root
-      forkDigest: this.config.boundary2ForkDigest(this.config.getSubscribeBoundary(this.clock.currentEpoch)),
+      forkDigest: this.config.boundary2ForkDigest(createSubscribeBoundary(this.config, this.clock.currentEpoch)),
       // finalized_root: state.finalized_checkpoint.root for the state corresponding to the head block (Note this defaults to Root(b'\x00' * 32) for the genesis finalized checkpoint).
       finalizedRoot: finalizedCheckpoint.epoch === GENESIS_EPOCH ? ZERO_HASH : finalizedCheckpoint.root,
       finalizedEpoch: finalizedCheckpoint.epoch,

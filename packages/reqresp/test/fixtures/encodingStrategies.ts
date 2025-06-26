@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
-import {ForkName} from "@lodestar/params";
+import {createSubscribeBoundary} from "@lodestar/config";
+import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
 import {encode as varintEncode} from "uint8-varint";
 import {SszSnappyErrorCode} from "../../src/encodingStrategies/sszSnappy/errors.js";
@@ -34,7 +35,7 @@ export const goerliShadowForkBlock13249: SszSnappyTestBlockData = {
   type: ssz.bellatrix.SignedBeaconBlock,
   payload: {
     data: fs.readFileSync(path.join(__dirname, "/goerliShadowForkBlock.13249/serialized.ssz")),
-    boundary: {fork: ForkName.altair},
+    boundary: createSubscribeBoundary(config, config.ALTAIR_FORK_EPOCH),
   },
   streamedBody: fs.readFileSync(path.join(__dirname, "/goerliShadowForkBlock.13249/streamed.snappy")),
 };

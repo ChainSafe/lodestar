@@ -1,5 +1,5 @@
 import {BitArray} from "@chainsafe/ssz";
-import {BeaconConfig, isSubscribeBoundaryPostFulu} from "@lodestar/config";
+import {BeaconConfig, createSubscribeBoundary} from "@lodestar/config";
 import {ForkSeq} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, fulu, phase0, ssz} from "@lodestar/types";
@@ -125,7 +125,7 @@ export class MetadataController {
     this.onSetValue(ENRKey.eth2, enrForkIdBytes);
     const nextForkDigest =
       enrForkId.nextForkEpoch !== FAR_FUTURE_EPOCH
-        ? config.boundary2ForkDigest(config.getSubscribeBoundary(enrForkId.nextForkEpoch))
+        ? config.boundary2ForkDigest(createSubscribeBoundary(config, enrForkId.nextForkEpoch))
         : ssz.ForkDigest.defaultValue();
     this.onSetValue(ENRKey.nfd, nextForkDigest);
     return enrForkIdBytes;
@@ -143,11 +143,6 @@ export function getENRForkID(config: BeaconConfig, clockEpoch: Epoch): phase0.EN
       ? config.forks[nextBoundary.fork].version
       : config.forks[currentBoundary.fork].version,
     // Next fork epoch
-    nextForkEpoch: nextBoundary
-      ? Math.max(
-          config.forks[nextBoundary.fork].epoch,
-          isSubscribeBoundaryPostFulu(nextBoundary) ? nextBoundary.EPOCH : -1
-        )
-      : FAR_FUTURE_EPOCH,
+    nextForkEpoch: nextBoundary ? nextBoundary.epoch : FAR_FUTURE_EPOCH,
   };
 }

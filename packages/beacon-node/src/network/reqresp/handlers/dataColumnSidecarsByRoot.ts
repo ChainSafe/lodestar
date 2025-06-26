@@ -1,3 +1,4 @@
+import {createSubscribeBoundary} from "@lodestar/config";
 import {NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
@@ -89,7 +90,7 @@ export async function* onDataColumnSidecarsByRoot(
 
       yield {
         data: dataColumnSidecarBytes,
-        boundary: chain.config.getSubscribeBoundary(computeEpochAtSlot(block.slot)),
+        boundary: createSubscribeBoundary(chain.config, computeEpochAtSlot(block.slot)),
       };
     }
   }

@@ -1,3 +1,4 @@
+import {createSubscribeBoundary} from "@lodestar/config";
 import {GENESIS_SLOT, MAX_REQUEST_BLOCKS_DENEB, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
@@ -138,7 +139,7 @@ export function* iterateDataColumnBytesFromWrapper(
     // console.log(`iterate onDataColumnSidecarsByRange blockSlot=${blockSlot} index=${index} dataIndex=${dataIndex}`);
     yield {
       data: dataColumnSidecarBytes,
-      boundary: chain.config.getSubscribeBoundary(computeEpochAtSlot(blockSlot)),
+      boundary: createSubscribeBoundary(chain.config, computeEpochAtSlot(blockSlot)),
     };
   }
 }

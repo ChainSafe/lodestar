@@ -3,6 +3,7 @@ import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {IBeaconChain} from "../../../chain/index.js";
 import {assertLightClientServer} from "../../../node/utils/lightclient.js";
 
+import {createSubscribeBoundary} from "@lodestar/config";
 import {ReqRespMethod, responseSszTypeByMethod} from "../types.js";
 
 export async function* onLightClientOptimisticUpdate(chain: IBeaconChain): AsyncIterable<ResponseOutgoing> {
@@ -17,6 +18,6 @@ export async function* onLightClientOptimisticUpdate(chain: IBeaconChain): Async
   const type = responseSszTypeByMethod[ReqRespMethod.LightClientOptimisticUpdate](fork, 0);
   yield {
     data: type.serialize(update),
-    boundary: chain.config.getSubscribeBoundary(computeEpochAtSlot(update.signatureSlot)),
+    boundary: createSubscribeBoundary(chain.config, computeEpochAtSlot(update.signatureSlot)),
   };
 }

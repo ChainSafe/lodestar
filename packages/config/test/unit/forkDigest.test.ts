@@ -1,8 +1,13 @@
 import {ForkName} from "@lodestar/params";
 import {fromHex as b, toHex} from "@lodestar/utils";
 import {describe, expect, it} from "vitest";
-import {isSubscribeBoundaryPostFulu} from "../../src/genesisConfig/types.js";
-import {ForkInfo, computeForkDigest, createCachedGenesis, createChainForkConfig} from "../../src/index.js";
+import {
+  ForkInfo,
+  computeForkDigest,
+  createCachedGenesis,
+  createChainForkConfig,
+  createSubscribeBoundary,
+} from "../../src/index.js";
 
 // Test cases copied from https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.2/tests/core/pyspec/eth2spec/test/fulu/validator/test_compute_fork_digest.py
 // TODO FULU: Add Electra scenarios to test cases when they are available in the spec repo
@@ -85,14 +90,8 @@ describe("fork digest", () => {
       const {epoch, forkVersion, expectedForkDigest} = testCase;
       it(`should match fork digest at epoch ${epoch}`, () => {
         const fork: ForkInfo = {...config.forks[ForkName.fulu], version: forkVersion};
-        const boundary = config.getSubscribeBoundary(epoch);
-        const forkDigest = toHex(
-          computeForkDigest(
-            fork,
-            genesisValidatorRoot,
-            isSubscribeBoundaryPostFulu(boundary) ? {...boundary} : undefined
-          )
-        );
+        const boundary = createSubscribeBoundary(config, epoch);
+        const forkDigest = toHex(computeForkDigest(fork, genesisValidatorRoot, boundary.blobSchedule));
 
         expect(forkDigest.slice(2)).toBe(expectedForkDigest);
       });
@@ -118,7 +117,7 @@ describe("fork digest", () => {
     for (const testCase of testCases) {
       const {epoch, expectedForkDigest} = testCase;
       it(`should match fork digest at epoch ${epoch}`, () => {
-        const boundary = config.getSubscribeBoundary(epoch);
+        const boundary = createSubscribeBoundary(config, epoch);
         const forkDigestHex = cachedGenesis.boundary2ForkDigestHex(boundary);
 
         expect(forkDigestHex).toBe(expectedForkDigest);

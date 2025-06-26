@@ -3,7 +3,7 @@ import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {Connection, PrivateKey} from "@libp2p/interface";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {routes} from "@lodestar/api";
-import {BeaconConfig, SubscribeBoundary, isSubscribeBoundaryPostFulu} from "@lodestar/config";
+import {BeaconConfig, SubscribeBoundary, createSubscribeBoundary} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {ResponseIncoming} from "@lodestar/reqresp";
 import {Epoch, Status, sszTypesFor} from "@lodestar/types";
@@ -230,7 +230,7 @@ export class NetworkCore implements INetworkCore {
     );
 
     // Network spec decides version changes based on clock fork, not head fork
-    const boundary = config.getSubscribeBoundary(clock.currentEpoch);
+    const boundary = createSubscribeBoundary(config, clock.currentEpoch);
     // Register only ReqResp protocols relevant to clock's epoch
     reqResp.registerProtocolsAtBoundary(boundary);
 
@@ -493,18 +493,16 @@ export class NetworkCore implements INetworkCore {
           const prevBoundary = activeBoundaries[i];
           const nextBoundary = activeBoundaries[i + 1];
 
-          // If EPOCH does not exist, that means next boundary is still pre-fulu
-          const blobScheduleEpoch = isSubscribeBoundaryPostFulu(nextBoundary) ? nextBoundary.EPOCH : -1;
-          const nextBoundaryEpoch = Math.max(this.config.forks[nextBoundary.fork].epoch, blobScheduleEpoch);
+          const nextBoundaryEpoch = nextBoundary.epoch;
 
           // Before subscribe boundary transition
           if (epoch === nextBoundaryEpoch - FORK_EPOCH_LOOKAHEAD) {
             // Don't subscribe to new boundary if the node is not subscribed to any topic
             if (await this.isSubscribedToGossipCoreTopics()) {
               this.subscribeCoreTopicsAtBoundary(this.config, nextBoundary);
-              this.logger.info("Subscribing gossip topics before boundary", nextBoundary);
+              this.logger.info("Subscribing gossip topics before boundary epoch", nextBoundary.epoch);
             } else {
-              this.logger.info("Skipping subscribing gossip topics before boundary", nextBoundary);
+              this.logger.info("Skipping subscribing gossip topics before boundary epoch", nextBoundary.epoch);
             }
             this.attnetsService.subscribeSubnetsAfterBoundary(nextBoundary);
             this.syncnetsService.subscribeSubnetsAfterBoundary(nextBoundary);
@@ -519,7 +517,7 @@ export class NetworkCore implements INetworkCore {
 
           // After boundary transition
           if (epoch === nextBoundaryEpoch + FORK_EPOCH_LOOKAHEAD) {
-            this.logger.info("Unsubscribing gossip topics before boundary", prevBoundary);
+            this.logger.info("Unsubscribing gossip topics before boundary epoch", prevBoundary.epoch);
             this.unsubscribeCoreTopicsAtBoundary(this.config, prevBoundary);
             this.attnetsService.unsubscribeSubnetsBeforeBoundary(prevBoundary);
             this.syncnetsService.unsubscribeSubnetsBeforeBoundary(prevBoundary);

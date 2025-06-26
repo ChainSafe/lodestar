@@ -1,7 +1,7 @@
 import {PeerId} from "@libp2p/interface";
+import {createSubscribeBoundary} from "@lodestar/config";
 import {config} from "@lodestar/config/default.js";
 import {getEmptyLogger} from "@lodestar/logger/empty";
-import {isForkPostFulu} from "@lodestar/params";
 import {LodestarError, fromHex} from "@lodestar/utils";
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {Protocol, RespStatus} from "../../../src/index.js";
@@ -27,15 +27,11 @@ const testCases: {
       const fork = payload.fork;
       yield {
         ...payload,
-        boundary: isForkPostFulu(fork)
-          ? {fork, EPOCH: config.ELECTRA_FORK_EPOCH, MAX_BLOBS_PER_BLOCK: config.MAX_BLOBS_PER_BLOCK_ELECTRA}
-          : {fork},
+        boundary: createSubscribeBoundary(config, config.forks[fork].epoch),
       };
       yield {
         ...payload,
-        boundary: isForkPostFulu(fork)
-          ? {fork, EPOCH: config.ELECTRA_FORK_EPOCH, MAX_BLOBS_PER_BLOCK: config.MAX_BLOBS_PER_BLOCK_ELECTRA}
-          : {fork},
+        boundary: createSubscribeBoundary(config, config.forks[fork].epoch),
       };
       throw new LodestarError({code: "TEST_ERROR"});
     }),

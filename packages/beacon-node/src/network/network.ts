@@ -3,7 +3,7 @@ import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {PeerId, PrivateKey} from "@libp2p/interface";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {routes} from "@lodestar/api";
-import {BeaconConfig} from "@lodestar/config";
+import {BeaconConfig, createSubscribeBoundary} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
 import {ForkSeq, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
@@ -332,7 +332,7 @@ export class Network implements INetwork {
 
   async publishBeaconBlock(signedBlock: SignedBeaconBlock): Promise<number> {
     const epoch = computeEpochAtSlot(signedBlock.message.slot);
-    const boundary = this.config.getSubscribeBoundary(epoch);
+    const boundary = createSubscribeBoundary(this.config, epoch);
 
     return this.publishGossip<GossipType.beacon_block>({type: GossipType.beacon_block, boundary}, signedBlock, {
       ignoreDuplicatePublishError: true,
@@ -341,7 +341,7 @@ export class Network implements INetwork {
 
   async publishBlobSidecar(blobSidecar: deneb.BlobSidecar): Promise<number> {
     const epoch = computeEpochAtSlot(blobSidecar.signedBlockHeader.message.slot);
-    const boundary = this.config.getSubscribeBoundary(epoch);
+    const boundary = createSubscribeBoundary(this.config, epoch);
 
     const subnet = blobSidecar.index;
 
@@ -352,7 +352,7 @@ export class Network implements INetwork {
 
   async publishDataColumnSidecar(dataColumnSidecar: fulu.DataColumnSidecar): Promise<number> {
     const epoch = computeEpochAtSlot(dataColumnSidecar.signedBlockHeader.message.slot);
-    const boundary = this.config.getSubscribeBoundary(epoch);
+    const boundary = createSubscribeBoundary(this.config, epoch);
 
     const subnet = computeSubnetForDataColumnSidecar(dataColumnSidecar);
     return this.publishGossip<GossipType.data_column_sidecar>(
@@ -366,7 +366,7 @@ export class Network implements INetwork {
 
   async publishBeaconAggregateAndProof(aggregateAndProof: SignedAggregateAndProof): Promise<number> {
     const epoch = computeEpochAtSlot(aggregateAndProof.message.aggregate.data.slot);
-    const boundary = this.config.getSubscribeBoundary(epoch);
+    const boundary = createSubscribeBoundary(this.config, epoch);
 
     return this.publishGossip<GossipType.beacon_aggregate_and_proof>(
       {type: GossipType.beacon_aggregate_and_proof, boundary},
@@ -377,7 +377,7 @@ export class Network implements INetwork {
 
   async publishBeaconAttestation(attestation: SingleAttestation, subnet: SubnetID): Promise<number> {
     const epoch = computeEpochAtSlot(attestation.data.slot);
-    const boundary = this.config.getSubscribeBoundary(epoch);
+    const boundary = createSubscribeBoundary(this.config, epoch);
 
     return this.publishGossip<GossipType.beacon_attestation>(
       {type: GossipType.beacon_attestation, boundary, subnet},
@@ -388,7 +388,7 @@ export class Network implements INetwork {
 
   async publishVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<number> {
     const epoch = voluntaryExit.message.epoch;
-    const boundary = this.config.getSubscribeBoundary(epoch);
+    const boundary = createSubscribeBoundary(this.config, epoch);
 
     return this.publishGossip<GossipType.voluntary_exit>({type: GossipType.voluntary_exit, boundary}, voluntaryExit, {
       ignoreDuplicatePublishError: true,
@@ -418,7 +418,7 @@ export class Network implements INetwork {
 
   async publishProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<number> {
     const epoch = computeEpochAtSlot(Number(proposerSlashing.signedHeader1.message.slot as bigint));
-    const boundary = this.config.getSubscribeBoundary(epoch);
+    const boundary = createSubscribeBoundary(this.config, epoch);
 
     return this.publishGossip<GossipType.proposer_slashing>(
       {type: GossipType.proposer_slashing, boundary},
@@ -428,7 +428,7 @@ export class Network implements INetwork {
 
   async publishAttesterSlashing(attesterSlashing: AttesterSlashing): Promise<number> {
     const epoch = computeEpochAtSlot(Number(attesterSlashing.attestation1.data.slot as bigint));
-    const boundary = this.config.getSubscribeBoundary(epoch);
+    const boundary = createSubscribeBoundary(this.config, epoch);
 
     return this.publishGossip<GossipType.attester_slashing>(
       {type: GossipType.attester_slashing, boundary},
@@ -438,7 +438,7 @@ export class Network implements INetwork {
 
   async publishSyncCommitteeSignature(signature: altair.SyncCommitteeMessage, subnet: SubnetID): Promise<number> {
     const epoch = computeEpochAtSlot(signature.slot);
-    const boundary = this.config.getSubscribeBoundary(epoch);
+    const boundary = createSubscribeBoundary(this.config, epoch);
 
     return this.publishGossip<GossipType.sync_committee>(
       {type: GossipType.sync_committee, boundary, subnet},
@@ -451,7 +451,7 @@ export class Network implements INetwork {
 
   async publishContributionAndProof(contributionAndProof: altair.SignedContributionAndProof): Promise<number> {
     const epoch = computeEpochAtSlot(contributionAndProof.message.contribution.slot);
-    const boundary = this.config.getSubscribeBoundary(epoch);
+    const boundary = createSubscribeBoundary(this.config, epoch);
 
     return this.publishGossip<GossipType.sync_committee_contribution_and_proof>(
       {type: GossipType.sync_committee_contribution_and_proof, boundary},
@@ -462,7 +462,7 @@ export class Network implements INetwork {
 
   async publishLightClientFinalityUpdate(update: LightClientFinalityUpdate): Promise<number> {
     const epoch = computeEpochAtSlot(update.signatureSlot);
-    const boundary = this.config.getSubscribeBoundary(epoch);
+    const boundary = createSubscribeBoundary(this.config, epoch);
 
     return this.publishGossip<GossipType.light_client_finality_update>(
       {type: GossipType.light_client_finality_update, boundary},
@@ -472,7 +472,7 @@ export class Network implements INetwork {
 
   async publishLightClientOptimisticUpdate(update: LightClientOptimisticUpdate): Promise<number> {
     const epoch = computeEpochAtSlot(update.signatureSlot);
-    const boundary = this.config.getSubscribeBoundary(epoch);
+    const boundary = createSubscribeBoundary(this.config, epoch);
 
     return this.publishGossip<GossipType.light_client_optimistic_update>(
       {type: GossipType.light_client_optimistic_update, boundary},

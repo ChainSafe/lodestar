@@ -1,4 +1,4 @@
-import {BeaconConfig, SubscribeBoundary} from "@lodestar/config";
+import {BeaconConfig, SubscribeBoundary, createSubscribeBoundary} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Epoch, Slot, SubnetID, ssz} from "@lodestar/types";
@@ -134,7 +134,7 @@ export class AttnetsService implements IAttnetsService {
    **/
   subscribeSubnetsAfterBoundary(boundary: SubscribeBoundary): void {
     this.logger.info("Subscribing to long lived attnets after boundary", {
-      ...boundary,
+      boundaryEpoch: boundary.epoch,
       subnets: Array.from(this.longLivedSubscriptions).join(","),
     });
     for (const subnet of this.longLivedSubscriptions) {
@@ -147,7 +147,7 @@ export class AttnetsService implements IAttnetsService {
    * Call  ONLY ONCE: Two epochs after the fork, un-subscribe all subnets from the old fork
    **/
   unsubscribeSubnetsBeforeBoundary(boundary: SubscribeBoundary): void {
-    this.logger.info("Unsubscribing to long lived attnets before boundary", {...boundary});
+    this.logger.info("Unsubscribing to long lived attnets before boundary", {boundaryEpoch: boundary.epoch});
     for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
       if (!this.opts.subscribeAllSubnets) {
         this.gossip.unsubscribeTopic({type: gossipType, subnet, boundary});
@@ -219,7 +219,7 @@ export class AttnetsService implements IAttnetsService {
           const topicStr = stringifyGossipTopic(this.config, {
             type: gossipType,
             subnet,
-            boundary: this.config.getSubscribeBoundary(computeEpochAtSlot(dutiedSlot)),
+            boundary: createSubscribeBoundary(this.config, computeEpochAtSlot(dutiedSlot)),
           });
           const numMeshPeers = this.gossip.mesh.get(topicStr)?.size ?? 0;
           if (numMeshPeers >= GOSSIP_D_LOW) {
@@ -369,7 +369,7 @@ export class AttnetsService implements IAttnetsService {
     for (const {subnet} of this.shortLivedSubscriptions.getActiveTtl(currentSlot)) {
       const topicStr = stringifyGossipTopic(this.config, {
         type: gossipType,
-        boundary: this.config.getSubscribeBoundary(computeEpochAtSlot(currentSlot)),
+        boundary: createSubscribeBoundary(this.config, computeEpochAtSlot(currentSlot)),
         subnet,
       });
       const numMeshPeers = this.gossip.mesh.get(topicStr)?.size ?? 0;

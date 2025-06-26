@@ -1,5 +1,5 @@
+import {createSubscribeBoundary} from "@lodestar/config";
 import {config} from "@lodestar/config/default.js";
-import {isForkPostFulu} from "@lodestar/params";
 import {pipe} from "it-pipe";
 import {responseEncodeError, responseEncodeSuccess} from "../../src/encoders/responseEncode.js";
 import {RespStatus} from "../../src/interface.js";
@@ -16,9 +16,7 @@ export async function* responseEncode(responseChunks: ResponseChunk[], protocol:
         arrToSource([
           {
             ...payload,
-            boundary: isForkPostFulu(fork)
-              ? {fork, EPOCH: config.ELECTRA_FORK_EPOCH, MAX_BLOBS_PER_BLOCK: config.MAX_BLOBS_PER_BLOCK_ELECTRA}
-              : {fork},
+            boundary: createSubscribeBoundary(config, config.forks[fork].epoch),
           },
         ]),
         responseEncodeSuccess(protocol, {onChunk: () => {}})

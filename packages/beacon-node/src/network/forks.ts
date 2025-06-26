@@ -1,4 +1,4 @@
-import {ChainForkConfig, SubscribeBoundary, isBlobSchedule} from "@lodestar/config";
+import {ChainForkConfig, SubscribeBoundary, createSubscribeBoundary, isBpo} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {Epoch} from "@lodestar/types";
 
@@ -56,19 +56,17 @@ export function getActiveForks(config: ChainForkConfig, epoch: Epoch): ForkName[
 
 export function getActiveSubscribeBoundaries(config: ChainForkConfig, epoch: Epoch): SubscribeBoundary[] {
   const activeBoundaries: SubscribeBoundary[] = [];
-  const forkOrBlobScheduleList = config.forkOrBlobScheduleAscendingEpochOrder;
+  const forkOrBlobScheduleList = config.forkOrBpoAscendingEpochOrder;
 
   for (let i = 0; i < forkOrBlobScheduleList.length; i++) {
     const currForkOrBlobSchedule = forkOrBlobScheduleList[i];
     const nextForkOrBlobSchedule = forkOrBlobScheduleList[i + 1];
 
-    const currEpoch = isBlobSchedule(currForkOrBlobSchedule)
-      ? currForkOrBlobSchedule.EPOCH
-      : currForkOrBlobSchedule.epoch;
+    const currEpoch = isBpo(currForkOrBlobSchedule) ? currForkOrBlobSchedule.EPOCH : currForkOrBlobSchedule.epoch;
     const nextEpoch =
       nextForkOrBlobSchedule === undefined
         ? Infinity
-        : isBlobSchedule(nextForkOrBlobSchedule)
+        : isBpo(nextForkOrBlobSchedule)
           ? nextForkOrBlobSchedule.EPOCH
           : nextForkOrBlobSchedule.epoch;
 
@@ -78,7 +76,7 @@ export function getActiveSubscribeBoundaries(config: ChainForkConfig, epoch: Epo
     }
 
     if (epoch >= currEpoch - FORK_EPOCH_LOOKAHEAD && epoch <= nextEpoch + FORK_EPOCH_LOOKAHEAD) {
-      activeBoundaries.push(config.getSubscribeBoundary(currEpoch));
+      activeBoundaries.push(createSubscribeBoundary(config, currEpoch));
     }
   }
 
@@ -95,13 +93,13 @@ export function getCurrentAndNextBoundary(
   // normalize negative epochs to zero
   if (epoch < 0) epoch = 0;
 
-  const schedule = config.forkOrBlobScheduleAscendingEpochOrder;
+  const schedule = config.forkOrBpoAscendingEpochOrder;
   let currIdx = -1;
 
   // find the last schedule whose start‐epoch ≤ our epoch
   for (let i = 0; i < schedule.length; i++) {
     const entry = schedule[i];
-    const e = isBlobSchedule(entry) ? entry.EPOCH : entry.epoch;
+    const e = isBpo(entry) ? entry.EPOCH : entry.epoch;
     if (epoch >= e) currIdx = i;
   }
 
@@ -109,13 +107,13 @@ export function getCurrentAndNextBoundary(
   if (currIdx === -1) currIdx = 0;
 
   const currSchedule = schedule[currIdx];
-  const currEpoch = isBlobSchedule(currSchedule) ? currSchedule.EPOCH : currSchedule.epoch;
-  const currentBoundary = config.getSubscribeBoundary(currEpoch);
+  const currEpoch = isBpo(currSchedule) ? currSchedule.EPOCH : currSchedule.epoch;
+  const currentBoundary = createSubscribeBoundary(config, currEpoch);
 
   // find the next schedule whose epoch > our epoch
   let nextIdx = currIdx + 1;
   let entry = schedule[nextIdx];
-  while (nextIdx < schedule.length && (isBlobSchedule(entry) ? entry.EPOCH : entry.epoch) === currEpoch) {
+  while (nextIdx < schedule.length && (isBpo(entry) ? entry.EPOCH : entry.epoch) === currEpoch) {
     // skip any that have the same epoch
     nextIdx++;
     entry = schedule[nextIdx];
@@ -126,8 +124,8 @@ export function getCurrentAndNextBoundary(
   }
 
   const nextSchedule = schedule[nextIdx];
-  const nextEpoch = isBlobSchedule(nextSchedule) ? nextSchedule.EPOCH : nextSchedule.epoch;
-  const nextBoundary = config.getSubscribeBoundary(nextEpoch);
+  const nextEpoch = isBpo(nextSchedule) ? nextSchedule.EPOCH : nextSchedule.epoch;
+  const nextBoundary = createSubscribeBoundary(config, nextEpoch);
 
   return {currentBoundary, nextBoundary};
 }

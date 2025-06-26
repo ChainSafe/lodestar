@@ -1,3 +1,4 @@
+import {createSubscribeBoundary} from "@lodestar/config";
 import {BLOBSIDECAR_FIXED_SIZE} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
@@ -56,7 +57,7 @@ export async function* onBlobSidecarsByRoot(
 
     yield {
       data: blobSidecarBytes,
-      boundary: chain.config.getSubscribeBoundary(computeEpochAtSlot(block.slot)),
+      boundary: createSubscribeBoundary(chain.config, computeEpochAtSlot(block.slot)),
     };
   }
 }

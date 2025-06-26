@@ -1,4 +1,4 @@
-import {ForkName} from "@lodestar/params";
+import {createSubscribeBoundary} from "@lodestar/config";
 import {LodestarError} from "@lodestar/utils";
 import {SszSnappyError, SszSnappyErrorCode} from "../../src/encodingStrategies/sszSnappy/index.js";
 import {ResponseError} from "../../src/index.js";
@@ -135,7 +135,7 @@ export const responseEncodersTestCases: {
       // <result>
       Buffer.from([RespStatus.SUCCESS]),
       // <context-bytes>
-      beaconConfig.boundary2ForkDigest({fork: ForkName.phase0}),
+      beaconConfig.boundary2ForkDigest(createSubscribeBoundary(beaconConfig, 0)),
       // <encoding-dependent-header> | <encoded-payload>
       ...sszSnappySignedBeaconBlockPhase0.chunks,
     ],
@@ -148,7 +148,7 @@ export const responseEncodersTestCases: {
       // <result>
       Buffer.from([RespStatus.SUCCESS]),
       // <context-bytes>
-      beaconConfig.boundary2ForkDigest({fork: ForkName.altair}),
+      beaconConfig.boundary2ForkDigest(createSubscribeBoundary(beaconConfig, beaconConfig.ALTAIR_FORK_EPOCH)),
       // <encoding-dependent-header> | <encoded-payload>
       ...sszSnappySignedBeaconBlockAltair.chunks,
     ],
@@ -212,11 +212,11 @@ export const responseEncodersTestCases: {
     chunks: [
       // Chunk 0 - success block in phase0 with context bytes
       Buffer.from([RespStatus.SUCCESS]),
-      beaconConfig.boundary2ForkDigest({fork: ForkName.phase0}),
+      beaconConfig.boundary2ForkDigest(createSubscribeBoundary(beaconConfig, 0)),
       ...sszSnappySignedBeaconBlockPhase0.chunks,
       // Chunk 1 - success block in altair with context bytes
       Buffer.from([RespStatus.SUCCESS]),
-      beaconConfig.boundary2ForkDigest({fork: ForkName.altair}),
+      beaconConfig.boundary2ForkDigest(createSubscribeBoundary(beaconConfig, beaconConfig.ALTAIR_FORK_EPOCH)),
       ...sszSnappySignedBeaconBlockAltair.chunks,
     ],
   },
@@ -247,7 +247,7 @@ export const responseEncodersErrorTestCases: {
       // <result>
       Buffer.from([RespStatus.SUCCESS]),
       // <context-bytes>
-      beaconConfig.boundary2ForkDigest({fork: ForkName.altair}),
+      beaconConfig.boundary2ForkDigest(createSubscribeBoundary(beaconConfig, beaconConfig.ALTAIR_FORK_EPOCH)),
       // <encoding-dependent-header> | <encoded-payload>
       ...sszSnappySignedBeaconBlockAltair.chunks,
     ],

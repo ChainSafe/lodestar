@@ -1,3 +1,4 @@
+import {createSubscribeBoundary} from "@lodestar/config";
 import {ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Slot, phase0} from "@lodestar/types";
@@ -41,7 +42,7 @@ export async function* onBeaconBlocksByRoot(
 
       yield {
         data: blockBytes,
-        boundary: chain.config.getSubscribeBoundary(computeEpochAtSlot(slot)),
+        boundary: createSubscribeBoundary(chain.config, computeEpochAtSlot(slot)),
       };
     }
   }

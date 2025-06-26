@@ -1,4 +1,4 @@
-import {BeaconConfig, ChainConfig} from "@lodestar/config";
+import {BeaconConfig, ChainConfig, createSubscribeBoundary} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
   DATA_COLUMN_SIDECAR_SUBNET_COUNT,
@@ -181,7 +181,7 @@ export function parseGossipTopic(forkDigestContext: BeaconConfig, topicStr: stri
     const fork = forkDigestContext.forkDigest2ForkName(forkDigestHexNoPrefix);
     // TODO: This epoch is just an approximate. Will update in the next PR
     const epoch = forkDigestContext.forks[fork].epoch;
-    const boundary = forkDigestContext.getSubscribeBoundary(epoch);
+    const boundary = createSubscribeBoundary(forkDigestContext, epoch);
     const encoding = parseEncodingStr(encodingStr);
 
     // Inline-d the parseGossipTopicType() function since spreading the resulting object x4 the time to parse a topicStr

@@ -1,3 +1,4 @@
+import {createSubscribeBoundary} from "@lodestar/config";
 import {
   LightClientServerError,
   LightClientServerErrorCode,
@@ -20,7 +21,7 @@ export async function* onLightClientBootstrap(requestBody: Root, chain: IBeaconC
     const type = responseSszTypeByMethod[ReqRespMethod.LightClientBootstrap](fork, 0);
     yield {
       data: type.serialize(bootstrap),
-      boundary: chain.config.getSubscribeBoundary(computeEpochAtSlot(bootstrap.header.beacon.slot)),
+      boundary: createSubscribeBoundary(chain.config, computeEpochAtSlot(bootstrap.header.beacon.slot)),
     };
   } catch (e) {
     if ((e as LightClientServerError).type?.code === LightClientServerErrorCode.RESOURCE_UNAVAILABLE) {

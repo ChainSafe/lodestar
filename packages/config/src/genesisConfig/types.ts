@@ -1,15 +1,9 @@
-import {ForkName, ForkPostFulu, ForkPreFulu} from "@lodestar/params";
+import {ForkName} from "@lodestar/params";
 import {DomainType, ForkDigest, Root, Slot} from "@lodestar/types";
-import {BlobScheduleEntry} from "../chainConfig/types.js";
+import {SubscribeBoundary} from "./network.js";
 
 export type ForkDigestHex = string;
-// Boundary of network subscription. We subscribe/unsubscribe during fork and blob schedule transitions
-// TODO: We can actually make `type SubscribeBoundary = Epoch` and rely on the callers to decode it
-// as fork or blob schedule as needed. However it takes some sizable refactor give every callers access
-// to beacon config
-type SubscribeBoundaryPreFulu = {fork: ForkPreFulu};
-type SubscribeBoundaryPostFulu = {fork: ForkPostFulu} & BlobScheduleEntry;
-export type SubscribeBoundary = SubscribeBoundaryPreFulu | SubscribeBoundaryPostFulu;
+export {type SubscribeBoundary} from "./network.js";
 
 export type ForkDigestContext = {
   forkDigest2ForkName(forkDigest: ForkDigest | ForkDigestHex): ForkName;
@@ -33,8 +27,4 @@ export interface CachedGenesis extends ForkDigestContext {
   getDomainForVoluntaryExit(stateSlot: Slot, messageSlot?: Slot): Uint8Array;
 
   readonly genesisValidatorsRoot: Root;
-}
-
-export function isSubscribeBoundaryPostFulu(boundary: SubscribeBoundary): boundary is SubscribeBoundaryPostFulu {
-  return "EPOCH" in boundary;
 }

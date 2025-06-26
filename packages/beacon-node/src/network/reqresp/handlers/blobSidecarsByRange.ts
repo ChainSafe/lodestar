@@ -1,4 +1,4 @@
-import {BeaconConfig} from "@lodestar/config";
+import {BeaconConfig, createSubscribeBoundary} from "@lodestar/config";
 import {BLOBSIDECAR_FIXED_SIZE, GENESIS_SLOT} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
@@ -86,7 +86,7 @@ export function* iterateBlobBytesFromWrapper(
     }
     yield {
       data: blobSideCarBytes,
-      boundary: chain.config.getSubscribeBoundary(computeEpochAtSlot(blockSlot)),
+      boundary: createSubscribeBoundary(chain.config, computeEpochAtSlot(blockSlot)),
     };
   }
 }

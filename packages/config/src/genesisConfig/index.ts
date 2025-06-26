@@ -3,11 +3,12 @@ import {DOMAIN_VOLUNTARY_EXIT, ForkName, ForkSeq, SLOTS_PER_EPOCH} from "@lodest
 import {DomainType, Epoch, ForkDigest, Root, Slot, Version, phase0, ssz} from "@lodestar/types";
 import {intToBytes, strip0xPrefix, toHex} from "@lodestar/utils";
 import {ChainForkConfig} from "../beaconConfig.js";
-import {BlobScheduleEntry, ForkInfo, isBlobSchedule} from "../index.js";
+import {BlobScheduleEntry, ForkInfo, isBpo} from "../index.js";
 import {xor} from "../utils/bytes.js";
-import {CachedGenesis, ForkDigestHex, SubscribeBoundary, isSubscribeBoundaryPostFulu} from "./types.js";
+import {createSubscribeBoundary} from "./network.js";
+import {CachedGenesis, ForkDigestHex, SubscribeBoundary} from "./types.js";
 export type {ForkDigestContext, SubscribeBoundary} from "./types.js";
-export {isSubscribeBoundaryPostFulu} from "./types.js";
+export {createSubscribeBoundary, SubscribeBoundaryType} from "./network.js";
 
 export function createCachedGenesis(chainForkConfig: ChainForkConfig, genesisValidatorsRoot: Root): CachedGenesis {
   const domainCache = new Map<ForkName, Map<DomainType, Uint8Array>>();
@@ -19,19 +20,17 @@ export function createCachedGenesis(chainForkConfig: ChainForkConfig, genesisVal
   /** Map of ForkDigest in hex format without prefix: `0011aabb` */
   const epochByForkDigest = new Map<ForkDigestHex, Epoch>();
 
-  const forkOrBlobScheduleList = chainForkConfig.forkOrBlobScheduleAscendingEpochOrder;
+  const forkOrBlobScheduleList = chainForkConfig.forkOrBpoAscendingEpochOrder;
 
   for (let i = 0; i < forkOrBlobScheduleList.length; i++) {
     const currForkOrBlobSchedule = forkOrBlobScheduleList[i];
     const nextForkOrBlobSchedule = forkOrBlobScheduleList[i + 1];
 
-    const currEpoch = isBlobSchedule(currForkOrBlobSchedule)
-      ? currForkOrBlobSchedule.EPOCH
-      : currForkOrBlobSchedule.epoch;
+    const currEpoch = isBpo(currForkOrBlobSchedule) ? currForkOrBlobSchedule.EPOCH : currForkOrBlobSchedule.epoch;
     const nextEpoch =
       nextForkOrBlobSchedule === undefined
         ? Infinity
-        : isBlobSchedule(nextForkOrBlobSchedule)
+        : isBpo(nextForkOrBlobSchedule)
           ? nextForkOrBlobSchedule.EPOCH
           : nextForkOrBlobSchedule.epoch;
 
@@ -40,13 +39,9 @@ export function createCachedGenesis(chainForkConfig: ChainForkConfig, genesisVal
       continue;
     }
 
-    const boundary = chainForkConfig.getSubscribeBoundary(currEpoch);
+    const boundary = createSubscribeBoundary(chainForkConfig, currEpoch);
     const fork = chainForkConfig.forks[boundary.fork];
-    const forkDigest = computeForkDigest(
-      fork,
-      genesisValidatorsRoot,
-      isSubscribeBoundaryPostFulu(boundary) ? {...boundary} : undefined
-    );
+    const forkDigest = computeForkDigest(fork, genesisValidatorsRoot, boundary.blobSchedule);
     const forkDigestHex = toHexStringNoPrefix(forkDigest);
     epochByForkDigest.set(forkDigestHex, currEpoch);
     forkDigestByEpoch.set(currEpoch, forkDigest);
@@ -139,25 +134,17 @@ export function createCachedGenesis(chainForkConfig: ChainForkConfig, genesisVal
     },
 
     boundary2ForkDigest(boundary: SubscribeBoundary): ForkDigest {
-      const epoch = Math.max(
-        chainForkConfig.forks[boundary.fork].epoch,
-        isSubscribeBoundaryPostFulu(boundary) ? boundary.EPOCH : -1
-      );
-      const forkDigest = forkDigestByEpoch.get(epoch);
+      const forkDigest = forkDigestByEpoch.get(boundary.epoch);
       if (!forkDigest) {
-        throw Error(`No precomputed forkDigest for ${epoch}`);
+        throw Error(`No precomputed forkDigest for ${boundary.epoch}`);
       }
       return forkDigest;
     },
 
     boundary2ForkDigestHex(boundary: SubscribeBoundary): ForkDigestHex {
-      const epoch = Math.max(
-        chainForkConfig.forks[boundary.fork].epoch,
-        isSubscribeBoundaryPostFulu(boundary) ? boundary.EPOCH : -1
-      );
-      const forkDigestHex = forkDigestHexByEpoch.get(epoch);
+      const forkDigestHex = forkDigestHexByEpoch.get(boundary.epoch);
       if (!forkDigestHex) {
-        throw Error(`No precomputed forkDigest for ${epoch}`);
+        throw Error(`No precomputed forkDigest for ${boundary.epoch}`);
       }
       return toHexStringNoPrefix(forkDigestHex);
     },

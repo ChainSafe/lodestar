@@ -1,5 +1,5 @@
 import {ListCompositeType, ValueOf} from "@chainsafe/ssz";
-import {BeaconConfig, ChainForkConfig, createBeaconConfig} from "@lodestar/config";
+import {BeaconConfig, ChainForkConfig, createBeaconConfig, createSubscribeBoundary} from "@lodestar/config";
 import {NetworkName, genesisData} from "@lodestar/config/networks";
 import {ForkName, SLOTS_PER_EPOCH, ZERO_HASH} from "@lodestar/params";
 import {
@@ -133,7 +133,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
             for (const [i, update] of data.entries()) {
               const version = meta.versions[i];
               const epoch = Math.floor(update.attestedHeader.beacon.slot / SLOTS_PER_EPOCH);
-              const boundary = cachedBeaconConfig().getSubscribeBoundary(epoch);
+              const boundary = createSubscribeBoundary(cachedBeaconConfig(), epoch);
               const forkDigest = cachedBeaconConfig().boundary2ForkDigest(boundary);
               const serialized = getPostAltairForkTypes(version).LightClientUpdate.serialize(update);
               const length = ssz.UintNum64.serialize(4 + serialized.length);

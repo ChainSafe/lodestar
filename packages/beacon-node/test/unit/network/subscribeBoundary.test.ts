@@ -1,4 +1,11 @@
-import {BlobSchedule, ChainConfig, ChainForkConfig, SubscribeBoundary, createChainForkConfig} from "@lodestar/config";
+import {
+  BlobSchedule,
+  ChainConfig,
+  ChainForkConfig,
+  SubscribeBoundary,
+  SubscribeBoundaryType,
+  createChainForkConfig,
+} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
 import {describe, expect, it} from "vitest";
@@ -53,9 +60,9 @@ const testScenarios: {
     fulu: Infinity,
     blobSchedule: [] as BlobSchedule,
     testCases: [
-      {epoch: -1, activeBoundaries: [{fork: ForkName.altair}]},
-      {epoch: 0, activeBoundaries: [{fork: ForkName.altair}]},
-      {epoch: 1, activeBoundaries: [{fork: ForkName.altair}]},
+      {epoch: -1, activeBoundaries: [{type: SubscribeBoundaryType.PreFulu, fork: ForkName.altair, epoch: 0}]},
+      {epoch: 0, activeBoundaries: [{type: SubscribeBoundaryType.PreFulu, fork: ForkName.altair, epoch: 0}]},
+      {epoch: 1, activeBoundaries: [{type: SubscribeBoundaryType.PreFulu, fork: ForkName.altair, epoch: 0}]},
     ],
   },
   {
@@ -67,8 +74,14 @@ const testScenarios: {
     fulu: Infinity,
     blobSchedule: [] as BlobSchedule,
     testCases: [
-      {epoch: 50, activeBoundaries: [{fork: ForkName.deneb}, {fork: ForkName.electra}]},
-      {epoch: 55, activeBoundaries: [{fork: ForkName.electra}]},
+      {
+        epoch: 50,
+        activeBoundaries: [
+          {type: SubscribeBoundaryType.PreFulu, fork: ForkName.deneb, epoch: 40},
+          {type: SubscribeBoundaryType.PreFulu, fork: ForkName.electra, epoch: 50},
+        ],
+      },
+      {epoch: 55, activeBoundaries: [{type: SubscribeBoundaryType.PreFulu, fork: ForkName.electra, epoch: 50}]},
     ],
   },
   {
@@ -80,19 +93,35 @@ const testScenarios: {
     fulu: 60,
     blobSchedule: [] as BlobSchedule,
     testCases: [
-      {epoch: 50, activeBoundaries: [{fork: ForkName.deneb}, {fork: ForkName.electra}]},
-      {epoch: 55, activeBoundaries: [{fork: ForkName.electra}]},
+      {
+        epoch: 50,
+        activeBoundaries: [
+          {type: SubscribeBoundaryType.PreFulu, fork: ForkName.deneb, epoch: 40},
+          {type: SubscribeBoundaryType.PreFulu, fork: ForkName.electra, epoch: 50},
+        ],
+      },
+      {epoch: 55, activeBoundaries: [{type: SubscribeBoundaryType.PreFulu, fork: ForkName.electra, epoch: 50}]},
       {
         epoch: 60,
         activeBoundaries: [
-          {fork: ForkName.electra},
-          {fork: ForkName.fulu, EPOCH: 50, MAX_BLOBS_PER_BLOCK: defaultConfig.MAX_BLOBS_PER_BLOCK_ELECTRA},
+          {type: SubscribeBoundaryType.PreFulu, fork: ForkName.electra, epoch: 50},
+          {
+            type: SubscribeBoundaryType.HardFork,
+            fork: ForkName.fulu,
+            epoch: 60,
+            blobSchedule: {EPOCH: 50, MAX_BLOBS_PER_BLOCK: defaultConfig.MAX_BLOBS_PER_BLOCK_ELECTRA},
+          },
         ],
       },
       {
         epoch: 65,
         activeBoundaries: [
-          {fork: ForkName.fulu, EPOCH: 50, MAX_BLOBS_PER_BLOCK: defaultConfig.MAX_BLOBS_PER_BLOCK_ELECTRA},
+          {
+            type: SubscribeBoundaryType.HardFork,
+            fork: ForkName.fulu,
+            epoch: 60,
+            blobSchedule: {EPOCH: 50, MAX_BLOBS_PER_BLOCK: defaultConfig.MAX_BLOBS_PER_BLOCK_ELECTRA},
+          },
         ],
       },
     ],
@@ -110,27 +139,71 @@ const testScenarios: {
       {EPOCH: 30, MAX_BLOBS_PER_BLOCK: 300},
     ],
     testCases: [
-      {epoch: 10, activeBoundaries: [{fork: ForkName.deneb}, {fork: ForkName.electra}]},
-      {epoch: 15, activeBoundaries: [{fork: ForkName.electra}]},
+      {
+        epoch: 10,
+        activeBoundaries: [
+          {type: SubscribeBoundaryType.PreFulu, fork: ForkName.deneb, epoch: 0},
+          {type: SubscribeBoundaryType.PreFulu, fork: ForkName.electra, epoch: 10},
+        ],
+      },
+      {epoch: 15, activeBoundaries: [{type: SubscribeBoundaryType.PreFulu, fork: ForkName.electra, epoch: 10}]},
       {
         epoch: 20,
-        activeBoundaries: [{fork: ForkName.electra}, {fork: ForkName.fulu, EPOCH: 20, MAX_BLOBS_PER_BLOCK: 200}],
+        activeBoundaries: [
+          {type: SubscribeBoundaryType.PreFulu, fork: ForkName.electra, epoch: 10},
+          {
+            type: SubscribeBoundaryType.BpoFork,
+            fork: ForkName.fulu,
+            epoch: 20,
+            blobSchedule: {EPOCH: 20, MAX_BLOBS_PER_BLOCK: 200},
+          },
+        ],
       },
       {
         epoch: 25,
         activeBoundaries: [
-          {fork: ForkName.fulu, EPOCH: 20, MAX_BLOBS_PER_BLOCK: 200},
-          {fork: ForkName.fulu, EPOCH: 25, MAX_BLOBS_PER_BLOCK: 250},
+          {
+            type: SubscribeBoundaryType.BpoFork,
+            fork: ForkName.fulu,
+            epoch: 20,
+            blobSchedule: {EPOCH: 20, MAX_BLOBS_PER_BLOCK: 200},
+          },
+          {
+            type: SubscribeBoundaryType.BpoFork,
+            fork: ForkName.fulu,
+            epoch: 25,
+            blobSchedule: {EPOCH: 25, MAX_BLOBS_PER_BLOCK: 250},
+          },
         ],
       },
       {
         epoch: 30,
         activeBoundaries: [
-          {fork: ForkName.fulu, EPOCH: 25, MAX_BLOBS_PER_BLOCK: 250},
-          {fork: ForkName.fulu, EPOCH: 30, MAX_BLOBS_PER_BLOCK: 300},
+          {
+            type: SubscribeBoundaryType.BpoFork,
+            fork: ForkName.fulu,
+            epoch: 25,
+            blobSchedule: {EPOCH: 25, MAX_BLOBS_PER_BLOCK: 250},
+          },
+          {
+            type: SubscribeBoundaryType.BpoFork,
+            fork: ForkName.fulu,
+            epoch: 30,
+            blobSchedule: {EPOCH: 30, MAX_BLOBS_PER_BLOCK: 300},
+          },
         ],
       },
-      {epoch: 33, activeBoundaries: [{fork: ForkName.fulu, EPOCH: 30, MAX_BLOBS_PER_BLOCK: 300}]},
+      {
+        epoch: 33,
+        activeBoundaries: [
+          {
+            type: SubscribeBoundaryType.BpoFork,
+            fork: ForkName.fulu,
+            epoch: 30,
+            blobSchedule: {EPOCH: 30, MAX_BLOBS_PER_BLOCK: 300},
+          },
+        ],
+      },
     ],
   },
   {
@@ -148,32 +221,82 @@ const testScenarios: {
       {
         epoch: 20,
         activeBoundaries: [
-          {fork: ForkName.electra},
-          {fork: ForkName.fulu, EPOCH: 10, MAX_BLOBS_PER_BLOCK: defaultConfig.MAX_BLOBS_PER_BLOCK_ELECTRA},
+          {type: SubscribeBoundaryType.PreFulu, fork: ForkName.electra, epoch: 10},
+          {
+            type: SubscribeBoundaryType.HardFork,
+            fork: ForkName.fulu,
+            epoch: 20,
+            blobSchedule: {EPOCH: 10, MAX_BLOBS_PER_BLOCK: defaultConfig.MAX_BLOBS_PER_BLOCK_ELECTRA},
+          },
         ],
       },
       {
         epoch: 25,
         activeBoundaries: [
-          {fork: ForkName.fulu, EPOCH: 10, MAX_BLOBS_PER_BLOCK: defaultConfig.MAX_BLOBS_PER_BLOCK_ELECTRA},
+          {
+            type: SubscribeBoundaryType.HardFork,
+            fork: ForkName.fulu,
+            epoch: 20,
+            blobSchedule: {EPOCH: 10, MAX_BLOBS_PER_BLOCK: defaultConfig.MAX_BLOBS_PER_BLOCK_ELECTRA},
+          },
         ],
       },
       {
         epoch: 30,
         activeBoundaries: [
-          {fork: ForkName.fulu, EPOCH: 10, MAX_BLOBS_PER_BLOCK: defaultConfig.MAX_BLOBS_PER_BLOCK_ELECTRA},
-          {fork: ForkName.fulu, EPOCH: 30, MAX_BLOBS_PER_BLOCK: 300},
+          {
+            type: SubscribeBoundaryType.HardFork,
+            fork: ForkName.fulu,
+            epoch: 20,
+            blobSchedule: {EPOCH: 10, MAX_BLOBS_PER_BLOCK: defaultConfig.MAX_BLOBS_PER_BLOCK_ELECTRA},
+          },
+          {
+            type: SubscribeBoundaryType.BpoFork,
+            fork: ForkName.fulu,
+            epoch: 30,
+            blobSchedule: {EPOCH: 30, MAX_BLOBS_PER_BLOCK: 300},
+          },
         ],
       },
-      {epoch: 35, activeBoundaries: [{fork: ForkName.fulu, EPOCH: 30, MAX_BLOBS_PER_BLOCK: 300}]},
+      {
+        epoch: 35,
+        activeBoundaries: [
+          {
+            type: SubscribeBoundaryType.BpoFork,
+            fork: ForkName.fulu,
+            epoch: 30,
+            blobSchedule: {EPOCH: 30, MAX_BLOBS_PER_BLOCK: 300},
+          },
+        ],
+      },
       {
         epoch: 40,
         activeBoundaries: [
-          {fork: ForkName.fulu, EPOCH: 30, MAX_BLOBS_PER_BLOCK: 300},
-          {fork: ForkName.fulu, EPOCH: 40, MAX_BLOBS_PER_BLOCK: 400},
+          {
+            type: SubscribeBoundaryType.BpoFork,
+            fork: ForkName.fulu,
+            epoch: 30,
+            blobSchedule: {EPOCH: 30, MAX_BLOBS_PER_BLOCK: 300},
+          },
+          {
+            type: SubscribeBoundaryType.BpoFork,
+            fork: ForkName.fulu,
+            epoch: 40,
+            blobSchedule: {EPOCH: 40, MAX_BLOBS_PER_BLOCK: 400},
+          },
         ],
       },
-      {epoch: 45, activeBoundaries: [{fork: ForkName.fulu, EPOCH: 40, MAX_BLOBS_PER_BLOCK: 400}]},
+      {
+        epoch: 45,
+        activeBoundaries: [
+          {
+            type: SubscribeBoundaryType.BpoFork,
+            fork: ForkName.fulu,
+            epoch: 40,
+            blobSchedule: {EPOCH: 40, MAX_BLOBS_PER_BLOCK: 400},
+          },
+        ],
+      },
     ],
   },
   {
@@ -191,27 +314,72 @@ const testScenarios: {
       {
         epoch: 20,
         activeBoundaries: [
-          {fork: ForkName.electra},
-          {fork: ForkName.fulu, EPOCH: 10, MAX_BLOBS_PER_BLOCK: defaultConfig.MAX_BLOBS_PER_BLOCK_ELECTRA},
-          {fork: ForkName.fulu, EPOCH: 22, MAX_BLOBS_PER_BLOCK: 220},
+          {type: SubscribeBoundaryType.PreFulu, fork: ForkName.electra, epoch: 10},
+          {
+            type: SubscribeBoundaryType.HardFork,
+            fork: ForkName.fulu,
+            epoch: 20,
+            blobSchedule: {EPOCH: 10, MAX_BLOBS_PER_BLOCK: defaultConfig.MAX_BLOBS_PER_BLOCK_ELECTRA},
+          },
+          {
+            type: SubscribeBoundaryType.BpoFork,
+            fork: ForkName.fulu,
+            epoch: 22,
+            blobSchedule: {EPOCH: 22, MAX_BLOBS_PER_BLOCK: 220},
+          },
         ],
       },
       {
         epoch: 23,
         activeBoundaries: [
-          {fork: ForkName.fulu, EPOCH: 10, MAX_BLOBS_PER_BLOCK: defaultConfig.MAX_BLOBS_PER_BLOCK_ELECTRA},
-          {fork: ForkName.fulu, EPOCH: 22, MAX_BLOBS_PER_BLOCK: 220},
-          {fork: ForkName.fulu, EPOCH: 24, MAX_BLOBS_PER_BLOCK: 240},
+          {
+            type: SubscribeBoundaryType.HardFork,
+            fork: ForkName.fulu,
+            epoch: 20,
+            blobSchedule: {EPOCH: 10, MAX_BLOBS_PER_BLOCK: defaultConfig.MAX_BLOBS_PER_BLOCK_ELECTRA},
+          },
+          {
+            type: SubscribeBoundaryType.BpoFork,
+            fork: ForkName.fulu,
+            epoch: 22,
+            blobSchedule: {EPOCH: 22, MAX_BLOBS_PER_BLOCK: 220},
+          },
+          {
+            type: SubscribeBoundaryType.BpoFork,
+            fork: ForkName.fulu,
+            epoch: 24,
+            blobSchedule: {EPOCH: 24, MAX_BLOBS_PER_BLOCK: 240},
+          },
         ],
       },
       {
         epoch: 25,
         activeBoundaries: [
-          {fork: ForkName.fulu, EPOCH: 22, MAX_BLOBS_PER_BLOCK: 220},
-          {fork: ForkName.fulu, EPOCH: 24, MAX_BLOBS_PER_BLOCK: 240},
+          {
+            type: SubscribeBoundaryType.BpoFork,
+            fork: ForkName.fulu,
+            epoch: 22,
+            blobSchedule: {EPOCH: 22, MAX_BLOBS_PER_BLOCK: 220},
+          },
+          {
+            type: SubscribeBoundaryType.BpoFork,
+            fork: ForkName.fulu,
+            epoch: 24,
+            blobSchedule: {EPOCH: 24, MAX_BLOBS_PER_BLOCK: 240},
+          },
         ],
       },
-      {epoch: 27, activeBoundaries: [{fork: ForkName.fulu, EPOCH: 24, MAX_BLOBS_PER_BLOCK: 240}]},
+      {
+        epoch: 27,
+        activeBoundaries: [
+          {
+            type: SubscribeBoundaryType.BpoFork,
+            fork: ForkName.fulu,
+            epoch: 24,
+            blobSchedule: {EPOCH: 24, MAX_BLOBS_PER_BLOCK: 240},
+          },
+        ],
+      },
     ],
   },
 ];

@@ -1,5 +1,5 @@
 import {PeerId} from "@libp2p/interface";
-import {BeaconConfig, SubscribeBoundary} from "@lodestar/config";
+import {BeaconConfig, SubscribeBoundary, createSubscribeBoundary} from "@lodestar/config";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {
   Encoding,
@@ -331,7 +331,7 @@ export class ReqRespBeaconNode extends ReqResp {
     const status = this.statusCache.get();
     yield {
       data: type.serialize(status as fulu.Status),
-      boundary: this.config.getSubscribeBoundary(computeEpochAtSlot(body.headSlot)),
+      boundary: createSubscribeBoundary(this.config, computeEpochAtSlot(body.headSlot)),
     };
   }
 
@@ -341,8 +341,8 @@ export class ReqRespBeaconNode extends ReqResp {
 
     yield {
       data: ssz.phase0.Goodbye.serialize(BigInt(0)),
-      // Goodbye topic is fork-agnostic
-      boundary: {fork: ForkName.phase0},
+      // Goodbye topic is fork-agnostic.
+      boundary: createSubscribeBoundary(this.config, 0),
     };
   }
 
@@ -352,7 +352,7 @@ export class ReqRespBeaconNode extends ReqResp {
     yield {
       data: ssz.phase0.Ping.serialize(this.metadataController.seqNumber),
       // Ping topic is fork-agnostic
-      boundary: {fork: ForkName.phase0},
+      boundary: createSubscribeBoundary(this.config, 0),
     };
   }
 
@@ -368,7 +368,7 @@ export class ReqRespBeaconNode extends ReqResp {
 
     yield {
       data: type.serialize(metadata),
-      boundary: {fork},
+      boundary: createSubscribeBoundary(this.config, 0),
     };
   }
 }
