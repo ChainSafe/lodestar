@@ -10,6 +10,8 @@ export type PeerSyncInfo = PeerSyncMeta & {
   target: ChainTarget;
 };
 
+type PeerInfoColumn = {syncInfo: PeerSyncInfo; columns: number};
+
 /**
  * Balance and organize peers to perform requests with a SyncChain
  * Shuffles peers only once on instantiation
@@ -41,45 +43,10 @@ export class ChainPeersBalancer {
       return;
     }
     const {partialDownload} = batch.state;
+    const pendingDataColumns = partialDownload?.pendingDataColumns ?? this.custodyConfig.sampledColumns;
+    const eligiblePeers = this.filterPeers(batch, pendingDataColumns, false);
 
     const failedPeers = new Set(batch.getFailedPeers());
-    const eligiblePeers: {syncInfo: PeerSyncInfo; columns: number}[] = [];
-    for (const peer of this.peers) {
-      const {earliestAvailableSlot, custodyGroups, target} = peer;
-      if (!batch.isFulu()) {
-        eligiblePeers.push({syncInfo: peer, columns: 0});
-        continue;
-      }
-
-      // TODO(fulu): this is a bug and is prioritizing peers that do not announce
-      //     an earliestAvailableSlot. Need to refactor this logic
-      const earliestSlot = earliestAvailableSlot ?? 0;
-      const peerColumns = custodyGroups;
-
-      if (earliestSlot > batch.request.startSlot) {
-        continue;
-      }
-
-      if (target.slot < batch.request.startSlot) {
-        continue;
-      }
-
-      const pendingDataColumns = partialDownload
-        ? partialDownload.pendingDataColumns
-        : this.custodyConfig.sampledColumns;
-
-      const columns = peerColumns.reduce((acc, elem) => {
-        if (pendingDataColumns.includes(elem)) {
-          acc.push(elem);
-        }
-        return acc;
-      }, [] as number[]);
-
-      if (columns.length > 0) {
-        eligiblePeers.push({syncInfo: peer, columns: columns.length});
-      }
-    }
-
     const sortedBestPeers = sortBy(
       eligiblePeers,
       ({syncInfo}) => (failedPeers.has(syncInfo.peerId) ? 1 : 0), // Sort by no failed first = 0
@@ -94,18 +61,27 @@ export class ChainPeersBalancer {
    * Return peers with 0 or no active requests that has a higher target slot than this batch and has columns we need.
    */
   idlePeerForBatch(batch: Batch): PeerSyncInfo | undefined {
-    const eligiblePeers: {peerInfo: PeerSyncInfo; columns: number}[] = [];
-    for (const peerInfo of this.peers) {
-      const {peerId, custodyGroups, target, earliestAvailableSlot} = peerInfo;
-      const activeRequests = this.activeRequestsByPeer.get(peerId);
-      if (activeRequests != null && activeRequests > 0) {
-        continue;
-      }
+    const eligiblePeers = this.filterPeers(batch, this.custodyConfig.sampledColumns, true);
 
-      // TODO(fulu): this is a bug and is prioritizing peers that do not announce
-      //     an earliestAvailableSlot. Need to refactor this logic
-      const earliestSlot = earliestAvailableSlot ?? 0;
-      if (earliestSlot > batch.request.startSlot) {
+    // pick idle peer that has the most columns we need, for pre-fulu they are always 0
+    const mostColumnsPeer = eligiblePeers.sort((a, b) => b.columns - a.columns)[0];
+    if (mostColumnsPeer != null) {
+      // we will use this peer for batch in SyncChain right after this call
+      this.activeRequestsByPeer.set(mostColumnsPeer.syncInfo.peerId, 1);
+      return mostColumnsPeer.syncInfo;
+    }
+
+    return undefined;
+  }
+
+  private filterPeers(batch: Batch, requestColumns: number[], checkActiveRequest: boolean): PeerInfoColumn[] {
+    const eligiblePeers: PeerInfoColumn[] = [];
+
+    for (const peer of this.peers) {
+      const {earliestAvailableSlot, custodyGroups, target, peerId} = peer;
+
+      const activeRequest = this.activeRequestsByPeer.get(peerId) ?? 0;
+      if (checkActiveRequest && activeRequest > 0) {
         continue;
       }
 
@@ -114,32 +90,32 @@ export class ChainPeersBalancer {
       }
 
       if (!batch.isFulu()) {
-        eligiblePeers.push({peerInfo, columns: 0});
+        // pre-fulu logic
+        eligiblePeers.push({syncInfo: peer, columns: 0});
         continue;
       }
 
-      // fulu specific logic
+      // TODO(fulu): this is a bug and is prioritizing peers that do not announce
+      //     an earliestAvailableSlot. Need to refactor this logic
+      const earliestSlot = earliestAvailableSlot ?? 0;
       const peerColumns = custodyGroups;
+
+      if (earliestSlot > batch.request.startSlot) {
+        continue;
+      }
+
       const columns = peerColumns.reduce((acc, elem) => {
-        if (this.custodyConfig.sampledColumns.includes(elem)) {
+        if (requestColumns.includes(elem)) {
           acc.push(elem);
         }
         return acc;
       }, [] as number[]);
 
       if (columns.length > 0) {
-        eligiblePeers.push({peerInfo, columns: columns.length});
+        eligiblePeers.push({syncInfo: peer, columns: columns.length});
       }
     }
 
-    // pick idle peer that has the most columns we need, for pre-fulu they are always 0
-    const mostColumnsPeer = eligiblePeers.sort((a, b) => b.columns - a.columns)[0];
-    if (mostColumnsPeer != null) {
-      // we will use this peer for batch in SyncChain right after this call
-      this.activeRequestsByPeer.set(mostColumnsPeer.peerInfo.peerId, 1);
-      return mostColumnsPeer.peerInfo;
-    }
-
-    return undefined;
+    return eligiblePeers;
   }
 }
