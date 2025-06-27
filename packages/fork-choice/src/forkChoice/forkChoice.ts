@@ -265,11 +265,8 @@ export class ForkChoice implements IForkChoice {
       return {shouldOverrideFcu: false, reason: prelimNotReorgedReason ?? NotReorgedReason.Unknown};
     }
 
-    // https://github.com/ethereum/consensus-specs/blob/v1.5.0/specs/phase0/fork-choice.md#is_proposing_on_time
-    const proposerReorgCutoff = this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT / 2;
-    const isProposingOnTime = secFromSlot <= proposerReorgCutoff;
-
-    const currentTimeOk = headBlock.slot === currentSlot || (proposalSlot === currentSlot && isProposingOnTime);
+    const currentTimeOk =
+      headBlock.slot === currentSlot || (proposalSlot === currentSlot && this.isProposingOnTime(secFromSlot));
     if (!currentTimeOk) {
       return {shouldOverrideFcu: false, reason: NotReorgedReason.ReorgMoreThanOneSlot};
     }
@@ -357,10 +354,8 @@ export class ForkChoice implements IForkChoice {
       return {proposerHead, isHeadTimely, notReorgedReason: prelimNotReorgedReason};
     }
 
-    // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_proposing_on_time
-    const proposerReorgCutoff = this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT / 2;
-    const isProposingOnTime = secFromSlot <= proposerReorgCutoff;
-    if (!isProposingOnTime) {
+    // Only re-org if we are proposing on-time
+    if (!this.isProposingOnTime(secFromSlot)) {
       return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.NotProposingOnTime};
     }
 
@@ -1181,6 +1176,14 @@ export class ForkChoice implements IForkChoice {
   protected isBlockTimely(block: BeaconBlock, blockDelaySec: number): boolean {
     const isBeforeAttestingInterval = blockDelaySec < this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT;
     return this.fcStore.currentSlot === block.slot && isBeforeAttestingInterval;
+  }
+
+  /**
+   * https://github.com/ethereum/consensus-specs/blob/v1.5.0/specs/phase0/fork-choice.md#is_proposing_on_time
+   */
+  private isProposingOnTime(secFromSlot: number): boolean {
+    const proposerReorgCutoff = this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT / 2;
+    return secFromSlot <= proposerReorgCutoff;
   }
 
   private getPreMergeExecStatus(executionStatus: MaybeValidExecutionStatus): ExecutionStatus.PreMerge {
