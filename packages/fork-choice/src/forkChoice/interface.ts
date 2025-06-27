@@ -117,7 +117,11 @@ export interface IForkChoice {
    * Primarily being called during block import when proposerBoostReorg is enabled
    * fcu call in `importBlock()` will be suppressed if this returns true
    */
-  shouldOverrideForkChoiceUpdate(slot: Slot, blockRoot: RootHex): ShouldOverrideForkChoiceUpdateResult;
+  shouldOverrideForkChoiceUpdate(
+    blockRoot: RootHex,
+    secFromSlot: number,
+    currentSlot: Slot
+  ): ShouldOverrideForkChoiceUpdateResult;
   /**
    * Retrieves all possible chain heads (leaves of fork choice tree).
    */
