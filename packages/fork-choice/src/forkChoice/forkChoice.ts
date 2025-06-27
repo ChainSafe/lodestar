@@ -236,7 +236,7 @@ export class ForkChoice implements IForkChoice {
   ): ShouldOverrideForkChoiceUpdateResult {
     const headBlock = this.getBlockHex(blockRoot);
     if (headBlock === null) {
-      // should not happen beacause this block just got imported. Fall back to no-reorg.
+      // should not happen because this block just got imported. Fall back to no-reorg.
       return {shouldOverrideFcu: false, reason: NotReorgedReason.HeadBlockNotAvailable};
     }
     // Skip re-org attempt if proposer boost (reorg) are disabled

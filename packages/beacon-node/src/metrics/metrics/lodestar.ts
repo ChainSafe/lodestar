@@ -746,7 +746,7 @@ export function createLodestarMetrics(
         labelNames: ["blobsSource"],
       }),
       notOverrideFcuReason: register.counter<{reason: NotReorgedReason}>({
-        name: "beacon_import_block_not_override_fcu_reason_total",
+        name: "lodestar_import_block_not_override_fcu_reason_total",
         help: "Reason why the fcu call is not suppressed during block import",
         labelNames: ["reason"],
       }),

@@ -132,7 +132,7 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
       expectReorg: true,
     },
     {
-      id: "No reorg when head block is timly",
+      id: "No reorg when head block is timely",
       parentBlock: {...baseParentHeadBlock},
       headBlock: {...baseHeadBlock, timeliness: true},
       expectReorg: false,
@@ -196,7 +196,7 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
     currentSlot: blockSeenSlot,
     expectedNotReorgedReason,
   } of testCases) {
-    it(`${id}`, async () => {
+    it(id, async () => {
       protoArr.onBlock(parentBlock, parentBlock.slot);
       protoArr.onBlock(headBlock, headBlock.slot);
 
