@@ -66,6 +66,14 @@ export function createHistoricalStateTransitionMetrics(
       name: "lodestar_historical_state_stfn_num_effective_balance_updates_count",
       help: "Count of effective balance updates in epoch transition",
     }),
+    validatorsInActivationQueue: metricsRegister.gauge({
+      name: "lodestar_historical_state_stfn_validators_in_activation_queue",
+      help: "Current number of validators in the activation queue",
+    }),
+    validatorsInExitQueue: metricsRegister.gauge({
+      name: "lodestar_historical_state_stfn_validators_in_exit_queue",
+      help: "Current number of validators in the exit queue",
+    }),
     preStateBalancesNodesPopulatedMiss: metricsRegister.gauge<{source: StateCloneSource}>({
       name: "lodestar_historical_state_stfn_balances_nodes_populated_miss_total",
       help: "Total count state.balances nodesPopulated is false on stfn",

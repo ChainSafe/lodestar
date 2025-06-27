@@ -56,6 +56,21 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       help: "number of validators in current epoch",
     }),
 
+    pendingDeposits: register.gauge({
+      name: "beacon_pending_deposits",
+      help: "Current number of pending deposits",
+    }),
+
+    pendingConsolidations: register.gauge({
+      name: "beacon_pending_consolidations",
+      help: "Current number of pending consolidations",
+    }),
+
+    pendingPartialWithdrawals: register.gauge({
+      name: "beacon_pending_partial_withdrawals",
+      help: "Current number of pending partial withdrawals",
+    }),
+
     // Non-spec'ed
 
     forkChoice: {
@@ -208,6 +223,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         name: "beacon_block_payload_fetched_time",
         help: "Time to fetch the payload from EL",
         labelNames: ["prepType"],
+        buckets: [0.1, 0.2, 0.3, 0.5, 0.7, 1, 2],
       }),
       emptyPayloads: register.gauge<{prepType: PayloadPreparationType}>({
         name: "beacon_block_payload_empty_total",

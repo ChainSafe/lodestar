@@ -26,7 +26,7 @@ export async function* onBeaconBlocksByRange(
     for await (const {key, value} of finalized.binaryEntriesStream({gte: startSlot, lt: endSlot})) {
       yield {
         data: value,
-        fork: chain.config.getForkName(finalized.decodeKey(key)),
+        boundary: {fork: chain.config.getForkName(finalized.decodeKey(key))},
       };
     }
   }
@@ -57,7 +57,7 @@ export async function* onBeaconBlocksByRange(
 
         yield {
           data: blockBytes,
-          fork: chain.config.getForkName(block.slot),
+          boundary: {fork: chain.config.getForkName(block.slot)},
         };
       }
 

@@ -14,7 +14,7 @@ import {BlobIndex, Root, Slot, SubnetID, deneb, ssz} from "@lodestar/types";
 import {toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 
 import {byteArrayEquals} from "../../util/bytes.js";
-import {ckzg} from "../../util/kzg.js";
+import {kzg} from "../../util/kzg.js";
 import {BlobSidecarErrorCode, BlobSidecarGossipError} from "../errors/blobSidecarError.js";
 import {GossipAction} from "../errors/gossipValidation.js";
 import {IBeaconChain} from "../interface.js";
@@ -164,7 +164,7 @@ export async function validateGossipBlobSidecar(
 
   // blob, proof and commitment as a valid BLS G1 point gets verified in batch validation
   try {
-    validateBlobsAndProofs([blobSidecar.kzgCommitment], [blobSidecar.blob], [blobSidecar.kzgProof]);
+    await validateBlobsAndProofs([blobSidecar.kzgCommitment], [blobSidecar.blob], [blobSidecar.kzgProof]);
   } catch (_e) {
     throw new BlobSidecarGossipError(GossipAction.REJECT, {
       code: BlobSidecarErrorCode.INVALID_KZG_PROOF,
@@ -174,13 +174,13 @@ export async function validateGossipBlobSidecar(
 }
 
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#validate_blobs_sidecar
-export function validateBlobSidecars(
+export async function validateBlobSidecars(
   blockSlot: Slot,
   blockRoot: Root,
   expectedKzgCommitments: deneb.BlobKzgCommitments,
   blobSidecars: deneb.BlobSidecars,
   opts: {skipProofsCheck: boolean} = {skipProofsCheck: false}
-): void {
+): Promise<void> {
   // assert len(expected_kzg_commitments) == len(blobs)
   if (expectedKzgCommitments.length !== blobSidecars.length) {
     throw new Error(
@@ -214,20 +214,20 @@ export function validateBlobSidecars(
     }
 
     if (!opts.skipProofsCheck) {
-      validateBlobsAndProofs(expectedKzgCommitments, blobs, proofs);
+      await validateBlobsAndProofs(expectedKzgCommitments, blobs, proofs);
     }
   }
 }
 
-function validateBlobsAndProofs(
+async function validateBlobsAndProofs(
   expectedKzgCommitments: deneb.BlobKzgCommitments,
   blobs: deneb.Blobs,
   proofs: deneb.KZGProofs
-): void {
+): Promise<void> {
   // assert verify_aggregate_kzg_proof(blobs, expected_kzg_commitments, kzg_aggregated_proof)
   let isProofValid: boolean;
   try {
-    isProofValid = ckzg.verifyBlobKzgProofBatch(blobs, expectedKzgCommitments, proofs);
+    isProofValid = await kzg.asyncVerifyBlobKzgProofBatch(blobs, expectedKzgCommitments, proofs);
   } catch (e) {
     (e as Error).message = `Error on verifyBlobKzgProofBatch: ${(e as Error).message}`;
     throw e;

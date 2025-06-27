@@ -85,7 +85,7 @@ export function* iterateBlobBytesFromWrapper(
     }
     yield {
       data: blobSideCarBytes,
-      fork: chain.config.getForkName(blockSlot),
+      boundary: {fork: chain.config.getForkName(blockSlot)},
     };
   }
 }

@@ -26,6 +26,7 @@ import {
   Slot,
   ValidatorIndex,
   Wei,
+  altair,
   capella,
   deneb,
   electra,
@@ -108,7 +109,8 @@ export async function produceBlockBody<T extends BlockType>(
   blockAttr: BlockAttributes & {
     proposerIndex: ValidatorIndex;
     proposerPubKey: BLSPubkey;
-    commonBlockBody?: CommonBlockBody;
+    // TODO: make `commonBlockBodyPromise` required and remove calls to `produceCommonBlockBody` below
+    commonBlockBodyPromise?: Promise<CommonBlockBody>;
   }
 ): Promise<{
   body: AssembledBodyType<T>;
@@ -122,13 +124,14 @@ export async function produceBlockBody<T extends BlockType>(
     parentBlockRoot,
     proposerIndex,
     proposerPubKey,
-    commonBlockBody,
+    commonBlockBodyPromise,
   } = blockAttr;
   // Type-safe for blobs variable. Translate 'null' value into 'preDeneb' enum
   // TODO: Not ideal, but better than just using null.
   // TODO: Does not guarantee that preDeneb enum goes with a preDeneb block
   let blobsResult: BlobsResult;
   let executionPayloadValue: Wei;
+  let blockBody: AssembledBodyType<T>;
   // even though shouldOverrideBuilder is relevant for the engine response, for simplicity of typing
   // we just return it undefined for the builder which anyway doesn't get consumed downstream
   let shouldOverrideBuilder: boolean | undefined;
@@ -140,42 +143,7 @@ export async function produceBlockBody<T extends BlockType>(
     slot: blockSlot,
   };
   this.logger.verbose("Producing beacon block body", logMeta);
-  const stepsMetrics =
-    blockType === BlockType.Full
-      ? this.metrics?.executionBlockProductionTimeSteps
-      : this.metrics?.builderBlockProductionTimeSteps;
 
-  const blockBody = commonBlockBody
-    ? Object.assign({}, commonBlockBody)
-    : await produceCommonBlockBody.call(this, blockType, currentState, blockAttr);
-
-  const {
-    graffiti,
-    attestations,
-    deposits,
-    voluntaryExits,
-    attesterSlashings,
-    proposerSlashings,
-    syncAggregate,
-    blsToExecutionChanges,
-  } = blockBody;
-
-  Object.assign(logMeta, {
-    graffiti: fromGraffitiBytes(graffiti),
-    attestations: attestations.length,
-    deposits: deposits.length,
-    voluntaryExits: voluntaryExits.length,
-    attesterSlashings: attesterSlashings.length,
-    proposerSlashings: proposerSlashings.length,
-  });
-
-  if (isForkPostAltair(fork)) {
-    Object.assign(logMeta, {
-      syncAggregateParticipants: syncAggregate.syncCommitteeBits.getTrueBitIndexes().length,
-    });
-  }
-
-  const endExecutionPayload = stepsMetrics?.startTimer();
   if (isForkPostBellatrix(fork)) {
     const safeBlockHash = this.forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
@@ -190,32 +158,53 @@ export async function produceBlockBody<T extends BlockType>(
 
     if (blockType === BlockType.Blinded) {
       if (!this.executionBuilder) throw Error("Execution Builder not available");
+      const executionBuilder = this.executionBuilder;
 
-      // This path will not be used in the production, but is here just for merge mock
-      // tests because merge-mock requires an fcU to be issued prior to fetch payload
-      // header.
-      if (this.executionBuilder.issueLocalFcUWithFeeRecipient !== undefined) {
-        await prepareExecutionPayload(
+      const builderPromise = (async () => {
+        const endExecutionPayloadHeader = this.metrics?.builderBlockProductionTimeSteps.startTimer();
+        // This path will not be used in the production, but is here just for merge mock
+        // tests because merge-mock requires an fcU to be issued prior to fetch payload
+        // header.
+        if (executionBuilder.issueLocalFcUWithFeeRecipient !== undefined) {
+          await prepareExecutionPayload(
+            this,
+            this.logger,
+            fork,
+            parentBlockRoot,
+            safeBlockHash,
+            finalizedBlockHash ?? ZERO_HASH_HEX,
+            currentState as CachedBeaconStateBellatrix,
+            executionBuilder.issueLocalFcUWithFeeRecipient
+          );
+        }
+
+        // For MeV boost integration, this is where the execution header will be
+        // fetched from the payload id and a blinded block will be produced instead of
+        // fullblock for the validator to sign
+        this.logger.verbose("Fetching execution payload header from builder", {
+          slot: blockSlot,
+          proposerPubKey: toHex(proposerPubKey),
+        });
+        const headerRes = prepareExecutionPayloadHeader(
           this,
-          this.logger,
           fork,
-          parentBlockRoot,
-          safeBlockHash,
-          finalizedBlockHash ?? ZERO_HASH_HEX,
           currentState as CachedBeaconStateBellatrix,
-          this.executionBuilder.issueLocalFcUWithFeeRecipient
+          proposerPubKey
         );
-      }
 
-      // For MeV boost integration, this is where the execution header will be
-      // fetched from the payload id and a blinded block will be produced instead of
-      // fullblock for the validator to sign
-      const builderRes = await prepareExecutionPayloadHeader(
-        this,
-        fork,
-        currentState as CachedBeaconStateBellatrix,
-        proposerPubKey
-      );
+        endExecutionPayloadHeader?.({
+          step: BlockProductionStep.executionPayload,
+        });
+
+        return headerRes;
+      })();
+
+      const [builderRes, commonBlockBody] = await Promise.all([
+        builderPromise,
+        commonBlockBodyPromise ?? produceCommonBlockBody.call(this, blockType, currentState, blockAttr),
+      ]);
+      blockBody = Object.assign({}, commonBlockBody) as AssembledBodyType<BlockType.Blinded>;
+
       (blockBody as BlindedBeaconBlockBody).executionPayloadHeader = builderRes.header;
       executionPayloadValue = builderRes.executionPayloadValue;
 
@@ -229,7 +218,7 @@ export async function produceBlockBody<T extends BlockType>(
         fetchedTime,
       });
 
-      const targetGasLimit = this.executionBuilder.getValidatorRegistration(proposerPubKey)?.gasLimit;
+      const targetGasLimit = executionBuilder.getValidatorRegistration(proposerPubKey)?.gasLimit;
       if (!targetGasLimit) {
         // This should only happen if cache was cleared due to restart of beacon node
         this.logger.warn("Failed to get validator registration, could not check header gas limit", {
@@ -286,11 +275,15 @@ export async function produceBlockBody<T extends BlockType>(
 
     // blockType === BlockType.Full
     else {
-      // try catch payload fetch here, because there is still a recovery path possible if we
-      // are pre-merge. We don't care the same for builder segment as the execution block
-      // will takeover if the builder flow was activated and errors
-      try {
-        // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/validator.md#constructing-the-beaconblockbody
+      const enginePromise = (async () => {
+        const endExecutionPayload = this.metrics?.executionBlockProductionTimeSteps.startTimer();
+
+        this.logger.verbose("Preparing execution payload from engine", {
+          slot: blockSlot,
+          parentBlockRoot: toRootHex(parentBlockRoot),
+          feeRecipient,
+        });
+        // https://github.com/ethereum/consensus-specs/blob/dev/specs/deneb/validator.md#constructing-the-beaconblockbody
         const prepareRes = await prepareExecutionPayload(
           this,
           this.logger,
@@ -303,75 +296,38 @@ export async function produceBlockBody<T extends BlockType>(
         );
 
         if (prepareRes.isPremerge) {
-          (blockBody as BeaconBlockBody<ForkPostBellatrix>).executionPayload =
-            sszTypesFor(fork).ExecutionPayload.defaultValue();
-          blobsResult = {type: BlobsResultType.preDeneb};
-          executionPayloadValue = BigInt(0);
-        } else {
-          const {prepType, payloadId} = prepareRes;
-          Object.assign(logMeta, {executionPayloadPrepType: prepType});
-
-          if (prepType !== PayloadPreparationType.Cached) {
-            // Wait for 500ms to allow EL to add some txs to the payload
-            // the pitfalls of this have been put forward here, but 500ms delay for block proposal
-            // seems marginal even with unhealthy network
-            //
-            // See: https://discord.com/channels/595666850260713488/892088344438255616/1009882079632314469
-            await sleep(PAYLOAD_GENERATION_TIME_MS);
-          }
-
-          const engineRes = await this.executionEngine.getPayload(fork, payloadId);
-          const {executionPayload, blobsBundle, executionRequests} = engineRes;
-          shouldOverrideBuilder = engineRes.shouldOverrideBuilder;
-
-          (blockBody as BeaconBlockBody<ForkPostBellatrix>).executionPayload = executionPayload;
-          executionPayloadValue = engineRes.executionPayloadValue;
-          Object.assign(logMeta, {transactions: executionPayload.transactions.length, shouldOverrideBuilder});
-
-          const fetchedTime = Date.now() / 1000 - computeTimeAtSlot(this.config, blockSlot, this.genesisTime);
-          this.metrics?.blockPayload.payloadFetchedTime.observe({prepType}, fetchedTime);
-          this.logger.verbose("Fetched execution payload from engine", {
-            slot: blockSlot,
-            executionPayloadValue,
-            prepType,
-            payloadId,
-            fetchedTime,
-            executionHeadBlockHash: toRootHex(engineRes.executionPayload.blockHash),
-          });
-          if (executionPayload.transactions.length === 0) {
-            this.metrics?.blockPayload.emptyPayloads.inc({prepType});
-          }
-
-          if (ForkSeq[fork] >= ForkSeq.deneb) {
-            if (blobsBundle === undefined) {
-              throw Error(`Missing blobsBundle response from getPayload at fork=${fork}`);
-            }
-
-            if (this.opts.sanityCheckExecutionEngineBlobs) {
-              validateBlobsAndKzgCommitments(executionPayload, blobsBundle);
-            }
-
-            (blockBody as deneb.BeaconBlockBody).blobKzgCommitments = blobsBundle.commitments;
-            const blockHash = toRootHex(executionPayload.blockHash);
-            const contents = {kzgProofs: blobsBundle.proofs, blobs: blobsBundle.blobs};
-            blobsResult = {type: BlobsResultType.produced, contents, blockHash};
-
-            Object.assign(logMeta, {blobs: blobsBundle.commitments.length});
-          } else {
-            blobsResult = {type: BlobsResultType.preDeneb};
-          }
-
-          if (ForkSeq[fork] >= ForkSeq.electra) {
-            if (executionRequests === undefined) {
-              throw Error(`Missing executionRequests response from getPayload at fork=${fork}`);
-            }
-            (blockBody as electra.BeaconBlockBody).executionRequests = executionRequests;
-          }
+          return {
+            ...prepareRes,
+            executionPayload: sszTypesFor(fork).ExecutionPayload.defaultValue(),
+            executionPayloadValue: BigInt(0),
+          };
         }
-      } catch (e) {
+
+        const {prepType, payloadId} = prepareRes;
+        Object.assign(logMeta, {executionPayloadPrepType: prepType});
+
+        if (prepType !== PayloadPreparationType.Cached) {
+          // Wait for 500ms to allow EL to add some txs to the payload
+          // the pitfalls of this have been put forward here, but 500ms delay for block proposal
+          // seems marginal even with unhealthy network
+          //
+          // See: https://discord.com/channels/595666850260713488/892088344438255616/1009882079632314469
+          await sleep(PAYLOAD_GENERATION_TIME_MS);
+        }
+
+        this.logger.verbose("Fetching execution payload from engine", {slot: blockSlot, payloadId});
+        const payloadRes = await this.executionEngine.getPayload(fork, payloadId);
+
+        endExecutionPayload?.({
+          step: BlockProductionStep.executionPayload,
+        });
+
+        return {...prepareRes, ...payloadRes};
+      })().catch((e) => {
+        // catch payload fetch here, because there is still a recovery path possible if we
+        // are pre-merge. We don't care the same for builder segment as the execution block
+        // will takeover if the builder flow was activated and errors
         this.metrics?.blockPayload.payloadFetchErrors.inc();
-        // ok we don't have an execution payload here, so we can assign an empty one
-        // if pre-merge
 
         if (!isMergeTransitionComplete(currentState as CachedBeaconStateBellatrix)) {
           this.logger?.warn(
@@ -379,26 +335,106 @@ export async function produceBlockBody<T extends BlockType>(
             {},
             e as Error
           );
-          (blockBody as BeaconBlockBody<ForkPostBellatrix>).executionPayload =
-            sszTypesFor(fork).ExecutionPayload.defaultValue();
-          blobsResult = {type: BlobsResultType.preDeneb};
-          executionPayloadValue = BigInt(0);
+          // ok we don't have an execution payload here, so we can assign an empty one
+          // if pre-merge
+          return {
+            isPremerge: true as const,
+            executionPayload: sszTypesFor(fork).ExecutionPayload.defaultValue(),
+            executionPayloadValue: BigInt(0),
+          };
+        }
+        // since merge transition is complete, we need a valid payload even if with an
+        // empty (transactions) one. defaultValue isn't gonna cut it!
+        throw e;
+      });
+
+      const [engineRes, commonBlockBody] = await Promise.all([
+        enginePromise,
+        commonBlockBodyPromise ?? produceCommonBlockBody.call(this, blockType, currentState, blockAttr),
+      ]);
+      blockBody = Object.assign({}, commonBlockBody) as AssembledBodyType<BlockType.Blinded>;
+
+      if (engineRes.isPremerge) {
+        (blockBody as BeaconBlockBody<ForkPostBellatrix>).executionPayload = engineRes.executionPayload;
+        blobsResult = {type: BlobsResultType.preDeneb};
+        executionPayloadValue = engineRes.executionPayloadValue;
+      } else {
+        const {prepType, payloadId, executionPayload, blobsBundle, executionRequests} = engineRes;
+        shouldOverrideBuilder = engineRes.shouldOverrideBuilder;
+
+        (blockBody as BeaconBlockBody<ForkPostBellatrix>).executionPayload = executionPayload;
+        executionPayloadValue = engineRes.executionPayloadValue;
+        Object.assign(logMeta, {transactions: executionPayload.transactions.length, shouldOverrideBuilder});
+
+        const fetchedTime = Date.now() / 1000 - computeTimeAtSlot(this.config, blockSlot, this.genesisTime);
+        this.metrics?.blockPayload.payloadFetchedTime.observe({prepType}, fetchedTime);
+        this.logger.verbose("Fetched execution payload from engine", {
+          slot: blockSlot,
+          executionPayloadValue,
+          prepType,
+          payloadId,
+          fetchedTime,
+          executionHeadBlockHash: toRootHex(engineRes.executionPayload.blockHash),
+        });
+        if (executionPayload.transactions.length === 0) {
+          this.metrics?.blockPayload.emptyPayloads.inc({prepType});
+        }
+
+        if (ForkSeq[fork] >= ForkSeq.deneb) {
+          if (blobsBundle === undefined) {
+            throw Error(`Missing blobsBundle response from getPayload at fork=${fork}`);
+          }
+
+          if (this.opts.sanityCheckExecutionEngineBlobs) {
+            validateBlobsAndKzgCommitments(executionPayload, blobsBundle);
+          }
+
+          (blockBody as deneb.BeaconBlockBody).blobKzgCommitments = blobsBundle.commitments;
+          const blockHash = toRootHex(executionPayload.blockHash);
+          const contents = {kzgProofs: blobsBundle.proofs, blobs: blobsBundle.blobs};
+          blobsResult = {type: BlobsResultType.produced, contents, blockHash};
+
+          Object.assign(logMeta, {blobs: blobsBundle.commitments.length});
         } else {
-          // since merge transition is complete, we need a valid payload even if with an
-          // empty (transactions) one. defaultValue isn't gonna cut it!
-          throw e;
+          blobsResult = {type: BlobsResultType.preDeneb};
+        }
+
+        if (ForkSeq[fork] >= ForkSeq.electra) {
+          if (executionRequests === undefined) {
+            throw Error(`Missing executionRequests response from getPayload at fork=${fork}`);
+          }
+          (blockBody as electra.BeaconBlockBody).executionRequests = executionRequests;
         }
       }
     }
   } else {
+    const commonBlockBody = await (commonBlockBodyPromise ??
+      produceCommonBlockBody.call(this, blockType, currentState, blockAttr));
+    blockBody = Object.assign({}, commonBlockBody) as AssembledBodyType<T>;
     blobsResult = {type: BlobsResultType.preDeneb};
     executionPayloadValue = BigInt(0);
   }
-  endExecutionPayload?.({
-    step: BlockProductionStep.executionPayload,
+
+  const {graffiti, attestations, deposits, voluntaryExits, attesterSlashings, proposerSlashings} = blockBody;
+
+  Object.assign(logMeta, {
+    graffiti: fromGraffitiBytes(graffiti),
+    attestations: attestations.length,
+    deposits: deposits.length,
+    voluntaryExits: voluntaryExits.length,
+    attesterSlashings: attesterSlashings.length,
+    proposerSlashings: proposerSlashings.length,
   });
 
+  if (isForkPostAltair(fork)) {
+    const {syncAggregate} = blockBody as altair.BeaconBlockBody;
+    Object.assign(logMeta, {
+      syncAggregateParticipants: syncAggregate.syncCommitteeBits.getTrueBitIndexes().length,
+    });
+  }
+
   if (ForkSeq[fork] >= ForkSeq.capella) {
+    const {blsToExecutionChanges, executionPayload} = blockBody as capella.BeaconBlockBody;
     Object.assign(logMeta, {
       blsToExecutionChanges: blsToExecutionChanges.length,
     });
@@ -406,7 +442,7 @@ export async function produceBlockBody<T extends BlockType>(
     // withdrawals are only available in full body
     if (blockType === BlockType.Full) {
       Object.assign(logMeta, {
-        withdrawals: (blockBody as capella.BeaconBlockBody).executionPayload.withdrawals.length,
+        withdrawals: executionPayload.withdrawals.length,
       });
     }
   }

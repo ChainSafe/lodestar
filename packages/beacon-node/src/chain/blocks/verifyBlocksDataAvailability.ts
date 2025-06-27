@@ -106,7 +106,7 @@ async function maybeValidateBlobs(
       // if the blob siddecars have been individually verified then we can skip kzg proof check
       // but other checks to match blobs with block data still need to be performed
       const skipProofsCheck = opts.validBlobSidecars === BlobSidecarValidation.Individual;
-      validateBlobSidecars(blockSlot, beaconBlockRoot, blobKzgCommitments, blobs, {skipProofsCheck});
+      await validateBlobSidecars(blockSlot, beaconBlockRoot, blobKzgCommitments, blobs, {skipProofsCheck});
 
       const availableBlockInput = getBlockInput.availableData(
         chain.config,

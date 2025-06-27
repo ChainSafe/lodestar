@@ -47,7 +47,7 @@ describe("data serialization through worker boundary", () => {
     [ReqRespBridgeEvent.outgoingResponse]: {
       type: IteratorEventType.next,
       id: 0,
-      item: {data: bytes, fork: ForkName.altair},
+      item: {data: bytes, boundary: {fork: ForkName.altair}},
     },
     [ReqRespBridgeEvent.incomingRequest]: {id: 0, callArgs: {method, req: {data: bytes, version: 1}, peerId}},
     [ReqRespBridgeEvent.incomingResponse]: {
@@ -95,7 +95,7 @@ describe("data serialization through worker boundary", () => {
       peer,
     },
     [NetworkEvent.pendingGossipsubMessage]: {
-      topic: {type: GossipType.beacon_block, fork: ForkName.altair},
+      topic: {type: GossipType.beacon_block, boundary: {fork: ForkName.altair}},
       msg: {
         type: "unsigned",
         topic: "test-topic",

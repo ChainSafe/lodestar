@@ -110,6 +110,8 @@ export function processEpoch(
   // after processSlashings() to update balances only once
   // processRewardsAndPenalties(state, cache);
   {
+    metrics?.validatorsInActivationQueue.set(cache.indicesEligibleForActivationQueue.length);
+    metrics?.validatorsInExitQueue.set(cache.indicesToEject.length);
     const timer = metrics?.epochTransitionStepTime.startTimer({step: EpochTransitionStep.processRegistryUpdates});
     processRegistryUpdates(fork, state, cache);
     timer?.();

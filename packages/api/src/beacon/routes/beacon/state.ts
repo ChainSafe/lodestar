@@ -476,7 +476,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         parseReqJson: ({params, body = {}}) => ({
           stateId: params.state_id,
           validatorIds: fromValidatorIdsStr(body.ids),
-          statuses: body.statuses,
+          statuses: body.statuses ?? undefined,
         }),
         schema: {
           params: {state_id: Schema.StringRequired},
