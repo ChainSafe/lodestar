@@ -243,6 +243,8 @@ export class ForkChoice implements IForkChoice {
     if (!this.opts?.proposerBoost || !this.opts?.proposerBoostReorg) {
       this.logger?.verbose("Skip shouldOverrideForkChoiceUpdate check since the related flags are disabled", {
         slot: currentSlot,
+        proposerBoost: this.opts?.proposerBoost,
+        proposerBoostReorg: this.opts?.proposerBoostReorg,
       });
       return {shouldOverrideFcu: false, reason: NotReorgedReason.ProposerBoostReorgDisabled};
     }
