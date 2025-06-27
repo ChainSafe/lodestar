@@ -71,7 +71,7 @@ export enum UpdateHeadOpt {
 export type UpdateAndGetHeadOpt =
   | {mode: UpdateHeadOpt.GetCanonicialHead}
   | {mode: UpdateHeadOpt.GetProposerHead; secFromSlot: number; slot: Slot}
-  | {mode: UpdateHeadOpt.GetPredictedProposerHead; slot: Slot};
+  | {mode: UpdateHeadOpt.GetPredictedProposerHead; secFromSlot: number; slot: Slot};
 
 /**
  * Provides an implementation of "Ethereum Consensus -- Beacon Chain Fork Choice":
@@ -208,7 +208,7 @@ export class ForkChoice implements IForkChoice {
     const canonicialHeadBlock = mode === UpdateHeadOpt.GetPredictedProposerHead ? this.getHead() : this.updateHead();
     switch (mode) {
       case UpdateHeadOpt.GetPredictedProposerHead:
-        return {head: this.predictProposerHead(canonicialHeadBlock, opt.slot)};
+        return {head: this.predictProposerHead(canonicialHeadBlock, opt.secFromSlot, opt.slot)};
       case UpdateHeadOpt.GetProposerHead: {
         const {
           proposerHead: head,
@@ -229,7 +229,11 @@ export class ForkChoice implements IForkChoice {
   // Return true if the given block passes all criteria to be re-orged out
   // Return false otherwise.
   // Note when proposer boost reorg is disabled, it always returns false
-  shouldOverrideForkChoiceUpdate(currentSlot: Slot, blockRoot: RootHex): ShouldOverrideForkChoiceUpdateResult {
+  shouldOverrideForkChoiceUpdate(
+    blockRoot: RootHex,
+    secFromSlot: number,
+    currentSlot: Slot
+  ): ShouldOverrideForkChoiceUpdateResult {
     const headBlock = this.getBlockHex(blockRoot);
     if (headBlock === null) {
       // should not happen beacause this block just got imported. Fall back to no-reorg.
@@ -261,7 +265,8 @@ export class ForkChoice implements IForkChoice {
       return {shouldOverrideFcu: false, reason: prelimNotReorgedReason ?? NotReorgedReason.Unknown};
     }
 
-    const currentTimeOk = headBlock.slot === currentSlot;
+    const currentTimeOk =
+      headBlock.slot === currentSlot || (proposalSlot === currentSlot && this.isProposingOnTime(secFromSlot));
     if (!currentTimeOk) {
       return {shouldOverrideFcu: false, reason: NotReorgedReason.ReorgMoreThanOneSlot};
     }
@@ -287,7 +292,7 @@ export class ForkChoice implements IForkChoice {
    * By calling this function, we assume we are the proposer of next slot
    *
    */
-  predictProposerHead(headBlock: ProtoBlock, currentSlot?: Slot): ProtoBlock {
+  predictProposerHead(headBlock: ProtoBlock, secFromSlot: number, currentSlot: Slot): ProtoBlock {
     // Skip re-org attempt if proposer boost (reorg) are disabled
     if (!this.opts?.proposerBoost || !this.opts?.proposerBoostReorg) {
       this.logger?.verbose("No proposer boot reorg prediction since the related flags are disabled");
@@ -300,10 +305,8 @@ export class ForkChoice implements IForkChoice {
       return headBlock;
     }
 
-    currentSlot = currentSlot ?? this.fcStore.currentSlot;
-
     const blockRoot = headBlock.blockRoot;
-    const result = this.shouldOverrideForkChoiceUpdate(currentSlot, blockRoot);
+    const result = this.shouldOverrideForkChoiceUpdate(blockRoot, secFromSlot, currentSlot);
 
     if (result.shouldOverrideFcu) {
       this.logger?.verbose("Current head is weak. Predicting next block to be built on parent of head.", {
@@ -351,10 +354,8 @@ export class ForkChoice implements IForkChoice {
       return {proposerHead, isHeadTimely, notReorgedReason: prelimNotReorgedReason};
     }
 
-    // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_proposing_on_time
-    const proposerReorgCutoff = this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT / 2;
-    const isProposingOnTime = secFromSlot <= proposerReorgCutoff;
-    if (!isProposingOnTime) {
+    // Only re-org if we are proposing on-time
+    if (!this.isProposingOnTime(secFromSlot)) {
       return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.NotProposingOnTime};
     }
 
@@ -1175,6 +1176,14 @@ export class ForkChoice implements IForkChoice {
   protected isBlockTimely(block: BeaconBlock, blockDelaySec: number): boolean {
     const isBeforeAttestingInterval = blockDelaySec < this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT;
     return this.fcStore.currentSlot === block.slot && isBeforeAttestingInterval;
+  }
+
+  /**
+   * https://github.com/ethereum/consensus-specs/blob/v1.5.0/specs/phase0/fork-choice.md#is_proposing_on_time
+   */
+  private isProposingOnTime(secFromSlot: number): boolean {
+    const proposerReorgCutoff = this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT / 2;
+    return secFromSlot <= proposerReorgCutoff;
   }
 
   private getPreMergeExecStatus(executionStatus: MaybeValidExecutionStatus): ExecutionStatus.PreMerge {

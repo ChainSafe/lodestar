@@ -331,6 +331,7 @@ export async function importBlock(
     try {
       const proposerIndex = postState.epochCtx.getBeaconProposer(blockSlot + 1);
       const feeRecipient = this.beaconProposerCache.get(proposerIndex);
+      const {currentSlot} = this.clock;
 
       if (feeRecipient) {
         // We would set this to true if
@@ -338,7 +339,11 @@ export async function importBlock(
         //  2) We are proposer of next slot
         //  3) Proposer boost reorg related flag is turned on (this is checked inside the function)
         //  4) Block meets the criteria of being re-orged out (this is also checked inside the function)
-        const result = this.forkChoice.shouldOverrideForkChoiceUpdate(this.clock.currentSlot, blockSummary.blockRoot);
+        const result = this.forkChoice.shouldOverrideForkChoiceUpdate(
+          blockSummary.blockRoot,
+          this.clock.secFromSlot(currentSlot),
+          currentSlot
+        );
         shouldOverrideFcu = result.shouldOverrideFcu;
         if (!result.shouldOverrideFcu) {
           notOverrideFcuReason = result.reason;
