@@ -502,7 +502,7 @@ type Checks = {
     finalized_checkpoint?: SpecTestCheckpoint;
     proposer_boost_root?: RootHex;
     get_proposer_head?: string;
-    should_override_forkchoice_update: {
+    should_override_forkchoice_update?: {
       validator_is_connected: boolean;
       result: boolean;
     };
