@@ -419,7 +419,7 @@ export class NetworkCore implements INetworkCore {
   private _dumpPeer(peerIdStr: string, connections: Connection[]): routes.lodestar.LodestarNodePeer {
     const peerData = this.peersData.connectedPeers.get(peerIdStr);
     const fork = this.config.getForkName(this.clock.currentSlot);
-    if (isForkPostFulu(fork) && peerData) {
+    if (isForkPostFulu(fork) && peerData?.status) {
       (peerData.status as fulu.Status).earliestAvailableSlot =
         (peerData.status as fulu.Status).earliestAvailableSlot ?? 0;
     }
