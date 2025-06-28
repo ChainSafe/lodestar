@@ -328,8 +328,9 @@ export async function importBlock(
   let notOverrideFcuReason = NotReorgedReason.Unknown;
 
   if (opts.isGossipBlock && isExecutionStateType(postState)) {
+    const proposalSlot = blockSlot + 1;
     try {
-      const proposerIndex = postState.epochCtx.getBeaconProposer(blockSlot + 1);
+      const proposerIndex = postState.epochCtx.getBeaconProposer(proposalSlot);
       const feeRecipient = this.beaconProposerCache.get(proposerIndex);
       const {currentSlot} = this.clock;
 
@@ -350,7 +351,7 @@ export async function importBlock(
         }
       }
     } catch (e) {
-      if (isStartSlotOfEpoch(blockSlot + 1)) {
+      if (isStartSlotOfEpoch(proposalSlot)) {
         notOverrideFcuReason = NotReorgedReason.NotShufflingStable;
       } else {
         this.logger.warn("Unable to get beacon proposer. Do not override fcu.", {proposalSlot}, e as Error);
