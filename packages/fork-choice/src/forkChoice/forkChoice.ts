@@ -239,12 +239,13 @@ export class ForkChoice implements IForkChoice {
       // should not happen because this block just got imported. Fall back to no-reorg.
       return {shouldOverrideFcu: false, reason: NotReorgedReason.HeadBlockNotAvailable};
     }
+    const {proposerBoost, proposerBoostReorg} = this.opts ?? {};
     // Skip re-org attempt if proposer boost (reorg) are disabled
-    if (!this.opts?.proposerBoost || !this.opts?.proposerBoostReorg) {
+    if (!proposerBoost || !proposerBoostReorg) {
       this.logger?.verbose("Skip shouldOverrideForkChoiceUpdate check since the related flags are disabled", {
         slot: currentSlot,
-        proposerBoost: this.opts?.proposerBoost,
-        proposerBoostReorg: this.opts?.proposerBoostReorg,
+        proposerBoost,
+        proposerBoostReorg,
       });
       return {shouldOverrideFcu: false, reason: NotReorgedReason.ProposerBoostReorgDisabled};
     }
