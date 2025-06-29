@@ -23,10 +23,6 @@ export function createCachedGenesis(chainForkConfig: ChainForkConfig, genesisVal
     const nextForkBoundary = forkBoundariesAscendingEpochOrder[i + 1];
 
     const currentEpoch = currentForkBoundary.epoch;
-
-    // Skip unscheduled fork boundaries
-    if (currentEpoch === Infinity) continue;
-
     const nextEpoch = nextForkBoundary !== undefined ? nextForkBoundary.epoch : Infinity;
 
     // If multiple forks/blob schedules start at the same epoch, only consider the latest one

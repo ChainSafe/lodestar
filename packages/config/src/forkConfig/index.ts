@@ -96,7 +96,10 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
       fork: forksDescendingEpochOrder.find((f) => entry.EPOCH >= f.epoch)?.name ?? phase0.name,
       epoch: entry.EPOCH,
     })),
-  ].sort((a, b) => a.epoch - b.epoch);
+  ]
+    // Remove unscheduled fork boundaries
+    .filter(({epoch}) => epoch !== Infinity)
+    .sort((a, b) => a.epoch - b.epoch);
 
   const forkBoundariesDescendingEpochOrder = [...forkBoundariesAscendingEpochOrder].reverse();
 
