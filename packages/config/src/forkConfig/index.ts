@@ -99,6 +99,7 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
   ]
     // Remove unscheduled fork boundaries
     .filter(({epoch}) => epoch !== Infinity)
+    // Sort by epoch in ascending order
     .sort((a, b) => a.epoch - b.epoch);
 
   const forkBoundariesDescendingEpochOrder = [...forkBoundariesAscendingEpochOrder].reverse();
@@ -123,7 +124,7 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
       return phase0;
     },
     getForkBoundaryAtEpoch(epoch: Epoch): ForkBoundary {
-      // NOTE: boundaries must be sorted by descending epoch, latest boundary first
+      // NOTE: fork boundaries must be sorted by descending epoch, latest boundary first
       for (const boundary of forkBoundariesDescendingEpochOrder) {
         if (epoch >= boundary.epoch) return boundary;
       }
