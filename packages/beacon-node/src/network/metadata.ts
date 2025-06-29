@@ -11,6 +11,7 @@ export enum ENRKey {
   eth2 = "eth2",
   attnets = "attnets",
   syncnets = "syncnets",
+  nfd = "nfd",
 }
 export enum SubnetType {
   attnets = "attnets",
@@ -94,10 +95,15 @@ export class MetadataController {
    * 2. Network MUST call this method on fork transition.
    *    Current Clock implementation ensures no race conditions, epoch is correct if re-fetched
    */
-  updateEth2Field(epoch: Epoch): Uint8Array {
-    const enrForkId = ssz.phase0.ENRForkID.serialize(getENRForkID(this.config, epoch));
-    this.onSetValue(ENRKey.eth2, enrForkId);
-    return enrForkId;
+  updateEth2Field(epoch: Epoch): void {
+    const enrForkId = getENRForkID(this.config, epoch);
+    this.onSetValue(ENRKey.eth2, ssz.phase0.ENRForkID.serialize(enrForkId));
+
+    const nextForkDigest =
+      enrForkId.nextForkEpoch !== FAR_FUTURE_EPOCH
+        ? this.config.epoch2ForkDigest(enrForkId.nextForkEpoch)
+        : ssz.ForkDigest.defaultValue();
+    this.onSetValue(ENRKey.nfd, nextForkDigest);
   }
 }
 
