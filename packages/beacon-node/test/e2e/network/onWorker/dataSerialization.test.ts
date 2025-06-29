@@ -1,7 +1,7 @@
 import {BitArray} from "@chainsafe/ssz";
 import {TopicValidatorResult} from "@libp2p/interface";
 import {routes} from "@lodestar/api";
-import {config} from "@lodestar/config/default.js";
+import {config} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
