@@ -1,3 +1,4 @@
+import {config} from "@lodestar/config/default.js";
 import {pipe} from "it-pipe";
 import {responseEncodeError, responseEncodeSuccess} from "../../src/encoders/responseEncode.js";
 import {RespStatus} from "../../src/interface.js";
@@ -10,7 +11,7 @@ export async function* responseEncode(responseChunks: ResponseChunk[], protocol:
     if (chunk.status === RespStatus.SUCCESS) {
       const payload = chunk.payload;
       yield* pipe(
-        arrToSource([{...payload, boundary: {fork: payload.fork}}]),
+        arrToSource([{...payload, boundary: {fork: payload.fork, epoch: config.forks[payload.fork].epoch}}]),
         responseEncodeSuccess(protocol, {onChunk: () => {}})
       );
     } else {

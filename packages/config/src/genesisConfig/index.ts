@@ -1,24 +1,45 @@
-import {DOMAIN_VOLUNTARY_EXIT, ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {DomainType, ForkDigest, Root, Slot, Version, phase0, ssz} from "@lodestar/types";
-import {strip0xPrefix, toHex} from "@lodestar/utils";
+import {digest} from "@chainsafe/as-sha256";
+import {DOMAIN_VOLUNTARY_EXIT, ForkName, ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {DomainType, Epoch, ForkDigest, Root, Slot, Version, phase0, ssz} from "@lodestar/types";
+import {intToBytes, strip0xPrefix, toHex} from "@lodestar/utils";
 import {ChainForkConfig} from "../beaconConfig.js";
+import {ForkBoundary} from "../forkConfig/types.js";
+import {xor} from "../utils/bytes.js";
 import {CachedGenesis, ForkDigestHex} from "./types.js";
 export type {ForkDigestContext} from "./types.js";
 
 export function createCachedGenesis(chainForkConfig: ChainForkConfig, genesisValidatorsRoot: Root): CachedGenesis {
   const domainCache = new Map<ForkName, Map<DomainType, Uint8Array>>();
 
-  const forkDigestByForkName = new Map<ForkName, ForkDigest>();
-  const forkDigestHexByForkName = new Map<ForkName, ForkDigestHex>();
+  const forkDigestByEpoch = new Map<Epoch, ForkDigest>();
+  const forkDigestHexByEpoch = new Map<Epoch, ForkDigestHex>();
   /** Map of ForkDigest in hex format without prefix: `0011aabb` */
-  const forkNameByForkDigest = new Map<ForkDigestHex, ForkName>();
+  const epochByForkDigest = new Map<ForkDigestHex, Epoch>();
 
-  for (const fork of Object.values(chainForkConfig.forks)) {
-    const forkDigest = computeForkDigest(fork.version, genesisValidatorsRoot);
+  const {forkBoundariesAscendingEpochOrder} = chainForkConfig;
+
+  for (let i = 0; i < forkBoundariesAscendingEpochOrder.length; i++) {
+    const currentForkBoundary = forkBoundariesAscendingEpochOrder[i];
+    const nextForkBoundary = forkBoundariesAscendingEpochOrder[i + 1];
+
+    const currentEpoch = currentForkBoundary.epoch;
+
+    // Skip unscheduled fork boundaries
+    if (currentEpoch === Infinity) continue;
+
+    const nextEpoch = nextForkBoundary !== undefined ? nextForkBoundary.epoch : Infinity;
+
+    // If multiple forks/blob schedules start at the same epoch, only consider the latest one
+    if (currentEpoch === nextEpoch) {
+      continue;
+    }
+
+    const forkDigest = computeForkDigest(chainForkConfig, genesisValidatorsRoot, currentEpoch);
     const forkDigestHex = toHexStringNoPrefix(forkDigest);
-    forkNameByForkDigest.set(forkDigestHex, fork.name);
-    forkDigestByForkName.set(fork.name, forkDigest);
-    forkDigestHexByForkName.set(fork.name, forkDigestHex);
+
+    epochByForkDigest.set(forkDigestHex, currentEpoch);
+    forkDigestByEpoch.set(currentEpoch, forkDigest);
+    forkDigestHexByEpoch.set(currentEpoch, forkDigestHex);
   }
 
   return {
@@ -86,36 +107,40 @@ export function createCachedGenesis(chainForkConfig: ChainForkConfig, genesisVal
       return domain;
     },
 
-    forkDigest2ForkName(forkDigest: ForkDigest | ForkDigestHex): ForkName {
+    forkDigest2ForkBoundary(forkDigest: ForkDigest | ForkDigestHex): ForkBoundary {
       const forkDigestHex = toHexStringNoPrefix(forkDigest);
-      const forkName = forkNameByForkDigest.get(forkDigestHex);
-      if (forkName == null) {
+      const epoch = epochByForkDigest.get(forkDigestHex);
+      if (epoch == null) {
         throw Error(`Unknown forkDigest ${forkDigestHex}`);
       }
-      return forkName;
+
+      return chainForkConfig.getForkBoundaryAtEpoch(epoch);
     },
 
-    forkDigest2ForkNameOption(forkDigest: ForkDigest | ForkDigestHex): ForkName | null {
+    forkDigest2ForkBoundaryOption(forkDigest: ForkDigest | ForkDigestHex): ForkBoundary | null {
       const forkDigestHex = toHexStringNoPrefix(forkDigest);
-      const forkName = forkNameByForkDigest.get(forkDigestHex);
-      if (forkName == null) {
+      const epoch = epochByForkDigest.get(forkDigestHex);
+      if (epoch == null) {
         return null;
       }
-      return forkName;
+
+      return chainForkConfig.getForkBoundaryAtEpoch(epoch);
     },
 
-    forkName2ForkDigest(forkName: ForkName): ForkDigest {
-      const forkDigest = forkDigestByForkName.get(forkName);
+    epoch2ForkDigest(epoch: Epoch): ForkDigest {
+      const boundary = chainForkConfig.getForkBoundaryAtEpoch(epoch);
+      const forkDigest = forkDigestByEpoch.get(boundary.epoch);
       if (!forkDigest) {
-        throw Error(`No precomputed forkDigest for ${forkName}`);
+        throw Error(`No precomputed forkDigest for ${epoch}`);
       }
       return forkDigest;
     },
 
-    forkName2ForkDigestHex(forkName: ForkName): ForkDigestHex {
-      const forkDigestHex = forkDigestHexByForkName.get(forkName);
+    epoch2ForkDigestHex(epoch: Epoch): ForkDigestHex {
+      const boundary = chainForkConfig.getForkBoundaryAtEpoch(epoch);
+      const forkDigestHex = forkDigestHexByEpoch.get(boundary.epoch);
       if (!forkDigestHex) {
-        throw Error(`No precomputed forkDigest for ${forkName}`);
+        throw Error(`No precomputed forkDigest for ${epoch}`);
       }
       return toHexStringNoPrefix(forkDigestHex);
     },
@@ -142,6 +167,23 @@ function toHexStringNoPrefix(hex: string | Uint8Array): string {
   return strip0xPrefix(typeof hex === "string" ? hex : toHex(hex));
 }
 
-function computeForkDigest(currentVersion: Version, genesisValidatorsRoot: Root): ForkDigest {
-  return computeForkDataRoot(currentVersion, genesisValidatorsRoot).slice(0, 4);
+export function computeForkDigest(config: ChainForkConfig, genesisValidatorsRoot: Root, epoch: Epoch): ForkDigest {
+  const currentFork = config.getForkInfoAtEpoch(epoch);
+  const baseDigest = computeForkDataRoot(currentFork.version, genesisValidatorsRoot);
+
+  if (currentFork.seq < ForkSeq.fulu) {
+    return baseDigest.slice(0, 4);
+  }
+
+  const blobParameters = config.getBlobParameters(epoch);
+
+  return xor(
+    baseDigest,
+    digest(
+      Buffer.concat([
+        intToBytes(blobParameters.EPOCH, 8, "le"),
+        intToBytes(blobParameters.MAX_BLOBS_PER_BLOCK, 8, "le"),
+      ])
+    )
+  ).slice(0, 4);
 }

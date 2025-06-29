@@ -2,6 +2,7 @@ import {noise} from "@chainsafe/libp2p-noise";
 import {mplex} from "@libp2p/mplex";
 import {tcp} from "@libp2p/tcp";
 import {createBeaconConfig} from "@lodestar/config";
+import {config} from "@lodestar/config/default.js";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {fromHex, sleep, toHex} from "@lodestar/utils";
@@ -99,7 +100,7 @@ describe("reqresp encoder", () => {
 
   it("assert correct handler switch between metadata v2 and v1", async () => {
     const {multiaddr: serverMultiaddr, reqresp} = await getReqResp();
-    reqresp.registerProtocolsAtBoundary({fork: ForkName.phase0});
+    reqresp.registerProtocolsAtBoundary({fork: ForkName.phase0, epoch: 0});
     await sleep(0); // Sleep to resolve register handler promises
 
     reqresp["metadataController"].attnets.set(0, true);
@@ -130,11 +131,11 @@ describe("reqresp encoder", () => {
             data: ssz.altair.LightClientOptimisticUpdate.serialize(
               ssz.altair.LightClientOptimisticUpdate.defaultValue()
             ),
-            boundary: {fork: ForkName.phase0}, // Aware that phase0 does not makes sense here, but it's just to pick a fork digest
+            boundary: {fork: ForkName.phase0, epoch: 0}, // Aware that phase0 does not makes sense here, but it's just to pick a fork digest
           };
         }
     );
-    reqresp.registerProtocolsAtBoundary({fork: ForkName.altair});
+    reqresp.registerProtocolsAtBoundary({fork: ForkName.altair, epoch: config.ALTAIR_FORK_EPOCH});
     await sleep(0); // Sleep to resolve register handler promises
 
     const {libp2p: dialer} = await getLibp2p();

@@ -335,13 +335,13 @@ function attSubnetLabel(subnet: SubnetID): string {
 function getMetricsTopicStrToLabel(config: BeaconConfig, opts: {disableLightClientServer: boolean}): TopicStrToLabel {
   const metricsTopicStrToLabel = new Map<TopicStr, TopicLabel>();
 
-  for (const {name: fork} of config.forksAscendingEpochOrder) {
-    const topics = getCoreTopicsAtFork(config, fork, {
+  for (const boundary of config.forkBoundariesAscendingEpochOrder) {
+    const topics = getCoreTopicsAtFork(config, boundary.fork, {
       subscribeAllSubnets: true,
       disableLightClientServer: opts.disableLightClientServer,
     });
     for (const topic of topics) {
-      metricsTopicStrToLabel.set(stringifyGossipTopic(config, {...topic, boundary: {fork}}), topic.type);
+      metricsTopicStrToLabel.set(stringifyGossipTopic(config, {...topic, boundary}), topic.type);
     }
   }
   return metricsTopicStrToLabel;

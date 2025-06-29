@@ -15,8 +15,8 @@ import {GossipType} from "../../../../src/network/index.js";
 describe("computeGossipPeerScoreParams", () => {
   const config = createBeaconConfig(mainnetChainConfig, ZERO_HASH);
   // Cheap stub on new BeaconConfig instance
-  config.forkName2ForkDigest = () => Buffer.alloc(4, 1);
-  config.forkDigest2ForkName = () => ForkName.phase0;
+  config.epoch2ForkDigest = () => Buffer.alloc(4, 1);
+  config.forkDigest2ForkBoundary = () => ({fork: ForkName.phase0, epoch: 0});
 
   const TOLERANCE = 0.00005;
 
@@ -69,7 +69,7 @@ describe("computeGossipPeerScoreParams", () => {
   function validateVoluntaryExitTopicParams(topics: Record<string, TopicScoreParams>): void {
     const topicString = stringifyGossipTopic(config, {
       type: GossipType.voluntary_exit,
-      boundary: {fork: ForkName.phase0},
+      boundary: {fork: ForkName.phase0, epoch: 0},
     });
     const params = topics[topicString];
     assertMessageRatePenaltiesDisabled(params);
@@ -87,11 +87,11 @@ describe("computeGossipPeerScoreParams", () => {
   function validateSlashingTopicParams(topics: Record<string, TopicScoreParams>): void {
     const attesterSlashingTopicString = stringifyGossipTopic(config, {
       type: GossipType.attester_slashing,
-      boundary: {fork: ForkName.phase0},
+      boundary: {fork: ForkName.phase0, epoch: 0},
     });
     const proposerSlashingTopicString = stringifyGossipTopic(config, {
       type: GossipType.proposer_slashing,
-      boundary: {fork: ForkName.phase0},
+      boundary: {fork: ForkName.phase0, epoch: 0},
     });
     validateSlashingTopicScoreParams(topics[attesterSlashingTopicString]);
     validateSlashingTopicScoreParams(topics[proposerSlashingTopicString]);
@@ -113,7 +113,7 @@ describe("computeGossipPeerScoreParams", () => {
   function validateAggregateTopicParams(topics: Record<string, TopicScoreParams>, penaltiesActive: boolean): void {
     const topicString = stringifyGossipTopic(config, {
       type: GossipType.beacon_aggregate_and_proof,
-      boundary: {fork: ForkName.phase0},
+      boundary: {fork: ForkName.phase0, epoch: 0},
     });
     const params = topics[topicString];
 
@@ -147,7 +147,7 @@ describe("computeGossipPeerScoreParams", () => {
   function validateBlockTopicParams(topics: Record<string, TopicScoreParams>, penaltiesActive: boolean): void {
     const topicString = stringifyGossipTopic(config, {
       type: GossipType.beacon_block,
-      boundary: {fork: ForkName.phase0},
+      boundary: {fork: ForkName.phase0, epoch: 0},
     });
     const params = topics[topicString];
 
@@ -185,7 +185,7 @@ describe("computeGossipPeerScoreParams", () => {
     for (let i = 0; i < ATTESTATION_SUBNET_COUNT; i++) {
       const topicString = stringifyGossipTopic(config, {
         type: GossipType.beacon_attestation,
-        boundary: {fork: ForkName.phase0},
+        boundary: {fork: ForkName.phase0, epoch: 0},
         subnet: i,
       });
       validateAllAttestationSubnetTopicScoreParams(topics[topicString], penaltiesActive);
