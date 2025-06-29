@@ -8,7 +8,14 @@ import {testData} from "../testData/lightclient.js";
 
 describe("beacon / lightclient", () => {
   runGenericServerTest<Endpoints>(
-    createChainForkConfig({...defaultChainConfig, ELECTRA_FORK_EPOCH: 0}),
+    createChainForkConfig({
+      ...defaultChainConfig,
+      ALTAIR_FORK_EPOCH: 0,
+      BELLATRIX_FORK_EPOCH: 0,
+      CAPELLA_FORK_EPOCH: 0,
+      DENEB_FORK_EPOCH: 0,
+      ELECTRA_FORK_EPOCH: 0,
+    }),
     getClient,
     getRoutes,
     testData
