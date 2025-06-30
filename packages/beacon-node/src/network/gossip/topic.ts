@@ -178,10 +178,7 @@ export function parseGossipTopic(forkDigestContext: BeaconConfig, topicStr: stri
 
     const [, forkDigestHexNoPrefix, gossipTypeStr, encodingStr] = matches;
 
-    const fork = forkDigestContext.forkDigest2ForkName(forkDigestHexNoPrefix);
-    // TODO: This epoch is just an approximate. Will update in the next PR
-    const epoch = forkDigestContext.forks[fork].epoch;
-    const boundary = forkDigestContext.getSubscribeBoundary(epoch);
+    const boundary = forkDigestContext.forkDigest2Boundary(forkDigestHexNoPrefix);
     const encoding = parseEncodingStr(encodingStr);
 
     // Inline-d the parseGossipTopicType() function since spreading the resulting object x4 the time to parse a topicStr

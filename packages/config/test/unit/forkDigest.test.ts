@@ -125,7 +125,7 @@ describe("fork digest", () => {
 
         const fork = config.getForkInfoAtEpoch(epoch).name;
 
-        expect(fork).toBe(cachedGenesis.forkDigest2ForkName(expectedForkDigest));
+        expect(fork).toBe(cachedGenesis.forkDigest2Boundary(expectedForkDigest).fork);
       });
     }
   });

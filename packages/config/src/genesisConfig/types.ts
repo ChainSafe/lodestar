@@ -12,8 +12,8 @@ type SubscribeBoundaryPostFulu = {fork: ForkPostFulu} & BlobScheduleEntry;
 export type SubscribeBoundary = SubscribeBoundaryPreFulu | SubscribeBoundaryPostFulu;
 
 export type ForkDigestContext = {
-  forkDigest2ForkName(forkDigest: ForkDigest | ForkDigestHex): ForkName;
-  forkDigest2ForkNameOption(forkDigest: ForkDigest | ForkDigestHex): ForkName | null;
+  forkDigest2Boundary(forkDigest: ForkDigest | ForkDigestHex): SubscribeBoundary;
+  forkDigest2BoundaryOption(forkDigest: ForkDigest | ForkDigestHex): SubscribeBoundary | null;
   boundary2ForkDigest(boundary: SubscribeBoundary): ForkDigest;
   boundary2ForkDigestHex(boundary: SubscribeBoundary): ForkDigestHex;
 };
