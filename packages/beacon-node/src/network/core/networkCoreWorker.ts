@@ -141,7 +141,6 @@ const libp2pWorkerApi: NetworkWorkerApi = {
   publishGossip: (topic, data, opts) => core.publishGossip(topic, data, opts),
 
   setTargetGroupCount: (count) => core.setTargetGroupCount(count),
-  setAdvertisedGroupCount: (count) => core.setAdvertisedGroupCount(count),
 
   // Debug
 

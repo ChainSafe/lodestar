@@ -36,8 +36,4 @@ export class NetworkConfig {
   setTargetGroupCount(count: number): void {
     this.custodyConfig.updateTargetCustodyGroupCount(count);
   }
-
-  setAdvertisedGroupCount(count: number): void {
-    this.custodyConfig.updateAdvertisedCustodyGroupCount(count);
-  }
 }

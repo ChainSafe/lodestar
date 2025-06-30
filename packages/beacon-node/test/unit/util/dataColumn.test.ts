@@ -133,27 +133,11 @@ describe("CustodyConfig", () => {
 
       expect(custodyConfig.sampledGroupCount).toBe(8);
       expect(custodyConfig.targetCustodyGroupCount).toBe(4);
-      expect(custodyConfig.advertisedCustodyGroupCount).toBe(4);
 
       custodyConfig.updateTargetCustodyGroupCount(6);
 
       expect(custodyConfig.sampledGroupCount).toBe(8);
       expect(custodyConfig.targetCustodyGroupCount).toBe(6);
-      expect(custodyConfig.advertisedCustodyGroupCount).toBe(4);
-    });
-
-    it("should update advertised but not target or sampled", () => {
-      const custodyConfig = new CustodyConfig(nodeId, config, null);
-
-      expect(custodyConfig.sampledGroupCount).toBe(8);
-      expect(custodyConfig.targetCustodyGroupCount).toBe(4);
-      expect(custodyConfig.advertisedCustodyGroupCount).toBe(4);
-
-      custodyConfig.updateAdvertisedCustodyGroupCount(3);
-
-      expect(custodyConfig.sampledGroupCount).toBe(8);
-      expect(custodyConfig.targetCustodyGroupCount).toBe(4);
-      expect(custodyConfig.advertisedCustodyGroupCount).toBe(3);
     });
   });
 });
