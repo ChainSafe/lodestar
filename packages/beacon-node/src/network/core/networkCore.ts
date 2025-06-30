@@ -537,7 +537,10 @@ export class NetworkCore implements INetworkCore {
   };
 
   private subscribeCoreTopicsAtBoundary(config: BeaconConfig, boundary: SubscribeBoundary): void {
-    const epoch = config.forks[boundary.fork].epoch;
+    const epoch = Math.max(
+      config.forks[boundary.fork].epoch,
+      isSubscribeBoundaryPostFulu(boundary) ? boundary.EPOCH : -1
+    );
     if (this.subscribedBoundariesByEpoch.has(epoch)) return;
     this.subscribedBoundariesByEpoch.set(epoch, boundary);
     const {subscribeAllSubnets, disableLightClientServer} = this.opts;
@@ -551,7 +554,10 @@ export class NetworkCore implements INetworkCore {
   }
 
   private unsubscribeCoreTopicsAtBoundary(config: BeaconConfig, boundary: SubscribeBoundary): void {
-    const epoch = config.forks[boundary.fork].epoch;
+    const epoch = Math.max(
+      config.forks[boundary.fork].epoch,
+      isSubscribeBoundaryPostFulu(boundary) ? boundary.EPOCH : -1
+    );
     if (!this.subscribedBoundariesByEpoch.has(epoch)) return;
     this.subscribedBoundariesByEpoch.delete(epoch);
     const {subscribeAllSubnets, disableLightClientServer} = this.opts;
