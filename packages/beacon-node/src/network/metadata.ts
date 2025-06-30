@@ -43,7 +43,7 @@ export class MetadataController {
     this.onSetValue = modules.onSetValue;
     this._metadata = opts.metadata ?? {
       ...ssz.fulu.Metadata.defaultValue(),
-      custodyGroupCount: modules.networkConfig.getCustodyConfig().advertisedCustodyGroupCount,
+      custodyGroupCount: modules.networkConfig.getCustodyConfig().targetCustodyGroupCount,
     };
   }
 

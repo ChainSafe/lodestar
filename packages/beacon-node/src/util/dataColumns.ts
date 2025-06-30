@@ -63,11 +63,6 @@ export class CustodyConfig {
   custodyColumnsIndex: Uint8Array;
 
   /**
-   * The number of custody groups the node will advertise to the network
-   */
-  advertisedCustodyGroupCount: number;
-
-  /**
    * The number of custody groups the node will sample
    */
   sampledGroupCount: number;
@@ -102,8 +97,7 @@ export class CustodyConfig {
     this.targetCustodyGroupCount = Math.max(config.CUSTODY_REQUIREMENT, config.NODE_CUSTODY_REQUIREMENT);
     this.custodyColumns = getDataColumns(this.nodeId, this.targetCustodyGroupCount);
     this.custodyColumnsIndex = this.getCustodyColumnsIndex(this.custodyColumns);
-    this.advertisedCustodyGroupCount = this.targetCustodyGroupCount;
-    this.metrics?.peerDas.custodyGroupCount.set(this.advertisedCustodyGroupCount);
+    this.metrics?.peerDas.custodyGroupCount.set(this.targetCustodyGroupCount);
     this.sampledGroupCount = Math.max(this.targetCustodyGroupCount, this.config.SAMPLES_PER_SLOT);
     this.sampleGroups = getCustodyGroups(this.nodeId, this.sampledGroupCount);
     this.sampledColumns = getDataColumns(this.nodeId, this.sampledGroupCount);
@@ -120,11 +114,7 @@ export class CustodyConfig {
     this.sampleGroups = getCustodyGroups(this.nodeId, this.sampledGroupCount);
     this.sampledColumns = getDataColumns(this.nodeId, this.sampledGroupCount);
     this.sampledSubnets = this.sampledColumns.map(computeSubnetForDataColumn);
-  }
-
-  updateAdvertisedCustodyGroupCount(advertisedCustodyGroupCount: number) {
-    this.advertisedCustodyGroupCount = advertisedCustodyGroupCount;
-    this.metrics?.peerDas.custodyGroupCount.set(this.advertisedCustodyGroupCount);
+    this.metrics?.peerDas.custodyGroupCount.set(this.targetCustodyGroupCount);
   }
 
   private getCustodyColumnsIndex(custodyColumns: ColumnIndex[]): Uint8Array {

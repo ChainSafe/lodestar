@@ -362,10 +362,6 @@ export class NetworkCore implements INetworkCore {
 
   async setTargetGroupCount(count: number): Promise<void> {
     this.networkConfig.setTargetGroupCount(count);
-  }
-
-  async setAdvertisedGroupCount(count: number): Promise<void> {
-    this.networkConfig.setAdvertisedGroupCount(count);
     this.metadata.custodyGroupCount = count;
   }
 

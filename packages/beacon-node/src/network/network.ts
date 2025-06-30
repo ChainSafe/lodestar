@@ -138,7 +138,6 @@ export class Network implements INetwork {
       this.onLightClientOptimisticUpdate(data)
     );
     this.chain.emitter.on(ChainEvent.updateTargetGroupCount, this.onTargetGroupCountUpdated);
-    this.chain.emitter.on(ChainEvent.updateAdvertisedGroupCount, this.onAdvertisedGroupCountUpdated);
     this.chain.emitter.on(ChainEvent.publishDataColumns, this.onPublishDataColumns);
     this.chain.emitter.on(ChainEvent.updateStatus, this.onUpdateStatus);
   }
@@ -232,7 +231,6 @@ export class Network implements INetwork {
     this.chain.emitter.off(routes.events.EventType.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
     this.chain.emitter.off(routes.events.EventType.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
     this.chain.emitter.off(ChainEvent.updateTargetGroupCount, this.onTargetGroupCountUpdated);
-    this.chain.emitter.off(ChainEvent.updateAdvertisedGroupCount, this.onAdvertisedGroupCountUpdated);
     this.chain.emitter.off(ChainEvent.publishDataColumns, this.onPublishDataColumns);
     await this.core.close();
 
@@ -742,10 +740,6 @@ export class Network implements INetwork {
 
   private onTargetGroupCountUpdated = (count: number): void => {
     this.core.setTargetGroupCount(count);
-  };
-
-  private onAdvertisedGroupCountUpdated = (count: number): void => {
-    this.core.setAdvertisedGroupCount(count);
   };
 
   private onPublishDataColumns = (sidecars: fulu.DataColumnSidecar[]): Promise<number[]> => {
