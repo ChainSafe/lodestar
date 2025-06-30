@@ -39,10 +39,6 @@ export enum ChainEvent {
    */
   updateTargetGroupCount = "updateTargetGroupCount",
   /**
-   * This event signals that the chain is ready to advertise the given group count to the network.
-   */
-  updateAdvertisedGroupCount = "updateAdvertisedGroupCount",
-  /**
    * This event signals that data columns have been fetched from the execution engine
    * and are ready to be published.
    */
@@ -66,7 +62,6 @@ export type IChainEvents = ApiEvents & {
   [ChainEvent.forkChoiceFinalized]: (checkpoint: CheckpointWithHex) => void;
 
   [ChainEvent.updateTargetGroupCount]: (targetGroupCount: number) => void;
-  [ChainEvent.updateAdvertisedGroupCount]: (advertisedGroupCount: number) => void;
 
   [ChainEvent.publishDataColumns]: (sidecars: fulu.DataColumnSidecar[]) => void;
 

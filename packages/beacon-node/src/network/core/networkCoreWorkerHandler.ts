@@ -222,9 +222,6 @@ export class WorkerNetworkCore implements INetworkCore {
   setTargetGroupCount(count: number): Promise<void> {
     return this.getApi().setTargetGroupCount(count);
   }
-  setAdvertisedGroupCount(count: number): Promise<void> {
-    return this.getApi().setAdvertisedGroupCount(count);
-  }
 
   // Debug
 
