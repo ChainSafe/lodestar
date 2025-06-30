@@ -118,24 +118,24 @@ export function createCachedGenesis(chainForkConfig: ChainForkConfig, genesisVal
       return domain;
     },
 
-    forkDigest2ForkName(forkDigest: ForkDigest | ForkDigestHex): ForkName {
+    forkDigest2Boundary(forkDigest: ForkDigest | ForkDigestHex): SubscribeBoundary {
       const forkDigestHex = toHexStringNoPrefix(forkDigest);
       const epoch = epochByForkDigest.get(forkDigestHex);
       if (epoch == null) {
         throw Error(`Unknown forkDigest ${forkDigestHex}`);
       }
 
-      return chainForkConfig.getForkInfoAtEpoch(epoch).name;
+      return chainForkConfig.getSubscribeBoundary(epoch);
     },
 
-    forkDigest2ForkNameOption(forkDigest: ForkDigest | ForkDigestHex): ForkName | null {
+    forkDigest2BoundaryOption(forkDigest: ForkDigest | ForkDigestHex): SubscribeBoundary | null {
       const forkDigestHex = toHexStringNoPrefix(forkDigest);
       const epoch = epochByForkDigest.get(forkDigestHex);
       if (epoch == null) {
         return null;
       }
 
-      return chainForkConfig.getForkInfoAtEpoch(epoch).name;
+      return chainForkConfig.getSubscribeBoundary(epoch);
     },
 
     boundary2ForkDigest(boundary: SubscribeBoundary): ForkDigest {

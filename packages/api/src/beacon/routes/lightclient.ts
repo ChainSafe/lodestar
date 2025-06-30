@@ -147,7 +147,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
             while (offset < data.length) {
               const length = ssz.UintNum64.deserialize(data.subarray(offset, offset + 8));
               const forkDigest = ssz.ForkDigest.deserialize(data.subarray(offset + 8, offset + 12));
-              const version = cachedBeaconConfig().forkDigest2ForkName(forkDigest);
+              const {fork: version} = cachedBeaconConfig().forkDigest2Boundary(forkDigest);
               updates.push(
                 getPostAltairForkTypes(version).LightClientUpdate.deserialize(
                   data.subarray(offset + 12, offset + 8 + length)
