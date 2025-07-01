@@ -360,8 +360,13 @@ export async function importBlock(
   }
 
   if (shouldOverrideFcu) {
-    this.metrics?.importBlock.notOverrideFcuReason.inc({reason: notOverrideFcuReason});
     this.logger.verbose("Weak block detected. Skip fcu call in importBlock", {
+      blockRoot: blockRootHex,
+      slot: blockSlot,
+    });
+  } else {
+    this.metrics?.importBlock.notOverrideFcuReason.inc({reason: notOverrideFcuReason});
+    this.logger.verbose("Strong block detected. Not override fcu call", {
       blockRoot: blockRootHex,
       slot: blockSlot,
       reason: notOverrideFcuReason,

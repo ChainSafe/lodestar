@@ -224,7 +224,7 @@ export class ForkChoice implements IForkChoice {
     }
   }
 
-  // Basically called by `predictProposerHead`. If the result is not same as blockRoot's block, return true else false
+  // Called by `predictProposerHead` and `importBlock`. If the result is not same as blockRoot's block, return true else false
   // See https://github.com/ethereum/consensus-specs/blob/v1.5.0/specs/bellatrix/fork-choice.md#should_override_forkchoice_update
   // Return true if the given block passes all criteria to be re-orged out
   // Return false otherwise.

@@ -114,8 +114,9 @@ export interface IForkChoice {
     notReorgedReason?: NotReorgedReason;
   };
   /**
-   * Primarily being called during block import when proposerBoostReorg is enabled
-   * fcu call in `importBlock()` will be suppressed if this returns true
+   * This is called during block import when proposerBoostReorg is enabled
+   * fcu call in `importBlock()` will be suppressed if this returns true. It is also
+   * called by `predictProposerHead()` during `prepareNextSlot()`.
    */
   shouldOverrideForkChoiceUpdate(
     blockRoot: RootHex,
