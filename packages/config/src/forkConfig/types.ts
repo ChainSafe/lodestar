@@ -1,6 +1,5 @@
 import {ForkAll, ForkName, ForkPostAltair, ForkPostBellatrix, ForkPostDeneb, ForkSeq} from "@lodestar/params";
-import {Epoch, SSZTypesFor, Slot, Version} from "@lodestar/types";
-import {BlobScheduleEntry} from "../chainConfig/types.js";
+import {Epoch, SSZTypesFor, Slot, UintNum64, Version} from "@lodestar/types";
 
 export type ForkInfo = {
   name: ForkName;
@@ -13,6 +12,8 @@ export type ForkInfo = {
 
 /** TODO: */
 export type ForkBoundary = {fork: ForkName; epoch: Epoch};
+
+export type BlobParameters = {epoch: Epoch; maxBlobsPerBlock: UintNum64};
 
 /**
  * Fork schedule and helper methods
@@ -49,8 +50,8 @@ export type ForkConfig = {
   getPostDenebForkTypes(slot: Slot): SSZTypesFor<ForkPostDeneb>;
   /** Get max blobs per block at a given epoch */
   getMaxBlobsPerBlock(epoch: Epoch): number;
-  /** Get blob schedule entry at a given epoch */
-  getBlobParameters(epoch: Epoch): BlobScheduleEntry;
+  /** Get blob parameters at a given epoch */
+  getBlobParameters(epoch: Epoch): BlobParameters;
   /** Get max request blob sidecars by hard-fork */
   getMaxRequestBlobSidecars(fork: ForkName): number;
 };

@@ -173,10 +173,7 @@ export function computeForkDigest(config: ChainForkConfig, genesisValidatorsRoot
   return xor(
     baseDigest,
     digest(
-      Buffer.concat([
-        intToBytes(blobParameters.EPOCH, 8, "le"),
-        intToBytes(blobParameters.MAX_BLOBS_PER_BLOCK, 8, "le"),
-      ])
+      Buffer.concat([intToBytes(blobParameters.epoch, 8, "le"), intToBytes(blobParameters.maxBlobsPerBlock, 8, "le")])
     )
   ).slice(0, 4);
 }

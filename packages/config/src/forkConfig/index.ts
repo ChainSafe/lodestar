@@ -13,8 +13,8 @@ import {
   isForkPostElectra,
 } from "@lodestar/params";
 import {Epoch, SSZTypesFor, Slot, Version, sszTypesFor} from "@lodestar/types";
-import {BlobScheduleEntry, ChainConfig} from "../chainConfig/index.js";
-import {ForkBoundary, ForkConfig, ForkInfo} from "./types.js";
+import {ChainConfig} from "../chainConfig/index.js";
+import {BlobParameters, ForkBoundary, ForkConfig, ForkInfo} from "./types.js";
 
 export * from "./types.js";
 
@@ -176,9 +176,9 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
           return config.MAX_BLOBS_PER_BLOCK;
       }
 
-      return this.getBlobParameters(epoch).MAX_BLOBS_PER_BLOCK;
+      return this.getBlobParameters(epoch).maxBlobsPerBlock;
     },
-    getBlobParameters(epoch: Epoch): BlobScheduleEntry {
+    getBlobParameters(epoch: Epoch): BlobParameters {
       if (epoch < config.FULU_FORK_EPOCH) {
         throw Error(`getBlobParameters is not available pre-fulu epoch=${epoch}`);
       }
@@ -186,11 +186,11 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
       // Find the latest applicable value from blob schedule
       for (const entry of blobScheduleDescendingEpochOrder) {
         if (epoch >= entry.EPOCH) {
-          return entry;
+          return {epoch: entry.EPOCH, maxBlobsPerBlock: entry.MAX_BLOBS_PER_BLOCK};
         }
       }
 
-      return {EPOCH: config.ELECTRA_FORK_EPOCH, MAX_BLOBS_PER_BLOCK: config.MAX_BLOBS_PER_BLOCK_ELECTRA};
+      return {epoch: config.ELECTRA_FORK_EPOCH, maxBlobsPerBlock: config.MAX_BLOBS_PER_BLOCK_ELECTRA};
     },
     getMaxRequestBlobSidecars(fork: ForkName): number {
       return isForkPostElectra(fork) ? config.MAX_REQUEST_BLOB_SIDECARS_ELECTRA : config.MAX_REQUEST_BLOB_SIDECARS;
