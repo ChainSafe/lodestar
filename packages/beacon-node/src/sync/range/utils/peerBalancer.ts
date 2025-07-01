@@ -55,7 +55,7 @@ export class ChainPeersBalancer {
       ({columns}) => -1 * columns // prefer peers with the most columns
     );
 
-    return sortedBestPeers[0].syncInfo;
+    return sortedBestPeers.length > 0 ? sortedBestPeers[0].syncInfo : undefined;
   }
 
   /**
