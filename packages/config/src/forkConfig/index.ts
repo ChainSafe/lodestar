@@ -88,10 +88,12 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
   const blobScheduleDescendingEpochOrder = [...config.BLOB_SCHEDULE].sort((a, b) => b.EPOCH - a.EPOCH);
 
   const forkBoundariesAscendingEpochOrder: ForkBoundary[] = [
+    // Normal hard-forks (phase0, altair, etc.)
     ...forksAscendingEpochOrder.map((fork) => ({
       fork: fork.name,
       epoch: fork.epoch,
     })),
+    // Blob Parameter Only (BPO) forks
     ...config.BLOB_SCHEDULE.map((entry) => ({
       fork: forksDescendingEpochOrder.find((f) => entry.EPOCH >= f.epoch)?.name ?? phase0.name,
       epoch: entry.EPOCH,

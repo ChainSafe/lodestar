@@ -10,7 +10,11 @@ export type ForkInfo = {
   prevForkName: ForkName;
 };
 
-/** TODO: */
+/**
+ * Fork boundaries include both normal hard-forks (phase0, altair, etc.)
+ * and Blob Parameter Only (BPO) forks and are used to un-/subscribe to gossip topics
+ * and compute the fork digest.
+ */
 export type ForkBoundary = {fork: ForkName; epoch: Epoch};
 
 export type BlobParameters = {epoch: Epoch; maxBlobsPerBlock: UintNum64};
