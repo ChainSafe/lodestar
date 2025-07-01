@@ -1,10 +1,9 @@
 import {digest} from "@chainsafe/as-sha256";
 import {DOMAIN_VOLUNTARY_EXIT, ForkName, ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {DomainType, Epoch, ForkDigest, Root, Slot, Version, phase0, ssz} from "@lodestar/types";
-import {intToBytes, strip0xPrefix, toHex} from "@lodestar/utils";
+import {intToBytes, strip0xPrefix, toHex, xor} from "@lodestar/utils";
 import {ChainForkConfig} from "../beaconConfig.js";
 import {ForkBoundary} from "../forkConfig/types.js";
-import {xor} from "../utils/bytes.js";
 import {CachedGenesis, ForkDigestHex} from "./types.js";
 export type {ForkDigestContext} from "./types.js";
 
