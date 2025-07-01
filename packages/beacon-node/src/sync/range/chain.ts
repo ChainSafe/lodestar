@@ -355,7 +355,11 @@ export class SyncChain {
 
     const peersSyncInfo: PeerSyncInfo[] = [];
     for (const [peerId, target] of this.peerset.entries()) {
-      peersSyncInfo.push({...this.getConnectedPeerSyncMeta(peerId), target});
+      try {
+        peersSyncInfo.push({...this.getConnectedPeerSyncMeta(peerId), target});
+      } catch (e) {
+        this.logger.debug("Failed to get peer sync meta", {peerId}, e as Error);
+      }
     }
 
     const peerBalancer = new ChainPeersBalancer(peersSyncInfo, toArr(this.batches), this.custodyConfig);
@@ -573,7 +577,11 @@ export class SyncChain {
 
     const peersSyncMeta = new Map<PeerIdStr, PeerSyncMeta>();
     for (const peerId of this.peerset.keys()) {
-      peersSyncMeta.set(peerId, this.getConnectedPeerSyncMeta(peerId));
+      try {
+        peersSyncMeta.set(peerId, this.getConnectedPeerSyncMeta(peerId));
+      } catch (_) {
+        // ignore for metric as peer could be disconnected
+      }
     }
 
     const peersByColumnIndex = new Map<number, number>();
