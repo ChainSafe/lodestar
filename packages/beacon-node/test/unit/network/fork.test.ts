@@ -169,7 +169,7 @@ for (const testScenario of testScenarios) {
       it(` on epoch ${epoch} should return ${JSON.stringify({
         currentFork,
         nextFork,
-      })}, getActiveForks: ${activeForks.join(",")}`, () => {
+      })}, activeForks: ${activeForks.join(",")}`, () => {
         const currentForkInfo = forks[currentFork as ForkName];
         const nextForkInfo = (nextFork && forks[nextFork as ForkName]) ?? undefined;
 

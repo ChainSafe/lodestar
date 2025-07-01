@@ -161,7 +161,7 @@ function toHexStringNoPrefix(hex: string | Uint8Array): string {
 }
 
 export function computeForkDigest(config: ChainForkConfig, genesisValidatorsRoot: Root, epoch: Epoch): ForkDigest {
-  const currentFork = config.forks[config.getForkBoundaryAtEpoch(epoch).fork];
+  const currentFork = config.getForkInfoAtEpoch(epoch);
   const baseDigest = computeForkDataRoot(currentFork.version, genesisValidatorsRoot);
 
   if (currentFork.seq < ForkSeq.fulu) {

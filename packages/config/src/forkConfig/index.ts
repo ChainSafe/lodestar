@@ -117,11 +117,7 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
       return this.getForkInfoAtEpoch(epoch);
     },
     getForkInfoAtEpoch(epoch: Epoch): ForkInfo {
-      // NOTE: forks must be sorted by descending epoch, latest fork first
-      for (const fork of forksDescendingEpochOrder) {
-        if (epoch >= fork.epoch) return fork;
-      }
-      return phase0;
+      return forks[this.getForkBoundaryAtEpoch(epoch).fork];
     },
     getForkBoundaryAtEpoch(epoch: Epoch): ForkBoundary {
       // NOTE: fork boundaries must be sorted by descending epoch, latest boundary first
