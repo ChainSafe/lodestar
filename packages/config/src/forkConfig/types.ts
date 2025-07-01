@@ -13,7 +13,7 @@ export type ForkInfo = {
 /**
  * Fork boundaries include both normal hard-forks (phase0, altair, etc.)
  * and Blob Parameter Only (BPO) forks and are used to un-/subscribe to gossip topics
- * and compute the fork digest.
+ * and compute the fork digest primarily for domain separation on the p2p layer.
  */
 export type ForkBoundary = {fork: ForkName; epoch: Epoch};
 
