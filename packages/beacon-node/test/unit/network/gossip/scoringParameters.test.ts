@@ -15,7 +15,7 @@ import {GossipType} from "../../../../src/network/index.js";
 describe("computeGossipPeerScoreParams", () => {
   const config = createBeaconConfig(mainnetChainConfig, ZERO_HASH);
   // Cheap stub on new BeaconConfig instance
-  config.epoch2ForkDigest = () => Buffer.alloc(4, 1);
+  config.forkBoundary2ForkDigest = () => Buffer.alloc(4, 1);
   config.forkDigest2ForkBoundary = () => ({fork: ForkName.phase0, epoch: 0});
 
   const TOLERANCE = 0.00005;

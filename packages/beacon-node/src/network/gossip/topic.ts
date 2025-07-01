@@ -49,7 +49,7 @@ export class GossipTopicCache implements IGossipTopicCache {
  * Stringify a GossipTopic into a spec-ed formated topic string
  */
 export function stringifyGossipTopic(forkDigestContext: ForkDigestContext, topic: GossipTopic): string {
-  const forkDigestHexNoPrefix = forkDigestContext.epoch2ForkDigestHex(topic.boundary.epoch);
+  const forkDigestHexNoPrefix = forkDigestContext.forkBoundary2ForkDigestHex(topic.boundary);
   const topicType = stringifyGossipTopicType(topic);
   const encoding = topic.encoding ?? DEFAULT_ENCODING;
   return `/eth2/${forkDigestHexNoPrefix}/${topicType}/${encoding}`;

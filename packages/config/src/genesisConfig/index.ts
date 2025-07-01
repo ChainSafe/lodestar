@@ -123,20 +123,18 @@ export function createCachedGenesis(chainForkConfig: ChainForkConfig, genesisVal
       return chainForkConfig.getForkBoundaryAtEpoch(epoch);
     },
 
-    epoch2ForkDigest(epoch: Epoch): ForkDigest {
-      const boundary = chainForkConfig.getForkBoundaryAtEpoch(epoch);
+    forkBoundary2ForkDigest(boundary: ForkBoundary): ForkDigest {
       const forkDigest = forkDigestByEpoch.get(boundary.epoch);
       if (!forkDigest) {
-        throw Error(`No precomputed forkDigest for ${epoch}`);
+        throw Error(`No precomputed forkDigest for ${boundary.epoch}`);
       }
       return forkDigest;
     },
 
-    epoch2ForkDigestHex(epoch: Epoch): ForkDigestHex {
-      const boundary = chainForkConfig.getForkBoundaryAtEpoch(epoch);
+    forkBoundary2ForkDigestHex(boundary: ForkBoundary): ForkDigestHex {
       const forkDigestHex = forkDigestHexByEpoch.get(boundary.epoch);
       if (!forkDigestHex) {
-        throw Error(`No precomputed forkDigest for ${epoch}`);
+        throw Error(`No precomputed forkDigest for ${boundary.epoch}`);
       }
       return toHexStringNoPrefix(forkDigestHex);
     },

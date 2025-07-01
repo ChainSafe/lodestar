@@ -97,12 +97,10 @@ describe("fork digest", () => {
     for (const testCase of testCases) {
       const {epoch, expectedForkDigest} = testCase;
       it(`should match fork digest at epoch ${epoch}`, () => {
-        const forkDigestHex = cachedGenesis.epoch2ForkDigestHex(epoch);
+        const boundary = config.getForkBoundaryAtEpoch(epoch);
+        const forkDigestHex = cachedGenesis.forkBoundary2ForkDigestHex(boundary);
 
         expect(forkDigestHex).toBe(expectedForkDigest);
-
-        const boundary = config.getForkBoundaryAtEpoch(epoch);
-
         expect(boundary).toBe(cachedGenesis.forkDigest2ForkBoundary(expectedForkDigest));
       });
     }

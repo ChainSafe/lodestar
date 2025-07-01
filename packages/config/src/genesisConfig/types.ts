@@ -1,5 +1,5 @@
 import {ForkName} from "@lodestar/params";
-import {DomainType, Epoch, ForkDigest, Root, Slot} from "@lodestar/types";
+import {DomainType, ForkDigest, Root, Slot} from "@lodestar/types";
 import {ForkBoundary} from "../forkConfig/types.js";
 
 export type ForkDigestHex = string;
@@ -7,8 +7,8 @@ export type ForkDigestHex = string;
 export type ForkDigestContext = {
   forkDigest2ForkBoundary(forkDigest: ForkDigest | ForkDigestHex): ForkBoundary;
   forkDigest2ForkBoundaryOption(forkDigest: ForkDigest | ForkDigestHex): ForkBoundary | null;
-  epoch2ForkDigest(epoch: Epoch): ForkDigest;
-  epoch2ForkDigestHex(epoch: Epoch): ForkDigestHex;
+  forkBoundary2ForkDigest(boundary: ForkBoundary): ForkDigest;
+  forkBoundary2ForkDigestHex(boundary: ForkBoundary): ForkDigestHex;
 };
 
 export interface CachedGenesis extends ForkDigestContext {

@@ -106,7 +106,7 @@ export function getENRForkID(config: BeaconConfig, clockEpoch: Epoch): phase0.EN
 
   return {
     // Current fork digest
-    forkDigest: config.epoch2ForkDigest(currentBoundary.epoch),
+    forkDigest: config.forkBoundary2ForkDigest(currentBoundary),
     // Next planned fork version
     nextForkVersion: nextBoundary
       ? config.forks[nextBoundary.fork].version
