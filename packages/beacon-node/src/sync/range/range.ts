@@ -249,7 +249,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
           getConnectedPeerSyncMeta: this.getConnectedPeerSyncMeta,
           onEnd: this.onSyncChainEnd,
         },
-        {config: this.config, logger: this.logger}
+        {config: this.config, logger: this.logger, custodyConfig: this.chain.custodyConfig, metrics: this.metrics}
       );
       this.chains.set(syncType, syncChain);
 
@@ -259,6 +259,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
         firstEpoch: syncChain.firstBatchEpoch,
         targetSlot: syncChain.target.slot,
         targetRoot: toRootHex(syncChain.target.root),
+        peer,
       });
     }
 

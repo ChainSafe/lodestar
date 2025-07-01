@@ -17,9 +17,9 @@ export async function getRandPeerIdStr(): Promise<string> {
   return peerIdToString(peerIdFromPrivateKey(await generateKeyPair("secp256k1")));
 }
 
-export async function getRandPeerSyncMeta(): Promise<PeerSyncMeta> {
+export async function getRandPeerSyncMeta(peerId?: string): Promise<PeerSyncMeta> {
   return {
-    peerId: await getRandPeerIdStr(),
+    peerId: peerId ?? (await getRandPeerIdStr()),
     client: "PEER_CLIENT",
     custodyGroups: [],
     earliestAvailableSlot: 0,
