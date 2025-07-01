@@ -116,7 +116,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
           if (method === ReqRespMethod.LightClientBootstrap) {
             yield {
               data: ssz.altair.LightClientBootstrap.serialize(expectedValue),
-              boundary: {fork: ForkName.altair, epoch: 0},
+              boundary: {fork: ForkName.altair, epoch: config.ALTAIR_FORK_EPOCH},
             };
           }
         }
@@ -137,7 +137,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
           if (method === ReqRespMethod.LightClientOptimisticUpdate) {
             yield {
               data: ssz.altair.LightClientOptimisticUpdate.serialize(expectedValue),
-              boundary: {fork: ForkName.altair, epoch: 0},
+              boundary: {fork: ForkName.altair, epoch: config.ALTAIR_FORK_EPOCH},
             };
           }
         }
@@ -158,7 +158,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
           if (method === ReqRespMethod.LightClientFinalityUpdate) {
             yield {
               data: ssz.altair.LightClientFinalityUpdate.serialize(expectedValue),
-              boundary: {fork: ForkName.altair, epoch: 0},
+              boundary: {fork: ForkName.altair, epoch: config.ALTAIR_FORK_EPOCH},
             };
           }
         }
@@ -178,7 +178,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
       update.signatureSlot = slot;
       lightClientUpdates.push({
         data: ssz.altair.LightClientUpdate.serialize(update),
-        boundary: {fork: ForkName.altair, epoch: 0},
+        boundary: {fork: ForkName.altair, epoch: config.ALTAIR_FORK_EPOCH},
       });
     }
 
