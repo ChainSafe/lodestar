@@ -124,7 +124,7 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
       for (const boundary of forkBoundariesDescendingEpochOrder) {
         if (epoch >= boundary.epoch) return boundary;
       }
-      return {fork: phase0.name, epoch: 0};
+      return {fork: phase0.name, epoch: GENESIS_EPOCH};
     },
     getForkName(slot: Slot): ForkName {
       return this.getForkInfo(slot).name;
