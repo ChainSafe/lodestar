@@ -453,20 +453,20 @@ export class NetworkCore implements INetworkCore {
   }
 
   /**
-   * Handle subscriptions through subscribe boundary transitions, @see FORK_EPOCH_LOOKAHEAD
+   * Handle subscriptions through fork boundary transitions, @see FORK_EPOCH_LOOKAHEAD
    */
   private onEpoch = async (epoch: Epoch): Promise<void> => {
     try {
       // Compute prev and next fork shifted, so next fork is still next at forkEpoch + FORK_EPOCH_LOOKAHEAD
       const activeBoundaries = getActiveForkBoundaries(this.config, epoch);
       for (let i = 0; i < activeBoundaries.length; i++) {
-        // Only when a new subscribe boundary is scheduled post this one
+        // Only when a new fork boundary is scheduled post this one
         if (activeBoundaries[i + 1] !== undefined) {
           const prevBoundary = activeBoundaries[i];
           const nextBoundary = activeBoundaries[i + 1];
           const nextBoundaryEpoch = nextBoundary.epoch;
 
-          // Before subscribe boundary transition
+          // Before fork boundary transition
           if (epoch === nextBoundaryEpoch - FORK_EPOCH_LOOKAHEAD) {
             // Don't subscribe to new boundary if the node is not subscribed to any topic
             if (await this.isSubscribedToGossipCoreTopics()) {

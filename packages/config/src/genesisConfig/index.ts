@@ -24,7 +24,7 @@ export function createCachedGenesis(chainForkConfig: ChainForkConfig, genesisVal
     const currentEpoch = currentForkBoundary.epoch;
     const nextEpoch = nextForkBoundary !== undefined ? nextForkBoundary.epoch : Infinity;
 
-    // If multiple forks/blob schedules start at the same epoch, only consider the latest one
+    // Edge case: If multiple fork boundaries start at the same epoch, only consider the latest one
     if (currentEpoch === nextEpoch) {
       continue;
     }
