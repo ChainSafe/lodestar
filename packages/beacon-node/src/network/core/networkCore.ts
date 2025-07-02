@@ -465,30 +465,15 @@ export class NetworkCore implements INetworkCore {
           const prevBoundary = activeBoundaries[i];
           const nextBoundary = activeBoundaries[i + 1];
           const nextBoundaryEpoch = nextBoundary.epoch;
-          const isBpoForkBoundary = prevBoundary.fork === nextBoundary.fork;
 
           // Before fork boundary transition
           if (epoch === nextBoundaryEpoch - FORK_EPOCH_LOOKAHEAD) {
-            // Don't subscribe to new fork boundary if the node is not subscribed to any topic
+            // Don't subscribe to new boundary if the node is not subscribed to any topic
             if (await this.isSubscribedToGossipCoreTopics()) {
               this.subscribeCoreTopicsAtBoundary(this.config, nextBoundary);
-              if (isBpoForkBoundary) {
-                this.logger.info(
-                  "Subscribing gossip topics before BPO fork boundary",
-                  this.config.getBlobParameters(nextBoundaryEpoch)
-                );
-              } else {
-                this.logger.info("Subscribing gossip topics before fork boundary", nextBoundary);
-              }
+              this.logger.info("Subscribing gossip topics before fork boundary", nextBoundary);
             } else {
-              if (isBpoForkBoundary) {
-                this.logger.info(
-                  "Skipping subscribing gossip topics before BPO fork boundary",
-                  this.config.getBlobParameters(nextBoundaryEpoch)
-                );
-              } else {
-                this.logger.info("Skipping subscribing gossip topics before fork boundary", nextBoundary);
-              }
+              this.logger.info("Skipping subscribing gossip topics before fork boundary", nextBoundary);
             }
             this.attnetsService.subscribeSubnetsAfterBoundary(nextBoundary);
             this.syncnetsService.subscribeSubnetsAfterBoundary(nextBoundary);
@@ -503,14 +488,7 @@ export class NetworkCore implements INetworkCore {
 
           // After fork boundary transition
           if (epoch === nextBoundaryEpoch + FORK_EPOCH_LOOKAHEAD) {
-            if (isBpoForkBoundary) {
-              this.logger.info(
-                "Unsubscribing gossip topics of previous BPO fork boundary",
-                this.config.getBlobParameters(prevBoundary.epoch)
-              );
-            } else {
-              this.logger.info("Unsubscribing gossip topics of previous fork boundary", prevBoundary);
-            }
+            this.logger.info("Unsubscribing gossip topics before fork boundary", prevBoundary);
             this.unsubscribeCoreTopicsAtBoundary(this.config, prevBoundary);
             this.attnetsService.unsubscribeSubnetsBeforeBoundary(prevBoundary);
             this.syncnetsService.unsubscribeSubnetsBeforeBoundary(prevBoundary);
