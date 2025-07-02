@@ -73,8 +73,8 @@ export class SyncnetsService implements SubnetsService {
   }
 
   /** Call ONLY ONCE: Two epoch before the fork, re-subscribe all existing random subscriptions to the new fork  */
-  subscribeSubnetsBeforeBoundary(boundary: ForkBoundary): void {
-    this.logger.info("Subscribing to random attnets before fork boundary", boundary);
+  subscribeSubnetsForNextBoundary(boundary: ForkBoundary): void {
+    this.logger.info("Subscribing to random attnets for next fork boundary", boundary);
     for (const subnet of this.subscriptionsCommittee.getAll()) {
       this.gossip.subscribeTopic({type: gossipType, boundary, subnet});
     }

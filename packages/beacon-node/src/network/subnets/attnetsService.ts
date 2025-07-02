@@ -132,8 +132,8 @@ export class AttnetsService implements IAttnetsService {
    * TODO-dll: clarify how many epochs before the fork we should subscribe to the new fork
    * Call ONLY ONCE: Two epoch before the fork, re-subscribe all existing random subscriptions to the new fork
    **/
-  subscribeSubnetsBeforeBoundary(boundary: ForkBoundary): void {
-    this.logger.info("Subscribing to long lived attnets before fork boundary", {
+  subscribeSubnetsForNextBoundary(boundary: ForkBoundary): void {
+    this.logger.info("Subscribing to long lived attnets for next fork boundary", {
       ...boundary,
       subnets: Array.from(this.longLivedSubscriptions).join(","),
     });

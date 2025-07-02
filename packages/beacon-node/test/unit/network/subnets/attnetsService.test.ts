@@ -86,7 +86,7 @@ describe("AttnetsService", () => {
     const secondSubnet = (gossipStub.subscribeTopic.mock.calls[1][0] as unknown as {subnet: SubnetID}).subnet;
     expect(gossipStub.subscribeTopic).toBeCalledTimes(SUBNETS_PER_NODE);
     vi.advanceTimersByTime(config.SECONDS_PER_SLOT * SLOTS_PER_EPOCH * (ALTAIR_FORK_EPOCH - 2) * 1000);
-    service.subscribeSubnetsBeforeBoundary({fork: ForkName.altair, epoch: config.ALTAIR_FORK_EPOCH});
+    service.subscribeSubnetsForNextBoundary({fork: ForkName.altair, epoch: config.ALTAIR_FORK_EPOCH});
     // SUBNETS_PER_NODE = 2 => 2 more calls
     // same subnets were called
     expect(gossipStub.subscribeTopic).toHaveBeenCalledWith(

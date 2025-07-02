@@ -15,7 +15,7 @@ export type SubnetsService = {
   close(): void;
   addCommitteeSubscriptions(subscriptions: CommitteeSubscription[]): void;
   getActiveSubnets(): RequestedSubnet[];
-  subscribeSubnetsBeforeBoundary(boundary: ForkBoundary): void;
+  subscribeSubnetsForNextBoundary(boundary: ForkBoundary): void;
   unsubscribeSubnetsFromPrevBoundary(boundary: ForkBoundary): void;
 };
 

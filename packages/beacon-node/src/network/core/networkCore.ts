@@ -468,15 +468,15 @@ export class NetworkCore implements INetworkCore {
 
           // Before fork boundary transition
           if (epoch === nextBoundaryEpoch - FORK_EPOCH_LOOKAHEAD) {
-            // Don't subscribe to new boundary if the node is not subscribed to any topic
+            // Don't subscribe to new fork boundary if the node is not subscribed to any topic
             if (await this.isSubscribedToGossipCoreTopics()) {
               this.subscribeCoreTopicsAtBoundary(this.config, nextBoundary);
-              this.logger.info("Subscribing gossip topics before fork boundary", nextBoundary);
+              this.logger.info("Subscribing gossip topics for next fork boundary", nextBoundary);
             } else {
-              this.logger.info("Skipping subscribing gossip topics before fork boundary", nextBoundary);
+              this.logger.info("Skipping subscribing gossip topics for next fork boundary", nextBoundary);
             }
-            this.attnetsService.subscribeSubnetsBeforeBoundary(nextBoundary);
-            this.syncnetsService.subscribeSubnetsBeforeBoundary(nextBoundary);
+            this.attnetsService.subscribeSubnetsForNextBoundary(nextBoundary);
+            this.syncnetsService.subscribeSubnetsForNextBoundary(nextBoundary);
           }
 
           // On fork boundary transition
