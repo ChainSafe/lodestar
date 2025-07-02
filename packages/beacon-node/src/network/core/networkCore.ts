@@ -475,8 +475,8 @@ export class NetworkCore implements INetworkCore {
             } else {
               this.logger.info("Skipping subscribing gossip topics before fork boundary", nextBoundary);
             }
-            this.attnetsService.subscribeSubnetsAfterBoundary(nextBoundary);
-            this.syncnetsService.subscribeSubnetsAfterBoundary(nextBoundary);
+            this.attnetsService.subscribeSubnetsBeforeBoundary(nextBoundary);
+            this.syncnetsService.subscribeSubnetsBeforeBoundary(nextBoundary);
           }
 
           // On fork boundary transition
@@ -488,10 +488,10 @@ export class NetworkCore implements INetworkCore {
 
           // After fork boundary transition
           if (epoch === nextBoundaryEpoch + FORK_EPOCH_LOOKAHEAD) {
-            this.logger.info("Unsubscribing gossip topics before fork boundary", prevBoundary);
+            this.logger.info("Unsubscribing gossip topics from previous fork boundary", prevBoundary);
             this.unsubscribeCoreTopicsAtBoundary(this.config, prevBoundary);
-            this.attnetsService.unsubscribeSubnetsBeforeBoundary(prevBoundary);
-            this.syncnetsService.unsubscribeSubnetsBeforeBoundary(prevBoundary);
+            this.attnetsService.unsubscribeSubnetsFromPrevBoundary(prevBoundary);
+            this.syncnetsService.unsubscribeSubnetsFromPrevBoundary(prevBoundary);
           }
         }
       }

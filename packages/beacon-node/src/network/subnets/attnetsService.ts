@@ -132,8 +132,8 @@ export class AttnetsService implements IAttnetsService {
    * TODO-dll: clarify how many epochs before the fork we should subscribe to the new fork
    * Call ONLY ONCE: Two epoch before the fork, re-subscribe all existing random subscriptions to the new fork
    **/
-  subscribeSubnetsAfterBoundary(boundary: ForkBoundary): void {
-    this.logger.info("Subscribing to long lived attnets after fork boundary", {
+  subscribeSubnetsBeforeBoundary(boundary: ForkBoundary): void {
+    this.logger.info("Subscribing to long lived attnets before fork boundary", {
       ...boundary,
       subnets: Array.from(this.longLivedSubscriptions).join(","),
     });
@@ -146,8 +146,8 @@ export class AttnetsService implements IAttnetsService {
    * TODO-dll: clarify how many epochs after the fork we should unsubscribe to the new fork
    * Call  ONLY ONCE: Two epochs after the fork, un-subscribe all subnets from the old fork
    **/
-  unsubscribeSubnetsBeforeBoundary(boundary: ForkBoundary): void {
-    this.logger.info("Unsubscribing to long lived attnets before fork boundary", {...boundary});
+  unsubscribeSubnetsFromPrevBoundary(boundary: ForkBoundary): void {
+    this.logger.info("Unsubscribing to long lived attnets from previous fork boundary", boundary);
     for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
       if (!this.opts.subscribeAllSubnets) {
         this.gossip.unsubscribeTopic({type: gossipType, subnet, boundary});
