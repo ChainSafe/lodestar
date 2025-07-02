@@ -57,7 +57,7 @@ export function getActiveForkBoundaries(config: ChainForkConfig, epoch: Epoch): 
 }
 
 /**
- * Return the currentBoundary and nextBoundary given a fork/blob schedule and `epoch`
+ * Return the currentBoundary and nextBoundary given a fork/BPO schedule and `epoch`
  */
 export function getCurrentAndNextForkBoundary(
   config: ChainForkConfig,
