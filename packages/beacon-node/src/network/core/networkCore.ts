@@ -479,14 +479,14 @@ export class NetworkCore implements INetworkCore {
             this.syncnetsService.subscribeSubnetsAfterBoundary(nextBoundary);
           }
 
-          // On boundary transition
+          // On fork boundary transition
           if (epoch === nextBoundaryEpoch) {
             // updateEth2Field() MUST be called with clock epoch, onEpoch event is emitted in response to clock events
             this.metadata.updateEth2Field(epoch);
             this.reqResp.registerProtocolsAtBoundary(nextBoundary);
           }
 
-          // After boundary transition
+          // After fork boundary transition
           if (epoch === nextBoundaryEpoch + FORK_EPOCH_LOOKAHEAD) {
             this.logger.info("Unsubscribing gossip topics before fork boundary", prevBoundary);
             this.unsubscribeCoreTopicsAtBoundary(this.config, prevBoundary);

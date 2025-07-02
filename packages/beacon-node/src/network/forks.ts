@@ -40,15 +40,15 @@ export function getActiveForkBoundaries(config: ChainForkConfig, epoch: Epoch): 
     const currentForkBoundary = forkBoundariesAscendingEpochOrder[i];
     const nextForkBoundary = forkBoundariesAscendingEpochOrder[i + 1];
 
-    const currEpoch = currentForkBoundary.epoch;
+    const currentEpoch = currentForkBoundary.epoch;
     const nextEpoch = nextForkBoundary !== undefined ? nextForkBoundary.epoch : Infinity;
 
     // Edge case: If multiple fork boundaries start at the same epoch, only consider the latest one
-    if (currEpoch === nextEpoch) {
+    if (currentEpoch === nextEpoch) {
       continue;
     }
 
-    if (epoch >= currEpoch - FORK_EPOCH_LOOKAHEAD && epoch <= nextEpoch + FORK_EPOCH_LOOKAHEAD) {
+    if (epoch >= currentEpoch - FORK_EPOCH_LOOKAHEAD && epoch <= nextEpoch + FORK_EPOCH_LOOKAHEAD) {
       activeBoundaries.push(currentForkBoundary);
     }
   }
