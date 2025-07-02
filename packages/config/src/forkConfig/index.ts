@@ -122,6 +122,7 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
       return forks[this.getForkBoundaryAtEpoch(epoch).fork];
     },
     getForkBoundaryAtEpoch(epoch: Epoch): ForkBoundary {
+      if (epoch < 0) epoch = 0;
       // NOTE: fork boundaries must be sorted by descending epoch, latest first
       for (const boundary of forkBoundariesDescendingEpochOrder) {
         if (epoch >= boundary.epoch) return boundary;
