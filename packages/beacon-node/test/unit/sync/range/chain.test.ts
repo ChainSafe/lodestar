@@ -1,3 +1,4 @@
+import {fromHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
@@ -8,6 +9,7 @@ import {BlockInput, BlockSource, getBlockInput} from "../../../../src/chain/bloc
 import {ZERO_HASH} from "../../../../src/constants/index.js";
 import {ChainTarget, SyncChain, SyncChainFns} from "../../../../src/sync/range/chain.js";
 import {RangeSyncType} from "../../../../src/sync/utils/remoteSyncType.js";
+import {CustodyConfig} from "../../../../src/util/dataColumns.js";
 import {linspace} from "../../../../src/util/numpy.js";
 import {testLogger} from "../../../utils/logger.js";
 import {validPeerIdStr} from "../../../utils/peer.js";
@@ -56,6 +58,8 @@ describe("sync / range / chain", () => {
   const REJECT_BLOCK = Buffer.alloc(96, 1);
   const zeroBlockBody = ssz.phase0.BeaconBlockBody.defaultValue();
   const interval: NodeJS.Timeout | null = null;
+  const nodeId = fromHexString("cdbee32dc3c50e9711d22be5565c7e44ff6108af663b2dc5abd2df573d2fa83f");
+  const custodyConfig = new CustodyConfig(nodeId, config, null);
 
   const reportPeer: SyncChainFns["reportPeer"] = () => {};
   const getConnectedPeerSyncMeta: SyncChainFns["getConnectedPeerSyncMeta"] = (peerId) => {
@@ -123,7 +127,7 @@ describe("sync / range / chain", () => {
             reportPeer,
             onEnd,
           }),
-          {config, logger}
+          {config, logger, custodyConfig, metrics: null}
         );
 
         const peers = [peer];
@@ -177,7 +181,7 @@ describe("sync / range / chain", () => {
           getConnectedPeerSyncMeta,
           onEnd,
         }),
-        {config, logger}
+        {config, logger, custodyConfig, metrics: null}
       );
 
       // Add peers after some time
