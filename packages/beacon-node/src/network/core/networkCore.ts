@@ -464,7 +464,7 @@ export class NetworkCore implements INetworkCore {
         if (activeBoundaries[i + 1] !== undefined) {
           const prevBoundary = activeBoundaries[i];
           const nextBoundary = activeBoundaries[i + 1];
-          const nextBoundaryEpoch = this.config.forks[nextBoundary.fork].epoch;
+          const nextBoundaryEpoch = nextBoundary.epoch;
 
           // Before subscribe boundary transition
           if (epoch === nextBoundaryEpoch - FORK_EPOCH_LOOKAHEAD) {
