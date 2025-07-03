@@ -3,9 +3,11 @@ import {ForkName} from "@lodestar/params";
 import {Epoch, Root, Slot, phase0} from "@lodestar/types";
 import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
 import {BlockInput, BlockInputDataColumns, BlockInputType} from "../../chain/blocks/types.js";
+import {Metrics} from "../../metrics/metrics.js";
 import {PeerAction, prettyPrintPeerIdStr} from "../../network/index.js";
 import {PeerSyncMeta} from "../../network/peers/peersData.js";
 import {PartialDownload} from "../../network/reqresp/beaconBlocksMaybeBlobsByRange.js";
+import {CustodyConfig} from "../../util/dataColumns.js";
 import {ItTrigger} from "../../util/itTrigger.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {wrapError} from "../../util/wrapError.js";
@@ -14,8 +16,9 @@ import {RangeSyncType} from "../utils/remoteSyncType.js";
 import {Batch, BatchError, BatchErrorCode, BatchMetadata, BatchStatus} from "./batch.js";
 import {
   ChainPeersBalancer,
+  PeerSyncInfo,
   batchStartEpochIsAfterSlot,
-  computeMostCommonTarget,
+  computeHighestTarget,
   getBatchSlotRange,
   getNextBatchToProcess,
   isSyncChainDone,
@@ -26,7 +29,9 @@ import {
 
 export type SyncChainModules = {
   config: ChainForkConfig;
+  custodyConfig: CustodyConfig;
   logger: Logger;
+  metrics: Metrics | null;
 };
 
 export type SyncChainFns = {
@@ -118,6 +123,8 @@ export class SyncChain {
 
   private readonly logger: Logger;
   private readonly config: ChainForkConfig;
+  private readonly custodyConfig: CustodyConfig;
+  private readonly metrics: Metrics | null;
 
   constructor(
     initialBatchEpoch: Epoch,
@@ -135,8 +142,14 @@ export class SyncChain {
     this.reportPeer = fns.reportPeer;
     this.getConnectedPeerSyncMeta = fns.getConnectedPeerSyncMeta;
     this.config = modules.config;
+    this.custodyConfig = modules.custodyConfig;
     this.logger = modules.logger;
+    this.metrics = modules.metrics;
     this.logId = `${syncType}`;
+
+    if (this.metrics != null) {
+      this.metrics.syncRange.headSyncPeers.addCollect(() => this.scrapeMetrics(this.metrics as Metrics));
+    }
 
     // Trigger event on parent class
     this.sync().then(
@@ -257,7 +270,7 @@ export class SyncChain {
   private computeTarget(): void {
     if (this.peerset.size > 0) {
       const targets = Array.from(this.peerset.values());
-      this.target = computeMostCommonTarget(targets);
+      this.target = computeHighestTarget(targets);
     }
   }
 
@@ -340,12 +353,16 @@ export class SyncChain {
       return;
     }
 
-    const peersSyncMeta: PeerSyncMeta[] = [];
-    for (const peerId of this.peerset.keys()) {
-      peersSyncMeta.push(this.getConnectedPeerSyncMeta(peerId));
+    const peersSyncInfo: PeerSyncInfo[] = [];
+    for (const [peerId, target] of this.peerset.entries()) {
+      try {
+        peersSyncInfo.push({...this.getConnectedPeerSyncMeta(peerId), target});
+      } catch (e) {
+        this.logger.debug("Failed to get peer sync meta", {peerId}, e as Error);
+      }
     }
 
-    const peerBalancer = new ChainPeersBalancer(peersSyncMeta, toArr(this.batches));
+    const peerBalancer = new ChainPeersBalancer(peersSyncInfo, toArr(this.batches), this.custodyConfig);
 
     // Retry download of existing batches
     for (const batch of this.batches.values()) {
@@ -360,12 +377,15 @@ export class SyncChain {
     }
 
     // find the next pending batch and request it from the peer
-    for (const peer of peerBalancer.idlePeers()) {
-      const batch = this.includeNextBatch();
-      if (!batch) {
+    let batch = this.includeNextBatch();
+    while (batch != null) {
+      const peer = peerBalancer.idlePeerForBatch(batch);
+      if (!peer) {
+        // if there is no peer available, we stop requesting batches because next batches will have greater startEpoch with the same sampling groups
         break;
       }
       void this.sendBatch(batch, peer);
+      batch = this.includeNextBatch();
     }
   }
 
@@ -547,6 +567,36 @@ export class SyncChain {
     }
 
     this.lastEpochWithProcessBlocks = newLastEpochWithProcessBlocks;
+  }
+
+  private scrapeMetrics(metrics: Metrics): void {
+    const syncPeersMetric =
+      this.syncType === RangeSyncType.Finalized
+        ? metrics.syncRange.finalizedSyncPeers
+        : metrics.syncRange.headSyncPeers;
+
+    const peersSyncMeta = new Map<PeerIdStr, PeerSyncMeta>();
+    for (const peerId of this.peerset.keys()) {
+      try {
+        peersSyncMeta.set(peerId, this.getConnectedPeerSyncMeta(peerId));
+      } catch (_) {
+        // ignore for metric as peer could be disconnected
+      }
+    }
+
+    const peersByColumnIndex = new Map<number, number>();
+    for (const [columnIndex, column] of this.custodyConfig.sampledColumns.entries()) {
+      for (const {custodyGroups} of peersSyncMeta.values()) {
+        if (custodyGroups.includes(column)) {
+          peersByColumnIndex.set(columnIndex, (peersByColumnIndex.get(columnIndex) ?? 0) + 1);
+        }
+      }
+    }
+
+    for (let columnIndex = 0; columnIndex < this.custodyConfig.sampledColumns.length; columnIndex++) {
+      const peerCount = peersByColumnIndex.get(columnIndex) ?? 0;
+      syncPeersMetric.set({columnIndex}, peerCount);
+    }
   }
 }
 
