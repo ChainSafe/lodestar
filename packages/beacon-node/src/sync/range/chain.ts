@@ -427,6 +427,11 @@ export class SyncChain {
    * Requests the batch assigned to the given id from a given peer.
    */
   private async sendBatch(batch: Batch, peer: PeerSyncMeta): Promise<void> {
+    this.logger.verbose("Downloading batch", {
+      id: this.logId,
+      ...batch.getMetadata(),
+      peer: prettyPrintPeerIdStr(peer.peerId),
+    });
     try {
       const partialDownload = batch.startDownloading(peer.peerId);
 
