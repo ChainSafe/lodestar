@@ -467,10 +467,17 @@ export class SyncChain {
             ...downloadInfo,
             peer: prettyPrintPeerIdStr(peer.peerId),
           });
+          this.triggerBatchProcessor();
         } else {
-          this.logger.debug("Partially downloaded batch", {id: this.logId, ...batch.getMetadata(), peer: peer.peerId});
+          const pendingDataColumns = res.result.pendingDataColumns?.join(",");
+          this.logger.debug("Partially downloaded batch", {
+            id: this.logId,
+            ...batch.getMetadata(),
+            pendingDataColumns,
+            peer: peer.peerId,
+          });
+          // the flow will continue to call triggerBatchDownloader() below
         }
-        this.triggerBatchProcessor();
       } else {
         this.logger.verbose(
           "Batch download error",
