@@ -427,6 +427,11 @@ export class SyncChain {
    * Requests the batch assigned to the given id from a given peer.
    */
   private async sendBatch(batch: Batch, peer: PeerSyncMeta): Promise<void> {
+    this.logger.verbose("Downloading batch", {
+      id: this.logId,
+      ...batch.getMetadata(),
+      peer: prettyPrintPeerIdStr(peer.peerId),
+    });
     try {
       const partialDownload = batch.startDownloading(peer.peerId);
 
@@ -467,10 +472,17 @@ export class SyncChain {
             ...downloadInfo,
             peer: prettyPrintPeerIdStr(peer.peerId),
           });
+          this.triggerBatchProcessor();
         } else {
-          this.logger.debug("Partially downloaded batch", {id: this.logId, ...batch.getMetadata(), peer: peer.peerId});
+          const pendingDataColumns = res.result.pendingDataColumns?.join(",");
+          this.logger.debug("Partially downloaded batch", {
+            id: this.logId,
+            ...batch.getMetadata(),
+            pendingDataColumns,
+            peer: peer.peerId,
+          });
+          // the flow will continue to call triggerBatchDownloader() below
         }
-        this.triggerBatchProcessor();
       } else {
         this.logger.verbose(
           "Batch download error",
