@@ -457,7 +457,7 @@ export class NetworkCore implements INetworkCore {
    */
   private onEpoch = async (epoch: Epoch): Promise<void> => {
     try {
-      // Compute prev and next fork shifted, so next fork is still next at forkEpoch + FORK_EPOCH_LOOKAHEAD
+      // Compute prev and next fork boundary shifted, so next boundary is still next at forkEpoch + FORK_EPOCH_LOOKAHEAD
       const activeBoundaries = getActiveForkBoundaries(this.config, epoch);
       for (let i = 0; i < activeBoundaries.length; i++) {
         // Only when a new fork boundary is scheduled post this one

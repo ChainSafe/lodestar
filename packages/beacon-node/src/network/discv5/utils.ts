@@ -30,7 +30,7 @@ export function enrRelevance(enr: ENR, config: BeaconConfig, clock: IClock): ENR
   const forkDigest = eth2.slice(0, 4);
   // Check if forkDigest matches any of our known forks.
   const {fork: forkName} = config.forkDigest2ForkBoundaryOption(forkDigest) ?? {};
-  if (forkName == null) {
+  if (forkName === undefined) {
     return ENRRelevance.unknown_forkDigest;
   }
 

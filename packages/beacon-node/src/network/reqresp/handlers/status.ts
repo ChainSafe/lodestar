@@ -8,6 +8,6 @@ export async function* onStatus(chain: IBeaconChain): AsyncIterable<ResponseOutg
   yield {
     data: ssz.phase0.Status.serialize(status),
     // Status topic is fork-agnostic
-    boundary: {fork: ForkName.phase0, epoch: 0},
+    boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH},
   };
 }

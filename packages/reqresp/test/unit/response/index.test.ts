@@ -23,7 +23,8 @@ const testCases: {
     id: "Yield two chunks, then throw",
     protocol: pingProtocol(async function* () {
       const payload = sszSnappyPing.binaryPayload;
-      const boundary = {fork: payload.fork, epoch: config.forks[payload.fork].epoch};
+      const epoch = config.forks[payload.fork].epoch;
+      const boundary = config.getForkBoundaryAtEpoch(epoch);
       yield {...payload, boundary};
       yield {...payload, boundary};
       throw new LodestarError({code: "TEST_ERROR"});

@@ -296,7 +296,7 @@ export class ReqRespBeaconNode extends ReqResp {
     yield {
       data: ssz.phase0.Status.serialize(this.statusCache.get()),
       // Status topic is fork-agnostic
-      boundary: {fork: ForkName.phase0, epoch: 0},
+      boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH},
     };
   }
 
