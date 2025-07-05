@@ -327,11 +327,12 @@ export class ReqRespBeaconNode extends ReqResp {
     const metadata = this.metadataController.json;
     // Metadata topic is fork-agnostic
     const fork = ForkName.phase0;
+    const epoch = GENESIS_EPOCH;
     const type = responseSszTypeByMethod[ReqRespMethod.Metadata](fork, req.version);
 
     yield {
       data: type.serialize(metadata),
-      boundary: {fork, epoch: 0},
+      boundary: {fork, epoch},
     };
   }
 }
