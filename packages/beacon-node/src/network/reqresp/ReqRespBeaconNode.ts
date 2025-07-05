@@ -1,6 +1,6 @@
 import {PeerId} from "@libp2p/interface";
 import {BeaconConfig, ForkBoundary} from "@lodestar/config";
-import {ForkName, ForkSeq} from "@lodestar/params";
+import {ForkName, ForkSeq, GENESIS_EPOCH} from "@lodestar/params";
 import {
   Encoding,
   ProtocolDescriptor,
@@ -307,7 +307,7 @@ export class ReqRespBeaconNode extends ReqResp {
     yield {
       data: ssz.phase0.Goodbye.serialize(BigInt(0)),
       // Goodbye topic is fork-agnostic
-      boundary: {fork: ForkName.phase0, epoch: 0},
+      boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH},
     };
   }
 
@@ -317,7 +317,7 @@ export class ReqRespBeaconNode extends ReqResp {
     yield {
       data: ssz.phase0.Ping.serialize(this.metadataController.seqNumber),
       // Ping topic is fork-agnostic
-      boundary: {fork: ForkName.phase0, epoch: 0},
+      boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH},
     };
   }
 

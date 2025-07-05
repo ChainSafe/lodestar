@@ -32,7 +32,7 @@ async function getReqResp(libp2p: Libp2p, logger: Logger): Promise<void> {
     handler: async function* (req) {
       yield {
         data: req.data,
-        boundary: {fork: ForkName.phase0, epoch: 0},
+        boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH},
       };
     },
   };

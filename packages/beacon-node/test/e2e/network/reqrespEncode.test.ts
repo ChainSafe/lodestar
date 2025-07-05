@@ -3,7 +3,7 @@ import {mplex} from "@libp2p/mplex";
 import {tcp} from "@libp2p/tcp";
 import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
-import {ForkName} from "@lodestar/params";
+import {ForkName, GENESIS_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {fromHex, sleep, toHex} from "@lodestar/utils";
 import {Multiaddr, multiaddr} from "@multiformats/multiaddr";
@@ -100,7 +100,7 @@ describe("reqresp encoder", () => {
 
   it("assert correct handler switch between metadata v2 and v1", async () => {
     const {multiaddr: serverMultiaddr, reqresp} = await getReqResp();
-    reqresp.registerProtocolsAtBoundary({fork: ForkName.phase0, epoch: 0});
+    reqresp.registerProtocolsAtBoundary({fork: ForkName.phase0, epoch: GENESIS_EPOCH});
     await sleep(0); // Sleep to resolve register handler promises
 
     reqresp["metadataController"].attnets.set(0, true);
@@ -131,7 +131,7 @@ describe("reqresp encoder", () => {
             data: ssz.altair.LightClientOptimisticUpdate.serialize(
               ssz.altair.LightClientOptimisticUpdate.defaultValue()
             ),
-            boundary: {fork: ForkName.phase0, epoch: 0}, // Aware that phase0 does not makes sense here, but it's just to pick a fork digest
+            boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH}, // Aware that phase0 does not makes sense here, but it's just to pick a fork digest
           };
         }
     );

@@ -1,4 +1,4 @@
-import {ForkName} from "@lodestar/params";
+import {ForkName, GENESIS_EPOCH} from "@lodestar/params";
 import {describe, expect, it} from "vitest";
 import {GossipEncoding, GossipTopicMap, GossipType} from "../../../../src/network/gossip/index.js";
 import {parseGossipTopic, stringifyGossipTopic} from "../../../../src/network/gossip/topic.js";
@@ -11,7 +11,7 @@ describe("network / gossip / topic", () => {
   const testCases: {[K in GossipType]: {topic: GossipTopicMap[K]; topicStr: string}[]} = {
     [GossipType.beacon_block]: [
       {
-        topic: {type: GossipType.beacon_block, boundary: {fork: ForkName.phase0, epoch: 0}, encoding},
+        topic: {type: GossipType.beacon_block, boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH}, encoding},
         topicStr: "/eth2/f5a5fd42/beacon_block/ssz_snappy",
       },
     ],
@@ -30,7 +30,7 @@ describe("network / gossip / topic", () => {
       {
         topic: {
           type: GossipType.beacon_aggregate_and_proof,
-          boundary: {fork: ForkName.phase0, epoch: 0},
+          boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH},
           encoding,
         },
         topicStr: "/eth2/f5a5fd42/beacon_aggregate_and_proof/ssz_snappy",
@@ -40,7 +40,7 @@ describe("network / gossip / topic", () => {
       {
         topic: {
           type: GossipType.beacon_attestation,
-          boundary: {fork: ForkName.phase0, epoch: 0},
+          boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH},
           subnet: 5,
           encoding,
         },
@@ -49,7 +49,7 @@ describe("network / gossip / topic", () => {
     ],
     [GossipType.voluntary_exit]: [
       {
-        topic: {type: GossipType.voluntary_exit, boundary: {fork: ForkName.phase0, epoch: 0}, encoding},
+        topic: {type: GossipType.voluntary_exit, boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH}, encoding},
         topicStr: "/eth2/f5a5fd42/voluntary_exit/ssz_snappy",
       },
     ],
@@ -67,7 +67,7 @@ describe("network / gossip / topic", () => {
       {
         topic: {
           type: GossipType.proposer_slashing,
-          boundary: {fork: ForkName.phase0, epoch: 0},
+          boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH},
           encoding,
         },
         topicStr: "/eth2/f5a5fd42/proposer_slashing/ssz_snappy",
@@ -77,7 +77,7 @@ describe("network / gossip / topic", () => {
       {
         topic: {
           type: GossipType.attester_slashing,
-          boundary: {fork: ForkName.phase0, epoch: 0},
+          boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH},
           encoding,
         },
         topicStr: "/eth2/f5a5fd42/attester_slashing/ssz_snappy",

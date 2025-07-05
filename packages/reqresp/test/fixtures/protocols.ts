@@ -1,5 +1,5 @@
 import {ContainerType, ListBasicType, UintNumberType, ValueOf} from "@chainsafe/ssz";
-import {ForkName} from "@lodestar/params";
+import {ForkName, GENESIS_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {ContextBytesType, DialOnlyProtocol, Encoding, Protocol, ProtocolHandler} from "../../src/types.js";
 import {getEmptyHandler} from "./messages.js";
@@ -40,7 +40,7 @@ export const numberToStringProtocol: Protocol = {
   handler: async function* handler(req) {
     yield {
       data: Buffer.from(req.data.toString(), "utf8"),
-      boundary: {fork: ForkName.phase0, epoch: 0},
+      boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH},
     };
   },
 };
