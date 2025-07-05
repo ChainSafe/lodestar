@@ -94,6 +94,7 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
       epoch: fork.epoch,
     })),
     // Blob Parameter Only (BPO) forks
+    // Note: Must be appended after normal hard-forks to have precedence if scheduled at the same epoch
     ...config.BLOB_SCHEDULE.map((entry) => ({
       fork: forksDescendingEpochOrder.find((f) => entry.EPOCH >= f.epoch)?.name ?? phase0.name,
       epoch: entry.EPOCH,
