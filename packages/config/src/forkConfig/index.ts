@@ -164,7 +164,7 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
       return sszTypesFor(forkName);
     },
     getMaxBlobsPerBlock(epoch: Epoch): number {
-      const {fork} = this.getForkBoundaryAtEpoch(epoch);
+      const fork = this.getForkInfoAtEpoch(epoch).name;
 
       switch (fork) {
         case ForkName.electra:
