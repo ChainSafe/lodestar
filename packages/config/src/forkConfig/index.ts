@@ -125,7 +125,7 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
       for (const boundary of forkBoundariesDescendingEpochOrder) {
         if (epoch >= boundary.epoch) return boundary;
       }
-      return {fork: phase0.name, epoch: GENESIS_EPOCH};
+      throw Error("Unreachable as phase0 is scheduled at epoch 0");
     },
     getForkName(slot: Slot): ForkName {
       return this.getForkInfo(slot).name;
