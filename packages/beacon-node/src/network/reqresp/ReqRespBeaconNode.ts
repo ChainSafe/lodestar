@@ -179,7 +179,7 @@ export class ReqRespBeaconNode extends ReqResp {
       this.sendReqRespRequest(
         peerId,
         ReqRespMethod.Status,
-        this.currentRegisteredFork >= ForkSeq.fulu ? [Version.V2] : [Version.V1],
+        this.currentRegisteredFork >= ForkSeq.fulu ? [Version.V2, Version.V1] : [Version.V1],
         request
       ),
       responseSszTypeByMethod[ReqRespMethod.Status]
