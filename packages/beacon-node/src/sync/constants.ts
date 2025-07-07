@@ -5,7 +5,10 @@ export const PARALLEL_HEAD_CHAINS = 2;
 export const MIN_FINALIZED_CHAIN_VALIDATED_EPOCHS = 10;
 
 /** The number of times to retry a batch before it is considered failed. */
-export const MAX_BATCH_DOWNLOAD_ATTEMPTS = 5;
+// export const MAX_BATCH_DOWNLOAD_ATTEMPTS = 5;
+// this constant is increased a lot for peerDAS because we may have many failed download due to rate limit not implemented yet
+// TODO: change it back to 5 when this issue is implemented https://github.com/ChainSafe/lodestar/issues/8033
+export const MAX_BATCH_DOWNLOAD_ATTEMPTS = 20;
 
 /** Consider batch faulty after downloading and processing this number of times */
 export const MAX_BATCH_PROCESSING_ATTEMPTS = 3;
