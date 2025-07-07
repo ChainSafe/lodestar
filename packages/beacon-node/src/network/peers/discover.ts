@@ -28,6 +28,7 @@ const MAX_CACHED_ENRS = 100;
 /** Max age a cached ENR will be considered for dial */
 const MAX_CACHED_ENR_AGE_MS = 5 * 60 * 1000;
 
+const MAX_BLACKLISTED_PEER_IDS = 200;
 /** Nominal timeout for disconnected or disconnecting peers is one hour */
 const PEER_BLACKLIST_TIMEOUT_MIN = 60;
 const PEER_BLACKLIST_TIMEOUT_MS = PEER_BLACKLIST_TIMEOUT_MIN * 60 * 1000;
@@ -379,6 +380,12 @@ export class PeerDiscovery {
         this.blacklistedPeerIds.delete(peerIdStr);
       }
     }
+
+    pruneSetToMax(this.blacklistedPeerIds, MAX_BLACKLISTED_PEER_IDS, (a, b) => {
+      const t1 = this.blacklistedPeerIds.get(a);
+      const t2 = this.blacklistedPeerIds.get(b);
+      return t2 - t1; // remove oldest first
+    });
   };
 
   /**
