@@ -1,6 +1,6 @@
 import {ENR} from "@chainsafe/enr";
 import {toHexString} from "@chainsafe/ssz";
-import type {PeerId, PeerInfo, PrivateKey} from "@libp2p/interface";
+import type {Direction, PeerId, PeerInfo, PrivateKey} from "@libp2p/interface";
 import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
 import {ATTESTATION_SUBNET_COUNT, ForkSeq, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
@@ -189,6 +189,7 @@ export class PeerDiscovery {
     if (metrics) {
       metrics.discovery.cachedENRsSize.addCollect(() => {
         metrics.discovery.cachedENRsSize.set(this.cachedENRs.size);
+        metrics.discovery.blacklistedPeersSize.set(this.blacklistedPeerIds.size);
         metrics.discovery.peersToConnect.set(this.peersToConnect);
 
         // PeerDAS metrics
@@ -350,7 +351,10 @@ export class PeerDiscovery {
     });
   }
 
-  blacklistPeer(peerIdStr: PeerIdStr): void {
+  blacklistPeer(peerIdStr: PeerIdStr, direction: Direction): void {
+    const cachedENR = this.cachedENRs.get(peerIdStr);
+    this.cachedENRs.delete(peerIdStr);
+
     if (this.blacklistedPeerIds.has(peerIdStr)) {
       this.logger.warn("blacklistPeer called on peer already in blacklistedENRs", {
         peerId: prettyPrintPeerIdStr(peerIdStr),
@@ -358,14 +362,14 @@ export class PeerDiscovery {
       return;
     }
 
-    const cachedENR = this.cachedENRs.get(peerIdStr);
     if (!cachedENR) {
-      this.logger.debug("blacklistedPeer was not in cachedENRs", {peerId: peerIdStr});
+      this.logger.debug("blacklisted peer was not in cachedENRs so will not be redialed", {peerId: peerIdStr});
       return;
     }
 
     this.logger.debug(`adding peer to blacklistedPeers for ${PEER_BLACKLIST_TIMEOUT_MIN} minutes`, {peerId: peerIdStr});
     this.blacklistedPeerIds.set(peerIdStr, Date.now() + PEER_BLACKLIST_TIMEOUT_MS);
+    this.metrics?.discovery.blacklistedPeerDirection.inc({direction});
   }
 
   private onBlacklistPruneInterval = () => {

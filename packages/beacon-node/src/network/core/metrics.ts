@@ -1,3 +1,4 @@
+import {Direction} from "@libp2p/interface";
 import {SubnetID} from "@lodestar/types";
 import {RegistryMetricCreator} from "../../metrics/utils/registryMetricCreator.js";
 import {Libp2pError} from "../libp2p/error.js";
@@ -159,6 +160,15 @@ export function createNetworkCoreMetrics(register: RegistryMetricCreator) {
       cachedENRsSize: register.gauge({
         name: "lodestar_discovery_cached_enrs_size",
         help: "Current size of the cachedENRs Set",
+      }),
+      blacklistedPeerIdsSize: register.gauge({
+        name: "lodestar_discovery_blacklisted_peer_ids_size",
+        help: "Current size of the blacklistedPeerIds Map",
+      }),
+      blacklistedPeerDirection: register.gauge<{direction: Direction}>({
+        name: "lodestar_discovery_blacklisted_peer_direction",
+        help: "Whether peer disconnected us or we disconnected them",
+        labelNames: ["direction"],
       }),
       findNodeQueryRequests: register.gauge<{action: string}>({
         name: "lodestar_discovery_find_node_query_requests_total",
