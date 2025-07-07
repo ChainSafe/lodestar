@@ -439,8 +439,9 @@ export class SyncChain {
       const res = await wrapError(this.downloadBeaconBlocksByRange(peer, batch.request, partialDownload));
 
       if (!res.err) {
-        const blocks = batch.downloadingSuccess(res.result);
-        if (blocks !== null) {
+        const downloadSuccessOutput = batch.downloadingSuccess(res.result);
+        if (downloadSuccessOutput.status === BatchStatus.AwaitingProcessing) {
+          const blocks = downloadSuccessOutput.blocks;
           let hasPostDenebBlocks = false;
           const blobs = blocks.reduce((acc, blockInput) => {
             hasPostDenebBlocks ||= blockInput.type === BlockInputType.availableData;
@@ -474,7 +475,7 @@ export class SyncChain {
           });
           this.triggerBatchProcessor();
         } else {
-          const pendingDataColumns = res.result.pendingDataColumns?.join(",");
+          const pendingDataColumns = downloadSuccessOutput.pendingDataColumns.join(",");
           this.logger.debug("Partially downloaded batch", {
             id: this.logId,
             ...batch.getMetadata(),

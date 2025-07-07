@@ -50,6 +50,16 @@ export type BatchMetadata = {
   status: BatchStatus;
 };
 
+export type DownloadSuccessOutput =
+  | {
+      status: BatchStatus.AwaitingProcessing;
+      blocks: BlockInput[];
+    }
+  | {
+      status: BatchStatus.AwaitingDownload;
+      pendingDataColumns: number[];
+    };
+
 /**
  * Batches are downloaded at the first block of the epoch.
  *
@@ -114,22 +124,40 @@ export class Batch {
   /**
    * Downloading -> AwaitingProcessing
    */
-  downloadingSuccess(downloadResult: {blocks: BlockInput[]; pendingDataColumns: null | number[]}): null | BlockInput[] {
+  downloadingSuccess(downloadResult: {
+    blocks: BlockInput[];
+    pendingDataColumns: null | number[];
+  }): DownloadSuccessOutput {
     if (this.state.status !== BatchStatus.Downloading) {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.Downloading));
     }
+    let updatedPendingDataColumns = this.state.partialDownload?.pendingDataColumns ?? null;
 
     const {blocks, pendingDataColumns} = downloadResult;
-    if (pendingDataColumns === null) {
-      this.state = {status: BatchStatus.AwaitingProcessing, peer: this.state.peer, blocks};
-      return blocks;
+    if (updatedPendingDataColumns == null) {
+      // state pendingDataColumns is null as initial value, just update it to pendingDataColumns in this case
+      updatedPendingDataColumns = pendingDataColumns;
+    } else {
+      updatedPendingDataColumns =
+        // pendingDataColumns = null means a complete download
+        pendingDataColumns == null
+          ? null
+          : // if not state pendingDataColumns should be reduced over time, see see https://github.com/ChainSafe/lodestar/issues/8036
+            updatedPendingDataColumns.filter((column) => pendingDataColumns.includes(column));
     }
 
+    if (updatedPendingDataColumns === null) {
+      // complete download
+      this.state = {status: BatchStatus.AwaitingProcessing, peer: this.state.peer, blocks};
+      return {status: BatchStatus.AwaitingProcessing, blocks};
+    }
+
+    // partial download, track updatedPendingDataColumns in state
     this.state = {
       status: BatchStatus.AwaitingDownload,
-      partialDownload: blocks.length === 0 ? null : {blocks, pendingDataColumns},
+      partialDownload: blocks.length === 0 ? null : {blocks, pendingDataColumns: updatedPendingDataColumns},
     };
-    return null;
+    return {status: BatchStatus.AwaitingDownload, pendingDataColumns: updatedPendingDataColumns};
   }
 
   /**
