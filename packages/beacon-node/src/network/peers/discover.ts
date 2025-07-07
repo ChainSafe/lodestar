@@ -190,7 +190,7 @@ export class PeerDiscovery {
     if (metrics) {
       metrics.discovery.cachedENRsSize.addCollect(() => {
         metrics.discovery.cachedENRsSize.set(this.cachedENRs.size);
-        metrics.discovery.blacklistedPeersSize.set(this.blacklistedPeerIds.size);
+        metrics.discovery.blacklistedPeerIdsSize.set(this.blacklistedPeerIds.size);
         metrics.discovery.peersToConnect.set(this.peersToConnect);
 
         // PeerDAS metrics
@@ -382,8 +382,10 @@ export class PeerDiscovery {
     }
 
     pruneSetToMax(this.blacklistedPeerIds, MAX_BLACKLISTED_PEER_IDS, (a, b) => {
-      const t1 = this.blacklistedPeerIds.get(a);
-      const t2 = this.blacklistedPeerIds.get(b);
+      // biome-ignore lint/style/noNonNullAssertion: pulled from Map so must exist
+      const t1 = this.blacklistedPeerIds.get(a)!;
+      // biome-ignore lint/style/noNonNullAssertion: pulled from Map so must exist
+      const t2 = this.blacklistedPeerIds.get(b)!;
       return t2 - t1; // remove oldest first
     });
   };

@@ -778,7 +778,7 @@ export class PeerManager {
 
     // remove the ping and status timer for the peer
     this.connectedPeers.delete(peerIdStr);
-    this.discovery.blacklistPeer(peerIdStr, "inbound");
+    this.discovery?.blacklistPeer(peerIdStr, "inbound");
     this.logger.verbose("a peer disconnected us", {peer: prettyPrintPeerIdStr(peerIdStr), direction, status});
     this.networkEventBus.emit(NetworkEvent.peerDisconnected, {peer: peerIdStr});
     this.metrics?.peerDisconnectedEvent.inc({direction});
@@ -812,7 +812,7 @@ export class PeerManager {
     } catch (e) {
       this.logger.verbose("Failed to send goodbye", {peer: prettyPrintPeerIdStr(peerIdStr)}, e as Error);
     } finally {
-      this.discovery.blacklistPeer(peerIdStr, "outbound");
+      this.discovery?.blacklistPeer(peerIdStr, "outbound");
       await this.disconnect(peer);
     }
   }
