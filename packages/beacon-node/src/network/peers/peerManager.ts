@@ -1,5 +1,5 @@
 import {BitArray, toHexString} from "@chainsafe/ssz";
-import {Connection, PeerId, PrivateKey} from "@libp2p/interface";
+import {Connection, Direction, PeerId, PrivateKey} from "@libp2p/interface";
 import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
 import {ForkSeq, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
@@ -778,8 +778,8 @@ export class PeerManager {
 
     // remove the ping and status timer for the peer
     this.connectedPeers.delete(peerIdStr);
-    this.discovery.blacklistPeer(peerIdStr);
-    this.logger.verbose("a peer disconnected", {peer: prettyPrintPeerIdStr(peerIdStr), direction, status});
+    this.discovery.blacklistPeer(peerIdStr, "inbound");
+    this.logger.verbose("a peer disconnected us", {peer: prettyPrintPeerIdStr(peerIdStr), direction, status});
     this.networkEventBus.emit(NetworkEvent.peerDisconnected, {peer: peerIdStr});
     this.metrics?.peerDisconnectedEvent.inc({direction});
     this.libp2p.peerStore
@@ -796,12 +796,13 @@ export class PeerManager {
   }
 
   private async goodbyeAndDisconnect(peer: PeerId, goodbye: GoodByeReasonCode): Promise<void> {
+    const peerIdStr = peer.toString();
     try {
       const reason = GOODBYE_KNOWN_CODES[goodbye.toString()] || "";
       this.metrics?.peerGoodbyeSent.inc({reason});
-      this.logger.debug("disconnected a peer", {reason, peerId: prettyPrintPeerId(peer)});
+      this.logger.debug("we disconnected a peer", {reason, peerId: prettyPrintPeerIdStr(peerIdStr)});
 
-      const conn = getConnection(this.libp2p, peer.toString());
+      const conn = getConnection(this.libp2p, peerIdStr);
       if (conn && Date.now() - conn.timeline.open > LONG_PEER_CONNECTION_MS) {
         this.metrics?.peerLongConnectionDisconnect.inc({reason});
       }
@@ -809,8 +810,9 @@ export class PeerManager {
       // Wrap with shorter timeout than regular ReqResp requests to speed up shutdown
       await withTimeout(() => this.reqResp.sendGoodbye(peer, BigInt(goodbye)), 1_000);
     } catch (e) {
-      this.logger.verbose("Failed to send goodbye", {peer: prettyPrintPeerId(peer)}, e as Error);
+      this.logger.verbose("Failed to send goodbye", {peer: prettyPrintPeerIdStr(peerIdStr)}, e as Error);
     } finally {
+      this.discovery.blacklistPeer(peerIdStr, "outbound");
       await this.disconnect(peer);
     }
   }
