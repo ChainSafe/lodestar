@@ -18,7 +18,7 @@ import {getLibp2pError} from "../libp2p/error.js";
 import {ENRKey, SubnetType} from "../metadata.js";
 import {NetworkConfig} from "../networkConfig.js";
 import {NodeId, computeNodeId} from "../subnets/interface.js";
-import {getConnectionsMap, prettyPrintPeerId} from "../util.js";
+import {getConnectionsMap, prettyPrintPeerId, prettyPrintPeerIdStr} from "../util.js";
 import {IPeerRpcScoreStore, ScoreState} from "./score/index.js";
 import {deserializeEnrSubnets, zeroAttnets, zeroSyncnets} from "./utils/enrSubnetsDeserialize.js";
 import {type GroupQueries} from "./utils/prioritizePeers.js";
@@ -27,6 +27,13 @@ import {type GroupQueries} from "./utils/prioritizePeers.js";
 const MAX_CACHED_ENRS = 100;
 /** Max age a cached ENR will be considered for dial */
 const MAX_CACHED_ENR_AGE_MS = 5 * 60 * 1000;
+
+/** Nominal timeout for disconnected or disconnecting peers is one hour */
+const PEER_BLACKLIST_TIMEOUT_MIN = 60;
+const PEER_BLACKLIST_TIMEOUT_MS = PEER_BLACKLIST_TIMEOUT_MIN * 60 * 1000;
+
+/** Prune blacklist for expired timeouts this often (5min) */
+const PEER_BLACKLIST_PRUNE_INTERVAL_MS = 5 * 60 * 1000;
 
 export type PeerDiscoveryOpts = {
   discv5FirstQueryDelayMs: number;
@@ -65,6 +72,7 @@ export enum DiscoveredPeerStatus {
   cached = "cached",
   dropped = "dropped",
   no_multiaddrs = "no_multiaddrs",
+  blacklisted = "blacklisted",
 }
 
 export enum NotDialReason {
@@ -116,6 +124,8 @@ export class PeerDiscovery {
   private networkConfig: NetworkConfig;
   private config: BeaconConfig;
   private cachedENRs = new Map<PeerIdStr, CachedENR>();
+  private blacklistedPeerIds = new Map<PeerIdStr, number>();
+  private blacklistPruneInterval: NodeJS.Timeout;
   private randomNodeQuery: QueryStatus = {code: QueryStatusCode.NotActive};
   private peersToConnect = 0;
   private subnetRequests: Record<SubnetType, Map<number, SubnetRequestInfo>> = {
@@ -146,6 +156,7 @@ export class PeerDiscovery {
     // TODO-das: remove
     this.nodeId = networkConfig.getNodeId();
     this.groupRequests = new Map();
+    this.blacklistPruneInterval = setInterval(this.onBlacklistPruneInterval, PEER_BLACKLIST_PRUNE_INTERVAL_MS);
 
     this.discv5StartMs = 0;
     this.discv5StartMs = Date.now();
@@ -214,6 +225,7 @@ export class PeerDiscovery {
   async stop(): Promise<void> {
     this.libp2p.removeEventListener("peer:discovery", this.onDiscoveredPeer);
     this.discv5.off("discovered", this.onDiscoveredENR);
+    clearInterval(this.blacklistPruneInterval);
     await this.discv5.close();
   }
 
@@ -338,6 +350,33 @@ export class PeerDiscovery {
     });
   }
 
+  blacklistPeer(peerIdStr: PeerIdStr): void {
+    if (this.blacklistedPeerIds.has(peerIdStr)) {
+      this.logger.warn("blacklistPeer called on peer already in blacklistedENRs", {
+        peerId: prettyPrintPeerIdStr(peerIdStr),
+      });
+      return;
+    }
+
+    const cachedENR = this.cachedENRs.get(peerIdStr);
+    if (!cachedENR) {
+      this.logger.debug("blacklistedPeer was not in cachedENRs", {peerId: peerIdStr});
+      return;
+    }
+
+    this.logger.debug(`adding peer to blacklistedPeers for ${PEER_BLACKLIST_TIMEOUT_MIN} minutes`, {peerId: peerIdStr});
+    this.blacklistedPeerIds.set(peerIdStr, Date.now() + PEER_BLACKLIST_TIMEOUT_MS);
+  }
+
+  private onBlacklistPruneInterval = () => {
+    const currentTimeMs = Date.now();
+    for (const [peerIdStr, endTimeMs] of this.blacklistedPeerIds.entries()) {
+      if (endTimeMs < currentTimeMs) {
+        this.blacklistedPeerIds.delete(peerIdStr);
+      }
+    }
+  };
+
   /**
    * Request discv5 to find peers if there is no query in progress
    */
@@ -442,8 +481,14 @@ export class PeerDiscovery {
     syncnets: boolean[],
     custodySubnetCount?: number
   ): DiscoveredPeerStatus {
+    const peerIdStr = peerId.toString();
+    if (this.blacklistedPeerIds.has(peerIdStr)) {
+      this.logger.warn("blacklisted peer was rediscovered. enforcing cool-off period", {peerId: peerIdStr});
+      return DiscoveredPeerStatus.blacklisted;
+    }
+
     const nodeId = computeNodeId(peerId);
-    this.logger.warn("handleDiscoveredPeer", {nodeId: toHexString(nodeId), peerId: peerId.toString()});
+    this.logger.warn("handleDiscoveredPeer", {nodeId: toHexString(nodeId), peerId: peerIdStr});
     try {
       // Check if peer is not banned or disconnected
       if (this.peerRpcScores.getScoreState(peerId) !== ScoreState.Healthy) {
@@ -486,7 +531,7 @@ export class PeerDiscovery {
       }
 
       // Add to pending good peers with a last seen time
-      this.cachedENRs.set(peerId.toString(), cachedPeer);
+      this.cachedENRs.set(peerIdStr, cachedPeer);
       const dropped = pruneSetToMax(this.cachedENRs, MAX_CACHED_ENRS);
       // If the cache was already full, count the peer as dropped
       return dropped > 0 ? DiscoveredPeerStatus.dropped : DiscoveredPeerStatus.cached;

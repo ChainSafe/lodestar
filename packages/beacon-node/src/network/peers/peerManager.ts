@@ -18,7 +18,7 @@ import {NetworkConfig} from "../networkConfig.js";
 import {ReqRespMethod} from "../reqresp/ReqRespBeaconNode.js";
 import {StatusCache} from "../statusCache.js";
 import {NodeId, SubnetsService, computeNodeId} from "../subnets/index.js";
-import {getConnection, getConnectionsMap, prettyPrintPeerId} from "../util.js";
+import {getConnection, getConnectionsMap, prettyPrintPeerId, prettyPrintPeerIdStr} from "../util.js";
 import {ClientKind, getKnownClientFromAgentVersion} from "./client.js";
 import {PeerDiscovery, SubnetDiscvQueryMs} from "./discover.js";
 import {PeerData, PeersData} from "./peersData.js";
@@ -774,16 +774,17 @@ export class PeerManager {
    */
   private onLibp2pPeerDisconnect = (evt: CustomEvent<Connection>): void => {
     const {direction, status, remotePeer} = evt.detail;
+    const peerIdStr = remotePeer.toString();
 
     // remove the ping and status timer for the peer
-    this.connectedPeers.delete(remotePeer.toString());
-
-    this.logger.verbose("peer disconnected", {peer: prettyPrintPeerId(remotePeer), direction, status});
-    this.networkEventBus.emit(NetworkEvent.peerDisconnected, {peer: remotePeer.toString()});
+    this.connectedPeers.delete(peerIdStr);
+    this.discovery.blacklistPeer(peerIdStr);
+    this.logger.verbose("a peer disconnected", {peer: prettyPrintPeerIdStr(peerIdStr), direction, status});
+    this.networkEventBus.emit(NetworkEvent.peerDisconnected, {peer: peerIdStr});
     this.metrics?.peerDisconnectedEvent.inc({direction});
     this.libp2p.peerStore
       .merge(remotePeer, {tags: {[PEER_RELEVANT_TAG]: undefined}})
-      .catch((e) => this.logger.verbose("cannot untag peer", {peerId: remotePeer.toString()}, e as Error));
+      .catch((e) => this.logger.verbose("cannot untag peer", {peerId: peerIdStr}, e as Error));
   };
 
   private async disconnect(peer: PeerId): Promise<void> {
@@ -798,7 +799,7 @@ export class PeerManager {
     try {
       const reason = GOODBYE_KNOWN_CODES[goodbye.toString()] || "";
       this.metrics?.peerGoodbyeSent.inc({reason});
-      this.logger.debug("disconnected peer", {reason, peerId: prettyPrintPeerId(peer)});
+      this.logger.debug("disconnected a peer", {reason, peerId: prettyPrintPeerId(peer)});
 
       const conn = getConnection(this.libp2p, peer.toString());
       if (conn && Date.now() - conn.timeline.open > LONG_PEER_CONNECTION_MS) {
