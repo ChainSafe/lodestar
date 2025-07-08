@@ -23,6 +23,7 @@ import {
 import {createExtractBlockSlotRootFns} from "./extractSlotRootFns.js";
 import {GossipHandlerOpts, ValidatorFnsModules, getGossipHandlers} from "./gossipHandlers.js";
 import {createGossipQueues} from "./gossipQueues/index.js";
+import {MINIMUM_WAIT_TIME_MS} from "./gossipQueues/indexed.js";
 import {ValidatorFnModules, getGossipValidatorBatchFn, getGossipValidatorFn} from "./gossipValidatorFn.js";
 import {PendingGossipsubMessage} from "./types.js";
 
@@ -158,6 +159,7 @@ export class NetworkProcessor {
   private readonly awaitingGossipsubMessagesByRootBySlot: MapDef<Slot, MapDef<RootHex, Set<PendingGossipsubMessage>>>;
   private unknownBlockGossipsubMessagesCount = 0;
   private unknownRootsBySlot = new MapDef<Slot, Set<RootHex>>(() => new Set());
+  private nextTickTimeout: NodeJS.Timeout | null = null;
 
   constructor(
     modules: NetworkProcessorModules,
@@ -302,8 +304,20 @@ export class NetworkProcessor {
       this.metrics?.gossipValidationQueue.droppedJobs.inc({topic: message.topic.type}, droppedCount);
     }
 
+    if (this.nextTickTimeout != null) {
+      clearTimeout(this.nextTickTimeout);
+    }
+
     // Tentatively perform work
     this.executeWork();
+
+    // we know there could messages in the queue that could be processed in the next `MINIMUM_WAIT_TIME_MS`
+    // this is to prevent the last message not being processed
+    this.nextTickTimeout = setTimeout(() => {
+      this.nextTickTimeout = null;
+      this.executeWork();
+      // +1 to make sure all messages get executed
+    }, MINIMUM_WAIT_TIME_MS + 1);
   }
 
   private async onBlockProcessed({

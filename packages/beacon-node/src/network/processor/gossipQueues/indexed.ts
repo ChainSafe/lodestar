@@ -14,7 +14,7 @@ type QueueItem<T> = {
  * Starting from peerDAS, we also use this queue for data_column_sidecar topic
  * without using this queue, total job time + job wait time is almost 500ms in fulu-devnet-0 so the constant still makes sense.
  */
-const MINIMUM_WAIT_TIME_MS = 50;
+export const MINIMUM_WAIT_TIME_MS = 50;
 
 /**
  * This implementation tries to get the most items with same key:
