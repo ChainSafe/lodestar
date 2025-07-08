@@ -100,6 +100,8 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
       epoch: entry.EPOCH,
     })),
   ]
+    // Remove unscheduled fork boundaries
+    .filter(({epoch}) => epoch !== Infinity)
     // Sort by epoch in ascending order
     .sort((a, b) => a.epoch - b.epoch);
 
