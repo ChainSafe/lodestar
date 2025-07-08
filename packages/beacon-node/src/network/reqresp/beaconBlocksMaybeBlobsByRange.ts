@@ -30,7 +30,7 @@ export async function beaconBlocksMaybeBlobsByRange(
   request: phase0.BeaconBlocksByRangeRequest,
   currentEpoch: Epoch,
   partialDownload: PartialDownload,
-  metrics?: Metrics | null,
+  metrics: Metrics | null,
   logger?: Logger
 ): Promise<{blocks: BlockInput[]; pendingDataColumns: null | number[]}> {
   const {peerId, client: peerClient, custodyGroups: peerColumns, earliestAvailableSlot} = peer;

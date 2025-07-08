@@ -101,7 +101,7 @@ export function getBeaconBlockApi({
           dataColumnsIndex: new Uint8Array(Array.from({length: dataColumnSidecars.length}, (_, j) => 1 + j)),
           dataColumns: dataColumnSidecars,
           dataColumnsBytes: dataColumnSidecars.map(() => null),
-          dataColumnsSource: DataColumnsSource.api,
+          dataColumnsSource: DataColumnsSource.beaconApi,
         } as BlockInputDataColumns;
         blobSidecars = [];
       } else if (fork === ForkName.deneb || fork === ForkName.electra) {
@@ -301,6 +301,7 @@ export function getBeaconBlockApi({
         blockForImport.blockData.fork === ForkName.fulu
       ) {
         const {dataColumns} = blockForImport.blockData;
+        metrics?.dataColumns.bySource.inc({source: DataColumnsSource.beaconApi}, dataColumns.length);
 
         for (const dataColumnSidecar of dataColumns) {
           chain.emitter.emit(routes.events.EventType.dataColumnSidecar, {

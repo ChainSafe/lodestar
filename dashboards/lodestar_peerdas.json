@@ -7,20 +7,6 @@
       "pluginId": "prometheus",
       "pluginName": "Prometheus",
       "type": "datasource"
-    },
-    {
-      "description": "",
-      "label": "Beacon node job name",
-      "name": "VAR_BEACON_JOB",
-      "type": "constant",
-      "value": "beacon"
-    },
-    {
-      "description": "",
-      "label": "Validator client job name",
-      "name": "VAR_VALIDATOR_JOB",
-      "type": "constant",
-      "value": "validator"
     }
   ],
   "annotations": {
@@ -79,7 +65,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Total number of received data columns by source",
+      "description": "Number of received data columns by source",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -147,9 +133,9 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(lodestar_data_columns_by_source_total[$rate_interval]) * 12",
+          "expr": "rate(lodestar_data_columns_by_source[$rate_interval]) * 12",
           "instant": false,
-          "legendFormat": "{{sourse}}",
+          "legendFormat": "__auto",
           "range": true,
           "refId": "A"
         }
@@ -1942,24 +1928,6 @@
         "name": "Filters",
         "skipUrlSync": false,
         "type": "adhoc"
-      },
-      {
-        "description": "Job name used in Prometheus config to scrape Beacon node",
-        "hide": 2,
-        "label": "Beacon node job name",
-        "name": "beacon_job",
-        "query": "${VAR_BEACON_JOB}",
-        "skipUrlSync": false,
-        "type": "constant"
-      },
-      {
-        "description": "Job name used in Prometheus config to scrape Validator client",
-        "hide": 2,
-        "label": "Validator client job name",
-        "name": "validator_job",
-        "query": "${VAR_VALIDATOR_JOB}",
-        "skipUrlSync": false,
-        "type": "constant"
       }
     ]
   },

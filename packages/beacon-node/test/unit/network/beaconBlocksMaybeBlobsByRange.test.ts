@@ -122,6 +122,7 @@ describe.skip("beaconBlocksMaybeBlobsByRange", () => {
         {peerId, client: "PEER_CLIENT", custodyGroups: []},
         rangeRequest,
         0,
+        null,
         null
       );
       expect(response).toEqual(expectedResponse);
