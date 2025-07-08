@@ -837,20 +837,7 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
         metrics?.peerDas.dataColumnSidecarProcessingSuccesses.inc();
         metrics?.gossipBlob.recvToValidation.observe(recvToValidation);
         metrics?.gossipBlob.validationTime.observe(validationTime);
-        const blockInputAndMeta = chain.seenGossipBlockInput.getGossipBlockInput(
-          config,
-          {
-            type: GossipedInputType.dataColumn,
-            dataColumnSidecar: sidecar,
-            dataColumnBytes: bytes,
-          },
-          metrics
-        );
-        const {blockInputMeta} = blockInputAndMeta;
-        last = {blockInput: blockInputAndMeta.blockInput, peerIdStr};
-
-        // this will be logged multiple times for this batch but it's not much per slot and we can confirm if they're validated in batch there
-        logger.debug("Received gossip dataColumn", {
+        const logCtx = {
           slot: slot,
           root: blockHex,
           curentSlot: chain.clock.currentSlot,
@@ -859,11 +846,34 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
           delaySec,
           subnet,
           columnIndex: sidecar.index,
-          ...blockInputMeta,
           recvToValLatency,
           recvToValidation,
           validationTime,
-        });
+        };
+        try {
+          const blockInputAndMeta = chain.seenGossipBlockInput.getGossipBlockInput(
+            config,
+            {
+              type: GossipedInputType.dataColumn,
+              dataColumnSidecar: sidecar,
+              dataColumnBytes: bytes,
+            },
+            metrics
+          );
+          const {blockInputMeta} = blockInputAndMeta;
+          last = {blockInput: blockInputAndMeta.blockInput, peerIdStr};
+
+          // this will be logged multiple times for this batch but it's not much per slot and we can confirm if they're validated in batch there
+          logger.verbose("Received gossip dataColumn", {
+            ...logCtx,
+            ...blockInputMeta,
+          });
+        } catch (e) {
+          logger.debug("Error adding data column sidecar to gossip block input", logCtx, e as Error);
+          // there could be error like DataColumnSidecarErrorCode.ALREADY_KNOWN when calling getGossipBlockInput
+          results[i] = e as DataColumnSidecarGossipError;
+          // last statement, no need continue;
+        }
       }
 
       if (last == null) {
