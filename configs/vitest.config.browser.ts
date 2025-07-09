@@ -2,7 +2,6 @@
 
 import path from "node:path";
 import {nodePolyfills} from "vite-plugin-node-polyfills";
-// import topLevelAwait from "vite-plugin-top-level-await";
 import {defineProject} from "vitest/config";
 import {blsBrowserPlugin} from "../scripts/vite/plugins/blsBrowserPlugin.js";
 
@@ -47,7 +46,6 @@ export const browserTestProject = defineProject({
     },
   },
   plugins: [
-    // topLevelAwait(),
     blsBrowserPlugin(),
     nodePolyfills({
       include: ["buffer", "process", "util", "string_decoder", "url", "querystring", "events"],
