@@ -678,9 +678,9 @@
     uint8arrays "^5.0.0"
     wherearewe "^2.0.1"
 
-"@chainsafe/libp2p-quic@https://github.com/chainsafe/js-libp2p-quic/raw/cayman/fix-segfault/package.tgz":
+"@chainsafe/libp2p-quic@https://github.com/chainsafe/js-libp2p-quic/raw/lodestar-test/package.tgz":
   version "1.1.1"
-  resolved "https://github.com/chainsafe/js-libp2p-quic/raw/cayman/fix-segfault/package.tgz#8921f9e256ca61ad2bde13f0d154f734e7220d56"
+  resolved "https://github.com/chainsafe/js-libp2p-quic/raw/lodestar-test/package.tgz#e3b3800ddb6674de76d411814864de5c13651abf"
   dependencies:
     "@libp2p/crypto" "^5.0.12"
     "@libp2p/interface" "^2.6.0"
