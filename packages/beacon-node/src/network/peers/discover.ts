@@ -9,7 +9,7 @@ import {pruneSetToMax, sleep} from "@lodestar/utils";
 import {bytesToInt} from "@lodestar/utils";
 import {Multiaddr} from "@multiformats/multiaddr";
 import {IClock} from "../../util/clock.js";
-import {getCustodyGroups, getDataColumns} from "../../util/dataColumns.js";
+import {getCustodyGroups} from "../../util/dataColumns.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
 import {Discv5Worker} from "../discv5/index.js";
 import {LodestarDiscv5Opts} from "../discv5/types.js";
@@ -17,7 +17,7 @@ import {Libp2p} from "../interface.js";
 import {getLibp2pError} from "../libp2p/error.js";
 import {ENRKey, SubnetType} from "../metadata.js";
 import {NetworkConfig} from "../networkConfig.js";
-import {NodeId, computeNodeId} from "../subnets/interface.js";
+import {computeNodeId} from "../subnets/interface.js";
 import {getConnectionsMap, prettyPrintPeerId} from "../util.js";
 import {IPeerRpcScoreStore, ScoreState} from "./score/index.js";
 import {deserializeEnrSubnets, zeroAttnets, zeroSyncnets} from "./utils/enrSubnetsDeserialize.js";
@@ -32,10 +32,6 @@ export type PeerDiscoveryOpts = {
   discv5FirstQueryDelayMs: number;
   discv5: LodestarDiscv5Opts;
   connectToDiscv5Bootnodes?: boolean;
-  // experimental flags for debugging
-  // TODO-das: remove
-  onlyConnectToBiggerDataNodes?: boolean;
-  onlyConnectToMinimalCustodyOverlapNodes?: boolean;
 };
 
 export type PeerDiscoveryModules = {
@@ -108,12 +104,9 @@ export class PeerDiscovery {
   readonly discv5: Discv5Worker;
   private libp2p: Libp2p;
   private readonly clock: IClock;
-  // TODO-das: remove nodeId and sampleSubnets once we remove onlyConnect* flag
-  private nodeId: NodeId;
   private peerRpcScores: IPeerRpcScoreStore;
   private metrics: NetworkCoreMetrics | null;
   private logger: LoggerNode;
-  private networkConfig: NetworkConfig;
   private config: BeaconConfig;
   private cachedENRs = new Map<PeerIdStr, CachedENR>();
   private randomNodeQuery: QueryStatus = {code: QueryStatusCode.NotActive};
@@ -129,9 +122,6 @@ export class PeerDiscovery {
   private discv5FirstQueryDelayMs: number;
 
   private connectToDiscv5BootnodesOnStart: boolean | undefined = false;
-  // TODO-das: remove the below 2 flags
-  private onlyConnectToBiggerDataNodes: boolean | undefined = false;
-  private onlyConnectToMinimalCustodyOverlapNodes: boolean | undefined = false;
 
   constructor(modules: PeerDiscoveryModules, opts: PeerDiscoveryOpts, discv5: Discv5Worker) {
     const {libp2p, clock, peerRpcScores, metrics, logger, networkConfig} = modules;
@@ -140,19 +130,14 @@ export class PeerDiscovery {
     this.peerRpcScores = peerRpcScores;
     this.metrics = metrics;
     this.logger = logger;
-    this.networkConfig = networkConfig;
     this.config = networkConfig.getConfig();
     this.discv5 = discv5;
-    // TODO-das: remove
-    this.nodeId = networkConfig.getNodeId();
     this.groupRequests = new Map();
 
     this.discv5StartMs = 0;
     this.discv5StartMs = Date.now();
     this.discv5FirstQueryDelayMs = opts.discv5FirstQueryDelayMs;
     this.connectToDiscv5BootnodesOnStart = opts.connectToDiscv5Bootnodes;
-    this.onlyConnectToBiggerDataNodes = opts.onlyConnectToBiggerDataNodes;
-    this.onlyConnectToMinimalCustodyOverlapNodes = opts.onlyConnectToMinimalCustodyOverlapNodes;
 
     this.libp2p.addEventListener("peer:discovery", this.onDiscoveredPeer);
     this.discv5.on("discovered", this.onDiscoveredENR);
@@ -499,38 +484,6 @@ export class PeerDiscovery {
   private shouldDialPeer(peer: CachedENR): boolean {
     const forkSeq = this.config.getForkSeq(this.clock.currentSlot);
     if (forkSeq >= ForkSeq.fulu && peer.peerCustodyGroups !== null) {
-      // begin onlyConnect* experimental logic
-      // TODO-das: remove
-      const nodeId = computeNodeId(peer.peerId);
-      const peerCustodyGroupCount = peer.peerCustodyGroups.length;
-      const peerCustodyColumns = getDataColumns(nodeId, peerCustodyGroupCount);
-
-      const sampleSubnets = this.networkConfig.getCustodyConfig().sampledSubnets;
-      const matchingSubnetsNum = sampleSubnets.reduce(
-        (acc, elem) => acc + (peerCustodyColumns.includes(elem) ? 1 : 0),
-        0
-      );
-      const hasAllColumns = matchingSubnetsNum === sampleSubnets.length;
-      const hasMinCustodyMatchingColumns = matchingSubnetsNum >= Math.max(this.config.CUSTODY_REQUIREMENT);
-
-      this.logger.warn("peerCustodyColumns", {
-        peerId: peer.peerId.toString(),
-        peerNodeId: toHexString(nodeId),
-        hasAllColumns,
-        peerCustodyGroupCount,
-        peerCustodyColumns: peerCustodyColumns.join(" "),
-        sampleSubnets: sampleSubnets.join(" "),
-        nodeId: `${toHexString(this.nodeId)}`,
-      });
-      if (this.onlyConnectToBiggerDataNodes && !hasAllColumns) {
-        return false;
-      }
-
-      if (this.onlyConnectToMinimalCustodyOverlapNodes && !hasMinCustodyMatchingColumns) {
-        return false;
-      }
-      // end onlyConnect* experimental logic
-
       // pre-fulu `this.groupRequests` is empty
       // starting from fulu, we need to make sure we have stable subnet sampling peers first
       // given CUSTODY_REQUIREMENT = 4 and 100 peers, we have 400 custody columns from peers
