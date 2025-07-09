@@ -177,6 +177,7 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
     chain: {
       validatorMonitorLogs: args.validatorMonitorLogs,
       persistInvalidSszObjectsDir: beaconPaths.persistInvalidSszObjectsDir,
+      persistOrphanedBlocksDir: beaconPaths.persistOrphanedBlocksDir,
     },
   });
   // Add metrics metadata to show versioning + network info in Prometheus + Grafana

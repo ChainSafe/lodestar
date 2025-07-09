@@ -1,4 +1,5 @@
 import {PeerId} from "@libp2p/interface";
+import {config} from "@lodestar/config/default";
 import {getEmptyLogger} from "@lodestar/logger/empty";
 import {LodestarError, fromHex} from "@lodestar/utils";
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
@@ -21,8 +22,11 @@ const testCases: {
   {
     id: "Yield two chunks, then throw",
     protocol: pingProtocol(async function* () {
-      yield sszSnappyPing.binaryPayload;
-      yield sszSnappyPing.binaryPayload;
+      const payload = sszSnappyPing.binaryPayload;
+      const epoch = config.forks[payload.fork].epoch;
+      const boundary = config.getForkBoundaryAtEpoch(epoch);
+      yield {...payload, boundary};
+      yield {...payload, boundary};
       throw new LodestarError({code: "TEST_ERROR"});
     }),
     requestChunks: sszSnappyPing.chunks, // Request Ping: BigInt(1)

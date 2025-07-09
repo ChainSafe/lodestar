@@ -1,6 +1,12 @@
 import {routes} from "@lodestar/api";
 import {ApiError, ApplicationMethods} from "@lodestar/api/server";
-import {ForkPostBellatrix, SLOTS_PER_HISTORICAL_ROOT, isForkPostBellatrix, isForkPostElectra} from "@lodestar/params";
+import {
+  ForkName,
+  ForkPostBellatrix,
+  SLOTS_PER_HISTORICAL_ROOT,
+  isForkPostBellatrix,
+  isForkPostElectra,
+} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   computeTimeAtSlot,
@@ -16,11 +22,12 @@ import {
   deneb,
   isSignedBlockContents,
 } from "@lodestar/types";
-import {fromHex, sleep, toRootHex} from "@lodestar/utils";
+import {fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
 import {
   BlobsSource,
   BlockInput,
   BlockInputDataBlobs,
+  BlockInputType,
   BlockSource,
   ImportBlockOpts,
   getBlockInput,
@@ -31,7 +38,7 @@ import {BlockError, BlockErrorCode, BlockGossipError} from "../../../../chain/er
 import {validateGossipBlock} from "../../../../chain/validation/block.js";
 import {OpSource} from "../../../../chain/validatorMonitor.js";
 import {NetworkEvent} from "../../../../network/index.js";
-import {computeBlobSidecars} from "../../../../util/blobs.js";
+import {computeBlobSidecars, kzgCommitmentToVersionedHash} from "../../../../util/blobs.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {ApiModules} from "../../types.js";
@@ -200,8 +207,6 @@ export function getBeaconBlockApi({
       await sleep(msToBlockSlot);
     }
 
-    chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRoot});
-
     // TODO: Validate block
     const delaySec =
       seenTimestampSec - (chain.genesisTime + blockForImport.block.message.slot * config.SECONDS_PER_SLOT);
@@ -235,6 +240,29 @@ export function getBeaconBlockApi({
           }),
     ];
     await promiseAllMaybeAsync(publishPromises);
+
+    if (chain.emitter.listenerCount(routes.events.EventType.blockGossip)) {
+      chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRoot});
+    }
+
+    if (
+      chain.emitter.listenerCount(routes.events.EventType.blobSidecar) &&
+      blockForImport.type === BlockInputType.availableData &&
+      (blockForImport.blockData.fork === ForkName.deneb || blockForImport.blockData.fork === ForkName.electra)
+    ) {
+      const {blobs} = blockForImport.blockData;
+
+      for (const blobSidecar of blobs) {
+        const {index, kzgCommitment} = blobSidecar;
+        chain.emitter.emit(routes.events.EventType.blobSidecar, {
+          blockRoot,
+          slot,
+          index,
+          kzgCommitment: toHex(kzgCommitment),
+          versionedHash: toHex(kzgCommitmentToVersionedHash(kzgCommitment)),
+        });
+      }
+    }
   };
 
   const publishBlindedBlock: ApplicationMethods<routes.beacon.block.Endpoints>["publishBlindedBlock"] = async (

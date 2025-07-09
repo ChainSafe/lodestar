@@ -9,7 +9,6 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
 import {BeaconChain} from "../../../../../src/chain/chain.js";
-import {CommonBlockBody} from "../../../../../src/chain/interface.js";
 import {BlockType, produceBlockBody} from "../../../../../src/chain/produceBlock/index.js";
 import {PayloadIdCache} from "../../../../../src/execution/index.js";
 import {SyncState} from "../../../../../src/sync/interface.js";
@@ -97,23 +96,20 @@ describe("api/validator - produceBlockV3", () => {
       } as ProtoBlock);
       modules.chain.getProposerHead.mockReturnValue({blockRoot: toHexString(fullBlock.parentRoot)} as ProtoBlock);
       modules.chain.forkChoice.getBlock.mockReturnValue(zeroProtoBlock);
+      modules.chain.produceCommonBlockBody.mockResolvedValue({
+        attestations: fullBlock.body.attestations,
+        attesterSlashings: fullBlock.body.attesterSlashings,
+        deposits: fullBlock.body.deposits,
+        proposerSlashings: fullBlock.body.proposerSlashings,
+        eth1Data: fullBlock.body.eth1Data,
+        graffiti: fullBlock.body.graffiti,
+        randaoReveal: fullBlock.body.randaoReveal,
+        voluntaryExits: fullBlock.body.voluntaryExits,
+        blsToExecutionChanges: [],
+        syncAggregate: fullBlock.body.syncAggregate,
+      });
 
       if (enginePayloadValue !== null) {
-        const commonBlockBody: CommonBlockBody = {
-          attestations: fullBlock.body.attestations,
-          attesterSlashings: fullBlock.body.attesterSlashings,
-          deposits: fullBlock.body.deposits,
-          proposerSlashings: fullBlock.body.proposerSlashings,
-          eth1Data: fullBlock.body.eth1Data,
-          graffiti: fullBlock.body.graffiti,
-          randaoReveal: fullBlock.body.randaoReveal,
-          voluntaryExits: fullBlock.body.voluntaryExits,
-          blsToExecutionChanges: [],
-          syncAggregate: fullBlock.body.syncAggregate,
-        };
-
-        modules.chain.produceCommonBlockBody.mockResolvedValue(commonBlockBody);
-
         modules.chain.produceBlock.mockResolvedValue({
           block: fullBlock,
           executionPayloadValue: BigInt(enginePayloadValue),
@@ -197,6 +193,18 @@ describe("api/validator - produceBlockV3", () => {
       executionPayloadValue,
       consensusBlockValue,
     });
+    modules.chain.produceCommonBlockBody.mockResolvedValue({
+      attestations: fullBlock.body.attestations,
+      attesterSlashings: fullBlock.body.attesterSlashings,
+      deposits: fullBlock.body.deposits,
+      proposerSlashings: fullBlock.body.proposerSlashings,
+      eth1Data: fullBlock.body.eth1Data,
+      graffiti: fullBlock.body.graffiti,
+      randaoReveal: fullBlock.body.randaoReveal,
+      voluntaryExits: fullBlock.body.voluntaryExits,
+      blsToExecutionChanges: [],
+      syncAggregate: fullBlock.body.syncAggregate,
+    });
 
     // check if expectedFeeRecipient is passed to produceBlock
     await api.produceBlockV3({slot, randaoReveal, graffiti, feeRecipient});
@@ -207,6 +215,7 @@ describe("api/validator - produceBlockV3", () => {
       parentBlockRoot,
       parentSlot: currentSlot - 1,
       feeRecipient,
+      commonBlockBodyPromise: expect.any(Promise),
     });
 
     // check that no feeRecipient is passed to produceBlock so that produceBlockBody will
@@ -219,6 +228,7 @@ describe("api/validator - produceBlockV3", () => {
       parentBlockRoot,
       parentSlot: currentSlot - 1,
       feeRecipient: undefined,
+      commonBlockBodyPromise: expect.any(Promise),
     });
   });
 

@@ -17,6 +17,7 @@ type BeaconExtraArgs = {
   dbDir?: string;
   persistInvalidSszObjectsDir?: string;
   persistInvalidSszObjectsRetentionHours?: number;
+  persistOrphanedBlocksDir?: string;
   peerStoreDir?: string;
   persistNetworkIdentity?: boolean;
   private?: boolean;
@@ -108,6 +109,13 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
     description: "Number of hours to keep invalid SSZ objects on local disk",
     hidden: true,
     type: "number",
+  },
+
+  persistOrphanedBlocksDir: {
+    description: "Enable and specify a directory to persist orphaned blocks",
+    defaultDescription: defaultBeaconPaths.persistOrphanedBlocksDir,
+    hidden: true,
+    type: "string",
   },
 
   peerStoreDir: {
