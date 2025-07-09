@@ -106,6 +106,7 @@ export class PeerDiscovery {
     attnets: new Map(),
     syncnets: new Map(),
   };
+  private transports: string[];
 
   private discv5StartMs: number;
   private discv5FirstQueryDelayMs: number;
@@ -159,6 +160,8 @@ export class PeerDiscovery {
         }
       });
     }
+
+    this.transports = libp2p.services.components.transportManager.getTransports().map((t) => t[Symbol.toStringTag]);
   }
 
   static async init(modules: PeerDiscoveryModules, opts: PeerDiscoveryOpts): Promise<PeerDiscovery> {
@@ -382,6 +385,11 @@ export class PeerDiscovery {
       // Ignore connected peers. TODO: Is this check necessary?
       if (this.isPeerConnected(peerId.toString())) {
         return DiscoveredPeerStatus.already_connected;
+      }
+
+      // ignore peers if they don't have the transport we are using
+      if (!this.transports.includes("tcp") && !multiaddrQUIC) {
+        return DiscoveredPeerStatus.no_multiaddrs;
       }
 
       // Ignore dialing peers
