@@ -14,6 +14,8 @@ export const unitTestMinimalProject = defineProject({
     name: "unit-minimal",
     include: ["**/test/unit-minimal/**/*.test.ts"],
     setupFiles,
+    // Current vitest `forks` pool is not yet supported with Bun
+    // so we conditionally switch to our custom pool which run tests in main process
     pool: isBun ? "vitest-in-process-pool" : "forks",
     poolOptions: {
       forks: isBun ? {singleFork: true} : {},
@@ -37,6 +39,8 @@ export const unitTestMainnetProject = defineProject({
     // for now I tried to identify such tests an increase the limit a bit higher
     testTimeout: 20_000,
     hookTimeout: 20_000,
+    // Current vitest `forks` pool is not yet supported with Bun
+    // so we conditionally switch to our custom pool which run tests in main process
     pool: isBun ? "vitest-in-process-pool" : "forks",
     poolOptions: {
       forks: isBun ? {singleFork: true} : {},
