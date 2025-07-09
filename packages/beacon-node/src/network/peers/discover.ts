@@ -475,7 +475,10 @@ export class PeerDiscovery {
 
     // Note: PeerDiscovery adds the multiaddrs beforehand
     const peerIdShort = prettyPrintPeerId(peerId);
-    this.logger.debug("Dialing discovered peer", {peer: peerIdShort});
+    this.logger.debug("Dialing discovered peer", {
+      peer: peerIdShort,
+      addresses: peer.addresses.map((a) => a.multiaddr.toString()).join(", "),
+    });
 
     this.metrics?.discovery.dialAttempts.inc();
     const timer = this.metrics?.discovery.dialTime.startTimer();
