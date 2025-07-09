@@ -675,7 +675,7 @@
 
 "@chainsafe/libp2p-quic@https://github.com/chainsafe/js-libp2p-quic/raw/lodestar-test/package.tgz":
   version "1.1.3"
-  resolved "https://github.com/chainsafe/js-libp2p-quic/raw/lodestar-test/package.tgz#638a5e31329bb34f6047a8a885f6f343f3e84e27"
+  resolved "https://github.com/chainsafe/js-libp2p-quic/raw/lodestar-test/package.tgz#905622a4705d0346b953e758378d25e8b18c6816"
   dependencies:
     "@libp2p/crypto" "^5.1.7"
     "@libp2p/interface" "^2.10.5"
