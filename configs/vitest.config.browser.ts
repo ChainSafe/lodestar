@@ -5,6 +5,8 @@ import {nodePolyfills} from "vite-plugin-node-polyfills";
 import {defineProject} from "vitest/config";
 import {blsBrowserPlugin} from "../scripts/vite/plugins/blsBrowserPlugin.js";
 
+const isBun = "bun" in process.versions;
+
 export const browserTestProject = defineProject({
   test: {
     name: "browser",
@@ -46,6 +48,10 @@ export const browserTestProject = defineProject({
     },
   },
   plugins: [
+    // Bun does allow commonjs to be in pipeline and `vite-plugin-top-level-await` is using it
+    // So we convert it to the dynamic import so bun unit tests does not load these
+    // when the `import` called on top of the config file
+    ...(isBun ? [] : [import("vite-plugin-top-level-await").then((p) => p.default())]),
     blsBrowserPlugin(),
     nodePolyfills({
       include: ["buffer", "process", "util", "string_decoder", "url", "querystring", "events"],
