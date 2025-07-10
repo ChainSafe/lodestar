@@ -288,6 +288,8 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     NODE_CUSTODY_REQUIREMENT: false,
     VALIDATOR_CUSTODY_REQUIREMENT: fuluForkRelevant,
     BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: fuluForkRelevant,
+    NUMBER_OF_COLUMNS: fuluForkRelevant,
+    DATA_COLUMN_SIDECAR_SUBNET_COUNT: fuluForkRelevant,
     BLOB_SCHEDULE: fuluForkRelevant,
   };
 }

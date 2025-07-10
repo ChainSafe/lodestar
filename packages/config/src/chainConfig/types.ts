@@ -90,6 +90,10 @@ export type ChainConfig = {
   VALIDATOR_CUSTODY_REQUIREMENT: number;
   BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: number;
 
+  // PeerDAS
+  NUMBER_OF_COLUMNS: number;
+  DATA_COLUMN_SIDECAR_SUBNET_COUNT: number;
+
   // Blob Scheduling
   BLOB_SCHEDULE: BlobSchedule;
 };
@@ -173,6 +177,10 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   NODE_CUSTODY_REQUIREMENT: "number",
   VALIDATOR_CUSTODY_REQUIREMENT: "number",
   BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: "number",
+
+  // PeerDAS
+  NUMBER_OF_COLUMNS: "number",
+  DATA_COLUMN_SIDECAR_SUBNET_COUNT: "number",
 
   // Blob Scheduling
   BLOB_SCHEDULE: "blob_schedule",

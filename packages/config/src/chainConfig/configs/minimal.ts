@@ -127,6 +127,11 @@ export const chainConfig: ChainConfig = {
   VALIDATOR_CUSTODY_REQUIREMENT: 8,
   BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: 32000000000,
 
+  // PeerDAS
+  // ---------------------------------------------------------------
+  NUMBER_OF_COLUMNS: 128,
+  DATA_COLUMN_SIDECAR_SUBNET_COUNT: 128,
+
   // Blob Scheduling
   // ---------------------------------------------------------------
   BLOB_SCHEDULE: [],
