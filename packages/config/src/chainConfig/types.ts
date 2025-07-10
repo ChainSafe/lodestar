@@ -93,7 +93,6 @@ export type ChainConfig = {
   NODE_CUSTODY_REQUIREMENT: number;
   VALIDATOR_CUSTODY_REQUIREMENT: number;
   BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: number;
-  MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: number;
 
   // Blob Scheduling
   BLOB_SCHEDULE: BlobSchedule;
@@ -182,7 +181,6 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   NODE_CUSTODY_REQUIREMENT: "number",
   VALIDATOR_CUSTODY_REQUIREMENT: "number",
   BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: "number",
-  MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: "number",
 
   // Blob Scheduling
   BLOB_SCHEDULE: "blob_schedule",
