@@ -112,6 +112,7 @@ ${validatorsToExit.map((v) => `${v.pubkey} ${v.index} ${v.status}`).join("\n")}`
 
     const alreadySubmitted = [];
     for (const [i, validatorToExit] of validatorsToExit.entries()) {
+<<<<<<< HEAD
       const {err} = await wrapError(processVoluntaryExit({config, client}, exitEpoch, validatorToExit));
       const {pubkey, index} = validatorToExit;
       if (err === null) {
@@ -123,6 +124,31 @@ ${validatorsToExit.map((v) => `${v.pubkey} ${v.index} ${v.status}`).join("\n")}`
           console.log(
             `Voluntary exit errored for ${pubkey} (${index}) ${i + 1}/${signersToExit.length}: ${err.message}`
           );
+=======
+      const v: {index: ValidatorIndex; signer: Signer; pubkey: string} = validatorToExit;
+      let signedVoluntaryExit: phase0.SignedVoluntaryExit;
+      try {
+        signedVoluntaryExit = await signVoluntaryExit(config, exitEpoch, v);
+      } catch (err) {
+        console.log(`Signing voluntary exit errored for ${v.pubkey} (${v.index}): ${err instanceof Error ? err.message : err}`);
+        continue;
+      }
+      if (args.saveToFile) {
+        signedExits.push(signedVoluntaryExit);
+        console.log(`Prepared signed voluntary exit for ${v.pubkey} (${v.index}) ${i + 1}/${signersToExit.length}`);
+      } else {
+        try {
+          (await client.beacon.submitPoolVoluntaryExit({signedVoluntaryExit})).assertOk();
+          console.log(`Submitted voluntary exit for ${v.pubkey} (${v.index}) ${i + 1}/${signersToExit.length}`);
+        } catch (err: any) {
+          if (err && err.message && err.message.includes("ALREADY_EXISTS")) {
+            alreadySubmitted.push(v);
+          } else {
+            console.log(
+              `Voluntary exit errored for ${v.pubkey} (${v.index}) ${i + 1}/${signersToExit.length}: ${err && err.message ? err.message : err}`
+            );
+          }
+>>>>>>> 7aba5b1b4b (Update voluntaryExit.ts)
         }
       }
     }
@@ -137,11 +163,11 @@ ${validatorsToExit.map((v) => `${v.pubkey} ${v.index} ${v.status}`).join("\n")}`
   },
 };
 
-async function processVoluntaryExit(
-  {config, client}: {config: BeaconConfig; client: ApiClient},
+async function signVoluntaryExit(
+  config: BeaconConfig,
   exitEpoch: Epoch,
   validatorToExit: {index: ValidatorIndex; signer: Signer; pubkey: string}
-): Promise<void> {
+): Promise<phase0.SignedVoluntaryExit> {
   const {index, signer, pubkey} = validatorToExit;
   const slot = computeStartSlotAtEpoch(exitEpoch);
   const domain = config.getDomainForVoluntaryExit(slot);
@@ -165,12 +191,15 @@ async function processVoluntaryExit(
       throw new YargsError(`Unexpected signer type for ${pubkey}`);
   }
 
-  const signedVoluntaryExit: phase0.SignedVoluntaryExit = {
+  return {
     message: voluntaryExit,
     signature: signature.toBytes(),
   };
+<<<<<<< HEAD
 
   (await client.beacon.submitPoolVoluntaryExit({signedVoluntaryExit})).assertOk();
+=======
+>>>>>>> 7aba5b1b4b (Update voluntaryExit.ts)
 }
 
 type SignerPubkey = {signer: Signer; pubkey: string};
