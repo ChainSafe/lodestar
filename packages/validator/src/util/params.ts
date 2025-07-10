@@ -283,13 +283,16 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     FIELD_ELEMENTS_PER_CELL: fuluForkRelevant,
     FIELD_ELEMENTS_PER_EXT_BLOB: fuluForkRelevant,
     KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH: fuluForkRelevant,
+    NUMBER_OF_COLUMNS: fuluForkRelevant,
+    NUMBER_OF_CUSTODY_GROUPS: fuluForkRelevant,
+    DATA_COLUMN_SIDECAR_SUBNET_COUNT: fuluForkRelevant,
+    MAX_REQUEST_DATA_COLUMN_SIDECARS: fuluForkRelevant,
     SAMPLES_PER_SLOT: fuluForkRelevant,
     CUSTODY_REQUIREMENT: fuluForkRelevant,
     NODE_CUSTODY_REQUIREMENT: false,
     VALIDATOR_CUSTODY_REQUIREMENT: fuluForkRelevant,
     BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: fuluForkRelevant,
-    NUMBER_OF_COLUMNS: fuluForkRelevant,
-    DATA_COLUMN_SIDECAR_SUBNET_COUNT: fuluForkRelevant,
+    MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: fuluForkRelevant,
     BLOB_SCHEDULE: fuluForkRelevant,
   };
 }
