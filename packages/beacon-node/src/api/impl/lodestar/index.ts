@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
+import {ValueOf} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
+import {ArrayOf} from "@lodestar/api/lib/utils/codecs.js";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {ChainForkConfig} from "@lodestar/config";
 import {Repository} from "@lodestar/db";
@@ -14,8 +16,16 @@ import {QueuedStateRegenerator, RegenRequest} from "../../../chain/regen/index.j
 import {IBeaconDb} from "../../../db/interface.js";
 import {GossipType} from "../../../network/index.js";
 import {profileNodeJS, writeHeapSnapshot} from "../../../util/profile.js";
+import {getBlockResponse} from "../beacon/blocks/utils.js";
 import {getStateResponseWithRegen} from "../beacon/state/utils.js";
 import {ApiModules} from "../types.js";
+
+export const AttesterSlashingListTypePhase0 = ArrayOf(ssz.phase0.AttesterSlashing);
+export const AttesterSlashingListTypeElectra = ArrayOf(ssz.electra.AttesterSlashing);
+
+export type AttesterSlashingListPhase0 = ValueOf<typeof AttesterSlashingListTypePhase0>;
+export type AttesterSlashingListElectra = ValueOf<typeof AttesterSlashingListTypeElectra>;
+export type AttesterSlashingList = AttesterSlashingListPhase0 | AttesterSlashingListElectra;
 
 export function getLodestarApi({
   chain,
@@ -216,6 +226,22 @@ export function getLodestarApi({
           proof: proof,
         },
         meta: {executionOptimistic, finalized, version: fork},
+      };
+    },
+
+    async getBlocksAttesterSlashings({block_ids}) {
+      const fork = chain.config.getForkName(chain.clock.currentSlot);
+
+      const attesterSlashingsList: AttesterSlashingList = [];
+      for (const blockId of block_ids) {
+        const {block} = await getBlockResponse(chain, blockId);
+        for (const attesterSlashing of block.message.body.attesterSlashings) {
+          attesterSlashingsList.push(attesterSlashing);
+        }
+      }
+      return {
+        data: attesterSlashingsList,
+        meta: {version: fork},
       };
     },
   };

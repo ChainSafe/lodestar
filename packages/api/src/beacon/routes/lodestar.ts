@@ -1,5 +1,6 @@
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
+import {isForkPostElectra} from "@lodestar/params";
 import {Epoch, RootHex, Slot, ssz} from "@lodestar/types";
 import {
   ArrayOf,
@@ -10,11 +11,14 @@ import {
   EmptyResponseCodec,
   EmptyResponseData,
   JsonOnlyResponseCodec,
+  WithVersion,
 } from "../../utils/codecs.js";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {
   ExecutionOptimisticFinalizedAndVersionCodec,
   ExecutionOptimisticFinalizedAndVersionMeta,
+  VersionCodec,
+  VersionMeta,
 } from "../../utils/metadata.js";
 import {StateArgs} from "./beacon/state.js";
 import {FilterGetPeers, NodePeer, PeerDirection, PeerState} from "./node.js";
@@ -98,6 +102,15 @@ const HistoricalSummariesResponseType = new ContainerType(
 );
 
 export type HistoricalSummariesResponse = ValueOf<typeof HistoricalSummariesResponseType>;
+
+export type BlockId = RootHex | Slot | "head" | "genesis" | "finalized" | "justified";
+
+export const AttesterSlashingListTypePhase0 = ArrayOf(ssz.phase0.AttesterSlashing);
+export const AttesterSlashingListTypeElectra = ArrayOf(ssz.electra.AttesterSlashing);
+
+export type AttesterSlashingListPhase0 = ValueOf<typeof AttesterSlashingListTypePhase0>;
+export type AttesterSlashingListElectra = ValueOf<typeof AttesterSlashingListTypeElectra>;
+export type AttesterSlashingList = AttesterSlashingListPhase0 | AttesterSlashingListElectra;
 
 export type Endpoints = {
   /** Trigger to write a heapdump to disk at `dirpath`. May take > 1min */
@@ -291,6 +304,18 @@ export type Endpoints = {
     {root: RootHex; slot: Slot}[],
     EmptyMeta
   >;
+
+  /**
+   * Get list of blocks
+   * Retrieves AttesterSlashings included in requested blocks.
+   */
+  getBlocksAttesterSlashings: Endpoint<
+    "GET",
+    {block_ids: BlockId[]},
+    {query: {block_ids: string[]}},
+    AttesterSlashingList,
+    VersionMeta
+  >;
 };
 
 export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpoints> {
@@ -451,6 +476,21 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       method: "GET",
       req: EmptyRequestCodec,
       resp: JsonOnlyResponseCodec,
+    },
+    getBlocksAttesterSlashings: {
+      url: "/eth/v1/lodestar/blocks/attester_slashings",
+      method: "GET",
+      req: {
+        writeReq: ({block_ids}) => ({query: {block_ids: block_ids.map(String)}}),
+        parseReq: ({query}) => ({block_ids: query.block_ids}),
+        schema: {query: {block_ids: Schema.StringArray}},
+      },
+      resp: {
+        data: WithVersion((fork) =>
+          isForkPostElectra(fork) ? AttesterSlashingListTypeElectra : AttesterSlashingListTypePhase0
+        ),
+        meta: VersionCodec,
+      },
     },
   };
 }

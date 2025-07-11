@@ -37,6 +37,9 @@
     },
     "./keymanager/server": {
       "import": "./lib/keymanager/server/index.js"
+    },
+    "./lib/utils/codecs.js": {
+      "import": "./lib/utils/codecs.js"
     }
   },
   "typesVersions": {
