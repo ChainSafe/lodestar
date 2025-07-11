@@ -232,11 +232,20 @@ export function getLodestarApi({
     async getBlocksAttesterSlashings({block_ids}) {
       const fork = chain.config.getForkName(chain.clock.currentSlot);
 
+      const blockPromises = block_ids.map((blockId) => getBlockResponse(chain, blockId));
+      const blockResults = await Promise.allSettled(blockPromises);
+
       const attesterSlashingsList: AttesterSlashingList = [];
-      for (const blockId of block_ids) {
-        const {block} = await getBlockResponse(chain, blockId);
-        for (const attesterSlashing of block.message.body.attesterSlashings) {
-          attesterSlashingsList.push(attesterSlashing);
+      for (const result of blockResults) {
+        // Missed block
+        if (result.status === "rejected") {
+          continue;
+        }
+        const {block} = result.value;
+        if (block?.message.body.attesterSlashings) {
+          for (const attesterSlashing of block.message.body.attesterSlashings) {
+            attesterSlashingsList.push(attesterSlashing);
+          }
         }
       }
       return {
