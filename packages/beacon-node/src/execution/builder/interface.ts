@@ -1,4 +1,4 @@
-import {ForkPostBellatrix} from "@lodestar/params";
+import {ForkName, ForkPostBellatrix} from "@lodestar/params";
 import {
   BLSPubkey,
   Epoch,
@@ -44,6 +44,7 @@ export interface IExecutionBuilder {
     executionRequests?: electra.ExecutionRequests;
   }>;
   submitBlindedBlock(
+    fork: ForkName,
     signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>
-  ): Promise<SignedBeaconBlockOrContents>;
+  ): Promise<SignedBeaconBlockOrContents | void>;
 }

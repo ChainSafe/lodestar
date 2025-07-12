@@ -6,6 +6,7 @@ import {
   SLOTS_PER_HISTORICAL_ROOT,
   isForkPostBellatrix,
   isForkPostElectra,
+  isForkPostFulu,
 } from "@lodestar/params";
 import {
   computeEpochAtSlot,
@@ -276,6 +277,7 @@ export function getBeaconBlockApi({
         .getPostBellatrixForkTypes(signedBlindedBlock.message.slot)
         .BlindedBeaconBlock.hashTreeRoot(signedBlindedBlock.message)
     );
+    const fork = config.getForkName(slot);
 
     // Either the payload/blobs are cached from i) engine locally or ii) they are from the builder
     //
@@ -297,17 +299,22 @@ export function getBeaconBlockApi({
     const source = ProducedBlockSource.builder;
     chain.logger.debug("Reconstructing  signedBlockOrContents", {slot, blockRoot, source});
 
-    const signedBlockOrContents = await reconstructBuilderBlockOrContents(chain, {
+    const signedBlockOrContents = await reconstructBuilderBlockOrContents(fork, chain, {
       data: signedBlindedBlock,
       bytes: context?.sszBytes,
     });
 
-    // the full block is published by relay and it's possible that the block is already known to us
-    // by gossip
-    //
-    // see: https://github.com/ChainSafe/lodestar/issues/5404
-    chain.logger.info("Publishing assembled block", {slot, blockRoot, source});
-    return publishBlock({signedBlockOrContents}, {...context, sszBytes: null}, {...opts, ignoreIfKnown: true});
+    if (signedBlockOrContents !== undefined) {
+      // the full block is published by relay and it's possible that the block is already known to us
+      // by gossip
+      //
+      // see: https://github.com/ChainSafe/lodestar/issues/5404
+      chain.logger.info("Publishing assembled block", {slot, blockRoot, source});
+      return publishBlock({signedBlockOrContents}, {...context, sszBytes: null}, {...opts, ignoreIfKnown: true});
+    }
+
+    // Skip publishing. This is an expected behaviour post-fulu
+    chain.logger.info("Skip publishing. Builder published the block on our behalf.");
   };
 
   return {
@@ -539,14 +546,20 @@ export function getBeaconBlockApi({
 }
 
 async function reconstructBuilderBlockOrContents(
+  fork: ForkName,
   chain: ApiModules["chain"],
   signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>
-): Promise<SignedBeaconBlockOrContents> {
+): Promise<SignedBeaconBlockOrContents | void> {
   const executionBuilder = chain.executionBuilder;
   if (!executionBuilder) {
     throw Error("executionBuilder required to publish SignedBlindedBeaconBlock");
   }
 
-  const signedBlockOrContents = await executionBuilder.submitBlindedBlock(signedBlindedBlock);
-  return signedBlockOrContents;
+  const res = await executionBuilder.submitBlindedBlock(fork, signedBlindedBlock);
+
+  if (res === undefined && !isForkPostFulu(fork)) {
+    throw Error("executionBuilder returned empty response for submitBlindedBlock in pre-fulu fork");
+  }
+
+  return res;
 }
