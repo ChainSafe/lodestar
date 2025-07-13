@@ -4,6 +4,7 @@ import {Transfer, expose} from "@chainsafe/threads/worker";
 import {chainConfigFromJson, createBeaconConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db";
 import {getNodeLogger} from "@lodestar/logger/node";
+import {BeaconStateTransitionMetrics, getMetrics} from "@lodestar/state-transition";
 import {BeaconDb} from "../../../db/index.js";
 import {RegistryMetricCreator, collectNodeJSMetrics} from "../../../metrics/index.js";
 import {JobFnQueue} from "../../../util/queue/fnQueue.js";
@@ -34,6 +35,7 @@ const abortController = new AbortController();
 const metricsRegister = workerData.metricsEnabled ? new RegistryMetricCreator() : null;
 let historicalStateRegenMetrics: HistoricalStateRegenMetrics | undefined;
 let queueMetrics: QueueMetrics | undefined;
+let stateTransitionMetrics: BeaconStateTransitionMetrics | undefined;
 
 if (metricsRegister) {
   const closeMetrics = collectNodeJSMetrics(metricsRegister, "lodestar_historical_state_worker_");
@@ -41,6 +43,7 @@ if (metricsRegister) {
 
   historicalStateRegenMetrics = createHistoricalStateRegenMetrics(metricsRegister);
   queueMetrics = createHistoricalStateQueueMetrics(metricsRegister);
+  stateTransitionMetrics = getMetrics(metricsRegister);
 }
 
 const queue = new JobFnQueue(
@@ -65,7 +68,7 @@ const api: HistoricalStateWorkerApi = {
     historicalStateRegenMetrics?.regenRequestCount.inc();
 
     const stateBytes = await queue.push<Uint8Array>(() =>
-      getHistoricalState(slot, config, db, pubkey2index, historicalStateRegenMetrics)
+      getHistoricalState(slot, config, db, pubkey2index, historicalStateRegenMetrics, stateTransitionMetrics)
     );
     const result = Transfer(stateBytes, [stateBytes.buffer]) as unknown as Uint8Array;
 

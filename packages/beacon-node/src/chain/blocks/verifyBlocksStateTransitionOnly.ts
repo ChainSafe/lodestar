@@ -3,6 +3,7 @@ import {
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
   StateHashTreeRootSource,
+  StateTransitionSource,
   stateTransition,
 } from "@lodestar/state-transition";
 import {ErrorAborted, Logger} from "@lodestar/utils";
@@ -59,11 +60,12 @@ export async function verifyBlocksStateTransitionOnly(
         verifyProposer: !useBlsBatchVerify && !validSignatures && !validProposerSignature,
         verifySignatures: !useBlsBatchVerify && !validSignatures,
       },
-      {metrics, validatorMonitor}
+      {metrics, validatorMonitor, stateTransitionSource: StateTransitionSource.block}
     );
 
     const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
-      source: StateHashTreeRootSource.blockTransition,
+      source: StateTransitionSource.block,
+      stateHashTreeRootSource: StateHashTreeRootSource.blockTransition,
     });
     const stateRoot = postState.hashTreeRoot();
     hashTreeRootTimer?.();

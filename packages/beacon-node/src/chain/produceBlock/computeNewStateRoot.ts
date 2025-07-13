@@ -3,6 +3,7 @@ import {
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
   StateHashTreeRootSource,
+  StateTransitionSource,
   stateTransition,
 } from "@lodestar/state-transition";
 import {BeaconBlock, BlindedBeaconBlock, Gwei, Root} from "@lodestar/types";
@@ -39,14 +40,15 @@ export function computeNewStateRoot(
       // Preserve cache in source state, since the resulting state is not added to the state cache
       dontTransferCache: true,
     },
-    {metrics}
+    {metrics, stateTransitionSource: StateTransitionSource.block}
   );
 
   const {attestations, syncAggregate, slashing} = postState.proposerRewards;
   const proposerReward = BigInt(attestations + syncAggregate + slashing);
 
   const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
-    source: StateHashTreeRootSource.computeNewStateRoot,
+    source: StateTransitionSource.block,
+    stateHashTreeRootSource: StateHashTreeRootSource.computeNewStateRoot,
   });
   const newStateRoot = postState.hashTreeRoot();
   hashTreeRootTimer?.();

@@ -2,9 +2,11 @@ import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {BeaconConfig} from "@lodestar/config";
 import {
   BeaconStateAllForks,
+  BeaconStateTransitionMetrics,
   CachedBeaconStateAllForks,
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
+  StateTransitionSource,
   createCachedBeaconState,
   stateTransition,
 } from "@lodestar/state-transition";
@@ -64,18 +66,19 @@ export async function getHistoricalState(
   config: BeaconConfig,
   db: IBeaconDb,
   pubkey2index: PubkeyIndexMap,
-  metrics?: HistoricalStateRegenMetrics
+  historicalStateMetrics?: HistoricalStateRegenMetrics,
+  stateTransitionMetrics?: BeaconStateTransitionMetrics
 ): Promise<Uint8Array> {
-  const regenTimer = metrics?.regenTime.startTimer();
+  const regenTimer = historicalStateMetrics?.regenTime.startTimer();
 
-  const loadStateTimer = metrics?.loadStateTime.startTimer();
+  const loadStateTimer = historicalStateMetrics?.loadStateTime.startTimer();
   let state = await getNearestState(slot, config, db, pubkey2index).catch((e) => {
-    metrics?.regenErrorCount.inc({reason: RegenErrorType.loadState});
+    historicalStateMetrics?.regenErrorCount.inc({reason: RegenErrorType.loadState});
     throw e;
   });
   loadStateTimer?.();
 
-  const transitionTimer = metrics?.stateTransitionTime.startTimer();
+  const transitionTimer = historicalStateMetrics?.stateTransitionTime.startTimer();
   let blockCount = 0;
   for await (const block of db.blockArchive.valuesStream({gt: state.slot, lte: slot})) {
     try {
@@ -89,25 +92,25 @@ export async function getHistoricalState(
           executionPayloadStatus: ExecutionPayloadStatus.valid,
           dataAvailabilityStatus: DataAvailabilityStatus.Available,
         },
-        {metrics}
+        {metrics: stateTransitionMetrics, stateTransitionSource: StateTransitionSource.historicalState}
       );
     } catch (e) {
-      metrics?.regenErrorCount.inc({reason: RegenErrorType.blockProcessing});
+      historicalStateMetrics?.regenErrorCount.inc({reason: RegenErrorType.blockProcessing});
       throw e;
     }
     blockCount++;
     if (Buffer.compare(state.hashTreeRoot(), block.message.stateRoot) !== 0) {
-      metrics?.regenErrorCount.inc({reason: RegenErrorType.invalidStateRoot});
+      historicalStateMetrics?.regenErrorCount.inc({reason: RegenErrorType.invalidStateRoot});
     }
   }
-  metrics?.stateTransitionBlocks.observe(blockCount);
+  historicalStateMetrics?.stateTransitionBlocks.observe(blockCount);
   transitionTimer?.();
 
   if (state.slot !== slot) {
     throw Error(`Failed to generate historical state for slot ${slot}`);
   }
 
-  const serializeTimer = metrics?.stateSerializationTime.startTimer();
+  const serializeTimer = historicalStateMetrics?.stateSerializationTime.startTimer();
   const stateBytes = state.serialize();
   serializeTimer?.();
 

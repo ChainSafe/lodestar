@@ -1,7 +1,7 @@
 import {MetricsRegister} from "@lodestar/utils";
 import {ProposerRewardType} from "./block/types.js";
 import {EpochTransitionStep} from "./epoch/index.js";
-import {StateCloneSource, StateHashTreeRootSource} from "./stateTransition.js";
+import {StateCloneSource, StateHashTreeRootSource, StateTransitionSource} from "./stateTransition.js";
 import {CachedBeaconStateAllForks} from "./types.js";
 
 export type BeaconStateTransitionMetrics = ReturnType<typeof getMetrics>;
@@ -13,106 +13,135 @@ export function getMetrics(register: MetricsRegister) {
   // Using function style instead of class to prevent having to re-declare all MetricsPrometheus types.
 
   return {
-    epochTransitionTime: register.histogram({
+    // not on dashboard
+    epochTransitionTime: register.histogram<{source: StateTransitionSource}>({
       name: "lodestar_stfn_epoch_transition_seconds",
       help: "Time to process a single epoch transition in seconds",
+      labelNames: ["source"],
       // Epoch transitions are 100ms on very fast clients, and average 800ms on heavy networks
       buckets: [0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1, 1.25, 1.5, 3, 10],
     }),
-    epochTransitionCommitTime: register.histogram({
+    // not on dashboard
+    epochTransitionCommitTime: register.histogram<{source: StateTransitionSource}>({
       name: "lodestar_stfn_epoch_transition_commit_seconds",
       help: "Time to call commit after process a single epoch transition in seconds",
+      labelNames: ["source"],
       buckets: [0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1],
     }),
-    epochTransitionStepTime: register.histogram<{step: EpochTransitionStep}>({
+    // not on dashboard
+    epochTransitionStepTime: register.histogram<{source: StateTransitionSource; step: EpochTransitionStep}>({
       name: "lodestar_stfn_epoch_transition_step_seconds",
       help: "Time to call each step of epoch transition in seconds",
-      labelNames: ["step"],
+      labelNames: ["source", "step"],
       buckets: [0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1],
     }),
-    processBlockTime: register.histogram({
+    // not on dashboard
+    processBlockTime: register.histogram<{source: StateTransitionSource}>({
       name: "lodestar_stfn_process_block_seconds",
       help: "Time to process a single block in seconds",
+      labelNames: ["source"],
       // TODO: Add metrics for each step
       // Block processing can take 5-40ms, 100ms max
       buckets: [0.005, 0.01, 0.02, 0.05, 0.1, 1],
     }),
-    processBlockCommitTime: register.histogram({
+    // not on dashboard
+    processBlockCommitTime: register.histogram<{source: StateTransitionSource}>({
       name: "lodestar_stfn_process_block_commit_seconds",
       help: "Time to call commit after process a single block in seconds",
+      labelNames: ["source"],
       buckets: [0.005, 0.01, 0.02, 0.05, 0.1, 1],
     }),
-    stateHashTreeRootTime: register.histogram<{source: StateHashTreeRootSource}>({
+    // not on dashboard
+    stateHashTreeRootTime: register.histogram<{
+      source: StateTransitionSource;
+      stateHashTreeRootSource: StateHashTreeRootSource;
+    }>({
       name: "lodestar_stfn_hash_tree_root_seconds",
       help: "Time to compute the hash tree root of a post state in seconds",
       buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5],
-      labelNames: ["source"],
+      labelNames: ["source", "stateHashTreeRootSource"],
     }),
+    // not on dashboard
     numEffectiveBalanceUpdates: register.gauge({
       name: "lodestar_stfn_effective_balance_updates_count",
       help: "Total count of effective balance updates",
     }),
+    // lodestar_summary dashboard
     validatorsInActivationQueue: register.gauge({
       name: "lodestar_stfn_validators_in_activation_queue",
       help: "Current number of validators in the activation queue",
     }),
+    // lodestar_summary dashboard
     validatorsInExitQueue: register.gauge({
       name: "lodestar_stfn_validators_in_exit_queue",
       help: "Current number of validators in the exit queue",
     }),
+    // lodestar_block_processor dashboard
     preStateBalancesNodesPopulatedMiss: register.gauge<{source: StateCloneSource}>({
       name: "lodestar_stfn_balances_nodes_populated_miss_total",
       help: "Total count state.balances nodesPopulated is false on stfn",
       labelNames: ["source"],
     }),
+    // not on dashboard
     preStateBalancesNodesPopulatedHit: register.gauge<{source: StateCloneSource}>({
       name: "lodestar_stfn_balances_nodes_populated_hit_total",
       help: "Total count state.balances nodesPopulated is true on stfn",
       labelNames: ["source"],
     }),
+    // lodestar_block_processor dashboard
     preStateValidatorsNodesPopulatedMiss: register.gauge<{source: StateCloneSource}>({
       name: "lodestar_stfn_validators_nodes_populated_miss_total",
       help: "Total count state.validators nodesPopulated is false on stfn",
       labelNames: ["source"],
     }),
+    // not on dashboard
     preStateValidatorsNodesPopulatedHit: register.gauge<{source: StateCloneSource}>({
       name: "lodestar_stfn_validators_nodes_populated_hit_total",
       help: "Total count state.validators nodesPopulated is true on stfn",
       labelNames: ["source"],
     }),
+    // not on dashboard
     preStateClonedCount: register.histogram({
       name: "lodestar_stfn_state_cloned_count",
       help: "Histogram of cloned count per state every time state.clone() is called",
       buckets: [1, 2, 5, 10, 50, 250],
     }),
+    // not on dashboard
     postStateBalancesNodesPopulatedHit: register.gauge({
       name: "lodestar_stfn_post_state_balances_nodes_populated_hit_total",
       help: "Total count state.validators nodesPopulated is true on stfn for post state",
     }),
+    // not on dashboard
     postStateBalancesNodesPopulatedMiss: register.gauge({
       name: "lodestar_stfn_post_state_balances_nodes_populated_miss_total",
       help: "Total count state.validators nodesPopulated is false on stfn for post state",
     }),
+    // not on dashboard
     postStateValidatorsNodesPopulatedHit: register.gauge({
       name: "lodestar_stfn_post_state_validators_nodes_populated_hit_total",
       help: "Total count state.validators nodesPopulated is true on stfn for post state",
     }),
+    // not on dashboard
     postStateValidatorsNodesPopulatedMiss: register.gauge({
       name: "lodestar_stfn_post_state_validators_nodes_populated_miss_total",
       help: "Total count state.validators nodesPopulated is false on stfn for post state",
     }),
+    // lodestar_block_production dashboard
     newSeenAttestersPerBlock: register.gauge({
       name: "lodestar_stfn_new_seen_attesters_per_block_total",
       help: "Total count of new seen attesters per block",
     }),
+    // not on dashboard
     newSeenAttestersEffectiveBalancePerBlock: register.gauge({
       name: "lodestar_stfn_new_seen_attesters_effective_balance_per_block_total",
       help: "Total effective balance increment of new seen attesters per block",
     }),
+    // not on dashboard
     attestationsPerBlock: register.gauge({
       name: "lodestar_stfn_attestations_per_block_total",
       help: "Total count of attestations per block",
     }),
+    // not on dashboard
     proposerRewards: register.gauge<{type: ProposerRewardType}>({
       name: "lodestar_stfn_proposer_rewards_total",
       help: "Proposer reward by type per block",

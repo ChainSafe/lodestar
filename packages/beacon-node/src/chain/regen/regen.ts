@@ -6,6 +6,7 @@ import {
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
   StateHashTreeRootSource,
+  StateTransitionSource,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   processSlots,
@@ -255,6 +256,8 @@ export class StateRegenerator implements IStateRegeneratorInternal {
       try {
         // Only advances state trusting block's signture and hashes.
         // We are only running the state transition to get a specific state's data.
+        const metrics = this.modules.metrics;
+        const validatorMonitor = this.modules.validatorMonitor;
         state = stateTransition(
           state,
           block,
@@ -266,11 +269,12 @@ export class StateRegenerator implements IStateRegeneratorInternal {
             verifyProposer: false,
             verifySignatures: false,
           },
-          this.modules
+          {metrics, validatorMonitor, stateTransitionSource: StateTransitionSource.regen}
         );
 
         const hashTreeRootTimer = this.modules.metrics?.stateHashTreeRootTime.startTimer({
-          source: StateHashTreeRootSource.regenState,
+          source: StateTransitionSource.regen,
+          stateHashTreeRootSource: StateHashTreeRootSource.regenState,
         });
         const stateRoot = toRootHex(state.hashTreeRoot());
         hashTreeRootTimer?.();
@@ -336,7 +340,11 @@ async function processSlotsByCheckpoint(
 ): Promise<CachedBeaconStateAllForks> {
   let postState = await processSlotsToNearestCheckpoint(modules, preState, slot, regenCaller, opts);
   if (postState.slot < slot) {
-    postState = processSlots(postState, slot, opts, modules);
+    postState = processSlots(postState, slot, opts, {
+      metrics: modules.metrics,
+      validatorMonitor: modules.validatorMonitor,
+      stateTransitionSource: StateTransitionSource.regen,
+    });
   }
   return postState;
 }
@@ -380,7 +388,11 @@ export async function processSlotsToNearestCheckpoint(
       caller: regenCaller,
     });
     // processSlots calls .clone() before mutating
-    postState = processSlots(postState, nextEpochSlot, opts, modules);
+    postState = processSlots(postState, nextEpochSlot, opts, {
+      metrics: modules.metrics,
+      validatorMonitor: modules.validatorMonitor,
+      stateTransitionSource: StateTransitionSource.regen,
+    });
     metrics?.epochTransitionByCaller.inc({caller: regenCaller});
 
     // this is usually added when we prepare for next slot or validate gossip block

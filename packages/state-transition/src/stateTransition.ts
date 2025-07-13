@@ -43,6 +43,7 @@ export type StateTransitionOpts = BlockExternalData &
 export type StateTransitionModules = {
   metrics?: BeaconStateTransitionMetrics | null;
   validatorMonitor?: ValidatorMonitor | null;
+  stateTransitionSource: StateTransitionSource;
 };
 
 interface ValidatorMonitor {
@@ -54,6 +55,18 @@ interface ValidatorMonitor {
     isActivePrevEpoch: boolean[],
     balances?: number[]
   ): void;
+}
+
+/**
+ * state transition call tracked in metrics
+ */
+export enum StateTransitionSource {
+  stateTransition = "state_transition",
+  chain = "chain",
+  block = "block",
+  regen = "regen",
+  historicalState = "hisrotical_state",
+  undefined = "undefined",
 }
 
 /**
@@ -87,7 +100,9 @@ export function stateTransition(
     executionPayloadStatus: ExecutionPayloadStatus.valid,
     dataAvailabilityStatus: DataAvailabilityStatus.Available,
   },
-  {metrics, validatorMonitor}: StateTransitionModules = {}
+  {metrics, validatorMonitor, stateTransitionSource}: StateTransitionModules = {
+    stateTransitionSource: StateTransitionSource.undefined,
+  }
 ): CachedBeaconStateAllForks {
   const {verifyStateRoot = true, verifyProposer = true} = options;
 
@@ -106,7 +121,11 @@ export function stateTransition(
 
   // Process slots (including those with no blocks) since block.
   // Includes state upgrades
-  postState = processSlotsWithTransientCache(postState, blockSlot, options, {metrics, validatorMonitor});
+  postState = processSlotsWithTransientCache(postState, blockSlot, options, {
+    metrics,
+    validatorMonitor,
+    stateTransitionSource,
+  });
 
   // Verify proposer signature only
   if (verifyProposer && !verifyProposerSignature(postState, signedBlock)) {
@@ -117,11 +136,11 @@ export function stateTransition(
   const fork = state.config.getForkSeq(block.slot);
 
   // Note: time only on success
-  const processBlockTimer = metrics?.processBlockTime.startTimer();
+  const processBlockTimer = metrics?.processBlockTime.startTimer({source: stateTransitionSource});
 
   processBlock(fork, postState, block, options, options, metrics);
 
-  const processBlockCommitTimer = metrics?.processBlockCommitTime.startTimer();
+  const processBlockCommitTimer = metrics?.processBlockCommitTime.startTimer({source: stateTransitionSource});
   postState.commit();
   processBlockCommitTimer?.();
 
@@ -135,7 +154,8 @@ export function stateTransition(
   // Verify state root
   if (verifyStateRoot) {
     const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
-      source: StateHashTreeRootSource.stateTransition,
+      source: stateTransitionSource,
+      stateHashTreeRootSource: StateHashTreeRootSource.stateTransition,
     });
     const stateRoot = postState.hashTreeRoot();
     hashTreeRootTimer?.();
@@ -161,7 +181,9 @@ export function processSlots(
   state: CachedBeaconStateAllForks,
   slot: Slot,
   epochTransitionCacheOpts?: EpochTransitionCacheOpts & {dontTransferCache?: boolean},
-  {metrics, validatorMonitor}: StateTransitionModules = {}
+  {metrics, validatorMonitor, stateTransitionSource}: StateTransitionModules = {
+    stateTransitionSource: StateTransitionSource.undefined,
+  }
 ): CachedBeaconStateAllForks {
   // .clone() before mutating state in state transition
   let postState = state.clone(epochTransitionCacheOpts?.dontTransferCache);
@@ -173,7 +195,11 @@ export function processSlots(
   // State is already a ViewDU, which won't commit changes. Equivalent to .setStateCachesAsTransient()
   // postState.setStateCachesAsTransient();
 
-  postState = processSlotsWithTransientCache(postState, slot, epochTransitionCacheOpts, {metrics, validatorMonitor});
+  postState = processSlotsWithTransientCache(postState, slot, epochTransitionCacheOpts, {
+    metrics,
+    validatorMonitor,
+    stateTransitionSource,
+  });
 
   // Apply changes to state, must do before hashing
   postState.commit();
@@ -207,7 +233,9 @@ function processSlotsWithTransientCache(
   postState: CachedBeaconStateAllForks,
   slot: Slot,
   epochTransitionCacheOpts?: EpochTransitionCacheOpts,
-  {metrics, validatorMonitor}: StateTransitionModules = {}
+  {metrics, validatorMonitor, stateTransitionSource}: StateTransitionModules = {
+    stateTransitionSource: StateTransitionSource.undefined,
+  }
 ): CachedBeaconStateAllForks {
   const {config} = postState;
   if (postState.slot > slot) {
@@ -222,11 +250,14 @@ function processSlotsWithTransientCache(
       // At fork boundary we don't want to process "next fork" epoch before upgrading state
       const fork = postState.config.getForkSeq(postState.slot);
 
-      const epochTransitionTimer = metrics?.epochTransitionTime.startTimer();
+      const epochTransitionTimer = metrics?.epochTransitionTime.startTimer({source: stateTransitionSource});
 
       let epochTransitionCache: EpochTransitionCache;
       {
-        const timer = metrics?.epochTransitionStepTime.startTimer({step: EpochTransitionStep.beforeProcessEpoch});
+        const timer = metrics?.epochTransitionStepTime.startTimer({
+          source: stateTransitionSource,
+          step: EpochTransitionStep.beforeProcessEpoch,
+        });
         epochTransitionCache = beforeProcessEpoch(postState, epochTransitionCacheOpts);
         timer?.();
       }
@@ -247,7 +278,10 @@ function processSlotsWithTransientCache(
       postState.slot++;
 
       {
-        const timer = metrics?.epochTransitionStepTime.startTimer({step: EpochTransitionStep.afterProcessEpoch});
+        const timer = metrics?.epochTransitionStepTime.startTimer({
+          source: stateTransitionSource,
+          step: EpochTransitionStep.afterProcessEpoch,
+        });
         postState.epochCtx.afterProcessEpoch(postState, epochTransitionCache);
         timer?.();
       }
@@ -255,7 +289,7 @@ function processSlotsWithTransientCache(
       // Running commit here is not strictly necessary. The cost of running commit twice (here + after process block)
       // Should be negligible but gives better metrics to differentiate the cost of it for block and epoch proc.
       {
-        const timer = metrics?.epochTransitionCommitTime.startTimer();
+        const timer = metrics?.epochTransitionCommitTime.startTimer({source: stateTransitionSource});
         postState.commit();
         timer?.();
       }
