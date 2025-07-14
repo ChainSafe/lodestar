@@ -12,6 +12,7 @@ import {
   prioritizePeers,
   sortPeersToPrune,
 } from "../../../../src/network/peers/utils/prioritizePeers.js";
+import {linspace} from "../../../../src/util/numpy.js";
 import {getAttnets, getSyncnets} from "../../../utils/network.js";
 
 type Result = ReturnType<typeof prioritizePeers>;
@@ -591,6 +592,71 @@ describe("network / peers / priorization", async () => {
     },
 
     // TODO: Add a test case with syncnets priorization
+
+    {
+      id: "Request more peers per sampling and non-sampling groups",
+      connectedPeers: [
+        {
+          id: peers[0],
+          direction: null,
+          syncnets: none,
+          attnets: getAttnets([0]),
+          samplingGroups: linspace(0, 127),
+          score: 0,
+          status: null,
+        },
+        {
+          id: peers[1],
+          direction: null,
+          syncnets: none,
+          attnets: getAttnets([1]),
+          samplingGroups: linspace(0, 127),
+          score: 0,
+          status: null,
+        },
+        {
+          id: peers[2],
+          direction: null,
+          syncnets: none,
+          attnets: getAttnets([2]),
+          samplingGroups: linspace(0, 127),
+          score: 0,
+          status: null,
+        },
+        {
+          id: peers[3],
+          direction: null,
+          syncnets: none,
+          attnets: getAttnets([3]),
+          // need 1 more peer for column 127
+          samplingGroups: linspace(0, 126),
+          score: 0,
+          status: null,
+        },
+      ],
+      activeAttnets: [],
+      activeSyncnets: [],
+      samplingGroups: [0, 1, 2, 3, 4, 5, 6, 7],
+      opts: {...defaultOpts, targetGroupPeers: 6, maxPeers: 4, targetPeers: 4},
+      expectedResult: {
+        peersToDisconnect: new Map(),
+        peersToConnect: 0,
+        attnetQueries: [],
+        syncnetQueries: [],
+        groupQueries: new Map([
+          [0, 2],
+          [1, 2],
+          [2, 2],
+          [3, 2],
+          [4, 2],
+          [5, 2],
+          [6, 2],
+          [7, 2],
+          // need 1 more peer for non-sampling column 127
+          [127, 1],
+        ]),
+      },
+    },
   ];
 
   for (const {id, connectedPeers, activeAttnets, activeSyncnets, samplingGroups, opts, expectedResult} of testCases) {
