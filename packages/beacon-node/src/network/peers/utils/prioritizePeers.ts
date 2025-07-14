@@ -304,7 +304,9 @@ function requestSubnetPeers(
   for (let groupIndex = 0; groupIndex < NUMBER_OF_CUSTODY_GROUPS; groupIndex++) {
     const peersInGroup = peersPerGroup.get(groupIndex) ?? 0;
     metrics?.peerCountPerSamplingGroup.set({groupIndex}, peersInGroup);
-    const targetGroupPeers = ourSamplingGroupSet.has(groupIndex) ? targetGroupPeersPerSamplingGroup : TARGET_GROUP_PEERS_PER_SUBNET;
+    const targetGroupPeers = ourSamplingGroupSet.has(groupIndex)
+      ? targetGroupPeersPerSamplingGroup
+      : TARGET_GROUP_PEERS_PER_SUBNET;
     if (peersInGroup < targetGroupPeers) {
       // We need more peers
       groupQueries.set(groupIndex, targetGroupPeers - peersInGroup);
