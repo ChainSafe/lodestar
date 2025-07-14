@@ -567,7 +567,8 @@ export class PeerManager {
           status: peerData?.status ?? null,
           attnets: peerData?.metadata?.attnets ?? null,
           syncnets: peerData?.metadata?.syncnets ?? null,
-          custodyGroups: peerData?.metadata?.custodyGroups ?? null,
+          // here we care samplingGroups not custodyGroups in order to know which column subnets peers subscribe to
+          samplingGroups: peerData?.metadata?.samplingGroups ?? null,
           score: this.peerRpcScores.getScore(peer),
         };
       }),

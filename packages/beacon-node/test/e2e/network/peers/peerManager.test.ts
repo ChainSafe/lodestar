@@ -191,12 +191,14 @@ describe("network / peers / PeerManager", () => {
     // Simulate peer1 returning a PING and STATUS message
     const remoteStatus = statusCache.get();
     const custodyGroupCount = config.CUSTODY_REQUIREMENT;
+    const samplingGroupCount = config.SAMPLES_PER_SLOT;
     const remoteMetadata: NonNullable<ReturnType<PeerManager["connectedPeers"]["get"]>>["metadata"] = {
       seqNumber: BigInt(1),
       attnets: getAttnets(),
       syncnets: getSyncnets(),
       custodyGroupCount,
       custodyGroups: getCustodyGroups(computeNodeId(peerId1), custodyGroupCount),
+      samplingGroups: getCustodyGroups(computeNodeId(peerId1), samplingGroupCount),
     };
     reqResp.sendPing.mockResolvedValue(remoteMetadata.seqNumber);
     reqResp.sendStatus.mockResolvedValue(remoteStatus);

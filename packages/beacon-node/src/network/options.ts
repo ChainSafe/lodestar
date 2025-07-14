@@ -61,6 +61,9 @@ export const defaultNetworkOptions: NetworkOptions = {
   slotsToSubscribeBeforeAggregatorDuty: 2,
   // This will enable the light client server by default
   disableLightClientServer: false,
-  // for PeerDAS, this is the same to TARGET_SUBNET_PEERS, should reavaluate after devnets
+  // specific option for fulu
+  //   - this is the same to TARGET_SUBNET_PEERS
+  //   - for fusaka-devnets, we have 25-30 peers per subnet
+  //   - for public testnets or mainnet, average number of peers per group is SAMPLES_PER_SLOT * targetPeers / NUMBER_OF_CUSTODY_GROUPS = 6.25 so this should not be an issue
   targetGroupPeers: 6,
 };

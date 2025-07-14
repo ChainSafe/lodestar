@@ -486,9 +486,9 @@ export class PeerDiscovery {
     if (forkSeq >= ForkSeq.fulu && peer.peerCustodyGroups !== null) {
       // pre-fulu `this.groupRequests` is empty
       // starting from fulu, we need to make sure we have stable subnet sampling peers first
-      // given CUSTODY_REQUIREMENT = 4 and 100 peers, we have 400 custody columns from peers
-      // with NUMBER_OF_CUSTODY_GROUPS = 128, we have 400 / 128 = 3.125 peers per column in average
-      // it would not be hard to find TARGET_SUBNET_PEERS(6) peers per SAMPLES_PER_SLOT(8) columns
+      // given SAMPLES_PER_SLOT = 8 and 100 peers, we have 800 custody columns from peers
+      // with NUMBER_OF_CUSTODY_GROUPS = 128, we have 800 / 128 = 6.25 peers per column in average
+      // it would not be hard to find TARGET_SUBNET_PEERS(6) peers per sampling columns columns and TARGET_GROUP_PEERS_PER_SUBNET(4) peers per non-sampling columns
       // after some first heartbeats, we should have no more column requested, then go with conditions of prior forks
       let hasMatchingGroup = false;
       let groupRequestCount = 0;

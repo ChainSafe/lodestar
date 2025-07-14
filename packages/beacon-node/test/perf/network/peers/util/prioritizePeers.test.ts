@@ -103,7 +103,7 @@ describe("prioritizePeers", () => {
             Array.from({length: Math.floor(syncnetPercentage * SYNC_COMMITTEE_SUBNET_COUNT)}, (_, i) => i)
           ),
           score: lowestScore + ((highestScore - lowestScore) * i) / defaultNetworkOptions.maxPeers,
-          custodyGroups: [],
+          samplingGroups: [],
           status: ssz.phase0.Status.defaultValue(),
         }));
 

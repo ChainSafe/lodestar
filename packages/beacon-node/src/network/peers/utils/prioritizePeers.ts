@@ -1,6 +1,6 @@
 import {BitArray} from "@chainsafe/ssz";
 import {Direction, PeerId} from "@libp2p/interface";
-import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+import {ATTESTATION_SUBNET_COUNT, NUMBER_OF_CUSTODY_GROUPS, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {CustodyIndex, Status, SubnetID, altair, phase0} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
 import {shuffle} from "../../../util/shuffle.js";
@@ -10,6 +10,12 @@ import {RequestedSubnet} from "./subnetMap.js";
 
 /** Target number of peers we'd like to have connected to a given long-lived subnet */
 const TARGET_SUBNET_PEERS = 6;
+
+/**
+ * This is for non-sampling groups only. This is a very easy number to achieve given an average of 6.25 peers per column subnet on public networks.
+ * This is needed to always maintain some minimum peers on all subnets so that when we publish a block, we're sure we pubish to all column subnets.
+ */
+const TARGET_GROUP_PEERS_PER_SUBNET = 4;
 
 /**
  * This is used in the pruning logic. We avoid pruning peers on sync-committees if doing so would
@@ -91,7 +97,7 @@ type PeerInfo = {
   statusScore: StatusScore;
   attnets: phase0.AttestationSubnets;
   syncnets: altair.SyncSubnets;
-  custodyGroups: CustodyIndex[];
+  samplingGroups: CustodyIndex[];
   attnetsTrueBitIndices: number[];
   syncnetsTrueBitIndices: number[];
   score: number;
@@ -121,7 +127,7 @@ export enum ExcessPeerDisconnectReason {
  * - Reach `targetPeers`
  *   - If we're starved for data, prune additional peers
  * - Don't exceed `maxPeers`
- * - Ensure there are enough peers per active subnet
+ * - Ensure there are enough peers per column subnets, attestation subnets and sync committee subnets
  * - Prioritize peers with good score
  *
  * pre-fulu samplingGroups is not used and this function returns empty groupQueries
@@ -133,7 +139,7 @@ export function prioritizePeers(
     status: Status | null;
     attnets: phase0.AttestationSubnets | null;
     syncnets: altair.SyncSubnets | null;
-    custodyGroups: CustodyIndex[] | null;
+    samplingGroups: CustodyIndex[] | null;
     score: number;
   }[],
   activeAttnets: RequestedSubnet[],
@@ -161,7 +167,7 @@ export function prioritizePeers(
       statusScore: computeStatusScore(opts.status, peer.status, opts),
       attnets: peer.attnets ?? attnetsZero,
       syncnets: peer.syncnets ?? syncnetsZero,
-      custodyGroups: peer.custodyGroups ?? [],
+      samplingGroups: peer.samplingGroups ?? [],
       attnetsTrueBitIndices: peer.attnets?.getTrueBitIndexes() ?? [],
       syncnetsTrueBitIndices: peer.syncnets?.getTrueBitIndexes() ?? [],
       score: peer.score,
@@ -210,7 +216,7 @@ function requestSubnetPeers(
   connectedPeers: PeerInfo[],
   activeAttnets: RequestedSubnet[],
   activeSyncnets: RequestedSubnet[],
-  samplingGroups: CustodyIndex[] | undefined,
+  ourSamplingGroups: CustodyIndex[] | undefined,
   opts: PrioritizePeersOpts,
   metrics: NetworkCoreMetrics | null
 ): {
@@ -278,26 +284,31 @@ function requestSubnetPeers(
     }
   }
 
-  // column subnets, do we need queries for more peers
-  const targetGroupPeers = opts.targetGroupPeers;
   const groupQueries: GroupQueries = new Map();
+  // pre-fulu
+  if (ourSamplingGroups == null) {
+    return {attnetQueries, syncnetQueries, groupQueries, dutiesByPeer};
+  }
+
+  // column subnets, do we need queries for more peers
+  const targetGroupPeersPerSamplingGroup = opts.targetGroupPeers;
   const peersPerGroup = new Map<CustodyIndex, number>();
   for (const peer of connectedPeers) {
-    const {custodyGroups} = peer;
-    for (const group of custodyGroups) {
+    const peerSamplingGroups = peer.samplingGroups;
+    for (const group of peerSamplingGroups) {
       peersPerGroup.set(group, 1 + (peersPerGroup.get(group) ?? 0));
     }
   }
 
-  let groupIndex = 0;
-  for (const group of samplingGroups ?? []) {
-    const peersInGroup = peersPerGroup.get(group) ?? 0;
+  const ourSamplingGroupSet = new Set(ourSamplingGroups);
+  for (let groupIndex = 0; groupIndex < NUMBER_OF_CUSTODY_GROUPS; groupIndex++) {
+    const peersInGroup = peersPerGroup.get(groupIndex) ?? 0;
     metrics?.peerCountPerSamplingGroup.set({groupIndex}, peersInGroup);
+    const targetGroupPeers = ourSamplingGroupSet.has(groupIndex) ? targetGroupPeersPerSamplingGroup : TARGET_GROUP_PEERS_PER_SUBNET;
     if (peersInGroup < targetGroupPeers) {
       // We need more peers
-      groupQueries.set(group, targetGroupPeers - peersInGroup);
+      groupQueries.set(groupIndex, targetGroupPeers - peersInGroup);
     }
-    groupIndex++;
   }
 
   return {attnetQueries, syncnetQueries, groupQueries, dutiesByPeer};
