@@ -5,7 +5,7 @@ import {NodeId} from "../subnets/interface.js";
 import {ClientKind} from "./client.js";
 
 type PeerIdStr = string;
-type Metadata = fulu.Metadata & {custodyGroups: CustodyIndex[]};
+type Metadata = fulu.Metadata & {custodyGroups: CustodyIndex[]; samplingGroups: CustodyIndex[]};
 export type PeerSyncMeta = {
   peerId: PeerIdStr;
   client: string;

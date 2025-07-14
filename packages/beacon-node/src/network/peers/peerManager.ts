@@ -342,12 +342,18 @@ export class PeerManager {
       const oldMetadata = peerData.metadata;
       const custodyGroupCount =
         (metadata as Partial<fulu.Metadata>).custodyGroupCount ?? this.config.CUSTODY_REQUIREMENT;
+      const samplingGroupCount = Math.max(this.config.SAMPLES_PER_SLOT, custodyGroupCount);
       const nodeId = peerData?.nodeId ?? computeNodeId(peer);
       // TODO(fulu): this should be columns not groups.  need to change everywhere
       const custodyGroups =
         oldMetadata == null || oldMetadata.custodyGroups == null || custodyGroupCount !== oldMetadata.custodyGroupCount
           ? getCustodyGroups(nodeId, custodyGroupCount)
           : oldMetadata.custodyGroups;
+      const oldSamplingGroupCount = Math.max(this.config.SAMPLES_PER_SLOT, oldMetadata?.custodyGroupCount ?? 0);
+      const samplingGroups =
+        oldMetadata == null || oldMetadata.samplingGroups == null || samplingGroupCount !== oldSamplingGroupCount
+          ? getCustodyGroups(nodeId, samplingGroupCount)
+          : oldMetadata.samplingGroups;
       peerData.metadata = {
         seqNumber: metadata.seqNumber,
         attnets: metadata.attnets,
@@ -357,6 +363,7 @@ export class PeerManager {
           // TODO: spec says that Clients MAY reject peers with a value less than CUSTODY_REQUIREMENT
           this.config.CUSTODY_REQUIREMENT,
         custodyGroups,
+        samplingGroups,
       };
       if (oldMetadata === null || oldMetadata.custodyGroupCount !== peerData.metadata.custodyGroupCount) {
         void this.requestStatus(peer, this.statusCache.get());
