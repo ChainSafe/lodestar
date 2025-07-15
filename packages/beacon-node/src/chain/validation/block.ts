@@ -57,7 +57,7 @@ export async function validateGossipBlock(
   // check, we will load the parent and state from disk only to find out later that we
   // already know this block.
   if (chain.forkChoice.getBlockHex(blockInput.rootHex) !== null) {
-    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.ALREADY_KNOWN, rootHex: blockInput.rootHex});
+    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.ALREADY_KNOWN, root: blockInput.rootHex});
   }
 
   // No need to check for badBlock

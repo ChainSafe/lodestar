@@ -147,7 +147,7 @@ export class Network implements INetwork {
     );
 
     for (let index = 0; index < NUMBER_OF_COLUMNS; index++) {
-      this.columnCustody.set(index, new Set<string>());
+      this.columnCustody.set(index, new Map());
     }
   }
 
@@ -290,7 +290,7 @@ export class Network implements INetwork {
     return Array.from(this.connectedPeers.keys());
   }
 
-  getPeersWithCustody(column: ColumnIndex): PeerCustody[] {
+  getPeersWithCustody(column: ColumnIndex[]): PeerCustody[] {
     const custody = this.columnCustody.get(column);
     if (!custody) return [];
     const peers: PeerCustody[] = [];
@@ -732,12 +732,12 @@ export class Network implements INetwork {
   };
 
   private onPeerDisconnected = (data: NetworkEventData[NetworkEvent.peerDisconnected]): void => {
-    const columns = this.connectedPeers.get(data.peer);
+    const columns = this.connectedPeers.get(data.peer) ?? [];
     for (const column of columns) {
       let custody = this.columnCustody.get(column);
       if (!custody) custody = new Map();
       custody.delete(data.peer);
-      if (custody.size() === 0) {
+      if (custody.size === 0) {
         this.logger.warn(`No remaining peers with custody of column=${column}`);
       }
       this.columnCustody.set(column, custody);

@@ -31,10 +31,6 @@ import {ChainForkConfig} from "@lodestar/config";
 import {LodestarError} from "@lodestar/utils";
 import {BlobSidecar} from "@lodestar/types/lib/deneb/types.js";
 
-export function prettyPrintArray(arr: unknown[]): string {
-  return `[ ${arr.join(",")} ]`;
-}
-
 export type DownloadByRangeRequests = {
   blocksRequest?: phase0.BeaconBlocksByRangeRequest;
   blobsRequest?: deneb.BlobSidecarsByRangeRequest;

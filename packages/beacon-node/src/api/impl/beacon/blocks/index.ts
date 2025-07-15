@@ -7,16 +7,19 @@ import {
   SLOTS_PER_HISTORICAL_ROOT,
   isForkBlobs,
   isForkPostBellatrix,
+  isForkPostDeneb,
   isForkPostElectra,
   isForkPostFulu,
 } from "@lodestar/params";
 import {
   computeEpochAtSlot,
   computeTimeAtSlot,
+  DataAvailabilityStatus,
   reconstructFullBlockOrContents,
   signedBeaconBlockToBlinded,
 } from "@lodestar/state-transition";
 import {
+  Epoch,
   ProducedBlockSource,
   SignedBeaconBlock,
   SignedBeaconBlockOrContents,
@@ -48,6 +51,8 @@ import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {ApiModules} from "../../types.js";
 import {getBlockResponse, toBeaconHeaderResponse} from "./utils.js";
+import {IBeaconChain} from "../../../../chain/interface.js";
+import {ChainForkConfig} from "@lodestar/config";
 
 type PublishBlockOpts = ImportBlockOpts;
 
@@ -61,6 +66,22 @@ const MAX_API_CLOCK_DISPARITY_MS = 1000;
  * PeerID of identity keypair to signal self for score reporting
  */
 const IDENTITY_PEER_ID = ""; // TODO: Compute identity keypair
+
+export function getDataAvailabilityStatus(
+  config: ChainForkConfig,
+  block: SignedBeaconBlock,
+  currentEpoch: Epoch
+): DataAvailabilityStatus {
+  const blockSlot = block.message.slot;
+  const forkName = config.getForkName(blockSlot);
+  if (!isForkPostDeneb(forkName)) {
+    return DataAvailabilityStatus.PreData;
+  }
+  if (computeEpochAtSlot(blockSlot) < currentEpoch - config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS) {
+    return DataAvailabilityStatus.OutOfRange;
+  }
+  return DataAvailabilityStatus.Available;
+}
 
 export function getBeaconBlockApi({
   chain,
@@ -81,15 +102,19 @@ export function getBeaconBlockApi({
 
     let blockInput: BlockInput;
     if (!isSignedBlockContents(signedBlockOrContents)) {
-      const blockRoot = this.config
-        .getForkTypes(signedBlockOrContents.message.slot)
-        .SignedBeaconBlock.hashTreeRoot(signedBlockOrContents.message);
-      blockInput = chain.blockInputCache.getBlockInputByBlock({blockRoot, block: signedBlockOrContents});
+      blockInput = chain.blockInputCache.getBlockInputByBlock({
+        block: signedBlockOrContents,
+        seenTimestampSec: Date.now(),
+        source: BlockInputSourceType.api,
+        dataAvailability: DataAvailabilityStatus.PreData,
+      });
     } else {
-      const blockRoot = this.config
-        .getForkTypes(signedBlockOrContents.signedBlock.message.slot)
-        .SignedBeaconBlock.hashTreeRoot(signedBlockOrContents.signedBlock.message);
-      blockInput = chain.blockInputCache.getBlockInputByBlock({blockRoot, block: signedBlockOrContents.signedBlock});
+      blockInput = chain.blockInputCache.getBlockInputByBlock({
+        block: signedBlockOrContents.signedBlock,
+        seenTimestampSec: Date.now(),
+        source: BlockInputSourceType.api,
+        dataAvailability: getDataAvailabilityStatus(config, signedBlockOrContents, chain.clock.currentEpoch),
+      });
       if (isBlockInputBlobs(blockInput)) {
         // TODO (@matthewkeil) Look at this function signature to see if we can simplify the second param of
         //                     computeBlobSidecars to SignedBlockContents and get rid of the third
@@ -103,11 +128,14 @@ export function getBeaconBlockApi({
       } else if (isBlockInputColumns(blockInput)) {
         // TODO (@matthewkeil) Look at this function signature to see if we can simplify the second param of
         //                     computeDataColumnSidecars to SignedBlockContents and get rid of the third
-        for (const columnSidecar of computeDataColumnSidecars(
+        const timer = metrics.startTimer();
+        const columnSidecars = computeDataColumnSidecars(
           config,
           signedBlockOrContents.signedBlock,
           signedBlockOrContents
-        )) {
+        );
+        timer?.();
+        for (const columnSidecar of columnSidecars) {
           blockInput.addColumnSidecar(columnSidecar, BlockInputSourceType.api);
         }
       } else {
@@ -242,7 +270,13 @@ export function getBeaconBlockApi({
     //        blobs might need to hop between nodes because of partial subnet subscription
     const publishPromises: Array<() => Promise<unknown>> = [];
     if (isBlockInputBlobs(blockInput)) {
-      publishPromises.push(...blockInput.getBlobs().map((blobSidecar) => network.publishBlobSidecar(blobSidecar)));
+      publishPromises.push(
+        ...blockInput.getAllBlobs().map(
+          ({blobSidecar}) =>
+            () =>
+              network.publishBlobSidecar(blobSidecar)
+        )
+      );
     } else if (isBlockInputColumns(blockInput)) {
       const dataColumnSidecars = blockInput.getAllColumns();
       // TODO (@matthewkeil) not sure if this check is necessary because they should have all been added above.... hmmm

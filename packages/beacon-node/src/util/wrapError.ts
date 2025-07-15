@@ -1,4 +1,4 @@
-export type Result<T, E extends Error> = {err: null; result: T} | {err: E};
+export type Result<T, E extends Error = Error> = {err: null; result: T} | {err: E};
 
 /**
  * Wraps a promise to return either an error or result

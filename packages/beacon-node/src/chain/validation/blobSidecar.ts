@@ -78,7 +78,7 @@ export async function validateGossipBlobSidecar(
   if (chain.forkChoice.getBlockHex(blockInput.rootHex) !== null) {
     throw new BlobSidecarGossipError(GossipAction.IGNORE, {
       code: BlobSidecarErrorCode.ALREADY_KNOWN,
-      rootHex: blockInput.rootHex,
+      root: blockInput.rootHex,
     });
   }
 

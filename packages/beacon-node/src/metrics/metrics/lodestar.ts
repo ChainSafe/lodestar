@@ -1,13 +1,11 @@
 import {EpochTransitionStep, StateCloneSource, StateHashTreeRootSource} from "@lodestar/state-transition";
 import {BeaconState} from "@lodestar/types";
-import {BlobsSource, BlockSource} from "../../chain/blocks/types.js";
 import {JobQueueItemType} from "../../chain/bls/index.js";
 import {BlockErrorCode} from "../../chain/errors/index.js";
 import {InsertOutcome} from "../../chain/opPools/types.js";
 import {RegenCaller, RegenFnName} from "../../chain/regen/interface.js";
 import {ReprocessStatus} from "../../chain/reprocess.js";
 import {RejectReason} from "../../chain/seenCache/seenAttestationData.js";
-import {BlockInputAvailabilitySource} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {CacheItemType} from "../../chain/stateCache/types.js";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {GossipType} from "../../network/index.js";
@@ -19,7 +17,7 @@ import {AllocSource} from "../../util/bufferPool.js";
 import {LodestarMetadata} from "../options.js";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
 import {OpSource} from "../validatorMonitor.js";
-import {BlockInputSourceType, BlockInputStatus, BlockInputType} from "../../chain/blocks/utils/blockInput.js";
+import {BlockInputSourceType, BlockInputDataStatus, BlockInputType} from "../../chain/blocks/utils/blockInput.js";
 
 export type LodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 
@@ -568,7 +566,7 @@ export function createLodestarMetrics(
         help: "Total number of block input events from each source",
         labelNames: ["source"],
       }),
-      onBlockInputStatus: register.gauge<{status: BlockInputStatus}>({
+      onBlockInputStatus: register.gauge<{status: BlockInputDataStatus}>({
         name: "lodestar_sync_on_block_input_requests_total",
         help: "Total number of unknown block events or requests",
         labelNames: ["status"],
@@ -581,30 +579,30 @@ export function createLodestarMetrics(
         name: "lodestar_sync_block_input_processed_blocks_error_total",
         help: "Total number of processed blocks errors in BlockInputSync",
       }),
-      block: {
-        fetchBlockRequestCount: register.gauge(),
-        fetchBlockRequestTime: register.histogram(),
-        fetchBlockResponseCount: register.gauge(),
-        fetchBlockErrorCount: register.gauge(),
-      },
-      data: {
-        fetchDataRequestTime: register.histogram(),
-        getBlobsApiRequestCount: register.gauge(),
-        getBlobsApiReturnedCount: register.gauge(),
-        getBlobsApiErrorCount: register.gauge(),
-        fetchDataReqCount: register.gauge<{type: BlockInputType}>({
-          labelNames: ["type"],
-        }),
-        fetchDataRespCount: register.gauge<{type: BlockInputType}>({
-          labelNames: ["type"],
-        }),
-        fetchDataErrorCount: register.gauge<{type: BlockInputType}>({
-          labelNames: ["type"],
-        }),
-        fetchDataRespNotReturnedCount: register.gauge<{type: BlockInputType}>({
-          labelNames: ["type"],
-        }),
-      },
+      // block: {
+      //   fetchBlockRequestCount: register.gauge(),
+      //   fetchBlockRequestTime: register.histogram(),
+      //   fetchBlockResponseCount: register.gauge(),
+      //   fetchBlockErrorCount: register.gauge(),
+      // },
+      // data: {
+      //   fetchDataRequestTime: register.histogram(),
+      //   getBlobsApiRequestCount: register.gauge(),
+      //   getBlobsApiReturnedCount: register.gauge(),
+      //   getBlobsApiErrorCount: register.gauge(),
+      //   fetchDataReqCount: register.gauge<{type: BlockInputType}>({
+      //     labelNames: ["type"],
+      //   }),
+      //   fetchDataRespCount: register.gauge<{type: BlockInputType}>({
+      //     labelNames: ["type"],
+      //   }),
+      //   fetchDataErrorCount: register.gauge<{type: BlockInputType}>({
+      //     labelNames: ["type"],
+      //   }),
+      //   fetchDataRespNotReturnedCount: register.gauge<{type: BlockInputType}>({
+      //     labelNames: ["type"],
+      //   }),
+      // },
     },
 
     syncUnknownBlock: {
@@ -613,49 +611,49 @@ export function createLodestarMetrics(
         help: "Switch network subscriptions on/off",
         labelNames: ["action"],
       }),
-      requests: register.gauge<{type: PendingBlockType}>({
-        name: "lodestar_sync_unknown_block_requests_total",
-        help: "Total number of unknown block events or requests",
-        labelNames: ["type"],
-      }),
-      pendingBlocks: register.gauge({
-        name: "lodestar_sync_unknown_block_pending_blocks_size",
-        help: "Current size of UnknownBlockSync pending blocks cache",
-      }),
-      knownBadBlocks: register.gauge({
-        name: "lodestar_sync_unknown_block_known_bad_blocks_size",
-        help: "Current size of UnknownBlockSync known bad blocks cache",
-      }),
-      processedBlocksSuccess: register.gauge({
-        name: "lodestar_sync_unknown_block_processed_blocks_success_total",
-        help: "Total number of processed blocks successes in UnknownBlockSync",
-      }),
-      processedBlocksError: register.gauge({
-        name: "lodestar_sync_unknown_block_processed_blocks_error_total",
-        help: "Total number of processed blocks errors in UnknownBlockSync",
-      }),
-      downloadedBlocksSuccess: register.gauge({
-        name: "lodestar_sync_unknown_block_downloaded_blocks_success_total",
-        help: "Total number of downloaded blocks successes in UnknownBlockSync",
-      }),
-      downloadedBlocksError: register.gauge({
-        name: "lodestar_sync_unknown_block_downloaded_blocks_error_total",
-        help: "Total number of downloaded blocks errors in UnknownBlockSync",
-      }),
-      removedBlocks: register.gauge({
-        name: "lodestar_sync_unknown_block_removed_blocks_total",
-        help: "Total number of removed bad blocks in UnknownBlockSync",
-      }),
-      elapsedTimeTillReceived: register.histogram({
-        name: "lodestar_sync_unknown_block_elapsed_time_till_received",
-        help: "Time elapsed between block slot time and the time block received via unknown block sync",
-        buckets: [0.5, 1, 2, 4, 6, 12],
-      }),
-      resolveAvailabilitySource: register.gauge<{source: BlockInputAvailabilitySource}>({
-        name: "lodestar_sync_blockinput_availability_source",
-        help: "Total number of blocks whose data availability was resolved",
-        labelNames: ["source"],
-      }),
+      // requests: register.gauge<{type: PendingBlockType}>({
+      //   name: "lodestar_sync_unknown_block_requests_total",
+      //   help: "Total number of unknown block events or requests",
+      //   labelNames: ["type"],
+      // }),
+      // pendingBlocks: register.gauge({
+      //   name: "lodestar_sync_unknown_block_pending_blocks_size",
+      //   help: "Current size of UnknownBlockSync pending blocks cache",
+      // }),
+      // knownBadBlocks: register.gauge({
+      //   name: "lodestar_sync_unknown_block_known_bad_blocks_size",
+      //   help: "Current size of UnknownBlockSync known bad blocks cache",
+      // }),
+      // processedBlocksSuccess: register.gauge({
+      //   name: "lodestar_sync_unknown_block_processed_blocks_success_total",
+      //   help: "Total number of processed blocks successes in UnknownBlockSync",
+      // }),
+      // processedBlocksError: register.gauge({
+      //   name: "lodestar_sync_unknown_block_processed_blocks_error_total",
+      //   help: "Total number of processed blocks errors in UnknownBlockSync",
+      // }),
+      // downloadedBlocksSuccess: register.gauge({
+      //   name: "lodestar_sync_unknown_block_downloaded_blocks_success_total",
+      //   help: "Total number of downloaded blocks successes in UnknownBlockSync",
+      // }),
+      // downloadedBlocksError: register.gauge({
+      //   name: "lodestar_sync_unknown_block_downloaded_blocks_error_total",
+      //   help: "Total number of downloaded blocks errors in UnknownBlockSync",
+      // }),
+      // removedBlocks: register.gauge({
+      //   name: "lodestar_sync_unknown_block_removed_blocks_total",
+      //   help: "Total number of removed bad blocks in UnknownBlockSync",
+      // }),
+      // elapsedTimeTillReceived: register.histogram({
+      //   name: "lodestar_sync_unknown_block_elapsed_time_till_received",
+      //   help: "Time elapsed between block slot time and the time block received via unknown block sync",
+      //   buckets: [0.5, 1, 2, 4, 6, 12],
+      // }),
+      // resolveAvailabilitySource: register.gauge<{source: BlockInputAvailabilitySource}>({
+      //   name: "lodestar_sync_blockinput_availability_source",
+      //   help: "Total number of blocks whose data availability was resolved",
+      //   labelNames: ["source"],
+      // }),
     },
 
     // Gossip sync committee
@@ -853,16 +851,16 @@ export function createLodestarMetrics(
         name: "lodestar_import_block_set_head_after_first_interval_total",
         help: "Total times an imported block is set as head after the first slot interval",
       }),
-      bySource: register.gauge<{source: BlockSource}>({
-        name: "lodestar_import_block_by_source_total",
-        help: "Total number of imported blocks by source",
-        labelNames: ["source"],
-      }),
-      blobsBySource: register.gauge<{blobsSource: BlobsSource}>({
-        name: "lodestar_import_blobs_by_source_total",
-        help: "Total number of imported blobs by source",
-        labelNames: ["blobsSource"],
-      }),
+      // bySource: register.gauge<{source: BlockSource}>({
+      //   name: "lodestar_import_block_by_source_total",
+      //   help: "Total number of imported blocks by source",
+      //   labelNames: ["source"],
+      // }),
+      // blobsBySource: register.gauge<{blobsSource: BlobsSource}>({
+      //   name: "lodestar_import_blobs_by_source_total",
+      //   help: "Total number of imported blobs by source",
+      //   labelNames: ["blobsSource"],
+      // }),
     },
     engineNotifyNewPayloadResult: register.gauge<{result: ExecutionPayloadStatus}>({
       name: "lodestar_execution_engine_notify_new_payload_result_total",

@@ -1,13 +1,12 @@
 import {EventEmitter} from "node:events";
 import {PeerId, TopicValidatorResult} from "@libp2p/interface";
 import {ColumnIndex, RootHex, phase0} from "@lodestar/types";
-import {BlockInput, NullBlockInput} from "../chain/blocks/types.js";
 import {PeerIdStr} from "../util/peerId.js";
 import {StrictEventEmitterSingleArg} from "../util/strictEvents.js";
 import {EventDirection} from "../util/workerEvents.js";
 import {PendingGossipsubMessage} from "./processor/types.js";
 import {RequestTypedContainer} from "./reqresp/ReqRespBeaconNode.js";
-import {BlockInputSourceType} from "../chain/blocks/utils/blockInput.js";
+import {BlockInput, BlockInputSourceType} from "../chain/blocks/utils/blockInput.js";
 
 export enum NetworkEvent {
   /** A relevant peer has connected or has been re-STATUS'd */
@@ -43,7 +42,7 @@ export type NetworkEventData = {
   [NetworkEvent.reqRespRequest]: {request: RequestTypedContainer; peer: PeerId};
   [NetworkEvent.unknownBlockParent]: {blockInput: BlockInput; peer: PeerIdStr};
   [NetworkEvent.unknownBlock]: {rootHex: RootHex; peer?: PeerIdStr};
-  [NetworkEvent.unknownBlockInput]: {blockInput: BlockInput | NullBlockInput; peer?: PeerIdStr};
+  [NetworkEvent.unknownBlockInput]: {blockInput: BlockInput; peer?: PeerIdStr};
   [NetworkEvent.blockInput]: {blockInput: BlockInput; source: BlockInputSourceType; peerIdStr?: PeerIdStr};
   [NetworkEvent.unknownParent]: {blockInput: BlockInput; source: BlockInputSourceType; peerIdStr?: PeerIdStr};
   [NetworkEvent.pendingGossipsubMessage]: PendingGossipsubMessage;

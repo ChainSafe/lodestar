@@ -48,9 +48,13 @@ export class BlockInputCache {
   constructor(
     private config: ChainForkConfig,
     private custodyConfig: CustodyConfig,
-    private logger?: Logger,
-    private metrics?: Metrics
+    private metrics: Metrics | null,
+    private logger?: Logger
   ) {}
+
+  hasBlock(rootHex: RootHex): boolean {
+    return this.blockInputs.has(rootHex);
+  }
 
   getBlockInputByRootHex({rootHex, slot}: BlockInputByRootHex): BlockInput {
     let blockInput = this.blockInputs.get(rootHex);
@@ -75,7 +79,7 @@ export class BlockInputCache {
       } else if (blockSlot !== slot) {
         throw new BlockInputCacheError({
           code: BlockInputCacheErrorCode.SLOT_MISMATCH,
-          blockInputSlot: blockInput.slot,
+          blockInputSlot: blockSlot,
           slot,
         });
       }

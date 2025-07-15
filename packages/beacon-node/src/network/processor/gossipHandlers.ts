@@ -137,7 +137,12 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     peerIdStr: string,
     seenTimestampSec: number
   ): Promise<BlockInput> {
-    const blockInput = chain.blockInputCache.getBlockInputByBlock(signedBlock, BlockInputSourceType.gossip, peerIdStr);
+    const blockInput = chain.blockInputCache.getBlockInputByBlock({
+      block: signedBlock,
+      source: BlockInputSourceType.gossip,
+      peerIdStr,
+      seenTimestampSec: Date.now(),
+    });
     const slot = blockInput.getSlot();
     const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
     const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
@@ -211,7 +216,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         .waitForData(waitTime)
         .then(() => {})
         .catch(() => {
-          events.emit(NetworkEvent.blockInput, {blockInput, source: BlockInputSourceType.gossip, peer: peerIdStr});
+          events.emit(NetworkEvent.blockInput, {blockInput, source: BlockInputSourceType.gossip, peerIdStr});
         });
     }
 
@@ -255,7 +260,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
               // Error is quite frequent and not critical
               logLevel = LogLevel.debug;
               removeCachedBlock = false;
-              events.emit(NetworkEvent.blockInput, {blockInput, source: BlockInputSourceType.gossip, peer: peerIdStr});
+              events.emit(NetworkEvent.blockInput, {blockInput, source: BlockInputSourceType.gossip, peerIdStr});
               break;
             }
             // ALREADY_KNOWN should not happen with ignoreIfKnown=true above
@@ -299,9 +304,14 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       throw new GossipActionError(GossipAction.REJECT, {code: "BLOB_RECEIVED_ON_NON_BLOB_FORK"});
     }
 
-    let blockInput: BlockInputBlobs;
+    let blockInput!: BlockInputBlobs;
     try {
-      blockInput = chain.blockInputCache.getBlockInputByBlob(blobSidecar, BlockInputSourceType.gossip, peerIdStr);
+      blockInput = chain.blockInputCache.getBlockInputByBlob({
+        blobSidecar,
+        source: BlockInputSourceType.gossip,
+        peerIdStr,
+        seenTimestampSec: Date.now(),
+      });
       await validateGossipBlobSidecar(forkName, chain, blockInput, blobSidecar, subnet);
 
       const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
@@ -315,7 +325,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       logger.debug("Received gossip blob", {
         slotReceived: chain.clock.currentSlot,
         blobIndex: subnet,
-        ...blockInput.getMeta(),
+        ...blockInput.getLogMeta(),
         peerId: peerIdStr,
         delaySec,
         recvToValLatency,
@@ -325,29 +335,32 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
       return blockInput;
     } catch (e) {
-      let removeCachedBlob = true;
-      if (e instanceof BlobSidecarGossipError) {
-        if (e.type.code === BlobSidecarErrorCode.PARENT_UNKNOWN) {
-          removeCachedBlob = false;
-          logger.debug("Gossip blob has error", {...blockInput.getLogMeta(), code: e.type.code});
-          // Don't trigger this yet if full block and blobs haven't arrived yet
-          if (!blockInput.hasBlock()) {
-            events.emit(NetworkEvent.unknownParent, {blockInput, source: BlockInputSourceType.gossip, peerIdStr});
+      if (blockInput) {
+        let removeCachedBlob = true;
+        if (e instanceof BlobSidecarGossipError) {
+          if (e.type.code === BlobSidecarErrorCode.PARENT_UNKNOWN) {
+            removeCachedBlob = false;
+            logger.debug("Gossip blob has error", {...blockInput.getLogMeta(), code: e.type.code});
+            // Don't trigger this yet if full block and blobs haven't arrived yet
+            if (!blockInput.hasBlock()) {
+              events.emit(NetworkEvent.unknownParent, {blockInput, source: BlockInputSourceType.gossip, peerIdStr});
+            }
+          }
+
+          if (e.action === GossipAction.REJECT) {
+            chain.persistInvalidSszValue(
+              ssz.deneb.BlobSidecar,
+              blobSidecar,
+              `gossip_reject_slot_${slot}_index_${blobSidecar.index}`
+            );
           }
         }
 
-        if (e.action === GossipAction.REJECT) {
-          chain.persistInvalidSszValue(
-            ssz.deneb.BlobSidecar,
-            blobSidecar,
-            `gossip_reject_slot_${slot}_index_${blobSidecar.index}`
-          );
+        if (removeCachedBlob) {
+          chain.blockInputCache.removeBlobsFromBlockInput(blockInput.rootHex, [blobSidecar.index]);
         }
       }
 
-      if (removeCachedBlob) {
-        chain.blockInputCache.removeBlobsFromBlockInput(blockInput.rootHex, [blobSidecar.index]);
-      }
       throw e;
     }
   }
@@ -364,10 +377,15 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       throw new GossipActionError(GossipAction.REJECT, {code: "COLUMN_RECEIVED_ON_NO_COLUMN_FORK"});
     }
 
-    let blockInput: BlockInputColumns;
+    let blockInput: undefined | BlockInputColumns;
     try {
-      blockInput = chain.blockInputCache.getBlockInputByColumn(columnSidecar, BlockInputSourceType.gossip, peerIdStr);
-      await validateGossipDataColumnSidecar(chain, columnSidecar, columnIndex);
+      blockInput = chain.blockInputCache.getBlockInputByColumn({
+        columnSidecar,
+        source: BlockInputSourceType.gossip,
+        peerIdStr,
+        seenTimestampSec: Date.now(),
+      });
+      await validateGossipDataColumnSidecar(chain, blockInput, columnSidecar, columnIndex);
 
       const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
       const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
@@ -390,28 +408,30 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
       return blockInput;
     } catch (e) {
-      let removeCachedColumn = true;
-      if (e instanceof DataColumnSidecarGossipError) {
-        if (e.type.code === DataColumnSidecarErrorCode.PARENT_UNKNOWN) {
-          removeCachedColumn = false;
-          logger.debug("Gossip dataColumn has error", {...blockInput.getLogMeta(), code: e.type.code});
-          // Don't trigger this yet if full block and blobs haven't arrived yet
-          if (!blockInput.hasBlock()) {
-            events.emit(NetworkEvent.unknownParent, {blockInput, source: BlockInputSourceType.gossip, peerIdStr});
+      if (blockInput) {
+        let removeCachedColumn = true;
+        if (e instanceof DataColumnSidecarGossipError) {
+          if (e.type.code === DataColumnSidecarErrorCode.PARENT_UNKNOWN) {
+            removeCachedColumn = false;
+            logger.debug("Gossip dataColumn has error", {...blockInput.getLogMeta(), code: e.type.code});
+            // Don't trigger this yet if full block and blobs haven't arrived yet
+            if (!blockInput.hasBlock()) {
+              events.emit(NetworkEvent.unknownParent, {blockInput, source: BlockInputSourceType.gossip, peerIdStr});
+            }
+          }
+
+          if (e.action === GossipAction.REJECT) {
+            chain.persistInvalidSszValue(
+              ssz.fulu.DataColumnSidecar,
+              columnSidecar,
+              `gossip_reject_slot_${slot}_index_${columnSidecar.index}`
+            );
           }
         }
 
-        if (e.action === GossipAction.REJECT) {
-          chain.persistInvalidSszValue(
-            ssz.fulu.DataColumnSidecar,
-            columnSidecar,
-            `gossip_reject_slot_${slot}_index_${columnSidecar.index}`
-          );
+        if (removeCachedColumn) {
+          chain.blockInputCache.removeColumnsFromBlockInput(blockInput.rootHex, [columnSidecar.index]);
         }
-      }
-
-      if (removeCachedColumn) {
-        chain.blockInputCache.removeColumnsFromBlockInput(blockInput.rootHex, [columnSidecar.index]);
       }
 
       throw e;
@@ -455,7 +475,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
       if (!blockInput.isComplete()) {
         chain.logger.debug("BlockInput not complete by BLOCK_AVAILABILITY_CUTOFF_MS", blockInput.getLogMeta());
-        events.emit(NetworkEvent.blockInput, {blockInput, source: BlockInputSourceType.gossip, peer: peerIdStr});
+        events.emit(NetworkEvent.blockInput, {blockInput, source: BlockInputSourceType.gossip, peerIdStr});
       }
     },
 
@@ -481,7 +501,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
       if (!blockInput.isComplete()) {
         chain.logger.debug("BlockInput not complete by BLOCK_AVAILABILITY_CUTOFF_MS", blockInput.getLogMeta());
-        events.emit(NetworkEvent.blockInput, {blockInput, source: BlockInputSourceType.gossip, peer: peerIdStr});
+        events.emit(NetworkEvent.blockInput, {blockInput, source: BlockInputSourceType.gossip, peerIdStr});
       }
     },
 
