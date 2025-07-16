@@ -623,7 +623,9 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       metrics?.eip7805.inclusionListSeen.inc({source: InclusionListSource.gossip});
       // TODO EIP-7805: should we persist invalid ssz value?
       try {
+        const timer = metrics?.eip7805.inclusionListValidationTime.startTimer();
         await validateGossipInclusionList(chain, inclusionList, metrics);
+        timer?.({source: InclusionListSource.gossip});
       } catch (e) {
         chain.logger.debug(`Gossip Inclusion List validation error ${JSON.stringify(e)}`);
         if (e instanceof InclusionListError) {
@@ -637,9 +639,10 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       }
 
       try {
-        const insertOutcome = chain.inclusionListPool.add(inclusionList, metrics);
+        const insertOutcome = chain.inclusionListPool.add(inclusionList);
         metrics?.opPool.inclusionListPoolInsertOutcome.inc({insertOutcome});
         metrics?.eip7805.inclusionListTransactionsSeen.inc(
+          {source: InclusionListSource.gossip}, 
           chain.inclusionListPool.getTransactions(inclusionList.message.slot, metrics).length
         );
 

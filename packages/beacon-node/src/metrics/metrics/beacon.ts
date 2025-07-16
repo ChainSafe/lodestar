@@ -62,15 +62,13 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
     }),
 
     eip7805: {
-      validInclusionListByteSize: register.counter<{source: InclusionListSource}>({
+      validInclusionListByteSize: register.counter({
         name: "beacon_valid_inclusion_lists_size_bytes_total",
         help: "Byte size of the inclusion list",
-        labelNames: ["source"],
       }),
-      invalidInclusionListByteSize: register.counter<{source: InclusionListSource}>({
+      invalidInclusionListByteSize: register.counter({
         name: "beacon_invalid_inclusion_lists_size_bytes_total",
         help: "Byte size of the inclusion list",
-        labelNames: ["source"],
       }),
       inclusionListSeen: register.counter<{source: InclusionListSource}>({
         name: "beacon_inclusion_lists_seen_total",
@@ -101,19 +99,15 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         name: "beacon_inclusion_lists_broadcasted_total",
         help: "Total number of inclusion lists proposed",
       }),
-      inclusionListReceived: register.counter<{source: InclusionListSource}>({
-        name: "beacon_inclusion_lists_received_total",
-        help: "Total number of inclusion lists received",
-        labelNames: ["source"],
-      }),
       inclusionListReceivedSecFromSlot: register.histogram({
         name: "beacon_inclusion_lists_received_seconds_from_slot",
         help: "Inclusion list arrival time since the clock slot",
         buckets: [0, 2, 4, 6, 9, 10, 11, 12],
       }),
-      inclusionListTransactionsSeen: register.counter({
+      inclusionListTransactionsSeen: register.counter<{source: InclusionListSource}>({
         name: "beacon_inclusion_list_transactions_seen_total",
         help: "Total number of transactions seen in inclusion lists",
+        labelNames: ["source"],
       }),
       inclusionListTransactionsIncluded: register.counter({
         name: "beacon_inclusion_list_transactions_included_total",

@@ -10,8 +10,6 @@ import {IBeaconChain} from "../index.js";
 export enum InclusionListSource {
   gossip = "gossip",
   api = "api",
-  byRange = "req_resp_by_range",
-  byRoot = "req_resp_by_root",
 }
 
 export enum InvalidInclusionListReason {
@@ -53,7 +51,7 @@ async function validateInclusionList(
   const inclusionListSize = transactions.reduce((total, transaction) => total + transaction.byteLength, 0);
   if (inclusionListSize > chain.config.MAX_BYTES_PER_INCLUSION_LIST) {
     metrics?.eip7805.inclusionListInvalid.inc({source, reason: InvalidInclusionListReason.maxSizeExceeded});
-    metrics?.eip7805.invalidInclusionListByteSize.inc({source}, inclusionListSize);
+    metrics?.eip7805.invalidInclusionListByteSize.inc(inclusionListSize);
     throw new InclusionListError(GossipAction.REJECT, {
       code: InclusionListErrorCode.MAXIMUM_SIZE_EXCEEDED,
       inclusionListSize,
@@ -64,7 +62,7 @@ async function validateInclusionList(
   // [REJECT] The slot message.slot is equal to the previous or current slot.
   if (slot !== chain.clock.currentSlot && slot !== chain.clock.currentSlot - 1) {
     metrics?.eip7805.inclusionListInvalid.inc({source, reason: InvalidInclusionListReason.slotNumberError});
-    metrics?.eip7805.invalidInclusionListByteSize.inc({source}, inclusionListSize);
+    metrics?.eip7805.invalidInclusionListByteSize.inc(inclusionListSize);
     throw new InclusionListError(GossipAction.REJECT, {
       code: InclusionListErrorCode.INVALID_SLOT,
       inclusionListSlot: slot,
@@ -82,7 +80,7 @@ async function validateInclusionList(
 
   if (shuffling === null) {
     metrics?.eip7805.inclusionListInvalid.inc({source, reason: InvalidInclusionListReason.clientImplementation});
-    metrics?.eip7805.invalidInclusionListByteSize.inc({source}, inclusionListSize);
+    metrics?.eip7805.invalidInclusionListByteSize.inc(inclusionListSize);
     throw new Error("Shuffling not available"); // TODO EIP-7805: Handle shuffling cache miss
   }
 
@@ -90,7 +88,7 @@ async function validateInclusionList(
   const inclusionListCommitteeRootFromShuffling = shuffling.inclusionListCommitteeRoots[slot % SLOTS_PER_EPOCH];
   if (Buffer.compare(inclusionListCommitteeRoot, inclusionListCommitteeRootFromShuffling) !== 0) {
     metrics?.eip7805.inclusionListInvalid.inc({source, reason: InvalidInclusionListReason.ilCommitteeShuffling});
-    metrics?.eip7805.invalidInclusionListByteSize.inc({source}, inclusionListSize);
+    metrics?.eip7805.invalidInclusionListByteSize.inc(inclusionListSize);
     throw new InclusionListError(GossipAction.IGNORE, {
       code: InclusionListErrorCode.INVALID_COMMITTEE_ROOT,
       received: inclusionListCommitteeRoot,
@@ -102,7 +100,7 @@ async function validateInclusionList(
   const inclusionListCommitteeFromShuffling = shuffling.inclusionListCommittees[slot % SLOTS_PER_EPOCH];
   if (!inclusionListCommitteeFromShuffling.includes(validatorIndex)) {
     metrics?.eip7805.inclusionListInvalid.inc({source, reason: InvalidInclusionListReason.validatorNotInCommittee});
-    metrics?.eip7805.invalidInclusionListByteSize.inc({source}, inclusionListSize);
+    metrics?.eip7805.invalidInclusionListByteSize.inc(inclusionListSize);
     throw new InclusionListError(GossipAction.REJECT, {
       code: InclusionListErrorCode.VALIDATOR_NOT_IN_COMMITTEE,
       validatorIndex,
@@ -114,7 +112,7 @@ async function validateInclusionList(
   // [IGNORE] The message is either the first or second valid message received from the validator with index message.validator_index.
   if (chain.inclusionListPool.seenTwice(slot, validatorIndex)) {
     metrics?.eip7805.inclusionListInvalid.inc({source, reason: InvalidInclusionListReason.seenTwice});
-    metrics?.eip7805.invalidInclusionListByteSize.inc({source}, inclusionListSize);
+    metrics?.eip7805.invalidInclusionListByteSize.inc(inclusionListSize);
     throw new InclusionListError(GossipAction.IGNORE, {
       code: InclusionListErrorCode.MORE_THAN_TWO,
       validatorIndex,
@@ -125,12 +123,12 @@ async function validateInclusionList(
   const signatureSet = getInclusionListSignatureSet(chain.getHeadState(), inclusionList);
   if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true}))) {
     metrics?.eip7805.inclusionListInvalid.inc({source, reason: InvalidInclusionListReason.invalidSignature});
-    metrics?.eip7805.invalidInclusionListByteSize.inc({source}, inclusionListSize);
+    metrics?.eip7805.invalidInclusionListByteSize.inc(inclusionListSize);
     throw new InclusionListError(GossipAction.REJECT, {
       code: InclusionListErrorCode.INVALID_SIGNATURE,
     });
   }
 
   metrics?.eip7805.inclusionListValid.inc({source});
-  metrics?.eip7805.validInclusionListByteSize.inc({source}, inclusionListSize);
+  metrics?.eip7805.validInclusionListByteSize.inc(inclusionListSize);
 }

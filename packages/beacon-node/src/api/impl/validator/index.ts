@@ -1530,11 +1530,13 @@ export function getValidatorApi(
         throw new ApiError(400, `Publishing pre-eip7805 inclusion list slot: ${slot}`);
       }
 
+      const timer = metrics?.eip7805.inclusionListValidationTime.startTimer();
       await validateApiInclusionList(chain, signedInclusionList, metrics);
+      timer?.({source: InclusionListSource.api});
 
-      chain.inclusionListPool.add(signedInclusionList, metrics);
+      chain.inclusionListPool.add(signedInclusionList);
       metrics?.eip7805.inclusionListSeen.inc({source: InclusionListSource.api});
-      metrics?.eip7805.inclusionListTransactionsSeen.inc(chain.inclusionListPool.getTransactions(slot, metrics).length);
+      metrics?.eip7805.inclusionListTransactionsSeen.inc({source: InclusionListSource.api}, chain.inclusionListPool.getTransactions(slot, metrics).length);
 
       const secFromSlot = chain.clock.secFromSlot(slot, Date.now() / 1000);
       chain.forkChoice.onInclusionList(signedInclusionList, secFromSlot, metrics, FCInclusionListSource.api);

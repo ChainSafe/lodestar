@@ -61,7 +61,7 @@ export class InclusionListPool {
     return count;
   }
 
-  add(inclusionList: eip7805.SignedInclusionList, metrics: Metrics | null): InclusionListInsertOutcome {
+  add(inclusionList: eip7805.SignedInclusionList): InclusionListInsertOutcome {
     const {slot, validatorIndex, transactions} = inclusionList.message;
 
     // Reject any inclusion lists that are too old.
@@ -90,7 +90,6 @@ export class InclusionListPool {
 
     // Create new inclusion list
     inclusionListsByValidator.set(validatorIndex, {transactions, seenTwice: false});
-    metrics?.eip7805.inclusionListTransactionsIncluded.inc(transactions.length);
     return InclusionListInsertOutcome.New;
   }
 
