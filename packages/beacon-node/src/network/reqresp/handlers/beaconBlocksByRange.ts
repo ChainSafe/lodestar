@@ -1,6 +1,7 @@
 import {BeaconConfig} from "@lodestar/config";
 import {GENESIS_SLOT, MAX_REQUEST_BLOCKS, MAX_REQUEST_BLOCKS_DENEB, isForkPostDeneb} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
+import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {deneb, phase0} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
@@ -26,7 +27,7 @@ export async function* onBeaconBlocksByRange(
     for await (const {key, value} of finalized.binaryEntriesStream({gte: startSlot, lt: endSlot})) {
       yield {
         data: value,
-        boundary: {fork: chain.config.getForkName(finalized.decodeKey(key))},
+        boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(finalized.decodeKey(key))),
       };
     }
   }
@@ -57,7 +58,7 @@ export async function* onBeaconBlocksByRange(
 
         yield {
           data: blockBytes,
-          boundary: {fork: chain.config.getForkName(block.slot)},
+          boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(block.slot)),
         };
       }
 

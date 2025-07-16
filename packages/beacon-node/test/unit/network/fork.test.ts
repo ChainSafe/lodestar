@@ -1,7 +1,7 @@
 import {BeaconConfig, ForkInfo} from "@lodestar/config";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {describe, expect, it} from "vitest";
-import {getActiveForks, getCurrentAndNextFork} from "../../../src/network/forks.js";
+import {getCurrentAndNextForkBoundary} from "../../../src/network/forks.js";
 
 function getForkConfig({
   phase0,
@@ -80,7 +80,12 @@ function getForkConfig({
   };
   const forksAscendingEpochOrder = Object.values(forks);
   const forksDescendingEpochOrder = Object.values(forks).reverse();
-  return {forks, forksAscendingEpochOrder, forksDescendingEpochOrder} as BeaconConfig;
+  return {
+    forks,
+    forksAscendingEpochOrder,
+    forksDescendingEpochOrder,
+    forkBoundariesAscendingEpochOrder: forksAscendingEpochOrder.map(({name, epoch}) => ({fork: name, epoch})),
+  } as BeaconConfig;
 }
 
 const testScenarios = [
@@ -164,12 +169,14 @@ for (const testScenario of testScenarios) {
       it(` on epoch ${epoch} should return ${JSON.stringify({
         currentFork,
         nextFork,
-      })}, getActiveForks: ${activeForks.join(",")}`, () => {
-        expect(getCurrentAndNextFork(forkConfig, epoch)).toEqual({
-          currentFork: forks[currentFork as ForkName],
-          nextFork: (nextFork && forks[nextFork as ForkName]) ?? undefined,
+      })}, activeForks: ${activeForks.join(",")}`, () => {
+        const currentForkInfo = forks[currentFork as ForkName];
+        const nextForkInfo = (nextFork && forks[nextFork as ForkName]) ?? undefined;
+
+        expect(getCurrentAndNextForkBoundary(forkConfig, epoch)).toEqual({
+          currentBoundary: {fork: currentForkInfo.name, epoch: currentForkInfo.epoch},
+          nextBoundary: nextForkInfo ? {fork: nextForkInfo.name, epoch: nextForkInfo.epoch} : undefined,
         });
-        expect(getActiveForks(forkConfig, epoch)).toEqual(activeForks);
       });
     }
   });

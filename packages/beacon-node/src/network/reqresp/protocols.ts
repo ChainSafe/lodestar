@@ -1,4 +1,4 @@
-import {BeaconConfig, ForkDigestContext} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {ContextBytesFactory, ContextBytesType, Encoding} from "@lodestar/reqresp";
 import {rateLimitQuotas} from "./rateLimit.js";
@@ -136,11 +136,11 @@ function toProtocol(protocol: ProtocolSummary) {
   });
 }
 
-function toContextBytes(type: ContextBytesType, config: ForkDigestContext): ContextBytesFactory {
+function toContextBytes(type: ContextBytesType, config: BeaconConfig): ContextBytesFactory {
   switch (type) {
     case ContextBytesType.Empty:
       return {type: ContextBytesType.Empty};
     case ContextBytesType.ForkDigest:
-      return {type: ContextBytesType.ForkDigest, forkDigestContext: config};
+      return {type: ContextBytesType.ForkDigest, config};
   }
 }

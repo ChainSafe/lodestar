@@ -1,11 +1,11 @@
-import {BeaconConfig} from "@lodestar/config";
+import {BeaconConfig, ForkBoundary} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Epoch, Slot, SubnetID, ssz} from "@lodestar/types";
 import {Logger, MapDef} from "@lodestar/utils";
 import {ClockEvent, IClock} from "../../util/clock.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
-import {SubscribeBoundary} from "../core/types.js";
-import {getActiveSubscribeBoundaries} from "../forks.js";
+import {getActiveForkBoundaries} from "../forks.js";
 import {GossipType} from "../gossip/index.js";
 import {GOSSIP_D_LOW} from "../gossip/scoringParameters.js";
 import {stringifyGossipTopic} from "../gossip/topic.js";
@@ -132,8 +132,8 @@ export class AttnetsService implements IAttnetsService {
    * TODO-dll: clarify how many epochs before the fork we should subscribe to the new fork
    * Call ONLY ONCE: Two epoch before the fork, re-subscribe all existing random subscriptions to the new fork
    **/
-  subscribeSubnetsAfterBoundary(boundary: SubscribeBoundary): void {
-    this.logger.info("Subscribing to long lived attnets after boundary", {
+  subscribeSubnetsNextBoundary(boundary: ForkBoundary): void {
+    this.logger.info("Subscribing to long lived attnets for next fork boundary", {
       ...boundary,
       subnets: Array.from(this.longLivedSubscriptions).join(","),
     });
@@ -146,8 +146,8 @@ export class AttnetsService implements IAttnetsService {
    * TODO-dll: clarify how many epochs after the fork we should unsubscribe to the new fork
    * Call  ONLY ONCE: Two epochs after the fork, un-subscribe all subnets from the old fork
    **/
-  unsubscribeSubnetsBeforeBoundary(boundary: SubscribeBoundary): void {
-    this.logger.info("Unsubscribing to long lived attnets before boundary", {...boundary});
+  unsubscribeSubnetsPrevBoundary(boundary: ForkBoundary): void {
+    this.logger.info("Unsubscribing from long lived attnets of previous fork boundary", boundary);
     for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
       if (!this.opts.subscribeAllSubnets) {
         this.gossip.unsubscribeTopic({type: gossipType, subnet, boundary});
@@ -218,7 +218,7 @@ export class AttnetsService implements IAttnetsService {
         if (timeToFormMesh === null) {
           const topicStr = stringifyGossipTopic(this.config, {
             type: gossipType,
-            boundary: {fork: this.config.getForkName(dutiedSlot)},
+            boundary: this.config.getForkBoundaryAtEpoch(computeEpochAtSlot(dutiedSlot)),
             subnet,
           });
           const numMeshPeers = this.gossip.mesh.get(topicStr)?.size ?? 0;
@@ -329,7 +329,7 @@ export class AttnetsService implements IAttnetsService {
    * shortLivedSubscriptions or longLivedSubscriptions should be updated right AFTER this called
    **/
   private subscribeToSubnets(subnets: number[], src: SubnetSource): void {
-    const boundaries = getActiveSubscribeBoundaries(this.config, this.clock.currentEpoch);
+    const boundaries = getActiveForkBoundaries(this.config, this.clock.currentEpoch);
 
     for (const subnet of subnets) {
       if (!this.shortLivedSubscriptions.has(subnet) && !this.longLivedSubscriptions.has(subnet)) {
@@ -349,7 +349,7 @@ export class AttnetsService implements IAttnetsService {
     // No need to unsubscribeTopic(). Return early to prevent repetitive extra work
     if (this.opts.subscribeAllSubnets) return;
 
-    const boundaries = getActiveSubscribeBoundaries(this.config, this.clock.currentEpoch);
+    const boundaries = getActiveForkBoundaries(this.config, this.clock.currentEpoch);
 
     for (const subnet of subnets) {
       if (!this.shortLivedSubscriptions.isActiveAtSlot(subnet, slot) && !this.longLivedSubscriptions.has(subnet)) {
@@ -369,7 +369,7 @@ export class AttnetsService implements IAttnetsService {
     for (const {subnet} of this.shortLivedSubscriptions.getActiveTtl(currentSlot)) {
       const topicStr = stringifyGossipTopic(this.config, {
         type: gossipType,
-        boundary: {fork: this.config.getForkName(currentSlot)},
+        boundary: this.config.getForkBoundaryAtEpoch(this.clock.currentEpoch),
         subnet,
       });
       const numMeshPeers = this.gossip.mesh.get(topicStr)?.size ?? 0;

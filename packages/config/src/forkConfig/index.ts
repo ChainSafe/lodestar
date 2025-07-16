@@ -14,7 +14,7 @@ import {
 } from "@lodestar/params";
 import {Epoch, SSZTypesFor, Slot, Version, sszTypesFor} from "@lodestar/types";
 import {ChainConfig} from "../chainConfig/index.js";
-import {ForkConfig, ForkInfo} from "./types.js";
+import {BlobParameters, ForkBoundary, ForkConfig, ForkInfo} from "./types.js";
 
 export * from "./types.js";
 
@@ -85,10 +85,34 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
   const forksAscendingEpochOrder = Object.values(forks);
   const forksDescendingEpochOrder = Object.values(forks).reverse();
 
+  const blobScheduleDescendingEpochOrder = [...config.BLOB_SCHEDULE].sort((a, b) => b.EPOCH - a.EPOCH);
+
+  const forkBoundariesAscendingEpochOrder: ForkBoundary[] = [
+    // Normal hard-forks (phase0, altair, etc.)
+    ...forksAscendingEpochOrder.map((fork) => ({
+      fork: fork.name,
+      epoch: fork.epoch,
+    })),
+    // Blob Parameter Only (BPO) forks
+    // Note: Must be appended after normal hard-forks to have precedence if scheduled at the same epoch
+    ...config.BLOB_SCHEDULE.map((entry) => ({
+      fork: forksDescendingEpochOrder.find((f) => entry.EPOCH >= f.epoch)?.name ?? phase0.name,
+      epoch: entry.EPOCH,
+    })),
+  ]
+    // Remove unscheduled fork boundaries
+    .filter(({epoch}) => epoch !== Infinity)
+    // Sort by epoch in ascending order
+    .sort((a, b) => a.epoch - b.epoch);
+
+  const forkBoundariesDescendingEpochOrder = [...forkBoundariesAscendingEpochOrder].reverse();
+
   return {
     forks,
     forksAscendingEpochOrder,
     forksDescendingEpochOrder,
+    forkBoundariesAscendingEpochOrder,
+    forkBoundariesDescendingEpochOrder,
 
     // Fork convenience methods
     getForkInfo(slot: Slot): ForkInfo {
@@ -96,11 +120,15 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
       return this.getForkInfoAtEpoch(epoch);
     },
     getForkInfoAtEpoch(epoch: Epoch): ForkInfo {
-      // NOTE: forks must be sorted by descending epoch, latest fork first
-      for (const fork of forksDescendingEpochOrder) {
-        if (epoch >= fork.epoch) return fork;
+      return forks[this.getForkBoundaryAtEpoch(epoch).fork];
+    },
+    getForkBoundaryAtEpoch(epoch: Epoch): ForkBoundary {
+      if (epoch < 0) epoch = 0;
+      // NOTE: fork boundaries must be sorted by descending epoch, latest first
+      for (const boundary of forkBoundariesDescendingEpochOrder) {
+        if (epoch >= boundary.epoch) return boundary;
       }
-      return phase0;
+      throw Error("Unreachable as phase0 is scheduled at epoch 0");
     },
     getForkName(slot: Slot): ForkName {
       return this.getForkInfo(slot).name;
@@ -148,16 +176,21 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
           return config.MAX_BLOBS_PER_BLOCK;
       }
 
-      // Sort by epoch in descending order to find the latest applicable value
-      const blobSchedule = [...config.BLOB_SCHEDULE].sort((a, b) => b.EPOCH - a.EPOCH);
+      return this.getBlobParameters(epoch).maxBlobsPerBlock;
+    },
+    getBlobParameters(epoch: Epoch): BlobParameters {
+      if (epoch < config.FULU_FORK_EPOCH) {
+        throw Error(`getBlobParameters is not available pre-fulu epoch=${epoch}`);
+      }
 
-      for (const entry of blobSchedule) {
+      // Find the latest applicable value from blob schedule
+      for (const entry of blobScheduleDescendingEpochOrder) {
         if (epoch >= entry.EPOCH) {
-          return entry.MAX_BLOBS_PER_BLOCK;
+          return {epoch: entry.EPOCH, maxBlobsPerBlock: entry.MAX_BLOBS_PER_BLOCK};
         }
       }
 
-      return config.MAX_BLOBS_PER_BLOCK_ELECTRA;
+      return {epoch: config.ELECTRA_FORK_EPOCH, maxBlobsPerBlock: config.MAX_BLOBS_PER_BLOCK_ELECTRA};
     },
     getMaxRequestBlobSidecars(fork: ForkName): number {
       return isForkPostElectra(fork) ? config.MAX_REQUEST_BLOB_SIDECARS_ELECTRA : config.MAX_REQUEST_BLOB_SIDECARS;

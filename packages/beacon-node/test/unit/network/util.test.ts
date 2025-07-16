@@ -1,35 +1,35 @@
 import {config} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
 import {afterEach, describe, expect, it} from "vitest";
-import {getCurrentAndNextFork} from "../../../src/network/forks.js";
+import {getCurrentAndNextForkBoundary} from "../../../src/network/forks.js";
 import {getDiscv5Multiaddrs} from "../../../src/network/libp2p/index.js";
 
-describe("getCurrentAndNextFork", () => {
-  const altairEpoch = config.forks.altair.epoch;
+describe("getCurrentAndNextForkBoundary", () => {
+  const altairEpoch = config.forkBoundariesAscendingEpochOrder[1].epoch;
   afterEach(() => {
-    config.forks.altair.epoch = altairEpoch;
+    config.forkBoundariesAscendingEpochOrder[1].epoch = altairEpoch;
   });
 
-  it("should return no next fork if altair epoch is infinity", () => {
-    config.forks.altair.epoch = Infinity;
-    const {currentFork, nextFork} = getCurrentAndNextFork(config, 0);
-    expect(currentFork.name).toBe(ForkName.phase0);
-    expect(nextFork).toBeUndefined();
+  it("should return no next fork boundary if altair epoch is infinity", () => {
+    config.forkBoundariesAscendingEpochOrder[1].epoch = Infinity;
+    const {currentBoundary, nextBoundary} = getCurrentAndNextForkBoundary(config, 0);
+    expect(currentBoundary.fork).toBe(ForkName.phase0);
+    expect(nextBoundary).toBeUndefined();
   });
 
-  it("should return altair as next fork and then bellatrix", () => {
-    config.forks.altair.epoch = 1000;
-    let forks = getCurrentAndNextFork(config, 0);
-    expect(forks.currentFork.name).toBe(ForkName.phase0);
-    if (forks.nextFork) {
-      expect(forks.nextFork.name).toBe(ForkName.altair);
+  it("should return altair as next fork boundary and then bellatrix", () => {
+    config.forkBoundariesAscendingEpochOrder[1].epoch = 1000;
+    let boundaries = getCurrentAndNextForkBoundary(config, 0);
+    expect(boundaries.currentBoundary.fork).toBe(ForkName.phase0);
+    if (boundaries.nextBoundary) {
+      expect(boundaries.nextBoundary.fork).toBe(ForkName.altair);
     } else {
       expect.fail("No next fork");
     }
 
-    forks = getCurrentAndNextFork(config, 1000);
-    expect(forks.currentFork.name).toBe(ForkName.altair);
-    expect(forks.nextFork?.name).toBe(ForkName.bellatrix);
+    boundaries = getCurrentAndNextForkBoundary(config, 1000);
+    expect(boundaries.currentBoundary.fork).toBe(ForkName.altair);
+    expect(boundaries.nextBoundary?.fork).toBe(ForkName.bellatrix);
   });
 });
 
