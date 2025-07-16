@@ -837,7 +837,6 @@ export class BeaconChain implements IBeaconChain {
   getStatus(): Status {
     const head = this.forkChoice.getHead();
     const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
-    const forkName = this.config.getForkName(this.clock.currentSlot);
     const boundary = this.config.getForkBoundaryAtEpoch(this.clock.currentEpoch);
     const status = {
       // fork_digest: The node's ForkDigest (compute_fork_digest(current_fork_version, genesis_validators_root)) where
@@ -853,7 +852,7 @@ export class BeaconChain implements IBeaconChain {
       headSlot: head.slot,
     };
 
-    if (isForkPostFulu(forkName)) {
+    if (isForkPostFulu(boundary.fork)) {
       (status as fulu.Status).earliestAvailableSlot = this._earliestSlotAvailable;
     }
 
