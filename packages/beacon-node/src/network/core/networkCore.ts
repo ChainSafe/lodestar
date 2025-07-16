@@ -153,7 +153,7 @@ export class NetworkCore implements INetworkCore {
     const onMetadataSetValue = function onMetadataSetValue(key: string, value: Uint8Array): void {
       discv5?.setEnrValue(key, value).catch((e) => logger.error("error on setEnrValue", {key}, e));
     };
-    const metadata = new MetadataController({}, {config, onSetValue: onMetadataSetValue});
+    const metadata = new MetadataController({}, {config, logger, onSetValue: onMetadataSetValue});
 
     const reqResp = new ReqRespBeaconNode(
       {

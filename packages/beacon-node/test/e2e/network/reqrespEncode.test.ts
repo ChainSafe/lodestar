@@ -58,14 +58,15 @@ describe("reqresp encoder", () => {
       };
 
     const config = createBeaconConfig({}, ZERO_HASH);
+    const logger = testLogger();
     const modules: ReqRespBeaconNodeModules = {
       libp2p,
       peersData: new PeersData(),
-      logger: testLogger(),
+      logger,
       config,
       metrics: null,
       getHandler: getHandler ?? getHandlerNoop,
-      metadata: new MetadataController({}, {config, onSetValue: () => null}),
+      metadata: new MetadataController({}, {config, logger, onSetValue: () => null}),
       peerRpcScores: new PeerRpcScoreStore(),
       events: new NetworkEventBus(),
       statusCache: new LocalStatusCache(ssz.phase0.Status.defaultValue()),

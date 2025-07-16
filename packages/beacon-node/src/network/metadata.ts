@@ -3,6 +3,7 @@ import {BeaconConfig} from "@lodestar/config";
 import {ForkSeq} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, altair, phase0, ssz} from "@lodestar/types";
+import {Logger, toHex} from "@lodestar/utils";
 import {FAR_FUTURE_EPOCH} from "../constants/index.js";
 import {getCurrentAndNextForkBoundary} from "./forks.js";
 
@@ -24,6 +25,7 @@ export type MetadataOpts = {
 
 export type MetadataModules = {
   config: BeaconConfig;
+  logger: Logger;
   onSetValue: (key: string, value: Uint8Array) => void;
 };
 
@@ -35,10 +37,12 @@ export type MetadataModules = {
 export class MetadataController {
   private onSetValue: (key: string, value: Uint8Array) => void;
   private config: BeaconConfig;
+  private logger: Logger;
   private _metadata: altair.Metadata;
 
   constructor(opts: MetadataOpts, modules: MetadataModules) {
     this.config = modules.config;
+    this.logger = modules.logger;
     this.onSetValue = modules.onSetValue;
     this._metadata = opts.metadata || ssz.altair.Metadata.defaultValue();
   }
@@ -98,13 +102,20 @@ export class MetadataController {
    */
   updateEth2Field(epoch: Epoch): void {
     const enrForkId = getENRForkID(this.config, epoch);
+    const {forkDigest, nextForkVersion, nextForkEpoch} = enrForkId;
     this.onSetValue(ENRKey.eth2, ssz.phase0.ENRForkID.serialize(enrForkId));
+    this.logger.debug("Updated eth2 field in ENR", {
+      forkDigest: toHex(forkDigest),
+      nextForkVersion: toHex(nextForkVersion),
+      nextForkEpoch,
+    });
 
     const nextForkDigest =
-      enrForkId.nextForkEpoch !== FAR_FUTURE_EPOCH
-        ? this.config.forkBoundary2ForkDigest(this.config.getForkBoundaryAtEpoch(enrForkId.nextForkEpoch))
+      nextForkEpoch !== FAR_FUTURE_EPOCH
+        ? this.config.forkBoundary2ForkDigest(this.config.getForkBoundaryAtEpoch(nextForkEpoch))
         : ssz.ForkDigest.defaultValue();
     this.onSetValue(ENRKey.nfd, nextForkDigest);
+    this.logger.debug("Updated nfd field in ENR", {nextForkDigest: toHex(nextForkDigest)});
   }
 }
 
