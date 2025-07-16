@@ -101,7 +101,7 @@ export class MetadataController {
 
     const nextForkDigest =
       enrForkId.nextForkEpoch !== FAR_FUTURE_EPOCH
-        ? this.config.epoch2ForkDigest(enrForkId.nextForkEpoch)
+        ? this.config.forkBoundary2ForkDigest(this.config.getForkBoundaryAtEpoch(enrForkId.nextForkEpoch))
         : ssz.ForkDigest.defaultValue();
     this.onSetValue(ENRKey.nfd, nextForkDigest);
   }
