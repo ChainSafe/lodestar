@@ -214,7 +214,7 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
       const subnetStr = gossipTypeStr.slice(GossipType.data_column_sidecar.length + 1); // +1 for '_' concatenating the topic name and the subnet
       const subnet = parseInt(subnetStr, 10);
       if (Number.isNaN(subnet)) throw Error(`subnet ${subnetStr} is not a number`);
-      return {type: GossipType.data_column_sidecar, subnet, boundary: {fork}, encoding};
+      return {type: GossipType.data_column_sidecar, subnet, boundary, encoding};
     }
 
     throw Error(`Unknown gossip type ${gossipTypeStr}`);

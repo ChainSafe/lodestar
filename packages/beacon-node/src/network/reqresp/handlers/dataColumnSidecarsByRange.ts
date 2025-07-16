@@ -1,5 +1,6 @@
 import {GENESIS_SLOT, MAX_REQUEST_BLOCKS_DENEB, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
+import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {ColumnIndex, Slot, fulu, ssz} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
@@ -115,8 +116,6 @@ export function* iterateDataColumnBytesFromWrapper(
     return;
   }
 
-  const fork = chain.config.getForkName(blockSlot);
-
   for (const index of columns) {
     // get the index at which the column is
     const dataIndex = (dataColumnsIndex[index] ?? 0) - 1;
@@ -139,7 +138,7 @@ export function* iterateDataColumnBytesFromWrapper(
     // console.log(`iterate onDataColumnSidecarsByRange blockSlot=${blockSlot} index=${index} dataIndex=${dataIndex}`);
     yield {
       data: dataColumnSidecarBytes,
-      boundary: {fork},
+      boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(blockSlot)),
     };
   }
 }

@@ -28,7 +28,12 @@ describe("network / gossip / topic", () => {
     ],
     [GossipType.data_column_sidecar]: [
       {
-        topic: {type: GossipType.data_column_sidecar, subnet: 1, boundary: {fork: ForkName.fulu}, encoding},
+        topic: {
+          type: GossipType.data_column_sidecar,
+          subnet: 1,
+          boundary: {fork: ForkName.fulu, epoch: config.FULU_FORK_EPOCH},
+          encoding,
+        },
         topicStr: "/eth2/0570c363/data_column_sidecar_1/ssz_snappy",
       },
     ],

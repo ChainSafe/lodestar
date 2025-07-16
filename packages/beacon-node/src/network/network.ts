@@ -57,7 +57,6 @@ import {
 } from "./reqresp/utils/collect.js";
 import {collectSequentialBlocksInRange} from "./reqresp/utils/collectSequentialBlocksInRange.js";
 import {CommitteeSubscription} from "./subnets/index.js";
-import {getSubscribeBoundary} from "./subscribeBoundary.js";
 import {isPublishToZeroPeersError, prettyPrintPeerIdStr} from "./util.js";
 
 type NetworkModules = {
@@ -351,7 +350,7 @@ export class Network implements INetwork {
 
   async publishDataColumnSidecar(dataColumnSidecar: fulu.DataColumnSidecar): Promise<number> {
     const epoch = computeEpochAtSlot(dataColumnSidecar.signedBlockHeader.message.slot);
-    const boundary = getSubscribeBoundary(this.config, epoch);
+    const boundary = this.config.getForkBoundaryAtEpoch(epoch);
 
     const subnet = computeSubnetForDataColumnSidecar(dataColumnSidecar);
     return this.publishGossip<GossipType.data_column_sidecar>(

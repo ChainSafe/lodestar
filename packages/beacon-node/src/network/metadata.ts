@@ -5,7 +5,6 @@ import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, fulu, phase0, ssz} from "@lodestar/types";
 import {FAR_FUTURE_EPOCH} from "../constants/index.js";
 import {serializeCgc} from "../util/metadata.js";
-import {getCurrentAndNextFork} from "./forks.js";
 import {getCurrentAndNextForkBoundary} from "./forks.js";
 import {NetworkConfig} from "./networkConfig.js";
 
