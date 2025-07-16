@@ -216,7 +216,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(lodestar_data_column_elapsed_time_till_received_sum{source=\"gossip\"}[$rate_interval])\n/\nrate(lodestar_data_column_elapsed_time_till_received_count{source=\"gossip\"}[$rate_interval])",
+          "expr": "rate(lodestar_data_column_elapsed_time_till_received_seconds_sum{source=\"gossip\"}[$rate_interval])\n/\nrate(lodestar_data_column_elapsed_time_till_received_seconds_count{source=\"gossip\"}[$rate_interval])",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
@@ -1799,7 +1799,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(lodestar_data_column_sidecar_elapsed_time_till_reconstructed_sum[$rate_interval])\n/\nrate(lodestar_data_column_sidecar_elapsed_time_till_reconstructed_count[$rate_interval])",
+          "expr": "rate(lodestar_data_column_sidecar_elapsed_time_till_reconstructed_seconds_sum[$rate_interval])\n/\nrate(lodestar_data_column_sidecar_elapsed_time_till_reconstructed_seconds_count[$rate_interval])",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,

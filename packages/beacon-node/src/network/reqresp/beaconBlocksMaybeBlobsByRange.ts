@@ -257,7 +257,7 @@ export function matchBlockWithDataColumns(
   dataColumnsSource: DataColumnsSource,
   prevPartialDownload: null | PartialDownload,
   peerClient: string,
-  metrics?: Metrics | null,
+  metrics: Metrics | null,
   logger?: Logger
 ): BlockInput[] {
   const blockInputs: BlockInput[] = [];

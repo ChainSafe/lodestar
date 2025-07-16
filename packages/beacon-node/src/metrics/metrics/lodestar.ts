@@ -719,7 +719,7 @@ export function createLodestarMetrics(
     },
     recoverDataColumnSidecars: {
       elapsedTimeTillReconstructed: register.histogram({
-        name: "lodestar_data_column_sidecar_elapsed_time_till_reconstructed",
+        name: "lodestar_data_column_sidecar_elapsed_time_till_reconstructed_seconds",
         help: "Time elapsed between block slot time and the time data column sidecar reconstructed",
         buckets: [2, 4, 6, 8, 10, 12],
       }),
@@ -740,7 +740,7 @@ export function createLodestarMetrics(
         labelNames: ["source"],
       }),
       elapsedTimeTillReceived: register.histogram<{source: DataColumnsSource}>({
-        name: "lodestar_data_column_elapsed_time_till_received",
+        name: "lodestar_data_column_elapsed_time_till_received_seconds",
         help: "Time elapsed between block slot time and the time data column received",
         labelNames: ["source"],
         buckets: [1, 2, 3, 4, 6, 12],

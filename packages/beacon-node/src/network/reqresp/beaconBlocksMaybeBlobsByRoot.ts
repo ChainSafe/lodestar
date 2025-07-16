@@ -42,7 +42,7 @@ export async function beaconBlocksMaybeBlobsByRoot(
   request: phase0.BeaconBlocksByRootRequest,
   partialDownload: null | PartialDownload,
   peerClient: string,
-  metrics?: Metrics | null,
+  metrics: Metrics | null,
   logger?: Logger
 ): Promise<{blocks: BlockInput[]; pendingDataColumns: null | number[]}> {
   // console.log("beaconBlocksMaybeBlobsByRoot", request);
