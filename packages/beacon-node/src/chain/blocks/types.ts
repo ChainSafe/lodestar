@@ -68,8 +68,8 @@ export type CachedBlobs = CachedDataItem &
  */
 export enum DataColumnsSource {
   gossip = "gossip",
-  beaconApi = "beacon_api",
-  engineApi = "engine_api",
+  api = "api",
+  engine = "engine",
   byRange = "req_resp_by_range",
   byRoot = "req_resp_by_root",
 }

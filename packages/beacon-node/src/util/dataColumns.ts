@@ -507,11 +507,11 @@ export async function getDataColumnsFromExecution(
   const blockData: BlockInputDataColumns = {
     fork: blockCache.cachedData.fork,
     ...allDataColumns,
-    dataColumnsSource: DataColumnsSource.engineApi,
+    dataColumnsSource: DataColumnsSource.engine,
   };
   const partialColumns = blockCache.cachedData.dataColumnsCache.size;
   blockCache.cachedData.resolveAvailability(blockData);
-  metrics?.dataColumns.bySource.inc({source: DataColumnsSource.engineApi}, NUMBER_OF_COLUMNS - partialColumns);
+  metrics?.dataColumns.bySource.inc({source: DataColumnsSource.engine}, NUMBER_OF_COLUMNS - partialColumns);
 
   if (blockCache.block !== undefined) {
     const blockInput = getBlockInput.availableData(config, blockCache.block, BlockSource.gossip, blockData);
