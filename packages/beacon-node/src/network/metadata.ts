@@ -90,6 +90,7 @@ export class MetadataController {
    *   - current_fork_version is the fork version at the node's current epoch defined by the wall-clock time (not
    *     necessarily the epoch to which the node is sync)
    *   - genesis_validators_root is the static Root found in state.genesis_validators_root
+   *   - epoch of fork boundary is used to get blob parameters of current Blob Parameter Only (BPO) fork
    *
    * 1. MUST be called on start to populate ENR
    * 2. Network MUST call this method on fork transition.
