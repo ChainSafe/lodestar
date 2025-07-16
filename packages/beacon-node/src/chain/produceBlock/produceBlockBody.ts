@@ -185,7 +185,7 @@ export async function produceBlockBody<T extends BlockType>(
           slot: blockSlot,
           proposerPubKey: toHex(proposerPubKey),
         });
-        const headerRes = prepareExecutionPayloadHeader(
+        const headerRes = await prepareExecutionPayloadHeader(
           this,
           fork,
           currentState as CachedBeaconStateBellatrix,
