@@ -623,7 +623,7 @@ export class BeaconChain implements IBeaconChain {
     return data && {block: data, executionOptimistic: false, finalized: true};
   }
 
-  async produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody> {
+  async produceCommonBlockBody(blockAttributes: BlockAttributes, metrics: Metrics | null): Promise<CommonBlockBody> {
     const {slot, parentBlockRoot} = blockAttributes;
     const state = await this.regen.getBlockSlotState(
       toRootHex(parentBlockRoot),
@@ -637,6 +637,7 @@ export class BeaconChain implements IBeaconChain {
 
     return produceCommonBlockBody.call(this, blockType, state, {
       ...blockAttributes,
+      ...metrics,
       parentSlot: slot - 1,
     });
   }

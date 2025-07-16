@@ -11,6 +11,7 @@ import {
   eip7805,
   phase0,
 } from "@lodestar/types";
+import {BeaconForkChoiceMetrics} from "../metrics.js";
 import {
   DataAvailabilityStatus,
   LVHExecResponse,
@@ -18,7 +19,7 @@ import {
   ProtoBlock,
   ProtoNode,
 } from "../protoArray/interface.js";
-import {UpdateAndGetHeadOpt} from "./forkChoice.js";
+import {FCInclusionListSource, UpdateAndGetHeadOpt} from "./forkChoice.js";
 import {CheckpointWithHex} from "./store.js";
 
 export type CheckpointHex = {
@@ -179,7 +180,12 @@ export interface IForkChoice {
   /**
    * inclusionListCommittee is a list of IL committee validators' index in the current slot
    */
-  onInclusionList(inclusionList: eip7805.SignedInclusionList, secFromSlot: number): void;
+  onInclusionList(
+    inclusionList: eip7805.SignedInclusionList,
+    secFromSlot: number,
+    metrics: BeaconForkChoiceMetrics | null,
+    source: FCInclusionListSource
+  ): void;
   getLatestMessage(validatorIndex: ValidatorIndex): LatestMessage | undefined;
   /**
    * Call `onTick` for all slots between `fcStore.getCurrentSlot()` and the provided `currentSlot`.

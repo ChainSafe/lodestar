@@ -193,7 +193,7 @@ export interface IBeaconChain {
 
   getContents(beaconBlock: deneb.BeaconBlock): deneb.Contents;
 
-  produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody>;
+  produceCommonBlockBody(blockAttributes: BlockAttributes, metrics: Metrics | null): Promise<CommonBlockBody>;
   produceBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
     block: BeaconBlock;
     executionPayloadValue: Wei;

@@ -1,5 +1,6 @@
 import {routes} from "@lodestar/api";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
+import {FCInclusionListSource} from "@lodestar/fork-choice";
 import {ForkName, ForkPostElectra, ForkPreElectra, ForkSeq, isForkPostElectra} from "@lodestar/params";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {
@@ -21,6 +22,7 @@ import {
   GossipedInputType,
   NullBlockInput,
 } from "../../chain/blocks/types.js";
+import {InclusionListError, InclusionListErrorCode} from "../../chain/errors/inclusionList.js";
 import {
   AttestationError,
   AttestationErrorCode,
@@ -35,6 +37,7 @@ import {
 } from "../../chain/errors/index.js";
 import {IBeaconChain} from "../../chain/interface.js";
 import {validateGossipBlobSidecar} from "../../chain/validation/blobSidecar.js";
+import {InclusionListSource} from "../../chain/validation/inclusionList.js";
 import {
   AggregateAndProofValidationResult,
   GossipAttestation,
@@ -67,7 +70,6 @@ import {sszDeserialize} from "../gossip/topic.js";
 import {INetwork} from "../interface.js";
 import {PeerAction} from "../peers/index.js";
 import {AggregatorTracker} from "./aggregatorTracker.js";
-import { InclusionListError, InclusionListErrorCode } from "../../chain/errors/inclusionList.js";
 
 /**
  * Gossip handler options as part of network options
@@ -618,25 +620,32 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     }: GossipHandlerParamGeneric<GossipType.inclusion_list>) => {
       const {serializedData} = gossipData;
       const inclusionList = sszDeserialize(topic, serializedData);
+      metrics?.eip7805.inclusionListSeen.inc({source: InclusionListSource.gossip});
       // TODO EIP-7805: should we persist invalid ssz value?
       try {
-        await validateGossipInclusionList(chain, inclusionList);
+        await validateGossipInclusionList(chain, inclusionList, metrics);
       } catch (e) {
         chain.logger.debug(`Gossip Inclusion List validation error ${JSON.stringify(e)}`);
         if (e instanceof InclusionListError) {
           if (e.type.code === InclusionListErrorCode.INVALID_COMMITTEE_ROOT) {
-            chain.logger.debug(`Expected ILC Root ${toRootHex(e.type.expected)} Received ILC Root ${toRootHex(e.type.received)}`);
+            chain.logger.debug(
+              `Expected ILC Root ${toRootHex(e.type.expected)} Received ILC Root ${toRootHex(e.type.received)}`
+            );
           }
         }
         throw e;
       }
 
       try {
-        const insertOutcome = chain.inclusionListPool.add(inclusionList);
+        const insertOutcome = chain.inclusionListPool.add(inclusionList, metrics);
         metrics?.opPool.inclusionListPoolInsertOutcome.inc({insertOutcome});
+        metrics?.eip7805.inclusionListTransactionsSeen.inc(
+          chain.inclusionListPool.getTransactions(inclusionList.message.slot, metrics).length
+        );
 
         const secFromSlot = chain.clock.secFromSlot(inclusionList.message.slot, seenTimestampSec);
-        chain.forkChoice.onInclusionList(inclusionList, secFromSlot);
+        metrics?.eip7805.inclusionListReceivedSecFromSlot.observe(secFromSlot);
+        chain.forkChoice.onInclusionList(inclusionList, secFromSlot, metrics, FCInclusionListSource.gossip);
       } catch (e) {
         logger.error("Error adding inclusionList to pool", {}, e as Error);
       }

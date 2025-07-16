@@ -306,7 +306,9 @@ export async function verifyBlockExecutionPayload(
   const parentBlockRoot = ForkSeq[fork] >= ForkSeq.deneb ? block.message.parentRoot : undefined;
   const executionRequests =
     ForkSeq[fork] >= ForkSeq.electra ? (block.message.body as electra.BeaconBlockBody).executionRequests : undefined;
-  const ilTransactions = isForkPostEip7805(fork) ? chain.inclusionListPool.getTransactions(currentSlot) : undefined;
+  const ilTransactions = isForkPostEip7805(fork)
+    ? chain.inclusionListPool.getTransactions(currentSlot, chain.metrics)
+    : undefined;
 
   const logCtx = {slot: block.message.slot, executionBlock: executionPayloadEnabled.blockNumber};
   chain.logger.debug("Call engine api newPayload", logCtx);

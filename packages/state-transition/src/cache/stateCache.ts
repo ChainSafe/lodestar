@@ -9,8 +9,8 @@ import {
   BeaconStateBellatrix,
   BeaconStateCapella,
   BeaconStateDeneb,
-  BeaconStateElectra,
   BeaconStateEip7805,
+  BeaconStateElectra,
   BeaconStateExecutions,
   BeaconStatePhase0,
 } from "./types.js";

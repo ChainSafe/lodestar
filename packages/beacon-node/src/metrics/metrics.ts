@@ -1,4 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
+import {BeaconForkChoiceMetrics, getMetrics} from "@lodestar/fork-choice";
 import {BeaconStateAllForks, getCurrentSlot} from "@lodestar/state-transition";
 import {Logger} from "@lodestar/utils";
 import {Metric, Registry} from "prom-client";
@@ -11,6 +12,7 @@ import {ValidatorMonitor, createValidatorMonitor} from "./validatorMonitor.js";
 
 export type Metrics = BeaconMetrics &
   LodestarMetrics &
+  BeaconForkChoiceMetrics &
   ValidatorMonitor & {register: RegistryMetricCreator; close: () => void};
 
 export function createMetrics(
@@ -23,6 +25,7 @@ export function createMetrics(
   const register = new RegistryMetricCreator();
   const beacon = createBeaconMetrics(register);
   const lodestar = createLodestarMetrics(register, opts.metadata, anchorState);
+  const forkChoice = getMetrics(register);
 
   const genesisTime = anchorState.genesisTime;
   const validatorMonitor = createValidatorMonitor(lodestar, config, genesisTime, logger, opts);
@@ -47,6 +50,7 @@ export function createMetrics(
   return {
     ...beacon,
     ...lodestar,
+    ...forkChoice,
     ...validatorMonitor,
     register,
     close,

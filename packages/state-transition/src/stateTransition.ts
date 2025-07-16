@@ -14,8 +14,8 @@ import {
   upgradeStateToBellatrix,
   upgradeStateToCapella,
   upgradeStateToDeneb,
-  upgradeStateToElectra,
   upgradeStateToEip7805,
+  upgradeStateToElectra,
 } from "./slot/index.js";
 import {
   CachedBeaconStateAllForks,

@@ -41,6 +41,7 @@ import {
 } from "../protoArray/interface.js";
 import {ProtoArray} from "../protoArray/protoArray.js";
 
+import {BeaconForkChoiceMetrics} from "../metrics.js";
 import {ForkChoiceError, ForkChoiceErrorCode, InvalidAttestationCode, InvalidBlockCode} from "./errors.js";
 import {
   AncestorResult,
@@ -76,6 +77,13 @@ export type UpdateAndGetHeadOpt =
   | {mode: UpdateHeadOpt.GetCanonicialHead}
   | {mode: UpdateHeadOpt.GetProposerHead; secFromSlot: number; slot: Slot}
   | {mode: UpdateHeadOpt.GetPredictedProposerHead; slot: Slot};
+
+export enum FCInclusionListSource {
+  gossip = "gossip",
+  api = "api",
+  byRange = "req_resp_by_range",
+  byRoot = "req_resp_by_root",
+}
 
 /**
  * Provides an implementation of "Ethereum Consensus -- Beacon Chain Fork Choice":
@@ -792,7 +800,12 @@ export class ForkChoice implements IForkChoice {
   }
 
   // Skip all validation check that overlaps `validateInclusionList()` since an IL needs to pass it before calling `onInclusionList()`
-  onInclusionList(inclusionList: eip7805.SignedInclusionList, secFromSlot: number): void {
+  onInclusionList(
+    inclusionList: eip7805.SignedInclusionList,
+    secFromSlot: number,
+    metrics: BeaconForkChoiceMetrics | null,
+    source: FCInclusionListSource
+  ): void {
     const currentSlot = this.fcStore.currentSlot;
     const {slot, inclusionListCommitteeRoot, validatorIndex} = inclusionList.message;
 
@@ -814,6 +827,9 @@ export class ForkChoice implements IForkChoice {
 
     const storeKey: InclusionListStoreKey = [slot, inclusionListCommitteeRoot];
     const storedInclusionLists = this.fcStore.inclusionLists.get(storeKey) ?? [];
+    if (storedInclusionLists.length === 0) {
+      metrics?.inclusionListFirstSeenInSLot.observe(secFromSlot);
+    }
     const validatorInclusionLists = storedInclusionLists.filter((il) => il.validatorIndex === validatorIndex);
 
     if (validatorInclusionLists.length > 0) {
@@ -825,6 +841,7 @@ export class ForkChoice implements IForkChoice {
         const equivocators = this.fcStore.inclusionListEquivocators.get(storeKey) ?? new Set<ValidatorIndex>();
         equivocators.add(validatorIndex);
         this.fcStore.inclusionListEquivocators.set(storeKey, equivocators);
+        metrics?.inclusionListEquivocating.inc({source});
       }
     } else if (isBeforeFreezeDeadline) {
       const inclusionLists = this.fcStore.inclusionLists.get(storeKey) ?? [];

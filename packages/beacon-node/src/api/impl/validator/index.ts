@@ -2,6 +2,7 @@ import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {DataAvailabilityStatus, ExecutionStatus} from "@lodestar/fork-choice";
+import {FCInclusionListSource} from "@lodestar/fork-choice/lib/forkChoice/forkChoice.js";
 import {
   ForkBlobs,
   ForkExecution,
@@ -69,6 +70,7 @@ import {
 import {ChainEvent, CheckpointHex, CommonBlockBody} from "../../../chain/index.js";
 import {SCHEDULER_LOOKAHEAD_FACTOR} from "../../../chain/prepareNextSlot.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
+import {InclusionListSource} from "../../../chain/validation/inclusionList.js";
 import {validateApiAggregateAndProof, validateApiInclusionList} from "../../../chain/validation/index.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
 import {ZERO_HASH} from "../../../constants/index.js";
@@ -629,14 +631,17 @@ export function getValidatorApi(
     };
 
     logger.verbose("Assembling block with produceEngineOrBuilderBlock", loggerContext);
-    const commonBlockBody = await chain.produceCommonBlockBody({
-      slot,
-      parentBlockRoot,
-      randaoReveal,
-      graffiti: toGraffitiBuffer(
-        graffiti ?? getDefaultGraffiti(getLodestarClientVersion(opts), chain.executionEngine.clientVersion, opts)
-      ),
-    });
+    const commonBlockBody = await chain.produceCommonBlockBody(
+      {
+        slot,
+        parentBlockRoot,
+        randaoReveal,
+        graffiti: toGraffitiBuffer(
+          graffiti ?? getDefaultGraffiti(getLodestarClientVersion(opts), chain.executionEngine.clientVersion, opts)
+        ),
+      },
+      metrics
+    );
     logger.debug("Produced common block body", loggerContext);
 
     // Calculate cutoff time based on start of the slot
@@ -1035,7 +1040,10 @@ export function getValidatorApi(
       const blockHash = toHex(executionPayload.blockHash);
       logger.debug("produce inclusion list", {blockHash});
 
+      metrics?.eip7805.getInclusionListV1Requests.inc();
+      const timer = metrics?.eip7805.getInclusionListV1ResponseTime.startTimer();
       const ilTransactions = await chain.executionEngine.getInclusionList(blockHash);
+      timer?.();
 
       return {
         data: ilTransactions,
@@ -1522,12 +1530,15 @@ export function getValidatorApi(
         throw new ApiError(400, `Publishing pre-eip7805 inclusion list slot: ${slot}`);
       }
 
-      await validateApiInclusionList(chain, signedInclusionList);
+      await validateApiInclusionList(chain, signedInclusionList, metrics);
 
-      chain.inclusionListPool.add(signedInclusionList);
+      chain.inclusionListPool.add(signedInclusionList, metrics);
+      metrics?.eip7805.inclusionListSeen.inc({source: InclusionListSource.api});
+      metrics?.eip7805.inclusionListTransactionsSeen.inc(chain.inclusionListPool.getTransactions(slot, metrics).length);
 
       const secFromSlot = chain.clock.secFromSlot(slot, Date.now() / 1000);
-      chain.forkChoice.onInclusionList(signedInclusionList, secFromSlot);
+      chain.forkChoice.onInclusionList(signedInclusionList, secFromSlot, metrics, FCInclusionListSource.api);
+      metrics?.eip7805.inclusionListProposed.inc();
 
       chain.emitter.emit(routes.events.EventType.inclusionList, {
         version: config.getForkName(signedInclusionList.message.slot),
@@ -1535,6 +1546,7 @@ export function getValidatorApi(
       });
 
       await network.publishInclusionList(signedInclusionList);
+      metrics?.eip7805.inclusionListBroadcasted.inc();
     },
 
     async prepareBeaconCommitteeSubnet({subscriptions}) {

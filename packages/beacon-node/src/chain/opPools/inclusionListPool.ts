@@ -2,6 +2,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {INCLUSION_LIST_COMMITTEE_SIZE} from "@lodestar/params";
 import {Slot, ValidatorIndex, bellatrix, eip7805} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
+import {Metrics} from "../../metrics/metrics.js";
 import {byteArrayEquals} from "../../util/bytes.js";
 import {IClock} from "../../util/clock.js";
 import {OpPoolError, OpPoolErrorCode} from "./types.js";
@@ -60,7 +61,7 @@ export class InclusionListPool {
     return count;
   }
 
-  add(inclusionList: eip7805.SignedInclusionList): InclusionListInsertOutcome {
+  add(inclusionList: eip7805.SignedInclusionList, metrics: Metrics | null): InclusionListInsertOutcome {
     const {slot, validatorIndex, transactions} = inclusionList.message;
 
     // Reject any inclusion lists that are too old.
@@ -89,13 +90,14 @@ export class InclusionListPool {
 
     // Create new inclusion list
     inclusionListsByValidator.set(validatorIndex, {transactions, seenTwice: false});
+    metrics?.eip7805.inclusionListTransactionsIncluded.inc(transactions.length);
     return InclusionListInsertOutcome.New;
   }
 
   /**
    * Return a list of unique inclusion list transactions for the given slot
    */
-  getTransactions(slot: Slot): bellatrix.Transactions {
+  getTransactions(slot: Slot, metrics: Metrics | null): bellatrix.Transactions {
     const uniqueTransactions: bellatrix.Transactions = [];
 
     const inclusionListsByValidator = this.inclusionListByValidatorBySlot.get(slot);
@@ -113,6 +115,8 @@ export class InclusionListPool {
 
         if (!duplicate) {
           uniqueTransactions.push(transaction);
+        } else {
+          metrics?.eip7805.inclusionListTransactionsDuplicated.inc();
         }
       }
     }

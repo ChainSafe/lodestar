@@ -1,12 +1,13 @@
 import {UpdateHeadOpt} from "@lodestar/fork-choice";
 import {NotReorgedReason} from "@lodestar/fork-choice/lib/forkChoice/interface.js";
-import {ProducedBlockSource} from "@lodestar/types";
+import {ProducedBlockSource, eip7805} from "@lodestar/types";
 import {
   BlockSelectionResult,
   BuilderBlockSelectionReason,
   EngineBlockSelectionReason,
 } from "../../api/impl/validator/index.js";
 import {BlockProductionStep, PayloadPreparationType} from "../../chain/produceBlock/index.js";
+import {InclusionListSource, InvalidInclusionListReason} from "../../chain/validation/inclusionList.js";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
 
 export type BeaconMetrics = ReturnType<typeof createBeaconMetrics>;
@@ -59,6 +60,88 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       labelNames: ["status"],
       help: "number of validators in current epoch",
     }),
+
+    eip7805: {
+      validInclusionListByteSize: register.counter<{source: InclusionListSource}>({
+        name: "beacon_valid_inclusion_lists_size_bytes_total",
+        help: "Byte size of the inclusion list",
+        labelNames: ["source"],
+      }),
+      invalidInclusionListByteSize: register.counter<{source: InclusionListSource}>({
+        name: "beacon_invalid_inclusion_lists_size_bytes_total",
+        help: "Byte size of the inclusion list",
+        labelNames: ["source"],
+      }),
+      inclusionListSeen: register.counter<{source: InclusionListSource}>({
+        name: "beacon_inclusion_lists_seen_total",
+        help: "Total number of seen inclusion lists (gossip, api)",
+        labelNames: ["source"],
+      }),
+      inclusionListValid: register.counter<{source: InclusionListSource}>({
+        name: "beacon_valid_inclusion_lists_total",
+        help: "Total number of valid inclusion lists",
+        labelNames: ["source"],
+      }),
+      inclusionListInvalid: register.counter<{source: InclusionListSource; reason: InvalidInclusionListReason}>({
+        name: "beacon_invalid_inclusion_lists_total",
+        help: "Total number of invalid inclusion lists",
+        labelNames: ["source", "reason"],
+      }),
+      inclusionListValidationTime: register.histogram<{source: InclusionListSource}>({
+        name: "beacon_inclusion_lists_validation_time_seconds",
+        help: "Time taken to validate inclusion list",
+        buckets: [0.01, 0.05, 0.1, 0.5, 1, 2, 5],
+        labelNames: ["source"],
+      }),
+      inclusionListProposed: register.counter({
+        name: "beacon_inclusion_lists_proposed_total",
+        help: "Total number of inclusion lists proposed",
+      }),
+      inclusionListBroadcasted: register.counter({
+        name: "beacon_inclusion_lists_broadcasted_total",
+        help: "Total number of inclusion lists proposed",
+      }),
+      inclusionListReceived: register.counter<{source: InclusionListSource}>({
+        name: "beacon_inclusion_lists_received_total",
+        help: "Total number of inclusion lists received",
+        labelNames: ["source"],
+      }),
+      inclusionListReceivedSecFromSlot: register.histogram({
+        name: "beacon_inclusion_lists_received_seconds_from_slot",
+        help: "Inclusion list arrival time since the clock slot",
+        buckets: [0, 2, 4, 6, 9, 10, 11, 12],
+      }),
+      inclusionListTransactionsSeen: register.counter({
+        name: "beacon_inclusion_list_transactions_seen_total",
+        help: "Total number of transactions seen in inclusion lists",
+      }),
+      inclusionListTransactionsIncluded: register.counter({
+        name: "beacon_inclusion_list_transactions_included_total",
+        help: "Total number of inclusion list transactions included into payload",
+      }),
+      inclusionListTransactionsDuplicated: register.counter({
+        name: "beacon_inclusion_list_transactions_duplicated_total",
+        help: "Total number of duplicated inclusion list transactions",
+      }),
+      getInclusionListV1Requests: register.counter({
+        name: "beacon_engine_getInclusionListV1_requests_total",
+        help: "Total number of getInclusionListV1 requests sent",
+      }),
+      getInclusionListV1ResponseTime: register.histogram({
+        name: "beacon_engine_getInclusionListV1_response_time_seconds",
+        help: "Response time of getInclusionListV1 requests",
+        buckets: [0.01, 0.05, 0.1, 0.5, 1, 2.5, 5, 7.5],
+      }),
+      updatePayloadWithInclusionListV1Requests: register.counter({
+        name: "beacon_engine_updatePayloadWithInclusionListV1_requests_total",
+        help: "Total number of updatePayloadWithInclusionListV1 requests sent",
+      }),
+      updatePayloadWithInclusionListV1ResponseTime: register.histogram({
+        name: "beacon_engine_updatePayloadWithInclusionListV1_response_time_seconds",
+        help: "Response time of updatePayloadWithInclusionListV1 requests",
+        buckets: [0.01, 0.05, 0.1, 0.5, 1, 2.5, 5, 7.5],
+      }),
+    },
 
     // Non-spec'ed
 

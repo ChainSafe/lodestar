@@ -43,6 +43,7 @@ import {
   PayloadId,
   getExpectedGasLimit,
 } from "../../execution/index.js";
+import {Metrics} from "../../metrics/metrics.js";
 import {fromGraffitiBuffer} from "../../util/graffiti.js";
 import type {BeaconChain} from "../chain.js";
 import {CommonBlockBody} from "../interface.js";
@@ -508,11 +509,16 @@ export async function prepareExecutionPayloadInclusionList(
   chain: {executionEngine: IExecutionEngine; inclusionListPool: InclusionListPool},
   logger: Logger,
   payloadId: PayloadId,
-  slot: Slot
+  slot: Slot,
+  metrics: Metrics | null
 ): Promise<void> {
-  const transactions = chain.inclusionListPool.getTransactions(slot);
+  const transactions = chain.inclusionListPool.getTransactions(slot, metrics);
 
+  metrics?.eip7805.updatePayloadWithInclusionListV1Requests.inc();
+  const timer = metrics?.eip7805.updatePayloadWithInclusionListV1ResponseTime.startTimer();
   await chain.executionEngine.updatePayloadWithInclusionList(payloadId, {transactions});
+  timer?.();
+  metrics?.eip7805.inclusionListTransactionsIncluded.inc(transactions.length);
 
   logger.verbose("Updated payload with inclusion list", {
     slot,
