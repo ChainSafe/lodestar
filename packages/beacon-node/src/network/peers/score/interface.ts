@@ -12,6 +12,7 @@ export interface IPeerRpcScoreStore {
   getScoreState(peer: PeerId): ScoreState;
   dumpPeerScoreStats(): PeerScoreStats;
   applyAction(peer: PeerId, action: PeerAction, actionName: string): void;
+  applyReconnectionCoolDown(peer: PeerIdStr, timeInMin: number): void;
   update(): void;
   updateGossipsubScore(peerId: PeerIdStr, newScore: number, ignore: boolean): void;
 }
@@ -23,6 +24,7 @@ export interface IPeerScore {
   update(): number;
   updateGossipsubScore(newScore: number, ignore: boolean): void;
   getStat(): PeerScoreStat;
+  applyReconnectionCoolDown(timeInMin: number): void;
 }
 
 export enum ScoreState {

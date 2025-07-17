@@ -46,6 +46,16 @@ export class RealScore implements IPeerScore {
     this.setLodestarScore(newScore);
   }
 
+  applyReconnectionCoolDown(timeInMin: number): void {
+    // set banning period to time in ms in the future from now
+    this.lastUpdate = Date.now() + timeInMin * 60 * 1000;
+    // TODO: already applying banning period so existing scores were set to
+    // self-decay to zero after banning period. should we also enforce the decay
+    // from existing scores though @twoeths?
+    this.lodestarScore = -1;
+    this.gossipScore = 0;
+  }
+
   /**
    * Applies time-based logic such as decay rates to the score.
    * This function should be called periodically.

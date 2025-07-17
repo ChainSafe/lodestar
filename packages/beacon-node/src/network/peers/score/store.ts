@@ -18,6 +18,7 @@ const peerActionScore: Record<PeerAction, number> = {
  * A peer's score (perceived potential usefulness).
  * This simplistic version consists of a global score per peer which decays to 0 over time.
  * The decay rate applies equally to positive and negative scores.
+ * Peer gossipScore will be checked before dialing and will only be dialed if score >= 0
  */
 export class PeerRpcScoreStore implements IPeerRpcScoreStore {
   private readonly scores: MapDef<PeerIdStr, IPeerScore>;
@@ -51,6 +52,18 @@ export class PeerRpcScoreStore implements IPeerRpcScoreStore {
     peerScore.add(peerActionScore[action]);
 
     this.metrics?.peersReportPeerCount.inc({reason: actionName});
+  }
+
+  /**
+   * Apply a reconnection cool-down period to prevent automatic reconnection. Sets peer
+   * banning period and updates gossip score to -1 so next update removes the negative
+   * score
+   */
+  applyReconnectionCoolDown(peer: PeerId, timeInMin: number): void {
+    const peerScore = this.scores.get(peer);
+    if (peerScore) {
+      peerScore.applyReconnectionCoolDown(timeInMin);
+    }
   }
 
   update(): void {

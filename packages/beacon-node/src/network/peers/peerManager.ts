@@ -16,7 +16,7 @@ import {SubnetType} from "../metadata.js";
 import {ReqRespMethod} from "../reqresp/ReqRespBeaconNode.js";
 import {StatusCache} from "../statusCache.js";
 import {SubnetsService} from "../subnets/index.js";
-import {getConnection, getConnectionsMap, prettyPrintPeerId} from "../util.js";
+import {getConnection, getConnectionsMap, prettyPrintPeerId, prettyPrintPeerIdStr} from "../util.js";
 import {ClientKind, getKnownClientFromAgentVersion} from "./client.js";
 import {PeerDiscovery, SubnetDiscvQueryMs} from "./discover.js";
 import {PeerData, PeersData} from "./peersData.js";
@@ -657,16 +657,26 @@ export class PeerManager {
    */
   private onLibp2pPeerDisconnect = (evt: CustomEvent<Connection>): void => {
     const {direction, status, remotePeer} = evt.detail;
+    const peerIdStr = remotePeer.toString();
+
+    // prevent automatic/immediate reconnects
+    const coolDownMin = 60;
+    this.peerRpcScores.applyReconnectionCoolDown(remotePeer, coolDownMin);
 
     // remove the ping and status timer for the peer
-    this.connectedPeers.delete(remotePeer.toString());
+    this.connectedPeers.delete(peerIdStr);
 
-    this.logger.verbose("peer disconnected", {peer: prettyPrintPeerId(remotePeer), direction, status});
-    this.networkEventBus.emit(NetworkEvent.peerDisconnected, {peer: remotePeer.toString()});
+    this.logger.verbose("A peer disconnected us. Enforcing a reconnection cool-down period", {
+      peerId: prettyPrintPeerIdStr(peerIdStr),
+      direction,
+      status,
+      coolDownMin,
+    });
+    this.networkEventBus.emit(NetworkEvent.peerDisconnected, {peer: peerIdStr});
     this.metrics?.peerDisconnectedEvent.inc({direction});
     this.libp2p.peerStore
       .merge(remotePeer, {tags: {[PEER_RELEVANT_TAG]: undefined}})
-      .catch((e) => this.logger.verbose("cannot untag peer", {peerId: remotePeer.toString()}, e as Error));
+      .catch((e) => this.logger.verbose("cannot untag peer", {peerId: peerIdStr}, e as Error));
   };
 
   private async disconnect(peer: PeerId): Promise<void> {
@@ -678,11 +688,12 @@ export class PeerManager {
   }
 
   private async goodbyeAndDisconnect(peer: PeerId, goodbye: GoodByeReasonCode): Promise<void> {
+    const reason = GOODBYE_KNOWN_CODES[goodbye.toString()] || "";
+    const peerIdStr = peer.toString();
     try {
-      const reason = GOODBYE_KNOWN_CODES[goodbye.toString()] || "";
       this.metrics?.peerGoodbyeSent.inc({reason});
 
-      const conn = getConnection(this.libp2p, peer.toString());
+      const conn = getConnection(this.libp2p, peerIdStr);
       if (conn && Date.now() - conn.timeline.open > LONG_PEER_CONNECTION_MS) {
         this.metrics?.peerLongConnectionDisconnect.inc({reason});
       }
@@ -693,6 +704,15 @@ export class PeerManager {
       this.logger.verbose("Failed to send goodbye", {peer: prettyPrintPeerId(peer)}, e as Error);
     } finally {
       await this.disconnect(peer);
+      if (goodbye !== GoodByeReasonCode.TOO_MANY_PEERS) {
+        const coolDownMin = 60;
+        // prevent automatic/immediate reconnects
+        this.peerRpcScores.applyReconnectionCoolDown(peer, coolDownMin);
+        this.logger.verbose("Disconnected a peer. Enforcing a reconnection cool-down period", {
+          peerId: prettyPrintPeerIdStr(peerIdStr),
+          coolDownMin,
+        });
+      }
     }
   }
 
