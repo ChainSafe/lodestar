@@ -200,7 +200,7 @@ export class PeerDiscovery {
         pendingDials.has(id)
       ) {
         this.cachedENRs.delete(id);
-      } else {
+      } else if (!this.isPeerCoolingDown(cachedENR)) {
         cachedENRsReverse.push(cachedENR);
       }
     }
@@ -406,7 +406,15 @@ export class PeerDiscovery {
     }
   }
 
+  private isPeerCoolingDown(peer: CachedENR): boolean {
+    const peerScore = this.peerRpcScores.getScore(peer.peerId);
+    return peerScore > -1;
+  }
+
   private shouldDialPeer(peer: CachedENR): boolean {
+    if (this.isPeerCoolingDown(peer)) {
+      return false;
+    }
     for (const type of [SubnetType.attnets, SubnetType.syncnets]) {
       for (const [subnet, {toUnixMs, peersToConnect}] of this.subnetRequests[type].entries()) {
         if (toUnixMs < Date.now() || peersToConnect === 0) {
