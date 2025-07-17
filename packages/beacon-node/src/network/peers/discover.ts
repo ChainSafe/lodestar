@@ -408,7 +408,7 @@ export class PeerDiscovery {
 
   private isPeerCoolingDown(peer: CachedENR): boolean {
     const peerScore = this.peerRpcScores.getScore(peer.peerId);
-    return peerScore > -1;
+    return peerScore <= -1;
   }
 
   private shouldDialPeer(peer: CachedENR): boolean {
