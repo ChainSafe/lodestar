@@ -34,7 +34,7 @@ describe("config api implementation", () => {
       const {data: specJson} = (await api.getSpec()) as {data: routes.config.Spec};
 
       expect(specJson.SECONDS_PER_ETH1_BLOCK).toBe("14");
-      expect(specJson.DEPOSIT_CONTRACT_ADDRESS).toBe("0x1234567890123456789012345678901234567890");
+      expect(specJson.DEPOSIT_CONTRACT_ADDRESS).toBe("0x00000000219ab540356cbb839cbe05303d7705fa");
     });
   });
 });

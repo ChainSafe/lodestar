@@ -1,6 +1,6 @@
 import {ChainConfig, createBeaconConfig} from "@lodestar/config";
 import {LightclientSpec, toLightClientUpdateSummary} from "@lodestar/light-client/spec";
-import {isForkLightClient} from "@lodestar/params";
+import {isForkPostAltair} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {computeSyncPeriodAtSlot} from "@lodestar/state-transition";
 import {RootHex, Slot, altair, phase0, ssz, sszTypesFor} from "@lodestar/types";
@@ -128,7 +128,7 @@ export const sync: TestRunnerFn<SyncTestCase, void> = (fork) => {
             }
 
             const headerSlot = Number(step.process_update.checks.optimistic_header.slot);
-            const update = config.getLightClientForkTypes(headerSlot).LightClientUpdate.deserialize(updateBytes);
+            const update = config.getPostAltairForkTypes(headerSlot).LightClientUpdate.deserialize(updateBytes);
 
             logger.debug(`LightclientUpdateSummary: ${JSON.stringify(toLightClientUpdateSummary(update))}`);
 
@@ -165,7 +165,7 @@ export const sync: TestRunnerFn<SyncTestCase, void> = (fork) => {
         config: InputType.YAML,
       },
       sszTypes: {
-        bootstrap: isForkLightClient(fork) ? sszTypesFor(fork).LightClientBootstrap : ssz.altair.LightClientBootstrap,
+        bootstrap: isForkPostAltair(fork) ? sszTypesFor(fork).LightClientBootstrap : ssz.altair.LightClientBootstrap,
         // The updates are multifork and need config and step info to be deserialized within the test
         [UPDATE_FILE_NAME]: {typeName: "LightClientUpdate", deserialize: (bytes: Uint8Array) => bytes},
       },
@@ -173,6 +173,8 @@ export const sync: TestRunnerFn<SyncTestCase, void> = (fork) => {
         // t has input file name as key
         const updates = new Map<string, Uint8Array>();
         for (const key in t) {
+          if (!Object.prototype.hasOwnProperty.call(t, key)) continue;
+
           const updateMatch = key.match(UPDATE_FILE_NAME);
           if (updateMatch) {
             updates.set(key, t[key]);
@@ -194,7 +196,13 @@ function pickConfigForkEpochs(config: Partial<ChainConfig>): Partial<ChainConfig
   const configOnlyFork: Record<string, number> = {};
   for (const key of Object.keys(config) as (keyof ChainConfig)[]) {
     if (key.endsWith("_FORK_EPOCH")) {
-      configOnlyFork[key] = config[key] as number;
+      const value = config[key];
+      // Overwrite 2^64 to Infinity
+      if (typeof value === "bigint" && value > BigInt(Number.MAX_SAFE_INTEGER)) {
+        configOnlyFork[key] = Infinity;
+      } else {
+        configOnlyFork[key] = Number(value);
+      }
     }
   }
   return configOnlyFork;

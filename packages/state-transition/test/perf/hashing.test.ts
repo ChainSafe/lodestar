@@ -1,5 +1,5 @@
+import {beforeAll, bench, describe} from "@chainsafe/benchmark";
 import {unshuffleList} from "@chainsafe/swap-or-not-shuffle";
-import {itBench} from "@dapplion/benchmark";
 import {SHUFFLE_ROUND_COUNT} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {generatePerfTestCachedStatePhase0, numValidators} from "./util.js";
@@ -11,8 +11,7 @@ describe("BeaconState hashTreeRoot", () => {
   let indicesShuffled: Uint32Array;
   let stateOg: ReturnType<typeof generatePerfTestCachedStatePhase0>;
 
-  before(function () {
-    this.timeout(300_000);
+  beforeAll(() => {
     stateOg = generatePerfTestCachedStatePhase0();
     stateOg.hashTreeRoot();
 
@@ -23,7 +22,7 @@ describe("BeaconState hashTreeRoot", () => {
       preShuffle[i] = i;
     }
     indicesShuffled = unshuffleList(preShuffle, seed, SHUFFLE_ROUND_COUNT);
-  });
+  }, 300_000);
 
   const validator = ssz.phase0.Validator.defaultViewDU();
   const balance = 31e9;
@@ -72,7 +71,7 @@ describe("BeaconState hashTreeRoot", () => {
   }
 
   for (const {id, noTrack, fn} of testCases) {
-    itBench<typeof stateOg, typeof stateOg>({
+    bench<typeof stateOg, typeof stateOg>({
       id: `BeaconState.hashTreeRoot - ${id}`,
       noThreshold: noTrack,
       beforeEach: () => {

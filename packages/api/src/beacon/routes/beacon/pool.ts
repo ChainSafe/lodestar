@@ -27,8 +27,6 @@ import {fromHeaders} from "../../../utils/headers.js";
 import {Endpoint, RouteDefinitions, Schema} from "../../../utils/index.js";
 import {MetaHeader, VersionCodec, VersionMeta} from "../../../utils/metadata.js";
 
-// See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
-
 const SingleAttestationListTypePhase0 = ArrayOf(ssz.phase0.Attestation);
 const SingleAttestationListTypeElectra = ArrayOf(ssz.electra.SingleAttestation);
 const AttestationListTypePhase0 = ArrayOf(ssz.phase0.Attestation);

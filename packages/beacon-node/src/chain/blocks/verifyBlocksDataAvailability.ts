@@ -1,6 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {DataAvailabilityStatus} from "@lodestar/fork-choice";
-import {computeTimeAtSlot} from "@lodestar/state-transition";
+import {DataAvailabilityStatus, computeTimeAtSlot} from "@lodestar/state-transition";
 import {UintNum64, deneb} from "@lodestar/types";
 import {ErrorAborted, Logger} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
@@ -34,7 +33,8 @@ export async function verifyBlocksDataAvailability(
   availableTime: number;
   availableBlockInputs: BlockInput[];
 }> {
-  if (blocks.length === 0) {
+  const lastBlock = blocks.at(-1);
+  if (!lastBlock) {
     throw Error("Empty partiallyVerifiedBlocks");
   }
 
@@ -54,7 +54,7 @@ export async function verifyBlocksDataAvailability(
     availableBlockInputs.push(availableBlockInput);
   }
 
-  const availableTime = blocks[blocks.length - 1].type === BlockInputType.dataPromise ? Date.now() : seenTime;
+  const availableTime = lastBlock.type === BlockInputType.dataPromise ? Date.now() : seenTime;
   if (blocks.length === 1 && opts.seenTimestampSec !== undefined && blocks[0].type !== BlockInputType.preData) {
     const recvToAvailableTime = availableTime / 1000 - opts.seenTimestampSec;
     const numBlobs = (blocks[0].block as deneb.SignedBeaconBlock).message.body.blobKzgCommitments.length;
@@ -106,13 +106,12 @@ async function maybeValidateBlobs(
       // if the blob siddecars have been individually verified then we can skip kzg proof check
       // but other checks to match blobs with block data still need to be performed
       const skipProofsCheck = opts.validBlobSidecars === BlobSidecarValidation.Individual;
-      validateBlobSidecars(blockSlot, beaconBlockRoot, blobKzgCommitments, blobs, {skipProofsCheck});
+      await validateBlobSidecars(blockSlot, beaconBlockRoot, blobKzgCommitments, blobs, {skipProofsCheck});
 
       const availableBlockInput = getBlockInput.availableData(
         chain.config,
         blockInput.block,
         blockInput.source,
-        blockInput.blockBytes,
         blobsData
       );
       return {dataAvailabilityStatus: DataAvailabilityStatus.Available, availableBlockInput: availableBlockInput};

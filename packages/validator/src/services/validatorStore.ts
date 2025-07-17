@@ -133,7 +133,7 @@ type ValidatorData = ProposerConfig & {
 
 export const defaultOptions = {
   suggestedFeeRecipient: "0x0000000000000000000000000000000000000000",
-  defaultGasLimit: 36_000_000,
+  defaultGasLimit: 45_000_000,
   builderSelection: routes.validator.BuilderSelection.ExecutionOnly,
   builderAliasSelection: routes.validator.BuilderSelection.Default,
   builderBoostFactor: BigInt(100),
@@ -811,16 +811,6 @@ export class ValidatorStore {
         }
       }
     }
-  }
-
-  private getSignerAndPubkeyHex(pubkey: BLSPubkeyMaybeHex): [Signer, string] {
-    // TODO: Refactor indexing to not have to run toHex() on the pubkey every time
-    const pubkeyHex = typeof pubkey === "string" ? pubkey : toPubkeyHex(pubkey);
-    const signer = this.validators.get(pubkeyHex)?.signer;
-    if (!signer) {
-      throw Error(`Validator pubkey ${pubkeyHex} not known`);
-    }
-    return [signer, pubkeyHex];
   }
 
   /** Prevent signing bad data sent by the Beacon node */

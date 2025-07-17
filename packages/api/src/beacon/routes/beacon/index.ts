@@ -7,8 +7,6 @@ import * as pool from "./pool.js";
 import * as rewards from "./rewards.js";
 import * as state from "./state.js";
 
-// See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
-
 // NOTE: We choose to split the block, pool, state and rewards namespaces so the files are not too big.
 // However, for a consumer all these methods are within the same service "beacon"
 export {block, pool, state, rewards};

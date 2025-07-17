@@ -1,7 +1,7 @@
 # Lodestar
 
 [![Discord](https://img.shields.io/discord/593655374469660673.svg?label=Discord&logo=discord)](https://discord.gg/aMxzVcr)
-[![Eth Consensus Spec v1.4.0](https://img.shields.io/badge/ETH%20consensus--spec-1.4.0-blue)](https://github.com/ethereum/consensus-specs/releases/tag/v1.4.0)
+[![Eth Consensus Spec v1.5.0](https://img.shields.io/badge/ETH%20consensus--spec-1.5.0-blue)](https://github.com/ethereum/consensus-specs/releases/tag/v1.5.0)
 ![ES Version](https://img.shields.io/badge/ES-2021-yellow)
 ![Node Version](https://img.shields.io/badge/node-22.x-green)
 
@@ -26,4 +26,4 @@ Read our [contributors document](/CONTRIBUTING.md), [submit an issue](https://gi
 
 ## License
 
-LGPL-3.0 [ChainSafe Systems](https://chainsafe.io)
+Apache-2.0 [ChainSafe Systems](https://chainsafe.io)

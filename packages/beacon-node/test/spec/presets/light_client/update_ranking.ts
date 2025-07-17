@@ -1,5 +1,5 @@
 import {LightClientUpdateSummary, isBetterUpdate, toLightClientUpdateSummary} from "@lodestar/light-client/spec";
-import {isForkLightClient} from "@lodestar/params";
+import {isForkPostAltair} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {LightClientUpdate, altair, ssz, sszTypesFor} from "@lodestar/types";
 import {expect} from "vitest";
@@ -51,7 +51,7 @@ newUpdate = ${renderUpdate(newUpdate)}
         meta: InputType.YAML,
       },
       sszTypes: {
-        [UPDATES_FILE_NAME]: isForkLightClient(fork)
+        [UPDATES_FILE_NAME]: isForkPostAltair(fork)
           ? sszTypesFor(fork).LightClientUpdate
           : ssz.altair.LightClientUpdate,
       },

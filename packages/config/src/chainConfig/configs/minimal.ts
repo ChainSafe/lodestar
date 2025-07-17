@@ -50,6 +50,9 @@ export const chainConfig: ChainConfig = {
   // EIP-7805
   EIP7805_FORK_VERSION: b("0x06000001"),
   EIP7805_FORK_EPOCH: Infinity,
+  // FULU
+  FULU_FORK_VERSION: b("0x07000001"),
+  FULU_FORK_EPOCH: Infinity,
 
   // Time parameters
   // ---------------------------------------------------------------
@@ -100,6 +103,8 @@ export const chainConfig: ChainConfig = {
 
   // Networking
   // ---------------------------------------------------------------
+  // [customized] `MIN_VALIDATOR_WITHDRAWABILITY_DELAY + CHURN_LIMIT_QUOTIENT // 2` (= 272)
+  MIN_EPOCHS_FOR_BLOCK_REQUESTS: 272,
 
   // Deneb
   // `2**12` (= 4096 epochs, ~18 days)
@@ -118,6 +123,19 @@ export const chainConfig: ChainConfig = {
   MAX_BLOBS_PER_BLOCK_ELECTRA: 9,
   // MAX_REQUEST_BLOCKS_DENEB * MAX_BLOBS_PER_BLOCK_ELECTRA
   MAX_REQUEST_BLOB_SIDECARS_ELECTRA: 1152,
+
+  // Fulu
+  // `2**12` (= 4096 epochs, ~18 days)
+  MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 4096,
+  SAMPLES_PER_SLOT: 8,
+  CUSTODY_REQUIREMENT: 4,
+  NODE_CUSTODY_REQUIREMENT: 1,
+  VALIDATOR_CUSTODY_REQUIREMENT: 8,
+  BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: 32000000000,
+
+  // Blob Scheduling
+  // ---------------------------------------------------------------
+  BLOB_SCHEDULE: [],
 
   // EIP-7805
   // 2**4 (= 16)

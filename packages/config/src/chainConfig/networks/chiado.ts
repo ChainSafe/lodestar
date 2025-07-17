@@ -37,4 +37,13 @@ export const chiadoChainConfig: ChainConfig = {
   // Deneb
   DENEB_FORK_VERSION: b("0x0400006f"),
   DENEB_FORK_EPOCH: 516608, // Wed Jan 31 2024 18:15:40 GMT+0000
+  // Electra
+  ELECTRA_FORK_VERSION: b("0x0500006f"),
+  ELECTRA_FORK_EPOCH: 948224, // Thu Mar 06 2025 09:43:40 GMT+0000
+  // Fulu
+  FULU_FORK_VERSION: b("0x0600006f"),
+  FULU_FORK_EPOCH: Infinity,
+
+  // Blob Scheduling
+  BLOB_SCHEDULE: [],
 };

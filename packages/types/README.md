@@ -2,7 +2,7 @@
 
 [![npm](https://img.shields.io/npm/v/@lodestar/types)](https://www.npmjs.com/package/@lodestar/types)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Eth Consensus Spec v1.4.0](https://img.shields.io/badge/ETH%20consensus--spec-1.4.0-blue)](https://github.com/ethereum/consensus-specs/releases/tag/v1.4.0)
+[![Eth Consensus Spec v1.5.0](https://img.shields.io/badge/ETH%20consensus--spec-1.5.0-blue)](https://github.com/ethereum/consensus-specs/releases/tag/v1.5.0)
 ![ES Version](https://img.shields.io/badge/ES-2021-yellow)
 ![Node Version](https://img.shields.io/badge/node-22.x-green)
 
@@ -67,13 +67,15 @@ import {Epoch, ssz} from "@lodestar/types";
 const epoch: Epoch = ssz.Epoch.defaultValue();
 ```
 
-In some cases, we need interfaces that accept types across all forks, like when the fork is not known ahead of time. SSZ Types typed to these interfaces are also provided under an `allForks` namespace, but keyed by `ForkName`.
+In some cases, we need interfaces that accept types across all forks, like when the fork is not known ahead of time. Those are directly available without a namespace and SSZ Types typed to these interfaces can be retrieved by calling `sszTypesFor` with the `ForkName`.
 
 ```typescript
-import {ForkName} from "@lodestar/params";
-import {ssz, BeaconState} from "@lodestar/types";
+import {ForkName, ForkPostAltair} from "@lodestar/params";
+import {sszTypesFor, BeaconState} from "@lodestar/types";
 
-const state: BeaconState<ForkName.phase0> = ssz.allForks[ForkName.phase0].BeaconState.defaultValue();
+const fork = ForkName.altair;
+
+const state: BeaconState<ForkPostAltair> = sszTypesFor(fork).BeaconState.defaultValue();
 ```
 
 ## License

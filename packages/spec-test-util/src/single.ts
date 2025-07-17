@@ -4,13 +4,6 @@ import {loadYaml} from "@lodestar/utils";
 import {uncompress} from "snappyjs";
 import {describe, expect, it, vi} from "vitest";
 
-/* eslint-disable
-  @typescript-eslint/no-unsafe-assignment,
-  @typescript-eslint/no-unsafe-member-access,
-  @typescript-eslint/no-unsafe-return,
-  @typescript-eslint/no-explicit-any,
-  func-names */
-
 export enum InputType {
   SSZ = "ssz",
   SSZ_SNAPPY = "ssz_snappy",
@@ -87,8 +80,8 @@ const defaultOptions: SpecTestOptions<any, any> = {
   getExpected: (testCase) => testCase,
   shouldError: () => false,
   shouldSkip: () => false,
-  expectFunc: (_testCase, expected, actual) => expect(actual).to.be.deep.equal(expected),
-  timeout: 10 * 60 * 1000,
+  expectFunc: (_testCase, expected, actual) => expect(actual).toEqual(expected),
+  timeout: 1000 * 60 * 15,
 };
 
 export function describeDirectorySpecTest<TestCase extends {meta?: any}, Result>(
@@ -103,8 +96,8 @@ export function describeDirectorySpecTest<TestCase extends {meta?: any}, Result>
   }
 
   describe(name, () => {
-    if (options.timeout !== undefined) {
-      vi.setConfig({testTimeout: options.timeout ?? 10 * 60 * 1000});
+    if (options.timeout) {
+      vi.setConfig({testTimeout: options.timeout, hookTimeout: options.timeout});
     }
 
     for (const testSubDirname of fs.readdirSync(testCaseDirectoryPath)) {

@@ -20,14 +20,14 @@ import {testData as validatorTestData} from "./testData/validator.js";
 // Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const version = "v3.0.0-alpha.9";
+const version = "v3.1.0";
 const openApiFile: OpenApiFile = {
   url: `https://github.com/ethereum/beacon-APIs/releases/download/${version}/beacon-node-oapi.json`,
   filepath: path.join(__dirname, "../../../oapi-schemas/beacon-node-oapi.json"),
   version: RegExp(version),
 };
 
-const config = createChainForkConfig({...defaultChainConfig, ALTAIR_FORK_EPOCH: 1, BELLATRIX_FORK_EPOCH: 2});
+const config = createChainForkConfig({...defaultChainConfig, ELECTRA_FORK_EPOCH: 0});
 
 const definitions = {
   ...routes.beacon.getDefinitions(config),
@@ -63,25 +63,12 @@ const ignoredProperties: Record<string, IgnoredProperty> = {
    /query/syncing_status - must be integer
    */
   getHealth: {request: ["query.syncing_status"]},
-
-  /* 
-   https://github.com/ChainSafe/lodestar/issues/4638 
-   /query - must have required property 'skip_randao_verification'
-   */
-  produceBlockV2: {request: ["query.skip_randao_verification"]},
-  produceBlindedBlock: {request: ["query.skip_randao_verification"]},
 };
 
 const openApiJson = await fetchOpenApiSpec(openApiFile);
 runTestCheckAgainstSpec(openApiJson, definitions, testDatas, ignoredOperations, ignoredProperties);
 
-const ignoredTopics = [
-  /*
-   https://github.com/ChainSafe/lodestar/issues/6470
-   topic block_gossip not implemented
-   */
-  "block_gossip",
-];
+const ignoredTopics: string[] = [];
 
 // eventstream types are defined as comments in the description of "examples".
 // The function runTestCheckAgainstSpec() can't handle those, so the custom code before:

@@ -26,7 +26,10 @@ export function processSyncCommitteeUpdates(fork: ForkSeq, state: CachedBeaconSt
     const validators = state.validators;
 
     // Using the index2pubkey cache is slower because it needs the serialized pubkey.
-    const nextSyncCommitteePubkeys = nextSyncCommitteeIndices.map((index) => validators.getReadonly(index).pubkey);
+    const nextSyncCommitteePubkeys = [];
+    for (const index of nextSyncCommitteeIndices) {
+      nextSyncCommitteePubkeys.push(validators.getReadonly(index).pubkey);
+    }
 
     // Rotate syncCommittee in state
     state.currentSyncCommittee = state.nextSyncCommittee;

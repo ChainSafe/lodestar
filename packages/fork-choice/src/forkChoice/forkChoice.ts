@@ -2,6 +2,7 @@ import {ChainConfig, ChainForkConfig} from "@lodestar/config";
 import {INTERVALS_PER_SLOT, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT, isForkPostEip7805} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
+  DataAvailabilityStatus,
   EffectiveBalanceIncrements,
   ZERO_HASH,
   computeEpochAtSlot,
@@ -14,14 +15,16 @@ import {
 } from "@lodestar/state-transition";
 import {computeUnrealizedCheckpoints} from "@lodestar/state-transition/epoch";
 import {
+  AttesterSlashing,
   BeaconBlock,
   Epoch,
+  IndexedAttestation,
   Root,
   RootHex,
   Slot,
   ValidatorIndex,
-  bellatrix,
   eip7805,
+  bellatrix,
   phase0,
   ssz,
 } from "@lodestar/types";
@@ -30,7 +33,6 @@ import {Logger, MapDef, fromHex, toRootHex} from "@lodestar/utils";
 import {computeDeltas} from "../protoArray/computeDeltas.js";
 import {ProtoArrayError, ProtoArrayErrorCode} from "../protoArray/errors.js";
 import {
-  DataAvailabilityStatus,
   ExecutionStatus,
   HEX_ZERO_HASH,
   LVHExecResponse,
@@ -731,7 +733,7 @@ export class ForkChoice implements IForkChoice {
    * The supplied `attestation` **must** pass the `in_valid_indexed_attestation` function as it
    * will not be run here.
    */
-  onAttestation(attestation: phase0.IndexedAttestation, attDataRoot: string, forceImport?: boolean): void {
+  onAttestation(attestation: IndexedAttestation, attDataRoot: string, forceImport?: boolean): void {
     // Ignore any attestations to the zero hash.
     //
     // This is an edge case that results from the spec aliasing the zero hash to the genesis
@@ -783,7 +785,7 @@ export class ForkChoice implements IForkChoice {
    * We already call is_slashable_attestation_data() and is_valid_indexed_attestation
    * in state transition so no need to do it again
    */
-  onAttesterSlashing(attesterSlashing: phase0.AttesterSlashing): void {
+  onAttesterSlashing(attesterSlashing: AttesterSlashing): void {
     // TODO: we already call in in state-transition, find a way not to recompute it again
     const intersectingIndices = getAttesterSlashableIndices(attesterSlashing);
     for (const validatorIndex of intersectingIndices) {
@@ -1022,6 +1024,19 @@ export class ForkChoice implements IForkChoice {
    */
   getAllNonAncestorBlocks(blockRoot: RootHex): ProtoBlock[] {
     return this.protoArray.getAllNonAncestorNodes(blockRoot);
+  }
+
+  /**
+   * Returns both ancestor and non-ancestor blocks in a single traversal.
+   */
+  getAllAncestorAndNonAncestorBlocks(blockRoot: RootHex): {ancestors: ProtoBlock[]; nonAncestors: ProtoBlock[]} {
+    const {ancestors, nonAncestors} = this.protoArray.getAllAncestorAndNonAncestorNodes(blockRoot);
+
+    return {
+      // the last node is the previous finalized one, it's there to check onBlock finalized checkpoint only.
+      ancestors: ancestors.slice(0, ancestors.length - 1),
+      nonAncestors,
+    };
   }
 
   getCanonicalBlockAtSlot(slot: Slot): ProtoBlock | null {
@@ -1292,7 +1307,7 @@ export class ForkChoice implements IForkChoice {
    * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md#validate_on_attestation
    */
   private validateOnAttestation(
-    indexedAttestation: phase0.IndexedAttestation,
+    indexedAttestation: IndexedAttestation,
     slot: Slot,
     blockRootHex: string,
     targetEpoch: Epoch,

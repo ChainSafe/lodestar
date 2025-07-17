@@ -134,11 +134,18 @@ export function upgradeLightClientHeader(
       // Break if no further upgradation is required else fall through
       if (ForkSeq[targetFork] <= ForkSeq.deneb) break;
 
+    // biome-ignore lint/suspicious/noFallthroughSwitchClause: We need fall-through behavior here
     case ForkName.electra:
       // No changes to LightClientHeader in Electra
 
       // Break if no further upgrades is required else fall through
       if (ForkSeq[targetFork] <= ForkSeq.electra) break;
+
+    case ForkName.fulu:
+      // No changes to LightClientHeader in Electra
+
+      // Break if no further upgrades is required else fall through
+      if (ForkSeq[targetFork] <= ForkSeq.fulu) break;
   }
   return upgradedHeader;
 }
@@ -161,20 +168,19 @@ export function isValidLightClientHeader(config: ChainForkConfig, header: LightC
     );
   }
 
-  if (epoch < config.DENEB_FORK_EPOCH) {
-    if (
-      ((header as LightClientHeader<ForkName.deneb>).execution.blobGasUsed &&
-        (header as LightClientHeader<ForkName.deneb>).execution.blobGasUsed !== BigInt(0)) ||
+  if (
+    epoch < config.DENEB_FORK_EPOCH &&
+    (((header as LightClientHeader<ForkName.deneb>).execution.blobGasUsed &&
+      (header as LightClientHeader<ForkName.deneb>).execution.blobGasUsed !== BigInt(0)) ||
       ((header as LightClientHeader<ForkName.deneb>).execution.excessBlobGas &&
-        (header as LightClientHeader<ForkName.deneb>).execution.excessBlobGas !== BigInt(0))
-    ) {
-      return false;
-    }
+        (header as LightClientHeader<ForkName.deneb>).execution.excessBlobGas !== BigInt(0)))
+  ) {
+    return false;
   }
 
   return isValidMerkleBranch(
     config
-      .getExecutionForkTypes(header.beacon.slot)
+      .getPostBellatrixForkTypes(header.beacon.slot)
       .ExecutionPayloadHeader.hashTreeRoot((header as LightClientHeader<ForkName.capella>).execution),
     (header as LightClientHeader<ForkName.capella>).executionBranch,
     EXECUTION_PAYLOAD_DEPTH,

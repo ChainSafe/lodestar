@@ -101,7 +101,7 @@ jobs:
 
       # Cache validator slashing protection data tests
       - name: Restore spec tests cache
-        uses: actions/cache@master
+        uses: actions/cache@v4
         with:
           path: packages/validator/spec-tests
           key: spec-test-data-${{ hashFiles('packages/validator/test/spec/params.ts') }}
@@ -110,7 +110,7 @@ jobs:
         # id: unit_tests
         # Rever to "yarn test:unit" when finished debugging core dumps
         # run: sudo sh -c "ulimit -c unlimited && /usr/bin/node-with-debug $(which yarn) test:unit"
-        run: yarn test:unit
+        run: yarn vitest run --project unit --project unit-minimal --coverage
 
       # # Remove when finished debugging core dumps
       # - uses: './.github/actions/core-dump'
@@ -201,13 +201,12 @@ jobs:
 
       # Download spec tests with cache
       - name: Restore spec tests cache
-        uses: actions/cache@master
+        uses: actions/cache@v4
         with:
           path: packages/beacon-node/spec-tests
           key: spec-test-data-${{ hashFiles('packages/beacon-node/test/spec/specTestVersioning.ts') }}
       - name: Download spec tests
         run: yarn download-spec-tests
-        working-directory: packages/beacon-node
       # Run them in different steps to quickly identifying which command failed
       # Otherwise just doing `yarn test:spec` you can't tell which specific suite failed
       # many of the suites have identical names for minimal and mainnet
@@ -223,3 +222,6 @@ jobs:
       - name: Spec tests mainnet
         run: NODE_OPTIONS='--max-old-space-size=4096' yarn test:spec:mainnet
         working-directory: packages/beacon-node
+      - name: Spec tests validator
+        run: yarn test:spec
+        working-directory: packages/validator

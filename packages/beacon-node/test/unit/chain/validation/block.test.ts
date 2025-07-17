@@ -1,6 +1,7 @@
+import {createChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {ProtoBlock} from "@lodestar/fork-choice";
-import {ForkBlobs, ForkName} from "@lodestar/params";
+import {ForkName, ForkPostDeneb} from "@lodestar/params";
 import {SignedBeaconBlock, ssz} from "@lodestar/types";
 import {Mock, Mocked, beforeEach, describe, it, vi} from "vitest";
 import {BlockErrorCode} from "../../../../src/chain/errors/index.js";
@@ -24,11 +25,15 @@ describe("gossip block validation", () => {
   block.slot = clockSlot;
   const signature = EMPTY_SIGNATURE;
   const maxSkipSlots = 10;
+  const denebConfig = createChainForkConfig({
+    ...config,
+    ALTAIR_FORK_EPOCH: 0,
+    BELLATRIX_FORK_EPOCH: 0,
+    CAPELLA_FORK_EPOCH: 0,
+    DENEB_FORK_EPOCH: 0,
+  });
 
   beforeEach(() => {
-    // Fill up with kzg commitments
-    block.body.blobKzgCommitments = Array.from({length: config.MAX_BLOBS_PER_BLOCK}, () => new Uint8Array([0]));
-
     chain = getMockedBeaconChain();
     vi.spyOn(chain.clock, "currentSlotWithGossipDisparity", "get").mockReturnValue(clockSlot);
     forkChoice = chain.forkChoice;
@@ -194,6 +199,11 @@ describe("gossip block validation", () => {
   });
 
   it("deneb - TOO_MANY_KZG_COMMITMENTS", async () => {
+    // Fill up with kzg commitments
+    block.body.blobKzgCommitments = Array.from(
+      {length: denebConfig.getMaxBlobsPerBlock(denebConfig.DENEB_FORK_EPOCH)},
+      () => new Uint8Array([0])
+    );
     // Return not known for proposed block
     forkChoice.getBlockHex.mockReturnValueOnce(null);
     // Returned parent block is latter than proposed block
@@ -206,15 +216,20 @@ describe("gossip block validation", () => {
     // Force proposer shuffling cache to return correct value
     vi.spyOn(state.epochCtx, "getBeaconProposer").mockReturnValue(proposerIndex + 1);
     // Add one extra kzg commitment in the block so it goes over the limit
-    (job as SignedBeaconBlock<ForkBlobs>).message.body.blobKzgCommitments.push(new Uint8Array([0]));
+    (job as SignedBeaconBlock<ForkPostDeneb>).message.body.blobKzgCommitments.push(new Uint8Array([0]));
 
     await expectRejectedWithLodestarError(
-      validateGossipBlock(config, chain, job, ForkName.deneb),
+      validateGossipBlock(denebConfig, chain, job, ForkName.deneb),
       BlockErrorCode.TOO_MANY_KZG_COMMITMENTS
     );
   });
 
   it("deneb - valid", async () => {
+    // Fill up with kzg commitments
+    block.body.blobKzgCommitments = Array.from(
+      {length: denebConfig.getMaxBlobsPerBlock(denebConfig.DENEB_FORK_EPOCH)},
+      () => new Uint8Array([0])
+    );
     // Return not known for proposed block
     forkChoice.getBlockHex.mockReturnValueOnce(null);
     // Returned parent block is latter than proposed block
@@ -228,6 +243,6 @@ describe("gossip block validation", () => {
     vi.spyOn(state.epochCtx, "getBeaconProposer").mockReturnValue(proposerIndex);
     // Keep number of kzg commitments as is so it stays within the limit
 
-    await validateGossipBlock(config, chain, job, ForkName.deneb);
+    await validateGossipBlock(denebConfig, chain, job, ForkName.deneb);
   });
 });

@@ -1,4 +1,4 @@
-import {itBench, setBenchOpts} from "@dapplion/benchmark";
+import {bench, describe, setBenchOpts} from "@chainsafe/benchmark";
 import {ssz} from "@lodestar/types";
 import {cachedStateAltairPopulateCaches, generatePerfTestCachedStateAltair} from "../util.js";
 
@@ -6,9 +6,7 @@ import {cachedStateAltairPopulateCaches, generatePerfTestCachedStateAltair} from
  * This shows different statistics between allocating memory once vs every time.
  * Due to gc, the test is not consistent so skipping it for CI.
  */
-describe.skip("serialize state and validators", function () {
-  this.timeout(0);
-
+describe.skip("serialize state and validators", () => {
   setBenchOpts({
     // increasing this may have different statistics due to gc time
     minMs: 60_000,
@@ -28,7 +26,7 @@ describe.skip("serialize state and validators", function () {
   const rootNode = seedState.node;
   const stateBytes = new Uint8Array(stateType.tree_serializedSize(rootNode));
   const stateDataView = new DataView(stateBytes.buffer, stateBytes.byteOffset, stateBytes.byteLength);
-  itBench({
+  bench({
     id: `serialize state ${valicatorCount} validators, alloc once`,
     fn: () => {
       stateBytes.fill(0);
@@ -39,7 +37,7 @@ describe.skip("serialize state and validators", function () {
   // now cache nodes
   cachedStateAltairPopulateCaches(seedState);
 
-  itBench({
+  bench({
     id: `serialize state ${valicatorCount} validators using new serializeToBytes() method`,
     fn: () => {
       stateBytes.fill(0);
@@ -47,7 +45,7 @@ describe.skip("serialize state and validators", function () {
     },
   });
 
-  itBench({
+  bench({
     id: `serialize altair state ${valicatorCount} validators`,
     fn: () => {
       seedState.serialize();
@@ -65,7 +63,7 @@ describe.skip("serialize state and validators", function () {
     validatorsBytes.byteOffset,
     validatorsBytes.byteLength
   );
-  itBench({
+  bench({
     id: `serialize state validators ${valicatorCount} validators, alloc once`,
     fn: () => {
       validatorsBytes.fill(0);
@@ -80,7 +78,7 @@ describe.skip("serialize state and validators", function () {
   /**
    * Allocate memory every time, this takes 640ms to more than 1s on a Mac M1.
    */
-  itBench({
+  bench({
     id: `serialize state validators ${valicatorCount} validators`,
     fn: () => {
       seedState.validators.serialize();
@@ -96,7 +94,7 @@ describe.skip("serialize state and validators", function () {
   const dataView = new DataView(output.buffer, output.byteOffset, output.byteLength);
   // this caches validators nodes which is what happen after we run a state transition
   const validators = seedState.validators.getAllReadonlyValues();
-  itBench({
+  bench({
     id: `serialize ${valicatorCount} validators manually`,
     fn: () => {
       let offset = 0;
@@ -132,7 +130,7 @@ describe.skip("serialize state and validators", function () {
     },
   });
 
-  itBench({
+  bench({
     id: `serialize ${valicatorCount} validators from state `,
     fn: () => {
       seedState.validators.serializeToBytes({uint8Array: output, dataView}, 0);

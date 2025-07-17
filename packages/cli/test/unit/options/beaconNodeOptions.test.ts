@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import {IBeaconNodeOptions, StateArchiveMode} from "@lodestar/beacon-node";
+import {ArchiveMode, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {RecursivePartial} from "@lodestar/utils";
 import {describe, expect, it} from "vitest";
 import {BeaconNodeArgs, parseBeaconNodeArgs} from "../../../src/options/beaconNodeOptions/index.js";
@@ -35,7 +35,6 @@ describe("options / beaconNodeOptions", () => {
       "chain.maxSkipSlots": 100,
       "safe-slots-to-import-optimistically": 256,
       "chain.archiveStateEpochFrequency": 1024,
-      "chain.trustedSetup": "",
       "chain.minSameMessageSignatureSetsToBatch": 32,
       "chain.maxShufflingCacheEpochs": 100,
       "chain.archiveBlobEpochs": 10000,
@@ -43,7 +42,7 @@ describe("options / beaconNodeOptions", () => {
       "chain.nHistoricalStatesFileDataStore": true,
       "chain.maxBlockStates": 100,
       "chain.maxCPStateEpochsInMemory": 100,
-      "chain.stateArchiveMode": StateArchiveMode.Frequency,
+      "chain.archiveMode": ArchiveMode.Frequency,
       emitPayloadAttributes: false,
 
       eth1: true,
@@ -144,11 +143,10 @@ describe("options / beaconNodeOptions", () => {
         maxSkipSlots: 100,
         archiveStateEpochFrequency: 1024,
         emitPayloadAttributes: false,
-        trustedSetup: "",
         minSameMessageSignatureSetsToBatch: 32,
         maxShufflingCacheEpochs: 100,
         archiveBlobEpochs: 10000,
-        stateArchiveMode: StateArchiveMode.Frequency,
+        archiveMode: ArchiveMode.Frequency,
         nHistoricalStates: true,
         nHistoricalStatesFileDataStore: true,
         maxBlockStates: 100,

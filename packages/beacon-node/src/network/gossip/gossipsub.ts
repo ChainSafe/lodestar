@@ -136,6 +136,10 @@ export class Eth2Gossipsub extends GossipSub {
       // if this is false, only publish to mesh peers. If there is not enough GOSSIP_D mesh peers,
       // publish to some more topic peers to make sure we always publish to at least GOSSIP_D peers
       floodPublish: !opts?.disableFloodPublish,
+      // Only send IDONTWANT messages if the message size is larger than this
+      // This should be large enough to not send IDONTWANT for "small" messages
+      // See https://github.com/ChainSafe/lodestar/pull/7077#issuecomment-2383679472
+      idontwantMinDataSize: 16829,
     });
     this.scoreParams = scoreParams;
     this.config = config;
@@ -195,6 +199,7 @@ export class Eth2Gossipsub extends GossipSub {
     ]) {
       // Pre-aggregate results by fork so we can fill the remaining metrics with 0
       const peersByTypeByFork = new Map2d<ForkName, GossipType, number>();
+      // TODO: This shouldnt be by fork, but by boundary
       const peersByBeaconAttSubnetByFork = new Map2dArr<ForkName, number>();
       const peersByBeaconSyncSubnetByFork = new Map2dArr<ForkName, number>();
 
@@ -207,12 +212,13 @@ export class Eth2Gossipsub extends GossipSub {
         // for example in prater: /eth2/82f4a72b/optimistic_light_client_update_v0/ssz_snappy
         const topic = this.gossipTopicCache.getKnownTopic(topicString);
         if (topic !== undefined) {
+          const {fork} = topic.boundary;
           if (topic.type === GossipType.beacon_attestation) {
-            peersByBeaconAttSubnetByFork.set(topic.fork, topic.subnet, peers.size);
+            peersByBeaconAttSubnetByFork.set(fork, topic.subnet, peers.size);
           } else if (topic.type === GossipType.sync_committee) {
-            peersByBeaconSyncSubnetByFork.set(topic.fork, topic.subnet, peers.size);
+            peersByBeaconSyncSubnetByFork.set(fork, topic.subnet, peers.size);
           } else {
-            peersByTypeByFork.set(topic.fork, topic.type, peers.size);
+            peersByTypeByFork.set(fork, topic.type, peers.size);
           }
         }
 
@@ -328,15 +334,25 @@ function attSubnetLabel(subnet: SubnetID): string {
 
 function getMetricsTopicStrToLabel(config: BeaconConfig, opts: {disableLightClientServer: boolean}): TopicStrToLabel {
   const metricsTopicStrToLabel = new Map<TopicStr, TopicLabel>();
+  const {forkBoundariesAscendingEpochOrder} = config;
 
-  for (const {name: fork} of config.forksAscendingEpochOrder) {
-    const topics = getCoreTopicsAtFork(config, fork, {
+  for (let i = 0; i < forkBoundariesAscendingEpochOrder.length; i++) {
+    const currentForkBoundary = forkBoundariesAscendingEpochOrder[i];
+    const nextForkBoundary = forkBoundariesAscendingEpochOrder[i + 1];
+
+    // Edge case: If multiple fork boundaries start at the same epoch, only consider the latest one
+    if (nextForkBoundary && currentForkBoundary.epoch === nextForkBoundary.epoch) {
+      continue;
+    }
+
+    const topics = getCoreTopicsAtFork(config, currentForkBoundary.fork, {
       subscribeAllSubnets: true,
       disableLightClientServer: opts.disableLightClientServer,
     });
     for (const topic of topics) {
-      metricsTopicStrToLabel.set(stringifyGossipTopic(config, {...topic, fork}), topic.type);
+      metricsTopicStrToLabel.set(stringifyGossipTopic(config, {...topic, boundary: currentForkBoundary}), topic.type);
     }
   }
+
   return metricsTopicStrToLabel;
 }

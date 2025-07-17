@@ -1,4 +1,4 @@
-import {ForkExecution} from "@lodestar/params";
+import {ForkPostBellatrix} from "@lodestar/params";
 import {
   BLSPubkey,
   Epoch,
@@ -33,7 +33,7 @@ export interface IExecutionBuilder {
   registerValidator(epoch: Epoch, registrations: bellatrix.SignedValidatorRegistrationV1[]): Promise<void>;
   getValidatorRegistration(pubkey: BLSPubkey): ValidatorRegistration | undefined;
   getHeader(
-    fork: ForkExecution,
+    fork: ForkPostBellatrix,
     slot: Slot,
     parentHash: Root,
     proposerPubKey: BLSPubkey

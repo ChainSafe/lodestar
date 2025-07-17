@@ -1,6 +1,8 @@
-import {EffectiveBalanceIncrements} from "@lodestar/state-transition";
+import {DataAvailabilityStatus, EffectiveBalanceIncrements} from "@lodestar/state-transition";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
+import {eip7805} from "@lodestar/types";
 import {
+  AttesterSlashing,
   BeaconBlock,
   Epoch,
   IndexedAttestation,
@@ -8,16 +10,8 @@ import {
   RootHex,
   Slot,
   ValidatorIndex,
-  eip7805,
-  phase0,
 } from "@lodestar/types";
-import {
-  DataAvailabilityStatus,
-  LVHExecResponse,
-  MaybeValidExecutionStatus,
-  ProtoBlock,
-  ProtoNode,
-} from "../protoArray/interface.js";
+import {LVHExecResponse, MaybeValidExecutionStatus, ProtoBlock, ProtoNode} from "../protoArray/interface.js";
 import {UpdateAndGetHeadOpt} from "./forkChoice.js";
 import {CheckpointWithHex} from "./store.js";
 
@@ -175,7 +169,7 @@ export interface IForkChoice {
    *
    * https://github.com/ethereum/consensus-specs/blob/v1.2.0-rc.3/specs/phase0/fork-choice.md#on_attester_slashing
    */
-  onAttesterSlashing(slashing: phase0.AttesterSlashing): void;
+  onAttesterSlashing(slashing: AttesterSlashing): void;
   /**
    * inclusionListCommittee is a list of IL committee validators' index in the current slot
    */
@@ -229,6 +223,10 @@ export interface IForkChoice {
    * The same to iterateAncestorBlocks but this gets non-ancestor nodes instead of ancestor nodes.
    */
   getAllNonAncestorBlocks(blockRoot: RootHex): ProtoBlock[];
+  /**
+   * Returns both ancestor and non-ancestor blocks in a single traversal.
+   */
+  getAllAncestorAndNonAncestorBlocks(blockRoot: RootHex): {ancestors: ProtoBlock[]; nonAncestors: ProtoBlock[]};
   getCanonicalBlockAtSlot(slot: Slot): ProtoBlock | null;
   getCanonicalBlockClosestLteSlot(slot: Slot): ProtoBlock | null;
   /**

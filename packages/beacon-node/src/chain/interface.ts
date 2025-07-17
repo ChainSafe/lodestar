@@ -31,6 +31,8 @@ import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/metrics.js";
 import {BufferPool} from "../util/bufferPool.js";
 import {IClock} from "../util/clock.js";
+import {SerializedCache} from "../util/serializedCache.js";
+import {IArchiveStore} from "./archiveStore/interface.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache, ProposerPreparationData} from "./beaconProposerCache.js";
 import {BlockInput, ImportBlockOpts} from "./blocks/types.js";
@@ -64,7 +66,9 @@ import {SeenGossipBlockInput} from "./seenCache/index.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
+import {SeenBlockInputCache} from "./seenCache/seenBlockInput.js";
 import {ShufflingCache} from "./shufflingCache.js";
+import {ValidatorMonitor} from "./validatorMonitor.js";
 
 export {BlockType, type AssembledBlockType};
 export {type ProposerPreparationData};
@@ -94,6 +98,7 @@ export interface IBeaconChain {
   readonly config: BeaconConfig;
   readonly logger: Logger;
   readonly metrics: Metrics | null;
+  readonly validatorMonitor: ValidatorMonitor | null;
   readonly bufferPool: BufferPool | null;
 
   /** The initial slot that the chain is started with */
@@ -108,6 +113,7 @@ export interface IBeaconChain {
   readonly reprocessController: ReprocessController;
   readonly pubkey2index: PubkeyIndexMap;
   readonly index2pubkey: Index2PubkeyCache;
+  readonly archiveStore: IArchiveStore;
 
   // Ops pool
   readonly attestationPool: AttestationPool;
@@ -125,6 +131,7 @@ export interface IBeaconChain {
   readonly seenSyncCommitteeMessages: SeenSyncCommitteeMessages;
   readonly seenContributionAndProof: SeenContributionAndProof;
   readonly seenAttestationDatas: SeenAttestationDatas;
+  readonly seenBlockInputCache: SeenBlockInputCache;
   readonly seenGossipBlockInput: SeenGossipBlockInput;
   // Seen cache for liveness checks
   readonly seenBlockAttesters: SeenBlockAttesters;
@@ -135,8 +142,14 @@ export interface IBeaconChain {
   readonly producedBlockRoot: Map<RootHex, ExecutionPayload | null>;
   readonly shufflingCache: ShufflingCache;
   readonly producedBlindedBlockRoot: Set<RootHex>;
+  readonly blacklistedBlocks: Map<RootHex, Slot | null>;
+  // Cache for serialized objects
+  readonly serializedCache: SerializedCache;
+
   readonly opts: IChainOptions;
 
+  /** Start the processing of chain and load state from disk and related actions */
+  init(): Promise<void>;
   /** Stop beacon chain processing */
   close(): Promise<void>;
   /** Chain has seen the specified block root or not. The block may not be processed yet, use forkchoice.hasBlock to check it  */
@@ -194,13 +207,13 @@ export interface IBeaconChain {
   getContents(beaconBlock: deneb.BeaconBlock): deneb.Contents;
 
   produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody>;
-  produceBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
+  produceBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise?: Promise<CommonBlockBody>}): Promise<{
     block: BeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Wei;
     shouldOverrideBuilder?: boolean;
   }>;
-  produceBlindedBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
+  produceBlindedBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise?: Promise<CommonBlockBody>}): Promise<{
     block: BlindedBeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Wei;
@@ -226,6 +239,11 @@ export interface IBeaconChain {
   updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void>;
 
   persistBlock(data: BeaconBlock | BlindedBeaconBlock, suffix?: string): void;
+  persistInvalidStateRoot(
+    preState: CachedBeaconStateAllForks,
+    postState: CachedBeaconStateAllForks,
+    block: SignedBeaconBlock
+  ): Promise<void>;
   persistInvalidSszValue<T>(type: Type<T>, sszObject: T | Uint8Array, suffix?: string): void;
   persistInvalidSszBytes(type: string, sszBytes: Uint8Array, suffix?: string): void;
   /** Persist bad items to persistInvalidSszObjectsDir dir, for example invalid state, attestations etc. */

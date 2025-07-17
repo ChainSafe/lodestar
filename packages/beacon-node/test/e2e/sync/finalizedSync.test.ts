@@ -5,8 +5,7 @@ import {ChainConfig} from "@lodestar/config";
 import {TimestampFormatCode} from "@lodestar/logger";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {phase0} from "@lodestar/types";
-import {assert} from "chai";
-import {afterEach, describe, it, vi} from "vitest";
+import {afterEach, describe, expect, it, vi} from "vitest";
 import {ChainEvent} from "../../../src/chain/index.js";
 import {waitForEvent} from "../../utils/events/resolver.js";
 import {LogLevel, TestLoggerOpts, testLogger} from "../../utils/logger.js";
@@ -114,7 +113,7 @@ describe("sync / finalized sync", () => {
       await waitForSynced;
       loggerNodeB.info("Node B synced to Node A, received head block", {slot: head.message.slot});
     } catch (_e) {
-      assert.fail("Failed to sync to other node in time");
+      expect.fail("Failed to sync to other node in time");
     }
   });
 });

@@ -1,4 +1,5 @@
 import {ResponseOutgoing} from "@lodestar/reqresp";
+import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Slot, phase0} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
@@ -40,7 +41,7 @@ export async function* onBeaconBlocksByRoot(
 
       yield {
         data: blockBytes,
-        fork: chain.config.getForkName(slot),
+        boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(slot)),
       };
     }
   }

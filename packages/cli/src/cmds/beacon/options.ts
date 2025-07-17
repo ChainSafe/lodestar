@@ -17,6 +17,7 @@ type BeaconExtraArgs = {
   dbDir?: string;
   persistInvalidSszObjectsDir?: string;
   persistInvalidSszObjectsRetentionHours?: number;
+  persistOrphanedBlocksDir?: string;
   peerStoreDir?: string;
   persistNetworkIdentity?: boolean;
   private?: boolean;
@@ -110,6 +111,13 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
     type: "number",
   },
 
+  persistOrphanedBlocksDir: {
+    description: "Enable and specify a directory to persist orphaned blocks",
+    defaultDescription: defaultBeaconPaths.persistOrphanedBlocksDir,
+    hidden: true,
+    type: "string",
+  },
+
   peerStoreDir: {
     hidden: true,
     description: "Peer store directory",
@@ -129,7 +137,7 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
   },
 
   validatorMonitorLogs: {
-    description: "Log validator monitor events as info. This requires metrics to be enabled.",
+    description: "Log validator monitor events as info.",
     type: "boolean",
   },
 

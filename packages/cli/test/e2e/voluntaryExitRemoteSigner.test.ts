@@ -15,7 +15,7 @@ import {afterAll, beforeAll, describe, it, onTestFinished, vi} from "vitest";
 import {testFilesDir} from "../utils.js";
 
 describe("voluntaryExit using remote signer", () => {
-  vi.setConfig({testTimeout: 30_000});
+  vi.setConfig({testTimeout: 30_000, hookTimeout: 30_000});
 
   let externalSigner: StartedExternalSigner;
 
@@ -31,7 +31,9 @@ describe("voluntaryExit using remote signer", () => {
   });
 
   afterAll(async () => {
-    await externalSigner.container.stop();
+    if (externalSigner) {
+      await externalSigner.container.stop();
+    }
   });
 
   it("Perform a voluntary exit", async () => {

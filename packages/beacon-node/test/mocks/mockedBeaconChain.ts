@@ -55,6 +55,7 @@ vi.mock("@lodestar/fork-choice", async (importActual) => {
       getBlock: vi.fn(),
       getAllAncestorBlocks: vi.fn(),
       getAllNonAncestorBlocks: vi.fn(),
+      getAllAncestorAndNonAncestorBlocks: vi.fn(),
       iterateAncestorBlocks: vi.fn(),
       getBlockSummariesByParentRoot: vi.fn(),
       getCanonicalBlockAtSlot: vi.fn(),
@@ -112,58 +113,63 @@ vi.mock("../../src/chain/opPools/index.js", async (importActual) => {
 vi.mock("../../src/chain/chain.js", async (importActual) => {
   const mod = await importActual<typeof import("../../src/chain/chain.js")>();
 
-  const BeaconChain = vi.fn().mockImplementation(({clock, genesisTime, config}: MockedBeaconChainOptions) => {
-    const logger = getMockedLogger();
+  const BeaconChain = vi
+    .fn()
+    .mockImplementation(({clock: clockParam, genesisTime, config}: MockedBeaconChainOptions) => {
+      const logger = getMockedLogger();
+      const clock =
+        clockParam === "real"
+          ? new Clock({config, genesisTime, signal: new AbortController().signal})
+          : getMockedClock();
 
-    return {
-      config,
-      opts: {},
-      genesisTime,
-      clock:
-        clock === "real" ? new Clock({config, genesisTime, signal: new AbortController().signal}) : getMockedClock(),
-      forkChoice: getMockedForkChoice(),
-      executionEngine: {
-        notifyForkchoiceUpdate: vi.fn(),
-        getPayload: vi.fn(),
-        getClientVersion: vi.fn(),
-      },
-      executionBuilder: {},
-      // @ts-expect-error
-      eth1: new Eth1ForBlockProduction(),
-      opPool: new OpPool(),
-      aggregatedAttestationPool: new AggregatedAttestationPool(config),
-      syncContributionAndProofPool: new SyncContributionAndProofPool(),
-      // @ts-expect-error
-      beaconProposerCache: new BeaconProposerCache(),
-      shufflingCache: new ShufflingCache(),
-      pubkey2index: new PubkeyIndexMap(),
-      index2pubkey: [],
-      produceCommonBlockBody: vi.fn(),
-      getProposerHead: vi.fn(),
-      produceBlock: vi.fn(),
-      produceBlindedBlock: vi.fn(),
-      getCanonicalBlockAtSlot: vi.fn(),
-      recomputeForkChoiceHead: vi.fn(),
-      predictProposerHead: vi.fn(),
-      getHeadStateAtCurrentEpoch: vi.fn(),
-      getHeadState: vi.fn(),
-      getStateBySlot: vi.fn(),
-      updateBuilderStatus: vi.fn(),
-      processBlock: vi.fn(),
-      regenStateForAttestationVerification: vi.fn(),
-      close: vi.fn(),
-      logger,
-      regen: new QueuedStateRegenerator({} as any),
-      lightClientServer: new LightClientServer({} as any, {} as any),
-      bls: {
-        verifySignatureSets: vi.fn().mockResolvedValue(true),
-        verifySignatureSetsSameMessage: vi.fn().mockResolvedValue([true]),
-        close: vi.fn().mockResolvedValue(true),
-        canAcceptWork: vi.fn().mockReturnValue(true),
-      },
-      emitter: new ChainEventEmitter(),
-    };
-  });
+      return {
+        config,
+        opts: {},
+        genesisTime,
+        clock,
+        forkChoice: getMockedForkChoice(),
+        executionEngine: {
+          notifyForkchoiceUpdate: vi.fn(),
+          getPayload: vi.fn(),
+          getClientVersion: vi.fn(),
+        },
+        executionBuilder: {},
+        // @ts-expect-error
+        eth1: new Eth1ForBlockProduction(),
+        opPool: new OpPool(),
+        aggregatedAttestationPool: new AggregatedAttestationPool(config),
+        syncContributionAndProofPool: new SyncContributionAndProofPool(clock),
+        // @ts-expect-error
+        beaconProposerCache: new BeaconProposerCache(),
+        shufflingCache: new ShufflingCache(),
+        pubkey2index: new PubkeyIndexMap(),
+        index2pubkey: [],
+        produceCommonBlockBody: vi.fn(),
+        getProposerHead: vi.fn(),
+        produceBlock: vi.fn(),
+        produceBlindedBlock: vi.fn(),
+        getCanonicalBlockAtSlot: vi.fn(),
+        recomputeForkChoiceHead: vi.fn(),
+        predictProposerHead: vi.fn(),
+        getHeadStateAtCurrentEpoch: vi.fn(),
+        getHeadState: vi.fn(),
+        getStateBySlot: vi.fn(),
+        updateBuilderStatus: vi.fn(),
+        processBlock: vi.fn(),
+        regenStateForAttestationVerification: vi.fn(),
+        close: vi.fn(),
+        logger,
+        regen: new QueuedStateRegenerator({} as any),
+        lightClientServer: new LightClientServer({} as any, {} as any),
+        bls: {
+          verifySignatureSets: vi.fn().mockResolvedValue(true),
+          verifySignatureSetsSameMessage: vi.fn().mockResolvedValue([true]),
+          close: vi.fn().mockResolvedValue(true),
+          canAcceptWork: vi.fn().mockReturnValue(true),
+        },
+        emitter: new ChainEventEmitter(),
+      };
+    });
 
   return {
     ...mod,

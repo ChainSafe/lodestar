@@ -1,8 +1,8 @@
 import {PeerIdStr} from "@chainsafe/libp2p-gossipsub/types";
 import {Message, TopicValidatorResult} from "@libp2p/interface";
-import {BeaconConfig} from "@lodestar/config";
-import {ForkName} from "@lodestar/params";
+import {BeaconConfig, ForkBoundary} from "@lodestar/config";
 import {
+  AttesterSlashing,
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
   SignedAggregateAndProof,
@@ -51,7 +51,7 @@ export enum GossipEncoding {
  */
 export interface IGossipTopic {
   type: GossipType;
-  fork: ForkName;
+  boundary: ForkBoundary;
   encoding?: GossipEncoding;
 }
 
@@ -93,7 +93,7 @@ export type GossipTypeMap = {
   [GossipType.beacon_attestation]: SingleAttestation;
   [GossipType.voluntary_exit]: phase0.SignedVoluntaryExit;
   [GossipType.proposer_slashing]: phase0.ProposerSlashing;
-  [GossipType.attester_slashing]: phase0.AttesterSlashing;
+  [GossipType.attester_slashing]: AttesterSlashing;
   [GossipType.sync_committee_contribution_and_proof]: altair.SignedContributionAndProof;
   [GossipType.sync_committee]: altair.SyncCommitteeMessage;
   [GossipType.light_client_finality_update]: LightClientFinalityUpdate;
@@ -109,7 +109,7 @@ export type GossipFnByType = {
   [GossipType.beacon_attestation]: (attestation: SingleAttestation) => Promise<void> | void;
   [GossipType.voluntary_exit]: (voluntaryExit: phase0.SignedVoluntaryExit) => Promise<void> | void;
   [GossipType.proposer_slashing]: (proposerSlashing: phase0.ProposerSlashing) => Promise<void> | void;
-  [GossipType.attester_slashing]: (attesterSlashing: phase0.AttesterSlashing) => Promise<void> | void;
+  [GossipType.attester_slashing]: (attesterSlashing: AttesterSlashing) => Promise<void> | void;
   [GossipType.sync_committee_contribution_and_proof]: (
     signedContributionAndProof: altair.SignedContributionAndProof
   ) => Promise<void> | void;

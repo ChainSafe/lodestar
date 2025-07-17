@@ -1,5 +1,5 @@
+import {bench, describe} from "@chainsafe/benchmark";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {itBench} from "@dapplion/benchmark";
 import {ATTESTATION_SUBNET_COUNT} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
@@ -11,7 +11,7 @@ describe("ForkChoice onAttestation", () => {
    * Committee:       | ----------- 0 --------------| ... | ----------------------- i --------------------- | ------------------------63 -------------------------|
    * Validator index: | 0 1 2 ... committeeLength-1 | ... | (i*committeeLengh + ) 0 1 2 ... committeeLengh-1| (63*committeeLengh +) 0 1 2 ... committeeLength - 1 |
    */
-  itBench({
+  bench({
     id: "pass gossip attestations to forkchoice per slot",
     beforeEach: () => {
       const initialBlockCount = 64;

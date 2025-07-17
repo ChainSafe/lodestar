@@ -1,6 +1,12 @@
 import {routes} from "@lodestar/api";
 import {ApiError, ApplicationMethods} from "@lodestar/api/server";
-import {ForkExecution, SLOTS_PER_HISTORICAL_ROOT, isForkExecution, isForkPostElectra} from "@lodestar/params";
+import {
+  ForkName,
+  ForkPostBellatrix,
+  SLOTS_PER_HISTORICAL_ROOT,
+  isForkPostBellatrix,
+  isForkPostElectra,
+} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   computeTimeAtSlot,
@@ -16,11 +22,12 @@ import {
   deneb,
   isSignedBlockContents,
 } from "@lodestar/types";
-import {fromHex, sleep, toRootHex} from "@lodestar/utils";
+import {fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
 import {
   BlobsSource,
   BlockInput,
   BlockInputDataBlobs,
+  BlockInputType,
   BlockSource,
   ImportBlockOpts,
   getBlockInput,
@@ -29,12 +36,13 @@ import {verifyBlocksInEpoch} from "../../../../chain/blocks/verifyBlock.js";
 import {BeaconChain} from "../../../../chain/chain.js";
 import {BlockError, BlockErrorCode, BlockGossipError} from "../../../../chain/errors/index.js";
 import {validateGossipBlock} from "../../../../chain/validation/block.js";
-import {OpSource} from "../../../../metrics/validatorMonitor.js";
+import {OpSource} from "../../../../chain/validatorMonitor.js";
 import {NetworkEvent} from "../../../../network/index.js";
-import {computeBlobSidecars} from "../../../../util/blobs.js";
+import {computeBlobSidecars, kzgCommitmentToVersionedHash} from "../../../../util/blobs.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {ApiModules} from "../../types.js";
+import {assertUniqueItems} from "../../utils.js";
 import {getBlockResponse, toBeaconHeaderResponse} from "./utils.js";
 
 type PublishBlockOpts = ImportBlockOpts;
@@ -62,7 +70,7 @@ export function getBeaconBlockApi({
 >): ApplicationMethods<routes.beacon.block.Endpoints> {
   const publishBlock: ApplicationMethods<routes.beacon.block.Endpoints>["publishBlockV2"] = async (
     {signedBlockOrContents, broadcastValidation},
-    context,
+    _context,
     opts: PublishBlockOpts = {}
   ) => {
     const seenTimestampSec = Date.now() / 1000;
@@ -75,20 +83,12 @@ export function getBeaconBlockApi({
         fork: config.getForkName(signedBlock.message.slot),
         blobs: blobSidecars,
         blobsSource: BlobsSource.api,
-        blobsBytes: blobSidecars.map(() => null),
       } as BlockInputDataBlobs;
-      blockForImport = getBlockInput.availableData(
-        config,
-        signedBlock,
-        BlockSource.api,
-        // don't bundle any bytes for block and blobs
-        null,
-        blockData
-      );
+      blockForImport = getBlockInput.availableData(config, signedBlock, BlockSource.api, blockData);
     } else {
       signedBlock = signedBlockOrContents;
       blobSidecars = [];
-      blockForImport = getBlockInput.preData(config, signedBlock, BlockSource.api, context?.sszBytes ?? null);
+      blockForImport = getBlockInput.preData(config, signedBlock, BlockSource.api);
     }
 
     // check what validations have been requested before broadcasting and publishing the block
@@ -208,7 +208,11 @@ export function getBeaconBlockApi({
     }
 
     // TODO: Validate block
-    metrics?.registerBeaconBlock(OpSource.api, seenTimestampSec, blockForImport.block.message);
+    const delaySec =
+      seenTimestampSec - (chain.genesisTime + blockForImport.block.message.slot * config.SECONDS_PER_SLOT);
+    metrics?.gossipBlock.elapsedTimeTillReceived.observe({source: OpSource.api}, delaySec);
+    chain.validatorMonitor?.registerBeaconBlock(OpSource.api, delaySec, blockForImport.block.message);
+
     chain.logger.info("Publishing block", valLogMeta);
     const publishPromises = [
       // Send the block, regardless of whether or not it is valid. The API
@@ -236,6 +240,29 @@ export function getBeaconBlockApi({
           }),
     ];
     await promiseAllMaybeAsync(publishPromises);
+
+    if (chain.emitter.listenerCount(routes.events.EventType.blockGossip)) {
+      chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRoot});
+    }
+
+    if (
+      chain.emitter.listenerCount(routes.events.EventType.blobSidecar) &&
+      blockForImport.type === BlockInputType.availableData &&
+      (blockForImport.blockData.fork === ForkName.deneb || blockForImport.blockData.fork === ForkName.electra)
+    ) {
+      const {blobs} = blockForImport.blockData;
+
+      for (const blobSidecar of blobs) {
+        const {index, kzgCommitment} = blobSidecar;
+        chain.emitter.emit(routes.events.EventType.blobSidecar, {
+          blockRoot,
+          slot,
+          index,
+          kzgCommitment: toHex(kzgCommitment),
+          versionedHash: toHex(kzgCommitmentToVersionedHash(kzgCommitment)),
+        });
+      }
+    }
   };
 
   const publishBlindedBlock: ApplicationMethods<routes.beacon.block.Endpoints>["publishBlindedBlock"] = async (
@@ -246,7 +273,7 @@ export function getBeaconBlockApi({
     const slot = signedBlindedBlock.message.slot;
     const blockRoot = toRootHex(
       chain.config
-        .getExecutionForkTypes(signedBlindedBlock.message.slot)
+        .getPostBellatrixForkTypes(signedBlindedBlock.message.slot)
         .BlindedBeaconBlock.hashTreeRoot(signedBlindedBlock.message)
     );
 
@@ -398,8 +425,8 @@ export function getBeaconBlockApi({
       const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
       const fork = config.getForkName(block.message.slot);
       return {
-        data: isForkExecution(fork)
-          ? signedBeaconBlockToBlinded(config, block as SignedBeaconBlock<ForkExecution>)
+        data: isForkPostBellatrix(fork)
+          ? signedBeaconBlockToBlinded(config, block as SignedBeaconBlock<ForkPostBellatrix>)
           : block,
         meta: {
           executionOptimistic,
@@ -485,6 +512,8 @@ export function getBeaconBlockApi({
     },
 
     async getBlobSidecars({blockId, indices}) {
+      assertUniqueItems(indices, "Duplicate indices provided");
+
       const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
       const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
 

@@ -66,7 +66,7 @@ describe("get proposers api impl", () => {
     vi.advanceTimersByTime((SYNC_TOLERANCE_EPOCHS * SLOTS_PER_EPOCH + 1) * config.SECONDS_PER_SLOT * 1000);
     vi.spyOn(modules.sync, "state", "get").mockReturnValue(SyncState.SyncingHead);
 
-    await expect(api.getProposerDuties({epoch: 1})).rejects.toThrow("Node is syncing - headSlot 0 currentSlot 25");
+    await expect(api.getProposerDuties({epoch: 1})).rejects.toThrow("Node is syncing - headSlot 0 currentSlot 97");
   });
 
   it("should raise error if node stalled", async () => {

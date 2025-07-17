@@ -1,5 +1,5 @@
 import {FAR_FUTURE_EPOCH, ForkSeq} from "@lodestar/params";
-import {ValidatorIndex, phase0} from "@lodestar/types";
+import {phase0} from "@lodestar/types";
 import {verifyVoluntaryExitSignature} from "../signatureSets/index.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateElectra} from "../types.js";
 import {getPendingBalanceToWithdraw, isActiveValidator} from "../util/index.js";

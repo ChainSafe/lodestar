@@ -2,16 +2,18 @@ import fs from "node:fs";
 import path from "node:path";
 import worker from "node:worker_threads";
 import {Discv5} from "@chainsafe/discv5";
-import {ENR, ENRData, SignableENR, SignableENRData, createPrivateKeyFromPeerId} from "@chainsafe/enr";
+import {ENR, ENRData, SignableENR, SignableENRData} from "@chainsafe/enr";
 import {Observable, Subject} from "@chainsafe/threads/observable";
 import {expose} from "@chainsafe/threads/worker";
-import {createFromProtobuf} from "@libp2p/peer-id-factory";
+import {privateKeyFromProtobuf} from "@libp2p/crypto/keys";
+import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {createBeaconConfig} from "@lodestar/config";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {Gauge} from "@lodestar/utils";
 import {Multiaddr, multiaddr} from "@multiformats/multiaddr";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {collectNodeJSMetrics} from "../../metrics/nodeJsMetrics.js";
+import {Clock} from "../../util/clock.js";
 import {profileNodeJS, writeHeapSnapshot} from "../../util/profile.js";
 import {Discv5WorkerApi, Discv5WorkerData} from "./types.js";
 import {ENRRelevance, enrRelevance} from "./utils.js";
@@ -42,15 +44,15 @@ if (workerData.metrics) {
   });
 }
 
-const peerId = await createFromProtobuf(workerData.peerIdProto);
-const keypair = createPrivateKeyFromPeerId(peerId);
+const privateKey = privateKeyFromProtobuf(workerData.privateKeyProto);
+const peerId = peerIdFromPrivateKey(privateKey);
 
 const config = createBeaconConfig(workerData.chainConfig, workerData.genesisValidatorsRoot);
 
 // Initialize discv5
 const discv5 = Discv5.create({
-  enr: SignableENR.decodeTxt(workerData.enr, keypair.privateKey),
-  peerId,
+  enr: SignableENR.decodeTxt(workerData.enr, privateKey.raw),
+  privateKey,
   bindAddrs: {
     ip4: (workerData.bindAddrs.ip4 ? multiaddr(workerData.bindAddrs.ip4) : undefined) as Multiaddr,
     ip6: workerData.bindAddrs.ip6 ? multiaddr(workerData.bindAddrs.ip6) : undefined,
@@ -67,8 +69,12 @@ for (const bootEnr of workerData.bootEnrs) {
 /** Used to push discovered ENRs */
 const subject = new Subject<ENRData>();
 
+/** Define a new clock */
+const abortController = new AbortController();
+const clock = new Clock({config, genesisTime: workerData.genesisTime, signal: abortController.signal});
+
 const onDiscovered = (enr: ENR): void => {
-  const status = enrRelevance(enr, config);
+  const status = enrRelevance(enr, config, clock);
   enrRelevanceMetric?.inc({status});
   if (status === ENRRelevance.relevant) {
     subject.next(enr.toObject());

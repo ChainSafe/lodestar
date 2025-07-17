@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {Db, Repository} from "@lodestar/db";
-import {ValidatorIndex, phase0, ssz} from "@lodestar/types";
+import {AttesterSlashing, ValidatorIndex, ssz} from "@lodestar/types";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 /**
@@ -9,10 +9,16 @@ import {Bucket, getBucketNameByValue} from "../buckets.js";
  * Added via gossip or api
  * Removed when included on chain or old
  */
-export class AttesterSlashingRepository extends Repository<Uint8Array, phase0.AttesterSlashing> {
+export class AttesterSlashingRepository extends Repository<Uint8Array, AttesterSlashing> {
   constructor(config: ChainForkConfig, db: Db) {
-    const bucket = Bucket.phase0_attesterSlashing;
-    super(config, db, bucket, ssz.phase0.AttesterSlashing, getBucketNameByValue(bucket));
+    const bucket = Bucket.allForks_attesterSlashing;
+    /**
+     * We are using `ssz.electra.AttesterSlashing` type since it is backward compatible with `ssz.phase0.AttesterSlashing`
+     * But this also means the length of `attestingIndices` is not checked/enforced here. Need to make sure length
+     * is correct before writing to db.
+     */
+    const type = ssz.electra.AttesterSlashing;
+    super(config, db, bucket, type, getBucketNameByValue(bucket));
   }
 
   async hasAll(attesterIndices: ValidatorIndex[] = []): Promise<boolean> {

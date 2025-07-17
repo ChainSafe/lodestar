@@ -1,11 +1,7 @@
 import {UpdateHeadOpt} from "@lodestar/fork-choice";
-import {NotReorgedReason} from "@lodestar/fork-choice/lib/forkChoice/interface.js";
+import {NotReorgedReason} from "@lodestar/fork-choice";
 import {ProducedBlockSource} from "@lodestar/types";
-import {
-  BlockSelectionResult,
-  BuilderBlockSelectionReason,
-  EngineBlockSelectionReason,
-} from "../../api/impl/validator/index.js";
+import {BlockSelectionResult} from "../../api/impl/validator/index.js";
 import {BlockProductionStep, PayloadPreparationType} from "../../chain/produceBlock/index.js";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
 
@@ -58,6 +54,21 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       name: "beacon_current_validators",
       labelNames: ["status"],
       help: "number of validators in current epoch",
+    }),
+
+    pendingDeposits: register.gauge({
+      name: "beacon_pending_deposits",
+      help: "Current number of pending deposits",
+    }),
+
+    pendingConsolidations: register.gauge({
+      name: "beacon_pending_consolidations",
+      help: "Current number of pending consolidations",
+    }),
+
+    pendingPartialWithdrawals: register.gauge({
+      name: "beacon_pending_partial_withdrawals",
+      help: "Current number of pending partial withdrawals",
     }),
 
     // Non-spec'ed
@@ -130,6 +141,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       buckets: [1, 2, 3, 5, 7, 10, 20, 30, 50, 100],
     }),
 
+    // TODO: wrap to blockProduction
     blockProductionTime: register.histogram<{source: ProducedBlockSource}>({
       name: "beacon_block_production_seconds",
       help: "Full runtime of block production",
@@ -166,8 +178,18 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
     blockProductionNumAggregated: register.histogram<{source: ProducedBlockSource}>({
       name: "beacon_block_production_num_aggregated_total",
       help: "Count of all aggregated attestations in our produced block",
-      buckets: [32, 64, 96, 128],
+      buckets: [1, 2, 4, 6, 8],
       labelNames: ["source"],
+    }),
+    blockProductionConsensusBlockValue: register.histogram<{source: ProducedBlockSource}>({
+      name: "beacon_block_production_consensus_block_value",
+      help: "Consensus block value denominated in ETH of produced blocks",
+      buckets: [0.001, 0.005, 0.01, 0.03, 0.05, 0.07, 0.1],
+      labelNames: ["source"],
+    }),
+    blockProductionSlotDelta: register.gauge({
+      name: "beacon_block_production_slot_delta",
+      help: "Slot delta of produced slot compared to parent slot",
     }),
     blockProductionExecutionPayloadValue: register.histogram<{source: ProducedBlockSource}>({
       name: "beacon_block_production_execution_payload_value",
@@ -201,6 +223,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         name: "beacon_block_payload_fetched_time",
         help: "Time to fetch the payload from EL",
         labelNames: ["prepType"],
+        buckets: [0.1, 0.2, 0.3, 0.5, 0.7, 1, 2],
       }),
       emptyPayloads: register.gauge<{prepType: PayloadPreparationType}>({
         name: "beacon_block_payload_empty_total",
@@ -215,16 +238,12 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
 
     blockInputFetchStats: {
       // of already available blocks which didn't have to go through blobs pull
-      totalDataAvailableBlockInputs: register.gauge({
-        name: "beacon_blockinputs_already_available_total",
-        help: "Total number of block inputs whose blobs were already available",
-      }),
       totalDataAvailableBlockInputBlobs: register.gauge({
         name: "beacon_blockinput_blobs_already_available_total",
         help: "Total number of block input blobs that of already available blocks",
       }),
 
-      // of those which need to be fetched
+      // blobs resolution stats
       dataPromiseBlobsAlreadyAvailable: register.gauge({
         name: "beacon_datapromise_blockinput_blobs_already_available_total",
         help: "Count of data promise blocks' blobs that were already available in blockinput cache via gossip",
@@ -277,25 +296,6 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         name: "beacon_datapromise_blockinput_blobs_finally_resolved_from_network_total",
         help: "Number of blobs successfully fetched from the network",
       }),
-
-      totalDataPromiseBlockInputsAvailableUsingGetBlobs: register.gauge({
-        name: "beacon_datapromise_blockinputs_available_using_getblobs_total",
-        help: "Count of block inputs that became available using non-null get blobs requests",
-      }),
-      totalDataPromiseBlockInputsTried: register.gauge({
-        name: "beacon_datapromise_blockinputs_tried_for_blobs_pull_total",
-        help: "Total number of block inputs that were tried to resolve",
-      }),
-      totalDataPromiseBlockInputsResolvedAvailable: register.gauge({
-        name: "beacon_datapromise_blockinputs_available_post_blobs_pull_total",
-        help: "Total number of block inputs that were successfully resolved as available on blobs pull",
-      }),
-
-      // retry counts
-      totalDataPromiseBlockInputsReTried: register.gauge({
-        name: "beacon_datapromise_blockinputs_retried_for_blobs_pull_total",
-        help: "Total number of block inputs that were retried for blobs pull from network",
-      }),
       dataPromiseBlobsRetriedFromNetwork: register.gauge({
         name: "beacon_datapromise_blockinput_blobs_retried_from_network_total",
         help: "Number of blob requests required from the network on retries",
@@ -304,9 +304,43 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         name: "beacon_datapromise_blockinput_blobs_retried_and_resolved_from_network_total",
         help: "Number of blobs successfully fetched from the network on retries",
       }),
+
+      // blockinput resolution stats
+      totalDataAvailableBlockInputs: register.gauge({
+        name: "beacon_blockinputs_already_available_total",
+        help: "Total number of block inputs whose blobs were already available",
+      }),
+      totalDataPromiseBlockInputsAvailableUsingGetBlobs: register.gauge({
+        name: "beacon_datapromise_blockinputs_available_using_getblobs_total",
+        help: "Count of block inputs that became available using non-null get blobs requests",
+      }),
+      totalDataPromiseBlockInputsAvailableFromGetBlobs: register.gauge({
+        name: "beacon_datapromise_blockinputs_available_from_getblobs_total",
+        help: "Count of block inputs that became available from non-null get blobs requests",
+      }),
+      totalDataPromiseBlockInputsFinallyAvailableFromNetworkReqResp: register.gauge({
+        name: "beacon_datapromise_blockinputs_finally_available_from_reqresp_total",
+        help: "Count of block inputs that became available using the req/resp from network",
+      }),
+      totalDataPromiseBlockInputsTriedBlobsPull: register.gauge({
+        name: "beacon_datapromise_blockinputs_tried_for_blobs_pull_total",
+        help: "Total number of block inputs that were tried to resolve",
+      }),
+      totalDataPromiseBlockInputsTriedGetBlobs: register.gauge({
+        name: "beacon_datapromise_blockinputs_tried_for_getblobs_pull_total",
+        help: "Total number of block inputs that were tried to resolve",
+      }),
+      totalDataPromiseBlockInputsResolvedAvailable: register.gauge({
+        name: "beacon_datapromise_blockinputs_available_post_blobs_pull_total",
+        help: "Total number of block inputs that were successfully resolved as available on blobs pull",
+      }),
       totalDataPromiseBlockInputsRetriedAvailableFromNetwork: register.gauge({
         name: "beacon_datapromise_blockinputs_retried_and_resolved_from_network_total",
         help: "Number of blockinputs successfully resolved from the network on retries",
+      }),
+      totalDataPromiseBlockInputsReTriedBlobsPull: register.gauge({
+        name: "beacon_datapromise_blockinputs_retried_for_blobs_pull_total",
+        help: "Total number of block inputs that were retried for blobs pull from network",
       }),
 
       // some caches stats
