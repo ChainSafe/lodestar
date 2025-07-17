@@ -1,13 +1,15 @@
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
-import {PeerId} from "@libp2p/interface";
+import {PeerId, PrivateKey} from "@libp2p/interface";
+import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
 import {ForkSeq} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
-import {computeStartSlotAtEpoch, computeTimeAtSlot} from "@lodestar/state-transition";
+import {computeEpochAtSlot, computeTimeAtSlot} from "@lodestar/state-transition";
 import {
+  AttesterSlashing,
   LightClientBootstrap,
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
@@ -34,7 +36,7 @@ import {PeerIdStr, peerIdToString} from "../util/peerId.js";
 import {BlobSidecarsByRootRequest} from "../util/types.js";
 import {INetworkCore, NetworkCore, WorkerNetworkCore} from "./core/index.js";
 import {INetworkEventBus, NetworkEvent, NetworkEventBus, NetworkEventData} from "./events.js";
-import {getActiveForks} from "./forks.js";
+import {getActiveForkBoundaries} from "./forks.js";
 import {GossipHandlers, GossipTopicMap, GossipType, GossipTypeMap} from "./gossip/index.js";
 import {getGossipSSZType, gossipTopicIgnoreDuplicatePublishError, stringifyGossipTopic} from "./gossip/topic.js";
 import {INetwork} from "./interface.js";
@@ -55,7 +57,7 @@ import {isPublishToZeroPeersError} from "./util.js";
 
 type NetworkModules = {
   opts: NetworkOptions;
-  peerId: PeerId;
+  privateKey: PrivateKey;
   config: BeaconConfig;
   logger: LoggerNode;
   chain: IBeaconChain;
@@ -68,7 +70,7 @@ type NetworkModules = {
 export type NetworkInitModules = {
   opts: NetworkOptions;
   config: BeaconConfig;
-  peerId: PeerId;
+  privateKey: PrivateKey;
   peerStoreDir?: string;
   logger: LoggerNode;
   metrics: Metrics | null;
@@ -106,10 +108,9 @@ export class Network implements INetwork {
 
   private subscribedToCoreTopics = false;
   private connectedPeers = new Set<PeerIdStr>();
-  private regossipBlsChangesPromise: Promise<void> | null = null;
 
   constructor(modules: NetworkModules) {
-    this.peerId = modules.peerId;
+    this.peerId = peerIdFromPrivateKey(modules.privateKey);
     this.config = modules.config;
     this.logger = modules.logger;
     this.chain = modules.chain;
@@ -139,7 +140,7 @@ export class Network implements INetwork {
     chain,
     db,
     gossipHandlers,
-    peerId,
+    privateKey,
     peerStoreDir,
     getReqRespHandler,
   }: NetworkInitModules): Promise<Network> {
@@ -164,7 +165,7 @@ export class Network implements INetwork {
             initialStatus,
           },
           config,
-          peerId,
+          privateKey,
           logger,
           events,
           metrics,
@@ -173,7 +174,7 @@ export class Network implements INetwork {
       : await NetworkCore.init({
           opts,
           config,
-          peerId,
+          privateKey,
           peerStoreDir,
           logger,
           clock: chain.clock,
@@ -190,11 +191,12 @@ export class Network implements INetwork {
     );
 
     const multiaddresses = opts.localMultiaddrs?.join(",");
+    const peerId = peerIdFromPrivateKey(privateKey);
     logger.info(`PeerId ${peerIdToString(peerId)}, Multiaddrs ${multiaddresses}`);
 
     return new Network({
       opts,
-      peerId,
+      privateKey,
       config,
       logger,
       chain,
@@ -212,8 +214,6 @@ export class Network implements INetwork {
   /** Destroy this instance. Can only be called once. */
   async close(): Promise<void> {
     if (this.closed) return;
-    // Used only for sleep() statements
-    this.controller.abort();
 
     this.events.off(NetworkEvent.peerConnected, this.onPeerConnected);
     this.events.off(NetworkEvent.peerDisconnected, this.onPeerDisconnected);
@@ -221,6 +221,9 @@ export class Network implements INetwork {
     this.chain.emitter.off(routes.events.EventType.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
     this.chain.emitter.off(routes.events.EventType.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
     await this.core.close();
+
+    // Used only for sleep() statements
+    this.controller.abort();
     this.logger.debug("network core closed");
   }
 
@@ -306,53 +309,64 @@ export class Network implements INetwork {
   // Gossip
 
   async publishBeaconBlock(signedBlock: SignedBeaconBlock): Promise<number> {
-    const fork = this.config.getForkName(signedBlock.message.slot);
-    return this.publishGossip<GossipType.beacon_block>({type: GossipType.beacon_block, fork}, signedBlock, {
+    const epoch = computeEpochAtSlot(signedBlock.message.slot);
+    const boundary = this.config.getForkBoundaryAtEpoch(epoch);
+
+    return this.publishGossip<GossipType.beacon_block>({type: GossipType.beacon_block, boundary}, signedBlock, {
       ignoreDuplicatePublishError: true,
     });
   }
 
   async publishBlobSidecar(blobSidecar: deneb.BlobSidecar): Promise<number> {
-    const slot = blobSidecar.signedBlockHeader.message.slot;
-    const fork = this.config.getForkName(slot);
+    const epoch = computeEpochAtSlot(blobSidecar.signedBlockHeader.message.slot);
+    const boundary = this.config.getForkBoundaryAtEpoch(epoch);
+
     const subnet = blobSidecar.index;
 
-    return this.publishGossip<GossipType.blob_sidecar>({type: GossipType.blob_sidecar, fork, subnet}, blobSidecar, {
+    return this.publishGossip<GossipType.blob_sidecar>({type: GossipType.blob_sidecar, boundary, subnet}, blobSidecar, {
       ignoreDuplicatePublishError: true,
     });
   }
 
   async publishBeaconAggregateAndProof(aggregateAndProof: SignedAggregateAndProof): Promise<number> {
-    const fork = this.config.getForkName(aggregateAndProof.message.aggregate.data.slot);
+    const epoch = computeEpochAtSlot(aggregateAndProof.message.aggregate.data.slot);
+    const boundary = this.config.getForkBoundaryAtEpoch(epoch);
+
     return this.publishGossip<GossipType.beacon_aggregate_and_proof>(
-      {type: GossipType.beacon_aggregate_and_proof, fork},
+      {type: GossipType.beacon_aggregate_and_proof, boundary},
       aggregateAndProof,
       {ignoreDuplicatePublishError: true}
     );
   }
 
   async publishBeaconAttestation(attestation: SingleAttestation, subnet: SubnetID): Promise<number> {
-    const fork = this.config.getForkName(attestation.data.slot);
+    const epoch = computeEpochAtSlot(attestation.data.slot);
+    const boundary = this.config.getForkBoundaryAtEpoch(epoch);
+
     return this.publishGossip<GossipType.beacon_attestation>(
-      {type: GossipType.beacon_attestation, fork, subnet},
+      {type: GossipType.beacon_attestation, boundary, subnet},
       attestation,
       {ignoreDuplicatePublishError: true}
     );
   }
 
   async publishVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<number> {
-    const fork = this.config.getForkName(computeStartSlotAtEpoch(voluntaryExit.message.epoch));
-    return this.publishGossip<GossipType.voluntary_exit>({type: GossipType.voluntary_exit, fork}, voluntaryExit, {
+    const epoch = voluntaryExit.message.epoch;
+    const boundary = this.config.getForkBoundaryAtEpoch(epoch);
+
+    return this.publishGossip<GossipType.voluntary_exit>({type: GossipType.voluntary_exit, boundary}, voluntaryExit, {
       ignoreDuplicatePublishError: true,
     });
   }
 
   async publishBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange): Promise<number> {
     const publishChanges = [];
-    for (const fork of getActiveForks(this.config, this.clock.currentEpoch)) {
-      if (ForkSeq[fork] >= ForkSeq.capella) {
+    for (const boundary of getActiveForkBoundaries(this.config, this.clock.currentEpoch)) {
+      const fork = ForkSeq[boundary.fork];
+
+      if (fork >= ForkSeq.capella) {
         const publishPromise = this.publishGossip<GossipType.bls_to_execution_change>(
-          {type: GossipType.bls_to_execution_change, fork},
+          {type: GossipType.bls_to_execution_change, boundary},
           blsToExecutionChange,
           {ignoreDuplicatePublishError: true}
         );
@@ -367,57 +381,74 @@ export class Network implements INetwork {
   }
 
   async publishProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<number> {
-    const fork = this.config.getForkName(Number(proposerSlashing.signedHeader1.message.slot as bigint));
+    const epoch = computeEpochAtSlot(Number(proposerSlashing.signedHeader1.message.slot as bigint));
+    const boundary = this.config.getForkBoundaryAtEpoch(epoch);
+
     return this.publishGossip<GossipType.proposer_slashing>(
-      {type: GossipType.proposer_slashing, fork},
+      {type: GossipType.proposer_slashing, boundary},
       proposerSlashing
     );
   }
 
-  async publishAttesterSlashing(attesterSlashing: phase0.AttesterSlashing): Promise<number> {
-    const fork = this.config.getForkName(Number(attesterSlashing.attestation1.data.slot as bigint));
+  async publishAttesterSlashing(attesterSlashing: AttesterSlashing): Promise<number> {
+    const epoch = computeEpochAtSlot(Number(attesterSlashing.attestation1.data.slot as bigint));
+    const boundary = this.config.getForkBoundaryAtEpoch(epoch);
+
     return this.publishGossip<GossipType.attester_slashing>(
-      {type: GossipType.attester_slashing, fork},
+      {type: GossipType.attester_slashing, boundary},
       attesterSlashing
     );
   }
 
   async publishSyncCommitteeSignature(signature: altair.SyncCommitteeMessage, subnet: SubnetID): Promise<number> {
-    const fork = this.config.getForkName(signature.slot);
-    return this.publishGossip<GossipType.sync_committee>({type: GossipType.sync_committee, fork, subnet}, signature, {
-      ignoreDuplicatePublishError: true,
-    });
+    const epoch = computeEpochAtSlot(signature.slot);
+    const boundary = this.config.getForkBoundaryAtEpoch(epoch);
+
+    return this.publishGossip<GossipType.sync_committee>(
+      {type: GossipType.sync_committee, boundary, subnet},
+      signature,
+      {
+        ignoreDuplicatePublishError: true,
+      }
+    );
   }
 
   async publishContributionAndProof(contributionAndProof: altair.SignedContributionAndProof): Promise<number> {
-    const fork = this.config.getForkName(contributionAndProof.message.contribution.slot);
+    const epoch = computeEpochAtSlot(contributionAndProof.message.contribution.slot);
+    const boundary = this.config.getForkBoundaryAtEpoch(epoch);
+
     return this.publishGossip<GossipType.sync_committee_contribution_and_proof>(
-      {type: GossipType.sync_committee_contribution_and_proof, fork},
+      {type: GossipType.sync_committee_contribution_and_proof, boundary},
       contributionAndProof,
       {ignoreDuplicatePublishError: true}
     );
   }
 
   async publishLightClientFinalityUpdate(update: LightClientFinalityUpdate): Promise<number> {
-    const fork = this.config.getForkName(update.signatureSlot);
+    const epoch = computeEpochAtSlot(update.signatureSlot);
+    const boundary = this.config.getForkBoundaryAtEpoch(epoch);
+
     return this.publishGossip<GossipType.light_client_finality_update>(
-      {type: GossipType.light_client_finality_update, fork},
+      {type: GossipType.light_client_finality_update, boundary},
       update
     );
   }
 
   async publishLightClientOptimisticUpdate(update: LightClientOptimisticUpdate): Promise<number> {
-    const fork = this.config.getForkName(update.signatureSlot);
+    const epoch = computeEpochAtSlot(update.signatureSlot);
+    const boundary = this.config.getForkBoundaryAtEpoch(epoch);
+
     return this.publishGossip<GossipType.light_client_optimistic_update>(
-      {type: GossipType.light_client_optimistic_update, fork},
+      {type: GossipType.light_client_optimistic_update, boundary},
       update
     );
   }
 
   async publishInclusionList(inclusionList: eip7805.SignedInclusionList): Promise<number> {
-    const fork = this.config.getForkName(inclusionList.message.slot);
+    const epoch = computeEpochAtSlot(inclusionList.message.slot);
+    const boundary = this.config.getForkBoundaryAtEpoch(epoch);
     return this.publishGossip<GossipType.inclusion_list>(
-      {type: GossipType.inclusion_list, fork},
+      {type: GossipType.inclusion_list, boundary},
       inclusionList,
       {ignoreDuplicatePublishError: true} // TODO EIP-7805: Double check if we want to ignore duplicate error
     );
@@ -512,11 +543,11 @@ export class Network implements INetwork {
     peerId: PeerIdStr,
     request: deneb.BlobSidecarsByRangeRequest
   ): Promise<deneb.BlobSidecar[]> {
-    const fork = this.config.getForkName(request.startSlot);
+    const epoch = computeEpochAtSlot(request.startSlot);
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.BlobSidecarsByRange, [Version.V1], request),
       // request's count represent the slots, so the actual max count received could be slots * blobs per slot
-      request.count * this.config.getMaxBlobsPerBlock(fork),
+      request.count * this.config.getMaxBlobsPerBlock(epoch),
       responseSszTypeByMethod[ReqRespMethod.BlobSidecarsByRange]
     );
   }
@@ -548,7 +579,7 @@ export class Network implements INetwork {
     request: Req
   ): AsyncIterable<ResponseIncoming> {
     const fork = this.config.getForkName(this.clock.currentSlot);
-    const requestType = requestSszTypeByMethod(this.config, fork)[method];
+    const requestType = requestSszTypeByMethod(fork, this.config)[method];
     const requestData = requestType ? requestType.serialize(request as never) : new Uint8Array();
 
     // ReqResp outgoing request, emit from main thread to worker

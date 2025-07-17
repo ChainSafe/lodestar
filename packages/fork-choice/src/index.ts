@@ -7,7 +7,6 @@ export type {
   LVHValidResponse,
   LVHInvalidResponse,
 } from "./protoArray/interface.js";
-export {DataAvailabilityStatus} from "./protoArray/interface.js";
 export {ExecutionStatus} from "./protoArray/interface.js";
 
 export {
@@ -24,6 +23,7 @@ export {
   type AncestorResult,
   AncestorStatus,
   type ForkChoiceMetrics,
+  NotReorgedReason,
 } from "./forkChoice/interface.js";
 export {
   ForkChoiceStore,
@@ -39,4 +39,4 @@ export {
   ForkChoiceError,
   ForkChoiceErrorCode,
 } from "./forkChoice/errors.js";
-export {type BeaconForkChoiceMetrics, getMetrics} from "./metrics.js";
+export {type BeaconForkChoiceMetrics, getForkChoiceMetrics} from "./metrics.js";

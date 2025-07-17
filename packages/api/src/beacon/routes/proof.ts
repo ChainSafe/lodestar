@@ -12,8 +12,6 @@ export const CompactMultiProofType = new ContainerType({
   descriptor: new ByteListType(2048),
 });
 
-// See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
-
 export type Endpoints = {
   /**
    * Returns a multiproof of `descriptor` at the requested `stateId`.

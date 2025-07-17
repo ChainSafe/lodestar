@@ -15,7 +15,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
         descriptor,
         leaves: [root, root, root, root],
       },
-      meta: {version: ForkName.altair},
+      meta: {version: ForkName.electra},
     },
   },
   getBlockProof: {
@@ -26,7 +26,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
         descriptor,
         leaves: [root, root, root, root],
       },
-      meta: {version: ForkName.altair},
+      meta: {version: ForkName.electra},
     },
   },
 };

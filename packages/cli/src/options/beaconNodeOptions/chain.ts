@@ -1,9 +1,11 @@
-import * as path from "node:path";
-import {DEFAULT_STATE_ARCHIVE_MODE, IBeaconNodeOptions, StateArchiveMode, defaultOptions} from "@lodestar/beacon-node";
+import {ArchiveMode, DEFAULT_ARCHIVE_MODE, IBeaconNodeOptions, defaultOptions} from "@lodestar/beacon-node";
 import {CliCommandOptions} from "@lodestar/utils";
+import {ensure0xPrefix} from "../../util/format.js";
 
 export type ChainArgs = {
   suggestedFeeRecipient: string;
+  serveHistoricalState?: boolean;
+  "chain.blacklistedBlocks"?: string[];
   "chain.blsVerifyAllMultiThread"?: boolean;
   "chain.blsVerifyAllMainThread"?: boolean;
   "chain.disableBlsBatchVerify"?: boolean;
@@ -12,6 +14,7 @@ export type ChainArgs = {
   // No need to define chain.persistInvalidSszObjects as part of ChainArgs
   // as this is defined as part of BeaconPaths
   // "chain.persistInvalidSszObjectsDir": string;
+  "chain.persistOrphanedBlocks"?: boolean;
   "chain.proposerBoost"?: boolean;
   "chain.proposerBoostReorg"?: boolean;
   "chain.disableImportExecutionFcU"?: boolean;
@@ -20,7 +23,6 @@ export type ChainArgs = {
   "chain.computeUnrealized"?: boolean;
   "chain.assertCorrectProgressiveBalances"?: boolean;
   "chain.maxSkipSlots"?: number;
-  "chain.trustedSetup"?: string;
   "safe-slots-to-import-optimistically": number;
   emitPayloadAttributes?: boolean;
   broadcastValidationStrictness?: string;
@@ -28,16 +30,20 @@ export type ChainArgs = {
   "chain.maxShufflingCacheEpochs"?: number;
   "chain.archiveStateEpochFrequency": number;
   "chain.archiveBlobEpochs"?: number;
-  "chain.stateArchiveMode": StateArchiveMode;
+  "chain.archiveMode": ArchiveMode;
   "chain.nHistoricalStates"?: boolean;
   "chain.nHistoricalStatesFileDataStore"?: boolean;
   "chain.maxBlockStates"?: number;
   "chain.maxCPStateEpochsInMemory"?: number;
+
+  "chain.pruneHistory"?: boolean;
 };
 
 export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
   return {
     suggestedFeeRecipient: args.suggestedFeeRecipient,
+    serveHistoricalState: args.serveHistoricalState,
+    blacklistedBlocks: args["chain.blacklistedBlocks"],
     blsVerifyAllMultiThread: args["chain.blsVerifyAllMultiThread"],
     blsVerifyAllMainThread: args["chain.blsVerifyAllMainThread"],
     disableBlsBatchVerify: args["chain.disableBlsBatchVerify"],
@@ -45,6 +51,9 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     persistInvalidSszObjects: args["chain.persistInvalidSszObjects"],
     // biome-ignore lint/suspicious/noExplicitAny: <explanation>
     persistInvalidSszObjectsDir: undefined as any,
+    persistOrphanedBlocks: args["chain.persistOrphanedBlocks"],
+    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+    persistOrphanedBlocksDir: undefined as any,
     proposerBoost: args["chain.proposerBoost"],
     proposerBoostReorg: args["chain.proposerBoostReorg"],
     disableImportExecutionFcU: args["chain.disableImportExecutionFcU"],
@@ -53,7 +62,6 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     computeUnrealized: args["chain.computeUnrealized"],
     assertCorrectProgressiveBalances: args["chain.assertCorrectProgressiveBalances"],
     maxSkipSlots: args["chain.maxSkipSlots"],
-    trustedSetup: args["chain.trustedSetup"],
     safeSlotsToImportOptimistically: args["safe-slots-to-import-optimistically"],
     emitPayloadAttributes: args.emitPayloadAttributes,
     broadcastValidationStrictness: args.broadcastValidationStrictness,
@@ -62,12 +70,13 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     maxShufflingCacheEpochs: args["chain.maxShufflingCacheEpochs"] ?? defaultOptions.chain.maxShufflingCacheEpochs,
     archiveStateEpochFrequency: args["chain.archiveStateEpochFrequency"],
     archiveBlobEpochs: args["chain.archiveBlobEpochs"],
-    stateArchiveMode: args["chain.stateArchiveMode"] ?? defaultOptions.chain.stateArchiveMode,
+    archiveMode: args["chain.archiveMode"] ?? defaultOptions.chain.archiveMode,
     nHistoricalStates: args["chain.nHistoricalStates"] ?? defaultOptions.chain.nHistoricalStates,
     nHistoricalStatesFileDataStore:
       args["chain.nHistoricalStatesFileDataStore"] ?? defaultOptions.chain.nHistoricalStatesFileDataStore,
     maxBlockStates: args["chain.maxBlockStates"] ?? defaultOptions.chain.maxBlockStates,
     maxCPStateEpochsInMemory: args["chain.maxCPStateEpochsInMemory"] ?? defaultOptions.chain.maxCPStateEpochsInMemory,
+    pruneHistory: args["chain.pruneHistory"],
   };
 }
 
@@ -87,6 +96,14 @@ export const options: CliCommandOptions<ChainArgs> = {
     group: "chain",
   },
 
+  serveHistoricalState: {
+    description:
+      "Enable regenerating finalized state to serve historical data. Fetching this data is expensive and may affect validator performance.",
+    type: "boolean",
+    default: defaultOptions.chain.serveHistoricalState,
+    group: "chain",
+  },
+
   "chain.blsVerifyAllMultiThread": {
     hidden: true,
     type: "boolean",
@@ -101,6 +118,20 @@ export const options: CliCommandOptions<ChainArgs> = {
     description: "Always use main threads for BLS verification",
     defaultDescription: String(defaultOptions.chain.blsVerifyAllMainThread),
     group: "chain",
+  },
+
+  "chain.blacklistedBlocks": {
+    hidden: true,
+    type: "array",
+    string: true,
+    description:
+      "Comma-separated list of 0x-prefixed root hex's for blocks that should not be allowed through processing",
+    group: "chain",
+    coerce: (blocks: string[]): string[] =>
+      blocks
+        .flatMap((hex) => hex.split(","))
+        .map((hex) => hex.trim())
+        .map(ensure0xPrefix),
   },
 
   "chain.disableBlsBatchVerify": {
@@ -124,6 +155,13 @@ Will double processing times. Use only for debugging purposes.",
     hidden: true,
     type: "boolean",
     description: "Persist invalid ssz objects or not for debugging purpose",
+    group: "chain",
+  },
+
+  "chain.persistOrphanedBlocks": {
+    hidden: true,
+    type: "boolean",
+    description: "Whether to persist orphaned blocks",
     group: "chain",
   },
 
@@ -180,14 +218,6 @@ Will double processing times. Use only for debugging purposes.",
     group: "chain",
   },
 
-  "chain.trustedSetup": {
-    hidden: true,
-    type: "string",
-    description: "Use a customized trustedSetup to verify blobSidecars",
-    group: "chain",
-    coerce: (arg: string) => (arg ? path.resolve(arg) : undefined),
-  },
-
   "chain.assertCorrectProgressiveBalances": {
     hidden: true,
     description: "Enable asserting the progressive balances",
@@ -205,18 +235,17 @@ Will double processing times. Use only for debugging purposes.",
   },
 
   "chain.archiveStateEpochFrequency": {
-    hidden: true,
     description: "Minimum number of epochs between archived states",
     default: defaultOptions.chain.archiveStateEpochFrequency,
     type: "number",
     group: "chain",
   },
 
-  "chain.stateArchiveMode": {
+  "chain.archiveMode": {
     hidden: true,
-    choices: Object.values(StateArchiveMode),
-    description: `Strategy to manage archive states, only support ${DEFAULT_STATE_ARCHIVE_MODE} at this time`,
-    default: defaultOptions.chain.stateArchiveMode,
+    choices: Object.values(ArchiveMode),
+    description: `Strategy to manage archive states, only support ${DEFAULT_ARCHIVE_MODE} at this time`,
+    default: defaultOptions.chain.archiveMode,
     type: "string",
     group: "chain",
   },
@@ -282,6 +311,14 @@ Will double processing times. Use only for debugging purposes.",
     description: "Max epochs to cache checkpoint states in memory, used for PersistentCheckpointStateCache",
     type: "number",
     default: defaultOptions.chain.maxCPStateEpochsInMemory,
+    group: "chain",
+  },
+
+  "chain.pruneHistory": {
+    hidden: true,
+    description: "Prune historical blocks and state",
+    type: "boolean",
+    default: defaultOptions.chain.pruneHistory,
     group: "chain",
   },
 };

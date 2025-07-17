@@ -1,6 +1,7 @@
 import {Id, Repository} from "@lodestar/db";
 import {
   BLS_WITHDRAWAL_PREFIX,
+  ForkName,
   ForkSeq,
   MAX_ATTESTER_SLASHINGS,
   MAX_ATTESTER_SLASHINGS_ELECTRA,
@@ -15,7 +16,15 @@ import {
   getAttesterSlashableIndices,
   isValidVoluntaryExit,
 } from "@lodestar/state-transition";
-import {AttesterSlashing, Epoch, SignedBeaconBlock, ValidatorIndex, capella, phase0, ssz} from "@lodestar/types";
+import {
+  AttesterSlashing,
+  Epoch,
+  SignedBeaconBlock,
+  ValidatorIndex,
+  capella,
+  phase0,
+  sszTypesFor,
+} from "@lodestar/types";
 import {fromHex, toHex, toRootHex} from "@lodestar/utils";
 import {IBeaconDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/metrics.js";
@@ -26,7 +35,7 @@ import {isValidBlsToExecutionChangeForBlockInclusion} from "./utils.js";
 
 type HexRoot = string;
 type AttesterSlashingCached = {
-  attesterSlashing: phase0.AttesterSlashing;
+  attesterSlashing: AttesterSlashing;
   intersectingIndices: number[];
 };
 
@@ -66,7 +75,7 @@ export class OpPool {
     ]);
 
     for (const attesterSlashing of attesterSlashings) {
-      this.insertAttesterSlashing(attesterSlashing.value, attesterSlashing.key);
+      this.insertAttesterSlashing(ForkName.electra, attesterSlashing.value, attesterSlashing.key);
     }
     for (const proposerSlashing of proposerSlashings) {
       this.insertProposerSlashing(proposerSlashing);
@@ -132,8 +141,11 @@ export class OpPool {
   }
 
   /** Must be validated beforehand */
-  insertAttesterSlashing(attesterSlashing: phase0.AttesterSlashing, rootHash?: Uint8Array): void {
-    if (!rootHash) rootHash = ssz.phase0.AttesterSlashing.hashTreeRoot(attesterSlashing);
+  insertAttesterSlashing(fork: ForkName, attesterSlashing: AttesterSlashing, rootHash?: Uint8Array): void {
+    if (!rootHash) {
+      rootHash = sszTypesFor(fork).AttesterSlashing.hashTreeRoot(attesterSlashing);
+    }
+
     // TODO: Do once and cache attached to the AttesterSlashing object
     const intersectingIndices = getAttesterSlashableIndices(attesterSlashing);
     this.attesterSlashings.set(toRootHex(rootHash), {
@@ -284,8 +296,7 @@ export class OpPool {
   }
 
   /** For beacon pool API */
-  // TODO Electra: Update to adapt electra.AttesterSlashing
-  getAllAttesterSlashings(): phase0.AttesterSlashing[] {
+  getAllAttesterSlashings(): AttesterSlashing[] {
     return Array.from(this.attesterSlashings.values()).map((attesterSlashings) => attesterSlashings.attesterSlashing);
   }
 

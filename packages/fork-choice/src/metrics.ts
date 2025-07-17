@@ -1,12 +1,12 @@
 import {MetricsRegister} from "@lodestar/utils";
-import {FCInclusionListSource} from "./forkChoice/forkChoice";
+import {FCInclusionListSource} from "./index.js";
 
-export type BeaconForkChoiceMetrics = ReturnType<typeof getMetrics>;
+export type BeaconForkChoiceMetrics = ReturnType<typeof getForkChoiceMetrics>;
 
 /**
  * A collection of metrics used throughout the Fork Choice.
  */
-export function getMetrics(register: MetricsRegister) {
+export function getForkChoiceMetrics(register: MetricsRegister) {
   return {
     inclusionListEquivocating: register.counter<{source: FCInclusionListSource}>({
       name: "beacon_equivocating_inclusion_lists_total",

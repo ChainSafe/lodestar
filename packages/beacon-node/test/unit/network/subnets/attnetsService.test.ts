@@ -3,6 +3,7 @@ import {
   ATTESTATION_SUBNET_COUNT,
   EPOCHS_PER_SUBNET_SUBSCRIPTION,
   ForkName,
+  GENESIS_EPOCH,
   SLOTS_PER_EPOCH,
   SUBNETS_PER_NODE,
 } from "@lodestar/params";
@@ -75,31 +76,38 @@ describe("AttnetsService", () => {
   });
 
   it("should subscribe to new fork 2 epochs before ALTAIR_FORK_EPOCH", () => {
-    expect(gossipStub.subscribeTopic).toBeCalledWith(expect.objectContaining({fork: ForkName.phase0}));
-    expect(gossipStub.subscribeTopic).not.toBeCalledWith({fork: ForkName.altair});
+    expect(gossipStub.subscribeTopic).toBeCalledWith(
+      expect.objectContaining({boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH}})
+    );
+    expect(gossipStub.subscribeTopic).not.toBeCalledWith({
+      boundary: {fork: ForkName.altair, epoch: config.ALTAIR_FORK_EPOCH},
+    });
     expect(gossipStub.subscribeTopic).toBeCalledTimes(2);
     const firstSubnet = (gossipStub.subscribeTopic.mock.calls[0][0] as unknown as {subnet: SubnetID}).subnet;
     const secondSubnet = (gossipStub.subscribeTopic.mock.calls[1][0] as unknown as {subnet: SubnetID}).subnet;
     expect(gossipStub.subscribeTopic).toBeCalledTimes(SUBNETS_PER_NODE);
     vi.advanceTimersByTime(config.SECONDS_PER_SLOT * SLOTS_PER_EPOCH * (ALTAIR_FORK_EPOCH - 2) * 1000);
-    service.subscribeSubnetsToNextFork(ForkName.altair);
+    service.subscribeSubnetsNextBoundary({fork: ForkName.altair, epoch: config.ALTAIR_FORK_EPOCH});
     // SUBNETS_PER_NODE = 2 => 2 more calls
     // same subnets were called
     expect(gossipStub.subscribeTopic).toHaveBeenCalledWith(
-      expect.objectContaining({fork: ForkName.altair, subnet: firstSubnet})
+      expect.objectContaining({boundary: {fork: ForkName.altair, epoch: config.ALTAIR_FORK_EPOCH}, subnet: firstSubnet})
     );
     expect(gossipStub.subscribeTopic).toHaveBeenCalledWith(
-      expect.objectContaining({fork: ForkName.altair, subnet: secondSubnet})
+      expect.objectContaining({
+        boundary: {fork: ForkName.altair, epoch: config.ALTAIR_FORK_EPOCH},
+        subnet: secondSubnet,
+      })
     );
     expect(gossipStub.subscribeTopic).toBeCalledTimes(2 * SUBNETS_PER_NODE);
     // 2 epochs after the fork
     vi.advanceTimersByTime(config.SECONDS_PER_SLOT * 4 * 1000);
-    service.unsubscribeSubnetsFromPrevFork(ForkName.phase0);
+    service.unsubscribeSubnetsPrevBoundary({fork: ForkName.phase0, epoch: GENESIS_EPOCH});
     expect(gossipStub.unsubscribeTopic).toHaveBeenCalledWith(
-      expect.objectContaining({fork: ForkName.phase0, subnet: firstSubnet})
+      expect.objectContaining({boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH}, subnet: firstSubnet})
     );
     expect(gossipStub.unsubscribeTopic).toHaveBeenCalledWith(
-      expect.objectContaining({fork: ForkName.phase0, subnet: secondSubnet})
+      expect.objectContaining({boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH}, subnet: secondSubnet})
     );
     expect(gossipStub.unsubscribeTopic).toBeCalledTimes(ATTESTATION_SUBNET_COUNT);
   });

@@ -1,6 +1,6 @@
 import {config} from "@lodestar/config/default";
 import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
-import {phase0, ssz} from "@lodestar/types";
+import {IndexedAttestation, ssz} from "@lodestar/types";
 import {describe, expect, it} from "vitest";
 import {isValidIndexedAttestation} from "../../../src/block/isValidIndexedAttestation.js";
 import {EMPTY_SIGNATURE} from "../../../src/index.js";
@@ -40,7 +40,7 @@ describe("validate indexed attestation", () => {
     attestationData.source.epoch = 0;
     attestationData.target.epoch = 1;
 
-    const indexedAttestation: phase0.IndexedAttestation = {
+    const indexedAttestation: IndexedAttestation = {
       attestingIndices: indices,
       data: attestationData,
       signature: EMPTY_SIGNATURE,

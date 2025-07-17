@@ -1,4 +1,4 @@
-import {ChainConfig, chainConfigToJson} from "@lodestar/config";
+import {BlobScheduleEntry, ChainConfig, SpecJson, chainConfigToJson, deserializeBlobSchedule} from "@lodestar/config";
 import {BeaconPreset, activePreset, presetToJson} from "@lodestar/params";
 
 export class NotEqualParamsError extends Error {}
@@ -20,7 +20,7 @@ type ConfigWithPreset = ChainConfig & BeaconPreset;
  * So this check only compares a specific list of parameters that are consensus critical, ignoring the rest. Typed
  * config and preset ensure new parameters are labeled critical or ignore, facilitating maintenance of the list.
  */
-export function assertEqualParams(localConfig: ChainConfig, externalSpecJson: Record<string, string>): void {
+export function assertEqualParams(localConfig: ChainConfig, externalSpecJson: SpecJson): void {
   // Before comparing, add preset which is bundled in api impl config route.
   // config and preset must be serialized to JSON for safe comparisions.
   const localSpecJson = {
@@ -52,6 +52,35 @@ export function assertEqualParams(localConfig: ChainConfig, externalSpecJson: Re
       continue;
     }
 
+    if (key === "BLOB_SCHEDULE") {
+      const localBlobSchedule = deserializeBlobSchedule(localSpecJson[key]).sort((a, b) => a.EPOCH - b.EPOCH);
+      const remoteBlobSchedule = deserializeBlobSchedule(externalSpecJson[key]).sort((a, b) => a.EPOCH - b.EPOCH);
+
+      if (localBlobSchedule.length !== remoteBlobSchedule.length) {
+        errors.push(`BLOB_SCHEDULE different length: ${localBlobSchedule.length} != ${remoteBlobSchedule.length}`);
+
+        // Skip per entry comparison
+        continue;
+      }
+
+      for (let i = 0; i < localBlobSchedule.length; i++) {
+        const localEntry = localBlobSchedule[i];
+        const remoteEntry = remoteBlobSchedule[i];
+
+        for (const entryKey of ["EPOCH", "MAX_BLOBS_PER_BLOCK"] as Array<keyof BlobScheduleEntry>) {
+          const localValue = String(localEntry[entryKey]);
+          const remoteValue = String(remoteEntry[entryKey]);
+
+          if (localValue !== remoteValue) {
+            errors.push(`BLOB_SCHEDULE[${i}].${entryKey} different value: ${localValue} != ${remoteValue}`);
+          }
+        }
+      }
+
+      // Skip generic string comparison
+      continue;
+    }
+
     // Must compare JSON serialized specs, to ensure all strings are rendered in the same way
     // Must compare as lowercase to ensure checksum addresses and names have same capilatization
     const localValue = String(localSpecJson[key]).toLocaleLowerCase();
@@ -73,6 +102,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
   const denebForkRelevant = localConfig.DENEB_FORK_EPOCH < Infinity;
   const electraForkRelevant = localConfig.ELECTRA_FORK_EPOCH < Infinity;
   const eip7805ForkRelevant = localConfig.EIP7805_FORK_EPOCH < Infinity;
+  const fuluForkRelevant = localConfig.FULU_FORK_EPOCH < Infinity;
 
   return {
     // # Config
@@ -111,6 +141,9 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     // EIP-7805
     EIP7805_FORK_VERSION: eip7805ForkRelevant,
     EIP7805_FORK_EPOCH: eip7805ForkRelevant,
+    // fulu
+    FULU_FORK_VERSION: fuluForkRelevant,
+    FULU_FORK_EPOCH: fuluForkRelevant,
 
     // Time parameters
     SECONDS_PER_SLOT: true,
@@ -139,7 +172,9 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     DEPOSIT_CONTRACT_ADDRESS: true,
 
     // Networking (non-critical as those do not affect consensus)
+    MIN_EPOCHS_FOR_BLOCK_REQUESTS: false,
     MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: false,
+    MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: false,
     BLOB_SIDECAR_SUBNET_COUNT: false,
     BLOB_SIDECAR_SUBNET_COUNT_ELECTRA: false,
     MAX_REQUEST_BLOB_SIDECARS: false,
@@ -253,5 +288,17 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     VIEW_FREEZE_DEADLINE: eip7805ForkRelevant,
     MAX_REQUEST_INCLUSION_LIST: eip7805ForkRelevant,
     MAX_BYTES_PER_INCLUSION_LIST: eip7805ForkRelevant,
+
+    // FULU
+    /////////////////
+    FIELD_ELEMENTS_PER_CELL: fuluForkRelevant,
+    FIELD_ELEMENTS_PER_EXT_BLOB: fuluForkRelevant,
+    KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH: fuluForkRelevant,
+    SAMPLES_PER_SLOT: fuluForkRelevant,
+    CUSTODY_REQUIREMENT: fuluForkRelevant,
+    NODE_CUSTODY_REQUIREMENT: false,
+    VALIDATOR_CUSTODY_REQUIREMENT: fuluForkRelevant,
+    BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: fuluForkRelevant,
+    BLOB_SCHEDULE: fuluForkRelevant,
   };
 }

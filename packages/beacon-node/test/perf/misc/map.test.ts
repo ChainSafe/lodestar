@@ -1,4 +1,4 @@
-import {itBench} from "@dapplion/benchmark";
+import {bench, describe} from "@chainsafe/benchmark";
 
 describe("misc / Map", () => {
   const times = 1000;
@@ -6,7 +6,7 @@ describe("misc / Map", () => {
   type ObjData = {obj: Record<string, number>; keys: string[]};
   type MapData = {map: Map<string, number>; keys: string[]};
 
-  itBench({
+  bench({
     id: "Object access 1 prop",
     runsFactor: times,
     beforeEach: () => ({a: 1}),
@@ -15,7 +15,7 @@ describe("misc / Map", () => {
     },
   });
 
-  itBench({
+  bench({
     id: "Map access 1 prop",
     runsFactor: times,
     beforeEach: () => new Map([["a", 1]]),
@@ -24,7 +24,7 @@ describe("misc / Map", () => {
     },
   });
 
-  itBench<ObjData, ObjData>({
+  bench<ObjData, ObjData>({
     id: `Object get x${times}`,
     runsFactor: times,
     before: () => {
@@ -45,7 +45,7 @@ describe("misc / Map", () => {
     },
   });
 
-  itBench<MapData, MapData>({
+  bench<MapData, MapData>({
     id: `Map get x${times}`,
     runsFactor: times,
     before: () => {
@@ -66,7 +66,7 @@ describe("misc / Map", () => {
     },
   });
 
-  itBench<ObjData, ObjData>({
+  bench<ObjData, ObjData>({
     id: `Object set x${times}`,
     runsFactor: times,
     before: () => {
@@ -85,7 +85,7 @@ describe("misc / Map", () => {
     },
   });
 
-  itBench<MapData, MapData>({
+  bench<MapData, MapData>({
     id: `Map set x${times}`,
     runsFactor: times,
     before: () => {

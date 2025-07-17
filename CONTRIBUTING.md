@@ -62,6 +62,16 @@ If you observe any error in tests with matching to above error message, that imp
 
 If you observe following error running any of the test files that means you are running a file which itself or any dependency of that file imports `vitest`, but you are not running that file with `vitest` runner. Try running it with `yarn vitest` command, not with `node` command.
 
+**Error: Could not locate the bindings file.**
+
+If you observe the above error in running tests or the [beacon chain cli](https://github.com/ChainSafe/lodestar/issues/1396#issue-677613531), try removing `node_modules` and running `npm rebuild`:
+
+```sh
+rm -rf node_modules && npm rebuild
+```
+
+While `npm rebuild` is useful mostly during node version upgrades, it also [recompiles all your C++ addons](https://docs.npmjs.com/cli/v7/commands/npm-rebuild), which indirectly fixes our issue with bindings.
+
 ### Debugging Spec Tests
 
 - To fix errors always focus on passing all minimal tests first without running mainnet tests.
@@ -71,7 +81,7 @@ If you observe following error running any of the test files that means you are 
 - Before running the tests, make sure to switch to the package directory (e.g. `packages/beacon-node`) to speed up test execution
 
 ```sh
-LODESTAR_PRESET=minimal yarn vitest --run --bail 1 --config vitest.spec.config.ts test/spec/presets/sanity.test.ts -t attester_slashing
+LODESTAR_PRESET=minimal yarn vitest run --bail 1 --config vitest.spec.config.ts test/spec/presets/sanity.test.ts -t attester_slashing
 ```
 
 ## Docker
@@ -124,7 +134,6 @@ Unsure where to begin contributing to Lodestar? Here are some ideas!
 3. Make your changes in your local fork.
 4. If you've made a code change, make sure to lint and test your changes (`yarn lint` and `yarn test:unit`).
 5. Make an open pull request when you're ready for it to be reviewed. We review PRs on a regular basis. See Pull request etiquette for more information.
-6. You may be asked to sign a Contributor License Agreement (CLA). We make it relatively painless with CLA-bot.
 
 Please note that trivial, non-code contributions such as spelling, grammar, typos, corrections, comments and link fixes are not acceptable pull requests. Although we appreciate the effort to fix these valid concerns, it is not practical for us to run our CI systems to accommodate minor external contributions which generate minimal value for the purpose of contribution/airdrop farming. It would be appreciated for you to open up an issue instead for our team to aggregate these types of contributions into a batch commit.
 
@@ -208,6 +217,54 @@ for (const blockResult of blocksResult) {
   expect(blockResult.status).equals("processed", `wrong block ${blockResult.id} result status`);
 }
 ```
+
+## Managing and Opening Feature/Large PRs
+
+To maintain code quality, improve collaboration, and ensure clarity in large or complex changes, we follow these guidelines when opening pull requests (PRs). Depending on the nature of the change, PRs fall into three categories:
+
+### 1. Single, Complete PR
+
+If the PR contains a self-contained and complete feature or bug fix that does not require major refactoring or cross-team discussions, then:
+
+- Clearly explain the rationale and motivation behind the change in the PR description.
+- Provide relevant context, including:
+  - Problem the PR is solving.
+  - Why the approach was chosen.
+  - Any alternatives considered.
+- If the PR modifies critical code paths, add references to relevant issues, benchmarks, or related discussions.
+- Ensure the PR adheres to our standard PR etiquette and commit message guidelines.
+
+### 2. PR with Major Refactoring
+
+If the PR involves significant code refactoring, structural changes, or fundamental modifications where team input is needed:
+
+- Start a GitHub Discussion or Discord Thread before writing code.
+- Outline the problem, your proposed approach, and any alternative solutions.
+- Request feedback and build consensus with the team.
+- Summarize the outcome and link the discussion in the PR description once consensus is reached.
+- If changes affect multiple packages or require coordination with ongoing development, summarize any key decisions from the discussion in the PR description.
+
+### 3. Large Feature or Multi-PR Implementation
+
+If the PR introduces large-scale changes, affecting multiple areas of the codebase or requiring step-by-step integration:
+
+- Document the feature first before opening any PR.
+- Open a GitHub Discussion with a detailed technical proposal explaining the feature. This ideally will include some details like:
+  - Big picture explanation of how and why the feature will help or will change the codebase
+  - Rough outline of the classes and interfaces that will be implemented
+  - If a functional implementation is used, a brief description of what each function will do, possibly with a basic function signature if it is clear what will be needed
+  - Broad overview of how data will flow and integrate with the surrounding sub-systems
+  - Rough discussion of potential performance (cpu and memory) implications
+- Share the document with the team and gather feedback before implementation.
+- Create a feature branch to showcase the entire implementation. The idea will be to get this branch deployed on a feature group to test.
+- First merge any refactor work necessary to get `unstable` prepared for the feature
+- Create a second empty feature branch off of `unstable` that fork after the refactor work is merged. (Can also do this before the refactor work but then it will need to be rebased onto `unstable` after that refactor work is merged)
+- Break down the implementation into smaller, manageable PRs that merge into the empty feature branch
+- Each PR should focus on a specific part of the feature. This middle part of the review is focused on API, implementation overview and other high level pieces but will be relatively limited as the API discussion, analysis of the feature branch and full review on merge to `unstable` are the important steps.
+- Link the design document in each PR description so reviewers can always refer to the full scope.
+- Merge the smaller PRs into the feature branch until the complete feature is ready for a final merge into the `unstable` branch. This is the "formal review process" where several team members will likely get involved. Up to this point its mostly peer review. The merge to `unstable` is where details like naming, function signature, type definitions, etc will be scrutinized. This is also where metrics from the initial implementation branch will get detailed analysis (ideally this has already been happening along the way to make sure there are no performance regressions).
+- Some corner cases can be observed while testing on feature group. If any such issue is identified which was not brainstormed earlier must be bring to attention of the team.
+- If and when possible try to release big features under opt-in feature flags.
 
 ## Logging policy
 

@@ -119,17 +119,11 @@ describe("AttestationService", () => {
 
         // Mock beacon's attestation and aggregates endpoints
         api.validator.produceAttestationData.mockResolvedValue(mockApiResponse({data: singleAttestation.data}));
-        if (isPostElectra) {
-          api.validator.getAggregatedAttestationV2.mockResolvedValue(
-            mockApiResponse({data: aggregatedAttestation, meta: {version: ForkName.electra}})
-          );
-          api.beacon.submitPoolAttestationsV2.mockResolvedValue(mockApiResponse({}));
-          api.validator.publishAggregateAndProofsV2.mockResolvedValue(mockApiResponse({}));
-        } else {
-          api.validator.getAggregatedAttestation.mockResolvedValue(mockApiResponse({data: aggregatedAttestation}));
-          api.beacon.submitPoolAttestations.mockResolvedValue(mockApiResponse({}));
-          api.validator.publishAggregateAndProofs.mockResolvedValue(mockApiResponse({}));
-        }
+        api.validator.getAggregatedAttestationV2.mockResolvedValue(
+          mockApiResponse({data: aggregatedAttestation, meta: {version: ForkName.electra}})
+        );
+        api.beacon.submitPoolAttestationsV2.mockResolvedValue(mockApiResponse({}));
+        api.validator.publishAggregateAndProofsV2.mockResolvedValue(mockApiResponse({}));
 
         if (opts.distributedAggregationSelection) {
           // Mock distributed validator middleware client selections endpoint
@@ -170,27 +164,15 @@ describe("AttestationService", () => {
           expect(api.validator.prepareBeaconCommitteeSubnet).toHaveBeenCalledWith({subscriptions: [subscription]});
         }
 
-        if (isPostElectra) {
-          // Must submit the attestation received through produceAttestationData()
-          expect(api.beacon.submitPoolAttestationsV2).toHaveBeenCalledOnce();
-          expect(api.beacon.submitPoolAttestationsV2).toHaveBeenCalledWith({signedAttestations: [singleAttestation]});
+        // Must submit the attestation received through produceAttestationData()
+        expect(api.beacon.submitPoolAttestationsV2).toHaveBeenCalledOnce();
+        expect(api.beacon.submitPoolAttestationsV2).toHaveBeenCalledWith({signedAttestations: [singleAttestation]});
 
-          // Must submit the aggregate received through getAggregatedAttestationV2() then createAndSignAggregateAndProof()
-          expect(api.validator.publishAggregateAndProofsV2).toHaveBeenCalledOnce();
-          expect(api.validator.publishAggregateAndProofsV2).toHaveBeenCalledWith({
-            signedAggregateAndProofs: [aggregateAndProof],
-          });
-        } else {
-          // Must submit the attestation received through produceAttestationData()
-          expect(api.beacon.submitPoolAttestations).toHaveBeenCalledOnce();
-          expect(api.beacon.submitPoolAttestations).toHaveBeenCalledWith({signedAttestations: [singleAttestation]});
-
-          // Must submit the aggregate received through getAggregatedAttestation() then createAndSignAggregateAndProof()
-          expect(api.validator.publishAggregateAndProofs).toHaveBeenCalledOnce();
-          expect(api.validator.publishAggregateAndProofs).toHaveBeenCalledWith({
-            signedAggregateAndProofs: [aggregateAndProof],
-          });
-        }
+        // Must submit the aggregate received through getAggregatedAttestationV2() then createAndSignAggregateAndProof()
+        expect(api.validator.publishAggregateAndProofsV2).toHaveBeenCalledOnce();
+        expect(api.validator.publishAggregateAndProofsV2).toHaveBeenCalledWith({
+          signedAggregateAndProofs: [aggregateAndProof],
+        });
       });
     });
   }

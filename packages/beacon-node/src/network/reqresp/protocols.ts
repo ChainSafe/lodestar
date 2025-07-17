@@ -1,4 +1,5 @@
-import {BeaconConfig, ForkDigestContext} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
+import {ForkName} from "@lodestar/params";
 import {ContextBytesFactory, ContextBytesType, Encoding} from "@lodestar/reqresp";
 import {rateLimitQuotas} from "./rateLimit.js";
 import {ProtocolNoHandler, ReqRespMethod, Version, requestSszTypeByMethod, responseSszTypeByMethod} from "./types.js";
@@ -100,22 +101,22 @@ type ProtocolSummary = {
 };
 
 function toProtocol(protocol: ProtocolSummary) {
-  return (config: BeaconConfig): ProtocolNoHandler => ({
+  return (fork: ForkName, config: BeaconConfig): ProtocolNoHandler => ({
     method: protocol.method,
     version: protocol.version,
     encoding: Encoding.SSZ_SNAPPY,
     contextBytes: toContextBytes(protocol.contextBytesType, config),
-    inboundRateLimits: rateLimitQuotas(config)[protocol.method],
-    requestSizes: requestSszTypeByMethod(config)[protocol.method],
+    inboundRateLimits: rateLimitQuotas(fork, config)[protocol.method],
+    requestSizes: requestSszTypeByMethod(fork, config)[protocol.method],
     responseSizes: (fork) => responseSszTypeByMethod[protocol.method](fork, protocol.version),
   });
 }
 
-function toContextBytes(type: ContextBytesType, config: ForkDigestContext): ContextBytesFactory {
+function toContextBytes(type: ContextBytesType, config: BeaconConfig): ContextBytesFactory {
   switch (type) {
     case ContextBytesType.Empty:
       return {type: ContextBytesType.Empty};
     case ContextBytesType.ForkDigest:
-      return {type: ContextBytesType.ForkDigest, forkDigestContext: config};
+      return {type: ContextBytesType.ForkDigest, config};
   }
 }

@@ -1,4 +1,4 @@
-import {itBench, setBenchOpts} from "@dapplion/benchmark";
+import {bench, describe, setBenchOpts} from "@chainsafe/benchmark";
 import {ForkSeq} from "@lodestar/params";
 import {processEpoch} from "../../../src/epoch/index.js";
 import {processEffectiveBalanceUpdates} from "../../../src/epoch/processEffectiveBalanceUpdates.js";
@@ -19,7 +19,7 @@ import {
   beforeProcessEpoch,
   computeStartSlotAtEpoch,
 } from "../../../src/index.js";
-import {LazyValue, beforeValue} from "../../utils/beforeValueMocha.js";
+import {LazyValue, beforeValue} from "../../utils/beforeValueBenchmark.js";
 import {getNetworkCachedState} from "../../utils/testFileCache.js";
 import {altairState} from "../params.js";
 import {StateEpoch} from "../types.js";
@@ -39,7 +39,7 @@ describe(`altair processEpoch - ${stateId}`, () => {
     return state;
   }, 300_000);
 
-  itBench({
+  bench({
     id: `altair processEpoch - ${stateId}`,
     yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
     beforeEach: () => stateOg.value.clone(),
@@ -92,40 +92,40 @@ function benchmarkAltairEpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>
   // processParticipationFlagUpdates     | 300.0 ms/op | xxxxxx
   // processSyncCommitteeUpdates         | 0.000 ms/op |
 
-  itBench({
+  bench({
     id: `${stateId} - altair beforeProcessEpoch`,
     fn: () => {
       beforeProcessEpoch(stateOg.value);
     },
   });
 
-  itBench({
+  bench({
     id: `${stateId} - altair processJustificationAndFinalization`,
     beforeEach: () => stateOg.value.clone(),
     fn: (state) => processJustificationAndFinalization(state, cache.value),
   });
 
-  itBench({
+  bench({
     id: `${stateId} - altair processInactivityUpdates`,
     beforeEach: () => stateOg.value.clone() as CachedBeaconStateAltair,
     fn: (state) => processInactivityUpdates(state, cache.value),
   });
 
-  itBench({
+  bench({
     id: `${stateId} - altair processRewardsAndPenalties`,
     beforeEach: () => stateOg.value.clone() as CachedBeaconStateAltair,
     fn: (state) => processRewardsAndPenalties(state, cache.value),
   });
 
   // TODO: Needs a better state to test with, current does not include enough actions: 17.715 us/op
-  itBench({
+  bench({
     id: `${stateId} - altair processRegistryUpdates`,
     beforeEach: () => stateOg.value.clone(),
     fn: (state) => processRegistryUpdates(ForkSeq.altair, state, cache.value),
   });
 
   // TODO: Needs a better state to test with, current does not include enough actions: 39.985 us/op
-  itBench({
+  bench({
     id: `${stateId} - altair processSlashings`,
     beforeEach: () => stateOg.value.clone() as CachedBeaconStateAltair,
     fn: (state) => {
@@ -133,13 +133,13 @@ function benchmarkAltairEpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>
     },
   });
 
-  itBench({
+  bench({
     id: `${stateId} - altair processEth1DataReset`,
     beforeEach: () => stateOg.value.clone(),
     fn: (state) => processEth1DataReset(state, cache.value),
   });
 
-  itBench({
+  bench({
     id: `${stateId} - altair processEffectiveBalanceUpdates`,
     beforeEach: () => stateOg.value.clone(),
     fn: (state) => {
@@ -147,38 +147,38 @@ function benchmarkAltairEpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>
     },
   });
 
-  itBench({
+  bench({
     id: `${stateId} - altair processSlashingsReset`,
     beforeEach: () => stateOg.value.clone(),
     fn: (state) => processSlashingsReset(state, cache.value),
   });
 
-  itBench({
+  bench({
     id: `${stateId} - altair processRandaoMixesReset`,
     beforeEach: () => stateOg.value.clone(),
     fn: (state) => processRandaoMixesReset(state, cache.value),
   });
 
-  itBench({
+  bench({
     id: `${stateId} - altair processHistoricalRootsUpdate`,
     beforeEach: () => stateOg.value.clone(),
     fn: (state) => processHistoricalRootsUpdate(state, cache.value),
   });
 
-  itBench({
+  bench({
     id: `${stateId} - altair processParticipationFlagUpdates`,
     beforeEach: () => stateOg.value.clone() as CachedBeaconStateAltair,
     fn: (state) => processParticipationFlagUpdates(state),
   });
 
-  itBench({
+  bench({
     id: `${stateId} - altair processSyncCommitteeUpdates`,
     convergeFactor: 1 / 100, // Very unstable make it converge faster
     beforeEach: () => stateOg.value.clone() as CachedBeaconStateAltair,
     fn: (state) => processSyncCommitteeUpdates(ForkSeq.altair, state),
   });
 
-  itBench<StateEpoch, StateEpoch>({
+  bench<StateEpoch, StateEpoch>({
     id: `${stateId} - altair afterProcessEpoch`,
     // Compute a state and cache after running processEpoch() since those values are mutated
     before: () => {

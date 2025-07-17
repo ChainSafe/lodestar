@@ -1,30 +1,35 @@
 import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@lodestar/params";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
-import {DEFAULT_STATE_ARCHIVE_MODE} from "./archiver/archiver.js";
-import {ArchiverOpts} from "./archiver/interface.js";
+import {DEFAULT_ARCHIVE_MODE} from "./archiveStore/constants.js";
+import {ArchiveMode, ArchiveStoreOpts} from "./archiveStore/interface.js";
 import {ForkChoiceOpts} from "./forkChoice/index.js";
 import {LightClientServerOpts} from "./lightClient/index.js";
 import {ShufflingCacheOpts} from "./shufflingCache.js";
 import {DEFAULT_MAX_BLOCK_STATES, FIFOBlockStateCacheOpts} from "./stateCache/fifoBlockStateCache.js";
 import {PersistentCheckpointStateCacheOpts} from "./stateCache/persistentCheckpointsCache.js";
 import {DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY} from "./stateCache/persistentCheckpointsCache.js";
-export {StateArchiveMode} from "./archiver/interface.js";
-export {DEFAULT_STATE_ARCHIVE_MODE} from "./archiver/archiver.js";
+import {ValidatorMonitorOpts} from "./validatorMonitor.js";
+
+export {ArchiveMode, DEFAULT_ARCHIVE_MODE};
 
 export type IChainOptions = BlockProcessOpts &
   PoolOpts &
   SeenCacheOpts &
   ForkChoiceOpts &
-  ArchiverOpts &
+  ArchiveStoreOpts &
   FIFOBlockStateCacheOpts &
   PersistentCheckpointStateCacheOpts &
   ShufflingCacheOpts &
+  ValidatorMonitorOpts &
   LightClientServerOpts & {
     blsVerifyAllMainThread?: boolean;
     blsVerifyAllMultiThread?: boolean;
+    blacklistedBlocks?: string[];
     persistProducedBlocks?: boolean;
     persistInvalidSszObjects?: boolean;
     persistInvalidSszObjectsDir?: string;
+    persistOrphanedBlocks?: boolean;
+    persistOrphanedBlocksDir?: string;
     skipCreateStateCacheIfAvailable?: boolean;
     suggestedFeeRecipient: string;
     maxSkipSlots?: number;
@@ -34,8 +39,6 @@ export type IChainOptions = BlockProcessOpts &
     maxCachedBlobSidecars?: number;
     /** Max number of produced block roots (blinded or full) cached for broadcast validations */
     maxCachedProducedRoots?: number;
-    /** Option to load a custom kzg trusted setup in txt format */
-    trustedSetup?: string;
     broadcastValidationStrictness?: string;
     minSameMessageSignatureSetsToBatch: number;
     archiveBlobEpochs?: number;
@@ -97,15 +100,18 @@ export type SeenCacheOpts = {
 export const defaultChainOptions: IChainOptions = {
   blsVerifyAllMainThread: false,
   blsVerifyAllMultiThread: false,
+  blacklistedBlocks: [],
   disableBlsBatchVerify: false,
   proposerBoost: true,
   proposerBoostReorg: false,
   computeUnrealized: true,
   safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
   suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
+  serveHistoricalState: false,
   assertCorrectProgressiveBalances: false,
   archiveStateEpochFrequency: 1024,
-  stateArchiveMode: DEFAULT_STATE_ARCHIVE_MODE,
+  archiveMode: DEFAULT_ARCHIVE_MODE,
+  pruneHistory: false,
   emitPayloadAttributes: false,
   // for gossip block validation, it's unlikely we see a reorg with 32 slots
   // for attestation validation, having this value ensures we don't have to regen states most of the time
@@ -116,7 +122,11 @@ export const defaultChainOptions: IChainOptions = {
   // since this batch attestation work is designed to work with useWorker=true, make this the lowest value
   minSameMessageSignatureSetsToBatch: 2,
   nHistoricalStates: true,
-  nHistoricalStatesFileDataStore: false,
+  // as of Feb 2025, this option turned out to be very useful:
+  //   - it allows to share a persisted checkpoint state to other nodes
+  //   - users can prune the persisted checkpoint state files manually to save disc space
+  //   - it helps debug easier when network is unfinalized
+  nHistoricalStatesFileDataStore: true,
   maxBlockStates: DEFAULT_MAX_BLOCK_STATES,
   maxCPStateEpochsInMemory: DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY,
 };

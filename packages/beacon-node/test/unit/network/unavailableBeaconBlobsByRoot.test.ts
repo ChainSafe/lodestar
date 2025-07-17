@@ -1,9 +1,9 @@
 import {toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {BYTES_PER_FIELD_ELEMENT, FIELD_ELEMENTS_PER_BLOB, ForkBlobs, ForkName, isForkBlobs} from "@lodestar/params";
+import {BYTES_PER_FIELD_ELEMENT, FIELD_ELEMENTS_PER_BLOB, ForkName, isForkPostDeneb} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {SignedBeaconBlock, deneb, ssz} from "@lodestar/types";
-import {beforeAll, describe, expect, it, vi} from "vitest";
+import {describe, expect, it, vi} from "vitest";
 import {
   BlobsSource,
   BlockInput,
@@ -17,16 +17,9 @@ import {IExecutionEngine} from "../../../src/execution/index.js";
 import {INetwork} from "../../../src/network/interface.js";
 import {unavailableBeaconBlobsByRoot} from "../../../src/network/reqresp/index.js";
 import {computeInclusionProof, kzgCommitmentToVersionedHash} from "../../../src/util/blobs.js";
-import {ckzg} from "../../../src/util/kzg.js";
-import {initCKZG, loadEthereumTrustedSetup} from "../../../src/util/kzg.js";
+import {kzg} from "../../../src/util/kzg.js";
 
 describe("unavailableBeaconBlobsByRoot", () => {
-  beforeAll(async () => {
-    await initCKZG();
-    loadEthereumTrustedSetup();
-  });
-
-  /* eslint-disable @typescript-eslint/naming-convention */
   const chainConfig = createChainForkConfig({
     ...defaultChainConfig,
     ALTAIR_FORK_EPOCH: 0,
@@ -123,6 +116,7 @@ describe("unavailableBeaconBlobsByRoot", () => {
       {
         executionEngine: executionEngine as unknown as IExecutionEngine,
         metrics: null,
+        emitter: null,
         engineGetBlobsCache,
       }
     );
@@ -172,12 +166,11 @@ describe("unavailableBeaconBlobsByRoot", () => {
     ];
 
     const blockData = {
-      fork: ForkName.deneb as ForkBlobs,
+      fork: ForkName.deneb as const,
       blobs: allBlobs,
-      blobsBytes: [null, null, null, null, null],
       blobsSource: BlobsSource.byRoot,
     };
-    const resolvedBlobs = getBlockInput.availableData(config, signedBlock, BlockSource.byRoot, null, blockData);
+    const resolvedBlobs = getBlockInput.availableData(config, signedBlock, BlockSource.byRoot, blockData);
 
     const engineReqIdentifiers = [...blobscommitmentsandproofs.blobVersionedHashes];
     // versionedHashes: 1,2,4
@@ -191,7 +184,6 @@ describe("unavailableBeaconBlobsByRoot", () => {
 type BlockInputCacheType = {
   fork: ForkName;
   block?: SignedBeaconBlock;
-  blockBytes?: Uint8Array | null;
   cachedData?: CachedData;
   // block promise and its callback cached for delayed resolution
   blockInputPromise: Promise<BlockInput>;
@@ -208,7 +200,7 @@ function getEmptyBlockInputCacheEntry(fork: ForkName): BlockInputCacheType {
   if (resolveBlockInput === null) {
     throw Error("Promise Constructor was not executed immediately");
   }
-  if (!isForkBlobs(fork)) {
+  if (!isForkPostDeneb(fork)) {
     return {fork, blockInputPromise, resolveBlockInput};
   }
 
@@ -233,9 +225,9 @@ function generateBlobs(count: number): {
   kzgProofs: Uint8Array[];
 } {
   const blobs = Array.from({length: count}, (_, index) => generateRandomBlob(index));
-  const kzgCommitments = blobs.map((blob) => ckzg.blobToKzgCommitment(blob));
+  const kzgCommitments = blobs.map((blob) => kzg.blobToKzgCommitment(blob));
   const versionedHash = kzgCommitments.map((kzgCommitment) => kzgCommitmentToVersionedHash(kzgCommitment));
-  const kzgProofs = blobs.map((blob, index) => ckzg.computeBlobKzgProof(blob, kzgCommitments[index]));
+  const kzgProofs = blobs.map((blob, index) => kzg.computeBlobKzgProof(blob, kzgCommitments[index]));
 
   return {
     blobs,

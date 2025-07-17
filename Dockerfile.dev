@@ -1,0 +1,19 @@
+# Dockerfile.dev is a stripped down version of Dockerfile that is used for development purposes.
+# It minimizes number of installs and builds to speed up the development process.
+# Run this on local host only.
+# Generated image is larger than production image. Do not use this for production.
+
+FROM --platform=${BUILDPLATFORM:-amd64} node:22 AS build_dev
+ARG COMMIT
+
+WORKDIR /usr/app
+
+COPY . .
+
+RUN yarn install --non-interactive && yarn build
+
+RUN cd packages/cli && GIT_COMMIT=${COMMIT} yarn write-git-data
+
+ENV NODE_OPTIONS=--max-old-space-size=8192
+
+ENTRYPOINT ["node", "./packages/cli/bin/lodestar"]

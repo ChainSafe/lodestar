@@ -1,16 +1,9 @@
 import {PeerId} from "@libp2p/interface";
 import {MapDef, pruneSetToMax} from "@lodestar/utils";
+import {PeerIdStr} from "../../../util/peerId.js";
 import {NetworkCoreMetrics} from "../../core/metrics.js";
 import {DEFAULT_SCORE, MAX_ENTRIES, MAX_SCORE, MIN_SCORE, SCORE_THRESHOLD} from "./constants.js";
-import {
-  IPeerRpcScoreStore,
-  IPeerScore,
-  PeerAction,
-  PeerIdStr,
-  PeerRpcScoreOpts,
-  PeerScoreStats,
-  ScoreState,
-} from "./interface.js";
+import {IPeerRpcScoreStore, IPeerScore, PeerAction, PeerRpcScoreOpts, PeerScoreStats, ScoreState} from "./interface.js";
 import {MaxScore, RealScore} from "./score.js";
 import {scoreToState} from "./utils.js";
 

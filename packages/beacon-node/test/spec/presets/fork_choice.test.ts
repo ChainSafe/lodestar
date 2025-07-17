@@ -2,7 +2,7 @@ import path from "node:path";
 import {toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
-import {ACTIVE_PRESET, ForkName, ForkSeq, isForkBlobs} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkName, ForkSeq} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {BeaconStateAllForks, isExecutionStateType, signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {
@@ -35,7 +35,6 @@ import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js"
 import {getExecutionEngineFromBackend} from "../../../src/execution/index.js";
 import {computeInclusionProof} from "../../../src/util/blobs.js";
 import {ClockEvent} from "../../../src/util/clock.js";
-import {initCKZG, loadEthereumTrustedSetup} from "../../../src/util/kzg.js";
 import {ClockStopped} from "../../mocks/clock.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
@@ -61,11 +60,6 @@ const forkChoiceTest =
   (fork) => {
     return {
       testFunction: async (testcase) => {
-        if (isForkBlobs(fork)) {
-          await initCKZG();
-          loadEthereumTrustedSetup();
-        }
-
         const {steps, anchorState} = testcase;
         const currentSlot = anchorState.slot;
         const config = getConfig(fork);
@@ -111,10 +105,13 @@ const forkChoiceTest =
           {
             config: createBeaconConfig(config, state.genesisValidatorsRoot),
             db: getMockedBeaconDb(),
+            dataDir: ".",
+            dbName: ",",
             logger,
             processShutdownCallback: () => {},
             clock,
             metrics: null,
+            validatorMonitor: null,
             anchorState,
             eth1,
             executionEngine,
@@ -223,14 +220,13 @@ const forkChoiceTest =
                     };
                   });
 
-                  blockImport = getBlockInput.availableData(config, signedBlock, BlockSource.gossip, null, {
+                  blockImport = getBlockInput.availableData(config, signedBlock, BlockSource.gossip, {
                     fork: ForkName.deneb,
                     blobs: blobSidecars,
-                    blobsBytes: [null],
                     blobsSource: BlobsSource.gossip,
                   });
                 } else {
-                  blockImport = getBlockInput.preData(config, signedBlock, BlockSource.gossip, null);
+                  blockImport = getBlockInput.preData(config, signedBlock, BlockSource.gossip);
                 }
 
                 await chain.processBlock(blockImport, {
@@ -362,6 +358,8 @@ const forkChoiceTest =
           const attestations = new Map<string, Attestation>();
           const attesterSlashings = new Map<string, AttesterSlashing>();
           for (const key in t) {
+            if (!Object.prototype.hasOwnProperty.call(t, key)) continue;
+
             const blockMatch = key.match(BLOCK_FILE_NAME);
             if (blockMatch) {
               blocks.set(key, t[key]);
@@ -402,7 +400,7 @@ const forkChoiceTest =
         // as testId for the entire directory is same : `deneb/fork_choice/on_block/pyspec_tests` and
         // we just want to skip this one particular test because we don't have minimal kzg lib integrated
         //
-        // This skip can be removed once c-kzg lib with run-time minimal blob size setup is released and
+        // This skip can be removed once a kzg lib with run-time minimal blob size setup is released and
         // integrated
         shouldSkip: (_testcase, name, _index) => name.includes("invalid_incorrect_proof"),
       },

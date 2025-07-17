@@ -77,7 +77,7 @@ const indexedGossipQueueOpts: {
     // this topic may cause node to be overload and drop 100% of lower priority queues
     maxLength: 24576,
     indexFn: (item: PendingGossipsubMessage) => {
-      return getBeaconAttestationGossipIndex(item.topic.fork, item.msg.data);
+      return getBeaconAttestationGossipIndex(item.topic.boundary.fork, item.msg.data);
     },
     minChunkSize: MIN_SIGNATURE_SETS_TO_BATCH_VERIFY,
     maxChunkSize: MAX_GOSSIP_ATTESTATION_BATCH_SIZE,

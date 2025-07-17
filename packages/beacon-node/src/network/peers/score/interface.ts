@@ -1,7 +1,6 @@
 import {PeerId} from "@libp2p/interface";
+import {PeerIdStr} from "../../../util/peerId.js";
 import {NetworkCoreMetrics} from "../../core/metrics.js";
-
-export type PeerIdStr = string;
 
 export type PeerRpcScoreOpts = {
   disablePeerScoring?: boolean;

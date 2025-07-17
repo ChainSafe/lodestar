@@ -4,7 +4,7 @@ import {ForkSeq} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, altair, phase0, ssz} from "@lodestar/types";
 import {FAR_FUTURE_EPOCH} from "../constants/index.js";
-import {getCurrentAndNextFork} from "./forks.js";
+import {getCurrentAndNextForkBoundary} from "./forks.js";
 
 export enum ENRKey {
   tcp = "tcp",
@@ -102,14 +102,16 @@ export class MetadataController {
 }
 
 export function getENRForkID(config: BeaconConfig, clockEpoch: Epoch): phase0.ENRForkID {
-  const {currentFork, nextFork} = getCurrentAndNextFork(config, clockEpoch);
+  const {currentBoundary, nextBoundary} = getCurrentAndNextForkBoundary(config, clockEpoch);
 
   return {
     // Current fork digest
-    forkDigest: config.forkName2ForkDigest(currentFork.name),
-    // next planned fork versin
-    nextForkVersion: nextFork ? nextFork.version : currentFork.version,
-    // next fork epoch
-    nextForkEpoch: nextFork ? nextFork.epoch : FAR_FUTURE_EPOCH,
+    forkDigest: config.forkBoundary2ForkDigest(currentBoundary),
+    // Next planned fork version
+    nextForkVersion: nextBoundary
+      ? config.forks[nextBoundary.fork].version
+      : config.forks[currentBoundary.fork].version,
+    // Next fork epoch
+    nextForkEpoch: nextBoundary ? nextBoundary.epoch : FAR_FUTURE_EPOCH,
   };
 }

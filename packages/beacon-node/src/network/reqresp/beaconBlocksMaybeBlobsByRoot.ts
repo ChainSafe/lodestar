@@ -1,10 +1,11 @@
 import {toHexString} from "@chainsafe/ssz";
+import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {RootHex, SignedBeaconBlock, deneb, phase0} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
-import {fromHex} from "@lodestar/utils";
+import {fromHex, toHex} from "@lodestar/utils";
 import {
   BlobsSource,
   BlockInput,
@@ -15,6 +16,7 @@ import {
   getBlockInput,
   getBlockInputBlobs,
 } from "../../chain/blocks/types.js";
+import {ChainEventEmitter} from "../../chain/emitter.js";
 import {BlockInputAvailabilitySource} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {IExecutionEngine} from "../../execution/index.js";
 import {Metrics} from "../../metrics/index.js";
@@ -69,12 +71,13 @@ export async function unavailableBeaconBlobsByRoot(
   unavailableBlockInput: BlockInput | NullBlockInput,
   opts: {
     metrics: Metrics | null;
+    emitter: ChainEventEmitter | null;
     executionEngine: IExecutionEngine;
     engineGetBlobsCache?: Map<RootHex, BlobAndProof | null>;
     blockInputsRetryTrackerCache?: Set<RootHex>;
   }
 ): Promise<BlockInput> {
-  const {executionEngine, metrics, engineGetBlobsCache, blockInputsRetryTrackerCache} = opts;
+  const {executionEngine, metrics, emitter, engineGetBlobsCache, blockInputsRetryTrackerCache} = opts;
   if (unavailableBlockInput.block !== null && unavailableBlockInput.type !== BlockInputType.dataPromise) {
     return unavailableBlockInput;
   }
@@ -82,17 +85,15 @@ export async function unavailableBeaconBlobsByRoot(
   // resolve the block if thats unavailable
   let block: SignedBeaconBlock,
     blobsCache: NullBlockInput["cachedData"]["blobsCache"],
-    blockBytes: Uint8Array | null,
     resolveAvailability: NullBlockInput["cachedData"]["resolveAvailability"],
     cachedData: NullBlockInput["cachedData"];
   if (unavailableBlockInput.block === null) {
     const allBlocks = await network.sendBeaconBlocksByRoot(peerId, [fromHex(unavailableBlockInput.blockRootHex)]);
     block = allBlocks[0].data;
-    blockBytes = allBlocks[0].bytes;
     cachedData = unavailableBlockInput.cachedData;
     ({blobsCache, resolveAvailability} = cachedData);
   } else {
-    ({block, cachedData, blockBytes} = unavailableBlockInput);
+    ({block, cachedData} = unavailableBlockInput);
     ({blobsCache, resolveAvailability} = cachedData);
   }
 
@@ -104,9 +105,9 @@ export async function unavailableBeaconBlobsByRoot(
 
   const blockTriedBefore = blockInputsRetryTrackerCache?.has(blockRootHex) === true;
   if (blockTriedBefore) {
-    metrics?.blockInputFetchStats.totalDataPromiseBlockInputsReTried.inc();
+    metrics?.blockInputFetchStats.totalDataPromiseBlockInputsReTriedBlobsPull.inc();
   } else {
-    metrics?.blockInputFetchStats.totalDataPromiseBlockInputsTried.inc();
+    metrics?.blockInputFetchStats.totalDataPromiseBlockInputsTriedBlobsPull.inc();
     blockInputsRetryTrackerCache?.add(blockRootHex);
   }
 
@@ -137,7 +138,7 @@ export async function unavailableBeaconBlobsByRoot(
           const {blob, proof: kzgProof} = catchedBlobAndProof;
           const kzgCommitmentInclusionProof = computeInclusionProof(fork, block.message.body, index);
           const blobSidecar = {index, blob, kzgCommitment, kzgProof, signedBlockHeader, kzgCommitmentInclusionProof};
-          blobsCache.set(blobSidecar.index, {blobSidecar, blobBytes: null});
+          blobsCache.set(blobSidecar.index, blobSidecar);
         }
       } else if (blockTriedBefore) {
         // only retry it from network
@@ -152,6 +153,9 @@ export async function unavailableBeaconBlobsByRoot(
     }
   }
 
+  if (engineReqIdentifiers.length > 0) {
+    metrics?.blockInputFetchStats.totalDataPromiseBlockInputsTriedGetBlobs.inc();
+  }
   const versionedHashes = engineReqIdentifiers.map((bi) => bi.versionedHash);
   metrics?.blockInputFetchStats.dataPromiseBlobsEngineGetBlobsApiRequests.inc(versionedHashes.length);
 
@@ -162,8 +166,9 @@ export async function unavailableBeaconBlobsByRoot(
 
   for (let j = 0; j < versionedHashes.length; j++) {
     const blobAndProof = blobAndProofs[j] ?? null;
+    const versionedHash = versionedHashes[j];
     // save to cache for future reference
-    engineGetBlobsCache?.set(toHexString(versionedHashes[j]), blobAndProof);
+    engineGetBlobsCache?.set(toHexString(versionedHash), blobAndProof);
     if (blobAndProof !== null) {
       metrics?.blockInputFetchStats.dataPromiseBlobsEngineGetBlobsApiNotNull.inc();
 
@@ -178,7 +183,17 @@ export async function unavailableBeaconBlobsByRoot(
         // add them in cache so that its reflected in all the blockInputs that carry this
         // for e.g. a blockInput that might be awaiting blobs promise fullfillment in
         // verifyBlocksDataAvailability
-        blobsCache.set(blobSidecar.index, {blobSidecar, blobBytes: null});
+        blobsCache.set(blobSidecar.index, blobSidecar);
+
+        if (emitter?.listenerCount(routes.events.EventType.blobSidecar)) {
+          emitter.emit(routes.events.EventType.blobSidecar, {
+            blockRoot: blockRootHex,
+            slot,
+            index,
+            kzgCommitment: toHex(kzgCommitment),
+            versionedHash: toHex(versionedHash),
+          });
+        }
       } else {
         metrics?.blockInputFetchStats.dataPromiseBlobsDelayedGossipAvailable.inc();
         metrics?.blockInputFetchStats.dataPromiseBlobsDelayedGossipAvailableSavedGetBlobsCompute.inc();
@@ -241,7 +256,17 @@ export async function unavailableBeaconBlobsByRoot(
   // for e.g. a blockInput that might be awaiting blobs promise fullfillment in
   // verifyBlocksDataAvailability
   for (const blobSidecar of networkResBlobSidecars) {
-    blobsCache.set(blobSidecar.index, {blobSidecar, blobBytes: null});
+    blobsCache.set(blobSidecar.index, blobSidecar);
+
+    if (emitter?.listenerCount(routes.events.EventType.blobSidecar)) {
+      emitter.emit(routes.events.EventType.blobSidecar, {
+        blockRoot: blockRootHex,
+        slot,
+        index: blobSidecar.index,
+        kzgCommitment: toHex(blobSidecar.kzgCommitment),
+        versionedHash: toHex(kzgCommitmentToVersionedHash(blobSidecar.kzgCommitment)),
+      });
+    }
   }
 
   // check and see if all blobs are now available and in that case resolve availability
@@ -258,10 +283,16 @@ export async function unavailableBeaconBlobsByRoot(
   metrics?.blockInputFetchStats.totalDataPromiseBlockInputsResolvedAvailable.inc();
   if (getBlobsUseful) {
     metrics?.blockInputFetchStats.totalDataPromiseBlockInputsAvailableUsingGetBlobs.inc();
+    if (networkReqIdentifiers.length === 0) {
+      metrics?.blockInputFetchStats.totalDataPromiseBlockInputsAvailableFromGetBlobs.inc();
+    }
+  }
+  if (networkResBlobSidecars.length > 0) {
+    metrics?.blockInputFetchStats.totalDataPromiseBlockInputsFinallyAvailableFromNetworkReqResp.inc();
   }
   if (blockTriedBefore) {
     metrics?.blockInputFetchStats.totalDataPromiseBlockInputsRetriedAvailableFromNetwork.inc();
   }
 
-  return getBlockInput.availableData(config, block, BlockSource.byRoot, blockBytes, blockData);
+  return getBlockInput.availableData(config, block, BlockSource.byRoot, blockData);
 }

@@ -2,7 +2,7 @@ import {SignedBeaconBlock} from "@lodestar/types";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStatePhase0} from "../../src/index.js";
 import {EpochTransitionCache} from "../../src/types.js";
 
-// Type aliases to typesafe itBench() calls
+// Type aliases to typesafe bench() calls
 
 export type State = CachedBeaconStateAllForks;
 export type StateAltair = CachedBeaconStateAltair;

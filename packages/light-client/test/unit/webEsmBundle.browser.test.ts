@@ -1,5 +1,4 @@
 import {sleep} from "@lodestar/utils";
-/* eslint-disable @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-call */
 import {beforeAll, describe, expect, it, vi} from "vitest";
 import {Lightclient, LightclientEvent, transport, utils} from "../../dist/lightclient.min.mjs";
 

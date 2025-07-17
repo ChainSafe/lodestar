@@ -1,39 +1,24 @@
-import {ChainForkConfig} from "@lodestar/config";
-import {BeaconForkChoiceMetrics, getMetrics} from "@lodestar/fork-choice";
-import {BeaconStateAllForks, getCurrentSlot} from "@lodestar/state-transition";
-import {Logger} from "@lodestar/utils";
+import {BeaconForkChoiceMetrics, getForkChoiceMetrics} from "@lodestar/fork-choice";
+import {BeaconStateTransitionMetrics, getMetrics} from "@lodestar/state-transition";
 import {Metric, Registry} from "prom-client";
 import {BeaconMetrics, createBeaconMetrics} from "./metrics/beacon.js";
 import {LodestarMetrics, createLodestarMetrics} from "./metrics/lodestar.js";
 import {collectNodeJSMetrics} from "./nodeJsMetrics.js";
 import {MetricsOptions} from "./options.js";
 import {RegistryMetricCreator} from "./utils/registryMetricCreator.js";
-import {ValidatorMonitor, createValidatorMonitor} from "./validatorMonitor.js";
 
 export type Metrics = BeaconMetrics &
-  LodestarMetrics &
   BeaconForkChoiceMetrics &
-  ValidatorMonitor & {register: RegistryMetricCreator; close: () => void};
+  BeaconStateTransitionMetrics &
+  LodestarMetrics & {register: RegistryMetricCreator; close: () => void};
 
-export function createMetrics(
-  opts: MetricsOptions,
-  config: ChainForkConfig,
-  anchorState: BeaconStateAllForks,
-  logger: Logger,
-  externalRegistries: Registry[] = []
-): Metrics {
+export function createMetrics(opts: MetricsOptions, genesisTime: number, externalRegistries: Registry[] = []): Metrics {
   const register = new RegistryMetricCreator();
   const beacon = createBeaconMetrics(register);
-  const lodestar = createLodestarMetrics(register, opts.metadata, anchorState);
-  const forkChoice = getMetrics(register);
+  const lodestar = createLodestarMetrics(register, opts.metadata, genesisTime);
+  const forkChoice = getForkChoiceMetrics(register);
+  const stateTransition = getMetrics(register);
 
-  const genesisTime = anchorState.genesisTime;
-  const validatorMonitor = createValidatorMonitor(lodestar, config, genesisTime, logger, opts);
-  // Register a single collect() function to run all validatorMonitor metrics
-  lodestar.validatorMonitor.validatorsConnected.addCollect(() => {
-    const clockSlot = getCurrentSlot(config, genesisTime);
-    validatorMonitor.scrapeMetrics(clockSlot);
-  });
   process.on("unhandledRejection", (_error) => {
     lodestar.unhandledPromiseRejections.inc();
   });
@@ -51,7 +36,7 @@ export function createMetrics(
     ...beacon,
     ...lodestar,
     ...forkChoice,
-    ...validatorMonitor,
+    ...stateTransition,
     register,
     close,
   };

@@ -1,6 +1,7 @@
 import {BeaconConfig} from "@lodestar/config";
-import {GENESIS_SLOT, MAX_REQUEST_BLOCKS, MAX_REQUEST_BLOCKS_DENEB, isForkBlobs} from "@lodestar/params";
+import {GENESIS_SLOT, MAX_REQUEST_BLOCKS, MAX_REQUEST_BLOCKS_DENEB, isForkPostDeneb} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
+import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {deneb, phase0} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
@@ -26,7 +27,7 @@ export async function* onBeaconBlocksByRange(
     for await (const {key, value} of finalized.binaryEntriesStream({gte: startSlot, lt: endSlot})) {
       yield {
         data: value,
-        fork: chain.config.getForkName(finalized.decodeKey(key)),
+        boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(finalized.decodeKey(key))),
       };
     }
   }
@@ -57,7 +58,7 @@ export async function* onBeaconBlocksByRange(
 
         yield {
           data: blockBytes,
-          fork: chain.config.getForkName(block.slot),
+          boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(block.slot)),
         };
       }
 
@@ -86,7 +87,9 @@ export function validateBeaconBlocksByRangeRequest(
 
   // step > 1 is deprecated, see https://github.com/ethereum/consensus-specs/pull/2856
 
-  const maxRequestBlocks = isForkBlobs(config.getForkName(startSlot)) ? MAX_REQUEST_BLOCKS_DENEB : MAX_REQUEST_BLOCKS;
+  const maxRequestBlocks = isForkPostDeneb(config.getForkName(startSlot))
+    ? MAX_REQUEST_BLOCKS_DENEB
+    : MAX_REQUEST_BLOCKS;
 
   if (count > maxRequestBlocks) {
     count = maxRequestBlocks;

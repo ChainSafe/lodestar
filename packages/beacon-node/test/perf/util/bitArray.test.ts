@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
+import {bench, describe, setBenchOpts} from "@chainsafe/benchmark";
 import {BitArray} from "@chainsafe/ssz";
-import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {intersectUint8Arrays} from "../../../src/util/bitArray.js";
 
 /**
@@ -16,7 +16,7 @@ describe("Intersect BitArray vs Array+Set", () => {
     const aBA = BitArray.fromBoolArray(Array.from({length: bitLen}, (_, i) => i % 2 === 0));
     const bBA = BitArray.fromBoolArray(Array.from({length: bitLen}, (_, i) => i % 4 === 0));
 
-    itBench({
+    bench({
       id: `intersect bitArray bitLen ${bitLen}`,
       runsFactor: 1000,
       fn: () => {
@@ -29,7 +29,7 @@ describe("Intersect BitArray vs Array+Set", () => {
     const setValid = new Set(linspace(0, bitLen, 2));
     const indices = Array.from({length: bitLen}, (_, i) => i);
 
-    itBench({
+    bench({
       id: `intersect array and set length ${bitLen}`,
       runsFactor: 1000,
       fn: () => {
@@ -48,7 +48,7 @@ describe("Intersect BitArray vs Array+Set", () => {
 
 describe("BitArray.trueBitCount", () => {
   for (const bitLen of [128, 248, 512]) {
-    itBench({
+    bench({
       id: `bitArray.getTrueBitIndexes() bitLen ${bitLen}`,
       beforeEach: () => new BitArray(crypto.randomBytes(Math.ceil(bitLen / 8)), bitLen),
       fn: (bitArray) => {

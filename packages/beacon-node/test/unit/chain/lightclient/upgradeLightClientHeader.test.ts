@@ -15,6 +15,8 @@ describe("UpgradeLightClientHeader", () => {
     CAPELLA_FORK_EPOCH: 3,
     DENEB_FORK_EPOCH: 4,
     ELECTRA_FORK_EPOCH: 5,
+    EIP7805_FORK_EPOCH: 6,
+    FULU_FORK_EPOCH: 7,
   });
 
   const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
@@ -29,16 +31,18 @@ describe("UpgradeLightClientHeader", () => {
       deneb: ssz.deneb.LightClientHeader.defaultValue(),
       electra: ssz.deneb.LightClientHeader.defaultValue(),
       eip7805: ssz.deneb.LightClientHeader.defaultValue(),
+      fulu: ssz.deneb.LightClientHeader.defaultValue(),
     };
 
     testSlots = {
       phase0: 0,
-      altair: 10,
-      bellatrix: 17,
-      capella: 25,
-      deneb: 33,
-      electra: 41,
-      eip7805: 49,
+      altair: 40,
+      bellatrix: 68,
+      capella: 100,
+      deneb: 132,
+      electra: 164,
+      eip7805: 216,
+      fulu: 230,
     };
   });
 

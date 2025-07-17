@@ -28,10 +28,8 @@ import {logFilesDir} from "./params.js";
 import {shell} from "./shell.js";
 
 // NOTE: How to run
-// DEV_RUN=true EL_BINARY_DIR=ethpandaops/ethereumjs:master-0e06ddf EL_SCRIPT_DIR=ethereumjsdocker yarn vitest --run test/sim/electra-interop.test.ts
+// DEV_RUN=true EL_BINARY_DIR=ethpandaops/ethereumjs:master-0e06ddf EL_SCRIPT_DIR=ethereumjsdocker yarn vitest run test/sim/electra-interop.test.ts
 // ```
-
-/* eslint-disable no-console, @typescript-eslint/naming-convention */
 
 const jwtSecretHex = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
 const retries = defaultExecutionEngineHttpOpts.retries;
@@ -158,7 +156,7 @@ describe("executionEngine / ExecutionEngineHttp", () => {
         256
       ),
       prevRandao: dataToBytes("0x0000000000000000000000000000000000000000000000000000000000000000", 32),
-      gasLimit: 36000000,
+      gasLimit: 45000000,
       gasUsed: 84714,
       timestamp: 16,
       extraData: dataToBytes("0x", 0),

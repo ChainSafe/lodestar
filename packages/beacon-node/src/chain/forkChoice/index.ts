@@ -1,6 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {
-  DataAvailabilityStatus,
   ExecutionStatus,
   ForkChoice,
   ForkChoiceStore,
@@ -10,6 +9,7 @@ import {
 } from "@lodestar/fork-choice";
 import {
   CachedBeaconStateAllForks,
+  DataAvailabilityStatus,
   computeAnchorCheckpoint,
   getEffectiveBalanceIncrementsZeroInactive,
   isExecutionStateType,

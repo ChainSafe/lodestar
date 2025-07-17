@@ -42,6 +42,10 @@ export function bigIntToBytes(value: bigint, length: number, endianness: Endiann
 }
 
 export function bytesToBigInt(value: Uint8Array, endianness: Endianness = "le"): bigint {
+  if (!(value instanceof Uint8Array)) {
+    throw new TypeError("expected a Uint8Array");
+  }
+
   if (endianness === "le") {
     return toBigIntLE(value as Buffer);
   }
@@ -69,4 +73,12 @@ export function formatBytes(bytes: number): string {
   const formattedSize = (bytes / Math.pow(k, i)).toFixed(2);
 
   return `${formattedSize} ${units[i]}`;
+}
+
+export function xor(a: Uint8Array, b: Uint8Array): Uint8Array {
+  const length = Math.min(a.length, b.length);
+  for (let i = 0; i < length; i++) {
+    a[i] = a[i] ^ b[i];
+  }
+  return a;
 }

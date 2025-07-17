@@ -16,7 +16,7 @@ export function hashBlocks(blocks: BlockInput[], config: ChainForkConfig): RootH
     }
     default: {
       const block0 = blocks[0].block;
-      const blockN = blocks[blocks.length - 1].block;
+      const blockN = blocks.at(-1)?.block as BlockInput["block"];
       return (
         toRootHex(config.getForkTypes(block0.message.slot).SignedBeaconBlock.hashTreeRoot(block0)) +
         toRootHex(config.getForkTypes(blockN.message.slot).SignedBeaconBlock.hashTreeRoot(blockN))

@@ -1,4 +1,4 @@
-import {itBench} from "@dapplion/benchmark";
+import {bench, describe} from "@chainsafe/benchmark";
 import {beforeProcessEpoch} from "../../../src/index.js";
 import {StateEpoch} from "../types.js";
 import {generatePerfTestCachedStatePhase0, perfStateId} from "../util.js";
@@ -7,7 +7,7 @@ import {generatePerfTestCachedStatePhase0, perfStateId} from "../util.js";
 // network conditions. See also individual benchmarks for shuffling computations.
 
 describe("phase0 afterProcessEpoch", () => {
-  itBench<StateEpoch, StateEpoch>({
+  bench<StateEpoch, StateEpoch>({
     id: `phase0 afterProcessEpoch - ${perfStateId}`,
     yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
     before: () => {

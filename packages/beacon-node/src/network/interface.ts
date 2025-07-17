@@ -1,4 +1,4 @@
-import {Identify} from "@chainsafe/libp2p-identify";
+import {Identify} from "@libp2p/identify";
 import {
   ComponentLogger,
   ConnectionGater,
@@ -10,11 +10,13 @@ import {
   PeerId,
   PeerRouting,
   PeerStore,
+  PrivateKey,
   TypedEventTarget,
   Upgrader,
 } from "@libp2p/interface";
 import type {AddressManager, ConnectionManager, Registrar, TransportManager} from "@libp2p/interface-internal";
 import {
+  AttesterSlashing,
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
   SignedAggregateAndProof,
@@ -80,7 +82,7 @@ export interface INetwork extends INetworkCorePublic {
   publishVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<number>;
   publishBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange): Promise<number>;
   publishProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<number>;
-  publishAttesterSlashing(attesterSlashing: phase0.AttesterSlashing): Promise<number>;
+  publishAttesterSlashing(attesterSlashing: AttesterSlashing): Promise<number>;
   publishSyncCommitteeSignature(signature: altair.SyncCommitteeMessage, subnet: SubnetID): Promise<number>;
   publishContributionAndProof(contributionAndProof: altair.SignedContributionAndProof): Promise<number>;
   publishLightClientFinalityUpdate(update: LightClientFinalityUpdate): Promise<number>;
@@ -97,6 +99,7 @@ export interface INetwork extends INetworkCorePublic {
 
 export type LodestarComponents = {
   peerId: PeerId;
+  privateKey: PrivateKey;
   nodeInfo: NodeInfo;
   logger: ComponentLogger;
   events: TypedEventTarget<Libp2pEvents>;

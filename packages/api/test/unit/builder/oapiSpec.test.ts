@@ -12,7 +12,7 @@ import {testData} from "./testData.js";
 // Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const version = "v0.2.0";
+const version = "v0.5.0";
 const openApiFile: OpenApiFile = {
   url: `https://github.com/ethereum/builder-specs/releases/download/${version}/builder-oapi.json`,
   filepath: path.join(__dirname, "../../../oapi-schemas/builder-oapi.json"),
@@ -21,9 +21,7 @@ const openApiFile: OpenApiFile = {
   version: RegExp(/.*/),
 };
 
-const definitions = getDefinitions(
-  createChainForkConfig({...defaultChainConfig, ALTAIR_FORK_EPOCH: 0, BELLATRIX_FORK_EPOCH: 0})
-);
+const definitions = getDefinitions(createChainForkConfig({...defaultChainConfig, ELECTRA_FORK_EPOCH: 0}));
 
 const openApiJson = await fetchOpenApiSpec(openApiFile);
 runTestCheckAgainstSpec(openApiJson, definitions, testData);

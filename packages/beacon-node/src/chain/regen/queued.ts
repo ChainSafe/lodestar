@@ -291,7 +291,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
 
   private jobQueueProcessor = async (regenRequest: RegenRequest): Promise<CachedBeaconStateAllForks> => {
     const metricsLabels = {
-      caller: regenRequest.args[regenRequest.args.length - 1] as RegenCaller,
+      caller: regenRequest.args.at(-1) as RegenCaller,
       entrypoint: regenRequest.key as RegenFnName,
     };
     let timer: (() => number) | undefined;

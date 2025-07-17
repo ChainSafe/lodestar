@@ -1,5 +1,5 @@
+import {bench, describe} from "@chainsafe/benchmark";
 import {BitArray} from "@chainsafe/ssz";
-import {itBench} from "@dapplion/benchmark";
 import {TARGET_AGGREGATORS_PER_COMMITTEE} from "@lodestar/params";
 import {SeenAggregatedAttestations} from "../../../../src/chain/seenCache/seenAggregateAndProof.js";
 
@@ -28,7 +28,8 @@ describe("SeenAggregatedAttestations perf test", () => {
   ];
 
   for (const {id, aggregationBits} of testCases) {
-    itBench({
+    const committeeIndex = 0;
+    bench({
       id,
       beforeEach: () => {
         const seenCache = new SeenAggregatedAttestations(null);
@@ -38,13 +39,13 @@ describe("SeenAggregatedAttestations perf test", () => {
             aggregationBits: toAggregationBitsSingleFalse(i),
             trueBitCount: numAttestersInByte * 8 - 1,
           };
-          seenCache.add(targetEpoch, attDataRoot, aggregationInfo, false);
+          seenCache.add(targetEpoch, committeeIndex, attDataRoot, aggregationInfo, false);
         }
 
         return seenCache;
       },
       fn: (seenCache) => {
-        seenCache.isKnown(targetEpoch, attDataRoot, aggregationBits);
+        seenCache.isKnown(targetEpoch, committeeIndex, attDataRoot, aggregationBits);
       },
     });
   }
