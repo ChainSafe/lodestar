@@ -23,8 +23,8 @@ import {
   RootHex,
   Slot,
   ValidatorIndex,
-  eip7805,
   bellatrix,
+  eip7805,
   phase0,
   ssz,
 } from "@lodestar/types";

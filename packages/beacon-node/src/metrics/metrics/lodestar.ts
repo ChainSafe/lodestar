@@ -927,6 +927,15 @@ export function createLodestarMetrics(
         help: "Total number of InsertOutcome as a result of adding a SyncCommitteeMessage to pool",
         labelNames: ["insertOutcome"],
       }),
+      inclusionListPoolSize: register.gauge({
+        name: "lodestar_oppool_inclusion_list_pool_size",
+        help: "Current size of the InclusionListPool = total inclusion lists unique by validator and slot",
+      }),
+      inclusionListPoolInsertOutcome: register.counter<{insertOutcome: InclusionListInsertOutcome}>({
+        name: "lodestar_inclusion_list_pool_insert_outcome_total",
+        help: "Total number of InsertOutcome as a result of adding an inclusion list in a pool",
+        labelNames: ["insertOutcome"],
+      }),
       syncContributionAndProofPool: {
         size: register.gauge({
           name: "lodestar_oppool_sync_contribution_and_proof_pool_size",
@@ -973,17 +982,6 @@ export function createLodestarMetrics(
           help: "Total number of empty returns in SyncContributionAndProofPool.getAggregate(slot, root)",
         }),
       },
-      inclusionListPool: {
-        inclusionListPoolSize: register.gauge({
-          name: "lodestar_oppool_inclusion_list_pool_size",
-          help: "Current size of the InclusionListPool = total inclusion lists unique by validator and slot",
-        }),
-        inclusionListPoolInsertOutcome: register.counter<{insertOutcome: InclusionListInsertOutcome}>({
-          name: "lodestar_inclusion_list_pool_insert_outcome_total",
-          help: "Total number of InsertOutcome as a result of adding an inclusion list in a pool",
-          labelNames: ["insertOutcome"],
-        }),
-      }
     },
 
     chain: {

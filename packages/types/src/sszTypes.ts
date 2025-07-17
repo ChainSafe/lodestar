@@ -4,13 +4,12 @@ import {ssz as altairSsz} from "./altair/index.js";
 import {ssz as bellatrixSsz} from "./bellatrix/index.js";
 import {ssz as capellaSsz} from "./capella/index.js";
 import {ssz as denebSsz} from "./deneb/index.js";
-import {ssz as electraSsz} from "./electra/index.js";
 import {ssz as eip7805Ssz} from "./eip7805/index.js";
+import {ssz as electraSsz} from "./electra/index.js";
 import {ssz as fuluSsz} from "./fulu/index.js";
 import {ssz as phase0Ssz} from "./phase0/index.js";
 
 export * from "./primitive/sszTypes.js";
-export {eip7805};
 
 /**
  * Index the ssz types that differ by fork
@@ -23,8 +22,25 @@ const typesByFork = {
   [ForkName.capella]: {...phase0Ssz, ...altairSsz, ...bellatrixSsz, ...capellaSsz},
   [ForkName.deneb]: {...phase0Ssz, ...altairSsz, ...bellatrixSsz, ...capellaSsz, ...denebSsz},
   [ForkName.electra]: {...phase0Ssz, ...altairSsz, ...bellatrixSsz, ...capellaSsz, ...denebSsz, ...electraSsz},
-  [ForkName.eip7805]: {...phase0Ssz, ...altairSsz, ...bellatrixSsz, ...capellaSsz, ...denebSsz, ...electraSsz, ...eip7805Ssz},
-  [ForkName.fulu]: {...phase0Ssz, ...altairSsz, ...bellatrixSsz, ...capellaSsz, ...denebSsz, ...electraSsz, ...eip7805Ssz, ...fuluSsz},
+  [ForkName.eip7805]: {
+    ...phase0Ssz,
+    ...altairSsz,
+    ...bellatrixSsz,
+    ...capellaSsz,
+    ...denebSsz,
+    ...electraSsz,
+    ...eip7805Ssz,
+  },
+  [ForkName.fulu]: {
+    ...phase0Ssz,
+    ...altairSsz,
+    ...bellatrixSsz,
+    ...capellaSsz,
+    ...denebSsz,
+    ...electraSsz,
+    ...eip7805Ssz,
+    ...fuluSsz,
+  },
 };
 
 // Export these types to ensure that each fork is a superset of the previous one (with overridden types obviously)
@@ -36,6 +52,7 @@ export const bellatrix = typesByFork[ForkName.bellatrix];
 export const capella = typesByFork[ForkName.capella];
 export const deneb = typesByFork[ForkName.deneb];
 export const electra = typesByFork[ForkName.electra];
+export const eip7805 = typesByFork[ForkName.eip7805];
 export const fulu = typesByFork[ForkName.fulu];
 
 /**

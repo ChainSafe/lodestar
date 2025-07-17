@@ -445,9 +445,10 @@ export class Network implements INetwork {
   }
 
   async publishInclusionList(inclusionList: eip7805.SignedInclusionList): Promise<number> {
-    const fork = this.config.getForkName(inclusionList.message.slot);
+    const epoch = computeEpochAtSlot(inclusionList.message.slot);
+    const boundary = this.config.getForkBoundaryAtEpoch(epoch);
     return this.publishGossip<GossipType.inclusion_list>(
-      {type: GossipType.inclusion_list, fork},
+      {type: GossipType.inclusion_list, boundary},
       inclusionList,
       {ignoreDuplicatePublishError: true} // TODO EIP-7805: Double check if we want to ignore duplicate error
     );

@@ -81,7 +81,7 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     seq: ForkSeq.fulu,
     epoch: config.FULU_FORK_EPOCH,
     version: config.FULU_FORK_VERSION,
-    prevVersion: config.EIP7805_FORK_EPOCH,
+    prevVersion: config.EIP7805_FORK_VERSION,
     prevForkName: ForkName.eip7805,
   };
 

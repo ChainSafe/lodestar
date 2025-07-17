@@ -1,6 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH, isForkPostElectra, isForkPostEip7805} from "@lodestar/params";
+import {ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH, isForkPostEip7805, isForkPostElectra} from "@lodestar/params";
 import {
   BeaconStateElectra,
   CachedBeaconStateAllForks,

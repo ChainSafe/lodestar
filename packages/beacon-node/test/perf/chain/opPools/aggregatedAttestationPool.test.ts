@@ -68,7 +68,7 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
 
           timeliness: false,
           isEip7805Enabled: false,
-        dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+          dataAvailabilityStatus: DataAvailabilityStatus.PreData,
         },
         originalState.slot
       );
@@ -94,7 +94,7 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
             executionStatus: ExecutionStatus.PreMerge,
             timeliness: false,
             isEip7805Enabled: false,
-          dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+            dataAvailabilityStatus: DataAvailabilityStatus.PreData,
           },
           slot
         );
