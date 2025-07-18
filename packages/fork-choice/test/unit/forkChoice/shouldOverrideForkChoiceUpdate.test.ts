@@ -174,14 +174,6 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
       expectReorg: false,
       expectedNotReorgedReason: NotReorgedReason.ParentBlockDistanceMoreThanOneSlot,
     },
-    // {
-    //   id: "No reorg if head block slot and current slot mismatch",
-    //   parentBlock: {...baseParentHeadBlock},
-    //   headBlock: {...baseHeadBlock},
-    //   expectReorg: false,
-    //   currentSlot: headSlot + 1,
-    //   expectedNotReorgedReason: NotReorgedReason.ReorgMoreThanOneSlot,
-    // },
   ];
 
   beforeEach(() => {
