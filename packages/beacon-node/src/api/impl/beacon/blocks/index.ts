@@ -299,11 +299,24 @@ export function getBeaconBlockApi({
     const source = ProducedBlockSource.builder;
     chain.logger.debug("Reconstructing  signedBlockOrContents", {slot, blockRoot, source});
 
-    const signedBlockOrContents = await reconstructBuilderBlockOrContents(fork, chain, {
-      data: signedBlindedBlock,
-      bytes: context?.sszBytes,
-    });
+    let signedBlockOrContents: SignedBeaconBlockOrContents | undefined = undefined;
 
+    if (isForkPostFulu(fork)) {
+      chain.logger.info("Submit blinded block to builder for publishing", {slot, blockRoot});
+      await delegateBlindedBlockToBuilder(chain, {
+        data: signedBlindedBlock,
+        bytes: context?.sszBytes,
+      });
+    } else {
+      // TODO: After fulu is live and all builders support sumitBlindedBlockV2, we can safely remove
+      // this code block and related functions
+      signedBlockOrContents = await reconstructBuilderBlockOrContents(chain, {
+        data: signedBlindedBlock,
+        bytes: context?.sszBytes,
+      });
+    }
+
+    // TODO: Remove this post-fulu after all builders support submitBlindedBlockV2
     if (signedBlockOrContents !== undefined) {
       // the full block is published by relay and it's possible that the block is already known to us
       // by gossip
@@ -312,9 +325,6 @@ export function getBeaconBlockApi({
       chain.logger.info("Publishing assembled block", {slot, blockRoot, source});
       return publishBlock({signedBlockOrContents}, {...context, sszBytes: null}, {...opts, ignoreIfKnown: true});
     }
-
-    // Skip publishing. This is an expected behaviour post-fulu
-    chain.logger.info("Skip publishing. Builder published the block on our behalf.");
   };
 
   return {
@@ -546,20 +556,25 @@ export function getBeaconBlockApi({
 }
 
 async function reconstructBuilderBlockOrContents(
-  fork: ForkName,
   chain: ApiModules["chain"],
   signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>
-): Promise<SignedBeaconBlockOrContents | void> {
+): Promise<SignedBeaconBlockOrContents> {
   const executionBuilder = chain.executionBuilder;
   if (!executionBuilder) {
     throw Error("executionBuilder required to publish SignedBlindedBeaconBlock");
   }
 
-  const res = await executionBuilder.submitBlindedBlock(fork, signedBlindedBlock);
+  const signedBlockOrContents = await executionBuilder.submitBlindedBlock(signedBlindedBlock);
+  return signedBlockOrContents;
+}
 
-  if (res === undefined && !isForkPostFulu(fork)) {
-    throw Error("executionBuilder returned empty response for submitBlindedBlock in pre-fulu fork");
+async function delegateBlindedBlockToBuilder(
+  chain: ApiModules["chain"],
+  signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>
+): Promise<void> {
+  const executionBuilder = chain.executionBuilder;
+  if (!executionBuilder) {
+    throw Error("executionBuilder required to publish SignedBlindedBeaconBlock to builder");
   }
-
-  return res;
+  await executionBuilder.submitBlindedBlockNoResponse(signedBlindedBlock);
 }

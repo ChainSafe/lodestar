@@ -181,30 +181,30 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
   }
 
   async submitBlindedBlock(
-    fork: ForkName,
     signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>
-  ): Promise<SignedBeaconBlockOrContents | void> {
-    if (!isForkPostFulu(fork)) {
-      const res = await this.api.submitBlindedBlock(
-        {signedBlindedBlock},
-        {retries: 2, requestWireFormat: this.sszSupported ? WireFormat.ssz : WireFormat.json}
-      );
-
-      const {executionPayload, blobsBundle} = parseExecutionPayloadAndBlobsBundle(res.value());
-
-      // for the sake of timely proposals we can skip matching the payload with payloadHeader
-      // if the roots (transactions, withdrawals) don't match, this will likely lead to a block with
-      // invalid signature, but there is no recourse to this anyway so lets just proceed and will
-      // probably need diagonis if this block turns out to be invalid because of some bug
-      //
-      const contents = blobsBundle ? {blobs: blobsBundle.blobs, kzgProofs: blobsBundle.proofs} : null;
-      return reconstructFullBlockOrContents(signedBlindedBlock.data, {executionPayload, contents});
-    }
-
-    const res = await this.api.submitBlindedBlockV2(
+  ): Promise<SignedBeaconBlockOrContents> {
+    const res = await this.api.submitBlindedBlock(
       {signedBlindedBlock},
       {retries: 2, requestWireFormat: this.sszSupported ? WireFormat.ssz : WireFormat.json}
     );
-    return res.value();
+
+    const {executionPayload, blobsBundle} = parseExecutionPayloadAndBlobsBundle(res.value());
+
+    // for the sake of timely proposals we can skip matching the payload with payloadHeader
+    // if the roots (transactions, withdrawals) don't match, this will likely lead to a block with
+    // invalid signature, but there is no recourse to this anyway so lets just proceed and will
+    // probably need diagonis if this block turns out to be invalid because of some bug
+    //
+    const contents = blobsBundle ? {blobs: blobsBundle.blobs, kzgProofs: blobsBundle.proofs} : null;
+    return reconstructFullBlockOrContents(signedBlindedBlock.data, {executionPayload, contents});
+  }
+
+  async submitBlindedBlockNoResponse(signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>): Promise<void> {
+    (
+      await this.api.submitBlindedBlockV2(
+        {signedBlindedBlock},
+        {retries: 2, requestWireFormat: this.sszSupported ? WireFormat.ssz : WireFormat.json}
+      )
+    ).assertOk();
   }
 }

@@ -44,7 +44,7 @@ export interface IExecutionBuilder {
     executionRequests?: electra.ExecutionRequests;
   }>;
   submitBlindedBlock(
-    fork: ForkName,
     signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>
-  ): Promise<SignedBeaconBlockOrContents | void>;
+  ): Promise<SignedBeaconBlockOrContents>;
+  submitBlindedBlockNoResponse(signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>): Promise<void>;
 }
