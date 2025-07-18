@@ -332,7 +332,7 @@ const forkChoiceTest =
                   currentSlot
                 );
                 if (result.shouldOverrideFcu === false) {
-                  logger.debug(`Not reorged reason ${result.reason} at step ${i}`);
+                  logger.debug(`Not override fcu reason ${result.reason} at step ${i}`);
                 }
                 expect({result: result.shouldOverrideFcu, validator_is_connected: true}).toEqualWithMessage(
                   step.checks.should_override_forkchoice_update,
