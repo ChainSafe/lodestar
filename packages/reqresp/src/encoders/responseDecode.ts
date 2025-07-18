@@ -147,7 +147,7 @@ export async function readContextBytes(
 
     case ContextBytesType.ForkDigest: {
       const forkDigest = await readContextBytesForkDigest(bufferedSource);
-      return contextBytes.forkDigestContext.forkDigest2ForkName(forkDigest);
+      return contextBytes.config.forkDigest2ForkBoundary(forkDigest).fork;
     }
   }
 }

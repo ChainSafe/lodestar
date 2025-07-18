@@ -1,6 +1,7 @@
 import {BeaconConfig} from "@lodestar/config";
 import {BLOBSIDECAR_FIXED_SIZE, GENESIS_SLOT} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
+import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Slot, deneb} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
@@ -85,7 +86,7 @@ export function* iterateBlobBytesFromWrapper(
     }
     yield {
       data: blobSideCarBytes,
-      boundary: {fork: chain.config.getForkName(blockSlot)},
+      boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(blockSlot)),
     };
   }
 }

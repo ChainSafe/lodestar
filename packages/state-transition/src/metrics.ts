@@ -1,4 +1,5 @@
 import {MetricsRegister} from "@lodestar/utils";
+import {ProposerRewardType} from "./block/types.js";
 import {EpochTransitionStep} from "./epoch/index.js";
 import {StateCloneSource, StateHashTreeRootSource} from "./stateTransition.js";
 import {CachedBeaconStateAllForks} from "./types.js";
@@ -111,6 +112,11 @@ export function getMetrics(register: MetricsRegister) {
     attestationsPerBlock: register.gauge({
       name: "lodestar_stfn_attestations_per_block_total",
       help: "Total count of attestations per block",
+    }),
+    proposerRewards: register.gauge<{type: ProposerRewardType}>({
+      name: "lodestar_stfn_proposer_rewards_total",
+      help: "Proposer reward by type per block",
+      labelNames: ["type"],
     }),
   };
 }

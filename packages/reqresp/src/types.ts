@@ -1,12 +1,10 @@
 import {PeerId} from "@libp2p/interface";
-import {BeaconConfig, ForkDigestContext} from "@lodestar/config";
+import {BeaconConfig, ForkBoundary} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {LodestarError} from "@lodestar/utils";
 import {RateLimiterQuota} from "./rate_limiter/rateLimiterGRCA.js";
 
 export const protocolPrefix = "/eth2/beacon_chain/req";
-
-export type SubscribeBoundary = {fork: ForkName};
 
 /**
  * Available request/response encoding strategies:
@@ -30,10 +28,10 @@ export type ResponseIncoming = {
 export type ResponseOutgoing = {
   data: Uint8Array;
   /**
-   * Reason why outgoing needs boundary but incoming only needs fork is because we can deserialize incoming data
-   * with only fork info, but for outgoing we also need to compute fork digest, which requires boundary.
+   * Reason why outgoing needs fork boundary but incoming only needs fork is because we can deserialize incoming data
+   * with only fork info, but for outgoing we also need to compute fork digest, which requires fork boundary.
    */
-  boundary: SubscribeBoundary;
+  boundary: ForkBoundary;
 };
 
 /**
@@ -135,7 +133,7 @@ export type HandlerTypeFromMessage<T> = T extends ProtocolGenerator ? ProtocolHa
 
 export type ContextBytesFactory =
   | {type: ContextBytesType.Empty}
-  | {type: ContextBytesType.ForkDigest; forkDigestContext: ForkDigestContext};
+  | {type: ContextBytesType.ForkDigest; config: BeaconConfig};
 
 export type ContextBytes = {type: ContextBytesType.Empty} | {type: ContextBytesType.ForkDigest; fork: ForkName};
 

@@ -3,7 +3,6 @@ import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {routes} from "@lodestar/api";
 import {SpecJson} from "@lodestar/config";
 import {LoggerNodeOpts} from "@lodestar/logger/node";
-import {ForkName} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
 import {phase0} from "@lodestar/types";
 import {PeerIdStr} from "../../util/peerId.js";
@@ -13,8 +12,6 @@ import {OutgoingRequestArgs} from "../reqresp/types.js";
 import {CommitteeSubscription} from "../subnets/interface.js";
 
 export type MultiaddrStr = string;
-/* Boundary of network subscription. We subscribe/unsubscribe during fork transition */
-export type SubscribeBoundary = {fork: ForkName};
 
 // Interface shared by main Network class, and all backends
 export interface INetworkCorePublic {
