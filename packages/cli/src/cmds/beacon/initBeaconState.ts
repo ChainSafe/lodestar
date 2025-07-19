@@ -191,11 +191,11 @@ export async function initBeaconState(
     // Validate genesis state root
     const stateRoot = toRootHex(anchorState.hashTreeRoot());
     const expectedRoot = getGenesisStateRoot(args.network || defaultNetwork);
-    if (expectedRoot && stateRoot !== expectedRoot) {
-      logger.error("Genesis state root mismatch", {
-        expected: expectedRoot,
-        found: stateRoot,
-      });
+    if (expectedRoot !== null && stateRoot !== expectedRoot) {
+      throw new Error(`Genesis state root mismatch, {
+        expected: ${expectedRoot},
+        found: ${stateRoot},
+      }`);
     }
     const config = createBeaconConfig(chainForkConfig, anchorState.genesisValidatorsRoot);
     const wssCheck = isWithinWeakSubjectivityPeriod(config, anchorState, getCheckpointFromState(anchorState));
