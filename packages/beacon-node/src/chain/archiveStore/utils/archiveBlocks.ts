@@ -1,3 +1,4 @@
+import path from "node:path";
 import {ChainForkConfig} from "@lodestar/config";
 import {KeyValue} from "@lodestar/db";
 import {IForkChoice} from "@lodestar/fork-choice";
@@ -7,6 +8,8 @@ import {Epoch, RootHex, Slot} from "@lodestar/types";
 import {Logger, fromHex, toRootHex} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/index.js";
 import {BlockArchiveBatchPutBinaryItem} from "../../../db/repositories/index.js";
+import {ensureDir, writeIfNotExist} from "../../../util/file.js";
+import {BlockRootHex} from "../../../util/sszBytes.js";
 import {LightClientServer} from "../../lightClient/index.js";
 
 // Process in chunks to avoid OOM
@@ -17,6 +20,23 @@ const BLOB_SIDECAR_BATCH_SIZE = 32;
 
 type BlockRootSlot = {slot: Slot; root: Uint8Array};
 type CheckpointHex = {epoch: Epoch; rootHex: RootHex};
+
+/**
+ * Persist orphaned block to disk
+ */
+async function persistOrphanedBlock(
+  slot: Slot,
+  blockRoot: BlockRootHex,
+  bytes: Uint8Array,
+  opts: {
+    persistOrphanedBlocksDir: string;
+  }
+) {
+  const dirpath = path.join(opts.persistOrphanedBlocksDir ?? "orphaned_blocks");
+  const filepath = path.join(dirpath, `${slot}_${blockRoot}.ssz`);
+  await ensureDir(dirpath);
+  await writeIfNotExist(filepath, bytes);
+}
 
 /**
  * Archives finalized blocks from active bucket to archive bucket.
@@ -35,7 +55,9 @@ export async function archiveBlocks(
   logger: Logger,
   finalizedCheckpoint: CheckpointHex,
   currentEpoch: Epoch,
-  archiveBlobEpochs?: number
+  archiveBlobEpochs?: number,
+  persistOrphanedBlocks?: boolean,
+  persistOrphanedBlocksDir?: string
 ): Promise<void> {
   // Use fork choice to determine the blocks to archive and delete
   // getAllAncestorBlocks response includes the finalized block, so it's also moved to the cold db
@@ -69,6 +91,25 @@ export async function archiveBlocks(
 
   const nonCanonicalBlockRoots = finalizedNonCanonicalBlocks.map((summary) => fromHex(summary.blockRoot));
   if (nonCanonicalBlockRoots.length > 0) {
+    if (persistOrphanedBlocks) {
+      // Persist orphaned blocks to disk before deleting them from hot db
+      await Promise.all(
+        nonCanonicalBlockRoots.map(async (root, index) => {
+          const block = finalizedNonCanonicalBlocks[index];
+          const blockBytes = await db.block.getBinary(root);
+          const logCtx = {slot: block.slot, root: block.blockRoot};
+          if (blockBytes) {
+            await persistOrphanedBlock(block.slot, block.blockRoot, blockBytes, {
+              persistOrphanedBlocksDir: persistOrphanedBlocksDir ?? "orphaned_blocks",
+            });
+            logger.verbose("Persisted orphaned block", logCtx);
+          } else {
+            logger.warn("Tried to persist orphaned block but no block found", logCtx);
+          }
+        })
+      );
+    }
+
     await db.block.batchDelete(nonCanonicalBlockRoots);
     logger.verbose("Deleted non canonical blocks from hot DB", {
       slots: finalizedNonCanonicalBlocks.map((summary) => summary.slot).join(","),

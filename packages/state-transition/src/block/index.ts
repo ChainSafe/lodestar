@@ -12,7 +12,7 @@ import {processOperations} from "./processOperations.js";
 import {processRandao} from "./processRandao.js";
 import {processSyncAggregate} from "./processSyncCommittee.js";
 import {processWithdrawals} from "./processWithdrawals.js";
-import {ProcessBlockOpts} from "./types.js";
+import {ProcessBlockOpts, ProposerRewardType} from "./types.js";
 
 // Spec tests
 export {
@@ -73,4 +73,9 @@ export function processBlock(
       throw Error("dataAvailabilityStatus.PreData");
     }
   }
+
+  const rewards = state.proposerRewards;
+  metrics?.proposerRewards.set({type: ProposerRewardType.attestation}, rewards.attestations);
+  metrics?.proposerRewards.set({type: ProposerRewardType.syncAggregate}, rewards.syncAggregate);
+  metrics?.proposerRewards.set({type: ProposerRewardType.slashing}, rewards.slashing);
 }

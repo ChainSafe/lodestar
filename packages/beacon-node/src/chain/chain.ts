@@ -808,11 +808,13 @@ export class BeaconChain implements IBeaconChain {
   getStatus(): phase0.Status {
     const head = this.forkChoice.getHead();
     const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
+    const boundary = this.config.getForkBoundaryAtEpoch(this.clock.currentEpoch);
     return {
       // fork_digest: The node's ForkDigest (compute_fork_digest(current_fork_version, genesis_validators_root)) where
       // - current_fork_version is the fork version at the node's current epoch defined by the wall-clock time (not necessarily the epoch to which the node is sync)
       // - genesis_validators_root is the static Root found in state.genesis_validators_root
-      forkDigest: this.config.forkName2ForkDigest(this.config.getForkName(this.clock.currentSlot)),
+      // - epoch of fork boundary is used to get blob parameters of current Blob Parameter Only (BPO) fork
+      forkDigest: this.config.forkBoundary2ForkDigest(boundary),
       // finalized_root: state.finalized_checkpoint.root for the state corresponding to the head block (Note this defaults to Root(b'\x00' * 32) for the genesis finalized checkpoint).
       finalizedRoot: finalizedCheckpoint.epoch === GENESIS_EPOCH ? ZERO_HASH : finalizedCheckpoint.root,
       finalizedEpoch: finalizedCheckpoint.epoch,

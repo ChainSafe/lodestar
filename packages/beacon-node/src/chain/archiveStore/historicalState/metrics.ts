@@ -1,6 +1,7 @@
 import {
   BeaconStateTransitionMetrics,
   EpochTransitionStep,
+  ProposerRewardType,
   StateCloneSource,
   StateHashTreeRootSource,
 } from "@lodestar/state-transition";
@@ -126,6 +127,11 @@ export function createHistoricalStateTransitionMetrics(
     attestationsPerBlock: metricsRegister.gauge({
       name: "lodestar_historical_state_stfn_attestations_per_block_total",
       help: "Count of attestations per block",
+    }),
+    proposerRewards: metricsRegister.gauge<{type: ProposerRewardType}>({
+      name: "lodestar_historical_state_stfn_proposer_rewards_total",
+      help: "Proposer reward by type per block",
+      labelNames: ["type"],
     }),
   };
 }

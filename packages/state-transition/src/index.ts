@@ -71,3 +71,5 @@ export {becomesNewEth1Data} from "./block/processEth1Data.js";
 export {getExpectedWithdrawals} from "./block/processWithdrawals.js";
 
 export {getAttestationParticipationStatus, processAttestationsAltair} from "./block/processAttestationsAltair.js";
+
+export {ProposerRewardType} from "./block/types.js";

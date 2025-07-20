@@ -62,6 +62,16 @@ If you observe any error in tests with matching to above error message, that imp
 
 If you observe following error running any of the test files that means you are running a file which itself or any dependency of that file imports `vitest`, but you are not running that file with `vitest` runner. Try running it with `yarn vitest` command, not with `node` command.
 
+**Error: Could not locate the bindings file.**
+
+If you observe the above error in running tests or the [beacon chain cli](https://github.com/ChainSafe/lodestar/issues/1396#issue-677613531), try removing `node_modules` and running `npm rebuild`:
+
+```sh
+rm -rf node_modules && npm rebuild
+```
+
+While `npm rebuild` is useful mostly during node version upgrades, it also [recompiles all your C++ addons](https://docs.npmjs.com/cli/v7/commands/npm-rebuild), which indirectly fixes our issue with bindings.
+
 ### Debugging Spec Tests
 
 - To fix errors always focus on passing all minimal tests first without running mainnet tests.

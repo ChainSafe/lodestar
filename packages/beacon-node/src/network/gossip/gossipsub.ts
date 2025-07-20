@@ -334,15 +334,25 @@ function attSubnetLabel(subnet: SubnetID): string {
 
 function getMetricsTopicStrToLabel(config: BeaconConfig, opts: {disableLightClientServer: boolean}): TopicStrToLabel {
   const metricsTopicStrToLabel = new Map<TopicStr, TopicLabel>();
+  const {forkBoundariesAscendingEpochOrder} = config;
 
-  for (const {name: fork} of config.forksAscendingEpochOrder) {
-    const topics = getCoreTopicsAtFork(config, fork, {
+  for (let i = 0; i < forkBoundariesAscendingEpochOrder.length; i++) {
+    const currentForkBoundary = forkBoundariesAscendingEpochOrder[i];
+    const nextForkBoundary = forkBoundariesAscendingEpochOrder[i + 1];
+
+    // Edge case: If multiple fork boundaries start at the same epoch, only consider the latest one
+    if (nextForkBoundary && currentForkBoundary.epoch === nextForkBoundary.epoch) {
+      continue;
+    }
+
+    const topics = getCoreTopicsAtFork(config, currentForkBoundary.fork, {
       subscribeAllSubnets: true,
       disableLightClientServer: opts.disableLightClientServer,
     });
     for (const topic of topics) {
-      metricsTopicStrToLabel.set(stringifyGossipTopic(config, {...topic, boundary: {fork}}), topic.type);
+      metricsTopicStrToLabel.set(stringifyGossipTopic(config, {...topic, boundary: currentForkBoundary}), topic.type);
     }
   }
+
   return metricsTopicStrToLabel;
 }

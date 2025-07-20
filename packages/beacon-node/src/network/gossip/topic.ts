@@ -49,7 +49,7 @@ export class GossipTopicCache implements IGossipTopicCache {
  * Stringify a GossipTopic into a spec-ed formated topic string
  */
 export function stringifyGossipTopic(forkDigestContext: ForkDigestContext, topic: GossipTopic): string {
-  const forkDigestHexNoPrefix = forkDigestContext.forkName2ForkDigestHex(topic.boundary.fork);
+  const forkDigestHexNoPrefix = forkDigestContext.forkBoundary2ForkDigestHex(topic.boundary);
   const topicType = stringifyGossipTopicType(topic);
   const encoding = topic.encoding ?? DEFAULT_ENCODING;
   return `/eth2/${forkDigestHexNoPrefix}/${topicType}/${encoding}`;
@@ -172,7 +172,7 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
 
     const [, forkDigestHexNoPrefix, gossipTypeStr, encodingStr] = matches;
 
-    const fork = forkDigestContext.forkDigest2ForkName(forkDigestHexNoPrefix);
+    const boundary = forkDigestContext.forkDigest2ForkBoundary(forkDigestHexNoPrefix);
     const encoding = parseEncodingStr(encodingStr);
 
     // Inline-d the parseGossipTopicType() function since spreading the resulting object x4 the time to parse a topicStr
@@ -186,7 +186,7 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
       case GossipType.light_client_finality_update:
       case GossipType.light_client_optimistic_update:
       case GossipType.bls_to_execution_change:
-        return {type: gossipTypeStr, boundary: {fork}, encoding};
+        return {type: gossipTypeStr, boundary, encoding};
     }
 
     for (const gossipType of [GossipType.beacon_attestation as const, GossipType.sync_committee as const]) {
@@ -194,7 +194,7 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
         const subnetStr = gossipTypeStr.slice(gossipType.length + 1); // +1 for '_' concatenating the topic name and the subnet
         const subnet = parseInt(subnetStr, 10);
         if (Number.isNaN(subnet)) throw Error(`Subnet ${subnetStr} is not a number`);
-        return {type: gossipType, subnet, boundary: {fork}, encoding};
+        return {type: gossipType, subnet, boundary, encoding};
       }
     }
 
@@ -202,7 +202,7 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
       const subnetStr = gossipTypeStr.slice(GossipType.blob_sidecar.length + 1); // +1 for '_' concatenating the topic name and the subnet
       const subnet = parseInt(subnetStr, 10);
       if (Number.isNaN(subnet)) throw Error(`subnet ${subnetStr} is not a number`);
-      return {type: GossipType.blob_sidecar, subnet, boundary: {fork}, encoding};
+      return {type: GossipType.blob_sidecar, subnet, boundary, encoding};
     }
 
     throw Error(`Unknown gossip type ${gossipTypeStr}`);

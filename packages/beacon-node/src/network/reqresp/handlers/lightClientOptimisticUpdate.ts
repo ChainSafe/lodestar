@@ -1,4 +1,5 @@
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
+import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {IBeaconChain} from "../../../chain/index.js";
 import {assertLightClientServer} from "../../../node/utils/lightclient.js";
 import {ReqRespMethod, responseSszTypeByMethod} from "../types.js";
@@ -11,10 +12,10 @@ export async function* onLightClientOptimisticUpdate(chain: IBeaconChain): Async
     throw new ResponseError(RespStatus.RESOURCE_UNAVAILABLE, "No latest optimistic update available");
   }
 
-  const fork = chain.config.getForkName(update.signatureSlot);
-  const type = responseSszTypeByMethod[ReqRespMethod.LightClientOptimisticUpdate](fork, 0);
+  const boundary = chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(update.signatureSlot));
+  const type = responseSszTypeByMethod[ReqRespMethod.LightClientOptimisticUpdate](boundary.fork, 0);
   yield {
     data: type.serialize(update),
-    boundary: {fork},
+    boundary,
   };
 }
