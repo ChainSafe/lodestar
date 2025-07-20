@@ -349,6 +349,8 @@ export async function importBlock(
         if (!result.shouldOverrideFcu) {
           notOverrideFcuReason = result.reason;
         }
+      } else {
+        notOverrideFcuReason = NotReorgedReason.NotProposerOfNextSlot;
       }
     } catch (e) {
       if (isStartSlotOfEpoch(proposalSlot)) {
