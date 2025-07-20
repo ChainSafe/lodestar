@@ -102,7 +102,7 @@ export enum AttestationErrorCode {
    */
   INVALID_TARGET_ROOT = "ATTESTATION_ERROR_INVALID_TARGET_ROOT",
   /**
-   * The The attestation target block is not an ancestor of the block named in the LMD vote.
+   * The attestation target block is not an ancestor of the block named in the LMD vote.
    */
   TARGET_BLOCK_NOT_AN_ANCESTOR_OF_LMD_BLOCK = "ATTESTATION_ERROR_TARGET_BLOCK_NOT_AN_ANCESTOR_OF_LMD_BLOCK",
   /**
