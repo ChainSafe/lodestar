@@ -1,7 +1,9 @@
 import {ForkSeq, MIN_SEED_LOOKAHEAD} from "@lodestar/params";
 import {ValidatorIndex} from "@lodestar/types";
 import {CachedBeaconStateElectra} from "../types.js";
+import {computeEpochShuffling} from "./epochShuffling.js";
 import {computeProposerIndices} from "./seed.js";
+import {getActiveValidatorIndices} from "./validator.js";
 
 /**
  * Return the proposer indices for the full available lookahead starting from current epoch.
@@ -14,7 +16,12 @@ export function initializeProposerLookahead(state: CachedBeaconStateElectra): Va
 
   for (let i = 0; i < MIN_SEED_LOOKAHEAD + 1; i++) {
     const epoch = currentEpoch + i;
-    const shuffling = state.epochCtx.getShufflingAtEpoch(epoch);
+
+    const shuffling =
+      state.epochCtx.getShufflingAtEpochOrNull(epoch) ??
+      // Shuffling might not be available for next epoch
+      computeEpochShuffling(state, getActiveValidatorIndices(state, epoch), epoch);
+
     lookahead.push(...computeProposerIndices(ForkSeq.fulu, state, shuffling, epoch));
   }
 
