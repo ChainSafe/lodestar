@@ -55,6 +55,7 @@ export enum DiscoveredPeerStatus {
   cached = "cached",
   dropped = "dropped",
   no_multiaddrs = "no_multiaddrs",
+  peer_cooling_down = "peer_cooling_down",
 }
 
 export enum NotDialReason {
@@ -389,6 +390,10 @@ export class PeerDiscovery {
         addedUnixMs: Date.now(),
       };
 
+      if (this.isPeerCoolingDown(cachedPeer)) {
+        return DiscoveredPeerStatus.peer_cooling_down;
+      }
+
       // Only dial peer if necessary
       if (this.shouldDialPeer(cachedPeer)) {
         void this.dialPeer(cachedPeer);
@@ -412,9 +417,6 @@ export class PeerDiscovery {
   }
 
   private shouldDialPeer(peer: CachedENR): boolean {
-    if (this.isPeerCoolingDown(peer)) {
-      return false;
-    }
     for (const type of [SubnetType.attnets, SubnetType.syncnets]) {
       for (const [subnet, {toUnixMs, peersToConnect}] of this.subnetRequests[type].entries()) {
         if (toUnixMs < Date.now() || peersToConnect === 0) {
