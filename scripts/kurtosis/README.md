@@ -56,20 +56,6 @@ kurtosis enclave inspect lodestar-testnet | grep RUNNING
 
 **Note:** The `start` command automatically builds a fresh Docker image from your local Lodestar code before starting the testnet.
 
-## Configuration File
-
-### lodestar.yaml
-
-Default configuration for running a Lodestar testnet with:
-- 2 Geth execution nodes
-- 4 Lodestar consensus nodes (using locally built image)
-- 32 validators per node
-- Prometheus and Grafana monitoring
-
-The configuration uses `lodestar:local` which is automatically built from your local code when you run `./run.sh start`.
-
-You can create custom configurations by copying and modifying this file.
-
 ## Advanced Usage
 
 ### Custom Configuration
