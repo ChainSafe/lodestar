@@ -1,4 +1,4 @@
-import {ForkName, ForkPostBellatrix} from "@lodestar/params";
+import {ForkPostBellatrix} from "@lodestar/params";
 import {
   BLSPubkey,
   Epoch,
