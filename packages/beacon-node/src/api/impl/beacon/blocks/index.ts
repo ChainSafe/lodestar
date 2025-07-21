@@ -302,11 +302,11 @@ export function getBeaconBlockApi({
     let signedBlockOrContents: SignedBeaconBlockOrContents | undefined = undefined;
 
     if (isForkPostFulu(fork)) {
-      chain.logger.info("Submit blinded block to builder for publishing", {slot, blockRoot});
       await delegateBlindedBlockToBuilder(chain, {
         data: signedBlindedBlock,
         bytes: context?.sszBytes,
       });
+      chain.logger.info("Submitted blinded block to builder for publishing", {slot, blockRoot});
     } else {
       // TODO: After fulu is live and all builders support sumitBlindedBlockV2, we can safely remove
       // this code block and related functions
@@ -574,7 +574,7 @@ async function delegateBlindedBlockToBuilder(
 ): Promise<void> {
   const executionBuilder = chain.executionBuilder;
   if (!executionBuilder) {
-    throw Error("executionBuilder required to publish SignedBlindedBeaconBlock to builder");
+    throw Error("executionBuilder required to submit SignedBlindedBeaconBlock to builder");
   }
   await executionBuilder.submitBlindedBlockNoResponse(signedBlindedBlock);
 }
