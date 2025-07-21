@@ -5,6 +5,10 @@ type LayersTest = {
   title: string;
   slot: Slot;
   path: Slot[];
+  blockReplay?: {
+    fromSlot?: Slot;
+    tillSlot?: Slot;
+  };
 };
 
 export const mixEpochLayers = "1,2,3,5";
@@ -138,21 +142,37 @@ export const mixEpochLayersData: LayersTest[] = [
     title: "edge case: mid-slot within epoch first and second layer",
     slot: computeStartSlotAtEpoch(2) + 15,
     path: [computeStartSlotAtEpoch(0), computeStartSlotAtEpoch(2)],
+    blockReplay: {
+      fromSlot: computeStartSlotAtEpoch(2) + 1,
+      tillSlot: computeStartSlotAtEpoch(2) + 15,
+    },
   },
   {
     title: "edge case: last slot of epoch 4 (twice diff slot at layer 2)",
     slot: computeStartSlotAtEpoch(5) - 1,
     path: [computeStartSlotAtEpoch(0), computeStartSlotAtEpoch(3), computeStartSlotAtEpoch(4)],
+    blockReplay: {
+      fromSlot: computeStartSlotAtEpoch(4) + 1,
+      tillSlot: computeStartSlotAtEpoch(5) - 1,
+    },
   },
   {
     title: "edge case: mid-slot within epoch 7 (boundary of layer 3 and layer 1)",
     slot: computeStartSlotAtEpoch(7) + 10,
     path: [computeStartSlotAtEpoch(5), computeStartSlotAtEpoch(6), computeStartSlotAtEpoch(7)],
+    blockReplay: {
+      fromSlot: computeStartSlotAtEpoch(7) + 1,
+      tillSlot: computeStartSlotAtEpoch(7) + 10,
+    },
   },
   {
     title: "edge case: just before snapshot at epoch 10",
     slot: computeStartSlotAtEpoch(10) - 1,
     path: [computeStartSlotAtEpoch(5), computeStartSlotAtEpoch(9)],
+    blockReplay: {
+      fromSlot: computeStartSlotAtEpoch(9) + 1,
+      tillSlot: computeStartSlotAtEpoch(10) - 1,
+    },
   },
   {
     title: "edge case: large epoch beyond multiple snapshots",
@@ -164,11 +184,15 @@ export const mixEpochLayersData: LayersTest[] = [
 export const overlappingLayers = "1,3,5,7";
 export const overlappingLayersData: LayersTest[] = [
   {title: "genesis slot", slot: 0, path: [0]},
-  {title: "slot after genesis slot", slot: 5, path: [0]},
+  {title: "slot after genesis slot", slot: 5, path: [0], blockReplay: {fromSlot: 1, tillSlot: 5}},
   {
     title: "slot before the epoch 1",
     slot: computeStartSlotAtEpoch(1) - 1,
     path: [0],
+    blockReplay: {
+      fromSlot: 1,
+      tillSlot: computeStartSlotAtEpoch(1) - 1,
+    },
   },
   {
     title: "slot at epoch 1",
@@ -179,11 +203,19 @@ export const overlappingLayersData: LayersTest[] = [
     title: "slot after epoch 1",
     slot: computeStartSlotAtEpoch(1) + 1,
     path: [0, computeStartSlotAtEpoch(1)],
+    blockReplay: {
+      fromSlot: computeStartSlotAtEpoch(1) + 1,
+      tillSlot: computeStartSlotAtEpoch(1) + 1,
+    },
   },
   {
     title: "slot before epoch 2",
     slot: computeStartSlotAtEpoch(2) - 1,
     path: [0, computeStartSlotAtEpoch(1)],
+    blockReplay: {
+      fromSlot: computeStartSlotAtEpoch(1) + 1,
+      tillSlot: computeStartSlotAtEpoch(2) - 1,
+    },
   },
   {
     title: "slot at epoch 2",
@@ -194,11 +226,19 @@ export const overlappingLayersData: LayersTest[] = [
     title: "slot after epoch 2",
     slot: computeStartSlotAtEpoch(2) + 1,
     path: [0, computeStartSlotAtEpoch(2)],
+    blockReplay: {
+      fromSlot: computeStartSlotAtEpoch(2) + 1,
+      tillSlot: computeStartSlotAtEpoch(2) + 1,
+    },
   },
   {
     title: "slot before epoch 3",
     slot: computeStartSlotAtEpoch(3) - 1,
     path: [0, computeStartSlotAtEpoch(2)],
+    blockReplay: {
+      fromSlot: computeStartSlotAtEpoch(2) + 1,
+      tillSlot: computeStartSlotAtEpoch(3) - 1,
+    },
   },
   {
     title: "slot at epoch 3",
@@ -209,12 +249,20 @@ export const overlappingLayersData: LayersTest[] = [
     title: "slot after epoch 3",
     slot: computeStartSlotAtEpoch(3) + 1,
     path: [0, computeStartSlotAtEpoch(3)],
+    blockReplay: {
+      fromSlot: computeStartSlotAtEpoch(3) + 1,
+      tillSlot: computeStartSlotAtEpoch(3) + 1,
+    },
   },
   // Snapshot epoch
   {
     title: "slot before epoch 7",
     slot: computeStartSlotAtEpoch(7) - 1,
     path: [0, computeStartSlotAtEpoch(5), computeStartSlotAtEpoch(6)],
+    blockReplay: {
+      fromSlot: computeStartSlotAtEpoch(6) + 1,
+      tillSlot: computeStartSlotAtEpoch(7) - 1,
+    },
   },
   {
     title: "slot at epoch 7",
@@ -225,12 +273,20 @@ export const overlappingLayersData: LayersTest[] = [
     title: "slot after epoch 7",
     slot: computeStartSlotAtEpoch(7) + 1,
     path: [computeStartSlotAtEpoch(7)],
+    blockReplay: {
+      fromSlot: computeStartSlotAtEpoch(7) + 1,
+      tillSlot: computeStartSlotAtEpoch(7) + 1,
+    },
   },
   // An epoch after first snapshot
   {
     title: "slot before epoch 8",
     slot: computeStartSlotAtEpoch(8) - 1,
     path: [computeStartSlotAtEpoch(7)],
+    blockReplay: {
+      fromSlot: computeStartSlotAtEpoch(7) + 1,
+      tillSlot: computeStartSlotAtEpoch(8) - 1,
+    },
   },
   {
     title: "slot at epoch 8",
@@ -241,17 +297,25 @@ export const overlappingLayersData: LayersTest[] = [
     title: "slot after epoch 8",
     slot: computeStartSlotAtEpoch(8) + 1,
     path: [computeStartSlotAtEpoch(7), computeStartSlotAtEpoch(8)],
+    blockReplay: {
+      fromSlot: computeStartSlotAtEpoch(8) + 1,
+      tillSlot: computeStartSlotAtEpoch(8) + 1,
+    },
   },
 ];
 
 export const nonOverlappingLayers = "3,5,7";
 export const nonOverlappingLayersData: LayersTest[] = [
   {title: "genesis slot", slot: 0, path: [0]},
-  {title: "slot after genesis slot", slot: 5, path: [0]},
+  {title: "slot after genesis slot", slot: 5, path: [0], blockReplay: {fromSlot: 1, tillSlot: 5}},
   {
     title: "one slot before first diff layer",
     slot: computeStartSlotAtEpoch(3) - 1,
     path: [0],
+    blockReplay: {
+      fromSlot: 1,
+      tillSlot: computeStartSlotAtEpoch(3) - 1,
+    },
   },
   {
     title: "at slot of first diff layer",
@@ -262,11 +326,19 @@ export const nonOverlappingLayersData: LayersTest[] = [
     title: "after slot of first diff layer",
     slot: computeStartSlotAtEpoch(3) + 1,
     path: [0, computeStartSlotAtEpoch(3)],
+    blockReplay: {
+      fromSlot: computeStartSlotAtEpoch(3) + 1,
+      tillSlot: computeStartSlotAtEpoch(3) + 1,
+    },
   },
   {
     title: "one slot before second diff layer",
     slot: computeStartSlotAtEpoch(5) - 1,
     path: [0, computeStartSlotAtEpoch(3)],
+    blockReplay: {
+      fromSlot: computeStartSlotAtEpoch(3) + 1,
+      tillSlot: computeStartSlotAtEpoch(5) - 1,
+    },
   },
   {
     title: "at slot of second diff layer",
@@ -277,11 +349,19 @@ export const nonOverlappingLayersData: LayersTest[] = [
     title: "after slot of second diff layer",
     slot: computeStartSlotAtEpoch(5) + 1,
     path: [0, computeStartSlotAtEpoch(5)],
+    blockReplay: {
+      fromSlot: computeStartSlotAtEpoch(5) + 1,
+      tillSlot: computeStartSlotAtEpoch(5) + 1,
+    },
   },
   {
     title: "one slot before first snapshot",
     slot: computeStartSlotAtEpoch(7) - 1,
     path: [0, computeStartSlotAtEpoch(5), computeStartSlotAtEpoch(6)],
+    blockReplay: {
+      fromSlot: computeStartSlotAtEpoch(6) + 1,
+      tillSlot: computeStartSlotAtEpoch(7) - 1,
+    },
   },
   {
     title: "at slot of second diff layer",
@@ -292,6 +372,10 @@ export const nonOverlappingLayersData: LayersTest[] = [
     title: "after slot of second diff layer",
     slot: computeStartSlotAtEpoch(7) + 1,
     path: [computeStartSlotAtEpoch(7)],
+    blockReplay: {
+      fromSlot: computeStartSlotAtEpoch(7) + 1,
+      tillSlot: computeStartSlotAtEpoch(7) + 1,
+    },
   },
   {
     title: "at start of the 12 epoch",
