@@ -48,7 +48,11 @@ export class FetchError extends Error {
       super(`Request to ${url.toString()} timed out`);
       this.type = "timeout";
       this.code = "ERR_TIMEOUT";
-    } else if (isBunError(e) && e.code === "ConnectionRefused") {
+    }
+    // There are few incompatibilities related to `fetch` with NodeJS
+    // So we have to wrap those cases here explicitly
+    // https://github.com/oven-sh/bun/issues/20486
+    else if (isBunError(e) && e.code === "ConnectionRefused") {
       super("TypeError: fetch failed");
       this.type = "failed";
       this.code = "ENOTFOUND";
