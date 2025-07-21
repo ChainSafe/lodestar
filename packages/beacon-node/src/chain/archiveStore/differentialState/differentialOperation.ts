@@ -87,7 +87,11 @@ export async function processDifferentialOperation(
   );
 
   if (stateWithDiffApplied.stateBytes.byteLength === 0 || stateWithDiffApplied.balancesBytes.byteLength === 0) {
-    throw new Error("Some error during applying diffs");
+    throw new Error(
+      `Invalid state after applying diffs: 
+      stateBytesSize=${stateWithDiffApplied.stateBytes.byteLength},
+      balancesBytesSize=${stateWithDiffApplied.balancesBytes.byteLength}`
+    );
   }
 
   // There is no blocks to replay
@@ -98,7 +102,7 @@ export async function processDifferentialOperation(
   // 4. Replay blocks
   const stateWithBlockReplay = await replayBlocks(modules, {
     toSlot: blockReplay.tillSlot,
-    slot: lastDiffSlot,
+    fromSlot: lastDiffSlot,
     stateBytes,
   });
 
