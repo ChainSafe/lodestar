@@ -297,17 +297,17 @@ export function getBeaconBlockApi({
     }
 
     const source = ProducedBlockSource.builder;
-    chain.logger.debug("Reconstructing  signedBlockOrContents", {slot, blockRoot, source});
 
     let signedBlockOrContents: SignedBeaconBlockOrContents | undefined = undefined;
 
     if (isForkPostFulu(fork)) {
-      await delegateBlindedBlockToBuilder(chain, {
+      await submitBlindedBlockToBuilder(chain, {
         data: signedBlindedBlock,
         bytes: context?.sszBytes,
       });
       chain.logger.info("Submitted blinded block to builder for publishing", {slot, blockRoot});
     } else {
+      chain.logger.debug("Reconstructing  signedBlockOrContents", {slot, blockRoot, source});
       // TODO: After fulu is live and all builders support sumitBlindedBlockV2, we can safely remove
       // this code block and related functions
       signedBlockOrContents = await reconstructBuilderBlockOrContents(chain, {
@@ -568,7 +568,7 @@ async function reconstructBuilderBlockOrContents(
   return signedBlockOrContents;
 }
 
-async function delegateBlindedBlockToBuilder(
+async function submitBlindedBlockToBuilder(
   chain: ApiModules["chain"],
   signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>
 ): Promise<void> {
