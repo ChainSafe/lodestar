@@ -1,5 +1,6 @@
 import {PeerId} from "@libp2p/interface";
 import {MapDef, pruneSetToMax} from "@lodestar/utils";
+import {GoodByeReasonCode} from "../../../constants/network.js";
 import {PeerIdStr} from "../../../util/peerId.js";
 import {NetworkCoreMetrics} from "../../core/metrics.js";
 import {DEFAULT_SCORE, MAX_ENTRIES, MAX_SCORE, MIN_SCORE, SCORE_THRESHOLD} from "./constants.js";
@@ -59,11 +60,9 @@ export class PeerRpcScoreStore implements IPeerRpcScoreStore {
    * banning period and updates gossip score to -1 so next update removes the negative
    * score
    */
-  applyReconnectionCoolDown(peer: PeerId, timeInMin: number): void {
-    const peerScore = this.scores.get(peer);
-    if (peerScore) {
-      peerScore.applyReconnectionCoolDown(timeInMin);
-    }
+  applyReconnectionCoolDown(peer: PeerId, reason: GoodByeReasonCode): number {
+    const peerScore = this.scores.getOrDefault(peer.toString());
+    return peerScore.applyReconnectionCoolDown(reason);
   }
 
   update(): void {

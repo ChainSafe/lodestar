@@ -666,9 +666,11 @@ export class PeerManager {
       status,
     };
     if (direction === "inbound") {
-      const coolDownMin = 60;
       // prevent automatic/immediate reconnects
-      this.peerRpcScores.applyReconnectionCoolDown(remotePeer, coolDownMin);
+      const coolDownMin = this.peerRpcScores.applyReconnectionCoolDown(
+        remotePeer,
+        GoodByeReasonCode.INBOUND_DISCONNECT_NO_GOODBYE
+      );
       logMessage += ". Enforcing a reconnection cool-down period";
       logContext.coolDownMin = coolDownMin;
     }
@@ -709,10 +711,11 @@ export class PeerManager {
       this.logger.verbose("Failed to send goodbye", {peer: prettyPrintPeerId(peer)}, e as Error);
     } finally {
       await this.disconnect(peer);
-      if (goodbye !== GoodByeReasonCode.TOO_MANY_PEERS) {
-        const coolDownMin = 60;
-        // prevent automatic/immediate reconnects
-        this.peerRpcScores.applyReconnectionCoolDown(peer, coolDownMin);
+      // prevent automatic/immediate reconnects
+      const coolDownMin = this.peerRpcScores.applyReconnectionCoolDown(peer, goodbye);
+      if (coolDownMin === -1) {
+        this.logger.verbose("Disconnected a peer", {peerId: prettyPrintPeerIdStr(peerIdStr)});
+      } else {
         this.logger.verbose("Disconnected a peer. Enforcing a reconnection cool-down period", {
           peerId: prettyPrintPeerIdStr(peerIdStr),
           coolDownMin,

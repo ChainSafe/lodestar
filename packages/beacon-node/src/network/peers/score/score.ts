@@ -1,3 +1,4 @@
+import {GoodByeReasonCode} from "../../../constants/network.js";
 import {
   BANNED_BEFORE_DECAY_MS,
   DEFAULT_SCORE,
@@ -46,9 +47,26 @@ export class RealScore implements IPeerScore {
     this.setLodestarScore(newScore);
   }
 
-  applyReconnectionCoolDown(timeInMin: number): void {
+  applyReconnectionCoolDown(reason: GoodByeReasonCode): number {
+    let coolDownMin = -1;
+    switch (reason) {
+      // let scoring system handle score decay by itself
+      case GoodByeReasonCode.BANNED:
+      case GoodByeReasonCode.ERROR:
+        return coolDownMin;
+      case GoodByeReasonCode.INBOUND_DISCONNECT_NO_GOODBYE:
+      case GoodByeReasonCode.TOO_MANY_PEERS:
+        coolDownMin = 5;
+        break;
+      case GoodByeReasonCode.IRRELEVANT_NETWORK:
+        coolDownMin = 120;
+        break;
+      case GoodByeReasonCode.CLIENT_SHUTDOWN:
+      case GoodByeReasonCode.SCORE_TOO_LOW:
+    }
     // set banning period to time in ms in the future from now
-    this.lastUpdate = Date.now() + timeInMin * 60 * 1000;
+    this.lastUpdate = Date.now() + coolDownMin * 60 * 1000;
+    return coolDownMin;
   }
 
   /**
