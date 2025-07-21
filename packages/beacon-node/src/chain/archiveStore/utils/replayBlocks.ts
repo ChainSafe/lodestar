@@ -1,7 +1,6 @@
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {BeaconConfig} from "@lodestar/config";
 import {
-  BeaconStateAllForks,
   CachedBeaconStateAllForks,
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
@@ -11,20 +10,7 @@ import {
 import {Slot} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/index.js";
-
-/**
- * Populate a PubkeyIndexMap with any new entries based on a BeaconState
- */
-export function syncPubkeyCache(state: BeaconStateAllForks, pubkey2index: PubkeyIndexMap): void {
-  // Get the validators sub tree once for all the loop
-  const validators = state.validators;
-
-  const newCount = state.validators.length;
-  for (let i = pubkey2index.size; i < newCount; i++) {
-    const pubkey = validators.getReadonly(i).pubkey;
-    pubkey2index.set(pubkey, i);
-  }
-}
+import {syncPubkeyCache} from "../historicalState/getHistoricalState.js";
 
 /**
  * Get and regenerate a historical state
@@ -37,19 +23,15 @@ export async function replayBlocks(
   },
   {
     toSlot,
-    slot,
+    fromSlot,
     stateBytes,
   }: {
     toSlot: Slot;
     stateBytes: Uint8Array;
-    slot: Slot;
+    fromSlot: Slot;
   }
 ): Promise<Uint8Array> {
   const {config, db, pubkey2index} = modules;
-
-  if (slot + 1 !== toSlot) {
-    throw new Error(`Invalid full state slot to regen historical sate. expected=${toSlot - 1} actual=${slot}`);
-  }
 
   let state = config.getForkTypes(toSlot).BeaconState.deserializeToViewDU(stateBytes);
   syncPubkeyCache(state, pubkey2index);
@@ -69,7 +51,7 @@ export async function replayBlocks(
   // biome-ignore lint/correctness/noUnusedVariables: <explanation>
   let blockCount = 0;
 
-  for await (const block of db.blockArchive.valuesStream({gt: slot, lte: toSlot})) {
+  for await (const block of db.blockArchive.valuesStream({gt: fromSlot, lte: toSlot})) {
     try {
       state = stateTransition(state as CachedBeaconStateAllForks, block, {
         verifyProposer: false,

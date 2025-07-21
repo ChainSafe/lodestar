@@ -6,9 +6,7 @@ import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 export class BeaconStateSnapshotArchiveRepository extends Repository<Slot, BeaconStateSnapshot> {
   constructor(config: ChainForkConfig, db: Db) {
-    // Pick some type but won't be used. Casted to any because no type can match `BeaconStateAllForks`
-    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-    const type = BeaconStateSnapshotType as any;
+    const type = BeaconStateSnapshotType;
     const bucket = Bucket.allForks_beaconStateSnapshotArchive;
     super(config, db, bucket, type, getBucketNameByValue(bucket));
   }

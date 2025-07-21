@@ -80,7 +80,7 @@ export async function getStateSnapshot(
   // There is a possibility that node is started with checkpoint and initial snapshot
   // is not persisted on expected slot
   const lastSnapshotSlot = await db.beaconStateSnapshotArchive.lastKey();
-  if (lastSnapshotSlot && lastSnapshotSlot !== slot) {
+  if (lastSnapshotSlot && lastSnapshotSlot < slot) {
     return getStateSnapshot(modules, {slot: lastSnapshotSlot, fallback});
   }
 

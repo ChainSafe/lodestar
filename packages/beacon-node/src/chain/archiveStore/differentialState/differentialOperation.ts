@@ -10,14 +10,14 @@ import {BeaconStateSnapshot} from "./ssz.js";
 import {getStateDifferentials, replayStateDifferentials} from "./stateDifferential.js";
 import {beaconStateBytesToSnapshot, getStateSnapshot, snapshotToBeaconStateBytes} from "./stateSnapshot.js";
 
-interface DifferentialStateOperation {
+type DifferentialStateOperation = {
   snapshotSlot: Slot;
   diffSlots: Slot[];
   blockReplay?: {
     fromSlot: Slot;
     tillSlot: Slot;
   };
-}
+};
 
 export async function processDifferentialOperation(
   modules: {
@@ -86,11 +86,7 @@ export async function processDifferentialOperation(
     {stateDifferentials: nonEmptyDiffs, stateSnapshot}
   );
 
-  if (
-    !stateWithDiffApplied ||
-    stateWithDiffApplied.stateBytes.byteLength === 0 ||
-    stateWithDiffApplied.balancesBytes.byteLength === 0
-  ) {
+  if (stateWithDiffApplied.stateBytes.byteLength === 0 || stateWithDiffApplied.balancesBytes.byteLength === 0) {
     throw new Error("Some error during applying diffs");
   }
 

@@ -43,20 +43,32 @@ export function applyStateDifferential(
 ): BeaconStateSnapshot {
   const {codec, logger} = modules;
 
-  logger?.verbose("Applying state differential", {
-    slot: diff.slot,
+  if (diff.baseSlot !== base.slot) {
+    throw new Error(`Base slot mismatch when applying differential: expected ${diff.baseSlot}, got ${base.slot}`);
+  }
+
+  const logInfo = {
+    baseSlot: base.slot,
+    diffSlot: diff.slot,
     baseStateSize: formatBytes(base.stateBytes.byteLength + base.balancesBytes.byteLength),
     diffSize: formatBytes(diff.stateDiffBytes.byteLength + diff.balancesDiffBytes.byteLength),
-  });
-
-  const stateBytes = codec.apply(base.stateBytes, diff.stateDiffBytes);
-  const balancesBytes = codec.apply(base.balancesBytes, diff.balancesDiffBytes);
-
-  return {
-    slot: diff.slot,
-    stateBytes,
-    balancesBytes,
   };
+
+  logger?.verbose("Applying state differential", logInfo);
+
+  try {
+    const stateBytes = codec.apply(base.stateBytes, diff.stateDiffBytes);
+    const balancesBytes = codec.apply(base.balancesBytes, diff.balancesDiffBytes);
+
+    return {
+      slot: diff.slot,
+      stateBytes,
+      balancesBytes,
+    };
+  } catch (error) {
+    logger?.error("Failed to apply state differential", logInfo);
+    throw error;
+  }
 }
 
 export async function replayStateDifferentials(
