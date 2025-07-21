@@ -33,6 +33,7 @@ describe("External signer sync", () => {
     vi.useFakeTimers();
     secretKeys = Array.from({length: 3}, (_, i) => SecretKey.fromBytes(toBufferBE(BigInt(i + 1), 32)));
     pubkeys = secretKeys.map((sk) => sk.toPublicKey().toHex());
+    // vi.mock does not automock all objects in Bun runtime, so we have to explicitly spy on needed methods
     externalSignerGetKeysStub = vi.spyOn(externalSignerClient, "externalSignerGetKeys");
   });
 

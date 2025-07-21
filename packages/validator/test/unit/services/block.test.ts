@@ -30,6 +30,7 @@ describe("BlockDutiesService", () => {
     const secretKeys = Array.from({length: 2}, (_, i) => SecretKey.fromBytes(Buffer.alloc(32, i + 1)));
     pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
 
+    // vi.mock does not automock all objects in Bun runtime, so we have to explicitly spy on needed methods
     vi.spyOn(validatorStore, "votingPubkeys");
     vi.spyOn(validatorStore, "signRandao");
     vi.spyOn(validatorStore, "signBlock");
