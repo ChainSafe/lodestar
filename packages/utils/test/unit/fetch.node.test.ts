@@ -53,7 +53,7 @@ describe("FetchError", () => {
       errorType: "failed",
       errorCode: "UND_ERR_HEADERS_OVERFLOW",
       expectCause: true,
-      skip: "Header overflow is not supported in Bun runtime",
+      skip: isBun ? "Header overflow is not supported in Bun runtime" : undefined,
     },
     {
       id: "Unknown scheme",
