@@ -659,19 +659,24 @@ export class PeerManager {
     const {direction, status, remotePeer} = evt.detail;
     const peerIdStr = remotePeer.toString();
 
-    // prevent automatic/immediate reconnects
-    const coolDownMin = 60;
-    this.peerRpcScores.applyReconnectionCoolDown(remotePeer, coolDownMin);
+    let logMessage = "A peer disconnected us";
+    const logContext: Record<string, string | number> = {
+      peerId: prettyPrintPeerIdStr(peerIdStr),
+      direction,
+      status,
+    };
+    if (direction === "inbound") {
+      const coolDownMin = 60;
+      // prevent automatic/immediate reconnects
+      this.peerRpcScores.applyReconnectionCoolDown(remotePeer, coolDownMin);
+      logMessage += ". Enforcing a reconnection cool-down period";
+      logContext.coolDownMin = coolDownMin;
+    }
 
     // remove the ping and status timer for the peer
     this.connectedPeers.delete(peerIdStr);
 
-    this.logger.verbose("A peer disconnected us. Enforcing a reconnection cool-down period", {
-      peerId: prettyPrintPeerIdStr(peerIdStr),
-      direction,
-      status,
-      coolDownMin,
-    });
+    this.logger.verbose(logMessage, logContext);
     this.networkEventBus.emit(NetworkEvent.peerDisconnected, {peer: peerIdStr});
     this.metrics?.peerDisconnectedEvent.inc({direction});
     this.libp2p.peerStore
