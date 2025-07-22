@@ -54,17 +54,18 @@ export class RealScore implements IPeerScore {
     switch (reason) {
       // let scoring system handle score decay by itself
       case GoodByeReasonCode.BANNED:
-      case GoodByeReasonCode.ERROR:
-        return coolDownMin;
+      case GoodByeReasonCode.SCORE_TOO_LOW:
+        break;
       case GoodByeReasonCode.INBOUND_DISCONNECT_NO_GOODBYE:
       case GoodByeReasonCode.TOO_MANY_PEERS:
         coolDownMin = 5;
         break;
-      case GoodByeReasonCode.IRRELEVANT_NETWORK:
-        coolDownMin = 120;
-        break;
+      case GoodByeReasonCode.ERROR:
       case GoodByeReasonCode.CLIENT_SHUTDOWN:
-      case GoodByeReasonCode.SCORE_TOO_LOW:
+        coolDownMin = 60;
+        break;
+      case GoodByeReasonCode.IRRELEVANT_NETWORK:
+      // should this just remove the peer from the peerManager?
     }
     // set banning period to time in ms in the future from now
     this.lastUpdate = Date.now() + coolDownMin * 60 * 1000;
