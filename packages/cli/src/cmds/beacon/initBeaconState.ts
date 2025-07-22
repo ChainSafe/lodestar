@@ -190,7 +190,7 @@ export async function initBeaconState(
     const anchorState = getStateTypeFromBytes(chainForkConfig, stateBytes).deserializeToViewDU(stateBytes);
     // Validate genesis state root
     const stateRoot = toRootHex(anchorState.hashTreeRoot());
-    const expectedRoot = getGenesisStateRoot(args.network || defaultNetwork);
+    const expectedRoot = getGenesisStateRoot(args.network);
     if (expectedRoot !== null && stateRoot !== expectedRoot) {
       throw Error(`Genesis state root mismatch expected=${expectedRoot} received=${stateRoot}`);
     }

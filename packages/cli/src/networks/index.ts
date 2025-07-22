@@ -96,7 +96,10 @@ export function getGenesisFileUrl(network: NetworkName): string | null {
  * For example, this returns null for Ephemery, since its genesis state root
  * changes with each iteration and we don't know the permanent state root.
  */
-export function getGenesisStateRoot(network: NetworkName): string | null {
+export function getGenesisStateRoot(network: NetworkName | undefined): string | null {
+  if (!network) {
+    return null;
+  }
   return getNetworkData(network).genesisStateRoot;
 }
 
