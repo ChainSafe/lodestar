@@ -112,9 +112,9 @@ export function getAttestationsForBlock(
     for (const {consolidation, type} of [
       ...aggregatedAttPoolConsolidations.map((c) => ({
         consolidation: c,
-        type: ConsolidationType.Aggregated_Attestation_Pool,
+        type: ConsolidationType.aggregated_attestation_pool,
       })),
-      ...singleAttConsolidations.map((c) => ({consolidation: c, type: ConsolidationType.Single_Attestation_Pool})),
+      ...singleAttConsolidations.map((c) => ({consolidation: c, type: ConsolidationType.single_attestation_pool})),
     ]) {
       const score = consolidation.totalNewSeenEffectiveBalance / inclusionDistance;
       consolidations.set(consolidation, {type, score});
@@ -152,11 +152,11 @@ export function getAttestationsForBlock(
 
     // record metrics of packed attestations
     const packedAttestationsMetrics =
-      type === ConsolidationType.Aggregated_Attestation_Pool
+      type === ConsolidationType.aggregated_attestation_pool
         ? aggregatedAttestationsPackedMetrics
         : singleAttestationPackedMetrics;
     const index =
-      type === ConsolidationType.Aggregated_Attestation_Pool
+      type === ConsolidationType.aggregated_attestation_pool
         ? aggregatedAttestationPoolIndex++
         : singleAttestationPoolIndex++;
     packedAttestationsMetrics?.committeeCount.set({index}, consolidation.byCommittee.size);
@@ -171,8 +171,8 @@ export function getAttestationsForBlock(
     stopReason = ScannedSlotsTerminationReason.ScannedAllSlots;
   }
 
-  // only need to track this for aggregatedAttestationPool
   aggregatedAttestationsPackedMetrics?.scannedSlots.set({reason: stopReason}, scannedSlotsAggregatedAttestationPool);
+  singleAttestationPackedMetrics?.scannedSlots.set({reason: stopReason}, scannedSlotsSingleAttestationPool);
 
   aggregatedAttestationsPackedMetrics?.poolSlots.set(aggregatedAttPoolSlotsDesc.length);
   singleAttestationPackedMetrics?.poolSlots.set(singleAttestationPoolSlots.size);
