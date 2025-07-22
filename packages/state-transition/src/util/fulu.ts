@@ -14,13 +14,27 @@ export function initializeProposerLookahead(state: CachedBeaconStateElectra): Va
 
   const lookahead: ValidatorIndex[] = [];
 
-  for (let i = 0; i < MIN_SEED_LOOKAHEAD + 1; i++) {
+  for (let i = 0; i <= MIN_SEED_LOOKAHEAD; i++) {
     const epoch = currentEpoch + i;
 
-    const shuffling =
-      state.epochCtx.getShufflingAtEpochOrNull(epoch) ??
-      // Shuffling might not be available for next epoch
-      computeEpochShuffling(state, getActiveValidatorIndices(state, epoch), epoch);
+    // Try to pull a cached shuffling first
+    let shuffling = state.epochCtx.getShufflingAtEpochOrNull(epoch);
+
+    if (!shuffling) {
+      // Only compute epoch shuffling if cache is not yet populated
+      let activeIndices: Uint32Array;
+      if (epoch === currentEpoch) {
+        // This should never happen as current shuffling should always be cached
+        activeIndices = state.epochCtx.currentShuffling.activeIndices;
+      } else if (epoch === currentEpoch + 1) {
+        activeIndices = state.epochCtx.nextActiveIndices;
+      } else {
+        // This will never be reached with current spec as `MIN_SEED_LOOKAHEAD == 1`
+        activeIndices = getActiveValidatorIndices(state, epoch);
+      }
+
+      shuffling = computeEpochShuffling(state, activeIndices, epoch);
+    }
 
     lookahead.push(...computeProposerIndices(ForkSeq.fulu, state, shuffling, epoch));
   }
