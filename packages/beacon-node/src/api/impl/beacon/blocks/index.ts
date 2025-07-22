@@ -298,8 +298,6 @@ export function getBeaconBlockApi({
 
     const source = ProducedBlockSource.builder;
 
-    let signedBlockOrContents: SignedBeaconBlockOrContents | undefined = undefined;
-
     if (isForkPostFulu(fork)) {
       await submitBlindedBlockToBuilder(chain, {
         data: signedBlindedBlock,
@@ -307,17 +305,15 @@ export function getBeaconBlockApi({
       });
       chain.logger.info("Submitted blinded block to builder for publishing", {slot, blockRoot});
     } else {
-      chain.logger.debug("Reconstructing  signedBlockOrContents", {slot, blockRoot, source});
-      // TODO: After fulu is live and all builders support sumitBlindedBlockV2, we can safely remove
+      // TODO: After fulu is live and all builders support submitBlindedBlockV2, we can safely remove
       // this code block and related functions
-      signedBlockOrContents = await reconstructBuilderBlockOrContents(chain, {
+      chain.logger.debug("Reconstructing  signedBlockOrContents", {slot, blockRoot, source});
+
+      const signedBlockOrContents = await reconstructBuilderBlockOrContents(chain, {
         data: signedBlindedBlock,
         bytes: context?.sszBytes,
       });
-    }
 
-    // TODO: Remove this post-fulu after all builders support submitBlindedBlockV2
-    if (signedBlockOrContents !== undefined) {
       // the full block is published by relay and it's possible that the block is already known to us
       // by gossip
       //
