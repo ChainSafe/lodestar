@@ -110,7 +110,7 @@ export class SingleAttestationPool {
     attestation: SingleAttestation<ForkPostElectra>,
     attDataRootHex: RootHex,
     committeeValidatorIndex: CommitteeValidatorIndex,
-    committeeSize: number,
+    committeeSize: number
   ): InsertOutcome {
     const slot = attestation.data.slot;
     const lowestPermissibleSlot = this.lowestPermissibleSlot;
@@ -169,7 +169,7 @@ export class SingleAttestationPool {
     const inclusionDistance = stateSlot - slot;
     const epoch = computeEpochAtSlot(slot);
     const result: AttestationsConsolidation[] = [];
-    const packedAttestationsMetrics = this.metrics?.opPool.attestationPool.packedAttestations;
+    const packedAttestationsMetrics = this.metrics?.opPool.singleAttestationPool.packedAttestations;
 
     // CommitteeIndex    0           1            2    ...   Consolidation (sameAttDataCons)
     // Attestations    att00  ---   att10  ---  att20  ---   0 (att 00 10 20)

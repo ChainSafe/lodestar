@@ -43,6 +43,7 @@ import {ForkchoiceCaller} from "./forkChoice/index.js";
 import {LightClientServer} from "./lightClient/index.js";
 import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool.js";
 import {AttestationPool, OpPool, SyncCommitteeMessagePool, SyncContributionAndProofPool} from "./opPools/index.js";
+import {SingleAttestationPool} from "./opPools/singleAttestationPool.js";
 import {IChainOptions} from "./options.js";
 import {AssembledBlockType, BlockAttributes, BlockType} from "./produceBlock/produceBlockBody.js";
 import {IStateRegenerator, RegenCaller} from "./regen/index.js";
@@ -64,7 +65,6 @@ import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {SeenBlockInputCache} from "./seenCache/seenBlockInput.js";
 import {ShufflingCache} from "./shufflingCache.js";
 import {ValidatorMonitor} from "./validatorMonitor.js";
-import { SingleAttestationPool } from "./opPools/singleAttestationPool.js";
 
 export {BlockType, type AssembledBlockType};
 export {type ProposerPreparationData};

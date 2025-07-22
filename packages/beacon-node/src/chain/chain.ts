@@ -76,6 +76,7 @@ import {
   SyncCommitteeMessagePool,
   SyncContributionAndProofPool,
 } from "./opPools/index.js";
+import {SingleAttestationPool} from "./opPools/singleAttestationPool.js";
 import {IChainOptions} from "./options.js";
 import {PrepareNextSlotScheduler} from "./prepareNextSlot.js";
 import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
@@ -106,7 +107,6 @@ import {FIFOBlockStateCache} from "./stateCache/fifoBlockStateCache.js";
 import {InMemoryCheckpointStateCache} from "./stateCache/inMemoryCheckpointsCache.js";
 import {PersistentCheckpointStateCache} from "./stateCache/persistentCheckpointsCache.js";
 import {ValidatorMonitor} from "./validatorMonitor.js";
-import { SingleAttestationPool } from "./opPools/singleAttestationPool.js";
 
 /**
  * Arbitrary constants, blobs and payloads should be consumed immediately in the same slot

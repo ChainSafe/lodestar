@@ -40,7 +40,7 @@ export function getAttestationsForBlock(
   const validateAttestationDataFn = getValidateAttestationDataFn(forkChoice, state);
 
   const aggregatedAttPoolSlotsDesc = this.aggregatedAttestationPool.getStoredSlots();
-  const singleAttestationPoolSlots = this.attestationPool.getStoredSlots();
+  const singleAttestationPoolSlots = this.singleAttestationPool.getStoredSlots();
 
   // Track score of each `AttestationsConsolidation` from both pools
   const consolidations = new Map<AttestationsConsolidation, {type: ConsolidationType; score: number}>();
@@ -131,7 +131,7 @@ export function getAttestationsForBlock(
   this.metrics?.opPool.aggregatedAttestationPool.packedAttestations.totalConsolidations.set(
     totalAggregatedAttPoolConsolidations
   );
-  this.metrics?.opPool.attestationPool.packedAttestations.totalConsolidations.set(
+  this.metrics?.opPool.singleAttestationPool.packedAttestations.totalConsolidations.set(
     totalSingleAttestationPoolConsolidations
   );
 
@@ -142,7 +142,7 @@ export function getAttestationsForBlock(
 
   // on chain aggregation is expensive, only do it after all
   const aggregatedAttestationsPackedMetrics = this.metrics?.opPool.aggregatedAttestationPool.packedAttestations;
-  const singleAttestationPackedMetrics = this.metrics?.opPool.attestationPool.packedAttestations;
+  const singleAttestationPackedMetrics = this.metrics?.opPool.singleAttestationPool.packedAttestations;
   const packedAttestations: electra.Attestation[] = new Array(sortedConsolidationsByScore.length);
 
   let aggregatedAttestationPoolIndex = 0;
