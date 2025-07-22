@@ -1,31 +1,29 @@
 import fs from "node:fs";
 import path from "node:path";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
-import {ValueOf} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
-import {ArrayOf} from "@lodestar/api/lib/utils/codecs.js";
+import {AttesterSlashingList, BlockId} from "@lodestar/api/beacon/routes/lodestar.js";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {ChainForkConfig} from "@lodestar/config";
 import {Repository} from "@lodestar/db";
-import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {BeaconStateCapella, getLatestWeakSubjectivityCheckpointEpoch, loadState} from "@lodestar/state-transition";
-import {ssz} from "@lodestar/types";
+import {ForkName, ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {
+  BeaconStateCapella,
+  getLatestWeakSubjectivityCheckpointEpoch,
+  isSlashableAttestationData,
+  loadState,
+} from "@lodestar/state-transition";
+import {IndexedAttestation, ValidatorIndex, ssz} from "@lodestar/types";
+import {AttesterSlashing} from "@lodestar/types";
 import {toHex, toRootHex} from "@lodestar/utils";
 import {BeaconChain} from "../../../chain/index.js";
-import {QueuedStateRegenerator, RegenRequest} from "../../../chain/regen/index.js";
+import {QueuedStateRegenerator, RegenCaller, RegenRequest} from "../../../chain/regen/index.js";
 import {IBeaconDb} from "../../../db/interface.js";
 import {GossipType} from "../../../network/index.js";
 import {profileNodeJS, writeHeapSnapshot} from "../../../util/profile.js";
 import {getBlockResponse} from "../beacon/blocks/utils.js";
 import {getStateResponseWithRegen} from "../beacon/state/utils.js";
 import {ApiModules} from "../types.js";
-
-export const AttesterSlashingListTypePhase0 = ArrayOf(ssz.phase0.AttesterSlashing);
-export const AttesterSlashingListTypeElectra = ArrayOf(ssz.electra.AttesterSlashing);
-
-export type AttesterSlashingListPhase0 = ValueOf<typeof AttesterSlashingListTypePhase0>;
-export type AttesterSlashingListElectra = ValueOf<typeof AttesterSlashingListTypeElectra>;
-export type AttesterSlashingList = AttesterSlashingListPhase0 | AttesterSlashingListElectra;
 
 export function getLodestarApi({
   chain,
@@ -229,28 +227,78 @@ export function getLodestarApi({
       };
     },
 
-    async getBlocksAttesterSlashings({block_ids}) {
-      const fork = chain.config.getForkName(chain.clock.currentSlot);
+    async getAttesterSlashingsFromBlocks({block_ids}) {
+      const attesterSlashings: AttesterSlashingList = [];
+      const validatorIndicesSeen = new Set<ValidatorIndex>();
 
-      const blockPromises = block_ids.map((blockId) => getBlockResponse(chain, blockId));
+      const validatorsAttestations = new Map<ValidatorIndex, IndexedAttestation[]>();
+
+      let fork = chain.config.getForkSeq(chain.clock.currentSlot);
+
+      const blockPromises = block_ids.map((blockId: BlockId) => getBlockResponse(chain, blockId));
       const blockResults = await Promise.allSettled(blockPromises);
-
-      const attesterSlashingsList: AttesterSlashingList = [];
       for (const result of blockResults) {
         // Missed block
         if (result.status === "rejected") {
           continue;
         }
-        const {block} = result.value;
-        if (block?.message.body.attesterSlashings) {
-          for (const attesterSlashing of block.message.body.attesterSlashings) {
-            attesterSlashingsList.push(attesterSlashing);
+        const block = result.value.block;
+
+        const state = await chain.regen.getState(toHex(block.message.stateRoot), RegenCaller.restApi);
+        fork = chain.config.getForkSeq(block.message.slot);
+        const attestations = block.message.body.attestations;
+
+        // iterate through all the attestations in the block
+        for (const attestation of attestations) {
+          const indexedAttestation = state.epochCtx.getIndexedAttestation(fork, attestation);
+
+          // extract validators from every attestation
+          // and update the list of unique validators
+          for (const validatorIndex of indexedAttestation.attestingIndices) {
+            if (!validatorIndicesSeen.has(validatorIndex)) {
+              validatorIndicesSeen.add(validatorIndex);
+            }
+
+            // initiate the list of attestations for a first seen validator
+            let validatorAttestationsSeen = validatorsAttestations.get(validatorIndex);
+            if (!validatorAttestationsSeen) {
+              validatorAttestationsSeen = [];
+              validatorsAttestations.set(validatorIndex, validatorAttestationsSeen);
+            }
+
+            // iterate through the existing validator attestations and compare with the current attestation
+            for (const prevIndexedAttestation of validatorAttestationsSeen) {
+              if (
+                isSlashableAttestationData(
+                  // use json to convert to BigInt
+                  ssz.phase0.AttestationDataBigint.fromJson(
+                    ssz.phase0.AttestationData.toJson(prevIndexedAttestation.data)
+                  ),
+                  ssz.phase0.AttestationDataBigint.fromJson(ssz.phase0.AttestationData.toJson(indexedAttestation.data))
+                )
+              ) {
+                // create new slashing and add it to the slashing list
+                const newSlashing: AttesterSlashing = {
+                  attestation1: ssz.phase0.IndexedAttestationBigint.fromJson(
+                    ssz.phase0.IndexedAttestation.toJson(prevIndexedAttestation)
+                  ),
+                  attestation2: ssz.phase0.IndexedAttestationBigint.fromJson(
+                    ssz.phase0.IndexedAttestation.toJson(indexedAttestation)
+                  ),
+                };
+                attesterSlashings.push(newSlashing);
+              }
+            }
+
+            // update validator attestations list
+            validatorAttestationsSeen.push(indexedAttestation);
           }
         }
       }
+
       return {
-        data: attesterSlashingsList,
-        meta: {version: fork},
+        data: attesterSlashings,
+        meta: {version: ForkSeq[fork] as ForkName},
       };
     },
   };

@@ -309,7 +309,7 @@ export type Endpoints = {
    * Get list of blocks
    * Retrieves AttesterSlashings included in requested blocks.
    */
-  getBlocksAttesterSlashings: Endpoint<
+  getAttesterSlashingsFromBlocks: Endpoint<
     "GET",
     {block_ids: BlockId[]},
     {query: {block_ids: string[]}},
@@ -477,7 +477,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       req: EmptyRequestCodec,
       resp: JsonOnlyResponseCodec,
     },
-    getBlocksAttesterSlashings: {
+    getAttesterSlashingsFromBlocks: {
       url: "/eth/v1/lodestar/blocks/attester_slashings",
       method: "GET",
       req: {
