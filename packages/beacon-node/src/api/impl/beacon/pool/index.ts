@@ -1,7 +1,14 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {ForkPostElectra, ForkPreElectra, SYNC_COMMITTEE_SUBNET_SIZE, isForkPostElectra} from "@lodestar/params";
-import {Attestation, Epoch, SingleAttestation, isElectraAttestation, ssz} from "@lodestar/types";
+import {
+  Attestation,
+  Epoch,
+  SingleAttestation,
+  isElectraAttestation,
+  isElectraSingleAttestation,
+  ssz,
+} from "@lodestar/types";
 import {
   AttestationError,
   AttestationErrorCode,
@@ -125,6 +132,17 @@ export function getBeaconPoolApi({
                 priority
               );
               metrics?.opPool.attestationPool.apiInsertOutcome.inc({insertOutcome});
+            }
+
+            if (isElectraSingleAttestation(attestation)) {
+              const insertOutcome = chain.singleAttestationPool.add(
+                committeeIndex,
+                attestation,
+                attDataRootHex,
+                committeeValidatorIndex,
+                committeeSize
+              );
+              metrics?.opPool.singleAttestationPool.apiInsertOutcome.inc({insertOutcome});
             }
 
             if (isForkPostElectra(fork)) {

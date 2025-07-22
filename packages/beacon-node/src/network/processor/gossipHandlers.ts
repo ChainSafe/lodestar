@@ -10,6 +10,7 @@ import {
   SubnetID,
   UintNum64,
   deneb,
+  isElectraSingleAttestation,
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
@@ -689,6 +690,17 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
               committeeSize
             );
             metrics?.opPool.attestationPool.gossipInsertOutcome.inc({insertOutcome});
+          }
+
+          if (isElectraSingleAttestation(attestation)) {
+            const insertOutcome = chain.singleAttestationPool.add(
+              committeeIndex,
+              attestation,
+              attDataRootHex,
+              committeeValidatorIndex,
+              committeeSize
+            );
+            metrics?.opPool.singleAttestationPool.gossipInsertOutcome.inc({insertOutcome});
           }
         } catch (e) {
           logger.error("Error adding unaggregated attestation to pool", {subnet}, e as Error);
