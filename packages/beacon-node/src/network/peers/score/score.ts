@@ -8,6 +8,7 @@ import {
   MAX_SCORE,
   MIN_LODESTAR_SCORE_BEFORE_BAN,
   MIN_SCORE,
+  NO_COOL_DOWN_APPLIED,
 } from "./constants.js";
 import {IPeerScore, PeerScoreStat, ScoreState} from "./interface.js";
 import {scoreToState} from "./utils.js";
@@ -47,8 +48,9 @@ export class RealScore implements IPeerScore {
     this.setLodestarScore(newScore);
   }
 
+  // TODO: @twoeths these times need some massaging.  Curious to get your thoughts
   applyReconnectionCoolDown(reason: GoodByeReasonCode): number {
-    let coolDownMin = -1;
+    let coolDownMin = NO_COOL_DOWN_APPLIED;
     switch (reason) {
       // let scoring system handle score decay by itself
       case GoodByeReasonCode.BANNED:
@@ -166,6 +168,10 @@ export class MaxScore implements IPeerScore {
 
   update(): number {
     return MAX_SCORE;
+  }
+
+  applyReconnectionCoolDown(_reason: GoodByeReasonCode): number {
+    return NO_COOL_DOWN_APPLIED;
   }
 
   updateGossipsubScore(): void {}

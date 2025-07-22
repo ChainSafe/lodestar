@@ -20,6 +20,7 @@ import {getConnection, getConnectionsMap, prettyPrintPeerId, prettyPrintPeerIdSt
 import {ClientKind, getKnownClientFromAgentVersion} from "./client.js";
 import {PeerDiscovery, SubnetDiscvQueryMs} from "./discover.js";
 import {PeerData, PeersData} from "./peersData.js";
+import {NO_COOL_DOWN_APPLIED} from "./score/constants.js";
 import {IPeerRpcScoreStore, PeerAction, PeerScoreStats, ScoreState, updateGossipsubScores} from "./score/index.js";
 import {
   assertPeerRelevance,
@@ -668,7 +669,7 @@ export class PeerManager {
     if (direction === "inbound") {
       // prevent automatic/immediate reconnects
       const coolDownMin = this.peerRpcScores.applyReconnectionCoolDown(
-        remotePeer,
+        peerIdStr,
         GoodByeReasonCode.INBOUND_DISCONNECT_NO_GOODBYE
       );
       logMessage += ". Enforcing a reconnection cool-down period";
@@ -712,8 +713,8 @@ export class PeerManager {
     } finally {
       await this.disconnect(peer);
       // prevent automatic/immediate reconnects
-      const coolDownMin = this.peerRpcScores.applyReconnectionCoolDown(peer, goodbye);
-      if (coolDownMin === -1) {
+      const coolDownMin = this.peerRpcScores.applyReconnectionCoolDown(peerIdStr, goodbye);
+      if (coolDownMin === NO_COOL_DOWN_APPLIED) {
         this.logger.verbose("Disconnected a peer", {peerId: prettyPrintPeerIdStr(peerIdStr)});
       } else {
         this.logger.verbose("Disconnected a peer. Enforcing a reconnection cool-down period", {

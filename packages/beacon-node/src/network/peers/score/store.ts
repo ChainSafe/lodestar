@@ -60,8 +60,8 @@ export class PeerRpcScoreStore implements IPeerRpcScoreStore {
    * banning period and updates gossip score to -1 so next update removes the negative
    * score
    */
-  applyReconnectionCoolDown(peer: PeerId, reason: GoodByeReasonCode): number {
-    const peerScore = this.scores.getOrDefault(peer.toString());
+  applyReconnectionCoolDown(peer: PeerIdStr, reason: GoodByeReasonCode): number {
+    const peerScore = this.scores.getOrDefault(peer);
     return peerScore.applyReconnectionCoolDown(reason);
   }
 

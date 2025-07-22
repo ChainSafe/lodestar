@@ -1,6 +1,7 @@
 import {PeerId} from "@libp2p/interface";
 import {PeerIdStr} from "../../../util/peerId.js";
 import {NetworkCoreMetrics} from "../../core/metrics.js";
+import {GoodByeReasonCode} from "../../../constants/network.js";
 
 export type PeerRpcScoreOpts = {
   disablePeerScoring?: boolean;
@@ -12,7 +13,7 @@ export interface IPeerRpcScoreStore {
   getScoreState(peer: PeerId): ScoreState;
   dumpPeerScoreStats(): PeerScoreStats;
   applyAction(peer: PeerId, action: PeerAction, actionName: string): void;
-  applyReconnectionCoolDown(peer: PeerIdStr, timeInMin: number): void;
+  applyReconnectionCoolDown(peer: PeerIdStr, reason: GoodByeReasonCode): number;
   update(): void;
   updateGossipsubScore(peerId: PeerIdStr, newScore: number, ignore: boolean): void;
 }
@@ -24,7 +25,7 @@ export interface IPeerScore {
   update(): number;
   updateGossipsubScore(newScore: number, ignore: boolean): void;
   getStat(): PeerScoreStat;
-  applyReconnectionCoolDown(timeInMin: number): void;
+  applyReconnectionCoolDown(reason: GoodByeReasonCode): number;
 }
 
 export enum ScoreState {
