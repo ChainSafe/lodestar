@@ -17,14 +17,14 @@ export function initializeProposerLookahead(state: CachedBeaconStateElectra): Va
   for (let i = 0; i <= MIN_SEED_LOOKAHEAD; i++) {
     const epoch = currentEpoch + i;
 
-    // Try to pull a cached shuffling first
+    // Try to pull cached shuffling first
     let shuffling = state.epochCtx.getShufflingAtEpochOrNull(epoch);
 
     if (!shuffling) {
       // Only compute epoch shuffling if cache is not yet populated
       let activeIndices: Uint32Array;
       if (epoch === currentEpoch) {
-        // This should never happen as current shuffling should always be cached
+        // This should never happen as current shuffling will always be cached
         activeIndices = state.epochCtx.currentShuffling.activeIndices;
       } else if (epoch === currentEpoch + 1) {
         activeIndices = state.epochCtx.nextActiveIndices;
