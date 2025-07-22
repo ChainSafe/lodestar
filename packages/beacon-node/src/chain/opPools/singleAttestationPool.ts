@@ -70,10 +70,7 @@ export class SingleAttestationPool {
 
   private lowestPermissibleSlot = 0;
 
-  constructor(
-    private readonly config: ChainForkConfig,
-    private readonly metrics: Metrics | null = null
-  ) {}
+  constructor(private readonly metrics: Metrics | null = null) {}
 
   /** Returns current count of SingleAttestations */
   getAttestationCount(): number {
@@ -89,21 +86,8 @@ export class SingleAttestationPool {
   }
 
   /**
-   * Accepts an `VerifiedUnaggregatedAttestation` and attempts to apply it to the "naive
-   * aggregation pool".
-   *
-   * The naive aggregation pool is used by local validators to produce
-   * `SignedAggregateAndProof` and also for block production.
-   *
-   * If the attestation is too old (low slot) to be included in the pool it is simply dropped
-   * and no error is returned. Also if it's at clock slot but come to the pool later than 2/3
-   * of slot time, it's dropped too since it's not helpful for the validator anymore
-   *
-   * Expects the attestation to be fully validated:
-   * - Valid signature
-   * - Consistent bitlength
-   * - Valid committeeIndex
-   * - Valid data
+   * Store SingleAttestations in the pool to be used for block production.
+   * This pool assumes consumer checked duplicate attestation per epoch checked
    */
   add(
     committeeIndex: CommitteeIndex,
@@ -135,7 +119,6 @@ export class SingleAttestationPool {
       };
     }
 
-    // this pool assumes consumer checked duplicate attestation per epoch checked
     committeeInfo.attestations.set(committeeValidatorIndex, attestation);
     return InsertOutcome.NewData;
   }
@@ -229,7 +212,6 @@ export class SingleAttestationPool {
         const sameComitteeAttestations = new Map<CommitteeValidatorIndex, SingleAttestation>();
         let newSeenEffectiveBalance = 0;
         let newSeenAttesters = 0;
-        let notSeenAttesters = notSeenMembers.size;
         for (const notSeenCommitteeValidatorIndex of notSeenMembers) {
           const attestation = attestationsByCommitteeValidatorIndex.get(notSeenCommitteeValidatorIndex);
           if (attestation == null) {
@@ -238,7 +220,6 @@ export class SingleAttestationPool {
           }
           newSeenEffectiveBalance += effectiveBalanceIncrements[attestation.attesterIndex];
           newSeenAttesters++;
-          notSeenAttesters--;
           sameComitteeAttestations.set(notSeenCommitteeValidatorIndex, attestation);
           // no need to search for the same notSeenCommitteeValidatorIndex in the next loop of attestation data root
           notSeenMembers.delete(notSeenCommitteeValidatorIndex);
@@ -252,7 +233,7 @@ export class SingleAttestationPool {
         const aggregatedAttestation = aggregateAttestations(sameComitteeAttestations, committeeIndex, committeeSize);
         const attestationNonParticipation: AttestationNonParticipant = {
           attestation: aggregatedAttestation,
-          newSeenEffectiveBalance: 0,
+          newSeenEffectiveBalance,
           newSeenAttesters,
           notSeenCommitteeMembers: notSeenMembers,
         };
@@ -277,8 +258,7 @@ export class SingleAttestationPool {
   }
 
   /**
-   * Removes any attestations with a slot lower than `current_slot - preaggregateSlotDistance`.
-   * By default, not interested in attestations in old slots, we only preaggregate attestations for the current slot.
+   * Removes any attestations with a slot lower than `current_slot - SLOTS_RETAINED`.
    */
   prune(clockSlot: Slot): void {
     pruneBySlot(this.committeeByIndexByRootBySlot, clockSlot, SLOTS_RETAINED);

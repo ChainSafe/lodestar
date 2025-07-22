@@ -250,7 +250,7 @@ export class BeaconChain implements IBeaconChain {
       this.opts?.preaggregateSlotDistance,
       metrics
     );
-    this.singleAttestationPool = new SingleAttestationPool(this.config, metrics);
+    this.singleAttestationPool = new SingleAttestationPool(metrics);
     this.aggregatedAttestationPool = new AggregatedAttestationPool(this.config, metrics);
     this.syncCommitteeMessagePool = new SyncCommitteeMessagePool(
       clock,

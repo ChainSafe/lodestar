@@ -66,8 +66,8 @@ export type AttestationsConsolidation = {
 };
 
 export enum ConsolidationType {
-  Aggregated_Attestation_Pool = "aggregated_attestation_pool",
-  Single_Attestation_Pool = "single_attestation_pool",
+  aggregated_attestation_pool = "aggregated_attestation_pool",
+  single_attestation_pool = "single_attestation_pool",
 }
 
 /**
@@ -467,7 +467,7 @@ export class AggregatedAttestationPool {
             sameAttDataCon.totalAttesters += attestationGroup.committee.length;
           }
 
-          if (i == attestationsSameGroup.length - 1) {
+          if (i === attestationsSameGroup.length - 1) {
             // this is the last item of attestationsSameGroup which has the least not seen committee validator indices
             // we will try to find them in SingleAttestationPool later
             notSeenCommitteeMembersByIndex.set(committeeIndex, attestationNonParticipation.notSeenCommitteeMembers);
