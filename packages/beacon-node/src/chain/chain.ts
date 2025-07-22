@@ -106,6 +106,7 @@ import {FIFOBlockStateCache} from "./stateCache/fifoBlockStateCache.js";
 import {InMemoryCheckpointStateCache} from "./stateCache/inMemoryCheckpointsCache.js";
 import {PersistentCheckpointStateCache} from "./stateCache/persistentCheckpointsCache.js";
 import {ValidatorMonitor} from "./validatorMonitor.js";
+import { SingleAttestationPool } from "./opPools/singleAttestationPool.js";
 
 /**
  * Arbitrary constants, blobs and payloads should be consumed immediately in the same slot
@@ -140,6 +141,7 @@ export class BeaconChain implements IBeaconChain {
 
   // Ops pool
   readonly attestationPool: AttestationPool;
+  readonly singleAttestationPool: SingleAttestationPool;
   readonly aggregatedAttestationPool: AggregatedAttestationPool;
   readonly syncCommitteeMessagePool: SyncCommitteeMessagePool;
   readonly syncContributionAndProofPool;
@@ -248,6 +250,7 @@ export class BeaconChain implements IBeaconChain {
       this.opts?.preaggregateSlotDistance,
       metrics
     );
+    this.singleAttestationPool = new SingleAttestationPool(this.config, metrics);
     this.aggregatedAttestationPool = new AggregatedAttestationPool(this.config, metrics);
     this.syncCommitteeMessagePool = new SyncCommitteeMessagePool(
       clock,
@@ -1138,6 +1141,7 @@ export class BeaconChain implements IBeaconChain {
     this.metrics?.clockSlot.set(slot);
 
     this.attestationPool.prune(slot);
+    this.singleAttestationPool.prune(slot);
     this.aggregatedAttestationPool.prune(slot);
     this.syncCommitteeMessagePool.prune(slot);
     this.seenSyncCommitteeMessages.prune(slot);

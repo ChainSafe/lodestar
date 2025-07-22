@@ -1,0 +1,181 @@
+import {IForkChoice} from "@lodestar/fork-choice";
+import {ForkName, ForkSeq, MAX_ATTESTATIONS_ELECTRA, MIN_ATTESTATION_INCLUSION_DELAY} from "@lodestar/params";
+import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
+import {Attestation, CommitteeIndex, electra} from "@lodestar/types";
+import type {BeaconChain} from "../chain.js";
+import {
+  AttestationsConsolidation,
+  CommitteeValidatorIndex,
+  ConsolidationType,
+  ScannedSlotsTerminationReason,
+  aggregateConsolidation,
+  getNotSeenValidatorsFn,
+  getValidateAttestationDataFn,
+} from "./aggregatedAttestationPool.js";
+
+/**
+ * Get attestations to be included in a block.
+ * Post electra, for each slot:
+ *   - get attestations from aggregated attestation pool, track not seen committee members from there
+ *   - search for missing attestations of those committee members in single attestation pool
+ */
+export function getAttestationsForBlock(
+  this: BeaconChain,
+  fork: ForkName,
+  forkChoice: IForkChoice,
+  state: CachedBeaconStateAllForks
+): Attestation[] {
+  const forkSeq = ForkSeq[fork];
+  if (forkSeq < ForkSeq.electra) {
+    return this.aggregatedAttestationPool.getAttestationsForBlockPreElectra(fork, forkChoice, state);
+  }
+
+  const stateSlot = state.slot;
+  const stateEpoch = state.epochCtx.epoch;
+  const statePrevEpoch = stateEpoch - 1;
+
+  // it's important to use the same instance of these functions for both pools
+  // for the cache inside them to work well
+  const notSeenValidatorsFn = getNotSeenValidatorsFn(state);
+  const validateAttestationDataFn = getValidateAttestationDataFn(forkChoice, state);
+
+  const aggregatedAttPoolSlotsDesc = this.aggregatedAttestationPool.getStoredSlots();
+  const singleAttestationPoolSlots = this.attestationPool.getStoredSlots();
+
+  // Track score of each `AttestationsConsolidation` from both pools
+  const consolidations = new Map<AttestationsConsolidation, {type: ConsolidationType; score: number}>();
+  let scannedSlotsAggregatedAttestationPool = 0;
+  let scannedSlotsSingleAttestationPool = 0;
+  let stopReason: ScannedSlotsTerminationReason | null = null;
+  let totalAggregatedAttPoolConsolidations = 0;
+  let totalSingleAttestationPoolConsolidations = 0;
+
+  for (const slot of aggregatedAttPoolSlotsDesc) {
+    const epoch = computeEpochAtSlot(slot);
+    if (epoch < statePrevEpoch) {
+      // we process slot in desc order, this means next slot is not eligible, we should stop
+      stopReason = ScannedSlotsTerminationReason.SlotBeforePreviousEpoch;
+      break;
+    }
+
+    // validateAttestation condition: Attestation target epoch not in previous or current epoch
+    if (!(epoch === stateEpoch || epoch === statePrevEpoch)) {
+      continue; // Invalid attestations
+    }
+
+    // validateAttestation condition: Attestation slot not within inclusion window
+    if (!(slot + MIN_ATTESTATION_INCLUSION_DELAY <= stateSlot)) {
+      // this should not happen as slot is decreased so no need to track in metric
+      continue; // Invalid attestations
+    }
+
+    const inclusionDistance = stateSlot - slot;
+    let aggregatedAttPoolConsolidations: AttestationsConsolidation[] = [];
+    let notSeenCommitteeMembersByIndex: Map<CommitteeIndex, Set<CommitteeValidatorIndex> | null> = new Map();
+    try {
+      const aggAttestationPoolResult = this.aggregatedAttestationPool.getAttestationsForBlockElectraBySlot(
+        slot,
+        fork,
+        state.slot,
+        state.epochCtx.effectiveBalanceIncrements,
+        notSeenValidatorsFn,
+        validateAttestationDataFn
+      );
+      aggregatedAttPoolConsolidations = aggAttestationPoolResult.consolidations;
+      notSeenCommitteeMembersByIndex = aggAttestationPoolResult.notSeenCommitteeMembersByIndex;
+    } catch (e) {
+      this.logger.debug("Error getting AggregatedAttestations for block production", {slot}, e as Error);
+      continue;
+    }
+    scannedSlotsAggregatedAttestationPool++;
+    totalAggregatedAttPoolConsolidations += aggregatedAttPoolConsolidations.length;
+
+    let singleAttConsolidations: AttestationsConsolidation[] = [];
+    if (singleAttestationPoolSlots.has(slot)) {
+      try {
+        singleAttConsolidations = this.singleAttestationPool.getAttestationsForBlockElectraBySlot(
+          slot,
+          state.slot,
+          notSeenCommitteeMembersByIndex,
+          state.epochCtx.effectiveBalanceIncrements,
+          notSeenValidatorsFn,
+          validateAttestationDataFn
+        );
+        totalSingleAttestationPoolConsolidations += singleAttConsolidations.length;
+      } catch (e) {
+        this.logger.debug("Error getting SingleAttations for block production", {slot}, e as Error);
+        // no need to continue here, we can still process aggregated attestations
+      }
+    }
+    scannedSlotsSingleAttestationPool++;
+
+    for (const {consolidation, type} of [
+      ...aggregatedAttPoolConsolidations.map((c) => ({
+        consolidation: c,
+        type: ConsolidationType.Aggregated_Attestation_Pool,
+      })),
+      ...singleAttConsolidations.map((c) => ({consolidation: c, type: ConsolidationType.Single_Attestation_Pool})),
+    ]) {
+      const score = consolidation.totalNewSeenEffectiveBalance / inclusionDistance;
+      consolidations.set(consolidation, {type, score});
+      // Stop accumulating attestations there are enough that may have good scoring
+      if (consolidations.size >= MAX_ATTESTATIONS_ELECTRA * 2) {
+        stopReason = ScannedSlotsTerminationReason.MaxConsolidationReached;
+        break;
+      }
+    }
+
+    // finished processing a slot
+  }
+
+  this.metrics?.opPool.aggregatedAttestationPool.packedAttestations.totalConsolidations.set(
+    totalAggregatedAttPoolConsolidations
+  );
+  this.metrics?.opPool.attestationPool.packedAttestations.totalConsolidations.set(
+    totalSingleAttestationPoolConsolidations
+  );
+
+  const sortedConsolidationsByScore = Array.from(consolidations.entries())
+    .sort((a, b) => b[1].score - a[1].score)
+    .map(([consolidation, {type}]) => ({consolidation, type}))
+    .slice(0, MAX_ATTESTATIONS_ELECTRA);
+
+  // on chain aggregation is expensive, only do it after all
+  const aggregatedAttestationsPackedMetrics = this.metrics?.opPool.aggregatedAttestationPool.packedAttestations;
+  const singleAttestationPackedMetrics = this.metrics?.opPool.attestationPool.packedAttestations;
+  const packedAttestations: electra.Attestation[] = new Array(sortedConsolidationsByScore.length);
+
+  let aggregatedAttestationPoolIndex = 0;
+  let singleAttestationPoolIndex = 0;
+  for (const [i, {consolidation, type}] of sortedConsolidationsByScore.entries()) {
+    packedAttestations[i] = aggregateConsolidation(consolidation);
+
+    // record metrics of packed attestations
+    const packedAttestationsMetrics =
+      type === ConsolidationType.Aggregated_Attestation_Pool
+        ? aggregatedAttestationsPackedMetrics
+        : singleAttestationPackedMetrics;
+    const index =
+      type === ConsolidationType.Aggregated_Attestation_Pool
+        ? aggregatedAttestationPoolIndex++
+        : singleAttestationPoolIndex++;
+    packedAttestationsMetrics?.committeeCount.set({index}, consolidation.byCommittee.size);
+    packedAttestationsMetrics?.totalAttesters.set({index}, consolidation.totalAttesters);
+    packedAttestationsMetrics?.nonParticipation.set({index}, consolidation.notSeenAttesters);
+    packedAttestationsMetrics?.inclusionDistance.set({index}, stateSlot - packedAttestations[i].data.slot);
+    packedAttestationsMetrics?.newSeenAttesters.set({index}, consolidation.newSeenAttesters);
+    packedAttestationsMetrics?.totalEffectiveBalance.set({index}, consolidation.totalNewSeenEffectiveBalance);
+  }
+
+  if (stopReason === null) {
+    stopReason = ScannedSlotsTerminationReason.ScannedAllSlots;
+  }
+
+  // only need to track this for aggregatedAttestationPool
+  aggregatedAttestationsPackedMetrics?.scannedSlots.set({reason: stopReason}, scannedSlotsAggregatedAttestationPool);
+
+  aggregatedAttestationsPackedMetrics?.poolSlots.set(aggregatedAttPoolSlotsDesc.length);
+  singleAttestationPackedMetrics?.poolSlots.set(singleAttestationPoolSlots.size);
+
+  return packedAttestations;
+}

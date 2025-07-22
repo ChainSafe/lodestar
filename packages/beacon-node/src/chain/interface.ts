@@ -16,6 +16,7 @@ import {
   Root,
   RootHex,
   SignedBeaconBlock,
+  SingleAttestation,
   Slot,
   UintNum64,
   ValidatorIndex,
@@ -63,6 +64,7 @@ import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {SeenBlockInputCache} from "./seenCache/seenBlockInput.js";
 import {ShufflingCache} from "./shufflingCache.js";
 import {ValidatorMonitor} from "./validatorMonitor.js";
+import { SingleAttestationPool } from "./opPools/singleAttestationPool.js";
 
 export {BlockType, type AssembledBlockType};
 export {type ProposerPreparationData};
@@ -111,6 +113,7 @@ export interface IBeaconChain {
 
   // Ops pool
   readonly attestationPool: AttestationPool;
+  readonly singleAttestationPool: SingleAttestationPool;
   readonly aggregatedAttestationPool: AggregatedAttestationPool;
   readonly syncCommitteeMessagePool: SyncCommitteeMessagePool;
   readonly syncContributionAndProofPool: SyncContributionAndProofPool;
