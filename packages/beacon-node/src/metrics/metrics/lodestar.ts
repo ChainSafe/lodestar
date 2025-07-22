@@ -885,7 +885,19 @@ export function createLodestarMetrics(
       singleAttestationPool: {
         size: register.gauge({
           name: "lodestar_oppool_single_attestation_pool_size",
-          help: "Current size of the AttestationPool = total attestations unique by data and slot",
+          help: "Current size of the SingleAttestationPool = total attestations stored",
+        }),
+        attDataPerSlot: register.gauge({
+          name: "lodestar_oppool_single_attestation_pool_attestation_data_per_slot_total",
+          help: "Total number of attestation data per slot in SingleAttestationPool",
+        }),
+        committeesPerSlot: register.gauge({
+          name: "lodestar_oppool_single_attestation_pool_committees_per_slot_total",
+          help: "Total number of committees per slot in SingleAttestationPool",
+        }),
+        minAttestationsPerCommittee: register.gauge({
+          name: "lodestar_oppool_single_attestation_pool_max_attestations_per_committee",
+          help: "Min number of attestations per committee in SingleAttestationPool",
         }),
         gossipInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
           name: "lodestar_oppool_single_attestation_pool_gossip_insert_outcome_total",
@@ -896,10 +908,6 @@ export function createLodestarMetrics(
           name: "lodestar_oppool_single_attestation_pool_api_insert_outcome_total",
           help: "Total number of InsertOutcome as a result of adding a single attestation from api to the pool",
           labelNames: ["insertOutcome"],
-        }),
-        getAggregateCacheMisses: register.counter({
-          name: "lodestar_oppool_single_attestation_pool_get_aggregate_cache_misses_total",
-          help: "Total number of getAggregate calls with no aggregate for slot, attestation data root, and committee index",
         }),
         packedAttestations: {
           committeeCount: register.gauge<{index: number}>({

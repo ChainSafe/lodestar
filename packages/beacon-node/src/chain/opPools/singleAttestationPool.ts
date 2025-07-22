@@ -70,19 +70,8 @@ export class SingleAttestationPool {
 
   private lowestPermissibleSlot = 0;
 
-  constructor(private readonly metrics: Metrics | null = null) {}
-
-  /** Returns current count of SingleAttestations */
-  getAttestationCount(): number {
-    let attestationCount = 0;
-    for (const committeeByIndexByRoot of this.committeeByIndexByRootBySlot.values()) {
-      for (const committeeByIndex of committeeByIndexByRoot.values()) {
-        for (const committee of committeeByIndex.values()) {
-          attestationCount += committee.attestations.size;
-        }
-      }
-    }
-    return attestationCount;
+  constructor(private readonly metrics: Metrics | null = null) {
+    metrics?.opPool.singleAttestationPool.size.addCollect(() => this.onScrapeMetrics(metrics));
   }
 
   /**
@@ -263,6 +252,51 @@ export class SingleAttestationPool {
   prune(clockSlot: Slot): void {
     pruneBySlot(this.committeeByIndexByRootBySlot, clockSlot, SLOTS_RETAINED);
     this.lowestPermissibleSlot = clockSlot - SLOTS_RETAINED;
+  }
+
+  private onScrapeMetrics(metrics: Metrics): void {
+    const poolMetrics = metrics.opPool.singleAttestationPool;
+    const allSlots = Array.from(this.committeeByIndexByRootBySlot.keys());
+
+    // last item is current slot, we want the previous one, if available.
+    const previousSlot = allSlots.length > 1 ? (allSlots.at(-2) ?? null) : null;
+
+    // always record the previous slot because the current slot may not be finished yet, we may receive more attestations
+    if (previousSlot !== null) {
+      const committeeByIndexByRoot = this.committeeByIndexByRootBySlot.get(previousSlot);
+      if (committeeByIndexByRoot != null) {
+        poolMetrics.attDataPerSlot.set(committeeByIndexByRoot.size);
+
+        let minAttestations = Infinity;
+        let committeeCount = 0;
+        for (const committeeByIndex of committeeByIndexByRoot.values()) {
+          for (const committeeInfo of committeeByIndex.values()) {
+            const attestationCount = committeeInfo.attestations.size;
+            minAttestations = Math.min(minAttestations, attestationCount);
+            committeeCount += 1;
+          }
+        }
+        // expect some committees have so few attestations and it's not included in AggreatedAttestationPool
+        // we could include these attestations for block production
+        poolMetrics.minAttestationsPerCommittee.set(minAttestations);
+        poolMetrics.committeesPerSlot.set(committeeCount);
+      }
+    }
+
+    poolMetrics.size.set(this.getAttestationCount());
+  }
+
+  /** Returns current count of SingleAttestations */
+  private getAttestationCount(): number {
+    let attestationCount = 0;
+    for (const committeeByIndexByRoot of this.committeeByIndexByRootBySlot.values()) {
+      for (const committeeByIndex of committeeByIndexByRoot.values()) {
+        for (const committee of committeeByIndex.values()) {
+          attestationCount += committee.attestations.size;
+        }
+      }
+    }
+    return attestationCount;
   }
 }
 
