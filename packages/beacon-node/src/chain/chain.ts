@@ -841,9 +841,10 @@ export class BeaconChain implements IBeaconChain {
   predictProposerHead(slot: Slot): ProtoBlock {
     this.metrics?.forkChoice.requests.inc();
     const timer = this.metrics?.forkChoice.findHead.startTimer({caller: FindHeadFnName.predictProposerHead});
+    const secFromSlot = this.clock.secFromSlot(slot);
 
     try {
-      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetPredictedProposerHead, slot}).head;
+      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetPredictedProposerHead, secFromSlot, slot}).head;
     } catch (e) {
       this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetPredictedProposerHead});
       throw e;

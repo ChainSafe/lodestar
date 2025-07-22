@@ -5,7 +5,7 @@ import {ChainConfig, createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {AttestationService, AttestationServiceOpts} from "../../../src/services/attestation.js";
 import {AttDutyAndProof} from "../../../src/services/attestationDuties.js";
 import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker.js";
@@ -25,27 +25,33 @@ vi.mock("../../../src/services/syncingStatusTracker.js");
 describe("AttestationService", () => {
   const api = getApiClientStub();
   // @ts-expect-error - Mocked class don't need parameters
-  const validatorStore = vi.mocked(new ValidatorStore());
+  const validatorStore = vi.mocked(new ValidatorStore({}, {defaultConfig: {}}));
   const emitter = vi.mocked(new ValidatorEventEmitter());
   // @ts-expect-error - Mocked class don't need parameters
   const chainHeadTracker = vi.mocked(new ChainHeaderTracker());
   // @ts-expect-error - Mocked class don't need parameters
-  const syncingStatusTracker = vi.mocked(new SyncingStatusTracker());
+  const syncingStatusTracker = vi.mocked(new SyncingStatusTracker({}, api, new ClockMock(), null));
 
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
-
-  beforeAll(() => {
-    const secretKeys = Array.from({length: 1}, (_, i) => SecretKey.fromBytes(Buffer.alloc(32, i + 1)));
-    pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
-    validatorStore.votingPubkeys.mockReturnValue(pubkeys.map(toHexString));
-    validatorStore.hasVotingPubkey.mockReturnValue(true);
-    validatorStore.hasSomeValidators.mockReturnValue(true);
-    validatorStore.signAttestationSelectionProof.mockResolvedValue(ZERO_HASH);
-  });
 
   let controller: AbortController; // To stop clock
   beforeEach(() => {
     controller = new AbortController();
+    const secretKeys = Array.from({length: 1}, (_, i) => SecretKey.fromBytes(Buffer.alloc(32, i + 1)));
+    pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
+
+    // vi.mock does not automock all objects in Bun runtime, so we have to explicitly spy on needed methods
+    vi.spyOn(validatorStore, "votingPubkeys");
+    vi.spyOn(validatorStore, "hasVotingPubkey");
+    vi.spyOn(validatorStore, "hasSomeValidators");
+    vi.spyOn(validatorStore, "signAttestationSelectionProof");
+    vi.spyOn(validatorStore, "signAttestation");
+    vi.spyOn(validatorStore, "signAggregateAndProof");
+
+    validatorStore.votingPubkeys.mockReturnValue(pubkeys.map(toHexString));
+    validatorStore.hasVotingPubkey.mockReturnValue(true);
+    validatorStore.hasSomeValidators.mockReturnValue(true);
+    validatorStore.signAttestationSelectionProof.mockResolvedValue(ZERO_HASH);
   });
   afterEach(() => {
     controller.abort();

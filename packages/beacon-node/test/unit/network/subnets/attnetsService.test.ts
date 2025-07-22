@@ -52,7 +52,7 @@ describe("AttnetsService", () => {
 
     // load getCurrentSlot first, vscode not able to debug without this
     getCurrentSlot(config, Math.floor(Date.now() / 1000));
-    metadata = new MetadataController({}, {config, onSetValue: () => null});
+    metadata = new MetadataController({}, {config, logger, onSetValue: () => null});
     service = new AttnetsService(config, clock, gossipStub, metadata, logger, null, nodeId, {
       slotsToSubscribeBeforeAggregatorDuty: 2,
     });

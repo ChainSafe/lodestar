@@ -1,6 +1,12 @@
 import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
-import {AncestorStatus, EpochDifference, ForkChoiceError, ForkChoiceErrorCode} from "@lodestar/fork-choice";
+import {
+  AncestorStatus,
+  EpochDifference,
+  ForkChoiceError,
+  ForkChoiceErrorCode,
+  NotReorgedReason,
+} from "@lodestar/fork-choice";
 import {
   ForkPostAltair,
   ForkPostElectra,
@@ -15,6 +21,8 @@ import {
   RootCache,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
+  isExecutionStateType,
+  isStartSlotOfEpoch,
   isStateValidatorsNodesPopulated,
 } from "@lodestar/state-transition";
 import {Attestation, BeaconBlock, altair, capella, electra, phase0, ssz} from "@lodestar/types";
@@ -313,9 +321,64 @@ export async function importBlock(
   // Notifying EL of head and finalized updates as below is usually done within the 1st 4s of the slot.
   // If there is an advanced payload generation in the next slot, we'll notify EL again 4s before next
   // slot via PrepareNextSlotScheduler. There is no harm updating the ELs with same data, it will just ignore it.
+
+  // Suppress fcu call if shouldOverrideFcu is true. This only happens if we have proposer boost reorg enabled
+  // and the block is weak and can potentially be reorged out.
+  let shouldOverrideFcu = false;
+  let notOverrideFcuReason = NotReorgedReason.Unknown;
+
+  if (opts.isGossipBlock && isExecutionStateType(postState)) {
+    const proposalSlot = blockSlot + 1;
+    try {
+      const proposerIndex = postState.epochCtx.getBeaconProposer(proposalSlot);
+      const feeRecipient = this.beaconProposerCache.get(proposerIndex);
+      const {currentSlot} = this.clock;
+
+      if (feeRecipient) {
+        // We would set this to true if
+        //  1) This is a gossip block
+        //  2) We are proposer of next slot
+        //  3) Proposer boost reorg related flag is turned on (this is checked inside the function)
+        //  4) Block meets the criteria of being re-orged out (this is also checked inside the function)
+        const result = this.forkChoice.shouldOverrideForkChoiceUpdate(
+          blockSummary.blockRoot,
+          this.clock.secFromSlot(currentSlot),
+          currentSlot
+        );
+        shouldOverrideFcu = result.shouldOverrideFcu;
+        if (!result.shouldOverrideFcu) {
+          notOverrideFcuReason = result.reason;
+        }
+      } else {
+        notOverrideFcuReason = NotReorgedReason.NotProposerOfNextSlot;
+      }
+    } catch (e) {
+      if (isStartSlotOfEpoch(proposalSlot)) {
+        notOverrideFcuReason = NotReorgedReason.NotShufflingStable;
+      } else {
+        this.logger.warn("Unable to get beacon proposer. Do not override fcu.", {proposalSlot}, e as Error);
+      }
+    }
+  }
+
+  if (shouldOverrideFcu) {
+    this.logger.verbose("Weak block detected. Skip fcu call in importBlock", {
+      blockRoot: blockRootHex,
+      slot: blockSlot,
+    });
+  } else {
+    this.metrics?.importBlock.notOverrideFcuReason.inc({reason: notOverrideFcuReason});
+    this.logger.verbose("Strong block detected. Not override fcu call", {
+      blockRoot: blockRootHex,
+      slot: blockSlot,
+      reason: notOverrideFcuReason,
+    });
+  }
+
   if (
     !this.opts.disableImportExecutionFcU &&
-    (newHead.blockRoot !== oldHead.blockRoot || currFinalizedEpoch !== prevFinalizedEpoch)
+    (newHead.blockRoot !== oldHead.blockRoot || currFinalizedEpoch !== prevFinalizedEpoch) &&
+    !shouldOverrideFcu
   ) {
     /**
      * On post BELLATRIX_EPOCH but pre TTD, blocks include empty execution payload with a zero block hash.

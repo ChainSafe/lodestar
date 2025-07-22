@@ -3,6 +3,7 @@ import {BeaconConfig} from "@lodestar/config";
 import {ForkSeq} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, altair, phase0, ssz} from "@lodestar/types";
+import {Logger, toHex} from "@lodestar/utils";
 import {FAR_FUTURE_EPOCH} from "../constants/index.js";
 import {getCurrentAndNextForkBoundary} from "./forks.js";
 
@@ -11,6 +12,7 @@ export enum ENRKey {
   eth2 = "eth2",
   attnets = "attnets",
   syncnets = "syncnets",
+  nfd = "nfd",
 }
 export enum SubnetType {
   attnets = "attnets",
@@ -23,6 +25,7 @@ export type MetadataOpts = {
 
 export type MetadataModules = {
   config: BeaconConfig;
+  logger: Logger;
   onSetValue: (key: string, value: Uint8Array) => void;
 };
 
@@ -34,10 +37,12 @@ export type MetadataModules = {
 export class MetadataController {
   private onSetValue: (key: string, value: Uint8Array) => void;
   private config: BeaconConfig;
+  private logger: Logger;
   private _metadata: altair.Metadata;
 
   constructor(opts: MetadataOpts, modules: MetadataModules) {
     this.config = modules.config;
+    this.logger = modules.logger;
     this.onSetValue = modules.onSetValue;
     this._metadata = opts.metadata || ssz.altair.Metadata.defaultValue();
   }
@@ -89,15 +94,28 @@ export class MetadataController {
    *   - current_fork_version is the fork version at the node's current epoch defined by the wall-clock time (not
    *     necessarily the epoch to which the node is sync)
    *   - genesis_validators_root is the static Root found in state.genesis_validators_root
+   *   - epoch of fork boundary is used to get blob parameters of current Blob Parameter Only (BPO) fork
    *
    * 1. MUST be called on start to populate ENR
    * 2. Network MUST call this method on fork transition.
    *    Current Clock implementation ensures no race conditions, epoch is correct if re-fetched
    */
-  updateEth2Field(epoch: Epoch): Uint8Array {
-    const enrForkId = ssz.phase0.ENRForkID.serialize(getENRForkID(this.config, epoch));
-    this.onSetValue(ENRKey.eth2, enrForkId);
-    return enrForkId;
+  updateEth2Field(epoch: Epoch): void {
+    const enrForkId = getENRForkID(this.config, epoch);
+    const {forkDigest, nextForkVersion, nextForkEpoch} = enrForkId;
+    this.onSetValue(ENRKey.eth2, ssz.phase0.ENRForkID.serialize(enrForkId));
+    this.logger.debug("Updated eth2 field in ENR", {
+      forkDigest: toHex(forkDigest),
+      nextForkVersion: toHex(nextForkVersion),
+      nextForkEpoch,
+    });
+
+    const nextForkDigest =
+      nextForkEpoch !== FAR_FUTURE_EPOCH
+        ? this.config.forkBoundary2ForkDigest(this.config.getForkBoundaryAtEpoch(nextForkEpoch))
+        : ssz.ForkDigest.defaultValue();
+    this.onSetValue(ENRKey.nfd, nextForkDigest);
+    this.logger.debug("Updated nfd field in ENR", {nextForkDigest: toHex(nextForkDigest)});
   }
 }
 

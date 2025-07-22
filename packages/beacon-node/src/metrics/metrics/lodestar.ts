@@ -1,3 +1,4 @@
+import {NotReorgedReason} from "@lodestar/fork-choice";
 import {BlockInputSource} from "../../chain/blocks/blockInput/index.js";
 import {BlobsSource, BlockSource} from "../../chain/blocks/types.js";
 import {JobQueueItemType} from "../../chain/bls/index.js";
@@ -743,6 +744,11 @@ export function createLodestarMetrics(
         name: "lodestar_import_blobs_by_source_total",
         help: "Total number of imported blobs by source",
         labelNames: ["blobsSource"],
+      }),
+      notOverrideFcuReason: register.counter<{reason: NotReorgedReason}>({
+        name: "lodestar_import_block_not_override_fcu_reason_total",
+        help: "Reason why the fcu call is not suppressed during block import",
+        labelNames: ["reason"],
       }),
     },
     engineNotifyNewPayloadResult: register.gauge<{result: ExecutionPayloadStatus}>({
