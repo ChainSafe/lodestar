@@ -1,7 +1,7 @@
 import {PeerId} from "@libp2p/interface";
+import {GoodByeReasonCode} from "../../../constants/network.js";
 import {PeerIdStr} from "../../../util/peerId.js";
 import {NetworkCoreMetrics} from "../../core/metrics.js";
-import {GoodByeReasonCode} from "../../../constants/network.js";
 
 export type PeerRpcScoreOpts = {
   disablePeerScoring?: boolean;
