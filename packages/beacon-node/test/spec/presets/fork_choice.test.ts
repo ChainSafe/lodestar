@@ -324,6 +324,21 @@ const forkChoiceTest =
                   `Invalid proposer head at step ${i}`
                 );
               }
+              if (step.checks.should_override_forkchoice_update) {
+                const currentSlot = Math.floor(tickTime / config.SECONDS_PER_SLOT);
+                const result = chain.forkChoice.shouldOverrideForkChoiceUpdate(
+                  head.blockRoot,
+                  tickTime % config.SECONDS_PER_SLOT,
+                  currentSlot
+                );
+                if (result.shouldOverrideFcu === false) {
+                  logger.debug(`Not override fcu reason ${result.reason} at step ${i}`);
+                }
+                expect({result: result.shouldOverrideFcu, validator_is_connected: true}).toEqualWithMessage(
+                  step.checks.should_override_forkchoice_update,
+                  `Invalid should override fcu result at step ${i}`
+                );
+              }
             }
 
             // None of the above
@@ -487,6 +502,10 @@ type Checks = {
     finalized_checkpoint?: SpecTestCheckpoint;
     proposer_boost_root?: RootHex;
     get_proposer_head?: string;
+    should_override_forkchoice_update?: {
+      validator_is_connected: boolean;
+      result: boolean;
+    };
   };
 };
 

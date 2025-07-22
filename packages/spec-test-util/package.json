@@ -65,9 +65,9 @@
     "@lodestar/utils": "^1.32.0",
     "rimraf": "^4.4.1",
     "snappyjs": "^0.7.0",
-    "vitest": "^3.0.6"
+    "vitest": "3.0.9"
   },
   "peerDependencies": {
-    "vitest": "^3.0.6"
+    "vitest": "3.0.9"
   }
 }

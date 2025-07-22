@@ -19,7 +19,6 @@ import {
   computeCommitteeCount,
   computeEpochAtSlot,
   createCachedBeaconState,
-  getActiveValidatorIndices,
   interopSecretKey,
   newFilledArray,
 } from "../../src/index.js";
@@ -32,6 +31,7 @@ import {
   CachedBeaconStatePhase0,
 } from "../../src/types.js";
 import {getNextSyncCommittee} from "../../src/util/syncCommittee.js";
+import {getActiveValidatorIndices} from "../../src/util/validator.js";
 import {interopPubkeysCached} from "../utils/interop.js";
 
 let phase0State: BeaconStatePhase0 | null = null;
