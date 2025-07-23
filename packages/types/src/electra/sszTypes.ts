@@ -7,6 +7,7 @@ import {
   VectorCompositeType,
 } from "@chainsafe/ssz";
 import {
+  CURRENT_SYNC_COMMITTEE_DEPTH_ELECTRA,
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
   FINALIZED_ROOT_DEPTH_ELECTRA,
   HISTORICAL_ROOTS_LIMIT,
@@ -46,6 +47,12 @@ const {
   ValidatorIndex,
   CommitteeIndex,
 } = primitiveSsz;
+
+export const CurrentSyncCommitteeBranch = new VectorCompositeType(Bytes32, CURRENT_SYNC_COMMITTEE_DEPTH_ELECTRA);
+
+export const FinalityBranch = new VectorCompositeType(Bytes32, FINALIZED_ROOT_DEPTH_ELECTRA);
+
+export const NextSyncCommitteeBranch = new VectorCompositeType(Bytes32, NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA);
 
 export const AggregationBits = new BitListType(MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT);
 
@@ -362,7 +369,7 @@ export const LightClientBootstrap = new ContainerType(
   {
     header: denebSsz.LightClientHeader,
     currentSyncCommittee: altairSsz.SyncCommittee,
-    currentSyncCommitteeBranch: new VectorCompositeType(Bytes32, NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA),
+    currentSyncCommitteeBranch: CurrentSyncCommitteeBranch,
   },
   {typeName: "LightClientBootstrap", jsonCase: "eth2"}
 );
@@ -371,9 +378,9 @@ export const LightClientUpdate = new ContainerType(
   {
     attestedHeader: denebSsz.LightClientHeader,
     nextSyncCommittee: altairSsz.SyncCommittee,
-    nextSyncCommitteeBranch: new VectorCompositeType(Bytes32, NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA), // Modified in ELECTRA
+    nextSyncCommitteeBranch: NextSyncCommitteeBranch, // Modified in ELECTRA
     finalizedHeader: denebSsz.LightClientHeader,
-    finalityBranch: new VectorCompositeType(Bytes32, FINALIZED_ROOT_DEPTH_ELECTRA), // Modified in ELECTRA
+    finalityBranch: FinalityBranch, // Modified in ELECTRA
     syncAggregate: altairSsz.SyncAggregate,
     signatureSlot: Slot,
   },
@@ -384,7 +391,7 @@ export const LightClientFinalityUpdate = new ContainerType(
   {
     attestedHeader: denebSsz.LightClientHeader,
     finalizedHeader: denebSsz.LightClientHeader,
-    finalityBranch: new VectorCompositeType(Bytes32, FINALIZED_ROOT_DEPTH_ELECTRA), // Modified in ELECTRA
+    finalityBranch: FinalityBranch, // Modified in ELECTRA
     syncAggregate: altairSsz.SyncAggregate,
     signatureSlot: Slot,
   },

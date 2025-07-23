@@ -1,13 +1,17 @@
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {BLOB_TX_TYPE, BYTES_PER_FIELD_ELEMENT} from "@lodestar/params";
+import {
+  BLOB_TX_TYPE,
+  BYTES_PER_FIELD_ELEMENT,
+  FIELD_ELEMENTS_PER_BLOB as FIELD_ELEMENTS_PER_BLOB_MAINNET,
+} from "@lodestar/params";
 import {bellatrix, deneb, ssz} from "@lodestar/types";
-import {afterEach, beforeAll, describe, expect, it} from "vitest";
+import {afterEach, describe, expect, it} from "vitest";
 import {validateBlobSidecars, validateGossipBlobSidecar} from "../../../src/chain/validation/blobSidecar.js";
 import {computeBlobSidecars, kzgCommitmentToVersionedHash} from "../../../src/util/blobs.js";
-import {FIELD_ELEMENTS_PER_BLOB_MAINNET, ckzg, initCKZG, loadEthereumTrustedSetup} from "../../../src/util/kzg.js";
+import {kzg} from "../../../src/util/kzg.js";
 import {getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
 
-describe("C-KZG", () => {
+describe("KZG", () => {
   const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];
   afterEach(async () => {
     while (afterEachCallbacks.length > 0) {
@@ -16,19 +20,14 @@ describe("C-KZG", () => {
     }
   });
 
-  beforeAll(async () => {
-    await initCKZG();
-    loadEthereumTrustedSetup();
-  });
-
   it("computes the correct commitments and aggregate proofs from blobs", () => {
     // ====================
     // Apply this example to the test data
     // ====================
     const blobs = new Array(2).fill(0).map(generateRandomBlob);
-    const commitments = blobs.map((blob) => ckzg.blobToKzgCommitment(blob));
-    const proofs = blobs.map((blob, index) => ckzg.computeBlobKzgProof(blob, commitments[index]));
-    expect(ckzg.verifyBlobKzgProofBatch(blobs, commitments, proofs)).toBe(true);
+    const commitments = blobs.map((blob) => kzg.blobToKzgCommitment(blob));
+    const proofs = blobs.map((blob, index) => kzg.computeBlobKzgProof(blob, commitments[index]));
+    expect(kzg.verifyBlobKzgProofBatch(blobs, commitments, proofs)).toBe(true);
   });
 
   it("BlobSidecars", async () => {
@@ -47,7 +46,7 @@ describe("C-KZG", () => {
     const slot = 0;
     const fork = config.getForkName(slot);
     const blobs = [generateRandomBlob(), generateRandomBlob()];
-    const kzgCommitments = blobs.map((blob) => ckzg.blobToKzgCommitment(blob));
+    const kzgCommitments = blobs.map((blob) => kzg.blobToKzgCommitment(blob));
 
     const signedBeaconBlock = ssz.deneb.SignedBeaconBlock.defaultValue();
 
@@ -56,13 +55,13 @@ describe("C-KZG", () => {
       signedBeaconBlock.message.body.blobKzgCommitments.push(kzgCommitment);
     }
     const blockRoot = ssz.deneb.BeaconBlock.hashTreeRoot(signedBeaconBlock.message);
-    const kzgProofs = blobs.map((blob, index) => ckzg.computeBlobKzgProof(blob, kzgCommitments[index]));
+    const kzgProofs = blobs.map((blob, index) => kzg.computeBlobKzgProof(blob, kzgCommitments[index]));
     const blobSidecars: deneb.BlobSidecars = computeBlobSidecars(chain.config, signedBeaconBlock, {blobs, kzgProofs});
 
     expect(blobSidecars.length).toBe(2);
 
     // Full validation
-    validateBlobSidecars(slot, blockRoot, kzgCommitments, blobSidecars);
+    await validateBlobSidecars(slot, blockRoot, kzgCommitments, blobSidecars);
 
     for (const blobSidecar of blobSidecars) {
       try {

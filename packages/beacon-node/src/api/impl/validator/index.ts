@@ -50,6 +50,7 @@ import {
 } from "@lodestar/types";
 import {
   TimeoutError,
+  defer,
   formatWeiToEth,
   fromHex,
   prettyWeiToEth,
@@ -100,14 +101,14 @@ import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices, selectBlockProdu
 export const SYNC_TOLERANCE_EPOCHS = 1;
 
 /**
- * Cutoff time to wait from start of the slot for execution and builder block production apis to resolve
- * Post this time, race execution and builder to pick whatever resolves first
+ * Cutoff time to wait from start of the slot for execution and builder block production apis to resolve.
+ * Post this time, race execution and builder to pick whatever resolves first.
  *
- * Empirically the builder block resolves in ~1.5+ seconds, and execution should resolve <1 sec.
- * So lowering the cutoff to 2.5 sec from 3 seconds to publish faster for successful proposal
- * as proposals post 4 seconds into the slot will likely be orphaned due to proposer boost reorg.
+ * Empirically the builder block resolves in ~1 second, and execution block resolves in <500 ms.
+ * A cutoff of 2 seconds gives enough time and if there are unexpected delays it ensures we publish
+ * in time as proposals post 4 seconds into the slot will likely be orphaned due to proposer boost reorg.
  */
-const BLOCK_PRODUCTION_RACE_CUTOFF_MS = 2_500;
+const BLOCK_PRODUCTION_RACE_CUTOFF_MS = 2_000;
 /** Overall timeout for execution and block production apis */
 const BLOCK_PRODUCTION_RACE_TIMEOUT_MS = 12_000;
 
@@ -403,11 +404,13 @@ export function getValidatorApi(
     graffiti: Bytes32,
     // as of now fee recipient checks can not be performed because builder does not return bid recipient
     {
-      commonBlockBody,
+      commonBlockBodyPromise,
       parentBlockRoot,
+      parentSlot,
     }: Omit<routes.validator.ExtraProduceBlockOpts, "builderSelection"> & {
-      commonBlockBody: CommonBlockBody;
+      commonBlockBodyPromise: Promise<CommonBlockBody>;
       parentBlockRoot: Root;
+      parentSlot: Slot;
     }
   ): Promise<ProduceBlindedBlockRes> {
     const version = config.getForkName(slot);
@@ -432,13 +435,15 @@ export function getValidatorApi(
       const {block, executionPayloadValue, consensusBlockValue} = await chain.produceBlindedBlock({
         slot,
         parentBlockRoot,
+        parentSlot,
         randaoReveal,
         graffiti,
-        commonBlockBody,
+        commonBlockBodyPromise,
       });
 
       metrics?.blockProductionSuccess.inc({source});
       metrics?.blockProductionNumAggregated.observe({source}, block.body.attestations.length);
+      metrics?.blockProductionConsensusBlockValue.observe({source}, Number(formatWeiToEth(consensusBlockValue)));
       metrics?.blockProductionExecutionPayloadValue.observe({source}, Number(formatWeiToEth(executionPayloadValue)));
       logger.verbose("Produced blinded block", {
         slot,
@@ -464,11 +469,13 @@ export function getValidatorApi(
     {
       feeRecipient,
       strictFeeRecipientCheck,
-      commonBlockBody,
+      commonBlockBodyPromise,
       parentBlockRoot,
+      parentSlot,
     }: Omit<routes.validator.ExtraProduceBlockOpts, "builderSelection"> & {
-      commonBlockBody: CommonBlockBody;
+      commonBlockBodyPromise: Promise<CommonBlockBody>;
       parentBlockRoot: Root;
+      parentSlot: Slot;
     }
   ): Promise<ProduceBlockOrContentsRes & {shouldOverrideBuilder?: boolean}> {
     const source = ProducedBlockSource.engine;
@@ -480,10 +487,11 @@ export function getValidatorApi(
       const {block, executionPayloadValue, consensusBlockValue, shouldOverrideBuilder} = await chain.produceBlock({
         slot,
         parentBlockRoot,
+        parentSlot,
         randaoReveal,
         graffiti,
         feeRecipient,
-        commonBlockBody,
+        commonBlockBodyPromise,
       });
       const version = config.getForkName(block.slot);
       if (strictFeeRecipientCheck && feeRecipient && isForkPostBellatrix(version)) {
@@ -495,6 +503,7 @@ export function getValidatorApi(
 
       metrics?.blockProductionSuccess.inc({source});
       metrics?.blockProductionNumAggregated.observe({source}, block.body.attestations.length);
+      metrics?.blockProductionConsensusBlockValue.observe({source}, Number(formatWeiToEth(consensusBlockValue)));
       metrics?.blockProductionExecutionPayloadValue.observe({source}, Number(formatWeiToEth(executionPayloadValue)));
       logger.verbose("Produced execution block", {
         slot,
@@ -539,8 +548,10 @@ export function getValidatorApi(
     notWhileSyncing();
     await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
-    const parentBlockRoot = fromHex(chain.getProposerHead(slot).blockRoot);
+    const {blockRoot: parentBlockRootHex, slot: parentSlot} = chain.getProposerHead(slot);
+    const parentBlockRoot = fromHex(parentBlockRootHex);
     notOnOutOfRangeData(parentBlockRoot);
+    metrics?.blockProductionSlotDelta.set(slot - parentSlot);
 
     const fork = config.getForkName(slot);
     // set some sensible opts
@@ -579,6 +590,8 @@ export function getValidatorApi(
 
     const loggerContext = {
       slot,
+      parentSlot,
+      parentBlockRoot: parentBlockRootHex,
       fork,
       builderSelection,
       isBuilderEnabled,
@@ -589,35 +602,23 @@ export function getValidatorApi(
     };
 
     logger.verbose("Assembling block with produceEngineOrBuilderBlock", loggerContext);
-    const commonBlockBody = await chain.produceCommonBlockBody({
-      slot,
-      parentBlockRoot,
-      randaoReveal,
-      graffiti: graffitiBytes,
-    });
-    logger.debug("Produced common block body", loggerContext);
 
-    // Calculate cutoff time based on start of the slot
-    const cutoffMs = Math.max(0, BLOCK_PRODUCTION_RACE_CUTOFF_MS - Math.round(chain.clock.secFromSlot(slot) * 1000));
-
-    logger.verbose("Block production race (builder vs execution) starting", {
-      ...loggerContext,
-      cutoffMs,
-      timeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
-    });
+    // Defer common block body production to make sure we sent async builder and engine requests before
+    const deferredCommonBlockBody = defer<CommonBlockBody>();
+    const commonBlockBodyPromise = deferredCommonBlockBody.promise;
 
     // use abort controller to stop waiting for both block sources
     const controller = new AbortController();
 
     // Start calls for building execution and builder blocks
-
     const builderPromise = isBuilderEnabled
       ? produceBuilderBlindedBlock(slot, randaoReveal, graffitiBytes, {
           feeRecipient,
           // can't do fee recipient checks as builder bid doesn't return feeRecipient as of now
           strictFeeRecipientCheck: false,
-          commonBlockBody,
+          commonBlockBodyPromise,
           parentBlockRoot,
+          parentSlot,
         })
       : Promise.reject(new Error("Builder disabled"));
 
@@ -625,8 +626,9 @@ export function getValidatorApi(
       ? produceEngineFullBlockOrContents(slot, randaoReveal, graffitiBytes, {
           feeRecipient,
           strictFeeRecipientCheck,
-          commonBlockBody,
+          commonBlockBodyPromise,
           parentBlockRoot,
+          parentSlot,
         }).then((engineBlock) => {
           // Once the engine returns a block, in the event of either:
           // - suspected builder censorship
@@ -643,11 +645,42 @@ export function getValidatorApi(
         })
       : Promise.reject(new Error("Engine disabled"));
 
-    const [builder, engine] = await resolveOrRacePromises([builderPromise, enginePromise], {
+    // Calculate cutoff time based on start of the slot
+    const cutoffMs = Math.max(0, BLOCK_PRODUCTION_RACE_CUTOFF_MS - Math.round(chain.clock.secFromSlot(slot) * 1000));
+
+    logger.verbose("Block production race (builder vs execution) starting", {
+      ...loggerContext,
+      cutoffMs,
+      timeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
+    });
+
+    const blockProductionRacePromise = resolveOrRacePromises([builderPromise, enginePromise], {
       resolveTimeoutMs: cutoffMs,
       raceTimeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
       signal: controller.signal,
     });
+
+    logger.verbose("Producing common block body", loggerContext);
+    const commonBlockBodyStartedAt = Date.now();
+
+    const produceCommonBlockBodyPromise = chain
+      .produceCommonBlockBody({
+        slot,
+        parentBlockRoot,
+        parentSlot,
+        randaoReveal,
+        graffiti: graffitiBytes,
+      })
+      .then((commonBlockBody) => {
+        deferredCommonBlockBody.resolve(commonBlockBody);
+        logger.verbose("Produced common block body", {
+          ...loggerContext,
+          durationMs: Date.now() - commonBlockBodyStartedAt,
+        });
+      })
+      .catch(deferredCommonBlockBody.reject);
+
+    const [[builder, engine]] = await Promise.all([blockProductionRacePromise, produceCommonBlockBodyPromise]);
 
     if (builder.status === "pending" && engine.status === "pending") {
       throw Error("Builder and engine both failed to produce the block within timeout");

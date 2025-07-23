@@ -1,7 +1,7 @@
 import {TopicScoreParams} from "@chainsafe/libp2p-gossipsub/score";
 import {createBeaconConfig} from "@lodestar/config";
 import {mainnetChainConfig} from "@lodestar/config/configs";
-import {ATTESTATION_SUBNET_COUNT, ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ATTESTATION_SUBNET_COUNT, ForkName, GENESIS_EPOCH, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {describe, expect, it} from "vitest";
 import {ZERO_HASH} from "../../../../src/constants/index.js";
 import {computeGossipPeerScoreParams, gossipScoreThresholds} from "../../../../src/network/gossip/scoringParameters.js";
@@ -15,8 +15,8 @@ import {GossipType} from "../../../../src/network/index.js";
 describe("computeGossipPeerScoreParams", () => {
   const config = createBeaconConfig(mainnetChainConfig, ZERO_HASH);
   // Cheap stub on new BeaconConfig instance
-  config.forkName2ForkDigest = () => Buffer.alloc(4, 1);
-  config.forkDigest2ForkName = () => ForkName.phase0;
+  config.forkBoundary2ForkDigest = () => Buffer.alloc(4, 1);
+  config.forkDigest2ForkBoundary = () => ({fork: ForkName.phase0, epoch: GENESIS_EPOCH});
 
   const TOLERANCE = 0.00005;
 
@@ -69,7 +69,7 @@ describe("computeGossipPeerScoreParams", () => {
   function validateVoluntaryExitTopicParams(topics: Record<string, TopicScoreParams>): void {
     const topicString = stringifyGossipTopic(config, {
       type: GossipType.voluntary_exit,
-      fork: ForkName.phase0,
+      boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH},
     });
     const params = topics[topicString];
     assertMessageRatePenaltiesDisabled(params);
@@ -87,11 +87,11 @@ describe("computeGossipPeerScoreParams", () => {
   function validateSlashingTopicParams(topics: Record<string, TopicScoreParams>): void {
     const attesterSlashingTopicString = stringifyGossipTopic(config, {
       type: GossipType.attester_slashing,
-      fork: ForkName.phase0,
+      boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH},
     });
     const proposerSlashingTopicString = stringifyGossipTopic(config, {
       type: GossipType.proposer_slashing,
-      fork: ForkName.phase0,
+      boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH},
     });
     validateSlashingTopicScoreParams(topics[attesterSlashingTopicString]);
     validateSlashingTopicScoreParams(topics[proposerSlashingTopicString]);
@@ -113,7 +113,7 @@ describe("computeGossipPeerScoreParams", () => {
   function validateAggregateTopicParams(topics: Record<string, TopicScoreParams>, penaltiesActive: boolean): void {
     const topicString = stringifyGossipTopic(config, {
       type: GossipType.beacon_aggregate_and_proof,
-      fork: ForkName.phase0,
+      boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH},
     });
     const params = topics[topicString];
 
@@ -147,7 +147,7 @@ describe("computeGossipPeerScoreParams", () => {
   function validateBlockTopicParams(topics: Record<string, TopicScoreParams>, penaltiesActive: boolean): void {
     const topicString = stringifyGossipTopic(config, {
       type: GossipType.beacon_block,
-      fork: ForkName.phase0,
+      boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH},
     });
     const params = topics[topicString];
 
@@ -185,7 +185,7 @@ describe("computeGossipPeerScoreParams", () => {
     for (let i = 0; i < ATTESTATION_SUBNET_COUNT; i++) {
       const topicString = stringifyGossipTopic(config, {
         type: GossipType.beacon_attestation,
-        fork: ForkName.phase0,
+        boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH},
         subnet: i,
       });
       validateAllAttestationSubnetTopicScoreParams(topics[topicString], penaltiesActive);

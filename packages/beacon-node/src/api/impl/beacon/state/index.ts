@@ -1,9 +1,10 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {EPOCHS_PER_HISTORICAL_VECTOR, isForkPostElectra} from "@lodestar/params";
+import {EPOCHS_PER_HISTORICAL_VECTOR, isForkPostElectra, isForkPostFulu} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   BeaconStateElectra,
+  BeaconStateFulu,
   CachedBeaconStateAltair,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
@@ -363,6 +364,22 @@ export function getBeaconStateApi({
 
       return {
         data: context?.returnBytes ? pendingConsolidations.serialize() : pendingConsolidations.toValue(),
+        meta: {executionOptimistic, finalized, version: fork},
+      };
+    },
+
+    async getProposerLookahead({stateId}, context) {
+      const {state, executionOptimistic, finalized} = await getState(stateId);
+      const fork = config.getForkName(state.slot);
+
+      if (!isForkPostFulu(fork)) {
+        throw new ApiError(400, `Cannot retrieve proposer lookahead for pre-fulu state fork=${fork}`);
+      }
+
+      const {proposerLookahead} = state as BeaconStateFulu;
+
+      return {
+        data: context?.returnBytes ? proposerLookahead.serialize() : proposerLookahead.toValue(),
         meta: {executionOptimistic, finalized, version: fork},
       };
     },

@@ -26,4 +26,8 @@ export const testData: GenericServerTestCases<Endpoints> = {
     args: {signedBlindedBlock: {data: ssz.electra.SignedBlindedBeaconBlock.defaultValue()}},
     res: {data: ssz.deneb.ExecutionPayloadAndBlobsBundle.defaultValue(), meta: {version: ForkName.electra}},
   },
+  submitBlindedBlockV2: {
+    args: {signedBlindedBlock: {data: ssz.fulu.SignedBlindedBeaconBlock.defaultValue()}},
+    res: undefined,
+  },
 };

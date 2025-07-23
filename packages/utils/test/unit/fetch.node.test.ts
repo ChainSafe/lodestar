@@ -3,6 +3,8 @@ import http from "node:http";
 import {afterEach, describe, expect, it} from "vitest";
 import {FetchError, FetchErrorType, fetch} from "../../src/fetch.js";
 
+const isBun = "bun" in process.versions;
+
 describe("FetchError", () => {
   const port = 37421;
   const randomHex = crypto.randomBytes(32).toString("hex");
@@ -15,6 +17,7 @@ describe("FetchError", () => {
     errorType: FetchErrorType;
     errorCode: string;
     expectCause: boolean;
+    skip?: string;
   }[] = [
     {
       id: "Bad domain",
@@ -29,7 +32,9 @@ describe("FetchError", () => {
       url: `http://localhost:${port + 1}`,
       requestListener: (_req, res) => res.end(),
       errorType: "failed",
-      errorCode: "ECONNREFUSED",
+      // In Bun runtime we cant differentiate if the connection was refused or domain was not found
+      // We get `Unable to connect. Is the computer able to access the url?` error with code `ConnectionRefused`
+      errorCode: isBun ? "ENOTFOUND" : "ECONNREFUSED",
       expectCause: true,
     },
     {
@@ -48,6 +53,7 @@ describe("FetchError", () => {
       errorType: "failed",
       errorCode: "UND_ERR_HEADERS_OVERFLOW",
       expectCause: true,
+      skip: isBun ? "Header overflow is not supported in Bun runtime" : undefined,
     },
     {
       id: "Unknown scheme",
@@ -100,7 +106,9 @@ describe("FetchError", () => {
   for (const testCase of testCases) {
     const {id, url = `http://localhost:${port}`, requestListener, signalHandler} = testCase;
 
-    it(id, async () => {
+    it(id, async ({skip}) => {
+      if (testCase.skip) return skip(testCase.skip);
+
       if (requestListener) {
         const server = http.createServer(requestListener);
         await new Promise<void>((resolve) => server.listen(port, resolve));

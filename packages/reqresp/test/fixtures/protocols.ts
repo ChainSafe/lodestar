@@ -1,5 +1,5 @@
 import {ContainerType, ListBasicType, UintNumberType, ValueOf} from "@chainsafe/ssz";
-import {ForkName} from "@lodestar/params";
+import {ForkName, GENESIS_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {ContextBytesType, DialOnlyProtocol, Encoding, Protocol, ProtocolHandler} from "../../src/types.js";
 import {getEmptyHandler} from "./messages.js";
@@ -40,7 +40,7 @@ export const numberToStringProtocol: Protocol = {
   handler: async function* handler(req) {
     yield {
       data: Buffer.from(req.data.toString(), "utf8"),
-      fork: ForkName.phase0,
+      boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH},
     };
   },
 };
@@ -71,7 +71,7 @@ export function customProtocol(opts: ProtocolOptions): Protocol {
     responseSizes: () => ({minSize: 0, maxSize: Infinity}),
     contextBytes:
       opts.contextBytesType === ContextBytesType.ForkDigest
-        ? {type: ContextBytesType.ForkDigest, forkDigestContext: beaconConfig}
+        ? {type: ContextBytesType.ForkDigest, config: beaconConfig}
         : {type: ContextBytesType.Empty},
     method: "req/test",
     version: opts.version ?? 1,

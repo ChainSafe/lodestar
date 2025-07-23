@@ -7,7 +7,6 @@ BLS
 BeaconNode
 Besu
 Buterin
-CLA
 CLI
 CTRL
 Casper
@@ -62,8 +61,6 @@ JWT
 KDE
 Kubernetes
 Kurtosis
-LGPL
-LGPLv
 LMD
 LPoS
 LTS
@@ -109,6 +106,7 @@ VM
 Vitalik
 Vitest
 Wagyu
+addons
 api
 args
 async
@@ -210,6 +208,7 @@ protolambda
 prover
 pubsub
 rebased
+recompiles
 repo
 repos
 req
