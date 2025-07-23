@@ -106,6 +106,7 @@ export class SingleAttestationPool {
         committeeSize,
         attestations: new Map<CommitteeValidatorIndex, SingleAttestation<ForkPostElectra>>(),
       };
+      committeeByIndex.set(committeeIndex, committeeInfo);
     }
 
     committeeInfo.attestations.set(committeeValidatorIndex, attestation);
