@@ -2,18 +2,20 @@
 import {setHasher} from "@chainsafe/persistent-merkle-tree";
 import {hasher as asSha256Hasher} from "@chainsafe/persistent-merkle-tree/hasher/as-sha256";
 import {hasher as hashtreeHasher} from "@chainsafe/persistent-merkle-tree/hasher/hashtree";
-import CpuFeatures from "cpu-features";
+
+import si from "systeminformation";
+
+const flags = (await si.cpuFlags()).split(" ");
+const avx512f = flags.includes("avx512f");
+const avx512vl = flags.includes("avx512vl");
+const avx2 = flags.includes("avx2");
+const bmi2 = flags.includes("bmi2");
+const avx = flags.includes("avx");
+const sha = flags.includes("sha");
+const osInfo = await si.osInfo();
 
 // without setting this first, persistent-merkle-tree will use noble instead
-const cpuFeatures = CpuFeatures();
-if (
-  cpuFeatures.arch === "x86" &&
-  !(
-    (cpuFeatures.flags.avx512f && cpuFeatures.flags.avx512vl) ||
-    (cpuFeatures.flags.avx2 && cpuFeatures.flags.bmi2) ||
-    (cpuFeatures.flags.avx && cpuFeatures.flags.sha)
-  )
-) {
+if (osInfo.arch === "x86" && !((avx512f && avx512vl) || (avx2 && bmi2) || (avx && sha))) {
   setHasher(asSha256Hasher);
 } else {
   setHasher(hashtreeHasher);
