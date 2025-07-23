@@ -102,10 +102,10 @@ const sidebars: SidebarsConfig = {
           items: [
             "contribution/dev-cli",
             "contribution/tools/debugging",
-            "contribution/tools/ethspecify",
             "contribution/tools/flamegraphs",
             "contribution/tools/heap-dumps",
             "contribution/tools/core-dumps",
+            "contribution/tools/ethspecify",
           ],
         },
         {
