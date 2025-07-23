@@ -47,10 +47,10 @@ export function parseWrappedColumnSidecars(wrapped: Uint8Array): {
   );
 
   const columnSizeInBytes = ssz.UintNum64.deserialize(
-    wrapped.slice(COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_COLUMN_SIZE, COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_CUSTODY_INDEX)
+    wrapped.subarray(COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_COLUMN_SIZE, COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_CUSTODY_INDEX)
   );
 
-  const custodyIndex = wrapped.slice(
+  const custodyIndex = wrapped.subarray(
     COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_CUSTODY_INDEX,
     COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_CUSTODY_INDEX + NUMBER_OF_COLUMNS
   );
@@ -58,7 +58,7 @@ export function parseWrappedColumnSidecars(wrapped: Uint8Array): {
   // each dataColumnSidecar element int he dataColumnSidecars list is itself a variable length
   // container so there is an offset for each element at the beginning of the container. need
   // to slice those off to get to the actual elements
-  const serializedColumnSidecars = wrapped.slice(
+  const serializedColumnSidecars = wrapped.subarray(
     COLUMN_SIDECAR_WRAPPER_BYTE_OFFSET_TO_FIRST_SIDECAR + SSZ_OFFSET_BYTES_FOR_LIST_TYPE * numberOfColumns
   );
 
