@@ -17,11 +17,10 @@ const path = require('path');
 // Note: Need to transpile TypeScript to JS first or use a runtime like ts-node
 // For simplicity, we'll read the file and extract the data
 const specReferencesPath = path.join(__dirname, '../configs/spec-references.ts');
-const specReferencesContent = fs.readFileSync(specReferencesPath, 'utf8');
 
 // Read and parse the spec references file
 const specRefsContent = fs.readFileSync(specReferencesPath, 'utf8');
-const specRefsMatch = specRefsContent.match(/export const SpecReferences = (\[[\s\S]*?\]);/);
+const specRefsMatch = specRefsContent.match(/export const SpecReferences\s*=\s*(\[[\s\S]*?\n\]);/);
 if (!specRefsMatch) {
   console.error('Could not find SpecReferences array in spec-references.ts');
   process.exit(1);
@@ -46,12 +45,12 @@ let htmlContent = `
 `;
 
 // Parse the SpecReferences array content using regex to extract each entry
-const specRefContent = specRefsMatch[1];
+const arrayString = specRefsMatch[1].replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '');
 const specRefEntries = [];
-const entryRegex = /{\s*component:\s*"([^"]+)",\s*filePath:\s*"([^"]+)",\s*specTag:\s*`([^`]+)`\s*}/g;
+const entryRegex = /{[^}]*component:\s*"([^"]+)"[^}]*filePath:\s*"([^"]+)"[^}]*specTag:\s*`([^`]+)`[^}]*}/g;
 let match;
 
-while ((match = entryRegex.exec(specRefContent)) !== null) {
+while ((match = entryRegex.exec(arrayString)) !== null) {
   specRefEntries.push({
     component: match[1],
     filePath: match[2],
@@ -62,7 +61,7 @@ while ((match = entryRegex.exec(specRefContent)) !== null) {
 // Add validation for @spec tags
 const missingSpecTags = [];
 specRefEntries.forEach(ref => {
-  if (!specReferencesContent.includes(`@spec ${ref.component}`)) {
+  if (!specRefsContent.includes(`@spec ${ref.component}`)) {
     missingSpecTags.push(ref.component);
   }
 });
@@ -126,7 +125,7 @@ try {
   console.log(`Total references: ${specRefEntries.length}`);
   console.log(`Updated tags: ${updatedTags.length}`);
 
-  // @SPEC Tag Validation
+  // @spec Tag Validation
   console.log('\n@spec Tag Validation:');
   console.log('=====================');
   if (missingSpecTags.length === 0) {
