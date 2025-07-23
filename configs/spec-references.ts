@@ -53,12 +53,12 @@ export const SpecReferences = [
     specTag: `<spec fn="get_beacon_committee" hash="f04db100" />`,
   },
   /**
-   * @spec MAX_BLOBS_PER_BLOCK
+   * @spec get_blob_parameters
    */
   {
-    component: "MAX_BLOBS_PER_BLOCK",
+    component: "get_blob_parameters",
     filePath: "packages/config/src/forkConfig/index.ts",
-    specTag: `<spec config_var="MAX_BLOBS_PER_BLOCK" hash="3521ad35" />`,
+    specTag: `<spec fn="get_blob_parameters" hash="3521ad35" />`,
   },
   /**
    * @spec get_max_effective_balance
