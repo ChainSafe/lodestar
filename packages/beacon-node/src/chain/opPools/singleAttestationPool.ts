@@ -1,6 +1,5 @@
 import {Signature, aggregateSignatures} from "@chainsafe/blst";
 import {BitArray} from "@chainsafe/ssz";
-import {ChainForkConfig} from "@lodestar/config";
 import {ForkPostElectra, MAX_COMMITTEES_PER_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {EffectiveBalanceIncrements, computeEpochAtSlot} from "@lodestar/state-transition";
 import {Attestation, RootHex, SingleAttestation, Slot, phase0} from "@lodestar/types";
@@ -30,7 +29,20 @@ import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
  * TODO: only store SingleAttestations when we have proposer duty once proposerLookAhead is implemented in fulu.
  * TODO: monitor on mainnet to see if we need to adject this value
  */
-const SLOTS_RETAINED = SLOTS_PER_EPOCH;
+const MAX_SLOTS_RETAINED = SLOTS_PER_EPOCH;
+
+/**
+ * This is mainly for a node subscribing to all subnets, we don't want to spend a lot of memory for this.
+ * We store at least 3 recent slots of SingleAttestations to be able to include missing attestations in the next block.
+ */
+const MIN_SLOTS_RETAINED = 3;
+
+/**
+ * Given an average of 3k SingleAttestations per slot for 2M active validators network, and 32 slots per epoch,
+ * we can store up to 100k SingleAttestations in memory.
+ * As of Jul 2025, mainnet has ~1.1M active validators so we can store up to 32 slots of SingleAttestations until it reaches 2M active validators.
+ */
+const MAX_ATTESTATIONS_RETAINED = 100_000;
 
 /** Hex string of DataRoot `TODO` */
 type DataRootHex = string;
@@ -48,12 +60,9 @@ type CommitteeInfo = {
 /**
  * A pool of `SingleAttestation` that is specially designed to block production.
  *
- * The pool has a capacity for `SLOTS_RETAINED` slots, when a new `attestation.data.slot` is
- * provided, the oldest slot is dropped and replaced with the new slot. The pool can also be
- * pruned by supplying a `current_slot`; all existing attestations with a slot lower than
- * `current_slot - SLOTS_RETAINED` will be removed and any future attestation with a slot lower
- * than that will also be refused. Pruning is done automatically based upon the attestations it
- * receives and it can be triggered manually.
+ * Due to memory constraints, this pool is designed to store attestations for a limited number of slots ranging from 3 to 32
+ *   - For a regular node, it is expected to store attestations of 32 recent slots
+ *   - For a node subscribing to all subnets, it is expected to store attestations of 3 recent slots
  *
  */
 export class SingleAttestationPool {
@@ -251,8 +260,35 @@ export class SingleAttestationPool {
    * Removes any attestations with a slot lower than `current_slot - SLOTS_RETAINED`.
    */
   prune(clockSlot: Slot): void {
-    pruneBySlot(this.committeeByIndexByRootBySlot, clockSlot, SLOTS_RETAINED);
-    this.lowestPermissibleSlot = clockSlot - SLOTS_RETAINED;
+    pruneBySlot(this.committeeByIndexByRootBySlot, clockSlot, MAX_SLOTS_RETAINED);
+    this.lowestPermissibleSlot = clockSlot - MAX_SLOTS_RETAINED;
+
+    // now we have 32 slots, we want to delete slots until we have less than MAX_ATTESTATIONS_RETAINED
+    const attestationCountBySlot: number[] = [];
+    for (let i = 0; i < MAX_SLOTS_RETAINED; i++) {
+      // i = 0 => slot = clockSlot - 31 (first value)
+      // i = 31 => slot = clockSlot (last value)
+      attestationCountBySlot[i] = this.getAttestationCountAtSlot(clockSlot - (MAX_SLOTS_RETAINED - i) + 1);
+    }
+
+    let i = 0;
+    let total = attestationCountBySlot.reduce((sum, count) => sum + count, 0);
+    while (
+      total > MAX_ATTESTATIONS_RETAINED &&
+      Array.from(this.committeeByIndexByRootBySlot.keys()).length > MIN_SLOTS_RETAINED
+    ) {
+      // i = 0 => slot = clockSlot - 31 (first value)
+      // i = 28 => slot = clockSlot - 3 (last value)
+      const slot = clockSlot - (MAX_SLOTS_RETAINED - i) + 1;
+
+      // i = 0 => attestationCountIndex = 31
+      // i = 28 => attestationCountIndex = 3
+      const attestationCount = attestationCountBySlot[i];
+
+      this.committeeByIndexByRootBySlot.delete(slot);
+      total -= attestationCount;
+      i++;
+    }
   }
 
   private onScrapeMetrics(metrics: Metrics): void {
@@ -285,16 +321,31 @@ export class SingleAttestationPool {
     }
 
     poolMetrics.size.set(this.getAttestationCount());
+    poolMetrics.slotCount.set(this.committeeByIndexByRootBySlot.size);
   }
 
   /** Returns current count of SingleAttestations */
   private getAttestationCount(): number {
     let attestationCount = 0;
-    for (const committeeByIndexByRoot of this.committeeByIndexByRootBySlot.values()) {
-      for (const committeeByIndex of committeeByIndexByRoot.values()) {
-        for (const committee of committeeByIndex.values()) {
-          attestationCount += committee.attestations.size;
-        }
+    for (const slot of this.committeeByIndexByRootBySlot.keys()) {
+      attestationCount += this.getAttestationCountAtSlot(slot);
+    }
+    return attestationCount;
+  }
+
+  /**
+   * Returns the count of SingleAttestations for a specific slot.
+   */
+  private getAttestationCountAtSlot(slot: Slot): number {
+    const committeeByIndexByRoot = this.committeeByIndexByRootBySlot.get(slot);
+    if (committeeByIndexByRoot == null) {
+      return 0;
+    }
+
+    let attestationCount = 0;
+    for (const committeeByIndex of committeeByIndexByRoot.values()) {
+      for (const committee of committeeByIndex.values()) {
+        attestationCount += committee.attestations.size;
       }
     }
     return attestationCount;

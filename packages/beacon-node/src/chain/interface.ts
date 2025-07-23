@@ -16,7 +16,6 @@ import {
   Root,
   RootHex,
   SignedBeaconBlock,
-  SingleAttestation,
   Slot,
   UintNum64,
   ValidatorIndex,
