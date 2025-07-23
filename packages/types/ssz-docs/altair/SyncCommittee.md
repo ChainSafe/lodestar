@@ -1,0 +1,1 @@
+//doc for type SyncCOmmittee
