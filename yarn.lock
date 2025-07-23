@@ -3413,11 +3413,6 @@
   resolved "https://registry.yarnpkg.com/@types/cookie/-/cookie-0.6.0.tgz#eac397f28bf1d6ae0ae081363eca2f425bedf0d5"
   integrity sha512-4Kh9a6B2bQciAhf7FSuMRRkUWecJgJu9nPnx3yzpsfXX/c50REIqpHY4C82bXP90qrLtXtkDxTZosYO3UpOwlA==
 
-"@types/cpu-features@^0.0.3":
-  version "0.0.3"
-  resolved "https://registry.yarnpkg.com/@types/cpu-features/-/cpu-features-0.0.3.tgz#a2bec076eb5dc95e0a6c23d1f8d389be4109b309"
-  integrity sha512-W/Ep+LDZoxMbCcH7LHRB3RN+TY4gbHl3u4uRq4XsxOh1gnpf5Lkwy5xWTBKSaJYQuMLW2XPAmRWA5Ucsy2EGVQ==
-
 "@types/datastore-level@^3.0.0":
   version "3.0.0"
   resolved "https://registry.npmjs.org/@types/datastore-level/-/datastore-level-3.0.0.tgz"
@@ -5444,14 +5439,6 @@ cosmiconfig@^8.2.0:
     js-yaml "^4.1.0"
     parse-json "^5.2.0"
     path-type "^4.0.0"
-
-cpu-features@^0.0.10:
-  version "0.0.10"
-  resolved "https://registry.yarnpkg.com/cpu-features/-/cpu-features-0.0.10.tgz#9aae536db2710c7254d7ed67cb3cbc7d29ad79c5"
-  integrity sha512-9IkYqtX3YHPCzoVg1Py+o9057a3i0fp7S530UWokCSaFVTc7CwXPRiOjRjBQQ18ZCNafx78YfnG+HALxtVmOGA==
-  dependencies:
-    buildcheck "~0.0.6"
-    nan "^2.19.0"
 
 cpu-features@~0.0.4:
   version "0.0.8"
@@ -12089,6 +12076,11 @@ systeminformation@^5.22.9:
   version "5.23.8"
   resolved "https://registry.yarnpkg.com/systeminformation/-/systeminformation-5.23.8.tgz#b8efa73b36221cbcb432e3fe83dc1878a43f986a"
   integrity sha512-Osd24mNKe6jr/YoXLLK3k8TMdzaxDffhpCxgkfgBHcapykIkd50HXThM3TCEuHO2pPuCsSx2ms/SunqhU5MmsQ==
+
+systeminformation@^5.27.7:
+  version "5.27.7"
+  resolved "https://registry.yarnpkg.com/systeminformation/-/systeminformation-5.27.7.tgz#4dc9d436419948cd5e5f076779a1298220d19a72"
+  integrity sha512-saaqOoVEEFaux4v0K8Q7caiauRwjXC4XbD2eH60dxHXbpKxQ8kH9Rf7Jh+nryKpOUSEFxtCdBlSUx0/lO6rwRg==
 
 tar-fs@^3.0.4:
   version "3.0.6"
