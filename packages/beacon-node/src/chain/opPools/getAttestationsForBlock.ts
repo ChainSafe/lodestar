@@ -50,7 +50,7 @@ export function getAttestationsForBlock(
   let totalAggregatedAttPoolConsolidations = 0;
   let totalSingleAttestationPoolConsolidations = 0;
 
-  for (const slot of aggregatedAttPoolSlotsDesc) {
+  slot: for (const slot of aggregatedAttPoolSlotsDesc) {
     const epoch = computeEpochAtSlot(slot);
     if (epoch < statePrevEpoch) {
       // we process slot in desc order, this means next slot is not eligible, we should stop
@@ -121,7 +121,7 @@ export function getAttestationsForBlock(
       // Stop accumulating attestations there are enough that may have good scoring
       if (consolidations.size >= MAX_ATTESTATIONS_ELECTRA * 2) {
         stopReason = ScannedSlotsTerminationReason.MaxConsolidationReached;
-        break;
+        break slot;
       }
     }
 
