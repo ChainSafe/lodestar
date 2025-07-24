@@ -1,5 +1,7 @@
 export {AttesterSlashingRepository} from "./attesterSlashing.js";
 export {BackfilledRanges} from "./backfilledRanges.js";
+export {BeaconStateDifferentialArchiveRepository} from "./beaconStateDifferentialArchive.js";
+export {BeaconStateSnapshotArchiveRepository} from "./beaconStateSnapshotArchive.js";
 export {BlobSidecarsRepository} from "./blobSidecars.js";
 export {BlobSidecarsArchiveRepository} from "./blobSidecarsArchive.js";
 export {BlockRepository} from "./block.js";

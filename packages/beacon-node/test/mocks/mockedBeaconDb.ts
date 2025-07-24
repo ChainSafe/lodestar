@@ -4,6 +4,8 @@ import {BeaconDb} from "../../src/db/index.js";
 import {
   AttesterSlashingRepository,
   BLSToExecutionChangeRepository,
+  BeaconStateDifferentialArchiveRepository,
+  BeaconStateSnapshotArchiveRepository,
   BlobSidecarsArchiveRepository,
   BlobSidecarsRepository,
   BlockArchiveRepository,
@@ -26,6 +28,8 @@ export type MockedBeaconDb = Mocked<BeaconDb> & {
   dataColumnSidecarArchive: Mocked<DataColumnSidecarArchiveRepository>;
 
   stateArchive: Mocked<StateArchiveRepository>;
+  beaconStateSnapshotArchive: Mocked<BeaconStateSnapshotArchiveRepository>;
+  beaconStateDifferentialArchive: Mocked<BeaconStateDifferentialArchiveRepository>;
 
   voluntaryExit: Mocked<VoluntaryExitRepository>;
   blsToExecutionChange: Mocked<BLSToExecutionChangeRepository>;
@@ -43,6 +47,8 @@ vi.mock("../../src/db/index.js", async (importActual) => {
       block: vi.mocked(new BlockRepository({} as any, {} as any)),
       blockArchive: vi.mocked(new BlockArchiveRepository({} as any, {} as any)),
       stateArchive: vi.mocked(new StateArchiveRepository({} as any, {} as any)),
+      beaconStateSnapshotArchive: vi.mocked(new BeaconStateSnapshotArchiveRepository({} as any, {} as any)),
+      beaconStateDifferentialArchive: vi.mocked(new BeaconStateDifferentialArchiveRepository({} as any, {} as any)),
 
       voluntaryExit: vi.mocked(new VoluntaryExitRepository({} as any, {} as any)),
       blsToExecutionChange: vi.mocked(new BLSToExecutionChangeRepository({} as any, {} as any)),

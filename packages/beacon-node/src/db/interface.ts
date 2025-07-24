@@ -4,6 +4,8 @@ import {
   AttesterSlashingRepository,
   BLSToExecutionChangeRepository,
   BackfilledRanges,
+  BeaconStateDifferentialArchiveRepository,
+  BeaconStateSnapshotArchiveRepository,
   BestLightClientUpdateRepository,
   BlobSidecarsArchiveRepository,
   BlobSidecarsRepository,
@@ -39,6 +41,10 @@ export interface IBeaconDb {
   stateArchive: StateArchiveRepository;
   // checkpoint states
   checkpointState: CheckpointStateRepository;
+
+  // Differential States
+  beaconStateSnapshotArchive: BeaconStateSnapshotArchiveRepository;
+  beaconStateDifferentialArchive: BeaconStateDifferentialArchiveRepository;
 
   // op pool
   voluntaryExit: VoluntaryExitRepository;

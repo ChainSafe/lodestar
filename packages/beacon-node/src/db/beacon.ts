@@ -7,6 +7,8 @@ import {
   AttesterSlashingRepository,
   BLSToExecutionChangeRepository,
   BackfilledRanges,
+  BeaconStateDifferentialArchiveRepository,
+  BeaconStateSnapshotArchiveRepository,
   BestLightClientUpdateRepository,
   BlobSidecarsArchiveRepository,
   BlobSidecarsRepository,
@@ -38,6 +40,8 @@ export class BeaconDb implements IBeaconDb {
 
   stateArchive: StateArchiveRepository;
   checkpointState: CheckpointStateRepository;
+  beaconStateSnapshotArchive: BeaconStateSnapshotArchiveRepository;
+  beaconStateDifferentialArchive: BeaconStateDifferentialArchiveRepository;
 
   voluntaryExit: VoluntaryExitRepository;
   proposerSlashing: ProposerSlashingRepository;
@@ -66,6 +70,8 @@ export class BeaconDb implements IBeaconDb {
     this.dataColumnSidecarArchive = new DataColumnSidecarArchiveRepository(config, db);
 
     this.stateArchive = new StateArchiveRepository(config, db);
+    this.beaconStateSnapshotArchive = new BeaconStateSnapshotArchiveRepository(config, db);
+    this.beaconStateDifferentialArchive = new BeaconStateDifferentialArchiveRepository(config, db);
     this.checkpointState = new CheckpointStateRepository(config, db);
     this.voluntaryExit = new VoluntaryExitRepository(config, db);
     this.blsToExecutionChange = new BLSToExecutionChangeRepository(config, db);

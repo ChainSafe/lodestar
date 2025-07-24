@@ -69,6 +69,10 @@ export enum Bucket {
 
   fulu_dataColumnSidecars = 57, // FULU BeaconBlockRoot -> DataColumnSidecars
   fulu_dataColumnSidecarsArchive = 58, // FULU BeaconBlockSlot -> DataColumnSidecars
+
+  // Differential State Storage
+  allForks_beaconStateSnapshotArchive = 59, // Slot -> BeaconStateAllForks
+  allForks_beaconStateDifferentialArchive = 60, // Slot -> UInt8Array
 }
 
 export function getBucketNameByValue<T extends Bucket>(enumValue: T): keyof typeof Bucket {
