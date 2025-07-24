@@ -2,6 +2,7 @@ import {IForkChoice} from "@lodestar/fork-choice";
 import {ForkName, ForkSeq, MAX_ATTESTATIONS_ELECTRA, MIN_ATTESTATION_INCLUSION_DELAY} from "@lodestar/params";
 import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
 import {Attestation, CommitteeIndex, electra} from "@lodestar/types";
+import type {Metrics} from "../../metrics/index.js";
 import type {BeaconChain} from "../chain.js";
 import {
   AttestationsConsolidation,
@@ -168,6 +169,9 @@ export function getAttestationsForBlock(
     packedAttestationsMetrics?.totalEffectiveBalance.set({index}, consolidation.totalNewSeenEffectiveBalance);
   }
 
+  // reset unused indexes to avoid stale metrics to display on grafana
+  resetMetrics(this.metrics, aggregatedAttestationPoolIndex, singleAttestationPoolIndex);
+
   aggregatedAttestationsPackedMetrics?.packedAttestations.observe(packedAttestations.length);
 
   if (stopReason === null) {
@@ -181,4 +185,30 @@ export function getAttestationsForBlock(
   singleAttestationPackedMetrics?.poolSlots.set(singleAttestationPoolSlots.size);
 
   return packedAttestations;
+}
+
+function resetMetrics(
+  metrics: Metrics | null,
+  aggregatedAttestationPoolIndex: number,
+  singleAttestationPoolIndex: number
+): void {
+  const aggregatedAttestationsPackedMetrics = metrics?.opPool.aggregatedAttestationPool.packedAttestations;
+  for (let index = aggregatedAttestationPoolIndex; index < MAX_ATTESTATIONS_ELECTRA; index++) {
+    aggregatedAttestationsPackedMetrics?.committeeCount.set({index}, 0);
+    aggregatedAttestationsPackedMetrics?.totalAttesters.set({index}, 0);
+    aggregatedAttestationsPackedMetrics?.nonParticipation.set({index}, 0);
+    aggregatedAttestationsPackedMetrics?.inclusionDistance.set({index}, 0);
+    aggregatedAttestationsPackedMetrics?.newSeenAttesters.set({index}, 0);
+    aggregatedAttestationsPackedMetrics?.totalEffectiveBalance.set({index}, 0);
+  }
+
+  const singleAttestationPackedMetrics = metrics?.opPool.singleAttestationPool.packedAttestations;
+  for (let index = singleAttestationPoolIndex; index < MAX_ATTESTATIONS_ELECTRA; index++) {
+    singleAttestationPackedMetrics?.committeeCount.set({index}, 0);
+    singleAttestationPackedMetrics?.totalAttesters.set({index}, 0);
+    singleAttestationPackedMetrics?.nonParticipation.set({index}, 0);
+    singleAttestationPackedMetrics?.inclusionDistance.set({index}, 0);
+    singleAttestationPackedMetrics?.newSeenAttesters.set({index}, 0);
+    singleAttestationPackedMetrics?.totalEffectiveBalance.set({index}, 0);
+  }
 }
