@@ -93,6 +93,7 @@ vi.mock("../../src/chain/opPools/index.js", async (importActual) => {
   const AggregatedAttestationPool = vi.fn().mockImplementation(() => {
     return {
       getAttestationsForBlock: vi.fn(),
+      getAttestationsForBlockPreElectra: vi.fn(),
     };
   });
 

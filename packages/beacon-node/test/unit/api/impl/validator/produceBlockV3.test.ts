@@ -245,7 +245,7 @@ describe("api/validator - produceBlockV3", () => {
 
     modules.chain.recomputeForkChoiceHead.mockReturnValue(generateProtoBlock({slot: headSlot}));
     modules.chain["opPool"].getSlashingsAndExits.mockReturnValue([[], [], [], []]);
-    modules.chain["aggregatedAttestationPool"].getAttestationsForBlock.mockReturnValue([]);
+    modules.chain["aggregatedAttestationPool"].getAttestationsForBlockPreElectra.mockReturnValue([]);
     modules.chain["eth1"].getEth1DataAndDeposits.mockResolvedValue({
       eth1Data: ssz.phase0.Eth1Data.defaultValue(),
       deposits: [],
