@@ -118,8 +118,9 @@ export function getAttestationsForBlock(
     ]) {
       const score = consolidation.totalNewSeenEffectiveBalance / inclusionDistance;
       consolidations.set(consolidation, {type, score});
-      // Stop accumulating attestations there are enough that may have good scoring
-      if (consolidations.size >= MAX_ATTESTATIONS_ELECTRA * 2) {
+      // previously we had a limit of 2 * MAX_ATTESTATIONS_ELECTRA, but now we have a limit of MAX_ATTESTATIONS_ELECTRA * 3
+      // due to multiple SingleAttestations could be found per slot. This does not affect performance through.
+      if (consolidations.size >= MAX_ATTESTATIONS_ELECTRA * 3) {
         stopReason = ScannedSlotsTerminationReason.MaxConsolidationReached;
         break slot;
       }
