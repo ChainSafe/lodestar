@@ -257,13 +257,18 @@ export class SingleAttestationPool {
   }
 
   /**
-   * Removes any attestations with a slot lower than `current_slot - SLOTS_RETAINED`.
+   * Remove any attestations with a slot lower than `current_slot - MAX_SLOTS_RETAINED`.
+   * Remove more slots until we have less than `MAX_ATTESTATIONS_RETAINED` attestations in the pool or at least `MIN_SLOTS_RETAINED` slots.
+   *   - for regular beacon node, it will keep 32 slots of attestations
+   *   - for beacon node subscribing to all subnets, it will keep removing slots until it meets the above conditions.
+   *     This ensures we have some SingleAttesations for block production while it does not occupy a lot of memory.
    */
   prune(clockSlot: Slot): void {
     pruneBySlot(this.committeeByIndexByRootBySlot, clockSlot, MAX_SLOTS_RETAINED);
     this.lowestPermissibleSlot = clockSlot - MAX_SLOTS_RETAINED;
 
-    // now we have 32 slots, we want to delete slots until we have less than MAX_ATTESTATIONS_RETAINED
+    // now we have 32 slots, we want to prune slots until we have less than MAX_ATTESTATIONS_RETAINED
+    // this is mainly a concern for beacon node subscribing to all subnets, which may have a lot of attestations
     const attestationCountBySlot: number[] = [];
     for (let i = 0; i < MAX_SLOTS_RETAINED; i++) {
       // i = 0 => slot = clockSlot - 31 (first value)
@@ -271,12 +276,17 @@ export class SingleAttestationPool {
       attestationCountBySlot[i] = this.getAttestationCountAtSlot(clockSlot - (MAX_SLOTS_RETAINED - i) + 1);
     }
 
-    let i = 0;
-    let total = attestationCountBySlot.reduce((sum, count) => sum + count, 0);
-    while (
-      total > MAX_ATTESTATIONS_RETAINED &&
-      Array.from(this.committeeByIndexByRootBySlot.keys()).length > MIN_SLOTS_RETAINED
-    ) {
+    let totalAttestations = attestationCountBySlot.reduce((sum, count) => sum + count, 0);
+    for (let i = 0; i < MAX_ATTESTATIONS_RETAINED - MIN_SLOTS_RETAINED; i++) {
+      if (
+        totalAttestations < MAX_ATTESTATIONS_RETAINED ||
+        this.committeeByIndexByRootBySlot.size <= MIN_SLOTS_RETAINED
+      ) {
+        // we have not too many attestations or too few slots, no need to prune more
+        // this usually happens for a regular node at i = 0
+        break;
+      }
+
       // i = 0 => slot = clockSlot - 31 (first value)
       // i = 28 => slot = clockSlot - 3 (last value)
       const slot = clockSlot - (MAX_SLOTS_RETAINED - i) + 1;
@@ -284,10 +294,8 @@ export class SingleAttestationPool {
       // i = 0 => attestationCountIndex = 31
       // i = 28 => attestationCountIndex = 3
       const attestationCount = attestationCountBySlot[i];
-
       this.committeeByIndexByRootBySlot.delete(slot);
-      total -= attestationCount;
-      i++;
+      totalAttestations -= attestationCount;
     }
   }
 

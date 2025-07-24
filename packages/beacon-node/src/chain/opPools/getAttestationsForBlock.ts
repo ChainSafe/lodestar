@@ -71,7 +71,7 @@ export function getAttestationsForBlock(
 
     const inclusionDistance = stateSlot - slot;
     let aggregatedAttPoolConsolidations: AttestationsConsolidation[] = [];
-    let notSeenCommitteeMembersByIndex: Map<CommitteeIndex, Set<CommitteeValidatorIndex> | null> = new Map();
+    let notSeenCommitteeMembersByIndex: Map<CommitteeIndex, Set<CommitteeValidatorIndex> | null>;
     try {
       const aggAttestationPoolResult = this.aggregatedAttestationPool.getAttestationsForBlockElectraBySlot(
         slot,
