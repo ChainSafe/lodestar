@@ -168,6 +168,8 @@ export function getAttestationsForBlock(
     packedAttestationsMetrics?.totalEffectiveBalance.set({index}, consolidation.totalNewSeenEffectiveBalance);
   }
 
+  aggregatedAttestationsPackedMetrics?.packedAttestations.observe(packedAttestations.length);
+
   if (stopReason === null) {
     stopReason = ScannedSlotsTerminationReason.ScannedAllSlots;
   }

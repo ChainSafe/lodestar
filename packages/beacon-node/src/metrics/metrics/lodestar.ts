@@ -866,6 +866,11 @@ export function createLodestarMetrics(
             name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_total_consolidations_total",
             help: "Total number of consolidations before truncate",
           }),
+          packedAttestations: register.histogram({
+            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_total",
+            help: "Total number of packed attestations produced (after truncate consolidations)",
+            buckets: [2, 3, 4, 6, 8],
+          }),
           emptyAttestationData: register.gauge({
             name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_empty_attestation_data_total",
             help: "Total number of attestation data with no group when producing packed attestation",
