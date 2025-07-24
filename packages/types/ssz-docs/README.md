@@ -17,8 +17,9 @@ It is detailed description of the method's purpose, includes working code exampl
 
 ## 📘 Learn More
 
-- [SSZ Quickstart](./docs/ssz-quickstart.md)
-- [Working with SSZ Views & Proofs](./docs/ssz-views-and-proofs.md)
+- [SSZ Quickstart](./ssz-quickstart.md)
+- [Working with SSZ Views & Proofs](./ssz-views-and-proofs.md)
+
 
 ```bash
 docs/
