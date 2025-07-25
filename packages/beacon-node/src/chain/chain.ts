@@ -24,6 +24,7 @@ import {
   BeaconBlock,
   BlindedBeaconBlock,
   BlindedBeaconBlockBody,
+  CommitteeIndex,
   Epoch,
   ExecutionPayload,
   Root,
@@ -95,7 +96,7 @@ import {
   SeenSyncCommitteeMessages,
 } from "./seenCache/index.js";
 import {SeenGossipBlockInput} from "./seenCache/index.js";
-import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
+import {AggregationInfo, SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {SeenBlockInputCache} from "./seenCache/seenBlockInput.js";
@@ -993,6 +994,18 @@ export class BeaconChain implements IBeaconChain {
 
     // should always be the current epoch of the active context so no need to await a result from the ShufflingCache
     return state.epochCtx.getShufflingAtEpoch(attEpoch);
+  }
+
+  addSeenAgregatedAttestation(
+    slot: Slot,
+    targetEpoch: Epoch,
+    committeeIndex: CommitteeIndex,
+    attDataRoot: RootHex,
+    newItem: AggregationInfo,
+    checkIsKnown: boolean
+  ): void {
+    this.seenAggregatedAttestations.add(targetEpoch, committeeIndex, attDataRoot, newItem, checkIsKnown);
+    this.singleAttestationPool.seenAggregatedAttestation(slot, attDataRoot, committeeIndex, newItem.aggregationBits);
   }
 
   /**

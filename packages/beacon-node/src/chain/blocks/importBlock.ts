@@ -523,6 +523,8 @@ export function addAttestationPostElectra(
       const aggregationBits = BitArray.fromBoolArray(aggregationBools.slice(offset, offset + committee.length));
       const trueBitCount = aggregationBits.getTrueBitIndexes().length;
       offset += committee.length;
+      // no need to add to SingleAttestationPool because this block could be reorged
+      // it will also slow down the block import process
       this.seenAggregatedAttestations.add(
         target.epoch,
         committeeIndices[i],

@@ -69,6 +69,7 @@ import {
 import {ChainEvent, CheckpointHex, CommonBlockBody} from "../../../chain/index.js";
 import {SCHEDULER_LOOKAHEAD_FACTOR} from "../../../chain/prepareNextSlot.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
+import {AggregationInfo} from "../../../chain/seenCache/seenAggregateAndProof.js";
 import {validateApiAggregateAndProof} from "../../../chain/validation/index.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
 import {ZERO_HASH} from "../../../constants/index.js";
@@ -1273,23 +1274,30 @@ export function getValidatorApi(
           try {
             // TODO: Validate in batch
             const validateFn = () => validateApiAggregateAndProof(fork, chain, signedAggregateAndProof);
-            const {slot, beaconBlockRoot} = signedAggregateAndProof.message.aggregate.data;
+            const {slot, beaconBlockRoot, target} = signedAggregateAndProof.message.aggregate.data;
             // when a validator is configured with multiple beacon node urls, this attestation may come from another beacon node
             // and the block hasn't been in our forkchoice since we haven't seen / processing that block
             // see https://github.com/ChainSafe/lodestar/issues/5098
-            const {indexedAttestation, committeeIndices, attDataRootHex} = await validateGossipFnRetryUnknownRoot(
-              validateFn,
-              network,
-              chain,
-              slot,
-              beaconBlockRoot
-            );
+            const {indexedAttestation, committeeIndices, attDataRootHex, committeeIndex} =
+              await validateGossipFnRetryUnknownRoot(validateFn, network, chain, slot, beaconBlockRoot);
 
             const insertOutcome = chain.aggregatedAttestationPool.add(
               signedAggregateAndProof.message.aggregate,
               attDataRootHex,
               indexedAttestation.attestingIndices.length,
               committeeIndices
+            );
+            const aggregationInto: AggregationInfo = {
+              aggregationBits: signedAggregateAndProof.message.aggregate.aggregationBits,
+              trueBitCount: indexedAttestation.attestingIndices.length,
+            };
+            chain.addSeenAgregatedAttestation(
+              slot,
+              target.epoch,
+              committeeIndex,
+              attDataRootHex,
+              aggregationInto,
+              false
             );
             metrics?.opPool.aggregatedAttestationPool.apiInsertOutcome.inc({insertOutcome});
 

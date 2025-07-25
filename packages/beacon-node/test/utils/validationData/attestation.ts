@@ -159,6 +159,7 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
     index2pubkey: state.epochCtx.index2pubkey,
     shufflingCache,
     opts: defaultChainOptions,
+    addSeenAgregatedAttestation: () => {},
   } as Partial<IBeaconChain> as IBeaconChain;
 
   return {chain, attestation, subnet, validatorIndex};
