@@ -18,5 +18,5 @@ export {BestLightClientUpdateRepository} from "./lightclientBestUpdate.js";
 export {CheckpointHeaderRepository} from "./lightclientCheckpointHeader.js";
 export {SyncCommitteeRepository} from "./lightclientSyncCommittee.js";
 export {SyncCommitteeWitnessRepository} from "./lightclientSyncCommitteeWitness.js";
-export {BackfilledRanges} from "./backfilledRanges.js";
+export {BackfillState} from "./backfillState.js";
 export {BLSToExecutionChangeRepository} from "./blsToExecutionChange.js";
