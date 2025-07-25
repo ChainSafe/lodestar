@@ -11,6 +11,7 @@ import {
 import {
   BeaconBlock,
   BlindedBeaconBlock,
+  CommitteeIndex,
   Epoch,
   ExecutionPayload,
   Root,
@@ -58,7 +59,7 @@ import {
   SeenSyncCommitteeMessages,
 } from "./seenCache/index.js";
 import {SeenGossipBlockInput} from "./seenCache/index.js";
-import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
+import {AggregationInfo, SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {SeenBlockInputCache} from "./seenCache/seenBlockInput.js";
@@ -262,6 +263,15 @@ export interface IBeaconChain {
     blockRef: BeaconBlock | BlindedBeaconBlock,
     validatorIds?: (ValidatorIndex | string)[]
   ): Promise<SyncCommitteeRewards>;
+
+  addSeenAgregatedAttestation(
+    slot: Slot,
+    targetEpoch: Epoch,
+    committeeIndex: CommitteeIndex,
+    attDataRoot: RootHex,
+    newItem: AggregationInfo,
+    checkIsKnown: boolean
+  ): void;
 }
 
 export type SSZObjectType =

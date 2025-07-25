@@ -1,7 +1,7 @@
 import {Signature, aggregateSignatures} from "@chainsafe/blst";
 import {BitArray} from "@chainsafe/ssz";
-import {ForkPostElectra, MAX_COMMITTEES_PER_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {EffectiveBalanceIncrements, computeEpochAtSlot} from "@lodestar/state-transition";
+import {ForkPostElectra, MAX_COMMITTEES_PER_SLOT} from "@lodestar/params";
+import {EffectiveBalanceIncrements, computeEpochAtSlot, computeSlotsSinceEpochStart} from "@lodestar/state-transition";
 import {Attestation, RootHex, SingleAttestation, Slot, phase0} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
@@ -13,36 +13,6 @@ import {
 } from "./aggregatedAttestationPool.js";
 import {InsertOutcome} from "./types.js";
 import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
-
-/**
- * The number of slots storing SingleAttestation to be included in producing blocks.
- * The beacon node has to subscribe to 2 random (long-lived) subnets plus short-lived subnets for aggregation duties, in avarage it's usually less than 3 per slot.
- * Given a network of 2M active validators, total number of SingleAttestation per slot is up to 2M / 32 / 64 * 3 = 3k
- * Each SingleAttestation includes:
- * - CommitteeIndex: 8 bytes
- * - ValidatorIndex: 8 bytes
- * - AttestationData: this is shared via SeenAttestationDatas so we don't count
- * - Signature: 96 bytes, but NodeJS has some overhead so could be up to 300 bytes
- *
- * So given 3k SingleAttestations per slot, it could cause up to 3k * 316 bytes = 948kB, which is < 1MB per slot.
- * It should not affect beacon node's performance if we store 32MB of SingleAttestation in memory.
- * TODO: only store SingleAttestations when we have proposer duty once proposerLookAhead is implemented in fulu.
- * TODO: monitor on mainnet to see if we need to adject this value
- */
-const MAX_SLOTS_RETAINED = SLOTS_PER_EPOCH;
-
-/**
- * This is mainly for a node subscribing to all subnets, we don't want to spend a lot of memory for this.
- * We store at least 3 recent slots of SingleAttestations to be able to include missing attestations in the next block.
- */
-const MIN_SLOTS_RETAINED = 3;
-
-/**
- * Given an average of 3k SingleAttestations per slot for 2M active validators network, and 32 slots per epoch,
- * we can store up to 100k SingleAttestations in memory.
- * As of Jul 2025, mainnet has ~1.1M active validators so we can store up to 32 slots of SingleAttestations until it reaches 2M active validators.
- */
-const MAX_ATTESTATIONS_RETAINED = 100_000;
 
 /** Hex string of DataRoot `TODO` */
 type DataRootHex = string;
@@ -60,10 +30,8 @@ type CommitteeInfo = {
 /**
  * A pool of `SingleAttestation` that is specially designed to block production.
  *
- * Due to memory constraints, this pool is designed to store attestations for a limited number of slots ranging from 3 to 32
- *   - For a regular node, it is expected to store attestations of 32 recent slots
- *   - For a node subscribing to all subnets, it is expected to store attestations of 3 recent slots
- *
+ * The memory usage of this pool is small because after an aggregated attestation is seen,
+ * all `SingleAttestation` for the same data root and committee index are removed.
  */
 export class SingleAttestationPool {
   /**
@@ -95,10 +63,8 @@ export class SingleAttestationPool {
     committeeSize: number
   ): InsertOutcome {
     const slot = attestation.data.slot;
-    const lowestPermissibleSlot = this.lowestPermissibleSlot;
-
     // Reject any attestations that are too old.
-    if (slot < lowestPermissibleSlot) {
+    if (slot < this.lowestPermissibleSlot) {
       return InsertOutcome.Old;
     }
 
@@ -120,6 +86,43 @@ export class SingleAttestationPool {
 
     committeeInfo.attestations.set(committeeValidatorIndex, attestation);
     return InsertOutcome.NewData;
+  }
+
+  /**
+   * An aggregated attestations was seen, so we remove all SingleAttestations respective to that data
+   * as it's useless for us. In block production it'll prioritize aggregated attestations before reaching this pool.
+   */
+  seenAggregatedAttestation(
+    slot: Slot,
+    attDataRootHex: RootHex,
+    committeeIndex: CommitteeIndex,
+    aggregationBits: BitArray
+  ): void {
+    const committeeByIndexByRoot = this.committeeByIndexByRootBySlot.get(slot);
+    if (committeeByIndexByRoot == null) {
+      // no SingleAttestation for this slot
+      return;
+    }
+
+    const committeeByIndex = committeeByIndexByRoot.get(attDataRootHex);
+    if (committeeByIndex == null) {
+      // no SingleAttestation for this data root
+      return;
+    }
+
+    const committeeInfo = committeeByIndex.get(committeeIndex);
+    if (committeeInfo == null) {
+      // no SingleAttestation for this committee index
+      return;
+    }
+
+    // remove SingleAttestation for this committee index, we have it in AggregatedAttestationPool
+    const singleAttestations = committeeInfo.attestations;
+    for (const committeeValidatorIndex of singleAttestations.keys()) {
+      if (aggregationBits.get(committeeValidatorIndex)) {
+        singleAttestations.delete(committeeValidatorIndex);
+      }
+    }
   }
 
   /**
@@ -264,39 +267,11 @@ export class SingleAttestationPool {
    *     This ensures we have some SingleAttesations for block production while it does not occupy a lot of memory.
    */
   prune(clockSlot: Slot): void {
-    pruneBySlot(this.committeeByIndexByRootBySlot, clockSlot, MAX_SLOTS_RETAINED);
-    this.lowestPermissibleSlot = clockSlot - MAX_SLOTS_RETAINED;
+    // this value is for post-deneb
+    const slotsToRetain = computeSlotsSinceEpochStart(clockSlot, computeEpochAtSlot(clockSlot) - 1);
 
-    // now we have 32 slots, we want to prune slots until we have less than MAX_ATTESTATIONS_RETAINED
-    // this is mainly a concern for beacon node subscribing to all subnets, which may have a lot of attestations
-    const attestationCountBySlot: number[] = [];
-    for (let i = 0; i < MAX_SLOTS_RETAINED; i++) {
-      // i = 0 => slot = clockSlot - 31 (first value)
-      // i = 31 => slot = clockSlot (last value)
-      attestationCountBySlot[i] = this.getAttestationCountAtSlot(clockSlot - (MAX_SLOTS_RETAINED - i) + 1);
-    }
-
-    let totalAttestations = attestationCountBySlot.reduce((sum, count) => sum + count, 0);
-    for (let i = 0; i < MAX_ATTESTATIONS_RETAINED - MIN_SLOTS_RETAINED; i++) {
-      if (
-        totalAttestations < MAX_ATTESTATIONS_RETAINED ||
-        this.committeeByIndexByRootBySlot.size <= MIN_SLOTS_RETAINED
-      ) {
-        // we have not too many attestations or too few slots, no need to prune more
-        // this usually happens for a regular node at i = 0
-        break;
-      }
-
-      // i = 0 => slot = clockSlot - 31 (first value)
-      // i = 28 => slot = clockSlot - 3 (last value)
-      const slot = clockSlot - (MAX_SLOTS_RETAINED - i) + 1;
-
-      // i = 0 => attestationCountIndex = 31
-      // i = 28 => attestationCountIndex = 3
-      const attestationCount = attestationCountBySlot[i];
-      this.committeeByIndexByRootBySlot.delete(slot);
-      totalAttestations -= attestationCount;
-    }
+    pruneBySlot(this.committeeByIndexByRootBySlot, clockSlot, slotsToRetain);
+    this.lowestPermissibleSlot = Math.max(clockSlot - slotsToRetain, 0);
   }
 
   private onScrapeMetrics(metrics: Metrics): void {
