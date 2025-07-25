@@ -71,6 +71,7 @@ if (missingSpecTags.length > 0) {
   missingSpecTags.forEach(component => console.log(`- ${component}`));
 }
 
+const pinnedVersion = 'v1.6.0-alpha.1';
 // Add each spec reference to the HTML content
 specRefEntries.forEach(ref => {
   htmlContent += `
@@ -79,7 +80,7 @@ specRefEntries.forEach(ref => {
     <p>File: ${ref.filePath}</p>
     <pre>
       /**
-       * ${ref.specTag}
+       * @spec ${ref.specTag.replace('<spec ', `<spec version="${pinnedVersion}" `)}
        */
     </pre>
   </div>

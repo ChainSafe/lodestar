@@ -16,6 +16,7 @@ Codespaces
 CoinCashew
 Corepack
 Customizations
+Dataclasses
 DPoS
 DVs
 Discv
@@ -35,6 +36,7 @@ EthStaker
 EtherScan
 Ethereum
 EthereumJS
+Ethspecify
 FINDNODE
 FX
 Flamegraph
@@ -56,6 +58,7 @@ IPFS
 IPv
 Infura
 JSON
+JSDoc
 JSObjects
 JWT
 KDE
@@ -88,6 +91,7 @@ Quickstart
 RPC
 Reth
 Ryzen
+Searchability
 SFTP
 SHA
 SSD
@@ -154,6 +158,7 @@ env
 envs
 ephemery
 ethers
+ethspecify
 feeRecipient
 flamegraph
 flamegraphs
