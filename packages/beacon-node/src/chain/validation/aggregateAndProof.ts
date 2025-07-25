@@ -4,7 +4,7 @@ import {
   createAggregateSignatureSetFromComponents,
   isAggregatorFromCommitteeLength,
 } from "@lodestar/state-transition";
-import {IndexedAttestation, RootHex, SignedAggregateAndProof, electra, ssz} from "@lodestar/types";
+import {CommitteeIndex, IndexedAttestation, RootHex, SignedAggregateAndProof, electra, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
@@ -23,6 +23,7 @@ export type AggregateAndProofValidationResult = {
   indexedAttestation: IndexedAttestation;
   committeeIndices: Uint32Array;
   attDataRootHex: RootHex;
+  committeeIndex: CommitteeIndex;
 };
 
 export async function validateApiAggregateAndProof(
@@ -255,5 +256,5 @@ async function validateAggregateAndProof(
     false
   );
 
-  return {indexedAttestation, committeeIndices, attDataRootHex};
+  return {indexedAttestation, committeeIndex, committeeIndices, attDataRootHex};
 }

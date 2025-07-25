@@ -118,6 +118,8 @@ export class SingleAttestationPool {
 
     // remove SingleAttestation for this committee index, we have it in AggregatedAttestationPool
     const singleAttestations = committeeInfo.attestations;
+    // loop through singleAttestations instead of aggregationBits because after the 1st seen aggregated attestation,
+    // there is few/zero SingleAttestations left for the same committee index
     for (const committeeValidatorIndex of singleAttestations.keys()) {
       if (aggregationBits.get(committeeValidatorIndex)) {
         singleAttestations.delete(committeeValidatorIndex);
