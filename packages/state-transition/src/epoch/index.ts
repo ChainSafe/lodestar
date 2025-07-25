@@ -194,7 +194,7 @@ export function processEpoch(
     const timer = metrics?.epochTransitionStepTime.startTimer({
       step: EpochTransitionStep.processProposerLookahead,
     });
-    processProposerLookahead(fork, state as CachedBeaconStateFulu);
+    processProposerLookahead(fork, state as CachedBeaconStateFulu, cache);
     timer?.();
   }
 }
