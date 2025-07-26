@@ -97,6 +97,13 @@ export const testData: GenericServerTestCases<Endpoints> = {
       meta: {executionOptimistic: true, finalized: false, version: ForkName.electra},
     },
   },
+  getBlobs: {
+    args: {blockId: "head", indices: [0]},
+    res: {
+      data: [ssz.deneb.Blob.defaultValue()],
+      meta: {executionOptimistic: true, finalized: false},
+    },
+  },
 
   // pool
 

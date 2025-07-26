@@ -23,6 +23,7 @@ import {
   deneb,
   fulu,
   isSignedBlockContents,
+  sszTypesFor,
 } from "@lodestar/types";
 import {fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
 import {
@@ -594,6 +595,38 @@ export function getBeaconBlockApi({
           executionOptimistic,
           finalized,
           version: config.getForkName(block.message.slot),
+        },
+      };
+    },
+
+    async getBlobs({blockId, indices}) {
+      assertUniqueItems(indices, "Duplicate indices provided");
+
+      const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
+      const fork = config.getForkName(block.message.slot);
+
+      if (isForkPostFulu(fork)) {
+        throw Error("TODO");
+      }
+
+      const blockRoot = sszTypesFor(fork).BeaconBlock.hashTreeRoot(block.message);
+
+      let {blobSidecars} = (await db.blobSidecars.get(blockRoot)) ?? {};
+      if (!blobSidecars) {
+        ({blobSidecars} = (await db.blobSidecarsArchive.get(block.message.slot)) ?? {});
+      }
+
+      if (!blobSidecars) {
+        throw Error(`blobSidecars not found in db for slot=${block.message.slot} root=${toRootHex(blockRoot)}`);
+      }
+
+      blobSidecars = indices ? blobSidecars.filter(({index}) => indices.includes(index)) : blobSidecars;
+
+      return {
+        data: blobSidecars.map(({blob}) => blob),
+        meta: {
+          executionOptimistic,
+          finalized,
         },
       };
     },
