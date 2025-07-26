@@ -248,15 +248,8 @@ function processSlotsWithTransientCache(
 
       {
         const timer = metrics?.epochTransitionStepTime.startTimer({step: EpochTransitionStep.afterProcessEpoch});
+        // this should be called before `upgradeState*()` below to prepare data for it
         postState.epochCtx.afterProcessEpoch(postState, epochTransitionCache);
-        timer?.();
-      }
-
-      // Running commit here is not strictly necessary. The cost of running commit twice (here + after process block)
-      // Should be negligible but gives better metrics to differentiate the cost of it for block and epoch proc.
-      {
-        const timer = metrics?.epochTransitionCommitTime.startTimer();
-        postState.commit();
         timer?.();
       }
 
@@ -282,6 +275,21 @@ function processSlotsWithTransientCache(
       }
       if (stateEpoch === config.FULU_FORK_EPOCH) {
         postState = upgradeStateToFulu(postState as CachedBeaconStateElectra) as CachedBeaconStateAllForks;
+      }
+
+      {
+        const timer = metrics?.epochTransitionStepTime.startTimer({step: EpochTransitionStep.finalProcessEpoch});
+        // last step to prepare epoch data that depends on the upgraded state, for example proposerLookAhead of BeaconStateFulu
+        postState.epochCtx.finalProcessEpoch(postState);
+        timer?.();
+      }
+
+      // Running commit here is not strictly necessary. The cost of running commit twice (here + after process block)
+      // Should be negligible but gives better metrics to differentiate the cost of it for block and epoch proc.
+      {
+        const timer = metrics?.epochTransitionCommitTime.startTimer();
+        postState.commit();
+        timer?.();
       }
     } else {
       postState.slot++;
