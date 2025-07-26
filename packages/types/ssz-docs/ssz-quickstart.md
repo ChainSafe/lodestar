@@ -23,12 +23,19 @@ SSZ helps by:
 ---
 ## 🛠️ What Does SSZ Do?
 
-✨ SSZ = Serialization + Merkleization
+ SSZ = Serialization + Merkleization
 
 | Part            | Description                                                                 |
 |-----------------|-----------------------------------------------------------------------------|
 |  **Serialization**   | It is the process of converting data into a format that can be stored , transmitted and later restructured. Turning structured data (like a block, validator, or state object) into a sequence of bytes so it can be stored, sent over the network, or hashed.  |
 |  **Deserialization** |This is the reverse of serialization. You turn the data back into a usable project. Reconstructs the original structured data from the serialized byte array. |
 |  **Merkleization**    | This is the process of turning a list of data into a merkle tree. You Buil a Merkle tree from the data and computes a single 32-byte Merkle root (hash) that summarizes it. |
+
+Simpler defination: Serialization: Turn object → bytes, Deserialization: Turn bytes → object, Merkleization: Turn object → tree of hashes → 1 final secure root
+
+---
+## SSZ Components in Detail
+
+
 
 
