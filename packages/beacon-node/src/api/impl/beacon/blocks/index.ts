@@ -578,7 +578,13 @@ export function getBeaconBlockApi({
       assertUniqueItems(indices, "Duplicate indices provided");
 
       const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
-      const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
+      const fork = config.getForkName(block.message.slot);
+
+      if (isForkPostFulu(fork)) {
+        throw new ApiError(400, `Use getBlobs to retrieve blobs for post-fulu fork=${fork}`);
+      }
+
+      const blockRoot = sszTypesFor(fork).BeaconBlock.hashTreeRoot(block.message);
 
       let {blobSidecars} = (await db.blobSidecars.get(blockRoot)) ?? {};
       if (!blobSidecars) {
