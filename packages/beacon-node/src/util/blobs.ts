@@ -192,7 +192,7 @@ export async function recoverDataColumnSidecars(
  */
 export function blobsFromDataColumnSidecars(sidecars: fulu.DataColumnSidecars): deneb.Blobs {
   if (sidecars.length !== NUMBER_OF_COLUMNS) {
-    throw Error(`Expected ${NUMBER_OF_COLUMNS} columns to reconstruct blobs, received ${sidecars.length}`);
+    throw Error(`Expected ${NUMBER_OF_COLUMNS} data columns to reconstruct blobs, received ${sidecars.length}`);
   }
   const blobCount = sidecars[0].column.length;
   const blobs: deneb.Blobs = new Array(blobCount);
