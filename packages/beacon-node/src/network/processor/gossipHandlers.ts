@@ -1,6 +1,6 @@
 import {routes} from "@lodestar/api";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
-import {FCInclusionListSource} from "@lodestar/fork-choice";
+import {InclusionListSource} from "@lodestar/fork-choice";
 import {ForkName, ForkPostElectra, ForkPreElectra, ForkSeq, isForkPostElectra} from "@lodestar/params";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {
@@ -37,7 +37,6 @@ import {
 } from "../../chain/errors/index.js";
 import {IBeaconChain} from "../../chain/interface.js";
 import {validateGossipBlobSidecar} from "../../chain/validation/blobSidecar.js";
-import {InclusionListSource} from "../../chain/validation/inclusionList.js";
 import {
   AggregateAndProofValidationResult,
   GossipAttestation,
@@ -656,12 +655,12 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         metrics?.opPool.inclusionListPoolInsertOutcome.inc({insertOutcome});
         metrics?.eip7805.inclusionListTransactionsSeen.inc(
           {source: InclusionListSource.gossip},
-          chain.inclusionListPool.getTransactions(inclusionList.message.slot, metrics).length
+          inclusionList.message.transactions.length
         );
 
         const secFromSlot = chain.clock.secFromSlot(inclusionList.message.slot, seenTimestampSec);
         metrics?.eip7805.inclusionListReceivedSecFromSlot.observe(secFromSlot);
-        chain.forkChoice.onInclusionList(inclusionList, secFromSlot, metrics, FCInclusionListSource.gossip);
+        chain.forkChoice.onInclusionList(inclusionList, secFromSlot, InclusionListSource.gossip);
       } catch (e) {
         logger.error("Error adding inclusionList to pool", {}, e as Error);
       }

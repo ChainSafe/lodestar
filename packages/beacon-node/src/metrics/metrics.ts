@@ -1,4 +1,3 @@
-import {BeaconForkChoiceMetrics, getForkChoiceMetrics} from "@lodestar/fork-choice";
 import {BeaconStateTransitionMetrics, getMetrics} from "@lodestar/state-transition";
 import {Metric, Registry} from "prom-client";
 import {BeaconMetrics, createBeaconMetrics} from "./metrics/beacon.js";
@@ -8,7 +7,6 @@ import {MetricsOptions} from "./options.js";
 import {RegistryMetricCreator} from "./utils/registryMetricCreator.js";
 
 export type Metrics = BeaconMetrics &
-  BeaconForkChoiceMetrics &
   BeaconStateTransitionMetrics &
   LodestarMetrics & {register: RegistryMetricCreator; close: () => void};
 
@@ -16,7 +14,6 @@ export function createMetrics(opts: MetricsOptions, genesisTime: number, externa
   const register = new RegistryMetricCreator();
   const beacon = createBeaconMetrics(register);
   const lodestar = createLodestarMetrics(register, opts.metadata, genesisTime);
-  const forkChoice = getForkChoiceMetrics(register);
   const stateTransition = getMetrics(register);
 
   process.on("unhandledRejection", (_error) => {
@@ -35,7 +32,6 @@ export function createMetrics(opts: MetricsOptions, genesisTime: number, externa
   return {
     ...beacon,
     ...lodestar,
-    ...forkChoice,
     ...stateTransition,
     register,
     close,

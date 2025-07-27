@@ -1,8 +1,7 @@
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {ExecutionStatus} from "@lodestar/fork-choice";
-import {FCInclusionListSource} from "@lodestar/fork-choice";
+import {ExecutionStatus, InclusionListSource} from "@lodestar/fork-choice";
 import {
   ForkPostBellatrix,
   ForkPostDeneb,
@@ -73,7 +72,6 @@ import {
 import {ChainEvent, CheckpointHex, CommonBlockBody} from "../../../chain/index.js";
 import {SCHEDULER_LOOKAHEAD_FACTOR} from "../../../chain/prepareNextSlot.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
-import {InclusionListSource} from "../../../chain/validation/inclusionList.js";
 import {validateApiAggregateAndProof, validateApiInclusionList} from "../../../chain/validation/index.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
 import {ZERO_HASH} from "../../../constants/index.js";
@@ -1515,13 +1513,11 @@ export function getValidatorApi(
       metrics?.eip7805.inclusionListSeen.inc({source: InclusionListSource.api});
       metrics?.eip7805.inclusionListTransactionsSeen.inc(
         {source: InclusionListSource.api},
-        chain.inclusionListPool.getTransactions(slot, metrics).length
+        signedInclusionList.message.transactions.length
       );
 
       const secFromSlot = chain.clock.secFromSlot(slot, Date.now() / 1000);
-      chain.forkChoice.onInclusionList(signedInclusionList, secFromSlot, metrics, FCInclusionListSource.api);
-      metrics?.eip7805.inclusionListProposed.inc();
-
+      chain.forkChoice.onInclusionList(signedInclusionList, secFromSlot, InclusionListSource.api);
       chain.emitter.emit(routes.events.EventType.inclusionList, {
         version: config.getForkName(signedInclusionList.message.slot),
         data: signedInclusionList,

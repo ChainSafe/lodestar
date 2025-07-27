@@ -1,3 +1,4 @@
+import {InclusionListSource} from "@lodestar/fork-choice";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, getInclusionListSignatureSet} from "@lodestar/state-transition";
 import {eip7805} from "@lodestar/types";
@@ -7,19 +8,14 @@ import {InclusionListError, InclusionListErrorCode} from "../errors/inclusionLis
 import {GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
 
-export enum InclusionListSource {
-  gossip = "gossip",
-  api = "api",
-}
-
 export enum InvalidInclusionListReason {
   maxSizeExceeded = "max_size_exceeded",
-  slotNumberError = "slot_number_error",
-  ilCommitteeShuffling = "il_committee_shuffling",
+  slotOutOfRange = "slot_out_of_range",
+  committeeShuffling = "committee_shuffling",
   validatorNotInCommittee = "validator_not_in_committee",
   seenTwice = "seen_twice",
   invalidSignature = "invalid_signature",
-  clientImplementation = "client_implementation",
+  unknown = "unknown", // TODO  EIP-7805: should be refactored and deleted later
 }
 
 export async function validateApiInclusionList(
@@ -27,7 +23,7 @@ export async function validateApiInclusionList(
   inclusionList: eip7805.SignedInclusionList,
   metrics: Metrics | null
 ): Promise<void> {
-  return validateInclusionList(chain, inclusionList, metrics, InclusionListSource.api);
+  return validateInclusionList(chain, inclusionList, InclusionListSource.api, metrics);
 }
 
 export async function validateGossipInclusionList(
@@ -35,14 +31,14 @@ export async function validateGossipInclusionList(
   inclusionList: eip7805.SignedInclusionList,
   metrics: Metrics | null
 ): Promise<void> {
-  return validateInclusionList(chain, inclusionList, metrics, InclusionListSource.gossip);
+  return validateInclusionList(chain, inclusionList, InclusionListSource.gossip, metrics);
 }
 
 async function validateInclusionList(
   chain: IBeaconChain,
   inclusionList: eip7805.SignedInclusionList,
-  metrics: Metrics | null,
-  source: InclusionListSource
+  source: InclusionListSource,
+  metrics: Metrics | null
 ): Promise<void> {
   const {slot, validatorIndex, transactions, inclusionListCommitteeRoot} = inclusionList.message;
 
@@ -61,7 +57,7 @@ async function validateInclusionList(
 
   // [REJECT] The slot message.slot is equal to the previous or current slot.
   if (slot !== chain.clock.currentSlot && slot !== chain.clock.currentSlot - 1) {
-    metrics?.eip7805.inclusionListInvalid.inc({source, reason: InvalidInclusionListReason.slotNumberError});
+    metrics?.eip7805.inclusionListInvalid.inc({source, reason: InvalidInclusionListReason.slotOutOfRange});
     metrics?.eip7805.invalidInclusionListByteSize.inc(inclusionListSize);
     throw new InclusionListError(GossipAction.REJECT, {
       code: InclusionListErrorCode.INVALID_SLOT,
@@ -79,7 +75,7 @@ async function validateInclusionList(
   const shuffling = await chain.shufflingCache.get(ilEpoch, shufflingDependentRoot);
 
   if (shuffling === null) {
-    metrics?.eip7805.inclusionListInvalid.inc({source, reason: InvalidInclusionListReason.clientImplementation});
+    metrics?.eip7805.inclusionListInvalid.inc({source, reason: InvalidInclusionListReason.unknown});
     metrics?.eip7805.invalidInclusionListByteSize.inc(inclusionListSize);
     throw new Error("Shuffling not available"); // TODO EIP-7805: Handle shuffling cache miss
   }
@@ -87,7 +83,7 @@ async function validateInclusionList(
   // [IGNORE] The inclusion_list_committee for slot message.slot on the current branch corresponds to message.inclusion_list_committee_root, as determined by hash_tree_root(inclusion_list_committee) == message.inclusion_list_committee_root.
   const inclusionListCommitteeRootFromShuffling = shuffling.inclusionListCommitteeRoots[slot % SLOTS_PER_EPOCH];
   if (Buffer.compare(inclusionListCommitteeRoot, inclusionListCommitteeRootFromShuffling) !== 0) {
-    metrics?.eip7805.inclusionListInvalid.inc({source, reason: InvalidInclusionListReason.ilCommitteeShuffling});
+    metrics?.eip7805.inclusionListInvalid.inc({source, reason: InvalidInclusionListReason.committeeShuffling});
     metrics?.eip7805.invalidInclusionListByteSize.inc(inclusionListSize);
     throw new InclusionListError(GossipAction.IGNORE, {
       code: InclusionListErrorCode.INVALID_COMMITTEE_ROOT,

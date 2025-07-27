@@ -13,7 +13,7 @@ export {
   ForkChoice,
   type ForkChoiceOpts,
   UpdateHeadOpt,
-  FCInclusionListSource,
+  InclusionListSource,
   assertValidTerminalPowBlock,
 } from "./forkChoice/forkChoice.js";
 export {
@@ -39,4 +39,3 @@ export {
   ForkChoiceError,
   ForkChoiceErrorCode,
 } from "./forkChoice/errors.js";
-export {type BeaconForkChoiceMetrics, getForkChoiceMetrics} from "./metrics.js";

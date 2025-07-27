@@ -50,7 +50,8 @@ export class InclusionListPool {
 
   constructor(
     private readonly config: ChainForkConfig,
-    private readonly clock: IClock
+    private readonly clock: IClock,
+    private readonly metrics: Metrics | null
   ) {}
 
   get size(): number {
@@ -96,7 +97,7 @@ export class InclusionListPool {
   /**
    * Return a list of unique inclusion list transactions for the given slot
    */
-  getTransactions(slot: Slot, metrics: Metrics | null): bellatrix.Transactions {
+  getTransactions(slot: Slot): bellatrix.Transactions {
     const uniqueTransactions: bellatrix.Transactions = [];
 
     const inclusionListsByValidator = this.inclusionListByValidatorBySlot.get(slot);
@@ -115,7 +116,7 @@ export class InclusionListPool {
         if (!duplicate) {
           uniqueTransactions.push(transaction);
         } else {
-          metrics?.eip7805.inclusionListTransactionsDuplicated.inc();
+          this.metrics?.eip7805.inclusionListTransactionsDuplicated.inc();
         }
       }
     }

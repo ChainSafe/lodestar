@@ -1,9 +1,9 @@
-import {UpdateHeadOpt} from "@lodestar/fork-choice";
+import {InclusionListSource, UpdateHeadOpt} from "@lodestar/fork-choice";
 import {NotReorgedReason} from "@lodestar/fork-choice";
 import {ProducedBlockSource} from "@lodestar/types";
 import {BlockSelectionResult} from "../../api/impl/validator/index.js";
 import {BlockProductionStep, PayloadPreparationType} from "../../chain/produceBlock/index.js";
-import {InclusionListSource, InvalidInclusionListReason} from "../../chain/validation/inclusionList.js";
+import {InvalidInclusionListReason} from "../../chain/validation/inclusionList.js";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
 
 export type BeaconMetrics = ReturnType<typeof createBeaconMetrics>;
@@ -73,17 +73,17 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
     }),
 
     eip7805: {
-      validInclusionListByteSize: register.counter({
+      validInclusionListByteSize: register.gauge({
         name: "beacon_valid_inclusion_lists_size_bytes_total",
         help: "Byte size of the inclusion list",
       }),
-      invalidInclusionListByteSize: register.counter({
+      invalidInclusionListByteSize: register.gauge({
         name: "beacon_invalid_inclusion_lists_size_bytes_total",
         help: "Byte size of the inclusion list",
       }),
       inclusionListSeen: register.counter<{source: InclusionListSource}>({
         name: "beacon_inclusion_lists_seen_total",
-        help: "Total number of seen inclusion lists (gossip, api)",
+        help: "Total number of seen inclusion lists by gossip or api",
         labelNames: ["source"],
       }),
       inclusionListValid: register.counter<{source: InclusionListSource}>({
@@ -99,12 +99,8 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       inclusionListValidationTime: register.histogram<{source: InclusionListSource}>({
         name: "beacon_inclusion_lists_validation_time_seconds",
         help: "Time taken to validate inclusion list",
-        buckets: [0.01, 0.05, 0.1, 0.5, 1, 2, 5],
+        buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.5],
         labelNames: ["source"],
-      }),
-      inclusionListProposed: register.counter({
-        name: "beacon_inclusion_lists_proposed_total",
-        help: "Total number of inclusion lists proposed",
       }),
       inclusionListBroadcasted: register.counter({
         name: "beacon_inclusion_lists_broadcasted_total",
@@ -120,9 +116,9 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         help: "Total number of transactions seen in inclusion lists",
         labelNames: ["source"],
       }),
-      inclusionListTransactionsIncluded: register.counter({
-        name: "beacon_inclusion_list_transactions_included_total",
-        help: "Total number of inclusion list transactions included into payload",
+      inclusionListTransactionsSentToPayload: register.counter({
+        name: "beacon_inclusion_list_transactions_sent_to_payload_total",
+        help: "Total number of inclusion list transactions sent to payload",
       }),
       inclusionListTransactionsDuplicated: register.counter({
         name: "beacon_inclusion_list_transactions_duplicated_total",
@@ -209,6 +205,17 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         name: "beacon_fork_choice_not_reorged_reason_total",
         help: "Reason why the current head is not re-orged out",
         labelNames: ["reason"],
+      }),
+      inclusionListEquivocating: register.gauge<{source: InclusionListSource}>({
+        name: "beacon_equivocating_inclusion_lists_total",
+        help: "Total number of equivocating inclusion lists",
+        labelNames: ["source"],
+      }),
+      inclusionListFirstSeenInSlot: register.histogram<{source: InclusionListSource}>({
+        name: "beacon_inclusion_list_first_seen_in_slot",
+        help: "Inclusion list first time seen in slot (seconds from slot)",
+        buckets: [0, 1, 2, 3, 4, 6, 8, 10, 12],
+        labelNames: ["source"],
       }),
     },
 

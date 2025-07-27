@@ -43,7 +43,6 @@ import {
 } from "../protoArray/interface.js";
 import {ProtoArray} from "../protoArray/protoArray.js";
 
-import {BeaconForkChoiceMetrics} from "../metrics.js";
 import {ForkChoiceError, ForkChoiceErrorCode, InvalidAttestationCode, InvalidBlockCode} from "./errors.js";
 import {
   AncestorResult,
@@ -80,7 +79,7 @@ export type UpdateAndGetHeadOpt =
   | {mode: UpdateHeadOpt.GetProposerHead; secFromSlot: number; slot: Slot}
   | {mode: UpdateHeadOpt.GetPredictedProposerHead; slot: Slot};
 
-export enum FCInclusionListSource {
+export enum InclusionListSource {
   gossip = "gossip",
   api = "api",
 }
@@ -142,6 +141,14 @@ export class ForkChoice implements IForkChoice {
   private justifiedProposerBoostScore: number | null = null;
   /** The current effective balances */
   private balances: EffectiveBalanceIncrements;
+  /** Number of equivocating inclusion lists */
+  private inclusionListEquivocating: MapDef<InclusionListSource, number> = new MapDef<InclusionListSource, number>(
+    () => 0
+  );
+  /** First inclusion list seen in slot */
+  private inclusionListFirstSeenInSlot: MapDef<InclusionListSource, number> = new MapDef<InclusionListSource, number>(
+    () => 0
+  );
   /**
    * Instantiates a Fork Choice from some existing components
    *
@@ -167,6 +174,8 @@ export class ForkChoice implements IForkChoice {
       balancesLength: this.balances.length,
       nodes: this.protoArray.nodes.length,
       indices: this.protoArray.indices.size,
+      inclusionListEquivocating: this.inclusionListEquivocating,
+      inclusionListFirstSeenInSlot: this.inclusionListFirstSeenInSlot,
     };
   }
 
@@ -800,12 +809,7 @@ export class ForkChoice implements IForkChoice {
   }
 
   // Skip all validation check that overlaps `validateInclusionList()` since an IL needs to pass it before calling `onInclusionList()`
-  onInclusionList(
-    inclusionList: eip7805.SignedInclusionList,
-    secFromSlot: number,
-    metrics: BeaconForkChoiceMetrics | null,
-    source: FCInclusionListSource
-  ): void {
+  onInclusionList(inclusionList: eip7805.SignedInclusionList, secFromSlot: number, source: InclusionListSource): void {
     const currentSlot = this.fcStore.currentSlot;
     const {slot, inclusionListCommitteeRoot, validatorIndex} = inclusionList.message;
 
@@ -828,7 +832,7 @@ export class ForkChoice implements IForkChoice {
     const storeKey: InclusionListStoreKey = [slot, inclusionListCommitteeRoot];
     const storedInclusionLists = this.fcStore.inclusionLists.get(storeKey) ?? [];
     if (storedInclusionLists.length === 0) {
-      metrics?.inclusionListFirstSeenInSLot.observe(secFromSlot);
+      this.inclusionListFirstSeenInSlot.set(source, secFromSlot);
     }
     const validatorInclusionLists = storedInclusionLists.filter((il) => il.validatorIndex === validatorIndex);
 
@@ -841,7 +845,7 @@ export class ForkChoice implements IForkChoice {
         const equivocators = this.fcStore.inclusionListEquivocators.get(storeKey) ?? new Set<ValidatorIndex>();
         equivocators.add(validatorIndex);
         this.fcStore.inclusionListEquivocators.set(storeKey, equivocators);
-        metrics?.inclusionListEquivocating.inc({source});
+        this.inclusionListEquivocating.set(source, this.inclusionListEquivocating.getOrDefault(source) + 1);
       }
     } else if (isBeforeFreezeDeadline) {
       const inclusionLists = this.fcStore.inclusionLists.get(storeKey) ?? [];

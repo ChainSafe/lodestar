@@ -2,7 +2,14 @@ import path from "node:path";
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
+import {
+  CheckpointWithHex,
+  ExecutionStatus,
+  IForkChoice,
+  InclusionListSource,
+  ProtoBlock,
+  UpdateHeadOpt,
+} from "@lodestar/fork-choice";
 import {ForkSeq, GENESIS_SLOT, SLOTS_PER_EPOCH, isForkPostElectra} from "@lodestar/params";
 import {
   BeaconStateAllForks,
@@ -257,7 +264,7 @@ export class BeaconChain implements IBeaconChain {
       this.opts?.preaggregateSlotDistance
     );
     this.syncContributionAndProofPool = new SyncContributionAndProofPool(clock, metrics, logger);
-    this.inclusionListPool = new InclusionListPool(config, clock);
+    this.inclusionListPool = new InclusionListPool(config, clock, metrics);
 
     this.seenAggregatedAttestations = new SeenAggregatedAttestations(metrics);
     this.seenContributionAndProof = new SeenContributionAndProof(metrics);
@@ -1131,6 +1138,22 @@ export class BeaconChain implements IBeaconChain {
     metrics.forkChoice.balancesLength.set(forkChoiceMetrics.balancesLength);
     metrics.forkChoice.nodes.set(forkChoiceMetrics.nodes);
     metrics.forkChoice.indices.set(forkChoiceMetrics.indices);
+    metrics.forkChoice.inclusionListEquivocating.set(
+      {source: InclusionListSource.api},
+      forkChoiceMetrics.inclusionListEquivocating.getOrDefault(InclusionListSource.api)
+    );
+    metrics.forkChoice.inclusionListEquivocating.set(
+      {source: InclusionListSource.gossip},
+      forkChoiceMetrics.inclusionListEquivocating.getOrDefault(InclusionListSource.gossip)
+    );
+    metrics.forkChoice.inclusionListFirstSeenInSlot.observe(
+      {source: InclusionListSource.api},
+      forkChoiceMetrics.inclusionListFirstSeenInSlot.getOrDefault(InclusionListSource.api)
+    );
+    metrics.forkChoice.inclusionListFirstSeenInSlot.observe(
+      {source: InclusionListSource.gossip},
+      forkChoiceMetrics.inclusionListFirstSeenInSlot.getOrDefault(InclusionListSource.gossip)
+    );
 
     const fork = this.config.getForkName(this.clock.currentSlot);
     if (isForkPostElectra(fork)) {
