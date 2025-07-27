@@ -3,6 +3,7 @@ import {ApiError, ApplicationMethods} from "@lodestar/api/server";
 import {
   ForkName,
   ForkPostBellatrix,
+  NUMBER_OF_COLUMNS,
   SLOTS_PER_HISTORICAL_ROOT,
   isForkPostBellatrix,
   isForkPostDeneb,
@@ -621,6 +622,10 @@ export function getBeaconBlockApi({
       let blobs: deneb.Blobs;
 
       if (isForkPostFulu(fork)) {
+        if (chain.custodyConfig.custodyColumns.length !== NUMBER_OF_COLUMNS) {
+          throw Error(`Must custody all ${NUMBER_OF_COLUMNS} data columns to be able to serve blobs`);
+        }
+
         let {dataColumnSidecars} = (await db.dataColumnSidecars.get(blockRoot)) ?? {};
         if (!dataColumnSidecars) {
           ({dataColumnSidecars} = (await db.dataColumnSidecarsArchive.get(block.message.slot)) ?? {});
