@@ -2,6 +2,9 @@ import {digest as sha256Digest} from "@chainsafe/as-sha256";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {ChainForkConfig} from "@lodestar/config";
 import {
+  BYTES_PER_CELL,
+  BYTES_PER_FIELD_ELEMENT,
+  FIELD_ELEMENTS_PER_BLOB,
   ForkAll,
   ForkName,
   KZG_COMMITMENTS_GINDEX,
@@ -207,12 +210,19 @@ export function blobsFromDataColumnSidecars(sidecars: fulu.DataColumnSidecars): 
 }
 
 function cellsToBlob(cells: fulu.Cell[]): deneb.Blob {
-  const len = cells.reduce((n, c) => n + c.length, 0);
-  const blob = new Uint8Array(len);
-  let off = 0;
-  for (const c of cells) {
-    blob.set(c, off);
-    off += c.length;
+  if (cells.length !== NUMBER_OF_COLUMNS) {
+    throw Error(`Expected ${NUMBER_OF_COLUMNS} cells to reconstruct blob, received ${cells.length}`);
   }
+
+  const blob = new Uint8Array(BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB);
+
+  for (const [i, cell] of cells.entries()) {
+    if (cell.length !== BYTES_PER_CELL) {
+      throw Error(`Cell ${i} has incorrect byte size ${cell.length} != ${BYTES_PER_CELL}`);
+    }
+
+    blob.set(cell, i * BYTES_PER_CELL);
+  }
+
   return blob;
 }
