@@ -632,7 +632,10 @@ export function getBeaconBlockApi({
         }
 
         if (!dataColumnSidecars) {
-          throw Error(`dataColumnSidecars not found in db for slot=${block.message.slot} root=${toRootHex(blockRoot)}`);
+          throw new ApiError(
+            404,
+            `dataColumnSidecars not found in db for slot=${block.message.slot} root=${toRootHex(blockRoot)}`
+          );
         }
 
         blobs = blobsFromDataColumnSidecars(dataColumnSidecars);
@@ -643,7 +646,10 @@ export function getBeaconBlockApi({
         }
 
         if (!blobSidecars) {
-          throw Error(`blobSidecars not found in db for slot=${block.message.slot} root=${toRootHex(blockRoot)}`);
+          throw new ApiError(
+            404,
+            `blobSidecars not found in db for slot=${block.message.slot} root=${toRootHex(blockRoot)}`
+          );
         }
 
         blobs = blobSidecars.sort((a, b) => a.index - b.index).map(({blob}) => blob);
