@@ -5,6 +5,7 @@ import {
   ForkPostBellatrix,
   SLOTS_PER_HISTORICAL_ROOT,
   isForkPostBellatrix,
+  isForkPostDeneb,
   isForkPostElectra,
   isForkPostFulu,
 } from "@lodestar/params";
@@ -44,7 +45,12 @@ import {BlockError, BlockErrorCode, BlockGossipError} from "../../../../chain/er
 import {validateGossipBlock} from "../../../../chain/validation/block.js";
 import {OpSource} from "../../../../chain/validatorMonitor.js";
 import {NetworkEvent} from "../../../../network/index.js";
-import {computeBlobSidecars, computeDataColumnSidecars, kzgCommitmentToVersionedHash} from "../../../../util/blobs.js";
+import {
+  blobsFromDataColumnSidecars,
+  computeBlobSidecars,
+  computeDataColumnSidecars,
+  kzgCommitmentToVersionedHash,
+} from "../../../../util/blobs.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {ApiModules} from "../../types.js";
@@ -610,26 +616,38 @@ export function getBeaconBlockApi({
 
       const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
       const fork = config.getForkName(block.message.slot);
-
-      if (isForkPostFulu(fork)) {
-        throw Error("TODO");
-      }
-
       const blockRoot = sszTypesFor(fork).BeaconBlock.hashTreeRoot(block.message);
 
-      let {blobSidecars} = (await db.blobSidecars.get(blockRoot)) ?? {};
-      if (!blobSidecars) {
-        ({blobSidecars} = (await db.blobSidecarsArchive.get(block.message.slot)) ?? {});
-      }
+      let blobs: deneb.Blobs;
 
-      if (!blobSidecars) {
-        throw Error(`blobSidecars not found in db for slot=${block.message.slot} root=${toRootHex(blockRoot)}`);
-      }
+      if (isForkPostFulu(fork)) {
+        let {dataColumnSidecars} = (await db.dataColumnSidecars.get(blockRoot)) ?? {};
+        if (!dataColumnSidecars) {
+          ({dataColumnSidecars} = (await db.dataColumnSidecarsArchive.get(block.message.slot)) ?? {});
+        }
 
-      blobSidecars = indices ? blobSidecars.filter(({index}) => indices.includes(index)) : blobSidecars;
+        if (!dataColumnSidecars) {
+          throw Error(`dataColumnSidecars not found in db for slot=${block.message.slot} root=${toRootHex(blockRoot)}`);
+        }
+
+        blobs = blobsFromDataColumnSidecars(dataColumnSidecars);
+      } else if (isForkPostDeneb(fork)) {
+        let {blobSidecars} = (await db.blobSidecars.get(blockRoot)) ?? {};
+        if (!blobSidecars) {
+          ({blobSidecars} = (await db.blobSidecarsArchive.get(block.message.slot)) ?? {});
+        }
+
+        if (!blobSidecars) {
+          throw Error(`blobSidecars not found in db for slot=${block.message.slot} root=${toRootHex(blockRoot)}`);
+        }
+
+        blobs = blobSidecars.sort((a, b) => a.index - b.index).map(({blob}) => blob);
+      } else {
+        blobs = [];
+      }
 
       return {
-        data: blobSidecars.map(({blob}) => blob),
+        data: indices ? blobs.filter((_, i) => indices.includes(i)) : blobs,
         meta: {
           executionOptimistic,
           finalized,

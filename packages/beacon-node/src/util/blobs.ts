@@ -186,3 +186,33 @@ export async function recoverDataColumnSidecars(
 
   return result;
 }
+
+/**
+ * Reconstruct blobs from a complete set of data columns
+ */
+export function blobsFromDataColumnSidecars(sidecars: fulu.DataColumnSidecars): deneb.Blobs {
+  if (sidecars.length !== NUMBER_OF_COLUMNS) {
+    throw Error(`Expected ${NUMBER_OF_COLUMNS} columns to reconstruct blobs, received ${sidecars.length}`);
+  }
+  const blobCount = sidecars[0].column.length;
+  const blobs: deneb.Blobs = new Array(blobCount);
+
+  const ordered = sidecars.slice().sort((a, b) => a.index - b.index);
+  for (let row = 0; row < blobCount; row++) {
+    const cells = ordered.map((col) => col.column[row]);
+    blobs[row] = cellsToBlob(cells);
+  }
+
+  return blobs;
+}
+
+function cellsToBlob(cells: fulu.Cell[]): deneb.Blob {
+  const len = cells.reduce((n, c) => n + c.length, 0);
+  const blob = new Uint8Array(len);
+  let off = 0;
+  for (const c of cells) {
+    blob.set(c, off);
+    off += c.length;
+  }
+  return blob;
+}
