@@ -622,7 +622,7 @@ export function getBeaconBlockApi({
       let blobs: deneb.Blobs;
 
       if (isForkPostFulu(fork)) {
-        if (chain.custodyConfig.custodyColumns.length !== NUMBER_OF_COLUMNS) {
+        if (chain.custodyConfig.targetCustodyGroupCount !== NUMBER_OF_COLUMNS) {
           throw Error(`Must custody all ${NUMBER_OF_COLUMNS} data columns to be able to serve blobs`);
         }
 
