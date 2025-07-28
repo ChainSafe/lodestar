@@ -58,8 +58,8 @@ IPFS
 IPv
 Infura
 JSON
-JSDoc
 JSObjects
+JSDoc
 JWT
 KDE
 Kubernetes
