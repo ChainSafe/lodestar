@@ -126,14 +126,14 @@ export class EpochCache {
 
   /**
    * Indexes of the block proposers for the current epoch.
+   * For pre-fulu, this is computed and cached from the current shuffling.
+   * For post-fulu, this is copied from the state.proposerLookahead.
    *
    * 32 x Number
    */
-  // TODO FULU: This is no longer needed since EIP-7917
   proposers: ValidatorIndex[];
 
   /** Proposers for previous epoch, initialized to null in first epoch */
-  // TODO FULU: This is no longer needed since EIP-7917. Need to find a way to deal with
   // getProposerDuties requests with previous epoch
   proposersPrevEpoch: ValidatorIndex[] | null;
 
@@ -141,8 +141,10 @@ export class EpochCache {
    * The next proposer seed is only used in the getBeaconProposersNextEpoch call. It cannot be moved into
    * getBeaconProposersNextEpoch because it needs state as input and all data needed by getBeaconProposersNextEpoch
    * should be in the epoch context.
+   *
+   * For pre-fulu, this is lazily computed from the next epoch's shuffling.
+   * For post-fulu, this is copied from the state.proposerLookahead.
    */
-  // TODO FULU: This is no longer needed since EIP-7917
   proposersNextEpoch: ProposersDeferred;
 
   /**
@@ -618,7 +620,7 @@ export class EpochCache {
    * Steps for afterProcessEpoch
    * 1) update previous/current/next values of cached items
    *
-   * Note that this method should be called before `upgradeState*()`
+   * At fork boundary, this runs pre-fork logic and it happens before `upgradeState*` is called.
    */
   afterProcessEpoch(state: CachedBeaconStateAllForks, epochTransitionCache: EpochTransitionCache): void {
     // Because the slot was incremented before entering this function the "next epoch" is actually the "current epoch"
@@ -632,7 +634,6 @@ export class EpochCache {
     // move current to previous
     this.previousShuffling = this.currentShuffling;
     this.previousDecisionRoot = this.currentDecisionRoot;
-    this.proposersPrevEpoch = this.proposers;
 
     // move next to current or calculate upcoming
     this.currentDecisionRoot = this.nextDecisionRoot;
@@ -742,12 +743,14 @@ export class EpochCache {
   }
 
   /**
-   * Call after afterProcessEpoch() and upgradeState*() to finalize the epoch cache.
+   * At fork boundary, this runs post-fork logic and it happens after `upgradeState*` is called.
    */
   finalProcessEpoch(state: CachedBeaconStateAllForks): void {
     // this.epoch was updated at the end of afterProcessEpoch()
     const upcomingEpoch = this.epoch;
     const epochAfterUpcoming = upcomingEpoch + 1;
+
+    this.proposersPrevEpoch = this.proposers;
     if (this.epoch >= this.config.FULU_FORK_EPOCH) {
       // Populate proposer cache with lookahead from state
       const proposerLookahead = (state as CachedBeaconStateFulu).proposerLookahead.getAll();
@@ -830,8 +833,10 @@ export class EpochCache {
     return (committeesSinceEpochStart + committeeIndex) % ATTESTATION_SUBNET_COUNT;
   }
 
-  // TODO FULU: Read from state.proposer_lookahead instead.
-  // See https://github.com/ethereum/consensus-specs/blob/e9266b2145c09b63ba0039a9f477cfe8a629c78b/specs/fulu/beacon-chain.md#modified-get_beacon_proposer_index
+  /**
+   * Read from proposers instead of state.proposer_lookahead because we set it in `finalProcessEpoch()`
+   * See https://github.com/ethereum/consensus-specs/blob/e9266b2145c09b63ba0039a9f477cfe8a629c78b/specs/fulu/beacon-chain.md#modified-get_beacon_proposer_index
+   */
   getBeaconProposer(slot: Slot): ValidatorIndex {
     const epoch = computeEpochAtSlot(slot);
     if (epoch !== this.currentShuffling.epoch) {
@@ -889,9 +894,9 @@ export class EpochCache {
    * balances are sampled to adjust the probability of the next selection (32 per epoch on average). So to invalidate
    * the prediction the effective of one of those 32 samples should change and change the random_byte inequality.
    */
-  // TODO Fulu: We can't do lazy compute anymore post EIP-7917. Since we need them to compute state.proposerLookahead
   getBeaconProposersNextEpoch(): ValidatorIndex[] {
     if (!this.proposersNextEpoch.computed) {
+      // this is lazily computed pre-fulu
       const indexes = computeProposers(
         this.config.getForkSeqAtEpoch(this.nextEpoch),
         this.proposersNextEpoch.seed,
@@ -901,6 +906,7 @@ export class EpochCache {
       this.proposersNextEpoch = {computed: true, indexes};
     }
 
+    // this is eagerly computed post-fulu
     return this.proposersNextEpoch.indexes;
   }
 
