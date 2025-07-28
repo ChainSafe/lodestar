@@ -47,10 +47,10 @@ import {validateGossipBlock} from "../../../../chain/validation/block.js";
 import {OpSource} from "../../../../chain/validatorMonitor.js";
 import {NetworkEvent} from "../../../../network/index.js";
 import {
-  blobsFromDataColumnSidecars,
   computeBlobSidecars,
   computeDataColumnSidecars,
   kzgCommitmentToVersionedHash,
+  reconstructBlobs,
 } from "../../../../util/blobs.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
@@ -638,7 +638,7 @@ export function getBeaconBlockApi({
           );
         }
 
-        blobs = blobsFromDataColumnSidecars(dataColumnSidecars);
+        blobs = reconstructBlobs(dataColumnSidecars);
       } else if (isForkPostDeneb(fork)) {
         let {blobSidecars} = (await db.blobSidecars.get(blockRoot)) ?? {};
         if (!blobSidecars) {

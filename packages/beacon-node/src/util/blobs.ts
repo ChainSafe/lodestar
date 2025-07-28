@@ -193,7 +193,7 @@ export async function recoverDataColumnSidecars(
 /**
  * Reconstruct blobs from a complete set of data columns
  */
-export function blobsFromDataColumnSidecars(sidecars: fulu.DataColumnSidecars): deneb.Blobs {
+export function reconstructBlobs(sidecars: fulu.DataColumnSidecars): deneb.Blobs {
   //  Must have all columns otherwise call `recoverDataColumnSidecars` first
   if (sidecars.length !== NUMBER_OF_COLUMNS) {
     throw Error(`Expected ${NUMBER_OF_COLUMNS} data columns to reconstruct blobs, received ${sidecars.length}`);
