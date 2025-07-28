@@ -91,11 +91,11 @@ Quickstart
 RPC
 Reth
 Ryzen
-Searchability
 SFTP
 SHA
 SSD
 SSZ
+Searchability
 Somer
 Stakehouse
 TOC
