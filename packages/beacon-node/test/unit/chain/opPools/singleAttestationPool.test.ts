@@ -13,7 +13,7 @@ import {
 } from "../../../../src/chain/opPools/aggregatedAttestationPool.js";
 import {SingleAttestationPool} from "../../../../src/chain/opPools/singleAttestationPool.js";
 
-describe("stored slots", () => {
+describe("SingleAttestationPool - stored slots", () => {
   const pool = new SingleAttestationPool(null);
   beforeEach(() => {
     for (let slot = 0; slot < 96; slot++) {
@@ -66,7 +66,7 @@ describe("stored slots", () => {
   });
 });
 
-describe("seenAggregatedAttestation", () => {
+describe("SingleAttestationPool - seenAggregatedAttestation", () => {
   const pool = new SingleAttestationPool(null);
   const slot = 20252025;
   const attestationData = generateAttestationData(slot);
@@ -95,7 +95,7 @@ describe("seenAggregatedAttestation", () => {
   // since the method getStoredSlots() returns the slots that are stored in the pool, not the slots of the attestations
 });
 
-describe("getAttestationsForBlockElectraBySlot", () => {
+describe("SingleAttestationPool - getAttestationsForBlockElectraBySlot", () => {
   const pool = new SingleAttestationPool(null);
   const slot = 20252025;
   const stateSlot = slot + 1;
