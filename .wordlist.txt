@@ -57,9 +57,9 @@ Hyperledger
 IPFS
 IPv
 Infura
+JSDoc
 JSON
 JSObjects
-JSDoc
 JWT
 KDE
 Kubernetes
