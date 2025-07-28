@@ -253,9 +253,6 @@ function processSlotsWithTransientCache(
         timer?.();
       }
 
-      // Note: time only on success. Include beforeProcessEpoch, processEpoch, afterProcessEpoch, commit
-      epochTransitionTimer?.();
-
       // Upgrade state if exactly at epoch boundary
       const stateEpoch = computeEpochAtSlot(postState.slot);
       if (stateEpoch === config.ALTAIR_FORK_EPOCH) {
@@ -279,7 +276,7 @@ function processSlotsWithTransientCache(
 
       {
         const timer = metrics?.epochTransitionStepTime.startTimer({step: EpochTransitionStep.finalProcessEpoch});
-        // last step to prepare epoch data that depends on the upgraded state, for example proposerLookAhead of BeaconStateFulu
+        // last step to prepare epoch data that depends on the upgraded state, for example proposerLookahead of BeaconStateFulu
         postState.epochCtx.finalProcessEpoch(postState);
         timer?.();
       }
@@ -291,6 +288,9 @@ function processSlotsWithTransientCache(
         postState.commit();
         timer?.();
       }
+
+      // Note: time only on success. Include beforeProcessEpoch, processEpoch, afterProcessEpoch, upgradeState*, finalProcessEpoch, commit
+      epochTransitionTimer?.();
     } else {
       postState.slot++;
     }

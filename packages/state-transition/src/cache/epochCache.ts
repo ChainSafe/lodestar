@@ -751,7 +751,7 @@ export class EpochCache {
     const epochAfterUpcoming = upcomingEpoch + 1;
 
     this.proposersPrevEpoch = this.proposers;
-    if (this.epoch >= this.config.FULU_FORK_EPOCH) {
+    if (upcomingEpoch >= this.config.FULU_FORK_EPOCH) {
       // Populate proposer cache with lookahead from state
       const proposerLookahead = (state as CachedBeaconStateFulu).proposerLookahead.getAll();
       this.proposers = proposerLookahead.slice(0, SLOTS_PER_EPOCH);
