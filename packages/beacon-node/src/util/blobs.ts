@@ -4,6 +4,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {
   BYTES_PER_CELL,
   BYTES_PER_FIELD_ELEMENT,
+  CELLS_PER_EXT_BLOB,
   FIELD_ELEMENTS_PER_BLOB,
   ForkAll,
   ForkName,
@@ -217,14 +218,14 @@ export function reconstructBlobs(sidecars: fulu.DataColumnSidecars): deneb.Blobs
  * it is only needed for erasure‑coding recovery when columns are missing.
  */
 function cellsToBlob(cells: fulu.Cell[]): deneb.Blob {
-  if (cells.length !== NUMBER_OF_COLUMNS) {
-    throw Error(`Expected ${NUMBER_OF_COLUMNS} cells to reconstruct blob, received ${cells.length}`);
+  if (cells.length !== CELLS_PER_EXT_BLOB) {
+    throw Error(`Expected ${CELLS_PER_EXT_BLOB} cells to reconstruct blob, received ${cells.length}`);
   }
 
   const blob = new Uint8Array(BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB);
 
   // Only the first 64 cells hold the original bytes
-  for (let i = 0; i < NUMBER_OF_COLUMNS / 2; i++) {
+  for (let i = 0; i < CELLS_PER_EXT_BLOB / 2; i++) {
     const cell = cells[i];
     if (cell.length !== BYTES_PER_CELL) {
       throw Error(`Cell ${i} has incorrect byte size ${cell.length} != ${BYTES_PER_CELL}`);
