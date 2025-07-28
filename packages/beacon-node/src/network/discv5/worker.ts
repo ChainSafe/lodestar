@@ -34,7 +34,7 @@ let enrRelevanceMetric: Gauge<{status: string}> | undefined;
 let closeMetrics: () => void | undefined;
 if (workerData.metrics) {
   metricsRegistry = new RegistryMetricCreator();
-  closeMetrics = collectNodeJSMetrics(metricsRegistry, "discv5_worker_");
+  closeMetrics = await collectNodeJSMetrics(metricsRegistry, "discv5_worker_");
 
   // add enr relevance metric
   enrRelevanceMetric = metricsRegistry.gauge<{status: string}>({

@@ -3,7 +3,7 @@ import {createMetricsTest} from "./utils.js";
 
 describe("BeaconMetrics", () => {
   it("updated metrics should be reflected in the register", async () => {
-    const metrics = createMetricsTest();
+    const metrics = await createMetricsTest();
     const metricsAsArray = metrics.register.getMetricsAsArray();
     const metricsAsText = await metrics.register.metrics();
 

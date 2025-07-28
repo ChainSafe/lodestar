@@ -10,7 +10,11 @@ export type Metrics = BeaconMetrics &
   BeaconStateTransitionMetrics &
   LodestarMetrics & {register: RegistryMetricCreator; close: () => void};
 
-export function createMetrics(opts: MetricsOptions, genesisTime: number, externalRegistries: Registry[] = []): Metrics {
+export async function createMetrics(
+  opts: MetricsOptions,
+  genesisTime: number,
+  externalRegistries: Registry[] = []
+): Promise<Metrics> {
   const register = new RegistryMetricCreator();
   const beacon = createBeaconMetrics(register);
   const lodestar = createLodestarMetrics(register, opts.metadata, genesisTime);
@@ -20,7 +24,7 @@ export function createMetrics(opts: MetricsOptions, genesisTime: number, externa
     lodestar.unhandledPromiseRejections.inc();
   });
 
-  const close = collectNodeJSMetrics(register);
+  const close = await collectNodeJSMetrics(register);
 
   // Merge external registries
   for (const externalRegister of externalRegistries) {

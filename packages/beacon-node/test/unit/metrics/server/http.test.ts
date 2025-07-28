@@ -11,7 +11,7 @@ describe("HttpMetricsServer", () => {
   const port = 14500;
 
   it("should serve metrics on /metrics", async () => {
-    const metrics = createMetricsTest();
+    const metrics = await createMetricsTest();
     server = await getHttpMetricsServer({port}, {register: metrics.register, logger});
 
     const res = await fetch(`http://127.0.0.1:${port}/metrics`);

@@ -3,7 +3,7 @@ import {createMetricsTest} from "./utils.js";
 
 describe("Metrics", () => {
   it("should get default metrics from register", async () => {
-    const metrics = createMetricsTest();
+    const metrics = await createMetricsTest();
     const metricsAsArray = metrics.register.getMetricsAsArray();
     const metricsAsText = await metrics.register.metrics();
     expect(metricsAsArray.length).toBeGreaterThan(0);

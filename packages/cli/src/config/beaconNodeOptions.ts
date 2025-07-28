@@ -49,7 +49,10 @@ export function mergeBeaconNodeOptionsWithDefaults(
   defaultOptions: IBeaconNodeOptions,
   ...partialOptionsArr: RecursivePartial<IBeaconNodeOptions>[]
 ): IBeaconNodeOptions {
-  return mergeBeaconNodeOptions(defaultOptions, ...partialOptionsArr) as IBeaconNodeOptions;
+  return mergeBeaconNodeOptions(
+    defaultOptions as RecursivePartial<IBeaconNodeOptions>,
+    ...partialOptionsArr
+  ) as IBeaconNodeOptions;
 }
 
 /**

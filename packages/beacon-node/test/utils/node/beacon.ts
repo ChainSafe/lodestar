@@ -69,7 +69,7 @@ export async function getDevBeaconNode(
       arrayMerge: overwriteTargetArrayIfItems,
       isMergeableObject: isPlainObject,
     }
-  );
+  ) as RecursivePartial<IBeaconNodeOptions>;
 
   let anchorState = opts.anchorState;
   if (!anchorState) {

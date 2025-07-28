@@ -48,7 +48,7 @@ const abortController = new AbortController();
 // Set up metrics, nodejs and discv5-specific
 const metricsRegister = workerData.metricsEnabled ? new RegistryMetricCreator() : null;
 if (metricsRegister) {
-  const closeMetrics = collectNodeJSMetrics(metricsRegister, "network_worker_");
+  const closeMetrics = await collectNodeJSMetrics(metricsRegister, "network_worker_");
   abortController.signal.addEventListener("abort", closeMetrics, {once: true});
 }
 

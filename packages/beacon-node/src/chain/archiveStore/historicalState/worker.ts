@@ -36,7 +36,7 @@ let historicalStateRegenMetrics: HistoricalStateRegenMetrics | undefined;
 let queueMetrics: QueueMetrics | undefined;
 
 if (metricsRegister) {
-  const closeMetrics = collectNodeJSMetrics(metricsRegister, "lodestar_historical_state_worker_");
+  const closeMetrics = await collectNodeJSMetrics(metricsRegister, "lodestar_historical_state_worker_");
   abortController.signal.addEventListener("abort", closeMetrics, {once: true});
 
   historicalStateRegenMetrics = createHistoricalStateRegenMetrics(metricsRegister);

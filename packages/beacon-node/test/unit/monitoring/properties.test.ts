@@ -33,8 +33,8 @@ describe("monitoring / properties", () => {
   describe("MetricProperty", () => {
     let metrics: Metrics;
 
-    beforeAll(() => {
-      metrics = createMetricsTest();
+    beforeAll(async () => {
+      metrics = await createMetricsTest();
     });
 
     it("should return a json record with the configured key and metric value", async () => {

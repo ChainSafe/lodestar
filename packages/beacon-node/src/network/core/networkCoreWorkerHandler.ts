@@ -133,7 +133,7 @@ export class WorkerNetworkCore implements INetworkCore {
        * showed that there is a pretty big window of "correct" values but we can always tune as
        * necessary
        */
-      resourceLimits: {maxYoungGenerationSizeMb: opts.maxYoungGenerationSizeMb},
+      // resourceLimits: {maxYoungGenerationSizeMb: opts.maxYoungGenerationSizeMb},
     } as ConstructorParameters<typeof Worker>[1]);
 
     // biome-ignore lint/suspicious/noExplicitAny: <explanation>
