@@ -14,7 +14,7 @@ import {
 import {InsertOutcome} from "./types.js";
 import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
 
-/** Hex string of DataRoot `TODO` */
+/** Hex string of DataRoot */
 type DataRootHex = string;
 
 // TODO: dedup, same for below types
@@ -227,7 +227,7 @@ export class SingleAttestationPool {
           sameComitteeAttestations.set(notSeenCommitteeValidatorIndex, attestation);
           // no need to search for the same notSeenCommitteeValidatorIndex in the next loop of attestation data root
           notSeenMembers.delete(notSeenCommitteeValidatorIndex);
-        }
+        } // end looping through not seen committee members
 
         if (sameComitteeAttestations.size === 0) {
           // no missing SingleAttestations for this committeeIndex, expect this to happen a lot of times so not sure if we should track metrics here
@@ -310,7 +310,7 @@ export class SingleAttestationPool {
   }
 
   /** Returns current count of SingleAttestations */
-  private getAttestationCount(): number {
+  getAttestationCount(): number {
     let attestationCount = 0;
     for (const slot of this.committeeByIndexByRootBySlot.keys()) {
       attestationCount += this.getAttestationCountAtSlot(slot);
