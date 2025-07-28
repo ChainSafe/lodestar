@@ -194,6 +194,7 @@ export async function recoverDataColumnSidecars(
  * Reconstruct blobs from a complete set of data columns
  */
 export function blobsFromDataColumnSidecars(sidecars: fulu.DataColumnSidecars): deneb.Blobs {
+  //  Must have all columns otherwise call `recoverDataColumnSidecars` first
   if (sidecars.length !== NUMBER_OF_COLUMNS) {
     throw Error(`Expected ${NUMBER_OF_COLUMNS} data columns to reconstruct blobs, received ${sidecars.length}`);
   }
@@ -202,6 +203,7 @@ export function blobsFromDataColumnSidecars(sidecars: fulu.DataColumnSidecars): 
 
   const ordered = sidecars.slice().sort((a, b) => a.index - b.index);
   for (let row = 0; row < blobCount; row++) {
+    // 128 cells that make up one "extended blob" row
     const cells = ordered.map((col) => col.column[row]);
     blobs[row] = cellsToBlob(cells);
   }
@@ -209,6 +211,11 @@ export function blobsFromDataColumnSidecars(sidecars: fulu.DataColumnSidecars): 
   return blobs;
 }
 
+/**
+ * Concatenate the systematic half (columns 0‑63) of a row of cells into
+ * the original 131072 byte blob. The parity half (64‑127) is ignored as
+ * it is only needed for erasure‑coding recovery when columns are missing.
+ */
 function cellsToBlob(cells: fulu.Cell[]): deneb.Blob {
   if (cells.length !== NUMBER_OF_COLUMNS) {
     throw Error(`Expected ${NUMBER_OF_COLUMNS} cells to reconstruct blob, received ${cells.length}`);
@@ -216,7 +223,9 @@ function cellsToBlob(cells: fulu.Cell[]): deneb.Blob {
 
   const blob = new Uint8Array(BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB);
 
-  for (const [i, cell] of cells.entries()) {
+  // Only the first 64 cells hold the original bytes
+  for (let i = 0; i < NUMBER_OF_COLUMNS / 2; i++) {
+    const cell = cells[i];
     if (cell.length !== BYTES_PER_CELL) {
       throw Error(`Cell ${i} has incorrect byte size ${cell.length} != ${BYTES_PER_CELL}`);
     }
