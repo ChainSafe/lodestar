@@ -75,11 +75,11 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
     eip7805: {
       validInclusionListByteSize: register.gauge({
         name: "beacon_valid_inclusion_lists_size_bytes_total",
-        help: "Byte size of the inclusion list",
+        help: "Byte size of the valid inclusion list",
       }),
       invalidInclusionListByteSize: register.gauge({
         name: "beacon_invalid_inclusion_lists_size_bytes_total",
-        help: "Byte size of the inclusion list",
+        help: "Byte size of the invalid inclusion list",
       }),
       inclusionListSeen: register.counter<{source: InclusionListSource}>({
         name: "beacon_inclusion_lists_seen_total",
