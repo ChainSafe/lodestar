@@ -1,5 +1,5 @@
 import {ChainConfig, ChainForkConfig} from "@lodestar/config";
-import {ForkSeq, INTERVALS_PER_SLOT, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {AGGREGATE_DUE_MS, ATTESTATION_DUE_MS, ForkSeq, INTERVALS_PER_SLOT, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
@@ -441,8 +441,8 @@ export function createValidatorMonitor(
 
     onPoolSubmitUnaggregatedAttestation(seenTimestampSec, indexedAttestation, subnet, sentPeers) {
       const data = indexedAttestation.data;
-      // Returns the duration between when the attestation `data` could be produced (1/3rd through the slot) and `seenTimestamp`.
-      const delaySec = seenTimestampSec - (genesisTime + (data.slot + 1 / 3) * config.SECONDS_PER_SLOT);
+      // Returns the duration between when the attestation `data` could be produced (4s through the slot) and `seenTimestamp`.
+      const delaySec = seenTimestampSec - (genesisTime + data.slot * config.SECONDS_PER_SLOT + ATTESTATION_DUE_MS / 1000);
       for (const index of indexedAttestation.attestingIndices) {
         const validator = validators.get(index);
         if (validator) {
@@ -474,8 +474,8 @@ export function createValidatorMonitor(
       const src = OpSource.gossip;
       const data = indexedAttestation.data;
       const epoch = computeEpochAtSlot(data.slot);
-      // Returns the duration between when the attestation `data` could be produced (1/3rd through the slot) and `seenTimestamp`.
-      const delaySec = seenTimestampSec - (genesisTime + (data.slot + 1 / 3) * config.SECONDS_PER_SLOT);
+      // Returns the duration between when the attestation `data` could be produced (4s through the slot) and `seenTimestamp`.
+      const delaySec = seenTimestampSec - (genesisTime + data.slot * config.SECONDS_PER_SLOT + ATTESTATION_DUE_MS / 1000);
 
       for (const index of indexedAttestation.attestingIndices) {
         const validator = validators.get(index);
@@ -491,8 +491,8 @@ export function createValidatorMonitor(
 
     onPoolSubmitAggregatedAttestation(seenTimestampSec, indexedAttestation, sentPeers) {
       const data = indexedAttestation.data;
-      // Returns the duration between when a `AggregateAndproof` with `data` could be produced (2/3rd through the slot) and `seenTimestamp`.
-      const delaySec = seenTimestampSec - (genesisTime + (data.slot + 2 / 3) * config.SECONDS_PER_SLOT);
+      // Returns the duration between when a `AggregateAndproof` with `data` could be produced (8s through the slot) and `seenTimestamp`.
+      const delaySec = seenTimestampSec - (genesisTime + data.slot * config.SECONDS_PER_SLOT + AGGREGATE_DUE_MS / 1000);
 
       for (const index of indexedAttestation.attestingIndices) {
         const validator = validators.get(index);
@@ -518,8 +518,8 @@ export function createValidatorMonitor(
       const src = OpSource.gossip;
       const data = indexedAttestation.data;
       const epoch = computeEpochAtSlot(data.slot);
-      // Returns the duration between when a `AggregateAndProof` with `data` could be produced (2/3rd through the slot) and `seenTimestamp`.
-      const delaySec = seenTimestampSec - (genesisTime + (data.slot + 2 / 3) * config.SECONDS_PER_SLOT);
+        // Returns the duration between when a `AggregateAndproof` with `data` could be produced (8s through the slot) and `seenTimestamp`.
+      const delaySec = seenTimestampSec - (genesisTime + data.slot * config.SECONDS_PER_SLOT + AGGREGATE_DUE_MS / 1000);
 
       const aggregatorIndex = signedAggregateAndProof.message.aggregatorIndex;
       const validatorAggregator = validators.get(aggregatorIndex);
