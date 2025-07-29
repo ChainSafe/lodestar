@@ -8,7 +8,12 @@ import {BeaconProposerCache} from "../../src/chain/beaconProposerCache.js";
 import {BeaconChain} from "../../src/chain/chain.js";
 import {ChainEventEmitter} from "../../src/chain/emitter.js";
 import {LightClientServer} from "../../src/chain/lightClient/index.js";
-import {AggregatedAttestationPool, OpPool, SyncContributionAndProofPool} from "../../src/chain/opPools/index.js";
+import {
+  AggregatedAttestationPool,
+  OpPool,
+  SingleAttestationPool,
+  SyncContributionAndProofPool,
+} from "../../src/chain/opPools/index.js";
 import {QueuedStateRegenerator} from "../../src/chain/regen/index.js";
 import {ShufflingCache} from "../../src/chain/shufflingCache.js";
 import {Eth1ForBlockProduction} from "../../src/eth1/index.js";
@@ -27,6 +32,7 @@ export type MockedBeaconChain = Mocked<BeaconChain> & {
   eth1: Mocked<Eth1ForBlockProduction>;
   opPool: Mocked<OpPool>;
   aggregatedAttestationPool: Mocked<AggregatedAttestationPool>;
+  singleAttestationPool: Mocked<SingleAttestationPool>;
   syncContributionAndProofPool: Mocked<SyncContributionAndProofPool>;
   beaconProposerCache: Mocked<BeaconProposerCache>;
   shufflingCache: Mocked<ShufflingCache>;
@@ -92,8 +98,17 @@ vi.mock("../../src/chain/opPools/index.js", async (importActual) => {
 
   const AggregatedAttestationPool = vi.fn().mockImplementation(() => {
     return {
+      getAttestationsForBlockElectraBySlot: vi.fn(),
+      getStoredSlots: vi.fn(),
       getAttestationsForBlock: vi.fn(),
       getAttestationsForBlockPreElectra: vi.fn(),
+    };
+  });
+
+  const SingleAttestationPool = vi.fn().mockImplementation(() => {
+    return {
+      getAttestationsForBlockElectraBySlot: vi.fn(),
+      getStoredSlots: vi.fn(),
     };
   });
 
@@ -107,6 +122,7 @@ vi.mock("../../src/chain/opPools/index.js", async (importActual) => {
     ...mod,
     OpPool,
     AggregatedAttestationPool,
+    SingleAttestationPool,
     SyncContributionAndProofPool,
   };
 });
@@ -139,6 +155,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
         eth1: new Eth1ForBlockProduction(),
         opPool: new OpPool(),
         aggregatedAttestationPool: new AggregatedAttestationPool(config),
+        singleAttestationPool: new SingleAttestationPool(),
         syncContributionAndProofPool: new SyncContributionAndProofPool(clock),
         // @ts-expect-error
         beaconProposerCache: new BeaconProposerCache(),
