@@ -1,5 +1,5 @@
 import {ChainConfig, ChainForkConfig} from "@lodestar/config";
-import {INTERVALS_PER_SLOT, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {LATE_BLOCK_CUTOFF_MS, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   DataAvailabilityStatus,
@@ -1192,16 +1192,16 @@ export class ForkChoice implements IForkChoice {
    * Child class can overwrite this for testing purpose.
    */
   protected isBlockTimely(block: BeaconBlock, blockDelaySec: number): boolean {
-    const isBeforeAttestingInterval = blockDelaySec < this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT;
-    return this.fcStore.currentSlot === block.slot && isBeforeAttestingInterval;
+    const isBeforeLateBlockCutoff = (blockDelaySec * 1000) < LATE_BLOCK_CUTOFF_MS;
+    return this.fcStore.currentSlot === block.slot && isBeforeLateBlockCutoff;
   }
 
   /**
    * https://github.com/ethereum/consensus-specs/blob/v1.5.0/specs/phase0/fork-choice.md#is_proposing_on_time
    */
   private isProposingOnTime(secFromSlot: number): boolean {
-    const proposerReorgCutoff = this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT / 2;
-    return secFromSlot <= proposerReorgCutoff;
+    const proposerReorgCutoff = LATE_BLOCK_CUTOFF_MS / 2;
+    return (secFromSlot * 1000) <= proposerReorgCutoff;
   }
 
   private getPreMergeExecStatus(executionStatus: MaybeValidExecutionStatus): ExecutionStatus.PreMerge {
