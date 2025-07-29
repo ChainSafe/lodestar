@@ -224,6 +224,13 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     MAX_DEPOSITS: true,
     MAX_VOLUNTARY_EXITS: true,
 
+    // Fork choice
+    LATE_BLOCK_CUTOFF_MS: true,
+
+    // Validator duties
+    ATTESTATION_DUE_MS: true,
+    AGGREGATE_DUE_MS: true,
+
     // # AltairPreset
     /////////////////
 
@@ -234,6 +241,8 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR: altairForkRelevant,
     MIN_SYNC_COMMITTEE_PARTICIPANTS: false, // Only relevant for lightclients
     UPDATE_TIMEOUT: false, // Only relevant for lightclients
+    SYNC_MESSAGE_DUE_MS: false, // Only relevant for lightclients
+    CONTRIBUTION_DUE_MS: false, // Only relevant for lightclients
 
     // # BellatrixPreset
     /////////////////

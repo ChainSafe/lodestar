@@ -48,6 +48,13 @@ export type BeaconPreset = {
   MAX_DEPOSITS: number;
   MAX_VOLUNTARY_EXITS: number;
 
+  // Fork choice
+  LATE_BLOCK_CUTOFF_MS: number;
+
+  // Validator duties
+  ATTESTATION_DUE_MS: number;
+  AGGREGATE_DUE_MS: number;
+
   // ALTAIR
   /////////
   SYNC_COMMITTEE_SIZE: number;
@@ -57,7 +64,8 @@ export type BeaconPreset = {
   PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR: number;
   MIN_SYNC_COMMITTEE_PARTICIPANTS: number;
   UPDATE_TIMEOUT: number;
-
+  SYNC_MESSAGE_DUE_MS: number;
+  CONTRIBUTION_DUE_MS: number;
   // BELLATRIX
   ////////////
   INACTIVITY_PENALTY_QUOTIENT_BELLATRIX: number;
@@ -154,6 +162,13 @@ export const beaconPresetTypes: BeaconPresetTypes = {
   MAX_DEPOSITS: "number",
   MAX_VOLUNTARY_EXITS: "number",
 
+  // Fork choice
+  LATE_BLOCK_CUTOFF_MS: "number",
+
+  // Validator duties
+  ATTESTATION_DUE_MS: "number",
+  AGGREGATE_DUE_MS: "number",
+
   // ALTAIR
   /////////
   SYNC_COMMITTEE_SIZE: "number",
@@ -163,6 +178,8 @@ export const beaconPresetTypes: BeaconPresetTypes = {
   PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR: "number",
   MIN_SYNC_COMMITTEE_PARTICIPANTS: "number",
   UPDATE_TIMEOUT: "number",
+  SYNC_MESSAGE_DUE_MS: "number",
+  CONTRIBUTION_DUE_MS: "number",
 
   // BELLATRIX
   ////////////
