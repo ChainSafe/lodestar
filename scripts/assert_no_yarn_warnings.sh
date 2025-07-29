@@ -6,6 +6,7 @@ IGNORE_WARNINGS=(
   'engine "deno" appears to be invalid'
   'engine "bun" appears to be invalid'
   'engine "bare" appears to be invalid'
+  'unmet peer dependency "@types/react@^19"'
 )
 
 # Run yarn install --check-files and capture output
