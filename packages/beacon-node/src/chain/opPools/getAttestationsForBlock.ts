@@ -1,4 +1,3 @@
-import {IForkChoice} from "@lodestar/fork-choice";
 import {ForkName, ForkSeq, MAX_ATTESTATIONS_ELECTRA, MIN_ATTESTATION_INCLUSION_DELAY} from "@lodestar/params";
 import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
 import {Attestation, CommitteeIndex, electra} from "@lodestar/types";
@@ -23,12 +22,11 @@ import {
 export function getAttestationsForBlock(
   this: BeaconChain,
   fork: ForkName,
-  forkChoice: IForkChoice,
   state: CachedBeaconStateAllForks
 ): Attestation[] {
   const forkSeq = ForkSeq[fork];
   if (forkSeq < ForkSeq.electra) {
-    return this.aggregatedAttestationPool.getAttestationsForBlockPreElectra(fork, forkChoice, state);
+    return this.aggregatedAttestationPool.getAttestationsForBlockPreElectra(fork, this.forkChoice, state);
   }
 
   const stateSlot = state.slot;
@@ -38,7 +36,7 @@ export function getAttestationsForBlock(
   // it's important to use the same instance of these functions for both pools
   // for the cache inside them to work well
   const notSeenValidatorsFn = getNotSeenValidatorsFn(state);
-  const validateAttestationDataFn = getValidateAttestationDataFn(forkChoice, state);
+  const validateAttestationDataFn = getValidateAttestationDataFn(this.forkChoice, state);
 
   const aggregatedAttPoolSlotsDesc = this.aggregatedAttestationPool.getStoredSlots();
   const singleAttestationPoolSlots = this.singleAttestationPool.getStoredSlots();
