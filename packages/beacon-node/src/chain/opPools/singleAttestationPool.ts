@@ -28,10 +28,27 @@ type CommitteeInfo = {
 };
 
 /**
- * A pool of `SingleAttestation` that is specially designed to block production.
- *
  * The memory usage of this pool is small because after an aggregated attestation is seen,
  * all `SingleAttestation` for the same data root and committee index are removed.
+ *
+ * However we should bound it by total number of attestations just in case the network is in unfinality state.
+ * Each SingleAttestation includes ~316 bytes:
+ * - CommitteeIndex: 8 bytes
+ * - ValidatorIndex: 8 bytes
+ * - AttestationData: this is shared via SeenAttestationDatas so we don't count
+ * - Signature: 96 bytes, but NodeJS has some overhead so could be up to 300 bytes
+ *
+ * In the worse case, We don't want to spend more than 100MB for this cache, it means we don't want to store more than 300_000 attestations.
+ * As of Aug 2025:
+ * - we store less than 40k attestations in the pool for a mainnet-sas node
+ * - we store less than 1k attestations in the pool for a regular mainnet node
+ * - we store less than 6k attestations in the pool for a regular hoodi node
+ * - we store less than 125k attestations in the pool for a hoodi-sas node
+ */
+const MAX_ATTESTATIONS_RETAINED = 300_000;
+
+/**
+ * A pool of `SingleAttestation` that is specially designed to block production.
  */
 export class SingleAttestationPool {
   /**
@@ -273,7 +290,23 @@ export class SingleAttestationPool {
     const slotsToRetain = computeSlotsSinceEpochStart(clockSlot, computeEpochAtSlot(clockSlot) - 1);
 
     pruneBySlot(this.committeeByIndexByRootBySlot, clockSlot, slotsToRetain);
-    this.lowestPermissibleSlot = Math.max(clockSlot - slotsToRetain, 0);
+    this.lowestPermissibleSlot = Math.max(clockSlot - slotsToRetain + 1, 0);
+
+    const attestationCountBySlot: number[] = [];
+    for (let slot = this.lowestPermissibleSlot; slot <= clockSlot; slot++) {
+      attestationCountBySlot.push(this.getAttestationCountAtSlot(slot));
+    }
+
+    let totalAttestationCount = attestationCountBySlot.reduce((sum, count) => sum + count, 0);
+    // remove slots until we have less than MAX_ATTESTATIONS_RETAINED
+    // this will never reached in normal network condition
+    let slot = this.lowestPermissibleSlot;
+    while (totalAttestationCount > MAX_ATTESTATIONS_RETAINED && slot <= clockSlot) {
+      const countAtSlot = attestationCountBySlot[slot - this.lowestPermissibleSlot];
+      totalAttestationCount -= countAtSlot;
+      this.committeeByIndexByRootBySlot.delete(slot);
+      slot++;
+    }
   }
 
   private onScrapeMetrics(metrics: Metrics): void {
