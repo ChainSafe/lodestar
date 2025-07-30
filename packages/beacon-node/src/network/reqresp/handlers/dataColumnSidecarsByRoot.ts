@@ -33,7 +33,12 @@ export async function* onDataColumnSidecarsByRoot(
     // If any root in the request content references a block earlier than minimum_request_epoch, peers MAY respond with
     // error code 3: ResourceUnavailable or not include the data column sidecar in the response.
     // https://github.com/ethereum/consensus-specs/blob/1937aff86b41b5171a9bc3972515986f1bbbf303/specs/fulu/p2p-interface.md#datacolumnsidecarsbyroot-v1
-    if (!block || computeEpochAtSlot(block.slot) < minimumRequestEpoch) {
+    if (!block) {
+      continue;
+    }
+
+    const epoch = computeEpochAtSlot(block.slot);
+    if (epoch < minimumRequestEpoch) {
       continue;
     }
 
@@ -68,9 +73,7 @@ export async function* onDataColumnSidecarsByRoot(
 
       yield {
         data: dataColumnSidecarBytes,
-        boundary: {
-          fork: chain.config.getForkName(block.slot),
-        },
+        boundary: chain.config.getForkBoundaryAtEpoch(epoch),
       };
     }
   }
