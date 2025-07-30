@@ -59,7 +59,7 @@ export class RealScore implements IPeerScore {
       case GoodByeReasonCode.BANNED:
       case GoodByeReasonCode.SCORE_TOO_LOW:
         return coolDownMin;
-      case GoodByeReasonCode.INBOUND_DISCONNECT_NO_GOODBYE:
+      case GoodByeReasonCode.INBOUND_DISCONNECT:
       case GoodByeReasonCode.TOO_MANY_PEERS:
         coolDownMin = 5;
         break;
