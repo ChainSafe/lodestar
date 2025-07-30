@@ -38,14 +38,18 @@ type CommitteeInfo = {
  * - AttestationData: this is shared via SeenAttestationDatas so we don't count
  * - Signature: 96 bytes, but NodeJS has some overhead so could be up to 300 bytes
  *
- * In the worse case, We don't want to spend more than 100MB for this cache, it means we don't want to store more than 300_000 attestations.
+ * In the worse case, we don't want to store more than 150k attestations because:
+ * - it keeps the memory usage of the pool under 50MB
+ * - it does not drag performance of aggregated attestation validation due to `seenAggregatedAttestation` method
+ * - it's more than enough to include SingleAttestations in block production due to the max capacity of 8 attestations in block
+ *
  * As of Aug 2025:
  * - we store less than 40k attestations in the pool for a mainnet-sas node
  * - we store less than 1k attestations in the pool for a regular mainnet node
- * - we store less than 6k attestations in the pool for a regular hoodi node
  * - we store less than 125k attestations in the pool for a hoodi-sas node
+ * - we store less than 6k attestations in the pool for a regular hoodi node
  */
-const MAX_ATTESTATIONS_RETAINED = 300_000;
+const MAX_ATTESTATIONS_RETAINED = 150_000;
 
 /**
  * A pool of `SingleAttestation` that is specially designed to block production.
@@ -336,6 +340,8 @@ export class SingleAttestationPool {
         poolMetrics.minAttestationsPerCommittee.set(minAttestations);
         poolMetrics.committeesPerSlot.set(committeeCount);
       }
+
+      poolMetrics.attestationsPerSlot.set(this.getAttestationCountAtSlot(previousSlot));
     }
 
     poolMetrics.size.set(this.getAttestationCount());

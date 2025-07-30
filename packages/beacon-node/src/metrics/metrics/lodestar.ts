@@ -904,6 +904,10 @@ export function createLodestarMetrics(
           name: "lodestar_oppool_single_attestation_pool_committees_per_slot_total",
           help: "Total number of committees per slot in SingleAttestationPool",
         }),
+        attestationsPerSlot: register.gauge({
+          name: "lodestar_oppool_single_attestation_pool_attestations_per_slot_total",
+          help: "Total number of attestations per slot in SingleAttestationPool",
+        }),
         minAttestationsPerCommittee: register.gauge({
           name: "lodestar_oppool_single_attestation_pool_min_attestations_per_committee",
           help: "Min number of attestations per committee in SingleAttestationPool",
