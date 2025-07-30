@@ -339,8 +339,6 @@ export class PeerManager {
       this.metrics?.peerLongConnectionDisconnect.inc({reason});
     }
 
-    // TODO: Consider register that we are banned, if discovery keeps attempting to connect to the same peers
-
     void this.disconnect(peer);
   }
 
@@ -660,18 +658,17 @@ export class PeerManager {
     const {direction, status, remotePeer} = evt.detail;
     const peerIdStr = remotePeer.toString();
 
-    let logMessage = "A peer disconnected us";
+    let logMessage = "onLibp2pPeerDisconnect";
     const logContext: Record<string, string | number> = {
       peerId: prettyPrintPeerIdStr(peerIdStr),
       direction,
       status,
     };
+    // Some clients do not send good-bye requests (Nimbus) so check for inbound disconnects and apply reconnection
+    // cool-down period to prevent automatic reconnection by Discovery
     if (direction === "inbound") {
       // prevent automatic/immediate reconnects
-      const coolDownMin = this.peerRpcScores.applyReconnectionCoolDown(
-        peerIdStr,
-        GoodByeReasonCode.INBOUND_DISCONNECT_NO_GOODBYE
-      );
+      const coolDownMin = this.peerRpcScores.applyReconnectionCoolDown(peerIdStr, GoodByeReasonCode.INBOUND_DISCONNECT);
       logMessage += ". Enforcing a reconnection cool-down period";
       logContext.coolDownMin = coolDownMin;
     }
