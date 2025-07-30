@@ -11,7 +11,7 @@ import {
   ForkPostAltair,
   ForkPostElectra,
   ForkSeq,
-  INTERVALS_PER_SLOT,
+  LATE_BLOCK_CUTOFF_MS,
   MAX_SEED_LOOKAHEAD,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
@@ -264,8 +264,8 @@ export async function importBlock(
       // We want to track recent blocks coming from gossip, unknown block sync, and API.
       if (delaySec < SLOTS_PER_EPOCH * this.config.SECONDS_PER_SLOT) {
         this.metrics.importBlock.elapsedTimeTillBecomeHead.observe(delaySec);
-        if (delaySec > this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT) {
-          this.metrics.importBlock.setHeadAfterFirstInterval.inc();
+        if (delaySec > LATE_BLOCK_CUTOFF_MS / 1000) {
+          this.metrics.importBlock.setHeadAfterCutoff.inc();
         }
       }
     }
