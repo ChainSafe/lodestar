@@ -7,7 +7,7 @@ import {
   MAX_COMMITTEES_PER_SLOT,
   isForkPostElectra,
 } from "@lodestar/params";
-import {BLSSignature, CommitteeIndex, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
+import {BLSSignature, ColumnIndex, CommitteeIndex, RootHex, Slot, ValidatorIndex, ssz} from "@lodestar/types";
 
 export type BlockRootHex = RootHex;
 // pre-electra, AttestationData is used to cache attestations
@@ -44,8 +44,9 @@ export type CommitteeBitsBase64 = string;
 
 const VARIABLE_FIELD_OFFSET = 4;
 const ATTESTATION_BEACON_BLOCK_ROOT_OFFSET = VARIABLE_FIELD_OFFSET + 8 + 8;
-const ROOT_SIZE = 32;
+export const ROOT_SIZE = 32;
 const SLOT_SIZE = 8;
+const COLUMN_INDEX_SIZE = 8;
 const COMMITTEE_INDEX_SIZE = 8;
 const ATTESTATION_DATA_SIZE = 128;
 // MAX_COMMITTEES_PER_SLOT is in bit, need to convert to byte
@@ -396,6 +397,25 @@ export function getSlotFromBlobSidecarSerialized(data: Uint8Array): Slot | null 
 }
 
 /**
+ * class DataColumnSidecar(Container):
+ *   index: ColumnIndex
+ *   column: List[Cell, MAX_BLOB_COMMITMENTS_PER_BLOCK]
+ *   kzg_commitments: List[KZGCommitment, MAX_BLOB_COMMITMENTS_PER_BLOCK]
+ *   kzg_proofs: List[KZGProof, MAX_BLOB_COMMITMENTS_PER_BLOCK]
+ *   signed_block_header: SignedBeaconBlockHeader
+ *   kzg_commitments_inclusion_proof: Vector[Bytes32, KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH]
+ */
+const COLUMN_INDEX_POSITION_IN_DATA_COLUMN_SIDECAR = 0;
+
+export function getColumnIndexFromDataColumnSidecarSerialized(data: Uint8Array): ColumnIndex | null {
+  if (data.length < COLUMN_INDEX_POSITION_IN_DATA_COLUMN_SIDECAR + COLUMN_INDEX_SIZE) {
+    return null;
+  }
+
+  return getIndexFromOffset(data, COLUMN_INDEX_POSITION_IN_DATA_COLUMN_SIDECAR);
+}
+
+/**
  * Read only the first 4 bytes of Slot, max value is 4,294,967,295 will be reached 1634 years after genesis
  *
  * If the high bytes are not zero, return null
@@ -407,7 +427,7 @@ function getSlotFromOffset(data: Uint8Array, offset: number): Slot | null {
 /**
  * Alias of `getSlotFromOffset` for readability
  */
-function getIndexFromOffset(data: Uint8Array, offset: number): (ValidatorIndex | CommitteeIndex) | null {
+function getIndexFromOffset(data: Uint8Array, offset: number): (ValidatorIndex | CommitteeIndex | ColumnIndex) | null {
   return getSlotFromOffset(data, offset);
 }
 
