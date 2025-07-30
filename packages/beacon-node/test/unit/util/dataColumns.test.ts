@@ -1,5 +1,4 @@
-import {randomBytes} from "node:crypto";
-import {ssz} from "@lodestar/types/lib";
+import {ssz} from "@lodestar/types";
 import {describe, expect, it} from "vitest";
 import {
   buildCustodyIndex,

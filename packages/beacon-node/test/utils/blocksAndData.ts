@@ -1,12 +1,8 @@
 import {randomBytes} from "node:crypto";
 import {SIGNATURE_LENGTH_UNCOMPRESSED} from "@chainsafe/blst";
 import {BYTES_PER_BLOB, BYTES_PER_FIELD_ELEMENT} from "@crate-crypto/node-eth-kzg";
-import {ForkPostDeneb, NUMBER_OF_COLUMNS} from "@lodestar/params";
-import {signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {SignedBeaconBlock, deneb, fulu, ssz} from "@lodestar/types";
-import {VersionedHashes} from "../../src/execution/index.js";
-import {computeInclusionProof, kzgCommitmentToVersionedHash} from "../../src/util/blobs.js";
-import {computeDataColumnSidecars} from "../../src/util/dataColumns.js";
+import {NUMBER_OF_COLUMNS} from "@lodestar/params";
+import {fulu, ssz} from "@lodestar/types";
 import {kzg} from "../../src/util/rustKzg.js";
 import {ROOT_SIZE} from "../../src/util/sszBytes.js";
 
@@ -33,7 +29,7 @@ function generateRandomBlob(): Uint8Array {
 }
 
 export function generateColumnSidecars(numberOfBlobs: number): fulu.DataColumnSidecars {
-  const blobs = Array.from({length: numberOfBlobs}, (_, index) => generateRandomBlob(index));
+  const blobs = Array.from({length: numberOfBlobs}, () => generateRandomBlob());
   const kzgCommitments = blobs.map(kzg.blobToKzgCommitment);
   const cellsAndProofs = blobs.map(kzg.computeCellsAndKzgProofs);
   const signedBlockHeader = ssz.fulu.SignedBeaconBlockHeader.defaultValue();

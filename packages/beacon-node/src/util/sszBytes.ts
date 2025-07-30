@@ -7,7 +7,7 @@ import {
   MAX_COMMITTEES_PER_SLOT,
   isForkPostElectra,
 } from "@lodestar/params";
-import {BLSSignature, ColumnIndex, CommitteeIndex, RootHex, Slot, ValidatorIndex, ssz} from "@lodestar/types";
+import {BLSSignature, ColumnIndex, CommitteeIndex, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 
 export type BlockRootHex = RootHex;
 // pre-electra, AttestationData is used to cache attestations
