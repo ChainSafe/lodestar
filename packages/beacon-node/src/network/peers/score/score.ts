@@ -169,6 +169,10 @@ export class MaxScore implements IPeerScore {
     return DEFAULT_SCORE;
   }
 
+  isCoolingDown(): boolean {
+    return false;
+  }
+
   add(): void {}
 
   update(): number {
