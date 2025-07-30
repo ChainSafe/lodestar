@@ -142,7 +142,7 @@ describe("reconstructBlobs", () => {
     expect(await reconstructBlobs(sidecars)).toEqual(blobs);
   });
 
-  it("should reconstruct blobs from at least half of the data columns ", async () => {
+  it("should reconstruct blobs from at least half of the data columns", async () => {
     // random shuffle + take first 64
     const randomHalf = sidecars
       .slice()
