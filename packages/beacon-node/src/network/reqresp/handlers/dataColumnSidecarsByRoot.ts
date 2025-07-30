@@ -20,6 +20,8 @@ export async function* onDataColumnSidecarsByRoot(
     chain.config.FULU_FORK_EPOCH
   );
 
+  // TODO(fulu): Need CustodyConfig to be able to quick check if requested columns are in the DB
+  // https://github.com/ChainSafe/lodestar/pull/7947#discussion_r2161364242
   for (const dataColumnsByRootIdentifier of requestBody) {
     const {blockRoot, columns} = dataColumnsByRootIdentifier;
     const blockRootHex = toRootHex(blockRoot);

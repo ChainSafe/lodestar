@@ -12,6 +12,8 @@ export async function* onDataColumnSidecarsByRange(
   db: IBeaconDb
 ): AsyncIterable<ResponseOutgoing> {
   // Non-finalized range of columns
+  // TODO(fulu): Need CustodyConfig to be able to quick check if requested columns are in the DB
+  // https://github.com/ChainSafe/lodestar/pull/7947#discussion_r2161364242
   const {startSlot, count, columns} = validateDataColumnSidecarsByRangeRequest(request);
   const endSlot = startSlot + count;
 
