@@ -22,6 +22,7 @@ import {getPayloadAttributesForSSE, prepareExecutionPayload} from "./produceBloc
 import {RegenCaller} from "./regen/index.js";
 
 /* With 12s slot times, this scheduler will run 4s before the start of each slot (`12 / 3 = 4`). */
+// TODO: consider express this in terms of milliseconds. See https://github.com/ChainSafe/lodestar/issues/8013
 export const SCHEDULER_LOOKAHEAD_FACTOR = 3;
 
 /* We don't want to do more epoch transition than this */
