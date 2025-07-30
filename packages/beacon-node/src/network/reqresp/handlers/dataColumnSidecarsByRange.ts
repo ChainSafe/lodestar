@@ -111,7 +111,7 @@ export function* iterateDataColumnBytesFromWrapper(
     }
     yield {
       data: dataColumnSidecarBytes,
-      fork,
+      boundary: {fork},
     };
   }
 }
