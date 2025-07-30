@@ -1,6 +1,6 @@
 import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {GENESIS_SLOT, MAX_COMMITTEES_PER_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {AGGREGATE_DUE_MS, GENESIS_SLOT, MAX_COMMITTEES_PER_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {electra, phase0, ssz} from "@lodestar/types";
 import {beforeEach, describe, expect, it, vi} from "vitest";
 import {AttestationPool} from "../../../../src/chain/opPools/attestationPool.js";
@@ -27,7 +27,7 @@ describe("AttestationPool", () => {
   const committeeValidatorIndex = 0;
   const committeeSize = 128;
 
-  const cutOffSecFromSlot = (2 / 3) * config.SECONDS_PER_SLOT;
+  const cutOffSecFromSlot = AGGREGATE_DUE_MS / 1000;
 
   // Mock attestations
   const electraAttestationData: phase0.AttestationData = {
