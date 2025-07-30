@@ -48,14 +48,13 @@ export class RealScore implements IPeerScore {
     this.setLodestarScore(newScore);
   }
 
-  // TODO: @twoeths these times need some massaging.  Curious to get your thoughts
   applyReconnectionCoolDown(reason: GoodByeReasonCode): number {
     let coolDownMin = NO_COOL_DOWN_APPLIED;
     switch (reason) {
       // let scoring system handle score decay by itself
       case GoodByeReasonCode.BANNED:
       case GoodByeReasonCode.SCORE_TOO_LOW:
-        break;
+        return coolDownMin;
       case GoodByeReasonCode.INBOUND_DISCONNECT_NO_GOODBYE:
       case GoodByeReasonCode.TOO_MANY_PEERS:
         coolDownMin = 5;
@@ -65,7 +64,8 @@ export class RealScore implements IPeerScore {
         coolDownMin = 60;
         break;
       case GoodByeReasonCode.IRRELEVANT_NETWORK:
-      // should this just remove the peer from the peerManager?
+        coolDownMin = 240;
+        break;
     }
     // set banning period to time in ms in the future from now
     this.lastUpdate = Date.now() + coolDownMin * 60 * 1000;
