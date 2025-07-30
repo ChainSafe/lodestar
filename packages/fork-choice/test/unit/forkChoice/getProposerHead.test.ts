@@ -1,6 +1,6 @@
 import {fromHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
-import {INTERVALS_PER_SLOT, LATE_BLOCK_CUTOFF_MS, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {LATE_BLOCK_CUTOFF_MS, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
