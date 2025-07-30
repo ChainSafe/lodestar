@@ -1,4 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
+import {SYNC_MESSAGE_DUE_MS} from "@lodestar/params";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {LightClientOptimisticUpdate} from "@lodestar/types";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants/index.js";
@@ -6,7 +7,6 @@ import {assertLightClientServer} from "../../node/utils/lightclient.js";
 import {GossipAction} from "../errors/index.js";
 import {LightClientError, LightClientErrorCode} from "../errors/lightClientError.js";
 import {IBeaconChain} from "../interface.js";
-import { SYNC_MESSAGE_DUE_MS } from "@lodestar/params";
 
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#light_client_optimistic_update
 export function validateLightClientOptimisticUpdate(
@@ -54,7 +54,7 @@ export function validateLightClientOptimisticUpdate(
  * xxx|-------  (x is not okay)
  *
  * [IGNORE] The *update is received after the block at signature_slot was given enough time to propagate
- * through the network -- i.e. validate that `SYNC_MESSAGE_DUE_MS` milliseconds after `finality_update.signature_slot` has 
+ * through the network -- i.e. validate that `SYNC_MESSAGE_DUE_MS` milliseconds after `finality_update.signature_slot` has
  * transpired, with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance
  */
 export function updateReceivedTooEarly(

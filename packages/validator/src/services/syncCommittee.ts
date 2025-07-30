@@ -1,5 +1,6 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
+import {CONTRIBUTION_DUE_MS, SYNC_MESSAGE_DUE_MS} from "@lodestar/params";
 import {computeEpochAtSlot, isSyncCommitteeAggregator} from "@lodestar/state-transition";
 import {BLSSignature, CommitteeIndex, Root, Slot, altair} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
@@ -12,7 +13,6 @@ import {SyncCommitteeDutiesService, SyncDutyAndProofs} from "./syncCommitteeDuti
 import {SyncingStatusTracker} from "./syncingStatusTracker.js";
 import {SubcommitteeDuty, groupSyncDutiesBySubcommitteeIndex} from "./utils.js";
 import {ValidatorStore} from "./validatorStore.js";
-import { CONTRIBUTION_DUE_MS, SYNC_MESSAGE_DUE_MS } from "@lodestar/params";
 
 export type SyncCommitteeServiceOpts = {
   scAfterBlockDelaySlotFraction?: number;
@@ -86,7 +86,10 @@ export class SyncCommitteeService {
       // unlike Attestation, SyncCommitteeSignature could be published asap
       // especially with lodestar, it's very busy at 4s into the slot
       // see https://github.com/ChainSafe/lodestar/issues/4608
-      await Promise.race([sleep(this.clock.msToSlot(slot, SYNC_MESSAGE_DUE_MS), signal), this.emitter.waitForBlockSlot(slot)]);
+      await Promise.race([
+        sleep(this.clock.msToSlot(slot, SYNC_MESSAGE_DUE_MS), signal),
+        this.emitter.waitForBlockSlot(slot),
+      ]);
       this.metrics?.syncCommitteeStepCallProduceMessage.observe(this.clock.secFromSlot(slot, SYNC_MESSAGE_DUE_MS));
 
       // Step 1. Download, sign and publish an `SyncCommitteeMessage` for each validator.

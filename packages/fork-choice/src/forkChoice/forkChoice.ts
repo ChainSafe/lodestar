@@ -1192,7 +1192,7 @@ export class ForkChoice implements IForkChoice {
    * Child class can overwrite this for testing purpose.
    */
   protected isBlockTimely(block: BeaconBlock, blockDelaySec: number): boolean {
-    const isBeforeLateBlockCutoff = (blockDelaySec * 1000) < LATE_BLOCK_CUTOFF_MS;
+    const isBeforeLateBlockCutoff = blockDelaySec * 1000 < LATE_BLOCK_CUTOFF_MS;
     return this.fcStore.currentSlot === block.slot && isBeforeLateBlockCutoff;
   }
 
@@ -1201,7 +1201,7 @@ export class ForkChoice implements IForkChoice {
    */
   private isProposingOnTime(secFromSlot: number): boolean {
     const proposerReorgCutoff = LATE_BLOCK_CUTOFF_MS / 2;
-    return (secFromSlot * 1000) <= proposerReorgCutoff;
+    return secFromSlot * 1000 <= proposerReorgCutoff;
   }
 
   private getPreMergeExecStatus(executionStatus: MaybeValidExecutionStatus): ExecutionStatus.PreMerge {

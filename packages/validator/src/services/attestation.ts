@@ -90,7 +90,10 @@ export class AttestationService {
     // A validator should create and broadcast the attestation to the associated attestation subnet when either
     // (a) the validator has received a valid block from the expected block proposer for the assigned slot or
     // (b) 4s (ATTESTATION_DUE_MS) of the slot has transpired -- whichever comes first.
-    await Promise.race([sleep(this.clock.msToSlot(slot, ATTESTATION_DUE_MS), signal), this.emitter.waitForBlockSlot(slot)]);
+    await Promise.race([
+      sleep(this.clock.msToSlot(slot, ATTESTATION_DUE_MS), signal),
+      this.emitter.waitForBlockSlot(slot),
+    ]);
     this.metrics?.attesterStepCallProduceAttestation.observe(this.clock.secFromSlot(slot, ATTESTATION_DUE_MS));
 
     if (this.opts?.disableAttestationGrouping) {

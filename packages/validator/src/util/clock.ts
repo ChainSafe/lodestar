@@ -71,13 +71,13 @@ export class Clock implements IClock {
   }
 
   /** Milliseconds from now to `msIntoSlot` into a specific slot */
-  msToSlot(slot: Slot, msIntoTheSlot: number = 0): number {
+  msToSlot(slot: Slot, msIntoTheSlot = 0): number {
     const timeAt = (this.genesisTime + this.config.SECONDS_PER_SLOT * slot) * 1000 + msIntoTheSlot;
     return timeAt - Date.now();
   }
 
   /** Seconds elapsed from `msIntoSlot` into a specific slot to now */
-  secFromSlot(slot: Slot, msIntoTheSlot: number = 0): number {
+  secFromSlot(slot: Slot, msIntoTheSlot = 0): number {
     return Date.now() / 1000 - (this.genesisTime + this.config.SECONDS_PER_SLOT * slot + msIntoTheSlot / 1000);
   }
 
