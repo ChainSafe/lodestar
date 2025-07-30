@@ -44,6 +44,10 @@ export class PeerRpcScoreStore implements IPeerRpcScoreStore {
     return scoreToState(this.getScore(peer));
   }
 
+  isCoolingDown(peerIdStr: PeerIdStr): boolean {
+    return this.scores.get(peerIdStr)?.isCoolingDown() ?? false;
+  }
+
   dumpPeerScoreStats(): PeerScoreStats {
     return Array.from(this.scores.entries()).map(([peerId, peerScore]) => ({peerId, ...peerScore.getStat()}));
   }

@@ -1,6 +1,6 @@
 import {GoodByeReasonCode} from "../../../constants/network.js";
 import {
-  BANNED_BEFORE_DECAY_MS,
+  COOL_DOWN_BEFORE_DECAY_MS,
   DEFAULT_SCORE,
   GOSSIPSUB_NEGATIVE_SCORE_WEIGHT,
   GOSSIPSUB_POSITIVE_SCORE_WEIGHT,
@@ -30,6 +30,10 @@ export class RealScore implements IPeerScore {
     this.score = DEFAULT_SCORE;
     this.ignoreNegativeGossipScore = false;
     this.lastUpdate = Date.now();
+  }
+
+  isCoolingDown(): boolean {
+    return Date.now() < this.lastUpdate;
   }
 
   getScore(): number {
@@ -133,7 +137,7 @@ export class RealScore implements IPeerScore {
 
     if (prevState !== ScoreState.Banned && newState === ScoreState.Banned) {
       // ban this peer for at least BANNED_BEFORE_DECAY_MS seconds
-      this.lastUpdate = Date.now() + BANNED_BEFORE_DECAY_MS;
+      this.lastUpdate = Date.now() + COOL_DOWN_BEFORE_DECAY_MS;
     }
   }
 

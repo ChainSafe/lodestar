@@ -11,6 +11,7 @@ export interface IPeerRpcScoreStore {
   getScore(peer: PeerId): number;
   getGossipScore(peer: PeerId): number;
   getScoreState(peer: PeerId): ScoreState;
+  isCoolingDown(peer: PeerIdStr): boolean;
   dumpPeerScoreStats(): PeerScoreStats;
   applyAction(peer: PeerId, action: PeerAction, actionName: string): void;
   applyReconnectionCoolDown(peer: PeerIdStr, reason: GoodByeReasonCode): number;
@@ -21,6 +22,7 @@ export interface IPeerRpcScoreStore {
 export interface IPeerScore {
   getScore(): number;
   getGossipScore(): number;
+  isCoolingDown(): boolean;
   add(scoreDelta: number): void;
   update(): number;
   updateGossipsubScore(newScore: number, ignore: boolean): void;
