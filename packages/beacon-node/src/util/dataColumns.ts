@@ -70,7 +70,20 @@ export function parseWrappedColumnSidecars(wrapped: Uint8Array): {
   };
 }
 
-// TOOO(fulu): will be implemented in writeBlockInputToDb.ts
+/**
+ * Calculate the byte-wise length of a serialized DataColumnSidecar.  Used to be able to slice concatenated sidecars
+ * in the database into individuals for sending via ReqResp.  Is calculated by added the size of the fixed fields
+ * to the variable length parts that are based on the number of blobs that are in a block. Each blob has an
+ * associated cell, the blob commitment and a cell proof.
+ */
+export function calculateDataColumnByteLength(numberOfBlobs: number): number {
+  return (
+    ssz.fulu.DataColumnSidecar.minSize +
+    numberOfBlobs * (ssz.fulu.Cell.fixedSize + ssz.deneb.KZGCommitment.fixedSize + ssz.deneb.KZGProof.fixedSize)
+  );
+}
+
+// TOOO(fulu): will be implemented in writeBlockInputToDb.ts. Need CustodyConfig to uncomment
 // export function buildDataColumnSidecarsDbWrapper(
 //   custodyConfig: CustodyConfig,
 //   block: SignedBeaconBlock,
