@@ -5,6 +5,7 @@ import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {getIndexOfSidecarInWrapper, parseWrappedColumnSidecars} from "../../../util/dataColumns.js";
+import {getColumnIndexFromDataColumnSidecarSerialized} from "../../../util/sszBytes.js";
 
 export async function* onDataColumnSidecarsByRange(
   request: fulu.DataColumnSidecarsByRangeRequest,
@@ -96,6 +97,12 @@ export function* iterateDataColumnBytesFromWrapper(
       dataIndex * columnSizeInBytes,
       (dataIndex + 1) * columnSizeInBytes
     );
+    const actualIndex = getColumnIndexFromDataColumnSidecarSerialized(dataColumnSidecarBytes);
+    if (actualIndex !== columnIndex) {
+      throw new Error(
+        `Invalidly saved column for blockSlot=${blockSlot} in database. Expected columnIndex=${columnIndex} and got actualIndex=${actualIndex}`
+      );
+    }
     if (dataColumnSidecarBytes.length !== columnSizeInBytes) {
       throw new ResponseError(
         RespStatus.SERVER_ERROR,

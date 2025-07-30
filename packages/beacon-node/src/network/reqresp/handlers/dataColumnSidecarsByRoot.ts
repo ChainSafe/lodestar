@@ -5,6 +5,7 @@ import {toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {getIndexOfSidecarInWrapper, parseWrappedColumnSidecars} from "../../../util/dataColumns.js";
+import {getColumnIndexFromDataColumnSidecarSerialized} from "../../../util/sszBytes.js";
 
 export async function* onDataColumnSidecarsByRoot(
   requestBody: fulu.DataColumnSidecarsByRootRequest,
@@ -52,9 +53,16 @@ export async function* onDataColumnSidecarsByRoot(
         dataIndex * columnSizeInBytes,
         (dataIndex + 1) * columnSizeInBytes
       );
+
+      const actualIndex = getColumnIndexFromDataColumnSidecarSerialized(dataColumnSidecarBytes);
+      if (actualIndex !== columnIndex) {
+        throw new Error(
+          `Invalidly saved column for blockRoot=${blockRootHex} in database. Expected columnIndex=${columnIndex} and got actualIndex=${actualIndex}`
+        );
+      }
       if (dataColumnSidecarBytes.length !== columnSizeInBytes) {
         throw Error(
-          `Inconsistent state, dataColumnSidecar blockRoot=${blockRootHex} columnIndex=${columnIndex} dataColumnSidecarBytes=${dataColumnSidecarBytes.length} expected=${columnSizeInBytes}`
+          `Invalid DataColumnSidecar length when sliced blockRoot=${blockRootHex} columnIndex=${columnIndex} dataColumnSidecarBytes=${dataColumnSidecarBytes.length} expected=${columnSizeInBytes}`
         );
       }
 
