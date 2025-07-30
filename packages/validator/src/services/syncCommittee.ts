@@ -12,6 +12,7 @@ import {SyncCommitteeDutiesService, SyncDutyAndProofs} from "./syncCommitteeDuti
 import {SyncingStatusTracker} from "./syncingStatusTracker.js";
 import {SubcommitteeDuty, groupSyncDutiesBySubcommitteeIndex} from "./utils.js";
 import {ValidatorStore} from "./validatorStore.js";
+import { CONTRIBUTION_DUE_MS, SYNC_MESSAGE_DUE_MS } from "@lodestar/params";
 
 export type SyncCommitteeServiceOpts = {
   scAfterBlockDelaySlotFraction?: number;
@@ -83,19 +84,19 @@ export class SyncCommitteeService {
       }
 
       // unlike Attestation, SyncCommitteeSignature could be published asap
-      // especially with lodestar, it's very busy at 1/3 of slot
+      // especially with lodestar, it's very busy at 4s into the slot
       // see https://github.com/ChainSafe/lodestar/issues/4608
-      await Promise.race([sleep(this.clock.msToSlot(slot + 1 / 3), signal), this.emitter.waitForBlockSlot(slot)]);
-      this.metrics?.syncCommitteeStepCallProduceMessage.observe(this.clock.secFromSlot(slot + 1 / 3));
+      await Promise.race([sleep(this.clock.msToSlot(slot, SYNC_MESSAGE_DUE_MS), signal), this.emitter.waitForBlockSlot(slot)]);
+      this.metrics?.syncCommitteeStepCallProduceMessage.observe(this.clock.secFromSlot(slot, SYNC_MESSAGE_DUE_MS));
 
       // Step 1. Download, sign and publish an `SyncCommitteeMessage` for each validator.
       //         Differs from AttestationService, `SyncCommitteeMessage` are equal for all
       const beaconBlockRoot = await this.produceAndPublishSyncCommittees(slot, dutiesAtSlot);
 
       // Step 2. If an attestation was produced, make an aggregate.
-      // First, wait until the `aggregation_production_instant` (2/3rds of the way though the slot)
-      await sleep(this.clock.msToSlot(slot + 2 / 3), signal);
-      this.metrics?.syncCommitteeStepCallProduceAggregate.observe(this.clock.secFromSlot(slot + 2 / 3));
+      // First, wait until the CONTRIBUTION_DUE_MS`` (8s into the slot)
+      await sleep(this.clock.msToSlot(slot, CONTRIBUTION_DUE_MS), signal);
+      this.metrics?.syncCommitteeStepCallProduceAggregate.observe(this.clock.secFromSlot(slot, CONTRIBUTION_DUE_MS));
 
       // await for all so if the Beacon node is overloaded it auto-throttles
       // TODO: This approach is conservative to reduce the node's load, review
@@ -156,14 +157,14 @@ export class SyncCommitteeService {
     // by default we want to submit SyncCommitteeSignature asap after we receive block
     // provide a delay option just in case any client implementation validate the existence of block in
     // SyncCommitteeSignature gossip validation.
-    const msToOneThirdSlot = this.clock.msToSlot(slot + 1 / 3);
+    const msToCutoffTime = this.clock.msToSlot(slot, SYNC_MESSAGE_DUE_MS);
     const afterBlockDelayMs = 1000 * this.clock.secondsPerSlot * (this.opts?.scAfterBlockDelaySlotFraction ?? 0);
-    const toDelayMs = Math.min(msToOneThirdSlot, afterBlockDelayMs);
+    const toDelayMs = Math.min(msToCutoffTime, afterBlockDelayMs);
     if (toDelayMs > 0) {
       await sleep(toDelayMs);
     }
 
-    this.metrics?.syncCommitteeStepCallPublishMessage.observe(this.clock.secFromSlot(slot + 1 / 3));
+    this.metrics?.syncCommitteeStepCallPublishMessage.observe(this.clock.secFromSlot(slot, SYNC_MESSAGE_DUE_MS));
 
     if (signatures.length > 0) {
       try {
@@ -223,7 +224,7 @@ export class SyncCommitteeService {
       })
     );
 
-    this.metrics?.syncCommitteeStepCallPublishAggregate.observe(this.clock.secFromSlot(slot + 2 / 3));
+    this.metrics?.syncCommitteeStepCallPublishAggregate.observe(this.clock.secFromSlot(slot, CONTRIBUTION_DUE_MS));
 
     if (signedContributions.length > 0) {
       try {
@@ -270,18 +271,18 @@ export class SyncCommitteeService {
 
     const res = await Promise.race([
       this.api.validator.submitSyncCommitteeSelections({selections: partialSelections}),
-      // Exit sync committee contributions flow if there is no response after 2/3 of slot.
-      // This is in contrast to attestations aggregations flow which is already exited at 1/3 of the slot
+      // Exit sync committee contributions flow if there is no response after 8s into the slot.
+      // This is in contrast to attestations aggregations flow which is already exited at 4s into the slot
       // because for sync committee is not required to resubscribe to subnets as beacon node will assume
       // validator always aggregates. This allows us to wait until we have to produce sync committee contributions.
       // Note that the sync committee contributions flow is not explicitly exited but rather will be skipped
       // due to the fact that calculation of `is_sync_committee_aggregator` in SyncCommitteeDutiesService is not done
       // and selectionProof is set to null, meaning no validator will be considered an aggregator.
-      sleep(this.clock.msToSlot(slot + 2 / 3), signal),
+      sleep(this.clock.msToSlot(slot, CONTRIBUTION_DUE_MS), signal),
     ]);
 
     if (!res) {
-      throw new Error("Failed to receive combined selection proofs before 2/3 of slot");
+      throw new Error(`Failed to receive combined selection proofs before ${CONTRIBUTION_DUE_MS / 1000}s into slot`);
     }
 
     const combinedSelections = res.value();

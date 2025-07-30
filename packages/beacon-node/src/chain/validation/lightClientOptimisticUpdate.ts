@@ -6,6 +6,7 @@ import {assertLightClientServer} from "../../node/utils/lightclient.js";
 import {GossipAction} from "../errors/index.js";
 import {LightClientError, LightClientErrorCode} from "../errors/lightClientError.js";
 import {IBeaconChain} from "../interface.js";
+import { SYNC_MESSAGE_DUE_MS } from "@lodestar/params";
 
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#light_client_optimistic_update
 export function validateLightClientOptimisticUpdate(
@@ -26,8 +27,8 @@ export function validateLightClientOptimisticUpdate(
   }
 
   // [IGNORE] The optimistic_update is received after the block at signature_slot was given enough time to propagate
-  // through the network -- i.e. validate that one-third of optimistic_update.signature_slot has transpired
-  // (SECONDS_PER_SLOT / INTERVALS_PER_SLOT seconds after the start of the slot, with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
+  // through the network -- i.e. validate that `SYNC_MESSAGE_DUE_MS` milliseconds after `finality_update.signature_slot`
+  // has transpired, with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance
   if (updateReceivedTooEarly(config, chain.genesisTime, gossipedOptimisticUpdate)) {
     throw new LightClientError(GossipAction.IGNORE, {
       code: LightClientErrorCode.OPTIMISTIC_UPDATE_RECEIVED_TOO_EARLY,
@@ -53,15 +54,15 @@ export function validateLightClientOptimisticUpdate(
  * xxx|-------  (x is not okay)
  *
  * [IGNORE] The *update is received after the block at signature_slot was given enough time to propagate
- * through the network -- i.e. validate that one-third of *update.signature_slot has transpired
- * (SECONDS_PER_SLOT / INTERVALS_PER_SLOT seconds after the start of the slot, with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
+ * through the network -- i.e. validate that `SYNC_MESSAGE_DUE_MS` milliseconds after `finality_update.signature_slot` has 
+ * transpired, with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance
  */
 export function updateReceivedTooEarly(
   config: ChainForkConfig,
   genesisTime: number,
   update: Pick<LightClientOptimisticUpdate, "signatureSlot">
 ): boolean {
-  const signatureSlot13TimestampMs = computeTimeAtSlot(config, update.signatureSlot + 1 / 3, genesisTime) * 1000;
-  const earliestAllowedTimestampMs = signatureSlot13TimestampMs - MAXIMUM_GOSSIP_CLOCK_DISPARITY;
+  const updateCutoff = computeTimeAtSlot(config, update.signatureSlot, genesisTime) * 1000 + SYNC_MESSAGE_DUE_MS;
+  const earliestAllowedTimestampMs = updateCutoff - MAXIMUM_GOSSIP_CLOCK_DISPARITY;
   return Date.now() < earliestAllowedTimestampMs;
 }
