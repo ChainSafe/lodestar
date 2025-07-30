@@ -113,32 +113,48 @@ describe("reconstructBlobs", () => {
     FULU_FORK_EPOCH: 0,
   });
 
-  it("should reconstruct blobs from a complete set of data columns", () => {
-    // Generate test data
-    const blobs = [generateRandomBlob(), generateRandomBlob()];
+  // Generate test data
+  const blobs = [generateRandomBlob(), generateRandomBlob()];
 
-    // Compute commitments, cells, and proofs for each blob
-    const kzgCommitments: deneb.KZGCommitment[] = [];
-    const cells: fulu.Cell[][] = [];
-    const kzgProofs: deneb.KZGProof[] = [];
-    for (const blob of blobs) {
-      kzgCommitments.push(kzg.blobToKzgCommitment(blob));
+  // Compute commitments, cells, and proofs for each blob
+  const kzgCommitments: deneb.KZGCommitment[] = [];
+  const cells: fulu.Cell[][] = [];
+  const kzgProofs: deneb.KZGProof[] = [];
+  for (const blob of blobs) {
+    kzgCommitments.push(kzg.blobToKzgCommitment(blob));
 
-      const {cells: blobCells, proofs} = kzg.computeCellsAndKzgProofs(blob);
-      cells.push(blobCells);
-      kzgProofs.push(...proofs);
-    }
+    const {cells: blobCells, proofs} = kzg.computeCellsAndKzgProofs(blob);
+    cells.push(blobCells);
+    kzgProofs.push(...proofs);
+  }
 
-    // Create a test block with the commitments
-    const signedBeaconBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
-    signedBeaconBlock.message.body.blobKzgCommitments = kzgCommitments;
+  // Create a test block with the commitments
+  const signedBeaconBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
+  signedBeaconBlock.message.body.blobKzgCommitments = kzgCommitments;
 
-    // Compute sidecars without providing cells
-    const sidecars = computeDataColumnSidecars(config, signedBeaconBlock, {
-      blobs,
-      kzgProofs,
-    });
+  // Compute sidecars without providing cells
+  const sidecars = computeDataColumnSidecars(config, signedBeaconBlock, {
+    blobs,
+    kzgProofs,
+  });
 
-    expect(reconstructBlobs(sidecars)).toEqual(blobs);
+  it("should reconstruct blobs from a complete set of data columns", async () => {
+    expect(await reconstructBlobs(sidecars)).toEqual(blobs);
+  });
+
+  it("should reconstruct blobs from at least half of the data columns ", async () => {
+    // random shuffle + take first 64
+    const randomHalf = sidecars
+      .slice()
+      .sort(() => Math.random() - 0.5)
+      .slice(0, NUMBER_OF_COLUMNS / 2);
+
+    expect(await reconstructBlobs(randomHalf)).toEqual(blobs);
+  });
+
+  it("should throw if less than half of the data columns are provided", async () => {
+    const lessThanHalf = sidecars.slice(0, NUMBER_OF_COLUMNS / 2 - 10);
+
+    await expect(reconstructBlobs(lessThanHalf)).rejects.toThrow();
   });
 });

@@ -192,17 +192,35 @@ export async function recoverDataColumnSidecars(
 }
 
 /**
- * Reconstruct blobs from a complete set of data columns
+ * Reconstruct blobs from a set of data columns, at least 50%+ of all the columns
+ * must be provided to allow to reconstruct the full data matrix
  */
-export function reconstructBlobs(sidecars: fulu.DataColumnSidecars): deneb.Blobs {
-  //  Must have all columns otherwise call `recoverDataColumnSidecars` first
-  if (sidecars.length !== NUMBER_OF_COLUMNS) {
-    throw Error(`Expected ${NUMBER_OF_COLUMNS} data columns to reconstruct blobs, received ${sidecars.length}`);
+export async function reconstructBlobs(sidecars: fulu.DataColumnSidecars): Promise<deneb.Blobs> {
+  if (sidecars.length < NUMBER_OF_COLUMNS / 2) {
+    throw Error(
+      `Expected at least ${NUMBER_OF_COLUMNS / 2} data columns to reconstruct blobs, received ${sidecars.length}`
+    );
   }
-  const blobCount = sidecars[0].column.length;
+
+  let fullSidecars: fulu.DataColumnSidecars;
+
+  if (sidecars.length === NUMBER_OF_COLUMNS) {
+    // Full columns, no need to recover
+    fullSidecars = sidecars;
+  } else {
+    const sidecarsByIndex = new Map<number, fulu.DataColumnSidecar>(sidecars.map((sc) => [sc.index, sc]));
+    const recoveredSidecars = await recoverDataColumnSidecars(sidecarsByIndex);
+    if (recoveredSidecars === null) {
+      // Should not happen because we check the column count above
+      throw Error("Failed to reconstruct the full data matrix");
+    }
+    fullSidecars = recoveredSidecars;
+  }
+
+  const blobCount = fullSidecars[0].column.length;
   const blobs: deneb.Blobs = new Array(blobCount);
 
-  const ordered = sidecars.slice().sort((a, b) => a.index - b.index);
+  const ordered = fullSidecars.slice().sort((a, b) => a.index - b.index);
   for (let row = 0; row < blobCount; row++) {
     // 128 cells that make up one "extended blob" row
     const cells = ordered.map((col) => col.column[row]);

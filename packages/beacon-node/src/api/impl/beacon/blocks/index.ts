@@ -622,8 +622,11 @@ export function getBeaconBlockApi({
       let blobs: deneb.Blobs;
 
       if (isForkPostFulu(fork)) {
-        if (chain.custodyConfig.targetCustodyGroupCount !== NUMBER_OF_COLUMNS) {
-          throw Error(`Must custody all ${NUMBER_OF_COLUMNS} data columns to be able to serve blobs`);
+        const {targetCustodyGroupCount} = chain.custodyConfig;
+        if (targetCustodyGroupCount < NUMBER_OF_COLUMNS / 2) {
+          throw Error(
+            `Custody group count of ${targetCustodyGroupCount} is not sufficient to serve blobs, must custody at least ${NUMBER_OF_COLUMNS / 2} data columns`
+          );
         }
 
         let {dataColumnSidecars} = (await db.dataColumnSidecars.get(blockRoot)) ?? {};
@@ -638,7 +641,7 @@ export function getBeaconBlockApi({
           );
         }
 
-        blobs = reconstructBlobs(dataColumnSidecars);
+        blobs = await reconstructBlobs(dataColumnSidecars);
       } else if (isForkPostDeneb(fork)) {
         let {blobSidecars} = (await db.blobSidecars.get(blockRoot)) ?? {};
         if (!blobSidecars) {
