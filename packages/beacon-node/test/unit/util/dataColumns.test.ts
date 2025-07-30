@@ -37,7 +37,7 @@ describe("src/util/dataColumns.ts", () => {
     it("should correctly deserialize numberOfColumns", () => {
       expect(numberOfColumns).toEqual(wrapped.dataColumnsLen);
     });
-    it("should correctly deserialize serializedColumnSidecars", () => {
+    it("should correctly slice serializedColumnSidecars", () => {
       expect(
         byteArrayEquals(
           serializedColumnSidecars,
