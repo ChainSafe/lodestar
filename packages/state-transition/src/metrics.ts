@@ -1,4 +1,5 @@
 import {MetricsRegister} from "@lodestar/utils";
+import {ProposerRewardType} from "./block/types.js";
 import {EpochTransitionStep} from "./epoch/index.js";
 import {StateCloneSource, StateHashTreeRootSource} from "./stateTransition.js";
 import {CachedBeaconStateAllForks} from "./types.js";
@@ -50,6 +51,14 @@ export function getMetrics(register: MetricsRegister) {
     numEffectiveBalanceUpdates: register.gauge({
       name: "lodestar_stfn_effective_balance_updates_count",
       help: "Total count of effective balance updates",
+    }),
+    validatorsInActivationQueue: register.gauge({
+      name: "lodestar_stfn_validators_in_activation_queue",
+      help: "Current number of validators in the activation queue",
+    }),
+    validatorsInExitQueue: register.gauge({
+      name: "lodestar_stfn_validators_in_exit_queue",
+      help: "Current number of validators in the exit queue",
     }),
     preStateBalancesNodesPopulatedMiss: register.gauge<{source: StateCloneSource}>({
       name: "lodestar_stfn_balances_nodes_populated_miss_total",
@@ -103,6 +112,11 @@ export function getMetrics(register: MetricsRegister) {
     attestationsPerBlock: register.gauge({
       name: "lodestar_stfn_attestations_per_block_total",
       help: "Total count of attestations per block",
+    }),
+    proposerRewards: register.gauge<{type: ProposerRewardType}>({
+      name: "lodestar_stfn_proposer_rewards_total",
+      help: "Proposer reward by type per block",
+      labelNames: ["type"],
     }),
   };
 }

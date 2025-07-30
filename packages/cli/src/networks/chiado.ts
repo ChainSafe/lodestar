@@ -3,6 +3,7 @@ export {chiadoChainConfig as chainConfig} from "@lodestar/config/networks";
 // eth1.providerUrls suggestion: https://rpc.chiado.gnosis.gateway.fm
 export const depositContractDeployBlock = 155435;
 export const genesisFileUrl = "https://raw.githubusercontent.com/gnosischain/configs/main/chiado/genesis.ssz";
+export const genesisStateRoot = "0xa48419160f8f146ecaa53d12a5d6e1e6af414a328afdc56b60d5002bb472a077";
 export const bootnodesFileUrl = "https://raw.githubusercontent.com/gnosischain/configs/main/chiado/bootnodes.yaml";
 
 export const bootEnrs = [

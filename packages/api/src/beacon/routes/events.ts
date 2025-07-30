@@ -74,7 +74,7 @@ export enum EventType {
   lightClientFinalityUpdate = "light_client_finality_update",
   /** Payload attributes for block proposal */
   payloadAttributes = "payload_attributes",
-  /** The node has received a valid blobSidecar (from P2P or API) */
+  /** The node has received a valid BlobSidecar (from P2P or API) */
   blobSidecar = "blob_sidecar",
 }
 

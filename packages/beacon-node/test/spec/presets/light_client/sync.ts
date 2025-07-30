@@ -196,7 +196,13 @@ function pickConfigForkEpochs(config: Partial<ChainConfig>): Partial<ChainConfig
   const configOnlyFork: Record<string, number> = {};
   for (const key of Object.keys(config) as (keyof ChainConfig)[]) {
     if (key.endsWith("_FORK_EPOCH")) {
-      configOnlyFork[key] = config[key] as number;
+      const value = config[key];
+      // Overwrite 2^64 to Infinity
+      if (typeof value === "bigint" && value > BigInt(Number.MAX_SAFE_INTEGER)) {
+        configOnlyFork[key] = Infinity;
+      } else {
+        configOnlyFork[key] = Number(value);
+      }
     }
   }
   return configOnlyFork;

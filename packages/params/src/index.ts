@@ -233,6 +233,19 @@ export const BLOCK_BODY_EXECUTION_PAYLOAD_INDEX = 9;
 
 /**
  * ```ts
+ * config.types.altair.BeaconState.getPathGindex(["currentSyncCommittee"])
+ * ```
+ */
+export const CURRENT_SYNC_COMMITTEE_GINDEX = 54;
+/**
+ * ```ts
+ * Math.floor(Math.log2(CURRENT_SYNC_COMMITTEE_GINDEX))
+ * ```
+ */
+export const CURRENT_SYNC_COMMITTEE_DEPTH = 5;
+export const CURRENT_SYNC_COMMITTEE_INDEX = 22;
+/**
+ * ```ts
  * config.types.altair.BeaconState.getPathGindex(["nextSyncCommittee"])
  * ```
  */
@@ -271,6 +284,9 @@ export const FULL_EXIT_REQUEST_AMOUNT = 0;
 export const FINALIZED_ROOT_GINDEX_ELECTRA = 169;
 export const FINALIZED_ROOT_DEPTH_ELECTRA = 7;
 export const FINALIZED_ROOT_INDEX_ELECTRA = 41;
+export const CURRENT_SYNC_COMMITTEE_GINDEX_ELECTRA = 86;
+export const CURRENT_SYNC_COMMITTEE_DEPTH_ELECTRA = 6;
+export const CURRENT_SYNC_COMMITTEE_INDEX_ELECTRA = 22;
 export const NEXT_SYNC_COMMITTEE_GINDEX_ELECTRA = 87;
 export const NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA = 6;
 export const NEXT_SYNC_COMMITTEE_INDEX_ELECTRA = 23;

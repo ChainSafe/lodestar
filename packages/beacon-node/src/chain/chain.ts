@@ -663,7 +663,7 @@ export class BeaconChain implements IBeaconChain {
     return produceCommonBlockBody.call(this, blockType, state, blockAttributes);
   }
 
-  produceBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
+  produceBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise?: Promise<CommonBlockBody>}): Promise<{
     block: BeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Wei;
@@ -672,7 +672,7 @@ export class BeaconChain implements IBeaconChain {
     return this.produceBlockWrapper<BlockType.Full>(BlockType.Full, blockAttributes);
   }
 
-  produceBlindedBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
+  produceBlindedBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise?: Promise<CommonBlockBody>}): Promise<{
     block: BlindedBeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Wei;
@@ -687,10 +687,10 @@ export class BeaconChain implements IBeaconChain {
       graffiti,
       slot,
       feeRecipient,
-      commonBlockBody,
+      commonBlockBodyPromise,
       parentBlockRoot,
       parentSlot,
-    }: BlockAttributes & {commonBlockBody?: CommonBlockBody}
+    }: BlockAttributes & {commonBlockBodyPromise?: Promise<CommonBlockBody>}
   ): Promise<{
     block: AssembledBlockType<T>;
     executionPayloadValue: Wei;
@@ -719,7 +719,7 @@ export class BeaconChain implements IBeaconChain {
         parentBlockRoot,
         proposerIndex,
         proposerPubKey,
-        commonBlockBody,
+        commonBlockBodyPromise,
       }
     );
 
@@ -808,11 +808,13 @@ export class BeaconChain implements IBeaconChain {
   getStatus(): phase0.Status {
     const head = this.forkChoice.getHead();
     const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
+    const boundary = this.config.getForkBoundaryAtEpoch(this.clock.currentEpoch);
     return {
       // fork_digest: The node's ForkDigest (compute_fork_digest(current_fork_version, genesis_validators_root)) where
       // - current_fork_version is the fork version at the node's current epoch defined by the wall-clock time (not necessarily the epoch to which the node is sync)
       // - genesis_validators_root is the static Root found in state.genesis_validators_root
-      forkDigest: this.config.forkName2ForkDigest(this.config.getForkName(this.clock.currentSlot)),
+      // - epoch of fork boundary is used to get blob parameters of current Blob Parameter Only (BPO) fork
+      forkDigest: this.config.forkBoundary2ForkDigest(boundary),
       // finalized_root: state.finalized_checkpoint.root for the state corresponding to the head block (Note this defaults to Root(b'\x00' * 32) for the genesis finalized checkpoint).
       finalizedRoot: finalizedCheckpoint.epoch === GENESIS_EPOCH ? ZERO_HASH : finalizedCheckpoint.root,
       finalizedEpoch: finalizedCheckpoint.epoch,
@@ -827,9 +829,9 @@ export class BeaconChain implements IBeaconChain {
     const timer = this.metrics?.forkChoice.findHead.startTimer({caller});
 
     try {
-      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetCanonicialHead}).head;
+      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetCanonicalHead}).head;
     } catch (e) {
-      this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetCanonicialHead});
+      this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetCanonicalHead});
       throw e;
     } finally {
       timer?.();
@@ -839,9 +841,10 @@ export class BeaconChain implements IBeaconChain {
   predictProposerHead(slot: Slot): ProtoBlock {
     this.metrics?.forkChoice.requests.inc();
     const timer = this.metrics?.forkChoice.findHead.startTimer({caller: FindHeadFnName.predictProposerHead});
+    const secFromSlot = this.clock.secFromSlot(slot);
 
     try {
-      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetPredictedProposerHead, slot}).head;
+      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetPredictedProposerHead, secFromSlot, slot}).head;
     } catch (e) {
       this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetPredictedProposerHead});
       throw e;
@@ -1114,6 +1117,14 @@ export class BeaconChain implements IBeaconChain {
     metrics.forkChoice.balancesLength.set(forkChoiceMetrics.balancesLength);
     metrics.forkChoice.nodes.set(forkChoiceMetrics.nodes);
     metrics.forkChoice.indices.set(forkChoiceMetrics.indices);
+
+    const fork = this.config.getForkName(this.clock.currentSlot);
+    if (isForkPostElectra(fork)) {
+      const headStateElectra = this.getHeadState() as BeaconStateElectra;
+      metrics.pendingDeposits.set(headStateElectra.pendingDeposits.length);
+      metrics.pendingPartialWithdrawals.set(headStateElectra.pendingPartialWithdrawals.length);
+      metrics.pendingConsolidations.set(headStateElectra.pendingConsolidations.length);
+    }
   }
 
   private onClockSlot(slot: Slot): void {
