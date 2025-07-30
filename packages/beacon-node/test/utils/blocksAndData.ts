@@ -30,8 +30,8 @@ function generateRandomBlob(): Uint8Array {
 
 export function generateColumnSidecars(numberOfBlobs: number): fulu.DataColumnSidecars {
   const blobs = Array.from({length: numberOfBlobs}, () => generateRandomBlob());
-  const kzgCommitments = blobs.map(kzg.blobToKzgCommitment);
-  const cellsAndProofs = blobs.map(kzg.computeCellsAndKzgProofs);
+  const kzgCommitments = blobs.map((blob) => kzg.blobToKzgCommitment(blob));
+  const cellsAndProofs = blobs.map((blob) => kzg.computeCellsAndKzgProofs(blob));
   const signedBlockHeader = ssz.fulu.SignedBeaconBlockHeader.defaultValue();
   signedBlockHeader.message.slot = 1234;
   signedBlockHeader.message.proposerIndex = 5678;

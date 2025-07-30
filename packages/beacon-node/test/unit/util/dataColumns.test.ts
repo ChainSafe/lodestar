@@ -1,5 +1,6 @@
 import {ssz} from "@lodestar/types";
 import {describe, expect, it} from "vitest";
+import {byteArrayEquals} from "../../../src/util/bytes.js";
 import {
   buildCustodyIndex,
   calculateDataColumnByteLength,
@@ -23,15 +24,26 @@ describe("src/util/dataColumns.ts", () => {
   wrapped.dataColumnsLen = wrapped.dataColumnSidecars.length;
   wrapped.dataColumnsSize = calculateDataColumnByteLength(numberOfBlobs);
 
-  it("parseWrappedColumnSidecars", () => {
+  describe("parseWrappedColumnSidecars", () => {
     const {custodyIndex, columnSizeInBytes, numberOfColumns, serializedColumnSidecars} = parseWrappedColumnSidecars(
       dataColumnSidecarsDbWrapperSsz.serialize(wrapped)
     );
-    expect(custodyIndex).toEqual(wrapped.dataColumnsIndex);
-    expect(columnSizeInBytes).toEqual(wrapped.dataColumnsSize);
-    expect(numberOfColumns).toEqual(wrapped.dataColumnsLen);
-    expect(serializedColumnSidecars).toEqual(
-      Buffer.concat(dataColumnSidecars.map(ssz.fulu.DataColumnSidecar.serialize))
-    );
+    it("should correctly deserialize custodyIndex", () => {
+      expect(custodyIndex).toEqual(wrapped.dataColumnsIndex);
+    });
+    it("should correctly deserialize columnSizeInBytes", () => {
+      expect(columnSizeInBytes).toEqual(wrapped.dataColumnsSize);
+    });
+    it("should correctly deserialize numberOfColumns", () => {
+      expect(numberOfColumns).toEqual(wrapped.dataColumnsLen);
+    });
+    it("should correctly deserialize serializedColumnSidecars", () => {
+      expect(
+        byteArrayEquals(
+          serializedColumnSidecars,
+          Buffer.concat(dataColumnSidecars.map((sidecar) => ssz.fulu.DataColumnSidecar.serialize(sidecar)))
+        )
+      ).toBeTruthy();
+    });
   });
 });
