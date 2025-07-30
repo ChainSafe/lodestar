@@ -6,10 +6,10 @@ import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 export const backfillRangeSSZ = new ContainerType(
   {
-    beginningEpoch: ssz.UintNum64,
-    endingEpoch: ssz.UintNum64,
-  }
-  // {typeName: "BackfillRange", jsonCase: "eth2"}
+    beginningEpoch: ssz.Epoch,
+    endingEpoch: ssz.Epoch,
+  },
+  {typeName: "BackfillRange", jsonCase: "eth2"}
 );
 export type BackfillRangeWrapper = ValueOf<typeof backfillRangeSSZ>;
 
