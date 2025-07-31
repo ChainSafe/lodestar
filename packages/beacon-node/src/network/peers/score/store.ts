@@ -19,7 +19,7 @@ const peerActionScore: Record<PeerAction, number> = {
  * A peer's score (perceived potential usefulness).
  * This simplistic version consists of a global score per peer which decays to 0 over time.
  * The decay rate applies equally to positive and negative scores.
- * Peer gossipScore will be checked before dialing and will only be dialed if score >= 0
+ * Peer cool-down period will be checked before dialing and will only be dialed if score is not waiting to decay
  */
 export class PeerRpcScoreStore implements IPeerRpcScoreStore {
   private readonly scores: MapDef<PeerIdStr, IPeerScore>;
