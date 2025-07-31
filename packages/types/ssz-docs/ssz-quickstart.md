@@ -1,6 +1,6 @@
 # SSZ Quickstart Guide
 
-**SSZ** (Simple Serialize) is a standard used in the Ethereum consensus layer to serialize and Merkleize structured data. It is used heavily in Ethereum 2.0 (the consensus layer) to serialize and Merkleize data structures such as blocks, validator records, the beacon state, and data used in light client proofs. It is the official serialization and Merkleization format used in Ethereum 2.0 (now Ethereum consensus layer).
+**SSZ** (Simple Serialize) is a standard(serialization format) used in the Ethereum consensus layer(beacon chain) to serialize and Merkleize structured data. It is used heavily in Ethereum 2.0 (the consensus layer) to serialize and Merkleize data structures such as blocks, validator records, the beacon state, and data used in light client proofs. It is the official serialization and Merkleization format used in Ethereum 2.0 (now Ethereum consensus layer).
 
 [*SSZ*](https://github.com/ChainSafe/ssz/tree/master/packages/ssz) provides a standardized way to:
 -  **Serialize** structured data into bytes (for storage or transmission)
@@ -36,6 +36,17 @@ Simpler defination: Serialization: Turn object → bytes, Deserialization: Turn 
 ---
 ## SSZ Components in Detail
 
+The Simple Serialize(SSZ) system has two layers of components.
+- *Core SSZ types* :This is a set of composite types used to define data Structures.
+- *Fork Specific Schemas* : Ethereum upgrades (eg. Altair, Bellatrix) They define new structures using the core types.
 
+This section will break down the different layers of components so you understand how SSZ is used in Lodestar and Ethereum consensus. Understanding this components help in grasping how SSZ transforms structured data into merkle-friendly format for ethereum consensus.
+ 
+### Core SSZ Types.
+This are the *building blocks* of all SSZ structures.They fall into two types/categories. Primitive types and composite types.
 
-
+|Type                    | Description                      |
+|------------------------|--------------------------------- |
+|boolean        | A single byte  |
+|uintN         | Unsigned Integers: uint8, uint16, uint32.....upto uint256 |
+|bytesN        | fixed length byte arrays eg. byte4, bytes32   |
