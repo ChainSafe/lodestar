@@ -1251,9 +1251,9 @@ export class BeaconChain implements IBeaconChain {
       if (!this.opts.noValidatorCustody) {
         // Update custody requirement based on finalized state
         const validatorIndices = this.beaconProposerCache.getValidatorIndices();
-        // Validators custody requirement must be at least configured node custody requirement
         const targetCustodyGroupCount = Math.max(
           getValidatorsCustodyRequirement(headState, validatorIndices, this.config),
+          // Validators custody requirement must be at least configured node custody requirement
           this.opts.nodeCustodyRequirement ?? 1
         );
         // only update if target is increased
