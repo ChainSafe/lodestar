@@ -5,7 +5,7 @@ import {BeaconDb, BeaconNode} from "@lodestar/beacon-node";
 import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db";
 import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
-import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
+import {ACTIVE_PRESET, NUMBER_OF_CUSTODY_GROUPS, PresetName} from "@lodestar/params";
 import {ErrorAborted} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
@@ -188,8 +188,9 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   // Disable dynamic custody updates for supernodes since they must maintain custody
   // of all custody groups regardless of validator effective balances
   if (args.supernode) {
-    beaconNodeOptions.set({chain: {noValidatorCustody: true}});
+    beaconNodeOptions.set({chain: {noValidatorCustody: true, nodeCustodyRequirement: NUMBER_OF_CUSTODY_GROUPS}});
   }
+  beaconNodeOptions.set({network: {nodeCustodyRequirement: beaconNodeOptions.get().chain?.nodeCustodyRequirement}});
 
   // Set known depositContractDeployBlock
   if (isKnownNetworkName(network)) {

@@ -158,7 +158,7 @@ export class NetworkCore implements INetworkCore {
       discv5?.setEnrValue(key, value).catch((e) => logger.error("error on setEnrValue", {key}, e));
     };
     const peerId = peerIdFromPrivateKey(privateKey);
-    const networkConfig = new NetworkConfig(peerId, config);
+    const networkConfig = new NetworkConfig(peerId, config, opts);
     const metadata = new MetadataController({}, {networkConfig, logger, onSetValue: onMetadataSetValue});
 
     const reqResp = new ReqRespBeaconNode(

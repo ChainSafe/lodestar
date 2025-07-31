@@ -70,28 +70,6 @@ describe("getValidatorsCustodyRequirement", () => {
     const result = getValidatorsCustodyRequirement(state, validatorIndices, config);
     expect(result).toBe(config.CUSTODY_REQUIREMENT);
   });
-
-  it("should return NODE_CUSTODY_REQUIREMENT when computed requirement is less", () => {
-    const configWithNodeRequirement = createChainForkConfig({
-      ...defaultChainConfig,
-      ALTAIR_FORK_EPOCH: 0,
-      BELLATRIX_FORK_EPOCH: 0,
-      CAPELLA_FORK_EPOCH: 0,
-      DENEB_FORK_EPOCH: 0,
-      ELECTRA_FORK_EPOCH: 0,
-      FULU_FORK_EPOCH: Infinity,
-      BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: 32000000000, // 32 ETH per group
-      VALIDATOR_CUSTODY_REQUIREMENT: 8,
-      CUSTODY_REQUIREMENT: 4,
-      NODE_CUSTODY_REQUIREMENT: 16,
-    });
-
-    // Create a state with 1 validator
-    // This would compute to 8 columns, but should return NODE_CUSTODY_REQUIREMENT (16)
-    const validatorIndices: ValidatorIndex[] = [0];
-    const result = getValidatorsCustodyRequirement(state, validatorIndices, configWithNodeRequirement);
-    expect(result).toBe(configWithNodeRequirement.NODE_CUSTODY_REQUIREMENT);
-  });
 });
 
 describe("CustodyConfig", () => {

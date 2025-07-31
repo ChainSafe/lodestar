@@ -40,7 +40,7 @@ export function getBeaconConfigFromArgs(args: GlobalArgs): {config: ChainForkCon
  * @see getBeaconParams
  */
 export function getBeaconParamsFromArgs(args: GlobalArgs): ChainConfig {
-  const beaconParams = getBeaconParams({
+  return getBeaconParams({
     network: args.network,
     paramsFile: args.paramsFile,
     additionalParamsCli: {
@@ -48,11 +48,6 @@ export function getBeaconParamsFromArgs(args: GlobalArgs): ChainConfig {
       ...parseTerminalPowArgs(args as ITerminalPowArgs),
     },
   });
-
-  if (args.supernode) {
-    beaconParams.NODE_CUSTODY_REQUIREMENT = DATA_COLUMN_SIDECAR_SUBNET_COUNT;
-  }
-  return beaconParams;
 }
 
 /**

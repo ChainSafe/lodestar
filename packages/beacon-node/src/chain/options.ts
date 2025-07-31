@@ -41,6 +41,8 @@ export type IChainOptions = BlockProcessOpts &
     maxCachedProducedRoots?: number;
     /** Whether to disable dynamic validator custody requirement updates */
     noValidatorCustody?: boolean;
+    /** Minimum number of groups the node is required to custody */
+    nodeCustodyRequirement?: number;
     /*
      * This is the window size for the windowed multiplication in proof
      * generation. The larger wbits is, the faster the MSM will be, but the

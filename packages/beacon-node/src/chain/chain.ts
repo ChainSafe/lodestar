@@ -279,7 +279,7 @@ export class BeaconChain implements IBeaconChain {
     this.seenContributionAndProof = new SeenContributionAndProof(metrics);
     this.seenAttestationDatas = new SeenAttestationDatas(metrics, this.opts?.attDataCacheSlotDistance);
     const nodeId = computeNodeIdFromPrivateKey(privateKey);
-    this.custodyConfig = new CustodyConfig(nodeId, config, metrics);
+    this.custodyConfig = new CustodyConfig(nodeId, config, metrics, this.opts);
     this.seenGossipBlockInput = new SeenGossipBlockInput(
       this.custodyConfig,
       this.executionEngine,
@@ -1251,7 +1251,11 @@ export class BeaconChain implements IBeaconChain {
       if (!this.opts.noValidatorCustody) {
         // Update custody requirement based on finalized state
         const validatorIndices = this.beaconProposerCache.getValidatorIndices();
-        const targetCustodyGroupCount = getValidatorsCustodyRequirement(headState, validatorIndices, this.config);
+        // Validators custody requirement must be at least configured node custody requirement
+        const targetCustodyGroupCount = Math.max(
+          getValidatorsCustodyRequirement(headState, validatorIndices, this.config),
+          this.opts.nodeCustodyRequirement ?? 1
+        );
         // only update if target is increased
         if (targetCustodyGroupCount > this.custodyConfig.targetCustodyGroupCount) {
           this.custodyConfig.updateTargetCustodyGroupCount(targetCustodyGroupCount);

@@ -12,6 +12,7 @@ export type ChainArgs = {
   "chain.persistProducedBlocks"?: boolean;
   "chain.persistInvalidSszObjects"?: boolean;
   "chain.noValidatorCustody"?: boolean;
+  "chain.nodeCustodyRequirement"?: number;
   // No need to define chain.persistInvalidSszObjects as part of ChainArgs
   // as this is defined as part of BeaconPaths
   // "chain.persistInvalidSszObjectsDir": string;
@@ -81,6 +82,7 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     maxCPStateEpochsInMemory: args["chain.maxCPStateEpochsInMemory"] ?? defaultOptions.chain.maxCPStateEpochsInMemory,
     pruneHistory: args["chain.pruneHistory"],
     noValidatorCustody: args["chain.noValidatorCustody"],
+    nodeCustodyRequirement: args["chain.nodeCustodyRequirement"],
   };
 }
 
@@ -335,9 +337,17 @@ Will double processing times. Use only for debugging purposes.",
   },
 
   "chain.noValidatorCustody": {
+    hidden: true,
     type: "boolean",
     description: "Disable dynamic updates to validator custody requirements",
     defaultDescription: "false",
+    group: "chain",
+  },
+
+  "chain.nodeCustodyRequirement": {
+    hidden: true,
+    type: "number",
+    description: "Minimum number of groups the node is required to custody",
     group: "chain",
   },
 };
