@@ -5,7 +5,6 @@ import {
   createChainConfig,
   createChainForkConfig,
 } from "@lodestar/config";
-import {DATA_COLUMN_SIDECAR_SUBNET_COUNT} from "@lodestar/params";
 import {NetworkName, getNetworkBeaconParams} from "../networks/index.js";
 import {
   GlobalArgs,
