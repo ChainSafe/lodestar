@@ -1252,7 +1252,8 @@ export class BeaconChain implements IBeaconChain {
         // Update custody requirement based on finalized state
         const validatorIndices = this.beaconProposerCache.getValidatorIndices();
         const targetCustodyGroupCount = getValidatorsCustodyRequirement(headState, validatorIndices, this.config);
-        if (targetCustodyGroupCount !== this.custodyConfig.targetCustodyGroupCount) {
+        // only update if target is increased
+        if (targetCustodyGroupCount > this.custodyConfig.targetCustodyGroupCount) {
           this.custodyConfig.updateTargetCustodyGroupCount(targetCustodyGroupCount);
           this.logger.verbose(`Updated targetCustodyGroupCount=${this.custodyConfig.targetCustodyGroupCount}`);
           this.emitter.emit(ChainEvent.updateTargetGroupCount, this.custodyConfig.targetCustodyGroupCount);
