@@ -486,6 +486,8 @@ export class BlockInputByRootSync {
             block.status = PendingBlockInputStatus.downloaded;
             break;
 
+          // TODO(fulu): this condition should be checked and potentially down score the peer for some cases.
+          // https://github.com/ChainSafe/lodestar/pull/7846#discussion_r2214030977
           case BlockErrorCode.EXECUTION_ENGINE_ERROR:
             // Removing the block(s) without penalizing the peers, hoping for EL to
             // recover on a latter download + verify attempt
