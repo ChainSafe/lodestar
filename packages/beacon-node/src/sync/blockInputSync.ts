@@ -607,8 +607,6 @@ export function getDescendantBlocks(
 
 enum BlockInputSyncErrorCode {
   MAX_ATTEMPTS = "BLOCK_INPUT_SYNC_ERROR_MAX_ATTEMPTS",
-
-  Z = "BLOCK_INPUT_SYNC_ERROR_Z",
 }
 type BlockInputSyncErrorType = {
   code: BlockInputSyncErrorCode.MAX_ATTEMPTS;
