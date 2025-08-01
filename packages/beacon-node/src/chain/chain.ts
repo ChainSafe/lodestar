@@ -1248,14 +1248,12 @@ export class BeaconChain implements IBeaconChain {
     if (headState) {
       this.opPool.pruneAll(headBlock, headState);
 
-      if (!this.opts.noValidatorCustody) {
+      // Disable dynamic custody updates for supernodes since they must maintain custody
+      // of all custody groups regardless of validator effective balances
+      if (!this.opts.supernode) {
         // Update custody requirement based on finalized state
         const validatorIndices = this.beaconProposerCache.getValidatorIndices();
-        const targetCustodyGroupCount = Math.max(
-          getValidatorsCustodyRequirement(headState, validatorIndices, this.config),
-          // Validators custody requirement must be at least configured node custody requirement
-          this.opts.nodeCustodyRequirement ?? 1
-        );
+        const targetCustodyGroupCount = getValidatorsCustodyRequirement(headState, validatorIndices, this.config);
         // only update if target is increased
         if (targetCustodyGroupCount > this.custodyConfig.targetCustodyGroupCount) {
           this.custodyConfig.updateTargetCustodyGroupCount(targetCustodyGroupCount);

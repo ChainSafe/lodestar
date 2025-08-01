@@ -46,7 +46,7 @@ export enum RecoverResult {
 }
 
 export type CustodyConfigOpts = {
-  nodeCustodyRequirement?: number;
+  supernode?: boolean;
 };
 
 export class CustodyConfig {
@@ -98,7 +98,7 @@ export class CustodyConfig {
     this.config = config;
     this.nodeId = nodeId;
     this.metrics = metrics;
-    this.targetCustodyGroupCount = Math.max(config.CUSTODY_REQUIREMENT, opts.nodeCustodyRequirement ?? 1);
+    this.targetCustodyGroupCount = opts.supernode ? NUMBER_OF_CUSTODY_GROUPS : config.CUSTODY_REQUIREMENT;
     this.custodyColumns = getDataColumns(this.nodeId, this.targetCustodyGroupCount);
     this.custodyColumnsIndex = this.getCustodyColumnsIndex(this.custodyColumns);
     this.metrics?.peerDas.custodyGroupCount.set(this.targetCustodyGroupCount);

@@ -4,7 +4,7 @@ import {CustodyConfig} from "../util/dataColumns.js";
 import {NodeId, computeNodeId} from "./subnets/interface.js";
 
 export type NetworkConfigOpts = {
-  nodeCustodyRequirement?: number;
+  supernode?: boolean;
 };
 
 /**
