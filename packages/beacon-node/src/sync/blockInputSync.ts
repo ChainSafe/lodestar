@@ -51,6 +51,24 @@ function getLogMeta(
 }
 
 /**
+ * BlockInputSync is a class that handles ReqResp to find blocks and data related to a specific blockRoot.  The
+ * blockRoot may have been found via object gossip, or the API.  Gossip objects that can trigger a search are block,
+ * blobs, columns, attestations, etc.  In the case of blocks and data this is generally during the current slot but
+ * can also be for items that are received late but are not fully verified and thus not in fork-choice (old blocks on
+ * an unknown fork). It can also be triggered via an attestation (or sync committee message or any other item that
+ * gets gossiped) that references a blockRoot that is not in fork-choice.  In rare (and realistically should not happen)
+ * situations it can get triggered via the API when the validator attempts to publish a block, attestation, aggregate
+ * and proof or a sync committee contribution that has unknown information included (parentRoot for instance).
+ *
+ * The goal of the class is to make sure that all information that is necessary for import into fork-choice is pulled
+ * from peers so that the block and data can be processed, and thus the object that triggered the search can be
+ * referenced and validated.
+ *
+ * The most common case for this search is a set of block/data that comes across gossip for the current slot, during
+ * normal chain operation, but not everything was received before the gossip cutoff window happens so it is necessary
+ * to pull remaining data via req/resp so that fork-choice can be updated prior to making an attestation for the
+ * current slot.
+ *
  * Event sources for old UnknownBlock
  *
  * - publishBlock
@@ -590,6 +608,10 @@ function getUnknownAndAncestorBlocks(blocks: Map<RootHex, BlockInputSyncCacheIte
   return {unknowns, ancestors};
 }
 
+/**
+ * Gets direct descendant blocks for a given blockRootHex.  Does not check n-deep, only direct
+ * descendants
+ */
 export function getDescendantBlocks(
   blockRootHex: RootHex,
   blocks: Map<RootHex, BlockInputSyncCacheItem>
