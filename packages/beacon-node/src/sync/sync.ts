@@ -8,7 +8,7 @@ import {Metrics} from "../metrics/index.js";
 import {INetwork, NetworkEvent, NetworkEventData} from "../network/index.js";
 import {ClockEvent} from "../util/clock.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
-import {BlockInputSync} from "./blockInputSync.js";
+import {BlockInputByRootSync} from "./blockInputSync.js";
 import {MIN_EPOCH_TO_START_GOSSIP} from "./constants.js";
 import {IBeaconSync, SyncModules, SyncingStatus} from "./interface.js";
 import {SyncChainDebugState, SyncState, syncStateMetric} from "./interface.js";
@@ -26,7 +26,7 @@ export class BeaconSync implements IBeaconSync {
 
   private readonly rangeSync: RangeSync;
   private readonly unknownBlockSync: UnknownBlockSync;
-  private readonly blockInputSync: BlockInputSync;
+  private readonly blockInputSync: BlockInputByRootSync;
 
   /** For metrics only */
   private readonly peerSyncType = new Map<string, PeerSyncType>();
@@ -41,7 +41,7 @@ export class BeaconSync implements IBeaconSync {
     this.logger = logger;
     this.rangeSync = new RangeSync(modules, opts);
     this.unknownBlockSync = new UnknownBlockSync(config, network, chain, logger, metrics, opts);
-    this.blockInputSync = new BlockInputSync(config, network, chain, logger, metrics, opts);
+    this.blockInputSync = new BlockInputByRootSync(config, network, chain, logger, metrics, opts);
     this.slotImportTolerance = opts.slotImportTolerance ?? SLOTS_PER_EPOCH;
 
     // Subscribe to RangeSync completing a SyncChain and recompute sync state

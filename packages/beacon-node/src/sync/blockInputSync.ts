@@ -83,7 +83,7 @@ function getLogMeta(
  *            - onGossipsubMessage
  */
 
-export class BlockInputSync {
+export class BlockInputByRootSync {
   /**
    * block RootHex -> PendingBlock. To avoid finding same root at the same time
    */
