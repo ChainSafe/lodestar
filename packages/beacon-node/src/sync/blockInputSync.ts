@@ -268,7 +268,7 @@ export class BlockInputByRootSync {
         }
       }
 
-      this.logger.verbose("No unknown block, process ancestor downloaded blocks", {
+      this.logger.verbose("No unknown block, downloaded ancestor blocks awaiting processing", {
         pendingBlocks: this.pendingBlocks.size,
         ancestorBlocks: ancestors.length,
         processedBlocks,
