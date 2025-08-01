@@ -1012,7 +1012,7 @@ export function getValidatorApi(
       logger.debug("produce inclusion list", {blockHash});
 
       metrics?.eip7805.getInclusionListV1Requests.inc();
-      const timer = metrics?.eip7805.getInclusionListV1ResponseTime.startTimer();
+      const timer = metrics?.eip7805.getInclusionListV1RequestsDuration.startTimer();
       const ilTransactions = await chain.executionEngine.getInclusionList(blockHash);
       timer?.();
 
@@ -1505,12 +1505,12 @@ export function getValidatorApi(
         throw new ApiError(400, `Publishing pre-eip7805 inclusion list slot: ${slot}`);
       }
 
-      const timer = metrics?.eip7805.inclusionListValidationTime.startTimer();
+      const timer = metrics?.eip7805.inclusionListsValidationTime.startTimer();
       await validateApiInclusionList(chain, signedInclusionList, metrics);
       timer?.({source: InclusionListSource.api});
 
       chain.inclusionListPool.add(signedInclusionList);
-      metrics?.eip7805.inclusionListSeen.inc({source: InclusionListSource.api});
+      metrics?.eip7805.inclusionListsSeen.inc({source: InclusionListSource.api});
       metrics?.eip7805.inclusionListTransactionsSeen.inc(
         {source: InclusionListSource.api},
         signedInclusionList.message.transactions.length
@@ -1524,7 +1524,7 @@ export function getValidatorApi(
       });
 
       await network.publishInclusionList(signedInclusionList);
-      metrics?.eip7805.inclusionListBroadcasted.inc();
+      metrics?.eip7805.inclusionListsPublished.inc();
     },
 
     async prepareBeaconCommitteeSubnet({subscriptions}) {

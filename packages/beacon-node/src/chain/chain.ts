@@ -1138,21 +1138,21 @@ export class BeaconChain implements IBeaconChain {
     metrics.forkChoice.balancesLength.set(forkChoiceMetrics.balancesLength);
     metrics.forkChoice.nodes.set(forkChoiceMetrics.nodes);
     metrics.forkChoice.indices.set(forkChoiceMetrics.indices);
-    metrics.forkChoice.inclusionListEquivocating.set(
+    metrics.forkChoice.inclusionListsEquivocating.set(
       {source: InclusionListSource.api},
-      forkChoiceMetrics.inclusionListEquivocating.getOrDefault(InclusionListSource.api)
+      forkChoiceMetrics.inclusionListsEquivocating.getOrDefault(InclusionListSource.api)
     );
-    metrics.forkChoice.inclusionListEquivocating.set(
+    metrics.forkChoice.inclusionListsEquivocating.set(
       {source: InclusionListSource.gossip},
-      forkChoiceMetrics.inclusionListEquivocating.getOrDefault(InclusionListSource.gossip)
+      forkChoiceMetrics.inclusionListsEquivocating.getOrDefault(InclusionListSource.gossip)
     );
-    metrics.forkChoice.inclusionListFirstSeenInSlot.observe(
+    metrics.forkChoice.inclusionListsFirstSeenInSlot.observe(
       {source: InclusionListSource.api},
-      forkChoiceMetrics.inclusionListFirstSeenInSlot.getOrDefault(InclusionListSource.api)
+      forkChoiceMetrics.inclusionListsFirstSeenInSlot.getOrDefault(InclusionListSource.api)
     );
-    metrics.forkChoice.inclusionListFirstSeenInSlot.observe(
+    metrics.forkChoice.inclusionListsFirstSeenInSlot.observe(
       {source: InclusionListSource.gossip},
-      forkChoiceMetrics.inclusionListFirstSeenInSlot.getOrDefault(InclusionListSource.gossip)
+      forkChoiceMetrics.inclusionListsFirstSeenInSlot.getOrDefault(InclusionListSource.gossip)
     );
 
     const fork = this.config.getForkName(this.clock.currentSlot);

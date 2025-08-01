@@ -142,11 +142,11 @@ export class ForkChoice implements IForkChoice {
   /** The current effective balances */
   private balances: EffectiveBalanceIncrements;
   /** Number of equivocating inclusion lists */
-  private inclusionListEquivocating: MapDef<InclusionListSource, number> = new MapDef<InclusionListSource, number>(
+  private inclusionListsEquivocating: MapDef<InclusionListSource, number> = new MapDef<InclusionListSource, number>(
     () => 0
   );
   /** First inclusion list seen in slot */
-  private inclusionListFirstSeenInSlot: MapDef<InclusionListSource, number> = new MapDef<InclusionListSource, number>(
+  private inclusionListsFirstSeenInSlot: MapDef<InclusionListSource, number> = new MapDef<InclusionListSource, number>(
     () => 0
   );
   /**
@@ -174,8 +174,8 @@ export class ForkChoice implements IForkChoice {
       balancesLength: this.balances.length,
       nodes: this.protoArray.nodes.length,
       indices: this.protoArray.indices.size,
-      inclusionListEquivocating: this.inclusionListEquivocating,
-      inclusionListFirstSeenInSlot: this.inclusionListFirstSeenInSlot,
+      inclusionListsEquivocating: this.inclusionListsEquivocating,
+      inclusionListsFirstSeenInSlot: this.inclusionListsFirstSeenInSlot,
     };
   }
 
@@ -832,7 +832,7 @@ export class ForkChoice implements IForkChoice {
     const storeKey: InclusionListStoreKey = [slot, inclusionListCommitteeRoot];
     const storedInclusionLists = this.fcStore.inclusionLists.get(storeKey) ?? [];
     if (storedInclusionLists.length === 0) {
-      this.inclusionListFirstSeenInSlot.set(source, secFromSlot);
+      this.inclusionListsFirstSeenInSlot.set(source, secFromSlot);
     }
     const validatorInclusionLists = storedInclusionLists.filter((il) => il.validatorIndex === validatorIndex);
 
@@ -845,7 +845,7 @@ export class ForkChoice implements IForkChoice {
         const equivocators = this.fcStore.inclusionListEquivocators.get(storeKey) ?? new Set<ValidatorIndex>();
         equivocators.add(validatorIndex);
         this.fcStore.inclusionListEquivocators.set(storeKey, equivocators);
-        this.inclusionListEquivocating.set(source, this.inclusionListEquivocating.getOrDefault(source) + 1);
+        this.inclusionListsEquivocating.set(source, this.inclusionListsEquivocating.getOrDefault(source) + 1);
       }
     } else if (isBeforeFreezeDeadline) {
       const inclusionLists = this.fcStore.inclusionLists.get(storeKey) ?? [];

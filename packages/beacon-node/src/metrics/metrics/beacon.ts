@@ -73,74 +73,74 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
     }),
 
     eip7805: {
-      validInclusionListByteSize: register.gauge({
-        name: "beacon_valid_inclusion_lists_size_bytes_total",
-        help: "Byte size of the valid inclusion list",
-      }),
-      invalidInclusionListByteSize: register.gauge({
-        name: "beacon_invalid_inclusion_lists_size_bytes_total",
-        help: "Byte size of the invalid inclusion list",
-      }),
-      inclusionListSeen: register.counter<{source: InclusionListSource}>({
-        name: "beacon_inclusion_lists_seen_total",
-        help: "Total number of seen inclusion lists by gossip or api",
-        labelNames: ["source"],
-      }),
-      inclusionListValid: register.counter<{source: InclusionListSource}>({
-        name: "beacon_valid_inclusion_lists_total",
+      inclusionListsValid: register.counter<{source: InclusionListSource}>({
+        name: "beacon_inclusion_lists_valid_total",
         help: "Total number of valid inclusion lists",
         labelNames: ["source"],
       }),
-      inclusionListInvalid: register.counter<{source: InclusionListSource; reason: InvalidInclusionListReason}>({
-        name: "beacon_invalid_inclusion_lists_total",
+      inclusionListsInvalid: register.counter<{source: InclusionListSource; reason: InvalidInclusionListReason}>({
+        name: "beacon_inclusion_lists_invalid_total",
         help: "Total number of invalid inclusion lists",
         labelNames: ["source", "reason"],
       }),
-      inclusionListValidationTime: register.histogram<{source: InclusionListSource}>({
+      inclusionListsValidSize: register.counter({
+        name: "beacon_inclusion_lists_valid_size_bytes",
+        help: "Size of valid inclusion lists in bytes",
+      }),
+      inclusionListsInvalidSize: register.counter({
+        name: "beacon_inclusion_lists_invalid_size_bytes",
+        help: "Size of invalid inclusion lists in bytes",
+      }),
+      inclusionListsValidationTime: register.histogram<{source: InclusionListSource}>({
         name: "beacon_inclusion_lists_validation_time_seconds",
-        help: "Time taken to validate inclusion list",
-        buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.5],
+        help: "Time taken to validate inclusion lists",
+        buckets: [0.1, 0.25, 0.5, 0.75, 1, 2],
         labelNames: ["source"],
       }),
-      inclusionListBroadcasted: register.counter({
-        name: "beacon_inclusion_lists_broadcasted_total",
-        help: "Total number of inclusion lists proposed",
-      }),
-      inclusionListReceivedSecFromSlot: register.histogram({
-        name: "beacon_inclusion_lists_received_seconds_from_slot",
-        help: "Inclusion list arrival time since the clock slot",
-        buckets: [0, 2, 4, 6, 9, 10, 11, 12],
+      inclusionListsSeen: register.counter<{source: InclusionListSource}>({
+        name: "beacon_inclusion_lists_seen_total",
+        help: "Total number of seen inclusion lists",
+        labelNames: ["source"],
       }),
       inclusionListTransactionsSeen: register.counter<{source: InclusionListSource}>({
         name: "beacon_inclusion_list_transactions_seen_total",
         help: "Total number of transactions seen in inclusion lists",
         labelNames: ["source"],
       }),
-      inclusionListTransactionsSentToPayload: register.counter({
-        name: "beacon_inclusion_list_transactions_sent_to_payload_total",
-        help: "Total number of inclusion list transactions sent to payload",
+      inclusionListsPublished: register.counter({
+        name: "beacon_inclusion_lists_published_total",
+        help: "Total number of published inclusion lists",
+      }),
+      inclusionListArrivalTime: register.histogram({
+        name: "beacon_inclusion_lists_arrival_time_seconds",
+        help: "Inclusion list arrival time since the beginning of slot",
+        buckets: [0, 1, 2, 3, 4, 6, 8, 10, 12],
       }),
       inclusionListTransactionsDuplicated: register.counter({
         name: "beacon_inclusion_list_transactions_duplicated_total",
         help: "Total number of duplicated inclusion list transactions",
       }),
+      inclusionListTransactionsSentInPayload: register.counter({
+        name: "beacon_inclusion_list_transactions_sent_in_payload_total",
+        help: "Total number of inclusion list transactions sent in a payload",
+      }),
       getInclusionListV1Requests: register.counter({
         name: "beacon_engine_getInclusionListV1_requests_total",
         help: "Total number of getInclusionListV1 requests sent",
       }),
-      getInclusionListV1ResponseTime: register.histogram({
-        name: "beacon_engine_getInclusionListV1_response_time_seconds",
-        help: "Response time of getInclusionListV1 requests",
-        buckets: [0.01, 0.05, 0.1, 0.5, 1, 2.5, 5, 7.5],
+      getInclusionListV1RequestsDuration: register.histogram({
+        name: "beacon_engine_getInclusionListV1_requests_duration_seconds",
+        help: "Duration of getInclusionListV1 requests",
+        buckets: [0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.5],
       }),
       updatePayloadWithInclusionListV1Requests: register.counter({
         name: "beacon_engine_updatePayloadWithInclusionListV1_requests_total",
         help: "Total number of updatePayloadWithInclusionListV1 requests sent",
       }),
-      updatePayloadWithInclusionListV1ResponseTime: register.histogram({
-        name: "beacon_engine_updatePayloadWithInclusionListV1_response_time_seconds",
-        help: "Response time of updatePayloadWithInclusionListV1 requests",
-        buckets: [0.01, 0.05, 0.1, 0.5, 1, 2.5, 5, 7.5],
+      updatePayloadWithInclusionListV1RequestsDuration: register.histogram({
+        name: "beacon_engine_updatePayloadWithInclusionListV1_requests_duration_seconds",
+        help: "Duration of updatePayloadWithInclusionListV1 requests",
+        buckets: [0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.5],
       }),
     },
 
@@ -206,14 +206,14 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         help: "Reason why the current head is not re-orged out",
         labelNames: ["reason"],
       }),
-      inclusionListEquivocating: register.gauge<{source: InclusionListSource}>({
-        name: "beacon_equivocating_inclusion_lists_total",
+      inclusionListsEquivocating: register.gauge<{source: InclusionListSource}>({
+        name: "beacon_inclusion_lists_equivocating_total",
         help: "Total number of equivocating inclusion lists",
         labelNames: ["source"],
       }),
-      inclusionListFirstSeenInSlot: register.histogram<{source: InclusionListSource}>({
-        name: "beacon_inclusion_list_first_seen_in_slot",
-        help: "Inclusion list first time seen in slot (seconds from slot)",
+      inclusionListsFirstSeenInSlot: register.histogram<{source: InclusionListSource}>({
+        name: "beacon_inclusion_lists_first_seen_in_slot_seconds",
+        help: "Inclusion lists first time seen in slot",
         buckets: [0, 1, 2, 3, 4, 6, 8, 10, 12],
         labelNames: ["source"],
       }),
