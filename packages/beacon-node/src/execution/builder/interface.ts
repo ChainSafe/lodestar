@@ -46,4 +46,5 @@ export interface IExecutionBuilder {
   submitBlindedBlock(
     signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>
   ): Promise<SignedBeaconBlockOrContents>;
+  submitBlindedBlockNoResponse(signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>): Promise<void>;
 }

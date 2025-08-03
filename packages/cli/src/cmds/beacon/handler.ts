@@ -38,7 +38,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
   const {config, options, beaconPaths, network, version, commit, privateKey, logger} = await beaconHandlerInit(args);
 
   if (hasher.name !== "hashtree") {
-    throw Error(`Loaded incorrect hasher ${hasher.name}, expected hashtree`);
+    logger.warn(`hashtree is not supported, using hasher ${hasher.name}`);
   }
 
   const heapSizeLimit = getHeapStatistics().heap_size_limit;
@@ -177,6 +177,7 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
     chain: {
       validatorMonitorLogs: args.validatorMonitorLogs,
       persistInvalidSszObjectsDir: beaconPaths.persistInvalidSszObjectsDir,
+      persistOrphanedBlocksDir: beaconPaths.persistOrphanedBlocksDir,
     },
   });
   // Add metrics metadata to show versioning + network info in Prometheus + Grafana

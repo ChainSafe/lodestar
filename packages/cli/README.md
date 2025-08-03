@@ -32,4 +32,4 @@ For full documentation on cli commands and options, see the [Command Line Refere
 
 ## License
 
-LGPL-3.0 [ChainSafe Systems](https://chainsafe.io)
+Apache-2.0 [ChainSafe Systems](https://chainsafe.io)

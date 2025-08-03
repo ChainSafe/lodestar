@@ -1,9 +1,10 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {EPOCHS_PER_HISTORICAL_VECTOR, isForkPostElectra} from "@lodestar/params";
+import {EPOCHS_PER_HISTORICAL_VECTOR, isForkPostElectra, isForkPostFulu} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   BeaconStateElectra,
+  BeaconStateFulu,
   CachedBeaconStateAltair,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
@@ -15,6 +16,7 @@ import {getValidatorStatus} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {ApiError} from "../../errors.js";
 import {ApiModules} from "../../types.js";
+import {assertUniqueItems} from "../../utils.js";
 import {
   filterStateValidatorsByStatus,
   getStateResponseWithRegen,
@@ -92,6 +94,8 @@ export function getBeaconStateApi({
 
       const validatorResponses: routes.beacon.ValidatorResponse[] = [];
       if (validatorIds.length) {
+        assertUniqueItems(validatorIds, "Duplicate validator IDs provided");
+
         for (const id of validatorIds) {
           const resp = getStateValidatorIndex(id, state, pubkey2index);
           if (resp.valid) {
@@ -116,6 +120,8 @@ export function getBeaconStateApi({
       }
 
       if (statuses.length) {
+        assertUniqueItems(statuses, "Duplicate statuses provided");
+
         const validatorsByStatus = filterStateValidatorsByStatus(statuses, state, pubkey2index, currentEpoch);
         return {
           data: validatorsByStatus,
@@ -148,6 +154,8 @@ export function getBeaconStateApi({
       let validatorIdentities: routes.beacon.ValidatorIdentities;
 
       if (validatorIds.length) {
+        assertUniqueItems(validatorIds, "Duplicate validator IDs provided");
+
         validatorIdentities = [];
         for (const id of validatorIds) {
           const resp = getStateValidatorIndex(id, state, pubkey2index);
@@ -197,6 +205,8 @@ export function getBeaconStateApi({
       const {state, executionOptimistic, finalized} = await getState(stateId);
 
       if (validatorIds.length) {
+        assertUniqueItems(validatorIds, "Duplicate validator IDs provided");
+
         const headState = chain.getHeadState();
         const balances: routes.beacon.ValidatorBalance[] = [];
         for (const id of validatorIds) {
@@ -354,6 +364,22 @@ export function getBeaconStateApi({
 
       return {
         data: context?.returnBytes ? pendingConsolidations.serialize() : pendingConsolidations.toValue(),
+        meta: {executionOptimistic, finalized, version: fork},
+      };
+    },
+
+    async getProposerLookahead({stateId}, context) {
+      const {state, executionOptimistic, finalized} = await getState(stateId);
+      const fork = config.getForkName(state.slot);
+
+      if (!isForkPostFulu(fork)) {
+        throw new ApiError(400, `Cannot retrieve proposer lookahead for pre-fulu state fork=${fork}`);
+      }
+
+      const {proposerLookahead} = state as BeaconStateFulu;
+
+      return {
+        data: context?.returnBytes ? proposerLookahead.serialize() : proposerLookahead.toValue(),
         meta: {executionOptimistic, finalized, version: fork},
       };
     },

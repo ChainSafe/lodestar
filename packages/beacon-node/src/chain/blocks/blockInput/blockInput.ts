@@ -1,9 +1,8 @@
 import {ForkName, ForkPreDeneb} from "@lodestar/params";
 import {BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
-import {fromHex, prettyBytes, toHex, withTimeout} from "@lodestar/utils";
+import {fromHex, prettyBytes, toRootHex, withTimeout} from "@lodestar/utils";
 import {VersionedHashes} from "../../../execution/index.js";
 import {kzgCommitmentToVersionedHash} from "../../../util/blobs.js";
-import {byteArrayEquals} from "../../../util/bytes.js";
 import {BlockInputError, BlockInputErrorCode} from "./errors.js";
 import {
   AddBlob,
@@ -80,7 +79,7 @@ abstract class AbstractBlockInput<F extends ForkName = ForkName, TData extends D
 {
   abstract type: DAType;
   daOutOfRange: boolean;
-  timeCreated: number;
+  timeCreatedSec: number;
 
   forkName: ForkName;
   slot: Slot;
@@ -94,7 +93,7 @@ abstract class AbstractBlockInput<F extends ForkName = ForkName, TData extends D
 
   constructor(init: BlockInputInit) {
     this.daOutOfRange = init.daOutOfRange;
-    this.timeCreated = init.timeCreated;
+    this.timeCreatedSec = init.timeCreated;
     this.forkName = init.forkName;
     this.slot = init.slot;
     this.blockRootHex = init.blockRootHex;
@@ -145,6 +144,7 @@ abstract class AbstractBlockInput<F extends ForkName = ForkName, TData extends D
     return {
       blockRoot: prettyBytes(this.blockRootHex),
       slot: this.slot,
+      timeCreatedSec: this.timeCreatedSec,
     };
   }
 
@@ -210,7 +210,7 @@ export class BlockInputPreData extends AbstractBlockInput<ForkPreDeneb, null> {
       forkName: props.forkName,
       slot: props.block.message.slot,
       blockRootHex: props.blockRootHex,
-      parentRootHex: toHex(props.block.message.parentRoot),
+      parentRootHex: toRootHex(props.block.message.parentRoot),
     };
     const state: BlockInputPreDataState = {
       hasBlock: true,
@@ -292,7 +292,7 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
       forkName: props.forkName,
       slot: props.block.message.slot,
       blockRootHex: props.blockRootHex,
-      parentRootHex: toHex(props.block.message.parentRoot),
+      parentRootHex: toRootHex(props.block.message.parentRoot),
     };
     const blockInput = new BlockInputBlobs(init, state);
     blockInput.blockPromise.resolve(props.block);
@@ -312,7 +312,7 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
       timeCreated: props.seenTimestampSec,
       forkName: props.forkName,
       blockRootHex: props.blockRootHex,
-      parentRootHex: toHex(props.blobSidecar.signedBlockHeader.message.parentRoot),
+      parentRootHex: toRootHex(props.blobSidecar.signedBlockHeader.message.parentRoot),
       slot: props.blobSidecar.signedBlockHeader.message.slot,
     };
     const blockInput = new BlockInputBlobs(init, state);
@@ -329,13 +329,14 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
     return {
       blockRoot: prettyBytes(this.blockRootHex),
       slot: this.slot,
+      timeCreatedSec: this.timeCreatedSec,
       expectedBlobs: this.state.hasBlock ? this.state.block.message.body.blobKzgCommitments.length : "unknown",
       receivedBlobs: this.blobsCache.size,
     };
   }
 
   addBlock({blockRootHex, block, source}: AddBlock<ForkBlobsDA>): void {
-    if (!this.state.hasBlock) {
+    if (this.state.hasBlock) {
       throw new BlockInputError(
         {
           code: BlockInputErrorCode.INVALID_CONSTRUCTION,
@@ -371,6 +372,7 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
 
     this.state = {
       ...this.state,
+      hasBlock: true,
       hasAllData,
       block,
       versionedHashes: block.message.body.blobKzgCommitments.map(kzgCommitmentToVersionedHash),
@@ -497,7 +499,11 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
 }
 
 function blockAndBlobArePaired(block: SignedBeaconBlock<ForkBlobsDA>, blobSidecar: deneb.BlobSidecar): boolean {
-  return byteArrayEquals(block.message.body.blobKzgCommitments[blobSidecar.index], blobSidecar.kzgCommitment);
+  const blockCommitment = block.message.body.blobKzgCommitments[blobSidecar.index];
+  if (!blockCommitment || !blobSidecar.kzgCommitment) {
+    return false;
+  }
+  return Buffer.compare(blockCommitment, blobSidecar.kzgCommitment) === 0;
 }
 
 function assertBlockAndBlobArePaired(
@@ -601,7 +607,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
       timeCreated: props.source.seenTimestampSec,
       forkName: props.forkName,
       blockRootHex: props.blockRootHex,
-      parentRootHex: toHex(props.block.message.parentRoot),
+      parentRootHex: toRootHex(props.block.message.parentRoot),
       slot: props.block.message.slot,
     };
     const blockInput = new BlockInputColumns(init, state, props.sampledColumns, props.custodyColumns);
@@ -627,7 +633,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
       timeCreated: props.seenTimestampSec,
       forkName: props.forkName,
       blockRootHex: props.blockRootHex,
-      parentRootHex: toHex(props.columnSidecar.signedBlockHeader.message.parentRoot),
+      parentRootHex: toRootHex(props.columnSidecar.signedBlockHeader.message.parentRoot),
       slot: props.columnSidecar.signedBlockHeader.message.slot,
     };
     const blockInput = new BlockInputColumns(init, state, props.sampledColumns, props.custodyColumns);
@@ -641,6 +647,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     return {
       blockRoot: prettyBytes(this.blockRootHex),
       slot: this.slot,
+      timeCreatedSec: this.timeCreatedSec,
       expectedColumns:
         this.state.hasBlock && this.state.block.message.body.blobKzgCommitments.length === 0
           ? 0
@@ -789,7 +796,7 @@ function blockAndColumnArePaired(
   return (
     block.message.body.blobKzgCommitments.length === columnSidecar.kzgCommitments.length &&
     block.message.body.blobKzgCommitments.every((commitment, index) =>
-      byteArrayEquals(commitment, columnSidecar.kzgCommitments[index])
+      Buffer.compare(commitment, columnSidecar.kzgCommitments[index])
     )
   );
 }

@@ -1,4 +1,4 @@
-import {ChainConfig, chainConfigToJson} from "@lodestar/config";
+import {BlobScheduleEntry, ChainConfig, SpecJson, chainConfigToJson, deserializeBlobSchedule} from "@lodestar/config";
 import {BeaconPreset, activePreset, presetToJson} from "@lodestar/params";
 
 export class NotEqualParamsError extends Error {}
@@ -20,7 +20,7 @@ type ConfigWithPreset = ChainConfig & BeaconPreset;
  * So this check only compares a specific list of parameters that are consensus critical, ignoring the rest. Typed
  * config and preset ensure new parameters are labeled critical or ignore, facilitating maintenance of the list.
  */
-export function assertEqualParams(localConfig: ChainConfig, externalSpecJson: Record<string, string>): void {
+export function assertEqualParams(localConfig: ChainConfig, externalSpecJson: SpecJson): void {
   // Before comparing, add preset which is bundled in api impl config route.
   // config and preset must be serialized to JSON for safe comparisions.
   const localSpecJson = {
@@ -49,6 +49,35 @@ export function assertEqualParams(localConfig: ChainConfig, externalSpecJson: Re
       // to detect spec discrepancies in all cases.
       externalSpecJson[key] === undefined
     ) {
+      continue;
+    }
+
+    if (key === "BLOB_SCHEDULE") {
+      const localBlobSchedule = deserializeBlobSchedule(localSpecJson[key]).sort((a, b) => a.EPOCH - b.EPOCH);
+      const remoteBlobSchedule = deserializeBlobSchedule(externalSpecJson[key]).sort((a, b) => a.EPOCH - b.EPOCH);
+
+      if (localBlobSchedule.length !== remoteBlobSchedule.length) {
+        errors.push(`BLOB_SCHEDULE different length: ${localBlobSchedule.length} != ${remoteBlobSchedule.length}`);
+
+        // Skip per entry comparison
+        continue;
+      }
+
+      for (let i = 0; i < localBlobSchedule.length; i++) {
+        const localEntry = localBlobSchedule[i];
+        const remoteEntry = remoteBlobSchedule[i];
+
+        for (const entryKey of ["EPOCH", "MAX_BLOBS_PER_BLOCK"] as Array<keyof BlobScheduleEntry>) {
+          const localValue = String(localEntry[entryKey]);
+          const remoteValue = String(remoteEntry[entryKey]);
+
+          if (localValue !== remoteValue) {
+            errors.push(`BLOB_SCHEDULE[${i}].${entryKey} different value: ${localValue} != ${remoteValue}`);
+          }
+        }
+      }
+
+      // Skip generic string comparison
       continue;
     }
 
@@ -259,6 +288,6 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     NODE_CUSTODY_REQUIREMENT: false,
     VALIDATOR_CUSTODY_REQUIREMENT: fuluForkRelevant,
     BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: fuluForkRelevant,
-    MAX_BLOBS_PER_BLOCK_FULU: fuluForkRelevant,
+    BLOB_SCHEDULE: fuluForkRelevant,
   };
 }

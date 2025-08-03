@@ -1,0 +1,38 @@
+name: Bun Tests
+# only one can run at a time
+concurrency:
+  # If PR, cancel prev commits. head_ref = source branch name on pull_request, null if push
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+on:
+  push:
+    # We intentionally don't run push on feature branches. See PR for rational.
+    branches: [unstable, stable]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  unit-tests-bun:
+    name: Unit Tests (Bun)
+    runs-on: buildjet-4vcpu-ubuntu-2204
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install Yarn
+        run: bun install -g npm:yarn
+      - name: Install
+        run: yarn install --frozen-lockfile
+      - name: Build
+        run: yarn build
+      - name: Unit Tests
+        # These packages are not testable yet in Bun because of `@chainsafe/blst` dependency.
+        run: excluded=(beacon-node prover light-client cli); for pkg in packages/*/; do [[ ! " ${excluded[@]} " =~ " $(basename "$pkg") " ]] && echo "Testing $(basename "$pkg")" && (cd "$pkg" && bun run --bun test:unit); done
+        shell: bash

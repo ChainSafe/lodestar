@@ -1,6 +1,13 @@
 import {routes} from "@lodestar/api";
 import {ApiError, ApplicationMethods} from "@lodestar/api/server";
-import {ForkPostBellatrix, SLOTS_PER_HISTORICAL_ROOT, isForkPostBellatrix, isForkPostElectra} from "@lodestar/params";
+import {
+  ForkName,
+  ForkPostBellatrix,
+  SLOTS_PER_HISTORICAL_ROOT,
+  isForkPostBellatrix,
+  isForkPostElectra,
+  isForkPostFulu,
+} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   computeTimeAtSlot,
@@ -16,11 +23,12 @@ import {
   deneb,
   isSignedBlockContents,
 } from "@lodestar/types";
-import {fromHex, sleep, toRootHex} from "@lodestar/utils";
+import {fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
 import {
   BlobsSource,
   BlockInput,
   BlockInputDataBlobs,
+  BlockInputType,
   BlockSource,
   ImportBlockOpts,
   getBlockInput,
@@ -31,10 +39,11 @@ import {BlockError, BlockErrorCode, BlockGossipError} from "../../../../chain/er
 import {validateGossipBlock} from "../../../../chain/validation/block.js";
 import {OpSource} from "../../../../chain/validatorMonitor.js";
 import {NetworkEvent} from "../../../../network/index.js";
-import {computeBlobSidecars} from "../../../../util/blobs.js";
+import {computeBlobSidecars, kzgCommitmentToVersionedHash} from "../../../../util/blobs.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {ApiModules} from "../../types.js";
+import {assertUniqueItems} from "../../utils.js";
 import {getBlockResponse, toBeaconHeaderResponse} from "./utils.js";
 
 type PublishBlockOpts = ImportBlockOpts;
@@ -53,6 +62,7 @@ const IDENTITY_PEER_ID = ""; // TODO: Compute identity keypair
 export function getBeaconBlockApi({
   chain,
   config,
+  metrics,
   network,
   db,
 }: Pick<
@@ -198,10 +208,12 @@ export function getBeaconBlockApi({
       await sleep(msToBlockSlot);
     }
 
-    chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRoot});
-
     // TODO: Validate block
-    chain.validatorMonitor?.registerBeaconBlock(OpSource.api, seenTimestampSec, blockForImport.block.message);
+    const delaySec =
+      seenTimestampSec - (chain.genesisTime + blockForImport.block.message.slot * config.SECONDS_PER_SLOT);
+    metrics?.gossipBlock.elapsedTimeTillReceived.observe({source: OpSource.api}, delaySec);
+    chain.validatorMonitor?.registerBeaconBlock(OpSource.api, delaySec, blockForImport.block.message);
+
     chain.logger.info("Publishing block", valLogMeta);
     const publishPromises = [
       // Send the block, regardless of whether or not it is valid. The API
@@ -229,6 +241,29 @@ export function getBeaconBlockApi({
           }),
     ];
     await promiseAllMaybeAsync(publishPromises);
+
+    if (chain.emitter.listenerCount(routes.events.EventType.blockGossip)) {
+      chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRoot});
+    }
+
+    if (
+      chain.emitter.listenerCount(routes.events.EventType.blobSidecar) &&
+      blockForImport.type === BlockInputType.availableData &&
+      (blockForImport.blockData.fork === ForkName.deneb || blockForImport.blockData.fork === ForkName.electra)
+    ) {
+      const {blobs} = blockForImport.blockData;
+
+      for (const blobSidecar of blobs) {
+        const {index, kzgCommitment} = blobSidecar;
+        chain.emitter.emit(routes.events.EventType.blobSidecar, {
+          blockRoot,
+          slot,
+          index,
+          kzgCommitment: toHex(kzgCommitment),
+          versionedHash: toHex(kzgCommitmentToVersionedHash(kzgCommitment)),
+        });
+      }
+    }
   };
 
   const publishBlindedBlock: ApplicationMethods<routes.beacon.block.Endpoints>["publishBlindedBlock"] = async (
@@ -242,6 +277,7 @@ export function getBeaconBlockApi({
         .getPostBellatrixForkTypes(signedBlindedBlock.message.slot)
         .BlindedBeaconBlock.hashTreeRoot(signedBlindedBlock.message)
     );
+    const fork = config.getForkName(slot);
 
     // Either the payload/blobs are cached from i) engine locally or ii) they are from the builder
     //
@@ -261,19 +297,30 @@ export function getBeaconBlockApi({
     }
 
     const source = ProducedBlockSource.builder;
-    chain.logger.debug("Reconstructing  signedBlockOrContents", {slot, blockRoot, source});
 
-    const signedBlockOrContents = await reconstructBuilderBlockOrContents(chain, {
-      data: signedBlindedBlock,
-      bytes: context?.sszBytes,
-    });
+    if (isForkPostFulu(fork)) {
+      await submitBlindedBlockToBuilder(chain, {
+        data: signedBlindedBlock,
+        bytes: context?.sszBytes,
+      });
+      chain.logger.info("Submitted blinded block to builder for publishing", {slot, blockRoot});
+    } else {
+      // TODO: After fulu is live and all builders support submitBlindedBlockV2, we can safely remove
+      // this code block and related functions
+      chain.logger.debug("Reconstructing  signedBlockOrContents", {slot, blockRoot, source});
 
-    // the full block is published by relay and it's possible that the block is already known to us
-    // by gossip
-    //
-    // see: https://github.com/ChainSafe/lodestar/issues/5404
-    chain.logger.info("Publishing assembled block", {slot, blockRoot, source});
-    return publishBlock({signedBlockOrContents}, {...context, sszBytes: null}, {...opts, ignoreIfKnown: true});
+      const signedBlockOrContents = await reconstructBuilderBlockOrContents(chain, {
+        data: signedBlindedBlock,
+        bytes: context?.sszBytes,
+      });
+
+      // the full block is published by relay and it's possible that the block is already known to us
+      // by gossip
+      //
+      // see: https://github.com/ChainSafe/lodestar/issues/5404
+      chain.logger.info("Publishing assembled block", {slot, blockRoot, source});
+      return publishBlock({signedBlockOrContents}, {...context, sszBytes: null}, {...opts, ignoreIfKnown: true});
+    }
   };
 
   return {
@@ -478,6 +525,8 @@ export function getBeaconBlockApi({
     },
 
     async getBlobSidecars({blockId, indices}) {
+      assertUniqueItems(indices, "Duplicate indices provided");
+
       const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
       const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
 
@@ -513,4 +562,15 @@ async function reconstructBuilderBlockOrContents(
 
   const signedBlockOrContents = await executionBuilder.submitBlindedBlock(signedBlindedBlock);
   return signedBlockOrContents;
+}
+
+async function submitBlindedBlockToBuilder(
+  chain: ApiModules["chain"],
+  signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>
+): Promise<void> {
+  const executionBuilder = chain.executionBuilder;
+  if (!executionBuilder) {
+    throw Error("executionBuilder required to submit SignedBlindedBeaconBlock to builder");
+  }
+  await executionBuilder.submitBlindedBlockNoResponse(signedBlindedBlock);
 }

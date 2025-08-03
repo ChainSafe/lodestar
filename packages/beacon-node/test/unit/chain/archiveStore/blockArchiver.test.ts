@@ -40,8 +40,10 @@ describe("block archiver task", () => {
     const canonicalBlocks = [blocks[4], blocks[3], blocks[1], blocks[0]];
     const nonCanonicalBlocks = [blocks[2]];
     const currentEpoch = 8;
-    vi.spyOn(forkChoiceStub, "getAllAncestorBlocks").mockReturnValue(canonicalBlocks);
-    vi.spyOn(forkChoiceStub, "getAllNonAncestorBlocks").mockReturnValue(nonCanonicalBlocks);
+    vi.spyOn(forkChoiceStub, "getAllAncestorAndNonAncestorBlocks").mockReturnValue({
+      ancestors: canonicalBlocks,
+      nonAncestors: nonCanonicalBlocks,
+    });
     await archiveBlocks(
       config,
       dbStub,

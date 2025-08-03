@@ -56,6 +56,21 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       help: "number of validators in current epoch",
     }),
 
+    pendingDeposits: register.gauge({
+      name: "beacon_pending_deposits",
+      help: "Current number of pending deposits",
+    }),
+
+    pendingConsolidations: register.gauge({
+      name: "beacon_pending_consolidations",
+      help: "Current number of pending consolidations",
+    }),
+
+    pendingPartialWithdrawals: register.gauge({
+      name: "beacon_pending_partial_withdrawals",
+      help: "Current number of pending partial withdrawals",
+    }),
+
     // Non-spec'ed
 
     forkChoice: {
@@ -113,7 +128,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         name: "beacon_fork_choice_indices_count",
         help: "Current count of indices in fork choice data structures",
       }),
-      notReorgedReason: register.gauge<{reason: NotReorgedReason}>({
+      notReorgedReason: register.counter<{reason: NotReorgedReason}>({
         name: "beacon_fork_choice_not_reorged_reason_total",
         help: "Reason why the current head is not re-orged out",
         labelNames: ["reason"],
@@ -126,6 +141,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       buckets: [1, 2, 3, 5, 7, 10, 20, 30, 50, 100],
     }),
 
+    // TODO: wrap to blockProduction
     blockProductionTime: register.histogram<{source: ProducedBlockSource}>({
       name: "beacon_block_production_seconds",
       help: "Full runtime of block production",
@@ -165,6 +181,16 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       buckets: [1, 2, 4, 6, 8],
       labelNames: ["source"],
     }),
+    blockProductionConsensusBlockValue: register.histogram<{source: ProducedBlockSource}>({
+      name: "beacon_block_production_consensus_block_value",
+      help: "Consensus block value denominated in ETH of produced blocks",
+      buckets: [0.001, 0.005, 0.01, 0.03, 0.05, 0.07, 0.1],
+      labelNames: ["source"],
+    }),
+    blockProductionSlotDelta: register.gauge({
+      name: "beacon_block_production_slot_delta",
+      help: "Slot delta of produced slot compared to parent slot",
+    }),
     blockProductionExecutionPayloadValue: register.histogram<{source: ProducedBlockSource}>({
       name: "beacon_block_production_execution_payload_value",
       help: "Execution payload value denominated in ETH of produced blocks",
@@ -197,6 +223,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         name: "beacon_block_payload_fetched_time",
         help: "Time to fetch the payload from EL",
         labelNames: ["prepType"],
+        buckets: [0.1, 0.2, 0.3, 0.5, 0.7, 1, 2],
       }),
       emptyPayloads: register.gauge<{prepType: PayloadPreparationType}>({
         name: "beacon_block_payload_empty_total",

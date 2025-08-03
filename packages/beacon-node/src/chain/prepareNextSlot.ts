@@ -136,7 +136,7 @@ export class PrepareNextSlotScheduler {
 
           // If we predict we can reorg, update prepareState with proposer head block
           if (proposerHeadRoot !== headRoot || proposerHeadSlot !== headSlot) {
-            this.logger.verbose("Weak head detected. May build on this block instead:", {
+            this.logger.verbose("Weak head detected. May build on parent block instead", {
               proposerHeadSlot,
               proposerHeadRoot,
               headSlot,

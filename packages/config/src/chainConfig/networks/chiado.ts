@@ -43,4 +43,7 @@ export const chiadoChainConfig: ChainConfig = {
   // Fulu
   FULU_FORK_VERSION: b("0x0600006f"),
   FULU_FORK_EPOCH: Infinity,
+
+  // Blob Scheduling
+  BLOB_SCHEDULE: [],
 };

@@ -104,9 +104,17 @@ async function validateAggregateAndProof(
       throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.BAD_TARGET_EPOCH});
     }
 
+    // Pre-deneb:
     // [IGNORE] aggregate.data.slot is within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
     // -- i.e. aggregate.data.slot + ATTESTATION_PROPAGATION_SLOT_RANGE >= current_slot >= aggregate.data.slot
     // (a client MAY queue future aggregates for processing at the appropriate slot).
+    // Post-deneb:
+    // [IGNORE] `aggregate.data.slot` is equal to or earlier than the `current_slot` (with a `MAXIMUM_GOSSIP_CLOCK_DISPARITY` allowance)
+    // -- i.e. `aggregate.data.slot <= current_slot`
+    //   (a client MAY queue future aggregates for processing at the appropriate slot).
+    // [IGNORE] the epoch of `aggregate.data.slot` is either the current or previous epoch
+    //   (with a `MAXIMUM_GOSSIP_CLOCK_DISPARITY` allowance)
+    // -- i.e. `compute_epoch_at_slot(aggregate.data.slot) in (get_previous_epoch(state), get_current_epoch(state))`
     verifyPropagationSlotRange(fork, chain, attSlot);
   }
 
@@ -128,7 +136,7 @@ async function validateAggregateAndProof(
     : toRootHex(ssz.phase0.AttestationData.hashTreeRoot(attData));
   if (
     !skipValidationKnownAttesters &&
-    chain.seenAggregatedAttestations.isKnown(targetEpoch, attDataRootHex, aggregationBits)
+    chain.seenAggregatedAttestations.isKnown(targetEpoch, attIndex, attDataRootHex, aggregationBits)
   ) {
     throw new AttestationError(GossipAction.IGNORE, {
       code: AttestationErrorCode.ATTESTERS_ALREADY_KNOWN,
@@ -240,6 +248,7 @@ async function validateAggregateAndProof(
   chain.seenAggregators.add(targetEpoch, aggregatorIndex);
   chain.seenAggregatedAttestations.add(
     targetEpoch,
+    attIndex,
     attDataRootHex,
     {aggregationBits, trueBitCount: attestingIndices.length},
     false

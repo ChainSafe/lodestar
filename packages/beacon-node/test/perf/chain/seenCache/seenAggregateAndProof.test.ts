@@ -28,6 +28,7 @@ describe("SeenAggregatedAttestations perf test", () => {
   ];
 
   for (const {id, aggregationBits} of testCases) {
+    const committeeIndex = 0;
     bench({
       id,
       beforeEach: () => {
@@ -38,13 +39,13 @@ describe("SeenAggregatedAttestations perf test", () => {
             aggregationBits: toAggregationBitsSingleFalse(i),
             trueBitCount: numAttestersInByte * 8 - 1,
           };
-          seenCache.add(targetEpoch, attDataRoot, aggregationInfo, false);
+          seenCache.add(targetEpoch, committeeIndex, attDataRoot, aggregationInfo, false);
         }
 
         return seenCache;
       },
       fn: (seenCache) => {
-        seenCache.isKnown(targetEpoch, attDataRoot, aggregationBits);
+        seenCache.isKnown(targetEpoch, committeeIndex, attDataRoot, aggregationBits);
       },
     });
   }

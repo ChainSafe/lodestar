@@ -1,16 +1,17 @@
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {routes} from "@lodestar/api";
+import {SpecJson} from "@lodestar/config";
 import {LoggerNodeOpts} from "@lodestar/logger/node";
 import {ResponseIncoming} from "@lodestar/reqresp";
 import {phase0} from "@lodestar/types";
+import {PeerIdStr} from "../../util/peerId.js";
 import {NetworkOptions} from "../options.js";
 import {PeerAction, PeerScoreStats} from "../peers/index.js";
 import {OutgoingRequestArgs} from "../reqresp/types.js";
 import {CommitteeSubscription} from "../subnets/interface.js";
 
 export type MultiaddrStr = string;
-export type PeerIdStr = string;
 
 // Interface shared by main Network class, and all backends
 export interface INetworkCorePublic {
@@ -73,7 +74,7 @@ export interface INetworkCore extends INetworkCorePublic {
 export type NetworkWorkerData = {
   // TODO: Review if NetworkOptions is safe for passing
   opts: NetworkOptions;
-  chainConfigJson: Record<string, string>;
+  chainConfigJson: SpecJson;
   genesisValidatorsRoot: Uint8Array;
   genesisTime: number;
   activeValidatorCount: number;

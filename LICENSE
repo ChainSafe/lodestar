@@ -175,22 +175,6 @@
 
    END OF TERMS AND CONDITIONS
 
-   License applies to:
-   - lodestar/packages/api
-   - lodestar/packages/config
-   - lodestar/packages/db
-   - lodestar/packages/flare
-   - lodestar/packages/fork-choice
-   - lodestar/packages/light-client
-   - lodestar/packages/logger
-   - lodestar/packages/params
-   - lodestar/packages/reqresp
-   - lodestar/packages/spec-test-util
-   - lodestar/packages/state-transition
-   - lodestar/packages/test-utils
-   - lodestar/packages/types
-   - lodestar/packages/utils
-
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at

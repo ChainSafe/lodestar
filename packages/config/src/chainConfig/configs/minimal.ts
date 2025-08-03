@@ -126,5 +126,8 @@ export const chainConfig: ChainConfig = {
   NODE_CUSTODY_REQUIREMENT: 1,
   VALIDATOR_CUSTODY_REQUIREMENT: 8,
   BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: 32000000000,
-  MAX_BLOBS_PER_BLOCK_FULU: 12,
+
+  // Blob Scheduling
+  // ---------------------------------------------------------------
+  BLOB_SCHEDULE: [],
 };

@@ -64,7 +64,11 @@ export function sszTypesFor<F extends ForkName, K extends keyof SSZTypesByFork[F
   fork: F,
   typeName?: K
 ): SSZTypesFor<F, K> {
-  return (
-    typeName === undefined ? typesByFork[fork] : typesByFork[fork][typeName as keyof SSZTypesByFork[F]]
-  ) as SSZTypesFor<F, K>;
+  const sszTypes = typesByFork[fork];
+
+  if (sszTypes === undefined) {
+    throw Error(`SSZ types for fork ${fork} are not defined`);
+  }
+
+  return (typeName === undefined ? sszTypes : sszTypes[typeName as keyof SSZTypesByFork[F]]) as SSZTypesFor<F, K>;
 }

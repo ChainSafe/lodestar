@@ -40,7 +40,7 @@ jobs:
         id: node
         run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT
       - name: Restore dependencies
-        uses: actions/cache@master
+        uses: actions/cache@v4
         id: cache-deps
         with:
           path: |
@@ -57,7 +57,7 @@ jobs:
 
       # Restore performance downloaded states
       - name: Restore performance state cache
-        uses: actions/cache@master
+        uses: actions/cache@v4
         with:
           path: packages/state-transition/test-cache
           key: perf-states-${{ hashFiles('packages/state-transition/test/perf/params.ts') }}

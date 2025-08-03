@@ -23,7 +23,6 @@ import {Network, getReqRespHandlers} from "../network/index.js";
 import {BackfillSync} from "../sync/backfill/index.js";
 import {BeaconSync, IBeaconSync} from "../sync/index.js";
 import {Clock} from "../util/clock.js";
-import {TrustedFileMode, initCKZG, loadEthereumTrustedSetup} from "../util/kzg.js";
 import {runNodeNotifier} from "./notifier.js";
 import {IBeaconNodeOptions} from "./options.js";
 
@@ -161,7 +160,7 @@ export class BeaconNode {
     metricsRegistries = [],
   }: BeaconNodeInitModules): Promise<T> {
     if (hasher.name !== "hashtree") {
-      throw Error(`Loaded incorrect hasher ${hasher.name}, expected hashtree`);
+      logger.warn(`hashtree is not supported, using hasher ${hasher.name}`);
     }
 
     const controller = new AbortController();
@@ -169,12 +168,6 @@ export class BeaconNode {
     // Since it is perfectly fine to have listeners > 10
     setMaxListeners(Infinity, controller.signal);
     const signal = controller.signal;
-
-    // If deneb is configured, load the trusted setup
-    if (config.DENEB_FORK_EPOCH < Infinity) {
-      await initCKZG();
-      loadEthereumTrustedSetup(TrustedFileMode.Txt, opts.chain.trustedSetup);
-    }
 
     let metrics = null;
     if (
@@ -192,7 +185,7 @@ export class BeaconNode {
     const validatorMonitor =
       opts.metrics.enabled || opts.validatorMonitor.validatorMonitorLogs
         ? createValidatorMonitor(
-            metrics,
+            metrics?.register ?? null,
             config,
             anchorState.genesisTime,
             logger.child({module: LoggerModule.vmon}),

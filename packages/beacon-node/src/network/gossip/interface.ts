@@ -1,7 +1,6 @@
 import {PeerIdStr} from "@chainsafe/libp2p-gossipsub/types";
 import {Message, TopicValidatorResult} from "@libp2p/interface";
-import {BeaconConfig} from "@lodestar/config";
-import {ForkName} from "@lodestar/params";
+import {BeaconConfig, ForkBoundary} from "@lodestar/config";
 import {
   AttesterSlashing,
   LightClientFinalityUpdate,
@@ -50,7 +49,7 @@ export enum GossipEncoding {
  */
 export interface IGossipTopic {
   type: GossipType;
-  fork: ForkName;
+  boundary: ForkBoundary;
   encoding?: GossipEncoding;
 }
 

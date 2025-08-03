@@ -12,7 +12,7 @@ import {ResponseIncoming, ResponseOutgoing} from "@lodestar/reqresp";
 import {phase0} from "@lodestar/types";
 import {Metrics} from "../../metrics/index.js";
 import {AsyncIterableBridgeCaller, AsyncIterableBridgeHandler} from "../../util/asyncIterableToEvents.js";
-import {peerIdFromString} from "../../util/peerId.js";
+import {PeerIdStr, peerIdFromString} from "../../util/peerId.js";
 import {terminateWorkerThread, wireEventsOnMainThread} from "../../util/workerEvents.js";
 import {NetworkEventBus, NetworkEventData, networkEventDirection} from "../events.js";
 import {NetworkOptions} from "../options.js";
@@ -27,7 +27,7 @@ import {
   getReqRespBridgeRespEvents,
   reqRespBridgeEventDirection,
 } from "./events.js";
-import {INetworkCore, MultiaddrStr, NetworkWorkerApi, NetworkWorkerData, PeerIdStr} from "./types.js";
+import {INetworkCore, MultiaddrStr, NetworkWorkerApi, NetworkWorkerData} from "./types.js";
 
 // Worker constructor consider the path relative to the current working directory
 const workerDir = process.env.NODE_ENV === "test" ? "../../../lib/network/core/" : "./";

@@ -12,6 +12,7 @@ export type {
   CachedBeaconStateCapella,
   CachedBeaconStateDeneb,
   CachedBeaconStateElectra,
+  CachedBeaconStateFulu,
   CachedBeaconStateAllForks,
   CachedBeaconStateExecutions,
   // Non-cached states
@@ -21,6 +22,7 @@ export type {
   BeaconStateCapella,
   BeaconStateDeneb,
   BeaconStateElectra,
+  BeaconStateFulu,
   BeaconStateAllForks,
   BeaconStateExecutions,
 } from "./types.js";
@@ -69,3 +71,5 @@ export {becomesNewEth1Data} from "./block/processEth1Data.js";
 export {getExpectedWithdrawals} from "./block/processWithdrawals.js";
 
 export {getAttestationParticipationStatus, processAttestationsAltair} from "./block/processAttestationsAltair.js";
+
+export {ProposerRewardType} from "./block/types.js";

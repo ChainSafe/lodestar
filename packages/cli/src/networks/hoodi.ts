@@ -2,6 +2,7 @@ export {hoodiChainConfig as chainConfig} from "@lodestar/config/networks";
 
 export const depositContractDeployBlock = 0;
 export const genesisFileUrl = "https://media.githubusercontent.com/media/eth-clients/hoodi/main/metadata/genesis.ssz";
+export const genesisStateRoot = "0x2683ebc120f91f740c7bed4c866672d01e1ba51b4cc360297138465ee5df40f0";
 export const bootnodesFileUrl =
   "https://raw.githubusercontent.com/eth-clients/hoodi/main/metadata/bootstrap_nodes.yaml";
 

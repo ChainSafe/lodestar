@@ -16,9 +16,9 @@ import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   createCachedBeaconState,
-  getCurrentSlot,
   getEffectiveBalanceIncrementsZeroInactive,
   isCachedBeaconState,
+  processSlots,
 } from "@lodestar/state-transition";
 import {
   BeaconBlock,
@@ -142,7 +142,7 @@ export class BeaconChain implements IBeaconChain {
   readonly attestationPool: AttestationPool;
   readonly aggregatedAttestationPool: AggregatedAttestationPool;
   readonly syncCommitteeMessagePool: SyncCommitteeMessagePool;
-  readonly syncContributionAndProofPool = new SyncContributionAndProofPool();
+  readonly syncContributionAndProofPool;
   readonly opPool = new OpPool();
 
   // Gossip seen cache
@@ -254,6 +254,7 @@ export class BeaconChain implements IBeaconChain {
       preAggregateCutOffTime,
       this.opts?.preaggregateSlotDistance
     );
+    this.syncContributionAndProofPool = new SyncContributionAndProofPool(clock, metrics, logger);
 
     this.seenAggregatedAttestations = new SeenAggregatedAttestations(metrics);
     this.seenContributionAndProof = new SeenContributionAndProof(metrics);
@@ -392,11 +393,6 @@ export class BeaconChain implements IBeaconChain {
 
     if (metrics) {
       metrics.clockSlot.addCollect(() => this.onScrapeMetrics(metrics));
-      // Register a single collect() function to run all validatorMonitor metrics
-      metrics.validatorMonitor.validatorsConnected.addCollect(() => {
-        const clockSlot = getCurrentSlot(config, this.genesisTime);
-        this.validatorMonitor?.scrapeMetrics(clockSlot);
-      });
     }
 
     // Event handlers. emitter is created internally and dropped on close(). Not need to .removeListener()
@@ -664,13 +660,10 @@ export class BeaconChain implements IBeaconChain {
     // TODO: To avoid breaking changes for metric define this attribute
     const blockType = BlockType.Full;
 
-    return produceCommonBlockBody.call(this, blockType, state, {
-      ...blockAttributes,
-      parentSlot: slot - 1,
-    });
+    return produceCommonBlockBody.call(this, blockType, state, blockAttributes);
   }
 
-  produceBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
+  produceBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise?: Promise<CommonBlockBody>}): Promise<{
     block: BeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Wei;
@@ -679,7 +672,7 @@ export class BeaconChain implements IBeaconChain {
     return this.produceBlockWrapper<BlockType.Full>(BlockType.Full, blockAttributes);
   }
 
-  produceBlindedBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
+  produceBlindedBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise?: Promise<CommonBlockBody>}): Promise<{
     block: BlindedBeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Wei;
@@ -694,9 +687,10 @@ export class BeaconChain implements IBeaconChain {
       graffiti,
       slot,
       feeRecipient,
-      commonBlockBody,
+      commonBlockBodyPromise,
       parentBlockRoot,
-    }: BlockAttributes & {commonBlockBody?: CommonBlockBody}
+      parentSlot,
+    }: BlockAttributes & {commonBlockBodyPromise?: Promise<CommonBlockBody>}
   ): Promise<{
     block: AssembledBlockType<T>;
     executionPayloadValue: Wei;
@@ -721,11 +715,11 @@ export class BeaconChain implements IBeaconChain {
         graffiti,
         slot,
         feeRecipient,
-        parentSlot: slot - 1,
+        parentSlot,
         parentBlockRoot,
         proposerIndex,
         proposerPubKey,
-        commonBlockBody,
+        commonBlockBodyPromise,
       }
     );
 
@@ -814,11 +808,13 @@ export class BeaconChain implements IBeaconChain {
   getStatus(): phase0.Status {
     const head = this.forkChoice.getHead();
     const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
+    const boundary = this.config.getForkBoundaryAtEpoch(this.clock.currentEpoch);
     return {
       // fork_digest: The node's ForkDigest (compute_fork_digest(current_fork_version, genesis_validators_root)) where
       // - current_fork_version is the fork version at the node's current epoch defined by the wall-clock time (not necessarily the epoch to which the node is sync)
       // - genesis_validators_root is the static Root found in state.genesis_validators_root
-      forkDigest: this.config.forkName2ForkDigest(this.config.getForkName(this.clock.currentSlot)),
+      // - epoch of fork boundary is used to get blob parameters of current Blob Parameter Only (BPO) fork
+      forkDigest: this.config.forkBoundary2ForkDigest(boundary),
       // finalized_root: state.finalized_checkpoint.root for the state corresponding to the head block (Note this defaults to Root(b'\x00' * 32) for the genesis finalized checkpoint).
       finalizedRoot: finalizedCheckpoint.epoch === GENESIS_EPOCH ? ZERO_HASH : finalizedCheckpoint.root,
       finalizedEpoch: finalizedCheckpoint.epoch,
@@ -833,9 +829,9 @@ export class BeaconChain implements IBeaconChain {
     const timer = this.metrics?.forkChoice.findHead.startTimer({caller});
 
     try {
-      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetCanonicialHead}).head;
+      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetCanonicalHead}).head;
     } catch (e) {
-      this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetCanonicialHead});
+      this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetCanonicalHead});
       throw e;
     } finally {
       timer?.();
@@ -845,9 +841,10 @@ export class BeaconChain implements IBeaconChain {
   predictProposerHead(slot: Slot): ProtoBlock {
     this.metrics?.forkChoice.requests.inc();
     const timer = this.metrics?.forkChoice.findHead.startTimer({caller: FindHeadFnName.predictProposerHead});
+    const secFromSlot = this.clock.secFromSlot(slot);
 
     try {
-      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetPredictedProposerHead, slot}).head;
+      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetPredictedProposerHead, secFromSlot, slot}).head;
     } catch (e) {
       this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetPredictedProposerHead});
       throw e;
@@ -1109,7 +1106,7 @@ export class BeaconChain implements IBeaconChain {
     metrics.opPool.proposerSlashingPoolSize.set(this.opPool.proposerSlashingsSize);
     metrics.opPool.voluntaryExitPoolSize.set(this.opPool.voluntaryExitsSize);
     metrics.opPool.syncCommitteeMessagePoolSize.set(this.syncCommitteeMessagePool.size);
-    metrics.opPool.syncContributionAndProofPoolSize.set(this.syncContributionAndProofPool.size);
+    // syncContributionAndProofPool tracks metrics on its own
     metrics.opPool.blsToExecutionChangePoolSize.set(this.opPool.blsToExecutionChangeSize);
     metrics.chain.blacklistedBlocks.set(this.blacklistedBlocks.size);
 
@@ -1120,6 +1117,14 @@ export class BeaconChain implements IBeaconChain {
     metrics.forkChoice.balancesLength.set(forkChoiceMetrics.balancesLength);
     metrics.forkChoice.nodes.set(forkChoiceMetrics.nodes);
     metrics.forkChoice.indices.set(forkChoiceMetrics.indices);
+
+    const fork = this.config.getForkName(this.clock.currentSlot);
+    if (isForkPostElectra(fork)) {
+      const headStateElectra = this.getHeadState() as BeaconStateElectra;
+      metrics.pendingDeposits.set(headStateElectra.pendingDeposits.length);
+      metrics.pendingPartialWithdrawals.set(headStateElectra.pendingPartialWithdrawals.length);
+      metrics.pendingConsolidations.set(headStateElectra.pendingConsolidations.length);
+    }
   }
 
   private onClockSlot(slot: Slot): void {
@@ -1246,11 +1251,13 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async getBlockRewards(block: BeaconBlock | BlindedBeaconBlock): Promise<BlockRewards> {
-    const preState = this.regen.getPreStateSync(block);
+    let preState = this.regen.getPreStateSync(block);
 
     if (preState === null) {
       throw Error(`Pre-state is unavailable given block's parent root ${toRootHex(block.parentRoot)}`);
     }
+
+    preState = processSlots(preState, block.slot); // Dial preState's slot to block.slot
 
     const postState = this.regen.getStateSync(toRootHex(block.stateRoot)) ?? undefined;
 
@@ -1287,11 +1294,13 @@ export class BeaconChain implements IBeaconChain {
     block: BeaconBlock | BlindedBeaconBlock,
     validatorIds?: (ValidatorIndex | string)[]
   ): Promise<SyncCommitteeRewards> {
-    const preState = this.regen.getPreStateSync(block);
+    let preState = this.regen.getPreStateSync(block);
 
     if (preState === null) {
       throw Error(`Pre-state is unavailable given block's parent root ${toRootHex(block.parentRoot)}`);
     }
+
+    preState = processSlots(preState, block.slot); // Dial preState's slot to block.slot
 
     return computeSyncCommitteeRewards(block, preState.clone(), validatorIds);
   }
