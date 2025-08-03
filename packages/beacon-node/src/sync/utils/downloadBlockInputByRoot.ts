@@ -76,7 +76,7 @@ export async function downloadAndCacheBlock({
     return pending;
   }
 
-  const blockInput = cache.getBlockInputByBlock({
+  const blockInput = cache.getByBlock({
     block: response.data,
     source: BlockInputSource.byRoot,
     seenTimestampSec: Date.now(),
