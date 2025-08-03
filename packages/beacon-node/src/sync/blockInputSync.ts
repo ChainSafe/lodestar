@@ -504,8 +504,9 @@ export class BlockInputByRootSync {
             this.removeAndDownScoreAllDescendants(block);
         }
       } else {
+        // Probably a queue error or something unwanted happened, mark as downloaded and pending processing to try again latter
         this.logger.debug(
-          "Unknown error processing block from unknown block sync",
+          "Unknown error in BlockInputByRootSync.processBlock()",
           block.blockInput.getLogMeta(),
           res.err
         );
