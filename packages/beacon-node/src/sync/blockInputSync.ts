@@ -341,6 +341,9 @@ export class BlockInputByRootSync {
         parentRootHex,
         ...blockInput.getLogMeta(),
       });
+      // TODO(fulu): there are some edge cases where this may not be the prudent thing to do.  Need to come back and
+      //      look at this again.
+      //      https://github.com/ChainSafe/lodestar/pull/7846#discussion_r2214088968
       this.removeAndDownScoreAllDescendants(block);
     } else {
       this.addUnknownBlockRoot(blockInput.parentRootHex);
