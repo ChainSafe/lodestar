@@ -1,12 +1,6 @@
 import {digest} from "@chainsafe/as-sha256";
 import {ChainForkConfig} from "@lodestar/config";
-import {
-  DATA_COLUMN_SIDECAR_SUBNET_COUNT,
-  EFFECTIVE_BALANCE_INCREMENT,
-  ForkName,
-  NUMBER_OF_COLUMNS,
-  NUMBER_OF_CUSTODY_GROUPS,
-} from "@lodestar/params";
+import {EFFECTIVE_BALANCE_INCREMENT, ForkName} from "@lodestar/params";
 import {CachedBeaconStateAllForks, signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {ColumnIndex, CustodyIndex, SignedBeaconBlockHeader, ValidatorIndex, deneb, fulu} from "@lodestar/types";
 import {ssz} from "@lodestar/types";
@@ -98,33 +92,33 @@ export class CustodyConfig {
     this.config = config;
     this.nodeId = nodeId;
     this.metrics = metrics;
-    this.targetCustodyGroupCount = opts.supernode ? NUMBER_OF_CUSTODY_GROUPS : config.CUSTODY_REQUIREMENT;
-    this.custodyColumns = getDataColumns(this.nodeId, this.targetCustodyGroupCount);
+    this.targetCustodyGroupCount = opts.supernode ? config.NUMBER_OF_CUSTODY_GROUPS : config.CUSTODY_REQUIREMENT;
+    this.custodyColumns = getDataColumns(config, this.nodeId, this.targetCustodyGroupCount);
     this.custodyColumnsIndex = this.getCustodyColumnsIndex(this.custodyColumns);
     this.metrics?.peerDas.custodyGroupCount.set(this.targetCustodyGroupCount);
     this.sampledGroupCount = Math.max(this.targetCustodyGroupCount, this.config.SAMPLES_PER_SLOT);
-    this.sampleGroups = getCustodyGroups(this.nodeId, this.sampledGroupCount);
-    this.sampledColumns = getDataColumns(this.nodeId, this.sampledGroupCount);
-    this.sampledSubnets = this.sampledColumns.map(computeSubnetForDataColumn);
+    this.sampleGroups = getCustodyGroups(config, this.nodeId, this.sampledGroupCount);
+    this.sampledColumns = getDataColumns(config, this.nodeId, this.sampledGroupCount);
+    this.sampledSubnets = this.sampledColumns.map(this.computeSubnetForDataColumn.bind(this));
   }
 
   updateTargetCustodyGroupCount(targetCustodyGroupCount: number) {
     this.targetCustodyGroupCount = targetCustodyGroupCount;
-    this.custodyColumns = getDataColumns(this.nodeId, this.targetCustodyGroupCount);
+    this.custodyColumns = getDataColumns(this.config, this.nodeId, this.targetCustodyGroupCount);
     this.custodyColumnsIndex = this.getCustodyColumnsIndex(this.custodyColumns);
     // TODO: Porting this over to match current behavior, but I think this incorrectly mixes units:
     // SAMPLES_PER_SLOT is in columns, and CUSTODY_GROUP_COUNT is in groups
     this.sampledGroupCount = Math.max(this.targetCustodyGroupCount, this.config.SAMPLES_PER_SLOT);
-    this.sampleGroups = getCustodyGroups(this.nodeId, this.sampledGroupCount);
-    this.sampledColumns = getDataColumns(this.nodeId, this.sampledGroupCount);
-    this.sampledSubnets = this.sampledColumns.map(computeSubnetForDataColumn);
+    this.sampleGroups = getCustodyGroups(this.config, this.nodeId, this.sampledGroupCount);
+    this.sampledColumns = getDataColumns(this.config, this.nodeId, this.sampledGroupCount);
+    this.sampledSubnets = this.sampledColumns.map(this.computeSubnetForDataColumn.bind(this));
     this.metrics?.peerDas.custodyGroupCount.set(this.targetCustodyGroupCount);
   }
 
   private getCustodyColumnsIndex(custodyColumns: ColumnIndex[]): Uint8Array {
     // custody columns map which column maps to which index in the array of columns custodied
     // with zero representing it is not custodied
-    const custodyColumnsIndex = new Uint8Array(NUMBER_OF_COLUMNS);
+    const custodyColumnsIndex = new Uint8Array(this.config.NUMBER_OF_COLUMNS);
     let custodyAtIndex = 1;
     for (const columnIndex of custodyColumns) {
       custodyColumnsIndex[columnIndex] = custodyAtIndex;
@@ -132,10 +126,10 @@ export class CustodyConfig {
     }
     return custodyColumnsIndex;
   }
-}
 
-function computeSubnetForDataColumn(columnIndex: ColumnIndex): number {
-  return columnIndex % DATA_COLUMN_SIDECAR_SUBNET_COUNT;
+  private computeSubnetForDataColumn(columnIndex: ColumnIndex): number {
+    return columnIndex % this.config.DATA_COLUMN_SIDECAR_SUBNET_COUNT;
+  }
 }
 
 /**
@@ -166,7 +160,7 @@ export function getValidatorsCustodyRequirement(
   validatorsCustodyRequirement = Math.max(validatorsCustodyRequirement, config.VALIDATOR_CUSTODY_REQUIREMENT);
 
   // Cannot custody more than NUMBER_OF_CUSTODY_GROUPS
-  validatorsCustodyRequirement = Math.min(validatorsCustodyRequirement, NUMBER_OF_CUSTODY_GROUPS);
+  validatorsCustodyRequirement = Math.min(validatorsCustodyRequirement, config.NUMBER_OF_CUSTODY_GROUPS);
 
   return validatorsCustodyRequirement;
 }
@@ -178,14 +172,14 @@ export function getValidatorsCustodyRequirement(
  * SPEC FUNCTION
  * https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/das-core.md#compute_columns_for_custody_group
  */
-export function computeColumnsForCustodyGroup(custodyIndex: CustodyIndex): ColumnIndex[] {
-  if (custodyIndex > NUMBER_OF_CUSTODY_GROUPS) {
-    custodyIndex = NUMBER_OF_CUSTODY_GROUPS;
+export function computeColumnsForCustodyGroup(config: ChainForkConfig, custodyIndex: CustodyIndex): ColumnIndex[] {
+  if (custodyIndex > config.NUMBER_OF_CUSTODY_GROUPS) {
+    custodyIndex = config.NUMBER_OF_CUSTODY_GROUPS;
   }
-  const columnsPerCustodyGroup = Number(NUMBER_OF_COLUMNS / NUMBER_OF_CUSTODY_GROUPS);
+  const columnsPerCustodyGroup = Number(config.NUMBER_OF_COLUMNS / config.NUMBER_OF_CUSTODY_GROUPS);
   const columnIndexes = [];
   for (let i = 0; i < columnsPerCustodyGroup; i++) {
-    columnIndexes.push(NUMBER_OF_CUSTODY_GROUPS * i + custodyIndex);
+    columnIndexes.push(config.NUMBER_OF_CUSTODY_GROUPS * i + custodyIndex);
   }
   columnIndexes.sort((a, b) => a - b);
   return columnIndexes;
@@ -198,9 +192,9 @@ export function computeColumnsForCustodyGroup(custodyIndex: CustodyIndex): Colum
  * SPEC FUNCTION
  * https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/das-core.md#get_custody_groups
  */
-export function getCustodyGroups(nodeId: NodeId, custodyGroupCount: number): CustodyIndex[] {
-  if (custodyGroupCount > NUMBER_OF_CUSTODY_GROUPS) {
-    custodyGroupCount = NUMBER_OF_CUSTODY_GROUPS;
+export function getCustodyGroups(config: ChainForkConfig, nodeId: NodeId, custodyGroupCount: number): CustodyIndex[] {
+  if (custodyGroupCount > config.NUMBER_OF_CUSTODY_GROUPS) {
+    custodyGroupCount = config.NUMBER_OF_CUSTODY_GROUPS;
   }
 
   const custodyGroups: CustodyIndex[] = [];
@@ -210,7 +204,7 @@ export function getCustodyGroups(nodeId: NodeId, custodyGroupCount: number): Cus
     // could be optimized
     const currentIdBytes = ssz.UintBn256.serialize(currentId);
     const custodyGroup = Number(
-      ssz.UintBn64.deserialize(digest(currentIdBytes).slice(0, 8)) % BigInt(NUMBER_OF_CUSTODY_GROUPS)
+      ssz.UintBn64.deserialize(digest(currentIdBytes).slice(0, 8)) % BigInt(config.NUMBER_OF_CUSTODY_GROUPS)
     );
 
     if (!custodyGroups.includes(custodyGroup)) {
@@ -229,9 +223,9 @@ export function getCustodyGroups(nodeId: NodeId, custodyGroupCount: number): Cus
   return custodyGroups;
 }
 
-export function getDataColumns(nodeId: NodeId, custodyGroupCount: number): ColumnIndex[] {
-  return getCustodyGroups(nodeId, custodyGroupCount)
-    .flatMap(computeColumnsForCustodyGroup)
+export function getDataColumns(config: ChainForkConfig, nodeId: NodeId, custodyGroupCount: number): ColumnIndex[] {
+  return getCustodyGroups(config, nodeId, custodyGroupCount)
+    .flatMap((custodyIndex) => computeColumnsForCustodyGroup(config, custodyIndex))
     .sort((a, b) => a - b);
 }
 
@@ -257,6 +251,7 @@ export function getCellsAndProofs(blobBundles: fulu.BlobAndProofV2[]): {cells: U
  * https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/validator.md#get_data_column_sidecars
  */
 export function getDataColumnSidecars(
+  config: ChainForkConfig,
   signedBlockHeader: SignedBeaconBlockHeader,
   kzgCommitments: deneb.KZGCommitment[],
   kzgCommitmentsInclusionProof: fulu.KzgCommitmentsInclusionProof,
@@ -267,7 +262,7 @@ export function getDataColumnSidecars(
   }
 
   const sidecars: fulu.DataColumnSidecars = [];
-  for (let columnIndex = 0; columnIndex < NUMBER_OF_COLUMNS; columnIndex++) {
+  for (let columnIndex = 0; columnIndex < config.NUMBER_OF_COLUMNS; columnIndex++) {
     const columnCells = [];
     const columnProofs = [];
     for (const {cells, proofs} of cellsAndKzgProofs) {
@@ -304,7 +299,13 @@ export function getDataColumnSidecarsFromBlock(
 
   const kzgCommitmentsInclusionProof = computeKzgCommitmentsInclusionProof(fork, signedBlock.message.body);
 
-  return getDataColumnSidecars(signedBlockHeader, blobKzgCommitments, kzgCommitmentsInclusionProof, cellsAndKzgProofs);
+  return getDataColumnSidecars(
+    config,
+    signedBlockHeader,
+    blobKzgCommitments,
+    kzgCommitmentsInclusionProof,
+    cellsAndKzgProofs
+  );
 }
 
 /**
@@ -315,10 +316,12 @@ export function getDataColumnSidecarsFromBlock(
  * https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/validator.md#get_data_column_sidecars_from_column_sidecar
  */
 export function getDataColumnSidecarsFromColumnSidecar(
+  config: ChainForkConfig,
   sidecar: fulu.DataColumnSidecar,
   cellsAndKzgProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[]
 ): fulu.DataColumnSidecars {
   return getDataColumnSidecars(
+    config,
     sidecar.signedBlockHeader,
     sidecar.kzgCommitments,
     sidecar.kzgCommitmentsInclusionProof,
@@ -331,16 +334,17 @@ export function getDataColumnSidecarsFromColumnSidecar(
  */
 export async function recoverDataColumnSidecars(
   dataColumnCache: DataColumnsCacheMap,
+  config: ChainForkConfig,
   clock: IClock,
   metrics: Metrics | null
 ): Promise<RecoverResult> {
   const columnCount = dataColumnCache.size;
-  if (columnCount >= NUMBER_OF_COLUMNS) {
+  if (columnCount >= config.NUMBER_OF_COLUMNS) {
     // We have all columns
     return RecoverResult.NotAttemptedFull;
   }
 
-  if (columnCount < NUMBER_OF_COLUMNS / 2) {
+  if (columnCount < config.NUMBER_OF_COLUMNS / 2) {
     // We don't have enough columns to recover
     return RecoverResult.NotAttemptedLessThanHalf;
   }
@@ -350,7 +354,7 @@ export async function recoverDataColumnSidecars(
   const partialSidecars = new Map<number, fulu.DataColumnSidecar>();
   for (const [columnIndex, {dataColumn}] of dataColumnCache.entries()) {
     // the more columns we put, the slower the recover
-    if (partialSidecars.size >= NUMBER_OF_COLUMNS / 2) {
+    if (partialSidecars.size >= config.NUMBER_OF_COLUMNS / 2) {
       break;
     }
     partialSidecars.set(columnIndex, dataColumn);
@@ -358,7 +362,7 @@ export async function recoverDataColumnSidecars(
 
   const timer = metrics?.peerDas.dataColumnsReconstructionTime.startTimer();
   // if this function throws, we catch at the consumer side
-  const fullSidecars = await recover(partialSidecars);
+  const fullSidecars = await recover(config, partialSidecars);
   timer?.();
   if (fullSidecars == null) {
     return RecoverResult.Failed;
@@ -374,13 +378,13 @@ export async function recoverDataColumnSidecars(
   const secFromSlot = clock.secFromSlot(slot);
   metrics?.recoverDataColumnSidecars.elapsedTimeTillReconstructed.observe(secFromSlot);
 
-  if (dataColumnCache.size === NUMBER_OF_COLUMNS) {
+  if (dataColumnCache.size === config.NUMBER_OF_COLUMNS) {
     // either gossip or getBlobsV2 resolved availability while we were recovering
     return RecoverResult.SuccessLate;
   }
 
   // We successfully recovered the data columns, update the cache
-  for (let columnIndex = 0; columnIndex < NUMBER_OF_COLUMNS; columnIndex++) {
+  for (let columnIndex = 0; columnIndex < config.NUMBER_OF_COLUMNS; columnIndex++) {
     if (dataColumnCache.has(columnIndex)) {
       // We already have this column
       continue;
@@ -391,7 +395,7 @@ export async function recoverDataColumnSidecars(
       throw new Error(`full sidecars is undefined at index ${columnIndex}`);
     }
     dataColumnCache.set(columnIndex, {dataColumn: sidecar, dataColumnBytes: null});
-    metrics?.peerDas.reconstructedColumns.inc(NUMBER_OF_COLUMNS - partialColumns);
+    metrics?.peerDas.reconstructedColumns.inc(config.NUMBER_OF_COLUMNS - partialColumns);
   }
 
   return RecoverResult.SuccessResolved;
@@ -481,7 +485,7 @@ export async function getDataColumnsFromExecution(
     if (!firstSidecar) {
       throw new Error("blockInputCache missing both block and data column sidecar");
     }
-    dataColumnSidecars = getDataColumnSidecarsFromColumnSidecar(firstSidecar.dataColumn, cellsAndProofs);
+    dataColumnSidecars = getDataColumnSidecarsFromColumnSidecar(config, firstSidecar.dataColumn, cellsAndProofs);
   }
 
   // Publish columns if and only if subscribed to them
@@ -504,7 +508,7 @@ export async function getDataColumnsFromExecution(
   };
   const partialColumns = blockCache.cachedData.dataColumnsCache.size;
   blockCache.cachedData.resolveAvailability(blockData);
-  metrics?.dataColumns.bySource.inc({source: DataColumnsSource.engine}, NUMBER_OF_COLUMNS - partialColumns);
+  metrics?.dataColumns.bySource.inc({source: DataColumnsSource.engine}, config.NUMBER_OF_COLUMNS - partialColumns);
 
   if (blockCache.block !== undefined) {
     const blockInput = getBlockInput.availableData(config, blockCache.block, BlockSource.gossip, blockData);

@@ -1,6 +1,6 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, INTERVALS_PER_SLOT, NUMBER_OF_COLUMNS} from "@lodestar/params";
+import {ForkName, INTERVALS_PER_SLOT} from "@lodestar/params";
 import {ColumnIndex, Root, RootHex, deneb} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {Logger, fromHex, pruneSetToMax, toRootHex} from "@lodestar/utils";
@@ -361,7 +361,7 @@ export class UnknownBlockSync {
         this.pendingBlocks.set(block.blockRootHex, block);
         block.status = PendingBlockStatus.pending;
         // parentSlot > finalizedSlot, continue downloading parent of parent
-        block.downloadAttempts += this.config.CUSTODY_REQUIREMENT / NUMBER_OF_COLUMNS;
+        block.downloadAttempts += this.config.CUSTODY_REQUIREMENT / this.config.NUMBER_OF_COLUMNS;
         const errorData = {root: block.blockRootHex, attempts: block.downloadAttempts, unknownBlockType};
         if (block.downloadAttempts > MAX_ATTEMPTS_PER_BLOCK) {
           // Give up on this block and assume it does not exist, penalizing all peers as if it was a bad block

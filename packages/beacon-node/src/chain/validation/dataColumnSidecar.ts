@@ -1,12 +1,8 @@
-import {
-  DATA_COLUMN_SIDECAR_SUBNET_COUNT,
-  KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH,
-  KZG_COMMITMENTS_SUBTREE_INDEX,
-  NUMBER_OF_COLUMNS,
-} from "@lodestar/params";
+import {KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH, KZG_COMMITMENTS_SUBTREE_INDEX} from "@lodestar/params";
 import {Root, Slot, SubnetID, deneb, fulu, ssz} from "@lodestar/types";
 import {toHex, toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 
+import {ChainConfig, ChainForkConfig} from "@lodestar/config";
 import {computeStartSlotAtEpoch, getBlockHeaderProposerSignatureSet} from "@lodestar/state-transition";
 import {Metrics} from "../../metrics/metrics.js";
 import {byteArrayEquals} from "../../util/bytes.js";
@@ -27,10 +23,10 @@ export async function validateGossipDataColumnSidecar(
   const blockHeader = dataColumnSidecar.signedBlockHeader.message;
 
   // 1) [REJECT] The sidecar is valid as verified by verify_data_column_sidecar
-  verifyDataColumnSidecar(dataColumnSidecar);
+  verifyDataColumnSidecar(chain.config, dataColumnSidecar);
 
   // 2) [REJECT] The sidecar is for the correct subnet -- i.e. compute_subnet_for_data_column_sidecar(sidecar.index) == subnet_id
-  if (computeSubnetForDataColumnSidecar(dataColumnSidecar) !== gossipSubnet) {
+  if (computeSubnetForDataColumnSidecar(chain.config, dataColumnSidecar) !== gossipSubnet) {
     throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
       code: DataColumnSidecarErrorCode.INVALID_SUBNET,
       columnIdx: dataColumnSidecar.index,
@@ -180,6 +176,7 @@ export async function validateDataColumnsSidecars(
   blockRoot: Root,
   blockKzgCommitments: deneb.BlobKzgCommitments,
   dataColumnSidecars: fulu.DataColumnSidecars,
+  config: ChainForkConfig,
   metrics: Metrics | null,
   opts: {skipProofsCheck: boolean} = {skipProofsCheck: false}
 ): Promise<void> {
@@ -208,7 +205,7 @@ export async function validateDataColumnsSidecars(
       );
     }
 
-    if (columnIndex >= NUMBER_OF_COLUMNS) {
+    if (columnIndex >= config.NUMBER_OF_COLUMNS) {
       throw new Error(
         `Invalid data sidecar columnIndex=${columnIndex} in slot=${blockSlot} blockRoot=${toHex(blockRoot)} sidecarsIndex=${sidecarsIndex}`
       );
@@ -249,8 +246,8 @@ export async function validateDataColumnsSidecars(
  * SPEC FUNCTION
  * https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/p2p-interface.md#verify_data_column_sidecar
  */
-export function verifyDataColumnSidecar(dataColumnSidecar: fulu.DataColumnSidecar): void {
-  if (dataColumnSidecar.index >= NUMBER_OF_COLUMNS) {
+export function verifyDataColumnSidecar(config: ChainConfig, dataColumnSidecar: fulu.DataColumnSidecar): void {
+  if (dataColumnSidecar.index >= config.NUMBER_OF_COLUMNS) {
     throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
       code: DataColumnSidecarErrorCode.INVALID_INDEX,
       columnIdx: dataColumnSidecar.index,
@@ -317,6 +314,9 @@ export function verifyDataColumnSidecarInclusionProof(dataColumnSidecar: fulu.Da
  * SPEC FUNCTION
  * https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/p2p-interface.md#compute_subnet_for_data_column_sidecar
  */
-export function computeSubnetForDataColumnSidecar(columnSidecar: fulu.DataColumnSidecar): SubnetID {
-  return columnSidecar.index % DATA_COLUMN_SIDECAR_SUBNET_COUNT;
+export function computeSubnetForDataColumnSidecar(
+  config: ChainConfig,
+  columnSidecar: fulu.DataColumnSidecar
+): SubnetID {
+  return columnSidecar.index % config.DATA_COLUMN_SIDECAR_SUBNET_COUNT;
 }

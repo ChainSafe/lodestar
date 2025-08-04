@@ -256,6 +256,7 @@ describe("unavailableBeaconBlobsByRoot", () => {
       );
 
       const sampledSidecars = getDataColumnSidecars(
+        chainConfig,
         blockheader,
         blobscommitmentsandproofs.map((b) => b.kzgCommitment),
         computeKzgCommitmentsInclusionProof(ForkName.fulu, signedBlock.message.body),

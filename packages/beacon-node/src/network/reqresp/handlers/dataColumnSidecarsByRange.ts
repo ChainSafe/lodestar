@@ -1,7 +1,8 @@
-import {GENESIS_SLOT, MAX_REQUEST_BLOCKS_DENEB, NUMBER_OF_COLUMNS} from "@lodestar/params";
+import {BeaconConfig} from "@lodestar/config";
+import {GENESIS_SLOT} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {ColumnIndex, Slot, fulu, ssz} from "@lodestar/types";
+import {ColumnIndex, Slot, ssz} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
@@ -11,14 +12,15 @@ import {
   DATA_COLUMN_SIDECARS_IN_WRAPPER_INDEX,
   NUM_COLUMNS_IN_WRAPPER_INDEX,
 } from "../../../db/repositories/dataColumnSidecars.js";
+import {DataColumnSidecarsByRangeRequest} from "../../../util/types.js";
 
 export async function* onDataColumnSidecarsByRange(
-  request: fulu.DataColumnSidecarsByRangeRequest,
+  request: DataColumnSidecarsByRangeRequest,
   chain: IBeaconChain,
   db: IBeaconDb
 ): AsyncIterable<ResponseOutgoing> {
   // Non-finalized range of blobs
-  const {startSlot, count, columns} = validateDataColumnSidecarsByRangeRequest(request);
+  const {startSlot, count, columns} = validateDataColumnSidecarsByRangeRequest(chain.config, request);
   const endSlot = startSlot + count;
 
   const finalized = db.dataColumnSidecarsArchive;
@@ -98,7 +100,7 @@ export function* iterateDataColumnBytesFromWrapper(
   const columnsSize = ssz.UintNum64.deserialize(retrievedColumnsSizeBytes);
   const dataColumnsIndex = dataColumnSidecarsBytesWrapped.slice(
     CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX,
-    CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX + NUMBER_OF_COLUMNS
+    CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX + chain.config.NUMBER_OF_COLUMNS
   );
   const allDataColumnSidecarsBytes = dataColumnSidecarsBytesWrapped.slice(
     DATA_COLUMN_SIDECARS_IN_WRAPPER_INDEX + 4 * retrivedColumnsLen
@@ -144,8 +146,9 @@ export function* iterateDataColumnBytesFromWrapper(
 }
 
 export function validateDataColumnSidecarsByRangeRequest(
-  request: fulu.DataColumnSidecarsByRangeRequest
-): fulu.DataColumnSidecarsByRangeRequest {
+  config: BeaconConfig,
+  request: DataColumnSidecarsByRangeRequest
+): DataColumnSidecarsByRangeRequest {
   const {startSlot, columns} = request;
   let {count} = request;
 
@@ -157,8 +160,8 @@ export function validateDataColumnSidecarsByRangeRequest(
     throw new ResponseError(RespStatus.INVALID_REQUEST, "startSlot < genesis");
   }
 
-  if (count > MAX_REQUEST_BLOCKS_DENEB) {
-    count = MAX_REQUEST_BLOCKS_DENEB;
+  if (count > config.MAX_REQUEST_DATA_COLUMN_SIDECARS) {
+    count = config.MAX_REQUEST_DATA_COLUMN_SIDECARS;
   }
 
   return {startSlot, count, columns};

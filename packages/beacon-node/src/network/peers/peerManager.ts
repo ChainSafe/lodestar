@@ -347,12 +347,12 @@ export class PeerManager {
       // TODO(fulu): this should be columns not groups.  need to change everywhere
       const custodyGroups =
         oldMetadata == null || oldMetadata.custodyGroups == null || custodyGroupCount !== oldMetadata.custodyGroupCount
-          ? getCustodyGroups(nodeId, custodyGroupCount)
+          ? getCustodyGroups(this.config, nodeId, custodyGroupCount)
           : oldMetadata.custodyGroups;
       const oldSamplingGroupCount = Math.max(this.config.SAMPLES_PER_SLOT, oldMetadata?.custodyGroupCount ?? 0);
       const samplingGroups =
         oldMetadata == null || oldMetadata.samplingGroups == null || samplingGroupCount !== oldSamplingGroupCount
-          ? getCustodyGroups(nodeId, samplingGroupCount)
+          ? getCustodyGroups(this.config, nodeId, samplingGroupCount)
           : oldMetadata.samplingGroups;
       peerData.metadata = {
         seqNumber: metadata.seqNumber,
@@ -447,9 +447,10 @@ export class PeerManager {
       const custodyGroupCount = peerData?.metadata?.custodyGroupCount;
 
       const peerCustodyGroupCount = custodyGroupCount ?? this.config.CUSTODY_REQUIREMENT;
-      const dataColumns = getDataColumns(nodeId, peerCustodyGroupCount);
+      const dataColumns = getDataColumns(this.config, nodeId, peerCustodyGroupCount);
       // on metadata, we should have custodyGroupss
-      const peerCustodyGroups = peerData?.metadata?.custodyGroups ?? getCustodyGroups(nodeId, peerCustodyGroupCount);
+      const peerCustodyGroups =
+        peerData?.metadata?.custodyGroups ?? getCustodyGroups(this.config, nodeId, peerCustodyGroupCount);
 
       const sampleSubnets = this.networkConfig.getCustodyConfig().sampledSubnets;
       const matchingSubnetsNum = sampleSubnets.reduce((acc, elem) => acc + (dataColumns.includes(elem) ? 1 : 0), 0);

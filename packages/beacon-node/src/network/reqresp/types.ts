@@ -14,7 +14,14 @@ import {
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
-import {BlobSidecarsByRootRequest, BlobSidecarsByRootRequestType} from "../../util/types.js";
+import {
+  BlobSidecarsByRootRequest,
+  BlobSidecarsByRootRequestType,
+  DataColumnSidecarsByRangeRequest,
+  DataColumnSidecarsByRangeRequestType,
+  DataColumnSidecarsByRootRequest,
+  DataColumnSidecarsByRootRequestType,
+} from "../../util/types.js";
 
 export type ProtocolNoHandler = Omit<Protocol, "handler">;
 
@@ -47,8 +54,8 @@ export type RequestBodyByMethod = {
   [ReqRespMethod.BeaconBlocksByRoot]: phase0.BeaconBlocksByRootRequest;
   [ReqRespMethod.BlobSidecarsByRange]: deneb.BlobSidecarsByRangeRequest;
   [ReqRespMethod.BlobSidecarsByRoot]: BlobSidecarsByRootRequest;
-  [ReqRespMethod.DataColumnSidecarsByRange]: fulu.DataColumnSidecarsByRangeRequest;
-  [ReqRespMethod.DataColumnSidecarsByRoot]: fulu.DataColumnSidecarsByRootRequest;
+  [ReqRespMethod.DataColumnSidecarsByRange]: DataColumnSidecarsByRangeRequest;
+  [ReqRespMethod.DataColumnSidecarsByRoot]: DataColumnSidecarsByRootRequest;
   [ReqRespMethod.LightClientBootstrap]: Root;
   [ReqRespMethod.LightClientUpdatesByRange]: altair.LightClientUpdatesByRange;
   [ReqRespMethod.LightClientFinalityUpdate]: null;
@@ -90,8 +97,8 @@ export const requestSszTypeByMethod: (
   [ReqRespMethod.BeaconBlocksByRoot]: ssz.phase0.BeaconBlocksByRootRequest,
   [ReqRespMethod.BlobSidecarsByRange]: ssz.deneb.BlobSidecarsByRangeRequest,
   [ReqRespMethod.BlobSidecarsByRoot]: BlobSidecarsByRootRequestType(fork, config),
-  [ReqRespMethod.DataColumnSidecarsByRange]: ssz.fulu.DataColumnSidecarsByRangeRequest,
-  [ReqRespMethod.DataColumnSidecarsByRoot]: ssz.fulu.DataColumnSidecarsByRootRequest,
+  [ReqRespMethod.DataColumnSidecarsByRange]: DataColumnSidecarsByRangeRequestType(config),
+  [ReqRespMethod.DataColumnSidecarsByRoot]: DataColumnSidecarsByRootRequestType(config),
 
   [ReqRespMethod.LightClientBootstrap]: ssz.Root,
   [ReqRespMethod.LightClientUpdatesByRange]: ssz.altair.LightClientUpdatesByRange,

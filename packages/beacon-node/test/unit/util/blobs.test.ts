@@ -1,5 +1,4 @@
 import {createChainForkConfig} from "@lodestar/config";
-import {NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {deneb, fulu, ssz} from "@lodestar/types";
 import {describe, expect, it} from "vitest";
 import {computeDataColumnSidecars, reconstructBlobs} from "../../../src/util/blobs.js";
@@ -43,10 +42,10 @@ describe("computeDataColumnSidecars", () => {
     });
 
     // Verify the results
-    expect(sidecars.length).toBe(NUMBER_OF_COLUMNS);
+    expect(sidecars.length).toBe(config.NUMBER_OF_COLUMNS);
     expect(sidecars[0].column.length).toBe(blobs.length);
     for (let i = 0; i < blobs.length; i++) {
-      for (let j = 0; j < NUMBER_OF_COLUMNS; j++) {
+      for (let j = 0; j < config.NUMBER_OF_COLUMNS; j++) {
         expect(sidecars[j].column[i]).toEqual(cells[i][j]);
       }
     }
@@ -80,10 +79,10 @@ describe("computeDataColumnSidecars", () => {
     });
 
     // Verify the results
-    expect(sidecars.length).toBe(NUMBER_OF_COLUMNS);
+    expect(sidecars.length).toBe(config.NUMBER_OF_COLUMNS);
     expect(sidecars[0].column.length).toBe(blobs.length);
     for (let i = 0; i < blobs.length; i++) {
-      for (let j = 0; j < NUMBER_OF_COLUMNS; j++) {
+      for (let j = 0; j < config.NUMBER_OF_COLUMNS; j++) {
         expect(sidecars[j].column[i]).toEqual(cells[i][j]);
       }
     }
@@ -139,7 +138,7 @@ describe("reconstructBlobs", () => {
   });
 
   it("should reconstruct blobs from a complete set of data columns", async () => {
-    expect(await reconstructBlobs(sidecars)).toEqual(blobs);
+    expect(await reconstructBlobs(config, sidecars)).toEqual(blobs);
   });
 
   it("should reconstruct blobs from at least half of the data columns", async () => {
@@ -147,14 +146,14 @@ describe("reconstructBlobs", () => {
     const randomHalf = sidecars
       .slice()
       .sort(() => Math.random() - 0.5)
-      .slice(0, NUMBER_OF_COLUMNS / 2);
+      .slice(0, config.NUMBER_OF_COLUMNS / 2);
 
-    expect(await reconstructBlobs(randomHalf)).toEqual(blobs);
+    expect(await reconstructBlobs(config, randomHalf)).toEqual(blobs);
   });
 
   it("should throw if less than half of the data columns are provided", async () => {
-    const lessThanHalf = sidecars.slice(0, NUMBER_OF_COLUMNS / 2 - 10);
+    const lessThanHalf = sidecars.slice(0, config.NUMBER_OF_COLUMNS / 2 - 10);
 
-    await expect(reconstructBlobs(lessThanHalf)).rejects.toThrow();
+    await expect(reconstructBlobs(config, lessThanHalf)).rejects.toThrow();
   });
 });

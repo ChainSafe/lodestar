@@ -125,9 +125,17 @@ async function maybeValidateBlobs(
       } else if (blockData.fork === ForkName.fulu) {
         const {dataColumns} = blockData as BlockInputDataColumns;
         const skipProofsCheck = opts.validBlobSidecars === BlobSidecarValidation.Individual;
-        await validateDataColumnsSidecars(blockSlot, beaconBlockRoot, blobKzgCommitments, dataColumns, chain.metrics, {
-          skipProofsCheck,
-        });
+        await validateDataColumnsSidecars(
+          blockSlot,
+          beaconBlockRoot,
+          blobKzgCommitments,
+          dataColumns,
+          chain.config,
+          chain.metrics,
+          {
+            skipProofsCheck,
+          }
+        );
       }
 
       const availableBlockInput = getBlockInput.availableData(

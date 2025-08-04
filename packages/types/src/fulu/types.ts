@@ -9,17 +9,12 @@ export type Status = ValueOf<typeof ssz.Status>;
 
 export type Cell = ValueOf<typeof ssz.Cell>;
 export type DataColumn = ValueOf<typeof ssz.DataColumn>;
-export type ExtendedMatrix = ValueOf<typeof ssz.ExtendedMatrix>;
 export type KzgCommitmentsInclusionProof = ValueOf<typeof ssz.KzgCommitmentsInclusionProof>;
 export type DataColumnSidecar = ValueOf<typeof ssz.DataColumnSidecar>;
 export type DataColumnSidecars = ValueOf<typeof ssz.DataColumnSidecars>;
 export type MatrixEntry = ValueOf<typeof ssz.MatrixEntry>;
 
 export type ProposerLookahead = ValueOf<typeof ssz.ProposerLookahead>;
-
-export type DataColumnsByRootIdentifier = ValueOf<typeof ssz.DataColumnsByRootIdentifier>;
-export type DataColumnSidecarsByRootRequest = ValueOf<typeof ssz.DataColumnSidecarsByRootRequest>;
-export type DataColumnSidecarsByRangeRequest = ValueOf<typeof ssz.DataColumnSidecarsByRangeRequest>;
 
 export type ExecutionPayloadAndBlobsBundle = ValueOf<typeof ssz.ExecutionPayloadAndBlobsBundle>;
 

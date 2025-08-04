@@ -19,6 +19,7 @@ import {
 import {getEmptyBlockInputCacheEntry} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {Metrics} from "../../metrics/index.js";
 import {PeerIdStr} from "../../util/peerId.js";
+import {DataColumnSidecarsByRangeRequestType} from "../../util/types.js";
 import {INetwork, WithOptionalBytes} from "../interface.js";
 import {PeerSyncMeta} from "../peers/peersData.js";
 
@@ -120,7 +121,7 @@ export async function beaconBlocksMaybeBlobsByRange(
     ]);
     logger?.debug("ByRange requests", {
       beaconBlocksRequest: JSON.stringify(ssz.phase0.BeaconBlocksByRangeRequest.toJson(request)),
-      dataColumnRequest: JSON.stringify(ssz.fulu.DataColumnSidecarsByRangeRequest.toJson(dataColumnRequest)),
+      dataColumnRequest: JSON.stringify(DataColumnSidecarsByRangeRequestType(config).toJson(dataColumnRequest)),
       [`allBlocks(${allBlocks.length})`]: allBlocks.map((blk) => blk.data.message.slot).join(" "),
       [`allDataColumnSidecars(${allDataColumnSidecars.length})`]: allDataColumnSidecars
         .map((dCol) => `${dCol.signedBlockHeader.message.slot}:${dCol.index}`)

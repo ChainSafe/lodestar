@@ -1,4 +1,5 @@
 import path from "node:path";
+import {config} from "@lodestar/config/default";
 import {ACTIVE_PRESET} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {bigIntToBytes} from "@lodestar/utils";
@@ -20,10 +21,10 @@ type NetworkFn = (input: any) => number[];
 
 const networkingFns: Record<string, NetworkFn> = {
   compute_columns_for_custody_group(input: ComputeColumnForCustodyGroupInput): number[] {
-    return computeColumnsForCustodyGroup(Number(input.custody_group));
+    return computeColumnsForCustodyGroup(config, Number(input.custody_group));
   },
   get_custody_groups(input: GetCustodyGroupInput): number[] {
-    return getCustodyGroups(bigIntToBytes(input.node_id, 32, "be"), input.custody_group_count);
+    return getCustodyGroups(config, bigIntToBytes(input.node_id, 32, "be"), input.custody_group_count);
   },
 };
 

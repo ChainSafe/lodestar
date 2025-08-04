@@ -5,7 +5,7 @@ import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
-import {ForkSeq, NUMBER_OF_COLUMNS} from "@lodestar/params";
+import {ForkSeq} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
 import {computeEpochAtSlot, computeTimeAtSlot} from "@lodestar/state-transition";
 import {
@@ -36,7 +36,11 @@ import {IClock} from "../util/clock.js";
 import {CustodyConfig} from "../util/dataColumns.js";
 import {PeerIdStr, peerIdToString} from "../util/peerId.js";
 import {promiseAllMaybeAsync} from "../util/promises.js";
-import {BlobSidecarsByRootRequest} from "../util/types.js";
+import {
+  BlobSidecarsByRootRequest,
+  DataColumnSidecarsByRangeRequest,
+  DataColumnSidecarsByRootRequest,
+} from "../util/types.js";
 import {INetworkCore, NetworkCore, WorkerNetworkCore} from "./core/index.js";
 import {INetworkEventBus, NetworkEvent, NetworkEventBus, NetworkEventData} from "./events.js";
 import {getActiveForkBoundaries} from "./forks.js";
@@ -352,7 +356,7 @@ export class Network implements INetwork {
     const epoch = computeEpochAtSlot(dataColumnSidecar.signedBlockHeader.message.slot);
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);
 
-    const subnet = computeSubnetForDataColumnSidecar(dataColumnSidecar);
+    const subnet = computeSubnetForDataColumnSidecar(this.config, dataColumnSidecar);
     return this.publishGossip<GossipType.data_column_sidecar>(
       {type: GossipType.data_column_sidecar, boundary, subnet},
       dataColumnSidecar,
@@ -586,19 +590,19 @@ export class Network implements INetwork {
 
   async sendDataColumnSidecarsByRange(
     peerId: PeerIdStr,
-    request: fulu.DataColumnSidecarsByRangeRequest
+    request: DataColumnSidecarsByRangeRequest
   ): Promise<fulu.DataColumnSidecar[]> {
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.DataColumnSidecarsByRange, [Version.V1], request),
       // request's count represent the slots, so the actual max count received could be slots * blobs per slot
-      request.count * NUMBER_OF_COLUMNS,
+      request.count * this.config.NUMBER_OF_COLUMNS,
       responseSszTypeByMethod[ReqRespMethod.DataColumnSidecarsByRange]
     );
   }
 
   async sendDataColumnSidecarsByRoot(
     peerId: PeerIdStr,
-    request: fulu.DataColumnSidecarsByRootRequest
+    request: DataColumnSidecarsByRootRequest
   ): Promise<fulu.DataColumnSidecar[]> {
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.DataColumnSidecarsByRoot, [Version.V1], request),

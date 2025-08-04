@@ -36,7 +36,11 @@ import type {Datastore} from "interface-datastore";
 import {Libp2p as ILibp2p} from "libp2p";
 import {CustodyConfig} from "../util/dataColumns.js";
 import {PeerIdStr} from "../util/peerId.js";
-import {BlobSidecarsByRootRequest} from "../util/types.js";
+import {
+  BlobSidecarsByRootRequest,
+  DataColumnSidecarsByRangeRequest,
+  DataColumnSidecarsByRootRequest,
+} from "../util/types.js";
 import {INetworkCorePublic} from "./core/types.js";
 import {INetworkEventBus} from "./events.js";
 import {GossipType} from "./gossip/interface.js";
@@ -82,11 +86,11 @@ export interface INetwork extends INetworkCorePublic {
   sendBlobSidecarsByRoot(peerId: PeerIdStr, request: BlobSidecarsByRootRequest): Promise<deneb.BlobSidecar[]>;
   sendDataColumnSidecarsByRange(
     peerId: PeerIdStr,
-    request: fulu.DataColumnSidecarsByRangeRequest
+    request: DataColumnSidecarsByRangeRequest
   ): Promise<fulu.DataColumnSidecar[]>;
   sendDataColumnSidecarsByRoot(
     peerId: PeerIdStr,
-    request: fulu.DataColumnSidecarsByRootRequest
+    request: DataColumnSidecarsByRootRequest
   ): Promise<fulu.DataColumnSidecar[]>;
 
   // Gossip

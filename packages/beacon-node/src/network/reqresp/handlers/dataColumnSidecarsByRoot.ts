@@ -1,7 +1,6 @@
-import {NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {fulu, ssz} from "@lodestar/types";
+import {ssz} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
@@ -11,9 +10,10 @@ import {
   DATA_COLUMN_SIDECARS_IN_WRAPPER_INDEX,
   NUM_COLUMNS_IN_WRAPPER_INDEX,
 } from "../../../db/repositories/dataColumnSidecars.js";
+import {DataColumnSidecarsByRootRequest} from "../../../util/types.js";
 
 export async function* onDataColumnSidecarsByRoot(
-  requestBody: fulu.DataColumnSidecarsByRootRequest,
+  requestBody: DataColumnSidecarsByRootRequest,
   chain: IBeaconChain,
   db: IBeaconDb
 ): AsyncIterable<ResponseOutgoing> {
@@ -60,7 +60,7 @@ export async function* onDataColumnSidecarsByRoot(
 
     const dataColumnsIndex = dataColumnSidecarsBytesWrapped.slice(
       CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX,
-      CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX + NUMBER_OF_COLUMNS
+      CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX + chain.config.NUMBER_OF_COLUMNS
     );
 
     // const storedColumns = Array.from({length: NUMBER_OF_COLUMNS}, (_v, i) => i).filter(

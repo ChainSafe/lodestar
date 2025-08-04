@@ -1,6 +1,6 @@
 import {toHexString} from "@chainsafe/ssz";
-import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, NUMBER_OF_COLUMNS, isForkPostDeneb} from "@lodestar/params";
+import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
+import {ForkName, isForkPostDeneb} from "@lodestar/params";
 import {RootHex, SignedBeaconBlock, deneb, fulu, ssz} from "@lodestar/types";
 import {Logger, pruneSetToMax} from "@lodestar/utils";
 
@@ -94,6 +94,7 @@ const MAX_GOSSIPINPUT_CACHE = 5;
  */
 export class SeenGossipBlockInput {
   private readonly blockInputCache = new Map<RootHex, BlockInputCacheType>();
+  private readonly config: BeaconConfig;
   private readonly custodyConfig: CustodyConfig;
   private readonly executionEngine: IExecutionEngine;
   private readonly clock: IClock;
@@ -101,12 +102,14 @@ export class SeenGossipBlockInput {
   private readonly logger: Logger;
 
   constructor(
+    config: BeaconConfig,
     custodyConfig: CustodyConfig,
     executionEngine: IExecutionEngine,
     emitter: ChainEventEmitter,
     clock: IClock,
     logger: Logger
   ) {
+    this.config = config;
     this.custodyConfig = custodyConfig;
     this.executionEngine = executionEngine;
     this.clock = clock;
@@ -293,9 +296,9 @@ export class SeenGossipBlockInput {
         const {slot} = signedBlock.message;
         const blockInfo = `blockHex=${blockHex}, slot=${slot}`;
 
-        if (NUMBER_OF_COLUMNS < dataColumnsCache.size) {
+        if (config.NUMBER_OF_COLUMNS < dataColumnsCache.size) {
           throw Error(
-            `Received more dataColumns=${dataColumnsCache.size} than columns=${NUMBER_OF_COLUMNS} for ${blockInfo}`
+            `Received more dataColumns=${dataColumnsCache.size} than columns=${config.NUMBER_OF_COLUMNS} for ${blockInfo}`
           );
         }
 
@@ -340,9 +343,9 @@ export class SeenGossipBlockInput {
         const columnCount = dataColumnsCache.size;
         if (
           // only try to recover all columns with "--supernode"
-          this.custodyConfig.sampledColumns.length === NUMBER_OF_COLUMNS &&
-          columnCount >= NUMBER_OF_COLUMNS / 2 &&
-          columnCount < NUMBER_OF_COLUMNS &&
+          this.custodyConfig.sampledColumns.length === config.NUMBER_OF_COLUMNS &&
+          columnCount >= config.NUMBER_OF_COLUMNS / 2 &&
+          columnCount < config.NUMBER_OF_COLUMNS &&
           !calledRecover &&
           // doing recover right away is not efficient because it may delay data_column_sidecar validation
           this.clock.secFromSlot(slot) * 1000 >= BLOCK_AVAILABILITY_CUTOFF_MS
@@ -355,7 +358,12 @@ export class SeenGossipBlockInput {
               slot,
               dataColumns: dataColumnsCache.size,
             };
-            const recoverResult = await recoverDataColumnSidecars(dataColumnsCache, this.clock, metrics).catch((e) => {
+            const recoverResult = await recoverDataColumnSidecars(
+              dataColumnsCache,
+              this.config,
+              this.clock,
+              metrics
+            ).catch((e) => {
               this.logger.error("Error recovering data column sidecars", logCtx, e);
               return RecoverResult.Failed;
             });

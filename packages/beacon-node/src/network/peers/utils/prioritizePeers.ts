@@ -1,6 +1,6 @@
 import {BitArray} from "@chainsafe/ssz";
 import {Direction, PeerId} from "@libp2p/interface";
-import {ATTESTATION_SUBNET_COUNT, NUMBER_OF_CUSTODY_GROUPS, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {CustodyIndex, Status, SubnetID, altair, phase0} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
 import {shuffle} from "../../../util/shuffle.js";
@@ -301,7 +301,8 @@ function requestSubnetPeers(
   }
 
   const ourSamplingGroupSet = new Set(ourSamplingGroups);
-  for (let groupIndex = 0; groupIndex < NUMBER_OF_CUSTODY_GROUPS; groupIndex++) {
+  // TODO Fulu: why do we use 128 here, shouldn't this be based on our custody?
+  for (let groupIndex = 0; groupIndex < 128; groupIndex++) {
     const peersInGroup = peersPerGroup.get(groupIndex) ?? 0;
     metrics?.peerCountPerSamplingGroup.set({groupIndex}, peersInGroup);
     const targetGroupPeers = ourSamplingGroupSet.has(groupIndex)

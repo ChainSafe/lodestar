@@ -1,7 +1,6 @@
 import {fromHexString} from "@chainsafe/ssz";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ChainForkConfig} from "@lodestar/config";
-import {NUMBER_OF_COLUMNS, NUMBER_OF_CUSTODY_GROUPS} from "@lodestar/params";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {ValidatorIndex} from "@lodestar/types";
@@ -20,13 +19,6 @@ describe("getValidatorsCustodyRequirement", () => {
   let config: ChainForkConfig;
 
   beforeEach(() => {
-    // Create a mock state with validators effective balance increments
-    state = {
-      epochCtx: {
-        effectiveBalanceIncrements: new Uint8Array(NUMBER_OF_CUSTODY_GROUPS + 1).fill(32), // Each validator has 32 ETH (1 increment)
-      },
-    } as unknown as CachedBeaconStateAllForks;
-
     // Create a proper config using createChainForkConfig
     config = createChainForkConfig({
       ...defaultChainConfig,
@@ -40,6 +32,13 @@ describe("getValidatorsCustodyRequirement", () => {
       VALIDATOR_CUSTODY_REQUIREMENT: 8,
       CUSTODY_REQUIREMENT: 4,
     });
+
+    // Create a mock state with validators effective balance increments
+    state = {
+      epochCtx: {
+        effectiveBalanceIncrements: new Uint8Array(config.NUMBER_OF_CUSTODY_GROUPS + 1).fill(32), // Each validator has 32 ETH (1 increment)
+      },
+    } as unknown as CachedBeaconStateAllForks;
   });
 
   it("should return minimum requirement when total balance is below the balance per additional custody group", () => {
@@ -58,11 +57,11 @@ describe("getValidatorsCustodyRequirement", () => {
   it("should cap at maximum number of custody groups", () => {
     // Create a state with enough validators to exceed max groups
     const validatorIndices: ValidatorIndex[] = Array.from(
-      {length: NUMBER_OF_CUSTODY_GROUPS + 1},
+      {length: config.NUMBER_OF_CUSTODY_GROUPS + 1},
       (_, i) => i as ValidatorIndex
     );
     const result = getValidatorsCustodyRequirement(state, validatorIndices, config);
-    expect(result).toBe(NUMBER_OF_CUSTODY_GROUPS);
+    expect(result).toBe(config.NUMBER_OF_CUSTODY_GROUPS);
   });
 
   it("should handle zero validators", () => {
@@ -121,6 +120,8 @@ describe("CustodyConfig", () => {
 });
 
 describe("getDataColumns", () => {
+  const config = createChainForkConfig(defaultChainConfig);
+
   const testCases: [string, number, number[]][] = [
     ["cdbee32dc3c50e9711d22be5565c7e44ff6108af663b2dc5abd2df573d2fa83f", 4, [2, 80, 89, 118]],
     [
@@ -137,7 +138,7 @@ describe("getDataColumns", () => {
     it(`${nodeIdHex} / ${numSubnets}`, async () => {
       const nodeId = nodeIdHex.length === 64 ? fromHexString(nodeIdHex) : bigIntToBytes(BigInt(nodeIdHex), 32, "be");
 
-      const columnIndexs = getDataColumns(nodeId, numSubnets);
+      const columnIndexs = getDataColumns(config, nodeId, numSubnets);
       expect(columnIndexs).toEqual(custodyColumns);
     });
   }
@@ -183,11 +184,11 @@ describe("data column sidecars", () => {
       kzgProofs,
     });
 
-    expect(columnSidecars.length).toEqual(NUMBER_OF_COLUMNS);
+    expect(columnSidecars.length).toEqual(config.NUMBER_OF_COLUMNS);
     expect(columnSidecars[0].column.length).toEqual(blobs.length);
 
     await expect(
-      validateDataColumnsSidecars(slot, blockRoot, kzgCommitments, columnSidecars, null)
+      validateDataColumnsSidecars(slot, blockRoot, kzgCommitments, columnSidecars, config, null)
     ).resolves.toBeUndefined();
   });
 
@@ -223,10 +224,10 @@ describe("data column sidecars", () => {
       kzgProofs,
     });
 
-    expect(columnSidecars.length).toEqual(NUMBER_OF_COLUMNS);
+    expect(columnSidecars.length).toEqual(config.NUMBER_OF_COLUMNS);
     expect(columnSidecars[0].column.length).toEqual(blobs.length);
 
-    await expect(validateDataColumnsSidecars(slot, blockRoot, [], columnSidecars, null)).rejects.toThrow(
+    await expect(validateDataColumnsSidecars(slot, blockRoot, [], columnSidecars, config, null)).rejects.toThrow(
       `Invalid data column sidecar slot=${slot}`
     );
   });

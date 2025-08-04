@@ -1,20 +1,12 @@
-import {
-  ByteVectorType,
-  ContainerType,
-  ListBasicType,
-  ListCompositeType,
-  VectorBasicType,
-  VectorCompositeType,
-} from "@chainsafe/ssz";
+import {ByteVectorType, ContainerType, ListCompositeType, VectorBasicType, VectorCompositeType} from "@chainsafe/ssz";
 import {
   BYTES_PER_FIELD_ELEMENT,
+  CELLS_PER_EXT_BLOB,
   FIELD_ELEMENTS_PER_CELL,
   FIELD_ELEMENTS_PER_EXT_BLOB,
   KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH,
   MAX_BLOB_COMMITMENTS_PER_BLOCK,
-  MAX_REQUEST_BLOCKS_DENEB,
   MIN_SEED_LOOKAHEAD,
-  NUMBER_OF_COLUMNS,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
 
@@ -24,7 +16,7 @@ import {ssz as electraSsz} from "../electra/index.js";
 import {ssz as phase0Ssz} from "../phase0/index.js";
 import {ssz as primitiveSsz} from "../primitive/index.js";
 
-const {BLSSignature, Root, ColumnIndex, RowIndex, Bytes32, Slot, UintNum64, ValidatorIndex} = primitiveSsz;
+const {BLSSignature, ColumnIndex, RowIndex, Bytes32, Slot, UintNum64, ValidatorIndex} = primitiveSsz;
 
 export const KZGProof = denebSsz.KZGProof;
 export const Blob = denebSsz.Blob;
@@ -46,7 +38,6 @@ export const Status = new ContainerType(
 
 export const Cell = new ByteVectorType(BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_CELL);
 export const DataColumn = new ListCompositeType(Cell, MAX_BLOB_COMMITMENTS_PER_BLOCK);
-export const ExtendedMatrix = new ListCompositeType(Cell, MAX_BLOB_COMMITMENTS_PER_BLOCK * NUMBER_OF_COLUMNS);
 export const KzgCommitmentsInclusionProof = new VectorCompositeType(Bytes32, KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH);
 export const KZGProofs = new ListCompositeType(
   denebSsz.KZGProof,
@@ -66,7 +57,7 @@ export const DataColumnSidecar = new ContainerType(
   {typeName: "DataColumnSidecar", jsonCase: "eth2"}
 );
 
-export const DataColumnSidecars = new ListCompositeType(DataColumnSidecar, NUMBER_OF_COLUMNS);
+export const DataColumnSidecars = new ListCompositeType(DataColumnSidecar, CELLS_PER_EXT_BLOB);
 
 export const MatrixEntry = new ContainerType(
   {
@@ -76,31 +67,6 @@ export const MatrixEntry = new ContainerType(
     rowIndex: RowIndex,
   },
   {typeName: "MatrixEntry", jsonCase: "eth2"}
-);
-
-// ReqResp types
-// =============
-
-export const DataColumnsByRootIdentifier = new ContainerType(
-  {
-    blockRoot: Root,
-    columns: new ListBasicType(ColumnIndex, NUMBER_OF_COLUMNS),
-  },
-  {typeName: "DataColumnsByRootIdentifier", jsonCase: "eth2"}
-);
-
-export const DataColumnSidecarsByRootRequest = new ListCompositeType(
-  DataColumnsByRootIdentifier,
-  MAX_REQUEST_BLOCKS_DENEB
-);
-
-export const DataColumnSidecarsByRangeRequest = new ContainerType(
-  {
-    startSlot: Slot,
-    count: UintNum64,
-    columns: new ListBasicType(ColumnIndex, NUMBER_OF_COLUMNS),
-  },
-  {typeName: "DataColumnSidecarsByRangeRequest", jsonCase: "eth2"}
 );
 
 export const ExecutionPayload = new ContainerType(

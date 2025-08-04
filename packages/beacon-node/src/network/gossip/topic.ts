@@ -1,7 +1,6 @@
 import {ChainConfig, ForkDigestContext} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
-  DATA_COLUMN_SIDECAR_SUBNET_COUNT,
   ForkName,
   ForkSeq,
   SYNC_COMMITTEE_SUBNET_COUNT,
@@ -244,7 +243,7 @@ export function getCoreTopicsAtFork(
   // After fulu also track data_column_sidecar_{index}
   if (ForkSeq[fork] >= ForkSeq.fulu) {
     // TODO: @matthewkeil check if this needs to be updated for custody groups
-    for (let subnet = 0; subnet < DATA_COLUMN_SIDECAR_SUBNET_COUNT; subnet++) {
+    for (let subnet = 0; subnet < config.DATA_COLUMN_SIDECAR_SUBNET_COUNT; subnet++) {
       topics.push({type: GossipType.data_column_sidecar, subnet});
     }
   }

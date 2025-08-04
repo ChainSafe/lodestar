@@ -1,7 +1,7 @@
 import {ByteVectorType, ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {Db, Repository} from "@lodestar/db";
-import {NUMBER_OF_COLUMNS} from "@lodestar/params";
+import {CELLS_PER_EXT_BLOB} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 
 import {Bucket, getBucketNameByValue} from "../buckets.js";
@@ -14,7 +14,7 @@ export const dataColumnSidecarsWrapperSsz = new ContainerType(
     dataColumnsSize: ssz.UintNum64,
     // // each byte[i] tells what index (1 based) the column i is stored, 0 means not custodied
     // max value to represent will be 128 which can be represented in a byte
-    dataColumnsIndex: new ByteVectorType(NUMBER_OF_COLUMNS),
+    dataColumnsIndex: new ByteVectorType(CELLS_PER_EXT_BLOB),
     dataColumnSidecars: ssz.fulu.DataColumnSidecars,
   },
   {typeName: "DataColumnSidecarsWrapper", jsonCase: "eth2"}
@@ -26,7 +26,7 @@ export const BLOCK_SLOT_IN_WRAPPER_INDEX = 32;
 export const NUM_COLUMNS_IN_WRAPPER_INDEX = 40;
 export const COLUMN_SIZE_IN_WRAPPER_INDEX = 41;
 export const CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX = 49;
-export const DATA_COLUMN_SIDECARS_IN_WRAPPER_INDEX = CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX + NUMBER_OF_COLUMNS + 4;
+export const DATA_COLUMN_SIDECARS_IN_WRAPPER_INDEX = CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX + CELLS_PER_EXT_BLOB + 4;
 
 /**
  * dataColumnSidecarsWrapper by block root (= hash_tree_root(SignedBeaconBlock.message))

@@ -3,7 +3,6 @@ import {ApiError, ApplicationMethods} from "@lodestar/api/server";
 import {
   ForkName,
   ForkPostBellatrix,
-  NUMBER_OF_COLUMNS,
   SLOTS_PER_HISTORICAL_ROOT,
   isForkPostBellatrix,
   isForkPostDeneb,
@@ -623,9 +622,9 @@ export function getBeaconBlockApi({
 
       if (isForkPostFulu(fork)) {
         const {targetCustodyGroupCount} = chain.custodyConfig;
-        if (targetCustodyGroupCount < NUMBER_OF_COLUMNS / 2) {
+        if (targetCustodyGroupCount < config.NUMBER_OF_COLUMNS / 2) {
           throw Error(
-            `Custody group count of ${targetCustodyGroupCount} is not sufficient to serve blobs, must custody at least ${NUMBER_OF_COLUMNS / 2} data columns`
+            `Custody group count of ${targetCustodyGroupCount} is not sufficient to serve blobs, must custody at least ${config.NUMBER_OF_COLUMNS / 2} data columns`
           );
         }
 
@@ -641,7 +640,7 @@ export function getBeaconBlockApi({
           );
         }
 
-        blobs = await reconstructBlobs(dataColumnSidecars);
+        blobs = await reconstructBlobs(config, dataColumnSidecars);
       } else if (isForkPostDeneb(fork)) {
         let {blobSidecars} = (await db.blobSidecars.get(blockRoot)) ?? {};
         if (!blobSidecars) {

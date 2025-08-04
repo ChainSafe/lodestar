@@ -10,7 +10,6 @@ import {
   ForkName,
   KZG_COMMITMENTS_GINDEX,
   KZG_COMMITMENT_GINDEX0,
-  NUMBER_OF_COLUMNS,
   VERSIONED_HASH_VERSION_KZG,
 } from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
@@ -93,11 +92,11 @@ export function computeDataColumnSidecars(
   const {blobs, kzgProofs} = contents;
   const cellsAndProofs = Array.from({length: blobs.length}, (_, rowNumber) => {
     const cells = contents.cells?.[rowNumber] ?? kzg.computeCells(blobs[rowNumber]);
-    const proofs = kzgProofs.slice(rowNumber * NUMBER_OF_COLUMNS, (rowNumber + 1) * NUMBER_OF_COLUMNS);
+    const proofs = kzgProofs.slice(rowNumber * config.NUMBER_OF_COLUMNS, (rowNumber + 1) * config.NUMBER_OF_COLUMNS);
     return {cells, proofs};
   });
 
-  return Array.from({length: NUMBER_OF_COLUMNS}, (_, columnIndex) => {
+  return Array.from({length: config.NUMBER_OF_COLUMNS}, (_, columnIndex) => {
     // columnIndex'th column
     const column = Array.from({length: blobs.length}, (_, rowNumber) => cellsAndProofs[rowNumber].cells[columnIndex]);
     const kzgProofs = Array.from(
@@ -120,15 +119,16 @@ export function computeDataColumnSidecars(
  * See https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/das-core.md#recover_matrix
  */
 export async function recoverDataColumnSidecars(
+  config: ChainForkConfig,
   partialSidecars: Map<number, fulu.DataColumnSidecar>
 ): Promise<fulu.DataColumnSidecars | null> {
   const columnCount = partialSidecars.size;
-  if (columnCount < NUMBER_OF_COLUMNS / 2) {
+  if (columnCount < config.NUMBER_OF_COLUMNS / 2) {
     // We don't have enough columns to recover
     return null;
   }
 
-  if (columnCount === NUMBER_OF_COLUMNS) {
+  if (columnCount === config.NUMBER_OF_COLUMNS) {
     // full columns, no need to recover
     return Array.from(partialSidecars.values());
   }
@@ -141,7 +141,7 @@ export async function recoverDataColumnSidecars(
   const blobCount = firstDataColumn.kzgCommitments.length;
 
   const fullColumns: Array<Uint8Array[]> = Array.from(
-    {length: NUMBER_OF_COLUMNS},
+    {length: config.NUMBER_OF_COLUMNS},
     () => new Array<Uint8Array>(blobCount)
   );
   const blobProofs: Array<Uint8Array[]> = Array.from({length: blobCount});
@@ -162,14 +162,14 @@ export async function recoverDataColumnSidecars(
   for (let blobIndex = 0; blobIndex < blobCount; blobIndex++) {
     const recoveredCells = cellsAndProofs[blobIndex].cells;
     blobProofs[blobIndex] = cellsAndProofs[blobIndex].proofs;
-    for (let columnIndex = 0; columnIndex < NUMBER_OF_COLUMNS; columnIndex++) {
+    for (let columnIndex = 0; columnIndex < config.NUMBER_OF_COLUMNS; columnIndex++) {
       fullColumns[columnIndex][blobIndex] = recoveredCells[columnIndex];
     }
   }
 
-  const result: fulu.DataColumnSidecars = new Array(NUMBER_OF_COLUMNS);
+  const result: fulu.DataColumnSidecars = new Array(config.NUMBER_OF_COLUMNS);
 
-  for (let columnIndex = 0; columnIndex < NUMBER_OF_COLUMNS; columnIndex++) {
+  for (let columnIndex = 0; columnIndex < config.NUMBER_OF_COLUMNS; columnIndex++) {
     let sidecar = partialSidecars.get(columnIndex);
     if (sidecar) {
       // We already have this column
@@ -195,21 +195,24 @@ export async function recoverDataColumnSidecars(
  * Reconstruct blobs from a set of data columns, at least 50%+ of all the columns
  * must be provided to allow to reconstruct the full data matrix
  */
-export async function reconstructBlobs(sidecars: fulu.DataColumnSidecars): Promise<deneb.Blobs> {
-  if (sidecars.length < NUMBER_OF_COLUMNS / 2) {
+export async function reconstructBlobs(
+  config: ChainForkConfig,
+  sidecars: fulu.DataColumnSidecars
+): Promise<deneb.Blobs> {
+  if (sidecars.length < config.NUMBER_OF_COLUMNS / 2) {
     throw Error(
-      `Expected at least ${NUMBER_OF_COLUMNS / 2} data columns to reconstruct blobs, received ${sidecars.length}`
+      `Expected at least ${config.NUMBER_OF_COLUMNS / 2} data columns to reconstruct blobs, received ${sidecars.length}`
     );
   }
 
   let fullSidecars: fulu.DataColumnSidecars;
 
-  if (sidecars.length === NUMBER_OF_COLUMNS) {
+  if (sidecars.length === config.NUMBER_OF_COLUMNS) {
     // Full columns, no need to recover
     fullSidecars = sidecars;
   } else {
     const sidecarsByIndex = new Map<number, fulu.DataColumnSidecar>(sidecars.map((sc) => [sc.index, sc]));
-    const recoveredSidecars = await recoverDataColumnSidecars(sidecarsByIndex);
+    const recoveredSidecars = await recoverDataColumnSidecars(config, sidecarsByIndex);
     if (recoveredSidecars === null) {
       // Should not happen because we check the column count above
       throw Error("Failed to reconstruct the full data matrix");

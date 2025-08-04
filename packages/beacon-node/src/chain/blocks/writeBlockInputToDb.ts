@@ -1,4 +1,4 @@
-import {ForkName, NUMBER_OF_COLUMNS} from "@lodestar/params";
+import {ForkName} from "@lodestar/params";
 import {fulu, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {toHex} from "@lodestar/utils";
@@ -57,7 +57,7 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInput: BlockI
         let dataColumnsIndex: Uint8Array;
         if (blobsLen === 0) {
           dataColumnsLen = 0;
-          dataColumnsIndex = new Uint8Array(NUMBER_OF_COLUMNS);
+          dataColumnsIndex = new Uint8Array(this.config.NUMBER_OF_COLUMNS);
         } else {
           dataColumnsLen = custodyColumns.length;
           dataColumnsIndex = custodyColumnsIndex;

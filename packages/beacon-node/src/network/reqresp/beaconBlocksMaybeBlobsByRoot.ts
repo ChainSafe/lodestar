@@ -28,6 +28,7 @@ import {Metrics} from "../../metrics/index.js";
 import {computeInclusionProof, kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {getDataColumnsFromExecution} from "../../util/dataColumns.js";
 import {PeerIdStr} from "../../util/peerId.js";
+import {DataColumnsByRootIdentifier} from "../../util/types.js";
 import {INetwork} from "../interface.js";
 import {PartialDownload, matchBlockWithBlobs, matchBlockWithDataColumns} from "./beaconBlocksMaybeBlobsByRange.js";
 
@@ -70,7 +71,7 @@ export async function beaconBlocksMaybeBlobsByRoot(
   let pendingDataColumns = null;
 
   const blobIdentifiers: deneb.BlobIdentifier[] = [];
-  const dataColumnsByRootIdentifiers: fulu.DataColumnsByRootIdentifier[] = [];
+  const dataColumnsByRootIdentifiers: DataColumnsByRootIdentifier[] = [];
 
   let prevFork = null;
   for (const block of allBlocks) {

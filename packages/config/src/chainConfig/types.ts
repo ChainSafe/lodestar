@@ -81,9 +81,14 @@ export type ChainConfig = {
   MAX_BLOBS_PER_BLOCK: number;
   MAX_REQUEST_BLOB_SIDECARS: number;
   BLOB_SIDECAR_SUBNET_COUNT_ELECTRA: number;
+  DATA_COLUMN_SIDECAR_SUBNET_COUNT: number;
   MAX_BLOBS_PER_BLOCK_ELECTRA: number;
   MAX_REQUEST_BLOB_SIDECARS_ELECTRA: number;
+  MAX_REQUEST_DATA_COLUMN_SIDECARS: number;
 
+  // Fulu
+  NUMBER_OF_COLUMNS: number;
+  NUMBER_OF_CUSTODY_GROUPS: number;
   SAMPLES_PER_SLOT: number;
   CUSTODY_REQUIREMENT: number;
   VALIDATOR_CUSTODY_REQUIREMENT: number;
@@ -159,7 +164,6 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   // Networking
   MIN_EPOCHS_FOR_BLOCK_REQUESTS: "number",
   MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: "number",
-  MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: "number",
   BLOB_SIDECAR_SUBNET_COUNT: "number",
   MAX_BLOBS_PER_BLOCK: "number",
   MAX_REQUEST_BLOB_SIDECARS: "number",
@@ -167,10 +171,16 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   MAX_BLOBS_PER_BLOCK_ELECTRA: "number",
   MAX_REQUEST_BLOB_SIDECARS_ELECTRA: "number",
 
+  // Fulu
+  NUMBER_OF_COLUMNS: "number",
+  NUMBER_OF_CUSTODY_GROUPS: "number",
+  DATA_COLUMN_SIDECAR_SUBNET_COUNT: "number",
+  MAX_REQUEST_DATA_COLUMN_SIDECARS: "number",
   SAMPLES_PER_SLOT: "number",
   CUSTODY_REQUIREMENT: "number",
   VALIDATOR_CUSTODY_REQUIREMENT: "number",
   BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: "number",
+  MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: "number",
 
   // Blob Scheduling
   BLOB_SCHEDULE: "blob_schedule",

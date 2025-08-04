@@ -281,6 +281,7 @@ export class BeaconChain implements IBeaconChain {
     const nodeId = computeNodeIdFromPrivateKey(privateKey);
     this.custodyConfig = new CustodyConfig(nodeId, config, metrics, this.opts);
     this.seenGossipBlockInput = new SeenGossipBlockInput(
+      config,
       this.custodyConfig,
       this.executionEngine,
       emitter,

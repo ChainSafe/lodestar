@@ -1,6 +1,5 @@
 import {createChainForkConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db";
-import {NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {rimraf} from "rimraf";
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
@@ -51,7 +50,7 @@ describe("block archive repository", () => {
     singedBlock.message.body.blobKzgCommitments.push(commitment);
     const allDataColumnSidecars = computeDataColumnSidecars(config, singedBlock, {
       blobs: [blob, blob, blob],
-      kzgProofs: Array.from({length: 3 * NUMBER_OF_COLUMNS}, () => kzgProof),
+      kzgProofs: Array.from({length: 3 * config.NUMBER_OF_COLUMNS}, () => kzgProof),
     });
     for (let j = 0; j < allDataColumnSidecars.length; j++) {
       allDataColumnSidecars[j].index = j;
@@ -65,7 +64,7 @@ describe("block archive repository", () => {
 
     const dataColumnSidecars = allDataColumnSidecars.slice(0, 7);
     const dataColumnsLen = dataColumnSidecars.length;
-    const dataColumnsIndex = Array.from({length: NUMBER_OF_COLUMNS}, (_v, _i) => 0);
+    const dataColumnsIndex = Array.from({length: config.NUMBER_OF_COLUMNS}, (_v, _i) => 0);
     for (let i = 0; i < dataColumnsLen; i++) {
       dataColumnsIndex[i] = i + 1;
     }

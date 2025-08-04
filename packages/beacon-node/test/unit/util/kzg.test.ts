@@ -1,5 +1,4 @@
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
-import {NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {deneb, fulu, ssz} from "@lodestar/types";
 import {afterEach, describe, expect, it} from "vitest";
@@ -121,7 +120,7 @@ describe("KZG", () => {
     });
 
     const partialSidecars = new Map<number, fulu.DataColumnSidecar>();
-    for (let i = 0; i < NUMBER_OF_COLUMNS; i++) {
+    for (let i = 0; i < config.NUMBER_OF_COLUMNS; i++) {
       if (i % 2 === 0) {
         // skip every second column to simulate partial sidecars
         continue;
@@ -137,13 +136,13 @@ describe("KZG", () => {
       }
     }
 
-    const recoveredSidecars = await recoverDataColumnSidecars(shuffledPartial);
+    const recoveredSidecars = await recoverDataColumnSidecars(config, shuffledPartial);
     expect(recoveredSidecars !== null).toBeTruthy();
     if (recoveredSidecars == null) {
       // should not happen
       throw new Error("Recovered sidecars should not be null");
     }
-    expect(recoveredSidecars.length).toBe(NUMBER_OF_COLUMNS);
+    expect(recoveredSidecars.length).toBe(config.NUMBER_OF_COLUMNS);
     expect(ssz.fulu.DataColumnSidecars.equals(recoveredSidecars, sidecars)).toBeTruthy();
   });
 });
