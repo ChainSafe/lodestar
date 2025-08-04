@@ -288,7 +288,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     chain.validatorMonitor?.registerBeaconBlock(OpSource.gossip, delaySec, signedBlock.message);
     // if blobs are not yet fully available start an aggressive blob pull
     if (blockInput.type === BlockInputType.dataPromise) {
-      events.emit(NetworkEvent.unknownBlockInput, {blockInput, peer: peerIdStr});
+      events.emit(NetworkEvent.blockInput, {
+        blockInput: convertOldBlockInputToNewBlockInput(blockInput),
+        source: BlockInputSource.gossip,
+        peer: peerIdStr,
+      });
     } else if (blockInput.type === BlockInputType.availableData) {
       metrics?.blockInputFetchStats.totalDataAvailableBlockInputs.inc();
       metrics?.blockInputFetchStats.totalDataAvailableBlockInputBlobs.inc(blockInput.blockData.blobs.length);
@@ -420,11 +424,19 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           // however we can emit the event which will atleast add the peer to the list of peers to pull
           // data from
           if (normalBlockInput.type === BlockInputType.dataPromise) {
-            events.emit(NetworkEvent.unknownBlockInput, {blockInput: normalBlockInput, peer: peerIdStr});
+            events.emit(NetworkEvent.blockInput, {
+              blockInput: convertOldBlockInputToNewBlockInput(normalBlockInput),
+              source: BlockInputSource.gossip,
+              peer: peerIdStr,
+            });
           }
         } else {
           chain.logger.debug("Block not available till BLOCK_AVAILABILITY_CUTOFF_MS", {blobSlot, index});
-          events.emit(NetworkEvent.unknownBlockInput, {blockInput, peer: peerIdStr});
+          events.emit(NetworkEvent.blockInput, {
+            blockInput: convertOldBlockInputToNewBlockInput(blockInput),
+            source: BlockInputSource.gossip,
+            peer: peerIdStr,
+          });
         }
       }
     },
