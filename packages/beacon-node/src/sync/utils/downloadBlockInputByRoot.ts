@@ -167,8 +167,6 @@ export async function downloadAndCacheData({
 export enum DownloadByRootErrorCode {
   INVALID_BLOCK_INPUT_TYPE = "DOWNLOAD_BY_ROOT_ERROR_INVALID_BLOCK_INPUT_TYPE",
   BLOCK_NOT_DOWNLOADED = "DOWNLOAD_BY_ROOT_ERROR_BLOCK_NOT_DOWNLOADED",
-
-  Z = "DOWNLOAD_BY_ROOT_ERROR_Z",
 }
 export type DownloadByRootErrorType =
   | {
