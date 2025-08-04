@@ -68,7 +68,7 @@ export async function downloadAndCacheBlock({
       blockRootHex,
       block: response.data,
       source: {
-        seenTimestampSec: Date.now(),
+        seenTimestampSec: Date.now() / 1000,
         source: BlockInputSource.byRoot,
         peerIdStr,
       },
@@ -79,7 +79,7 @@ export async function downloadAndCacheBlock({
   const blockInput = cache.getByBlock({
     block: response.data,
     source: BlockInputSource.byRoot,
-    seenTimestampSec: Date.now(),
+    seenTimestampSec: Date.now() / 1000,
     peerIdStr,
   });
   return {
@@ -124,7 +124,7 @@ export async function downloadAndCacheData({
           blockInput.addBlob({
             blobSidecar,
             blockRootHex: blockInput.blockRootHex,
-            seenTimestampSec: Date.now(),
+            seenTimestampSec: Date.now() / 1000,
             source: BlockInputSource.engine,
           });
         }
@@ -139,7 +139,7 @@ export async function downloadAndCacheData({
       peerIdStr,
       missingBlobsMeta.map(({blockRoot, index}) => ({blockRoot, index}))
     );
-    const seenTimestampSec = Date.now();
+    const seenTimestampSec = Date.now() / 1000;
 
     for (const blobSidecar of response) {
       const blockRoot = config
