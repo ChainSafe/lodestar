@@ -1,16 +1,8 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkPostDeneb, INTERVALS_PER_SLOT} from "@lodestar/params";
+import {INTERVALS_PER_SLOT} from "@lodestar/params";
 import {RootHex} from "@lodestar/types";
 import {LodestarError, Logger, fromHex, prettyBytes, prettyPrintArray, pruneSetToMax, sleep} from "@lodestar/utils";
-import {
-  BlockInputBlobs,
-  IBlockInput,
-  convertNewBlockInputToOldBlockInput,
-  convertNewToOldBlobSource,
-  convertNewToOldBlockSource,
-  isBlockInputPreDeneb,
-} from "../chain/blocks/blockInput/index.js";
-import {BlockInput as BlockInputOld, getBlockInput as getBlockInputOld} from "../chain/blocks/types.js";
+import {IBlockInput, convertNewBlockInputToOldBlockInput} from "../chain/blocks/blockInput/index.js";
 import {BlockError, BlockErrorCode} from "../chain/errors/blockError.js";
 import {IBeaconChain} from "../chain/index.js";
 import {Metrics} from "../metrics/index.js";

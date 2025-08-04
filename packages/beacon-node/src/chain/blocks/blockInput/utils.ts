@@ -9,7 +9,6 @@ import {
   BlockInputType as BlockInputTypeOld,
   BlockSource as BlockSourceOld,
   CachedData,
-  NullBlockInput,
   NullBlockInput as NullBlockInputOld,
   getBlockInput as getBlockInputOld,
 } from "../types.js";
@@ -104,7 +103,10 @@ export function convertOldBlockInputToNewBlockInput(cache: SeenBlockInputCache, 
   return handleBlockInputOld(cache, old);
 }
 
-export function convertOldNullBlockInputToNewBlockInput(cache: SeenBlockInputCache, old: NullBlockInput): IBlockInput {
+export function convertOldNullBlockInputToNewBlockInput(
+  cache: SeenBlockInputCache,
+  old: NullBlockInputOld
+): IBlockInput {
   const {blockInputPromise, blockRootHex, cachedData} = old;
   const blockInput = migrateBlobs(cache, Array.from(cachedData.blobsCache.values()), BlobsSourceOld.gossip);
 
