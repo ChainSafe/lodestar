@@ -485,7 +485,7 @@ export class PeerManager {
       this.logger.warn("requestMetadata", {peer: prettyPrintPeerIdStr(peerIdStr)});
       this.onMetadata(peer, await this.reqResp.sendMetadata(peer));
     } catch (e) {
-      this.logger.error("invalid requestMetadata response", {peer: prettyPrintPeerIdStr(peerIdStr)}, e as Error);
+      this.logger.verbose("invalid requestMetadata response", {peer: prettyPrintPeerIdStr(peerIdStr)}, e as Error);
       // TODO: Downvote peer here or in the reqResp layer
     }
   }
@@ -500,7 +500,7 @@ export class PeerManager {
       const peerData = this.connectedPeers.get(peer.toString());
       if (peerData) peerData.lastReceivedMsgUnixTsMs = Date.now();
     } catch (e) {
-      this.logger.error("invalid requestPing", {peer: prettyPrintPeerIdStr(peerIdStr)}, e as Error);
+      this.logger.verbose("invalid requestPing", {peer: prettyPrintPeerIdStr(peerIdStr)}, e as Error);
       // TODO: Downvote peer here or in the reqResp layer
     }
   }
@@ -510,7 +510,7 @@ export class PeerManager {
     try {
       this.onStatus(peer, await this.reqResp.sendStatus(peer, localStatus));
     } catch (e) {
-      this.logger.error("invalid requestStatus", {peer: prettyPrintPeerIdStr(peerIdStr)}, e as Error);
+      this.logger.verbose("invalid requestStatus", {peer: prettyPrintPeerIdStr(peerIdStr)}, e as Error);
       // TODO: Failed to get peer latest status: downvote but don't disconnect
     }
   }
