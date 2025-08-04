@@ -517,7 +517,7 @@ export function createLodestarMetrics(
         labelNames: ["source"],
       }),
       onUnknownBlockRoot: register.gauge<{source: BlockInputSource}>({
-        name: "lodestar_block_input_sync_on_unknown_block_route_source",
+        name: "lodestar_block_input_sync_on_unknown_block_root_source",
         help: "Emission source for NetworkEvent.unknownBlockRoot that triggered sync",
         labelNames: ["source"],
       }),
