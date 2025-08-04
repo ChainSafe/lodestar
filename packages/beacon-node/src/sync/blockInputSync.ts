@@ -5,6 +5,7 @@ import {LodestarError, Logger, fromHex, prettyBytes, prettyPrintArray, pruneSetT
 import {
   BlockInputBlobs,
   IBlockInput,
+  convertNewBlockInputToOldBlockInput,
   convertNewToOldBlobSource,
   convertNewToOldBlockSource,
   isBlockInputPreDeneb,
@@ -420,34 +421,7 @@ export class BlockInputByRootSync {
      * This whole conversion is only to get this to build.  Once the process pipeline is updated this code segment will
      * all go away (along with the helper functions).
      */
-    const signedBeaconBlock = block.blockInput.getBlock();
-    const blockSource = block.blockInput.getBlockSource();
-    let blockInputOld: BlockInputOld;
-    if (isBlockInputPreDeneb(block.blockInput)) {
-      blockInputOld = getBlockInputOld.preData(
-        this.config,
-        signedBeaconBlock,
-        convertNewToOldBlockSource(blockSource.source)
-      );
-    } else if (block.blockInput.daOutOfRange) {
-      blockInputOld = getBlockInputOld.outOfRangeData(
-        this.config,
-        signedBeaconBlock,
-        convertNewToOldBlockSource(blockSource.source)
-      );
-    } else {
-      const blobsWithSource = (block.blockInput as BlockInputBlobs).getAllBlobsWithSource();
-      blockInputOld = getBlockInputOld.availableData(
-        this.config,
-        signedBeaconBlock,
-        convertNewToOldBlockSource(blockSource.source),
-        {
-          blobs: blobsWithSource.map(({blobSidecar}) => blobSidecar),
-          blobsSource: convertNewToOldBlobSource(blobsWithSource[0].source),
-          fork: block.blockInput.forkName as ForkPostDeneb,
-        }
-      );
-    }
+    const blockInputOld = convertNewBlockInputToOldBlockInput(block);
 
     // At gossip time, it's critical to keep a good number of mesh peers.
     // To do that, the Gossip Job Wait Time should be consistently <3s to avoid the behavior penalties in gossip
