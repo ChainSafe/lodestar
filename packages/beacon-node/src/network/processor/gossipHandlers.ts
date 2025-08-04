@@ -336,7 +336,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
               const forkTypes = config.getForkTypes(slot);
               const rootHex = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
 
-              events.emit(NetworkEvent.unknownBlock, {rootHex, peer: peerIdStr});
+              events.emit(NetworkEvent.unknownBlockRoot, {rootHex, peer: peerIdStr, source: BlockInputSource.gossip});
 
               // Error is quite frequent and not critical
               logLevel = LogLevel.debug;
@@ -775,7 +775,7 @@ export async function validateGossipFnRetryUnknownRoot<T>(
         if (unknownBlockRootRetries === 0) {
           // Trigger unknown block root search here
           const rootHex = toRootHex(blockRoot);
-          network.searchUnknownSlotRoot({slot, root: rootHex});
+          network.searchUnknownSlotRoot({slot, root: rootHex}, BlockInputSource.gossip);
         }
 
         if (unknownBlockRootRetries++ < MAX_UNKNOWN_BLOCK_ROOT_RETRIES) {
