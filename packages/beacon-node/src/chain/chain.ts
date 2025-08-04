@@ -1118,9 +1118,11 @@ export class BeaconChain implements IBeaconChain {
     metrics.forkChoice.nodes.set(forkChoiceMetrics.nodes);
     metrics.forkChoice.indices.set(forkChoiceMetrics.indices);
 
-    const fork = this.config.getForkName(this.clock.currentSlot);
+    const headState = this.getHeadState();
+    const fork = this.config.getForkName(headState.slot);
+
     if (isForkPostElectra(fork)) {
-      const headStateElectra = this.getHeadState() as BeaconStateElectra;
+      const headStateElectra = headState as BeaconStateElectra;
       metrics.pendingDeposits.set(headStateElectra.pendingDeposits.length);
       metrics.pendingPartialWithdrawals.set(headStateElectra.pendingPartialWithdrawals.length);
       metrics.pendingConsolidations.set(headStateElectra.pendingConsolidations.length);
