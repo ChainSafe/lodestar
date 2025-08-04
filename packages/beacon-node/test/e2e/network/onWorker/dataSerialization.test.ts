@@ -95,12 +95,14 @@ describe("data serialization through worker boundary", () => {
     [NetworkEvent.blockInput]: {
       peer,
       source: BlockInputSource.gossip,
-      blockInput: getIBlockInput(peer),
+      // BlockInput does not, and cannot, serialize across the worker boundary because of the promises
+      blockInput: {} as unknown as IBlockInput,
     },
     [NetworkEvent.unknownParent]: {
       peer,
       source: BlockInputSource.gossip,
-      blockInput: getIBlockInput(peer),
+      // BlockInput does not, and cannot, serialize across the worker boundary because of the promises
+      blockInput: {} as unknown as IBlockInput,
     },
     // Old BlockInput events
     [NetworkEvent.unknownBlockParent]: {
@@ -291,19 +293,4 @@ function getEmptyBlockInput(): BlockInputOld {
     source: BlockSource.gossip,
     cachedData,
   };
-}
-
-function getIBlockInput(peerIdStr: string): IBlockInput {
-  const block = ssz.capella.SignedBeaconBlock.defaultValue();
-  return BlockInputPreData.createFromBlock({
-    block,
-    forkName: ForkName.capella,
-    blockRootHex: toHex(ssz.capella.SignedBeaconBlock.hashTreeRoot(block)),
-    daOutOfRange: true,
-    source: {
-      peerIdStr,
-      seenTimestampSec: Date.now(),
-      source: BlockInputSource.gossip,
-    },
-  });
 }

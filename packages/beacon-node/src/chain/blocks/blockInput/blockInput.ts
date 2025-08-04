@@ -74,6 +74,11 @@ type BlockInputState<F extends ForkName> =
       timeCompleteSec: number;
     };
 
+/**
+ * NOTE:  It is critical to note that the set of BlockInput classes does NOT serialize across the worker boundary.
+ *
+ * They can ONLY be used on the main thread
+ */
 abstract class AbstractBlockInput<F extends ForkName = ForkName, TData extends DAData = DAData>
   implements IBlockInput<F, TData>
 {

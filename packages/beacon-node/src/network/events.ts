@@ -61,8 +61,8 @@ export const networkEventDirection: Record<NetworkEvent, EventDirection> = {
   [NetworkEvent.gossipMessageValidationResult]: EventDirection.mainToWorker,
   // new block input events
   [NetworkEvent.unknownBlockRoot]: EventDirection.workerToMain,
-  [NetworkEvent.blockInput]: EventDirection.workerToMain,
-  [NetworkEvent.unknownParent]: EventDirection.workerToMain,
+  [NetworkEvent.blockInput]: EventDirection.none, // Only used on the main thread. Cannot serialize across worker boundary
+  [NetworkEvent.unknownParent]: EventDirection.none, // Only used on the main thread. Cannot serialize across worker boundary
   // old unknownBlock blockInput events
   [NetworkEvent.unknownBlockParent]: EventDirection.workerToMain,
   [NetworkEvent.unknownBlock]: EventDirection.workerToMain,
