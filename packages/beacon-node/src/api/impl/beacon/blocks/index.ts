@@ -143,7 +143,7 @@ export function getBeaconBlockApi({
             network.events.emit(NetworkEvent.unknownParent, {
               peer: IDENTITY_PEER_ID,
               source: BlockInputSource.api,
-              blockInput: convertOldBlockInputToNewBlockInput(blockForImport),
+              blockInput: convertOldBlockInputToNewBlockInput(chain.seenBlockInputCache, blockForImport),
             });
             chain.persistInvalidSszValue(
               chain.config.getForkTypes(slot).SignedBeaconBlock,
@@ -238,7 +238,7 @@ export function getBeaconBlockApi({
               network.events.emit(NetworkEvent.unknownParent, {
                 peer: IDENTITY_PEER_ID,
                 source: BlockInputSource.api,
-                blockInput: convertOldBlockInputToNewBlockInput(blockForImport),
+                blockInput: convertOldBlockInputToNewBlockInput(chain.seenBlockInputCache, blockForImport),
               });
             }
             throw e;

@@ -15,7 +15,10 @@ import {
 } from "@lodestar/types";
 import {LogLevel, Logger, prettyBytes, toHex, toRootHex} from "@lodestar/utils";
 import {BlockInputSource} from "../../chain/blocks/blockInput/types.js";
-import {convertOldBlockInputToNewBlockInput} from "../../chain/blocks/blockInput/utils.js";
+import {
+  convertOldBlockInputToNewBlockInput,
+  convertOldNullBlockInputToNewBlockInput,
+} from "../../chain/blocks/blockInput/utils.js";
 import {
   BlobSidecarValidation,
   BlockInput,
@@ -184,7 +187,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           events.emit(NetworkEvent.unknownParent, {
             peer: peerIdStr,
             source: BlockInputSource.gossip,
-            blockInput: convertOldBlockInputToNewBlockInput(blockInput),
+            blockInput: convertOldBlockInputToNewBlockInput(chain.seenBlockInputCache, blockInput),
           });
         }
 
@@ -261,7 +264,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           events.emit(NetworkEvent.unknownParent, {
             peer: peerIdStr,
             source: BlockInputSource.gossip,
-            blockInput: convertOldBlockInputToNewBlockInput(blockInput),
+            blockInput: convertOldBlockInputToNewBlockInput(chain.seenBlockInputCache, blockInput),
           });
         }
 
@@ -289,7 +292,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     // if blobs are not yet fully available start an aggressive blob pull
     if (blockInput.type === BlockInputType.dataPromise) {
       events.emit(NetworkEvent.blockInput, {
-        blockInput: convertOldBlockInputToNewBlockInput(blockInput),
+        blockInput: convertOldBlockInputToNewBlockInput(chain.seenBlockInputCache, blockInput),
         source: BlockInputSource.gossip,
         peer: peerIdStr,
       });
@@ -425,7 +428,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           // data from
           if (normalBlockInput.type === BlockInputType.dataPromise) {
             events.emit(NetworkEvent.blockInput, {
-              blockInput: convertOldBlockInputToNewBlockInput(normalBlockInput),
+              blockInput: convertOldBlockInputToNewBlockInput(chain.seenBlockInputCache, normalBlockInput),
               source: BlockInputSource.gossip,
               peer: peerIdStr,
             });
@@ -433,7 +436,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         } else {
           chain.logger.debug("Block not available till BLOCK_AVAILABILITY_CUTOFF_MS", {blobSlot, index});
           events.emit(NetworkEvent.blockInput, {
-            blockInput: convertOldBlockInputToNewBlockInput(blockInput),
+            blockInput: convertOldNullBlockInputToNewBlockInput(chain.seenBlockInputCache, blockInput),
             source: BlockInputSource.gossip,
             peer: peerIdStr,
           });

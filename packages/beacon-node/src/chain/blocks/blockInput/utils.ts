@@ -1,13 +1,16 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, ForkPostDeneb, isForkPostDeneb} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {Epoch, Slot, deneb} from "@lodestar/types";
+import {Epoch, SignedBeaconBlock, Slot, deneb} from "@lodestar/types";
 import {SeenBlockInputCache} from "../../seenCache/seenBlockInput.js";
 import {
   BlobsSource as BlobsSourceOld,
   BlockInput as BlockInputOld,
   BlockInputType as BlockInputTypeOld,
   BlockSource as BlockSourceOld,
+  CachedData,
+  NullBlockInput,
+  NullBlockInput as NullBlockInputOld,
   getBlockInput as getBlockInputOld,
 } from "../types.js";
 import {BlockInputBlobs, isBlockInputPreDeneb} from "./blockInput.js";
@@ -51,33 +54,24 @@ export function convertNewToOldBlobSource(source: BlockInputSource): BlobsSource
   }
 }
 
-export function convertNewBlockInputToOldBlockInput(block: IBlockInput): BlockInputOld {
-  const signedBeaconBlock = block.blockInput.getBlock();
-  const blockSource = block.blockInput.getBlockSource();
+export function convertNewBlockInputToOldBlockInput(config: ChainForkConfig, block: IBlockInput): BlockInputOld {
+  const signedBeaconBlock = block.getBlock();
+  const blockSource = block.getBlockSource();
 
-  if (isBlockInputPreDeneb(block.blockInput)) {
-    return getBlockInputOld.preData(this.config, signedBeaconBlock, convertNewToOldBlockSource(blockSource.source));
+  if (isBlockInputPreDeneb(block)) {
+    return getBlockInputOld.preData(config, signedBeaconBlock, convertNewToOldBlockSource(blockSource.source));
   }
 
-  if (block.blockInput.daOutOfRange) {
-    return getBlockInputOld.outOfRangeData(
-      this.config,
-      signedBeaconBlock,
-      convertNewToOldBlockSource(blockSource.source)
-    );
+  if (block.daOutOfRange) {
+    return getBlockInputOld.outOfRangeData(config, signedBeaconBlock, convertNewToOldBlockSource(blockSource.source));
   }
 
-  const blobsWithSource = (block.blockInput as BlockInputBlobs).getAllBlobsWithSource();
-  return getBlockInputOld.availableData(
-    this.config,
-    signedBeaconBlock,
-    convertNewToOldBlockSource(blockSource.source),
-    {
-      blobs: blobsWithSource.map(({blobSidecar}) => blobSidecar),
-      blobsSource: convertNewToOldBlobSource(blobsWithSource[0].source),
-      fork: block.blockInput.forkName as ForkPostDeneb,
-    }
-  );
+  const blobsWithSource = (block as BlockInputBlobs).getAllBlobsWithSource();
+  return getBlockInputOld.availableData(config, signedBeaconBlock, convertNewToOldBlockSource(blockSource.source), {
+    blobs: blobsWithSource.map(({blobSidecar}) => blobSidecar),
+    blobsSource: convertNewToOldBlobSource(blobsWithSource[0].source),
+    fork: block.forkName as ForkPostDeneb,
+  });
 }
 
 export function convertOldToNewBlockSource(source: BlockSourceOld): BlockInputSource {
@@ -107,14 +101,94 @@ export function convertOldToNewBlobSource(source: BlobsSourceOld): BlockInputSou
 }
 
 export function convertOldBlockInputToNewBlockInput(cache: SeenBlockInputCache, old: BlockInputOld): IBlockInput {
-  const {block, source, type} = old;
+  return handleBlockInputOld(cache, old);
+}
 
+export function convertOldNullBlockInputToNewBlockInput(cache: SeenBlockInputCache, old: NullBlockInput): IBlockInput {
+  const {blockInputPromise, blockRootHex, cachedData} = old;
+  const blockInput = migrateBlobs(cache, Array.from(cachedData.blobsCache.values()), BlobsSourceOld.gossip);
+
+  coordinateAvailabilityPromises(cachedData, blockInput);
+
+  blockInputPromise.then((b) => {
+    blockInput.addBlock({
+      blockRootHex,
+      block: b.block as SignedBeaconBlock<ForkPostDeneb>,
+      source: {
+        source: convertOldToNewBlockSource(b.source),
+        seenTimestampSec: Date.now() / 1000,
+      },
+    });
+  });
+
+  return blockInput;
+}
+
+function migrateBlobs(
+  cache: SeenBlockInputCache,
+  blobs: deneb.BlobSidecars,
+  blobsSource: BlobsSourceOld,
+  blockInput?: BlockInputBlobs
+): BlockInputBlobs {
+  for (const blob of blobs) {
+    if (blockInput) {
+      blockInput.addBlob({
+        blockRootHex: blockInput.blockRootHex,
+        blobSidecar: blob,
+        seenTimestampSec: Date.now() / 1000,
+        source: convertOldToNewBlobSource(blobsSource),
+      });
+    }
+    blockInput = cache.getByBlob({
+      blobSidecar: blob,
+      seenTimestampSec: Date.now() / 1000,
+      source: convertOldToNewBlobSource(blobsSource),
+    });
+  }
+  return blockInput as BlockInputBlobs;
+}
+
+function coordinateAvailabilityPromises(cachedData: CachedData, blockInput: BlockInputBlobs): void {
+  const {availabilityPromise, resolveAvailability} = cachedData;
+
+  availabilityPromise.then(({blobs, blobsSource}) => {
+    const missing = blockInput.getMissingBlobMeta();
+    for (const {index} of missing) {
+      blockInput.addBlob({
+        blockRootHex: blockInput.blockRootHex,
+        blobSidecar: blobs.find((blobSidecar) => blobSidecar.index === index) as deneb.BlobSidecar,
+        seenTimestampSec: Date.now(),
+        source: convertOldToNewBlobSource(blobsSource),
+      });
+    }
+  });
+
+  // biome-ignore lint/complexity/useLiteralKeys: protected field
+  blockInput["dataPromise"].promise = new Promise((_resolve, _reject) => {
+    // biome-ignore lint/complexity/useLiteralKeys: protected field
+    blockInput["dataPromise"].resolve = (value) => {
+      resolveAvailability({
+        blobs: value,
+        blobsSource: BlobsSourceOld.gossip,
+        fork: ForkName.electra,
+      });
+      _resolve(value);
+    };
+
+    // biome-ignore lint/complexity/useLiteralKeys: protected field
+    blockInput["dataPromise"].reject = _reject;
+
+    availabilityPromise.catch((err) => _reject(err));
+  });
+}
+
+function handleBlockInputOld(cache: SeenBlockInputCache, old: BlockInputOld): IBlockInput {
   let blockInput: IBlockInput | undefined;
-  if (block) {
+  if (old.block) {
     blockInput = cache.getByBlock({
-      block,
+      block: old.block,
       seenTimestampSec: Date.now() / 1000, // this is not correct but BlockInputOld does not track this time,
-      source: convertNewToOldBlockSource(source),
+      source: convertOldToNewBlockSource(old.source),
     });
   }
 
@@ -135,53 +209,15 @@ export function convertOldBlockInputToNewBlockInput(cache: SeenBlockInputCache, 
     const {blobsCache} = old.cachedData;
     blobs = Array.from(blobsCache.values());
     blobsSource = BlobsSourceOld.gossip;
+  } else {
+    throw new Error(`Invalid conversion of BlockInputOld type=${old.type} to IBlockInput`);
   }
 
-  for (const blob of blobs) {
-    const props = {
-      blockRootHex: blockInput.blockRootHex,
-      blobSidecar: blob,
-      seenTimestampSec: Date.now(),
-      source: convertOldToNewBlobSource(blobsSource),
-    };
-    blockInput = blockInput ? blockInput.addBlob(props) : cache.getByBlob(props);
+  blockInput = migrateBlobs(cache, blobs, blobsSource, blockInput as BlockInputBlobs | undefined);
+
+  if (old.type === BlockInputTypeOld.dataPromise) {
+    coordinateAvailabilityPromises(old.cachedData, blockInput as BlockInputBlobs);
   }
 
-  if (type === BlockInputTypeOld.availableData) {
-    return blockInput;
-  }
-
-  if (type === BlockInputTypeOld.dataPromise) {
-    const {availabilityPromise, resolveAvailability} = old.cachedData;
-
-    availabilityPromise.then(({blobs, blobsSource}) => {
-      const missing = (blockInput as BlockInputBlobs).getMissingBlobMeta();
-      for (const {index} of missing) {
-        (blockInput as BlockInputBlobs).addBlob({
-          blockRootHex: blockInput.blockRootHex,
-          blobSidecar: blobs.find((blobSidecar) => blobSidecar.index === index),
-          seenTimestampSec: Date.now(),
-          source: convertOldToNewBlobSource(blobsSource),
-        });
-      }
-    });
-
-    // biome-ignore lint/complexity/useLiteralKeys: protected field
-    (blockInput as BlockInputBlobs)["dataPromise"].promise = new Promise((_resolve, _reject) => {
-      // biome-ignore lint/complexity/useLiteralKeys: protected field
-      (blockInput as BlockInputBlobs)["dataPromise"].resolve = (value) => {
-        resolveAvailability({
-          blobs: value,
-          blobsSource: BlobsSourceOld.gossip,
-          fork: ForkName.electra,
-        });
-        _resolve(value);
-      };
-
-      // biome-ignore lint/complexity/useLiteralKeys: protected field
-      (blockInput as BlockInputBlobs)["dataPromise"].reject = _reject;
-
-      availabilityPromise.catch((err) => _reject(err));
-    });
-  }
+  return blockInput;
 }

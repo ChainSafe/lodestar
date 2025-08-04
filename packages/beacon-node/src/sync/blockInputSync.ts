@@ -421,7 +421,7 @@ export class BlockInputByRootSync {
      * This whole conversion is only to get this to build.  Once the process pipeline is updated this code segment will
      * all go away (along with the helper functions).
      */
-    const blockInputOld = convertNewBlockInputToOldBlockInput(block);
+    const blockInputOld = convertNewBlockInputToOldBlockInput(this.config, block.blockInput);
 
     // At gossip time, it's critical to keep a good number of mesh peers.
     // To do that, the Gossip Job Wait Time should be consistently <3s to avoid the behavior penalties in gossip
