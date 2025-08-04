@@ -6,7 +6,7 @@ import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
-import {BlockInputPreData, BlockInputSource, IBlockInput} from "../../../../src/chain/blocks/blockInput/index.js";
+import {BlockInputSource, IBlockInput} from "../../../../src/chain/blocks/blockInput/index.js";
 import {
   BlockInput as BlockInputOld,
   BlockInputType,
