@@ -202,7 +202,7 @@ export class BlockInputByRootSync {
     // Limit pending blocks to prevent DOS attacks that cause OOM
     const prunedItemCount = pruneSetToMax(this.pendingBlocks, this.maxPendingBlocks);
     if (prunedItemCount > 0) {
-      this.logger.warn(`Pruned ${prunedItemCount} items from BlockInputSync.pendingBlocks`);
+      this.logger.verbose(`Pruned ${prunedItemCount} items from BlockInputSync.pendingBlocks`);
     }
 
     return pendingBlock;
@@ -230,7 +230,7 @@ export class BlockInputByRootSync {
     // Limit pending blocks to prevent DOS attacks that cause OOM
     const prunedItemCount = pruneSetToMax(this.pendingBlocks, this.maxPendingBlocks);
     if (prunedItemCount > 0) {
-      this.logger.warn(`Pruned ${prunedItemCount} items from BlockInputSync.pendingBlocks`);
+      this.logger.verbose(`Pruned ${prunedItemCount} items from BlockInputSync.pendingBlocks`);
     }
 
     return pendingBlock;
