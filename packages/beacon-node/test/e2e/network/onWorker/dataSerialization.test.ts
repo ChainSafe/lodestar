@@ -4,7 +4,7 @@ import {routes} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {toHex} from "@lodestar/utils";
+import {toRootHex} from "@lodestar/utils";
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {BlockInputPreData, BlockInputSource, IBlockInput} from "../../../../src/chain/blocks/blockInput/index.js";
 import {
@@ -88,7 +88,7 @@ describe("data serialization through worker boundary", () => {
     },
     // New BlockInput events
     [NetworkEvent.unknownBlockRoot]: {
-      rootHex: toHex(bytes),
+      rootHex: toRootHex(bytes),
       source: BlockInputSource.gossip,
       peer,
     },
