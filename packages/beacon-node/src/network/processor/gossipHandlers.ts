@@ -14,6 +14,8 @@ import {
   sszTypesFor,
 } from "@lodestar/types";
 import {LogLevel, Logger, prettyBytes, toHex, toRootHex} from "@lodestar/utils";
+import {BlockInputSource} from "../../chain/blocks/blockInput/types.js";
+import {convertOldBlockInputToNewBlockInput} from "../../chain/blocks/blockInput/utils.js";
 import {
   BlobSidecarValidation,
   BlockInput,
@@ -179,7 +181,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         // Don't trigger this yet if full block and blobs haven't arrived yet
         if (e.type.code === BlockErrorCode.PARENT_UNKNOWN && blockInput !== null) {
           logger.debug("Gossip block has error", {slot, root: blockShortHex, code: e.type.code});
-          events.emit(NetworkEvent.unknownBlockParent, {blockInput, peer: peerIdStr});
+          events.emit(NetworkEvent.unknownParent, {
+            peer: peerIdStr,
+            source: BlockInputSource.gossip,
+            blockInput: convertOldBlockInputToNewBlockInput(blockInput),
+          });
         }
 
         if (e.action === GossipAction.REJECT) {
@@ -252,7 +258,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         // Don't trigger this yet if full block and blobs haven't arrived yet
         if (e.type.code === BlobSidecarErrorCode.PARENT_UNKNOWN && blockInput.block !== null) {
           logger.debug("Gossip blob has error", {slot, root: blockShortHex, code: e.type.code});
-          events.emit(NetworkEvent.unknownBlockParent, {blockInput, peer: peerIdStr});
+          events.emit(NetworkEvent.unknownParent, {
+            peer: peerIdStr,
+            source: BlockInputSource.gossip,
+            blockInput: convertOldBlockInputToNewBlockInput(blockInput),
+          });
         }
 
         if (e.action === GossipAction.REJECT) {

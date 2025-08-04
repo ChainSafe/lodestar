@@ -24,6 +24,8 @@ import {
   isSignedBlockContents,
 } from "@lodestar/types";
 import {fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
+import {BlockInputSource} from "../../../../chain/blocks/blockInput/types.js";
+import {convertOldBlockInputToNewBlockInput} from "../../../../chain/blocks/blockInput/utils.js";
 import {
   BlobsSource,
   BlockInput,
@@ -138,9 +140,10 @@ export function getBeaconBlockApi({
         if (!blockLocallyProduced) {
           const parentBlock = chain.forkChoice.getBlock(signedBlock.message.parentRoot);
           if (parentBlock === null) {
-            network.events.emit(NetworkEvent.unknownBlockParent, {
-              blockInput: blockForImport,
+            network.events.emit(NetworkEvent.unknownParent, {
               peer: IDENTITY_PEER_ID,
+              source: BlockInputSource.api,
+              blockInput: convertOldBlockInputToNewBlockInput(blockForImport),
             });
             chain.persistInvalidSszValue(
               chain.config.getForkTypes(slot).SignedBeaconBlock,
@@ -232,9 +235,10 @@ export function getBeaconBlockApi({
           .processBlock(blockForImport, {...opts, eagerPersistBlock: false})
           .catch((e) => {
             if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
-              network.events.emit(NetworkEvent.unknownBlockParent, {
-                blockInput: blockForImport,
+              network.events.emit(NetworkEvent.unknownParent, {
                 peer: IDENTITY_PEER_ID,
+                source: BlockInputSource.api,
+                blockInput: convertOldBlockInputToNewBlockInput(blockForImport),
               });
             }
             throw e;
