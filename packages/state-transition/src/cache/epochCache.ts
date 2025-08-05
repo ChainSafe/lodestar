@@ -134,7 +134,6 @@ export class EpochCache {
   proposers: ValidatorIndex[];
 
   /** Proposers for previous epoch, initialized to null in first epoch */
-  // getProposerDuties requests with previous epoch
   proposersPrevEpoch: ValidatorIndex[] | null;
 
   /**
