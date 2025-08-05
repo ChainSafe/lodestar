@@ -59,9 +59,13 @@ export class MetadataController {
     const enrCgcRaw = enr?.kvs.get(ENRKey.cgc);
     const enrCgc = enrCgcRaw ? deserializeCgc(enrCgcRaw) : undefined;
 
-    // First update the metadata with the current ENR values
+    // First synchronize the metadata with the current ENR values
     if (enrSeq) this._metadata.seqNumber = enrSeq;
-    if (enrCgc) this._metadata.custodyGroupCount = enrCgc;
+    if (!enrCgc || enrCgc < this._metadata.custodyGroupCount) {
+      this.onSetValue(ENRKey.cgc, serializeCgc(this._metadata.custodyGroupCount));
+    } else {
+      this._metadata.custodyGroupCount = enrCgc;
+    }
 
     // Then update the metadata (and ENR) based on the current clock epoch
 
