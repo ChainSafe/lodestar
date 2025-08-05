@@ -48,7 +48,7 @@ describe("network / metadata", () => {
       const networkConfig = new NetworkConfig(getValidPeerId(), config);
       const metadata = new MetadataController({}, {onSetValue, networkConfig, logger});
 
-      metadata.upstreamValues(0);
+      metadata.init(0);
 
       expect(onSetValue).toHaveBeenCalledWith(ENRKey.cgc, expect.anything());
     });

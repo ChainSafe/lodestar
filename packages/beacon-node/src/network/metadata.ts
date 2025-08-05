@@ -1,11 +1,10 @@
+import {ENR} from "@chainsafe/enr";
 import {BitArray} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {ForkSeq} from "@lodestar/params";
-import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, fulu, phase0, ssz} from "@lodestar/types";
 import {Logger, toHex} from "@lodestar/utils";
 import {FAR_FUTURE_EPOCH} from "../constants/index.js";
-import {serializeCgc} from "../util/metadata.js";
+import {deserializeCgc, serializeCgc} from "../util/metadata.js";
 import {getCurrentAndNextForkBoundary} from "./forks.js";
 import {NetworkConfig} from "./networkConfig.js";
 
@@ -22,9 +21,7 @@ export enum SubnetType {
   syncnets = "syncnets",
 }
 
-export type MetadataOpts = {
-  metadata?: fulu.Metadata;
-};
+export type MetadataOpts = Record<string, never>;
 
 export type MetadataModules = {
   networkConfig: NetworkConfig;
@@ -43,32 +40,33 @@ export class MetadataController {
   private logger: Logger;
   private _metadata: fulu.Metadata;
 
-  constructor(opts: MetadataOpts, modules: MetadataModules) {
+  constructor(_: MetadataOpts, modules: MetadataModules) {
     this.networkConfig = modules.networkConfig;
     this.logger = modules.logger;
     this.onSetValue = modules.onSetValue;
-    this._metadata = opts.metadata ?? {
+    this._metadata = {
       ...ssz.fulu.Metadata.defaultValue(),
       custodyGroupCount: modules.networkConfig.getCustodyConfig().targetCustodyGroupCount,
     };
   }
 
-  upstreamValues(currentEpoch: Epoch): void {
+  /**
+   * Initialize metadata controller with initial ENR
+   * Initialize ENR with clock's fork
+   */
+  init(currentEpoch: Epoch, enr?: ENR): void {
+    const enrSeq = enr?.seq;
+    const enrCgcRaw = enr?.kvs.get(ENRKey.cgc);
+    const enrCgc = enrCgcRaw ? deserializeCgc(enrCgcRaw) : undefined;
+
+    // First update the metadata with the current ENR values
+    if (enrSeq) this._metadata.seqNumber = enrSeq;
+    if (enrCgc) this._metadata.custodyGroupCount = enrCgc;
+
+    // Then update the metadata (and ENR) based on the current clock epoch
+
     // updateEth2Field() MUST be called with clock epoch
     this.updateEth2Field(currentEpoch);
-
-    this.onSetValue(ENRKey.attnets, ssz.phase0.AttestationSubnets.serialize(this._metadata.attnets));
-
-    const config = this.networkConfig.getConfig();
-
-    if (config.getForkSeq(computeStartSlotAtEpoch(currentEpoch)) >= ForkSeq.altair) {
-      // Only persist syncnets if altair fork is already activated. If currentFork is altair but head is phase0
-      // adding syncnets to the ENR is not a problem, we will just have a useless field for a few hours.
-      this.onSetValue(ENRKey.syncnets, ssz.phase0.AttestationSubnets.serialize(this._metadata.syncnets));
-    }
-
-    // Set CGC regardless of fork. It may be useful to clients before Fulu, and will be ignored otherwise.
-    this.onSetValue(ENRKey.cgc, serializeCgc(this._metadata.custodyGroupCount));
   }
 
   get seqNumber(): bigint {

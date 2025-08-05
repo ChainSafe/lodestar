@@ -240,8 +240,9 @@ export class NetworkCore implements INetworkCore {
     // biome-ignore lint/complexity/useLiteralKeys: `discovery` is a private attribute
     discv5 = peerManager["discovery"]?.discv5;
 
+    // Initialize metadata controller with initial ENR
     // Initialize ENR with clock's fork
-    metadata.upstreamValues(clock.currentEpoch);
+    metadata.init(clock.currentEpoch, (await discv5?.enr())?.toENR());
 
     return new NetworkCore({
       libp2p,
