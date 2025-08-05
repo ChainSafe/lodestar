@@ -16,10 +16,11 @@ import {SubnetType} from "../metadata.js";
 import {ReqRespMethod} from "../reqresp/ReqRespBeaconNode.js";
 import {StatusCache} from "../statusCache.js";
 import {SubnetsService} from "../subnets/index.js";
-import {getConnection, getConnectionsMap, prettyPrintPeerId} from "../util.js";
+import {getConnection, getConnectionsMap, prettyPrintPeerId, prettyPrintPeerIdStr} from "../util.js";
 import {ClientKind, getKnownClientFromAgentVersion} from "./client.js";
 import {PeerDiscovery, SubnetDiscvQueryMs} from "./discover.js";
 import {PeerData, PeersData} from "./peersData.js";
+import {NO_COOL_DOWN_APPLIED} from "./score/constants.js";
 import {IPeerRpcScoreStore, PeerAction, PeerScoreStats, ScoreState, updateGossipsubScores} from "./score/index.js";
 import {
   assertPeerRelevance,
@@ -338,8 +339,6 @@ export class PeerManager {
       this.metrics?.peerLongConnectionDisconnect.inc({reason});
     }
 
-    // TODO: Consider register that we are banned, if discovery keeps attempting to connect to the same peers
-
     void this.disconnect(peer);
   }
 
@@ -657,16 +656,32 @@ export class PeerManager {
    */
   private onLibp2pPeerDisconnect = (evt: CustomEvent<Connection>): void => {
     const {direction, status, remotePeer} = evt.detail;
+    const peerIdStr = remotePeer.toString();
+
+    let logMessage = "onLibp2pPeerDisconnect";
+    const logContext: Record<string, string | number> = {
+      peerId: prettyPrintPeerIdStr(peerIdStr),
+      direction,
+      status,
+    };
+    // Some clients do not send good-bye requests (Nimbus) so check for inbound disconnects and apply reconnection
+    // cool-down period to prevent automatic reconnection by Discovery
+    if (direction === "inbound") {
+      // prevent automatic/immediate reconnects
+      const coolDownMin = this.peerRpcScores.applyReconnectionCoolDown(peerIdStr, GoodByeReasonCode.INBOUND_DISCONNECT);
+      logMessage += ". Enforcing a reconnection cool-down period";
+      logContext.coolDownMin = coolDownMin;
+    }
 
     // remove the ping and status timer for the peer
-    this.connectedPeers.delete(remotePeer.toString());
+    this.connectedPeers.delete(peerIdStr);
 
-    this.logger.verbose("peer disconnected", {peer: prettyPrintPeerId(remotePeer), direction, status});
-    this.networkEventBus.emit(NetworkEvent.peerDisconnected, {peer: remotePeer.toString()});
+    this.logger.verbose(logMessage, logContext);
+    this.networkEventBus.emit(NetworkEvent.peerDisconnected, {peer: peerIdStr});
     this.metrics?.peerDisconnectedEvent.inc({direction});
     this.libp2p.peerStore
       .merge(remotePeer, {tags: {[PEER_RELEVANT_TAG]: undefined}})
-      .catch((e) => this.logger.verbose("cannot untag peer", {peerId: remotePeer.toString()}, e as Error));
+      .catch((e) => this.logger.verbose("cannot untag peer", {peerId: peerIdStr}, e as Error));
   };
 
   private async disconnect(peer: PeerId): Promise<void> {
@@ -678,11 +693,12 @@ export class PeerManager {
   }
 
   private async goodbyeAndDisconnect(peer: PeerId, goodbye: GoodByeReasonCode): Promise<void> {
+    const reason = GOODBYE_KNOWN_CODES[goodbye.toString()] || "";
+    const peerIdStr = peer.toString();
     try {
-      const reason = GOODBYE_KNOWN_CODES[goodbye.toString()] || "";
       this.metrics?.peerGoodbyeSent.inc({reason});
 
-      const conn = getConnection(this.libp2p, peer.toString());
+      const conn = getConnection(this.libp2p, peerIdStr);
       if (conn && Date.now() - conn.timeline.open > LONG_PEER_CONNECTION_MS) {
         this.metrics?.peerLongConnectionDisconnect.inc({reason});
       }
@@ -693,6 +709,16 @@ export class PeerManager {
       this.logger.verbose("Failed to send goodbye", {peer: prettyPrintPeerId(peer)}, e as Error);
     } finally {
       await this.disconnect(peer);
+      // prevent automatic/immediate reconnects
+      const coolDownMin = this.peerRpcScores.applyReconnectionCoolDown(peerIdStr, goodbye);
+      if (coolDownMin === NO_COOL_DOWN_APPLIED) {
+        this.logger.verbose("Disconnected a peer", {peerId: prettyPrintPeerIdStr(peerIdStr)});
+      } else {
+        this.logger.verbose("Disconnected a peer. Enforcing a reconnection cool-down period", {
+          peerId: prettyPrintPeerIdStr(peerIdStr),
+          coolDownMin,
+        });
+      }
     }
   }
 

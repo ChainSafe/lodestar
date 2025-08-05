@@ -1,5 +1,6 @@
 import {PeerId} from "@libp2p/interface";
 import {MapDef, pruneSetToMax} from "@lodestar/utils";
+import {GoodByeReasonCode} from "../../../constants/network.js";
 import {PeerIdStr} from "../../../util/peerId.js";
 import {NetworkCoreMetrics} from "../../core/metrics.js";
 import {DEFAULT_SCORE, MAX_ENTRIES, MAX_SCORE, MIN_SCORE, SCORE_THRESHOLD} from "./constants.js";
@@ -18,6 +19,7 @@ const peerActionScore: Record<PeerAction, number> = {
  * A peer's score (perceived potential usefulness).
  * This simplistic version consists of a global score per peer which decays to 0 over time.
  * The decay rate applies equally to positive and negative scores.
+ * Peer cool-down period will be checked before dialing and will only be dialed if score is not waiting to decay
  */
 export class PeerRpcScoreStore implements IPeerRpcScoreStore {
   private readonly scores: MapDef<PeerIdStr, IPeerScore>;
@@ -42,6 +44,10 @@ export class PeerRpcScoreStore implements IPeerRpcScoreStore {
     return scoreToState(this.getScore(peer));
   }
 
+  isCoolingDown(peerIdStr: PeerIdStr): boolean {
+    return this.scores.get(peerIdStr)?.isCoolingDown() ?? false;
+  }
+
   dumpPeerScoreStats(): PeerScoreStats {
     return Array.from(this.scores.entries()).map(([peerId, peerScore]) => ({peerId, ...peerScore.getStat()}));
   }
@@ -51,6 +57,16 @@ export class PeerRpcScoreStore implements IPeerRpcScoreStore {
     peerScore.add(peerActionScore[action]);
 
     this.metrics?.peersReportPeerCount.inc({reason: actionName});
+  }
+
+  /**
+   * Apply a reconnection cool-down period to prevent automatic reconnection. Sets peer
+   * banning period and updates gossip score to -1 so next update removes the negative
+   * score
+   */
+  applyReconnectionCoolDown(peer: PeerIdStr, reason: GoodByeReasonCode): number {
+    const peerScore = this.scores.getOrDefault(peer);
+    return peerScore.applyReconnectionCoolDown(reason);
   }
 
   update(): void {

@@ -103,7 +103,7 @@ export const defaultChainOptions: IChainOptions = {
   blacklistedBlocks: [],
   disableBlsBatchVerify: false,
   proposerBoost: true,
-  proposerBoostReorg: false,
+  proposerBoostReorg: true,
   computeUnrealized: true,
   safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
   suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,

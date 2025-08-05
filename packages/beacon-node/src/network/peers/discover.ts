@@ -55,6 +55,7 @@ export enum DiscoveredPeerStatus {
   cached = "cached",
   dropped = "dropped",
   no_multiaddrs = "no_multiaddrs",
+  peer_cooling_down = "peer_cooling_down",
 }
 
 export enum NotDialReason {
@@ -200,7 +201,7 @@ export class PeerDiscovery {
         pendingDials.has(id)
       ) {
         this.cachedENRs.delete(id);
-      } else {
+      } else if (!this.peerRpcScores.isCoolingDown(id)) {
         cachedENRsReverse.push(cachedENR);
       }
     }
@@ -367,8 +368,16 @@ export class PeerDiscovery {
         return DiscoveredPeerStatus.bad_score;
       }
 
+      const peerIdStr = peerId.toString();
+      // check if peer has a cool-down period applied for reconnection. Is possible that a peer has a
+      // "healthy" score but has disconnected us and we are letting the reconnection cool-down before
+      // they are eligible for reconnection
+      if (this.peerRpcScores.isCoolingDown(peerIdStr)) {
+        return DiscoveredPeerStatus.peer_cooling_down;
+      }
+
       // Ignore connected peers. TODO: Is this check necessary?
-      if (this.isPeerConnected(peerId.toString())) {
+      if (this.isPeerConnected(peerIdStr)) {
         return DiscoveredPeerStatus.already_connected;
       }
 
