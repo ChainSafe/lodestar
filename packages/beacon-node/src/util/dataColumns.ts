@@ -45,6 +45,10 @@ export enum RecoverResult {
   Failed = "failed",
 }
 
+export type CustodyConfigOpts = {
+  supernode?: boolean;
+};
+
 export class CustodyConfig {
   /**
    * The number of custody groups the node should subscribe to
@@ -90,11 +94,11 @@ export class CustodyConfig {
 
   private readonly metrics: Metrics | null;
 
-  constructor(nodeId: NodeId, config: ChainForkConfig, metrics: Metrics | null) {
+  constructor(nodeId: NodeId, config: ChainForkConfig, metrics: Metrics | null, opts: CustodyConfigOpts = {}) {
     this.config = config;
     this.nodeId = nodeId;
     this.metrics = metrics;
-    this.targetCustodyGroupCount = Math.max(config.CUSTODY_REQUIREMENT, config.NODE_CUSTODY_REQUIREMENT);
+    this.targetCustodyGroupCount = opts.supernode ? NUMBER_OF_CUSTODY_GROUPS : config.CUSTODY_REQUIREMENT;
     this.custodyColumns = getDataColumns(this.nodeId, this.targetCustodyGroupCount);
     this.custodyColumnsIndex = this.getCustodyColumnsIndex(this.custodyColumns);
     this.metrics?.peerDas.custodyGroupCount.set(this.targetCustodyGroupCount);
@@ -164,8 +168,7 @@ export function getValidatorsCustodyRequirement(
   // Cannot custody more than NUMBER_OF_CUSTODY_GROUPS
   validatorsCustodyRequirement = Math.min(validatorsCustodyRequirement, NUMBER_OF_CUSTODY_GROUPS);
 
-  // Validators custody requirement must be at least configured node custody requirement
-  return Math.max(validatorsCustodyRequirement, config.NODE_CUSTODY_REQUIREMENT);
+  return validatorsCustodyRequirement;
 }
 
 /**

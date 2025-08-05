@@ -3,8 +3,10 @@ import {ApiError, ApplicationMethods} from "@lodestar/api/server";
 import {
   ForkName,
   ForkPostBellatrix,
+  NUMBER_OF_COLUMNS,
   SLOTS_PER_HISTORICAL_ROOT,
   isForkPostBellatrix,
+  isForkPostDeneb,
   isForkPostElectra,
   isForkPostFulu,
 } from "@lodestar/params";
@@ -23,6 +25,7 @@ import {
   deneb,
   fulu,
   isSignedBlockContents,
+  sszTypesFor,
 } from "@lodestar/types";
 import {fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
 import {
@@ -43,7 +46,12 @@ import {BlockError, BlockErrorCode, BlockGossipError} from "../../../../chain/er
 import {validateGossipBlock} from "../../../../chain/validation/block.js";
 import {OpSource} from "../../../../chain/validatorMonitor.js";
 import {NetworkEvent} from "../../../../network/index.js";
-import {computeBlobSidecars, computeDataColumnSidecars, kzgCommitmentToVersionedHash} from "../../../../util/blobs.js";
+import {
+  computeBlobSidecars,
+  computeDataColumnSidecars,
+  kzgCommitmentToVersionedHash,
+  reconstructBlobs,
+} from "../../../../util/blobs.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {ApiModules} from "../../types.js";
@@ -577,7 +585,13 @@ export function getBeaconBlockApi({
       assertUniqueItems(indices, "Duplicate indices provided");
 
       const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
-      const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
+      const fork = config.getForkName(block.message.slot);
+
+      if (isForkPostFulu(fork)) {
+        throw new ApiError(400, `Use getBlobs to retrieve blobs for post-fulu fork=${fork}`);
+      }
+
+      const blockRoot = sszTypesFor(fork).BeaconBlock.hashTreeRoot(block.message);
 
       let {blobSidecars} = (await db.blobSidecars.get(blockRoot)) ?? {};
       if (!blobSidecars) {
@@ -594,6 +608,63 @@ export function getBeaconBlockApi({
           executionOptimistic,
           finalized,
           version: config.getForkName(block.message.slot),
+        },
+      };
+    },
+
+    async getBlobs({blockId, indices}) {
+      assertUniqueItems(indices, "Duplicate indices provided");
+
+      const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
+      const fork = config.getForkName(block.message.slot);
+      const blockRoot = sszTypesFor(fork).BeaconBlock.hashTreeRoot(block.message);
+
+      let blobs: deneb.Blobs;
+
+      if (isForkPostFulu(fork)) {
+        const {targetCustodyGroupCount} = chain.custodyConfig;
+        if (targetCustodyGroupCount < NUMBER_OF_COLUMNS / 2) {
+          throw Error(
+            `Custody group count of ${targetCustodyGroupCount} is not sufficient to serve blobs, must custody at least ${NUMBER_OF_COLUMNS / 2} data columns`
+          );
+        }
+
+        let {dataColumnSidecars} = (await db.dataColumnSidecars.get(blockRoot)) ?? {};
+        if (!dataColumnSidecars) {
+          ({dataColumnSidecars} = (await db.dataColumnSidecarsArchive.get(block.message.slot)) ?? {});
+        }
+
+        if (!dataColumnSidecars) {
+          throw new ApiError(
+            404,
+            `dataColumnSidecars not found in db for slot=${block.message.slot} root=${toRootHex(blockRoot)}`
+          );
+        }
+
+        blobs = await reconstructBlobs(dataColumnSidecars);
+      } else if (isForkPostDeneb(fork)) {
+        let {blobSidecars} = (await db.blobSidecars.get(blockRoot)) ?? {};
+        if (!blobSidecars) {
+          ({blobSidecars} = (await db.blobSidecarsArchive.get(block.message.slot)) ?? {});
+        }
+
+        if (!blobSidecars) {
+          throw new ApiError(
+            404,
+            `blobSidecars not found in db for slot=${block.message.slot} root=${toRootHex(blockRoot)}`
+          );
+        }
+
+        blobs = blobSidecars.sort((a, b) => a.index - b.index).map(({blob}) => blob);
+      } else {
+        blobs = [];
+      }
+
+      return {
+        data: indices ? blobs.filter((_, i) => indices.includes(i)) : blobs,
+        meta: {
+          executionOptimistic,
+          finalized,
         },
       };
     },

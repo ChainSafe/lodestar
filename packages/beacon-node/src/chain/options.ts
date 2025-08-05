@@ -39,8 +39,8 @@ export type IChainOptions = BlockProcessOpts &
     maxCachedBlobSidecars?: number;
     /** Max number of produced block roots (blinded or full) cached for broadcast validations */
     maxCachedProducedRoots?: number;
-    /** Whether to disable dynamic validator custody requirement updates */
-    noValidatorCustody?: boolean;
+    /** Subscribe to and custody all data column sidecar subnets */
+    supernode?: boolean;
     /*
      * This is the window size for the windowed multiplication in proof
      * generation. The larger wbits is, the faster the MSM will be, but the
@@ -123,7 +123,7 @@ export const defaultChainOptions: IChainOptions = {
   archiveMode: DEFAULT_ARCHIVE_MODE,
   pruneHistory: false,
   emitPayloadAttributes: false,
-  noValidatorCustody: false,
+  supernode: false,
   // for gossip block validation, it's unlikely we see a reorg with 32 slots
   // for attestation validation, having this value ensures we don't have to regen states most of the time
   maxSkipSlots: 32,

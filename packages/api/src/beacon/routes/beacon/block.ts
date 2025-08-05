@@ -220,6 +220,24 @@ export type Endpoints = {
     deneb.BlobSidecars,
     ExecutionOptimisticFinalizedAndVersionMeta
   >;
+
+  /**
+   * Get blobs
+   * Retrieves blobs for a given block id.
+   */
+  getBlobs: Endpoint<
+    "GET",
+    BlockArgs & {
+      /**
+       * Array of indices for blobs to request for in the specified block.
+       * Returns all blobs in the block if not specified.
+       */
+      indices?: number[];
+    },
+    {params: {block_id: string}; query: {indices?: number[]}},
+    deneb.Blobs,
+    ExecutionOptimisticAndFinalizedMeta
+  >;
 };
 
 // biome-ignore lint/suspicious/noExplicitAny: <explanation>
@@ -549,6 +567,19 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       resp: {
         data: ssz.deneb.BlobSidecars,
         meta: ExecutionOptimisticFinalizedAndVersionCodec,
+      },
+    },
+    getBlobs: {
+      url: "/eth/v1/beacon/blobs/{block_id}",
+      method: "GET",
+      req: {
+        writeReq: ({blockId, indices}) => ({params: {block_id: blockId.toString()}, query: {indices}}),
+        parseReq: ({params, query}) => ({blockId: params.block_id, indices: query.indices}),
+        schema: {params: {block_id: Schema.StringRequired}, query: {indices: Schema.UintArray}},
+      },
+      resp: {
+        data: ssz.deneb.Blobs,
+        meta: ExecutionOptimisticAndFinalizedCodec,
       },
     },
   };

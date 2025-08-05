@@ -86,7 +86,6 @@ export type ChainConfig = {
 
   SAMPLES_PER_SLOT: number;
   CUSTODY_REQUIREMENT: number;
-  NODE_CUSTODY_REQUIREMENT: number;
   VALIDATOR_CUSTODY_REQUIREMENT: number;
   BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: number;
 
@@ -170,7 +169,6 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
 
   SAMPLES_PER_SLOT: "number",
   CUSTODY_REQUIREMENT: "number",
-  NODE_CUSTODY_REQUIREMENT: "number",
   VALIDATOR_CUSTODY_REQUIREMENT: "number",
   BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: "number",
 

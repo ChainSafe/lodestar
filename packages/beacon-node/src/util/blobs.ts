@@ -2,6 +2,10 @@ import {digest as sha256Digest} from "@chainsafe/as-sha256";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {ChainForkConfig} from "@lodestar/config";
 import {
+  BYTES_PER_CELL,
+  BYTES_PER_FIELD_ELEMENT,
+  CELLS_PER_EXT_BLOB,
+  FIELD_ELEMENTS_PER_BLOB,
   ForkAll,
   ForkName,
   KZG_COMMITMENTS_GINDEX,
@@ -185,4 +189,68 @@ export async function recoverDataColumnSidecars(
   }
 
   return result;
+}
+
+/**
+ * Reconstruct blobs from a set of data columns, at least 50%+ of all the columns
+ * must be provided to allow to reconstruct the full data matrix
+ */
+export async function reconstructBlobs(sidecars: fulu.DataColumnSidecars): Promise<deneb.Blobs> {
+  if (sidecars.length < NUMBER_OF_COLUMNS / 2) {
+    throw Error(
+      `Expected at least ${NUMBER_OF_COLUMNS / 2} data columns to reconstruct blobs, received ${sidecars.length}`
+    );
+  }
+
+  let fullSidecars: fulu.DataColumnSidecars;
+
+  if (sidecars.length === NUMBER_OF_COLUMNS) {
+    // Full columns, no need to recover
+    fullSidecars = sidecars;
+  } else {
+    const sidecarsByIndex = new Map<number, fulu.DataColumnSidecar>(sidecars.map((sc) => [sc.index, sc]));
+    const recoveredSidecars = await recoverDataColumnSidecars(sidecarsByIndex);
+    if (recoveredSidecars === null) {
+      // Should not happen because we check the column count above
+      throw Error("Failed to reconstruct the full data matrix");
+    }
+    fullSidecars = recoveredSidecars;
+  }
+
+  const blobCount = fullSidecars[0].column.length;
+  const blobs: deneb.Blobs = new Array(blobCount);
+
+  const ordered = fullSidecars.slice().sort((a, b) => a.index - b.index);
+  for (let row = 0; row < blobCount; row++) {
+    // 128 cells that make up one "extended blob" row
+    const cells = ordered.map((col) => col.column[row]);
+    blobs[row] = cellsToBlob(cells);
+  }
+
+  return blobs;
+}
+
+/**
+ * Concatenate the systematic half (columns 0‑63) of a row of cells into
+ * the original 131072 byte blob. The parity half (64‑127) is ignored as
+ * it is only needed for erasure‑coding recovery when columns are missing.
+ */
+function cellsToBlob(cells: fulu.Cell[]): deneb.Blob {
+  if (cells.length !== CELLS_PER_EXT_BLOB) {
+    throw Error(`Expected ${CELLS_PER_EXT_BLOB} cells to reconstruct blob, received ${cells.length}`);
+  }
+
+  const blob = new Uint8Array(BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB);
+
+  // Only the first 64 cells hold the original bytes
+  for (let i = 0; i < CELLS_PER_EXT_BLOB / 2; i++) {
+    const cell = cells[i];
+    if (cell.length !== BYTES_PER_CELL) {
+      throw Error(`Cell ${i} has incorrect byte size ${cell.length} != ${BYTES_PER_CELL}`);
+    }
+
+    blob.set(cell, i * BYTES_PER_CELL);
+  }
+
+  return blob;
 }

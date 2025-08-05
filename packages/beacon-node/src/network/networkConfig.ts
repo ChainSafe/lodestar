@@ -3,6 +3,10 @@ import {BeaconConfig} from "@lodestar/config";
 import {CustodyConfig} from "../util/dataColumns.js";
 import {NodeId, computeNodeId} from "./subnets/interface.js";
 
+export type NetworkConfigOpts = {
+  supernode?: boolean;
+};
+
 /**
  * Store shared data for different modules in the network stack.
  * TODO: consider moving similar shared data, for example PeersData, under NetworkConfig.
@@ -12,10 +16,10 @@ export class NetworkConfig {
   private readonly config: BeaconConfig;
   private readonly custodyConfig: CustodyConfig;
 
-  constructor(peerId: PeerId, config: BeaconConfig) {
+  constructor(peerId: PeerId, config: BeaconConfig, opts: NetworkConfigOpts = {}) {
     this.nodeId = computeNodeId(peerId);
     this.config = config;
-    this.custodyConfig = new CustodyConfig(this.nodeId, config, null);
+    this.custodyConfig = new CustodyConfig(this.nodeId, config, null, opts);
   }
 
   getConfig(): BeaconConfig {

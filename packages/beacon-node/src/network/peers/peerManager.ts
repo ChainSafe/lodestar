@@ -18,7 +18,7 @@ import {NetworkConfig} from "../networkConfig.js";
 import {ReqRespMethod} from "../reqresp/ReqRespBeaconNode.js";
 import {StatusCache} from "../statusCache.js";
 import {NodeId, SubnetsService, computeNodeId} from "../subnets/index.js";
-import {getConnection, getConnectionsMap, prettyPrintPeerId} from "../util.js";
+import {getConnection, getConnectionsMap, prettyPrintPeerId, prettyPrintPeerIdStr} from "../util.js";
 import {ClientKind, getKnownClientFromAgentVersion} from "./client.js";
 import {PeerDiscovery, SubnetDiscvQueryMs} from "./discover.js";
 import {PeerData, PeersData} from "./peersData.js";
@@ -480,16 +480,18 @@ export class PeerManager {
   }
 
   private async requestMetadata(peer: PeerId): Promise<void> {
+    const peerIdStr = peer.toString();
     try {
-      this.logger.warn("requestMetadata", {peer: peer.toString()});
+      this.logger.warn("requestMetadata", {peer: prettyPrintPeerIdStr(peerIdStr)});
       this.onMetadata(peer, await this.reqResp.sendMetadata(peer));
     } catch (e) {
-      this.logger.error("invalid requestMetadata response", undefined, e as Error);
+      this.logger.verbose("invalid requestMetadata response", {peer: prettyPrintPeerIdStr(peerIdStr)}, e as Error);
       // TODO: Downvote peer here or in the reqResp layer
     }
   }
 
   private async requestPing(peer: PeerId): Promise<void> {
+    const peerIdStr = peer.toString();
     try {
       this.logger.warn("requestPing", {peer: peer.toString()});
       this.onPing(peer, await this.reqResp.sendPing(peer));
@@ -497,15 +499,18 @@ export class PeerManager {
       // If peer replies a PING request also update lastReceivedMsg
       const peerData = this.connectedPeers.get(peer.toString());
       if (peerData) peerData.lastReceivedMsgUnixTsMs = Date.now();
-    } catch (_e) {
+    } catch (e) {
+      this.logger.verbose("invalid requestPing", {peer: prettyPrintPeerIdStr(peerIdStr)}, e as Error);
       // TODO: Downvote peer here or in the reqResp layer
     }
   }
 
   private async requestStatus(peer: PeerId, localStatus: Status): Promise<void> {
+    const peerIdStr = peer.toString();
     try {
       this.onStatus(peer, await this.reqResp.sendStatus(peer, localStatus));
-    } catch (_e) {
+    } catch (e) {
+      this.logger.verbose("invalid requestStatus", {peer: prettyPrintPeerIdStr(peerIdStr)}, e as Error);
       // TODO: Failed to get peer latest status: downvote but don't disconnect
     }
   }

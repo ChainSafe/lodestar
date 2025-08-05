@@ -23,6 +23,7 @@ export interface NetworkOptions
   useWorker?: boolean;
   maxYoungGenerationSizeMb?: number;
   disableLightClientServer?: boolean;
+  supernode?: boolean;
 
   /**
    * During E2E tests observe a lot of following `missing stream`:

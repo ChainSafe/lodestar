@@ -53,7 +53,7 @@ const globalSingleOptions: CliCommandOptions<GlobalSingleArgs> = {
   },
 
   supernode: {
-    description: "custody all subnets, alias to params.NODE_CUSTODY_REQUIREMENT for all subnets",
+    description: "Subscribe to and custody all data column sidecar subnets",
     type: "boolean",
   },
 };
