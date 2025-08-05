@@ -61,7 +61,7 @@ export class MetadataController {
 
     // First synchronize the metadata with the current ENR values
     if (enrSeq) this._metadata.seqNumber = enrSeq;
-    if (!enrCgc || enrCgc < this._metadata.custodyGroupCount) {
+    if (enrCgc === undefined || enrCgc < this._metadata.custodyGroupCount) {
       this.onSetValue(ENRKey.cgc, serializeCgc(this._metadata.custodyGroupCount));
     } else {
       this._metadata.custodyGroupCount = enrCgc;
