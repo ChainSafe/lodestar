@@ -58,12 +58,12 @@ This are the *building blocks* of all SSZ structures.They fall into two types/ca
 
 #### Primitive types(Basic types)
 These types represent single, atomic values and have a fixed size in bytes. They are the building blocks of all other types.
+| Type     | Description                                          | Example              |
+|----------|------------------------------------------------------|----------------------|
+| boolean  | A single byte, true or false                         | Serialized as 0x00 or 0x01 |
+| uintN    | Unsigned Integers: uint8, uint16, ..., up to uint256 | uint64 = 8 bytes     |
+| bytesN   | Fixed-length byte arrays, e.g. bytes4, bytes32       | bytes32 = 32 bytes   |
 
-|Type                    | Description                      | Example                      |
-|------------------------|--------------------------------- |
-|boolean                 | A single byte, true or false     | Serialized as 0x00 or 0x01
-|uintN                   | Unsigned Integers: uint8, uint16, uint32.....upto uint256 | uint64 = 8 bytes |
-|bytesN                  | fixed length byte arrays eg. byte4, bytes32   |  |
 
 Basic types are always a fixed size and will always occupy the same number of bytes.
 
