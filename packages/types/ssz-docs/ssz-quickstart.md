@@ -63,7 +63,7 @@ These types represent single, atomic values and have a fixed size in bytes. They
 |------------------------|--------------------------------- |
 |boolean                 | A single byte, true or false     | Serialized as 0x00 or 0x01
 |uintN                   | Unsigned Integers: uint8, uint16, uint32.....upto uint256 | uint64 = 8 bytes |
-|bytesN                  | fixed length byte arrays eg. byte4, bytes32   |
+|bytesN                  | fixed length byte arrays eg. byte4, bytes32   |  |
 
 Basic types are always a fixed size and will always occupy the same number of bytes.
 
@@ -97,7 +97,8 @@ These aliases don't change the encoding — they’re just semantic conveniences
 #### Real World Example
 Defining a validator container using SSZ.
 
-```type Validator = Container({
+```
+type Validator = Container({
   pubkey: ByteVector[48],
   withdrawal_credentials: Bytes32,
   effective_balance: uint64,
@@ -106,7 +107,8 @@ Defining a validator container using SSZ.
   activation_epoch: uint64,
   exit_epoch: uint64,
   withdrawable_epoch: uint64
-});```
+});
+```
 The whole structure is fixed-size — so it’s encoded without any offsets.
 
 #### Summary
