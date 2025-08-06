@@ -220,7 +220,7 @@ export class SeenGossipBlockInput {
             // TODO: (@matthewkeil) add metrics collection point here
           })
           .catch((error) => {
-            this.logger.error("Error getting data columns from execution", {blockHex}, error);
+            this.logger.debug("Error getting data columns from execution", {blockHex}, error);
           });
       });
     }
@@ -356,7 +356,7 @@ export class SeenGossipBlockInput {
               dataColumns: dataColumnsCache.size,
             };
             const recoverResult = await recoverDataColumnSidecars(dataColumnsCache, this.clock, metrics).catch((e) => {
-              this.logger.error("Error recovering data column sidecars", logCtx, e);
+              this.logger.debug("Error recovering data column sidecars", logCtx, e);
               return RecoverResult.Failed;
             });
             metrics?.recoverDataColumnSidecars.reconstructionResult.inc({result: recoverResult});

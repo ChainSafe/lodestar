@@ -397,7 +397,7 @@ export class PeerDiscovery {
     const syncnetsBytes = enr.kvs.get(ENRKey.syncnets); // 4 bits
     const custodyGroupCountBytes = enr.kvs.get(ENRKey.cgc); // 64 bits
     if (custodyGroupCountBytes === undefined) {
-      this.logger.warn("peer discovered with no cgc assuming 4", exportENRToJSON(enr));
+      this.logger.debug("peer discovered with no cgc assuming 4", exportENRToJSON(enr));
     }
 
     // Use faster version than ssz's implementation that leverages pre-cached.
@@ -428,7 +428,7 @@ export class PeerDiscovery {
     custodySubnetCount?: number
   ): DiscoveredPeerStatus {
     const nodeId = computeNodeId(peerId);
-    this.logger.warn("handleDiscoveredPeer", {nodeId: toHexString(nodeId), peerId: peerId.toString()});
+    this.logger.debug("handleDiscoveredPeer", {nodeId: toHexString(nodeId), peerId: peerId.toString()});
     try {
       // Check if peer is not banned or disconnected
       if (this.peerRpcScores.getScoreState(peerId) !== ScoreState.Healthy) {
