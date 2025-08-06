@@ -93,8 +93,8 @@ type CachedENR = {
   multiaddrTCP: Multiaddr;
   subnets: Record<SubnetType, boolean[]>;
   addedUnixMs: number;
-  // peerCustodyGroups is null for pre-fulu
-  peerCustodyGroups: number[] | null;
+  // custodyGroups is null for pre-fulu
+  custodyGroups: number[] | null;
 };
 
 /**
@@ -246,7 +246,7 @@ export class PeerDiscovery {
       group: for (const [group, maxPeersToConnect] of groupRequests) {
         let cachedENRsInGroup = 0;
         for (const cachedENR of cachedENRsReverse) {
-          if (cachedENR.peerCustodyGroups?.includes(group)) {
+          if (cachedENR.custodyGroups?.includes(group)) {
             cachedENRsToDial.set(cachedENR.peerId.toString(), cachedENR);
 
             if (++cachedENRsInGroup >= maxPeersToConnect) {
@@ -470,8 +470,8 @@ export class PeerDiscovery {
         multiaddrTCP,
         subnets: {attnets, syncnets},
         addedUnixMs: Date.now(),
-        // for pre-fulu, peerCustodyGroups is null
-        peerCustodyGroups:
+        // for pre-fulu, custodyGroups is null
+        custodyGroups:
           forkSeq >= ForkSeq.fulu
             ? getCustodyGroups(nodeId, custodySubnetCount ?? this.config.CUSTODY_REQUIREMENT)
             : null,
@@ -496,7 +496,7 @@ export class PeerDiscovery {
 
   private shouldDialPeer(peer: CachedENR): boolean {
     const forkSeq = this.config.getForkSeq(this.clock.currentSlot);
-    if (forkSeq >= ForkSeq.fulu && peer.peerCustodyGroups !== null) {
+    if (forkSeq >= ForkSeq.fulu && peer.custodyGroups !== null) {
       // pre-fulu `this.groupRequests` is empty
       // starting from fulu, we need to make sure we have stable subnet sampling peers first
       // given SAMPLES_PER_SLOT = 8 and 100 peers, we have 800 custody columns from peers
@@ -508,7 +508,7 @@ export class PeerDiscovery {
       for (const [group, peersToConnect] of this.groupRequests.entries()) {
         if (peersToConnect <= 0) {
           this.groupRequests.delete(group);
-        } else if (peer.peerCustodyGroups.includes(group)) {
+        } else if (peer.custodyGroups.includes(group)) {
           this.groupRequests.set(group, Math.max(0, peersToConnect - 1));
           hasMatchingGroup = true;
           groupRequestCount += peersToConnect;
