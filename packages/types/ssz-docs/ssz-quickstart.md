@@ -61,9 +61,10 @@ These types represent single, atomic values and have a fixed size in bytes. They
 
 |Type                    | Description                      | Example                      |
 |------------------------|--------------------------------- |
-|boolean        | A single byte, true or false  | Serialized as 0x00 or 0x01
-|uintN         | Unsigned Integers: uint8, uint16, uint32.....upto uint256 | uint64 = 8 bytes |
-|bytesN        | fixed length byte arrays eg. byte4, bytes32   |
+|boolean                 | A single byte, true or false     | Serialized as 0x00 or 0x01
+|uintN                   | Unsigned Integers: uint8, uint16, uint32.....upto uint256 | uint64 = 8 bytes |
+|bytesN                  | fixed length byte arrays eg. byte4, bytes32   |
+
 Basic types are always a fixed size and will always occupy the same number of bytes.
 
 #### Composite types
@@ -118,5 +119,6 @@ The whole structure is fixed-size — so it’s encoded without any offsets.
 | **Type Aliases**    | Shorthand notations for common composite types           |
 | **Constants**       | Internal SSZ rules for byte/bit sizing and Merkleization |
 
+To learn more about lodestar types go to this repository - [ ChainSafe/Lodestar](https://github.com/ChainSafe/lodestar/tree/unstable/packages/types)
 ---
 
