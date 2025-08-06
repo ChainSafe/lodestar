@@ -56,12 +56,12 @@ export async function* onDataColumnSidecarsByRange(
         // re-org there's no need to abort the request
         // Spec: https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/p2p-interface.md#datacolumnsidecarsbyrange-v1
 
-        const blobSideCarsBytesWrapped = await unfinalized.getBinary(fromHex(block.blockRoot));
-        if (!blobSideCarsBytesWrapped) {
+        const dataColumnSidecarsBytesWrapped = await unfinalized.getBinary(fromHex(block.blockRoot));
+        if (!dataColumnSidecarsBytesWrapped) {
           // Handle the same to onBeaconBlocksByRange
           throw new ResponseError(RespStatus.SERVER_ERROR, `No item for root ${block.blockRoot} slot ${block.slot}`);
         }
-        yield* iterateDataColumnBytesFromWrapper(chain, blobSideCarsBytesWrapped, block.slot, columns);
+        yield* iterateDataColumnBytesFromWrapper(chain, dataColumnSidecarsBytesWrapped, block.slot, columns);
       }
 
       // If block is after endSlot, stop iterating
@@ -96,7 +96,7 @@ export function* iterateDataColumnBytesFromWrapper(
 
   const columnsLen = allDataColumnSidecarsBytes.length / columnsSize;
 
-  // no columns possibly no blob
+  // no columns possibly no blobs
   if (columnsLen === 0) {
     return;
   }
