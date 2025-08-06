@@ -188,15 +188,15 @@ export class BeaconChain implements IBeaconChain {
   protected readonly db: IBeaconDb;
   private abortController = new AbortController();
   private processShutdownCallback: ProcessShutdownCallback;
-  private _earliestSlotAvailable: Slot;
+  private _earliestAvailableSlot: Slot;
 
-  get earliestSlotAvailable(): Slot {
-    return this._earliestSlotAvailable;
+  get earliestAvailableSlot(): Slot {
+    return this._earliestAvailableSlot;
   }
 
-  set earliestSlotAvailable(slot: Slot) {
-    if (this._earliestSlotAvailable !== slot) {
-      this._earliestSlotAvailable = slot;
+  set earliestAvailableSlot(slot: Slot) {
+    if (this._earliestAvailableSlot !== slot) {
+      this._earliestAvailableSlot = slot;
       this.emitter.emit(ChainEvent.updateStatus);
     }
   }
@@ -312,7 +312,7 @@ export class BeaconChain implements IBeaconChain {
             pubkey2index: new PubkeyIndexMap(),
             index2pubkey: [],
           });
-    this._earliestSlotAvailable = cachedState.slot;
+    this._earliestAvailableSlot = cachedState.slot;
 
     this.shufflingCache = cachedState.epochCtx.shufflingCache = new ShufflingCache(metrics, logger, this.opts, [
       {
@@ -853,7 +853,7 @@ export class BeaconChain implements IBeaconChain {
     };
 
     if (isForkPostFulu(boundary.fork)) {
-      (status as fulu.Status).earliestAvailableSlot = this._earliestSlotAvailable;
+      (status as fulu.Status).earliestAvailableSlot = this._earliestAvailableSlot;
     }
 
     return status;
