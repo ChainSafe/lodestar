@@ -324,7 +324,7 @@ export class ReqRespBeaconNode extends ReqResp {
 
   private async *onStatus(req: ReqRespRequest, peerId: PeerId): AsyncIterable<ResponseOutgoing> {
     const fork = ForkName[ForkSeq[this.currentRegisteredFork] as ForkName];
-    const type = sszTypesFor(fork).Status;
+    const type = responseSszTypeByMethod[ReqRespMethod.Status](fork, req.version);
     const body = type.deserialize(req.data);
     this.onIncomingRequestBody({method: ReqRespMethod.Status, body}, peerId);
 
