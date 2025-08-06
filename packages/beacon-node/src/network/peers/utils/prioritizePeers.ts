@@ -49,7 +49,7 @@ type SubnetDiscvQuery = {subnet: SubnetID; toSlot: number; maxPeersToDiscover: n
 /**
  * A map of das custody group index to maxPeersToDiscover
  */
-export type GroupQueries = Map<CustodyIndex, number>;
+export type CustodyGroupQueries = Map<CustodyIndex, number>;
 
 /**
  * Comparison of our status vs a peer's status.
@@ -130,7 +130,7 @@ export enum ExcessPeerDisconnectReason {
  * - Ensure there are enough peers per column subnets, attestation subnets and sync committee subnets
  * - Prioritize peers with good score
  *
- * pre-fulu samplingGroups is not used and this function returns empty groupQueries
+ * pre-fulu samplingGroups is not used and this function returns empty custodyGroupQueries
  */
 export function prioritizePeers(
   connectedPeersInfo: {
@@ -152,7 +152,7 @@ export function prioritizePeers(
   peersToDisconnect: Map<ExcessPeerDisconnectReason, PeerId[]>;
   attnetQueries: SubnetDiscvQuery[];
   syncnetQueries: SubnetDiscvQuery[];
-  groupQueries: GroupQueries;
+  custodyGroupQueries: CustodyGroupQueries;
 } {
   const {targetPeers, maxPeers} = opts;
 
@@ -174,7 +174,7 @@ export function prioritizePeers(
     })
   );
 
-  const {attnetQueries, syncnetQueries, groupQueries, dutiesByPeer} = requestSubnetPeers(
+  const {attnetQueries, syncnetQueries, custodyGroupQueries, dutiesByPeer} = requestSubnetPeers(
     connectedPeers,
     activeAttnets,
     activeSyncnets,
@@ -204,13 +204,13 @@ export function prioritizePeers(
     peersToDisconnect,
     attnetQueries,
     syncnetQueries,
-    groupQueries,
+    custodyGroupQueries,
   };
 }
 
 /**
  * If more peers are needed in attnets and syncnets and column subnets, create SubnetDiscvQuery for each subnet
- * pre-fulu samplingGroups is not used and this function returns empty groupQueries
+ * pre-fulu samplingGroups is not used and this function returns empty custodyGroupQueries
  */
 function requestSubnetPeers(
   connectedPeers: PeerInfo[],
@@ -222,7 +222,7 @@ function requestSubnetPeers(
 ): {
   attnetQueries: SubnetDiscvQuery[];
   syncnetQueries: SubnetDiscvQuery[];
-  groupQueries: GroupQueries;
+  custodyGroupQueries: CustodyGroupQueries;
   dutiesByPeer: Map<PeerInfo, number>;
 } {
   const {targetSubnetPeers = TARGET_SUBNET_PEERS} = opts;
@@ -284,10 +284,10 @@ function requestSubnetPeers(
     }
   }
 
-  const groupQueries: GroupQueries = new Map();
+  const custodyGroupQueries: CustodyGroupQueries = new Map();
   // pre-fulu
   if (ourSamplingGroups == null) {
-    return {attnetQueries, syncnetQueries, groupQueries, dutiesByPeer};
+    return {attnetQueries, syncnetQueries, custodyGroupQueries, dutiesByPeer};
   }
 
   // column subnets, do we need queries for more peers
@@ -309,11 +309,11 @@ function requestSubnetPeers(
       : TARGET_GROUP_PEERS_PER_SUBNET;
     if (peersInGroup < targetGroupPeers) {
       // We need more peers
-      groupQueries.set(groupIndex, targetGroupPeers - peersInGroup);
+      custodyGroupQueries.set(groupIndex, targetGroupPeers - peersInGroup);
     }
   }
 
-  return {attnetQueries, syncnetQueries, groupQueries, dutiesByPeer};
+  return {attnetQueries, syncnetQueries, custodyGroupQueries, dutiesByPeer};
 }
 
 /**

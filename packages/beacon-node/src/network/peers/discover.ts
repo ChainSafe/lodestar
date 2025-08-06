@@ -21,7 +21,7 @@ import {computeNodeId} from "../subnets/interface.js";
 import {getConnectionsMap, prettyPrintPeerId} from "../util.js";
 import {IPeerRpcScoreStore, ScoreState} from "./score/index.js";
 import {deserializeEnrSubnets, zeroAttnets, zeroSyncnets} from "./utils/enrSubnetsDeserialize.js";
-import {type GroupQueries} from "./utils/prioritizePeers.js";
+import {type CustodyGroupQueries} from "./utils/prioritizePeers.js";
 
 /** Max number of cached ENRs after discovering a good peer */
 const MAX_CACHED_ENRS = 100;
@@ -207,7 +207,11 @@ export class PeerDiscovery {
    * Request to find peers, both on specific subnets and in general
    * pre-fulu groupRequests is empty
    */
-  discoverPeers(peersToConnect: number, groupRequests: GroupQueries, subnetRequests: SubnetDiscvQueryMs[] = []): void {
+  discoverPeers(
+    peersToConnect: number,
+    groupRequests: CustodyGroupQueries,
+    subnetRequests: SubnetDiscvQueryMs[] = []
+  ): void {
     const subnetsToDiscoverPeers: SubnetDiscvQueryMs[] = [];
     const cachedENRsToDial = new Map<PeerIdStr, CachedENR>();
     // Iterate in reverse to consider first the most recent ENRs

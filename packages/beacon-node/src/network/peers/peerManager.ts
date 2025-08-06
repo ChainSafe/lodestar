@@ -560,7 +560,13 @@ export class PeerManager {
     this.metrics?.peerManager.starved.set(starved ? 1 : 0);
     const forkSeq = this.config.getForkSeq(this.clock.currentSlot);
 
-    const {peersToDisconnect, peersToConnect, attnetQueries, syncnetQueries, groupQueries} = prioritizePeers(
+    const {
+      peersToDisconnect,
+      peersToConnect,
+      attnetQueries,
+      syncnetQueries,
+      custodyGroupQueries: groupQueries,
+    } = prioritizePeers(
       connectedHealthyPeers.map((peer) => {
         const peerData = this.connectedPeers.get(peer.toString());
         return {
