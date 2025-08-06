@@ -257,15 +257,26 @@ export function getBeaconBlockApi({
     chain.logger.info("Publishing block", valLogMeta);
     const publishPromises = [
       // Send the block, regardless of whether or not it is valid. The API
-      // specification is very clear that this is the desired behaviour.
+      // specification is very clear that this is the desired behavior.
       //
       // i) Publish blobs and block before importing so that network can see them asap
-      // ii) publish blobs first because
-      //     a) by the times nodes see block, they might decide to pull blobs
-      //     b) they might require more hops to reach recipients in peerDAS kind of setup where
-      //        blobs might need to hop between nodes because of partial subnet subscription
-      () => network.publishBeaconBlock(signedBlock) as Promise<unknown>,
+      //
+      // For blobs and columns the publish order is reversed do to networking considerations. When data
+      // is sharded across the network there is additional latency for it to reasonably propagate.
+      //
+      // ii) DENEB/ELECTRA publish block first because
+      //     a) as soon as node sees block they can start processing it while large blobs are in transit
+      //     b) getting block first allows nodes to use getBlobs from local ELs and save
+      //        import latency and hopefully bandwidth
+      //
+      // ii) POST-FULU publish columns first because
+      //     a) by the times nodes see block, they might decide to pull sidecars
+      //     b) they might require more hops to reach recipients under data sharding where sidecars
+      //        might need to distribute to more nodes for sufficient availability because of
+      //        partial subnet subscription
+      //
       ...dataColumnSidecars.map((dataColumnSidecar) => () => network.publishDataColumnSidecar(dataColumnSidecar)),
+      () => network.publishBeaconBlock(signedBlock) as Promise<unknown>,
       ...blobSidecars.map((blobSidecar) => () => network.publishBlobSidecar(blobSidecar)),
       () =>
         // there is no rush to persist block since we published it to gossip anyway
