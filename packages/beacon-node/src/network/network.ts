@@ -136,7 +136,7 @@ export class Network implements INetwork {
     this.chain.emitter.on(routes.events.EventType.lightClientOptimisticUpdate, ({data}) =>
       this.onLightClientOptimisticUpdate(data)
     );
-    this.chain.emitter.on(ChainEvent.updateTargetGroupCount, this.onTargetGroupCountUpdated);
+    this.chain.emitter.on(ChainEvent.updateTargetCustodyGroupCount, this.onTargetGroupCountUpdated);
     this.chain.emitter.on(ChainEvent.publishDataColumns, this.onPublishDataColumns);
     this.chain.emitter.on(ChainEvent.updateStatus, this.onUpdateStatus);
   }
@@ -229,7 +229,7 @@ export class Network implements INetwork {
     this.chain.emitter.off(routes.events.EventType.head, this.onHead);
     this.chain.emitter.off(routes.events.EventType.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
     this.chain.emitter.off(routes.events.EventType.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
-    this.chain.emitter.off(ChainEvent.updateTargetGroupCount, this.onTargetGroupCountUpdated);
+    this.chain.emitter.off(ChainEvent.updateTargetCustodyGroupCount, this.onTargetGroupCountUpdated);
     this.chain.emitter.off(ChainEvent.publishDataColumns, this.onPublishDataColumns);
     await this.core.close();
 

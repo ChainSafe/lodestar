@@ -1260,7 +1260,7 @@ export class BeaconChain implements IBeaconChain {
         if (targetCustodyGroupCount > this.custodyConfig.targetCustodyGroupCount) {
           this.custodyConfig.updateTargetCustodyGroupCount(targetCustodyGroupCount);
           this.logger.verbose(`Updated targetCustodyGroupCount=${this.custodyConfig.targetCustodyGroupCount}`);
-          this.emitter.emit(ChainEvent.updateTargetGroupCount, this.custodyConfig.targetCustodyGroupCount);
+          this.emitter.emit(ChainEvent.updateTargetCustodyGroupCount, this.custodyConfig.targetCustodyGroupCount);
         }
       }
     }
