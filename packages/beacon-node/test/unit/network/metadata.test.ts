@@ -5,6 +5,8 @@ import {toHex} from "@lodestar/utils";
 import {describe, expect, it, vi} from "vitest";
 import {ENRKey, MetadataController, getENRForkID} from "../../../src/network/metadata.js";
 import {NetworkConfig} from "../../../src/network/networkConfig.js";
+import {computeNodeId} from "../../../src/network/subnets/index.js";
+import {CustodyConfig} from "../../../src/util/dataColumns.js";
 import {serializeCgc} from "../../../src/util/metadata.js";
 import {config} from "../../utils/config.js";
 import {testLogger} from "../../utils/logger.js";
@@ -45,7 +47,12 @@ describe("network / metadata", () => {
         }),
         ZERO_HASH
       );
-      const networkConfig = new NetworkConfig(getValidPeerId(), config);
+      const nodeId = computeNodeId(getValidPeerId());
+      const networkConfig: NetworkConfig = {
+        nodeId,
+        config,
+        custodyConfig: new CustodyConfig(nodeId, config, null, {supernode: false}),
+      };
       const metadata = new MetadataController({}, {onSetValue, networkConfig, logger});
 
       metadata.upstreamValues(0);
@@ -55,7 +62,12 @@ describe("network / metadata", () => {
 
     it("should call onSetValue with the correct cgc", () => {
       const onSetValue = vi.fn();
-      const networkConfig = new NetworkConfig(getValidPeerId(), config);
+      const nodeId = computeNodeId(getValidPeerId());
+      const networkConfig: NetworkConfig = {
+        nodeId,
+        config,
+        custodyConfig: new CustodyConfig(nodeId, config, null, {supernode: false}),
+      };
       const metadata = new MetadataController({}, {onSetValue, networkConfig, logger});
       metadata.custodyGroupCount = 128;
       expect(onSetValue).toHaveBeenCalledWith(ENRKey.cgc, serializeCgc(128));
@@ -63,7 +75,12 @@ describe("network / metadata", () => {
 
     it("should increment seqNumber when cgc is updated", () => {
       const onSetValue = vi.fn();
-      const networkConfig = new NetworkConfig(getValidPeerId(), config);
+      const nodeId = computeNodeId(getValidPeerId());
+      const networkConfig: NetworkConfig = {
+        nodeId,
+        config,
+        custodyConfig: new CustodyConfig(nodeId, config, null, {supernode: false}),
+      };
       const metadata = new MetadataController({}, {onSetValue, networkConfig, logger});
       const initialSeqNumber = metadata.seqNumber;
       metadata.custodyGroupCount = 128;
@@ -72,7 +89,12 @@ describe("network / metadata", () => {
 
     it("should not increment seqNumber when cgc is set to the same value", () => {
       const onSetValue = vi.fn();
-      const networkConfig = new NetworkConfig(getValidPeerId(), config);
+      const nodeId = computeNodeId(getValidPeerId());
+      const networkConfig: NetworkConfig = {
+        nodeId,
+        config,
+        custodyConfig: new CustodyConfig(nodeId, config, null, {supernode: false}),
+      };
       const metadata = new MetadataController({}, {onSetValue, networkConfig, logger});
       metadata.custodyGroupCount = 128;
       const initialSeqNumber = metadata.seqNumber;

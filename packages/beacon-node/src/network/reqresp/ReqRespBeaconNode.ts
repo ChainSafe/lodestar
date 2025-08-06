@@ -13,7 +13,7 @@ import {
   ResponseOutgoing,
 } from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {Metadata, Status, phase0, ssz, sszTypesFor} from "@lodestar/types";
+import {Metadata, Status, phase0, ssz} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {Libp2p} from "libp2p";
 import {callInNextEventLoop} from "../../util/eventLoop.js";

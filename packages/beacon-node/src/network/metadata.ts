@@ -49,7 +49,7 @@ export class MetadataController {
     this.onSetValue = modules.onSetValue;
     this._metadata = opts.metadata ?? {
       ...ssz.fulu.Metadata.defaultValue(),
-      custodyGroupCount: modules.networkConfig.getCustodyConfig().targetCustodyGroupCount,
+      custodyGroupCount: modules.networkConfig.custodyConfig.targetCustodyGroupCount,
     };
   }
 
@@ -59,7 +59,7 @@ export class MetadataController {
 
     this.onSetValue(ENRKey.attnets, ssz.phase0.AttestationSubnets.serialize(this._metadata.attnets));
 
-    const config = this.networkConfig.getConfig();
+    const config = this.networkConfig.config;
 
     if (config.getForkSeq(computeStartSlotAtEpoch(currentEpoch)) >= ForkSeq.altair) {
       // Only persist syncnets if altair fork is already activated. If currentFork is altair but head is phase0
@@ -125,7 +125,7 @@ export class MetadataController {
    *    Current Clock implementation ensures no race conditions, epoch is correct if re-fetched
    */
   updateEth2Field(epoch: Epoch): void {
-    const config = this.networkConfig.getConfig();
+    const config = this.networkConfig.config;
     const enrForkId = getENRForkID(config, epoch);
     const {forkDigest, nextForkVersion, nextForkEpoch} = enrForkId;
     this.onSetValue(ENRKey.eth2, ssz.phase0.ENRForkID.serialize(enrForkId));

@@ -18,8 +18,8 @@ import {NetworkConfig} from "../../../../src/network/networkConfig.js";
 import {AttnetsService} from "../../../../src/network/subnets/attnetsService.js";
 import {CommitteeSubscription} from "../../../../src/network/subnets/interface.js";
 import {Clock, IClock} from "../../../../src/util/clock.js";
+import {CustodyConfig} from "../../../../src/util/dataColumns.js";
 import {testLogger} from "../../../utils/logger.js";
-import {getValidPeerId} from "../../../utils/peer.js";
 
 vi.mock("../../../../src/network/gossip/gossipsub.js");
 
@@ -31,7 +31,11 @@ describe("AttnetsService", () => {
   );
   const ALTAIR_FORK_EPOCH = 100;
   const config = createBeaconConfig({ALTAIR_FORK_EPOCH}, ZERO_HASH);
-  const networkConfig = new NetworkConfig(getValidPeerId(), config);
+  const networkConfig: NetworkConfig = {
+    nodeId,
+    config,
+    custodyConfig: new CustodyConfig(nodeId, config, null, {supernode: false}),
+  };
   // const {SECONDS_PER_SLOT} = config;
   let service: AttnetsService;
   let gossipStub: MockedObject<Eth2Gossipsub>;

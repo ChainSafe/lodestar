@@ -176,13 +176,13 @@ export class PeerManager {
     this.statusCache = modules.statusCache;
     this.clock = modules.clock;
     this.networkConfig = networkConfig;
-    this.config = networkConfig.getConfig();
+    this.config = networkConfig.config;
     this.peerRpcScores = modules.peerRpcScores;
     this.networkEventBus = modules.events;
     this.connectedPeers = modules.peersData.connectedPeers;
     this.opts = opts;
     this.discovery = discovery;
-    this.nodeId = networkConfig.getNodeId();
+    this.nodeId = networkConfig.nodeId;
 
     const {metrics} = modules;
     if (metrics) {
@@ -450,7 +450,7 @@ export class PeerManager {
       // on metadata, we should have custodyGroupss
       const peerCustodyGroups = peerData?.metadata?.custodyGroups ?? getCustodyGroups(nodeId, peerCustodyGroupCount);
 
-      const sampleSubnets = this.networkConfig.getCustodyConfig().sampledSubnets;
+      const sampleSubnets = this.networkConfig.custodyConfig.sampledSubnets;
       const matchingSubnetsNum = sampleSubnets.reduce((acc, elem) => acc + (dataColumns.includes(elem) ? 1 : 0), 0);
       const hasAllColumns = matchingSubnetsNum === sampleSubnets.length;
       const clientAgent = peerData?.agentClient ?? ClientKind.Unknown;
@@ -578,7 +578,7 @@ export class PeerManager {
       this.attnetsService.getActiveSubnets(),
       this.syncnetsService.getActiveSubnets(),
       // ignore samplingGroups for pre-fulu forks
-      forkSeq >= ForkSeq.fulu ? this.networkConfig.getCustodyConfig().sampleGroups : undefined,
+      forkSeq >= ForkSeq.fulu ? this.networkConfig.custodyConfig.sampleGroups : undefined,
       {
         ...this.opts,
         status,

@@ -131,7 +131,7 @@ export class PeerDiscovery {
     this.peerRpcScores = peerRpcScores;
     this.metrics = metrics;
     this.logger = logger;
-    this.config = networkConfig.getConfig();
+    this.config = networkConfig.config;
     this.discv5 = discv5;
     this.groupRequests = new Map();
 
@@ -190,7 +190,7 @@ export class PeerDiscovery {
       privateKey: modules.privateKey,
       metrics: modules.metrics ?? undefined,
       logger: modules.logger,
-      config: modules.networkConfig.getConfig(),
+      config: modules.networkConfig.config,
       genesisTime: modules.clock.genesisTime,
     });
 
