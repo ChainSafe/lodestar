@@ -104,9 +104,6 @@ export function getBeaconBlockApi({
         timer?.();
         blockData = {
           fork,
-          dataColumnsLen: dataColumnSidecars.length,
-          // dataColumnsIndex is a 1 based index of ith column present in dataColumns[custodyColumns[i-1]]
-          dataColumnsIndex: new Uint8Array(Array.from({length: dataColumnSidecars.length}, (_, j) => 1 + j)),
           dataColumns: dataColumnSidecars,
           dataColumnsBytes: dataColumnSidecars.map(() => null),
           dataColumnsSource: DataColumnsSource.api,
