@@ -211,7 +211,10 @@ describe("unavailableBeaconBlobsByRoot", () => {
     const network = {
       sendBeaconBlocksByRoot: vi.fn(),
       sendBlobSidecarsByRoot: vi.fn(),
-      custodyConfig: new CustodyConfig(computeNodeId(getValidPeerId()), config, null),
+      custodyConfig: new CustodyConfig({
+        nodeId: computeNodeId(getValidPeerId()),
+        config,
+      }),
     };
 
     const peerId = "mockPeerId";

@@ -41,6 +41,7 @@ export type IChainOptions = BlockProcessOpts &
     maxCachedProducedRoots?: number;
     /** Subscribe to and custody all data column sidecar subnets */
     supernode?: boolean;
+    initialCustodyGroupCount?: number;
     /*
      * This is the window size for the windowed multiplication in proof
      * generation. The larger wbits is, the faster the MSM will be, but the

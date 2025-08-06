@@ -158,6 +158,7 @@ export class Network implements INetwork {
 
     const activeValidatorCount = chain.getHeadState().epochCtx.currentShuffling.activeIndices.length;
     const initialStatus = chain.getStatus();
+    const initialCustodyGroupCount = chain.custodyConfig.targetCustodyGroupCount;
 
     if (opts.useWorker) {
       logger.info("running libp2p instance in worker thread");
@@ -172,6 +173,7 @@ export class Network implements INetwork {
             activeValidatorCount,
             genesisTime: chain.genesisTime,
             initialStatus,
+            initialCustodyGroupCount,
           },
           config,
           privateKey,
@@ -191,6 +193,7 @@ export class Network implements INetwork {
           getReqRespHandler,
           metricsRegistry: metrics ? new RegistryMetricCreator() : null,
           initialStatus,
+          initialCustodyGroupCount,
           activeValidatorCount,
         });
 

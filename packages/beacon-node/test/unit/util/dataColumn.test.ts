@@ -94,7 +94,7 @@ describe("CustodyConfig", () => {
   });
 
   it("custody columns present in sampled columns", () => {
-    const custodyConfig = new CustodyConfig(nodeId, config, null);
+    const custodyConfig = new CustodyConfig({nodeId, config});
     const {custodyColumns} = custodyConfig;
     const sampledColumns = custodyConfig.sampledColumns;
 
@@ -107,7 +107,7 @@ describe("CustodyConfig", () => {
 
   describe("updateCustodyRequirement", () => {
     it("should update target and sampled but not advertised", () => {
-      const custodyConfig = new CustodyConfig(nodeId, config, null);
+      const custodyConfig = new CustodyConfig({nodeId, config});
 
       expect(custodyConfig.sampledGroupCount).toBe(8);
       expect(custodyConfig.targetCustodyGroupCount).toBe(4);

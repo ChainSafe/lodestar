@@ -3,7 +3,14 @@ import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
-import {ForkSeq, GENESIS_SLOT, SLOTS_PER_EPOCH, isForkPostElectra, isForkPostFulu} from "@lodestar/params";
+import {
+  ForkSeq,
+  GENESIS_SLOT,
+  NUMBER_OF_CUSTODY_GROUPS,
+  SLOTS_PER_EPOCH,
+  isForkPostElectra,
+  isForkPostFulu,
+} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   BeaconStateElectra,
@@ -279,7 +286,14 @@ export class BeaconChain implements IBeaconChain {
     this.seenContributionAndProof = new SeenContributionAndProof(metrics);
     this.seenAttestationDatas = new SeenAttestationDatas(metrics, this.opts?.attDataCacheSlotDistance);
     const nodeId = computeNodeIdFromPrivateKey(privateKey);
-    this.custodyConfig = new CustodyConfig(nodeId, config, metrics, this.opts);
+    const initialCustodyGroupCount =
+      (opts.initialCustodyGroupCount ?? opts.supernode) ? NUMBER_OF_CUSTODY_GROUPS : config.CUSTODY_REQUIREMENT;
+    this.metrics?.peerDas.custodyGroupCount.set(initialCustodyGroupCount);
+    this.custodyConfig = new CustodyConfig({
+      nodeId,
+      config,
+      initialCustodyGroupCount,
+    });
     this.seenGossipBlockInput = new SeenGossipBlockInput(
       this.custodyConfig,
       this.executionEngine,
@@ -1255,18 +1269,28 @@ export class BeaconChain implements IBeaconChain {
       if (!this.opts.supernode) {
         // Update custody requirement based on finalized state
         const validatorIndices = this.beaconProposerCache.getValidatorIndices();
-        const targetCustodyGroupCount = getValidatorsCustodyRequirement(headState, validatorIndices, this.config);
-        // only update if target is increased
-        if (targetCustodyGroupCount > this.custodyConfig.targetCustodyGroupCount) {
-          this.custodyConfig.updateTargetCustodyGroupCount(targetCustodyGroupCount);
-          this.logger.verbose(`Updated targetCustodyGroupCount=${this.custodyConfig.targetCustodyGroupCount}`);
-          this.emitter.emit(ChainEvent.updateTargetGroupCount, this.custodyConfig.targetCustodyGroupCount);
-        }
+        this.updateTargetCustodyGroupCount(getValidatorsCustodyRequirement(headState, validatorIndices, this.config));
       }
     }
 
     if (headState === null) {
       this.logger.verbose("Head state is null");
+    }
+  }
+
+  updateTargetCustodyGroupCount(newTarget: number): void {
+    // Only increase targetCustodyGroupCount, never decrease it
+    const oldTarget = this.custodyConfig.targetCustodyGroupCount;
+    if (newTarget > oldTarget) {
+      this.custodyConfig.updateTargetCustodyGroupCount(newTarget);
+      this.metrics?.peerDas.custodyGroupCount.set(newTarget);
+      this.logger.verbose("Updated targetCustodyGroupCount", {oldTarget, newTarget});
+      this.emitter.emit(ChainEvent.updateTargetGroupCount, newTarget);
+    } else {
+      this.logger.verbose("Not updating targetCustodyGroupCount", {
+        currentTarget: oldTarget,
+        attemptedTarget: newTarget,
+      });
     }
   }
 

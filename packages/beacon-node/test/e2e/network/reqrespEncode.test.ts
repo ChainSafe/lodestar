@@ -71,7 +71,10 @@ describe("reqresp encoder", () => {
     const networkConfig: NetworkConfig = {
       nodeId,
       config,
-      custodyConfig: new CustodyConfig(nodeId, config, null, {supernode: false}),
+      custodyConfig: new CustodyConfig({
+        nodeId,
+        config,
+      }),
     };
     const logger = testLogger();
     const modules: ReqRespBeaconNodeModules = {

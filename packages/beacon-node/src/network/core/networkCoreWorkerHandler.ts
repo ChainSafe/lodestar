@@ -38,6 +38,7 @@ export type WorkerNetworkCoreOpts = NetworkOptions & {
   activeValidatorCount: number;
   genesisTime: number;
   initialStatus: Status;
+  initialCustodyGroupCount: number;
 };
 
 export type WorkerNetworkCoreInitModules = {
@@ -104,7 +105,15 @@ export class WorkerNetworkCore implements INetworkCore {
 
   static async init(modules: WorkerNetworkCoreInitModules): Promise<WorkerNetworkCore> {
     const {opts, config, privateKey} = modules;
-    const {genesisTime, peerStoreDir, activeValidatorCount, localMultiaddrs, metricsEnabled, initialStatus} = opts;
+    const {
+      genesisTime,
+      peerStoreDir,
+      activeValidatorCount,
+      localMultiaddrs,
+      metricsEnabled,
+      initialStatus,
+      initialCustodyGroupCount,
+    } = opts;
 
     const workerData: NetworkWorkerData = {
       opts,
@@ -116,6 +125,7 @@ export class WorkerNetworkCore implements INetworkCore {
       peerStoreDir,
       genesisTime,
       initialStatus,
+      initialCustodyGroupCount,
       activeValidatorCount,
       loggerOpts: modules.logger.toOpts(),
     };

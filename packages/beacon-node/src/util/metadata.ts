@@ -1,4 +1,4 @@
-import {intToBytes} from "@lodestar/utils";
+import {bytesToInt, intToBytes} from "@lodestar/utils";
 import {ClientCode, ClientVersion} from "../execution/index.js";
 
 export function getLodestarClientVersion(info?: {version?: string; commit?: string}): ClientVersion {
@@ -15,4 +15,8 @@ export function getLodestarClientVersion(info?: {version?: string; commit?: stri
  */
 export function serializeCgc(cgc: number): Uint8Array {
   return intToBytes(cgc, Math.ceil(Math.log2(cgc + 1) / 8), "be");
+}
+
+export function deserializeCgc(cgcBytes: Uint8Array): number {
+  return bytesToInt(cgcBytes, "be");
 }

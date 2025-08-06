@@ -49,7 +49,10 @@ describe("network / peers / PeerManager", () => {
     const networkConfig: NetworkConfig = {
       nodeId,
       config: beaconConfig,
-      custodyConfig: new CustodyConfig(nodeId, config, null, {supernode: false}),
+      custodyConfig: new CustodyConfig({
+        nodeId,
+        config,
+      }),
     };
     const controller = new AbortController();
     const clock = new Clock({config: beaconConfig, genesisTime: 0, signal: controller.signal});

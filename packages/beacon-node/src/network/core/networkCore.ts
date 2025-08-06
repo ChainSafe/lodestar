@@ -66,6 +66,7 @@ export type BaseNetworkInit = {
   getReqRespHandler: GetReqRespHandlerFn;
   activeValidatorCount: number;
   initialStatus: Status;
+  initialCustodyGroupCount: number;
 };
 
 /**
@@ -139,6 +140,7 @@ export class NetworkCore implements INetworkCore {
     getReqRespHandler,
     activeValidatorCount,
     initialStatus,
+    initialCustodyGroupCount,
   }: BaseNetworkInit): Promise<NetworkCore> {
     const libp2p = await createNodeJsLibp2p(privateKey, opts, {
       peerStoreDir,
@@ -163,7 +165,7 @@ export class NetworkCore implements INetworkCore {
     const networkConfig: NetworkConfig = {
       nodeId,
       config,
-      custodyConfig: new CustodyConfig(nodeId, config, null, {supernode: opts.supernode}),
+      custodyConfig: new CustodyConfig({nodeId, config, initialCustodyGroupCount}),
     };
     const metadata = new MetadataController({}, {networkConfig, logger, onSetValue: onMetadataSetValue});
 

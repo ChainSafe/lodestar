@@ -59,7 +59,10 @@ describe("sync / range / chain", () => {
   const zeroBlockBody = ssz.phase0.BeaconBlockBody.defaultValue();
   const interval: NodeJS.Timeout | null = null;
   const nodeId = fromHexString("cdbee32dc3c50e9711d22be5565c7e44ff6108af663b2dc5abd2df573d2fa83f");
-  const custodyConfig = new CustodyConfig(nodeId, config, null);
+  const custodyConfig = new CustodyConfig({
+    nodeId,
+    config,
+  });
 
   const reportPeer: SyncChainFns["reportPeer"] = () => {};
   const getConnectedPeerSyncMeta: SyncChainFns["getConnectedPeerSyncMeta"] = (peerId) => {

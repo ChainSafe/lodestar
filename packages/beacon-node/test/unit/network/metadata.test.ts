@@ -51,7 +51,10 @@ describe("network / metadata", () => {
       const networkConfig: NetworkConfig = {
         nodeId,
         config,
-        custodyConfig: new CustodyConfig(nodeId, config, null, {supernode: false}),
+        custodyConfig: new CustodyConfig({
+          nodeId,
+          config,
+        }),
       };
       const metadata = new MetadataController({}, {onSetValue, networkConfig, logger});
 
@@ -66,7 +69,10 @@ describe("network / metadata", () => {
       const networkConfig: NetworkConfig = {
         nodeId,
         config,
-        custodyConfig: new CustodyConfig(nodeId, config, null, {supernode: false}),
+        custodyConfig: new CustodyConfig({
+          nodeId,
+          config,
+        }),
       };
       const metadata = new MetadataController({}, {onSetValue, networkConfig, logger});
       metadata.custodyGroupCount = 128;
@@ -79,7 +85,10 @@ describe("network / metadata", () => {
       const networkConfig: NetworkConfig = {
         nodeId,
         config,
-        custodyConfig: new CustodyConfig(nodeId, config, null, {supernode: false}),
+        custodyConfig: new CustodyConfig({
+          nodeId,
+          config,
+        }),
       };
       const metadata = new MetadataController({}, {onSetValue, networkConfig, logger});
       const initialSeqNumber = metadata.seqNumber;
@@ -93,7 +102,10 @@ describe("network / metadata", () => {
       const networkConfig: NetworkConfig = {
         nodeId,
         config,
-        custodyConfig: new CustodyConfig(nodeId, config, null, {supernode: false}),
+        custodyConfig: new CustodyConfig({
+          nodeId,
+          config,
+        }),
       };
       const metadata = new MetadataController({}, {onSetValue, networkConfig, logger});
       metadata.custodyGroupCount = 128;

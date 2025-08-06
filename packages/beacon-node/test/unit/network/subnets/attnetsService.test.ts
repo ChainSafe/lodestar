@@ -34,7 +34,10 @@ describe("AttnetsService", () => {
   const networkConfig: NetworkConfig = {
     nodeId,
     config,
-    custodyConfig: new CustodyConfig(nodeId, config, null, {supernode: false}),
+    custodyConfig: new CustodyConfig({
+      nodeId,
+      config,
+    }),
   };
   // const {SECONDS_PER_SLOT} = config;
   let service: AttnetsService;

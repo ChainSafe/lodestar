@@ -80,6 +80,7 @@ export type NetworkWorkerData = {
   genesisTime: number;
   activeValidatorCount: number;
   initialStatus: Status;
+  initialCustodyGroupCount: number;
   privateKeyProto: Uint8Array;
   localMultiaddrs: string[];
   metricsEnabled: boolean;

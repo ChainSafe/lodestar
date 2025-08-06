@@ -46,7 +46,9 @@ export enum RecoverResult {
 }
 
 export type CustodyConfigOpts = {
-  supernode?: boolean;
+  nodeId: NodeId;
+  config: ChainForkConfig;
+  initialCustodyGroupCount?: number;
 };
 
 export class CustodyConfig {
@@ -92,16 +94,12 @@ export class CustodyConfig {
   private config: ChainForkConfig;
   private nodeId: NodeId;
 
-  private readonly metrics: Metrics | null;
-
-  constructor(nodeId: NodeId, config: ChainForkConfig, metrics: Metrics | null, opts: CustodyConfigOpts = {}) {
-    this.config = config;
-    this.nodeId = nodeId;
-    this.metrics = metrics;
-    this.targetCustodyGroupCount = opts.supernode ? NUMBER_OF_CUSTODY_GROUPS : config.CUSTODY_REQUIREMENT;
+  constructor(opts: CustodyConfigOpts) {
+    this.config = opts.config;
+    this.nodeId = opts.nodeId;
+    this.targetCustodyGroupCount = opts.initialCustodyGroupCount ?? this.config.CUSTODY_REQUIREMENT;
     this.custodyColumns = getDataColumns(this.nodeId, this.targetCustodyGroupCount);
     this.custodyColumnsIndex = this.getCustodyColumnsIndex(this.custodyColumns);
-    this.metrics?.peerDas.custodyGroupCount.set(this.targetCustodyGroupCount);
     this.sampledGroupCount = Math.max(this.targetCustodyGroupCount, this.config.SAMPLES_PER_SLOT);
     this.sampleGroups = getCustodyGroups(this.nodeId, this.sampledGroupCount);
     this.sampledColumns = getDataColumns(this.nodeId, this.sampledGroupCount);
@@ -118,7 +116,6 @@ export class CustodyConfig {
     this.sampleGroups = getCustodyGroups(this.nodeId, this.sampledGroupCount);
     this.sampledColumns = getDataColumns(this.nodeId, this.sampledGroupCount);
     this.sampledSubnets = this.sampledColumns.map(computeSubnetForDataColumn);
-    this.metrics?.peerDas.custodyGroupCount.set(this.targetCustodyGroupCount);
   }
 
   private getCustodyColumnsIndex(custodyColumns: ColumnIndex[]): Uint8Array {
