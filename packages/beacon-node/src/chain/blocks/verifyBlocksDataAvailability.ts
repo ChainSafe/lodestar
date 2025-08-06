@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName} from "@lodestar/params";
+import {ForkName, isForkPostFulu} from "@lodestar/params";
 import {DataAvailabilityStatus, computeTimeAtSlot} from "@lodestar/state-transition";
 import {UintNum64, deneb} from "@lodestar/types";
 import {ErrorAborted, Logger} from "@lodestar/utils";
@@ -122,7 +122,7 @@ async function maybeValidateBlobs(
         // but other checks to match blobs with block data still need to be performed
         const skipProofsCheck = opts.validBlobSidecars === BlobSidecarValidation.Individual;
         await validateBlobSidecars(blockSlot, beaconBlockRoot, blobKzgCommitments, blobs, {skipProofsCheck});
-      } else if (blockData.fork === ForkName.fulu) {
+      } else if (isForkPostFulu(blockData.fork)) {
         const {dataColumns} = blockData as BlockInputDataColumns;
         const skipProofsCheck = opts.validBlobSidecars === BlobSidecarValidation.Individual;
         await validateDataColumnsSidecars(blockSlot, beaconBlockRoot, blobKzgCommitments, dataColumns, chain.metrics, {
