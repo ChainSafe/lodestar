@@ -456,7 +456,7 @@ export class PeerManager {
       const hasAllColumns = matchingSubnetsNum === sampleSubnets.length;
       const clientAgent = peerData?.agentClient ?? ClientKind.Unknown;
 
-      this.logger.debug(`onStatus ${custodyGroupCount === undefined ? "undefined custody count assuming 4" : ""}`, {
+      this.logger.debug("onStatus", {
         nodeId: toHexString(nodeId),
         myNodeId: toHexString(this.nodeId),
         peerId: peer.toString(),
