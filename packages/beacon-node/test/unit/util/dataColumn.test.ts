@@ -19,7 +19,6 @@ describe("getValidatorsCustodyRequirement", () => {
   let config: ChainForkConfig;
 
   beforeEach(() => {
-    // Create a mock state validators
     const defaultValidator = ssz.phase0.Validator.defaultValue();
 
     stateValidators = ssz.phase0.Validators.toViewDU(
@@ -29,7 +28,6 @@ describe("getValidatorsCustodyRequirement", () => {
       }))
     );
 
-    // Create a proper config using createChainForkConfig
     config = createChainForkConfig({
       ...defaultChainConfig,
       ALTAIR_FORK_EPOCH: 0,
