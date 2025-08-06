@@ -1,5 +1,7 @@
-import {CompositeViewDU} from "@chainsafe/ssz";
+import {CompositeViewDU, ListCompositeTreeViewDU} from "@chainsafe/ssz";
+import {ChainForkConfig} from "@lodestar/config";
 import {deserializeContainerIgnoreFields, ssz} from "@lodestar/types";
+import {getStateTypeFromBytes} from "../sszBytes.js";
 
 /**
  * Load validator from bytes given a seed validator.
@@ -40,4 +42,22 @@ function getSameFields(
   }
 
   return ignoredFields;
+}
+
+/**
+ * Extract and deserialize validators from state bytes
+ */
+export function getValidatorsFromStateBytes(
+  config: ChainForkConfig,
+  stateBytes: Uint8Array
+): ListCompositeTreeViewDU<typeof ssz.phase0.Validator> {
+  // stateType could be any types, casting just to make typescript happy
+  const stateType = getStateTypeFromBytes(config, stateBytes) as typeof ssz.phase0.BeaconState;
+  const dataView = new DataView(stateBytes.buffer, stateBytes.byteOffset, stateBytes.byteLength);
+  const fieldRanges = stateType.getFieldRanges(dataView, 0, stateBytes.length);
+  const allFields = Object.keys(stateType.fields);
+  const validatorFieldIndex = allFields.indexOf("validators");
+  const validatorRange = fieldRanges[validatorFieldIndex];
+  const validatorsBytes = stateBytes.subarray(validatorRange.start, validatorRange.end);
+  return ssz.phase0.Validators.deserializeToViewDU(validatorsBytes);
 }

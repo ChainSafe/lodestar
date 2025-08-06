@@ -1,8 +1,7 @@
-import {fromHexString} from "@chainsafe/ssz";
+import {ListCompositeTreeViewDU, fromHexString} from "@chainsafe/ssz";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ChainForkConfig} from "@lodestar/config";
 import {NUMBER_OF_COLUMNS, NUMBER_OF_CUSTODY_GROUPS} from "@lodestar/params";
-import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {ValidatorIndex} from "@lodestar/types";
 import {bigIntToBytes} from "@lodestar/utils";
@@ -16,16 +15,19 @@ import {getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
 import {generateRandomBlob, transactionForKzgCommitment} from "../../utils/kzg.js";
 
 describe("getValidatorsCustodyRequirement", () => {
-  let state: CachedBeaconStateAllForks;
+  let stateValidators: ListCompositeTreeViewDU<typeof ssz.phase0.Validator>;
   let config: ChainForkConfig;
 
   beforeEach(() => {
-    // Create a mock state with validators effective balance increments
-    state = {
-      epochCtx: {
-        effectiveBalanceIncrements: new Uint8Array(NUMBER_OF_CUSTODY_GROUPS + 1).fill(32), // Each validator has 32 ETH (1 increment)
-      },
-    } as unknown as CachedBeaconStateAllForks;
+    // Create a mock state validators
+    const defaultValidator = ssz.phase0.Validator.defaultValue();
+
+    stateValidators = ssz.phase0.Validators.toViewDU(
+      Array.from({length: NUMBER_OF_CUSTODY_GROUPS + 1}, () => ({
+        ...defaultValidator,
+        effectiveBalance: 32000000000, // Each validator has 32 ETH (1 increment)
+      }))
+    );
 
     // Create a proper config using createChainForkConfig
     config = createChainForkConfig({
@@ -44,30 +46,27 @@ describe("getValidatorsCustodyRequirement", () => {
 
   it("should return minimum requirement when total balance is below the balance per additional custody group", () => {
     const validatorIndices: ValidatorIndex[] = [0, 1]; // 2 validators with 32 ETH each = 64 ETH total
-    const result = getValidatorsCustodyRequirement(state, validatorIndices, config);
+    const result = getValidatorsCustodyRequirement(config, stateValidators, validatorIndices);
     expect(result).toBe(config.VALIDATOR_CUSTODY_REQUIREMENT);
   });
 
   it("should calculate correct number of groups based on total balance", () => {
     // Create a state with 10 validators with 32 ETH each = 320 ETH total
-    const validatorIndices: ValidatorIndex[] = Array.from({length: 10}, (_, i) => i as ValidatorIndex);
-    const result = getValidatorsCustodyRequirement(state, validatorIndices, config);
+    const validatorIndices: ValidatorIndex[] = Array.from({length: 10}, (_, i) => i);
+    const result = getValidatorsCustodyRequirement(config, stateValidators, validatorIndices);
     expect(result).toBe(10);
   });
 
   it("should cap at maximum number of custody groups", () => {
     // Create a state with enough validators to exceed max groups
-    const validatorIndices: ValidatorIndex[] = Array.from(
-      {length: NUMBER_OF_CUSTODY_GROUPS + 1},
-      (_, i) => i as ValidatorIndex
-    );
-    const result = getValidatorsCustodyRequirement(state, validatorIndices, config);
+    const validatorIndices: ValidatorIndex[] = Array.from({length: NUMBER_OF_CUSTODY_GROUPS + 1}, (_, i) => i);
+    const result = getValidatorsCustodyRequirement(config, stateValidators, validatorIndices);
     expect(result).toBe(NUMBER_OF_CUSTODY_GROUPS);
   });
 
   it("should handle zero validators", () => {
     const validatorIndices: ValidatorIndex[] = [];
-    const result = getValidatorsCustodyRequirement(state, validatorIndices, config);
+    const result = getValidatorsCustodyRequirement(config, stateValidators, validatorIndices);
     expect(result).toBe(config.CUSTODY_REQUIREMENT);
   });
 });
