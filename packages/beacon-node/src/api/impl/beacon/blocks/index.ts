@@ -276,7 +276,7 @@ export function getBeaconBlockApi({
       //        partial subnet subscription
       //
       ...dataColumnSidecars.map((dataColumnSidecar) => () => network.publishDataColumnSidecar(dataColumnSidecar)),
-      () => network.publishBeaconBlock(signedBlock) as Promise<unknown>,
+      () => network.publishBeaconBlock(signedBlock),
       ...blobSidecars.map((blobSidecar) => () => network.publishBlobSidecar(blobSidecar)),
       () =>
         // there is no rush to persist block since we published it to gossip anyway
@@ -292,7 +292,7 @@ export function getBeaconBlockApi({
             throw e;
           }),
     ];
-    await promiseAllMaybeAsync(publishPromises);
+    await promiseAllMaybeAsync<number | void>(publishPromises);
 
     if (chain.emitter.listenerCount(routes.events.EventType.blockGossip)) {
       chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRoot});
