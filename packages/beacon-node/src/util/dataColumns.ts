@@ -101,7 +101,7 @@ export class CustodyConfig {
     this.targetCustodyGroupCount = opts.supernode ? NUMBER_OF_CUSTODY_GROUPS : config.CUSTODY_REQUIREMENT;
     this.custodyColumns = getDataColumns(this.nodeId, this.targetCustodyGroupCount);
     this.custodyColumnsIndex = this.getCustodyColumnsIndex(this.custodyColumns);
-    this.metrics?.peerDas.custodyGroupCount.set(this.targetCustodyGroupCount);
+    this.metrics?.peerDas.targetCustodyGroupCount.set(this.targetCustodyGroupCount);
     this.sampledGroupCount = Math.max(this.targetCustodyGroupCount, this.config.SAMPLES_PER_SLOT);
     this.sampleGroups = getCustodyGroups(this.nodeId, this.sampledGroupCount);
     this.sampledColumns = getDataColumns(this.nodeId, this.sampledGroupCount);
@@ -118,7 +118,7 @@ export class CustodyConfig {
     this.sampleGroups = getCustodyGroups(this.nodeId, this.sampledGroupCount);
     this.sampledColumns = getDataColumns(this.nodeId, this.sampledGroupCount);
     this.sampledSubnets = this.sampledColumns.map(computeSubnetForDataColumn);
-    this.metrics?.peerDas.custodyGroupCount.set(this.targetCustodyGroupCount);
+    this.metrics?.peerDas.targetCustodyGroupCount.set(this.targetCustodyGroupCount);
   }
 
   private getCustodyColumnsIndex(custodyColumns: ColumnIndex[]): Uint8Array {
