@@ -169,8 +169,8 @@ export class PeerDiscovery {
         // PeerDAS metrics
         const groupsToConnect = Array.from(this.custodyGroupQueries.values());
         const groupPeersToConnect = groupsToConnect.reduce((acc, elem) => acc + elem, 0);
-        metrics.discovery.groupPeersToConnect.set(groupPeersToConnect);
-        metrics.discovery.groupsToConnect.set(groupsToConnect.filter((elem) => elem > 0).length);
+        metrics.discovery.custodyGroupPeersToConnect.set(groupPeersToConnect);
+        metrics.discovery.custodyGroupsToConnect.set(groupsToConnect.filter((elem) => elem > 0).length);
 
         for (const type of [SubnetType.attnets, SubnetType.syncnets]) {
           const subnetPeersToConnect = Array.from(this.subnetRequests[type].values()).reduce(
