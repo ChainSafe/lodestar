@@ -560,13 +560,7 @@ export class PeerManager {
     this.metrics?.peerManager.starved.set(starved ? 1 : 0);
     const forkSeq = this.config.getForkSeq(this.clock.currentSlot);
 
-    const {
-      peersToDisconnect,
-      peersToConnect,
-      attnetQueries,
-      syncnetQueries,
-      custodyGroupQueries: groupQueries,
-    } = prioritizePeers(
+    const {peersToDisconnect, peersToConnect, attnetQueries, syncnetQueries, custodyGroupQueries} = prioritizePeers(
       connectedHealthyPeers.map((peer) => {
         const peerData = this.connectedPeers.get(peer.toString());
         return {
@@ -617,7 +611,7 @@ export class PeerManager {
       }
     }
 
-    for (const maxPeersToDiscover of groupQueries.values()) {
+    for (const maxPeersToDiscover of custodyGroupQueries.values()) {
       this.metrics?.peersRequestedSubnetsToQuery.inc({type: "column"}, 1);
       this.metrics?.peersRequestedSubnetsPeerCount.inc({type: "column"}, maxPeersToDiscover);
     }
@@ -634,7 +628,7 @@ export class PeerManager {
       try {
         this.metrics?.peersRequestedToConnect.inc(peersToConnect);
         // for PeerDAS, lodestar implements subnet sampling strategy, hence we need to issue columnSubnetQueries to PeerDiscovery
-        this.discovery.discoverPeers(peersToConnect, groupQueries, queriesMerged);
+        this.discovery.discoverPeers(peersToConnect, custodyGroupQueries, queriesMerged);
       } catch (e) {
         this.logger.error("Error on discoverPeers", {}, e as Error);
       }
