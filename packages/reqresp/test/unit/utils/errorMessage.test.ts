@@ -1,7 +1,6 @@
 import {Uint8ArrayList} from "uint8arraylist";
 import {describe, expect, it} from "vitest";
 import {Encoding} from "../../../src/types.js";
-import {BufferedSource} from "../../../src/utils/bufferedSource.js";
 import {decodeErrorMessage, encodeErrorMessage} from "../../../src/utils/errorMessage.js";
 
 describe("encode and decode error message", () => {
