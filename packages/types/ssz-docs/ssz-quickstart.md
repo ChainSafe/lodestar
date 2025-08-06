@@ -37,12 +37,22 @@ Simpler defination: Serialization: Turn object → bytes, Deserialization: Turn 
 ## 3. SSZ Components in Detail
 
 The Simple Serialize(SSZ) system has two layers of components.
-- *Core SSZ types* :This is a set of composite types used to define data Structures.
 - *Fork Specific Schemas* : Ethereum upgrades (eg. Altair, Bellatrix) They define new structures using the core types.
+- *Core SSZ types* :This is a set of composite types used to define data Structures.
 
 This section will break down the different layers of components so you understand how SSZ is used in Lodestar and Ethereum consensus. Understanding this components help in grasping how SSZ transforms structured data into merkle-friendly format for ethereum consensus.
+--
+## 3.1. Fork-Specific Schemas
+Ethereum upgrades like Phase0, Altair, Bellatrix, Capella, etc., introduce new data structures that reflect changes in the protocol.
 
-### 3.1 Consonants
+These schemas are defined using the core SSZ types.
+For example: BeaconBlock, Attestation, Validator in Phase0, SyncCommittee in Altair, ExecutionPayload in Bellatrix
+Each of these is structured using Containers, Lists, Bitlists, etc., and lives in its own directory in the Lodestar codebase:
+/src/phase0, /src/altair, /src/bellatrix, and so on.
+
+---
+## 3.2. Core SSZ types
+### 3.2.1 Consonants
 *SSZ* uses a few constants to standardize Serialization and merkleization.
 | Constant                  | Value | Description                                 |
 | ------------------------- | ----- | ------------------------------------------- |
@@ -52,8 +62,8 @@ This section will break down the different layers of components so you understan
 
 These constants ensure compatibility across implementations and define how data is packed and hashed.
 
-### 3.2 Typing System
-### 3.2.1 Core SSZ Types.
+### 3.2.2 Typing System
+###  Core SSZ Types.
 This are the *building blocks* of all SSZ structures.They fall into two types/categories. Primitive types and composite types.
 
 #### Primitive types(Basic types)
