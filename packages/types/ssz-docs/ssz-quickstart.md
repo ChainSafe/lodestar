@@ -43,6 +43,14 @@ The Simple Serialize(SSZ) system has two layers of components.
 This section will break down the different layers of components so you understand how SSZ is used in Lodestar and Ethereum consensus. Understanding this components help in grasping how SSZ transforms structured data into merkle-friendly format for ethereum consensus.
 
 ### 3.1 Consonants
+*SSZ* uses a few constants to standardize Serialization and merkleization.
+| Constant                  | Value | Description                                 |
+| ------------------------- | ----- | ------------------------------------------- |
+| `BYTES_PER_CHUNK`         | 32    | Size of each Merkle tree leaf (in bytes)    |
+| `BITS_PER_BYTE`           | 8     | Number of bits in a byte                    |
+| `BYTES_PER_LENGTH_OFFSET` | 4     | Bytes used to store variable-length offsets |
+
+These constants ensure compatibility across implementations and define how data is packed and hashed.
 
 ### 3.2 Typing System
 ### 3.2.1 Core SSZ Types.
@@ -71,3 +79,44 @@ Composite types are constructed by combining other types(basic or composite).The
 | `Union[T0, T1...]` | Holds one of several possible types, along with an index/selector byte     |
 
 Composite types enable grouping of data which is very important on ethereum. Ethereum uses containers, lists, and bitvectors extensively for organizing consensus messages (e.g., BeaconBlock, Attestation, SyncCommittee).
+
+Tip: Any type that includes a List, Bitlist, or Union (or contains them nested) becomes variable-sized.
+
+#### Type Aliases
+To make SSZ more readable, common type aliases are used:
+| Alias           | Equivalent SSZ Type |
+| --------------- | ------------------- |
+| `bit`           | `boolean`           |
+| `BytesN`        | `Vector[byte, N]`   |
+| `ByteList[N]`   | `List[byte, N]`     |
+| `ByteVector[N]` | `Vector[byte, N]`   |
+
+These aliases don't change the encoding — they’re just semantic conveniences.
+
+#### Real World Example
+Defining a validator container using SSZ.
+
+```type Validator = Container({
+  pubkey: ByteVector[48],
+  withdrawal_credentials: Bytes32,
+  effective_balance: uint64,
+  slashed: boolean,
+  activation_eligibility_epoch: uint64,
+  activation_epoch: uint64,
+  exit_epoch: uint64,
+  withdrawable_epoch: uint64
+});```
+The whole structure is fixed-size — so it’s encoded without any offsets.
+
+#### Summary
+| Concept             | Meaning                                                  |
+| ------------------- | -------------------------------------------------------- |
+| **Basic Types**     | Atomic, fixed-size values like numbers and booleans      |
+| **Composite Types** | Structs, arrays, or complex types made from other types  |
+| **Fixed-Size**      | Known size — no offset metadata needed                   |
+| **Variable-Size**   | Dynamic size — needs offset and/or length bytes          |
+| **Type Aliases**    | Shorthand notations for common composite types           |
+| **Constants**       | Internal SSZ rules for byte/bit sizing and Merkleization |
+
+---
+
