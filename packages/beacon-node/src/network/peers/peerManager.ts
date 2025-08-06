@@ -345,7 +345,6 @@ export class PeerManager {
         (metadata as Partial<fulu.Metadata>).custodyGroupCount ?? this.config.CUSTODY_REQUIREMENT;
       const samplingGroupCount = Math.max(this.config.SAMPLES_PER_SLOT, custodyGroupCount);
       const nodeId = peerData?.nodeId ?? computeNodeId(peer);
-      // TODO(fulu): this should be columns not groups.  need to change everywhere
       const custodyGroups =
         oldMetadata == null || oldMetadata.custodyGroups == null || custodyGroupCount !== oldMetadata.custodyGroupCount
           ? getCustodyGroups(nodeId, custodyGroupCount)

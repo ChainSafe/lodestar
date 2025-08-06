@@ -74,7 +74,6 @@ export function overwriteEnrWithCliArgs(
 ): void {
   const preSeq = enr.seq;
   const {port, discoveryPort, port6, discoveryPort6} = parseListenArgs(args);
-  // TODO remove the hardcoding serialize count
   maybeUpdateEnr(enr, "ip", args["enr.ip"] ?? enr.ip);
   maybeUpdateEnr(enr, "ip6", args["enr.ip6"] ?? enr.ip6);
   maybeUpdateEnr(enr, "udp", args["enr.udp"] ?? discoveryPort ?? enr.udp);
