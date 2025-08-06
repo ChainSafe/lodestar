@@ -397,7 +397,7 @@ export class PeerDiscovery {
     const syncnetsBytes = enr.kvs.get(ENRKey.syncnets); // 4 bits
     const custodyGroupCountBytes = enr.kvs.get(ENRKey.cgc); // 64 bits
     if (custodyGroupCountBytes === undefined) {
-      this.logger.debug("peer discovered with no cgc assuming 4", exportENRToJSON(enr));
+      this.logger.warn("peer discovered with no cgc assuming 4", exportENRToJSON(enr));
     }
 
     // Use faster version than ssz's implementation that leverages pre-cached.

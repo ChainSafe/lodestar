@@ -482,7 +482,6 @@ export class PeerManager {
   private async requestMetadata(peer: PeerId): Promise<void> {
     const peerIdStr = peer.toString();
     try {
-      this.logger.debug("requestMetadata", {peer: prettyPrintPeerIdStr(peerIdStr)});
       this.onMetadata(peer, await this.reqResp.sendMetadata(peer));
     } catch (e) {
       this.logger.verbose("invalid requestMetadata response", {peer: prettyPrintPeerIdStr(peerIdStr)}, e as Error);
@@ -493,7 +492,6 @@ export class PeerManager {
   private async requestPing(peer: PeerId): Promise<void> {
     const peerIdStr = peer.toString();
     try {
-      this.logger.debug("requestPing", {peer: peer.toString()});
       this.onPing(peer, await this.reqResp.sendPing(peer));
 
       // If peer replies a PING request also update lastReceivedMsg
