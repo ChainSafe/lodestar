@@ -73,6 +73,13 @@ export class RequestError extends LodestarError<RequestErrorType> {
  */
 export function responseStatusErrorToRequestError(e: ResponseError): RequestErrorType {
   const {errorMessage, status} = e;
+  // rate limited error from clients have different status, for example: lighthouse responds with 139, teku responds with 1
+  // but all of them has "rate limit" in the error message
+  // refer to https://github.com/ChainSafe/lodestar/issues/8065#issuecomment-3157266196
+  if (errorMessage.toLowerCase().includes("rate limit")) {
+    return {code: RequestErrorCode.REQUEST_RATE_LIMITED};
+  }
+
   switch (status) {
     case RespStatus.INVALID_REQUEST:
       return {code: RequestErrorCode.INVALID_REQUEST, errorMessage};

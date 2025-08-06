@@ -1,4 +1,5 @@
 import {MetricsRegister} from "@lodestar/utils";
+import {RequestErrorCode} from "./request/errors.js";
 
 export type Metrics = ReturnType<typeof getMetrics>;
 
@@ -25,6 +26,11 @@ export function getMetrics(register: MetricsRegister) {
       name: "beacon_reqresp_outgoing_requests_error_total",
       help: "Counts total failed requests done per method",
       labelNames: ["method"],
+    }),
+    outgoingErrorReasons: register.gauge<{reason: RequestErrorCode}>({
+      name: "beacon_reqresp_outgoing_requests_error_reason_total",
+      help: "Count total outgoing request errors by reason",
+      labelNames: ["reason"],
     }),
     incomingRequests: register.gauge<{method: string}>({
       name: "beacon_reqresp_incoming_requests_total",
