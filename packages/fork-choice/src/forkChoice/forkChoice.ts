@@ -63,13 +63,13 @@ export type ForkChoiceOpts = {
 };
 
 export enum UpdateHeadOpt {
-  GetCanonicialHead = "getCanonicialHead", // Skip getProposerHead
+  GetCanonicalHead = "getCanonicalHead", // Skip getProposerHead
   GetProposerHead = "getProposerHead", // With getProposerHead
   GetPredictedProposerHead = "getPredictedProposerHead", // With predictProposerHead
 }
 
 export type UpdateAndGetHeadOpt =
-  | {mode: UpdateHeadOpt.GetCanonicialHead}
+  | {mode: UpdateHeadOpt.GetCanonicalHead}
   | {mode: UpdateHeadOpt.GetProposerHead; secFromSlot: number; slot: Slot}
   | {mode: UpdateHeadOpt.GetPredictedProposerHead; secFromSlot: number; slot: Slot};
 
@@ -205,22 +205,22 @@ export class ForkChoice implements IForkChoice {
   } {
     const {mode} = opt;
 
-    const canonicialHeadBlock = mode === UpdateHeadOpt.GetPredictedProposerHead ? this.getHead() : this.updateHead();
+    const canonicalHeadBlock = mode === UpdateHeadOpt.GetPredictedProposerHead ? this.getHead() : this.updateHead();
     switch (mode) {
       case UpdateHeadOpt.GetPredictedProposerHead:
-        return {head: this.predictProposerHead(canonicialHeadBlock, opt.secFromSlot, opt.slot)};
+        return {head: this.predictProposerHead(canonicalHeadBlock, opt.secFromSlot, opt.slot)};
       case UpdateHeadOpt.GetProposerHead: {
         const {
           proposerHead: head,
           isHeadTimely,
           notReorgedReason,
-        } = this.getProposerHead(canonicialHeadBlock, opt.secFromSlot, opt.slot);
+        } = this.getProposerHead(canonicalHeadBlock, opt.secFromSlot, opt.slot);
         return {head, isHeadTimely, notReorgedReason};
       }
-      case UpdateHeadOpt.GetCanonicialHead:
-        return {head: canonicialHeadBlock};
+      case UpdateHeadOpt.GetCanonicalHead:
+        return {head: canonicalHeadBlock};
       default:
-        return {head: canonicialHeadBlock};
+        return {head: canonicalHeadBlock};
     }
   }
 
@@ -296,15 +296,14 @@ export class ForkChoice implements IForkChoice {
    *
    */
   predictProposerHead(headBlock: ProtoBlock, secFromSlot: number, currentSlot: Slot): ProtoBlock {
+    const {proposerBoost, proposerBoostReorg} = this.opts ?? {};
     // Skip re-org attempt if proposer boost (reorg) are disabled
-    if (!this.opts?.proposerBoost || !this.opts?.proposerBoostReorg) {
-      this.logger?.verbose("No proposer boot reorg prediction since the related flags are disabled");
-      return headBlock;
-    }
-
-    if (headBlock.slot === currentSlot) {
-      // If head block aka the head cache is current, that means `updateHead` is called during gossip handling,
-      // that can only happen if shouldOverrideForkChoiceUpdate = false so no reorg
+    if (!proposerBoost || !proposerBoostReorg) {
+      this.logger?.verbose("No proposer boost reorg prediction since the related flags are disabled", {
+        slot: currentSlot,
+        proposerBoost,
+        proposerBoostReorg,
+      });
       return headBlock;
     }
 
@@ -313,11 +312,18 @@ export class ForkChoice implements IForkChoice {
 
     if (result.shouldOverrideFcu) {
       this.logger?.verbose("Current head is weak. Predicting next block to be built on parent of head.", {
-        blockRoot,
         slot: currentSlot,
+        proposerHead: result.parentBlock.blockRoot,
+        weakHead: blockRoot,
       });
       return result.parentBlock;
     }
+
+    this.logger?.verbose("Current head is strong. Predicting next block to be built on head", {
+      slot: currentSlot,
+      head: headBlock.blockRoot,
+      reason: result.reason,
+    });
 
     return headBlock;
   }
@@ -339,8 +345,13 @@ export class ForkChoice implements IForkChoice {
     let proposerHead = headBlock;
 
     // Skip re-org attempt if proposer boost (reorg) are disabled
-    if (!this.opts?.proposerBoost || !this.opts?.proposerBoostReorg) {
-      this.logger?.verbose("No proposer boot reorg attempt since the related flags are disabled");
+    const {proposerBoost, proposerBoostReorg} = this.opts ?? {};
+    if (!proposerBoost || !proposerBoostReorg) {
+      this.logger?.verbose("No proposer boost reorg attempt since the related flags are disabled", {
+        slot,
+        proposerBoost,
+        proposerBoostReorg,
+      });
       return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.ProposerBoostReorgDisabled};
     }
 
@@ -400,7 +411,11 @@ export class ForkChoice implements IForkChoice {
     }
 
     // Reorg if all above checks fail
-    this.logger?.info("Will perform single-slot reorg to reorg out current weak head");
+    this.logger?.verbose("Performing single-slot reorg to remove current weak head", {
+      slot,
+      proposerHead: parentBlock.blockRoot,
+      weakHead: headBlock.blockRoot,
+    });
     proposerHead = parentBlock;
 
     return {proposerHead, isHeadTimely};

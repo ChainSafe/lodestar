@@ -1,5 +1,6 @@
+import {GoodByeReasonCode} from "../../../constants/network.js";
 import {
-  BANNED_BEFORE_DECAY_MS,
+  COOL_DOWN_BEFORE_DECAY_MS,
   DEFAULT_SCORE,
   GOSSIPSUB_NEGATIVE_SCORE_WEIGHT,
   GOSSIPSUB_POSITIVE_SCORE_WEIGHT,
@@ -7,6 +8,7 @@ import {
   MAX_SCORE,
   MIN_LODESTAR_SCORE_BEFORE_BAN,
   MIN_SCORE,
+  NO_COOL_DOWN_APPLIED,
 } from "./constants.js";
 import {IPeerScore, PeerScoreStat, ScoreState} from "./interface.js";
 import {scoreToState} from "./utils.js";
@@ -30,6 +32,10 @@ export class RealScore implements IPeerScore {
     this.lastUpdate = Date.now();
   }
 
+  isCoolingDown(): boolean {
+    return Date.now() < this.lastUpdate;
+  }
+
   getScore(): number {
     return this.score;
   }
@@ -45,6 +51,30 @@ export class RealScore implements IPeerScore {
 
     this.setLodestarScore(newScore);
     return newScore;
+  }
+
+  applyReconnectionCoolDown(reason: GoodByeReasonCode): number {
+    let coolDownMin = NO_COOL_DOWN_APPLIED;
+    switch (reason) {
+      // let scoring system handle score decay by itself
+      case GoodByeReasonCode.BANNED:
+      case GoodByeReasonCode.SCORE_TOO_LOW:
+        return coolDownMin;
+      case GoodByeReasonCode.INBOUND_DISCONNECT:
+      case GoodByeReasonCode.TOO_MANY_PEERS:
+        coolDownMin = 5;
+        break;
+      case GoodByeReasonCode.ERROR:
+      case GoodByeReasonCode.CLIENT_SHUTDOWN:
+        coolDownMin = 60;
+        break;
+      case GoodByeReasonCode.IRRELEVANT_NETWORK:
+        coolDownMin = 240;
+        break;
+    }
+    // set banning period to time in ms in the future from now
+    this.lastUpdate = Date.now() + coolDownMin * 60 * 1000;
+    return coolDownMin;
   }
 
   /**
@@ -108,7 +138,7 @@ export class RealScore implements IPeerScore {
 
     if (prevState !== ScoreState.Banned && newState === ScoreState.Banned) {
       // ban this peer for at least BANNED_BEFORE_DECAY_MS seconds
-      this.lastUpdate = Date.now() + BANNED_BEFORE_DECAY_MS;
+      this.lastUpdate = Date.now() + COOL_DOWN_BEFORE_DECAY_MS;
     }
   }
 
@@ -140,12 +170,20 @@ export class MaxScore implements IPeerScore {
     return DEFAULT_SCORE;
   }
 
+  isCoolingDown(): boolean {
+    return false;
+  }
+
   add(): number {
     return DEFAULT_SCORE;
   }
 
   update(): number {
     return MAX_SCORE;
+  }
+
+  applyReconnectionCoolDown(_reason: GoodByeReasonCode): number {
+    return NO_COOL_DOWN_APPLIED;
   }
 
   updateGossipsubScore(): void {}

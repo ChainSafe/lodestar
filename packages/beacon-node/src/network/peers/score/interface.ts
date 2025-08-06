@@ -1,4 +1,5 @@
 import {PeerId} from "@libp2p/interface";
+import {GoodByeReasonCode} from "../../../constants/network.js";
 import {PeerIdStr} from "../../../util/peerId.js";
 import {NetworkCoreMetrics} from "../../core/metrics.js";
 
@@ -10,8 +11,10 @@ export interface IPeerRpcScoreStore {
   getScore(peer: PeerId): number;
   getGossipScore(peer: PeerId): number;
   getScoreState(peer: PeerId): ScoreState;
+  isCoolingDown(peer: PeerIdStr): boolean;
   dumpPeerScoreStats(): PeerScoreStats;
   applyAction(peer: PeerId, action: PeerAction, actionName: string): void;
+  applyReconnectionCoolDown(peer: PeerIdStr, reason: GoodByeReasonCode): number;
   update(): void;
   updateGossipsubScore(peerId: PeerIdStr, newScore: number, ignore: boolean): void;
 }
@@ -19,10 +22,12 @@ export interface IPeerRpcScoreStore {
 export interface IPeerScore {
   getScore(): number;
   getGossipScore(): number;
+  isCoolingDown(): boolean;
   add(scoreDelta: number): number;
   update(): number;
   updateGossipsubScore(newScore: number, ignore: boolean): void;
   getStat(): PeerScoreStat;
+  applyReconnectionCoolDown(reason: GoodByeReasonCode): number;
 }
 
 export enum ScoreState {

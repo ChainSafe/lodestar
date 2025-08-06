@@ -128,7 +128,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         name: "beacon_fork_choice_indices_count",
         help: "Current count of indices in fork choice data structures",
       }),
-      notReorgedReason: register.gauge<{reason: NotReorgedReason}>({
+      notReorgedReason: register.counter<{reason: NotReorgedReason}>({
         name: "beacon_fork_choice_not_reorged_reason_total",
         help: "Reason why the current head is not re-orged out",
         labelNames: ["reason"],
