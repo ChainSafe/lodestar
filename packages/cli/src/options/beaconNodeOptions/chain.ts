@@ -285,6 +285,8 @@ Will double processing times. Use only for debugging purposes.",
   },
 
   "chain.archiveDataEpochs": {
+    // TODO: remove this alias after Lodestar 2.0
+    alias: "chain.archiveBlobEpochs",
     description:
       "Number of epochs to retain finalized blobs/columns (minimum of MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS/MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS)",
     type: "number",
