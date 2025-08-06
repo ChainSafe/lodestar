@@ -417,7 +417,7 @@ export class PeerDiscovery {
     this.logger.debug("Discovered peer via discv5", {
       peer: prettyPrintPeerId(peerId),
       status,
-      custodySubnetCount: custodyGroupCount,
+      cgc: custodyGroupCount,
     });
     this.metrics?.discovery.discoveredStatus.inc({status});
   };
