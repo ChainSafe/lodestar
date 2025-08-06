@@ -260,23 +260,13 @@ export function getBeaconBlockApi({
       // specification is very clear that this is the desired behavior.
       //
       // - Publish blobs and block before importing so that network can see them asap
-      //
-      // For blobs and columns the publish order is reversed do to networking considerations. When data
-      // is sharded across the network there is additional latency for it to reasonably propagate.
-      //
-      // - DENEB/ELECTRA publish block first because
-      //     a) as soon as node sees block they can start processing it while large blobs are in transit
+      // - Publish block first because
+      //     a) as soon as node sees block they can start processing it while data is in transit
       //     b) getting block first allows nodes to use getBlobs from local ELs and save
       //        import latency and hopefully bandwidth
       //
-      // - POST-FULU publish columns first because
-      //     a) by the times nodes see block, they might decide to pull sidecars
-      //     b) they might require more hops to reach recipients under data sharding where sidecars
-      //        might need to distribute to more nodes for sufficient availability because of
-      //        partial subnet subscription
-      //
-      ...dataColumnSidecars.map((dataColumnSidecar) => () => network.publishDataColumnSidecar(dataColumnSidecar)),
       () => network.publishBeaconBlock(signedBlock),
+      ...dataColumnSidecars.map((dataColumnSidecar) => () => network.publishDataColumnSidecar(dataColumnSidecar)),
       ...blobSidecars.map((blobSidecar) => () => network.publishBlobSidecar(blobSidecar)),
       () =>
         // there is no rush to persist block since we published it to gossip anyway
