@@ -5,7 +5,6 @@ import {
   ForkPostBellatrix,
   NUMBER_OF_COLUMNS,
   SLOTS_PER_HISTORICAL_ROOT,
-  forkPostFulu,
   isForkPostBellatrix,
   isForkPostDeneb,
   isForkPostElectra,
