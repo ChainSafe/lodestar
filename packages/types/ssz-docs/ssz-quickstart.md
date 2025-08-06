@@ -8,7 +8,7 @@
 
 ---
 
-## 🔍 Why Does SSZ Exist?
+## 1.🔍 Why Does SSZ Exist?
 
 Ethereum needs to:
 - Efficiently communicate large, complex data structures between nodes
@@ -21,7 +21,7 @@ SSZ helps by:
 - Making Merkle root generation and verification fast and consistent
 
 ---
-## 🛠️ What Does SSZ Do?
+## 2.🛠️ What Does SSZ Do?
 
  SSZ = Serialization + Merkleization
 
@@ -34,19 +34,40 @@ SSZ helps by:
 Simpler defination: Serialization: Turn object → bytes, Deserialization: Turn bytes → object, Merkleization: Turn object → tree of hashes → 1 final secure root
 
 ---
-## SSZ Components in Detail
+## 3. SSZ Components in Detail
 
 The Simple Serialize(SSZ) system has two layers of components.
 - *Core SSZ types* :This is a set of composite types used to define data Structures.
 - *Fork Specific Schemas* : Ethereum upgrades (eg. Altair, Bellatrix) They define new structures using the core types.
 
 This section will break down the different layers of components so you understand how SSZ is used in Lodestar and Ethereum consensus. Understanding this components help in grasping how SSZ transforms structured data into merkle-friendly format for ethereum consensus.
- 
-### Core SSZ Types.
+
+### 3.1 Consonants
+
+### 3.2 Typing System
+### 3.2.1 Core SSZ Types.
 This are the *building blocks* of all SSZ structures.They fall into two types/categories. Primitive types and composite types.
 
-|Type                    | Description                      |
+#### Primitive types(Basic types)
+These types represent single, atomic values and have a fixed size in bytes. They are the building blocks of all other types.
+
+|Type                    | Description                      | Example                      |
 |------------------------|--------------------------------- |
-|boolean        | A single byte  |
-|uintN         | Unsigned Integers: uint8, uint16, uint32.....upto uint256 |
+|boolean        | A single byte, true or false  | Serialized as 0x00 or 0x01
+|uintN         | Unsigned Integers: uint8, uint16, uint32.....upto uint256 | uint64 = 8 bytes |
 |bytesN        | fixed length byte arrays eg. byte4, bytes32   |
+Basic types are always a fixed size and will always occupy the same number of bytes.
+
+#### Composite types
+Composite types are constructed by combining other types(basic or composite).They represent structured or grouped data and may be fixed or variable size, depending on their contents.
+
+| Type               | Description                                                                |
+| ------------------ | -------------------------------------------------------------------------- |
+| `Container`        | Like a struct: named fields with different types                           |
+| `Vector[T, N]`     | Fixed-length array of N elements of type T                                 |
+| `List[T, N]`       | Variable-length array with maximum N elements                              |
+| `Bitvector[N]`     | Fixed-length array of bits (booleans) — serialized compactly               |
+| `Bitlist[N]`       | Variable-length array of bits, up to N bits — with special length encoding |
+| `Union[T0, T1...]` | Holds one of several possible types, along with an index/selector byte     |
+
+Composite types enable grouping of data which is very important on ethereum. Ethereum uses containers, lists, and bitvectors extensively for organizing consensus messages (e.g., BeaconBlock, Attestation, SyncCommittee).
