@@ -31,6 +31,8 @@ export enum RequestErrorCode {
   RESP_TIMEOUT = "REQUEST_ERROR_RESP_TIMEOUT",
   /** Request rate limited */
   REQUEST_RATE_LIMITED = "REQUEST_ERROR_RATE_LIMITED",
+  /** Response rate limited */
+  RESP_RATE_LIMITED = "RESPONSE_ERROR_RATE_LIMITED",
   /** For malformed SSZ (metadata) responses */
   SSZ_OVER_MAX_SIZE = "SSZ_SNAPPY_ERROR_OVER_SSZ_MAX_SIZE",
 }
@@ -49,6 +51,7 @@ type RequestErrorType =
   | {code: RequestErrorCode.TTFB_TIMEOUT}
   | {code: RequestErrorCode.RESP_TIMEOUT}
   | {code: RequestErrorCode.REQUEST_RATE_LIMITED}
+  | {code: RequestErrorCode.RESP_RATE_LIMITED}
   | {code: RequestErrorCode.SSZ_OVER_MAX_SIZE};
 
 export const REQUEST_ERROR_CLASS_NAME = "RequestError";
@@ -77,7 +80,7 @@ export function responseStatusErrorToRequestError(e: ResponseError): RequestErro
   // refer to https://github.com/ChainSafe/lodestar/issues/8065#issuecomment-3157266196
   const errorMessageLowercase = errorMessage.toLowerCase();
   if (errorMessageLowercase.includes("rate limit")) {
-    return {code: RequestErrorCode.REQUEST_RATE_LIMITED};
+    return {code: RequestErrorCode.RESP_RATE_LIMITED};
   }
 
   // Grandine may return this without standard RespStatus, see https://github.com/ChainSafe/lodestar/issues/8110
