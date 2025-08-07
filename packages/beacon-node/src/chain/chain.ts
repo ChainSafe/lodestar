@@ -44,7 +44,7 @@ import {ProcessShutdownCallback} from "@lodestar/validator";
 
 import {PrivateKey} from "@libp2p/interface";
 import {LoggerNode} from "@lodestar/logger/node";
-import {getValidatorsFromStateBytes} from "@lodestar/state-transition";
+import {getEffectiveBalancesFromStateBytes} from "@lodestar/state-transition";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
@@ -1292,13 +1292,18 @@ export class BeaconChain implements IBeaconChain {
       );
     }
 
-    const stateValidators =
-      stateOrBytes instanceof Uint8Array
-        ? getValidatorsFromStateBytes(this.config, stateOrBytes)
-        : stateOrBytes.validators;
-
+    // Validators attached to the node
     const validatorIndices = this.beaconProposerCache.getValidatorIndices();
-    const effectiveBalances = validatorIndices.map((index) => stateValidators.get(index).effectiveBalance);
+
+    let effectiveBalances: number[];
+    if (stateOrBytes instanceof Uint8Array) {
+      effectiveBalances = Array.from(
+        getEffectiveBalancesFromStateBytes(this.config, stateOrBytes, validatorIndices).values()
+      );
+    } else {
+      effectiveBalances = validatorIndices.map((index) => stateOrBytes.validators.get(index).effectiveBalance);
+    }
+
     const targetCustodyGroupCount = getValidatorsCustodyRequirement(this.config, effectiveBalances);
     // Only update if target is increased
     if (targetCustodyGroupCount > this.custodyConfig.targetCustodyGroupCount) {

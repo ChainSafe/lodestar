@@ -1,6 +1,6 @@
-import {CompositeViewDU, ListCompositeTreeViewDU} from "@chainsafe/ssz";
+import {CompositeViewDU} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {deserializeContainerIgnoreFields, ssz} from "@lodestar/types";
+import {ValidatorIndex, deserializeContainerIgnoreFields, ssz} from "@lodestar/types";
 import {getStateTypeFromBytes} from "../sszBytes.js";
 
 /**
@@ -45,19 +45,33 @@ function getSameFields(
 }
 
 /**
- * Extract and deserialize validators from state bytes
+ * Extract and deserialize validator effective balances from state bytes
  */
-export function getValidatorsFromStateBytes(
+export function getEffectiveBalancesFromStateBytes(
   config: ChainForkConfig,
-  stateBytes: Uint8Array
-): ListCompositeTreeViewDU<typeof ssz.phase0.Validator> {
+  stateBytes: Uint8Array,
+  validatorIndices: ValidatorIndex[]
+): Map<ValidatorIndex, number> {
   // stateType could be any types, casting just to make typescript happy
   const stateType = getStateTypeFromBytes(config, stateBytes) as typeof ssz.phase0.BeaconState;
-  const dataView = new DataView(stateBytes.buffer, stateBytes.byteOffset, stateBytes.byteLength);
-  const fieldRanges = stateType.getFieldRanges(dataView, 0, stateBytes.length);
-  const allFields = Object.keys(stateType.fields);
-  const validatorFieldIndex = allFields.indexOf("validators");
-  const validatorRange = fieldRanges[validatorFieldIndex];
-  const validatorsBytes = stateBytes.subarray(validatorRange.start, validatorRange.end);
-  return ssz.phase0.Validators.deserializeToViewDU(validatorsBytes);
+  const stateView = new DataView(stateBytes.buffer, stateBytes.byteOffset, stateBytes.byteLength);
+  const stateFieldRanges = stateType.getFieldRanges(stateView, 0, stateBytes.length);
+  const stateFields = Object.keys(stateType.fields);
+  const validatorsFieldIndex = stateFields.indexOf("validators");
+  const validatorsRange = stateFieldRanges[validatorsFieldIndex];
+  const validatorsBytes = stateBytes.subarray(validatorsRange.start, validatorsRange.end);
+  const validatorSize = ssz.phase0.Validator.fixedSize as number;
+
+  const effectiveBalances = new Map<ValidatorIndex, number>();
+
+  for (const index of validatorIndices) {
+    const validatorBytes = validatorsBytes.subarray(index * validatorSize, (index + 1) * validatorSize);
+    if (validatorBytes.byteLength === 0) {
+      throw Error(`Validator index ${index} out of range`);
+    }
+    const validator = ssz.phase0.Validator.deserialize(validatorBytes);
+    effectiveBalances.set(index, validator.effectiveBalance);
+  }
+
+  return effectiveBalances;
 }
