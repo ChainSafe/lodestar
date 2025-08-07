@@ -152,6 +152,7 @@ Each schema (like Attestation, BeaconBlock, etc.) provides a defaultValue() meth
 Here is a table of the different types and their default values.
 
 |Type	|Default Value|
+|-------|--------------|
 |uintN|	0|
 |boolean|	False|
 |Container|	[default(type) for type in container]|
