@@ -251,14 +251,6 @@ export class ReqRespBeaconNode extends ReqResp {
       );
     }
 
-    if (ForkSeq[fork] < ForkSeq.fulu) {
-      // Unregister StatusV1, MetadataV2 at the fork boundary, so only declare for pre-fulu
-      protocolsAtFork.push(
-        [protocols.Status(fork, this.config), this.onStatus.bind(this)],
-        [protocols.MetadataV2(fork, this.config), this.onMetadata.bind(this)]
-      );
-    }
-
     if (ForkSeq[fork] >= ForkSeq.altair && !this.disableLightClientServer) {
       // Should be okay to enable before altair, but for consistency only enable afterwards
       protocolsAtFork.push(
@@ -285,7 +277,13 @@ export class ReqRespBeaconNode extends ReqResp {
       );
     }
 
-    if (ForkSeq[fork] >= ForkSeq.fulu) {
+    if (ForkSeq[fork] < ForkSeq.fulu) {
+      // Unregister StatusV1, MetadataV2 at the fork boundary, so only declare for pre-fulu
+      protocolsAtFork.push(
+        [protocols.Status(fork, this.config), this.onStatus.bind(this)],
+        [protocols.MetadataV2(fork, this.config), this.onMetadata.bind(this)]
+      );
+    } else {
       protocolsAtFork.push(
         [
           protocols.DataColumnSidecarsByRoot(fork, this.config),
@@ -323,8 +321,7 @@ export class ReqRespBeaconNode extends ReqResp {
   }
 
   private async *onStatus(req: ReqRespRequest, peerId: PeerId): AsyncIterable<ResponseOutgoing> {
-    const fork = ForkName[ForkSeq[this.currentRegisteredFork] as ForkName];
-    const type = responseSszTypeByMethod[ReqRespMethod.Status](fork, req.version);
+    const type = responseSszTypeByMethod[ReqRespMethod.Status](ForkName.phase0 /* forkName is ignored */, req.version);
     const body = type.deserialize(req.data);
     this.onIncomingRequestBody({method: ReqRespMethod.Status, body}, peerId);
 
