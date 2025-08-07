@@ -120,14 +120,14 @@ async function maybeValidateBlobs(
 
         // if the blob sidecars have been individually verified then we can skip kzg proof check
         // but other checks to match blobs with block data still need to be performed
+        //
+        // TODO(@matthewkeil) this needs to be removed in BlockInput refactor.  should not be an option to
+        //    not verify during gossip so should never be necessary during block import
         const skipProofsCheck = opts.validBlobSidecars === BlobSidecarValidation.Individual;
         await validateBlobSidecars(blockSlot, beaconBlockRoot, blobKzgCommitments, blobs, {skipProofsCheck});
       } else if (isForkPostFulu(blockData.fork)) {
         const {dataColumns} = blockData as BlockInputDataColumns;
-        const skipProofsCheck = opts.validBlobSidecars === BlobSidecarValidation.Individual;
-        await validateDataColumnsSidecars(blockSlot, beaconBlockRoot, blobKzgCommitments, dataColumns, chain.metrics, {
-          skipProofsCheck,
-        });
+        validateDataColumnsSidecars(blockSlot, beaconBlockRoot, blobKzgCommitments, dataColumns);
       }
 
       const availableBlockInput = getBlockInput.availableData(

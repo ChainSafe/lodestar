@@ -172,9 +172,7 @@ describe("data column sidecars", () => {
     expect(columnSidecars.length).toEqual(NUMBER_OF_COLUMNS);
     expect(columnSidecars[0].column.length).toEqual(blobs.length);
 
-    await expect(
-      validateDataColumnsSidecars(slot, blockRoot, kzgCommitments, columnSidecars, null)
-    ).resolves.toBeUndefined();
+    expect(validateDataColumnsSidecars(slot, blockRoot, kzgCommitments, columnSidecars)).toBeUndefined();
   });
 
   it("fail for no blob commitments in validateDataColumnsSidecars", async () => {
@@ -212,7 +210,7 @@ describe("data column sidecars", () => {
     expect(columnSidecars.length).toEqual(NUMBER_OF_COLUMNS);
     expect(columnSidecars[0].column.length).toEqual(blobs.length);
 
-    await expect(validateDataColumnsSidecars(slot, blockRoot, [], columnSidecars, null)).rejects.toThrow(
+    expect(validateDataColumnsSidecars(slot, blockRoot, [], columnSidecars)).toThrow(
       `Invalid data column sidecar slot=${slot}`
     );
   });

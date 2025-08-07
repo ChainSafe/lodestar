@@ -175,19 +175,12 @@ export async function validateGossipDataColumnSidecar(
   }
 }
 
-export async function validateDataColumnsSidecars(
+export function validateDataColumnsSidecars(
   blockSlot: Slot,
   blockRoot: Root,
   blockKzgCommitments: deneb.BlobKzgCommitments,
-  dataColumnSidecars: fulu.DataColumnSidecars,
-  metrics: Metrics | null,
-  opts: {skipProofsCheck: boolean} = {skipProofsCheck: false}
+  dataColumnSidecars: fulu.DataColumnSidecars
 ): Promise<void> {
-  const commitmentBytes: Uint8Array[] = [];
-  const cellIndices: number[] = [];
-  const cells: Uint8Array[] = [];
-  const proofBytes: Uint8Array[] = [];
-
   for (let sidecarsIndex = 0; sidecarsIndex < dataColumnSidecars.length; sidecarsIndex++) {
     const columnSidecar = dataColumnSidecars[sidecarsIndex];
     const {index: columnIndex, column, kzgCommitments, kzgProofs} = columnSidecar;
@@ -219,29 +212,6 @@ export async function validateDataColumnsSidecars(
         `Invalid data sidecar array lengths for columnIndex=${columnIndex} in slot=${blockSlot} blockRoot=${toHex(blockRoot)}`
       );
     }
-
-    commitmentBytes.push(...kzgCommitments);
-    cellIndices.push(...Array.from({length: column.length}, () => columnIndex));
-    cells.push(...column);
-    proofBytes.push(...kzgProofs);
-  }
-
-  if (opts.skipProofsCheck) {
-    return;
-  }
-
-  let valid: boolean;
-  try {
-    const timer = metrics?.peerDas.kzgVerificationDataColumnBatchTime.startTimer();
-    valid = await kzg.asyncVerifyCellKzgProofBatch(commitmentBytes, cellIndices, cells, proofBytes);
-    timer?.();
-  } catch (err) {
-    (err as Error).message = `Error in verifyCellKzgProofBatch for slot=${blockSlot} blockRoot=${toHex(blockRoot)}`;
-    throw err;
-  }
-
-  if (!valid) {
-    throw new Error(`Invalid data column sidecars in slot=${blockSlot} blockRoot=${toHex(blockRoot)}`);
   }
 }
 
@@ -289,13 +259,15 @@ export async function verifyDataColumnSidecarKzgProofs(
 ): Promise<void> {
   let valid: boolean;
   try {
-    valid = await kzg.verifyCellKzgProofBatch(commitments, cellIndices, cells, proofs);
+    // TODO(fulu): this was an async function with the sync kzg method.  prob should be full async
+    //    but should double check gossip validation times to see if it should stay main thread (full sync)
+    valid = await kzg.asyncVerifyCellKzgProofBatch(commitments, cellIndices, cells, proofs);
   } catch (e) {
-    (e as Error).message = `Error on verifyCellKzgProofBatch: ${(e as Error).message}`;
+    (e as Error).message = `Error on asyncVerifyCellKzgProofBatch: ${(e as Error).message}`;
     throw e;
   }
   if (!valid) {
-    throw Error("Invalid verifyCellKzgProofBatch");
+    throw Error("Invalid asyncVerifyCellKzgProofBatch");
   }
 }
 
