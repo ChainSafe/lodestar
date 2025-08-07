@@ -1311,7 +1311,7 @@ export class BeaconChain implements IBeaconChain {
         validatorCount: validatorIndices.length,
         targetCustodyGroupCount,
       });
-      this.emitter.emit(ChainEvent.updateTargetGroupCount, targetCustodyGroupCount);
+      this.emitter.emit(ChainEvent.updateTargetCustodyGroupCount, targetCustodyGroupCount);
     }
   }
 
