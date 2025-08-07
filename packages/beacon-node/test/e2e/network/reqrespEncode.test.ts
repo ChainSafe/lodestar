@@ -25,6 +25,8 @@ import {NetworkConfig} from "../../../src/network/networkConfig.js";
 import {PeersData} from "../../../src/network/peers/peersData.js";
 import {GetReqRespHandlerFn} from "../../../src/network/reqresp/types.js";
 import {LocalStatusCache} from "../../../src/network/statusCache.js";
+import {computeNodeId} from "../../../src/network/subnets/index.js";
+import {CustodyConfig} from "../../../src/util/dataColumns.js";
 import {testLogger} from "../../utils/logger.js";
 
 describe("reqresp encoder", () => {
@@ -65,7 +67,12 @@ describe("reqresp encoder", () => {
 
     const config = createBeaconConfig({}, ZERO_HASH);
     const peerId = peerIdFromPrivateKey(privateKey);
-    const networkConfig = new NetworkConfig(peerId, config);
+    const nodeId = computeNodeId(peerId);
+    const networkConfig: NetworkConfig = {
+      nodeId,
+      config,
+      custodyConfig: new CustodyConfig(nodeId, config, null, {supernode: false}),
+    };
     const logger = testLogger();
     const modules: ReqRespBeaconNodeModules = {
       libp2p,

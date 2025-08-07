@@ -404,8 +404,8 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         help: "Duration of engine_getBlobsV2 requests",
         buckets: [0.01, 0.05, 0.1, 0.5, 1, 2.5, 5, 7.5],
       }),
-      custodyGroupCount: register.gauge({
-        name: "beacon_custody_groups",
+      targetCustodyGroupCount: register.gauge({
+        name: "beacon_target_custody_group_count",
         help: "Total number of custody groups within a node",
       }),
       reconstructedColumns: register.counter({

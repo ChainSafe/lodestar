@@ -14,7 +14,7 @@ import {ReqRespMethod} from "../../../../src/network/reqresp/ReqRespBeaconNode.j
 import {LocalStatusCache} from "../../../../src/network/statusCache.js";
 import {IAttnetsService, computeNodeId} from "../../../../src/network/subnets/index.js";
 import {Clock} from "../../../../src/util/clock.js";
-import {getCustodyGroups} from "../../../../src/util/dataColumns.js";
+import {CustodyConfig, getCustodyGroups} from "../../../../src/util/dataColumns.js";
 import {waitForEvent} from "../../../utils/events/resolver.js";
 import {testLogger} from "../../../utils/logger.js";
 import {createNode} from "../../../utils/network.js";
@@ -45,7 +45,12 @@ describe("network / peers / PeerManager", () => {
       },
     });
     const beaconConfig = createBeaconConfig(config, state.genesisValidatorsRoot);
-    const networkConfig = new NetworkConfig(peerId1, beaconConfig);
+    const nodeId = computeNodeId(peerId1);
+    const networkConfig: NetworkConfig = {
+      nodeId,
+      config: beaconConfig,
+      custodyConfig: new CustodyConfig(nodeId, config, null, {supernode: false}),
+    };
     const controller = new AbortController();
     const clock = new Clock({config: beaconConfig, genesisTime: 0, signal: controller.signal});
     const status = ssz.phase0.Status.defaultValue();

@@ -176,13 +176,13 @@ export class PeerManager {
     this.statusCache = modules.statusCache;
     this.clock = modules.clock;
     this.networkConfig = networkConfig;
-    this.config = networkConfig.getConfig();
+    this.config = networkConfig.config;
     this.peerRpcScores = modules.peerRpcScores;
     this.networkEventBus = modules.events;
     this.connectedPeers = modules.peersData.connectedPeers;
     this.opts = opts;
     this.discovery = discovery;
-    this.nodeId = networkConfig.getNodeId();
+    this.nodeId = networkConfig.nodeId;
 
     const {metrics} = modules;
     if (metrics) {
@@ -317,7 +317,7 @@ export class PeerManager {
   private onPing(peer: PeerId, seqNumber: phase0.Ping): void {
     // if the sequence number is unknown update the peer's metadata
     const metadata = this.connectedPeers.get(peer.toString())?.metadata;
-    this.logger.warn("onPing", {
+    this.logger.debug("onPing", {
       seqNumber,
       metaSeqNumber: metadata?.seqNumber,
       cond: !metadata || metadata.seqNumber < seqNumber,
@@ -334,7 +334,7 @@ export class PeerManager {
     // Store metadata always in case the peer updates attnets but not the sequence number
     // Trust that the peer always sends the latest metadata (From Lighthouse)
     const peerData = this.connectedPeers.get(peer.toString());
-    this.logger.warn("onMetadata", {
+    this.logger.debug("onMetadata", {
       peer: peer.toString(),
       peerData: peerData !== undefined,
       custodyGroupCount: (metadata as Partial<fulu.Metadata>).custodyGroupCount,
@@ -345,7 +345,6 @@ export class PeerManager {
         (metadata as Partial<fulu.Metadata>).custodyGroupCount ?? this.config.CUSTODY_REQUIREMENT;
       const samplingGroupCount = Math.max(this.config.SAMPLES_PER_SLOT, custodyGroupCount);
       const nodeId = peerData?.nodeId ?? computeNodeId(peer);
-      // TODO(fulu): this should be columns not groups.  need to change everywhere
       const custodyGroups =
         oldMetadata == null || oldMetadata.custodyGroups == null || custodyGroupCount !== oldMetadata.custodyGroupCount
           ? getCustodyGroups(nodeId, custodyGroupCount)
@@ -450,12 +449,12 @@ export class PeerManager {
       // on metadata, we should have custodyGroupss
       const peerCustodyGroups = peerData?.metadata?.custodyGroups ?? getCustodyGroups(nodeId, peerCustodyGroupCount);
 
-      const sampleSubnets = this.networkConfig.getCustodyConfig().sampledSubnets;
+      const sampleSubnets = this.networkConfig.custodyConfig.sampledSubnets;
       const matchingSubnetsNum = sampleSubnets.reduce((acc, elem) => acc + (dataColumns.includes(elem) ? 1 : 0), 0);
       const hasAllColumns = matchingSubnetsNum === sampleSubnets.length;
       const clientAgent = peerData?.agentClient ?? ClientKind.Unknown;
 
-      this.logger.warn(`onStatus ${custodyGroupCount === undefined ? "undefined custody count assuming 4" : ""}`, {
+      this.logger.debug("onStatus", {
         nodeId: toHexString(nodeId),
         myNodeId: toHexString(this.nodeId),
         peerId: peer.toString(),
@@ -481,7 +480,6 @@ export class PeerManager {
   private async requestMetadata(peer: PeerId): Promise<void> {
     const peerIdStr = peer.toString();
     try {
-      this.logger.warn("requestMetadata", {peer: prettyPrintPeerIdStr(peerIdStr)});
       this.onMetadata(peer, await this.reqResp.sendMetadata(peer));
     } catch (e) {
       this.logger.verbose("invalid requestMetadata response", {peer: prettyPrintPeerIdStr(peerIdStr)}, e as Error);
@@ -492,7 +490,6 @@ export class PeerManager {
   private async requestPing(peer: PeerId): Promise<void> {
     const peerIdStr = peer.toString();
     try {
-      this.logger.warn("requestPing", {peer: peer.toString()});
       this.onPing(peer, await this.reqResp.sendPing(peer));
 
       // If peer replies a PING request also update lastReceivedMsg
@@ -562,7 +559,7 @@ export class PeerManager {
     this.metrics?.peerManager.starved.set(starved ? 1 : 0);
     const forkSeq = this.config.getForkSeq(this.clock.currentSlot);
 
-    const {peersToDisconnect, peersToConnect, attnetQueries, syncnetQueries, groupQueries} = prioritizePeers(
+    const {peersToDisconnect, peersToConnect, attnetQueries, syncnetQueries, custodyGroupQueries} = prioritizePeers(
       connectedHealthyPeers.map((peer) => {
         const peerData = this.connectedPeers.get(peer.toString());
         return {
@@ -580,7 +577,7 @@ export class PeerManager {
       this.attnetsService.getActiveSubnets(),
       this.syncnetsService.getActiveSubnets(),
       // ignore samplingGroups for pre-fulu forks
-      forkSeq >= ForkSeq.fulu ? this.networkConfig.getCustodyConfig().sampleGroups : undefined,
+      forkSeq >= ForkSeq.fulu ? this.networkConfig.custodyConfig.sampleGroups : undefined,
       {
         ...this.opts,
         status,
@@ -613,7 +610,7 @@ export class PeerManager {
       }
     }
 
-    for (const maxPeersToDiscover of groupQueries.values()) {
+    for (const maxPeersToDiscover of custodyGroupQueries.values()) {
       this.metrics?.peersRequestedSubnetsToQuery.inc({type: "column"}, 1);
       this.metrics?.peersRequestedSubnetsPeerCount.inc({type: "column"}, maxPeersToDiscover);
     }
@@ -630,7 +627,7 @@ export class PeerManager {
       try {
         this.metrics?.peersRequestedToConnect.inc(peersToConnect);
         // for PeerDAS, lodestar implements subnet sampling strategy, hence we need to issue columnSubnetQueries to PeerDiscovery
-        this.discovery.discoverPeers(peersToConnect, groupQueries, queriesMerged);
+        this.discovery.discoverPeers(peersToConnect, custodyGroupQueries, queriesMerged);
       } catch (e) {
         this.logger.error("Error on discoverPeers", {}, e as Error);
       }

@@ -143,18 +143,18 @@ export function createNetworkCoreMetrics(register: RegistryMetricCreator) {
         help: "Current peers to connect count from discoverPeers requests",
         labelNames: ["type"],
       }),
-      groupPeersToConnect: register.gauge({
-        name: "lodestar_discovery_group_peers_to_connect",
-        help: "Current PeerDAS group peers to connect count from discoverPeers requests",
+      custodyGroupPeersToConnect: register.gauge({
+        name: "lodestar_discovery_custody_group_peers_to_connect",
+        help: "Current PeerDAS custodyGroup peers to connect count from discoverPeers requests",
       }),
       subnetsToConnect: register.gauge<{type: SubnetType}>({
         name: "lodestar_discovery_subnets_to_connect",
         help: "Current subnets to connect count from discoverPeers requests",
         labelNames: ["type"],
       }),
-      groupsToConnect: register.gauge({
-        name: "lodestar_discovery_groups_to_connect",
-        help: "PeerDAS groups to connect count from discoverPeers requests",
+      custodyGroupsToConnect: register.gauge({
+        name: "lodestar_discovery_custody_groups_to_connect",
+        help: "PeerDAS custodyGroups to connect count from discoverPeers requests",
       }),
       cachedENRsSize: register.gauge({
         name: "lodestar_discovery_cached_enrs_size",

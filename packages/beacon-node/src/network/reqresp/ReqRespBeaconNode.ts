@@ -13,7 +13,7 @@ import {
   ResponseOutgoing,
 } from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {Metadata, Status, phase0, ssz, sszTypesFor} from "@lodestar/types";
+import {Metadata, Status, phase0, ssz} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {Libp2p} from "libp2p";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
@@ -252,7 +252,7 @@ export class ReqRespBeaconNode extends ReqResp {
     }
 
     if (ForkSeq[fork] < ForkSeq.fulu) {
-      // Unregister MetadataV2 at the fork boundary, so only declare for pre-fulu
+      // Unregister StatusV1, MetadataV2 at the fork boundary, so only declare for pre-fulu
       protocolsAtFork.push(
         [protocols.Status(fork, this.config), this.onStatus.bind(this)],
         [protocols.MetadataV2(fork, this.config), this.onMetadata.bind(this)]
@@ -324,7 +324,7 @@ export class ReqRespBeaconNode extends ReqResp {
 
   private async *onStatus(req: ReqRespRequest, peerId: PeerId): AsyncIterable<ResponseOutgoing> {
     const fork = ForkName[ForkSeq[this.currentRegisteredFork] as ForkName];
-    const type = sszTypesFor(fork).Status;
+    const type = responseSszTypeByMethod[ReqRespMethod.Status](fork, req.version);
     const body = type.deserialize(req.data);
     this.onIncomingRequestBody({method: ReqRespMethod.Status, body}, peerId);
 

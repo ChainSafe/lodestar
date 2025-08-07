@@ -142,7 +142,7 @@ export async function validateGossipDataColumnSidecar(
   try {
     await verifyDataColumnSidecarKzgProofs(
       dataColumnSidecar.kzgCommitments,
-      Array.from({length: dataColumnSidecar.column.length}, () => BigInt(dataColumnSidecar.index)),
+      Array.from({length: dataColumnSidecar.column.length}, () => dataColumnSidecar.index),
       dataColumnSidecar.column,
       dataColumnSidecar.kzgProofs
     );
@@ -184,7 +184,7 @@ export async function validateDataColumnsSidecars(
   opts: {skipProofsCheck: boolean} = {skipProofsCheck: false}
 ): Promise<void> {
   const commitmentBytes: Uint8Array[] = [];
-  const cellIndices: bigint[] = [];
+  const cellIndices: number[] = [];
   const cells: Uint8Array[] = [];
   const proofBytes: Uint8Array[] = [];
 
@@ -221,7 +221,7 @@ export async function validateDataColumnsSidecars(
     }
 
     commitmentBytes.push(...kzgCommitments);
-    cellIndices.push(...Array.from({length: column.length}, () => BigInt(columnIndex)));
+    cellIndices.push(...Array.from({length: column.length}, () => columnIndex));
     cells.push(...column);
     proofBytes.push(...kzgProofs);
   }
@@ -283,7 +283,7 @@ export function verifyDataColumnSidecar(dataColumnSidecar: fulu.DataColumnSideca
  */
 export async function verifyDataColumnSidecarKzgProofs(
   commitments: Uint8Array[],
-  cellIndices: bigint[],
+  cellIndices: number[],
   cells: Uint8Array[],
   proofs: Uint8Array[]
 ): Promise<void> {
