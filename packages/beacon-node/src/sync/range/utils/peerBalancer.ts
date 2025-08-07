@@ -3,6 +3,7 @@ import {CustodyConfig} from "../../../util/dataColumns.js";
 import {PeerIdStr} from "../../../util/peerId.js";
 import {shuffle} from "../../../util/shuffle.js";
 import {sortBy} from "../../../util/sortBy.js";
+import {MAX_CONCURRENT_REQUESTS} from "../../constants.js";
 import {Batch, BatchStatus} from "../batch.js";
 import {ChainTarget} from "./chainTarget.js";
 
@@ -11,12 +12,6 @@ export type PeerSyncInfo = PeerSyncMeta & {
 };
 
 type PeerInfoColumn = {syncInfo: PeerSyncInfo; columns: number; hasEarliestAvailableSlots: boolean};
-
-/**
- * Maximum number of concurrent requests to perform with a SyncChain.
- * This is according to the spec https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/p2p-interface.md
- */
-const MAX_CONCURRENT_REQUESTS = 2;
 
 /**
  * Balance and organize peers to perform requests with a SyncChain

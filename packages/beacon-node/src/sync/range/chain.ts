@@ -11,7 +11,7 @@ import {CustodyConfig} from "../../util/dataColumns.js";
 import {ItTrigger} from "../../util/itTrigger.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {wrapError} from "../../util/wrapError.js";
-import {BATCH_BUFFER_SIZE, EPOCHS_PER_BATCH} from "../constants.js";
+import {BATCH_BUFFER_SIZE, EPOCHS_PER_BATCH, MAX_LOOK_AHEAD_EPOCHS} from "../constants.js";
 import {RangeSyncType} from "../utils/remoteSyncType.js";
 import {Batch, BatchError, BatchErrorCode, BatchMetadata, BatchStatus} from "./batch.js";
 import {
@@ -406,6 +406,16 @@ export class SyncChain {
       return batch.state.status === BatchStatus.Downloading || batch.state.status === BatchStatus.AwaitingProcessing;
     });
     if (batchesInBuffer.length > BATCH_BUFFER_SIZE) {
+      return null;
+    }
+
+    // if last processed epoch is n, we don't want to request batches with epoch > n + MAX_LOOK_AHEAD_EPOCHS
+    // we should have enough batches to process in the buffer: n + 1, ..., n + MAX_LOOK_AHEAD_EPOCHS
+    // let's focus on redownloading these batches first because it may have to reach different peers to get enough sampled columns
+    if (
+      batches.length > 0 &&
+      Math.max(...batches.map((b) => b.startEpoch)) >= this.lastEpochWithProcessBlocks + MAX_LOOK_AHEAD_EPOCHS
+    ) {
       return null;
     }
 
