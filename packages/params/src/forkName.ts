@@ -110,10 +110,6 @@ export function isForkPostFulu(fork: ForkName): fork is ForkPostFulu {
   return isForkPostElectra(fork) && fork !== ForkName.electra;
 }
 
-export function isForkBlobs(fork: ForkName): fork is ForkName.deneb | ForkName.electra {
-  return fork === ForkName.deneb || fork === ForkName.electra;
-}
-
 /*
  * Aliases only exported for backwards compatibility. This will be removed in
  * lodestar v2.0.  The types and guards above should be used in all places as
