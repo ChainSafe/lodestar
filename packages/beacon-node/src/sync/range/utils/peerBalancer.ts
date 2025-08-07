@@ -13,6 +13,12 @@ export type PeerSyncInfo = PeerSyncMeta & {
 type PeerInfoColumn = {syncInfo: PeerSyncInfo; columns: number; hasEarliestAvailableSlots: boolean};
 
 /**
+ * Maximum number of concurrent requests to perform with a SyncChain.
+ * This is according to the spec https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/p2p-interface.md
+ */
+const MAX_CONCURRENT_REQUESTS = 2;
+
+/**
  * Balance and organize peers to perform requests with a SyncChain
  * Shuffles peers only once on instantiation
  */
@@ -20,11 +26,21 @@ export class ChainPeersBalancer {
   private peers: PeerSyncInfo[];
   private activeRequestsByPeer = new Map<PeerIdStr, number>();
   private readonly custodyConfig: CustodyConfig;
+  private readonly maxConcurrentRequests: number;
 
-  // TODO: @matthewkeil check if this needs to be updated for custody groups
-  constructor(peers: PeerSyncInfo[], batches: Batch[], custodyConfig: CustodyConfig) {
+  /**
+   * No need to specify `maxConcurrentRequests` for production code
+   * It is used for testing purposes to limit the number of concurrent requests
+   */
+  constructor(
+    peers: PeerSyncInfo[],
+    batches: Batch[],
+    custodyConfig: CustodyConfig,
+    maxConcurrentRequests = MAX_CONCURRENT_REQUESTS
+  ) {
     this.peers = shuffle(peers);
     this.custodyConfig = custodyConfig;
+    this.maxConcurrentRequests = maxConcurrentRequests;
 
     // Compute activeRequestsByPeer from all batches internal states
     for (const batch of batches) {
@@ -82,14 +98,20 @@ export class ChainPeersBalancer {
     return undefined;
   }
 
-  private filterPeers(batch: Batch, requestColumns: number[], checkActiveRequest: boolean): PeerInfoColumn[] {
+  private filterPeers(batch: Batch, requestColumns: number[], noActiveRequest: boolean): PeerInfoColumn[] {
     const eligiblePeers: PeerInfoColumn[] = [];
 
     for (const peer of this.peers) {
       const {earliestAvailableSlot, custodyGroups, target, peerId} = peer;
 
       const activeRequest = this.activeRequestsByPeer.get(peerId) ?? 0;
-      if (checkActiveRequest && activeRequest > 0) {
+      if (noActiveRequest && activeRequest > 0) {
+        // consumer wants to find peer with no active request, but this peer has active request
+        continue;
+      }
+
+      if (!noActiveRequest && activeRequest >= this.maxConcurrentRequests) {
+        // consumer wants to find peer with no more than MAX_CONCURRENT_REQUESTS active requests
         continue;
       }
 
