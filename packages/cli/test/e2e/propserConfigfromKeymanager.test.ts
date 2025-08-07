@@ -16,13 +16,13 @@ describe("import keystores from api, test DefaultProposerConfig", () => {
 
   const defaultOptions = {
     suggestedFeeRecipient: "0x0000000000000000000000000000000000000000",
-    gasLimit: 36_000_000,
+    gasLimit: 45_000_000,
     graffiti: "aaaa",
   };
 
   const updatedOptions = {
     suggestedFeeRecipient: "0xcccccccccccccccccccccccccccccccccccccccc",
-    gasLimit: 40_000_000,
+    gasLimit: 50_000_000,
     graffiti: "bbbb",
   };
 

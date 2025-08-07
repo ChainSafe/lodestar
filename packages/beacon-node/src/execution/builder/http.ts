@@ -198,4 +198,13 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
     const contents = blobsBundle ? {blobs: blobsBundle.blobs, kzgProofs: blobsBundle.proofs} : null;
     return reconstructFullBlockOrContents(signedBlindedBlock.data, {executionPayload, contents});
   }
+
+  async submitBlindedBlockNoResponse(signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>): Promise<void> {
+    (
+      await this.api.submitBlindedBlockV2(
+        {signedBlindedBlock},
+        {retries: 2, requestWireFormat: this.sszSupported ? WireFormat.ssz : WireFormat.json}
+      )
+    ).assertOk();
+  }
 }

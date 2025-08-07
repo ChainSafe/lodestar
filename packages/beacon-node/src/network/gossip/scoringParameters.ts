@@ -7,7 +7,7 @@ import {
 import {BeaconConfig} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, TARGET_AGGREGATORS_PER_COMMITTEE} from "@lodestar/params";
 import {computeCommitteeCount} from "@lodestar/state-transition";
-import {getActiveForks} from "../forks.js";
+import {getActiveForkBoundaries} from "../forks.js";
 import {Eth2Context, Eth2GossipsubModules} from "./gossipsub.js";
 import {GossipType} from "./interface.js";
 import {stringifyGossipTopic} from "./topic.js";
@@ -123,14 +123,14 @@ function getAllTopicsScoreParams(
   const {epochDurationMs, slotDurationMs} = precomputedParams;
   const epoch = eth2Context.currentEpoch;
   const topicsParams: Record<string, TopicScoreParams> = {};
-  const forks = getActiveForks(config, epoch);
+  const boundaries = getActiveForkBoundaries(config, epoch);
   const beaconAttestationSubnetWeight = 1 / ATTESTATION_SUBNET_COUNT;
-  for (const fork of forks) {
+  for (const boundary of boundaries) {
     //first all fixed topics
     topicsParams[
       stringifyGossipTopic(config, {
         type: GossipType.voluntary_exit,
-        fork,
+        boundary,
       })
     ] = getTopicScoreParams(config, precomputedParams, {
       topicWeight: VOLUNTARY_EXIT_WEIGHT,
@@ -141,7 +141,7 @@ function getAllTopicsScoreParams(
     topicsParams[
       stringifyGossipTopic(config, {
         type: GossipType.bls_to_execution_change,
-        fork,
+        boundary,
       })
     ] = getTopicScoreParams(config, precomputedParams, {
       topicWeight: BLS_TO_EXECUTION_CHANGE_WEIGHT,
@@ -152,7 +152,7 @@ function getAllTopicsScoreParams(
     topicsParams[
       stringifyGossipTopic(config, {
         type: GossipType.attester_slashing,
-        fork,
+        boundary,
       })
     ] = getTopicScoreParams(config, precomputedParams, {
       topicWeight: ATTESTER_SLASHING_WEIGHT,
@@ -162,7 +162,7 @@ function getAllTopicsScoreParams(
     topicsParams[
       stringifyGossipTopic(config, {
         type: GossipType.proposer_slashing,
-        fork,
+        boundary,
       })
     ] = getTopicScoreParams(config, precomputedParams, {
       topicWeight: PROPOSER_SLASHING_WEIGHT,
@@ -174,7 +174,7 @@ function getAllTopicsScoreParams(
     topicsParams[
       stringifyGossipTopic(config, {
         type: GossipType.beacon_block,
-        fork,
+        boundary,
       })
     ] = getTopicScoreParams(config, precomputedParams, {
       topicWeight: BEACON_BLOCK_WEIGHT,
@@ -201,7 +201,7 @@ function getAllTopicsScoreParams(
     topicsParams[
       stringifyGossipTopic(config, {
         type: GossipType.beacon_aggregate_and_proof,
-        fork,
+        boundary,
       })
     ] = getTopicScoreParams(config, precomputedParams, {
       topicWeight: BEACON_AGGREGATE_PROOF_WEIGHT,
@@ -231,8 +231,8 @@ function getAllTopicsScoreParams(
     for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
       const topicStr = stringifyGossipTopic(config, {
         type: GossipType.beacon_attestation,
-        fork,
         subnet,
+        boundary,
       });
       topicsParams[topicStr] = beaconAttestationParams;
     }

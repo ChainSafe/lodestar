@@ -1,6 +1,6 @@
 import {PeerId} from "@libp2p/interface";
-import {BeaconConfig} from "@lodestar/config";
-import {ForkName, ForkSeq} from "@lodestar/params";
+import {BeaconConfig, ForkBoundary} from "@lodestar/config";
+import {ForkName, ForkSeq, GENESIS_EPOCH} from "@lodestar/params";
 import {
   Encoding,
   ProtocolDescriptor,
@@ -119,10 +119,10 @@ export class ReqRespBeaconNode extends ReqResp {
   // pruneOnPeerDisconnect(peerId: PeerId): void {
   //   this.rateLimiter.prune(peerId);
 
-  registerProtocolsAtFork(fork: ForkName): void {
-    this.currentRegisteredFork = ForkSeq[fork];
+  registerProtocolsAtBoundary(boundary: ForkBoundary): void {
+    this.currentRegisteredFork = ForkSeq[boundary.fork];
 
-    const mustSubscribeProtocols = this.getProtocolsAtFork(fork);
+    const mustSubscribeProtocols = this.getProtocolsAtBoundary(boundary);
     const mustSubscribeProtocolIDs = new Set(
       mustSubscribeProtocols.map(([protocol]) => this.formatProtocolID(protocol))
     );
@@ -217,7 +217,8 @@ export class ReqRespBeaconNode extends ReqResp {
    * Returns the list of protocols that must be subscribed during a specific fork.
    * Any protocol not in this list must be un-subscribed.
    */
-  private getProtocolsAtFork(fork: ForkName): [ProtocolNoHandler, ProtocolHandler][] {
+  private getProtocolsAtBoundary(boundary: ForkBoundary): [ProtocolNoHandler, ProtocolHandler][] {
+    const {fork} = boundary;
     const protocolsAtFork: [ProtocolNoHandler, ProtocolHandler][] = [
       [protocols.Ping(fork, this.config), this.onPing.bind(this)],
       [protocols.Status(fork, this.config), this.onStatus.bind(this)],
@@ -295,7 +296,7 @@ export class ReqRespBeaconNode extends ReqResp {
     yield {
       data: ssz.phase0.Status.serialize(this.statusCache.get()),
       // Status topic is fork-agnostic
-      fork: ForkName.phase0,
+      boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH},
     };
   }
 
@@ -306,7 +307,7 @@ export class ReqRespBeaconNode extends ReqResp {
     yield {
       data: ssz.phase0.Goodbye.serialize(BigInt(0)),
       // Goodbye topic is fork-agnostic
-      fork: ForkName.phase0,
+      boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH},
     };
   }
 
@@ -316,7 +317,7 @@ export class ReqRespBeaconNode extends ReqResp {
     yield {
       data: ssz.phase0.Ping.serialize(this.metadataController.seqNumber),
       // Ping topic is fork-agnostic
-      fork: ForkName.phase0,
+      boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH},
     };
   }
 
@@ -326,11 +327,12 @@ export class ReqRespBeaconNode extends ReqResp {
     const metadata = this.metadataController.json;
     // Metadata topic is fork-agnostic
     const fork = ForkName.phase0;
+    const epoch = GENESIS_EPOCH;
     const type = responseSszTypeByMethod[ReqRespMethod.Metadata](fork, req.version);
 
     yield {
       data: type.serialize(metadata),
-      fork,
+      boundary: {fork, epoch},
     };
   }
 }

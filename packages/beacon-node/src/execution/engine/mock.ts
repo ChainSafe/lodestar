@@ -12,7 +12,7 @@ import {fromHex, toHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {quantityToNum} from "../../eth1/provider/utils.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
-import {ckzg} from "../../util/kzg.js";
+import {kzg} from "../../util/kzg.js";
 import {ClientCode, ExecutionPayloadStatus, PayloadIdCache} from "./interface.js";
 import {
   BlobsBundleRpc,
@@ -322,8 +322,8 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
         const denebTxCount = Math.round(2 * Math.random());
         for (let i = 0; i < denebTxCount; i++) {
           const blob = generateRandomBlob();
-          const commitment = ckzg.blobToKzgCommitment(blob);
-          const proof = ckzg.computeBlobKzgProof(blob, commitment);
+          const commitment = kzg.blobToKzgCommitment(blob);
+          const proof = kzg.computeBlobKzgProof(blob, commitment);
           executionPayload.transactions.push(transactionForKzgCommitment(commitment));
           commitments.push(commitment);
           blobs.push(blob);

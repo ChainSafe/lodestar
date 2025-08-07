@@ -1,6 +1,7 @@
 import {
   BeaconStateTransitionMetrics,
   EpochTransitionStep,
+  ProposerRewardType,
   StateCloneSource,
   StateHashTreeRootSource,
 } from "@lodestar/state-transition";
@@ -66,6 +67,14 @@ export function createHistoricalStateTransitionMetrics(
       name: "lodestar_historical_state_stfn_num_effective_balance_updates_count",
       help: "Count of effective balance updates in epoch transition",
     }),
+    validatorsInActivationQueue: metricsRegister.gauge({
+      name: "lodestar_historical_state_stfn_validators_in_activation_queue",
+      help: "Current number of validators in the activation queue",
+    }),
+    validatorsInExitQueue: metricsRegister.gauge({
+      name: "lodestar_historical_state_stfn_validators_in_exit_queue",
+      help: "Current number of validators in the exit queue",
+    }),
     preStateBalancesNodesPopulatedMiss: metricsRegister.gauge<{source: StateCloneSource}>({
       name: "lodestar_historical_state_stfn_balances_nodes_populated_miss_total",
       help: "Total count state.balances nodesPopulated is false on stfn",
@@ -118,6 +127,11 @@ export function createHistoricalStateTransitionMetrics(
     attestationsPerBlock: metricsRegister.gauge({
       name: "lodestar_historical_state_stfn_attestations_per_block_total",
       help: "Count of attestations per block",
+    }),
+    proposerRewards: metricsRegister.gauge<{type: ProposerRewardType}>({
+      name: "lodestar_historical_state_stfn_proposer_rewards_total",
+      help: "Proposer reward by type per block",
+      labelNames: ["type"],
     }),
   };
 }

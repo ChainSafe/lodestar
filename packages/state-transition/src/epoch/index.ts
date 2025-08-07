@@ -65,6 +65,7 @@ const maxSafeValidators = Math.floor(Number.MAX_SAFE_INTEGER / MAX_EFFECTIVE_BAL
 export enum EpochTransitionStep {
   beforeProcessEpoch = "beforeProcessEpoch",
   afterProcessEpoch = "afterProcessEpoch",
+  finalProcessEpoch = "finalProcessEpoch",
   processJustificationAndFinalization = "processJustificationAndFinalization",
   processInactivityUpdates = "processInactivityUpdates",
   processRegistryUpdates = "processRegistryUpdates",
@@ -110,6 +111,8 @@ export function processEpoch(
   // after processSlashings() to update balances only once
   // processRewardsAndPenalties(state, cache);
   {
+    metrics?.validatorsInActivationQueue.set(cache.indicesEligibleForActivationQueue.length);
+    metrics?.validatorsInExitQueue.set(cache.indicesToEject.length);
     const timer = metrics?.epochTransitionStepTime.startTimer({step: EpochTransitionStep.processRegistryUpdates});
     processRegistryUpdates(fork, state, cache);
     timer?.();
@@ -189,6 +192,10 @@ export function processEpoch(
   }
 
   if (fork >= ForkSeq.fulu) {
-    processProposerLookahead(fork, state as CachedBeaconStateFulu);
+    const timer = metrics?.epochTransitionStepTime.startTimer({
+      step: EpochTransitionStep.processProposerLookahead,
+    });
+    processProposerLookahead(fork, state as CachedBeaconStateFulu, cache);
+    timer?.();
   }
 }

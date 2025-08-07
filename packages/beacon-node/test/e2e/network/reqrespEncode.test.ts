@@ -2,7 +2,8 @@ import {noise} from "@chainsafe/libp2p-noise";
 import {mplex} from "@libp2p/mplex";
 import {tcp} from "@libp2p/tcp";
 import {createBeaconConfig} from "@lodestar/config";
-import {ForkName} from "@lodestar/params";
+import {config} from "@lodestar/config/default";
+import {ForkName, GENESIS_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {fromHex, sleep, toHex} from "@lodestar/utils";
 import {Multiaddr, multiaddr} from "@multiformats/multiaddr";
@@ -57,14 +58,15 @@ describe("reqresp encoder", () => {
       };
 
     const config = createBeaconConfig({}, ZERO_HASH);
+    const logger = testLogger();
     const modules: ReqRespBeaconNodeModules = {
       libp2p,
       peersData: new PeersData(),
-      logger: testLogger(),
+      logger,
       config,
       metrics: null,
       getHandler: getHandler ?? getHandlerNoop,
-      metadata: new MetadataController({}, {config, onSetValue: () => null}),
+      metadata: new MetadataController({}, {config, logger, onSetValue: () => null}),
       peerRpcScores: new PeerRpcScoreStore(),
       events: new NetworkEventBus(),
       statusCache: new LocalStatusCache(ssz.phase0.Status.defaultValue()),
@@ -99,7 +101,7 @@ describe("reqresp encoder", () => {
 
   it("assert correct handler switch between metadata v2 and v1", async () => {
     const {multiaddr: serverMultiaddr, reqresp} = await getReqResp();
-    reqresp.registerProtocolsAtFork(ForkName.phase0);
+    reqresp.registerProtocolsAtBoundary({fork: ForkName.phase0, epoch: GENESIS_EPOCH});
     await sleep(0); // Sleep to resolve register handler promises
 
     reqresp["metadataController"].attnets.set(0, true);
@@ -130,11 +132,11 @@ describe("reqresp encoder", () => {
             data: ssz.altair.LightClientOptimisticUpdate.serialize(
               ssz.altair.LightClientOptimisticUpdate.defaultValue()
             ),
-            fork: ForkName.phase0, // Aware that phase0 does not makes sense here, but it's just to pick a fork digest
+            boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH}, // Aware that phase0 does not makes sense here, but it's just to pick a fork digest
           };
         }
     );
-    reqresp.registerProtocolsAtFork(ForkName.altair);
+    reqresp.registerProtocolsAtBoundary({fork: ForkName.altair, epoch: config.ALTAIR_FORK_EPOCH});
     await sleep(0); // Sleep to resolve register handler promises
 
     const {libp2p: dialer} = await getLibp2p();
