@@ -1297,9 +1297,7 @@ export class BeaconChain implements IBeaconChain {
 
     let effectiveBalances: number[];
     if (stateOrBytes instanceof Uint8Array) {
-      effectiveBalances = Array.from(
-        getEffectiveBalancesFromStateBytes(this.config, stateOrBytes, validatorIndices).values()
-      );
+      effectiveBalances = getEffectiveBalancesFromStateBytes(this.config, stateOrBytes, validatorIndices);
     } else {
       effectiveBalances = validatorIndices.map((index) => stateOrBytes.validators.get(index).effectiveBalance);
     }

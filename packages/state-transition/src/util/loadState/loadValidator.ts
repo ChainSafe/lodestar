@@ -51,7 +51,7 @@ export function getEffectiveBalancesFromStateBytes(
   config: ChainForkConfig,
   stateBytes: Uint8Array,
   validatorIndices: ValidatorIndex[]
-): Map<ValidatorIndex, number> {
+): number[] {
   // stateType could be any types, casting just to make typescript happy
   const stateType = getStateTypeFromBytes(config, stateBytes) as typeof ssz.phase0.BeaconState;
   const stateView = new DataView(stateBytes.buffer, stateBytes.byteOffset, stateBytes.byteLength);
@@ -62,7 +62,7 @@ export function getEffectiveBalancesFromStateBytes(
   const validatorsBytes = stateBytes.subarray(validatorsRange.start, validatorsRange.end);
   const validatorSize = ssz.phase0.Validator.fixedSize as number;
 
-  const effectiveBalances = new Map<ValidatorIndex, number>();
+  const effectiveBalances: number[] = [];
 
   for (const index of validatorIndices) {
     const validatorBytes = validatorsBytes.subarray(index * validatorSize, (index + 1) * validatorSize);
@@ -70,7 +70,7 @@ export function getEffectiveBalancesFromStateBytes(
       throw Error(`Validator index ${index} out of range`);
     }
     const validator = ssz.phase0.Validator.deserialize(validatorBytes);
-    effectiveBalances.set(index, validator.effectiveBalance);
+    effectiveBalances.push(validator.effectiveBalance);
   }
 
   return effectiveBalances;

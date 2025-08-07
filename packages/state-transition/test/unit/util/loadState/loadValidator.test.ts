@@ -127,19 +127,15 @@ describe("getEffectiveBalancesFromStateBytes", () => {
   it("should get the effective balance of a single validator", () => {
     const validatorIndices = [1];
     const effectiveBalances = getEffectiveBalancesFromStateBytes(config, stateBytes, validatorIndices);
-    expect(effectiveBalances.size).toBe(1);
-    expect(effectiveBalances.get(1)).toBe(balance);
+    expect(effectiveBalances.length).toBe(1);
+    expect(effectiveBalances[0]).toBe(balance);
   });
 
   it("should get the effective balances of multiple validators", () => {
     const validatorIndices = [1, 5, 9];
     const effectiveBalances = getEffectiveBalancesFromStateBytes(config, stateBytes, validatorIndices);
-    expect(effectiveBalances.size).toBe(3);
-    expect(Array.from(effectiveBalances.entries())).toEqual([
-      [1, balance],
-      [5, balance],
-      [9, balance],
-    ]);
+    expect(effectiveBalances.length).toBe(3);
+    expect(effectiveBalances).toEqual(Array.from({length: validatorIndices.length}, () => balance));
   });
 
   it("should throw an error if validator index is out of range", () => {
