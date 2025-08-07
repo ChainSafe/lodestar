@@ -1,5 +1,4 @@
 import {digest} from "@chainsafe/as-sha256";
-import {ListCompositeTreeViewDU} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {
   DATA_COLUMN_SIDECAR_SUBNET_COUNT,
@@ -8,7 +7,7 @@ import {
   NUMBER_OF_CUSTODY_GROUPS,
 } from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {ColumnIndex, CustodyIndex, SignedBeaconBlockHeader, ValidatorIndex, deneb, fulu} from "@lodestar/types";
+import {ColumnIndex, CustodyIndex, SignedBeaconBlockHeader, deneb, fulu} from "@lodestar/types";
 import {ssz} from "@lodestar/types";
 import {bytesToBigInt} from "@lodestar/utils";
 import {
