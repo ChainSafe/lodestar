@@ -42,6 +42,8 @@ export function onOutgoingReqRespError(e: RequestError, method: ReqRespMethod): 
     case RequestErrorCode.RESP_TIMEOUT:
       switch (method) {
         case ReqRespMethod.Ping:
+        case ReqRespMethod.Status:
+        case ReqRespMethod.Metadata:
           return PeerAction.LowToleranceError;
         case ReqRespMethod.BeaconBlocksByRange:
         case ReqRespMethod.BeaconBlocksByRoot:
