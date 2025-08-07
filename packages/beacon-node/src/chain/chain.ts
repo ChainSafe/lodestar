@@ -1298,7 +1298,8 @@ export class BeaconChain implements IBeaconChain {
         : stateOrBytes.validators;
 
     const validatorIndices = this.beaconProposerCache.getValidatorIndices();
-    const targetCustodyGroupCount = getValidatorsCustodyRequirement(this.config, stateValidators, validatorIndices);
+    const effectiveBalances = validatorIndices.map((index) => stateValidators.get(index).effectiveBalance);
+    const targetCustodyGroupCount = getValidatorsCustodyRequirement(this.config, effectiveBalances);
     // Only update if target is increased
     if (targetCustodyGroupCount > this.custodyConfig.targetCustodyGroupCount) {
       this.custodyConfig.updateTargetCustodyGroupCount(targetCustodyGroupCount);

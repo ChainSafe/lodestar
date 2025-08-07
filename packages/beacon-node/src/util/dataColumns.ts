@@ -144,17 +144,13 @@ function computeSubnetForDataColumn(columnIndex: ColumnIndex): number {
  * SPEC FUNCTION
  * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.3/specs/fulu/validator.md#validator-custody
  */
-export function getValidatorsCustodyRequirement(
-  config: ChainForkConfig,
-  stateValidators: ListCompositeTreeViewDU<typeof ssz.phase0.Validator>,
-  validatorIndices: ValidatorIndex[]
-): number {
-  if (validatorIndices.length === 0) {
+export function getValidatorsCustodyRequirement(config: ChainForkConfig, effectiveBalances: number[]): number {
+  if (effectiveBalances.length === 0) {
     return config.CUSTODY_REQUIREMENT;
   }
 
-  const totalNodeEffectiveBalance = validatorIndices.reduce((total, validatorIndex) => {
-    return total + stateValidators.get(validatorIndex).effectiveBalance;
+  const totalNodeEffectiveBalance = effectiveBalances.reduce((total, effectiveBalance) => {
+    return total + effectiveBalance;
   }, 0);
 
   // Must custody one group for every BALANCE_PER_ADDITIONAL_CUSTODY_GROUP of effective balance
