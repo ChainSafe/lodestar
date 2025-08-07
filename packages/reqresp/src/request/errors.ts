@@ -45,7 +45,6 @@ type RequestErrorType =
   | {code: RequestErrorCode.DIAL_ERROR; error: Error}
   | {code: RequestErrorCode.REQUEST_TIMEOUT}
   | {code: RequestErrorCode.REQUEST_ERROR; error: Error}
-  | {code: RequestErrorCode.RESPONSE_TIMEOUT}
   | {code: RequestErrorCode.EMPTY_RESPONSE}
   | {code: RequestErrorCode.TTFB_TIMEOUT}
   | {code: RequestErrorCode.RESP_TIMEOUT}
@@ -76,8 +75,14 @@ export function responseStatusErrorToRequestError(e: ResponseError): RequestErro
   // rate limited error from clients have different status, for example: lighthouse responds with 139, teku responds with 1
   // but all of them has "rate limit" in the error message
   // refer to https://github.com/ChainSafe/lodestar/issues/8065#issuecomment-3157266196
-  if (errorMessage.toLowerCase().includes("rate limit")) {
+  const errorMessageLowercase = errorMessage.toLowerCase();
+  if (errorMessageLowercase.includes("rate limit")) {
     return {code: RequestErrorCode.REQUEST_RATE_LIMITED};
+  }
+
+  // Grandine may return this without standard RespStatus, see https://github.com/ChainSafe/lodestar/issues/8110
+  if (errorMessageLowercase.includes("wait ")) {
+    return {code: RequestErrorCode.RESP_TIMEOUT};
   }
 
   switch (status) {
