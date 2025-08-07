@@ -649,9 +649,17 @@ function exportENRToJSON(enr?: ENR): Record<string, string | undefined> | undefi
   if (enr === undefined) {
     return undefined;
   }
-  return {
-    ip4: enr.kvs.get("ip")?.toString(),
-    cgc: enr.kvs.get("cgc")?.toString(),
+
+  const jsonEnr = {
     nodeId: enr.nodeId,
   };
+
+  for (const key of ["cgc", "ip", "ip6", "quic", "quic6"]) {
+    const value = enr.kvs.get(key)?.toString();
+    if (value) {
+      jsonEnr[key] = value;
+    }
+  }
+
+  return jsonEnr;
 }
