@@ -47,7 +47,7 @@ export async function validateBlobsAndKzgCommitments(
 
   const commitmentBytes = blobsBundle.commitments.flatMap((commitment) => Array(CELLS_PER_EXT_BLOB).fill(commitment));
   const cellIndices = Array.from({length: blobsBundle.blobs.length}).flatMap(() =>
-    Array.from({length: CELLS_PER_EXT_BLOB}, (_, i) => BigInt(i))
+    Array.from({length: CELLS_PER_EXT_BLOB}, (_, i) => i)
   );
   const proofBytes = blobsBundle.proofs.flat();
 

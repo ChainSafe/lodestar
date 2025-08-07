@@ -252,7 +252,7 @@ export class ReqRespBeaconNode extends ReqResp {
     }
 
     if (ForkSeq[fork] < ForkSeq.fulu) {
-      // Unregister MetadataV2 at the fork boundary, so only declare for pre-fulu
+      // Unregister StatusV1, MetadataV2 at the fork boundary, so only declare for pre-fulu
       protocolsAtFork.push(
         [protocols.Status(fork, this.config), this.onStatus.bind(this)],
         [protocols.MetadataV2(fork, this.config), this.onMetadata.bind(this)]

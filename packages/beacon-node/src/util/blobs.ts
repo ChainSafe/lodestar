@@ -148,10 +148,10 @@ export async function recoverDataColumnSidecars(
   // https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/das-core.md#recover_matrix
   const cellsAndProofs = await Promise.all(
     blobProofs.map((_, blobIndex) => {
-      const cellIndices: bigint[] = [];
+      const cellIndices: number[] = [];
       const cells: Uint8Array[] = [];
       for (const [columnIndex, dataColumn] of partialSidecars.entries()) {
-        cellIndices.push(BigInt(columnIndex));
+        cellIndices.push(columnIndex);
         cells.push(dataColumn.column[blobIndex]);
       }
       // recovered cells and proofs are of the same row/blob, their length should be NUMBER_OF_COLUMNS

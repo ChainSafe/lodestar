@@ -2,13 +2,12 @@ import {digest} from "@chainsafe/as-sha256";
 import {ChainForkConfig} from "@lodestar/config";
 import {
   DATA_COLUMN_SIDECAR_SUBNET_COUNT,
-  EFFECTIVE_BALANCE_INCREMENT,
   ForkName,
   NUMBER_OF_COLUMNS,
   NUMBER_OF_CUSTODY_GROUPS,
 } from "@lodestar/params";
-import {CachedBeaconStateAllForks, signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {ColumnIndex, CustodyIndex, SignedBeaconBlockHeader, ValidatorIndex, deneb, fulu} from "@lodestar/types";
+import {signedBlockToSignedHeader} from "@lodestar/state-transition";
+import {ColumnIndex, CustodyIndex, SignedBeaconBlockHeader, deneb, fulu} from "@lodestar/types";
 import {ssz} from "@lodestar/types";
 import {bytesToBigInt} from "@lodestar/utils";
 import {
@@ -139,19 +138,15 @@ function computeSubnetForDataColumn(columnIndex: ColumnIndex): number {
  * Calculate the number of custody groups the node should subscribe to based on the node's effective balance
  *
  * SPEC FUNCTION
- * https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/validator.md#validator-custody
+ * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.3/specs/fulu/validator.md#validator-custody
  */
-export function getValidatorsCustodyRequirement(
-  state: CachedBeaconStateAllForks,
-  validatorIndices: ValidatorIndex[],
-  config: ChainForkConfig
-): number {
-  if (validatorIndices.length === 0) {
+export function getValidatorsCustodyRequirement(config: ChainForkConfig, effectiveBalances: number[]): number {
+  if (effectiveBalances.length === 0) {
     return config.CUSTODY_REQUIREMENT;
   }
 
-  const totalNodeEffectiveBalance = validatorIndices.reduce((total, validatorIndex) => {
-    return total + state.epochCtx.effectiveBalanceIncrements[validatorIndex] * EFFECTIVE_BALANCE_INCREMENT;
+  const totalNodeEffectiveBalance = effectiveBalances.reduce((total, effectiveBalance) => {
+    return total + effectiveBalance;
   }, 0);
 
   // Must custody one group for every BALANCE_PER_ADDITIONAL_CUSTODY_GROUP of effective balance

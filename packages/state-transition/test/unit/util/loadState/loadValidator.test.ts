@@ -1,7 +1,10 @@
 import {CompositeViewDU} from "@chainsafe/ssz";
+import {config} from "@lodestar/config/default";
 import {phase0, ssz} from "@lodestar/types";
 import {describe, expect, it} from "vitest";
-import {loadValidator} from "../../../../src/util/loadState/loadValidator.js";
+import {getEffectiveBalancesFromStateBytes, loadValidator} from "../../../../src/util/loadState/loadValidator.js";
+import {generateState} from "../../../utils/state.js";
+import {generateValidators} from "../../../utils/validator.js";
 
 describe("loadValidator", () => {
   const validatorValue: phase0.Validator = {
@@ -111,5 +114,32 @@ describe("loadValidator", () => {
     const loadedValidator = loadValidator(validator, newValidatorBytes);
     expect(Buffer.compare(loadedValidator.hashTreeRoot(), newValidator.hashTreeRoot())).toBe(0);
     expect(Buffer.compare(loadedValidator.serialize(), newValidator.serialize())).toBe(0);
+  });
+});
+
+describe("getEffectiveBalancesFromStateBytes", () => {
+  const numValidators = 10;
+  const balance = 32000000000;
+  const validators = generateValidators(numValidators, {balance});
+  const state = generateState({validators: validators});
+  const stateBytes = state.serialize();
+
+  it("should get the effective balance of a single validator", () => {
+    const validatorIndices = [1];
+    const effectiveBalances = getEffectiveBalancesFromStateBytes(config, stateBytes, validatorIndices);
+    expect(effectiveBalances.length).toBe(1);
+    expect(effectiveBalances[0]).toBe(balance);
+  });
+
+  it("should get the effective balances of multiple validators", () => {
+    const validatorIndices = [1, 5, 9];
+    const effectiveBalances = getEffectiveBalancesFromStateBytes(config, stateBytes, validatorIndices);
+    expect(effectiveBalances.length).toBe(3);
+    expect(effectiveBalances).toEqual(Array.from({length: validatorIndices.length}, () => balance));
+  });
+
+  it("should throw an error if validator index is out of range", () => {
+    const validatorIndices = [numValidators];
+    expect(() => getEffectiveBalancesFromStateBytes(config, stateBytes, validatorIndices)).toThrowError();
   });
 });

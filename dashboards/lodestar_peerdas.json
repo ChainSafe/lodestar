@@ -1307,7 +1307,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "beacon_custody_groups",
+          "expr": "beacon_target_custody_group_count",
           "interval": "",
           "legendFormat": "__auto",
           "range": true,

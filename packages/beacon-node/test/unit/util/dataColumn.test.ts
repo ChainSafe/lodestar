@@ -2,9 +2,7 @@ import {fromHexString} from "@chainsafe/ssz";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ChainForkConfig} from "@lodestar/config";
 import {NUMBER_OF_COLUMNS, NUMBER_OF_CUSTODY_GROUPS} from "@lodestar/params";
-import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {ValidatorIndex} from "@lodestar/types";
 import {bigIntToBytes} from "@lodestar/utils";
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
 
@@ -16,18 +14,9 @@ import {getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
 import {generateRandomBlob, transactionForKzgCommitment} from "../../utils/kzg.js";
 
 describe("getValidatorsCustodyRequirement", () => {
-  let state: CachedBeaconStateAllForks;
   let config: ChainForkConfig;
 
   beforeEach(() => {
-    // Create a mock state with validators effective balance increments
-    state = {
-      epochCtx: {
-        effectiveBalanceIncrements: new Uint8Array(NUMBER_OF_CUSTODY_GROUPS + 1).fill(32), // Each validator has 32 ETH (1 increment)
-      },
-    } as unknown as CachedBeaconStateAllForks;
-
-    // Create a proper config using createChainForkConfig
     config = createChainForkConfig({
       ...defaultChainConfig,
       ALTAIR_FORK_EPOCH: 0,
@@ -43,31 +32,28 @@ describe("getValidatorsCustodyRequirement", () => {
   });
 
   it("should return minimum requirement when total balance is below the balance per additional custody group", () => {
-    const validatorIndices: ValidatorIndex[] = [0, 1]; // 2 validators with 32 ETH each = 64 ETH total
-    const result = getValidatorsCustodyRequirement(state, validatorIndices, config);
+    const effectiveBalances = [32000000000, 32000000000]; // 2 validators with 32 ETH each = 64 ETH total
+    const result = getValidatorsCustodyRequirement(config, effectiveBalances);
     expect(result).toBe(config.VALIDATOR_CUSTODY_REQUIREMENT);
   });
 
   it("should calculate correct number of groups based on total balance", () => {
     // Create a state with 10 validators with 32 ETH each = 320 ETH total
-    const validatorIndices: ValidatorIndex[] = Array.from({length: 10}, (_, i) => i as ValidatorIndex);
-    const result = getValidatorsCustodyRequirement(state, validatorIndices, config);
+    const effectiveBalances = Array.from({length: 10}, () => 32000000000);
+    const result = getValidatorsCustodyRequirement(config, effectiveBalances);
     expect(result).toBe(10);
   });
 
   it("should cap at maximum number of custody groups", () => {
     // Create a state with enough validators to exceed max groups
-    const validatorIndices: ValidatorIndex[] = Array.from(
-      {length: NUMBER_OF_CUSTODY_GROUPS + 1},
-      (_, i) => i as ValidatorIndex
-    );
-    const result = getValidatorsCustodyRequirement(state, validatorIndices, config);
+    const effectiveBalances = Array.from({length: NUMBER_OF_CUSTODY_GROUPS + 1}, () => 32000000000);
+    const result = getValidatorsCustodyRequirement(config, effectiveBalances);
     expect(result).toBe(NUMBER_OF_CUSTODY_GROUPS);
   });
 
   it("should handle zero validators", () => {
-    const validatorIndices: ValidatorIndex[] = [];
-    const result = getValidatorsCustodyRequirement(state, validatorIndices, config);
+    const effectiveBalances: number[] = [];
+    const result = getValidatorsCustodyRequirement(config, effectiveBalances);
     expect(result).toBe(config.CUSTODY_REQUIREMENT);
   });
 });

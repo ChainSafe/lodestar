@@ -23,7 +23,6 @@ export type ChainArgs = {
   "chain.computeUnrealized"?: boolean;
   "chain.assertCorrectProgressiveBalances"?: boolean;
   "chain.maxSkipSlots"?: number;
-  "chain.trustedSetupPrecompute"?: number;
   "safe-slots-to-import-optimistically": number;
   emitPayloadAttributes?: boolean;
   broadcastValidationStrictness?: string;
@@ -63,7 +62,6 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     computeUnrealized: args["chain.computeUnrealized"],
     assertCorrectProgressiveBalances: args["chain.assertCorrectProgressiveBalances"],
     maxSkipSlots: args["chain.maxSkipSlots"],
-    trustedSetupPrecompute: args["chain.trustedSetupPrecompute"],
     safeSlotsToImportOptimistically: args["safe-slots-to-import-optimistically"],
     emitPayloadAttributes: args.emitPayloadAttributes,
     broadcastValidationStrictness: args.broadcastValidationStrictness,
@@ -220,13 +218,6 @@ Will double processing times. Use only for debugging purposes.",
     group: "chain",
   },
 
-  "chain.trustedSetupPrecompute": {
-    hidden: true,
-    type: "number",
-    description: "Use a customized trustedSetupPrecompute tables for MSM to verify blobSidecars",
-    group: "chain",
-  },
-
   "chain.assertCorrectProgressiveBalances": {
     hidden: true,
     description: "Enable asserting the progressive balances",
@@ -285,6 +276,7 @@ Will double processing times. Use only for debugging purposes.",
   },
 
   "chain.archiveDataEpochs": {
+    alias: "chain.archiveBlobEpochs",
     description:
       "Number of epochs to retain finalized blobs/columns (minimum of MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS/MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS)",
     type: "number",

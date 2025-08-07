@@ -51,6 +51,7 @@ import {ProcessShutdownCallback} from "@lodestar/validator";
 
 import {PrivateKey} from "@libp2p/interface";
 import {LoggerNode} from "@lodestar/logger/node";
+import {getEffectiveBalancesFromStateBytes} from "@lodestar/state-transition";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
@@ -285,15 +286,17 @@ export class BeaconChain implements IBeaconChain {
     this.seenAggregatedAttestations = new SeenAggregatedAttestations(metrics);
     this.seenContributionAndProof = new SeenContributionAndProof(metrics);
     this.seenAttestationDatas = new SeenAttestationDatas(metrics, this.opts?.attDataCacheSlotDistance);
+
     const nodeId = computeNodeIdFromPrivateKey(privateKey);
     const initialCustodyGroupCount =
       (opts.initialCustodyGroupCount ?? opts.supernode) ? NUMBER_OF_CUSTODY_GROUPS : config.CUSTODY_REQUIREMENT;
-    this.metrics?.peerDas.custodyGroupCount.set(initialCustodyGroupCount);
+    this.metrics?.peerDas.targetCustodyGroupCount.set(initialCustodyGroupCount);
     this.custodyConfig = new CustodyConfig({
       nodeId,
       config,
       initialCustodyGroupCount,
     });
+
     this.seenGossipBlockInput = new SeenGossipBlockInput(
       this.custodyConfig,
       this.executionEngine,
@@ -1253,6 +1256,9 @@ export class BeaconChain implements IBeaconChain {
     this.logger.verbose("Fork choice finalized", {epoch: cp.epoch, root: cp.rootHex});
     this.seenBlockProposers.prune(computeStartSlotAtEpoch(cp.epoch));
 
+    // Update validator custody to account for effective balance changes
+    await this.updateValidatorsCustodyRequirement(cp);
+
     // TODO: Improve using regen here
     const {blockRoot, stateRoot, slot} = this.forkChoice.getHead();
     const headState = this.regen.getStateSync(stateRoot);
@@ -1263,14 +1269,6 @@ export class BeaconChain implements IBeaconChain {
 
     if (headState) {
       this.opPool.pruneAll(headBlock, headState);
-
-      // Disable dynamic custody updates for supernodes since they must maintain custody
-      // of all custody groups regardless of validator effective balances
-      if (!this.opts.supernode) {
-        // Update custody requirement based on finalized state
-        const validatorIndices = this.beaconProposerCache.getValidatorIndices();
-        this.updateTargetCustodyGroupCount(getValidatorsCustodyRequirement(headState, validatorIndices, this.config));
-      }
     }
 
     if (headState === null) {
@@ -1278,25 +1276,58 @@ export class BeaconChain implements IBeaconChain {
     }
   }
 
-  updateTargetCustodyGroupCount(newTarget: number): void {
-    // Only increase targetCustodyGroupCount, never decrease it
-    const oldTarget = this.custodyConfig.targetCustodyGroupCount;
-    if (newTarget > oldTarget) {
-      this.custodyConfig.updateTargetCustodyGroupCount(newTarget);
-      this.metrics?.peerDas.custodyGroupCount.set(newTarget);
-      this.logger.verbose("Updated targetCustodyGroupCount", {oldTarget, newTarget});
-      this.emitter.emit(ChainEvent.updateTargetGroupCount, newTarget);
-    } else {
-      this.logger.verbose("Not updating targetCustodyGroupCount", {
-        currentTarget: oldTarget,
-        attemptedTarget: newTarget,
-      });
+  async updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void> {
+    const previousValidatorCount = this.beaconProposerCache.getValidatorIndices().length;
+
+    for (const proposer of proposers) {
+      this.beaconProposerCache.add(epoch, proposer);
+    }
+
+    const newValidatorCount = this.beaconProposerCache.getValidatorIndices().length;
+
+    // Only update validator custody if we discovered new validators
+    if (newValidatorCount > previousValidatorCount) {
+      const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
+      await this.updateValidatorsCustodyRequirement(finalizedCheckpoint);
     }
   }
 
-  async updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void> {
-    for (const proposer of proposers) {
-      this.beaconProposerCache.add(epoch, proposer);
+  private async updateValidatorsCustodyRequirement(finalizedCheckpoint: CheckpointWithHex): Promise<void> {
+    if (this.opts.supernode) {
+      // Disable dynamic custody updates for supernodes since they must maintain custody
+      // of all custody groups regardless of validator effective balances
+      return;
+    }
+
+    // Update custody requirement based on finalized state
+    const stateOrBytes = (await this.getStateOrBytesByCheckpoint(finalizedCheckpoint))?.state;
+
+    if (!stateOrBytes) {
+      throw Error(
+        `No finalized state for epoch ${finalizedCheckpoint.epoch} and root ${finalizedCheckpoint.rootHex} to update target custody group count`
+      );
+    }
+
+    // Validators attached to the node
+    const validatorIndices = this.beaconProposerCache.getValidatorIndices();
+
+    let effectiveBalances: number[];
+    if (stateOrBytes instanceof Uint8Array) {
+      effectiveBalances = getEffectiveBalancesFromStateBytes(this.config, stateOrBytes, validatorIndices);
+    } else {
+      effectiveBalances = validatorIndices.map((index) => stateOrBytes.validators.get(index).effectiveBalance);
+    }
+
+    const targetCustodyGroupCount = getValidatorsCustodyRequirement(this.config, effectiveBalances);
+    // Only update if target is increased
+    if (targetCustodyGroupCount > this.custodyConfig.targetCustodyGroupCount) {
+      this.custodyConfig.updateTargetCustodyGroupCount(targetCustodyGroupCount);
+      this.logger.verbose("Updated target custody group count", {
+        finalizedEpoch: finalizedCheckpoint.epoch,
+        validatorCount: validatorIndices.length,
+        targetCustodyGroupCount,
+      });
+      this.emitter.emit(ChainEvent.updateTargetCustodyGroupCount, targetCustodyGroupCount);
     }
   }
 
