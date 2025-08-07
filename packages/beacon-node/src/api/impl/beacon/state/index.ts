@@ -210,23 +210,16 @@ export function getBeaconStateApi({
         const headState = chain.getHeadState();
         const balances: routes.beacon.ValidatorBalance[] = [];
         for (const id of validatorIds) {
-          if (typeof id === "number") {
-            if (state.validators.length <= id) {
-              continue;
-            }
-            balances.push({index: id, balance: state.balances.get(id)});
-          } else {
-            if (id.startsWith("0x")) {
-              const index = headState.epochCtx.pubkey2index.get(fromHex(id));
-              if (index != null && index <= state.validators.length) {
-                balances.push({index, balance: state.balances.get(index)});
-              }
-            } else {
-              const validatorIndex = parseInt(id, 10);
-              if (!Number.isNaN(validatorIndex) && validatorIndex >= 0 && validatorIndex < state.validators.length) {
-                balances.push({index: validatorIndex, balance: state.balances.get(validatorIndex)});
-              }
-            }
+          const validatorIndex =
+            typeof id === "number"
+              ? {valid: true, validatorIndex: id}
+              : getStateValidatorIndex(id, state, headState.epochCtx.pubkey2index);
+
+          if (validatorIndex.valid && validatorIndex.validatorIndex < state.validators.length) {
+            balances.push({
+              index: validatorIndex.validatorIndex,
+              balance: state.balances.get(validatorIndex.validatorIndex),
+            });
           }
         }
         return {
