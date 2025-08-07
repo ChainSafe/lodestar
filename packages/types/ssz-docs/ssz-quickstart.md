@@ -40,6 +40,7 @@ The Simple Serialize(SSZ) system has two layers of components.
 - *Fork Specific Schemas* : Ethereum upgrades (eg. Altair, Bellatrix) They define new structures using the core types.
 - *Core SSZ types* :This is a set of composite types used to define data Structures.
 
+
 This section will break down the different layers of components so you understand how SSZ is used in Lodestar and Ethereum consensus. Understanding this components help in grasping how SSZ transforms structured data into merkle-friendly format for ethereum consensus.
 --
 ## 3.1. Fork-Specific Schemas
@@ -134,3 +135,31 @@ The whole structure is fixed-size — so it’s encoded without any offsets.
 To learn more about lodestar types go to this repository - [ ChainSafe/Lodestar](https://github.com/ChainSafe/lodestar/tree/unstable/packages/types)
 ---
 
+## 4. Working with Default values
+In this section we will intoduce how to generate SSZ objects with default (zero-initialized) values, explain how to modify them, and demonstrate how TypeScript ensures type-safe interaction.
+
+### What is a default Value?
+In SSZ, a default value is an object where all fields are initialized to their zero-equivalent values.
+Assuming a helper function default(type) which returns the default value for type, we can recursively define the default value for all types.
+
+This is useful when:
+-You want to create new SSZ data from scratch.
+-You’re preparing data to be filled step-by-step.
+-You want to ensure consistency with SSZ schemas
+
+Each schema (like Attestation, BeaconBlock, etc.) provides a defaultValue() method to create such an object.
+
+Here is a table of the different types and their default values.
+
+|Type	|Default Value|
+|uintN|	0|
+|boolean|	False|
+|Container|	[default(type) for type in container]|
+|Vector[type, N]|	[default(type)] * N|
+|Bitvector[N]|	[False] * N|
+|List[type, N]	|[]|
+|Bitlist[N]	|[]|
+|Union[type_0, type_1, ...]	|default(type_0)|
+
+is_zero
+An SSZ object is called zeroed (and thus, is_zero(object) returns true) if it is equal to the default value for that type.
