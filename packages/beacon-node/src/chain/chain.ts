@@ -289,7 +289,7 @@ export class BeaconChain implements IBeaconChain {
 
     const nodeId = computeNodeIdFromPrivateKey(privateKey);
     const initialCustodyGroupCount =
-      (opts.initialCustodyGroupCount ?? opts.supernode) ? NUMBER_OF_CUSTODY_GROUPS : config.CUSTODY_REQUIREMENT;
+      opts.initialCustodyGroupCount ?? (opts.supernode ? NUMBER_OF_CUSTODY_GROUPS : config.CUSTODY_REQUIREMENT);
     this.metrics?.peerDas.targetCustodyGroupCount.set(initialCustodyGroupCount);
     this.custodyConfig = new CustodyConfig({
       nodeId,
