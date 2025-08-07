@@ -212,7 +212,7 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
     beaconNodeOptions.set({network: {discv5: {bootEnrs: [...new Set(bootnodes)]}}});
   }
 
-  beaconNodeOptions.set({chain: {initialCustodyGroupCount: getInitialCGC(args, config, enr)}});
+  beaconNodeOptions.set({chain: {initialCustodyGroupCount: getInitialCustodyGroupCount(args, config, enr)}});
 
   if (args.disableLightClientServer) {
     beaconNodeOptions.set({chain: {disableLightClientServer: true}});
@@ -256,7 +256,7 @@ export function initLogger(
   return logger;
 }
 
-function getInitialCGC(args: BeaconArgs & GlobalArgs, config: ChainForkConfig, enr: SignableENR): number {
+function getInitialCustodyGroupCount(args: BeaconArgs & GlobalArgs, config: ChainForkConfig, enr: SignableENR): number {
   if (args.supernode) {
     return NUMBER_OF_CUSTODY_GROUPS;
   }
