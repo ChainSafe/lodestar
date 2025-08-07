@@ -400,7 +400,7 @@ export class PeerDiscovery {
     // Are this fields mandatory?
     const attnetsBytes = enr.kvs.get(ENRKey.attnets); // 64 bits
     const syncnetsBytes = enr.kvs.get(ENRKey.syncnets); // 4 bits
-    const custodyGroupCountBytes = enr.kvs.get(ENRKey.cgc); // 64 bits
+    const custodyGroupCountBytes = enr.kvs.get(ENRKey.cgc); // not preserialized value, is byte representation of number
     if (custodyGroupCountBytes === undefined) {
       this.logger.warn("peer discovered with no cgc assuming 4", exportENRToJSON(enr));
     }
