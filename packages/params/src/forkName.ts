@@ -137,6 +137,14 @@ export type ForkPreWithdrawals = ForkPreCapella;
  */
 export type ForkWithdrawals = ForkPostCapella;
 /**
+ * @deprecated Use `ForkPreDeneb` instead.
+ */
+export type ForkPreBlobs = ForkPreDeneb;
+/**
+ * @deprecated Use `ForkPostDeneb` instead.
+ */
+export type ForkBlobs = ForkPostDeneb;
+/**
  * @deprecated Use `forkPostAltair` instead.
  */
 export const forkLightClient = forkPostAltair;
@@ -160,3 +168,11 @@ export const forkWithdrawals = forkPostCapella;
  * @deprecated Use `isForkPostCapella` instead.
  */
 export const isForkWithdrawals = isForkPostCapella;
+/**
+ * @deprecated Use `forkPostDeneb` instead.
+ */
+export const forkBlobs = forkPostDeneb;
+/**
+ * @deprecated Use `isForkPostDeneb` instead.
+ */
+export const isForkBlobs = isForkPostDeneb;
