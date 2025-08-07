@@ -361,8 +361,7 @@ export class ReqRespBeaconNode extends ReqResp {
 
     const metadata = this.metadataController.json;
 
-    // TODO(fulu): is this still correct?  there are three versions of Metadata now...
-    // Metadata topic is fork-agnostic
+    // Fork is ignored in responseSszTypeByMethod, type is determined by req.version that is negotiated
     const fork = ForkName.phase0;
     const epoch = GENESIS_EPOCH;
     const type = responseSszTypeByMethod[ReqRespMethod.Metadata](fork, req.version);
