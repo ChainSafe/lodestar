@@ -23,10 +23,10 @@ type IrrelevantPeerType =
  * irrelevant the reason is returned.
  */
 export function assertPeerRelevance(
+  forkName: ForkName,
   remote: Status,
   local: Status,
-  currentSlot: Slot,
-  forkName: ForkName
+  currentSlot: Slot
 ): IrrelevantPeerType | null {
   // The node is on a different network/fork
   if (!ssz.ForkDigest.equals(local.forkDigest, remote.forkDigest)) {

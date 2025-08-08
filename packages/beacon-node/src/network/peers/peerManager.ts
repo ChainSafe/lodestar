@@ -403,10 +403,10 @@ export class PeerManager {
     let isIrrelevant: boolean;
     try {
       const irrelevantReasonType = assertPeerRelevance(
+        forkName,
         status,
         this.statusCache.get(),
-        this.clock.currentSlot,
-        forkName
+        this.clock.currentSlot
       );
       if (irrelevantReasonType === null) {
         isIrrelevant = false;
