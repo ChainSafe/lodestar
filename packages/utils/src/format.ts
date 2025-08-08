@@ -73,7 +73,7 @@ export function strip0xPrefix(hex: string): string {
   return hex.startsWith("0x") ? hex.slice(2) : hex;
 }
 
-function getCustodyGroupIncrements(custodyGroups: number[]): string[] {
+export function getCustodyGroupIncrements(custodyGroups: number[]): string[] {
   if (custodyGroups.length === 0) {
     return [];
   }
