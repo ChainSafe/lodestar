@@ -51,7 +51,6 @@ export class ChainPeersBalancer {
       eligiblePeers,
       ({syncInfo}) => (failedPeers.has(syncInfo.peerId) ? 1 : 0), // prefer peers without failed requests
       ({syncInfo}) => this.activeRequestsByPeer.get(syncInfo.peerId) ?? 0, // prefer peers with least active req
-      ({hasEarliestAvailableSlots}) => (hasEarliestAvailableSlots ? 0 : 1), // prefer peers with earliestAvailableSlots defined
       ({columns}) => -1 * columns // prefer peers with the most columns
     );
 
@@ -69,7 +68,6 @@ export class ChainPeersBalancer {
     // - the most columns we need
     const sortedBestPeers = sortBy(
       eligiblePeers,
-      ({hasEarliestAvailableSlots}) => (hasEarliestAvailableSlots ? 0 : 1), // prefer peers with earliestAvailableSlots defined
       ({columns}) => -1 * columns // prefer peers with most columns we need
     );
     const bestPeer = sortedBestPeers[0];
@@ -103,15 +101,17 @@ export class ChainPeersBalancer {
         continue;
       }
 
-      // for devnet, we optimistically assume peers without earliestAvailableSlot, but don't prioritize them
-      // TODO(fulu): consider do not accept these peers
-      const earliestSlot = earliestAvailableSlot ?? 0;
-      const peerColumns = custodyGroups;
-
-      if (earliestSlot > batch.request.startSlot) {
+      // we don't accept peers without earliestAvailableSlot because it may return 0 blocks and we get stuck
+      // see https://github.com/ChainSafe/lodestar/issues/8147
+      if (earliestAvailableSlot == null) {
         continue;
       }
 
+      if (earliestAvailableSlot > batch.request.startSlot) {
+        continue;
+      }
+
+      const peerColumns = custodyGroups;
       const columns = peerColumns.reduce((acc, elem) => {
         if (requestColumns.includes(elem)) {
           acc.push(elem);
