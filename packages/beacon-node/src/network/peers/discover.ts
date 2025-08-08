@@ -645,12 +645,12 @@ function formatLibp2pDialError(e: Error): void {
   }
 }
 
-function exportENRToJSON(enr?: ENR): Record<string, string | undefined> | undefined {
+function exportENRToJSON(enr?: ENR): Record<string, string> | undefined {
   if (enr === undefined) {
     return undefined;
   }
 
-  const jsonEnr = {
+  const jsonEnr: Record<string, string> = {
     nodeId: enr.nodeId,
   };
 
