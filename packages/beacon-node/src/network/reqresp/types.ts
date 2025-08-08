@@ -3,6 +3,10 @@ import {BeaconConfig} from "@lodestar/config";
 import {ForkName, ForkPostAltair, isForkPostAltair} from "@lodestar/params";
 import {Protocol, ProtocolHandler, ReqRespRequest} from "@lodestar/reqresp";
 import {
+  LightClientBootstrap,
+  LightClientFinalityUpdate,
+  LightClientOptimisticUpdate,
+  LightClientUpdate,
   Metadata,
   Root,
   SignedBeaconBlock,
@@ -68,10 +72,10 @@ type ResponseBodyByMethod = {
   [ReqRespMethod.DataColumnSidecarsByRange]: fulu.DataColumnSidecar;
   [ReqRespMethod.DataColumnSidecarsByRoot]: fulu.DataColumnSidecar;
 
-  [ReqRespMethod.LightClientBootstrap]: altair.LightClientBootstrap;
-  [ReqRespMethod.LightClientUpdatesByRange]: altair.LightClientUpdate;
-  [ReqRespMethod.LightClientFinalityUpdate]: altair.LightClientFinalityUpdate;
-  [ReqRespMethod.LightClientOptimisticUpdate]: altair.LightClientOptimisticUpdate;
+  [ReqRespMethod.LightClientBootstrap]: LightClientBootstrap;
+  [ReqRespMethod.LightClientUpdatesByRange]: LightClientUpdate;
+  [ReqRespMethod.LightClientFinalityUpdate]: LightClientFinalityUpdate;
+  [ReqRespMethod.LightClientOptimisticUpdate]: LightClientOptimisticUpdate;
 };
 
 /** Request SSZ type for each method and ForkName */
