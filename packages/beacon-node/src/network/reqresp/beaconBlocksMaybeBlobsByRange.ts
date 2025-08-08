@@ -38,7 +38,7 @@ export async function beaconBlocksMaybeBlobsByRange(
   // Range sync satisfies this condition, but double check here for sanity
   const {startSlot, count} = request;
   if (count < 1) {
-    return {blocks: [], pendingDataColumns: null};
+    throw Error(`Invalid count=${count} in BeaconBlocksByRangeRequest`);
   }
   const endSlot = startSlot + count - 1;
 
@@ -55,6 +55,12 @@ export async function beaconBlocksMaybeBlobsByRange(
   // Note: Assumes all blocks in the same epoch
   if (forkSeq < ForkSeq.deneb) {
     const beaconBlocks = await network.sendBeaconBlocksByRange(peerId, request);
+    if (beaconBlocks.length === 0) {
+      throw Error(
+        `peerId=${peerId} peerClient=${peerClient} returned no blocks for BeaconBlocksByRangeRequest ${JSON.stringify(request)}`
+      );
+    }
+
     const blocks = beaconBlocks.map((block) => getBlockInput.preData(config, block.data, BlockSource.byRange));
     return {blocks, pendingDataColumns: null};
   }
@@ -68,6 +74,12 @@ export async function beaconBlocksMaybeBlobsByRange(
         network.sendBlobSidecarsByRange(peerId, request),
       ]);
 
+      if (allBlocks.length === 0) {
+        throw Error(
+          `peerId=${peerId} peerClient=${peerClient} returns no blocks allBlobSidecars=${allBlobSidecars.length} for BeaconBlocksByRangeRequest ${JSON.stringify(request)}`
+        );
+      }
+
       const blocks = matchBlockWithBlobs(
         config,
         allBlocks,
@@ -78,7 +90,8 @@ export async function beaconBlocksMaybeBlobsByRange(
       );
       return {blocks, pendingDataColumns: null};
     }
-    // get columns
+
+    // From fulu, get columns
     const sampledColumns = network.custodyConfig.sampledColumns;
     const neededColumns = partialDownload ? partialDownload.pendingDataColumns : sampledColumns;
 
@@ -130,6 +143,12 @@ export async function beaconBlocksMaybeBlobsByRange(
       peerClient,
       prevPartialDownload: !!partialDownload,
     });
+
+    if (allBlocks.length === 0) {
+      throw Error(
+        `peerId=${peerId} peerClient=${peerClient} returns no blocks dataColumnSidecars=${allDataColumnSidecars.length} for BeaconBlocksByRangeRequest ${JSON.stringify(request)}`
+      );
+    }
 
     const blocks = matchBlockWithDataColumns(
       network,
