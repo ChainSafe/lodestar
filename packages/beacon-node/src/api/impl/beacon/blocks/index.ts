@@ -109,7 +109,7 @@ export function getBeaconBlockApi({
           dataColumnsSource: DataColumnsSource.api,
         } as BlockInputDataColumns;
         blobSidecars = [];
-      } else if (fork === ForkName.deneb || fork === ForkName.electra) {
+      } else if (isForkPostDeneb(fork)) {
         blobSidecars = computeBlobSidecars(config, signedBlock, signedBlockOrContents);
         blockData = {
           fork,
@@ -286,10 +286,25 @@ export function getBeaconBlockApi({
     }
 
     if (blockForImport.type === BlockInputType.availableData) {
-      if (
-        chain.emitter.listenerCount(routes.events.EventType.blobSidecar) &&
-        (blockForImport.blockData.fork === ForkName.deneb || blockForImport.blockData.fork === ForkName.electra)
-      ) {
+      if (isForkPostFulu(blockForImport.blockData.fork)) {
+        if (!chain.emitter.listenerCount(routes.events.EventType.dataColumnSidecar)) {
+          return;
+        }
+        const {dataColumns} = blockForImport.blockData as BlockInputDataColumns;
+        metrics?.dataColumns.bySource.inc({source: DataColumnsSource.api}, dataColumns.length);
+
+        for (const dataColumnSidecar of dataColumns) {
+          chain.emitter.emit(routes.events.EventType.dataColumnSidecar, {
+            blockRoot,
+            slot,
+            index: dataColumnSidecar.index,
+            kzgCommitments: dataColumnSidecar.kzgCommitments.map(toHex),
+          });
+        }
+      } else if (isForkPostDeneb(blockForImport.blockData.fork)) {
+        if (!chain.emitter.listenerCount(routes.events.EventType.blobSidecar)) {
+          return;
+        }
         const {blobs} = blockForImport.blockData;
 
         for (const blobSidecar of blobs) {
@@ -300,21 +315,6 @@ export function getBeaconBlockApi({
             index,
             kzgCommitment: toHex(kzgCommitment),
             versionedHash: toHex(kzgCommitmentToVersionedHash(kzgCommitment)),
-          });
-        }
-      } else if (
-        chain.emitter.listenerCount(routes.events.EventType.dataColumnSidecar) &&
-        isForkPostFulu(blockForImport.blockData.fork)
-      ) {
-        const {dataColumns} = blockForImport.blockData as BlockInputDataColumns;
-        metrics?.dataColumns.bySource.inc({source: DataColumnsSource.api}, dataColumns.length);
-
-        for (const dataColumnSidecar of dataColumns) {
-          chain.emitter.emit(routes.events.EventType.dataColumnSidecar, {
-            blockRoot,
-            slot,
-            index: dataColumnSidecar.index,
-            kzgCommitments: dataColumnSidecar.kzgCommitments.map(toHex),
           });
         }
       }
