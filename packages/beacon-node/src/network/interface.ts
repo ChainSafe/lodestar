@@ -26,6 +26,7 @@ import {
   SlotRootHex,
   SubnetID,
   WithBytes,
+  WithOptionalBytes,
   altair,
   capella,
   deneb,
@@ -43,8 +44,6 @@ import {GossipType} from "./gossip/interface.js";
 import {PeerAction} from "./peers/index.js";
 import {PeerSyncMeta} from "./peers/peersData.js";
 import {PendingGossipsubMessage} from "./processor/types.js";
-
-export type WithOptionalBytes<T> = {data: T; bytes?: Uint8Array | null};
 
 /**
  * The architecture of the network looks like so:
