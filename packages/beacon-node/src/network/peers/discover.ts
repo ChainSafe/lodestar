@@ -402,10 +402,10 @@ export class PeerDiscovery {
     const syncnetsBytes = enr.kvs.get(ENRKey.syncnets); // 4 bits
     const custodyGroupCountBytes = enr.kvs.get(ENRKey.cgc); // 64 bits
     if (custodyGroupCountBytes === undefined) {
-      this.logger.warn(
-        `peer discovered with no cgc assuming CUSTODY_REQUIREMENT=${this.config.CUSTODY_REQUIREMENT}`,
-        exportENRToJSON(enr)
-      );
+      this.logger.debug("peer discovered with no cgc, using default/miniumn", {
+        CUSTODY_REQUIREMENT: this.config.CUSTODY_REQUIREMENT,
+        peer: prettyPrintPeerId(peerId),
+      });
     }
 
     // Use faster version than ssz's implementation that leverages pre-cached.
