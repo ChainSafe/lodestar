@@ -126,7 +126,8 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
   },
 
   persistNetworkIdentity: {
-    description: "Whether to reuse the same peer-id across restarts",
+    description:
+      "Whether to reuse the same peer-id across restarts. Peer das requires cgc to persist relative to a given ENR. Setting to false will reset ENR and also peer das validator custody group count",
     default: true,
     type: "boolean",
   },
