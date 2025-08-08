@@ -701,13 +701,11 @@ export class PeerManager {
    * dialed or connecting to us.
    */
   private onLibp2pPeerConnect = async (evt: CustomEvent<Connection>): Promise<void> => {
-    const {direction, status, remotePeer} = evt.detail;
+    const {direction, remotePeer} = evt.detail;
     this.logger.verbose("peer connected", {peer: prettyPrintPeerId(remotePeer), direction, status});
     // NOTE: The peerConnect event is not emitted here here, but after asserting peer relevance
-    this.metrics?.peerConnectedEvent.inc({direction, status});
-    // libp2p may emit closed connection, we don't want to handle it
-    // see https://github.com/libp2p/js-libp2p/issues/1565
-    if (this.connectedPeers.has(remotePeer.toString()) || status !== "open") {
+    this.metrics?.peerConnectedEvent.inc({direction, status: evt.detail.status});
+    if (this.connectedPeers.has(remotePeer.toString())) {
       return;
     }
 
@@ -740,6 +738,10 @@ export class PeerManager {
       void this.requestPing(remotePeer);
       void this.requestStatus(remotePeer, this.statusCache.get());
     }
+
+    // It is observed that client connect and immediately disconnect
+    // We don't need to identify a peer which have connection status `closing` or `closed`
+    if (evt.detail.status !== "open") return;
 
     this.libp2p.services.identify
       .identify(evt.detail)
