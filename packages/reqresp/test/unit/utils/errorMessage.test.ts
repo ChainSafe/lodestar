@@ -22,6 +22,15 @@ describe("encode and decode error message", () => {
       name: "NA - rate limited",
       errorMessage: "rate limited",
     },
+    // see https://github.com/ChainSafe/lodestar/issues/8110
+    {
+      name: "NA - Wait n seconds",
+      errorMessage: "Wait 2.816488536s",
+    },
+    {
+      name: "Lodestar - Timeout",
+      errorMessage: "Timeout",
+    },
   ];
   for (const {name, errorMessage} of testCases) {
     it(name, async () => {
