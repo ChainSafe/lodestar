@@ -247,7 +247,7 @@ export async function validateDataColumnsSidecars(
 
 /**
  * SPEC FUNCTION
- * https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/p2p-interface.md#verify_data_column_sidecar
+ * https://github.com/ethereum/consensus-specs/blob/ad36024441cf910d428d03f87f331fbbd2b3e5f1/specs/fulu/p2p-interface.md#L82
  */
 export function verifyDataColumnSidecar(dataColumnSidecar: fulu.DataColumnSidecar): void {
   if (dataColumnSidecar.index >= NUMBER_OF_COLUMNS) {
