@@ -73,7 +73,7 @@ describe("data serialization through worker boundary", () => {
 
   // Defining tests in this notation ensures that any event data is tested and probably safe to send
   const networkEventData = filterByUsedEvents<NetworkEventData>(networkEventDirection, {
-    [NetworkEvent.peerConnected]: {peer, status: statusZero, dataColumns: [], clientAgent: "CLIENT_AGENT"},
+    [NetworkEvent.peerConnected]: {peer, status: statusZero, custodyGroups: [1, 2, 3, 4], clientAgent: "CLIENT_AGENT"},
     [NetworkEvent.peerDisconnected]: {peer},
     [NetworkEvent.reqRespRequest]: {
       request: {method: ReqRespMethod.Status, body: statusZero},

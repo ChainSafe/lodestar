@@ -72,3 +72,47 @@ export function prettyMsToTime(timeMs: number): string {
 export function strip0xPrefix(hex: string): string {
   return hex.startsWith("0x") ? hex.slice(2) : hex;
 }
+
+function getCustodyGroupIncrements(custodyGroups: number[]): string[] {
+  if (custodyGroups.length === 0) {
+    return [];
+  }
+
+  const result: string[] = [];
+  let start = custodyGroups[0];
+  let end = custodyGroups[0];
+
+  for (let i = 1; i < custodyGroups.length; i++) {
+    const current = custodyGroups[i];
+
+    // If current number is consecutive to the previous one
+    if (current === end + 1) {
+      end = current;
+    } else {
+      // We have a break in the sequence, so add the current range
+      if (start === end) {
+        result.push(start.toString());
+      } else {
+        result.push(`${start}-${end}`);
+      }
+
+      // Start a new range
+      start = current;
+      end = current;
+    }
+  }
+
+  // Add the final range
+  if (start === end) {
+    result.push(start.toString());
+  } else {
+    result.push(`${start}-${end}`);
+  }
+
+  return result;
+}
+
+export function prettyPrintCustodyGroups(custodyGroups: number[]): string {
+  const increments = getCustodyGroupIncrements(custodyGroups);
+  return `[${increments.join(", ")}]`;
+}

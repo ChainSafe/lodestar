@@ -27,7 +27,7 @@ import {
   fulu,
   phase0,
 } from "@lodestar/types";
-import {sleep} from "@lodestar/utils";
+import {prettyPrintCustodyGroups, sleep} from "@lodestar/utils";
 import {ChainEvent, IBeaconChain} from "../chain/index.js";
 import {computeSubnetForDataColumnSidecar} from "../chain/validation/dataColumnSidecar.js";
 import {IBeaconDb} from "../db/interface.js";
@@ -724,15 +724,17 @@ export class Network implements INetwork {
   };
 
   private onPeerConnected = (data: NetworkEventData[NetworkEvent.peerConnected]): void => {
-    const earliestAvailableSlot = (data.status as fulu.Status).earliestAvailableSlot;
+    const {peer, clientAgent, custodyGroups, status} = data;
+    const earliestAvailableSlot = (status as fulu.Status).earliestAvailableSlot;
     this.logger.verbose("onPeerConnected", {
-      peer: data.peer,
-      dataColumns: data.dataColumns.join(" "),
+      peer,
+      clientAgent,
+      custodyGroups: prettyPrintCustodyGroups(custodyGroups),
       earliestAvailableSlot: earliestAvailableSlot ?? "pre-fulu",
     });
-    this.connectedPeersSyncMeta.set(data.peer, {
-      client: data.clientAgent,
-      custodyGroups: data.dataColumns,
+    this.connectedPeersSyncMeta.set(peer, {
+      client: clientAgent,
+      custodyGroups,
       earliestAvailableSlot, // can be undefined pre-fulu
     });
   };
