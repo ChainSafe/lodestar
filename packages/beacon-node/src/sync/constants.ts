@@ -10,8 +10,12 @@ export const MIN_FINALIZED_CHAIN_VALIDATED_EPOCHS = 10;
 // TODO: change it back to 5 when this issue is implemented https://github.com/ChainSafe/lodestar/issues/8033
 export const MAX_BATCH_DOWNLOAD_ATTEMPTS = 20;
 
-/** Consider batch faulty after downloading and processing this number of times */
-export const MAX_BATCH_PROCESSING_ATTEMPTS = 3;
+/**
+ * Consider batch faulty after downloading and processing this number of times
+ * as in https://github.com/ChainSafe/lodestar/issues/8147 we cannot proceed the sync chain if a peer return 0 blocks without error
+ * in that case we should throw error and `RangeSync` should remove that error chain and add a new one.
+ **/
+export const MAX_BATCH_PROCESSING_ATTEMPTS = 0;
 
 /**
  * Number of slots to offset batches.
