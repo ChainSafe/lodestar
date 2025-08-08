@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, isForkPostFulu} from "@lodestar/params";
+import {ForkName, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
 import {DataAvailabilityStatus, computeTimeAtSlot} from "@lodestar/state-transition";
 import {UintNum64, deneb} from "@lodestar/types";
 import {ErrorAborted, Logger} from "@lodestar/utils";
@@ -115,19 +115,19 @@ async function maybeValidateBlobs(
               signal
             );
 
-      if (blockData.fork === ForkName.deneb || blockData.fork === ForkName.electra) {
+      if (isForkPostFulu(blockData.fork)) {
+        const {dataColumns} = blockData as BlockInputDataColumns;
+        const skipProofsCheck = opts.validBlobSidecars === BlobSidecarValidation.Individual;
+        await validateDataColumnsSidecars(blockSlot, beaconBlockRoot, blobKzgCommitments, dataColumns, chain.metrics, {
+          skipProofsCheck,
+        });
+      } else if (isForkPostDeneb(blockData.fork)) {
         const {blobs} = blockData;
 
         // if the blob sidecars have been individually verified then we can skip kzg proof check
         // but other checks to match blobs with block data still need to be performed
         const skipProofsCheck = opts.validBlobSidecars === BlobSidecarValidation.Individual;
         await validateBlobSidecars(blockSlot, beaconBlockRoot, blobKzgCommitments, blobs, {skipProofsCheck});
-      } else if (isForkPostFulu(blockData.fork)) {
-        const {dataColumns} = blockData as BlockInputDataColumns;
-        const skipProofsCheck = opts.validBlobSidecars === BlobSidecarValidation.Individual;
-        await validateDataColumnsSidecars(blockSlot, beaconBlockRoot, blobKzgCommitments, dataColumns, chain.metrics, {
-          skipProofsCheck,
-        });
       }
 
       const availableBlockInput = getBlockInput.availableData(
