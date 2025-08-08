@@ -647,14 +647,3 @@ function formatLibp2pDialError(e: Error): void {
     e.stack = undefined;
   }
 }
-
-function exportENRToJSON(enr?: ENR): Record<string, string | undefined> | undefined {
-  if (enr === undefined) {
-    return undefined;
-  }
-  return {
-    ip4: enr.kvs.get("ip")?.toString(),
-    cgc: enr.kvs.get("cgc")?.toString(),
-    nodeId: enr.nodeId,
-  };
-}
