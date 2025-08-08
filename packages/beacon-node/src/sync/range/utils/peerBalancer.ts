@@ -66,7 +66,17 @@ export class ChainPeersBalancer {
       ({columns}) => -1 * columns // prefer peers with the most columns
     );
 
-    return sortedBestPeers.length > 0 ? sortedBestPeers[0].syncInfo : undefined;
+    if (sortedBestPeers.length > 0) {
+      const bestPeer = sortedBestPeers[0];
+      // we will use this peer for batch in SyncChain right after this call
+      this.activeRequestsByPeer.set(
+        bestPeer.syncInfo.peerId,
+        (this.activeRequestsByPeer.get(bestPeer.syncInfo.peerId) ?? 0) + 1
+      );
+      return bestPeer.syncInfo;
+    }
+
+    return undefined;
   }
 
   /**
