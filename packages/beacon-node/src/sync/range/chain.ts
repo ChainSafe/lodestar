@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName} from "@lodestar/params";
+import {ForkName, isForkPostFulu} from "@lodestar/params";
 import {Epoch, Root, Slot, phase0} from "@lodestar/types";
 import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
 import {BlockInput, BlockInputDataColumns, BlockInputType} from "../../chain/blocks/types.js";
@@ -461,7 +461,7 @@ export class SyncChain {
             hasPostDenebBlocks ||= blockInput.type === BlockInputType.availableData;
             return hasPostDenebBlocks
               ? acc +
-                  (blockInput.type === BlockInputType.availableData && blockInput.blockData.fork === ForkName.fulu
+                  (blockInput.type === BlockInputType.availableData && isForkPostFulu(blockInput.blockData.fork)
                     ? (blockInput.blockData as BlockInputDataColumns).dataColumns.length
                     : 0)
               : 0;
