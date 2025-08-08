@@ -180,7 +180,7 @@ export function validateDataColumnsSidecars(
   blockRoot: Root,
   blockKzgCommitments: deneb.BlobKzgCommitments,
   dataColumnSidecars: fulu.DataColumnSidecars
-): Promise<void> {
+): void {
   for (let sidecarsIndex = 0; sidecarsIndex < dataColumnSidecars.length; sidecarsIndex++) {
     const columnSidecar = dataColumnSidecars[sidecarsIndex];
     const {index: columnIndex, column, kzgCommitments, kzgProofs} = columnSidecar;
