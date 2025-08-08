@@ -1,11 +1,10 @@
 import {ENR} from "@chainsafe/enr";
-import {toHexString} from "@chainsafe/ssz";
 import type {PeerId, PeerInfo, PrivateKey} from "@libp2p/interface";
 import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
 import {ATTESTATION_SUBNET_COUNT, ForkSeq, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {CustodyIndex, SubnetID} from "@lodestar/types";
-import {pruneSetToMax, sleep} from "@lodestar/utils";
+import {pruneSetToMax, sleep, toHex} from "@lodestar/utils";
 import {bytesToInt} from "@lodestar/utils";
 import {Multiaddr} from "@multiformats/multiaddr";
 import {IClock} from "../../util/clock.js";
@@ -433,7 +432,7 @@ export class PeerDiscovery {
     custodySubnetCount?: number
   ): DiscoveredPeerStatus {
     const nodeId = computeNodeId(peerId);
-    this.logger.debug("handleDiscoveredPeer", {nodeId: toHexString(nodeId), peerId: peerId.toString()});
+    this.logger.debug("handleDiscoveredPeer", {nodeId: toHex(nodeId), peerId: peerId.toString()});
     try {
       // Check if peer is not banned or disconnected
       if (this.peerRpcScores.getScoreState(peerId) !== ScoreState.Healthy) {

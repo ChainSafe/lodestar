@@ -4,7 +4,7 @@ import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
 import {ForkSeq, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {Metadata, Status, fulu, phase0} from "@lodestar/types";
-import {withTimeout} from "@lodestar/utils";
+import {toHex, withTimeout} from "@lodestar/utils";
 import {GOODBYE_KNOWN_CODES, GoodByeReasonCode, Libp2pEvent} from "../../constants/index.js";
 import {IClock} from "../../util/clock.js";
 import {getCustodyGroups, getDataColumns} from "../../util/dataColumns.js";
@@ -455,8 +455,8 @@ export class PeerManager {
       const clientAgent = peerData?.agentClient ?? ClientKind.Unknown;
 
       this.logger.debug("onStatus", {
-        nodeId: toHexString(nodeId),
-        myNodeId: toHexString(this.nodeId),
+        nodeId: toHex(nodeId),
+        myNodeId: toHex(this.nodeId),
         peerId: peer.toString(),
         custodyGroupCount,
         hasAllColumns,
