@@ -152,7 +152,7 @@ export class SyncChain {
     this.logId = `${syncType}-${nextChainId++}`;
 
     if (this.metrics != null) {
-      this.metrics.syncRange.headSyncPeers.addCollect(() => this.scrapeMetrics(this.metrics as Metrics));
+      this.metrics.syncRange.headSyncPeers.addCollect(() => this.scrapeMetrics(this.metrics));
     }
 
     // Trigger event on parent class
@@ -586,7 +586,11 @@ export class SyncChain {
     this.lastEpochWithProcessBlocks = newLastEpochWithProcessBlocks;
   }
 
-  private scrapeMetrics(metrics: Metrics): void {
+  private scrapeMetrics(metrics: Metrics | null): void {
+    if (metrics === null) {
+      return;
+    }
+
     const syncPeersMetric =
       this.syncType === RangeSyncType.Finalized
         ? metrics.syncRange.finalizedSyncPeers
