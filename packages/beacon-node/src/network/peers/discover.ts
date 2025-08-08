@@ -403,7 +403,7 @@ export class PeerDiscovery {
     const custodyGroupCountBytes = enr.kvs.get(ENRKey.cgc); // 64 bits
     if (custodyGroupCountBytes === undefined) {
       this.logger.debug("peer discovered with no cgc, using default/miniumn", {
-        CUSTODY_REQUIREMENT: this.config.CUSTODY_REQUIREMENT,
+        custodyRequirement: this.config.CUSTODY_REQUIREMENT,
         peer: prettyPrintPeerId(peerId),
       });
     }
