@@ -465,7 +465,6 @@ export class PeerManager {
         clientAgent,
       });
 
-      // TODO @matthewkeil need to double check the dataColumns is received on the other end of this correctly
       this.networkEventBus.emit(NetworkEvent.peerConnected, {
         peer: peer.toString(),
         status,
