@@ -594,6 +594,10 @@ export class SyncChain {
     }
 
     this.lastEpochWithProcessBlocks = newLastEpochWithProcessBlocks;
+    this.logger.verbose("Advanced chain", {
+      id: this.logId,
+      lastEpochWithProcessBlocks: this.lastEpochWithProcessBlocks,
+    });
   }
 
   private scrapeMetrics(metrics: Metrics): void {
