@@ -242,7 +242,7 @@ export class Batch {
     return this.state.attempt;
   }
 
-  isFulu(): boolean {
+  isPostFulu(): boolean {
     return this.config.getForkSeq(this.request.startSlot) >= ForkSeq.fulu;
   }
 
