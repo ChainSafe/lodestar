@@ -201,8 +201,8 @@ export class ReqRespBeaconNode extends ReqResp {
         this.currentRegisteredFork >= ForkSeq.fulu
           ? [Version.V3]
           : this.currentRegisteredFork >= ForkSeq.altair
-            ? [Version.V2]
-            : [Version.V1],
+            ? [Version.V3, Version.V2]
+            : [Version.V2, Version.V1],
         null
       ),
       responseSszTypeByMethod[ReqRespMethod.Metadata]
