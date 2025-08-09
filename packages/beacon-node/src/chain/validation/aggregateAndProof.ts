@@ -4,7 +4,7 @@ import {
   createAggregateSignatureSetFromComponents,
   isAggregatorFromCommitteeLength,
 } from "@lodestar/state-transition";
-import {IndexedAttestation, RootHex, SignedAggregateAndProof, electra, ssz} from "@lodestar/types";
+import {CommitteeIndex, IndexedAttestation, RootHex, SignedAggregateAndProof, electra, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
@@ -23,6 +23,7 @@ export type AggregateAndProofValidationResult = {
   indexedAttestation: IndexedAttestation;
   committeeIndices: Uint32Array;
   attDataRootHex: RootHex;
+  committeeIndex: CommitteeIndex;
 };
 
 export async function validateApiAggregateAndProof(
@@ -71,11 +72,11 @@ async function validateAggregateAndProof(
   const attData = aggregate.data;
   const attSlot = attData.slot;
 
-  let attIndex: number | null;
+  let committeeIndex: number | null;
   if (ForkSeq[fork] >= ForkSeq.electra) {
-    attIndex = (aggregate as electra.Attestation).committeeBits.getSingleTrueBit();
+    committeeIndex = (aggregate as electra.Attestation).committeeBits.getSingleTrueBit();
     // [REJECT] len(committee_indices) == 1, where committee_indices = get_committee_indices(aggregate)
-    if (attIndex === null) {
+    if (committeeIndex === null) {
       throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.NOT_EXACTLY_ONE_COMMITTEE_BIT_SET});
     }
     // [REJECT] aggregate.data.index == 0
@@ -83,11 +84,11 @@ async function validateAggregateAndProof(
       throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.NON_ZERO_ATTESTATION_DATA_INDEX});
     }
   } else {
-    attIndex = attData.index;
+    committeeIndex = attData.index;
   }
 
   const seenAttDataKey = serializedData ? getSeenAttDataKeyFromSignedAggregateAndProof(fork, serializedData) : null;
-  const cachedAttData = seenAttDataKey ? chain.seenAttestationDatas.get(attSlot, attIndex, seenAttDataKey) : null;
+  const cachedAttData = seenAttDataKey ? chain.seenAttestationDatas.get(attSlot, committeeIndex, seenAttDataKey) : null;
 
   const attEpoch = computeEpochAtSlot(attSlot);
   const attTarget = attData.target;
@@ -136,7 +137,7 @@ async function validateAggregateAndProof(
     : toRootHex(ssz.phase0.AttestationData.hashTreeRoot(attData));
   if (
     !skipValidationKnownAttesters &&
-    chain.seenAggregatedAttestations.isKnown(targetEpoch, attIndex, attDataRootHex, aggregationBits)
+    chain.seenAggregatedAttestations.isKnown(targetEpoch, committeeIndex, attDataRootHex, aggregationBits)
   ) {
     throw new AttestationError(GossipAction.IGNORE, {
       code: AttestationErrorCode.ATTESTERS_ALREADY_KNOWN,
@@ -177,7 +178,7 @@ async function validateAggregateAndProof(
   // -- i.e. data.index < get_committee_count_per_slot(state, data.target.epoch)
   const committeeIndices = cachedAttData
     ? cachedAttData.committeeValidatorIndices
-    : getCommitteeIndices(shuffling, attSlot, attIndex);
+    : getCommitteeIndices(shuffling, attSlot, committeeIndex);
 
   // [REJECT] The number of aggregation bits matches the committee size
   // -- i.e. `len(aggregation_bits) == len(get_beacon_committee(state, aggregate.data.slot, index))`.
@@ -246,13 +247,14 @@ async function validateAggregateAndProof(
   }
 
   chain.seenAggregators.add(targetEpoch, aggregatorIndex);
-  chain.seenAggregatedAttestations.add(
+  chain.addSeenAgregatedAttestation(
+    attSlot,
     targetEpoch,
-    attIndex,
+    committeeIndex,
     attDataRootHex,
     {aggregationBits, trueBitCount: attestingIndices.length},
     false
   );
 
-  return {indexedAttestation, committeeIndices, attDataRootHex};
+  return {indexedAttestation, committeeIndex, committeeIndices, attDataRootHex};
 }

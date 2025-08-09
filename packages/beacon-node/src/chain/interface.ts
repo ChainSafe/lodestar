@@ -11,6 +11,7 @@ import {
 import {
   BeaconBlock,
   BlindedBeaconBlock,
+  CommitteeIndex,
   Epoch,
   ExecutionPayload,
   Root,
@@ -42,6 +43,7 @@ import {ForkchoiceCaller} from "./forkChoice/index.js";
 import {LightClientServer} from "./lightClient/index.js";
 import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool.js";
 import {AttestationPool, OpPool, SyncCommitteeMessagePool, SyncContributionAndProofPool} from "./opPools/index.js";
+import {SingleAttestationPool} from "./opPools/singleAttestationPool.js";
 import {IChainOptions} from "./options.js";
 import {AssembledBlockType, BlockAttributes, BlockType} from "./produceBlock/produceBlockBody.js";
 import {IStateRegenerator, RegenCaller} from "./regen/index.js";
@@ -57,7 +59,7 @@ import {
   SeenSyncCommitteeMessages,
 } from "./seenCache/index.js";
 import {SeenGossipBlockInput} from "./seenCache/index.js";
-import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
+import {AggregationInfo, SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {SeenBlockInputCache} from "./seenCache/seenBlockInput.js";
@@ -111,6 +113,7 @@ export interface IBeaconChain {
 
   // Ops pool
   readonly attestationPool: AttestationPool;
+  readonly singleAttestationPool: SingleAttestationPool;
   readonly aggregatedAttestationPool: AggregatedAttestationPool;
   readonly syncCommitteeMessagePool: SyncCommitteeMessagePool;
   readonly syncContributionAndProofPool: SyncContributionAndProofPool;
@@ -260,6 +263,15 @@ export interface IBeaconChain {
     blockRef: BeaconBlock | BlindedBeaconBlock,
     validatorIds?: (ValidatorIndex | string)[]
   ): Promise<SyncCommitteeRewards>;
+
+  addSeenAgregatedAttestation(
+    slot: Slot,
+    targetEpoch: Epoch,
+    committeeIndex: CommitteeIndex,
+    attDataRoot: RootHex,
+    newItem: AggregationInfo,
+    checkIsKnown: boolean
+  ): void;
 }
 
 export type SSZObjectType =

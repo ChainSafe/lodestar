@@ -47,6 +47,7 @@ import {
 import {fromGraffitiBytes} from "../../util/graffiti.js";
 import type {BeaconChain} from "../chain.js";
 import {CommonBlockBody} from "../interface.js";
+import {getAttestationsForBlock} from "../opPools/getAttestationsForBlock.js";
 import {validateBlobsAndKzgCommitments} from "./validateBlobsAndKzgCommitments.js";
 
 // Time to provide the EL to generate a payload from new payload id
@@ -715,7 +716,7 @@ export async function produceCommonBlockBody<T extends BlockType>(
     this.opPool.getSlashingsAndExits(currentState, blockType, this.metrics);
 
   const endAttestations = stepsMetrics?.startTimer();
-  const attestations = this.aggregatedAttestationPool.getAttestationsForBlock(fork, this.forkChoice, currentState);
+  const attestations = getAttestationsForBlock.call(this, fork, currentState);
   endAttestations?.({
     step: BlockProductionStep.attestations,
   });

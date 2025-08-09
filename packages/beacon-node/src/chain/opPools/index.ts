@@ -1,4 +1,5 @@
 export {AggregatedAttestationPool} from "./aggregatedAttestationPool.js";
+export {SingleAttestationPool} from "./singleAttestationPool.js";
 export {AttestationPool} from "./attestationPool.js";
 export {SyncCommitteeMessagePool} from "./syncCommitteeMessagePool.js";
 export {SyncContributionAndProofPool} from "./syncContributionAndProofPool.js";

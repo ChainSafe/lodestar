@@ -63,6 +63,7 @@ type CommitteeIndex = number | null;
  * `current_slot - SLOTS_RETAINED` will be removed and any future attestation with a slot lower
  * than that will also be refused. Pruning is done automatically based upon the attestations it
  * receives and it can be triggered manually.
+ * // TODO: rename this to FastAggregatePool
  */
 export class AttestationPool {
   private readonly aggregateByIndexByRootBySlot = new MapDef<

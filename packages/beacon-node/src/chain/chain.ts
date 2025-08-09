@@ -24,6 +24,7 @@ import {
   BeaconBlock,
   BlindedBeaconBlock,
   BlindedBeaconBlockBody,
+  CommitteeIndex,
   Epoch,
   ExecutionPayload,
   Root,
@@ -76,6 +77,7 @@ import {
   SyncCommitteeMessagePool,
   SyncContributionAndProofPool,
 } from "./opPools/index.js";
+import {SingleAttestationPool} from "./opPools/singleAttestationPool.js";
 import {IChainOptions} from "./options.js";
 import {PrepareNextSlotScheduler} from "./prepareNextSlot.js";
 import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
@@ -94,7 +96,7 @@ import {
   SeenSyncCommitteeMessages,
 } from "./seenCache/index.js";
 import {SeenGossipBlockInput} from "./seenCache/index.js";
-import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
+import {AggregationInfo, SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {SeenBlockInputCache} from "./seenCache/seenBlockInput.js";
@@ -140,6 +142,7 @@ export class BeaconChain implements IBeaconChain {
 
   // Ops pool
   readonly attestationPool: AttestationPool;
+  readonly singleAttestationPool: SingleAttestationPool;
   readonly aggregatedAttestationPool: AggregatedAttestationPool;
   readonly syncCommitteeMessagePool: SyncCommitteeMessagePool;
   readonly syncContributionAndProofPool;
@@ -248,6 +251,7 @@ export class BeaconChain implements IBeaconChain {
       this.opts?.preaggregateSlotDistance,
       metrics
     );
+    this.singleAttestationPool = new SingleAttestationPool(metrics);
     this.aggregatedAttestationPool = new AggregatedAttestationPool(this.config, metrics);
     this.syncCommitteeMessagePool = new SyncCommitteeMessagePool(
       clock,
@@ -993,6 +997,18 @@ export class BeaconChain implements IBeaconChain {
     return state.epochCtx.getShufflingAtEpoch(attEpoch);
   }
 
+  addSeenAgregatedAttestation(
+    slot: Slot,
+    targetEpoch: Epoch,
+    committeeIndex: CommitteeIndex,
+    attDataRoot: RootHex,
+    newItem: AggregationInfo,
+    checkIsKnown: boolean
+  ): void {
+    this.seenAggregatedAttestations.add(targetEpoch, committeeIndex, attDataRoot, newItem, checkIsKnown);
+    this.singleAttestationPool.seenAggregatedAttestation(slot, attDataRoot, committeeIndex, newItem.aggregationBits);
+  }
+
   /**
    * `ForkChoice.onBlock` must never throw for a block that is valid with respect to the network
    * `justifiedBalancesGetter()` must never throw and it should always return a state.
@@ -1141,6 +1157,7 @@ export class BeaconChain implements IBeaconChain {
     this.metrics?.clockSlot.set(slot);
 
     this.attestationPool.prune(slot);
+    this.singleAttestationPool.prune(slot);
     this.aggregatedAttestationPool.prune(slot);
     this.syncCommitteeMessagePool.prune(slot);
     this.seenSyncCommitteeMessages.prune(slot);
