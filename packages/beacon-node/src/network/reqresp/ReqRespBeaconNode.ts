@@ -179,7 +179,7 @@ export class ReqRespBeaconNode extends ReqResp {
       this.sendReqRespRequest(
         peerId,
         ReqRespMethod.Status,
-        this.currentRegisteredFork >= ForkSeq.fulu ? [Version.V2] : [Version.V2, Version.V1],
+        this.currentRegisteredFork >= ForkSeq.fulu ? [Version.V2] : [Version.V1],
         request
       ),
       responseSszTypeByMethod[ReqRespMethod.Status]
@@ -199,12 +199,11 @@ export class ReqRespBeaconNode extends ReqResp {
       this.sendReqRespRequest(
         peerId,
         ReqRespMethod.Metadata,
-        // Before altair, prioritize V2. After altair only request V2
         this.currentRegisteredFork >= ForkSeq.fulu
           ? [Version.V3]
           : this.currentRegisteredFork >= ForkSeq.altair
-            ? [Version.V3, Version.V2]
-            : [(Version.V3, Version.V2, Version.V1)],
+            ? [Version.V2]
+            : [Version.V1],
         null
       ),
       responseSszTypeByMethod[ReqRespMethod.Metadata]
@@ -321,14 +320,17 @@ export class ReqRespBeaconNode extends ReqResp {
   }
 
   private async *onStatus(req: ReqRespRequest, peerId: PeerId): AsyncIterable<ResponseOutgoing> {
-    const type = responseSszTypeByMethod[ReqRespMethod.Status](ForkName.phase0 /* forkName is ignored */, req.version);
+    // Fork is ignored in responseSszTypeByMethod, type is determined by protocol version that is negotiated
+    const type = responseSszTypeByMethod[ReqRespMethod.Status](ForkName.phase0, req.version);
+    // Request uses the same type as response
     const body = type.deserialize(req.data);
     this.onIncomingRequestBody({method: ReqRespMethod.Status, body}, peerId);
 
     const status = this.statusCache.get();
     yield {
       data: type.serialize(status),
-      boundary: this.config.getForkBoundaryAtEpoch(computeEpochAtSlot(body.headSlot)),
+      // Status topic is fork-agnostic
+      boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH},
     };
   }
 
@@ -358,14 +360,13 @@ export class ReqRespBeaconNode extends ReqResp {
 
     const metadata = this.metadataController.json;
 
-    // Fork is ignored in responseSszTypeByMethod, type is determined by req.version that is negotiated
-    const fork = ForkName.phase0;
-    const epoch = GENESIS_EPOCH;
-    const type = responseSszTypeByMethod[ReqRespMethod.Metadata](fork, req.version);
+    // Fork is ignored in responseSszTypeByMethod, type is determined by protocol version that is negotiated
+    const type = responseSszTypeByMethod[ReqRespMethod.Metadata](ForkName.phase0, req.version);
 
     yield {
       data: type.serialize(metadata),
-      boundary: {fork, epoch},
+      // Metadata topic is fork-agnostic
+      boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH},
     };
   }
 }

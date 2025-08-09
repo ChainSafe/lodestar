@@ -68,6 +68,7 @@ export async function* sendRequest(
   const RESP_TIMEOUT = opts?.respTimeoutMs ?? DEFAULT_RESP_TIMEOUT;
 
   const peerIdStrShort = prettyPrintPeerId(peerId);
+  // TODO: this is wrong, we should print out the version that's actually used
   const {method, encoding, version} = protocols[0];
   const logCtx = {method, version, encoding, client: peerClient, peer: peerIdStrShort, requestId};
 
@@ -197,7 +198,7 @@ export async function* sendRequest(
       // NOTE: Only log once per request to verbose, intermediate steps to debug
       // NOTE: Do not log the response, logs get extremely cluttered
       // NOTE: add double space after "Req  " to align log with the "Resp " log
-      logger.verbose("Req  done", {...logCtx});
+      logger.verbose("Req  done", logCtx);
     } finally {
       clearTimeout(timeoutTTFB);
       if (timeoutRESP !== null) clearTimeout(timeoutRESP);
