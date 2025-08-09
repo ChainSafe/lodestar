@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import os from "node:os";
+import {toHex} from "@lodestar/utils";
 import path from "node:path";
 import {SignableENR} from "@chainsafe/enr";
 import {generateKeyPair} from "@libp2p/crypto/keys";
@@ -10,6 +11,7 @@ import {exportToJSON, readPrivateKey} from "../../config/index.js";
 import {parseListenArgs} from "../../options/beaconNodeOptions/network.js";
 import {writeFile600Perm} from "../../util/file.js";
 import {BeaconArgs} from "./options.js";
+import { peerIdFromPrivateKey } from "@libp2p/peer-id";
 
 /**
  * Check if multiaddr belongs to the local network interfaces.
@@ -154,11 +156,11 @@ export async function initPrivateKeyAndEnr(
     let privateKey: PrivateKey;
     let enr: SignableENR;
 
-    // attempt to read stored peer id
+    // attempt to read stored private key
     try {
       privateKey = readPrivateKey(peerIdFile);
     } catch (_e) {
-      logger.warn("Unable to read peerIdFile, creating a new peer id");
+      logger.warn("Unable to read peerIdFile, creating a new private key");
       return {...(await newPrivateKeyAndENR()), newEnr: true};
     }
     // attempt to read stored enr
@@ -170,7 +172,7 @@ export async function initPrivateKeyAndEnr(
       return {privateKey, enr, newEnr: true};
     }
     // check stored peer id against stored enr
-    if (!privateKey.equals(enr.peerId)) {
+    if (!peerIdFromPrivateKey(privateKey).equals(enr.peerId)) {
       logger.warn("Stored local ENR doesn't match peerIdFile, creating a new ENR");
       enr = SignableENR.createFromPrivateKey(privateKey);
       return {privateKey, enr, newEnr: true};
