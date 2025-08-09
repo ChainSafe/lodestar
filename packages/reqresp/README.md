@@ -28,6 +28,7 @@ async function getReqResp(libp2p: Libp2p, logger: Logger): Promise<void> {
     encoding: Encoding.SSZ_SNAPPY,
     contextBytes: {type: ContextBytesType.Empty},
     requestSizes: ssz.phase0.Ping,
+    requestType: () => ssz.phase0.Ping,
     responseSizes: () => ssz.phase0.Ping,
     handler: async function* (req) {
       yield {
