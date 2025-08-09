@@ -159,7 +159,7 @@ export async function initPrivateKeyAndEnr(
     try {
       privateKey = readPrivateKey(peerIdFile);
     } catch (_e) {
-      logger.warn("Unable to read peerIdFile, creating a new private key");
+      logger.warn("Unable to read peerIdFile, creating a new peer id");
       return {...(await newPrivateKeyAndENR()), newEnr: true};
     }
     // attempt to read stored enr
