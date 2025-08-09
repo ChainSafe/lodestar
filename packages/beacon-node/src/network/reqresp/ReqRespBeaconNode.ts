@@ -30,6 +30,7 @@ import {
   ReqRespMethod,
   RequestTypedContainer,
   Version,
+  requestSszTypeByMethod,
   responseSszTypeByMethod,
 } from "./types.js";
 import {collectExactOneTyped} from "./utils/collect.js";
@@ -312,13 +313,15 @@ export class ReqRespBeaconNode extends ReqResp {
 
   private async *onStatus(req: ReqRespRequest, peerId: PeerId): AsyncIterable<ResponseOutgoing> {
     // SSZ type is selected based on protocol version, not fork
-    const type = responseSszTypeByMethod[ReqRespMethod.Status](ForkName.phase0, req.version);
-    const body = type.deserialize(req.data);
+    const requestType = requestSszTypeByMethod(ForkName.phase0, this.config, req.version)[ReqRespMethod.Status];
+    const responseType = responseSszTypeByMethod[ReqRespMethod.Status](ForkName.phase0, req.version);
+
+    const body = requestType.deserialize(req.data);
     this.onIncomingRequestBody({method: ReqRespMethod.Status, body}, peerId);
 
     const status = this.statusCache.get();
     yield {
-      data: type.serialize(status),
+      data: responseType.serialize(status),
       // Status topic is fork-agnostic
       boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH},
     };
