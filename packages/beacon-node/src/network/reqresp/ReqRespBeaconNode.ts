@@ -12,7 +12,6 @@ import {
   ResponseIncoming,
   ResponseOutgoing,
 } from "@lodestar/reqresp";
-import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Metadata, Status, phase0, ssz} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {Libp2p} from "libp2p";
