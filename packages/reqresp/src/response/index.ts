@@ -1,4 +1,3 @@
-import {version} from "node:os";
 import {PeerId, Stream} from "@libp2p/interface";
 import {Logger, TimeoutError, withTimeout} from "@lodestar/utils";
 import {pipe} from "it-pipe";
