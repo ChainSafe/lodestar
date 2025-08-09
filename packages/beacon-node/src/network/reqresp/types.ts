@@ -77,11 +77,12 @@ type ResponseBodyByMethod = {
 /** Request SSZ type for each method and ForkName */
 export const requestSszTypeByMethod: (
   fork: ForkName,
-  config: BeaconConfig
+  config: BeaconConfig,
+  version: number
 ) => {
   [K in ReqRespMethod]: RequestBodyByMethod[K] extends null ? null : Type<RequestBodyByMethod[K]>;
-} = (fork, config) => ({
-  [ReqRespMethod.Status]: sszTypesFor(fork).Status,
+} = (fork, config, version) => ({
+  [ReqRespMethod.Status]: version === Version.V2 ? ssz.fulu.Status : ssz.phase0.Status,
   [ReqRespMethod.Goodbye]: ssz.phase0.Goodbye,
   [ReqRespMethod.Ping]: ssz.phase0.Ping,
   [ReqRespMethod.Metadata]: null,
@@ -146,10 +147,11 @@ export enum Version {
 }
 
 export type OutgoingRequestArgs = {
+  fork: ForkName;
   peerId: string;
   method: ReqRespMethod;
   versions: number[];
-  requestData: Uint8Array;
+  request: unknown;
 };
 
 export type IncomingRequestArgs = {

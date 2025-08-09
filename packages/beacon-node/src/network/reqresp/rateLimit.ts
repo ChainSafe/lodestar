@@ -8,7 +8,7 @@ import {
   isForkPostDeneb,
 } from "@lodestar/params";
 import {InboundRateLimitQuota} from "@lodestar/reqresp";
-import {ReqRespMethod, RequestBodyByMethod, requestSszTypeByMethod} from "./types.js";
+import {ReqRespMethod, RequestBodyByMethod, Version, requestSszTypeByMethod} from "./types.js";
 
 export const rateLimitQuotas: (fork: ForkName, config: BeaconConfig) => Record<ReqRespMethod, InboundRateLimitQuota> = (
   fork,
@@ -89,7 +89,9 @@ function getRequestCountFn<T extends ReqRespMethod>(
   method: T,
   fn: (req: RequestBodyByMethod[T]) => number
 ): (reqData: Uint8Array) => number {
-  const type = requestSszTypeByMethod(fork, config)[method];
+  // Relevant SSZ types are selected based on fork, not protocol version
+  const version = Version.V1;
+  const type = requestSszTypeByMethod(fork, config, version)[method];
   return (reqData: Uint8Array) => {
     try {
       return (type && fn(type.deserialize(reqData))) ?? 1;

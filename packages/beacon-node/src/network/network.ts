@@ -49,7 +49,7 @@ import {PeerSyncMeta} from "./peers/peersData.js";
 import {AggregatorTracker} from "./processor/aggregatorTracker.js";
 import {NetworkProcessor, PendingGossipsubMessage} from "./processor/index.js";
 import {ReqRespMethod} from "./reqresp/index.js";
-import {GetReqRespHandlerFn, Version, requestSszTypeByMethod, responseSszTypeByMethod} from "./reqresp/types.js";
+import {GetReqRespHandlerFn, Version, responseSszTypeByMethod} from "./reqresp/types.js";
 import {
   collectExactOneTyped,
   collectMaxResponseTyped,
@@ -511,7 +511,7 @@ export class Network implements INetwork {
         peerId,
         ReqRespMethod.BeaconBlocksByRange,
         // Before altair, prioritize V2. After altair only request V2
-        this.config.getForkSeq(this.clock.currentSlot) >= ForkSeq.altair ? [Version.V2] : [(Version.V2, Version.V1)],
+        this.config.getForkSeq(this.clock.currentSlot) >= ForkSeq.altair ? [Version.V2] : [Version.V2, Version.V1],
         request
       ),
       request
@@ -527,7 +527,7 @@ export class Network implements INetwork {
         peerId,
         ReqRespMethod.BeaconBlocksByRoot,
         // Before altair, prioritize V2. After altair only request V2
-        this.config.getForkSeq(this.clock.currentSlot) >= ForkSeq.altair ? [Version.V2] : [(Version.V2, Version.V1)],
+        this.config.getForkSeq(this.clock.currentSlot) >= ForkSeq.altair ? [Version.V2] : [Version.V2, Version.V1],
         request
       ),
       request.length,
@@ -618,11 +618,9 @@ export class Network implements INetwork {
     request: Req
   ): AsyncIterable<ResponseIncoming> {
     const fork = this.config.getForkName(this.clock.currentSlot);
-    const requestType = requestSszTypeByMethod(fork, this.config)[method];
-    const requestData = requestType ? requestType.serialize(request as never) : new Uint8Array();
 
     // ReqResp outgoing request, emit from main thread to worker
-    return this.core.sendReqRespRequest({peerId, method, versions, requestData});
+    return this.core.sendReqRespRequest({fork, peerId, method, versions, request});
   }
 
   // Debug

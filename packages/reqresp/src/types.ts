@@ -96,6 +96,7 @@ export interface Protocol extends ProtocolDescriptor {
   handler: ProtocolHandler;
   inboundRateLimits?: InboundRateLimitQuota;
   requestSizes: TypeSizes | null;
+  requestType: (fork: ForkName, version: number) => {serialize(req: unknown): Uint8Array} | null;
   responseSizes: (fork: ForkName) => TypeSizes;
 }
 

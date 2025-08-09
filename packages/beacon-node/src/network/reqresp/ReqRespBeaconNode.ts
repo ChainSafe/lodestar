@@ -12,7 +12,6 @@ import {
   ResponseIncoming,
   ResponseOutgoing,
 } from "@lodestar/reqresp";
-import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Metadata, Status, phase0, ssz} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {Libp2p} from "libp2p";
@@ -31,7 +30,6 @@ import {
   ReqRespMethod,
   RequestTypedContainer,
   Version,
-  requestSszTypeByMethod,
   responseSszTypeByMethod,
 } from "./types.js";
 import {collectExactOneTyped} from "./utils/collect.js";
@@ -146,24 +144,18 @@ export class ReqRespBeaconNode extends ReqResp {
     }
   }
 
-  sendRequestWithoutEncoding(
+  sendRequestWithoutEncoding<Req>(
+    fork: ForkName,
     peerId: PeerId,
     method: ReqRespMethod,
     versions: number[],
-    requestData: Uint8Array
+    request: Req
   ): AsyncIterable<ResponseIncoming> {
     // Remember preferred encoding
     const encoding = this.peersData.getEncodingPreference(peerId.toString()) ?? Encoding.SSZ_SNAPPY;
 
-    // Overwrite placeholder requestData from main thread with correct sequenceNumber
-    if (method === ReqRespMethod.Ping) {
-      requestData = requestSszTypeByMethod(ForkName.phase0, this.config)[ReqRespMethod.Ping].serialize(
-        this.metadataController.seqNumber
-      );
-    }
-
     // ReqResp outgoing request, emit from main thread to worker
-    return this.sendRequest(peerId, method, versions, encoding, requestData);
+    return this.sendRequest(fork, peerId, method, versions, encoding, request);
   }
 
   async sendPing(peerId: PeerId): Promise<phase0.Ping> {
@@ -204,7 +196,7 @@ export class ReqRespBeaconNode extends ReqResp {
           ? [Version.V3]
           : this.currentRegisteredFork >= ForkSeq.altair
             ? [Version.V3, Version.V2]
-            : [(Version.V3, Version.V2, Version.V1)],
+            : [Version.V2, Version.V1],
         null
       ),
       responseSszTypeByMethod[ReqRespMethod.Metadata]
@@ -218,9 +210,7 @@ export class ReqRespBeaconNode extends ReqResp {
     request: Req
   ): AsyncIterable<ResponseIncoming> {
     const fork = ForkName[ForkSeq[this.currentRegisteredFork] as ForkName];
-    const requestType = requestSszTypeByMethod(fork, this.config)[method];
-    const requestData = requestType ? requestType.serialize(request as never) : new Uint8Array();
-    return this.sendRequestWithoutEncoding(peerId, method, versions, requestData);
+    return this.sendRequestWithoutEncoding(fork, peerId, method, versions, request);
   }
 
   /**
@@ -321,14 +311,16 @@ export class ReqRespBeaconNode extends ReqResp {
   }
 
   private async *onStatus(req: ReqRespRequest, peerId: PeerId): AsyncIterable<ResponseOutgoing> {
-    const type = responseSszTypeByMethod[ReqRespMethod.Status](ForkName.phase0 /* forkName is ignored */, req.version);
+    // SSZ type is selected based on protocol version, not fork
+    const type = responseSszTypeByMethod[ReqRespMethod.Status](ForkName.phase0, req.version);
     const body = type.deserialize(req.data);
     this.onIncomingRequestBody({method: ReqRespMethod.Status, body}, peerId);
 
     const status = this.statusCache.get();
     yield {
       data: type.serialize(status),
-      boundary: this.config.getForkBoundaryAtEpoch(computeEpochAtSlot(body.headSlot)),
+      // Status topic is fork-agnostic
+      boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH},
     };
   }
 
@@ -355,17 +347,14 @@ export class ReqRespBeaconNode extends ReqResp {
 
   private async *onMetadata(req: ReqRespRequest, peerId: PeerId): AsyncIterable<ResponseOutgoing> {
     this.onIncomingRequestBody({method: ReqRespMethod.Metadata, body: null}, peerId);
-
+    // SSZ type is selected based on protocol version, not fork
+    const type = responseSszTypeByMethod[ReqRespMethod.Metadata](ForkName.phase0, req.version);
     const metadata = this.metadataController.json;
-
-    // Fork is ignored in responseSszTypeByMethod, type is determined by req.version that is negotiated
-    const fork = ForkName.phase0;
-    const epoch = GENESIS_EPOCH;
-    const type = responseSszTypeByMethod[ReqRespMethod.Metadata](fork, req.version);
 
     yield {
       data: type.serialize(metadata),
-      boundary: {fork, epoch},
+      // Metadata topic is fork-agnostic
+      boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH},
     };
   }
 }

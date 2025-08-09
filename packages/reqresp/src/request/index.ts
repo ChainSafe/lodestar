@@ -1,4 +1,5 @@
 import {PeerId} from "@libp2p/interface";
+import {ForkName} from "@lodestar/params";
 import {ErrorAborted, Logger, TimeoutError, withTimeout} from "@lodestar/utils";
 import {pipe} from "it-pipe";
 import type {Libp2p} from "libp2p";
@@ -48,12 +49,13 @@ type SendRequestModules = {
  *    - Any part of the response_chunk fails validation. Throws a typed error (see `SszSnappyError`)
  *    - The maximum number of requested chunks are read. Does not throw, returns read chunks only.
  */
-export async function* sendRequest(
+export async function* sendRequest<Req>(
   {logger, libp2p, metrics, peerClient}: SendRequestModules,
+  fork: ForkName,
   peerId: PeerId,
   protocols: MixedProtocol[],
   protocolIDs: string[],
-  requestBody: Uint8Array,
+  request: Req,
   signal?: AbortSignal,
   opts?: SendRequestOpts,
   requestId = 0
@@ -68,14 +70,16 @@ export async function* sendRequest(
   const RESP_TIMEOUT = opts?.respTimeoutMs ?? DEFAULT_RESP_TIMEOUT;
 
   const peerIdStrShort = prettyPrintPeerId(peerId);
-  const {method, encoding, version} = protocols[0];
-  const logCtx = {method, version, encoding, client: peerClient, peer: peerIdStrShort, requestId};
+  const logCtx = {client: peerClient, peer: peerIdStrShort, requestId};
 
   if (signal?.aborted) {
     throw new ErrorAborted("sendRequest");
   }
 
-  logger.debug("Req  dialing peer", logCtx);
+  // method and encoding is the same irrespective of version used
+  const {method, encoding} = protocols[0];
+  const versions = protocols.map(({version}) => version);
+  logger.debug("Req  dialing peer", {method, versions: `[${versions.join(",")}]`, encoding, ...logCtx});
 
   try {
     // From Altair block query methods have V1 and V2. Both protocols should be requested.
@@ -118,14 +122,21 @@ export async function* sendRequest(
     const protocol = protocolsMap.get(protocolId);
     if (!protocol) throw Error(`dialProtocol selected unknown protocolId ${protocolId}`);
 
-    logger.debug("Req  sending request", logCtx);
+    // Version negotiated with the peer
+    const {version} = protocol;
+    const logCtx2 = {method, version, encoding, ...logCtx};
+
+    const requestType = protocol.requestType(fork, protocol.version);
+    const requestData = requestType ? requestType.serialize(request) : new Uint8Array();
+
+    logger.debug("Req  sending request", logCtx2);
 
     // Spec: The requester MUST close the write side of the stream once it finishes writing the request message
     // Impl: stream.sink is closed automatically by js-libp2p-mplex when piped source is exhausted
 
     // REQUEST_TIMEOUT: Non-spec timeout from sending request until write stream closed by responder
     // Note: libp2p.stop() will close all connections, so not necessary to abort this pipe on parent stop
-    await withTimeout(() => pipe(requestEncode(protocol, requestBody), stream.sink), REQUEST_TIMEOUT, signal).catch(
+    await withTimeout(() => pipe(requestEncode(protocol, requestData), stream.sink), REQUEST_TIMEOUT, signal).catch(
       (e) => {
         // Must close the stream read side (stream.source) manually AND the write side
         stream.abort(e);
@@ -137,7 +148,7 @@ export async function* sendRequest(
       }
     );
 
-    logger.debug("Req  request sent", logCtx);
+    logger.debug("Req  request sent", logCtx2);
 
     // For goodbye method peers may disconnect before completing the response and trigger multiple errors.
     // Do not expect them to reply and successfully return early
@@ -197,7 +208,7 @@ export async function* sendRequest(
       // NOTE: Only log once per request to verbose, intermediate steps to debug
       // NOTE: Do not log the response, logs get extremely cluttered
       // NOTE: add double space after "Req  " to align log with the "Resp " log
-      logger.verbose("Req  done", {...logCtx});
+      logger.verbose("Req  done", logCtx2);
     } finally {
       clearTimeout(timeoutTTFB);
       if (timeoutRESP !== null) clearTimeout(timeoutRESP);

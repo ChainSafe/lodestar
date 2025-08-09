@@ -361,7 +361,7 @@ export class NetworkCore implements INetworkCore {
 
   sendReqRespRequest(data: OutgoingRequestArgs): AsyncIterable<ResponseIncoming> {
     const peerId = peerIdFromString(data.peerId);
-    return this.reqResp.sendRequestWithoutEncoding(peerId, data.method, data.versions, data.requestData);
+    return this.reqResp.sendRequestWithoutEncoding(data.fork, peerId, data.method, data.versions, data.request);
   }
 
   async publishGossip(topic: string, data: Uint8Array, opts?: PublishOpts | undefined): Promise<number> {

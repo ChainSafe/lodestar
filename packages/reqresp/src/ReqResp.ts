@@ -1,5 +1,6 @@
 import {setMaxListeners} from "node:events";
 import {Connection, PeerId, Stream} from "@libp2p/interface";
+import {ForkName} from "@lodestar/params";
 import {Logger, MetricsRegister} from "@lodestar/utils";
 import type {Libp2p} from "libp2p";
 import {Metrics, getMetrics} from "./metrics.js";
@@ -139,12 +140,13 @@ export class ReqResp {
   }
 
   // Helper to reduce code duplication
-  async *sendRequest(
+  async *sendRequest<Req>(
+    fork: ForkName,
     peerId: PeerId,
     method: string,
     versions: number[],
     encoding: Encoding,
-    body: Uint8Array
+    request: Req
   ): AsyncIterable<ResponseIncoming> {
     const peerClient = this.opts.getPeerLogMetadata?.(peerId.toString());
     this.metrics?.outgoingRequests.inc({method});
@@ -166,10 +168,11 @@ export class ReqResp {
     try {
       yield* sendRequest(
         {logger: this.logger, libp2p: this.libp2p, metrics: this.metrics, peerClient},
+        fork,
         peerId,
         protocols,
         protocolIDs,
-        body,
+        request,
         this.controller.signal,
         this.opts,
         this.reqCount++

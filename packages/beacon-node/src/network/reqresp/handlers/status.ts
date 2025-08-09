@@ -4,6 +4,7 @@ import {sszTypesFor} from "@lodestar/types";
 import {IBeaconChain} from "../../../chain/index.js";
 
 export async function* onStatus(chain: IBeaconChain): AsyncIterable<ResponseOutgoing> {
+  // TODO: where is this used?
   const status = chain.getStatus();
   const fork = chain.config.getForkName(chain.clock.currentSlot);
   yield {
