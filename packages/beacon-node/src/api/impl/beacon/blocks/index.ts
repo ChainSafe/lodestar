@@ -1,7 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ApiError, ApplicationMethods} from "@lodestar/api/server";
 import {
-  ForkName,
   ForkPostBellatrix,
   NUMBER_OF_COLUMNS,
   SLOTS_PER_HISTORICAL_ROOT,
@@ -287,25 +286,24 @@ export function getBeaconBlockApi({
 
     if (blockForImport.type === BlockInputType.availableData) {
       if (isForkPostFulu(blockForImport.blockData.fork)) {
-        if (!chain.emitter.listenerCount(routes.events.EventType.dataColumnSidecar)) {
-          return;
-        }
         const {dataColumns} = blockForImport.blockData as BlockInputDataColumns;
         metrics?.dataColumns.bySource.inc({source: DataColumnsSource.api}, dataColumns.length);
 
-        for (const dataColumnSidecar of dataColumns) {
-          chain.emitter.emit(routes.events.EventType.dataColumnSidecar, {
-            blockRoot,
-            slot,
-            index: dataColumnSidecar.index,
-            kzgCommitments: dataColumnSidecar.kzgCommitments.map(toHex),
-          });
+        if (chain.emitter.listenerCount(routes.events.EventType.dataColumnSidecar)) {
+          for (const dataColumnSidecar of dataColumns) {
+            chain.emitter.emit(routes.events.EventType.dataColumnSidecar, {
+              blockRoot,
+              slot,
+              index: dataColumnSidecar.index,
+              kzgCommitments: dataColumnSidecar.kzgCommitments.map(toHex),
+            });
+          }
         }
-      } else if (isForkPostDeneb(blockForImport.blockData.fork)) {
-        if (!chain.emitter.listenerCount(routes.events.EventType.blobSidecar)) {
-          return;
-        }
-        const {blobs} = blockForImport.blockData;
+      } else if (
+        isForkPostDeneb(blockForImport.blockData.fork) &&
+        chain.emitter.listenerCount(routes.events.EventType.blobSidecar)
+      ) {
+        const {blobs} = blockForImport.blockData as BlockInputBlobs;
 
         for (const blobSidecar of blobs) {
           const {index, kzgCommitment} = blobSidecar;
