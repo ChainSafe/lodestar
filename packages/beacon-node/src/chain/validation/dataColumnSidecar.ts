@@ -5,7 +5,7 @@ import {
   NUMBER_OF_COLUMNS,
 } from "@lodestar/params";
 import {Root, Slot, SubnetID, deneb, fulu, ssz} from "@lodestar/types";
-import {toHex, toRootHex, verifyMerkleBranch} from "@lodestar/utils";
+import {toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 
 import {computeStartSlotAtEpoch, getBlockHeaderProposerSignatureSet} from "@lodestar/state-transition";
 import {Metrics} from "../../metrics/metrics.js";

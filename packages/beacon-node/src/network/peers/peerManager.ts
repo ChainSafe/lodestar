@@ -1,4 +1,4 @@
-import {BitArray, toHexString} from "@chainsafe/ssz";
+import {BitArray} from "@chainsafe/ssz";
 import {Connection, PeerId, PrivateKey} from "@libp2p/interface";
 import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
