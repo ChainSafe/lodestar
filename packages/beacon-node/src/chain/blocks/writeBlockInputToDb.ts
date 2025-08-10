@@ -3,7 +3,7 @@ import {fulu, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {toHex} from "@lodestar/utils";
 import {BeaconChain} from "../chain.js";
-import {BlockInput, BlockInputDataColumns, BlockInputType} from "./types.js";
+import {BlockInput, BlockInputBlobs, BlockInputDataColumns, BlockInputType} from "./types.js";
 
 /**
  * Persists block input data to DB. This operation must be eventually completed if a block is imported to the fork-choice.
@@ -41,7 +41,7 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInput: BlockI
           : await blockInput.cachedData.availabilityPromise;
 
       // NOTE: Old data is pruned on archive
-      if (isForkPostFulu()) {
+      if (isForkPostFulu(blockData.fork)) {
         const {custodyConfig} = this;
         const {custodyColumnsIndex, custodyColumns} = custodyConfig;
         const blobsLen = (block.message as fulu.BeaconBlock).body.blobKzgCommitments.length;
@@ -87,7 +87,7 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInput: BlockI
           root: blockRootHex,
         });
       } else if (isForkPostDeneb(blockData.fork)) {
-        const blobSidecars = blockData.blobs;
+        const blobSidecars = (blockData as BlockInputBlobs).blobs;
         fnPromises.push(this.db.blobSidecars.add({blockRoot, slot: block.message.slot, blobSidecars}));
         this.logger.debug("Persisted blobSidecars to hot DB", {
           blobsLen: blobSidecars.length,

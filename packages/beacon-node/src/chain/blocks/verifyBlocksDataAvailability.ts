@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
+import {isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
 import {DataAvailabilityStatus, computeTimeAtSlot} from "@lodestar/state-transition";
 import {UintNum64, deneb} from "@lodestar/types";
 import {ErrorAborted, Logger} from "@lodestar/utils";
@@ -11,6 +11,7 @@ import {
   BlobSidecarValidation,
   BlockInput,
   BlockInputAvailableData,
+  BlockInputBlobs,
   BlockInputDataColumns,
   BlockInputType,
   ImportBlockOpts,
@@ -122,7 +123,7 @@ async function maybeValidateBlobs(
           skipProofsCheck,
         });
       } else if (isForkPostDeneb(blockData.fork)) {
-        const {blobs} = blockData;
+        const {blobs} = blockData as BlockInputBlobs;
 
         // if the blob sidecars have been individually verified then we can skip kzg proof check
         // but other checks to match blobs with block data still need to be performed
