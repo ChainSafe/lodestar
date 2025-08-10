@@ -5,7 +5,6 @@ import {
   MAX_REQUEST_BLOCKS_DENEB,
   MAX_REQUEST_DATA_COLUMN_SIDECARS,
   MAX_REQUEST_LIGHT_CLIENT_UPDATES,
-  NUMBER_OF_COLUMNS,
   isForkPostDeneb,
 } from "@lodestar/params";
 import {InboundRateLimitQuota} from "@lodestar/reqresp";

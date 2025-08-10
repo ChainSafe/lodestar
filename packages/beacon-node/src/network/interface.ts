@@ -26,7 +26,6 @@ import {
   SlotRootHex,
   SubnetID,
   WithBytes,
-  WithOptionalBytes,
   altair,
   capella,
   deneb,
