@@ -3,7 +3,7 @@ import {Connection, PeerId, PrivateKey} from "@libp2p/interface";
 import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
 import {ForkSeq, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
-import {Metadata, Status, fulu, phase0} from "@lodestar/types";
+import {Metadata, Status, altair, fulu, phase0} from "@lodestar/types";
 import {withTimeout} from "@lodestar/utils";
 import {GOODBYE_KNOWN_CODES, GoodByeReasonCode, Libp2pEvent} from "../../constants/index.js";
 import {IClock} from "../../util/clock.js";
@@ -357,7 +357,7 @@ export class PeerManager {
       peerData.metadata = {
         seqNumber: metadata.seqNumber,
         attnets: metadata.attnets,
-        syncnets: (metadata as Partial<fulu.Metadata>).syncnets ?? BitArray.fromBitLen(SYNC_COMMITTEE_SUBNET_COUNT),
+        syncnets: (metadata as Partial<altair.Metadata>).syncnets ?? BitArray.fromBitLen(SYNC_COMMITTEE_SUBNET_COUNT),
         custodyGroupCount:
           (metadata as Partial<fulu.Metadata>).custodyGroupCount ??
           // TODO: spec says that Clients MAY reject peers with a value less than CUSTODY_REQUIREMENT
@@ -403,10 +403,10 @@ export class PeerManager {
     let isIrrelevant: boolean;
     try {
       const irrelevantReasonType = assertPeerRelevance(
+        forkName,
         status,
         this.statusCache.get(),
-        this.clock.currentSlot,
-        forkName
+        this.clock.currentSlot
       );
       if (irrelevantReasonType === null) {
         isIrrelevant = false;

@@ -128,7 +128,6 @@ export class SyncChain {
   private readonly logger: Logger;
   private readonly config: ChainForkConfig;
   private readonly custodyConfig: CustodyConfig;
-  private readonly metrics: Metrics | null;
 
   constructor(
     initialBatchEpoch: Epoch,
@@ -137,6 +136,7 @@ export class SyncChain {
     fns: SyncChainFns,
     modules: SyncChainModules
   ) {
+    const {config, custodyConfig, logger, metrics} = modules;
     this.firstBatchEpoch = initialBatchEpoch;
     this.lastEpochWithProcessBlocks = initialBatchEpoch;
     this.target = initialTarget;
@@ -145,14 +145,13 @@ export class SyncChain {
     this.downloadBeaconBlocksByRange = fns.downloadBeaconBlocksByRange;
     this.reportPeer = fns.reportPeer;
     this.getConnectedPeerSyncMeta = fns.getConnectedPeerSyncMeta;
-    this.config = modules.config;
-    this.custodyConfig = modules.custodyConfig;
-    this.logger = modules.logger;
-    this.metrics = modules.metrics;
+    this.config = config;
+    this.custodyConfig = custodyConfig;
+    this.logger = logger;
     this.logId = `${syncType}-${nextChainId++}`;
 
-    if (this.metrics != null) {
-      this.metrics.syncRange.headSyncPeers.addCollect(() => this.scrapeMetrics(this.metrics as Metrics));
+    if (metrics) {
+      metrics.syncRange.headSyncPeers.addCollect(() => this.scrapeMetrics(metrics));
     }
 
     // Trigger event on parent class

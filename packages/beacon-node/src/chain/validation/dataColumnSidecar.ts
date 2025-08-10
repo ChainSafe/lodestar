@@ -17,7 +17,7 @@ import {IBeaconChain} from "../interface.js";
 import {RegenCaller} from "../regen/interface.js";
 
 // SPEC FUNCTION
-// https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/p2p-interface.md#data_column_sidecar_subnet_id
+// https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/p2p-interface.md#data_column_sidecar_subnet_id
 export async function validateGossipDataColumnSidecar(
   chain: IBeaconChain,
   dataColumnSidecar: fulu.DataColumnSidecar,
@@ -247,7 +247,7 @@ export async function validateDataColumnsSidecars(
 
 /**
  * SPEC FUNCTION
- * https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/p2p-interface.md#verify_data_column_sidecar
+ * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/p2p-interface.md#verify_data_column_sidecar
  */
 export function verifyDataColumnSidecar(dataColumnSidecar: fulu.DataColumnSidecar): void {
   if (dataColumnSidecar.index >= NUMBER_OF_COLUMNS) {
@@ -279,7 +279,7 @@ export function verifyDataColumnSidecar(dataColumnSidecar: fulu.DataColumnSideca
 
 /**
  * SPEC FUNCTION
- * https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/p2p-interface.md#verify_data_column_sidecar_kzg_proofs
+ * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/p2p-interface.md#verify_data_column_sidecar_kzg_proofs
  */
 export async function verifyDataColumnSidecarKzgProofs(
   commitments: Uint8Array[],
@@ -301,7 +301,7 @@ export async function verifyDataColumnSidecarKzgProofs(
 
 /**
  * SPEC FUNCTION
- * https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/p2p-interface.md#verify_data_column_sidecar_inclusion_proof
+ * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/p2p-interface.md#verify_data_column_sidecar_inclusion_proof
  */
 export function verifyDataColumnSidecarInclusionProof(dataColumnSidecar: fulu.DataColumnSidecar): boolean {
   return verifyMerkleBranch(
@@ -315,7 +315,7 @@ export function verifyDataColumnSidecarInclusionProof(dataColumnSidecar: fulu.Da
 
 /**
  * SPEC FUNCTION
- * https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/p2p-interface.md#compute_subnet_for_data_column_sidecar
+ * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/p2p-interface.md#compute_subnet_for_data_column_sidecar
  */
 export function computeSubnetForDataColumnSidecar(columnSidecar: fulu.DataColumnSidecar): SubnetID {
   return columnSidecar.index % DATA_COLUMN_SIDECAR_SUBNET_COUNT;

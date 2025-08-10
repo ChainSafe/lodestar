@@ -117,7 +117,7 @@ export function computeDataColumnSidecars(
 
 /**
  * If the node obtains 50%+ of all the columns, it SHOULD reconstruct the full data matrix via the recover_matrix helper
- * See https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/das-core.md#recover_matrix
+ * See https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/das-core.md#recover_matrix
  */
 export async function recoverDataColumnSidecars(
   partialSidecars: Map<number, fulu.DataColumnSidecar>
@@ -145,7 +145,7 @@ export async function recoverDataColumnSidecars(
     () => new Array<Uint8Array>(blobCount)
   );
   const blobProofs: Array<Uint8Array[]> = Array.from({length: blobCount});
-  // https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/das-core.md#recover_matrix
+  // https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/das-core.md#recover_matrix
   const cellsAndProofs = await Promise.all(
     blobProofs.map((_, blobIndex) => {
       const cellIndices: number[] = [];

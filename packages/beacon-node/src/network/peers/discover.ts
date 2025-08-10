@@ -402,7 +402,10 @@ export class PeerDiscovery {
     const syncnetsBytes = enr.kvs.get(ENRKey.syncnets); // 4 bits
     const custodyGroupCountBytes = enr.kvs.get(ENRKey.cgc); // not preserialized value, is byte representation of number
     if (custodyGroupCountBytes === undefined) {
-      this.logger.warn("peer discovered with no cgc assuming 4", exportENRToJSON(enr));
+      this.logger.debug("peer discovered with no cgc, using default/miniumn", {
+        custodyRequirement: this.config.CUSTODY_REQUIREMENT,
+        peer: prettyPrintPeerId(peerId),
+      });
     }
 
     // Use faster version than ssz's implementation that leverages pre-cached.
@@ -643,15 +646,4 @@ function formatLibp2pDialError(e: Error): void {
   ) {
     e.stack = undefined;
   }
-}
-
-function exportENRToJSON(enr?: ENR): Record<string, string | undefined> | undefined {
-  if (enr === undefined) {
-    return undefined;
-  }
-  return {
-    ip4: enr.kvs.get("ip")?.toString(),
-    cgc: enr.kvs.get("cgc")?.toString(),
-    nodeId: enr.nodeId,
-  };
 }

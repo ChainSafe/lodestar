@@ -79,7 +79,7 @@ export class CustodyConfig {
 
   /**
    * Data columns sampled by the node as part of custody sampling
-   * https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/das-core.md#custody-sampling
+   * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/das-core.md#custody-sampling
    *
    * TODO: Consider race conditions if this updates during sync/backfill
    */
@@ -168,7 +168,7 @@ export function getValidatorsCustodyRequirement(config: ChainForkConfig, effecti
  * columns and 128 custody groups.
  *
  * SPEC FUNCTION
- * https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/das-core.md#compute_columns_for_custody_group
+ * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/das-core.md#compute_columns_for_custody_group
  */
 export function computeColumnsForCustodyGroup(custodyIndex: CustodyIndex): ColumnIndex[] {
   if (custodyIndex > NUMBER_OF_CUSTODY_GROUPS) {
@@ -188,7 +188,7 @@ export function computeColumnsForCustodyGroup(custodyIndex: CustodyIndex): Colum
  * further converted to column indices
  *
  * SPEC FUNCTION
- * https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/das-core.md#get_custody_groups
+ * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/das-core.md#get_custody_groups
  */
 export function getCustodyGroups(nodeId: NodeId, custodyGroupCount: number): CustodyIndex[] {
   if (custodyGroupCount > NUMBER_OF_CUSTODY_GROUPS) {
@@ -232,7 +232,7 @@ export function getDataColumns(nodeId: NodeId, custodyGroupCount: number): Colum
  * Similar to the computeMatrix function described below.
  *
  * SPEC FUNCTION (note: spec currently computes proofs, but we already have them)
- * https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/das-core.md#compute_matrix
+ * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/das-core.md#compute_matrix
  */
 export function getCellsAndProofs(blobBundles: fulu.BlobAndProofV2[]): {cells: Uint8Array[]; proofs: Uint8Array[]}[] {
   return blobBundles.map(({blob, proofs}) => {
@@ -246,7 +246,7 @@ export function getCellsAndProofs(blobBundles: fulu.BlobAndProofV2[]): {cells: U
  * each blob in the block, assemble the sidecars which can be distributed to peers.
  *
  * SPEC FUNCTION
- * https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/validator.md#get_data_column_sidecars
+ * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/validator.md#get_data_column_sidecars
  */
 export function getDataColumnSidecars(
   signedBlockHeader: SignedBeaconBlockHeader,
@@ -283,7 +283,7 @@ export function getDataColumnSidecars(
  * block, assemble the sidecars which can be distributed to peers.
  *
  * SPEC FUNCTION
- * https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/validator.md#get_data_column_sidecars_from_block
+ * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/validator.md#get_data_column_sidecars_from_block
  */
 export function getDataColumnSidecarsFromBlock(
   config: ChainForkConfig,
@@ -304,7 +304,7 @@ export function getDataColumnSidecarsFromBlock(
  * to the commitments it contains, assemble all sidecars for distribution to peers.
  *
  * SPEC FUNCTION
- * https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/validator.md#get_data_column_sidecars_from_column_sidecar
+ * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/validator.md#get_data_column_sidecars_from_column_sidecar
  */
 export function getDataColumnSidecarsFromColumnSidecar(
   sidecar: fulu.DataColumnSidecar,

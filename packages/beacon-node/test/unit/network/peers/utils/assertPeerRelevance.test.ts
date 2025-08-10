@@ -101,7 +101,7 @@ describe("network / peers / utils / assertPeerRelevance", () => {
         headSlot: 0,
       };
 
-      expect(assertPeerRelevance(remote, local, currentSlot ?? 0, forkName ?? ForkName.electra)).toEqual(
+      expect(assertPeerRelevance(forkName ?? ForkName.electra, remote, local, currentSlot ?? 0)).toEqual(
         irrelevantType
       );
     });
