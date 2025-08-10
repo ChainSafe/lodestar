@@ -192,7 +192,12 @@ export function computeColumnsForCustodyGroup(custodyIndex: CustodyIndex): Colum
  */
 export function getCustodyGroups(nodeId: NodeId, custodyGroupCount: number): CustodyIndex[] {
   if (custodyGroupCount > NUMBER_OF_CUSTODY_GROUPS) {
-    custodyGroupCount = NUMBER_OF_CUSTODY_GROUPS;
+    throw Error(`Invalid custody group count ${custodyGroupCount} > ${NUMBER_OF_CUSTODY_GROUPS}`);
+  }
+
+  // Skip computation if all groups are custodied
+  if (custodyGroupCount === NUMBER_OF_CUSTODY_GROUPS) {
+    return Array.from({length: NUMBER_OF_CUSTODY_GROUPS}, (_, i) => i);
   }
 
   const custodyGroups: CustodyIndex[] = [];
