@@ -405,7 +405,7 @@ export function matchBlockWithDataColumns(
     throw Error(
       `Unmatched dataColumnSidecars, blocks=${allBlocks.length}, blobs=${
         allDataColumnSidecars.length
-      } lastMatchedSlot=${lastMatchedSlot}, pending blobSidecars slots=${allDataColumnSidecars
+      } lastMatchedSlot=${lastMatchedSlot}, pending dataColumnSidecars slots=${allDataColumnSidecars
         .slice(dataColumnSideCarIndex)
         .map((blb) => blb.signedBlockHeader.message.slot)
         .join(" ")}`
