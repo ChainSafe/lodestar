@@ -40,12 +40,7 @@ export type MockedBeaconDb = Mocked<BeaconDb> & {
   eth1Data: Mocked<Eth1DataRepository>;
 };
 
-vi.mock("../../src/db/repositories/index.js", async (importActual) => {
-  const actualMods = await importActual<typeof import("@lodestar/types")>();
-  return {
-    ...actualMods,
-  };
-});
+vi.mock("../../src/db/repositories/index.js");
 
 vi.mock("../../src/db/index.js", async (importActual) => {
   const actualMods = await importActual<typeof import("../../src/db/index.js")>();
