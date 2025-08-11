@@ -281,6 +281,9 @@ export class ReqRespBeaconNode extends ReqResp {
       );
     } else {
       protocolsAtFork.push(
+        // We can't handle StatusV2 correctly pre-fulu as request type is selected based on fork
+        // instead of protocol version. This is not easily fixable with our current architecture.
+        // See https://github.com/ChainSafe/lodestar/pull/8168 for more details.
         [protocols.StatusV2(fork, this.config), this.onStatus.bind(this)],
         [
           protocols.DataColumnSidecarsByRoot(fork, this.config),
