@@ -44,6 +44,7 @@ export async function getNetworkForTest(
 
   const beaconConfig = createBeaconConfig(config, state.genesisValidatorsRoot);
   const db = getMockedBeaconDb();
+  const privateKey = await generateKeyPair("secp256k1");
 
   const chain = new BeaconChain(
     {
@@ -59,7 +60,7 @@ export async function getNetworkForTest(
       archiveMode: ArchiveMode.Frequency,
     },
     {
-      privateKey: await generateKeyPair("secp256k1"),
+      privateKey,
       config: beaconConfig,
       db,
       dataDir: ".",
@@ -77,18 +78,18 @@ export async function getNetworkForTest(
     }
   );
 
-  const modules: Omit<NetworkInitModules, "opts" | "privateKey" | "logger"> = {
+  const modules: Omit<NetworkInitModules, "opts" | "logger"> = {
     config: beaconConfig,
     chain,
     db,
     getReqRespHandler: opts.getReqRespHandler ?? getReqRespHandlers({db, chain}),
     gossipHandlers: opts.gossipHandlersPartial as GossipHandlers,
+    privateKey,
     metrics: null,
   };
 
   const network = await Network.init({
     ...modules,
-    privateKey: await generateKeyPair("secp256k1"),
     opts: {
       ...defaultNetworkOptions,
       maxPeers: 10,

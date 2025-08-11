@@ -5,7 +5,7 @@ import {
   NUMBER_OF_COLUMNS,
 } from "@lodestar/params";
 import {Root, Slot, SubnetID, deneb, fulu, ssz} from "@lodestar/types";
-import {toHex, toRootHex, verifyMerkleBranch} from "@lodestar/utils";
+import {toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 
 import {computeStartSlotAtEpoch, getBlockHeaderProposerSignatureSet} from "@lodestar/state-transition";
 import {Metrics} from "../../metrics/metrics.js";
@@ -17,7 +17,7 @@ import {IBeaconChain} from "../interface.js";
 import {RegenCaller} from "../regen/interface.js";
 
 // SPEC FUNCTION
-// https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/p2p-interface.md#data_column_sidecar_subnet_id
+// https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/p2p-interface.md#data_column_sidecar_subnet_id
 export async function validateGossipDataColumnSidecar(
   chain: IBeaconChain,
   dataColumnSidecar: fulu.DataColumnSidecar,
@@ -204,19 +204,19 @@ export async function validateDataColumnsSidecars(
         .filter((result) => result === false).length
     ) {
       throw new Error(
-        `Invalid data column sidecar slot=${columnBlockHeader.slot} columnBlockRoot=${toHex(columnBlockRoot)} columnIndex=${columnIndex} for the block blockRoot=${toHex(blockRoot)} slot=${blockSlot} sidecarsIndex=${sidecarsIndex}`
+        `Invalid data column sidecar slot=${columnBlockHeader.slot} columnBlockRoot=${toRootHex(columnBlockRoot)} columnIndex=${columnIndex} for the block blockRoot=${toRootHex(blockRoot)} slot=${blockSlot} sidecarsIndex=${sidecarsIndex}`
       );
     }
 
     if (columnIndex >= NUMBER_OF_COLUMNS) {
       throw new Error(
-        `Invalid data sidecar columnIndex=${columnIndex} in slot=${blockSlot} blockRoot=${toHex(blockRoot)} sidecarsIndex=${sidecarsIndex}`
+        `Invalid data sidecar columnIndex=${columnIndex} in slot=${blockSlot} blockRoot=${toRootHex(blockRoot)} sidecarsIndex=${sidecarsIndex}`
       );
     }
 
     if (column.length !== kzgCommitments.length || column.length !== kzgProofs.length) {
       throw new Error(
-        `Invalid data sidecar array lengths for columnIndex=${columnIndex} in slot=${blockSlot} blockRoot=${toHex(blockRoot)}`
+        `Invalid data sidecar array lengths for columnIndex=${columnIndex} in slot=${blockSlot} blockRoot=${toRootHex(blockRoot)}`
       );
     }
 
@@ -236,18 +236,18 @@ export async function validateDataColumnsSidecars(
     valid = await kzg.asyncVerifyCellKzgProofBatch(commitmentBytes, cellIndices, cells, proofBytes);
     timer?.();
   } catch (err) {
-    (err as Error).message = `Error in verifyCellKzgProofBatch for slot=${blockSlot} blockRoot=${toHex(blockRoot)}`;
+    (err as Error).message = `Error in verifyCellKzgProofBatch for slot=${blockSlot} blockRoot=${toRootHex(blockRoot)}`;
     throw err;
   }
 
   if (!valid) {
-    throw new Error(`Invalid data column sidecars in slot=${blockSlot} blockRoot=${toHex(blockRoot)}`);
+    throw new Error(`Invalid data column sidecars in slot=${blockSlot} blockRoot=${toRootHex(blockRoot)}`);
   }
 }
 
 /**
  * SPEC FUNCTION
- * https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/p2p-interface.md#verify_data_column_sidecar
+ * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/p2p-interface.md#verify_data_column_sidecar
  */
 export function verifyDataColumnSidecar(dataColumnSidecar: fulu.DataColumnSidecar): void {
   if (dataColumnSidecar.index >= NUMBER_OF_COLUMNS) {
@@ -279,7 +279,7 @@ export function verifyDataColumnSidecar(dataColumnSidecar: fulu.DataColumnSideca
 
 /**
  * SPEC FUNCTION
- * https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/p2p-interface.md#verify_data_column_sidecar_kzg_proofs
+ * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/p2p-interface.md#verify_data_column_sidecar_kzg_proofs
  */
 export async function verifyDataColumnSidecarKzgProofs(
   commitments: Uint8Array[],
@@ -301,7 +301,7 @@ export async function verifyDataColumnSidecarKzgProofs(
 
 /**
  * SPEC FUNCTION
- * https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/p2p-interface.md#verify_data_column_sidecar_inclusion_proof
+ * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/p2p-interface.md#verify_data_column_sidecar_inclusion_proof
  */
 export function verifyDataColumnSidecarInclusionProof(dataColumnSidecar: fulu.DataColumnSidecar): boolean {
   return verifyMerkleBranch(
@@ -315,7 +315,7 @@ export function verifyDataColumnSidecarInclusionProof(dataColumnSidecar: fulu.Da
 
 /**
  * SPEC FUNCTION
- * https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/p2p-interface.md#compute_subnet_for_data_column_sidecar
+ * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/p2p-interface.md#compute_subnet_for_data_column_sidecar
  */
 export function computeSubnetForDataColumnSidecar(columnSidecar: fulu.DataColumnSidecar): SubnetID {
   return columnSidecar.index % DATA_COLUMN_SIDECAR_SUBNET_COUNT;

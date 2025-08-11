@@ -182,6 +182,8 @@ export async function archiveBlocks(
         } else {
           logger.verbose(`dataColumnSidecars prune: no entries before epoch ${dataColumnSidecarsMinEpoch}`);
         }
+      } else {
+        logger.verbose(`dataColumnSidecars pruning skipped: ${dataColumnSidecarsMinEpoch} is before fulu fork epoch`);
       }
     } else {
       logger.verbose("dataColumnSidecars pruning skipped: archiveDataEpochs set to Infinity");

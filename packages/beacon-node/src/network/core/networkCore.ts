@@ -430,8 +430,8 @@ export class NetworkCore implements INetworkCore {
     }
     return {
       ...formatNodePeer(peerIdStr, connections),
-      status: peerData?.status ? sszTypesFor(fork).Status.toJson(peerData.status) : null,
       agentVersion: peerData?.agentVersion ?? "NA",
+      status: peerData?.status ? sszTypesFor(fork).Status.toJson(peerData.status) : null,
       metadata: peerData?.metadata ? sszTypesFor(fork).Metadata.toJson(peerData.metadata) : null,
       agentClient: String(peerData?.agentClient ?? "Unknown"),
       lastReceivedMsgUnixTsMs: peerData?.lastReceivedMsgUnixTsMs ?? 0,
