@@ -130,7 +130,6 @@ export function getBeaconBlockApi({
 
       blockForImport = getBlockInput.availableData(config, signedBlock, BlockSource.api, blockData);
     } else {
-      signedBlock = signedBlockContents;
       blobSidecars = [];
       dataColumnSidecars = [];
       blockForImport = getBlockInput.preData(config, signedBlock, BlockSource.api);
