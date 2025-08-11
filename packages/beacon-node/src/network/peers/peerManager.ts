@@ -4,7 +4,7 @@ import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
 import {ForkSeq, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {Metadata, Status, altair, fulu, phase0} from "@lodestar/types";
-import {toHex, withTimeout} from "@lodestar/utils";
+import {ErrorAborted, isErrorAborted, toHex, withTimeout} from "@lodestar/utils";
 import {GOODBYE_KNOWN_CODES, GoodByeReasonCode, Libp2pEvent} from "../../constants/index.js";
 import {IClock} from "../../util/clock.js";
 import {getCustodyGroups, getDataColumns} from "../../util/dataColumns.js";
@@ -702,10 +702,13 @@ export class PeerManager {
    */
   private onLibp2pPeerConnect = async (evt: CustomEvent<Connection>): Promise<void> => {
     const {direction, remotePeer} = evt.detail;
-    this.logger.verbose("peer connected", {peer: prettyPrintPeerId(remotePeer), direction, status});
+    const remotePeerIdStr = remotePeer.toString();
+    const remotePeerIdPrettyStr = prettyPrintPeerId(remotePeer);
+    this.logger.verbose("peer connected", {peer: remotePeerIdPrettyStr, direction, status: evt.detail.status});
+
     // NOTE: The peerConnect event is not emitted here here, but after asserting peer relevance
     this.metrics?.peerConnectedEvent.inc({direction, status: evt.detail.status});
-    if (this.connectedPeers.has(remotePeer.toString())) {
+    if (this.connectedPeers.has(remotePeerIdStr)) {
       return;
     }
 
@@ -731,7 +734,7 @@ export class PeerManager {
       agentClient: null,
       encodingPreference: null,
     };
-    this.connectedPeers.set(remotePeer.toString(), peerData);
+    this.connectedPeers.set(remotePeerIdStr, peerData);
 
     if (direction === "outbound") {
       // this.pingAndStatusTimeouts();
@@ -741,20 +744,37 @@ export class PeerManager {
 
     // It is observed that client connect and immediately disconnect
     // We don't need to identify a peer which have connection status `closing` or `closed`
-    if (evt.detail.status !== "open") return;
+    if (evt.detail.status !== "open") {
+      this.logger.debug("Skipping Identify because connection not open", {peerId: remotePeerIdPrettyStr, direction});
+      return;
+    }
 
-    this.libp2p.services.identify
-      .identify(evt.detail)
-      .then((result) => {
-        const agentVersion = result.agentVersion;
-        if (agentVersion) {
-          peerData.agentVersion = agentVersion;
-          peerData.agentClient = getKnownClientFromAgentVersion(agentVersion);
-        }
-      })
-      .catch((err) => {
-        this.logger.debug("Error setting agentVersion for the peer", {peerId: peerData.peerId.toString()}, err);
-      });
+    const identifyController = new AbortController();
+    const earlyAbortMessage = "Abort identify step because peer is disconnected";
+    const onEarlyDisconnect = (disconnectEvt: CustomEvent<Connection>) => {
+      if (disconnectEvt.detail === evt.detail) identifyController.abort(new ErrorAborted(earlyAbortMessage));
+    };
+    this.libp2p.services.components.events.addEventListener(Libp2pEvent.connectionClose, onEarlyDisconnect, {
+      once: true,
+    });
+
+    try {
+      const result = await this.libp2p.services.identify.identify(evt.detail, {signal: identifyController.signal});
+      this.libp2p.services.components.events.removeEventListener(Libp2pEvent.connectionClose, onEarlyDisconnect);
+      const agentVersion = result.agentVersion;
+      if (agentVersion) {
+        peerData.agentVersion = agentVersion;
+        peerData.agentClient = getKnownClientFromAgentVersion(agentVersion);
+      }
+    } catch (err: unknown) {
+      if (isErrorAborted(err) && err.message === earlyAbortMessage) {
+        this.logger.debug("Peer disconnected before identification", {peerId: remotePeerIdPrettyStr, direction});
+      } else {
+        this.logger.debug("Error setting agentVersion for the peer", {peerId: remotePeerIdPrettyStr}, err as Error);
+      }
+    } finally {
+      this.libp2p.services.components.events.removeEventListener(Libp2pEvent.connectionClose, onEarlyDisconnect);
+    }
   };
 
   /**
