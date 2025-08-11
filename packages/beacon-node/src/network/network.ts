@@ -27,7 +27,7 @@ import {
   fulu,
   phase0,
 } from "@lodestar/types";
-import {prettyPrintCustodyGroups, sleep} from "@lodestar/utils";
+import {prettyPrintIndices, sleep} from "@lodestar/utils";
 import {ChainEvent, IBeaconChain} from "../chain/index.js";
 import {computeSubnetForDataColumnSidecar} from "../chain/validation/dataColumnSidecar.js";
 import {IBeaconDb} from "../db/interface.js";
@@ -729,7 +729,7 @@ export class Network implements INetwork {
     this.logger.verbose("onPeerConnected", {
       peer,
       clientAgent,
-      custodyGroups: prettyPrintCustodyGroups(custodyGroups),
+      custodyGroups: prettyPrintIndices(custodyGroups),
       earliestAvailableSlot: earliestAvailableSlot ?? "pre-fulu",
     });
     this.connectedPeersSyncMeta.set(peer, {

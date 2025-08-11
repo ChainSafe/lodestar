@@ -4,7 +4,7 @@ import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
 import {ForkSeq, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {Metadata, Status, fulu, phase0} from "@lodestar/types";
-import {prettyPrintCustodyGroups, withTimeout} from "@lodestar/utils";
+import {prettyPrintIndices, withTimeout} from "@lodestar/utils";
 import {GOODBYE_KNOWN_CODES, GoodByeReasonCode, Libp2pEvent} from "../../constants/index.js";
 import {IClock} from "../../util/clock.js";
 import {getCustodyGroups, getDataColumns} from "../../util/dataColumns.js";
@@ -458,9 +458,9 @@ export class PeerManager {
         peerId: peer.toString(),
         custodyGroupCount,
         hasAllColumns,
-        dataColumns: prettyPrintCustodyGroups(dataColumns),
+        dataColumns: prettyPrintIndices(dataColumns),
         matchingSubnetsNum,
-        custodyGroups: prettyPrintCustodyGroups(custodyGroups),
+        custodyGroups: prettyPrintIndices(custodyGroups),
         mySampleSubnets: sampleSubnets.join(" "),
         clientAgent,
       });
