@@ -1,7 +1,7 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
+import {ForkName, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {getSlotComponentDuration} from "@lodestar/state-transition";
-import {ForkName, INTERVALS_PER_SLOT, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {ColumnIndex, Root, RootHex, deneb} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {Logger, fromHex, pruneSetToMax, toRootHex} from "@lodestar/utils";

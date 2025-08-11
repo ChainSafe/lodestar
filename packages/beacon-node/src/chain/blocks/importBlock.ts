@@ -12,7 +12,6 @@ import {
   ForkPostAltair,
   ForkPostElectra,
   ForkSeq,
-  INTERVALS_PER_SLOT,
   MAX_SEED_LOOKAHEAD,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
