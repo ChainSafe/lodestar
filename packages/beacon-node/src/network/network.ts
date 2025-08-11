@@ -510,7 +510,8 @@ export class Network implements INetwork {
       this.sendReqRespRequest(
         peerId,
         ReqRespMethod.BeaconBlocksByRange,
-        this.config.getForkSeq(this.clock.currentSlot) >= ForkSeq.altair ? [Version.V2] : [Version.V1],
+        // Before altair, prioritize V2. After altair only request V2
+        this.config.getForkSeq(this.clock.currentSlot) >= ForkSeq.altair ? [Version.V2] : [Version.V2, Version.V1],
         request
       ),
       request
@@ -525,7 +526,8 @@ export class Network implements INetwork {
       this.sendReqRespRequest(
         peerId,
         ReqRespMethod.BeaconBlocksByRoot,
-        this.config.getForkSeq(this.clock.currentSlot) >= ForkSeq.altair ? [Version.V2] : [Version.V1],
+        // Before altair, prioritize V2. After altair only request V2
+        this.config.getForkSeq(this.clock.currentSlot) >= ForkSeq.altair ? [Version.V2] : [Version.V2, Version.V1],
         request
       ),
       request.length,
