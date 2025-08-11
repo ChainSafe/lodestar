@@ -33,7 +33,7 @@ describe("get proposers api impl", () => {
     modules.chain.getHeadStateAtCurrentEpoch.mockResolvedValue(cachedState);
     modules.forkChoice.getHead.mockReturnValue(zeroProtoBlock);
     modules.forkChoice.getFinalizedBlock.mockReturnValue(zeroProtoBlock);
-    modules.db.block.get.mockResolvedValue({message: {stateRoot: Buffer.alloc(32)}} as any);
+    vi.spyOn(modules.db.block, "get").mockResolvedValue({message: {stateRoot: Buffer.alloc(32)}} as any);
 
     vi.spyOn(modules.sync, "state", "get").mockReturnValue(SyncState.Synced);
   });
