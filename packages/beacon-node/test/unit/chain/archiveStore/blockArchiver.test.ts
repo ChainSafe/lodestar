@@ -24,12 +24,12 @@ describe("block archiver task", () => {
     forkChoiceStub = chain.forkChoice;
     lightclientServer = chain.lightClientServer;
 
-    vi.spyOn(dbStub.block, "batchDelete").mockReturnValue(Promise.resolve());
-    vi.spyOn(dbStub.blockArchive, "batchPutBinary").mockReturnValue(Promise.resolve());
+    vi.spyOn(dbStub.blockArchive, "batchPutBinary");
+    vi.spyOn(dbStub.block, "batchDelete");
     vi.spyOn(dbStub.blobSidecarsArchive, "batchPutBinary");
     vi.spyOn(dbStub.blobSidecars, "batchDelete");
-    vi.spyOn(dbStub.dataColumnSidecarsArchive, "batchPutBinary").mockReturnValue(Promise.resolve());
-    vi.spyOn(dbStub.dataColumnSidecars, "batchDelete").mockReturnValue(Promise.resolve());
+    vi.spyOn(dbStub.dataColumnSidecarsArchive, "batchPutBinary");
+    vi.spyOn(dbStub.dataColumnSidecars, "batchDelete");
     // Mock keys() to return empty array by default
     vi.spyOn(dbStub.blobSidecarsArchive, "keys").mockResolvedValue([]);
     vi.spyOn(dbStub.dataColumnSidecarsArchive, "keys").mockResolvedValue([]);
