@@ -294,3 +294,49 @@ Ethereum SSZ structures have very precise rules, some fields have fixed-length b
 Without type safety, it is easy to Assign a wrong-sized array, mistype a field name, pass data in the wrong format hence breakinf serialization.
 
 Lodestar + TypeScript ensures these mistakes never make it to runtime — they’re caught instantly in your editor.
+
+### Lodestar SSZ Type Safety Flow
+
+```
+      ┌────────────────────┐
+      │ Ethereum Spec Types │
+      │ (Phase0, Altair...) │
+      └─────────┬──────────┘
+                │
+                ▼
+      ┌───────────────────────┐
+      │ Lodestar TypeScript    │
+      │ Interfaces             │
+      │ e.g. Attestation, Block│
+      └─────────┬─────────────┘
+                │
+                ▼
+      ┌───────────────────────┐
+      │ Lodestar SSZ Schema    │
+      │ (Serialization rules)  │
+      └─────────┬─────────────┘
+                │
+                ▼
+      ┌───────────────────────┐
+      │ TypeScript Compiler    │
+      │ (Type Checking,        │
+      │ Autocomplete, Errors)  │
+      └─────────┬─────────────┘
+                │
+                ▼
+      ┌───────────────────────┐
+      │ Developer Experience   │
+      │ • Correct types only   │
+      │ • Auto-complete        │
+      │ • Early bug detection  │
+      └───────────────────────┘
+
+```
+
+#### How to read tthe above diagram
+
+1. Ethereum Spec Types → Definitions from the Ethereum consensus spec (Phase0, Altair, Bellatrix, etc.).
+2. Lodestar TypeScript Interfaces → These will mirror the spec but in TypeScript form.
+3. SSZ Schema → Maps each interface to its SSZ serialization/deserialization rules.
+4. TypeScript Compiler → Enforces correctness at compile-time.
+5. Developer Experience → What you benefit from (type correctness, autocomplete, no silent runtime bugs).
