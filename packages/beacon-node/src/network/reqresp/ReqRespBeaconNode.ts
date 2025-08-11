@@ -13,7 +13,7 @@ import {
   ResponseOutgoing,
 } from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {Metadata, Status, isFuluStatus, phase0, ssz} from "@lodestar/types";
+import {Metadata, Status, phase0, ssz} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {Libp2p} from "libp2p";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
@@ -179,8 +179,7 @@ export class ReqRespBeaconNode extends ReqResp {
       this.sendReqRespRequest(
         peerId,
         ReqRespMethod.Status,
-        // unlike Metadata, request body of pre-fulu and post-fulu Status is different so we must not negotiate 2 versions at the same time
-        isFuluStatus(request) ? [Version.V2] : [Version.V1],
+        this.currentRegisteredFork >= ForkSeq.fulu ? [Version.V2] : [Version.V2, Version.V1],
         request
       ),
       responseSszTypeByMethod[ReqRespMethod.Status]

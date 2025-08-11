@@ -1,10 +1,4 @@
-import {
-  FINALIZED_ROOT_DEPTH_ELECTRA,
-  ForkPostBellatrix,
-  ForkPostDeneb,
-  ForkPostElectra,
-  ForkPostFulu,
-} from "@lodestar/params";
+import {FINALIZED_ROOT_DEPTH_ELECTRA, ForkPostBellatrix, ForkPostDeneb, ForkPostElectra} from "@lodestar/params";
 import {
   Attestation,
   BeaconBlock,
@@ -23,7 +17,6 @@ import {
   SignedBlindedBeaconBlock,
   SignedBlockContents,
   SingleAttestation,
-  Status,
 } from "../types.js";
 
 export function isExecutionPayload<F extends ForkPostBellatrix>(
@@ -104,9 +97,4 @@ export function isELectraLightClientFinalityUpdate(
     updatePostElectra.finalityBranch !== undefined &&
     updatePostElectra.finalityBranch.length === FINALIZED_ROOT_DEPTH_ELECTRA
   );
-}
-
-export function isFuluStatus(status: Status): status is Status<ForkPostFulu> {
-  // fulu status has earliest_available_slot
-  return (status as Status<ForkPostFulu>).earliestAvailableSlot !== undefined;
 }
