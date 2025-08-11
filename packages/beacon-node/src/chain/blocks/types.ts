@@ -10,7 +10,7 @@ export enum BlockInputType {
   // data is out of available window, can be used to sync forward and keep adding to forkchoice
   outOfRangeData = "outOfRangeData",
   availableData = "availableData",
-  dataPromise = "data_promise",
+  dataPromise = "dataPromise",
 }
 
 /** Enum to represent where blocks come from */
@@ -66,6 +66,7 @@ export type CachedBlobs = CachedDataItem &
  * PeerDAS Column Format Types
  *
  */
+
 export enum DataColumnsSource {
   gossip = "gossip",
   api = "api",
@@ -99,6 +100,7 @@ export type CachedDataColumns = CachedDataItem &
  * Cross-Fork Data Types
  *
  */
+
 export type BlockInputAvailableData = BlockInputBlobs | BlockInputDataColumns;
 export type CachedData = CachedBlobs | CachedDataColumns;
 

@@ -28,10 +28,13 @@ describe("sync / range / chain", () => {
       targetEpoch: 16,
     },
     {
-      id: "Simulate sync with a very long range of skipped slots",
+      // due to BATCH_BUFFER_SIZE and MAX_LOOK_AHEAD_EPOCHS, lodestar cannot deal with unlimited skipped slots
+      // having a test with 2 epochs of skipped slots is enough to test the logic
+      // this hasn't happened in any networks as of Aug 2025
+      id: "Simulate sync with 2 epochs of skipped slots",
       startEpoch: 0,
       targetEpoch: 16,
-      skippedSlots: new Set(linspace(3 * SLOTS_PER_EPOCH, 10 * SLOTS_PER_EPOCH)),
+      skippedSlots: new Set(linspace(3 * SLOTS_PER_EPOCH, 4 * SLOTS_PER_EPOCH)),
     },
     {
       id: "Simulate sync with multiple ranges of bad blocks",

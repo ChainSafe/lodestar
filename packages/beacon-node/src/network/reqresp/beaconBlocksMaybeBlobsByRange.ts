@@ -1,7 +1,17 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {ColumnIndex, Epoch, SignedBeaconBlock, Slot, deneb, fulu, phase0, ssz} from "@lodestar/types";
+import {
+  ColumnIndex,
+  Epoch,
+  SignedBeaconBlock,
+  Slot,
+  WithOptionalBytes,
+  deneb,
+  fulu,
+  phase0,
+  ssz,
+} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {
   BlobsSource,
@@ -19,10 +29,18 @@ import {
 import {getEmptyBlockInputCacheEntry} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {Metrics} from "../../metrics/index.js";
 import {PeerIdStr} from "../../util/peerId.js";
-import {INetwork, WithOptionalBytes} from "../interface.js";
+import {INetwork} from "../interface.js";
 import {PeerSyncMeta} from "../peers/peersData.js";
+import {PeerAction} from "../peers/score/interface.js";
 
 export type PartialDownload = null | {blocks: BlockInput[]; pendingDataColumns: number[]};
+
+/**
+ * Download blocks and blobs (prefulu) or data columns (fulu) by range.
+ * returns:
+ *  - array of blocks with blobs or data columns
+ *  - pendingDataColumns: null if all data columns are present, or array of column indexes that are missing. Also null for prefulu
+ */
 export async function beaconBlocksMaybeBlobsByRange(
   config: ChainForkConfig,
   network: INetwork,
@@ -38,7 +56,7 @@ export async function beaconBlocksMaybeBlobsByRange(
   // Range sync satisfies this condition, but double check here for sanity
   const {startSlot, count} = request;
   if (count < 1) {
-    return {blocks: [], pendingDataColumns: null};
+    throw Error(`Invalid count=${count} in BeaconBlocksByRangeRequest`);
   }
   const endSlot = startSlot + count - 1;
 
@@ -55,6 +73,12 @@ export async function beaconBlocksMaybeBlobsByRange(
   // Note: Assumes all blocks in the same epoch
   if (forkSeq < ForkSeq.deneb) {
     const beaconBlocks = await network.sendBeaconBlocksByRange(peerId, request);
+    if (beaconBlocks.length === 0) {
+      throw Error(
+        `peerId=${peerId} peerClient=${peerClient} returned no blocks for BeaconBlocksByRangeRequest ${JSON.stringify(request)}`
+      );
+    }
+
     const blocks = beaconBlocks.map((block) => getBlockInput.preData(config, block.data, BlockSource.byRange));
     return {blocks, pendingDataColumns: null};
   }
@@ -68,6 +92,12 @@ export async function beaconBlocksMaybeBlobsByRange(
         network.sendBlobSidecarsByRange(peerId, request),
       ]);
 
+      if (allBlocks.length === 0) {
+        throw Error(
+          `peerId=${peerId} peerClient=${peerClient} returns no blocks allBlobSidecars=${allBlobSidecars.length} for BeaconBlocksByRangeRequest ${JSON.stringify(request)}`
+        );
+      }
+
       const blocks = matchBlockWithBlobs(
         config,
         allBlocks,
@@ -78,7 +108,8 @@ export async function beaconBlocksMaybeBlobsByRange(
       );
       return {blocks, pendingDataColumns: null};
     }
-    // get columns
+
+    // From fulu, get columns
     const sampledColumns = network.custodyConfig.sampledColumns;
     const neededColumns = partialDownload ? partialDownload.pendingDataColumns : sampledColumns;
 
@@ -131,6 +162,12 @@ export async function beaconBlocksMaybeBlobsByRange(
       prevPartialDownload: !!partialDownload,
     });
 
+    if (allBlocks.length === 0) {
+      throw Error(
+        `peerId=${peerId} peerClient=${peerClient} returns no blocks dataColumnSidecars=${allDataColumnSidecars.length} for BeaconBlocksByRangeRequest ${JSON.stringify(request)}`
+      );
+    }
+
     const blocks = matchBlockWithDataColumns(
       network,
       peerId,
@@ -163,10 +200,14 @@ export async function beaconBlocksMaybeBlobsByRange(
 
   // Data is out of range, only request blocks
   const blocks = await network.sendBeaconBlocksByRange(peerId, request);
+  if (blocks.length === 0) {
+    throw Error(
+      `peerId=${peerId} peerClient=${peerClient} returned no blocks for BeaconBlocksByRangeRequest ${JSON.stringify(request)}`
+    );
+  }
   return {
     blocks: blocks.map((block) => getBlockInput.outOfRangeData(config, block.data, BlockSource.byRange)),
-    // TODO: (@matthewkeil) this was a merge conflict when rebased on electra. Should this be a null or an empty array?  Should it
-    //       depend on which fork we are in?  Need to revisit
+    // null means all data columns are present
     pendingDataColumns: null,
   };
 }
@@ -245,7 +286,7 @@ export function matchBlockWithBlobs(
 }
 
 export function matchBlockWithDataColumns(
-  _network: INetwork,
+  network: INetwork,
   peerId: PeerIdStr,
   config: ChainForkConfig,
   sampledColumns: ColumnIndex[],
@@ -300,6 +341,7 @@ export function matchBlockWithDataColumns(
     });
     if (blobKzgCommitmentsLen === 0) {
       if (dataColumnSidecars.length > 0) {
+        network.reportPeer(peerId, PeerAction.LowToleranceError, "Missing or mismatching dataColumnSidecars");
         throw Error(
           `Missing or mismatching dataColumnSidecars from peerId=${peerId} for blockSlot=${block.data.message.slot} with blobKzgCommitmentsLen=0 dataColumnSidecars=${dataColumnSidecars.length}>0`
         );
@@ -338,6 +380,7 @@ export function matchBlockWithDataColumns(
             peerClient,
           }
         );
+        network.reportPeer(peerId, PeerAction.LowToleranceError, "Missing or mismatching dataColumnSidecars");
         throw Error(
           `Missing or mismatching dataColumnSidecars from peerId=${peerId} for blockSlot=${block.data.message.slot} blobKzgCommitmentsLen=${blobKzgCommitmentsLen} with numColumns=${sampledColumns.length} dataColumnSidecars=${dataColumnSidecars.length} requestedColumnsPresent=${requestedColumnsPresent} received dataColumnIndexes=${dataColumnIndexes.join(" ")} requested=${requestedColumns.join(" ")}`
         );
@@ -398,10 +441,11 @@ export function matchBlockWithDataColumns(
     // If there are no data columns, the data columns request can give 1 block outside the requested range
     allDataColumnSidecars[dataColumnSideCarIndex].signedBlockHeader.message.slot <= endSlot
   ) {
+    network.reportPeer(peerId, PeerAction.LowToleranceError, "Unmatched dataColumnSidecars");
     throw Error(
-      `Unmatched blobSidecars, blocks=${allBlocks.length}, blobs=${
+      `Unmatched dataColumnSidecars, blocks=${allBlocks.length}, blobs=${
         allDataColumnSidecars.length
-      } lastMatchedSlot=${lastMatchedSlot}, pending blobSidecars slots=${allDataColumnSidecars
+      } lastMatchedSlot=${lastMatchedSlot}, pending dataColumnSidecars slots=${allDataColumnSidecars
         .slice(dataColumnSideCarIndex)
         .map((blb) => blb.signedBlockHeader.message.slot)
         .join(" ")}`

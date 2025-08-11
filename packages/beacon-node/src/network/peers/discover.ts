@@ -1,11 +1,10 @@
 import {ENR} from "@chainsafe/enr";
-import {toHexString} from "@chainsafe/ssz";
 import type {PeerId, PeerInfo, PrivateKey} from "@libp2p/interface";
 import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
 import {ATTESTATION_SUBNET_COUNT, ForkSeq, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {CustodyIndex, SubnetID} from "@lodestar/types";
-import {pruneSetToMax, sleep} from "@lodestar/utils";
+import {pruneSetToMax, sleep, toHex} from "@lodestar/utils";
 import {bytesToInt} from "@lodestar/utils";
 import {Multiaddr} from "@multiformats/multiaddr";
 import {IClock} from "../../util/clock.js";
@@ -402,7 +401,10 @@ export class PeerDiscovery {
     const syncnetsBytes = enr.kvs.get(ENRKey.syncnets); // 4 bits
     const custodyGroupCountBytes = enr.kvs.get(ENRKey.cgc); // not preserialized value, is byte representation of number
     if (custodyGroupCountBytes === undefined) {
-      this.logger.warn("peer discovered with no cgc assuming 4", exportENRToJSON(enr));
+      this.logger.debug("peer discovered with no cgc, using default/miniumn", {
+        custodyRequirement: this.config.CUSTODY_REQUIREMENT,
+        peer: prettyPrintPeerId(peerId),
+      });
     }
 
     // Use faster version than ssz's implementation that leverages pre-cached.
@@ -433,7 +435,7 @@ export class PeerDiscovery {
     custodySubnetCount?: number
   ): DiscoveredPeerStatus {
     const nodeId = computeNodeId(peerId);
-    this.logger.debug("handleDiscoveredPeer", {nodeId: toHexString(nodeId), peerId: peerId.toString()});
+    this.logger.debug("handleDiscoveredPeer", {nodeId: toHex(nodeId), peerId: peerId.toString()});
     try {
       // Check if peer is not banned or disconnected
       if (this.peerRpcScores.getScoreState(peerId) !== ScoreState.Healthy) {
@@ -643,15 +645,4 @@ function formatLibp2pDialError(e: Error): void {
   ) {
     e.stack = undefined;
   }
-}
-
-function exportENRToJSON(enr?: ENR): Record<string, string | undefined> | undefined {
-  if (enr === undefined) {
-    return undefined;
-  }
-  return {
-    ip4: enr.kvs.get("ip")?.toString(),
-    cgc: enr.kvs.get("cgc")?.toString(),
-    nodeId: enr.nodeId,
-  };
 }

@@ -1,7 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ApiError, ApplicationMethods} from "@lodestar/api/server";
 import {
-  ForkName,
   ForkPostBellatrix,
   NUMBER_OF_COLUMNS,
   SLOTS_PER_HISTORICAL_ROOT,
@@ -109,7 +108,7 @@ export function getBeaconBlockApi({
           dataColumnsSource: DataColumnsSource.api,
         } as BlockInputDataColumns;
         blobSidecars = [];
-      } else if (fork === ForkName.deneb || fork === ForkName.electra) {
+      } else if (isForkPostDeneb(fork)) {
         blobSidecars = computeBlobSidecars(config, signedBlock, signedBlockOrContents);
         blockData = {
           fork,
@@ -286,11 +285,25 @@ export function getBeaconBlockApi({
     }
 
     if (blockForImport.type === BlockInputType.availableData) {
-      if (
-        chain.emitter.listenerCount(routes.events.EventType.blobSidecar) &&
-        (blockForImport.blockData.fork === ForkName.deneb || blockForImport.blockData.fork === ForkName.electra)
+      if (isForkPostFulu(blockForImport.blockData.fork)) {
+        const {dataColumns} = blockForImport.blockData as BlockInputDataColumns;
+        metrics?.dataColumns.bySource.inc({source: DataColumnsSource.api}, dataColumns.length);
+
+        if (chain.emitter.listenerCount(routes.events.EventType.dataColumnSidecar)) {
+          for (const dataColumnSidecar of dataColumns) {
+            chain.emitter.emit(routes.events.EventType.dataColumnSidecar, {
+              blockRoot,
+              slot,
+              index: dataColumnSidecar.index,
+              kzgCommitments: dataColumnSidecar.kzgCommitments.map(toHex),
+            });
+          }
+        }
+      } else if (
+        isForkPostDeneb(blockForImport.blockData.fork) &&
+        chain.emitter.listenerCount(routes.events.EventType.blobSidecar)
       ) {
-        const {blobs} = blockForImport.blockData;
+        const {blobs} = blockForImport.blockData as BlockInputBlobs;
 
         for (const blobSidecar of blobs) {
           const {index, kzgCommitment} = blobSidecar;
@@ -300,21 +313,6 @@ export function getBeaconBlockApi({
             index,
             kzgCommitment: toHex(kzgCommitment),
             versionedHash: toHex(kzgCommitmentToVersionedHash(kzgCommitment)),
-          });
-        }
-      } else if (
-        chain.emitter.listenerCount(routes.events.EventType.dataColumnSidecar) &&
-        isForkPostFulu(blockForImport.blockData.fork)
-      ) {
-        const {dataColumns} = blockForImport.blockData as BlockInputDataColumns;
-        metrics?.dataColumns.bySource.inc({source: DataColumnsSource.api}, dataColumns.length);
-
-        for (const dataColumnSidecar of dataColumns) {
-          chain.emitter.emit(routes.events.EventType.dataColumnSidecar, {
-            blockRoot,
-            slot,
-            index: dataColumnSidecar.index,
-            kzgCommitments: dataColumnSidecar.kzgCommitments.map(toHex),
           });
         }
       }

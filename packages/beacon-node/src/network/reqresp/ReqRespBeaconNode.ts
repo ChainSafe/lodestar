@@ -12,7 +12,6 @@ import {
   ResponseIncoming,
   ResponseOutgoing,
 } from "@lodestar/reqresp";
-import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Metadata, Status, phase0, ssz} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {Libp2p} from "libp2p";
@@ -179,7 +178,7 @@ export class ReqRespBeaconNode extends ReqResp {
       this.sendReqRespRequest(
         peerId,
         ReqRespMethod.Status,
-        this.currentRegisteredFork >= ForkSeq.fulu ? [Version.V2] : [Version.V2, Version.V1],
+        this.currentRegisteredFork >= ForkSeq.fulu ? [Version.V2] : [Version.V1],
         request
       ),
       responseSszTypeByMethod[ReqRespMethod.Status]
@@ -199,12 +198,11 @@ export class ReqRespBeaconNode extends ReqResp {
       this.sendReqRespRequest(
         peerId,
         ReqRespMethod.Metadata,
-        // Before altair, prioritize V2. After altair only request V2
         this.currentRegisteredFork >= ForkSeq.fulu
           ? [Version.V3]
           : this.currentRegisteredFork >= ForkSeq.altair
             ? [Version.V3, Version.V2]
-            : [(Version.V3, Version.V2, Version.V1)],
+            : [Version.V2, Version.V1],
         null
       ),
       responseSszTypeByMethod[ReqRespMethod.Metadata]
@@ -236,8 +234,6 @@ export class ReqRespBeaconNode extends ReqResp {
       // Follows pattern for altair:
       // Ref https://github.com/ethereum/consensus-specs/blob/v1.2.0/specs/altair/p2p-interface.md#transitioning-from-v1-to-v2
       [protocols.MetadataV3(fork, this.config), this.onMetadata.bind(this)],
-      // Similar reasoning to the above
-      [protocols.StatusV2(fork, this.config), this.onStatus.bind(this)],
       [protocols.BeaconBlocksByRangeV2(fork, this.config), this.getHandler(ReqRespMethod.BeaconBlocksByRange)],
       [protocols.BeaconBlocksByRootV2(fork, this.config), this.getHandler(ReqRespMethod.BeaconBlocksByRoot)],
     ];
@@ -285,6 +281,10 @@ export class ReqRespBeaconNode extends ReqResp {
       );
     } else {
       protocolsAtFork.push(
+        // We can't handle StatusV2 correctly pre-fulu as request type is selected based on fork
+        // instead of protocol version. This is not easily fixable with our current architecture.
+        // See https://github.com/ChainSafe/lodestar/pull/8168 for more details.
+        [protocols.StatusV2(fork, this.config), this.onStatus.bind(this)],
         [
           protocols.DataColumnSidecarsByRoot(fork, this.config),
           this.getHandler(ReqRespMethod.DataColumnSidecarsByRoot),
@@ -321,14 +321,17 @@ export class ReqRespBeaconNode extends ReqResp {
   }
 
   private async *onStatus(req: ReqRespRequest, peerId: PeerId): AsyncIterable<ResponseOutgoing> {
-    const type = responseSszTypeByMethod[ReqRespMethod.Status](ForkName.phase0 /* forkName is ignored */, req.version);
+    // Fork is ignored in responseSszTypeByMethod, type is determined by protocol version that is negotiated
+    const type = responseSszTypeByMethod[ReqRespMethod.Status](ForkName.phase0, req.version);
+    // Request uses the same type as response
     const body = type.deserialize(req.data);
     this.onIncomingRequestBody({method: ReqRespMethod.Status, body}, peerId);
 
     const status = this.statusCache.get();
     yield {
       data: type.serialize(status),
-      boundary: this.config.getForkBoundaryAtEpoch(computeEpochAtSlot(body.headSlot)),
+      // Status topic is fork-agnostic
+      boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH},
     };
   }
 
@@ -358,14 +361,13 @@ export class ReqRespBeaconNode extends ReqResp {
 
     const metadata = this.metadataController.json;
 
-    // Fork is ignored in responseSszTypeByMethod, type is determined by req.version that is negotiated
-    const fork = ForkName.phase0;
-    const epoch = GENESIS_EPOCH;
-    const type = responseSszTypeByMethod[ReqRespMethod.Metadata](fork, req.version);
+    // Fork is ignored in responseSszTypeByMethod, type is determined by protocol version that is negotiated
+    const type = responseSszTypeByMethod[ReqRespMethod.Metadata](ForkName.phase0, req.version);
 
     yield {
       data: type.serialize(metadata),
-      boundary: {fork, epoch},
+      // Metadata topic is fork-agnostic
+      boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH},
     };
   }
 }

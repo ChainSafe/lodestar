@@ -123,6 +123,7 @@ export class Batch {
 
   /**
    * Downloading -> AwaitingProcessing
+   * pendingDataColumns is null when a complete download is done, otherwise it contains the columns that are still pending
    */
   downloadingSuccess(downloadResult: {
     blocks: BlockInput[];
@@ -242,7 +243,7 @@ export class Batch {
     return this.state.attempt;
   }
 
-  isFulu(): boolean {
+  isPostFulu(): boolean {
     return this.config.getForkSeq(this.request.startSlot) >= ForkSeq.fulu;
   }
 
