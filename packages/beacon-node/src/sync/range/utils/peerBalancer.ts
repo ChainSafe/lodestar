@@ -115,7 +115,7 @@ export class ChainPeersBalancer {
         continue;
       }
 
-      if (!noActiveRequest && activeRequest >= this.maxConcurrentRequests) {
+      if (activeRequest >= this.maxConcurrentRequests) {
         // consumer wants to find peer with no more than MAX_CONCURRENT_REQUESTS active requests
         continue;
       }
