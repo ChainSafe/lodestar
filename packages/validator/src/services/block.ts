@@ -5,15 +5,15 @@ import {
   BLSPubkey,
   BLSSignature,
   BeaconBlock,
-  BeaconBlockOrContents,
   BlindedBeaconBlock,
+  BlockContents,
   ProducedBlockSource,
   SignedBeaconBlock,
   SignedBlindedBeaconBlock,
   Slot,
   deneb,
   isBlindedSignedBeaconBlock,
-  isBlockContents,
+  isDenebBlockContents,
 } from "@lodestar/types";
 import {extendError, prettyBytes, prettyWeiToEth, toPubkeyHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
@@ -26,18 +26,18 @@ import {ValidatorStore} from "./validatorStore.js";
 //  i) a full block pre deneb
 //  ii) a full block and full blobs post deneb
 //  iii) a blinded block post bellatrix
-type FullOrBlindedBlockWithContents =
+type BlindedBlockOrBlockProposal =
   | {
       version: ForkPreDeneb;
       block: BeaconBlock<ForkPreDeneb>;
-      contents: null;
+      daContents: null;
       executionPayloadBlinded: false;
       executionPayloadSource: ProducedBlockSource.engine;
     }
   | {
       version: ForkPostDeneb;
       block: BeaconBlock<ForkPostDeneb>;
-      contents: {
+      daContents: {
         kzgProofs: deneb.KZGProofs;
         blobs: deneb.Blobs;
       };
@@ -47,7 +47,7 @@ type FullOrBlindedBlockWithContents =
   | {
       version: ForkPostBellatrix;
       block: BlindedBeaconBlock;
-      contents: null;
+      daContents: null;
       executionPayloadBlinded: true;
       executionPayloadSource: ProducedBlockSource;
     };
@@ -159,7 +159,7 @@ export class BlockProposingService {
 
       const {broadcastValidation} = this.opts;
       const publishOpts = {broadcastValidation};
-      await this.publishBlockWrapper(signedBlock, blockContents.contents, publishOpts).catch((e: Error) => {
+      await this.publishBlockWrapper(signedBlock, blockContents.daContents, publishOpts).catch((e: Error) => {
         this.metrics?.blockProposingErrors.inc({error: "publish"});
         throw extendError(e, "Failed to publish block");
       });
@@ -186,11 +186,11 @@ export class BlockProposingService {
       (await this.api.beacon.publishBlindedBlockV2({signedBlindedBlock: signedBlock, ...opts})).assertOk();
     } else {
       if (contents === null) {
-        (await this.api.beacon.publishBlockV2({signedBlockOrContents: signedBlock, ...opts})).assertOk();
+        (await this.api.beacon.publishBlockV2({signedBlockContents: signedBlock, ...opts})).assertOk();
       } else {
         (
           await this.api.beacon.publishBlockV2({
-            signedBlockOrContents: {...contents, signedBlock: signedBlock as SignedBeaconBlock<ForkPostDeneb>},
+            signedBlockContents: {...contents, signedBlock: signedBlock as SignedBeaconBlock<ForkPostDeneb>},
             ...opts,
           })
         ).assertOk();
@@ -206,7 +206,7 @@ export class BlockProposingService {
     builderBoostFactor: bigint,
     {feeRecipient, strictFeeRecipientCheck, blindedLocal}: routes.validator.ExtraProduceBlockOpts,
     builderSelection: routes.validator.BuilderSelection
-  ): Promise<FullOrBlindedBlockWithContents & DebugLogCtx> => {
+  ): Promise<BlindedBlockOrBlockProposal & DebugLogCtx> => {
     const res = await this.api.validator.produceBlockV3({
       slot,
       randaoReveal,
@@ -237,14 +237,14 @@ export class BlockProposingService {
 }
 
 function parseProduceBlockResponse(
-  response: {data: BeaconBlockOrContents | BlindedBeaconBlock} & {
+  response: {data: BlockContents | BlindedBeaconBlock} & {
     executionPayloadSource: ProducedBlockSource;
     executionPayloadBlinded: boolean;
     version: ForkName;
   },
   debugLogCtx: Record<string, string | boolean | undefined>,
   builderSelection: routes.validator.BuilderSelection
-): FullOrBlindedBlockWithContents & DebugLogCtx {
+): BlindedBlockOrBlockProposal & DebugLogCtx {
   const executionPayloadSource = response.executionPayloadSource;
 
   if (
@@ -261,32 +261,32 @@ function parseProduceBlockResponse(
   if (response.executionPayloadBlinded) {
     return {
       block: response.data,
-      contents: null,
+      daContents: null,
       version: response.version,
       executionPayloadBlinded: true,
       executionPayloadSource,
       debugLogCtx,
-    } as FullOrBlindedBlockWithContents & DebugLogCtx;
+    } as BlindedBlockOrBlockProposal & DebugLogCtx;
   }
 
   const data = response.data;
-  if (isBlockContents(data)) {
+  if (isDenebBlockContents(data)) {
     return {
       block: data.block,
-      contents: {blobs: data.blobs, kzgProofs: data.kzgProofs},
+      daContents: {blobs: data.blobs, kzgProofs: data.kzgProofs},
       version: response.version,
       executionPayloadBlinded: false,
       executionPayloadSource,
       debugLogCtx,
-    } as FullOrBlindedBlockWithContents & DebugLogCtx;
+    } as BlindedBlockOrBlockProposal & DebugLogCtx;
   }
 
   return {
     block: response.data,
-    contents: null,
+    daContents: null,
     version: response.version,
     executionPayloadBlinded: false,
     executionPayloadSource,
     debugLogCtx,
-  } as FullOrBlindedBlockWithContents & DebugLogCtx;
+  } as BlindedBlockOrBlockProposal & DebugLogCtx;
 }

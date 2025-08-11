@@ -4,8 +4,8 @@ import {VALIDATOR_REGISTRY_LIMIT, isForkPostDeneb, isForkPostElectra} from "@lod
 import {
   Attestation,
   BLSSignature,
-  BeaconBlockOrContents,
   BlindedBeaconBlock,
+  BlockContents,
   CommitteeIndex,
   Epoch,
   ProducedBlockSource,
@@ -320,7 +320,7 @@ export type Endpoints = {
         blinded_local?: boolean;
       };
     },
-    BeaconBlockOrContents | BlindedBeaconBlock,
+    BlockContents | BlindedBeaconBlock,
     ProduceBlockV3Meta
   >;
 
@@ -636,7 +636,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
               ? getPostBellatrixForkTypes(version).BlindedBeaconBlock
               : isForkPostDeneb(version)
                 ? sszTypesFor(version).BlockContents
-                : ssz[version].BeaconBlock) as Type<BeaconBlockOrContents | BlindedBeaconBlock>
+                : ssz[version].BeaconBlock) as Type<BlockContents | BlindedBeaconBlock>
         ),
         meta: {
           toJson: (meta) => ({

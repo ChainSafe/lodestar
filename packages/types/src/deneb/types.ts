@@ -49,7 +49,7 @@ export type ProducedBlobSidecars = Omit<BlobSidecars, "signedBlockHeader" | "kzg
 
 export type BlockContents = ValueOf<typeof ssz.BlockContents>;
 export type SignedBlockContents = ValueOf<typeof ssz.SignedBlockContents>;
-export type Contents = Omit<BlockContents, "block">;
+export type DAContents = ValueOf<typeof ssz.DAContents>;
 export type BlobAndProof = {
   blob: Blob;
   proof: KZGProof;

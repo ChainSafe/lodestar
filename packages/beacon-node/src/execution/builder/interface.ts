@@ -4,8 +4,8 @@ import {
   Epoch,
   ExecutionPayloadHeader,
   Root,
-  SignedBeaconBlockOrContents,
   SignedBlindedBeaconBlock,
+  SignedBlockContents,
   Slot,
   Wei,
   WithOptionalBytes,
@@ -43,8 +43,6 @@ export interface IExecutionBuilder {
     blobKzgCommitments?: deneb.BlobKzgCommitments;
     executionRequests?: electra.ExecutionRequests;
   }>;
-  submitBlindedBlock(
-    signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>
-  ): Promise<SignedBeaconBlockOrContents>;
+  submitBlindedBlock(signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>): Promise<SignedBlockContents>;
   submitBlindedBlockNoResponse(signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>): Promise<void>;
 }

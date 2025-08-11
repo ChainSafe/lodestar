@@ -47,7 +47,7 @@ export function computeKzgCommitmentsInclusionProof(
 export function computeBlobSidecars(
   config: ChainForkConfig,
   signedBlock: SignedBeaconBlock,
-  contents: deneb.Contents & {kzgCommitmentInclusionProofs?: deneb.KzgCommitmentInclusionProof[]}
+  daContentsExt: deneb.DAContents & {kzgCommitmentInclusionProofs?: deneb.KzgCommitmentInclusionProof[]}
 ): deneb.BlobSidecars {
   const blobKzgCommitments = (signedBlock as deneb.SignedBeaconBlock).message.body.blobKzgCommitments;
   if (blobKzgCommitments === undefined) {
@@ -58,10 +58,11 @@ export function computeBlobSidecars(
   const fork = config.getForkName(signedBlockHeader.message.slot);
 
   return blobKzgCommitments.map((kzgCommitment, index) => {
-    const blob = contents.blobs[index];
-    const kzgProof = contents.kzgProofs[index];
+    const blob = daContentsExt.blobs[index];
+    const kzgProof = daContentsExt.kzgProofs[index];
     const kzgCommitmentInclusionProof =
-      contents.kzgCommitmentInclusionProofs?.[index] ?? computeInclusionProof(fork, signedBlock.message.body, index);
+      daContentsExt.kzgCommitmentInclusionProofs?.[index] ??
+      computeInclusionProof(fork, signedBlock.message.body, index);
 
     return {index, blob, kzgCommitment, kzgProof, signedBlockHeader, kzgCommitmentInclusionProof};
   });
@@ -77,7 +78,9 @@ export function computeBlobSidecars(
 export function computeDataColumnSidecars(
   config: ChainForkConfig,
   signedBlock: SignedBeaconBlock,
-  contents: fulu.Contents & {kzgCommitmentsInclusionProof?: fulu.KzgCommitmentsInclusionProof; cells?: fulu.Cell[][]}
+  daContents: deneb.DAContents,
+  kzgCommitmentsInclusionProof?: fulu.KzgCommitmentsInclusionProof,
+  cells?: fulu.Cell[][]
 ): fulu.DataColumnSidecars {
   const blobKzgCommitments = (signedBlock as deneb.SignedBeaconBlock).message.body.blobKzgCommitments;
   if (blobKzgCommitments === undefined) {
@@ -88,13 +91,13 @@ export function computeDataColumnSidecars(
   }
   const fork = config.getForkName(signedBlock.message.slot);
   const signedBlockHeader = signedBlockToSignedHeader(config, signedBlock);
-  const kzgCommitmentsInclusionProof =
-    contents.kzgCommitmentsInclusionProof ?? computeKzgCommitmentsInclusionProof(fork, signedBlock.message.body);
-  const {blobs, kzgProofs} = contents;
+  kzgCommitmentsInclusionProof =
+    kzgCommitmentsInclusionProof ?? computeKzgCommitmentsInclusionProof(fork, signedBlock.message.body);
+  const {blobs, kzgProofs} = daContents;
   const cellsAndProofs = Array.from({length: blobs.length}, (_, rowNumber) => {
-    const cells = contents.cells?.[rowNumber] ?? kzg.computeCells(blobs[rowNumber]);
+    const rowCells = cells?.[rowNumber] ?? kzg.computeCells(blobs[rowNumber]);
     const proofs = kzgProofs.slice(rowNumber * NUMBER_OF_COLUMNS, (rowNumber + 1) * NUMBER_OF_COLUMNS);
-    return {cells, proofs};
+    return {cells: rowCells, proofs};
   });
 
   return Array.from({length: NUMBER_OF_COLUMNS}, (_, columnIndex) => {

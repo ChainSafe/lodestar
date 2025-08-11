@@ -4,15 +4,14 @@ import {
   BeaconBlock,
   BeaconBlockHeader,
   BlindedBeaconBlock,
-  BlobsBundle,
-  Contents,
   ExecutionPayload,
   ExecutionPayloadAndBlobsBundle,
   ExecutionPayloadHeader,
   Root,
   SignedBeaconBlock,
-  SignedBeaconBlockOrContents,
   SignedBlindedBeaconBlock,
+  SignedBlockContents,
+  deneb,
   isBlindedBeaconBlock,
   isExecutionPayloadAndBlobsBundle,
 } from "@lodestar/types";
@@ -101,7 +100,7 @@ export function signedBlindedBlockToFull(
 
 export function parseExecutionPayloadAndBlobsBundle(data: ExecutionPayload | ExecutionPayloadAndBlobsBundle): {
   executionPayload: ExecutionPayload;
-  blobsBundle: BlobsBundle | null;
+  blobsBundle: deneb.BlobsBundle | null;
 } {
   if (isExecutionPayloadAndBlobsBundle(data)) {
     return data;
@@ -112,24 +111,19 @@ export function parseExecutionPayloadAndBlobsBundle(data: ExecutionPayload | Exe
   };
 }
 
-export function reconstructFullBlockOrContents(
+export function reconstructSignedBlockContents(
   signedBlindedBlock: SignedBlindedBeaconBlock,
-  {
-    executionPayload,
-    contents,
-  }: {
-    executionPayload: ExecutionPayload | null;
-    contents: Contents | null;
-  }
-): SignedBeaconBlockOrContents {
+  executionPayload: ExecutionPayload | null,
+  daContents: deneb.DAContents | null
+): SignedBlockContents {
   const signedBlock = signedBlindedBlockToFull(signedBlindedBlock, executionPayload);
 
-  if (contents !== null) {
+  if (daContents !== null) {
     if (executionPayload === null) {
       throw Error("Missing locally produced executionPayload for deneb+ publishBlindedBlock");
     }
 
-    return {signedBlock, ...contents} as SignedBeaconBlockOrContents;
+    return {signedBlock, ...daContents} as SignedBlockContents;
   }
-  return signedBlock as SignedBeaconBlockOrContents;
+  return signedBlock;
 }

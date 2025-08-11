@@ -46,6 +46,7 @@ export const Status = new ContainerType(
 
 export const Cell = new ByteVectorType(BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_CELL);
 export const DataColumn = new ListCompositeType(Cell, MAX_BLOB_COMMITMENTS_PER_BLOCK);
+export const DataColumns = new ListCompositeType(DataColumn, NUMBER_OF_COLUMNS);
 export const ExtendedMatrix = new ListCompositeType(Cell, MAX_BLOB_COMMITMENTS_PER_BLOCK * NUMBER_OF_COLUMNS);
 export const KzgCommitmentsInclusionProof = new VectorCompositeType(Bytes32, KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH);
 export const KZGProofs = new ListCompositeType(
@@ -123,6 +124,14 @@ export const BeaconState = new ContainerType(
     proposerLookahead: ProposerLookahead, // New in FULU:EIP7917
   },
   {typeName: "BeaconState", jsonCase: "eth2"}
+);
+
+export const DAContents = new ContainerType(
+  {
+    kzgProofs: KZGProofs,
+    blobs: denebSsz.Blobs,
+  },
+  {typeName: "DAContents", jsonCase: "eth2"}
 );
 
 export const BlockContents = new ContainerType(

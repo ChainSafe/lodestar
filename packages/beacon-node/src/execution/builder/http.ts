@@ -3,14 +3,14 @@ import {ApiClient as BuilderApi, getClient} from "@lodestar/api/builder";
 import {ChainForkConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/logger";
 import {ForkPostBellatrix, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {parseExecutionPayloadAndBlobsBundle, reconstructFullBlockOrContents} from "@lodestar/state-transition";
+import {parseExecutionPayloadAndBlobsBundle, reconstructSignedBlockContents} from "@lodestar/state-transition";
 import {
   BLSPubkey,
   Epoch,
   ExecutionPayloadHeader,
   Root,
-  SignedBeaconBlockOrContents,
   SignedBlindedBeaconBlock,
+  SignedBlockContents,
   Slot,
   Wei,
   WithOptionalBytes,
@@ -182,7 +182,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
 
   async submitBlindedBlock(
     signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>
-  ): Promise<SignedBeaconBlockOrContents> {
+  ): Promise<SignedBlockContents> {
     const res = await this.api.submitBlindedBlock(
       {signedBlindedBlock},
       {retries: 2, requestWireFormat: this.sszSupported ? WireFormat.ssz : WireFormat.json}
@@ -195,8 +195,8 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
     // invalid signature, but there is no recourse to this anyway so lets just proceed and will
     // probably need diagonis if this block turns out to be invalid because of some bug
     //
-    const contents = blobsBundle ? {blobs: blobsBundle.blobs, kzgProofs: blobsBundle.proofs} : null;
-    return reconstructFullBlockOrContents(signedBlindedBlock.data, {executionPayload, contents});
+    const daContents = blobsBundle ? {blobs: blobsBundle.blobs, kzgProofs: blobsBundle.proofs} : null;
+    return reconstructSignedBlockContents(signedBlindedBlock.data, executionPayload, daContents);
   }
 
   async submitBlindedBlockNoResponse(signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>): Promise<void> {

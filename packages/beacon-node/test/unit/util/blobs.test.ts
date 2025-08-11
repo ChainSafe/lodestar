@@ -73,11 +73,16 @@ describe("computeDataColumnSidecars", () => {
     signedBeaconBlock.message.body.blobKzgCommitments = kzgCommitments;
 
     // Compute sidecars with provided cells
-    const sidecars = computeDataColumnSidecars(config, signedBeaconBlock, {
-      blobs,
-      kzgProofs,
-      cells,
-    });
+    const sidecars = computeDataColumnSidecars(
+      config,
+      signedBeaconBlock,
+      {
+        blobs,
+        kzgProofs,
+      },
+      undefined,
+      cells
+    );
 
     // Verify the results
     expect(sidecars.length).toBe(NUMBER_OF_COLUMNS);

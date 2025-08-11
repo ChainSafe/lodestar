@@ -199,17 +199,9 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
     }),
 
     blockProductionCaches: {
-      producedBlockRoot: register.gauge({
-        name: "beacon_blockroot_produced_cache_total",
-        help: "Count of cached produced block roots",
-      }),
-      producedBlindedBlockRoot: register.gauge({
-        name: "beacon_blinded_blockroot_produced_cache_total",
-        help: "Count of cached produced blinded block roots",
-      }),
-      producedContentsCache: register.gauge({
-        name: "beacon_contents_produced_cache_total",
-        help: "Count of cached produced blob contents",
+      producedResults: register.gauge({
+        name: "beacon_blockroot_produced_results_total",
+        help: "Count of cached produced results",
       }),
     },
 

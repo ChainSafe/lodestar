@@ -25,7 +25,7 @@ export type SignedBeaconBlock = ValueOf<typeof ssz.SignedBeaconBlock>;
 export type BeaconState = ValueOf<typeof ssz.BeaconState>;
 export type BlockContents = ValueOf<typeof ssz.BlockContents>;
 export type SignedBlockContents = ValueOf<typeof ssz.SignedBlockContents>;
-export type Contents = Omit<BlockContents, "block">;
+export type DAContents = ValueOf<typeof ssz.DAContents>;
 export type BlobAndProofV2 = {
   blob: Blob;
   proofs: KZGProof[];
