@@ -10,6 +10,7 @@ import {ResponseIncoming} from "@lodestar/reqresp";
 import {computeEpochAtSlot, computeTimeAtSlot} from "@lodestar/state-transition";
 import {
   AttesterSlashing,
+  Epoch,
   LightClientBootstrap,
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
@@ -32,7 +33,7 @@ import {ChainEvent, IBeaconChain} from "../chain/index.js";
 import {computeSubnetForDataColumnSidecar} from "../chain/validation/dataColumnSidecar.js";
 import {IBeaconDb} from "../db/interface.js";
 import {Metrics, RegistryMetricCreator} from "../metrics/index.js";
-import {IClock} from "../util/clock.js";
+import {ClockEvent, IClock} from "../util/clock.js";
 import {CustodyConfig} from "../util/dataColumns.js";
 import {PeerIdStr, peerIdToString} from "../util/peerId.js";
 import {promiseAllMaybeAsync} from "../util/promises.js";
@@ -139,6 +140,7 @@ export class Network implements INetwork {
     this.chain.emitter.on(ChainEvent.updateTargetCustodyGroupCount, this.onTargetGroupCountUpdated);
     this.chain.emitter.on(ChainEvent.publishDataColumns, this.onPublishDataColumns);
     this.chain.emitter.on(ChainEvent.updateStatus, this.onUpdateStatus);
+    this.chain.clock.addListener(ClockEvent.epoch, this.onClockEpoch.bind(this));
   }
 
   static async init({
@@ -235,6 +237,7 @@ export class Network implements INetwork {
     this.chain.emitter.off(ChainEvent.updateTargetCustodyGroupCount, this.onTargetGroupCountUpdated);
     this.chain.emitter.off(ChainEvent.publishDataColumns, this.onPublishDataColumns);
     this.chain.emitter.off(ChainEvent.updateStatus, this.onUpdateStatus);
+    this.chain.clock.off(ClockEvent.epoch, this.onClockEpoch);
     await this.core.close();
 
     // Used only for sleep() statements
@@ -269,6 +272,13 @@ export class Network implements INetwork {
    */
   async reStatusPeers(peers: PeerIdStr[]): Promise<void> {
     return this.core.reStatusPeers(peers);
+  }
+
+  private onClockEpoch(epoch: Epoch): void {
+    if (epoch === this.config.FULU_FORK_EPOCH) {
+      // post-fulu we should send our status v2 with earliestAvailableSlot
+      this.core.updateStatus(this.chain.getStatus());
+    }
   }
 
   searchUnknownSlotRoot(slotRoot: SlotRootHex, peer?: PeerIdStr): void {
