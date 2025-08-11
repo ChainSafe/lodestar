@@ -23,6 +23,13 @@ import {INetwork, WithOptionalBytes} from "../interface.js";
 import {PeerSyncMeta} from "../peers/peersData.js";
 
 export type PartialDownload = null | {blocks: BlockInput[]; pendingDataColumns: number[]};
+
+/**
+ * Download blocks and blobs (prefulu) or data columns (fulu) by range.
+ * returns:
+ *  - array of blocks with blobs or data columns
+ *  - pendingDataColumns: null if all data columns are present, or array of column indexes that are missing. Also null for prefulu
+ */
 export async function beaconBlocksMaybeBlobsByRange(
   config: ChainForkConfig,
   network: INetwork,
@@ -182,10 +189,14 @@ export async function beaconBlocksMaybeBlobsByRange(
 
   // Data is out of range, only request blocks
   const blocks = await network.sendBeaconBlocksByRange(peerId, request);
+  if (blocks.length === 0) {
+    throw Error(
+      `peerId=${peerId} peerClient=${peerClient} returned no blocks for BeaconBlocksByRangeRequest ${JSON.stringify(request)}`
+    );
+  }
   return {
     blocks: blocks.map((block) => getBlockInput.outOfRangeData(config, block.data, BlockSource.byRange)),
-    // TODO: (@matthewkeil) this was a merge conflict when rebased on electra. Should this be a null or an empty array?  Should it
-    //       depend on which fork we are in?  Need to revisit
+    // null means all data columns are present
     pendingDataColumns: null,
   };
 }
