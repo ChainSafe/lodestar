@@ -299,21 +299,21 @@ export function getBeaconBlockApi({
             });
           }
         }
-      } else if (isForkPostDeneb(blockForImport.blockData.fork)) {
+      } else if (
+        isForkPostDeneb(blockForImport.blockData.fork) &&
+        chain.emitter.listenerCount(routes.events.EventType.blobSidecar)
+      ) {
         const {blobs} = blockForImport.blockData as BlockInputBlobs;
-        metrics?.blobs.bySource.inc({source: BlobsSource.api}, blobs.length);
 
-        if (chain.emitter.listenerCount(routes.events.EventType.blobSidecar)) {
-          for (const blobSidecar of blobs) {
-            const {index, kzgCommitment} = blobSidecar;
-            chain.emitter.emit(routes.events.EventType.blobSidecar, {
-              blockRoot,
-              slot,
-              index,
-              kzgCommitment: toHex(kzgCommitment),
-              versionedHash: toHex(kzgCommitmentToVersionedHash(kzgCommitment)),
-            });
-          }
+        for (const blobSidecar of blobs) {
+          const {index, kzgCommitment} = blobSidecar;
+          chain.emitter.emit(routes.events.EventType.blobSidecar, {
+            blockRoot,
+            slot,
+            index,
+            kzgCommitment: toHex(kzgCommitment),
+            versionedHash: toHex(kzgCommitmentToVersionedHash(kzgCommitment)),
+          });
         }
       }
     }

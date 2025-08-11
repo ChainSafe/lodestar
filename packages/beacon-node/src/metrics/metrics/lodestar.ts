@@ -757,13 +757,6 @@ export function createLodestarMetrics(
         buckets: [1, 2, 3, 4, 6, 12],
       }),
     },
-    blobs: {
-      bySource: register.gauge<{source: BlobsSource}>({
-        name: "lodestar_blobs_by_source",
-        help: "Number of received blobs by source",
-        labelNames: ["source"],
-      }),
-    },
     importBlock: {
       persistBlockNoSerializedDataCount: register.gauge({
         name: "lodestar_import_block_persist_block_no_serialized_data_count",
