@@ -234,4 +234,78 @@ describe("network / peers / PeerManager", () => {
 
     expect(peerManager["connectedPeers"].get(peerId1.toString())?.metadata).toEqual(remoteMetadata);
   });
+
+  describe("safe identification of peers", () => {
+    it("skips identify when connection status is closing", async () => {
+      const {peerManager, libp2p} = await mockModules();
+      const conn = {
+        direction: "inbound",
+        status: "closing",
+        remotePeer: peerId1,
+      } as unknown as Connection;
+      const identifySpy = vi.spyOn(libp2p.services.identify, "identify");
+
+      await peerManager["onLibp2pPeerConnect"](new CustomEvent("evt", {detail: conn}));
+      // identify should not be called; we assert by absence of agentVersion on peerData
+      const pd = peerManager["connectedPeers"].get(peerId1.toString());
+      expect(pd).toBeDefined();
+      expect(pd?.agentVersion).toBeNull();
+      expect(identifySpy).not.toHaveBeenCalled();
+    });
+
+    it("skips identify when connection status is closed", async () => {
+      const {peerManager, libp2p} = await mockModules();
+      const conn = {
+        direction: "inbound",
+        status: "closed",
+        remotePeer: peerId1,
+      } as unknown as Connection;
+      const identifySpy = vi.spyOn(libp2p.services.identify, "identify");
+
+      await peerManager["onLibp2pPeerConnect"](new CustomEvent("evt", {detail: conn}));
+      // identify should not be called; we assert by absence of agentVersion on peerData
+      const pd = peerManager["connectedPeers"].get(peerId1.toString());
+      expect(pd).toBeDefined();
+      expect(pd?.agentVersion).toBeNull();
+      expect(identifySpy).not.toHaveBeenCalled();
+    });
+
+    it("aborts identify on connectionClose for same connection", async () => {
+      const {peerManager, libp2p} = await mockModules();
+
+      const conn = {
+        direction: "inbound",
+        status: "open",
+        remotePeer: peerId1,
+      } as unknown as Connection;
+      const identifySpy = vi.spyOn(libp2p.services.identify, "identify");
+
+      const p = peerManager["onLibp2pPeerConnect"](new CustomEvent("evt", {detail: conn}));
+
+      // fire the close event for the same connection to trigger abort
+      libp2p.services.components.events.dispatchEvent(new CustomEvent("connection:close", {detail: conn}));
+
+      await p;
+
+      expect(identifySpy).toHaveBeenCalledOnce();
+    });
+
+    it("successful identify stores agentVersion", async () => {
+      const {peerManager, libp2p} = await mockModules();
+      const conn = {
+        direction: "outbound",
+        status: "open",
+        remotePeer: peerId1,
+      } as unknown as Connection;
+      const identifySpy = vi
+        .spyOn(libp2p.services.identify, "identify")
+        .mockResolvedValue({agentVersion: "Lighthouse/v4.6.0"} as any);
+
+      await peerManager["onLibp2pPeerConnect"](new CustomEvent("evt", {detail: conn}));
+      const pd = peerManager["connectedPeers"].get(peerId1.toString());
+
+      expect(identifySpy).toHaveBeenCalledOnce();
+      expect(pd?.agentVersion).toBe("Lighthouse/v4.6.0");
+    });
+  });
 });
