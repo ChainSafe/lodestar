@@ -68,7 +68,6 @@ export async function* sendRequest(
   const RESP_TIMEOUT = opts?.respTimeoutMs ?? DEFAULT_RESP_TIMEOUT;
 
   const peerIdStrShort = prettyPrintPeerId(peerId);
-  // TODO: this is wrong, we should print out the version that's actually used
   const {method, encoding, version} = protocols[0];
   const logCtx = {method, version, encoding, client: peerClient, peer: peerIdStrShort, requestId};
 
@@ -118,6 +117,9 @@ export async function* sendRequest(
     const protocolId = stream.protocol ?? "unknown";
     const protocol = protocolsMap.get(protocolId);
     if (!protocol) throw Error(`dialProtocol selected unknown protocolId ${protocolId}`);
+
+    // Override with actual version that was negotiated
+    logCtx.version = protocol.version;
 
     logger.debug("Req  sending request", logCtx);
 
