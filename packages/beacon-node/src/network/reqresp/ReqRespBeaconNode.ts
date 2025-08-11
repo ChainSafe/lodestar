@@ -234,8 +234,6 @@ export class ReqRespBeaconNode extends ReqResp {
       // Follows pattern for altair:
       // Ref https://github.com/ethereum/consensus-specs/blob/v1.2.0/specs/altair/p2p-interface.md#transitioning-from-v1-to-v2
       [protocols.MetadataV3(fork, this.config), this.onMetadata.bind(this)],
-      // Similar reasoning to the above
-      [protocols.StatusV2(fork, this.config), this.onStatus.bind(this)],
       [protocols.BeaconBlocksByRangeV2(fork, this.config), this.getHandler(ReqRespMethod.BeaconBlocksByRange)],
       [protocols.BeaconBlocksByRootV2(fork, this.config), this.getHandler(ReqRespMethod.BeaconBlocksByRoot)],
     ];
@@ -283,6 +281,7 @@ export class ReqRespBeaconNode extends ReqResp {
       );
     } else {
       protocolsAtFork.push(
+        [protocols.StatusV2(fork, this.config), this.onStatus.bind(this)],
         [
           protocols.DataColumnSidecarsByRoot(fork, this.config),
           this.getHandler(ReqRespMethod.DataColumnSidecarsByRoot),
