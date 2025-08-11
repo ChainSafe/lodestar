@@ -5,9 +5,9 @@ import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
-import {ForkSeq, SYNC_MESSAGE_DUE_MS} from "@lodestar/params";
+import {ForkSeq} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
-import {computeEpochAtSlot, computeTimeAtSlot} from "@lodestar/state-transition";
+import {computeEpochAtSlot, computeTimeAtSlot, getSlotComponentDuration} from "@lodestar/state-transition";
 import {
   AttesterSlashing,
   LightClientBootstrap,
@@ -621,7 +621,7 @@ export class Network implements INetwork {
     // TODO: Review is OK to remove if (this.hasAttachedSyncCommitteeMember())
 
     try {
-      // messages SHOULD be broadcast after 4s of slot has transpired
+      // messages SHOULD be broadcast after SYNC_MESSAGE_DUE_BPS of slot has transpired
       // https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#sync-committee
       await this.waitForSyncMessageCutoff(finalityUpdate.signatureSlot);
       await this.publishLightClientFinalityUpdate(finalityUpdate);
@@ -638,7 +638,7 @@ export class Network implements INetwork {
     // TODO: Review is OK to remove if (this.hasAttachedSyncCommitteeMember())
 
     try {
-      // messages SHOULD be broadcast after 4s of slot has transpired
+      // messages SHOULD be broadcast after SYNC_MESSAGE_DUE_BPS of slot has transpired
       // https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#sync-committee
       await this.waitForSyncMessageCutoff(optimisticUpdate.signatureSlot);
       await this.publishLightClientOptimisticUpdate(optimisticUpdate);
@@ -652,7 +652,9 @@ export class Network implements INetwork {
   };
 
   private waitForSyncMessageCutoff = async (slot: number): Promise<void> => {
-    const secAtSlot = computeTimeAtSlot(this.config, slot, this.chain.genesisTime) + SYNC_MESSAGE_DUE_MS / 1000;
+    const secAtSlot =
+      computeTimeAtSlot(this.config, slot, this.chain.genesisTime) +
+      getSlotComponentDuration(this.config, this.config.SYNC_MESSAGE_DUE_BPS) / 1000;
     const msToSlot = secAtSlot * 1000 - Date.now();
     await sleep(msToSlot, this.controller.signal);
   };

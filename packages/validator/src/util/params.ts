@@ -143,10 +143,17 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
 
     // Time parameters
     SECONDS_PER_SLOT: true,
+    SLOT_DURATION_MS: true,
     SECONDS_PER_ETH1_BLOCK: true,
     MIN_VALIDATOR_WITHDRAWABILITY_DELAY: true,
     SHARD_COMMITTEE_PERIOD: true,
     ETH1_FOLLOW_DISTANCE: true,
+    PROPOSER_REORG_CUTOFF_BPS: true,
+    ATTESTATION_DUE_BPS: true,
+    AGGREGRATE_DUE_BPS: true,
+    // Altair
+    SYNC_MESSAGE_DUE_BPS: altairForkRelevant,
+    CONTRIBUTION_DUE_BPS: altairForkRelevant,
 
     // Validator cycle
     INACTIVITY_SCORE_BIAS: true,
@@ -224,13 +231,6 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     MAX_DEPOSITS: true,
     MAX_VOLUNTARY_EXITS: true,
 
-    // Fork choice
-    LATE_BLOCK_CUTOFF_MS: true,
-
-    // Validator duties
-    ATTESTATION_DUE_MS: true,
-    AGGREGATE_DUE_MS: true,
-
     // # AltairPreset
     /////////////////
 
@@ -241,8 +241,6 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR: altairForkRelevant,
     MIN_SYNC_COMMITTEE_PARTICIPANTS: false, // Only relevant for lightclients
     UPDATE_TIMEOUT: false, // Only relevant for lightclients
-    SYNC_MESSAGE_DUE_MS: false, // Only relevant for lightclients
-    CONTRIBUTION_DUE_MS: false, // Only relevant for lightclients
 
     // # BellatrixPreset
     /////////////////

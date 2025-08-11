@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {LATE_BLOCK_CUTOFF_MS} from "@lodestar/params";
+import {getSlotComponentDuration} from "@lodestar/state-transition";
 import {Root, RootHex, deneb} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {Logger, fromHex, pruneSetToMax, toRootHex} from "@lodestar/utils";
@@ -47,7 +47,7 @@ export class UnknownBlockSync {
     private readonly opts?: SyncOptions
   ) {
     this.maxPendingBlocks = opts?.maxPendingBlocks ?? MAX_PENDING_BLOCKS;
-    this.proposerBoostSecWindow = LATE_BLOCK_CUTOFF_MS / 1000;
+    this.proposerBoostSecWindow = getSlotComponentDuration(config, config.PROPOSER_REORG_CUTOFF_BPS) / 1000;
 
     if (metrics) {
       metrics.syncUnknownBlock.pendingBlocks.addCollect(() =>

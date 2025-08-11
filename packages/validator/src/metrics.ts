@@ -82,25 +82,25 @@ export function getMetrics(register: MetricsRegisterExtra, gitData: LodestarGitD
 
     syncCommitteeStepCallProduceMessage: register.histogram({
       name: "vc_sync_committee_step_call_produce_message_seconds",
-      help: "Time between SYNC_MESSAGE_DUE_MS of slot and call produce message",
+      help: "Time between SYNC_MESSAGE_DUE_BPS of slot and call produce message",
       // Max wait time is 4s of slot
       buckets: [0.5, 1, 2, 3, 6, 12],
     }),
     syncCommitteeStepCallPublishMessage: register.histogram({
       name: "vc_sync_committee_step_call_publish_message_seconds",
-      help: "Time between SYNC_MESSAGE_DUE_MS of slot and call publish message",
+      help: "Time between SYNC_MESSAGE_DUE_BPS of slot and call publish message",
       buckets: [0.5, 1, 2, 3, 6, 12],
     }),
 
     syncCommitteeStepCallProduceAggregate: register.histogram({
       name: "vc_sync_committee_step_call_produce_aggregate_seconds",
-      help: "Time between CONTRIBUTION_DUE_MS of slot and call produce aggregate",
+      help: "Time between CONTRIBUTION_DUE_BPS of slot and call produce aggregate",
       // Min wait time is 8s of slot
       buckets: [0.5, 1, 2, 3, 6, 12],
     }),
     syncCommitteeStepCallPublishAggregate: register.histogram({
       name: "vc_sync_committee_step_call_publish_aggregate_seconds",
-      help: "Time between CONTRIBUTION_DUE_MS of slot and call publish aggregate",
+      help: "Time between CONTRIBUTION_DUE_BPS of slot and call publish aggregate",
       buckets: [0.5, 1, 2, 3, 6, 12],
     }),
 

@@ -1,6 +1,6 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {AGGREGATE_DUE_MS, ATTESTATION_DUE_MS, ForkSeq} from "@lodestar/params";
+import {ForkSeq} from "@lodestar/params";
 import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@lodestar/state-transition";
 import {BLSSignature, SignedAggregateAndProof, SingleAttestation, Slot, phase0, ssz} from "@lodestar/types";
 import {prettyBytes, sleep, toRootHex} from "@lodestar/utils";
@@ -89,12 +89,14 @@ export class AttestationService {
 
     // A validator should create and broadcast the attestation to the associated attestation subnet when either
     // (a) the validator has received a valid block from the expected block proposer for the assigned slot or
-    // (b) 4s (ATTESTATION_DUE_MS) of the slot has transpired -- whichever comes first.
+    // (b) 33.33% (ATTESTATION_DUE_BPS) of the slot has transpired -- whichever comes first.
     await Promise.race([
-      sleep(this.clock.msToSlot(slot, ATTESTATION_DUE_MS), signal),
+      sleep(this.clock.msToSlot(slot, this.config.ATTESTATION_DUE_BPS), signal),
       this.emitter.waitForBlockSlot(slot),
     ]);
-    this.metrics?.attesterStepCallProduceAttestation.observe(this.clock.secFromSlot(slot, ATTESTATION_DUE_MS));
+    this.metrics?.attesterStepCallProduceAttestation.observe(
+      this.clock.secFromSlot(slot, this.config.ATTESTATION_DUE_BPS)
+    );
 
     if (this.opts?.disableAttestationGrouping) {
       // Attestation service grouping optimization must be disabled in a distributed validator cluster as
@@ -136,9 +138,11 @@ export class AttestationService {
     await this.signAndPublishAttestations(slot, attestation, dutiesSameCommittee);
 
     // Step 2. after all attestations are submitted, make an aggregate.
-    // First, wait until the `AGGREGATE_DUE_MS` (8 seconds into the slot)
-    await sleep(this.clock.msToSlot(slot, AGGREGATE_DUE_MS), signal);
-    this.metrics?.attesterStepCallProduceAggregate.observe(this.clock.secFromSlot(slot, AGGREGATE_DUE_MS));
+    // First, wait until the `AGGREGATE_DUE_BPS` (66.66% into the slot)
+    await sleep(this.clock.msToSlot(slot, this.config.AGGREGRATE_DUE_BPS), signal);
+    this.metrics?.attesterStepCallProduceAggregate.observe(
+      this.clock.secFromSlot(slot, this.config.AGGREGRATE_DUE_BPS)
+    );
 
     // Then download, sign and publish a `SignedAggregateAndProof` for each
     // validator that is elected to aggregate for this `slot` and `committeeIndex`.
@@ -157,9 +161,11 @@ export class AttestationService {
     await this.signAndPublishAttestations(slot, attestationNoCommittee, dutiesAll);
 
     // Step 2. after all attestations are submitted, make an aggregate.
-    // First, wait until the `AGGREGATE_DUE_MS` (8 seconds into the slot)
-    await sleep(this.clock.msToSlot(slot, AGGREGATE_DUE_MS), signal);
-    this.metrics?.attesterStepCallProduceAggregate.observe(this.clock.secFromSlot(slot, AGGREGATE_DUE_MS));
+    // First, wait until the `AGGREGATE_DUE_BPS` (66% into the slot)
+    await sleep(this.clock.msToSlot(slot, this.config.AGGREGRATE_DUE_BPS), signal);
+    this.metrics?.attesterStepCallProduceAggregate.observe(
+      this.clock.secFromSlot(slot, this.config.AGGREGRATE_DUE_BPS)
+    );
 
     const dutiesByCommitteeIndex = groupAttDutiesByCommitteeIndex(dutiesAll);
     const isPostElectra = this.config.getForkSeq(slot) >= ForkSeq.electra;
@@ -217,12 +223,12 @@ export class AttestationService {
       })
     );
 
-    // signAndPublishAttestations() may be called before the 4s into the slot if the block was received early.
+    // signAndPublishAttestations() may be called before the 33% cutoff time if the block was received early.
     // If we produced the block or we got the block sooner than our peers, our attestations can be dropped because
     // they reach our peers before the block. To prevent that, we wait 2 extra seconds AFTER block arrival, but
-    // never beyond the 4s cutoff time.
+    // never beyond the 33% cutoff time.
     // https://github.com/status-im/nimbus-eth2/blob/7b64c1dce4392731a4a59ee3a36caef2e0a8357a/beacon_chain/validators/validator_duties.nim#L1123
-    const msToCutoffTime = this.clock.msToSlot(slot, ATTESTATION_DUE_MS);
+    const msToCutoffTime = this.clock.msToSlot(slot, this.config.ATTESTATION_DUE_BPS);
     // submitting attestations asap to avoid busy time at around 1/3 of slot
     const afterBlockDelayMs =
       1000 *
@@ -230,7 +236,9 @@ export class AttestationService {
       (this.opts?.afterBlockDelaySlotFraction ?? DEFAULT_AFTER_BLOCK_DELAY_SLOT_FRACTION);
     await sleep(Math.min(msToCutoffTime, afterBlockDelayMs));
 
-    this.metrics?.attesterStepCallPublishAttestation.observe(this.clock.secFromSlot(slot, ATTESTATION_DUE_MS));
+    this.metrics?.attesterStepCallPublishAttestation.observe(
+      this.clock.secFromSlot(slot, this.config.ATTESTATION_DUE_BPS)
+    );
 
     // Step 2. Publish all `Attestations` in one go
     const logCtx = {
@@ -305,7 +313,9 @@ export class AttestationService {
       })
     );
 
-    this.metrics?.attesterStepCallPublishAggregate.observe(this.clock.secFromSlot(attestation.slot, AGGREGATE_DUE_MS));
+    this.metrics?.attesterStepCallPublishAggregate.observe(
+      this.clock.secFromSlot(attestation.slot, this.config.AGGREGRATE_DUE_BPS)
+    );
 
     if (signedAggregateAndProofs.length > 0) {
       try {
@@ -349,12 +359,12 @@ export class AttestationService {
 
     const res = await Promise.race([
       this.api.validator.submitBeaconCommitteeSelections({selections: partialSelections}),
-      // Exit attestation aggregation flow if there is no response after 4s into the slot as
+      // Exit attestation aggregation flow if there is no response after 33% into the slot as
       // beacon node would likely not have enough time to prepare an aggregate attestation.
       // Note that the aggregations flow is not explicitly exited but rather will be skipped
       // due to the fact that calculation of `is_aggregator` in AttestationDutiesService is not done
       // and selectionProof is set to null, meaning no validator will be considered an aggregator.
-      sleep(this.clock.msToSlot(slot, AGGREGATE_DUE_MS), signal),
+      sleep(this.clock.msToSlot(slot, this.config.AGGREGRATE_DUE_BPS), signal),
     ]);
 
     if (!res) {

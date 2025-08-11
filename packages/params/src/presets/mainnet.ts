@@ -85,18 +85,6 @@ export const mainnetPreset: BeaconPreset = {
   // 2**4 (= 16)
   MAX_VOLUNTARY_EXITS: 16,
 
-  // Fork choice
-  // ---------------------------------------------------------------
-  // 4000ms
-  LATE_BLOCK_CUTOFF_MS: 4000,
-
-  // Validator duties
-  // ---------------------------------------------------------------
-  // 4000ms
-  ATTESTATION_DUE_MS: 4000,
-  // 8000ms
-  AGGREGATE_DUE_MS: 8000,
-
   // ALTAIR
   /////////
   SYNC_COMMITTEE_SIZE: 512,
@@ -106,8 +94,6 @@ export const mainnetPreset: BeaconPreset = {
   PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR: 2,
   MIN_SYNC_COMMITTEE_PARTICIPANTS: 1,
   UPDATE_TIMEOUT: 8192,
-  SYNC_MESSAGE_DUE_MS: 4000,
-  CONTRIBUTION_DUE_MS: 8000,
 
   // BELLATRIX
   ////////////

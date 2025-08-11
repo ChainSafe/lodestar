@@ -135,8 +135,7 @@ export class AttestationDutiesService {
     }
 
     // during the 1 / 3 of epoch, last block of epoch may come
-    // TODO: Consider express this in milliseconds. See https://github.com/ChainSafe/lodestar/issues/8013
-    await sleep(this.clock.msToSlot(slot + 1 / 3), signal);
+    await sleep(this.clock.msToSlot(slot, 3333), signal);
 
     const nextEpoch = computeEpochAtSlot(slot) + 1;
     const dependentRoot = this.dutiesByIndexByEpoch.get(nextEpoch)?.dependentRoot;

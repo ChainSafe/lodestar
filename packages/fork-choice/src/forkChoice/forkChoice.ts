@@ -1,5 +1,5 @@
 import {ChainConfig, ChainForkConfig} from "@lodestar/config";
-import {LATE_BLOCK_CUTOFF_MS, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   DataAvailabilityStatus,
@@ -9,6 +9,7 @@ import {
   computeSlotsSinceEpochStart,
   computeStartSlotAtEpoch,
   getAttesterSlashableIndices,
+  getSlotComponentDuration,
   isExecutionBlockBodyType,
   isExecutionEnabled,
   isExecutionStateType,
@@ -1192,7 +1193,8 @@ export class ForkChoice implements IForkChoice {
    * Child class can overwrite this for testing purpose.
    */
   protected isBlockTimely(block: BeaconBlock, blockDelaySec: number): boolean {
-    const isBeforeLateBlockCutoff = blockDelaySec * 1000 < LATE_BLOCK_CUTOFF_MS;
+    const isBeforeLateBlockCutoff =
+      blockDelaySec * 1000 < getSlotComponentDuration(this.config, this.config.PROPOSER_REORG_CUTOFF_BPS);
     return this.fcStore.currentSlot === block.slot && isBeforeLateBlockCutoff;
   }
 
@@ -1200,7 +1202,7 @@ export class ForkChoice implements IForkChoice {
    * https://github.com/ethereum/consensus-specs/blob/v1.5.0/specs/phase0/fork-choice.md#is_proposing_on_time
    */
   private isProposingOnTime(secFromSlot: number): boolean {
-    const proposerReorgCutoff = LATE_BLOCK_CUTOFF_MS / 2;
+    const proposerReorgCutoff = getSlotComponentDuration(this.config, this.config.PROPOSER_REORG_CUTOFF_BPS) / 2;
     return secFromSlot * 1000 <= proposerReorgCutoff;
   }
 

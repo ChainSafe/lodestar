@@ -1,7 +1,7 @@
 import {fromHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
-import {LATE_BLOCK_CUTOFF_MS, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {DataAvailabilityStatus} from "@lodestar/state-transition";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {DataAvailabilityStatus, getSlotComponentDuration} from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {beforeEach, describe, expect, it} from "vitest";
@@ -204,7 +204,7 @@ describe("Forkchoice / GetProposerHead", () => {
       parentBlock: {...baseParentHeadBlock, weight: 211},
       headBlock: {...baseHeadBlock},
       expectReorg: false,
-      secFromSlot: LATE_BLOCK_CUTOFF_MS / 1000 / 2 + 1,
+      secFromSlot: getSlotComponentDuration(config, config.PROPOSER_REORG_CUTOFF_BPS) / 1000 / 2 + 1,
       expectedNotReorgedReason: NotReorgedReason.NotProposingOnTime,
     },
   ];
