@@ -73,46 +73,47 @@ export function strip0xPrefix(hex: string): string {
   return hex.startsWith("0x") ? hex.slice(2) : hex;
 }
 
-export function getCustodyGroupIncrements(custodyGroups: number[]): string[] {
-  if (custodyGroups.length === 0) {
+export function groupSequentialIndices(indices: number[]): string[] {
+  if (indices.length === 0) {
     return [];
   }
 
+  // Get unique values and sort them
+  const uniqueValues = Array.from(new Set(indices)).sort((a, b) => a - b);
+
   const result: string[] = [];
-  let start = custodyGroups[0];
-  let end = custodyGroups[0];
+  let start = uniqueValues[0];
+  let end = uniqueValues[0];
 
-  for (let i = 1; i < custodyGroups.length; i++) {
-    const current = custodyGroups[i];
+  for (let i = 1; i < uniqueValues.length; i++) {
+    const current = uniqueValues[i];
 
-    // If current number is consecutive to the previous one
     if (current === end + 1) {
-      end = current;
+      end = current; // extend the range
     } else {
-      // We have a break in the sequence, so add the current range
-      if (start === end) {
-        result.push(start.toString());
-      } else {
-        result.push(`${start}-${end}`);
-      }
-
-      // Start a new range
+      result.push(start === end ? `${start}` : `${start}-${end}`);
       start = current;
       end = current;
     }
   }
 
-  // Add the final range
-  if (start === end) {
-    result.push(start.toString());
-  } else {
-    result.push(`${start}-${end}`);
-  }
+  // Push the last range
+  result.push(start === end ? `${start}` : `${start}-${end}`);
 
   return result;
 }
 
-export function prettyPrintCustodyGroups(custodyGroups: number[]): string {
-  const increments = getCustodyGroupIncrements(custodyGroups);
+/**
+ * Pretty print indices from an array of numbers.
+ *
+ * example:
+ * ```ts
+ * const indices = [1, 3, 109, 110, 111, 112, 113, 127];
+ * console.log(prettyPrintIndices(indices));
+ * // `1,3,110-113,127`
+ * ```
+ */
+export function prettyPrintIndices(indices: number[]): string {
+  const increments = groupSequentialIndices(indices);
   return `[${increments.join(", ")}]`;
 }
