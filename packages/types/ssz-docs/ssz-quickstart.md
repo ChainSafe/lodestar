@@ -333,10 +333,12 @@ Lodestar + TypeScript ensures these mistakes never make it to runtime — they�
 
 ```
 
-#### How to read tthe above diagram
+#### How to read the above diagram
 
 1. Ethereum Spec Types → Definitions from the Ethereum consensus spec (Phase0, Altair, Bellatrix, etc.).
 2. Lodestar TypeScript Interfaces → These will mirror the spec but in TypeScript form.
 3. SSZ Schema → Maps each interface to its SSZ serialization/deserialization rules.
 4. TypeScript Compiler → Enforces correctness at compile-time.
 5. Developer Experience → What you benefit from (type correctness, autocomplete, no silent runtime bugs).
+
+### Serialization and Deserialization
