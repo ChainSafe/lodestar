@@ -85,6 +85,8 @@ export const requestSszTypeByMethod: (
 ) => {
   [K in ReqRespMethod]: RequestBodyByMethod[K] extends null ? null : Type<RequestBodyByMethod[K]>;
 } = (fork, config) => ({
+  // Status type should ideally be determined by protocol version and not fork but since
+  // we only start using the new status version after the fork this is not an issue
   [ReqRespMethod.Status]: sszTypesFor(fork).Status,
   [ReqRespMethod.Goodbye]: ssz.phase0.Goodbye,
   [ReqRespMethod.Ping]: ssz.phase0.Ping,

@@ -25,7 +25,8 @@ describe("sync / range / peerBalancer", () => {
       custodyColumns: number[][];
       targetEpochs: number[];
       earliestAvailableSlots: (number | undefined | null)[];
-      expected: PeerIdStr;
+      maxConcurrentRequests?: number;
+      expected?: PeerIdStr;
     }[] = [
       {
         isFulu: true,
@@ -69,7 +70,20 @@ describe("sync / range / peerBalancer", () => {
       },
       {
         isFulu: true,
-        // peer3 and peer4 are free but peer4 has more clumns
+        // same to above but it should not return any peers
+        // peer3 is free but don't have any custody columns
+        // peer 4 has unrelated custody column
+        // peer 2 is busy downloading batch1 and maxConcurrentRequests is 1
+        // test custody columns condition and maxConcurrentRequests condition
+        custodyColumns: [[], [0, 1, 2, 3], [4, 5, 6, 7], [100]],
+        targetEpochs: [1, 2, 3, 4],
+        earliestAvailableSlots: [0, 0, 0, 0],
+        maxConcurrentRequests: 1,
+        expected: undefined,
+      },
+      {
+        isFulu: true,
+        // peer3 and peer4 are free but peer4 has more columns
         // test custody columns condition
         custodyColumns: [[], [0, 1, 2, 3], [2, 3, 4, 5], [1, 2, 3, 4]],
         targetEpochs: [1, 2, 3, 4],
@@ -95,7 +109,10 @@ describe("sync / range / peerBalancer", () => {
         expected: peer3.peerId,
       },
     ];
-    for (const [i, {isFulu, custodyColumns, targetEpochs, earliestAvailableSlots, expected}] of testCases.entries()) {
+    for (const [
+      i,
+      {isFulu, custodyColumns, targetEpochs, earliestAvailableSlots, maxConcurrentRequests, expected},
+    ] of testCases.entries()) {
       it(`test case ${i}`, async () => {
         const columnsByPeer = new Map<PeerIdStr, {custodyColumns: number[]}>();
         for (const [i, custody] of custodyColumns.entries()) {
@@ -133,7 +150,7 @@ describe("sync / range / peerBalancer", () => {
         // peer2 is busy downloading batch1
         batch1.startDownloading(peer2.peerId);
 
-        const peerBalancer = new ChainPeersBalancer(peerInfos, [batch0, batch1], custodyConfig);
+        const peerBalancer = new ChainPeersBalancer(peerInfos, [batch0, batch1], custodyConfig, maxConcurrentRequests);
         expect(peerBalancer.bestPeerToRetryBatch(batch0)?.peerId).toBe(expected);
       });
     }

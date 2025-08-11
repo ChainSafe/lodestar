@@ -317,11 +317,6 @@ export class PeerManager {
   private onPing(peer: PeerId, seqNumber: phase0.Ping): void {
     // if the sequence number is unknown update the peer's metadata
     const metadata = this.connectedPeers.get(peer.toString())?.metadata;
-    this.logger.debug("onPing", {
-      seqNumber,
-      metaSeqNumber: metadata?.seqNumber,
-      cond: !metadata || metadata.seqNumber < seqNumber,
-    });
     if (!metadata || metadata.seqNumber < seqNumber) {
       void this.requestMetadata(peer);
     }
@@ -337,7 +332,7 @@ export class PeerManager {
     this.logger.debug("onMetadata", {
       peer: peer.toString(),
       peerData: peerData !== undefined,
-      custodyGroupCount: (metadata as Partial<fulu.Metadata>).custodyGroupCount,
+      custodyGroupCount: (metadata as Partial<fulu.Metadata>)?.custodyGroupCount,
     });
     if (peerData) {
       const oldMetadata = peerData.metadata;
@@ -482,7 +477,7 @@ export class PeerManager {
     try {
       this.onMetadata(peer, await this.reqResp.sendMetadata(peer));
     } catch (e) {
-      this.logger.verbose("invalid requestMetadata response", {peer: prettyPrintPeerIdStr(peerIdStr)}, e as Error);
+      this.logger.verbose("invalid requestMetadata", {peer: prettyPrintPeerIdStr(peerIdStr)}, e as Error);
       // TODO: Downvote peer here or in the reqResp layer
     }
   }
@@ -801,7 +796,7 @@ export class PeerManager {
     const peerIdStr = peer.toString();
     try {
       this.metrics?.peerGoodbyeSent.inc({reason});
-      this.logger.debug("disconnected peer", {reason, peerId: prettyPrintPeerId(peer)});
+      this.logger.debug("initiating goodbyeAndDisconnect peer", {reason, peerId: prettyPrintPeerId(peer)});
 
       const conn = getConnection(this.libp2p, peerIdStr);
       if (conn && Date.now() - conn.timeline.open > LONG_PEER_CONNECTION_MS) {

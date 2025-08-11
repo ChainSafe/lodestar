@@ -3,14 +3,7 @@ import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
-import {
-  ForkSeq,
-  GENESIS_SLOT,
-  NUMBER_OF_CUSTODY_GROUPS,
-  SLOTS_PER_EPOCH,
-  isForkPostElectra,
-  isForkPostFulu,
-} from "@lodestar/params";
+import {ForkSeq, GENESIS_SLOT, NUMBER_OF_CUSTODY_GROUPS, SLOTS_PER_EPOCH, isForkPostElectra} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   BeaconStateElectra,
@@ -855,7 +848,7 @@ export class BeaconChain implements IBeaconChain {
     const head = this.forkChoice.getHead();
     const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
     const boundary = this.config.getForkBoundaryAtEpoch(this.clock.currentEpoch);
-    const status = {
+    return {
       // fork_digest: The node's ForkDigest (compute_fork_digest(current_fork_version, genesis_validators_root)) where
       // - current_fork_version is the fork version at the node's current epoch defined by the wall-clock time (not necessarily the epoch to which the node is sync)
       // - genesis_validators_root is the static Root found in state.genesis_validators_root
@@ -867,13 +860,8 @@ export class BeaconChain implements IBeaconChain {
       // TODO: PERFORMANCE: Memoize to prevent re-computing every time
       headRoot: fromHex(head.blockRoot),
       headSlot: head.slot,
+      earliestAvailableSlot: this._earliestAvailableSlot,
     };
-
-    if (isForkPostFulu(boundary.fork)) {
-      (status as fulu.Status).earliestAvailableSlot = this._earliestAvailableSlot;
-    }
-
-    return status;
   }
 
   recomputeForkChoiceHead(caller: ForkchoiceCaller): ProtoBlock {

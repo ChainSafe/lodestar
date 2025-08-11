@@ -10,8 +10,12 @@ export const MIN_FINALIZED_CHAIN_VALIDATED_EPOCHS = 10;
 // TODO: change it back to 5 when this issue is implemented https://github.com/ChainSafe/lodestar/issues/8033
 export const MAX_BATCH_DOWNLOAD_ATTEMPTS = 20;
 
-/** Consider batch faulty after downloading and processing this number of times */
-export const MAX_BATCH_PROCESSING_ATTEMPTS = 3;
+/**
+ * Consider batch faulty after downloading and processing this number of times
+ * as in https://github.com/ChainSafe/lodestar/issues/8147 we cannot proceed the sync chain if a peer return 0 blocks without error
+ * in that case we should throw error and `RangeSync` should remove that error chain and add a new one.
+ **/
+export const MAX_BATCH_PROCESSING_ATTEMPTS = 0;
 
 /**
  * Number of slots to offset batches.
@@ -51,3 +55,16 @@ export const EPOCHS_PER_BATCH = 1;
  * TODO: When switching branches usually all batches in AwaitingProcessing are dropped, could it be optimized?
  */
 export const BATCH_BUFFER_SIZE = Math.ceil(10 / EPOCHS_PER_BATCH);
+
+/**
+ * Maximum number of concurrent requests to perform with a SyncChain.
+ * This is according to the spec https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/p2p-interface.md
+ */
+export const MAX_CONCURRENT_REQUESTS = 2;
+
+/**
+ * Maximum number of epochs to download ahead when syncing.
+ * In fulu, to fully process a batch we may need to download columns from multiple peers
+ * so having this constant too big is a waste of resources and peers may rate limit us.
+ */
+export const MAX_LOOK_AHEAD_EPOCHS = 2;

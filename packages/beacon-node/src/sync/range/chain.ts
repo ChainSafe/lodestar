@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName} from "@lodestar/params";
+import {ForkName, isForkPostFulu} from "@lodestar/params";
 import {Epoch, Root, Slot, phase0} from "@lodestar/types";
 import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
 import {BlockInput, BlockInputDataColumns, BlockInputType} from "../../chain/blocks/types.js";
@@ -11,7 +11,7 @@ import {CustodyConfig} from "../../util/dataColumns.js";
 import {ItTrigger} from "../../util/itTrigger.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {wrapError} from "../../util/wrapError.js";
-import {BATCH_BUFFER_SIZE, EPOCHS_PER_BATCH} from "../constants.js";
+import {BATCH_BUFFER_SIZE, EPOCHS_PER_BATCH, MAX_LOOK_AHEAD_EPOCHS} from "../constants.js";
 import {RangeSyncType} from "../utils/remoteSyncType.js";
 import {Batch, BatchError, BatchErrorCode, BatchMetadata, BatchStatus} from "./batch.js";
 import {
@@ -408,6 +408,16 @@ export class SyncChain {
       return null;
     }
 
+    // if last processed epoch is n, we don't want to request batches with epoch > n + MAX_LOOK_AHEAD_EPOCHS
+    // we should have enough batches to process in the buffer: n + 1, ..., n + MAX_LOOK_AHEAD_EPOCHS
+    // let's focus on redownloading these batches first because it may have to reach different peers to get enough sampled columns
+    if (
+      batches.length > 0 &&
+      Math.max(...batches.map((b) => b.startEpoch)) >= this.lastEpochWithProcessBlocks + MAX_LOOK_AHEAD_EPOCHS
+    ) {
+      return null;
+    }
+
     // This line decides the starting epoch of the next batch. MUST ensure no duplicate batch for the same startEpoch
     const startEpoch = toBeDownloadedStartEpoch(batches, this.lastEpochWithProcessBlocks);
 
@@ -460,7 +470,7 @@ export class SyncChain {
             hasPostDenebBlocks ||= blockInput.type === BlockInputType.availableData;
             return hasPostDenebBlocks
               ? acc +
-                  (blockInput.type === BlockInputType.availableData && blockInput.blockData.fork === ForkName.fulu
+                  (blockInput.type === BlockInputType.availableData && isForkPostFulu(blockInput.blockData.fork)
                     ? (blockInput.blockData as BlockInputDataColumns).dataColumns.length
                     : 0)
               : 0;
@@ -583,6 +593,10 @@ export class SyncChain {
     }
 
     this.lastEpochWithProcessBlocks = newLastEpochWithProcessBlocks;
+    this.logger.verbose("Advanced chain", {
+      id: this.logId,
+      lastEpochWithProcessBlocks: this.lastEpochWithProcessBlocks,
+    });
   }
 
   private scrapeMetrics(metrics: Metrics): void {
