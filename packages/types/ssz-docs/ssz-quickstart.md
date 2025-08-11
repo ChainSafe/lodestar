@@ -241,4 +241,25 @@ attestation.data.slot = 123456;
 attestation.aggregationBits = new Uint8Array([1, 0, 1]);
 ```
 
-### TypeScript Safety
+### TypeScript Safety with Lodestar SSZ Library.
+
+One of the biggest advantages of using Lodestar’s SSZ library in TypeScript is its strong type safety.
+Ethereum’s data structures (like Attestation, Block, or Validator) are deeply nested and have strict formats — TypeScript + Lodestar ensures you can work with them without guessing field names or data types.
+
+#### What Type Safety Means Here
+
+It has compiler checks that ensure values match expected types.
+When we say “TypeScript safety,” we mean:
+-Correct types only – you cannot assign a wrong type to a field.
+-Autocomplete support – your IDE (e.g., VSCode) can suggest valid field names and their types.
+-Compile-time error checking – mistakes are caught before you run the code.
+-Confidence when refactoring – if a field changes, TypeScript will highlight every affected place.
+-It has compiler checks that ensure values match expected types.
+
+#### How Lodestar ENhances TYpescript Safety
+
+The Lodestar SSZ library:
+
+-Ships with predefined TypeScript interfaces for all Ethereum consensus types.
+-Links these interfaces directly to SSZ serialization/deserialization methods.
+-Enforces nested type correctness — even inside deeply nested objects like attestation.data.source.epoch.
