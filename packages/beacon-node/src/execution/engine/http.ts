@@ -10,7 +10,6 @@ import {
   IJsonRpcHttpClient,
   JsonRpcHttpClientEvent,
   ReqOpts,
-  parseJsonRpcErrorCode,
 } from "../../eth1/provider/jsonRpcHttpClient.js";
 import {bytesToData, numToQuantity} from "../../eth1/provider/utils.js";
 import {Metrics} from "../../metrics/index.js";
@@ -108,11 +107,6 @@ const QUEUE_MAX_LENGTH = EPOCHS_PER_BATCH * SLOTS_PER_EPOCH * 2;
  */
 const MAX_VERSIONED_HASHES = 128;
 
-/**
- * retry only after a day may be
- */
-const GET_BLOBS_RETRY_TIMEOUT = 256 * 32 * 12;
-
 // Define static options once to prevent extra allocations
 const notifyNewPayloadOpts: ReqOpts = {routeId: "notifyNewPayload"};
 const forkchoiceUpdatedV1Opts: ReqOpts = {routeId: "forkchoiceUpdated"};
@@ -129,7 +123,6 @@ const getPayloadOpts: ReqOpts = {routeId: "getPayload"};
  */
 export class ExecutionEngineHttp implements IExecutionEngine {
   private logger: Logger;
-  private lastGetBlobsV1ErrorTimeSec = 0;
 
   // The default state is ONLINE, it will be updated to SYNCING once we receive the first payload
   // This assumption is better than the OFFLINE state, since we can't be sure if the EL is offline and being offline may trigger some notifications
@@ -507,63 +500,36 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   }
 
   private async getBlobsV1(versionedHashesHex: string[]) {
-    const timeNowSec = Date.now() / 1000;
-    const timeSinceLastFail = timeNowSec - this.lastGetBlobsV1ErrorTimeSec;
-    if (timeSinceLastFail < GET_BLOBS_RETRY_TIMEOUT) {
-      // do not try getblobs since it might not be available
-      this.logger.debug(
-        `disabled engine_getBlobsV1 api call since last failed < GETBLOBS_RETRY_TIMEOUT=${GET_BLOBS_RETRY_TIMEOUT}`,
-        timeSinceLastFail
-      );
-      throw Error(
-        `engine_getBlobsV1 call recently failed timeSinceLastFail=${timeSinceLastFail} < GETBLOBS_RETRY_TIMEOUT=${GET_BLOBS_RETRY_TIMEOUT}`
-      );
-    }
+    const response = await this.rpc.fetchWithRetries<
+      EngineApiRpcReturnTypes["engine_getBlobsV1"],
+      EngineApiRpcParamTypes["engine_getBlobsV1"]
+    >({
+      method: "engine_getBlobsV1",
+      params: [versionedHashesHex],
+    });
 
-    const response = await this.rpc
-      .fetchWithRetries<EngineApiRpcReturnTypes["engine_getBlobsV1"], EngineApiRpcParamTypes["engine_getBlobsV1"]>({
-        method: "engine_getBlobsV1",
-        params: [versionedHashesHex],
-      })
-      .catch((e) => {
-        if (e instanceof ErrorJsonRpcResponse && parseJsonRpcErrorCode(e.response.error.code) === "Method not found") {
-          this.lastGetBlobsV1ErrorTimeSec = timeNowSec;
-          this.logger.debug("disabling engine_getBlobsV1 api call since engine responded with method not available", {
-            retryTimeout: GET_BLOBS_RETRY_TIMEOUT,
-          });
-        }
-        throw e;
-      });
-
-    const invalidLength = !response || response.length !== versionedHashesHex.length;
+    const invalidLength = response.length !== versionedHashesHex.length;
 
     if (invalidLength) {
-      const error = `Invalid engine_getBlobsV1 response length=${response?.length ?? "null"} versionedHashes=${versionedHashesHex.length}`;
+      const error = `Invalid engine_getBlobsV1 response length=${response.length} versionedHashes=${versionedHashesHex.length}`;
       this.logger.error(error);
       throw Error(error);
     }
 
-    return (response as EngineApiRpcReturnTypes["engine_getBlobsV1"]).map(deserializeBlobAndProofs);
+    return response.map(deserializeBlobAndProofs);
   }
 
   private async getBlobsV2(versionedHashesHex: string[]) {
-    const response = await this.rpc
-      .fetchWithRetries<EngineApiRpcReturnTypes["engine_getBlobsV2"], EngineApiRpcParamTypes["engine_getBlobsV2"]>({
-        method: "engine_getBlobsV2",
-        params: [versionedHashesHex],
-      })
-      .catch((e) => {
-        if (e instanceof ErrorJsonRpcResponse && parseJsonRpcErrorCode(e.response.error.code) === "Method not found") {
-          this.logger.debug("disabling engine_getBlobsV2 api call since engine responded with method not available", {
-            retryTimeout: GET_BLOBS_RETRY_TIMEOUT,
-          });
-        }
-        throw e;
-      });
+    const response = await this.rpc.fetchWithRetries<
+      EngineApiRpcReturnTypes["engine_getBlobsV2"],
+      EngineApiRpcParamTypes["engine_getBlobsV2"]
+    >({
+      method: "engine_getBlobsV2",
+      params: [versionedHashesHex],
+    });
 
-    // engine_getBlobsV2 does not return partial responses. It returns an empty array if any blob is not found
-    // TODO: Spec says to return null if any blob is not found, but reth and nethermind return empty arrays as of peerdas-devnet-6
-    const invalidLength = response && response.length !== 0 && response.length !== versionedHashesHex.length;
+    // engine_getBlobsV2 does not return partial responses. It returns null if any blob is not found
+    const invalidLength = !!response && response.length !== versionedHashesHex.length;
 
     if (invalidLength) {
       const error = `Invalid engine_getBlobsV2 response length=${response?.length ?? "null"} versionedHashes=${versionedHashesHex.length}`;
@@ -571,12 +537,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       throw Error(error);
     }
 
-    const castResponse = response as EngineApiRpcReturnTypes["engine_getBlobsV2"];
-    // TODO(fulu): Spec says to return null if any blob is not found, but reth and nethermind return empty arrays as of peerdas-devnet-6
-    // TODO(fulu): Erigon returns array with `null` values
-    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-    if (castResponse === null || castResponse.length === 0 || castResponse?.includes(null as any)) return null;
-    return castResponse.map(deserializeBlobAndProofsV2);
+    return !response ? null : response.map(deserializeBlobAndProofsV2);
   }
 
   private async getClientVersion(clientVersion: ClientVersion): Promise<ClientVersion[]> {
