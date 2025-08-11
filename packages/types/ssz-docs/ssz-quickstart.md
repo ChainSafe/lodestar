@@ -263,3 +263,34 @@ The Lodestar SSZ library:
 -Ships with predefined TypeScript interfaces for all Ethereum consensus types.
 -Links these interfaces directly to SSZ serialization/deserialization methods.
 -Enforces nested type correctness — even inside deeply nested objects like attestation.data.source.epoch.
+
+For example:
+
+```
+
+import { ssz } from "@lodestar/types";
+
+// Create a zero-initialized attestation
+const attestation = ssz.phase0.Attestation.defaultValue();
+
+// ✅ Autocomplete works for deeply nested fields
+attestation.data.source.epoch = 100;
+
+// ❌ Type error: Trying to assign a string where a number is expected
+attestation.data.source.epoch = "100";
+// Error: Type 'string' is not assignable to type 'number'
+
+// ✅ Correct way to set the signature (96-byte array)
+attestation.signature = new Uint8Array(96);
+
+// ❌ Wrong type: TypeScript will reject this immediately
+attestation.signature = "0xabc";
+// Error: Type 'string' is not assignable to type 'Uint8Array'
+
+```
+
+This is is important for _Ethereum_ Development.
+Ethereum SSZ structures have very precise rules, some fields have fixed-length bytes arrays(eg. Uint8Array(96) for the signatures), some will have different sizes etc.
+Without type safety, it is easy to Assign a wrong-sized array, mistype a field name, pass data in the wrong format hence breakinf serialization.
+
+Lodestar + TypeScript ensures these mistakes never make it to runtime — they’re caught instantly in your editor.
