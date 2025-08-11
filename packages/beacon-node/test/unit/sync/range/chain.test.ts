@@ -36,12 +36,13 @@ describe("sync / range / chain", () => {
       targetEpoch: 16,
       skippedSlots: new Set(linspace(3 * SLOTS_PER_EPOCH, 4 * SLOTS_PER_EPOCH)),
     },
-    {
-      id: "Simulate sync with multiple ranges of bad blocks",
-      startEpoch: 0,
-      targetEpoch: 16,
-      badBlocks: new Set(linspace(3 * SLOTS_PER_EPOCH, 10 * SLOTS_PER_EPOCH)),
-    },
+    // As of https://github.com/ChainSafe/lodestar/pull/8150, we abort the batch after a single processing error
+    // {
+    //   id: "Simulate sync with multiple ranges of bad blocks",
+    //   startEpoch: 0,
+    //   targetEpoch: 16,
+    //   badBlocks: new Set(linspace(3 * SLOTS_PER_EPOCH, 10 * SLOTS_PER_EPOCH)),
+    // },
     {
       id: "Simulate sync when right on genesis epoch",
       startEpoch: 0,
