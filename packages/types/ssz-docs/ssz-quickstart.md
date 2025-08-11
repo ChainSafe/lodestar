@@ -233,3 +233,12 @@ Once you have a default object, you can update it's values directly:
 attestation.data.source.epoch = 100;
 attestation.data.target.epoch = 200;
 ```
+
+You can also modify primitive values like numbers, boolean, bigint easilly:
+
+```
+attestation.data.slot = 123456;
+attestation.aggregationBits = new Uint8Array([1, 0, 1]);
+```
+
+### TypeScript Safety
