@@ -40,10 +40,16 @@ export type MockedBeaconDb = Mocked<BeaconDb> & {
   eth1Data: Mocked<Eth1DataRepository>;
 };
 
-vi.mock("../../src/db/repositories/index.js");
+vi.mock("../../src/db/repositories/index.js", async (importActual) => {
+  const actualMods = await importActual<typeof import("@lodestar/types")>();
+  return {
+    ...actualMods,
+  };
+});
 
 vi.mock("../../src/db/index.js", async (importActual) => {
-  const mod = await importActual<typeof import("../../src/db/index.js")>();
+  const actualMods = await importActual<typeof import("../../src/db/index.js")>();
+  const actualMods2 = await importActual<typeof import("@lodestar/types")>();
 
   const mockedBeaconDb = vi.fn().mockImplementation(() => {
     return {
@@ -69,7 +75,8 @@ vi.mock("../../src/db/index.js", async (importActual) => {
   });
 
   return {
-    ...mod,
+    ...actualMods,
+    ...actualMods2,
     BeaconDb: mockedBeaconDb,
   };
 });
