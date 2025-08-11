@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkPostBellatrix, ForkSeq, isForkPostAltair, isForkPostBellatrix} from "@lodestar/params";
+import {ForkPostBellatrix, ForkPostDeneb, ForkSeq, isForkPostAltair, isForkPostBellatrix} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStateBellatrix,
@@ -30,6 +30,7 @@ import {
   capella,
   deneb,
   electra,
+  fulu,
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
@@ -45,6 +46,7 @@ import {
   getExpectedGasLimit,
 } from "../../execution/index.js";
 import {fromGraffitiBytes} from "../../util/graffiti.js";
+import {kzg} from "../../util/kzg.js";
 import type {BeaconChain} from "../chain.js";
 import {CommonBlockBody} from "../interface.js";
 import {validateBlobsAndKzgCommitments} from "./validateBlobsAndKzgCommitments.js";
@@ -99,7 +101,7 @@ export enum BlobsResultType {
 
 export type BlobsResult =
   | {type: BlobsResultType.preDeneb}
-  | {type: BlobsResultType.produced; contents: deneb.Contents; blockHash: RootHex}
+  | {type: BlobsResultType.produced; contents: deneb.Contents & {cells?: fulu.Cell[][]}; blockHash: RootHex}
   | {type: BlobsResultType.blinded};
 
 export async function produceBlockBody<T extends BlockType>(
@@ -385,13 +387,18 @@ export async function produceBlockBody<T extends BlockType>(
             throw Error(`Missing blobsBundle response from getPayload at fork=${fork}`);
           }
 
+          let cells: fulu.Cell[][] | undefined;
+          if (ForkSeq[fork] >= ForkSeq.fulu) {
+            cells = blobsBundle.blobs.map((blob) => kzg.computeCells(blob));
+          }
+
           if (this.opts.sanityCheckExecutionEngineBlobs) {
-            validateBlobsAndKzgCommitments(executionPayload, blobsBundle);
+            await validateBlobsAndKzgCommitments(fork as ForkPostDeneb, executionPayload, blobsBundle, cells);
           }
 
           (blockBody as deneb.BeaconBlockBody).blobKzgCommitments = blobsBundle.commitments;
           const blockHash = toRootHex(executionPayload.blockHash);
-          const contents = {kzgProofs: blobsBundle.proofs, blobs: blobsBundle.blobs};
+          const contents = {kzgProofs: blobsBundle.proofs, blobs: blobsBundle.blobs, cells};
           blobsResult = {type: BlobsResultType.produced, contents, blockHash};
 
           Object.assign(logMeta, {blobs: blobsBundle.commitments.length});

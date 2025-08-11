@@ -7,7 +7,15 @@ import {
   ForkChoiceErrorCode,
   NotReorgedReason,
 } from "@lodestar/fork-choice";
-import {ForkPostAltair, ForkPostElectra, ForkSeq, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {
+  ForkName,
+  ForkPostAltair,
+  ForkPostElectra,
+  ForkSeq,
+  INTERVALS_PER_SLOT,
+  MAX_SEED_LOOKAHEAD,
+  SLOTS_PER_EPOCH,
+} from "@lodestar/params";
 import {
   CachedBeaconStateAltair,
   EpochCache,
@@ -507,7 +515,10 @@ export async function importBlock(
   // dataPromise will not end up here, but preDeneb could. In future we might also allow syncing
   // out of data range blocks and import then in forkchoice although one would not be able to
   // attest and propose with such head similar to optimistic sync
-  if (blockInput.type === BlockInputType.availableData) {
+  if (
+    blockInput.type === BlockInputType.availableData &&
+    (blockInput.blockData.fork === ForkName.deneb || blockInput.blockData.fork === ForkName.electra)
+  ) {
     const {blobsSource} = blockInput.blockData;
     this.metrics?.importBlock.blobsBySource.inc({blobsSource});
   }

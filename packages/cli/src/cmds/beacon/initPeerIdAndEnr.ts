@@ -4,6 +4,7 @@ import path from "node:path";
 import {SignableENR} from "@chainsafe/enr";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import type {PrivateKey} from "@libp2p/interface";
+import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {Logger} from "@lodestar/utils";
 import {Multiaddr} from "@multiformats/multiaddr";
 import {exportToJSON, readPrivateKey} from "../../config/index.js";
@@ -154,7 +155,7 @@ export async function initPrivateKeyAndEnr(
     let privateKey: PrivateKey;
     let enr: SignableENR;
 
-    // attempt to read stored peer id
+    // attempt to read stored private key
     try {
       privateKey = readPrivateKey(peerIdFile);
     } catch (_e) {
@@ -170,7 +171,7 @@ export async function initPrivateKeyAndEnr(
       return {privateKey, enr, newEnr: true};
     }
     // check stored peer id against stored enr
-    if (!privateKey.equals(enr.peerId)) {
+    if (!peerIdFromPrivateKey(privateKey).equals(enr.peerId)) {
       logger.warn("Stored local ENR doesn't match peerIdFile, creating a new ENR");
       enr = SignableENR.createFromPrivateKey(privateKey);
       return {privateKey, enr, newEnr: true};

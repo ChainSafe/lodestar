@@ -1,6 +1,6 @@
 import {NotReorgedReason} from "@lodestar/fork-choice";
 import {BlockInputSource} from "../../chain/blocks/blockInput/index.js";
-import {BlobsSource, BlockSource} from "../../chain/blocks/types.js";
+import {BlobsSource, BlockSource, DataColumnsSource} from "../../chain/blocks/types.js";
 import {JobQueueItemType} from "../../chain/bls/index.js";
 import {AttestationErrorCode, BlockErrorCode} from "../../chain/errors/index.js";
 import {
@@ -21,6 +21,7 @@ import {BackfillSyncMethod} from "../../sync/backfill/backfill.js";
 import {PendingBlockType} from "../../sync/index.js";
 import {PeerSyncType, RangeSyncType} from "../../sync/utils/remoteSyncType.js";
 import {AllocSource} from "../../util/bufferPool.js";
+import {RecoverResult} from "../../util/dataColumns.js";
 import {LodestarMetadata} from "../options.js";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
 
@@ -486,6 +487,16 @@ export function createLodestarMetrics(
         name: "lodestar_sync_chain_highest_target_slot_completed",
         help: "Highest target slot completed by a sync chain",
       }),
+      headSyncPeers: register.gauge<{columnIndex: number}>({
+        name: "lodestar_sync_head_sync_peers_count",
+        help: "Count of head sync peers by group index",
+        labelNames: ["columnIndex"],
+      }),
+      finalizedSyncPeers: register.gauge<{columnIndex: number}>({
+        name: "lodestar_sync_finalized_sync_peers_count",
+        help: "Count of finalized sync peers by group index",
+        labelNames: ["columnIndex"],
+      }),
     },
 
     syncUnknownBlock: {
@@ -715,6 +726,35 @@ export function createLodestarMetrics(
         name: "lodestar_gossip_blob_gossip_validate_time",
         help: "Time elapsed for blob validation",
         buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
+      }),
+    },
+    recoverDataColumnSidecars: {
+      elapsedTimeTillReconstructed: register.histogram({
+        name: "lodestar_data_column_sidecar_elapsed_time_till_reconstructed_seconds",
+        help: "Time elapsed between block slot time and the time data column sidecar reconstructed",
+        buckets: [2, 4, 6, 8, 10, 12],
+      }),
+      custodyBeforeReconstruction: register.gauge({
+        name: "lodestar_data_columns_in_custody_before_reconstruction",
+        help: "Number of data columns in custody before reconstruction",
+      }),
+      reconstructionResult: register.gauge<{result: RecoverResult}>({
+        name: "lodestar_data_column_sidecars_reconstruction_result",
+        help: "Data column sidecars reconstruction result",
+        labelNames: ["result"],
+      }),
+    },
+    dataColumns: {
+      bySource: register.gauge<{source: DataColumnsSource}>({
+        name: "lodestar_data_columns_by_source",
+        help: "Number of received data columns by source",
+        labelNames: ["source"],
+      }),
+      elapsedTimeTillReceived: register.histogram<{source: DataColumnsSource}>({
+        name: "lodestar_data_column_elapsed_time_till_received_seconds",
+        help: "Time elapsed between block slot time and the time data column received",
+        labelNames: ["source"],
+        buckets: [1, 2, 3, 4, 6, 12],
       }),
     },
     importBlock: {

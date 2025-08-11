@@ -23,7 +23,7 @@ RUN cd packages/cli && GIT_COMMIT=${COMMIT} yarn write-git-data
 # Note: This step is redundant for the host arch
 FROM node:22-slim AS build_deps
 WORKDIR /usr/app
-RUN apt-get update && apt-get install -y g++ make python3 python3-setuptools && apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y git g++ make python3 python3-setuptools && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build_src /usr/app .
 

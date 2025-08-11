@@ -17,12 +17,14 @@ import {
   RootHex,
   SignedBeaconBlock,
   Slot,
+  Status,
   UintNum64,
   ValidatorIndex,
   Wei,
   altair,
   capella,
   deneb,
+  fulu,
   phase0,
 } from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
@@ -31,6 +33,7 @@ import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/metrics.js";
 import {BufferPool} from "../util/bufferPool.js";
 import {IClock} from "../util/clock.js";
+import {CustodyConfig} from "../util/dataColumns.js";
 import {SerializedCache} from "../util/serializedCache.js";
 import {IArchiveStore} from "./archiveStore/interface.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
@@ -90,6 +93,7 @@ export interface IBeaconChain {
   readonly executionBuilder?: IExecutionBuilder;
   // Expose config for convenience in modularized functions
   readonly config: BeaconConfig;
+  readonly custodyConfig: CustodyConfig;
   readonly logger: Logger;
   readonly metrics: Metrics | null;
   readonly validatorMonitor: ValidatorMonitor | null;
@@ -131,7 +135,7 @@ export interface IBeaconChain {
 
   readonly beaconProposerCache: BeaconProposerCache;
   readonly checkpointBalancesCache: CheckpointBalancesCache;
-  readonly producedContentsCache: Map<BlockHash, deneb.Contents>;
+  readonly producedContentsCache: Map<BlockHash, deneb.Contents & {cells?: fulu.Cell[][]}>;
   readonly producedBlockRoot: Map<RootHex, ExecutionPayload | null>;
   readonly shufflingCache: ShufflingCache;
   readonly producedBlindedBlockRoot: Set<RootHex>;
@@ -196,7 +200,7 @@ export interface IBeaconChain {
     root: RootHex
   ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null>;
 
-  getContents(beaconBlock: deneb.BeaconBlock): deneb.Contents;
+  getContents(beaconBlock: deneb.BeaconBlock): deneb.Contents & {cells?: fulu.Cell[][]};
 
   produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody>;
   produceBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise?: Promise<CommonBlockBody>}): Promise<{
@@ -216,7 +220,7 @@ export interface IBeaconChain {
   /** Process a chain of blocks until complete */
   processChainSegment(blocks: BlockInput[], opts?: ImportBlockOpts): Promise<void>;
 
-  getStatus(): phase0.Status;
+  getStatus(): Status;
 
   recomputeForkChoiceHead(caller: ForkchoiceCaller): ProtoBlock;
 

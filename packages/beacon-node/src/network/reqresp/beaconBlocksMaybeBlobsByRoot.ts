@@ -3,27 +3,33 @@ import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {RootHex, SignedBeaconBlock, deneb, phase0} from "@lodestar/types";
+import {RootHex, SignedBeaconBlock, deneb, fulu, phase0} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
-import {fromHex, toHex} from "@lodestar/utils";
+import {Logger, fromHex, toHex} from "@lodestar/utils";
 import {
   BlobsSource,
   BlockInput,
-  BlockInputDataBlobs,
+  BlockInputBlobs,
+  BlockInputDataColumns,
   BlockInputType,
   BlockSource,
+  CachedBlobs,
+  CachedDataColumns,
+  DataColumnsSource,
   NullBlockInput,
   getBlockInput,
   getBlockInputBlobs,
+  getBlockInputDataColumns,
 } from "../../chain/blocks/types.js";
 import {ChainEventEmitter} from "../../chain/emitter.js";
 import {BlockInputAvailabilitySource} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {IExecutionEngine} from "../../execution/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {computeInclusionProof, kzgCommitmentToVersionedHash} from "../../util/blobs.js";
+import {getDataColumnsFromExecution} from "../../util/dataColumns.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {INetwork} from "../interface.js";
-import {matchBlockWithBlobs} from "./beaconBlocksMaybeBlobsByRange.js";
+import {PartialDownload, matchBlockWithBlobs, matchBlockWithDataColumns} from "./beaconBlocksMaybeBlobsByRange.js";
 
 // keep 1 epoch of stuff, assmume 16 blobs
 const MAX_ENGINE_GETBLOBS_CACHE = 32 * 16;
@@ -33,45 +39,229 @@ export async function beaconBlocksMaybeBlobsByRoot(
   config: ChainForkConfig,
   network: INetwork,
   peerId: PeerIdStr,
-  request: phase0.BeaconBlocksByRootRequest
-): Promise<BlockInput[]> {
-  const allBlocks = await network.sendBeaconBlocksByRoot(peerId, request);
-  const blobIdentifiers: deneb.BlobIdentifier[] = [];
+  request: phase0.BeaconBlocksByRootRequest,
+  partialDownload: null | PartialDownload,
+  peerClient: string,
+  metrics: Metrics | null,
+  logger?: Logger
+): Promise<{blocks: BlockInput[]; pendingDataColumns: null | number[]}> {
+  // console.log("beaconBlocksMaybeBlobsByRoot", request);
+  const allBlocks = partialDownload
+    ? partialDownload.blocks.map((blockInput) => ({data: blockInput.block}))
+    : await network.sendBeaconBlocksByRoot(peerId, request);
 
+  logger?.debug("beaconBlocksMaybeBlobsByRoot response", {allBlocks: allBlocks.length, peerClient});
+
+  const preDataBlocks = [];
+  const blobsDataBlocks = [];
+  const dataColumnsDataBlocks = [];
+
+  const sampledColumns = network.custodyConfig.sampledColumns;
+  const neededColumns = partialDownload ? partialDownload.pendingDataColumns : sampledColumns;
+  const {custodyGroups: peerColumns} = network.getConnectedPeerSyncMeta(peerId);
+
+  // get match
+  const columns = peerColumns.reduce((acc, elem) => {
+    if (neededColumns.includes(elem)) {
+      acc.push(elem);
+    }
+    return acc;
+  }, [] as number[]);
+  let pendingDataColumns = null;
+
+  const blobIdentifiers: deneb.BlobIdentifier[] = [];
+  const dataColumnsByRootIdentifiers: fulu.DataColumnsByRootIdentifier[] = [];
+
+  let prevFork = null;
   for (const block of allBlocks) {
     const slot = block.data.message.slot;
     const blockRoot = config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.data.message);
     const fork = config.getForkName(slot);
+    if (fork !== (prevFork ?? fork)) {
+      throw Error("beaconBlocksMaybeBlobsByRoot only accepts requests of same fork");
+    }
+    prevFork = fork;
 
-    if (ForkSeq[fork] >= ForkSeq.deneb) {
+    if (ForkSeq[fork] < ForkSeq.deneb) {
+      preDataBlocks.push(block);
+    } else if (fork === ForkName.deneb || fork === ForkName.electra) {
+      blobsDataBlocks.push(block);
       const blobKzgCommitmentsLen = (block.data.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length;
+      logger?.debug("beaconBlocksMaybeBlobsByRoot", {blobKzgCommitmentsLen, peerClient});
       for (let index = 0; index < blobKzgCommitmentsLen; index++) {
         // try see if the blob is available locally
         blobIdentifiers.push({blockRoot, index});
       }
+    } else if (fork === ForkName.fulu) {
+      dataColumnsDataBlocks.push(block);
+      const blobKzgCommitmentsLen = (block.data.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length;
+      const custodyColumnIndexes = blobKzgCommitmentsLen > 0 ? columns : [];
+      if (custodyColumnIndexes.length > 0) {
+        dataColumnsByRootIdentifiers.push({
+          blockRoot,
+          columns: custodyColumnIndexes,
+        });
+      }
+    } else {
+      throw Error(`Invalid fork=${fork} in beaconBlocksMaybeBlobsByRoot`);
     }
   }
 
-  let allBlobSidecars: deneb.BlobSidecar[];
-  if (blobIdentifiers.length > 0) {
-    allBlobSidecars = await network.sendBlobSidecarsByRoot(peerId, blobIdentifiers);
-  } else {
-    allBlobSidecars = [];
+  let blockInputs = preDataBlocks.map((block) => getBlockInput.preData(config, block.data, BlockSource.byRoot));
+
+  if (blobsDataBlocks.length > 0) {
+    let allBlobSidecars: deneb.BlobSidecar[];
+    if (blobIdentifiers.length > 0) {
+      allBlobSidecars = await network.sendBlobSidecarsByRoot(peerId, blobIdentifiers);
+    } else {
+      allBlobSidecars = [];
+    }
+
+    // The last arg is to provide slot to which all blobs should be exausted in matching
+    // and here it should be infinity since all bobs should match
+    const blockInputWithBlobs = matchBlockWithBlobs(
+      config,
+      allBlocks,
+      allBlobSidecars,
+      Infinity,
+      BlockSource.byRoot,
+      BlobsSource.byRoot
+    );
+    blockInputs = [...blockInputs, ...blockInputWithBlobs];
   }
 
-  // The last arg is to provide slot to which all blobs should be exausted in matching
-  // and here it should be infinity since all bobs should match
-  return matchBlockWithBlobs(config, allBlocks, allBlobSidecars, Infinity, BlockSource.byRoot, BlobsSource.byRoot);
+  if (dataColumnsDataBlocks.length > 0) {
+    pendingDataColumns = neededColumns.reduce((acc, elem) => {
+      if (!columns.includes(elem)) {
+        acc.push(elem);
+      }
+      return acc;
+    }, [] as number[]);
+
+    let allDataColumnsSidecars: fulu.DataColumnSidecar[];
+    logger?.debug("allDataColumnsSidecars partialDownload", {
+      ...(partialDownload
+        ? {blocks: partialDownload.blocks.length, pendingDataColumns: partialDownload.pendingDataColumns.join(" ")}
+        : {blocks: null, pendingDataColumns: null}),
+      dataColumnIdentifiers: dataColumnsByRootIdentifiers
+        .map((id) => `${id.blockRoot}: ${id.columns.join(" ")}`)
+        .join(" "),
+      peerClient,
+    });
+    if (dataColumnsByRootIdentifiers.length > 0) {
+      allDataColumnsSidecars = await network.sendDataColumnSidecarsByRoot(peerId, dataColumnsByRootIdentifiers);
+    } else {
+      if (partialDownload !== null) {
+        return partialDownload;
+      }
+      allDataColumnsSidecars = [];
+    }
+
+    // The last arg is to provide slot to which all blobs should be exausted in matching
+    // and here it should be infinity since all bobs should match
+    // TODO: should not call matchBlockWithDataColumns() because it's supposed for range sync
+    // in that function, peers should return all requested data columns, this function runs at gossip time
+    // and it should not expect that
+    const blockInputWithBlobs = matchBlockWithDataColumns(
+      network,
+      peerId,
+      config,
+      sampledColumns,
+      columns,
+      allBlocks,
+      allDataColumnsSidecars,
+      Infinity,
+      BlockSource.byRoot,
+      DataColumnsSource.byRoot,
+      partialDownload,
+      peerClient,
+      metrics,
+      logger
+    );
+    blockInputs = [...blockInputs, ...blockInputWithBlobs];
+  }
+
+  return {
+    blocks: blockInputs,
+    pendingDataColumns: pendingDataColumns && pendingDataColumns.length > 0 ? pendingDataColumns : null,
+  };
 }
 
 export async function unavailableBeaconBlobsByRoot(
   config: ChainForkConfig,
   network: INetwork,
   peerId: PeerIdStr,
+  peerClient: string,
   unavailableBlockInput: BlockInput | NullBlockInput,
   opts: {
-    metrics: Metrics | null;
-    emitter: ChainEventEmitter | null;
+    logger?: Logger;
+    metrics?: Metrics | null;
+    executionEngine: IExecutionEngine;
+    emitter: ChainEventEmitter;
+    engineGetBlobsCache?: Map<RootHex, BlobAndProof | null>;
+    blockInputsRetryTrackerCache?: Set<RootHex>;
+  }
+): Promise<BlockInput> {
+  if (unavailableBlockInput.block !== null && unavailableBlockInput.type !== BlockInputType.dataPromise) {
+    return unavailableBlockInput;
+  }
+
+  // resolve the block if thats unavailable
+  let block: SignedBeaconBlock, cachedData: NullBlockInput["cachedData"];
+  if (unavailableBlockInput.block === null) {
+    const allBlocks = await network.sendBeaconBlocksByRoot(peerId, [fromHex(unavailableBlockInput.blockRootHex)]);
+    block = allBlocks[0].data;
+    cachedData = unavailableBlockInput.cachedData;
+    unavailableBlockInput = getBlockInput.dataPromise(config, block, BlockSource.byRoot, cachedData);
+    // console.log(
+    //   "downloaded sendBeaconBlocksByRoot",
+    //   ssz.fulu.SignedBeaconBlock.toJson(block as fulu.SignedBeaconBlock)
+    // );
+  } else {
+    ({block, cachedData} = unavailableBlockInput);
+  }
+
+  const forkSeq = config.getForkSeq(block.message.slot);
+
+  if (forkSeq < ForkSeq.fulu) {
+    return unavailableBeaconBlobsByRootPreFulu(
+      config,
+      network,
+      peerId,
+      unavailableBlockInput,
+      block,
+      cachedData as CachedBlobs,
+      opts
+    );
+  }
+
+  return unavailableBeaconBlobsByRootPostFulu(
+    config,
+    network,
+    peerId,
+    peerClient,
+    unavailableBlockInput,
+    block,
+    cachedData,
+    {
+      metrics: opts.metrics,
+      executionEngine: opts.executionEngine,
+      emitter: opts.emitter,
+      logger: opts.logger,
+    }
+  );
+}
+
+export async function unavailableBeaconBlobsByRootPreFulu(
+  config: ChainForkConfig,
+  network: INetwork,
+  peerId: PeerIdStr,
+  unavailableBlockInput: BlockInput | NullBlockInput,
+  block: SignedBeaconBlock,
+  cachedData: CachedBlobs,
+  opts: {
+    metrics?: Metrics | null;
+    emitter: ChainEventEmitter;
     executionEngine: IExecutionEngine;
     engineGetBlobsCache?: Map<RootHex, BlobAndProof | null>;
     blockInputsRetryTrackerCache?: Set<RootHex>;
@@ -80,21 +270,6 @@ export async function unavailableBeaconBlobsByRoot(
   const {executionEngine, metrics, emitter, engineGetBlobsCache, blockInputsRetryTrackerCache} = opts;
   if (unavailableBlockInput.block !== null && unavailableBlockInput.type !== BlockInputType.dataPromise) {
     return unavailableBlockInput;
-  }
-
-  // resolve the block if thats unavailable
-  let block: SignedBeaconBlock,
-    blobsCache: NullBlockInput["cachedData"]["blobsCache"],
-    resolveAvailability: NullBlockInput["cachedData"]["resolveAvailability"],
-    cachedData: NullBlockInput["cachedData"];
-  if (unavailableBlockInput.block === null) {
-    const allBlocks = await network.sendBeaconBlocksByRoot(peerId, [fromHex(unavailableBlockInput.blockRootHex)]);
-    block = allBlocks[0].data;
-    cachedData = unavailableBlockInput.cachedData;
-    ({blobsCache, resolveAvailability} = cachedData);
-  } else {
-    ({block, cachedData} = unavailableBlockInput);
-    ({blobsCache, resolveAvailability} = cachedData);
   }
 
   // resolve missing blobs
@@ -122,7 +297,7 @@ export async function unavailableBeaconBlobsByRoot(
 
   let getBlobsUseful = false;
   for (let index = 0; index < blobKzgCommitmentsLen; index++) {
-    if (blobsCache.has(index) === false) {
+    if (cachedData.blobsCache.has(index) === false) {
       const kzgCommitment = (block.message.body as deneb.BeaconBlockBody).blobKzgCommitments[index];
       const versionedHash = kzgCommitmentToVersionedHash(kzgCommitment);
 
@@ -138,7 +313,7 @@ export async function unavailableBeaconBlobsByRoot(
           const {blob, proof: kzgProof} = catchedBlobAndProof;
           const kzgCommitmentInclusionProof = computeInclusionProof(fork, block.message.body, index);
           const blobSidecar = {index, blob, kzgCommitment, kzgProof, signedBlockHeader, kzgCommitmentInclusionProof};
-          blobsCache.set(blobSidecar.index, blobSidecar);
+          cachedData.blobsCache.set(blobSidecar.index, blobSidecar);
         }
       } else if (blockTriedBefore) {
         // only retry it from network
@@ -173,7 +348,7 @@ export async function unavailableBeaconBlobsByRoot(
       metrics?.blockInputFetchStats.dataPromiseBlobsEngineGetBlobsApiNotNull.inc();
 
       // if we already got it by now, save the compute
-      if (blobsCache.has(engineReqIdentifiers[j].index) === false) {
+      if (cachedData.blobsCache.has(engineReqIdentifiers[j].index) === false) {
         metrics?.blockInputFetchStats.dataPromiseBlobsEngineApiGetBlobsUseful.inc();
         getBlobsUseful = true;
         const {blob, proof: kzgProof} = blobAndProof;
@@ -183,9 +358,9 @@ export async function unavailableBeaconBlobsByRoot(
         // add them in cache so that its reflected in all the blockInputs that carry this
         // for e.g. a blockInput that might be awaiting blobs promise fullfillment in
         // verifyBlocksDataAvailability
-        blobsCache.set(blobSidecar.index, blobSidecar);
+        cachedData.blobsCache.set(blobSidecar.index, blobSidecar);
 
-        if (emitter?.listenerCount(routes.events.EventType.blobSidecar)) {
+        if (emitter.listenerCount(routes.events.EventType.blobSidecar)) {
           emitter.emit(routes.events.EventType.blobSidecar, {
             blockRoot: blockRootHex,
             slot,
@@ -202,7 +377,7 @@ export async function unavailableBeaconBlobsByRoot(
     // may be blobsidecar arrived in the timespan of making the request
     else {
       metrics?.blockInputFetchStats.dataPromiseBlobsEngineGetBlobsApiNull.inc();
-      if (blobsCache.has(engineReqIdentifiers[j].index) === false) {
+      if (cachedData.blobsCache.has(engineReqIdentifiers[j].index) === false) {
         const {blockRoot, index} = engineReqIdentifiers[j];
         networkReqIdentifiers.push({blockRoot, index});
       } else {
@@ -256,9 +431,9 @@ export async function unavailableBeaconBlobsByRoot(
   // for e.g. a blockInput that might be awaiting blobs promise fullfillment in
   // verifyBlocksDataAvailability
   for (const blobSidecar of networkResBlobSidecars) {
-    blobsCache.set(blobSidecar.index, blobSidecar);
+    cachedData.blobsCache.set(blobSidecar.index, blobSidecar);
 
-    if (emitter?.listenerCount(routes.events.EventType.blobSidecar)) {
+    if (emitter.listenerCount(routes.events.EventType.blobSidecar)) {
       emitter.emit(routes.events.EventType.blobSidecar, {
         blockRoot: blockRootHex,
         slot,
@@ -271,13 +446,13 @@ export async function unavailableBeaconBlobsByRoot(
 
   // check and see if all blobs are now available and in that case resolve availability
   // if not this will error and the leftover blobs will be tried from another peer
-  const allBlobs = getBlockInputBlobs(blobsCache);
+  const allBlobs = getBlockInputBlobs(cachedData.blobsCache);
   const {blobs} = allBlobs;
   if (blobs.length !== blobKzgCommitmentsLen) {
     throw Error(`Not all blobs fetched missingBlobs=${blobKzgCommitmentsLen - blobs.length}`);
   }
-  const blockData = {fork: cachedData.fork, ...allBlobs, blobsSource: BlobsSource.byRoot} as BlockInputDataBlobs;
-  resolveAvailability(blockData);
+  const blockData = {fork: cachedData.fork, ...allBlobs, blobsSource: BlobsSource.byRoot} as BlockInputBlobs;
+  cachedData.resolveAvailability(blockData);
   metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.UNKNOWN_SYNC});
 
   metrics?.blockInputFetchStats.totalDataPromiseBlockInputsResolvedAvailable.inc();
@@ -295,4 +470,204 @@ export async function unavailableBeaconBlobsByRoot(
   }
 
   return getBlockInput.availableData(config, block, BlockSource.byRoot, blockData);
+}
+
+/**
+ * Download more columns for a BlockInput
+ * - unavailableBlockInput should have block, but not enough blobs (deneb) or data columns (fulu)
+ *
+ * This function may return data promise, and consumer should continue with fetching more blobs or columns from other peers
+ * see UnknownBlockSync.fetchUnavailableBlockInput()
+ */
+export async function unavailableBeaconBlobsByRootPostFulu(
+  config: ChainForkConfig,
+  network: INetwork,
+  peerId: PeerIdStr,
+  peerClient: string,
+  unavailableBlockInput: BlockInput,
+  block: SignedBeaconBlock,
+  cachedData: NullBlockInput["cachedData"],
+  opts: {
+    metrics?: Metrics | null;
+    executionEngine: IExecutionEngine;
+    emitter: ChainEventEmitter;
+    logger?: Logger;
+  }
+): Promise<BlockInput> {
+  if (unavailableBlockInput.block !== null && unavailableBlockInput.type !== BlockInputType.dataPromise) {
+    return unavailableBlockInput;
+  }
+
+  if (cachedData.fork === ForkName.deneb || cachedData.fork === ForkName.electra) {
+    const {blobsCache, resolveAvailability} = cachedData;
+
+    // resolve missing blobs
+    const blobIdentifiers: deneb.BlobIdentifier[] = [];
+    const slot = block.message.slot;
+    const blockRoot = config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message);
+
+    const blobKzgCommitmentsLen = (block.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length;
+    for (let index = 0; index < blobKzgCommitmentsLen; index++) {
+      if (blobsCache.has(index) === false) blobIdentifiers.push({blockRoot, index});
+    }
+
+    let allBlobSidecars: deneb.BlobSidecar[];
+    if (blobIdentifiers.length > 0) {
+      allBlobSidecars = await network.sendBlobSidecarsByRoot(peerId, blobIdentifiers);
+    } else {
+      allBlobSidecars = [];
+    }
+
+    // add them in cache so that its reflected in all the blockInputs that carry this
+    // for e.g. a blockInput that might be awaiting blobs promise fullfillment in
+    // verifyBlocksDataAvailability
+    for (const blobSidecar of allBlobSidecars) {
+      blobsCache.set(blobSidecar.index, blobSidecar);
+    }
+
+    // check and see if all blobs are now available and in that case resolve availability
+    // if not this will error and the leftover blobs will be tried from another peer
+    const allBlobs = getBlockInputBlobs(blobsCache);
+    const {blobs} = allBlobs;
+    if (blobs.length !== blobKzgCommitmentsLen) {
+      throw Error(`Not all blobs fetched missingBlobs=${blobKzgCommitmentsLen - blobs.length}`);
+    }
+    const blockData = {fork: cachedData.fork, ...allBlobs, blobsSource: BlobsSource.byRoot} as BlockInputBlobs;
+    resolveAvailability(blockData);
+    opts.metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.UNKNOWN_SYNC});
+    return getBlockInput.availableData(config, block, BlockSource.byRoot, blockData);
+  }
+
+  // fulu fork
+  const {dataColumnsCache, resolveAvailability} = cachedData as CachedDataColumns;
+
+  // resolve missing blobs
+  const slot = block.message.slot;
+  const blockRoot = config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message);
+
+  const blobKzgCommitments = (block.message.body as deneb.BeaconBlockBody).blobKzgCommitments;
+  if (blobKzgCommitments.length === 0) {
+    const blockData = {
+      fork: cachedData.fork,
+      dataColumns: [],
+      dataColumnsBytes: [],
+      dataColumnsSource: DataColumnsSource.gossip,
+    } as BlockInputDataColumns;
+
+    resolveAvailability(blockData);
+    opts.metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.UNKNOWN_SYNC});
+    return getBlockInput.availableData(config, block, BlockSource.byRoot, blockData);
+  }
+
+  const sampledColumns = network.custodyConfig.sampledColumns;
+  let neededColumns = sampledColumns.reduce((acc, elem) => {
+    if (dataColumnsCache.get(elem) === undefined) {
+      acc.push(elem);
+    }
+    return acc;
+  }, [] as number[]);
+
+  let resolveBlockInput: ((block: BlockInput) => void) | null = null;
+  const blockInputPromise = new Promise<BlockInput>((resolveCB) => {
+    resolveBlockInput = resolveCB;
+  });
+  if (resolveBlockInput === null) {
+    throw Error("Promise Constructor was not executed immediately");
+  }
+
+  const gotColumnsFromExecution = await getDataColumnsFromExecution(
+    config,
+    network.custodyConfig,
+    opts.executionEngine,
+    opts.emitter,
+    {
+      fork: config.getForkName(block.message.slot),
+      block: block,
+      cachedData: cachedData,
+      blockInputPromise,
+      resolveBlockInput,
+    },
+    opts.metrics ?? null
+  );
+
+  if (!gotColumnsFromExecution) {
+    const {custodyGroups: peerColumns} = network.getConnectedPeerSyncMeta(peerId);
+
+    // get match
+    const columns = peerColumns.reduce((acc, elem) => {
+      if (neededColumns.includes(elem)) {
+        acc.push(elem);
+      }
+      return acc;
+    }, [] as number[]);
+
+    // this peer can't help fetching columns for this block
+    if (unavailableBlockInput.block !== null && columns.length === 0 && neededColumns.length > 0) {
+      return unavailableBlockInput;
+    }
+
+    let allDataColumnSidecars: fulu.DataColumnSidecar[];
+    if (columns.length > 0) {
+      allDataColumnSidecars = await network.sendDataColumnSidecarsByRoot(peerId, [{blockRoot, columns}]);
+      opts.metrics?.dataColumns.bySource.inc({source: DataColumnsSource.byRoot}, allDataColumnSidecars.length);
+    } else {
+      allDataColumnSidecars = [];
+    }
+
+    const logCtx = {
+      slot: block.message.slot,
+      requestedColumns: columns.join(","),
+      respondedColumns: allDataColumnSidecars.map((dcs) => dcs.index).join(","),
+      peerClient,
+    };
+
+    opts.logger?.verbose("unavailableBeaconBlobsByRootPostFulu: Requested data columns from peer", logCtx);
+
+    // the same to matchBlockWithDataColumns() without expecting requested data columns = responded data columns
+    // because at gossip time peer may not have enough column to return
+    for (const dataColumnSidecar of allDataColumnSidecars) {
+      dataColumnsCache.set(dataColumnSidecar.index, {
+        dataColumn: dataColumnSidecar,
+        // TODO: req/resp should return bytes here
+        dataColumnBytes: null,
+      });
+    }
+  }
+
+  // reevaluate needeColumns and resolve availability if possible
+  neededColumns = sampledColumns.reduce((acc, elem) => {
+    if (dataColumnsCache.get(elem) === undefined) {
+      acc.push(elem);
+    }
+    return acc;
+  }, [] as number[]);
+
+  const logCtx = {
+    slot: block.message.slot,
+    neededColumns: neededColumns.join(","),
+    sampledColumns: sampledColumns.join(","),
+  };
+
+  if (neededColumns.length === 0) {
+    const {dataColumns, dataColumnsBytes} = getBlockInputDataColumns(
+      (cachedData as CachedDataColumns).dataColumnsCache,
+      sampledColumns
+    );
+
+    // don't forget to resolve availability as the block may be stuck in availability wait
+    const blockData = {
+      fork: config.getForkName(block.message.slot),
+      dataColumns,
+      dataColumnsBytes,
+      dataColumnsSource: DataColumnsSource.byRoot,
+    } as BlockInputDataColumns;
+    resolveAvailability(blockData);
+    opts.logger?.verbose(
+      "unavailableBeaconBlobsByRootPostFulu: Resolved availability for block with all data columns",
+      logCtx
+    );
+    return getBlockInput.availableData(config, block, BlockSource.byRoot, blockData);
+  }
+  opts.logger?.verbose("unavailableBeaconBlobsByRootPostFulu: Still missing data columns for block", logCtx);
+  return getBlockInput.dataPromise(config, block, BlockSource.byRoot, cachedData);
 }

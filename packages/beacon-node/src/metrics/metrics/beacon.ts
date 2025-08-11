@@ -362,6 +362,64 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       }),
     },
 
+    peerDas: {
+      dataColumnSidecarProcessingRequests: register.counter({
+        name: "beacon_data_column_sidecar_processing_requests_total",
+        help: "Number of data column sidecars submitted for processing",
+      }),
+      dataColumnSidecarProcessingSuccesses: register.counter({
+        name: "beacon_data_column_sidecar_processing_successes_total",
+        help: "Number of data column sidecars verified for gossip",
+      }),
+      dataColumnSidecarGossipVerificationTime: register.histogram({
+        name: "beacon_data_column_sidecar_gossip_verification_seconds",
+        help: "Full runtime of data column sidecars gossip verification",
+        buckets: [0.025, 0.05, 0.1, 0.5, 1, 2, 5],
+      }),
+      dataColumnSidecarComputationTime: register.histogram({
+        name: "beacon_data_column_sidecar_computation_seconds",
+        help: "Time taken to compute data column sidecars, including cells and inclusion proof",
+        buckets: [0.1, 0.25, 0.5, 0.75, 1, 2, 5],
+      }),
+      dataColumnSidecarInclusionProofVerificationTime: register.histogram({
+        name: "beacon_data_column_sidecar_inclusion_proof_verification_seconds",
+        help: "Time taken to verify data_column sidecar inclusion proof",
+        buckets: [0.002, 0.004, 0.006, 0.008, 0.01, 0.05, 1, 2],
+      }),
+      kzgVerificationDataColumnBatchTime: register.histogram({
+        name: "beacon_kzg_verification_data_column_batch_seconds",
+        help: "Runtime of batched data column kzg verification",
+        buckets: [0.025, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 1, 2, 5],
+      }),
+      getBlobsV2Requests: register.counter({
+        name: "beacon_engine_getBlobsV2_requests_total",
+        help: "Total number of engine_getBlobsV2 requests sent",
+      }),
+      getBlobsV2Responses: register.counter({
+        name: "beacon_engine_getBlobsV2_responses_total",
+        help: "Total number of engine_getBlobsV2 successful responses received",
+      }),
+      getBlobsV2RequestDuration: register.histogram({
+        name: "beacon_engine_getBlobsV2_request_duration_seconds",
+        help: "Duration of engine_getBlobsV2 requests",
+        buckets: [0.01, 0.05, 0.1, 0.5, 1, 2.5, 5, 7.5],
+      }),
+      targetCustodyGroupCount: register.gauge({
+        name: "beacon_target_custody_group_count",
+        help: "Total number of custody groups within a node",
+      }),
+      reconstructedColumns: register.counter({
+        name: "beacon_data_availability_reconstructed_columns_total",
+        help: "Total count of reconstructed columns",
+      }),
+      dataColumnsReconstructionTime: register.histogram({
+        name: "beacon_data_availability_reconstruction_time_seconds",
+        help: "Time taken to reconstruct columns",
+        // this data comes from 20 blobs in `fusaka-devnet-1`, need to reevaluate in the future
+        buckets: [0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 2, 5],
+      }),
+    },
+
     // Non-spec'ed
     clockSlot: register.gauge({
       name: "beacon_clock_slot",

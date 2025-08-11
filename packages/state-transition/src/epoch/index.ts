@@ -65,6 +65,7 @@ const maxSafeValidators = Math.floor(Number.MAX_SAFE_INTEGER / MAX_EFFECTIVE_BAL
 export enum EpochTransitionStep {
   beforeProcessEpoch = "beforeProcessEpoch",
   afterProcessEpoch = "afterProcessEpoch",
+  finalProcessEpoch = "finalProcessEpoch",
   processJustificationAndFinalization = "processJustificationAndFinalization",
   processInactivityUpdates = "processInactivityUpdates",
   processRegistryUpdates = "processRegistryUpdates",

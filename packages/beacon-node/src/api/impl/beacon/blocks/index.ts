@@ -1,10 +1,11 @@
 import {routes} from "@lodestar/api";
 import {ApiError, ApplicationMethods} from "@lodestar/api/server";
 import {
-  ForkName,
   ForkPostBellatrix,
+  NUMBER_OF_COLUMNS,
   SLOTS_PER_HISTORICAL_ROOT,
   isForkPostBellatrix,
+  isForkPostDeneb,
   isForkPostElectra,
   isForkPostFulu,
 } from "@lodestar/params";
@@ -21,15 +22,20 @@ import {
   SignedBlindedBeaconBlock,
   WithOptionalBytes,
   deneb,
+  fulu,
   isSignedBlockContents,
+  sszTypesFor,
 } from "@lodestar/types";
 import {fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
 import {
   BlobsSource,
   BlockInput,
-  BlockInputDataBlobs,
+  BlockInputAvailableData,
+  BlockInputBlobs,
+  BlockInputDataColumns,
   BlockInputType,
   BlockSource,
+  DataColumnsSource,
   ImportBlockOpts,
   getBlockInput,
 } from "../../../../chain/blocks/types.js";
@@ -39,7 +45,12 @@ import {BlockError, BlockErrorCode, BlockGossipError} from "../../../../chain/er
 import {validateGossipBlock} from "../../../../chain/validation/block.js";
 import {OpSource} from "../../../../chain/validatorMonitor.js";
 import {NetworkEvent} from "../../../../network/index.js";
-import {computeBlobSidecars, kzgCommitmentToVersionedHash} from "../../../../util/blobs.js";
+import {
+  computeBlobSidecars,
+  computeDataColumnSidecars,
+  kzgCommitmentToVersionedHash,
+  reconstructBlobs,
+} from "../../../../util/blobs.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {ApiModules} from "../../types.js";
@@ -75,20 +86,45 @@ export function getBeaconBlockApi({
     opts: PublishBlockOpts = {}
   ) => {
     const seenTimestampSec = Date.now() / 1000;
-    let blockForImport: BlockInput, signedBlock: SignedBeaconBlock, blobSidecars: deneb.BlobSidecars;
+    let blockForImport: BlockInput,
+      signedBlock: SignedBeaconBlock,
+      blobSidecars: deneb.BlobSidecars,
+      dataColumnSidecars: fulu.DataColumnSidecars;
 
     if (isSignedBlockContents(signedBlockOrContents)) {
       ({signedBlock} = signedBlockOrContents);
-      blobSidecars = computeBlobSidecars(config, signedBlock, signedBlockOrContents);
-      const blockData = {
-        fork: config.getForkName(signedBlock.message.slot),
-        blobs: blobSidecars,
-        blobsSource: BlobsSource.api,
-      } as BlockInputDataBlobs;
+      const fork = config.getForkName(signedBlock.message.slot);
+      let blockData: BlockInputAvailableData;
+      if (isForkPostFulu(fork)) {
+        const cachedContents = chain.getContents(signedBlock.message as deneb.BeaconBlock);
+
+        const timer = metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
+        dataColumnSidecars = computeDataColumnSidecars(config, signedBlock, cachedContents ?? signedBlockOrContents);
+        timer?.();
+        blockData = {
+          fork,
+          dataColumns: dataColumnSidecars,
+          dataColumnsBytes: dataColumnSidecars.map(() => null),
+          dataColumnsSource: DataColumnsSource.api,
+        } as BlockInputDataColumns;
+        blobSidecars = [];
+      } else if (isForkPostDeneb(fork)) {
+        blobSidecars = computeBlobSidecars(config, signedBlock, signedBlockOrContents);
+        blockData = {
+          fork,
+          blobs: blobSidecars,
+          blobsSource: BlobsSource.api,
+        } as BlockInputBlobs;
+        dataColumnSidecars = [];
+      } else {
+        throw Error(`Invalid data fork=${fork} for publish`);
+      }
+
       blockForImport = getBlockInput.availableData(config, signedBlock, BlockSource.api, blockData);
     } else {
       signedBlock = signedBlockOrContents;
       blobSidecars = [];
+      dataColumnSidecars = [];
       blockForImport = getBlockInput.preData(config, signedBlock, BlockSource.api);
     }
 
@@ -217,14 +253,16 @@ export function getBeaconBlockApi({
     chain.logger.info("Publishing block", valLogMeta);
     const publishPromises = [
       // Send the block, regardless of whether or not it is valid. The API
-      // specification is very clear that this is the desired behaviour.
+      // specification is very clear that this is the desired behavior.
       //
-      // i) Publish blobs and block before importing so that network can see them asap
-      // ii) publish block first because
-      //     a) as soon as node sees block they can start processing it while blobs arrive
+      // - Publish blobs and block before importing so that network can see them asap
+      // - Publish block first because
+      //     a) as soon as node sees block they can start processing it while data is in transit
       //     b) getting block first allows nodes to use getBlobs from local ELs and save
       //        import latency and hopefully bandwidth
-      () => network.publishBeaconBlock(signedBlock) as Promise<unknown>,
+      //
+      () => network.publishBeaconBlock(signedBlock),
+      ...dataColumnSidecars.map((dataColumnSidecar) => () => network.publishDataColumnSidecar(dataColumnSidecar)),
       ...blobSidecars.map((blobSidecar) => () => network.publishBlobSidecar(blobSidecar)),
       () =>
         // there is no rush to persist block since we published it to gossip anyway
@@ -240,28 +278,43 @@ export function getBeaconBlockApi({
             throw e;
           }),
     ];
-    await promiseAllMaybeAsync(publishPromises);
+    await promiseAllMaybeAsync<number | void>(publishPromises);
 
     if (chain.emitter.listenerCount(routes.events.EventType.blockGossip)) {
       chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRoot});
     }
 
-    if (
-      chain.emitter.listenerCount(routes.events.EventType.blobSidecar) &&
-      blockForImport.type === BlockInputType.availableData &&
-      (blockForImport.blockData.fork === ForkName.deneb || blockForImport.blockData.fork === ForkName.electra)
-    ) {
-      const {blobs} = blockForImport.blockData;
+    if (blockForImport.type === BlockInputType.availableData) {
+      if (isForkPostFulu(blockForImport.blockData.fork)) {
+        const {dataColumns} = blockForImport.blockData as BlockInputDataColumns;
+        metrics?.dataColumns.bySource.inc({source: DataColumnsSource.api}, dataColumns.length);
 
-      for (const blobSidecar of blobs) {
-        const {index, kzgCommitment} = blobSidecar;
-        chain.emitter.emit(routes.events.EventType.blobSidecar, {
-          blockRoot,
-          slot,
-          index,
-          kzgCommitment: toHex(kzgCommitment),
-          versionedHash: toHex(kzgCommitmentToVersionedHash(kzgCommitment)),
-        });
+        if (chain.emitter.listenerCount(routes.events.EventType.dataColumnSidecar)) {
+          for (const dataColumnSidecar of dataColumns) {
+            chain.emitter.emit(routes.events.EventType.dataColumnSidecar, {
+              blockRoot,
+              slot,
+              index: dataColumnSidecar.index,
+              kzgCommitments: dataColumnSidecar.kzgCommitments.map(toHex),
+            });
+          }
+        }
+      } else if (
+        isForkPostDeneb(blockForImport.blockData.fork) &&
+        chain.emitter.listenerCount(routes.events.EventType.blobSidecar)
+      ) {
+        const {blobs} = blockForImport.blockData as BlockInputBlobs;
+
+        for (const blobSidecar of blobs) {
+          const {index, kzgCommitment} = blobSidecar;
+          chain.emitter.emit(routes.events.EventType.blobSidecar, {
+            blockRoot,
+            slot,
+            index,
+            kzgCommitment: toHex(kzgCommitment),
+            versionedHash: toHex(kzgCommitmentToVersionedHash(kzgCommitment)),
+          });
+        }
       }
     }
   };
@@ -528,7 +581,13 @@ export function getBeaconBlockApi({
       assertUniqueItems(indices, "Duplicate indices provided");
 
       const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
-      const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
+      const fork = config.getForkName(block.message.slot);
+
+      if (isForkPostFulu(fork)) {
+        throw new ApiError(400, `Use getBlobs to retrieve blobs for post-fulu fork=${fork}`);
+      }
+
+      const blockRoot = sszTypesFor(fork).BeaconBlock.hashTreeRoot(block.message);
 
       let {blobSidecars} = (await db.blobSidecars.get(blockRoot)) ?? {};
       if (!blobSidecars) {
@@ -545,6 +604,63 @@ export function getBeaconBlockApi({
           executionOptimistic,
           finalized,
           version: config.getForkName(block.message.slot),
+        },
+      };
+    },
+
+    async getBlobs({blockId, indices}) {
+      assertUniqueItems(indices, "Duplicate indices provided");
+
+      const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
+      const fork = config.getForkName(block.message.slot);
+      const blockRoot = sszTypesFor(fork).BeaconBlock.hashTreeRoot(block.message);
+
+      let blobs: deneb.Blobs;
+
+      if (isForkPostFulu(fork)) {
+        const {targetCustodyGroupCount} = chain.custodyConfig;
+        if (targetCustodyGroupCount < NUMBER_OF_COLUMNS / 2) {
+          throw Error(
+            `Custody group count of ${targetCustodyGroupCount} is not sufficient to serve blobs, must custody at least ${NUMBER_OF_COLUMNS / 2} data columns`
+          );
+        }
+
+        let {dataColumnSidecars} = (await db.dataColumnSidecars.get(blockRoot)) ?? {};
+        if (!dataColumnSidecars) {
+          ({dataColumnSidecars} = (await db.dataColumnSidecarsArchive.get(block.message.slot)) ?? {});
+        }
+
+        if (!dataColumnSidecars) {
+          throw new ApiError(
+            404,
+            `dataColumnSidecars not found in db for slot=${block.message.slot} root=${toRootHex(blockRoot)}`
+          );
+        }
+
+        blobs = await reconstructBlobs(dataColumnSidecars);
+      } else if (isForkPostDeneb(fork)) {
+        let {blobSidecars} = (await db.blobSidecars.get(blockRoot)) ?? {};
+        if (!blobSidecars) {
+          ({blobSidecars} = (await db.blobSidecarsArchive.get(block.message.slot)) ?? {});
+        }
+
+        if (!blobSidecars) {
+          throw new ApiError(
+            404,
+            `blobSidecars not found in db for slot=${block.message.slot} root=${toRootHex(blockRoot)}`
+          );
+        }
+
+        blobs = blobSidecars.sort((a, b) => a.index - b.index).map(({blob}) => blob);
+      } else {
+        blobs = [];
+      }
+
+      return {
+        data: indices ? blobs.filter((_, i) => indices.includes(i)) : blobs,
+        meta: {
+          executionOptimistic,
+          finalized,
         },
       };
     },

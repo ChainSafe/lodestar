@@ -1,17 +1,18 @@
-import {ENR} from "@chainsafe/enr";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/dist/src/score/peer-score.js";
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {Connection, PrivateKey} from "@libp2p/interface";
+import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {routes} from "@lodestar/api";
 import {BeaconConfig, ForkBoundary} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
+import {isForkPostFulu} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
-import {Epoch, phase0, ssz, sszTypesFor} from "@lodestar/types";
-import {fromHex} from "@lodestar/utils";
+import {Epoch, Status, fulu, sszTypesFor} from "@lodestar/types";
 import {multiaddr} from "@multiformats/multiaddr";
 import {formatNodePeer} from "../../api/impl/node/utils.js";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {ClockEvent, IClock} from "../../util/clock.js";
+import {CustodyConfig} from "../../util/dataColumns.js";
 import {PeerIdStr, peerIdFromString, peerIdToString} from "../../util/peerId.js";
 import {Discv5Worker} from "../discv5/index.js";
 import {NetworkEventBus} from "../events.js";
@@ -20,6 +21,7 @@ import {Eth2Gossipsub, getCoreTopicsAtFork} from "../gossip/index.js";
 import {Libp2p} from "../interface.js";
 import {createNodeJsLibp2p} from "../libp2p/index.js";
 import {MetadataController} from "../metadata.js";
+import {NetworkConfig} from "../networkConfig.js";
 import {NetworkOptions} from "../options.js";
 import {PeerAction, PeerRpcScoreStore, PeerScoreStats} from "../peers/index.js";
 import {PeerManager} from "../peers/peerManager.js";
@@ -28,7 +30,7 @@ import {ReqRespBeaconNode} from "../reqresp/ReqRespBeaconNode.js";
 import {GetReqRespHandlerFn, OutgoingRequestArgs} from "../reqresp/types.js";
 import {LocalStatusCache} from "../statusCache.js";
 import {AttnetsService} from "../subnets/attnetsService.js";
-import {CommitteeSubscription, IAttnetsService} from "../subnets/interface.js";
+import {CommitteeSubscription, IAttnetsService, computeNodeId} from "../subnets/interface.js";
 import {SyncnetsService} from "../subnets/syncnetsService.js";
 import {getConnectionsMap} from "../util.js";
 import {NetworkCoreMetrics, createNetworkCoreMetrics} from "./metrics.js";
@@ -41,6 +43,7 @@ type Mods = {
   attnetsService: IAttnetsService;
   syncnetsService: SyncnetsService;
   peerManager: PeerManager;
+  networkConfig: NetworkConfig;
   peersData: PeersData;
   metadata: MetadataController;
   logger: LoggerNode;
@@ -62,7 +65,8 @@ export type BaseNetworkInit = {
   events: NetworkEventBus;
   getReqRespHandler: GetReqRespHandlerFn;
   activeValidatorCount: number;
-  initialStatus: phase0.Status;
+  initialStatus: Status;
+  initialCustodyGroupCount: number;
 };
 
 /**
@@ -87,6 +91,7 @@ export class NetworkCore implements INetworkCore {
   private readonly attnetsService: IAttnetsService;
   private readonly syncnetsService: SyncnetsService;
   private readonly peerManager: PeerManager;
+  private readonly networkConfig: NetworkConfig;
   private readonly peersData: PeersData;
   private readonly reqResp: ReqRespBeaconNode;
   private readonly gossip: Eth2Gossipsub;
@@ -110,6 +115,7 @@ export class NetworkCore implements INetworkCore {
     this.attnetsService = modules.attnetsService;
     this.syncnetsService = modules.syncnetsService;
     this.peerManager = modules.peerManager;
+    this.networkConfig = modules.networkConfig;
     this.peersData = modules.peersData;
     this.metadata = modules.metadata;
     this.logger = modules.logger;
@@ -134,6 +140,7 @@ export class NetworkCore implements INetworkCore {
     getReqRespHandler,
     activeValidatorCount,
     initialStatus,
+    initialCustodyGroupCount,
   }: BaseNetworkInit): Promise<NetworkCore> {
     const libp2p = await createNodeJsLibp2p(privateKey, opts, {
       peerStoreDir,
@@ -143,7 +150,7 @@ export class NetworkCore implements INetworkCore {
 
     const metrics = metricsRegistry ? createNetworkCoreMetrics(metricsRegistry) : null;
     const peersData = new PeersData();
-    const peerRpcScores = new PeerRpcScoreStore(opts, metrics);
+    const peerRpcScores = new PeerRpcScoreStore(opts, metrics, logger);
     const statusCache = new LocalStatusCache(initialStatus);
 
     // Bind discv5's ENR to local metadata
@@ -153,7 +160,14 @@ export class NetworkCore implements INetworkCore {
     const onMetadataSetValue = function onMetadataSetValue(key: string, value: Uint8Array): void {
       discv5?.setEnrValue(key, value).catch((e) => logger.error("error on setEnrValue", {key}, e));
     };
-    const metadata = new MetadataController({}, {config, logger, onSetValue: onMetadataSetValue});
+    const peerId = peerIdFromPrivateKey(privateKey);
+    const nodeId = computeNodeId(peerId);
+    const networkConfig: NetworkConfig = {
+      nodeId,
+      config,
+      custodyConfig: new CustodyConfig({nodeId, config, initialCustodyGroupCount}),
+    };
+    const metadata = new MetadataController({}, {networkConfig, logger, onSetValue: onMetadataSetValue});
 
     const reqResp = new ReqRespBeaconNode(
       {
@@ -192,9 +206,16 @@ export class NetworkCore implements INetworkCore {
     // should be called before AttnetsService constructor so that node subscribe to deterministic attnet topics
     await gossip.start();
 
-    const enr = opts.discv5?.enr;
-    const nodeId = enr ? fromHex(ENR.decodeTxt(enr).nodeId) : null;
-    const attnetsService = new AttnetsService(config, clock, gossip, metadata, logger, metrics, nodeId, opts);
+    const attnetsService = new AttnetsService(
+      config,
+      clock,
+      gossip,
+      metadata,
+      logger,
+      metrics,
+      networkConfig.nodeId,
+      opts
+    );
     const syncnetsService = new SyncnetsService(config, clock, gossip, metadata, logger, metrics, opts);
 
     const peerManager = await PeerManager.init(
@@ -208,9 +229,9 @@ export class NetworkCore implements INetworkCore {
         logger,
         metrics,
         clock,
-        config,
         peerRpcScores,
         events,
+        networkConfig: networkConfig,
         peersData,
         statusCache,
       },
@@ -237,6 +258,7 @@ export class NetworkCore implements INetworkCore {
       attnetsService,
       syncnetsService,
       peerManager,
+      networkConfig: networkConfig,
       peersData,
       metadata,
       logger,
@@ -272,6 +294,10 @@ export class NetworkCore implements INetworkCore {
     this.closed = true;
   }
 
+  getNetworkConfig(): NetworkConfig {
+    return this.networkConfig;
+  }
+
   async scrapeMetrics(): Promise<string> {
     return [
       (await this.metrics?.register.metrics()) ?? "",
@@ -282,12 +308,14 @@ export class NetworkCore implements INetworkCore {
       .join("\n\n");
   }
 
-  async updateStatus(status: phase0.Status): Promise<void> {
+  async updateStatus(status: Status): Promise<void> {
     this.statusCache.update(status);
   }
+
   async reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): Promise<void> {
     this.peerManager.reportPeer(peerIdFromString(peer), action, actionName);
   }
+
   async reStatusPeers(peers: PeerIdStr[]): Promise<void> {
     this.peerManager.reStatusPeers(peers);
   }
@@ -335,9 +363,15 @@ export class NetworkCore implements INetworkCore {
     const peerId = peerIdFromString(data.peerId);
     return this.reqResp.sendRequestWithoutEncoding(peerId, data.method, data.versions, data.requestData);
   }
+
   async publishGossip(topic: string, data: Uint8Array, opts?: PublishOpts | undefined): Promise<number> {
     const {recipients} = await this.gossip.publish(topic, data, opts);
     return recipients.length;
+  }
+
+  async setTargetGroupCount(count: number): Promise<void> {
+    this.networkConfig.custodyConfig.updateTargetCustodyGroupCount(count);
+    this.metadata.custodyGroupCount = count;
   }
 
   // REST API queries
@@ -390,10 +424,14 @@ export class NetworkCore implements INetworkCore {
   private _dumpPeer(peerIdStr: string, connections: Connection[]): routes.lodestar.LodestarNodePeer {
     const peerData = this.peersData.connectedPeers.get(peerIdStr);
     const fork = this.config.getForkName(this.clock.currentSlot);
+    if (isForkPostFulu(fork) && peerData?.status) {
+      (peerData.status as fulu.Status).earliestAvailableSlot =
+        (peerData.status as fulu.Status).earliestAvailableSlot ?? 0;
+    }
     return {
       ...formatNodePeer(peerIdStr, connections),
       agentVersion: peerData?.agentVersion ?? "NA",
-      status: peerData?.status ? ssz.phase0.Status.toJson(peerData.status) : null,
+      status: peerData?.status ? sszTypesFor(fork).Status.toJson(peerData.status) : null,
       metadata: peerData?.metadata ? sszTypesFor(fork).Metadata.toJson(peerData.metadata) : null,
       agentClient: String(peerData?.agentClient ?? "Unknown"),
       lastReceivedMsgUnixTsMs: peerData?.lastReceivedMsgUnixTsMs ?? 0,

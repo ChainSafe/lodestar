@@ -1,6 +1,7 @@
 import {generateKeyPair, publicKeyFromProtobuf} from "@libp2p/crypto/keys";
 import {PeerId} from "@libp2p/interface";
 import {peerIdFromPrivateKey, peerIdFromPublicKey} from "@libp2p/peer-id";
+import {PeerSyncMeta} from "../../src/network/peers/peersData.js";
 import {peerIdToString} from "../../src/util/peerId.js";
 
 /**
@@ -14,6 +15,15 @@ export function getValidPeerId(): PeerId {
 
 export async function getRandPeerIdStr(): Promise<string> {
   return peerIdToString(peerIdFromPrivateKey(await generateKeyPair("secp256k1")));
+}
+
+export async function getRandPeerSyncMeta(peerId?: string): Promise<PeerSyncMeta> {
+  return {
+    peerId: peerId ?? (await getRandPeerIdStr()),
+    client: "PEER_CLIENT",
+    custodyGroups: [],
+    earliestAvailableSlot: 0,
+  };
 }
 
 export const validPeerIdStr = peerIdToString(getValidPeerId());

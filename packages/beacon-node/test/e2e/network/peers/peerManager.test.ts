@@ -3,16 +3,18 @@ import {generateKeyPair} from "@libp2p/crypto/keys";
 import {Connection} from "@libp2p/interface";
 import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
-import {altair, phase0, ssz} from "@lodestar/types";
+import {phase0, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {afterEach, describe, expect, it, vi} from "vitest";
 import {Eth2Gossipsub, NetworkEvent, NetworkEventBus, getConnectionsMap} from "../../../../src/network/index.js";
+import {NetworkConfig} from "../../../../src/network/networkConfig.js";
 import {IReqRespBeaconNodePeerManager, PeerManager, PeerRpcScoreStore} from "../../../../src/network/peers/index.js";
 import {PeersData} from "../../../../src/network/peers/peersData.js";
 import {ReqRespMethod} from "../../../../src/network/reqresp/ReqRespBeaconNode.js";
 import {LocalStatusCache} from "../../../../src/network/statusCache.js";
-import {IAttnetsService} from "../../../../src/network/subnets/index.js";
+import {IAttnetsService, computeNodeId} from "../../../../src/network/subnets/index.js";
 import {Clock} from "../../../../src/util/clock.js";
+import {CustodyConfig, getCustodyGroups} from "../../../../src/util/dataColumns.js";
 import {waitForEvent} from "../../../utils/events/resolver.js";
 import {testLogger} from "../../../utils/logger.js";
 import {createNode} from "../../../utils/network.js";
@@ -43,6 +45,15 @@ describe("network / peers / PeerManager", () => {
       },
     });
     const beaconConfig = createBeaconConfig(config, state.genesisValidatorsRoot);
+    const nodeId = computeNodeId(peerId1);
+    const networkConfig: NetworkConfig = {
+      nodeId,
+      config: beaconConfig,
+      custodyConfig: new CustodyConfig({
+        nodeId,
+        config,
+      }),
+    };
     const controller = new AbortController();
     const clock = new Clock({config: beaconConfig, genesisTime: 0, signal: controller.signal});
     const status = ssz.phase0.Status.defaultValue();
@@ -76,7 +87,7 @@ describe("network / peers / PeerManager", () => {
         metrics: null,
         clock,
         statusCache,
-        config: beaconConfig,
+        networkConfig,
         peerRpcScores,
         events: networkEventBus,
         attnetsService: mockSubnetsService,
@@ -86,6 +97,7 @@ describe("network / peers / PeerManager", () => {
       },
       {
         targetPeers: 30,
+        targetGroupPeers: 6,
         maxPeers: 50,
         discv5: null,
         discv5FirstQueryDelayMs: 0,
@@ -186,7 +198,16 @@ describe("network / peers / PeerManager", () => {
 
     // Simulate peer1 returning a PING and STATUS message
     const remoteStatus = statusCache.get();
-    const remoteMetadata: altair.Metadata = {seqNumber: BigInt(1), attnets: getAttnets(), syncnets: getSyncnets()};
+    const custodyGroupCount = config.CUSTODY_REQUIREMENT;
+    const samplingGroupCount = config.SAMPLES_PER_SLOT;
+    const remoteMetadata: NonNullable<ReturnType<PeerManager["connectedPeers"]["get"]>>["metadata"] = {
+      seqNumber: BigInt(1),
+      attnets: getAttnets(),
+      syncnets: getSyncnets(),
+      custodyGroupCount,
+      custodyGroups: getCustodyGroups(computeNodeId(peerId1), custodyGroupCount),
+      samplingGroups: getCustodyGroups(computeNodeId(peerId1), samplingGroupCount),
+    };
     reqResp.sendPing.mockResolvedValue(remoteMetadata.seqNumber);
     reqResp.sendStatus.mockResolvedValue(remoteStatus);
     reqResp.sendMetadata.mockResolvedValue(remoteMetadata);
@@ -208,7 +229,7 @@ describe("network / peers / PeerManager", () => {
     // 3. Receive ping result (1) and call reqResp.sendMetadata
     // 4. Receive status result (2) assert peer relevance and emit `PeerManagerEvent.peerConnected`
     expect(reqResp.sendPing).toHaveBeenCalledOnce();
-    expect(reqResp.sendStatus).toHaveBeenCalledOnce();
+    expect(reqResp.sendStatus).toHaveBeenCalledTimes(2);
     expect(reqResp.sendMetadata).toHaveBeenCalledOnce();
 
     expect(peerManager["connectedPeers"].get(peerId1.toString())?.metadata).toEqual(remoteMetadata);

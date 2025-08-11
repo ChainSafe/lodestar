@@ -1,6 +1,7 @@
 import {ChainConfig, ForkDigestContext} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
+  DATA_COLUMN_SIDECAR_SUBNET_COUNT,
   ForkName,
   ForkSeq,
   SYNC_COMMITTEE_SUBNET_COUNT,
@@ -75,6 +76,8 @@ function stringifyGossipTopicType(topic: GossipTopic): string {
       return `${topic.type}_${topic.subnet}`;
     case GossipType.blob_sidecar:
       return `${topic.type}_${topic.subnet}`;
+    case GossipType.data_column_sidecar:
+      return `${topic.type}_${topic.subnet}`;
   }
 }
 
@@ -86,6 +89,8 @@ export function getGossipSSZType(topic: GossipTopic) {
       return ssz[fork].SignedBeaconBlock;
     case GossipType.blob_sidecar:
       return ssz.deneb.BlobSidecar;
+    case GossipType.data_column_sidecar:
+      return ssz.fulu.DataColumnSidecar;
     case GossipType.beacon_aggregate_and_proof:
       return sszTypesFor(fork).SignedAggregateAndProof;
     case GossipType.beacon_attestation:
@@ -205,6 +210,13 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
       return {type: GossipType.blob_sidecar, subnet, boundary, encoding};
     }
 
+    if (gossipTypeStr.startsWith(GossipType.data_column_sidecar)) {
+      const subnetStr = gossipTypeStr.slice(GossipType.data_column_sidecar.length + 1); // +1 for '_' concatenating the topic name and the subnet
+      const subnet = parseInt(subnetStr, 10);
+      if (Number.isNaN(subnet)) throw Error(`subnet ${subnetStr} is not a number`);
+      return {type: GossipType.data_column_sidecar, subnet, boundary, encoding};
+    }
+
     throw Error(`Unknown gossip type ${gossipTypeStr}`);
   } catch (e) {
     (e as Error).message = `Invalid gossip topic ${topicStr}: ${(e as Error).message}`;
@@ -228,6 +240,14 @@ export function getCoreTopicsAtFork(
     {type: GossipType.proposer_slashing},
     {type: GossipType.attester_slashing},
   ];
+
+  // After fulu also track data_column_sidecar_{index}
+  if (ForkSeq[fork] >= ForkSeq.fulu) {
+    // TODO: @matthewkeil check if this needs to be updated for custody groups
+    for (let subnet = 0; subnet < DATA_COLUMN_SIDECAR_SUBNET_COUNT; subnet++) {
+      topics.push({type: GossipType.data_column_sidecar, subnet});
+    }
+  }
 
   // After Deneb also track blob_sidecar_{subnet_id}
   if (ForkSeq[fork] >= ForkSeq.deneb) {
@@ -285,6 +305,7 @@ function parseEncodingStr(encodingStr: string): GossipEncoding {
 export const gossipTopicIgnoreDuplicatePublishError: Record<GossipType, boolean> = {
   [GossipType.beacon_block]: true,
   [GossipType.blob_sidecar]: true,
+  [GossipType.data_column_sidecar]: true,
   [GossipType.beacon_aggregate_and_proof]: true,
   [GossipType.beacon_attestation]: true,
   [GossipType.voluntary_exit]: true,
