@@ -224,3 +224,12 @@ It includes:
 
 Attestations are bundled together and included in new blocks to help the network agree on the canonical.
 ```
+
+### Setting Values in your Attestation object
+
+Once you have a default object, you can update it's values directly:
+
+```
+attestation.data.source.epoch = 100;
+attestation.data.target.epoch = 200;
+```
