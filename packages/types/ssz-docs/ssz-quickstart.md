@@ -46,7 +46,7 @@ The Simple Serialize(SSZ) system has two layers of components.
 - _Fork Specific Schemas_ : Ethereum upgrades (eg. Altair, Bellatrix) They define new structures using the core types.
 - _Core SSZ types_ :This is a set of composite types used to define data Structures.
 
-## This section will break down the different layers of components so you understand how SSZ is used in Lodestar and Ethereum consensus. Understanding this components help in grasping how SSZ transforms structured data into merkle-friendly format for ethereum consensus.
+This section will break down the different layers of components so you understand how SSZ is used in Lodestar and Ethereum consensus. Understanding this components help in grasping how SSZ transforms structured data into merkle-friendly format for ethereum consensus.
 
 ## 3.1. Fork-Specific Schemas
 
