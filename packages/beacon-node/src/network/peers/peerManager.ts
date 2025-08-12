@@ -697,11 +697,6 @@ export class PeerManager {
     this.logger.verbose("peer connected", {peer: prettyPrintPeerId(remotePeer), direction, status});
     // NOTE: The peerConnect event is not emitted here here, but after asserting peer relevance
     this.metrics?.peerConnectedEvent.inc({direction, status});
-    // libp2p may emit closed connection, we don't want to handle it
-    // see https://github.com/libp2p/js-libp2p/issues/1565
-    if (this.connectedPeers.has(remotePeer.toString()) || status !== "open") {
-      return;
-    }
 
     // On connection:
     // - Outbound connections: send a STATUS and PING request
@@ -743,7 +738,11 @@ export class PeerManager {
         }
       })
       .catch((err) => {
-        this.logger.debug("Error setting agentVersion for the peer", {peerId: peerData.peerId.toString()}, err);
+        if (evt.detail.status !== "open") {
+          this.logger.debug("Peer disconnected during the identification", {peerId: peerData.peerId.toString()}, err);
+        } else {
+          this.logger.debug("Error setting agentVersion for the peer", {peerId: peerData.peerId.toString()}, err);
+        }
       });
   };
 
