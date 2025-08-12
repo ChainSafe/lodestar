@@ -60,7 +60,7 @@ export const generateLodestarValidatorNode: ValidatorNodeGenerator<ValidatorClie
           path.join(rootDir, "params.json"),
         ],
         env: {
-          DEBUG: process.env.DISABLE_DEBUG_LOGS ? "" : "*,-winston:*",
+          DEBUG: process.env.ENABLE_DEBUG_LOGS ? "*,-winston:*" : "",
         },
       },
       logs: {
