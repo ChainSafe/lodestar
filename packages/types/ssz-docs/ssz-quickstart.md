@@ -347,3 +347,24 @@ SSZ provides serialize() to turn a value into bytes and deserialize() to restore
 We recursively define the serialize function which consumes an object value (of the type specified) and returns a bytestring of type bytes. To learn more about the different type bytes go here. [SimpleSerialize.md](https://github.com/ethereum/consensus-specs/blob/dev/ssz/simple-serialize.md)
 
 Example: 
+```
+const serialized = ssz.phase0.Attestation.serialize(attestation);
+console.log(serialized); // Uint8Array([...])
+```
+Here, serialized is a Uint8Array — a compact binary representation of your object.
+
+#### What is Deserialization?
+Deserialization is the reverse process — it converts a byte array back into the original structured object.
+
+example:
+```
+const attestation2 = ssz.phase0.Attestation.deserialize(serialized);
+console.log(attestation2); // Object same as the original
+
+```
+#### Why Do We Need This in Ethereum?
+In Ethereum consensus:
+
+-Blocks, attestations, and other state objects are sent over the network as bytes.
+-Nodes serialize before sending and deserialize when receiving to reconstruct the exact original structure.
+-SSZ ensures the process is consistent across all clients.
