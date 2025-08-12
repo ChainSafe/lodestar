@@ -368,3 +368,25 @@ In Ethereum consensus:
 -Blocks, attestations, and other state objects are sent over the network as bytes.
 -Nodes serialize before sending and deserialize when receiving to reconstruct the exact original structure.
 -SSZ ensures the process is consistent across all clients.
+
+#### Full Round example
+```
+import { ssz } from "@lodestar/types";
+
+// Step 1: Create default attestation
+const attestation = ssz.phase0.Attestation.defaultValue();
+attestation.data.source.epoch = 100;
+
+// Step 2: Serialize → Uint8Array
+const serialized = ssz.phase0.Attestation.serialize(attestation);
+console.log("Serialized bytes:", serialized);
+
+// Step 3: Deserialize → Object
+const attestation2 = ssz.phase0.Attestation.deserialize(serialized);
+
+// Step 4: Verify equality
+console.log(
+  "Equal?",
+  ssz.phase0.Attestation.equals(attestation, attestation2) // true
+);
+```
