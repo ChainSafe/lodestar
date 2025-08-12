@@ -722,18 +722,18 @@ export class PeerManager {
     };
     this.connectedPeers.set(remotePeer.toString(), peerData);
 
-    if (direction === "outbound") {
-      // this.pingAndStatusTimeouts();
-      void this.requestPing(remotePeer);
-      void this.requestStatus(remotePeer, this.statusCache.get());
-    }
-
     if (evt.detail.status !== "open") {
       this.logger.debug("Peer disconnected before identification", {
         peerId: peerData.peerId.toString(),
         status: evt.detail.status,
       });
       return;
+    }
+
+    if (direction === "outbound") {
+      // this.pingAndStatusTimeouts();
+      void this.requestPing(remotePeer);
+      void this.requestStatus(remotePeer, this.statusCache.get());
     }
 
     this.libp2p.services.identify
