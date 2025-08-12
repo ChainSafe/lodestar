@@ -49,7 +49,7 @@ export class UnknownBlockSync {
     private readonly opts?: SyncOptions
   ) {
     this.maxPendingBlocks = opts?.maxPendingBlocks ?? MAX_PENDING_BLOCKS;
-    this.proposerBoostSecWindow = getSlotComponentDuration(config, config.PROPOSER_REORG_CUTOFF_BPS) / 1000;
+    this.proposerBoostSecWindow = getSlotComponentDuration(config, config.ATTESTATION_DUE_BPS) / 1000;
 
     if (metrics) {
       metrics.syncUnknownBlock.pendingBlocks.addCollect(() =>
