@@ -99,7 +99,7 @@ describe("computeDataColumnSidecars", () => {
         blobs,
         kzgProofs,
       })
-    ).toThrow("Invalid block with missing blobKzgCommitments for computeBlobSidecars");
+    ).toThrow("Invalid block with missing blobKzgCommitments for computeDataColumnSidecars");
   });
 });
 
