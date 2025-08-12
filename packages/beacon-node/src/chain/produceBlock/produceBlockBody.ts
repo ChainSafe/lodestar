@@ -393,7 +393,7 @@ export async function produceBlockBody<T extends BlockType>(
           }
 
           if (this.opts.sanityCheckExecutionEngineBlobs) {
-            await validateBlobsAndKzgCommitments(fork as ForkPostDeneb, executionPayload, blobsBundle, cells);
+            await validateBlobsAndKzgCommitments(fork, executionPayload, blobsBundle, cells);
           }
 
           (blockBody as deneb.BeaconBlockBody).blobKzgCommitments = blobsBundle.commitments;

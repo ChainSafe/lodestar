@@ -1,4 +1,4 @@
-import {CELLS_PER_EXT_BLOB, ForkPostDeneb, ForkSeq} from "@lodestar/params";
+import {CELLS_PER_EXT_BLOB, ForkName, ForkSeq, isForkPostDeneb} from "@lodestar/params";
 import {ExecutionPayload, fulu} from "@lodestar/types";
 import {BlobsBundle} from "../../execution/index.js";
 import {kzg} from "../../util/kzg.js";
@@ -9,11 +9,15 @@ import {kzg} from "../../util/kzg.js";
  */
 
 export async function validateBlobsAndKzgCommitments(
-  fork: ForkPostDeneb,
+  fork: ForkName,
   _payload: ExecutionPayload,
   blobsBundle: BlobsBundle,
   cells?: fulu.Cell[][]
 ): Promise<void> {
+  if (!isForkPostDeneb(fork)) {
+    throw Error(`validateBlobsAndKzgCommitments called with pre-deneb fork=${fork}`);
+  }
+
   if (blobsBundle.blobs.length !== blobsBundle.commitments.length) {
     throw Error(
       `Blobs bundle blobs len ${blobsBundle.blobs.length} != commitments len ${blobsBundle.commitments.length}`
@@ -35,7 +39,7 @@ export async function validateBlobsAndKzgCommitments(
   }
 
   if (!cells) {
-    cells = blobsBundle.blobs.map((blob) => kzg.computeCells(blob));
+    throw Error(`Missing cells for post-fulu fork=${fork}`);
   }
 
   const expectedProofsLength = blobsBundle.blobs.length * CELLS_PER_EXT_BLOB;
