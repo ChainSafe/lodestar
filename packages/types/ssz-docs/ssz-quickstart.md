@@ -341,6 +341,8 @@ Lodestar + TypeScript ensures these mistakes never make it to runtime — they�
 4. TypeScript Compiler → Enforces correctness at compile-time.
 5. Developer Experience → What you benefit from (type correctness, autocomplete, no silent runtime bugs).
 
+---
+
 ### Serialization and Deserialization
 SSZ provides serialize() to turn a value into bytes and deserialize() to restore it. Both follow Ethereum’s standardized format so all clients produce identical results.
 
@@ -390,3 +392,11 @@ console.log(
   ssz.phase0.Attestation.equals(attestation, attestation2) // true
 );
 ```
+
+Tip: Serialization in SSZ is not JSON serialization — it’s binary, so the result is not human-readable.
+If you want a JSON-friendly format, use:
+```
+const json = ssz.phase0.Attestation.toJson(attestation);
+const fromJson = ssz.phase0.Attestation.fromJson(json);
+```
+To understand how Lodestar’s SSZ library implements serialization and deserialization. Read this article [Under the Hood: How serialize() and deserialize() Work in Lodestar]()
