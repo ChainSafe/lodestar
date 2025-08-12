@@ -379,16 +379,27 @@ export class NetworkCore implements INetworkCore {
   async getNetworkIdentity(): Promise<routes.node.NetworkIdentity> {
     // biome-ignore lint/complexity/useLiteralKeys: `discovery` is a private attribute
     const enr = await this.peerManager["discovery"]?.discv5.enr();
+
+    // Node's addresses on which is listening for discv5 requests.
+    // The example provided by the beacon-APIs show a _full_ multiaddr, ie including the peer id, so we include it.
     const discoveryAddresses = [
-      enr?.getLocationMultiaddr("tcp")?.toString() ?? null,
-      enr?.getLocationMultiaddr("udp")?.toString() ?? null,
+      enr?.getFullMultiaddr("udp")?.toString() ?? null,
+      enr?.getFullMultiaddr("udp6")?.toString() ?? null,
+    ].filter((addr): addr is string => Boolean(addr));
+
+    // Node's addresses on which eth2 RPC requests are served.
+    const p2pAddresses = [
+      enr?.getFullMultiaddr("tcp")?.toString() ?? null,
+      enr?.getFullMultiaddr("tcp6")?.toString() ?? null,
+      enr?.getFullMultiaddr("quic")?.toString() ?? null,
+      enr?.getFullMultiaddr("quic6")?.toString() ?? null,
     ].filter((addr): addr is string => Boolean(addr));
 
     return {
       peerId: peerIdToString(this.libp2p.peerId),
       enr: enr?.encodeTxt() || "",
       discoveryAddresses,
-      p2pAddresses: this.libp2p.getMultiaddrs().map((m) => m.toString()),
+      p2pAddresses,
       metadata: this.metadata.json,
     };
   }
