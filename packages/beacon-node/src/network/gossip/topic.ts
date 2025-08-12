@@ -1,7 +1,6 @@
-import {ChainConfig, ForkDigestContext} from "@lodestar/config";
+import {ForkDigestContext} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
-  DATA_COLUMN_SIDECAR_SUBNET_COUNT,
   ForkName,
   ForkSeq,
   SYNC_COMMITTEE_SUBNET_COUNT,
@@ -11,6 +10,7 @@ import {
 import {Attestation, SingleAttestation, ssz, sszTypesFor} from "@lodestar/types";
 
 import {GossipAction, GossipActionError, GossipErrorCode} from "../../chain/errors/gossipValidation.js";
+import {NetworkConfig} from "../networkConfig.js";
 import {DEFAULT_ENCODING} from "./constants.js";
 import {GossipEncoding, GossipTopic, GossipTopicTypeMap, GossipType, SSZTypeOfGossipTopic} from "./interface.js";
 
@@ -228,7 +228,7 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
  * De-duplicate logic to pick fork topics between subscribeCoreTopicsAtFork and unsubscribeCoreTopicsAtFork
  */
 export function getCoreTopicsAtFork(
-  config: ChainConfig,
+  networkConfig: NetworkConfig,
   fork: ForkName,
   opts: {subscribeAllSubnets?: boolean; disableLightClientServer?: boolean}
 ): GossipTopicTypeMap[keyof GossipTopicTypeMap][] {
@@ -244,13 +244,15 @@ export function getCoreTopicsAtFork(
   // After fulu also track data_column_sidecar_{index}
   if (ForkSeq[fork] >= ForkSeq.fulu) {
     // TODO: @matthewkeil check if this needs to be updated for custody groups
-    for (let subnet = 0; subnet < DATA_COLUMN_SIDECAR_SUBNET_COUNT; subnet++) {
+    const subnets = networkConfig.custodyConfig.sampledSubnets;
+    for (const subnet of subnets) {
       topics.push({type: GossipType.data_column_sidecar, subnet});
     }
   }
 
   // After Deneb also track blob_sidecar_{subnet_id}
   if (ForkSeq[fork] >= ForkSeq.deneb) {
+    const {config} = networkConfig;
     const subnetCount = isForkPostElectra(fork)
       ? config.BLOB_SIDECAR_SUBNET_COUNT_ELECTRA
       : config.BLOB_SIDECAR_SUBNET_COUNT;
