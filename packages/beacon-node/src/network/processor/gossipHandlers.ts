@@ -626,7 +626,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
             });
           } else {
             chain.logger.debug("Block corresponding to data column is now available for processing", {
-              blobSlot: dataColumnSlot,
+              dataColumnSlot,
               index,
             });
           }
