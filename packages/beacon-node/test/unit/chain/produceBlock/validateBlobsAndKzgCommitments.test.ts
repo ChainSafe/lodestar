@@ -198,6 +198,6 @@ describe("validateBlobsAndKzgCommitments", () => {
       parentHash: new Uint8Array(32),
     } as ExecutionPayload;
 
-    await expect(validateBlobsAndKzgCommitments(ForkName.fulu, mockPayload, blobsBundle)).resolves.toThrow();
+    await expect(validateBlobsAndKzgCommitments(ForkName.fulu, mockPayload, blobsBundle)).rejects.toThrow();
   });
 });
