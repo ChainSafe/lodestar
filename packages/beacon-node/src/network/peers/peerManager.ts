@@ -700,6 +700,14 @@ export class PeerManager {
     // NOTE: The peerConnect event is not emitted here here, but after asserting peer relevance
     this.metrics?.peerConnectedEvent.inc({direction, status});
 
+    if (evt.detail.status !== "open") {
+      this.logger.debug("Peer disconnected before identify protocol initiated", {
+        peerId: remotePeerPrettyStr,
+        status: evt.detail.status,
+      });
+      return;
+    }
+
     // On connection:
     // - Outbound connections: send a STATUS and PING request
     // - Inbound connections: expect to be STATUS'd, schedule STATUS and PING for latter
@@ -723,14 +731,6 @@ export class PeerManager {
       encodingPreference: null,
     };
     this.connectedPeers.set(remotePeerStr, peerData);
-
-    if (evt.detail.status !== "open") {
-      this.logger.debug("Peer disconnected before identify protocol initiated", {
-        peerId: remotePeerPrettyStr,
-        status: evt.detail.status,
-      });
-      return;
-    }
 
     if (direction === "outbound") {
       // this.pingAndStatusTimeouts();
