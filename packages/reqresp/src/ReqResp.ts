@@ -1,6 +1,6 @@
 import {setMaxListeners} from "node:events";
 import {Connection, PeerId, Stream} from "@libp2p/interface";
-import {Logger, MetricsRegister} from "@lodestar/utils";
+import {Logger, MetricsRegisterExtra} from "@lodestar/utils";
 import type {Libp2p} from "libp2p";
 import {Metrics, getMetrics} from "./metrics.js";
 import {ReqRespRateLimiter} from "./rate_limiter/ReqRespRateLimiter.js";
@@ -25,7 +25,7 @@ export const DEFAULT_PROTOCOL_PREFIX = "/eth2/beacon_chain/req";
 export interface ReqRespProtocolModules {
   libp2p: Libp2p;
   logger: Logger;
-  metricsRegister: MetricsRegister | null;
+  metricsRegister: MetricsRegisterExtra | null;
 }
 
 export interface ReqRespOpts extends SendRequestOpts, ReqRespRateLimiterOpts {
@@ -71,9 +71,9 @@ export class ReqResp {
     this.rateLimiter = new ReqRespRateLimiter(opts);
     this.selfRateLimiter = new SelfRateLimiter();
 
-    if (this.metrics) {
-      this.metrics.selfRateLimiterPeerCount.set(this.selfRateLimiter.getPeerCount());
-    }
+    this.metrics?.selfRateLimiterPeerCount.addCollect(() => {
+      this.metrics?.selfRateLimiterPeerCount.set(this.selfRateLimiter.getPeerCount());
+    });
   }
 
   /**

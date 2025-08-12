@@ -1,4 +1,4 @@
-import {MetricsRegister} from "@lodestar/utils";
+import {MetricsRegisterExtra} from "@lodestar/utils";
 import {RequestErrorCode} from "./request/errors.js";
 
 export type Metrics = ReturnType<typeof getMetrics>;
@@ -6,7 +6,7 @@ export type Metrics = ReturnType<typeof getMetrics>;
 /**
  * A collection of metrics used throughout the Gossipsub behaviour.
  */
-export function getMetrics(register: MetricsRegister) {
+export function getMetrics(register: MetricsRegisterExtra) {
   // Using function style instead of class to prevent having to re-declare all MetricsPrometheus types.
 
   return {
