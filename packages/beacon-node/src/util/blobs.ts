@@ -81,7 +81,7 @@ export function computeDataColumnSidecars(
 ): fulu.DataColumnSidecars {
   const blobKzgCommitments = (signedBlock as deneb.SignedBeaconBlock).message.body.blobKzgCommitments;
   if (blobKzgCommitments === undefined) {
-    throw Error("Invalid block with missing blobKzgCommitments for computeBlobSidecars");
+    throw Error("Invalid block with missing blobKzgCommitments for computeDataColumnSidecars");
   }
   if (blobKzgCommitments.length === 0) {
     return [];

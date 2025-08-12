@@ -1,4 +1,3 @@
-import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, INTERVALS_PER_SLOT, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {ColumnIndex, Root, RootHex, deneb} from "@lodestar/types";
@@ -184,9 +183,7 @@ export class UnknownBlockSync {
     } else {
       if (blockInputOrRootHex.block !== null) {
         const {block} = blockInputOrRootHex;
-        blockRootHex = toHexString(
-          this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)
-        );
+        blockRootHex = toRootHex(this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
         unknownBlockType = PendingBlockType.UNKNOWN_DATA;
       } else {
         unknownBlockType = PendingBlockType.UNKNOWN_BLOCKINPUT;
@@ -298,7 +295,7 @@ export class UnknownBlockSync {
     if (block.blockInput === null) {
       connectedPeers = allPeers;
       // we only have block root, and nothing else
-      res = await wrapError(this.fetchUnknownBlockRoot(fromHexString(block.blockRootHex), connectedPeers));
+      res = await wrapError(this.fetchUnknownBlockRoot(fromHex(block.blockRootHex), connectedPeers));
     } else {
       const {cachedData} = block.blockInput;
       if (cachedData.fork === ForkName.fulu) {
@@ -376,7 +373,7 @@ export class UnknownBlockSync {
           ...block,
           status: PendingBlockStatus.downloaded,
           blockInput,
-          parentBlockRootHex: toHexString(blockInput.block.message.parentRoot),
+          parentBlockRootHex: toRootHex(blockInput.block.message.parentRoot),
         };
         this.pendingBlocks.set(block.blockRootHex, block);
         const blockSlot = blockInput.block.message.slot;
@@ -408,7 +405,7 @@ export class UnknownBlockSync {
           this.logger.debug("Downloaded block is before finalized slot", {
             finalizedSlot,
             blockSlot,
-            parentRoot: toHexString(blockRoot),
+            parentRoot: toRootHex(blockRoot),
             unknownBlockType,
           });
           this.removeAndDownscoreAllDescendants(block);

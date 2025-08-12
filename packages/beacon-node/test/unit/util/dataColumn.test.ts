@@ -1,9 +1,8 @@
-import {fromHexString} from "@chainsafe/ssz";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ChainForkConfig} from "@lodestar/config";
 import {NUMBER_OF_COLUMNS, NUMBER_OF_CUSTODY_GROUPS} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {bigIntToBytes} from "@lodestar/utils";
+import {bigIntToBytes, fromHex} from "@lodestar/utils";
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
 
 import {validateDataColumnsSidecars} from "../../../src/chain/validation/dataColumnSidecar.js";
@@ -60,7 +59,7 @@ describe("getValidatorsCustodyRequirement", () => {
 
 describe("CustodyConfig", () => {
   let config: ChainForkConfig;
-  const nodeId = fromHexString("cdbee32dc3c50e9711d22be5565c7e44ff6108af663b2dc5abd2df573d2fa83f");
+  const nodeId = fromHex("cdbee32dc3c50e9711d22be5565c7e44ff6108af663b2dc5abd2df573d2fa83f");
 
   beforeEach(() => {
     // Create a proper config using createChainForkConfig
@@ -121,7 +120,7 @@ describe("getDataColumns", () => {
   ];
   for (const [nodeIdHex, numSubnets, custodyColumns] of testCases) {
     it(`${nodeIdHex} / ${numSubnets}`, async () => {
-      const nodeId = nodeIdHex.length === 64 ? fromHexString(nodeIdHex) : bigIntToBytes(BigInt(nodeIdHex), 32, "be");
+      const nodeId = nodeIdHex.length === 64 ? fromHex(nodeIdHex) : bigIntToBytes(BigInt(nodeIdHex), 32, "be");
 
       const columnIndexs = getDataColumns(nodeId, numSubnets);
       expect(columnIndexs).toEqual(custodyColumns);
