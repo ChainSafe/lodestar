@@ -342,3 +342,10 @@ Lodestar + TypeScript ensures these mistakes never make it to runtime — they�
 5. Developer Experience → What you benefit from (type correctness, autocomplete, no silent runtime bugs).
 
 ### Serialization and Deserialization
+Serialization is the process of converting structured data (objects) into a flat sequence of bytes, making it possible to store and transmit data efficiently.
+In SSZ serialization follows a deterministic, Ethereum-compatible format so all clients agree on the exact byte representation.
+
+We recursively define the serialize function which consumes an object value (of the type specified) and returns a bytestring of type bytes. To learn more about the different type bytes go here. [SimpleSerialize.md](https://github.com/ethereum/consensus-specs/blob/dev/ssz/simple-serialize.md)
+
+
+Example: 
