@@ -63,14 +63,6 @@ export async function* onDataColumnSidecarsByRoot(
       CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX + NUMBER_OF_COLUMNS
     );
 
-    // const storedColumns = Array.from({length: NUMBER_OF_COLUMNS}, (_v, i) => i).filter(
-    //   (i) => dataColumnsIndex[i] > 0
-    // );
-    // const columnsLen = dataColumnSidecarsBytes.length / columnsSize;
-    // console.log(
-    //   `onDataColumnSidecarsByRoot: slot=${block.slot} columnsSize=${columnsSize} storedColumnsLen=${columnsLen} retrivedColumnsLen=${retrivedColumnsLen} dataColumnSidecarsBytesWrapped=${dataColumnSidecarsBytesWrapped.length} storedColumns=${storedColumns.join(" ")}`
-    // );
-
     for (const index of columns) {
       const dataIndex = (dataColumnsIndex[index] ?? 0) - 1;
       if (dataIndex < 0) {

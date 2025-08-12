@@ -58,7 +58,7 @@ describe("network / peers / priorization", async () => {
         peersToConnect: 1,
         attnetQueries: [{subnet: 3, maxPeersToDiscover: 1, toSlot: 0}],
         syncnetQueries: [],
-        groupQueries: new Map(),
+        custodyGroupQueries: new Map(),
       },
     },
     {
@@ -82,7 +82,7 @@ describe("network / peers / priorization", async () => {
         peersToConnect: 0,
         attnetQueries: [],
         syncnetQueries: [],
-        groupQueries: new Map(),
+        custodyGroupQueries: new Map(),
       },
     },
     {
@@ -137,7 +137,7 @@ describe("network / peers / priorization", async () => {
         peersToConnect: 0,
         attnetQueries: [],
         syncnetQueries: [],
-        groupQueries: new Map(),
+        custodyGroupQueries: new Map(),
       },
     },
     {
@@ -167,7 +167,7 @@ describe("network / peers / priorization", async () => {
         peersToConnect: 0,
         attnetQueries: [],
         syncnetQueries: [],
-        groupQueries: new Map(),
+        custodyGroupQueries: new Map(),
       },
     },
     {
@@ -233,7 +233,7 @@ describe("network / peers / priorization", async () => {
         peersToConnect: 0,
         attnetQueries: [],
         syncnetQueries: [],
-        groupQueries: new Map(),
+        custodyGroupQueries: new Map(),
       },
     },
     {
@@ -302,7 +302,7 @@ describe("network / peers / priorization", async () => {
         peersToConnect: 0,
         attnetQueries: [],
         syncnetQueries: [],
-        groupQueries: new Map(),
+        custodyGroupQueries: new Map(),
       },
     },
     {
@@ -365,7 +365,7 @@ describe("network / peers / priorization", async () => {
         peersToConnect: 0,
         attnetQueries: [],
         syncnetQueries: [],
-        groupQueries: new Map(),
+        custodyGroupQueries: new Map(),
       },
     },
     {
@@ -459,7 +459,7 @@ describe("network / peers / priorization", async () => {
         peersToConnect: 0,
         attnetQueries: [],
         syncnetQueries: [],
-        groupQueries: new Map(),
+        custodyGroupQueries: new Map(),
       },
     },
     {
@@ -550,7 +550,7 @@ describe("network / peers / priorization", async () => {
         peersToConnect: 0,
         attnetQueries: [{subnet: 3, maxPeersToDiscover: 1, toSlot: 0}],
         syncnetQueries: [],
-        groupQueries: new Map(),
+        custodyGroupQueries: new Map(),
       },
     },
     {
@@ -587,7 +587,7 @@ describe("network / peers / priorization", async () => {
           // only the two CLOSE_TO_US peers are disconnected; keep FAR_AHEAD peer
           [ExcessPeerDisconnectReason.NO_LONG_LIVED_SUBNET, [peers[1], peers[0]]],
         ]),
-        groupQueries: new Map(),
+        custodyGroupQueries: new Map(),
       },
     },
 
@@ -643,7 +643,7 @@ describe("network / peers / priorization", async () => {
         peersToConnect: 0,
         attnetQueries: [],
         syncnetQueries: [],
-        groupQueries: new Map([
+        custodyGroupQueries: new Map([
           [0, 2],
           [1, 2],
           [2, 2],

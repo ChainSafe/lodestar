@@ -1,10 +1,10 @@
-import {BitArray, toHexString} from "@chainsafe/ssz";
+import {BitArray} from "@chainsafe/ssz";
 import {Connection, PeerId, PrivateKey} from "@libp2p/interface";
 import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
 import {ForkSeq, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
-import {Metadata, Status, fulu, phase0} from "@lodestar/types";
-import {withTimeout} from "@lodestar/utils";
+import {Metadata, Status, altair, fulu, phase0} from "@lodestar/types";
+import {prettyPrintIndices, toHex, withTimeout} from "@lodestar/utils";
 import {GOODBYE_KNOWN_CODES, GoodByeReasonCode, Libp2pEvent} from "../../constants/index.js";
 import {IClock} from "../../util/clock.js";
 import {getCustodyGroups, getDataColumns} from "../../util/dataColumns.js";
@@ -22,6 +22,7 @@ import {getConnection, getConnectionsMap, prettyPrintPeerId, prettyPrintPeerIdSt
 import {ClientKind, getKnownClientFromAgentVersion} from "./client.js";
 import {PeerDiscovery, SubnetDiscvQueryMs} from "./discover.js";
 import {PeerData, PeersData} from "./peersData.js";
+import {NO_COOL_DOWN_APPLIED} from "./score/constants.js";
 import {IPeerRpcScoreStore, PeerAction, PeerScoreStats, ScoreState, updateGossipsubScores} from "./score/index.js";
 import {
   assertPeerRelevance,
@@ -175,13 +176,13 @@ export class PeerManager {
     this.statusCache = modules.statusCache;
     this.clock = modules.clock;
     this.networkConfig = networkConfig;
-    this.config = networkConfig.getConfig();
+    this.config = networkConfig.config;
     this.peerRpcScores = modules.peerRpcScores;
     this.networkEventBus = modules.events;
     this.connectedPeers = modules.peersData.connectedPeers;
     this.opts = opts;
     this.discovery = discovery;
-    this.nodeId = networkConfig.getNodeId();
+    this.nodeId = networkConfig.nodeId;
 
     const {metrics} = modules;
     if (metrics) {
@@ -316,11 +317,6 @@ export class PeerManager {
   private onPing(peer: PeerId, seqNumber: phase0.Ping): void {
     // if the sequence number is unknown update the peer's metadata
     const metadata = this.connectedPeers.get(peer.toString())?.metadata;
-    this.logger.warn("onPing", {
-      seqNumber,
-      metaSeqNumber: metadata?.seqNumber,
-      cond: !metadata || metadata.seqNumber < seqNumber,
-    });
     if (!metadata || metadata.seqNumber < seqNumber) {
       void this.requestMetadata(peer);
     }
@@ -333,10 +329,10 @@ export class PeerManager {
     // Store metadata always in case the peer updates attnets but not the sequence number
     // Trust that the peer always sends the latest metadata (From Lighthouse)
     const peerData = this.connectedPeers.get(peer.toString());
-    this.logger.warn("onMetadata", {
+    this.logger.debug("onMetadata", {
       peer: peer.toString(),
       peerData: peerData !== undefined,
-      custodyGroupCount: (metadata as Partial<fulu.Metadata>).custodyGroupCount,
+      custodyGroupCount: (metadata as Partial<fulu.Metadata>)?.custodyGroupCount,
     });
     if (peerData) {
       const oldMetadata = peerData.metadata;
@@ -344,7 +340,6 @@ export class PeerManager {
         (metadata as Partial<fulu.Metadata>).custodyGroupCount ?? this.config.CUSTODY_REQUIREMENT;
       const samplingGroupCount = Math.max(this.config.SAMPLES_PER_SLOT, custodyGroupCount);
       const nodeId = peerData?.nodeId ?? computeNodeId(peer);
-      // TODO(fulu): this should be columns not groups.  need to change everywhere
       const custodyGroups =
         oldMetadata == null || oldMetadata.custodyGroups == null || custodyGroupCount !== oldMetadata.custodyGroupCount
           ? getCustodyGroups(nodeId, custodyGroupCount)
@@ -357,7 +352,7 @@ export class PeerManager {
       peerData.metadata = {
         seqNumber: metadata.seqNumber,
         attnets: metadata.attnets,
-        syncnets: (metadata as Partial<fulu.Metadata>).syncnets ?? BitArray.fromBitLen(SYNC_COMMITTEE_SUBNET_COUNT),
+        syncnets: (metadata as Partial<altair.Metadata>).syncnets ?? BitArray.fromBitLen(SYNC_COMMITTEE_SUBNET_COUNT),
         custodyGroupCount:
           (metadata as Partial<fulu.Metadata>).custodyGroupCount ??
           // TODO: spec says that Clients MAY reject peers with a value less than CUSTODY_REQUIREMENT
@@ -384,8 +379,6 @@ export class PeerManager {
       this.metrics?.peerLongConnectionDisconnect.inc({reason});
     }
 
-    // TODO: Consider register that we are banned, if discovery keeps attempting to connect to the same peers
-
     void this.disconnect(peer);
   }
 
@@ -405,10 +398,10 @@ export class PeerManager {
     let isIrrelevant: boolean;
     try {
       const irrelevantReasonType = assertPeerRelevance(
+        forkName,
         status,
         this.statusCache.get(),
-        this.clock.currentSlot,
-        forkName
+        this.clock.currentSlot
       );
       if (irrelevantReasonType === null) {
         isIrrelevant = false;
@@ -444,37 +437,34 @@ export class PeerManager {
     }
     if (getConnection(this.libp2p, peer.toString())) {
       const nodeId = peerData?.nodeId ?? computeNodeId(peer);
-      const custodyGroupCount = peerData?.metadata?.custodyGroupCount;
+      // TODO(fulu): Are we sure we've run Metadata before this?
+      const custodyGroupCount = peerData?.metadata?.custodyGroupCount ?? this.config.CUSTODY_REQUIREMENT;
+      const custodyGroups = peerData?.metadata?.custodyGroups ?? getCustodyGroups(nodeId, custodyGroupCount);
+      const dataColumns = getDataColumns(nodeId, custodyGroupCount);
 
-      const peerCustodyGroupCount = custodyGroupCount ?? this.config.CUSTODY_REQUIREMENT;
-      const dataColumns = getDataColumns(nodeId, peerCustodyGroupCount);
-      // on metadata, we should have custodyGroupss
-      const peerCustodyGroups = peerData?.metadata?.custodyGroups ?? getCustodyGroups(nodeId, peerCustodyGroupCount);
-
-      const sampleSubnets = this.networkConfig.getCustodyConfig().sampledSubnets;
+      const sampleSubnets = this.networkConfig.custodyConfig.sampledSubnets;
       const matchingSubnetsNum = sampleSubnets.reduce((acc, elem) => acc + (dataColumns.includes(elem) ? 1 : 0), 0);
       const hasAllColumns = matchingSubnetsNum === sampleSubnets.length;
       const clientAgent = peerData?.agentClient ?? ClientKind.Unknown;
 
-      this.logger.warn(`onStatus ${custodyGroupCount === undefined ? "undefined custody count assuming 4" : ""}`, {
-        nodeId: toHexString(nodeId),
-        myNodeId: toHexString(this.nodeId),
+      this.logger.debug("onStatus", {
+        nodeId: toHex(nodeId),
+        myNodeId: toHex(this.nodeId),
         peerId: peer.toString(),
         custodyGroupCount,
         hasAllColumns,
-        dataColumns: dataColumns.join(" "),
+        dataColumns: prettyPrintIndices(dataColumns),
         matchingSubnetsNum,
-        peerCustodyGroups: peerCustodyGroups.join(" "),
+        custodyGroups: prettyPrintIndices(custodyGroups),
         mySampleSubnets: sampleSubnets.join(" "),
         clientAgent,
       });
 
-      // TODO @matthewkeil need to double check the dataColumns is received on the other end of this correctly
       this.networkEventBus.emit(NetworkEvent.peerConnected, {
         peer: peer.toString(),
         status,
-        dataColumns,
-        clientAgent: `${clientAgent}-cgc:${dataColumns.length}`,
+        clientAgent,
+        custodyGroups,
       });
     }
   }
@@ -482,10 +472,9 @@ export class PeerManager {
   private async requestMetadata(peer: PeerId): Promise<void> {
     const peerIdStr = peer.toString();
     try {
-      this.logger.warn("requestMetadata", {peer: prettyPrintPeerIdStr(peerIdStr)});
       this.onMetadata(peer, await this.reqResp.sendMetadata(peer));
     } catch (e) {
-      this.logger.verbose("invalid requestMetadata response", {peer: prettyPrintPeerIdStr(peerIdStr)}, e as Error);
+      this.logger.verbose("invalid requestMetadata", {peer: prettyPrintPeerIdStr(peerIdStr)}, e as Error);
       // TODO: Downvote peer here or in the reqResp layer
     }
   }
@@ -493,7 +482,6 @@ export class PeerManager {
   private async requestPing(peer: PeerId): Promise<void> {
     const peerIdStr = peer.toString();
     try {
-      this.logger.warn("requestPing", {peer: peer.toString()});
       this.onPing(peer, await this.reqResp.sendPing(peer));
 
       // If peer replies a PING request also update lastReceivedMsg
@@ -563,7 +551,7 @@ export class PeerManager {
     this.metrics?.peerManager.starved.set(starved ? 1 : 0);
     const forkSeq = this.config.getForkSeq(this.clock.currentSlot);
 
-    const {peersToDisconnect, peersToConnect, attnetQueries, syncnetQueries, groupQueries} = prioritizePeers(
+    const {peersToDisconnect, peersToConnect, attnetQueries, syncnetQueries, custodyGroupQueries} = prioritizePeers(
       connectedHealthyPeers.map((peer) => {
         const peerData = this.connectedPeers.get(peer.toString());
         return {
@@ -581,7 +569,7 @@ export class PeerManager {
       this.attnetsService.getActiveSubnets(),
       this.syncnetsService.getActiveSubnets(),
       // ignore samplingGroups for pre-fulu forks
-      forkSeq >= ForkSeq.fulu ? this.networkConfig.getCustodyConfig().sampleGroups : undefined,
+      forkSeq >= ForkSeq.fulu ? this.networkConfig.custodyConfig.sampleGroups : undefined,
       {
         ...this.opts,
         status,
@@ -614,7 +602,7 @@ export class PeerManager {
       }
     }
 
-    for (const maxPeersToDiscover of groupQueries.values()) {
+    for (const maxPeersToDiscover of custodyGroupQueries.values()) {
       this.metrics?.peersRequestedSubnetsToQuery.inc({type: "column"}, 1);
       this.metrics?.peersRequestedSubnetsPeerCount.inc({type: "column"}, maxPeersToDiscover);
     }
@@ -631,7 +619,7 @@ export class PeerManager {
       try {
         this.metrics?.peersRequestedToConnect.inc(peersToConnect);
         // for PeerDAS, lodestar implements subnet sampling strategy, hence we need to issue columnSubnetQueries to PeerDiscovery
-        this.discovery.discoverPeers(peersToConnect, groupQueries, queriesMerged);
+        this.discovery.discoverPeers(peersToConnect, custodyGroupQueries, queriesMerged);
       } catch (e) {
         this.logger.error("Error on discoverPeers", {}, e as Error);
       }
@@ -764,16 +752,32 @@ export class PeerManager {
    */
   private onLibp2pPeerDisconnect = (evt: CustomEvent<Connection>): void => {
     const {direction, status, remotePeer} = evt.detail;
+    const peerIdStr = remotePeer.toString();
+
+    let logMessage = "onLibp2pPeerDisconnect";
+    const logContext: Record<string, string | number> = {
+      peerId: prettyPrintPeerIdStr(peerIdStr),
+      direction,
+      status,
+    };
+    // Some clients do not send good-bye requests (Nimbus) so check for inbound disconnects and apply reconnection
+    // cool-down period to prevent automatic reconnection by Discovery
+    if (direction === "inbound") {
+      // prevent automatic/immediate reconnects
+      const coolDownMin = this.peerRpcScores.applyReconnectionCoolDown(peerIdStr, GoodByeReasonCode.INBOUND_DISCONNECT);
+      logMessage += ". Enforcing a reconnection cool-down period";
+      logContext.coolDownMin = coolDownMin;
+    }
 
     // remove the ping and status timer for the peer
-    this.connectedPeers.delete(remotePeer.toString());
+    this.connectedPeers.delete(peerIdStr);
 
-    this.logger.verbose("peer disconnected", {peer: prettyPrintPeerId(remotePeer), direction, status});
-    this.networkEventBus.emit(NetworkEvent.peerDisconnected, {peer: remotePeer.toString()});
+    this.logger.verbose(logMessage, logContext);
+    this.networkEventBus.emit(NetworkEvent.peerDisconnected, {peer: peerIdStr});
     this.metrics?.peerDisconnectedEvent.inc({direction});
     this.libp2p.peerStore
       .merge(remotePeer, {tags: {[PEER_RELEVANT_TAG]: undefined}})
-      .catch((e) => this.logger.verbose("cannot untag peer", {peerId: remotePeer.toString()}, e as Error));
+      .catch((e) => this.logger.verbose("cannot untag peer", {peerId: peerIdStr}, e as Error));
   };
 
   private async disconnect(peer: PeerId): Promise<void> {
@@ -785,12 +789,13 @@ export class PeerManager {
   }
 
   private async goodbyeAndDisconnect(peer: PeerId, goodbye: GoodByeReasonCode): Promise<void> {
+    const reason = GOODBYE_KNOWN_CODES[goodbye.toString()] || "";
+    const peerIdStr = peer.toString();
     try {
-      const reason = GOODBYE_KNOWN_CODES[goodbye.toString()] || "";
       this.metrics?.peerGoodbyeSent.inc({reason});
-      this.logger.debug("disconnected peer", {reason, peerId: prettyPrintPeerId(peer)});
+      this.logger.debug("initiating goodbyeAndDisconnect peer", {reason, peerId: prettyPrintPeerId(peer)});
 
-      const conn = getConnection(this.libp2p, peer.toString());
+      const conn = getConnection(this.libp2p, peerIdStr);
       if (conn && Date.now() - conn.timeline.open > LONG_PEER_CONNECTION_MS) {
         this.metrics?.peerLongConnectionDisconnect.inc({reason});
       }
@@ -801,6 +806,16 @@ export class PeerManager {
       this.logger.verbose("Failed to send goodbye", {peer: prettyPrintPeerId(peer)}, e as Error);
     } finally {
       await this.disconnect(peer);
+      // prevent automatic/immediate reconnects
+      const coolDownMin = this.peerRpcScores.applyReconnectionCoolDown(peerIdStr, goodbye);
+      if (coolDownMin === NO_COOL_DOWN_APPLIED) {
+        this.logger.verbose("Disconnected a peer", {peerId: prettyPrintPeerIdStr(peerIdStr)});
+      } else {
+        this.logger.verbose("Disconnected a peer. Enforcing a reconnection cool-down period", {
+          peerId: prettyPrintPeerIdStr(peerIdStr),
+          coolDownMin,
+        });
+      }
     }
   }
 

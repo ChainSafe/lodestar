@@ -1,7 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ApiError, ApplicationMethods} from "@lodestar/api/server";
 import {
-  ForkName,
   ForkPostBellatrix,
   NUMBER_OF_COLUMNS,
   SLOTS_PER_HISTORICAL_ROOT,
@@ -104,15 +103,12 @@ export function getBeaconBlockApi({
         timer?.();
         blockData = {
           fork,
-          dataColumnsLen: dataColumnSidecars.length,
-          // dataColumnsIndex is a 1 based index of ith column present in dataColumns[custodyColumns[i-1]]
-          dataColumnsIndex: new Uint8Array(Array.from({length: dataColumnSidecars.length}, (_, j) => 1 + j)),
           dataColumns: dataColumnSidecars,
           dataColumnsBytes: dataColumnSidecars.map(() => null),
           dataColumnsSource: DataColumnsSource.api,
         } as BlockInputDataColumns;
         blobSidecars = [];
-      } else if (fork === ForkName.deneb || fork === ForkName.electra) {
+      } else if (isForkPostDeneb(fork)) {
         blobSidecars = computeBlobSidecars(config, signedBlock, signedBlockOrContents);
         blockData = {
           fork,
@@ -257,14 +253,15 @@ export function getBeaconBlockApi({
     chain.logger.info("Publishing block", valLogMeta);
     const publishPromises = [
       // Send the block, regardless of whether or not it is valid. The API
-      // specification is very clear that this is the desired behaviour.
+      // specification is very clear that this is the desired behavior.
       //
-      // i) Publish blobs and block before importing so that network can see them asap
-      // ii) publish blobs first because
-      //     a) by the times nodes see block, they might decide to pull blobs
-      //     b) they might require more hops to reach recipients in peerDAS kind of setup where
-      //        blobs might need to hop between nodes because of partial subnet subscription
-      () => network.publishBeaconBlock(signedBlock) as Promise<unknown>,
+      // - Publish blobs and block before importing so that network can see them asap
+      // - Publish block first because
+      //     a) as soon as node sees block they can start processing it while data is in transit
+      //     b) getting block first allows nodes to use getBlobs from local ELs and save
+      //        import latency and hopefully bandwidth
+      //
+      () => network.publishBeaconBlock(signedBlock),
       ...dataColumnSidecars.map((dataColumnSidecar) => () => network.publishDataColumnSidecar(dataColumnSidecar)),
       ...blobSidecars.map((blobSidecar) => () => network.publishBlobSidecar(blobSidecar)),
       () =>
@@ -281,18 +278,32 @@ export function getBeaconBlockApi({
             throw e;
           }),
     ];
-    await promiseAllMaybeAsync(publishPromises);
+    await promiseAllMaybeAsync<number | void>(publishPromises);
 
     if (chain.emitter.listenerCount(routes.events.EventType.blockGossip)) {
       chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRoot});
     }
 
     if (blockForImport.type === BlockInputType.availableData) {
-      if (
-        chain.emitter.listenerCount(routes.events.EventType.blobSidecar) &&
-        (blockForImport.blockData.fork === ForkName.deneb || blockForImport.blockData.fork === ForkName.electra)
+      if (isForkPostFulu(blockForImport.blockData.fork)) {
+        const {dataColumns} = blockForImport.blockData as BlockInputDataColumns;
+        metrics?.dataColumns.bySource.inc({source: DataColumnsSource.api}, dataColumns.length);
+
+        if (chain.emitter.listenerCount(routes.events.EventType.dataColumnSidecar)) {
+          for (const dataColumnSidecar of dataColumns) {
+            chain.emitter.emit(routes.events.EventType.dataColumnSidecar, {
+              blockRoot,
+              slot,
+              index: dataColumnSidecar.index,
+              kzgCommitments: dataColumnSidecar.kzgCommitments.map(toHex),
+            });
+          }
+        }
+      } else if (
+        isForkPostDeneb(blockForImport.blockData.fork) &&
+        chain.emitter.listenerCount(routes.events.EventType.blobSidecar)
       ) {
-        const {blobs} = blockForImport.blockData;
+        const {blobs} = blockForImport.blockData as BlockInputBlobs;
 
         for (const blobSidecar of blobs) {
           const {index, kzgCommitment} = blobSidecar;
@@ -302,21 +313,6 @@ export function getBeaconBlockApi({
             index,
             kzgCommitment: toHex(kzgCommitment),
             versionedHash: toHex(kzgCommitmentToVersionedHash(kzgCommitment)),
-          });
-        }
-      } else if (
-        chain.emitter.listenerCount(routes.events.EventType.dataColumnSidecar) &&
-        blockForImport.blockData.fork === ForkName.fulu
-      ) {
-        const {dataColumns} = blockForImport.blockData;
-        metrics?.dataColumns.bySource.inc({source: DataColumnsSource.api}, dataColumns.length);
-
-        for (const dataColumnSidecar of dataColumns) {
-          chain.emitter.emit(routes.events.EventType.dataColumnSidecar, {
-            blockRoot,
-            slot,
-            index: dataColumnSidecar.index,
-            kzgCommitments: dataColumnSidecar.kzgCommitments.map(toHex),
           });
         }
       }

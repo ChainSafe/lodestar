@@ -409,7 +409,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
   private getBlobsV2(
     _versionedHashes: EngineApiRpcParamTypes["engine_getBlobsV2"][0]
   ): EngineApiRpcReturnTypes["engine_getBlobsV2"] {
-    return [];
+    return null;
   }
 
   private timestampToFork(timestamp: number): ForkPostBellatrix {

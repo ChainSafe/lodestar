@@ -181,6 +181,7 @@ export class ReqResp {
         if (e.type.code === RequestErrorCode.DIAL_ERROR || e.type.code === RequestErrorCode.DIAL_TIMEOUT) {
           this.metrics?.dialErrors.inc();
         }
+        this.metrics?.outgoingErrorReasons.inc({reason: e.type.code});
 
         this.onOutgoingRequestError(peerId, method, e);
       }

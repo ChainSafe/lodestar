@@ -44,7 +44,7 @@ describe("SeenGossipBlockInput", () => {
   const unusedClock = {} as unknown as IClock;
 
   const seenGossipBlockInput = new SeenGossipBlockInput(
-    new CustodyConfig(nodeId, config, null),
+    new CustodyConfig({nodeId, config}),
     executionEngine,
     emitter,
     unusedClock,

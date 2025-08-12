@@ -24,7 +24,7 @@ import {ssz as electraSsz} from "../electra/index.js";
 import {ssz as phase0Ssz} from "../phase0/index.js";
 import {ssz as primitiveSsz} from "../primitive/index.js";
 
-const {BLSSignature, Root, ColumnIndex, RowIndex, Bytes32, Slot, UintNum64, ValidatorIndex} = primitiveSsz;
+const {Root, ColumnIndex, RowIndex, Bytes32, Slot, UintNum64, ValidatorIndex} = primitiveSsz;
 
 export const KZGProof = denebSsz.KZGProof;
 export const Blob = denebSsz.Blob;
@@ -103,49 +103,11 @@ export const DataColumnSidecarsByRangeRequest = new ContainerType(
   {typeName: "DataColumnSidecarsByRangeRequest", jsonCase: "eth2"}
 );
 
-export const ExecutionPayload = new ContainerType(
-  {
-    ...electraSsz.ExecutionPayload.fields,
-  },
-  {typeName: "ExecutionPayload", jsonCase: "eth2"}
-);
+// Explicit aliases for a few common types
+export const BeaconBlock = electraSsz.BeaconBlock;
+export const SignedBeaconBlock = electraSsz.SignedBeaconBlock;
 
-export const ExecutionPayloadHeader = new ContainerType(
-  {
-    ...electraSsz.ExecutionPayloadHeader.fields,
-  },
-  {typeName: "ExecutionPayloadHeader", jsonCase: "eth2"}
-);
-
-export const BeaconBlockBody = new ContainerType(
-  {
-    ...electraSsz.BeaconBlockBody.fields,
-  },
-  {typeName: "BeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
-);
-
-export const BeaconBlock = new ContainerType(
-  {
-    ...electraSsz.BeaconBlock.fields,
-  },
-  {typeName: "BeaconBlock", jsonCase: "eth2", cachePermanentRootStruct: true}
-);
-
-export const SignedBeaconBlock = new ContainerType(
-  {
-    message: BeaconBlock,
-    signature: BLSSignature,
-  },
-  {typeName: "SignedBeaconBlock", jsonCase: "eth2"}
-);
-
-export const BlobSidecar = new ContainerType(
-  {
-    ...denebSsz.BlobSidecar.fields,
-  },
-  {typeName: "BlobSidecar", jsonCase: "eth2"}
-);
-
+// Containers
 export const BlobsBundle = new ContainerType(
   {
     commitments: denebSsz.BlobKzgCommitments,
@@ -153,51 +115,6 @@ export const BlobsBundle = new ContainerType(
     blobs: denebSsz.Blobs,
   },
   {typeName: "BlobsBundle", jsonCase: "eth2"}
-);
-
-export const BlindedBeaconBlockBody = new ContainerType(
-  {
-    ...electraSsz.BlindedBeaconBlockBody.fields,
-  },
-  {typeName: "BlindedBeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
-);
-
-export const BlindedBeaconBlock = new ContainerType(
-  {
-    ...electraSsz.BlindedBeaconBlock.fields,
-  },
-  {typeName: "BlindedBeaconBlock", jsonCase: "eth2", cachePermanentRootStruct: true}
-);
-
-export const SignedBlindedBeaconBlock = new ContainerType(
-  {
-    message: BlindedBeaconBlock,
-    signature: BLSSignature,
-  },
-  {typeName: "SignedBlindedBeaconBlock", jsonCase: "eth2"}
-);
-
-export const BuilderBid = new ContainerType(
-  {
-    ...electraSsz.BuilderBid.fields,
-  },
-  {typeName: "BuilderBid", jsonCase: "eth2"}
-);
-
-export const SignedBuilderBid = new ContainerType(
-  {
-    message: BuilderBid,
-    signature: BLSSignature,
-  },
-  {typeName: "SignedBuilderBid", jsonCase: "eth2"}
-);
-
-export const ExecutionPayloadAndBlobsBundle = new ContainerType(
-  {
-    executionPayload: ExecutionPayload,
-    blobsBundle: BlobsBundle,
-  },
-  {typeName: "ExecutionPayloadAndBlobsBundle", jsonCase: "eth2"}
 );
 
 export const BeaconState = new ContainerType(
@@ -208,58 +125,9 @@ export const BeaconState = new ContainerType(
   {typeName: "BeaconState", jsonCase: "eth2"}
 );
 
-export const LightClientHeader = new ContainerType(
-  {
-    ...denebSsz.LightClientHeader.fields,
-  },
-  {typeName: "LightClientHeader", jsonCase: "eth2"}
-);
-
-export const LightClientBootstrap = new ContainerType(
-  {
-    ...electraSsz.LightClientBootstrap.fields,
-  },
-  {typeName: "LightClientBootstrap", jsonCase: "eth2"}
-);
-
-export const LightClientUpdate = new ContainerType(
-  {
-    ...electraSsz.LightClientUpdate.fields,
-  },
-  {typeName: "LightClientUpdate", jsonCase: "eth2"}
-);
-
-export const LightClientFinalityUpdate = new ContainerType(
-  {
-    ...electraSsz.LightClientFinalityUpdate.fields,
-  },
-  {typeName: "LightClientFinalityUpdate", jsonCase: "eth2"}
-);
-
-export const LightClientOptimisticUpdate = new ContainerType(
-  {
-    ...electraSsz.LightClientOptimisticUpdate.fields,
-  },
-  {typeName: "LightClientOptimisticUpdate", jsonCase: "eth2"}
-);
-
-export const LightClientStore = new ContainerType(
-  {
-    ...electraSsz.LightClientStore.fields,
-  },
-  {typeName: "LightClientStore", jsonCase: "eth2"}
-);
-
-export const SSEPayloadAttributes = new ContainerType(
-  {
-    ...electraSsz.SSEPayloadAttributes.fields,
-  },
-  {typeName: "SSEPayloadAttributes", jsonCase: "eth2"}
-);
-
 export const BlockContents = new ContainerType(
   {
-    block: BeaconBlock,
+    block: electraSsz.BeaconBlock,
     kzgProofs: KZGProofs,
     blobs: denebSsz.Blobs,
   },
@@ -268,7 +136,7 @@ export const BlockContents = new ContainerType(
 
 export const SignedBlockContents = new ContainerType(
   {
-    signedBlock: SignedBeaconBlock,
+    signedBlock: electraSsz.SignedBeaconBlock,
     kzgProofs: KZGProofs,
     blobs: denebSsz.Blobs,
   },

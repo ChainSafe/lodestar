@@ -220,7 +220,7 @@ export class SeenGossipBlockInput {
             // TODO: (@matthewkeil) add metrics collection point here
           })
           .catch((error) => {
-            this.logger.error("Error getting data columns from execution", {blockHex}, error);
+            this.logger.warn("Error getting data columns from execution", {blockHex}, error);
           });
       });
     }

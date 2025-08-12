@@ -12,6 +12,7 @@ import {multiaddr} from "@multiformats/multiaddr";
 import {formatNodePeer} from "../../api/impl/node/utils.js";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {ClockEvent, IClock} from "../../util/clock.js";
+import {CustodyConfig} from "../../util/dataColumns.js";
 import {PeerIdStr, peerIdFromString, peerIdToString} from "../../util/peerId.js";
 import {Discv5Worker} from "../discv5/index.js";
 import {NetworkEventBus} from "../events.js";
@@ -29,7 +30,7 @@ import {ReqRespBeaconNode} from "../reqresp/ReqRespBeaconNode.js";
 import {GetReqRespHandlerFn, OutgoingRequestArgs} from "../reqresp/types.js";
 import {LocalStatusCache} from "../statusCache.js";
 import {AttnetsService} from "../subnets/attnetsService.js";
-import {CommitteeSubscription, IAttnetsService} from "../subnets/interface.js";
+import {CommitteeSubscription, IAttnetsService, computeNodeId} from "../subnets/interface.js";
 import {SyncnetsService} from "../subnets/syncnetsService.js";
 import {getConnectionsMap} from "../util.js";
 import {NetworkCoreMetrics, createNetworkCoreMetrics} from "./metrics.js";
@@ -65,6 +66,7 @@ export type BaseNetworkInit = {
   getReqRespHandler: GetReqRespHandlerFn;
   activeValidatorCount: number;
   initialStatus: Status;
+  initialCustodyGroupCount: number;
 };
 
 /**
@@ -138,6 +140,7 @@ export class NetworkCore implements INetworkCore {
     getReqRespHandler,
     activeValidatorCount,
     initialStatus,
+    initialCustodyGroupCount,
   }: BaseNetworkInit): Promise<NetworkCore> {
     const libp2p = await createNodeJsLibp2p(privateKey, opts, {
       peerStoreDir,
@@ -158,7 +161,12 @@ export class NetworkCore implements INetworkCore {
       discv5?.setEnrValue(key, value).catch((e) => logger.error("error on setEnrValue", {key}, e));
     };
     const peerId = peerIdFromPrivateKey(privateKey);
-    const networkConfig = new NetworkConfig(peerId, config, opts);
+    const nodeId = computeNodeId(peerId);
+    const networkConfig: NetworkConfig = {
+      nodeId,
+      config,
+      custodyConfig: new CustodyConfig({nodeId, config, initialCustodyGroupCount}),
+    };
     const metadata = new MetadataController({}, {networkConfig, logger, onSetValue: onMetadataSetValue});
 
     const reqResp = new ReqRespBeaconNode(
@@ -205,7 +213,7 @@ export class NetworkCore implements INetworkCore {
       metadata,
       logger,
       metrics,
-      networkConfig.getNodeId(),
+      networkConfig.nodeId,
       opts
     );
     const syncnetsService = new SyncnetsService(config, clock, gossip, metadata, logger, metrics, opts);
@@ -362,7 +370,7 @@ export class NetworkCore implements INetworkCore {
   }
 
   async setTargetGroupCount(count: number): Promise<void> {
-    this.networkConfig.setTargetGroupCount(count);
+    this.networkConfig.custodyConfig.updateTargetCustodyGroupCount(count);
     this.metadata.custodyGroupCount = count;
   }
 
@@ -422,8 +430,8 @@ export class NetworkCore implements INetworkCore {
     }
     return {
       ...formatNodePeer(peerIdStr, connections),
-      status: peerData?.status ? sszTypesFor(fork).Status.toJson(peerData.status) : null,
       agentVersion: peerData?.agentVersion ?? "NA",
+      status: peerData?.status ? sszTypesFor(fork).Status.toJson(peerData.status) : null,
       metadata: peerData?.metadata ? sszTypesFor(fork).Metadata.toJson(peerData.metadata) : null,
       agentClient: String(peerData?.agentClient ?? "Unknown"),
       lastReceivedMsgUnixTsMs: peerData?.lastReceivedMsgUnixTsMs ?? 0,

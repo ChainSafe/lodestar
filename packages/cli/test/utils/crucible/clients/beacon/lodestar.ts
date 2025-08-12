@@ -87,7 +87,7 @@ export const generateLodestarBeaconNode: BeaconNodeGenerator<BeaconClient.Lodest
         command: LODESTAR_BINARY_PATH,
         args: ["beacon", "--rcConfig", rcConfigPath, "--paramsFile", paramsPath],
         env: {
-          DEBUG: process.env.DISABLE_DEBUG_LOGS ? "" : "*,-winston:*",
+          DEBUG: process.env.ENABLE_DEBUG_LOGS ? "*,-winston:*" : "",
         },
       },
       logs: {

@@ -1,9 +1,9 @@
-import {ForkName, NUMBER_OF_COLUMNS} from "@lodestar/params";
+import {ForkName, NUMBER_OF_COLUMNS, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
 import {fulu, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {toHex} from "@lodestar/utils";
 import {BeaconChain} from "../chain.js";
-import {BlockInput, BlockInputDataColumns, BlockInputType} from "./types.js";
+import {BlockInput, BlockInputBlobs, BlockInputDataColumns, BlockInputType} from "./types.js";
 
 /**
  * Persists block input data to DB. This operation must be eventually completed if a block is imported to the fork-choice.
@@ -41,15 +41,7 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInput: BlockI
           : await blockInput.cachedData.availabilityPromise;
 
       // NOTE: Old data is pruned on archive
-      if (blockData.fork === ForkName.deneb || blockData.fork === ForkName.electra) {
-        const blobSidecars = blockData.blobs;
-        fnPromises.push(this.db.blobSidecars.add({blockRoot, slot: block.message.slot, blobSidecars}));
-        this.logger.debug("Persisted blobSidecars to hot DB", {
-          blobsLen: blobSidecars.length,
-          slot: block.message.slot,
-          root: blockRootHex,
-        });
-      } else {
+      if (isForkPostFulu(blockData.fork)) {
         const {custodyConfig} = this;
         const {custodyColumnsIndex, custodyColumns} = custodyConfig;
         const blobsLen = (block.message as fulu.BeaconBlock).body.blobKzgCommitments.length;
@@ -91,6 +83,14 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInput: BlockI
           dataColumnsSize,
           dataColumnsLen,
           dataColumnSidecars: dataColumnSidecars.length,
+          slot: block.message.slot,
+          root: blockRootHex,
+        });
+      } else if (isForkPostDeneb(blockData.fork)) {
+        const blobSidecars = (blockData as BlockInputBlobs).blobs;
+        fnPromises.push(this.db.blobSidecars.add({blockRoot, slot: block.message.slot, blobSidecars}));
+        this.logger.debug("Persisted blobSidecars to hot DB", {
+          blobsLen: blobSidecars.length,
           slot: block.message.slot,
           root: blockRootHex,
         });

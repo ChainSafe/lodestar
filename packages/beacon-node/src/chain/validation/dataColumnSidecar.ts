@@ -5,7 +5,7 @@ import {
   NUMBER_OF_COLUMNS,
 } from "@lodestar/params";
 import {Root, Slot, SubnetID, deneb, fulu, ssz} from "@lodestar/types";
-import {toHex, toRootHex, verifyMerkleBranch} from "@lodestar/utils";
+import {toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 
 import {computeStartSlotAtEpoch, getBlockHeaderProposerSignatureSet} from "@lodestar/state-transition";
 import {Metrics} from "../../metrics/metrics.js";
@@ -17,7 +17,7 @@ import {IBeaconChain} from "../interface.js";
 import {RegenCaller} from "../regen/interface.js";
 
 // SPEC FUNCTION
-// https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/p2p-interface.md#data_column_sidecar_subnet_id
+// https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/p2p-interface.md#data_column_sidecar_subnet_id
 export async function validateGossipDataColumnSidecar(
   chain: IBeaconChain,
   dataColumnSidecar: fulu.DataColumnSidecar,
@@ -105,6 +105,22 @@ export async function validateGossipDataColumnSidecar(
       });
     });
 
+  // 13) [REJECT] The sidecar is proposed by the expected proposer_index for the block's slot in the context of the current
+  //              shuffling (defined by block_header.parent_root/block_header.slot). If the proposer_index cannot
+  //              immediately be verified against the expected shuffling, the sidecar MAY be queued for later processing
+  //              while proposers for the block's branch are calculated -- in such a case do not REJECT, instead IGNORE
+  //              this message.
+  const proposerIndex = blockHeader.proposerIndex;
+  const expectedProposerIndex = blockState.epochCtx.getBeaconProposer(blockHeader.slot);
+
+  if (proposerIndex !== expectedProposerIndex) {
+    throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+      code: DataColumnSidecarErrorCode.INCORRECT_PROPOSER,
+      actualProposerIndex: proposerIndex,
+      expectedProposerIndex,
+    });
+  }
+
   // 5) [REJECT] The proposer signature of sidecar.signed_block_header, is valid with respect to the block_header.proposer_index pubkey.
   const signatureSet = getBlockHeaderProposerSignatureSet(blockState, dataColumnSidecar.signedBlockHeader);
   // Don't batch so verification is not delayed
@@ -142,7 +158,7 @@ export async function validateGossipDataColumnSidecar(
   try {
     await verifyDataColumnSidecarKzgProofs(
       dataColumnSidecar.kzgCommitments,
-      Array.from({length: dataColumnSidecar.column.length}, () => BigInt(dataColumnSidecar.index)),
+      Array.from({length: dataColumnSidecar.column.length}, () => dataColumnSidecar.index),
       dataColumnSidecar.column,
       dataColumnSidecar.kzgProofs
     );
@@ -157,22 +173,6 @@ export async function validateGossipDataColumnSidecar(
   // 12) [IGNORE] The sidecar is the first sidecar for the tuple (block_header.slot, block_header.proposer_index,
   //              sidecar.index) with valid header signature, sidecar inclusion proof, and kzg proof
   //              -- Handled in seenGossipBlockInput
-
-  // 13) [REJECT] The sidecar is proposed by the expected proposer_index for the block's slot in the context of the current
-  //              shuffling (defined by block_header.parent_root/block_header.slot). If the proposer_index cannot
-  //              immediately be verified against the expected shuffling, the sidecar MAY be queued for later processing
-  //              while proposers for the block's branch are calculated -- in such a case do not REJECT, instead IGNORE
-  //              this message.
-  const proposerIndex = blockHeader.proposerIndex;
-  const expectedProposerIndex = blockState.epochCtx.getBeaconProposer(blockHeader.slot);
-
-  if (proposerIndex !== expectedProposerIndex) {
-    throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
-      code: DataColumnSidecarErrorCode.INCORRECT_PROPOSER,
-      actualProposerIndex: proposerIndex,
-      expectedProposerIndex,
-    });
-  }
 }
 
 export async function validateDataColumnsSidecars(
@@ -184,7 +184,7 @@ export async function validateDataColumnsSidecars(
   opts: {skipProofsCheck: boolean} = {skipProofsCheck: false}
 ): Promise<void> {
   const commitmentBytes: Uint8Array[] = [];
-  const cellIndices: bigint[] = [];
+  const cellIndices: number[] = [];
   const cells: Uint8Array[] = [];
   const proofBytes: Uint8Array[] = [];
 
@@ -204,24 +204,24 @@ export async function validateDataColumnsSidecars(
         .filter((result) => result === false).length
     ) {
       throw new Error(
-        `Invalid data column sidecar slot=${columnBlockHeader.slot} columnBlockRoot=${toHex(columnBlockRoot)} columnIndex=${columnIndex} for the block blockRoot=${toHex(blockRoot)} slot=${blockSlot} sidecarsIndex=${sidecarsIndex}`
+        `Invalid data column sidecar slot=${columnBlockHeader.slot} columnBlockRoot=${toRootHex(columnBlockRoot)} columnIndex=${columnIndex} for the block blockRoot=${toRootHex(blockRoot)} slot=${blockSlot} sidecarsIndex=${sidecarsIndex}`
       );
     }
 
     if (columnIndex >= NUMBER_OF_COLUMNS) {
       throw new Error(
-        `Invalid data sidecar columnIndex=${columnIndex} in slot=${blockSlot} blockRoot=${toHex(blockRoot)} sidecarsIndex=${sidecarsIndex}`
+        `Invalid data sidecar columnIndex=${columnIndex} in slot=${blockSlot} blockRoot=${toRootHex(blockRoot)} sidecarsIndex=${sidecarsIndex}`
       );
     }
 
     if (column.length !== kzgCommitments.length || column.length !== kzgProofs.length) {
       throw new Error(
-        `Invalid data sidecar array lengths for columnIndex=${columnIndex} in slot=${blockSlot} blockRoot=${toHex(blockRoot)}`
+        `Invalid data sidecar array lengths for columnIndex=${columnIndex} in slot=${blockSlot} blockRoot=${toRootHex(blockRoot)}`
       );
     }
 
     commitmentBytes.push(...kzgCommitments);
-    cellIndices.push(...Array.from({length: column.length}, () => BigInt(columnIndex)));
+    cellIndices.push(...Array.from({length: column.length}, () => columnIndex));
     cells.push(...column);
     proofBytes.push(...kzgProofs);
   }
@@ -236,18 +236,18 @@ export async function validateDataColumnsSidecars(
     valid = await kzg.asyncVerifyCellKzgProofBatch(commitmentBytes, cellIndices, cells, proofBytes);
     timer?.();
   } catch (err) {
-    (err as Error).message = `Error in verifyCellKzgProofBatch for slot=${blockSlot} blockRoot=${toHex(blockRoot)}`;
+    (err as Error).message = `Error in verifyCellKzgProofBatch for slot=${blockSlot} blockRoot=${toRootHex(blockRoot)}`;
     throw err;
   }
 
   if (!valid) {
-    throw new Error(`Invalid data column sidecars in slot=${blockSlot} blockRoot=${toHex(blockRoot)}`);
+    throw new Error(`Invalid data column sidecars in slot=${blockSlot} blockRoot=${toRootHex(blockRoot)}`);
   }
 }
 
 /**
  * SPEC FUNCTION
- * https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/p2p-interface.md#verify_data_column_sidecar
+ * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/p2p-interface.md#verify_data_column_sidecar
  */
 export function verifyDataColumnSidecar(dataColumnSidecar: fulu.DataColumnSidecar): void {
   if (dataColumnSidecar.index >= NUMBER_OF_COLUMNS) {
@@ -279,11 +279,11 @@ export function verifyDataColumnSidecar(dataColumnSidecar: fulu.DataColumnSideca
 
 /**
  * SPEC FUNCTION
- * https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/p2p-interface.md#verify_data_column_sidecar_kzg_proofs
+ * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/p2p-interface.md#verify_data_column_sidecar_kzg_proofs
  */
 export async function verifyDataColumnSidecarKzgProofs(
   commitments: Uint8Array[],
-  cellIndices: bigint[],
+  cellIndices: number[],
   cells: Uint8Array[],
   proofs: Uint8Array[]
 ): Promise<void> {
@@ -301,7 +301,7 @@ export async function verifyDataColumnSidecarKzgProofs(
 
 /**
  * SPEC FUNCTION
- * https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/p2p-interface.md#verify_data_column_sidecar_inclusion_proof
+ * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/p2p-interface.md#verify_data_column_sidecar_inclusion_proof
  */
 export function verifyDataColumnSidecarInclusionProof(dataColumnSidecar: fulu.DataColumnSidecar): boolean {
   return verifyMerkleBranch(
@@ -315,7 +315,7 @@ export function verifyDataColumnSidecarInclusionProof(dataColumnSidecar: fulu.Da
 
 /**
  * SPEC FUNCTION
- * https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/p2p-interface.md#compute_subnet_for_data_column_sidecar
+ * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/p2p-interface.md#compute_subnet_for_data_column_sidecar
  */
 export function computeSubnetForDataColumnSidecar(columnSidecar: fulu.DataColumnSidecar): SubnetID {
   return columnSidecar.index % DATA_COLUMN_SIDECAR_SUBNET_COUNT;

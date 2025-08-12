@@ -58,7 +58,13 @@ export async function handleRequest({
 }: HandleRequestOpts): Promise<void> {
   const REQUEST_TIMEOUT = requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT;
 
-  const logCtx = {method: protocol.method, client: peerClient, peer: prettyPrintPeerId(peerId), requestId};
+  const logCtx = {
+    method: protocol.method,
+    version: protocol.version,
+    client: peerClient,
+    peer: prettyPrintPeerId(peerId),
+    requestId,
+  };
 
   let responseError: Error | null = null;
   await pipe(

@@ -19,9 +19,11 @@ export const SCORE_THRESHOLD = 1;
 export const SCORE_HALFLIFE_MS = 10 * 60 * 1000;
 export const HALFLIFE_DECAY_MS = -Math.log(2) / SCORE_HALFLIFE_MS;
 /** The number of milliseconds we ban a peer for before their score begins to decay */
-export const BANNED_BEFORE_DECAY_MS = 30 * 60 * 1000;
+export const COOL_DOWN_BEFORE_DECAY_MS = 30 * 60 * 1000;
 /** Limit of entries in the scores map */
 export const MAX_ENTRIES = 1000;
+/** Const that gets returned when no cool-down is applied */
+export const NO_COOL_DOWN_APPLIED = -1;
 
 /**
  * We weight negative gossipsub scores in such a way that they never result in a disconnect by
