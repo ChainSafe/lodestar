@@ -725,7 +725,7 @@ export class PeerManager {
     this.connectedPeers.set(remotePeerStr, peerData);
 
     if (evt.detail.status !== "open") {
-      this.logger.debug("Peer disconnected before identification", {
+      this.logger.debug("Peer disconnected before identify protocol initiated", {
         peerId: remotePeerPrettyStr,
         status: evt.detail.status,
       });
@@ -749,7 +749,7 @@ export class PeerManager {
       })
       .catch((err) => {
         if (evt.detail.status !== "open") {
-          this.logger.debug("Peer disconnected during the identification", {peerId: remotePeerStr});
+          this.logger.debug("Peer disconnected during identify protocol", {peerId: remotePeerStr}, err);
         } else {
           this.logger.debug("Error setting agentVersion for the peer", {peerId: remotePeerStr}, err);
         }
