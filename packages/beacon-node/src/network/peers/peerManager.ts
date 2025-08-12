@@ -728,6 +728,14 @@ export class PeerManager {
       void this.requestStatus(remotePeer, this.statusCache.get());
     }
 
+    if (evt.detail.status !== "open") {
+      this.logger.debug("Peer disconnected before identification", {
+        peerId: peerData.peerId.toString(),
+        status: evt.detail.status,
+      });
+      return;
+    }
+
     this.libp2p.services.identify
       .identify(evt.detail)
       .then((result) => {
