@@ -694,7 +694,9 @@ export class PeerManager {
    */
   private onLibp2pPeerConnect = async (evt: CustomEvent<Connection>): Promise<void> => {
     const {direction, status, remotePeer} = evt.detail;
-    this.logger.verbose("peer connected", {peer: prettyPrintPeerId(remotePeer), direction, status});
+    const remotePeerStr = remotePeer.toString();
+    const remotePeerPrettyStr = prettyPrintPeerId(remotePeer);
+    this.logger.verbose("peer connected", {peer: remotePeerPrettyStr, direction, status});
     // NOTE: The peerConnect event is not emitted here here, but after asserting peer relevance
     this.metrics?.peerConnectedEvent.inc({direction, status});
 
@@ -720,11 +722,11 @@ export class PeerManager {
       agentClient: null,
       encodingPreference: null,
     };
-    this.connectedPeers.set(remotePeer.toString(), peerData);
+    this.connectedPeers.set(remotePeerStr, peerData);
 
     if (evt.detail.status !== "open") {
       this.logger.debug("Peer disconnected before identification", {
-        peerId: peerData.peerId.toString(),
+        peerId: remotePeerPrettyStr,
         status: evt.detail.status,
       });
       return;
@@ -747,9 +749,9 @@ export class PeerManager {
       })
       .catch((err) => {
         if (evt.detail.status !== "open") {
-          this.logger.debug("Peer disconnected during the identification", {peerId: peerData.peerId.toString()}, err);
+          this.logger.debug("Peer disconnected during the identification", {peerId: remotePeerStr});
         } else {
-          this.logger.debug("Error setting agentVersion for the peer", {peerId: peerData.peerId.toString()}, err);
+          this.logger.debug("Error setting agentVersion for the peer", {peerId: remotePeerStr}, err);
         }
       });
   };
