@@ -13,7 +13,8 @@ import {
   NUM_COLUMNS_IN_WRAPPER_INDEX,
   dataColumnSidecarsWrapperSsz,
 } from "../../../../../src/db/repositories/dataColumnSidecars.js";
-import {computeDataColumnSidecars} from "../../../../../src/util/blobs.js";
+import {getDataColumnSidecarsFromBlock} from "../../../../../src/util/dataColumns.js";
+import {kzg} from "../../../../../src/util/kzg.js";
 import {testLogger} from "../../../../utils/logger.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -42,17 +43,14 @@ describe("block archive repository", () => {
     const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(dataColumn.signedBlockHeader.message);
     const slot = dataColumn.signedBlockHeader.message.slot;
     const blob = ssz.deneb.Blob.defaultValue();
-    const commitment = ssz.deneb.KZGCommitment.defaultValue();
-    const kzgProof = ssz.deneb.KZGProof.defaultValue();
-    const singedBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
+    const commitment = kzg.blobToKzgCommitment(blob);
+    const signedBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
+    const blobs = [blob, blob, blob];
+    const commitments = [commitment, commitment, commitment];
+    signedBlock.message.body.blobKzgCommitments = commitments;
+    const cellsAndProofs = blobs.map((b) => kzg.computeCellsAndKzgProofs(b));
 
-    singedBlock.message.body.blobKzgCommitments.push(commitment);
-    singedBlock.message.body.blobKzgCommitments.push(commitment);
-    singedBlock.message.body.blobKzgCommitments.push(commitment);
-    const allDataColumnSidecars = computeDataColumnSidecars(config, singedBlock, {
-      blobs: [blob, blob, blob],
-      kzgProofs: Array.from({length: 3 * NUMBER_OF_COLUMNS}, () => kzgProof),
-    });
+    const allDataColumnSidecars = getDataColumnSidecarsFromBlock(config, signedBlock, cellsAndProofs);
     for (let j = 0; j < allDataColumnSidecars.length; j++) {
       allDataColumnSidecars[j].index = j;
     }

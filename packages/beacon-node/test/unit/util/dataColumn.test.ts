@@ -6,8 +6,12 @@ import {bigIntToBytes, fromHex} from "@lodestar/utils";
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
 
 import {validateDataColumnsSidecars} from "../../../src/chain/validation/dataColumnSidecar.js";
-import {computeDataColumnSidecars} from "../../../src/util/blobs.js";
-import {CustodyConfig, getDataColumns, getValidatorsCustodyRequirement} from "../../../src/util/dataColumns.js";
+import {
+  CustodyConfig,
+  getDataColumnSidecarsFromBlock,
+  getDataColumns,
+  getValidatorsCustodyRequirement,
+} from "../../../src/util/dataColumns.js";
 import {kzg} from "../../../src/util/kzg.js";
 import {getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
 import {generateRandomBlob, transactionForKzgCommitment} from "../../utils/kzg.js";
@@ -154,7 +158,7 @@ describe("data column sidecars", () => {
     const slot = 0;
     const blobs = [generateRandomBlob(), generateRandomBlob()];
     const kzgCommitments = blobs.map((blob) => kzg.blobToKzgCommitment(blob));
-    const kzgProofs = blobs.flatMap((blob) => kzg.computeCellsAndKzgProofs(blob).proofs);
+    const cellsAndProofs = blobs.map((blob) => kzg.computeCellsAndKzgProofs(blob));
 
     const signedBeaconBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
 
@@ -163,10 +167,7 @@ describe("data column sidecars", () => {
       signedBeaconBlock.message.body.blobKzgCommitments.push(kzgCommitment);
     }
     const blockRoot = ssz.fulu.BeaconBlock.hashTreeRoot(signedBeaconBlock.message);
-    const columnSidecars = computeDataColumnSidecars(config, signedBeaconBlock, {
-      blobs,
-      kzgProofs,
-    });
+    const columnSidecars = getDataColumnSidecarsFromBlock(config, signedBeaconBlock, cellsAndProofs);
 
     expect(columnSidecars.length).toEqual(NUMBER_OF_COLUMNS);
     expect(columnSidecars[0].column.length).toEqual(blobs.length);
@@ -194,7 +195,7 @@ describe("data column sidecars", () => {
     const slot = 0;
     const blobs = [generateRandomBlob(), generateRandomBlob()];
     const kzgCommitments = blobs.map((blob) => kzg.blobToKzgCommitment(blob));
-    const kzgProofs = blobs.flatMap((blob) => kzg.computeCellsAndKzgProofs(blob).proofs);
+    const cellsAndProofs = blobs.map((blob) => kzg.computeCellsAndKzgProofs(blob));
 
     const signedBeaconBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
 
@@ -203,10 +204,7 @@ describe("data column sidecars", () => {
       signedBeaconBlock.message.body.blobKzgCommitments.push(kzgCommitment);
     }
     const blockRoot = ssz.fulu.BeaconBlock.hashTreeRoot(signedBeaconBlock.message);
-    const columnSidecars = computeDataColumnSidecars(config, signedBeaconBlock, {
-      blobs,
-      kzgProofs,
-    });
+    const columnSidecars = getDataColumnSidecarsFromBlock(config, signedBeaconBlock, cellsAndProofs);
 
     expect(columnSidecars.length).toEqual(NUMBER_OF_COLUMNS);
     expect(columnSidecars[0].column.length).toEqual(blobs.length);

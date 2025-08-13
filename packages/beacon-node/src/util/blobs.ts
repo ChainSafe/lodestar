@@ -8,13 +8,12 @@ import {
   FIELD_ELEMENTS_PER_BLOB,
   ForkAll,
   ForkName,
-  KZG_COMMITMENTS_GINDEX,
   KZG_COMMITMENT_GINDEX0,
   NUMBER_OF_COLUMNS,
   VERSIONED_HASH_VERSION_KZG,
 } from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {BeaconBlockBody, BlobsAndProofs, SSZTypesFor, SignedBeaconBlock, deneb, fulu, ssz} from "@lodestar/types";
+import {BeaconBlockBody, SSZTypesFor, SignedBeaconBlock, deneb, fulu, ssz} from "@lodestar/types";
 import {kzg} from "./kzg.js";
 
 type VersionHash = Uint8Array;
@@ -34,14 +33,6 @@ export function computeInclusionProof(
   const bodyView = (ssz[fork].BeaconBlockBody as SSZTypesFor<ForkAll, "BeaconBlockBody">).toView(body);
   const commitmentGindex = KZG_COMMITMENT_GINDEX0 + index;
   return new Tree(bodyView.node).getSingleProof(BigInt(commitmentGindex));
-}
-
-export function computeKzgCommitmentsInclusionProof(
-  fork: ForkName,
-  body: BeaconBlockBody
-): fulu.KzgCommitmentsInclusionProof {
-  const bodyView = (ssz[fork].BeaconBlockBody as SSZTypesFor<ForkAll, "BeaconBlockBody">).toView(body);
-  return new Tree(bodyView.node).getSingleProof(BigInt(KZG_COMMITMENTS_GINDEX));
 }
 
 export function computeBlobSidecars(
@@ -65,56 +56,6 @@ export function computeBlobSidecars(
       kzgCommitmentInclusionProofs?.[index] ?? computeInclusionProof(fork, signedBlock.message.body, index);
 
     return {index, blob, kzgCommitment, kzgProof, signedBlockHeader, kzgCommitmentInclusionProof};
-  });
-}
-
-/**
- * Turns a SignedBeaconBlock and an array of Blobs from a given slot into an array of
- * DataColumnSidecars that are ready to be served by gossip and req/resp.
- *
- * Implementation of get_data_column_sidecars
- * https://github.com/ethereum/consensus-specs/blob/dev/specs/_features/eip7594/das-core.md#get_data_column_sidecars
- */
-export function computeDataColumnSidecars(
-  config: ChainForkConfig,
-  signedBlock: SignedBeaconBlock,
-  blobsAndProofs: BlobsAndProofs,
-  inclusionProof?: fulu.KzgCommitmentsInclusionProof,
-  cells?: fulu.Cell[][]
-): fulu.DataColumnSidecars {
-  const kzgCommitments = (signedBlock as deneb.SignedBeaconBlock).message.body.blobKzgCommitments;
-  if (kzgCommitments === undefined) {
-    throw Error("Invalid block with missing blobKzgCommitments for computeDataColumnSidecars");
-  }
-  if (kzgCommitments.length === 0) {
-    return [];
-  }
-  const fork = config.getForkName(signedBlock.message.slot);
-  const signedBlockHeader = signedBlockToSignedHeader(config, signedBlock);
-  const {blobs, kzgProofs} = blobsAndProofs;
-  const kzgCommitmentsInclusionProof =
-    inclusionProof ?? computeKzgCommitmentsInclusionProof(fork, signedBlock.message.body);
-  const cellsAndProofs = Array.from({length: blobs.length}, (_, rowNumber) => {
-    const rowCells = cells?.[rowNumber] ?? kzg.computeCells(blobs[rowNumber]);
-    const proofs = kzgProofs.slice(rowNumber * NUMBER_OF_COLUMNS, (rowNumber + 1) * NUMBER_OF_COLUMNS);
-    return {cells: rowCells, proofs};
-  });
-
-  return Array.from({length: NUMBER_OF_COLUMNS}, (_, columnIndex) => {
-    // columnIndex'th column
-    const column = Array.from({length: blobs.length}, (_, rowNumber) => cellsAndProofs[rowNumber].cells[columnIndex]);
-    const kzgProofs = Array.from(
-      {length: blobs.length},
-      (_, rowNumber) => cellsAndProofs[rowNumber].proofs[columnIndex]
-    );
-    return {
-      index: columnIndex,
-      column,
-      kzgCommitments,
-      kzgProofs,
-      signedBlockHeader,
-      kzgCommitmentsInclusionProof,
-    };
   });
 }
 

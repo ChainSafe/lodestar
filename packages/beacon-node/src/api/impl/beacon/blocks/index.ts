@@ -2,6 +2,7 @@ import {routes} from "@lodestar/api";
 import {ApiError, ApplicationMethods} from "@lodestar/api/server";
 import {
   ForkPostBellatrix,
+  ForkPostFulu,
   NUMBER_OF_COLUMNS,
   SLOTS_PER_HISTORICAL_ROOT,
   isForkPostBellatrix,
@@ -24,6 +25,7 @@ import {
   WithOptionalBytes,
   deneb,
   fulu,
+  isDenebBlockContents,
   sszTypesFor,
 } from "@lodestar/types";
 import {fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
@@ -46,13 +48,10 @@ import {ProduceFullBellatrix, ProduceFullDeneb, ProduceFullFulu} from "../../../
 import {validateGossipBlock} from "../../../../chain/validation/block.js";
 import {OpSource} from "../../../../chain/validatorMonitor.js";
 import {NetworkEvent} from "../../../../network/index.js";
-import {
-  computeBlobSidecars,
-  computeDataColumnSidecars,
-  kzgCommitmentToVersionedHash,
-  reconstructBlobs,
-} from "../../../../util/blobs.js";
+import {computeBlobSidecars, kzgCommitmentToVersionedHash, reconstructBlobs} from "../../../../util/blobs.js";
+import {getDataColumnSidecarsFromBlock} from "../../../../util/dataColumns.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
+import {kzg} from "../../../../util/kzg.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {ApiModules} from "../../types.js";
 import {assertUniqueItems} from "../../utils.js";
@@ -94,19 +93,23 @@ export function getBeaconBlockApi({
 
     let blockForImport: BlockInput, blobSidecars: deneb.BlobSidecars, dataColumnSidecars: fulu.DataColumnSidecars;
 
-    if (isForkPostDeneb(fork)) {
+    if (isDenebBlockContents(signedBlockContents)) {
       let blockData: BlockInputAvailableData;
       if (isForkPostFulu(fork)) {
+        const timer = metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
         // If the block was produced by this node, we will already have computed cells
         // Otherwise, we will compute them from the blobs in this function
-        const cells = (chain.producedResults.get(blockRoot) as ProduceFullFulu)?.cells;
-        const timer = metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
-        dataColumnSidecars = computeDataColumnSidecars(
+        const cells =
+          (chain.producedResults.get(blockRoot) as ProduceFullFulu)?.cells ??
+          signedBlockContents.blobs.map((blob) => kzg.computeCells(blob));
+        const cellsAndProofs = cells.map((rowCells, rowIndex) => ({
+          cells: rowCells,
+          proofs: signedBlockContents.kzgProofs.slice(rowIndex * NUMBER_OF_COLUMNS, (rowIndex + 1) * NUMBER_OF_COLUMNS),
+        }));
+        dataColumnSidecars = getDataColumnSidecarsFromBlock(
           config,
-          signedBlock,
-          signedBlockContents as BlobsAndProofs,
-          undefined,
-          cells
+          signedBlock as SignedBeaconBlock<ForkPostFulu>,
+          cellsAndProofs
         );
         timer?.();
         blockData = {
