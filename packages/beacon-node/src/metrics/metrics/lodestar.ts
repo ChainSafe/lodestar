@@ -728,17 +728,29 @@ export function createLodestarMetrics(
         buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
       }),
     },
+    gossipDataColumn: {
+      recvToValidation: register.histogram({
+        name: "lodestar_gossip_data_column_received_to_gossip_validate",
+        help: "Time elapsed between data column received and data column validation",
+        buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
+      }),
+      validationTime: register.histogram({
+        name: "lodestar_gossip_data_column_gossip_validate_time",
+        help: "Time elapsed for data column validation",
+        buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
+      }),
+    },
     blobs: {
       bySource: register.gauge<{source: BlobsSource}>({
-        name: "lodestar_blobs_by_source_total",
-        help: "Total number of received blobs by source",
+        name: "lodestar_blobs_by_source",
+        help: "Number of received blobs by source",
         labelNames: ["source"],
       }),
     },
     dataColumns: {
       bySource: register.gauge<{source: DataColumnsSource}>({
-        name: "lodestar_data_columns_by_source_total",
-        help: "Total number of received data columns by source",
+        name: "lodestar_data_columns_by_source",
+        help: "Number of received data columns by source",
         labelNames: ["source"],
       }),
       elapsedTimeTillReceived: register.histogram<{source: DataColumnsSource}>({

@@ -293,6 +293,12 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
     try {
       await validateGossipDataColumnSidecar(chain, dataColumnSidecar, gossipSubnet, metrics);
+      const recvToValidation = Date.now() / 1000 - seenTimestampSec;
+      const validationTime = recvToValidation - recvToValLatency;
+
+      metrics?.gossipDataColumn.recvToValidation.observe(recvToValidation);
+      metrics?.gossipDataColumn.validationTime.observe(validationTime);
+
       const {blockInput, blockInputMeta} = chain.seenGossipBlockInput.getGossipBlockInput(
         config,
         {
@@ -303,12 +309,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         metrics
       );
 
-      const recvToValidation = Date.now() / 1000 - seenTimestampSec;
-      const validationTime = recvToValidation - recvToValLatency;
-
       metrics?.peerDas.dataColumnSidecarProcessingSuccesses.inc();
-      metrics?.gossipBlob.recvToValidation.observe(recvToValidation);
-      metrics?.gossipBlob.validationTime.observe(validationTime);
 
       chain.emitter.emit(routes.events.EventType.dataColumnSidecar, {
         blockRoot: blockRootHex,
