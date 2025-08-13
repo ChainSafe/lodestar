@@ -5,11 +5,11 @@ type ProtocolID = string;
 /** https://github.com/ethereum/consensus-specs/blob/master/specs/phase0/p2p-interface.md#constants */
 const MAX_CONCURRENT_REQUESTS = 2;
 
-/** Sometimes a peer request comes AFTER libp2p disconnect event, check for such peers every 10 minutes */
-export const CHECK_DISCONNECTED_PEERS_INTERVAL_MS = 10 * 60 * 1000;
+/** Sometimes a peer request comes AFTER libp2p disconnect event, check for such peers every 2 minutes */
+export const CHECK_DISCONNECTED_PEERS_INTERVAL_MS = 2 * 60 * 1000;
 
-/** Peers don't request us for 5 mins are considered disconnected */
-const DISCONNECTED_TIMEOUT_MS = 5 * 60 * 1000;
+/** Given PING_INTERVAL constants of 15s/20s, we consider a peer is disconnected if there is no request in 1 minute */
+const DISCONNECTED_TIMEOUT_MS = 60 * 1000;
 
 /**
  * Simple rate limiter that allows a maximum of 2 concurrent requests per protocol per peer.
