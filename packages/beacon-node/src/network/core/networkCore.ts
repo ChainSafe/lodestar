@@ -399,16 +399,16 @@ export class NetworkCore implements INetworkCore {
     // Node's addresses on which is listening for discv5 requests.
     // The example provided by the beacon-APIs show a _full_ multiaddr, ie including the peer id, so we include it.
     const discoveryAddresses = [
-      enr?.getFullMultiaddr("udp")?.toString() ?? null,
-      enr?.getFullMultiaddr("udp6")?.toString() ?? null,
+      (await enr?.getFullMultiaddr("udp"))?.toString() ?? null,
+      (await enr?.getFullMultiaddr("udp6"))?.toString() ?? null,
     ].filter((addr): addr is string => Boolean(addr));
 
     // Node's addresses on which eth2 RPC requests are served.
     const p2pAddresses = [
-      enr?.getFullMultiaddr("tcp")?.toString() ?? null,
-      enr?.getFullMultiaddr("tcp6")?.toString() ?? null,
-      enr?.getFullMultiaddr("quic")?.toString() ?? null,
-      enr?.getFullMultiaddr("quic6")?.toString() ?? null,
+      (await enr?.getFullMultiaddr("tcp"))?.toString() ?? null,
+      (await enr?.getFullMultiaddr("tcp6"))?.toString() ?? null,
+      (await enr?.getFullMultiaddr("quic"))?.toString() ?? null,
+      (await enr?.getFullMultiaddr("quic6"))?.toString() ?? null,
     ].filter((addr): addr is string => Boolean(addr));
 
     return {
