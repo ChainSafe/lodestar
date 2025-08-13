@@ -409,7 +409,7 @@ export class NetworkCore implements INetworkCore {
     // Node's addresses on which eth2 RPC requests are served.
     const p2pAddresses = [
       // It is useful to include listen multiaddrs even if they use public IPs
-      ...this.libp2p.getMultiaddrs(),
+      ...this.libp2p.getMultiaddrs().map((ma) => ma.toString()),
       (await enr?.getFullMultiaddr("tcp"))?.toString(),
       (await enr?.getFullMultiaddr("tcp6"))?.toString(),
       (await enr?.getFullMultiaddr("quic"))?.toString(),
