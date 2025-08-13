@@ -513,14 +513,6 @@ export async function importBlock(
   // dataPromise will not end up here, but preDeneb could. In future we might also allow syncing
   // out of data range blocks and import then in forkchoice although one would not be able to
   // attest and propose with such head similar to optimistic sync
-  if (
-    blockInput.type === BlockInputType.availableData &&
-    (blockInput.blockData.fork === ForkName.deneb || blockInput.blockData.fork === ForkName.electra)
-  ) {
-    const {blobsSource} = blockInput.blockData;
-    this.metrics?.importBlock.blobsBySource.inc({blobsSource});
-  }
-
   const advancedSlot = this.clock.slotWithFutureTolerance(REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC);
 
   // Gossip blocks need to be imported as soon as possible, waiting attestations could be processed

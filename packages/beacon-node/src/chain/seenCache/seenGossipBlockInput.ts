@@ -263,6 +263,7 @@ export class SeenGossipBlockInput {
           };
           resolveAvailability(blockData);
           metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.GOSSIP});
+          metrics?.blobs.bySource.inc({source: BlobsSource.gossip});
 
           const blockInput = getBlockInput.availableData(config, signedBlock, BlockSource.gossip, blockData);
 
@@ -320,7 +321,7 @@ export class SeenGossipBlockInput {
           };
         }
 
-        const resolveAvailabilityAndBlockInput = (source: BlockInputAvailabilitySource) => {
+        const resolveAvailabilityAndBlockInput = () => {
           const allDataColumns = getBlockInputDataColumns(dataColumnsCache, this.custodyConfig.sampledColumns);
           const blockData: BlockInputDataColumns = {
             fork: cachedData.fork,
@@ -328,8 +329,6 @@ export class SeenGossipBlockInput {
             dataColumnsSource: DataColumnsSource.gossip,
           };
           resolveAvailability(blockData);
-          // TODO(das): should not use syncUnknownBlock metrics here
-          metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source});
           metrics?.dataColumns.bySource.inc({source: DataColumnsSource.gossip});
 
           const blockInput = getBlockInput.availableData(config, signedBlock, BlockSource.gossip, blockData);
@@ -362,7 +361,10 @@ export class SeenGossipBlockInput {
             metrics?.recoverDataColumnSidecars.reconstructionResult.inc({result: recoverResult});
             switch (recoverResult) {
               case RecoverResult.SuccessResolved: {
-                resolveAvailabilityAndBlockInput(BlockInputAvailabilitySource.RECOVERED);
+                resolveAvailabilityAndBlockInput();
+                metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({
+                  source: BlockInputAvailabilitySource.RECOVERED,
+                });
                 // Publish columns if and only if subscribed to them
                 const sampledColumns = this.custodyConfig.sampledColumns.map((columnIndex) => {
                   const dataColumn = dataColumnsCache.get(columnIndex)?.dataColumn;
@@ -395,7 +397,8 @@ export class SeenGossipBlockInput {
           });
         }
         if (hasSampledDataColumns(this.custodyConfig, dataColumnsCache)) {
-          const blockInput = resolveAvailabilityAndBlockInput(BlockInputAvailabilitySource.GOSSIP);
+          const blockInput = resolveAvailabilityAndBlockInput();
+          metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.GOSSIP});
           const allDataColumns = getBlockInputDataColumns(dataColumnsCache, this.custodyConfig.sampledColumns);
           const {dataColumns} = allDataColumns;
           return {

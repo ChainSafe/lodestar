@@ -255,7 +255,7 @@ export function getBeaconBlockApi({
       // Send the block, regardless of whether or not it is valid. The API
       // specification is very clear that this is the desired behavior.
       //
-      // - Publish blobs and block before importing so that network can see them asap
+      // - Publish blobs or data columns and block before importing so that network can see them asap
       // - Publish block first because
       //     a) as soon as node sees block they can start processing it while data is in transit
       //     b) getting block first allows nodes to use getBlobs from local ELs and save
@@ -304,6 +304,7 @@ export function getBeaconBlockApi({
         chain.emitter.listenerCount(routes.events.EventType.blobSidecar)
       ) {
         const {blobs} = blockForImport.blockData as BlockInputBlobs;
+        metrics?.blobs.bySource.inc({source: BlobsSource.api}, blobs.length);
 
         for (const blobSidecar of blobs) {
           const {index, kzgCommitment} = blobSidecar;

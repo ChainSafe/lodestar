@@ -728,6 +728,26 @@ export function createLodestarMetrics(
         buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
       }),
     },
+    blobs: {
+      bySource: register.gauge<{source: BlobsSource}>({
+        name: "lodestar_blobs_by_source_total",
+        help: "Total number of received blobs by source",
+        labelNames: ["source"],
+      }),
+    },
+    dataColumns: {
+      bySource: register.gauge<{source: DataColumnsSource}>({
+        name: "lodestar_data_columns_by_source_total",
+        help: "Total number of received data columns by source",
+        labelNames: ["source"],
+      }),
+      elapsedTimeTillReceived: register.histogram<{source: DataColumnsSource}>({
+        name: "lodestar_data_column_elapsed_time_till_received_seconds",
+        help: "Time elapsed between block slot time and the time data column received",
+        labelNames: ["source"],
+        buckets: [1, 2, 3, 4, 6, 12],
+      }),
+    },
     recoverDataColumnSidecars: {
       elapsedTimeTillReconstructed: register.histogram({
         name: "lodestar_data_column_sidecar_elapsed_time_till_reconstructed_seconds",
@@ -742,19 +762,6 @@ export function createLodestarMetrics(
         name: "lodestar_data_column_sidecars_reconstruction_result",
         help: "Data column sidecars reconstruction result",
         labelNames: ["result"],
-      }),
-    },
-    dataColumns: {
-      bySource: register.gauge<{source: DataColumnsSource}>({
-        name: "lodestar_data_columns_by_source",
-        help: "Number of received data columns by source",
-        labelNames: ["source"],
-      }),
-      elapsedTimeTillReceived: register.histogram<{source: DataColumnsSource}>({
-        name: "lodestar_data_column_elapsed_time_till_received_seconds",
-        help: "Time elapsed between block slot time and the time data column received",
-        labelNames: ["source"],
-        buckets: [1, 2, 3, 4, 6, 12],
       }),
     },
     importBlock: {
@@ -779,11 +786,6 @@ export function createLodestarMetrics(
         name: "lodestar_import_block_by_source_total",
         help: "Total number of imported blocks by source",
         labelNames: ["source"],
-      }),
-      blobsBySource: register.gauge<{blobsSource: BlobsSource}>({
-        name: "lodestar_import_blobs_by_source_total",
-        help: "Total number of imported blobs by source",
-        labelNames: ["blobsSource"],
       }),
       notOverrideFcuReason: register.counter<{reason: NotReorgedReason}>({
         name: "lodestar_import_block_not_override_fcu_reason_total",
