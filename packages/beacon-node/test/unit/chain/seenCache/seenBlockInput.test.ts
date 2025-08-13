@@ -8,6 +8,7 @@ import {
   BlockInputSource,
   IBlockInput,
   isBlockInputBlobs,
+  isBlockInputColumns,
   isBlockInputPreDeneb,
 } from "../../../../src/chain/blocks/blockInput/index.js";
 import {ChainEvent, ChainEventEmitter} from "../../../../src/chain/emitter.js";
@@ -306,16 +307,15 @@ describe("SeenBlockInputCache", () => {
         });
         expect(isBlockInputBlobs(blockInput)).toBeTruthy();
       });
-      // TODO(fulu): need to turn this on once we have custodyConfig available with peerDAS branch
-      //   it("should return a BlockInputColumns", () => {
-      //     const {block} = buildBlockTestSet(ForkName.fulu);
-      //     const blockInput = cache.getByBlock({
-      //       block,
-      //       source: BlockInputSource.gossip,
-      //       seenTimestampSec: Date.now(),
-      //     });
-      //     expect(isBlockInputColumns(blockInput)).toBeTruthy();
-      //   });
+      it("should return a BlockInputColumns", () => {
+        const {block} = buildBlockTestSet(ForkName.fulu);
+        const blockInput = cache.getByBlock({
+          block,
+          source: BlockInputSource.gossip,
+          seenTimestampSec: Date.now(),
+        });
+        expect(isBlockInputColumns(blockInput)).toBeTruthy();
+      });
     });
     it("should return the same BlockInput for an existing block root", () => {
       const {block, rootHex} = buildBlockTestSet(ForkName.capella);
@@ -369,6 +369,20 @@ describe("SeenBlockInputCache", () => {
       });
 
       expect(blockInput1).toBe(blockInput2);
+    });
+    it("should return the correct BlockInput for a BlockInput created by column", () => {
+      // const {block, columnSidecar} = buildBlockAndBlobTestSet(ForkName.fulu);
+      // const blockInput1 = cache.getByColumn({
+      //   columnSidecar,
+      //   source: BlockInputSource.gossip,
+      //   seenTimestampSec: Date.now(),
+      // });
+      // const blockInput2 = cache.getByBlock({
+      //   block,
+      //   source: BlockInputSource.gossip,
+      //   seenTimestampSec: Date.now(),
+      // });
+      // expect(blockInput1).toBe(blockInput2);
     });
   });
   describe("getByBlob()", () => {
@@ -481,4 +495,114 @@ describe("SeenBlockInputCache", () => {
       ).toThrow();
     });
   });
+  // describe("getByColumn()", () => {
+  //   it("should return a new BlockInput for a new block root", () => {
+  //     const {rootHex, blobSidecar} = buildBlockAndBlobTestSet(ForkName.electra);
+  //     expect(cache.get(rootHex)).toBeUndefined();
+  //     const blockInput = cache.getByBlob({
+  //       blobSidecar,
+  //       source: BlockInputSource.gossip,
+  //       seenTimestampSec: Date.now(),
+  //     });
+  //     expect(cache.get(rootHex)).toBe(blockInput);
+  //   });
+  //   it("should return the same BlockInput for an existing block root", () => {
+  //     const {rootHex, blobSidecar} = buildBlockAndBlobTestSet(ForkName.electra);
+
+  //     const blockInput1 = cache.getByBlob({
+  //       blobSidecar,
+  //       source: BlockInputSource.gossip,
+  //       seenTimestampSec: Date.now(),
+  //     });
+  //     expect(cache.get(rootHex)).toBe(blockInput1);
+  //     const blockInput2 = cache.getByBlob({
+  //       blobSidecar,
+  //       source: BlockInputSource.gossip,
+  //       seenTimestampSec: Date.now(),
+  //     });
+  //     expect(blockInput1).toBe(blockInput2);
+  //   });
+  //   it("should throw if attempting to add a blob to wrong type of BlockInput", () => {
+  //     const {block} = buildBlockTestSet(ForkName.capella);
+  //     const blockInput = cache.getByBlock({
+  //       block,
+  //       source: BlockInputSource.gossip,
+  //       seenTimestampSec: Date.now(),
+  //     });
+  //     expect(isBlockInputPreDeneb(blockInput)).toBeTruthy();
+
+  //     const {blobSidecar} = buildBlockAndBlobTestSet(ForkName.electra);
+  //     blobSidecar.signedBlockHeader = signedBlockToSignedHeader(config, block);
+  //     expect(() =>
+  //       cache.getByBlob({blobSidecar, source: BlockInputSource.gossip, seenTimestampSec: Date.now()})
+  //     ).toThrow();
+  //   });
+  //   it("should add blob to an existing BlockInput", () => {
+  //     const {block, blobSidecar} = buildBlockAndBlobTestSet(ForkName.electra);
+
+  //     const blockInput1 = cache.getByBlock({
+  //       block,
+  //       source: BlockInputSource.gossip,
+  //       seenTimestampSec: Date.now(),
+  //     });
+  //     const blockInput2 = cache.getByBlob({
+  //       blobSidecar,
+  //       source: BlockInputSource.gossip,
+  //       seenTimestampSec: Date.now(),
+  //     });
+
+  //     expect(blockInput1).toBe(blockInput2);
+  //     expect(blockInput2.getBlobs()[0]).toBe(blobSidecar);
+  //   });
+  //   it("should not throw for a BlockInput with an existing blob", () => {
+  //     const {rootHex, blobSidecar} = buildBlockAndBlobTestSet(ForkName.electra);
+
+  //     expect(cache.get(rootHex)).toBeUndefined();
+  //     const blockInput = cache.getByBlob({
+  //       blobSidecar,
+  //       source: BlockInputSource.gossip,
+  //       seenTimestampSec: Date.now(),
+  //     });
+  //     expect(cache.get(rootHex)).toBe(blockInput);
+  //     expect(() =>
+  //       blockInput.addBlob({
+  //         blobSidecar,
+  //         source: BlockInputSource.gossip,
+  //         seenTimestampSec: Date.now(),
+  //         blockRootHex: rootHex,
+  //       })
+  //     ).toThrow();
+  //     expect(() =>
+  //       cache.getByBlob({
+  //         blobSidecar,
+  //         source: BlockInputSource.gossip,
+  //         seenTimestampSec: Date.now(),
+  //       })
+  //     ).not.toThrow();
+  //   });
+  //   it("should throw for an existing blob with opts.throwGossipErrorIfAlreadyKnown", () => {
+  //     const {rootHex, blobSidecar} = buildBlockAndBlobTestSet(ForkName.electra);
+
+  //     expect(cache.get(rootHex)).toBeUndefined();
+  //     const blockInput = cache.getByBlob(
+  //       {
+  //         blobSidecar,
+  //         source: BlockInputSource.gossip,
+  //         seenTimestampSec: Date.now(),
+  //       },
+  //       {throwErrorIfAlreadyKnown: true}
+  //     );
+  //     expect(cache.get(rootHex)).toBe(blockInput);
+  //     expect(() =>
+  //       cache.getByBlob(
+  //         {
+  //           blobSidecar,
+  //           source: BlockInputSource.gossip,
+  //           seenTimestampSec: Date.now(),
+  //         },
+  //         {throwErrorIfAlreadyKnown: true}
+  //       )
+  //     ).toThrow();
+  //   });
+  // });
 });
