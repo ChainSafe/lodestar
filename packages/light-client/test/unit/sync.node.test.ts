@@ -36,6 +36,7 @@ describe("sync", () => {
 
   it("Sync lightclient and track head", async () => {
     const SECONDS_PER_SLOT = 2;
+    const SLOT_DURATION_MS = 2000;
     const ALTAIR_FORK_EPOCH = 0;
 
     const initialPeriod = 0;
@@ -45,7 +46,7 @@ describe("sync", () => {
     const targetSlot = firstHeadSlot + slotsIntoPeriod;
 
     // Genesis data such that targetSlot is at the current clock slot
-    const chainConfig: ChainConfig = {...chainConfigDef, SECONDS_PER_SLOT, ALTAIR_FORK_EPOCH};
+    const chainConfig: ChainConfig = {...chainConfigDef, SECONDS_PER_SLOT, SLOT_DURATION_MS, ALTAIR_FORK_EPOCH};
     const genesisTime = Math.floor(Date.now() / 1000) - chainConfig.SECONDS_PER_SLOT * targetSlot;
     const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
     const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);

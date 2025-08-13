@@ -16,8 +16,12 @@ describe("proposer boost reorg", () => {
   vi.setConfig({testTimeout: 60000});
 
   const validatorCount = 8;
-  const testParams: Pick<ChainConfig, "SECONDS_PER_SLOT" | "REORG_PARENT_WEIGHT_THRESHOLD" | "PROPOSER_SCORE_BOOST"> = {
+  const testParams: Pick<
+    ChainConfig,
+    "SECONDS_PER_SLOT" | "SLOT_DURATION_MS" | "REORG_PARENT_WEIGHT_THRESHOLD" | "PROPOSER_SCORE_BOOST"
+  > = {
     SECONDS_PER_SLOT: 2,
+    SLOT_DURATION_MS: 2000,
     // need this to make block `reorgSlot - 1` strong enough
     REORG_PARENT_WEIGHT_THRESHOLD: 80,
     // need this to make block `reorgSlot + 1` to become the head
@@ -46,14 +50,14 @@ describe("proposer boost reorg", () => {
   it(`should reorg a late block at slot ${reorgSlot}`, async () => {
     // the node needs time to transpile/initialize bls worker threads
     const genesisSlotsDelay = 7;
-    const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
+    const genesisTime = Math.floor(Date.now() / 1000) + (genesisSlotsDelay * testParams.SLOT_DURATION_MS) / 1000;
     const testLoggerOpts: TestLoggerOpts = {
       level: LogLevel.debug,
       timestampFormat: {
         format: TimestampFormatCode.EpochSlot,
         genesisTime,
         slotsPerEpoch: SLOTS_PER_EPOCH,
-        secondsPerSlot: testParams.SECONDS_PER_SLOT,
+        secondsPerSlot: testParams.SLOT_DURATION_MS / 1000,
       },
     };
     const logger = testLogger("BeaconNode", testLoggerOpts);

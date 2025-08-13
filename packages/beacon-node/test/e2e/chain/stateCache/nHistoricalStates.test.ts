@@ -23,8 +23,9 @@ describe("regen/reload states with n-historical states configuration", () => {
   vi.setConfig({testTimeout: 96_000});
 
   const validatorCount = 8;
-  const testParams: Pick<ChainConfig, "SECONDS_PER_SLOT"> = {
+  const testParams: Pick<ChainConfig, "SECONDS_PER_SLOT" | "SLOT_DURATION_MS"> = {
     SECONDS_PER_SLOT: 2,
+    SLOT_DURATION_MS: 2000,
   };
 
   const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];

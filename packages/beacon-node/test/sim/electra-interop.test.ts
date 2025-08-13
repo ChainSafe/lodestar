@@ -266,8 +266,9 @@ describe("executionEngine / ExecutionEngineHttp", () => {
     const validatorClientCount = 1;
     const validatorsPerClient = 32;
 
-    const testParams: Pick<ChainConfig, "SECONDS_PER_SLOT"> = {
+    const testParams: Pick<ChainConfig, "SECONDS_PER_SLOT" | "SLOT_DURATION_MS"> = {
       SECONDS_PER_SLOT: 2,
+      SLOT_DURATION_MS: 2000,
     };
 
     // Just enough to have a checkpoint finalized

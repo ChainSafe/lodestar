@@ -33,8 +33,9 @@ describe.skip("doppelganger / doppelganger test", () => {
 
   const validatorCount = 1;
   const genesisSlotsDelay = 5;
-  const beaconParams: Pick<ChainConfig, "SECONDS_PER_SLOT"> = {
+  const beaconParams: Pick<ChainConfig, "SECONDS_PER_SLOT" | "SLOT_DURATION_MS"> = {
     SECONDS_PER_SLOT: 2,
+    SLOT_DURATION_MS: 2000,
   };
 
   const timeout = (SLOTS_PER_EPOCH + genesisSlotsDelay) * beaconParams.SECONDS_PER_SLOT * 1000;
