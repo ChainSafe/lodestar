@@ -19,6 +19,7 @@ import {GossipTopic, GossipType} from "./interface.js";
 import {Eth2GossipsubMetrics, createEth2GossipsubMetrics} from "./metrics.js";
 import {GossipTopicCache, getCoreTopicsAtFork, stringifyGossipTopic} from "./topic.js";
 
+import {NetworkConfig} from "../networkConfig.js";
 import {
   GOSSIP_D,
   GOSSIP_D_HIGH,
@@ -39,7 +40,7 @@ export type Eth2Context = {
 };
 
 export type Eth2GossipsubModules = {
-  config: BeaconConfig;
+  networkConfig: NetworkConfig;
   libp2p: Libp2p;
   logger: Logger;
   metricsRegister: RegistryMetricCreator | null;
@@ -84,10 +85,11 @@ export class Eth2Gossipsub extends GossipSub {
 
   constructor(opts: Eth2GossipsubOpts, modules: Eth2GossipsubModules) {
     const {allowPublishToZeroPeers, gossipsubD, gossipsubDLow, gossipsubDHigh} = opts;
-    const gossipTopicCache = new GossipTopicCache(modules.config);
+    const {networkConfig, logger, metricsRegister, peersData, events} = modules;
+    const {config} = networkConfig;
+    const gossipTopicCache = new GossipTopicCache(config);
 
-    const scoreParams = computeGossipPeerScoreParams(modules);
-    const {config, logger, metricsRegister, peersData, events} = modules;
+    const scoreParams = computeGossipPeerScoreParams({config, eth2Context: modules.eth2Context});
 
     // Gossipsub parameters defined here:
     // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
@@ -126,7 +128,7 @@ export class Eth2Gossipsub extends GossipSub {
       ),
       metricsRegister: metricsRegister as MetricsRegister | null,
       metricsTopicStrToLabel: metricsRegister
-        ? getMetricsTopicStrToLabel(config, {disableLightClientServer: opts.disableLightClientServer ?? false})
+        ? getMetricsTopicStrToLabel(networkConfig, {disableLightClientServer: opts.disableLightClientServer ?? false})
         : undefined,
       asyncValidation: true,
 
@@ -332,7 +334,11 @@ function attSubnetLabel(subnet: SubnetID): string {
   return `0${subnet}`;
 }
 
-function getMetricsTopicStrToLabel(config: BeaconConfig, opts: {disableLightClientServer: boolean}): TopicStrToLabel {
+function getMetricsTopicStrToLabel(
+  networkConfig: NetworkConfig,
+  opts: {disableLightClientServer: boolean}
+): TopicStrToLabel {
+  const {config} = networkConfig;
   const metricsTopicStrToLabel = new Map<TopicStr, TopicLabel>();
   const {forkBoundariesAscendingEpochOrder} = config;
 
@@ -345,7 +351,7 @@ function getMetricsTopicStrToLabel(config: BeaconConfig, opts: {disableLightClie
       continue;
     }
 
-    const topics = getCoreTopicsAtFork(config, currentForkBoundary.fork, {
+    const topics = getCoreTopicsAtFork(networkConfig, currentForkBoundary.fork, {
       subscribeAllSubnets: true,
       disableLightClientServer: opts.disableLightClientServer,
     });

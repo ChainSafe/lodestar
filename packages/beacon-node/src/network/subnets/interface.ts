@@ -1,9 +1,9 @@
 import {getV4Crypto} from "@chainsafe/enr";
-import {fromHexString} from "@chainsafe/ssz";
 import type {PeerId, PrivateKey} from "@libp2p/interface";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {ForkBoundary} from "@lodestar/config";
 import {Bytes32, Slot, SubnetID, ValidatorIndex} from "@lodestar/types";
+import {fromHex} from "@lodestar/utils";
 import {GossipTopic} from "../gossip/interface.js";
 import {RequestedSubnet} from "../peers/utils/index.js";
 
@@ -62,5 +62,5 @@ export function computeNodeId(peerId: PeerId): Uint8Array {
     throw Error(`Undefined publicKey peerId=${peerId.toString()}`);
   }
   const nodeIdHex = getV4Crypto().nodeId(peerId.publicKey.raw);
-  return fromHexString(nodeIdHex);
+  return fromHex(nodeIdHex);
 }

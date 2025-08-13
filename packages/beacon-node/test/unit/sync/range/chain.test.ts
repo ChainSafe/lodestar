@@ -1,9 +1,8 @@
-import {fromHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, Slot, phase0, ssz} from "@lodestar/types";
-import {Logger} from "@lodestar/utils";
+import {Logger, fromHex} from "@lodestar/utils";
 import {afterEach, describe, it} from "vitest";
 import {BlockInput, BlockSource, getBlockInput} from "../../../../src/chain/blocks/types.js";
 import {ZERO_HASH} from "../../../../src/constants/index.js";
@@ -62,7 +61,7 @@ describe("sync / range / chain", () => {
   const REJECT_BLOCK = Buffer.alloc(96, 1);
   const zeroBlockBody = ssz.phase0.BeaconBlockBody.defaultValue();
   const interval: NodeJS.Timeout | null = null;
-  const nodeId = fromHexString("cdbee32dc3c50e9711d22be5565c7e44ff6108af663b2dc5abd2df573d2fa83f");
+  const nodeId = fromHex("cdbee32dc3c50e9711d22be5565c7e44ff6108af663b2dc5abd2df573d2fa83f");
   const custodyConfig = new CustodyConfig({
     nodeId,
     config,

@@ -38,7 +38,7 @@ export enum RecoverResult {
   NotAttemptedFull = "not_attempted_full",
   // the recover is a success and it helps resolve availability
   SuccessResolved = "success_resolved",
-  // the redover is a success but it's late, availability is already resolved by either gossip or getBlobsV2
+  // the recover is a success but it's late, availability is already resolved by either gossip or getBlobsV2
   SuccessLate = "success_late",
   // the recover failed
   Failed = "failed",
@@ -172,7 +172,7 @@ export function getValidatorsCustodyRequirement(config: ChainForkConfig, effecti
  */
 export function computeColumnsForCustodyGroup(custodyIndex: CustodyIndex): ColumnIndex[] {
   if (custodyIndex > NUMBER_OF_CUSTODY_GROUPS) {
-    custodyIndex = NUMBER_OF_CUSTODY_GROUPS;
+    throw Error(`Invalid custody index ${custodyIndex} > ${NUMBER_OF_CUSTODY_GROUPS}`);
   }
   const columnsPerCustodyGroup = Number(NUMBER_OF_COLUMNS / NUMBER_OF_CUSTODY_GROUPS);
   const columnIndexes = [];
