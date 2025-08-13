@@ -47,7 +47,8 @@ export function computeKzgCommitmentsInclusionProof(
 export function computeBlobSidecars(
   config: ChainForkConfig,
   signedBlock: SignedBeaconBlock,
-  blobsAndProofsExt: deneb.BlobsAndProofs & {kzgCommitmentInclusionProofs?: deneb.KzgCommitmentInclusionProof[]}
+  blobsAndProofs: deneb.BlobsAndProofs,
+  kzgCommitmentInclusionProofs?: deneb.KzgCommitmentInclusionProof[]
 ): deneb.BlobSidecars {
   const blobKzgCommitments = (signedBlock as deneb.SignedBeaconBlock).message.body.blobKzgCommitments;
   if (blobKzgCommitments === undefined) {
@@ -58,11 +59,10 @@ export function computeBlobSidecars(
   const fork = config.getForkName(signedBlockHeader.message.slot);
 
   return blobKzgCommitments.map((kzgCommitment, index) => {
-    const blob = blobsAndProofsExt.blobs[index];
-    const kzgProof = blobsAndProofsExt.kzgProofs[index];
+    const blob = blobsAndProofs.blobs[index];
+    const kzgProof = blobsAndProofs.kzgProofs[index];
     const kzgCommitmentInclusionProof =
-      blobsAndProofsExt.kzgCommitmentInclusionProofs?.[index] ??
-      computeInclusionProof(fork, signedBlock.message.body, index);
+      kzgCommitmentInclusionProofs?.[index] ?? computeInclusionProof(fork, signedBlock.message.body, index);
 
     return {index, blob, kzgCommitment, kzgProof, signedBlockHeader, kzgCommitmentInclusionProof};
   });
