@@ -79,21 +79,21 @@ export function computeDataColumnSidecars(
   config: ChainForkConfig,
   signedBlock: SignedBeaconBlock,
   blobsAndProofs: BlobsAndProofs,
-  kzgCommitmentsInclusionProof?: fulu.KzgCommitmentsInclusionProof,
+  inclusionProof?: fulu.KzgCommitmentsInclusionProof,
   cells?: fulu.Cell[][]
 ): fulu.DataColumnSidecars {
-  const blobKzgCommitments = (signedBlock as deneb.SignedBeaconBlock).message.body.blobKzgCommitments;
-  if (blobKzgCommitments === undefined) {
+  const kzgCommitments = (signedBlock as deneb.SignedBeaconBlock).message.body.blobKzgCommitments;
+  if (kzgCommitments === undefined) {
     throw Error("Invalid block with missing blobKzgCommitments for computeDataColumnSidecars");
   }
-  if (blobKzgCommitments.length === 0) {
+  if (kzgCommitments.length === 0) {
     return [];
   }
   const fork = config.getForkName(signedBlock.message.slot);
   const signedBlockHeader = signedBlockToSignedHeader(config, signedBlock);
-  kzgCommitmentsInclusionProof =
-    kzgCommitmentsInclusionProof ?? computeKzgCommitmentsInclusionProof(fork, signedBlock.message.body);
   const {blobs, kzgProofs} = blobsAndProofs;
+  const kzgCommitmentsInclusionProof =
+    inclusionProof ?? computeKzgCommitmentsInclusionProof(fork, signedBlock.message.body);
   const cellsAndProofs = Array.from({length: blobs.length}, (_, rowNumber) => {
     const rowCells = cells?.[rowNumber] ?? kzg.computeCells(blobs[rowNumber]);
     const proofs = kzgProofs.slice(rowNumber * NUMBER_OF_COLUMNS, (rowNumber + 1) * NUMBER_OF_COLUMNS);
@@ -110,7 +110,7 @@ export function computeDataColumnSidecars(
     return {
       index: columnIndex,
       column,
-      kzgCommitments: blobKzgCommitments,
+      kzgCommitments,
       kzgProofs,
       signedBlockHeader,
       kzgCommitmentsInclusionProof,
