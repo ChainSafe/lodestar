@@ -284,13 +284,6 @@ export function getBeaconBlockApi({
       // sent peers per topic are logged in network.publishGossip(), here we only track metrics for it
       // starting from fulu, we have to push to 128 subnets so need to make sure we have enough sent peers per topic
       // + 1 because we publish to beacon_block first
-      if (sentPeersArr.length < dataColumnSidecars.length + 1) {
-        // should not happen
-        throw Error(
-          `Not enough sent peers per data column subnet, sentPeersArr.length=${sentPeersArr.length}, expected at least ${dataColumnSidecars.length + 1}`
-        );
-      }
-
       for (let i = 0; i < dataColumnSidecars.length; i++) {
         // + 1 because we publish to beacon_block first
         const sentPeers = sentPeersArr[i + 1] as number;
