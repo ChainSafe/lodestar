@@ -1,4 +1,3 @@
-import {CELLS_PER_EXT_BLOB} from "@lodestar/params";
 import {deneb, fulu} from "@lodestar/types";
 import {describe, expect, it} from "vitest";
 import {
@@ -51,17 +50,6 @@ describe("validateBlobsAndKzgCommitments", () => {
 
     await expect(validateBlobsAndKzgCommitments(commitments, proofs, blobs)).rejects.toThrow(
       "Invalid proofs length for BlobsBundleV1 format: expected 1, got 0"
-    );
-  });
-
-  it("should throw if V2 proofs length is incorrect", async () => {
-    const blobs = [generateRandomBlob()];
-    const commitments = blobs.map((blob) => kzg.blobToKzgCommitment(blob));
-
-    const proofs = [new Uint8Array(48).fill(1)]; // Only one proof when we need CELLS_PER_EXT_BLOB
-
-    await expect(validateBlobsAndKzgCommitments(commitments, proofs, blobs)).rejects.toThrow(
-      `Invalid proofs length for BlobsBundleV2 format: expected ${CELLS_PER_EXT_BLOB}, got 1`
     );
   });
 

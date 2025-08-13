@@ -144,7 +144,7 @@ describe("api/validator - produceBlockV3", () => {
         ...produceBlockOpts,
       });
 
-      const expectedBlock = finalSelection === "builder" ? blindedBlock : fullBlock;
+      const expectedBlock = finalSelection === "builder" ? blindedBlock : {block: fullBlock};
       const expectedExecution = finalSelection === "builder";
 
       expect(block).toEqual(expectedBlock);
