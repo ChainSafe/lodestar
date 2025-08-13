@@ -2,20 +2,24 @@ import {ChainForkConfig} from "@lodestar/config";
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {ForkName, isForkPostDeneb} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {RootHex, SignedBeaconBlock, Slot, deneb} from "@lodestar/types";
+import {RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
 import {LodestarError, Logger, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {IClock} from "../../util/clock.js";
+import {CustodyConfig} from "../../util/dataColumns.js";
 import {
   BlockInputBlobs,
+  BlockInputColumns,
   BlockInputPreData,
   DAType,
   ForkBlobsDA,
   IBlockInput,
   LogMetaBasic,
   LogMetaBlobs,
+  LogMetaColumns,
   SourceMeta,
   isBlockInputBlobs,
+  isBlockInputColumns,
   isDaOutOfRange,
 } from "../blocks/blockInput/index.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
@@ -27,7 +31,7 @@ export type SeenBlockInputCacheModules = {
   clock: IClock;
   chainEvents: ChainEventEmitter;
   signal: AbortSignal;
-  //   custodyConfig: CustodyConfig;
+  custodyConfig: CustodyConfig;
   metrics: Metrics | null;
   logger?: Logger;
 };
@@ -70,6 +74,7 @@ export type GetByBlobOptions = {
 
 export class SeenBlockInputCache {
   private readonly config: ChainForkConfig;
+  private readonly custodyConfig: CustodyConfig;
   private readonly clock: IClock;
   private readonly chainEvents: ChainEventEmitter;
   private readonly signal: AbortSignal;
@@ -77,8 +82,9 @@ export class SeenBlockInputCache {
   private readonly logger?: Logger;
   private blockInputs = new Map<RootHex, IBlockInput>();
 
-  constructor({config, clock, chainEvents, signal, metrics, logger}: SeenBlockInputCacheModules) {
+  constructor({config, custodyConfig, clock, chainEvents, signal, metrics, logger}: SeenBlockInputCacheModules) {
     this.config = config;
+    this.custodyConfig = custodyConfig;
     this.clock = clock;
     this.chainEvents = chainEvents;
     this.signal = signal;
@@ -257,6 +263,66 @@ export class SeenBlockInputCache {
     return blockInput;
   }
 
+  getByColumn(
+    {columnSidecar, seenTimestampSec, source, peerIdStr}: SourceMeta & {columnSidecar: fulu.DataColumnSidecar},
+    opts: GetByBlobOptions = {}
+  ): BlockInputColumns {
+    const blockRoot = this.config
+      .getForkTypes(columnSidecar.signedBlockHeader.message.slot)
+      .BeaconBlockHeader.hashTreeRoot(columnSidecar.signedBlockHeader.message);
+    const blockRootHex = toRootHex(blockRoot);
+
+    let blockInput = this.blockInputs.get(blockRootHex);
+    let created = false;
+    if (!blockInput) {
+      created = true;
+      const {forkName, daOutOfRange} = this.buildCommonProps(columnSidecar.signedBlockHeader.message.slot);
+      blockInput = BlockInputColumns.createFromColumn({
+        columnSidecar,
+        blockRootHex,
+        daOutOfRange,
+        forkName,
+        source,
+        seenTimestampSec,
+        peerIdStr,
+        custodyColumns: this.custodyConfig.custodyColumns,
+        sampledColumns: this.custodyConfig.sampledColumns,
+      });
+      this.metrics?.seenCache.blockInput.createdByBlob.inc();
+      this.blockInputs.set(blockRootHex, blockInput);
+    }
+
+    if (!isBlockInputColumns(blockInput)) {
+      throw new SeenBlockInputCacheError(
+        {
+          code: SeenBlockInputCacheErrorCode.WRONG_BLOCK_INPUT_TYPE,
+          cachedType: blockInput.type,
+          requestedType: DAType.Columns,
+          ...blockInput.getLogMeta(),
+        },
+        `BlockInputType mismatch adding columnIndex=${columnSidecar.index}`
+      );
+    }
+
+    if (!blockInput.hasColumn(columnSidecar.index)) {
+      blockInput.addColumn({columnSidecar, blockRootHex, source, seenTimestampSec, peerIdStr});
+    } else if (!created) {
+      this.logger?.debug(
+        `Attempt to cache column index #${columnSidecar.index} but is already cached on BlockInput`,
+        blockInput.getLogMeta()
+      );
+      this.metrics?.seenCache.blockInput.duplicateColumnCount.inc({source});
+      if (opts.throwErrorIfAlreadyKnown) {
+        throw new SeenBlockInputCacheError({
+          code: SeenBlockInputCacheErrorCode.GOSSIP_COLUMN_ALREADY_KNOWN,
+          ...blockInput.getLogMeta(),
+        });
+      }
+    }
+
+    return blockInput;
+  }
+
   private buildCommonProps(slot: Slot): {
     daOutOfRange: boolean;
     forkName: ForkName;
@@ -289,6 +355,7 @@ export class SeenBlockInputCache {
 enum SeenBlockInputCacheErrorCode {
   WRONG_BLOCK_INPUT_TYPE = "BLOCK_INPUT_CACHE_ERROR_WRONG_BLOCK_INPUT_TYPE",
   GOSSIP_BLOB_ALREADY_KNOWN = "BLOCK_INPUT_CACHE_ERROR_GOSSIP_BLOB_ALREADY_KNOWN",
+  GOSSIP_COLUMN_ALREADY_KNOWN = "BLOCK_INPUT_CACHE_ERROR_GOSSIP_COLUMN_ALREADY_KNOWN",
 }
 
 type SeenBlockInputCacheErrorType =
@@ -299,6 +366,9 @@ type SeenBlockInputCacheErrorType =
     })
   | (LogMetaBlobs & {
       code: SeenBlockInputCacheErrorCode.GOSSIP_BLOB_ALREADY_KNOWN;
+    })
+  | (LogMetaColumns & {
+      code: SeenBlockInputCacheErrorCode.GOSSIP_COLUMN_ALREADY_KNOWN;
     });
 
 class SeenBlockInputCacheError extends LodestarError<SeenBlockInputCacheErrorType> {}

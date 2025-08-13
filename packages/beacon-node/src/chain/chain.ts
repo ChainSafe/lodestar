@@ -302,6 +302,7 @@ export class BeaconChain implements IBeaconChain {
     this.checkpointBalancesCache = new CheckpointBalancesCache();
     this.seenBlockInputCache = new SeenBlockInputCache({
       config,
+      custodyConfig: this.custodyConfig,
       clock,
       chainEvents: emitter,
       signal,
