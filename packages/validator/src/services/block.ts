@@ -174,23 +174,23 @@ export class BlockProposingService {
 
   private publishBlockWrapper = async (
     signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,
-    contents: {kzgProofs: deneb.KZGProofs; blobs: deneb.Blobs} | null,
+    blobsAndProofs: {kzgProofs: deneb.KZGProofs; blobs: deneb.Blobs} | null,
     opts: {broadcastValidation?: routes.beacon.BroadcastValidation} = {}
   ): Promise<void> => {
     if (isBlindedSignedBeaconBlock(signedBlock)) {
-      if (contents !== null) {
+      if (blobsAndProofs !== null) {
         this.logger.warn(
           "Ignoring contents while publishing blinded block - publishing beacon should assemble it from its local cache or builder"
         );
       }
       (await this.api.beacon.publishBlindedBlockV2({signedBlindedBlock: signedBlock, ...opts})).assertOk();
     } else {
-      if (contents === null) {
+      if (blobsAndProofs === null) {
         (await this.api.beacon.publishBlockV2({signedBlockContents: signedBlock, ...opts})).assertOk();
       } else {
         (
           await this.api.beacon.publishBlockV2({
-            signedBlockContents: {...contents, signedBlock: signedBlock as SignedBeaconBlock<ForkPostDeneb>},
+            signedBlockContents: {...blobsAndProofs, signedBlock: signedBlock as SignedBeaconBlock<ForkPostDeneb>},
             ...opts,
           })
         ).assertOk();
