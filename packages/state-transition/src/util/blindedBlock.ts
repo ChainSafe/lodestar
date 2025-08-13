@@ -12,6 +12,7 @@ import {
   BeaconBlockHeader,
   BlindedBeaconBlock,
   BlobsAndProofs,
+  BlobsBundle,
   ExecutionPayload,
   ExecutionPayloadAndBlobsBundle,
   ExecutionPayloadHeader,
@@ -19,7 +20,6 @@ import {
   SignedBeaconBlock,
   SignedBlindedBeaconBlock,
   SignedBlockContents,
-  deneb,
   isBlindedBeaconBlock,
   isExecutionPayloadAndBlobsBundle,
 } from "@lodestar/types";
@@ -113,7 +113,7 @@ export function signedBlindedBlockToFull(
 
 export function parseExecutionPayloadAndBlobsBundle(data: ExecutionPayload | ExecutionPayloadAndBlobsBundle): {
   executionPayload: ExecutionPayload;
-  blobsBundle: deneb.BlobsBundle | null;
+  blobsBundle: BlobsBundle | null;
 } {
   if (isExecutionPayloadAndBlobsBundle(data)) {
     return data;

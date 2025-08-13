@@ -223,6 +223,7 @@ type TypesByFork = {
     BlockContents: electra.BlockContents;
     SignedBlockContents: electra.SignedBlockContents;
     ExecutionPayloadAndBlobsBundle: deneb.ExecutionPayloadAndBlobsBundle;
+    BlobsBundle: deneb.BlobsBundle;
     SyncCommittee: altair.SyncCommittee;
     SyncAggregate: altair.SyncAggregate;
     SingleAttestation: electra.SingleAttestation;
@@ -261,6 +262,7 @@ type TypesByFork = {
     BlockContents: fulu.BlockContents;
     SignedBlockContents: fulu.SignedBlockContents;
     ExecutionPayloadAndBlobsBundle: deneb.ExecutionPayloadAndBlobsBundle;
+    BlobsBundle: fulu.BlobsBundle;
     SyncCommittee: altair.SyncCommittee;
     SyncAggregate: altair.SyncAggregate;
     SingleAttestation: electra.SingleAttestation;
@@ -304,6 +306,7 @@ export type ExecutionRequests<F extends ForkPostElectra = ForkPostElectra> = Typ
 
 export type ExecutionPayloadAndBlobsBundle<F extends ForkPostDeneb = ForkPostDeneb> =
   TypesByFork[F]["ExecutionPayloadAndBlobsBundle"];
+export type BlobsBundle<F extends ForkPostDeneb = ForkPostDeneb> = TypesByFork[F]["BlobsBundle"];
 
 export type LightClientHeader<F extends ForkPostAltair = ForkPostAltair> = TypesByFork[F]["LightClientHeader"];
 export type LightClientBootstrap<F extends ForkPostAltair = ForkPostAltair> = TypesByFork[F]["LightClientBootstrap"];
