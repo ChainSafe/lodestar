@@ -186,7 +186,7 @@ export class BlockProposingService {
       (await this.api.beacon.publishBlindedBlockV2({signedBlindedBlock: signedBlock, ...opts})).assertOk();
     } else {
       if (blobsAndProofs === null) {
-        (await this.api.beacon.publishBlockV2({signedBlockContents: signedBlock, ...opts})).assertOk();
+        (await this.api.beacon.publishBlockV2({signedBlockContents: {signedBlock}, ...opts})).assertOk();
       } else {
         (
           await this.api.beacon.publishBlockV2({

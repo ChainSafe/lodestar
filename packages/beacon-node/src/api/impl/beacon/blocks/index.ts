@@ -16,6 +16,7 @@ import {
   signedBeaconBlockToBlinded,
 } from "@lodestar/state-transition";
 import {
+  BlobsAndProofs,
   ProducedBlockSource,
   SignedBeaconBlock,
   SignedBlindedBeaconBlock,
@@ -23,7 +24,6 @@ import {
   WithOptionalBytes,
   deneb,
   fulu,
-  isDenebSignedBlockContents,
   sszTypesFor,
 } from "@lodestar/types";
 import {fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
@@ -87,27 +87,27 @@ export function getBeaconBlockApi({
     opts: PublishBlockOpts = {}
   ) => {
     const seenTimestampSec = Date.now() / 1000;
-    let blockForImport: BlockInput,
-      signedBlock: SignedBeaconBlock,
-      blobSidecars: deneb.BlobSidecars,
-      dataColumnSidecars: fulu.DataColumnSidecars;
-
-    if (isDenebSignedBlockContents(signedBlockContents)) {
-      ({signedBlock} = signedBlockContents);
-    } else {
-      signedBlock = signedBlockContents;
-    }
+    const signedBlock = signedBlockContents.signedBlock;
     const slot = signedBlock.message.slot;
     const fork = config.getForkName(slot);
     const blockRoot = toRootHex(chain.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
 
-    if (isDenebSignedBlockContents(signedBlockContents)) {
-      const fork = config.getForkName(signedBlock.message.slot);
+    let blockForImport: BlockInput, blobSidecars: deneb.BlobSidecars, dataColumnSidecars: fulu.DataColumnSidecars;
+
+    if (isForkPostDeneb(fork)) {
       let blockData: BlockInputAvailableData;
       if (isForkPostFulu(fork)) {
+        // If the block was produced by this node, we will already have computed cells
+        // Otherwise, we will compute them from the blobs in this function
         const cells = (chain.producedResults.get(blockRoot) as ProduceFullFulu)?.cells;
         const timer = metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
-        dataColumnSidecars = computeDataColumnSidecars(config, signedBlock, signedBlockContents, undefined, cells);
+        dataColumnSidecars = computeDataColumnSidecars(
+          config,
+          signedBlock,
+          signedBlockContents as BlobsAndProofs,
+          undefined,
+          cells
+        );
         timer?.();
         blockData = {
           fork,
@@ -117,7 +117,7 @@ export function getBeaconBlockApi({
         } as BlockInputDataColumns;
         blobSidecars = [];
       } else if (isForkPostDeneb(fork)) {
-        blobSidecars = computeBlobSidecars(config, signedBlock, signedBlockContents);
+        blobSidecars = computeBlobSidecars(config, signedBlock, signedBlockContents as BlobsAndProofs);
         blockData = {
           fork,
           blobs: blobSidecars,

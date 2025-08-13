@@ -58,8 +58,8 @@ type TypesByFork = {
     AttesterSlashing: phase0.AttesterSlashing;
     AggregateAndProof: phase0.AggregateAndProof;
     SignedAggregateAndProof: phase0.SignedAggregateAndProof;
-    BlockContents: phase0.BeaconBlock;
-    SignedBlockContents: phase0.SignedBeaconBlock;
+    BlockContents: {block: phase0.BeaconBlock};
+    SignedBlockContents: {signedBlock: phase0.SignedBeaconBlock};
   };
   [ForkName.altair]: {
     BeaconBlockHeader: phase0.BeaconBlockHeader;
@@ -85,8 +85,8 @@ type TypesByFork = {
     AttesterSlashing: phase0.AttesterSlashing;
     AggregateAndProof: phase0.AggregateAndProof;
     SignedAggregateAndProof: phase0.SignedAggregateAndProof;
-    BlockContents: altair.BeaconBlock;
-    SignedBlockContents: altair.SignedBeaconBlock;
+    BlockContents: {block: altair.BeaconBlock};
+    SignedBlockContents: {signedBlock: altair.SignedBeaconBlock};
   };
   [ForkName.bellatrix]: {
     BeaconBlockHeader: phase0.BeaconBlockHeader;
@@ -120,8 +120,8 @@ type TypesByFork = {
     AttesterSlashing: phase0.AttesterSlashing;
     AggregateAndProof: phase0.AggregateAndProof;
     SignedAggregateAndProof: phase0.SignedAggregateAndProof;
-    BlockContents: bellatrix.BeaconBlock;
-    SignedBlockContents: bellatrix.SignedBeaconBlock;
+    BlockContents: {block: bellatrix.BeaconBlock};
+    SignedBlockContents: {signedBlock: bellatrix.SignedBeaconBlock};
   };
   [ForkName.capella]: {
     BeaconBlockHeader: phase0.BeaconBlockHeader;
@@ -155,8 +155,8 @@ type TypesByFork = {
     AttesterSlashing: phase0.AttesterSlashing;
     AggregateAndProof: phase0.AggregateAndProof;
     SignedAggregateAndProof: phase0.SignedAggregateAndProof;
-    BlockContents: capella.BeaconBlock;
-    SignedBlockContents: capella.SignedBeaconBlock;
+    BlockContents: {block: capella.BeaconBlock};
+    SignedBlockContents: {signedBlock: capella.SignedBeaconBlock};
   };
   [ForkName.deneb]: {
     BeaconBlockHeader: phase0.BeaconBlockHeader;

@@ -43,7 +43,6 @@ import {
   Wei,
   bellatrix,
   getValidatorStatus,
-  isDenebBlockContents,
   phase0,
   ssz,
 } from "@lodestar/types";
@@ -535,7 +534,7 @@ export function getValidatorApi(
         };
       }
 
-      return {data: block, version, executionPayloadValue, consensusBlockValue, shouldOverrideBuilder};
+      return {data: {block}, version, executionPayloadValue, consensusBlockValue, shouldOverrideBuilder};
     } finally {
       if (timer) timer({source});
     }
@@ -869,16 +868,8 @@ export function getValidatorApi(
           return {data, meta};
         }
 
-        if (isDenebBlockContents(data)) {
-          const {block} = data;
-          const blindedBlock = beaconBlockToBlinded(config, block as BeaconBlock<ForkPostBellatrix>);
-          return {
-            data: blindedBlock,
-            meta: {...meta, executionPayloadBlinded: true},
-          };
-        }
-
-        const blindedBlock = beaconBlockToBlinded(config, data as BeaconBlock<ForkPostBellatrix>);
+        const {block} = data as BlockContents;
+        const blindedBlock = beaconBlockToBlinded(config, block as BeaconBlock<ForkPostBellatrix>);
         return {
           data: blindedBlock,
           meta: {...meta, executionPayloadBlinded: true},

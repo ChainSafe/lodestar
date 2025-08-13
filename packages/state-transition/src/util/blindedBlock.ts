@@ -138,5 +138,5 @@ export function reconstructSignedBlockContents(
     }
     return {signedBlock: signedBlock as SignedBeaconBlock<ForkPostDeneb>, ...blobsAndProofs};
   }
-  return signedBlock;
+  return {signedBlock};
 }

@@ -75,7 +75,7 @@ describe("BlockDutiesService", () => {
 
     api.validator.produceBlockV3.mockResolvedValue(
       mockApiResponse({
-        data: signedBlock.message,
+        data: {block: signedBlock.message},
         meta: {
           version: ForkName.bellatrix,
           executionPayloadValue: BigInt(1),
