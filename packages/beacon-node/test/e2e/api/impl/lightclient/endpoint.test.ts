@@ -72,9 +72,13 @@ describe("lightclient api", () => {
 
   const waitForBestUpdate = async (): Promise<void> => {
     // should see this event in 5 slots
-    await waitForEvent(bn.chain.emitter, routes.events.EventType.lightClientOptimisticUpdate, 5 * SLOT_DURATION_MS);
+    await waitForEvent(
+      bn.chain.emitter,
+      routes.events.EventType.lightClientOptimisticUpdate,
+      5 * SECONDS_PER_SLOT * 1000
+    );
     // wait for 1 slot to persist the best update
-    await sleep(2 * SLOT_DURATION_MS);
+    await sleep(2 * SECONDS_PER_SLOT * 1000);
   };
 
   it("getLightClientUpdatesByRange()", async () => {

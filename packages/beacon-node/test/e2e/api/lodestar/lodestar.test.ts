@@ -26,7 +26,7 @@ describe("api / impl / validator", () => {
       ALTAIR_FORK_EPOCH: ALTAIR_FORK_EPOCH,
     };
     const genesisSlotsDelay = 5;
-    const timeout = (SLOTS_PER_EPOCH + genesisSlotsDelay) * testParams.SLOT_DURATION_MS;
+    const timeout = (SLOTS_PER_EPOCH + genesisSlotsDelay) * testParams.SECONDS_PER_SLOT * 1000;
 
     afterEach(async () => {
       if (bn) await bn.close();

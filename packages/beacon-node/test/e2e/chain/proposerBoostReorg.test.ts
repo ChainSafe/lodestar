@@ -50,14 +50,14 @@ describe("proposer boost reorg", () => {
   it(`should reorg a late block at slot ${reorgSlot}`, async () => {
     // the node needs time to transpile/initialize bls worker threads
     const genesisSlotsDelay = 7;
-    const genesisTime = Math.floor(Date.now() / 1000) + (genesisSlotsDelay * testParams.SLOT_DURATION_MS) / 1000;
+    const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
     const testLoggerOpts: TestLoggerOpts = {
       level: LogLevel.debug,
       timestampFormat: {
         format: TimestampFormatCode.EpochSlot,
         genesisTime,
         slotsPerEpoch: SLOTS_PER_EPOCH,
-        secondsPerSlot: testParams.SLOT_DURATION_MS / 1000,
+        secondsPerSlot: testParams.SECONDS_PER_SLOT,
       },
     };
     const logger = testLogger("BeaconNode", testLoggerOpts);

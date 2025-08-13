@@ -51,7 +51,7 @@ describe("chain / lightclient", () => {
     // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
     // also delay to allow bls workers to be transpiled/initialized
     const genesisSlotsDelay = 7;
-    const genesisTime = Math.floor(Date.now() / 1000) + (genesisSlotsDelay * testParams.SLOT_DURATION_MS) / 1000;
+    const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
 
     const testLoggerOpts: TestLoggerOpts = {
       level: LogLevel.info,
@@ -59,7 +59,7 @@ describe("chain / lightclient", () => {
         format: TimestampFormatCode.EpochSlot,
         genesisTime,
         slotsPerEpoch: SLOTS_PER_EPOCH,
-        secondsPerSlot: testParams.SLOT_DURATION_MS / 1000,
+        secondsPerSlot: testParams.SECONDS_PER_SLOT,
       },
     };
 
