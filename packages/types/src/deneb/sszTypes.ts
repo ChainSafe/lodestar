@@ -310,12 +310,12 @@ export const SSEPayloadAttributes = new ContainerType(
   {typeName: "SSEPayloadAttributes", jsonCase: "eth2"}
 );
 
-export const DAContents = new ContainerType(
+export const BlobsAndProofs = new ContainerType(
   {
     kzgProofs: KZGProofs,
     blobs: Blobs,
   },
-  {typeName: "DAContents", jsonCase: "eth2"}
+  {typeName: "BlobsAndProofs", jsonCase: "eth2"}
 );
 
 export const BlockContents = new ContainerType(

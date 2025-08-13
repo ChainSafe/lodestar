@@ -30,14 +30,14 @@ type BlindedBlockOrBlockProposal =
   | {
       version: ForkPreDeneb;
       block: BeaconBlock<ForkPreDeneb>;
-      daContents: null;
+      blobsAndProofs: null;
       executionPayloadBlinded: false;
       executionPayloadSource: ProducedBlockSource.engine;
     }
   | {
       version: ForkPostDeneb;
       block: BeaconBlock<ForkPostDeneb>;
-      daContents: {
+      blobsAndProofs: {
         kzgProofs: deneb.KZGProofs;
         blobs: deneb.Blobs;
       };
@@ -47,7 +47,7 @@ type BlindedBlockOrBlockProposal =
   | {
       version: ForkPostBellatrix;
       block: BlindedBeaconBlock;
-      daContents: null;
+      blobsAndProofs: null;
       executionPayloadBlinded: true;
       executionPayloadSource: ProducedBlockSource;
     };
@@ -159,7 +159,7 @@ export class BlockProposingService {
 
       const {broadcastValidation} = this.opts;
       const publishOpts = {broadcastValidation};
-      await this.publishBlockWrapper(signedBlock, blockContents.daContents, publishOpts).catch((e: Error) => {
+      await this.publishBlockWrapper(signedBlock, blockContents.blobsAndProofs, publishOpts).catch((e: Error) => {
         this.metrics?.blockProposingErrors.inc({error: "publish"});
         throw extendError(e, "Failed to publish block");
       });
@@ -261,7 +261,7 @@ function parseProduceBlockResponse(
   if (response.executionPayloadBlinded) {
     return {
       block: response.data,
-      daContents: null,
+      blobsAndProofs: null,
       version: response.version,
       executionPayloadBlinded: true,
       executionPayloadSource,
@@ -273,7 +273,7 @@ function parseProduceBlockResponse(
   if (isDenebBlockContents(data)) {
     return {
       block: data.block,
-      daContents: {blobs: data.blobs, kzgProofs: data.kzgProofs},
+      blobsAndProofs: {blobs: data.blobs, kzgProofs: data.kzgProofs},
       version: response.version,
       executionPayloadBlinded: false,
       executionPayloadSource,
@@ -283,7 +283,7 @@ function parseProduceBlockResponse(
 
   return {
     block: response.data,
-    daContents: null,
+    blobsAndProofs: null,
     version: response.version,
     executionPayloadBlinded: false,
     executionPayloadSource,

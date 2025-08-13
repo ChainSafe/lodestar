@@ -527,7 +527,7 @@ export function getValidatorApi(
         }
 
         return {
-          data: {block, ...(produceResult as ProduceFullDeneb).daContents} as BlockContents,
+          data: {block, ...(produceResult as ProduceFullDeneb).blobsAndProofs} as BlockContents,
           version,
           executionPayloadValue,
           consensusBlockValue,

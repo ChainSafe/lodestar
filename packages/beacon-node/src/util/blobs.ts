@@ -14,7 +14,7 @@ import {
   VERSIONED_HASH_VERSION_KZG,
 } from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {BeaconBlockBody, SSZTypesFor, SignedBeaconBlock, deneb, fulu, ssz} from "@lodestar/types";
+import {BeaconBlockBody, BlobsAndProofs, SSZTypesFor, SignedBeaconBlock, deneb, fulu, ssz} from "@lodestar/types";
 import {kzg} from "./kzg.js";
 
 type VersionHash = Uint8Array;
@@ -47,7 +47,7 @@ export function computeKzgCommitmentsInclusionProof(
 export function computeBlobSidecars(
   config: ChainForkConfig,
   signedBlock: SignedBeaconBlock,
-  daContentsExt: deneb.DAContents & {kzgCommitmentInclusionProofs?: deneb.KzgCommitmentInclusionProof[]}
+  blobsAndProofsExt: deneb.BlobsAndProofs & {kzgCommitmentInclusionProofs?: deneb.KzgCommitmentInclusionProof[]}
 ): deneb.BlobSidecars {
   const blobKzgCommitments = (signedBlock as deneb.SignedBeaconBlock).message.body.blobKzgCommitments;
   if (blobKzgCommitments === undefined) {
@@ -58,10 +58,10 @@ export function computeBlobSidecars(
   const fork = config.getForkName(signedBlockHeader.message.slot);
 
   return blobKzgCommitments.map((kzgCommitment, index) => {
-    const blob = daContentsExt.blobs[index];
-    const kzgProof = daContentsExt.kzgProofs[index];
+    const blob = blobsAndProofsExt.blobs[index];
+    const kzgProof = blobsAndProofsExt.kzgProofs[index];
     const kzgCommitmentInclusionProof =
-      daContentsExt.kzgCommitmentInclusionProofs?.[index] ??
+      blobsAndProofsExt.kzgCommitmentInclusionProofs?.[index] ??
       computeInclusionProof(fork, signedBlock.message.body, index);
 
     return {index, blob, kzgCommitment, kzgProof, signedBlockHeader, kzgCommitmentInclusionProof};
@@ -78,7 +78,7 @@ export function computeBlobSidecars(
 export function computeDataColumnSidecars(
   config: ChainForkConfig,
   signedBlock: SignedBeaconBlock,
-  daContents: deneb.DAContents,
+  blobsAndProofs: BlobsAndProofs,
   kzgCommitmentsInclusionProof?: fulu.KzgCommitmentsInclusionProof,
   cells?: fulu.Cell[][]
 ): fulu.DataColumnSidecars {
@@ -93,7 +93,7 @@ export function computeDataColumnSidecars(
   const signedBlockHeader = signedBlockToSignedHeader(config, signedBlock);
   kzgCommitmentsInclusionProof =
     kzgCommitmentsInclusionProof ?? computeKzgCommitmentsInclusionProof(fork, signedBlock.message.body);
-  const {blobs, kzgProofs} = daContents;
+  const {blobs, kzgProofs} = blobsAndProofs;
   const cellsAndProofs = Array.from({length: blobs.length}, (_, rowNumber) => {
     const rowCells = cells?.[rowNumber] ?? kzg.computeCells(blobs[rowNumber]);
     const proofs = kzgProofs.slice(rowNumber * NUMBER_OF_COLUMNS, (rowNumber + 1) * NUMBER_OF_COLUMNS);

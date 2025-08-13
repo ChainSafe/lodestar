@@ -1,9 +1,17 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkPostBellatrix, ForkSeq} from "@lodestar/params";
+import {
+  ForkName,
+  ForkPostBellatrix,
+  ForkPostDeneb,
+  ForkSeq,
+  isForkPostBellatrix,
+  isForkPostDeneb,
+} from "@lodestar/params";
 import {
   BeaconBlock,
   BeaconBlockHeader,
   BlindedBeaconBlock,
+  BlobsAndProofs,
   ExecutionPayload,
   ExecutionPayloadAndBlobsBundle,
   ExecutionPayloadHeader,
@@ -77,9 +85,14 @@ export function signedBeaconBlockToBlinded(
 }
 
 export function signedBlindedBlockToFull(
+  fork: ForkName,
   signedBlindedBlock: SignedBlindedBeaconBlock,
   executionPayload: ExecutionPayload | null
 ): SignedBeaconBlock {
+  if (isForkPostBellatrix(fork) && executionPayload === null) {
+    throw Error("Missing executionPayload for post-bellatrix blinded block");
+  }
+
   const signedBlock = {
     ...signedBlindedBlock,
     message: {
@@ -112,18 +125,18 @@ export function parseExecutionPayloadAndBlobsBundle(data: ExecutionPayload | Exe
 }
 
 export function reconstructSignedBlockContents(
+  fork: ForkName,
   signedBlindedBlock: SignedBlindedBeaconBlock,
   executionPayload: ExecutionPayload | null,
-  daContents: deneb.DAContents | null
+  blobsAndProofs: BlobsAndProofs | null
 ): SignedBlockContents {
-  const signedBlock = signedBlindedBlockToFull(signedBlindedBlock, executionPayload);
+  const signedBlock = signedBlindedBlockToFull(fork, signedBlindedBlock, executionPayload);
 
-  if (daContents !== null) {
-    if (executionPayload === null) {
-      throw Error("Missing locally produced executionPayload for deneb+ publishBlindedBlock");
+  if (isForkPostDeneb(fork)) {
+    if (blobsAndProofs === null) {
+      throw Error("Missing blobsAndProofs for post-deneb blinded block");
     }
-
-    return {signedBlock, ...daContents} as SignedBlockContents;
+    return {signedBlock: signedBlock as SignedBeaconBlock<ForkPostDeneb>, ...blobsAndProofs};
   }
   return signedBlock;
 }

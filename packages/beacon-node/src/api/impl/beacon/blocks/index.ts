@@ -342,9 +342,10 @@ export function getBeaconBlockApi({
       chain.logger.debug("Reconstructing the full signed block contents", {slot, blockRoot, source});
 
       const signedBlockContents = reconstructSignedBlockContents(
+        fork,
         signedBlindedBlock,
         (producedResult as ProduceFullBellatrix).executionPayload ?? null,
-        (producedResult as ProduceFullDeneb).daContents ?? null
+        (producedResult as ProduceFullDeneb).blobsAndProofs ?? null
       );
 
       chain.logger.info("Publishing assembled block", {slot, blockRoot, source});
