@@ -26,7 +26,7 @@ import {ValidatorStore} from "./validatorStore.js";
 //  i) a full block pre deneb
 //  ii) a full block and full blobs post deneb
 //  iii) a blinded block post bellatrix
-type BlindedBlockOrBlockProposal =
+type BlindedBlockOrBlockContents =
   | {
       version: ForkPreDeneb;
       block: BeaconBlock<ForkPreDeneb>;
@@ -206,7 +206,7 @@ export class BlockProposingService {
     builderBoostFactor: bigint,
     {feeRecipient, strictFeeRecipientCheck, blindedLocal}: routes.validator.ExtraProduceBlockOpts,
     builderSelection: routes.validator.BuilderSelection
-  ): Promise<BlindedBlockOrBlockProposal & DebugLogCtx> => {
+  ): Promise<BlindedBlockOrBlockContents & DebugLogCtx> => {
     const res = await this.api.validator.produceBlockV3({
       slot,
       randaoReveal,
@@ -244,7 +244,7 @@ function parseProduceBlockResponse(
   },
   debugLogCtx: Record<string, string | boolean | undefined>,
   builderSelection: routes.validator.BuilderSelection
-): BlindedBlockOrBlockProposal & DebugLogCtx {
+): BlindedBlockOrBlockContents & DebugLogCtx {
   const executionPayloadSource = response.executionPayloadSource;
 
   if (
@@ -266,7 +266,7 @@ function parseProduceBlockResponse(
       executionPayloadBlinded: true,
       executionPayloadSource,
       debugLogCtx,
-    } as BlindedBlockOrBlockProposal & DebugLogCtx;
+    } as BlindedBlockOrBlockContents & DebugLogCtx;
   }
 
   const data = response.data;
@@ -278,7 +278,7 @@ function parseProduceBlockResponse(
       executionPayloadBlinded: false,
       executionPayloadSource,
       debugLogCtx,
-    } as BlindedBlockOrBlockProposal & DebugLogCtx;
+    } as BlindedBlockOrBlockContents & DebugLogCtx;
   }
 
   return {
@@ -288,5 +288,5 @@ function parseProduceBlockResponse(
     executionPayloadBlinded: false,
     executionPayloadSource,
     debugLogCtx,
-  } as BlindedBlockOrBlockProposal & DebugLogCtx;
+  } as BlindedBlockOrBlockContents & DebugLogCtx;
 }
