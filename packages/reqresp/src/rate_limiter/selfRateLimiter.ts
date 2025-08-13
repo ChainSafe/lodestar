@@ -77,6 +77,7 @@ export class SelfRateLimiter {
     for (const [peerIdStr, lastSeenTime] of this.lastSeenRequestsByPeer.entries()) {
       if (now - lastSeenTime >= DISCONNECTED_TIMEOUT_MS) {
         this.rateLimitersPerPeer.delete(peerIdStr);
+        this.lastSeenRequestsByPeer.delete(peerIdStr);
       }
     }
   }
