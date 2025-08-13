@@ -18,6 +18,7 @@ import {Discv5Worker} from "../discv5/index.js";
 import {NetworkEventBus} from "../events.js";
 import {FORK_EPOCH_LOOKAHEAD, getActiveForkBoundaries} from "../forks.js";
 import {Eth2Gossipsub, getCoreTopicsAtFork} from "../gossip/index.js";
+import {getDataColumnSidecarTopics} from "../gossip/topic.js";
 import {Libp2p} from "../interface.js";
 import {createNodeJsLibp2p} from "../libp2p/index.js";
 import {MetadataController} from "../metadata.js";
@@ -369,9 +370,24 @@ export class NetworkCore implements INetworkCore {
     return recipients.length;
   }
 
+  /**
+   * Handler of ChainEvent.updateTargetCustodyGroupCount event
+   * Updates the target custody group count in the network config and metadata.
+   * Also subscribes to new data_column_sidecar subnet topics for the new custody group count.
+   */
   async setTargetGroupCount(count: number): Promise<void> {
     this.networkConfig.custodyConfig.updateTargetCustodyGroupCount(count);
     this.metadata.custodyGroupCount = count;
+    // cannot call subscribeGossipCoreTopics() because we subsribed to core topics already
+    // we only need to subscribe to more data_column_sidecar topics
+    const dataColumnSubnetTopics = getDataColumnSidecarTopics(this.networkConfig);
+    const activeBoundaries = getActiveForkBoundaries(this.config, this.clock.currentEpoch);
+    for (const boundary of activeBoundaries) {
+      for (const topic of dataColumnSubnetTopics) {
+        // there are existing subscriptions for old subnets, in that case gossipsub will just ignore
+        this.gossip.subscribeTopic({...topic, boundary});
+      }
+    }
   }
 
   // REST API queries

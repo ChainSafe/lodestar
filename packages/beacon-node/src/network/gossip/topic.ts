@@ -243,10 +243,7 @@ export function getCoreTopicsAtFork(
 
   // After fulu also track data_column_sidecar_{index}
   if (ForkSeq[fork] >= ForkSeq.fulu) {
-    const subnets = networkConfig.custodyConfig.sampledSubnets;
-    for (const subnet of subnets) {
-      topics.push({type: GossipType.data_column_sidecar, subnet});
-    }
+    topics.push(...getDataColumnSidecarTopics(networkConfig));
   }
 
   // After Deneb also track blob_sidecar_{subnet_id}
@@ -284,6 +281,22 @@ export function getCoreTopicsAtFork(
         topics.push({type: GossipType.sync_committee, subnet});
       }
     }
+  }
+
+  return topics;
+}
+
+/**
+ * Pick data column subnets to subscribe to post-fulu.
+ */
+export function getDataColumnSidecarTopics(
+  networkConfig: NetworkConfig
+): GossipTopicTypeMap[keyof GossipTopicTypeMap][] {
+  const topics: GossipTopicTypeMap[keyof GossipTopicTypeMap][] = [];
+
+  const subnets = networkConfig.custodyConfig.sampledSubnets;
+  for (const subnet of subnets) {
+    topics.push({type: GossipType.data_column_sidecar, subnet});
   }
 
   return topics;
