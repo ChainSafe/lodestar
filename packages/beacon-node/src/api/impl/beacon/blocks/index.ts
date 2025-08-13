@@ -296,7 +296,7 @@ export function getBeaconBlockApi({
       }
       if (columnsPublishedWithZeroPeers > 0) {
         chain.logger.warn("Published data columns to 0 peers, increased risk of reorg", {
-          slot: signedBlock.message.slot,
+          slot,
           blockRoot,
           columns: columnsPublishedWithZeroPeers,
         });
