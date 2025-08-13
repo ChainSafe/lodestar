@@ -35,11 +35,15 @@ export function computeInclusionProof(
   return new Tree(bodyView.node).getSingleProof(BigInt(commitmentGindex));
 }
 
-export function computeBlobSidecars(
+/**
+ * SPEC FUNCTION get_blob_sidecars
+ * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/deneb/validator.md#sidecar
+ */
+export function getBlobSidecars(
   config: ChainForkConfig,
   signedBlock: SignedBeaconBlock,
-  blobsAndProofs: deneb.BlobsAndProofs,
-  kzgCommitmentInclusionProofs?: deneb.KzgCommitmentInclusionProof[]
+  blobs: deneb.Blobs,
+  proofs: deneb.KZGProofs
 ): deneb.BlobSidecars {
   const blobKzgCommitments = (signedBlock as deneb.SignedBeaconBlock).message.body.blobKzgCommitments;
   if (blobKzgCommitments === undefined) {
@@ -50,10 +54,9 @@ export function computeBlobSidecars(
   const fork = config.getForkName(signedBlockHeader.message.slot);
 
   return blobKzgCommitments.map((kzgCommitment, index) => {
-    const blob = blobsAndProofs.blobs[index];
-    const kzgProof = blobsAndProofs.proofs[index];
-    const kzgCommitmentInclusionProof =
-      kzgCommitmentInclusionProofs?.[index] ?? computeInclusionProof(fork, signedBlock.message.body, index);
+    const blob = blobs[index];
+    const kzgProof = proofs[index];
+    const kzgCommitmentInclusionProof = computeInclusionProof(fork, signedBlock.message.body, index);
 
     return {index, blob, kzgCommitment, kzgProof, signedBlockHeader, kzgCommitmentInclusionProof};
   });

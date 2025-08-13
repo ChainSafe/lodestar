@@ -47,7 +47,7 @@ import {ProduceFullBellatrix, ProduceFullDeneb, ProduceFullFulu} from "../../../
 import {validateGossipBlock} from "../../../../chain/validation/block.js";
 import {OpSource} from "../../../../chain/validatorMonitor.js";
 import {NetworkEvent} from "../../../../network/index.js";
-import {computeBlobSidecars, kzgCommitmentToVersionedHash, reconstructBlobs} from "../../../../util/blobs.js";
+import {getBlobSidecars, kzgCommitmentToVersionedHash, reconstructBlobs} from "../../../../util/blobs.js";
 import {getDataColumnSidecarsFromBlock} from "../../../../util/dataColumns.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 import {kzg} from "../../../../util/kzg.js";
@@ -119,10 +119,7 @@ export function getBeaconBlockApi({
         } as BlockInputDataColumns;
         blobSidecars = [];
       } else if (isForkPostDeneb(fork)) {
-        blobSidecars = computeBlobSidecars(config, signedBlock, {
-          blobs: signedBlockContents.blobs,
-          proofs: signedBlockContents.kzgProofs,
-        });
+        blobSidecars = getBlobSidecars(config, signedBlock, signedBlockContents.blobs, signedBlockContents.kzgProofs);
         blockData = {
           fork,
           blobs: blobSidecars,
@@ -362,7 +359,7 @@ export function getBeaconBlockApi({
         fork,
         signedBlindedBlock,
         (producedResult as ProduceFullBellatrix).executionPayload ?? null,
-        (producedResult as ProduceFullDeneb).blobsAndProofs ?? null
+        (producedResult as ProduceFullDeneb).blobsBundle ?? null
       );
 
       chain.logger.info("Publishing assembled block", {slot, blockRoot, source});

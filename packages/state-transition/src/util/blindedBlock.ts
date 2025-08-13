@@ -11,7 +11,6 @@ import {
   BeaconBlock,
   BeaconBlockHeader,
   BlindedBeaconBlock,
-  BlobsAndProofs,
   BlobsBundle,
   ExecutionPayload,
   ExecutionPayloadAndBlobsBundle,
@@ -128,15 +127,19 @@ export function reconstructSignedBlockContents(
   fork: ForkName,
   signedBlindedBlock: SignedBlindedBeaconBlock,
   executionPayload: ExecutionPayload | null,
-  blobsAndProofs: BlobsAndProofs | null
+  blobsBundle: BlobsBundle | null
 ): SignedBlockContents {
   const signedBlock = signedBlindedBlockToFull(fork, signedBlindedBlock, executionPayload);
 
   if (isForkPostDeneb(fork)) {
-    if (blobsAndProofs === null) {
-      throw Error("Missing blobsAndProofs for post-deneb blinded block");
+    if (blobsBundle === null) {
+      throw Error("Missing blobs bundle for post-deneb blinded block");
     }
-    return {signedBlock: signedBlock as SignedBeaconBlock<ForkPostDeneb>, ...blobsAndProofs};
+    return {
+      signedBlock: signedBlock as SignedBeaconBlock<ForkPostDeneb>,
+      kzgProofs: blobsBundle.proofs,
+      blobs: blobsBundle.blobs,
+    };
   }
   return {signedBlock};
 }

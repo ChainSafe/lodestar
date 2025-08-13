@@ -181,7 +181,6 @@ type TypesByFork = {
     BuilderBid: deneb.BuilderBid;
     SignedBuilderBid: deneb.SignedBuilderBid;
     SSEPayloadAttributes: deneb.SSEPayloadAttributes;
-    BlobsAndProofs: deneb.BlobsAndProofs;
     BlockContents: deneb.BlockContents;
     SignedBlockContents: deneb.SignedBlockContents;
     ExecutionPayloadAndBlobsBundle: deneb.ExecutionPayloadAndBlobsBundle;
@@ -219,7 +218,6 @@ type TypesByFork = {
     BuilderBid: electra.BuilderBid;
     SignedBuilderBid: electra.SignedBuilderBid;
     SSEPayloadAttributes: electra.SSEPayloadAttributes;
-    BlobsAndProofs: deneb.BlobsAndProofs;
     BlockContents: electra.BlockContents;
     SignedBlockContents: electra.SignedBlockContents;
     ExecutionPayloadAndBlobsBundle: deneb.ExecutionPayloadAndBlobsBundle;
@@ -258,7 +256,6 @@ type TypesByFork = {
     BuilderBid: electra.BuilderBid;
     SignedBuilderBid: electra.SignedBuilderBid;
     SSEPayloadAttributes: electra.SSEPayloadAttributes;
-    BlobsAndProofs: fulu.BlobsAndProofs;
     BlockContents: fulu.BlockContents;
     SignedBlockContents: fulu.SignedBlockContents;
     ExecutionPayloadAndBlobsBundle: deneb.ExecutionPayloadAndBlobsBundle;
@@ -294,7 +291,6 @@ export type BeaconBlockBody<F extends ForkAll = ForkAll> = TypesByFork[F]["Beaco
 export type BlindedBeaconBlockBody<F extends ForkPostBellatrix = ForkPostBellatrix> =
   TypesByFork[F]["BlindedBeaconBlockBody"];
 
-export type BlobsAndProofs<F extends ForkPostDeneb = ForkPostDeneb> = TypesByFork[F]["BlobsAndProofs"];
 export type BlockContents<F extends ForkAll = ForkAll> = TypesByFork[F]["BlockContents"];
 export type SignedBlockContents<F extends ForkAll = ForkAll> = TypesByFork[F]["SignedBlockContents"];
 export type SignedOrUnsignedBlockContents<F extends ForkAll = ForkAll> = BlockContents<F> | SignedBlockContents<F>;

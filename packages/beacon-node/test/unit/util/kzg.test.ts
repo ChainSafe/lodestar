@@ -4,7 +4,7 @@ import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {deneb, fulu, ssz} from "@lodestar/types";
 import {afterEach, describe, expect, it} from "vitest";
 import {validateBlobSidecars, validateGossipBlobSidecar} from "../../../src/chain/validation/blobSidecar.js";
-import {computeBlobSidecars, recoverDataColumnSidecars} from "../../../src/util/blobs.js";
+import {getBlobSidecars, recoverDataColumnSidecars} from "../../../src/util/blobs.js";
 import {getDataColumnSidecarsFromBlock} from "../../../src/util/dataColumns.js";
 import {kzg} from "../../../src/util/kzg.js";
 import {shuffle} from "../../../src/util/shuffle.js";
@@ -57,7 +57,7 @@ describe("KZG", () => {
     }
     const blockRoot = ssz.deneb.BeaconBlock.hashTreeRoot(signedBeaconBlock.message);
     const proofs = blobs.map((blob, index) => kzg.computeBlobKzgProof(blob, kzgCommitments[index]));
-    const blobSidecars: deneb.BlobSidecars = computeBlobSidecars(chain.config, signedBeaconBlock, {blobs, proofs});
+    const blobSidecars: deneb.BlobSidecars = getBlobSidecars(chain.config, signedBeaconBlock, blobs, proofs);
 
     expect(blobSidecars.length).toBe(2);
 

@@ -26,7 +26,7 @@ import {
   BeaconBlockBody,
   BlindedBeaconBlock,
   BlindedBeaconBlockBody,
-  BlobsAndProofs,
+  BlobsBundle,
   Bytes32,
   ExecutionPayload,
   ExecutionPayloadHeader,
@@ -107,14 +107,14 @@ export type ProduceFullFulu = {
   type: BlockType.Full;
   fork: ForkPostFulu;
   executionPayload: ExecutionPayload<ForkPostFulu>;
-  blobsAndProofs: BlobsAndProofs<ForkPostFulu>;
+  blobsBundle: BlobsBundle<ForkPostFulu>;
   cells: fulu.Cell[][];
 };
 export type ProduceFullDeneb = {
   type: BlockType.Full;
   fork: ForkName.deneb | ForkName.electra;
   executionPayload: ExecutionPayload<ForkPostDeneb>;
-  blobsAndProofs: BlobsAndProofs<ForkPostDeneb>;
+  blobsBundle: BlobsBundle<ForkPostDeneb>;
 };
 export type ProduceFullBellatrix = {
   type: BlockType.Full;
@@ -429,7 +429,7 @@ export async function produceBlockBody<T extends BlockType>(
           }
 
           (blockBody as deneb.BeaconBlockBody).blobKzgCommitments = blobsBundle.commitments;
-          (produceResult as ProduceFullFulu).blobsAndProofs = {proofs: blobsBundle.proofs, blobs: blobsBundle.blobs};
+          (produceResult as ProduceFullFulu).blobsBundle = blobsBundle;
           (produceResult as ProduceFullFulu).cells = cells;
 
           Object.assign(logMeta, {blobs: blobsBundle.commitments.length});
@@ -443,10 +443,7 @@ export async function produceBlockBody<T extends BlockType>(
           }
 
           (blockBody as deneb.BeaconBlockBody).blobKzgCommitments = blobsBundle.commitments;
-          (produceResult as ProduceFullDeneb).blobsAndProofs = {
-            proofs: blobsBundle.proofs,
-            blobs: blobsBundle.blobs,
-          };
+          (produceResult as ProduceFullDeneb).blobsBundle = blobsBundle;
 
           Object.assign(logMeta, {blobs: blobsBundle.commitments.length});
         }

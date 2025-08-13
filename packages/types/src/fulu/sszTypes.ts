@@ -126,14 +126,6 @@ export const BeaconState = new ContainerType(
   {typeName: "BeaconState", jsonCase: "eth2"}
 );
 
-export const BlobsAndProofs = new ContainerType(
-  {
-    proofs: KZGProofs,
-    blobs: denebSsz.Blobs,
-  },
-  {typeName: "BlobsAndProofs", jsonCase: "eth2"}
-);
-
 export const BlockContents = new ContainerType(
   {
     block: electraSsz.BeaconBlock,
