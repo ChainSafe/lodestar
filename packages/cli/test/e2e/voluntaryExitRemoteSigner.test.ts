@@ -50,6 +50,7 @@ describe("voluntaryExit using remote signer", () => {
         `--rest.port=${restPort}`,
         // Speed up test to make genesis happen faster
         "--params.SECONDS_PER_SLOT=2",
+        "--params.SLOT_DURATION_MS=2000",
         // Allow voluntary exists to be valid immediately
         "--params.SHARD_COMMITTEE_PERIOD=0",
       ],

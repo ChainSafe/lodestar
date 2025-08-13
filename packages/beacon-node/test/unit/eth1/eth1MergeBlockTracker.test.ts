@@ -21,6 +21,7 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
       // Set time units to 0 to make the test as fast as possible
       SECONDS_PER_ETH1_BLOCK: 0,
       SECONDS_PER_SLOT: 0,
+      SLOT_DURATION_MS: 0,
       // Hardcode TTD to a low value
       TERMINAL_TOTAL_DIFFICULTY: BigInt(terminalTotalDifficulty),
       TERMINAL_BLOCK_HASH: ZERO_HASH,

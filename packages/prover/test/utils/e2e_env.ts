@@ -22,6 +22,7 @@ export const config = {
   CAPELLA_FORK_EPOCH: capellaForkEpoch,
   GENESIS_DELAY: genesisDelaySeconds,
   SECONDS_PER_SLOT: secondsPerSlot,
+  SLOT_DURATION_MS: secondsPerSlot * 1000,
 };
 
 export function waitForCapellaFork(): Promise<void> {

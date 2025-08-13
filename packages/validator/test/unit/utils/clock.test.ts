@@ -81,7 +81,7 @@ describe("util / Clock", () => {
   });
 
   describe("getCurrentSlot", () => {
-    const testConfig = {SECONDS_PER_SLOT: 12} as BeaconConfig;
+    const testConfig = {SECONDS_PER_SLOT: 12, SLOT_DURATION_MS: 12 * 1000} as BeaconConfig;
     const genesisTime = Math.floor(new Date("2021-01-01").getTime() / 1000);
 
     // Tests can fail under certain time slots, overriding the system time
