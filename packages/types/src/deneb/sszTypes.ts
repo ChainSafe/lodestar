@@ -312,7 +312,7 @@ export const SSEPayloadAttributes = new ContainerType(
 
 export const BlobsAndProofs = new ContainerType(
   {
-    kzgProofs: KZGProofs,
+    proofs: KZGProofs,
     blobs: Blobs,
   },
   {typeName: "BlobsAndProofs", jsonCase: "eth2"}

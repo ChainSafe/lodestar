@@ -17,7 +17,6 @@ import {
   signedBeaconBlockToBlinded,
 } from "@lodestar/state-transition";
 import {
-  BlobsAndProofs,
   ProducedBlockSource,
   SignedBeaconBlock,
   SignedBlindedBeaconBlock,
@@ -120,7 +119,10 @@ export function getBeaconBlockApi({
         } as BlockInputDataColumns;
         blobSidecars = [];
       } else if (isForkPostDeneb(fork)) {
-        blobSidecars = computeBlobSidecars(config, signedBlock, signedBlockContents as BlobsAndProofs);
+        blobSidecars = computeBlobSidecars(config, signedBlock, {
+          blobs: signedBlockContents.blobs,
+          proofs: signedBlockContents.kzgProofs,
+        });
         blockData = {
           fork,
           blobs: blobSidecars,

@@ -429,7 +429,7 @@ export async function produceBlockBody<T extends BlockType>(
           }
 
           (blockBody as deneb.BeaconBlockBody).blobKzgCommitments = blobsBundle.commitments;
-          (produceResult as ProduceFullFulu).blobsAndProofs = {kzgProofs: blobsBundle.proofs, blobs: blobsBundle.blobs};
+          (produceResult as ProduceFullFulu).blobsAndProofs = {proofs: blobsBundle.proofs, blobs: blobsBundle.blobs};
           (produceResult as ProduceFullFulu).cells = cells;
 
           Object.assign(logMeta, {blobs: blobsBundle.commitments.length});
@@ -444,7 +444,7 @@ export async function produceBlockBody<T extends BlockType>(
 
           (blockBody as deneb.BeaconBlockBody).blobKzgCommitments = blobsBundle.commitments;
           (produceResult as ProduceFullDeneb).blobsAndProofs = {
-            kzgProofs: blobsBundle.proofs,
+            proofs: blobsBundle.proofs,
             blobs: blobsBundle.blobs,
           };
 

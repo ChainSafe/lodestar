@@ -195,9 +195,8 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
     // invalid signature, but there is no recourse to this anyway so lets just proceed and will
     // probably need diagonis if this block turns out to be invalid because of some bug
     //
-    const blobsAndProofs = blobsBundle ? {blobs: blobsBundle.blobs, kzgProofs: blobsBundle.proofs} : null;
     const fork = this.config.getForkName(signedBlindedBlock.data.message.slot);
-    return reconstructSignedBlockContents(fork, signedBlindedBlock.data, executionPayload, blobsAndProofs);
+    return reconstructSignedBlockContents(fork, signedBlindedBlock.data, executionPayload, blobsBundle);
   }
 
   async submitBlindedBlockNoResponse(signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>): Promise<void> {

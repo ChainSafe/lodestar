@@ -51,7 +51,7 @@ export function computeBlobSidecars(
 
   return blobKzgCommitments.map((kzgCommitment, index) => {
     const blob = blobsAndProofs.blobs[index];
-    const kzgProof = blobsAndProofs.kzgProofs[index];
+    const kzgProof = blobsAndProofs.proofs[index];
     const kzgCommitmentInclusionProof =
       kzgCommitmentInclusionProofs?.[index] ?? computeInclusionProof(fork, signedBlock.message.body, index);
 

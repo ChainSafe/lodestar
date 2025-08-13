@@ -128,7 +128,7 @@ export const BeaconState = new ContainerType(
 
 export const BlobsAndProofs = new ContainerType(
   {
-    kzgProofs: KZGProofs,
+    proofs: KZGProofs,
     blobs: denebSsz.Blobs,
   },
   {typeName: "BlobsAndProofs", jsonCase: "eth2"}
