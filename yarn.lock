@@ -566,20 +566,6 @@
     lru-cache "^10.1.0"
     strict-event-emitter-types "^2.0.0"
 
-"@chainsafe/enr@^5.0.0":
-  version "5.0.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/enr/-/enr-5.0.0.tgz#0486d6d3ba9cb8c4a6e2190921b2dd33ec60bb7b"
-  integrity sha512-xqWBsdFFHy/sLqddsyCT4BH/5PFheyK8Grho27tmiwg/a95nANYANsqXXUP8/HbgCx3F5VDl0/xFacV3Ik7kDA==
-  dependencies:
-    "@ethereumjs/rlp" "^5.0.2"
-    "@libp2p/crypto" "^5.0.1"
-    "@libp2p/interface" "^2.0.1"
-    "@libp2p/peer-id" "^5.0.1"
-    "@multiformats/multiaddr" "^12.1.10"
-    "@scure/base" "^1.2.1"
-    ethereum-cryptography "^2.2.0"
-    uint8-varint "^2.0.2"
-
 "@chainsafe/enr@^5.0.1":
   version "5.0.1"
   resolved "https://registry.yarnpkg.com/@chainsafe/enr/-/enr-5.0.1.tgz#ac7622ee381475110239af75073969fad1faf412"
