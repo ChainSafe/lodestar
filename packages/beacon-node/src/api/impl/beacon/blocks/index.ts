@@ -287,6 +287,7 @@ export function getBeaconBlockApi({
       for (let i = 0; i < dataColumnSidecars.length; i++) {
         // + 1 because we publish to beacon_block first
         const sentPeers = sentPeersArr[i + 1] as number;
+        // sent peers could be 0 as we set `allowPublishToZeroTopicPeers=true` in network.publishDataColumnSidecar() api
         metrics?.dataColumns.sentPeersPerSubnet.observe(sentPeers);
       }
     }
