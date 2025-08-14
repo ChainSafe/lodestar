@@ -164,7 +164,7 @@ export class BeaconChain implements IBeaconChain {
   readonly shufflingCache: ShufflingCache;
 
   /**
-   * Cache produces results (ExecutionPayload, DA Data) from the local execution so that we can send
+   * Cache produced results (ExecutionPayload, DA Data) from the local execution so that we can send
    * and get signed/published blinded versions which beacon node can
    * assemble into full blocks before publishing to the network.
    */

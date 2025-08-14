@@ -89,7 +89,7 @@ export function signedBlindedBlockToFull(
   executionPayload: ExecutionPayload | null
 ): SignedBeaconBlock {
   if (isForkPostBellatrix(fork) && executionPayload === null) {
-    throw Error("Missing executionPayload to construct post-bellatrix full block");
+    throw Error("Missing executionPayload to reconstruct post-bellatrix full block");
   }
 
   const signedBlock = {
@@ -133,7 +133,7 @@ export function reconstructSignedBlockContents(
 
   if (isForkPostDeneb(fork)) {
     if (blobsBundle === null) {
-      throw Error("Missing blobs bundle for post-deneb blinded block");
+      throw Error("Missing blobs bundle to reconstruct post-deneb block contents");
     }
     return {
       signedBlock: signedBlock as SignedBeaconBlock<ForkPostDeneb>,
