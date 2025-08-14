@@ -10,6 +10,7 @@ import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
 import {BeaconChain} from "../../../../../src/chain/chain.js";
 import {BlockType, produceBlockBody} from "../../../../../src/chain/produceBlock/index.js";
+import {BuilderStatus} from "../../../../../src/execution/builder/http.js";
 import {PayloadIdCache} from "../../../../../src/execution/index.js";
 import {SyncState} from "../../../../../src/sync/interface.js";
 import {toGraffitiBytes} from "../../../../../src/util/graffiti.js";
@@ -35,7 +36,7 @@ describe("api/validator - produceBlockV3", () => {
     api = getValidatorApi(defaultApiOptions, {...modules, config});
     state = generateCachedBellatrixState();
 
-    modules.chain.executionBuilder.status = true;
+    modules.chain.executionBuilder.status = BuilderStatus.enabled;
   });
 
   afterEach(() => {

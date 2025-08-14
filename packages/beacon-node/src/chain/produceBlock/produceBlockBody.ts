@@ -159,7 +159,7 @@ export async function produceBlockBody<T extends BlockType>(
     Object.assign(logMeta, {feeRecipientType, feeRecipient});
 
     if (blockType === BlockType.Blinded) {
-      if (!this.executionBuilder) throw Error("Execution Builder not available");
+      if (!this.executionBuilder) throw Error("External builder not configured");
       const executionBuilder = this.executionBuilder;
 
       const builderPromise = (async () => {
@@ -567,7 +567,7 @@ async function prepareExecutionPayloadHeader(
 
   const parentHashRes = await getExecutionPayloadParentHash(chain, state);
   if (parentHashRes.isPremerge) {
-    throw Error("Execution builder disabled pre-merge");
+    throw Error("External builder disabled pre-merge");
   }
 
   const {parentHash} = parentHashRes;

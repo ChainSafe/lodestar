@@ -48,6 +48,7 @@ import {getEffectiveBalancesFromStateBytes} from "@lodestar/state-transition";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
+import {BuilderStatus} from "../execution/builder/http.js";
 import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
 import {computeNodeIdFromPrivateKey} from "../network/subnets/interface.js";
@@ -1328,7 +1329,7 @@ export class BeaconChain implements IBeaconChain {
       const previousStatus = executionBuilder.status;
       const shouldEnable = slotsPresent >= Math.min(faultInspectionWindow - allowedFaults, clockSlot);
 
-      executionBuilder.updateStatus(shouldEnable);
+      executionBuilder.updateStatus(shouldEnable ? BuilderStatus.enabled : BuilderStatus.circuitBreaker);
       // The status changed we should log
       const status = executionBuilder.status;
       const builderLog = {
@@ -1338,9 +1339,9 @@ export class BeaconChain implements IBeaconChain {
         allowedFaults,
       };
       if (status !== previousStatus) {
-        this.logger.info("Execution builder status updated", builderLog);
+        this.logger.info("External builder status updated", builderLog);
       } else {
-        this.logger.verbose("Execution builder status", builderLog);
+        this.logger.verbose("External builder status", builderLog);
       }
     }
   }

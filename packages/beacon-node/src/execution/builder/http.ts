@@ -42,6 +42,23 @@ export const defaultExecutionBuilderHttpOpts: ExecutionBuilderHttpOpts = {
   timeout: 12000,
 };
 
+export enum BuilderStatus {
+  /**
+   * Builder is enabled and operational
+   */
+  enabled = "enabled",
+  /**
+   * Builder is disabled due to failed status checks
+   */
+  disabled = "disabled",
+  /**
+   * Circuit breaker condition that is triggered when the node determines the chain is unhealthy.
+   * When the circuit breaker is fired, proposers **MUST** not utilize the external builder
+   * network and exclusively build locally.
+   */
+  circuitBreaker = "circuit_breaker",
+}
+
 /**
  * Expected error if builder does not provide a bid. Most of the time, this
  * is due to `min-bid` setting on the mev-boost side but in rare cases could
@@ -71,7 +88,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
   readonly registrations: ValidatorRegistrationCache;
   readonly issueLocalFcUWithFeeRecipient?: string;
   // Builder needs to be explicity enabled using updateStatus
-  status = false;
+  status = BuilderStatus.disabled;
   faultInspectionWindow: number;
   allowedFaults: number;
 
@@ -119,21 +136,23 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
     );
     // allowedFaults should be < faultInspectionWindow, limiting them to faultInspectionWindow/2
     this.allowedFaults = Math.min(
-      opts.allowedFaults ?? Math.floor(this.faultInspectionWindow / 2),
-      Math.floor(this.faultInspectionWindow / 2)
+      opts.allowedFaults ?? Math.floor(this.faultInspectionWindow / 4),
+      Math.floor(this.faultInspectionWindow / 4)
     );
   }
 
-  updateStatus(shouldEnable: boolean): void {
-    this.status = shouldEnable;
+  updateStatus(status: BuilderStatus): void {
+    this.status = status;
   }
 
   async checkStatus(): Promise<void> {
     try {
       (await this.api.status()).assertOk();
     } catch (e) {
-      // Disable if the status was enabled
-      this.status = false;
+      if (this.status === BuilderStatus.enabled) {
+        // Disable if the status was enabled
+        this.status = BuilderStatus.disabled;
+      }
       throw e;
     }
   }

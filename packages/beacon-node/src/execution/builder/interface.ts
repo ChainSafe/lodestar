@@ -14,6 +14,7 @@ import {
   electra,
 } from "@lodestar/types";
 import {ValidatorRegistration} from "./cache.js";
+import {BuilderStatus} from "./http.js";
 
 export interface IExecutionBuilder {
   /**
@@ -22,13 +23,13 @@ export interface IExecutionBuilder {
    * fetch
    */
   readonly issueLocalFcUWithFeeRecipient?: string;
-  status: boolean;
+  status: BuilderStatus;
   /** Window to inspect missed slots for enabling/disabling builder circuit breaker */
   faultInspectionWindow: number;
   /** Number of missed slots allowed in the faultInspectionWindow for builder circuit*/
   allowedFaults: number;
 
-  updateStatus(shouldEnable: boolean): void;
+  updateStatus(status: BuilderStatus): void;
   checkStatus(): Promise<void>;
   registerValidator(epoch: Epoch, registrations: bellatrix.SignedValidatorRegistrationV1[]): Promise<void>;
   getValidatorRegistration(pubkey: BLSPubkey): ValidatorRegistration | undefined;

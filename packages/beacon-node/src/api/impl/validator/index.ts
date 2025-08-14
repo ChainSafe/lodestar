@@ -72,7 +72,7 @@ import {RegenCaller} from "../../../chain/regen/index.js";
 import {validateApiAggregateAndProof} from "../../../chain/validation/index.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
 import {ZERO_HASH} from "../../../constants/index.js";
-import {NoBidReceived} from "../../../execution/builder/http.js";
+import {BuilderStatus, NoBidReceived} from "../../../execution/builder/http.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossipHandlers.js";
 import {CommitteeSubscription} from "../../../network/subnets/index.js";
 import {SyncState} from "../../../sync/index.js";
@@ -423,10 +423,17 @@ export function getValidatorApi(
 
     // Error early for builder if builder flow not active
     if (!chain.executionBuilder) {
-      throw Error("Execution builder not set");
+      throw Error("External builder not configured");
     }
-    if (!chain.executionBuilder.status) {
-      throw Error("Execution builder disabled");
+
+    switch (chain.executionBuilder.status) {
+      case BuilderStatus.disabled:
+        throw Error("External builder disabled due to failed status checks");
+      case BuilderStatus.circuitBreaker:
+        throw Error("External builder circuit breaker is activated");
+      case BuilderStatus.enabled:
+        // continue
+        break;
     }
 
     let timer: undefined | ((opts: {source: ProducedBlockSource}) => number);
@@ -1491,7 +1498,7 @@ export function getValidatorApi(
 
     async registerValidator({registrations}) {
       if (!chain.executionBuilder) {
-        throw Error("Execution builder not enabled");
+        throw Error("External builder not configured");
       }
 
       // should only send active or pending validator to builder
