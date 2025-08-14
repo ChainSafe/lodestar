@@ -134,7 +134,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
       opts.faultInspectionWindow ?? SLOTS_PER_EPOCH + Math.floor(Math.random() * SLOTS_PER_EPOCH),
       SLOTS_PER_EPOCH
     );
-    // allowedFaults should be < faultInspectionWindow, limiting them to faultInspectionWindow/2
+    // allowedFaults should be < faultInspectionWindow, limiting them to faultInspectionWindow/4
     this.allowedFaults = Math.min(
       opts.allowedFaults ?? Math.floor(this.faultInspectionWindow / 4),
       Math.floor(this.faultInspectionWindow / 4)
