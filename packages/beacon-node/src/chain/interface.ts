@@ -133,7 +133,7 @@ export interface IBeaconChain {
   readonly beaconProposerCache: BeaconProposerCache;
   readonly checkpointBalancesCache: CheckpointBalancesCache;
 
-  readonly producedResults: Map<RootHex, ProduceResult>;
+  readonly blockProductionCache: Map<RootHex, ProduceResult>;
 
   readonly shufflingCache: ShufflingCache;
   readonly blacklistedBlocks: Map<RootHex, Slot | null>;

@@ -516,7 +516,7 @@ export function getValidatorApi(
         void chain.persistBlock(block, "produced_engine_block");
       }
       if (isForkPostDeneb(version)) {
-        const produceResult = chain.producedResults.get(blockRoot);
+        const produceResult = chain.blockProductionCache.get(blockRoot);
         if (produceResult === undefined) {
           throw Error("production result missing in cache");
         }

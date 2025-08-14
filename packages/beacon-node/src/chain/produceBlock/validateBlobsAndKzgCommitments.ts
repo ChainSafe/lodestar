@@ -29,7 +29,7 @@ export async function validateBlobsAndKzgCommitments(
  */
 export async function validateCellsAndKzgCommitments(
   commitments: deneb.KZGCommitment[],
-  proofs: deneb.KZGProof[],
+  proofs: fulu.KZGProof[],
   cells: fulu.Cell[][]
 ): Promise<void> {
   if (cells.length !== commitments.length) {

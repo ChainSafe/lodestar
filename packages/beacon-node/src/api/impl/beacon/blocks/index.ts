@@ -99,7 +99,7 @@ export function getBeaconBlockApi({
         // If the block was produced by this node, we will already have computed cells
         // Otherwise, we will compute them from the blobs in this function
         const cells =
-          (chain.producedResults.get(blockRoot) as ProduceFullFulu)?.cells ??
+          (chain.blockProductionCache.get(blockRoot) as ProduceFullFulu)?.cells ??
           signedBlockContents.blobs.map((blob) => kzg.computeCells(blob));
         const cellsAndProofs = cells.map((rowCells, rowIndex) => ({
           cells: rowCells,
@@ -144,7 +144,7 @@ export function getBeaconBlockApi({
     // state transition to produce the stateRoot
     // bodyRoot should be the same to produced block
     const bodyRoot = toRootHex(chain.config.getForkTypes(slot).BeaconBlockBody.hashTreeRoot(signedBlock.message.body));
-    const blockLocallyProduced = chain.producedResults.has(blockRoot);
+    const blockLocallyProduced = chain.blockProductionCache.has(blockRoot);
     const valLogMeta = {slot, blockRoot, bodyRoot, broadcastValidation, blockLocallyProduced};
 
     switch (broadcastValidation) {
@@ -361,7 +361,7 @@ export function getBeaconBlockApi({
     const fork = config.getForkName(slot);
 
     // Either the payload/blobs are cached from i) engine locally or ii) they are from the builder
-    const producedResult = chain.producedResults.get(blockRoot);
+    const producedResult = chain.blockProductionCache.get(blockRoot);
     if (producedResult !== undefined) {
       const source = ProducedBlockSource.engine;
       chain.logger.debug("Reconstructing the full signed block contents", {slot, blockRoot, source});
@@ -704,7 +704,7 @@ async function reconstructBuilderSignedBlockContents(
     throw Error("executionBuilder required to publish SignedBlindedBeaconBlock");
   }
 
-  return await executionBuilder.submitBlindedBlock(signedBlindedBlock);
+  return executionBuilder.submitBlindedBlock(signedBlindedBlock);
 }
 
 async function submitBlindedBlockToBuilder(

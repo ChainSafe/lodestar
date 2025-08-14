@@ -168,7 +168,7 @@ export class BeaconChain implements IBeaconChain {
    * and get signed/published blinded versions which beacon node can
    * assemble into full blocks before publishing to the network.
    */
-  readonly producedResults = new Map<RootHex, ProduceResult>();
+  readonly blockProductionCache = new Map<RootHex, ProduceResult>();
 
   readonly blacklistedBlocks: Map<RootHex, Slot | null>;
 
@@ -783,8 +783,8 @@ export class BeaconChain implements IBeaconChain {
     const blockRootHex = toRootHex(blockRoot);
 
     // Track the produced block for consensus broadcast validations, later validation, etc.
-    this.producedResults.set(blockRootHex, produceResult);
-    this.metrics?.blockProductionCaches.producedResults.set(this.producedResults.size);
+    this.blockProductionCache.set(blockRootHex, produceResult);
+    this.metrics?.blockProductionCaches.blockProductionCache.set(this.blockProductionCache.size);
 
     return {block, executionPayloadValue, consensusBlockValue: gweiToWei(proposerReward), shouldOverrideBuilder};
   }
@@ -1141,8 +1141,8 @@ export class BeaconChain implements IBeaconChain {
     this.reprocessController.onSlot(slot);
 
     // Prune old cached block production artifacts, those are only useful on their slot
-    pruneSetToMax(this.producedResults, this.opts.maxCachedProducedRoots ?? DEFAULT_MAX_CACHED_PRODUCED_RESULTS);
-    this.metrics?.blockProductionCaches.producedResults.set(this.producedResults.size);
+    pruneSetToMax(this.blockProductionCache, this.opts.maxCachedProducedRoots ?? DEFAULT_MAX_CACHED_PRODUCED_RESULTS);
+    this.metrics?.blockProductionCaches.blockProductionCache.set(this.blockProductionCache.size);
 
     const metrics = this.metrics;
     if (metrics && (slot + 1) % SLOTS_PER_EPOCH === 0) {
