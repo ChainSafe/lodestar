@@ -446,24 +446,22 @@ export function matchBlockWithDataColumns(
     }
   }
 
-  // If there are still unconsumed blobs this means that the response was inconsistent
-  // and matching was wrong and hence we should throw error
+  // for head sync, there could be unconsumed data column sidecars because the retried peers may have higher head
   if (
     allDataColumnSidecars[dataColumnSideCarIndex] !== undefined &&
     // If there are no data columns, the data columns request can give 1 block outside the requested range
-    allDataColumnSidecars[dataColumnSideCarIndex].signedBlockHeader.message.slot <= endSlot
-  ) {
+    allDataColumnSidecars[dataColumnSideCarIndex].signedBlockHeader.message.slot <= endSlot &&
     // only penalize peer with Finalized range sync or "ByRoot" sync source
-    if (syncSource !== RangeSyncType.Head) {
-      network.reportPeer(peerId, PeerAction.LowToleranceError, "Unmatched dataColumnSidecars");
-    }
+    syncSource !== RangeSyncType.Head
+  ) {
+    network.reportPeer(peerId, PeerAction.LowToleranceError, "Unmatched dataColumnSidecars");
     throw Error(
       `Unmatched dataColumnSidecars, blocks=${allBlocks.length}, blobs=${
         allDataColumnSidecars.length
       } lastMatchedSlot=${lastMatchedSlot}, pending dataColumnSidecars slots=${allDataColumnSidecars
         .slice(dataColumnSideCarIndex)
         .map((blb) => blb.signedBlockHeader.message.slot)
-        .join(" ")}`
+        .join(" ")} endSlot=${endSlot}, peerId=${peerId}, peerClient=${peerClient}`
     );
   }
   logger?.debug("matched BlockWithDataColumns", {
