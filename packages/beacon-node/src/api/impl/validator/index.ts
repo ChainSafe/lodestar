@@ -66,7 +66,7 @@ import {
 } from "../../../chain/errors/index.js";
 import {ChainEvent, CheckpointHex, CommonBlockBody} from "../../../chain/index.js";
 import {SCHEDULER_LOOKAHEAD_FACTOR} from "../../../chain/prepareNextSlot.js";
-import {ProduceFullDeneb} from "../../../chain/produceBlock/index.js";
+import {BlockType, ProduceFullDeneb} from "../../../chain/produceBlock/index.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
 import {validateApiAggregateAndProof} from "../../../chain/validation/index.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
@@ -520,13 +520,20 @@ export function getValidatorApi(
         if (produceResult === undefined) {
           throw Error("production result missing in cache");
         }
-
         if (!isForkPostDeneb(produceResult.fork)) {
           throw Error("production result is for pre-deneb fork");
         }
+        if (produceResult.type !== BlockType.Full) {
+          throw Error("production result is not full block");
+        }
+        const blobsBundle = (produceResult as ProduceFullDeneb).blobsBundle;
 
         return {
-          data: {block, ...(produceResult as ProduceFullDeneb).blobsBundle} as BlockContents,
+          data: {
+            block,
+            blobs: blobsBundle.blobs,
+            kzgProofs: blobsBundle.proofs,
+          },
           version,
           executionPayloadValue,
           consensusBlockValue,
