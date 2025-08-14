@@ -1,4 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
+import {ForkPreFulu} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {deneb} from "@lodestar/types";
 import {LodestarError, fromHex, prettyBytes, toHex} from "@lodestar/utils";
@@ -101,7 +102,7 @@ export async function downloadAndCacheData({
   if (isBlockInputBlobs(blockInput)) {
     const missingBlobsMeta = blockInput.getMissingBlobMeta();
     if (executionEngine) {
-      const forkName = blockInput.forkName;
+      const forkName = blockInput.forkName as ForkPreFulu;
       const response = await executionEngine.getBlobs(
         forkName,
         missingBlobsMeta.map(({versionHash}) => versionHash)

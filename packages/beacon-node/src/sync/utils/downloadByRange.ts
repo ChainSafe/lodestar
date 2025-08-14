@@ -1,7 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPostDeneb, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
-import {RootHex, SignedBeaconBlock, Slot, WithBytes, deneb, fulu, phase0} from "@lodestar/types";
+import {RootHex, SignedBeaconBlock, Slot, deneb, fulu, phase0} from "@lodestar/types";
 import {LodestarError, Logger, prettyBytes, prettyPrintIndices} from "@lodestar/utils";
 import {BlockInputSource, IBlockInput} from "../../chain/blocks/blockInput/index.js";
 import {SeenBlockInputCache} from "../../chain/seenCache/seenBlockInput.js";
