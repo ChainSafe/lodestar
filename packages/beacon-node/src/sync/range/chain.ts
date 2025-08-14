@@ -365,7 +365,7 @@ export class SyncChain {
       }
     }
 
-    const peerBalancer = new ChainPeersBalancer(peersSyncInfo, toArr(this.batches), this.custodyConfig);
+    const peerBalancer = new ChainPeersBalancer(peersSyncInfo, toArr(this.batches), this.custodyConfig, this.syncType);
 
     // Retry download of existing batches
     for (const batch of this.batches.values()) {
