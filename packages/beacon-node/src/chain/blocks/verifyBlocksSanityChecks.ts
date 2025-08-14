@@ -6,7 +6,8 @@ import {toRootHex} from "@lodestar/utils";
 import {IClock} from "../../util/clock.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {IChainOptions} from "../options.js";
-import {BlockInput, ImportBlockOpts} from "./types.js";
+import {BlockInput} from "./blockInput/index.js";
+import {ImportBlockOpts} from "./types.js";
 
 /**
  * Verifies some early cheap sanity checks on the block before running the full state transition.
@@ -44,7 +45,7 @@ export function verifyBlocksSanityChecks(
   let parentBlock: ProtoBlock | null = null;
 
   for (const blockInput of blocks) {
-    const {block} = blockInput;
+    const block = blockInput.getBlock();
     const blockSlot = block.message.slot;
     const blockHash = toRootHex(chain.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
 
@@ -85,7 +86,7 @@ export function verifyBlocksSanityChecks(
     let parentBlockSlot: Slot;
 
     if (relevantLastBlock) {
-      parentBlockSlot = relevantLastBlock.block.message.slot;
+      parentBlockSlot = relevantLastBlock.getBlock().message.slot;
     } else {
       // When importing a block segment, only the first NON-IGNORED block must be known to the fork-choice.
       const parentRoot = toRootHex(block.message.parentRoot);

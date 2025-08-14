@@ -1,6 +1,5 @@
 import {NotReorgedReason} from "@lodestar/fork-choice";
 import {BlockInputSource} from "../../chain/blocks/blockInput/index.js";
-import {BlobsSource, BlockSource, DataColumnsSource} from "../../chain/blocks/types.js";
 import {JobQueueItemType} from "../../chain/bls/index.js";
 import {AttestationErrorCode, BlockErrorCode} from "../../chain/errors/index.js";
 import {
@@ -11,7 +10,6 @@ import {InsertOutcome} from "../../chain/opPools/types.js";
 import {RegenCaller, RegenFnName} from "../../chain/regen/interface.js";
 import {ReprocessStatus} from "../../chain/reprocess.js";
 import {RejectReason} from "../../chain/seenCache/seenAttestationData.js";
-import {BlockInputAvailabilitySource} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {CacheItemType} from "../../chain/stateCache/types.js";
 import {OpSource} from "../../chain/validatorMonitor.js";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
@@ -543,7 +541,7 @@ export function createLodestarMetrics(
         help: "Time elapsed between block slot time and the time block received via unknown block sync",
         buckets: [0.5, 1, 2, 4, 6, 12],
       }),
-      resolveAvailabilitySource: register.gauge<{source: BlockInputAvailabilitySource}>({
+      resolveAvailabilitySource: register.gauge<{source: BlockInputSource}>({
         name: "lodestar_sync_blockinput_availability_source",
         help: "Total number of blocks whose data availability was resolved",
         labelNames: ["source"],
@@ -745,12 +743,12 @@ export function createLodestarMetrics(
       }),
     },
     dataColumns: {
-      bySource: register.gauge<{source: DataColumnsSource}>({
+      bySource: register.gauge<{source: BlockInputSource}>({
         name: "lodestar_data_columns_by_source",
         help: "Number of received data columns by source",
         labelNames: ["source"],
       }),
-      elapsedTimeTillReceived: register.histogram<{source: DataColumnsSource}>({
+      elapsedTimeTillReceived: register.histogram<{source: BlockInputSource}>({
         name: "lodestar_data_column_elapsed_time_till_received_seconds",
         help: "Time elapsed between block slot time and the time data column received",
         labelNames: ["source"],
@@ -781,12 +779,12 @@ export function createLodestarMetrics(
         name: "lodestar_import_block_set_head_after_first_interval_total",
         help: "Total times an imported block is set as head after the first slot interval",
       }),
-      bySource: register.gauge<{source: BlockSource}>({
+      bySource: register.gauge<{source: BlockInputSource}>({
         name: "lodestar_import_block_by_source_total",
         help: "Total number of imported blocks by source",
         labelNames: ["source"],
       }),
-      blobsBySource: register.gauge<{blobsSource: BlobsSource}>({
+      blobsBySource: register.gauge<{blobsSource: BlockInputSource}>({
         name: "lodestar_import_blobs_by_source_total",
         help: "Total number of imported blobs by source",
         labelNames: ["blobsSource"],

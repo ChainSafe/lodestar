@@ -1,9 +1,12 @@
-import {ForkName, NUMBER_OF_COLUMNS, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
-import {fulu, ssz} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {KeyValue} from "@lodestar/db";
+import {NUMBER_OF_COLUMNS} from "@lodestar/params";
+import {SignedBeaconBlock, fulu, ssz} from "@lodestar/types";
+import {prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {toHex} from "@lodestar/utils";
+import {BlobSidecarsWrapper} from "../../db/repositories/blobSidecars.js";
+import {DataColumnSidecarsWrapper} from "../../db/repositories/dataColumnSidecars.js";
 import {BeaconChain} from "../chain.js";
-import {BlockInput, BlockInputBlobs, BlockInputDataColumns, BlockInputType} from "./types.js";
+import {BlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blockInput/index.js";
 
 /**
  * Persists block input data to DB. This operation must be eventually completed if a block is imported to the fork-choice.
@@ -12,96 +15,100 @@ import {BlockInput, BlockInputBlobs, BlockInputDataColumns, BlockInputType} from
  * This operation may be performed before, during or after importing to the fork-choice. As long as errors
  * are handled properly for eventual consistency.
  */
-export async function writeBlockInputToDb(this: BeaconChain, blocksInput: BlockInput[]): Promise<void> {
-  const fnPromises: Promise<void>[] = [];
+export async function writeBlockInputToDb(this: BeaconChain, blocksInputs: BlockInput[]): Promise<void> {
+  // track all these objects for a few batch db operations
+  const putBlocks: KeyValue<Uint8Array, SignedBeaconBlock>[] = [];
+  const putSerializedBlocks: KeyValue<Uint8Array, Uint8Array>[] = [];
+  const putBlobSidecars: KeyValue<Uint8Array, BlobSidecarsWrapper>[] = [];
+  const putDataColumnSidecars: KeyValue<Uint8Array, DataColumnSidecarsWrapper>[] = [];
+  // track slots for logging
+  const slots: number[] = [];
 
-  for (const blockInput of blocksInput) {
-    const {block} = blockInput;
+  for (const blockInput of blocksInputs) {
+    const block = blockInput.getBlock();
+    const slot = block.message.slot;
+    slots.push(slot);
     const blockRoot = this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
     const blockRootHex = toRootHex(blockRoot);
     const blockBytes = this.serializedCache.get(block);
     if (blockBytes) {
       // skip serializing data if we already have it
       this.metrics?.importBlock.persistBlockWithSerializedDataCount.inc();
-      fnPromises.push(this.db.block.putBinary(this.db.block.getId(block), blockBytes));
+      putSerializedBlocks.push({key: this.db.block.getId(block), value: blockBytes});
     } else {
       this.metrics?.importBlock.persistBlockNoSerializedDataCount.inc();
-      fnPromises.push(this.db.block.add(block));
+      putBlocks.push({key: this.db.block.getId(block), value: block});
     }
+
     this.logger.debug("Persist block to hot DB", {
-      slot: block.message.slot,
+      slot,
       root: blockRootHex,
       inputType: blockInput.type,
     });
 
-    if (blockInput.type === BlockInputType.availableData || blockInput.type === BlockInputType.dataPromise) {
-      const blockData =
-        blockInput.type === BlockInputType.availableData
-          ? blockInput.blockData
-          : await blockInput.cachedData.availabilityPromise;
-
-      // NOTE: Old data is pruned on archive
-      if (isForkPostFulu(blockData.fork)) {
-        const {custodyConfig} = this;
-        const {custodyColumnsIndex, custodyColumns} = custodyConfig;
-        const blobsLen = (block.message as fulu.BeaconBlock).body.blobKzgCommitments.length;
-        let dataColumnsLen: number;
-        let dataColumnsIndex: Uint8Array;
-        if (blobsLen === 0) {
-          dataColumnsLen = 0;
-          dataColumnsIndex = new Uint8Array(NUMBER_OF_COLUMNS);
-        } else {
-          dataColumnsLen = custodyColumns.length;
-          dataColumnsIndex = custodyColumnsIndex;
-        }
-
-        const blockDataColumns = (blockData as BlockInputDataColumns).dataColumns;
-        const dataColumnSidecars = blockDataColumns.filter((dataColumnSidecar) =>
-          custodyColumns.includes(dataColumnSidecar.index)
-        );
-        if (dataColumnSidecars.length !== dataColumnsLen) {
-          throw Error(
-            `Invalid dataColumnSidecars=${dataColumnSidecars.length} for custody expected custodyColumnsLen=${dataColumnsLen}`
-          );
-        }
-
-        const dataColumnsSize =
-          ssz.fulu.DataColumnSidecar.minSize +
-          blobsLen * (ssz.fulu.Cell.fixedSize + ssz.deneb.KZGCommitment.fixedSize + ssz.deneb.KZGProof.fixedSize);
-        const slot = block.message.slot;
-        const writeData = {
-          blockRoot,
-          slot,
-          dataColumnsLen,
-          dataColumnsSize,
-          dataColumnsIndex,
-          dataColumnSidecars,
-        };
-        fnPromises.push(this.db.dataColumnSidecars.add(writeData));
-
-        this.logger.debug("Persisted dataColumnSidecars to hot DB", {
-          dataColumnsSize,
-          dataColumnsLen,
-          dataColumnSidecars: dataColumnSidecars.length,
-          slot: block.message.slot,
-          root: blockRootHex,
-        });
-      } else if (isForkPostDeneb(blockData.fork)) {
-        const blobSidecars = (blockData as BlockInputBlobs).blobs;
-        fnPromises.push(this.db.blobSidecars.add({blockRoot, slot: block.message.slot, blobSidecars}));
-        this.logger.debug("Persisted blobSidecars to hot DB", {
-          blobsLen: blobSidecars.length,
-          slot: block.message.slot,
-          root: blockRootHex,
-        });
+    // NOTE: Old data is pruned on archive
+    if (isBlockInputColumns(blockInput)) {
+      const {custodyConfig} = this;
+      const {custodyColumnsIndex, custodyColumns} = custodyConfig;
+      const blobsLen = (block.message as fulu.BeaconBlock).body.blobKzgCommitments.length;
+      let dataColumnsLen: number;
+      let dataColumnsIndex: Uint8Array;
+      if (blobsLen === 0) {
+        dataColumnsLen = 0;
+        dataColumnsIndex = new Uint8Array(NUMBER_OF_COLUMNS);
+      } else {
+        dataColumnsLen = custodyColumns.length;
+        dataColumnsIndex = custodyColumnsIndex;
       }
+
+      const dataColumnSidecars = blockInput.getCustodyColumns();
+      if (dataColumnSidecars.length !== dataColumnsLen) {
+        throw Error(
+          `Invalid dataColumnSidecars=${dataColumnSidecars.length} for custody expected custodyColumnsLen=${dataColumnsLen}`
+        );
+      }
+
+      const dataColumnsSize =
+        ssz.fulu.DataColumnSidecar.minSize +
+        blobsLen * (ssz.fulu.Cell.fixedSize + ssz.deneb.KZGCommitment.fixedSize + ssz.deneb.KZGProof.fixedSize);
+      const writeData = {
+        blockRoot,
+        slot,
+        dataColumnsLen,
+        dataColumnsSize,
+        dataColumnsIndex,
+        dataColumnSidecars,
+      };
+      putDataColumnSidecars.push({key: this.db.dataColumnSidecars.getId(writeData), value: writeData});
+
+      this.logger.debug("Persisted dataColumnSidecars to hot DB", {
+        dataColumnsSize,
+        dataColumnsLen,
+        dataColumnSidecars: dataColumnSidecars.length,
+        slot,
+        root: blockRootHex,
+      });
+    } else if (isBlockInputBlobs(blockInput)) {
+      const blobSidecars = blockInput.getBlobs();
+      const wrapper = {blockRoot, slot, blobSidecars};
+      putBlobSidecars.push({key: this.db.blobSidecars.getId(wrapper), value: wrapper});
+      this.logger.debug("Persisted blobSidecars to hot DB", {
+        blobsLen: blobSidecars.length,
+        slot,
+        root: blockRootHex,
+      });
     }
   }
 
-  await Promise.all(fnPromises);
+  await Promise.all([
+    this.db.block.batchPut(putBlocks),
+    this.db.block.batchPutBinary(putSerializedBlocks),
+    this.db.blobSidecars.batchPut(putBlobSidecars),
+    this.db.dataColumnSidecars.batchPut(putDataColumnSidecars),
+  ]);
   this.logger.debug("Persisted blocksInput to db", {
-    blocksInput: blocksInput.length,
-    slots: blocksInput.map((blockInput) => blockInput.block.message.slot).join(" "),
+    blocksInput: blocksInputs.length,
+    slots: prettyPrintIndices(slots),
   });
 }
 
@@ -114,43 +121,38 @@ export async function removeEagerlyPersistedBlockInputs(this: BeaconChain, block
   const dataColumnsToRemove = [];
 
   for (const blockInput of blockInputs) {
-    const {block, type} = blockInput;
+    const block = blockInput.getBlock();
     const slot = block.message.slot;
     const blockRoot = this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message);
     const blockRootHex = toHex(blockRoot);
     if (!this.forkChoice.hasBlockHex(blockRootHex)) {
       blockToRemove.push(block);
 
-      if (type === BlockInputType.availableData) {
-        const {blockData} = blockInput;
-        if (blockData.fork === ForkName.deneb || blockData.fork === ForkName.electra) {
-          const blobSidecars = blockData.blobs;
-          blobsToRemove.push({blockRoot, slot, blobSidecars});
-        } else {
-          const {custodyConfig} = this;
-          const {custodyColumnsIndex: dataColumnsIndex, custodyColumns} = custodyConfig;
-          const dataColumnsLen = custodyColumns.length;
-          const dataColumnSidecars = (blockData as BlockInputDataColumns).dataColumns.filter((dataColumnSidecar) =>
-            custodyColumns.includes(dataColumnSidecar.index)
+      if (isBlockInputColumns(blockInput)) {
+        const {custodyConfig} = this;
+        const {custodyColumnsIndex: dataColumnsIndex, custodyColumns} = custodyConfig;
+        const dataColumnsLen = custodyColumns.length;
+        const dataColumnSidecars = blockInput.getCustodyColumns();
+        if (dataColumnSidecars.length !== dataColumnsLen) {
+          throw Error(
+            `Invalid dataColumnSidecars=${dataColumnSidecars.length} for custody expected custodyColumnsLen=${dataColumnsLen}`
           );
-          if (dataColumnSidecars.length !== dataColumnsLen) {
-            throw Error(
-              `Invalid dataColumnSidecars=${dataColumnSidecars.length} for custody expected custodyColumnsLen=${dataColumnsLen}`
-            );
-          }
-
-          const blobsLen = (block.message as fulu.BeaconBlock).body.blobKzgCommitments.length;
-          const dataColumnsSize = ssz.fulu.Cell.fixedSize * blobsLen;
-
-          dataColumnsToRemove.push({
-            blockRoot,
-            slot,
-            dataColumnsLen,
-            dataColumnsSize,
-            dataColumnsIndex,
-            dataColumnSidecars,
-          });
         }
+
+        const blobsLen = (block.message as fulu.BeaconBlock).body.blobKzgCommitments.length;
+        const dataColumnsSize = ssz.fulu.Cell.fixedSize * blobsLen;
+
+        dataColumnsToRemove.push({
+          blockRoot,
+          slot,
+          dataColumnsLen,
+          dataColumnsSize,
+          dataColumnsIndex,
+          dataColumnSidecars,
+        });
+      } else if (isBlockInputBlobs(blockInput)) {
+        const blobSidecars = blockInput.getBlobs();
+        blobsToRemove.push({blockRoot, slot, blobSidecars});
       }
     }
   }

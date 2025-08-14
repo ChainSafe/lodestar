@@ -4,7 +4,7 @@ import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {RootHex, SignedBeaconBlock, Slot, deneb, fulu, phase0} from "@lodestar/types";
 import {LodestarError, Logger, prettyBytes, prettyPrintIndices} from "@lodestar/utils";
 import {BlockInputSource, IBlockInput} from "../../chain/blocks/blockInput/index.js";
-import {SeenBlockInputCache} from "../../chain/seenCache/seenBlockInput.js";
+import {SeenBlockInput} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {INetwork, prettyPrintPeerIdStr} from "../../network/index.js";
 import {linspace} from "../../util/numpy.js";
 import {PeerIdStr} from "../../util/peerId.js";
@@ -23,7 +23,7 @@ export type DownloadByRangeResponses = {
 
 export type DownloadAndCacheByRangeProps = DownloadByRangeRequests & {
   config: ChainForkConfig;
-  cache: SeenBlockInputCache;
+  cache: SeenBlockInput;
   network: INetwork;
   logger: Logger;
   peerIdStr: string;

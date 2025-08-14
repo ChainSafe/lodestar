@@ -115,7 +115,7 @@ export function getLodestarApi({
         data: (chain as BeaconChain)["blockProcessor"].jobQueue.getItems().map((item) => {
           const [blockInputs, opts] = item.args;
           return {
-            blockSlots: blockInputs.map((blockInput) => blockInput.block.message.slot),
+            blockSlots: blockInputs.map((blockInput) => blockInput.slot),
             jobOpts: opts,
             addedTimeMs: item.addedTimeMs,
           };

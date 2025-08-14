@@ -60,8 +60,8 @@ import {SerializedCache} from "../util/serializedCache.js";
 import {ArchiveStore} from "./archiveStore/archiveStore.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
+import {BlockInput} from "./blocks/blockInput/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
-import {BlockInput} from "./blocks/types.js";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
 import {ChainEvent, ChainEventEmitter} from "./emitter.js";
 import {ForkchoiceCaller, initializeForkChoice} from "./forkChoice/index.js";
@@ -98,11 +98,10 @@ import {
   SeenContributionAndProof,
   SeenSyncCommitteeMessages,
 } from "./seenCache/index.js";
-import {SeenGossipBlockInput} from "./seenCache/index.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
-import {SeenBlockInputCache} from "./seenCache/seenBlockInput.js";
+import {SeenBlockInput} from "./seenCache/seenGossipBlockInput.js";
 import {ShufflingCache} from "./shufflingCache.js";
 import {BlockStateCacheImpl} from "./stateCache/blockStateCacheImpl.js";
 import {DbCPStateDatastore} from "./stateCache/datastore/db.js";
@@ -159,8 +158,8 @@ export class BeaconChain implements IBeaconChain {
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
   readonly seenContributionAndProof: SeenContributionAndProof;
   readonly seenAttestationDatas: SeenAttestationDatas;
-  readonly seenGossipBlockInput: SeenGossipBlockInput;
-  readonly seenBlockInputCache: SeenBlockInputCache;
+  readonly seenGossipBlockInput: SeenBlockInput;
+  readonly seenBlockInputCache: SeenBlockInput;
   // Seen cache for liveness checks
   readonly seenBlockAttesters = new SeenBlockAttesters();
 
@@ -290,17 +289,19 @@ export class BeaconChain implements IBeaconChain {
       initialCustodyGroupCount,
     });
 
-    this.seenGossipBlockInput = new SeenGossipBlockInput(
-      this.custodyConfig,
-      this.executionEngine,
-      emitter,
+    this.seenGossipBlockInput = new SeenBlockInput({
+      config: this.config,
+      custodyConfig: this.custodyConfig,
+      chainEvents: emitter,
       clock,
-      logger
-    );
+      logger,
+      metrics,
+      signal,
+    });
 
     this.beaconProposerCache = new BeaconProposerCache(opts);
     this.checkpointBalancesCache = new CheckpointBalancesCache();
-    this.seenBlockInputCache = new SeenBlockInputCache({
+    this.seenBlockInputCache = new SeenBlockInput({
       config,
       custodyConfig: this.custodyConfig,
       clock,
@@ -454,7 +455,7 @@ export class BeaconChain implements IBeaconChain {
   }
 
   seenBlock(blockRoot: RootHex): boolean {
-    return this.seenGossipBlockInput.hasBlock(blockRoot) || this.forkChoice.hasBlockHex(blockRoot);
+    return this.seenGossipBlockInput.has(blockRoot) || this.forkChoice.hasBlockHex(blockRoot);
   }
 
   regenCanAcceptWork(): boolean {

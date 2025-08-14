@@ -4,7 +4,7 @@ import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {deneb} from "@lodestar/types";
 import {LodestarError, fromHex, prettyBytes, toHex} from "@lodestar/utils";
 import {BlockInputSource, DAType, IBlockInput, isBlockInputBlobs} from "../../chain/blocks/blockInput/index.js";
-import {SeenBlockInputCache} from "../../chain/seenCache/seenBlockInput.js";
+import {SeenBlockInput} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {IExecutionEngine} from "../../execution/index.js";
 import {INetwork} from "../../network/index.js";
 import {computeInclusionProof} from "../../util/blobs.js";
@@ -19,7 +19,7 @@ import {
 export type DownloadBlockInputByRootProps = {
   config: ChainForkConfig;
   network: INetwork;
-  cache: SeenBlockInputCache;
+  cache: SeenBlockInput;
   executionEngine?: IExecutionEngine;
   pending: BlockInputSyncCacheItem;
   peerIdStr: PeerIdStr;

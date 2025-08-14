@@ -27,18 +27,8 @@ import {
   sszTypesFor,
 } from "@lodestar/types";
 import {fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
-import {
-  BlobsSource,
-  BlockInput,
-  BlockInputAvailableData,
-  BlockInputBlobs,
-  BlockInputDataColumns,
-  BlockInputType,
-  BlockSource,
-  DataColumnsSource,
-  ImportBlockOpts,
-  getBlockInput,
-} from "../../../../chain/blocks/types.js";
+import {BlockInput} from "../../../../chain/blocks/blockInput/index.js";
+import {ImportBlockOpts} from "../../../../chain/blocks/types.js";
 import {verifyBlocksInEpoch} from "../../../../chain/blocks/verifyBlock.js";
 import {BeaconChain} from "../../../../chain/chain.js";
 import {BlockError, BlockErrorCode, BlockGossipError} from "../../../../chain/errors/index.js";
