@@ -48,7 +48,7 @@ export enum BuilderStatus {
    */
   enabled = "enabled",
   /**
-   * Builder is disabled due to failed status checks
+   * Builder is disabled due to failed status check
    */
   disabled = "disabled",
   /**
