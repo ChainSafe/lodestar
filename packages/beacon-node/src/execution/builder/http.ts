@@ -126,7 +126,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
      * Beacon clients select randomized values from the following ranges when initializing
      * the circuit breaker (so at boot time and once for each unique boot).
      *
-     * ALLOWED_FAULTS: between 1 and SLOTS_PER_EPOCH // 2
+     * ALLOWED_FAULTS: between 1 and SLOTS_PER_EPOCH // 4
      * FAULT_INSPECTION_WINDOW: between SLOTS_PER_EPOCH and 2 * SLOTS_PER_EPOCH
      *
      */
