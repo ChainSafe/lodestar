@@ -784,7 +784,7 @@ export class BeaconChain implements IBeaconChain {
 
     // Track the produced block for consensus broadcast validations, later validation, etc.
     this.blockProductionCache.set(blockRootHex, produceResult);
-    this.metrics?.blockProductionCaches.blockProductionCache.set(this.blockProductionCache.size);
+    this.metrics?.blockProductionCacheSize.set(this.blockProductionCache.size);
 
     return {block, executionPayloadValue, consensusBlockValue: gweiToWei(proposerReward), shouldOverrideBuilder};
   }
@@ -1142,7 +1142,7 @@ export class BeaconChain implements IBeaconChain {
 
     // Prune old cached block production artifacts, those are only useful on their slot
     pruneSetToMax(this.blockProductionCache, this.opts.maxCachedProducedRoots ?? DEFAULT_MAX_CACHED_PRODUCED_RESULTS);
-    this.metrics?.blockProductionCaches.blockProductionCache.set(this.blockProductionCache.size);
+    this.metrics?.blockProductionCacheSize.set(this.blockProductionCache.size);
 
     const metrics = this.metrics;
     if (metrics && (slot + 1) % SLOTS_PER_EPOCH === 0) {
