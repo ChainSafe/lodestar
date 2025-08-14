@@ -263,7 +263,6 @@ export class SeenGossipBlockInput {
           };
           resolveAvailability(blockData);
           metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.GOSSIP});
-          metrics?.blobs.bySource.inc({source: BlobsSource.gossip});
 
           const blockInput = getBlockInput.availableData(config, signedBlock, BlockSource.gossip, blockData);
 
@@ -329,7 +328,6 @@ export class SeenGossipBlockInput {
             dataColumnsSource: DataColumnsSource.gossip,
           };
           resolveAvailability(blockData);
-          metrics?.dataColumns.bySource.inc({source: DataColumnsSource.gossip});
 
           const blockInput = getBlockInput.availableData(config, signedBlock, BlockSource.gossip, blockData);
           resolveBlockInput(blockInput);

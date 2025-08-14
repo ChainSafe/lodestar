@@ -133,7 +133,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(lodestar_data_columns_by_source[$rate_interval]) * 12",
+          "expr": "rate(lodestar_data_columns_by_source_total[$rate_interval]) * 12",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,

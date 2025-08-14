@@ -741,16 +741,16 @@ export function createLodestarMetrics(
       }),
     },
     blobs: {
-      bySource: register.gauge<{source: BlobsSource}>({
-        name: "lodestar_blobs_by_source",
-        help: "Number of received blobs by source",
+      bySource: register.counter<{source: BlobsSource}>({
+        name: "lodestar_blobs_by_source_total",
+        help: "Total number of received blobs by source",
         labelNames: ["source"],
       }),
     },
     dataColumns: {
-      bySource: register.gauge<{source: DataColumnsSource}>({
-        name: "lodestar_data_columns_by_source",
-        help: "Number of received data columns by source",
+      bySource: register.counter<{source: DataColumnsSource}>({
+        name: "lodestar_data_columns_by_source_total",
+        help: "Total number of received data columns by source",
         labelNames: ["source"],
       }),
       elapsedTimeTillReceived: register.histogram<{source: DataColumnsSource}>({

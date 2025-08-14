@@ -125,7 +125,8 @@ export async function beaconBlocksMaybeBlobsByRoot(
       allBlobSidecars,
       Infinity,
       BlockSource.byRoot,
-      BlobsSource.byRoot
+      BlobsSource.byRoot,
+      metrics
     );
     blockInputs = [...blockInputs, ...blockInputWithBlobs];
   }
@@ -138,8 +139,8 @@ export async function beaconBlocksMaybeBlobsByRoot(
       return acc;
     }, [] as number[]);
 
-    let allDataColumnsSidecars: fulu.DataColumnSidecar[];
-    logger?.debug("allDataColumnsSidecars partialDownload", {
+    let allDataColumnSidecars: fulu.DataColumnSidecar[];
+    logger?.debug("allDataColumnSidecars partialDownload", {
       ...(partialDownload
         ? {blocks: partialDownload.blocks.length, pendingDataColumns: partialDownload.pendingDataColumns.join(" ")}
         : {blocks: null, pendingDataColumns: null}),
@@ -149,12 +150,12 @@ export async function beaconBlocksMaybeBlobsByRoot(
       peerClient,
     });
     if (dataColumnsByRootIdentifiers.length > 0) {
-      allDataColumnsSidecars = await network.sendDataColumnSidecarsByRoot(peerId, dataColumnsByRootIdentifiers);
+      allDataColumnSidecars = await network.sendDataColumnSidecarsByRoot(peerId, dataColumnsByRootIdentifiers);
     } else {
       if (partialDownload !== null) {
         return partialDownload;
       }
-      allDataColumnsSidecars = [];
+      allDataColumnSidecars = [];
     }
 
     // The last arg is to provide slot to which all blobs should be exausted in matching
@@ -169,7 +170,7 @@ export async function beaconBlocksMaybeBlobsByRoot(
       sampledColumns,
       columns,
       allBlocks,
-      allDataColumnsSidecars,
+      allDataColumnSidecars,
       Infinity,
       BlockSource.byRoot,
       DataColumnsSource.byRoot,
@@ -359,6 +360,7 @@ export async function unavailableBeaconBlobsByRootPreFulu(
         // for e.g. a blockInput that might be awaiting blobs promise fullfillment in
         // verifyBlocksDataAvailability
         cachedData.blobsCache.set(blobSidecar.index, blobSidecar);
+        metrics?.blobs.bySource.inc({source: BlobsSource.engine});
 
         if (emitter.listenerCount(routes.events.EventType.blobSidecar)) {
           emitter.emit(routes.events.EventType.blobSidecar, {
@@ -443,6 +445,7 @@ export async function unavailableBeaconBlobsByRootPreFulu(
       });
     }
   }
+  metrics?.blobs.bySource.inc({source: BlobsSource.byRoot}, networkResBlobSidecars.length);
 
   // check and see if all blobs are now available and in that case resolve availability
   // if not this will error and the leftover blobs will be tried from another peer
@@ -524,6 +527,7 @@ export async function unavailableBeaconBlobsByRootPostFulu(
     for (const blobSidecar of allBlobSidecars) {
       blobsCache.set(blobSidecar.index, blobSidecar);
     }
+    opts.metrics?.blobs.bySource.inc({source: BlobsSource.byRoot}, allBlobSidecars.length);
 
     // check and see if all blobs are now available and in that case resolve availability
     // if not this will error and the leftover blobs will be tried from another peer
@@ -609,7 +613,6 @@ export async function unavailableBeaconBlobsByRootPostFulu(
     let allDataColumnSidecars: fulu.DataColumnSidecar[];
     if (columns.length > 0) {
       allDataColumnSidecars = await network.sendDataColumnSidecarsByRoot(peerId, [{blockRoot, columns}]);
-      opts.metrics?.dataColumns.bySource.inc({source: DataColumnsSource.byRoot}, allDataColumnSidecars.length);
     } else {
       allDataColumnSidecars = [];
     }
@@ -632,6 +635,7 @@ export async function unavailableBeaconBlobsByRootPostFulu(
         dataColumnBytes: null,
       });
     }
+    opts.metrics?.dataColumns.bySource.inc({source: DataColumnsSource.byRoot}, allDataColumnSidecars.length);
   }
 
   // reevaluate needeColumns and resolve availability if possible

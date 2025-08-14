@@ -17,6 +17,7 @@ import {
 import {LogLevel, Logger, prettyBytes, toHex, toRootHex} from "@lodestar/utils";
 import {
   BlobSidecarValidation,
+  BlobsSource,
   BlockInput,
   BlockInputAvailableData,
   BlockInputType,
@@ -480,6 +481,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const blobSidecar = sszDeserialize(topic, serializedData);
       const blobSlot = blobSidecar.signedBlockHeader.message.slot;
       const index = blobSidecar.index;
+      metrics?.blobs.bySource.inc({source: BlobsSource.gossip});
 
       if (config.getForkSeq(blobSlot) < ForkSeq.deneb) {
         throw new GossipActionError(GossipAction.REJECT, {code: "PRE_DENEB_BLOCK"});
@@ -562,6 +564,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const dataColumnSidecar = sszDeserialize(topic, serializedData);
       const dataColumnSlot = dataColumnSidecar.signedBlockHeader.message.slot;
       const index = dataColumnSidecar.index;
+      metrics?.dataColumns.bySource.inc({source: DataColumnsSource.gossip});
 
       if (config.getForkSeq(dataColumnSlot) < ForkSeq.fulu) {
         throw new GossipActionError(GossipAction.REJECT, {code: "PRE_FULU_BLOCK"});

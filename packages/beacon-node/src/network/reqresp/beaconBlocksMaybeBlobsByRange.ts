@@ -104,7 +104,8 @@ export async function beaconBlocksMaybeBlobsByRange(
         allBlobSidecars,
         endSlot,
         BlockSource.byRange,
-        BlobsSource.byRange
+        BlobsSource.byRange,
+        metrics
       );
       return {blocks, pendingDataColumns: null};
     }
@@ -219,7 +220,8 @@ export function matchBlockWithBlobs(
   allBlobSidecars: deneb.BlobSidecar[],
   endSlot: Slot,
   blockSource: BlockSource,
-  blobsSource: BlobsSource
+  blobsSource: BlobsSource,
+  metrics: Metrics | null
 ): BlockInput[] {
   const blockInputs: BlockInput[] = [];
   let blobSideCarIndex = 0;
@@ -263,6 +265,7 @@ export function matchBlockWithBlobs(
       } as BlockInputBlobs;
 
       blockInputs.push(getBlockInput.availableData(config, block.data, blockSource, blockData));
+      metrics?.blobs.bySource.inc({source: blobsSource}, allBlobSidecars.length);
     }
   }
 
@@ -326,7 +329,6 @@ export function matchBlockWithDataColumns(
       lastMatchedSlot = block.data.message.slot;
       dataColumnSideCarIndex++;
     }
-    metrics?.dataColumns.bySource.inc({source: DataColumnsSource.byRange}, dataColumnSidecars.length);
 
     const blobKzgCommitmentsLen = (block.data.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length;
     logger?.debug("processing matchBlockWithDataColumns", {
@@ -412,6 +414,7 @@ export function matchBlockWithDataColumns(
           dataColumnBytes: null,
         });
       }
+      metrics?.dataColumns.bySource.inc({source: dataColumnsSource}, dataColumnSidecars.length);
 
       if (shouldHaveAllData) {
         const {dataColumns, dataColumnsBytes} = getBlockInputDataColumns(

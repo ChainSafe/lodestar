@@ -44,6 +44,7 @@ type Availability<T> = {
 export enum BlobsSource {
   gossip = "gossip",
   api = "api",
+  engine = "engine",
   byRange = "req_resp_by_range",
   byRoot = "req_resp_by_root",
 }
