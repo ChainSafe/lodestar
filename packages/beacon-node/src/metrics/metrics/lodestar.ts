@@ -756,6 +756,12 @@ export function createLodestarMetrics(
         labelNames: ["source"],
         buckets: [1, 2, 3, 4, 6, 12],
       }),
+      sentPeersPerSubnet: register.histogram({
+        name: "lodestar_data_column_sent_peers_per_subnet",
+        help: "Number of peers node sent per subnet when publishing DataColumnSidecars",
+        // given TARGET_GROUP_PEERS_PER_SUBNET = 4, we expect sending to 4 peers per subnet
+        buckets: [1, 2, 3, 4],
+      }),
     },
     importBlock: {
       persistBlockNoSerializedDataCount: register.gauge({

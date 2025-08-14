@@ -12,7 +12,7 @@ export const MAX_BATCH_DOWNLOAD_ATTEMPTS = 20;
 
 /**
  * Consider batch faulty after downloading and processing this number of times
- * as in https://github.com/ChainSafe/lodestar/issues/8147 we cannot proceed the sync chain if a peer return 0 blocks without error
+ * for example a peer may send us a non-canonical chain segment or not returning all blocks
  * in that case we should throw error and `RangeSync` should remove that error chain and add a new one.
  **/
 export const MAX_BATCH_PROCESSING_ATTEMPTS = 0;

@@ -362,6 +362,11 @@ export class Network implements INetwork {
       dataColumnSidecar,
       {
         ignoreDuplicatePublishError: true,
+        // we ensure having all topic peers via prioritizePeers() function
+        // in the worse case, if there is 0 peer on the topic, the overall publish operation could be still a success
+        // because supernode will rebuild and publish missing data column sidecars for us
+        // hence we want to track sent peers as 0 instead of an error
+        allowPublishToZeroTopicPeers: true,
       }
     );
   }

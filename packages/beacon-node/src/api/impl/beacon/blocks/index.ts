@@ -278,7 +278,30 @@ export function getBeaconBlockApi({
             throw e;
           }),
     ];
-    await promiseAllMaybeAsync<number | void>(publishPromises);
+    const sentPeersArr = await promiseAllMaybeAsync<number | void>(publishPromises);
+
+    if (isForkPostFulu(fork)) {
+      let columnsPublishedWithZeroPeers = 0;
+      // sent peers per topic are logged in network.publishGossip(), here we only track metrics for it
+      // starting from fulu, we have to push to 128 subnets so need to make sure we have enough sent peers per topic
+      // + 1 because we publish to beacon_block first
+      for (let i = 0; i < dataColumnSidecars.length; i++) {
+        // + 1 because we publish to beacon_block first
+        const sentPeers = sentPeersArr[i + 1] as number;
+        // sent peers could be 0 as we set `allowPublishToZeroTopicPeers=true` in network.publishDataColumnSidecar() api
+        metrics?.dataColumns.sentPeersPerSubnet.observe(sentPeers);
+        if (sentPeers === 0) {
+          columnsPublishedWithZeroPeers++;
+        }
+      }
+      if (columnsPublishedWithZeroPeers > 0) {
+        chain.logger.warn("Published data columns to 0 peers, increased risk of reorg", {
+          slot,
+          blockRoot,
+          columns: columnsPublishedWithZeroPeers,
+        });
+      }
+    }
 
     if (chain.emitter.listenerCount(routes.events.EventType.blockGossip)) {
       chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRoot});

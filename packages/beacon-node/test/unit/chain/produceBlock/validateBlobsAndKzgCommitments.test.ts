@@ -105,6 +105,7 @@ describe("validateBlobsAndKzgCommitments", () => {
       blobs,
       proofs: [new Uint8Array(48).fill(1)], // Only one proof when we need CELLS_PER_EXT_BLOB
     };
+    const cells = blobsBundle.blobs.map((blob) => kzg.computeCells(blob));
 
     // Create a mock ExecutionPayload
     const mockPayload = {
@@ -113,7 +114,7 @@ describe("validateBlobsAndKzgCommitments", () => {
       parentHash: new Uint8Array(32),
     } as ExecutionPayload;
 
-    await expect(validateBlobsAndKzgCommitments(ForkName.fulu, mockPayload, blobsBundle)).rejects.toThrow(
+    await expect(validateBlobsAndKzgCommitments(ForkName.fulu, mockPayload, blobsBundle, cells)).rejects.toThrow(
       `Invalid proofs length for BlobsBundleV2 format: expected ${CELLS_PER_EXT_BLOB}, got 1`
     );
   });
@@ -171,7 +172,7 @@ describe("validateBlobsAndKzgCommitments", () => {
     await expect(validateBlobsAndKzgCommitments(ForkName.fulu, mockPayload, blobsBundle, cells)).resolves.not.toThrow();
   });
 
-  it("should validate V2 blobs bundle when cells are not passed", async () => {
+  it("should throw when cells are not passed post-fulu", async () => {
     const blobs = [generateRandomBlob()];
 
     // Compute commitments and proofs for each blob
@@ -197,6 +198,6 @@ describe("validateBlobsAndKzgCommitments", () => {
       parentHash: new Uint8Array(32),
     } as ExecutionPayload;
 
-    await expect(validateBlobsAndKzgCommitments(ForkName.fulu, mockPayload, blobsBundle)).resolves.not.toThrow();
+    await expect(validateBlobsAndKzgCommitments(ForkName.fulu, mockPayload, blobsBundle)).rejects.toThrow();
   });
 });
