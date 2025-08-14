@@ -1,3 +1,4 @@
+import {generateKeyPair} from "@libp2p/crypto/keys";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ForkName, ForkPostCapella, ForkPostDeneb} from "@lodestar/params";
 import {computeStartSlotAtEpoch, signedBlockToSignedHeader} from "@lodestar/state-transition";
@@ -13,10 +14,12 @@ import {
 } from "../../../../src/chain/blocks/blockInput/index.js";
 import {ChainEvent, ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {SeenBlockInputCache} from "../../../../src/chain/seenCache/seenBlockInput.js";
+import {computeNodeIdFromPrivateKey} from "../../../../src/network/subnets/index.js";
 import {Clock} from "../../../../src/util/clock.js";
+import {CustodyConfig} from "../../../../src/util/dataColumns.js";
 import {testLogger} from "../../../utils/logger.js";
 
-describe("SeenBlockInputCache", () => {
+describe("SeenBlockInputCache", async () => {
   let cache: SeenBlockInputCache;
   let abortController: AbortController;
   let chainEvents: ChainEventEmitter;
@@ -32,6 +35,9 @@ describe("SeenBlockInputCache", () => {
     ELECTRA_FORK_EPOCH,
     FULU_FORK_EPOCH,
   });
+  const privateKey = await generateKeyPair("secp256k1");
+  const nodeId = computeNodeIdFromPrivateKey(privateKey);
+  const custodyConfig = new CustodyConfig({config, nodeId});
 
   const slots: Record<ForkPostCapella, number> = {
     capella: computeStartSlotAtEpoch(CAPELLA_FORK_EPOCH),
@@ -111,6 +117,7 @@ describe("SeenBlockInputCache", () => {
     const genesisTime = Math.floor(Date.now() / 1000);
     cache = new SeenBlockInputCache({
       config,
+      custodyConfig,
       clock: new Clock({config, genesisTime, signal}),
       chainEvents,
       signal,

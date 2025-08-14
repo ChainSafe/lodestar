@@ -1,14 +1,9 @@
 import {randomBytes} from "node:crypto";
 import {SIGNATURE_LENGTH_UNCOMPRESSED} from "@chainsafe/blst";
+import {BYTES_PER_BLOB, BYTES_PER_FIELD_ELEMENT} from "@crate-crypto/node-eth-kzg";
+import {generateKeyPair} from "@libp2p/crypto/keys";
+import {ChainForkConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {
-  BYTES_PER_BLOB,
-  BYTES_PER_COMMITMENT,
-  BYTES_PER_FIELD_ELEMENT,
-  BYTES_PER_PROOF,
-} from "@crate-crypto/node-eth-kzg";
-import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {
-  ForkName,
   ForkPostCapella,
   ForkPostDeneb,
   ForkPostFulu,
@@ -16,20 +11,12 @@ import {
   isForkPostDeneb,
   isForkPostFulu,
 } from "@lodestar/params";
-import {
-  blindedOrFullBlockToHeader,
-  blockToHeader,
-  computeStartSlotAtEpoch,
-  signedBlockToSignedHeader,
-} from "@lodestar/state-transition";
-import {BeaconBlock, SignedBeaconBlock, Slot, deneb, fulu, ssz} from "@lodestar/types";
+import {computeStartSlotAtEpoch, signedBlockToSignedHeader} from "@lodestar/state-transition";
+import {SignedBeaconBlock, Slot, deneb, fulu, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {VersionedHashes} from "../../src/execution/index.js";
-import {
-  computeInclusionProof,
-  computeKzgCommitmentsInclusionProof,
-  kzgCommitmentToVersionedHash,
-} from "../../src/util/blobs.js";
+import {computeNodeIdFromPrivateKey} from "../../src/network/subnets/index.js";
+import {computeInclusionProof, computeKzgCommitmentsInclusionProof} from "../../src/util/blobs.js";
+import {CustodyConfig, getDataColumnSidecarsFromBlock} from "../../src/util/dataColumns.js";
 import {kzg} from "../../src/util/kzg.js";
 import {ROOT_SIZE} from "../../src/util/sszBytes.js";
 
@@ -44,6 +31,9 @@ export const config = createChainForkConfig({
   ELECTRA_FORK_EPOCH,
   FULU_FORK_EPOCH,
 });
+export const privateKey = await generateKeyPair("secp256k1");
+export const nodeId = computeNodeIdFromPrivateKey(privateKey);
+export const custodyConfig = new CustodyConfig({config, nodeId});
 
 export const slots: Record<ForkPostCapella, number> = {
   capella: computeStartSlotAtEpoch(CAPELLA_FORK_EPOCH),
@@ -94,6 +84,7 @@ function generateBeaconBlock<F extends ForkPostCapella>({
   block.message.parentRoot = parentRoot ? parentRoot : Uint8Array.from(randomBytes(ROOT_SIZE));
   block.message.stateRoot = Uint8Array.from(randomBytes(ROOT_SIZE));
   block.message.proposerIndex = generateProposerIndex();
+  // signature is obviously not valid so can generate it now instead of after commitments are attached
   block.signature = Uint8Array.from(randomBytes(SIGNATURE_LENGTH_UNCOMPRESSED));
   return block;
 }
@@ -107,9 +98,7 @@ function generateRoots<F extends ForkPostCapella>(
 } {
   const blockRoot = ssz[forkName].BeaconBlock.hashTreeRoot(block.message);
   const rootHex = toRootHex(blockRoot);
-  const signed = ssz[forkName].SignedBeaconBlock.defaultValue();
   return {
-    block: signed,
     blockRoot,
     rootHex,
   };
@@ -167,7 +156,7 @@ function generateColumnSidecars<F extends ForkPostFulu>(
 } {
   const blobs = Array.from({length: numberOfBlobs}, () => generateRandomBlob());
   const kzgCommitments = blobs.map((blob) => kzg.blobToKzgCommitment(blob));
-  block.body.blobKzgCommitments = kzgCommitments;
+  block.message.body.blobKzgCommitments = kzgCommitments;
 
   const signedBlockHeader = signedBlockToSignedHeader(config, block);
   const cellsAndProofs = blobs.map((blob) => kzg.computeCellsAndKzgProofs(blob));
@@ -245,7 +234,8 @@ export function generateBlockWithBlobSidecars<F extends ForkPostDeneb>({
   const {block, blobSidecars} = generateBlobSidecars(
     forkName,
     generateBeaconBlock({forkName, parentRoot, slot}),
-    generateRandomInt(1, 6)
+    generateRandomInt(1, 6),
+    oomProtection
   );
   const {blockRoot, rootHex} = generateRoots(forkName, block);
   return {
@@ -270,7 +260,8 @@ export function generateBlockWithColumnSidecars<F extends ForkPostFulu>({
   const {block, columnSidecars} = generateColumnSidecars(
     forkName,
     generateBeaconBlock({forkName, parentRoot, slot}),
-    generateRandomInt(1, 6)
+    generateRandomInt(1, 6),
+    oomProtection
   );
   const {blockRoot, rootHex} = generateRoots(forkName, block);
   return {
@@ -284,6 +275,7 @@ export function generateBlockWithColumnSidecars<F extends ForkPostFulu>({
 export type BlocksWithSidecars<F extends ForkPostDeneb> = F extends ForkPostFulu
   ? BlockWithColumnsTestSet<F>[]
   : BlockWithBlobsTestSet<F>[];
+
 export function generateChainOfBlocksWithBlobs<F extends ForkPostDeneb>({
   forkName,
   count,
@@ -311,6 +303,7 @@ export type ChainOfBlockMaybeSidecars<F extends ForkPostCapella> = F extends For
   : F extends ForkPostDeneb
     ? BlockWithBlobsTestSet<F>[]
     : BlockTestSet<F>[];
+
 export function generateChainOfBlockMaybeSidecars<F extends ForkPostCapella>(
   forkName: F,
   count: number,

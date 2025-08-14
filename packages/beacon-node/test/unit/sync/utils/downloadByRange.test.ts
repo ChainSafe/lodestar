@@ -1,11 +1,10 @@
-import {ChainForkConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {SignedBeaconBlock, WithBytes, deneb, ssz} from "@lodestar/types";
 import {Mock, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
-import {ChainEventEmitter} from "../../../../../src/chain/index.js";
-import {SeenBlockInputCache} from "../../../../../src/chain/seenCache/seenBlockInput.js";
-import {INetwork} from "../../../../../src/network/index.js";
+import {ChainEventEmitter} from "../../../../src/chain/index.js";
+import {SeenBlockInputCache} from "../../../../src/chain/seenCache/seenBlockInput.js";
+import {INetwork} from "../../../../src/network/index.js";
 import {
   DownloadByRangeRequests,
   DownloadByRangeResponses,
@@ -13,10 +12,10 @@ import {
   compareBlockByRangeRequestAndResponse,
   requestByRange,
   validateRequests,
-} from "../../../../../src/sync/range/utils/downloadByRange.js";
-import {Clock} from "../../../../../src/util/clock.js";
-import {getMockedLogger} from "../../../../../test/mocks/loggerMock.js";
-import {buildBatchOfBlockWithBlobs, config, slots} from "../../../../utils/blocksAndData.js";
+} from "../../../../src/sync/utils/downloadByRange.js";
+import {Clock} from "../../../../src/util/clock.js";
+import {getMockedLogger} from "../../../../test/mocks/loggerMock.js";
+import {config, custodyConfig, generateChainOfBlockMaybeSidecars, slots} from "../../../utils/blocksAndData.js";
 
 describe("downloadByRange", () => {
   const peerIdStr = "0x1234567890abcdef";
@@ -40,7 +39,7 @@ describe("downloadByRange", () => {
       blocksRequest: [{startSlot, count, step: 1}],
       blobsRequest: [{count, startSlot}],
     };
-    const blockAndBlobs = buildBatchOfBlockWithBlobs(ForkName.deneb, startSlot, count, minBlobs, maxBlobs);
+    const blockAndBlobs = generateChainOfBlockMaybeSidecars(ForkName.deneb, startSlot, count, minBlobs, maxBlobs);
     const blobSidecars = blockAndBlobs.flatMap(({blobSidecars}) => blobSidecars);
     networkResponse = {
       blocks: blockAndBlobs.map(({block}) => ({bytes: new Uint8Array(), data: block})),
@@ -57,6 +56,7 @@ describe("downloadByRange", () => {
     const signal = abortController.signal;
     cache = new SeenBlockInputCache({
       config,
+      custodyConfig,
       clock: new Clock({config, signal, genesisTime: Math.floor(Date.now() / 1000)}),
       chainEvents: new ChainEventEmitter(),
       signal,
