@@ -164,20 +164,20 @@ export class BlockProposingService {
   }
 
   private publishBlockWrapper = async (
-    signedBlindedBlockOrSignedBlockContents: SignedBlockContents | {signedBlock: SignedBlindedBeaconBlock},
+    signedBlindedBlockOrBlockContents: SignedBlockContents | {signedBlock: SignedBlindedBeaconBlock},
     opts: {broadcastValidation?: routes.beacon.BroadcastValidation} = {}
   ): Promise<void> => {
-    if (isBlindedSignedBeaconBlock(signedBlindedBlockOrSignedBlockContents.signedBlock)) {
+    if (isBlindedSignedBeaconBlock(signedBlindedBlockOrBlockContents.signedBlock)) {
       (
         await this.api.beacon.publishBlindedBlockV2({
-          signedBlindedBlock: signedBlindedBlockOrSignedBlockContents.signedBlock,
+          signedBlindedBlock: signedBlindedBlockOrBlockContents.signedBlock,
           ...opts,
         })
       ).assertOk();
     } else {
       (
         await this.api.beacon.publishBlockV2({
-          signedBlockContents: signedBlindedBlockOrSignedBlockContents,
+          signedBlockContents: signedBlindedBlockOrBlockContents,
           ...opts,
         })
       ).assertOk();
