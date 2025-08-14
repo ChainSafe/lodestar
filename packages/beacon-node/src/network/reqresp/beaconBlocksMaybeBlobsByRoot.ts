@@ -130,7 +130,8 @@ export async function beaconBlocksMaybeBlobsByRoot(
       allBlobSidecars,
       Infinity,
       BlockSource.byRoot,
-      BlobsSource.byRoot
+      BlobsSource.byRoot,
+      SyncSourceByRoot
     );
     blockInputs = [...blockInputs, ...blockInputWithBlobs];
   }

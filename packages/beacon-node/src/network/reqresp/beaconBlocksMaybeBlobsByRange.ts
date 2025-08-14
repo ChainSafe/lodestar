@@ -108,7 +108,8 @@ export async function beaconBlocksMaybeBlobsByRange(
         allBlobSidecars,
         endSlot,
         BlockSource.byRange,
-        BlobsSource.byRange
+        BlobsSource.byRange,
+        syncSource
       );
       return {blocks, pendingDataColumns: null};
     }
@@ -224,7 +225,8 @@ export function matchBlockWithBlobs(
   allBlobSidecars: deneb.BlobSidecar[],
   endSlot: Slot,
   blockSource: BlockSource,
-  blobsSource: BlobsSource
+  blobsSource: BlobsSource,
+  syncSource: SyncSource
 ): BlockInput[] {
   const blockInputs: BlockInput[] = [];
   let blobSideCarIndex = 0;
@@ -243,12 +245,27 @@ export function matchBlockWithBlobs(
     } else {
       const blobSidecars: deneb.BlobSidecar[] = [];
 
-      let blobSidecar: deneb.BlobSidecar;
-      while (
-        // biome-ignore lint/suspicious/noAssignInExpressions: <explanation>
-        (blobSidecar = allBlobSidecars[blobSideCarIndex])?.signedBlockHeader.message.slot === block.data.message.slot
-      ) {
-        blobSidecars.push(blobSidecar);
+      const blockRoot = config.getForkTypes(block.data.message.slot).BeaconBlock.hashTreeRoot(block.data.message);
+      const matchBlob = (blobSidecar?: deneb.BlobSidecar): boolean => {
+        if (blobSidecar === undefined) {
+          return false;
+        }
+
+        if (syncSource === RangeSyncType.Head || syncSource === SyncSourceByRoot) {
+          return (
+            Buffer.compare(
+              ssz.phase0.BeaconBlockHeader.hashTreeRoot(blobSidecar.signedBlockHeader.message),
+              blockRoot
+            ) === 0
+          );
+        }
+
+        // For finalized range sync, we can just match by slot
+        return blobSidecar.signedBlockHeader.message.slot === block.data.message.slot;
+      };
+
+      while (matchBlob(allBlobSidecars[blobSideCarIndex])) {
+        blobSidecars.push(allBlobSidecars[blobSideCarIndex]);
         lastMatchedSlot = block.data.message.slot;
         blobSideCarIndex++;
       }
@@ -327,7 +344,25 @@ export function matchBlockWithDataColumns(
       throw Error(`Invalid block forkSeq=${forkSeq} < ForSeq.fulu for matchBlockWithDataColumns`);
     }
     const dataColumnSidecars: fulu.DataColumnSidecar[] = [];
-    while (allDataColumnSidecars[dataColumnSideCarIndex]?.signedBlockHeader.message.slot === block.data.message.slot) {
+    const blockRoot = config.getForkTypes(block.data.message.slot).BeaconBlock.hashTreeRoot(block.data.message);
+    const matchDataColumnSidecar = (dataColumnSidecar?: fulu.DataColumnSidecar): boolean => {
+      if (dataColumnSidecar === undefined) {
+        return false;
+      }
+
+      if (syncSource === RangeSyncType.Head || syncSource === SyncSourceByRoot) {
+        return (
+          Buffer.compare(
+            ssz.phase0.BeaconBlockHeader.hashTreeRoot(dataColumnSidecar.signedBlockHeader.message),
+            blockRoot
+          ) === 0
+        );
+      }
+
+      // For finalized range sync, we can just match by slot
+      return dataColumnSidecar.signedBlockHeader.message.slot === block.data.message.slot;
+    };
+    while (matchDataColumnSidecar(allDataColumnSidecars[dataColumnSideCarIndex])) {
       dataColumnSidecars.push(allDataColumnSidecars[dataColumnSideCarIndex]);
       lastMatchedSlot = block.data.message.slot;
       dataColumnSideCarIndex++;
