@@ -6,7 +6,6 @@ import {YargsError} from "../../util/index.js";
 
 export const defaultListenAddress = "0.0.0.0";
 export const defaultP2pPort = 9000;
-export const defaultP2pPort6 = 9090;
 
 export type NetworkArgs = {
   discv5?: boolean;
@@ -67,8 +66,8 @@ export function parseListenArgs(args: NetworkArgs) {
 
   // Only use listenAddress6 if it is explicitly set
   const listenAddress6 = args.listenAddress6;
-  const port6 = listenAddress6 ? (args.port6 ?? defaultP2pPort6) : undefined;
-  const discoveryPort6 = listenAddress6 ? (args.discoveryPort6 ?? args.port6 ?? defaultP2pPort6) : undefined;
+  const port6 = listenAddress6 ? (args.port6 ?? defaultP2pPort) : undefined;
+  const discoveryPort6 = listenAddress6 ? (args.discoveryPort6 ?? args.port6 ?? defaultP2pPort) : undefined;
 
   return {listenAddress, port, discoveryPort, listenAddress6, port6, discoveryPort6};
 }
@@ -199,7 +198,7 @@ export const options: CliCommandOptions<NetworkArgs> = {
     description: "The TCP/UDP port to listen on. The UDP port can be modified by the --discoveryPort6 flag.",
     type: "number",
     // TODO: Derive from BeaconNode defaults
-    defaultDescription: String(defaultP2pPort6),
+    defaultDescription: String(defaultP2pPort),
     group: "network",
   },
 
