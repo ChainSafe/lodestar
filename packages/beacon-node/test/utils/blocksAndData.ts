@@ -1,15 +1,35 @@
 import {randomBytes} from "node:crypto";
 import {SIGNATURE_LENGTH_UNCOMPRESSED} from "@chainsafe/blst";
-import {BYTES_PER_BLOB, BYTES_PER_FIELD_ELEMENT} from "@crate-crypto/node-eth-kzg";
-import {generateKeyPair} from "@libp2p/crypto/keys";
-import {ChainForkConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {ForkPostCapella, ForkPostDeneb, ForkPostFulu, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
-import {computeStartSlotAtEpoch, signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {SignedBeaconBlock, Slot, deneb, fulu, ssz} from "@lodestar/types";
+import {
+  BYTES_PER_BLOB,
+  BYTES_PER_COMMITMENT,
+  BYTES_PER_FIELD_ELEMENT,
+  BYTES_PER_PROOF,
+} from "@crate-crypto/node-eth-kzg";
+import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {
+  ForkName,
+  ForkPostCapella,
+  ForkPostDeneb,
+  ForkPostFulu,
+  NUMBER_OF_COLUMNS,
+  isForkPostDeneb,
+  isForkPostFulu,
+} from "@lodestar/params";
+import {
+  blindedOrFullBlockToHeader,
+  blockToHeader,
+  computeStartSlotAtEpoch,
+  signedBlockToSignedHeader,
+} from "@lodestar/state-transition";
+import {BeaconBlock, SignedBeaconBlock, Slot, deneb, fulu, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {computeNodeIdFromPrivateKey} from "../../src/network/subnets/index.js";
-import {computeInclusionProof} from "../../src/util/blobs.js";
-import {CustodyConfig, getDataColumnSidecarsFromBlock} from "../../src/util/dataColumns.js";
+import {VersionedHashes} from "../../src/execution/index.js";
+import {
+  computeInclusionProof,
+  computeKzgCommitmentsInclusionProof,
+  kzgCommitmentToVersionedHash,
+} from "../../src/util/blobs.js";
 import {kzg} from "../../src/util/kzg.js";
 import {ROOT_SIZE} from "../../src/util/sszBytes.js";
 
@@ -24,9 +44,6 @@ export const config = createChainForkConfig({
   ELECTRA_FORK_EPOCH,
   FULU_FORK_EPOCH,
 });
-export const privateKey = await generateKeyPair("secp256k1");
-export const nodeId = computeNodeIdFromPrivateKey(privateKey);
-export const custodyConfig = new CustodyConfig({config, nodeId});
 
 export const slots: Record<ForkPostCapella, number> = {
   capella: computeStartSlotAtEpoch(CAPELLA_FORK_EPOCH),
@@ -67,13 +84,13 @@ function generateProposerIndex(min = 0, max = 100_000): number {
   return generateRandomInt(max, min);
 }
 
-function generateBeaconBlock({
-  config,
+function generateBeaconBlock<F extends ForkPostCapella>({
+  forkName,
   slot,
   parentRoot,
-}: {config: ChainForkConfig; slot?: Slot; parentRoot?: Uint8Array}): SignedBeaconBlock {
-  const block = config.getForkTypes(slot ?? 0).SignedBeaconBlock.defaultValue();
-  block.message.slot = slot ? slot : 0;
+}: {forkName: F; slot?: Slot; parentRoot?: Uint8Array}): SignedBeaconBlock<F> {
+  const block = ssz[forkName].SignedBeaconBlock.defaultValue();
+  block.message.slot = slot ? slot : slots[forkName];
   block.message.parentRoot = parentRoot ? parentRoot : Uint8Array.from(randomBytes(ROOT_SIZE));
   block.message.stateRoot = Uint8Array.from(randomBytes(ROOT_SIZE));
   block.message.proposerIndex = generateProposerIndex();
@@ -81,23 +98,25 @@ function generateBeaconBlock({
   return block;
 }
 
-function generateRoots(
-  config: ChainForkConfig,
-  block: SignedBeaconBlock
+function generateRoots<F extends ForkPostCapella>(
+  forkName: F,
+  block: SignedBeaconBlock<F>
 ): {
   blockRoot: Uint8Array;
   rootHex: string;
 } {
-  const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
+  const blockRoot = ssz[forkName].BeaconBlock.hashTreeRoot(block.message);
   const rootHex = toRootHex(blockRoot);
+  const signed = ssz[forkName].SignedBeaconBlock.defaultValue();
   return {
+    block: signed,
     blockRoot,
     rootHex,
   };
 }
 
 function generateBlobSidecars(
-  config: ChainForkConfig,
+  forkName: ForkPostDeneb,
   block: SignedBeaconBlock<ForkPostDeneb>,
   count: number,
   oomProtection = false
@@ -111,16 +130,12 @@ function generateBlobSidecars(
   const signedBlockHeader = signedBlockToSignedHeader(config, block);
 
   for (let index = 0; index < count; index++) {
-    const blobSidecar = ssz.deneb.BlobSidecar.defaultValue();
+    const blobSidecar = ssz[forkName].BlobSidecar.defaultValue();
     blobSidecar.index = index;
     blobSidecar.signedBlockHeader = signedBlockHeader;
-    blobSidecar.blob = generateRandomBlob();
+    blobSidecar.blob = generateRandomBlob(index);
     blobSidecar.kzgCommitment = kzg.blobToKzgCommitment(blobSidecar.blob);
-    blobSidecar.kzgCommitmentInclusionProof = computeInclusionProof(
-      config.getForkName(block.message.slot),
-      block.message.body,
-      index
-    );
+    blobSidecar.kzgCommitmentInclusionProof = computeInclusionProof(forkName, block.message.body, index);
     blobSidecar.kzgProof = kzg.computeBlobKzgProof(blobSidecar.blob, blobSidecar.kzgCommitment);
 
     if (oomProtection) {
@@ -142,19 +157,41 @@ function generateBlobSidecars(
 }
 
 function generateColumnSidecars<F extends ForkPostFulu>(
-  config: ChainForkConfig,
+  forkName: F,
   block: SignedBeaconBlock<F>,
-  numberOfBlobs: number
+  numberOfBlobs: number,
+  oomProtection = false
 ): {
   block: SignedBeaconBlock<F>;
   columnSidecars: fulu.DataColumnSidecars;
 } {
   const blobs = Array.from({length: numberOfBlobs}, () => generateRandomBlob());
   const kzgCommitments = blobs.map((blob) => kzg.blobToKzgCommitment(blob));
-  block.message.body.blobKzgCommitments = kzgCommitments;
+  block.body.blobKzgCommitments = kzgCommitments;
 
+  const signedBlockHeader = signedBlockToSignedHeader(config, block);
   const cellsAndProofs = blobs.map((blob) => kzg.computeCellsAndKzgProofs(blob));
-  const columnSidecars = getDataColumnSidecarsFromBlock(config, block, cellsAndProofs);
+  const kzgCommitmentsInclusionProof = Array.from({length: blobs.length}, () =>
+    computeKzgCommitmentsInclusionProof(forkName, block.body)
+  );
+
+  const columnSidecars = Array.from({length: NUMBER_OF_COLUMNS}, (_, columnIndex) => {
+    const column = oomProtection
+      ? []
+      : Array.from({length: blobs.length}, (_, rowNumber) => cellsAndProofs[rowNumber].cells[columnIndex]);
+    const kzgProofs = Array.from(
+      {length: blobs.length},
+      (_, rowNumber) => cellsAndProofs[rowNumber].proofs[columnIndex]
+    );
+    return {
+      index: columnIndex,
+      column,
+      kzgCommitments,
+      kzgProofs,
+      signedBlockHeader,
+      kzgCommitmentsInclusionProof,
+    };
+  });
 
   return {
     block,
@@ -168,19 +205,19 @@ export type BlockTestSet<F extends ForkPostCapella> = {
   rootHex: string;
 };
 
-export function generateChainOfBlocks({
-  config,
+export function generateChainOfBlocks<F extends ForkPostCapella>({
+  forkName,
   count,
-}: {config: ChainForkConfig; count: number}): BlockTestSet<ForkPostCapella>[] {
+}: {forkName: F; count: number}): BlockTestSet<F>[] {
   let parentRoot = Uint8Array.from(randomBytes(ROOT_SIZE));
-
-  const blocks: BlockTestSet<ForkPostCapella>[] = [];
-  for (let slot = 0; slot < count; slot++) {
-    const block = generateBeaconBlock({config, parentRoot, slot});
-    const {blockRoot, rootHex} = generateRoots(config, block);
+  let slot = slots[forkName];
+  const blocks: BlockTestSet<F>[] = [];
+  for (; slot < slot + count; slot++) {
+    const block = generateBeaconBlock({forkName, parentRoot, slot});
+    const {blockRoot, rootHex} = generateRoots(forkName, block);
     parentRoot = block.message.parentRoot;
     blocks.push({
-      block: block as SignedBeaconBlock<ForkPostCapella>,
+      block,
       blockRoot,
       rootHex,
     });
@@ -194,22 +231,23 @@ export type BlockWithColumnsTestSet<F extends ForkPostFulu> = BlockTestSet<F> & 
   columnSidecars: fulu.DataColumnSidecars;
 };
 
-export function generateBlockWithBlobSidecars({
-  config,
+export function generateBlockWithBlobSidecars<F extends ForkPostDeneb>({
+  forkName,
   slot,
   parentRoot,
+  oomProtection = false,
 }: {
-  config: ChainForkConfig;
+  forkName: F;
   parentRoot?: Uint8Array;
   slot?: Slot;
   oomProtection?: boolean;
-}): BlockWithBlobsTestSet<ForkPostDeneb> {
+}): BlockWithBlobsTestSet<F> {
   const {block, blobSidecars} = generateBlobSidecars(
-    config,
-    generateBeaconBlock({config, parentRoot, slot}) as SignedBeaconBlock<ForkPostDeneb>,
+    forkName,
+    generateBeaconBlock({forkName, parentRoot, slot}),
     generateRandomInt(1, 6)
   );
-  const {blockRoot, rootHex} = generateRoots(config, block);
+  const {blockRoot, rootHex} = generateRoots(forkName, block);
   return {
     block,
     blobSidecars,
@@ -218,22 +256,23 @@ export function generateBlockWithBlobSidecars({
   };
 }
 
-export function generateBlockWithColumnSidecars({
-  config,
+export function generateBlockWithColumnSidecars<F extends ForkPostFulu>({
+  forkName,
   slot,
   parentRoot,
+  oomProtection = false,
 }: {
-  config: ChainForkConfig;
+  forkName: F;
   parentRoot?: Uint8Array;
   slot?: Slot;
   oomProtection?: boolean;
-}): BlockWithColumnsTestSet<ForkPostFulu> {
+}): BlockWithColumnsTestSet<F> {
   const {block, columnSidecars} = generateColumnSidecars(
-    config,
-    generateBeaconBlock({config, parentRoot, slot}) as SignedBeaconBlock<ForkPostFulu>,
+    forkName,
+    generateBeaconBlock({forkName, parentRoot, slot}),
     generateRandomInt(1, 6)
   );
-  const {blockRoot, rootHex} = generateRoots(config, block);
+  const {blockRoot, rootHex} = generateRoots(forkName, block);
   return {
     block,
     columnSidecars,
@@ -245,29 +284,26 @@ export function generateBlockWithColumnSidecars({
 export type BlocksWithSidecars<F extends ForkPostDeneb> = F extends ForkPostFulu
   ? BlockWithColumnsTestSet<F>[]
   : BlockWithBlobsTestSet<F>[];
-
 export function generateChainOfBlocksWithBlobs<F extends ForkPostDeneb>({
-  config,
   forkName,
   count,
   oomProtection = false,
 }: {
-  config: ChainForkConfig;
   forkName: F;
   count: number;
   oomProtection?: boolean;
 }): BlocksWithSidecars<F> {
   let parentRoot = Uint8Array.from(randomBytes(ROOT_SIZE));
   let slot = slots[forkName];
-  const blocks: BlocksWithSidecars<ForkPostDeneb> = [];
+  const blocks: BlocksWithSidecars<F> = [];
   for (; slot < slot + count; slot++) {
     const blockWithSidecars = isForkPostFulu(forkName)
-      ? generateBlockWithColumnSidecars({config, parentRoot, slot, oomProtection})
-      : generateBlockWithBlobSidecars({config, parentRoot, slot, oomProtection});
+      ? generateBlockWithColumnSidecars({forkName, parentRoot, slot, oomProtection})
+      : generateBlockWithBlobSidecars({forkName, parentRoot, slot, oomProtection});
     parentRoot = blockWithSidecars.blockRoot;
-    blocks.push(blockWithSidecars as any);
+    blocks.push(blockWithSidecars);
   }
-  return blocks as BlocksWithSidecars<F>;
+  return blocks;
 }
 
 export type ChainOfBlockMaybeSidecars<F extends ForkPostCapella> = F extends ForkPostFulu
@@ -275,14 +311,13 @@ export type ChainOfBlockMaybeSidecars<F extends ForkPostCapella> = F extends For
   : F extends ForkPostDeneb
     ? BlockWithBlobsTestSet<F>[]
     : BlockTestSet<F>[];
-
 export function generateChainOfBlockMaybeSidecars<F extends ForkPostCapella>(
   forkName: F,
   count: number,
   oomProtection = false
 ): ChainOfBlockMaybeSidecars<F> {
   if (isForkPostDeneb(forkName)) {
-    return generateChainOfBlocksWithBlobs({config, forkName, count, oomProtection}) as ChainOfBlockMaybeSidecars<F>;
+    return generateChainOfBlocksWithBlobs({forkName, count, oomProtection});
   }
-  return generateChainOfBlocks({config, count}) as ChainOfBlockMaybeSidecars<F>;
+  return generateChainOfBlocks({forkName, count});
 }
