@@ -97,7 +97,7 @@ describe("BlockDutiesService", () => {
     // Must have submitted the block received on signBlock()
     expect(api.beacon.publishBlockV2).toHaveBeenCalledOnce();
     expect(api.beacon.publishBlockV2.mock.calls[0]).toEqual([
-      {signedBlockContents: signedBlock, broadcastValidation: routes.beacon.BroadcastValidation.consensus},
+      {signedBlockContents: {signedBlock}, broadcastValidation: routes.beacon.BroadcastValidation.consensus},
     ]);
 
     // ProduceBlockV3 is called with all correct arguments

@@ -3,6 +3,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {
   BLSPubkey,
   BLSSignature,
+  BeaconBlock,
   BlindedBeaconBlock,
   BlockContents,
   ProducedBlockSource,
@@ -22,10 +23,11 @@ import {ValidatorStore} from "./validatorStore.js";
 //  i) a full block contents (eg block and all related data-layer data)
 //  ii) a blinded block post bellatrix
 type BlindedBlockOrBlockContents =
-  | (BlockContents & {
+  | {
+      blockContents: BlockContents;
       executionPayloadBlinded: false;
       executionPayloadSource: ProducedBlockSource.engine;
-    })
+    }
   | {
       block: BlindedBeaconBlock;
       executionPayloadBlinded: true;
@@ -119,7 +121,7 @@ export class BlockProposingService {
         strictFeeRecipientCheck,
         blindedLocal,
       };
-      const blockContents = await this.produceBlockWrapper(
+      const blockContentsWrapper = await this.produceBlockWrapper(
         this.config,
         slot,
         randaoReveal,
@@ -132,34 +134,43 @@ export class BlockProposingService {
         throw extendError(e, "Failed to produce block");
       });
 
-      this.logger.debug("Produced block", {...debugLogCtx, ...blockContents.debugLogCtx});
+      this.logger.debug("Produced block", {...debugLogCtx, ...blockContentsWrapper.debugLogCtx});
       this.metrics?.blocksProduced.inc();
 
-      const signedBlock = await this.validatorStore.signBlock(pubkey, blockContents.block, slot, this.logger);
+      const block = blockContentsWrapper.executionPayloadBlinded
+        ? blockContentsWrapper.block
+        : blockContentsWrapper.blockContents.block;
+      const signedBlock = await this.validatorStore.signBlock(pubkey, block, slot, this.logger);
 
       const {broadcastValidation} = this.opts;
       const publishOpts = {broadcastValidation};
-      await this.publishBlockWrapper({signedBlock, ...blockContents}, publishOpts).catch((e: Error) => {
+
+      const signedBlindedBlockOrBlockContents = blockContentsWrapper.executionPayloadBlinded
+        ? {signedBlock}
+        : {signedBlock, ...blockContentsWrapper.blockContents};
+      delete (signedBlindedBlockOrBlockContents as {block?: BeaconBlock}).block; // remove block if present
+
+      await this.publishBlockWrapper(signedBlindedBlockOrBlockContents, publishOpts).catch((e: Error) => {
         this.metrics?.blockProposingErrors.inc({error: "publish"});
         throw extendError(e, "Failed to publish block");
       });
 
       this.metrics?.proposerStepCallPublishBlock.observe(this.clock.secFromSlot(slot));
       this.metrics?.blocksPublished.inc();
-      this.logger.info("Published block", {...logCtx, graffiti, ...blockContents.debugLogCtx});
+      this.logger.info("Published block", {...logCtx, graffiti, ...blockContentsWrapper.debugLogCtx});
     } catch (e) {
       this.logger.error("Error proposing block", logCtx, e as Error);
     }
   }
 
   private publishBlockWrapper = async (
-    signedBlindedBlockOrSignedBlockContents: SignedBlockContents | SignedBlindedBeaconBlock,
+    signedBlindedBlockOrSignedBlockContents: SignedBlockContents | {signedBlock: SignedBlindedBeaconBlock},
     opts: {broadcastValidation?: routes.beacon.BroadcastValidation} = {}
   ): Promise<void> => {
-    if (isBlindedSignedBeaconBlock(signedBlindedBlockOrSignedBlockContents)) {
+    if (isBlindedSignedBeaconBlock(signedBlindedBlockOrSignedBlockContents.signedBlock)) {
       (
         await this.api.beacon.publishBlindedBlockV2({
-          signedBlindedBlock: signedBlindedBlockOrSignedBlockContents,
+          signedBlindedBlock: signedBlindedBlockOrSignedBlockContents.signedBlock,
           ...opts,
         })
       ).assertOk();
@@ -242,7 +253,7 @@ function parseProduceBlockResponse(
   }
 
   return {
-    ...response.data,
+    blockContents: response.data,
     executionPayloadBlinded: false,
     executionPayloadSource,
     debugLogCtx,
