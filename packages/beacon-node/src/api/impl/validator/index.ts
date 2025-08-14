@@ -428,7 +428,7 @@ export function getValidatorApi(
 
     switch (chain.executionBuilder.status) {
       case BuilderStatus.disabled:
-        throw Error("External builder disabled due to failed status checks");
+        throw Error("External builder disabled due to failed status check");
       case BuilderStatus.circuitBreaker:
         throw Error("External builder circuit breaker is activated");
       case BuilderStatus.enabled:
