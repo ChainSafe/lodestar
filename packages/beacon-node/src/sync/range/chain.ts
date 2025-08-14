@@ -44,7 +44,8 @@ export type SyncChainFns = {
   downloadBeaconBlocksByRange: (
     peer: PeerSyncMeta,
     request: phase0.BeaconBlocksByRangeRequest,
-    partialDownload: PartialDownload
+    partialDownload: PartialDownload,
+    syncType: RangeSyncType
   ) => Promise<{blocks: BlockInput[]; pendingDataColumns: null | number[]}>;
   /** Report peer for negative actions. Decouples from the full network instance */
   reportPeer: (peer: PeerIdStr, action: PeerAction, actionName: string) => void;
@@ -449,7 +450,9 @@ export class SyncChain {
       const partialDownload = batch.startDownloading(peer.peerId);
 
       // wrapError ensures to never call both batch success() and batch error()
-      const res = await wrapError(this.downloadBeaconBlocksByRange(peer, batch.request, partialDownload));
+      const res = await wrapError(
+        this.downloadBeaconBlocksByRange(peer, batch.request, partialDownload, this.syncType)
+      );
 
       if (!res.err) {
         const downloadSuccessOutput = batch.downloadingSuccess(res.result);
