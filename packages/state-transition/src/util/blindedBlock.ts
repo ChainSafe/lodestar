@@ -89,7 +89,7 @@ export function signedBlindedBlockToFull(
   executionPayload: ExecutionPayload | null
 ): SignedBeaconBlock {
   if (isForkPostBellatrix(fork) && executionPayload === null) {
-    throw Error("Missing executionPayload for post-bellatrix blinded block");
+    throw Error("Missing executionPayload to construct post-bellatrix full block");
   }
 
   const signedBlock = {
