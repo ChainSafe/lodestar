@@ -396,19 +396,26 @@ export class NetworkCore implements INetworkCore {
     // biome-ignore lint/complexity/useLiteralKeys: `discovery` is a private attribute
     const enr = await this.peerManager["discovery"]?.discv5.enr();
 
+    // enr.getFullMultiaddr can counterintuitively return undefined near startup if the enr.ip or enr.ip6 is not set.
+    // Eventually, the enr will be updated with the correct ip after discv5 runs for a while.
+
     // Node's addresses on which is listening for discv5 requests.
     // The example provided by the beacon-APIs show a _full_ multiaddr, ie including the peer id, so we include it.
     const discoveryAddresses = [
-      enr?.getFullMultiaddr("udp")?.toString() ?? null,
-      enr?.getFullMultiaddr("udp6")?.toString() ?? null,
+      (await enr?.getFullMultiaddr("udp"))?.toString(),
+      (await enr?.getFullMultiaddr("udp6"))?.toString(),
     ].filter((addr): addr is string => Boolean(addr));
 
     // Node's addresses on which eth2 RPC requests are served.
     const p2pAddresses = [
-      enr?.getFullMultiaddr("tcp")?.toString() ?? null,
-      enr?.getFullMultiaddr("tcp6")?.toString() ?? null,
-      enr?.getFullMultiaddr("quic")?.toString() ?? null,
-      enr?.getFullMultiaddr("quic6")?.toString() ?? null,
+      // It is useful to include listen multiaddrs even if they likely aren't public IPs
+      // This means that we will always return some multiaddrs
+      ...this.libp2p.getMultiaddrs().map((ma) => ma.toString()),
+
+      (await enr?.getFullMultiaddr("tcp"))?.toString(),
+      (await enr?.getFullMultiaddr("tcp6"))?.toString(),
+      (await enr?.getFullMultiaddr("quic"))?.toString(),
+      (await enr?.getFullMultiaddr("quic6"))?.toString(),
     ].filter((addr): addr is string => Boolean(addr));
 
     return {
