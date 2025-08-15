@@ -133,6 +133,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
 
     // always set block to seen cache for all forks so that we don't need to download it
+    // TODO: validate block before adding to cache
+    // tracked in https://github.com/ChainSafe/lodestar/issues/7957
     const blockInputRes = chain.seenGossipBlockInput.getGossipBlockInput(
       config,
       {
@@ -211,17 +213,16 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
     const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
 
-    const {blockInput, blockInputMeta} = chain.seenGossipBlockInput.getGossipBlockInput(
-      config,
-      {
-        type: GossipedInputType.blob,
-        blobSidecar,
-      },
-      metrics
-    );
-
     try {
       await validateGossipBlobSidecar(fork, chain, blobSidecar, subnet);
+      const {blockInput, blockInputMeta} = chain.seenGossipBlockInput.getGossipBlockInput(
+        config,
+        {
+          type: GossipedInputType.blob,
+          blobSidecar,
+        },
+        metrics
+      );
       const recvToValidation = Date.now() / 1000 - seenTimestampSec;
       const validationTime = recvToValidation - recvToValLatency;
 
@@ -255,9 +256,9 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     } catch (e) {
       if (e instanceof BlobSidecarGossipError) {
         // Don't trigger this yet if full block and blobs haven't arrived yet
-        if (e.type.code === BlobSidecarErrorCode.PARENT_UNKNOWN && blockInput.block !== null) {
+        if (e.type.code === BlobSidecarErrorCode.PARENT_UNKNOWN) {
           logger.debug("Gossip blob has error", {slot, root: blockShortHex, code: e.type.code});
-          events.emit(NetworkEvent.unknownBlockParent, {blockInput, peer: peerIdStr});
+          // no need to trigger `unknownBlockParent` event here, as we already did it in `validateBeaconBlock()`
         }
 
         if (e.action === GossipAction.REJECT) {
@@ -339,6 +340,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           dataColumnSidecar,
           `gossip_reject_slot_${slot}_index_${dataColumnSidecar.index}`
         );
+        // no need to trigger `unknownBlockParent` event here, as we already did it in `validateBeaconBlock()`
       }
 
       throw e;
