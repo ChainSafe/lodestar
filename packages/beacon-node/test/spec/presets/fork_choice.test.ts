@@ -1,5 +1,6 @@
 import path from "node:path";
 import {toHexString} from "@chainsafe/ssz";
+import {generateKeyPair} from "@libp2p/crypto/keys";
 import {createBeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
 import {ACTIVE_PRESET, ForkName, ForkSeq} from "@lodestar/params";
@@ -13,6 +14,7 @@ import {
   SignedBeaconBlock,
   bellatrix,
   deneb,
+  fulu,
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
@@ -22,11 +24,18 @@ import {
   AttestationImportOpt,
   BlobSidecarValidation,
   BlobsSource,
+  BlockInputDataColumns,
   BlockSource,
+  DataColumnsSource,
   getBlockInput,
 } from "../../../src/chain/blocks/types.js";
 import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
+import {
+  verifyDataColumnSidecar,
+  verifyDataColumnSidecarInclusionProof,
+  verifyDataColumnSidecarKzgProofs,
+} from "../../../src/chain/validation/dataColumnSidecar.js";
 import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
 import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";
 import {PowMergeBlock} from "../../../src/eth1/interface.js";
@@ -49,6 +58,7 @@ const ANCHOR_STATE_FILE_NAME = "anchor_state";
 const ANCHOR_BLOCK_FILE_NAME = "anchor_block";
 const BLOCK_FILE_NAME = "^(block)_([0-9a-zA-Z]+)$";
 const BLOBS_FILE_NAME = "^(blobs)_([0-9a-zA-Z]+)$";
+const COLUMN_FILE_NAME = "^(column)_([0-9a-zA-Z]+)$";
 const POW_BLOCK_FILE_NAME = "^(pow_block)_([0-9a-zA-Z]+)$";
 const ATTESTATION_FILE_NAME = "^(attestation)_([0-9a-zA-Z])+$";
 const ATTESTER_SLASHING_FILE_NAME = "^(attester_slashing)_([0-9a-zA-Z])+$";
@@ -103,6 +113,7 @@ const forkChoiceTest =
             proposerBoostReorg: true,
           },
           {
+            privateKey: await generateKeyPair("secp256k1"),
             config: createBeaconConfig(config, state.genesisValidatorsRoot),
             db: getMockedBeaconDb(),
             dataDir: ".",
@@ -167,13 +178,26 @@ const forkChoiceTest =
                 throw Error(`No block ${step.block}`);
               }
 
+              // Post-Deneb and pre-Fulu, `columns` should not be present. Post-Fulu `blobs` and
+              // `proofs` should not be present.
               let blobs: deneb.Blob[] | undefined;
               let proofs: deneb.KZGProof[] | undefined;
+              let columns: fulu.DataColumnSidecar[] | undefined;
               if (step.blobs !== undefined) {
                 blobs = testcase.blobs.get(step.blobs);
               }
               if (step.proofs !== undefined) {
                 proofs = step.proofs.map((proof) => ssz.deneb.KZGProof.deserialize(fromHex(proof)));
+              }
+              if (step.columns !== undefined) {
+                columns = [];
+                for (const columnName of step.columns) {
+                  const column = testcase.columns.get(columnName);
+                  if (column === undefined) {
+                    throw Error(`Malformed spec test. Column file with name ${columnName} not found.`);
+                  }
+                  columns.push(column);
+                }
               }
 
               const {slot} = signedBlock.message;
@@ -191,7 +215,33 @@ const forkChoiceTest =
 
               try {
                 let blockImport;
-                if (config.getForkSeq(slot) >= ForkSeq.deneb) {
+                const forkSeq = config.getForkSeq(slot);
+
+                if (forkSeq >= ForkSeq.fulu) {
+                  if (columns === undefined) {
+                    columns = [];
+                  }
+
+                  for (const column of columns) {
+                    verifyDataColumnSidecar(column);
+                    verifyDataColumnSidecarInclusionProof(column);
+                    await verifyDataColumnSidecarKzgProofs(
+                      column.kzgCommitments,
+                      Array.from({length: column.column.length}, () => column.index),
+                      column.column,
+                      column.kzgProofs
+                    );
+                  }
+
+                  const blockData = {
+                    fork,
+                    dataColumns: columns,
+                    dataColumnsBytes: columns.map(() => null),
+                    dataColumnsSource: DataColumnsSource.gossip,
+                  } as BlockInputDataColumns;
+
+                  blockImport = getBlockInput.availableData(config, signedBlock, BlockSource.gossip, blockData);
+                } else if (forkSeq >= ForkSeq.deneb && forkSeq < ForkSeq.fulu) {
                   if (blobs === undefined) {
                     // seems like some deneb tests don't have this and we are supposed to assume empty
                     // throw Error("Missing blobs for the deneb+ block");
@@ -361,6 +411,7 @@ const forkChoiceTest =
           [ANCHOR_BLOCK_FILE_NAME]: ssz[fork].BeaconBlock,
           [BLOCK_FILE_NAME]: ssz[fork].SignedBeaconBlock,
           [BLOBS_FILE_NAME]: ssz.deneb.Blobs,
+          [COLUMN_FILE_NAME]: ssz.fulu.DataColumnSidecar,
           [POW_BLOCK_FILE_NAME]: ssz.bellatrix.PowBlock,
           [ATTESTATION_FILE_NAME]: sszTypesFor(fork).Attestation,
           [ATTESTER_SLASHING_FILE_NAME]: sszTypesFor(fork).AttesterSlashing,
@@ -369,6 +420,7 @@ const forkChoiceTest =
           // t has input file name as key
           const blocks = new Map<string, SignedBeaconBlock>();
           const blobs = new Map<string, deneb.Blobs>();
+          const columns = new Map<string, fulu.DataColumnSidecar>();
           const powBlocks = new Map<string, bellatrix.PowBlock>();
           const attestations = new Map<string, Attestation>();
           const attesterSlashings = new Map<string, AttesterSlashing>();
@@ -382,6 +434,10 @@ const forkChoiceTest =
             const blobsMatch = key.match(BLOBS_FILE_NAME);
             if (blobsMatch) {
               blobs.set(key, t[key]);
+            }
+            const columnMatch = key.match(COLUMN_FILE_NAME);
+            if (columnMatch) {
+              columns.set(key, t[key]);
             }
             const powBlockMatch = key.match(POW_BLOCK_FILE_NAME);
             if (powBlockMatch) {
@@ -403,6 +459,7 @@ const forkChoiceTest =
             steps: t["steps"] as ForkChoiceTestCase["steps"],
             blocks,
             blobs,
+            columns,
             powBlocks,
             attestations,
             attesterSlashings,
@@ -465,6 +522,7 @@ type OnBlock = {
   block: string;
   blobs?: string;
   proofs?: string[];
+  columns?: string[];
   /** optional, default to `true`. */
   valid?: number;
 };
@@ -519,6 +577,7 @@ type ForkChoiceTestCase = {
   steps: Step[];
   blocks: Map<string, SignedBeaconBlock>;
   blobs: Map<string, deneb.Blobs>;
+  columns: Map<string, fulu.DataColumnSidecar>;
   powBlocks: Map<string, bellatrix.PowBlock>;
   attestations: Map<string, Attestation>;
   attesterSlashings: Map<string, AttesterSlashing>;

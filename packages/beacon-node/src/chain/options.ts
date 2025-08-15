@@ -39,9 +39,12 @@ export type IChainOptions = BlockProcessOpts &
     maxCachedBlobSidecars?: number;
     /** Max number of produced block roots (blinded or full) cached for broadcast validations */
     maxCachedProducedRoots?: number;
+    /** Subscribe to and custody all data column sidecar subnets */
+    supernode?: boolean;
+    initialCustodyGroupCount?: number;
     broadcastValidationStrictness?: string;
     minSameMessageSignatureSetsToBatch: number;
-    archiveBlobEpochs?: number;
+    archiveDateEpochs?: number;
     nHistoricalStates?: boolean;
     nHistoricalStatesFileDataStore?: boolean;
   };
@@ -113,6 +116,7 @@ export const defaultChainOptions: IChainOptions = {
   archiveMode: DEFAULT_ARCHIVE_MODE,
   pruneHistory: false,
   emitPayloadAttributes: false,
+  supernode: false,
   // for gossip block validation, it's unlikely we see a reorg with 32 slots
   // for attestation validation, having this value ensures we don't have to regen states most of the time
   maxSkipSlots: 32,

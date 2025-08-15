@@ -1,31 +1,58 @@
+import {toHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, isForkPostDeneb} from "@lodestar/params";
-import {RootHex, SignedBeaconBlock, deneb, ssz} from "@lodestar/types";
-import {pruneSetToMax, toRootHex} from "@lodestar/utils";
+import {ForkName, NUMBER_OF_COLUMNS, isForkPostDeneb} from "@lodestar/params";
+import {RootHex, SignedBeaconBlock, deneb, fulu, ssz} from "@lodestar/types";
+import {Logger, pruneSetToMax} from "@lodestar/utils";
 
+import {IExecutionEngine} from "../../execution/index.js";
 import {Metrics} from "../../metrics/index.js";
+import {IClock} from "../../util/clock.js";
+import {
+  CustodyConfig,
+  RecoverResult,
+  getDataColumnsFromExecution,
+  hasSampledDataColumns,
+  recoverDataColumnSidecars,
+} from "../../util/dataColumns.js";
+import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {
   BlobsSource,
   BlockInput,
-  BlockInputDataBlobs,
+  BlockInputBlobs,
+  BlockInputDataColumns,
   BlockSource,
   CachedData,
+  CachedDataColumns,
+  DataColumnsSource,
   GossipedInputType,
   NullBlockInput,
   getBlockInput,
   getBlockInputBlobs,
+  getBlockInputDataColumns,
 } from "../blocks/types.js";
+import {ChainEvent, ChainEventEmitter} from "../emitter.js";
+import {DataColumnSidecarErrorCode, DataColumnSidecarGossipError} from "../errors/dataColumnSidecarError.js";
+import {GossipAction} from "../errors/gossipValidation.js";
 
 export enum BlockInputAvailabilitySource {
   GOSSIP = "gossip",
+  RECOVERED = "recovered",
   UNKNOWN_SYNC = "unknown_sync",
 }
 
 type GossipedBlockInput =
   | {type: GossipedInputType.block; signedBlock: SignedBeaconBlock}
-  | {type: GossipedInputType.blob; blobSidecar: deneb.BlobSidecar};
+  | {type: GossipedInputType.blob; blobSidecar: deneb.BlobSidecar}
+  | {
+      type: GossipedInputType.dataColumn;
+      dataColumnSidecar: fulu.DataColumnSidecar;
+      dataColumnBytes: Uint8Array | null;
+    };
 
-type BlockInputCacheType = {
+// TODO(fulu): dedup with gossipHandlers.ts
+const BLOCK_AVAILABILITY_CUTOFF_MS = 3_000;
+
+export type BlockInputCacheType = {
   fork: ForkName;
   block?: SignedBeaconBlock;
   cachedData?: CachedData;
@@ -33,6 +60,24 @@ type BlockInputCacheType = {
   blockInputPromise: Promise<BlockInput>;
   resolveBlockInput: (blockInput: BlockInput) => void;
 };
+
+type GossipBlockInputResponseWithBlock = {
+  blockInput: BlockInput;
+  blockInputMeta:
+    | {pending: GossipedInputType.blob | null; haveBlobs: number; expectedBlobs: number}
+    | {pending: GossipedInputType.dataColumn | null; haveColumns: number; expectedColumns: number};
+};
+
+type BlockInputPendingBlock = {pending: GossipedInputType.block};
+export type BlockInputMetaPendingBlockWithBlobs = BlockInputPendingBlock & {haveBlobs: number; expectedBlobs: null};
+type BlockInputMetaPendingBlockWithColumns = BlockInputPendingBlock & {haveColumns: number; expectedColumns: null};
+
+type GossipBlockInputResponseWithNullBlock = {
+  blockInput: NullBlockInput;
+  blockInputMeta: BlockInputMetaPendingBlockWithBlobs | BlockInputMetaPendingBlockWithColumns;
+};
+
+type GossipBlockInputResponse = GossipBlockInputResponseWithBlock | GossipBlockInputResponseWithNullBlock;
 
 const MAX_GOSSIPINPUT_CACHE = 5;
 
@@ -48,7 +93,27 @@ const MAX_GOSSIPINPUT_CACHE = 5;
  * block are seen by SeenGossipBlockInput
  */
 export class SeenGossipBlockInput {
-  private blockInputCache = new Map<RootHex, BlockInputCacheType>();
+  private readonly blockInputCache = new Map<RootHex, BlockInputCacheType>();
+  private readonly custodyConfig: CustodyConfig;
+  private readonly executionEngine: IExecutionEngine;
+  private readonly clock: IClock;
+  private readonly emitter: ChainEventEmitter;
+  private readonly logger: Logger;
+
+  constructor(
+    custodyConfig: CustodyConfig,
+    executionEngine: IExecutionEngine,
+    emitter: ChainEventEmitter,
+    clock: IClock,
+    logger: Logger
+  ) {
+    this.custodyConfig = custodyConfig;
+    this.executionEngine = executionEngine;
+    this.clock = clock;
+    this.emitter = emitter;
+    this.logger = logger;
+  }
+  globalCacheId = 0;
 
   prune(): void {
     pruneSetToMax(this.blockInputCache, MAX_GOSSIPINPUT_CACHE);
@@ -58,19 +123,39 @@ export class SeenGossipBlockInput {
     return this.blockInputCache.has(blockRoot);
   }
 
+  /**
+   * Intended to be used for gossip validation, specifically this check:
+   * [IGNORE] The sidecar is the first sidecar for the tuple (block_header.slot, block_header.proposer_index,
+   *          sidecar.index) with valid header signature, sidecar inclusion proof, and kzg proof
+   */
+  hasDataColumnSidecar(sidecar: fulu.DataColumnSidecar) {
+    const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(sidecar.signedBlockHeader.message);
+    const blockRootHex = toHexString(blockRoot);
+
+    const blockCache = this.blockInputCache.get(blockRootHex);
+    if (blockCache === undefined) {
+      return false;
+    }
+    if (blockCache.cachedData === undefined || blockCache.cachedData.fork !== ForkName.fulu) {
+      return false;
+    }
+    const existingSidecar = blockCache.cachedData.dataColumnsCache.get(sidecar.index);
+    if (!existingSidecar) {
+      return false;
+    }
+    return (
+      sidecar.signedBlockHeader.message.slot === existingSidecar.dataColumn.signedBlockHeader.message.slot &&
+      sidecar.index === existingSidecar.dataColumn.index &&
+      sidecar.signedBlockHeader.message.proposerIndex ===
+        existingSidecar.dataColumn.signedBlockHeader.message.proposerIndex
+    );
+  }
+
   getGossipBlockInput(
     config: ChainForkConfig,
     gossipedInput: GossipedBlockInput,
     metrics: Metrics | null
-  ):
-    | {
-        blockInput: BlockInput;
-        blockInputMeta: {pending: GossipedInputType.blob | null; haveBlobs: number; expectedBlobs: number};
-      }
-    | {
-        blockInput: NullBlockInput;
-        blockInputMeta: {pending: GossipedInputType.block; haveBlobs: number; expectedBlobs: null};
-      } {
+  ): GossipBlockInputResponse {
     let blockHex: RootHex;
     let blockCache: BlockInputCacheType;
     let fork: ForkName;
@@ -79,24 +164,65 @@ export class SeenGossipBlockInput {
       const {signedBlock} = gossipedInput;
       fork = config.getForkName(signedBlock.message.slot);
 
-      blockHex = toRootHex(config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message));
-      blockCache = this.blockInputCache.get(blockHex) ?? getEmptyBlockInputCacheEntry(fork);
+      blockHex = toHexString(
+        config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message)
+      );
+      blockCache = this.blockInputCache.get(blockHex) ?? getEmptyBlockInputCacheEntry(fork, ++this.globalCacheId);
 
       blockCache.block = signedBlock;
-    } else {
+    } else if (gossipedInput.type === GossipedInputType.blob) {
       const {blobSidecar} = gossipedInput;
       const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blobSidecar.signedBlockHeader.message);
       fork = config.getForkName(blobSidecar.signedBlockHeader.message.slot);
 
-      blockHex = toRootHex(blockRoot);
-      blockCache = this.blockInputCache.get(blockHex) ?? getEmptyBlockInputCacheEntry(fork);
+      blockHex = toHexString(blockRoot);
+      blockCache = this.blockInputCache.get(blockHex) ?? getEmptyBlockInputCacheEntry(fork, ++this.globalCacheId);
+      if (blockCache.cachedData?.fork !== ForkName.deneb && blockCache.cachedData?.fork !== ForkName.electra) {
+        throw Error(`blob data at non deneb/electra fork=${blockCache.fork}`);
+      }
 
       // TODO: freetheblobs check if its the same blob or a duplicate and throw/take actions
       blockCache.cachedData?.blobsCache.set(blobSidecar.index, blobSidecar);
+    } else if (gossipedInput.type === GossipedInputType.dataColumn) {
+      const {dataColumnSidecar, dataColumnBytes} = gossipedInput;
+      const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(dataColumnSidecar.signedBlockHeader.message);
+      fork = config.getForkName(dataColumnSidecar.signedBlockHeader.message.slot);
+
+      blockHex = toHexString(blockRoot);
+      blockCache = this.blockInputCache.get(blockHex) ?? getEmptyBlockInputCacheEntry(fork, ++this.globalCacheId);
+      if (blockCache.cachedData?.fork !== ForkName.fulu) {
+        throw Error(`data column data at non fulu fork=${blockCache.fork}`);
+      }
+
+      if (this.hasDataColumnSidecar(dataColumnSidecar)) {
+        throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
+          code: DataColumnSidecarErrorCode.ALREADY_KNOWN,
+          slot: dataColumnSidecar.signedBlockHeader.message.slot,
+          columnIdx: dataColumnSidecar.index,
+        });
+      }
+
+      blockCache.cachedData?.dataColumnsCache.set(dataColumnSidecar.index, {
+        dataColumn: dataColumnSidecar,
+        // easily splice out the unsigned message as blob is a fixed length type
+        dataColumnBytes: dataColumnBytes?.slice(0, dataColumnBytes.length) ?? null,
+      });
+    } else {
+      // somehow helps resolve typescript that all types have been exausted
+      throw Error("Invalid gossipedInput type");
     }
 
     if (!this.blockInputCache.has(blockHex)) {
       this.blockInputCache.set(blockHex, blockCache);
+      callInNextEventLoop(() => {
+        getDataColumnsFromExecution(config, this.custodyConfig, this.executionEngine, this.emitter, blockCache, metrics)
+          .then((_success) => {
+            // TODO: (@matthewkeil) add metrics collection point here
+          })
+          .catch((error) => {
+            this.logger.warn("Error getting data columns from execution", {blockHex}, error);
+          });
+      });
     }
 
     const {block: signedBlock, blockInputPromise, resolveBlockInput, cachedData} = blockCache;
@@ -112,65 +238,252 @@ export class SeenGossipBlockInput {
       if (cachedData === undefined || !isForkPostDeneb(cachedData.fork)) {
         throw Error("Missing or Invalid fork cached Data for post-deneb block");
       }
-      const {blobsCache, resolveAvailability} = cachedData;
 
-      // block is available, check if all blobs have shown up
-      const {slot, body} = signedBlock.message;
-      const {blobKzgCommitments} = body as deneb.BeaconBlockBody;
-      const blockInfo = `blockHex=${blockHex}, slot=${slot}`;
+      if (cachedData.fork === ForkName.deneb || cachedData.fork === ForkName.electra) {
+        const {blobsCache, resolveAvailability} = cachedData;
 
-      if (blobKzgCommitments.length < blobsCache.size) {
-        throw Error(
-          `Received more blobs=${blobsCache.size} than commitments=${blobKzgCommitments.length} for ${blockInfo}`
-        );
-      }
+        // block is available, check if all blobs have shown up
+        const {slot, body} = signedBlock.message;
+        const {blobKzgCommitments} = body as deneb.BeaconBlockBody;
+        const blockInfo = `blockHex=${blockHex}, slot=${slot}`;
 
-      if (blobKzgCommitments.length === blobsCache.size) {
-        const allBlobs = getBlockInputBlobs(blobsCache);
-        const blockData = {...allBlobs, blobsSource: BlobsSource.gossip, fork: cachedData.fork};
-        resolveAvailability(blockData);
-        metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.GOSSIP});
-        const blockInput = getBlockInput.availableData(config, signedBlock, BlockSource.gossip, blockData);
+        if (blobKzgCommitments.length < blobsCache.size) {
+          throw Error(
+            `Received more blobs=${blobsCache.size} than commitments=${blobKzgCommitments.length} for ${blockInfo}`
+          );
+        }
+
+        if (blobKzgCommitments.length === blobsCache.size) {
+          const allBlobs = getBlockInputBlobs(blobsCache);
+          const {blobs} = allBlobs;
+          const blockData = {
+            fork: cachedData.fork,
+            ...allBlobs,
+            blobsSource: BlobsSource.gossip,
+          };
+          resolveAvailability(blockData);
+          metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.GOSSIP});
+
+          const blockInput = getBlockInput.availableData(config, signedBlock, BlockSource.gossip, blockData);
+
+          resolveBlockInput(blockInput);
+          return {
+            blockInput,
+            blockInputMeta: {pending: null, haveBlobs: blobs.length, expectedBlobs: blobKzgCommitments.length},
+          };
+        }
+
+        const blockInput = getBlockInput.dataPromise(config, signedBlock, BlockSource.gossip, cachedData);
 
         resolveBlockInput(blockInput);
         return {
           blockInput,
-          blockInputMeta: {pending: null, haveBlobs: allBlobs.blobs.length, expectedBlobs: blobKzgCommitments.length},
+          blockInputMeta: {
+            pending: GossipedInputType.blob,
+            haveBlobs: blobsCache.size,
+            expectedBlobs: blobKzgCommitments.length,
+          },
         };
       }
 
-      const blockInput = getBlockInput.dataPromise(config, signedBlock, BlockSource.gossip, cachedData);
+      if (cachedData.fork === ForkName.fulu) {
+        const {dataColumnsCache, resolveAvailability, calledRecover} = cachedData as CachedDataColumns;
 
-      resolveBlockInput(blockInput);
-      return {
-        blockInput,
-        blockInputMeta: {
-          pending: GossipedInputType.blob,
-          haveBlobs: blobsCache.size,
-          expectedBlobs: blobKzgCommitments.length,
-        },
-      };
+        // block is available, check if all blobs have shown up
+        const {slot} = signedBlock.message;
+        const blockInfo = `blockHex=${blockHex}, slot=${slot}`;
+
+        if (NUMBER_OF_COLUMNS < dataColumnsCache.size) {
+          throw Error(
+            `Received more dataColumns=${dataColumnsCache.size} than columns=${NUMBER_OF_COLUMNS} for ${blockInfo}`
+          );
+        }
+
+        // get the custody columns and see if we have got all the requisite columns
+        const blobKzgCommitmentsLen = (signedBlock.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length;
+        if (blobKzgCommitmentsLen === 0) {
+          const blockData: BlockInputDataColumns = {
+            fork: cachedData.fork,
+            dataColumns: [],
+            dataColumnsBytes: [],
+            dataColumnsSource: DataColumnsSource.gossip,
+          };
+          resolveAvailability(blockData);
+          metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.GOSSIP});
+
+          const blockInput = getBlockInput.availableData(config, signedBlock, BlockSource.gossip, blockData);
+
+          resolveBlockInput(blockInput);
+          return {
+            blockInput,
+            blockInputMeta: {pending: null, haveColumns: 0, expectedColumns: 0},
+          };
+        }
+
+        const resolveAvailabilityAndBlockInput = (source: BlockInputAvailabilitySource) => {
+          const allDataColumns = getBlockInputDataColumns(dataColumnsCache, this.custodyConfig.sampledColumns);
+          const blockData: BlockInputDataColumns = {
+            fork: cachedData.fork,
+            ...allDataColumns,
+            dataColumnsSource: DataColumnsSource.gossip,
+          };
+          resolveAvailability(blockData);
+          // TODO(das): should not use syncUnknownBlock metrics here
+          metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source});
+          metrics?.dataColumns.bySource.inc({source: DataColumnsSource.gossip});
+
+          const blockInput = getBlockInput.availableData(config, signedBlock, BlockSource.gossip, blockData);
+          resolveBlockInput(blockInput);
+          return blockInput;
+        };
+
+        const columnCount = dataColumnsCache.size;
+        if (
+          // only try to recover all columns with "--supernode"
+          this.custodyConfig.sampledColumns.length === NUMBER_OF_COLUMNS &&
+          columnCount >= NUMBER_OF_COLUMNS / 2 &&
+          columnCount < NUMBER_OF_COLUMNS &&
+          !calledRecover &&
+          // doing recover right away is not efficient because it may delay data_column_sidecar validation
+          this.clock.secFromSlot(slot) * 1000 >= BLOCK_AVAILABILITY_CUTOFF_MS
+        ) {
+          // should call once per slot
+          cachedData.calledRecover = true;
+          callInNextEventLoop(async () => {
+            const logCtx = {
+              blockHex,
+              slot,
+              dataColumns: dataColumnsCache.size,
+            };
+            const recoverResult = await recoverDataColumnSidecars(dataColumnsCache, this.clock, metrics).catch((e) => {
+              this.logger.error("Error recovering data column sidecars", logCtx, e);
+              return RecoverResult.Failed;
+            });
+            metrics?.recoverDataColumnSidecars.reconstructionResult.inc({result: recoverResult});
+            switch (recoverResult) {
+              case RecoverResult.SuccessResolved: {
+                resolveAvailabilityAndBlockInput(BlockInputAvailabilitySource.RECOVERED);
+                // Publish columns if and only if subscribed to them
+                const sampledColumns = this.custodyConfig.sampledColumns.map((columnIndex) => {
+                  const dataColumn = dataColumnsCache.get(columnIndex)?.dataColumn;
+                  if (!dataColumn) {
+                    throw Error(`After recover, missing data column for index=${columnIndex} in cache`);
+                  }
+                  return dataColumn;
+                });
+
+                // for columns that we already seen, it will be ignored through `ignoreDuplicatePublishError` gossip option
+                this.emitter.emit(ChainEvent.publishDataColumns, sampledColumns);
+                this.logger.verbose("Recovered data column sidecars and resolved availability", logCtx);
+                break;
+              }
+              case RecoverResult.SuccessLate:
+                this.logger.verbose("Recovered data column sidecars but it's late to resolve availability", logCtx);
+                break;
+              case RecoverResult.Failed:
+                this.logger.verbose("Failed to recover data column sidecars", logCtx);
+                break;
+              case RecoverResult.NotAttemptedFull:
+                this.logger.verbose("Did not attempt because we have full column sidecars", logCtx);
+                break;
+              case RecoverResult.NotAttemptedLessThanHalf:
+                this.logger.verbose("Did not attempt because we have too few column sidecars", logCtx);
+                break;
+              default:
+                break;
+            }
+          });
+        }
+        if (hasSampledDataColumns(this.custodyConfig, dataColumnsCache)) {
+          const blockInput = resolveAvailabilityAndBlockInput(BlockInputAvailabilitySource.GOSSIP);
+          const allDataColumns = getBlockInputDataColumns(dataColumnsCache, this.custodyConfig.sampledColumns);
+          const {dataColumns} = allDataColumns;
+          return {
+            blockInput,
+            blockInputMeta: {
+              pending: null,
+              haveColumns: dataColumns.length,
+              expectedColumns: this.custodyConfig.sampledColumns.length,
+            },
+          };
+        }
+
+        const blockInput = getBlockInput.dataPromise(config, signedBlock, BlockSource.gossip, cachedData);
+
+        resolveBlockInput(blockInput);
+        return {
+          blockInput,
+          blockInputMeta: {
+            pending: GossipedInputType.dataColumn,
+            haveColumns: dataColumnsCache.size,
+            expectedColumns: this.custodyConfig.sampledColumns.length,
+          },
+        };
+      }
+
+      throw Error(`Invalid fork=${fork}`);
     }
 
     // will need to wait for the block to showup
     if (cachedData === undefined) {
       throw Error("Missing cachedData for deneb+ blobs");
     }
-    const {blobsCache} = cachedData;
 
-    return {
-      blockInput: {
-        block: null,
-        blockRootHex: blockHex,
-        cachedData,
-        blockInputPromise,
-      },
-      blockInputMeta: {pending: GossipedInputType.block, haveBlobs: blobsCache.size, expectedBlobs: null},
-    };
+    if (cachedData.fork === ForkName.deneb || cachedData.fork === ForkName.electra) {
+      const {blobsCache} = cachedData;
+
+      return {
+        blockInput: {
+          block: null,
+          blockRootHex: blockHex,
+          cachedData,
+          blockInputPromise,
+        },
+        blockInputMeta: {pending: GossipedInputType.block, haveBlobs: blobsCache.size, expectedBlobs: null},
+      };
+    }
+
+    if (fork === ForkName.fulu) {
+      const {dataColumnsCache} = cachedData as CachedDataColumns;
+
+      return {
+        blockInput: {
+          block: null,
+          blockRootHex: blockHex,
+          cachedData,
+          blockInputPromise,
+        },
+        blockInputMeta: {pending: GossipedInputType.block, haveColumns: dataColumnsCache.size, expectedColumns: null},
+      };
+    }
+
+    throw Error(`invalid fork=${fork} data not implemented`);
+
+    /**
+     * TODO: @matthewkeil this code was unreachable.  Commented to remove lint error but need to verify the condition
+     * again to make sure this is not necessary before deleting it
+     *
+     * DO NOT DELETE until verified can be removed
+     */
+    // will need to wait for the block to showup
+    // if (cachedData === undefined) {
+    //   throw Error("Missing cachedData for deneb+ blobs");
+    // }
+    // const {blobsCache} = cachedData as CachedBlobs;
+
+    // return {
+    //   blockInput: {
+    //     block: null,
+    //     blockRootHex: blockHex,
+    //     cachedData: cachedData as CachedData,
+    //     blockInputPromise,
+    //   },
+    //   blockInputMeta: {pending: GossipedInputType.block, haveBlobs: blobsCache.size, expectedBlobs: null},
+    // };
   }
 }
 
-function getEmptyBlockInputCacheEntry(fork: ForkName): BlockInputCacheType {
+export function getEmptyBlockInputCacheEntry(fork: ForkName, globalCacheId: number): BlockInputCacheType {
   // Capture both the promise and its callbacks for blockInput and final availability
   // It is not spec'ed but in tests in Firefox and NodeJS the promise constructor is run immediately
   let resolveBlockInput: ((block: BlockInput) => void) | null = null;
@@ -184,16 +497,48 @@ function getEmptyBlockInputCacheEntry(fork: ForkName): BlockInputCacheType {
     return {fork, blockInputPromise, resolveBlockInput};
   }
 
-  let resolveAvailability: ((blobs: BlockInputDataBlobs) => void) | null = null;
-  const availabilityPromise = new Promise<BlockInputDataBlobs>((resolveCB) => {
-    resolveAvailability = resolveCB;
-  });
+  if (fork === ForkName.deneb || fork === ForkName.electra) {
+    let resolveAvailability: ((blobs: BlockInputBlobs) => void) | null = null;
+    const availabilityPromise = new Promise<BlockInputBlobs>((resolveCB) => {
+      resolveAvailability = resolveCB;
+    });
 
-  if (resolveAvailability === null) {
-    throw Error("Promise Constructor was not executed immediately");
+    if (resolveAvailability === null) {
+      throw Error("Promise Constructor was not executed immediately");
+    }
+
+    const blobsCache = new Map();
+    const cachedData: CachedData = {
+      fork,
+      blobsCache,
+      availabilityPromise,
+      resolveAvailability,
+      cacheId: ++globalCacheId,
+    };
+    return {fork, blockInputPromise, resolveBlockInput, cachedData};
   }
 
-  const blobsCache = new Map();
-  const cachedData: CachedData = {fork, blobsCache, availabilityPromise, resolveAvailability};
-  return {fork, blockInputPromise, resolveBlockInput, cachedData};
+  if (fork === ForkName.fulu) {
+    let resolveAvailability: ((blobs: BlockInputDataColumns) => void) | null = null;
+    const availabilityPromise = new Promise<BlockInputDataColumns>((resolveCB) => {
+      resolveAvailability = resolveCB;
+    });
+
+    if (resolveAvailability === null) {
+      throw Error("Promise Constructor was not executed immediately");
+    }
+
+    const dataColumnsCache = new Map();
+    const cachedData: CachedData = {
+      fork,
+      dataColumnsCache,
+      availabilityPromise,
+      resolveAvailability,
+      cacheId: ++globalCacheId,
+      calledRecover: false,
+    };
+    return {fork, blockInputPromise, resolveBlockInput, cachedData};
+  }
+
+  throw Error(`Invalid fork=${fork} for getEmptyBlockInputCacheEntry`);
 }

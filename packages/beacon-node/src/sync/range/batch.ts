@@ -1,8 +1,10 @@
 import {ChainForkConfig} from "@lodestar/config";
+import {ForkSeq} from "@lodestar/params";
 import {Epoch, RootHex, phase0} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 import {BlockInput} from "../../chain/blocks/types.js";
 import {BlockError, BlockErrorCode} from "../../chain/errors/index.js";
+import {PartialDownload} from "../../network/reqresp/beaconBlocksMaybeBlobsByRange.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {MAX_BATCH_DOWNLOAD_ATTEMPTS, MAX_BATCH_PROCESSING_ATTEMPTS} from "../constants.js";
 import {getBatchSlotRange, hashBlocks} from "./utils/index.js";
@@ -37,8 +39,8 @@ export type Attempt = {
 };
 
 export type BatchState =
-  | {status: BatchStatus.AwaitingDownload}
-  | {status: BatchStatus.Downloading; peer: PeerIdStr}
+  | {status: BatchStatus.AwaitingDownload; partialDownload: PartialDownload}
+  | {status: BatchStatus.Downloading; peer: PeerIdStr; partialDownload: PartialDownload}
   | {status: BatchStatus.AwaitingProcessing; peer: PeerIdStr; blocks: BlockInput[]}
   | {status: BatchStatus.Processing; attempt: Attempt}
   | {status: BatchStatus.AwaitingValidation; attempt: Attempt};
@@ -47,6 +49,16 @@ export type BatchMetadata = {
   startEpoch: Epoch;
   status: BatchStatus;
 };
+
+export type DownloadSuccessOutput =
+  | {
+      status: BatchStatus.AwaitingProcessing;
+      blocks: BlockInput[];
+    }
+  | {
+      status: BatchStatus.AwaitingDownload;
+      pendingDataColumns: number[];
+    };
 
 /**
  * Batches are downloaded at the first block of the epoch.
@@ -62,7 +74,7 @@ export type BatchMetadata = {
 export class Batch {
   readonly startEpoch: Epoch;
   /** State of the batch. */
-  state: BatchState = {status: BatchStatus.AwaitingDownload};
+  state: BatchState = {status: BatchStatus.AwaitingDownload, partialDownload: null};
   /** BeaconBlocksByRangeRequest */
   readonly request: phase0.BeaconBlocksByRangeRequest;
   /** The `Attempts` that have been made and failed to send us this batch. */
@@ -99,23 +111,54 @@ export class Batch {
   /**
    * AwaitingDownload -> Downloading
    */
-  startDownloading(peer: PeerIdStr): void {
+  startDownloading(peer: PeerIdStr): PartialDownload {
     if (this.state.status !== BatchStatus.AwaitingDownload) {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.AwaitingDownload));
     }
 
-    this.state = {status: BatchStatus.Downloading, peer};
+    const {partialDownload} = this.state;
+    this.state = {status: BatchStatus.Downloading, peer, partialDownload};
+    return partialDownload;
   }
 
   /**
    * Downloading -> AwaitingProcessing
+   * pendingDataColumns is null when a complete download is done, otherwise it contains the columns that are still pending
    */
-  downloadingSuccess(blocks: BlockInput[]): void {
+  downloadingSuccess(downloadResult: {
+    blocks: BlockInput[];
+    pendingDataColumns: null | number[];
+  }): DownloadSuccessOutput {
     if (this.state.status !== BatchStatus.Downloading) {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.Downloading));
     }
+    let updatedPendingDataColumns = this.state.partialDownload?.pendingDataColumns ?? null;
 
-    this.state = {status: BatchStatus.AwaitingProcessing, peer: this.state.peer, blocks};
+    const {blocks, pendingDataColumns} = downloadResult;
+    if (updatedPendingDataColumns == null) {
+      // state pendingDataColumns is null as initial value, just update it to pendingDataColumns in this case
+      updatedPendingDataColumns = pendingDataColumns;
+    } else {
+      updatedPendingDataColumns =
+        // pendingDataColumns = null means a complete download
+        pendingDataColumns == null
+          ? null
+          : // if not state pendingDataColumns should be reduced over time, see see https://github.com/ChainSafe/lodestar/issues/8036
+            updatedPendingDataColumns.filter((column) => pendingDataColumns.includes(column));
+    }
+
+    if (updatedPendingDataColumns === null) {
+      // complete download
+      this.state = {status: BatchStatus.AwaitingProcessing, peer: this.state.peer, blocks};
+      return {status: BatchStatus.AwaitingProcessing, blocks};
+    }
+
+    // partial download, track updatedPendingDataColumns in state
+    this.state = {
+      status: BatchStatus.AwaitingDownload,
+      partialDownload: blocks.length === 0 ? null : {blocks, pendingDataColumns: updatedPendingDataColumns},
+    };
+    return {status: BatchStatus.AwaitingDownload, pendingDataColumns: updatedPendingDataColumns};
   }
 
   /**
@@ -131,7 +174,8 @@ export class Batch {
       throw new BatchError(this.errorType({code: BatchErrorCode.MAX_DOWNLOAD_ATTEMPTS}));
     }
 
-    this.state = {status: BatchStatus.AwaitingDownload};
+    const {partialDownload} = this.state;
+    this.state = {status: BatchStatus.AwaitingDownload, partialDownload};
   }
 
   /**
@@ -199,13 +243,17 @@ export class Batch {
     return this.state.attempt;
   }
 
+  isPostFulu(): boolean {
+    return this.config.getForkSeq(this.request.startSlot) >= ForkSeq.fulu;
+  }
+
   private onExecutionEngineError(attempt: Attempt): void {
     this.executionErrorAttempts.push(attempt);
     if (this.executionErrorAttempts.length > MAX_BATCH_PROCESSING_ATTEMPTS) {
       throw new BatchError(this.errorType({code: BatchErrorCode.MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS}));
     }
 
-    this.state = {status: BatchStatus.AwaitingDownload};
+    this.state = {status: BatchStatus.AwaitingDownload, partialDownload: null};
   }
 
   private onProcessingError(attempt: Attempt): void {
@@ -214,7 +262,7 @@ export class Batch {
       throw new BatchError(this.errorType({code: BatchErrorCode.MAX_PROCESSING_ATTEMPTS}));
     }
 
-    this.state = {status: BatchStatus.AwaitingDownload};
+    this.state = {status: BatchStatus.AwaitingDownload, partialDownload: null};
   }
 
   /** Helper to construct typed BatchError. Stack traces are correct as the error is thrown above */

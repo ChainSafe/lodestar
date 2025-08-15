@@ -1,8 +1,9 @@
 import {PeerId} from "@libp2p/interface";
-import {MapDef, pruneSetToMax} from "@lodestar/utils";
+import {Logger, MapDef, pruneSetToMax} from "@lodestar/utils";
 import {GoodByeReasonCode} from "../../../constants/network.js";
 import {PeerIdStr} from "../../../util/peerId.js";
 import {NetworkCoreMetrics} from "../../core/metrics.js";
+import {prettyPrintPeerId} from "../../util.js";
 import {DEFAULT_SCORE, MAX_ENTRIES, MAX_SCORE, MIN_SCORE, SCORE_THRESHOLD} from "./constants.js";
 import {IPeerRpcScoreStore, IPeerScore, PeerAction, PeerRpcScoreOpts, PeerScoreStats, ScoreState} from "./interface.js";
 import {MaxScore, RealScore} from "./score.js";
@@ -24,11 +25,13 @@ const peerActionScore: Record<PeerAction, number> = {
 export class PeerRpcScoreStore implements IPeerRpcScoreStore {
   private readonly scores: MapDef<PeerIdStr, IPeerScore>;
   private readonly metrics: NetworkCoreMetrics | null;
+  private readonly logger: Logger | null;
 
   // TODO: Persist scores, at least BANNED status to disk
 
-  constructor(opts: PeerRpcScoreOpts = {}, metrics: NetworkCoreMetrics | null = null) {
+  constructor(opts: PeerRpcScoreOpts = {}, metrics: NetworkCoreMetrics | null = null, logger: Logger | null = null) {
     this.metrics = metrics;
+    this.logger = logger;
     this.scores = opts.disablePeerScoring ? new MapDef(() => new MaxScore()) : new MapDef(() => new RealScore());
   }
 
@@ -54,8 +57,10 @@ export class PeerRpcScoreStore implements IPeerRpcScoreStore {
 
   applyAction(peer: PeerId, action: PeerAction, actionName: string): void {
     const peerScore = this.scores.getOrDefault(peer.toString());
-    peerScore.add(peerActionScore[action]);
+    const scoreChange = peerActionScore[action];
+    const newScore = peerScore.add(scoreChange);
 
+    this.logger?.debug("peer score adjusted", {scoreChange, newScore, peerId: prettyPrintPeerId(peer), actionName});
     this.metrics?.peersReportPeerCount.inc({reason: actionName});
   }
 

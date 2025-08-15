@@ -1,5 +1,8 @@
 import {noise} from "@chainsafe/libp2p-noise";
+import {generateKeyPair} from "@libp2p/crypto/keys";
+import {PrivateKey} from "@libp2p/interface";
 import {mplex} from "@libp2p/mplex";
+import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {tcp} from "@libp2p/tcp";
 import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
@@ -18,9 +21,12 @@ import {
   ReqRespBeaconNodeModules,
 } from "../../../src/network/index.js";
 import {MetadataController} from "../../../src/network/metadata.js";
+import {NetworkConfig} from "../../../src/network/networkConfig.js";
 import {PeersData} from "../../../src/network/peers/peersData.js";
 import {GetReqRespHandlerFn} from "../../../src/network/reqresp/types.js";
 import {LocalStatusCache} from "../../../src/network/statusCache.js";
+import {computeNodeId} from "../../../src/network/subnets/index.js";
+import {CustodyConfig} from "../../../src/util/dataColumns.js";
 import {testLogger} from "../../utils/logger.js";
 
 describe("reqresp encoder", () => {
@@ -34,9 +40,10 @@ describe("reqresp encoder", () => {
     }
   });
 
-  async function getLibp2p() {
+  async function getLibp2p(privateKey?: PrivateKey) {
     const listen = `/ip4/127.0.0.1/tcp/${port++}`;
     const libp2p = await createLibp2p({
+      privateKey,
       transports: [tcp()],
       streamMuxers: [mplex()],
       connectionEncrypters: [noise()],
@@ -49,7 +56,8 @@ describe("reqresp encoder", () => {
   }
 
   async function getReqResp(getHandler?: GetReqRespHandlerFn) {
-    const {libp2p, multiaddr} = await getLibp2p();
+    const privateKey = await generateKeyPair("secp256k1");
+    const {libp2p, multiaddr} = await getLibp2p(privateKey);
 
     const getHandlerNoop: GetReqRespHandlerFn = () =>
       // biome-ignore lint/correctness/useYield: No need for yield in test context
@@ -58,6 +66,16 @@ describe("reqresp encoder", () => {
       };
 
     const config = createBeaconConfig({}, ZERO_HASH);
+    const peerId = peerIdFromPrivateKey(privateKey);
+    const nodeId = computeNodeId(peerId);
+    const networkConfig: NetworkConfig = {
+      nodeId,
+      config,
+      custodyConfig: new CustodyConfig({
+        nodeId,
+        config,
+      }),
+    };
     const logger = testLogger();
     const modules: ReqRespBeaconNodeModules = {
       libp2p,
@@ -66,7 +84,7 @@ describe("reqresp encoder", () => {
       config,
       metrics: null,
       getHandler: getHandler ?? getHandlerNoop,
-      metadata: new MetadataController({}, {config, logger, onSetValue: () => null}),
+      metadata: new MetadataController({}, {networkConfig, logger, onSetValue: () => null}),
       peerRpcScores: new PeerRpcScoreStore(),
       events: new NetworkEventBus(),
       statusCache: new LocalStatusCache(ssz.phase0.Status.defaultValue()),
@@ -108,7 +126,8 @@ describe("reqresp encoder", () => {
     reqresp["metadataController"].attnets.set(8, true);
     reqresp["metadataController"].syncnets.set(1, true);
 
-    const {libp2p: dialer} = await getLibp2p();
+    const privateKey = await generateKeyPair("secp256k1");
+    const {libp2p: dialer} = await getLibp2p(privateKey);
     await dialProtocol({
       dialer,
       toMultiaddr: serverMultiaddr,

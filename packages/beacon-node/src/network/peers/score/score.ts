@@ -44,12 +44,13 @@ export class RealScore implements IPeerScore {
     return this.gossipScore;
   }
 
-  add(scoreDelta: number): void {
+  add(scoreDelta: number): number {
     let newScore = this.lodestarScore + scoreDelta;
     if (newScore > MAX_SCORE) newScore = MAX_SCORE;
     if (newScore < MIN_SCORE) newScore = MIN_SCORE;
 
     this.setLodestarScore(newScore);
+    return newScore;
   }
 
   applyReconnectionCoolDown(reason: GoodByeReasonCode): number {
@@ -173,7 +174,9 @@ export class MaxScore implements IPeerScore {
     return false;
   }
 
-  add(): void {}
+  add(): number {
+    return DEFAULT_SCORE;
+  }
 
   update(): number {
     return MAX_SCORE;

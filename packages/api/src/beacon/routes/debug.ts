@@ -1,6 +1,6 @@
 import {ContainerType, Type, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {BeaconState, StringType, ssz} from "@lodestar/types";
+import {BeaconState, StringType, fulu, ssz} from "@lodestar/types";
 import {
   ArrayOf,
   EmptyArgs,
@@ -17,6 +17,7 @@ import {
 import {Schema} from "../../utils/schema.js";
 import {Endpoint, RouteDefinitions} from "../../utils/types.js";
 import {WireFormat} from "../../utils/wireFormat.js";
+import {BlockArgs} from "./beacon/block.js";
 import {StateArgs} from "./beacon/state.js";
 
 const stringType = new StringType();
@@ -133,6 +134,25 @@ export type Endpoints = {
     BeaconState,
     ExecutionOptimisticFinalizedAndVersionMeta
   >;
+
+  /**
+   * Get data column sidecars
+   * Retrieves data column sidecars for a given block id.
+   */
+  getDebugDataColumnSidecars: Endpoint<
+    "GET",
+    BlockArgs & {
+      /**
+       * Array of indices for data column sidecars to request for in the specified block.
+       * This endpoint will only return columns that the node is actually custodying.
+       * If not specified, returns all data column sidecars that this node is custodying in the block.
+       */
+      indices?: number[];
+    },
+    {params: {block_id: string}; query: {indices?: number[]}},
+    fulu.DataColumnSidecars,
+    ExecutionOptimisticFinalizedAndVersionMeta
+  >;
 };
 
 export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpoints> {
@@ -192,6 +212,19 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       init: {
         // Default timeout is not sufficient to download state as JSON
         timeoutMs: 5 * 60 * 1000,
+      },
+    },
+    getDebugDataColumnSidecars: {
+      url: "/eth/v1/debug/beacon/data_column_sidecars/{block_id}",
+      method: "GET",
+      req: {
+        writeReq: ({blockId, indices}) => ({params: {block_id: blockId.toString()}, query: {indices}}),
+        parseReq: ({params, query}) => ({blockId: params.block_id, indices: query.indices}),
+        schema: {params: {block_id: Schema.StringRequired}, query: {indices: Schema.UintArray}},
+      },
+      resp: {
+        data: ssz.fulu.DataColumnSidecars,
+        meta: ExecutionOptimisticFinalizedAndVersionCodec,
       },
     },
   };

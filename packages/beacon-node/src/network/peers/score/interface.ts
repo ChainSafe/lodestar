@@ -23,7 +23,7 @@ export interface IPeerScore {
   getScore(): number;
   getGossipScore(): number;
   isCoolingDown(): boolean;
-  add(scoreDelta: number): void;
+  add(scoreDelta: number): number;
   update(): number;
   updateGossipsubScore(newScore: number, ignore: boolean): void;
   getStat(): PeerScoreStat;

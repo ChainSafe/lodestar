@@ -1,5 +1,6 @@
 import {afterAll, beforeAll, bench, describe} from "@chainsafe/benchmark";
 import {fromHexString} from "@chainsafe/ssz";
+import {generateKeyPair} from "@libp2p/crypto/keys";
 import {config} from "@lodestar/config/default";
 import {LevelDbController} from "@lodestar/db";
 import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@lodestar/params";
@@ -39,6 +40,7 @@ describe("produceBlockBody", () => {
         archiveMode: ArchiveMode.Frequency,
       },
       {
+        privateKey: await generateKeyPair("secp256k1"),
         config: state.config,
         db,
         dataDir: ".",

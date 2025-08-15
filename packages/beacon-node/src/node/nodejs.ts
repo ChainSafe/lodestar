@@ -208,6 +208,7 @@ export class BeaconNode {
       : null;
 
     const chain = new BeaconChain(opts.chain, {
+      privateKey,
       config,
       clock,
       dataDir,
