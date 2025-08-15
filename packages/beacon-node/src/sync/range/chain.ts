@@ -447,15 +447,13 @@ export class SyncChain {
       peer: prettyPrintPeerIdStr(peer.peerId),
     });
     try {
-      const partialDownload = batch.startDownloading(peer.peerId);
+      const requests = batch.startDownloading(peer.peerId);
 
       // wrapError ensures to never call both batch success() and batch error()
-      const res = await wrapError(
-        this.downloadBeaconBlocksByRange(peer, batch.request, partialDownload, this.syncType)
-      );
+      const res = await wrapError(this.downloadBeaconBlocksByRange(peer, requests, partialDownload, this.syncType));
 
       if (!res.err) {
-        const downloadSuccessOutput = batch.downloadingSuccess(res.result);
+        const downloadSuccessOutput = batch.downloadingSuccess(peer.peerId, res.result.blocks);
         if (downloadSuccessOutput.status === BatchStatus.AwaitingProcessing) {
           const blocks = downloadSuccessOutput.blocks;
           let hasPostDenebBlocks = false;
@@ -491,11 +489,9 @@ export class SyncChain {
           });
           this.triggerBatchProcessor();
         } else {
-          const pendingDataColumns = downloadSuccessOutput.pendingDataColumns.join(",");
           this.logger.debug("Partially downloaded batch", {
             id: this.logId,
             ...batch.getMetadata(),
-            pendingDataColumns,
             peer: peer.peerId,
           });
           // the flow will continue to call triggerBatchDownloader() below
@@ -506,7 +502,7 @@ export class SyncChain {
           {id: this.logId, ...batch.getMetadata(), peer: prettyPrintPeerIdStr(peer.peerId)},
           res.err
         );
-        batch.downloadingError(); // Throws after MAX_DOWNLOAD_ATTEMPTS
+        batch.downloadingError(peer.peerId); // Throws after MAX_DOWNLOAD_ATTEMPTS
       }
 
       // Preemptively request more blocks from peers whilst we process current blocks
@@ -583,12 +579,14 @@ export class SyncChain {
         const attemptOk = batch.validationSuccess();
         for (const attempt of batch.failedProcessingAttempts) {
           if (attempt.hash !== attemptOk.hash) {
-            if (attemptOk.peer === attempt.peer.toString()) {
-              // The same peer corrected its previous attempt
-              this.reportPeer(attempt.peer, PeerAction.MidToleranceError, "SyncChainInvalidBatchSelf");
-            } else {
-              // A different peer sent an bad batch
-              this.reportPeer(attempt.peer, PeerAction.LowToleranceError, "SyncChainInvalidBatchOther");
+            for (const badAttemptPeer of attempt.peers) {
+              if (attemptOk.peers.find((goodPeer) => goodPeer === badAttemptPeer)) {
+                // The same peer corrected its previous attempt
+                this.reportPeer(badAttemptPeer, PeerAction.MidToleranceError, "SyncChainInvalidBatchSelf");
+              } else {
+                // A different peer sent an bad batch
+                this.reportPeer(badAttemptPeer, PeerAction.LowToleranceError, "SyncChainInvalidBatchOther");
+              }
             }
           }
         }
