@@ -134,7 +134,7 @@ export class UnknownBlockSync {
 
   /**
    * When a blockInput comes with  an unknown parent:
-   * - add the block to pendingBlocks with status downloaded, blockRootHex as key. This is similar to
+   * - add the block to pendingBlocks with status downloaded or pending blockRootHex as key. This is similar to
    * an `onUnknownBlock` event, but the blocks is downloaded.
    * - add the parent root to pendingBlocks with status pending, parentBlockRootHex as key. This is
    * the same to an `onUnknownBlock` event with parentBlockRootHex as root.
@@ -148,14 +148,26 @@ export class UnknownBlockSync {
     // add 1 pending block with status downloaded
     let pendingBlock = this.pendingBlocks.get(blockRootHex);
     if (!pendingBlock) {
-      pendingBlock = {
-        blockRootHex,
-        parentBlockRootHex,
-        blockInput,
-        peerIdStrs: new Set(),
-        status: PendingBlockStatus.downloaded,
-        downloadAttempts: 0,
-      };
+      pendingBlock =
+        blockInput.type === BlockInputType.dataPromise
+          ? {
+              unknownBlockType: PendingBlockType.UNKNOWN_DATA,
+              blockRootHex,
+              // this will be set after we download block
+              parentBlockRootHex: null,
+              blockInput,
+              peerIdStrs: new Set(),
+              status: PendingBlockStatus.pending,
+              downloadAttempts: 0,
+            }
+          : {
+              blockRootHex,
+              parentBlockRootHex,
+              blockInput,
+              peerIdStrs: new Set(),
+              status: PendingBlockStatus.downloaded,
+              downloadAttempts: 0,
+            };
       this.pendingBlocks.set(blockRootHex, pendingBlock);
       this.logger.verbose("Added unknown block parent to pendingBlocks", {
         root: blockRootHex,
@@ -197,6 +209,7 @@ export class UnknownBlockSync {
       pendingBlock = {
         unknownBlockType,
         blockRootHex,
+        // this will be set after we download block
         parentBlockRootHex: null,
         blockInput,
         peerIdStrs: new Set(),
