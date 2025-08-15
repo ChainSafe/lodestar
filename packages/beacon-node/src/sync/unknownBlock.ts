@@ -446,9 +446,21 @@ export class UnknownBlockSync {
   /**
    * Send block to the processor awaiting completition. If processed successfully, send all children to the processor.
    * On error, remove and downscore all descendants.
+   * This function could run recursively for all descendant blocks
    */
   private async processBlock(pendingBlock: PendingBlock): Promise<void> {
+    // pending block status is `downloaded` right after `downloadBlock`
+    // but could be `pending` if added by `onUnknownBlockParent` event and this function is called recursively
     if (pendingBlock.status !== PendingBlockStatus.downloaded) {
+      if (pendingBlock.status === PendingBlockStatus.pending) {
+        const connectedPeers = this.network.getConnectedPeers();
+        if (connectedPeers.length === 0) {
+          this.logger.debug("No connected peers, skipping download block", {blockRoot: pendingBlock.blockRootHex});
+          return;
+        }
+        // if the download is a success we'll call `processBlock()` for this block
+        await this.downloadBlock(pendingBlock, connectedPeers);
+      }
       return;
     }
 
