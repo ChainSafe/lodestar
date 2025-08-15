@@ -28,7 +28,7 @@ import {
   sszTypesFor,
 } from "@lodestar/types";
 import {fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
-import {BlockInput} from "../../../../chain/blocks/blockInput/index.js";
+import {BlockInputSource, isBlockInputBlobs, isBlockInputColumns} from "../../../../chain/blocks/blockInput/index.js";
 import {ImportBlockOpts} from "../../../../chain/blocks/types.js";
 import {verifyBlocksInEpoch} from "../../../../chain/blocks/verifyBlock.js";
 import {BeaconChain} from "../../../../chain/chain.js";
@@ -80,10 +80,14 @@ export function getBeaconBlockApi({
     const fork = config.getForkName(slot);
     const blockRoot = toRootHex(chain.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
 
-    let blockForImport: BlockInput, blobSidecars: deneb.BlobSidecars, dataColumnSidecars: fulu.DataColumnSidecars;
+    const blockForImport = chain.seenBlockInputCache.getByBlock({
+      block: signedBlock,
+      source: BlockInputSource.api,
+      seenTimestampSec,
+    });
+    let blobSidecars: deneb.BlobSidecars, dataColumnSidecars: fulu.DataColumnSidecars;
 
     if (isDenebBlockContents(signedBlockContents)) {
-      let blockData: BlockInputAvailableData;
       if (isForkPostFulu(fork)) {
         const timer = metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
         // If the block was produced by this node, we will already have computed cells
@@ -101,30 +105,32 @@ export function getBeaconBlockApi({
           cellsAndProofs
         );
         timer?.();
-        blockData = {
-          fork,
-          dataColumns: dataColumnSidecars,
-          dataColumnsBytes: dataColumnSidecars.map(() => null),
-          dataColumnsSource: DataColumnsSource.api,
-        } as BlockInputDataColumns;
         blobSidecars = [];
       } else if (isForkPostDeneb(fork)) {
         blobSidecars = getBlobSidecars(config, signedBlock, signedBlockContents.blobs, signedBlockContents.kzgProofs);
-        blockData = {
-          fork,
-          blobs: blobSidecars,
-          blobsSource: BlobsSource.api,
-        } as BlockInputBlobs;
         dataColumnSidecars = [];
       } else {
         throw Error(`Invalid data fork=${fork} for publish`);
       }
-
-      blockForImport = getBlockInput.availableData(config, signedBlock, BlockSource.api, blockData);
     } else {
       blobSidecars = [];
       dataColumnSidecars = [];
-      blockForImport = getBlockInput.preData(config, signedBlock, BlockSource.api);
+    }
+
+    if (dataColumnSidecars.length > 0 && isBlockInputColumns(blockForImport)) {
+      for (const dataColumnSidecar of dataColumnSidecars) {
+        blockForImport.addColumn({
+          blockRootHex: blockRoot,
+          columnSidecar: dataColumnSidecar,
+          source: BlockInputSource.api,
+          seenTimestampSec,
+        });
+      }
+    }
+    if (blobSidecars.length > 0 && isBlockInputBlobs(blockForImport)) {
+      for (const blobSidecar of blobSidecars) {
+        blockForImport.addBlob({blockRootHex: blockRoot, blobSidecar, source: BlockInputSource.api, seenTimestampSec});
+      }
     }
 
     // check what validations have been requested before broadcasting and publishing the block
@@ -232,18 +238,16 @@ export function getBeaconBlockApi({
 
     // Simple implementation of a pending block queue. Keeping the block here recycles the API logic, and keeps the
     // REST request promise without any extra infrastructure.
-    const msToBlockSlot =
-      computeTimeAtSlot(config, blockForImport.block.message.slot, chain.genesisTime) * 1000 - Date.now();
+    const msToBlockSlot = computeTimeAtSlot(config, slot, chain.genesisTime) * 1000 - Date.now();
     if (msToBlockSlot <= MAX_API_CLOCK_DISPARITY_MS && msToBlockSlot > 0) {
       // If block is a bit early, hold it in a promise. Equivalent to a pending queue.
       await sleep(msToBlockSlot);
     }
 
     // TODO: Validate block
-    const delaySec =
-      seenTimestampSec - (chain.genesisTime + blockForImport.block.message.slot * config.SECONDS_PER_SLOT);
+    const delaySec = seenTimestampSec - (chain.genesisTime + slot * config.SECONDS_PER_SLOT);
     metrics?.gossipBlock.elapsedTimeTillReceived.observe({source: OpSource.api}, delaySec);
-    chain.validatorMonitor?.registerBeaconBlock(OpSource.api, delaySec, blockForImport.block.message);
+    chain.validatorMonitor?.registerBeaconBlock(OpSource.api, delaySec, signedBlock.message);
 
     chain.logger.info("Publishing block", valLogMeta);
     const publishPromises = [
@@ -302,28 +306,25 @@ export function getBeaconBlockApi({
       chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRoot});
     }
 
-    if (blockForImport.type === BlockInputType.availableData) {
-      if (isForkPostFulu(blockForImport.blockData.fork)) {
-        const {dataColumns} = blockForImport.blockData as BlockInputDataColumns;
-        metrics?.dataColumns.bySource.inc({source: DataColumnsSource.api}, dataColumns.length);
+    if (isBlockInputColumns(blockForImport)) {
+      const dataColumns = blockForImport.getAllColumns();
+      metrics?.dataColumns.bySource.inc({source: BlockInputSource.api}, dataColumns.length);
 
-        if (chain.emitter.listenerCount(routes.events.EventType.dataColumnSidecar)) {
-          for (const dataColumnSidecar of dataColumns) {
-            chain.emitter.emit(routes.events.EventType.dataColumnSidecar, {
-              blockRoot,
-              slot,
-              index: dataColumnSidecar.index,
-              kzgCommitments: dataColumnSidecar.kzgCommitments.map(toHex),
-            });
-          }
+      if (chain.emitter.listenerCount(routes.events.EventType.dataColumnSidecar)) {
+        for (const dataColumnSidecar of dataColumns) {
+          chain.emitter.emit(routes.events.EventType.dataColumnSidecar, {
+            blockRoot,
+            slot,
+            index: dataColumnSidecar.index,
+            kzgCommitments: dataColumnSidecar.kzgCommitments.map(toHex),
+          });
         }
-      } else if (
-        isForkPostDeneb(blockForImport.blockData.fork) &&
-        chain.emitter.listenerCount(routes.events.EventType.blobSidecar)
-      ) {
-        const {blobs} = blockForImport.blockData as BlockInputBlobs;
+      }
+    } else if (isBlockInputBlobs(blockForImport) && chain.emitter.listenerCount(routes.events.EventType.blobSidecar)) {
+      const blobSidecars = blockForImport.getBlobs();
 
-        for (const blobSidecar of blobs) {
+      if (chain.emitter.listenerCount(routes.events.EventType.blobSidecar)) {
+        for (const blobSidecar of blobSidecars) {
           const {index, kzgCommitment} = blobSidecar;
           chain.emitter.emit(routes.events.EventType.blobSidecar, {
             blockRoot,

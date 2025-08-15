@@ -8,6 +8,7 @@ import {Metrics} from "../../metrics/metrics.js";
 import {IClock} from "../../util/clock.js";
 import {CustodyConfig} from "../../util/dataColumns.js";
 import {
+  BlockInput,
   BlockInputBlobs,
   BlockInputColumns,
   BlockInputPreData,
@@ -142,7 +143,7 @@ export class SeenBlockInput {
     this.pruneToMaxSize();
   };
 
-  getByBlock({block, source, seenTimestampSec, peerIdStr}: SourceMeta & {block: SignedBeaconBlock}): IBlockInput {
+  getByBlock({block, source, seenTimestampSec, peerIdStr}: SourceMeta & {block: SignedBeaconBlock}): BlockInput {
     const blockRoot = this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
     const blockRootHex = toRootHex(blockRoot);
 
@@ -201,7 +202,7 @@ export class SeenBlockInput {
       this.metrics?.seenCache.blockInput.duplicateBlockCount.inc({source});
     }
 
-    return blockInput;
+    return blockInput as BlockInput;
   }
 
   getByBlob(
