@@ -1,3 +1,4 @@
+import {ChainConfig} from "@lodestar/config";
 import {
   KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH,
   KZG_COMMITMENTS_SUBTREE_INDEX,
@@ -6,7 +7,6 @@ import {
 import {Root, Slot, SubnetID, deneb, fulu, ssz} from "@lodestar/types";
 import {toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 
-import {ChainConfig} from "@lodestar/config";
 import {computeStartSlotAtEpoch, getBlockHeaderProposerSignatureSet} from "@lodestar/state-transition";
 import {Metrics} from "../../metrics/metrics.js";
 import {byteArrayEquals} from "../../util/bytes.js";
