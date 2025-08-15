@@ -1,4 +1,10 @@
-import {FINALIZED_ROOT_DEPTH_ELECTRA, ForkPostBellatrix, ForkPostDeneb, ForkPostElectra} from "@lodestar/params";
+import {
+  FINALIZED_ROOT_DEPTH_ELECTRA,
+  ForkPostBellatrix,
+  ForkPostDeneb,
+  ForkPostElectra,
+  ForkPreEip7732,
+} from "@lodestar/params";
 import {
   Attestation,
   BeaconBlock,
@@ -27,7 +33,7 @@ export function isExecutionPayload<F extends ForkPostBellatrix>(
   return (payload as ExecutionPayload<F>).transactions !== undefined;
 }
 
-export function isExecutionPayloadHeader<F extends ForkPostBellatrix>(
+export function isExecutionPayloadHeader<F extends ForkPostBellatrix & ForkPreEip7732>(
   payload: ExecutionPayload<F> | ExecutionPayloadHeader<F>
 ): payload is ExecutionPayloadHeader<F> {
   // we just check transactionsRoot for determining as it the base field

@@ -2,6 +2,7 @@ import {routes} from "@lodestar/api";
 import {ApiError, ApplicationMethods} from "@lodestar/api/server";
 import {
   ForkPostBellatrix,
+  ForkPreEip7732,
   NUMBER_OF_COLUMNS,
   SLOTS_PER_HISTORICAL_ROOT,
   isForkPostBellatrix,
@@ -515,7 +516,7 @@ export function getBeaconBlockApi({
       const fork = config.getForkName(block.message.slot);
       return {
         data: isForkPostBellatrix(fork)
-          ? signedBeaconBlockToBlinded(config, block as SignedBeaconBlock<ForkPostBellatrix>)
+          ? signedBeaconBlockToBlinded(config, block as SignedBeaconBlock<ForkPostBellatrix & ForkPreEip7732>)
           : block,
         meta: {
           executionOptimistic,

@@ -6,11 +6,13 @@ import {
   ForkPostDeneb,
   ForkPostElectra,
   ForkPreDeneb,
+  ForkPreEip7732,
 } from "@lodestar/params";
 import {ts as altair} from "./altair/index.js";
 import {ts as bellatrix} from "./bellatrix/index.js";
 import {ts as capella} from "./capella/index.js";
 import {ts as deneb} from "./deneb/index.js";
+import {ts as eip7732} from "./eip7732/index.js";
 import {ts as electra} from "./electra/index.js";
 import {ts as fulu} from "./fulu/index.js";
 import {ts as phase0} from "./phase0/index.js";
@@ -24,6 +26,7 @@ export {ts as capella} from "./capella/index.js";
 export {ts as deneb} from "./deneb/index.js";
 export {ts as electra} from "./electra/index.js";
 export {ts as fulu} from "./fulu/index.js";
+export {ts as eip7732} from "./eip7732/index.js";
 
 /** Common non-spec type to represent roots as strings */
 export type RootHex = string;
@@ -274,6 +277,45 @@ type TypesByFork = {
     SignedAggregateAndProof: electra.SignedAggregateAndProof;
     ExecutionRequests: electra.ExecutionRequests;
   };
+  [ForkName.eip7732]: {
+    BeaconBlockHeader: phase0.BeaconBlockHeader;
+    SignedBeaconBlockHeader: phase0.SignedBeaconBlockHeader;
+    BeaconBlock: eip7732.BeaconBlock;
+    BeaconBlockBody: eip7732.BeaconBlockBody;
+    BeaconState: eip7732.BeaconState;
+    SignedBeaconBlock: eip7732.SignedBeaconBlock;
+    Metadata: fulu.Metadata;
+    Status: fulu.Status;
+    LightClientHeader: deneb.LightClientHeader;
+    LightClientBootstrap: electra.LightClientBootstrap;
+    LightClientUpdate: electra.LightClientUpdate;
+    LightClientFinalityUpdate: electra.LightClientFinalityUpdate;
+    LightClientOptimisticUpdate: electra.LightClientOptimisticUpdate;
+    LightClientStore: electra.LightClientStore;
+    BlindedBeaconBlock: electra.BlindedBeaconBlock;
+    BlindedBeaconBlockBody: electra.BlindedBeaconBlockBody;
+    SignedBlindedBeaconBlock: electra.SignedBlindedBeaconBlock;
+    ExecutionPayload: deneb.ExecutionPayload;
+    ExecutionPayloadHeader: eip7732.ExecutionPayloadHeader;
+    BuilderBid: electra.BuilderBid;
+    SignedBuilderBid: electra.SignedBuilderBid;
+    SSEPayloadAttributes: electra.SSEPayloadAttributes;
+    BlockContents: fulu.BlockContents;
+    SignedBlockContents: fulu.SignedBlockContents;
+    ExecutionPayloadAndBlobsBundle: deneb.ExecutionPayloadAndBlobsBundle;
+    BlobsBundle: deneb.BlobsBundle;
+    Contents: deneb.Contents;
+    SyncCommittee: altair.SyncCommittee;
+    SyncAggregate: altair.SyncAggregate;
+    SingleAttestation: electra.SingleAttestation;
+    Attestation: electra.Attestation;
+    IndexedAttestation: electra.IndexedAttestation;
+    IndexedAttestationBigint: electra.IndexedAttestationBigint;
+    AttesterSlashing: electra.AttesterSlashing;
+    AggregateAndProof: electra.AggregateAndProof;
+    SignedAggregateAndProof: electra.SignedAggregateAndProof;
+    ExecutionRequests: electra.ExecutionRequests;
+  };
 };
 
 export type TypesFor<F extends ForkName, K extends keyof TypesByFork[F] | void = void> = K extends void
@@ -310,7 +352,7 @@ export type SignedBeaconBlockOrContents<
 > = SignedBeaconBlock<FB> | SignedBlockContents<FC>;
 
 export type ExecutionPayload<F extends ForkPostBellatrix = ForkPostBellatrix> = TypesByFork[F]["ExecutionPayload"];
-export type ExecutionPayloadHeader<F extends ForkPostBellatrix = ForkPostBellatrix> =
+export type ExecutionPayloadHeader<F extends ForkPostBellatrix = ForkPostBellatrix & ForkPreEip7732> =
   TypesByFork[F]["ExecutionPayloadHeader"];
 export type ExecutionRequests<F extends ForkPostElectra = ForkPostElectra> = TypesByFork[F]["ExecutionRequests"];
 

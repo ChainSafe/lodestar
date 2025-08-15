@@ -102,6 +102,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
   const denebForkRelevant = localConfig.DENEB_FORK_EPOCH < Infinity;
   const electraForkRelevant = localConfig.ELECTRA_FORK_EPOCH < Infinity;
   const fuluForkRelevant = localConfig.FULU_FORK_EPOCH < Infinity;
+  const eip7732ForkRelevant = localConfig.EIP7732_FORK_EPOCH < Infinity;
 
   return {
     // # Config
@@ -140,6 +141,9 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     // fulu
     FULU_FORK_VERSION: fuluForkRelevant,
     FULU_FORK_EPOCH: fuluForkRelevant,
+    // EIP7732
+    EIP7732_FORK_VERSION: eip7732ForkRelevant,
+    EIP7732_FORK_EPOCH: eip7732ForkRelevant,
 
     // Time parameters
     SECONDS_PER_SLOT: true,
@@ -288,5 +292,10 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     VALIDATOR_CUSTODY_REQUIREMENT: fuluForkRelevant,
     BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: fuluForkRelevant,
     BLOB_SCHEDULE: fuluForkRelevant,
+
+    // EIP7732
+    PTC_SIZE: eip7732ForkRelevant,
+    MAX_PAYLOAD_ATTESTATIONS: eip7732ForkRelevant,
+    BUILDER_PENDING_WITHDRAWALS_LIMIT: eip7732ForkRelevant,
   };
 }

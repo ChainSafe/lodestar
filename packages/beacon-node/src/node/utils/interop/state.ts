@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, GENESIS_SLOT} from "@lodestar/params";
+import {ForkName, GENESIS_SLOT, isForkPostEip7732} from "@lodestar/params";
 import {BeaconStateAllForks, initializeBeaconStateFromEth1} from "@lodestar/state-transition";
 import {createEmptyEpochCacheImmutableData} from "@lodestar/state-transition";
 import {Bytes32, TimeSeconds, phase0, ssz, sszTypesFor} from "@lodestar/types";
@@ -32,6 +32,10 @@ export function getInteropState(
   fullDepositDataRootList?: DepositTree
 ): BeaconStateAllForks {
   const fork = config.getForkName(GENESIS_SLOT);
+  // TODO EIP7732: Add support to eip7732 fork
+  if (isForkPostEip7732(fork)) {
+    throw new Error("Unsupported operation");
+  }
   const executionPayloadHeaderType =
     fork !== ForkName.phase0 && fork !== ForkName.altair
       ? sszTypesFor(fork).ExecutionPayloadHeader

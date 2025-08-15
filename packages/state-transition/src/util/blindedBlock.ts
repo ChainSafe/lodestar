@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkPostBellatrix, ForkSeq} from "@lodestar/params";
+import {ForkPostBellatrix, ForkPreEip7732, ForkSeq} from "@lodestar/params";
 import {
   BeaconBlock,
   BeaconBlockHeader,
@@ -59,7 +59,7 @@ export function blindedOrFullBlockToHeader(
 
 export function beaconBlockToBlinded(
   config: ChainForkConfig,
-  block: BeaconBlock<ForkPostBellatrix>
+  block: BeaconBlock<ForkPostBellatrix & ForkPreEip7732>
 ): BlindedBeaconBlock {
   const fork = config.getForkName(block.slot);
   const executionPayloadHeader = executionPayloadToPayloadHeader(ForkSeq[fork], block.body.executionPayload);
@@ -69,7 +69,7 @@ export function beaconBlockToBlinded(
 
 export function signedBeaconBlockToBlinded(
   config: ChainForkConfig,
-  signedBlock: SignedBeaconBlock<ForkPostBellatrix>
+  signedBlock: SignedBeaconBlock<ForkPostBellatrix & ForkPreEip7732>
 ): SignedBlindedBeaconBlock {
   return {
     message: beaconBlockToBlinded(config, signedBlock.message),

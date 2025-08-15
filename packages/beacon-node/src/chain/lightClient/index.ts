@@ -11,6 +11,7 @@ import {
   ForkName,
   ForkPostAltair,
   ForkPostBellatrix,
+  ForkPreEip7732,
   ForkSeq,
   MIN_SYNC_COMMITTEE_PARTICIPANTS,
   SYNC_COMMITTEE_SIZE,
@@ -752,7 +753,7 @@ export function blockToLightClientHeader(fork: ForkName, block: BeaconBlock<Fork
     bodyRoot: (ssz[fork].BeaconBlockBody as SSZTypesFor<ForkPostAltair, "BeaconBlockBody">).hashTreeRoot(block.body),
   };
   if (ForkSeq[fork] >= ForkSeq.capella) {
-    const blockBody = block.body as BeaconBlockBody<ForkPostBellatrix>;
+    const blockBody = block.body as BeaconBlockBody<ForkPostBellatrix & ForkPreEip7732>;
     const execution = executionPayloadToPayloadHeader(ForkSeq[fork], blockBody.executionPayload);
     return {
       beacon,

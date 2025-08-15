@@ -329,6 +329,8 @@ export function initializeBeaconStateFromEth1(
       ssz.fulu.ExecutionPayloadHeader.defaultViewDU();
   }
 
+  // TODO
+
   state.commit();
 
   return state;

@@ -51,6 +51,10 @@ export const chainConfig: ChainConfig = {
   FULU_FORK_VERSION: b("0x06000001"),
   FULU_FORK_EPOCH: Infinity,
 
+  // EIP7732
+  EIP7732_FORK_VERSION: b("0x07000001"),
+  EIP7732_FORK_EPOCH: Infinity,
+
   // Time parameters
   // ---------------------------------------------------------------
   // [customized] Faster for testing purposes

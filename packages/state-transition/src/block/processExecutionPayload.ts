@@ -1,6 +1,6 @@
 import {byteArrayEquals} from "@chainsafe/ssz";
 import {ForkName, ForkSeq, isForkPostDeneb} from "@lodestar/params";
-import {BeaconBlockBody, BlindedBeaconBlockBody, deneb, isExecutionPayload} from "@lodestar/types";
+import {BeaconBlockBody, BlindedBeaconBlockBody, deneb, eip7732, isExecutionPayload} from "@lodestar/types";
 import {toHex, toRootHex} from "@lodestar/utils";
 import {CachedBeaconStateBellatrix, CachedBeaconStateCapella} from "../types.js";
 import {
@@ -19,6 +19,7 @@ export function processExecutionPayload(
 ): void {
   const payload = getFullOrBlindedPayloadFromBody(body);
   const forkName = ForkName[ForkSeq[fork] as ForkName];
+
   // Verify consistency of the parent hash, block number, base fee per gas and gas limit
   // with respect to the previous execution payload header
   if (isMergeTransitionComplete(state)) {

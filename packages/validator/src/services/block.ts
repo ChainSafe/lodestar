@@ -1,6 +1,6 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, ForkPostBellatrix, ForkPostDeneb, ForkPreDeneb} from "@lodestar/params";
+import {ForkName, ForkPostBellatrix, ForkPostDeneb, ForkPreDeneb, ForkPreEip7732} from "@lodestar/params";
 import {
   BLSPubkey,
   BLSSignature,
@@ -190,7 +190,10 @@ export class BlockProposingService {
       } else {
         (
           await this.api.beacon.publishBlockV2({
-            signedBlockOrContents: {...contents, signedBlock: signedBlock as SignedBeaconBlock<ForkPostDeneb>},
+            signedBlockOrContents: {
+              ...contents,
+              signedBlock: signedBlock as SignedBeaconBlock<ForkPostDeneb & ForkPreEip7732>,
+            },
             ...opts,
           })
         ).assertOk();

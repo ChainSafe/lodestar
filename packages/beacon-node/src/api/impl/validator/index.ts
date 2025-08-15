@@ -6,6 +6,7 @@ import {
   ForkPostBellatrix,
   ForkPostDeneb,
   ForkPreDeneb,
+  ForkPreEip7732,
   ForkSeq,
   GENESIS_SLOT,
   SLOTS_PER_EPOCH,
@@ -873,14 +874,14 @@ export function getValidatorApi(
 
         if (isBlockContents(data)) {
           const {block} = data;
-          const blindedBlock = beaconBlockToBlinded(config, block as BeaconBlock<ForkPostBellatrix>);
+          const blindedBlock = beaconBlockToBlinded(config, block as BeaconBlock<ForkPostBellatrix & ForkPreEip7732>);
           return {
             data: blindedBlock,
             meta: {...meta, executionPayloadBlinded: true},
           };
         }
 
-        const blindedBlock = beaconBlockToBlinded(config, data as BeaconBlock<ForkPostBellatrix>);
+        const blindedBlock = beaconBlockToBlinded(config, data as BeaconBlock<ForkPostBellatrix & ForkPreEip7732>);
         return {
           data: blindedBlock,
           meta: {...meta, executionPayloadBlinded: true},

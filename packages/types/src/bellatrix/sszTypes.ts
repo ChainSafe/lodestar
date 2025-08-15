@@ -37,6 +37,7 @@ export const Transaction = new ByteListType(MAX_BYTES_PER_TRANSACTION);
  */
 export const Transactions = new ListCompositeType(Transaction, MAX_TRANSACTIONS_PER_PAYLOAD);
 
+// EIP7732: No longer applies ExecutionPayloadHeader post epbs
 export const CommonExecutionPayloadType = new ContainerType({
   parentHash: Root,
   feeRecipient: ExecutionAddress,

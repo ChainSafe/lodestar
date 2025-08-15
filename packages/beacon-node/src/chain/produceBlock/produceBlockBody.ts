@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkPostBellatrix, ForkSeq, isForkPostAltair, isForkPostBellatrix} from "@lodestar/params";
+import {ForkPostBellatrix, ForkPreEip7732, ForkSeq, isForkPostAltair, isForkPostBellatrix} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStateBellatrix,
@@ -357,14 +357,15 @@ export async function produceBlockBody<T extends BlockType>(
       blockBody = Object.assign({}, commonBlockBody) as AssembledBodyType<BlockType.Blinded>;
 
       if (engineRes.isPremerge) {
-        (blockBody as BeaconBlockBody<ForkPostBellatrix>).executionPayload = engineRes.executionPayload;
+        (blockBody as BeaconBlockBody<ForkPostBellatrix & ForkPreEip7732>).executionPayload =
+          engineRes.executionPayload;
         blobsResult = {type: BlobsResultType.preDeneb};
         executionPayloadValue = engineRes.executionPayloadValue;
       } else {
         const {prepType, payloadId, executionPayload, blobsBundle, executionRequests} = engineRes;
         shouldOverrideBuilder = engineRes.shouldOverrideBuilder;
 
-        (blockBody as BeaconBlockBody<ForkPostBellatrix>).executionPayload = executionPayload;
+        (blockBody as BeaconBlockBody<ForkPostBellatrix & ForkPreEip7732>).executionPayload = executionPayload;
         executionPayloadValue = engineRes.executionPayloadValue;
         Object.assign(logMeta, {transactions: executionPayload.transactions.length, shouldOverrideBuilder});
 
