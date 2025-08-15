@@ -15,7 +15,7 @@ export type BackfillRangeWrapper = ValueOf<typeof backfillRangeSSZ>;
 
 // unique & practically impossible key to store BackfillRange inside 'backfill_state'
 // bucket which stores Epoch -> EpochBackfillState key value pairs
-export const BACKFILL_RANGE_KEY = Infinity;
+export const BACKFILL_RANGE_KEY = -1;
 
 export class BackfillRange {
   private readonly bucket: Bucket;
@@ -27,7 +27,7 @@ export class BackfillRange {
   constructor(_config: ChainForkConfig, db: Db) {
     this.db = db;
     this.bucket = Bucket.backfill_state;
-    this.key = _encodeKey(this.bucket, BACKFILL_RANGE_KEY); // set unique key: [0x2a, 0xff, 0xff, ...0xff]
+    this.key = _encodeKey(this.bucket, BACKFILL_RANGE_KEY);
     this.type = backfillRangeSSZ;
     this.dbReqOpts = {bucketId: getBucketNameByValue(this.bucket)};
   }
