@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {CheckpointWithHex} from "@lodestar/fork-choice";
-import {ForkName, isForkPostDeneb} from "@lodestar/params";
+import {ForkName, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
 import {LodestarError, Logger, toRootHex} from "@lodestar/utils";
@@ -163,23 +163,21 @@ export class SeenBlockInput {
             peerIdStr,
           },
         });
-      }
-      // else if (isForkPostFulu(forkName)) {
-      //   blockInput = new BlockInputColumns.createFromBlock({
-      //     block,
-      //     blockRootHex,
-      //     daOutOfRange,
-      //     forkName,
-      //     custodyColumns: this.custodyConfig.custodyColumns,
-      //     sampledColumns: this.custodyConfig.sampledColumns,
-      //     source: {
-      //       source,
-      //       seenTimestampSec,
-      //       peerIdStr
-      //     }
-      //   })
-      // }
-      else {
+      } else if (isForkPostFulu(forkName)) {
+        blockInput = BlockInputColumns.createFromBlock({
+          block,
+          blockRootHex,
+          daOutOfRange,
+          forkName,
+          custodyColumns: this.custodyConfig.custodyColumns,
+          sampledColumns: this.custodyConfig.sampledColumns,
+          source: {
+            source,
+            seenTimestampSec,
+            peerIdStr,
+          },
+        });
+      } else {
         blockInput = BlockInputBlobs.createFromBlock({
           block: block as SignedBeaconBlock<ForkBlobsDA>,
           blockRootHex,
