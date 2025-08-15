@@ -173,8 +173,10 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: false,
     BLOB_SIDECAR_SUBNET_COUNT: false,
     BLOB_SIDECAR_SUBNET_COUNT_ELECTRA: false,
+    DATA_COLUMN_SIDECAR_SUBNET_COUNT: false,
     MAX_REQUEST_BLOB_SIDECARS: false,
     MAX_REQUEST_BLOB_SIDECARS_ELECTRA: false,
+    MAX_REQUEST_DATA_COLUMN_SIDECARS: false,
 
     // # Phase0Preset
     /////////////////
@@ -280,9 +282,12 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
 
     // FULU
     /////////////////
+    CELLS_PER_EXT_BLOB: fuluForkRelevant,
     FIELD_ELEMENTS_PER_CELL: fuluForkRelevant,
     FIELD_ELEMENTS_PER_EXT_BLOB: fuluForkRelevant,
     KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH: fuluForkRelevant,
+    NUMBER_OF_COLUMNS: fuluForkRelevant,
+    NUMBER_OF_CUSTODY_GROUPS: fuluForkRelevant,
     SAMPLES_PER_SLOT: fuluForkRelevant,
     CUSTODY_REQUIREMENT: fuluForkRelevant,
     VALIDATOR_CUSTODY_REQUIREMENT: fuluForkRelevant,

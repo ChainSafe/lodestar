@@ -3,7 +3,7 @@ import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
-import {GENESIS_SLOT, NUMBER_OF_CUSTODY_GROUPS, SLOTS_PER_EPOCH, isForkPostElectra} from "@lodestar/params";
+import {GENESIS_SLOT, SLOTS_PER_EPOCH, isForkPostElectra} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   BeaconStateElectra,
@@ -274,7 +274,7 @@ export class BeaconChain implements IBeaconChain {
 
     const nodeId = computeNodeIdFromPrivateKey(privateKey);
     const initialCustodyGroupCount =
-      opts.initialCustodyGroupCount ?? (opts.supernode ? NUMBER_OF_CUSTODY_GROUPS : config.CUSTODY_REQUIREMENT);
+      opts.initialCustodyGroupCount ?? (opts.supernode ? config.NUMBER_OF_CUSTODY_GROUPS : config.CUSTODY_REQUIREMENT);
     this.metrics?.peerDas.targetCustodyGroupCount.set(initialCustodyGroupCount);
     this.custodyConfig = new CustodyConfig({
       nodeId,

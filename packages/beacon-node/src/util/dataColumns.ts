@@ -1,15 +1,7 @@
 import {digest} from "@chainsafe/as-sha256";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {ChainForkConfig} from "@lodestar/config";
-import {
-  DATA_COLUMN_SIDECAR_SUBNET_COUNT,
-  ForkAll,
-  ForkName,
-  ForkPostFulu,
-  KZG_COMMITMENTS_GINDEX,
-  NUMBER_OF_COLUMNS,
-  NUMBER_OF_CUSTODY_GROUPS,
-} from "@lodestar/params";
+import {ForkAll, ForkName, ForkPostFulu, KZG_COMMITMENTS_GINDEX, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {
   BeaconBlockBody,
@@ -106,24 +98,28 @@ export class CustodyConfig {
     this.config = opts.config;
     this.nodeId = opts.nodeId;
     this.targetCustodyGroupCount = opts.initialCustodyGroupCount ?? this.config.CUSTODY_REQUIREMENT;
-    this.custodyColumns = getDataColumns(this.nodeId, this.targetCustodyGroupCount);
+    this.custodyColumns = getDataColumns(this.config, this.nodeId, this.targetCustodyGroupCount);
     this.custodyColumnsIndex = this.getCustodyColumnsIndex(this.custodyColumns);
     this.sampledGroupCount = Math.max(this.targetCustodyGroupCount, this.config.SAMPLES_PER_SLOT);
-    this.sampleGroups = getCustodyGroups(this.nodeId, this.sampledGroupCount);
-    this.sampledColumns = getDataColumns(this.nodeId, this.sampledGroupCount);
-    this.sampledSubnets = this.sampledColumns.map(computeSubnetForDataColumn);
+    this.sampleGroups = getCustodyGroups(this.config, this.nodeId, this.sampledGroupCount);
+    this.sampledColumns = getDataColumns(this.config, this.nodeId, this.sampledGroupCount);
+    this.sampledSubnets = this.sampledColumns.map((columnIndex) =>
+      computeSubnetForDataColumn(this.config, columnIndex)
+    );
   }
 
   updateTargetCustodyGroupCount(targetCustodyGroupCount: number) {
     this.targetCustodyGroupCount = targetCustodyGroupCount;
-    this.custodyColumns = getDataColumns(this.nodeId, this.targetCustodyGroupCount);
+    this.custodyColumns = getDataColumns(this.config, this.nodeId, this.targetCustodyGroupCount);
     this.custodyColumnsIndex = this.getCustodyColumnsIndex(this.custodyColumns);
     // TODO: Porting this over to match current behavior, but I think this incorrectly mixes units:
     // SAMPLES_PER_SLOT is in columns, and CUSTODY_GROUP_COUNT is in groups
     this.sampledGroupCount = Math.max(this.targetCustodyGroupCount, this.config.SAMPLES_PER_SLOT);
-    this.sampleGroups = getCustodyGroups(this.nodeId, this.sampledGroupCount);
-    this.sampledColumns = getDataColumns(this.nodeId, this.sampledGroupCount);
-    this.sampledSubnets = this.sampledColumns.map(computeSubnetForDataColumn);
+    this.sampleGroups = getCustodyGroups(this.config, this.nodeId, this.sampledGroupCount);
+    this.sampledColumns = getDataColumns(this.config, this.nodeId, this.sampledGroupCount);
+    this.sampledSubnets = this.sampledColumns.map((columnIndex) =>
+      computeSubnetForDataColumn(this.config, columnIndex)
+    );
   }
 
   private getCustodyColumnsIndex(custodyColumns: ColumnIndex[]): Uint8Array {
@@ -139,8 +135,8 @@ export class CustodyConfig {
   }
 }
 
-function computeSubnetForDataColumn(columnIndex: ColumnIndex): number {
-  return columnIndex % DATA_COLUMN_SIDECAR_SUBNET_COUNT;
+function computeSubnetForDataColumn(config: ChainForkConfig, columnIndex: ColumnIndex): number {
+  return columnIndex % config.DATA_COLUMN_SIDECAR_SUBNET_COUNT;
 }
 
 /**
@@ -167,7 +163,7 @@ export function getValidatorsCustodyRequirement(config: ChainForkConfig, effecti
   validatorsCustodyRequirement = Math.max(validatorsCustodyRequirement, config.VALIDATOR_CUSTODY_REQUIREMENT);
 
   // Cannot custody more than NUMBER_OF_CUSTODY_GROUPS
-  validatorsCustodyRequirement = Math.min(validatorsCustodyRequirement, NUMBER_OF_CUSTODY_GROUPS);
+  validatorsCustodyRequirement = Math.min(validatorsCustodyRequirement, config.NUMBER_OF_CUSTODY_GROUPS);
 
   return validatorsCustodyRequirement;
 }
@@ -179,14 +175,14 @@ export function getValidatorsCustodyRequirement(config: ChainForkConfig, effecti
  * SPEC FUNCTION
  * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/das-core.md#compute_columns_for_custody_group
  */
-export function computeColumnsForCustodyGroup(custodyIndex: CustodyIndex): ColumnIndex[] {
-  if (custodyIndex > NUMBER_OF_CUSTODY_GROUPS) {
-    throw Error(`Invalid custody index ${custodyIndex} > ${NUMBER_OF_CUSTODY_GROUPS}`);
+export function computeColumnsForCustodyGroup(config: ChainForkConfig, custodyIndex: CustodyIndex): ColumnIndex[] {
+  if (custodyIndex > config.NUMBER_OF_CUSTODY_GROUPS) {
+    throw Error(`Invalid custody index ${custodyIndex} > ${config.NUMBER_OF_CUSTODY_GROUPS}`);
   }
-  const columnsPerCustodyGroup = Number(NUMBER_OF_COLUMNS / NUMBER_OF_CUSTODY_GROUPS);
+  const columnsPerCustodyGroup = Number(NUMBER_OF_COLUMNS / config.NUMBER_OF_CUSTODY_GROUPS);
   const columnIndexes = [];
   for (let i = 0; i < columnsPerCustodyGroup; i++) {
-    columnIndexes.push(NUMBER_OF_CUSTODY_GROUPS * i + custodyIndex);
+    columnIndexes.push(config.NUMBER_OF_CUSTODY_GROUPS * i + custodyIndex);
   }
   columnIndexes.sort((a, b) => a - b);
   return columnIndexes;
@@ -199,14 +195,14 @@ export function computeColumnsForCustodyGroup(custodyIndex: CustodyIndex): Colum
  * SPEC FUNCTION
  * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/das-core.md#get_custody_groups
  */
-export function getCustodyGroups(nodeId: NodeId, custodyGroupCount: number): CustodyIndex[] {
-  if (custodyGroupCount > NUMBER_OF_CUSTODY_GROUPS) {
-    throw Error(`Invalid custody group count ${custodyGroupCount} > ${NUMBER_OF_CUSTODY_GROUPS}`);
+export function getCustodyGroups(config: ChainForkConfig, nodeId: NodeId, custodyGroupCount: number): CustodyIndex[] {
+  if (custodyGroupCount > config.NUMBER_OF_CUSTODY_GROUPS) {
+    throw Error(`Invalid custody group count ${custodyGroupCount} > ${config.NUMBER_OF_CUSTODY_GROUPS}`);
   }
 
   // Skip computation if all groups are custodied
-  if (custodyGroupCount === NUMBER_OF_CUSTODY_GROUPS) {
-    return Array.from({length: NUMBER_OF_CUSTODY_GROUPS}, (_, i) => i);
+  if (custodyGroupCount === config.NUMBER_OF_CUSTODY_GROUPS) {
+    return Array.from({length: config.NUMBER_OF_CUSTODY_GROUPS}, (_, i) => i);
   }
 
   const custodyGroups: CustodyIndex[] = [];
@@ -216,7 +212,7 @@ export function getCustodyGroups(nodeId: NodeId, custodyGroupCount: number): Cus
     // could be optimized
     const currentIdBytes = ssz.UintBn256.serialize(currentId);
     const custodyGroup = Number(
-      ssz.UintBn64.deserialize(digest(currentIdBytes).slice(0, 8)) % BigInt(NUMBER_OF_CUSTODY_GROUPS)
+      ssz.UintBn64.deserialize(digest(currentIdBytes).slice(0, 8)) % BigInt(config.NUMBER_OF_CUSTODY_GROUPS)
     );
 
     if (!custodyGroups.includes(custodyGroup)) {
@@ -243,9 +239,9 @@ export function computeKzgCommitmentsInclusionProof(
   return new Tree(bodyView.node).getSingleProof(BigInt(KZG_COMMITMENTS_GINDEX));
 }
 
-export function getDataColumns(nodeId: NodeId, custodyGroupCount: number): ColumnIndex[] {
-  return getCustodyGroups(nodeId, custodyGroupCount)
-    .flatMap(computeColumnsForCustodyGroup)
+export function getDataColumns(config: ChainForkConfig, nodeId: NodeId, custodyGroupCount: number): ColumnIndex[] {
+  return getCustodyGroups(config, nodeId, custodyGroupCount)
+    .flatMap((custodyIndex) => computeColumnsForCustodyGroup(config, custodyIndex))
     .sort((a, b) => a - b);
 }
 
