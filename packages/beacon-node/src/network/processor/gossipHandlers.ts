@@ -15,15 +15,8 @@ import {
   sszTypesFor,
 } from "@lodestar/types";
 import {LogLevel, Logger, prettyBytes, toHex, toRootHex} from "@lodestar/utils";
-import {
-  BlobSidecarValidation,
-  BlockInput,
-  BlockInputAvailableData,
-  BlockInputType,
-  DataColumnsSource,
-  GossipedInputType,
-  NullBlockInput,
-} from "../../chain/blocks/types.js";
+import {BlockInput, BlockInputSource} from "../../chain/blocks/blockInput/index.js";
+import {BlobSidecarValidation, GossipedInputType} from "../../chain/blocks/types.js";
 import {
   AttestationError,
   AttestationErrorCode,
@@ -135,31 +128,20 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     // always set block to seen cache for all forks so that we don't need to download it
     // TODO: validate block before adding to cache
     // tracked in https://github.com/ChainSafe/lodestar/issues/7957
-    const blockInputRes = chain.seenGossipBlockInput.getGossipBlockInput(
-      config,
-      {
-        type: GossipedInputType.block,
-        signedBlock,
-      },
-      metrics
-    );
-    const blockInput = blockInputRes.blockInput;
-    // blockInput can't be returned null, improve by enforcing via return types
-    if (blockInput.block === null) {
-      throw Error(
-        `Invalid null blockInput returned by getGossipBlockInput for type=${GossipedInputType.block} blockHex=${blockShortHex} slot=${slot}`
-      );
-    }
-    const blockInputMeta =
-      config.getForkSeq(signedBlock.message.slot) >= ForkSeq.deneb ? blockInputRes.blockInputMeta : {};
+    const blockInput = chain.seenGossipBlockInput.getByBlock({
+      block: signedBlock,
+      source: BlockInputSource.gossip,
+      seenTimestampSec,
+      peerIdStr,
+    });
+
+    const blockInputMeta = blockInput.getLogMeta();
 
     const logCtx = {
-      slot: slot,
-      root: blockShortHex,
+      ...blockInputMeta,
       currentSlot: chain.clock.currentSlot,
       peerId: peerIdStr,
       delaySec,
-      ...blockInputMeta,
       recvToValLatency,
     };
 
@@ -186,7 +168,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         // Don't trigger this yet if full block and blobs haven't arrived yet
         if (e.type.code === BlockErrorCode.PARENT_UNKNOWN && blockInput !== null) {
           logger.debug("Gossip block has error", {slot, root: blockShortHex, code: e.type.code});
-          events.emit(NetworkEvent.unknownBlockParent, {blockInput, peer: peerIdStr});
+          events.emit(NetworkEvent.unknownBlockInput, {blockInput, peer: peerIdStr});
         }
 
         if (e.action === GossipAction.REJECT) {
@@ -203,7 +185,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     subnet: SubnetID,
     peerIdStr: string,
     seenTimestampSec: number
-  ): Promise<BlockInput | NullBlockInput> {
+  ): Promise<BlockInput> {
     const blobBlockHeader = blobSidecar.signedBlockHeader.message;
     const slot = blobBlockHeader.slot;
     const fork = config.getForkName(slot);
@@ -215,14 +197,12 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
     try {
       await validateGossipBlobSidecar(fork, chain, blobSidecar, subnet);
-      const {blockInput, blockInputMeta} = chain.seenGossipBlockInput.getGossipBlockInput(
-        config,
-        {
-          type: GossipedInputType.blob,
-          blobSidecar,
-        },
-        metrics
-      );
+      const blockInput = chain.seenGossipBlockInput.getByBlob({
+        blobSidecar,
+        source: BlockInputSource.gossip,
+        seenTimestampSec,
+        peerIdStr,
+      });
       const recvToValidation = Date.now() / 1000 - seenTimestampSec;
       const validationTime = recvToValidation - recvToValLatency;
 
@@ -240,13 +220,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       }
 
       logger.debug("Received gossip blob", {
-        slot: slot,
-        root: blockShortHex,
+        ...blockInput.getLogMeta(),
         currentSlot: chain.clock.currentSlot,
         peerId: peerIdStr,
         delaySec,
         subnet,
-        ...blockInputMeta,
         recvToValLatency,
         recvToValidation,
         validationTime,
@@ -276,33 +254,29 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
   async function validateBeaconDataColumn(
     dataColumnSidecar: fulu.DataColumnSidecar,
-    dataColumnBytes: Uint8Array,
+    _dataColumnBytes: Uint8Array,
     gossipSubnet: SubnetID,
     peerIdStr: string,
     seenTimestampSec: number
-  ): Promise<BlockInput | NullBlockInput> {
+  ): Promise<BlockInput> {
     metrics?.peerDas.dataColumnSidecarProcessingRequests.inc();
     const verificationTimer = metrics?.peerDas.dataColumnSidecarGossipVerificationTime.startTimer();
 
     const dataColumnBlockHeader = dataColumnSidecar.signedBlockHeader.message;
     const slot = dataColumnBlockHeader.slot;
     const blockRootHex = toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(dataColumnBlockHeader));
-    const blockShortHex = prettyBytes(blockRootHex);
 
     const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
     const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
 
     try {
       await validateGossipDataColumnSidecar(chain, dataColumnSidecar, gossipSubnet, metrics);
-      const {blockInput, blockInputMeta} = chain.seenGossipBlockInput.getGossipBlockInput(
-        config,
-        {
-          type: GossipedInputType.dataColumn,
-          dataColumnSidecar,
-          dataColumnBytes,
-        },
-        metrics
-      );
+      const blockInput = chain.seenGossipBlockInput.getByColumn({
+        columnSidecar: dataColumnSidecar,
+        source: BlockInputSource.gossip,
+        seenTimestampSec,
+        peerIdStr,
+      });
 
       const recvToValidation = Date.now() / 1000 - seenTimestampSec;
       const validationTime = recvToValidation - recvToValLatency;
@@ -319,14 +293,12 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       });
 
       logger.debug("Received gossip dataColumn", {
-        slot: slot,
-        root: blockShortHex,
+        ...blockInput.getLogMeta(),
         currentSlot: chain.clock.currentSlot,
         peerId: peerIdStr,
         delaySec,
         gossipSubnet,
         columnIndex: dataColumnSidecar.index,
-        ...blockInputMeta,
         recvToValLatency,
         recvToValidation,
         validationTime,
@@ -350,20 +322,21 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
   }
 
   function handleValidBeaconBlock(blockInput: BlockInput, peerIdStr: string, seenTimestampSec: number): void {
-    const signedBlock = blockInput.block;
+    const signedBlock = blockInput.getBlock();
+    const slot = signedBlock.message.slot;
 
     // Handler - MUST NOT `await`, to allow validation result to be propagated
 
-    const delaySec = seenTimestampSec - (chain.genesisTime + signedBlock.message.slot * config.SECONDS_PER_SLOT);
+    const delaySec = seenTimestampSec - (chain.genesisTime + slot * config.SECONDS_PER_SLOT);
     metrics?.gossipBlock.elapsedTimeTillReceived.observe({source: OpSource.gossip}, delaySec);
     chain.validatorMonitor?.registerBeaconBlock(OpSource.gossip, delaySec, signedBlock.message);
-    // if blobs are not yet fully available start an aggressive blob pull
-    if (blockInput.type === BlockInputType.dataPromise) {
+    // if data is not yet fully available start an aggressive pull
+    if (!blockInput.hasAllData()) {
       events.emit(NetworkEvent.unknownBlockInput, {blockInput, peer: peerIdStr});
-    } else if (blockInput.type === BlockInputType.availableData) {
+    } else if (blockInput.hasBlockAndAllData()) {
       metrics?.blockInputFetchStats.totalDataAvailableBlockInputs.inc();
       metrics?.blockInputFetchStats.totalDataAvailableBlockInputBlobs.inc(
-        (blockInput.block.message as deneb.BeaconBlock).body.blobKzgCommitments.length
+        (signedBlock.message as deneb.BeaconBlock).body.blobKzgCommitments.length
       );
     }
 
@@ -390,9 +363,9 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       })
       .then(() => {
         // Returns the delay between the start of `block.slot` and `current time`
-        const delaySec = chain.clock.secFromSlot(signedBlock.message.slot);
+        const delaySec = chain.clock.secFromSlot(slot);
         metrics?.gossipBlock.elapsedTimeTillProcessed.observe(delaySec);
-        chain.seenGossipBlockInput.prune();
+        chain.seenGossipBlockInput.prune(blockInput.blockRootHex);
       })
       .catch((e) => {
         // Adjust verbosity based on error type
@@ -401,7 +374,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         if (e instanceof BlockError) {
           switch (e.type.code) {
             case BlockErrorCode.DATA_UNAVAILABLE: {
-              const slot = signedBlock.message.slot;
               const forkTypes = config.getForkTypes(slot);
               const rootHex = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
 
@@ -431,24 +403,19 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           logLevel = LogLevel.error;
         }
         metrics?.gossipBlock.processBlockErrors.inc({error: e instanceof BlockError ? e.type.code : "NOT_BLOCK_ERROR"});
-        logger[logLevel]("Error receiving block", {slot: signedBlock.message.slot, peer: peerIdStr}, e as Error);
-        chain.seenGossipBlockInput.prune();
+        logger[logLevel]("Error receiving block", {slot, peer: peerIdStr}, e as Error);
+        chain.seenGossipBlockInput.prune(blockInput.blockRootHex);
       });
 
-    if (blockInput.type === BlockInputType.dataPromise) {
-      const blockSlot = blockInput.block.message.slot;
+    if (!blockInput.hasAllData()) {
       // if blobs are not yet fully available start an aggressive blob pull
       chain.logger.debug("Block under processing is not available, racing with cutoff to add to unknownBlockInput", {
-        blockSlot,
+        blockSlot: slot,
       });
-      raceWithCutoff(
-        chain,
-        blockSlot,
-        blockInput.cachedData.availabilityPromise as Promise<BlockInputAvailableData>,
-        BLOCK_AVAILABILITY_CUTOFF_MS
-      ).catch((_e) => {
+      const cutoffTimeMs = getCutoffTimeMs(chain, slot, BLOCK_AVAILABILITY_CUTOFF_MS);
+      blockInput.waitForAllData(cutoffTimeMs).catch((_e) => {
         chain.logger.debug("Block under processing not yet available, racing with cutoff to add to unknownBlockInput", {
-          blockSlot,
+          blockSlot: slot,
         });
         events.emit(NetworkEvent.unknownBlockInput, {blockInput, peer: peerIdStr});
         return null;
@@ -486,18 +453,14 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         throw new GossipActionError(GossipAction.REJECT, {code: "PRE_DENEB_BLOCK"});
       }
       const blockInput = await validateBeaconBlob(blobSidecar, topic.subnet, peerIdStr, seenTimestampSec);
-      if (blockInput.block !== null) {
-        if (blockInput.type === BlockInputType.dataPromise) {
+      if (blockInput.hasBlock()) {
+        if (!blockInput.hasAllData()) {
           chain.logger.debug("Block corresponding to blob is available but waiting for data availability", {
             blobSlot,
             index,
           });
-          await raceWithCutoff(
-            chain,
-            blobSlot,
-            blockInput.cachedData.availabilityPromise as Promise<BlockInputAvailableData>,
-            BLOCK_AVAILABILITY_CUTOFF_MS
-          ).catch((_e) => {
+          const cutoffTimeMs = getCutoffTimeMs(chain, blobSlot, BLOCK_AVAILABILITY_CUTOFF_MS);
+          await blockInput.waitForAllData(cutoffTimeMs).catch((_e) => {
             chain.logger.debug("Block under processing not yet fully available adding to unknownBlockInput", {
               blobSlot,
             });
@@ -994,6 +957,16 @@ export async function validateGossipFnRetryUnknownRoot<T>(
   }
 }
 
+function getCutoffTimeMs(
+  chain: {config: ChainForkConfig; genesisTime: UintNum64; logger: Logger},
+  blockSlot: Slot,
+  cutoffMsFromSlotStart: number
+): number {
+  return Math.max(
+    computeTimeAtSlot(chain.config, blockSlot, chain.genesisTime) * 1000 + cutoffMsFromSlotStart - Date.now(),
+    0
+  );
+}
 async function raceWithCutoff<T>(
   chain: {config: ChainForkConfig; genesisTime: UintNum64; logger: Logger},
   blockSlot: Slot,

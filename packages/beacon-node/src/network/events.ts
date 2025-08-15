@@ -1,7 +1,7 @@
 import {EventEmitter} from "node:events";
 import {PeerId, TopicValidatorResult} from "@libp2p/interface";
 import {CustodyIndex, RootHex, Status} from "@lodestar/types";
-import {BlockInput, NullBlockInput} from "../chain/blocks/types.js";
+import {BlockInput} from "../chain/blocks/blockInput/index.js";
 import {PeerIdStr} from "../util/peerId.js";
 import {StrictEventEmitterSingleArg} from "../util/strictEvents.js";
 import {EventDirection} from "../util/workerEvents.js";
@@ -35,9 +35,8 @@ export type NetworkEventData = {
   };
   [NetworkEvent.peerDisconnected]: {peer: PeerIdStr};
   [NetworkEvent.reqRespRequest]: {request: RequestTypedContainer; peer: PeerId};
-  [NetworkEvent.unknownBlockParent]: {blockInput: BlockInput; peer: PeerIdStr};
+  [NetworkEvent.unknownBlockInput]: {blockInput: BlockInput; peer: PeerIdStr};
   [NetworkEvent.unknownBlock]: {rootHex: RootHex; peer?: PeerIdStr};
-  [NetworkEvent.unknownBlockInput]: {blockInput: BlockInput | NullBlockInput; peer?: PeerIdStr};
   [NetworkEvent.pendingGossipsubMessage]: PendingGossipsubMessage;
   [NetworkEvent.gossipMessageValidationResult]: {
     msgId: string;
