@@ -3,7 +3,6 @@ import {
   Attestation,
   BeaconBlock,
   BeaconBlockBody,
-  BeaconBlockOrContents,
   BlindedBeaconBlock,
   BlindedBeaconBlockBody,
   BlockContents,
@@ -13,7 +12,6 @@ import {
   LightClientFinalityUpdate,
   LightClientUpdate,
   SignedBeaconBlock,
-  SignedBeaconBlockOrContents,
   SignedBlindedBeaconBlock,
   SignedBlockContents,
   SingleAttestation,
@@ -42,13 +40,13 @@ export function isExecutionPayloadAndBlobsBundle<F extends ForkPostDeneb>(
 }
 
 export function isBlindedBeaconBlock<F extends ForkPostBellatrix>(
-  block: BeaconBlockOrContents | SignedBeaconBlockOrContents
+  block: BeaconBlock | BlockContents | SignedBeaconBlock | SignedBlockContents
 ): block is BlindedBeaconBlock<F> {
   return (block as BeaconBlock).body !== null && isBlindedBeaconBlockBody((block as BeaconBlock).body);
 }
 
 export function isBlindedSignedBeaconBlock<F extends ForkPostBellatrix>(
-  signedBlock: SignedBeaconBlock | SignedBeaconBlockOrContents
+  signedBlock: SignedBeaconBlock | SignedBlockContents
 ): signedBlock is SignedBlindedBeaconBlock<F> {
   return (signedBlock as SignedBlindedBeaconBlock<F>).message.body.executionPayloadHeader !== undefined;
 }
@@ -59,16 +57,16 @@ export function isBlindedBeaconBlockBody<F extends ForkPostBellatrix>(
   return (body as BlindedBeaconBlockBody).executionPayloadHeader !== undefined;
 }
 
-export function isBlockContents<F extends ForkPostDeneb>(
-  data: BeaconBlockOrContents | SignedBeaconBlockOrContents
-): data is BlockContents<F> {
-  return (data as BlockContents<F>).kzgProofs !== undefined;
+export function isDenebBlockContents(
+  data: BeaconBlock | BlockContents | SignedBeaconBlock | SignedBlockContents
+): data is BlockContents<ForkPostDeneb> {
+  return (data as BlockContents<ForkPostDeneb>).kzgProofs !== undefined;
 }
 
-export function isSignedBlockContents<F extends ForkPostDeneb>(
-  data: SignedBeaconBlockOrContents | BeaconBlockOrContents
-): data is SignedBlockContents<F> {
-  return (data as SignedBlockContents<F>).kzgProofs !== undefined;
+export function isDenebSignedBlockContents(
+  data: BeaconBlock | BlockContents | SignedBeaconBlock | SignedBlockContents
+): data is SignedBlockContents<ForkPostDeneb> {
+  return (data as SignedBlockContents<ForkPostDeneb>).kzgProofs !== undefined;
 }
 
 export function isElectraAttestation(attestation: Attestation): attestation is Attestation<ForkPostElectra> {

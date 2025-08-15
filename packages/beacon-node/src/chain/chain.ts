@@ -3,7 +3,7 @@ import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
-import {ForkSeq, GENESIS_SLOT, NUMBER_OF_CUSTODY_GROUPS, SLOTS_PER_EPOCH, isForkPostElectra} from "@lodestar/params";
+import {GENESIS_SLOT, NUMBER_OF_CUSTODY_GROUPS, SLOTS_PER_EPOCH, isForkPostElectra} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   BeaconStateElectra,
@@ -25,7 +25,6 @@ import {
   BlindedBeaconBlock,
   BlindedBeaconBlockBody,
   Epoch,
-  ExecutionPayload,
   Root,
   RootHex,
   SignedBeaconBlock,
@@ -34,9 +33,6 @@ import {
   UintNum64,
   ValidatorIndex,
   Wei,
-  bellatrix,
-  deneb,
-  fulu,
   isBlindedBeaconBlock,
 } from "@lodestar/types";
 import {Logger, fromHex, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
@@ -48,6 +44,7 @@ import {getEffectiveBalancesFromStateBytes} from "@lodestar/state-transition";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
+import {BuilderStatus} from "../execution/builder/http.js";
 import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
 import {computeNodeIdFromPrivateKey} from "../network/subnets/interface.js";
@@ -65,14 +62,7 @@ import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
 import {ChainEvent, ChainEventEmitter} from "./emitter.js";
 import {ForkchoiceCaller, initializeForkChoice} from "./forkChoice/index.js";
-import {
-  BlockHash,
-  CommonBlockBody,
-  FindHeadFnName,
-  IBeaconChain,
-  ProposerPreparationData,
-  StateGetOpts,
-} from "./interface.js";
+import {CommonBlockBody, FindHeadFnName, IBeaconChain, ProposerPreparationData, StateGetOpts} from "./interface.js";
 import {LightClientServer} from "./lightClient/index.js";
 import {
   AggregatedAttestationPool,
@@ -84,7 +74,7 @@ import {
 import {IChainOptions} from "./options.js";
 import {PrepareNextSlotScheduler} from "./prepareNextSlot.js";
 import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
-import {AssembledBlockType, BlobsResultType, BlockType} from "./produceBlock/index.js";
+import {AssembledBlockType, BlockType, ProduceResult} from "./produceBlock/index.js";
 import {BlockAttributes, produceBlockBody, produceCommonBlockBody} from "./produceBlock/produceBlockBody.js";
 import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
 import {ReprocessController} from "./reprocess.js";
@@ -112,11 +102,13 @@ import {PersistentCheckpointStateCache} from "./stateCache/persistentCheckpoints
 import {ValidatorMonitor} from "./validatorMonitor.js";
 
 /**
- * Arbitrary constants, blobs and payloads should be consumed immediately in the same slot
+ * The maximum number of cached produced results to keep in memory.
+ *
+ * Arbitrary constant. Blobs and payloads should be consumed immediately in the same slot
  * they are produced. A value of 1 would probably be sufficient. However it's sensible to
  * allow some margin if the node overloads.
  */
-const DEFAULT_MAX_CACHED_PRODUCED_ROOTS = 4;
+const DEFAULT_MAX_CACHED_PRODUCED_RESULTS = 4;
 
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: UintNum64;
@@ -170,14 +162,14 @@ export class BeaconChain implements IBeaconChain {
   readonly beaconProposerCache: BeaconProposerCache;
   readonly checkpointBalancesCache: CheckpointBalancesCache;
   readonly shufflingCache: ShufflingCache;
-  /** Map keyed by executionPayload.blockHash of the block for those blobs */
-  readonly producedContentsCache = new Map<BlockHash, deneb.Contents & {cells?: fulu.Cell[][]}>();
 
-  // Cache payloads from the local execution so that we can send
-  // and get signed/published blinded versions which beacon node can
-  // assemble into full blocks before publishing to the network.
-  readonly producedBlockRoot = new Map<RootHex, ExecutionPayload | null>();
-  readonly producedBlindedBlockRoot = new Set<RootHex>();
+  /**
+   * Cache produced results (ExecutionPayload, DA Data) from the local execution so that we can send
+   * and get signed/published blinded versions which beacon node can
+   * assemble into full blocks before publishing to the network.
+   */
+  readonly blockProductionCache = new Map<RootHex, ProduceResult>();
+
   readonly blacklistedBlocks: Map<RootHex, Slot | null>;
 
   readonly serializedCache: SerializedCache;
@@ -747,7 +739,7 @@ export class BeaconChain implements IBeaconChain {
     const proposerIndex = state.epochCtx.getBeaconProposer(slot);
     const proposerPubKey = state.epochCtx.index2pubkey[proposerIndex].toBytes();
 
-    const {body, blobs, executionPayloadValue, shouldOverrideBuilder} = await produceBlockBody.call(
+    const {body, produceResult, executionPayloadValue, shouldOverrideBuilder} = await produceBlockBody.call(
       this,
       blockType,
       state,
@@ -766,7 +758,7 @@ export class BeaconChain implements IBeaconChain {
 
     // The hashtree root computed here for debug log will get cached and hence won't introduce additional delays
     const bodyRoot =
-      blockType === BlockType.Full
+      produceResult.type === BlockType.Full
         ? this.config.getForkTypes(slot).BeaconBlockBody.hashTreeRoot(body)
         : this.config
             .getPostBellatrixForkTypes(slot)
@@ -788,54 +780,16 @@ export class BeaconChain implements IBeaconChain {
     const {newStateRoot, proposerReward} = computeNewStateRoot(this.metrics, state, block);
     block.stateRoot = newStateRoot;
     const blockRoot =
-      blockType === BlockType.Full
+      produceResult.type === BlockType.Full
         ? this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block)
         : this.config.getPostBellatrixForkTypes(slot).BlindedBeaconBlock.hashTreeRoot(block as BlindedBeaconBlock);
     const blockRootHex = toRootHex(blockRoot);
 
-    // track the produced block for consensus broadcast validations
-    if (blockType === BlockType.Full) {
-      this.logger.debug("Setting executionPayload cache for produced block", {blockRootHex, slot, blockType});
-      this.producedBlockRoot.set(blockRootHex, (block as bellatrix.BeaconBlock).body.executionPayload ?? null);
-      this.metrics?.blockProductionCaches.producedBlockRoot.set(this.producedBlockRoot.size);
-    } else {
-      this.logger.debug("Tracking the produced blinded block", {blockRootHex, slot, blockType});
-      this.producedBlindedBlockRoot.add(blockRootHex);
-      this.metrics?.blockProductionCaches.producedBlindedBlockRoot.set(this.producedBlindedBlockRoot.size);
-    }
-
-    // Cache for latter broadcasting
-    //
-    // blinded blobs will be fetched and added to this cache later before finally
-    // publishing the blinded block's full version
-    if (blobs.type === BlobsResultType.produced) {
-      // body is of full type here
-      const {blockHash, contents} = blobs;
-      this.producedContentsCache.set(blockHash, contents);
-      this.metrics?.blockProductionCaches.producedContentsCache.set(this.producedContentsCache.size);
-    }
+    // Track the produced block for consensus broadcast validations, later validation, etc.
+    this.blockProductionCache.set(blockRootHex, produceResult);
+    this.metrics?.blockProductionCacheSize.set(this.blockProductionCache.size);
 
     return {block, executionPayloadValue, consensusBlockValue: gweiToWei(proposerReward), shouldOverrideBuilder};
-  }
-
-  /**
-   * https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/validator.md#sidecar
-   * def get_blobs_sidecar(block: BeaconBlock, blobs: Sequence[Blob]) -> BlobSidecars:
-   *   return BlobSidecars(
-   *       beacon_block_root=hash_tree_root(block),
-   *       beacon_block_slot=block.slot,
-   *       blobs=blobs,
-   *       kzg_aggregated_proof=compute_proof_from_blobs(blobs),
-   *   )
-   */
-  getContents(beaconBlock: deneb.BeaconBlock): deneb.Contents & {cells?: fulu.Cell[][]} {
-    const blockHash = toRootHex(beaconBlock.body.executionPayload.blockHash);
-    const contents = this.producedContentsCache.get(blockHash);
-    if (!contents) {
-      throw Error(`No contents for executionPayload.blockHash ${blockHash}`);
-    }
-
-    return contents;
   }
 
   async processBlock(block: BlockInput, opts?: ImportBlockOpts): Promise<void> {
@@ -1190,16 +1144,8 @@ export class BeaconChain implements IBeaconChain {
     this.reprocessController.onSlot(slot);
 
     // Prune old cached block production artifacts, those are only useful on their slot
-    pruneSetToMax(this.producedBlockRoot, this.opts.maxCachedProducedRoots ?? DEFAULT_MAX_CACHED_PRODUCED_ROOTS);
-    this.metrics?.blockProductionCaches.producedBlockRoot.set(this.producedBlockRoot.size);
-
-    pruneSetToMax(this.producedBlindedBlockRoot, this.opts.maxCachedProducedRoots ?? DEFAULT_MAX_CACHED_PRODUCED_ROOTS);
-    this.metrics?.blockProductionCaches.producedBlindedBlockRoot.set(this.producedBlindedBlockRoot.size);
-
-    if (this.config.getForkSeq(slot) >= ForkSeq.deneb) {
-      pruneSetToMax(this.producedContentsCache, this.opts.maxCachedProducedRoots ?? DEFAULT_MAX_CACHED_PRODUCED_ROOTS);
-      this.metrics?.blockProductionCaches.producedContentsCache.set(this.producedContentsCache.size);
-    }
+    pruneSetToMax(this.blockProductionCache, this.opts.maxCachedProducedRoots ?? DEFAULT_MAX_CACHED_PRODUCED_RESULTS);
+    this.metrics?.blockProductionCacheSize.set(this.blockProductionCache.size);
 
     const metrics = this.metrics;
     if (metrics && (slot + 1) % SLOTS_PER_EPOCH === 0) {
@@ -1330,7 +1276,7 @@ export class BeaconChain implements IBeaconChain {
       const previousStatus = executionBuilder.status;
       const shouldEnable = slotsPresent >= Math.min(faultInspectionWindow - allowedFaults, clockSlot);
 
-      executionBuilder.updateStatus(shouldEnable);
+      executionBuilder.updateStatus(shouldEnable ? BuilderStatus.enabled : BuilderStatus.circuitBreaker);
       // The status changed we should log
       const status = executionBuilder.status;
       const builderLog = {
@@ -1340,9 +1286,9 @@ export class BeaconChain implements IBeaconChain {
         allowedFaults,
       };
       if (status !== previousStatus) {
-        this.logger.info("Execution builder status updated", builderLog);
+        this.logger.info("External builder status updated", builderLog);
       } else {
-        this.logger.verbose("Execution builder status", builderLog);
+        this.logger.verbose("External builder status", builderLog);
       }
     }
   }

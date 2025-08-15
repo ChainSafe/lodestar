@@ -134,7 +134,7 @@ export class UnknownBlockSync {
 
   /**
    * When a blockInput comes with  an unknown parent:
-   * - add the block to pendingBlocks with status downloaded, blockRootHex as key. This is similar to
+   * - add the block to pendingBlocks with status downloaded or pending blockRootHex as key. This is similar to
    * an `onUnknownBlock` event, but the blocks is downloaded.
    * - add the parent root to pendingBlocks with status pending, parentBlockRootHex as key. This is
    * the same to an `onUnknownBlock` event with parentBlockRootHex as root.
@@ -148,14 +148,26 @@ export class UnknownBlockSync {
     // add 1 pending block with status downloaded
     let pendingBlock = this.pendingBlocks.get(blockRootHex);
     if (!pendingBlock) {
-      pendingBlock = {
-        blockRootHex,
-        parentBlockRootHex,
-        blockInput,
-        peerIdStrs: new Set(),
-        status: PendingBlockStatus.downloaded,
-        downloadAttempts: 0,
-      };
+      pendingBlock =
+        blockInput.type === BlockInputType.dataPromise
+          ? {
+              unknownBlockType: PendingBlockType.UNKNOWN_DATA,
+              blockRootHex,
+              // this will be set after we download block
+              parentBlockRootHex: null,
+              blockInput,
+              peerIdStrs: new Set(),
+              status: PendingBlockStatus.pending,
+              downloadAttempts: 0,
+            }
+          : {
+              blockRootHex,
+              parentBlockRootHex,
+              blockInput,
+              peerIdStrs: new Set(),
+              status: PendingBlockStatus.downloaded,
+              downloadAttempts: 0,
+            };
       this.pendingBlocks.set(blockRootHex, pendingBlock);
       this.logger.verbose("Added unknown block parent to pendingBlocks", {
         root: blockRootHex,
@@ -197,6 +209,7 @@ export class UnknownBlockSync {
       pendingBlock = {
         unknownBlockType,
         blockRootHex,
+        // this will be set after we download block
         parentBlockRootHex: null,
         blockInput,
         peerIdStrs: new Set(),
@@ -433,9 +446,21 @@ export class UnknownBlockSync {
   /**
    * Send block to the processor awaiting completition. If processed successfully, send all children to the processor.
    * On error, remove and downscore all descendants.
+   * This function could run recursively for all descendant blocks
    */
   private async processBlock(pendingBlock: PendingBlock): Promise<void> {
+    // pending block status is `downloaded` right after `downloadBlock`
+    // but could be `pending` if added by `onUnknownBlockParent` event and this function is called recursively
     if (pendingBlock.status !== PendingBlockStatus.downloaded) {
+      if (pendingBlock.status === PendingBlockStatus.pending) {
+        const connectedPeers = this.network.getConnectedPeers();
+        if (connectedPeers.length === 0) {
+          this.logger.debug("No connected peers, skipping download block", {blockRoot: pendingBlock.blockRootHex});
+          return;
+        }
+        // if the download is a success we'll call `processBlock()` for this block
+        await this.downloadBlock(pendingBlock, connectedPeers);
+      }
       return;
     }
 
