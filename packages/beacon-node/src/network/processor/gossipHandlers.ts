@@ -859,18 +859,3 @@ function getCutoffTimeMs(
     0
   );
 }
-async function raceWithCutoff<T>(
-  chain: {config: ChainForkConfig; genesisTime: UintNum64; logger: Logger},
-  blockSlot: Slot,
-  availabilityPromise: Promise<T>,
-  cutoffMsFromSlotStart: number
-): Promise<T> {
-  const cutoffTimeMs = Math.max(
-    computeTimeAtSlot(chain.config, blockSlot, chain.genesisTime) * 1000 + cutoffMsFromSlotStart - Date.now(),
-    0
-  );
-  const cutoffTimeout = new Promise((_resolve, reject) => setTimeout(reject, cutoffTimeMs));
-  await Promise.race([availabilityPromise, cutoffTimeout]);
-  // we can only be here if availabilityPromise has resolved else an error will be thrown
-  return availabilityPromise;
-}
