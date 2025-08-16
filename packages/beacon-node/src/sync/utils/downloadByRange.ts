@@ -2,12 +2,19 @@ import {ChainForkConfig} from "@lodestar/config";
 import {ForkPostDeneb, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {RootHex, SignedBeaconBlock, Slot, deneb, fulu, phase0} from "@lodestar/types";
-import {LodestarError, Logger, prettyBytes, prettyPrintIndices} from "@lodestar/utils";
-import {BlockInputSource, IBlockInput} from "../../chain/blocks/blockInput/index.js";
+import {LodestarError, Logger, prettyBytes, prettyPrintIndices, toRootHex} from "@lodestar/utils";
+import {
+  BlockInputSource,
+  DAType,
+  IBlockInput,
+  isBlockInputBlobs,
+  isBlockInputColumns,
+} from "../../chain/blocks/blockInput/index.js";
 import {SeenBlockInput} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {INetwork, prettyPrintPeerIdStr} from "../../network/index.js";
 import {linspace} from "../../util/numpy.js";
 import {PeerIdStr} from "../../util/peerId.js";
+import {RangeSyncType} from "./remoteSyncType.js";
 
 export type DownloadByRangeRequests = {
   blocksRequest: phase0.BeaconBlocksByRangeRequest;
@@ -27,7 +34,7 @@ export type DownloadAndCacheByRangeProps = DownloadByRangeRequests & {
   network: INetwork;
   logger: Logger;
   peerIdStr: string;
-  dataAvailabilityStatus: DataAvailabilityStatus;
+  daOutOfRange: boolean;
 };
 
 export type DownloadAndCacheByRangeResults = {
@@ -36,6 +43,138 @@ export type DownloadAndCacheByRangeResults = {
   numberOfBlobs: number;
   numberOfColumns: number;
 };
+
+export type CacheByRangeResponsesProps = {
+  config: ChainForkConfig;
+  cache: SeenBlockInput;
+  syncType: RangeSyncType;
+  peerIdStr: PeerIdStr;
+  responses: DownloadByRangeResponses;
+  batchBlocks: IBlockInput[];
+};
+
+export async function cacheByRangeResponses({
+  config,
+  cache,
+  syncType,
+  peerIdStr,
+  responses,
+  batchBlocks,
+}: CacheByRangeResponsesProps): IBlockInput[] {
+  const source = BlockInputSource.byRange;
+  const seenTimestampSec = Date.now() / 1000;
+  const updatedBatchBlocks = [...batchBlocks];
+
+  for (const block of responses.blocks ?? []) {
+    const existing = updatedBatchBlocks.find((b) => b.slot === block.message.slot);
+    if (existing) {
+      const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
+      const blockRootHex = toRootHex(blockRoot);
+      // will throw if root hex does not match (meaning we are following the wrong chain)
+      existing.addBlock(
+        {
+          block,
+          blockRootHex,
+          source: {
+            source,
+            peerIdStr,
+            seenTimestampSec,
+          },
+        },
+        {throwOnDuplicateAdd: false}
+      );
+    } else {
+      updatedBatchBlocks.push(
+        cache.getByBlock({
+          block,
+          source,
+          peerIdStr,
+          seenTimestampSec,
+        })
+      );
+    }
+  }
+
+  for (const blobSidecar of responses.blobSidecars ?? []) {
+    const existing = updatedBatchBlocks.find((b) => b.slot === blobSidecar.signedBlockHeader.message.slot);
+    if (existing) {
+      const blockRoot = config
+        .getForkTypes(existing.slot)
+        .BeaconBlockHeader.hashTreeRoot(blobSidecar.signedBlockHeader.message);
+      const blockRootHex = toRootHex(blockRoot);
+      if (!isBlockInputBlobs(existing)) {
+        throw new DownloadByRangeError({
+          code: DownloadByRangeErrorCode.MISMATCH_BLOCK_INPUT_TYPE,
+          cachedType: existing.type,
+          expectedType: DAType.Blobs,
+          slot: existing.slot,
+          blockRoot: prettyBytes(existing.blockRootHex),
+        });
+      }
+      // will throw if root hex does not match (meaning we are following the wrong chain)
+      existing.addBlob(
+        {
+          blobSidecar,
+          blockRootHex,
+          seenTimestampSec,
+          peerIdStr,
+          source,
+        },
+        {throwOnDuplicateAdd: false}
+      );
+    } else {
+      updatedBatchBlocks.push(
+        cache.getByBlob({
+          blobSidecar,
+          source,
+          peerIdStr,
+          seenTimestampSec,
+        })
+      );
+    }
+  }
+
+  for (const columnSidecar of responses.columnSidecars ?? []) {
+    const existing = updatedBatchBlocks.find((b) => b.slot === columnSidecar.signedBlockHeader.message.slot);
+    if (existing) {
+      const blockRoot = config
+        .getForkTypes(existing.slot)
+        .BeaconBlockHeader.hashTreeRoot(columnSidecar.signedBlockHeader.message);
+      const blockRootHex = toRootHex(blockRoot);
+      if (!isBlockInputColumns(existing)) {
+        throw new DownloadByRangeError({
+          code: DownloadByRangeErrorCode.MISMATCH_BLOCK_INPUT_TYPE,
+          cachedType: existing.type,
+          expectedType: DAType.Columns,
+          slot: existing.slot,
+          blockRoot: prettyBytes(existing.blockRootHex),
+        });
+      }
+      // will throw if root hex does not match (meaning we are following the wrong chain)
+      existing.addColumn(
+        {
+          columnSidecar,
+          blockRootHex,
+          seenTimestampSec,
+          peerIdStr,
+          source,
+        },
+        {throwOnDuplicateAdd: false}
+      );
+    } else {
+      updatedBatchBlocks.push(
+        cache.getByBlob({
+          columnSidecar,
+          source,
+          peerIdStr,
+          seenTimestampSec,
+        })
+      );
+    }
+  }
+
+  return updatedBatchBlocks;
+}
 
 export async function downloadAndCacheByRange(
   request: DownloadAndCacheByRangeProps
@@ -158,14 +297,14 @@ export async function downloadByRange({
   network,
   logger,
   peerIdStr,
-  dataAvailabilityStatus,
+  daOutOfRange,
   blocksRequest,
   blobsRequest,
   columnsRequest,
 }: Omit<DownloadAndCacheByRangeProps, "cache">): Promise<DownloadByRangeResponses> {
   const slotRangeString = validateRequests({
     config,
-    dataAvailabilityStatus,
+    daOutOfRange,
     blocksRequest,
     blobsRequest,
     columnsRequest,
@@ -206,7 +345,7 @@ export async function downloadByRange({
  */
 export function validateRequests({
   config,
-  dataAvailabilityStatus,
+  daOutOfRange,
   blocksRequest,
   blobsRequest,
   columnsRequest,
@@ -223,14 +362,14 @@ export function validateRequests({
     });
   }
 
-  if (dataAvailabilityStatus !== DataAvailabilityStatus.Available) {
+  if (daOutOfRange) {
     if (dataRequest) {
       throw new DownloadByRangeError(
         {
           code: DownloadByRangeErrorCode.INVALID_DATA_REQUEST,
           slotRange,
         },
-        "Cannot request data if it is not available"
+        "Cannot request data if it is outside of the availability range"
       );
     }
 
@@ -745,6 +884,7 @@ export enum DownloadByRangeErrorCode {
   EXTRA_COLUMNS_SOME_SLOTS = "DOWNLOAD_BY_RANGE_ERROR_EXTRA_COLUMNS_SOME_SLOTS",
   PEER_CUSTODY_FAILURE = "DOWNLOAD_BY_RANGE_ERROR_PEER_CUSTODY_FAILURE",
   CACHING_ERROR = "DOWNLOAD_BY_RANGE_CACHING_ERROR",
+  MISMATCH_BLOCK_INPUT_TYPE = "DOWNLOAD_BY_RANGE_MISMATCH_BLOCK_INPUT_TYPE",
 }
 
 export type DownloadByRangeErrorType =
@@ -841,6 +981,13 @@ export type DownloadByRangeErrorType =
       code: DownloadByRangeErrorCode.PEER_CUSTODY_FAILURE;
       peerId: string;
       missingColumns: string;
+    }
+  | {
+      code: DownloadByRangeErrorCode.MISMATCH_BLOCK_INPUT_TYPE;
+      expectedType: DAType;
+      cachedType: DAType;
+      slot: Slot;
+      blockRoot: string;
     };
 
 export class DownloadByRangeError extends LodestarError<DownloadByRangeErrorType> {}
