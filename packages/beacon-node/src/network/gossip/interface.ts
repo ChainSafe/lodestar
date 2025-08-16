@@ -1,6 +1,6 @@
 import {PeerIdStr} from "@chainsafe/libp2p-gossipsub/types";
 import {Message, TopicValidatorResult} from "@libp2p/interface";
-import {BeaconConfig} from "@lodestar/config";
+import {BeaconConfig, ForkBoundary} from "@lodestar/config";
 import {
   AttesterSlashing,
   LightClientFinalityUpdate,
@@ -13,6 +13,7 @@ import {
   altair,
   capella,
   deneb,
+  fulu,
   phase0,
 } from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
@@ -21,11 +22,11 @@ import {AttestationError, AttestationErrorType} from "../../chain/errors/attesta
 import {GossipActionError} from "../../chain/errors/gossipValidation.js";
 import {IBeaconChain} from "../../chain/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
-import {SubscribeBoundary} from "../core/types.js";
 
 export enum GossipType {
   beacon_block = "beacon_block",
   blob_sidecar = "blob_sidecar",
+  data_column_sidecar = "data_column_sidecar",
   beacon_aggregate_and_proof = "beacon_aggregate_and_proof",
   beacon_attestation = "beacon_attestation",
   voluntary_exit = "voluntary_exit",
@@ -50,13 +51,14 @@ export enum GossipEncoding {
  */
 export interface IGossipTopic {
   type: GossipType;
-  boundary: SubscribeBoundary;
+  boundary: ForkBoundary;
   encoding?: GossipEncoding;
 }
 
 export type GossipTopicTypeMap = {
   [GossipType.beacon_block]: {type: GossipType.beacon_block};
   [GossipType.blob_sidecar]: {type: GossipType.blob_sidecar; subnet: SubnetID};
+  [GossipType.data_column_sidecar]: {type: GossipType.data_column_sidecar; subnet: SubnetID};
   [GossipType.beacon_aggregate_and_proof]: {type: GossipType.beacon_aggregate_and_proof};
   [GossipType.beacon_attestation]: {type: GossipType.beacon_attestation; subnet: SubnetID};
   [GossipType.voluntary_exit]: {type: GossipType.voluntary_exit};
@@ -89,6 +91,7 @@ export type GossipTypeMap = {
   [GossipType.blob_sidecar]: deneb.BlobSidecar;
   [GossipType.beacon_aggregate_and_proof]: SignedAggregateAndProof;
   [GossipType.beacon_attestation]: SingleAttestation;
+  [GossipType.data_column_sidecar]: fulu.DataColumnSidecar;
   [GossipType.voluntary_exit]: phase0.SignedVoluntaryExit;
   [GossipType.proposer_slashing]: phase0.ProposerSlashing;
   [GossipType.attester_slashing]: AttesterSlashing;
@@ -104,6 +107,7 @@ export type GossipFnByType = {
   [GossipType.blob_sidecar]: (blobSidecar: deneb.BlobSidecar) => Promise<void> | void;
   [GossipType.beacon_aggregate_and_proof]: (aggregateAndProof: SignedAggregateAndProof) => Promise<void> | void;
   [GossipType.beacon_attestation]: (attestation: SingleAttestation) => Promise<void> | void;
+  [GossipType.data_column_sidecar]: (dataColumnSidecar: fulu.DataColumnSidecar) => Promise<void> | void;
   [GossipType.voluntary_exit]: (voluntaryExit: phase0.SignedVoluntaryExit) => Promise<void> | void;
   [GossipType.proposer_slashing]: (proposerSlashing: phase0.ProposerSlashing) => Promise<void> | void;
   [GossipType.attester_slashing]: (attesterSlashing: AttesterSlashing) => Promise<void> | void;

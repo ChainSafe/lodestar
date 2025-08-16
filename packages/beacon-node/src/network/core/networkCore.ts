@@ -1,25 +1,28 @@
-import {ENR} from "@chainsafe/enr";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/dist/src/score/peer-score.js";
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {Connection, PrivateKey} from "@libp2p/interface";
+import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {routes} from "@lodestar/api";
-import {BeaconConfig} from "@lodestar/config";
+import {BeaconConfig, ForkBoundary} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
+import {isForkPostFulu} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
-import {Epoch, phase0, ssz, sszTypesFor} from "@lodestar/types";
-import {fromHex} from "@lodestar/utils";
+import {Epoch, Status, fulu, sszTypesFor} from "@lodestar/types";
 import {multiaddr} from "@multiformats/multiaddr";
 import {formatNodePeer} from "../../api/impl/node/utils.js";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {ClockEvent, IClock} from "../../util/clock.js";
+import {CustodyConfig} from "../../util/dataColumns.js";
 import {PeerIdStr, peerIdFromString, peerIdToString} from "../../util/peerId.js";
 import {Discv5Worker} from "../discv5/index.js";
 import {NetworkEventBus} from "../events.js";
-import {FORK_EPOCH_LOOKAHEAD, getActiveSubscribeBoundaries} from "../forks.js";
+import {FORK_EPOCH_LOOKAHEAD, getActiveForkBoundaries} from "../forks.js";
 import {Eth2Gossipsub, getCoreTopicsAtFork} from "../gossip/index.js";
+import {getDataColumnSidecarTopics} from "../gossip/topic.js";
 import {Libp2p} from "../interface.js";
 import {createNodeJsLibp2p} from "../libp2p/index.js";
 import {MetadataController} from "../metadata.js";
+import {NetworkConfig} from "../networkConfig.js";
 import {NetworkOptions} from "../options.js";
 import {PeerAction, PeerRpcScoreStore, PeerScoreStats} from "../peers/index.js";
 import {PeerManager} from "../peers/peerManager.js";
@@ -28,11 +31,11 @@ import {ReqRespBeaconNode} from "../reqresp/ReqRespBeaconNode.js";
 import {GetReqRespHandlerFn, OutgoingRequestArgs} from "../reqresp/types.js";
 import {LocalStatusCache} from "../statusCache.js";
 import {AttnetsService} from "../subnets/attnetsService.js";
-import {CommitteeSubscription, IAttnetsService} from "../subnets/interface.js";
+import {CommitteeSubscription, IAttnetsService, computeNodeId} from "../subnets/interface.js";
 import {SyncnetsService} from "../subnets/syncnetsService.js";
 import {getConnectionsMap} from "../util.js";
 import {NetworkCoreMetrics, createNetworkCoreMetrics} from "./metrics.js";
-import {INetworkCore, MultiaddrStr, SubscribeBoundary} from "./types.js";
+import {INetworkCore, MultiaddrStr} from "./types.js";
 
 type Mods = {
   libp2p: Libp2p;
@@ -41,6 +44,7 @@ type Mods = {
   attnetsService: IAttnetsService;
   syncnetsService: SyncnetsService;
   peerManager: PeerManager;
+  networkConfig: NetworkConfig;
   peersData: PeersData;
   metadata: MetadataController;
   logger: LoggerNode;
@@ -62,7 +66,8 @@ export type BaseNetworkInit = {
   events: NetworkEventBus;
   getReqRespHandler: GetReqRespHandlerFn;
   activeValidatorCount: number;
-  initialStatus: phase0.Status;
+  initialStatus: Status;
+  initialCustodyGroupCount: number;
 };
 
 /**
@@ -87,6 +92,7 @@ export class NetworkCore implements INetworkCore {
   private readonly attnetsService: IAttnetsService;
   private readonly syncnetsService: SyncnetsService;
   private readonly peerManager: PeerManager;
+  private readonly networkConfig: NetworkConfig;
   private readonly peersData: PeersData;
   private readonly reqResp: ReqRespBeaconNode;
   private readonly gossip: Eth2Gossipsub;
@@ -100,7 +106,7 @@ export class NetworkCore implements INetworkCore {
   private readonly opts: NetworkOptions;
 
   // Internal state
-  private readonly subscribedBoundariesByEpoch = new Map<Epoch, SubscribeBoundary>();
+  private readonly forkBoundariesByEpoch = new Map<Epoch, ForkBoundary>();
   private closed = false;
 
   constructor(modules: Mods) {
@@ -110,6 +116,7 @@ export class NetworkCore implements INetworkCore {
     this.attnetsService = modules.attnetsService;
     this.syncnetsService = modules.syncnetsService;
     this.peerManager = modules.peerManager;
+    this.networkConfig = modules.networkConfig;
     this.peersData = modules.peersData;
     this.metadata = modules.metadata;
     this.logger = modules.logger;
@@ -134,6 +141,7 @@ export class NetworkCore implements INetworkCore {
     getReqRespHandler,
     activeValidatorCount,
     initialStatus,
+    initialCustodyGroupCount,
   }: BaseNetworkInit): Promise<NetworkCore> {
     const libp2p = await createNodeJsLibp2p(privateKey, opts, {
       peerStoreDir,
@@ -143,7 +151,7 @@ export class NetworkCore implements INetworkCore {
 
     const metrics = metricsRegistry ? createNetworkCoreMetrics(metricsRegistry) : null;
     const peersData = new PeersData();
-    const peerRpcScores = new PeerRpcScoreStore(opts, metrics);
+    const peerRpcScores = new PeerRpcScoreStore(opts, metrics, logger);
     const statusCache = new LocalStatusCache(initialStatus);
 
     // Bind discv5's ENR to local metadata
@@ -153,7 +161,14 @@ export class NetworkCore implements INetworkCore {
     const onMetadataSetValue = function onMetadataSetValue(key: string, value: Uint8Array): void {
       discv5?.setEnrValue(key, value).catch((e) => logger.error("error on setEnrValue", {key}, e));
     };
-    const metadata = new MetadataController({}, {config, onSetValue: onMetadataSetValue});
+    const peerId = peerIdFromPrivateKey(privateKey);
+    const nodeId = computeNodeId(peerId);
+    const networkConfig: NetworkConfig = {
+      nodeId,
+      config,
+      custodyConfig: new CustodyConfig({nodeId, config, initialCustodyGroupCount}),
+    };
+    const metadata = new MetadataController({}, {networkConfig, logger, onSetValue: onMetadataSetValue});
 
     const reqResp = new ReqRespBeaconNode(
       {
@@ -172,7 +187,7 @@ export class NetworkCore implements INetworkCore {
     );
 
     const gossip = new Eth2Gossipsub(opts, {
-      config,
+      networkConfig,
       libp2p,
       logger,
       metricsRegister: metricsRegistry,
@@ -192,9 +207,16 @@ export class NetworkCore implements INetworkCore {
     // should be called before AttnetsService constructor so that node subscribe to deterministic attnet topics
     await gossip.start();
 
-    const enr = opts.discv5?.enr;
-    const nodeId = enr ? fromHex(ENR.decodeTxt(enr).nodeId) : null;
-    const attnetsService = new AttnetsService(config, clock, gossip, metadata, logger, metrics, nodeId, opts);
+    const attnetsService = new AttnetsService(
+      config,
+      clock,
+      gossip,
+      metadata,
+      logger,
+      metrics,
+      networkConfig.nodeId,
+      opts
+    );
     const syncnetsService = new SyncnetsService(config, clock, gossip, metadata, logger, metrics, opts);
 
     const peerManager = await PeerManager.init(
@@ -208,20 +230,20 @@ export class NetworkCore implements INetworkCore {
         logger,
         metrics,
         clock,
-        config,
         peerRpcScores,
         events,
+        networkConfig,
         peersData,
         statusCache,
       },
       opts
     );
 
-    // Network spec decides version changes based on clock fork, not head fork
-    const forkCurrentSlot = config.getForkName(clock.currentSlot);
+    // Network spec decides version changes based on clock epoch, not head epoch
+    const boundary = config.getForkBoundaryAtEpoch(clock.currentEpoch);
 
-    // Register only ReqResp protocols relevant to clock's fork
-    reqResp.registerProtocolsAtBoundary({fork: forkCurrentSlot});
+    // Register only ReqResp protocols relevant to clock's epoch
+    reqResp.registerProtocolsAtBoundary(boundary);
 
     // Bind discv5's ENR to local metadata
     // biome-ignore lint/complexity/useLiteralKeys: `discovery` is a private attribute
@@ -237,6 +259,7 @@ export class NetworkCore implements INetworkCore {
       attnetsService,
       syncnetsService,
       peerManager,
+      networkConfig,
       peersData,
       metadata,
       logger,
@@ -272,6 +295,10 @@ export class NetworkCore implements INetworkCore {
     this.closed = true;
   }
 
+  getNetworkConfig(): NetworkConfig {
+    return this.networkConfig;
+  }
+
   async scrapeMetrics(): Promise<string> {
     return [
       (await this.metrics?.register.metrics()) ?? "",
@@ -282,12 +309,14 @@ export class NetworkCore implements INetworkCore {
       .join("\n\n");
   }
 
-  async updateStatus(status: phase0.Status): Promise<void> {
+  async updateStatus(status: Status): Promise<void> {
     this.statusCache.update(status);
   }
+
   async reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): Promise<void> {
     this.peerManager.reportPeer(peerIdFromString(peer), action, actionName);
   }
+
   async reStatusPeers(peers: PeerIdStr[]): Promise<void> {
     this.peerManager.reStatusPeers(peers);
   }
@@ -313,8 +342,8 @@ export class NetworkCore implements INetworkCore {
       this.logger.info("Subscribed gossip core topics");
     }
 
-    for (const boundary of getActiveSubscribeBoundaries(this.config, this.clock.currentEpoch)) {
-      this.subscribeCoreTopicsAtBoundary(this.config, boundary);
+    for (const boundary of getActiveForkBoundaries(this.config, this.clock.currentEpoch)) {
+      this.subscribeCoreTopicsAtBoundary(this.networkConfig, boundary);
     }
   }
 
@@ -322,22 +351,43 @@ export class NetworkCore implements INetworkCore {
    * Unsubscribe from all gossip events. Safe to call multiple times
    */
   async unsubscribeGossipCoreTopics(): Promise<void> {
-    for (const boundary of this.subscribedBoundariesByEpoch.values()) {
-      this.unsubscribeCoreTopicsAtBoundary(this.config, boundary);
+    for (const boundary of this.forkBoundariesByEpoch.values()) {
+      this.unsubscribeCoreTopicsAtBoundary(this.networkConfig, boundary);
     }
   }
 
   async isSubscribedToGossipCoreTopics(): Promise<boolean> {
-    return this.subscribedBoundariesByEpoch.size > 0;
+    return this.forkBoundariesByEpoch.size > 0;
   }
 
   sendReqRespRequest(data: OutgoingRequestArgs): AsyncIterable<ResponseIncoming> {
     const peerId = peerIdFromString(data.peerId);
     return this.reqResp.sendRequestWithoutEncoding(peerId, data.method, data.versions, data.requestData);
   }
+
   async publishGossip(topic: string, data: Uint8Array, opts?: PublishOpts | undefined): Promise<number> {
     const {recipients} = await this.gossip.publish(topic, data, opts);
     return recipients.length;
+  }
+
+  /**
+   * Handler of ChainEvent.updateTargetCustodyGroupCount event
+   * Updates the target custody group count in the network config and metadata.
+   * Also subscribes to new data_column_sidecar subnet topics for the new custody group count.
+   */
+  async setTargetGroupCount(count: number): Promise<void> {
+    this.networkConfig.custodyConfig.updateTargetCustodyGroupCount(count);
+    this.metadata.custodyGroupCount = count;
+    // cannot call subscribeGossipCoreTopics() because we subsribed to core topics already
+    // we only need to subscribe to more data_column_sidecar topics
+    const dataColumnSubnetTopics = getDataColumnSidecarTopics(this.networkConfig);
+    const activeBoundaries = getActiveForkBoundaries(this.config, this.clock.currentEpoch);
+    for (const boundary of activeBoundaries) {
+      for (const topic of dataColumnSubnetTopics) {
+        // there are existing subscriptions for old subnets, in that case gossipsub will just ignore
+        this.gossip.subscribeTopic({...topic, boundary});
+      }
+    }
   }
 
   // REST API queries
@@ -345,16 +395,34 @@ export class NetworkCore implements INetworkCore {
   async getNetworkIdentity(): Promise<routes.node.NetworkIdentity> {
     // biome-ignore lint/complexity/useLiteralKeys: `discovery` is a private attribute
     const enr = await this.peerManager["discovery"]?.discv5.enr();
+
+    // enr.getFullMultiaddr can counterintuitively return undefined near startup if the enr.ip or enr.ip6 is not set.
+    // Eventually, the enr will be updated with the correct ip after discv5 runs for a while.
+
+    // Node's addresses on which is listening for discv5 requests.
+    // The example provided by the beacon-APIs show a _full_ multiaddr, ie including the peer id, so we include it.
     const discoveryAddresses = [
-      enr?.getLocationMultiaddr("tcp")?.toString() ?? null,
-      enr?.getLocationMultiaddr("udp")?.toString() ?? null,
+      (await enr?.getFullMultiaddr("udp"))?.toString(),
+      (await enr?.getFullMultiaddr("udp6"))?.toString(),
+    ].filter((addr): addr is string => Boolean(addr));
+
+    // Node's addresses on which eth2 RPC requests are served.
+    const p2pAddresses = [
+      // It is useful to include listen multiaddrs even if they likely aren't public IPs
+      // This means that we will always return some multiaddrs
+      ...this.libp2p.getMultiaddrs().map((ma) => ma.toString()),
+
+      (await enr?.getFullMultiaddr("tcp"))?.toString(),
+      (await enr?.getFullMultiaddr("tcp6"))?.toString(),
+      (await enr?.getFullMultiaddr("quic"))?.toString(),
+      (await enr?.getFullMultiaddr("quic6"))?.toString(),
     ].filter((addr): addr is string => Boolean(addr));
 
     return {
       peerId: peerIdToString(this.libp2p.peerId),
       enr: enr?.encodeTxt() || "",
       discoveryAddresses,
-      p2pAddresses: this.libp2p.getMultiaddrs().map((m) => m.toString()),
+      p2pAddresses,
       metadata: this.metadata.json,
     };
   }
@@ -390,10 +458,14 @@ export class NetworkCore implements INetworkCore {
   private _dumpPeer(peerIdStr: string, connections: Connection[]): routes.lodestar.LodestarNodePeer {
     const peerData = this.peersData.connectedPeers.get(peerIdStr);
     const fork = this.config.getForkName(this.clock.currentSlot);
+    if (isForkPostFulu(fork) && peerData?.status) {
+      (peerData.status as fulu.Status).earliestAvailableSlot =
+        (peerData.status as fulu.Status).earliestAvailableSlot ?? 0;
+    }
     return {
       ...formatNodePeer(peerIdStr, connections),
       agentVersion: peerData?.agentVersion ?? "NA",
-      status: peerData?.status ? ssz.phase0.Status.toJson(peerData.status) : null,
+      status: peerData?.status ? sszTypesFor(fork).Status.toJson(peerData.status) : null,
       metadata: peerData?.metadata ? sszTypesFor(fork).Metadata.toJson(peerData.metadata) : null,
       agentClient: String(peerData?.agentClient ?? "Unknown"),
       lastReceivedMsgUnixTsMs: peerData?.lastReceivedMsgUnixTsMs ?? 0,
@@ -453,45 +525,45 @@ export class NetworkCore implements INetworkCore {
   }
 
   /**
-   * Handle subscriptions through subscribe boundary transitions, @see FORK_EPOCH_LOOKAHEAD
+   * Handle subscriptions through fork boundary transitions, @see FORK_EPOCH_LOOKAHEAD
    */
   private onEpoch = async (epoch: Epoch): Promise<void> => {
     try {
-      // Compute prev and next fork shifted, so next fork is still next at forkEpoch + FORK_EPOCH_LOOKAHEAD
-      const activeBoundaries = getActiveSubscribeBoundaries(this.config, epoch);
+      // Compute prev and next fork boundary shifted, so next boundary is still next at forkEpoch + FORK_EPOCH_LOOKAHEAD
+      const activeBoundaries = getActiveForkBoundaries(this.config, epoch);
       for (let i = 0; i < activeBoundaries.length; i++) {
-        // Only when a new subscribe boundary is scheduled post this one
+        // Only when a new fork boundary is scheduled post this one
         if (activeBoundaries[i + 1] !== undefined) {
           const prevBoundary = activeBoundaries[i];
           const nextBoundary = activeBoundaries[i + 1];
-          const nextBoundaryEpoch = this.config.forks[nextBoundary.fork].epoch;
+          const nextBoundaryEpoch = nextBoundary.epoch;
 
-          // Before subscribe boundary transition
+          // Before fork boundary transition
           if (epoch === nextBoundaryEpoch - FORK_EPOCH_LOOKAHEAD) {
-            // Don't subscribe to new boundary if the node is not subscribed to any topic
+            // Don't subscribe to new fork boundary if the node is not subscribed to any topic
             if (await this.isSubscribedToGossipCoreTopics()) {
-              this.subscribeCoreTopicsAtBoundary(this.config, nextBoundary);
-              this.logger.info("Subscribing gossip topics before boundary", nextBoundary);
+              this.subscribeCoreTopicsAtBoundary(this.networkConfig, nextBoundary);
+              this.logger.info("Subscribing gossip topics for next fork boundary", nextBoundary);
             } else {
-              this.logger.info("Skipping subscribing gossip topics before boundary", nextBoundary);
+              this.logger.info("Skipping subscribing gossip topics for next fork boundary", nextBoundary);
             }
-            this.attnetsService.subscribeSubnetsAfterBoundary(nextBoundary);
-            this.syncnetsService.subscribeSubnetsAfterBoundary(nextBoundary);
+            this.attnetsService.subscribeSubnetsNextBoundary(nextBoundary);
+            this.syncnetsService.subscribeSubnetsNextBoundary(nextBoundary);
           }
 
-          // On boundary transition
+          // On fork boundary transition
           if (epoch === nextBoundaryEpoch) {
             // updateEth2Field() MUST be called with clock epoch, onEpoch event is emitted in response to clock events
             this.metadata.updateEth2Field(epoch);
             this.reqResp.registerProtocolsAtBoundary(nextBoundary);
           }
 
-          // After boundary transition
+          // After fork boundary transition
           if (epoch === nextBoundaryEpoch + FORK_EPOCH_LOOKAHEAD) {
-            this.logger.info("Unsubscribing gossip topics before boundary", prevBoundary);
-            this.unsubscribeCoreTopicsAtBoundary(this.config, prevBoundary);
-            this.attnetsService.unsubscribeSubnetsBeforeBoundary(prevBoundary);
-            this.syncnetsService.unsubscribeSubnetsBeforeBoundary(prevBoundary);
+            this.logger.info("Unsubscribing gossip topics of previous fork boundary", prevBoundary);
+            this.unsubscribeCoreTopicsAtBoundary(this.networkConfig, prevBoundary);
+            this.attnetsService.unsubscribeSubnetsPrevBoundary(prevBoundary);
+            this.syncnetsService.unsubscribeSubnetsPrevBoundary(prevBoundary);
           }
         }
       }
@@ -500,13 +572,12 @@ export class NetworkCore implements INetworkCore {
     }
   };
 
-  private subscribeCoreTopicsAtBoundary(config: BeaconConfig, boundary: SubscribeBoundary): void {
-    const epoch = config.forks[boundary.fork].epoch;
-    if (this.subscribedBoundariesByEpoch.has(epoch)) return;
-    this.subscribedBoundariesByEpoch.set(epoch, boundary);
+  private subscribeCoreTopicsAtBoundary(networkConfig: NetworkConfig, boundary: ForkBoundary): void {
+    if (this.forkBoundariesByEpoch.has(boundary.epoch)) return;
+    this.forkBoundariesByEpoch.set(boundary.epoch, boundary);
     const {subscribeAllSubnets, disableLightClientServer} = this.opts;
 
-    for (const topic of getCoreTopicsAtFork(config, boundary.fork, {
+    for (const topic of getCoreTopicsAtFork(networkConfig, boundary.fork, {
       subscribeAllSubnets,
       disableLightClientServer,
     })) {
@@ -514,13 +585,12 @@ export class NetworkCore implements INetworkCore {
     }
   }
 
-  private unsubscribeCoreTopicsAtBoundary(config: BeaconConfig, boundary: SubscribeBoundary): void {
-    const epoch = config.forks[boundary.fork].epoch;
-    if (!this.subscribedBoundariesByEpoch.has(epoch)) return;
-    this.subscribedBoundariesByEpoch.delete(epoch);
+  private unsubscribeCoreTopicsAtBoundary(networkConfig: NetworkConfig, boundary: ForkBoundary): void {
+    if (!this.forkBoundariesByEpoch.has(boundary.epoch)) return;
+    this.forkBoundariesByEpoch.delete(boundary.epoch);
     const {subscribeAllSubnets, disableLightClientServer} = this.opts;
 
-    for (const topic of getCoreTopicsAtFork(config, boundary.fork, {
+    for (const topic of getCoreTopicsAtFork(networkConfig, boundary.fork, {
       subscribeAllSubnets,
       disableLightClientServer,
     })) {

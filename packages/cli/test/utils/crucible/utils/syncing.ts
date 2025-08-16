@@ -131,7 +131,7 @@ export async function assertUnknownBlockSync(env: Simulation): Promise<void> {
   try {
     (
       await unknownBlockSync.beacon.api.beacon.publishBlockV2({
-        signedBlockOrContents: {
+        signedBlockContents: {
           signedBlock: currentHead as SignedBeaconBlock<ForkPostDeneb>,
           blobs: currentSidecars.map((b) => b.blob),
           kzgProofs: currentSidecars.map((b) => b.kzgProof),

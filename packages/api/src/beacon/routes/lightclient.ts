@@ -1,7 +1,7 @@
 import {ListCompositeType, ValueOf} from "@chainsafe/ssz";
 import {BeaconConfig, ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {NetworkName, genesisData} from "@lodestar/config/networks";
-import {ForkName, ZERO_HASH} from "@lodestar/params";
+import {ForkName, SLOTS_PER_EPOCH, ZERO_HASH} from "@lodestar/params";
 import {
   LightClientBootstrap,
   LightClientFinalityUpdate,
@@ -132,7 +132,9 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
             const chunks: Uint8Array[] = [];
             for (const [i, update] of data.entries()) {
               const version = meta.versions[i];
-              const forkDigest = cachedBeaconConfig().forkName2ForkDigest(version);
+              const config = cachedBeaconConfig();
+              const epoch = Math.floor(update.attestedHeader.beacon.slot / SLOTS_PER_EPOCH);
+              const forkDigest = config.forkBoundary2ForkDigest(config.getForkBoundaryAtEpoch(epoch));
               const serialized = getPostAltairForkTypes(version).LightClientUpdate.serialize(update);
               const length = ssz.UintNum64.serialize(4 + serialized.length);
               chunks.push(length, forkDigest, serialized);
@@ -145,7 +147,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
             while (offset < data.length) {
               const length = ssz.UintNum64.deserialize(data.subarray(offset, offset + 8));
               const forkDigest = ssz.ForkDigest.deserialize(data.subarray(offset + 8, offset + 12));
-              const version = cachedBeaconConfig().forkDigest2ForkName(forkDigest);
+              const {fork: version} = cachedBeaconConfig().forkDigest2ForkBoundary(forkDigest);
               updates.push(
                 getPostAltairForkTypes(version).LightClientUpdate.deserialize(
                   data.subarray(offset + 12, offset + 8 + length)

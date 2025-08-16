@@ -5,7 +5,7 @@ import {IForkChoice} from "@lodestar/fork-choice";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot} from "@lodestar/types";
-import {Logger, fromHex, toRootHex} from "@lodestar/utils";
+import {Logger, fromHex, toHex, toRootHex} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/index.js";
 import {BlockArchiveBatchPutBinaryItem} from "../../../db/repositories/index.js";
 import {ensureDir, writeIfNotExist} from "../../../util/file.js";
@@ -55,7 +55,7 @@ export async function archiveBlocks(
   logger: Logger,
   finalizedCheckpoint: CheckpointHex,
   currentEpoch: Epoch,
-  archiveBlobEpochs?: number,
+  archiveDataEpochs?: number,
   persistOrphanedBlocks?: boolean,
   persistOrphanedBlocksDir?: string
 ): Promise<void> {
@@ -66,6 +66,7 @@ export async function archiveBlocks(
 
   // NOTE: The finalized block will be exactly the first block of `epoch` or previous
   const finalizedPostDeneb = finalizedCheckpoint.epoch >= config.DENEB_FORK_EPOCH;
+  const finalizedPostFulu = finalizedCheckpoint.epoch >= config.FULU_FORK_EPOCH;
 
   const finalizedCanonicalBlockRoots: BlockRootSlot[] = finalizedCanonicalBlocks.map((block) => ({
     slot: block.slot,
@@ -81,8 +82,23 @@ export async function archiveBlocks(
     });
 
     if (finalizedPostDeneb) {
-      const migrate = await migrateBlobSidecarsFromHotToColdDb(config, db, finalizedCanonicalBlockRoots, currentEpoch);
-      logger.verbose(migrate ? "Migrated blobSidecars from hot DB to cold DB" : "Skip blobSidecars migration");
+      const migratedEntries = await migrateBlobSidecarsFromHotToColdDb(
+        config,
+        db,
+        finalizedCanonicalBlockRoots,
+        currentEpoch
+      );
+      logger.verbose("Migrated blobSidecars from hot DB to cold DB", {migratedEntries});
+    }
+
+    if (finalizedPostFulu) {
+      const migratedEntries = await migrateDataColumnSidecarsFromHotToColdDb(
+        config,
+        db,
+        finalizedCanonicalBlockRoots,
+        currentEpoch
+      );
+      logger.verbose("Migrated dataColumnSidecars from hot DB to cold DB", {migratedEntries});
     }
   }
 
@@ -117,16 +133,21 @@ export async function archiveBlocks(
 
     if (finalizedPostDeneb) {
       await db.blobSidecars.batchDelete(nonCanonicalBlockRoots);
-      logger.verbose("Deleted non canonical blobsSider from hot DB");
+      logger.verbose("Deleted non canonical blobSidecars from hot DB");
+    }
+
+    if (finalizedPostFulu) {
+      await db.dataColumnSidecars.batchDelete(nonCanonicalBlockRoots);
+      logger.verbose("Deleted non canonical dataColumnSidecars from hot DB");
     }
   }
 
   // Delete expired blobs
-  // Keep only `[current_epoch - max(MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, archiveBlobEpochs)]
-  // if archiveBlobEpochs set to Infinity do not prune`
+  // Keep only `[current_epoch - max(MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, archiveDataEpochs)]`
+  // if archiveDataEpochs set to Infinity do not prune`
   if (finalizedPostDeneb) {
-    if (archiveBlobEpochs !== Infinity) {
-      const blobsArchiveWindow = Math.max(config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, archiveBlobEpochs ?? 0);
+    if (archiveDataEpochs !== Infinity) {
+      const blobsArchiveWindow = Math.max(config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, archiveDataEpochs ?? 0);
       const blobSidecarsMinEpoch = currentEpoch - blobsArchiveWindow;
       if (blobSidecarsMinEpoch >= config.DENEB_FORK_EPOCH) {
         const slotsToDelete = await db.blobSidecarsArchive.keys({lt: computeStartSlotAtEpoch(blobSidecarsMinEpoch)});
@@ -138,7 +159,34 @@ export async function archiveBlocks(
         }
       }
     } else {
-      logger.verbose("blobSidecars pruning skipped: archiveBlobEpochs set to Infinity");
+      logger.verbose("blobSidecars pruning skipped: archiveDataEpochs set to Infinity");
+    }
+  }
+
+  // Delete expired data column sidecars
+  // Keep only `[current_epoch - max(MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS, archiveDataEpochs)]`
+  if (finalizedPostFulu) {
+    if (archiveDataEpochs !== Infinity) {
+      const dataColumnSidecarsArchiveWindow = Math.max(
+        config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS,
+        archiveDataEpochs ?? 0
+      );
+      const dataColumnSidecarsMinEpoch = currentEpoch - dataColumnSidecarsArchiveWindow;
+      if (dataColumnSidecarsMinEpoch >= config.FULU_FORK_EPOCH) {
+        const slotsToDelete = await db.dataColumnSidecarsArchive.keys({
+          lt: computeStartSlotAtEpoch(dataColumnSidecarsMinEpoch),
+        });
+        if (slotsToDelete.length > 0) {
+          await db.dataColumnSidecarsArchive.batchDelete(slotsToDelete);
+          logger.verbose(`dataColumnSidecars prune: batchDelete range ${slotsToDelete[0]}..${slotsToDelete.at(-1)}`);
+        } else {
+          logger.verbose(`dataColumnSidecars prune: no entries before epoch ${dataColumnSidecarsMinEpoch}`);
+        }
+      } else {
+        logger.verbose(`dataColumnSidecars pruning skipped: ${dataColumnSidecarsMinEpoch} is before fulu fork epoch`);
+      }
+    } else {
+      logger.verbose("dataColumnSidecars pruning skipped: archiveDataEpochs set to Infinity");
     }
   }
 
@@ -205,15 +253,14 @@ async function migrateBlobSidecarsFromHotToColdDb(
   db: IBeaconDb,
   blocks: BlockRootSlot[],
   currentEpoch: Epoch
-): Promise<boolean> {
-  let result = false;
-
+): Promise<number> {
+  let migratedWrappedBlobSidecars = 0;
   for (let i = 0; i < blocks.length; i += BLOB_SIDECAR_BATCH_SIZE) {
     const toIdx = Math.min(i + BLOB_SIDECAR_BATCH_SIZE, blocks.length);
     const canonicalBlocks = blocks.slice(i, toIdx);
 
     // processCanonicalBlocks
-    if (canonicalBlocks.length === 0) return false;
+    if (canonicalBlocks.length === 0) break;
 
     // load Buffer instead of ssz deserialized to improve performance
     const canonicalBlobSidecarsEntries: KeyValue<Slot, Uint8Array>[] = await Promise.all(
@@ -221,8 +268,11 @@ async function migrateBlobSidecarsFromHotToColdDb(
         .filter((block) => {
           const blockSlot = block.slot;
           const blockEpoch = computeEpochAtSlot(blockSlot);
+          const forkSeq = config.getForkSeq(blockSlot);
           return (
-            config.getForkSeq(blockSlot) >= ForkSeq.deneb &&
+            forkSeq >= ForkSeq.deneb &&
+            forkSeq < ForkSeq.fulu &&
+            // if block is out of ${config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS}, skip this step
             blockEpoch >= currentEpoch - config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS
           );
         })
@@ -235,20 +285,61 @@ async function migrateBlobSidecarsFromHotToColdDb(
         })
     );
 
-    const migrate = canonicalBlobSidecarsEntries.length > 0;
-
-    if (migrate) {
-      // put to blockArchive db and delete block db
-      await Promise.all([
-        db.blobSidecarsArchive.batchPutBinary(canonicalBlobSidecarsEntries),
-        db.blobSidecars.batchDelete(canonicalBlocks.map((block) => block.root)),
-      ]);
-    }
-
-    result = result || migrate;
+    // put to blockArchive db and delete block db
+    await Promise.all([
+      db.blobSidecarsArchive.batchPutBinary(canonicalBlobSidecarsEntries),
+      db.blobSidecars.batchDelete(canonicalBlocks.map((block) => block.root)),
+    ]);
+    migratedWrappedBlobSidecars += canonicalBlobSidecarsEntries.length;
   }
 
-  return result;
+  return migratedWrappedBlobSidecars;
+}
+
+async function migrateDataColumnSidecarsFromHotToColdDb(
+  config: ChainForkConfig,
+  db: IBeaconDb,
+  blocks: BlockRootSlot[],
+  currentEpoch: Epoch
+): Promise<number> {
+  let migratedWrappedDataColumns = 0;
+  for (let i = 0; i < blocks.length; i += BLOB_SIDECAR_BATCH_SIZE) {
+    const toIdx = Math.min(i + BLOB_SIDECAR_BATCH_SIZE, blocks.length);
+    const canonicalBlocks = blocks.slice(i, toIdx);
+
+    // processCanonicalBlocks
+    if (canonicalBlocks.length === 0) break;
+
+    // load Buffer instead of ssz deserialized to improve performance
+    const canonicalDataColumnSidecarsEntries: KeyValue<Slot, Uint8Array>[] = await Promise.all(
+      canonicalBlocks
+        .filter((block) => {
+          const blockSlot = block.slot;
+          const blockEpoch = computeEpochAtSlot(blockSlot);
+          return (
+            config.getForkSeq(blockSlot) >= ForkSeq.fulu &&
+            // if block is out of ${config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS}, skip this step
+            blockEpoch >= currentEpoch - config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS
+          );
+        })
+        .map(async (block) => {
+          const bytes = await db.dataColumnSidecars.getBinary(block.root);
+          if (!bytes) {
+            throw Error(`No dataColumnSidecars found for slot ${block.slot} root ${toHex(block.root)}`);
+          }
+          return {key: block.slot, value: bytes};
+        })
+    );
+
+    // put to blockArchive db and delete block db
+    await Promise.all([
+      db.dataColumnSidecarsArchive.batchPutBinary(canonicalDataColumnSidecarsEntries),
+      db.dataColumnSidecars.batchDelete(canonicalBlocks.map((block) => block.root)),
+    ]);
+    migratedWrappedDataColumns += canonicalDataColumnSidecarsEntries.length;
+  }
+
+  return migratedWrappedDataColumns;
 }
 
 /**

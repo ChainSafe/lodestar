@@ -1,5 +1,5 @@
 import {ForkAll, ForkName, ForkPostAltair, ForkPostBellatrix, ForkPostDeneb, ForkSeq} from "@lodestar/params";
-import {Epoch, SSZTypesFor, Slot, Version} from "@lodestar/types";
+import {Epoch, SSZTypesFor, Slot, UintNum64, Version} from "@lodestar/types";
 
 export type ForkInfo = {
   name: ForkName;
@@ -11,6 +11,15 @@ export type ForkInfo = {
 };
 
 /**
+ * Fork boundaries include both normal hard-forks (phase0, altair, etc.)
+ * and Blob Parameter Only (BPO) forks and are used to un-/subscribe to gossip topics
+ * and compute the fork digest primarily for domain separation on the p2p layer.
+ */
+export type ForkBoundary = {fork: ForkName; epoch: Epoch};
+
+export type BlobParameters = {epoch: Epoch; maxBlobsPerBlock: UintNum64};
+
+/**
  * Fork schedule and helper methods
  */
 export type ForkConfig = {
@@ -18,11 +27,15 @@ export type ForkConfig = {
   forks: {[K in ForkName]: ForkInfo};
   forksAscendingEpochOrder: ForkInfo[];
   forksDescendingEpochOrder: ForkInfo[];
+  forkBoundariesAscendingEpochOrder: ForkBoundary[];
+  forkBoundariesDescendingEpochOrder: ForkBoundary[];
 
   /** Get the hard-fork info for the active fork at `slot` */
   getForkInfo(slot: Slot): ForkInfo;
   /** Get the hard-fork info for the active fork at `epoch` */
   getForkInfoAtEpoch(epoch: Epoch): ForkInfo;
+  /** Get the active fork boundary at a given `epoch` */
+  getForkBoundaryAtEpoch(epoch: Epoch): ForkBoundary;
   /** Get the hard-fork name at a given slot */
   getForkName(slot: Slot): ForkName;
   /** Get the hard-fork sequence number at a given slot */
@@ -41,6 +54,8 @@ export type ForkConfig = {
   getPostDenebForkTypes(slot: Slot): SSZTypesFor<ForkPostDeneb>;
   /** Get max blobs per block at a given epoch */
   getMaxBlobsPerBlock(epoch: Epoch): number;
+  /** Get blob parameters at a given epoch */
+  getBlobParameters(epoch: Epoch): BlobParameters;
   /** Get max request blob sidecars by hard-fork */
   getMaxRequestBlobSidecars(fork: ForkName): number;
 };

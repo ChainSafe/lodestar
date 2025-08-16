@@ -28,7 +28,7 @@ export function parseArgs(args: ExecutionBuilderArgs): IBeaconNodeOptions["execu
 
 export const options: CliCommandOptions<ExecutionBuilderArgs> = {
   builder: {
-    description: "Enable builder interface",
+    description: "Enable external builder",
     type: "boolean",
     default: defaultExecutionBuilderHttpOpts.enabled,
     group: "builder",

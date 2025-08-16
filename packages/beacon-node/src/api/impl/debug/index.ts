@@ -3,15 +3,19 @@ import {ApplicationMethods} from "@lodestar/api/server";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {ZERO_HASH_HEX} from "@lodestar/params";
 import {BeaconState} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
 import {getStateSlotFromBytes} from "../../../util/multifork.js";
+import {getBlockResponse} from "../beacon/blocks/utils.js";
 import {getStateResponseWithRegen} from "../beacon/state/utils.js";
 import {ApiModules} from "../types.js";
+import {assertUniqueItems} from "../utils.js";
 
 export function getDebugApi({
   chain,
   config,
-}: Pick<ApiModules, "chain" | "config">): ApplicationMethods<routes.debug.Endpoints> {
+  db,
+}: Pick<ApiModules, "chain" | "config" | "db">): ApplicationMethods<routes.debug.Endpoints> {
   return {
     async getDebugChainHeadsV2() {
       const heads = chain.forkChoice.getHeads();
@@ -82,6 +86,31 @@ export function getDebugApi({
           version: config.getForkName(slot),
           executionOptimistic,
           finalized,
+        },
+      };
+    },
+
+    async getDebugDataColumnSidecars({blockId, indices}) {
+      assertUniqueItems(indices, "Duplicate indices provided");
+
+      const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
+      const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
+
+      let {dataColumnSidecars} = (await db.dataColumnSidecars.get(blockRoot)) ?? {};
+      if (!dataColumnSidecars) {
+        ({dataColumnSidecars} = (await db.dataColumnSidecarsArchive.get(block.message.slot)) ?? {});
+      }
+
+      if (!dataColumnSidecars) {
+        throw Error(`dataColumnSidecars not found in db for slot=${block.message.slot} root=${toRootHex(blockRoot)}`);
+      }
+
+      return {
+        data: indices ? dataColumnSidecars.filter(({index}) => indices.includes(index)) : dataColumnSidecars,
+        meta: {
+          executionOptimistic,
+          finalized,
+          version: config.getForkName(block.message.slot),
         },
       };
     },

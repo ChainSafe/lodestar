@@ -3,6 +3,7 @@ import {
   ForkName,
   MAX_REQUEST_BLOCKS,
   MAX_REQUEST_BLOCKS_DENEB,
+  MAX_REQUEST_DATA_COLUMN_SIDECARS,
   MAX_REQUEST_LIGHT_CLIENT_UPDATES,
   isForkPostDeneb,
 } from "@lodestar/params";
@@ -49,6 +50,16 @@ export const rateLimitQuotas: (fork: ForkName, config: BeaconConfig) => Record<R
     // Rationale: quota of BeaconBlocksByRoot * MAX_BLOBS_PER_BLOCK
     byPeer: {quota: config.getMaxRequestBlobSidecars(fork), quotaTimeMs: 10_000},
     getRequestCount: getRequestCountFn(fork, config, ReqRespMethod.BlobSidecarsByRoot, (req) => req.length),
+  },
+  [ReqRespMethod.DataColumnSidecarsByRange]: {
+    // Rationale: MAX_REQUEST_BLOCKS_DENEB * NUMBER_OF_COLUMNS
+    byPeer: {quota: MAX_REQUEST_DATA_COLUMN_SIDECARS, quotaTimeMs: 10_000},
+    getRequestCount: getRequestCountFn(fork, config, ReqRespMethod.DataColumnSidecarsByRange, (req) => req.count),
+  },
+  [ReqRespMethod.DataColumnSidecarsByRoot]: {
+    // Rationale: quota of BeaconBlocksByRoot * NUMBER_OF_COLUMNS
+    byPeer: {quota: MAX_REQUEST_DATA_COLUMN_SIDECARS, quotaTimeMs: 10_000},
+    getRequestCount: getRequestCountFn(fork, config, ReqRespMethod.DataColumnSidecarsByRoot, (req) => req.length),
   },
   [ReqRespMethod.LightClientBootstrap]: {
     // As similar in the nature of `Status` protocol so we use the same rate limits.

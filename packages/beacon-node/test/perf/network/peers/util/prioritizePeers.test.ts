@@ -103,6 +103,7 @@ describe("prioritizePeers", () => {
             Array.from({length: Math.floor(syncnetPercentage * SYNC_COMMITTEE_SUBNET_COUNT)}, (_, i) => i)
           ),
           score: lowestScore + ((highestScore - lowestScore) * i) / defaultNetworkOptions.maxPeers,
+          samplingGroups: [],
           status: ssz.phase0.Status.defaultValue(),
         }));
 
@@ -115,16 +116,23 @@ describe("prioritizePeers", () => {
         for (let i = 0; i < requestedSyncNets.count; i++) {
           syncnets.push({subnet: requestedSyncNets.start + i, toSlot: 1_000_000});
         }
-        return {connectedPeers, attnets, syncnets};
+        return {connectedPeers, attnets, syncnets, samplingGroups: []};
       },
-      fn: ({connectedPeers, attnets, syncnets}) => {
-        prioritizePeers(connectedPeers, attnets, syncnets, {
-          ...defaultNetworkOptions,
-          status: ssz.phase0.Status.defaultValue(),
-          starved: false,
-          starvationPruneRatio: 0.05,
-          starvationThresholdSlots: SLOTS_PER_EPOCH * 2,
-        });
+      fn: ({connectedPeers, attnets, syncnets, samplingGroups}) => {
+        prioritizePeers(
+          connectedPeers,
+          attnets,
+          syncnets,
+          samplingGroups,
+          {
+            ...defaultNetworkOptions,
+            status: ssz.phase0.Status.defaultValue(),
+            starved: false,
+            starvationPruneRatio: 0.05,
+            starvationThresholdSlots: SLOTS_PER_EPOCH * 2,
+          },
+          null
+        );
       },
     });
   }
