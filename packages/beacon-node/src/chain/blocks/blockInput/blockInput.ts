@@ -395,7 +395,27 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
     return this.blobsCache.has(blobIndex);
   }
 
-  addBlob({blockRootHex, blobSidecar, source, peerIdStr, seenTimestampSec}: AddBlob): void {
+  addBlob(
+    {blockRootHex, blobSidecar, source, peerIdStr, seenTimestampSec}: AddBlob,
+    opts = {throwOnDuplicateAdd: true}
+  ): void {
+    // this check suffices for checking slot, parentRoot, and forkName
+    if (blockRootHex !== this.blockRootHex) {
+      throw new BlockInputError(
+        {
+          code: BlockInputErrorCode.MISMATCHED_ROOT_HEX,
+          blockInputRoot: this.blockRootHex,
+          mismatchedRoot: blockRootHex,
+          source: source,
+          peerId: `${peerIdStr}`,
+        },
+        "Blob BeaconBlockHeader blockRootHex does not match BlockInput.blockRootHex"
+      );
+    }
+
+    if (!opts.throwOnDuplicateAdd) {
+      return;
+    }
     if (this.state.hasAllData) {
       throw new BlockInputError(
         {
@@ -412,20 +432,6 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
           blockRoot: this.blockRootHex,
         },
         "Cannot addBlob to BlockInputBlobs with duplicate blobIndex"
-      );
-    }
-
-    // this check suffices for checking slot, parentRoot, and forkName
-    if (blockRootHex !== this.blockRootHex) {
-      throw new BlockInputError(
-        {
-          code: BlockInputErrorCode.MISMATCHED_ROOT_HEX,
-          blockInputRoot: this.blockRootHex,
-          mismatchedRoot: blockRootHex,
-          source: source,
-          peerId: `${peerIdStr}`,
-        },
-        "Blob BeaconBlockHeader blockRootHex does not match BlockInput.blockRootHex"
       );
     }
 
@@ -711,7 +717,10 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     this.blockPromise.resolve(props.block);
   }
 
-  addColumn({blockRootHex, columnSidecar, source, seenTimestampSec, peerIdStr}: AddColumn): void {
+  addColumn(
+    {blockRootHex, columnSidecar, source, seenTimestampSec, peerIdStr}: AddColumn,
+    opts = {throwOnDuplicateAdd: true}
+  ): void {
     if (blockRootHex !== this.blockRootHex) {
       throw new BlockInputError(
         {
@@ -722,6 +731,28 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
           peerId: `${peerIdStr}`,
         },
         "Column BeaconBlockHeader blockRootHex does not match BlockInput.blockRootHex"
+      );
+    }
+
+    if (!opts.throwOnDuplicateAdd) {
+      return;
+    }
+    if (this.state.hasAllData) {
+      throw new BlockInputError(
+        {
+          code: BlockInputErrorCode.INVALID_CONSTRUCTION,
+          blockRoot: this.blockRootHex,
+        },
+        "Cannot addColumn to BlockInputColumns after it already is complete"
+      );
+    }
+    if (this.columnsCache.has(columnSidecar.index)) {
+      throw new BlockInputError(
+        {
+          code: BlockInputErrorCode.INVALID_CONSTRUCTION,
+          blockRoot: this.blockRootHex,
+        },
+        "Cannot addColumn to BlockInputColumns with duplicate column index"
       );
     }
 
