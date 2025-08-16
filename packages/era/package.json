@@ -1,7 +1,7 @@
 {
   "name": "@lodestar/era",
-  "version": "1.31.0",
-  "description": "DB modules of Lodestar",
+  "version": "1.33.0",
+  "description": "Era file handling module for Lodestar",
   "author": "ChainSafe Systems",
   "homepage": "https://github.com/ChainSafe/lodestar#readme",
   "repository": {
@@ -35,6 +35,8 @@
     "check-readme": "typescript-docs-verifier"
   },
   "dependencies": {
+    "@lodestar/types": "^1.33.0",
+    "@lodestar/utils": "^1.33.0"
   },
   "devDependencies": {
   }
