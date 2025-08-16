@@ -222,14 +222,16 @@ export class BlockInputPreData extends AbstractBlockInput<ForkPreDeneb, null> {
     return new BlockInputPreData(init, state);
   }
 
-  addBlock(_: AddBlock): void {
-    throw new BlockInputError(
-      {
-        code: BlockInputErrorCode.INVALID_CONSTRUCTION,
-        blockRoot: this.blockRootHex,
-      },
-      "Cannot addBlock to BlockInputPreData"
-    );
+  addBlock(_: AddBlock, opts = {throwOnDuplicateAdd: true}): void {
+    if (opts.throwOnDuplicateAdd) {
+      throw new BlockInputError(
+        {
+          code: BlockInputErrorCode.INVALID_CONSTRUCTION,
+          blockRoot: this.blockRootHex,
+        },
+        "Cannot addBlock to BlockInputPreData"
+      );
+    }
   }
 }
 
@@ -335,17 +337,7 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
     };
   }
 
-  addBlock({blockRootHex, block, source}: AddBlock<ForkBlobsDA>): void {
-    if (this.state.hasBlock) {
-      throw new BlockInputError(
-        {
-          code: BlockInputErrorCode.INVALID_CONSTRUCTION,
-          blockRoot: this.blockRootHex,
-        },
-        "Cannot addBlock to BlockInputBlobs after it already has a block"
-      );
-    }
-
+  addBlock({blockRootHex, block, source}: AddBlock<ForkBlobsDA>, opts = {throwOnDuplicateAdd: true}): void {
     // this check suffices for checking slot, parentRoot, and forkName
     if (blockRootHex !== this.blockRootHex) {
       throw new BlockInputError(
@@ -357,6 +349,20 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
           peerId: `${source.peerIdStr}`,
         },
         "addBlock blockRootHex does not match BlockInput.blockRootHex"
+      );
+    }
+
+    if (!opts.throwOnDuplicateAdd) {
+      return;
+    }
+
+    if (this.state.hasBlock) {
+      throw new BlockInputError(
+        {
+          code: BlockInputErrorCode.INVALID_CONSTRUCTION,
+          blockRoot: this.blockRootHex,
+        },
+        "Cannot addBlock to BlockInputBlobs after it already has a block"
       );
     }
 
@@ -656,17 +662,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     };
   }
 
-  addBlock(props: AddBlock<ForkColumnsDA>): void {
-    if (this.state.hasBlock) {
-      throw new BlockInputError(
-        {
-          code: BlockInputErrorCode.INVALID_CONSTRUCTION,
-          blockRoot: this.blockRootHex,
-        },
-        "Cannot addBlock to BlockInputColumns after it already has a block"
-      );
-    }
-
+  addBlock(props: AddBlock<ForkColumnsDA>, opts = {throwOnDuplicateAdd: true}): void {
     if (props.blockRootHex !== this.blockRootHex) {
       throw new BlockInputError(
         {
@@ -677,6 +673,20 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
           peerId: `${props.source.peerIdStr}`,
         },
         "addBlock blockRootHex does not match BlockInput.blockRootHex"
+      );
+    }
+
+    if (!opts.throwOnDuplicateAdd) {
+      return;
+    }
+
+    if (this.state.hasBlock) {
+      throw new BlockInputError(
+        {
+          code: BlockInputErrorCode.INVALID_CONSTRUCTION,
+          blockRoot: this.blockRootHex,
+        },
+        "Cannot addBlock to BlockInputColumns after it already has a block"
       );
     }
 

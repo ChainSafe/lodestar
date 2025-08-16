@@ -111,7 +111,7 @@ export interface IBlockInput<F extends ForkName = ForkName, TData extends DAData
   blockRootHex: string;
   parentRootHex: string;
 
-  addBlock(props: AddBlock<F>): void;
+  addBlock(props: AddBlock<F>, opts?: {throwOnDuplicateAdd: boolean}): void;
   /** Whether the block has been seen and validated. If true, `getBlock` is guaranteed to not throw */
   hasBlock(): boolean;
   getBlock(): SignedBeaconBlock<F>;
