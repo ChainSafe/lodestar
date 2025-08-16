@@ -210,15 +210,12 @@ export function getBeaconStateApi({
         const headState = chain.getHeadState();
         const balances: routes.beacon.ValidatorBalance[] = [];
         for (const id of validatorIds) {
-          const validatorIndex =
-            typeof id === "number"
-              ? {valid: true, validatorIndex: id}
-              : getStateValidatorIndex(id, state, headState.epochCtx.pubkey2index);
+          const resp = getStateValidatorIndex(id, state, headState.epochCtx.pubkey2index);
 
-          if (validatorIndex.valid && validatorIndex.validatorIndex < state.validators.length) {
+          if (resp.valid && resp.validatorIndex < state.validators.length) {
             balances.push({
-              index: validatorIndex.validatorIndex,
-              balance: state.balances.get(validatorIndex.validatorIndex),
+              index: resp.validatorIndex,
+              balance: state.balances.get(resp.validatorIndex),
             });
           }
         }
