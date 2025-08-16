@@ -2,11 +2,11 @@ import {Slot} from "@lodestar/types";
 import {E2StoreEntryType} from "./constants.js";
 
 /**
- * Known entry types in an E2Store (.e2s) fil+ Snappy framing format.
+ * entry types in an E2Store (.e2s) fil+ Snappy framing format.
  * Encoding: snappyFramed(ssz(SignedBeaconBlock))
  */
 export interface CompressedSignedBeaconBlock {
-  type: typeof E2StoreEntryType.CompressedSignedBeaconBlock;
+  type: E2StoreEntryType.CompressedSignedBeaconBlock;
   data: Uint8Array;
 }
 
@@ -15,7 +15,7 @@ export interface CompressedSignedBeaconBlock {
  * Encoding: snappyFramed(ssz(BeaconState))
  */
 export interface CompressedBeaconState {
-  type: typeof E2StoreEntryType.CompressedBeaconState;
+  type: E2StoreEntryType.CompressedBeaconState;
   data: Uint8Array;
 }
 
@@ -40,8 +40,8 @@ export interface EraFileName {
  */
 export interface EraFile {
   groups: EraGroup[];
-  fileName?: string;
-  fileNameInfo?: EraFileName;
+  fileName: string;
+  fileNameInfo: EraFileName;
 }
 
 /**
@@ -49,21 +49,16 @@ export interface EraFile {
  * High-level representation after parsing the raw era file.
  * Era files can contain multiple groups - groups can freely be split and combined.
  */
-export interface EraGroup {
-  eraNumber: number;
-  version: VersionRecord;
-  blocks: {slot: Slot; block: CompressedSignedBeaconBlock}[];
-  state: CompressedBeaconState;
+export interface EraGroup { // iterate after implement the types
   blockIndex?: SlotIndex; // Optional for genesis era (era 0)
   stateIndex: SlotIndex;
-  otherEntries?: E2StoreEntry[]; // Extension point for future record types
-}
+} 
 
 /**
  * Logical, parsed entry from an E2Store file.
  */
 export interface E2StoreEntry {
-  type: (typeof E2StoreEntryType)[keyof typeof E2StoreEntryType];
+  type: E2StoreEntryType;
   data: Uint8Array;
 }
 
@@ -72,7 +67,7 @@ export interface E2StoreEntry {
  * The first 8 bytes of an e2s file are always [0x65, 0x32, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
  */
 export interface VersionRecord {
-  type: typeof E2StoreEntryType.Version;
+  type: E2StoreEntryType.Version;
   data: Uint8Array; // (length 0)
 }
 
@@ -83,12 +78,13 @@ export interface VersionRecord {
  * - Zero offset = empty slot (no block)
  */
 export interface SlotIndex {
+  type: E2StoreEntryType.SlotIndex;
   /** First slot covered by this index (era * SLOTS_PER_HISTORICAL_ROOT) */
   startSlot: Slot;
   /** File positions where data can be found. Length varies by index type. */
-  offsets: bigint[];
+  offsets: number[];
   /** Number of offsets in the index (stored at end of record for backward reading) */
-  count: bigint;
+  count: number;
 }
 
 /**
@@ -96,7 +92,7 @@ export interface SlotIndex {
  * Format: type (2 bytes) | length (4 bytes) | reserved (2 bytes)
  */
 export interface E2StoreHeader {
-  type: (typeof E2StoreEntryType)[keyof typeof E2StoreEntryType];
+  type: E2StoreEntryType;
   length: number; // uint32 little-endian
   reserved: number; // uint16 little-endian, must be 0
 }
