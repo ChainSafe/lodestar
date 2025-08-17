@@ -26,8 +26,6 @@ export const EraTypes = {
 export const VERSION_RECORD_BYTES = new Uint8Array([0x65, 0x32, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
 
 /**
- * Binary format constants.
+ * E2Store header size in bytes
  */
 export const E2STORE_HEADER_SIZE = 8;
-export const SLOT_INDEX_ENTRY_SIZE = 8;
-export const MIN_SLOT_INDEX_SIZE = 32; // header(8) + startSlot(8) + 1 offset(8) + count(8)

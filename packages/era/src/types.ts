@@ -2,24 +2,6 @@ import {Slot} from "@lodestar/types";
 import {E2StoreEntryType} from "./constants.js";
 
 /**
- * entry types in an E2Store (.e2s) fil+ Snappy framing format.
- * Encoding: snappyFramed(ssz(SignedBeaconBlock))
- */
-export interface CompressedSignedBeaconBlock {
-  type: E2StoreEntryType.CompressedSignedBeaconBlock;
-  data: Uint8Array;
-}
-
-/**
- * A compressed BeaconState using SSZ + Snappy framing format.
- * Encoding: snappyFramed(ssz(BeaconState))
- */
-export interface CompressedBeaconState {
-  type: E2StoreEntryType.CompressedBeaconState;
-  data: Uint8Array;
-}
-
-/**
  * Parsed components of an .era file name.
  * Format: <config-name>-<era-number>-<era-count>-<short-historical-root>.era
  */
@@ -34,25 +16,6 @@ export interface EraFileName {
   shortHistoricalRoot: string;
 }
 
-/**
- * Complete era file with potentially multiple groups.
- * Era files with multiple eras use the era number of the lowest era stored.
- */
-export interface EraFile {
-  groups: EraGroup[];
-  fileName: string;
-  fileNameInfo: EraFileName;
-}
-
-/**
- * Structured content of a single era file group.
- * High-level representation after parsing the raw era file.
- * Era files can contain multiple groups - groups can freely be split and combined.
- */
-export interface EraGroup { // iterate after implement the types
-  blockIndex?: SlotIndex; // Optional for genesis era (era 0)
-  stateIndex: SlotIndex;
-} 
 
 /**
  * Logical, parsed entry from an E2Store file.
@@ -62,14 +25,6 @@ export interface E2StoreEntry {
   data: Uint8Array;
 }
 
-/**
- * Version record data. Always empty but indicates e2store format version.
- * The first 8 bytes of an e2s file are always [0x65, 0x32, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
- */
-export interface VersionRecord {
-  type: E2StoreEntryType.Version;
-  data: Uint8Array; // (length 0)
-}
 
 /**
  * Maps slots to file positions in an era file.
@@ -83,35 +38,6 @@ export interface SlotIndex {
   startSlot: Slot;
   /** File positions where data can be found. Length varies by index type. */
   offsets: number[];
-  /** Number of offsets in the index (stored at end of record for backward reading) */
-  count: number;
-}
-
-/**
- * 8-byte header for every entry in an E2Store file.
- * Format: type (2 bytes) | length (4 bytes) | reserved (2 bytes)
- */
-export interface E2StoreHeader {
-  type: E2StoreEntryType;
-  length: number; // uint32 little-endian
-  reserved: number; // uint16 little-endian, must be 0
-}
-
-/**
- * Standalone .e2i index file.
- *
- * SlotIndex records can appear in standalone files ending with .e2i
- *
- * Key differences from embedded indices:
- * - File name ends with .e2i by convention
- * - Offsets are negative and counted from the end of the data file
- * - Can be appended to data file without changing contents
- */
-export interface StandaloneIndexFile {
-  /** File name, should end with .e2i */
-  fileName: string;
-  /** The slot index data */
-  slotIndex: SlotIndex;
-  /** Always true to indicate this is a standalone index with negative offsets */
-  isStandalone: true;
+  /** File position where this index record starts */
+  recordStart: number;
 }
