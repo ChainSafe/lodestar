@@ -40,8 +40,12 @@ export abstract class PrefixedRepository<I extends Id, P, T> {
     return this.type.deserialize(data);
   }
 
-  private wrapKey(raw: Uint8Array): Uint8Array {
+  protected wrapKey(raw: Uint8Array): Uint8Array {
     return encodeKey(this.bucket, raw);
+  }
+
+  protected unwrapKey(key: Uint8Array): Uint8Array {
+    return key.slice(BUCKET_LENGTH);
   }
 
   // The Id can be inferred from the value
@@ -194,7 +198,7 @@ export abstract class PrefixedRepository<I extends Id, P, T> {
     for (const v of Array.isArray(prefix) ? prefix : [prefix]) {
       const {gte, lt} = this.rangeForPrefixRaw(v);
       for await (const {key, value} of this.db.entriesStream({gte: this.wrapKey(gte), lt: this.wrapKey(lt)})) {
-        const {prefix, id} = this.decodeKeyRaw(key.slice(BUCKET_LENGTH));
+        const {prefix, id} = this.decodeKeyRaw(this.unwrapKey(key));
 
         yield {
           prefix,
@@ -209,7 +213,7 @@ export abstract class PrefixedRepository<I extends Id, P, T> {
     for (const v of Array.isArray(prefix) ? prefix : [prefix]) {
       const {gte, lt} = this.rangeForPrefixRaw(v);
       for await (const {key, value} of this.db.entriesStream({gte: this.wrapKey(gte), lt: this.wrapKey(lt)})) {
-        const {prefix, id} = this.decodeKeyRaw(key.slice(BUCKET_LENGTH));
+        const {prefix, id} = this.decodeKeyRaw(this.unwrapKey(key));
 
         yield {
           prefix,
