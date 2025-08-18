@@ -32,6 +32,7 @@ import {BlockInputSource, isBlockInputBlobs, isBlockInputColumns} from "../../..
 import {ImportBlockOpts} from "../../../../chain/blocks/types.js";
 import {verifyBlocksInEpoch} from "../../../../chain/blocks/verifyBlock.js";
 import {BeaconChain} from "../../../../chain/chain.js";
+import {ChainEvent} from "../../../../chain/emitter.js";
 import {BlockError, BlockErrorCode, BlockGossipError} from "../../../../chain/errors/index.js";
 import {ProduceFullBellatrix, ProduceFullDeneb, ProduceFullFulu} from "../../../../chain/produceBlock/index.js";
 import {validateGossipBlock} from "../../../../chain/validation/block.js";
@@ -175,7 +176,7 @@ export function getBeaconBlockApi({
         if (!blockLocallyProduced) {
           const parentBlock = chain.forkChoice.getBlock(signedBlock.message.parentRoot);
           if (parentBlock === null) {
-            network.events.emit(NetworkEvent.unknownBlockParent, {
+            chain.emitter.emit(ChainEvent.unknownParent, {
               blockInput: blockForImport,
               peer: IDENTITY_PEER_ID,
             });
@@ -269,7 +270,7 @@ export function getBeaconBlockApi({
           .processBlock(blockForImport, {...opts, eagerPersistBlock: false})
           .catch((e) => {
             if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
-              network.events.emit(NetworkEvent.unknownBlockParent, {
+              chain.emitter.emit(ChainEvent.unknownParent, {
                 blockInput: blockForImport,
                 peer: IDENTITY_PEER_ID,
               });

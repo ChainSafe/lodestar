@@ -6,7 +6,7 @@ import {Logger, fromHex, pruneSetToMax, toRootHex} from "@lodestar/utils";
 import {sleep} from "@lodestar/utils";
 import {BlockInput, BlockInputType, CachedDataColumns, NullBlockInput} from "../chain/blocks/types.js";
 import {BlockError, BlockErrorCode} from "../chain/errors/index.js";
-import {IBeaconChain} from "../chain/index.js";
+import {ChainEvent, ChainEventData, IBeaconChain} from "../chain/index.js";
 import {Metrics} from "../metrics/index.js";
 import {INetwork, NetworkEvent, NetworkEventData} from "../network/index.js";
 import {
@@ -64,9 +64,9 @@ export class UnknownBlockSync {
       // cannot chain to the above if or the log will be incorrect
       if (!this.subscribedToNetworkEvents) {
         this.logger.verbose("UnknownBlockSync enabled.");
-        this.network.events.on(NetworkEvent.unknownBlock, this.onUnknownBlock);
-        this.network.events.on(NetworkEvent.unknownBlockInput, this.onUnknownBlockInput);
-        this.network.events.on(NetworkEvent.unknownBlockParent, this.onUnknownParent);
+        this.chain.emitter.on(ChainEvent.unknownBlockRoot, this.onUnknownBlock);
+        this.chain.emitter.on(ChainEvent.incompleteBlockInput, this.onUnknownBlockInput);
+        this.chain.emitter.on(ChainEvent.unknownParent, this.onUnknownParent);
         this.network.events.on(NetworkEvent.peerConnected, this.triggerUnknownBlockSearch);
         this.subscribedToNetworkEvents = true;
       }
@@ -77,9 +77,9 @@ export class UnknownBlockSync {
 
   unsubscribeFromNetwork(): void {
     this.logger.verbose("UnknownBlockSync disabled.");
-    this.network.events.off(NetworkEvent.unknownBlock, this.onUnknownBlock);
-    this.network.events.off(NetworkEvent.unknownBlockInput, this.onUnknownBlockInput);
-    this.network.events.off(NetworkEvent.unknownBlockParent, this.onUnknownParent);
+    this.chain.emitter.off(ChainEvent.unknownBlockRoot, this.onUnknownBlock);
+    this.chain.emitter.off(ChainEvent.incompleteBlockInput, this.onUnknownBlockInput);
+    this.chain.emitter.off(ChainEvent.unknownParent, this.onUnknownParent);
     this.network.events.off(NetworkEvent.peerConnected, this.triggerUnknownBlockSearch);
     this.subscribedToNetworkEvents = false;
   }
@@ -96,7 +96,7 @@ export class UnknownBlockSync {
   /**
    * Process an unknownBlock event and register the block in `pendingBlocks` Map.
    */
-  private onUnknownBlock = (data: NetworkEventData[NetworkEvent.unknownBlock]): void => {
+  private onUnknownBlock = (data: ChainEventData[ChainEvent.unknownBlockRoot]): void => {
     try {
       const unknownBlockType = this.addUnknownBlock(data.rootHex, data.peer);
       this.triggerUnknownBlockSearch();
@@ -109,7 +109,7 @@ export class UnknownBlockSync {
   /**
    * Process an unknownBlockInput event and register the block in `pendingBlocks` Map.
    */
-  private onUnknownBlockInput = (data: NetworkEventData[NetworkEvent.unknownBlockInput]): void => {
+  private onUnknownBlockInput = (data: ChainEventData[ChainEvent.incompleteBlockInput]): void => {
     try {
       const unknownBlockType = this.addUnknownBlock(data.blockInput, data.peer);
       this.triggerUnknownBlockSearch();
@@ -122,7 +122,7 @@ export class UnknownBlockSync {
   /**
    * Process an unknownBlockParent event and register the block in `pendingBlocks` Map.
    */
-  private onUnknownParent = (data: NetworkEventData[NetworkEvent.unknownBlockParent]): void => {
+  private onUnknownParent = (data: ChainEventData[ChainEvent.unknownParent]): void => {
     try {
       this.addUnknownParent(data.blockInput, data.peer);
       this.triggerUnknownBlockSearch();

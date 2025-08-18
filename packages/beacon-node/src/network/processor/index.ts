@@ -24,6 +24,7 @@ import {GossipHandlerOpts, ValidatorFnsModules, getGossipHandlers} from "./gossi
 import {createGossipQueues} from "./gossipQueues/index.js";
 import {ValidatorFnModules, getGossipValidatorBatchFn, getGossipValidatorFn} from "./gossipValidatorFn.js";
 import {PendingGossipsubMessage} from "./types.js";
+import {ChainEvent} from "../../chain/emitter.js";
 
 export * from "./types.js";
 
@@ -235,7 +236,7 @@ export class NetworkProcessor {
     }
     // Search for the unknown block
     this.unknownRootsBySlot.getOrDefault(slot).add(root);
-    this.events.emit(NetworkEvent.unknownBlock, {rootHex: root, peer});
+    this.chain.emitter.emit(ChainEvent.unknownBlockRoot, {rootHex: root, peer});
   }
 
   private onPendingGossipsubMessage(message: PendingGossipsubMessage): void {

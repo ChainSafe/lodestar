@@ -17,6 +17,7 @@ import {
 import {LogLevel, Logger, prettyBytes, toHex, toRootHex} from "@lodestar/utils";
 import {BlockInput, BlockInputSource} from "../../chain/blocks/blockInput/index.js";
 import {BlobSidecarValidation} from "../../chain/blocks/types.js";
+import {ChainEvent} from "../../chain/emitter.js";
 import {
   AttestationError,
   AttestationErrorCode,
@@ -165,10 +166,12 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       return blockInput;
     } catch (e) {
       if (e instanceof BlockGossipError) {
+        // TODO(fulu): check that this is the only error that should trigger resolution of the block and all others
+        //    cause the block to get thrown away
         // Don't trigger this yet if full block and blobs haven't arrived yet
         if (e.type.code === BlockErrorCode.PARENT_UNKNOWN && blockInput !== null) {
           logger.debug("Gossip block has error", {slot, root: blockShortHex, code: e.type.code});
-          events.emit(NetworkEvent.unknownBlockInput, {blockInput, peer: peerIdStr});
+          chain.emitter.emit(ChainEvent.incompleteBlockInput, {blockInput, peer: peerIdStr});
           // throw error (don't prune the blockInput)
           throw e;
         }
@@ -338,7 +341,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         ...blockInput.getLogMeta(),
       });
       // The data is not yet fully available, immediately trigger an aggressive pull via unknown block sync
-      events.emit(NetworkEvent.unknownBlockInput, {blockInput, peer: peerIdStr});
+      chain.emitter.emit(ChainEvent.incompleteBlockInput, {blockInput, peer: peerIdStr});
     } else {
       metrics?.blockInputFetchStats.totalDataAvailableBlockInputs.inc();
       metrics?.blockInputFetchStats.totalDataAvailableBlockInputBlobs.inc(
@@ -448,11 +451,14 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           ...blockInput.getLogMeta(),
         });
         blockInput.waitForAllData(cutoffTimeMs).catch((_e) => {
-          chain.logger.debug("Received gossip blob, attempting fetch of unavailable data", {
-            blobIndex: index,
-            ...blockInput.getLogMeta(),
-          });
-          events.emit(NetworkEvent.unknownBlockInput, {blockInput, peer: peerIdStr});
+          chain.logger.debug(
+            "Waited for data after receiving gossip blob. Cut-off reached so attempting to fetch remainder of BlockInput",
+            {
+              blobIndex: index,
+              ...blockInput.getLogMeta(),
+            }
+          );
+          chain.emitter.emit(ChainEvent.incompleteBlockInput, {blockInput, peer: peerIdStr});
         });
       }
     },
@@ -488,11 +494,14 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           ...blockInput.getLogMeta(),
         });
         blockInput.waitForAllData(cutoffTimeMs).catch((_e) => {
-          chain.logger.debug("Received gossip data column, attempting fetch of unavailable data", {
-            dataColumnIndex: index,
-            ...blockInput.getLogMeta(),
-          });
-          events.emit(NetworkEvent.unknownBlockInput, {blockInput, peer: peerIdStr});
+          chain.logger.debug(
+            "Waited for data after receiving gossip column. Cut-off reached so attempting to fetch remainder of BlockInput",
+            {
+              dataColumnIndex: index,
+              ...blockInput.getLogMeta(),
+            }
+          );
+          chain.emitter.emit(ChainEvent.incompleteBlockInput, {blockInput, peer: peerIdStr});
         });
       }
     },
