@@ -6,7 +6,7 @@ import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {RootHex, fulu, phase0} from "@lodestar/types";
 import {PeerIdStr} from "../util/peerId.js";
-import {IBlockInput} from "./blocks/blockInput/types.js";
+import {BlockInputSource, IBlockInput} from "./blocks/blockInput/types.js";
 
 /**
  * Important chain events that occur during normal chain operation.
@@ -70,9 +70,9 @@ export type ReorgEventData = routes.events.EventData[routes.events.EventType.cha
 type ApiEvents = {[K in routes.events.EventType]: (data: routes.events.EventData[K]) => void};
 
 export type ChainEventData = {
-  [ChainEvent.unknownParent]: {blockInput: IBlockInput; peer: PeerIdStr};
-  [ChainEvent.unknownBlockRoot]: {rootHex: RootHex; peer?: PeerIdStr};
-  [ChainEvent.incompleteBlockInput]: {blockInput: IBlockInput; peer: PeerIdStr};
+  [ChainEvent.unknownParent]: {blockInput: IBlockInput; peer: PeerIdStr; source: BlockInputSource};
+  [ChainEvent.unknownBlockRoot]: {rootHex: RootHex; peer?: PeerIdStr; source: BlockInputSource};
+  [ChainEvent.incompleteBlockInput]: {blockInput: IBlockInput; peer: PeerIdStr; source: BlockInputSource};
 };
 
 export type IChainEvents = ApiEvents & {

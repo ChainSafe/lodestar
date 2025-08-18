@@ -171,7 +171,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         // Don't trigger this yet if full block and blobs haven't arrived yet
         if (e.type.code === BlockErrorCode.PARENT_UNKNOWN && blockInput !== null) {
           logger.debug("Gossip block has error", {slot, root: blockShortHex, code: e.type.code});
-          chain.emitter.emit(ChainEvent.incompleteBlockInput, {blockInput, peer: peerIdStr});
+          chain.emitter.emit(ChainEvent.incompleteBlockInput, {
+            blockInput,
+            peer: peerIdStr,
+            source: BlockInputSource.gossip,
+          });
           // throw error (don't prune the blockInput)
           throw e;
         }
@@ -341,7 +345,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         ...blockInput.getLogMeta(),
       });
       // The data is not yet fully available, immediately trigger an aggressive pull via unknown block sync
-      chain.emitter.emit(ChainEvent.incompleteBlockInput, {blockInput, peer: peerIdStr});
+      chain.emitter.emit(ChainEvent.incompleteBlockInput, {
+        blockInput,
+        peer: peerIdStr,
+        source: BlockInputSource.gossip,
+      });
     } else {
       metrics?.blockInputFetchStats.totalDataAvailableBlockInputs.inc();
       metrics?.blockInputFetchStats.totalDataAvailableBlockInputBlobs.inc(
@@ -458,7 +466,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
               ...blockInput.getLogMeta(),
             }
           );
-          chain.emitter.emit(ChainEvent.incompleteBlockInput, {blockInput, peer: peerIdStr});
+          chain.emitter.emit(ChainEvent.incompleteBlockInput, {
+            blockInput,
+            peer: peerIdStr,
+            source: BlockInputSource.gossip,
+          });
         });
       }
     },
@@ -501,7 +513,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
               ...blockInput.getLogMeta(),
             }
           );
-          chain.emitter.emit(ChainEvent.incompleteBlockInput, {blockInput, peer: peerIdStr});
+          chain.emitter.emit(ChainEvent.incompleteBlockInput, {
+            blockInput,
+            peer: peerIdStr,
+            source: BlockInputSource.gossip,
+          });
         });
       }
     },
@@ -840,7 +856,7 @@ export async function validateGossipFnRetryUnknownRoot<T>(
         if (unknownBlockRootRetries === 0) {
           // Trigger unknown block root search here
           const rootHex = toRootHex(blockRoot);
-          network.searchUnknownSlotRoot({slot, root: rootHex});
+          network.searchUnknownSlotRoot({slot, root: rootHex}, BlockInputSource.gossip);
         }
 
         if (unknownBlockRootRetries++ < MAX_UNKNOWN_BLOCK_ROOT_RETRIES) {

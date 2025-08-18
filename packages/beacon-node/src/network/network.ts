@@ -28,6 +28,7 @@ import {
   phase0,
 } from "@lodestar/types";
 import {prettyPrintIndices, sleep} from "@lodestar/utils";
+import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
 import {ChainEvent, IBeaconChain} from "../chain/index.js";
 import {computeSubnetForDataColumnSidecar} from "../chain/validation/dataColumnSidecar.js";
 import {IBeaconDb} from "../db/interface.js";
@@ -271,8 +272,8 @@ export class Network implements INetwork {
     return this.core.reStatusPeers(peers);
   }
 
-  searchUnknownSlotRoot(slotRoot: SlotRootHex, peer?: PeerIdStr): void {
-    this.networkProcessor.searchUnknownSlotRoot(slotRoot, peer);
+  searchUnknownSlotRoot(slotRoot: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void {
+    this.networkProcessor.searchUnknownSlotRoot(slotRoot, source, peer);
   }
 
   async reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): Promise<void> {
