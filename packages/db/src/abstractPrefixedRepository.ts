@@ -14,7 +14,7 @@ type Id = Uint8Array | string | number | bigint;
  *
  * By default, SSZ-encoded values,
  */
-export abstract class PrefixedRepository<I extends Id, P, T> {
+export abstract class PrefixedRepository<P, I extends Id, T> {
   private readonly dbReqOpts: DbReqOpts;
 
   protected constructor(

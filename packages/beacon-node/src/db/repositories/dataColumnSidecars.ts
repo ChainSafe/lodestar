@@ -1,49 +1,46 @@
-import {ByteVectorType, ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {Db, Repository} from "@lodestar/db";
+import {Db, PrefixedRepository} from "@lodestar/db";
 import {NUMBER_OF_COLUMNS} from "@lodestar/params";
-import {ssz} from "@lodestar/types";
-
+import {ColumnIndex, Root, fulu, ssz} from "@lodestar/types";
+import {bytesToInt, intToBytes} from "@lodestar/utils";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 
-export const dataColumnSidecarsWrapperSsz = new ContainerType(
-  {
-    blockRoot: ssz.Root,
-    slot: ssz.Slot,
-    dataColumnsLen: ssz.Uint8,
-    dataColumnsSize: ssz.UintNum64,
-    // // each byte[i] tells what index (1 based) the column i is stored, 0 means not custodied
-    // max value to represent will be 128 which can be represented in a byte
-    dataColumnsIndex: new ByteVectorType(NUMBER_OF_COLUMNS),
-    dataColumnSidecars: ssz.fulu.DataColumnSidecars,
-  },
-  {typeName: "DataColumnSidecarsWrapper", jsonCase: "eth2"}
-);
-
-export type DataColumnSidecarsWrapper = ValueOf<typeof dataColumnSidecarsWrapperSsz>;
-export const BLOCK_ROOT_IN_WRAPPER_INDEX = 0;
-export const BLOCK_SLOT_IN_WRAPPER_INDEX = 32;
-export const NUM_COLUMNS_IN_WRAPPER_INDEX = 40;
-export const COLUMN_SIZE_IN_WRAPPER_INDEX = 41;
-export const CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX = 49;
-export const DATA_COLUMN_SIDECARS_IN_WRAPPER_INDEX = CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX + NUMBER_OF_COLUMNS + 4;
+type BlockRoot = Root;
 
 /**
- * dataColumnSidecarsWrapper by block root (= hash_tree_root(SignedBeaconBlock.message))
+ * DataColumnSidecarsRepository
+ * Used to store `unfinalized` DataColumnSidecars
  *
- * Used to store unfinalized DataColumnSidecars
+ * Indexed data by `blockRoot` + `columnIndex`
  */
-export class DataColumnSidecarsRepository extends Repository<Uint8Array, DataColumnSidecarsWrapper> {
+export class DataColumnSidecarsRepository extends PrefixedRepository<BlockRoot, ColumnIndex, fulu.DataColumnSidecar> {
   constructor(config: ChainForkConfig, db: Db) {
     const bucket = Bucket.allForks_dataColumnSidecars;
-    super(config, db, bucket, dataColumnSidecarsWrapperSsz, getBucketNameByValue(bucket));
+    super(config, db, bucket, ssz.fulu.DataColumnSidecar, getBucketNameByValue(bucket));
   }
 
   /**
    * Id is hashTreeRoot of unsigned BeaconBlock
    */
-  getId(value: DataColumnSidecarsWrapper): Uint8Array {
-    const {blockRoot} = value;
-    return blockRoot;
+  getId(value: fulu.DataColumnSidecar): ColumnIndex {
+    return value.index;
+  }
+
+  protected encodeKeyRaw(prefix: BlockRoot, id: ColumnIndex): Uint8Array {
+    return Buffer.concat([prefix, intToBytes(id, 4)]);
+  }
+
+  protected decodeKeyRaw(raw: Uint8Array): {prefix: BlockRoot; id: ColumnIndex} {
+    return {
+      prefix: raw.slice(0, 32) as BlockRoot,
+      id: bytesToInt(raw.slice(32, 36)) as ColumnIndex,
+    };
+  }
+
+  protected rangeForPrefixRaw(prefix: BlockRoot): {gte: Uint8Array; lt: Uint8Array} {
+    return {
+      gte: Buffer.concat([prefix, intToBytes(0, 4)]),
+      lt: Buffer.concat([prefix, intToBytes(NUMBER_OF_COLUMNS, 4)]),
+    };
   }
 }

@@ -1,28 +1,44 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {Db, Repository} from "@lodestar/db";
-import {Slot} from "@lodestar/types";
-import {bytesToInt} from "@lodestar/utils";
+import {Db, PrefixedRepository} from "@lodestar/db";
+import {NUMBER_OF_COLUMNS} from "@lodestar/params";
+import {ColumnIndex, Slot, fulu, ssz} from "@lodestar/types";
+import {bytesToInt, intToBytes} from "@lodestar/utils";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
-import {DataColumnSidecarsWrapper, dataColumnSidecarsWrapperSsz} from "./dataColumnSidecars.js";
 
 /**
- * dataColumnSidecarsWrapper by slot
+ * DataColumnSidecarsRepository
+ * Used to store `finalized` DataColumnSidecars
  *
- * Used to store finalized DataColumnSidecars
+ * Indexed data by `slot` + `columnIndex`
  */
-export class DataColumnSidecarsArchiveRepository extends Repository<Slot, DataColumnSidecarsWrapper> {
+export class DataColumnSidecarsArchiveRepository extends PrefixedRepository<Slot, ColumnIndex, fulu.DataColumnSidecar> {
   constructor(config: ChainForkConfig, db: Db) {
-    const bucket = Bucket.allForks_dataColumnSidecarsArchive;
-    super(config, db, bucket, dataColumnSidecarsWrapperSsz, getBucketNameByValue(bucket));
+    const bucket = Bucket.allForks_dataColumnSidecars;
+    super(config, db, bucket, ssz.fulu.DataColumnSidecar, getBucketNameByValue(bucket));
   }
 
-  // Handle key as slot
-
-  getId(value: DataColumnSidecarsWrapper): Slot {
-    return value.slot;
+  /**
+   * Id is hashTreeRoot of unsigned BeaconBlock
+   */
+  getId(value: fulu.DataColumnSidecar): ColumnIndex {
+    return value.index;
   }
 
-  decodeKey(data: Uint8Array): number {
-    return bytesToInt(super.decodeKey(data) as unknown as Uint8Array, "be");
+  protected encodeKeyRaw(prefix: Slot, id: ColumnIndex): Uint8Array {
+    return Buffer.concat([intToBytes(prefix, 4), intToBytes(id, 4)]);
+  }
+
+  protected decodeKeyRaw(raw: Uint8Array): {prefix: Slot; id: ColumnIndex} {
+    return {
+      prefix: bytesToInt(raw.slice(0, 4)) as Slot,
+      id: bytesToInt(raw.slice(4, 8)) as ColumnIndex,
+    };
+  }
+
+  protected rangeForPrefixRaw(prefix: Slot): {gte: Uint8Array; lt: Uint8Array} {
+    return {
+      gte: Buffer.concat([intToBytes(prefix, 4), intToBytes(0, 4)]),
+      lt: Buffer.concat([intToBytes(prefix, 4), intToBytes(NUMBER_OF_COLUMNS, 4)]),
+    };
   }
 }
