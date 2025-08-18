@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, ForkSeq, INTERVALS_PER_SLOT, NUMBER_OF_COLUMNS} from "@lodestar/params";
+import {ForkName, ForkSeq, INTERVALS_PER_SLOT} from "@lodestar/params";
 import {ColumnIndex, Root, RootHex, deneb} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {Logger, fromHex, pruneSetToMax, toRootHex} from "@lodestar/utils";
@@ -22,7 +22,7 @@ import {shuffle} from "../util/shuffle.js";
 import {sortBy} from "../util/sortBy.js";
 import {Result, wrapError} from "../util/wrapError.js";
 import {MAX_CONCURRENT_REQUESTS} from "./constants.js";
-import {PendingBlock, PendingBlockStatus, PendingBlockType, UnknownBlock} from "./interface.js";
+import {PendingBlock, PendingBlockStatus, PendingBlockType} from "./interface.js";
 import {SyncOptions} from "./options.js";
 import {getAllDescendantBlocks, getDescendantBlocks, getUnknownAndAncestorBlocks} from "./utils/pendingBlocksTree.js";
 
