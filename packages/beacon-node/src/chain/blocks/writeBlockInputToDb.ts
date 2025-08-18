@@ -6,7 +6,7 @@ import {toHex} from "@lodestar/utils";
 import {BlobSidecarsWrapper} from "../../db/repositories/blobSidecars.js";
 import {DataColumnSidecarsWrapper} from "../../db/repositories/dataColumnSidecars.js";
 import {BeaconChain} from "../chain.js";
-import {BlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blockInput/index.js";
+import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blockInput/index.js";
 
 /**
  * Persists block input data to DB. This operation must be eventually completed if a block is imported to the fork-choice.
@@ -15,7 +15,7 @@ import {BlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blockInput/i
  * This operation may be performed before, during or after importing to the fork-choice. As long as errors
  * are handled properly for eventual consistency.
  */
-export async function writeBlockInputToDb(this: BeaconChain, blocksInputs: BlockInput[]): Promise<void> {
+export async function writeBlockInputToDb(this: BeaconChain, blocksInputs: IBlockInput[]): Promise<void> {
   // track all these objects for a few batch db operations
   const putBlocks: KeyValue<Uint8Array, SignedBeaconBlock>[] = [];
   const putSerializedBlocks: KeyValue<Uint8Array, Uint8Array>[] = [];
@@ -115,7 +115,7 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInputs: Block
 /**
  * Prunes eagerly persisted block inputs only if not known to the fork-choice
  */
-export async function removeEagerlyPersistedBlockInputs(this: BeaconChain, blockInputs: BlockInput[]): Promise<void> {
+export async function removeEagerlyPersistedBlockInputs(this: BeaconChain, blockInputs: IBlockInput[]): Promise<void> {
   const blockToRemove = [];
   const blobsToRemove = [];
   const dataColumnsToRemove = [];

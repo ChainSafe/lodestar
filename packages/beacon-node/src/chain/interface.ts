@@ -35,7 +35,7 @@ import {SerializedCache} from "../util/serializedCache.js";
 import {IArchiveStore} from "./archiveStore/interface.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache, ProposerPreparationData} from "./beaconProposerCache.js";
-import {BlockInput} from "./blocks/blockInput/index.js";
+import {IBlockInput} from "./blocks/blockInput/index.js";
 import {ImportBlockOpts} from "./blocks/types.js";
 import {IBlsVerifier} from "./bls/index.js";
 import {ChainEventEmitter} from "./emitter.js";
@@ -211,9 +211,9 @@ export interface IBeaconChain {
   }>;
 
   /** Process a block until complete */
-  processBlock(block: BlockInput, opts?: ImportBlockOpts): Promise<void>;
+  processBlock(block: IBlockInput, opts?: ImportBlockOpts): Promise<void>;
   /** Process a chain of blocks until complete */
-  processChainSegment(blocks: BlockInput[], opts?: ImportBlockOpts): Promise<void>;
+  processChainSegment(blocks: IBlockInput[], opts?: ImportBlockOpts): Promise<void>;
 
   getStatus(): Status;
 

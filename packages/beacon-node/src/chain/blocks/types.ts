@@ -3,7 +3,7 @@ import {MaybeValidExecutionStatus} from "@lodestar/fork-choice";
 import {ForkSeq} from "@lodestar/params";
 import {CachedBeaconStateAllForks, DataAvailabilityStatus, computeEpochAtSlot} from "@lodestar/state-transition";
 import type {Slot, fulu} from "@lodestar/types";
-import {BlockInput} from "./blockInput/index.js";
+import {IBlockInput} from "./blockInput/types.js";
 
 export enum GossipedInputType {
   block = "block",
@@ -88,7 +88,7 @@ export type ImportBlockOpts = {
  * A wrapper around a `SignedBeaconBlock` that indicates that this block is fully verified and ready to import
  */
 export type FullyVerifiedBlock = {
-  blockInput: BlockInput;
+  blockInput: IBlockInput;
   postState: CachedBeaconStateAllForks;
   parentBlockSlot: Slot;
   proposerBalanceDelta: number;

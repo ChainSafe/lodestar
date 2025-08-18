@@ -12,7 +12,7 @@ import {nextEventLoop} from "../../util/eventLoop.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {ValidatorMonitor} from "../validatorMonitor.js";
-import {BlockInput} from "./blockInput/index.js";
+import {BlockInput, IBlockInput} from "./blockInput/index.js";
 import {ImportBlockOpts} from "./types.js";
 
 /**
@@ -25,7 +25,7 @@ import {ImportBlockOpts} from "./types.js";
  */
 export async function verifyBlocksStateTransitionOnly(
   preState0: CachedBeaconStateAllForks,
-  blocks: BlockInput[],
+  blocks: IBlockInput[],
   dataAvailabilityStatuses: DataAvailabilityStatus[],
   logger: Logger,
   metrics: Metrics | null,

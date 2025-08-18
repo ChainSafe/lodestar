@@ -13,7 +13,7 @@ import type {BeaconChain} from "../chain.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {RegenCaller} from "../regen/index.js";
-import {BlockInput, DAType} from "./blockInput/index.js";
+import {BlockInput, DAType, IBlockInput} from "./blockInput/index.js";
 import {ImportBlockOpts} from "./types.js";
 import {DENEB_BLOWFISH_BANNER} from "./utils/blowfishBanner.js";
 import {ELECTRA_GIRAFFE_BANNER} from "./utils/giraffeBanner.js";
@@ -39,7 +39,7 @@ import {writeBlockInputToDb} from "./writeBlockInputToDb.js";
 export async function verifyBlocksInEpoch(
   this: BeaconChain,
   parentBlock: ProtoBlock,
-  blocksInput: BlockInput[],
+  blocksInput: IBlockInput[],
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<{
   postStates: CachedBeaconStateAllForks[];

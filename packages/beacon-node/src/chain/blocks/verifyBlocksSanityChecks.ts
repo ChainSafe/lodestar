@@ -6,7 +6,7 @@ import {toRootHex} from "@lodestar/utils";
 import {IClock} from "../../util/clock.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {IChainOptions} from "../options.js";
-import {BlockInput} from "./blockInput/index.js";
+import {IBlockInput} from "./blockInput/types.js";
 import {ImportBlockOpts} from "./types.js";
 
 /**
@@ -29,10 +29,10 @@ export function verifyBlocksSanityChecks(
     opts: IChainOptions;
     blacklistedBlocks: Map<RootHex, Slot | null>;
   },
-  blocks: BlockInput[],
+  blocks: IBlockInput[],
   opts: ImportBlockOpts
 ): {
-  relevantBlocks: BlockInput[];
+  relevantBlocks: IBlockInput[];
   parentSlots: Slot[];
   parentBlock: ProtoBlock | null;
 } {
@@ -40,7 +40,7 @@ export function verifyBlocksSanityChecks(
     throw Error("Empty partiallyVerifiedBlocks");
   }
 
-  const relevantBlocks: BlockInput[] = [];
+  const relevantBlocks: IBlockInput[] = [];
   const parentSlots: Slot[] = [];
   let parentBlock: ProtoBlock | null = null;
 

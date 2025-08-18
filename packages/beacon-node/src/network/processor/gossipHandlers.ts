@@ -15,7 +15,7 @@ import {
   sszTypesFor,
 } from "@lodestar/types";
 import {LogLevel, Logger, prettyBytes, toHex, toRootHex} from "@lodestar/utils";
-import {BlockInput, BlockInputSource} from "../../chain/blocks/blockInput/index.js";
+import {BlockInput, BlockInputSource, IBlockInput} from "../../chain/blocks/blockInput/index.js";
 import {BlobSidecarValidation} from "../../chain/blocks/types.js";
 import {ChainEvent} from "../../chain/emitter.js";
 import {
@@ -118,7 +118,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     fork: ForkName,
     peerIdStr: string,
     seenTimestampSec: number
-  ): Promise<BlockInput> {
+  ): Promise<IBlockInput> {
     const slot = signedBlock.message.slot;
     const forkTypes = config.getForkTypes(slot);
     const blockRootHex = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
@@ -331,7 +331,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     }
   }
 
-  function handleValidBeaconBlock(blockInput: BlockInput, peerIdStr: string, seenTimestampSec: number): void {
+  function handleValidBeaconBlock(blockInput: IBlockInput, peerIdStr: string, seenTimestampSec: number): void {
     const signedBlock = blockInput.getBlock();
     const slot = signedBlock.message.slot;
 
