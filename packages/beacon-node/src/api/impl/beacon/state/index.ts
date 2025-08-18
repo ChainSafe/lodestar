@@ -211,7 +211,7 @@ export function getBeaconStateApi({
         for (const id of validatorIds) {
           const resp = getStateValidatorIndex(id, state, headState.epochCtx.pubkey2index);
 
-          if (resp.valid && resp.validatorIndex < state.validators.length) {
+          if (resp.valid) {
             balances.push({
               index: resp.validatorIndex,
               balance: state.balances.get(resp.validatorIndex),
