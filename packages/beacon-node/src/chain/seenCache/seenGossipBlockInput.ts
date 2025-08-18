@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {CheckpointWithHex} from "@lodestar/fork-choice";
-import {ForkName, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
+import {ForkName, ForkPostFulu, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
 import {LodestarError, Logger, toRootHex} from "@lodestar/utils";
@@ -165,7 +165,7 @@ export class SeenBlockInput {
         });
       } else if (isForkPostFulu(forkName)) {
         blockInput = BlockInputColumns.createFromBlock({
-          block,
+          block: block as SignedBeaconBlock<ForkPostFulu>,
           blockRootHex,
           daOutOfRange,
           forkName,
