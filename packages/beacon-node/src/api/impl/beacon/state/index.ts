@@ -13,7 +13,6 @@ import {
   loadState,
 } from "@lodestar/state-transition";
 import {getValidatorStatus} from "@lodestar/types";
-import {fromHex} from "@lodestar/utils";
 import {ApiError} from "../../errors.js";
 import {ApiModules} from "../../types.js";
 import {assertUniqueItems} from "../../utils.js";
