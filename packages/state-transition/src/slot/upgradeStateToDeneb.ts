@@ -22,7 +22,7 @@ export function upgradeStateToDeneb(stateCapella: CachedBeaconStateCapella): Cac
 
   // Since excessBlobGas and blobGasUsed are appended in the end to latestExecutionPayloadHeader so they should
   // be set to defaults and need no assigning, but right now any access to latestExecutionPayloadHeader fails
-  // with LeafNode has no left node. Weirdly it's because of addition of the second field as with one field
+// with LeafNode has no left node. Weirdly it's because of addition of the second field as with one field
   // it seems to work.
   //
   // TODO DENEB: Debug and remove the following cloning
