@@ -410,7 +410,7 @@ export function serializeBlobsBundle(data: BlobsBundle): BlobsBundleRpc {
   return {
     commitments: data.commitments.map((kzg) => bytesToData(kzg)),
     blobs: data.blobs.map((blob) => bytesToData(blob)),
-    proofs: data.blobs.map((proof) => bytesToData(proof)),
+    proofs: data.proofs.map((proof) => bytesToData(proof)),
   };
 }
 
