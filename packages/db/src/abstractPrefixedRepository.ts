@@ -2,7 +2,7 @@ import {Type} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {BUCKET_LENGTH} from "./const.js";
 import {KeyValue} from "./controller/index.js";
-import {Db, DbReqOpts} from "./controller/interface.js";
+import {Db, DbReqOpts, FilterOptions} from "./controller/interface.js";
 import {encodeKey} from "./util.js";
 
 type Id = Uint8Array | string | number | bigint;
@@ -27,10 +27,16 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
     this.dbReqOpts = {bucketId: this.bucketId};
   }
 
-  protected abstract encodeKeyRaw(prefix: P, id: I): Uint8Array;
-  protected abstract decodeKeyRaw(raw: Uint8Array): {prefix: P; id: I};
-  /** Compute [gte, lt) raw range for a given prefix (bucket-local). */
-  protected abstract rangeForPrefixRaw(prefix: P): {gte: Uint8Array; lt: Uint8Array};
+  abstract encodeKeyRaw(prefix: P, id: I): Uint8Array;
+  abstract decodeKeyRaw(raw: Uint8Array): {prefix: P; id: I};
+  /**
+   * Max key is inclusive
+   * */
+  abstract getMaxKeyRaw(prefix: P): Uint8Array;
+  /**
+   * Min key is inclusive
+   * */
+  abstract getMinKeyRaw(prefix: P): Uint8Array;
 
   protected encodeValue(value: T): Uint8Array {
     return this.type.serialize(value);
@@ -146,8 +152,10 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
     const keys: Uint8Array[][] = [];
 
     for (const p of Array.isArray(prefix) ? prefix : [prefix]) {
-      const {gte, lt} = this.rangeForPrefixRaw(p);
-      const prefixedKeys = await this.db.keys({gte: this.wrapKey(gte), lt: this.wrapKey(lt)});
+      const prefixedKeys = await this.db.keys({
+        gte: this.wrapKey(this.getMinKeyRaw(p)),
+        lte: this.wrapKey(this.getMaxKeyRaw(p)),
+      });
       keys.push(prefixedKeys);
     }
 
@@ -156,8 +164,10 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
 
   async *valuesStream(prefix: P | P[]): AsyncIterable<T> {
     for (const p of Array.isArray(prefix) ? prefix : [prefix]) {
-      const {gte, lt} = this.rangeForPrefixRaw(p);
-      for await (const vb of this.db.valuesStream({gte: this.wrapKey(gte), lt: this.wrapKey(lt)})) {
+      for await (const vb of this.db.valuesStream({
+        gte: this.wrapKey(this.getMinKeyRaw(p)),
+        lte: this.wrapKey(this.getMaxKeyRaw(p)),
+      })) {
         yield this.decodeValue(vb);
       }
     }
@@ -174,11 +184,16 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
     return result;
   }
 
-  async *valuesStreamBinary(prefix: P | P[]): AsyncIterable<Uint8Array> {
+  async *valuesStreamBinary(prefix: P | P[]): AsyncIterable<{prefix: P; id: I; value: Uint8Array}> {
     for (const p of Array.isArray(prefix) ? prefix : [prefix]) {
-      const {gte, lt} = this.rangeForPrefixRaw(p);
-      for await (const vb of this.db.valuesStream({gte: this.wrapKey(gte), lt: this.wrapKey(lt)})) {
-        yield vb;
+      for await (const {key, value} of this.db.entriesStream({
+        gte: this.wrapKey(this.getMinKeyRaw(p)),
+        lte: this.wrapKey(this.getMaxKeyRaw(p)),
+      })) {
+        yield {
+          ...this.decodeKeyRaw(key),
+          value,
+        };
       }
     }
   }
@@ -186,7 +201,7 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
   /**
    * Non iterative version of `valuesStreamBinary`.
    */
-  async valuesBinary(prefix: P | P[]): Promise<Uint8Array[]> {
+  async valuesBinary(prefix: P | P[]): Promise<{prefix: P; id: I; value: Uint8Array}[]> {
     const result = [];
     for await (const value of this.valuesStreamBinary(prefix)) {
       result.push(value);
@@ -196,8 +211,10 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
 
   async *entriesStream(prefix: P | P[]): AsyncIterable<{prefix: P; id: I; value: T}> {
     for (const v of Array.isArray(prefix) ? prefix : [prefix]) {
-      const {gte, lt} = this.rangeForPrefixRaw(v);
-      for await (const {key, value} of this.db.entriesStream({gte: this.wrapKey(gte), lt: this.wrapKey(lt)})) {
+      for await (const {key, value} of this.db.entriesStream({
+        gte: this.wrapKey(this.getMinKeyRaw(v)),
+        lte: this.wrapKey(this.getMaxKeyRaw(v)),
+      })) {
         const {prefix, id} = this.decodeKeyRaw(this.unwrapKey(key));
 
         yield {
@@ -211,8 +228,10 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
 
   async *entriesStreamBinary(prefix: P | P[]): AsyncIterable<{prefix: P; id: I; value: Uint8Array}> {
     for (const v of Array.isArray(prefix) ? prefix : [prefix]) {
-      const {gte, lt} = this.rangeForPrefixRaw(v);
-      for await (const {key, value} of this.db.entriesStream({gte: this.wrapKey(gte), lt: this.wrapKey(lt)})) {
+      for await (const {key, value} of this.db.entriesStream({
+        gte: this.wrapKey(this.getMinKeyRaw(v)),
+        lt: this.wrapKey(this.getMaxKeyRaw(v)),
+      })) {
         const {prefix, id} = this.decodeKeyRaw(this.unwrapKey(key));
 
         yield {
@@ -222,5 +241,31 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
         };
       }
     }
+  }
+
+  async keys(opts?: FilterOptions<Uint8Array>): Promise<{prefix: P; id: I}[]> {
+    const optsBuff: FilterOptions<Uint8Array> = {
+      bucketId: this.bucketId,
+    };
+
+    // Set at least one min key
+    if (opts?.lt !== undefined) {
+      optsBuff.lt = this.wrapKey(opts.lt);
+    } else if (opts?.lte !== undefined) {
+      optsBuff.lte = this.wrapKey(opts.lte);
+    }
+
+    // Set at least on max key
+    if (opts?.gt !== undefined) {
+      optsBuff.gt = this.wrapKey(opts.gt);
+    } else if (opts?.gte !== undefined) {
+      optsBuff.gte = this.wrapKey(opts.gte);
+    }
+
+    if (opts?.reverse !== undefined) optsBuff.reverse = opts.reverse;
+    if (opts?.limit !== undefined) optsBuff.limit = opts.limit;
+
+    const data = await this.db.keys(optsBuff);
+    return (data ?? []).map((data) => this.decodeKeyRaw(data));
   }
 }

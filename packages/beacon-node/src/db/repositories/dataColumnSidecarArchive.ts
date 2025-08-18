@@ -24,21 +24,22 @@ export class DataColumnSidecarArchiveRepository extends PrefixedRepository<Slot,
     return value.index;
   }
 
-  protected encodeKeyRaw(prefix: Slot, id: ColumnIndex): Uint8Array {
+  encodeKeyRaw(prefix: Slot, id: ColumnIndex): Uint8Array {
     return Buffer.concat([intToBytes(prefix, 4), intToBytes(id, 4)]);
   }
 
-  protected decodeKeyRaw(raw: Uint8Array): {prefix: Slot; id: ColumnIndex} {
+  decodeKeyRaw(raw: Uint8Array): {prefix: Slot; id: ColumnIndex} {
     return {
       prefix: bytesToInt(raw.slice(0, 4)) as Slot,
       id: bytesToInt(raw.slice(4, 8)) as ColumnIndex,
     };
   }
 
-  protected rangeForPrefixRaw(prefix: Slot): {gte: Uint8Array; lt: Uint8Array} {
-    return {
-      gte: Buffer.concat([intToBytes(prefix, 4), intToBytes(0, 4)]),
-      lt: Buffer.concat([intToBytes(prefix, 4), intToBytes(NUMBER_OF_COLUMNS, 4)]),
-    };
+  getMaxKeyRaw(prefix: Slot): Uint8Array {
+    return Buffer.concat([intToBytes(prefix, 4), intToBytes(NUMBER_OF_COLUMNS, 4)]);
+  }
+
+  getMinKeyRaw(prefix: Slot): Uint8Array {
+    return Buffer.concat([intToBytes(prefix, 4), intToBytes(0, 4)]);
   }
 }

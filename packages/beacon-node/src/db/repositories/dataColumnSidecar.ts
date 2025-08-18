@@ -1,3 +1,4 @@
+import {ByteArray} from "@chainsafe/ssz/lib/type/byteArray.js";
 import {ChainForkConfig} from "@lodestar/config";
 import {Db, PrefixedRepository} from "@lodestar/db";
 import {NUMBER_OF_COLUMNS} from "@lodestar/params";
@@ -26,21 +27,22 @@ export class DataColumnSidecarRepository extends PrefixedRepository<BlockRoot, C
     return value.index;
   }
 
-  protected encodeKeyRaw(prefix: BlockRoot, id: ColumnIndex): Uint8Array {
+  encodeKeyRaw(prefix: BlockRoot, id: ColumnIndex): Uint8Array {
     return Buffer.concat([prefix, intToBytes(id, 4)]);
   }
 
-  protected decodeKeyRaw(raw: Uint8Array): {prefix: BlockRoot; id: ColumnIndex} {
+  decodeKeyRaw(raw: Uint8Array): {prefix: BlockRoot; id: ColumnIndex} {
     return {
       prefix: raw.slice(0, 32) as BlockRoot,
       id: bytesToInt(raw.slice(32, 36)) as ColumnIndex,
     };
   }
 
-  protected rangeForPrefixRaw(prefix: BlockRoot): {gte: Uint8Array; lt: Uint8Array} {
-    return {
-      gte: Buffer.concat([prefix, intToBytes(0, 4)]),
-      lt: Buffer.concat([prefix, intToBytes(NUMBER_OF_COLUMNS, 4)]),
-    };
+  getMaxKeyRaw(prefix: BlockRoot): Uint8Array {
+    return Buffer.concat([prefix, intToBytes(NUMBER_OF_COLUMNS, 4)]);
+  }
+
+  getMinKeyRaw(prefix: BlockRoot): Uint8Array {
+    return Buffer.concat([prefix, intToBytes(0, 4)]);
   }
 }
