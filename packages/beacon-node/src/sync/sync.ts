@@ -8,12 +8,12 @@ import {Metrics} from "../metrics/index.js";
 import {INetwork, NetworkEvent, NetworkEventData} from "../network/index.js";
 import {ClockEvent} from "../util/clock.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
+import {BlockInputSync} from "./blockInputSync.js";
 import {MIN_EPOCH_TO_START_GOSSIP} from "./constants.js";
 import {IBeaconSync, SyncModules, SyncingStatus} from "./interface.js";
 import {SyncChainDebugState, SyncState, syncStateMetric} from "./interface.js";
 import {SyncOptions} from "./options.js";
 import {RangeSync, RangeSyncEvent, RangeSyncStatus} from "./range/range.js";
-import {BlockInputSync} from "./unknownBlock.js";
 import {PeerSyncType, getPeerSyncType, peerSyncTypes} from "./utils/remoteSyncType.js";
 
 export class BeaconSync implements IBeaconSync {
