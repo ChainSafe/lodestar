@@ -404,8 +404,13 @@ export class UnknownChainSync {
 
   newEarliestKnownAncestor(chain: UnknownAncestorBackwardsChain, header: Header): void {
     const parentRootHex = header.parentRoot;
-
-    if (this.chain.forkChoice.hasBlockHex(parentRootHex)) {
+    const epoch = computeEpochAtSlot(header.slot);
+    if (
+      this.chain.forkChoice.getFinalizedCheckpoint().epoch > epoch ||
+      this.chain.forkChoice.hasBlockHex(parentRootHex)
+    ) {
+      // The new header is finalized or the parent is already known, we can link the chain
+      // In the former case, the chain will be discarded as "too old", in the latter case, the chain can be processed
       linkChain(chain);
     } else if (this.headers.has(parentRootHex)) {
       // If the parent is known, its either a head of another chain or an ancestor of another chain
