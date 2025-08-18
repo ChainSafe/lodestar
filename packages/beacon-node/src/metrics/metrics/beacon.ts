@@ -84,12 +84,12 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         labelNames: ["source", "reason"],
       }),
       inclusionListsValidSize: register.counter({
-        name: "beacon_inclusion_lists_valid_size_bytes",
-        help: "Size of valid inclusion lists in bytes",
+        name: "beacon_inclusion_lists_valid_size_bytes_total",
+        help: "Total size of valid inclusion lists in bytes",
       }),
       inclusionListsInvalidSize: register.counter({
-        name: "beacon_inclusion_lists_invalid_size_bytes",
-        help: "Size of invalid inclusion lists in bytes",
+        name: "beacon_inclusion_lists_invalid_size_bytes_total",
+        help: "Total size of invalid inclusion lists in bytes",
       }),
       inclusionListsValidationTime: register.histogram<{source: InclusionListSource}>({
         name: "beacon_inclusion_lists_validation_time_seconds",
@@ -114,7 +114,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       inclusionListArrivalTime: register.histogram({
         name: "beacon_inclusion_lists_arrival_time_seconds",
         help: "Inclusion list arrival time since the beginning of slot",
-        buckets: [0, 1, 2, 3, 4, 6, 8, 10, 12],
+        buckets: [0, 1, 2, 3, 4, 6, 8, 9, 10, 11, 12],
       }),
       inclusionListTransactionsDuplicated: register.counter({
         name: "beacon_inclusion_list_transactions_duplicated_total",
@@ -214,7 +214,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       inclusionListsFirstSeenInSlot: register.histogram<{source: InclusionListSource}>({
         name: "beacon_inclusion_lists_first_seen_in_slot_seconds",
         help: "Inclusion lists first time seen in slot",
-        buckets: [0, 1, 2, 3, 4, 6, 8, 10, 12],
+        buckets: [0, 1, 2, 3, 4, 6, 8, 9, 10, 11, 12],
         labelNames: ["source"],
       }),
     },
