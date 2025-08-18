@@ -65,9 +65,9 @@ export function getRewardsAndPenaltiesAltair(
   const {config, epochCtx} = state;
   const fork = config.getForkSeq(state.slot);
 
-  const inactivityPenalityMultiplier =
+  const inactivityPenaltyMultiplier =
     fork === ForkSeq.altair ? INACTIVITY_PENALTY_QUOTIENT_ALTAIR : INACTIVITY_PENALTY_QUOTIENT_BELLATRIX;
-  const penaltyDenominator = config.INACTIVITY_SCORE_BIAS * inactivityPenalityMultiplier;
+  const penaltyDenominator = config.INACTIVITY_SCORE_BIAS * inactivityPenaltyMultiplier;
 
   const {flags} = cache;
   for (let i = 0; i < flags.length; i++) {

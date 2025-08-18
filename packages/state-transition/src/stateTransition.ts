@@ -189,7 +189,7 @@ export function processSlots(
  *
  *   state-transition
  *   ╔══════════════════════════════════════════════════════════════════════════════════╗
- *   ║   beforeProcessEpoch          processEpoch                 afterPRocessEpoch     ║
+ *   ║   beforeProcessEpoch          processEpoch                 afterProcessEpoch     ║
  *   ║  |-------------------------|--------------------|-------------------------------|║
  *   ║                       |                         |     |                          ║
  *   ╚═══════════════════════|═══════════════════════════════|══════════════════════════╝
