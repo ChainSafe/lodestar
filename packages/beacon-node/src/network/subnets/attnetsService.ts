@@ -30,7 +30,7 @@ type AggregatorDutyInfo = Map<SubnetID, number | null>;
 const NOT_ABLE_TO_FORM_STABLE_MESH_SEC = -1;
 
 /**
- * Manage deleterministic long lived (DLL) subnets and short lived subnets.
+ * Manage deterministic long lived (DLL) subnets and short lived subnets.
  * - PeerManager uses attnetsService to know which peers are required for duties and long lived subscriptions
  * - Network call addCommitteeSubscriptions() from API calls
  * - Gossip handler checks shouldProcess to know if validator is aggregator
@@ -84,7 +84,7 @@ export class AttnetsService implements IAttnetsService {
   }
 
   /**
-   * Get all active subnets for the hearbeat:
+   * Get all active subnets for the heartbeat:
    *   - committeeSubnets so that submitted attestations can be spread to the network
    *  - longLivedSubscriptions because other peers based on this node's ENR for their submitted attestations
    */
@@ -283,7 +283,7 @@ export class AttnetsService implements IAttnetsService {
       this.longLivedSubscriptions.add(subnet);
     }
 
-    // Only tell gossip to unsubsribe last, longLivedSubscriptions has the latest state
+    // Only tell gossip to unsubscribe last, longLivedSubscriptions has the latest state
     this.unsubscribeSubnets(toRemoveSubnets, this.clock.currentSlot, SubnetSource.longLived);
     this.updateMetadata();
   }
@@ -325,7 +325,7 @@ export class AttnetsService implements IAttnetsService {
   }
 
   /**
-   * Trigger a gossip subcription only if not already subscribed
+   * Trigger a gossip subscription only if not already subscribed
    * shortLivedSubscriptions or longLivedSubscriptions should be updated right AFTER this called
    **/
   private subscribeToSubnets(subnets: number[], src: SubnetSource): void {

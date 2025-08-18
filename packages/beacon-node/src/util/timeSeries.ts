@@ -12,7 +12,7 @@ export class TimeSeries {
 
   /** Add TimeSeries entry for value at current time */
   addPoint(value: number, timeSec = Math.floor(Date.now() / 1000)): void {
-    // Substract initial time so x values are not big and cause rounding errors
+    // Subtract initial time so x values are not big and cause rounding errors
     const time = timeSec - this.startTimeSec;
     this.points.push([time, value]);
 
@@ -33,8 +33,8 @@ export class TimeSeries {
    */
   computeY0Point(): number {
     const {m, b} = linearRegression(this.points);
-    // The X cordinate system has been shifted left by startTimeSec, so return the
-    // projection in original coordinated system
+    // The X coordinate system has been shifted left by startTimeSec, so return the
+    // projection in original coordinate system
     return -b / m + this.startTimeSec;
   }
 

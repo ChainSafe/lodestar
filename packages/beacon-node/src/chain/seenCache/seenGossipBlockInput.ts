@@ -208,7 +208,7 @@ export class SeenGossipBlockInput {
         dataColumnBytes: dataColumnBytes?.slice(0, dataColumnBytes.length) ?? null,
       });
     } else {
-      // somehow helps resolve typescript that all types have been exausted
+      // somehow helps resolve typescript that all types have been exhausted
       throw Error("Invalid gossipedInput type");
     }
 

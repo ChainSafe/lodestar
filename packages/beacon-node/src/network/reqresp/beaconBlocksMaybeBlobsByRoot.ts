@@ -36,7 +36,7 @@ import {
   matchBlockWithDataColumns,
 } from "./beaconBlocksMaybeBlobsByRange.js";
 
-// keep 1 epoch of stuff, assmume 16 blobs
+// keep 1 epoch of stuff, assume 16 blobs
 const MAX_ENGINE_GETBLOBS_CACHE = 32 * 16;
 const MAX_UNAVAILABLE_RETRY_CACHE = 32;
 
@@ -122,7 +122,7 @@ export async function beaconBlocksMaybeBlobsByRoot(
       allBlobSidecars = [];
     }
 
-    // The last arg is to provide slot to which all blobs should be exausted in matching
+    // The last arg is to provide slot to which all blobs should be exhausted in matching
     // and here it should be infinity since all bobs should match
     const blockInputWithBlobs = matchBlockWithBlobs(
       config,
@@ -163,7 +163,7 @@ export async function beaconBlocksMaybeBlobsByRoot(
       allDataColumnsSidecars = [];
     }
 
-    // The last arg is to provide slot to which all blobs should be exausted in matching
+    // The last arg is to provide slot to which all blobs should be exhausted in matching
     // and here it should be infinity since all bobs should match
     // TODO: should not call matchBlockWithDataColumns() because it's supposed for range sync
     // in that function, peers should return all requested data columns, this function runs at gossip time

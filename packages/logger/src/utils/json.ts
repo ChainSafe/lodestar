@@ -16,7 +16,7 @@ export type LogData =
  * Renders any log Context to JSON up to one level of depth.
  *
  * By limiting recursiveness, it renders limited content while ensuring safer logging.
- * Consumers of the logger should ensure to send pre-formated data if they require nesting.
+ * Consumers of the logger should ensure to send pre-formatted data if they require nesting.
  */
 export function logCtxToJson(arg: unknown, depth = 0, fromError = false): LogData {
   switch (typeof arg) {
@@ -76,7 +76,7 @@ export function logCtxToJson(arg: unknown, depth = 0, fromError = false): LogDat
  * Renders any log Context to a string up to one level of depth.
  *
  * By limiting recursiveness, it renders limited content while ensuring safer logging.
- * Consumers of the logger should ensure to send pre-formated data if they require nesting.
+ * Consumers of the logger should ensure to send pre-formatted data if they require nesting.
  */
 export function logCtxToString(arg: unknown, depth = 0, fromError = false): string {
   switch (typeof arg) {

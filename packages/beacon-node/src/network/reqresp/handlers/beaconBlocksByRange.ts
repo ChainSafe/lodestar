@@ -35,7 +35,7 @@ export async function* onBeaconBlocksByRange(
   // Non-finalized range of blocks
   if (endSlot > finalizedSlot) {
     const headRoot = chain.forkChoice.getHeadRoot();
-    // TODO DENEB: forkChoice should mantain an array of canonical blocks, and change only on reorg
+    // TODO DENEB: forkChoice should maintain an array of canonical blocks, and change only on reorg
     const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot);
     // getAllAncestorBlocks response includes the head node, so it's the full chain.
 

@@ -22,7 +22,7 @@ type ConfigWithPreset = ChainConfig & BeaconPreset;
  */
 export function assertEqualParams(localConfig: ChainConfig, externalSpecJson: SpecJson): void {
   // Before comparing, add preset which is bundled in api impl config route.
-  // config and preset must be serialized to JSON for safe comparisions.
+  // config and preset must be serialized to JSON for safe comparisons.
   const localSpecJson = {
     ...chainConfigToJson(localConfig),
     ...presetToJson(activePreset),

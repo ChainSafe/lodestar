@@ -119,14 +119,14 @@ export class PersistedKeysBackend implements IPersistedKeysBackend {
     persistIfDuplicate: boolean;
   }): boolean {
     // Validate Keystore JSON + pubkey format.
-    // Note: while this is currently redundant, it's free to check that format is correct before writting
+    // Note: while this is currently redundant, it's free to check that format is correct before writing
     const keystore = Keystore.parse(keystoreStr);
     const pubkeyHex = getPubkeyHexFromKeystore(keystore);
 
     const {dirpath, keystoreFilepath, passphraseFilepath} = this.getValidatorPaths(pubkeyHex);
 
     // Check if duplicate first.
-    // TODO: Check that the content is actually equal. But not naively, the JSON could be formated differently
+    // TODO: Check that the content is actually equal. But not naively, the JSON could be formatted differently
     if (!persistIfDuplicate && fs.existsSync(keystoreFilepath)) {
       return false;
     }
@@ -188,7 +188,7 @@ export class PersistedKeysBackend implements IPersistedKeysBackend {
     const {definitionFilepath} = this.getDefinitionPaths(pubkey);
 
     // Check if duplicate first.
-    // TODO: Check that the content is actually equal. But not naively, the JSON could be formated differently
+    // TODO: Check that the content is actually equal. But not naively, the JSON could be formatted differently
     if (!persistIfDuplicate && fs.existsSync(definitionFilepath)) {
       return false;
     }
@@ -212,7 +212,7 @@ export class PersistedKeysBackend implements IPersistedKeysBackend {
   }
 
   private getDefinitionPaths(pubkey: PubkeyHex): {definitionFilepath: string} {
-    // TODO: Ensure correct formating 0x prefixed
+    // TODO: Ensure correct formatting 0x prefixed
 
     return {
       definitionFilepath: path.join(this.paths.remoteKeysDir, pubkey),
@@ -225,7 +225,7 @@ export class PersistedKeysBackend implements IPersistedKeysBackend {
     passphraseFilepath: string;
     proposerDirPath: string;
   } {
-    // TODO: Ensure correct formating 0x prefixed
+    // TODO: Ensure correct formatting 0x prefixed
 
     const dirpath = path.join(this.paths.keystoresDir, pubkey);
 

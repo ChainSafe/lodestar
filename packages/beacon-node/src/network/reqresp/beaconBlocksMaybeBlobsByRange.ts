@@ -233,7 +233,7 @@ export function matchBlockWithBlobs(
   let lastMatchedSlot = -1;
 
   // Match blobSideCar with the block as some blocks would have no blobs and hence
-  // would be omitted from the response. If there are any inconsitencies in the
+  // would be omitted from the response. If there are any inconsistencies in the
   // response, the validations during import will reject the block and hence this
   // entire segment.
   //
@@ -331,7 +331,7 @@ export function matchBlockWithDataColumns(
   const shouldHaveAllData = neededColumns.reduce((acc, elem) => acc && requestedColumns.includes(elem), true);
 
   // Match dataColumnSideCar with the block as some blocks would have no dataColumns and hence
-  // would be omitted from the response. If there are any inconsitencies in the
+  // would be omitted from the response. If there are any inconsistencies in the
   // response, the validations during import will reject the block and hence this
   // entire segment.
   //
