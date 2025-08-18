@@ -12,7 +12,7 @@ import {
   DataColumnSidecarsRepository,
   NUM_COLUMNS_IN_WRAPPER_INDEX,
   dataColumnSidecarsWrapperSsz,
-} from "../../../../../src/db/repositories/dataColumnSidecars.js";
+} from "../../../../../src/db/repositories/dataColumnSidecar.js";
 import {getDataColumnSidecarsFromBlock} from "../../../../../src/util/dataColumns.js";
 import {kzg} from "../../../../../src/util/kzg.js";
 import {testLogger} from "../../../../utils/logger.js";

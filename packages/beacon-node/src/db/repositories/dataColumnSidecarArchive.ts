@@ -11,7 +11,7 @@ import {Bucket, getBucketNameByValue} from "../buckets.js";
  *
  * Indexed data by `slot` + `columnIndex`
  */
-export class DataColumnSidecarsArchiveRepository extends PrefixedRepository<Slot, ColumnIndex, fulu.DataColumnSidecar> {
+export class DataColumnSidecarArchiveRepository extends PrefixedRepository<Slot, ColumnIndex, fulu.DataColumnSidecar> {
   constructor(config: ChainForkConfig, db: Db) {
     const bucket = Bucket.allForks_dataColumnSidecars;
     super(config, db, bucket, ssz.fulu.DataColumnSidecar, getBucketNameByValue(bucket));

@@ -10,7 +10,7 @@ import {
   CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX,
   DATA_COLUMN_SIDECARS_IN_WRAPPER_INDEX,
   NUM_COLUMNS_IN_WRAPPER_INDEX,
-} from "../../../db/repositories/dataColumnSidecars.js";
+} from "../../../db/repositories/dataColumnSidecar.js";
 
 export async function* onDataColumnSidecarsByRange(
   request: fulu.DataColumnSidecarsByRangeRequest,

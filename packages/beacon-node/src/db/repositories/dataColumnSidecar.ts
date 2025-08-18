@@ -13,7 +13,7 @@ type BlockRoot = Root;
  *
  * Indexed data by `blockRoot` + `columnIndex`
  */
-export class DataColumnSidecarsRepository extends PrefixedRepository<BlockRoot, ColumnIndex, fulu.DataColumnSidecar> {
+export class DataColumnSidecarRepository extends PrefixedRepository<BlockRoot, ColumnIndex, fulu.DataColumnSidecar> {
   constructor(config: ChainForkConfig, db: Db) {
     const bucket = Bucket.allForks_dataColumnSidecars;
     super(config, db, bucket, ssz.fulu.DataColumnSidecar, getBucketNameByValue(bucket));
