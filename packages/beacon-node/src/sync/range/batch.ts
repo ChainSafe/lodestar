@@ -5,7 +5,6 @@ import {LodestarError} from "@lodestar/utils";
 import {isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
 import {BlockError, BlockErrorCode} from "../../chain/errors/index.js";
-import {PartialDownload} from "../../network/reqresp/beaconBlocksMaybeBlobsByRange.js";
 import {CustodyConfig} from "../../util/dataColumns.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {MAX_BATCH_DOWNLOAD_ATTEMPTS, MAX_BATCH_PROCESSING_ATTEMPTS} from "../constants.js";
@@ -55,7 +54,7 @@ export type DownloadSuccessState =
 
 export type BatchState =
   | DownloadSuccessState
-  | {status: BatchStatus.Downloading; peer: PeerIdStr}
+  | {status: BatchStatus.Downloading; peer: PeerIdStr; blocks: IBlockInput[]}
   | {status: BatchStatus.Processing; attempt: Attempt}
   | {status: BatchStatus.AwaitingValidation; attempt: Attempt};
 
@@ -373,7 +372,7 @@ export class Batch {
 
     // remove any downloaded blocks and re-attempt
     // TODO(fulu): need to remove the bad blocks from the SeenBlockInputCache
-    this.state = {status: BatchStatus.AwaitingDownload};
+    this.state = {status: BatchStatus.AwaitingDownload, blocks: []};
   }
 
   private onProcessingError(attempt: Attempt): void {
@@ -384,7 +383,7 @@ export class Batch {
 
     // remove any downloaded blocks and re-attempt
     // TODO(fulu): need to remove the bad blocks from the SeenBlockInputCache
-    this.state = {status: BatchStatus.AwaitingDownload};
+    this.state = {status: BatchStatus.AwaitingDownload, blocks: []};
   }
 
   /** Helper to construct typed BatchError. Stack traces are correct as the error is thrown above */
