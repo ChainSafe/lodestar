@@ -16,7 +16,7 @@ import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {GossipType} from "../../network/index.js";
 import {CannotAcceptWorkReason, ReprocessRejectReason} from "../../network/processor/index.js";
 import {BackfillSyncMethod} from "../../sync/backfill/backfill.js";
-import {PendingBlockType} from "../../sync/index.js";
+import {PendingBlockType} from "../../sync/types.js";
 import {PeerSyncType, RangeSyncType} from "../../sync/utils/remoteSyncType.js";
 import {AllocSource} from "../../util/bufferPool.js";
 import {RecoverResult} from "../../util/dataColumns.js";
@@ -497,7 +497,7 @@ export function createLodestarMetrics(
       }),
     },
 
-    syncUnknownBlock: {
+    blockInputSync: {
       switchNetworkSubscriptions: register.gauge<{action: string}>({
         name: "lodestar_sync_unknown_block_network_subscriptions_count",
         help: "Switch network subscriptions on/off",
@@ -507,6 +507,11 @@ export function createLodestarMetrics(
         name: "lodestar_sync_unknown_block_requests_total",
         help: "Total number of unknown block events or requests",
         labelNames: ["type"],
+      }),
+      source: register.gauge<{source: BlockInputSource}>({
+        name: "lodestar_block_input_sync_source_total",
+        help: "The origination source of one of the BlockInputSync triggers",
+        labelNames: ["source"],
       }),
       pendingBlocks: register.gauge({
         name: "lodestar_sync_unknown_block_pending_blocks_size",

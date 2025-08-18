@@ -2,41 +2,95 @@ import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, INTERVALS_PER_SLOT, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {ColumnIndex, Root, RootHex, deneb} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
-import {Logger, fromHex, pruneSetToMax, toRootHex} from "@lodestar/utils";
+import {Logger, fromHex, prettyBytes, pruneSetToMax, toRootHex} from "@lodestar/utils";
 import {sleep} from "@lodestar/utils";
-import {BlockInput, BlockInputType, CachedDataColumns, NullBlockInput} from "../chain/blocks/types.js";
+import {IBlockInput} from "../chain/blocks/blockInput/types.js";
 import {BlockError, BlockErrorCode} from "../chain/errors/index.js";
 import {ChainEvent, ChainEventData, IBeaconChain} from "../chain/index.js";
 import {Metrics} from "../metrics/index.js";
 import {INetwork, NetworkEvent, NetworkEventData} from "../network/index.js";
-import {
-  beaconBlocksMaybeBlobsByRoot,
-  unavailableBeaconBlobsByRoot,
-} from "../network/reqresp/beaconBlocksMaybeBlobsByRoot.js";
 import {byteArrayEquals} from "../util/bytes.js";
 import {PeerIdStr} from "../util/peerId.js";
 import {shuffle} from "../util/shuffle.js";
 import {Result, wrapError} from "../util/wrapError.js";
-import {PendingBlock, PendingBlockStatus, PendingBlockType, UnknownBlock} from "./interface.js";
 import {SyncOptions} from "./options.js";
-import {getAllDescendantBlocks, getDescendantBlocks, getUnknownAndAncestorBlocks} from "./utils/pendingBlocksTree.js";
+import {
+  BlockInputSyncCacheItem,
+  PendingBlockInput,
+  PendingBlockInputStatus,
+  PendingBlockType,
+  PendingRootHex,
+  isPendingBlockInput,
+} from "./types.js";
+import {
+  getAllDescendantBlocks,
+  getDescendantBlocks,
+  getIncompleteAndAncestorBlocks,
+} from "./utils/pendingBlocksTree.js";
 
 const MAX_ATTEMPTS_PER_BLOCK = 5;
 const MAX_KNOWN_BAD_BLOCKS = 500;
 const MAX_PENDING_BLOCKS = 100;
 
-export class UnknownBlockSync {
+function getLogMeta(
+  block: BlockInputSyncCacheItem,
+  pendingBlocks?: Map<RootHex, BlockInputSyncCacheItem>
+): Record<string, string | number> {
+  const pendingBlocksLog: Record<string, number> = pendingBlocks ? {pendingBlocks: pendingBlocks.size} : {};
+  return isPendingBlockInput(block)
+    ? {
+        type: "pendingBlockInput",
+        ...pendingBlocksLog,
+        ...block.blockInput.getLogMeta(),
+      }
+    : {
+        type: "pendingRootHex",
+        ...pendingBlocksLog,
+        rootHex: prettyBytes(block.rootHex),
+      };
+}
+
+/**
+ * BlockInputSync is a class that handles ReqResp to find blocks and data related to a specific blockRoot.  The
+ * blockRoot may have been found via object gossip, or the API.  Gossip objects that can trigger a search are block,
+ * blobs, columns, attestations, etc.  In the case of blocks and data this is generally during the current slot but
+ * can also be for items that are received late but are not fully verified and thus not in fork-choice (old blocks on
+ * an unknown fork). It can also be triggered via an attestation (or sync committee message or any other item that
+ * gets gossiped) that references a blockRoot that is not in fork-choice.  In rare (and realistically should not happen)
+ * situations it can get triggered via the API when the validator attempts to publish a block, attestation, aggregate
+ * and proof or a sync committee contribution that has unknown information included (parentRoot for instance).
+ *
+ * The goal of the class is to make sure that all information that is necessary for import into fork-choice is pulled
+ * from peers so that the block and data can be processed, and thus the object that triggered the search can be
+ * referenced and validated.
+ *
+ * The most common case for this search is a set of block/data that comes across gossip for the current slot, during
+ * normal chain operation, but not everything was received before the gossip cutoff window happens so it is necessary
+ * to pull remaining data via req/resp so that fork-choice can be updated prior to making an attestation for the
+ * current slot.
+ *
+ * Event sources for old UnknownBlock
+ *
+ * - publishBlock
+ * - gossipHandlers
+ * - searchUnknownSlotRoot
+ *    = produceSyncCommitteeContribution
+ *    = validateGossipFnRetryUnknownRoot
+ *        * submitPoolAttestationsV2
+ *        * publishAggregateAndProofsV2
+ *    = onPendingGossipsubMessage
+ *        * NetworkEvent.pendingGossipsubMessage
+ *            - onGossipsubMessage
+ */
+export class BlockInputSync {
   /**
    * block RootHex -> PendingBlock. To avoid finding same root at the same time
    */
-  private readonly pendingBlocks = new Map<RootHex, PendingBlock>();
+  private readonly pendingBlocks = new Map<RootHex, BlockInputSyncCacheItem>();
   private readonly knownBadBlocks = new Set<RootHex>();
   private readonly proposerBoostSecWindow: number;
   private readonly maxPendingBlocks;
   private subscribedToNetworkEvents = false;
-
-  private engineGetBlobsCache = new Map<RootHex, BlobAndProof | null>();
-  private blockInputsRetryTrackerCache = new Set<RootHex>();
 
   constructor(
     private readonly config: ChainForkConfig,
@@ -50,35 +104,36 @@ export class UnknownBlockSync {
     this.proposerBoostSecWindow = this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT;
 
     if (metrics) {
-      metrics.syncUnknownBlock.pendingBlocks.addCollect(() =>
-        metrics.syncUnknownBlock.pendingBlocks.set(this.pendingBlocks.size)
+      metrics.blockInputSync.pendingBlocks.addCollect(() =>
+        metrics.blockInputSync.pendingBlocks.set(this.pendingBlocks.size)
       );
-      metrics.syncUnknownBlock.knownBadBlocks.addCollect(() =>
-        metrics.syncUnknownBlock.knownBadBlocks.set(this.knownBadBlocks.size)
+      metrics.blockInputSync.knownBadBlocks.addCollect(() =>
+        metrics.blockInputSync.knownBadBlocks.set(this.knownBadBlocks.size)
       );
     }
   }
 
   subscribeToNetwork(): void {
-    if (!this.opts?.disableUnknownBlockSync) {
-      // cannot chain to the above if or the log will be incorrect
-      if (!this.subscribedToNetworkEvents) {
-        this.logger.verbose("UnknownBlockSync enabled.");
-        this.chain.emitter.on(ChainEvent.unknownBlockRoot, this.onUnknownBlock);
-        this.chain.emitter.on(ChainEvent.incompleteBlockInput, this.onUnknownBlockInput);
-        this.chain.emitter.on(ChainEvent.unknownParent, this.onUnknownParent);
-        this.network.events.on(NetworkEvent.peerConnected, this.triggerUnknownBlockSearch);
-        this.subscribedToNetworkEvents = true;
-      }
-    } else {
-      this.logger.verbose("UnknownBlockSync disabled by disableUnknownBlockSync option.");
+    if (this.opts?.disableBlockInputSync) {
+      this.logger.verbose("BlockInputSync disabled by disableBlockInputSync option.");
+      return;
+    }
+
+    // cannot chain to the above if or the log will be incorrect
+    if (!this.subscribedToNetworkEvents) {
+      this.logger.verbose("BlockInputSync enabled.");
+      this.chain.emitter.on(ChainEvent.unknownBlockRoot, this.onUnknownBlockRoot);
+      this.chain.emitter.on(ChainEvent.incompleteBlockInput, this.onIncompleteBlockInput);
+      this.chain.emitter.on(ChainEvent.unknownParent, this.onUnknownParent);
+      this.network.events.on(NetworkEvent.peerConnected, this.triggerUnknownBlockSearch);
+      this.subscribedToNetworkEvents = true;
     }
   }
 
   unsubscribeFromNetwork(): void {
-    this.logger.verbose("UnknownBlockSync disabled.");
-    this.chain.emitter.off(ChainEvent.unknownBlockRoot, this.onUnknownBlock);
-    this.chain.emitter.off(ChainEvent.incompleteBlockInput, this.onUnknownBlockInput);
+    this.logger.verbose("BlockInputSync disabled.");
+    this.chain.emitter.off(ChainEvent.unknownBlockRoot, this.onUnknownBlockRoot);
+    this.chain.emitter.off(ChainEvent.incompleteBlockInput, this.onIncompleteBlockInput);
     this.chain.emitter.off(ChainEvent.unknownParent, this.onUnknownParent);
     this.network.events.off(NetworkEvent.peerConnected, this.triggerUnknownBlockSearch);
     this.subscribedToNetworkEvents = false;
@@ -86,7 +141,6 @@ export class UnknownBlockSync {
 
   close(): void {
     this.unsubscribeFromNetwork();
-    // add more in the future if needed
   }
 
   isSubscribedToNetwork(): boolean {
@@ -96,26 +150,28 @@ export class UnknownBlockSync {
   /**
    * Process an unknownBlock event and register the block in `pendingBlocks` Map.
    */
-  private onUnknownBlock = (data: ChainEventData[ChainEvent.unknownBlockRoot]): void => {
+  private onUnknownBlockRoot = (data: ChainEventData[ChainEvent.unknownBlockRoot]): void => {
     try {
-      const unknownBlockType = this.addUnknownBlock(data.rootHex, data.peer);
+      this.addByRootHex(data.rootHex, data.peer);
       this.triggerUnknownBlockSearch();
-      this.metrics?.syncUnknownBlock.requests.inc({type: unknownBlockType});
+      this.metrics?.blockInputSync.requests.inc({type: PendingBlockType.UNKNOWN_BLOCK_ROOT});
+      this.metrics?.blockInputSync.source.inc({source: data.source});
     } catch (e) {
-      this.logger.debug("Error handling unknownBlock event", {}, e as Error);
+      this.logger.debug("Error handling unknownBlockRoot event", {}, e as Error);
     }
   };
 
   /**
    * Process an unknownBlockInput event and register the block in `pendingBlocks` Map.
    */
-  private onUnknownBlockInput = (data: ChainEventData[ChainEvent.incompleteBlockInput]): void => {
+  private onIncompleteBlockInput = (data: ChainEventData[ChainEvent.incompleteBlockInput]): void => {
     try {
-      const unknownBlockType = this.addUnknownBlock(data.blockInput, data.peer);
+      this.addByBlockInput(data.blockInput, data.peer);
       this.triggerUnknownBlockSearch();
-      this.metrics?.syncUnknownBlock.requests.inc({type: unknownBlockType});
+      this.metrics?.blockInputSync.requests.inc({type: PendingBlockType.INCOMPLETE_BLOCK_INPUT});
+      this.metrics?.blockInputSync.source.inc({source: data.source});
     } catch (e) {
-      this.logger.debug("Error handling unknownBlockInput event", {}, e as Error);
+      this.logger.debug("Error handling incompleteBlockInput event", {}, e as Error);
     }
   };
 
@@ -124,119 +180,74 @@ export class UnknownBlockSync {
    */
   private onUnknownParent = (data: ChainEventData[ChainEvent.unknownParent]): void => {
     try {
-      this.addUnknownParent(data.blockInput, data.peer);
+      this.addByRootHex(data.blockInput.parentRootHex, data.peer);
+      this.addByBlockInput(data.blockInput, data.peer);
       this.triggerUnknownBlockSearch();
-      this.metrics?.syncUnknownBlock.requests.inc({type: PendingBlockType.UNKNOWN_PARENT});
+      this.metrics?.blockInputSync.requests.inc({type: PendingBlockType.UNKNOWN_PARENT});
+      this.metrics?.blockInputSync.source.inc({source: data.source});
     } catch (e) {
-      this.logger.debug("Error handling unknownBlockParent event", {}, e as Error);
+      this.logger.debug("Error handling unknownParent event", {}, e as Error);
     }
   };
 
-  /**
-   * When a blockInput comes with  an unknown parent:
-   * - add the block to pendingBlocks with status downloaded or pending blockRootHex as key. This is similar to
-   * an `onUnknownBlock` event, but the blocks is downloaded.
-   * - add the parent root to pendingBlocks with status pending, parentBlockRootHex as key. This is
-   * the same to an `onUnknownBlock` event with parentBlockRootHex as root.
-   */
-  private addUnknownParent(blockInput: BlockInput, peerIdStr: string): void {
-    const block = blockInput.block.message;
-    const blockRoot = this.config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block);
-    const blockRootHex = toRootHex(blockRoot);
-    const parentBlockRootHex = toRootHex(block.parentRoot);
-
-    // add 1 pending block with status downloaded
-    let pendingBlock = this.pendingBlocks.get(blockRootHex);
-    if (!pendingBlock) {
-      pendingBlock =
-        blockInput.type === BlockInputType.dataPromise
-          ? {
-              unknownBlockType: PendingBlockType.UNKNOWN_DATA,
-              blockRootHex,
-              // this will be set after we download block
-              parentBlockRootHex: null,
-              blockInput,
-              peerIdStrs: new Set(),
-              status: PendingBlockStatus.pending,
-              downloadAttempts: 0,
-            }
-          : {
-              blockRootHex,
-              parentBlockRootHex,
-              blockInput,
-              peerIdStrs: new Set(),
-              status: PendingBlockStatus.downloaded,
-              downloadAttempts: 0,
-            };
-      this.pendingBlocks.set(blockRootHex, pendingBlock);
-      this.logger.verbose("Added unknown block parent to pendingBlocks", {
-        root: blockRootHex,
-        parent: parentBlockRootHex,
-      });
-    }
-    pendingBlock.peerIdStrs.add(peerIdStr);
-
-    // add 1 pending block with status pending
-    this.addUnknownBlock(parentBlockRootHex, peerIdStr);
-  }
-
-  private addUnknownBlock(
-    blockInputOrRootHex: RootHex | BlockInput | NullBlockInput,
-    peerIdStr?: string
-  ): Exclude<PendingBlockType, PendingBlockType.UNKNOWN_PARENT> {
-    let blockRootHex: RootHex;
-    let blockInput: BlockInput | NullBlockInput | null;
-    let unknownBlockType: Exclude<PendingBlockType, PendingBlockType.UNKNOWN_PARENT>;
-
-    if (typeof blockInputOrRootHex === "string") {
-      blockRootHex = blockInputOrRootHex;
-      blockInput = null;
-      unknownBlockType = PendingBlockType.UNKNOWN_BLOCK;
-    } else {
-      if (blockInputOrRootHex.block !== null) {
-        const {block} = blockInputOrRootHex;
-        blockRootHex = toRootHex(this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
-        unknownBlockType = PendingBlockType.UNKNOWN_DATA;
-      } else {
-        unknownBlockType = PendingBlockType.UNKNOWN_BLOCKINPUT;
-        blockRootHex = blockInputOrRootHex.blockRootHex;
-      }
-      blockInput = blockInputOrRootHex;
-    }
-
-    let pendingBlock = this.pendingBlocks.get(blockRootHex);
+  private addByRootHex = (rootHex: RootHex, peerIdStr?: PeerIdStr): void => {
+    let pendingBlock = this.pendingBlocks.get(rootHex) as PendingRootHex;
     if (!pendingBlock) {
       pendingBlock = {
-        unknownBlockType,
-        blockRootHex,
-        // this will be set after we download block
-        parentBlockRootHex: null,
-        blockInput,
-        peerIdStrs: new Set(),
-        status: PendingBlockStatus.pending,
-        downloadAttempts: 0,
-      } as PendingBlock;
-      this.pendingBlocks.set(blockRootHex, pendingBlock);
+        status: PendingBlockInputStatus.pending,
+        rootHex: rootHex,
+        peerIdStrings: new Set(),
+        timeAddedSec: Date.now() / 1000,
+      };
+      this.pendingBlocks.set(rootHex, pendingBlock);
 
-      this.logger.verbose("Added unknown block to pendingBlocks", {
-        unknownBlockType,
-        root: blockRootHex,
-        slot: blockInput?.block?.message.slot ?? "unknown",
+      this.logger.verbose("Added new rootHex to BlockInputSync.pendingBlocks", {
+        rootHex: prettyBytes(pendingBlock.rootHex),
+        peerIdStr: peerIdStr ?? "unknown peer",
       });
     }
 
     if (peerIdStr) {
-      pendingBlock.peerIdStrs.add(peerIdStr);
+      pendingBlock.peerIdStrings.add(peerIdStr);
     }
 
+    // TODO: check this prune methodology
     // Limit pending blocks to prevent DOS attacks that cause OOM
     const prunedItemCount = pruneSetToMax(this.pendingBlocks, this.maxPendingBlocks);
     if (prunedItemCount > 0) {
-      this.logger.warn(`Pruned ${prunedItemCount} pending blocks from UnknownBlockSync`);
+      this.logger.verbose(`Pruned ${prunedItemCount} items from BlockInputSync.pendingBlocks`);
+    }
+  };
+
+  private addByBlockInput = (blockInput: IBlockInput, peerIdStr?: string): void => {
+    let pendingBlock = this.pendingBlocks.get(blockInput.blockRootHex) as PendingBlockInput;
+    // if entry is missing or was added via rootHex and now we have more complete information overwrite
+    // the existing information with the more complete cache entry
+    if (!pendingBlock || !isPendingBlockInput(pendingBlock)) {
+      pendingBlock = {
+        // can be added via unknown parent and we may already have full block input. need to check and set correctly
+        // so we pull the data if its missing or handle the block correctly in getIncompleteAndAncestorBlocks
+        status: blockInput.hasBlockAndAllData() ? PendingBlockInputStatus.downloaded : PendingBlockInputStatus.pending,
+        blockInput,
+        peerIdStrings: new Set(),
+        timeAddedSec: Date.now() / 1000,
+      };
+      this.pendingBlocks.set(blockInput.blockRootHex, pendingBlock);
+
+      this.logger.verbose("Added blockInput to BlockInputSync.pendingBlocks", pendingBlock.blockInput.getLogMeta());
     }
 
-    return unknownBlockType;
-  }
+    if (peerIdStr) {
+      pendingBlock.peerIdStrings.add(peerIdStr);
+    }
+
+    // TODO: check this prune methodology
+    // Limit pending blocks to prevent DOS attacks that cause OOM
+    const prunedItemCount = pruneSetToMax(this.pendingBlocks, this.maxPendingBlocks);
+    if (prunedItemCount > 0) {
+      this.logger.verbose(`Pruned ${prunedItemCount} items from BlockInputSync.pendingBlocks`);
+    }
+  };
 
   /**
    * Gather tip parent blocks with unknown parent and do a search for all of them
@@ -254,15 +265,15 @@ export class UnknownBlockSync {
       return;
     }
 
-    const {unknowns, ancestors} = getUnknownAndAncestorBlocks(this.pendingBlocks);
+    const {incomplete, ancestors} = getIncompleteAndAncestorBlocks(this.pendingBlocks);
     // it's rare when there is no unknown block
     // see https://github.com/ChainSafe/lodestar/issues/5649#issuecomment-1594213550
-    if (unknowns.length === 0) {
+    if (incomplete.length === 0) {
       let processedBlocks = 0;
 
       for (const block of ancestors) {
         // when this happens, it's likely the block and parent block are processed by head sync
-        if (this.chain.forkChoice.hasBlockHex(block.parentBlockRootHex)) {
+        if (this.chain.forkChoice.hasBlockHex(block.blockInput.parentRootHex)) {
           processedBlocks++;
           this.processBlock(block).catch((e) => {
             this.logger.debug("Unexpected error - process old downloaded block", {}, e);
@@ -279,15 +290,15 @@ export class UnknownBlockSync {
     }
 
     // most of the time there is exactly 1 unknown block
-    for (const block of unknowns) {
+    for (const block of incomplete) {
       this.downloadBlock(block, connectedPeers).catch((e) => {
         this.logger.debug("Unexpected error - downloadBlock", {root: block.blockRootHex}, e);
       });
     }
   };
 
-  private async downloadBlock(block: PendingBlock, allPeers: PeerIdStr[]): Promise<void> {
-    if (block.status !== PendingBlockStatus.pending) {
+  private async downloadBlock(block: BlockInputSyncCacheItem, allPeers: PeerIdStr[]): Promise<void> {
+    if (block.status !== PendingBlockInputStatus.pending) {
       return;
     }
 
@@ -301,9 +312,9 @@ export class UnknownBlockSync {
 
     this.logger.verbose("Downloading unknown block", logCtx);
 
-    block.status = PendingBlockStatus.fetching;
+    block.status = PendingBlockInputStatus.fetching;
 
-    let res: Result<{blockInput: BlockInput; peerIdStr: string}>;
+    let res: Result<{blockInput: IBlockInput; peerIdStr: string}>;
     let connectedPeers: string[];
     if (block.blockInput === null) {
       connectedPeers = allPeers;
@@ -355,8 +366,8 @@ export class UnknownBlockSync {
       res = await wrapError(this.fetchUnavailableBlockInput(block.blockInput, connectedPeers));
     }
 
-    if (res.err) this.metrics?.syncUnknownBlock.downloadedBlocksError.inc();
-    else this.metrics?.syncUnknownBlock.downloadedBlocksSuccess.inc();
+    if (res.err) this.metrics?.blockInputSync.downloadedBlocksError.inc();
+    else this.metrics?.blockInputSync.downloadedBlocksSuccess.inc();
 
     if (!res.err) {
       const {blockInput, peerIdStr} = res.result;
@@ -392,7 +403,7 @@ export class UnknownBlockSync {
         const blockSlot = blockInput.block.message.slot;
         const finalizedSlot = this.chain.forkChoice.getFinalizedBlock().slot;
         const delaySec = Date.now() / 1000 - (this.chain.genesisTime + blockSlot * this.config.SECONDS_PER_SLOT);
-        this.metrics?.syncUnknownBlock.elapsedTimeTillReceived.observe(delaySec);
+        this.metrics?.blockInputSync.elapsedTimeTillReceived.observe(delaySec);
 
         const parentInForkchoice = this.chain.forkChoice.hasBlock(blockInput.block.message.parentRoot);
         this.logger.verbose("Downloaded unknown block", {
@@ -448,10 +459,10 @@ export class UnknownBlockSync {
    * On error, remove and downscore all descendants.
    * This function could run recursively for all descendant blocks
    */
-  private async processBlock(pendingBlock: PendingBlock): Promise<void> {
+  private async processBlock(pendingBlock: PendingBlockInput): Promise<void> {
     // pending block status is `downloaded` right after `downloadBlock`
     // but could be `pending` if added by `onUnknownBlockParent` event and this function is called recursively
-    if (pendingBlock.status !== PendingBlockStatus.downloaded) {
+    if (pendingBlock.status !== PendingBlockInputStatus.downloaded) {
       if (pendingBlock.status === PendingBlockStatus.pending) {
         const connectedPeers = this.network.getConnectedPeers();
         if (connectedPeers.length === 0) {
@@ -502,8 +513,8 @@ export class UnknownBlockSync {
       })
     );
 
-    if (res.err) this.metrics?.syncUnknownBlock.processedBlocksError.inc();
-    else this.metrics?.syncUnknownBlock.processedBlocksSuccess.inc();
+    if (res.err) this.metrics?.blockInputSync.processedBlocksError.inc();
+    else this.metrics?.blockInputSync.processedBlocksSuccess.inc();
 
     if (!res.err) {
       // no need to update status to "processed", delete anyway
@@ -814,7 +825,7 @@ export class UnknownBlockSync {
     // Get all blocks that are a descendant of this one
     const badPendingBlocks = [block, ...getAllDescendantBlocks(block.blockRootHex, this.pendingBlocks)];
 
-    this.metrics?.syncUnknownBlock.removedBlocks.inc(badPendingBlocks.length);
+    this.metrics?.blockInputSync.removedBlocks.inc(badPendingBlocks.length);
 
     for (const block of badPendingBlocks) {
       this.pendingBlocks.delete(block.blockRootHex);

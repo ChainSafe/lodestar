@@ -1,20 +1,23 @@
 import {RootHex} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
-import {BlockInputType} from "../../chain/blocks/types.js";
+// import {DownloadedBlock, PendingBlock, PendingBlockStatus, UnknownBlock} from "../interface.js";
 import {
-  DownloadedBlock,
-  PendingBlock,
-  PendingBlockStatus,
-  UnknownAndAncestorBlocks,
-  UnknownBlock,
-} from "../interface.js";
+  BlockInputSyncCacheItem,
+  PendingBlockInput,
+  PendingBlockInputStatus,
+  getBlockInputSyncCacheItemRootHex,
+  isPendingBlockInput,
+} from "../types.js";
 
-export function getAllDescendantBlocks(blockRootHex: RootHex, blocks: Map<RootHex, PendingBlock>): PendingBlock[] {
+export function getAllDescendantBlocks(
+  blockRootHex: RootHex,
+  blocks: Map<RootHex, BlockInputSyncCacheItem>
+): BlockInputSyncCacheItem[] {
   // Do one pass over all blocks to index by parent
-  const byParent = new MapDef<RootHex, PendingBlock[]>(() => []);
+  const byParent = new MapDef<RootHex, PendingBlockInput[]>(() => []);
   for (const block of blocks.values()) {
-    if (block.parentBlockRootHex != null) {
-      byParent.getOrDefault(block.parentBlockRootHex).push(block);
+    if (isPendingBlockInput(block)) {
+      byParent.getOrDefault(block.blockInput.parentRootHex).push(block);
     }
   }
 
@@ -25,9 +28,9 @@ export function getAllDescendantBlocks(blockRootHex: RootHex, blocks: Map<RootHe
 /** Recursive function for `getAllDescendantBlocks()` */
 function addToDescendantBlocks(
   childBlockRootHex: string,
-  byParent: Map<RootHex, PendingBlock[]>,
-  descendantBlocks: PendingBlock[] = []
-): PendingBlock[] {
+  byParent: Map<RootHex, BlockInputSyncCacheItem[]>,
+  descendantBlocks: BlockInputSyncCacheItem[] = []
+): BlockInputSyncCacheItem[] {
   const firstDescendantBlocks = byParent.get(childBlockRootHex);
   if (firstDescendantBlocks) {
     for (const firstDescendantBlock of firstDescendantBlocks) {
@@ -38,8 +41,11 @@ function addToDescendantBlocks(
   return descendantBlocks;
 }
 
-export function getDescendantBlocks(blockRootHex: RootHex, blocks: Map<RootHex, PendingBlock>): PendingBlock[] {
-  const descendantBlocks: PendingBlock[] = [];
+export function getDescendantBlocks(
+  blockRootHex: RootHex,
+  blocks: Map<RootHex, BlockInputSyncCacheItem>
+): BlockInputSyncCacheItem[] {
+  const descendantBlocks: BlockInputSyncCacheItem[] = [];
 
   for (const block of blocks.values()) {
     if (block.parentBlockRootHex === blockRootHex) {
@@ -50,31 +56,58 @@ export function getDescendantBlocks(blockRootHex: RootHex, blocks: Map<RootHex, 
   return descendantBlocks;
 }
 
+export type IncompleteAndAncestorBlocks = {
+  incomplete: BlockInputSyncCacheItem[];
+  ancestors: PendingBlockInput[];
+};
+
 /**
- * Given this chain segment unknown block n => downloaded block n + 1 => downloaded block n + 2
- *   return `{unknowns: [n], ancestors: []}`
+ * Returns two arrays, one has the items that need to be pulled still and the other is items that
+ * are ready to be checked for rooting in fork-choice so the branch can be processed (or have their
+ * ancestor pulled to extend the branch backward until it does root in fork-choice)
+ *
+ * Given this chain segment incomplete block n => downloaded block n + 1 => downloaded block n + 2
+ *   return `{incomplete: [n], ancestors: []}`
  *
  * Given this chain segment: downloaded block n => downloaded block n + 1 => downloaded block n + 2
- *   return {unknowns: [], ancestors: [n]}
+ *   return {incomplete: [], ancestors: [n]}
  */
-export function getUnknownAndAncestorBlocks(blocks: Map<RootHex, PendingBlock>): UnknownAndAncestorBlocks {
-  const unknowns: UnknownBlock[] = [];
-  const ancestors: DownloadedBlock[] = [];
+export function getIncompleteAndAncestorBlocks(
+  blocks: Map<RootHex, BlockInputSyncCacheItem>
+): IncompleteAndAncestorBlocks {
+  const incomplete = new Map<RootHex, BlockInputSyncCacheItem>();
+  const ancestors = new Map<RootHex, BlockInputSyncCacheItem>();
 
   for (const block of blocks.values()) {
-    const parentHex = block.parentBlockRootHex;
-    if (
-      block.status === PendingBlockStatus.pending &&
-      (block.blockInput?.block == null || block.blockInput?.type === BlockInputType.dataPromise) &&
-      parentHex == null
-    ) {
-      unknowns.push(block);
+    // check if the block was already added via getAllDescendants
+    if (incomplete.has(getBlockInputSyncCacheItemRootHex(block))) {
+      continue;
     }
 
-    if (block.status === PendingBlockStatus.downloaded && parentHex && !blocks.has(parentHex)) {
-      ancestors.push(block);
+    // block and sidecars have bee fully downloaded and the parent is not in the pending block, attempt to find
+    // parentRootHex in fork-choice to determine if its ready to be processed
+    if (
+      isPendingBlockInput(block) &&
+      block.blockInput.hasBlockAndAllData() &&
+      !blocks.has(block.blockInput.parentRootHex)
+    ) {
+      ancestors.set(block.blockInput.blockRootHex, block);
+      const descendants = getAllDescendantBlocks(block);
+      for (const descendant of descendants) {
+        if (!isPendingBlockInput(descendant) || descendant.status !== PendingBlockInputStatus.downloaded) {
+          incomplete.set(getBlockInputSyncCacheItemRootHex(descendant), descendant);
+        }
+      }
+      continue;
+    }
+
+    if (block.status === PendingBlockInputStatus.pending) {
+      incomplete.push(block);
     }
   }
 
-  return {unknowns, ancestors};
+  return {
+    incomplete,
+    ancestors,
+  };
 }
