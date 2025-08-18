@@ -13,7 +13,7 @@ import {SeenBlockProposers} from "../../../src/chain/seenCache/seenBlockProposer
 import {ZERO_HASH} from "../../../src/constants/constants.js";
 import {INetwork, NetworkEvent, NetworkEventBus, PeerAction} from "../../../src/network/index.js";
 import {defaultSyncOptions} from "../../../src/sync/options.js";
-import {UnknownBlockSync} from "../../../src/sync/unknownBlock.js";
+import {BlockInputSync} from "../../../src/sync/unknownBlock.js";
 import {ClockStopped} from "../../mocks/clock.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
 import {testLogger} from "../../utils/logger.js";
@@ -188,7 +188,7 @@ describe.skip(
 
         const setTimeoutSpy = vi.spyOn(global, "setTimeout");
         const processBlockSpy = vi.spyOn(chain, "processBlock");
-        const syncService = new UnknownBlockSync(config, network as INetwork, chain as IBeaconChain, logger, null, {
+        const syncService = new BlockInputSync(config, network as INetwork, chain as IBeaconChain, logger, null, {
           ...defaultSyncOptions,
           maxPendingBlocks,
         });
@@ -247,7 +247,7 @@ describe("UnknownBlockSync", () => {
   let network: INetwork;
   let chain: MockedBeaconChain;
   const logger = testLogger();
-  let service: UnknownBlockSync;
+  let service: BlockInputSync;
 
   beforeEach(() => {
     network = {
@@ -277,7 +277,7 @@ describe("UnknownBlockSync", () => {
       const testName = actions.map((action) => (action ? "subscribe" : "unsubscribe")).join(" - ");
       it(testName, () => {
         const events = network.events as EventEmitter;
-        service = new UnknownBlockSync(minimalConfig, network, chain, logger, null, defaultSyncOptions);
+        service = new BlockInputSync(minimalConfig, network, chain, logger, null, defaultSyncOptions);
         for (const action of actions) {
           if (action) {
             service.subscribeToNetwork();
