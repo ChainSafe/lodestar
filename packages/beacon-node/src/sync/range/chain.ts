@@ -7,14 +7,13 @@ import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {PeerAction, prettyPrintPeerIdStr} from "../../network/index.js";
 import {PeerSyncMeta} from "../../network/peers/peersData.js";
-import {PartialDownload} from "../../network/reqresp/beaconBlocksMaybeBlobsByRange.js";
 import {CustodyConfig} from "../../util/dataColumns.js";
 import {ItTrigger} from "../../util/itTrigger.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {wrapError} from "../../util/wrapError.js";
 import {BATCH_BUFFER_SIZE, EPOCHS_PER_BATCH, MAX_LOOK_AHEAD_EPOCHS} from "../constants.js";
 import {RangeSyncType} from "../utils/remoteSyncType.js";
-import {Batch, BatchError, BatchErrorCode, BatchMetadata, BatchStatus, DownloadByRangeRequests} from "./batch.js";
+import {Batch, BatchError, BatchErrorCode, BatchMetadata, BatchStatus} from "./batch.js";
 import {
   ChainPeersBalancer,
   PeerSyncInfo,
