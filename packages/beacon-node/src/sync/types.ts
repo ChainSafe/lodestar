@@ -1,6 +1,24 @@
 import {IBlockInput} from "@lodestar/beacon-node/src/chain/blocks/blockInput/index.js";
 import {RootHex} from "@lodestar/types";
 
+export enum PendingBlockType {
+  /**
+   * We got a block root (from a gossip attestation, for exxample) but we don't have the block in forkchoice.
+   */
+  UNKNOWN_BLOCK_ROOT = "UnknownBlockRoot",
+  /**
+   * During gossip time, we may get a block but the parent root is unknown (not in forkchoice).
+   */
+  UNKNOWN_PARENT = "unknown_parent",
+  /**
+   * During gossip we wait for a set amount of time to receive the complete block input but if it does not
+   * arrive in time we turn to req/resp to pull the remainder so that it can be processed
+   */
+  INCOMPLETE_BLOCK_INPUT = "IncompleteBlockInput",
+
+  UNKNOWN_DATA = "unknown_data",
+}
+
 export enum PendingBlockInputStatus {
   pending = "pending",
   fetching = "fetching",
@@ -17,7 +35,7 @@ export type PendingBlockInput = {
 };
 
 export type PendingRootHex = {
-  status: PendingBlockInputStatus;
+  status: PendingBlockInputStatus.pending | PendingBlockInputStatus.fetching;
   rootHex: RootHex;
   timeAddedSec: number;
   timeSyncedSec?: number;
