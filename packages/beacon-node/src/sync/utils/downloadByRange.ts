@@ -17,7 +17,7 @@ import {PeerIdStr} from "../../util/peerId.js";
 import {RangeSyncType} from "./remoteSyncType.js";
 
 export type DownloadByRangeRequests = {
-  blocksRequest: phase0.BeaconBlocksByRangeRequest;
+  blocksRequest?: phase0.BeaconBlocksByRangeRequest;
   blobsRequest?: deneb.BlobSidecarsByRangeRequest;
   columnsRequest?: fulu.DataColumnSidecarsByRangeRequest;
 };
@@ -53,10 +53,10 @@ export type CacheByRangeResponsesProps = {
   batchBlocks: IBlockInput[];
 };
 
-export async function cacheByRangeResponses({
+export function cacheByRangeResponses({
   config,
   cache,
-  syncType,
+  // syncType,
   peerIdStr,
   responses,
   batchBlocks,
@@ -349,7 +349,7 @@ export function validateRequests({
   blocksRequest,
   blobsRequest,
   columnsRequest,
-}: DownloadByRangeRequests & Pick<DownloadAndCacheByRangeProps, "config" | "dataAvailabilityStatus">): string {
+}: DownloadByRangeRequests & Pick<DownloadAndCacheByRangeProps, "config" | "daOutOfRange">): string {
   const startSlot = (blocksRequest?.startSlot ?? blobsRequest?.startSlot ?? columnsRequest?.startSlot) as number;
   const count = (blocksRequest?.count ?? blobsRequest?.count ?? columnsRequest?.count) as number;
   const slotRange = `${startSlot} - ${startSlot + count}`;
