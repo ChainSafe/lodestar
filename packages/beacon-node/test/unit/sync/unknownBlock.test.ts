@@ -421,12 +421,12 @@ describe("UnknownBlockPeerBalancer", async () => {
 
   it("onRequest and onRequestCompleted", () => {
     peerBalancer.onRequest(peers[0].peerId);
-    expect(peerBalancer.getActiveRequest(peers[0].peerId)).toBe(1);
+    expect(peerBalancer.activeRequests.get(peers[0].peerId)).toBe(1);
     peerBalancer.onRequest(peers[0].peerId);
-    expect(peerBalancer.getActiveRequest(peers[0].peerId)).toBe(2);
+    expect(peerBalancer.activeRequests.get(peers[0].peerId)).toBe(2);
     peerBalancer.onRequestCompleted(peers[0].peerId);
-    expect(peerBalancer.getActiveRequest(peers[0].peerId)).toBe(1);
+    expect(peerBalancer.activeRequests.get(peers[0].peerId)).toBe(1);
     peerBalancer.onRequestCompleted(peers[0].peerId);
-    expect(peerBalancer.getActiveRequest(peers[0].peerId)).toBe(0);
+    expect(peerBalancer.activeRequests.get(peers[0].peerId)).toBe(0);
   });
 });

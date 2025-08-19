@@ -60,10 +60,8 @@ export class UnknownBlockSync {
       metrics.syncUnknownBlock.pendingBlocks.addCollect(() => {
         metrics.syncUnknownBlock.pendingBlocks.set(this.pendingBlocks.size);
         metrics.syncUnknownBlock.knownBadBlocks.set(this.knownBadBlocks.size);
-        metrics.syncUnknownBlock.peerBalancer.peersMetaCount.set(this.peerBalancer.getPeersMetaCount());
-        metrics.syncUnknownBlock.peerBalancer.peersActiveRequestCount.set(
-          this.peerBalancer.getPeersActiveRequestCount()
-        );
+        metrics.syncUnknownBlock.peerBalancer.peersMetaCount.set(this.peerBalancer.peersMeta.size);
+        metrics.syncUnknownBlock.peerBalancer.peersActiveRequestCount.set(this.peerBalancer.activeRequests.size);
         metrics.syncUnknownBlock.peerBalancer.totalActiveRequests.set(this.peerBalancer.getTotalActiveRequests());
       });
     }
@@ -530,7 +528,7 @@ export class UnknownBlockSync {
   private async fetchUnknownBlockRoot(blockRoot: Root): Promise<{blockInput: BlockInput; peerIdStr: string}> {
     const blockRootHex = toRootHex(blockRoot);
 
-    const requestedPeers = new Set<PeerIdStr>();
+    const excludedPeers = new Set<PeerIdStr>();
     let partialDownload: PartialDownload | null = null;
     const defaultPendingColumns =
       this.config.getForkSeq(this.chain.clock.currentSlot) >= ForkSeq.fulu
@@ -542,7 +540,7 @@ export class UnknownBlockSync {
       // pendingDataColumns is null prefulu
       const peer = this.peerBalancer.bestPeerForPendingColumns(
         partialDownload ? new Set(partialDownload.pendingDataColumns) : defaultPendingColumns,
-        requestedPeers
+        excludedPeers
       );
       if (peer === null) {
         // no more peer with needed columns to try, throw error
@@ -551,7 +549,7 @@ export class UnknownBlockSync {
         );
       }
       const {peerId, client: peerClient} = peer;
-      requestedPeers.add(peerId);
+      excludedPeers.add(peerId);
 
       try {
         const {
@@ -646,9 +644,9 @@ export class UnknownBlockSync {
 
     let lastError: Error | null = null;
     let i = 0;
-    const requestedPeers = new Set<PeerIdStr>();
+    const excludedPeers = new Set<PeerIdStr>();
     while (i++ < this.getMaxDownloadAttempts()) {
-      const bestPeer = this.peerBalancer.bestPeerForBlockInput(unavailableBlockInput, requestedPeers);
+      const bestPeer = this.peerBalancer.bestPeerForBlockInput(unavailableBlockInput, excludedPeers);
       if (bestPeer === null) {
         // no more peer to try, throw error
         throw Error(
@@ -656,6 +654,7 @@ export class UnknownBlockSync {
         );
       }
       const {peerId, client: peerClient} = bestPeer;
+      excludedPeers.add(peerId);
 
       try {
         const blockInput = await unavailableBeaconBlobsByRoot(
@@ -772,8 +771,8 @@ export class UnknownBlockSync {
  * Class to track active byRoots requests and balance them across eligible peers.
  */
 export class UnknownBlockPeerBalancer {
-  private readonly peersMeta: Map<PeerIdStr, PeerSyncMeta>;
-  private readonly activeRequests: Map<PeerIdStr, number>;
+  readonly peersMeta: Map<PeerIdStr, PeerSyncMeta>;
+  readonly activeRequests: Map<PeerIdStr, number>;
   private readonly custodyConfig: CustodyConfig;
 
   constructor(custodyConfig: CustodyConfig) {
@@ -782,10 +781,9 @@ export class UnknownBlockPeerBalancer {
     this.custodyConfig = custodyConfig;
   }
 
+  /** Trigger on each peer re-status */
   onPeerConnected(peerId: PeerIdStr, syncMeta: PeerSyncMeta): void {
-    if (!this.peersMeta.has(peerId)) {
-      this.peersMeta.set(peerId, syncMeta);
-    }
+    this.peersMeta.set(peerId, syncMeta);
 
     if (!this.activeRequests.has(peerId)) {
       this.activeRequests.set(peerId, 0);
@@ -883,36 +881,14 @@ export class UnknownBlockPeerBalancer {
    * make this public for testing
    */
   onRequest(peerId: PeerIdStr): void {
-    if (this.activeRequests.has(peerId)) {
-      this.activeRequests.set(peerId, (this.activeRequests.get(peerId) ?? 0) + 1);
-    } else {
-      this.activeRequests.set(peerId, 1);
-    }
+    this.activeRequests.set(peerId, (this.activeRequests.get(peerId) ?? 0) + 1);
   }
 
   /**
    * Consumers should call this method when a request is completed for a peer.
    */
   onRequestCompleted(peerId: PeerIdStr): void {
-    if (this.activeRequests.has(peerId)) {
-      const count = this.activeRequests.get(peerId) ?? 0;
-      this.activeRequests.set(peerId, Math.max(0, count - 1));
-    }
-  }
-
-  /**
-   * For testing only
-   */
-  getActiveRequest(peerId: PeerIdStr): number {
-    return this.activeRequests.get(peerId) ?? 0;
-  }
-
-  getPeersMetaCount(): number {
-    return this.peersMeta.size;
-  }
-
-  getPeersActiveRequestCount(): number {
-    return this.activeRequests.size;
+    this.activeRequests.set(peerId, Math.max(0, (this.activeRequests.get(peerId) ?? 1) - 1));
   }
 
   getTotalActiveRequests(): number {
@@ -929,7 +905,7 @@ export class UnknownBlockPeerBalancer {
     const considerPeers: {peerId: PeerIdStr; columnCount: number}[] = [];
     for (const [peerId, syncMeta] of this.peersMeta.entries()) {
       if (excludedPeers.has(peerId)) {
-        // this peer is requested already
+        // made request to this peer already
         continue;
       }
 
@@ -948,16 +924,9 @@ export class UnknownBlockPeerBalancer {
       // postfulu, find peers that have custody columns that we need
       const {custodyGroups: peerColumns} = syncMeta;
       // check if the peer has all needed columns
-      const neededColumns = this.custodyConfig.sampledColumns.reduce((acc, elem) => {
-        if (pendingDataColumns.has(elem)) {
-          acc.push(elem);
-        }
-        return acc;
-      }, [] as number[]);
-
       // get match
       const columns = peerColumns.reduce((acc, elem) => {
-        if (neededColumns.includes(elem)) {
+        if (pendingDataColumns.has(elem)) {
           acc.push(elem);
         }
         return acc;
