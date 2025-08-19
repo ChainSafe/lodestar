@@ -4,7 +4,8 @@ import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {deneb, fulu, ssz} from "@lodestar/types";
 import {afterEach, describe, expect, it} from "vitest";
 import {validateBlobSidecars, validateGossipBlobSidecar} from "../../../src/chain/validation/blobSidecar.js";
-import {computeBlobSidecars, computeDataColumnSidecars, recoverDataColumnSidecars} from "../../../src/util/blobs.js";
+import {getBlobSidecars, recoverDataColumnSidecars} from "../../../src/util/blobs.js";
+import {getDataColumnSidecarsFromBlock} from "../../../src/util/dataColumns.js";
 import {kzg} from "../../../src/util/kzg.js";
 import {shuffle} from "../../../src/util/shuffle.js";
 import {getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
@@ -55,8 +56,8 @@ describe("KZG", () => {
       signedBeaconBlock.message.body.blobKzgCommitments.push(kzgCommitment);
     }
     const blockRoot = ssz.deneb.BeaconBlock.hashTreeRoot(signedBeaconBlock.message);
-    const kzgProofs = blobs.map((blob, index) => kzg.computeBlobKzgProof(blob, kzgCommitments[index]));
-    const blobSidecars: deneb.BlobSidecars = computeBlobSidecars(chain.config, signedBeaconBlock, {blobs, kzgProofs});
+    const proofs = blobs.map((blob, index) => kzg.computeBlobKzgProof(blob, kzgCommitments[index]));
+    const blobSidecars: deneb.BlobSidecars = getBlobSidecars(chain.config, signedBeaconBlock, blobs, proofs);
 
     expect(blobSidecars.length).toBe(2);
 
@@ -86,13 +87,13 @@ describe("KZG", () => {
     const mocks = getBlobCellAndProofs();
     const blobs = mocks.map(({blob}) => blob);
     const kzgCommitments = blobs.map((blob) => kzg.blobToKzgCommitment(blob));
-    const kzgProofs = blobs.flatMap((blob) => kzg.computeCellsAndKzgProofs(blob).proofs);
+    const cellsAndProofs = blobs.map((blob) => kzg.computeCellsAndKzgProofs(blob));
     for (const commitment of kzgCommitments) {
       signedBeaconBlock.message.body.executionPayload.transactions.push(transactionForKzgCommitment(commitment));
       signedBeaconBlock.message.body.blobKzgCommitments.push(commitment);
     }
 
-    const sidecars = computeDataColumnSidecars(config, signedBeaconBlock, {blobs, kzgProofs});
+    const sidecars = getDataColumnSidecarsFromBlock(config, signedBeaconBlock, cellsAndProofs);
     const signedBlockHeader = signedBlockToSignedHeader(config, signedBeaconBlock);
 
     sidecars.forEach((sidecar, column) => {

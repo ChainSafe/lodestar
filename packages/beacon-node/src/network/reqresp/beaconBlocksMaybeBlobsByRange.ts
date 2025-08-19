@@ -28,12 +28,15 @@ import {
 } from "../../chain/blocks/types.js";
 import {getEmptyBlockInputCacheEntry} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {Metrics} from "../../metrics/index.js";
+import {RangeSyncType} from "../../sync/utils/remoteSyncType.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {INetwork} from "../interface.js";
 import {PeerSyncMeta} from "../peers/peersData.js";
 import {PeerAction} from "../peers/score/interface.js";
 
 export type PartialDownload = null | {blocks: BlockInput[]; pendingDataColumns: number[]};
+export const SyncSourceByRoot = "ByRoot" as const;
+export type SyncSource = RangeSyncType | typeof SyncSourceByRoot;
 
 /**
  * Download blocks and blobs (prefulu) or data columns (fulu) by range.
@@ -48,6 +51,7 @@ export async function beaconBlocksMaybeBlobsByRange(
   request: phase0.BeaconBlocksByRangeRequest,
   currentEpoch: Epoch,
   partialDownload: PartialDownload,
+  syncSource: SyncSource,
   metrics: Metrics | null,
   logger?: Logger
 ): Promise<{blocks: BlockInput[]; pendingDataColumns: null | number[]}> {
@@ -104,7 +108,8 @@ export async function beaconBlocksMaybeBlobsByRange(
         allBlobSidecars,
         endSlot,
         BlockSource.byRange,
-        BlobsSource.byRange
+        BlobsSource.byRange,
+        syncSource
       );
       return {blocks, pendingDataColumns: null};
     }
@@ -181,6 +186,7 @@ export async function beaconBlocksMaybeBlobsByRange(
       DataColumnsSource.byRange,
       partialDownload,
       peerClient,
+      syncSource,
       metrics,
       logger
     );
@@ -219,7 +225,8 @@ export function matchBlockWithBlobs(
   allBlobSidecars: deneb.BlobSidecar[],
   endSlot: Slot,
   blockSource: BlockSource,
-  blobsSource: BlobsSource
+  blobsSource: BlobsSource,
+  syncSource: SyncSource
 ): BlockInput[] {
   const blockInputs: BlockInput[] = [];
   let blobSideCarIndex = 0;
@@ -238,12 +245,27 @@ export function matchBlockWithBlobs(
     } else {
       const blobSidecars: deneb.BlobSidecar[] = [];
 
-      let blobSidecar: deneb.BlobSidecar;
-      while (
-        // biome-ignore lint/suspicious/noAssignInExpressions: <explanation>
-        (blobSidecar = allBlobSidecars[blobSideCarIndex])?.signedBlockHeader.message.slot === block.data.message.slot
-      ) {
-        blobSidecars.push(blobSidecar);
+      const blockRoot = config.getForkTypes(block.data.message.slot).BeaconBlock.hashTreeRoot(block.data.message);
+      const matchBlob = (blobSidecar?: deneb.BlobSidecar): boolean => {
+        if (blobSidecar === undefined) {
+          return false;
+        }
+
+        if (syncSource === RangeSyncType.Head || syncSource === SyncSourceByRoot) {
+          return (
+            Buffer.compare(
+              ssz.phase0.BeaconBlockHeader.hashTreeRoot(blobSidecar.signedBlockHeader.message),
+              blockRoot
+            ) === 0
+          );
+        }
+
+        // For finalized range sync, we can just match by slot
+        return blobSidecar.signedBlockHeader.message.slot === block.data.message.slot;
+      };
+
+      while (matchBlob(allBlobSidecars[blobSideCarIndex])) {
+        blobSidecars.push(allBlobSidecars[blobSideCarIndex]);
         lastMatchedSlot = block.data.message.slot;
         blobSideCarIndex++;
       }
@@ -298,6 +320,7 @@ export function matchBlockWithDataColumns(
   dataColumnsSource: DataColumnsSource,
   prevPartialDownload: null | PartialDownload,
   peerClient: string,
+  syncSource: SyncSource,
   metrics: Metrics | null,
   logger?: Logger
 ): BlockInput[] {
@@ -321,7 +344,25 @@ export function matchBlockWithDataColumns(
       throw Error(`Invalid block forkSeq=${forkSeq} < ForSeq.fulu for matchBlockWithDataColumns`);
     }
     const dataColumnSidecars: fulu.DataColumnSidecar[] = [];
-    while (allDataColumnSidecars[dataColumnSideCarIndex]?.signedBlockHeader.message.slot === block.data.message.slot) {
+    const blockRoot = config.getForkTypes(block.data.message.slot).BeaconBlock.hashTreeRoot(block.data.message);
+    const matchDataColumnSidecar = (dataColumnSidecar?: fulu.DataColumnSidecar): boolean => {
+      if (dataColumnSidecar === undefined) {
+        return false;
+      }
+
+      if (syncSource === RangeSyncType.Head || syncSource === SyncSourceByRoot) {
+        return (
+          Buffer.compare(
+            ssz.phase0.BeaconBlockHeader.hashTreeRoot(dataColumnSidecar.signedBlockHeader.message),
+            blockRoot
+          ) === 0
+        );
+      }
+
+      // For finalized range sync, we can just match by slot
+      return dataColumnSidecar.signedBlockHeader.message.slot === block.data.message.slot;
+    };
+    while (matchDataColumnSidecar(allDataColumnSidecars[dataColumnSideCarIndex])) {
       dataColumnSidecars.push(allDataColumnSidecars[dataColumnSideCarIndex]);
       lastMatchedSlot = block.data.message.slot;
       dataColumnSideCarIndex++;
@@ -341,7 +382,10 @@ export function matchBlockWithDataColumns(
     });
     if (blobKzgCommitmentsLen === 0) {
       if (dataColumnSidecars.length > 0) {
-        network.reportPeer(peerId, PeerAction.LowToleranceError, "Missing or mismatching dataColumnSidecars");
+        // only penalize peer with Finalized range sync or "ByRoot" sync source
+        if (syncSource !== RangeSyncType.Head) {
+          network.reportPeer(peerId, PeerAction.LowToleranceError, "Missing or mismatching dataColumnSidecars");
+        }
         throw Error(
           `Missing or mismatching dataColumnSidecars from peerId=${peerId} for blockSlot=${block.data.message.slot} with blobKzgCommitmentsLen=0 dataColumnSidecars=${dataColumnSidecars.length}>0`
         );
@@ -380,7 +424,10 @@ export function matchBlockWithDataColumns(
             peerClient,
           }
         );
-        network.reportPeer(peerId, PeerAction.LowToleranceError, "Missing or mismatching dataColumnSidecars");
+        // only penalize peer with Finalized range sync or "ByRoot" sync source
+        if (syncSource !== RangeSyncType.Head) {
+          network.reportPeer(peerId, PeerAction.LowToleranceError, "Missing or mismatching dataColumnSidecars");
+        }
         throw Error(
           `Missing or mismatching dataColumnSidecars from peerId=${peerId} for blockSlot=${block.data.message.slot} blobKzgCommitmentsLen=${blobKzgCommitmentsLen} with numColumns=${sampledColumns.length} dataColumnSidecars=${dataColumnSidecars.length} requestedColumnsPresent=${requestedColumnsPresent} received dataColumnIndexes=${dataColumnIndexes.join(" ")} requested=${requestedColumns.join(" ")}`
         );
@@ -434,12 +481,13 @@ export function matchBlockWithDataColumns(
     }
   }
 
-  // If there are still unconsumed blobs this means that the response was inconsistent
-  // and matching was wrong and hence we should throw error
+  // for head sync, there could be unconsumed data column sidecars because the retried peers may have higher head
   if (
     allDataColumnSidecars[dataColumnSideCarIndex] !== undefined &&
     // If there are no data columns, the data columns request can give 1 block outside the requested range
-    allDataColumnSidecars[dataColumnSideCarIndex].signedBlockHeader.message.slot <= endSlot
+    allDataColumnSidecars[dataColumnSideCarIndex].signedBlockHeader.message.slot <= endSlot &&
+    // only penalize peer with Finalized range sync or "ByRoot" sync source
+    syncSource !== RangeSyncType.Head
   ) {
     network.reportPeer(peerId, PeerAction.LowToleranceError, "Unmatched dataColumnSidecars");
     throw Error(
@@ -448,7 +496,7 @@ export function matchBlockWithDataColumns(
       } lastMatchedSlot=${lastMatchedSlot}, pending dataColumnSidecars slots=${allDataColumnSidecars
         .slice(dataColumnSideCarIndex)
         .map((blb) => blb.signedBlockHeader.message.slot)
-        .join(" ")}`
+        .join(" ")} endSlot=${endSlot}, peerId=${peerId}, peerClient=${peerClient}`
     );
   }
   logger?.debug("matched BlockWithDataColumns", {

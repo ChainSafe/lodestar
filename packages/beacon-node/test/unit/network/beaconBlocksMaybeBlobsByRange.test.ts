@@ -7,6 +7,7 @@ import {BlobsSource, BlockSource, getBlockInput} from "../../../src/chain/blocks
 import {ZERO_HASH} from "../../../src/constants/constants.js";
 import {INetwork} from "../../../src/network/interface.js";
 import {beaconBlocksMaybeBlobsByRange} from "../../../src/network/reqresp/index.js";
+import {RangeSyncType} from "../../../src/sync/utils/remoteSyncType.js";
 import {CustodyConfig} from "../../../src/util/dataColumns.js";
 
 describe.skip("beaconBlocksMaybeBlobsByRange", () => {
@@ -126,6 +127,7 @@ describe.skip("beaconBlocksMaybeBlobsByRange", () => {
         rangeRequest,
         0,
         null,
+        RangeSyncType.Finalized,
         null
       );
       expect(response).toEqual(expectedResponse);

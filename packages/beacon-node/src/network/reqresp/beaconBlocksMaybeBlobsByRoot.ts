@@ -29,7 +29,12 @@ import {computeInclusionProof, kzgCommitmentToVersionedHash} from "../../util/bl
 import {getDataColumnsFromExecution} from "../../util/dataColumns.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {INetwork} from "../interface.js";
-import {PartialDownload, matchBlockWithBlobs, matchBlockWithDataColumns} from "./beaconBlocksMaybeBlobsByRange.js";
+import {
+  PartialDownload,
+  SyncSourceByRoot,
+  matchBlockWithBlobs,
+  matchBlockWithDataColumns,
+} from "./beaconBlocksMaybeBlobsByRange.js";
 
 // keep 1 epoch of stuff, assmume 16 blobs
 const MAX_ENGINE_GETBLOBS_CACHE = 32 * 16;
@@ -125,7 +130,8 @@ export async function beaconBlocksMaybeBlobsByRoot(
       allBlobSidecars,
       Infinity,
       BlockSource.byRoot,
-      BlobsSource.byRoot
+      BlobsSource.byRoot,
+      SyncSourceByRoot
     );
     blockInputs = [...blockInputs, ...blockInputWithBlobs];
   }
@@ -175,6 +181,7 @@ export async function beaconBlocksMaybeBlobsByRoot(
       DataColumnsSource.byRoot,
       partialDownload,
       peerClient,
+      SyncSourceByRoot,
       metrics,
       logger
     );

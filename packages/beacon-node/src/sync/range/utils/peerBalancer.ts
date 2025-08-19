@@ -4,6 +4,7 @@ import {PeerIdStr} from "../../../util/peerId.js";
 import {shuffle} from "../../../util/shuffle.js";
 import {sortBy} from "../../../util/sortBy.js";
 import {MAX_CONCURRENT_REQUESTS} from "../../constants.js";
+import {RangeSyncType} from "../../utils/remoteSyncType.js";
 import {Batch, BatchStatus} from "../batch.js";
 import {ChainTarget} from "./chainTarget.js";
 
@@ -21,6 +22,7 @@ export class ChainPeersBalancer {
   private peers: PeerSyncInfo[];
   private activeRequestsByPeer = new Map<PeerIdStr, number>();
   private readonly custodyConfig: CustodyConfig;
+  private readonly syncType: RangeSyncType;
   private readonly maxConcurrentRequests: number;
 
   /**
@@ -31,10 +33,12 @@ export class ChainPeersBalancer {
     peers: PeerSyncInfo[],
     batches: Batch[],
     custodyConfig: CustodyConfig,
+    syncType: RangeSyncType,
     maxConcurrentRequests = MAX_CONCURRENT_REQUESTS
   ) {
     this.peers = shuffle(peers);
     this.custodyConfig = custodyConfig;
+    this.syncType = syncType;
     this.maxConcurrentRequests = maxConcurrentRequests;
 
     // Compute activeRequestsByPeer from all batches internal states
@@ -82,6 +86,9 @@ export class ChainPeersBalancer {
    * Return peers with 0 or no active requests that has a higher target slot than this batch and has columns we need.
    */
   idlePeerForBatch(batch: Batch): PeerSyncInfo | undefined {
+    if (batch.state.status !== BatchStatus.AwaitingDownload) {
+      return;
+    }
     const eligiblePeers = this.filterPeers(batch, this.custodyConfig.sampledColumns, true);
 
     // pick idle peer that has (for pre-fulu they are the same)
@@ -104,6 +111,10 @@ export class ChainPeersBalancer {
   private filterPeers(batch: Batch, requestColumns: number[], noActiveRequest: boolean): PeerInfoColumn[] {
     const eligiblePeers: PeerInfoColumn[] = [];
 
+    if (batch.state.status !== BatchStatus.AwaitingDownload) {
+      return eligiblePeers;
+    }
+
     for (const peer of this.peers) {
       const {earliestAvailableSlot, custodyGroups, target, peerId} = peer;
 
@@ -120,6 +131,18 @@ export class ChainPeersBalancer {
 
       if (target.slot < batch.request.startSlot) {
         continue;
+      }
+
+      if (batch.isPostFulu() && this.syncType === RangeSyncType.Head) {
+        // for head sync, target slot is head slot and each peer may have a different head slot
+        // we don't want to retry a batch with a peer that's not as up-to-date as the previous peer
+        // see https://github.com/ChainSafe/lodestar/issues/8193
+        const blocks = batch.state.partialDownload?.blocks;
+        const lastBlock = blocks?.at(-1)?.block;
+        const lastBlockSlot = lastBlock?.message?.slot;
+        if (lastBlockSlot && lastBlockSlot > target.slot) {
+          continue;
+        }
       }
 
       if (!batch.isPostFulu()) {

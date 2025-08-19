@@ -197,21 +197,10 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       buckets: [0.001, 0.005, 0.01, 0.03, 0.05, 0.07, 0.1, 0.3, 0.5, 1],
       labelNames: ["source"],
     }),
-
-    blockProductionCaches: {
-      producedBlockRoot: register.gauge({
-        name: "beacon_blockroot_produced_cache_total",
-        help: "Count of cached produced block roots",
-      }),
-      producedBlindedBlockRoot: register.gauge({
-        name: "beacon_blinded_blockroot_produced_cache_total",
-        help: "Count of cached produced blinded block roots",
-      }),
-      producedContentsCache: register.gauge({
-        name: "beacon_contents_produced_cache_total",
-        help: "Count of cached produced blob contents",
-      }),
-    },
+    blockProductionCacheSize: register.gauge({
+      name: "beacon_block_production_cache_size",
+      help: "Count of cached produced results",
+    }),
 
     blockPayload: {
       payloadAdvancePrepTime: register.histogram({

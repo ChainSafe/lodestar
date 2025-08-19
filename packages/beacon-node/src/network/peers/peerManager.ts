@@ -342,12 +342,12 @@ export class PeerManager {
       const nodeId = peerData?.nodeId ?? computeNodeId(peer);
       const custodyGroups =
         oldMetadata == null || oldMetadata.custodyGroups == null || custodyGroupCount !== oldMetadata.custodyGroupCount
-          ? getCustodyGroups(nodeId, custodyGroupCount)
+          ? getCustodyGroups(this.config, nodeId, custodyGroupCount)
           : oldMetadata.custodyGroups;
       const oldSamplingGroupCount = Math.max(this.config.SAMPLES_PER_SLOT, oldMetadata?.custodyGroupCount ?? 0);
       const samplingGroups =
         oldMetadata == null || oldMetadata.samplingGroups == null || samplingGroupCount !== oldSamplingGroupCount
-          ? getCustodyGroups(nodeId, samplingGroupCount)
+          ? getCustodyGroups(this.config, nodeId, samplingGroupCount)
           : oldMetadata.samplingGroups;
       peerData.metadata = {
         seqNumber: metadata.seqNumber,
@@ -439,8 +439,9 @@ export class PeerManager {
       const nodeId = peerData?.nodeId ?? computeNodeId(peer);
       // TODO(fulu): Are we sure we've run Metadata before this?
       const custodyGroupCount = peerData?.metadata?.custodyGroupCount ?? this.config.CUSTODY_REQUIREMENT;
-      const custodyGroups = peerData?.metadata?.custodyGroups ?? getCustodyGroups(nodeId, custodyGroupCount);
-      const dataColumns = getDataColumns(nodeId, custodyGroupCount);
+      const custodyGroups =
+        peerData?.metadata?.custodyGroups ?? getCustodyGroups(this.config, nodeId, custodyGroupCount);
+      const dataColumns = getDataColumns(this.config, nodeId, custodyGroupCount);
 
       const sampleSubnets = this.networkConfig.custodyConfig.sampledSubnets;
       const matchingSubnetsNum = sampleSubnets.reduce((acc, elem) => acc + (dataColumns.includes(elem) ? 1 : 0), 0);
@@ -577,6 +578,7 @@ export class PeerManager {
         starvationPruneRatio: STARVATION_PRUNE_RATIO,
         starvationThresholdSlots: STARVATION_THRESHOLD_SLOTS,
       },
+      this.config,
       this.metrics
     );
 
@@ -694,12 +696,17 @@ export class PeerManager {
    */
   private onLibp2pPeerConnect = async (evt: CustomEvent<Connection>): Promise<void> => {
     const {direction, status, remotePeer} = evt.detail;
-    this.logger.verbose("peer connected", {peer: prettyPrintPeerId(remotePeer), direction, status});
+    const remotePeerStr = remotePeer.toString();
+    const remotePeerPrettyStr = prettyPrintPeerId(remotePeer);
+    this.logger.verbose("peer connected", {peer: remotePeerPrettyStr, direction, status});
     // NOTE: The peerConnect event is not emitted here here, but after asserting peer relevance
     this.metrics?.peerConnectedEvent.inc({direction, status});
-    // libp2p may emit closed connection, we don't want to handle it
-    // see https://github.com/libp2p/js-libp2p/issues/1565
-    if (this.connectedPeers.has(remotePeer.toString()) || status !== "open") {
+
+    if (evt.detail.status !== "open") {
+      this.logger.debug("Peer disconnected before identify protocol initiated", {
+        peerId: remotePeerPrettyStr,
+        status: evt.detail.status,
+      });
       return;
     }
 
@@ -725,7 +732,7 @@ export class PeerManager {
       agentClient: null,
       encodingPreference: null,
     };
-    this.connectedPeers.set(remotePeer.toString(), peerData);
+    this.connectedPeers.set(remotePeerStr, peerData);
 
     if (direction === "outbound") {
       // this.pingAndStatusTimeouts();
@@ -743,7 +750,11 @@ export class PeerManager {
         }
       })
       .catch((err) => {
-        this.logger.debug("Error setting agentVersion for the peer", {peerId: peerData.peerId.toString()}, err);
+        if (evt.detail.status !== "open") {
+          this.logger.debug("Peer disconnected during identify protocol", {peerId: remotePeerPrettyStr}, err);
+        } else {
+          this.logger.debug("Error setting agentVersion for the peer", {peerId: remotePeerPrettyStr}, err);
+        }
       });
   };
 

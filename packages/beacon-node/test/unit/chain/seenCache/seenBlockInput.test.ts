@@ -24,12 +24,14 @@ describe("SeenBlockInputCache", () => {
   const DENEB_FORK_EPOCH = 1;
   const ELECTRA_FORK_EPOCH = 2;
   const FULU_FORK_EPOCH = 3;
+  const GLOAS_FORK_EPOCH = 4;
   const config = createChainForkConfig({
     ...defaultChainConfig,
     CAPELLA_FORK_EPOCH,
     DENEB_FORK_EPOCH,
     ELECTRA_FORK_EPOCH,
     FULU_FORK_EPOCH,
+    GLOAS_FORK_EPOCH,
   });
 
   const slots: Record<ForkPostCapella, number> = {
@@ -37,6 +39,7 @@ describe("SeenBlockInputCache", () => {
     deneb: computeStartSlotAtEpoch(DENEB_FORK_EPOCH),
     electra: computeStartSlotAtEpoch(ELECTRA_FORK_EPOCH),
     fulu: computeStartSlotAtEpoch(FULU_FORK_EPOCH),
+    gloas: computeStartSlotAtEpoch(GLOAS_FORK_EPOCH),
   };
 
   type BlockTestSet<F extends ForkPostCapella> = {

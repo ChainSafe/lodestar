@@ -8,7 +8,18 @@ import {
   ForkSeq,
   WITHDRAWAL_REQUEST_TYPE,
 } from "@lodestar/params";
-import {ExecutionPayload, ExecutionRequests, Root, Wei, bellatrix, capella, deneb, electra, ssz} from "@lodestar/types";
+import {
+  BlobsBundle,
+  ExecutionPayload,
+  ExecutionRequests,
+  Root,
+  Wei,
+  bellatrix,
+  capella,
+  deneb,
+  electra,
+  ssz,
+} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
 
@@ -22,7 +33,6 @@ import {
   quantityToNum,
 } from "../../eth1/provider/utils.js";
 import {
-  BlobsBundle,
   ExecutionPayloadStatus,
   ExecutionRequestType,
   PayloadAttributes,
@@ -400,7 +410,7 @@ export function serializeBlobsBundle(data: BlobsBundle): BlobsBundleRpc {
   return {
     commitments: data.commitments.map((kzg) => bytesToData(kzg)),
     blobs: data.blobs.map((blob) => bytesToData(blob)),
-    proofs: data.blobs.map((proof) => bytesToData(proof)),
+    proofs: data.proofs.map((proof) => bytesToData(proof)),
   };
 }
 

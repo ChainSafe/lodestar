@@ -13,7 +13,6 @@ import {
   loadState,
 } from "@lodestar/state-transition";
 import {getValidatorStatus} from "@lodestar/types";
-import {fromHex} from "@lodestar/utils";
 import {ApiError} from "../../errors.js";
 import {ApiModules} from "../../types.js";
 import {assertUniqueItems} from "../../utils.js";
@@ -210,16 +209,13 @@ export function getBeaconStateApi({
         const headState = chain.getHeadState();
         const balances: routes.beacon.ValidatorBalance[] = [];
         for (const id of validatorIds) {
-          if (typeof id === "number") {
-            if (state.validators.length <= id) {
-              continue;
-            }
-            balances.push({index: id, balance: state.balances.get(id)});
-          } else {
-            const index = headState.epochCtx.pubkey2index.get(fromHex(id));
-            if (index != null && index <= state.validators.length) {
-              balances.push({index, balance: state.balances.get(index)});
-            }
+          const resp = getStateValidatorIndex(id, state, headState.epochCtx.pubkey2index);
+
+          if (resp.valid) {
+            balances.push({
+              index: resp.validatorIndex,
+              balance: state.balances.get(resp.validatorIndex),
+            });
           }
         }
         return {

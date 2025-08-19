@@ -3,12 +3,15 @@ import {chainConfig} from "@lodestar/config/default";
 import {ZERO_HASH} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {describe, expect, it} from "vitest";
+import {BlockInput} from "../../../../../src/chain/blocks/types.js";
 import {Batch} from "../../../../../src/sync/range/batch.js";
 import {ChainTarget} from "../../../../../src/sync/range/chain.js";
 import {ChainPeersBalancer, PeerSyncInfo} from "../../../../../src/sync/range/utils/peerBalancer.js";
+import {RangeSyncType} from "../../../../../src/sync/utils/remoteSyncType.js";
 import {CustodyConfig} from "../../../../../src/util/dataColumns.js";
 import {PeerIdStr} from "../../../../../src/util/peerId.js";
 import {getRandPeerSyncMeta} from "../../../../utils/peer.js";
+import {generateSignedBlockAtSlot} from "../../../../utils/typeGenerator.js";
 
 describe("sync / range / peerBalancer", () => {
   const custodyConfig = {sampledColumns: [0, 1, 2, 3]} as CustodyConfig;
@@ -150,10 +153,49 @@ describe("sync / range / peerBalancer", () => {
         // peer2 is busy downloading batch1
         batch1.startDownloading(peer2.peerId);
 
-        const peerBalancer = new ChainPeersBalancer(peerInfos, [batch0, batch1], custodyConfig, maxConcurrentRequests);
+        const peerBalancer = new ChainPeersBalancer(
+          peerInfos,
+          [batch0, batch1],
+          custodyConfig,
+          RangeSyncType.Head,
+          maxConcurrentRequests
+        );
         expect(peerBalancer.bestPeerToRetryBatch(batch0)?.peerId).toBe(expected);
       });
     }
+
+    it("should not retry the batch with a not as up-to-date peer", async () => {
+      const config = createChainForkConfig({...chainConfig, FULU_FORK_EPOCH: 0});
+      const batch0 = new Batch(1, config);
+      // Batch zero has a failedDownloadAttempt with peer1
+      batch0.startDownloading(peer1.peerId);
+      const block: BlockInput = {
+        block: generateSignedBlockAtSlot(batch0.request.startSlot + batch0.request.count - 1),
+      } as BlockInput;
+      batch0.downloadingSuccess({blocks: [block], pendingDataColumns: [1, 2, 3]});
+
+      // peer2 and peer3 are the same but peer3 has a lower target slot than the previous download
+      const peerInfos: PeerSyncInfo[] = [
+        {
+          peerId: peer2.peerId,
+          client: peer2.client,
+          custodyGroups: [0, 1, 2, 3],
+          target: {slot: batch0.request.startSlot + batch0.request.count - 1, root: ZERO_HASH},
+          earliestAvailableSlot: 0,
+        },
+        {
+          peerId: peer3.peerId,
+          client: peer3.client,
+          custodyGroups: [0, 1, 2, 3],
+          target: {slot: batch0.request.startSlot + batch0.request.count - 2, root: ZERO_HASH},
+          earliestAvailableSlot: 0,
+        },
+      ];
+
+      const peerBalancer = new ChainPeersBalancer(peerInfos, [batch0], custodyConfig, RangeSyncType.Head);
+
+      expect(peerBalancer.bestPeerToRetryBatch(batch0)?.peerId).toBe(peer2.peerId);
+    });
   });
 
   describe("idlePeerForBatch", async () => {
@@ -255,7 +297,7 @@ describe("sync / range / peerBalancer", () => {
         batch1.startDownloading(peer2.peerId);
 
         const newBatch = new Batch(3, config);
-        const peerBalancer = new ChainPeersBalancer(peerInfos, [batch0, batch1], custodyConfig);
+        const peerBalancer = new ChainPeersBalancer(peerInfos, [batch0, batch1], custodyConfig, RangeSyncType.Head);
         const idlePeer = peerBalancer.idlePeerForBatch(newBatch);
         expect(idlePeer?.peerId).toBe(expected);
       });

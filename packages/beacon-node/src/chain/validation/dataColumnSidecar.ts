@@ -1,5 +1,5 @@
+import {ChainConfig} from "@lodestar/config";
 import {
-  DATA_COLUMN_SIDECAR_SUBNET_COUNT,
   KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH,
   KZG_COMMITMENTS_SUBTREE_INDEX,
   NUMBER_OF_COLUMNS,
@@ -30,7 +30,7 @@ export async function validateGossipDataColumnSidecar(
   verifyDataColumnSidecar(dataColumnSidecar);
 
   // 2) [REJECT] The sidecar is for the correct subnet -- i.e. compute_subnet_for_data_column_sidecar(sidecar.index) == subnet_id
-  if (computeSubnetForDataColumnSidecar(dataColumnSidecar) !== gossipSubnet) {
+  if (computeSubnetForDataColumnSidecar(chain.config, dataColumnSidecar) !== gossipSubnet) {
     throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
       code: DataColumnSidecarErrorCode.INVALID_SUBNET,
       columnIdx: dataColumnSidecar.index,
@@ -317,6 +317,9 @@ export function verifyDataColumnSidecarInclusionProof(dataColumnSidecar: fulu.Da
  * SPEC FUNCTION
  * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/p2p-interface.md#compute_subnet_for_data_column_sidecar
  */
-export function computeSubnetForDataColumnSidecar(columnSidecar: fulu.DataColumnSidecar): SubnetID {
-  return columnSidecar.index % DATA_COLUMN_SIDECAR_SUBNET_COUNT;
+export function computeSubnetForDataColumnSidecar(
+  config: ChainConfig,
+  columnSidecar: fulu.DataColumnSidecar
+): SubnetID {
+  return columnSidecar.index % config.DATA_COLUMN_SIDECAR_SUBNET_COUNT;
 }

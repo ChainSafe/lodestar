@@ -5,7 +5,7 @@ import {BeaconDb, BeaconNode} from "@lodestar/beacon-node";
 import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db";
 import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
-import {ACTIVE_PRESET, NUMBER_OF_CUSTODY_GROUPS, PresetName} from "@lodestar/params";
+import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
 import {ErrorAborted, bytesToInt} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
@@ -258,7 +258,7 @@ export function initLogger(
 
 function getInitialCustodyGroupCount(args: BeaconArgs & GlobalArgs, config: ChainForkConfig, enr: SignableENR): number {
   if (args.supernode) {
-    return NUMBER_OF_CUSTODY_GROUPS;
+    return config.NUMBER_OF_CUSTODY_GROUPS;
   }
 
   const enrCgcBytes = enr.kvs.get("cgc");

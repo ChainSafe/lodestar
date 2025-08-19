@@ -550,12 +550,12 @@
     "@chainsafe/blst-linux-x64-musl" "2.2.0"
     "@chainsafe/blst-win32-x64-msvc" "2.2.0"
 
-"@chainsafe/discv5@^11.0.0":
-  version "11.0.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/discv5/-/discv5-11.0.0.tgz#346a11ad25f552d29e8b1956b539e08d14bde361"
-  integrity sha512-g/x79Y5b7g6CrNuWazSzXTtnNguC0Sl8xkf9CPMlZ0BrsXmXPzwTp3zgtAiuJcG9x7zDUSDFOejrb4iFcJ0/FQ==
+"@chainsafe/discv5@^11.0.3":
+  version "11.0.3"
+  resolved "https://registry.yarnpkg.com/@chainsafe/discv5/-/discv5-11.0.3.tgz#0f53d2f8a7f015bf2c0c8d897c01e8cb5466c916"
+  integrity sha512-bDvpiHfg7th/YGoOx7+W6x/28kfE/Cob7uE0XWpyPMQ0RTmJmzMYMfT1eulg5unlggALABvKgsct/gQDQT/hFw==
   dependencies:
-    "@chainsafe/enr" "^5.0.0"
+    "@chainsafe/enr" "^5.0.1"
     "@ethereumjs/rlp" "^5.0.2"
     "@libp2p/crypto" "^5.0.1"
     "@libp2p/interface" "^2.0.1"
@@ -566,10 +566,10 @@
     lru-cache "^10.1.0"
     strict-event-emitter-types "^2.0.0"
 
-"@chainsafe/enr@^5.0.0":
-  version "5.0.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/enr/-/enr-5.0.0.tgz#0486d6d3ba9cb8c4a6e2190921b2dd33ec60bb7b"
-  integrity sha512-xqWBsdFFHy/sLqddsyCT4BH/5PFheyK8Grho27tmiwg/a95nANYANsqXXUP8/HbgCx3F5VDl0/xFacV3Ik7kDA==
+"@chainsafe/enr@^5.0.1":
+  version "5.0.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/enr/-/enr-5.0.1.tgz#ac7622ee381475110239af75073969fad1faf412"
+  integrity sha512-RP5XxJOSYt0f775ne6NqlaG33Qia+IaMjWlP7PlWagz6SOpXlfbm+vaqHx3by6lKPb9aW4UQtO+fiRxz85XwaQ==
   dependencies:
     "@ethereumjs/rlp" "^5.0.2"
     "@libp2p/crypto" "^5.0.1"
