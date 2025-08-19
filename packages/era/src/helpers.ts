@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
-import {SnappyFramesUncompress} from "../../reqresp/src/encodingStrategies/sszSnappy/snappyFrames/uncompress.js";
+import {SnappyFramesUncompress} from "../../reqresp/lib/encodingStrategies/sszSnappy/snappyFrames/uncompress.js";
 import {Uint8ArrayList} from "uint8arraylist";
 import {
   EraTypes, 
