@@ -65,48 +65,27 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
     return v ? this.decodeValue(v) : null;
   }
 
-  async getMany(prefix: P, ids: I[]): Promise<{id: I; value: T | null}[]> {
+  async getMany(prefix: P, ids: I[]): Promise<(T | null)[]> {
     const keys = [];
     for (const id of ids) {
       keys.push(this.wrapKey(this.encodeKeyRaw(prefix, id)));
     }
-    const result = await this.db.getMany(keys, this.dbReqOpts);
-    const values = [];
+    const values = await this.db.getMany(keys, this.dbReqOpts);
 
-    if (!result) {
-      for (const id of ids) {
-        values.push({id, value: null});
-      }
-      return values;
+    const result = [];
+    for (const value of values) {
+      result.push(value ? this.decodeValue(value) : null);
     }
 
-    for (const {key, value} of result) {
-      const id = this.decodeKeyRaw(key).id;
-      values.push({id, value: value ? this.decodeValue(value) : null});
-    }
-    return values;
+    return result;
   }
 
-  async getManyBinary(prefix: P, ids: I[]): Promise<{id: I; value: Uint8Array | null}[]> {
+  async getManyBinary(prefix: P, ids: I[]): Promise<(Uint8Array | null)[]> {
     const keys = [];
     for (const id of ids) {
       keys.push(this.wrapKey(this.encodeKeyRaw(prefix, id)));
     }
-    const result = await this.db.getMany(keys, this.dbReqOpts);
-    const values = [];
-
-    if (!result) {
-      for (const id of ids) {
-        values.push({id, value: null});
-      }
-      return values;
-    }
-
-    for (const {key, value} of result) {
-      const id = this.decodeKeyRaw(key).id;
-      values.push({id, value});
-    }
-    return values;
+    return await this.db.getMany(keys, this.dbReqOpts);
   }
 
   async getBinary(prefix: P, id: I): Promise<Uint8Array | null> {

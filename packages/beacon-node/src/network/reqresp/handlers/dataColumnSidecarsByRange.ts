@@ -22,11 +22,13 @@ export async function* onDataColumnSidecarsByRange(
   // Finalized range of columns
   if (startSlot <= finalizedSlot) {
     for (let slot = startSlot; slot < endSlot; slot++) {
-      for (const {id: columnIndex, value: dataColumnSidecarBytes} of await finalized.getManyBinary(slot, columns)) {
+      const dataColumnSidecars = await finalized.getManyBinary(slot, columns);
+
+      for (const [index, dataColumnSidecarBytes] of dataColumnSidecars.entries()) {
         if (!dataColumnSidecarBytes) {
           throw new ResponseError(
             RespStatus.SERVER_ERROR,
-            `No finalized dataColumnSidecar found for slot=${slot}, index=${columnIndex}`
+            `No finalized dataColumnSidecar found for slot=${slot}, index=${columns[index]}`
           );
         }
 
@@ -53,14 +55,12 @@ export async function* onDataColumnSidecarsByRange(
         // at the time of the start of the request. Spec is clear the chain of columns must be consistent, but on
         // re-org there's no need to abort the request
         // Spec: https://github.com/ethereum/consensus-specs/blob/ad36024441cf910d428d03f87f331fbbd2b3e5f1/specs/fulu/p2p-interface.md#L425-L429
-        for (const {id: columnIndex, value: dataColumnSidecarBytes} of await unfinalized.getManyBinary(
-          fromHex(block.blockRoot),
-          columns
-        )) {
+        const dataColumnSidecars = await unfinalized.getManyBinary(fromHex(block.blockRoot), columns);
+        for (const [index, dataColumnSidecarBytes] of dataColumnSidecars.entries()) {
           if (!dataColumnSidecarBytes) {
             throw new ResponseError(
               RespStatus.SERVER_ERROR,
-              `No unfinalized dataColumnSidecar found for root=${block.blockRoot}, index=${columnIndex}`
+              `No unfinalized dataColumnSidecar found for root=${block.blockRoot}, index=${columns[index]}`
             );
           }
 

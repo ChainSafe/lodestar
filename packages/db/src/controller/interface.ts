@@ -39,7 +39,7 @@ export interface DatabaseController<K, V> {
   // Core API
 
   get(key: K, opts?: DbReqOpts): Promise<V | null>;
-  getMany(key: K[], opts?: DbReqOpts): Promise<KeyValue<K, V | null>[] | null>;
+  getMany(key: K[], opts?: DbReqOpts): Promise<(V | null)[]>;
 
   put(key: K, value: V, opts?: DbReqOpts): Promise<void>;
   delete(key: K, opts?: DbReqOpts): Promise<void>;

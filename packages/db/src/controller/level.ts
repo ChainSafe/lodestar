@@ -103,26 +103,16 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
     }
   }
 
-  // https://github.com/Level/abstract-level?tab=readme-ov-file#dbgetmanykeys-options
-  async getMany(keys: Uint8Array[], opts?: DbReqOpts): Promise<KeyValue<Uint8Array, Uint8Array | null>[] | null> {
-    try {
-      this.metrics?.dbReadReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, keys.length);
-      this.metrics?.dbReadItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, keys.length);
-      const values = await this.db.getMany(keys);
-      const result: KeyValue<Uint8Array, Uint8Array | null>[] = [];
-      for (const [index, key] of keys.entries()) {
-        result.push({
-          key,
-          value: values[index] ?? null, // If the value is not found, return null
-        });
-      }
-      return result;
-    } catch (e) {
-      if ((e as LevelDbError).code === "LEVEL_NOT_FOUND") {
-        return null;
-      }
-      throw e;
-    }
+  /**
+   * Return the multiple items in the order of the given keys
+   * Will return `null` for the keys which does not exists
+   *
+   * https://github.com/Level/abstract-level?tab=readme-ov-file#dbgetmanykeys-options
+   */
+  async getMany(keys: Uint8Array[], opts?: DbReqOpts): Promise<(Uint8Array | null)[]> {
+    this.metrics?.dbReadReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
+    this.metrics?.dbReadItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, keys.length);
+    return await this.db.getMany(keys);
   }
 
   put(key: Uint8Array, value: Uint8Array, opts?: DbReqOpts): Promise<void> {

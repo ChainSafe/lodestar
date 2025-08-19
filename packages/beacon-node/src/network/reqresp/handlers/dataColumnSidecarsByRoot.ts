@@ -38,9 +38,9 @@ export async function* onDataColumnSidecarsByRoot(
       throw new ResponseError(RespStatus.SERVER_ERROR, `No item for root=${block.blockRoot}, slot=${block.slot}`);
     }
 
-    for (const {id: columnIndex, value: dataColumnBytes} of dataColumns) {
-      if (columnIndex < 0 || !dataColumnBytes) {
-        throw new ResponseError(RespStatus.SERVER_ERROR, `dataColumnSidecar index=${columnIndex} not custodied`);
+    for (const [index, dataColumnBytes] of dataColumns.entries()) {
+      if (!dataColumnBytes) {
+        throw new ResponseError(RespStatus.SERVER_ERROR, `dataColumnSidecar index=${columns[index]} not custodied`);
       }
 
       yield {
