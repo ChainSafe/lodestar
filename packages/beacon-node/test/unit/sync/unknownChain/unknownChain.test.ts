@@ -1,13 +1,11 @@
-import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {Epoch, RootHex, Slot, Status} from "@lodestar/types";
-import {toHex} from "@lodestar/utils";
+import {RootHex, Status} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
-import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {ChainEvent, IBeaconChain} from "../../../../src/chain/index.js";
-import {Network, NetworkEvent, PeerAction} from "../../../../src/network/index.js";
+import {MockedFunction, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {IBeaconChain} from "../../../../src/chain/index.js";
+import {Network, PeerAction} from "../../../../src/network/index.js";
 import {
   BackwardsChain,
   ChainState,
@@ -25,7 +23,7 @@ describe("sync / unknownChain / unknownChain", () => {
   let mockConfig: ChainForkConfig;
   let mockChain: IBeaconChain;
   let mockNetwork: Network;
-  let mockProcessLinkedChain: vi.MockedFunction<(chain: LinkedBackwardsChain) => void>;
+  let mockProcessLinkedChain: MockedFunction<(chain: LinkedBackwardsChain) => void>;
   let mockMetrics: UnknownChainSyncMetrics;
   let unknownChainSync: UnknownChainSync;
 
@@ -56,25 +54,21 @@ describe("sync / unknownChain / unknownChain", () => {
     lastUpdate: Date.now(),
   });
 
-  const createUnknownAncestorChain = (
-    headRoot: string,
-    head: Header,
-    earliestKnownAncestor: string
-  ): UnknownAncestorBackwardsChain => ({
+  const createUnknownAncestorChain = (head: Header): UnknownAncestorBackwardsChain => ({
     state: ChainState.UnknownAncestor,
     downloadState: DownloadState.Idle,
-    headRoot: headRoot as RootHex,
+    headRoot: head.root,
     head,
-    earliestKnownAncestor: earliestKnownAncestor as RootHex,
+    earliestKnownAncestor: head.parentRoot,
     ancestors: new Map(),
     peers: new Set(["peer1"]),
     lastUpdate: Date.now(),
   });
 
-  const createLinkedChain = (headRoot: string, head: Header, forwardChain: Header[]): LinkedBackwardsChain => ({
+  const createLinkedChain = (head: Header, forwardChain: Header[]): LinkedBackwardsChain => ({
     state: ChainState.Linked,
     downloadState: DownloadState.Idle,
-    headRoot: headRoot as RootHex,
+    headRoot: head.root,
     head,
     forwardChain,
     ancestors: new Map(),
@@ -96,6 +90,10 @@ describe("sync / unknownChain / unknownChain", () => {
     mockChain = {
       forkChoice: {
         hasBlockHex: vi.fn().mockReturnValue(false),
+        getFinalizedCheckpoint: vi.fn().mockReturnValue({
+          finalizedEpoch: 0,
+          finalizedRoot: fromHex("0x0000000000000000000000000000000000000000000000000000000000000000"),
+        }),
       },
       emitter: {
         on: vi.fn(),
@@ -161,7 +159,7 @@ describe("sync / unknownChain / unknownChain", () => {
 
     it("should link chain when block is ancestor of UnknownAncestor chain", () => {
       const header = createHeader(100, "0x1234", "0x4567");
-      const chain = createUnknownAncestorChain("0x1234", header, "0x4567");
+      const chain = createUnknownAncestorChain(header);
       chain.ancestors.set("0x4567", createHeader(99, "0x4567", "0x7890"));
       unknownChainSync.backwardsChains.set("0x1234", chain);
 
@@ -172,7 +170,7 @@ describe("sync / unknownChain / unknownChain", () => {
 
     it("should not affect linked chains", () => {
       const header = createHeader(100, "0x1234", "0x4567");
-      const chain = createLinkedChain("0x1234", header, [header]);
+      const chain = createLinkedChain(header, [header]);
       unknownChainSync.backwardsChains.set("0x1234", chain);
 
       unknownChainSync.onProcessedBlock({slot: 99, block: "0x4567"});
@@ -232,7 +230,7 @@ describe("sync / unknownChain / unknownChain", () => {
 
     it("should add peer to chain with matching ancestor", () => {
       const header = createHeader(100, "0x1234", "0x4567");
-      const chain = createUnknownAncestorChain("0x1234", header, "0x4567");
+      const chain = createUnknownAncestorChain(header);
       chain.ancestors.set("0x4567", createHeader(99, "0x4567", "0x7890"));
 
       unknownChainSync.headers.set("0x4567", createHeader(99, "0x457", "0x7890"));
@@ -245,7 +243,7 @@ describe("sync / unknownChain / unknownChain", () => {
 
     it("should add peer to chain if block is earliest known ancestor", () => {
       const header = createHeader(100, "0x1234", "0x4567");
-      const chain = createUnknownAncestorChain("0x1234", header, "0x4567");
+      const chain = createUnknownAncestorChain(header);
 
       unknownChainSync.backwardsChains.set("0x1234", chain);
 
@@ -258,7 +256,7 @@ describe("sync / unknownChain / unknownChain", () => {
       unknownChainSync.onUnknownBlockRoot("0x1234", "peer1");
 
       expect(unknownChainSync.backwardsChains.has("0x1234")).toBe(true);
-      const chain = unknownChainSync.backwardsChains.get("0x1234")!;
+      const chain = unknownChainSync.backwardsChains.get("0x1234") as BackwardsChain;
       expect(chain.state).toBe(ChainState.UnknownHead);
       expect(chain.headRoot).toBe("0x1234");
       expect(chain.peers.has("peer1")).toBe(true);
@@ -293,7 +291,7 @@ describe("sync / unknownChain / unknownChain", () => {
       unknownChainSync.onUnknownBlockInput(header, "peer1");
 
       expect(unknownChainSync.backwardsChains.has("0x1234")).toBe(true);
-      const chain = unknownChainSync.backwardsChains.get("0x1234")! as UnknownAncestorBackwardsChain;
+      const chain = unknownChainSync.backwardsChains.get("0x1234") as UnknownAncestorBackwardsChain;
       expect(chain.state).toBe(ChainState.UnknownAncestor);
       expect(chain.headRoot).toBe("0x1234");
       expect(chain.head).toEqual(header);
@@ -372,7 +370,7 @@ describe("sync / unknownChain / unknownChain", () => {
     it("should update chain earliest known ancestor when pruning ancestor", () => {
       const header1 = createHeader(99, "0x4567", "0x7890");
       const header2 = createHeader(100, "0x1234", "0x4567");
-      const chain = createUnknownAncestorChain("0x1234", header2, "0x7890");
+      const chain = createUnknownAncestorChain(header2);
       chain.ancestors.set("0x4567", header1);
 
       unknownChainSync.headers.set("0x4567", header1);
@@ -411,7 +409,7 @@ describe("sync / unknownChain / unknownChain", () => {
   describe("fetchBlock", () => {
     it("should return undefined for linked chain", async () => {
       const header = createHeader(100, "0x1234", "0x4567");
-      const chain = createLinkedChain("0x1234", header, [header]);
+      const chain = createLinkedChain(header, [header]);
 
       const result = await unknownChainSync.fetchBlock(chain, "peer1");
 
@@ -447,7 +445,7 @@ describe("sync / unknownChain / unknownChain", () => {
 
     it("should fetch earliest known ancestor for UnknownAncestor chain", async () => {
       const header = createHeader(100, "0x1234", "0x4567");
-      const chain = createUnknownAncestorChain("0x1234", header, "0x4567");
+      const chain = createUnknownAncestorChain(header);
       const mockBlock = {
         data: {
           message: {
@@ -547,7 +545,7 @@ describe("sync / unknownChain / unknownChain", () => {
   describe("newEarliestKnownAncestor", () => {
     it("should link chain if parent is in fork choice", () => {
       const header = createHeader(100, "0x1234", "0x4567");
-      const chain = createUnknownAncestorChain("0x1234", header, "0x4567");
+      const chain = createUnknownAncestorChain(header);
       mockChain.forkChoice.hasBlockHex = vi.fn().mockReturnValue(true);
 
       unknownChainSync.newEarliestKnownAncestor(chain, header);
@@ -557,9 +555,9 @@ describe("sync / unknownChain / unknownChain", () => {
 
     it("should merge with parent chain if parent is a chain head", () => {
       const header = createHeader(100, "0x1234", "0x4567");
-      const chain = createUnknownAncestorChain("0x1234", header, "0x4567");
+      const chain = createUnknownAncestorChain(header);
       const parentHeader = createHeader(99, "0x4567", "0x7890");
-      const parentChain = createUnknownAncestorChain("0x4567", parentHeader, "0x7890");
+      const parentChain = createUnknownAncestorChain(parentHeader);
 
       unknownChainSync.headers.set("0x4567", parentHeader);
       unknownChainSync.backwardsChains.set("0x4567", parentChain);
@@ -572,7 +570,7 @@ describe("sync / unknownChain / unknownChain", () => {
 
     it("should advance chain with known ancestors", () => {
       const header = createHeader(100, "0x1234", "0x4567");
-      const chain = createUnknownAncestorChain("0x1234", header, "0x4567");
+      const chain = createUnknownAncestorChain(header);
       const ancestor1 = createHeader(99, "0x4567", "0x7890");
       const ancestor2 = createHeader(98, "0x7890", "0xabcd");
 
@@ -587,9 +585,9 @@ describe("sync / unknownChain / unknownChain", () => {
 
     it("should advance other chains that can be advanced", () => {
       const header = createHeader(100, "0x1234", "0x4567");
-      const chain = createUnknownAncestorChain("0x1234", header, "0x4567");
+      const chain = createUnknownAncestorChain(header);
       const otherHeader = createHeader(101, "0x9999", "0x1234");
-      const otherChain = createUnknownAncestorChain("0x9999", otherHeader, "0x1234");
+      const otherChain = createUnknownAncestorChain(otherHeader);
 
       unknownChainSync.headers.set("0x1234", header);
       unknownChainSync.backwardsChains.set("0x1234", chain);
@@ -633,7 +631,7 @@ describe("sync / unknownChain / unknownChain", () => {
 
     it("should process linked chain", async () => {
       const header = createHeader(100, "0x1234", "0x4567");
-      const chain = createLinkedChain("0x1234", header, [header]);
+      const chain = createLinkedChain(header, [header]);
       unknownChainSync.backwardsChains.set("0x1234", chain);
 
       await unknownChainSync.processBackwardsChain(chain);
@@ -752,7 +750,7 @@ describe("sync / unknownChain / unknownChain", () => {
       const header1 = createHeader(100, "0x1234", "0x4567");
       const header2 = createHeader(101, "0x7890", "0xabca");
       const chain1 = createUnknownHeadChain("0x1234");
-      const chain2 = createLinkedChain("0x7890", header2, [header2]);
+      const chain2 = createLinkedChain(header2, [header2]);
 
       unknownChainSync.headers.set("0x1234", header1);
       unknownChainSync.headers.set("0x7890", header2);
@@ -795,8 +793,8 @@ describe("sync / unknownChain / unknownChain", () => {
       // Start with unknown block root
       unknownChainSync.onUnknownBlockRoot("0x1234", "peer1");
 
-      const chain = unknownChainSync.backwardsChains.get("0x1234");
-      expect(chain?.state).toBe(ChainState.UnknownHead);
+      const chain = unknownChainSync.backwardsChains.get("0x1234") as BackwardsChain;
+      expect(chain.state).toBe(ChainState.UnknownHead);
 
       // Simulate fetching the head block
       const mockBlock = {
@@ -814,16 +812,16 @@ describe("sync / unknownChain / unknownChain", () => {
         },
       });
 
-      await unknownChainSync.processUnknown(chain!);
+      await unknownChainSync.processUnknown(chain);
 
       // Chain should now be UnknownAncestor
-      expect((chain as any).state).toBe(ChainState.UnknownAncestor);
+      expect(chain.state).toBe(ChainState.UnknownAncestor);
 
       // Simulate parent being processed
       unknownChainSync.onProcessedBlock({slot: 100, block: "0x4567"});
 
       // Chain should now be linked
-      expect((chain as any).state).toBe(ChainState.Linked);
+      expect(chain.state).toBe(ChainState.Linked);
     });
 
     it("should handle chain merging scenario", () => {
@@ -831,8 +829,8 @@ describe("sync / unknownChain / unknownChain", () => {
       const header1 = createHeader(100, "0x1234", "0x4567");
       const header2 = createHeader(99, "0x4567", "0x7890");
 
-      const chain1 = createUnknownAncestorChain("0x1234", header1, "0x4567");
-      const chain2 = createUnknownAncestorChain("0x4567", header2, "0x7890");
+      const chain1 = createUnknownAncestorChain(header1);
+      const chain2 = createUnknownAncestorChain(header2);
 
       unknownChainSync.headers.set("0x4567", header2);
       unknownChainSync.backwardsChains.set("0x1234", chain1);

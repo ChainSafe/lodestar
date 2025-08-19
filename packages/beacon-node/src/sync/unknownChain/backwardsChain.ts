@@ -182,6 +182,6 @@ export function linkChain(chain: UnknownAncestorBackwardsChain): LinkedBackwards
     forwardChain.push(current);
   }
 
-  _chain.forwardChain = forwardChain;
+  _chain.forwardChain = forwardChain.reverse();
   return _chain;
 }

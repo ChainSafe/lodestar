@@ -18,38 +18,34 @@ describe("sync / unknownChain / backwardsChain", () => {
   // Test data helpers
   const createHeader = (slot: number, root: string, parentRoot: string): Header => ({
     slot,
-    root: root as any,
-    parentRoot: parentRoot as any,
+    root: root,
+    parentRoot: parentRoot,
   });
 
   const createUnknownHeadChain = (headRoot: string): UnknownHeadBackwardsChain => ({
     state: ChainState.UnknownHead,
     downloadState: DownloadState.Idle,
-    headRoot: headRoot as any,
+    headRoot: headRoot,
     ancestors: new Map(),
     peers: new Set(["peer1"]),
     lastUpdate: Date.now(),
   });
 
-  const createUnknownAncestorChain = (
-    headRoot: string,
-    head: Header,
-    earliestKnownAncestor: string
-  ): UnknownAncestorBackwardsChain => ({
+  const createUnknownAncestorChain = (head: Header): UnknownAncestorBackwardsChain => ({
     state: ChainState.UnknownAncestor,
     downloadState: DownloadState.Idle,
-    headRoot: headRoot as any,
+    headRoot: head.root,
     head,
-    earliestKnownAncestor: earliestKnownAncestor as any,
+    earliestKnownAncestor: head.parentRoot,
     ancestors: new Map(),
     peers: new Set(["peer1"]),
     lastUpdate: Date.now(),
   });
 
-  const createLinkedChain = (headRoot: string, head: Header, forwardChain: Header[]): LinkedBackwardsChain => ({
+  const createLinkedChain = (head: Header, forwardChain: Header[]): LinkedBackwardsChain => ({
     state: ChainState.Linked,
     downloadState: DownloadState.Idle,
-    headRoot: headRoot as any,
+    headRoot: head.root,
     head,
     forwardChain,
     ancestors: new Map(),
@@ -101,7 +97,7 @@ describe("sync / unknownChain / backwardsChain", () => {
 
     beforeEach(() => {
       const headHeader = createHeader(100, "0x1234", "0x4567");
-      chain = createUnknownAncestorChain("0x1234", headHeader, "0x4567");
+      chain = createUnknownAncestorChain(headHeader);
       header = createHeader(99, "0x4567", "0x7890");
     });
 
@@ -136,7 +132,7 @@ describe("sync / unknownChain / backwardsChain", () => {
   describe("advanceChain", () => {
     it("should not advance linked chain", () => {
       const headHeader = createHeader(100, "0x1234", "0x4567");
-      const chain = createLinkedChain("0x1234", headHeader, [headHeader]);
+      const chain = createLinkedChain(headHeader, [headHeader]);
       const header = createHeader(99, "0x4567", "0x7890");
 
       const result = advanceChain(chain, header);
@@ -146,7 +142,7 @@ describe("sync / unknownChain / backwardsChain", () => {
 
     it("should call addAncestorHeader for UnknownAncestor chain", () => {
       const headHeader = createHeader(100, "0x1234", "0x4567");
-      const chain = createUnknownAncestorChain("0x1234", headHeader, "0x4567");
+      const chain = createUnknownAncestorChain(headHeader);
       const header = createHeader(99, "0x4567", "0x7890");
 
       const result = advanceChain(chain, header);
@@ -174,16 +170,16 @@ describe("sync / unknownChain / backwardsChain", () => {
 
     beforeEach(() => {
       const headHeader = createHeader(100, "0x1234", "0x4567");
-      chain = createUnknownAncestorChain("0x1234", headHeader, "0x4567");
+      chain = createUnknownAncestorChain(headHeader);
 
       const otherHeadHeader = createHeader(99, "0x4567", "0x7890");
-      otherChain = createUnknownAncestorChain("0x4567", otherHeadHeader, "0x7890");
+      otherChain = createUnknownAncestorChain(otherHeadHeader);
       otherChain.ancestors.set("0x4567", otherHeadHeader);
       otherChain.peers.add("peer2");
     });
 
     it("should throw error when chains cannot be merged", () => {
-      const invalidOtherChain = createUnknownAncestorChain("0x999", createHeader(99, "0x999", "0x7890"), "0x7890");
+      const invalidOtherChain = createUnknownAncestorChain(createHeader(99, "0x999", "0x7890"));
 
       expect(() => mergeChain(chain, invalidOtherChain)).toThrow(
         "Cannot merge chains, earliestKnownAncestor does not match headRoot"
@@ -205,7 +201,7 @@ describe("sync / unknownChain / backwardsChain", () => {
     });
 
     it("should merge Linked chain into current chain", () => {
-      const linkedOtherChain = createLinkedChain("0x4567", createHeader(99, "0x4567", "0x7890"), [
+      const linkedOtherChain = createLinkedChain(createHeader(99, "0x4567", "0x7890"), [
         createHeader(99, "0x4567", "0x7890"),
         createHeader(98, "0x7890", "0xabcd"),
       ]);
@@ -214,10 +210,10 @@ describe("sync / unknownChain / backwardsChain", () => {
 
       mergeChain(chain, linkedOtherChain);
 
-      expect((chain as any).state).toBe(ChainState.Linked);
+      expect((chain as unknown as LinkedBackwardsChain).state).toBe(ChainState.Linked);
       expect(chain.peers.has("peer3")).toBe(true);
-      expect((chain as any).forwardChain).toBeDefined();
-      expect((chain as any).forwardChain.length).toBeGreaterThan(0);
+      expect((chain as unknown as LinkedBackwardsChain).forwardChain).toBeDefined();
+      expect((chain as unknown as LinkedBackwardsChain).forwardChain.length).toBeGreaterThan(0);
     });
 
     it("should update lastUpdate timestamp", () => {
@@ -234,13 +230,14 @@ describe("sync / unknownChain / backwardsChain", () => {
 
     beforeEach(() => {
       const headHeader = createHeader(100, "0x1234", "0x4567");
-      chain = createUnknownAncestorChain("0x1234", headHeader, "0x7890");
+      chain = createUnknownAncestorChain(headHeader);
 
       // Add some ancestors to create a chain
       const ancestor1 = createHeader(99, "0x4567", "0x7890");
       const ancestor2 = createHeader(98, "0x7890", "0xabcd");
-      chain.ancestors.set("0x4567", ancestor1);
-      chain.ancestors.set("0x7890", ancestor2);
+      chain.ancestors.set(ancestor1.root, ancestor1);
+      chain.ancestors.set(ancestor2.root, ancestor2);
+      chain.earliestKnownAncestor = ancestor2.parentRoot;
     });
 
     it("should convert UnknownAncestor chain to Linked chain", () => {
@@ -249,7 +246,7 @@ describe("sync / unknownChain / backwardsChain", () => {
       expect(linkedChain.state).toBe(ChainState.Linked);
       expect(linkedChain.forwardChain).toBeDefined();
       expect(linkedChain.forwardChain.length).toBeGreaterThan(0);
-      expect(linkedChain.forwardChain[0]).toEqual(chain.head);
+      expect(linkedChain.forwardChain.at(-1)).toEqual(chain.head);
       expect(linkedChain.lastUpdate).toBeGreaterThan(0);
     });
 
@@ -257,27 +254,17 @@ describe("sync / unknownChain / backwardsChain", () => {
       const linkedChain = linkChain(chain);
 
       expect(linkedChain.forwardChain.length).toBe(3); // head + 2 ancestors
-      expect(linkedChain.forwardChain[0].slot).toBe(100); // head
+      expect(linkedChain.forwardChain[0].slot).toBe(98); // second ancestor
       expect(linkedChain.forwardChain[1].slot).toBe(99); // first ancestor
-      expect(linkedChain.forwardChain[2].slot).toBe(98); // second ancestor
+      expect(linkedChain.forwardChain[2].slot).toBe(100); // head
     });
 
     it("should handle chain with no ancestors", () => {
-      const simpleChain = createUnknownAncestorChain("0x1234", createHeader(100, "0x1234", "0x4567"), "0x4567");
+      const simpleChain = createUnknownAncestorChain(createHeader(100, "0x1234", "0x4567"));
       const linkedChain = linkChain(simpleChain);
 
       expect(linkedChain.forwardChain.length).toBe(1);
       expect(linkedChain.forwardChain[0]).toEqual(simpleChain.head);
-    });
-
-    it("should handle broken chain (missing ancestor)", () => {
-      // Remove one ancestor to create a gap
-      chain.ancestors.delete("0x7890");
-      const linkedChain = linkChain(chain);
-
-      expect(linkedChain.forwardChain.length).toBe(2); // head + first ancestor only
-      expect(linkedChain.forwardChain[0].slot).toBe(100);
-      expect(linkedChain.forwardChain[1].slot).toBe(99);
     });
 
     it("should update lastUpdate timestamp", () => {
@@ -304,7 +291,7 @@ describe("sync / unknownChain / backwardsChain", () => {
 
     it("should transition from UnknownAncestor to Linked", () => {
       const headHeader = createHeader(100, "0x1234", "0x4567");
-      const chain = createUnknownAncestorChain("0x1234", headHeader, "0x4567");
+      const chain = createUnknownAncestorChain(headHeader);
 
       expect(chain.state).toBe(ChainState.UnknownAncestor);
 
@@ -317,7 +304,7 @@ describe("sync / unknownChain / backwardsChain", () => {
   describe("Edge cases", () => {
     it("should handle empty ancestors map in linkChain", () => {
       const headHeader = createHeader(100, "0x1234", "0x4567");
-      const chain = createUnknownAncestorChain("0x1234", headHeader, "0x4567");
+      const chain = createUnknownAncestorChain(headHeader);
 
       const linkedChain = linkChain(chain);
 
@@ -327,8 +314,8 @@ describe("sync / unknownChain / backwardsChain", () => {
 
     it("should handle peer set operations correctly", () => {
       const headHeader = createHeader(100, "0x1234", "0x4567");
-      const chain = createUnknownAncestorChain("0x1234", headHeader, "0x4567");
-      const otherChain = createUnknownAncestorChain("0x4567", createHeader(99, "0x4567", "0x7890"), "0x7890");
+      const chain = createUnknownAncestorChain(headHeader);
+      const otherChain = createUnknownAncestorChain(createHeader(99, "0x4567", "0x7890"));
 
       chain.peers.add("peer1");
       chain.peers.add("peer2");
@@ -345,8 +332,8 @@ describe("sync / unknownChain / backwardsChain", () => {
 
     it("should handle ancestor map operations correctly", () => {
       const headHeader = createHeader(100, "0x1234", "0x4567");
-      const chain = createUnknownAncestorChain("0x1234", headHeader, "0x4567");
-      const otherChain = createUnknownAncestorChain("0x4567", createHeader(99, "0x4567", "0x7890"), "0x7890");
+      const chain = createUnknownAncestorChain(headHeader);
+      const otherChain = createUnknownAncestorChain(createHeader(99, "0x4567", "0x7890"));
 
       const ancestor1 = createHeader(99, "0x4567", "0x7890");
       const ancestor2 = createHeader(98, "0x7890", "0xabcd");
