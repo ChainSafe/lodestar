@@ -9,6 +9,7 @@ export enum ForkName {
   deneb = "deneb",
   electra = "electra",
   fulu = "fulu",
+  gloas = "gloas",
 }
 
 /**
@@ -22,6 +23,7 @@ export enum ForkSeq {
   deneb = 4,
   electra = 5,
   fulu = 6,
+  gloas = 7,
 }
 
 function exclude<T extends ForkName, U extends T>(coll: T[], val: U[]): Exclude<T, U>[] {
@@ -108,6 +110,21 @@ export const forkPostFulu = exclude(forkAll, [
 ]);
 export function isForkPostFulu(fork: ForkName): fork is ForkPostFulu {
   return isForkPostElectra(fork) && fork !== ForkName.electra;
+}
+
+export type ForkPreGloas = ForkPreFulu | ForkName.fulu;
+export type ForkPostGloas = Exclude<ForkName, ForkPreGloas>;
+export const forkPostGloas = exclude(forkAll, [
+  ForkName.phase0,
+  ForkName.altair,
+  ForkName.bellatrix,
+  ForkName.capella,
+  ForkName.deneb,
+  ForkName.electra,
+  ForkName.fulu,
+]);
+export function isForkPostGloas(fork: ForkName): fork is ForkPostGloas {
+  return isForkPostFulu(fork) && fork !== ForkName.fulu;
 }
 
 /*

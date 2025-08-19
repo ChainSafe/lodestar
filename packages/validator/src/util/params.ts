@@ -102,6 +102,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
   const denebForkRelevant = localConfig.DENEB_FORK_EPOCH < Infinity;
   const electraForkRelevant = localConfig.ELECTRA_FORK_EPOCH < Infinity;
   const fuluForkRelevant = localConfig.FULU_FORK_EPOCH < Infinity;
+  const gloasForkRelevant = localConfig.GLOAS_FORK_EPOCH < Infinity;
 
   return {
     // # Config
@@ -140,6 +141,9 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     // fulu
     FULU_FORK_VERSION: fuluForkRelevant,
     FULU_FORK_EPOCH: fuluForkRelevant,
+    // gloas
+    GLOAS_FORK_VERSION: gloasForkRelevant,
+    GLOAS_FORK_EPOCH: gloasForkRelevant,
 
     // Time parameters
     SECONDS_PER_SLOT: true,

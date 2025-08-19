@@ -44,6 +44,9 @@ export type ChainConfig = {
   // FULU
   FULU_FORK_VERSION: Uint8Array;
   FULU_FORK_EPOCH: number;
+  // GLOAS
+  GLOAS_FORK_VERSION: Uint8Array;
+  GLOAS_FORK_EPOCH: number;
 
   // Time parameters
   SECONDS_PER_SLOT: number;
@@ -131,6 +134,9 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   // FULU
   FULU_FORK_VERSION: "bytes",
   FULU_FORK_EPOCH: "number",
+  // GLOAS
+  GLOAS_FORK_VERSION: "bytes",
+  GLOAS_FORK_EPOCH: "number",
 
   // Time parameters
   SECONDS_PER_SLOT: "number",
