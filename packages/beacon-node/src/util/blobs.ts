@@ -8,7 +8,6 @@ import {
   FIELD_ELEMENTS_PER_BLOB,
   ForkAll,
   ForkName,
-  KZG_COMMITMENTS_GINDEX,
   KZG_COMMITMENT_GINDEX0,
   NUMBER_OF_COLUMNS,
   VERSIONED_HASH_VERSION_KZG,
@@ -36,18 +35,15 @@ export function computeInclusionProof(
   return new Tree(bodyView.node).getSingleProof(BigInt(commitmentGindex));
 }
 
-export function computeKzgCommitmentsInclusionProof(
-  fork: ForkName,
-  body: BeaconBlockBody
-): fulu.KzgCommitmentsInclusionProof {
-  const bodyView = (ssz[fork].BeaconBlockBody as SSZTypesFor<ForkAll, "BeaconBlockBody">).toView(body);
-  return new Tree(bodyView.node).getSingleProof(BigInt(KZG_COMMITMENTS_GINDEX));
-}
-
-export function computeBlobSidecars(
+/**
+ * SPEC FUNCTION get_blob_sidecars
+ * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/deneb/validator.md#sidecar
+ */
+export function getBlobSidecars(
   config: ChainForkConfig,
   signedBlock: SignedBeaconBlock,
-  contents: deneb.Contents & {kzgCommitmentInclusionProofs?: deneb.KzgCommitmentInclusionProof[]}
+  blobs: deneb.Blobs,
+  proofs: deneb.KZGProofs
 ): deneb.BlobSidecars {
   const blobKzgCommitments = (signedBlock as deneb.SignedBeaconBlock).message.body.blobKzgCommitments;
   if (blobKzgCommitments === undefined) {
@@ -58,60 +54,11 @@ export function computeBlobSidecars(
   const fork = config.getForkName(signedBlockHeader.message.slot);
 
   return blobKzgCommitments.map((kzgCommitment, index) => {
-    const blob = contents.blobs[index];
-    const kzgProof = contents.kzgProofs[index];
-    const kzgCommitmentInclusionProof =
-      contents.kzgCommitmentInclusionProofs?.[index] ?? computeInclusionProof(fork, signedBlock.message.body, index);
+    const blob = blobs[index];
+    const kzgProof = proofs[index];
+    const kzgCommitmentInclusionProof = computeInclusionProof(fork, signedBlock.message.body, index);
 
     return {index, blob, kzgCommitment, kzgProof, signedBlockHeader, kzgCommitmentInclusionProof};
-  });
-}
-
-/**
- * Turns a SignedBeaconBlock and an array of Blobs from a given slot into an array of
- * DataColumnSidecars that are ready to be served by gossip and req/resp.
- *
- * Implementation of get_data_column_sidecars
- * https://github.com/ethereum/consensus-specs/blob/dev/specs/_features/eip7594/das-core.md#get_data_column_sidecars
- */
-export function computeDataColumnSidecars(
-  config: ChainForkConfig,
-  signedBlock: SignedBeaconBlock,
-  contents: fulu.Contents & {kzgCommitmentsInclusionProof?: fulu.KzgCommitmentsInclusionProof; cells?: fulu.Cell[][]}
-): fulu.DataColumnSidecars {
-  const blobKzgCommitments = (signedBlock as deneb.SignedBeaconBlock).message.body.blobKzgCommitments;
-  if (blobKzgCommitments === undefined) {
-    throw Error("Invalid block with missing blobKzgCommitments for computeDataColumnSidecars");
-  }
-  if (blobKzgCommitments.length === 0) {
-    return [];
-  }
-  const fork = config.getForkName(signedBlock.message.slot);
-  const signedBlockHeader = signedBlockToSignedHeader(config, signedBlock);
-  const kzgCommitmentsInclusionProof =
-    contents.kzgCommitmentsInclusionProof ?? computeKzgCommitmentsInclusionProof(fork, signedBlock.message.body);
-  const {blobs, kzgProofs} = contents;
-  const cellsAndProofs = Array.from({length: blobs.length}, (_, rowNumber) => {
-    const cells = contents.cells?.[rowNumber] ?? kzg.computeCells(blobs[rowNumber]);
-    const proofs = kzgProofs.slice(rowNumber * NUMBER_OF_COLUMNS, (rowNumber + 1) * NUMBER_OF_COLUMNS);
-    return {cells, proofs};
-  });
-
-  return Array.from({length: NUMBER_OF_COLUMNS}, (_, columnIndex) => {
-    // columnIndex'th column
-    const column = Array.from({length: blobs.length}, (_, rowNumber) => cellsAndProofs[rowNumber].cells[columnIndex]);
-    const kzgProofs = Array.from(
-      {length: blobs.length},
-      (_, rowNumber) => cellsAndProofs[rowNumber].proofs[columnIndex]
-    );
-    return {
-      index: columnIndex,
-      column,
-      kzgCommitments: blobKzgCommitments,
-      kzgProofs,
-      signedBlockHeader,
-      kzgCommitmentsInclusionProof,
-    };
   });
 }
 

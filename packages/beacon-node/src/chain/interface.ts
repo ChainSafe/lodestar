@@ -12,7 +12,6 @@ import {
   BeaconBlock,
   BlindedBeaconBlock,
   Epoch,
-  ExecutionPayload,
   Root,
   RootHex,
   SignedBeaconBlock,
@@ -23,8 +22,6 @@ import {
   Wei,
   altair,
   capella,
-  deneb,
-  fulu,
   phase0,
 } from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
@@ -46,7 +43,7 @@ import {LightClientServer} from "./lightClient/index.js";
 import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool.js";
 import {AttestationPool, OpPool, SyncCommitteeMessagePool, SyncContributionAndProofPool} from "./opPools/index.js";
 import {IChainOptions} from "./options.js";
-import {AssembledBlockType, BlockAttributes, BlockType} from "./produceBlock/produceBlockBody.js";
+import {AssembledBlockType, BlockAttributes, BlockType, ProduceResult} from "./produceBlock/produceBlockBody.js";
 import {IStateRegenerator, RegenCaller} from "./regen/index.js";
 import {ReprocessController} from "./reprocess.js";
 import {AttestationsRewards} from "./rewards/attestationsRewards.js";
@@ -135,10 +132,10 @@ export interface IBeaconChain {
 
   readonly beaconProposerCache: BeaconProposerCache;
   readonly checkpointBalancesCache: CheckpointBalancesCache;
-  readonly producedContentsCache: Map<BlockHash, deneb.Contents & {cells?: fulu.Cell[][]}>;
-  readonly producedBlockRoot: Map<RootHex, ExecutionPayload | null>;
+
+  readonly blockProductionCache: Map<RootHex, ProduceResult>;
+
   readonly shufflingCache: ShufflingCache;
-  readonly producedBlindedBlockRoot: Set<RootHex>;
   readonly blacklistedBlocks: Map<RootHex, Slot | null>;
   // Cache for serialized objects
   readonly serializedCache: SerializedCache;
@@ -199,8 +196,6 @@ export interface IBeaconChain {
   getBlockByRoot(
     root: RootHex
   ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null>;
-
-  getContents(beaconBlock: deneb.BeaconBlock): deneb.Contents & {cells?: fulu.Cell[][]};
 
   produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody>;
   produceBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise?: Promise<CommonBlockBody>}): Promise<{

@@ -356,7 +356,7 @@ export class Network implements INetwork {
     const epoch = computeEpochAtSlot(dataColumnSidecar.signedBlockHeader.message.slot);
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);
 
-    const subnet = computeSubnetForDataColumnSidecar(dataColumnSidecar);
+    const subnet = computeSubnetForDataColumnSidecar(this.config, dataColumnSidecar);
     return this.publishGossip<GossipType.data_column_sidecar>(
       {type: GossipType.data_column_sidecar, boundary, subnet},
       dataColumnSidecar,

@@ -216,9 +216,9 @@ function logSyncChainFns(logger: Logger, fns: SyncChainFns): SyncChainFns {
       logger.debug("mock processChainSegment", {blocks: blocks.map((b) => b.block.message.slot).join(",")});
       return fns.processChainSegment(blocks, syncType);
     },
-    downloadBeaconBlocksByRange(peer, request, _partialDownload) {
+    downloadBeaconBlocksByRange(peer, request, _partialDownload, syncType) {
       logger.debug("mock downloadBeaconBlocksByRange", request);
-      return fns.downloadBeaconBlocksByRange(peer, request, _partialDownload);
+      return fns.downloadBeaconBlocksByRange(peer, request, _partialDownload, syncType);
     },
     getConnectedPeerSyncMeta(peerId) {
       logger.debug("mock getConnectedPeerSyncMeta", peerId);

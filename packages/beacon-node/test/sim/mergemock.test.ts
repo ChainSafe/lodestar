@@ -11,6 +11,7 @@ import {afterAll, afterEach, describe, it, vi} from "vitest";
 
 import {BeaconRestApiServerOpts} from "../../src/api/index.js";
 import {ZERO_HASH} from "../../src/constants/index.js";
+import {BuilderStatus} from "../../src/execution/builder/http.js";
 import {Eth1Provider} from "../../src/index.js";
 import {ClockEvent} from "../../src/util/clock.js";
 import {TestLoggerOpts, testLogger} from "../utils/logger.js";
@@ -153,7 +154,7 @@ describe("executionEngine / ExecutionEngineHttp", () => {
           url: ethRpcUrl,
           enabled: true,
           issueLocalFcUWithFeeRecipient: feeRecipientMevBoost,
-          allowedFaults: 16,
+          allowedFaults: 8,
           faultInspectionWindow: 32,
         },
         chain: {suggestedFeeRecipient: feeRecipientLocal},
@@ -167,7 +168,7 @@ describe("executionEngine / ExecutionEngineHttp", () => {
       throw Error("executionBuilder should have been initialized");
     }
     // Enable builder by default, else because of circuit breaker we always start it with disabled
-    bn.chain.executionBuilder.updateStatus(true);
+    bn.chain.executionBuilder.updateStatus(BuilderStatus.enabled);
 
     afterEachCallbacks.push(async () => {
       await bn.close();

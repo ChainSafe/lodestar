@@ -97,6 +97,8 @@ export type BeaconPreset = {
 
   // FULU
   ///////////
+  NUMBER_OF_COLUMNS: number;
+  CELLS_PER_EXT_BLOB: number;
   FIELD_ELEMENTS_PER_CELL: number;
   FIELD_ELEMENTS_PER_EXT_BLOB: number;
   KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH: number;
@@ -203,6 +205,8 @@ export const beaconPresetTypes: BeaconPresetTypes = {
 
   // FULU
   ///////////
+  NUMBER_OF_COLUMNS: "number",
+  CELLS_PER_EXT_BLOB: "number",
   FIELD_ELEMENTS_PER_CELL: "number",
   FIELD_ELEMENTS_PER_EXT_BLOB: "number",
   KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH: "number",

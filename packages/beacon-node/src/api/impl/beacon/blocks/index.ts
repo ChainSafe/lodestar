@@ -2,6 +2,7 @@ import {routes} from "@lodestar/api";
 import {ApiError, ApplicationMethods} from "@lodestar/api/server";
 import {
   ForkPostBellatrix,
+  ForkPostFulu,
   NUMBER_OF_COLUMNS,
   SLOTS_PER_HISTORICAL_ROOT,
   isForkPostBellatrix,
@@ -12,18 +13,18 @@ import {
 import {
   computeEpochAtSlot,
   computeTimeAtSlot,
-  reconstructFullBlockOrContents,
+  reconstructSignedBlockContents,
   signedBeaconBlockToBlinded,
 } from "@lodestar/state-transition";
 import {
   ProducedBlockSource,
   SignedBeaconBlock,
-  SignedBeaconBlockOrContents,
   SignedBlindedBeaconBlock,
+  SignedBlockContents,
   WithOptionalBytes,
   deneb,
   fulu,
-  isSignedBlockContents,
+  isDenebBlockContents,
   sszTypesFor,
 } from "@lodestar/types";
 import {fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
@@ -42,16 +43,14 @@ import {
 import {verifyBlocksInEpoch} from "../../../../chain/blocks/verifyBlock.js";
 import {BeaconChain} from "../../../../chain/chain.js";
 import {BlockError, BlockErrorCode, BlockGossipError} from "../../../../chain/errors/index.js";
+import {ProduceFullBellatrix, ProduceFullDeneb, ProduceFullFulu} from "../../../../chain/produceBlock/index.js";
 import {validateGossipBlock} from "../../../../chain/validation/block.js";
 import {OpSource} from "../../../../chain/validatorMonitor.js";
 import {NetworkEvent} from "../../../../network/index.js";
-import {
-  computeBlobSidecars,
-  computeDataColumnSidecars,
-  kzgCommitmentToVersionedHash,
-  reconstructBlobs,
-} from "../../../../util/blobs.js";
+import {getBlobSidecars, kzgCommitmentToVersionedHash, reconstructBlobs} from "../../../../util/blobs.js";
+import {getDataColumnSidecarsFromBlock} from "../../../../util/dataColumns.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
+import {kzg} from "../../../../util/kzg.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {ApiModules} from "../../types.js";
 import {assertUniqueItems} from "../../utils.js";
@@ -81,25 +80,36 @@ export function getBeaconBlockApi({
   "chain" | "config" | "metrics" | "network" | "db"
 >): ApplicationMethods<routes.beacon.block.Endpoints> {
   const publishBlock: ApplicationMethods<routes.beacon.block.Endpoints>["publishBlockV2"] = async (
-    {signedBlockOrContents, broadcastValidation},
+    {signedBlockContents, broadcastValidation},
     _context,
     opts: PublishBlockOpts = {}
   ) => {
     const seenTimestampSec = Date.now() / 1000;
-    let blockForImport: BlockInput,
-      signedBlock: SignedBeaconBlock,
-      blobSidecars: deneb.BlobSidecars,
-      dataColumnSidecars: fulu.DataColumnSidecars;
+    const signedBlock = signedBlockContents.signedBlock;
+    const slot = signedBlock.message.slot;
+    const fork = config.getForkName(slot);
+    const blockRoot = toRootHex(chain.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
 
-    if (isSignedBlockContents(signedBlockOrContents)) {
-      ({signedBlock} = signedBlockOrContents);
-      const fork = config.getForkName(signedBlock.message.slot);
+    let blockForImport: BlockInput, blobSidecars: deneb.BlobSidecars, dataColumnSidecars: fulu.DataColumnSidecars;
+
+    if (isDenebBlockContents(signedBlockContents)) {
       let blockData: BlockInputAvailableData;
       if (isForkPostFulu(fork)) {
-        const cachedContents = chain.getContents(signedBlock.message as deneb.BeaconBlock);
-
         const timer = metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
-        dataColumnSidecars = computeDataColumnSidecars(config, signedBlock, cachedContents ?? signedBlockOrContents);
+        // If the block was produced by this node, we will already have computed cells
+        // Otherwise, we will compute them from the blobs in this function
+        const cells =
+          (chain.blockProductionCache.get(blockRoot) as ProduceFullFulu)?.cells ??
+          signedBlockContents.blobs.map((blob) => kzg.computeCells(blob));
+        const cellsAndProofs = cells.map((rowCells, rowIndex) => ({
+          cells: rowCells,
+          proofs: signedBlockContents.kzgProofs.slice(rowIndex * NUMBER_OF_COLUMNS, (rowIndex + 1) * NUMBER_OF_COLUMNS),
+        }));
+        dataColumnSidecars = getDataColumnSidecarsFromBlock(
+          config,
+          signedBlock as SignedBeaconBlock<ForkPostFulu>,
+          cellsAndProofs
+        );
         timer?.();
         blockData = {
           fork,
@@ -109,7 +119,7 @@ export function getBeaconBlockApi({
         } as BlockInputDataColumns;
         blobSidecars = [];
       } else if (isForkPostDeneb(fork)) {
-        blobSidecars = computeBlobSidecars(config, signedBlock, signedBlockOrContents);
+        blobSidecars = getBlobSidecars(config, signedBlock, signedBlockContents.blobs, signedBlockContents.kzgProofs);
         blockData = {
           fork,
           blobs: blobSidecars,
@@ -122,7 +132,6 @@ export function getBeaconBlockApi({
 
       blockForImport = getBlockInput.availableData(config, signedBlock, BlockSource.api, blockData);
     } else {
-      signedBlock = signedBlockOrContents;
       blobSidecars = [];
       dataColumnSidecars = [];
       blockForImport = getBlockInput.preData(config, signedBlock, BlockSource.api);
@@ -133,13 +142,9 @@ export function getBeaconBlockApi({
     broadcastValidation = broadcastValidation ?? routes.beacon.BroadcastValidation.gossip;
     // if block is locally produced, full or blinded, it already is 'consensus' validated as it went through
     // state transition to produce the stateRoot
-    const slot = signedBlock.message.slot;
-    const fork = config.getForkName(slot);
-    const blockRoot = toRootHex(chain.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
     // bodyRoot should be the same to produced block
     const bodyRoot = toRootHex(chain.config.getForkTypes(slot).BeaconBlockBody.hashTreeRoot(signedBlock.message.body));
-    const blockLocallyProduced =
-      chain.producedBlockRoot.has(blockRoot) || chain.producedBlindedBlockRoot.has(blockRoot);
+    const blockLocallyProduced = chain.blockProductionCache.has(blockRoot);
     const valLogMeta = {slot, blockRoot, bodyRoot, broadcastValidation, blockLocallyProduced};
 
     switch (broadcastValidation) {
@@ -356,20 +361,20 @@ export function getBeaconBlockApi({
     const fork = config.getForkName(slot);
 
     // Either the payload/blobs are cached from i) engine locally or ii) they are from the builder
-    //
-    // executionPayload can be null or a real payload in locally produced so check for presence of root
-    const executionPayload = chain.producedBlockRoot.get(blockRoot);
-    if (executionPayload !== undefined) {
+    const producedResult = chain.blockProductionCache.get(blockRoot);
+    if (producedResult !== undefined) {
       const source = ProducedBlockSource.engine;
-      chain.logger.debug("Reconstructing  signedBlockOrContents", {slot, blockRoot, source});
+      chain.logger.debug("Reconstructing the full signed block contents", {slot, blockRoot, source});
 
-      const contents = executionPayload
-        ? (chain.producedContentsCache.get(toRootHex(executionPayload.blockHash)) ?? null)
-        : null;
-      const signedBlockOrContents = reconstructFullBlockOrContents(signedBlindedBlock, {executionPayload, contents});
+      const signedBlockContents = reconstructSignedBlockContents(
+        fork,
+        signedBlindedBlock,
+        (producedResult as ProduceFullBellatrix).executionPayload ?? null,
+        (producedResult as ProduceFullDeneb).blobsBundle ?? null
+      );
 
       chain.logger.info("Publishing assembled block", {slot, blockRoot, source});
-      return publishBlock({signedBlockOrContents}, {...context, sszBytes: null}, opts);
+      return publishBlock({signedBlockContents}, {...context, sszBytes: null}, opts);
     }
 
     const source = ProducedBlockSource.builder;
@@ -383,9 +388,9 @@ export function getBeaconBlockApi({
     } else {
       // TODO: After fulu is live and all builders support submitBlindedBlockV2, we can safely remove
       // this code block and related functions
-      chain.logger.debug("Reconstructing  signedBlockOrContents", {slot, blockRoot, source});
+      chain.logger.debug("Reconstructing full signed block contents", {slot, blockRoot, source});
 
-      const signedBlockOrContents = await reconstructBuilderBlockOrContents(chain, {
+      const signedBlockContents = await reconstructBuilderSignedBlockContents(chain, {
         data: signedBlindedBlock,
         bytes: context?.sszBytes,
       });
@@ -395,7 +400,7 @@ export function getBeaconBlockApi({
       //
       // see: https://github.com/ChainSafe/lodestar/issues/5404
       chain.logger.info("Publishing assembled block", {slot, blockRoot, source});
-      return publishBlock({signedBlockOrContents}, {...context, sszBytes: null}, {...opts, ignoreIfKnown: true});
+      return publishBlock({signedBlockContents}, {...context, sszBytes: null}, {...opts, ignoreIfKnown: true});
     }
   };
 
@@ -690,17 +695,16 @@ export function getBeaconBlockApi({
   };
 }
 
-async function reconstructBuilderBlockOrContents(
+async function reconstructBuilderSignedBlockContents(
   chain: ApiModules["chain"],
   signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>
-): Promise<SignedBeaconBlockOrContents> {
+): Promise<SignedBlockContents> {
   const executionBuilder = chain.executionBuilder;
   if (!executionBuilder) {
     throw Error("executionBuilder required to publish SignedBlindedBeaconBlock");
   }
 
-  const signedBlockOrContents = await executionBuilder.submitBlindedBlock(signedBlindedBlock);
-  return signedBlockOrContents;
+  return executionBuilder.submitBlindedBlock(signedBlindedBlock);
 }
 
 async function submitBlindedBlockToBuilder(

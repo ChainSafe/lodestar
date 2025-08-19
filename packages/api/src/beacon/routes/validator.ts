@@ -1,11 +1,18 @@
 import {ContainerType, Type, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {VALIDATOR_REGISTRY_LIMIT, isForkPostDeneb, isForkPostElectra} from "@lodestar/params";
+import {
+  ForkPostDeneb,
+  ForkPreDeneb,
+  VALIDATOR_REGISTRY_LIMIT,
+  isForkPostDeneb,
+  isForkPostElectra,
+} from "@lodestar/params";
 import {
   Attestation,
   BLSSignature,
-  BeaconBlockOrContents,
+  BeaconBlock,
   BlindedBeaconBlock,
+  BlockContents,
   CommitteeIndex,
   Epoch,
   ProducedBlockSource,
@@ -27,7 +34,6 @@ import {
   EmptyResponseCodec,
   EmptyResponseData,
   JsonOnlyReq,
-  WithMeta,
   WithVersion,
 } from "../../utils/codecs.js";
 import {getPostBellatrixForkTypes, toForkName} from "../../utils/fork.js";
@@ -320,7 +326,7 @@ export type Endpoints = {
         blinded_local?: boolean;
       };
     },
-    BeaconBlockOrContents | BlindedBeaconBlock,
+    BlockContents | BlindedBeaconBlock,
     ProduceBlockV3Meta
   >;
 
@@ -630,14 +636,43 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         },
       },
       resp: {
-        data: WithMeta(
-          ({version, executionPayloadBlinded}) =>
-            (executionPayloadBlinded
-              ? getPostBellatrixForkTypes(version).BlindedBeaconBlock
+        // The spec defines the response as `preDeneb.BeaconBlock | postDeneb.BlockContents`
+        // We represent the response as `{block: preDeneb.BeaconBlock} | postDeneb.BlockContents` (aka BlockContents in our codebase)
+        // Due to this discripancy, we require a hand-written codec to handle the transformation.
+        data: {
+          toJson(data, {executionPayloadBlinded, version}) {
+            return executionPayloadBlinded
+              ? getPostBellatrixForkTypes(version).BlindedBeaconBlock.toJson(data as BlindedBeaconBlock)
               : isForkPostDeneb(version)
-                ? sszTypesFor(version).BlockContents
-                : ssz[version].BeaconBlock) as Type<BeaconBlockOrContents | BlindedBeaconBlock>
-        ),
+                ? sszTypesFor(version).BlockContents.toJson(data as BlockContents<ForkPostDeneb>)
+                : (ssz[version].BeaconBlock as Type<BeaconBlock<ForkPreDeneb>>).toJson(
+                    (data as BlockContents).block as BeaconBlock<ForkPreDeneb> // <- tranformation
+                  );
+          },
+          fromJson(data, {executionPayloadBlinded, version}) {
+            return executionPayloadBlinded
+              ? getPostBellatrixForkTypes(version).BlindedBeaconBlock.fromJson(data)
+              : isForkPostDeneb(version)
+                ? sszTypesFor(version).BlockContents.fromJson(data)
+                : {block: ssz[version].BeaconBlock.fromJson(data)}; // <- tranformation
+          },
+          serialize(data, {executionPayloadBlinded, version}) {
+            return executionPayloadBlinded
+              ? getPostBellatrixForkTypes(version).BlindedBeaconBlock.serialize(data as BlindedBeaconBlock)
+              : isForkPostDeneb(version)
+                ? sszTypesFor(version).BlockContents.serialize(data as BlockContents<ForkPostDeneb>)
+                : (ssz[version].BeaconBlock as Type<BeaconBlock<ForkPreDeneb>>).serialize(
+                    (data as BlockContents).block as BeaconBlock<ForkPreDeneb> // <- tranformation
+                  );
+          },
+          deserialize(data, {executionPayloadBlinded, version}) {
+            return executionPayloadBlinded
+              ? getPostBellatrixForkTypes(version).BlindedBeaconBlock.deserialize(data)
+              : isForkPostDeneb(version)
+                ? sszTypesFor(version).BlockContents.deserialize(data)
+                : {block: ssz[version].BeaconBlock.deserialize(data)}; // <- tranformation
+          },
+        },
         meta: {
           toJson: (meta) => ({
             ...ProduceBlockV3MetaType.toJson(meta),
