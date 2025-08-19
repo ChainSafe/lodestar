@@ -314,7 +314,12 @@ export class UnknownChainSync {
     // first get set of sync items that we're tracking
     const items = this.getRelatedHeaders(root);
 
-    // items guaranteed to have at least one item, the root itself
+    // `items` is not guaranteed to have at least one item, the root itself.
+    // This is because the root may have already been pruned.
+    if (items.length === 0) {
+      return;
+    }
+
     const firstItem = items[0];
 
     // prune items from chains
