@@ -154,7 +154,11 @@ export const arrayGroupBy = <T>(
 ): Record<string, T[]> =>
   array.reduce(
     (acc, value, index, array) => {
-      acc[predicate(value, index, array)]?.push(value);
+      const key = predicate(value, index, array);
+      if (!acc[key]) {
+        acc[key] = [];
+      }
+      acc[key].push(value);
       return acc;
     },
     {} as {[key: string]: T[]}
