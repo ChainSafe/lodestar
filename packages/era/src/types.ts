@@ -16,7 +16,6 @@ export interface EraFileName {
   shortHistoricalRoot: string;
 }
 
-
 /**
  * Logical, parsed entry from an E2Store file.
  */
@@ -24,7 +23,6 @@ export interface E2StoreEntry {
   type: E2StoreEntryType;
   data: Uint8Array;
 }
-
 
 /**
  * Maps slots to file positions in an era file.
