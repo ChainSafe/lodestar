@@ -634,7 +634,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     }: GossipHandlerParamGeneric<GossipType.inclusion_list>) => {
       const {serializedData} = gossipData;
       const inclusionList = sszDeserialize(topic, serializedData);
-      metrics?.eip7805.inclusionListsSeen.inc({source: InclusionListSource.gossip});
+      metrics?.eip7805.inclusionListsReceived.inc({source: InclusionListSource.gossip});
+      metrics?.eip7805.inclusionListTransactionsReceived.inc(
+        {source: InclusionListSource.gossip},
+        inclusionList.message.transactions.length
+      );
       // TODO EIP-7805: should we persist invalid ssz value?
       try {
         const timer = metrics?.eip7805.inclusionListsValidationTime.startTimer();
@@ -653,10 +657,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       try {
         const insertOutcome = chain.inclusionListPool.add(inclusionList);
         metrics?.opPool.inclusionListPoolInsertOutcome.inc({insertOutcome});
-        metrics?.eip7805.inclusionListTransactionsSeen.inc(
-          {source: InclusionListSource.gossip},
-          inclusionList.message.transactions.length
-        );
 
         const secFromSlot = chain.clock.secFromSlot(inclusionList.message.slot, seenTimestampSec);
         metrics?.eip7805.inclusionListArrivalTime.observe(secFromSlot);

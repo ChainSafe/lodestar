@@ -97,14 +97,14 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         buckets: [0.1, 0.25, 0.5, 0.75, 1, 2],
         labelNames: ["source"],
       }),
-      inclusionListsSeen: register.counter<{source: InclusionListSource}>({
-        name: "beacon_inclusion_lists_seen_total",
-        help: "Total number of seen inclusion lists",
+      inclusionListsReceived: register.counter<{source: InclusionListSource}>({
+        name: "beacon_inclusion_lists_received_total",
+        help: "Total number of received inclusion lists",
         labelNames: ["source"],
       }),
-      inclusionListTransactionsSeen: register.counter<{source: InclusionListSource}>({
-        name: "beacon_inclusion_list_transactions_seen_total",
-        help: "Total number of transactions seen in inclusion lists",
+      inclusionListTransactionsReceived: register.counter<{source: InclusionListSource}>({
+        name: "beacon_inclusion_list_transactions_received_total",
+        help: "Total number of transactions in received inclusion lists",
         labelNames: ["source"],
       }),
       inclusionListsPublished: register.counter({
@@ -115,14 +115,6 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         name: "beacon_inclusion_lists_arrival_time_seconds",
         help: "Inclusion list arrival time since the beginning of slot",
         buckets: [0, 1, 2, 3, 4, 6, 8, 9, 10, 11, 12],
-      }),
-      inclusionListTransactionsDuplicated: register.counter({
-        name: "beacon_inclusion_list_transactions_duplicated_total",
-        help: "Total number of duplicated inclusion list transactions",
-      }),
-      inclusionListTransactionsSentInPayload: register.counter({
-        name: "beacon_inclusion_list_transactions_sent_in_payload_total",
-        help: "Total number of inclusion list transactions sent in a payload",
       }),
       getInclusionListV1Requests: register.counter({
         name: "beacon_engine_getInclusionListV1_requests_total",
@@ -141,6 +133,10 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         name: "beacon_engine_updatePayloadWithInclusionListV1_requests_duration_seconds",
         help: "Duration of updatePayloadWithInclusionListV1 requests",
         buckets: [0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.5],
+      }),
+      inclusionListTransactionsSentToPayload: register.counter({
+        name: "beacon_inclusion_list_transactions_sent_to_payload_total",
+        help: "Total number of inclusion list transactions sent to payload",
       }),
     },
 
@@ -211,11 +207,10 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         help: "Total number of equivocating inclusion lists",
         labelNames: ["source"],
       }),
-      inclusionListsFirstSeenInSlot: register.histogram<{source: InclusionListSource}>({
-        name: "beacon_inclusion_lists_first_seen_in_slot_seconds",
-        help: "Inclusion lists first time seen in slot",
-        buckets: [0, 1, 2, 3, 4, 6, 8, 9, 10, 11, 12],
-        labelNames: ["source"],
+      // TODO: Katya - add metric after implementing FOCIL specs updates
+      unsatisfiedInclusionListBlocks: register.counter({
+        name: "beacon_inclusion_list_unsatisfied_blocks_total",
+        help: "Total number of unsatisfied inclusion list blocks",
       }),
     },
 

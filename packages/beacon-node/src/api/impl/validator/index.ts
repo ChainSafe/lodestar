@@ -1510,11 +1510,6 @@ export function getValidatorApi(
       timer?.({source: InclusionListSource.api});
 
       chain.inclusionListPool.add(signedInclusionList);
-      metrics?.eip7805.inclusionListsSeen.inc({source: InclusionListSource.api});
-      metrics?.eip7805.inclusionListTransactionsSeen.inc(
-        {source: InclusionListSource.api},
-        signedInclusionList.message.transactions.length
-      );
 
       const secFromSlot = chain.clock.secFromSlot(slot, Date.now() / 1000);
       chain.forkChoice.onInclusionList(signedInclusionList, secFromSlot, InclusionListSource.api);

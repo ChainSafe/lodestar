@@ -145,10 +145,6 @@ export class ForkChoice implements IForkChoice {
   private inclusionListsEquivocating: MapDef<InclusionListSource, number> = new MapDef<InclusionListSource, number>(
     () => 0
   );
-  /** First inclusion list seen in slot */
-  private inclusionListsFirstSeenInSlot: MapDef<InclusionListSource, number> = new MapDef<InclusionListSource, number>(
-    () => 0
-  );
   /**
    * Instantiates a Fork Choice from some existing components
    *
@@ -175,7 +171,6 @@ export class ForkChoice implements IForkChoice {
       nodes: this.protoArray.nodes.length,
       indices: this.protoArray.indices.size,
       inclusionListsEquivocating: this.inclusionListsEquivocating,
-      inclusionListsFirstSeenInSlot: this.inclusionListsFirstSeenInSlot,
     };
   }
 
@@ -831,9 +826,7 @@ export class ForkChoice implements IForkChoice {
 
     const storeKey: InclusionListStoreKey = [slot, inclusionListCommitteeRoot];
     const storedInclusionLists = this.fcStore.inclusionLists.get(storeKey) ?? [];
-    if (storedInclusionLists.length === 0) {
-      this.inclusionListsFirstSeenInSlot.set(source, secFromSlot);
-    }
+
     const validatorInclusionLists = storedInclusionLists.filter((il) => il.validatorIndex === validatorIndex);
 
     if (validatorInclusionLists.length > 0) {

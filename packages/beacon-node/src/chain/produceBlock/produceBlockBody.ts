@@ -554,8 +554,7 @@ export async function prepareExecutionPayloadInclusionList(
   const timer = metrics?.eip7805.updatePayloadWithInclusionListV1RequestsDuration.startTimer();
   await chain.executionEngine.updatePayloadWithInclusionList(payloadId, {transactions});
   timer?.();
-  metrics?.eip7805.inclusionListTransactionsSentInPayload.inc(transactions.length);
-
+  metrics?.eip7805.inclusionListTransactionsSentToPayload.inc(transactions.length);
   logger.verbose("Updated payload with inclusion list", {
     slot,
     payloadId,

@@ -115,8 +115,6 @@ export class InclusionListPool {
 
         if (!duplicate) {
           uniqueTransactions.push(transaction);
-        } else {
-          this.metrics?.eip7805.inclusionListTransactionsDuplicated.inc();
         }
       }
     }
