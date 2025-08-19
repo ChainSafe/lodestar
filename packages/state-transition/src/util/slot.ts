@@ -1,4 +1,4 @@
-import {ChainConfig} from "@lodestar/config";
+import {ChainConfig, SlotComponent} from "@lodestar/config";
 import {BASIS_POINTS, GENESIS_SLOT} from "@lodestar/params";
 import {Epoch, Slot, TimeSeconds} from "@lodestar/types";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "./epoch.js";
@@ -22,6 +22,7 @@ export function computeTimeAtSlot(config: ChainConfig, slot: Slot, genesisTime: 
 }
 
 // Convert basis points to milliseconds into the slot
-export function getSlotComponentDurationMs(config: ChainConfig, basisPoints: number): number {
+export function getSlotComponentDurationMs(config: ChainConfig, slotComponent: SlotComponent): number {
+  const basisPoints = config[slotComponent];
   return Math.floor((basisPoints * config.SLOT_DURATION_MS) / BASIS_POINTS);
 }

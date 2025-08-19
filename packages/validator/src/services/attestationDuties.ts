@@ -135,7 +135,7 @@ export class AttestationDutiesService {
     }
 
     // during the 1 / 3 of epoch, last block of epoch may come
-    await sleep(this.clock.msToSlot(slot, 3333), signal);
+    await sleep(this.clock.msToSlot(slot + 1 / 3), signal);
 
     const nextEpoch = computeEpochAtSlot(slot) + 1;
     const dependentRoot = this.dutiesByIndexByEpoch.get(nextEpoch)?.dependentRoot;

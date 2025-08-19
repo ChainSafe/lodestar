@@ -91,11 +91,11 @@ export class AttestationService {
     // (a) the validator has received a valid block from the expected block proposer for the assigned slot or
     // (b) 33.33% (ATTESTATION_DUE_BPS) of the slot has transpired -- whichever comes first.
     await Promise.race([
-      sleep(this.clock.msToSlot(slot, this.config.ATTESTATION_DUE_BPS), signal),
+      sleep(this.clock.msToSlotComponent(slot, "ATTESTATION_DUE_BPS"), signal),
       this.emitter.waitForBlockSlot(slot),
     ]);
     this.metrics?.attesterStepCallProduceAttestation.observe(
-      this.clock.secFromSlot(slot, this.config.ATTESTATION_DUE_BPS)
+      this.clock.secFromSlotComponent(slot, "ATTESTATION_DUE_BPS")
     );
 
     if (this.opts?.disableAttestationGrouping) {
@@ -139,10 +139,8 @@ export class AttestationService {
 
     // Step 2. after all attestations are submitted, make an aggregate.
     // First, wait until the `AGGREGATE_DUE_BPS` (66.66% into the slot)
-    await sleep(this.clock.msToSlot(slot, this.config.AGGREGRATE_DUE_BPS), signal);
-    this.metrics?.attesterStepCallProduceAggregate.observe(
-      this.clock.secFromSlot(slot, this.config.AGGREGRATE_DUE_BPS)
-    );
+    await sleep(this.clock.msToSlotComponent(slot, "AGGREGRATE_DUE_BPS"), signal);
+    this.metrics?.attesterStepCallProduceAggregate.observe(this.clock.secFromSlotComponent(slot, "AGGREGRATE_DUE_BPS"));
 
     // Then download, sign and publish a `SignedAggregateAndProof` for each
     // validator that is elected to aggregate for this `slot` and `committeeIndex`.
@@ -162,10 +160,8 @@ export class AttestationService {
 
     // Step 2. after all attestations are submitted, make an aggregate.
     // First, wait until the `AGGREGATE_DUE_BPS` (66% into the slot)
-    await sleep(this.clock.msToSlot(slot, this.config.AGGREGRATE_DUE_BPS), signal);
-    this.metrics?.attesterStepCallProduceAggregate.observe(
-      this.clock.secFromSlot(slot, this.config.AGGREGRATE_DUE_BPS)
-    );
+    await sleep(this.clock.msToSlotComponent(slot, "AGGREGRATE_DUE_BPS"), signal);
+    this.metrics?.attesterStepCallProduceAggregate.observe(this.clock.secFromSlotComponent(slot, "AGGREGRATE_DUE_BPS"));
 
     const dutiesByCommitteeIndex = groupAttDutiesByCommitteeIndex(dutiesAll);
     const isPostElectra = this.config.getForkSeq(slot) >= ForkSeq.electra;
@@ -228,7 +224,7 @@ export class AttestationService {
     // they reach our peers before the block. To prevent that, we wait 2 extra seconds AFTER block arrival, but
     // never beyond the 33% cutoff time.
     // https://github.com/status-im/nimbus-eth2/blob/7b64c1dce4392731a4a59ee3a36caef2e0a8357a/beacon_chain/validators/validator_duties.nim#L1123
-    const msToCutoffTime = this.clock.msToSlot(slot, this.config.ATTESTATION_DUE_BPS);
+    const msToCutoffTime = this.clock.msToSlotComponent(slot, "ATTESTATION_DUE_BPS");
     // submitting attestations asap to avoid busy time at around 1/3 of slot
     const afterBlockDelayMs =
       1000 *
@@ -237,7 +233,7 @@ export class AttestationService {
     await sleep(Math.min(msToCutoffTime, afterBlockDelayMs));
 
     this.metrics?.attesterStepCallPublishAttestation.observe(
-      this.clock.secFromSlot(slot, this.config.ATTESTATION_DUE_BPS)
+      this.clock.secFromSlotComponent(slot, "ATTESTATION_DUE_BPS")
     );
 
     // Step 2. Publish all `Attestations` in one go
@@ -314,7 +310,7 @@ export class AttestationService {
     );
 
     this.metrics?.attesterStepCallPublishAggregate.observe(
-      this.clock.secFromSlot(attestation.slot, this.config.AGGREGRATE_DUE_BPS)
+      this.clock.secFromSlotComponent(attestation.slot, "AGGREGRATE_DUE_BPS")
     );
 
     if (signedAggregateAndProofs.length > 0) {
@@ -364,7 +360,7 @@ export class AttestationService {
       // Note that the aggregations flow is not explicitly exited but rather will be skipped
       // due to the fact that calculation of `is_aggregator` in AttestationDutiesService is not done
       // and selectionProof is set to null, meaning no validator will be considered an aggregator.
-      sleep(this.clock.msToSlot(slot, this.config.AGGREGRATE_DUE_BPS), signal),
+      sleep(this.clock.msToSlotComponent(slot, "AGGREGRATE_DUE_BPS"), signal),
     ]);
 
     if (!res) {

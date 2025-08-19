@@ -1,3 +1,4 @@
+import {SlotComponent} from "@lodestar/config";
 import {Epoch, Slot} from "@lodestar/types";
 import {IClock} from "../../src/util/index.js";
 
@@ -15,7 +16,9 @@ export class ClockMock implements IClock {
   runEverySlot = (fn: RunEveryFn): number => this.everySlot.push(fn);
   runEveryEpoch = (fn: RunEveryFn): number => this.everyEpoch.push(fn);
   msToSlot = (_slot: number): number => 0;
+  msToSlotComponent = (_slot: number, _slotComponent: SlotComponent): number => 0;
   secFromSlot = (): number => 0;
+  secFromSlotComponent = (): number => 0;
   getCurrentSlot = (): number => 0;
   getCurrentEpoch = (): number => 0;
 

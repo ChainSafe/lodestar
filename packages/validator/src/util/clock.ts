@@ -1,4 +1,4 @@
-import {ChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig, SlotComponent} from "@lodestar/config";
 import {GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, getCurrentSlot, getSlotComponentDurationMs} from "@lodestar/state-transition";
 import {Epoch, Slot, TimeSeconds} from "@lodestar/types";
@@ -15,8 +15,10 @@ export interface IClock {
   start(signal: AbortSignal): void;
   runEverySlot(fn: (slot: Slot, signal: AbortSignal) => Promise<void>): void;
   runEveryEpoch(fn: (epoch: Epoch, signal: AbortSignal) => Promise<void>): void;
-  msToSlot(slot: Slot, basisPoints?: number): number;
-  secFromSlot(slot: Slot, msIntoTheSlot?: number): number;
+  msToSlot(slot: Slot): number;
+  msToSlotComponent(slot: Slot, slotComponent: SlotComponent): number;
+  secFromSlot(slot: Slot): number;
+  secFromSlotComponent(slot: Slot, slotComponent: SlotComponent): number;
   getCurrentSlot(): Slot;
   getCurrentEpoch(): Epoch;
 }
@@ -70,21 +72,31 @@ export class Clock implements IClock {
     this.fns.push({timeItem: TimeItem.Epoch, fn});
   }
 
-  /** Milliseconds from now to basis point into a specific slot */
-  msToSlot(slot: Slot, basisPoints = 0): number {
-    const timeAt =
-      (this.genesisTime + this.config.SECONDS_PER_SLOT * slot) * 1000 +
-      getSlotComponentDurationMs(this.config, basisPoints);
+  /** Milliseconds from now to a specific slot */
+  msToSlot(slot: Slot): number {
+    const timeAt = this.genesisTime + this.config.SECONDS_PER_SLOT * slot;
+    return timeAt * 1000 - Date.now();
+  }
+
+  /** Milliseconds from now to a specific slot's slot component */
+  msToSlotComponent(slot: Slot, slotComponent: SlotComponent): number {
+    const timeAt = (this.genesisTime + this.config.SECONDS_PER_SLOT * slot) * 1000;
+    getSlotComponentDurationMs(this.config, slotComponent);
     return timeAt - Date.now();
   }
 
-  /** Seconds elapsed from `basisPoints` into a specific slot to now */
-  secFromSlot(slot: Slot, basisPoints = 0): number {
+  /** Seconds elapsed from a specific slot to now */
+  secFromSlot(slot: Slot): number {
+    return Date.now() / 1000 - (this.genesisTime + this.config.SECONDS_PER_SLOT * slot);
+  }
+
+  /** Seconds elapsed from a specific slot's slot component to now */
+  secFromSlotComponent(slot: Slot, slotComponent: SlotComponent): number {
     return (
       Date.now() / 1000 -
       (this.genesisTime +
         this.config.SECONDS_PER_SLOT * slot +
-        Math.round(getSlotComponentDurationMs(this.config, basisPoints) / 1000))
+        Math.round(getSlotComponentDurationMs(this.config, slotComponent) / 1000))
     );
   }
 
