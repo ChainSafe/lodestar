@@ -1,11 +1,11 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
-import {Logger} from "@lodestar/utils";
+import {Logger, prettyBytesShort} from "@lodestar/utils";
 import {IBeaconChain} from "../chain/index.js";
 import {GENESIS_SLOT} from "../constants/constants.js";
 import {ExecutionEngineState} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
-import {INetwork, NetworkEvent, NetworkEventData} from "../network/index.js";
+import {INetwork, Network, NetworkEvent, NetworkEventData} from "../network/index.js";
 import {ClockEvent} from "../util/clock.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
 import {MIN_EPOCH_TO_START_GOSSIP} from "./constants.js";
@@ -14,6 +14,7 @@ import {SyncChainDebugState, SyncState, syncStateMetric} from "./interface.js";
 import {SyncOptions} from "./options.js";
 import {RangeSync, RangeSyncEvent, RangeSyncStatus} from "./range/range.js";
 import {UnknownBlockSync} from "./unknownBlock.js";
+import {UnknownChainSync} from "./unknownChain/unknownChain.js";
 import {PeerSyncType, getPeerSyncType, peerSyncTypes} from "./utils/remoteSyncType.js";
 
 export class BeaconSync implements IBeaconSync {
@@ -25,6 +26,7 @@ export class BeaconSync implements IBeaconSync {
 
   private readonly rangeSync: RangeSync;
   private readonly unknownBlockSync: UnknownBlockSync;
+  private readonly unknownChainSync: UnknownChainSync;
 
   /** For metrics only */
   private readonly peerSyncType = new Map<string, PeerSyncType>();
@@ -39,6 +41,20 @@ export class BeaconSync implements IBeaconSync {
     this.logger = logger;
     this.rangeSync = new RangeSync(modules, opts);
     this.unknownBlockSync = new UnknownBlockSync(config, network, chain, logger, metrics, opts);
+    this.unknownChainSync = new UnknownChainSync({
+      config,
+      chain,
+      network: network as Network,
+      metrics: metrics ?? undefined,
+      processLinkedChain: (chain) => {
+        const logCtx: Record<number, string> = {};
+        for (const header of chain.forwardChain) {
+          logCtx[header.slot] = prettyBytesShort(header.root);
+        }
+        this.logger.debug("UnknownChainSync: processLinkedChain", logCtx);
+      },
+    });
+    this.unknownChainSync.start();
     this.slotImportTolerance = opts.slotImportTolerance ?? SLOTS_PER_EPOCH;
 
     // Subscribe to RangeSync completing a SyncChain and recompute sync state
@@ -84,6 +100,7 @@ export class BeaconSync implements IBeaconSync {
     this.chain.clock.off(ClockEvent.epoch, this.onClockEpoch);
     this.rangeSync.close();
     this.unknownBlockSync.close();
+    this.unknownChainSync.stop();
   }
 
   getSyncStatus(): SyncingStatus {
