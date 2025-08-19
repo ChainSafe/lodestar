@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {computeTimeAtSlot, getSlotComponentDuration} from "@lodestar/state-transition";
+import {computeTimeAtSlot, getSlotComponentDurationMs} from "@lodestar/state-transition";
 import {LightClientOptimisticUpdate} from "@lodestar/types";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants/index.js";
 import {assertLightClientServer} from "../../node/utils/lightclient.js";
@@ -67,7 +67,7 @@ export function updateReceivedTooEarly(
 ): boolean {
   const updateCutoff =
     computeTimeAtSlot(config, update.signatureSlot, genesisTime) * 1000 +
-    getSlotComponentDuration(config, config.SYNC_MESSAGE_DUE_BPS);
+    getSlotComponentDurationMs(config, config.SYNC_MESSAGE_DUE_BPS);
   const earliestAllowedTimestampMs = updateCutoff - MAXIMUM_GOSSIP_CLOCK_DISPARITY;
   return Date.now() < earliestAllowedTimestampMs;
 }

@@ -46,7 +46,7 @@ export type ChainConfig = {
   FULU_FORK_EPOCH: number;
 
   // Time parameters
-  SECONDS_PER_SLOT: number;
+  SECONDS_PER_SLOT: number; // Deprecated
   SLOT_DURATION_MS: number;
   SECONDS_PER_ETH1_BLOCK: number;
   MIN_VALIDATOR_WITHDRAWABILITY_DELAY: number;

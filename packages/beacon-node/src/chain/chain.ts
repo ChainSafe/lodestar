@@ -17,7 +17,7 @@ import {
   computeStartSlotAtEpoch,
   createCachedBeaconState,
   getEffectiveBalanceIncrementsZeroInactive,
-  getSlotComponentDuration,
+  getSlotComponentDurationMs,
   isCachedBeaconState,
   processSlots,
 } from "@lodestar/state-transition";
@@ -261,7 +261,7 @@ export class BeaconChain implements IBeaconChain {
     if (!clock) clock = new Clock({config, genesisTime: this.genesisTime, signal});
 
     this.blacklistedBlocks = new Map((opts.blacklistedBlocks ?? []).map((hex) => [hex, null]));
-    const preAggregateCutOffTime = getSlotComponentDuration(config, config.AGGREGRATE_DUE_BPS) / 1000;
+    const preAggregateCutOffTime = Math.round(getSlotComponentDurationMs(config, config.AGGREGRATE_DUE_BPS) / 1000);
     this.attestationPool = new AttestationPool(
       config,
       clock,

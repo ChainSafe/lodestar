@@ -142,7 +142,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     FULU_FORK_EPOCH: fuluForkRelevant,
 
     // Time parameters
-    SECONDS_PER_SLOT: true,
+    SECONDS_PER_SLOT: true, // Deprecated
     SLOT_DURATION_MS: true,
     SECONDS_PER_ETH1_BLOCK: true,
     MIN_VALIDATOR_WITHDRAWABILITY_DELAY: true,

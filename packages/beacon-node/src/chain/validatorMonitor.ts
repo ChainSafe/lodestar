@@ -8,7 +8,7 @@ import {
   computeStartSlotAtEpoch,
   getBlockRootAtSlot,
   getCurrentSlot,
-  getSlotComponentDuration,
+  getSlotComponentDurationMs,
   parseAttesterFlags,
   parseParticipationFlags,
 } from "@lodestar/state-transition";
@@ -447,7 +447,7 @@ export function createValidatorMonitor(
         seenTimestampSec -
         (genesisTime +
           data.slot * config.SECONDS_PER_SLOT +
-          getSlotComponentDuration(config, config.ATTESTATION_DUE_BPS) / 1000);
+          Math.round(getSlotComponentDurationMs(config, config.ATTESTATION_DUE_BPS) / 1000));
       for (const index of indexedAttestation.attestingIndices) {
         const validator = validators.get(index);
         if (validator) {
@@ -484,7 +484,7 @@ export function createValidatorMonitor(
         seenTimestampSec -
         (genesisTime +
           data.slot * config.SECONDS_PER_SLOT +
-          getSlotComponentDuration(config, config.ATTESTATION_DUE_BPS) / 1000);
+          Math.round(getSlotComponentDurationMs(config, config.ATTESTATION_DUE_BPS) / 1000));
 
       for (const index of indexedAttestation.attestingIndices) {
         const validator = validators.get(index);
@@ -505,7 +505,7 @@ export function createValidatorMonitor(
         seenTimestampSec -
         (genesisTime +
           data.slot * config.SECONDS_PER_SLOT +
-          getSlotComponentDuration(config, config.AGGREGRATE_DUE_BPS) / 1000);
+          Math.round(getSlotComponentDurationMs(config, config.AGGREGRATE_DUE_BPS) / 1000));
 
       for (const index of indexedAttestation.attestingIndices) {
         const validator = validators.get(index);
@@ -536,7 +536,7 @@ export function createValidatorMonitor(
         seenTimestampSec -
         (genesisTime +
           data.slot * config.SECONDS_PER_SLOT +
-          getSlotComponentDuration(config, config.AGGREGRATE_DUE_BPS) / 1000);
+          Math.round(getSlotComponentDurationMs(config, config.AGGREGRATE_DUE_BPS) / 1000));
 
       const aggregatorIndex = signedAggregateAndProof.message.aggregatorIndex;
       const validatorAggregator = validators.get(aggregatorIndex);

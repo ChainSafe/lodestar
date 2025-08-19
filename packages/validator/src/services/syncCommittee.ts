@@ -99,7 +99,7 @@ export class SyncCommitteeService {
       const beaconBlockRoot = await this.produceAndPublishSyncCommittees(slot, dutiesAtSlot);
 
       // Step 2. If an attestation was produced, make an aggregate.
-      // First, wait until the `CONTRIBUTION_DUE_BPS` (66% into the slot)
+      // First, wait until the `CONTRIBUTION_DUE_BPS` (67% into the slot)
       await sleep(this.clock.msToSlot(slot, this.config.CONTRIBUTION_DUE_BPS), signal);
       this.metrics?.syncCommitteeStepCallProduceAggregate.observe(
         this.clock.secFromSlot(slot, this.config.CONTRIBUTION_DUE_BPS)
@@ -282,7 +282,7 @@ export class SyncCommitteeService {
 
     const res = await Promise.race([
       this.api.validator.submitSyncCommitteeSelections({selections: partialSelections}),
-      // Exit sync committee contributions flow if there is no response after 66% into the slot.
+      // Exit sync committee contributions flow if there is no response after 67% into the slot.
       // This is in contrast to attestations aggregations flow which is already exited at 33% into the slot
       // because for sync committee is not required to resubscribe to subnets as beacon node will assume
       // validator always aggregates. This allows us to wait until we have to produce sync committee contributions.
