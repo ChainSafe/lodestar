@@ -6,6 +6,7 @@ import {ssz as capellaSsz} from "./capella/index.js";
 import {ssz as denebSsz} from "./deneb/index.js";
 import {ssz as electraSsz} from "./electra/index.js";
 import {ssz as fuluSsz} from "./fulu/index.js";
+import {ssz as gloasSsz} from "./gloas/index.js";
 import {ssz as phase0Ssz} from "./phase0/index.js";
 
 export * from "./primitive/sszTypes.js";
@@ -22,6 +23,16 @@ const typesByFork = {
   [ForkName.deneb]: {...phase0Ssz, ...altairSsz, ...bellatrixSsz, ...capellaSsz, ...denebSsz},
   [ForkName.electra]: {...phase0Ssz, ...altairSsz, ...bellatrixSsz, ...capellaSsz, ...denebSsz, ...electraSsz},
   [ForkName.fulu]: {...phase0Ssz, ...altairSsz, ...bellatrixSsz, ...capellaSsz, ...denebSsz, ...electraSsz, ...fuluSsz},
+  [ForkName.gloas]: {
+    ...phase0Ssz,
+    ...altairSsz,
+    ...bellatrixSsz,
+    ...capellaSsz,
+    ...denebSsz,
+    ...electraSsz,
+    ...fuluSsz,
+    ...gloasSsz,
+  },
 };
 
 // Export these types to ensure that each fork is a superset of the previous one (with overridden types obviously)
@@ -34,6 +45,7 @@ export const capella = typesByFork[ForkName.capella];
 export const deneb = typesByFork[ForkName.deneb];
 export const electra = typesByFork[ForkName.electra];
 export const fulu = typesByFork[ForkName.fulu];
+export const gloas = typesByFork[ForkName.gloas];
 
 /**
  * A type of union of forks must accept as any parameter the UNION of all fork types.

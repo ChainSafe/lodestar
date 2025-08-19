@@ -56,6 +56,10 @@ export const chainConfig: ChainConfig = {
   FULU_FORK_VERSION: b("0x06000000"),
   FULU_FORK_EPOCH: Infinity,
 
+  // GLOAS
+  GLOAS_FORK_VERSION: b("0x07000000"),
+  GLOAS_FORK_EPOCH: Infinity,
+
   // Time parameters
   // ---------------------------------------------------------------
   // 12 seconds

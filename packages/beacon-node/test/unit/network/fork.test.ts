@@ -11,6 +11,7 @@ function getForkConfig({
   deneb,
   electra,
   fulu,
+  gloas,
 }: {
   phase0: number;
   altair: number;
@@ -19,6 +20,7 @@ function getForkConfig({
   deneb: number;
   electra: number;
   fulu: number;
+  gloas: number;
 }): BeaconConfig {
   const forks: Record<ForkName, ForkInfo> = {
     phase0: {
@@ -76,6 +78,14 @@ function getForkConfig({
       version: Buffer.from([0, 0, 0, 6]),
       prevVersion: Buffer.from([0, 0, 0, 5]),
       prevForkName: ForkName.electra,
+    },
+    gloas: {
+      name: ForkName.gloas,
+      seq: ForkSeq.gloas,
+      epoch: gloas,
+      version: Buffer.from([0, 0, 0, 7]),
+      prevVersion: Buffer.from([0, 0, 0, 6]),
+      prevForkName: ForkName.fulu,
     },
   };
   const forksAscendingEpochOrder = Object.values(forks);
@@ -160,9 +170,10 @@ for (const testScenario of testScenarios) {
   const deneb = Infinity;
   const electra = Infinity;
   const fulu = Infinity;
+  const gloas = Infinity;
 
   describe(`network / fork: phase0: ${phase0}, altair: ${altair}, bellatrix: ${bellatrix} capella: ${capella}`, () => {
-    const forkConfig = getForkConfig({phase0, altair, bellatrix, capella, deneb, electra, fulu});
+    const forkConfig = getForkConfig({phase0, altair, bellatrix, capella, deneb, electra, fulu, gloas});
     const forks = forkConfig.forks;
     for (const testCase of testCases) {
       const {epoch, currentFork, nextFork, activeForks} = testCase;
