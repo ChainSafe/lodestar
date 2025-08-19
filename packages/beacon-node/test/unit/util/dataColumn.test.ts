@@ -1,6 +1,6 @@
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ChainForkConfig} from "@lodestar/config";
-import {NUMBER_OF_COLUMNS, NUMBER_OF_CUSTODY_GROUPS} from "@lodestar/params";
+import {NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {bigIntToBytes, fromHex} from "@lodestar/utils";
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
@@ -49,9 +49,9 @@ describe("getValidatorsCustodyRequirement", () => {
 
   it("should cap at maximum number of custody groups", () => {
     // Create a state with enough validators to exceed max groups
-    const effectiveBalances = Array.from({length: NUMBER_OF_CUSTODY_GROUPS + 1}, () => 32000000000);
+    const effectiveBalances = Array.from({length: config.NUMBER_OF_CUSTODY_GROUPS + 1}, () => 32000000000);
     const result = getValidatorsCustodyRequirement(config, effectiveBalances);
-    expect(result).toBe(NUMBER_OF_CUSTODY_GROUPS);
+    expect(result).toBe(config.NUMBER_OF_CUSTODY_GROUPS);
   });
 
   it("should handle zero validators", () => {
@@ -110,6 +110,8 @@ describe("CustodyConfig", () => {
 });
 
 describe("getDataColumns", () => {
+  const config = createChainForkConfig(defaultChainConfig);
+
   const testCases: [string, number, number[]][] = [
     ["cdbee32dc3c50e9711d22be5565c7e44ff6108af663b2dc5abd2df573d2fa83f", 4, [2, 80, 89, 118]],
     [
@@ -126,7 +128,7 @@ describe("getDataColumns", () => {
     it(`${nodeIdHex} / ${numSubnets}`, async () => {
       const nodeId = nodeIdHex.length === 64 ? fromHex(nodeIdHex) : bigIntToBytes(BigInt(nodeIdHex), 32, "be");
 
-      const columnIndexs = getDataColumns(nodeId, numSubnets);
+      const columnIndexs = getDataColumns(config, nodeId, numSubnets);
       expect(columnIndexs).toEqual(custodyColumns);
     });
   }

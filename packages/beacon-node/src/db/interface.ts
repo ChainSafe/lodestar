@@ -10,8 +10,8 @@ import {
   BlockArchiveRepository,
   BlockRepository,
   CheckpointHeaderRepository,
-  DataColumnSidecarsArchiveRepository,
-  DataColumnSidecarsRepository,
+  DataColumnSidecarArchiveRepository,
+  DataColumnSidecarRepository,
   DepositDataRootRepository,
   DepositEventRepository,
   Eth1DataRepository,
@@ -36,8 +36,8 @@ export interface IBeaconDb {
 
   blobSidecars: BlobSidecarsRepository;
   blobSidecarsArchive: BlobSidecarsArchiveRepository;
-  dataColumnSidecars: DataColumnSidecarsRepository;
-  dataColumnSidecarsArchive: DataColumnSidecarsArchiveRepository;
+  dataColumnSidecar: DataColumnSidecarRepository;
+  dataColumnSidecarArchive: DataColumnSidecarArchiveRepository;
 
   // finalized states
   stateArchive: StateArchiveRepository;

@@ -28,11 +28,11 @@ describe("block archiver task", () => {
     vi.spyOn(dbStub.block, "batchDelete");
     vi.spyOn(dbStub.blobSidecarsArchive, "batchPutBinary");
     vi.spyOn(dbStub.blobSidecars, "batchDelete");
-    vi.spyOn(dbStub.dataColumnSidecarsArchive, "batchPutBinary");
-    vi.spyOn(dbStub.dataColumnSidecars, "batchDelete");
+    vi.spyOn(dbStub.dataColumnSidecarArchive, "putManyBinary");
+    vi.spyOn(dbStub.dataColumnSidecar, "deleteMany");
     // Mock keys() to return empty array by default
     vi.spyOn(dbStub.blobSidecarsArchive, "keys").mockResolvedValue([]);
-    vi.spyOn(dbStub.dataColumnSidecarsArchive, "keys").mockResolvedValue([]);
+    // vi.spyOn(dbStub.dataColumnSidecarArchive, "keys").mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -94,10 +94,17 @@ describe("block archiver task", () => {
       FULU_FORK_EPOCH: 0,
       MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 2,
     });
-    const blockBytes = ssz.fulu.SignedBeaconBlock.serialize(ssz.fulu.SignedBeaconBlock.defaultValue());
-    const dataColumnBytes = ssz.fulu.DataColumnSidecar.serialize(ssz.fulu.DataColumnSidecar.defaultValue());
+
+    const block = ssz.fulu.SignedBeaconBlock.defaultValue();
+    const blockBytes = ssz.fulu.SignedBeaconBlock.serialize(block);
+
+    const dataColumn = ssz.fulu.DataColumnSidecar.defaultValue();
+    const dataColumnBytes = ssz.fulu.DataColumnSidecar.serialize(dataColumn);
+
     vi.spyOn(dbStub.block, "getBinary").mockResolvedValue(blockBytes);
-    vi.spyOn(dbStub.dataColumnSidecars, "getBinary").mockResolvedValue(dataColumnBytes);
+    vi.spyOn(dbStub.dataColumnSidecar, "valuesBinary").mockResolvedValue([
+      {id: dataColumn.index, prefix: block.message.stateRoot, value: dataColumnBytes},
+    ]);
 
     // Create blocks after fulu fork
     const blocks = Array.from({length: 5}, (_, i) =>
@@ -116,6 +123,10 @@ describe("block archiver task", () => {
       nonAncestors: nonCanonicalBlocks,
     });
 
+    vi.spyOn(dbStub.dataColumnSidecarArchive, "keys").mockResolvedValue(
+      nonCanonicalBlocks.map((block) => ({prefix: block.slot, id: 0}))
+    );
+
     await archiveBlocks(
       config,
       dbStub,
@@ -127,24 +138,29 @@ describe("block archiver task", () => {
     );
 
     // Verify data column sidecars are archived
-    const expectedDataColumnEntries = canonicalBlocks.map((block) => ({
-      key: block.slot,
-      value: dataColumnBytes,
-    }));
-    expect(dbStub.dataColumnSidecarsArchive.batchPutBinary).toHaveBeenCalledWith(expectedDataColumnEntries);
+    for (const block of canonicalBlocks) {
+      expect(dbStub.dataColumnSidecarArchive.putManyBinary).toHaveBeenCalledWith(block.slot, [
+        {
+          key: 0,
+          value: dataColumnBytes,
+        },
+      ]);
+    }
 
     // Verify canonical data column sidecars are deleted from hot storage
-    expect(dbStub.dataColumnSidecars.batchDelete).toBeCalledWith(
+    expect(dbStub.dataColumnSidecar.deleteMany).toBeCalledWith(
       canonicalBlocks.map((block) => fromHexString(block.blockRoot))
     );
 
     // Verify non-canonical data column sidecars are deleted
-    expect(dbStub.dataColumnSidecars.batchDelete).toBeCalledWith(
+    expect(dbStub.dataColumnSidecar.deleteMany).toBeCalledWith(
       nonCanonicalBlocks.map((block) => fromHexString(block.blockRoot))
     );
 
-    expect(dbStub.dataColumnSidecarsArchive.keys).toBeCalledWith({
-      lt: computeStartSlotAtEpoch(currentEpoch - config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS),
+    expect(dbStub.dataColumnSidecarArchive.keys).toBeCalledWith({
+      lt: dbStub.dataColumnSidecarArchive.getMaxKeyRaw(
+        computeStartSlotAtEpoch(currentEpoch - config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS)
+      ),
     });
   });
 });

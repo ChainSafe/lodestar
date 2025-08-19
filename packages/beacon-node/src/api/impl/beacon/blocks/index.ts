@@ -647,9 +647,9 @@ export function getBeaconBlockApi({
           );
         }
 
-        let {dataColumnSidecars} = (await db.dataColumnSidecars.get(blockRoot)) ?? {};
+        let dataColumnSidecars = await db.dataColumnSidecar.values(blockRoot);
         if (!dataColumnSidecars) {
-          ({dataColumnSidecars} = (await db.dataColumnSidecarsArchive.get(block.message.slot)) ?? {});
+          dataColumnSidecars = await db.dataColumnSidecarArchive.values(block.message.slot);
         }
 
         if (!dataColumnSidecars) {
