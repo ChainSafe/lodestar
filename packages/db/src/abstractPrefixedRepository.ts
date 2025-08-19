@@ -93,20 +93,20 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
     return await this.db.get(key, this.dbReqOpts);
   }
 
-  async put(prefix: P, object: T): Promise<void> {
-    const id = this.getId(object);
+  async put(prefix: P, item: T): Promise<void> {
+    const id = this.getId(item);
     const key = this.wrapKey(this.encodeKeyRaw(prefix, id));
-    await this.db.put(key, this.encodeValue(object), this.dbReqOpts);
+    await this.db.put(key, this.encodeValue(item), this.dbReqOpts);
   }
 
-  async putMany(prefix: P, object: T[]): Promise<void> {
+  async putMany(prefix: P, items: T[]): Promise<void> {
     const batch: KeyValue<Uint8Array, Uint8Array>[] = [];
-    for (const item of object) {
+    for (const item of items) {
       const id = this.getId(item);
       const key = this.wrapKey(this.encodeKeyRaw(prefix, id));
       batch.push({key, value: this.encodeValue(item)});
     }
-    this.db.batchPut(batch, this.dbReqOpts);
+    await this.db.batchPut(batch, this.dbReqOpts);
   }
 
   async putBinary(prefix: P, id: I, bytes: Uint8Array): Promise<void> {
@@ -119,7 +119,7 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
     for (const {key, value} of items) {
       batch.push({key: this.wrapKey(this.encodeKeyRaw(prefix, key)), value: value});
     }
-    this.db.batchPut(batch, this.dbReqOpts);
+    await this.db.batchPut(batch, this.dbReqOpts);
   }
 
   async delete(prefix: P, id: I): Promise<void> {
