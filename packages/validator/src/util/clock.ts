@@ -80,8 +80,9 @@ export class Clock implements IClock {
 
   /** Milliseconds from now to a specific slot's slot component */
   msToSlotComponent(slot: Slot, slotComponent: SlotComponent): number {
-    const timeAt = (this.genesisTime + this.config.SECONDS_PER_SLOT * slot) * 1000;
-    getSlotComponentDurationMs(this.config, slotComponent);
+    const timeAt =
+      (this.genesisTime + this.config.SECONDS_PER_SLOT * slot) * 1000 +
+      getSlotComponentDurationMs(this.config, slotComponent);
     return timeAt - Date.now();
   }
 
