@@ -6,7 +6,6 @@
 
 See usage in the `lodestar` package here:
 
-
 ## License
 
 Apache-2.0 [ChainSafe Systems](https://chainsafe.io)
