@@ -299,6 +299,7 @@ async function migrateBlobSidecarsFromHotToColdDb(
   return migratedWrappedBlobSidecars;
 }
 
+// TODO: This function can be simplified further by reducing layers of promises in a loop
 async function migrateDataColumnSidecarsFromHotToColdDb(
   config: ChainForkConfig,
   db: IBeaconDb,
@@ -320,9 +321,9 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
       const blockEpoch = computeEpochAtSlot(blockSlot);
 
       if (
-        config.getForkSeq(blockSlot) >= ForkSeq.fulu &&
+        config.getForkSeq(blockSlot) < ForkSeq.fulu ||
         // if block is out of ${config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS}, skip this step
-        blockEpoch >= currentEpoch - config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS
+        blockEpoch < currentEpoch - config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS
       ) {
         continue;
       }

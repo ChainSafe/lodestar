@@ -1,4 +1,3 @@
-import {ByteArray} from "@chainsafe/ssz/lib/type/byteArray.js";
 import {ChainForkConfig} from "@lodestar/config";
 import {Db, PrefixedRepository} from "@lodestar/db";
 import {NUMBER_OF_COLUMNS} from "@lodestar/params";
