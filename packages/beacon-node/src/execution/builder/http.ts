@@ -3,14 +3,14 @@ import {ApiClient as BuilderApi, getClient} from "@lodestar/api/builder";
 import {ChainForkConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/logger";
 import {ForkPostBellatrix, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {parseExecutionPayloadAndBlobsBundle, reconstructFullBlockOrContents} from "@lodestar/state-transition";
+import {parseExecutionPayloadAndBlobsBundle, reconstructSignedBlockContents} from "@lodestar/state-transition";
 import {
   BLSPubkey,
   Epoch,
   ExecutionPayloadHeader,
   Root,
-  SignedBeaconBlockOrContents,
   SignedBlindedBeaconBlock,
+  SignedBlockContents,
   Slot,
   Wei,
   WithOptionalBytes,
@@ -42,6 +42,23 @@ export const defaultExecutionBuilderHttpOpts: ExecutionBuilderHttpOpts = {
   timeout: 12000,
 };
 
+export enum BuilderStatus {
+  /**
+   * Builder is enabled and operational
+   */
+  enabled = "enabled",
+  /**
+   * Builder is disabled due to failed status check
+   */
+  disabled = "disabled",
+  /**
+   * Circuit breaker condition that is triggered when the node determines the chain is unhealthy.
+   * When the circuit breaker is fired, proposers **MUST** not utilize the external builder
+   * network and exclusively build locally.
+   */
+  circuitBreaker = "circuit_breaker",
+}
+
 /**
  * Expected error if builder does not provide a bid. Most of the time, this
  * is due to `min-bid` setting on the mev-boost side but in rare cases could
@@ -71,7 +88,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
   readonly registrations: ValidatorRegistrationCache;
   readonly issueLocalFcUWithFeeRecipient?: string;
   // Builder needs to be explicity enabled using updateStatus
-  status = false;
+  status = BuilderStatus.disabled;
   faultInspectionWindow: number;
   allowedFaults: number;
 
@@ -109,7 +126,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
      * Beacon clients select randomized values from the following ranges when initializing
      * the circuit breaker (so at boot time and once for each unique boot).
      *
-     * ALLOWED_FAULTS: between 1 and SLOTS_PER_EPOCH // 2
+     * ALLOWED_FAULTS: between 1 and SLOTS_PER_EPOCH // 4
      * FAULT_INSPECTION_WINDOW: between SLOTS_PER_EPOCH and 2 * SLOTS_PER_EPOCH
      *
      */
@@ -117,23 +134,25 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
       opts.faultInspectionWindow ?? SLOTS_PER_EPOCH + Math.floor(Math.random() * SLOTS_PER_EPOCH),
       SLOTS_PER_EPOCH
     );
-    // allowedFaults should be < faultInspectionWindow, limiting them to faultInspectionWindow/2
+    // allowedFaults should be < faultInspectionWindow, limiting them to faultInspectionWindow/4
     this.allowedFaults = Math.min(
-      opts.allowedFaults ?? Math.floor(this.faultInspectionWindow / 2),
-      Math.floor(this.faultInspectionWindow / 2)
+      opts.allowedFaults ?? Math.floor(this.faultInspectionWindow / 4),
+      Math.floor(this.faultInspectionWindow / 4)
     );
   }
 
-  updateStatus(shouldEnable: boolean): void {
-    this.status = shouldEnable;
+  updateStatus(status: BuilderStatus): void {
+    this.status = status;
   }
 
   async checkStatus(): Promise<void> {
     try {
       (await this.api.status()).assertOk();
     } catch (e) {
-      // Disable if the status was enabled
-      this.status = false;
+      if (this.status === BuilderStatus.enabled) {
+        // Disable if the status was enabled
+        this.status = BuilderStatus.disabled;
+      }
       throw e;
     }
   }
@@ -182,7 +201,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
 
   async submitBlindedBlock(
     signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>
-  ): Promise<SignedBeaconBlockOrContents> {
+  ): Promise<SignedBlockContents> {
     const res = await this.api.submitBlindedBlock(
       {signedBlindedBlock},
       {retries: 2, requestWireFormat: this.sszSupported ? WireFormat.ssz : WireFormat.json}
@@ -195,8 +214,8 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
     // invalid signature, but there is no recourse to this anyway so lets just proceed and will
     // probably need diagonis if this block turns out to be invalid because of some bug
     //
-    const contents = blobsBundle ? {blobs: blobsBundle.blobs, kzgProofs: blobsBundle.proofs} : null;
-    return reconstructFullBlockOrContents(signedBlindedBlock.data, {executionPayload, contents});
+    const fork = this.config.getForkName(signedBlindedBlock.data.message.slot);
+    return reconstructSignedBlockContents(fork, signedBlindedBlock.data, executionPayload, blobsBundle);
   }
 
   async submitBlindedBlockNoResponse(signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>): Promise<void> {

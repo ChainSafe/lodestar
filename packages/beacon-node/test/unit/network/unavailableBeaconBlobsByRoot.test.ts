@@ -19,12 +19,8 @@ import {IExecutionEngine} from "../../../src/execution/index.js";
 import {INetwork} from "../../../src/network/interface.js";
 import {unavailableBeaconBlobsByRoot} from "../../../src/network/reqresp/index.js";
 import {computeNodeId} from "../../../src/network/subnets/index.js";
-import {
-  computeInclusionProof,
-  computeKzgCommitmentsInclusionProof,
-  kzgCommitmentToVersionedHash,
-} from "../../../src/util/blobs.js";
-import {CustodyConfig, getDataColumnSidecars} from "../../../src/util/dataColumns.js";
+import {computeInclusionProof, kzgCommitmentToVersionedHash} from "../../../src/util/blobs.js";
+import {CustodyConfig, getDataColumnSidecarsFromBlock} from "../../../src/util/dataColumns.js";
 import {kzg} from "../../../src/util/kzg.js";
 import {getValidPeerId} from "../../utils/peer.js";
 
@@ -226,7 +222,6 @@ describe("unavailableBeaconBlobsByRoot", () => {
       signedBlock.message.slot = 1;
       const blobscommitmentsandproofs = generateBlobsWithCellProofs(3);
       signedBlock.message.body.blobKzgCommitments.push(...blobscommitmentsandproofs.map((b) => b.kzgCommitment));
-      const blockheader = signedBlockToSignedHeader(config, signedBlock);
 
       const unavailableBlockInput: BlockInput = {
         block: signedBlock,
@@ -258,10 +253,9 @@ describe("unavailableBeaconBlobsByRoot", () => {
         }
       );
 
-      const sampledSidecars = getDataColumnSidecars(
-        blockheader,
-        blobscommitmentsandproofs.map((b) => b.kzgCommitment),
-        computeKzgCommitmentsInclusionProof(ForkName.fulu, signedBlock.message.body),
+      const sampledSidecars = getDataColumnSidecarsFromBlock(
+        config,
+        signedBlock,
         blobscommitmentsandproofs.map((b) => b.cellsAndProofs)
       ).filter((s) => network.custodyConfig.sampledColumns.includes(s.index));
 

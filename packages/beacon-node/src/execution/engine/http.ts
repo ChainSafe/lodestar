@@ -1,6 +1,6 @@
 import {Logger} from "@lodestar/logger";
 import {ForkName, ForkPostFulu, ForkPreFulu, ForkSeq, SLOTS_PER_EPOCH, isForkPostFulu} from "@lodestar/params";
-import {ExecutionPayload, ExecutionRequests, Root, RootHex, Wei} from "@lodestar/types";
+import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
 import {strip0xPrefix} from "@lodestar/utils";
@@ -17,7 +17,6 @@ import {EPOCHS_PER_BATCH} from "../../sync/constants.js";
 import {getLodestarClientVersion} from "../../util/metadata.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {
-  BlobsBundle,
   ClientCode,
   ClientVersion,
   ExecutePayloadResponse,

@@ -203,7 +203,8 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
   private downloadBeaconBlocksByRange: SyncChainFns["downloadBeaconBlocksByRange"] = async (
     peer,
     request,
-    partialDownload
+    partialDownload,
+    syncType: RangeSyncType
   ) => {
     return beaconBlocksMaybeBlobsByRange(
       this.config,
@@ -212,6 +213,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
       request,
       this.chain.clock.currentEpoch,
       partialDownload,
+      syncType,
       this.metrics,
       this.logger
     );

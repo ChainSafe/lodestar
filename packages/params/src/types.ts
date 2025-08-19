@@ -95,8 +95,11 @@ export type BeaconPreset = {
   PENDING_CONSOLIDATIONS_LIMIT: number;
   MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD: number;
   WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA: number;
+
   // FULU
   ///////////
+  NUMBER_OF_COLUMNS: number;
+  CELLS_PER_EXT_BLOB: number;
   FIELD_ELEMENTS_PER_CELL: number;
   FIELD_ELEMENTS_PER_EXT_BLOB: number;
   KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH: number;
@@ -203,6 +206,8 @@ export const beaconPresetTypes: BeaconPresetTypes = {
 
   // FULU
   ///////////
+  NUMBER_OF_COLUMNS: "number",
+  CELLS_PER_EXT_BLOB: "number",
   FIELD_ELEMENTS_PER_CELL: "number",
   FIELD_ELEMENTS_PER_EXT_BLOB: "number",
   KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH: "number",
