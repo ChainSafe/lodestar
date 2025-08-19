@@ -65,7 +65,7 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
     return v ? this.decodeValue(v) : null;
   }
 
-  async getMany(prefix: P, ids: I[]): Promise<(T | null)[]> {
+  async getMany(prefix: P, ids: I[]): Promise<(T | undefined)[]> {
     const keys = [];
     for (const id of ids) {
       keys.push(this.wrapKey(this.encodeKeyRaw(prefix, id)));
@@ -74,13 +74,13 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
 
     const result = [];
     for (const value of values) {
-      result.push(value ? this.decodeValue(value) : null);
+      result.push(value ? this.decodeValue(value) : undefined);
     }
 
     return result;
   }
 
-  async getManyBinary(prefix: P, ids: I[]): Promise<(Uint8Array | null)[]> {
+  async getManyBinary(prefix: P, ids: I[]): Promise<(Uint8Array | undefined)[]> {
     const keys = [];
     for (const id of ids) {
       keys.push(this.wrapKey(this.encodeKeyRaw(prefix, id)));
