@@ -311,12 +311,11 @@ export function getBeaconStateApi({
 
       const syncCommitteeCache = stateCached.epochCtx.getIndexedSyncCommitteeAtEpoch(epoch ?? stateEpoch);
       const validatorIndices = new Array<ValidatorIndex>(...syncCommitteeCache.validatorIndices);
-      const subcommitteeSize = SYNC_COMMITTEE_SUBNET_SIZE;
 
       // Subcommittee assignments of the current sync committee
       const validatorAggregates: ValidatorIndex[][] = [];
-      for (let i = 0; i < validatorIndices.length; i += subcommitteeSize) {
-        validatorAggregates.push(validatorIndices.slice(i, i + subcommitteeSize));
+      for (let i = 0; i < validatorIndices.length; i += SYNC_COMMITTEE_SUBNET_SIZE) {
+        validatorAggregates.push(validatorIndices.slice(i, i + SYNC_COMMITTEE_SUBNET_SIZE));
       }
 
       return {
