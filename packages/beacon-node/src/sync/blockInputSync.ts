@@ -710,44 +710,20 @@ export class UnknownBlockPeerBalancer {
    * called from fetchUnavailableBlockInput() where we have either BlockInput or NullBlockInput
    * excludedPeers are the peers that we requested already so we don't want to try again
    */
-  bestPeerForBlockInput(
-    unavailableBlockInput: BlockInput | NullBlockInput,
-    excludedPeers: Set<PeerIdStr>
-  ): PeerSyncMeta | null {
-    let cachedData: CachedData | undefined = undefined;
-    if (unavailableBlockInput.block === null) {
-      // NullBlockInput
-      cachedData = unavailableBlockInput.cachedData;
-    } else {
-      // BlockInput
-      if (unavailableBlockInput.type !== BlockInputType.dataPromise) {
-        throw Error(
-          `bestPeerForBlockInput called with BlockInput type ${unavailableBlockInput.type}, expected dataPromise`
-        );
-      }
-      cachedData = unavailableBlockInput.cachedData;
-    }
-
+  bestPeerForBlockInput(blockInput: IBlockInput, excludedPeers: Set<PeerIdStr>): PeerSyncMeta | null {
     const eligiblePeers: PeerIdStr[] = [];
 
-    if (cachedData.fork === ForkName.fulu) {
-      // cached data is CachedDataColumns
-      const {dataColumnsCache} = cachedData;
-      const pendingDataColumns: Set<number> = new Set();
-      for (const column of this.custodyConfig.sampledColumns) {
-        if (!dataColumnsCache.has(column)) {
-          pendingDataColumns.add(column);
-        }
-      }
+    if (isBlockInputColumns(blockInput)) {
+      const pendingDataColumns: Set<number> = new Set(blockInput.getMissingSampledColumnMeta().map((c) => c.index));
       if (pendingDataColumns.size === 0) {
         // no pending columns, we can return null
+        // TODO(fulu): is this correct @twoeths?  What if all the columns are fine but the block is missing?
         return null;
       }
       eligiblePeers.push(...this.filterPeers(pendingDataColumns, excludedPeers));
     } else {
       // prefulu
-      const pendingDataColumns = null;
-      eligiblePeers.push(...this.filterPeers(pendingDataColumns, excludedPeers));
+      eligiblePeers.push(...this.filterPeers(null, excludedPeers));
     }
 
     if (eligiblePeers.length === 0) {
