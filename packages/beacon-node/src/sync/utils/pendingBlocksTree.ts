@@ -35,7 +35,7 @@ function addToDescendantBlocks(
   if (firstDescendantBlocks) {
     for (const firstDescendantBlock of firstDescendantBlocks) {
       descendantBlocks.push(firstDescendantBlock);
-      addToDescendantBlocks(firstDescendantBlock.blockRootHex, byParent, descendantBlocks);
+      addToDescendantBlocks(getBlockInputSyncCacheItemRootHex(firstDescendantBlock), byParent, descendantBlocks);
     }
   }
   return descendantBlocks;
@@ -48,7 +48,7 @@ export function getDescendantBlocks(
   const descendantBlocks: BlockInputSyncCacheItem[] = [];
 
   for (const block of blocks.values()) {
-    if (block.parentBlockRootHex === blockRootHex) {
+    if ((isPendingBlockInput(block) ? block.blockInput.parentRootHex : undefined) === blockRootHex) {
       descendantBlocks.push(block);
     }
   }
@@ -76,7 +76,7 @@ export function getIncompleteAndAncestorBlocks(
   blocks: Map<RootHex, BlockInputSyncCacheItem>
 ): IncompleteAndAncestorBlocks {
   const incomplete = new Map<RootHex, BlockInputSyncCacheItem>();
-  const ancestors = new Map<RootHex, BlockInputSyncCacheItem>();
+  const ancestors = new Map<RootHex, PendingBlockInput>();
 
   for (const block of blocks.values()) {
     // check if the block was already added via getAllDescendants
@@ -92,7 +92,7 @@ export function getIncompleteAndAncestorBlocks(
       !blocks.has(block.blockInput.parentRootHex)
     ) {
       ancestors.set(block.blockInput.blockRootHex, block);
-      const descendants = getAllDescendantBlocks(block);
+      const descendants = getAllDescendantBlocks(block.blockInput.blockRootHex, blocks);
       for (const descendant of descendants) {
         if (!isPendingBlockInput(descendant) || descendant.status !== PendingBlockInputStatus.downloaded) {
           incomplete.set(getBlockInputSyncCacheItemRootHex(descendant), descendant);
@@ -102,12 +102,12 @@ export function getIncompleteAndAncestorBlocks(
     }
 
     if (block.status === PendingBlockInputStatus.pending) {
-      incomplete.push(block);
+      incomplete.set(getBlockInputSyncCacheItemRootHex(block), block);
     }
   }
 
   return {
-    incomplete,
-    ancestors,
+    incomplete: Array.from(incomplete.values()),
+    ancestors: Array.from(ancestors.values()),
   };
 }

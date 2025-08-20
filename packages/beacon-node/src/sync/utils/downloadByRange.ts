@@ -1,6 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPostDeneb, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
-import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {RootHex, SignedBeaconBlock, Slot, deneb, fulu, phase0} from "@lodestar/types";
 import {LodestarError, Logger, prettyBytes, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {
@@ -163,7 +162,7 @@ export function cacheByRangeResponses({
       );
     } else {
       updatedBatchBlocks.push(
-        cache.getByBlob({
+        cache.getByColumn({
           columnSidecar,
           source,
           peerIdStr,
@@ -518,6 +517,15 @@ export function validateResponses({
         slotRange: slotRangeString,
       },
       "No blocks to validate requests against"
+    );
+  }
+  if (!blocksRequest) {
+    throw new DownloadByRangeError(
+      {
+        code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
+        slotRange: slotRangeString,
+      },
+      "No blocks request to validate requests against"
     );
   }
 
