@@ -77,7 +77,10 @@ export function getUnknownAndAncestorBlocks(blocks: Map<RootHex, BlockInputSyncC
   const ancestors = new Map<RootHex, PendingBlockInput>();
 
   for (const block of blocks.values()) {
-    if (!isPendingBlockInput(block) && block.status === PendingBlockInputStatus.pending) {
+    if (
+      block.status === PendingBlockInputStatus.pending &&
+      (isPendingBlockInput(block) ? !block.blockInput.hasBlockAndAllData() : true)
+    ) {
       unknowns.set(getBlockInputSyncCacheItemRootHex(block), block);
     } else if (
       isPendingBlockInput(block) &&
