@@ -119,7 +119,7 @@ build_local() {
     LODESTAR_ROOT="$SCRIPT_DIR/../.."
     
     # Build the Docker image
-    if docker build -t lodestar:local "$LODESTAR_ROOT"; then
+    if docker build -f Dockerfile.dev -t lodestar:local "$LODESTAR_ROOT"; then
         print_info "Successfully built lodestar:local"
         print_info "You can now use this image in your config files with: cl_image: lodestar:local"
     else
