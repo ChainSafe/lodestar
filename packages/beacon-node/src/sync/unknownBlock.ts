@@ -10,7 +10,6 @@ import {ChainEvent, ChainEventData, IBeaconChain} from "../chain/index.js";
 import {Metrics} from "../metrics/index.js";
 import {INetwork, NetworkEvent, NetworkEventData, prettyPrintPeerIdStr} from "../network/index.js";
 import {PeerSyncMeta} from "../network/peers/peersData.js";
-import {CustodyConfig} from "../util/dataColumns.js";
 import {PeerIdStr} from "../util/peerId.js";
 import {shuffle} from "../util/shuffle.js";
 import {sortBy} from "../util/sortBy.js";
@@ -33,24 +32,6 @@ import {getAllDescendantBlocks, getDescendantBlocks, getUnknownAndAncestorBlocks
 const MAX_ATTEMPTS_PER_BLOCK = 5;
 const MAX_KNOWN_BAD_BLOCKS = 500;
 const MAX_PENDING_BLOCKS = 100;
-
-function getLogMeta(
-  block: BlockInputSyncCacheItem,
-  pendingBlocks?: Map<RootHex, BlockInputSyncCacheItem>
-): Record<string, string | number> {
-  const pendingBlocksLog: Record<string, number> = pendingBlocks ? {pendingBlocks: pendingBlocks.size} : {};
-  return isPendingBlockInput(block)
-    ? {
-        type: "pendingBlockInput",
-        ...pendingBlocksLog,
-        ...block.blockInput.getLogMeta(),
-      }
-    : {
-        type: "pendingRootHex",
-        ...pendingBlocksLog,
-        rootHex: prettyBytes(block.rootHex),
-      };
-}
 
 /**
  * BlockInputSync is a class that handles ReqResp to find blocks and data related to a specific blockRoot.  The
@@ -105,7 +86,7 @@ export class BlockInputSync {
   ) {
     this.maxPendingBlocks = opts?.maxPendingBlocks ?? MAX_PENDING_BLOCKS;
     this.proposerBoostSecWindow = this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT;
-    this.peerBalancer = new UnknownBlockPeerBalancer(this.network.custodyConfig);
+    this.peerBalancer = new UnknownBlockPeerBalancer();
 
     if (metrics) {
       metrics.blockInputSync.pendingBlocks.addCollect(() =>
@@ -346,7 +327,7 @@ export class BlockInputSync {
       const delaySec = Date.now() / 1000 - (this.chain.genesisTime + blockSlot * this.config.SECONDS_PER_SLOT);
       this.metrics?.blockInputSync.elapsedTimeTillReceived.observe(delaySec);
 
-      const parentInForkChoice = this.chain.forkChoice.hasBlock(pending.blockInput.getBlock().message.parentRoot);
+      const parentInForkChoice = this.chain.forkChoice.hasBlockHex(pending.blockInput.parentRootHex);
       this.logger.verbose("Downloaded unknown block", {
         blockRoot: rootHex,
         pendingBlocks: this.pendingBlocks.size,
@@ -375,18 +356,8 @@ export class BlockInputSync {
       }
     } else {
       this.metrics?.blockInputSync.downloadedBlocksError.inc();
-      // block download has error, this allows to retry the download of the block
-      block.status = PendingBlockInputStatus.pending;
-      // const errorData = {blockRoot: rootHex};
-      // TODO(fulu): removed outer retry loop. Need to look at how to down score for errors here
-      // if (block.downloadAttempts > MAX_ATTEMPTS_PER_BLOCK) {
-      //   // Give up on this block and assume it does not exist, penalizing all peers as if it was a bad block
-      //   this.logger.debug("Ignoring unknown block root after many failed downloads", errorData, res.err);
+      this.logger.debug("Ignoring unknown block root after many failed downloads", {blockRoot: rootHex}, res.err);
       this.removeAndDownScoreAllDescendants(block);
-      // } else {
-      //   // Try again when a new peer connects, its status changes, or a new unknownBlockParent event happens
-      //   this.logger.debug("Error downloading unknown block root", errorData, res.err);
-      // }
     }
   }
 
@@ -457,7 +428,6 @@ export class BlockInputSync {
 
       // Send child blocks to the processor
       for (const descendantBlock of getDescendantBlocks(pendingBlock.blockInput.blockRootHex, this.pendingBlocks)) {
-        // TODO(fulu): this might cause sync to get stuck... need to resolve
         if (isPendingBlockInput(descendantBlock)) {
           this.processBlock(descendantBlock).catch((e) => {
             this.logger.debug("Unexpected error - process descendant block", {}, e);
@@ -514,7 +484,7 @@ export class BlockInputSync {
     const excludedPeers = new Set<PeerIdStr>();
     const defaultPendingColumns =
       this.config.getForkSeq(this.chain.clock.currentSlot) >= ForkSeq.fulu
-        ? new Set(this.network.custodyConfig.sampleGroups)
+        ? new Set(this.network.custodyConfig.sampledColumns)
         : null;
 
     let i = 0;
@@ -656,12 +626,10 @@ export class BlockInputSync {
 export class UnknownBlockPeerBalancer {
   readonly peersMeta: Map<PeerIdStr, PeerSyncMeta>;
   readonly activeRequests: Map<PeerIdStr, number>;
-  private readonly custodyConfig: CustodyConfig;
 
-  constructor(custodyConfig: CustodyConfig) {
+  constructor() {
     this.peersMeta = new Map();
     this.activeRequests = new Map();
-    this.custodyConfig = custodyConfig;
   }
 
   /** Trigger on each peer re-status */
@@ -709,11 +677,7 @@ export class UnknownBlockPeerBalancer {
 
     if (isBlockInputColumns(blockInput)) {
       const pendingDataColumns: Set<number> = new Set(blockInput.getMissingSampledColumnMeta().map((c) => c.index));
-      if (pendingDataColumns.size === 0) {
-        // no pending columns, we can return null
-        // TODO(fulu): is this correct @twoeths?  What if all the columns are fine but the block is missing?
-        return null;
-      }
+      // there could be no pending column in case when block is still missing
       eligiblePeers.push(...this.filterPeers(pendingDataColumns, excludedPeers));
     } else {
       // prefulu
