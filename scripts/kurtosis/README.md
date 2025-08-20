@@ -110,6 +110,7 @@ kurtosis enclave inspect lodestar-testnet | grep -A 1 "User Services" | grep -E 
 ```
 
 Service naming pattern:
+
 - `cl-` = Consensus Layer
 - `el-` = Execution Layer
 - `vc-` = Validator Client

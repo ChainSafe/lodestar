@@ -1,6 +1,3 @@
-# Kurtosis configuration for testing local Lodestar builds
-# Uses locally built Docker image
-
 participants:
   # Execution layer
   - el_type: geth
