@@ -10,7 +10,6 @@ import {ChainEvent, ChainEventData, IBeaconChain} from "../chain/index.js";
 import {Metrics} from "../metrics/index.js";
 import {INetwork, NetworkEvent, NetworkEventData, prettyPrintPeerIdStr} from "../network/index.js";
 import {PeerSyncMeta} from "../network/peers/peersData.js";
-import {computeColumnsForCustodyGroup} from "../util/dataColumns.js";
 import {PeerIdStr} from "../util/peerId.js";
 import {shuffle} from "../util/shuffle.js";
 import {sortBy} from "../util/sortBy.js";
@@ -678,11 +677,7 @@ export class UnknownBlockPeerBalancer {
 
     if (isBlockInputColumns(blockInput)) {
       const pendingDataColumns: Set<number> = new Set(blockInput.getMissingSampledColumnMeta().map((c) => c.index));
-      if (pendingDataColumns.size === 0) {
-        // no pending columns, we can return null
-        // TODO(fulu): is this correct @twoeths?  What if all the columns are fine but the block is missing?
-        return null;
-      }
+      // there could be no pending column in case when block is still missing
       eligiblePeers.push(...this.filterPeers(pendingDataColumns, excludedPeers));
     } else {
       // prefulu

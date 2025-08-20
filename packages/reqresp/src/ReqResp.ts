@@ -174,7 +174,7 @@ export class ReqResp {
 
       if (!this.selfRateLimiter.allows(peerIdStr, protocolID)) {
         // we technically don't send request in this case but would be nice just to track this in the same `outgoingErrorReasons` metric
-        this.metrics?.outgoingErrorReasons.inc({reason: RequestErrorCode.REQUEST_RATE_LIMITED});
+        this.metrics?.outgoingErrorReasons.inc({reason: RequestErrorCode.REQUEST_SELF_RATE_LIMITED});
         throw new RequestError({code: RequestErrorCode.REQUEST_SELF_RATE_LIMITED});
         // don't call this.onOutgoingRequestError() to penalize peer
       }
