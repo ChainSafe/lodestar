@@ -2,14 +2,14 @@ import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, ForkSeq, INTERVALS_PER_SLOT} from "@lodestar/params";
 import {ColumnIndex, Root, RootHex, deneb} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
-import {Logger, fromHex, prettyBytes, pruneSetToMax, toRootHex} from "@lodestar/utils";
+import {Logger, fromHex, prettyBytes, prettyPrintIndices, pruneSetToMax, toRootHex} from "@lodestar/utils";
 import {sleep} from "@lodestar/utils";
-import {isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
+import {isBlockInputBlobs, isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
 import {BlockError, BlockErrorCode} from "../chain/errors/index.js";
 import {ChainEvent, ChainEventData, IBeaconChain} from "../chain/index.js";
 import {Metrics} from "../metrics/index.js";
-import {INetwork, NetworkEvent, NetworkEventData} from "../network/index.js";
+import {INetwork, NetworkEvent, NetworkEventData, prettyPrintPeerIdStr} from "../network/index.js";
 import {PeerSyncMeta} from "../network/peers/peersData.js";
 import {byteArrayEquals} from "../util/bytes.js";
 import {CustodyConfig} from "../util/dataColumns.js";
@@ -26,8 +26,10 @@ import {
   PendingBlockType,
   PendingRootHex,
   getBlockInputSyncCacheItemRootHex,
+  getBlockInputSyncCacheItemSlot,
   isPendingBlockInput,
 } from "./types.js";
+import {downloadByRoot} from "./utils/downloadByRoot.js";
 import {
   getAllDescendantBlocks,
   getDescendantBlocks,
@@ -323,66 +325,43 @@ export class BlockInputSync {
     }
   };
 
-  private async downloadBlock(block: PendingBlock): Promise<void> {
-    if (block.status !== PendingBlockStatus.pending) {
+  private async downloadBlock(block: BlockInputSyncCacheItem): Promise<void> {
+    if (block.status !== PendingBlockInputStatus.pending) {
       return;
     }
 
-    const unknownBlockType = block.unknownBlockType;
+    const rootHex = getBlockInputSyncCacheItemRootHex(block);
     const logCtx = {
-      root: block.blockRootHex,
+      blockRoot: prettyBytes(rootHex),
       pendingBlocks: this.pendingBlocks.size,
-      slot: block.blockInput?.block?.message.slot ?? "unknown",
-      unknownBlockType,
+      slot: getBlockInputSyncCacheItemSlot(block),
     };
 
-    this.logger.verbose("Downloading unknown block", logCtx);
+    this.logger.verbose("BlockInputSync.downloadBlock()", logCtx);
 
-    block.status = PendingBlockStatus.fetching;
+    block.status = PendingBlockInputStatus.fetching;
 
-    let res: Result<{blockInput: BlockInput; peerIdStr: string}>;
-    if (block.blockInput === null) {
-      // we only have block root, and nothing else
-      res = await wrapError(this.fetchUnknownBlockRoot(fromHex(block.blockRootHex)));
-    } else {
-      res = await wrapError(this.fetchUnavailableBlockInput(block.blockInput));
-    }
-
-    if (res.err) this.metrics?.syncUnknownBlock.downloadedBlocksError.inc();
-    else this.metrics?.syncUnknownBlock.downloadedBlocksSuccess.inc();
+    const res = await wrapError(this.fetchBlockInput(block));
 
     if (!res.err) {
-      const {blockInput, peerIdStr} = res.result;
-      // fetchUnknownBlockRoot and fetchUnavailableBlockInput should return available data BlockInput, throw error if not
-      if (blockInput.type === BlockInputType.dataPromise) {
-        // if there were any peers who would have had the missing datacolumns, it would have resulted in err
-        throw Error(`Expected BlockInput to be available, got dataPromise for ${block.blockRootHex}`);
-      }
-
-      block = {
-        ...block,
-        status: PendingBlockStatus.downloaded,
-        blockInput,
-        parentBlockRootHex: toRootHex(blockInput.block.message.parentRoot),
-      };
-      this.pendingBlocks.set(block.blockRootHex, block);
-      const blockSlot = blockInput.block.message.slot;
+      this.metrics?.blockInputSync.downloadedBlocksSuccess.inc();
+      const pending = res.result;
+      this.pendingBlocks.set(pending.blockInput.blockRootHex, pending);
+      const blockSlot = pending.blockInput.slot;
       const finalizedSlot = this.chain.forkChoice.getFinalizedBlock().slot;
       const delaySec = Date.now() / 1000 - (this.chain.genesisTime + blockSlot * this.config.SECONDS_PER_SLOT);
-      this.metrics?.syncUnknownBlock.elapsedTimeTillReceived.observe(delaySec);
+      this.metrics?.blockInputSync.elapsedTimeTillReceived.observe(delaySec);
 
-      const parentInForkchoice = this.chain.forkChoice.hasBlock(blockInput.block.message.parentRoot);
+      const parentInForkChoice = this.chain.forkChoice.hasBlock(pending.blockInput.getBlock().message.parentRoot);
       this.logger.verbose("Downloaded unknown block", {
-        root: block.blockRootHex,
+        blockRoot: rootHex,
         pendingBlocks: this.pendingBlocks.size,
-        parentInForkchoice,
-        blockInputType: blockInput.type,
-        unknownBlockType,
+        parentInForkChoice,
       });
 
-      if (parentInForkchoice) {
+      if (parentInForkChoice) {
         // Bingo! Process block. Add to pending blocks anyway for recycle the cache that prevents duplicate processing
-        this.processBlock(block).catch((e) => {
+        this.processBlock(pending).catch((e) => {
           this.logger.debug("Unexpected error - process newly downloaded block", {}, e);
         });
       } else if (blockSlot <= finalizedSlot) {
@@ -391,31 +370,29 @@ export class BlockInputSync {
         // 0 - 1 - ... - n - finalizedSlot
         //                \
         //                parent 1 - parent 2 - ... - unknownParent block
-        const blockRoot = this.config.getForkTypes(blockSlot).BeaconBlock.hashTreeRoot(blockInput.block.message);
         this.logger.debug("Downloaded block is before finalized slot", {
           finalizedSlot,
           blockSlot,
-          parentRoot: toRootHex(blockRoot),
-          unknownBlockType,
+          blockRoot: pending.blockInput.blockRootHex,
         });
-        this.removeAndDownscoreAllDescendants(block);
+        this.removeAndDownScoreAllDescendants(block);
       } else {
-        this.onUnknownParent({blockInput, peer: peerIdStr});
+        this.onUnknownBlockRoot({rootHex: pending.blockInput.parentRootHex, source: BlockInputSource.byRoot});
       }
     } else {
+      this.metrics?.blockInputSync.downloadedBlocksError.inc();
       // block download has error, this allows to retry the download of the block
-      block.status = PendingBlockStatus.pending;
-      // parentSlot > finalizedSlot, continue downloading parent of parent
-      block.downloadAttempts++;
-      const errorData = {root: block.blockRootHex, attempts: block.downloadAttempts, unknownBlockType};
-      if (block.downloadAttempts > MAX_ATTEMPTS_PER_BLOCK) {
-        // Give up on this block and assume it does not exist, penalizing all peers as if it was a bad block
-        this.logger.debug("Ignoring unknown block root after many failed downloads", errorData, res.err);
-        this.removeAndDownscoreAllDescendants(block);
-      } else {
-        // Try again when a new peer connects, its status changes, or a new unknownBlockParent event happens
-        this.logger.debug("Error downloading unknown block root", errorData, res.err);
-      }
+      block.status = PendingBlockInputStatus.pending;
+      // const errorData = {blockRoot: rootHex};
+      // TODO(fulu): removed outer retry loop. Need to look at how to down score for errors here
+      // if (block.downloadAttempts > MAX_ATTEMPTS_PER_BLOCK) {
+      //   // Give up on this block and assume it does not exist, penalizing all peers as if it was a bad block
+      //   this.logger.debug("Ignoring unknown block root after many failed downloads", errorData, res.err);
+      this.removeAndDownScoreAllDescendants(block);
+      // } else {
+      //   // Try again when a new peer connects, its status changes, or a new unknownBlockParent event happens
+      //   this.logger.debug("Error downloading unknown block root", errorData, res.err);
+      // }
     }
   }
 
@@ -424,14 +401,16 @@ export class BlockInputSync {
    * On error, remove and downscore all descendants.
    * This function could run recursively for all descendant blocks
    */
-  private async processBlock(pendingBlock: PendingBlock): Promise<void> {
+  private async processBlock(pendingBlock: PendingBlockInput): Promise<void> {
     // pending block status is `downloaded` right after `downloadBlock`
     // but could be `pending` if added by `onUnknownBlockParent` event and this function is called recursively
-    if (pendingBlock.status !== PendingBlockStatus.downloaded) {
-      if (pendingBlock.status === PendingBlockStatus.pending) {
+    if (pendingBlock.status !== PendingBlockInputStatus.downloaded) {
+      if (pendingBlock.status === PendingBlockInputStatus.pending) {
         const connectedPeers = this.network.getConnectedPeers();
         if (connectedPeers.length === 0) {
-          this.logger.debug("No connected peers, skipping download block", {blockRoot: pendingBlock.blockRootHex});
+          this.logger.debug("No connected peers, skipping download block", {
+            blockRoot: pendingBlock.blockInput.blockRootHex,
+          });
           return;
         }
         // if the download is a success we'll call `processBlock()` for this block
@@ -440,22 +419,19 @@ export class BlockInputSync {
       return;
     }
 
-    pendingBlock.status = PendingBlockStatus.processing;
+    pendingBlock.status = PendingBlockInputStatus.processing;
     // this prevents unbundling attack
     // see https://lighthouse-blog.sigmaprime.io/mev-unbundling-rpc.html
-    const {slot: blockSlot, proposerIndex} = pendingBlock.blockInput.block.message;
+    const {slot: blockSlot, proposerIndex} = pendingBlock.blockInput.getBlock().message;
     if (
       this.chain.clock.secFromSlot(blockSlot) < this.proposerBoostSecWindow &&
       this.chain.seenBlockProposers.isKnown(blockSlot, proposerIndex)
     ) {
       // proposer is known by a gossip block already, wait a bit to make sure this block is not
       // eligible for proposer boost to prevent unbundling attack
-      const blockRoot = this.config
-        .getForkTypes(blockSlot)
-        .BeaconBlock.hashTreeRoot(pendingBlock.blockInput.block.message);
       this.logger.verbose("Avoid proposer boost for this block of known proposer", {
         blockSlot,
-        blockRoot: toRootHex(blockRoot),
+        blockRoot: prettyBytes(pendingBlock.blockInput.blockRootHex),
         proposerIndex,
       });
       await sleep(this.proposerBoostSecWindow * 1000);
@@ -478,21 +454,24 @@ export class BlockInputSync {
       })
     );
 
-    if (res.err) this.metrics?.syncUnknownBlock.processedBlocksError.inc();
-    else this.metrics?.syncUnknownBlock.processedBlocksSuccess.inc();
+    if (res.err) this.metrics?.blockInputSync.processedBlocksError.inc();
+    else this.metrics?.blockInputSync.processedBlocksSuccess.inc();
 
     if (!res.err) {
       // no need to update status to "processed", delete anyway
-      this.pendingBlocks.delete(pendingBlock.blockRootHex);
+      this.pendingBlocks.delete(pendingBlock.blockInput.blockRootHex);
 
       // Send child blocks to the processor
-      for (const descendantBlock of getDescendantBlocks(pendingBlock.blockRootHex, this.pendingBlocks)) {
-        this.processBlock(descendantBlock).catch((e) => {
-          this.logger.debug("Unexpected error - process descendant block", {}, e);
-        });
+      for (const descendantBlock of getDescendantBlocks(pendingBlock.blockInput.blockRootHex, this.pendingBlocks)) {
+        // TODO(fulu): this might cause sync to get stuck... need to resolve
+        if (isPendingBlockInput(descendantBlock)) {
+          this.processBlock(descendantBlock).catch((e) => {
+            this.logger.debug("Unexpected error - process descendant block", {}, e);
+          });
+        }
       }
     } else {
-      const errorData = {root: pendingBlock.blockRootHex, slot: pendingBlock.blockInput.block.message.slot};
+      const errorData = {root: pendingBlock.blockInput.blockRootHex, slot: pendingBlock.blockInput.slot};
       if (res.err instanceof BlockError) {
         switch (res.err.type.code) {
           // This cases are already handled with `{ignoreIfKnown: true}`
@@ -503,7 +482,7 @@ export class BlockInputSync {
           case BlockErrorCode.PRESTATE_MISSING:
             // Should not happen, mark as downloaded to try again latter
             this.logger.debug("Attempted to process block but its parent was still unknown", errorData, res.err);
-            pendingBlock.status = PendingBlockStatus.downloaded;
+            pendingBlock.status = PendingBlockInputStatus.downloaded;
             break;
 
           case BlockErrorCode.EXECUTION_ENGINE_ERROR:
@@ -515,14 +494,14 @@ export class BlockInputSync {
           default:
             // Block is not correct with respect to our chain. Log error loudly
             this.logger.debug("Error processing block from unknown parent sync", errorData, res.err);
-            this.removeAndDownscoreAllDescendants(pendingBlock);
+            this.removeAndDownScoreAllDescendants(pendingBlock);
         }
       }
 
       // Probably a queue error or something unwanted happened, mark as pending to try again latter
       else {
         this.logger.debug("Unknown error processing block from unknown block sync", errorData, res.err);
-        pendingBlock.status = PendingBlockStatus.downloaded;
+        pendingBlock.status = PendingBlockInputStatus.downloaded;
       }
     }
   }
@@ -536,188 +515,80 @@ export class BlockInputSync {
    * prefulu, will attempt a max of `MAX_ATTEMPTS_PER_BLOCK` on different peers, postfulu we may attempt more as defined in `getMaxDownloadAttempts()` function
    * Also verifies the received block root + returns the peer that provided the block for future downscoring.
    */
-  private async fetchUnknownBlockRoot(blockRoot: Root): Promise<{blockInput: BlockInput; peerIdStr: string}> {
-    const blockRootHex = toRootHex(blockRoot);
-
+  private async fetchBlockInput(cacheItem: BlockInputSyncCacheItem): Promise<PendingBlockInput> {
+    const rootHex = getBlockInputSyncCacheItemRootHex(cacheItem);
     const excludedPeers = new Set<PeerIdStr>();
-    let partialDownload: PartialDownload | null = null;
     const defaultPendingColumns =
       this.config.getForkSeq(this.chain.clock.currentSlot) >= ForkSeq.fulu
         ? new Set(this.network.custodyConfig.sampleGroups)
         : null;
-    let lastError: Error | null = null;
+
     let i = 0;
     while (i++ < this.getMaxDownloadAttempts()) {
-      // pendingDataColumns is null prefulu
-      const peer = this.peerBalancer.bestPeerForPendingColumns(
-        partialDownload ? new Set(partialDownload.pendingDataColumns) : defaultPendingColumns,
-        excludedPeers
-      );
+      const pendingColumns =
+        isPendingBlockInput(cacheItem) && isBlockInputColumns(cacheItem.blockInput)
+          ? new Set(cacheItem.blockInput.getMissingSampledColumnMeta().map((meta) => meta.index))
+          : defaultPendingColumns;
+      // pendingDataColumns is null pre-fulu
+      const peer = this.peerBalancer.bestPeerForPendingColumns(pendingColumns, excludedPeers);
       if (peer === null) {
         // no more peer with needed columns to try, throw error
-        throw Error(
-          `Error fetching UnknownBlockRoot after ${i}: cannot find peer with needed columns ${partialDownload?.pendingDataColumns.join(", ")}`
-        );
+        let message = `Error fetching UnknownBlockRoot after ${i}: cannot find peer`;
+        if (pendingColumns) {
+          message += ` with needed columns=${prettyPrintIndices(Array.from(pendingColumns))}`;
+        }
+        throw Error(message);
       }
       const {peerId, client: peerClient} = peer;
       excludedPeers.add(peerId);
 
       try {
-        const {
-          blocks: [blockInput],
-          pendingDataColumns,
-        } = await beaconBlocksMaybeBlobsByRoot(
-          this.config,
-          this.network,
-          peerId,
-          [blockRoot],
-          partialDownload,
-          peerClient,
-          this.metrics,
-          this.logger
-        );
-
-        // Peer does not have the block, try with next peer
-        if (blockInput === undefined) {
-          continue;
-        }
-
-        if (pendingDataColumns !== null) {
-          partialDownload = {blocks: [blockInput], pendingDataColumns};
-          continue;
-        }
-
-        // data is available, verify block root is correct
-        const block = blockInput.block.message;
-        const receivedBlockRoot = this.config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block);
-        if (!byteArrayEquals(receivedBlockRoot, blockRoot)) {
-          throw Error(`Wrong block received by peer, got ${toRootHex(receivedBlockRoot)} expected ${blockRootHex}`);
-        }
-
-        return {blockInput, peerIdStr: peerId};
+        cacheItem = await downloadByRoot({
+          pending: cacheItem,
+          peerIdStr: peer.peerId,
+          config: this.config,
+          network: this.network,
+          cache: this.chain.seenBlockInputCache,
+          executionEngine: this.chain.executionEngine,
+        });
       } catch (e) {
-        this.logger.debug("Error fetching UnknownBlockRoot", {attempt: i, blockRootHex, peer: peerId}, e as Error);
-        lastError = e as Error;
+        this.logger.debug(
+          "Error downloading in BlockInputSync.fetchBlockInput",
+          {attempt: i, rootHex, peer: peerId, peerClient},
+          e as Error
+        );
       } finally {
         this.peerBalancer.onRequestCompleted(peerId);
       }
+
+      if (isPendingBlockInput(cacheItem) && cacheItem.blockInput.hasBlockAndAllData()) {
+        cacheItem.status = PendingBlockInputStatus.downloaded;
+        cacheItem.peerIdStrings.add(peerId);
+        cacheItem.timeSyncedSec = Date.now() / 1000;
+        return cacheItem;
+      }
     }
 
-    if (lastError) {
-      lastError.message = `Error fetching UnknownBlockRoot after ${i} attempts: ${lastError.message}`;
-      throw lastError;
-    }
-
-    throw Error(
-      `Error fetching UnknownBlockRoot after ${i}: cannot download all blobs or data columns for block ${blockRootHex}`
-    );
-  }
-
-  /**
-   * We have partial block input:
-   * - we have block but not have all blobs (deneb) or needed columns (fulu)
-   * - we don't have block and have some blobs (deneb) or some columns (fulu)
-   * Fetches missing block/data columns/block for the blockinput. This function returns either preData or availableData BlockInput.
-   */
-  private async fetchUnavailableBlockInput(
-    unavailableBlockInput: BlockInput | NullBlockInput
-  ): Promise<{blockInput: BlockInput; peerIdStr: string}> {
-    if (unavailableBlockInput.block !== null && unavailableBlockInput.type !== BlockInputType.dataPromise) {
-      return {blockInput: unavailableBlockInput, peerIdStr: ""};
-    }
-
-    let blockRootHex: RootHex;
-    let blobKzgCommitmentsLen: number | undefined;
-    let blockRoot: Uint8Array;
-    const dataMeta: Record<string, unknown> = {};
-    let sampledColumns: ColumnIndex[] = [];
-
-    if (unavailableBlockInput.block === null) {
-      blockRootHex = unavailableBlockInput.blockRootHex;
-      blockRoot = fromHex(blockRootHex);
+    let message = `Error fetching BlockInput with blockRoot=${prettyBytes(rootHex)} after ${i} attempts.`;
+    if (!isPendingBlockInput(cacheItem)) {
+      message += " No block and no data was found";
     } else {
-      const {cachedData, block: unavailableBlock} = unavailableBlockInput;
-      blockRoot = this.config
-        .getForkTypes(unavailableBlock.message.slot)
-        .BeaconBlock.hashTreeRoot(unavailableBlock.message);
-      blockRootHex = toRootHex(blockRoot);
-      blobKzgCommitmentsLen = (unavailableBlock.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length;
-
-      if (cachedData.fork === ForkName.deneb || cachedData.fork === ForkName.electra) {
-        const pendingBlobs = blobKzgCommitmentsLen - cachedData.blobsCache.size;
-        Object.assign(dataMeta, {pendingBlobs});
-      } else if (cachedData.fork === ForkName.fulu) {
-        sampledColumns = this.network.custodyConfig.sampledColumns;
-        const pendingColumns = sampledColumns.length - (cachedData as CachedDataColumns).dataColumnsCache.size;
-        Object.assign(dataMeta, {pendingColumns});
+      if (!cacheItem.blockInput.hasBlock()) {
+        message += " Block was not found.";
+      } else if (isBlockInputBlobs(cacheItem.blockInput)) {
+        const missing = cacheItem.blockInput.getMissingBlobMeta().map((b) => b.index);
+        if (missing.length) {
+          message += ` Missing blob indices=${prettyPrintIndices(missing)}`;
+        }
+      } else if (isBlockInputColumns(cacheItem.blockInput)) {
+        const missing = cacheItem.blockInput.getMissingSampledColumnMeta().map((b) => b.index);
+        if (missing.length) {
+          message += ` Missing column indices=${prettyPrintIndices(missing)}`;
+        }
       }
     }
 
-    let lastError: Error | null = null;
-    let i = 0;
-    const excludedPeers = new Set<PeerIdStr>();
-    while (i++ < this.getMaxDownloadAttempts()) {
-      const bestPeer = this.peerBalancer.bestPeerForBlockInput(unavailableBlockInput, excludedPeers);
-      if (bestPeer === null) {
-        // no more peer to try, throw error
-        throw Error(
-          `Error fetching UnavailableBlockInput after ${i}: cannot find peer with needed columns ${sampledColumns.join(", ")}`
-        );
-      }
-      const {peerId, client: peerClient} = bestPeer;
-      excludedPeers.add(peerId);
-
-      try {
-        const blockInput = await unavailableBeaconBlobsByRoot(
-          this.config,
-          this.network,
-          peerId,
-          peerClient,
-          unavailableBlockInput,
-          {
-            metrics: this.metrics,
-            logger: this.logger,
-            executionEngine: this.chain.executionEngine,
-            emitter: this.chain.emitter,
-            blockInputsRetryTrackerCache: this.blockInputsRetryTrackerCache,
-            engineGetBlobsCache: this.engineGetBlobsCache,
-          }
-        );
-
-        if (unavailableBlockInput.block !== null && blockInput.type === BlockInputType.dataPromise) {
-          // all datacolumns were not downloaded we can continue with other peers
-          // as unavailableBlockInput.block's dataColumnsCache would be updated
-          continue;
-        }
-
-        // data is available, verify block root is correct
-        const block = blockInput.block.message;
-        const receivedBlockRoot = this.config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block);
-
-        if (!byteArrayEquals(receivedBlockRoot, blockRoot)) {
-          throw Error(`Wrong block received by peer, got ${toRootHex(receivedBlockRoot)} expected ${blockRootHex}`);
-        }
-        if (unavailableBlockInput.block === null) {
-          this.logger.debug("Fetched  NullBlockInput", {attempts: i, blockRootHex});
-        } else {
-          this.logger.debug("Fetched UnavailableBlockInput", {attempts: i, ...dataMeta, blobKzgCommitmentsLen});
-        }
-
-        return {blockInput, peerIdStr: peerId};
-      } catch (e) {
-        this.logger.debug("Error fetching UnavailableBlockInput", {attempt: i, blockRootHex, peer: peerId}, e as Error);
-        lastError = e as Error;
-      } finally {
-        this.peerBalancer.onRequestCompleted(peerId);
-      }
-    }
-
-    if (lastError) {
-      lastError.message = `Error fetching UnavailableBlockInput after ${i} attempts: ${lastError.message}`;
-      throw lastError;
-    }
-
-    throw Error(`Error fetching UnavailableBlockInput after ${i}: unknown error`);
+    throw Error(message);
   }
 
   /**
@@ -726,21 +597,26 @@ export class BlockInputSync {
    * Downscore all peers that have referenced any of this bad blocks. May report peers multiple times if they have
    * referenced more than one bad block.
    */
-  private removeAndDownscoreAllDescendants(block: PendingBlock): void {
+  private removeAndDownScoreAllDescendants(block: BlockInputSyncCacheItem): void {
     // Get all blocks that are a descendant of this one
     const badPendingBlocks = this.removeAllDescendants(block);
     // just console log and do not penalize on pending/bad blocks for debugging
     // console.log("removeAndDownscoreAllDescendants", {block});
 
     for (const block of badPendingBlocks) {
+      //
+      // TODO(fulu): why is this commented out here?
+      //
       //   this.knownBadBlocks.add(block.blockRootHex);
       //   for (const peerIdStr of block.peerIdStrs) {
       //     // TODO: Refactor peerRpcScores to work with peerIdStr only
       //     this.network.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadBlockByRoot");
       //   }
       this.logger.debug("ignored Banning unknown block", {
-        root: block.blockRootHex,
-        peerIdStrs: Array.from(block.peerIdStrs).join(","),
+        root: getBlockInputSyncCacheItemRootHex(block),
+        peerIdStrings: Array.from(block.peerIdStrings)
+          .map((id) => prettyPrintPeerIdStr(id))
+          .join(","),
       });
     }
 
@@ -748,16 +624,18 @@ export class BlockInputSync {
     pruneSetToMax(this.knownBadBlocks, MAX_KNOWN_BAD_BLOCKS);
   }
 
-  private removeAllDescendants(block: PendingBlock): PendingBlock[] {
+  private removeAllDescendants(block: BlockInputSyncCacheItem): BlockInputSyncCacheItem[] {
+    const rootHex = getBlockInputSyncCacheItemRootHex(block);
     // Get all blocks that are a descendant of this one
-    const badPendingBlocks = [block, ...getAllDescendantBlocks(block.blockRootHex, this.pendingBlocks)];
+    const badPendingBlocks = [block, ...getAllDescendantBlocks(rootHex, this.pendingBlocks)];
 
-    this.metrics?.syncUnknownBlock.removedBlocks.inc(badPendingBlocks.length);
+    this.metrics?.blockInputSync.removedBlocks.inc(badPendingBlocks.length);
 
     for (const block of badPendingBlocks) {
-      this.pendingBlocks.delete(block.blockRootHex);
-      this.logger.debug("Removing unknown parent block", {
-        root: block.blockRootHex,
+      const rootHex = getBlockInputSyncCacheItemRootHex(block);
+      this.pendingBlocks.delete(rootHex);
+      this.logger.debug("Removing bad/unknown/incomplete BlockInputSyncCacheItem", {
+        blockRoot: rootHex,
       });
     }
 

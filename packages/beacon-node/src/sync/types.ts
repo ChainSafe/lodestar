@@ -1,5 +1,5 @@
 import {IBlockInput} from "@lodestar/beacon-node/src/chain/blocks/blockInput/index.js";
-import {RootHex} from "@lodestar/types";
+import {RootHex, Slot} from "@lodestar/types";
 
 export enum PendingBlockType {
   /**
@@ -50,4 +50,8 @@ export function isPendingBlockInput(pending: BlockInputSyncCacheItem): pending i
 
 export function getBlockInputSyncCacheItemRootHex(block: BlockInputSyncCacheItem): RootHex {
   return isPendingBlockInput(block) ? block.blockInput.blockRootHex : block.rootHex;
+}
+
+export function getBlockInputSyncCacheItemSlot(block: BlockInputSyncCacheItem): Slot | string {
+  return isPendingBlockInput(block) ? block.blockInput.slot : "unknown";
 }

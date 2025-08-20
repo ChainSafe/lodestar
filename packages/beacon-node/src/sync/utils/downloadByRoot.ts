@@ -25,7 +25,7 @@ export type DownloadBlockInputByRootProps = {
   peerIdStr: PeerIdStr;
 };
 
-export async function downloadBlockInputByRoot({
+export async function downloadByRoot({
   config,
   network,
   cache,
