@@ -135,7 +135,7 @@ export async function validateGossipBlobSidecar(
   }
 
   // verify if the blob inclusion proof is correct
-  if (!validateInclusionProof(blobSidecar)) {
+  if (!validateBlobSidecarInclusionProof(blobSidecar)) {
     throw new BlobSidecarGossipError(GossipAction.REJECT, {
       code: BlobSidecarErrorCode.INCLUSION_PROOF_INVALID,
       slot: blobSidecar.signedBlockHeader.message.slot,
@@ -164,7 +164,7 @@ export async function validateGossipBlobSidecar(
 
   // blob, proof and commitment as a valid BLS G1 point gets verified in batch validation
   try {
-    await validateBlobsAndProofs([blobSidecar.kzgCommitment], [blobSidecar.blob], [blobSidecar.kzgProof]);
+    await validateBlobsAndBlobProofs([blobSidecar.kzgCommitment], [blobSidecar.blob], [blobSidecar.kzgProof]);
   } catch (_e) {
     throw new BlobSidecarGossipError(GossipAction.REJECT, {
       code: BlobSidecarErrorCode.INVALID_KZG_PROOF,
@@ -214,12 +214,12 @@ export async function validateBlobSidecars(
     }
 
     if (!opts.skipProofsCheck) {
-      await validateBlobsAndProofs(expectedKzgCommitments, blobs, proofs);
+      await validateBlobsAndBlobProofs(expectedKzgCommitments, blobs, proofs);
     }
   }
 }
 
-async function validateBlobsAndProofs(
+export async function validateBlobsAndBlobProofs(
   expectedKzgCommitments: deneb.BlobKzgCommitments,
   blobs: deneb.Blobs,
   proofs: deneb.KZGProofs
@@ -237,7 +237,7 @@ async function validateBlobsAndProofs(
   }
 }
 
-function validateInclusionProof(blobSidecar: deneb.BlobSidecar): boolean {
+export function validateBlobSidecarInclusionProof(blobSidecar: deneb.BlobSidecar): boolean {
   return verifyMerkleBranch(
     ssz.deneb.KZGCommitment.hashTreeRoot(blobSidecar.kzgCommitment),
     blobSidecar.kzgCommitmentInclusionProof,
