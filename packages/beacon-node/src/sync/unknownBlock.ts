@@ -506,14 +506,16 @@ export class BlockInputSync {
       const {peerId, client: peerClient} = peer;
       excludedPeers.add(peerId);
 
+      cacheItem.peerIdStrings.add(peerId);
+
       try {
         cacheItem = await downloadByRoot({
-          pending: cacheItem,
-          peerIdStr: peer.peerId,
           config: this.config,
           network: this.network,
-          cache: this.chain.seenBlockInputCache,
+          seenCache: this.chain.seenGossipBlockInput,
           executionEngine: this.chain.executionEngine,
+          peerIdStr: peerId,
+          cacheItem,
         });
       } catch (e) {
         this.logger.debug(
@@ -525,10 +527,9 @@ export class BlockInputSync {
         this.peerBalancer.onRequestCompleted(peerId);
       }
 
-      if (isPendingBlockInput(cacheItem) && cacheItem.blockInput.hasBlockAndAllData()) {
-        cacheItem.status = PendingBlockInputStatus.downloaded;
-        cacheItem.peerIdStrings.add(peerId);
-        cacheItem.timeSyncedSec = Date.now() / 1000;
+      this.pendingBlocks.set(getBlockInputSyncCacheItemRootHex(cacheItem), cacheItem);
+
+      if (cacheItem.status === PendingBlockInputStatus.downloaded) {
         return cacheItem;
       }
     }
