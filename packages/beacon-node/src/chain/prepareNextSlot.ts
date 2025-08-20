@@ -290,6 +290,6 @@ export class PrepareNextSlotScheduler {
     const sleepTime = Math.min(secToNextSlot, secToCutOff) * 1000;
     await sleep(sleepTime, this.signal);
 
-    await prepareExecutionPayloadInclusionList(this.chain, this.logger, payloadId, clockSlot, this.metrics);
+    await prepareExecutionPayloadInclusionList(this.chain, this.logger, payloadId, clockSlot);
   }
 }

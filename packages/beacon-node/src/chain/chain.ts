@@ -1138,14 +1138,6 @@ export class BeaconChain implements IBeaconChain {
     metrics.forkChoice.balancesLength.set(forkChoiceMetrics.balancesLength);
     metrics.forkChoice.nodes.set(forkChoiceMetrics.nodes);
     metrics.forkChoice.indices.set(forkChoiceMetrics.indices);
-    metrics.forkChoice.inclusionListsEquivocating.set(
-      {source: InclusionListSource.api},
-      forkChoiceMetrics.inclusionListsEquivocating.getOrDefault(InclusionListSource.api)
-    );
-    metrics.forkChoice.inclusionListsEquivocating.set(
-      {source: InclusionListSource.gossip},
-      forkChoiceMetrics.inclusionListsEquivocating.getOrDefault(InclusionListSource.gossip)
-    );
 
     const fork = this.config.getForkName(this.clock.currentSlot);
     if (isForkPostElectra(fork)) {

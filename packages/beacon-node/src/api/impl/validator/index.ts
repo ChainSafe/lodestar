@@ -1011,10 +1011,10 @@ export function getValidatorApi(
       const blockHash = toHex(executionPayload.blockHash);
       logger.debug("produce inclusion list", {blockHash});
 
-      metrics?.eip7805.getInclusionListV1Requests.inc();
       const timer = metrics?.eip7805.getInclusionListV1RequestsDuration.startTimer();
       const ilTransactions = await chain.executionEngine.getInclusionList(blockHash);
       timer?.();
+      metrics?.eip7805.getInclusionListV1Requests.inc();
 
       return {
         data: ilTransactions,

@@ -118,20 +118,21 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       }),
       getInclusionListV1Requests: register.counter({
         name: "beacon_engine_getInclusionListV1_requests_total",
-        help: "Total number of getInclusionListV1 requests sent",
+        help: "Total number of engine_getInclusionListV1 requests sent",
       }),
       getInclusionListV1RequestsDuration: register.histogram({
         name: "beacon_engine_getInclusionListV1_requests_duration_seconds",
-        help: "Duration of getInclusionListV1 requests",
+        help: "Duration of engine_getInclusionListV1 requests",
         buckets: [0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.5],
       }),
-      updatePayloadWithInclusionListV1Requests: register.counter({
-        name: "beacon_engine_updatePayloadWithInclusionListV1_requests_total",
-        help: "Total number of updatePayloadWithInclusionListV1 requests sent",
+      // TODO: Katya - add forkchoiceUpdatedV4 metrics after the latest FOCIL spec updates
+      forkchoiceUpdatedV4Requests: register.counter({
+        name: "beacon_engine_forkchoiceUpdatedV4_requests_total",
+        help: "Total number of engine_forkchoiceUpdatedV4 requests sent to the execution client",
       }),
-      updatePayloadWithInclusionListV1RequestsDuration: register.histogram({
-        name: "beacon_engine_updatePayloadWithInclusionListV1_requests_duration_seconds",
-        help: "Duration of updatePayloadWithInclusionListV1 requests",
+      forkchoiceUpdatedV4RequestsDuration: register.histogram({
+        name: "beacon_engine_forkchoiceUpdatedV4_requests_duration_seconds",
+        help: "Duration of engine_forkchoiceUpdatedV4 requests",
         buckets: [0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.5],
       }),
       inclusionListTransactionsSentToPayload: register.counter({
@@ -202,7 +203,8 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         help: "Reason why the current head is not re-orged out",
         labelNames: ["reason"],
       }),
-      inclusionListsEquivocating: register.gauge<{source: InclusionListSource}>({
+      // TODO: Katya - add metric after refactoring fork-choice metrics
+      inclusionListsEquivocating: register.counter<{source: InclusionListSource}>({
         name: "beacon_inclusion_lists_equivocating_total",
         help: "Total number of equivocating inclusion lists",
         labelNames: ["source"],

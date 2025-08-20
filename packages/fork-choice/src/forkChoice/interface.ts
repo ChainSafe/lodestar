@@ -76,7 +76,6 @@ export type ForkChoiceMetrics = {
   balancesLength: number;
   nodes: number;
   indices: number;
-  inclusionListsEquivocating: MapDef<InclusionListSource, number>;
 };
 
 export interface IForkChoice {

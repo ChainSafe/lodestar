@@ -141,10 +141,6 @@ export class ForkChoice implements IForkChoice {
   private justifiedProposerBoostScore: number | null = null;
   /** The current effective balances */
   private balances: EffectiveBalanceIncrements;
-  /** Number of equivocating inclusion lists */
-  private inclusionListsEquivocating: MapDef<InclusionListSource, number> = new MapDef<InclusionListSource, number>(
-    () => 0
-  );
   /**
    * Instantiates a Fork Choice from some existing components
    *
@@ -170,7 +166,6 @@ export class ForkChoice implements IForkChoice {
       balancesLength: this.balances.length,
       nodes: this.protoArray.nodes.length,
       indices: this.protoArray.indices.size,
-      inclusionListsEquivocating: this.inclusionListsEquivocating,
     };
   }
 
@@ -838,7 +833,6 @@ export class ForkChoice implements IForkChoice {
         const equivocators = this.fcStore.inclusionListEquivocators.get(storeKey) ?? new Set<ValidatorIndex>();
         equivocators.add(validatorIndex);
         this.fcStore.inclusionListEquivocators.set(storeKey, equivocators);
-        this.inclusionListsEquivocating.set(source, this.inclusionListsEquivocating.getOrDefault(source) + 1);
       }
     } else if (isBeforeFreezeDeadline) {
       const inclusionLists = this.fcStore.inclusionLists.get(storeKey) ?? [];
