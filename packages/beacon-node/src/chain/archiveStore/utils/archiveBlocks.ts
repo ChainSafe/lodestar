@@ -299,55 +299,37 @@ async function migrateBlobSidecarsFromHotToColdDb(
   return migratedWrappedBlobSidecars;
 }
 
-// TODO: This function can be simplified further by reducing layers of promises in a loop
 async function migrateDataColumnSidecarsFromHotToColdDb(
   config: ChainForkConfig,
   db: IBeaconDb,
   blocks: BlockRootSlot[],
   currentEpoch: Epoch
 ): Promise<number> {
-  let migratedWrappedDataColumns = 0;
+  // Only Fulu and newer blocks and within the retention window
+  const withinDataColumnWindow = (slot: Slot) =>
+    config.getForkSeq(slot) >= ForkSeq.fulu &&
+    computeEpochAtSlot(slot) < currentEpoch - config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS;
+  let migratedDataColumnsCount = 0;
+
   for (let i = 0; i < blocks.length; i += BLOB_SIDECAR_BATCH_SIZE) {
     const toIdx = Math.min(i + BLOB_SIDECAR_BATCH_SIZE, blocks.length);
     const canonicalBlocks = blocks.slice(i, toIdx);
-
-    // processCanonicalBlocks
-    if (canonicalBlocks.length === 0) break;
+    const migratableBlocks = canonicalBlocks.filter((b) => withinDataColumnWindow(b.slot));
     const promises = [];
 
-    // load Buffer instead of ssz deserialized to improve performance
-    for (const block of canonicalBlocks) {
-      const blockSlot = block.slot;
-      const blockEpoch = computeEpochAtSlot(blockSlot);
-
-      if (
-        config.getForkSeq(blockSlot) < ForkSeq.fulu ||
-        // if block is out of ${config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS}, skip this step
-        blockEpoch < currentEpoch - config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS
-      ) {
-        continue;
-      }
-
-      const dataColumnSidecarBytes = await db.dataColumnSidecar.valuesBinary(block.root);
-      if (!dataColumnSidecarBytes) {
+    for (const block of migratableBlocks) {
+      const dataColumnSidecars = await db.dataColumnSidecar.valuesBinary(block.root);
+      if (!dataColumnSidecars || dataColumnSidecars.length === 0) {
         throw Error(`No dataColumnSidecars found for slot ${block.slot} root ${toHex(block.root)}`);
       }
-      promises.push(
-        db.dataColumnSidecarArchive.putManyBinary(
-          block.slot,
-          dataColumnSidecarBytes.map((p) => ({key: p.id, value: p.value}))
-        )
-      );
-      migratedWrappedDataColumns += dataColumnSidecarBytes.length;
+      promises.push(db.dataColumnSidecarArchive.putManyBinary(block.slot, dataColumnSidecars));
+      migratedDataColumnsCount += dataColumnSidecars.length;
     }
-
     promises.push(db.dataColumnSidecar.deleteMany(canonicalBlocks.map((block) => block.root)));
 
-    // put to blockArchive db and delete block db
     await Promise.all(promises);
   }
-
-  return migratedWrappedDataColumns;
+  return migratedDataColumnsCount;
 }
 
 /**

@@ -1,11 +1,15 @@
 import {Type} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {BUCKET_LENGTH} from "./const.js";
-import {KeyValue} from "./controller/index.js";
 import {Db, DbReqOpts, FilterOptions} from "./controller/interface.js";
 import {encodeKey} from "./util.js";
 
 type Id = Uint8Array | string | number | bigint;
+
+export interface IdValue<I, V> {
+  id: I;
+  value: V;
+}
 
 /**
  * Repository is a high level kv storage
@@ -100,7 +104,7 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
   }
 
   async putMany(prefix: P, items: T[]): Promise<void> {
-    const batch: KeyValue<Uint8Array, Uint8Array>[] = [];
+    const batch = [];
     for (const item of items) {
       const id = this.getId(item);
       const key = this.wrapKey(this.encodeKeyRaw(prefix, id));
@@ -114,10 +118,10 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
     await this.db.put(key, bytes, this.dbReqOpts);
   }
 
-  async putManyBinary(prefix: P, items: KeyValue<I, Uint8Array>[]): Promise<void> {
-    const batch: KeyValue<Uint8Array, Uint8Array>[] = [];
-    for (const {key, value} of items) {
-      batch.push({key: this.wrapKey(this.encodeKeyRaw(prefix, key)), value: value});
+  async putManyBinary(prefix: P, items: IdValue<I, Uint8Array>[]): Promise<void> {
+    const batch = [];
+    for (const {id, value} of items) {
+      batch.push({key: this.wrapKey(this.encodeKeyRaw(prefix, id)), value: value});
     }
     await this.db.batchPut(batch, this.dbReqOpts);
   }
