@@ -10,6 +10,7 @@ import {ChainEvent, ChainEventData, IBeaconChain} from "../chain/index.js";
 import {Metrics} from "../metrics/index.js";
 import {INetwork, NetworkEvent, NetworkEventData, prettyPrintPeerIdStr} from "../network/index.js";
 import {PeerSyncMeta} from "../network/peers/peersData.js";
+import {computeColumnsForCustodyGroup} from "../util/dataColumns.js";
 import {PeerIdStr} from "../util/peerId.js";
 import {shuffle} from "../util/shuffle.js";
 import {sortBy} from "../util/sortBy.js";
@@ -484,7 +485,7 @@ export class BlockInputSync {
     const excludedPeers = new Set<PeerIdStr>();
     const defaultPendingColumns =
       this.config.getForkSeq(this.chain.clock.currentSlot) >= ForkSeq.fulu
-        ? new Set(this.network.custodyConfig.sampleGroups)
+        ? new Set(this.network.custodyConfig.sampledColumns)
         : null;
 
     let i = 0;
