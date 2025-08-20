@@ -2,8 +2,7 @@ import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {
   EPOCHS_PER_HISTORICAL_VECTOR,
-  SYNC_COMMITTEE_SIZE,
-  SYNC_COMMITTEE_SUBNET_COUNT,
+  SYNC_COMMITTEE_SUBNET_SIZE,
   isForkPostElectra,
   isForkPostFulu,
 } from "@lodestar/params";
@@ -312,7 +311,7 @@ export function getBeaconStateApi({
 
       const syncCommitteeCache = stateCached.epochCtx.getIndexedSyncCommitteeAtEpoch(epoch ?? stateEpoch);
       const validatorIndices = new Array<ValidatorIndex>(...syncCommitteeCache.validatorIndices);
-      const subcommitteeSize = SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT;
+      const subcommitteeSize = SYNC_COMMITTEE_SUBNET_SIZE;
 
       // Subcommittee assignments of the current sync committee
       const validatorAggregates: ValidatorIndex[][] = [];
