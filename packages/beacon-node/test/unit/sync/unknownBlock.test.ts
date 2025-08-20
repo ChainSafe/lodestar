@@ -360,7 +360,7 @@ describe("UnknownBlockPeerBalancer", async () => {
 
   let peerBalancer: UnknownBlockPeerBalancer;
   beforeEach(() => {
-    peerBalancer = new UnknownBlockPeerBalancer(custodyConfig);
+    peerBalancer = new UnknownBlockPeerBalancer();
     for (const [peerId, peerMeta] of peersMeta.entries()) {
       peerBalancer.onPeerConnected(peerId, peerMeta);
     }

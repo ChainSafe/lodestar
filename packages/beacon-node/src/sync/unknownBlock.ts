@@ -10,7 +10,6 @@ import {ChainEvent, ChainEventData, IBeaconChain} from "../chain/index.js";
 import {Metrics} from "../metrics/index.js";
 import {INetwork, NetworkEvent, NetworkEventData, prettyPrintPeerIdStr} from "../network/index.js";
 import {PeerSyncMeta} from "../network/peers/peersData.js";
-import {CustodyConfig} from "../util/dataColumns.js";
 import {PeerIdStr} from "../util/peerId.js";
 import {shuffle} from "../util/shuffle.js";
 import {sortBy} from "../util/sortBy.js";
@@ -33,24 +32,6 @@ import {getAllDescendantBlocks, getDescendantBlocks, getUnknownAndAncestorBlocks
 const MAX_ATTEMPTS_PER_BLOCK = 5;
 const MAX_KNOWN_BAD_BLOCKS = 500;
 const MAX_PENDING_BLOCKS = 100;
-
-function getLogMeta(
-  block: BlockInputSyncCacheItem,
-  pendingBlocks?: Map<RootHex, BlockInputSyncCacheItem>
-): Record<string, string | number> {
-  const pendingBlocksLog: Record<string, number> = pendingBlocks ? {pendingBlocks: pendingBlocks.size} : {};
-  return isPendingBlockInput(block)
-    ? {
-        type: "pendingBlockInput",
-        ...pendingBlocksLog,
-        ...block.blockInput.getLogMeta(),
-      }
-    : {
-        type: "pendingRootHex",
-        ...pendingBlocksLog,
-        rootHex: prettyBytes(block.rootHex),
-      };
-}
 
 /**
  * BlockInputSync is a class that handles ReqResp to find blocks and data related to a specific blockRoot.  The
@@ -105,7 +86,7 @@ export class BlockInputSync {
   ) {
     this.maxPendingBlocks = opts?.maxPendingBlocks ?? MAX_PENDING_BLOCKS;
     this.proposerBoostSecWindow = this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT;
-    this.peerBalancer = new UnknownBlockPeerBalancer(this.network.custodyConfig);
+    this.peerBalancer = new UnknownBlockPeerBalancer();
 
     if (metrics) {
       metrics.blockInputSync.pendingBlocks.addCollect(() =>
@@ -645,12 +626,10 @@ export class BlockInputSync {
 export class UnknownBlockPeerBalancer {
   readonly peersMeta: Map<PeerIdStr, PeerSyncMeta>;
   readonly activeRequests: Map<PeerIdStr, number>;
-  private readonly custodyConfig: CustodyConfig;
 
-  constructor(custodyConfig: CustodyConfig) {
+  constructor() {
     this.peersMeta = new Map();
     this.activeRequests = new Map();
-    this.custodyConfig = custodyConfig;
   }
 
   /** Trigger on each peer re-status */
