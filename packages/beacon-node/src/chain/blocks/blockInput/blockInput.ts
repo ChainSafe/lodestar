@@ -206,7 +206,7 @@ export class BlockInputPreData extends AbstractBlockInput<ForkPreDeneb, null> {
   static createFromBlock(props: AddBlock & CreateBlockInputMeta): BlockInputPreData {
     const init: BlockInputInit = {
       daOutOfRange: props.daOutOfRange,
-      timeCreated: props.source.seenTimestampSec,
+      timeCreated: props.seenTimestampSec,
       forkName: props.forkName,
       slot: props.block.message.slot,
       blockRootHex: props.blockRootHex,
@@ -216,8 +216,12 @@ export class BlockInputPreData extends AbstractBlockInput<ForkPreDeneb, null> {
       hasBlock: true,
       hasAllData: true,
       block: props.block,
-      source: props.source,
-      timeCompleteSec: props.source.seenTimestampSec,
+      source: {
+        source: props.source,
+        seenTimestampSec: props.seenTimestampSec,
+        peerIdStr: props.peerIdStr,
+      },
+      timeCompleteSec: props.seenTimestampSec,
     };
     return new BlockInputPreData(init, state);
   }
@@ -285,12 +289,16 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
       hasAllData,
       versionedHashes: props.block.message.body.blobKzgCommitments.map(kzgCommitmentToVersionedHash),
       block: props.block,
-      source: props.source,
-      timeCompleteSec: hasAllData ? props.source.seenTimestampSec : undefined,
+      source: {
+        source: props.source,
+        seenTimestampSec: props.seenTimestampSec,
+        peerIdStr: props.peerIdStr,
+      },
+      timeCompleteSec: hasAllData ? props.seenTimestampSec : undefined,
     } as BlockInputBlobsState;
     const init: BlockInputInit = {
       daOutOfRange: props.daOutOfRange,
-      timeCreated: props.source.seenTimestampSec,
+      timeCreated: props.seenTimestampSec,
       forkName: props.forkName,
       slot: props.block.message.slot,
       blockRootHex: props.blockRootHex,
@@ -337,7 +345,10 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
     };
   }
 
-  addBlock({blockRootHex, block, source}: AddBlock<ForkBlobsDA>, opts = {throwOnDuplicateAdd: true}): void {
+  addBlock(
+    {blockRootHex, block, source, seenTimestampSec, peerIdStr}: AddBlock<ForkBlobsDA>,
+    opts = {throwOnDuplicateAdd: true}
+  ): void {
     // this check suffices for checking slot, parentRoot, and forkName
     if (blockRootHex !== this.blockRootHex) {
       throw new BlockInputError(
@@ -345,8 +356,8 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
           code: BlockInputErrorCode.MISMATCHED_ROOT_HEX,
           blockInputRoot: this.blockRootHex,
           mismatchedRoot: blockRootHex,
-          source: source.source,
-          peerId: `${source.peerIdStr}`,
+          source,
+          peerId: `${peerIdStr}`,
         },
         "addBlock blockRootHex does not match BlockInput.blockRootHex"
       );
@@ -382,8 +393,12 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
       hasAllData,
       block,
       versionedHashes: block.message.body.blobKzgCommitments.map(kzgCommitmentToVersionedHash),
-      source,
-      timeCompleteSec: hasAllData ? source.seenTimestampSec : undefined,
+      source: {
+        source,
+        seenTimestampSec,
+        peerIdStr,
+      },
+      timeCompleteSec: hasAllData ? seenTimestampSec : undefined,
     } as BlockInputBlobsState;
     this.blockPromise.resolve(block);
     if (hasAllData) {
@@ -610,13 +625,17 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
       hasAllData,
       versionedHashes: props.block.message.body.blobKzgCommitments.map(kzgCommitmentToVersionedHash),
       block: props.block,
-      source: props.source,
-      timeCreated: props.source.seenTimestampSec,
-      timeCompleteSec: hasAllData ? props.source.seenTimestampSec : undefined,
+      source: {
+        source: props.source,
+        seenTimestampSec: props.seenTimestampSec,
+        peerIdStr: props.peerIdStr,
+      },
+      timeCreated: props.seenTimestampSec,
+      timeCompleteSec: hasAllData ? props.seenTimestampSec : undefined,
     } as BlockInputColumnsState;
     const init: BlockInputInit = {
       daOutOfRange: props.daOutOfRange,
-      timeCreated: props.source.seenTimestampSec,
+      timeCreated: props.seenTimestampSec,
       forkName: props.forkName,
       blockRootHex: props.blockRootHex,
       parentRootHex: toRootHex(props.block.message.parentRoot),
@@ -675,8 +694,8 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
           code: BlockInputErrorCode.MISMATCHED_ROOT_HEX,
           blockInputRoot: this.blockRootHex,
           mismatchedRoot: props.blockRootHex,
-          source: props.source.source,
-          peerId: `${props.source.peerIdStr}`,
+          source: props.source,
+          peerId: `${props.peerIdStr}`,
         },
         "addBlock blockRootHex does not match BlockInput.blockRootHex"
       );
@@ -710,8 +729,12 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
       hasBlock: true,
       hasAllData,
       block: props.block,
-      source: props.source,
-      timeCompleteSec: hasAllData ? props.source.seenTimestampSec : undefined,
+      source: {
+        source: props.source,
+        seenTimestampSec: props.seenTimestampSec,
+        peerIdStr: props.peerIdStr,
+      },
+      timeCompleteSec: hasAllData ? props.seenTimestampSec : undefined,
     } as BlockInputColumnsState;
 
     this.blockPromise.resolve(props.block);

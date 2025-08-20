@@ -131,6 +131,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     // tracked in https://github.com/ChainSafe/lodestar/issues/7957
     const blockInput = chain.seenGossipBlockInput.getByBlock({
       block: signedBlock,
+      blockRootHex,
       source: BlockInputSource.gossip,
       seenTimestampSec,
       peerIdStr,
@@ -208,6 +209,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     try {
       await validateGossipBlobSidecar(fork, chain, blobSidecar, subnet);
       const blockInput = chain.seenGossipBlockInput.getByBlob({
+        blockRootHex,
         blobSidecar,
         source: BlockInputSource.gossip,
         seenTimestampSec,
@@ -282,6 +284,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     try {
       await validateGossipDataColumnSidecar(chain, dataColumnSidecar, gossipSubnet, metrics);
       const blockInput = chain.seenGossipBlockInput.getByColumn({
+        blockRootHex,
         columnSidecar: dataColumnSidecar,
         source: BlockInputSource.gossip,
         seenTimestampSec,

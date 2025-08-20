@@ -85,6 +85,7 @@ export function getBeaconBlockApi({
       block: signedBlock,
       source: BlockInputSource.api,
       seenTimestampSec,
+      blockRootHex: blockRoot,
     });
     let blobSidecars: deneb.BlobSidecars, dataColumnSidecars: fulu.DataColumnSidecars;
 

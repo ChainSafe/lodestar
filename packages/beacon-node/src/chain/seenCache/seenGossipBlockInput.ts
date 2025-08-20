@@ -12,6 +12,7 @@ import {
   BlockInputBlobs,
   BlockInputColumns,
   BlockInputPreData,
+  BlockWithSource,
   DAType,
   ForkBlobsDA,
   IBlockInput,
@@ -143,10 +144,7 @@ export class SeenBlockInput {
     this.pruneToMaxSize();
   };
 
-  getByBlock({block, source, seenTimestampSec, peerIdStr}: SourceMeta & {block: SignedBeaconBlock}): BlockInput {
-    const blockRoot = this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
-    const blockRootHex = toRootHex(blockRoot);
-
+  getByBlock({blockRootHex, block, source, seenTimestampSec, peerIdStr}: BlockWithSource): BlockInput {
     // TODO(peerDAS): Why is it necessary to static cast this here. All conditional paths result in a valid value so should be defined correctly below
     let blockInput = this.blockInputs.get(blockRootHex) as IBlockInput;
     if (!blockInput) {
@@ -157,11 +155,9 @@ export class SeenBlockInput {
           blockRootHex,
           daOutOfRange,
           forkName,
-          source: {
-            source,
-            seenTimestampSec,
-            peerIdStr,
-          },
+          source,
+          seenTimestampSec,
+          peerIdStr,
         });
       } else if (isForkPostFulu(forkName)) {
         blockInput = BlockInputColumns.createFromBlock({
@@ -171,11 +167,9 @@ export class SeenBlockInput {
           forkName,
           custodyColumns: this.custodyConfig.custodyColumns,
           sampledColumns: this.custodyConfig.sampledColumns,
-          source: {
-            source,
-            seenTimestampSec,
-            peerIdStr,
-          },
+          source,
+          seenTimestampSec,
+          peerIdStr,
         });
       } else {
         blockInput = BlockInputBlobs.createFromBlock({
@@ -183,18 +177,16 @@ export class SeenBlockInput {
           blockRootHex,
           daOutOfRange,
           forkName,
-          source: {
-            source,
-            seenTimestampSec,
-            peerIdStr,
-          },
+          source,
+          seenTimestampSec,
+          peerIdStr,
         });
       }
       this.blockInputs.set(blockInput.blockRootHex, blockInput);
     }
 
     if (!blockInput.hasBlock()) {
-      blockInput.addBlock({block, blockRootHex, source: {source, seenTimestampSec, peerIdStr}});
+      blockInput.addBlock({block, blockRootHex, source, seenTimestampSec, peerIdStr});
     } else {
       this.logger?.debug("Attempt to cache block but is already cached on BlockInput", blockInput.getLogMeta());
       this.metrics?.seenCache.blockInput.duplicateBlockCount.inc({source});
@@ -204,14 +196,15 @@ export class SeenBlockInput {
   }
 
   getByBlob(
-    {blobSidecar, source, seenTimestampSec, peerIdStr}: SourceMeta & {blobSidecar: deneb.BlobSidecar},
+    {
+      blockRootHex,
+      blobSidecar,
+      source,
+      seenTimestampSec,
+      peerIdStr,
+    }: SourceMeta & {blockRootHex: RootHex; blobSidecar: deneb.BlobSidecar},
     opts: GetByBlobOptions = {}
   ): BlockInputBlobs {
-    const blockRoot = this.config
-      .getForkTypes(blobSidecar.signedBlockHeader.message.slot)
-      .BeaconBlockHeader.hashTreeRoot(blobSidecar.signedBlockHeader.message);
-    const blockRootHex = toRootHex(blockRoot);
-
     // TODO(peerDAS): Why is it necessary to static cast this here. All conditional paths result in a valid value so should be defined correctly below
     let blockInput = this.blockInputs.get(blockRootHex) as IBlockInput;
     let created = false;
@@ -263,14 +256,15 @@ export class SeenBlockInput {
   }
 
   getByColumn(
-    {columnSidecar, seenTimestampSec, source, peerIdStr}: SourceMeta & {columnSidecar: fulu.DataColumnSidecar},
+    {
+      blockRootHex,
+      columnSidecar,
+      seenTimestampSec,
+      source,
+      peerIdStr,
+    }: SourceMeta & {blockRootHex: RootHex; columnSidecar: fulu.DataColumnSidecar},
     opts: GetByBlobOptions = {}
   ): BlockInputColumns {
-    const blockRoot = this.config
-      .getForkTypes(columnSidecar.signedBlockHeader.message.slot)
-      .BeaconBlockHeader.hashTreeRoot(columnSidecar.signedBlockHeader.message);
-    const blockRootHex = toRootHex(blockRoot);
-
     let blockInput = this.blockInputs.get(blockRootHex);
     let created = false;
     if (!blockInput) {

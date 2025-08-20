@@ -66,19 +66,17 @@ export function cacheByRangeResponses({
 
   for (const block of responses.blocks ?? []) {
     const existing = updatedBatchBlocks.find((b) => b.slot === block.message.slot);
+    const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
+    const blockRootHex = toRootHex(blockRoot);
     if (existing) {
-      const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
-      const blockRootHex = toRootHex(blockRoot);
       // will throw if root hex does not match (meaning we are following the wrong chain)
       existing.addBlock(
         {
           block,
           blockRootHex,
-          source: {
-            source,
-            peerIdStr,
-            seenTimestampSec,
-          },
+          source,
+          peerIdStr,
+          seenTimestampSec,
         },
         {throwOnDuplicateAdd: false}
       );
@@ -86,6 +84,7 @@ export function cacheByRangeResponses({
       updatedBatchBlocks.push(
         cache.getByBlock({
           block,
+          blockRootHex,
           source,
           peerIdStr,
           seenTimestampSec,
@@ -95,12 +94,12 @@ export function cacheByRangeResponses({
   }
 
   for (const blobSidecar of responses.blobSidecars ?? []) {
+    const blockRoot = config
+      .getForkTypes(blobSidecar.signedBlockHeader.message.slot)
+      .BeaconBlockHeader.hashTreeRoot(blobSidecar.signedBlockHeader.message);
+    const blockRootHex = toRootHex(blockRoot);
     const existing = updatedBatchBlocks.find((b) => b.slot === blobSidecar.signedBlockHeader.message.slot);
     if (existing) {
-      const blockRoot = config
-        .getForkTypes(existing.slot)
-        .BeaconBlockHeader.hashTreeRoot(blobSidecar.signedBlockHeader.message);
-      const blockRootHex = toRootHex(blockRoot);
       if (!isBlockInputBlobs(existing)) {
         throw new DownloadByRangeError({
           code: DownloadByRangeErrorCode.MISMATCH_BLOCK_INPUT_TYPE,
@@ -124,6 +123,7 @@ export function cacheByRangeResponses({
     } else {
       updatedBatchBlocks.push(
         cache.getByBlob({
+          blockRootHex,
           blobSidecar,
           source,
           peerIdStr,
@@ -134,12 +134,12 @@ export function cacheByRangeResponses({
   }
 
   for (const columnSidecar of responses.columnSidecars ?? []) {
+    const blockRoot = config
+      .getForkTypes(columnSidecar.signedBlockHeader.message.slot)
+      .BeaconBlockHeader.hashTreeRoot(columnSidecar.signedBlockHeader.message);
+    const blockRootHex = toRootHex(blockRoot);
     const existing = updatedBatchBlocks.find((b) => b.slot === columnSidecar.signedBlockHeader.message.slot);
     if (existing) {
-      const blockRoot = config
-        .getForkTypes(existing.slot)
-        .BeaconBlockHeader.hashTreeRoot(columnSidecar.signedBlockHeader.message);
-      const blockRootHex = toRootHex(blockRoot);
       if (!isBlockInputColumns(existing)) {
         throw new DownloadByRangeError({
           code: DownloadByRangeErrorCode.MISMATCH_BLOCK_INPUT_TYPE,
@@ -163,6 +163,7 @@ export function cacheByRangeResponses({
     } else {
       updatedBatchBlocks.push(
         cache.getByColumn({
+          blockRootHex,
           columnSidecar,
           source,
           peerIdStr,
@@ -173,122 +174,6 @@ export function cacheByRangeResponses({
   }
 
   return updatedBatchBlocks;
-}
-
-export async function downloadAndCacheByRange(
-  request: DownloadAndCacheByRangeProps
-): Promise<DownloadAndCacheByRangeResults> {
-  const {logger, cache, peerIdStr} = request;
-  const {blocks, blobSidecars, columnSidecars} = await downloadByRange(request);
-  const blockInputs = new Map<RootHex, IBlockInput>();
-  const seenTimestampSec = Date.now() / 1000;
-
-  function uncache() {
-    for (const [rootHex] of blockInputs) {
-      try {
-        cache.remove(rootHex);
-      } catch (e) {
-        logger.error(
-          "Error removing blockInput from seenBlockInputCache",
-          {blockRoot: prettyBytes(rootHex)},
-          e as Error
-        );
-      }
-    }
-  }
-
-  let numberOfBlocks = 0;
-  if (blocks) {
-    try {
-      for (const block of blocks) {
-        const blockInput = cache.getByBlock({
-          block,
-          seenTimestampSec,
-          source: BlockInputSource.byRange,
-          peerIdStr,
-        });
-        numberOfBlocks++;
-        blockInputs.set(blockInput.blockRootHex, blockInput);
-      }
-    } catch (err) {
-      uncache();
-      throw new DownloadByRangeError(
-        {
-          code: DownloadByRangeErrorCode.CACHING_ERROR,
-          peerId: prettyPrintPeerIdStr(peerIdStr),
-          message: (err as Error).message,
-        },
-        "Error caching ByRange fetched block"
-      );
-    }
-  }
-
-  const processedBlobs = new Map<RootHex, number[]>();
-  let numberOfBlobs = 0;
-  if (blobSidecars) {
-    try {
-      for (const blobSidecar of blobSidecars) {
-        const blockInput = cache.getByBlob({
-          peerIdStr,
-          blobSidecar,
-          seenTimestampSec,
-          source: BlockInputSource.byRange,
-        });
-        numberOfBlobs++;
-        blockInputs.set(blockInput.blockRootHex, blockInput);
-        const indices = processedBlobs.get(blockInput.blockRootHex) ?? [];
-        indices.push(blobSidecar.index);
-        processedBlobs.set(blockInput.blockRootHex, indices);
-      }
-    } catch (err) {
-      uncache();
-      throw new DownloadByRangeError(
-        {
-          code: DownloadByRangeErrorCode.CACHING_ERROR,
-          peerId: prettyPrintPeerIdStr(peerIdStr),
-          message: (err as Error).message,
-        },
-        "Error caching ByRange fetched blob"
-      );
-    }
-  }
-
-  const processedColumns = new Map<RootHex, number[]>();
-  let numberOfColumns = 0;
-  if (columnSidecars) {
-    try {
-      for (const columnSidecar of columnSidecars) {
-        const blockInput = cache.getByColumn({
-          peerIdStr,
-          columnSidecar,
-          seenTimestampSec,
-          source: BlockInputSource.byRange,
-        });
-        numberOfColumns++;
-        blockInputs.set(blockInput.blockRootHex, blockInput);
-        const indices = processedColumns.get(blockInput.blockRootHex) ?? [];
-        indices.push(columnSidecar.index);
-        processedColumns.set(blockInput.blockRootHex, indices);
-      }
-    } catch (err) {
-      uncache();
-      throw new DownloadByRangeError(
-        {
-          code: DownloadByRangeErrorCode.CACHING_ERROR,
-          peerId: prettyPrintPeerIdStr(peerIdStr),
-          message: (err as Error).message,
-        },
-        "Error caching ByRange fetched column"
-      );
-    }
-  }
-
-  return {
-    blockInputs: Array.from(blockInputs.values()),
-    numberOfBlocks,
-    numberOfBlobs,
-    numberOfColumns,
-  };
 }
 
 export async function downloadByRange({

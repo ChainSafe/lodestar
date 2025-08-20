@@ -49,6 +49,8 @@ export type SourceMeta = {
   peerIdStr?: string;
 };
 
+export type BlockWithSource = SourceMeta & {block: SignedBeaconBlock; blockRootHex: RootHex};
+
 export type BlobWithSource = SourceMeta & {blobSidecar: deneb.BlobSidecar};
 
 export type ColumnWithSource = SourceMeta & {columnSidecar: fulu.DataColumnSidecar};
@@ -71,10 +73,9 @@ export type BlockInputInit = BlockHeaderMeta & {
   timeCreated: number;
 };
 
-export type AddBlock<F extends ForkName = ForkName> = {
+export type AddBlock<F extends ForkName = ForkName> = SourceMeta & {
   block: SignedBeaconBlock<F>;
   blockRootHex: string;
-  source: SourceMeta;
 };
 
 export type AddBlob = BlobWithSource & {
