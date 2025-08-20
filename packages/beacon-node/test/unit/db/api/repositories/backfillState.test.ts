@@ -39,7 +39,7 @@ describe("BackfillState repository", () => {
     }
   });
 
-  it("should nullify hasBlobs and columnIndices for pre-Deneb epochs", async () => {
+  it("should handle regular values", async () => {
     const epoch = config.DENEB_FORK_EPOCH - 1;
     const testData = {
       hasBlock: true,
@@ -47,53 +47,10 @@ describe("BackfillState repository", () => {
       columnIndices: [1, 2, 3],
     };
 
-    await backfillState._put(epoch, testData);
-    const retrieved = await backfillState._get(epoch);
+    await backfillState.put(epoch, testData);
+    const retrieved = await backfillState.get(epoch);
 
-    expect(retrieved).toBeDefined();
-    if (retrieved) {
-      expect(retrieved.hasBlock).toBe(testData.hasBlock);
-      expect(retrieved.hasBlobs).toBe(null);
-      expect(retrieved.columnIndices).toBe(null);
-    }
-  });
-
-  it("should nullify columnIndices for post-Deneb, pre-Fulu epochs", async () => {
-    const epoch = config.DENEB_FORK_EPOCH + 1;
-    const testData = {
-      hasBlock: true,
-      hasBlobs: true,
-      columnIndices: [1, 2, 3],
-    };
-
-    await backfillState._put(epoch, testData);
-    const retrieved = await backfillState._get(epoch);
-
-    expect(retrieved).toBeDefined();
-    if (retrieved) {
-      expect(retrieved.hasBlock).toBe(testData.hasBlock);
-      expect(retrieved.hasBlobs).toBe(testData.hasBlobs);
-      expect(retrieved.columnIndices).toBe(null);
-    }
-  });
-
-  it("should handle columnIndices for post-Fulu epochs", async () => {
-    const epoch = config.FULU_FORK_EPOCH + 1;
-    const testData = {
-      hasBlock: true,
-      hasBlobs: true,
-      columnIndices: [1, 2, 3],
-    };
-
-    await backfillState._put(epoch, testData);
-    const retrieved = await backfillState._get(epoch);
-
-    expect(retrieved).toBeDefined();
-    if (retrieved) {
-      expect(retrieved.hasBlock).toBe(testData.hasBlock);
-      expect(retrieved.hasBlobs).toBe(testData.hasBlobs);
-      expect(retrieved.columnIndices).toEqual(testData.columnIndices);
-    }
+    expect(retrieved).toEqual(testData);
   });
 
   it("should handle null values", async () => {
@@ -104,17 +61,27 @@ describe("BackfillState repository", () => {
       columnIndices: null,
     };
 
-    await backfillState._put(epoch, testData);
-    const retrieved = await backfillState._get(epoch);
+    await backfillState.put(epoch, testData);
+    const retrieved = await backfillState.get(epoch);
 
-    expect(retrieved).toBeDefined();
-    if (retrieved) {
-      expect(retrieved.hasBlock).toBe(testData.hasBlock);
-      expect(retrieved.hasBlobs).toBe(testData.hasBlobs);
-      expect(retrieved.columnIndices).toBe(testData.columnIndices);
-    }
+    expect(retrieved).toEqual(testData);
   });
 
-  // TODO: Check wrapping logic - what actually gets written to the database
-  // TODO: Check for batch insertion
+  it("should handle batch of values", async () => {
+    const epoch = config.DENEB_FORK_EPOCH - 1;
+    const testData = [
+      {key: epoch, value: {hasBlock: true, hasBlobs: true, columnIndices: [1, 2, 3]}},
+      {key: epoch + 1, value: {hasBlock: true, hasBlobs: null, columnIndices: null}},
+      {key: epoch + 2, value: {hasBlock: false, hasBlobs: false, columnIndices: []}},
+    ];
+
+    await backfillState.batchPut(testData);
+    const retrievedData = [];
+    for (const element of testData) {
+      const retrievedValue = await backfillState.get(element.key);
+      retrievedData.push({key: element.key, value: retrievedValue});
+    }
+
+    expect(retrievedData).toEqual(testData);
+  });
 });
