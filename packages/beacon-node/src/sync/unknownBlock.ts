@@ -346,7 +346,7 @@ export class BlockInputSync {
       const delaySec = Date.now() / 1000 - (this.chain.genesisTime + blockSlot * this.config.SECONDS_PER_SLOT);
       this.metrics?.blockInputSync.elapsedTimeTillReceived.observe(delaySec);
 
-      const parentInForkChoice = this.chain.forkChoice.hasBlock(pending.blockInput.getBlock().message.parentRoot);
+      const parentInForkChoice = this.chain.forkChoice.hasBlockHex(pending.blockInput.parentRootHex);
       this.logger.verbose("Downloaded unknown block", {
         blockRoot: rootHex,
         pendingBlocks: this.pendingBlocks.size,
@@ -375,18 +375,8 @@ export class BlockInputSync {
       }
     } else {
       this.metrics?.blockInputSync.downloadedBlocksError.inc();
-      // block download has error, this allows to retry the download of the block
-      block.status = PendingBlockInputStatus.pending;
-      // const errorData = {blockRoot: rootHex};
-      // TODO(fulu): removed outer retry loop. Need to look at how to down score for errors here
-      // if (block.downloadAttempts > MAX_ATTEMPTS_PER_BLOCK) {
-      //   // Give up on this block and assume it does not exist, penalizing all peers as if it was a bad block
-      //   this.logger.debug("Ignoring unknown block root after many failed downloads", errorData, res.err);
+      this.logger.debug("Ignoring unknown block root after many failed downloads", {blockRoot: rootHex}, res.err);
       this.removeAndDownScoreAllDescendants(block);
-      // } else {
-      //   // Try again when a new peer connects, its status changes, or a new unknownBlockParent event happens
-      //   this.logger.debug("Error downloading unknown block root", errorData, res.err);
-      // }
     }
   }
 
@@ -457,7 +447,6 @@ export class BlockInputSync {
 
       // Send child blocks to the processor
       for (const descendantBlock of getDescendantBlocks(pendingBlock.blockInput.blockRootHex, this.pendingBlocks)) {
-        // TODO(fulu): this might cause sync to get stuck... need to resolve
         if (isPendingBlockInput(descendantBlock)) {
           this.processBlock(descendantBlock).catch((e) => {
             this.logger.debug("Unexpected error - process descendant block", {}, e);
