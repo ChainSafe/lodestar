@@ -16,29 +16,29 @@ import {PeerIdStr} from "../../util/peerId.js";
 import {BlobSidecarsByRootRequest} from "../../util/types.js";
 import {BlockInputSyncCacheItem, getBlockInputSyncCacheItemRootHex, isPendingBlockInput} from "../types.js";
 
-export type DownloadByRootCoreProps = {
+export type FetchByRootCoreProps = {
   config: ChainForkConfig;
   network: INetwork;
   peerIdStr: PeerIdStr;
 };
-export type DownloadByRootProps = DownloadByRootCoreProps & {
+export type FetchByRootProps = FetchByRootCoreProps & {
   cacheItem: BlockInputSyncCacheItem;
 };
-export type DownloadAndValidateBlockProps = DownloadByRootCoreProps & {blockRoot: Uint8Array};
-export type DownloadAndValidateBlobsProps = DownloadAndValidateBlockProps & {blobIndices: BlobIndex[]};
-export type DownloadAndValidateColumnsProps = DownloadAndValidateBlockProps & {columnIndices: ColumnIndex[]};
-export type DownloadByRootResponses = {
+export type FetchByRootAndValidateBlockProps = FetchByRootCoreProps & {blockRoot: Uint8Array};
+export type FetchByRootAndValidateBlobsProps = FetchByRootAndValidateBlockProps & {blobIndices: BlobIndex[]};
+export type FetchByRootAndValidateColumnsProps = FetchByRootAndValidateBlockProps & {columnIndices: ColumnIndex[]};
+export type FetchByRootResponses = {
   block: SignedBeaconBlock;
   blobSidecars?: deneb.BlobSidecars;
   columnSidecars?: fulu.DataColumnSidecars;
 };
 
-export async function downloadByRoot({
+export async function fetchByRoot({
   config,
   network,
   peerIdStr,
   cacheItem,
-}: DownloadByRootProps): Promise<DownloadByRootResponses> {
+}: FetchByRootProps): Promise<FetchByRootResponses> {
   let block: SignedBeaconBlock;
   let blobSidecars: deneb.BlobSidecars | undefined;
   let columnSidecars: fulu.DataColumnSidecars | undefined;
@@ -50,7 +50,7 @@ export async function downloadByRoot({
     if (cacheItem.blockInput.hasBlock()) {
       block = cacheItem.blockInput.getBlock();
     } else {
-      block = await downloadAndValidateBlock({
+      block = await fetchAndValidateBlock({
         config,
         network,
         peerIdStr,
@@ -60,7 +60,7 @@ export async function downloadByRoot({
 
     if (!cacheItem.blockInput.hasAllData()) {
       if (isBlockInputBlobs(cacheItem.blockInput)) {
-        blobSidecars = await downloadAndValidateBlobs({
+        blobSidecars = await fetchAndValidateBlobs({
           config,
           network,
           peerIdStr,
@@ -69,7 +69,7 @@ export async function downloadByRoot({
         });
       }
       if (isBlockInputColumns(cacheItem.blockInput)) {
-        columnSidecars = await downloadAndValidateColumns({
+        columnSidecars = await fetchAndValidateColumns({
           config,
           network,
           peerIdStr,
@@ -79,7 +79,7 @@ export async function downloadByRoot({
       }
     }
   } else {
-    block = await downloadAndValidateBlock({
+    block = await fetchAndValidateBlock({
       config,
       network,
       peerIdStr,
@@ -87,7 +87,7 @@ export async function downloadByRoot({
     });
     const forkName = config.getForkName(block.message.slot);
     if (isForkPostFulu(forkName)) {
-      columnSidecars = await downloadAndValidateColumns({
+      columnSidecars = await fetchAndValidateColumns({
         config,
         network,
         peerIdStr,
@@ -96,7 +96,7 @@ export async function downloadByRoot({
       });
     } else if (isForkPostDeneb(forkName)) {
       const blobCount = (block as SignedBeaconBlock<ForkPostDeneb>).message.body.blobKzgCommitments.length;
-      blobSidecars = await downloadAndValidateBlobs({
+      blobSidecars = await fetchAndValidateBlobs({
         config,
         network,
         peerIdStr,
@@ -113,12 +113,12 @@ export async function downloadByRoot({
   };
 }
 
-export async function downloadAndValidateBlock({
+export async function fetchAndValidateBlock({
   config,
   network,
   peerIdStr,
   blockRoot,
-}: DownloadAndValidateBlockProps): Promise<SignedBeaconBlock> {
+}: FetchByRootAndValidateBlockProps): Promise<SignedBeaconBlock> {
   const response = await network.sendBeaconBlocksByRoot(peerIdStr, [blockRoot]);
   const block = response.at(0)?.data;
   if (!block) {
@@ -143,13 +143,13 @@ export async function downloadAndValidateBlock({
   return block;
 }
 
-export async function downloadAndValidateBlobs({
+export async function fetchAndValidateBlobs({
   config,
   network,
   peerIdStr,
   blockRoot,
   blobIndices,
-}: DownloadAndValidateBlobsProps): Promise<deneb.BlobSidecars> {
+}: FetchByRootAndValidateBlobsProps): Promise<deneb.BlobSidecars> {
   const blobsRequest = blobIndices.map((index) => ({blockRoot, index}));
   const blobSidecars = await network.sendBlobSidecarsByRoot(peerIdStr, blobsRequest);
 
@@ -207,13 +207,13 @@ export async function downloadAndValidateBlobs({
   return blobSidecars;
 }
 
-export async function downloadAndValidateColumns({
+export async function fetchAndValidateColumns({
   config,
   network,
   peerIdStr,
   blockRoot,
   columnIndices,
-}: DownloadAndValidateColumnsProps): Promise<fulu.DataColumnSidecars> {
+}: FetchByRootAndValidateColumnsProps): Promise<fulu.DataColumnSidecars> {
   const columnSidecars = await network.sendDataColumnSidecarsByRoot(peerIdStr, [{blockRoot, columns: columnIndices}]);
 
   for (const columnSidecar of columnSidecars) {
