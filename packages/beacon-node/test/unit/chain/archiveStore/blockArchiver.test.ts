@@ -26,13 +26,10 @@ describe("block archiver task", () => {
 
     vi.spyOn(dbStub.blockArchive, "batchPutBinary");
     vi.spyOn(dbStub.block, "batchDelete");
-    vi.spyOn(dbStub.blobSidecarsArchive, "batchPutBinary");
-    vi.spyOn(dbStub.blobSidecars, "batchDelete");
+    vi.spyOn(dbStub.blobSidecarArchive, "putManyBinary");
+    vi.spyOn(dbStub.blobSidecar, "deleteMany");
     vi.spyOn(dbStub.dataColumnSidecarArchive, "putManyBinary");
     vi.spyOn(dbStub.dataColumnSidecar, "deleteMany");
-    // Mock keys() to return empty array by default
-    vi.spyOn(dbStub.blobSidecarsArchive, "keys").mockResolvedValue([]);
-    // vi.spyOn(dbStub.dataColumnSidecarArchive, "keys").mockResolvedValue([]);
   });
 
   afterEach(() => {

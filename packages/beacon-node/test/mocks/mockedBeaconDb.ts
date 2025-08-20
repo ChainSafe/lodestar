@@ -4,8 +4,8 @@ import {BeaconDb} from "../../src/db/index.js";
 import {
   AttesterSlashingRepository,
   BLSToExecutionChangeRepository,
-  BlobSidecarsArchiveRepository,
-  BlobSidecarsRepository,
+  BlobSidecarArchiveRepository,
+  BlobSidecarRepository,
   BlockArchiveRepository,
   BlockRepository,
   DataColumnSidecarArchiveRepository,
@@ -22,8 +22,8 @@ export type MockedBeaconDb = Mocked<BeaconDb> & {
   block: Mocked<BlockRepository>;
   blockArchive: Mocked<BlockArchiveRepository>;
 
-  blobSidecars: Mocked<BlobSidecarsRepository>;
-  blobSidecarsArchive: Mocked<BlobSidecarsArchiveRepository>;
+  blobSidecar: Mocked<BlobSidecarRepository>;
+  blobSidecarArchive: Mocked<BlobSidecarArchiveRepository>;
 
   dataColumnSidecar: Mocked<DataColumnSidecarRepository>;
   dataColumnSidecarArchive: Mocked<DataColumnSidecarArchiveRepository>;
@@ -60,8 +60,8 @@ vi.mock("../../src/db/index.js", async (importActual) => {
       depositDataRoot: vi.mocked(new DepositDataRootRepository({} as any, {} as any)),
       eth1Data: vi.mocked(new Eth1DataRepository({} as any, {} as any)),
 
-      blobSidecars: vi.mocked(new BlobSidecarsRepository({} as any, {} as any)),
-      blobSidecarsArchive: vi.mocked(new BlobSidecarsArchiveRepository({} as any, {} as any)),
+      blobSidecar: vi.mocked(new BlobSidecarRepository({} as any, {} as any)),
+      blobSidecarArchive: vi.mocked(new BlobSidecarArchiveRepository({} as any, {} as any)),
 
       dataColumnSidecar: vi.mocked(new DataColumnSidecarRepository({} as any, {} as any)),
       dataColumnSidecarArchive: vi.mocked(new DataColumnSidecarArchiveRepository({} as any, {} as any)),
