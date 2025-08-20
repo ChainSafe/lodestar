@@ -67,6 +67,8 @@ export interface IBeaconDb {
 
   backfilledRanges: BackfilledRanges;
 
+  migrateDBState(): Promise<void>;
+
   pruneHotDb(): Promise<void>;
 
   /**  Close the connection to the db instance and close the db store. */

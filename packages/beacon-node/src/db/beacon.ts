@@ -103,6 +103,10 @@ export class BeaconDb implements IBeaconDb {
     this.db.setMetrics(metrics);
   }
 
+  async migrateDBState(): Promise<void> {
+    await this.blobSidecarArchive.migrateFromWrapperState();
+  }
+
   async pruneHotDb(): Promise<void> {
     // Prune all hot blobs
     await this.blobSidecar.deleteAll();

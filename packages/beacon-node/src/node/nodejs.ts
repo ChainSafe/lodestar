@@ -198,6 +198,7 @@ export class BeaconNode {
     // Prune hot db repos
     // TODO: Should this call be awaited?
     await db.pruneHotDb();
+    await db.migrateDBState();
 
     const monitoring = opts.monitoring.endpoint
       ? new MonitoringService(
