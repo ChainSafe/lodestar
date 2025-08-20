@@ -21,8 +21,8 @@ import {SeenBlockProposers} from "../../../src/chain/seenCache/seenBlockProposer
 import {ZERO_HASH} from "../../../src/constants/constants.js";
 import {INetwork, NetworkEvent, NetworkEventBus, PeerAction} from "../../../src/network/index.js";
 import {PeerSyncMeta} from "../../../src/network/peers/peersData.js";
-import {BlockInputSync, UnknownBlockPeerBalancer} from "../../../src/sync/blockInputSync.js";
 import {defaultSyncOptions} from "../../../src/sync/options.js";
+import {BlockInputSync, UnknownBlockPeerBalancer} from "../../../src/sync/unknownBlock.js";
 import {CustodyConfig} from "../../../src/util/dataColumns.js";
 import {PeerIdStr} from "../../../src/util/peerId.js";
 import {ClockStopped} from "../../mocks/clock.js";
