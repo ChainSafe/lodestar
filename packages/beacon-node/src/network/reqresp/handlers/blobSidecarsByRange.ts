@@ -1,12 +1,11 @@
 import {BeaconConfig} from "@lodestar/config";
-import {BLOBSIDECAR_FIXED_SIZE, GENESIS_SLOT} from "@lodestar/params";
+import {GENESIS_SLOT} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {Slot, deneb} from "@lodestar/types";
+import {deneb} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
-import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../../../db/repositories/blobSidecars.js";
 
 export async function* onBlobSidecarsByRange(
   request: deneb.BlobSidecarsByRangeRequest,
@@ -17,18 +16,23 @@ export async function* onBlobSidecarsByRange(
   const {startSlot, count} = validateBlobSidecarsByRangeRequest(chain.config, request);
   const endSlot = startSlot + count;
 
-  const finalized = db.blobSidecarsArchive;
-  const unfinalized = db.blobSidecars;
+  const finalized = db.blobSidecarArchive;
+  const unfinalized = db.blobSidecar;
   const finalizedSlot = chain.forkChoice.getFinalizedBlock().slot;
 
   // Finalized range of blobs
   if (startSlot <= finalizedSlot) {
-    // Chain of blobs won't change
-    for await (const {key, value: blobSideCarsBytesWrapped} of finalized.binaryEntriesStream({
-      gte: startSlot,
-      lt: endSlot,
-    })) {
-      yield* iterateBlobBytesFromWrapper(chain, blobSideCarsBytesWrapped, finalized.decodeKey(key));
+    for (let slot = startSlot; slot < endSlot; slot++) {
+      for await (const {value: blobSideCarBytes} of finalized.valuesStreamBinary(slot)) {
+        if (!blobSideCarBytes) {
+          throw new ResponseError(RespStatus.SERVER_ERROR, `No finalized blobSidecar found for slot=${slot}`);
+        }
+
+        yield {
+          data: blobSideCarBytes,
+          boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(slot)),
+        };
+      }
     }
   }
 
@@ -49,12 +53,22 @@ export async function* onBlobSidecarsByRange(
         // re-org there's no need to abort the request
         // Spec: https://github.com/ethereum/consensus-specs/blob/a1e46d1ae47dd9d097725801575b46907c12a1f8/specs/eip4844/p2p-interface.md#blobssidecarsbyrange-v1
 
-        const blobSideCarsBytesWrapped = await unfinalized.getBinary(fromHex(block.blockRoot));
-        if (!blobSideCarsBytesWrapped) {
-          // Handle the same to onBeaconBlocksByRange
-          throw new ResponseError(RespStatus.SERVER_ERROR, `No item for root ${block.blockRoot} slot ${block.slot}`);
+        for await (const {value: blobSideCarBytes} of unfinalized.valuesStreamBinary({
+          blockRoot: fromHex(block.blockRoot),
+          slot: block.slot,
+        })) {
+          if (!blobSideCarBytes) {
+            throw new ResponseError(
+              RespStatus.SERVER_ERROR,
+              `No unfinalized blobSidecar found for blockRoot=${block.blockRoot}`
+            );
+          }
+
+          yield {
+            data: blobSideCarBytes,
+            boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(block.slot)),
+          };
         }
-        yield* iterateBlobBytesFromWrapper(chain, blobSideCarsBytesWrapped, block.slot);
       }
 
       // If block is after endSlot, stop iterating
@@ -62,32 +76,6 @@ export async function* onBlobSidecarsByRange(
         break;
       }
     }
-  }
-}
-
-export function* iterateBlobBytesFromWrapper(
-  chain: IBeaconChain,
-  blobSideCarsBytesWrapped: Uint8Array,
-  blockSlot: Slot
-): Iterable<ResponseOutgoing> {
-  const allBlobSideCarsBytes = blobSideCarsBytesWrapped.slice(BLOB_SIDECARS_IN_WRAPPER_INDEX);
-  const blobsLen = allBlobSideCarsBytes.length / BLOBSIDECAR_FIXED_SIZE;
-
-  for (let index = 0; index < blobsLen; index++) {
-    const blobSideCarBytes = allBlobSideCarsBytes.slice(
-      index * BLOBSIDECAR_FIXED_SIZE,
-      (index + 1) * BLOBSIDECAR_FIXED_SIZE
-    );
-    if (blobSideCarBytes.length !== BLOBSIDECAR_FIXED_SIZE) {
-      throw new ResponseError(
-        RespStatus.SERVER_ERROR,
-        `Invalid blobSidecar index=${index} bytes length=${blobSideCarBytes.length} expected=${BLOBSIDECAR_FIXED_SIZE} for slot ${blockSlot} blobsLen=${blobsLen}`
-      );
-    }
-    yield {
-      data: blobSideCarBytes,
-      boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(blockSlot)),
-    };
   }
 }
 

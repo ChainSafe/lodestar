@@ -616,10 +616,11 @@ export function getBeaconBlockApi({
       }
 
       const blockRoot = sszTypesFor(fork).BeaconBlock.hashTreeRoot(block.message);
+      const slot = block.message.slot;
 
-      let {blobSidecars} = (await db.blobSidecars.get(blockRoot)) ?? {};
+      let blobSidecars = await db.blobSidecar.values({blockRoot, slot});
       if (!blobSidecars) {
-        ({blobSidecars} = (await db.blobSidecarsArchive.get(block.message.slot)) ?? {});
+        blobSidecars = await db.blobSidecarArchive.values(slot);
       }
 
       if (!blobSidecars) {
@@ -642,6 +643,7 @@ export function getBeaconBlockApi({
       const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
       const fork = config.getForkName(block.message.slot);
       const blockRoot = sszTypesFor(fork).BeaconBlock.hashTreeRoot(block.message);
+      const slot = block.message.slot;
 
       let blobs: deneb.Blobs;
 
@@ -667,9 +669,9 @@ export function getBeaconBlockApi({
 
         blobs = await reconstructBlobs(dataColumnSidecars);
       } else if (isForkPostDeneb(fork)) {
-        let {blobSidecars} = (await db.blobSidecars.get(blockRoot)) ?? {};
+        let blobSidecars = await db.blobSidecar.values({blockRoot, slot});
         if (!blobSidecars) {
-          ({blobSidecars} = (await db.blobSidecarsArchive.get(block.message.slot)) ?? {});
+          blobSidecars = await db.blobSidecarArchive.values(block.message.slot);
         }
 
         if (!blobSidecars) {

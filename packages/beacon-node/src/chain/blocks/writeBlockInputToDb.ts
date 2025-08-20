@@ -69,7 +69,7 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInput: BlockI
         });
       } else if (isForkPostDeneb(blockData.fork)) {
         const blobSidecars = (blockData as BlockInputBlobs).blobs;
-        fnPromises.push(this.db.blobSidecars.add({blockRoot, slot: block.message.slot, blobSidecars}));
+        fnPromises.push(this.db.blobSidecar.putMany({blockRoot, slot: block.message.slot}, blobSidecars));
         this.logger.debug("Persisted blobSidecars to hot DB", {
           blobsLen: blobSidecars.length,
           slot: block.message.slot,
@@ -105,8 +105,7 @@ export async function removeEagerlyPersistedBlockInputs(this: BeaconChain, block
       if (type === BlockInputType.availableData) {
         const {blockData} = blockInput;
         if (blockData.fork === ForkName.deneb || blockData.fork === ForkName.electra) {
-          const blobSidecars = blockData.blobs;
-          blobsToRemove.push({blockRoot, slot, blobSidecars});
+          blobsToRemove.push({blockRoot, slot});
         } else {
           const {custodyConfig} = this;
           const {custodyColumns} = custodyConfig;
@@ -129,7 +128,7 @@ export async function removeEagerlyPersistedBlockInputs(this: BeaconChain, block
   await Promise.all([
     // TODO: Batch DB operations not with Promise.all but with level db ops
     this.db.block.batchRemove(blockToRemove),
-    this.db.blobSidecars.batchRemove(blobsToRemove),
+    this.db.blobSidecar.deleteMany(blobsToRemove),
     this.db.dataColumnSidecar.deleteMany(dataColumnsToRemove),
   ]);
 }

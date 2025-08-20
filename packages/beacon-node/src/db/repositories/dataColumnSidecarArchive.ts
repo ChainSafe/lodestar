@@ -17,9 +17,6 @@ export class DataColumnSidecarArchiveRepository extends PrefixedRepository<Slot,
     super(config, db, bucket, ssz.fulu.DataColumnSidecar, getBucketNameByValue(bucket));
   }
 
-  /**
-   * Id is hashTreeRoot of unsigned BeaconBlock
-   */
   getId(value: fulu.DataColumnSidecar): ColumnIndex {
     return value.index;
   }

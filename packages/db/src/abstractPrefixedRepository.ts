@@ -15,14 +15,14 @@ type Id = Uint8Array | string | number | bigint;
  * By default, SSZ-encoded values,
  */
 export abstract class PrefixedRepository<P, I extends Id, T> {
-  private readonly dbReqOpts: DbReqOpts;
+  protected readonly dbReqOpts: DbReqOpts;
 
   protected constructor(
     protected config: ChainForkConfig,
     protected db: Db,
     protected bucket: number,
     protected type: Type<T>,
-    private readonly bucketId: string
+    protected readonly bucketId: string
   ) {
     this.dbReqOpts = {bucketId: this.bucketId};
   }

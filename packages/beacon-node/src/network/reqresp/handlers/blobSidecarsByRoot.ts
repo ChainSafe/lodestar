@@ -1,11 +1,8 @@
-import {BLOBSIDECAR_FIXED_SIZE} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {RootHex} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
-import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../../../db/repositories/blobSidecars.js";
 import {BlobSidecarsByRootRequest} from "../../../util/types.js";
 
 export async function* onBlobSidecarsByRoot(
@@ -14,11 +11,6 @@ export async function* onBlobSidecarsByRoot(
   db: IBeaconDb
 ): AsyncIterable<ResponseOutgoing> {
   const finalizedSlot = chain.forkChoice.getFinalizedBlock().slot;
-
-  // In sidecars by root request, it can be expected that sidecar requests will be come
-  // clustured by blockroots, and this helps us save db lookups once we load sidecars
-  // for a root
-  let lastFetchedSideCars: {blockRoot: RootHex; bytes: Uint8Array} | null = null;
 
   for (const blobIdentifier of requestBody) {
     const {blockRoot, index} = blobIdentifier;
@@ -32,26 +24,17 @@ export async function* onBlobSidecarsByRoot(
       continue;
     }
 
-    // Check if we need to load sidecars for a new block root
-    if (lastFetchedSideCars === null || lastFetchedSideCars.blockRoot !== blockRootHex) {
-      const blobSideCarsBytesWrapped = await db.blobSidecars.getBinary(fromHex(block.blockRoot));
-      if (!blobSideCarsBytesWrapped) {
-        // Handle the same to onBeaconBlocksByRange
-        throw new ResponseError(RespStatus.SERVER_ERROR, `No item for root ${block.blockRoot} slot ${block.slot}`);
-      }
-      const blobSideCarsBytes = blobSideCarsBytesWrapped.slice(BLOB_SIDECARS_IN_WRAPPER_INDEX);
-
-      lastFetchedSideCars = {blockRoot: blockRootHex, bytes: blobSideCarsBytes};
-    }
-
-    const blobSidecarBytes = lastFetchedSideCars.bytes.slice(
-      index * BLOBSIDECAR_FIXED_SIZE,
-      (index + 1) * BLOBSIDECAR_FIXED_SIZE
+    const blobSidecarBytes = await db.blobSidecar.getBinary(
+      {
+        blockRoot: fromHex(block.blockRoot),
+        slot: block.slot,
+      },
+      index
     );
-    if (blobSidecarBytes.length !== BLOBSIDECAR_FIXED_SIZE) {
-      throw Error(
-        `Inconsistent state, blobSidecar blockRoot=${blockRootHex} index=${index} blobSidecarBytes=${blobSidecarBytes.length} expected=${BLOBSIDECAR_FIXED_SIZE}`
-      );
+
+    if (!blobSidecarBytes) {
+      // Handle the same to onBeaconBlocksByRange
+      throw new ResponseError(RespStatus.SERVER_ERROR, `No item for root ${block.blockRoot} slot ${block.slot}`);
     }
 
     yield {

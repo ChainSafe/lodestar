@@ -5,8 +5,8 @@ import {
   BLSToExecutionChangeRepository,
   BackfilledRanges,
   BestLightClientUpdateRepository,
-  BlobSidecarsArchiveRepository,
-  BlobSidecarsRepository,
+  BlobSidecarArchiveRepository,
+  BlobSidecarRepository,
   BlockArchiveRepository,
   BlockRepository,
   CheckpointHeaderRepository,
@@ -34,8 +34,8 @@ export interface IBeaconDb {
   // finalized blocks
   blockArchive: BlockArchiveRepository;
 
-  blobSidecars: BlobSidecarsRepository;
-  blobSidecarsArchive: BlobSidecarsArchiveRepository;
+  blobSidecar: BlobSidecarRepository;
+  blobSidecarArchive: BlobSidecarArchiveRepository;
   dataColumnSidecar: DataColumnSidecarRepository;
   dataColumnSidecarArchive: DataColumnSidecarArchiveRepository;
 

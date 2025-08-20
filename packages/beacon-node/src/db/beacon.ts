@@ -7,8 +7,8 @@ import {
   BLSToExecutionChangeRepository,
   BackfilledRanges,
   BestLightClientUpdateRepository,
-  BlobSidecarsArchiveRepository,
-  BlobSidecarsRepository,
+  BlobSidecarArchiveRepository,
+  BlobSidecarRepository,
   BlockArchiveRepository,
   BlockRepository,
   CheckpointHeaderRepository,
@@ -34,8 +34,8 @@ export class BeaconDb implements IBeaconDb {
   block: BlockRepository;
   blockArchive: BlockArchiveRepository;
 
-  blobSidecars: BlobSidecarsRepository;
-  blobSidecarsArchive: BlobSidecarsArchiveRepository;
+  blobSidecar: BlobSidecarRepository;
+  blobSidecarArchive: BlobSidecarArchiveRepository;
   dataColumnSidecar: DataColumnSidecarRepository;
   dataColumnSidecarArchive: DataColumnSidecarArchiveRepository;
 
@@ -69,8 +69,8 @@ export class BeaconDb implements IBeaconDb {
     this.block = new BlockRepository(config, db);
     this.blockArchive = new BlockArchiveRepository(config, db);
 
-    this.blobSidecars = new BlobSidecarsRepository(config, db);
-    this.blobSidecarsArchive = new BlobSidecarsArchiveRepository(config, db);
+    this.blobSidecar = new BlobSidecarRepository(config, db);
+    this.blobSidecarArchive = new BlobSidecarArchiveRepository(config, db);
     this.dataColumnSidecar = new DataColumnSidecarRepository(config, db);
     this.dataColumnSidecarArchive = new DataColumnSidecarArchiveRepository(config, db);
 
@@ -105,7 +105,7 @@ export class BeaconDb implements IBeaconDb {
 
   async pruneHotDb(): Promise<void> {
     // Prune all hot blobs
-    await this.blobSidecars.batchDelete(await this.blobSidecars.keys());
+    await this.blobSidecar.deleteAll();
     // Prune all hot blocks
     // TODO: Enable once it's deemed safe
     // await this.block.batchDelete(await this.block.keys());

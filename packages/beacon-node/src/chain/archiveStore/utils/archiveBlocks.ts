@@ -1,6 +1,5 @@
 import path from "node:path";
 import {ChainForkConfig} from "@lodestar/config";
-import {KeyValue} from "@lodestar/db";
 import {IForkChoice} from "@lodestar/fork-choice";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
@@ -132,7 +131,7 @@ export async function archiveBlocks(
     });
 
     if (finalizedPostDeneb) {
-      await db.blobSidecars.batchDelete(nonCanonicalBlockRoots);
+      await db.blobSidecar.deleteAll(nonCanonicalBlockRoots);
       logger.verbose("Deleted non canonical blobSidecars from hot DB");
     }
 
@@ -150,9 +149,14 @@ export async function archiveBlocks(
       const blobsArchiveWindow = Math.max(config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, archiveDataEpochs ?? 0);
       const blobSidecarsMinEpoch = currentEpoch - blobsArchiveWindow;
       if (blobSidecarsMinEpoch >= config.DENEB_FORK_EPOCH) {
-        const slotsToDelete = await db.blobSidecarsArchive.keys({lt: computeStartSlotAtEpoch(blobSidecarsMinEpoch)});
+        const slotsToDelete = (
+          await db.blobSidecarArchive.keys({
+            lt: db.blobSidecarArchive.getMaxKeyRaw(computeStartSlotAtEpoch(blobSidecarsMinEpoch)),
+          })
+        ).map((p) => p.prefix);
+
         if (slotsToDelete.length > 0) {
-          await db.blobSidecarsArchive.batchDelete(slotsToDelete);
+          await db.blobSidecarArchive.deleteMany(slotsToDelete);
           logger.verbose(`blobSidecars prune: batchDelete range ${slotsToDelete[0]}..${slotsToDelete.at(-1)}`);
         } else {
           logger.verbose(`blobSidecars prune: no entries before epoch ${blobSidecarsMinEpoch}`);
@@ -264,36 +268,43 @@ async function migrateBlobSidecarsFromHotToColdDb(
 
     // processCanonicalBlocks
     if (canonicalBlocks.length === 0) break;
+    const promises = [];
 
-    // load Buffer instead of ssz deserialized to improve performance
-    const canonicalBlobSidecarsEntries: KeyValue<Slot, Uint8Array>[] = await Promise.all(
-      canonicalBlocks
-        .filter((block) => {
-          const blockSlot = block.slot;
-          const blockEpoch = computeEpochAtSlot(blockSlot);
-          const forkSeq = config.getForkSeq(blockSlot);
-          return (
-            forkSeq >= ForkSeq.deneb &&
-            forkSeq < ForkSeq.fulu &&
-            // if block is out of ${config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS}, skip this step
-            blockEpoch >= currentEpoch - config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS
-          );
-        })
-        .map(async (block) => {
-          const bytes = await db.blobSidecars.getBinary(block.root);
-          if (!bytes) {
-            throw Error(`No blobSidecars found for slot ${block.slot} root ${toRootHex(block.root)}`);
-          }
-          return {key: block.slot, value: bytes};
-        })
-    );
+    for (const block of canonicalBlocks) {
+      const blockSlot = block.slot;
+      const blockEpoch = computeEpochAtSlot(blockSlot);
+      const forkSeq = config.getForkSeq(blockSlot);
+
+      if (
+        forkSeq < ForkSeq.deneb ||
+        forkSeq >= ForkSeq.fulu ||
+        // if block is out of ${config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS}, skip this step
+        blockEpoch < currentEpoch - config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS
+      ) {
+        continue;
+      }
+
+      const blobSidecarsBytes = await db.blobSidecar.valuesBinary({blockRoot: block.root, slot: block.slot});
+      if (!blobSidecarsBytes || blobSidecarsBytes.length === 0) {
+        throw Error(`No blobSidecars found for slot ${block.slot} root ${toRootHex(block.root)}`);
+      }
+
+      promises.push(
+        db.blobSidecarArchive.putManyBinary(
+          block.slot,
+          blobSidecarsBytes.map((p) => ({
+            value: p.value,
+            key: p.id,
+          }))
+        )
+      );
+      migratedWrappedBlobSidecars += blobSidecarsBytes.length;
+    }
+
+    promises.push(db.blobSidecar.deleteAll(canonicalBlocks.map((block) => block.root)));
 
     // put to blockArchive db and delete block db
-    await Promise.all([
-      db.blobSidecarsArchive.batchPutBinary(canonicalBlobSidecarsEntries),
-      db.blobSidecars.batchDelete(canonicalBlocks.map((block) => block.root)),
-    ]);
-    migratedWrappedBlobSidecars += canonicalBlobSidecarsEntries.length;
+    await Promise.all(promises);
   }
 
   return migratedWrappedBlobSidecars;
@@ -329,7 +340,7 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
       }
 
       const dataColumnSidecarBytes = await db.dataColumnSidecar.valuesBinary(block.root);
-      if (!dataColumnSidecarBytes) {
+      if (!dataColumnSidecarBytes || dataColumnSidecarBytes.length === 0) {
         throw Error(`No dataColumnSidecars found for slot ${block.slot} root ${toHex(block.root)}`);
       }
       promises.push(
