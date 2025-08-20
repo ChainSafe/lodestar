@@ -850,10 +850,7 @@ export class UnknownBlockPeerBalancer {
           pendingDataColumns.add(column);
         }
       }
-      if (pendingDataColumns.size === 0) {
-        // no pending columns, we can return null
-        return null;
-      }
+      // there could be no pending column in case of NullBlockInput
       eligiblePeers.push(...this.filterPeers(pendingDataColumns, excludedPeers));
     } else {
       // prefulu
