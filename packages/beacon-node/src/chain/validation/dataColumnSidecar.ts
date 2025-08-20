@@ -289,7 +289,7 @@ export async function verifyDataColumnSidecarKzgProofs(
 ): Promise<void> {
   let valid: boolean;
   try {
-    valid = await kzg.verifyCellKzgProofBatch(commitments, cellIndices, cells, proofs);
+    valid = await kzg.asyncVerifyCellKzgProofBatch(commitments, cellIndices, cells, proofs);
   } catch (e) {
     (e as Error).message = `Error on verifyCellKzgProofBatch: ${(e as Error).message}`;
     throw e;
