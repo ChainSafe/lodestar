@@ -1,8 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, ForkSeq, INTERVALS_PER_SLOT} from "@lodestar/params";
-import {ColumnIndex, Root, RootHex, deneb} from "@lodestar/types";
-import {BlobAndProof} from "@lodestar/types/deneb";
-import {Logger, fromHex, prettyBytes, prettyPrintIndices, pruneSetToMax, toRootHex} from "@lodestar/utils";
+import {ForkSeq, INTERVALS_PER_SLOT} from "@lodestar/params";
+import {RootHex} from "@lodestar/types";
+import {Logger, prettyBytes, prettyPrintIndices, pruneSetToMax} from "@lodestar/utils";
 import {sleep} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
@@ -11,12 +10,11 @@ import {ChainEvent, ChainEventData, IBeaconChain} from "../chain/index.js";
 import {Metrics} from "../metrics/index.js";
 import {INetwork, NetworkEvent, NetworkEventData, prettyPrintPeerIdStr} from "../network/index.js";
 import {PeerSyncMeta} from "../network/peers/peersData.js";
-import {byteArrayEquals} from "../util/bytes.js";
 import {CustodyConfig} from "../util/dataColumns.js";
 import {PeerIdStr} from "../util/peerId.js";
 import {shuffle} from "../util/shuffle.js";
 import {sortBy} from "../util/sortBy.js";
-import {Result, wrapError} from "../util/wrapError.js";
+import {wrapError} from "../util/wrapError.js";
 import {MAX_CONCURRENT_REQUESTS} from "./constants.js";
 import {SyncOptions} from "./options.js";
 import {
@@ -30,11 +28,7 @@ import {
   isPendingBlockInput,
 } from "./types.js";
 import {downloadByRoot} from "./utils/downloadByRoot.js";
-import {
-  getAllDescendantBlocks,
-  getDescendantBlocks,
-  getIncompleteAndAncestorBlocks,
-} from "./utils/pendingBlocksTree.js";
+import {getAllDescendantBlocks, getDescendantBlocks, getUnknownAndAncestorBlocks} from "./utils/pendingBlocksTree.js";
 
 const MAX_ATTEMPTS_PER_BLOCK = 5;
 const MAX_KNOWN_BAD_BLOCKS = 500;
@@ -293,10 +287,10 @@ export class BlockInputSync {
       return;
     }
 
-    const {incomplete, ancestors} = getIncompleteAndAncestorBlocks(this.pendingBlocks);
+    const {unknowns, ancestors} = getUnknownAndAncestorBlocks(this.pendingBlocks);
     // it's rare when there is no unknown block
     // see https://github.com/ChainSafe/lodestar/issues/5649#issuecomment-1594213550
-    if (incomplete.length === 0) {
+    if (unknowns.length === 0) {
       let processedBlocks = 0;
 
       for (const block of ancestors) {
@@ -318,7 +312,7 @@ export class BlockInputSync {
     }
 
     // most of the time there is exactly 1 unknown block
-    for (const block of incomplete) {
+    for (const block of unknowns) {
       this.downloadBlock(block).catch((e) => {
         this.logger.debug("Unexpected error - downloadBlock", {root: getBlockInputSyncCacheItemRootHex(block)}, e);
       });

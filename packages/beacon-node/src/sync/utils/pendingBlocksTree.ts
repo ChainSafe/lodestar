@@ -56,58 +56,40 @@ export function getDescendantBlocks(
   return descendantBlocks;
 }
 
-export type IncompleteAndAncestorBlocks = {
-  incomplete: BlockInputSyncCacheItem[];
+export type UnknownAndAncestorBlocks = {
+  unknowns: BlockInputSyncCacheItem[];
   ancestors: PendingBlockInput[];
 };
 
 /**
- * Returns two arrays, one has the items that need to be pulled still and the other is items that
- * are ready to be checked for rooting in fork-choice so the branch can be processed (or have their
- * ancestor pulled to extend the branch backward until it does root in fork-choice)
+ * Returns two arrays.
+ * The first one has the earliest blocks that are not linked to fork-choice yet, meaning they require parent blocks to be pulled.
+ * The second one has the earliest blocks that are linked to fork-choice, meaning they are ready to be processed.
  *
- * Given this chain segment incomplete block n => downloaded block n + 1 => downloaded block n + 2
+ * Given this chain segment unknown block n => downloaded block n + 1 => downloaded block n + 2
  *   return `{incomplete: [n], ancestors: []}`
  *
  * Given this chain segment: downloaded block n => downloaded block n + 1 => downloaded block n + 2
  *   return {incomplete: [], ancestors: [n]}
  */
-export function getIncompleteAndAncestorBlocks(
-  blocks: Map<RootHex, BlockInputSyncCacheItem>
-): IncompleteAndAncestorBlocks {
-  const incomplete = new Map<RootHex, BlockInputSyncCacheItem>();
+export function getUnknownAndAncestorBlocks(blocks: Map<RootHex, BlockInputSyncCacheItem>): UnknownAndAncestorBlocks {
+  const unknowns = new Map<RootHex, BlockInputSyncCacheItem>();
   const ancestors = new Map<RootHex, PendingBlockInput>();
 
   for (const block of blocks.values()) {
-    // check if the block was already added via getAllDescendants
-    if (incomplete.has(getBlockInputSyncCacheItemRootHex(block))) {
-      continue;
-    }
-
-    // block and sidecars have bee fully downloaded and the parent is not in the pending block, attempt to find
-    // parentRootHex in fork-choice to determine if its ready to be processed
-    if (
+    if (!isPendingBlockInput(block) && block.status !== PendingBlockInputStatus.pending) {
+      unknowns.set(getBlockInputSyncCacheItemRootHex(block), block);
+    } else if (
       isPendingBlockInput(block) &&
-      block.blockInput.hasBlockAndAllData() &&
+      block.status === PendingBlockInputStatus.downloaded &&
       !blocks.has(block.blockInput.parentRootHex)
     ) {
       ancestors.set(block.blockInput.blockRootHex, block);
-      const descendants = getAllDescendantBlocks(block.blockInput.blockRootHex, blocks);
-      for (const descendant of descendants) {
-        if (!isPendingBlockInput(descendant) || descendant.status !== PendingBlockInputStatus.downloaded) {
-          incomplete.set(getBlockInputSyncCacheItemRootHex(descendant), descendant);
-        }
-      }
-      continue;
-    }
-
-    if (block.status === PendingBlockInputStatus.pending) {
-      incomplete.set(getBlockInputSyncCacheItemRootHex(block), block);
     }
   }
 
   return {
-    incomplete: Array.from(incomplete.values()),
+    unknowns: Array.from(unknowns.values()),
     ancestors: Array.from(ancestors.values()),
   };
 }
