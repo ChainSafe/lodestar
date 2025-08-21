@@ -550,6 +550,7 @@ export async function prepareExecutionPayloadInclusionList(
   const transactions = chain.inclusionListPool.getTransactions(slot);
 
   await chain.executionEngine.updatePayloadWithInclusionList(payloadId, {transactions});
+
   logger.verbose("Updated payload with inclusion list", {
     slot,
     payloadId,

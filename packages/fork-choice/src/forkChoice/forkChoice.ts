@@ -816,7 +816,6 @@ export class ForkChoice implements IForkChoice {
 
     const storeKey: InclusionListStoreKey = [slot, inclusionListCommitteeRoot];
     const storedInclusionLists = this.fcStore.inclusionLists.get(storeKey) ?? [];
-
     const validatorInclusionLists = storedInclusionLists.filter((il) => il.validatorIndex === validatorIndex);
 
     if (validatorInclusionLists.length > 0) {
