@@ -13,7 +13,6 @@ export {
   ForkChoice,
   type ForkChoiceOpts,
   UpdateHeadOpt,
-  InclusionListSource,
   assertValidTerminalPowBlock,
 } from "./forkChoice/forkChoice.js";
 export {

@@ -29,6 +29,11 @@ export enum BlobsSource {
   byRoot = "req_resp_by_root",
 }
 
+export enum InclusionListSource {
+  gossip = "gossip",
+  api = "api",
+}
+
 export enum GossipedInputType {
   block = "block",
   blob = "blob",

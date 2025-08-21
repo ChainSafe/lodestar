@@ -79,11 +79,6 @@ export type UpdateAndGetHeadOpt =
   | {mode: UpdateHeadOpt.GetProposerHead; secFromSlot: number; slot: Slot}
   | {mode: UpdateHeadOpt.GetPredictedProposerHead; slot: Slot};
 
-export enum InclusionListSource {
-  gossip = "gossip",
-  api = "api",
-}
-
 /**
  * Provides an implementation of "Ethereum Consensus -- Beacon Chain Fork Choice":
  *
@@ -799,7 +794,7 @@ export class ForkChoice implements IForkChoice {
   }
 
   // Skip all validation check that overlaps `validateInclusionList()` since an IL needs to pass it before calling `onInclusionList()`
-  onInclusionList(inclusionList: eip7805.SignedInclusionList, secFromSlot: number, source: InclusionListSource): void {
+  onInclusionList(inclusionList: eip7805.SignedInclusionList, secFromSlot: number): void {
     const currentSlot = this.fcStore.currentSlot;
     const {slot, inclusionListCommitteeRoot, validatorIndex} = inclusionList.message;
 

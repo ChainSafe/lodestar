@@ -1,7 +1,8 @@
-import {InclusionListSource, UpdateHeadOpt} from "@lodestar/fork-choice";
+import {UpdateHeadOpt} from "@lodestar/fork-choice";
 import {NotReorgedReason} from "@lodestar/fork-choice";
 import {ProducedBlockSource} from "@lodestar/types";
 import {BlockSelectionResult} from "../../api/impl/validator/index.js";
+import {InclusionListSource} from "../../chain/blocks/types.js";
 import {BlockProductionStep, PayloadPreparationType} from "../../chain/produceBlock/index.js";
 import {InvalidInclusionListReason} from "../../chain/validation/inclusionList.js";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";

@@ -1,7 +1,7 @@
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {ExecutionStatus, InclusionListSource} from "@lodestar/fork-choice";
+import {ExecutionStatus} from "@lodestar/fork-choice";
 import {
   ForkPostBellatrix,
   ForkPostDeneb,
@@ -62,6 +62,7 @@ import {
   toRootHex,
 } from "@lodestar/utils";
 import {MAX_BUILDER_BOOST_FACTOR} from "@lodestar/validator";
+import {InclusionListSource} from "../../../chain/blocks/types.js";
 import {
   AttestationError,
   AttestationErrorCode,
@@ -1506,13 +1507,13 @@ export function getValidatorApi(
       }
 
       const timer = metrics?.eip7805.inclusionListsValidationTime.startTimer();
-      await validateApiInclusionList(chain, signedInclusionList, metrics);
+      await validateApiInclusionList(chain, signedInclusionList);
       timer?.({source: InclusionListSource.api});
 
       chain.inclusionListPool.add(signedInclusionList);
 
       const secFromSlot = chain.clock.secFromSlot(slot, Date.now() / 1000);
-      chain.forkChoice.onInclusionList(signedInclusionList, secFromSlot, InclusionListSource.api);
+      chain.forkChoice.onInclusionList(signedInclusionList, secFromSlot);
       chain.emitter.emit(routes.events.EventType.inclusionList, {
         version: config.getForkName(signedInclusionList.message.slot),
         data: signedInclusionList,

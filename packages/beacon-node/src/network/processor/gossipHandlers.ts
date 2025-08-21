@@ -1,6 +1,5 @@
 import {routes} from "@lodestar/api";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
-import {InclusionListSource} from "@lodestar/fork-choice";
 import {ForkName, ForkPostElectra, ForkPreElectra, ForkSeq, isForkPostElectra} from "@lodestar/params";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {
@@ -20,6 +19,7 @@ import {
   BlockInput,
   BlockInputType,
   GossipedInputType,
+  InclusionListSource,
   NullBlockInput,
 } from "../../chain/blocks/types.js";
 import {InclusionListError, InclusionListErrorCode} from "../../chain/errors/inclusionList.js";
@@ -642,7 +642,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       // TODO EIP-7805: should we persist invalid ssz value?
       try {
         const timer = metrics?.eip7805.inclusionListsValidationTime.startTimer();
-        await validateGossipInclusionList(chain, inclusionList, metrics);
+        await validateGossipInclusionList(chain, inclusionList);
         timer?.({source: InclusionListSource.gossip});
       } catch (e) {
         chain.logger.debug(`Gossip Inclusion List validation error ${JSON.stringify(e)}`);
@@ -660,7 +660,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
         const secFromSlot = chain.clock.secFromSlot(inclusionList.message.slot, seenTimestampSec);
         metrics?.eip7805.inclusionListArrivalTime.observe(secFromSlot);
-        chain.forkChoice.onInclusionList(inclusionList, secFromSlot, InclusionListSource.gossip);
+        chain.forkChoice.onInclusionList(inclusionList, secFromSlot);
       } catch (e) {
         logger.error("Error adding inclusionList to pool", {}, e as Error);
       }
