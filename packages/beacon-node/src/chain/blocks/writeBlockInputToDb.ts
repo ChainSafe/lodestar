@@ -1,9 +1,5 @@
-import {KeyValue} from "@lodestar/db";
-import {NUMBER_OF_COLUMNS} from "@lodestar/params";
-import {ForkName, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
 import {fulu} from "@lodestar/types";
 import {prettyPrintIndices, toRootHex} from "@lodestar/utils";
-import {BlobSidecarsWrapper} from "../../db/repositories/blobSidecars.js";
 import {BeaconChain} from "../chain.js";
 import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blockInput/index.js";
 

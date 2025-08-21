@@ -12,7 +12,7 @@ import {nextEventLoop} from "../../util/eventLoop.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {ValidatorMonitor} from "../validatorMonitor.js";
-import {BlockInput, IBlockInput} from "./blockInput/index.js";
+import {IBlockInput} from "./blockInput/index.js";
 import {ImportBlockOpts} from "./types.js";
 
 /**

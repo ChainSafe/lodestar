@@ -54,7 +54,7 @@ import {OpSource} from "../../chain/validatorMonitor.js";
 import {Metrics} from "../../metrics/index.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {INetworkCore} from "../core/index.js";
-import {NetworkEvent, NetworkEventBus} from "../events.js";
+import {NetworkEventBus} from "../events.js";
 import {
   BatchGossipHandlers,
   GossipHandlerParamGeneric,
@@ -111,7 +111,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
  * We only have a choice to do batch validation for beacon_attestation topic.
  */
 function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): SequentialGossipHandlers {
-  const {chain, config, metrics, events, logger, core} = modules;
+  const {chain, config, metrics, logger, core} = modules;
 
   async function validateBeaconBlock(
     signedBlock: SignedBeaconBlock,

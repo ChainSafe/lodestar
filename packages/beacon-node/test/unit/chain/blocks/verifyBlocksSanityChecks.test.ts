@@ -5,7 +5,8 @@ import {SignedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {toRootHex} from "@lodestar/utils";
 import {beforeEach, describe, expect, it} from "vitest";
-import {BlockSource, getBlockInput} from "../../../../src/chain/blocks/types.js";
+import {BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
+import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/index.js";
 import {verifyBlocksSanityChecks as verifyBlocksImportSanityChecks} from "../../../../src/chain/blocks/verifyBlocksSanityChecks.js";
 import {BlockErrorCode} from "../../../../src/chain/errors/index.js";
 import {IChainOptions} from "../../../../src/chain/options.js";
@@ -131,11 +132,24 @@ function verifyBlocksSanityChecks(
 ): {relevantBlocks: SignedBeaconBlock[]; parentSlots: Slot[]; parentBlock: ProtoBlock | null} {
   const {relevantBlocks, parentSlots, parentBlock} = verifyBlocksImportSanityChecks(
     modules,
-    blocks.map((block) => getBlockInput.preData(config, block, BlockSource.byRange)),
+    blocks.map((block) => {
+      const blockRootHex = toHex(
+        modules.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)
+      );
+      const forkName = modules.config.getForkName(block.message.slot);
+      return BlockInputPreData.createFromBlock({
+        block,
+        blockRootHex,
+        forkName,
+        daOutOfRange: true,
+        source: BlockInputSource.byRange,
+        seenTimestampSec: Math.floor(Date.now() / 1000),
+      });
+    }),
     opts
   );
   return {
-    relevantBlocks: relevantBlocks.map(({block}) => block),
+    relevantBlocks: relevantBlocks.map((blockInput) => blockInput.getBlock()),
     parentSlots,
     parentBlock,
   };

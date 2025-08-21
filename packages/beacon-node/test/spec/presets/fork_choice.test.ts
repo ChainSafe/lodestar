@@ -3,7 +3,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {createBeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
-import {ACTIVE_PRESET, ForkName, ForkSeq} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkPostDeneb, ForkPostFulu, ForkSeq} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {BeaconStateAllForks, isExecutionStateType, signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {
@@ -18,17 +18,15 @@ import {
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
-import {bnToNum, fromHex} from "@lodestar/utils";
+import {bnToNum, fromHex, toHex} from "@lodestar/utils";
 import {expect} from "vitest";
 import {
-  AttestationImportOpt,
-  BlobSidecarValidation,
-  BlobsSource,
-  BlockInputDataColumns,
-  BlockSource,
-  DataColumnsSource,
-  getBlockInput,
-} from "../../../src/chain/blocks/types.js";
+  BlockInputBlobs,
+  BlockInputColumns,
+  BlockInputPreData,
+  BlockInputSource,
+} from "../../../src/chain/blocks/blockInput/index.js";
+import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.js";
 import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
 import {
@@ -205,6 +203,7 @@ const forkChoiceTest =
               const blockRoot = config
                 .getForkTypes(signedBlock.message.slot)
                 .BeaconBlock.hashTreeRoot(signedBlock.message);
+              const blockRootHex = toHex(blockRoot);
               logger.debug(`Step ${i}/${stepsLen} block`, {
                 slot,
                 id: step.block,
@@ -233,14 +232,25 @@ const forkChoiceTest =
                     );
                   }
 
-                  const blockData = {
-                    fork,
-                    dataColumns: columns,
-                    dataColumnsBytes: columns.map(() => null),
-                    dataColumnsSource: DataColumnsSource.gossip,
-                  } as BlockInputDataColumns;
-
-                  blockImport = getBlockInput.availableData(config, signedBlock, BlockSource.gossip, blockData);
+                  blockImport = BlockInputColumns.createFromBlock({
+                    forkName: fork,
+                    block: signedBlock as SignedBeaconBlock<ForkPostFulu>,
+                    blockRootHex,
+                    custodyColumns: columns.map((c) => c.index),
+                    sampledColumns: columns.map((c) => c.index),
+                    source: BlockInputSource.gossip,
+                    seenTimestampSec: 0,
+                    daOutOfRange: false,
+                  });
+                  for (const column of columns) {
+                    blockImport.addColumn({
+                      blockRootHex,
+                      columnSidecar: column,
+                      source: BlockInputSource.gossip,
+                      seenTimestampSec: 0,
+                    });
+                  }
+                  // getBlockInput.availableData(config, signedBlock, BlockSource.gossip, blockData);
                 } else if (forkSeq >= ForkSeq.deneb && forkSeq < ForkSeq.fulu) {
                   if (blobs === undefined) {
                     // seems like some deneb tests don't have this and we are supposed to assume empty
@@ -270,13 +280,31 @@ const forkChoiceTest =
                     };
                   });
 
-                  blockImport = getBlockInput.availableData(config, signedBlock, BlockSource.gossip, {
-                    fork: ForkName.deneb,
-                    blobs: blobSidecars,
-                    blobsSource: BlobsSource.gossip,
+                  blockImport = BlockInputBlobs.createFromBlock({
+                    forkName: fork,
+                    block: signedBlock as SignedBeaconBlock<ForkPostDeneb>,
+                    blockRootHex,
+                    source: BlockInputSource.gossip,
+                    seenTimestampSec: 0,
+                    daOutOfRange: false,
                   });
+                  for (const blob of blobSidecars) {
+                    blockImport.addBlob({
+                      blockRootHex,
+                      blobSidecar: blob,
+                      source: BlockInputSource.gossip,
+                      seenTimestampSec: 0,
+                    });
+                  }
                 } else {
-                  blockImport = getBlockInput.preData(config, signedBlock, BlockSource.gossip);
+                  blockImport = BlockInputPreData.createFromBlock({
+                    forkName: fork,
+                    block: signedBlock as SignedBeaconBlock<ForkPostDeneb>,
+                    blockRootHex,
+                    source: BlockInputSource.gossip,
+                    seenTimestampSec: 0,
+                    daOutOfRange: false,
+                  });
                 }
 
                 await chain.processBlock(blockImport, {

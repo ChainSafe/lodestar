@@ -3,7 +3,7 @@ import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {ForkName, ForkPostFulu, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
-import {LodestarError, Logger, toRootHex} from "@lodestar/utils";
+import {LodestarError, Logger} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {IClock} from "../../util/clock.js";
 import {CustodyConfig} from "../../util/dataColumns.js";

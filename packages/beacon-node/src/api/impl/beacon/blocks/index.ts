@@ -37,7 +37,6 @@ import {BlockError, BlockErrorCode, BlockGossipError} from "../../../../chain/er
 import {ProduceFullBellatrix, ProduceFullDeneb, ProduceFullFulu} from "../../../../chain/produceBlock/index.js";
 import {validateGossipBlock} from "../../../../chain/validation/block.js";
 import {OpSource} from "../../../../chain/validatorMonitor.js";
-import {NetworkEvent} from "../../../../network/index.js";
 import {getBlobSidecars, kzgCommitmentToVersionedHash, reconstructBlobs} from "../../../../util/blobs.js";
 import {getDataColumnSidecarsFromBlock} from "../../../../util/dataColumns.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";

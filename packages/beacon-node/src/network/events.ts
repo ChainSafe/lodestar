@@ -1,7 +1,6 @@
 import {EventEmitter} from "node:events";
 import {PeerId, TopicValidatorResult} from "@libp2p/interface";
-import {CustodyIndex, RootHex, Status} from "@lodestar/types";
-import {BlockInput} from "../chain/blocks/blockInput/index.js";
+import {CustodyIndex, Status} from "@lodestar/types";
 import {PeerIdStr} from "../util/peerId.js";
 import {StrictEventEmitterSingleArg} from "../util/strictEvents.js";
 import {EventDirection} from "../util/workerEvents.js";

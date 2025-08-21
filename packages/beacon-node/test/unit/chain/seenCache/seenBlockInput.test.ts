@@ -1,6 +1,6 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {ForkName, ForkPostCapella, ForkPostDeneb} from "@lodestar/params";
+import {ForkName, ForkPostCapella, ForkPostDeneb, ForkPostFulu} from "@lodestar/params";
 import {computeStartSlotAtEpoch, signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {SignedBeaconBlock, deneb, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
@@ -13,14 +13,14 @@ import {
   isBlockInputPreDeneb,
 } from "../../../../src/chain/blocks/blockInput/index.js";
 import {ChainEvent, ChainEventEmitter} from "../../../../src/chain/emitter.js";
-import {SeenBlockInputCache} from "../../../../src/chain/seenCache/seenBlockInput.js";
+import {SeenBlockInput} from "../../../../src/chain/seenCache/seenGossipBlockInput.js";
 import {computeNodeIdFromPrivateKey} from "../../../../src/network/subnets/index.js";
 import {Clock} from "../../../../src/util/clock.js";
 import {CustodyConfig} from "../../../../src/util/dataColumns.js";
 import {testLogger} from "../../../utils/logger.js";
 
 describe("SeenBlockInputCache", async () => {
-  let cache: SeenBlockInputCache;
+  let cache: SeenBlockInput;
   let abortController: AbortController;
   let chainEvents: ChainEventEmitter;
 
@@ -118,7 +118,7 @@ describe("SeenBlockInputCache", async () => {
     abortController = new AbortController();
     const signal = abortController.signal;
     const genesisTime = Math.floor(Date.now() / 1000);
-    cache = new SeenBlockInputCache({
+    cache = new SeenBlockInput({
       config,
       custodyConfig,
       clock: new Clock({config, genesisTime, signal}),
@@ -133,6 +133,7 @@ describe("SeenBlockInputCache", async () => {
       const {block, rootHex} = buildBlockTestSet(ForkName.capella);
       cache.getByBlock({
         block,
+        blockRootHex: rootHex,
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now(),
       });
@@ -142,6 +143,7 @@ describe("SeenBlockInputCache", async () => {
       const {block, blockRoot, rootHex} = buildBlockTestSet(ForkName.capella);
       cache.getByBlock({
         block,
+        blockRootHex: rootHex,
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now(),
       });
@@ -157,6 +159,7 @@ describe("SeenBlockInputCache", async () => {
       const {block, rootHex} = buildBlockTestSet(ForkName.capella);
       const blockInput = cache.getByBlock({
         block,
+        blockRootHex: rootHex,
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now(),
       });
@@ -166,6 +169,7 @@ describe("SeenBlockInputCache", async () => {
       const {block, blockRoot, rootHex} = buildBlockTestSet(ForkName.capella);
       const blockInput = cache.getByBlock({
         block,
+        blockRootHex: rootHex,
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now(),
       });
@@ -181,6 +185,7 @@ describe("SeenBlockInputCache", async () => {
       const {block, rootHex} = buildBlockTestSet(ForkName.capella);
       const blockInput = cache.getByBlock({
         block,
+        blockRootHex: rootHex,
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now(),
       });
@@ -192,6 +197,7 @@ describe("SeenBlockInputCache", async () => {
       const {block, blockRoot, rootHex} = buildBlockTestSet(ForkName.capella);
       const blockInput = cache.getByBlock({
         block,
+        blockRootHex: rootHex,
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now(),
       });
@@ -208,6 +214,7 @@ describe("SeenBlockInputCache", async () => {
       const {block, rootHex} = buildBlockTestSet(ForkName.capella);
       const blockInput = cache.getByBlock({
         block,
+        blockRootHex: rootHex,
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now(),
       });
@@ -215,11 +222,13 @@ describe("SeenBlockInputCache", async () => {
       cache.prune(rootHex);
       expect(cache.get(rootHex)).toBeUndefined();
     });
+
     it("should remove all ancestors of a BlockInput", () => {
       const {parentBlock, parentRootHex, childBlock, childRootHex} = buildParentAndChildBlockTestSet(ForkName.capella);
 
       const parentBlockInput = cache.getByBlock({
         block: parentBlock,
+        blockRootHex: parentRootHex,
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now(),
       });
@@ -227,6 +236,7 @@ describe("SeenBlockInputCache", async () => {
 
       const childBlockInput = cache.getByBlock({
         block: childBlock,
+        blockRootHex: childRootHex,
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now(),
       });
@@ -256,6 +266,7 @@ describe("SeenBlockInputCache", async () => {
 
       parentBlockInput = cache.getByBlock({
         block: parentBlock,
+        blockRootHex: parentRootHex,
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now(),
       });
@@ -263,6 +274,7 @@ describe("SeenBlockInputCache", async () => {
 
       childBlockInput = cache.getByBlock({
         block: childBlock,
+        blockRootHex: childRootHex,
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now(),
       });
@@ -293,6 +305,7 @@ describe("SeenBlockInputCache", async () => {
       expect(cache.get(rootHex)).toBeUndefined();
       const blockInput = cache.getByBlock({
         block,
+        blockRootHex: rootHex,
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now(),
       });
@@ -300,27 +313,30 @@ describe("SeenBlockInputCache", async () => {
     });
     describe("should return the correct type of BlockInput for a given block root", () => {
       it("should return a BlockInputPreDeneb", () => {
-        const {block} = buildBlockTestSet(ForkName.capella);
+        const {block, rootHex} = buildBlockTestSet(ForkName.capella);
         const blockInput = cache.getByBlock({
           block,
+          blockRootHex: rootHex,
           source: BlockInputSource.gossip,
           seenTimestampSec: Date.now(),
         });
         expect(isBlockInputPreDeneb(blockInput)).toBeTruthy();
       });
       it("should return a BlockInputBlobs", () => {
-        const {block} = buildBlockTestSet(ForkName.deneb);
+        const {block, rootHex} = buildBlockTestSet(ForkName.deneb);
         const blockInput = cache.getByBlock({
           block,
+          blockRootHex: rootHex,
           source: BlockInputSource.gossip,
           seenTimestampSec: Date.now(),
         });
         expect(isBlockInputBlobs(blockInput)).toBeTruthy();
       });
       it("should return a BlockInputColumns", () => {
-        const {block} = buildBlockTestSet(ForkName.fulu);
+        const {block, rootHex} = buildBlockTestSet(ForkName.fulu);
         const blockInput = cache.getByBlock({
           block,
+          blockRootHex: rootHex,
           source: BlockInputSource.gossip,
           seenTimestampSec: Date.now(),
         });
@@ -331,12 +347,14 @@ describe("SeenBlockInputCache", async () => {
       const {block, rootHex} = buildBlockTestSet(ForkName.capella);
       const blockInput1 = cache.getByBlock({
         block,
+        blockRootHex: rootHex,
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now(),
       });
       expect(cache.get(rootHex)).toBe(blockInput1);
       const blockInput2 = cache.getByBlock({
         block,
+        blockRootHex: rootHex,
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now(),
       });
@@ -346,34 +364,39 @@ describe("SeenBlockInputCache", async () => {
       const {block, rootHex} = buildBlockTestSet(ForkName.capella);
       const blockInput = cache.getByBlock({
         block,
+        blockRootHex: rootHex,
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now(),
       });
       expect(() =>
         blockInput.addBlock({
-          block,
+          block: block as SignedBeaconBlock<ForkPostFulu>,
           blockRootHex: rootHex,
-          source: {source: BlockInputSource.gossip, seenTimestampSec: Date.now()},
+          source: BlockInputSource.gossip,
+          seenTimestampSec: Date.now(),
         })
       ).toThrow();
       expect(() =>
         cache.getByBlock({
           block,
+          blockRootHex: rootHex,
           source: BlockInputSource.gossip,
           seenTimestampSec: Date.now(),
         })
       ).not.toThrow();
     });
     it("should return the correct BlockInput for a BlockInput created by blob", () => {
-      const {block, blobSidecar} = buildBlockAndBlobTestSet(ForkName.deneb);
+      const {block, blobSidecar, rootHex} = buildBlockAndBlobTestSet(ForkName.deneb);
 
       const blockInput1 = cache.getByBlob({
         blobSidecar,
+        blockRootHex: rootHex,
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now(),
       });
       const blockInput2 = cache.getByBlock({
         block,
+        blockRootHex: rootHex,
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now(),
       });
@@ -401,6 +424,7 @@ describe("SeenBlockInputCache", async () => {
       expect(cache.get(rootHex)).toBeUndefined();
       const blockInput = cache.getByBlob({
         blobSidecar,
+        blockRootHex: rootHex,
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now(),
       });
@@ -411,42 +435,52 @@ describe("SeenBlockInputCache", async () => {
 
       const blockInput1 = cache.getByBlob({
         blobSidecar,
+        blockRootHex: rootHex,
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now(),
       });
       expect(cache.get(rootHex)).toBe(blockInput1);
       const blockInput2 = cache.getByBlob({
         blobSidecar,
+        blockRootHex: rootHex,
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now(),
       });
       expect(blockInput1).toBe(blockInput2);
     });
     it("should throw if attempting to add a blob to wrong type of BlockInput", () => {
-      const {block} = buildBlockTestSet(ForkName.capella);
+      const {block, rootHex} = buildBlockTestSet(ForkName.capella);
       const blockInput = cache.getByBlock({
         block,
+        blockRootHex: rootHex,
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now(),
       });
       expect(isBlockInputPreDeneb(blockInput)).toBeTruthy();
 
-      const {blobSidecar} = buildBlockAndBlobTestSet(ForkName.electra);
+      const {blobSidecar, rootHex: rootHex2} = buildBlockAndBlobTestSet(ForkName.electra);
       blobSidecar.signedBlockHeader = signedBlockToSignedHeader(config, block);
       expect(() =>
-        cache.getByBlob({blobSidecar, source: BlockInputSource.gossip, seenTimestampSec: Date.now()})
+        cache.getByBlob({
+          blobSidecar,
+          blockRootHex: rootHex2,
+          source: BlockInputSource.gossip,
+          seenTimestampSec: Date.now(),
+        })
       ).toThrow();
     });
     it("should add blob to an existing BlockInput", () => {
-      const {block, blobSidecar} = buildBlockAndBlobTestSet(ForkName.electra);
+      const {block, blobSidecar, rootHex} = buildBlockAndBlobTestSet(ForkName.electra);
 
       const blockInput1 = cache.getByBlock({
         block,
+        blockRootHex: rootHex,
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now(),
       });
       const blockInput2 = cache.getByBlob({
         blobSidecar,
+        blockRootHex: rootHex,
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now(),
       });
@@ -460,6 +494,7 @@ describe("SeenBlockInputCache", async () => {
       expect(cache.get(rootHex)).toBeUndefined();
       const blockInput = cache.getByBlob({
         blobSidecar,
+        blockRootHex: rootHex,
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now(),
       });
@@ -475,6 +510,7 @@ describe("SeenBlockInputCache", async () => {
       expect(() =>
         cache.getByBlob({
           blobSidecar,
+          blockRootHex: rootHex,
           source: BlockInputSource.gossip,
           seenTimestampSec: Date.now(),
         })
@@ -487,6 +523,7 @@ describe("SeenBlockInputCache", async () => {
       const blockInput = cache.getByBlob(
         {
           blobSidecar,
+          blockRootHex: rootHex,
           source: BlockInputSource.gossip,
           seenTimestampSec: Date.now(),
         },
@@ -497,6 +534,7 @@ describe("SeenBlockInputCache", async () => {
         cache.getByBlob(
           {
             blobSidecar,
+            blockRootHex: rootHex,
             source: BlockInputSource.gossip,
             seenTimestampSec: Date.now(),
           },
