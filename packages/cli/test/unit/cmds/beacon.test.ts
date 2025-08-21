@@ -81,10 +81,16 @@ describe("cmds / beacon / args handler", () => {
   it("Set known deposit contract", async () => {
     const {options} = await runBeaconHandlerInit({
       network: "mainnet",
+      eth1: true,
     });
 
+    const {eth1} = options;
+    if (eth1.mode !== "http") {
+      throw Error(`Expected eth1 mode to be 'http', got ${eth1.mode}`);
+    }
+
     // Okay to hardcode, since this value will never change
-    expect(options.eth1.depositContractDeployBlock).toBe(11052984);
+    expect(eth1.depositContractDeployBlock).toBe(11052984);
   });
 
   it("Apply custom network name from config file", async () => {

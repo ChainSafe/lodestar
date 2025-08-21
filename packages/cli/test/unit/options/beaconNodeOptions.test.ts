@@ -154,7 +154,7 @@ describe("options / beaconNodeOptions", () => {
         maxCPStateEpochsInMemory: 100,
       },
       eth1: {
-        enabled: true,
+        mode: "http",
         providerUrls: ["http://my.node:8545"],
         depositContractDeployBlock: 1625314,
         disableEth1DepositDataTracker: true,
@@ -245,7 +245,7 @@ describe("options / beaconNodeOptions", () => {
 
     const expectedOptions: RecursivePartial<IBeaconNodeOptions> = {
       eth1: {
-        enabled: true,
+        mode: "http",
         providerUrls: ["http://my.node:8551"],
         jwtSecretHex,
       },
