@@ -24,16 +24,6 @@ const typesByFork = {
   [ForkName.deneb]: {...phase0Ssz, ...altairSsz, ...bellatrixSsz, ...capellaSsz, ...denebSsz},
   [ForkName.electra]: {...phase0Ssz, ...altairSsz, ...bellatrixSsz, ...capellaSsz, ...denebSsz, ...electraSsz},
   [ForkName.fulu]: {...phase0Ssz, ...altairSsz, ...bellatrixSsz, ...capellaSsz, ...denebSsz, ...electraSsz, ...fuluSsz},
-  [ForkName.gloas]: {
-    ...phase0Ssz,
-    ...altairSsz,
-    ...bellatrixSsz,
-    ...capellaSsz,
-    ...denebSsz,
-    ...electraSsz,
-    ...fuluSsz,
-    ...gloasSsz,
-  },
   [ForkName.eip7805]: {
     ...phase0Ssz,
     ...altairSsz,
@@ -42,8 +32,18 @@ const typesByFork = {
     ...denebSsz,
     ...electraSsz,
     ...fuluSsz,
-    ...gloasSsz,
     ...eip7805Ssz,
+  },
+  [ForkName.gloas]: {
+    ...phase0Ssz,
+    ...altairSsz,
+    ...bellatrixSsz,
+    ...capellaSsz,
+    ...denebSsz,
+    ...electraSsz,
+    ...fuluSsz,
+    ...eip7805Ssz,
+    ...gloasSsz,
   },
 };
 
@@ -57,8 +57,8 @@ export const capella = typesByFork[ForkName.capella];
 export const deneb = typesByFork[ForkName.deneb];
 export const electra = typesByFork[ForkName.electra];
 export const fulu = typesByFork[ForkName.fulu];
-export const gloas = typesByFork[ForkName.gloas];
 export const eip7805 = typesByFork[ForkName.eip7805];
+export const gloas = typesByFork[ForkName.gloas];
 
 /**
  * A type of union of forks must accept as any parameter the UNION of all fork types.

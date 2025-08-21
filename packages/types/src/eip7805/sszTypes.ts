@@ -2,6 +2,7 @@ import {BitVectorType, ContainerType, VectorBasicType} from "@chainsafe/ssz";
 import {INCLUSION_LIST_COMMITTEE_SIZE} from "@lodestar/params";
 import {ssz as bellatrixSsz} from "../bellatrix/index.js";
 import {ssz as electraSsz} from "../electra/index.js";
+import {ssz as fuluSsz} from "../fulu/index.js";
 import {ssz as primitiveSsz} from "../primitive/index.js";
 
 const {Slot, Root, BLSSignature, ValidatorIndex} = primitiveSsz;
@@ -38,7 +39,7 @@ export const InclusionListByCommitteeIndicesRequest = new ContainerType(
 
 export const BeaconState = new ContainerType(
   {
-    ...electraSsz.BeaconState.fields,
+    ...fuluSsz.BeaconState.fields,
   },
   {typeName: "BeaconState", jsonCase: "eth2"}
 );
@@ -52,14 +53,14 @@ export const BeaconBlockBody = new ContainerType(
 
 export const BeaconBlock = new ContainerType(
   {
-    ...electraSsz.BeaconBlock.fields,
+    ...fuluSsz.BeaconBlock.fields,
   },
   {typeName: "BeaconBlock", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
 export const SignedBeaconBlock = new ContainerType(
   {
-    ...electraSsz.SignedBeaconBlock.fields,
+    ...fuluSsz.SignedBeaconBlock.fields,
   },
   {typeName: "SignedBeaconBlock", jsonCase: "eth2"}
 );

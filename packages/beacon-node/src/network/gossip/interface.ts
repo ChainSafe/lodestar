@@ -13,8 +13,8 @@ import {
   altair,
   capella,
   deneb,
-  fulu,
   eip7805,
+  fulu,
   phase0,
 } from "@lodestar/types";
 import {Logger} from "@lodestar/utils";

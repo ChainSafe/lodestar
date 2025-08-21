@@ -101,8 +101,8 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
   const capellaForkRelevant = localConfig.CAPELLA_FORK_EPOCH < Infinity;
   const denebForkRelevant = localConfig.DENEB_FORK_EPOCH < Infinity;
   const electraForkRelevant = localConfig.ELECTRA_FORK_EPOCH < Infinity;
-  const eip7805ForkRelevant = localConfig.EIP7805_FORK_EPOCH < Infinity;
   const fuluForkRelevant = localConfig.FULU_FORK_EPOCH < Infinity;
+  const eip7805ForkRelevant = localConfig.EIP7805_FORK_EPOCH < Infinity;
   const gloasForkRelevant = localConfig.GLOAS_FORK_EPOCH < Infinity;
 
   return {
@@ -139,12 +139,12 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     // electra
     ELECTRA_FORK_VERSION: electraForkRelevant,
     ELECTRA_FORK_EPOCH: electraForkRelevant,
-    // EIP-7805
-    EIP7805_FORK_VERSION: eip7805ForkRelevant,
-    EIP7805_FORK_EPOCH: eip7805ForkRelevant,
     // fulu
     FULU_FORK_VERSION: fuluForkRelevant,
     FULU_FORK_EPOCH: fuluForkRelevant,
+    // EIP-7805
+    EIP7805_FORK_VERSION: eip7805ForkRelevant,
+    EIP7805_FORK_EPOCH: eip7805ForkRelevant,
     // gloas
     GLOAS_FORK_VERSION: gloasForkRelevant,
     GLOAS_FORK_EPOCH: gloasForkRelevant,

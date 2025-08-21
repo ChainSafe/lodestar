@@ -76,26 +76,26 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     prevVersion: config.EIP7805_FORK_VERSION,
     prevForkName: ForkName.electra,
   };
-  const gloas: ForkInfo = {
-    name: ForkName.gloas,
-    seq: ForkSeq.gloas,
-    epoch: config.GLOAS_FORK_EPOCH,
-    version: config.GLOAS_FORK_VERSION,
-    prevVersion: config.FULU_FORK_VERSION,
-    prevForkName: ForkName.fulu,
-  };
   const eip7805: ForkInfo = {
     name: ForkName.eip7805,
     seq: ForkSeq.eip7805,
     epoch: config.EIP7805_FORK_EPOCH,
     version: config.EIP7805_FORK_VERSION,
-    prevVersion: config.GLOAS_FORK_EPOCH,
-    prevForkName: ForkName.gloas,
+    prevVersion: config.FULU_FORK_VERSION,
+    prevForkName: ForkName.fulu,
+  };
+  const gloas: ForkInfo = {
+    name: ForkName.gloas,
+    seq: ForkSeq.gloas,
+    epoch: config.GLOAS_FORK_EPOCH,
+    version: config.GLOAS_FORK_VERSION,
+    prevVersion: config.EIP7805_FORK_VERSION,
+    prevForkName: ForkName.eip7805,
   };
 
   /** Forks in order order of occurence, `phase0` first */
   // Note: Downstream code relies on proper ordering.
-  const forks = {phase0, altair, bellatrix, capella, deneb, electra, fulu, gloas, eip7805};
+  const forks = {phase0, altair, bellatrix, capella, deneb, electra, fulu, eip7805, gloas};
 
   // Prevents allocating an array on every getForkInfo() call
   const forksAscendingEpochOrder = Object.values(forks);

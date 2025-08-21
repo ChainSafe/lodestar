@@ -6,7 +6,16 @@ import {
   ForkPreFulu,
   WITHDRAWAL_REQUEST_TYPE,
 } from "@lodestar/params";
-import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei, bellatrix, capella} from "@lodestar/types";
+import {
+  BlobsBundle,
+  ExecutionPayload,
+  ExecutionRequests,
+  Root,
+  RootHex,
+  Wei,
+  bellatrix,
+  capella,
+} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
 

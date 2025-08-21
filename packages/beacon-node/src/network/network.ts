@@ -24,8 +24,8 @@ import {
   altair,
   capella,
   deneb,
-  fulu,
   eip7805,
+  fulu,
   phase0,
 } from "@lodestar/types";
 import {prettyPrintIndices, sleep} from "@lodestar/utils";

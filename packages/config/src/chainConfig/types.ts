@@ -41,12 +41,12 @@ export type ChainConfig = {
   // ELECTRA
   ELECTRA_FORK_VERSION: Uint8Array;
   ELECTRA_FORK_EPOCH: number;
-  // EIP-7805
-  EIP7805_FORK_VERSION: Uint8Array;
-  EIP7805_FORK_EPOCH: number;
   // FULU
   FULU_FORK_VERSION: Uint8Array;
   FULU_FORK_EPOCH: number;
+  // EIP-7805
+  EIP7805_FORK_VERSION: Uint8Array;
+  EIP7805_FORK_EPOCH: number;
   // GLOAS
   GLOAS_FORK_VERSION: Uint8Array;
   GLOAS_FORK_EPOCH: number;
@@ -141,12 +141,12 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   // ELECTRA
   ELECTRA_FORK_VERSION: "bytes",
   ELECTRA_FORK_EPOCH: "number",
-  // EIP-7805
-  EIP7805_FORK_VERSION: "bytes",
-  EIP7805_FORK_EPOCH: "number",
   // FULU
   FULU_FORK_VERSION: "bytes",
   FULU_FORK_EPOCH: "number",
+  // EIP-7805
+  EIP7805_FORK_VERSION: "bytes",
+  EIP7805_FORK_EPOCH: "number",
   // GLOAS
   GLOAS_FORK_VERSION: "bytes",
   GLOAS_FORK_EPOCH: "number",

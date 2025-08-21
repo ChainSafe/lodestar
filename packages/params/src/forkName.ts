@@ -9,8 +9,8 @@ export enum ForkName {
   deneb = "deneb",
   electra = "electra",
   fulu = "fulu",
-  gloas = "gloas",
   eip7805 = "eip7805",
+  gloas = "gloas",
 }
 
 /**
@@ -24,8 +24,8 @@ export enum ForkSeq {
   deneb = 4,
   electra = 5,
   fulu = 6,
-  gloas = 7,
-  eip7805: 8,
+  eip7805 = 7,
+  gloas = 8,
 }
 
 function exclude<T extends ForkName, U extends T>(coll: T[], val: U[]): Exclude<T, U>[] {
@@ -114,22 +114,7 @@ export function isForkPostFulu(fork: ForkName): fork is ForkPostFulu {
   return isForkPostElectra(fork) && fork !== ForkName.electra;
 }
 
-export type ForkPreGloas = ForkPreFulu | ForkName.fulu;
-export type ForkPostGloas = Exclude<ForkName, ForkPreGloas>;
-export const forkPostGloas = exclude(forkAll, [
-  ForkName.phase0,
-  ForkName.altair,
-  ForkName.bellatrix,
-  ForkName.capella,
-  ForkName.deneb,
-  ForkName.electra,
-  ForkName.fulu,
-]);
-export function isForkPostGloas(fork: ForkName): fork is ForkPostGloas {
-  return isForkPostFulu(fork) && fork !== ForkName.fulu;
-}
-
-export type ForkPreEip7805 = ForkPreGloas | ForkName.gloas;
+export type ForkPreEip7805 = ForkPreFulu | ForkName.fulu;
 export type ForkPostEip7805 = Exclude<ForkName, ForkPreEip7805>;
 export const forkPostEip7805 = exclude(forkAll, [
   ForkName.phase0,
@@ -139,10 +124,25 @@ export const forkPostEip7805 = exclude(forkAll, [
   ForkName.deneb,
   ForkName.electra,
   ForkName.fulu,
-  ForkName.gloas,
 ]);
 export function isForkPostEip7805(fork: ForkName): fork is ForkPostEip7805 {
-  return isForkPostGloas(fork) && fork !== ForkName.gloas;
+  return isForkPostFulu(fork) && fork !== ForkName.fulu;
+}
+
+export type ForkPreGloas = ForkPreEip7805 | ForkName.eip7805;
+export type ForkPostGloas = Exclude<ForkName, ForkPreGloas>;
+export const forkPostGloas = exclude(forkAll, [
+  ForkName.phase0,
+  ForkName.altair,
+  ForkName.bellatrix,
+  ForkName.capella,
+  ForkName.deneb,
+  ForkName.electra,
+  ForkName.fulu,
+  ForkName.eip7805,
+]);
+export function isForkPostGloas(fork: ForkName): fork is ForkPostGloas {
+  return isForkPostEip7805(fork) && fork !== ForkName.eip7805;
 }
 
 /*

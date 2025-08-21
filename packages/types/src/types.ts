@@ -237,14 +237,15 @@ type TypesByFork = {
     SignedAggregateAndProof: electra.SignedAggregateAndProof;
     ExecutionRequests: electra.ExecutionRequests;
   };
-  [ForkName.eip7805]: {
+  [ForkName.fulu]: {
     BeaconBlockHeader: phase0.BeaconBlockHeader;
     SignedBeaconBlockHeader: phase0.SignedBeaconBlockHeader;
     BeaconBlock: electra.BeaconBlock;
     BeaconBlockBody: electra.BeaconBlockBody;
-    BeaconState: electra.BeaconState;
+    BeaconState: fulu.BeaconState;
     SignedBeaconBlock: electra.SignedBeaconBlock;
-    Metadata: altair.Metadata;
+    Metadata: fulu.Metadata;
+    Status: fulu.Status;
     LightClientHeader: deneb.LightClientHeader;
     LightClientBootstrap: electra.LightClientBootstrap;
     LightClientUpdate: electra.LightClientUpdate;
@@ -259,11 +260,10 @@ type TypesByFork = {
     BuilderBid: electra.BuilderBid;
     SignedBuilderBid: electra.SignedBuilderBid;
     SSEPayloadAttributes: electra.SSEPayloadAttributes;
-    BlockContents: electra.BlockContents;
-    SignedBlockContents: electra.SignedBlockContents;
+    BlockContents: fulu.BlockContents;
+    SignedBlockContents: fulu.SignedBlockContents;
     ExecutionPayloadAndBlobsBundle: deneb.ExecutionPayloadAndBlobsBundle;
-    BlobsBundle: deneb.BlobsBundle;
-    Contents: deneb.Contents;
+    BlobsBundle: fulu.BlobsBundle;
     SyncCommittee: altair.SyncCommittee;
     SyncAggregate: altair.SyncAggregate;
     SingleAttestation: electra.SingleAttestation;
@@ -275,7 +275,7 @@ type TypesByFork = {
     SignedAggregateAndProof: electra.SignedAggregateAndProof;
     ExecutionRequests: electra.ExecutionRequests;
   };
-  [ForkName.fulu]: {
+  [ForkName.eip7805]: {
     BeaconBlockHeader: phase0.BeaconBlockHeader;
     SignedBeaconBlockHeader: phase0.SignedBeaconBlockHeader;
     BeaconBlock: electra.BeaconBlock;

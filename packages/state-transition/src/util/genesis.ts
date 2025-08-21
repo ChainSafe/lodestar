@@ -329,11 +329,20 @@ export function initializeBeaconStateFromEth1(
       ssz.fulu.ExecutionPayloadHeader.defaultViewDU();
   }
 
+  if (fork >= ForkSeq.eip7805) {
+    const stateEip7805 = state as CompositeViewDU<typeof ssz.eip7805.BeaconState>;
+    stateEip7805.fork.previousVersion = config.EIP7805_FORK_VERSION;
+    stateEip7805.fork.currentVersion = config.EIP7805_FORK_VERSION;
+    stateEip7805.latestExecutionPayloadHeader =
+      (executionPayloadHeader as CompositeViewDU<typeof ssz.eip7805.ExecutionPayloadHeader>) ??
+      ssz.eip7805.ExecutionPayloadHeader.defaultViewDU();
+  }
+
   if (fork >= ForkSeq.gloas) {
-    const stateFulu = state as CompositeViewDU<typeof ssz.gloas.BeaconState>;
-    stateFulu.fork.previousVersion = config.GLOAS_FORK_VERSION;
-    stateFulu.fork.currentVersion = config.GLOAS_FORK_VERSION;
-    stateFulu.latestExecutionPayloadHeader =
+    const stateGloas = state as CompositeViewDU<typeof ssz.gloas.BeaconState>;
+    stateGloas.fork.previousVersion = config.GLOAS_FORK_VERSION;
+    stateGloas.fork.currentVersion = config.GLOAS_FORK_VERSION;
+    stateGloas.latestExecutionPayloadHeader =
       (executionPayloadHeader as CompositeViewDU<typeof ssz.gloas.ExecutionPayloadHeader>) ??
       ssz.gloas.ExecutionPayloadHeader.defaultViewDU();
   }

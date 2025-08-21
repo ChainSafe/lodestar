@@ -8,8 +8,8 @@ export {upgradeStateToBellatrix} from "./upgradeStateToBellatrix.js";
 export {upgradeStateToCapella} from "./upgradeStateToCapella.js";
 export {upgradeStateToDeneb} from "./upgradeStateToDeneb.js";
 export {upgradeStateToElectra} from "./upgradeStateToElectra.js";
-export {upgradeStateToEip7805} from "./upgradeStateToEip7805.js";
 export {upgradeStateToFulu} from "./upgradeStateToFulu.js";
+export {upgradeStateToEip7805} from "./upgradeStateToEip7805.js";
 export {upgradeStateToGloas} from "./upgradeStateToGloas.js";
 
 /**
