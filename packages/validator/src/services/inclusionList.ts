@@ -5,7 +5,6 @@ import {Slot, bellatrix, eip7805} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {IClock, LoggerVc} from "../util/index.js";
 import {ChainHeaderTracker} from "./chainHeaderTracker.js";
-import {ValidatorEventEmitter} from "./emitter.js";
 import {InclusionListDutiesService} from "./inclusionListDuties.js";
 import {SyncingStatusTracker} from "./syncingStatusTracker.js";
 import {ValidatorStore} from "./validatorStore.js";
@@ -22,7 +21,6 @@ export class InclusionListService {
     private readonly api: ApiClient,
     private readonly clock: IClock,
     private readonly validatorStore: ValidatorStore,
-    private readonly emitter: ValidatorEventEmitter,
     chainHeadTracker: ChainHeaderTracker,
     syncingStatusTracker: SyncingStatusTracker
   ) {

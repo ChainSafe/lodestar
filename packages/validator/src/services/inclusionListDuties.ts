@@ -1,7 +1,7 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {computeEpochAtSlot, isAggregatorFromCommitteeLength, isStartSlotOfEpoch} from "@lodestar/state-transition";
+import {computeEpochAtSlot, isStartSlotOfEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {sleep, toPubkeyHex} from "@lodestar/utils";
 import {IClock, LoggerVc} from "../util/index.js";

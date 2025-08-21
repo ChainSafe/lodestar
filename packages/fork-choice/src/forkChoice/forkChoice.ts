@@ -231,7 +231,11 @@ export class ForkChoice implements IForkChoice {
     const {mode} = opt;
 
     const canonicialHeadBlock = mode === UpdateHeadOpt.GetPredictedProposerHead ? this.getHead() : this.updateHead();
-    let result;
+    let result: {
+      head: ProtoBlock;
+      isHeadTimely?: boolean;
+      notReorgedReason?: NotReorgedReason;
+    };
     switch (mode) {
       case UpdateHeadOpt.GetPredictedProposerHead:
         result = {head: this.predictProposerHead(canonicialHeadBlock, opt.slot)};
@@ -245,7 +249,7 @@ export class ForkChoice implements IForkChoice {
         result = {head, isHeadTimely, notReorgedReason};
         break;
       }
-      case UpdateHeadOpt.GetCanonicialHead:
+      //case UpdateHeadOpt.GetCanonicialHead:
       default:
         result = {head: canonicialHeadBlock};
         break;

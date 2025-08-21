@@ -54,7 +54,7 @@ export function getConfig(fork: ForkName, forkEpoch = 0): ChainForkConfig {
         CAPELLA_FORK_EPOCH: 0,
         DENEB_FORK_EPOCH: 0,
         ELECTRA_FORK_EPOCH: 0,
-        EIP_7805_FORK_EPOCH: 0,
+        EIP7805_FORK_EPOCH: 0,
         FULU_FORK_EPOCH: forkEpoch,
         BLOB_SCHEDULE: [],
       });

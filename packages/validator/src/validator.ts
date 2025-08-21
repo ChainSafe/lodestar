@@ -273,7 +273,6 @@ export class Validator {
       api,
       clock,
       validatorStore,
-      emitter,
       chainHeaderTracker,
       syncingStatusTracker
     );

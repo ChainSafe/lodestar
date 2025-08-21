@@ -10,6 +10,9 @@ import {
   ExecutionStatus,
   ForkChoice,
   IForkChoiceStore,
+  InclusionListCommitteeRootStore,
+  InclusionListEquivocatorStore,
+  InclusionListStore,
   ProtoArray,
   ProtoBlock,
 } from "../../../src/index.js";
@@ -60,6 +63,9 @@ describe("Forkchoice", () => {
     unrealizedFinalizedCheckpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
     justifiedBalancesGetter: () => new Uint16Array([32]),
     equivocatingIndices: new Set(),
+    inclusionLists: new InclusionListStore(),
+    inclusionListEquivocators: new InclusionListEquivocatorStore(),
+    unsatisifiedInclusionListBlocks: new InclusionListCommitteeRootStore(),
   };
 
   const getParentBlockRoot = (slot: number, skippedSlots: number[] = []): RootHex => {
