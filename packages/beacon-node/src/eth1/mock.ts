@@ -2,11 +2,9 @@ import {ChainForkConfig} from "@lodestar/config";
 import {ZERO_HASH_HEX} from "@lodestar/params";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {Root} from "@lodestar/types";
-import {fromHex, toRootHex} from "@lodestar/utils";
+import {fromHex} from "@lodestar/utils";
 import {Eth1DataAndDeposits, IEth1ForBlockProduction, PowMergeBlock, TDProgress} from "./interface.js";
-
-export const MOCK_TERMINAL_POW_BLOCK_HASH = toRootHex(Buffer.alloc(32, 1));
-export const MOCK_TERMINAL_POW_BLOCK_NUMBER = 1;
+import {Eth1MockOptions} from "./options.js";
 
 /**
  * Mock version of Eth1ForBlockProduction
@@ -14,7 +12,11 @@ export const MOCK_TERMINAL_POW_BLOCK_NUMBER = 1;
 export class Eth1ForBlockProductionMock implements IEth1ForBlockProduction {
   private powBlocks: Map<string, PowMergeBlock> = new Map();
 
-  constructor(config?: ChainForkConfig) {
+  constructor(
+    private readonly options: Eth1MockOptions,
+    config?: ChainForkConfig
+  ) {
+    const {terminalPowBlockNumber, terminalPowBlockHash} = options;
     const genericBlock: PowMergeBlock = {
       number: 0,
       blockHash: ZERO_HASH_HEX,
@@ -22,13 +24,13 @@ export class Eth1ForBlockProductionMock implements IEth1ForBlockProduction {
       totalDifficulty: BigInt(0),
     };
     const terminalPowBlock: PowMergeBlock = {
-      number: MOCK_TERMINAL_POW_BLOCK_NUMBER,
-      blockHash: MOCK_TERMINAL_POW_BLOCK_HASH,
+      number: terminalPowBlockNumber,
+      blockHash: terminalPowBlockHash,
       parentHash: ZERO_HASH_HEX,
       totalDifficulty: config?.TERMINAL_TOTAL_DIFFICULTY ?? BigInt(0),
     };
     this.powBlocks.set(ZERO_HASH_HEX, genericBlock);
-    this.powBlocks.set(MOCK_TERMINAL_POW_BLOCK_HASH, terminalPowBlock);
+    this.powBlocks.set(terminalPowBlockHash, terminalPowBlock);
   }
 
   /**
@@ -43,7 +45,7 @@ export class Eth1ForBlockProductionMock implements IEth1ForBlockProduction {
    * Will miss the oportunity to propose the merge block but will still produce valid blocks
    */
   async getTerminalPowBlock(): Promise<Root | null> {
-    return fromHex(MOCK_TERMINAL_POW_BLOCK_HASH);
+    return fromHex(this.options.terminalPowBlockHash);
   }
 
   /** Will not be able to validate the merge block */

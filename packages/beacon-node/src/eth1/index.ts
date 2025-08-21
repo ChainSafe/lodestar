@@ -52,7 +52,7 @@ export function initializeEth1ForBlockProduction(
       return new Eth1ForBlockProductionDisabled();
 
     case "mock":
-      return new Eth1ForBlockProductionMock(modules.config);
+      return new Eth1ForBlockProductionMock(opts, modules.config);
 
     default:
       return new Eth1ForBlockProduction(opts, {

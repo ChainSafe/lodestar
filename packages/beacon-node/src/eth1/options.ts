@@ -18,7 +18,7 @@ export type Eth1HttpOptions = {
 };
 
 export type Eth1MockOptions = {
-  genesisBlockHash: string;
+  terminalPowBlockNumber: number;
   terminalPowBlockHash: string;
 };
 
