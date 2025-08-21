@@ -2,7 +2,6 @@ import {ChainForkConfig} from "@lodestar/config";
 import {INCLUSION_LIST_COMMITTEE_SIZE} from "@lodestar/params";
 import {Slot, ValidatorIndex, bellatrix, eip7805} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
-import {Metrics} from "../../metrics/metrics.js";
 import {byteArrayEquals} from "../../util/bytes.js";
 import {IClock} from "../../util/clock.js";
 import {OpPoolError, OpPoolErrorCode} from "./types.js";
@@ -50,8 +49,7 @@ export class InclusionListPool {
 
   constructor(
     private readonly config: ChainForkConfig,
-    private readonly clock: IClock,
-    private readonly metrics: Metrics | null
+    private readonly clock: IClock
   ) {}
 
   get size(): number {

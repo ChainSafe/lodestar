@@ -542,7 +542,7 @@ export async function prepareExecutionPayload(
 }
 
 export async function prepareExecutionPayloadInclusionList(
-  chain: {executionEngine: IExecutionEngine; inclusionListPool: InclusionListPool},
+  chain: {executionEngine: IExecutionEngine; inclusionListPool: InclusionListPool; metrics: Metrics | null},
   logger: Logger,
   payloadId: PayloadId,
   slot: Slot
@@ -555,6 +555,7 @@ export async function prepareExecutionPayloadInclusionList(
     payloadId,
     numTransactions: transactions.length,
   });
+  chain.metrics?.eip7805.inclusionListTransactionsSentToPayload.inc(transactions.length);
 }
 
 async function prepareExecutionPayloadHeader(
