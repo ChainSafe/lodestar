@@ -360,7 +360,7 @@ export class AttestationService {
       // Note that the aggregations flow is not explicitly exited but rather will be skipped
       // due to the fact that calculation of `is_aggregator` in AttestationDutiesService is not done
       // and selectionProof is set to null, meaning no validator will be considered an aggregator.
-      sleep(this.clock.msToSlotComponent(slot, "AGGREGRATE_DUE_BPS"), signal),
+      sleep(this.clock.msToSlotComponent(slot, "ATTESTATION_DUE_BPS"), signal),
     ]);
 
     if (!res) {
