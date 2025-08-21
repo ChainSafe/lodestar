@@ -15,6 +15,7 @@ import {
   Upgrader,
 } from "@libp2p/interface";
 import type {AddressManager, ConnectionManager, Registrar, TransportManager} from "@libp2p/interface-internal";
+import {LoggerNode} from "@lodestar/logger/node";
 import {
   AttesterSlashing,
   LightClientFinalityUpdate,
@@ -58,6 +59,7 @@ export interface INetwork extends INetworkCorePublic {
   readonly peerId: PeerId;
   readonly custodyConfig: CustodyConfig;
   readonly closed: boolean;
+  readonly logger: LoggerNode;
   events: INetworkEventBus;
 
   getConnectedPeers(): PeerIdStr[];
