@@ -314,17 +314,20 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
   for (let i = 0; i < blocks.length; i += BLOB_SIDECAR_BATCH_SIZE) {
     const toIdx = Math.min(i + BLOB_SIDECAR_BATCH_SIZE, blocks.length);
     const canonicalBlocks = blocks.slice(i, toIdx);
-    const migratableBlocks = canonicalBlocks.filter((b) => withinDataColumnWindow(b.slot));
     const promises = [];
 
-    for (const block of migratableBlocks) {
+    for (const block of canonicalBlocks) {
+      if (!withinDataColumnWindow(block.slot)) continue;
+
       const dataColumnSidecars = await db.dataColumnSidecar.valuesBinary(block.root);
       if (!dataColumnSidecars || dataColumnSidecars.length === 0) {
         throw Error(`No dataColumnSidecars found for slot ${block.slot} root ${toHex(block.root)}`);
       }
+
       promises.push(db.dataColumnSidecarArchive.putManyBinary(block.slot, dataColumnSidecars));
       migratedDataColumnsCount += dataColumnSidecars.length;
     }
+
     promises.push(db.dataColumnSidecar.deleteMany(canonicalBlocks.map((block) => block.root)));
 
     await Promise.all(promises);
