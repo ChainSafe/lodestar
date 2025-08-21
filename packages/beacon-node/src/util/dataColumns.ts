@@ -238,11 +238,15 @@ export function getDataColumns(config: ChainForkConfig, nodeId: NodeId, custodyG
  * SPEC FUNCTION (note: spec currently computes proofs, but we already have them)
  * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/das-core.md#compute_matrix
  */
-export function getCellsAndProofs(blobBundles: fulu.BlobAndProofV2[]): {cells: Uint8Array[]; proofs: Uint8Array[]}[] {
-  return blobBundles.map(({blob, proofs}) => {
-    const cells = kzg.computeCells(blob);
-    return {cells, proofs};
-  });
+export async function getCellsAndProofs(
+  blobBundles: fulu.BlobAndProofV2[]
+): Promise<{cells: Uint8Array[]; proofs: Uint8Array[]}[]> {
+  const blobsAndProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[] = [];
+  for (const {blob, proofs} of blobBundles) {
+    const cells = await kzg.asyncComputeCells(blob);
+    blobsAndProofs.push({cells, proofs});
+  }
+  return blobsAndProofs;
 }
 
 /**
