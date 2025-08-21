@@ -16,7 +16,7 @@ export class InclusionListService {
   private readonly dutiesService: InclusionListDutiesService;
 
   constructor(
-    private readonly config: ChainForkConfig,
+    config: ChainForkConfig,
     private readonly logger: LoggerVc,
     private readonly api: ApiClient,
     private readonly clock: IClock,

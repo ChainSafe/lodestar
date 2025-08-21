@@ -126,7 +126,11 @@ describe("network / gossip / topic", () => {
     ],
     [GossipType.inclusion_list]: [
       {
-        topic: {type: GossipType.inclusion_list, fork: ForkName.eip7805, encoding},
+        topic: {
+          type: GossipType.inclusion_list,
+          boundary: {fork: ForkName.eip7805, epoch: config.EIP7805_FORK_EPOCH},
+          encoding,
+        },
         // TODO EIP-7805: this is not correct
         topicStr: "/eth2/46acb19a/inclusion_list/ssz_snappy",
       },

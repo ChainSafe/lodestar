@@ -1,6 +1,14 @@
 import {beforeAll, bench, describe} from "@chainsafe/benchmark";
 import {BitArray, toHexString} from "@chainsafe/ssz";
-import {ExecutionStatus, ForkChoice, IForkChoiceStore, ProtoArray} from "@lodestar/fork-choice";
+import {
+  ExecutionStatus,
+  ForkChoice,
+  IForkChoiceStore,
+  InclusionListCommitteeRootStore,
+  InclusionListEquivocatorStore,
+  InclusionListStore,
+  ProtoArray,
+} from "@lodestar/fork-choice";
 import {HISTORICAL_ROOTS_LIMIT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {
@@ -120,6 +128,9 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
         unrealizedFinalizedCheckpoint: {...finalizedCheckpoint, rootHex: toHexString(finalizedCheckpoint.root)},
         justifiedBalancesGetter: () => originalState.epochCtx.effectiveBalanceIncrements,
         equivocatingIndices: new Set(),
+        inclusionLists: new InclusionListStore(),
+        inclusionListEquivocators: new InclusionListEquivocatorStore(),
+        unsatisifiedInclusionListBlocks: new InclusionListCommitteeRootStore(),
       };
       forkchoice = new ForkChoice(originalState.config, fcStore, protoArray);
     },
