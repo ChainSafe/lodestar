@@ -1241,7 +1241,7 @@ export class BeaconChain implements IBeaconChain {
     const effectiveBalanceIncrements = this.checkpointBalancesCache.get(finalizedCheckpoint);
     if (effectiveBalanceIncrements) {
       effectiveBalances = validatorIndices.map(
-        (index) => effectiveBalanceIncrements[index] * EFFECTIVE_BALANCE_INCREMENT
+        (index) => (effectiveBalanceIncrements[index] ?? 0) * EFFECTIVE_BALANCE_INCREMENT
       );
     } else {
       // If there's no cached effective balances, get the state from disk and parse them out
@@ -1263,7 +1263,7 @@ export class BeaconChain implements IBeaconChain {
       if (stateOrBytes instanceof Uint8Array) {
         effectiveBalances = getEffectiveBalancesFromStateBytes(this.config, stateOrBytes, validatorIndices);
       } else {
-        effectiveBalances = validatorIndices.map((index) => stateOrBytes.validators.get(index).effectiveBalance);
+        effectiveBalances = validatorIndices.map((index) => stateOrBytes.validators.get(index).effectiveBalance ?? 0);
       }
     }
 
