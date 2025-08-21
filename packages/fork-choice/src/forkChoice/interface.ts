@@ -64,8 +64,11 @@ export enum NotReorgedReason {
   ReorgMoreThanOneSlot = "reorgMoreThanOneSlot",
   ProposerBoostNotWornOff = "proposerBoostNotWornOff",
   HeadBlockNotWeak = "headBlockNotWeak",
-  ParentBlockNotStrong = "ParentBlockNotStrong",
+  ParentBlockNotStrong = "parentBlockNotStrong",
   NotProposingOnTime = "notProposingOnTime",
+  NotProposerOfNextSlot = "notProposerOfNextSlot",
+  HeadBlockNotAvailable = "headBlockNotAvailable", // Should not happen because head block should be in cache
+  Unknown = "unknown", // A placeholder in case reason is not provided
 }
 
 export type ForkChoiceMetrics = {
@@ -76,6 +79,10 @@ export type ForkChoiceMetrics = {
   nodes: number;
   indices: number;
 };
+
+export type ShouldOverrideForkChoiceUpdateResult =
+  | {shouldOverrideFcu: true; parentBlock: ProtoBlock}
+  | {shouldOverrideFcu: false; reason: NotReorgedReason};
 
 export interface IForkChoice {
   irrecoverableError?: Error;
@@ -109,6 +116,16 @@ export interface IForkChoice {
     isHeadTimely?: boolean;
     notReorgedReason?: NotReorgedReason;
   };
+  /**
+   * This is called during block import when proposerBoostReorg is enabled
+   * fcu call in `importBlock()` will be suppressed if this returns true. It is also
+   * called by `predictProposerHead()` during `prepareNextSlot()`.
+   */
+  shouldOverrideForkChoiceUpdate(
+    blockRoot: RootHex,
+    secFromSlot: number,
+    currentSlot: Slot
+  ): ShouldOverrideForkChoiceUpdateResult;
   /**
    * Retrieves all possible chain heads (leaves of fork choice tree).
    */

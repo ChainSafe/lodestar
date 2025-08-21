@@ -15,13 +15,14 @@ import {
 } from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";
-import {Logger, formatBytes} from "@lodestar/utils";
+import {Logger, formatBytes, toRootHex} from "@lodestar/utils";
 
 import {
   fetchWeakSubjectivityState,
   getCheckpointFromArg,
   getCheckpointFromState,
   getGenesisFileUrl,
+  getGenesisStateRoot,
 } from "../../networks/index.js";
 import {GlobalArgs, defaultNetwork} from "../../options/globalOptions.js";
 import {downloadOrLoadFile, wrapFnError} from "../../util/index.js";
@@ -187,6 +188,12 @@ export async function initBeaconState(
     // Convert to `Uint8Array` to avoid unexpected behavior such as `Buffer.prototype.slice` not copying memory
     stateBytes = new Uint8Array(stateBytes.buffer, stateBytes.byteOffset, stateBytes.byteLength);
     const anchorState = getStateTypeFromBytes(chainForkConfig, stateBytes).deserializeToViewDU(stateBytes);
+    // Validate genesis state root
+    const stateRoot = toRootHex(anchorState.hashTreeRoot());
+    const expectedRoot = getGenesisStateRoot(args.network);
+    if (expectedRoot !== null && stateRoot !== expectedRoot) {
+      throw Error(`Genesis state root mismatch expected=${expectedRoot} received=${stateRoot}`);
+    }
     const config = createBeaconConfig(chainForkConfig, anchorState.genesisValidatorsRoot);
     const wssCheck = isWithinWeakSubjectivityPeriod(config, anchorState, getCheckpointFromState(anchorState));
     await checkAndPersistAnchorState(config, db, logger, anchorState, stateBytes, {

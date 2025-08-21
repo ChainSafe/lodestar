@@ -1,10 +1,13 @@
-import {ForkName, GENESIS_EPOCH} from "@lodestar/params";
+import {createBeaconConfig} from "@lodestar/config";
+import {config as chainConfig} from "@lodestar/config/default";
+import {ForkName, GENESIS_EPOCH, ZERO_HASH} from "@lodestar/params";
 import {describe, expect, it} from "vitest";
 import {GossipEncoding, GossipTopicMap, GossipType} from "../../../../src/network/gossip/index.js";
 import {parseGossipTopic, stringifyGossipTopic} from "../../../../src/network/gossip/topic.js";
-import {config} from "../../../utils/config.js";
 
 describe("network / gossip / topic", () => {
+  // TODO Fulu: this can be removed once fulu is scheduled
+  const config = createBeaconConfig({...chainConfig, FULU_FORK_EPOCH: 500000}, ZERO_HASH);
   const encoding = GossipEncoding.ssz_snappy;
 
   // Enforce with Typescript that we test all GossipType
@@ -24,6 +27,17 @@ describe("network / gossip / topic", () => {
           encoding,
         },
         topicStr: "/eth2/d6e497b8/blob_sidecar_1/ssz_snappy",
+      },
+    ],
+    [GossipType.data_column_sidecar]: [
+      {
+        topic: {
+          type: GossipType.data_column_sidecar,
+          subnet: 1,
+          boundary: {fork: ForkName.fulu, epoch: config.FULU_FORK_EPOCH},
+          encoding,
+        },
+        topicStr: "/eth2/4ba67af9/data_column_sidecar_1/ssz_snappy",
       },
     ],
     [GossipType.beacon_aggregate_and_proof]: [

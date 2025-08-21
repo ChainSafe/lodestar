@@ -12,6 +12,7 @@ function getForkConfig({
   electra,
   eip7805,
   fulu,
+  gloas,
 }: {
   phase0: number;
   altair: number;
@@ -21,6 +22,7 @@ function getForkConfig({
   electra: number;
   eip7805: number;
   fulu: number;
+  gloas: number;
 }): BeaconConfig {
   const forks: Record<ForkName, ForkInfo> = {
     phase0: {
@@ -71,14 +73,6 @@ function getForkConfig({
       prevVersion: Buffer.from([0, 0, 0, 4]),
       prevForkName: ForkName.deneb,
     },
-    eip7805: {
-      name: ForkName.eip7805,
-      seq: ForkSeq.eip7805,
-      epoch: eip7805,
-      version: Buffer.from([0, 0, 0, 6]),
-      prevVersion: Buffer.from([0, 0, 0, 5]),
-      prevForkName: ForkName.electra,
-    },
     fulu: {
       name: ForkName.fulu,
       seq: ForkSeq.fulu,
@@ -86,6 +80,22 @@ function getForkConfig({
       version: Buffer.from([0, 0, 0, 7]),
       prevVersion: Buffer.from([0, 0, 0, 6]),
       prevForkName: ForkName.eip7805,
+    },
+    gloas: {
+      name: ForkName.gloas,
+      seq: ForkSeq.gloas,
+      epoch: gloas,
+      version: Buffer.from([0, 0, 0, 7]),
+      prevVersion: Buffer.from([0, 0, 0, 6]),
+      prevForkName: ForkName.fulu,
+    },
+    eip7805: {
+      name: ForkName.eip7805,
+      seq: ForkSeq.eip7805,
+      epoch: eip7805,
+      version: Buffer.from([0, 0, 0, 8]),
+      prevVersion: Buffer.from([0, 0, 0, 7]),
+      prevForkName: ForkName.gloas,
     },
   };
   const forksAscendingEpochOrder = Object.values(forks);
@@ -171,9 +181,10 @@ for (const testScenario of testScenarios) {
   const electra = Infinity;
   const eip7805 = Infinity;
   const fulu = Infinity;
+  const gloas = Infinity;
 
   describe(`network / fork: phase0: ${phase0}, altair: ${altair}, bellatrix: ${bellatrix} capella: ${capella}`, () => {
-    const forkConfig = getForkConfig({phase0, altair, bellatrix, capella, deneb, electra, eip7805, fulu});
+    const forkConfig = getForkConfig({phase0, altair, bellatrix, capella, deneb, electra, fulu, gloas, eip7805});
     const forks = forkConfig.forks;
     for (const testCase of testCases) {
       const {epoch, currentFork, nextFork, activeForks} = testCase;

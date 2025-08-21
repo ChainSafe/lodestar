@@ -12,6 +12,7 @@ export type {
   CachedBeaconStateElectra,
   CachedBeaconStateEip7805,
   CachedBeaconStateFulu,
+  CachedBeaconStateGloas,
 } from "./cache/stateCache.js";
 
 export type {
@@ -25,4 +26,5 @@ export type {
   BeaconStateElectra,
   BeaconStateEip7805,
   BeaconStateFulu,
+  BeaconStateGloas,
 } from "./cache/types.js";

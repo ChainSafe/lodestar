@@ -1,5 +1,9 @@
+import {getV4Crypto} from "@chainsafe/enr";
+import type {PeerId, PrivateKey} from "@libp2p/interface";
+import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {ForkBoundary} from "@lodestar/config";
 import {Bytes32, Slot, SubnetID, ValidatorIndex} from "@lodestar/types";
+import {fromHex} from "@lodestar/utils";
 import {GossipTopic} from "../gossip/interface.js";
 import {RequestedSubnet} from "../peers/utils/index.js";
 
@@ -48,3 +52,15 @@ export type GossipSubscriber = {
 
 // uint256 in the spec
 export type NodeId = Bytes32;
+export function computeNodeIdFromPrivateKey(privateKey: PrivateKey): NodeId {
+  const peerId = peerIdFromPrivateKey(privateKey);
+  return computeNodeId(peerId);
+}
+
+export function computeNodeId(peerId: PeerId): Uint8Array {
+  if (peerId.publicKey === undefined) {
+    throw Error(`Undefined publicKey peerId=${peerId.toString()}`);
+  }
+  const nodeIdHex = getV4Crypto().nodeId(peerId.publicKey.raw);
+  return fromHex(nodeIdHex);
+}

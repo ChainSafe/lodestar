@@ -103,6 +103,18 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
     }
   }
 
+  /**
+   * Return the multiple items in the order of the given keys
+   * Will return `null` for the keys which does not exists
+   *
+   * https://github.com/Level/abstract-level?tab=readme-ov-file#dbgetmanykeys-options
+   */
+  async getMany(keys: Uint8Array[], opts?: DbReqOpts): Promise<(Uint8Array | undefined)[]> {
+    this.metrics?.dbReadReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
+    this.metrics?.dbReadItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, keys.length);
+    return await this.db.getMany(keys);
+  }
+
   put(key: Uint8Array, value: Uint8Array, opts?: DbReqOpts): Promise<void> {
     this.metrics?.dbWriteReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
     this.metrics?.dbWriteItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);

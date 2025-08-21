@@ -1,6 +1,6 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {GENESIS_EPOCH, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Epoch, bellatrix} from "@lodestar/types";
 
 import {Metrics} from "../metrics.js";
@@ -71,6 +71,11 @@ export function pollBuilderValidatorRegistration(
   _metrics: Metrics | null
 ): void {
   async function registerValidator(epoch: Epoch): Promise<void> {
+    // Don't send validator registrations pre-genesis as mev-boost-relay will reject
+    // those registrations anyways if timestamp is before genesis time and we wanna
+    // avoid caching and re-sending them in subsequent requests
+    if (epoch < GENESIS_EPOCH) return;
+
     // Before bellatrix we don't need to update this data on bn/builder
     if (epoch < config.BELLATRIX_FORK_EPOCH - 1) return;
     const slot = epoch * SLOTS_PER_EPOCH;

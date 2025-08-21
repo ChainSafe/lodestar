@@ -7,6 +7,7 @@ import {ssz as denebSsz} from "./deneb/index.js";
 import {ssz as eip7805Ssz} from "./eip7805/index.js";
 import {ssz as electraSsz} from "./electra/index.js";
 import {ssz as fuluSsz} from "./fulu/index.js";
+import {ssz as gloasSsz} from "./gloas/index.js";
 import {ssz as phase0Ssz} from "./phase0/index.js";
 
 export * from "./primitive/sszTypes.js";
@@ -22,6 +23,17 @@ const typesByFork = {
   [ForkName.capella]: {...phase0Ssz, ...altairSsz, ...bellatrixSsz, ...capellaSsz},
   [ForkName.deneb]: {...phase0Ssz, ...altairSsz, ...bellatrixSsz, ...capellaSsz, ...denebSsz},
   [ForkName.electra]: {...phase0Ssz, ...altairSsz, ...bellatrixSsz, ...capellaSsz, ...denebSsz, ...electraSsz},
+  [ForkName.fulu]: {...phase0Ssz, ...altairSsz, ...bellatrixSsz, ...capellaSsz, ...denebSsz, ...electraSsz, ...fuluSsz},
+  [ForkName.gloas]: {
+    ...phase0Ssz,
+    ...altairSsz,
+    ...bellatrixSsz,
+    ...capellaSsz,
+    ...denebSsz,
+    ...electraSsz,
+    ...fuluSsz,
+    ...gloasSsz,
+  },
   [ForkName.eip7805]: {
     ...phase0Ssz,
     ...altairSsz,
@@ -29,17 +41,9 @@ const typesByFork = {
     ...capellaSsz,
     ...denebSsz,
     ...electraSsz,
-    ...eip7805Ssz,
-  },
-  [ForkName.fulu]: {
-    ...phase0Ssz,
-    ...altairSsz,
-    ...bellatrixSsz,
-    ...capellaSsz,
-    ...denebSsz,
-    ...electraSsz,
-    ...eip7805Ssz,
     ...fuluSsz,
+    ...gloasSsz,
+    ...eip7805Ssz,
   },
 };
 
@@ -52,8 +56,9 @@ export const bellatrix = typesByFork[ForkName.bellatrix];
 export const capella = typesByFork[ForkName.capella];
 export const deneb = typesByFork[ForkName.deneb];
 export const electra = typesByFork[ForkName.electra];
-export const eip7805 = typesByFork[ForkName.eip7805];
 export const fulu = typesByFork[ForkName.fulu];
+export const gloas = typesByFork[ForkName.gloas];
+export const eip7805 = typesByFork[ForkName.eip7805];
 
 /**
  * A type of union of forks must accept as any parameter the UNION of all fork types.

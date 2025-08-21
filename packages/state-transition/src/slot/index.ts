@@ -10,6 +10,7 @@ export {upgradeStateToDeneb} from "./upgradeStateToDeneb.js";
 export {upgradeStateToElectra} from "./upgradeStateToElectra.js";
 export {upgradeStateToEip7805} from "./upgradeStateToEip7805.js";
 export {upgradeStateToFulu} from "./upgradeStateToFulu.js";
+export {upgradeStateToGloas} from "./upgradeStateToGloas.js";
 
 /**
  * Dial state to next slot. Common for all forks

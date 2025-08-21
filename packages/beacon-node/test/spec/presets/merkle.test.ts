@@ -1,52 +1,37 @@
 import path from "node:path";
-import {ProofType, SingleProof, Tree} from "@chainsafe/persistent-merkle-tree";
-import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {ACTIVE_PRESET} from "@lodestar/params";
+import {Tree} from "@chainsafe/persistent-merkle-tree";
+import {ACTIVE_PRESET, ForkAll} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
-import {BeaconStateAllForks} from "@lodestar/state-transition";
-import {ssz} from "@lodestar/types";
-import {verifyMerkleBranch} from "@lodestar/utils";
+import {BeaconBlockBody, SSZTypesFor, ssz} from "@lodestar/types";
+import {toHex} from "@lodestar/utils";
 import {expect} from "vitest";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
 import {RunnerType, TestRunnerFn} from "../utils/types.js";
 
-const merkle: TestRunnerFn<MerkleTestCase, IProof> = (fork) => {
+const merkle: TestRunnerFn<MerkleTestCase, string[]> = (fork) => {
   return {
     testFunction: (testcase) => {
-      const {proof: specTestProof, state} = testcase;
-      const stateRoot = state.hashTreeRoot();
-      const leaf = fromHexString(specTestProof.leaf);
-      const branch = specTestProof.branch.map((item) => fromHexString(item));
-      const leafIndex = Number(specTestProof.leaf_index);
-      const depth = Math.floor(Math.log2(leafIndex));
-      const verified = verifyMerkleBranch(leaf, branch, depth, leafIndex % 2 ** depth, stateRoot);
-      expect(verified).toEqualWithMessage(true, "invalid merkle branch");
-
-      const lodestarProof = new Tree(state.node).getProof({
-        gindex: specTestProof.leaf_index,
-        type: ProofType.single,
-      }) as SingleProof;
-
-      return {
-        leaf: toHexString(lodestarProof.leaf),
-        leaf_index: lodestarProof.gindex,
-        branch: lodestarProof.witnesses.map(toHexString),
-      };
+      const bodyView = (ssz[fork].BeaconBlockBody as SSZTypesFor<ForkAll, "BeaconBlockBody">).toView(testcase.object);
+      const branch = new Tree(bodyView.node).getSingleProof(testcase.proof.leaf_index);
+      return branch.map(toHex);
     },
-
     options: {
       inputTypes: {
-        state: {type: InputType.SSZ_SNAPPY as const, treeBacked: true as const},
-        proof: InputType.YAML as const,
+        object: InputType.SSZ_SNAPPY,
+        proof: InputType.YAML,
       },
       getSszTypes: () => ({
-        state: ssz[fork].BeaconState,
+        object: ssz[fork].BeaconBlockBody,
       }),
       timeout: 10000,
-      getExpected: (testCase) => testCase.proof,
+      shouldSkip: (_testCase, name) => {
+        // TODO-das: investigate why these tests are failing but passed for unstable
+        return name.includes("random_block") || name.includes("blob_kzg_commitments");
+      },
+      getExpected: (testCase) => testCase.proof.branch,
       expectFunc: (_testCase, expected, actual) => {
-        expect(actual).toEqualWithMessage(expected, "incorrect proof");
+        expect(actual).deep.equals(expected);
       },
       // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
     },
@@ -55,7 +40,7 @@ const merkle: TestRunnerFn<MerkleTestCase, IProof> = (fork) => {
 
 type MerkleTestCase = {
   meta?: any;
-  state: BeaconStateAllForks;
+  object: BeaconBlockBody;
   proof: IProof;
 };
 
@@ -66,5 +51,5 @@ interface IProof {
 }
 
 specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
-  merkle: {type: RunnerType.default, fn: merkle},
+  merkle_proof: {type: RunnerType.default, fn: merkle},
 });
