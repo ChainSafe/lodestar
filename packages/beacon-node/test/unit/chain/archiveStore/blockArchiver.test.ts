@@ -141,7 +141,7 @@ describe("block archiver task", () => {
     for (const block of canonicalBlocks) {
       expect(dbStub.dataColumnSidecarArchive.putManyBinary).toHaveBeenCalledWith(block.slot, [
         {
-          key: 0,
+          id: 0,
           value: dataColumnBytes,
         },
       ]);

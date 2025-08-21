@@ -308,7 +308,7 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
   // Only Fulu and newer blocks and within the retention window
   const withinDataColumnWindow = (slot: Slot) =>
     config.getForkSeq(slot) >= ForkSeq.fulu &&
-    computeEpochAtSlot(slot) < currentEpoch - config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS;
+    computeEpochAtSlot(slot) >= currentEpoch - config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS;
   let migratedDataColumnsCount = 0;
 
   for (let i = 0; i < blocks.length; i += BLOB_SIDECAR_BATCH_SIZE) {
@@ -324,7 +324,12 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
         throw Error(`No dataColumnSidecars found for slot ${block.slot} root ${toHex(block.root)}`);
       }
 
-      promises.push(db.dataColumnSidecarArchive.putManyBinary(block.slot, dataColumnSidecars));
+      promises.push(
+        db.dataColumnSidecarArchive.putManyBinary(
+          block.slot,
+          dataColumnSidecars.map(({id, value}) => ({id, value}))
+        )
+      );
       migratedDataColumnsCount += dataColumnSidecars.length;
     }
 
