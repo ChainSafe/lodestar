@@ -16,7 +16,7 @@ import {isValidAddress} from "../../util/address.js";
 import {linspace} from "../../util/numpy.js";
 import {Eth1Block, Eth1ProviderState, IEth1Provider} from "../interface.js";
 import {EthJsonRpcBlockRaw} from "../interface.js";
-import {DEFAULT_PROVIDER_URLS, Eth1Options} from "../options.js";
+import {DEFAULT_PROVIDER_URLS, Eth1HttpOptions} from "../options.js";
 import {depositEventTopics, parseDepositLog} from "../utils/depositContract.js";
 import {
   ErrorJsonRpcResponse,
@@ -68,7 +68,10 @@ export class Eth1Provider implements IEth1Provider {
 
   constructor(
     config: Pick<ChainConfig, "DEPOSIT_CONTRACT_ADDRESS">,
-    opts: Pick<Eth1Options, "depositContractDeployBlock" | "providerUrls" | "jwtSecretHex" | "jwtId" | "jwtVersion"> & {
+    opts: Pick<
+      Eth1HttpOptions,
+      "depositContractDeployBlock" | "providerUrls" | "jwtSecretHex" | "jwtId" | "jwtVersion"
+    > & {
       logger?: Logger;
     },
     signal?: AbortSignal,

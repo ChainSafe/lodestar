@@ -53,7 +53,7 @@ export async function getDevBeaconNode(
       // dev defaults that we wish, especially for the api options
       {
         db: {name: tmpDir.name},
-        eth1: {enabled: false},
+        eth1: {mode: "disabled"},
         api: {rest: {api: ["beacon", "config", "events", "node", "validator"], port: 19596}},
         metrics: {enabled: false},
         network: {

@@ -13,7 +13,7 @@ import {Metrics} from "../metrics/index.js";
 import {Eth1DataCache} from "./eth1DataCache.js";
 import {Eth1DepositsCache} from "./eth1DepositsCache.js";
 import {Eth1DataAndDeposits, EthJsonRpcBlockRaw, IEth1Provider} from "./interface.js";
-import {Eth1Options} from "./options.js";
+import {Eth1HttpOptions} from "./options.js";
 import {parseEth1Block} from "./provider/eth1Provider.js";
 import {HttpRpcError} from "./provider/jsonRpcHttpClient.js";
 import {isJsonRpcTruncatedError} from "./provider/utils.js";
@@ -76,7 +76,7 @@ export class Eth1DepositDataTracker {
   private stopPolling: boolean;
 
   constructor(
-    opts: Eth1Options,
+    opts: Eth1HttpOptions,
     {config, db, metrics, logger, signal}: Eth1DepositDataTrackerModules,
     private readonly eth1Provider: IEth1Provider
   ) {
@@ -108,13 +108,11 @@ export class Eth1DepositDataTracker {
       });
     }
 
-    if (opts.enabled) {
-      this.runAutoUpdate().catch((e: Error) => {
-        if (!(e instanceof ErrorAborted)) {
-          this.logger.error("Error on eth1 loop", {}, e);
-        }
-      });
-    }
+    this.runAutoUpdate().catch((e: Error) => {
+      if (!(e instanceof ErrorAborted)) {
+        this.logger.error("Error on eth1 loop", {}, e);
+      }
+    });
   }
 
   isPollingEth1Data(): boolean {

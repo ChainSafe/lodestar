@@ -1,5 +1,4 @@
-export type Eth1Options = {
-  enabled?: boolean;
+export type Eth1HttpOptions = {
   disableEth1DepositDataTracker?: boolean;
   providerUrls?: string[];
   /**
@@ -18,10 +17,16 @@ export type Eth1Options = {
   forcedEth1DataVote?: string;
 };
 
+export type Eth1MockOptions = {
+  genesisBlockHash: string;
+  terminalPowBlockHash: string;
+};
+
+export type Eth1Options = ({mode?: "http"} & Eth1HttpOptions) | ({mode: "mock"} & Eth1MockOptions) | {mode: "disabled"};
+
 export const DEFAULT_PROVIDER_URLS = ["http://localhost:8545"];
 
-export const defaultEth1Options: Eth1Options = {
-  enabled: true,
+export const defaultEth1HttpOptions: Eth1HttpOptions = {
   providerUrls: DEFAULT_PROVIDER_URLS,
   depositContractDeployBlock: 0,
   unsafeAllowDepositDataOverwrite: false,

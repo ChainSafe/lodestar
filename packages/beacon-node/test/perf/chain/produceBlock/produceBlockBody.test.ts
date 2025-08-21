@@ -9,7 +9,7 @@ import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {generatePerfTestCachedStateAltair} from "../../../../../state-transition/test/perf/util.js";
 import {BeaconChain} from "../../../../src/chain/index.js";
 import {BlockType, produceBlockBody} from "../../../../src/chain/produceBlock/produceBlockBody.js";
-import {Eth1ForBlockProductionDisabled} from "../../../../src/eth1/index.js";
+import {Eth1ForBlockProductionDisabled} from "../../../../src/eth1/disabled.js";
 import {ExecutionEngineDisabled} from "../../../../src/execution/engine/index.js";
 import {ArchiveMode, BeaconDb} from "../../../../src/index.js";
 import {testLogger} from "../../../utils/logger.js";

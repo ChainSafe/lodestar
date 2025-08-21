@@ -4,7 +4,7 @@ import {sleep} from "@lodestar/utils";
 import {afterEach, beforeAll, beforeEach, describe, expect, it} from "vitest";
 import {ZERO_HASH} from "../../../src/constants/index.js";
 import {Eth1MergeBlockTracker, StatusCode} from "../../../src/eth1/eth1MergeBlockTracker.js";
-import {Eth1Options} from "../../../src/eth1/options.js";
+import {Eth1HttpOptions} from "../../../src/eth1/options.js";
 import {quantityToBigint} from "../../../src/eth1/provider/utils.js";
 import {Eth1Provider, IEth1Provider} from "../../../src/index.js";
 import {getGoerliRpcUrl} from "../../testParams.js";
@@ -30,10 +30,9 @@ describe.skip("eth1 / Eth1MergeBlockTracker", () => {
   const eth1Config = {DEPOSIT_CONTRACT_ADDRESS: ZERO_HASH};
 
   // Compute lazily since getGoerliRpcUrl() throws if GOERLI_RPC_URL is not set
-  let eth1Options: Eth1Options;
+  let eth1Options: Eth1HttpOptions;
   beforeAll(() => {
     eth1Options = {
-      enabled: true,
       providerUrls: [getGoerliRpcUrl()],
       depositContractDeployBlock: 0,
       unsafeAllowDepositDataOverwrite: false,

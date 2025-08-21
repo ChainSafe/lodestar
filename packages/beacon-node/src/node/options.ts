@@ -2,7 +2,7 @@ import {ApiOptions, defaultApiOptions} from "../api/options.js";
 import {ArchiveMode, DEFAULT_ARCHIVE_MODE, IChainOptions, defaultChainOptions} from "../chain/options.js";
 import {ValidatorMonitorOpts, defaultValidatorMonitorOpts} from "../chain/validatorMonitor.js";
 import {DatabaseOptions, defaultDbOptions} from "../db/options.js";
-import {Eth1Options, defaultEth1Options} from "../eth1/options.js";
+import {Eth1Options, defaultEth1HttpOptions} from "../eth1/options.js";
 import {
   ExecutionBuilderOpts,
   ExecutionEngineOpts,
@@ -19,7 +19,13 @@ import {SyncOptions, defaultSyncOptions} from "../sync/options.js";
 export {allNamespaces} from "../api/rest/index.js";
 
 // Re-export to use as default values in CLI args
-export {defaultExecutionEngineHttpOpts, defaultExecutionBuilderHttpOpts, ArchiveMode, DEFAULT_ARCHIVE_MODE};
+export {
+  defaultEth1HttpOptions,
+  defaultExecutionEngineHttpOpts,
+  defaultExecutionBuilderHttpOpts,
+  ArchiveMode,
+  DEFAULT_ARCHIVE_MODE,
+};
 
 export interface IBeaconNodeOptions {
   api: ApiOptions;
@@ -39,7 +45,7 @@ export const defaultOptions: IBeaconNodeOptions = {
   api: defaultApiOptions,
   chain: defaultChainOptions,
   db: defaultDbOptions,
-  eth1: defaultEth1Options,
+  eth1: defaultEth1HttpOptions,
   executionEngine: defaultExecutionEngineOpts,
   executionBuilder: defaultExecutionBuilderOpts,
   metrics: defaultMetricsOptions,

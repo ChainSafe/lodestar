@@ -10,7 +10,7 @@ import {beforeValue} from "../../../../state-transition/test/utils/beforeValueBe
 import {getNetworkCachedBlock, getNetworkCachedState} from "../../../../state-transition/test/utils/testFileCache.js";
 import {AttestationImportOpt, BlockSource, getBlockInput} from "../../../src/chain/blocks/types.js";
 import {BeaconChain} from "../../../src/chain/index.js";
-import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";
+import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/disabled.js";
 import {ExecutionEngineDisabled} from "../../../src/execution/engine/index.js";
 import {ArchiveMode, BeaconDb} from "../../../src/index.js";
 import {linspace} from "../../../src/util/numpy.js";

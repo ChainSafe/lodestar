@@ -318,7 +318,7 @@ describe("executionEngine / ExecutionEngineHttp", () => {
         sync: {isSingleNode: true},
         network: {allowPublishToZeroPeers: true, discv5: null},
         // Now eth deposit/merge tracker methods directly available on engine endpoints
-        eth1: {enabled: false, providerUrls: [engineRpcUrl], jwtSecretHex},
+        eth1: {mode: "disabled"},
         executionEngine: {urls: [engineRpcUrl], jwtSecretHex},
         chain: {suggestedFeeRecipient: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
       },

@@ -1,5 +1,5 @@
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
-import {Eth1Options} from "../../../src/eth1/options.js";
+import {Eth1HttpOptions} from "../../../src/eth1/options.js";
 import {Eth1Provider} from "../../../src/eth1/provider/eth1Provider.js";
 import {getDepositsAndBlockStreamForGenesis, getDepositsStream} from "../../../src/eth1/stream.js";
 import {getGoerliRpcUrl} from "../../testParams.js";
@@ -17,8 +17,7 @@ describe.skip("Eth1 streams", () => {
 
   // Compute lazily since getGoerliRpcUrl() throws if GOERLI_RPC_URL is not set
   function getEth1Provider(): Eth1Provider {
-    const eth1Options: Eth1Options = {
-      enabled: true,
+    const eth1Options: Eth1HttpOptions = {
       providerUrls: [getGoerliRpcUrl()],
       depositContractDeployBlock: 0,
       unsafeAllowDepositDataOverwrite: false,

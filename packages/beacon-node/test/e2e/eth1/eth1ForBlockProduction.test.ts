@@ -6,7 +6,7 @@ import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {phase0, ssz} from "@lodestar/types";
 import {BeaconDb} from "../../../src/db/index.js";
 import {Eth1ForBlockProduction} from "../../../src/eth1/index.js";
-import {Eth1Options} from "../../../src/eth1/options.js";
+import {Eth1HttpOptions} from "../../../src/eth1/options.js";
 import {Eth1Provider} from "../../../src/eth1/provider/eth1Provider.js";
 import {getGoerliRpcUrl} from "../../testParams.js";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
@@ -47,8 +47,7 @@ describe.skip("eth1 / Eth1Provider", () => {
   });
 
   it("Should fetch real Pyrmont eth1 data for block proposing", async () => {
-    const eth1Options: Eth1Options = {
-      enabled: true,
+    const eth1Options: Eth1HttpOptions = {
       providerUrls: [getGoerliRpcUrl()],
       depositContractDeployBlock: medallaTestnetConfig.depositBlock,
       unsafeAllowDepositDataOverwrite: false,

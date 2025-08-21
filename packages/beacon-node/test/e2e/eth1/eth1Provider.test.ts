@@ -1,7 +1,7 @@
 import {fromHexString} from "@chainsafe/ssz";
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {Eth1Block} from "../../../src/eth1/interface.js";
-import {Eth1Options} from "../../../src/eth1/options.js";
+import {Eth1HttpOptions} from "../../../src/eth1/options.js";
 import {Eth1Provider, parseEth1Block} from "../../../src/eth1/provider/eth1Provider.js";
 import {getGoerliRpcUrl} from "../../testParams.js";
 import {getTestnetConfig} from "../../utils/testnet.js";
@@ -19,8 +19,7 @@ describe.skip("eth1 / Eth1Provider", () => {
 
   // Compute lazily since getGoerliRpcUrl() throws if GOERLI_RPC_URL is not set
   function getEth1Provider(): Eth1Provider {
-    const eth1Options: Eth1Options = {
-      enabled: true,
+    const eth1Options: Eth1HttpOptions = {
       providerUrls: [getGoerliRpcUrl()],
       depositContractDeployBlock: 0,
       unsafeAllowDepositDataOverwrite: false,

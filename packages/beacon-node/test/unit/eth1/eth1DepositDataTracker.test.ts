@@ -3,7 +3,7 @@ import {TimeoutError} from "@lodestar/utils";
 import {MockInstance, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {BeaconDb} from "../../../src/db/beacon.js";
 import {Eth1DepositDataTracker} from "../../../src/eth1/eth1DepositDataTracker.js";
-import {defaultEth1Options} from "../../../src/eth1/options.js";
+import {defaultEth1HttpOptions} from "../../../src/eth1/options.js";
 import {Eth1Provider} from "../../../src/eth1/provider/eth1Provider.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
 import {testLogger} from "../../utils/logger.js";
@@ -12,7 +12,7 @@ describe("Eth1DepositDataTracker", () => {
   const controller = new AbortController();
 
   const logger = testLogger();
-  const opts = {...defaultEth1Options, enabled: false};
+  const opts = {...defaultEth1HttpOptions};
   const signal = controller.signal;
   const eth1Provider = new Eth1Provider(config, opts, signal, null);
   let db: BeaconDb;

@@ -1,10 +1,12 @@
 import fs from "node:fs";
 import {IBeaconNodeOptions, defaultOptions} from "@lodestar/beacon-node";
+import {defaultEth1HttpOptions} from "@lodestar/beacon-node/lib/eth1/options.js";
 import {CliCommandOptions} from "@lodestar/utils";
 import {extractJwtHexSecret} from "../../util/index.js";
 import {ExecutionEngineArgs} from "./execution.js";
 
 export type Eth1Args = {
+  // cli only support boolean mode for eth1: true means "http" and false means "disabled"
   eth1?: boolean;
   "eth1.providerUrls"?: string[];
   "eth1.depositContractDeployBlock"?: number;
@@ -30,7 +32,7 @@ export function parseArgs(args: Eth1Args & Partial<ExecutionEngineArgs>): IBeaco
   }
 
   return {
-    enabled: args.eth1,
+    mode: args.eth1 ? "http" : "disabled",
     providerUrls,
     jwtSecretHex,
     jwtId,
@@ -45,14 +47,14 @@ export const options: CliCommandOptions<Eth1Args> = {
   eth1: {
     description: "Whether to follow the eth1 chain",
     type: "boolean",
-    defaultDescription: String(defaultOptions.eth1.enabled),
+    defaultDescription: String(defaultOptions.eth1.mode),
     group: "eth1",
   },
 
   "eth1.providerUrls": {
     description:
       "Urls to Eth1 node with enabled rpc. If not explicitly provided and execution endpoint provided via execution.urls, it will use execution.urls. Otherwise will try connecting on the specified default(s)",
-    defaultDescription: defaultOptions.eth1.providerUrls?.join(","),
+    defaultDescription: defaultEth1HttpOptions.providerUrls?.join(","),
     type: "array",
     string: true,
     coerce: (urls: string[]): string[] =>
@@ -65,7 +67,7 @@ export const options: CliCommandOptions<Eth1Args> = {
     hidden: true,
     description: "Block number at which the deposit contract contract was deployed",
     type: "number",
-    defaultDescription: String(defaultOptions.eth1.depositContractDeployBlock),
+    defaultDescription: String(defaultEth1HttpOptions.depositContractDeployBlock),
     group: "eth1",
   },
 
@@ -73,7 +75,7 @@ export const options: CliCommandOptions<Eth1Args> = {
     hidden: true,
     description: "Disable Eth1DepositDataTracker modules",
     type: "boolean",
-    defaultDescription: String(defaultOptions.eth1.disableEth1DepositDataTracker),
+    defaultDescription: String(defaultEth1HttpOptions.disableEth1DepositDataTracker),
     group: "eth1",
   },
 
@@ -82,7 +84,7 @@ export const options: CliCommandOptions<Eth1Args> = {
     description:
       "Allow the deposit tracker to overwrite previously fetched and saved deposit event data. Warning!!! This is an unsafe operation, so enable this flag only if you know what you are doing.",
     type: "boolean",
-    defaultDescription: String(defaultOptions.eth1.unsafeAllowDepositDataOverwrite),
+    defaultDescription: String(defaultEth1HttpOptions.unsafeAllowDepositDataOverwrite),
     group: "eth1",
   },
 

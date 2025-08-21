@@ -1,10 +1,12 @@
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {Root} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
+import {Eth1ForBlockProductionDisabled} from "./disabled.js";
 import {Eth1DepositDataTracker, Eth1DepositDataTrackerModules} from "./eth1DepositDataTracker.js";
 import {Eth1MergeBlockTracker, Eth1MergeBlockTrackerModules} from "./eth1MergeBlockTracker.js";
 import {Eth1DataAndDeposits, IEth1ForBlockProduction, IEth1Provider, PowMergeBlock, TDProgress} from "./interface.js";
-import {Eth1Options} from "./options.js";
+import {Eth1ForBlockProductionMock} from "./mock.js";
+import {Eth1HttpOptions, Eth1Options} from "./options.js";
 import {Eth1Provider} from "./provider/eth1Provider.js";
 export {Eth1Provider};
 export type {IEth1ForBlockProduction, IEth1Provider};
@@ -45,16 +47,22 @@ export function initializeEth1ForBlockProduction(
   opts: Eth1Options,
   modules: Pick<Eth1DepositDataTrackerModules, "db" | "config" | "metrics" | "logger" | "signal">
 ): IEth1ForBlockProduction {
-  if (opts.enabled) {
-    return new Eth1ForBlockProduction(opts, {
-      config: modules.config,
-      db: modules.db,
-      metrics: modules.metrics,
-      logger: modules.logger,
-      signal: modules.signal,
-    });
+  switch (opts.mode) {
+    case "disabled":
+      return new Eth1ForBlockProductionDisabled();
+
+    case "mock":
+      return new Eth1ForBlockProductionMock(modules.config);
+
+    default:
+      return new Eth1ForBlockProduction(opts, {
+        config: modules.config,
+        db: modules.db,
+        metrics: modules.metrics,
+        logger: modules.logger,
+        signal: modules.signal,
+      });
   }
-  return new Eth1ForBlockProductionDisabled();
 }
 
 export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
@@ -62,7 +70,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
   private readonly eth1MergeBlockTracker: Eth1MergeBlockTracker;
 
   constructor(
-    opts: Eth1Options,
+    opts: Eth1HttpOptions,
     modules: Eth1DepositDataTrackerModules & Eth1MergeBlockTrackerModules & {eth1Provider?: IEth1Provider}
   ) {
     const eth1Provider =
@@ -111,47 +119,5 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
 
   stopPollingEth1Data(): void {
     this.eth1DepositDataTracker?.stopPollingEth1Data();
-  }
-}
-
-/**
- * Disabled version of Eth1ForBlockProduction
- * May produce invalid blocks by not adding new deposits and voting for the same eth1Data
- */
-export class Eth1ForBlockProductionDisabled implements IEth1ForBlockProduction {
-  /**
-   * Returns same eth1Data as in state and no deposits
-   * May produce invalid blocks if deposits have to be added
-   */
-  async getEth1DataAndDeposits(state: CachedBeaconStateAllForks): Promise<Eth1DataAndDeposits> {
-    return {eth1Data: state.eth1Data, deposits: []};
-  }
-
-  /**
-   * Will miss the oportunity to propose the merge block but will still produce valid blocks
-   */
-  async getTerminalPowBlock(): Promise<Root | null> {
-    return null;
-  }
-
-  /** Will not be able to validate the merge block */
-  async getPowBlock(_powBlockHash: string): Promise<PowMergeBlock | null> {
-    throw Error("eth1 must be enabled to verify merge block");
-  }
-
-  getTDProgress(): TDProgress | null {
-    return null;
-  }
-
-  isPollingEth1Data(): boolean {
-    return false;
-  }
-
-  startPollingMergeBlock(): void {
-    // Ignore
-  }
-
-  stopPollingEth1Data(): void {
-    // Ignore
   }
 }

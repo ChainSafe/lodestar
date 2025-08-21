@@ -37,7 +37,7 @@ import {
   verifyDataColumnSidecarKzgProofs,
 } from "../../../src/chain/validation/dataColumnSidecar.js";
 import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
-import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";
+import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/disabled.js";
 import {PowMergeBlock} from "../../../src/eth1/interface.js";
 import {ExecutionPayloadStatus} from "../../../src/execution/engine/interface.js";
 import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js";
