@@ -4,7 +4,7 @@ import {routes} from "@lodestar/api";
 import {SpecJson} from "@lodestar/config";
 import {LoggerNodeOpts} from "@lodestar/logger/node";
 import {ResponseIncoming} from "@lodestar/reqresp";
-import {phase0} from "@lodestar/types";
+import {Status} from "@lodestar/types";
 import {PeerIdStr} from "../../util/peerId.js";
 import {NetworkOptions} from "../options.js";
 import {PeerAction, PeerScoreStats} from "../peers/index.js";
@@ -53,8 +53,9 @@ export interface INetworkCore extends INetworkCorePublic {
   getConnectedPeerCount(): Promise<number>;
 
   /** Chain must push status updates to the network core */
-  updateStatus(status: phase0.Status): Promise<void>;
+  updateStatus(status: Status): Promise<void>;
 
+  setTargetGroupCount(count: number): Promise<void>;
   /** Opens stream to handle ReqResp outgoing request */
   sendReqRespRequest(data: OutgoingRequestArgs): AsyncIterable<ResponseIncoming>;
   /** Publish gossip message to peers */
@@ -78,7 +79,8 @@ export type NetworkWorkerData = {
   genesisValidatorsRoot: Uint8Array;
   genesisTime: number;
   activeValidatorCount: number;
-  initialStatus: phase0.Status;
+  initialStatus: Status;
+  initialCustodyGroupCount: number;
   privateKeyProto: Uint8Array;
   localMultiaddrs: string[];
   metricsEnabled: boolean;
@@ -100,7 +102,9 @@ export type NetworkWorkerApi = INetworkCorePublic & {
   // TODO: Duplicated methods with INetwork interface
   getConnectedPeers(): Promise<PeerIdStr[]>;
   getConnectedPeerCount(): Promise<number>;
-  updateStatus(status: phase0.Status): Promise<void>;
+  updateStatus(status: Status): Promise<void>;
+
+  setTargetGroupCount(count: number): Promise<void>;
 
   // sendReqRespRequest - implemented via events
   publishGossip(topic: string, data: Uint8Array, opts?: PublishOpts): Promise<number>;

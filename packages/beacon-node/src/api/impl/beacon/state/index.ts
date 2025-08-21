@@ -1,9 +1,15 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {EPOCHS_PER_HISTORICAL_VECTOR, isForkPostElectra} from "@lodestar/params";
+import {
+  EPOCHS_PER_HISTORICAL_VECTOR,
+  SYNC_COMMITTEE_SUBNET_SIZE,
+  isForkPostElectra,
+  isForkPostFulu,
+} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   BeaconStateElectra,
+  BeaconStateFulu,
   CachedBeaconStateAltair,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
@@ -11,8 +17,7 @@ import {
   getRandaoMix,
   loadState,
 } from "@lodestar/state-transition";
-import {getValidatorStatus} from "@lodestar/types";
-import {fromHex} from "@lodestar/utils";
+import {ValidatorIndex, getValidatorStatus} from "@lodestar/types";
 import {ApiError} from "../../errors.js";
 import {ApiModules} from "../../types.js";
 import {assertUniqueItems} from "../../utils.js";
@@ -209,16 +214,13 @@ export function getBeaconStateApi({
         const headState = chain.getHeadState();
         const balances: routes.beacon.ValidatorBalance[] = [];
         for (const id of validatorIds) {
-          if (typeof id === "number") {
-            if (state.validators.length <= id) {
-              continue;
-            }
-            balances.push({index: id, balance: state.balances.get(id)});
-          } else {
-            const index = headState.epochCtx.pubkey2index.get(fromHex(id));
-            if (index != null && index <= state.validators.length) {
-              balances.push({index, balance: state.balances.get(index)});
-            }
+          const resp = getStateValidatorIndex(id, state, headState.epochCtx.pubkey2index);
+
+          if (resp.valid) {
+            balances.push({
+              index: resp.validatorIndex,
+              balance: state.balances.get(resp.validatorIndex),
+            });
           }
         }
         return {
@@ -331,12 +333,18 @@ export function getBeaconStateApi({
       }
 
       const syncCommitteeCache = stateCached.epochCtx.getIndexedSyncCommitteeAtEpoch(epoch ?? stateEpoch);
+      const validatorIndices = new Array<ValidatorIndex>(...syncCommitteeCache.validatorIndices);
+
+      // Subcommittee assignments of the current sync committee
+      const validatorAggregates: ValidatorIndex[][] = [];
+      for (let i = 0; i < validatorIndices.length; i += SYNC_COMMITTEE_SUBNET_SIZE) {
+        validatorAggregates.push(validatorIndices.slice(i, i + SYNC_COMMITTEE_SUBNET_SIZE));
+      }
 
       return {
         data: {
-          validators: new Array(...syncCommitteeCache.validatorIndices),
-          // TODO: This is not used by the validator and will be deprecated soon
-          validatorAggregates: [],
+          validators: validatorIndices,
+          validatorAggregates,
         },
         meta: {executionOptimistic, finalized},
       };
@@ -386,6 +394,22 @@ export function getBeaconStateApi({
 
       return {
         data: context?.returnBytes ? pendingConsolidations.serialize() : pendingConsolidations.toValue(),
+        meta: {executionOptimistic, finalized, version: fork},
+      };
+    },
+
+    async getProposerLookahead({stateId}, context) {
+      const {state, executionOptimistic, finalized} = await getState(stateId);
+      const fork = config.getForkName(state.slot);
+
+      if (!isForkPostFulu(fork)) {
+        throw new ApiError(400, `Cannot retrieve proposer lookahead for pre-fulu state fork=${fork}`);
+      }
+
+      const {proposerLookahead} = state as BeaconStateFulu;
+
+      return {
+        data: context?.returnBytes ? proposerLookahead.serialize() : proposerLookahead.toValue(),
         meta: {executionOptimistic, finalized, version: fork},
       };
     },

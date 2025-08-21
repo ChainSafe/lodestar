@@ -3,7 +3,7 @@ import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
-import {ForkSeq, GENESIS_SLOT, SLOTS_PER_EPOCH, isForkPostElectra} from "@lodestar/params";
+import {GENESIS_SLOT, SLOTS_PER_EPOCH, isForkPostElectra} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   BeaconStateElectra,
@@ -25,30 +25,32 @@ import {
   BlindedBeaconBlock,
   BlindedBeaconBlockBody,
   Epoch,
-  ExecutionPayload,
   Root,
   RootHex,
   SignedBeaconBlock,
   Slot,
+  Status,
   UintNum64,
   ValidatorIndex,
   Wei,
-  bellatrix,
-  deneb,
   isBlindedBeaconBlock,
-  phase0,
 } from "@lodestar/types";
 import {Logger, fromHex, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
+import {PrivateKey} from "@libp2p/interface";
 import {LoggerNode} from "@lodestar/logger/node";
+import {getEffectiveBalancesFromStateBytes} from "@lodestar/state-transition";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
+import {BuilderStatus} from "../execution/builder/http.js";
 import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
+import {computeNodeIdFromPrivateKey} from "../network/subnets/interface.js";
 import {BufferPool} from "../util/bufferPool.js";
 import {Clock, ClockEvent, IClock} from "../util/clock.js";
+import {CustodyConfig, getValidatorsCustodyRequirement} from "../util/dataColumns.js";
 import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
 import {SerializedCache} from "../util/serializedCache.js";
@@ -60,14 +62,7 @@ import {BlockInput} from "./blocks/types.js";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
 import {ChainEvent, ChainEventEmitter} from "./emitter.js";
 import {ForkchoiceCaller, initializeForkChoice} from "./forkChoice/index.js";
-import {
-  BlockHash,
-  CommonBlockBody,
-  FindHeadFnName,
-  IBeaconChain,
-  ProposerPreparationData,
-  StateGetOpts,
-} from "./interface.js";
+import {CommonBlockBody, FindHeadFnName, IBeaconChain, ProposerPreparationData, StateGetOpts} from "./interface.js";
 import {LightClientServer} from "./lightClient/index.js";
 import {
   AggregatedAttestationPool,
@@ -79,7 +74,7 @@ import {
 import {IChainOptions} from "./options.js";
 import {PrepareNextSlotScheduler} from "./prepareNextSlot.js";
 import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
-import {AssembledBlockType, BlobsResultType, BlockType} from "./produceBlock/index.js";
+import {AssembledBlockType, BlockType, ProduceResult} from "./produceBlock/index.js";
 import {BlockAttributes, produceBlockBody, produceCommonBlockBody} from "./produceBlock/produceBlockBody.js";
 import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
 import {ReprocessController} from "./reprocess.js";
@@ -108,11 +103,13 @@ import {PersistentCheckpointStateCache} from "./stateCache/persistentCheckpoints
 import {ValidatorMonitor} from "./validatorMonitor.js";
 
 /**
- * Arbitrary constants, blobs and payloads should be consumed immediately in the same slot
+ * The maximum number of cached produced results to keep in memory.
+ *
+ * Arbitrary constant. Blobs and payloads should be consumed immediately in the same slot
  * they are produced. A value of 1 would probably be sufficient. However it's sensible to
  * allow some margin if the node overloads.
  */
-const DEFAULT_MAX_CACHED_PRODUCED_ROOTS = 4;
+const DEFAULT_MAX_CACHED_PRODUCED_RESULTS = 4;
 
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: UintNum64;
@@ -122,6 +119,7 @@ export class BeaconChain implements IBeaconChain {
   readonly executionBuilder?: IExecutionBuilder;
   // Expose config for convenience in modularized functions
   readonly config: BeaconConfig;
+  readonly custodyConfig: CustodyConfig;
   readonly logger: Logger;
   readonly metrics: Metrics | null;
   readonly validatorMonitor: ValidatorMonitor | null;
@@ -153,7 +151,7 @@ export class BeaconChain implements IBeaconChain {
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
   readonly seenContributionAndProof: SeenContributionAndProof;
   readonly seenAttestationDatas: SeenAttestationDatas;
-  readonly seenGossipBlockInput = new SeenGossipBlockInput();
+  readonly seenGossipBlockInput: SeenGossipBlockInput;
   readonly seenBlockInputCache: SeenBlockInputCache;
   // Seen cache for liveness checks
   readonly seenBlockAttesters = new SeenBlockAttesters();
@@ -165,14 +163,14 @@ export class BeaconChain implements IBeaconChain {
   readonly beaconProposerCache: BeaconProposerCache;
   readonly checkpointBalancesCache: CheckpointBalancesCache;
   readonly shufflingCache: ShufflingCache;
-  /** Map keyed by executionPayload.blockHash of the block for those blobs */
-  readonly producedContentsCache = new Map<BlockHash, deneb.Contents>();
 
-  // Cache payloads from the local execution so that we can send
-  // and get signed/published blinded versions which beacon node can
-  // assemble into full blocks before publishing to the network.
-  readonly producedBlockRoot = new Map<RootHex, ExecutionPayload | null>();
-  readonly producedBlindedBlockRoot = new Set<RootHex>();
+  /**
+   * Cache produced results (ExecutionPayload, DA Data) from the local execution so that we can send
+   * and get signed/published blinded versions which beacon node can
+   * assemble into full blocks before publishing to the network.
+   */
+  readonly blockProductionCache = new Map<RootHex, ProduceResult>();
+
   readonly blacklistedBlocks: Map<RootHex, Slot | null>;
 
   readonly serializedCache: SerializedCache;
@@ -183,10 +181,23 @@ export class BeaconChain implements IBeaconChain {
   protected readonly db: IBeaconDb;
   private abortController = new AbortController();
   private processShutdownCallback: ProcessShutdownCallback;
+  private _earliestAvailableSlot: Slot;
+
+  get earliestAvailableSlot(): Slot {
+    return this._earliestAvailableSlot;
+  }
+
+  set earliestAvailableSlot(slot: Slot) {
+    if (this._earliestAvailableSlot !== slot) {
+      this._earliestAvailableSlot = slot;
+      this.emitter.emit(ChainEvent.updateStatus);
+    }
+  }
 
   constructor(
     opts: IChainOptions,
     {
+      privateKey,
       config,
       db,
       dbName,
@@ -201,6 +212,7 @@ export class BeaconChain implements IBeaconChain {
       executionEngine,
       executionBuilder,
     }: {
+      privateKey: PrivateKey;
       config: BeaconConfig;
       db: IBeaconDb;
       dbName: string;
@@ -260,6 +272,24 @@ export class BeaconChain implements IBeaconChain {
     this.seenContributionAndProof = new SeenContributionAndProof(metrics);
     this.seenAttestationDatas = new SeenAttestationDatas(metrics, this.opts?.attDataCacheSlotDistance);
 
+    const nodeId = computeNodeIdFromPrivateKey(privateKey);
+    const initialCustodyGroupCount =
+      opts.initialCustodyGroupCount ?? (opts.supernode ? config.NUMBER_OF_CUSTODY_GROUPS : config.CUSTODY_REQUIREMENT);
+    this.metrics?.peerDas.targetCustodyGroupCount.set(initialCustodyGroupCount);
+    this.custodyConfig = new CustodyConfig({
+      nodeId,
+      config,
+      initialCustodyGroupCount,
+    });
+
+    this.seenGossipBlockInput = new SeenGossipBlockInput(
+      this.custodyConfig,
+      this.executionEngine,
+      emitter,
+      clock,
+      logger
+    );
+
     this.beaconProposerCache = new BeaconProposerCache(opts);
     this.checkpointBalancesCache = new CheckpointBalancesCache();
     this.seenBlockInputCache = new SeenBlockInputCache({
@@ -284,6 +314,7 @@ export class BeaconChain implements IBeaconChain {
             pubkey2index: new PubkeyIndexMap(),
             index2pubkey: [],
           });
+    this._earliestAvailableSlot = cachedState.slot;
 
     this.shufflingCache = cachedState.epochCtx.shufflingCache = new ShufflingCache(metrics, logger, this.opts, [
       {
@@ -663,7 +694,7 @@ export class BeaconChain implements IBeaconChain {
     return produceCommonBlockBody.call(this, blockType, state, blockAttributes);
   }
 
-  produceBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
+  produceBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise?: Promise<CommonBlockBody>}): Promise<{
     block: BeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Wei;
@@ -672,7 +703,7 @@ export class BeaconChain implements IBeaconChain {
     return this.produceBlockWrapper<BlockType.Full>(BlockType.Full, blockAttributes);
   }
 
-  produceBlindedBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
+  produceBlindedBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise?: Promise<CommonBlockBody>}): Promise<{
     block: BlindedBeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Wei;
@@ -687,10 +718,10 @@ export class BeaconChain implements IBeaconChain {
       graffiti,
       slot,
       feeRecipient,
-      commonBlockBody,
+      commonBlockBodyPromise,
       parentBlockRoot,
       parentSlot,
-    }: BlockAttributes & {commonBlockBody?: CommonBlockBody}
+    }: BlockAttributes & {commonBlockBodyPromise?: Promise<CommonBlockBody>}
   ): Promise<{
     block: AssembledBlockType<T>;
     executionPayloadValue: Wei;
@@ -706,7 +737,7 @@ export class BeaconChain implements IBeaconChain {
     const proposerIndex = state.epochCtx.getBeaconProposer(slot);
     const proposerPubKey = state.epochCtx.index2pubkey[proposerIndex].toBytes();
 
-    const {body, blobs, executionPayloadValue, shouldOverrideBuilder} = await produceBlockBody.call(
+    const {body, produceResult, executionPayloadValue, shouldOverrideBuilder} = await produceBlockBody.call(
       this,
       blockType,
       state,
@@ -719,13 +750,13 @@ export class BeaconChain implements IBeaconChain {
         parentBlockRoot,
         proposerIndex,
         proposerPubKey,
-        commonBlockBody,
+        commonBlockBodyPromise,
       }
     );
 
     // The hashtree root computed here for debug log will get cached and hence won't introduce additional delays
     const bodyRoot =
-      blockType === BlockType.Full
+      produceResult.type === BlockType.Full
         ? this.config.getForkTypes(slot).BeaconBlockBody.hashTreeRoot(body)
         : this.config
             .getPostBellatrixForkTypes(slot)
@@ -747,54 +778,16 @@ export class BeaconChain implements IBeaconChain {
     const {newStateRoot, proposerReward} = computeNewStateRoot(this.metrics, state, block);
     block.stateRoot = newStateRoot;
     const blockRoot =
-      blockType === BlockType.Full
+      produceResult.type === BlockType.Full
         ? this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block)
         : this.config.getPostBellatrixForkTypes(slot).BlindedBeaconBlock.hashTreeRoot(block as BlindedBeaconBlock);
     const blockRootHex = toRootHex(blockRoot);
 
-    // track the produced block for consensus broadcast validations
-    if (blockType === BlockType.Full) {
-      this.logger.debug("Setting executionPayload cache for produced block", {blockRootHex, slot, blockType});
-      this.producedBlockRoot.set(blockRootHex, (block as bellatrix.BeaconBlock).body.executionPayload ?? null);
-      this.metrics?.blockProductionCaches.producedBlockRoot.set(this.producedBlockRoot.size);
-    } else {
-      this.logger.debug("Tracking the produced blinded block", {blockRootHex, slot, blockType});
-      this.producedBlindedBlockRoot.add(blockRootHex);
-      this.metrics?.blockProductionCaches.producedBlindedBlockRoot.set(this.producedBlindedBlockRoot.size);
-    }
-
-    // Cache for latter broadcasting
-    //
-    // blinded blobs will be fetched and added to this cache later before finally
-    // publishing the blinded block's full version
-    if (blobs.type === BlobsResultType.produced) {
-      // body is of full type here
-      const {blockHash, contents} = blobs;
-      this.producedContentsCache.set(blockHash, contents);
-      this.metrics?.blockProductionCaches.producedContentsCache.set(this.producedContentsCache.size);
-    }
+    // Track the produced block for consensus broadcast validations, later validation, etc.
+    this.blockProductionCache.set(blockRootHex, produceResult);
+    this.metrics?.blockProductionCacheSize.set(this.blockProductionCache.size);
 
     return {block, executionPayloadValue, consensusBlockValue: gweiToWei(proposerReward), shouldOverrideBuilder};
-  }
-
-  /**
-   * https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/validator.md#sidecar
-   * def get_blobs_sidecar(block: BeaconBlock, blobs: Sequence[Blob]) -> BlobSidecars:
-   *   return BlobSidecars(
-   *       beacon_block_root=hash_tree_root(block),
-   *       beacon_block_slot=block.slot,
-   *       blobs=blobs,
-   *       kzg_aggregated_proof=compute_proof_from_blobs(blobs),
-   *   )
-   */
-  getContents(beaconBlock: deneb.BeaconBlock): deneb.Contents {
-    const blockHash = toRootHex(beaconBlock.body.executionPayload.blockHash);
-    const contents = this.producedContentsCache.get(blockHash);
-    if (!contents) {
-      throw Error(`No contents for executionPayload.blockHash ${blockHash}`);
-    }
-
-    return contents;
   }
 
   async processBlock(block: BlockInput, opts?: ImportBlockOpts): Promise<void> {
@@ -805,20 +798,23 @@ export class BeaconChain implements IBeaconChain {
     return this.blockProcessor.processBlocksJob(blocks, opts);
   }
 
-  getStatus(): phase0.Status {
+  getStatus(): Status {
     const head = this.forkChoice.getHead();
     const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
+    const boundary = this.config.getForkBoundaryAtEpoch(this.clock.currentEpoch);
     return {
       // fork_digest: The node's ForkDigest (compute_fork_digest(current_fork_version, genesis_validators_root)) where
       // - current_fork_version is the fork version at the node's current epoch defined by the wall-clock time (not necessarily the epoch to which the node is sync)
       // - genesis_validators_root is the static Root found in state.genesis_validators_root
-      forkDigest: this.config.forkName2ForkDigest(this.config.getForkName(this.clock.currentSlot)),
+      // - epoch of fork boundary is used to get blob parameters of current Blob Parameter Only (BPO) fork
+      forkDigest: this.config.forkBoundary2ForkDigest(boundary),
       // finalized_root: state.finalized_checkpoint.root for the state corresponding to the head block (Note this defaults to Root(b'\x00' * 32) for the genesis finalized checkpoint).
       finalizedRoot: finalizedCheckpoint.epoch === GENESIS_EPOCH ? ZERO_HASH : finalizedCheckpoint.root,
       finalizedEpoch: finalizedCheckpoint.epoch,
       // TODO: PERFORMANCE: Memoize to prevent re-computing every time
       headRoot: fromHex(head.blockRoot),
       headSlot: head.slot,
+      earliestAvailableSlot: this._earliestAvailableSlot,
     };
   }
 
@@ -827,9 +823,9 @@ export class BeaconChain implements IBeaconChain {
     const timer = this.metrics?.forkChoice.findHead.startTimer({caller});
 
     try {
-      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetCanonicialHead}).head;
+      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetCanonicalHead}).head;
     } catch (e) {
-      this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetCanonicialHead});
+      this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetCanonicalHead});
       throw e;
     } finally {
       timer?.();
@@ -839,9 +835,10 @@ export class BeaconChain implements IBeaconChain {
   predictProposerHead(slot: Slot): ProtoBlock {
     this.metrics?.forkChoice.requests.inc();
     const timer = this.metrics?.forkChoice.findHead.startTimer({caller: FindHeadFnName.predictProposerHead});
+    const secFromSlot = this.clock.secFromSlot(slot);
 
     try {
-      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetPredictedProposerHead, slot}).head;
+      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetPredictedProposerHead, secFromSlot, slot}).head;
     } catch (e) {
       this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetPredictedProposerHead});
       throw e;
@@ -1114,6 +1111,16 @@ export class BeaconChain implements IBeaconChain {
     metrics.forkChoice.balancesLength.set(forkChoiceMetrics.balancesLength);
     metrics.forkChoice.nodes.set(forkChoiceMetrics.nodes);
     metrics.forkChoice.indices.set(forkChoiceMetrics.indices);
+
+    const headState = this.getHeadState();
+    const fork = this.config.getForkName(headState.slot);
+
+    if (isForkPostElectra(fork)) {
+      const headStateElectra = headState as BeaconStateElectra;
+      metrics.pendingDeposits.set(headStateElectra.pendingDeposits.length);
+      metrics.pendingPartialWithdrawals.set(headStateElectra.pendingPartialWithdrawals.length);
+      metrics.pendingConsolidations.set(headStateElectra.pendingConsolidations.length);
+    }
   }
 
   private onClockSlot(slot: Slot): void {
@@ -1135,16 +1142,8 @@ export class BeaconChain implements IBeaconChain {
     this.reprocessController.onSlot(slot);
 
     // Prune old cached block production artifacts, those are only useful on their slot
-    pruneSetToMax(this.producedBlockRoot, this.opts.maxCachedProducedRoots ?? DEFAULT_MAX_CACHED_PRODUCED_ROOTS);
-    this.metrics?.blockProductionCaches.producedBlockRoot.set(this.producedBlockRoot.size);
-
-    pruneSetToMax(this.producedBlindedBlockRoot, this.opts.maxCachedProducedRoots ?? DEFAULT_MAX_CACHED_PRODUCED_ROOTS);
-    this.metrics?.blockProductionCaches.producedBlindedBlockRoot.set(this.producedBlindedBlockRoot.size);
-
-    if (this.config.getForkSeq(slot) >= ForkSeq.deneb) {
-      pruneSetToMax(this.producedContentsCache, this.opts.maxCachedProducedRoots ?? DEFAULT_MAX_CACHED_PRODUCED_ROOTS);
-      this.metrics?.blockProductionCaches.producedContentsCache.set(this.producedContentsCache.size);
-    }
+    pruneSetToMax(this.blockProductionCache, this.opts.maxCachedProducedRoots ?? DEFAULT_MAX_CACHED_PRODUCED_RESULTS);
+    this.metrics?.blockProductionCacheSize.set(this.blockProductionCache.size);
 
     const metrics = this.metrics;
     if (metrics && (slot + 1) % SLOTS_PER_EPOCH === 0) {
@@ -1191,6 +1190,9 @@ export class BeaconChain implements IBeaconChain {
     this.logger.verbose("Fork choice finalized", {epoch: cp.epoch, root: cp.rootHex});
     this.seenBlockProposers.prune(computeStartSlotAtEpoch(cp.epoch));
 
+    // Update validator custody to account for effective balance changes
+    await this.updateValidatorsCustodyRequirement(cp);
+
     // TODO: Improve using regen here
     const {blockRoot, stateRoot, slot} = this.forkChoice.getHead();
     const headState = this.regen.getStateSync(stateRoot);
@@ -1209,8 +1211,58 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void> {
+    const previousValidatorCount = this.beaconProposerCache.getValidatorIndices().length;
+
     for (const proposer of proposers) {
       this.beaconProposerCache.add(epoch, proposer);
+    }
+
+    const newValidatorCount = this.beaconProposerCache.getValidatorIndices().length;
+
+    // Only update validator custody if we discovered new validators
+    if (newValidatorCount > previousValidatorCount) {
+      const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
+      await this.updateValidatorsCustodyRequirement(finalizedCheckpoint);
+    }
+  }
+
+  private async updateValidatorsCustodyRequirement(finalizedCheckpoint: CheckpointWithHex): Promise<void> {
+    if (this.opts.supernode) {
+      // Disable dynamic custody updates for supernodes since they must maintain custody
+      // of all custody groups regardless of validator effective balances
+      return;
+    }
+
+    // Update custody requirement based on finalized state
+    const stateOrBytes = (await this.getStateOrBytesByCheckpoint(finalizedCheckpoint))?.state;
+
+    if (!stateOrBytes) {
+      throw Error(
+        `No finalized state for epoch ${finalizedCheckpoint.epoch} and root ${finalizedCheckpoint.rootHex} to update target custody group count`
+      );
+    }
+
+    // Validators attached to the node
+    const validatorIndices = this.beaconProposerCache.getValidatorIndices();
+
+    let effectiveBalances: number[];
+    if (stateOrBytes instanceof Uint8Array) {
+      effectiveBalances = getEffectiveBalancesFromStateBytes(this.config, stateOrBytes, validatorIndices);
+    } else {
+      effectiveBalances = validatorIndices.map((index) => stateOrBytes.validators.get(index).effectiveBalance);
+    }
+
+    const targetCustodyGroupCount = getValidatorsCustodyRequirement(this.config, effectiveBalances);
+    // Only update if target is increased
+    if (targetCustodyGroupCount > this.custodyConfig.targetCustodyGroupCount) {
+      this.custodyConfig.updateTargetCustodyGroupCount(targetCustodyGroupCount);
+      this.metrics?.peerDas.targetCustodyGroupCount.set(targetCustodyGroupCount);
+      this.logger.verbose("Updated target custody group count", {
+        finalizedEpoch: finalizedCheckpoint.epoch,
+        validatorCount: validatorIndices.length,
+        targetCustodyGroupCount,
+      });
+      this.emitter.emit(ChainEvent.updateTargetCustodyGroupCount, targetCustodyGroupCount);
     }
   }
 
@@ -1222,7 +1274,7 @@ export class BeaconChain implements IBeaconChain {
       const previousStatus = executionBuilder.status;
       const shouldEnable = slotsPresent >= Math.min(faultInspectionWindow - allowedFaults, clockSlot);
 
-      executionBuilder.updateStatus(shouldEnable);
+      executionBuilder.updateStatus(shouldEnable ? BuilderStatus.enabled : BuilderStatus.circuitBreaker);
       // The status changed we should log
       const status = executionBuilder.status;
       const builderLog = {
@@ -1232,9 +1284,9 @@ export class BeaconChain implements IBeaconChain {
         allowedFaults,
       };
       if (status !== previousStatus) {
-        this.logger.info("Execution builder status updated", builderLog);
+        this.logger.info("External builder status updated", builderLog);
       } else {
-        this.logger.verbose("Execution builder status", builderLog);
+        this.logger.verbose("External builder status", builderLog);
       }
     }
   }

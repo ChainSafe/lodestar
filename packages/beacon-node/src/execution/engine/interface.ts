@@ -1,6 +1,14 @@
-import {CONSOLIDATION_REQUEST_TYPE, DEPOSIT_REQUEST_TYPE, ForkName, WITHDRAWAL_REQUEST_TYPE} from "@lodestar/params";
-import {ExecutionPayload, ExecutionRequests, Root, RootHex, Wei, capella} from "@lodestar/types";
-import {Blob, BlobAndProof, KZGCommitment, KZGProof} from "@lodestar/types/deneb";
+import {
+  CONSOLIDATION_REQUEST_TYPE,
+  DEPOSIT_REQUEST_TYPE,
+  ForkName,
+  ForkPostFulu,
+  ForkPreFulu,
+  WITHDRAWAL_REQUEST_TYPE,
+} from "@lodestar/params";
+import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei, capella} from "@lodestar/types";
+import {BlobAndProof} from "@lodestar/types/deneb";
+import {BlobAndProofV2} from "@lodestar/types/fulu";
 
 import {DATA} from "../../eth1/provider/utils.js";
 import {PayloadId, PayloadIdCache, WithdrawalV1} from "./payloadIdCache.js";
@@ -99,16 +107,6 @@ export type PayloadAttributes = {
   parentBeaconBlockRoot?: Uint8Array;
 };
 
-export type BlobsBundle = {
-  /**
-   * Execution payload `blockHash` for the caller to sanity-check the consistency with the `engine_getPayload` call
-   * https://github.com/protolambda/execution-apis/blob/bf44a8d08ab34b861ef97fa9ef5c5e7806194547/src/engine/blob-extension.md?plain=1#L49
-   */
-  commitments: KZGCommitment[];
-  blobs: Blob[];
-  proofs: KZGProof[];
-};
-
 export type ClientVersion = {
   code: ClientCode;
   name: string;
@@ -189,5 +187,6 @@ export interface IExecutionEngine {
 
   getPayloadBodiesByRange(fork: ForkName, start: number, count: number): Promise<(ExecutionPayloadBody | null)[]>;
 
-  getBlobs(fork: ForkName, versionedHashes: VersionedHashes): Promise<(BlobAndProof | null)[]>;
+  getBlobs(fork: ForkPostFulu, versionedHashes: VersionedHashes): Promise<BlobAndProofV2[] | null>;
+  getBlobs(fork: ForkPreFulu, versionedHashes: VersionedHashes): Promise<(BlobAndProof | null)[]>;
 }

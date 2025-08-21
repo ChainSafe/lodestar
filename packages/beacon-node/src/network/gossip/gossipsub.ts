@@ -19,6 +19,7 @@ import {GossipTopic, GossipType} from "./interface.js";
 import {Eth2GossipsubMetrics, createEth2GossipsubMetrics} from "./metrics.js";
 import {GossipTopicCache, getCoreTopicsAtFork, stringifyGossipTopic} from "./topic.js";
 
+import {NetworkConfig} from "../networkConfig.js";
 import {
   GOSSIP_D,
   GOSSIP_D_HIGH,
@@ -39,7 +40,7 @@ export type Eth2Context = {
 };
 
 export type Eth2GossipsubModules = {
-  config: BeaconConfig;
+  networkConfig: NetworkConfig;
   libp2p: Libp2p;
   logger: Logger;
   metricsRegister: RegistryMetricCreator | null;
@@ -84,10 +85,11 @@ export class Eth2Gossipsub extends GossipSub {
 
   constructor(opts: Eth2GossipsubOpts, modules: Eth2GossipsubModules) {
     const {allowPublishToZeroPeers, gossipsubD, gossipsubDLow, gossipsubDHigh} = opts;
-    const gossipTopicCache = new GossipTopicCache(modules.config);
+    const {networkConfig, logger, metricsRegister, peersData, events} = modules;
+    const {config} = networkConfig;
+    const gossipTopicCache = new GossipTopicCache(config);
 
-    const scoreParams = computeGossipPeerScoreParams(modules);
-    const {config, logger, metricsRegister, peersData, events} = modules;
+    const scoreParams = computeGossipPeerScoreParams({config, eth2Context: modules.eth2Context});
 
     // Gossipsub parameters defined here:
     // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
@@ -126,7 +128,7 @@ export class Eth2Gossipsub extends GossipSub {
       ),
       metricsRegister: metricsRegister as MetricsRegister | null,
       metricsTopicStrToLabel: metricsRegister
-        ? getMetricsTopicStrToLabel(config, {disableLightClientServer: opts.disableLightClientServer ?? false})
+        ? getMetricsTopicStrToLabel(networkConfig, {disableLightClientServer: opts.disableLightClientServer ?? false})
         : undefined,
       asyncValidation: true,
 
@@ -199,6 +201,7 @@ export class Eth2Gossipsub extends GossipSub {
     ]) {
       // Pre-aggregate results by fork so we can fill the remaining metrics with 0
       const peersByTypeByFork = new Map2d<ForkName, GossipType, number>();
+      // TODO: This shouldnt be by fork, but by boundary
       const peersByBeaconAttSubnetByFork = new Map2dArr<ForkName, number>();
       const peersByBeaconSyncSubnetByFork = new Map2dArr<ForkName, number>();
 
@@ -211,12 +214,13 @@ export class Eth2Gossipsub extends GossipSub {
         // for example in prater: /eth2/82f4a72b/optimistic_light_client_update_v0/ssz_snappy
         const topic = this.gossipTopicCache.getKnownTopic(topicString);
         if (topic !== undefined) {
+          const {fork} = topic.boundary;
           if (topic.type === GossipType.beacon_attestation) {
-            peersByBeaconAttSubnetByFork.set(topic.fork, topic.subnet, peers.size);
+            peersByBeaconAttSubnetByFork.set(fork, topic.subnet, peers.size);
           } else if (topic.type === GossipType.sync_committee) {
-            peersByBeaconSyncSubnetByFork.set(topic.fork, topic.subnet, peers.size);
+            peersByBeaconSyncSubnetByFork.set(fork, topic.subnet, peers.size);
           } else {
-            peersByTypeByFork.set(topic.fork, topic.type, peers.size);
+            peersByTypeByFork.set(fork, topic.type, peers.size);
           }
         }
 
@@ -330,17 +334,31 @@ function attSubnetLabel(subnet: SubnetID): string {
   return `0${subnet}`;
 }
 
-function getMetricsTopicStrToLabel(config: BeaconConfig, opts: {disableLightClientServer: boolean}): TopicStrToLabel {
+function getMetricsTopicStrToLabel(
+  networkConfig: NetworkConfig,
+  opts: {disableLightClientServer: boolean}
+): TopicStrToLabel {
+  const {config} = networkConfig;
   const metricsTopicStrToLabel = new Map<TopicStr, TopicLabel>();
+  const {forkBoundariesAscendingEpochOrder} = config;
 
-  for (const {name: fork} of config.forksAscendingEpochOrder) {
-    const topics = getCoreTopicsAtFork(config, fork, {
+  for (let i = 0; i < forkBoundariesAscendingEpochOrder.length; i++) {
+    const currentForkBoundary = forkBoundariesAscendingEpochOrder[i];
+    const nextForkBoundary = forkBoundariesAscendingEpochOrder[i + 1];
+
+    // Edge case: If multiple fork boundaries start at the same epoch, only consider the latest one
+    if (nextForkBoundary && currentForkBoundary.epoch === nextForkBoundary.epoch) {
+      continue;
+    }
+
+    const topics = getCoreTopicsAtFork(networkConfig, currentForkBoundary.fork, {
       subscribeAllSubnets: true,
       disableLightClientServer: opts.disableLightClientServer,
     });
     for (const topic of topics) {
-      metricsTopicStrToLabel.set(stringifyGossipTopic(config, {...topic, fork}), topic.type);
+      metricsTopicStrToLabel.set(stringifyGossipTopic(config, {...topic, boundary: currentForkBoundary}), topic.type);
     }
   }
+
   return metricsTopicStrToLabel;
 }

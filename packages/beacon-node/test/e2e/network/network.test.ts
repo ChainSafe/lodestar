@@ -132,10 +132,17 @@ function runTests({useWorker}: {useWorker: boolean}): void {
   it("Should subscribe to gossip core topics on demand", async () => {
     const netA = await createTestNode(`network-${useWorker ? "worker" : "main"}-CT`);
 
-    expect(await getTopics(netA)).toEqual([]);
+    // Beacon attestation topics are subscribed to when a nodeId is passed in to
+    // the constructor of AttnetsService.
+    expect(await getTopics(netA)).toEqual([
+      expect.stringContaining("beacon_attestation"),
+      expect.stringContaining("beacon_attestation"),
+    ]);
 
     await netA.subscribeGossipCoreTopics();
     expect(await getTopics(netA)).toEqual([
+      expect.stringContaining("beacon_attestation"),
+      expect.stringContaining("beacon_attestation"),
       "/eth2/18ae4ccb/beacon_block/ssz_snappy",
       "/eth2/18ae4ccb/beacon_aggregate_and_proof/ssz_snappy",
       "/eth2/18ae4ccb/voluntary_exit/ssz_snappy",
@@ -144,7 +151,10 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     ]);
 
     await netA.unsubscribeGossipCoreTopics();
-    expect(await getTopics(netA)).toEqual([]);
+    expect(await getTopics(netA)).toEqual([
+      expect.stringContaining("beacon_attestation"),
+      expect.stringContaining("beacon_attestation"),
+    ]);
   });
 }
 

@@ -12,7 +12,7 @@ import {fromHex, toHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {quantityToNum} from "../../eth1/provider/utils.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
-import {ckzg} from "../../util/kzg.js";
+import {kzg} from "../../util/kzg.js";
 import {ClientCode, ExecutionPayloadStatus, PayloadIdCache} from "./interface.js";
 import {
   BlobsBundleRpc,
@@ -96,10 +96,12 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       engine_getPayloadV2: this.getPayload.bind(this),
       engine_getPayloadV3: this.getPayload.bind(this),
       engine_getPayloadV4: this.getPayload.bind(this),
+      engine_getPayloadV5: this.getPayload.bind(this),
       engine_getPayloadBodiesByHashV1: this.getPayloadBodiesByHash.bind(this),
       engine_getPayloadBodiesByRangeV1: this.getPayloadBodiesByRange.bind(this),
       engine_getClientVersionV1: this.getClientVersionV1.bind(this),
       engine_getBlobsV1: this.getBlobs.bind(this),
+      engine_getBlobsV2: this.getBlobsV2.bind(this),
     };
   }
 
@@ -322,8 +324,8 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
         const denebTxCount = Math.round(2 * Math.random());
         for (let i = 0; i < denebTxCount; i++) {
           const blob = generateRandomBlob();
-          const commitment = ckzg.blobToKzgCommitment(blob);
-          const proof = ckzg.computeBlobKzgProof(blob, commitment);
+          const commitment = kzg.blobToKzgCommitment(blob);
+          const proof = kzg.computeBlobKzgProof(blob, commitment);
           executionPayload.transactions.push(transactionForKzgCommitment(commitment));
           commitments.push(commitment);
           blobs.push(blob);
@@ -402,6 +404,12 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
     versionedHashes: EngineApiRpcParamTypes["engine_getBlobsV1"][0]
   ): EngineApiRpcReturnTypes["engine_getBlobsV1"] {
     return versionedHashes.map((_vh) => null);
+  }
+
+  private getBlobsV2(
+    _versionedHashes: EngineApiRpcParamTypes["engine_getBlobsV2"][0]
+  ): EngineApiRpcReturnTypes["engine_getBlobsV2"] {
+    return null;
   }
 
   private timestampToFork(timestamp: number): ForkPostBellatrix {

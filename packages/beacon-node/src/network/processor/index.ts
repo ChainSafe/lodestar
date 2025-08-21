@@ -66,6 +66,7 @@ type WorkOpts = {
 const executeGossipWorkOrderObj: Record<GossipType, WorkOpts> = {
   [GossipType.beacon_block]: {bypassQueue: true},
   [GossipType.blob_sidecar]: {bypassQueue: true},
+  [GossipType.data_column_sidecar]: {bypassQueue: true},
   [GossipType.beacon_aggregate_and_proof]: {},
   [GossipType.voluntary_exit]: {},
   [GossipType.bls_to_execution_change]: {},
@@ -242,14 +243,14 @@ export class NetworkProcessor {
     const extractBlockSlotRootFn = this.extractBlockSlotRootFns[topicType];
     // check block root of Attestation and SignedAggregateAndProof messages
     if (extractBlockSlotRootFn) {
-      const slotRoot = extractBlockSlotRootFn(message.msg.data, message.topic.fork);
+      const slotRoot = extractBlockSlotRootFn(message.msg.data, message.topic.boundary.fork);
       // if slotRoot is null, it means the msg.data is invalid
       // in that case message will be rejected when deserializing data in later phase (gossipValidatorFn)
       if (slotRoot) {
         // DOS protection: avoid processing messages that are too old
         const {slot, root} = slotRoot;
         const clockSlot = this.chain.clock.currentSlot;
-        const {fork} = message.topic;
+        const {fork} = message.topic.boundary;
         let earliestPermissableSlot = clockSlot - DEFAULT_EARLIEST_PERMISSIBLE_SLOT_DISTANCE;
         if (ForkSeq[fork] >= ForkSeq.deneb && topicType === GossipType.beacon_attestation) {
           // post deneb, the attestations could be in current or previous epoch

@@ -17,6 +17,7 @@ type BeaconExtraArgs = {
   dbDir?: string;
   persistInvalidSszObjectsDir?: string;
   persistInvalidSszObjectsRetentionHours?: number;
+  persistOrphanedBlocksDir?: string;
   peerStoreDir?: string;
   persistNetworkIdentity?: boolean;
   private?: boolean;
@@ -110,6 +111,13 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
     type: "number",
   },
 
+  persistOrphanedBlocksDir: {
+    description: "Enable and specify a directory to persist orphaned blocks",
+    defaultDescription: defaultBeaconPaths.persistOrphanedBlocksDir,
+    hidden: true,
+    type: "string",
+  },
+
   peerStoreDir: {
     hidden: true,
     description: "Peer store directory",
@@ -118,7 +126,9 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
   },
 
   persistNetworkIdentity: {
-    description: "Whether to reuse the same peer-id across restarts",
+    description:
+      "Whether to reuse the same peer-id across restarts. Validator custody requires custody group count to persist relative to a given ENR. Setting to false will reset ENR and validator custody requirements on restarts.",
+    default: true,
     type: "boolean",
   },
 

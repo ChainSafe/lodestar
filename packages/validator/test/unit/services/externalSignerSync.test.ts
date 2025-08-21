@@ -2,10 +2,10 @@ import {SecretKey} from "@chainsafe/blst";
 import {createChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {toBufferBE} from "bigint-buffer";
-import {MockedFunction, afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
+import {MockInstance, afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {ExternalSignerOptions, pollExternalSignerPubkeys} from "../../../src/services/externalSignerSync.js";
 import {SignerRemote, SignerType, ValidatorStore} from "../../../src/services/validatorStore.js";
-import {externalSignerGetKeys} from "../../../src/util/externalSignerClient.js";
+import * as externalSignerClient from "../../../src/util/externalSignerClient.js";
 import {getApiClientStub} from "../../utils/apiStub.js";
 import {loggerVc} from "../../utils/logger.js";
 import {initValidatorStore} from "../../utils/validatorStore.js";
@@ -27,13 +27,14 @@ describe("External signer sync", () => {
   let pubkeys: string[];
   let secretKeys: SecretKey[];
 
-  let externalSignerGetKeysStub: MockedFunction<typeof externalSignerGetKeys>;
+  let externalSignerGetKeysStub: MockInstance<typeof externalSignerClient.externalSignerGetKeys>;
 
   beforeAll(() => {
     vi.useFakeTimers();
     secretKeys = Array.from({length: 3}, (_, i) => SecretKey.fromBytes(toBufferBE(BigInt(i + 1), 32)));
     pubkeys = secretKeys.map((sk) => sk.toPublicKey().toHex());
-    externalSignerGetKeysStub = vi.mocked(externalSignerGetKeys);
+    // vi.mock does not automock all objects in Bun runtime, so we have to explicitly spy on needed methods
+    externalSignerGetKeysStub = vi.spyOn(externalSignerClient, "externalSignerGetKeys");
   });
 
   let validatorStore: ValidatorStore;

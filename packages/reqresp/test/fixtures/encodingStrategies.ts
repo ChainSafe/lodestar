@@ -34,7 +34,7 @@ export const goerliShadowForkBlock13249: SszSnappyTestBlockData = {
   type: ssz.bellatrix.SignedBeaconBlock,
   payload: {
     data: fs.readFileSync(path.join(__dirname, "/goerliShadowForkBlock.13249/serialized.ssz")),
-    fork: ForkName.altair,
+    boundary: {fork: ForkName.altair, epoch: 36660},
   },
   streamedBody: fs.readFileSync(path.join(__dirname, "/goerliShadowForkBlock.13249/streamed.snappy")),
 };

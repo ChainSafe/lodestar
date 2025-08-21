@@ -1,4 +1,4 @@
-import {BeaconConfig, ForkDigestContext} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {ContextBytesFactory, ContextBytesType, Encoding} from "@lodestar/reqresp";
 import {rateLimitQuotas} from "./rateLimit.js";
@@ -22,6 +22,12 @@ export const MetadataV2 = toProtocol({
   contextBytesType: ContextBytesType.Empty,
 });
 
+export const MetadataV3 = toProtocol({
+  method: ReqRespMethod.Metadata,
+  version: Version.V3,
+  contextBytesType: ContextBytesType.Empty,
+});
+
 export const Ping = toProtocol({
   method: ReqRespMethod.Ping,
   version: Version.V1,
@@ -31,6 +37,12 @@ export const Ping = toProtocol({
 export const Status = toProtocol({
   method: ReqRespMethod.Status,
   version: Version.V1,
+  contextBytesType: ContextBytesType.Empty,
+});
+
+export const StatusV2 = toProtocol({
+  method: ReqRespMethod.Status,
+  version: Version.V2,
   contextBytesType: ContextBytesType.Empty,
 });
 
@@ -66,6 +78,18 @@ export const BlobSidecarsByRange = toProtocol({
 
 export const BlobSidecarsByRoot = toProtocol({
   method: ReqRespMethod.BlobSidecarsByRoot,
+  version: Version.V1,
+  contextBytesType: ContextBytesType.ForkDigest,
+});
+
+export const DataColumnSidecarsByRange = toProtocol({
+  method: ReqRespMethod.DataColumnSidecarsByRange,
+  version: Version.V1,
+  contextBytesType: ContextBytesType.ForkDigest,
+});
+
+export const DataColumnSidecarsByRoot = toProtocol({
+  method: ReqRespMethod.DataColumnSidecarsByRoot,
   version: Version.V1,
   contextBytesType: ContextBytesType.ForkDigest,
 });
@@ -112,11 +136,11 @@ function toProtocol(protocol: ProtocolSummary) {
   });
 }
 
-function toContextBytes(type: ContextBytesType, config: ForkDigestContext): ContextBytesFactory {
+function toContextBytes(type: ContextBytesType, config: BeaconConfig): ContextBytesFactory {
   switch (type) {
     case ContextBytesType.Empty:
       return {type: ContextBytesType.Empty};
     case ContextBytesType.ForkDigest:
-      return {type: ContextBytesType.ForkDigest, forkDigestContext: config};
+      return {type: ContextBytesType.ForkDigest, config};
   }
 }

@@ -39,36 +39,41 @@ describe("sync / range / batch", () => {
     expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
     expect(batch.getFailedPeers()[0]).toBe(peer);
 
+    // As of https://github.com/ChainSafe/lodestar/pull/8150, we abort the batch after a single processing error
+    // commented out the rest of the flow for now
+
     // retry download: AwaitingDownload -> Downloading
     // downloadingSuccess: Downloading -> AwaitingProcessing
     batch.startDownloading(peer);
-    batch.downloadingSuccess(blocksDownloaded);
+    batch.downloadingSuccess({blocks: blocksDownloaded, pendingDataColumns: null});
     expect(batch.state.status).toBe(BatchStatus.AwaitingProcessing);
 
     // startProcessing: AwaitingProcessing -> Processing
-    const blocksToProcess = batch.startProcessing();
-    expect(batch.state.status).toBe(BatchStatus.Processing);
-    expect(blocksToProcess).toBe(blocksDownloaded);
+    // const blocksToProcess = batch.startProcessing();
+    // expect(batch.state.status).toBe(BatchStatus.Processing);
+    // expect(blocksToProcess).toBe(blocksDownloaded);
 
     // processingError: Processing -> AwaitingDownload
-    batch.processingError(new Error());
-    expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
+
+    // batch.processingError(new Error());
+    // expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
 
     // retry download + processing: AwaitingDownload -> Downloading -> AwaitingProcessing -> Processing
     // processingSuccess: Processing -> AwaitingValidation
-    batch.startDownloading(peer);
-    batch.downloadingSuccess(blocksDownloaded);
-    batch.startProcessing();
-    batch.processingSuccess();
-    expect(batch.state.status).toBe(BatchStatus.AwaitingValidation);
+    // batch.startDownloading(peer);
+    // batch.downloadingSuccess({blocks: blocksDownloaded, pendingDataColumns: null});
+    // batch.startProcessing();
+    // batch.processingSuccess();
+    // expect(batch.state.status).toBe(BatchStatus.AwaitingValidation);
 
     // validationError: AwaitingValidation -> AwaitingDownload
-    batch.validationError(new Error());
-    expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
+
+    // batch.validationError(new Error());
+    // expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
 
     // retry download + processing + validation: AwaitingDownload -> Downloading -> AwaitingProcessing -> Processing -> AwaitingValidation
-    batch.startDownloading(peer);
-    batch.downloadingSuccess(blocksDownloaded);
+    // batch.startDownloading(peer);
+    // batch.downloadingSuccess({blocks: blocksDownloaded, pendingDataColumns: null});
     batch.startProcessing();
     batch.processingSuccess();
     expect(batch.state.status).toBe(BatchStatus.AwaitingValidation);
@@ -79,7 +84,7 @@ describe("sync / range / batch", () => {
     const batch = new Batch(startEpoch, config);
 
     expectThrowsLodestarError(
-      () => batch.downloadingSuccess(blocksDownloaded),
+      () => batch.downloadingSuccess({blocks: blocksDownloaded, pendingDataColumns: []}),
       new BatchError({
         code: BatchErrorCode.WRONG_STATUS,
         startEpoch,

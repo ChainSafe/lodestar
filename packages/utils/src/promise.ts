@@ -26,6 +26,19 @@ export async function callFnWhenAwait<T>(
   return t as T;
 }
 
+/**
+ * Create a deferred promise
+ */
+export function defer<T>() {
+  let resolve!: (v: T) => void;
+  let reject!: (e: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return {promise, resolve, reject};
+}
+
 export type PromiseResult<T> = {
   promise: Promise<T>;
 } & (
