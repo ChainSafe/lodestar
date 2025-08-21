@@ -166,8 +166,8 @@ export class Batch {
       }
       if (!blockInput.hasAllData()) {
         if (isBlockInputColumns(blockInput)) {
-          for (const missing of blockInput.getMissingSampledColumnMeta()) {
-            neededColumns.add(missing.index);
+          for (const index of blockInput.getMissingSampledColumnMeta().missing) {
+            neededColumns.add(index);
           }
         }
       } else if (dataStartSlot === blockSlot) {

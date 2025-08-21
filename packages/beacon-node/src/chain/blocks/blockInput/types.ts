@@ -1,5 +1,6 @@
 import {ForkName} from "@lodestar/params";
-import {RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
+import {ColumnIndex, RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
+import {VersionedHashes} from "../../../execution";
 
 export enum DAType {
   PreData = "pre-data",
@@ -86,11 +87,15 @@ export type AddColumn = ColumnWithSource & {
   blockRootHex: RootHex;
 };
 
-export type BlobMeta = ColumnMeta & {versionHash: Uint8Array};
-
-export type ColumnMeta = {
-  blockRoot: Uint8Array;
+export type BlobMeta = {
   index: number;
+  blockRoot: Uint8Array;
+  versionedHash: Uint8Array;
+};
+
+export type MissingColumnMeta = {
+  missing: ColumnIndex[];
+  versionedHashes: VersionedHashes;
 };
 
 /**

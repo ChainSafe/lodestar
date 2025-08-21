@@ -11,7 +11,6 @@ import {
   BlobMeta,
   BlobWithSource,
   BlockInputInit,
-  ColumnMeta,
   ColumnWithSource,
   CreateBlockInputMeta,
   DAData,
@@ -20,6 +19,7 @@ import {
   LogMetaBasic,
   LogMetaBlobs,
   LogMetaColumns,
+  MissingColumnMeta,
   PromiseParts,
   SourceMeta,
 } from "./types.js";
@@ -500,7 +500,7 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
         blobMeta.push({
           index,
           blockRoot: fromHex(this.blockRootHex),
-          versionHash: versionedHashes[index],
+          versionedHash: versionedHashes[index],
         });
       }
     }
@@ -837,19 +837,24 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     return this.getAllColumnsWithSource().map(({columnSidecar}) => columnSidecar);
   }
 
-  getMissingSampledColumnMeta(): ColumnMeta[] {
+  getMissingSampledColumnMeta(): MissingColumnMeta {
     if (this.state.hasAllData) {
-      return [];
+      return {
+        missing: [],
+        versionedHashes: this.state.versionedHashes,
+      };
     }
 
-    const needed: ColumnMeta[] = [];
-    const blockRoot = fromHex(this.blockRootHex);
+    const missing: number[] = [];
     for (const index of this.sampledColumns) {
       if (!this.columnsCache.has(index)) {
-        needed.push({index, blockRoot});
+        missing.push(index);
       }
     }
-    return needed;
+    return {
+      missing,
+      versionedHashes: this.state.versionedHashes,
+    };
   }
 }
 

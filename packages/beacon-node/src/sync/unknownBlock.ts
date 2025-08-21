@@ -491,7 +491,7 @@ export class BlockInputSync {
     while (i++ < this.getMaxDownloadAttempts()) {
       const pendingColumns =
         isPendingBlockInput(cacheItem) && isBlockInputColumns(cacheItem.blockInput)
-          ? new Set(cacheItem.blockInput.getMissingSampledColumnMeta().map((meta) => meta.index))
+          ? new Set(cacheItem.blockInput.getMissingSampledColumnMeta().missing)
           : defaultPendingColumns;
       // pendingDataColumns is null pre-fulu
       const peer = this.peerBalancer.bestPeerForPendingColumns(pendingColumns, excludedPeers);
@@ -546,7 +546,7 @@ export class BlockInputSync {
           message += ` Missing blob indices=${prettyPrintIndices(missing)}`;
         }
       } else if (isBlockInputColumns(cacheItem.blockInput)) {
-        const missing = cacheItem.blockInput.getMissingSampledColumnMeta().map((b) => b.index);
+        const missing = cacheItem.blockInput.getMissingSampledColumnMeta().missing;
         if (missing.length) {
           message += ` Missing column indices=${prettyPrintIndices(missing)}`;
         }
@@ -677,7 +677,7 @@ export class UnknownBlockPeerBalancer {
     const eligiblePeers: PeerIdStr[] = [];
 
     if (isBlockInputColumns(blockInput)) {
-      const pendingDataColumns: Set<number> = new Set(blockInput.getMissingSampledColumnMeta().map((c) => c.index));
+      const pendingDataColumns: Set<number> = new Set(blockInput.getMissingSampledColumnMeta().missing);
       // there could be no pending column in case when block is still missing
       eligiblePeers.push(...this.filterPeers(pendingDataColumns, excludedPeers));
     } else {
