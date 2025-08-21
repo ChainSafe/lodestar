@@ -32,6 +32,20 @@ describe("LevelDB controller", () => {
     expect(await db.get(key)).toBe(null);
   });
 
+  it("test getMany", async () => {
+    const key1 = Buffer.from("test 1");
+    const value1 = Buffer.from("some value 1");
+    await db.put(key1, value1);
+
+    const key2 = Buffer.from("test 2");
+    const value2 = Buffer.from("some value 2");
+    await db.put(key2, value2);
+
+    await expect(db.getMany([key1, key2])).resolves.toEqual([value1, value2]);
+    await db.delete(key1);
+    await expect(db.getMany([key1, key2])).resolves.toEqual([undefined, value2]);
+  });
+
   it("test batchPut", async () => {
     const k1 = Buffer.from("test1");
     const k2 = Buffer.from("test2");

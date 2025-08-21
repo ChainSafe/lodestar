@@ -137,7 +137,7 @@ export async function archiveBlocks(
     }
 
     if (finalizedPostFulu) {
-      await db.dataColumnSidecars.batchDelete(nonCanonicalBlockRoots);
+      await db.dataColumnSidecar.deleteMany(nonCanonicalBlockRoots);
       logger.verbose("Deleted non canonical dataColumnSidecars from hot DB");
     }
   }
@@ -173,11 +173,14 @@ export async function archiveBlocks(
       );
       const dataColumnSidecarsMinEpoch = currentEpoch - dataColumnSidecarsArchiveWindow;
       if (dataColumnSidecarsMinEpoch >= config.FULU_FORK_EPOCH) {
-        const slotsToDelete = await db.dataColumnSidecarsArchive.keys({
-          lt: computeStartSlotAtEpoch(dataColumnSidecarsMinEpoch),
-        });
+        const slotsToDelete = (
+          await db.dataColumnSidecarArchive.keys({
+            lt: db.dataColumnSidecarArchive.getMaxKeyRaw(computeStartSlotAtEpoch(dataColumnSidecarsMinEpoch)),
+          })
+        ).map((p) => p.prefix);
+
         if (slotsToDelete.length > 0) {
-          await db.dataColumnSidecarsArchive.batchDelete(slotsToDelete);
+          await db.dataColumnSidecarArchive.deleteMany(slotsToDelete);
           logger.verbose(`dataColumnSidecars prune: batchDelete range ${slotsToDelete[0]}..${slotsToDelete.at(-1)}`);
         } else {
           logger.verbose(`dataColumnSidecars prune: no entries before epoch ${dataColumnSidecarsMinEpoch}`);
@@ -296,6 +299,7 @@ async function migrateBlobSidecarsFromHotToColdDb(
   return migratedWrappedBlobSidecars;
 }
 
+// TODO: This function can be simplified further by reducing layers of promises in a loop
 async function migrateDataColumnSidecarsFromHotToColdDb(
   config: ChainForkConfig,
   db: IBeaconDb,
@@ -309,34 +313,38 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
 
     // processCanonicalBlocks
     if (canonicalBlocks.length === 0) break;
+    const promises = [];
 
     // load Buffer instead of ssz deserialized to improve performance
-    const canonicalDataColumnSidecarsEntries: KeyValue<Slot, Uint8Array>[] = await Promise.all(
-      canonicalBlocks
-        .filter((block) => {
-          const blockSlot = block.slot;
-          const blockEpoch = computeEpochAtSlot(blockSlot);
-          return (
-            config.getForkSeq(blockSlot) >= ForkSeq.fulu &&
-            // if block is out of ${config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS}, skip this step
-            blockEpoch >= currentEpoch - config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS
-          );
-        })
-        .map(async (block) => {
-          const bytes = await db.dataColumnSidecars.getBinary(block.root);
-          if (!bytes) {
-            throw Error(`No dataColumnSidecars found for slot ${block.slot} root ${toHex(block.root)}`);
-          }
-          return {key: block.slot, value: bytes};
-        })
-    );
+    for (const block of canonicalBlocks) {
+      const blockSlot = block.slot;
+      const blockEpoch = computeEpochAtSlot(blockSlot);
+
+      if (
+        config.getForkSeq(blockSlot) < ForkSeq.fulu ||
+        // if block is out of ${config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS}, skip this step
+        blockEpoch < currentEpoch - config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS
+      ) {
+        continue;
+      }
+
+      const dataColumnSidecarBytes = await db.dataColumnSidecar.valuesBinary(block.root);
+      if (!dataColumnSidecarBytes) {
+        throw Error(`No dataColumnSidecars found for slot ${block.slot} root ${toHex(block.root)}`);
+      }
+      promises.push(
+        db.dataColumnSidecarArchive.putManyBinary(
+          block.slot,
+          dataColumnSidecarBytes.map((p) => ({key: p.id, value: p.value}))
+        )
+      );
+      migratedWrappedDataColumns += dataColumnSidecarBytes.length;
+    }
+
+    promises.push(db.dataColumnSidecar.deleteMany(canonicalBlocks.map((block) => block.root)));
 
     // put to blockArchive db and delete block db
-    await Promise.all([
-      db.dataColumnSidecarsArchive.batchPutBinary(canonicalDataColumnSidecarsEntries),
-      db.dataColumnSidecars.batchDelete(canonicalBlocks.map((block) => block.root)),
-    ]);
-    migratedWrappedDataColumns += canonicalDataColumnSidecarsEntries.length;
+    await Promise.all(promises);
   }
 
   return migratedWrappedDataColumns;
