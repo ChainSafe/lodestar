@@ -6,7 +6,16 @@ import {Slot} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {beforeEach, describe, expect, it} from "vitest";
 import {NotReorgedReason} from "../../../src/forkChoice/interface.js";
-import {ExecutionStatus, ForkChoice, IForkChoiceStore, ProtoArray, ProtoBlock} from "../../../src/index.js";
+import {
+  ExecutionStatus,
+  ForkChoice,
+  IForkChoiceStore,
+  InclusionListCommitteeRootStore,
+  InclusionListEquivocatorStore,
+  InclusionListStore,
+  ProtoArray,
+  ProtoBlock,
+} from "../../../src/index.js";
 import {getBlockRoot, getStateRoot} from "../../utils/index.js";
 
 type ProtoBlockWithWeight = ProtoBlock & {weight: number}; // weight of the block itself
@@ -40,6 +49,7 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
     executionStatus: ExecutionStatus.PreMerge,
 
     timeliness: false,
+    isEip7805Enabled: false,
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
   };
 
@@ -63,6 +73,7 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
     executionStatus: ExecutionStatus.PreMerge,
 
     timeliness: false,
+    isEip7805Enabled: false,
 
     weight: 29,
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
@@ -88,6 +99,7 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
     executionStatus: ExecutionStatus.PreMerge,
 
     timeliness: false,
+    isEip7805Enabled: false,
     weight: 212, // 240 - 29 + 1
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
   };
@@ -115,6 +127,9 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
     },
     justifiedBalancesGetter: () => new Uint16Array(Array(32).fill(150)),
     equivocatingIndices: new Set(),
+    inclusionLists: new InclusionListStore(),
+    inclusionListEquivocators: new InclusionListEquivocatorStore(),
+    unsatisifiedInclusionListBlocks: new InclusionListCommitteeRootStore(),
   };
 
   const testCases: {
