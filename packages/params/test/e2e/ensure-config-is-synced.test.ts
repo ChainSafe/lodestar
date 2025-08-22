@@ -20,14 +20,12 @@ describe("Ensure config is synced", () => {
 
   it("mainnet", async () => {
     const remotePreset = await downloadRemoteConfig("mainnet", specConfigCommit);
-    // TODO: EIP7805 delete INCLUSION_LIST_COMMITTEE_SIZE after updating mainnetPreset
-    assertCorrectPreset({...mainnetPreset, INCLUSION_LIST_COMMITTEE_SIZE: 16}, remotePreset);
+    assertCorrectPreset({...mainnetPreset}, remotePreset);
   });
 
   it("minimal", async () => {
     const remotePreset = await downloadRemoteConfig("minimal", specConfigCommit);
-    // TODO: EIP7805 delete INCLUSION_LIST_COMMITTEE_SIZE after updating minimalPreset
-    assertCorrectPreset({...minimalPreset, INCLUSION_LIST_COMMITTEE_SIZE: 16}, remotePreset);
+    assertCorrectPreset({...minimalPreset}, remotePreset);
   });
 });
 
