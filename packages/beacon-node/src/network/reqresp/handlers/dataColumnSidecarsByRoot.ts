@@ -1,4 +1,4 @@
-import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
+import {ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {fulu} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
