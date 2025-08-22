@@ -37,7 +37,7 @@ describe("network / gossip / topic", () => {
           boundary: {fork: ForkName.fulu, epoch: config.FULU_FORK_EPOCH},
           encoding,
         },
-        topicStr: "/eth2/e4ae6998/data_column_sidecar_1/ssz_snappy",
+        topicStr: "/eth2/4ba67af9/data_column_sidecar_1/ssz_snappy",
       },
     ],
     [GossipType.beacon_aggregate_and_proof]: [
@@ -146,7 +146,7 @@ describe("network / gossip / topic", () => {
           encoding,
         },
         // TODO EIP-7805: this is not correct
-        topicStr: "/eth2/4ba67af9/inclusion_list/ssz_snappy",
+        topicStr: "/eth2/e4ae6998/inclusion_list/ssz_snappy",
       },
     ],
   };
