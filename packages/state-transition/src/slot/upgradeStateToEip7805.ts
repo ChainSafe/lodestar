@@ -1,21 +1,21 @@
 import {ssz} from "@lodestar/types";
-import {CachedBeaconStateEip7805, CachedBeaconStateElectra, getCachedBeaconState} from "../cache/stateCache.js";
+import {CachedBeaconStateEip7805, CachedBeaconStateFulu, getCachedBeaconState} from "../cache/stateCache.js";
 
 /**
- * Upgrade a state from Deneb to Electra.
+ * Upgrade a state from Fulu to eip7805.
  */
-export function upgradeStateToEip7805(stateElectra: CachedBeaconStateElectra): CachedBeaconStateEip7805 {
-  const {config} = stateElectra;
+export function upgradeStateToEip7805(stateFulu: CachedBeaconStateFulu): CachedBeaconStateEip7805 {
+  const {config} = stateFulu;
 
-  const stateElectraNode = ssz.electra.BeaconState.commitViewDU(stateElectra);
-  const stateEip7805View = ssz.eip7805.BeaconState.getViewDU(stateElectraNode);
+  const stateFuluNode = ssz.fulu.BeaconState.commitViewDU(stateFulu);
+  const stateEip7805View = ssz.eip7805.BeaconState.getViewDU(stateFuluNode);
   // Attach existing BeaconStateCache from stateAltair to new stateBellatrixView object
-  const stateEip7805 = getCachedBeaconState(stateEip7805View, stateElectra);
+  const stateEip7805 = getCachedBeaconState(stateEip7805View, stateFulu);
 
   stateEip7805.fork = ssz.phase0.Fork.toViewDU({
-    previousVersion: stateElectra.fork.currentVersion,
+    previousVersion: stateFulu.fork.currentVersion,
     currentVersion: config.EIP7805_FORK_VERSION,
-    epoch: stateElectra.epochCtx.epoch,
+    epoch: stateFulu.epochCtx.epoch,
   });
 
   // Commit new added fields ViewDU to the root node

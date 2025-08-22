@@ -69,12 +69,12 @@ export const testData: GenericServerTestCases<Endpoints> = {
     res: {data: {root}, meta: {executionOptimistic: true, finalized: false}},
   },
   publishBlock: {
-    args: {signedBlockOrContents: ssz.electra.SignedBlockContents.defaultValue()},
+    args: {signedBlockContents: ssz.electra.SignedBlockContents.defaultValue()},
     res: undefined,
   },
   publishBlockV2: {
     args: {
-      signedBlockOrContents: ssz.electra.SignedBlockContents.defaultValue(),
+      signedBlockContents: ssz.electra.SignedBlockContents.defaultValue(),
       broadcastValidation: BroadcastValidation.consensus,
     },
     res: undefined,
@@ -95,6 +95,13 @@ export const testData: GenericServerTestCases<Endpoints> = {
     res: {
       data: [ssz.deneb.BlobSidecar.defaultValue()],
       meta: {executionOptimistic: true, finalized: false, version: ForkName.electra},
+    },
+  },
+  getBlobs: {
+    args: {blockId: "head", indices: [0]},
+    res: {
+      data: [ssz.deneb.Blob.defaultValue()],
+      meta: {executionOptimistic: true, finalized: false},
     },
   },
 

@@ -2,8 +2,20 @@ import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lo
 import {ssz} from "@lodestar/types";
 import {describe, expect, it} from "vitest";
 
+import {ZERO_HASH_HEX} from "@lodestar/params";
 import {BlockInput, BlockInputType, GossipedInputType} from "../../../../src/chain/blocks/types.js";
-import {SeenGossipBlockInput} from "../../../../src/chain/seenCache/seenGossipBlockInput.js";
+import {ChainEventEmitter} from "../../../../src/chain/emitter.js";
+import {
+  BlockInputMetaPendingBlockWithBlobs,
+  SeenGossipBlockInput,
+} from "../../../../src/chain/seenCache/seenGossipBlockInput.js";
+import {getExecutionEngineFromBackend} from "../../../../src/execution/engine/index.js";
+import {ExecutionEngineMockBackend} from "../../../../src/execution/engine/mock.js";
+import {computeNodeId} from "../../../../src/network/subnets/index.js";
+import {IClock} from "../../../../src/util/clock.js";
+import {CustodyConfig} from "../../../../src/util/dataColumns.js";
+import {testLogger} from "../../../utils/logger.js";
+import {getValidPeerId} from "../../../utils/peer.js";
 
 describe("SeenGossipBlockInput", () => {
   const chainConfig = createChainForkConfig({
@@ -14,7 +26,30 @@ describe("SeenGossipBlockInput", () => {
   });
   const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
   const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
-  const seenGossipBlockInput = new SeenGossipBlockInput();
+  const nodeId = computeNodeId(getValidPeerId());
+
+  // Execution engine
+  const executionEngineBackend = new ExecutionEngineMockBackend({
+    onlyPredefinedResponses: false,
+    genesisBlockHash: ZERO_HASH_HEX,
+  });
+  const controller = new AbortController();
+  const executionEngine = getExecutionEngineFromBackend(executionEngineBackend, {
+    signal: controller.signal,
+    logger: testLogger("executionEngine"),
+  });
+
+  const emitter = new ChainEventEmitter();
+  // Not used in this test, but required by the constructor
+  const unusedClock = {} as unknown as IClock;
+
+  const seenGossipBlockInput = new SeenGossipBlockInput(
+    new CustodyConfig({nodeId, config}),
+    executionEngine,
+    emitter,
+    unusedClock,
+    testLogger("seenGossipBlockInput")
+  );
 
   // array of numBlobs, events where events are array of
   // [block|blob11|blob2, pd | bp | null | error string reflecting the expected result]
@@ -138,7 +173,7 @@ describe("SeenGossipBlockInput", () => {
               expect.fail(`expected to fail with error: ${expectedResponseType.message}`);
             } else if (expectedResponseType === null) {
               expect(blobInputRes.blockInput.block).toBeNull();
-              expect(blobInputRes.blockInputMeta.expectedBlobs).toBeNull();
+              expect((blobInputRes.blockInputMeta as BlockInputMetaPendingBlockWithBlobs).expectedBlobs).toBeNull();
             } else {
               expect((blobInputRes.blockInput as BlockInput)?.type).toEqual(expectedResponseType);
             }

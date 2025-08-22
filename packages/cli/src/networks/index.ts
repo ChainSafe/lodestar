@@ -54,6 +54,7 @@ export function getNetworkData(network: NetworkName): {
   chainConfig: ChainConfig;
   depositContractDeployBlock: number;
   genesisFileUrl: string | null;
+  genesisStateRoot: string | null;
   bootnodesFileUrl: string | null;
   bootEnrs: string[];
 } {
@@ -88,6 +89,18 @@ export function getNetworkBeaconParams(network: NetworkName): ChainConfig {
  */
 export function getGenesisFileUrl(network: NetworkName): string | null {
   return getNetworkData(network).genesisFileUrl;
+}
+
+/**
+ * Get expected genesisStateRoot for validation. Returns null if not available.
+ * For example, this returns null for Ephemery, since its genesis state root
+ * changes with each iteration and we don't know the permanent state root.
+ */
+export function getGenesisStateRoot(network: NetworkName | undefined): string | null {
+  if (!network) {
+    return null;
+  }
+  return getNetworkData(network).genesisStateRoot;
 }
 
 /**

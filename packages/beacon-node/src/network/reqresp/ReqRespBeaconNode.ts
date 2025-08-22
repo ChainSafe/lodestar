@@ -12,7 +12,7 @@ import {
   ResponseIncoming,
   ResponseOutgoing,
 } from "@lodestar/reqresp";
-import {Metadata, phase0, ssz} from "@lodestar/types";
+import {Metadata, Status, phase0, ssz} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {Libp2p} from "libp2p";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
@@ -173,9 +173,14 @@ export class ReqRespBeaconNode extends ReqResp {
     );
   }
 
-  async sendStatus(peerId: PeerId, request: phase0.Status): Promise<phase0.Status> {
+  async sendStatus(peerId: PeerId, request: Status): Promise<Status> {
     return collectExactOneTyped(
-      this.sendReqRespRequest(peerId, ReqRespMethod.Status, [Version.V1], request),
+      this.sendReqRespRequest(
+        peerId,
+        ReqRespMethod.Status,
+        this.currentRegisteredFork >= ForkSeq.fulu ? [Version.V2] : [Version.V1],
+        request
+      ),
       responseSszTypeByMethod[ReqRespMethod.Status]
     );
   }
@@ -193,8 +198,11 @@ export class ReqRespBeaconNode extends ReqResp {
       this.sendReqRespRequest(
         peerId,
         ReqRespMethod.Metadata,
-        // Before altair, prioritize V2. After altair only request V2
-        this.currentRegisteredFork >= ForkSeq.altair ? [Version.V2] : [(Version.V2, Version.V1)],
+        this.currentRegisteredFork >= ForkSeq.fulu
+          ? [Version.V3]
+          : this.currentRegisteredFork >= ForkSeq.altair
+            ? [Version.V3, Version.V2]
+            : [Version.V2, Version.V1],
         null
       ),
       responseSszTypeByMethod[ReqRespMethod.Metadata]
@@ -221,11 +229,11 @@ export class ReqRespBeaconNode extends ReqResp {
     const {fork} = boundary;
     const protocolsAtFork: [ProtocolNoHandler, ProtocolHandler][] = [
       [protocols.Ping(fork, this.config), this.onPing.bind(this)],
-      [protocols.Status(fork, this.config), this.onStatus.bind(this)],
       [protocols.Goodbye(fork, this.config), this.onGoodbye.bind(this)],
-      // Support V2 methods as soon as implemented (for altair)
+      // Support V3 methods as soon as implemented (for fulu)
+      // Follows pattern for altair:
       // Ref https://github.com/ethereum/consensus-specs/blob/v1.2.0/specs/altair/p2p-interface.md#transitioning-from-v1-to-v2
-      [protocols.MetadataV2(fork, this.config), this.onMetadata.bind(this)],
+      [protocols.MetadataV3(fork, this.config), this.onMetadata.bind(this)],
       [protocols.BeaconBlocksByRangeV2(fork, this.config), this.getHandler(ReqRespMethod.BeaconBlocksByRange)],
       [protocols.BeaconBlocksByRootV2(fork, this.config), this.getHandler(ReqRespMethod.BeaconBlocksByRoot)],
     ];
@@ -265,6 +273,29 @@ export class ReqRespBeaconNode extends ReqResp {
       );
     }
 
+    if (ForkSeq[fork] < ForkSeq.fulu) {
+      // Unregister StatusV1, MetadataV2 at the fork boundary, so only declare for pre-fulu
+      protocolsAtFork.push(
+        [protocols.Status(fork, this.config), this.onStatus.bind(this)],
+        [protocols.MetadataV2(fork, this.config), this.onMetadata.bind(this)]
+      );
+    } else {
+      protocolsAtFork.push(
+        // We can't handle StatusV2 correctly pre-fulu as request type is selected based on fork
+        // instead of protocol version. This is not easily fixable with our current architecture.
+        // See https://github.com/ChainSafe/lodestar/pull/8168 for more details.
+        [protocols.StatusV2(fork, this.config), this.onStatus.bind(this)],
+        [
+          protocols.DataColumnSidecarsByRoot(fork, this.config),
+          this.getHandler(ReqRespMethod.DataColumnSidecarsByRoot),
+        ],
+        [
+          protocols.DataColumnSidecarsByRange(fork, this.config),
+          this.getHandler(ReqRespMethod.DataColumnSidecarsByRange),
+        ]
+      );
+    }
+
     return protocolsAtFork;
   }
 
@@ -290,11 +321,15 @@ export class ReqRespBeaconNode extends ReqResp {
   }
 
   private async *onStatus(req: ReqRespRequest, peerId: PeerId): AsyncIterable<ResponseOutgoing> {
-    const body = ssz.phase0.Status.deserialize(req.data);
+    // Fork is ignored in responseSszTypeByMethod, type is determined by protocol version that is negotiated
+    const type = responseSszTypeByMethod[ReqRespMethod.Status](ForkName.phase0, req.version);
+    // Request uses the same type as response
+    const body = type.deserialize(req.data);
     this.onIncomingRequestBody({method: ReqRespMethod.Status, body}, peerId);
 
+    const status = this.statusCache.get();
     yield {
-      data: ssz.phase0.Status.serialize(this.statusCache.get()),
+      data: type.serialize(status),
       // Status topic is fork-agnostic
       boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH},
     };
@@ -325,14 +360,14 @@ export class ReqRespBeaconNode extends ReqResp {
     this.onIncomingRequestBody({method: ReqRespMethod.Metadata, body: null}, peerId);
 
     const metadata = this.metadataController.json;
-    // Metadata topic is fork-agnostic
-    const fork = ForkName.phase0;
-    const epoch = GENESIS_EPOCH;
-    const type = responseSszTypeByMethod[ReqRespMethod.Metadata](fork, req.version);
+
+    // Fork is ignored in responseSszTypeByMethod, type is determined by protocol version that is negotiated
+    const type = responseSszTypeByMethod[ReqRespMethod.Metadata](ForkName.phase0, req.version);
 
     yield {
       data: type.serialize(metadata),
-      boundary: {fork, epoch},
+      // Metadata topic is fork-agnostic
+      boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH},
     };
   }
 }

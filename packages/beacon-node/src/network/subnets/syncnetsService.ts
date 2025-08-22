@@ -11,8 +11,6 @@ import {MetadataController} from "../metadata.js";
 import {RequestedSubnet, SubnetMap} from "../peers/utils/index.js";
 import {CommitteeSubscription, GossipSubscriber, SubnetsService, SubnetsServiceOpts} from "./interface.js";
 
-const gossipType = GossipType.sync_committee;
-
 /**
  * Manage sync committee subnets. Sync committees are long (~27h) so there aren't random long-lived subscriptions
  */
@@ -76,7 +74,7 @@ export class SyncnetsService implements SubnetsService {
   subscribeSubnetsNextBoundary(boundary: ForkBoundary): void {
     this.logger.info("Subscribing to random attnets for next fork boundary", boundary);
     for (const subnet of this.subscriptionsCommittee.getAll()) {
-      this.gossip.subscribeTopic({type: gossipType, boundary, subnet});
+      this.gossip.subscribeTopic({type: GossipType.sync_committee, boundary, subnet});
     }
   }
 
@@ -85,7 +83,7 @@ export class SyncnetsService implements SubnetsService {
     this.logger.info("Unsubscribing from random attnets of previous fork boundary", boundary);
     for (let subnet = 0; subnet < SYNC_COMMITTEE_SUBNET_COUNT; subnet++) {
       if (!this.opts?.subscribeAllSubnets) {
-        this.gossip.unsubscribeTopic({type: gossipType, boundary, subnet});
+        this.gossip.unsubscribeTopic({type: GossipType.sync_committee, boundary, subnet});
       }
     }
   }
@@ -122,7 +120,7 @@ export class SyncnetsService implements SubnetsService {
     for (const subnet of subnets) {
       if (!this.subscriptionsCommittee.has(subnet)) {
         for (const boundary of boundaries) {
-          this.gossip.subscribeTopic({type: gossipType, boundary, subnet});
+          this.gossip.subscribeTopic({type: GossipType.sync_committee, boundary, subnet});
         }
         this.metrics?.syncnetsService.subscribeSubnets.inc({subnet});
       }
@@ -136,7 +134,7 @@ export class SyncnetsService implements SubnetsService {
       // No need to check if active in subscriptionsCommittee since we only have a single SubnetMap
       if (!this.opts?.subscribeAllSubnets) {
         for (const boundary of boundaries) {
-          this.gossip.unsubscribeTopic({type: gossipType, boundary, subnet});
+          this.gossip.unsubscribeTopic({type: GossipType.sync_committee, boundary, subnet});
         }
         this.metrics?.syncnetsService.unsubscribeSubnets.inc({subnet});
       }

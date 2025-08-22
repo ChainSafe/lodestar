@@ -41,12 +41,15 @@ export type ChainConfig = {
   // ELECTRA
   ELECTRA_FORK_VERSION: Uint8Array;
   ELECTRA_FORK_EPOCH: number;
-  // EIP-7805
-  EIP7805_FORK_VERSION: Uint8Array;
-  EIP7805_FORK_EPOCH: number;
   // FULU
   FULU_FORK_VERSION: Uint8Array;
   FULU_FORK_EPOCH: number;
+  // EIP-7805
+  EIP7805_FORK_VERSION: Uint8Array;
+  EIP7805_FORK_EPOCH: number;
+  // GLOAS
+  GLOAS_FORK_VERSION: Uint8Array;
+  GLOAS_FORK_EPOCH: number;
 
   // Time parameters
   SECONDS_PER_SLOT: number;
@@ -54,9 +57,12 @@ export type ChainConfig = {
   MIN_VALIDATOR_WITHDRAWABILITY_DELAY: number;
   SHARD_COMMITTEE_PERIOD: number;
   ETH1_FOLLOW_DISTANCE: number;
-  ATTESTATION_DEADLINE: number;
-  PROPOSER_INCLUSION_LIST_CUT_OFF: number;
-  VIEW_FREEZE_DEADLINE: number;
+  ATTESTATION_DEADLINE: number; // TODO EIP-7805: Deprecate this
+  PROPOSER_INCLUSION_LIST_CUT_OFF: number; // TODO EIP-7805: Deprecate this
+  VIEW_FREEZE_DEADLINE: number; // TODO EIP-7805: Deprecate this
+  INCLUSION_LIST_SUBMISSION_DUE_BPS: number;
+  PROPOSER_INCLUSION_LIST_CUTOFF_BPS: number;
+  VIEW_FREEZE_CUTOFF_BPS: number;
 
   // Validator cycle
   INACTIVITY_SCORE_BIAS: number;
@@ -87,12 +93,15 @@ export type ChainConfig = {
   MAX_BLOBS_PER_BLOCK: number;
   MAX_REQUEST_BLOB_SIDECARS: number;
   BLOB_SIDECAR_SUBNET_COUNT_ELECTRA: number;
+  DATA_COLUMN_SIDECAR_SUBNET_COUNT: number;
   MAX_BLOBS_PER_BLOCK_ELECTRA: number;
   MAX_REQUEST_BLOB_SIDECARS_ELECTRA: number;
+  MAX_REQUEST_DATA_COLUMN_SIDECARS: number;
 
+  // Fulu
+  NUMBER_OF_CUSTODY_GROUPS: number;
   SAMPLES_PER_SLOT: number;
   CUSTODY_REQUIREMENT: number;
-  NODE_CUSTODY_REQUIREMENT: number;
   VALIDATOR_CUSTODY_REQUIREMENT: number;
   BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: number;
 
@@ -135,12 +144,15 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   // ELECTRA
   ELECTRA_FORK_VERSION: "bytes",
   ELECTRA_FORK_EPOCH: "number",
-  // EIP-7805
-  EIP7805_FORK_VERSION: "bytes",
-  EIP7805_FORK_EPOCH: "number",
   // FULU
   FULU_FORK_VERSION: "bytes",
   FULU_FORK_EPOCH: "number",
+  // EIP-7805
+  EIP7805_FORK_VERSION: "bytes",
+  EIP7805_FORK_EPOCH: "number",
+  // GLOAS
+  GLOAS_FORK_VERSION: "bytes",
+  GLOAS_FORK_EPOCH: "number",
 
   // Time parameters
   SECONDS_PER_SLOT: "number",
@@ -151,6 +163,9 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   ATTESTATION_DEADLINE: "number",
   PROPOSER_INCLUSION_LIST_CUT_OFF: "number",
   VIEW_FREEZE_DEADLINE: "number",
+  INCLUSION_LIST_SUBMISSION_DUE_BPS: "number",
+  PROPOSER_INCLUSION_LIST_CUTOFF_BPS: "number",
+  VIEW_FREEZE_CUTOFF_BPS: "number",
 
   // Validator cycle
   INACTIVITY_SCORE_BIAS: "number",
@@ -178,15 +193,18 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: "number",
   MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: "number",
   BLOB_SIDECAR_SUBNET_COUNT: "number",
+  DATA_COLUMN_SIDECAR_SUBNET_COUNT: "number",
   MAX_BLOBS_PER_BLOCK: "number",
   MAX_REQUEST_BLOB_SIDECARS: "number",
   BLOB_SIDECAR_SUBNET_COUNT_ELECTRA: "number",
   MAX_BLOBS_PER_BLOCK_ELECTRA: "number",
   MAX_REQUEST_BLOB_SIDECARS_ELECTRA: "number",
+  MAX_REQUEST_DATA_COLUMN_SIDECARS: "number",
 
+  // Fulu
+  NUMBER_OF_CUSTODY_GROUPS: "number",
   SAMPLES_PER_SLOT: "number",
   CUSTODY_REQUIREMENT: "number",
-  NODE_CUSTODY_REQUIREMENT: "number",
   VALIDATOR_CUSTODY_REQUIREMENT: "number",
   BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: "number",
 
