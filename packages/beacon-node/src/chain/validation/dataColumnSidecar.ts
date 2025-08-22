@@ -204,7 +204,7 @@ export async function validateDataColumnsSidecars(
         .filter((result) => result === false).length
     ) {
       throw new Error(
-        `Invalid data column sidecar slot=${columnBlockHeader.slot} columnBlockRoot=${toRootHex(columnBlockRoot)} columnIndex=${columnIndex} for the block blockRoot=${toRootHex(blockRoot)} slot=${blockSlot} sidecarsIndex=${sidecarsIndex}`
+        `Invalid data column sidecar slot=${columnBlockHeader.slot} columnBlockRoot=${toRootHex(columnBlockRoot)} columnIndex=${columnIndex} for the block blockRoot=${toRootHex(blockRoot)} slot=${blockSlot} sidecarsIndex=${sidecarsIndex} kzgCommitments=${kzgCommitments.length} blockKzgCommitments=${blockKzgCommitments.length}`
       );
     }
 
@@ -236,7 +236,8 @@ export async function validateDataColumnsSidecars(
     valid = await kzg.asyncVerifyCellKzgProofBatch(commitmentBytes, cellIndices, cells, proofBytes);
     timer?.();
   } catch (err) {
-    (err as Error).message = `Error in verifyCellKzgProofBatch for slot=${blockSlot} blockRoot=${toRootHex(blockRoot)}`;
+    (err as Error).message =
+      `Error in verifyCellKzgProofBatch for slot=${blockSlot} blockRoot=${toRootHex(blockRoot)} commitmentBytes=${commitmentBytes.length} cellIndices=${cellIndices.length} cells=${cells.length} proofBytes=${proofBytes.length}`;
     throw err;
   }
 
