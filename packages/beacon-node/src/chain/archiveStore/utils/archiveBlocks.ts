@@ -332,6 +332,7 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
       if (dataColumnSidecarBytes.length === 0) {
         throw Error(`No dataColumnSidecars found for slot ${block.slot} root ${toHex(block.root)}`);
       }
+      console.log("@@@ migrateDataColumnSidecarsFromHotToColdDb block slot " + block.slot + " num of sidecars " + dataColumnSidecarBytes.length);
       promises.push(
         db.dataColumnSidecarArchive.putManyBinary(
           block.slot,
