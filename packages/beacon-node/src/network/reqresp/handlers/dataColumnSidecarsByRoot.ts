@@ -34,7 +34,7 @@ export async function* onDataColumnSidecarsByRoot(
     }
 
     const dataColumns = await db.dataColumnSidecar.getManyBinary(fromHex(block.blockRoot), columns);
-    if (!dataColumns) {
+    if (!dataColumns.length) {
       throw new ResponseError(RespStatus.SERVER_ERROR, `No item for root=${block.blockRoot}, slot=${block.slot}`);
     }
 
