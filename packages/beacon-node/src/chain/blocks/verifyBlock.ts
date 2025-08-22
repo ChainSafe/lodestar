@@ -173,9 +173,17 @@ export async function verifyBlocksInEpoch(
 
           default:
         }
-      } else if (isForkPostFulu(toForkBoundary.fork) && toForkBoundary.epoch !== fromForkBoundary.epoch) {
-        const {epoch, maxBlobsPerBlock} = this.config.getBlobParameters(toForkBoundary.epoch);
-        this.logger.info("Activating Blob Parameter Only (BPO) fork", {epoch, maxBlobsPerBlock});
+      }
+
+      if (isForkPostFulu(fromForkBoundary.fork)) {
+        const fromBlobParameters = this.config.getBlobParameters(fromForkBoundary.epoch);
+        const toBlobParameters = this.config.getBlobParameters(toForkBoundary.epoch);
+
+        if (toBlobParameters.maxBlobsPerBlock !== fromBlobParameters.maxBlobsPerBlock) {
+          const {epoch, maxBlobsPerBlock} = toBlobParameters;
+
+          this.logger.info("Activating Blob Parameter Only (BPO) fork", {epoch, maxBlobsPerBlock});
+        }
       }
     }
 
