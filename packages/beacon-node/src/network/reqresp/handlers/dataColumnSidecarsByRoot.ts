@@ -34,13 +34,10 @@ export async function* onDataColumnSidecarsByRoot(
     }
 
     const dataColumns = await db.dataColumnSidecar.getManyBinary(fromHex(block.blockRoot), columns);
-    if (!dataColumns.length) {
-      throw new ResponseError(RespStatus.SERVER_ERROR, `No item for root=${block.blockRoot}, slot=${block.slot}`);
-    }
-
     for (const [index, dataColumnBytes] of dataColumns.entries()) {
       if (!dataColumnBytes) {
-        throw new ResponseError(RespStatus.SERVER_ERROR, `dataColumnSidecar index=${columns[index]} not custodied`);
+        chain.logger.debug(`Requested dataColumnSidecar index=${columns[index]} not custodied`);
+        continue;
       }
 
       yield {

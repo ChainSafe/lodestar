@@ -26,10 +26,8 @@ export async function* onDataColumnSidecarsByRange(
 
       for (const [index, dataColumnSidecarBytes] of dataColumnSidecars.entries()) {
         if (!dataColumnSidecarBytes) {
-          throw new ResponseError(
-            RespStatus.SERVER_ERROR,
-            `No finalized dataColumnSidecar found for slot=${slot}, index=${columns[index]}`
-          );
+          chain.logger.debug(`No finalized dataColumnSidecar found for slot=${slot}, index=${columns[index]}`);
+          continue;
         }
 
         yield {
@@ -58,10 +56,10 @@ export async function* onDataColumnSidecarsByRange(
         const dataColumnSidecars = await unfinalized.getManyBinary(fromHex(block.blockRoot), columns);
         for (const [index, dataColumnSidecarBytes] of dataColumnSidecars.entries()) {
           if (!dataColumnSidecarBytes) {
-            throw new ResponseError(
-              RespStatus.SERVER_ERROR,
+            chain.logger.debug(
               `No unfinalized dataColumnSidecar found for root=${block.blockRoot}, index=${columns[index]}`
             );
+            continue;
           }
 
           yield {
