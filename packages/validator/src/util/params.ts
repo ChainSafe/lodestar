@@ -292,6 +292,9 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     ATTESTATION_DEADLINE: eip7805ForkRelevant,
     PROPOSER_INCLUSION_LIST_CUT_OFF: eip7805ForkRelevant,
     VIEW_FREEZE_DEADLINE: eip7805ForkRelevant,
+    INCLUSION_LIST_SUBMISSION_DUE_BPS: eip7805ForkRelevant,
+    PROPOSER_INCLUSION_LIST_CUTOFF_BPS: eip7805ForkRelevant,
+    VIEW_FREEZE_CUTOFF_BPS: eip7805ForkRelevant,
     MAX_REQUEST_INCLUSION_LIST: eip7805ForkRelevant,
     MAX_BYTES_PER_INCLUSION_LIST: eip7805ForkRelevant,
 

@@ -72,6 +72,12 @@ export const chainConfig: ChainConfig = {
   ATTESTATION_DEADLINE: 2,
   PROPOSER_INCLUSION_LIST_CUT_OFF: 5,
   VIEW_FREEZE_DEADLINE: 3,
+  // 67% of `SLOT_DURATION_MS`
+  INCLUSION_LIST_SUBMISSION_DUE_BPS: 6667,
+  // 92% of `SLOT_DURATION_MS`
+  PROPOSER_INCLUSION_LIST_CUTOFF_BPS: 9167,
+  // 75% of `SLOT_DURATION_MS`
+  VIEW_FREEZE_CUTOFF_BPS: 7500,
 
   // Validator cycle
   // ---------------------------------------------------------------
