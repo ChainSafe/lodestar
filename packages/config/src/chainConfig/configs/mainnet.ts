@@ -159,4 +159,6 @@ export const chainConfig: ChainConfig = {
   MAX_REQUEST_INCLUSION_LIST: 16,
   // 2**13 (=8192)
   MAX_BYTES_PER_INCLUSION_LIST: 8192,
+  // 2**4 (= 16)
+  INCLUSION_LIST_COMMITTEE_SIZE: 16,
 };
