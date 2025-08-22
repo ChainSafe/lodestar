@@ -33,7 +33,7 @@ describe("sync / unknown block sync for fulu", () => {
     FULU_FORK_EPOCH: FULU_FORK_EPOCH,
     BLOB_SCHEDULE: [
       {
-        EPOCH: 1,
+        EPOCH: 0,
         MAX_BLOBS_PER_BLOCK: 3,
       },
     ],
