@@ -16,7 +16,7 @@ import {connect, onPeerConnect} from "../../utils/network.js";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
 
-describe("sync / unknown block sync", () => {
+describe("sync / unknown block sync for fulu", () => {
   vi.setConfig({testTimeout: 40_000});
 
   const validatorCount = 8;
@@ -33,7 +33,7 @@ describe("sync / unknown block sync", () => {
     FULU_FORK_EPOCH: FULU_FORK_EPOCH,
     BLOB_SCHEDULE: [
       {
-        EPOCH: 0,
+        EPOCH: 1,
         MAX_BLOBS_PER_BLOCK: 3,
       },
     ],
