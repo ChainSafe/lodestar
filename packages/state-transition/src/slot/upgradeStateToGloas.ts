@@ -1,6 +1,6 @@
 import {ssz} from "@lodestar/types";
 import {getCachedBeaconState} from "../cache/stateCache.js";
-import {CachedBeaconStateEip7805, CachedBeaconStateFulu, CachedBeaconStateGloas} from "../types.js";
+import {CachedBeaconStateEip7805, CachedBeaconStateGloas} from "../types.js";
 
 /**
  * Upgrade a state from Fulu to Gloas.

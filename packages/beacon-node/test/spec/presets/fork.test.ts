@@ -9,7 +9,6 @@ import {
   CachedBeaconStateDeneb,
   CachedBeaconStateEip7805,
   CachedBeaconStateElectra,
-  CachedBeaconStateFulu,
   CachedBeaconStatePhase0,
 } from "@lodestar/state-transition";
 import * as slotFns from "@lodestar/state-transition/slot";
