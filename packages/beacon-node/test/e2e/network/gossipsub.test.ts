@@ -42,6 +42,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     CAPELLA_FORK_EPOCH: 1,
     DENEB_FORK_EPOCH: 1,
     ELECTRA_FORK_EPOCH: 1,
+    FULU_FORK_EPOCH: 1,
     EIP7805_FORK_EPOCH: 1,
   });
   const START_SLOT = computeStartSlotAtEpoch(config.ALTAIR_FORK_EPOCH);
