@@ -45,15 +45,11 @@ export async function* onDataColumnSidecarsByRoot(
       : // Finalized sidecars are archived and stored by slot
         await db.dataColumnSidecarArchive.getManyBinary(slot, columns);
 
-    if (!dataColumns) {
-      throw new ResponseError(RespStatus.SERVER_ERROR, `No item for root=${blockRootHex}, slot=${slot}`);
-    }
-
     for (const [index, dataColumnBytes] of dataColumns.entries()) {
       if (!dataColumnBytes) {
         throw new ResponseError(
           RespStatus.SERVER_ERROR,
-          `dataColumnSidecar index=${columns[index]} not custodied for slot=${slot}`
+          `No dataColumnSidecar found for root=${blockRootHex}, slot=${slot}, index=${columns[index]}`
         );
       }
 
