@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
-import {ForkName} from "@lodestar/params";
+import {ForkName, isForkPostFulu} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   DataAvailabilityStatus,
@@ -145,12 +145,12 @@ export async function verifyBlocksInEpoch(
         logOnPowBlock(this.logger, this.config, segmentExecStatus.mergeBlockFound);
       }
 
-      const fromFork = this.config.getForkName(parentBlock.slot);
-      const toFork = this.config.getForkName(lastBlock.message.slot);
+      const fromForkBoundary = this.config.getForkBoundaryAtEpoch(computeEpochAtSlot(parentBlock.slot));
+      const toForkBoundary = this.config.getForkBoundaryAtEpoch(computeEpochAtSlot(lastBlock.message.slot));
 
       // If transition through toFork, note won't happen if ${toFork}_EPOCH = 0, will log double on re-org
-      if (toFork !== fromFork) {
-        switch (toFork) {
+      if (toForkBoundary.fork !== fromForkBoundary.fork) {
+        switch (toForkBoundary.fork) {
           case ForkName.capella:
             this.logger.info(CAPELLA_OWL_BANNER);
             this.logger.info("Activating withdrawals", {epoch: this.config.CAPELLA_FORK_EPOCH});
@@ -173,6 +173,9 @@ export async function verifyBlocksInEpoch(
 
           default:
         }
+      } else if (isForkPostFulu(toForkBoundary.fork) && toForkBoundary.epoch !== fromForkBoundary.epoch) {
+        const {epoch, maxBlobsPerBlock} = this.config.getBlobParameters(toForkBoundary.epoch);
+        this.logger.info("Activating Blob Parameter Only (BPO) fork", {epoch, maxBlobsPerBlock});
       }
     }
 
