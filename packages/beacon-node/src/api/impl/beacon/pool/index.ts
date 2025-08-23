@@ -163,7 +163,7 @@ export function getBeaconPoolApi({
             failures.push({index: i, message: (e as Error).message});
             logger.error(`Error on submitPoolAttestations [${i}]`, logCtx, e as Error);
             if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
-              chain.persistInvalidSszValue(sszTypesFor(fork).Attestation, attestation, "api_reject");
+              chain.persistInvalidSszValue(sszTypesFor(fork).SingleAttestation, attestation, "api_reject");
             }
           }
         })
