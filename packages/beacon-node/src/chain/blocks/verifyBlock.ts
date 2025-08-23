@@ -182,7 +182,7 @@ export async function verifyBlocksInEpoch(
         if (toBlobParameters.maxBlobsPerBlock !== fromBlobParameters.maxBlobsPerBlock) {
           const {epoch, maxBlobsPerBlock} = toBlobParameters;
 
-          this.logger.info("Activating Blob Parameter Only (BPO) fork", {epoch, maxBlobsPerBlock});
+          this.logger.info("Activating BPO fork", {epoch, maxBlobsPerBlock});
         }
       }
     }
