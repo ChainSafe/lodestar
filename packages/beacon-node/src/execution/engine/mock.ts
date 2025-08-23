@@ -335,8 +335,8 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       const proofs: deneb.KZGProof[] = [];
 
       if (ForkSeq[fork] >= ForkSeq.fulu) {
-        // if post fulu, add between 1 and 3 data column transactions with BlobsBundleV2
-        const fuluTxCount = Math.round(2 * Math.random()) + 1;
+        // if post fulu, add between 0 and 3 data column transactions based on slot with BlobsBundleV2
+        const fuluTxCount = executionPayload.blockNumber % 4;
         for (let i = 0; i < fuluTxCount; i++) {
           const blob = generateRandomBlob();
           const commitment = kzg.blobToKzgCommitment(blob);
@@ -348,7 +348,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
         }
       } else if (ForkSeq[fork] >= ForkSeq.deneb && ForkSeq[fork] < ForkSeq.fulu) {
         // if post deneb, add between 0 and 2 blob transactions
-        const denebTxCount = Math.round(2 * Math.random());
+        const denebTxCount = executionPayload.blockNumber % 3;
         for (let i = 0; i < denebTxCount; i++) {
           const blob = generateRandomBlob();
           const commitment = kzg.blobToKzgCommitment(blob);
