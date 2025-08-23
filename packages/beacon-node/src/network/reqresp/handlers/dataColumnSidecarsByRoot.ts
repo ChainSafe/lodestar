@@ -34,7 +34,7 @@ export async function* onDataColumnSidecarsByRoot(
     // SPEC: Clients MUST support requesting sidecars since minimum_request_epoch.
     // If any root in the request content references a block earlier than minimum_request_epoch, peers MAY respond with
     // error code 3: ResourceUnavailable or not include the data column sidecar in the response.
-    // https://github.com/ethereum/consensus-specs/blob/1937aff86b41b5171a9bc3972515986f1bbbf303/specs/fulu/p2p-interface.md#datacolumnsidecarsbyroot-v1
+    // https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.5/specs/fulu/p2p-interface.md#datacolumnsidecarsbyroot-v1
     if (requestedEpoch < minimumRequestEpoch) {
       continue;
     }
