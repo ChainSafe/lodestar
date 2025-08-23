@@ -179,7 +179,7 @@ export async function verifyBlocksInEpoch(
         const fromBlobParameters = this.config.getBlobParameters(fromForkBoundary.epoch);
         const toBlobParameters = this.config.getBlobParameters(toForkBoundary.epoch);
 
-        if (toBlobParameters.maxBlobsPerBlock !== fromBlobParameters.maxBlobsPerBlock) {
+        if (toBlobParameters.epoch !== fromBlobParameters.epoch) {
           const {epoch, maxBlobsPerBlock} = toBlobParameters;
 
           this.logger.info("Activating BPO fork", {epoch, maxBlobsPerBlock});
