@@ -13,7 +13,7 @@ import {ChainHeaderTracker} from "./services/chainHeaderTracker.js";
 import {DoppelgangerService} from "./services/doppelgangerService.js";
 import {ValidatorEventEmitter} from "./services/emitter.js";
 import {ExternalSignerOptions, pollExternalSignerPubkeys} from "./services/externalSignerSync.js";
-//import {InclusionListService} from "./services/inclusionList.js";
+import {InclusionListService} from "./services/inclusionList.js";
 import {IndicesService} from "./services/indices.js";
 import {pollBuilderValidatorRegistration, pollPrepareBeaconProposer} from "./services/prepareBeaconProposer.js";
 import {SyncCommitteeService} from "./services/syncCommittee.js";
@@ -32,7 +32,7 @@ export type ValidatorModules = {
   blockProposingService: BlockProposingService;
   attestationService: AttestationService;
   syncCommitteeService: SyncCommitteeService;
-  //inclusionListService: InclusionListService;
+  inclusionListService: InclusionListService;
   config: BeaconConfig;
   api: ApiClient;
   clock: IClock;
@@ -106,7 +106,7 @@ export class Validator {
     blockProposingService,
     attestationService,
     syncCommitteeService,
-    //inclusionListService,
+    // inclusionListService,
     config,
     api,
     clock,
@@ -123,7 +123,7 @@ export class Validator {
     this.blockProposingService = blockProposingService;
     this.attestationService = attestationService;
     this.syncCommitteeService = syncCommitteeService;
-    //this.inclusionListService = inclusionListService;
+    // this.inclusionListService = inclusionListService;
     this.config = config;
     this.api = api;
     this.clock = clock;
@@ -267,15 +267,15 @@ export class Validator {
       }
     );
 
-    // const inclusionListService = new InclusionListService(
-    //   config,
-    //   loggerVc,
-    //   api,
-    //   clock,
-    //   validatorStore,
-    //   chainHeaderTracker,
-    //   syncingStatusTracker
-    // );
+    const inclusionListService = new InclusionListService(
+      config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      chainHeaderTracker,
+      syncingStatusTracker
+    );
 
     return new Validator({
       opts,
@@ -285,7 +285,7 @@ export class Validator {
       blockProposingService,
       attestationService,
       syncCommitteeService,
-      //inclusionListService,
+      inclusionListService,
       config,
       api,
       clock,
