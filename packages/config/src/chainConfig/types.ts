@@ -44,6 +44,9 @@ export type ChainConfig = {
   // FULU
   FULU_FORK_VERSION: Uint8Array;
   FULU_FORK_EPOCH: number;
+  // GLOAS
+  GLOAS_FORK_VERSION: Uint8Array;
+  GLOAS_FORK_EPOCH: number;
 
   // Time parameters
   SECONDS_PER_SLOT: number;
@@ -81,9 +84,13 @@ export type ChainConfig = {
   MAX_BLOBS_PER_BLOCK: number;
   MAX_REQUEST_BLOB_SIDECARS: number;
   BLOB_SIDECAR_SUBNET_COUNT_ELECTRA: number;
+  DATA_COLUMN_SIDECAR_SUBNET_COUNT: number;
   MAX_BLOBS_PER_BLOCK_ELECTRA: number;
   MAX_REQUEST_BLOB_SIDECARS_ELECTRA: number;
+  MAX_REQUEST_DATA_COLUMN_SIDECARS: number;
 
+  // Fulu
+  NUMBER_OF_CUSTODY_GROUPS: number;
   SAMPLES_PER_SLOT: number;
   CUSTODY_REQUIREMENT: number;
   VALIDATOR_CUSTODY_REQUIREMENT: number;
@@ -127,6 +134,9 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   // FULU
   FULU_FORK_VERSION: "bytes",
   FULU_FORK_EPOCH: "number",
+  // GLOAS
+  GLOAS_FORK_VERSION: "bytes",
+  GLOAS_FORK_EPOCH: "number",
 
   // Time parameters
   SECONDS_PER_SLOT: "number",
@@ -161,12 +171,16 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: "number",
   MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: "number",
   BLOB_SIDECAR_SUBNET_COUNT: "number",
+  DATA_COLUMN_SIDECAR_SUBNET_COUNT: "number",
   MAX_BLOBS_PER_BLOCK: "number",
   MAX_REQUEST_BLOB_SIDECARS: "number",
   BLOB_SIDECAR_SUBNET_COUNT_ELECTRA: "number",
   MAX_BLOBS_PER_BLOCK_ELECTRA: "number",
   MAX_REQUEST_BLOB_SIDECARS_ELECTRA: "number",
+  MAX_REQUEST_DATA_COLUMN_SIDECARS: "number",
 
+  // Fulu
+  NUMBER_OF_CUSTODY_GROUPS: "number",
   SAMPLES_PER_SLOT: "number",
   CUSTODY_REQUIREMENT: "number",
   VALIDATOR_CUSTODY_REQUIREMENT: "number",

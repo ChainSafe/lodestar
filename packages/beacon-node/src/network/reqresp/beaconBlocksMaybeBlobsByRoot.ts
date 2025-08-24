@@ -40,6 +40,10 @@ import {
 const MAX_ENGINE_GETBLOBS_CACHE = 32 * 16;
 const MAX_UNAVAILABLE_RETRY_CACHE = 32;
 
+/**
+ * Request beacon blocks by root, and blobs or data columns if available.
+ * return BlockInput[] along with pendingDataColumns (null for prefulu forks for postfulu where data is available)
+ */
 export async function beaconBlocksMaybeBlobsByRoot(
   config: ChainForkConfig,
   network: INetwork,
@@ -220,10 +224,6 @@ export async function unavailableBeaconBlobsByRoot(
     block = allBlocks[0].data;
     cachedData = unavailableBlockInput.cachedData;
     unavailableBlockInput = getBlockInput.dataPromise(config, block, BlockSource.byRoot, cachedData);
-    // console.log(
-    //   "downloaded sendBeaconBlocksByRoot",
-    //   ssz.fulu.SignedBeaconBlock.toJson(block as fulu.SignedBeaconBlock)
-    // );
   } else {
     ({block, cachedData} = unavailableBlockInput);
   }

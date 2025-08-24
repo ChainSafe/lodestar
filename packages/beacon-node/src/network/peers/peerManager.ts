@@ -342,12 +342,12 @@ export class PeerManager {
       const nodeId = peerData?.nodeId ?? computeNodeId(peer);
       const custodyGroups =
         oldMetadata == null || oldMetadata.custodyGroups == null || custodyGroupCount !== oldMetadata.custodyGroupCount
-          ? getCustodyGroups(nodeId, custodyGroupCount)
+          ? getCustodyGroups(this.config, nodeId, custodyGroupCount)
           : oldMetadata.custodyGroups;
       const oldSamplingGroupCount = Math.max(this.config.SAMPLES_PER_SLOT, oldMetadata?.custodyGroupCount ?? 0);
       const samplingGroups =
         oldMetadata == null || oldMetadata.samplingGroups == null || samplingGroupCount !== oldSamplingGroupCount
-          ? getCustodyGroups(nodeId, samplingGroupCount)
+          ? getCustodyGroups(this.config, nodeId, samplingGroupCount)
           : oldMetadata.samplingGroups;
       peerData.metadata = {
         seqNumber: metadata.seqNumber,
@@ -439,8 +439,9 @@ export class PeerManager {
       const nodeId = peerData?.nodeId ?? computeNodeId(peer);
       // TODO(fulu): Are we sure we've run Metadata before this?
       const custodyGroupCount = peerData?.metadata?.custodyGroupCount ?? this.config.CUSTODY_REQUIREMENT;
-      const custodyGroups = peerData?.metadata?.custodyGroups ?? getCustodyGroups(nodeId, custodyGroupCount);
-      const dataColumns = getDataColumns(nodeId, custodyGroupCount);
+      const custodyGroups =
+        peerData?.metadata?.custodyGroups ?? getCustodyGroups(this.config, nodeId, custodyGroupCount);
+      const dataColumns = getDataColumns(this.config, nodeId, custodyGroupCount);
 
       const sampleSubnets = this.networkConfig.custodyConfig.sampledSubnets;
       const matchingSubnetsNum = sampleSubnets.reduce((acc, elem) => acc + (dataColumns.includes(elem) ? 1 : 0), 0);
@@ -577,6 +578,7 @@ export class PeerManager {
         starvationPruneRatio: STARVATION_PRUNE_RATIO,
         starvationThresholdSlots: STARVATION_THRESHOLD_SLOTS,
       },
+      this.config,
       this.metrics
     );
 

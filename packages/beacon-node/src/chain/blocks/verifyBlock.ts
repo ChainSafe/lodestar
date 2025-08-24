@@ -18,6 +18,7 @@ import {DENEB_BLOWFISH_BANNER} from "./utils/blowfishBanner.js";
 import {ELECTRA_GIRAFFE_BANNER} from "./utils/giraffeBanner.js";
 import {CAPELLA_OWL_BANNER} from "./utils/ownBanner.js";
 import {POS_PANDA_MERGE_TRANSITION_BANNER} from "./utils/pandaMergeTransitionBanner.js";
+import {FULU_ZEBRA_BANNER} from "./utils/zebraBanner.js";
 import {verifyBlocksDataAvailability} from "./verifyBlocksDataAvailability.js";
 import {SegmentExecStatus, verifyBlocksExecutionPayload} from "./verifyBlocksExecutionPayloads.js";
 import {verifyBlocksSignatures} from "./verifyBlocksSignatures.js";
@@ -163,6 +164,11 @@ export async function verifyBlocksInEpoch(
           case ForkName.electra:
             this.logger.info(ELECTRA_GIRAFFE_BANNER);
             this.logger.info("Activating maxEB", {epoch: this.config.ELECTRA_FORK_EPOCH});
+            break;
+
+          case ForkName.fulu:
+            this.logger.info(FULU_ZEBRA_BANNER);
+            this.logger.info("Activating peerDAS", {epoch: this.config.FULU_FORK_EPOCH});
             break;
 
           default:
