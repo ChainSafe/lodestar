@@ -145,7 +145,6 @@ describe("network / gossip / topic", () => {
           boundary: {fork: ForkName.eip7805, epoch: config.EIP7805_FORK_EPOCH},
           encoding,
         },
-        // TODO EIP-7805: this is not correct
         topicStr: "/eth2/e4ae6998/inclusion_list/ssz_snappy",
       },
     ],

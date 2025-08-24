@@ -3,6 +3,7 @@ import {ts as altair} from "./altair/index.js";
 import {ts as bellatrix} from "./bellatrix/index.js";
 import {ts as capella} from "./capella/index.js";
 import {ts as deneb} from "./deneb/index.js";
+//import {ts as eip7805} from "./eip7805/index.js";
 import {ts as electra} from "./electra/index.js";
 import {ts as fulu} from "./fulu/index.js";
 import {ts as gloas} from "./gloas/index.js";
