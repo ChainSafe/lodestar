@@ -204,7 +204,7 @@ describe("Forkchoice / GetProposerHead", () => {
       parentBlock: {...baseParentHeadBlock, weight: 211},
       headBlock: {...baseHeadBlock},
       expectReorg: false,
-      secFromSlot: Math.round(getSlotComponentDurationMs(config, "PROPOSER_REORG_CUTOFF_BPS") / 1000) + 1,
+      secFromSlot: (getSlotComponentDurationMs(config, "PROPOSER_REORG_CUTOFF_BPS") / 1000) + 1,
       expectedNotReorgedReason: NotReorgedReason.NotProposingOnTime,
     },
   ];

@@ -265,7 +265,7 @@ export async function importBlock(
       // We want to track recent blocks coming from gossip, unknown block sync, and API.
       if (delaySec < SLOTS_PER_EPOCH * this.config.SECONDS_PER_SLOT) {
         this.metrics.importBlock.elapsedTimeTillBecomeHead.observe(delaySec);
-        const cutOffSec = Math.round(getSlotComponentDurationMs(this.config, "ATTESTATION_DUE_BPS") / 1000);
+        const cutOffSec = getSlotComponentDurationMs(this.config, "ATTESTATION_DUE_BPS") / 1000;
         if (delaySec > cutOffSec) {
           this.metrics.importBlock.setHeadAfterCutoff.inc();
         }

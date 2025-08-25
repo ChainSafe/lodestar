@@ -28,7 +28,7 @@ describe("AttestationPool", () => {
   const committeeValidatorIndex = 0;
   const committeeSize = 128;
 
-  const cutOffSecFromSlot = Math.round(getSlotComponentDurationMs(config, "AGGREGRATE_DUE_BPS") / 1000);
+  const cutOffSecFromSlot = getSlotComponentDurationMs(config, "AGGREGRATE_DUE_BPS") / 1000;
 
   // Mock attestations
   const electraAttestationData: phase0.AttestationData = {

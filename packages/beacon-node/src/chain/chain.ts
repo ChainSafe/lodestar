@@ -253,7 +253,7 @@ export class BeaconChain implements IBeaconChain {
     if (!clock) clock = new Clock({config, genesisTime: this.genesisTime, signal});
 
     this.blacklistedBlocks = new Map((opts.blacklistedBlocks ?? []).map((hex) => [hex, null]));
-    const preAggregateCutOffTime = Math.round(getSlotComponentDurationMs(config, "AGGREGRATE_DUE_BPS") / 1000);
+    const preAggregateCutOffTime = getSlotComponentDurationMs(config, "AGGREGRATE_DUE_BPS") / 1000;
     this.attestationPool = new AttestationPool(
       config,
       clock,

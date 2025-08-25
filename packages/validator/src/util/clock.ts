@@ -97,7 +97,7 @@ export class Clock implements IClock {
       Date.now() / 1000 -
       (this.genesisTime +
         this.config.SECONDS_PER_SLOT * slot +
-        Math.round(getSlotComponentDurationMs(this.config, slotComponent) / 1000))
+        getSlotComponentDurationMs(this.config, slotComponent) / 1000)
     );
   }
 
