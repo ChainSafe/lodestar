@@ -49,7 +49,8 @@ export type ChainConfig = {
   GLOAS_FORK_EPOCH: number;
 
   // Time parameters
-  SECONDS_PER_SLOT: number; // Deprecated
+  /** @deprecated */
+  SECONDS_PER_SLOT: number;
   SLOT_DURATION_MS: number;
   SECONDS_PER_ETH1_BLOCK: number;
   MIN_VALIDATOR_WITHDRAWABILITY_DELAY: number;
