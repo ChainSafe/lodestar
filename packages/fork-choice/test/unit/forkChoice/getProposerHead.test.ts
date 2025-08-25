@@ -238,7 +238,7 @@ describe("Forkchoice / GetProposerHead", () => {
         currentSlot,
       });
 
-      const forkChoice = new ForkChoice(config, fcStore, protoArr, {
+      const forkChoice = new ForkChoice(config, fcStore, protoArr, null, {
         proposerBoost: true,
         proposerBoostReorg: true,
       });

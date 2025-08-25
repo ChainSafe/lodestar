@@ -42,12 +42,12 @@ import {
 } from "../protoArray/interface.js";
 import {ProtoArray} from "../protoArray/protoArray.js";
 
+import {BeaconForkChoiceMetrics} from "../metrics.js";
 import {ForkChoiceError, ForkChoiceErrorCode, InvalidAttestationCode, InvalidBlockCode} from "./errors.js";
 import {
   AncestorResult,
   AncestorStatus,
   EpochDifference,
-  ForkChoiceMetrics,
   IForkChoice,
   LatestMessage,
   NotReorgedReason,
@@ -140,22 +140,15 @@ export class ForkChoice implements IForkChoice {
     private readonly fcStore: IForkChoiceStore,
     /** The underlying representation of the block DAG. */
     private readonly protoArray: ProtoArray,
+    private readonly metrics: BeaconForkChoiceMetrics | null,
     private readonly opts?: ForkChoiceOpts,
     private readonly logger?: Logger
   ) {
     this.head = this.updateHead();
     this.balances = this.fcStore.justified.balances;
-  }
-
-  getMetrics(): ForkChoiceMetrics {
-    return {
-      votes: this.votes.length,
-      queuedAttestations: this.queuedAttestationsPreviousSlot,
-      validatedAttestationDatas: this.validatedAttestationDatas.size,
-      balancesLength: this.balances.length,
-      nodes: this.protoArray.nodes.length,
-      indices: this.protoArray.indices.size,
-    };
+    if (metrics) {
+      metrics.forkChoice.balancesLength.addCollect(() => metrics.forkChoice.balancesLength.set(this.balances.length));
+    }
   }
 
   /**
@@ -453,6 +446,7 @@ export class ForkChoice implements IForkChoice {
       this.fcStore.equivocatingIndices
     );
     this.balances = newBalances;
+    this.metrics?.forkChoice.balancesLength.set(this.balances.length);
     /**
      * The structure in line with deltas to propagate boost up the branch
      * starting from the proposerIndex
@@ -739,6 +733,8 @@ export class ForkChoice implements IForkChoice {
     };
 
     this.protoArray.onBlock(protoBlock, currentSlot);
+    this.metrics?.forkChoice.nodes.set(this.protoArray.nodes.length);
+    this.metrics?.forkChoice.indices.set(this.protoArray.indices.size);
 
     return protoBlock;
   }
@@ -851,7 +847,9 @@ export class ForkChoice implements IForkChoice {
     this.queuedAttestationsPreviousSlot = 0;
     // Process any attestations that might now be eligible.
     this.processAttestationQueue();
+    this.metrics?.forkChoice.queuedAttestations.set(this.queuedAttestationsPreviousSlot);
     this.validatedAttestationDatas = new Set();
+    this.metrics?.forkChoice.validatedAttestationDatas.set(this.validatedAttestationDatas.size);
   }
 
   getTime(): Slot {
@@ -948,6 +946,8 @@ export class ForkChoice implements IForkChoice {
    */
   prune(finalizedRoot: RootHex): ProtoBlock[] {
     const prunedNodes = this.protoArray.maybePrune(finalizedRoot);
+    this.metrics?.forkChoice.nodes.set(this.protoArray.nodes.length);
+    this.metrics?.forkChoice.indices.set(this.protoArray.indices.size);
     const prunedCount = prunedNodes.length;
     for (let i = 0; i < this.votes.length; i++) {
       const vote = this.votes[i];
@@ -1432,6 +1432,7 @@ export class ForkChoice implements IForkChoice {
     }
 
     this.validatedAttestationDatas.add(attDataRoot);
+    this.metrics?.forkChoice.validatedAttestationDatas.set(this.validatedAttestationDatas.size);
   }
 
   /**
@@ -1451,6 +1452,7 @@ export class ForkChoice implements IForkChoice {
         nextIndex,
         nextEpoch,
       };
+      this.metrics?.forkChoice.votes.set(this.votes.length);
     } else if (nextEpoch > vote.nextEpoch) {
       vote.nextIndex = nextIndex;
       vote.nextEpoch = nextEpoch;

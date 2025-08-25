@@ -14,7 +14,7 @@ describe("util / getShufflingDependentRoot", () => {
   const blockEpoch = computeEpochAtSlot(headBattHeadBlock.slot);
 
   beforeEach(() => {
-    forkchoiceStub = vi.mocked(new ForkChoice({} as any, {} as any, {} as any));
+    forkchoiceStub = vi.mocked(new ForkChoice({} as any, {} as any, {} as any, {} as any));
   });
 
   afterEach(() => {
