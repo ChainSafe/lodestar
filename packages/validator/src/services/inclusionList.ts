@@ -3,6 +3,7 @@ import {InclusionListDutyList} from "@lodestar/api/lib/beacon/routes/validator.j
 import {ChainForkConfig} from "@lodestar/config";
 import {Slot, bellatrix, eip7805} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
+import {PubkeyHex} from "../types.js";
 import {IClock, LoggerVc} from "../util/index.js";
 import {ChainHeaderTracker} from "./chainHeaderTracker.js";
 import {InclusionListDutiesService} from "./inclusionListDuties.js";
@@ -36,6 +37,10 @@ export class InclusionListService {
 
     // At most every slot, check existing duties from InclusionListDutiesService and run tasks
     clock.runEverySlot(this.runInclusionListTasks);
+  }
+
+  removeDutiesForKey(pubkey: PubkeyHex): void {
+    this.dutiesService.removeDutiesForKey(pubkey);
   }
 
   private runInclusionListTasks = async (slot: Slot, signal: AbortSignal): Promise<void> => {

@@ -87,7 +87,7 @@ export class Validator {
   private readonly blockProposingService: BlockProposingService;
   private readonly attestationService: AttestationService;
   private readonly syncCommitteeService: SyncCommitteeService;
-  //private readonly inclusionListService: InclusionListService;
+  private readonly inclusionListService: InclusionListService;
   private readonly config: BeaconConfig;
   private readonly api: ApiClient;
   private readonly clock: IClock;
@@ -106,7 +106,7 @@ export class Validator {
     blockProposingService,
     attestationService,
     syncCommitteeService,
-    // inclusionListService,
+    inclusionListService,
     config,
     api,
     clock,
@@ -123,7 +123,7 @@ export class Validator {
     this.blockProposingService = blockProposingService;
     this.attestationService = attestationService;
     this.syncCommitteeService = syncCommitteeService;
-    // this.inclusionListService = inclusionListService;
+    this.inclusionListService = inclusionListService;
     this.config = config;
     this.api = api;
     this.clock = clock;
@@ -351,7 +351,7 @@ export class Validator {
     this.blockProposingService.removeDutiesForKey(pubkey);
     this.attestationService.removeDutiesForKey(pubkey);
     this.syncCommitteeService.removeDutiesForKey(pubkey);
-    // this.inclusionListService.removeDutiesForKey(pubkey); TODO EIP-7805: implement removeDutiesForKey for IL
+    this.inclusionListService.removeDutiesForKey(pubkey);
   }
 
   /**
