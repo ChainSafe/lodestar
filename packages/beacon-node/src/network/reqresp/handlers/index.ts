@@ -2,7 +2,11 @@ import {ProtocolHandler} from "@lodestar/reqresp";
 import {ssz} from "@lodestar/types";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
-import {BeaconBlocksByRootRequestType, BlobSidecarsByRootRequestType, DataColumnSidecarsByRootRequestType} from "../../../util/types.js";
+import {
+  BeaconBlocksByRootRequestType,
+  BlobSidecarsByRootRequestType,
+  DataColumnSidecarsByRootRequestType,
+} from "../../../util/types.js";
 import {GetReqRespHandlerFn, ReqRespMethod} from "../types.js";
 import {onBeaconBlocksByRange} from "./beaconBlocksByRange.js";
 import {onBeaconBlocksByRoot} from "./beaconBlocksByRoot.js";
