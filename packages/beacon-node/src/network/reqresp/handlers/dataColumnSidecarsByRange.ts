@@ -5,7 +5,7 @@ import {fulu} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
-import {logDataColumnSidecarUnavailability} from "../utils/dataColumnResponseValidaiton.js";
+import {filterDataColumnForCustody, logDataColumnSidecarUnavailability} from "../utils/dataColumnResponseValidaiton.js";
 
 export async function* onDataColumnSidecarsByRange(
   request: fulu.DataColumnSidecarsByRangeRequest,
@@ -16,12 +16,10 @@ export async function* onDataColumnSidecarsByRange(
   const {startSlot, count, columns: requestedColumns} = validateDataColumnSidecarsByRangeRequest(request);
   const endSlot = startSlot + count;
 
-  if (requestedColumns.length === 0) {
-    throw new ResponseError(RespStatus.INVALID_REQUEST, "dataColumnSidecar requested without column indices");
+  const columns = filterDataColumnForCustody(requestedColumns, chain.custodyConfig.custodyColumns, chain.logger);
+  if (columns.length === 0) {
+    return;
   }
-
-  const columns = requestedColumns.filter((c) => chain.custodyConfig.custodyColumns.includes(c));
-  if (columns.length === 0) return;
 
   const finalized = db.dataColumnSidecarArchive;
   const unfinalized = db.dataColumnSidecar;

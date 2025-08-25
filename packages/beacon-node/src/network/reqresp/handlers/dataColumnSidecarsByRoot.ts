@@ -1,10 +1,10 @@
-import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
+import {ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {fulu} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
-import {logDataColumnSidecarUnavailability} from "../utils/dataColumnResponseValidaiton.js";
+import {filterDataColumnForCustody, logDataColumnSidecarUnavailability} from "../utils/dataColumnResponseValidaiton.js";
 
 export async function* onDataColumnSidecarsByRoot(
   requestBody: fulu.DataColumnSidecarsByRootRequest,
@@ -22,12 +22,10 @@ export async function* onDataColumnSidecarsByRoot(
 
   for (const dataColumnsByRootIdentifier of requestBody) {
     const {blockRoot, columns: requestedColumns} = dataColumnsByRootIdentifier;
-    if (requestedColumns.length === 0) {
-      throw new ResponseError(RespStatus.INVALID_REQUEST, "dataColumnSidecar requested without column indices");
+    const columns = filterDataColumnForCustody(requestedColumns, chain.custodyConfig.custodyColumns, chain.logger);
+    if (columns.length === 0) {
+      return;
     }
-
-    const columns = requestedColumns.filter((c) => chain.custodyConfig.custodyColumns.includes(c));
-    if (columns.length === 0) continue;
 
     const blockRootHex = toHex(blockRoot);
     const block = chain.forkChoice.getBlockHex(blockRootHex);

@@ -1,7 +1,8 @@
 import {LogData} from "@lodestar/logger";
 import {ForkSeq, KZG_COMMITMENTS_GINDEX} from "@lodestar/params";
+import {RespStatus, ResponseError} from "@lodestar/reqresp";
 import {ColumnIndex, Slot} from "@lodestar/types";
-import {bytesToInt, toHex} from "@lodestar/utils";
+import {Logger, bytesToInt, toHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/interface.js";
 import {IBeaconDb} from "../../../db/interface.js";
 
@@ -39,4 +40,27 @@ export async function logDataColumnSidecarUnavailability(opts: {
   } else {
     chain.logger.debug("Requested dataColumnSidecar for empty blobs", localLogData);
   }
+}
+
+export function filterDataColumnForCustody(
+  requestedColumns: ColumnIndex[],
+  custodyColumns: ColumnIndex[],
+  logger: Logger
+): ColumnIndex[] {
+  if (requestedColumns.length === 0) {
+    throw new ResponseError(RespStatus.INVALID_REQUEST, "dataColumnSidecar requested without column indices");
+  }
+
+  const availableColumns = requestedColumns.filter((c) => custodyColumns.includes(c));
+  const missingColumns = requestedColumns.filter((c) => !custodyColumns.includes(c));
+
+  if (availableColumns.length !== requestedColumns.length) {
+    logger.debug("Requested for dataColumnsSidecars we do not have custody", {
+      requestedColumns: requestedColumns.join(),
+      custodyColumns: custodyColumns.join(","),
+      missingColumns: missingColumns.join(","),
+    });
+  }
+
+  return availableColumns;
 }
