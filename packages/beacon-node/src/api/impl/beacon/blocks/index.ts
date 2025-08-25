@@ -693,10 +693,11 @@ export function getBeaconBlockApi({
 
         const requestedIndices: number[] = [];
         for (const requestedHash of versionedHashes) {
-          const index = blockVersionedHashes.findIndex((hash) => hash.toLowerCase() === requestedHash.toLowerCase());
-          if (index !== -1) {
-            requestedIndices.push(index);
+          const index = blockVersionedHashes.findIndex((hash) => hash === requestedHash);
+          if (index === -1) {
+            throw new ApiError(400, `Versioned hash ${requestedHash} not found in block`);
           }
+          requestedIndices.push(index);
         }
 
         blobs = requestedIndices.sort((a, b) => a - b).map((index) => blobs[index]);
