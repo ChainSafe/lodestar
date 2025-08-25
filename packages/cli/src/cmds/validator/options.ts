@@ -223,7 +223,6 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     type: "number",
   },
 
-
   proposerSettingsFile: {
     description:
       "A yaml file to specify detailed default and per validator public key customized proposer configs. PS: This feature and its format is in alpha and subject to change",
