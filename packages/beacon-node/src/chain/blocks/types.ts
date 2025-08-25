@@ -66,9 +66,6 @@ export enum InclusionListSource {
   api = "api",
 }
 
-export enum GossipedInputType {
-  block = "block",
-  blob = "blob",
 /**
  *
  * PeerDAS Column Format Types
@@ -82,6 +79,7 @@ export enum DataColumnsSource {
   byRange = "req_resp_by_range",
   byRoot = "req_resp_by_root",
 }
+
 type ForkDataColumnsInfo = {
   fork: ForkPostFulu;
 };
