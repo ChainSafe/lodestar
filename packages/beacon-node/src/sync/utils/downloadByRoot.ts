@@ -1,15 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {
-  ForkName,
-  ForkPostDeneb,
-  ForkPostFulu,
-  ForkPreFulu,
-  NUMBER_OF_COLUMNS,
-  isForkPostDeneb,
-  isForkPostFulu,
-} from "@lodestar/params";
+import {ForkPostDeneb, ForkPostFulu, ForkPreFulu, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {BlobIndex, ColumnIndex, RootHex, SignedBeaconBlock, deneb, fulu, phase0} from "@lodestar/types";
+import {SignedBeaconBlock, deneb, fulu} from "@lodestar/types";
 import {LodestarError, fromHex, prettyBytes, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {BlobMeta, BlockInputSource, IBlockInput, MissingColumnMeta} from "../../chain/blocks/blockInput/types.js";
@@ -25,9 +17,7 @@ import {prettyPrintPeerIdStr} from "../../network/util.js";
 import {computeInclusionProof, kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {byteArrayEquals} from "../../util/bytes.js";
 import {getCellsAndProofs, getDataColumnSidecarsFromBlock} from "../../util/dataColumns.js";
-import {kzg} from "../../util/kzg.js";
 import {PeerIdStr} from "../../util/peerId.js";
-import {BlobSidecarsByRootRequest} from "../../util/types.js";
 import {
   BlockInputSyncCacheItem,
   PendingBlockInput,

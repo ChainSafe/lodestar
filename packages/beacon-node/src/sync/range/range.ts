@@ -4,7 +4,6 @@ import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, Status, fulu} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
 import {StrictEventEmitter} from "strict-event-emitter-types";
-import {BlockInputSource} from "../../chain/blocks/blockInput/types.js";
 import {isDaOutOfRange} from "../../chain/blocks/blockInput/utils.js";
 import {AttestationImportOpt, ImportBlockOpts} from "../../chain/blocks/index.js";
 import {IBeaconChain} from "../../chain/index.js";
@@ -13,7 +12,6 @@ import {INetwork} from "../../network/index.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {cacheByRangeResponses, downloadByRange} from "../utils/downloadByRange.js";
 import {RangeSyncType, getRangeSyncTarget, rangeSyncTypes} from "../utils/remoteSyncType.js";
-import {BatchStateAwaitingDownload} from "./batch.js";
 import {ChainTarget, SyncChain, SyncChainDebugState, SyncChainFns} from "./chain.js";
 import {updateChains} from "./utils/index.js";
 

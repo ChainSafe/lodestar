@@ -1,6 +1,6 @@
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
-import {RootHex, Slot, phase0} from "@lodestar/types";
+import {Slot, phase0} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {IBeaconChain} from "../chain/index.js";
 import {IBeaconDb} from "../db/index.js";
