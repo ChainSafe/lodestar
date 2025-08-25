@@ -79,7 +79,7 @@ export const chainConfig: ChainConfig = {
   // 3333 basis points, ~33% of SLOT_DURATION_MS
   ATTESTATION_DUE_BPS: 3333,
   // 6667 basis points, ~67% of SLOT_DURATION_MS
-  AGGREGRATE_DUE_BPS: 6667,
+  AGGREGATE_DUE_BPS: 6667,
 
   // Altair
   // 3333 basis points, ~33% of SLOT_DURATION_MS

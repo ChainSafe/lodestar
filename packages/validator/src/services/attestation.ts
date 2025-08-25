@@ -139,8 +139,8 @@ export class AttestationService {
 
     // Step 2. after all attestations are submitted, make an aggregate.
     // First, wait until the `AGGREGATE_DUE_BPS` (66.66% into the slot)
-    await sleep(this.clock.msToSlotComponent(slot, "AGGREGRATE_DUE_BPS"), signal);
-    this.metrics?.attesterStepCallProduceAggregate.observe(this.clock.secFromSlotComponent(slot, "AGGREGRATE_DUE_BPS"));
+    await sleep(this.clock.msToSlotComponent(slot, "AGGREGATE_DUE_BPS"), signal);
+    this.metrics?.attesterStepCallProduceAggregate.observe(this.clock.secFromSlotComponent(slot, "AGGREGATE_DUE_BPS"));
 
     // Then download, sign and publish a `SignedAggregateAndProof` for each
     // validator that is elected to aggregate for this `slot` and `committeeIndex`.
@@ -160,8 +160,8 @@ export class AttestationService {
 
     // Step 2. after all attestations are submitted, make an aggregate.
     // First, wait until the `AGGREGATE_DUE_BPS` (66% into the slot)
-    await sleep(this.clock.msToSlotComponent(slot, "AGGREGRATE_DUE_BPS"), signal);
-    this.metrics?.attesterStepCallProduceAggregate.observe(this.clock.secFromSlotComponent(slot, "AGGREGRATE_DUE_BPS"));
+    await sleep(this.clock.msToSlotComponent(slot, "AGGREGATE_DUE_BPS"), signal);
+    this.metrics?.attesterStepCallProduceAggregate.observe(this.clock.secFromSlotComponent(slot, "AGGREGATE_DUE_BPS"));
 
     const dutiesByCommitteeIndex = groupAttDutiesByCommitteeIndex(dutiesAll);
     const isPostElectra = this.config.getForkSeq(slot) >= ForkSeq.electra;
@@ -310,7 +310,7 @@ export class AttestationService {
     );
 
     this.metrics?.attesterStepCallPublishAggregate.observe(
-      this.clock.secFromSlotComponent(attestation.slot, "AGGREGRATE_DUE_BPS")
+      this.clock.secFromSlotComponent(attestation.slot, "AGGREGATE_DUE_BPS")
     );
 
     if (signedAggregateAndProofs.length > 0) {

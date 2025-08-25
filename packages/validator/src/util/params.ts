@@ -155,7 +155,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     ETH1_FOLLOW_DISTANCE: true,
     PROPOSER_REORG_CUTOFF_BPS: true,
     ATTESTATION_DUE_BPS: true,
-    AGGREGRATE_DUE_BPS: true,
+    AGGREGATE_DUE_BPS: true,
     // Altair
     SYNC_MESSAGE_DUE_BPS: altairForkRelevant,
     CONTRIBUTION_DUE_BPS: altairForkRelevant,

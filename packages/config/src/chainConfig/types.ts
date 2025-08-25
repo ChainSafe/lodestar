@@ -58,7 +58,7 @@ export type ChainConfig = {
   ETH1_FOLLOW_DISTANCE: number;
   PROPOSER_REORG_CUTOFF_BPS: number;
   ATTESTATION_DUE_BPS: number;
-  AGGREGRATE_DUE_BPS: number;
+  AGGREGATE_DUE_BPS: number;
   // Altair
   SYNC_MESSAGE_DUE_BPS: number;
   CONTRIBUTION_DUE_BPS: number;
@@ -155,7 +155,7 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   ETH1_FOLLOW_DISTANCE: "number",
   PROPOSER_REORG_CUTOFF_BPS: "number",
   ATTESTATION_DUE_BPS: "number",
-  AGGREGRATE_DUE_BPS: "number",
+  AGGREGATE_DUE_BPS: "number",
   // Altair
   SYNC_MESSAGE_DUE_BPS: "number",
   CONTRIBUTION_DUE_BPS: "number",
