@@ -1,4 +1,4 @@
-import {ResponseOutgoing} from "@lodestar/reqresp";
+import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {fulu} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
@@ -20,7 +20,14 @@ export async function* onDataColumnSidecarsByRoot(
   );
 
   for (const dataColumnsByRootIdentifier of requestBody) {
-    const {blockRoot, columns} = dataColumnsByRootIdentifier;
+    const {blockRoot, columns: requestedColumns} = dataColumnsByRootIdentifier;
+    if (requestedColumns.length === 0) {
+      throw new ResponseError(RespStatus.INVALID_REQUEST, "dataColumnSidecar requested without column indices");
+    }
+
+    const columns = requestedColumns.filter((c) => chain.custodyConfig.custodyColumns.includes(c));
+    if (columns.length === 0) continue;
+
     const blockRootHex = toHex(blockRoot);
     const block = chain.forkChoice.getBlockHex(blockRootHex);
 
@@ -36,7 +43,7 @@ export async function* onDataColumnSidecarsByRoot(
     const dataColumns = await db.dataColumnSidecar.getManyBinary(fromHex(block.blockRoot), columns);
     for (const [index, dataColumnBytes] of dataColumns.entries()) {
       if (!dataColumnBytes) {
-        chain.logger.debug(`Requested dataColumnSidecar index=${columns[index]} not custodied`);
+        chain.logger.debug("Requested dataColumnSidecar not found", {blockRoot: blockRootHex, index: columns[index]});
         continue;
       }
 

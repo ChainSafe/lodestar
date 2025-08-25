@@ -12,8 +12,15 @@ export async function* onDataColumnSidecarsByRange(
   db: IBeaconDb
 ): AsyncIterable<ResponseOutgoing> {
   // Non-finalized range of columns
-  const {startSlot, count, columns} = validateDataColumnSidecarsByRangeRequest(request);
+  const {startSlot, count, columns: requestedColumns} = validateDataColumnSidecarsByRangeRequest(request);
   const endSlot = startSlot + count;
+
+  if (requestedColumns.length === 0) {
+    throw new ResponseError(RespStatus.INVALID_REQUEST, "dataColumnSidecar requested without column indices");
+  }
+
+  const columns = requestedColumns.filter((c) => chain.custodyConfig.custodyColumns.includes(c));
+  if (columns.length === 0) return;
 
   const finalized = db.dataColumnSidecarArchive;
   const unfinalized = db.dataColumnSidecar;
