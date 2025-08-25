@@ -56,7 +56,6 @@ export type ValidatorOptions = {
   abortController: AbortController;
   afterBlockDelaySlotFraction?: number;
   scAfterBlockDelaySlotFraction?: number;
-  disableAttestationGrouping?: boolean;
   doppelgangerProtection?: boolean;
   closed?: boolean;
   valProposerConfig?: ValidatorProposerConfig;
@@ -241,7 +240,6 @@ export class Validator {
       config,
       {
         afterBlockDelaySlotFraction: opts.afterBlockDelaySlotFraction,
-        disableAttestationGrouping: opts.disableAttestationGrouping,
         distributedAggregationSelection: opts.distributed,
       }
     );

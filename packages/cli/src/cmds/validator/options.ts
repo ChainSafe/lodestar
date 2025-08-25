@@ -38,7 +38,6 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     graffiti?: string;
     afterBlockDelaySlotFraction?: number;
     scAfterBlockDelaySlotFraction?: number;
-    disableAttestationGrouping?: boolean;
     suggestedFeeRecipient?: string;
     proposerSettingsFile?: string;
     strictFeeRecipientCheck?: boolean;
@@ -224,12 +223,6 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     type: "number",
   },
 
-  disableAttestationGrouping: {
-    hidden: true,
-    description:
-      "Disables attestation service grouping optimization, attestation tasks will be executed per committee instead of just once for all committees.",
-    type: "boolean",
-  },
 
   proposerSettingsFile: {
     description:
