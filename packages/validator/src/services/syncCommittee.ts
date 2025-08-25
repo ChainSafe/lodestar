@@ -293,9 +293,7 @@ export class SyncCommitteeService {
     ]);
 
     if (!res) {
-      throw new Error(
-        `Failed to receive combined selection proofs before ${this.config.CONTRIBUTION_DUE_BPS / BASIS_POINTS}% into slot`
-      );
+      throw new Error("Failed to receive combined selection proofs before 67% of the slot");
     }
 
     const combinedSelections = res.value();

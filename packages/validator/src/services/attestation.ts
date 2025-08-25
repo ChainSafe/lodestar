@@ -364,7 +364,7 @@ export class AttestationService {
     ]);
 
     if (!res) {
-      throw new Error("Failed to receive combined selection proofs before 1/3 of slot");
+      throw new Error("Failed to receive combined selection proofs before 33% into the slot");
     }
 
     const combinedSelections = res.value();

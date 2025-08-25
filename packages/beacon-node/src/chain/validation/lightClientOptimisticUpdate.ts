@@ -65,9 +65,9 @@ export function updateReceivedTooEarly(
   genesisTime: number,
   update: Pick<LightClientOptimisticUpdate, "signatureSlot">
 ): boolean {
-  const updateCutoff =
+  const updateCutoffMs =
     computeTimeAtSlot(config, update.signatureSlot, genesisTime) * 1000 +
     getSlotComponentDurationMs(config, "SYNC_MESSAGE_DUE_BPS");
-  const earliestAllowedTimestampMs = updateCutoff - MAXIMUM_GOSSIP_CLOCK_DISPARITY;
+  const earliestAllowedTimestampMs = updateCutoffMs - MAXIMUM_GOSSIP_CLOCK_DISPARITY;
   return Date.now() < earliestAllowedTimestampMs;
 }
