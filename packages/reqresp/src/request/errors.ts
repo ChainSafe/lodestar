@@ -31,6 +31,8 @@ export enum RequestErrorCode {
   RESP_TIMEOUT = "REQUEST_ERROR_RESP_TIMEOUT",
   /** Request rate limited */
   REQUEST_RATE_LIMITED = "REQUEST_ERROR_RATE_LIMITED",
+  /** Request self rate limited */
+  REQUEST_SELF_RATE_LIMITED = "REQUEST_ERROR_SELF_RATE_LIMITED",
   /** Response rate limited */
   RESP_RATE_LIMITED = "RESPONSE_ERROR_RATE_LIMITED",
   /** For malformed SSZ (metadata) responses */
@@ -51,6 +53,7 @@ type RequestErrorType =
   | {code: RequestErrorCode.TTFB_TIMEOUT}
   | {code: RequestErrorCode.RESP_TIMEOUT}
   | {code: RequestErrorCode.REQUEST_RATE_LIMITED}
+  | {code: RequestErrorCode.REQUEST_SELF_RATE_LIMITED}
   | {code: RequestErrorCode.RESP_RATE_LIMITED}
   | {code: RequestErrorCode.SSZ_OVER_MAX_SIZE};
 

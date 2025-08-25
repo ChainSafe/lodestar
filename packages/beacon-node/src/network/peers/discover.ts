@@ -475,7 +475,7 @@ export class PeerDiscovery {
         // for pre-fulu, custodyGroups is null
         custodyGroups:
           forkSeq >= ForkSeq.fulu
-            ? getCustodyGroups(nodeId, custodySubnetCount ?? this.config.CUSTODY_REQUIREMENT)
+            ? getCustodyGroups(this.config, nodeId, custodySubnetCount ?? this.config.CUSTODY_REQUIREMENT)
             : null,
       };
 

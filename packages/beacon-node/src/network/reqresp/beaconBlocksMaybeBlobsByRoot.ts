@@ -29,12 +29,21 @@ import {computeInclusionProof, kzgCommitmentToVersionedHash} from "../../util/bl
 import {getDataColumnsFromExecution} from "../../util/dataColumns.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {INetwork} from "../interface.js";
-import {PartialDownload, matchBlockWithBlobs, matchBlockWithDataColumns} from "./beaconBlocksMaybeBlobsByRange.js";
+import {
+  PartialDownload,
+  SyncSourceByRoot,
+  matchBlockWithBlobs,
+  matchBlockWithDataColumns,
+} from "./beaconBlocksMaybeBlobsByRange.js";
 
 // keep 1 epoch of stuff, assmume 16 blobs
 const MAX_ENGINE_GETBLOBS_CACHE = 32 * 16;
 const MAX_UNAVAILABLE_RETRY_CACHE = 32;
 
+/**
+ * Request beacon blocks by root, and blobs or data columns if available.
+ * return BlockInput[] along with pendingDataColumns (null for prefulu forks for postfulu where data is available)
+ */
 export async function beaconBlocksMaybeBlobsByRoot(
   config: ChainForkConfig,
   network: INetwork,
@@ -126,6 +135,7 @@ export async function beaconBlocksMaybeBlobsByRoot(
       Infinity,
       BlockSource.byRoot,
       BlobsSource.byRoot,
+      SyncSourceByRoot,
       metrics
     );
     blockInputs = [...blockInputs, ...blockInputWithBlobs];
@@ -176,6 +186,7 @@ export async function beaconBlocksMaybeBlobsByRoot(
       DataColumnsSource.byRoot,
       partialDownload,
       peerClient,
+      SyncSourceByRoot,
       metrics,
       logger
     );
@@ -214,10 +225,6 @@ export async function unavailableBeaconBlobsByRoot(
     block = allBlocks[0].data;
     cachedData = unavailableBlockInput.cachedData;
     unavailableBlockInput = getBlockInput.dataPromise(config, block, BlockSource.byRoot, cachedData);
-    // console.log(
-    //   "downloaded sendBeaconBlocksByRoot",
-    //   ssz.fulu.SignedBeaconBlock.toJson(block as fulu.SignedBeaconBlock)
-    // );
   } else {
     ({block, cachedData} = unavailableBlockInput);
   }

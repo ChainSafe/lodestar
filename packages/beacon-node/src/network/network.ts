@@ -356,12 +356,17 @@ export class Network implements INetwork {
     const epoch = computeEpochAtSlot(dataColumnSidecar.signedBlockHeader.message.slot);
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);
 
-    const subnet = computeSubnetForDataColumnSidecar(dataColumnSidecar);
+    const subnet = computeSubnetForDataColumnSidecar(this.config, dataColumnSidecar);
     return this.publishGossip<GossipType.data_column_sidecar>(
       {type: GossipType.data_column_sidecar, boundary, subnet},
       dataColumnSidecar,
       {
         ignoreDuplicatePublishError: true,
+        // we ensure having all topic peers via prioritizePeers() function
+        // in the worse case, if there is 0 peer on the topic, the overall publish operation could be still a success
+        // because supernode will rebuild and publish missing data column sidecars for us
+        // hence we want to track sent peers as 0 instead of an error
+        allowPublishToZeroTopicPeers: true,
       }
     );
   }

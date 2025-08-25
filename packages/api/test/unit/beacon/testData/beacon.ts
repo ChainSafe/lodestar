@@ -69,12 +69,12 @@ export const testData: GenericServerTestCases<Endpoints> = {
     res: {data: {root}, meta: {executionOptimistic: true, finalized: false}},
   },
   publishBlock: {
-    args: {signedBlockOrContents: ssz.electra.SignedBlockContents.defaultValue()},
+    args: {signedBlockContents: ssz.electra.SignedBlockContents.defaultValue()},
     res: undefined,
   },
   publishBlockV2: {
     args: {
-      signedBlockOrContents: ssz.electra.SignedBlockContents.defaultValue(),
+      signedBlockContents: ssz.electra.SignedBlockContents.defaultValue(),
       broadcastValidation: BroadcastValidation.consensus,
     },
     res: undefined,

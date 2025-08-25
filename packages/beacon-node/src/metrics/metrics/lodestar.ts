@@ -548,6 +548,20 @@ export function createLodestarMetrics(
         help: "Total number of blocks whose data availability was resolved",
         labelNames: ["source"],
       }),
+      peerBalancer: {
+        peersMetaCount: register.gauge({
+          name: "lodestar_sync_unknown_block_peer_balancer_peers_meta_count",
+          help: "Count of peers meta in UnknownBlockSync peer balancer",
+        }),
+        peersActiveRequestCount: register.gauge({
+          name: "lodestar_sync_unknown_block_peer_balancer_peers_active_request_count",
+          help: "Count of peers active requests in UnknownBlockSync peer balancer",
+        }),
+        totalActiveRequests: register.gauge({
+          name: "lodestar_sync_unknown_block_peer_balancer_total_active_requests",
+          help: "Total active requests in UnknownBlockSync peer balancer",
+        }),
+      },
     },
 
     // Gossip sync committee
@@ -753,6 +767,12 @@ export function createLodestarMetrics(
         help: "Time elapsed between block slot time and the time data column received",
         labelNames: ["source"],
         buckets: [1, 2, 3, 4, 6, 12],
+      }),
+      sentPeersPerSubnet: register.histogram({
+        name: "lodestar_data_column_sent_peers_per_subnet",
+        help: "Number of peers node sent per subnet when publishing DataColumnSidecars",
+        // given TARGET_GROUP_PEERS_PER_SUBNET = 4, we expect sending to 4 peers per subnet
+        buckets: [1, 2, 3, 4],
       }),
     },
     recoverDataColumnSidecars: {
