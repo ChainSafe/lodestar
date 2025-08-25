@@ -95,40 +95,32 @@ export class AttestationService {
     // Beacon node's endpoint produceAttestationData return data is not dependent on committeeIndex.
     // Produce a single attestation for all committees and submit unaggregated attestations in one go.
     try {
-      await this.runAttestationTasksGrouped(duties, slot, signal);
+      // Produce a single attestation for all committees, and clone mutate before signing
+      const attestationNoCommittee = await this.produceAttestation(0, slot);
+
+      // Step 1. Mutate, and sign `Attestation` for each validator. Then publish all `Attestations` in one go
+      await this.signAndPublishAttestations(slot, attestationNoCommittee, duties);
+
+      // Step 2. after all attestations are submitted, make an aggregate.
+      // First, wait until the `aggregation_production_instant` (2/3rds of the way through the slot)
+      await sleep(this.clock.msToSlot(slot + 2 / 3), signal);
+      this.metrics?.attesterStepCallProduceAggregate.observe(this.clock.secFromSlot(slot + 2 / 3));
+
+      const dutiesByCommitteeIndex = groupAttDutiesByCommitteeIndex(duties);
+      const isPostElectra = this.config.getForkSeq(slot) >= ForkSeq.electra;
+
+      // Then download, sign and publish a `SignedAggregateAndProof` for each
+      // validator that is elected to aggregate for this `slot` and `committeeIndex`.
+      await Promise.all(
+        Array.from(dutiesByCommitteeIndex.entries()).map(([index, dutiesSameCommittee]) => {
+          const attestationData: phase0.AttestationData = {...attestationNoCommittee, index: isPostElectra ? 0 : index};
+          return this.produceAndPublishAggregates(attestationData, index, dutiesSameCommittee);
+        })
+      );
     } catch (e) {
       this.logger.error("Error on attestation routine", {slot}, e as Error);
     }
   };
-
-  private async runAttestationTasksGrouped(
-    dutiesAll: AttDutyAndProof[],
-    slot: Slot,
-    signal: AbortSignal
-  ): Promise<void> {
-    // Produce a single attestation for all committees, and clone mutate before signing
-    const attestationNoCommittee = await this.produceAttestation(0, slot);
-
-    // Step 1. Mutate, and sign `Attestation` for each validator. Then publish all `Attestations` in one go
-    await this.signAndPublishAttestations(slot, attestationNoCommittee, dutiesAll);
-
-    // Step 2. after all attestations are submitted, make an aggregate.
-    // First, wait until the `aggregation_production_instant` (2/3rds of the way through the slot)
-    await sleep(this.clock.msToSlot(slot + 2 / 3), signal);
-    this.metrics?.attesterStepCallProduceAggregate.observe(this.clock.secFromSlot(slot + 2 / 3));
-
-    const dutiesByCommitteeIndex = groupAttDutiesByCommitteeIndex(dutiesAll);
-    const isPostElectra = this.config.getForkSeq(slot) >= ForkSeq.electra;
-
-    // Then download, sign and publish a `SignedAggregateAndProof` for each
-    // validator that is elected to aggregate for this `slot` and `committeeIndex`.
-    await Promise.all(
-      Array.from(dutiesByCommitteeIndex.entries()).map(([index, dutiesSameCommittee]) => {
-        const attestationData: phase0.AttestationData = {...attestationNoCommittee, index: isPostElectra ? 0 : index};
-        return this.produceAndPublishAggregates(attestationData, index, dutiesSameCommittee);
-      })
-    );
-  }
 
   /**
    * Performs the first step of the attesting process: downloading one `Attestation` object.
