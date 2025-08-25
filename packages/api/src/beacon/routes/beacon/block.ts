@@ -587,7 +587,10 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           params: {block_id: blockId.toString()},
           query: {versioned_hashes: versionedHashes},
         }),
-        parseReq: ({params, query}) => ({blockId: params.block_id, versionedHashes: query.versioned_hashes}),
+        parseReq: ({params, query}) => ({
+          blockId: params.block_id,
+          versionedHashes: query.versioned_hashes?.map((hash) => hash.toLowerCase()),
+        }),
         schema: {params: {block_id: Schema.StringRequired}, query: {versioned_hashes: Schema.StringArray}},
       },
       resp: {
