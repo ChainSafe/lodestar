@@ -636,8 +636,8 @@ export function getBeaconBlockApi({
       };
     },
 
-    async getBlobs({blockId, indices}) {
-      assertUniqueItems(indices, "Duplicate indices provided");
+    async getBlobs({blockId, versionedHashes}) {
+      assertUniqueItems(versionedHashes, "Duplicate versioned hashes provided");
 
       const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
       const fork = config.getForkName(block.message.slot);
@@ -684,8 +684,28 @@ export function getBeaconBlockApi({
         blobs = [];
       }
 
+      if (versionedHashes?.length) {
+        const kzgCommitments = isForkPostDeneb(fork)
+          ? (block as deneb.SignedBeaconBlock).message.body.blobKzgCommitments
+          : [];
+
+        const blockVersionedHashes = kzgCommitments.map((commitment) =>
+          toHex(kzgCommitmentToVersionedHash(commitment))
+        );
+
+        const requestedIndices: number[] = [];
+        for (const requestedHash of versionedHashes) {
+          const index = blockVersionedHashes.findIndex((hash) => hash.toLowerCase() === requestedHash.toLowerCase());
+          if (index !== -1) {
+            requestedIndices.push(index);
+          }
+        }
+
+        blobs = requestedIndices.sort((a, b) => a - b).map((index) => blobs[index]);
+      }
+
       return {
-        data: indices ? blobs.filter((_, i) => indices.includes(i)) : blobs,
+        data: blobs,
         meta: {
           executionOptimistic,
           finalized,

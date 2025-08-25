@@ -98,7 +98,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
     },
   },
   getBlobs: {
-    args: {blockId: "head", indices: [0]},
+    args: {blockId: "head", versionedHashes: ["0x01234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"]},
     res: {
       data: [ssz.deneb.Blob.defaultValue()],
       meta: {executionOptimistic: true, finalized: false},

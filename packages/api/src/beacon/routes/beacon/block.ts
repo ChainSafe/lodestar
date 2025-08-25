@@ -235,12 +235,12 @@ export type Endpoints = {
     "GET",
     BlockArgs & {
       /**
-       * Array of indices for blobs to request for in the specified block.
+       * Array of versioned hashes for blobs to request for in the specified block.
        * Returns all blobs in the block if not specified.
        */
-      indices?: number[];
+      versionedHashes?: string[];
     },
-    {params: {block_id: string}; query: {indices?: number[]}},
+    {params: {block_id: string}; query: {versioned_hashes?: string[]}},
     deneb.Blobs,
     ExecutionOptimisticAndFinalizedMeta
   >;
@@ -583,9 +583,9 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       url: "/eth/v1/beacon/blobs/{block_id}",
       method: "GET",
       req: {
-        writeReq: ({blockId, indices}) => ({params: {block_id: blockId.toString()}, query: {indices}}),
-        parseReq: ({params, query}) => ({blockId: params.block_id, indices: query.indices}),
-        schema: {params: {block_id: Schema.StringRequired}, query: {indices: Schema.UintArray}},
+        writeReq: ({blockId, versionedHashes}) => ({params: {block_id: blockId.toString()}, query: {versioned_hashes: versionedHashes}}),
+        parseReq: ({params, query}) => ({blockId: params.block_id, versionedHashes: query.versioned_hashes}),
+        schema: {params: {block_id: Schema.StringRequired}, query: {versioned_hashes: Schema.StringArray}},
       },
       resp: {
         data: ssz.deneb.Blobs,
