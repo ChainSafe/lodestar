@@ -1,6 +1,5 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {BASIS_POINTS} from "@lodestar/params";
 import {computeEpochAtSlot, isSyncCommitteeAggregator} from "@lodestar/state-transition";
 import {BLSSignature, CommitteeIndex, Root, Slot, altair} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
