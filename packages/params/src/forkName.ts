@@ -8,8 +8,9 @@ export enum ForkName {
   capella = "capella",
   deneb = "deneb",
   electra = "electra",
-  eip7805 = "eip7805",
   fulu = "fulu",
+  eip7805 = "eip7805",
+  gloas = "gloas",
 }
 
 /**
@@ -22,8 +23,9 @@ export enum ForkSeq {
   capella = 3,
   deneb = 4,
   electra = 5,
-  eip7805 = 6,
-  fulu = 7,
+  fulu = 6,
+  eip7805 = 7,
+  gloas = 8,
 }
 
 function exclude<T extends ForkName, U extends T>(coll: T[], val: U[]): Exclude<T, U>[] {
@@ -98,21 +100,7 @@ export function isForkPostElectra(fork: ForkName): fork is ForkPostElectra {
   return isForkPostDeneb(fork) && fork !== ForkName.deneb;
 }
 
-export type ForkPreEip7805 = ForkPreElectra | ForkName.electra;
-export type ForkPostEip7805 = Exclude<ForkName, ForkPreEip7805>;
-export const forkPostEip7805 = exclude(forkAll, [
-  ForkName.phase0,
-  ForkName.altair,
-  ForkName.bellatrix,
-  ForkName.capella,
-  ForkName.deneb,
-  ForkName.electra,
-]);
-export function isForkPostEip7805(fork: ForkName): fork is ForkPostEip7805 {
-  return isForkPostElectra(fork) && fork !== ForkName.electra;
-}
-
-export type ForkPreFulu = ForkPreEip7805 | ForkName.eip7805;
+export type ForkPreFulu = ForkPreElectra | ForkName.electra;
 export type ForkPostFulu = Exclude<ForkName, ForkPreFulu>;
 export const forkPostFulu = exclude(forkAll, [
   ForkName.phase0,
@@ -121,9 +109,39 @@ export const forkPostFulu = exclude(forkAll, [
   ForkName.capella,
   ForkName.deneb,
   ForkName.electra,
-  ForkName.eip7805,
 ]);
 export function isForkPostFulu(fork: ForkName): fork is ForkPostFulu {
+  return isForkPostElectra(fork) && fork !== ForkName.electra;
+}
+
+export type ForkPreEip7805 = ForkPreFulu | ForkName.fulu;
+export type ForkPostEip7805 = Exclude<ForkName, ForkPreEip7805>;
+export const forkPostEip7805 = exclude(forkAll, [
+  ForkName.phase0,
+  ForkName.altair,
+  ForkName.bellatrix,
+  ForkName.capella,
+  ForkName.deneb,
+  ForkName.electra,
+  ForkName.fulu,
+]);
+export function isForkPostEip7805(fork: ForkName): fork is ForkPostEip7805 {
+  return isForkPostFulu(fork) && fork !== ForkName.fulu;
+}
+
+export type ForkPreGloas = ForkPreEip7805 | ForkName.eip7805;
+export type ForkPostGloas = Exclude<ForkName, ForkPreGloas>;
+export const forkPostGloas = exclude(forkAll, [
+  ForkName.phase0,
+  ForkName.altair,
+  ForkName.bellatrix,
+  ForkName.capella,
+  ForkName.deneb,
+  ForkName.electra,
+  ForkName.fulu,
+  ForkName.eip7805,
+]);
+export function isForkPostGloas(fork: ForkName): fork is ForkPostGloas {
   return isForkPostEip7805(fork) && fork !== ForkName.eip7805;
 }
 

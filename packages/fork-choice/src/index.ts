@@ -21,6 +21,9 @@ export {
 } from "./forkChoice/interface.js";
 export {
   ForkChoiceStore,
+  InclusionListStore,
+  InclusionListCommitteeRootStore,
+  InclusionListEquivocatorStore,
   type IForkChoiceStore,
   type CheckpointWithHex,
   type JustifiedBalancesGetter,

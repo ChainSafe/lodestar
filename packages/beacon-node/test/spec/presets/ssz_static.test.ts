@@ -44,6 +44,7 @@ const sszStatic =
 
     const sszType =
       (sszTypesFor(fork) as Types)[typeName] ||
+      (ssz.fulu as Types)[typeName] ||
       (ssz.electra as Types)[typeName] ||
       (ssz.deneb as Types)[typeName] ||
       (ssz.capella as Types)[typeName] ||

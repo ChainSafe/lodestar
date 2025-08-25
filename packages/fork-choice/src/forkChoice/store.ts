@@ -14,9 +14,9 @@ export type JustifiedBalances = EffectiveBalanceIncrements;
 
 export type InclusionListStoreKey = [Slot, Root];
 // TODO EIP-7805: Need prune mechanism to these three
-class InclusionListStore extends Map<InclusionListStoreKey, eip7805.InclusionList[]> {}
-class InclusionListEquivocatorStore extends Map<InclusionListStoreKey, Set<ValidatorIndex>> {}
-class InclusionListCommitteeRootStore extends Set<RootHex> {}
+export class InclusionListStore extends Map<InclusionListStoreKey, eip7805.InclusionList[]> {}
+export class InclusionListEquivocatorStore extends Map<InclusionListStoreKey, Set<ValidatorIndex>> {}
+export class InclusionListCommitteeRootStore extends Set<RootHex> {}
 
 /**
  * Returns the justified balances of checkpoint.

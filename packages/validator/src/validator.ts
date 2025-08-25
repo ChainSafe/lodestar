@@ -273,7 +273,6 @@ export class Validator {
       api,
       clock,
       validatorStore,
-      emitter,
       chainHeaderTracker,
       syncingStatusTracker
     );
@@ -352,7 +351,7 @@ export class Validator {
     this.blockProposingService.removeDutiesForKey(pubkey);
     this.attestationService.removeDutiesForKey(pubkey);
     this.syncCommitteeService.removeDutiesForKey(pubkey);
-    // this.inclusionListService.removeDutiesForKey(pubkey); TODO EIP-7805: implement removeDutiesForKey for IL
+    this.inclusionListService.removeDutiesForKey(pubkey);
   }
 
   /**

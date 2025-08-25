@@ -14,6 +14,7 @@ describe("FIFOBlockStateCache", () => {
     beaconCommittees: [],
     beaconCommitteesPerSlot: 1,
     inclusionListCommittees: [],
+    inclusionListCommitteeRoots: [],
   };
 
   const state1 = generateCachedState({slot: 0});

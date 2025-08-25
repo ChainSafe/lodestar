@@ -76,4 +76,11 @@ export const testData: GenericServerTestCases<Endpoints> = {
       meta: {executionOptimistic: true, finalized: false, version: ForkName.electra},
     },
   },
+  getDebugDataColumnSidecars: {
+    args: {blockId: "head", indices: [0]},
+    res: {
+      data: [ssz.fulu.DataColumnSidecar.defaultValue()],
+      meta: {executionOptimistic: true, finalized: false, version: ForkName.fulu},
+    },
+  },
 };

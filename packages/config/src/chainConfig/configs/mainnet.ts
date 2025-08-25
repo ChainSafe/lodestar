@@ -52,13 +52,17 @@ export const chainConfig: ChainConfig = {
   ELECTRA_FORK_VERSION: b("0x05000000"),
   ELECTRA_FORK_EPOCH: 364032, // May 7, 2025, 10:05:11am UTC
 
+  // FULU
+  FULU_FORK_VERSION: b("0x06000000"),
+  FULU_FORK_EPOCH: Infinity,
+
   // EIP-7805
-  EIP7805_FORK_VERSION: b("0x06000000"),
+  EIP7805_FORK_VERSION: b("0x07000000"),
   EIP7805_FORK_EPOCH: Infinity,
 
-  // FULU
-  FULU_FORK_VERSION: b("0x07000000"),
-  FULU_FORK_EPOCH: Infinity,
+  // GLOAS
+  GLOAS_FORK_VERSION: b("0x08000000"),
+  GLOAS_FORK_EPOCH: Infinity,
 
   // Time parameters
   // ---------------------------------------------------------------
@@ -75,6 +79,12 @@ export const chainConfig: ChainConfig = {
   ATTESTATION_DEADLINE: 4,
   PROPOSER_INCLUSION_LIST_CUT_OFF: 11,
   VIEW_FREEZE_DEADLINE: 9,
+  // 67% of `SLOT_DURATION_MS`
+  INCLUSION_LIST_SUBMISSION_DUE_BPS: 6667,
+  // 92% of `SLOT_DURATION_MS`
+  PROPOSER_INCLUSION_LIST_CUTOFF_BPS: 9167,
+  // 75% of `SLOT_DURATION_MS`
+  VIEW_FREEZE_CUTOFF_BPS: 7500,
 
   // Validator cycle
   // ---------------------------------------------------------------
@@ -130,13 +140,15 @@ export const chainConfig: ChainConfig = {
   MAX_REQUEST_BLOB_SIDECARS_ELECTRA: 1152,
 
   // Fulu
-  // `2**12` (= 4096 epochs, ~18 days)
-  MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 4096,
+  NUMBER_OF_CUSTODY_GROUPS: 128,
+  DATA_COLUMN_SIDECAR_SUBNET_COUNT: 128,
+  MAX_REQUEST_DATA_COLUMN_SIDECARS: 16384,
   SAMPLES_PER_SLOT: 8,
   CUSTODY_REQUIREMENT: 4,
-  NODE_CUSTODY_REQUIREMENT: 1,
   VALIDATOR_CUSTODY_REQUIREMENT: 8,
   BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: 32000000000,
+  // `2**12` (= 4096 epochs, ~18 days)
+  MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 4096,
 
   // Blob Scheduling
   // ---------------------------------------------------------------
@@ -147,4 +159,6 @@ export const chainConfig: ChainConfig = {
   MAX_REQUEST_INCLUSION_LIST: 16,
   // 2**13 (=8192)
   MAX_BYTES_PER_INCLUSION_LIST: 8192,
+  // 2**4 (= 16)
+  INCLUSION_LIST_COMMITTEE_SIZE: 16,
 };

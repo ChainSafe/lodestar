@@ -39,7 +39,7 @@ describe("api / impl / config", () => {
 
     if (missingConstants.length > 0) {
       throw Error(
-        "Some constants delcared in consensus-specs repo are not exposed in API:\n" + missingConstants.join("\n")
+        "Some constants declared in consensus-specs repo are not exposed in API:\n" + missingConstants.join("\n")
       );
     }
   });
