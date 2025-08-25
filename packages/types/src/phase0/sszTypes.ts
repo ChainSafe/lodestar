@@ -20,7 +20,6 @@ import {
   MAX_ATTESTER_SLASHINGS,
   MAX_DEPOSITS,
   MAX_PROPOSER_SLASHINGS,
-  MAX_REQUEST_BLOCKS,
   MAX_VALIDATORS_PER_COMMITTEE,
   MAX_VOLUNTARY_EXITS,
   SLOTS_PER_EPOCH,
@@ -501,8 +500,6 @@ export const BeaconBlocksByRangeRequest = new ContainerType(
   },
   {typeName: "BeaconBlocksByRangeRequest", jsonCase: "eth2"}
 );
-
-export const BeaconBlocksByRootRequest = new ListCompositeType(Root, MAX_REQUEST_BLOCKS);
 
 // Api types
 // =========
