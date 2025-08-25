@@ -2,6 +2,7 @@
 import {setHasher} from "@chainsafe/persistent-merkle-tree";
 import {hasher as hashtreeHasher} from "@chainsafe/persistent-merkle-tree/hasher/hashtree";
 
+// Without setting this first, persistent-merkle-tree will use noble instead
 setHasher(hashtreeHasher);
 
 //
