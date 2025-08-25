@@ -26,7 +26,13 @@ export async function* onDataColumnSidecarsByRange(
 
       for (const [index, dataColumnSidecarBytes] of dataColumnSidecars.entries()) {
         if (!dataColumnSidecarBytes) {
-          chain.logger.debug(`No finalized dataColumnSidecar found for slot=${slot}, index=${columns[index]}`);
+          chain.logger.debug("No finalized dataColumnSidecar found.", {
+            slot,
+            index: columns[index],
+            requestStartSlot: startSlot,
+            requestCount: count,
+            requestColumns: columns.join(","),
+          });
           continue;
         }
 
@@ -56,9 +62,13 @@ export async function* onDataColumnSidecarsByRange(
         const dataColumnSidecars = await unfinalized.getManyBinary(fromHex(block.blockRoot), columns);
         for (const [index, dataColumnSidecarBytes] of dataColumnSidecars.entries()) {
           if (!dataColumnSidecarBytes) {
-            chain.logger.debug(
-              `No unfinalized dataColumnSidecar found for root=${block.blockRoot}, index=${columns[index]}`
-            );
+            chain.logger.debug("No unfinalized dataColumnSidecar found", {
+              root: block.blockRoot,
+              index: columns[index],
+              requestStartSlot: startSlot,
+              requestCount: count,
+              requestColumns: columns.join(","),
+            });
             continue;
           }
 
