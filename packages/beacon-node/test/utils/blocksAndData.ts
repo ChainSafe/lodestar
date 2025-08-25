@@ -15,8 +15,12 @@ import {computeStartSlotAtEpoch, signedBlockToSignedHeader} from "@lodestar/stat
 import {SignedBeaconBlock, Slot, deneb, fulu, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {computeNodeIdFromPrivateKey} from "../../src/network/subnets/index.js";
-import {computeInclusionProof, computeKzgCommitmentsInclusionProof} from "../../src/util/blobs.js";
-import {CustodyConfig, getDataColumnSidecarsFromBlock} from "../../src/util/dataColumns.js";
+import {computePreFuluKzgCommitmentsInclusionProof} from "../../src/util/blobs.js";
+import {
+  CustodyConfig,
+  computePostFuluKzgCommitmentsInclusionProof,
+  getDataColumnSidecarsFromBlock,
+} from "../../src/util/dataColumns.js";
 import {kzg} from "../../src/util/kzg.js";
 import {ROOT_SIZE} from "../../src/util/sszBytes.js";
 
@@ -71,7 +75,7 @@ function generateRandomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 function generateProposerIndex(min = 0, max = 100_000): number {
-  return generateRandomInt(max, min);
+  return generateRandomInt(min, max);
 }
 
 function generateBeaconBlock<F extends ForkPostCapella>({
@@ -122,9 +126,13 @@ function generateBlobSidecars(
     const blobSidecar = ssz[forkName].BlobSidecar.defaultValue();
     blobSidecar.index = index;
     blobSidecar.signedBlockHeader = signedBlockHeader;
-    blobSidecar.blob = generateRandomBlob(index);
+    blobSidecar.blob = generateRandomBlob();
     blobSidecar.kzgCommitment = kzg.blobToKzgCommitment(blobSidecar.blob);
-    blobSidecar.kzgCommitmentInclusionProof = computeInclusionProof(forkName, block.message.body, index);
+    blobSidecar.kzgCommitmentInclusionProof = computePreFuluKzgCommitmentsInclusionProof(
+      forkName,
+      block.message.body,
+      index
+    );
     blobSidecar.kzgProof = kzg.computeBlobKzgProof(blobSidecar.blob, blobSidecar.kzgCommitment);
 
     if (oomProtection) {
@@ -160,9 +168,7 @@ function generateColumnSidecars<F extends ForkPostFulu>(
 
   const signedBlockHeader = signedBlockToSignedHeader(config, block);
   const cellsAndProofs = blobs.map((blob) => kzg.computeCellsAndKzgProofs(blob));
-  const kzgCommitmentsInclusionProof = Array.from({length: blobs.length}, () =>
-    computeKzgCommitmentsInclusionProof(forkName, block.body)
-  );
+  const kzgCommitmentsInclusionProof = computePostFuluKzgCommitmentsInclusionProof(forkName, block.message.body);
 
   const columnSidecars = Array.from({length: NUMBER_OF_COLUMNS}, (_, columnIndex) => {
     const column = oomProtection
@@ -204,7 +210,7 @@ export function generateChainOfBlocks<F extends ForkPostCapella>({
   for (; slot < slot + count; slot++) {
     const block = generateBeaconBlock({forkName, parentRoot, slot});
     const {blockRoot, rootHex} = generateRoots(forkName, block);
-    parentRoot = block.message.parentRoot;
+    parentRoot = blockRoot;
     blocks.push({
       block,
       blockRoot,

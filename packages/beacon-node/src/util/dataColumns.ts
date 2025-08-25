@@ -217,7 +217,7 @@ export function getCustodyGroups(config: ChainForkConfig, nodeId: NodeId, custod
   return custodyGroups;
 }
 
-export function computeKzgCommitmentsInclusionProof(
+export function computePostFuluKzgCommitmentsInclusionProof(
   fork: ForkName,
   body: BeaconBlockBody
 ): fulu.KzgCommitmentsInclusionProof {
@@ -302,7 +302,7 @@ export function getDataColumnSidecarsFromBlock(
   const fork = config.getForkName(signedBlock.message.slot);
   const signedBlockHeader = signedBlockToSignedHeader(config, signedBlock);
 
-  const kzgCommitmentsInclusionProof = computeKzgCommitmentsInclusionProof(fork, signedBlock.message.body);
+  const kzgCommitmentsInclusionProof = computePostFuluKzgCommitmentsInclusionProof(fork, signedBlock.message.body);
 
   return getDataColumnSidecars(signedBlockHeader, blobKzgCommitments, kzgCommitmentsInclusionProof, cellsAndKzgProofs);
 }

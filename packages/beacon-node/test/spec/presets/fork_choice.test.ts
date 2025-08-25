@@ -40,7 +40,7 @@ import {PowMergeBlock} from "../../../src/eth1/interface.js";
 import {ExecutionPayloadStatus} from "../../../src/execution/engine/interface.js";
 import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js";
 import {getExecutionEngineFromBackend} from "../../../src/execution/index.js";
-import {computeInclusionProof} from "../../../src/util/blobs.js";
+import {computePreFuluKzgCommitmentsInclusionProof} from "../../../src/util/blobs.js";
 import {ClockEvent} from "../../../src/util/clock.js";
 import {ClockStopped} from "../../mocks/clock.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
@@ -276,7 +276,11 @@ const forkChoiceTest =
                       kzgCommitment: commitments[index],
                       kzgProof: (proofs ?? [])[index],
                       signedBlockHeader: signedBlockToSignedHeader(config, signedBlock),
-                      kzgCommitmentInclusionProof: computeInclusionProof(fork, signedBlock.message.body, index),
+                      kzgCommitmentInclusionProof: computePreFuluKzgCommitmentsInclusionProof(
+                        fork,
+                        signedBlock.message.body,
+                        index
+                      ),
                     };
                   });
 

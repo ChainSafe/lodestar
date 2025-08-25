@@ -25,7 +25,7 @@ export function kzgCommitmentToVersionedHash(kzgCommitment: deneb.KZGCommitment)
   return hash;
 }
 
-export function computeInclusionProof(
+export function computePreFuluKzgCommitmentsInclusionProof(
   fork: ForkName,
   body: BeaconBlockBody,
   index: number
@@ -56,7 +56,11 @@ export function getBlobSidecars(
   return blobKzgCommitments.map((kzgCommitment, index) => {
     const blob = blobs[index];
     const kzgProof = proofs[index];
-    const kzgCommitmentInclusionProof = computeInclusionProof(fork, signedBlock.message.body, index);
+    const kzgCommitmentInclusionProof = computePreFuluKzgCommitmentsInclusionProof(
+      fork,
+      signedBlock.message.body,
+      index
+    );
 
     return {index, blob, kzgCommitment, kzgProof, signedBlockHeader, kzgCommitmentInclusionProof};
   });
