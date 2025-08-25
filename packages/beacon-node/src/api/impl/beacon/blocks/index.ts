@@ -684,10 +684,8 @@ export function getBeaconBlockApi({
         blobs = [];
       }
 
-      if (versionedHashes?.length) {
-        const kzgCommitments = isForkPostDeneb(fork)
-          ? (block as deneb.SignedBeaconBlock).message.body.blobKzgCommitments
-          : [];
+      if (blobs.length && versionedHashes?.length) {
+        const kzgCommitments = (block as deneb.SignedBeaconBlock).message.body.blobKzgCommitments;
 
         const blockVersionedHashes = kzgCommitments.map((commitment) =>
           toHex(kzgCommitmentToVersionedHash(commitment))
