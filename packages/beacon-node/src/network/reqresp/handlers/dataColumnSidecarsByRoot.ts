@@ -4,6 +4,7 @@ import {fulu} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
+import {logDataColumnSidecarUnavailability} from "../utils/dataColumnResponseValidaiton.js";
 
 export async function* onDataColumnSidecarsByRoot(
   requestBody: fulu.DataColumnSidecarsByRootRequest,
@@ -42,15 +43,21 @@ export async function* onDataColumnSidecarsByRoot(
 
     const dataColumns = await db.dataColumnSidecar.getManyBinary(fromHex(block.blockRoot), columns);
     for (const [index, dataColumnBytes] of dataColumns.entries()) {
-      if (!dataColumnBytes) {
-        chain.logger.debug("Requested dataColumnSidecar not found", {blockRoot: blockRootHex, index: columns[index]});
-        continue;
+      if (dataColumnBytes) {
+        yield {
+          data: dataColumnBytes,
+          boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(block.slot)),
+        };
+      } else {
+        await logDataColumnSidecarUnavailability({
+          chain,
+          db,
+          index: columns[index],
+          slot: block.slot,
+          blockRoot: fromHex(block.blockRoot),
+          logData: {requestColumns: columns.join(",")},
+        });
       }
-
-      yield {
-        data: dataColumnBytes,
-        boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(block.slot)),
-      };
     }
   }
 }

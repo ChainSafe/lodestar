@@ -5,6 +5,7 @@ import {fulu} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
+import {logDataColumnSidecarUnavailability} from "../utils/dataColumnResponseValidaiton.js";
 
 export async function* onDataColumnSidecarsByRange(
   request: fulu.DataColumnSidecarsByRangeRequest,
@@ -32,21 +33,20 @@ export async function* onDataColumnSidecarsByRange(
       const dataColumnSidecars = await finalized.getManyBinary(slot, columns);
 
       for (const [index, dataColumnSidecarBytes] of dataColumnSidecars.entries()) {
-        if (!dataColumnSidecarBytes) {
-          chain.logger.debug("No finalized dataColumnSidecar found.", {
-            slot,
+        if (dataColumnSidecarBytes) {
+          yield {
+            data: dataColumnSidecarBytes,
+            boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(slot)),
+          };
+        } else {
+          await logDataColumnSidecarUnavailability({
+            chain,
+            db,
             index: columns[index],
-            requestStartSlot: startSlot,
-            requestCount: count,
-            requestColumns: columns.join(","),
+            slot,
+            logData: {requestStartSlot: startSlot, requestCount: count, requestColumns: columns.join(",")},
           });
-          continue;
         }
-
-        yield {
-          data: dataColumnSidecarBytes,
-          boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(slot)),
-        };
       }
     }
   }
@@ -68,21 +68,21 @@ export async function* onDataColumnSidecarsByRange(
         // Spec: https://github.com/ethereum/consensus-specs/blob/ad36024441cf910d428d03f87f331fbbd2b3e5f1/specs/fulu/p2p-interface.md#L425-L429
         const dataColumnSidecars = await unfinalized.getManyBinary(fromHex(block.blockRoot), columns);
         for (const [index, dataColumnSidecarBytes] of dataColumnSidecars.entries()) {
-          if (!dataColumnSidecarBytes) {
-            chain.logger.debug("No unfinalized dataColumnSidecar found", {
-              root: block.blockRoot,
+          if (dataColumnSidecarBytes) {
+            yield {
+              data: dataColumnSidecarBytes,
+              boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(block.slot)),
+            };
+          } else {
+            await logDataColumnSidecarUnavailability({
+              chain,
+              db,
               index: columns[index],
-              requestStartSlot: startSlot,
-              requestCount: count,
-              requestColumns: columns.join(","),
+              blockRoot: fromHex(block.blockRoot),
+              slot: block.slot,
+              logData: {requestStartSlot: startSlot, requestCount: count, requestColumns: columns.join(",")},
             });
-            continue;
           }
-
-          yield {
-            data: dataColumnSidecarBytes,
-            boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(block.slot)),
-          };
         }
       }
 
