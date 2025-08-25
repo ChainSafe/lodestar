@@ -103,6 +103,10 @@ export type BeaconPreset = {
   FIELD_ELEMENTS_PER_CELL: number;
   FIELD_ELEMENTS_PER_EXT_BLOB: number;
   KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH: number;
+
+  // EIP7805
+  ///////////
+  INCLUSION_LIST_COMMITTEE_SIZE: number;
 };
 
 /**
@@ -211,6 +215,10 @@ export const beaconPresetTypes: BeaconPresetTypes = {
   FIELD_ELEMENTS_PER_CELL: "number",
   FIELD_ELEMENTS_PER_EXT_BLOB: "number",
   KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH: "number",
+
+  // EIP7805
+  ///////////
+  INCLUSION_LIST_COMMITTEE_SIZE: "number",
 };
 
 type BeaconPresetTypes = {

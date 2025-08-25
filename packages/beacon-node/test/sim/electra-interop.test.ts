@@ -13,8 +13,8 @@ import {CachedBeaconStateElectra} from "@lodestar/state-transition";
 import {ExecutionPayloadStatus, PayloadAttributes} from "../../src/execution/engine/interface.js";
 import {initializeExecutionEngine} from "../../src/execution/index.js";
 
-import {bytesToData} from "../../lib/eth1/provider/utils.js";
 import {BeaconRestApiServerOpts} from "../../src/api/index.js";
+import {bytesToData} from "../../src/eth1/provider/utils.js";
 import {dataToBytes} from "../../src/eth1/provider/utils.js";
 import {defaultExecutionEngineHttpOpts} from "../../src/execution/engine/http.js";
 import {BeaconNode} from "../../src/index.js";

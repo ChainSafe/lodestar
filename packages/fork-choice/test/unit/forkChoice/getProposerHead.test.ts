@@ -6,7 +6,16 @@ import {Slot} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {beforeEach, describe, expect, it} from "vitest";
 import {NotReorgedReason} from "../../../src/forkChoice/interface.js";
-import {ExecutionStatus, ForkChoice, IForkChoiceStore, ProtoArray, ProtoBlock} from "../../../src/index.js";
+import {
+  ExecutionStatus,
+  ForkChoice,
+  IForkChoiceStore,
+  InclusionListCommitteeRootStore,
+  InclusionListEquivocatorStore,
+  InclusionListStore,
+  ProtoArray,
+  ProtoBlock,
+} from "../../../src/index.js";
 import {getBlockRoot, getStateRoot} from "../../utils/index.js";
 
 type ProtoBlockWithWeight = ProtoBlock & {weight: number}; // weight of the block itself
@@ -118,6 +127,9 @@ describe("Forkchoice / GetProposerHead", () => {
     },
     justifiedBalancesGetter: () => new Uint16Array(Array(32).fill(150)),
     equivocatingIndices: new Set(),
+    inclusionLists: new InclusionListStore(),
+    inclusionListEquivocators: new InclusionListEquivocatorStore(),
+    unsatisifiedInclusionListBlocks: new InclusionListCommitteeRootStore(),
   };
 
   // head block's weight < 30 is considered weak. parent block's total weight > 240 is considered strong

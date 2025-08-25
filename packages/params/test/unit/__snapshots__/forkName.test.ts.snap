@@ -9,6 +9,7 @@ exports[`forkName > should have valid allForks 1`] = `
   "deneb",
   "electra",
   "fulu",
+  "eip7805",
   "gloas",
 ]
 `;
@@ -21,6 +22,7 @@ exports[`forkName > should have valid post-altair forks 1`] = `
   "deneb",
   "electra",
   "fulu",
+  "eip7805",
   "gloas",
 ]
 `;
@@ -32,6 +34,7 @@ exports[`forkName > should have valid post-bellatrix forks 1`] = `
   "deneb",
   "electra",
   "fulu",
+  "eip7805",
   "gloas",
 ]
 `;
@@ -42,6 +45,7 @@ exports[`forkName > should have valid post-capella forks 1`] = `
   "deneb",
   "electra",
   "fulu",
+  "eip7805",
   "gloas",
 ]
 `;
@@ -51,6 +55,7 @@ exports[`forkName > should have valid post-deneb forks 1`] = `
   "deneb",
   "electra",
   "fulu",
+  "eip7805",
   "gloas",
 ]
 `;

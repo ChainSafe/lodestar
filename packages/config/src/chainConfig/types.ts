@@ -111,6 +111,7 @@ export type ChainConfig = {
   // EIP-7805
   MAX_REQUEST_INCLUSION_LIST: number;
   MAX_BYTES_PER_INCLUSION_LIST: number;
+  INCLUSION_LIST_COMMITTEE_SIZE: number;
 };
 
 export const chainConfigTypes: SpecTypes<ChainConfig> = {
@@ -211,6 +212,7 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   // EIP-7805
   MAX_REQUEST_INCLUSION_LIST: "number",
   MAX_BYTES_PER_INCLUSION_LIST: "number",
+  INCLUSION_LIST_COMMITTEE_SIZE: "number",
 
   // Blob Scheduling
   BLOB_SCHEDULE: "blob_schedule",

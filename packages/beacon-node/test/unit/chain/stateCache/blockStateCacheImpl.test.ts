@@ -17,6 +17,7 @@ describe("BlockStateCacheImpl", () => {
     beaconCommittees: [],
     beaconCommitteesPerSlot: 1,
     inclusionListCommittees: [],
+    inclusionListCommitteeRoots: [],
   };
 
   beforeEach(() => {

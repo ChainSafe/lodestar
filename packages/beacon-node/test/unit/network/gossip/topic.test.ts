@@ -7,7 +7,7 @@ import {parseGossipTopic, stringifyGossipTopic} from "../../../../src/network/go
 
 describe("network / gossip / topic", () => {
   // TODO Fulu: this can be removed once fulu is scheduled
-  const config = createBeaconConfig({...chainConfig, FULU_FORK_EPOCH: 500000}, ZERO_HASH);
+  const config = createBeaconConfig({...chainConfig, FULU_FORK_EPOCH: 500000, EIP7805_FORK_EPOCH: 600000}, ZERO_HASH);
   const encoding = GossipEncoding.ssz_snappy;
 
   // Enforce with Typescript that we test all GossipType
@@ -140,9 +140,12 @@ describe("network / gossip / topic", () => {
     ],
     [GossipType.inclusion_list]: [
       {
-        topic: {type: GossipType.inclusion_list, fork: ForkName.eip7805, encoding},
-        // TODO EIP-7805: this is not correct
-        topicStr: "/eth2/46acb19a/inclusion_list/ssz_snappy",
+        topic: {
+          type: GossipType.inclusion_list,
+          boundary: {fork: ForkName.eip7805, epoch: config.EIP7805_FORK_EPOCH},
+          encoding,
+        },
+        topicStr: "/eth2/e4ae6998/inclusion_list/ssz_snappy",
       },
     ],
   };

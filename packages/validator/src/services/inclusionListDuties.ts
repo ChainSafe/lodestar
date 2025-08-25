@@ -1,9 +1,10 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {computeEpochAtSlot, isAggregatorFromCommitteeLength, isStartSlotOfEpoch} from "@lodestar/state-transition";
+import {computeEpochAtSlot, isStartSlotOfEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {sleep, toPubkeyHex} from "@lodestar/utils";
+import {PubkeyHex} from "../types.js";
 import {IClock, LoggerVc} from "../util/index.js";
 import {ChainHeaderTracker, HeadEventData} from "./chainHeaderTracker.js";
 import {SyncingStatusTracker} from "./syncingStatusTracker.js";
@@ -53,6 +54,19 @@ export class InclusionListDutiesService {
         return this.runDutiesTasks(computeEpochAtSlot(slot));
       }
     });
+  }
+
+  removeDutiesForKey(pubkey: PubkeyHex): void {
+    for (const [epoch, dutiesAtEpoch] of this.dutiesByIndexByEpoch) {
+      for (const [vIndex, duty] of dutiesAtEpoch.dutiesByIndex) {
+        if (toPubkeyHex(duty.pubkey) === pubkey) {
+          dutiesAtEpoch.dutiesByIndex.delete(vIndex);
+          if (dutiesAtEpoch.dutiesByIndex.size === 0) {
+            this.dutiesByIndexByEpoch.delete(epoch);
+          }
+        }
+      }
+    }
   }
 
   /** Returns all `ValidatorDuty` for the given `slot` */

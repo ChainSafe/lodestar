@@ -71,6 +71,13 @@ describe("execution / engine / utils", () => {
         [ExecutionEngineState.SYNCED, ExecutionEngineState.OFFLINE],
         [ExecutionEngineState.SYNCING, ExecutionEngineState.OFFLINE],
       ],
+      [ExecutionPayloadStatus.INVALID_INCLUSION_LIST]: [
+        [ExecutionEngineState.ONLINE, ExecutionEngineState.SYNCING],
+        [ExecutionEngineState.AUTH_FAILED, ExecutionEngineState.SYNCING],
+        [ExecutionEngineState.OFFLINE, ExecutionEngineState.SYNCING],
+        [ExecutionEngineState.SYNCED, ExecutionEngineState.SYNCING],
+        [ExecutionEngineState.SYNCING, ExecutionEngineState.SYNCING],
+      ],
       ["unknown" as ExecutionPayloadStatus]: [
         [ExecutionEngineState.ONLINE, ExecutionEngineState.ONLINE],
         [ExecutionEngineState.AUTH_FAILED, ExecutionEngineState.ONLINE],

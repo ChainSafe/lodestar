@@ -2,7 +2,16 @@ import {fromHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {computeTotalBalance} from "../../../src/forkChoice/store.js";
-import {ExecutionStatus, ForkChoice, IForkChoiceStore, ProtoArray, ProtoBlock} from "../../../src/index.js";
+import {
+  ExecutionStatus,
+  ForkChoice,
+  IForkChoiceStore,
+  InclusionListCommitteeRootStore,
+  InclusionListEquivocatorStore,
+  InclusionListStore,
+  ProtoArray,
+  ProtoBlock,
+} from "../../../src/index.js";
 
 const genesisSlot = 0;
 const genesisEpoch = 0;
@@ -52,6 +61,9 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
     unrealizedFinalizedCheckpoint: {epoch: genesisEpoch, root: fromHexString(genesisRoot), rootHex: genesisRoot},
     justifiedBalancesGetter: () => balances,
     equivocatingIndices: new Set(Array.from({length: opts.initialEquivocatedCount}, (_, i) => i)),
+    inclusionLists: new InclusionListStore(),
+    inclusionListEquivocators: new InclusionListEquivocatorStore(),
+    unsatisifiedInclusionListBlocks: new InclusionListCommitteeRootStore(),
   };
 
   const forkchoice = new ForkChoice(config, fcStore, protoArr);
