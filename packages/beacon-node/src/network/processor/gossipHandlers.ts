@@ -282,7 +282,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     seenTimestampSec: number
   ): Promise<BlockInput | NullBlockInput> {
     metrics?.peerDas.dataColumnSidecarProcessingRequests.inc();
-    const verificationTimer = metrics?.peerDas.dataColumnSidecarGossipVerificationTime.startTimer();
+    const verificationStartTimeSec = Date.now() / 1000;
 
     const dataColumnBlockHeader = dataColumnSidecar.signedBlockHeader.message;
     const slot = dataColumnBlockHeader.slot;
@@ -290,15 +290,12 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     const blockShortHex = prettyBytes(blockRootHex);
 
     const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
-    const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
 
     try {
       await validateGossipDataColumnSidecar(chain, dataColumnSidecar, gossipSubnet, metrics);
       const recvToValidation = Date.now() / 1000 - seenTimestampSec;
-      const validationTime = recvToValidation - recvToValLatency;
 
       metrics?.gossipDataColumn.recvToValidation.observe(recvToValidation);
-      metrics?.gossipDataColumn.validationTime.observe(validationTime);
 
       const {blockInput, blockInputMeta} = chain.seenGossipBlockInput.getGossipBlockInput(
         config,
@@ -310,6 +307,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         metrics
       );
 
+      const verificationTime = Date.now() / 1000 - verificationStartTimeSec;
+      metrics?.peerDas.dataColumnSidecarGossipVerificationTime.observe(verificationTime);
       metrics?.peerDas.dataColumnSidecarProcessingSuccesses.inc();
 
       chain.emitter.emit(routes.events.EventType.dataColumnSidecar, {
@@ -328,9 +327,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         gossipSubnet,
         columnIndex: dataColumnSidecar.index,
         ...blockInputMeta,
-        recvToValLatency,
         recvToValidation,
-        validationTime,
+        verificationTime,
       });
 
       return blockInput;

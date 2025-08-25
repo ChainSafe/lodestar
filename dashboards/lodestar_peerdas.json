@@ -596,12 +596,95 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Time elapsed between data column received and data column validated",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 20
+      },
+      "id": 69,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(lodestar_gossip_data_column_received_to_gossip_validate_seconds_bucket[$rate_interval])",
+          "instant": false,
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Data column recv to gossip validation delay",
+      "type": "timeseries"
+    },
+    {
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 20
+        "y": 26
       },
       "id": 58,
       "panels": [],
@@ -661,7 +744,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 21
+        "y": 27
       },
       "id": 50,
       "interval": "30s",
@@ -777,7 +860,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 21
+        "y": 27
       },
       "id": 56,
       "interval": "30s",
@@ -868,7 +951,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 27
+        "y": 33
       },
       "id": 57,
       "interval": "30s",
@@ -958,7 +1041,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 27
+        "y": 33
       },
       "id": 49,
       "options": {
@@ -998,7 +1081,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 33
+        "y": 39
       },
       "id": 60,
       "panels": [],
@@ -1057,7 +1140,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 34
+        "y": 40
       },
       "id": 21,
       "options": {
@@ -1142,7 +1225,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 34
+        "y": 40
       },
       "id": 22,
       "options": {
@@ -1226,7 +1309,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 40
+        "y": 46
       },
       "id": 24,
       "options": {
@@ -1280,7 +1363,7 @@
         "h": 6,
         "w": 6,
         "x": 12,
-        "y": 40
+        "y": 46
       },
       "id": 36,
       "options": {
@@ -1337,7 +1420,7 @@
         "h": 6,
         "w": 6,
         "x": 18,
-        "y": 40
+        "y": 46
       },
       "id": 53,
       "options": {
@@ -1380,7 +1463,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 46
+        "y": 52
       },
       "id": 59,
       "panels": [],
@@ -1438,7 +1521,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 47
+        "y": 53
       },
       "id": 14,
       "interval": "30s",
@@ -1526,7 +1609,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 47
+        "y": 53
       },
       "id": 25,
       "interval": "30s",
@@ -1611,7 +1694,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 53
+        "y": 59
       },
       "id": 64,
       "options": {
@@ -1694,7 +1777,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 53
+        "y": 59
       },
       "id": 67,
       "options": {
@@ -1777,7 +1860,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 59
+        "y": 65
       },
       "id": 68,
       "options": {

@@ -730,13 +730,8 @@ export function createLodestarMetrics(
     },
     gossipDataColumn: {
       recvToValidation: register.histogram({
-        name: "lodestar_gossip_data_column_received_to_gossip_validate",
+        name: "lodestar_gossip_data_column_received_to_gossip_validate_seconds",
         help: "Time elapsed between data column received and data column validation",
-        buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
-      }),
-      validationTime: register.histogram({
-        name: "lodestar_gossip_data_column_gossip_validate_time",
-        help: "Time elapsed for data column validation",
         buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
       }),
     },
