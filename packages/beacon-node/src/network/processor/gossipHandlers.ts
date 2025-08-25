@@ -344,8 +344,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       }
 
       throw e;
-    } finally {
-      verificationTimer?.();
     }
   }
 
