@@ -892,7 +892,7 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
           attDataRootHex,
           attestation,
           committeeIndex,
-          committeeValidatorIndex,
+          validatorCommitteeIndex,
           committeeSize,
         } = validationResult.result;
         chain.validatorMonitor?.registerGossipUnaggregatedAttestation(
@@ -909,7 +909,7 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
               committeeIndex,
               attestation,
               attDataRootHex,
-              committeeValidatorIndex,
+              validatorCommitteeIndex,
               committeeSize
             );
             metrics?.opPool.attestationPool.gossipInsertOutcome.inc({insertOutcome});
