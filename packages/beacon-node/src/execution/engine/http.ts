@@ -372,7 +372,9 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     // Once on capella, should this need to be permanently switched to v2 when payload attrs
     // not provided
     const method =
-      ForkSeq[fork] >= ForkSeq.deneb
+      ForkSeq[fork] >= ForkSeq.eip7805
+        ? "engine_forkchoiceUpdatedV4"
+      : ForkSeq[fork] >= ForkSeq.deneb
         ? "engine_forkchoiceUpdatedV3"
         : ForkSeq[fork] >= ForkSeq.capella
           ? "engine_forkchoiceUpdatedV2"
