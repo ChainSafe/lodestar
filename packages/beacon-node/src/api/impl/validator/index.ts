@@ -834,8 +834,8 @@ export function getValidatorApi(
 
     if (engine.status === "fulfilled" && builder.status === "fulfilled") {
       const result = selectBlockProductionSource({
-        builderBlockValue: builder.value.executionPayloadValue + builder.value.consensusBlockValue,
-        engineBlockValue: engine.value.executionPayloadValue + engine.value.consensusBlockValue,
+        builderExecutionPayloadValue: builder.value.executionPayloadValue,
+        engineExecutionPayloadValue: engine.value.executionPayloadValue,
         builderBoostFactor,
         builderSelection,
       });

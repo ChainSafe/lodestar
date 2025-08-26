@@ -1,7 +1,7 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {ForkPostElectra, ForkPreElectra, SYNC_COMMITTEE_SUBNET_SIZE, isForkPostElectra} from "@lodestar/params";
-import {Attestation, Epoch, SingleAttestation, isElectraAttestation, ssz} from "@lodestar/types";
+import {Attestation, Epoch, SingleAttestation, isElectraAttestation, ssz, sszTypesFor} from "@lodestar/types";
 import {
   AttestationError,
   AttestationErrorCode,
@@ -96,6 +96,7 @@ export function getBeaconPoolApi({
     },
 
     async submitPoolAttestationsV2({signedAttestations}) {
+      const fork = chain.config.getForkName(chain.clock.currentSlot);
       const seenTimestampSec = Date.now() / 1000;
       const failures: FailureList = [];
       // api attestation has high priority, we allow them to be added to pool even when it's late
@@ -106,7 +107,6 @@ export function getBeaconPoolApi({
       await Promise.all(
         signedAttestations.map(async (attestation, i) => {
           try {
-            const fork = chain.config.getForkName(chain.clock.currentSlot);
             const validateFn = () => validateApiAttestation(fork, chain, {attestation, serializedData: null});
             const {slot, beaconBlockRoot} = attestation.data;
             // when a validator is configured with multiple beacon node urls, this attestation data may come from another beacon node
@@ -163,7 +163,7 @@ export function getBeaconPoolApi({
             failures.push({index: i, message: (e as Error).message});
             logger.error(`Error on submitPoolAttestations [${i}]`, logCtx, e as Error);
             if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
-              chain.persistInvalidSszValue(ssz.phase0.Attestation, attestation, "api_reject");
+              chain.persistInvalidSszValue(sszTypesFor(fork).SingleAttestation, attestation, "api_reject");
             }
           }
         })
