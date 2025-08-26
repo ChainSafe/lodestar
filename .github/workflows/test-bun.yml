@@ -18,20 +18,30 @@ jobs:
     runs-on: buildjet-4vcpu-ubuntu-2204
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: yarn
+
+      # Yarn 1 check for engine version and failed with
+      # error root@: The engine "node" is incompatible with this module. Expected version ">=22 <23". Got "24.3.0"
+      - name: Install jq
+        uses: dcarbone/install-jq-action@v3.2.0
+      - name: Update engines with Bun's Node version
+        run: |
+          echo "NODE_RUNTIME_VERSION=$(bun -e 'console.log(process.versions.node)')" >> "$GITHUB_ENV"
+      - name: Update package engine dependency
+        run: |
+          jq --arg version ">=$NODE_RUNTIME_VERSION" '.engines.node = $version' package.json > temp.json && mv temp.json package.json
+      - name: Detect engine version
+        run: |
+          jq .engines.node package.json
+
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
       - name: Install Yarn
         run: bun install -g npm:yarn
       - name: Install
-        run: yarn install --frozen-lockfile
+        run: bunx --bun yarn install --frozen-lockfile
       - name: Build
-        run: yarn build
+        run: bunx --bun run build
       - name: Unit Tests
         # These packages are not testable yet in Bun because of `@chainsafe/blst` dependency.
         run: excluded=(beacon-node prover light-client cli); for pkg in packages/*/; do [[ ! " ${excluded[@]} " =~ " $(basename "$pkg") " ]] && echo "Testing $(basename "$pkg")" && (cd "$pkg" && bun run --bun test:unit); done
