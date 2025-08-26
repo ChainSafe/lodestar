@@ -34,7 +34,7 @@ jobs:
         run: bun install --no-save || true
 
       - name: Build
-        run: bunx --bun run build
+        run: bun --bun run build
 
       - name: Unit Tests
         # These packages are not testable yet in Bun because of `@chainsafe/blst` dependency.
