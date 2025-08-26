@@ -103,7 +103,6 @@ export type EngineApiRpcParamTypes = {
    * 1. DATA - 32 bytes - parent hash which returned inclusion list should be built upon
    */
   engine_getInclusionListV1: [DATA];
-
 };
 
 export type PayloadStatus = {
@@ -157,7 +156,6 @@ export type EngineApiRpcReturnTypes = {
   engine_getBlobsV2: BlobAndProofV2Rpc[] | null;
 
   engine_getInclusionListV1: InclusionListRpc;
-
 };
 
 type ExecutionPayloadRpcWithValue = {
@@ -402,7 +400,9 @@ export function serializePayloadAttributes(data: PayloadAttributes): PayloadAttr
     suggestedFeeRecipient: data.suggestedFeeRecipient,
     withdrawals: data.withdrawals?.map(serializeWithdrawal),
     parentBeaconBlockRoot: data.parentBeaconBlockRoot ? bytesToData(data.parentBeaconBlockRoot) : undefined,
-    inclusionListTransactions: data.inclusionListTransactions ? serializeInclusionList(data.inclusionListTransactions) : undefined,
+    inclusionListTransactions: data.inclusionListTransactions
+      ? serializeInclusionList(data.inclusionListTransactions)
+      : undefined,
   };
 }
 

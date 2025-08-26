@@ -19,10 +19,7 @@ import {ClockEvent} from "../util/clock.js";
 import {isQueueErrorAborted} from "../util/queue/index.js";
 import {ForkchoiceCaller} from "./forkChoice/index.js";
 import {IBeaconChain} from "./interface.js";
-import {
-  getPayloadAttributesForSSE,
-  prepareExecutionPayload,
-} from "./produceBlock/produceBlockBody.js";
+import {getPayloadAttributesForSSE, prepareExecutionPayload} from "./produceBlock/produceBlockBody.js";
 import {RegenCaller} from "./regen/index.js";
 
 /* With 12s slot times, this scheduler will run 4s before the start of each slot (`12 / 3 = 4`). */
@@ -197,7 +194,6 @@ export class PrepareNextSlotScheduler {
             proposerIndex,
             feeRecipient,
           });
-
         }
 
         this.computeStateHashTreeRoot(updatedPrepareState, isEpochTransition);
@@ -282,5 +278,4 @@ export class PrepareNextSlotScheduler {
       }
     }
   }
-
 }

@@ -10,10 +10,7 @@ export function byteArrayEquals(a: Uint8Array | Root, b: Uint8Array | Root): boo
   return true;
 }
 
-export function byteArrayArrayEquals(
-  arrA: Uint8Array[],
-  arrB: Uint8Array[]
-): boolean {
+export function byteArrayArrayEquals(arrA: Uint8Array[], arrB: Uint8Array[]): boolean {
   if (arrA.length !== arrB.length) return false;
 
   for (let i = 0; i < arrA.length; i++) {

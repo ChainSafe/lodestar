@@ -8,7 +8,10 @@ import {ssz as primitiveSsz} from "../primitive/index.js";
 const {Slot, Root, BLSSignature, ValidatorIndex} = primitiveSsz;
 
 export const InclusionListCommittee = new VectorBasicType(ValidatorIndex, INCLUSION_LIST_COMMITTEE_SIZE);
-export const InclusionListTransactions = new ListCompositeType(bellatrixSsz.Transaction, MAX_TRANSACTIONS_PER_PAYLOAD * INCLUSION_LIST_COMMITTEE_SIZE);
+export const InclusionListTransactions = new ListCompositeType(
+  bellatrixSsz.Transaction,
+  MAX_TRANSACTIONS_PER_PAYLOAD * INCLUSION_LIST_COMMITTEE_SIZE
+);
 
 export const InclusionList = new ContainerType(
   {
