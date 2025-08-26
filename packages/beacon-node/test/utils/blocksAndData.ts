@@ -16,16 +16,8 @@ import {SignedBeaconBlock, Slot, deneb, fulu, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {VersionedHashes} from "../../src/execution/index.js";
 import {computeNodeIdFromPrivateKey} from "../../src/network/subnets/index.js";
-import {
-  computePreFuluKzgCommitmentsInclusionProof,
-  getBlobSidecars,
-  kzgCommitmentToVersionedHash,
-} from "../../src/util/blobs.js";
-import {
-  CustodyConfig,
-  computePostFuluKzgCommitmentsInclusionProof,
-  getDataColumnSidecarsFromBlock,
-} from "../../src/util/dataColumns.js";
+import {getBlobSidecars, kzgCommitmentToVersionedHash} from "../../src/util/blobs.js";
+import {CustodyConfig, computePostFuluKzgCommitmentsInclusionProof} from "../../src/util/dataColumns.js";
 import {kzg} from "../../src/util/kzg.js";
 import {ROOT_SIZE} from "../../src/util/sszBytes.js";
 

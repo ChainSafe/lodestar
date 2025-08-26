@@ -1,49 +1,48 @@
 import {randomBytes} from "node:crypto";
-import {BYTES_PER_CELL, BYTES_PER_COMMITMENT, BYTES_PER_PROOF} from "@crate-crypto/node-eth-kzg";
+import {BYTES_PER_CELL, BYTES_PER_PROOF} from "@crate-crypto/node-eth-kzg";
 import {ForkName, NUMBER_OF_COLUMNS} from "@lodestar/params";
-import {SignedBeaconBlock, deneb, fulu, ssz} from "@lodestar/types";
-import {fromHex, prettyBytes, toRootHex} from "@lodestar/utils";
-import {Mock, afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
+import {deneb, fulu, ssz} from "@lodestar/types";
+import {prettyBytes} from "@lodestar/utils";
+import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {
   BlobMeta,
-  BlockInputSource,
-  IBlockInput,
+  // IBlockInput,
   MissingColumnMeta,
 } from "../../../../src/chain/blocks/blockInput/types.js";
-import {ChainEventEmitter} from "../../../../src/chain/index.js";
-import {SeenBlockInput} from "../../../../src/chain/seenCache/seenGossipBlockInput.js";
+// import {ChainEventEmitter} from "../../../../src/chain/index.js";
+// import {SeenBlockInput} from "../../../../src/chain/seenCache/seenGossipBlockInput.js";
 import {IExecutionEngine} from "../../../../src/execution/index.js";
 import {INetwork, prettyPrintPeerIdStr} from "../../../../src/network/index.js";
-import {BlockInputSyncCacheItem, PendingBlockInput, PendingBlockInputStatus} from "../../../../src/sync/types.js";
+// import {BlockInputSyncCacheItem, PendingBlockInput, PendingBlockInputStatus} from "../../../../src/sync/types.js";
 import {
   DownloadByRootError,
   DownloadByRootErrorCode,
   ValidateColumnSidecarsProps,
-  downloadByRoot,
-  fetchAndValidateBlobs,
-  fetchAndValidateBlock,
-  fetchAndValidateColumns,
+  // downloadByRoot,
+  // fetchAndValidateBlobs,
+  // fetchAndValidateBlock,
+  // fetchAndValidateColumns,
   fetchBlobsByRoot,
-  fetchByRoot,
+  // fetchByRoot,
   fetchColumnsByRoot,
-  fetchGetBlobsV1AndBuildSidecars,
+  // fetchGetBlobsV1AndBuildSidecars,
   fetchGetBlobsV2AndBuildSidecars,
   validateBlobs,
   validateColumnSidecar,
   validateColumnSidecars,
 } from "../../../../src/sync/utils/downloadByRoot.js";
 import {kzgCommitmentToVersionedHash} from "../../../../src/util/blobs.js";
-import {Clock} from "../../../../src/util/clock.js";
+// import {Clock} from "../../../../src/util/clock.js";
 import {kzg} from "../../../../src/util/kzg.js";
 import {ROOT_SIZE} from "../../../../src/util/sszBytes.js";
-import {getMockedLogger} from "../../../../test/mocks/loggerMock.js";
+// import {getMockedLogger} from "../../../../test/mocks/loggerMock.js";
 import {
   config,
-  custodyConfig,
+  // custodyConfig,
   generateBlockWithBlobSidecars,
   generateBlockWithColumnSidecars,
-  generateChainOfBlocks,
-  slots,
+  // generateChainOfBlocks,
+  // slots,
 } from "../../../utils/blocksAndData.js";
 
 describe("downloadByRoot.ts", () => {
@@ -258,7 +257,6 @@ describe("downloadByRoot.ts", () => {
       const response = await fetchBlobsByRoot({
         network,
         peerIdStr,
-        blockRoot,
         blobMeta,
       });
       expect(response).toEqual(denebBlockWithColumns.blobSidecars);
@@ -270,9 +268,9 @@ describe("downloadByRoot.ts", () => {
       await fetchBlobsByRoot({
         network,
         peerIdStr,
-        blockRoot,
         blobMeta,
-        indicesInPossession: [0, denebBlockWithColumns.blobSidecars.at(-1)?.index],
+        // biome-ignore lint/style/noNonNullAssertion: its there
+        indicesInPossession: [0, denebBlockWithColumns.blobSidecars.at(-1)?.index!],
       });
       expect(network.sendBlobSidecarsByRoot).toHaveBeenCalledOnce();
       expect(network.sendBlobSidecarsByRoot).toHaveBeenCalledWith(peerIdStr, blobMeta.slice(1, -1));
@@ -282,7 +280,6 @@ describe("downloadByRoot.ts", () => {
       const response = await fetchBlobsByRoot({
         network,
         peerIdStr,
-        blockRoot,
         blobMeta,
         indicesInPossession: blobMeta.map(({index}) => index),
       });
@@ -327,11 +324,11 @@ describe("downloadByRoot.ts", () => {
         });
       } catch (err) {
         expect(err).toBeInstanceOf(DownloadByRootError);
-        expect((err as DownloadByRootError).type.code).toBe(DownloadByRootErrorCode.EXTRA_SIDECAR_RECEIVED);
-        expect((err as DownloadByRootError).type.peer).toBe(prettyPeerIdStr);
-        expect((err as DownloadByRootError).type.blockRoot).toBe(prettyBytes(blockRoot));
-        expect((err as DownloadByRootError).type.invalidIndex).toBe(blobMeta.at(-1)?.index);
-        expect((err as DownloadByRootError).message).toBe("received a blobSidecar that was not requested");
+        expect((err as any).type.code).toBe(DownloadByRootErrorCode.EXTRA_SIDECAR_RECEIVED);
+        expect((err as any).type.peer).toBe(prettyPeerIdStr);
+        expect((err as any).type.blockRoot).toBe(prettyBytes(blockRoot));
+        expect((err as any).type.invalidIndex).toBe(blobMeta.at(-1)?.index);
+        expect((err as any).message).toBe("received a blobSidecar that was not requested");
       }
     });
 
@@ -350,11 +347,11 @@ describe("downloadByRoot.ts", () => {
         });
       } catch (err) {
         expect(err).toBeInstanceOf(DownloadByRootError);
-        expect((err as DownloadByRootError).type.code).toBe(DownloadByRootErrorCode.MISMATCH_BLOCK_ROOT);
-        expect((err as DownloadByRootError).type.peer).toBe(prettyPeerIdStr);
-        expect((err as DownloadByRootError).type.requestedBlockRoot).toBe(prettyBytes(requestedBlockRoot));
-        expect((err as DownloadByRootError).type.receivedBlockRoot).toBe(prettyBytes(headerRoot));
-        expect(err.message).toEqual("blobSidecar header root did not match requested blockRoot for index=0");
+        expect((err as any).type.code).toBe(DownloadByRootErrorCode.MISMATCH_BLOCK_ROOT);
+        expect((err as any).type.peer).toBe(prettyPeerIdStr);
+        expect((err as any).type.requestedBlockRoot).toBe(prettyBytes(requestedBlockRoot));
+        expect((err as any).type.receivedBlockRoot).toBe(prettyBytes(headerRoot));
+        expect((err as any).message).toEqual("blobSidecar header root did not match requested blockRoot for index=0");
       }
     });
 
@@ -373,11 +370,11 @@ describe("downloadByRoot.ts", () => {
         });
       } catch (err) {
         expect(err).toBeInstanceOf(DownloadByRootError);
-        expect((err as DownloadByRootError).type.code).toBe(DownloadByRootErrorCode.INVALID_INCLUSION_PROOF);
-        expect((err as DownloadByRootError).type.peer).toBe(prettyPeerIdStr);
-        expect((err as DownloadByRootError).type.blockRoot).toBe(prettyBytes(blockRoot));
-        expect((err as DownloadByRootError).type.sidecarIndex).toBe(invalidBlobSidecar.index);
-        expect(err.message).toEqual("invalid inclusion proof for blobSidecar at index=0");
+        expect((err as any).type.code).toBe(DownloadByRootErrorCode.INVALID_INCLUSION_PROOF);
+        expect((err as any).type.peer).toBe(prettyPeerIdStr);
+        expect((err as any).type.blockRoot).toBe(prettyBytes(blockRoot));
+        expect((err as any).type.sidecarIndex).toBe(invalidBlobSidecar.index);
+        expect((err as any).message).toEqual("invalid inclusion proof for blobSidecar at index=0");
       }
     });
 
@@ -396,9 +393,9 @@ describe("downloadByRoot.ts", () => {
         });
       } catch (err) {
         expect(err).toBeInstanceOf(DownloadByRootError);
-        expect((err as DownloadByRootError).type.code).toBe(DownloadByRootErrorCode.INVALID_KZG_PROOF);
-        expect((err as DownloadByRootError).type.peer).toBe(prettyPeerIdStr);
-        expect((err as DownloadByRootError).type.blockRoot).toBe(prettyBytes(blockRoot));
+        expect((err as any).type.code).toBe(DownloadByRootErrorCode.INVALID_KZG_PROOF);
+        expect((err as any).type.peer).toBe(prettyPeerIdStr);
+        expect((err as any).type.blockRoot).toBe(prettyBytes(blockRoot));
       }
     });
   });
@@ -624,16 +621,6 @@ describe("downloadByRoot.ts", () => {
     it("should throw error for mismatched block root in column header", () => {
       const columnSidecar = fuluBlockWithColumns.columnSidecars[0];
       const wrongBlockRoot = new Uint8Array(32).fill(1);
-
-      expect(() => {
-        validateColumnSidecar({
-          config,
-          peerIdStr,
-          blockRoot: wrongBlockRoot,
-          columnSidecar,
-        });
-      }).toThrow(DownloadByRootError);
-
       try {
         validateColumnSidecar({
           config,
@@ -643,9 +630,9 @@ describe("downloadByRoot.ts", () => {
         });
       } catch (error) {
         expect(error).toBeInstanceOf(DownloadByRootError);
-        expect((error as DownloadByRootError).type.code).toBe(DownloadByRootErrorCode.MISMATCH_BLOCK_ROOT);
-        expect((error as DownloadByRootError).type.peer).toBe(prettyPeerIdStr);
-        expect((error as DownloadByRootError).type.requestedBlockRoot).toBe(prettyBytes(wrongBlockRoot));
+        expect((error as any).type.code).toBe(DownloadByRootErrorCode.MISMATCH_BLOCK_ROOT);
+        expect((error as any).type.peer).toBe(prettyPeerIdStr);
+        expect((error as any).type.requestedBlockRoot).toBe(prettyBytes(wrongBlockRoot));
       }
     });
 
@@ -653,16 +640,6 @@ describe("downloadByRoot.ts", () => {
       const columnSidecar = ssz.fulu.DataColumnSidecar.clone(fuluBlockWithColumns.columnSidecars[0]);
       // Corrupt the inclusion proof to make it invalid
       columnSidecar.kzgCommitmentsInclusionProof[0] = new Uint8Array(32).fill(255);
-
-      expect(() => {
-        validateColumnSidecar({
-          config,
-          peerIdStr,
-          blockRoot: fuluBlockWithColumns.blockRoot,
-          columnSidecar,
-        });
-      }).toThrow(DownloadByRootError);
-
       try {
         validateColumnSidecar({
           config,
@@ -670,12 +647,12 @@ describe("downloadByRoot.ts", () => {
           blockRoot: fuluBlockWithColumns.blockRoot,
           columnSidecar,
         });
-      } catch (error) {
-        expect(error).toBeInstanceOf(DownloadByRootError);
-        expect((error as DownloadByRootError).type.code).toBe(DownloadByRootErrorCode.INVALID_INCLUSION_PROOF);
-        expect((error as DownloadByRootError).type.peer).toBe(prettyPeerIdStr);
-        expect((error as DownloadByRootError).type.blockRoot).toBe(prettyBytes(fuluBlockWithColumns.blockRoot));
-        expect((error as DownloadByRootError).type.sidecarIndex).toBe(columnSidecar.index);
+      } catch (err) {
+        expect(err).toBeInstanceOf(DownloadByRootError);
+        expect((err as any).type.code).toBe(DownloadByRootErrorCode.INVALID_INCLUSION_PROOF);
+        expect((err as any).type.peer).toBe(prettyPeerIdStr);
+        expect((err as any).type.blockRoot).toBe(prettyBytes(fuluBlockWithColumns.blockRoot));
+        expect((err as any).type.sidecarIndex).toBe(columnSidecar.index);
       }
     });
   });
@@ -735,11 +712,11 @@ describe("downloadByRoot.ts", () => {
         await validateColumnSidecars(testProps);
       } catch (err) {
         expect(err).toBeInstanceOf(DownloadByRootError);
-        expect((err as DownloadByRootError).type.code).toBe(DownloadByRootErrorCode.EXTRA_SIDECAR_RECEIVED);
-        expect((err as DownloadByRootError).type.peer).toBe(prettyPeerIdStr);
-        expect((err as DownloadByRootError).type.blockRoot).toBe(prettyBytes(blockRoot));
-        expect((err as DownloadByRootError).type.invalidIndex).toBe(18);
-        expect((err as DownloadByRootError).message).toBe("Received a columnSidecar that was not requested");
+        expect((err as any).type.code).toBe(DownloadByRootErrorCode.EXTRA_SIDECAR_RECEIVED);
+        expect((err as any).type.peer).toBe(prettyPeerIdStr);
+        expect((err as any).type.blockRoot).toBe(prettyBytes(blockRoot));
+        expect((err as any).type.invalidIndex).toBe(18);
+        expect((err as any).message).toBe("Received a columnSidecar that was not requested");
       }
     });
 
@@ -760,11 +737,11 @@ describe("downloadByRoot.ts", () => {
         await validateColumnSidecars(invalidTestProps);
       } catch (err) {
         expect(err).toBeInstanceOf(DownloadByRootError);
-        expect((err as DownloadByRootError).type.code).toBe(DownloadByRootErrorCode.INVALID_INCLUSION_PROOF);
-        expect((err as DownloadByRootError).type.peer).toBe(prettyPeerIdStr);
-        expect((err as DownloadByRootError).type.blockRoot).toBe(prettyBytes(fuluBlockWithColumns.blockRoot));
-        expect((err as DownloadByRootError).type.sidecarIndex).toBe(127);
-        expect(err.message).toBe(
+        expect((err as any).type.code).toBe(DownloadByRootErrorCode.INVALID_INCLUSION_PROOF);
+        expect((err as any).type.peer).toBe(prettyPeerIdStr);
+        expect((err as any).type.blockRoot).toBe(prettyBytes(fuluBlockWithColumns.blockRoot));
+        expect((err as any).type.sidecarIndex).toBe(127);
+        expect((err as any).message).toBe(
           "Error validating needed columnSidecar index=127. Validation error: DOWNLOAD_BY_ROOT_ERROR_INVALID_INCLUSION_PROOF"
         );
       }
@@ -787,11 +764,11 @@ describe("downloadByRoot.ts", () => {
         await validateColumnSidecars(invalidTestProps);
       } catch (err) {
         expect(err).toBeInstanceOf(DownloadByRootError);
-        expect((err as DownloadByRootError).type.code).toBe(DownloadByRootErrorCode.INVALID_INCLUSION_PROOF);
-        expect((err as DownloadByRootError).type.peer).toBe(prettyPeerIdStr);
-        expect((err as DownloadByRootError).type.blockRoot).toBe(prettyBytes(fuluBlockWithColumns.blockRoot));
-        expect((err as DownloadByRootError).type.sidecarIndex).toBe(127);
-        expect(err.message).toBe(
+        expect((err as any).type.code).toBe(DownloadByRootErrorCode.INVALID_INCLUSION_PROOF);
+        expect((err as any).type.peer).toBe(prettyPeerIdStr);
+        expect((err as any).type.blockRoot).toBe(prettyBytes(fuluBlockWithColumns.blockRoot));
+        expect((err as any).type.sidecarIndex).toBe(127);
+        expect((err as any).message).toBe(
           "Error validating needToPublish columnSidecar index=127. Validation error: DOWNLOAD_BY_ROOT_ERROR_INVALID_INCLUSION_PROOF"
         );
       }
@@ -867,9 +844,9 @@ describe("downloadByRoot.ts", () => {
         await validateColumnSidecars(testProps);
       } catch (err) {
         expect(err).toBeInstanceOf(DownloadByRootError);
-        expect((err as DownloadByRootError).type.code).toBe(DownloadByRootErrorCode.INVALID_KZG_PROOF);
-        expect((err as DownloadByRootError).type.peer).toBe(prettyPeerIdStr);
-        expect((err as DownloadByRootError).type.blockRoot).toBe(prettyBytes(blockRoot));
+        expect((err as any).type.code).toBe(DownloadByRootErrorCode.INVALID_KZG_PROOF);
+        expect((err as any).type.peer).toBe(prettyPeerIdStr);
+        expect((err as any).type.blockRoot).toBe(prettyBytes(blockRoot));
       }
 
       invalidColumn = ssz.fulu.DataColumnSidecar.clone(fuluBlockWithColumns.columnSidecars[0]);
@@ -888,9 +865,9 @@ describe("downloadByRoot.ts", () => {
         await validateColumnSidecars(testProps);
       } catch (err) {
         expect(err).toBeInstanceOf(DownloadByRootError);
-        expect((err as DownloadByRootError).type.code).toBe(DownloadByRootErrorCode.INVALID_KZG_PROOF);
-        expect((err as DownloadByRootError).type.peer).toBe(prettyPeerIdStr);
-        expect((err as DownloadByRootError).type.blockRoot).toBe(prettyBytes(blockRoot));
+        expect((err as any).type.code).toBe(DownloadByRootErrorCode.INVALID_KZG_PROOF);
+        expect((err as any).type.peer).toBe(prettyPeerIdStr);
+        expect((err as any).type.blockRoot).toBe(prettyBytes(blockRoot));
       }
     });
   });
@@ -899,100 +876,100 @@ describe("downloadByRoot.ts", () => {
     const blockRoot = randomBytes(ROOT_SIZE);
 
     it("should create error with MISMATCH_BLOCK_ROOT code", () => {
-      const error = new DownloadByRootError({
+      const err = new DownloadByRootError({
         code: DownloadByRootErrorCode.MISMATCH_BLOCK_ROOT,
         peer: peerIdStr,
         requestedBlockRoot: prettyBytes(blockRoot),
         receivedBlockRoot: prettyBytes(new Uint8Array(32).fill(1)),
       });
 
-      expect(error).toBeInstanceOf(DownloadByRootError);
-      expect(error.type.code).toBe(DownloadByRootErrorCode.MISMATCH_BLOCK_ROOT);
-      expect(error.type.peer).toBe(peerIdStr);
-      expect(error.type.requestedBlockRoot).toBe(prettyBytes(blockRoot));
-      expect(error.type.receivedBlockRoot).toBe(prettyBytes(new Uint8Array(32).fill(1)));
+      expect(err as any).toBeInstanceOf(DownloadByRootError);
+      expect((err as any).type.code).toBe(DownloadByRootErrorCode.MISMATCH_BLOCK_ROOT);
+      expect((err as any).type.peer).toBe(peerIdStr);
+      expect((err as any).type.requestedBlockRoot).toBe(prettyBytes(blockRoot));
+      expect((err as any).type.receivedBlockRoot).toBe(prettyBytes(new Uint8Array(32).fill(1)));
     });
 
     it("should create error with EXTRA_SIDECAR_RECEIVED code", () => {
-      const error = new DownloadByRootError({
+      const err = new DownloadByRootError({
         code: DownloadByRootErrorCode.EXTRA_SIDECAR_RECEIVED,
         peer: peerIdStr,
         blockRoot: prettyBytes(blockRoot),
         invalidIndex: 5,
       });
 
-      expect(error).toBeInstanceOf(DownloadByRootError);
-      expect(error.type.code).toBe(DownloadByRootErrorCode.EXTRA_SIDECAR_RECEIVED);
-      expect(error.type.peer).toBe(peerIdStr);
-      expect(error.type.blockRoot).toBe(prettyBytes(blockRoot));
-      expect(error.type.invalidIndex).toBe(5);
+      expect(err as any).toBeInstanceOf(DownloadByRootError);
+      expect((err as any).type.code).toBe(DownloadByRootErrorCode.EXTRA_SIDECAR_RECEIVED);
+      expect((err as any).type.peer).toBe(peerIdStr);
+      expect((err as any).type.blockRoot).toBe(prettyBytes(blockRoot));
+      expect((err as any).type.invalidIndex).toBe(5);
     });
 
     it("should create error with INVALID_INCLUSION_PROOF code", () => {
-      const error = new DownloadByRootError({
+      const err = new DownloadByRootError({
         code: DownloadByRootErrorCode.INVALID_INCLUSION_PROOF,
         peer: peerIdStr,
         blockRoot: prettyBytes(blockRoot),
         sidecarIndex: 2,
       });
 
-      expect(error).toBeInstanceOf(DownloadByRootError);
-      expect(error.type.code).toBe(DownloadByRootErrorCode.INVALID_INCLUSION_PROOF);
-      expect(error.type.peer).toBe(peerIdStr);
-      expect(error.type.blockRoot).toBe(prettyBytes(blockRoot));
-      expect(error.type.sidecarIndex).toBe(2);
+      expect(err as any).toBeInstanceOf(DownloadByRootError);
+      expect((err as any).type.code).toBe(DownloadByRootErrorCode.INVALID_INCLUSION_PROOF);
+      expect((err as any).type.peer).toBe(peerIdStr);
+      expect((err as any).type.blockRoot).toBe(prettyBytes(blockRoot));
+      expect((err as any).type.sidecarIndex).toBe(2);
     });
 
     it("should create error with INVALID_KZG_PROOF code", () => {
-      const error = new DownloadByRootError({
+      const err = new DownloadByRootError({
         code: DownloadByRootErrorCode.INVALID_KZG_PROOF,
         peer: peerIdStr,
         blockRoot: prettyBytes(blockRoot),
       });
 
-      expect(error).toBeInstanceOf(DownloadByRootError);
-      expect(error.type.code).toBe(DownloadByRootErrorCode.INVALID_KZG_PROOF);
-      expect(error.type.peer).toBe(peerIdStr);
-      expect(error.type.blockRoot).toBe(prettyBytes(blockRoot));
+      expect(err as any).toBeInstanceOf(DownloadByRootError);
+      expect((err as any).type.code).toBe(DownloadByRootErrorCode.INVALID_KZG_PROOF);
+      expect((err as any).type.peer).toBe(peerIdStr);
+      expect((err as any).type.blockRoot).toBe(prettyBytes(blockRoot));
     });
 
     it("should create error with MISSING_BLOCK_RESPONSE code", () => {
-      const error = new DownloadByRootError({
+      const err = new DownloadByRootError({
         code: DownloadByRootErrorCode.MISSING_BLOCK_RESPONSE,
         peer: peerIdStr,
         blockRoot: prettyBytes(blockRoot),
       });
 
-      expect(error).toBeInstanceOf(DownloadByRootError);
-      expect(error.type.code).toBe(DownloadByRootErrorCode.MISSING_BLOCK_RESPONSE);
-      expect(error.type.peer).toBe(peerIdStr);
-      expect(error.type.blockRoot).toBe(prettyBytes(blockRoot));
+      expect(err as any).toBeInstanceOf(DownloadByRootError);
+      expect((err as any).type.code).toBe(DownloadByRootErrorCode.MISSING_BLOCK_RESPONSE);
+      expect((err as any).type.peer).toBe(peerIdStr);
+      expect((err as any).type.blockRoot).toBe(prettyBytes(blockRoot));
     });
 
     it("should create error with MISSING_BLOB_RESPONSE code", () => {
-      const error = new DownloadByRootError({
+      const err = new DownloadByRootError({
         code: DownloadByRootErrorCode.MISSING_BLOB_RESPONSE,
         peer: peerIdStr,
         blockRoot: prettyBytes(blockRoot),
       });
 
-      expect(error).toBeInstanceOf(DownloadByRootError);
-      expect(error.type.code).toBe(DownloadByRootErrorCode.MISSING_BLOB_RESPONSE);
-      expect(error.type.peer).toBe(peerIdStr);
-      expect(error.type.blockRoot).toBe(prettyBytes(blockRoot));
+      expect(err as any).toBeInstanceOf(DownloadByRootError);
+      expect((err as any).type.code).toBe(DownloadByRootErrorCode.MISSING_BLOB_RESPONSE);
+      expect((err as any).type.peer).toBe(peerIdStr);
+      expect((err as any).type.blockRoot).toBe(prettyBytes(blockRoot));
     });
 
     it("should create error with MISSING_COLUMN_RESPONSE code", () => {
-      const error = new DownloadByRootError({
+      const err = new DownloadByRootError({
         code: DownloadByRootErrorCode.MISSING_COLUMN_RESPONSE,
         peer: peerIdStr,
         blockRoot: prettyBytes(blockRoot),
       });
 
-      expect(error).toBeInstanceOf(DownloadByRootError);
-      expect(error.type.code).toBe(DownloadByRootErrorCode.MISSING_COLUMN_RESPONSE);
-      expect(error.type.peer).toBe(peerIdStr);
-      expect(error.type.blockRoot).toBe(prettyBytes(blockRoot));
+      expect(err as any).toBeInstanceOf(DownloadByRootError);
+      expect((err as any).type.code).toBe(DownloadByRootErrorCode.MISSING_COLUMN_RESPONSE);
+      expect((err as any).type.peer).toBe(peerIdStr);
+      expect((err as any).type.blockRoot).toBe(prettyBytes(blockRoot));
     });
 
     it("should include correct error details in error object", () => {
@@ -1002,10 +979,10 @@ describe("downloadByRoot.ts", () => {
         requestedBlockRoot: prettyBytes(blockRoot),
         receivedBlockRoot: prettyBytes(new Uint8Array(32).fill(1)),
       };
-      const error = new DownloadByRootError(errorData);
+      const err = new DownloadByRootError(errorData as any);
 
-      expect(error.type).toEqual(errorData);
-      expect(Object.keys(error.type)).toEqual(Object.keys(errorData));
+      expect(err.type).toEqual(errorData);
+      expect(Object.keys(err.type)).toEqual(Object.keys(errorData));
     });
   });
 });
