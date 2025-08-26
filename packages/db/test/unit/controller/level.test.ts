@@ -82,7 +82,7 @@ describe("LevelDB controller", () => {
     expect((await db.entries()).length).toBe(0);
   });
 
-  it.only("test batch", async () => {
+  it("test batch", async () => {
     const [
       {key: k1, value: v1},
       {key: k2, value: v2},
