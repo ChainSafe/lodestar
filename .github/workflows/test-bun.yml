@@ -45,6 +45,7 @@ jobs:
           export V=$(jq -r .version node_modules/typescript/package.json) && bun remove typescript && bun install --dev typescript@$V
           export V=$(jq -r .version node_modules/@biomejs/biome) && bun remove @biomejs/biome && bun install --dev @biomejs/biome@$V
           export V=$(jq -r .version node_modules/lerna) && bun remove lerna && bun install --dev lerna@$V
+          export V=$(jq -r .version node_modules/vitest) && bun remove vitest && bun install --dev vitest@$V
           bun install @lerna-lite/run
 
       - name: Build
