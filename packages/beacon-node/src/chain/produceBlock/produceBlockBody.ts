@@ -55,12 +55,10 @@ import {
   PayloadId,
   getExpectedGasLimit,
 } from "../../execution/index.js";
-import {Metrics} from "../../metrics/metrics.js";
 import {fromGraffitiBytes} from "../../util/graffiti.js";
 import {kzg} from "../../util/kzg.js";
 import type {BeaconChain} from "../chain.js";
 import {CommonBlockBody} from "../interface.js";
-import {InclusionListPool} from "../opPools/inclusionListPool.js";
 import {validateBlobsAndKzgCommitments, validateCellsAndKzgCommitments} from "./validateBlobsAndKzgCommitments.js";
 
 // Time to provide the EL to generate a payload from new payload id
@@ -509,6 +507,7 @@ export async function produceBlockBody<T extends BlockType>(
  * Expects `eth1MergeBlockFinder` to be actively searching for blocks well in advance to being called.
  *
  * @returns PayloadId = pow block found, null = pow NOT found
+ * TODO EIP7805: call ILStore to get IL txs. Feed them into PayloadAttributes
  */
 export async function prepareExecutionPayload(
   chain: {
@@ -587,24 +586,6 @@ export async function prepareExecutionPayload(
   // prepareNextSlot, which is an advance call to execution engine to start building payload
   // Actual payload isn't produced till getPayload is called.
   return {isPremerge: false, payloadId, prepType};
-}
-
-export async function prepareExecutionPayloadInclusionList(
-  chain: {executionEngine: IExecutionEngine; inclusionListPool: InclusionListPool; metrics: Metrics | null},
-  logger: Logger,
-  payloadId: PayloadId,
-  slot: Slot
-): Promise<void> {
-  const transactions = chain.inclusionListPool.getTransactions(slot);
-
-  await chain.executionEngine.updatePayloadWithInclusionList(payloadId, {transactions});
-
-  logger.verbose("Updated payload with inclusion list", {
-    slot,
-    payloadId,
-    numTransactions: transactions.length,
-  });
-  chain.metrics?.eip7805.inclusionListTransactionsSentToPayload.inc(transactions.length);
 }
 
 async function prepareExecutionPayloadHeader(

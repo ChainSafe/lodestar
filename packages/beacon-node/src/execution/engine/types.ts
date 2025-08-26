@@ -67,6 +67,10 @@ export type EngineApiRpcParamTypes = {
     forkChoiceData: {headBlockHash: DATA; safeBlockHash: DATA; finalizedBlockHash: DATA},
     payloadAttributes?: PayloadAttributesRpc,
   ];
+  engine_forkchoiceUpdatedV4: [
+    forkChoiceData: {headBlockHash: DATA; safeBlockHash: DATA; finalizedBlockHash: DATA},
+    payloadAttributes?: PayloadAttributesRpc,
+  ];
   /**
    * 1. payloadId: QUANTITY, 64 Bits - Identifier of the payload building process
    */
@@ -99,12 +103,6 @@ export type EngineApiRpcParamTypes = {
    * 1. DATA - 32 bytes - parent hash which returned inclusion list should be built upon
    */
   engine_getInclusionListV1: [DATA];
-
-  /**
-   * 1. DATA - 8 bytes - Identifier of the payload build process
-   * 2. DATA[] aka InclusionListV1
-   */
-  engine_updatePayloadWithInclusionListV1: [QUANTITY, InclusionListRpc];
 };
 
 export type PayloadStatus = {
@@ -135,6 +133,10 @@ export type EngineApiRpcReturnTypes = {
     payloadStatus: PayloadStatus;
     payloadId: QUANTITY | null;
   };
+  engine_forkchoiceUpdatedV4: {
+    payloadStatus: PayloadStatus;
+    payloadId: QUANTITY | null;
+  };
   /**
    * payloadId | Error: QUANTITY, 64 Bits - Identifier of the payload building process
    */
@@ -154,8 +156,6 @@ export type EngineApiRpcReturnTypes = {
   engine_getBlobsV2: BlobAndProofV2Rpc[] | null;
 
   engine_getInclusionListV1: InclusionListRpc;
-
-  engine_updatePayloadWithInclusionListV1: QUANTITY | null;
 };
 
 type ExecutionPayloadRpcWithValue = {
@@ -240,6 +240,8 @@ export type PayloadAttributesRpc = {
   withdrawals?: WithdrawalRpc[];
   /** DATA, 32 Bytes - value for the parentBeaconBlockRoot to be used for building block */
   parentBeaconBlockRoot?: DATA;
+  /** Array of DATA - array of inclusion list transaction objects.  */
+  inclusionListTransactions?: InclusionListRpc;
 };
 
 export type ClientVersionRpc = {
@@ -398,6 +400,9 @@ export function serializePayloadAttributes(data: PayloadAttributes): PayloadAttr
     suggestedFeeRecipient: data.suggestedFeeRecipient,
     withdrawals: data.withdrawals?.map(serializeWithdrawal),
     parentBeaconBlockRoot: data.parentBeaconBlockRoot ? bytesToData(data.parentBeaconBlockRoot) : undefined,
+    inclusionListTransactions: data.inclusionListTransactions
+      ? serializeInclusionList(data.inclusionListTransactions)
+      : undefined,
   };
 }
 

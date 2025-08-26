@@ -1,5 +1,5 @@
-import {BitVectorType, ContainerType, VectorBasicType} from "@chainsafe/ssz";
-import {INCLUSION_LIST_COMMITTEE_SIZE} from "@lodestar/params";
+import {BitVectorType, ContainerType, ListCompositeType, VectorBasicType} from "@chainsafe/ssz";
+import {INCLUSION_LIST_COMMITTEE_SIZE, MAX_TRANSACTIONS_PER_PAYLOAD} from "@lodestar/params";
 import {ssz as bellatrixSsz} from "../bellatrix/index.js";
 import {ssz as electraSsz} from "../electra/index.js";
 import {ssz as fuluSsz} from "../fulu/index.js";
@@ -8,15 +8,17 @@ import {ssz as primitiveSsz} from "../primitive/index.js";
 const {Slot, Root, BLSSignature, ValidatorIndex} = primitiveSsz;
 
 export const InclusionListCommittee = new VectorBasicType(ValidatorIndex, INCLUSION_LIST_COMMITTEE_SIZE);
+export const InclusionListTransactions = new ListCompositeType(
+  bellatrixSsz.Transaction,
+  MAX_TRANSACTIONS_PER_PAYLOAD * INCLUSION_LIST_COMMITTEE_SIZE
+);
 
 export const InclusionList = new ContainerType(
   {
     slot: Slot,
     validatorIndex: ValidatorIndex,
     inclusionListCommitteeRoot: Root,
-    // TODO EIP-7805: the list limit is unreasonable high, on gossip we will reject ILs over 8 Kib but we still
-    // deserialize before that and load them into memory, hence a sane list limit would be good
-    transactions: bellatrixSsz.Transactions,
+    transactions: InclusionListTransactions,
   },
   {typeName: "InclusionList", jsonCase: "eth2"}
 );
@@ -98,4 +100,21 @@ export const ExecutionPayloadHeader = new ContainerType(
     ...electraSsz.ExecutionPayloadHeader.fields,
   },
   {typeName: "ExecutionPayloadHeader", jsonCase: "eth2"}
+);
+
+// PayloadAttributes primarily for SSE event
+export const PayloadAttributes = new ContainerType(
+  {
+    ...electraSsz.PayloadAttributes.fields,
+    inclusionListTransactions: InclusionListTransactions,
+  },
+  {typeName: "PayloadAttributes", jsonCase: "eth2"}
+);
+
+export const SSEPayloadAttributes = new ContainerType(
+  {
+    ...bellatrixSsz.SSEPayloadAttributesCommon.fields,
+    payloadAttributes: PayloadAttributes,
+  },
+  {typeName: "SSEPayloadAttributes", jsonCase: "eth2"}
 );

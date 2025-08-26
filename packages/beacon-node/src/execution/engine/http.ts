@@ -23,7 +23,6 @@ import {
   ExecutionEngineState,
   ExecutionPayloadStatus,
   IExecutionEngine,
-  InclusionList,
   PayloadAttributes,
   PayloadId,
   VersionedHashes,
@@ -372,11 +371,13 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     // Once on capella, should this need to be permanently switched to v2 when payload attrs
     // not provided
     const method =
-      ForkSeq[fork] >= ForkSeq.deneb
-        ? "engine_forkchoiceUpdatedV3"
-        : ForkSeq[fork] >= ForkSeq.capella
-          ? "engine_forkchoiceUpdatedV2"
-          : "engine_forkchoiceUpdatedV1";
+      ForkSeq[fork] >= ForkSeq.eip7805
+        ? "engine_forkchoiceUpdatedV4"
+        : ForkSeq[fork] >= ForkSeq.deneb
+          ? "engine_forkchoiceUpdatedV3"
+          : ForkSeq[fork] >= ForkSeq.capella
+            ? "engine_forkchoiceUpdatedV2"
+            : "engine_forkchoiceUpdatedV1";
     const payloadAttributesRpc = payloadAttributes ? serializePayloadAttributes(payloadAttributes) : undefined;
     // If we are just fcUing and not asking execution for payload, retry is not required
     // and we can move on, as the next fcU will be issued soon on the new slot
@@ -574,18 +575,6 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     });
 
     return deserializeInclusionList(response);
-  }
-
-  async updatePayloadWithInclusionList(payloadId: PayloadId, inclusionList: InclusionList): Promise<PayloadId | null> {
-    const method = "engine_updatePayloadWithInclusionListV1";
-    const result = await this.rpc.fetchWithRetries<
-      EngineApiRpcReturnTypes[typeof method],
-      EngineApiRpcParamTypes[typeof method]
-    >({
-      method,
-      params: [payloadId, inclusionList.transactions.map(bytesToData)],
-    });
-    return result !== "0x" ? payloadId : null;
   }
 
   private async getClientVersion(clientVersion: ClientVersion): Promise<ClientVersion[]> {

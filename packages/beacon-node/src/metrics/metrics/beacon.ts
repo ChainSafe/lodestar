@@ -136,6 +136,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         help: "Duration of engine_forkchoiceUpdatedV4 requests",
         buckets: [0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.5],
       }),
+      // TODO: Katya - add metric after focil refactoring
       inclusionListTransactionsSentToPayload: register.counter({
         name: "beacon_inclusion_list_transactions_sent_to_payload_total",
         help: "Total number of inclusion list transactions sent to payload",

@@ -380,7 +380,7 @@ export async function verifyBlockExecutionPayload(
     // back. But for now, lets assume other mechanisms like unknown parent block of a future
     // child block will cause it to replay
 
-    case ExecutionPayloadStatus.INVALID_INCLUSION_LIST: {
+    case ExecutionPayloadStatus.INCLUSION_LIST_UNSATISFIED: {
       // Add IL-unsatisified block to fcstore
       const blockRoot = toRootHex(
         chain.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)
