@@ -34,7 +34,7 @@ jobs:
       #     jq .engines.node package.json
 
       - name: Check proxy env configs
-        run: env | grep -i proxy
+        run: env | grep -i proxy || true
       - name: Check proxy yarn config
         run: bunx --bun yarn config proxy
       - name: Check https-proxy yarn config
