@@ -77,7 +77,7 @@ describe("produceBlockBody", () => {
     fn: async ({chain, state, head, proposerIndex, proposerPubKey}) => {
       const slot = state.slot;
 
-      const commonBlockBodyPromise = (chain as BeaconChain).produceCommonBlockBody({
+      const commonBlockBodyPromise = chain.produceCommonBlockBody({
         parentSlot: slot,
         slot: slot + 1,
         graffiti: Buffer.alloc(32),
