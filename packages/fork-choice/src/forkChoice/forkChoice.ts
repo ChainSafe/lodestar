@@ -146,20 +146,14 @@ export class ForkChoice implements IForkChoice {
   ) {
     this.head = this.updateHead();
     this.balances = this.fcStore.justified.balances;
-    this.metrics?.forkChoice.votes.addCollect(() => this.metrics?.forkChoice.votes.set(this.votes.length));
-    this.metrics?.forkChoice.queuedAttestations.addCollect(() =>
-      this.metrics?.forkChoice.queuedAttestations.set(this.queuedAttestationsPreviousSlot)
-    );
-    this.metrics?.forkChoice.validatedAttestationDatas.addCollect(() =>
-      this.metrics?.forkChoice.validatedAttestationDatas.set(this.validatedAttestationDatas.size)
-    );
-    this.metrics?.forkChoice.balancesLength.addCollect(() =>
-      this.metrics?.forkChoice.balancesLength.set(this.balances.length)
-    );
-    this.metrics?.forkChoice.nodes.addCollect(() => this.metrics?.forkChoice.nodes.set(this.protoArray.nodes.length));
-    this.metrics?.forkChoice.indices.addCollect(() =>
-      this.metrics?.forkChoice.indices.set(this.protoArray.indices.size)
-    );
+    this.metrics?.forkChoice.votes.addCollect(() => {
+      this.metrics?.forkChoice.votes.set(this.votes.length);
+      this.metrics?.forkChoice.queuedAttestations.set(this.queuedAttestationsPreviousSlot);
+      this.metrics?.forkChoice.validatedAttestationDatas.set(this.validatedAttestationDatas.size);
+      this.metrics?.forkChoice.balancesLength.set(this.balances.length);
+      this.metrics?.forkChoice.nodes.set(this.protoArray.nodes.length);
+      this.metrics?.forkChoice.indices.set(this.protoArray.indices.size);
+    });
   }
 
   /**
