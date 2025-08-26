@@ -463,7 +463,7 @@ export async function fetchAndValidateColumns({
   blockRoot,
   columnMeta,
 }: FetchByRootAndValidateColumnsProps): Promise<fulu.DataColumnSidecars> {
-  let columnSidecars: fulu.DataColumnSidecars;
+  let columnSidecars: fulu.DataColumnSidecars = [];
   try {
     columnSidecars = await fetchGetBlobsV2AndBuildSidecars({
       config,
@@ -476,7 +476,7 @@ export async function fetchAndValidateColumns({
     network.logger.error(
       `error building columnSidecars for blockRoot=${prettyBytes(blockRoot)} via getBlobsV2`,
       {},
-      err
+      err as Error
     );
   }
 
@@ -630,7 +630,8 @@ export async function validateColumnSidecars({
         columnSidecar,
       });
     } catch (err) {
-      err.message = `Error validating needed columnSidecar index=${columnSidecar.index}. Validation error: ${err.message}`;
+      (err as Error).message =
+        `Error validating needed columnSidecar index=${columnSidecar.index}. Validation error: ${(err as Error).message}`;
       throw err;
     }
   }
@@ -647,7 +648,8 @@ export async function validateColumnSidecars({
           columnSidecar,
         });
       } catch (err) {
-        err.message = `Error validating needToPublish columnSidecar index=${columnSidecar.index}. Validation error: ${err.message}`;
+        (err as Error).message =
+          `Error validating needToPublish columnSidecar index=${columnSidecar.index}. Validation error: ${(err as Error).message}`;
         throw err;
       }
       needToCheckProof.push(columnSidecar);
