@@ -77,14 +77,14 @@ describe("downloadByRange", () => {
       expect(
         typeof validateRequests({
           config,
-          dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+          daOutOfRange: DataAvailabilityStatus.PreData,
           blocksRequest: {startSlot: slots.capella, count: 1},
         }) === "string"
       ).toBeTruthy();
       expect(
         typeof validateRequests({
           config,
-          dataAvailabilityStatus: DataAvailabilityStatus.OutOfRange,
+          daOutOfRange: DataAvailabilityStatus.OutOfRange,
           blocksRequest: {startSlot: slots.deneb, count: 1},
         }) === "string"
       ).toBeTruthy();
@@ -93,7 +93,7 @@ describe("downloadByRange", () => {
       expect(() =>
         validateRequests({
           config,
-          dataAvailabilityStatus: DataAvailabilityStatus.OutOfRange,
+          daOutOfRange: DataAvailabilityStatus.OutOfRange,
           blocksRequest: {startSlot: slots.deneb, count: 1},
           blobsRequest: {startSlot: slots.deneb, count: 1},
         })
@@ -103,7 +103,7 @@ describe("downloadByRange", () => {
       expect(() =>
         validateRequests({
           config,
-          dataAvailabilityStatus: DataAvailabilityStatus.Available,
+          daOutOfRange: DataAvailabilityStatus.Available,
           blocksRequest: {startSlot: slots.deneb, count: 1},
         })
       ).toThrow("Must request data if it is available");
@@ -112,7 +112,7 @@ describe("downloadByRange", () => {
       expect(() =>
         validateRequests({
           config,
-          dataAvailabilityStatus: DataAvailabilityStatus.Available,
+          daOutOfRange: DataAvailabilityStatus.Available,
           blocksRequest: {startSlot: slots.deneb, count: 1},
           blobsRequest: {startSlot: slots.deneb, count: 1},
           columnsRequest: {startSlot: slots.fulu, count: 1},
@@ -123,7 +123,7 @@ describe("downloadByRange", () => {
       expect(() =>
         validateRequests({
           config,
-          dataAvailabilityStatus: DataAvailabilityStatus.Available,
+          daOutOfRange: DataAvailabilityStatus.Available,
           blocksRequest: {startSlot: slots.capella, count: 1},
           columnsRequest: {startSlot: slots.capella, count: 1},
         })
@@ -133,7 +133,7 @@ describe("downloadByRange", () => {
       expect(() =>
         validateRequests({
           config,
-          dataAvailabilityStatus: DataAvailabilityStatus.Available,
+          daOutOfRange: DataAvailabilityStatus.Available,
           blocksRequest: {startSlot: slots.deneb, count: 1},
           columnsRequest: {startSlot: slots.deneb, count: 1},
         })
@@ -143,7 +143,7 @@ describe("downloadByRange", () => {
       expect(() =>
         validateRequests({
           config,
-          dataAvailabilityStatus: DataAvailabilityStatus.Available,
+          daOutOfRange: DataAvailabilityStatus.Available,
           blocksRequest: {startSlot: slots.fulu, count: 1},
           blobsRequest: {startSlot: slots.fulu, count: 1},
         })
@@ -153,7 +153,7 @@ describe("downloadByRange", () => {
       expect(() =>
         validateRequests({
           config,
-          dataAvailabilityStatus: DataAvailabilityStatus.Available,
+          daOutOfRange: DataAvailabilityStatus.Available,
           blocksRequest: {startSlot: slots.deneb, count: 1},
           blobsRequest: {startSlot: slots.deneb + 1, count: 1},
         })
@@ -163,7 +163,7 @@ describe("downloadByRange", () => {
       expect(() =>
         validateRequests({
           config,
-          dataAvailabilityStatus: DataAvailabilityStatus.Available,
+          daOutOfRange: DataAvailabilityStatus.Available,
           blocksRequest: {startSlot: slots.deneb, count: 1},
           blobsRequest: {startSlot: slots.deneb, count: 2},
         })
@@ -173,7 +173,7 @@ describe("downloadByRange", () => {
       expect(
         typeof validateRequests({
           config,
-          dataAvailabilityStatus: DataAvailabilityStatus.Available,
+          daOutOfRange: DataAvailabilityStatus.Available,
           blocksRequest: {startSlot: slots.deneb, count: 1},
           blobsRequest: {startSlot: slots.deneb, count: 1},
         }) === "string"
@@ -183,7 +183,7 @@ describe("downloadByRange", () => {
       expect(
         typeof validateRequests({
           config,
-          dataAvailabilityStatus: DataAvailabilityStatus.Available,
+          daOutOfRange: DataAvailabilityStatus.Available,
           blocksRequest: {startSlot: slots.fulu, count: 1},
           columnsRequest: {startSlot: slots.fulu, count: 1},
         }) === "string"
