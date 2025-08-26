@@ -36,9 +36,9 @@ jobs:
       - name: Check proxy env configs
         run: env | grep -i proxy || true
       - name: Check proxy yarn config
-        run: bunx --bun yarn config proxy
+        run: bunx --bun yarn config get proxy
       - name: Check https-proxy yarn config
-        run: bunx --bun yarn config https-proxy
+        run: bunx --bun yarn config get https-proxy
 
       - name: Install Yarn
         run: bun install -g npm:yarn
