@@ -36,6 +36,17 @@ jobs:
       - name: Install
         run: bun install --no-save || true
 
+      # Bun is not installing binaries for the packages
+      # defined as dev dependencies and only been listed
+      # in the root of the workspace. Reinstalling those will
+      # make sure their binaries are available in `node_modules/.bin`
+      - name: Install binaries for tools
+        run: |
+          export V=$(jq -r .version node_modules/typescript/package.json) && bun remove typescript && bun install --dev typescript@$V
+          export V=$(jq -r .version node_modules/@biomejs/biome) && bun remove @biomejs/biome && bun install --dev @biomejs/biome@$V
+          export V=$(jq -r .version node_modules/lerna) && bun remove lerna && bun install --dev lerna@$V
+          bun install @lerna-lite/run
+
       - name: Build
         run: bun --bun run build
 
