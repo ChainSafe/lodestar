@@ -30,6 +30,9 @@ jobs:
       # - name: Install
       #   run: HTTP_PROXY= HTTPS_PROXY= NO_PROXY="*" bunx --bun yarn install --ignore-engines --frozen-lockfile --registry https://registry.npmjs.org/
 
+      - name: Install deps for Bun to work with node native bindings
+        run: bun install -g npm:node-gyp-build
+
       - name: Install
         run: bun install --no-save || true
 
