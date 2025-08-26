@@ -265,8 +265,8 @@ describe("api/validator - produceBlockV3", () => {
       executionPayloadValue,
     });
 
-    // Create a promise that resolves to a mock common block body
-    const commonBlockBodyPromise = Promise.resolve({
+    // Helper function to create a mock common block body promise
+    const createCommonBlockBodyPromise = () => Promise.resolve({
       attestations: [],
       attesterSlashings: [],
       proposerSlashings: [],
@@ -289,7 +289,7 @@ describe("api/validator - produceBlockV3", () => {
       parentBlockRoot: fromHexString(ZERO_HASH_HEX),
       proposerIndex: 0,
       proposerPubKey: new Uint8Array(32).fill(1),
-      commonBlockBodyPromise,
+      commonBlockBodyPromise: createCommonBlockBodyPromise(),
     });
 
     expect(modules.chain["executionEngine"].notifyForkchoiceUpdate).toBeCalledWith(
@@ -307,20 +307,6 @@ describe("api/validator - produceBlockV3", () => {
     // use fee recipient set in beaconProposerCacheStub if none passed
     modules.chain["beaconProposerCache"].getOrDefault.mockReturnValue("0x fee recipient address");
     
-    // Create another promise for the second test
-    const commonBlockBodyPromise2 = Promise.resolve({
-      attestations: [],
-      attesterSlashings: [],
-      proposerSlashings: [],
-      voluntaryExits: [],
-      blsToExecutionChanges: [],
-      syncAggregate: ssz.altair.SyncAggregate.defaultValue(),
-      eth1Data: ssz.phase0.Eth1Data.defaultValue(),
-      deposits: [],
-      randaoReveal,
-      graffiti: toGraffitiBytes(graffiti),
-    });
-    
     await produceBlockBody.call(modules.chain as unknown as BeaconChain, BlockType.Full, state, {
       randaoReveal,
       graffiti: toGraffitiBytes(graffiti),
@@ -329,7 +315,7 @@ describe("api/validator - produceBlockV3", () => {
       parentBlockRoot: fromHexString(ZERO_HASH_HEX),
       proposerIndex: 0,
       proposerPubKey: new Uint8Array(32).fill(1),
-      commonBlockBodyPromise: commonBlockBodyPromise2,
+      commonBlockBodyPromise: createCommonBlockBodyPromise(),
     });
 
     expect(modules.chain["executionEngine"].notifyForkchoiceUpdate).toBeCalledWith(
