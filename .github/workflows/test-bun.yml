@@ -48,6 +48,12 @@ jobs:
           export V=$(jq -r .version node_modules/vitest) && bun remove vitest && bun install --dev vitest@$V
           bun install @lerna-lite/run
 
+      # For vitest it is even stranger that `bun install` is not generating binary
+      # So have to install it as global package
+      - name: Install binaries for tools
+        run: |
+          export V=$(jq -r .version node_modules/vitest) && bun remove vitest && bun install -g vitest@$V
+
       - name: Build
         run: bun --bun run build
 
