@@ -508,6 +508,7 @@ export async function produceBlockBody<T extends BlockType>(
  * Expects `eth1MergeBlockFinder` to be actively searching for blocks well in advance to being called.
  *
  * @returns PayloadId = pow block found, null = pow NOT found
+ * TODO EIP7805: call ILStore to get IL txs. Feed them into PayloadAttributes
  */
 export async function prepareExecutionPayload(
   chain: {
@@ -586,23 +587,6 @@ export async function prepareExecutionPayload(
   // prepareNextSlot, which is an advance call to execution engine to start building payload
   // Actual payload isn't produced till getPayload is called.
   return {isPremerge: false, payloadId, prepType};
-}
-
-export async function prepareExecutionPayloadInclusionList(
-  chain: {executionEngine: IExecutionEngine; inclusionListPool: InclusionListPool},
-  logger: Logger,
-  payloadId: PayloadId,
-  slot: Slot
-): Promise<void> {
-  const transactions = chain.inclusionListPool.getTransactions(slot);
-
-  await chain.executionEngine.updatePayloadWithInclusionList(payloadId, {transactions});
-
-  logger.verbose("Updated payload with inclusion list", {
-    slot,
-    payloadId,
-    numTransactions: transactions.length,
-  });
 }
 
 async function prepareExecutionPayloadHeader(
