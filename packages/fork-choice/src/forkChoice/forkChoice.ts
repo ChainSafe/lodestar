@@ -148,6 +148,8 @@ export class ForkChoice implements IForkChoice {
     this.balances = this.fcStore.justified.balances;
     if (metrics) {
       metrics.forkChoice.balancesLength.addCollect(() => metrics.forkChoice.balancesLength.set(this.balances.length));
+      metrics.forkChoice.nodes.addCollect(() => metrics.forkChoice.nodes.set(this.protoArray.nodes.length));
+      metrics.forkChoice.indices.addCollect(() => metrics.forkChoice.indices.set(this.protoArray.indices.size));
     }
   }
 
