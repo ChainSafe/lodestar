@@ -148,7 +148,23 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
     await this.db.batchDelete(keys.flat(), this.dbReqOpts);
   }
 
-  async batch(prefix: P, batch: DbBatch<I, Uint8Array>): Promise<void> {
+  async batch(prefix: P, batch: DbBatch<I, T>): Promise<void> {
+    const batchWithKeys = [];
+    for (const b of batch) {
+      if (b.type === "del") {
+        batchWithKeys.push({type: b.type, key: this.wrapKey(this.encodeKeyRaw(prefix, b.key))});
+      } else {
+        batchWithKeys.push({
+          type: b.type,
+          key: this.wrapKey(this.encodeKeyRaw(prefix, b.key)),
+          value: this.encodeValue(b.value),
+        });
+      }
+    }
+    await this.db.batch(batchWithKeys, this.dbReqOpts);
+  }
+
+  async batchBinary(prefix: P, batch: DbBatch<I, Uint8Array>): Promise<void> {
     const batchWithKeys = [];
     for (const b of batch) {
       batchWithKeys.push({...b, key: this.wrapKey(this.encodeKeyRaw(prefix, b.key))});
