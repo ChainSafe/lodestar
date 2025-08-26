@@ -266,18 +266,19 @@ describe("api/validator - produceBlockV3", () => {
     });
 
     // Helper function to create a mock common block body promise
-    const createCommonBlockBodyPromise = () => Promise.resolve({
-      attestations: [],
-      attesterSlashings: [],
-      proposerSlashings: [],
-      voluntaryExits: [],
-      blsToExecutionChanges: [],
-      syncAggregate: ssz.altair.SyncAggregate.defaultValue(),
-      eth1Data: ssz.phase0.Eth1Data.defaultValue(),
-      deposits: [],
-      randaoReveal,
-      graffiti: toGraffitiBytes(graffiti),
-    });
+    const createCommonBlockBodyPromise = () =>
+      Promise.resolve({
+        attestations: [],
+        attesterSlashings: [],
+        proposerSlashings: [],
+        voluntaryExits: [],
+        blsToExecutionChanges: [],
+        syncAggregate: ssz.altair.SyncAggregate.defaultValue(),
+        eth1Data: ssz.phase0.Eth1Data.defaultValue(),
+        deposits: [],
+        randaoReveal,
+        graffiti: toGraffitiBytes(graffiti),
+      });
 
     // use fee recipient passed in produceBlockBody call for payload gen in engine notifyForkchoiceUpdate
     await produceBlockBody.call(modules.chain as unknown as BeaconChain, BlockType.Full, state, {
@@ -306,7 +307,7 @@ describe("api/validator - produceBlockV3", () => {
 
     // use fee recipient set in beaconProposerCacheStub if none passed
     modules.chain["beaconProposerCache"].getOrDefault.mockReturnValue("0x fee recipient address");
-    
+
     await produceBlockBody.call(modules.chain as unknown as BeaconChain, BlockType.Full, state, {
       randaoReveal,
       graffiti: toGraffitiBytes(graffiti),
