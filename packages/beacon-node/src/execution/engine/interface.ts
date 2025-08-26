@@ -210,5 +210,4 @@ export interface IExecutionEngine {
 
   getInclusionList(parentHash: RootHex): Promise<bellatrix.Transactions>;
 
-  updatePayloadWithInclusionList(payloadId: PayloadId, inclusionList: InclusionList): Promise<PayloadId | null>;
 }

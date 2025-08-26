@@ -14,7 +14,6 @@ import {Slot} from "@lodestar/types";
 import {Logger, fromHex, isErrorAborted, sleep} from "@lodestar/utils";
 import {GENESIS_SLOT, ZERO_HASH_HEX} from "../constants/constants.js";
 import {BuilderStatus} from "../execution/builder/http.js";
-import {PayloadId} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
 import {ClockEvent} from "../util/clock.js";
 import {isQueueErrorAborted} from "../util/queue/index.js";
@@ -23,7 +22,6 @@ import {IBeaconChain} from "./interface.js";
 import {
   getPayloadAttributesForSSE,
   prepareExecutionPayload,
-  prepareExecutionPayloadInclusionList,
 } from "./produceBlock/produceBlockBody.js";
 import {RegenCaller} from "./regen/index.js";
 
@@ -176,7 +174,15 @@ export class PrepareNextSlotScheduler {
           // awaiting here instead of throwing an async call because there is no other task
           // left for scheduler and this gives nice sematics to catch and log errors in the
           // try/catch wrapper here.
-          const {payloadId} = (await prepareExecutionPayload(
+          // EIP7805: We need to sleep until `PROPOSER_INCLUSION_LIST_CUTOFF_BPS` (~11s) to make sure
+          // we have gathered all ILs
+          if (isForkPostEip7805(fork)) {
+            const secToNextSlot = this.config.SECONDS_PER_SLOT - this.chain.clock.secFromSlot(clockSlot);
+            const secToCutOff = this.config.PROPOSER_INCLUSION_LIST_CUT_OFF - this.chain.clock.secFromSlot(clockSlot);
+            const sleepTime = Math.min(secToNextSlot, secToCutOff) * 1000;
+            await sleep(sleepTime, this.signal);
+          }
+          await prepareExecutionPayload(
             this.chain,
             this.logger,
             fork as ForkPostBellatrix, // State is of execution type
@@ -185,18 +191,13 @@ export class PrepareNextSlotScheduler {
             finalizedBlockHash,
             updatedPrepareState,
             feeRecipient
-          )) as {payloadId: PayloadId};
+          );
           this.logger.verbose("PrepareNextSlotScheduler prepared new payload", {
             prepareSlot,
             proposerIndex,
             feeRecipient,
           });
 
-          if (isForkPostEip7805(fork)) {
-            this.schedulePayloadInclusionListUpdate(payloadId, clockSlot).catch((e) => {
-              this.logger.error("Failed to update payload with inclusion list", {payloadId, prepareSlot}, e);
-            });
-          }
         }
 
         this.computeStateHashTreeRoot(updatedPrepareState, isEpochTransition);
@@ -282,15 +283,4 @@ export class PrepareNextSlotScheduler {
     }
   }
 
-  /**
-   * Schedule task to update payload with inclusion list transactions that gathered up to `PROPOSER_INCLUSION_LIST_CUT_OFF`
-   */
-  async schedulePayloadInclusionListUpdate(payloadId: PayloadId, clockSlot: Slot): Promise<void> {
-    const secToNextSlot = this.config.SECONDS_PER_SLOT - this.chain.clock.secFromSlot(clockSlot);
-    const secToCutOff = this.config.PROPOSER_INCLUSION_LIST_CUT_OFF - this.chain.clock.secFromSlot(clockSlot);
-    const sleepTime = Math.min(secToNextSlot, secToCutOff) * 1000;
-    await sleep(sleepTime, this.signal);
-
-    await prepareExecutionPayloadInclusionList(this.chain, this.logger, payloadId, clockSlot);
-  }
 }

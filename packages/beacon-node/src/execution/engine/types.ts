@@ -104,11 +104,6 @@ export type EngineApiRpcParamTypes = {
    */
   engine_getInclusionListV1: [DATA];
 
-  /**
-   * 1. DATA - 8 bytes - Identifier of the payload build process
-   * 2. DATA[] aka InclusionListV1
-   */
-  engine_updatePayloadWithInclusionListV1: [QUANTITY, InclusionListRpc];
 };
 
 export type PayloadStatus = {
@@ -163,7 +158,6 @@ export type EngineApiRpcReturnTypes = {
 
   engine_getInclusionListV1: InclusionListRpc;
 
-  engine_updatePayloadWithInclusionListV1: QUANTITY | null;
 };
 
 type ExecutionPayloadRpcWithValue = {
