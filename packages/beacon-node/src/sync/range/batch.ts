@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, ForkSeq, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
-import {Epoch, RootHex, Slot, deneb, fulu, phase0} from "@lodestar/types";
+import {ForkName, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
+import {Epoch, RootHex, Slot, phase0} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 import {isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {IBlockInput} from "../../chain/blocks/blockInput/types.js";

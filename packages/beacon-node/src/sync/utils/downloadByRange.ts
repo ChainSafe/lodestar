@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPostDeneb, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
-import {RootHex, SignedBeaconBlock, Slot, deneb, fulu, phase0} from "@lodestar/types";
+import {SignedBeaconBlock, Slot, deneb, fulu, phase0} from "@lodestar/types";
 import {LodestarError, Logger, prettyBytes, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {
   BlockInputSource,
