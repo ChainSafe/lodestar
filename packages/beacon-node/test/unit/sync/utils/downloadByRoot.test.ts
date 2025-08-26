@@ -52,7 +52,7 @@ describe("downloadByRoot.ts", () => {
   let network: INetwork;
   // let cache: SeenBlockInput;
   let executionEngine: IExecutionEngine;
-  const logger = getMockedLogger();
+  // const logger = getMockedLogger();
 
   // Test data
   // let capellaBlock: SignedBeaconBlock;

@@ -19,9 +19,9 @@ import {config, custodyConfig, generateChainOfBlockMaybeSidecars, slots} from ".
 
 describe("downloadByRange", () => {
   const peerIdStr = "0x1234567890abcdef";
-  let cache: SeenBlockInputCache;
+  // let cache: SeenBlockInputCache;
   let network: INetwork;
-  const logger = getMockedLogger();
+  // const logger = getMockedLogger();
 
   const startSlot = slots.deneb;
   const count = 32;
@@ -52,17 +52,17 @@ describe("downloadByRange", () => {
   });
 
   beforeEach(() => {
-    const abortController = new AbortController();
-    const signal = abortController.signal;
-    cache = new SeenBlockInputCache({
-      config,
-      custodyConfig,
-      clock: new Clock({config, signal, genesisTime: Math.floor(Date.now() / 1000)}),
-      chainEvents: new ChainEventEmitter(),
-      signal,
-      metrics: null,
-      logger,
-    });
+    // const abortController = new AbortController();
+    // const signal = abortController.signal;
+    // cache = new SeenBlockInputCache({
+    //   config,
+    //   custodyConfig,
+    //   clock: new Clock({config, signal, genesisTime: Math.floor(Date.now() / 1000)}),
+    //   chainEvents: new ChainEventEmitter(),
+    //   signal,
+    //   metrics: null,
+    //   logger,
+    // });
     network = {
       sendBeaconBlocksByRange: vi.fn(),
       sendBlobSidecarsByRange: vi.fn(),
