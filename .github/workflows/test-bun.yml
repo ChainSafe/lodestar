@@ -36,7 +36,7 @@ jobs:
       - name: Install Yarn
         run: bun install -g npm:yarn
       - name: Install
-        run: bunx --bun yarn install --frozen-lockfile
+        run: bunx --bun yarn install --frozen-lockfile --registry https://registry.npmjs.org/
       - name: Build
         run: bunx --bun run build
       - name: Unit Tests
