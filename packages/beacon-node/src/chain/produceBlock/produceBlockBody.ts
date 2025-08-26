@@ -148,8 +148,7 @@ export async function produceBlockBody<T extends BlockType>(
   blockAttr: BlockAttributes & {
     proposerIndex: ValidatorIndex;
     proposerPubKey: BLSPubkey;
-    // TODO: make `commonBlockBodyPromise` required and remove calls to `produceCommonBlockBody` below
-    commonBlockBodyPromise?: Promise<CommonBlockBody>;
+    commonBlockBodyPromise: Promise<CommonBlockBody>;
   }
 ): Promise<{
   body: AssembledBodyType<T>;
@@ -238,10 +237,7 @@ export async function produceBlockBody<T extends BlockType>(
         return headerRes;
       })();
 
-      const [builderRes, commonBlockBody] = await Promise.all([
-        builderPromise,
-        commonBlockBodyPromise ?? produceCommonBlockBody.call(this, blockType, currentState, blockAttr),
-      ]);
+      const [builderRes, commonBlockBody] = await Promise.all([builderPromise, commonBlockBodyPromise]);
       blockBody = Object.assign({}, commonBlockBody) as AssembledBodyType<BlockType.Blinded>;
 
       (blockBody as BlindedBeaconBlockBody).executionPayloadHeader = builderRes.header;
@@ -384,10 +380,7 @@ export async function produceBlockBody<T extends BlockType>(
         throw e;
       });
 
-      const [engineRes, commonBlockBody] = await Promise.all([
-        enginePromise,
-        commonBlockBodyPromise ?? produceCommonBlockBody.call(this, blockType, currentState, blockAttr),
-      ]);
+      const [engineRes, commonBlockBody] = await Promise.all([enginePromise, commonBlockBodyPromise]);
       blockBody = Object.assign({}, commonBlockBody) as AssembledBodyType<BlockType.Blinded>;
 
       if (engineRes.isPremerge) {
@@ -457,8 +450,7 @@ export async function produceBlockBody<T extends BlockType>(
       }
     }
   } else {
-    const commonBlockBody = await (commonBlockBodyPromise ??
-      produceCommonBlockBody.call(this, blockType, currentState, blockAttr));
+    const commonBlockBody = await commonBlockBodyPromise;
     blockBody = Object.assign({}, commonBlockBody) as AssembledBodyType<T>;
     executionPayloadValue = BigInt(0);
   }
