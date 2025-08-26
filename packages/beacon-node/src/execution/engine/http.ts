@@ -23,7 +23,6 @@ import {
   ExecutionEngineState,
   ExecutionPayloadStatus,
   IExecutionEngine,
-  InclusionList,
   PayloadAttributes,
   PayloadId,
   VersionedHashes,
