@@ -105,10 +105,14 @@ export const chainConfig: ChainConfig = {
 
   // Networking
   // ---------------------------------------------------------------
+  // 2**10 (= 1024)
+  MAX_REQUEST_BLOCKS: 1024,
   // `MIN_VALIDATOR_WITHDRAWABILITY_DELAY + CHURN_LIMIT_QUOTIENT // 2` (= 33024, ~5 months)
   MIN_EPOCHS_FOR_BLOCK_REQUESTS: 33024,
 
   // Deneb
+  // 2**7 (= 128)
+  MAX_REQUEST_BLOCKS_DENEB: 128,
   // `2**12` (= 4096 epochs, ~18 days)
   MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: 4096,
   BLOB_SIDECAR_SUBNET_COUNT: 6,

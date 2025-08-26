@@ -77,7 +77,6 @@ export const EpochSyncCommitteeResponseType = new ContainerType(
   {
     /** All of the validator indices in the current sync committee */
     validators: ArrayOf(ssz.ValidatorIndex),
-    // TODO: This property will likely be deprecated
     /** Subcommittee slices of the current sync committee */
     validatorAggregates: ArrayOf(ArrayOf(ssz.ValidatorIndex)),
   },

@@ -3,7 +3,7 @@ import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
-import {GENESIS_SLOT, SLOTS_PER_EPOCH, isForkPostElectra} from "@lodestar/params";
+import {EFFECTIVE_BALANCE_INCREMENT, GENESIS_SLOT, SLOTS_PER_EPOCH, isForkPostElectra} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   BeaconStateElectra,
@@ -17,6 +17,7 @@ import {
   computeStartSlotAtEpoch,
   createCachedBeaconState,
   getEffectiveBalanceIncrementsZeroInactive,
+  getEffectiveBalancesFromStateBytes,
   isCachedBeaconState,
   processSlots,
 } from "@lodestar/state-transition";
@@ -40,7 +41,6 @@ import {ProcessShutdownCallback} from "@lodestar/validator";
 
 import {PrivateKey} from "@libp2p/interface";
 import {LoggerNode} from "@lodestar/logger/node";
-import {getEffectiveBalancesFromStateBytes} from "@lodestar/state-transition";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
@@ -1233,23 +1233,38 @@ export class BeaconChain implements IBeaconChain {
       return;
     }
 
-    // Update custody requirement based on finalized state
-    const stateOrBytes = (await this.getStateOrBytesByCheckpoint(finalizedCheckpoint))?.state;
-
-    if (!stateOrBytes) {
-      throw Error(
-        `No finalized state for epoch ${finalizedCheckpoint.epoch} and root ${finalizedCheckpoint.rootHex} to update target custody group count`
-      );
-    }
-
     // Validators attached to the node
     const validatorIndices = this.beaconProposerCache.getValidatorIndices();
 
+    // Update custody requirement based on finalized state
     let effectiveBalances: number[];
-    if (stateOrBytes instanceof Uint8Array) {
-      effectiveBalances = getEffectiveBalancesFromStateBytes(this.config, stateOrBytes, validatorIndices);
+    const effectiveBalanceIncrements = this.checkpointBalancesCache.get(finalizedCheckpoint);
+    if (effectiveBalanceIncrements) {
+      effectiveBalances = validatorIndices.map(
+        (index) => (effectiveBalanceIncrements[index] ?? 0) * EFFECTIVE_BALANCE_INCREMENT
+      );
     } else {
-      effectiveBalances = validatorIndices.map((index) => stateOrBytes.validators.get(index).effectiveBalance);
+      // If there's no cached effective balances, get the state from disk and parse them out
+      this.logger.debug("No cached finalized effective balances to update target custody group count", {
+        finalizedEpoch: finalizedCheckpoint.epoch,
+        finalizedRoot: finalizedCheckpoint.rootHex,
+      });
+
+      const stateOrBytes = (await this.getStateOrBytesByCheckpoint(finalizedCheckpoint))?.state;
+      if (!stateOrBytes) {
+        // If even the state is not available, we cannot update the custody group count
+        this.logger.debug("No finalized state or bytes available to update target custody group count", {
+          finalizedEpoch: finalizedCheckpoint.epoch,
+          finalizedRoot: finalizedCheckpoint.rootHex,
+        });
+        return;
+      }
+
+      if (stateOrBytes instanceof Uint8Array) {
+        effectiveBalances = getEffectiveBalancesFromStateBytes(this.config, stateOrBytes, validatorIndices);
+      } else {
+        effectiveBalances = validatorIndices.map((index) => stateOrBytes.validators.get(index).effectiveBalance ?? 0);
+      }
     }
 
     const targetCustodyGroupCount = getValidatorsCustodyRequirement(this.config, effectiveBalances);

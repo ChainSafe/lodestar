@@ -3,7 +3,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as minimalConfig} from "@lodestar/config/default";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {ForkName} from "@lodestar/params";
+import {ForkName, ZERO_HASH_HEX} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {notNullish, sleep} from "@lodestar/utils";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
@@ -13,6 +13,7 @@ import {
   BlockInputType,
   BlockSource,
   CachedDataColumns,
+  NullBlockInput,
   getBlockInput,
 } from "../../../src/chain/blocks/types.js";
 import {BlockError, BlockErrorCode} from "../../../src/chain/errors/blockError.js";
@@ -418,6 +419,53 @@ describe("UnknownBlockPeerBalancer", async () => {
       }
     });
   } // end for testCases
+
+  it("bestPeerForBlockInput - NullBlockInput", () => {
+    // there is an edge case where the NullBlockInput has full custody groups but no block, make sure it can return any peers
+    // in case NullBlockInput has some pending columns, it falls on the above test cases
+    const signedBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
+    const cachedData: CachedDataColumns = {
+      cacheId: 2025,
+      fork: ForkName.fulu,
+      availabilityPromise: Promise.resolve({} as unknown as BlockInputDataColumns),
+      resolveAvailability: () => {},
+      dataColumnsCache: new Map([
+        [0, {dataColumn: ssz.fulu.DataColumnSidecar.defaultValue(), dataColumnBytes: null}],
+        [1, {dataColumn: ssz.fulu.DataColumnSidecar.defaultValue(), dataColumnBytes: null}],
+        [2, {dataColumn: ssz.fulu.DataColumnSidecar.defaultValue(), dataColumnBytes: null}],
+        [3, {dataColumn: ssz.fulu.DataColumnSidecar.defaultValue(), dataColumnBytes: null}],
+      ]),
+      calledRecover: false,
+    };
+    const blockInput: BlockInput = {
+      block: signedBlock,
+      source: BlockSource.gossip,
+      type: BlockInputType.dataPromise,
+      cachedData,
+    };
+
+    const nullBlockInput: NullBlockInput = {
+      block: null,
+      blockRootHex: ZERO_HASH_HEX,
+      blockInputPromise: Promise.resolve(blockInput),
+      cachedData,
+    };
+
+    const excludedPeers = new Set<PeerIdStr>();
+    for (let i = 0; i < peers.length; i++) {
+      const peer = peerBalancer.bestPeerForBlockInput(nullBlockInput, excludedPeers);
+      expect(peer).not.toBeNull();
+      if (peer == null) {
+        // should not happen, this is just to make the compiler happy
+        throw new Error("Unexpected null peer");
+      }
+      excludedPeers.add(peer.peerId);
+    }
+
+    // last round, no more peer should be returned because all are requested
+    const peer = peerBalancer.bestPeerForBlockInput(nullBlockInput, excludedPeers);
+    expect(peer).toBeNull();
+  });
 
   it("onRequest and onRequestCompleted", () => {
     peerBalancer.onRequest(peers[0].peerId);
