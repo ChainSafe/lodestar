@@ -22,7 +22,7 @@ import {
 import {IExecutionEngine} from "../../execution/index.js";
 import {INetwork} from "../../network/interface.js";
 import {prettyPrintPeerIdStr} from "../../network/util.js";
-import {computeInclusionProof, kzgCommitmentToVersionedHash} from "../../util/blobs.js";
+import {computePreFuluKzgCommitmentsInclusionProof, kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {byteArrayEquals} from "../../util/bytes.js";
 import {getCellsAndProofs, getDataColumnSidecarsFromBlock} from "../../util/dataColumns.js";
 import {kzg} from "../../util/kzg.js";
@@ -320,15 +320,17 @@ export async function fetchAndValidateBlobs({
 
   // not all needed blobs were fetched via getBlobs, need to use ReqResp
   if (blobSidecars.length !== blobMeta.length) {
-    const networkResponse = await fetchBlobByRoot({
+    const networkResponse = await fetchBlobsByRoot({
       network,
       peerIdStr,
-      blockRoot,
       blobMeta,
       indicesInPossession: blobSidecars.map((b) => b.index),
     });
     blobSidecars.push(...networkResponse);
   }
+
+  // responses can be sparse for both types of requests to sort to make sure its in sequential order
+  blobSidecars.sort((a, b) => a.index - b.index);
 
   await validateBlobs({config, peerIdStr, blockRoot, blobMeta, blobSidecars});
 
@@ -352,42 +354,46 @@ export async function fetchGetBlobsV1AndBuildSidecars({
     blobMeta.map(({versionedHash: versionHash}) => versionHash)
   );
 
-  if (enginedResponse.length > 0) {
-    // response.length should always match blobMeta.length and they should be in the same order
-    for (let i = 0; i < blobMeta.length; i++) {
-      const blobAndProof = enginedResponse[i];
-      if (blobAndProof) {
-        const {blob, proof} = blobAndProof;
-        const index = blobMeta[i].index;
-        const kzgCommitment = block.message.body.blobKzgCommitments[i];
-        const sidecar: deneb.BlobSidecar = {
-          index,
-          blob,
-          kzgProof: proof,
-          kzgCommitment,
-          kzgCommitmentInclusionProof: computeInclusionProof(forkName, block.message.body, index),
-          signedBlockHeader: signedBlockToSignedHeader(config, block),
-        };
-        blobSidecars.push(sidecar);
-      }
+  if (!enginedResponse.length) {
+    return blobSidecars;
+  }
+
+  // response.length should always match blobMeta.length and they should be in the same order
+  for (let i = 0; i < blobMeta.length; i++) {
+    const blobAndProof = enginedResponse[i];
+    if (blobAndProof) {
+      const {blob, proof} = blobAndProof;
+      const index = blobMeta[i].index;
+      const kzgCommitment = block.message.body.blobKzgCommitments[i];
+      const sidecar: deneb.BlobSidecar = {
+        index,
+        blob,
+        kzgProof: proof,
+        kzgCommitment,
+        kzgCommitmentInclusionProof: computePreFuluKzgCommitmentsInclusionProof(forkName, block.message.body, index),
+        signedBlockHeader: signedBlockToSignedHeader(config, block),
+      };
+      blobSidecars.push(sidecar);
     }
   }
 
   return blobSidecars;
 }
 
-export async function fetchBlobByRoot({
+export async function fetchBlobsByRoot({
   network,
   peerIdStr,
-  blockRoot,
   blobMeta,
-  indicesInPossession,
-}: Pick<FetchByRootAndValidateBlobsProps, "network" | "peerIdStr" | "blockRoot" | "blobMeta"> & {
-  indicesInPossession: number[];
+  indicesInPossession = [],
+}: Pick<FetchByRootAndValidateBlobsProps, "network" | "peerIdStr" | "blobMeta"> & {
+  indicesInPossession?: number[];
 }): Promise<deneb.BlobSidecars> {
   const blobsRequest = blobMeta
     .filter(({index}) => !indicesInPossession.includes(index))
-    .map(({index}) => ({blockRoot, index}));
+    .map(({blockRoot, index}) => ({blockRoot, index}));
+  if (!blobsRequest.length) {
+    return [];
+  }
   return await network.sendBlobSidecarsByRoot(peerIdStr, blobsRequest);
 }
 
@@ -417,25 +423,28 @@ export async function validateBlobs({
     const headerRoot = config
       .getForkTypes(blobSidecar.signedBlockHeader.message.slot)
       .BeaconBlockHeader.hashTreeRoot(blobSidecar.signedBlockHeader.message);
-    if (byteArrayEquals(blockRoot, headerRoot)) {
+    if (!byteArrayEquals(blockRoot, headerRoot)) {
       throw new DownloadByRootError(
         {
           code: DownloadByRootErrorCode.MISMATCH_BLOCK_ROOT,
           peer: prettyPrintPeerIdStr(peerIdStr),
           requestedBlockRoot: prettyBytes(blockRoot),
-          receivedBlockRoot: prettyBytes(toRootHex(headerRoot)),
+          receivedBlockRoot: prettyBytes(headerRoot),
         },
-        `blobSidecar.signedBlockHeader not match requested blockRoot for index=${blobSidecar.index}`
+        `blobSidecar header root did not match requested blockRoot for index=${blobSidecar.index}`
       );
     }
 
     if (!validateBlobSidecarInclusionProof(blobSidecar)) {
-      throw new DownloadByRootError({
-        code: DownloadByRootErrorCode.INVALID_INCLUSION_PROOF,
-        peer: prettyPrintPeerIdStr(peerIdStr),
-        blockRoot: prettyBytes(blockRoot),
-        sidecarIndex: blobSidecar.index,
-      });
+      throw new DownloadByRootError(
+        {
+          code: DownloadByRootErrorCode.INVALID_INCLUSION_PROOF,
+          peer: prettyPrintPeerIdStr(peerIdStr),
+          blockRoot: prettyBytes(blockRoot),
+          sidecarIndex: blobSidecar.index,
+        },
+        `invalid inclusion proof for blobSidecar at index=${blobSidecar.index}`
+      );
     }
   }
 
@@ -444,132 +453,6 @@ export async function validateBlobs({
       blobSidecars.map((b) => b.kzgCommitment),
       blobSidecars.map((b) => b.blob),
       blobSidecars.map((b) => b.kzgProof)
-    );
-  } catch {
-    throw new DownloadByRootError({
-      code: DownloadByRootErrorCode.INVALID_KZG_PROOF,
-      peer: prettyPrintPeerIdStr(peerIdStr),
-      blockRoot: prettyBytes(blockRoot),
-    });
-  }
-}
-
-export async function fetchGetBlobsV2AndBuildSidecars({
-  config,
-  executionEngine,
-  forkName,
-  block,
-  columnMeta,
-}: Pick<
-  FetchByRootAndValidateColumnsProps,
-  "config" | "executionEngine" | "forkName" | "block" | "columnMeta"
->): Promise<fulu.DataColumnSidecars> {
-  const response = await executionEngine.getBlobs(forkName, columnMeta.versionedHashes);
-  if (!response) {
-    return [];
-  }
-
-  const cellsAndProofs = await getCellsAndProofs(response);
-  return getDataColumnSidecarsFromBlock(config, block, cellsAndProofs);
-}
-
-export async function fetchColumnsByRoot({
-  network,
-  peerIdStr,
-  blockRoot,
-  columnMeta,
-}: FetchByRootAndValidateColumnsProps): Promise<fulu.DataColumnSidecars> {
-  return await network.sendDataColumnSidecarsByRoot(peerIdStr, [{blockRoot, columns: columnMeta.missing}]);
-}
-
-export function validateColumnSidecar({
-  config,
-  peerIdStr,
-  blockRoot,
-  columnSidecar,
-}: Pick<FetchByRootAndValidateColumnsProps, "config" | "peerIdStr" | "blockRoot"> & {
-  columnSidecar: fulu.DataColumnSidecar;
-}): void {
-  const headerRoot = config
-    .getForkTypes(columnSidecar.signedBlockHeader.message.slot)
-    .BeaconBlockHeader.hashTreeRoot(columnSidecar.signedBlockHeader.message);
-  if (byteArrayEquals(blockRoot, headerRoot)) {
-    throw new DownloadByRootError(
-      {
-        code: DownloadByRootErrorCode.MISMATCH_BLOCK_ROOT,
-        peer: prettyPrintPeerIdStr(peerIdStr),
-        requestedBlockRoot: prettyBytes(blockRoot),
-        receivedBlockRoot: prettyBytes(toRootHex(headerRoot)),
-      },
-      `columnSidecar.signedBlockHeader not match requested blockRoot for index=${columnSidecar.index}`
-    );
-  }
-
-  if (!verifyDataColumnSidecarInclusionProof(columnSidecar)) {
-    throw new DownloadByRootError({
-      code: DownloadByRootErrorCode.INVALID_INCLUSION_PROOF,
-      peer: prettyPrintPeerIdStr(peerIdStr),
-      blockRoot: prettyBytes(blockRoot),
-      sidecarIndex: columnSidecar.index,
-    });
-  }
-}
-
-export async function validateColumnSidecars({
-  config,
-  peerIdStr,
-  blockRoot,
-  columnMeta,
-  needed,
-  needToPublish = [],
-}: Pick<FetchByRootAndValidateColumnsProps, "config" | "peerIdStr" | "blockRoot" | "columnMeta"> & {
-  needed: fulu.DataColumnSidecars;
-  needToPublish?: fulu.DataColumnSidecars;
-}): Promise<void> {
-  const requestedIndices = columnMeta.missing;
-  for (const columnSidecar of needed) {
-    if (!requestedIndices.includes(columnSidecar.index)) {
-      throw new DownloadByRootError(
-        {
-          code: DownloadByRootErrorCode.EXTRA_SIDECAR_RECEIVED,
-          peer: prettyPrintPeerIdStr(peerIdStr),
-          blockRoot: prettyBytes(blockRoot),
-          invalidIndex: columnSidecar.index,
-        },
-        "received a columnSidecar that was not requested"
-      );
-    }
-
-    validateColumnSidecar({
-      config,
-      peerIdStr,
-      blockRoot,
-      columnSidecar,
-    });
-  }
-
-  const checkedIndices = needed.map((c) => c.index);
-  const needToCheckProof: fulu.DataColumnSidecars = [];
-  for (const columnSidecar of needToPublish) {
-    if (!checkedIndices.includes(columnSidecar.index)) {
-      validateColumnSidecar({
-        config,
-        peerIdStr,
-        blockRoot,
-        columnSidecar,
-      });
-      needToCheckProof.push(columnSidecar);
-    }
-  }
-
-  const columnSidecars = [...needed, ...needToCheckProof];
-  try {
-    // TODO(fulu): need to double check that the construction of these arrays is correct
-    await verifyDataColumnSidecarKzgProofs(
-      columnSidecars.flatMap((c) => c.kzgCommitments),
-      columnSidecars.flatMap((c) => Array.from({length: c.column.length}, () => c.index)),
-      columnSidecars.flatMap((c) => c.column),
-      columnSidecars.flatMap((c) => c.kzgProofs)
     );
   } catch {
     throw new DownloadByRootError({
@@ -590,13 +473,22 @@ export async function fetchAndValidateColumns({
   blockRoot,
   columnMeta,
 }: FetchByRootAndValidateColumnsProps): Promise<fulu.DataColumnSidecars> {
-  let columnSidecars = await fetchGetBlobsV2AndBuildSidecars({
-    config,
-    executionEngine,
-    forkName,
-    block,
-    columnMeta,
-  });
+  let columnSidecars: fulu.DataColumnSidecars;
+  try {
+    columnSidecars = await fetchGetBlobsV2AndBuildSidecars({
+      config,
+      executionEngine,
+      forkName,
+      block,
+      columnMeta,
+    });
+  } catch (err) {
+    network.logger.error(
+      `error building columnSidecars for blockRoot=${prettyBytes(blockRoot)} via getBlobsV2`,
+      {},
+      err
+    );
+  }
 
   if (columnSidecars.length) {
     // limit reconstructed to only the ones we need
@@ -643,6 +535,151 @@ export async function fetchAndValidateColumns({
   });
 
   return columnSidecars;
+}
+
+export async function fetchGetBlobsV2AndBuildSidecars({
+  config,
+  executionEngine,
+  forkName,
+  block,
+  columnMeta,
+}: Pick<
+  FetchByRootAndValidateColumnsProps,
+  "config" | "executionEngine" | "forkName" | "block" | "columnMeta"
+>): Promise<fulu.DataColumnSidecars> {
+  const response = await executionEngine.getBlobs(forkName, columnMeta.versionedHashes);
+  if (!response) {
+    return [];
+  }
+
+  const cellsAndProofs = await getCellsAndProofs(response);
+  return getDataColumnSidecarsFromBlock(config, block, cellsAndProofs);
+}
+
+export async function fetchColumnsByRoot({
+  network,
+  peerIdStr,
+  blockRoot,
+  columnMeta,
+}: Pick<
+  FetchByRootAndValidateColumnsProps,
+  "network" | "peerIdStr" | "blockRoot" | "columnMeta"
+>): Promise<fulu.DataColumnSidecars> {
+  return await network.sendDataColumnSidecarsByRoot(peerIdStr, [{blockRoot, columns: columnMeta.missing}]);
+}
+
+export type ValidateColumnSidecarProps = Pick<
+  FetchByRootAndValidateColumnsProps,
+  "config" | "peerIdStr" | "blockRoot"
+> & {
+  columnSidecar: fulu.DataColumnSidecar;
+};
+export function validateColumnSidecar({config, peerIdStr, blockRoot, columnSidecar}: ValidateColumnSidecarProps): void {
+  const headerRoot = config
+    .getForkTypes(columnSidecar.signedBlockHeader.message.slot)
+    .BeaconBlockHeader.hashTreeRoot(columnSidecar.signedBlockHeader.message);
+  if (!byteArrayEquals(blockRoot, headerRoot)) {
+    throw new DownloadByRootError(
+      {
+        code: DownloadByRootErrorCode.MISMATCH_BLOCK_ROOT,
+        peer: prettyPrintPeerIdStr(peerIdStr),
+        requestedBlockRoot: prettyBytes(blockRoot),
+        receivedBlockRoot: prettyBytes(toRootHex(headerRoot)),
+      },
+      `columnSidecar.signedBlockHeader not match requested blockRoot for index=${columnSidecar.index}`
+    );
+  }
+
+  if (!verifyDataColumnSidecarInclusionProof(columnSidecar)) {
+    throw new DownloadByRootError({
+      code: DownloadByRootErrorCode.INVALID_INCLUSION_PROOF,
+      peer: prettyPrintPeerIdStr(peerIdStr),
+      blockRoot: prettyBytes(blockRoot),
+      sidecarIndex: columnSidecar.index,
+    });
+  }
+}
+
+export type ValidateColumnSidecarsProps = Pick<
+  FetchByRootAndValidateColumnsProps,
+  "config" | "peerIdStr" | "blockRoot" | "columnMeta"
+> & {
+  needed?: fulu.DataColumnSidecars;
+  needToPublish?: fulu.DataColumnSidecars;
+  /* should only be used for testing purposes */
+  validateFn?: (props: ValidateColumnSidecarProps) => void;
+};
+export async function validateColumnSidecars({
+  config,
+  peerIdStr,
+  blockRoot,
+  columnMeta,
+  needed = [],
+  needToPublish = [],
+  validateFn = validateColumnSidecar,
+}: ValidateColumnSidecarsProps): Promise<void> {
+  const requestedIndices = columnMeta.missing;
+  for (const columnSidecar of needed) {
+    if (!requestedIndices.includes(columnSidecar.index)) {
+      throw new DownloadByRootError(
+        {
+          code: DownloadByRootErrorCode.EXTRA_SIDECAR_RECEIVED,
+          peer: prettyPrintPeerIdStr(peerIdStr),
+          blockRoot: prettyBytes(blockRoot),
+          invalidIndex: columnSidecar.index,
+        },
+        "Received a columnSidecar that was not requested"
+      );
+    }
+
+    try {
+      validateFn({
+        config,
+        peerIdStr,
+        blockRoot,
+        columnSidecar,
+      });
+    } catch (err) {
+      err.message = `Error validating needed columnSidecar index=${columnSidecar.index}. Validation error: ${err.message}`;
+      throw err;
+    }
+  }
+
+  const checkedIndices = needed.map((c) => c.index);
+  const needToCheckProof: fulu.DataColumnSidecars = [];
+  for (const columnSidecar of needToPublish) {
+    if (!checkedIndices.includes(columnSidecar.index)) {
+      try {
+        validateFn({
+          config,
+          peerIdStr,
+          blockRoot,
+          columnSidecar,
+        });
+      } catch (err) {
+        err.message = `Error validating needToPublish columnSidecar index=${columnSidecar.index}. Validation error: ${err.message}`;
+        throw err;
+      }
+      needToCheckProof.push(columnSidecar);
+    }
+  }
+
+  const columnSidecars = [...needed, ...needToCheckProof];
+  try {
+    // TODO(fulu): need to double check that the construction of these arrays is correct
+    await verifyDataColumnSidecarKzgProofs(
+      columnSidecars.flatMap((c) => c.kzgCommitments),
+      columnSidecars.flatMap((c) => Array.from({length: c.column.length}, () => c.index)),
+      columnSidecars.flatMap((c) => c.column),
+      columnSidecars.flatMap((c) => c.kzgProofs)
+    );
+  } catch {
+    throw new DownloadByRootError({
+      code: DownloadByRootErrorCode.INVALID_KZG_PROOF,
+      peer: prettyPrintPeerIdStr(peerIdStr),
+      blockRoot: prettyBytes(blockRoot),
+    });
+  }
 }
 
 export enum DownloadByRootErrorCode {

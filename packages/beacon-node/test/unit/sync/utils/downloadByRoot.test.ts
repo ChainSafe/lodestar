@@ -1,21 +1,29 @@
-import {ForkName} from "@lodestar/params";
+import {randomBytes} from "node:crypto";
+import {BYTES_PER_CELL, BYTES_PER_COMMITMENT, BYTES_PER_PROOF} from "@crate-crypto/node-eth-kzg";
+import {ForkName, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {SignedBeaconBlock, deneb, fulu, ssz} from "@lodestar/types";
 import {fromHex, prettyBytes, toRootHex} from "@lodestar/utils";
-import {Mock, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
-import {BlockInputSource, IBlockInput} from "../../../../src/chain/blocks/blockInput/types.js";
+import {Mock, afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
+import {
+  BlobMeta,
+  BlockInputSource,
+  IBlockInput,
+  MissingColumnMeta,
+} from "../../../../src/chain/blocks/blockInput/types.js";
 import {ChainEventEmitter} from "../../../../src/chain/index.js";
 import {SeenBlockInput} from "../../../../src/chain/seenCache/seenGossipBlockInput.js";
 import {IExecutionEngine} from "../../../../src/execution/index.js";
-import {INetwork} from "../../../../src/network/index.js";
+import {INetwork, prettyPrintPeerIdStr} from "../../../../src/network/index.js";
 import {BlockInputSyncCacheItem, PendingBlockInput, PendingBlockInputStatus} from "../../../../src/sync/types.js";
 import {
   DownloadByRootError,
   DownloadByRootErrorCode,
+  ValidateColumnSidecarsProps,
   downloadByRoot,
   fetchAndValidateBlobs,
   fetchAndValidateBlock,
   fetchAndValidateColumns,
-  fetchBlobByRoot,
+  fetchBlobsByRoot,
   fetchByRoot,
   fetchColumnsByRoot,
   fetchGetBlobsV1AndBuildSidecars,
@@ -26,6 +34,8 @@ import {
 } from "../../../../src/sync/utils/downloadByRoot.js";
 import {kzgCommitmentToVersionedHash} from "../../../../src/util/blobs.js";
 import {Clock} from "../../../../src/util/clock.js";
+import {kzg} from "../../../../src/util/kzg.js";
+import {ROOT_SIZE} from "../../../../src/util/sszBytes.js";
 import {getMockedLogger} from "../../../../test/mocks/loggerMock.js";
 import {
   config,
@@ -37,28 +47,27 @@ import {
 } from "../../../utils/blocksAndData.js";
 
 describe("downloadByRoot.ts", () => {
-  const peerIdStr = "0x1234567890abcdef";
+  const peerIdStr = "1234567890abcdef1234567890abcdef";
+  const prettyPeerIdStr = prettyPrintPeerIdStr(peerIdStr);
+  let network: INetwork;
   // let cache: SeenBlockInput;
-  // let network: INetwork;
-  // let executionEngine: IExecutionEngine;
+  let executionEngine: IExecutionEngine;
   const logger = getMockedLogger();
 
   // Test data
   // let capellaBlock: SignedBeaconBlock;
-  let denebBlockWithBlobs: ReturnType<typeof generateBlockWithBlobSidecars>;
-  let fuluBlockWithColumns: ReturnType<typeof generateBlockWithColumnSidecars>;
-  let blockRoot: Uint8Array;
+  // let denebBlockWithBlobs: ReturnType<typeof generateBlockWithBlobSidecars>;
+  // let fuluBlockWithColumns: ReturnType<typeof generateBlockWithColumnSidecars>;
+  // let blockRoot: Uint8Array;
   // let rootHex: string;
 
   beforeAll(() => {
     // Generate test blocks
     // const capellaBlocks = generateChainOfBlocks({forkName: ForkName.capella, count: 1});
     // capellaBlock = capellaBlocks[0].block;
-
-    denebBlockWithBlobs = generateBlockWithBlobSidecars({forkName: ForkName.deneb});
-    fuluBlockWithColumns = generateBlockWithColumnSidecars({forkName: ForkName.fulu});
-
-    blockRoot = denebBlockWithBlobs.blockRoot;
+    // denebBlockWithBlobs = generateBlockWithBlobSidecars({forkName: ForkName.deneb});
+    // fuluBlockWithColumns = generateBlockWithColumnSidecars({forkName: ForkName.fulu});
+    // blockRoot = denebBlockWithBlobs.blockRoot;
     // rootHex = denebBlockWithBlobs.rootHex;
   });
 
@@ -87,129 +96,129 @@ describe("downloadByRoot.ts", () => {
     // } as unknown as IExecutionEngine;
   });
 
-  describe("downloadByRoot", () => {
-    it("should successfully download block with blobs for post-Deneb fork", () => {
-      // Test downloading a block with blob sidecars in post-Deneb fork
-    });
+  // describe("downloadByRoot", () => {
+  //   it("should successfully download block with blobs for post-Deneb fork", () => {
+  //     // Test downloading a block with blob sidecars in post-Deneb fork
+  //   });
 
-    it("should successfully download block with columns for post-Fulu fork", () => {
-      // Test downloading a block with column sidecars in post-Fulu fork
-    });
+  //   it("should successfully download block with columns for post-Fulu fork", () => {
+  //     // Test downloading a block with column sidecars in post-Fulu fork
+  //   });
 
-    it("should successfully download block without additional data for pre-Deneb fork", () => {
-      // Test downloading a simple block in pre-Deneb fork
-    });
+  //   it("should successfully download block without additional data for pre-Deneb fork", () => {
+  //     // Test downloading a simple block in pre-Deneb fork
+  //   });
 
-    it("should handle pending block input that already has block", () => {
-      // Test case where cacheItem is PendingBlockInput and already has the block
-    });
+  //   it("should handle pending block input that already has block", () => {
+  //     // Test case where cacheItem is PendingBlockInput and already has the block
+  //   });
 
-    it("should handle pending block input that needs block and data", () => {
-      // Test case where cacheItem is PendingBlockInput but missing block and data
-    });
+  //   it("should handle pending block input that needs block and data", () => {
+  //     // Test case where cacheItem is PendingBlockInput but missing block and data
+  //   });
 
-    it("should handle non-pending cache item", () => {
-      // Test case where cacheItem is not PendingBlockInput
-    });
+  //   it("should handle non-pending cache item", () => {
+  //     // Test case where cacheItem is not PendingBlockInput
+  //   });
 
-    it("should throw error when blob sidecars are missing for blob input", () => {
-      // Test MISSING_BLOB_RESPONSE error
-    });
+  //   it("should throw error when blob sidecars are missing for blob input", () => {
+  //     // Test MISSING_BLOB_RESPONSE error
+  //   });
 
-    it("should throw error when column sidecars are missing for column input", () => {
-      // Test MISSING_COLUMN_RESPONSE error
-    });
+  //   it("should throw error when column sidecars are missing for column input", () => {
+  //     // Test MISSING_COLUMN_RESPONSE error
+  //   });
 
-    it("should return downloaded status when block has all data", () => {
-      // Test status is set to downloaded when blockInput.hasBlockAndAllData() returns true
-    });
+  //   it("should return downloaded status when block has all data", () => {
+  //     // Test status is set to downloaded when blockInput.hasBlockAndAllData() returns true
+  //   });
 
-    it("should return pending status when block is missing data", () => {
-      // Test status is set to pending when blockInput.hasBlockAndAllData() returns false
-    });
-  });
+  //   it("should return pending status when block is missing data", () => {
+  //     // Test status is set to pending when blockInput.hasBlockAndAllData() returns false
+  //   });
+  // });
 
-  describe("fetchByRoot", () => {
-    it("should fetch block and blobs for pending block input in post-Deneb fork", () => {
-      // Test fetching when cacheItem is PendingBlockInput and fork is post-Deneb
-    });
+  // describe("fetchByRoot", () => {
+  //   it("should fetch block and blobs for pending block input in post-Deneb fork", () => {
+  //     // Test fetching when cacheItem is PendingBlockInput and fork is post-Deneb
+  //   });
 
-    it("should fetch block and columns for pending block input in post-Fulu fork", () => {
-      // Test fetching when cacheItem is PendingBlockInput and fork is post-Fulu
-    });
+  //   it("should fetch block and columns for pending block input in post-Fulu fork", () => {
+  //     // Test fetching when cacheItem is PendingBlockInput and fork is post-Fulu
+  //   });
 
-    it("should use existing block from pending block input", () => {
-      // Test when cacheItem.blockInput.hasBlock() returns true
-    });
+  //   it("should use existing block from pending block input", () => {
+  //     // Test when cacheItem.blockInput.hasBlock() returns true
+  //   });
 
-    it("should fetch new block when pending block input doesn't have block", () => {
-      // Test when cacheItem.blockInput.hasBlock() returns false
-    });
+  //   it("should fetch new block when pending block input doesn't have block", () => {
+  //     // Test when cacheItem.blockInput.hasBlock() returns false
+  //   });
 
-    it("should skip data fetching when pending block input has all data", () => {
-      // Test when cacheItem.blockInput.hasAllData() returns true
-    });
+  //   it("should skip data fetching when pending block input has all data", () => {
+  //     // Test when cacheItem.blockInput.hasAllData() returns true
+  //   });
 
-    it("should fetch blobs when pending block input is missing blob data", () => {
-      // Test blob fetching for incomplete blob input
-    });
+  //   it("should fetch blobs when pending block input is missing blob data", () => {
+  //     // Test blob fetching for incomplete blob input
+  //   });
 
-    it("should fetch columns when pending block input is missing column data", () => {
-      // Test column fetching for incomplete column input
-    });
+  //   it("should fetch columns when pending block input is missing column data", () => {
+  //     // Test column fetching for incomplete column input
+  //   });
 
-    it("should fetch block and blobs for non-pending cache item in post-Deneb fork", () => {
-      // Test fetching for non-PendingBlockInput in post-Deneb
-    });
+  //   it("should fetch block and blobs for non-pending cache item in post-Deneb fork", () => {
+  //     // Test fetching for non-PendingBlockInput in post-Deneb
+  //   });
 
-    it("should fetch block and columns for non-pending cache item in post-Fulu fork", () => {
-      // Test fetching for non-PendingBlockInput in post-Fulu
-    });
+  //   it("should fetch block and columns for non-pending cache item in post-Fulu fork", () => {
+  //     // Test fetching for non-PendingBlockInput in post-Fulu
+  //   });
 
-    it("should fetch only block for non-pending cache item in pre-Deneb fork", () => {
-      // Test fetching for non-PendingBlockInput in pre-Deneb
-    });
-  });
+  //   it("should fetch only block for non-pending cache item in pre-Deneb fork", () => {
+  //     // Test fetching for non-PendingBlockInput in pre-Deneb
+  //   });
+  // });
 
-  describe("fetchAndValidateBlock", () => {
-    it("should successfully fetch and validate block with matching root", () => {
-      // Test successful block fetch and validation
-    });
+  // describe("fetchAndValidateBlock", () => {
+  //   it("should successfully fetch and validate block with matching root", () => {
+  //     // Test successful block fetch and validation
+  //   });
 
-    it("should throw error when no block is returned from network", () => {
-      // Test MISSING_BLOCK_RESPONSE error
-    });
+  //   it("should throw error when no block is returned from network", () => {
+  //     // Test MISSING_BLOCK_RESPONSE error
+  //   });
 
-    it("should throw error when block root doesn't match requested root", () => {
-      // Test MISMATCH_BLOCK_ROOT error
-    });
+  //   it("should throw error when block root doesn't match requested root", () => {
+  //     // Test MISMATCH_BLOCK_ROOT error
+  //   });
 
-    it("should handle network request failure", () => {
-      // Test network failure scenarios
-    });
-  });
+  //   it("should handle network request failure", () => {
+  //     // Test network failure scenarios
+  //   });
+  // });
 
-  describe("fetchAndValidateBlobs", () => {
-    it("should successfully fetch blobs from execution engine only", () => {
-      // Test when all blobs are available from execution engine
-    });
+  // describe("fetchAndValidateBlobs", () => {
+  //   it("should successfully fetch blobs from execution engine only", () => {
+  //     // Test when all blobs are available from execution engine
+  //   });
 
-    it("should fetch remaining blobs from network when execution engine is incomplete", () => {
-      // Test when some blobs are from execution engine, others from network
-    });
+  //   it("should fetch remaining blobs from network when execution engine is incomplete", () => {
+  //     // Test when some blobs are from execution engine, others from network
+  //   });
 
-    it("should fetch all blobs from network when execution engine returns none", () => {
-      // Test when execution engine returns no blobs
-    });
+  //   it("should fetch all blobs from network when execution engine returns none", () => {
+  //     // Test when execution engine returns no blobs
+  //   });
 
-    it("should validate all fetched blobs successfully", () => {
-      // Test successful blob validation
-    });
+  //   it("should validate all fetched blobs successfully", () => {
+  //     // Test successful blob validation
+  //   });
 
-    it("should throw error when blob validation fails", () => {
-      // Test blob validation failure scenarios
-    });
-  });
+  //   it("should throw error when blob validation fails", () => {
+  //     // Test blob validation failure scenarios
+  //   });
+  // });
 
   describe("fetchGetBlobsV1AndBuildSidecars", () => {
     it("should build blob sidecars from execution engine response", () => {
@@ -227,224 +236,668 @@ describe("downloadByRoot.ts", () => {
     it("should correctly compute inclusion proofs for blob sidecars", () => {
       // Test inclusion proof computation
     });
-
-    it("should handle execution engine errors gracefully", () => {
-      // Test execution engine failure scenarios
-    });
   });
 
-  describe("fetchBlobByRoot", () => {
-    it("should fetch blob sidecars by root from network", () => {
-      // Test successful network blob fetch
+  describe("fetchBlobsByRoot", () => {
+    let denebBlockWithColumns: ReturnType<typeof generateBlockWithBlobSidecars>;
+    let blockRoot: Uint8Array;
+    let blobMeta: BlobMeta[];
+    beforeAll(() => {
+      denebBlockWithColumns = generateBlockWithBlobSidecars({forkName: ForkName.deneb, count: 6});
+      blockRoot = denebBlockWithColumns.blockRoot;
+      blobMeta = denebBlockWithColumns.blobSidecars.map((_, index) => ({blockRoot, index}) as BlobMeta);
+      network = {
+        sendBlobSidecarsByRoot: vi.fn(() => denebBlockWithColumns.blobSidecars),
+      } as unknown as INetwork;
+    });
+    afterAll(() => {
+      vi.resetAllMocks();
     });
 
-    it("should filter out blobs already in possession", () => {
-      // Test that only missing blobs are requested
+    it("should fetch missing columnSidecars ByRoot from network", async () => {
+      const response = await fetchBlobsByRoot({
+        network,
+        peerIdStr,
+        blockRoot,
+        blobMeta,
+      });
+      expect(response).toEqual(denebBlockWithColumns.blobSidecars);
+      expect(network.sendBlobSidecarsByRoot).toHaveBeenCalledOnce();
+      expect(network.sendBlobSidecarsByRoot).toHaveBeenCalledWith(peerIdStr, blobMeta);
     });
 
-    it("should handle empty blob request when all blobs are in possession", () => {
-      // Test when indicesInPossession includes all needed blobs
+    it("should filter out blobs already in possession", async () => {
+      await fetchBlobsByRoot({
+        network,
+        peerIdStr,
+        blockRoot,
+        blobMeta,
+        indicesInPossession: [0, denebBlockWithColumns.blobSidecars.at(-1)?.index],
+      });
+      expect(network.sendBlobSidecarsByRoot).toHaveBeenCalledOnce();
+      expect(network.sendBlobSidecarsByRoot).toHaveBeenCalledWith(peerIdStr, blobMeta.slice(1, -1));
     });
 
-    it("should handle network request failure", () => {
-      // Test network failure scenarios
+    it("should handle empty blob request when all blobs are in possession", async () => {
+      const response = await fetchBlobsByRoot({
+        network,
+        peerIdStr,
+        blockRoot,
+        blobMeta,
+        indicesInPossession: blobMeta.map(({index}) => index),
+      });
+      expect(response).toEqual([]);
+      expect(network.sendBlobSidecarsByRoot).not.toHaveBeenCalled();
     });
   });
 
   describe("validateBlobs", () => {
-    it("should successfully validate all blob sidecars", () => {
-      // Test successful blob validation
+    let denebBlockWithBlobs: ReturnType<typeof generateBlockWithBlobSidecars>;
+    let blockRoot: Uint8Array;
+    let blobMeta: BlobMeta[];
+    let blobSidecars: deneb.BlobSidecars;
+
+    beforeAll(() => {
+      denebBlockWithBlobs = generateBlockWithBlobSidecars({forkName: ForkName.deneb});
+      blockRoot = denebBlockWithBlobs.blockRoot;
+      blobSidecars = denebBlockWithBlobs.blobSidecars;
+      blobMeta = blobSidecars.map((b) => ({index: b.index}) as BlobMeta);
     });
 
-    it("should throw error for extra unrequested blob sidecar", () => {
-      // Test EXTRA_SIDECAR_RECEIVED error
+    it("should successfully validate all blobSidecars", async () => {
+      await expect(
+        validateBlobs({
+          config,
+          peerIdStr,
+          blockRoot,
+          blobMeta,
+          blobSidecars,
+        })
+      ).resolves.toBeUndefined();
     });
 
-    it("should throw error for mismatched block root in blob header", () => {
-      // Test MISMATCH_BLOCK_ROOT error for blob sidecar
+    it("should throw error for extra un-requested blobSidecar", async () => {
+      try {
+        await validateBlobs({
+          config,
+          peerIdStr,
+          blockRoot,
+          blobMeta: blobMeta.slice(0, -1),
+          blobSidecars,
+        });
+      } catch (err) {
+        expect(err).toBeInstanceOf(DownloadByRootError);
+        expect((err as DownloadByRootError).type.code).toBe(DownloadByRootErrorCode.EXTRA_SIDECAR_RECEIVED);
+        expect((err as DownloadByRootError).type.peer).toBe(prettyPeerIdStr);
+        expect((err as DownloadByRootError).type.blockRoot).toBe(prettyBytes(blockRoot));
+        expect((err as DownloadByRootError).type.invalidIndex).toBe(blobMeta.at(-1)?.index);
+        expect((err as DownloadByRootError).message).toBe("received a blobSidecar that was not requested");
+      }
     });
 
-    it("should throw error for invalid inclusion proof", () => {
-      // Test INVALID_INCLUSION_PROOF error
+    it("should throw error for mismatched block root in blob header", async () => {
+      const requestedBlockRoot = new Uint8Array(ROOT_SIZE).fill(0xac);
+      const headerRoot = config
+        .getForkTypes(blobSidecars[0].signedBlockHeader.message.slot)
+        .BeaconBlockHeader.hashTreeRoot(blobSidecars[0].signedBlockHeader.message);
+      try {
+        await validateBlobs({
+          config,
+          peerIdStr,
+          blockRoot: requestedBlockRoot,
+          blobMeta,
+          blobSidecars,
+        });
+      } catch (err) {
+        expect(err).toBeInstanceOf(DownloadByRootError);
+        expect((err as DownloadByRootError).type.code).toBe(DownloadByRootErrorCode.MISMATCH_BLOCK_ROOT);
+        expect((err as DownloadByRootError).type.peer).toBe(prettyPeerIdStr);
+        expect((err as DownloadByRootError).type.requestedBlockRoot).toBe(prettyBytes(requestedBlockRoot));
+        expect((err as DownloadByRootError).type.receivedBlockRoot).toBe(prettyBytes(headerRoot));
+        expect(err.message).toEqual("blobSidecar header root did not match requested blockRoot for index=0");
+      }
     });
 
-    it("should throw error for invalid KZG proof", () => {
-      // Test INVALID_KZG_PROOF error
+    it("should throw error for invalid inclusion proof", async () => {
+      const invalidBlobSidecar = ssz.deneb.BlobSidecar.clone(denebBlockWithBlobs.blobSidecars[0]);
+      // Corrupt the inclusion proof to make it invalid
+      invalidBlobSidecar.kzgCommitmentInclusionProof[0] = new Uint8Array(32).fill(255);
+
+      try {
+        await validateBlobs({
+          config,
+          peerIdStr,
+          blockRoot,
+          blobMeta: [blobMeta[0]],
+          blobSidecars: [invalidBlobSidecar],
+        });
+      } catch (err) {
+        expect(err).toBeInstanceOf(DownloadByRootError);
+        expect((err as DownloadByRootError).type.code).toBe(DownloadByRootErrorCode.INVALID_INCLUSION_PROOF);
+        expect((err as DownloadByRootError).type.peer).toBe(prettyPeerIdStr);
+        expect((err as DownloadByRootError).type.blockRoot).toBe(prettyBytes(blockRoot));
+        expect((err as DownloadByRootError).type.sidecarIndex).toBe(invalidBlobSidecar.index);
+        expect(err.message).toEqual("invalid inclusion proof for blobSidecar at index=0");
+      }
     });
 
-    it("should validate multiple blob sidecars correctly", () => {
-      // Test validation of multiple blobs
+    it("should throw error for invalid KZG proof", async () => {
+      const invalidBlobSidecar = ssz.deneb.BlobSidecar.clone(denebBlockWithBlobs.blobSidecars[0]);
+      // Corrupt a single proof in the batch and make sure all trip as invalid
+      invalidBlobSidecar.kzgProof = new Uint8Array(48).fill(255);
+
+      try {
+        await validateBlobs({
+          config,
+          peerIdStr,
+          blockRoot,
+          blobMeta,
+          blobSidecars: [invalidBlobSidecar, ...blobSidecars.slice(1)],
+        });
+      } catch (err) {
+        expect(err).toBeInstanceOf(DownloadByRootError);
+        expect((err as DownloadByRootError).type.code).toBe(DownloadByRootErrorCode.INVALID_KZG_PROOF);
+        expect((err as DownloadByRootError).type.peer).toBe(prettyPeerIdStr);
+        expect((err as DownloadByRootError).type.blockRoot).toBe(prettyBytes(blockRoot));
+      }
     });
   });
 
+  // describe("fetchAndValidateColumns", () => {
+  //   it("should fetch columns from execution engine and validate", () => {
+  //     // Test successful fetch from execution engine
+  //   });
+
+  //   it("should gracefully handle executionEngine errors", () => {
+  //     // Test needToPublish logic with custody configuration
+  //   });
+
+  //   it("should fetch columns from network when execution engine returns empty", () => {
+  //     // Test fallback to network when execution engine fails
+  //   });
+
+  //   it("should publish reconstructed columns to network", () => {
+  //     // Test column publishing after reconstruction
+  //   });
+
+  //   it("should filter needed columns from reconstructed set", () => {
+  //     // Test that only needed columns are returned
+  //   });
+
+  //   it("should handle publishing errors gracefully", () => {
+  //     // Test that publishing errors don't fail the main operation
+  //   });
+
+  //   it("should validate columns correctly in both scenarios", () => {
+  //     // Test validation works for both execution engine and network paths
+  //   });
+
+  //   it("should determine correct columns to publish based on custody config", () => {
+  //     // Test needToPublish logic with custody configuration
+  //   });
+
+  // });
+
   describe("fetchGetBlobsV2AndBuildSidecars", () => {
-    it("should build column sidecars from execution engine blobs", () => {
-      // Test successful column sidecar building
+    let fuluBlockWithColumns: ReturnType<typeof generateBlockWithColumnSidecars>;
+    let blobAndProofs: fulu.BlobAndProofV2[];
+    let versionedHashes: Uint8Array[];
+
+    beforeEach(() => {
+      fuluBlockWithColumns = generateBlockWithColumnSidecars({forkName: ForkName.fulu, returnBlobs: true});
+      // biome-ignore lint/style/noNonNullAssertion: returnBlobs = true
+      const blobs = fuluBlockWithColumns.blobs!;
+      blobAndProofs = blobs
+        .map((b) => kzg.computeCellsAndKzgProofs(b))
+        .map(({proofs}, i) => ({proofs, blob: blobs[i]}));
+      versionedHashes = fuluBlockWithColumns.block.message.body.blobKzgCommitments.map((c) =>
+        kzgCommitmentToVersionedHash(c)
+      );
     });
 
-    it("should return empty array when execution engine returns no response", () => {
-      // Test when execution engine returns null/undefined
+    afterEach(() => {
+      vi.resetAllMocks();
     });
 
-    it("should handle execution engine errors", () => {
-      // Test execution engine failure scenarios
+    it("should call getBlobs with the correct arguments", async () => {
+      const getBlobsMock = vi.fn(() => Promise.resolve(blobAndProofs));
+      executionEngine = {
+        getBlobs: getBlobsMock,
+      } as unknown as IExecutionEngine;
+
+      const columnMeta = {
+        missing: fuluBlockWithColumns.columnSidecars.map((c) => c.index),
+        versionedHashes,
+      };
+
+      await fetchGetBlobsV2AndBuildSidecars({
+        config,
+        executionEngine,
+        forkName: ForkName.fulu,
+        block: fuluBlockWithColumns.block,
+        columnMeta,
+      });
+
+      expect(getBlobsMock).toHaveBeenCalledOnce();
+      expect(getBlobsMock).toHaveBeenCalledWith(ForkName.fulu, versionedHashes);
     });
 
-    it("should correctly process cells and proofs", () => {
-      // Test getCellsAndProofs processing
+    it("should return empty array when execution engine returns no response", async () => {
+      const getBlobsMock = vi.fn(() => Promise.resolve(null));
+      executionEngine = {
+        getBlobs: getBlobsMock,
+      } as unknown as IExecutionEngine;
+
+      const columnMeta = {
+        missing: fuluBlockWithColumns.columnSidecars.map((c) => c.index),
+        versionedHashes,
+      };
+
+      const result = await fetchGetBlobsV2AndBuildSidecars({
+        config,
+        executionEngine,
+        forkName: ForkName.fulu,
+        block: fuluBlockWithColumns.block,
+        columnMeta,
+      });
+
+      expect(getBlobsMock).toHaveBeenCalledOnce();
+      expect(result).toEqual([]);
+    });
+
+    it("should build columnSidecars from execution engine blobs", async () => {
+      const getBlobsMock = vi.fn(() => Promise.resolve(blobAndProofs));
+      executionEngine = {
+        getBlobs: getBlobsMock,
+      } as unknown as IExecutionEngine;
+
+      const columnMeta = {
+        missing: fuluBlockWithColumns.columnSidecars.map((c) => c.index),
+        versionedHashes,
+      };
+
+      const result = await fetchGetBlobsV2AndBuildSidecars({
+        config,
+        executionEngine,
+        forkName: ForkName.fulu,
+        block: fuluBlockWithColumns.block,
+        columnMeta,
+      });
+
+      expect(getBlobsMock).toHaveBeenCalledOnce();
+      expect(result).toBeDefined();
+      expect(result).toBeInstanceOf(Array);
+      expect(result.length).toEqual(NUMBER_OF_COLUMNS);
+
+      // Verify the structure of the returned column sidecars
+      for (const [index, columnSidecar] of Object.entries(result)) {
+        expect(columnSidecar).toHaveProperty("column");
+        expect(columnSidecar.column).toBeInstanceOf(Array);
+        columnSidecar.column.map((cell) => expect(cell).toBeInstanceOf(Uint8Array));
+        expect(columnSidecar.column.length).toEqual(fuluBlockWithColumns.block.message.body.blobKzgCommitments.length);
+
+        expect(columnSidecar).toHaveProperty("index");
+        expect(columnSidecar.index).toBeTypeOf("number");
+        expect(columnSidecar.index).toEqual(parseInt(index));
+
+        expect(columnSidecar).toHaveProperty("kzgCommitments");
+        expect(columnSidecar.kzgCommitments).toBeInstanceOf(Array);
+        columnSidecar.kzgCommitments.map((c) => expect(c).toBeInstanceOf(Uint8Array));
+        expect(columnSidecar.kzgCommitments.toString()).toEqual(
+          fuluBlockWithColumns.block.message.body.blobKzgCommitments.toString()
+        );
+
+        expect(columnSidecar).toHaveProperty("kzgProofs");
+        expect(columnSidecar.kzgProofs).toBeInstanceOf(Array);
+        columnSidecar.kzgProofs.map((proof) => expect(proof).toBeInstanceOf(Uint8Array));
+        expect(columnSidecar.kzgProofs.length).toEqual(columnSidecar.column.length);
+
+        expect(columnSidecar).toHaveProperty("kzgCommitmentsInclusionProof");
+        expect(columnSidecar.kzgCommitmentsInclusionProof).toBeInstanceOf(Array);
+        columnSidecar.kzgCommitmentsInclusionProof.map((proof) => expect(proof).toBeInstanceOf(Uint8Array));
+
+        // // Verify the signed block header matches the block
+        expect(columnSidecar).toHaveProperty("signedBlockHeader");
+        expect(columnSidecar.signedBlockHeader.message.slot).toBe(fuluBlockWithColumns.block.message.slot);
+        expect(columnSidecar.signedBlockHeader.message.proposerIndex).toBe(
+          fuluBlockWithColumns.block.message.proposerIndex
+        );
+        expect(columnSidecar.signedBlockHeader.message.parentRoot).toEqual(
+          fuluBlockWithColumns.block.message.parentRoot
+        );
+        expect(columnSidecar.signedBlockHeader.message.stateRoot).toEqual(fuluBlockWithColumns.block.message.stateRoot);
+      }
     });
   });
 
   describe("fetchColumnsByRoot", () => {
-    it("should fetch column sidecars by root from network", () => {
-      // Test successful network column fetch
+    let fuluBlockWithColumns: ReturnType<typeof generateBlockWithColumnSidecars>;
+    beforeAll(() => {
+      fuluBlockWithColumns = generateBlockWithColumnSidecars({forkName: ForkName.fulu});
+      network = {
+        sendDataColumnSidecarsByRoot: vi.fn(() => fuluBlockWithColumns.columnSidecars),
+      } as unknown as INetwork;
     });
-
-    it("should handle network request failure", () => {
-      // Test network failure scenarios
+    afterAll(() => {
+      vi.resetAllMocks();
     });
-
-    it("should request correct column indices", () => {
-      // Test that correct missing columns are requested
+    it("should fetch missing columnSidecars ByRoot from network", async () => {
+      const blockRoot = fuluBlockWithColumns.blockRoot;
+      const missing = fuluBlockWithColumns.columnSidecars.map((c) => c.index);
+      const response = await fetchColumnsByRoot({
+        network,
+        peerIdStr,
+        blockRoot,
+        columnMeta: {
+          missing,
+          versionedHashes: [],
+        },
+      });
+      expect(response).toEqual(fuluBlockWithColumns.columnSidecars);
+      expect(network.sendDataColumnSidecarsByRoot).toHaveBeenCalledOnce();
+      expect(network.sendDataColumnSidecarsByRoot).toHaveBeenCalledWith(peerIdStr, [{blockRoot, columns: missing}]);
     });
   });
 
-  // describe("validateColumnSidecar", () => {
-  //   it("should successfully validate column sidecar", () => {
-  //     const columnSidecar = fuluBlockWithColumns.columnSidecars[0];
-  //     const testBlockRoot = fuluBlockWithColumns.blockRoot;
+  describe("validateColumnSidecar", () => {
+    let fuluBlockWithColumns: ReturnType<typeof generateBlockWithColumnSidecars>;
 
-  //     // This should not throw
-  //     expect(() => {
-  //       validateColumnSidecar({
-  //         config,
-  //         peerIdStr,
-  //         blockRoot: testBlockRoot,
-  //         columnSidecar,
-  //       });
-  //     }).not.toThrow();
-  //   });
+    beforeAll(() => {
+      fuluBlockWithColumns = generateBlockWithColumnSidecars({forkName: ForkName.fulu});
+    });
 
-  //   it("should throw error for mismatched block root in column header", () => {
-  //     const columnSidecar = fuluBlockWithColumns.columnSidecars[0];
-  //     const wrongBlockRoot = new Uint8Array(32).fill(1); // Different block root
+    it("should successfully validate column sidecar", () => {
+      const columnSidecar = fuluBlockWithColumns.columnSidecars[0];
+      const testBlockRoot = fuluBlockWithColumns.blockRoot;
 
-  //     expect(() => {
-  //       validateColumnSidecar({
-  //         config,
-  //         peerIdStr,
-  //         blockRoot: wrongBlockRoot,
-  //         columnSidecar,
-  //       });
-  //     }).toThrow(DownloadByRootError);
+      // This should not throw
+      expect(() => {
+        validateColumnSidecar({
+          config,
+          peerIdStr,
+          blockRoot: testBlockRoot,
+          columnSidecar,
+        });
+      }).not.toThrow();
+    });
 
-  //     try {
-  //       validateColumnSidecar({
-  //         config,
-  //         peerIdStr,
-  //         blockRoot: wrongBlockRoot,
-  //         columnSidecar,
-  //       });
-  //     } catch (error) {
-  //       expect(error).toBeInstanceOf(DownloadByRootError);
-  //       expect((error as DownloadByRootError).type.code).toBe(DownloadByRootErrorCode.MISMATCH_BLOCK_ROOT);
-  //       expect((error as DownloadByRootError).type.peer).toBe(peerIdStr);
-  //       expect((error as DownloadByRootError).type.requestedBlockRoot).toBe(prettyBytes(wrongBlockRoot));
-  //     }
-  //   });
+    it("should throw error for mismatched block root in column header", () => {
+      const columnSidecar = fuluBlockWithColumns.columnSidecars[0];
+      const wrongBlockRoot = new Uint8Array(32).fill(1);
 
-  //   it("should throw error for invalid inclusion proof", () => {
-  //     const columnSidecar = ssz.fulu.DataColumnSidecar.clone(fuluBlockWithColumns.columnSidecars[0]);
-  //     // Corrupt the inclusion proof to make it invalid
-  //     columnSidecar.kzgCommitmentsInclusionProof[0] = new Uint8Array(32).fill(255);
+      expect(() => {
+        validateColumnSidecar({
+          config,
+          peerIdStr,
+          blockRoot: wrongBlockRoot,
+          columnSidecar,
+        });
+      }).toThrow(DownloadByRootError);
 
-  //     expect(() => {
-  //       validateColumnSidecar({
-  //         config,
-  //         peerIdStr,
-  //         blockRoot: fuluBlockWithColumns.blockRoot,
-  //         columnSidecar,
-  //       });
-  //     }).toThrow(DownloadByRootError);
+      try {
+        validateColumnSidecar({
+          config,
+          peerIdStr,
+          blockRoot: wrongBlockRoot,
+          columnSidecar,
+        });
+      } catch (error) {
+        expect(error).toBeInstanceOf(DownloadByRootError);
+        expect((error as DownloadByRootError).type.code).toBe(DownloadByRootErrorCode.MISMATCH_BLOCK_ROOT);
+        expect((error as DownloadByRootError).type.peer).toBe(prettyPeerIdStr);
+        expect((error as DownloadByRootError).type.requestedBlockRoot).toBe(prettyBytes(wrongBlockRoot));
+      }
+    });
 
-  //     try {
-  //       validateColumnSidecar({
-  //         config,
-  //         peerIdStr,
-  //         blockRoot: fuluBlockWithColumns.blockRoot,
-  //         columnSidecar,
-  //       });
-  //     } catch (error) {
-  //       expect(error).toBeInstanceOf(DownloadByRootError);
-  //       expect((error as DownloadByRootError).type.code).toBe(DownloadByRootErrorCode.INVALID_INCLUSION_PROOF);
-  //       expect((error as DownloadByRootError).type.peer).toBe(peerIdStr);
-  //       expect((error as DownloadByRootError).type.blockRoot).toBe(prettyBytes(fuluBlockWithColumns.blockRoot));
-  //       expect((error as DownloadByRootError).type.sidecarIndex).toBe(columnSidecar.index);
-  //     }
-  //   });
-  // });
+    it("should throw error for invalid inclusion proof", () => {
+      const columnSidecar = ssz.fulu.DataColumnSidecar.clone(fuluBlockWithColumns.columnSidecars[0]);
+      // Corrupt the inclusion proof to make it invalid
+      columnSidecar.kzgCommitmentsInclusionProof[0] = new Uint8Array(32).fill(255);
+
+      expect(() => {
+        validateColumnSidecar({
+          config,
+          peerIdStr,
+          blockRoot: fuluBlockWithColumns.blockRoot,
+          columnSidecar,
+        });
+      }).toThrow(DownloadByRootError);
+
+      try {
+        validateColumnSidecar({
+          config,
+          peerIdStr,
+          blockRoot: fuluBlockWithColumns.blockRoot,
+          columnSidecar,
+        });
+      } catch (error) {
+        expect(error).toBeInstanceOf(DownloadByRootError);
+        expect((error as DownloadByRootError).type.code).toBe(DownloadByRootErrorCode.INVALID_INCLUSION_PROOF);
+        expect((error as DownloadByRootError).type.peer).toBe(prettyPeerIdStr);
+        expect((error as DownloadByRootError).type.blockRoot).toBe(prettyBytes(fuluBlockWithColumns.blockRoot));
+        expect((error as DownloadByRootError).type.sidecarIndex).toBe(columnSidecar.index);
+      }
+    });
+  });
 
   describe("validateColumnSidecars", () => {
-    it("should successfully validate all needed column sidecars", () => {
-      // Test successful validation of needed columns
+    let fuluBlockWithColumns: ReturnType<typeof generateBlockWithColumnSidecars>;
+    let blockRoot: Uint8Array;
+    let columnMeta: MissingColumnMeta;
+
+    beforeAll(() => {
+      fuluBlockWithColumns = generateBlockWithColumnSidecars({forkName: ForkName.fulu});
+      blockRoot = fuluBlockWithColumns.blockRoot;
+      columnMeta = {
+        missing: fuluBlockWithColumns.columnSidecars.map((c) => c.index),
+        versionedHashes: [],
+      };
     });
 
-    it("should successfully validate needed and publish columns", () => {
-      // Test validation with both needed and needToPublish columns
+    it("should successfully validate all needed column sidecars", async () => {
+      await expect(
+        validateColumnSidecars({
+          config,
+          peerIdStr,
+          blockRoot,
+          columnMeta,
+          needed: fuluBlockWithColumns.columnSidecars,
+        })
+      ).resolves.toBeUndefined();
     });
 
-    it("should throw error for extra unrequested column sidecar", () => {
-      // Test EXTRA_SIDECAR_RECEIVED error for columns
+    it("should successfully validate needToPublish columns", async () => {
+      await expect(
+        validateColumnSidecars({
+          config,
+          peerIdStr,
+          blockRoot,
+          columnMeta,
+          needToPublish: fuluBlockWithColumns.columnSidecars,
+        })
+      ).resolves.toBeUndefined();
     });
 
-    it("should throw error for invalid KZG proofs", () => {
-      // Test INVALID_KZG_PROOF error for columns
+    it("should throw error for extra un-requested column sidecar", async () => {
+      const testProps = {
+        config,
+        peerIdStr,
+        blockRoot,
+        columnMeta: {
+          ...columnMeta,
+          missing: Array.from({length: 18}, (_, i) => i),
+        },
+        needed: fuluBlockWithColumns.columnSidecars,
+      };
+      await expect(validateColumnSidecars(testProps)).rejects.toThrow();
+
+      try {
+        await validateColumnSidecars(testProps);
+      } catch (err) {
+        expect(err).toBeInstanceOf(DownloadByRootError);
+        expect((err as DownloadByRootError).type.code).toBe(DownloadByRootErrorCode.EXTRA_SIDECAR_RECEIVED);
+        expect((err as DownloadByRootError).type.peer).toBe(prettyPeerIdStr);
+        expect((err as DownloadByRootError).type.blockRoot).toBe(prettyBytes(blockRoot));
+        expect((err as DownloadByRootError).type.invalidIndex).toBe(18);
+        expect((err as DownloadByRootError).message).toBe("Received a columnSidecar that was not requested");
+      }
     });
 
-    it("should validate individual column sidecars correctly", () => {
-      // Test individual column validation within the batch
+    it("should invalidate individual needed column sidecar correctly", async () => {
+      // Create an invalid column with bad inclusion proof to trigger the final validation error
+      const invalidColumn = ssz.fulu.DataColumnSidecar.clone(fuluBlockWithColumns.columnSidecars[127]);
+      invalidColumn.kzgCommitmentsInclusionProof[0] = new Uint8Array(32).fill(255);
+
+      const invalidTestProps = {
+        config,
+        peerIdStr,
+        blockRoot,
+        columnMeta,
+        needed: [...fuluBlockWithColumns.columnSidecars.slice(0, -1), invalidColumn],
+      };
+
+      try {
+        await validateColumnSidecars(invalidTestProps);
+      } catch (err) {
+        expect(err).toBeInstanceOf(DownloadByRootError);
+        expect((err as DownloadByRootError).type.code).toBe(DownloadByRootErrorCode.INVALID_INCLUSION_PROOF);
+        expect((err as DownloadByRootError).type.peer).toBe(prettyPeerIdStr);
+        expect((err as DownloadByRootError).type.blockRoot).toBe(prettyBytes(fuluBlockWithColumns.blockRoot));
+        expect((err as DownloadByRootError).type.sidecarIndex).toBe(127);
+        expect(err.message).toBe(
+          "Error validating needed columnSidecar index=127. Validation error: DOWNLOAD_BY_ROOT_ERROR_INVALID_INCLUSION_PROOF"
+        );
+      }
     });
 
-    it("should handle empty needToPublish array", () => {
-      // Test when needToPublish is empty or not provided
+    it("should invalidate individual needToPublish column sidecar correctly", async () => {
+      // Create an invalid column with bad inclusion proof to trigger the final validation error
+      const invalidColumn = ssz.fulu.DataColumnSidecar.clone(fuluBlockWithColumns.columnSidecars[127]);
+      invalidColumn.kzgCommitmentsInclusionProof[0] = new Uint8Array(32).fill(255);
+
+      const invalidTestProps = {
+        config,
+        peerIdStr,
+        blockRoot,
+        columnMeta,
+        needToPublish: [...fuluBlockWithColumns.columnSidecars.slice(0, -1), invalidColumn],
+      };
+
+      try {
+        await validateColumnSidecars(invalidTestProps);
+      } catch (err) {
+        expect(err).toBeInstanceOf(DownloadByRootError);
+        expect((err as DownloadByRootError).type.code).toBe(DownloadByRootErrorCode.INVALID_INCLUSION_PROOF);
+        expect((err as DownloadByRootError).type.peer).toBe(prettyPeerIdStr);
+        expect((err as DownloadByRootError).type.blockRoot).toBe(prettyBytes(fuluBlockWithColumns.blockRoot));
+        expect((err as DownloadByRootError).type.sidecarIndex).toBe(127);
+        expect(err.message).toBe(
+          "Error validating needToPublish columnSidecar index=127. Validation error: DOWNLOAD_BY_ROOT_ERROR_INVALID_INCLUSION_PROOF"
+        );
+      }
     });
 
-    it("should avoid duplicate validation for columns in both arrays", () => {
-      // Test that columns present in both needed and needToPublish are not validated twice
-    });
-  });
+    it("should avoid duplicate validation for columns in both arrays", async () => {
+      // Use valid columns to simplify the test setup
+      const sharedColumns = fuluBlockWithColumns.columnSidecars.slice(0, 2);
+      const uniqueNeededColumns = fuluBlockWithColumns.columnSidecars.slice(2, 4);
+      const uniquePublishColumns = fuluBlockWithColumns.columnSidecars.slice(4, 6);
+      const validateFn = vi.fn();
 
-  describe("fetchAndValidateColumns", () => {
-    it("should fetch columns from execution engine and validate", () => {
-      // Test successful fetch from execution engine
+      const testProps: ValidateColumnSidecarsProps = {
+        config,
+        peerIdStr,
+        blockRoot,
+        columnMeta: {
+          missing: [...sharedColumns, ...uniqueNeededColumns, ...uniquePublishColumns].map((c) => c.index),
+          versionedHashes: columnMeta.versionedHashes,
+        },
+        needed: [...sharedColumns, ...uniqueNeededColumns], // 4 columns total (2 shared + 2 unique)
+        needToPublish: [...sharedColumns, ...uniquePublishColumns], // 4 columns total (2 shared + 2 unique to publish)
+        validateFn,
+      };
+
+      await expect(validateColumnSidecars(testProps)).resolves.toBeUndefined();
+      const validateCommonProps = {
+        config,
+        peerIdStr,
+        blockRoot,
+      };
+      expect(validateFn).toHaveBeenCalledTimes(6);
+      expect(validateFn).toHaveBeenNthCalledWith(1, {
+        ...validateCommonProps,
+        columnSidecar: sharedColumns[0],
+      });
+      expect(validateFn).toHaveBeenNthCalledWith(2, {
+        ...validateCommonProps,
+        columnSidecar: sharedColumns[1],
+      });
+      expect(validateFn).toHaveBeenNthCalledWith(3, {
+        ...validateCommonProps,
+        columnSidecar: uniqueNeededColumns[0],
+      });
+      expect(validateFn).toHaveBeenNthCalledWith(4, {
+        ...validateCommonProps,
+        columnSidecar: uniqueNeededColumns[1],
+      });
+      expect(validateFn).toHaveBeenNthCalledWith(5, {
+        ...validateCommonProps,
+        columnSidecar: uniquePublishColumns[0],
+      });
+      expect(validateFn).toHaveBeenNthCalledWith(6, {
+        ...validateCommonProps,
+        columnSidecar: uniquePublishColumns[1],
+      });
     });
 
-    it("should fetch columns from network when execution engine returns empty", () => {
-      // Test fallback to network when execution engine fails
-    });
+    it("should throw error for invalid KZG proofs", async () => {
+      let invalidColumn = ssz.fulu.DataColumnSidecar.clone(fuluBlockWithColumns.columnSidecars[0]);
+      // Corrupt one of the KZG proofs to make it invalid
+      invalidColumn.kzgProofs[0] = new Uint8Array(BYTES_PER_PROOF).fill(255);
 
-    it("should publish reconstructed columns to network", () => {
-      // Test column publishing after reconstruction
-    });
+      let testProps = {
+        config,
+        peerIdStr,
+        blockRoot,
+        columnMeta,
+        needed: [invalidColumn, ...fuluBlockWithColumns.columnSidecars.slice(1)],
+      };
 
-    it("should filter needed columns from reconstructed set", () => {
-      // Test that only needed columns are returned
-    });
+      try {
+        await validateColumnSidecars(testProps);
+      } catch (err) {
+        expect(err).toBeInstanceOf(DownloadByRootError);
+        expect((err as DownloadByRootError).type.code).toBe(DownloadByRootErrorCode.INVALID_KZG_PROOF);
+        expect((err as DownloadByRootError).type.peer).toBe(prettyPeerIdStr);
+        expect((err as DownloadByRootError).type.blockRoot).toBe(prettyBytes(blockRoot));
+      }
 
-    it("should handle publishing errors gracefully", () => {
-      // Test that publishing errors don't fail the main operation
-    });
+      invalidColumn = ssz.fulu.DataColumnSidecar.clone(fuluBlockWithColumns.columnSidecars[0]);
+      // Corrupt one of the cells to make it invalid
+      invalidColumn.column[0] = new Uint8Array(BYTES_PER_CELL).fill(255);
 
-    it("should validate columns correctly in both scenarios", () => {
-      // Test validation works for both execution engine and network paths
-    });
+      testProps = {
+        config,
+        peerIdStr,
+        blockRoot,
+        columnMeta,
+        needed: [invalidColumn, ...fuluBlockWithColumns.columnSidecars.slice(1)],
+      };
 
-    it("should determine correct columns to publish based on custody config", () => {
-      // Test needToPublish logic with custody configuration
+      try {
+        await validateColumnSidecars(testProps);
+      } catch (err) {
+        expect(err).toBeInstanceOf(DownloadByRootError);
+        expect((err as DownloadByRootError).type.code).toBe(DownloadByRootErrorCode.INVALID_KZG_PROOF);
+        expect((err as DownloadByRootError).type.peer).toBe(prettyPeerIdStr);
+        expect((err as DownloadByRootError).type.blockRoot).toBe(prettyBytes(blockRoot));
+      }
     });
   });
 
   describe("DownloadByRootError", () => {
+    const blockRoot = randomBytes(ROOT_SIZE);
+
     it("should create error with MISMATCH_BLOCK_ROOT code", () => {
       const error = new DownloadByRootError({
         code: DownloadByRootErrorCode.MISMATCH_BLOCK_ROOT,

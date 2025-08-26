@@ -2,7 +2,7 @@ import {randomBytes} from "node:crypto";
 import {SIGNATURE_LENGTH_UNCOMPRESSED} from "@chainsafe/blst";
 import {BYTES_PER_BLOB, BYTES_PER_FIELD_ELEMENT} from "@crate-crypto/node-eth-kzg";
 import {generateKeyPair} from "@libp2p/crypto/keys";
-import {ChainForkConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {
   ForkPostCapella,
   ForkPostDeneb,
@@ -14,8 +14,13 @@ import {
 import {computeStartSlotAtEpoch, signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {SignedBeaconBlock, Slot, deneb, fulu, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
+import {VersionedHashes} from "../../src/execution/index.js";
 import {computeNodeIdFromPrivateKey} from "../../src/network/subnets/index.js";
-import {computePreFuluKzgCommitmentsInclusionProof} from "../../src/util/blobs.js";
+import {
+  computePreFuluKzgCommitmentsInclusionProof,
+  getBlobSidecars,
+  kzgCommitmentToVersionedHash,
+} from "../../src/util/blobs.js";
 import {
   CustodyConfig,
   computePostFuluKzgCommitmentsInclusionProof,
@@ -28,12 +33,14 @@ export const CAPELLA_FORK_EPOCH = 0;
 export const DENEB_FORK_EPOCH = 10;
 export const ELECTRA_FORK_EPOCH = 20;
 export const FULU_FORK_EPOCH = 30;
+export const GLOAS_FORK_EPOCH = 40;
 export const config = createChainForkConfig({
   ...defaultChainConfig,
   CAPELLA_FORK_EPOCH,
   DENEB_FORK_EPOCH,
   ELECTRA_FORK_EPOCH,
   FULU_FORK_EPOCH,
+  GLOAS_FORK_EPOCH,
 });
 export const privateKey = await generateKeyPair("secp256k1");
 export const nodeId = computeNodeIdFromPrivateKey(privateKey);
@@ -44,6 +51,7 @@ export const slots: Record<ForkPostCapella, number> = {
   deneb: computeStartSlotAtEpoch(DENEB_FORK_EPOCH),
   electra: computeStartSlotAtEpoch(ELECTRA_FORK_EPOCH),
   fulu: computeStartSlotAtEpoch(FULU_FORK_EPOCH),
+  gloas: computeStartSlotAtEpoch(GLOAS_FORK_EPOCH),
 };
 
 /**
@@ -109,47 +117,32 @@ function generateRoots<F extends ForkPostCapella>(
 }
 
 function generateBlobSidecars(
-  forkName: ForkPostDeneb,
   block: SignedBeaconBlock<ForkPostDeneb>,
   count: number,
   oomProtection = false
 ): {
   block: SignedBeaconBlock<ForkPostDeneb>;
   blobSidecars: deneb.BlobSidecars;
-  // versionedHashes: VersionedHashes
+  versionedHashes: VersionedHashes;
 } {
-  const blobKzgCommitments: Uint8Array[] = [];
-  const blobSidecars: deneb.BlobSidecars = [];
-  const signedBlockHeader = signedBlockToSignedHeader(config, block);
+  const blobs = Array.from({length: count}, () => generateRandomBlob());
+  const commitments = blobs.map((blob) => kzg.blobToKzgCommitment(blob));
+  const proofs = blobs.map((blob, i) => kzg.computeBlobKzgProof(blob, commitments[i]));
 
-  for (let index = 0; index < count; index++) {
-    const blobSidecar = ssz[forkName].BlobSidecar.defaultValue();
-    blobSidecar.index = index;
-    blobSidecar.signedBlockHeader = signedBlockHeader;
-    blobSidecar.blob = generateRandomBlob();
-    blobSidecar.kzgCommitment = kzg.blobToKzgCommitment(blobSidecar.blob);
-    blobSidecar.kzgCommitmentInclusionProof = computePreFuluKzgCommitmentsInclusionProof(
-      forkName,
-      block.message.body,
-      index
-    );
-    blobSidecar.kzgProof = kzg.computeBlobKzgProof(blobSidecar.blob, blobSidecar.kzgCommitment);
+  block.message.body.blobKzgCommitments = commitments;
 
-    if (oomProtection) {
-      blobSidecar.blob = new Uint8Array(1);
-    }
+  const blobSidecars = getBlobSidecars(config, block, blobs, proofs);
 
-    blobSidecars.push(blobSidecar);
-    blobKzgCommitments.push(blobSidecar.kzgCommitment);
+  if (oomProtection) {
+    blobSidecars.map((sidecar) => ({...sidecar, blob: new Uint8Array(1)}));
   }
 
-  block.message.body.blobKzgCommitments = blobKzgCommitments;
-  // const versionedHashes = blobKzgCommitments.map((commitment) => kzgCommitmentToVersionedHash(commitment));
+  const versionedHashes = commitments.map((commitment) => kzgCommitmentToVersionedHash(commitment));
 
   return {
     block,
     blobSidecars,
-    // versionedHashes,
+    versionedHashes,
   };
 }
 
@@ -157,10 +150,12 @@ function generateColumnSidecars<F extends ForkPostFulu>(
   forkName: F,
   block: SignedBeaconBlock<F>,
   numberOfBlobs: number,
-  oomProtection = false
+  oomProtection = false,
+  returnBlobs = false
 ): {
   block: SignedBeaconBlock<F>;
   columnSidecars: fulu.DataColumnSidecars;
+  blobs?: deneb.BlobSidecars;
 } {
   const blobs = Array.from({length: numberOfBlobs}, () => generateRandomBlob());
   const kzgCommitments = blobs.map((blob) => kzg.blobToKzgCommitment(blob));
@@ -191,6 +186,7 @@ function generateColumnSidecars<F extends ForkPostFulu>(
   return {
     block,
     columnSidecars,
+    blobs: returnBlobs ? blobs : undefined,
   };
 }
 
@@ -220,27 +216,32 @@ export function generateChainOfBlocks<F extends ForkPostCapella>({
   return blocks;
 }
 
-export type BlockWithBlobsTestSet<F extends ForkPostDeneb> = BlockTestSet<F> & {blobSidecars: deneb.BlobSidecars};
+export type BlockWithBlobsTestSet<F extends ForkPostDeneb> = BlockTestSet<F> & {
+  blobSidecars: deneb.BlobSidecars;
+  versionedHashed: VersionedHashes;
+};
 
 export type BlockWithColumnsTestSet<F extends ForkPostFulu> = BlockTestSet<F> & {
   columnSidecars: fulu.DataColumnSidecars;
+  blobs?: deneb.Blob[];
 };
 
 export function generateBlockWithBlobSidecars<F extends ForkPostDeneb>({
   forkName,
   slot,
+  count,
   parentRoot,
   oomProtection = false,
 }: {
   forkName: F;
   parentRoot?: Uint8Array;
+  count?: number;
   slot?: Slot;
   oomProtection?: boolean;
 }): BlockWithBlobsTestSet<F> {
-  const {block, blobSidecars} = generateBlobSidecars(
-    forkName,
+  const {block, blobSidecars, versionedHashes} = generateBlobSidecars(
     generateBeaconBlock({forkName, parentRoot, slot}),
-    generateRandomInt(1, 6),
+    count ? count : generateRandomInt(1, 6),
     oomProtection
   );
   const {blockRoot, rootHex} = generateRoots(forkName, block);
@@ -249,6 +250,7 @@ export function generateBlockWithBlobSidecars<F extends ForkPostDeneb>({
     blobSidecars,
     blockRoot,
     rootHex,
+    versionedHashes,
   };
 }
 
@@ -257,24 +259,28 @@ export function generateBlockWithColumnSidecars<F extends ForkPostFulu>({
   slot,
   parentRoot,
   oomProtection = false,
+  returnBlobs = false,
 }: {
   forkName: F;
   parentRoot?: Uint8Array;
   slot?: Slot;
   oomProtection?: boolean;
+  returnBlobs?: boolean;
 }): BlockWithColumnsTestSet<F> {
-  const {block, columnSidecars} = generateColumnSidecars(
+  const {block, columnSidecars, blobs} = generateColumnSidecars(
     forkName,
     generateBeaconBlock({forkName, parentRoot, slot}),
     generateRandomInt(1, 6),
-    oomProtection
+    oomProtection,
+    returnBlobs
   );
   const {blockRoot, rootHex} = generateRoots(forkName, block);
   return {
     block,
-    columnSidecars,
     blockRoot,
     rootHex,
+    columnSidecars,
+    blobs: returnBlobs ? blobs : undefined,
   };
 }
 
