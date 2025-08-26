@@ -1,6 +1,7 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {ssz} from "@lodestar/types";
+import {sleep} from "@lodestar/utils";
 import {BeaconChain} from "../../src/chain/chain.js";
 import {Eth1ForBlockProductionDisabled} from "../../src/eth1/index.js";
 import {ExecutionEngineDisabled} from "../../src/execution/index.js";
@@ -43,6 +44,7 @@ export async function getNetworkForTest(
 
   const beaconConfig = createBeaconConfig(config, state.genesisValidatorsRoot);
   const db = getMockedBeaconDb();
+  const privateKey = await generateKeyPair("secp256k1");
 
   const chain = new BeaconChain(
     {
@@ -58,6 +60,7 @@ export async function getNetworkForTest(
       archiveMode: ArchiveMode.Frequency,
     },
     {
+      privateKey,
       config: beaconConfig,
       db,
       dataDir: ".",
@@ -68,35 +71,39 @@ export async function getNetworkForTest(
       // mock timer does not work on worker thread
       clock: new ClockStatic(startSlot, Math.floor(Date.now() / 1000) - startSlot * beaconConfig.SECONDS_PER_SLOT),
       metrics: null,
+      validatorMonitor: null,
       anchorState: createCachedBeaconStateTest(state, beaconConfig),
       eth1: new Eth1ForBlockProductionDisabled(),
       executionEngine: new ExecutionEngineDisabled(),
     }
   );
 
-  const modules: Omit<NetworkInitModules, "opts" | "privateKey" | "logger"> = {
+  const modules: Omit<NetworkInitModules, "opts" | "logger"> = {
     config: beaconConfig,
     chain,
     db,
     getReqRespHandler: opts.getReqRespHandler ?? getReqRespHandlers({db, chain}),
     gossipHandlers: opts.gossipHandlersPartial as GossipHandlers,
+    privateKey,
     metrics: null,
   };
 
   const network = await Network.init({
     ...modules,
-    privateKey: await generateKeyPair("secp256k1"),
     opts: {
       ...defaultNetworkOptions,
-      maxPeers: 1,
+      maxPeers: 10,
       targetPeers: 1,
       bootMultiaddrs: [],
-      localMultiaddrs: ["/ip4/127.0.0.1/tcp/0"],
+      localMultiaddrs: ["/ip4/0.0.0.0/tcp/0"],
       discv5FirstQueryDelayMs: 0,
       discv5: null,
       skipParamsLog: true,
       // Disable rate limiting
       rateLimitMultiplier: 0,
+      // Increase of following value is just to circumvent the following error in e2e tests
+      // > libp2p:mplex rate limit hit when receiving messages
+      disconnectThreshold: 255,
       ...opts.opts,
     },
     logger,
@@ -107,6 +114,14 @@ export async function getNetworkForTest(
     async function closeAll() {
       await network.close();
       await chain.close();
+
+      /**
+       * We choose random port for the libp2p network. Though our libp2p instance is closed the
+       * system still hold the port momentarily. And if next test randomly select the same port
+       * it failed with ERR_CONNECTION_REFUSED. To avoid such situation giving a grace period
+       * for the system to also cleanup resources.
+       */
+      await sleep(100);
     },
   ];
 }

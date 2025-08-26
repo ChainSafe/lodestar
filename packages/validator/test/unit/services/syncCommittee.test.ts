@@ -4,7 +4,7 @@ import {routes} from "@lodestar/api";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as mainnetConfig} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
-import {afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker.js";
 import {ValidatorEventEmitter} from "../../../src/services/emitter.js";
 import {SyncCommitteeService, SyncCommitteeServiceOpts} from "../../../src/services/syncCommittee.js";
@@ -24,12 +24,12 @@ vi.mock("../../../src/services/syncingStatusTracker.js");
 describe("SyncCommitteeService", () => {
   const api = getApiClientStub();
   // @ts-expect-error - Mocked class don't need parameters
-  const validatorStore = vi.mocked(new ValidatorStore());
+  const validatorStore = vi.mocked(new ValidatorStore({}, {defaultConfig: {}}));
   const emitter = vi.mocked(new ValidatorEventEmitter());
   // @ts-expect-error - Mocked class don't need parameters
   const chainHeaderTracker = vi.mocked(new ChainHeaderTracker());
   // @ts-expect-error - Mocked class don't need parameters
-  const syncingStatusTracker = vi.mocked(new SyncingStatusTracker());
+  const syncingStatusTracker = vi.mocked(new SyncingStatusTracker({}, api, new ClockMock(), null));
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
 
   const config = createChainForkConfig({
@@ -38,18 +38,26 @@ describe("SyncCommitteeService", () => {
     ALTAIR_FORK_EPOCH: 0, // Activate Altair immediately
   });
 
-  beforeAll(() => {
+  let controller: AbortController; // To stop clock
+  beforeEach(() => {
+    controller = new AbortController();
     const secretKeys = Array.from({length: 1}, (_, i) => SecretKey.fromBytes(Buffer.alloc(32, i + 1)));
     pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
+
+    // vi.mock does not automock all objects in Bun runtime, so we have to explicitly spy on needed methods
+    vi.spyOn(validatorStore, "votingPubkeys");
+    vi.spyOn(validatorStore, "hasVotingPubkey");
+    vi.spyOn(validatorStore, "hasSomeValidators");
+    vi.spyOn(validatorStore, "signAttestationSelectionProof");
+    vi.spyOn(validatorStore, "signSyncCommitteeSignature");
+    vi.spyOn(validatorStore, "signContributionAndProof");
+
+    vi.spyOn(chainHeaderTracker, "getCurrentChainHead");
+
     validatorStore.votingPubkeys.mockReturnValue(pubkeys.map(toHexString));
     validatorStore.hasVotingPubkey.mockReturnValue(true);
     validatorStore.hasSomeValidators.mockReturnValue(true);
     validatorStore.signAttestationSelectionProof.mockResolvedValue(ZERO_HASH);
-  });
-
-  let controller: AbortController; // To stop clock
-  beforeEach(() => {
-    controller = new AbortController();
   });
   afterEach(() => {
     controller.abort();

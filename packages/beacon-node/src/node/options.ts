@@ -1,5 +1,6 @@
 import {ApiOptions, defaultApiOptions} from "../api/options.js";
 import {ArchiveMode, DEFAULT_ARCHIVE_MODE, IChainOptions, defaultChainOptions} from "../chain/options.js";
+import {ValidatorMonitorOpts, defaultValidatorMonitorOpts} from "../chain/validatorMonitor.js";
 import {DatabaseOptions, defaultDbOptions} from "../db/options.js";
 import {Eth1Options, defaultEth1Options} from "../eth1/options.js";
 import {
@@ -28,6 +29,7 @@ export interface IBeaconNodeOptions {
   executionEngine: ExecutionEngineOpts;
   executionBuilder: ExecutionBuilderOpts;
   metrics: MetricsOptions;
+  validatorMonitor: ValidatorMonitorOpts;
   monitoring: MonitoringOptions;
   network: NetworkOptions;
   sync: SyncOptions;
@@ -41,6 +43,7 @@ export const defaultOptions: IBeaconNodeOptions = {
   executionEngine: defaultExecutionEngineOpts,
   executionBuilder: defaultExecutionBuilderOpts,
   metrics: defaultMetricsOptions,
+  validatorMonitor: defaultValidatorMonitorOpts,
   monitoring: defaultMonitoringOptions,
   network: defaultNetworkOptions,
   sync: defaultSyncOptions,

@@ -1,5 +1,4 @@
 import {ChainConfig, ChainForkConfig, createChainForkConfig} from "@lodestar/config";
-/* eslint-disable no-console */
 import {activePreset} from "@lodestar/params";
 import {Epoch} from "@lodestar/types";
 import {
@@ -83,7 +82,6 @@ export function defineSimTestConfig(
     SECONDS_PER_ETH1_BLOCK: opts.cliqueSealingPeriod ?? CLIQUE_SEALING_PERIOD,
     ETH1_FOLLOW_DISTANCE: 1,
   });
-  /* eslint-enable @typescript-eslint/naming-convention */
 
   return {
     estimatedTimeoutMs,
@@ -156,7 +154,11 @@ export const arrayGroupBy = <T>(
 ): Record<string, T[]> =>
   array.reduce(
     (acc, value, index, array) => {
-      acc[predicate(value, index, array)]?.push(value);
+      const key = predicate(value, index, array);
+      if (!acc[key]) {
+        acc[key] = [];
+      }
+      acc[key].push(value);
       return acc;
     },
     {} as {[key: string]: T[]}

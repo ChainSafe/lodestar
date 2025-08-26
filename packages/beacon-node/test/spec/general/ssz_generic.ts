@@ -18,6 +18,10 @@ export const sszGeneric =
   (_fork, typeName, testSuite, testSuiteDirpath) => {
     if (testSuite === "invalid") {
       for (const testCase of fs.readdirSync(testSuiteDirpath)) {
+        // Do not manually skip tests here, do it in packages/beacon-node/test/spec/general/index.test.ts
+        if (skippedTypes.some((skippedType) => testCase.startsWith(skippedType))) {
+          continue;
+        }
         it(testCase, () => {
           // TODO: Strong type errors and assert that the entire it() throws known errors
           if (testCase.endsWith("_0")) {
@@ -28,7 +32,6 @@ export const sszGeneric =
           const type = getTestType(typeName, testCase);
           const testData = parseSszGenericInvalidTestcase(path.join(testSuiteDirpath, testCase));
 
-          /* eslint-disable no-console */
           if (process.env.DEBUG) {
             console.log({serialized: Buffer.from(testData.serialized).toString("hex")});
           }

@@ -1,7 +1,7 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {SignedBeaconBlock, SignedBlindedBeaconBlock, Slot, ssz} from "@lodestar/types";
+import {Epoch, SignedBeaconBlock, SignedBlindedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {BlockExternalData, DataAvailableStatus, ExecutionPayloadStatus} from "./block/externalData.js";
+import {BlockExternalData, DataAvailabilityStatus, ExecutionPayloadStatus} from "./block/externalData.js";
 import {processBlock} from "./block/index.js";
 import {ProcessBlockOpts} from "./block/types.js";
 import {EpochTransitionCache, EpochTransitionCacheOpts, beforeProcessEpoch} from "./cache/epochTransitionCache.js";
@@ -15,6 +15,7 @@ import {
   upgradeStateToCapella,
   upgradeStateToDeneb,
   upgradeStateToElectra,
+  upgradeStateToGloas,
 } from "./slot/index.js";
 import {upgradeStateToFulu} from "./slot/upgradeStateToFulu.js";
 import {
@@ -24,6 +25,7 @@ import {
   CachedBeaconStateCapella,
   CachedBeaconStateDeneb,
   CachedBeaconStateElectra,
+  CachedBeaconStateFulu,
   CachedBeaconStatePhase0,
 } from "./types.js";
 import {computeEpochAtSlot} from "./util/index.js";
@@ -39,6 +41,22 @@ export type StateTransitionOpts = BlockExternalData &
     verifySignatures?: boolean;
     dontTransferCache?: boolean;
   };
+
+export type StateTransitionModules = {
+  metrics?: BeaconStateTransitionMetrics | null;
+  validatorMonitor?: ValidatorMonitor | null;
+};
+
+interface ValidatorMonitor {
+  registerValidatorStatuses(
+    currentEpoch: Epoch,
+    inclusionDelays: number[],
+    flags: number[],
+    isActiveCurrEpoch: boolean[],
+    isActivePrevEpoch: boolean[],
+    balances?: number[]
+  ): void;
+}
 
 /**
  * `state.clone()` invocation source tracked in metrics
@@ -69,9 +87,9 @@ export function stateTransition(
   options: StateTransitionOpts = {
     // Assume default to be valid and available
     executionPayloadStatus: ExecutionPayloadStatus.valid,
-    dataAvailableStatus: DataAvailableStatus.available,
+    dataAvailabilityStatus: DataAvailabilityStatus.Available,
   },
-  metrics?: BeaconStateTransitionMetrics | null
+  {metrics, validatorMonitor}: StateTransitionModules = {}
 ): CachedBeaconStateAllForks {
   const {verifyStateRoot = true, verifyProposer = true} = options;
 
@@ -90,7 +108,7 @@ export function stateTransition(
 
   // Process slots (including those with no blocks) since block.
   // Includes state upgrades
-  postState = processSlotsWithTransientCache(postState, blockSlot, options, metrics);
+  postState = processSlotsWithTransientCache(postState, blockSlot, options, {metrics, validatorMonitor});
 
   // Verify proposer signature only
   if (verifyProposer && !verifyProposerSignature(postState, signedBlock)) {
@@ -145,7 +163,7 @@ export function processSlots(
   state: CachedBeaconStateAllForks,
   slot: Slot,
   epochTransitionCacheOpts?: EpochTransitionCacheOpts & {dontTransferCache?: boolean},
-  metrics?: BeaconStateTransitionMetrics | null
+  {metrics, validatorMonitor}: StateTransitionModules = {}
 ): CachedBeaconStateAllForks {
   // .clone() before mutating state in state transition
   let postState = state.clone(epochTransitionCacheOpts?.dontTransferCache);
@@ -157,7 +175,7 @@ export function processSlots(
   // State is already a ViewDU, which won't commit changes. Equivalent to .setStateCachesAsTransient()
   // postState.setStateCachesAsTransient();
 
-  postState = processSlotsWithTransientCache(postState, slot, epochTransitionCacheOpts, metrics);
+  postState = processSlotsWithTransientCache(postState, slot, epochTransitionCacheOpts, {metrics, validatorMonitor});
 
   // Apply changes to state, must do before hashing
   postState.commit();
@@ -191,7 +209,7 @@ function processSlotsWithTransientCache(
   postState: CachedBeaconStateAllForks,
   slot: Slot,
   epochTransitionCacheOpts?: EpochTransitionCacheOpts,
-  metrics?: BeaconStateTransitionMetrics | null
+  {metrics, validatorMonitor}: StateTransitionModules = {}
 ): CachedBeaconStateAllForks {
   const {config} = postState;
   if (postState.slot > slot) {
@@ -219,7 +237,7 @@ function processSlotsWithTransientCache(
 
       const {currentEpoch, inclusionDelays, flags, isActiveCurrEpoch, isActivePrevEpoch, balances} =
         epochTransitionCache;
-      metrics?.registerValidatorStatuses(
+      validatorMonitor?.registerValidatorStatuses(
         currentEpoch,
         inclusionDelays,
         flags,
@@ -232,20 +250,10 @@ function processSlotsWithTransientCache(
 
       {
         const timer = metrics?.epochTransitionStepTime.startTimer({step: EpochTransitionStep.afterProcessEpoch});
+        // this should be called before `upgradeState*()` below to prepare data for it
         postState.epochCtx.afterProcessEpoch(postState, epochTransitionCache);
         timer?.();
       }
-
-      // Running commit here is not strictly necessary. The cost of running commit twice (here + after process block)
-      // Should be negligible but gives better metrics to differentiate the cost of it for block and epoch proc.
-      {
-        const timer = metrics?.epochTransitionCommitTime.startTimer();
-        postState.commit();
-        timer?.();
-      }
-
-      // Note: time only on success. Include beforeProcessEpoch, processEpoch, afterProcessEpoch, commit
-      epochTransitionTimer?.();
 
       // Upgrade state if exactly at epoch boundary
       const stateEpoch = computeEpochAtSlot(postState.slot);
@@ -267,6 +275,27 @@ function processSlotsWithTransientCache(
       if (stateEpoch === config.FULU_FORK_EPOCH) {
         postState = upgradeStateToFulu(postState as CachedBeaconStateElectra) as CachedBeaconStateAllForks;
       }
+      if (stateEpoch === config.GLOAS_FORK_EPOCH) {
+        postState = upgradeStateToGloas(postState as CachedBeaconStateFulu) as CachedBeaconStateAllForks;
+      }
+
+      {
+        const timer = metrics?.epochTransitionStepTime.startTimer({step: EpochTransitionStep.finalProcessEpoch});
+        // last step to prepare epoch data that depends on the upgraded state, for example proposerLookahead of BeaconStateFulu
+        postState.epochCtx.finalProcessEpoch(postState);
+        timer?.();
+      }
+
+      // Running commit here is not strictly necessary. The cost of running commit twice (here + after process block)
+      // Should be negligible but gives better metrics to differentiate the cost of it for block and epoch proc.
+      {
+        const timer = metrics?.epochTransitionCommitTime.startTimer();
+        postState.commit();
+        timer?.();
+      }
+
+      // Note: time only on success. Include beforeProcessEpoch, processEpoch, afterProcessEpoch, upgradeState*, finalProcessEpoch, commit
+      epochTransitionTimer?.();
     } else {
       postState.slot++;
     }

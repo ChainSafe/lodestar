@@ -13,6 +13,7 @@ import {ProcessShutdownCallback} from "@lodestar/validator";
 
 import {BeaconRestApiServer, getApi} from "../api/index.js";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
+import {ValidatorMonitor, createValidatorMonitor} from "../chain/validatorMonitor.js";
 import {IBeaconDb} from "../db/index.js";
 import {initializeEth1ForBlockProduction} from "../eth1/index.js";
 import {initializeExecutionBuilder, initializeExecutionEngine} from "../execution/index.js";
@@ -22,7 +23,6 @@ import {Network, getReqRespHandlers} from "../network/index.js";
 import {BackfillSync} from "../sync/backfill/index.js";
 import {BeaconSync, IBeaconSync} from "../sync/index.js";
 import {Clock} from "../util/clock.js";
-import {TrustedFileMode, initCKZG, loadEthereumTrustedSetup} from "../util/kzg.js";
 import {runNodeNotifier} from "./notifier.js";
 import {IBeaconNodeOptions} from "./options.js";
 
@@ -33,6 +33,7 @@ export type BeaconNodeModules = {
   config: BeaconConfig;
   db: IBeaconDb;
   metrics: Metrics | null;
+  validatorMonitor: ValidatorMonitor | null;
   network: Network;
   chain: IBeaconChain;
   api: BeaconApiMethods;
@@ -96,6 +97,7 @@ export class BeaconNode {
   metrics: Metrics | null;
   metricsServer: HttpMetricsServer | null;
   monitoring: MonitoringService | null;
+  validatorMonitor: ValidatorMonitor | null;
   network: Network;
   chain: IBeaconChain;
   api: BeaconApiMethods;
@@ -113,6 +115,7 @@ export class BeaconNode {
     metrics,
     metricsServer,
     monitoring,
+    validatorMonitor,
     network,
     chain,
     api,
@@ -126,6 +129,7 @@ export class BeaconNode {
     this.metrics = metrics;
     this.metricsServer = metricsServer;
     this.monitoring = monitoring;
+    this.validatorMonitor = validatorMonitor;
     this.db = db;
     this.chain = chain;
     this.api = api;
@@ -156,7 +160,7 @@ export class BeaconNode {
     metricsRegistries = [],
   }: BeaconNodeInitModules): Promise<T> {
     if (hasher.name !== "hashtree") {
-      throw Error(`Loaded incorrect hasher ${hasher.name}, expected hashtree`);
+      logger.warn(`hashtree is not supported, using hasher ${hasher.name}`);
     }
 
     const controller = new AbortController();
@@ -165,30 +169,29 @@ export class BeaconNode {
     setMaxListeners(Infinity, controller.signal);
     const signal = controller.signal;
 
-    // If deneb is configured, load the trusted setup
-    if (config.DENEB_FORK_EPOCH < Infinity) {
-      await initCKZG();
-      loadEthereumTrustedSetup(TrustedFileMode.Txt, opts.chain.trustedSetup);
-    }
-
     let metrics = null;
     if (
       opts.metrics.enabled ||
       // monitoring relies on metrics data
       opts.monitoring.endpoint
     ) {
-      metrics = createMetrics(
-        opts.metrics,
-        config,
-        anchorState,
-        logger.child({module: LoggerModule.vmon}),
-        metricsRegistries
-      );
+      metrics = createMetrics(opts.metrics, anchorState.genesisTime, metricsRegistries);
       initBeaconMetrics(metrics, anchorState);
       // Since the db is instantiated before this, metrics must be injected manually afterwards
       db.setMetrics(metrics.db);
       signal.addEventListener("abort", metrics.close, {once: true});
     }
+
+    const validatorMonitor =
+      opts.metrics.enabled || opts.validatorMonitor.validatorMonitorLogs
+        ? createValidatorMonitor(
+            metrics?.register ?? null,
+            config,
+            anchorState.genesisTime,
+            logger.child({module: LoggerModule.vmon}),
+            opts.validatorMonitor
+          )
+        : null;
 
     const clock = new Clock({config, genesisTime: anchorState.genesisTime, signal});
 
@@ -205,6 +208,7 @@ export class BeaconNode {
       : null;
 
     const chain = new BeaconChain(opts.chain, {
+      privateKey,
       config,
       clock,
       dataDir,
@@ -213,6 +217,7 @@ export class BeaconNode {
       logger: logger.child({module: LoggerModule.chain}),
       processShutdownCallback,
       metrics,
+      validatorMonitor,
       anchorState,
       eth1: initializeEth1ForBlockProduction(opts.eth1, {
         config,
@@ -312,6 +317,7 @@ export class BeaconNode {
       metrics,
       metricsServer,
       monitoring,
+      validatorMonitor,
       network,
       chain,
       api,

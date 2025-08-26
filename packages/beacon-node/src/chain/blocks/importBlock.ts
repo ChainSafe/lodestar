@@ -1,17 +1,34 @@
+import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
-import {AncestorStatus, EpochDifference, ForkChoiceError, ForkChoiceErrorCode} from "@lodestar/fork-choice";
-import {ForkPostAltair, ForkSeq, INTERVALS_PER_SLOT, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {
+  AncestorStatus,
+  EpochDifference,
+  ForkChoiceError,
+  ForkChoiceErrorCode,
+  NotReorgedReason,
+} from "@lodestar/fork-choice";
+import {
+  ForkName,
+  ForkPostAltair,
+  ForkPostElectra,
+  ForkSeq,
+  INTERVALS_PER_SLOT,
+  MAX_SEED_LOOKAHEAD,
+  SLOTS_PER_EPOCH,
+} from "@lodestar/params";
 import {
   CachedBeaconStateAltair,
+  EpochCache,
   RootCache,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
+  isExecutionStateType,
+  isStartSlotOfEpoch,
   isStateValidatorsNodesPopulated,
 } from "@lodestar/state-transition";
-import {BeaconBlock, altair, capella, ssz} from "@lodestar/types";
-import {isErrorAborted, toHex, toRootHex} from "@lodestar/utils";
+import {Attestation, BeaconBlock, altair, capella, electra, phase0, ssz} from "@lodestar/types";
+import {isErrorAborted, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
-import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
@@ -118,6 +135,8 @@ export async function importBlock(
     const rootCache = new RootCache(postState);
     const invalidAttestationErrorsByCode = new Map<string, {error: Error; count: number}>();
 
+    const addAttestation = fork >= ForkSeq.electra ? addAttestationPostElectra : addAttestationPreElectra;
+
     for (const attestation of attestations) {
       try {
         // TODO Electra: figure out how to reuse the attesting indices computed from state transition
@@ -125,11 +144,13 @@ export async function importBlock(
         const {target, beaconBlockRoot} = attestation.data;
 
         const attDataRoot = toRootHex(ssz.phase0.AttestationData.hashTreeRoot(indexedAttestation.data));
-        this.seenAggregatedAttestations.add(
-          target.epoch,
+        addAttestation.call(
+          this,
+          postState.epochCtx,
+          target,
           attDataRoot,
-          {aggregationBits: attestation.aggregationBits, trueBitCount: indexedAttestation.attestingIndices.length},
-          true
+          attestation as Attestation<ForkPostElectra>,
+          indexedAttestation
         );
         // Duplicated logic from fork-choice onAttestation validation logic.
         // Attestations outside of this range will be dropped as Errors, so no need to import
@@ -152,7 +173,7 @@ export async function importBlock(
           rootCache.getBlockRootAtSlot(attestation.data.slot - 1),
           rootCache.getBlockRootAtSlot(attestation.data.slot)
         );
-        this.metrics?.registerAttestationInBlock(
+        this.validatorMonitor?.registerAttestationInBlock(
           indexedAttestation,
           parentBlockSlot,
           correctHead,
@@ -301,9 +322,64 @@ export async function importBlock(
   // Notifying EL of head and finalized updates as below is usually done within the 1st 4s of the slot.
   // If there is an advanced payload generation in the next slot, we'll notify EL again 4s before next
   // slot via PrepareNextSlotScheduler. There is no harm updating the ELs with same data, it will just ignore it.
+
+  // Suppress fcu call if shouldOverrideFcu is true. This only happens if we have proposer boost reorg enabled
+  // and the block is weak and can potentially be reorged out.
+  let shouldOverrideFcu = false;
+  let notOverrideFcuReason = NotReorgedReason.Unknown;
+
+  if (opts.isGossipBlock && isExecutionStateType(postState)) {
+    const proposalSlot = blockSlot + 1;
+    try {
+      const proposerIndex = postState.epochCtx.getBeaconProposer(proposalSlot);
+      const feeRecipient = this.beaconProposerCache.get(proposerIndex);
+      const {currentSlot} = this.clock;
+
+      if (feeRecipient) {
+        // We would set this to true if
+        //  1) This is a gossip block
+        //  2) We are proposer of next slot
+        //  3) Proposer boost reorg related flag is turned on (this is checked inside the function)
+        //  4) Block meets the criteria of being re-orged out (this is also checked inside the function)
+        const result = this.forkChoice.shouldOverrideForkChoiceUpdate(
+          blockSummary.blockRoot,
+          this.clock.secFromSlot(currentSlot),
+          currentSlot
+        );
+        shouldOverrideFcu = result.shouldOverrideFcu;
+        if (!result.shouldOverrideFcu) {
+          notOverrideFcuReason = result.reason;
+        }
+      } else {
+        notOverrideFcuReason = NotReorgedReason.NotProposerOfNextSlot;
+      }
+    } catch (e) {
+      if (isStartSlotOfEpoch(proposalSlot)) {
+        notOverrideFcuReason = NotReorgedReason.NotShufflingStable;
+      } else {
+        this.logger.warn("Unable to get beacon proposer. Do not override fcu.", {proposalSlot}, e as Error);
+      }
+    }
+  }
+
+  if (shouldOverrideFcu) {
+    this.logger.verbose("Weak block detected. Skip fcu call in importBlock", {
+      blockRoot: blockRootHex,
+      slot: blockSlot,
+    });
+  } else {
+    this.metrics?.importBlock.notOverrideFcuReason.inc({reason: notOverrideFcuReason});
+    this.logger.verbose("Strong block detected. Not override fcu call", {
+      blockRoot: blockRootHex,
+      slot: blockSlot,
+      reason: notOverrideFcuReason,
+    });
+  }
+
   if (
     !this.opts.disableImportExecutionFcU &&
-    (newHead.blockRoot !== oldHead.blockRoot || currFinalizedEpoch !== prevFinalizedEpoch)
+    (newHead.blockRoot !== oldHead.blockRoot || currFinalizedEpoch !== prevFinalizedEpoch) &&
+    !shouldOverrideFcu
   ) {
     /**
      * On post BELLATRIX_EPOCH but pre TTD, blocks include empty execution payload with a zero block hash.
@@ -420,31 +496,15 @@ export async function importBlock(
           this.emitter.emit(routes.events.EventType.proposerSlashing, proposerSlashing);
         }
       }
-      if (
-        blockInput.type === BlockInputType.availableData &&
-        this.emitter.listenerCount(routes.events.EventType.blobSidecar)
-      ) {
-        const {blobs} = blockInput.blockData;
-        for (const blobSidecar of blobs) {
-          const {index, kzgCommitment} = blobSidecar;
-          this.emitter.emit(routes.events.EventType.blobSidecar, {
-            blockRoot: blockRootHex,
-            slot: blockSlot,
-            index,
-            kzgCommitment: toHex(kzgCommitment),
-            versionedHash: toHex(kzgCommitmentToVersionedHash(kzgCommitment)),
-          });
-        }
-      }
     });
   }
 
   // Register stat metrics about the block after importing it
   this.metrics?.parentBlockDistance.observe(blockSlot - parentBlockSlot);
   this.metrics?.proposerBalanceDeltaAny.observe(fullyVerifiedBlock.proposerBalanceDelta);
-  this.metrics?.registerImportedBlock(block.message, fullyVerifiedBlock);
+  this.validatorMonitor?.registerImportedBlock(block.message, fullyVerifiedBlock);
   if (this.config.getForkSeq(blockSlot) >= ForkSeq.altair) {
-    this.metrics?.registerSyncAggregateInBlock(
+    this.validatorMonitor?.registerSyncAggregateInBlock(
       blockEpoch,
       (block as altair.SignedBeaconBlock).message.body.syncAggregate,
       fullyVerifiedBlock.postState.epochCtx.currentSyncCommitteeIndexed.validatorIndices
@@ -453,7 +513,10 @@ export async function importBlock(
   // dataPromise will not end up here, but preDeneb could. In future we might also allow syncing
   // out of data range blocks and import then in forkchoice although one would not be able to
   // attest and propose with such head similar to optimistic sync
-  if (blockInput.type === BlockInputType.availableData) {
+  if (
+    blockInput.type === BlockInputType.availableData &&
+    (blockInput.blockData.fork === ForkName.deneb || blockInput.blockData.fork === ForkName.electra)
+  ) {
     const {blobsSource} = blockInput.blockData;
     this.metrics?.importBlock.blobsBySource.inc({blobsSource});
   }
@@ -481,4 +544,59 @@ export async function importBlock(
     root: blockRootHex,
     delaySec: this.clock.secFromSlot(blockSlot),
   });
+}
+
+export function addAttestationPreElectra(
+  this: BeaconChain,
+  // added to have the same signature as addAttestationPostElectra
+  _: EpochCache,
+  target: phase0.Checkpoint,
+  attDataRoot: string,
+  attestation: Attestation,
+  indexedAttestation: phase0.IndexedAttestation
+): void {
+  this.seenAggregatedAttestations.add(
+    target.epoch,
+    attestation.data.index,
+    attDataRoot,
+    {aggregationBits: attestation.aggregationBits, trueBitCount: indexedAttestation.attestingIndices.length},
+    true
+  );
+}
+
+export function addAttestationPostElectra(
+  this: BeaconChain,
+  epochCtx: EpochCache,
+  target: phase0.Checkpoint,
+  attDataRoot: string,
+  attestation: Attestation<ForkPostElectra>,
+  indexedAttestation: electra.IndexedAttestation
+): void {
+  const committeeIndices = attestation.committeeBits.getTrueBitIndexes();
+  if (committeeIndices.length === 1) {
+    this.seenAggregatedAttestations.add(
+      target.epoch,
+      committeeIndices[0],
+      attDataRoot,
+      {aggregationBits: attestation.aggregationBits, trueBitCount: indexedAttestation.attestingIndices.length},
+      true
+    );
+  } else {
+    const committees = epochCtx.getBeaconCommittees(attestation.data.slot, committeeIndices);
+    const aggregationBools = attestation.aggregationBits.toBoolArray();
+    let offset = 0;
+    for (let i = 0; i < committees.length; i++) {
+      const committee = committees[i];
+      const aggregationBits = BitArray.fromBoolArray(aggregationBools.slice(offset, offset + committee.length));
+      const trueBitCount = aggregationBits.getTrueBitIndexes().length;
+      offset += committee.length;
+      this.seenAggregatedAttestations.add(
+        target.epoch,
+        committeeIndices[i],
+        attDataRoot,
+        {aggregationBits, trueBitCount},
+        true
+      );
+    }
+  }
 }

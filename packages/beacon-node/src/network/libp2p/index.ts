@@ -84,7 +84,7 @@ export async function createNodeJsLibp2p(
         },
       }),
     ],
-    streamMuxers: [mplex({maxInboundStreams: 256})],
+    streamMuxers: [mplex({maxInboundStreams: 256, disconnectThreshold: networkOpts.disconnectThreshold})],
     peerDiscovery,
     metrics: nodeJsLibp2pOpts.metrics
       ? prometheusMetrics({
@@ -105,6 +105,12 @@ export async function createNodeJsLibp2p(
     // rely on lodestar's peer manager to ping peers
     connectionMonitor: {
       enabled: false,
+    },
+    // for our purposes, we don't want peer store data to expire
+    // see https://github.com/libp2p/js-libp2p/pull/3019
+    peerStore: {
+      maxAddressAge: Infinity,
+      maxPeerAge: Infinity,
     },
     datastore,
     services: {

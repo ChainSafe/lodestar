@@ -8,6 +8,7 @@ import {ShufflingCacheOpts} from "./shufflingCache.js";
 import {DEFAULT_MAX_BLOCK_STATES, FIFOBlockStateCacheOpts} from "./stateCache/fifoBlockStateCache.js";
 import {PersistentCheckpointStateCacheOpts} from "./stateCache/persistentCheckpointsCache.js";
 import {DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY} from "./stateCache/persistentCheckpointsCache.js";
+import {ValidatorMonitorOpts} from "./validatorMonitor.js";
 
 export {ArchiveMode, DEFAULT_ARCHIVE_MODE};
 
@@ -19,6 +20,7 @@ export type IChainOptions = BlockProcessOpts &
   FIFOBlockStateCacheOpts &
   PersistentCheckpointStateCacheOpts &
   ShufflingCacheOpts &
+  ValidatorMonitorOpts &
   LightClientServerOpts & {
     blsVerifyAllMainThread?: boolean;
     blsVerifyAllMultiThread?: boolean;
@@ -26,6 +28,8 @@ export type IChainOptions = BlockProcessOpts &
     persistProducedBlocks?: boolean;
     persistInvalidSszObjects?: boolean;
     persistInvalidSszObjectsDir?: string;
+    persistOrphanedBlocks?: boolean;
+    persistOrphanedBlocksDir?: string;
     skipCreateStateCacheIfAvailable?: boolean;
     suggestedFeeRecipient: string;
     maxSkipSlots?: number;
@@ -35,11 +39,12 @@ export type IChainOptions = BlockProcessOpts &
     maxCachedBlobSidecars?: number;
     /** Max number of produced block roots (blinded or full) cached for broadcast validations */
     maxCachedProducedRoots?: number;
-    /** Option to load a custom kzg trusted setup in txt format */
-    trustedSetup?: string;
+    /** Subscribe to and custody all data column sidecar subnets */
+    supernode?: boolean;
+    initialCustodyGroupCount?: number;
     broadcastValidationStrictness?: string;
     minSameMessageSignatureSetsToBatch: number;
-    archiveBlobEpochs?: number;
+    archiveDateEpochs?: number;
     nHistoricalStates?: boolean;
     nHistoricalStatesFileDataStore?: boolean;
   };
@@ -101,15 +106,17 @@ export const defaultChainOptions: IChainOptions = {
   blacklistedBlocks: [],
   disableBlsBatchVerify: false,
   proposerBoost: true,
-  proposerBoostReorg: false,
+  proposerBoostReorg: true,
   computeUnrealized: true,
   safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
   suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
+  serveHistoricalState: false,
   assertCorrectProgressiveBalances: false,
   archiveStateEpochFrequency: 1024,
   archiveMode: DEFAULT_ARCHIVE_MODE,
   pruneHistory: false,
   emitPayloadAttributes: false,
+  supernode: false,
   // for gossip block validation, it's unlikely we see a reorg with 32 slots
   // for attestation validation, having this value ensures we don't have to regen states most of the time
   maxSkipSlots: 32,

@@ -82,7 +82,7 @@ If you would like to set unique proposer metadata (e.g. fee recipient address) f
 
 If you are running a beacon node with connected builder relays, you may use these validator configurations to signal which block (builder vs. local execution) the beacon node should produce.
 
-With produceBlockV3 (enabled automatically after the Deneb hard fork), the [`--builder.boostFactor`](./validator-cli.md#--builderboostfactor) is a percentage multiplier the block producing beacon node must apply to boost (&gt;100) or dampen (&lt;100) builder block value for selection against execution block. The multiplier is ignored if [`--builder.selection`](./validator-cli.md#--builderselection) is set to anything other than `maxprofit`. Even though this is set on the validator client, the calculation is requested and applied on the beacon node itself. For more information, see the [produceBlockV3 Beacon API](https://ethereum.github.io/beacon-APIs/#/ValidatorRequiredApi/produceBlockV3).
+With produceBlockV3 introduced in Deneb hard fork, the [`--builder.boostFactor`](./validator-cli.md#--builderboostfactor) is a percentage multiplier the block producing beacon node must apply to boost (&gt;100) or dampen (&lt;100) builder block value for selection against execution block. The multiplier is ignored if [`--builder.selection`](./validator-cli.md#--builderselection) is set to anything other than `maxprofit`. Even though this is set on the validator client, the calculation is requested and applied on the beacon node itself. For more information, see the [produceBlockV3 Beacon API](https://ethereum.github.io/beacon-APIs/#/ValidatorRequiredApi/produceBlockV3).
 
 With Lodestar's [`--builder.selection`](./validator-cli.md#--builderselection) validator options, you can select:
 
@@ -127,6 +127,10 @@ Please use the official Ethereum Launchpad to perform your deposits. Ensure your
 
 - [Ethereum Ephemery Testnet Launchpad](https://launchpad.ephemery.dev/)
 - [Ephemeral Testnet Resources](https://ephemery.dev/)
+
+### Slashing protection
+
+Slashing protection is enabled by default and cannot be disabled by the user. The slashing protection database is stored in non human-readable format in the `validator-db` folder, which can be found in the root data directory (see `--dataDir` flag). If you migrate to or from a different client, please use the [slashing protection import](./validator-cli.md#validator-slashing-protection-import) or [export](./validator-cli.md#validator-slashing-protection-export) commands to transfer your data.
 
 ## Run the validator
 

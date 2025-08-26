@@ -1,10 +1,9 @@
 // MUST import this file first before anything and not import any Lodestar code.
-
 import {setHasher} from "@chainsafe/persistent-merkle-tree";
-import {hasher} from "@chainsafe/persistent-merkle-tree/hasher/hashtree";
+import {hasher as hashtreeHasher} from "@chainsafe/persistent-merkle-tree/hasher/hashtree";
 
-// without setting this first, persistent-merkle-tree will use noble instead
-setHasher(hasher);
+// Without setting this first, persistent-merkle-tree will use noble instead
+setHasher(hashtreeHasher);
 
 //
 // ## Rationale
@@ -42,7 +41,7 @@ else if (process.env.LODESTAR_PRESET) {
 else if (network) {
   if (network === "dev") {
     process.env.LODESTAR_PRESET = "minimal";
-    // "c-kzg" has hardcoded the mainnet value, do not use presets
+    // the kzg library has hardcoded the mainnet value, do not use presets
     setActivePreset(PresetName.minimal, {FIELD_ELEMENTS_PER_BLOB: 4096});
   } else if (network === "gnosis" || network === "chiado") {
     process.env.LODESTAR_PRESET = "gnosis";

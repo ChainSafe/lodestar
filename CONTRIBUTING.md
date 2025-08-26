@@ -62,6 +62,16 @@ If you observe any error in tests with matching to above error message, that imp
 
 If you observe following error running any of the test files that means you are running a file which itself or any dependency of that file imports `vitest`, but you are not running that file with `vitest` runner. Try running it with `yarn vitest` command, not with `node` command.
 
+**Error: Could not locate the bindings file.**
+
+If you observe the above error in running tests or the [beacon chain cli](https://github.com/ChainSafe/lodestar/issues/1396#issue-677613531), try removing `node_modules` and running `npm rebuild`:
+
+```sh
+rm -rf node_modules && npm rebuild
+```
+
+While `npm rebuild` is useful mostly during node version upgrades, it also [recompiles all your C++ addons](https://docs.npmjs.com/cli/v7/commands/npm-rebuild), which indirectly fixes our issue with bindings.
+
 ### Debugging Spec Tests
 
 - To fix errors always focus on passing all minimal tests first without running mainnet tests.
@@ -124,7 +134,6 @@ Unsure where to begin contributing to Lodestar? Here are some ideas!
 3. Make your changes in your local fork.
 4. If you've made a code change, make sure to lint and test your changes (`yarn lint` and `yarn test:unit`).
 5. Make an open pull request when you're ready for it to be reviewed. We review PRs on a regular basis. See Pull request etiquette for more information.
-6. You may be asked to sign a Contributor License Agreement (CLA). We make it relatively painless with CLA-bot.
 
 Please note that trivial, non-code contributions such as spelling, grammar, typos, corrections, comments and link fixes are not acceptable pull requests. Although we appreciate the effort to fix these valid concerns, it is not practical for us to run our CI systems to accommodate minor external contributions which generate minimal value for the purpose of contribution/airdrop farming. It would be appreciated for you to open up an issue instead for our team to aggregate these types of contributions into a batch commit.
 

@@ -3,7 +3,7 @@ import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
-  DataAvailableStatus,
+  DataAvailabilityStatus,
   ExecutionPayloadStatus,
   StateHashTreeRootSource,
   computeEpochAtSlot,
@@ -11,7 +11,7 @@ import {
   processSlots,
   stateTransition,
 } from "@lodestar/state-transition";
-import {BeaconBlock, RootHex, SignedBeaconBlock, Slot, phase0, ssz} from "@lodestar/types";
+import {BeaconBlock, RootHex, SignedBeaconBlock, Slot, phase0} from "@lodestar/types";
 import {Logger, fromHex, toRootHex} from "@lodestar/utils";
 import {IBeaconDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/index.js";
@@ -19,6 +19,7 @@ import {nextEventLoop} from "../../util/eventLoop.js";
 import {getCheckpointFromState} from "../blocks/utils/checkpoint.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 import {BlockStateCache, CheckpointStateCache} from "../stateCache/types.js";
+import {ValidatorMonitor} from "../validatorMonitor.js";
 import {RegenError, RegenErrorCode} from "./errors.js";
 import {IStateRegeneratorInternal, RegenCaller, StateRegenerationOpts} from "./interface.js";
 
@@ -31,6 +32,7 @@ export type RegenModules = {
   emitter: ChainEventEmitter;
   logger: Logger;
   metrics: Metrics | null;
+  validatorMonitor: ValidatorMonitor | null;
 };
 
 /**
@@ -259,12 +261,12 @@ export class StateRegenerator implements IStateRegeneratorInternal {
           {
             // Replay previously imported blocks, assume valid and available
             executionPayloadStatus: ExecutionPayloadStatus.valid,
-            dataAvailableStatus: DataAvailableStatus.available,
+            dataAvailabilityStatus: DataAvailabilityStatus.Available,
             verifyStateRoot: false,
             verifyProposer: false,
             verifySignatures: false,
           },
-          this.modules.metrics
+          this.modules
         );
 
         const hashTreeRootTimer = this.modules.metrics?.stateHashTreeRootTime.startTimer({
@@ -323,6 +325,7 @@ async function processSlotsByCheckpoint(
   modules: {
     checkpointStateCache: CheckpointStateCache;
     metrics: Metrics | null;
+    validatorMonitor: ValidatorMonitor | null;
     emitter: ChainEventEmitter;
     logger: Logger;
   },
@@ -333,7 +336,7 @@ async function processSlotsByCheckpoint(
 ): Promise<CachedBeaconStateAllForks> {
   let postState = await processSlotsToNearestCheckpoint(modules, preState, slot, regenCaller, opts);
   if (postState.slot < slot) {
-    postState = processSlots(postState, slot, opts, modules.metrics);
+    postState = processSlots(postState, slot, opts, modules);
   }
   return postState;
 }
@@ -349,6 +352,7 @@ export async function processSlotsToNearestCheckpoint(
   modules: {
     checkpointStateCache: CheckpointStateCache;
     metrics: Metrics | null;
+    validatorMonitor: ValidatorMonitor | null;
     emitter: ChainEventEmitter | null;
     logger: Logger | null;
   },
@@ -376,7 +380,7 @@ export async function processSlotsToNearestCheckpoint(
       caller: regenCaller,
     });
     // processSlots calls .clone() before mutating
-    postState = processSlots(postState, nextEpochSlot, opts, metrics);
+    postState = processSlots(postState, nextEpochSlot, opts, modules);
     metrics?.epochTransitionByCaller.inc({caller: regenCaller});
 
     // this is usually added when we prepare for next slot or validate gossip block

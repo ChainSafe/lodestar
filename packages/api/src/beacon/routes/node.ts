@@ -1,6 +1,6 @@
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {ssz, stringType} from "@lodestar/types";
+import {fulu, ssz, stringType} from "@lodestar/types";
 import {
   ArrayOf,
   EmptyArgs,
@@ -24,6 +24,7 @@ export const NetworkIdentityType = new ContainerType(
     enr: stringType,
     p2pAddresses: ArrayOf(stringType),
     discoveryAddresses: ArrayOf(stringType),
+    // TODO Fulu: replace with `ssz.fulu.Metadata` once `custody_group_count` is more widely supported
     /** Based on Ethereum Consensus [Metadata object](https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#metadata) */
     metadata: ssz.altair.Metadata,
   },
@@ -56,7 +57,9 @@ export const SyncingStatusType = new ContainerType(
   {jsonCase: "eth2"}
 );
 
-export type NetworkIdentity = ValueOf<typeof NetworkIdentityType>;
+export type NetworkIdentity = ValueOf<typeof NetworkIdentityType> & {
+  metadata: Partial<fulu.Metadata>;
+};
 
 export type PeerState = "disconnected" | "connecting" | "connected" | "disconnecting";
 export type PeerDirection = "inbound" | "outbound";
@@ -190,7 +193,26 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       req: EmptyRequestCodec,
       resp: {
         onlySupport: WireFormat.json,
-        data: NetworkIdentityType,
+        // TODO Fulu: clean this up
+        data: {
+          ...JsonOnlyResponseCodec.data,
+          toJson: (data) => {
+            const json = NetworkIdentityType.toJson(data);
+            const {custodyGroupCount} = data.metadata;
+            (json as {metadata: {custody_group_count: string | undefined}}).metadata.custody_group_count =
+              custodyGroupCount !== undefined ? String(custodyGroupCount) : undefined;
+            return json;
+          },
+          fromJson: (json) => {
+            const data = NetworkIdentityType.fromJson(json);
+            const {
+              metadata: {custody_group_count},
+            } = json as {metadata: {custody_group_count: string | undefined}};
+            (data.metadata as Partial<fulu.Metadata>).custodyGroupCount =
+              custody_group_count !== undefined ? parseInt(custody_group_count) : undefined;
+            return data;
+          },
+        },
         meta: EmptyMetaCodec,
       },
     },

@@ -4838,7 +4838,7 @@
           "calcs": [],
           "displayMode": "list",
           "placement": "bottom",
-          "showLegend": false
+          "showLegend": true
         },
         "tooltip": {
           "mode": "single",
@@ -4856,7 +4856,8 @@
           "expr": "rate(lodestar_gossip_block_elapsed_time_till_received_sum[$rate_interval]) / rate(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval])",
           "format": "heatmap",
           "instant": false,
-          "legendFormat": "time",
+          "interval": "",
+          "legendFormat": "{{source}}",
           "range": true,
           "refId": "A"
         }

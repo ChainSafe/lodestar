@@ -49,6 +49,7 @@ describe("SeenAggregatedAttestations.isKnown", () => {
       const aggregationBits = new BitArray(new Uint8Array(seenAttestingBits), 8);
       cache.add(
         targetEpoch,
+        0,
         attDataRoot,
         {aggregationBits, trueBitCount: aggregationBits.getTrueBitIndexes().length},
         false
@@ -56,7 +57,7 @@ describe("SeenAggregatedAttestations.isKnown", () => {
       for (const {bits, isKnown} of checkAttestingBits) {
         // expect(cache.participantsKnown(subsetContribution)).to.equal(isKnown);
         const toCheckAggBits = new BitArray(new Uint8Array(bits), 8);
-        expect(cache.isKnown(targetEpoch, attDataRoot, toCheckAggBits)).toBe(isKnown);
+        expect(cache.isKnown(targetEpoch, 0, attDataRoot, toCheckAggBits)).toBe(isKnown);
       }
     });
   }

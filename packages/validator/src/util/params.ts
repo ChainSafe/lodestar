@@ -1,4 +1,4 @@
-import {ChainConfig, chainConfigToJson} from "@lodestar/config";
+import {BlobScheduleEntry, ChainConfig, SpecJson, chainConfigToJson, deserializeBlobSchedule} from "@lodestar/config";
 import {BeaconPreset, activePreset, presetToJson} from "@lodestar/params";
 
 export class NotEqualParamsError extends Error {}
@@ -20,7 +20,7 @@ type ConfigWithPreset = ChainConfig & BeaconPreset;
  * So this check only compares a specific list of parameters that are consensus critical, ignoring the rest. Typed
  * config and preset ensure new parameters are labeled critical or ignore, facilitating maintenance of the list.
  */
-export function assertEqualParams(localConfig: ChainConfig, externalSpecJson: Record<string, string>): void {
+export function assertEqualParams(localConfig: ChainConfig, externalSpecJson: SpecJson): void {
   // Before comparing, add preset which is bundled in api impl config route.
   // config and preset must be serialized to JSON for safe comparisions.
   const localSpecJson = {
@@ -52,6 +52,35 @@ export function assertEqualParams(localConfig: ChainConfig, externalSpecJson: Re
       continue;
     }
 
+    if (key === "BLOB_SCHEDULE") {
+      const localBlobSchedule = deserializeBlobSchedule(localSpecJson[key]).sort((a, b) => a.EPOCH - b.EPOCH);
+      const remoteBlobSchedule = deserializeBlobSchedule(externalSpecJson[key]).sort((a, b) => a.EPOCH - b.EPOCH);
+
+      if (localBlobSchedule.length !== remoteBlobSchedule.length) {
+        errors.push(`BLOB_SCHEDULE different length: ${localBlobSchedule.length} != ${remoteBlobSchedule.length}`);
+
+        // Skip per entry comparison
+        continue;
+      }
+
+      for (let i = 0; i < localBlobSchedule.length; i++) {
+        const localEntry = localBlobSchedule[i];
+        const remoteEntry = remoteBlobSchedule[i];
+
+        for (const entryKey of ["EPOCH", "MAX_BLOBS_PER_BLOCK"] as Array<keyof BlobScheduleEntry>) {
+          const localValue = String(localEntry[entryKey]);
+          const remoteValue = String(remoteEntry[entryKey]);
+
+          if (localValue !== remoteValue) {
+            errors.push(`BLOB_SCHEDULE[${i}].${entryKey} different value: ${localValue} != ${remoteValue}`);
+          }
+        }
+      }
+
+      // Skip generic string comparison
+      continue;
+    }
+
     // Must compare JSON serialized specs, to ensure all strings are rendered in the same way
     // Must compare as lowercase to ensure checksum addresses and names have same capilatization
     const localValue = String(localSpecJson[key]).toLocaleLowerCase();
@@ -73,6 +102,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
   const denebForkRelevant = localConfig.DENEB_FORK_EPOCH < Infinity;
   const electraForkRelevant = localConfig.ELECTRA_FORK_EPOCH < Infinity;
   const fuluForkRelevant = localConfig.FULU_FORK_EPOCH < Infinity;
+  const gloasForkRelevant = localConfig.GLOAS_FORK_EPOCH < Infinity;
 
   return {
     // # Config
@@ -111,6 +141,9 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     // fulu
     FULU_FORK_VERSION: fuluForkRelevant,
     FULU_FORK_EPOCH: fuluForkRelevant,
+    // gloas
+    GLOAS_FORK_VERSION: gloasForkRelevant,
+    GLOAS_FORK_EPOCH: gloasForkRelevant,
 
     // Time parameters
     SECONDS_PER_SLOT: true,
@@ -139,12 +172,17 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     DEPOSIT_CONTRACT_ADDRESS: true,
 
     // Networking (non-critical as those do not affect consensus)
+    MAX_REQUEST_BLOCKS: false,
+    MAX_REQUEST_BLOCKS_DENEB: false,
     MIN_EPOCHS_FOR_BLOCK_REQUESTS: false,
     MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: false,
+    MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: false,
     BLOB_SIDECAR_SUBNET_COUNT: false,
     BLOB_SIDECAR_SUBNET_COUNT_ELECTRA: false,
+    DATA_COLUMN_SIDECAR_SUBNET_COUNT: false,
     MAX_REQUEST_BLOB_SIDECARS: false,
     MAX_REQUEST_BLOB_SIDECARS_ELECTRA: false,
+    MAX_REQUEST_DATA_COLUMN_SIDECARS: false,
 
     // # Phase0Preset
     /////////////////
@@ -247,5 +285,19 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT: electraForkRelevant,
     MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA: electraForkRelevant,
     MAX_BLOBS_PER_BLOCK_ELECTRA: electraForkRelevant,
+
+    // FULU
+    /////////////////
+    CELLS_PER_EXT_BLOB: fuluForkRelevant,
+    FIELD_ELEMENTS_PER_CELL: fuluForkRelevant,
+    FIELD_ELEMENTS_PER_EXT_BLOB: fuluForkRelevant,
+    KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH: fuluForkRelevant,
+    NUMBER_OF_COLUMNS: fuluForkRelevant,
+    NUMBER_OF_CUSTODY_GROUPS: fuluForkRelevant,
+    SAMPLES_PER_SLOT: fuluForkRelevant,
+    CUSTODY_REQUIREMENT: fuluForkRelevant,
+    VALIDATOR_CUSTODY_REQUIREMENT: fuluForkRelevant,
+    BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: fuluForkRelevant,
+    BLOB_SCHEDULE: fuluForkRelevant,
   };
 }

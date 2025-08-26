@@ -28,7 +28,7 @@ jobs:
         id: node
         run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT
       - name: Restore dependencies
-        uses: actions/cache@master
+        uses: actions/cache@v4
         id: cache-deps
         with:
           path: |

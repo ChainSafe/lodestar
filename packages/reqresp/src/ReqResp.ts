@@ -1,9 +1,10 @@
 import {setMaxListeners} from "node:events";
 import {Connection, PeerId, Stream} from "@libp2p/interface";
-import {Logger, MetricsRegister} from "@lodestar/utils";
+import {Logger, MetricsRegisterExtra} from "@lodestar/utils";
 import type {Libp2p} from "libp2p";
 import {Metrics, getMetrics} from "./metrics.js";
 import {ReqRespRateLimiter} from "./rate_limiter/ReqRespRateLimiter.js";
+import {SelfRateLimiter} from "./rate_limiter/selfRateLimiter.js";
 import {RequestError, RequestErrorCode, SendRequestOpts, sendRequest} from "./request/index.js";
 import {handleRequest} from "./response/index.js";
 import {
@@ -24,17 +25,13 @@ export const DEFAULT_PROTOCOL_PREFIX = "/eth2/beacon_chain/req";
 export interface ReqRespProtocolModules {
   libp2p: Libp2p;
   logger: Logger;
-  metricsRegister: MetricsRegister | null;
+  metricsRegister: MetricsRegisterExtra | null;
 }
 
 export interface ReqRespOpts extends SendRequestOpts, ReqRespRateLimiterOpts {
   /** Custom prefix for `/ProtocolPrefix/MessageName/SchemaVersion/Encoding` */
   protocolPrefix?: string;
   getPeerLogMetadata?: (peerId: string) => string;
-}
-
-export interface ReqRespRegisterOpts {
-  ignoreIfDuplicate?: boolean;
 }
 
 /**
@@ -49,8 +46,11 @@ export class ReqResp {
   protected readonly logger: Logger;
   protected readonly metrics: Metrics | null;
 
-  // to not be used by extending class
+  // rate limit requests coming to this node to not be used by extending class
   private readonly rateLimiter: ReqRespRateLimiter;
+  // rate limit requests sending to other peers
+  private readonly selfRateLimiter: SelfRateLimiter;
+
   private controller = new AbortController();
   /** Tracks request and responses in a sequential counter */
   private reqCount = 0;
@@ -69,6 +69,11 @@ export class ReqResp {
     this.metrics = modules.metricsRegister ? getMetrics(modules.metricsRegister) : null;
     this.protocolPrefix = opts.protocolPrefix ?? DEFAULT_PROTOCOL_PREFIX;
     this.rateLimiter = new ReqRespRateLimiter(opts);
+    this.selfRateLimiter = new SelfRateLimiter();
+
+    this.metrics?.selfRateLimiterPeerCount.addCollect(() => {
+      this.metrics?.selfRateLimiterPeerCount.set(this.selfRateLimiter.getPeerCount());
+    });
   }
 
   /**
@@ -87,27 +92,21 @@ export class ReqResp {
   /**
    * Register protocol as supported and to libp2p.
    * async because libp2p registrar persists the new protocol list in the peer-store.
-   * Throws if the same protocol is registered twice.
+   * Overrides handler and rate limits in case protocol is already registered.
    * Can be called at any time, no concept of started / stopped
    */
-  async registerProtocol(protocol: Protocol, opts?: ReqRespRegisterOpts): Promise<void> {
+  async registerProtocol(protocol: Protocol): Promise<void> {
     const protocolID = this.formatProtocolID(protocol);
     const {handler: _handler, inboundRateLimits, ...rest} = protocol;
-
-    if (inboundRateLimits) {
-      // Rate limits can change across hard forks and must always be updated
-      this.rateLimiter.setRateLimits(protocolID, inboundRateLimits);
-    }
-
-    // libp2p will throw if handler for protocol is already registered, allow to overwrite behavior
-    if (opts?.ignoreIfDuplicate && this.registeredProtocols.has(protocolID)) {
-      return;
-    }
 
     this.registerDialOnlyProtocol(rest);
     this.dialOnlyProtocols.set(protocolID, false);
 
-    return this.libp2p.handle(protocolID, this.getRequestHandler(protocol, protocolID));
+    if (inboundRateLimits) {
+      this.rateLimiter.setRateLimits(protocolID, inboundRateLimits);
+    }
+
+    return this.libp2p.handle(protocolID, this.getRequestHandler(protocol, protocolID), {force: true});
   }
 
   /**
@@ -138,6 +137,7 @@ export class ReqResp {
   async start(): Promise<void> {
     this.controller = new AbortController();
     this.rateLimiter.start();
+    this.selfRateLimiter.start();
     // We set infinity to prevent MaxListenersExceededWarning which get logged when listeners > 10
     // Since it is perfectly fine to have listeners > 10
     setMaxListeners(Infinity, this.controller.signal);
@@ -145,6 +145,7 @@ export class ReqResp {
 
   async stop(): Promise<void> {
     this.rateLimiter.stop();
+    this.selfRateLimiter.stop();
     this.controller.abort();
   }
 
@@ -156,7 +157,8 @@ export class ReqResp {
     encoding: Encoding,
     body: Uint8Array
   ): AsyncIterable<ResponseIncoming> {
-    const peerClient = this.opts.getPeerLogMetadata?.(peerId.toString());
+    const peerIdStr = peerId.toString();
+    const peerClient = this.opts.getPeerLogMetadata?.(peerIdStr);
     this.metrics?.outgoingRequests.inc({method});
     const timer = this.metrics?.outgoingRequestRoundtripTime.startTimer({method});
 
@@ -169,6 +171,14 @@ export class ReqResp {
       if (!protocol) {
         throw Error(`Request to send to protocol ${protocolID} but it has not been declared`);
       }
+
+      if (!this.selfRateLimiter.allows(peerIdStr, protocolID)) {
+        // we technically don't send request in this case but would be nice just to track this in the same `outgoingErrorReasons` metric
+        this.metrics?.outgoingErrorReasons.inc({reason: RequestErrorCode.REQUEST_SELF_RATE_LIMITED});
+        throw new RequestError({code: RequestErrorCode.REQUEST_SELF_RATE_LIMITED});
+        // don't call this.onOutgoingRequestError() to penalize peer
+      }
+
       protocols.push(protocol);
       protocolIDs.push(protocolID);
     }
@@ -191,12 +201,16 @@ export class ReqResp {
         if (e.type.code === RequestErrorCode.DIAL_ERROR || e.type.code === RequestErrorCode.DIAL_TIMEOUT) {
           this.metrics?.dialErrors.inc();
         }
+        this.metrics?.outgoingErrorReasons.inc({reason: e.type.code});
 
         this.onOutgoingRequestError(peerId, method, e);
       }
 
       throw e;
     } finally {
+      for (const protocolID of protocolIDs) {
+        this.selfRateLimiter.requestCompleted(peerIdStr, protocolID);
+      }
       timer?.();
     }
   }

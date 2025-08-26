@@ -3,13 +3,14 @@ import {BeaconConfig} from "@lodestar/config";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
-  DataAvailableStatus,
+  DataAvailabilityStatus,
   ExecutionPayloadStatus,
   createCachedBeaconState,
   stateTransition,
 } from "@lodestar/state-transition";
 import {IBeaconDb} from "../../../db/index.js";
-import {HistoricalStateRegenMetrics, RegenErrorType} from "./types.js";
+import {HistoricalStateRegenMetrics} from "./metrics.js";
+import {RegenErrorType} from "./types.js";
 
 /**
  * Populate a PubkeyIndexMap with any new entries based on a BeaconState
@@ -86,9 +87,9 @@ export async function getHistoricalState(
           verifySignatures: false,
           verifyStateRoot: false,
           executionPayloadStatus: ExecutionPayloadStatus.valid,
-          dataAvailableStatus: DataAvailableStatus.available,
+          dataAvailabilityStatus: DataAvailabilityStatus.Available,
         },
-        metrics
+        {metrics}
       );
     } catch (e) {
       metrics?.regenErrorCount.inc({reason: RegenErrorType.blockProcessing});

@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, isForkPostDeneb} from "@lodestar/params";
+import {ForkName, VALIDATOR_REGISTRY_LIMIT, isForkPostDeneb} from "@lodestar/params";
 import {
   BLSPubkey,
   ExecutionPayload,
@@ -22,13 +22,13 @@ import {
   EmptyRequestCodec,
   EmptyResponseCodec,
   EmptyResponseData,
-  JsonOnlyReq,
   WithVersion,
 } from "../utils/codecs.js";
 import {getPostBellatrixForkTypes, getPostDenebForkTypes, toForkName} from "../utils/fork.js";
 import {fromHeaders} from "../utils/headers.js";
 import {Endpoint, RouteDefinitions, Schema} from "../utils/index.js";
 import {MetaHeader, VersionCodec, VersionMeta} from "../utils/metadata.js";
+import {WireFormat} from "../utils/wireFormat.js";
 
 // Mev-boost might not return any data if there are no bids from builders or min-bid threshold was not reached.
 // In this case, we receive a success response (204) which is not handled as an error. The generic response
@@ -36,7 +36,7 @@ import {MetaHeader, VersionCodec, VersionMeta} from "../utils/metadata.js";
 // It is important that this type indicates that there might be no value to ensure it is properly handled downstream.
 export type MaybeSignedBuilderBid = SignedBuilderBid | undefined;
 
-const RegistrationsType = ArrayOf(ssz.bellatrix.SignedValidatorRegistrationV1);
+const RegistrationsType = ArrayOf(ssz.bellatrix.SignedValidatorRegistrationV1, VALIDATOR_REGISTRY_LIMIT);
 
 export type Endpoints = {
   status: Endpoint<
@@ -75,6 +75,14 @@ export type Endpoints = {
     ExecutionPayload | ExecutionPayloadAndBlobsBundle,
     VersionMeta
   >;
+
+  submitBlindedBlockV2: Endpoint<
+    "POST",
+    {signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>},
+    {body: unknown; headers: {[MetaHeader.Version]: string}},
+    EmptyResponseData,
+    EmptyMeta
+  >;
 };
 
 export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoints> {
@@ -88,12 +96,17 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
     registerValidator: {
       url: "/eth/v1/builder/validators",
       method: "POST",
-      req: JsonOnlyReq({
+      req: {
         writeReqJson: ({registrations}) => ({body: RegistrationsType.toJson(registrations)}),
         parseReqJson: ({body}) => ({registrations: RegistrationsType.fromJson(body)}),
+        writeReqSsz: ({registrations}) => ({body: RegistrationsType.serialize(registrations)}),
+        parseReqSsz: ({body}) => ({registrations: RegistrationsType.deserialize(body)}),
         schema: {body: Schema.ObjectArray},
-      }),
+      },
       resp: EmptyResponseCodec,
+      init: {
+        requestWireFormat: WireFormat.ssz,
+      },
     },
     getHeader: {
       url: "/eth/v1/builder/header/{slot}/{parent_hash}/{pubkey}",
@@ -167,6 +180,49 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         }),
         meta: VersionCodec,
       },
+    },
+    submitBlindedBlockV2: {
+      url: "/eth/v2/builder/blinded_blocks",
+      method: "POST",
+      req: {
+        writeReqJson: ({signedBlindedBlock}) => {
+          const fork = config.getForkName(signedBlindedBlock.data.message.slot);
+          return {
+            body: getPostBellatrixForkTypes(fork).SignedBlindedBeaconBlock.toJson(signedBlindedBlock.data),
+            headers: {
+              [MetaHeader.Version]: fork,
+            },
+          };
+        },
+        parseReqJson: ({body, headers}) => {
+          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
+          return {
+            signedBlindedBlock: {data: getPostBellatrixForkTypes(fork).SignedBlindedBeaconBlock.fromJson(body)},
+          };
+        },
+        writeReqSsz: ({signedBlindedBlock}) => {
+          const fork = config.getForkName(signedBlindedBlock.data.message.slot);
+          return {
+            body:
+              signedBlindedBlock.bytes ??
+              getPostBellatrixForkTypes(fork).SignedBlindedBeaconBlock.serialize(signedBlindedBlock.data),
+            headers: {
+              [MetaHeader.Version]: fork,
+            },
+          };
+        },
+        parseReqSsz: ({body, headers}) => {
+          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
+          return {
+            signedBlindedBlock: {data: getPostBellatrixForkTypes(fork).SignedBlindedBeaconBlock.deserialize(body)},
+          };
+        },
+        schema: {
+          body: Schema.Object,
+          headers: {[MetaHeader.Version]: Schema.String},
+        },
+      },
+      resp: EmptyResponseCodec,
     },
   };
 }

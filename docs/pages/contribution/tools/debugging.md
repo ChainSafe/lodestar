@@ -6,7 +6,7 @@ This page describes different approaches for debugging Lodestar.
 
 The simplest way to debug is to use the provided [launch.template.json](https://github.com/ChainSafe/lodestar/blob/unstable/.vscode/launch.template.json) `configurations`. Copy them as `.vscode/launch.json` and they will be made available in the `Run and Debug` section in VS Code. Adapt as needed, e.g. by adding additional arguments to the beacon [configuration](https://github.com/ChainSafe/lodestar/blob/unstable/.vscode/launch.template.json#L22) to match your needs.
 
-VS Code supports debugging Workers out of the box when using those configurations.
+VS Code supports debugging Workers out of the box when using those configurations. The `Test Current File` launch configuration additionally requires to install [Command Variable](https://marketplace.visualstudio.com/items/?itemName=rioj7.command-variable) extension to correctly parse input prompts.
 
 ## Attach to running process
 

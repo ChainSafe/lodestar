@@ -1,7 +1,7 @@
 # Lodestar Eth Consensus Req/Resp Protocol
 
 [![Discord](https://img.shields.io/discord/593655374469660673.svg?label=Discord&logo=discord)](https://discord.gg/aMxzVcr)
-[![ETH Beacon APIs Spec v2.5.0](https://img.shields.io/badge/ETH%20beacon--APIs-2.5.0-blue)](https://github.com/ethereum/beacon-APIs/releases/tag/v2.5.0)
+[![ETH Beacon APIs Spec v3.1.0](https://img.shields.io/badge/ETH%20beacon--APIs-3.1.0-blue)](https://github.com/ethereum/beacon-APIs/releases/tag/v3.1.0)
 ![ES Version](https://img.shields.io/badge/ES-2021-yellow)
 ![Node Version](https://img.shields.io/badge/node-22.x-green)
 
@@ -15,7 +15,7 @@ Typescript implementation of the [Ethereum Consensus Req/Resp protocol](https://
 import {Libp2p} from "libp2p";
 import {ssz} from "@lodestar/types";
 import {ReqResp, ContextBytesType, Protocol, Encoding} from "@lodestar/reqresp";
-import {ForkName} from "@lodestar/params";
+import {ForkName, GENESIS_EPOCH} from "@lodestar/params";
 import {Logger} from "@lodestar/utils";
 
 async function getReqResp(libp2p: Libp2p, logger: Logger): Promise<void> {
@@ -32,7 +32,7 @@ async function getReqResp(libp2p: Libp2p, logger: Logger): Promise<void> {
     handler: async function* (req) {
       yield {
         data: req.data,
-        fork: ForkName.phase0,
+        boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH},
       };
     },
   };

@@ -58,6 +58,9 @@ export const gnosisChainConfig: ChainConfig = {
   FULU_FORK_VERSION: b("0x06000064"),
   FULU_FORK_EPOCH: Infinity,
 
+  // Deneb
+  MAX_BLOBS_PER_BLOCK: 2,
+
   // Electra
   // 2**6 * 10**9 (= 64,000,000,000)
   MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT: 64000000000,
@@ -65,4 +68,7 @@ export const gnosisChainConfig: ChainConfig = {
   MAX_BLOBS_PER_BLOCK_ELECTRA: 2,
   // MAX_REQUEST_BLOCKS_DENEB * MAX_BLOBS_PER_BLOCK_ELECTRA
   MAX_REQUEST_BLOB_SIDECARS_ELECTRA: 256,
+
+  // Blob Scheduling
+  BLOB_SCHEDULE: [],
 };

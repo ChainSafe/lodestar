@@ -1,6 +1,6 @@
 import {IForkChoice} from "@lodestar/fork-choice";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {Slot, phase0} from "@lodestar/types";
+import {Slot, Status} from "@lodestar/types";
 import {ChainTarget} from "../range/utils/index.js";
 
 /** The type of peer relative to our current state */
@@ -21,8 +21,8 @@ function withinRangeOf(value: number, target: number, range: number): boolean {
 }
 
 export function getPeerSyncType(
-  local: phase0.Status,
-  remote: phase0.Status,
+  local: Status,
+  remote: Status,
   forkChoice: IForkChoice,
   slotImportTolerance: number
 ): PeerSyncType {
@@ -93,7 +93,7 @@ export const rangeSyncTypes = Object.keys(RangeSyncType) as RangeSyncType[];
  * - The remotes finalized epoch is greater than our current finalized epoch and we have
  *   not seen the finalized hash before
  */
-export function getRangeSyncType(local: phase0.Status, remote: phase0.Status, forkChoice: IForkChoice): RangeSyncType {
+export function getRangeSyncType(local: Status, remote: Status, forkChoice: IForkChoice): RangeSyncType {
   if (remote.finalizedEpoch > local.finalizedEpoch && !forkChoice.hasBlock(remote.finalizedRoot)) {
     return RangeSyncType.Finalized;
   }
@@ -101,8 +101,8 @@ export function getRangeSyncType(local: phase0.Status, remote: phase0.Status, fo
 }
 
 export function getRangeSyncTarget(
-  local: phase0.Status,
-  remote: phase0.Status,
+  local: Status,
+  remote: Status,
   forkChoice: IForkChoice
 ): {syncType: RangeSyncType; startEpoch: Slot; target: ChainTarget} {
   if (remote.finalizedEpoch > local.finalizedEpoch && !forkChoice.hasBlock(remote.finalizedRoot)) {

@@ -118,6 +118,9 @@ export async function* sendRequest(
     const protocol = protocolsMap.get(protocolId);
     if (!protocol) throw Error(`dialProtocol selected unknown protocolId ${protocolId}`);
 
+    // Override with actual version that was negotiated
+    logCtx.version = protocol.version;
+
     logger.debug("Req  sending request", logCtx);
 
     // Spec: The requester MUST close the write side of the stream once it finishes writing the request message
@@ -152,8 +155,13 @@ export async function* sendRequest(
     const ttfbTimeoutController = new AbortController();
     const respTimeoutController = new AbortController();
 
-    const timeoutTTFB = setTimeout(() => ttfbTimeoutController.abort(), TTFB_TIMEOUT);
     let timeoutRESP: NodeJS.Timeout | null = null;
+
+    const timeoutTTFB = setTimeout(() => {
+      // If we abort on first byte delay, don't need to abort for response delay
+      if (timeoutRESP) clearTimeout(timeoutRESP);
+      ttfbTimeoutController.abort();
+    }, TTFB_TIMEOUT);
 
     const restartRespTimeout = (): void => {
       if (timeoutRESP) clearTimeout(timeoutRESP);
@@ -192,7 +200,7 @@ export async function* sendRequest(
       // NOTE: Only log once per request to verbose, intermediate steps to debug
       // NOTE: Do not log the response, logs get extremely cluttered
       // NOTE: add double space after "Req  " to align log with the "Resp " log
-      logger.verbose("Req  done", {...logCtx});
+      logger.verbose("Req  done", logCtx);
     } finally {
       clearTimeout(timeoutTTFB);
       if (timeoutRESP !== null) clearTimeout(timeoutRESP);

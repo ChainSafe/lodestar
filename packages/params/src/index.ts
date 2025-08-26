@@ -108,6 +108,12 @@ export const {
   MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP,
   MAX_PENDING_DEPOSITS_PER_EPOCH,
   WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA,
+
+  NUMBER_OF_COLUMNS,
+  CELLS_PER_EXT_BLOB,
+  FIELD_ELEMENTS_PER_CELL,
+  FIELD_ELEMENTS_PER_EXT_BLOB,
+  KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH,
 } = activePreset;
 
 ////////////
@@ -195,9 +201,6 @@ export const TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE = 16;
 export const SYNC_COMMITTEE_SUBNET_COUNT = 4;
 export const SYNC_COMMITTEE_SUBNET_SIZE = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
 
-export const MAX_REQUEST_BLOCKS = 2 ** 10; // 1024
-export const MAX_REQUEST_BLOCKS_DENEB = 2 ** 7; // 128
-
 // Lightclient pre-computed
 /**
  * ```ts
@@ -227,6 +230,19 @@ export const BLOCK_BODY_EXECUTION_PAYLOAD_GINDEX = 25;
 export const BLOCK_BODY_EXECUTION_PAYLOAD_DEPTH = 4;
 export const BLOCK_BODY_EXECUTION_PAYLOAD_INDEX = 9;
 
+/**
+ * ```ts
+ * config.types.altair.BeaconState.getPathGindex(["currentSyncCommittee"])
+ * ```
+ */
+export const CURRENT_SYNC_COMMITTEE_GINDEX = 54;
+/**
+ * ```ts
+ * Math.floor(Math.log2(CURRENT_SYNC_COMMITTEE_GINDEX))
+ * ```
+ */
+export const CURRENT_SYNC_COMMITTEE_DEPTH = 5;
+export const CURRENT_SYNC_COMMITTEE_INDEX = 22;
 /**
  * ```ts
  * config.types.altair.BeaconState.getPathGindex(["nextSyncCommittee"])
@@ -267,9 +283,18 @@ export const FULL_EXIT_REQUEST_AMOUNT = 0;
 export const FINALIZED_ROOT_GINDEX_ELECTRA = 169;
 export const FINALIZED_ROOT_DEPTH_ELECTRA = 7;
 export const FINALIZED_ROOT_INDEX_ELECTRA = 41;
+export const CURRENT_SYNC_COMMITTEE_GINDEX_ELECTRA = 86;
+export const CURRENT_SYNC_COMMITTEE_DEPTH_ELECTRA = 6;
+export const CURRENT_SYNC_COMMITTEE_INDEX_ELECTRA = 22;
 export const NEXT_SYNC_COMMITTEE_GINDEX_ELECTRA = 87;
 export const NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA = 6;
 export const NEXT_SYNC_COMMITTEE_INDEX_ELECTRA = 23;
 export const DEPOSIT_REQUEST_TYPE = 0x00;
 export const WITHDRAWAL_REQUEST_TYPE = 0x01;
 export const CONSOLIDATION_REQUEST_TYPE = 0x02;
+
+export const BYTES_PER_CELL = FIELD_ELEMENTS_PER_CELL * BYTES_PER_FIELD_ELEMENT;
+
+// ssz.fulu.BeaconBlockBody.getPathInfo(['blobKzgCommitments']).gindex
+export const KZG_COMMITMENTS_GINDEX = 27;
+export const KZG_COMMITMENTS_SUBTREE_INDEX = KZG_COMMITMENTS_GINDEX - 2 ** KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH;

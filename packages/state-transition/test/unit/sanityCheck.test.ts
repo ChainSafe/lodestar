@@ -4,7 +4,7 @@ import {beforeProcessEpoch} from "../../src/index.js";
 import {generatePerfTestCachedStateAltair, generatePerfTestCachedStatePhase0, perfStateId} from "../perf/util.js";
 
 describe("Perf test sanity check", () => {
-  vi.setConfig({testTimeout: 60 * 1000});
+  vi.setConfig({testTimeout: 90 * 1000});
 
   if (ACTIVE_PRESET !== PresetName.mainnet) {
     throw Error(`ACTIVE_PRESET '${ACTIVE_PRESET}' must be mainnet`);

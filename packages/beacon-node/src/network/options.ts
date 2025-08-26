@@ -23,6 +23,26 @@ export interface NetworkOptions
   useWorker?: boolean;
   maxYoungGenerationSizeMb?: number;
   disableLightClientServer?: boolean;
+  supernode?: boolean;
+
+  /**
+   * During E2E tests observe a lot of following `missing stream`:
+   *
+   * > libp2p:mplex receiver stream with id 2 and protocol /eth2/beacon_chain/req/metadata/2/ssz_snappy ended
+   * > libp2p:mplex initiator stream with id 4 and protocol /eth2/beacon_chain/req/metadata/2/ssz_snappy ended
+   * > libp2p:mplex initiator stream with id 2 and protocol /eth2/beacon_chain/req/metadata/2/ssz_snappy ended
+   * > libp2p:mplex missing stream 2 for message type CLOSE_INITIATOR
+   * > libp2p:mplex missing stream 2 for message type CLOSE_RECEIVER
+   * > libp2p:mplex missing stream 4 for message type CLOSE_INITIATOR
+   *
+   * which results in following rate-limit error and cause the connection to close and fail the e2e tests
+   * > libp2p:mplex rate limit hit when receiving messages for streams that do not exist - closing remote connection
+   * > libp2p:mplex:stream:initiator:3 abort with error Error: Too many messages for missing streams
+   *
+   * The default value for `disconnectThreshold` in libp2p is set to `5`.
+   * We need to increase this only for the testing purpose
+   */
+  disconnectThreshold?: number;
 }
 
 export const defaultNetworkOptions: NetworkOptions = {
@@ -42,4 +62,9 @@ export const defaultNetworkOptions: NetworkOptions = {
   slotsToSubscribeBeforeAggregatorDuty: 2,
   // This will enable the light client server by default
   disableLightClientServer: false,
+  // specific option for fulu
+  //   - this is the same to TARGET_SUBNET_PEERS
+  //   - for fusaka-devnets, we have 25-30 peers per subnet
+  //   - for public testnets or mainnet, average number of peers per group is SAMPLES_PER_SLOT * targetPeers / NUMBER_OF_CUSTODY_GROUPS = 6.25 so this should not be an issue
+  targetGroupPeers: 6,
 };

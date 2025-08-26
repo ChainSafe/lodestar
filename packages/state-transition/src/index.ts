@@ -3,7 +3,7 @@ export * from "./constants/index.js";
 export * from "./util/index.js";
 export * from "./signatureSets/index.js";
 export type {EpochTransitionStep} from "./epoch/index.js";
-export type {BeaconStateTransitionMetrics} from "./metrics.js";
+export {type BeaconStateTransitionMetrics, getMetrics} from "./metrics.js";
 
 export type {
   CachedBeaconStatePhase0,
@@ -12,6 +12,7 @@ export type {
   CachedBeaconStateCapella,
   CachedBeaconStateDeneb,
   CachedBeaconStateElectra,
+  CachedBeaconStateFulu,
   CachedBeaconStateAllForks,
   CachedBeaconStateExecutions,
   // Non-cached states
@@ -21,6 +22,7 @@ export type {
   BeaconStateCapella,
   BeaconStateDeneb,
   BeaconStateElectra,
+  BeaconStateFulu,
   BeaconStateAllForks,
   BeaconStateExecutions,
 } from "./types.js";
@@ -57,7 +59,11 @@ export {isValidVoluntaryExit} from "./block/processVoluntaryExit.js";
 export {isValidBlsToExecutionChange} from "./block/processBlsToExecutionChange.js";
 export {assertValidProposerSlashing} from "./block/processProposerSlashing.js";
 export {assertValidAttesterSlashing} from "./block/processAttesterSlashing.js";
-export {ExecutionPayloadStatus, DataAvailableStatus, type BlockExternalData} from "./block/externalData.js";
+export {
+  ExecutionPayloadStatus,
+  DataAvailabilityStatus,
+  type BlockExternalData,
+} from "./block/externalData.js";
 
 // BeaconChain, to prepare new blocks
 export {becomesNewEth1Data} from "./block/processEth1Data.js";
@@ -65,3 +71,5 @@ export {becomesNewEth1Data} from "./block/processEth1Data.js";
 export {getExpectedWithdrawals} from "./block/processWithdrawals.js";
 
 export {getAttestationParticipationStatus, processAttestationsAltair} from "./block/processAttestationsAltair.js";
+
+export {ProposerRewardType} from "./block/types.js";

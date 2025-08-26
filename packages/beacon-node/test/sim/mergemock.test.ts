@@ -11,6 +11,7 @@ import {afterAll, afterEach, describe, it, vi} from "vitest";
 
 import {BeaconRestApiServerOpts} from "../../src/api/index.js";
 import {ZERO_HASH} from "../../src/constants/index.js";
+import {BuilderStatus} from "../../src/execution/builder/http.js";
 import {Eth1Provider} from "../../src/index.js";
 import {ClockEvent} from "../../src/util/clock.js";
 import {TestLoggerOpts, testLogger} from "../utils/logger.js";
@@ -24,8 +25,6 @@ import {shell} from "./shell.js";
 // NOTE: How to run
 // EL_BINARY_DIR=g11tech/mergemock:latest EL_SCRIPT_DIR=mergemock LODESTAR_PRESET=mainnet ETH_PORT=8661 ENGINE_PORT=8551 yarn vitest run test/sim/mergemock.test.ts
 // ```
-
-/* eslint-disable no-console, @typescript-eslint/naming-convention */
 
 const jwtSecretHex = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
 
@@ -63,28 +62,25 @@ describe("executionEngine / ExecutionEngineHttp", () => {
     }
   });
 
-  for (const useProduceBlockV3 of [false, true]) {
-    it(`Test builder with useProduceBlockV3=${useProduceBlockV3}`, async () => {
-      console.log("\n\nPost-merge, run for a few blocks\n\n");
-      const {elClient, tearDownCallBack} = await runEL(
-        {...elSetupConfig, mode: ELStartMode.PostMerge},
-        {...elRunOptions, ttd: BigInt(0)},
-        controller.signal
-      );
-      afterEachCallbacks.push(() => tearDownCallBack());
+  it("Test builder flow", async () => {
+    console.log("\n\nPost-merge, run for a few blocks\n\n");
+    const {elClient, tearDownCallBack} = await runEL(
+      {...elSetupConfig, mode: ELStartMode.PostMerge},
+      {...elRunOptions, ttd: BigInt(0)},
+      controller.signal
+    );
+    afterEachCallbacks.push(() => tearDownCallBack());
 
-      await runNodeWithEL({
-        elClient,
-        bellatrixEpoch: 0,
-        testName: "post-merge",
-        useProduceBlockV3,
-      });
+    await runNodeWithEL({
+      elClient,
+      bellatrixEpoch: 0,
+      testName: "post-merge",
     });
-  }
+  });
 
-  type RunOpts = {elClient: ELClient; bellatrixEpoch: Epoch; testName: string; useProduceBlockV3: boolean};
+  type RunOpts = {elClient: ELClient; bellatrixEpoch: Epoch; testName: string};
 
-  async function runNodeWithEL({elClient, bellatrixEpoch, testName, useProduceBlockV3}: RunOpts): Promise<void> {
+  async function runNodeWithEL({elClient, bellatrixEpoch, testName}: RunOpts): Promise<void> {
     const {genesisBlockHash, ttd, engineRpcUrl, ethRpcUrl} = elClient;
     const validatorClientCount = 1;
     const validatorsPerClient = 32;
@@ -100,11 +96,11 @@ describe("executionEngine / ExecutionEngineHttp", () => {
     const epochsOfMargin = 1;
     const timeoutSetupMargin = 30 * 1000; // Give extra 30 seconds of margin
 
-    // The builder gets activated post middle of epoch because of circuit breaker
-    // In a perfect run expected builder = 16, expected engine = 16
-    //   keeping 4 missed slots margin for both
-    const expectedBuilderBlocks = 12;
-    const expectedEngineBlocks = 12;
+    // We only expect builder blocks since `builderalways` is configured
+    // In a perfect run expected builder = 32, expected engine = 0
+    // keeping 4 missed slots and 4 engine blocks due to fallback as margin
+    const expectedBuilderBlocks = 28;
+    const maximumEngineBlocks = 4;
 
     // All assertions are tracked w.r.t. fee recipient by attaching different fee recipient to
     // execution and builder
@@ -157,7 +153,7 @@ describe("executionEngine / ExecutionEngineHttp", () => {
           url: ethRpcUrl,
           enabled: true,
           issueLocalFcUWithFeeRecipient: feeRecipientMevBoost,
-          allowedFaults: 16,
+          allowedFaults: 8,
           faultInspectionWindow: 32,
         },
         chain: {suggestedFeeRecipient: feeRecipientLocal},
@@ -171,7 +167,7 @@ describe("executionEngine / ExecutionEngineHttp", () => {
       throw Error("executionBuilder should have been initialized");
     }
     // Enable builder by default, else because of circuit breaker we always start it with disabled
-    bn.chain.executionBuilder.updateStatus(true);
+    bn.chain.executionBuilder.updateStatus(BuilderStatus.enabled);
 
     afterEachCallbacks.push(async () => {
       await bn.close();
@@ -201,7 +197,6 @@ describe("executionEngine / ExecutionEngineHttp", () => {
       useRestApi: true,
       testLoggerOpts,
       valProposerConfig,
-      useProduceBlockV3,
     });
 
     afterEachCallbacks.push(async () => {
@@ -268,9 +263,9 @@ describe("executionEngine / ExecutionEngineHttp", () => {
       throw Error(`Incorrect builderBlocks=${builderBlocks} (expected=${expectedBuilderBlocks})`);
     }
 
-    // 3. engine blocks are as expected
-    if (engineBlocks < expectedEngineBlocks) {
-      throw Error(`Incorrect engineBlocks=${engineBlocks} (expected=${expectedEngineBlocks})`);
+    // 3. engine blocks do not exceed max limit
+    if (engineBlocks > maximumEngineBlocks) {
+      throw Error(`Incorrect engineBlocks=${engineBlocks} (limit=${maximumEngineBlocks})`);
     }
 
     // wait for 1 slot to print current epoch stats
