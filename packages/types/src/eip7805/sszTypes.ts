@@ -1,5 +1,5 @@
-import {BitVectorType, ContainerType, VectorBasicType} from "@chainsafe/ssz";
-import {INCLUSION_LIST_COMMITTEE_SIZE} from "@lodestar/params";
+import {BitVectorType, ContainerType, ListCompositeType, VectorBasicType} from "@chainsafe/ssz";
+import {INCLUSION_LIST_COMMITTEE_SIZE, MAX_TRANSACTIONS_PER_PAYLOAD} from "@lodestar/params";
 import {ssz as bellatrixSsz} from "../bellatrix/index.js";
 import {ssz as electraSsz} from "../electra/index.js";
 import {ssz as fuluSsz} from "../fulu/index.js";
@@ -8,6 +8,7 @@ import {ssz as primitiveSsz} from "../primitive/index.js";
 const {Slot, Root, BLSSignature, ValidatorIndex} = primitiveSsz;
 
 export const InclusionListCommittee = new VectorBasicType(ValidatorIndex, INCLUSION_LIST_COMMITTEE_SIZE);
+export const InclusionListTransactions = new ListCompositeType(bellatrixSsz.Transaction, MAX_TRANSACTIONS_PER_PAYLOAD * INCLUSION_LIST_COMMITTEE_SIZE);
 
 export const InclusionList = new ContainerType(
   {
@@ -104,8 +105,7 @@ export const ExecutionPayloadHeader = new ContainerType(
 export const PayloadAttributes = new ContainerType(
   {
     ...electraSsz.PayloadAttributes.fields,
-     // TODO EIP7805: this has limit of MAX_TRANSACTIONS_PER_PAYLOAD. But we don't know what's the appropriate limit is
-    inclusionListTransactions: bellatrixSsz.Transactions,
+    inclusionListTransactions: InclusionListTransactions,
   },
   {typeName: "PayloadAttributes", jsonCase: "eth2"}
 );
