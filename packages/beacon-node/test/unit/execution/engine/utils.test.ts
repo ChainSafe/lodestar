@@ -71,7 +71,7 @@ describe("execution / engine / utils", () => {
         [ExecutionEngineState.SYNCED, ExecutionEngineState.OFFLINE],
         [ExecutionEngineState.SYNCING, ExecutionEngineState.OFFLINE],
       ],
-      [ExecutionPayloadStatus.INVALID_INCLUSION_LIST]: [
+      [ExecutionPayloadStatus.INCLUSION_LIST_UNSATISFIED]: [
         [ExecutionEngineState.ONLINE, ExecutionEngineState.SYNCING],
         [ExecutionEngineState.AUTH_FAILED, ExecutionEngineState.SYNCING],
         [ExecutionEngineState.OFFLINE, ExecutionEngineState.SYNCING],

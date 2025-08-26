@@ -46,7 +46,7 @@ export enum ExecutionPayloadStatus {
   /** EL replied with SYNCING or ACCEPTED when its not safe to import optimistic blocks */
   UNSAFE_OPTIMISTIC_STATUS = "UNSAFE_OPTIMISTIC_STATUS",
   /** Payload does not satisfy the transactions in the provided inclusion lists */
-  INVALID_INCLUSION_LIST = "INVALID_INCLUSION_LIST",
+  INCLUSION_LIST_UNSATISFIED = "INCLUSION_LIST_UNSATISFIED",
 }
 
 export enum ExecutionEngineState {
@@ -98,7 +98,7 @@ export type ExecutePayloadResponse =
       status:
         | ExecutionPayloadStatus.INVALID_BLOCK_HASH
         | ExecutionPayloadStatus.ELERROR
-        | ExecutionPayloadStatus.INVALID_INCLUSION_LIST
+        | ExecutionPayloadStatus.INCLUSION_LIST_UNSATISFIED
         | ExecutionPayloadStatus.UNAVAILABLE;
       latestValidHash: null;
       validationError: string;
