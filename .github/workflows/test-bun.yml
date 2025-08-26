@@ -22,21 +22,21 @@ jobs:
         with:
           bun-version: latest
 
-      # Yarn 1 check for engine version and failed with
-      # error root@: The engine "node" is incompatible with this module. Expected version ">=22 <23". Got "24.3.0"
-      - name: Install jq
-        uses: dcarbone/install-jq-action@v3.2.0
-      - name: Update package engine dependency
-        run: |
-          jq --arg version ">= $(bun -e 'console.log(process.versions.node)')" '.engines.node = $version' package.json > temp.json && mv temp.json package.json
-      - name: Detect engine version
-        run: |
-          jq .engines.node package.json
+      # # Yarn 1 check for engine version and failed with
+      # # error root@: The engine "node" is incompatible with this module. Expected version ">=22 <23". Got "24.3.0"
+      # - name: Install jq
+      #   uses: dcarbone/install-jq-action@v3.2.0
+      # - name: Update package engine dependency
+      #   run: |
+      #     jq --arg version ">= $(bun -e 'console.log(process.versions.node)')" '.engines.node = $version' package.json > temp.json && mv temp.json package.json
+      # - name: Detect engine version
+      #   run: |
+      #     jq .engines.node package.json
 
       - name: Install Yarn
         run: bun install -g npm:yarn
       - name: Install
-        run: bunx --bun yarn install --frozen-lockfile --registry https://registry.npmjs.org/
+        run: bunx --bun yarn install --ignore-engines --frozen-lockfile --registry https://registry.npmjs.org/
       - name: Build
         run: bunx --bun run build
       - name: Unit Tests
