@@ -42,7 +42,7 @@ import {
 } from "../protoArray/interface.js";
 import {ProtoArray} from "../protoArray/protoArray.js";
 
-import {BeaconForkChoiceMetrics} from "../metrics.js";
+import {ForkChoiceMetrics} from "../metrics.js";
 import {ForkChoiceError, ForkChoiceErrorCode, InvalidAttestationCode, InvalidBlockCode} from "./errors.js";
 import {
   AncestorResult,
@@ -140,7 +140,7 @@ export class ForkChoice implements IForkChoice {
     private readonly fcStore: IForkChoiceStore,
     /** The underlying representation of the block DAG. */
     private readonly protoArray: ProtoArray,
-    private readonly metrics: BeaconForkChoiceMetrics | null,
+    private readonly metrics: ForkChoiceMetrics | null,
     private readonly opts?: ForkChoiceOpts,
     private readonly logger?: Logger
   ) {

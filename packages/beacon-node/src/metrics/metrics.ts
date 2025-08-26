@@ -1,4 +1,4 @@
-import {BeaconForkChoiceMetrics, getForkChoiceMetrics} from "@lodestar/fork-choice";
+import {ForkChoiceMetrics, getForkChoiceMetrics} from "@lodestar/fork-choice";
 import {BeaconStateTransitionMetrics, getMetrics} from "@lodestar/state-transition";
 import {Metric, Registry} from "prom-client";
 import {BeaconMetrics, createBeaconMetrics} from "./metrics/beacon.js";
@@ -8,7 +8,7 @@ import {MetricsOptions} from "./options.js";
 import {RegistryMetricCreator} from "./utils/registryMetricCreator.js";
 
 export type Metrics = BeaconMetrics &
-  BeaconForkChoiceMetrics &
+  ForkChoiceMetrics &
   BeaconStateTransitionMetrics &
   LodestarMetrics & {register: RegistryMetricCreator; close: () => void};
 

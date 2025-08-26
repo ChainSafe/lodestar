@@ -2,7 +2,7 @@ import {MetricsRegisterExtra} from "@lodestar/utils";
 import {UpdateHeadOpt} from "./forkChoice/forkChoice.js";
 import {NotReorgedReason} from "./forkChoice/interface.js";
 
-export type BeaconForkChoiceMetrics = ReturnType<typeof getForkChoiceMetrics>;
+export type ForkChoiceMetrics = ReturnType<typeof getForkChoiceMetrics>;
 
 export function getForkChoiceMetrics(register: MetricsRegisterExtra) {
   return {

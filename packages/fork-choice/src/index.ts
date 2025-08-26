@@ -32,4 +32,4 @@ export {
   ForkChoiceError,
   ForkChoiceErrorCode,
 } from "./forkChoice/errors.js";
-export {type BeaconForkChoiceMetrics, getForkChoiceMetrics} from "./metrics.js";
+export {type ForkChoiceMetrics, getForkChoiceMetrics} from "./metrics.js";
