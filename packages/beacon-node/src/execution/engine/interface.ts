@@ -117,6 +117,7 @@ export type PayloadAttributes = {
   suggestedFeeRecipient: string;
   withdrawals?: capella.Withdrawal[];
   parentBeaconBlockRoot?: Uint8Array;
+  inclusionListTransactions?: bellatrix.Transactions;
 };
 
 export type ClientVersion = {

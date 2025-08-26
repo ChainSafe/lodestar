@@ -99,3 +99,21 @@ export const ExecutionPayloadHeader = new ContainerType(
   },
   {typeName: "ExecutionPayloadHeader", jsonCase: "eth2"}
 );
+
+// PayloadAttributes primarily for SSE event
+export const PayloadAttributes = new ContainerType(
+  {
+    ...electraSsz.PayloadAttributes.fields,
+     // TODO EIP7805: this has limit of MAX_TRANSACTIONS_PER_PAYLOAD. But we don't know what's the appropriate limit is
+    inclusionListTransactions: bellatrixSsz.Transactions,
+  },
+  {typeName: "PayloadAttributes", jsonCase: "eth2"}
+);
+
+export const SSEPayloadAttributes = new ContainerType(
+  {
+    ...bellatrixSsz.SSEPayloadAttributesCommon.fields,
+    payloadAttributes: PayloadAttributes,
+  },
+  {typeName: "SSEPayloadAttributes", jsonCase: "eth2"}
+);

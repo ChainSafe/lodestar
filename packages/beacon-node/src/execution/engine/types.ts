@@ -240,6 +240,8 @@ export type PayloadAttributesRpc = {
   withdrawals?: WithdrawalRpc[];
   /** DATA, 32 Bytes - value for the parentBeaconBlockRoot to be used for building block */
   parentBeaconBlockRoot?: DATA;
+  /** Array of DATA - array of inclusion list transaction objects.  */
+  inclusionListTransactions?: InclusionListRpc;
 };
 
 export type ClientVersionRpc = {
@@ -398,6 +400,7 @@ export function serializePayloadAttributes(data: PayloadAttributes): PayloadAttr
     suggestedFeeRecipient: data.suggestedFeeRecipient,
     withdrawals: data.withdrawals?.map(serializeWithdrawal),
     parentBeaconBlockRoot: data.parentBeaconBlockRoot ? bytesToData(data.parentBeaconBlockRoot) : undefined,
+    inclusionListTransactions: data.inclusionListTransactions ? serializeInclusionList(data.inclusionListTransactions) : undefined,
   };
 }
 
