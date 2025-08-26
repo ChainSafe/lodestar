@@ -22,30 +22,20 @@ jobs:
         with:
           bun-version: latest
 
-      # # Yarn 1 check for engine version and failed with
-      # # error root@: The engine "node" is incompatible with this module. Expected version ">=22 <23". Got "24.3.0"
-      # - name: Install jq
-      #   uses: dcarbone/install-jq-action@v3.2.0
-      # - name: Update package engine dependency
-      #   run: |
-      #     jq --arg version ">= $(bun -e 'console.log(process.versions.node)')" '.engines.node = $version' package.json > temp.json && mv temp.json package.json
-      # - name: Detect engine version
-      #   run: |
-      #     jq .engines.node package.json
-
-      - name: Check proxy env configs
-        run: env | grep -i proxy || true
-      - name: Check proxy yarn config
-        run: bunx --bun yarn config get proxy
-      - name: Check https-proxy yarn config
-        run: bunx --bun yarn config get https-proxy
-
       - name: Install Yarn
         run: bun install -g npm:yarn
+
+      # This is ideal way to install with Yarn and not change the lock file
+      # But it is causing the error like SSL Error: https://registry.npmjs.org/<package-name>.tgz does not support SSL
+      # - name: Install
+      #   run: HTTP_PROXY= HTTPS_PROXY= NO_PROXY="*" bunx --bun yarn install --ignore-engines --frozen-lockfile --registry https://registry.npmjs.org/
+
       - name: Install
-        run: HTTP_PROXY= HTTPS_PROXY= NO_PROXY="*" bunx --bun yarn install --ignore-engines --frozen-lockfile --registry https://registry.npmjs.org/
+        run: bun install --no-save
+
       - name: Build
         run: bunx --bun run build
+
       - name: Unit Tests
         # These packages are not testable yet in Bun because of `@chainsafe/blst` dependency.
         run: excluded=(beacon-node prover light-client cli); for pkg in packages/*/; do [[ ! " ${excluded[@]} " =~ " $(basename "$pkg") " ]] && echo "Testing $(basename "$pkg")" && (cd "$pkg" && bun run --bun test:unit); done
