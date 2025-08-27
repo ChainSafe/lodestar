@@ -341,7 +341,7 @@ export async function fetchGetBlobsV1AndBuildSidecars({
 
   const enginedResponse = await executionEngine.getBlobs(
     forkName,
-    blobMeta.map(({versionedHash: versionHash}) => versionHash)
+    blobMeta.map(({versionedHash}) => versionedHash)
   );
 
   if (!enginedResponse.length) {

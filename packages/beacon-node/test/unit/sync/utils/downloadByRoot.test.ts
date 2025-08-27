@@ -1,5 +1,5 @@
 import {randomBytes} from "node:crypto";
-import {BYTES_PER_CELL, BYTES_PER_PROOF} from "@crate-crypto/node-eth-kzg";
+import {BYTES_PER_BLOB, BYTES_PER_CELL, BYTES_PER_COMMITMENT, BYTES_PER_PROOF} from "@crate-crypto/node-eth-kzg";
 import {ForkName, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {deneb, fulu, ssz} from "@lodestar/types";
 import {prettyBytes} from "@lodestar/utils";
@@ -25,6 +25,7 @@ import {
   fetchBlobsByRoot,
   // fetchByRoot,
   fetchColumnsByRoot,
+  fetchGetBlobsV1AndBuildSidecars,
   // fetchGetBlobsV1AndBuildSidecars,
   fetchGetBlobsV2AndBuildSidecars,
   validateBlobs,
@@ -220,20 +221,135 @@ describe("downloadByRoot.ts", () => {
   // });
 
   describe("fetchGetBlobsV1AndBuildSidecars", () => {
-    it("should build blob sidecars from execution engine response", () => {
-      // Test successful sidecar building from execution engine blobs
+    let denebBlockWithColumns: ReturnType<typeof generateBlockWithBlobSidecars>;
+    let blobsAndProofs: deneb.BlobAndProof[];
+    let blobMeta: BlobMeta[];
+    const forkName = ForkName.deneb;
+
+    beforeEach(() => {
+      denebBlockWithColumns = generateBlockWithBlobSidecars({forkName: ForkName.fulu, count: 6});
+      blobsAndProofs = denebBlockWithColumns.blobSidecars.map(({blob, kzgProof}) => ({blob, proof: kzgProof}));
+      blobMeta = denebBlockWithColumns.versionedHashes.map((versionedHash, index) => ({index, versionedHash}));
     });
 
-    it("should return empty array when execution engine returns no blobs", () => {
-      // Test when execution engine returns empty response
+    afterEach(() => {
+      vi.resetAllMocks();
     });
 
-    it("should handle partial blob response from execution engine", () => {
-      // Test when execution engine returns some but not all requested blobs
+    it("should call getBlobs with the correct arguments", async () => {
+      const getBlobsMock = vi.fn(() => Promise.resolve(blobsAndProofs));
+      executionEngine = {
+        getBlobs: getBlobsMock,
+      } as unknown as IExecutionEngine;
+
+      await fetchGetBlobsV1AndBuildSidecars({
+        config,
+        forkName,
+        executionEngine,
+        block: denebBlockWithColumns.block,
+        blobMeta: blobMeta,
+      });
+
+      expect(getBlobsMock).toHaveBeenCalledOnce();
+      expect(getBlobsMock).toHaveBeenCalledWith(forkName, denebBlockWithColumns.versionedHashes);
     });
 
-    it("should correctly compute inclusion proofs for blob sidecars", () => {
-      // Test inclusion proof computation
+    it("should return empty array when execution engine returns no blobs", async () => {
+      const getBlobsMock = vi.fn(() => Promise.resolve([]));
+      executionEngine = {
+        getBlobs: getBlobsMock,
+      } as unknown as IExecutionEngine;
+
+      const response = await fetchGetBlobsV1AndBuildSidecars({
+        config,
+        forkName,
+        executionEngine,
+        block: denebBlockWithColumns.block,
+        blobMeta: blobMeta,
+      });
+      expect(response).toEqual([]);
+    });
+
+    it("should build valid blob sidecars from execution engine response", async () => {
+      const getBlobsMock = vi.fn(() => Promise.resolve(blobsAndProofs));
+      executionEngine = {
+        getBlobs: getBlobsMock,
+      } as unknown as IExecutionEngine;
+
+      const response = await fetchGetBlobsV1AndBuildSidecars({
+        config,
+        forkName,
+        executionEngine,
+        block: denebBlockWithColumns.block,
+        blobMeta: blobMeta,
+      });
+
+      expect(getBlobsMock).toHaveBeenCalledOnce();
+      expect(response).toBeDefined();
+      expect(response).toBeInstanceOf(Array);
+      expect(response.length).toEqual(blobsAndProofs.length);
+      for (const blobSidecar of response) {
+        blobSidecar.kzgCommitmentInclusionProof;
+        expect(blobSidecar).toHaveProperty("index");
+        expect(blobSidecar.index).toBeTypeOf("number");
+
+        expect(blobSidecar).toHaveProperty("blob");
+        expect(blobSidecar.blob).toBeInstanceOf(Uint8Array);
+        expect(blobSidecar.blob.length).toEqual(BYTES_PER_BLOB);
+
+        expect(blobSidecar).toHaveProperty("kzgProof");
+        expect(blobSidecar.kzgProof).toBeInstanceOf(Uint8Array);
+        expect(blobSidecar.kzgProof.length).toEqual(BYTES_PER_PROOF);
+
+        expect(blobSidecar).toHaveProperty("kzgCommitment");
+        expect(blobSidecar.kzgCommitment).toBeInstanceOf(Uint8Array);
+        expect(blobSidecar.kzgCommitment.length).toEqual(BYTES_PER_COMMITMENT);
+
+        expect(blobSidecar).toHaveProperty("kzgCommitmentInclusionProof");
+        expect(blobSidecar.kzgCommitmentInclusionProof).toBeInstanceOf(Array);
+        blobSidecar.kzgCommitmentInclusionProof.map((proof) => expect(proof).toBeInstanceOf(Uint8Array));
+
+        expect(blobSidecar).toHaveProperty("signedBlockHeader");
+        expect(blobSidecar.signedBlockHeader.message.slot).toBe(denebBlockWithColumns.block.message.slot);
+        expect(blobSidecar.signedBlockHeader.message.proposerIndex).toBe(
+          denebBlockWithColumns.block.message.proposerIndex
+        );
+        expect(blobSidecar.signedBlockHeader.message.parentRoot).toEqual(
+          denebBlockWithColumns.block.message.parentRoot
+        );
+        expect(blobSidecar.signedBlockHeader.message.stateRoot).toEqual(denebBlockWithColumns.block.message.stateRoot);
+      }
+
+      await expect(
+        validateBlobs({
+          config,
+          peerIdStr,
+          blockRoot: denebBlockWithColumns.blockRoot,
+          blobSidecars: response,
+          blobMeta,
+        })
+      ).resolves.toBeUndefined();
+    });
+
+    it("should handle partial blob response from execution engine", async () => {
+      const engineResponse = [...blobsAndProofs];
+      engineResponse[2] = null;
+      engineResponse[4] = null;
+      const getBlobsMock = vi.fn(() => Promise.resolve(engineResponse));
+      executionEngine = {
+        getBlobs: getBlobsMock,
+      } as unknown as IExecutionEngine;
+
+      const response = await fetchGetBlobsV1AndBuildSidecars({
+        config,
+        forkName,
+        executionEngine,
+        block: denebBlockWithColumns.block,
+        blobMeta: blobMeta,
+      });
+
+      expect(response.length).toEqual(4);
+      expect(response.map(({index}) => index)).toEqual([0, 1, 3, 5]);
     });
   });
 
@@ -502,7 +618,7 @@ describe("downloadByRoot.ts", () => {
       expect(result).toEqual([]);
     });
 
-    it("should build columnSidecars from execution engine blobs", async () => {
+    it("should build valid columnSidecars from execution engine blobs", async () => {
       const getBlobsMock = vi.fn(() => Promise.resolve(blobAndProofs));
       executionEngine = {
         getBlobs: getBlobsMock,
@@ -563,6 +679,10 @@ describe("downloadByRoot.ts", () => {
           fuluBlockWithColumns.block.message.parentRoot
         );
         expect(columnSidecar.signedBlockHeader.message.stateRoot).toEqual(fuluBlockWithColumns.block.message.stateRoot);
+
+        expect(
+          validateColumnSidecar({config, peerIdStr, blockRoot: fuluBlockWithColumns.blockRoot, columnSidecar})
+        ).toBeUndefined();
       }
     });
   });
