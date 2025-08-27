@@ -40,21 +40,20 @@ export type Attempt = {
   hash: RootHex;
 };
 
-export type BatchStateAwaitingDownload = {
+export type AwaitingDownloadState = {
   status: BatchStatus.AwaitingDownload;
   blocks: IBlockInput[];
 };
 
-export type DownloadSuccessState =
-  | BatchStateAwaitingDownload
-  | {
-      status: BatchStatus.AwaitingProcessing;
-      blocks: IBlockInput[];
-    };
+export type DownloadSuccessState = {
+  status: BatchStatus.AwaitingProcessing;
+  blocks: IBlockInput[];
+};
 
 export type BatchState =
-  | DownloadSuccessState
+  | AwaitingDownloadState
   | {status: BatchStatus.Downloading; peer: PeerIdStr; blocks: IBlockInput[]}
+  | DownloadSuccessState
   | {status: BatchStatus.Processing; attempt: Attempt}
   | {status: BatchStatus.AwaitingValidation; attempt: Attempt};
 
@@ -221,7 +220,6 @@ export class Batch {
 
   getBlocks(): IBlockInput[] {
     switch (this.state.status) {
-      case BatchStatus.Downloading:
       case BatchStatus.AwaitingValidation:
       case BatchStatus.Processing:
         throw new BatchError(this.wrongStatusErrorType(BatchStatus.AwaitingDownload));
