@@ -154,6 +154,7 @@ export async function validateGossipDataColumnSidecar(
     });
   }
 
+  const kzgProofTimer = metrics?.peerDas.dataColumnSidecarKzgProofsVerificationTime.startTimer();
   // 11) [REJECT] The sidecar's column data is valid as verified by verify_data_column_sidecar_kzg_proofs
   try {
     await verifyDataColumnSidecarKzgProofs(
@@ -168,6 +169,8 @@ export async function validateGossipDataColumnSidecar(
       slot: blockHeader.slot,
       columnIdx: dataColumnSidecar.index,
     });
+  } finally {
+    kzgProofTimer?.();
   }
 
   // 12) [IGNORE] The sidecar is the first sidecar for the tuple (block_header.slot, block_header.proposer_index,
