@@ -207,6 +207,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
       logger: this.logger,
       peerIdStr: peer.peerId,
       daOutOfRange: isDaOutOfRange(this.config, batch.forkName, batch.startSlot, this.chain.clock.currentEpoch),
+      batchBlocks: batch.getBlocks(),
       ...batch.requests,
     });
     const cached = cacheByRangeResponses({

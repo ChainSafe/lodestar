@@ -11,7 +11,6 @@ import {
 } from "../../chain/blocks/blockInput/index.js";
 import {SeenBlockInput} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {INetwork, prettyPrintPeerIdStr} from "../../network/index.js";
-import {linspace} from "../../util/numpy.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {RangeSyncType} from "./remoteSyncType.js";
 
@@ -447,45 +446,7 @@ export function validateResponses({
       );
     }
 
-    const {
-      expectedBlobCount,
-      missingBlobCount,
-      missingBlobsDescription,
-      extraBlobCount,
-      extraBlobsDescription,
-      duplicateBlobCount,
-      duplicateBlobsDescription,
-    } = compareBlobsByRangeRequestAndResponse(blocks, blobSidecars);
-
-    if (duplicateBlobCount > 0) {
-      throw new DownloadByRangeError({
-        code: DownloadByRangeErrorCode.DUPLICATE_BLOBS,
-        peerId: prettyPrintPeerIdStr(peerIdStr),
-        expectedBlobCount,
-        duplicateBlobCount,
-        slotsWithIndices: duplicateBlobsDescription.join(","),
-      });
-    }
-
-    if (extraBlobCount > 0) {
-      throw new DownloadByRangeError({
-        code: DownloadByRangeErrorCode.EXTRA_BLOBS,
-        peerId: prettyPrintPeerIdStr(peerIdStr),
-        expectedBlobCount,
-        extraBlobCount,
-        slotsWithIndices: extraBlobsDescription.join(","),
-      });
-    }
-
-    if (missingBlobCount > 0) {
-      throw new DownloadByRangeError({
-        code: DownloadByRangeErrorCode.MISSING_BLOBS,
-        peerId: prettyPrintPeerIdStr(peerIdStr),
-        expectedBlobCount,
-        missingBlobCount,
-        slotsWithIndices: missingBlobsDescription.join(","),
-      });
-    }
+    validateBlobsByRangeResponse(blocks, blobSidecars);
   }
 
   if (columnsRequest) {
@@ -580,6 +541,8 @@ export function validateBlockByRangeResponse(
     throw new DownloadByRangeError(
       {
         code: DownloadByRangeErrorCode.EXTRA_BLOCKS,
+        expected: count,
+        actual: blocks.length - count,
       },
       "Extra blocks received in BeaconBlocksByRange response"
     );
@@ -607,102 +570,86 @@ export function validateBlockByRangeResponse(
     }
   }
 
-  return blocks.map((block) => config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
+  const blockRoots = blocks.map((block) =>
+    config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)
+  );
+  for (let i = 0; i < blocks.length - 1; i++) {
+    // compare the block root against the next block's parent root
+    const blockRoot = blockRoots[i];
+    const parentRoot = blocks[i + 1].message.parentRoot;
+    if (Buffer.compare(blockRoot, parentRoot) !== 0) {
+      throw new DownloadByRangeError(
+        {
+          code: DownloadByRangeErrorCode.PARENT_ROOT_MISMATCH,
+          parentSlot: blocks[i].message.slot,
+          expected: toRootHex(blockRoot),
+          actual: toRootHex(parentRoot),
+        },
+        `Block parent root does not match the previous block's root in BeaconBlocksByRange response`
+      );
+    }
+  }
+  return blockRoots;
 }
 
-type BlobComparisonResponse = {
-  expectedBlobCount: number;
-  missingBlobCount: number;
-  extraBlobCount: number;
-  duplicateBlobCount: number;
-  missingBlobsDescription: string[];
-  extraBlobsDescription: string[];
-  duplicateBlobsDescription: string[];
-};
 /**
  * Should not be called directly. Only exported for unit testing purposes
  */
-export function compareBlobsByRangeRequestAndResponse(
-  blocks: SignedBeaconBlock[],
-  blobSidecars: deneb.BlobSidecars
-): BlobComparisonResponse {
-  let expectedBlobCount = 0;
-  let missingBlobCount = 0;
-  let extraBlobCount = 0;
-  let duplicateBlobCount = 0;
-  const missingBlobsDescription: string[] = [];
-  const extraBlobsDescription: string[] = [];
-  const duplicateBlobsDescription: string[] = [];
-  for (const block of blocks) {
-    const slot = block.message.slot;
+export function validateBlobsByRangeResponse(blocks: SignedBeaconBlock[], blobSidecars: deneb.BlobSidecars): void {
+  const expectedBlobCount = blocks.reduce(
+    (acc, block) => (block as SignedBeaconBlock<ForkPostDeneb>).message.body.blobKzgCommitments.length + acc,
+    0
+  );
+  if (blobSidecars.length > expectedBlobCount) {
+    throw new DownloadByRangeError(
+      {
+        code: DownloadByRangeErrorCode.EXTRA_BLOBS,
+        expected: expectedBlobCount,
+        actual: blobSidecars.length - expectedBlobCount,
+      },
+      "Extra blobs received in BlobSidecarsByRange response"
+    );
+  }
+  if (blobSidecars.length < expectedBlobCount) {
+    throw new DownloadByRangeError(
+      {
+        code: DownloadByRangeErrorCode.MISSING_BLOBS,
+        expected: expectedBlobCount,
+        actual: expectedBlobCount - blobSidecars.length,
+      },
+      "Missing blobs in BlobSidecarsByRange response"
+    );
+  }
+  // cheap sanity checks (proper validation is done in the caching step)
+  for (let blockIndex = 0, blobSidecarIndex = 0; blockIndex < blocks.length; blockIndex++) {
+    const block = blocks[blockIndex];
     const expectedBlobs = (block as SignedBeaconBlock<ForkPostDeneb>).message.body.blobKzgCommitments.length;
-    const expectedIndices = linspace(0, expectedBlobs - 1);
-    expectedBlobCount += expectedBlobs;
-    const receivedBlobs = blobSidecars
-      .filter((blobSidecar) => {
-        return blobSidecar.signedBlockHeader.message.slot === slot;
-      })
-      .map((blobSidecar) => blobSidecar.index);
-
-    const missingIndices: number[] = [];
-    const duplicateIndices: number[] = [];
-    for (const index of expectedIndices) {
-      if (!receivedBlobs.includes(index)) {
-        missingIndices.push(index);
+    for (let i = 0; i < expectedBlobs; i++, blobSidecarIndex++) {
+      const blobSidecar = blobSidecars[blobSidecarIndex];
+      const slot = block.message.slot;
+      if (blobSidecar.signedBlockHeader.message.slot !== slot) {
+        throw new DownloadByRangeError(
+          {
+            code: DownloadByRangeErrorCode.WRONG_SLOT_BLOBS,
+            expected: slot,
+            actual: blobSidecar.signedBlockHeader.message.slot,
+          },
+          "BlobSidecar doesn't match corresponding block in BlobSidecarsByRange response"
+        );
       }
-      if (receivedBlobs.filter((blobIndex) => blobIndex === index).length > 1) {
-        duplicateIndices.push(index);
-      }
-    }
-    if (missingIndices.length > 0) {
-      missingBlobCount += missingIndices.length;
-      missingBlobsDescription.push(`${slot}${prettyPrintIndices(missingIndices)}`);
-    }
-    if (duplicateIndices.length > 0) {
-      duplicateBlobCount += duplicateIndices.length;
-      duplicateBlobsDescription.push(`${slot}${prettyPrintIndices(duplicateIndices)}`);
-    }
-
-    const extraIndices: number[] = [];
-    for (const index of receivedBlobs) {
-      if (!expectedIndices.includes(index)) {
-        extraIndices.push(index);
-      }
-    }
-    if (extraIndices.length > 0) {
-      extraBlobCount += extraIndices.length;
-      extraBlobsDescription.push(`${slot}${prettyPrintIndices(extraIndices)}`);
-    }
-  }
-
-  if (expectedBlobCount !== blobSidecars.length) {
-    const expectedSlots = blocks.map((block) => block.message.slot);
-    const extraBlocks = new Map<number, number[]>();
-    for (const blobSidecar of blobSidecars) {
-      const blobSlot = blobSidecar.signedBlockHeader.message.slot;
-      if (!expectedSlots.includes(blobSlot)) {
-        const extra = extraBlocks.get(blobSlot) ?? [];
-        extra.push(blobSidecar.index);
-        extraBlocks.set(blobSlot, extra);
-        extraBlobCount++;
-      }
-    }
-    if (extraBlocks.size) {
-      for (const [slot, extraIndices] of extraBlocks) {
-        extraBlobsDescription.push(`${slot}${prettyPrintIndices(extraIndices)}`);
+      if (blobSidecar.index !== i) {
+        throw new DownloadByRangeError(
+          {
+            code: DownloadByRangeErrorCode.WRONG_INDEX_BLOBS,
+            slot,
+            expected: i,
+            actual: blobSidecar.index,
+          },
+          "BlobSidecar out of order in BlobSidecarsByRange response"
+        );
       }
     }
   }
-
-  return {
-    expectedBlobCount,
-    missingBlobCount,
-    extraBlobCount,
-    duplicateBlobCount,
-    missingBlobsDescription,
-    extraBlobsDescription,
-    duplicateBlobsDescription,
-  };
 }
 
 type ColumnComparisonResponse = {
@@ -761,12 +708,14 @@ export enum DownloadByRangeErrorCode {
   START_SLOT_MISMATCH = "DOWNLOAD_BY_RANGE_ERROR_START_SLOT_MISMATCH",
   COUNT_MISMATCH = "DOWNLOAD_BY_RANGE_ERROR_COUNT_MISMATCH",
   REQ_RESP_ERROR = "DOWNLOAD_BY_RANGE_ERROR_REQ_RESP_ERROR",
-  MISSING_BLOCKS = "DOWNLOAD_BY_RANGE_ERROR_MISSING_BLOCKS",
+  PARENT_ROOT_MISMATCH = "DOWNLOAD_BY_RANGE_ERROR_PARENT_ROOT_MISMATCH",
   EXTRA_BLOCKS = "DOWNLOAD_BY_RANGE_ERROR_EXTRA_BLOCKS",
   OUT_OF_RANGE_BLOCKS = "DOWNLOAD_BY_RANGE_OUT_OF_RANGE_BLOCKS",
   OUT_OF_ORDER_BLOCKS = "DOWNLOAD_BY_RANGE_OUT_OF_ORDER_BLOCKS",
   MISSING_BLOBS = "DOWNLOAD_BY_RANGE_ERROR_MISSING_BLOBS",
   EXTRA_BLOBS = "DOWNLOAD_BY_RANGE_ERROR_EXTRA_BLOBS",
+  WRONG_SLOT_BLOBS = "DOWNLOAD_BY_RANGE_ERROR_WRONG_SLOT_BLOBS",
+  WRONG_INDEX_BLOBS = "DOWNLOAD_BY_RANGE_ERROR_WRONG_INDEX_BLOBS",
   DUPLICATE_BLOBS = "DOWNLOAD_BY_RANGE_ERROR_DUPLICATE_BLOBS",
   MISSING_COLUMNS = "DOWNLOAD_BY_RANGE_ERROR_MISSING_COLUMNS",
   EXTRA_COLUMNS_ALL_SLOTS = "DOWNLOAD_BY_RANGE_ERROR_EXTRA_COLUMNS_ALL_SLOTS",
@@ -816,34 +765,36 @@ export type DownloadByRangeErrorType =
       message: string;
     }
   | {
-      code: DownloadByRangeErrorCode.MISSING_BLOCKS;
+      code: DownloadByRangeErrorCode.PARENT_ROOT_MISMATCH;
+      parentSlot: number;
+      expected: string;
+      actual: string;
     }
   | {
       code: DownloadByRangeErrorCode.EXTRA_BLOCKS;
-    }
-  | {
-      code: DownloadByRangeErrorCode.EXTRA_BLOCKS;
+      expected: number;
+      actual: number;
     }
   | {
       code: DownloadByRangeErrorCode.MISSING_BLOBS;
-      peerId: string;
-      expectedBlobCount: number;
-      missingBlobCount: number;
-      slotsWithIndices: string;
+      expected: number;
+      actual: number;
     }
   | {
       code: DownloadByRangeErrorCode.EXTRA_BLOBS;
-      peerId: string;
-      expectedBlobCount: number;
-      extraBlobCount: number;
-      slotsWithIndices: string;
+      expected: number;
+      actual: number;
     }
   | {
-      code: DownloadByRangeErrorCode.DUPLICATE_BLOBS;
-      peerId: string;
-      expectedBlobCount: number;
-      duplicateBlobCount: number;
-      slotsWithIndices: string;
+      code: DownloadByRangeErrorCode.WRONG_SLOT_BLOBS;
+      expected: number;
+      actual: number;
+    }
+  | {
+      code: DownloadByRangeErrorCode.WRONG_INDEX_BLOBS;
+      slot: number;
+      expected: number;
+      actual: number;
     }
   | {
       code: DownloadByRangeErrorCode.MISSING_COLUMNS;

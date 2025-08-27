@@ -6,8 +6,8 @@ import {
   DownloadByRangeError,
   DownloadByRangeRequests,
   DownloadByRangeResponses,
-  compareBlobsByRangeRequestAndResponse,
   requestByRange,
+  validateBlobsByRangeResponse,
   validateBlockByRangeResponse,
 } from "../../../../src/sync/utils/downloadByRange.js";
 import {config, generateChainOfBlockMaybeSidecars, slots} from "../../../utils/blocksAndData.js";
@@ -205,67 +205,22 @@ describe("downloadByRange", () => {
   describe("compareBlobsByRangeRequestAndResponse", () => {
     const expectedBlocks = expected.blocks as SignedBeaconBlock[];
     const expectedBlobSidecars = expected.blobSidecars as deneb.BlobSidecars;
-    it("should return a properly formatted object", () => {
-      const response = compareBlobsByRangeRequestAndResponse([], []);
-      expect(response).instanceOf(Object);
-      expect(Object.keys(response).length).toEqual(7);
-      expect(response.expectedBlobCount).toEqual(0);
-      expect(response.missingBlobCount).toEqual(0);
-      expect(response.extraBlobCount).toEqual(0);
-      expect(response.duplicateBlobCount).toEqual(0);
-      expect(response.missingBlobsDescription).toBeInstanceOf(Array);
-      expect(response.missingBlobsDescription.length).toEqual(0);
-      expect(response.extraBlobsDescription).toBeInstanceOf(Array);
-      expect(response.extraBlobsDescription.length).toEqual(0);
-      expect(response.duplicateBlobsDescription).toBeInstanceOf(Array);
-      expect(response.duplicateBlobsDescription.length).toEqual(0);
+    it("should not throw when all blobs are present in response", () => {
+      expect(() => validateBlobsByRangeResponse(expectedBlocks, expectedBlobSidecars)).not.toThrow();
     });
-    it("should identify requested blobs missing from response", () => {
-      const response = compareBlobsByRangeRequestAndResponse(expectedBlocks, expectedBlobSidecars.slice(0, -4));
-      expect(response.missingBlobCount).toEqual(4);
-      expect(response.missingBlobsDescription.length).toEqual(2);
-      const lastSlot = startSlot + count - 1;
-      expect(response.missingBlobsDescription[0]).toEqual(`${lastSlot - 1}[2]`);
-      expect(response.missingBlobsDescription[1]).toEqual(`${lastSlot}[0,1,2]`);
-    });
-    it("should identify extra blobs from blocks that were requested", () => {
-      // biome-ignore lint/style/noNonNullAssertion: <explanation>
-      const [blob0, blob1, blob2, blob3] = expected.blobSidecars!;
-      const badBlob = ssz.deneb.BlobSidecar.clone(blob3);
-      badBlob.signedBlockHeader.message.slot = blob2.signedBlockHeader.message.slot;
-      badBlob.index = 3;
-      const response = compareBlobsByRangeRequestAndResponse(expectedBlocks.slice(0, 1), [
-        blob0,
-        blob1,
-        blob2,
-        badBlob,
-      ]);
-      expect(response.extraBlobCount).toEqual(1);
-      expect(response.extraBlobsDescription.length).toEqual(1);
-      expect(response.extraBlobsDescription[0]).toEqual(`${expectedBlocks[0].message.slot}[3]`);
-    });
-    it("should identify extra blobs from blocks that were requested", () => {
-      // biome-ignore lint/style/noNonNullAssertion: <explanation>
-      const [blob0, blob1, blob2] = expected.blobSidecars!;
-      const badBlob = ssz.deneb.BlobSidecar.clone(blob2);
-      const response = compareBlobsByRangeRequestAndResponse(expectedBlocks.slice(0, 1), [
-        blob0,
-        blob1,
-        blob2,
-        badBlob,
-      ]);
-      expect(response.duplicateBlobCount).toEqual(1);
-      expect(response.duplicateBlobsDescription.length).toEqual(1);
-      expect(response.duplicateBlobsDescription[0]).toEqual(`${expectedBlocks[0].message.slot}[2]`);
-    });
-    it("should identify extra blobs from blocks that were not requested", () => {
-      const response = compareBlobsByRangeRequestAndResponse(
-        expectedBlocks.slice(0, 1),
-        expectedBlobSidecars.slice(0, 6)
+    it("should throw when blobs are missing from response", () => {
+      expect(() => validateBlobsByRangeResponse(expectedBlocks, expectedBlobSidecars.slice(0, -4))).toThrow(
+        DownloadByRangeError
       );
-      expect(response.extraBlobCount).toEqual(3);
-      expect(response.extraBlobsDescription.length).toEqual(1);
-      expect(response.extraBlobsDescription[0]).toEqual(`${expectedBlocks[1].message.slot}[0,1,2]`);
+    });
+    it("should throw when extra blobs are in response", () => {
+      expect(() =>
+        validateBlobsByRangeResponse(expectedBlocks.slice(0, 1), expectedBlobSidecars.concat(expectedBlobSidecars))
+      ).toThrow(DownloadByRangeError);
+    });
+    it("should throw when blobs are not in order", () => {
+      const blobSidecars = expectedBlobSidecars.slice().reverse();
+      expect(() => validateBlobsByRangeResponse(expectedBlocks, blobSidecars)).toThrow(DownloadByRangeError);
     });
   });
   describe("validateResponse", () => {
