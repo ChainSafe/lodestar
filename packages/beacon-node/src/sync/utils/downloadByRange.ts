@@ -431,9 +431,9 @@ export function validateResponses({
   }
 
   // Set blocks for validation below
-  blocks = blocks ?? batchBlocks?.map((blockInput) => blockInput.getBlock()) ?? [];
+  // blocks = blocks ?? batchBlocks?.map((blockInput) => blockInput.getBlock()) ?? [];
 
-  const blockRoots = blocksRequest ? validateBlockByRangeResponse(config, blocksRequest, blocks) : undefined;
+  const blockRoots = blocksRequest ? validateBlockByRangeResponse(config, blocksRequest, blocks ?? []) : undefined;
 
   if (blobsRequest) {
     if (!blobSidecars) {
@@ -446,7 +446,10 @@ export function validateResponses({
       );
     }
 
-    validateBlobsByRangeResponse(blocks, blobSidecars);
+    validateBlobsByRangeResponse(
+      [...(blocks ?? []), ...(batchBlocks?.map((blockInput) => blockInput.getBlock()) ?? [])],
+      blobSidecars
+    );
   }
 
   if (columnsRequest) {
