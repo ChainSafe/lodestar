@@ -11,13 +11,13 @@ import {
 } from "../../src/chain/blocks/blockInput/index.js";
 
 export type MockBlockInputProps = {
-  type: DAType;
-  daOutOfRange: boolean;
-  timeCreatedSec: number;
-  forkName: ForkName;
-  slot: number;
-  blockRootHex: string;
-  parentRootHex: string;
+  type?: DAType;
+  daOutOfRange?: boolean;
+  timeCreatedSec?: number;
+  forkName?: ForkName;
+  slot?: number;
+  blockRootHex?: string;
+  parentRootHex?: string | null;
 };
 
 export class MockBlockInput implements IBlockInput {
@@ -37,13 +37,13 @@ export class MockBlockInput implements IBlockInput {
   _timeCompleted?: number;
 
   constructor({type, daOutOfRange, timeCreatedSec, forkName, slot, blockRootHex, parentRootHex}: MockBlockInputProps) {
-    this.type = type;
-    this.daOutOfRange = daOutOfRange;
-    this.timeCreatedSec = timeCreatedSec;
-    this.forkName = forkName;
-    this.slot = slot;
-    this.blockRootHex = blockRootHex;
-    this.parentRootHex = parentRootHex;
+    this.type = type ?? DAType.PreData;
+    this.daOutOfRange = daOutOfRange ?? true;
+    this.timeCreatedSec = timeCreatedSec ?? 0;
+    this.forkName = forkName ?? ForkName.capella;
+    this.slot = slot ?? 0;
+    this.blockRootHex = blockRootHex ?? "0x0000000000000000000000000000000000000000000000000000000000000000";
+    this.parentRootHex = parentRootHex ?? "0x0000000000000000000000000000000000000000000000000000000000000000";
   }
 
   addBlock(
