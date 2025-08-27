@@ -66,6 +66,21 @@ export function fromHex(hex: string): Uint8Array {
   return bytes;
 }
 
+export function fromHexInto(hex: string, buffer: Uint8Array): void {
+  if (hex.startsWith("0x")) {
+    hex = hex.slice(2);
+  }
+
+  if (hex.length !== buffer.length * 2) {
+    throw new Error(`hex string length ${hex.length} must be exactly double the buffer length ${buffer.length}`);
+  }
+
+  for (let i = 0; i < buffer.length; i++) {
+    const byte = parseInt(hex.slice(i * 2, (i + 1) * 2), 16);
+    buffer[i] = byte;
+  }
+}
+
 /**
  * Populate charCodes from bytes. Note that charCodes index 0 and 1 ("0x") are not populated.
  */

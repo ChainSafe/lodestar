@@ -1,3 +1,5 @@
+import {fromHexInto as _fromHexInto} from "./browser.js";
+
 export function toHex(buffer: Uint8Array | Parameters<typeof Buffer.from>[0]): string {
   if (Buffer.isBuffer(buffer)) {
     return "0x" + buffer.toString("hex");
@@ -58,4 +60,22 @@ export function fromHex(hex: string): Uint8Array {
 
   const b = Buffer.from(hex, "hex");
   return new Uint8Array(b.buffer, b.byteOffset, b.length);
+}
+
+export function fromHexInto(hex: string, buffer: Uint8Array): void {
+  // fallback to browser impl for non-Buffer inputs
+  if (!(buffer instanceof Buffer)) {
+    _fromHexInto(hex, buffer);
+    return;
+  }
+
+  if (hex.startsWith("0x")) {
+    hex = hex.slice(2);
+  }
+
+  if (hex.length !== buffer.length * 2) {
+    throw new Error(`hex string length ${hex.length} must be exactly double the buffer length ${buffer.length}`);
+  }
+
+  buffer.write(hex, "hex");
 }
