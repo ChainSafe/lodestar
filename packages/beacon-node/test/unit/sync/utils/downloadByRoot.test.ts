@@ -5,16 +5,9 @@ import {deneb, fulu, ssz} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/lib/deneb/types.js";
 import {prettyBytes} from "@lodestar/utils";
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
-import {
-  BlobMeta,
-  // IBlockInput,
-  MissingColumnMeta,
-} from "../../../../src/chain/blocks/blockInput/types.js";
-// import {ChainEventEmitter} from "../../../../src/chain/index.js";
-// import {SeenBlockInput} from "../../../../src/chain/seenCache/seenGossipBlockInput.js";
+import {BlobMeta, MissingColumnMeta} from "../../../../src/chain/blocks/blockInput/types.js";
 import {IExecutionEngine} from "../../../../src/execution/index.js";
 import {INetwork, prettyPrintPeerIdStr} from "../../../../src/network/index.js";
-// import {BlockInputSyncCacheItem, PendingBlockInput, PendingBlockInputStatus} from "../../../../src/sync/types.js";
 import {
   DownloadByRootError,
   DownloadByRootErrorCode,
@@ -22,15 +15,9 @@ import {
   fetchAndValidateBlobs,
   fetchAndValidateBlock,
   fetchAndValidateColumns,
-  // downloadByRoot,
-  // fetchAndValidateBlobs,
-  // fetchAndValidateBlock,
-  // fetchAndValidateColumns,
   fetchBlobsByRoot,
-  // fetchByRoot,
   fetchColumnsByRoot,
   fetchGetBlobsV1AndBuildSidecars,
-  // fetchGetBlobsV1AndBuildSidecars,
   fetchGetBlobsV2AndBuildSidecars,
   validateBlobs,
   validateColumnSidecar,
@@ -38,153 +25,20 @@ import {
 } from "../../../../src/sync/utils/downloadByRoot.js";
 import {kzgCommitmentToVersionedHash} from "../../../../src/util/blobs.js";
 import {CustodyConfig} from "../../../../src/util/dataColumns.js";
-// import {Clock} from "../../../../src/util/clock.js";
 import {kzg} from "../../../../src/util/kzg.js";
 import {ROOT_SIZE} from "../../../../src/util/sszBytes.js";
-// import {getMockedLogger} from "../../../../test/mocks/loggerMock.js";
 import {
   config,
   generateBlock,
-  // custodyConfig,
   generateBlockWithBlobSidecars,
   generateBlockWithColumnSidecars,
-  // generateChainOfBlocks,
-  // slots,
 } from "../../../utils/blocksAndData.js";
 
 describe("downloadByRoot.ts", () => {
   const peerIdStr = "1234567890abcdef1234567890abcdef";
   const prettyPeerIdStr = prettyPrintPeerIdStr(peerIdStr);
   let network: INetwork;
-  // let cache: SeenBlockInput;
   let executionEngine: IExecutionEngine;
-  // const logger = getMockedLogger();
-
-  // Test data
-  // let capellaBlock: SignedBeaconBlock;
-  // let denebBlockWithBlobs: ReturnType<typeof generateBlockWithBlobSidecars>;
-  // let fuluBlockWithColumns: ReturnType<typeof generateBlockWithColumnSidecars>;
-  // let blockRoot: Uint8Array;
-  // let rootHex: string;
-
-  beforeAll(() => {
-    // Generate test blocks
-    // const capellaBlocks = generateChainOfBlocks({forkName: ForkName.capella, count: 1});
-    // capellaBlock = capellaBlocks[0].block;
-    // denebBlockWithBlobs = generateBlockWithBlobSidecars({forkName: ForkName.deneb});
-    // fuluBlockWithColumns = generateBlockWithColumnSidecars({forkName: ForkName.fulu});
-    // blockRoot = denebBlockWithBlobs.blockRoot;
-    // rootHex = denebBlockWithBlobs.rootHex;
-  });
-
-  beforeEach(() => {
-    // const abortController = new AbortController();
-    // const signal = abortController.signal;
-    // cache = new SeenBlockInput({
-    //   config,
-    //   custodyConfig,
-    //   clock: new Clock({config, signal, genesisTime: Math.floor(Date.now() / 1000)}),
-    //   chainEvents: new ChainEventEmitter(),
-    //   signal,
-    //   metrics: null,
-    //   logger,
-    // });
-    // network = {
-    //   sendBeaconBlocksByRoot: vi.fn(),
-    //   sendBlobSidecarsByRoot: vi.fn(),
-    //   sendDataColumnSidecarsByRoot: vi.fn(),
-    //   publishDataColumnSidecar: vi.fn(),
-    //   custodyConfig,
-    //   logger,
-    // } as unknown as INetwork;
-    // executionEngine = {
-    //   getBlobs: vi.fn(),
-    // } as unknown as IExecutionEngine;
-  });
-
-  // describe("downloadByRoot", () => {
-  //   it("should successfully download block with blobs for post-Deneb fork", () => {
-  //     // Test downloading a block with blob sidecars in post-Deneb fork
-  //   });
-
-  //   it("should successfully download block with columns for post-Fulu fork", () => {
-  //     // Test downloading a block with column sidecars in post-Fulu fork
-  //   });
-
-  //   it("should successfully download block without additional data for pre-Deneb fork", () => {
-  //     // Test downloading a simple block in pre-Deneb fork
-  //   });
-
-  //   it("should handle pending block input that already has block", () => {
-  //     // Test case where cacheItem is PendingBlockInput and already has the block
-  //   });
-
-  //   it("should handle pending block input that needs block and data", () => {
-  //     // Test case where cacheItem is PendingBlockInput but missing block and data
-  //   });
-
-  //   it("should handle non-pending cache item", () => {
-  //     // Test case where cacheItem is not PendingBlockInput
-  //   });
-
-  //   it("should throw error when blob sidecars are missing for blob input", () => {
-  //     // Test MISSING_BLOB_RESPONSE error
-  //   });
-
-  //   it("should throw error when column sidecars are missing for column input", () => {
-  //     // Test MISSING_COLUMN_RESPONSE error
-  //   });
-
-  //   it("should return downloaded status when block has all data", () => {
-  //     // Test status is set to downloaded when blockInput.hasBlockAndAllData() returns true
-  //   });
-
-  //   it("should return pending status when block is missing data", () => {
-  //     // Test status is set to pending when blockInput.hasBlockAndAllData() returns false
-  //   });
-  // });
-
-  // describe("fetchByRoot", () => {
-  //   it("should fetch block and blobs for pending block input in post-Deneb fork", () => {
-  //     // Test fetching when cacheItem is PendingBlockInput and fork is post-Deneb
-  //   });
-
-  //   it("should fetch block and columns for pending block input in post-Fulu fork", () => {
-  //     // Test fetching when cacheItem is PendingBlockInput and fork is post-Fulu
-  //   });
-
-  //   it("should use existing block from pending block input", () => {
-  //     // Test when cacheItem.blockInput.hasBlock() returns true
-  //   });
-
-  //   it("should fetch new block when pending block input doesn't have block", () => {
-  //     // Test when cacheItem.blockInput.hasBlock() returns false
-  //   });
-
-  //   it("should skip data fetching when pending block input has all data", () => {
-  //     // Test when cacheItem.blockInput.hasAllData() returns true
-  //   });
-
-  //   it("should fetch blobs when pending block input is missing blob data", () => {
-  //     // Test blob fetching for incomplete blob input
-  //   });
-
-  //   it("should fetch columns when pending block input is missing column data", () => {
-  //     // Test column fetching for incomplete column input
-  //   });
-
-  //   it("should fetch block and blobs for non-pending cache item in post-Deneb fork", () => {
-  //     // Test fetching for non-PendingBlockInput in post-Deneb
-  //   });
-
-  //   it("should fetch block and columns for non-pending cache item in post-Fulu fork", () => {
-  //     // Test fetching for non-PendingBlockInput in post-Fulu
-  //   });
-
-  //   it("should fetch only block for non-pending cache item in pre-Deneb fork", () => {
-  //     // Test fetching for non-PendingBlockInput in pre-Deneb
-  //   });
-  // });
 
   describe("fetchAndValidateBlock", () => {
     let capellaBlock: ReturnType<typeof generateBlock>;
