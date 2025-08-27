@@ -505,7 +505,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     >({
       method: "engine_getBlobsV1",
       params: [versionedHashesHex],
-    });
+    }, {routeId: "getBlobsV1"});
 
     const invalidLength = response.length !== versionedHashesHex.length;
 
@@ -525,7 +525,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     >({
       method: "engine_getBlobsV2",
       params: [versionedHashesHex],
-    });
+    }, {routeId: "getBlobsV2"});
 
     // engine_getBlobsV2 does not return partial responses. It returns null if any blob is not found
     const invalidLength = !!response && response.length !== versionedHashesHex.length;
