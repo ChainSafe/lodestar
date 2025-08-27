@@ -18,6 +18,8 @@ import {
   DownloadByRootError,
   DownloadByRootErrorCode,
   ValidateColumnSidecarsProps,
+  fetchAndValidateBlobs,
+  fetchAndValidateBlock,
   // downloadByRoot,
   // fetchAndValidateBlobs,
   // fetchAndValidateBlock,
@@ -39,6 +41,8 @@ import {ROOT_SIZE} from "../../../../src/util/sszBytes.js";
 // import {getMockedLogger} from "../../../../test/mocks/loggerMock.js";
 import {
   config,
+  gen,
+  generateBlock,
   // custodyConfig,
   generateBlockWithBlobSidecars,
   generateBlockWithColumnSidecars,
@@ -180,56 +184,170 @@ describe("downloadByRoot.ts", () => {
   //   });
   // });
 
-  // describe("fetchAndValidateBlock", () => {
-  //   it("should successfully fetch and validate block with matching root", () => {
-  //     // Test successful block fetch and validation
-  //   });
+  describe("fetchAndValidateBlock", () => {
+    let capellaBlock: ReturnType<typeof generateBlock>;
+    beforeAll(() => {
+      capellaBlock = generateBlock({forkName: ForkName.capella});
+    });
+    afterAll(() => {
+      vi.resetAllMocks();
+    });
 
-  //   it("should throw error when no block is returned from network", () => {
-  //     // Test MISSING_BLOCK_RESPONSE error
-  //   });
+    it("should successfully fetch and validate block with matching root", async () => {
+      network = {
+        sendBeaconBlocksByRoot: vi.fn(() => [{data: capellaBlock.block}]),
+      } as unknown as INetwork;
 
-  //   it("should throw error when block root doesn't match requested root", () => {
-  //     // Test MISMATCH_BLOCK_ROOT error
-  //   });
+      const response = await fetchAndValidateBlock({
+        config,
+        network,
+        peerIdStr,
+        blockRoot: capellaBlock.blockRoot,
+      });
 
-  //   it("should handle network request failure", () => {
-  //     // Test network failure scenarios
-  //   });
-  // });
+      expect(response).toBe(capellaBlock.block);
+    });
 
-  // describe("fetchAndValidateBlobs", () => {
-  //   it("should successfully fetch blobs from execution engine only", () => {
-  //     // Test when all blobs are available from execution engine
-  //   });
+    it("should throw error when no block is returned from network", async () => {
+      network = {
+        sendBeaconBlocksByRoot: vi.fn(() => []),
+      } as unknown as INetwork;
 
-  //   it("should fetch remaining blobs from network when execution engine is incomplete", () => {
-  //     // Test when some blobs are from execution engine, others from network
-  //   });
+      try {
+        await fetchAndValidateBlock({
+          config,
+          network,
+          peerIdStr,
+          blockRoot: capellaBlock.blockRoot,
+        });
+      } catch (err) {
+        expect(err).toBeInstanceOf(DownloadByRootError);
+        expect((err as any).type.code).toEqual(DownloadByRootErrorCode.MISSING_BLOCK_RESPONSE);
+        expect((err as any).type.peer).toEqual(prettyPeerIdStr);
+        expect((err as any).type.blockRoot).toEqual(prettyBytes(capellaBlock.blockRoot));
+      }
+    });
 
-  //   it("should fetch all blobs from network when execution engine returns none", () => {
-  //     // Test when execution engine returns no blobs
-  //   });
+    it("should throw error when block root doesn't match requested root", async () => {
+      network = {
+        sendBeaconBlocksByRoot: vi.fn(() => [{data: capellaBlock.block}]),
+      } as unknown as INetwork;
 
-  //   it("should validate all fetched blobs successfully", () => {
-  //     // Test successful blob validation
-  //   });
+      const invalidRoot = randomBytes(ROOT_SIZE);
+      try {
+        await fetchAndValidateBlock({
+          config,
+          network,
+          peerIdStr,
+          blockRoot: invalidRoot,
+        });
+      } catch (err) {
+        expect(err).toBeInstanceOf(DownloadByRootError);
+        expect((err as any).message).toEqual("block does not match requested root");
+        expect((err as any).type.code).toEqual(DownloadByRootErrorCode.MISMATCH_BLOCK_ROOT);
+        expect((err as any).type.peer).toEqual(prettyPeerIdStr);
+        expect((err as any).type.requestedBlockRoot).toEqual(prettyBytes(invalidRoot));
+        expect((err as any).type.receivedBlockRoot).toEqual(prettyBytes(capellaBlock.blockRoot));
+      }
+    });
+  });
 
-  //   it("should throw error when blob validation fails", () => {
-  //     // Test blob validation failure scenarios
-  //   });
-  // });
+  describe("fetchAndValidateBlobs", () => {
+    const forkName = ForkName.deneb;
+    let denebBlockWithBlobs: ReturnType<typeof generateBlockWithBlobSidecars>;
+    let blobsAndProofs: deneb.BlobAndProof[];
+    let blobMeta: BlobMeta[];
+
+    beforeEach(() => {
+      denebBlockWithBlobs = generateBlockWithBlobSidecars({forkName, count: 6});
+      blobsAndProofs = denebBlockWithBlobs.blobSidecars.map(({blob, kzgProof}) => ({blob, proof: kzgProof}));
+      blobMeta = denebBlockWithBlobs.versionedHashes.map((versionedHash, index) => ({index, versionedHash}));
+    });
+
+    afterEach(() => {
+      vi.resetAllMocks();
+    });
+
+    it("should successfully fetch blobs from execution engine only", async () => {
+      const sendBlobSidecarsByRootMock = vi.fn(() => Promise.resolve([]));
+      network = {
+        sendBlobSidecarsByRoot: sendBlobSidecarsByRootMock,
+      } as unknown as INetwork;
+
+      const getBlobsMock = vi.fn(() => Promise.resolve(blobsAndProofs.slice(0, 1)));
+      executionEngine = {
+        getBlobs: getBlobsMock,
+      } as unknown as IExecutionEngine;
+
+      const response = await fetchAndValidateBlobs({
+        config,
+        network,
+        executionEngine,
+        forkName,
+        peerIdStr,
+        blockRoot: denebBlockWithBlobs.blockRoot,
+        block: denebBlockWithBlobs.block,
+        blobMeta: blobMeta.slice(0, 1),
+      });
+
+      expect(response).toBe(denebBlockWithBlobs.blobSidecars.slice(0, 1));
+    });
+
+    // it("should successfully fetch blobs from network only", async () => {
+    //   const response = await fetchAndValidateBlobs({
+    //     config,
+    //     network,
+    //     executionEngine,
+    //     forkName,
+    //     peerIdStr,
+    //     blockRoot,
+    //     block,
+    //     blobMeta,
+    //   });
+    // });
+
+    // it("should fetch remaining blobs from network when execution engine is incomplete", async () => {
+    //   const response = await fetchAndValidateBlobs({
+    //     config,
+    //     network,
+    //     executionEngine,
+    //     forkName,
+    //     peerIdStr,
+    //     blockRoot,
+    //     block,
+    //     blobMeta,
+    //   });
+    // });
+
+    // it("should throw error if blob validation fails", async () => {
+    //   try {
+    //     await fetchAndValidateBlobs({
+    //       config,
+    //       network,
+    //       executionEngine,
+    //       forkName,
+    //       peerIdStr,
+    //       blockRoot,
+    //       block,
+    //       blobMeta,
+    //     });
+    //     expect.fail("should have errored");
+    //   } catch (err) {
+    //     expect(err).toBeInstanceOf(DownloadByRootError);
+    //   }
+    // });
+  });
 
   describe("fetchGetBlobsV1AndBuildSidecars", () => {
-    let denebBlockWithColumns: ReturnType<typeof generateBlockWithBlobSidecars>;
+    let denebBlockWithBlobs: ReturnType<typeof generateBlockWithBlobSidecars>;
     let blobsAndProofs: deneb.BlobAndProof[];
     let blobMeta: BlobMeta[];
     const forkName = ForkName.deneb;
 
     beforeEach(() => {
-      denebBlockWithColumns = generateBlockWithBlobSidecars({forkName: ForkName.fulu, count: 6});
-      blobsAndProofs = denebBlockWithColumns.blobSidecars.map(({blob, kzgProof}) => ({blob, proof: kzgProof}));
-      blobMeta = denebBlockWithColumns.versionedHashes.map((versionedHash, index) => ({index, versionedHash}));
+      denebBlockWithBlobs = generateBlockWithBlobSidecars({forkName, count: 6});
+      blobsAndProofs = denebBlockWithBlobs.blobSidecars.map(({blob, kzgProof}) => ({blob, proof: kzgProof}));
+      blobMeta = denebBlockWithBlobs.versionedHashes.map((versionedHash, index) => ({index, versionedHash}));
     });
 
     afterEach(() => {
@@ -246,12 +364,12 @@ describe("downloadByRoot.ts", () => {
         config,
         forkName,
         executionEngine,
-        block: denebBlockWithColumns.block,
+        block: denebBlockWithBlobs.block,
         blobMeta: blobMeta,
       });
 
       expect(getBlobsMock).toHaveBeenCalledOnce();
-      expect(getBlobsMock).toHaveBeenCalledWith(forkName, denebBlockWithColumns.versionedHashes);
+      expect(getBlobsMock).toHaveBeenCalledWith(forkName, denebBlockWithBlobs.versionedHashes);
     });
 
     it("should return empty array when execution engine returns no blobs", async () => {
@@ -264,7 +382,7 @@ describe("downloadByRoot.ts", () => {
         config,
         forkName,
         executionEngine,
-        block: denebBlockWithColumns.block,
+        block: denebBlockWithBlobs.block,
         blobMeta: blobMeta,
       });
       expect(response).toEqual([]);
@@ -280,7 +398,7 @@ describe("downloadByRoot.ts", () => {
         config,
         forkName,
         executionEngine,
-        block: denebBlockWithColumns.block,
+        block: denebBlockWithBlobs.block,
         blobMeta: blobMeta,
       });
 
@@ -310,21 +428,19 @@ describe("downloadByRoot.ts", () => {
         blobSidecar.kzgCommitmentInclusionProof.map((proof) => expect(proof).toBeInstanceOf(Uint8Array));
 
         expect(blobSidecar).toHaveProperty("signedBlockHeader");
-        expect(blobSidecar.signedBlockHeader.message.slot).toBe(denebBlockWithColumns.block.message.slot);
+        expect(blobSidecar.signedBlockHeader.message.slot).toBe(denebBlockWithBlobs.block.message.slot);
         expect(blobSidecar.signedBlockHeader.message.proposerIndex).toBe(
-          denebBlockWithColumns.block.message.proposerIndex
+          denebBlockWithBlobs.block.message.proposerIndex
         );
-        expect(blobSidecar.signedBlockHeader.message.parentRoot).toEqual(
-          denebBlockWithColumns.block.message.parentRoot
-        );
-        expect(blobSidecar.signedBlockHeader.message.stateRoot).toEqual(denebBlockWithColumns.block.message.stateRoot);
+        expect(blobSidecar.signedBlockHeader.message.parentRoot).toEqual(denebBlockWithBlobs.block.message.parentRoot);
+        expect(blobSidecar.signedBlockHeader.message.stateRoot).toEqual(denebBlockWithBlobs.block.message.stateRoot);
       }
 
       await expect(
         validateBlobs({
           config,
           peerIdStr,
-          blockRoot: denebBlockWithColumns.blockRoot,
+          blockRoot: denebBlockWithBlobs.blockRoot,
           blobSidecars: response,
           blobMeta,
         })
@@ -344,7 +460,7 @@ describe("downloadByRoot.ts", () => {
         config,
         forkName,
         executionEngine,
-        block: denebBlockWithColumns.block,
+        block: denebBlockWithBlobs.block,
         blobMeta: blobMeta,
       });
 

@@ -354,12 +354,13 @@ export async function fetchGetBlobsV1AndBuildSidecars({
     if (blobAndProof) {
       const {blob, proof} = blobAndProof;
       const index = blobMeta[i].index;
-      const kzgCommitment = block.message.body.blobKzgCommitments[i];
+      const kzgCommitment = block.message.body.blobKzgCommitments[index];
       const sidecar: deneb.BlobSidecar = {
         index,
         blob,
         kzgProof: proof,
         kzgCommitment,
+        // TODO(fulu): refactor this to only calculate the root inside these following two functions once
         kzgCommitmentInclusionProof: computePreFuluKzgCommitmentsInclusionProof(forkName, block.message.body, index),
         signedBlockHeader: signedBlockToSignedHeader(config, block),
       };

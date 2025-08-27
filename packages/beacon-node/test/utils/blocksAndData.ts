@@ -78,11 +78,17 @@ function generateProposerIndex(min = 0, max = 100_000): number {
   return generateRandomInt(min, max);
 }
 
+export type GenerateBlockProps<F extends ForkPostCapella> = {
+  forkName: F;
+  slot?: Slot;
+  parentRoot?: Uint8Array;
+};
+
 function generateBeaconBlock<F extends ForkPostCapella>({
   forkName,
   slot,
   parentRoot,
-}: {forkName: F; slot?: Slot; parentRoot?: Uint8Array}): SignedBeaconBlock<F> {
+}: GenerateBlockProps<F>): SignedBeaconBlock<F> {
   const block = ssz[forkName].SignedBeaconBlock.defaultValue();
   block.message.slot = slot ? slot : slots[forkName];
   block.message.parentRoot = parentRoot ? parentRoot : Uint8Array.from(randomBytes(ROOT_SIZE));
@@ -187,6 +193,25 @@ export type BlockTestSet<F extends ForkPostCapella> = {
   blockRoot: Uint8Array;
   rootHex: string;
 };
+
+export function generateBlock<F extends ForkPostCapella>({
+  forkName,
+  parentRoot,
+  slot,
+}: GenerateBlockProps<F>): BlockTestSet<F> {
+  const block = generateBeaconBlock({
+    forkName,
+    slot,
+    parentRoot,
+  });
+  const {blockRoot, rootHex} = generateRoots(forkName, block);
+
+  return {
+    block,
+    rootHex,
+    blockRoot,
+  };
+}
 
 export function generateChainOfBlocks<F extends ForkPostCapella>({
   forkName,
