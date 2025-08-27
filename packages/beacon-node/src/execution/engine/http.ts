@@ -464,7 +464,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     const response = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
-    >({method, params: [blockHashes]});
+    >({method, params: [blockHashes]}, {routeId: "getPayloadBodiesByHash"});
     return response.map(deserializeExecutionPayloadBody);
   }
 
@@ -480,7 +480,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     const response = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
-    >({method, params: [start, count]});
+    >({method, params: [start, count]}, {routeId: "getPayloadBodiesByRange"});
     return response.map(deserializeExecutionPayloadBody);
   }
 
@@ -551,7 +551,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     const response = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
-    >({method, params: [{...clientVersion, commit: `0x${clientVersion.commit}`}]});
+    >({method, params: [{...clientVersion, commit: `0x${clientVersion.commit}`}]}, {routeId: "getClientVersion"});
 
     const clientVersions = response.map((cv) => {
       const code = cv.code in ClientCode ? ClientCode[cv.code as keyof typeof ClientCode] : ClientCode.XX;
