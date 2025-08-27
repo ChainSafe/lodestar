@@ -1,5 +1,4 @@
-import {BeaconConfig} from "@lodestar/config";
-import {BLOBSIDECAR_FIXED_SIZE, GENESIS_SLOT} from "@lodestar/params";
+import {BLOBSIDECAR_FIXED_SIZE, GENESIS_SLOT, MAX_REQUEST_BLOCKS_DENEB} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Slot, deneb} from "@lodestar/types";
@@ -14,7 +13,7 @@ export async function* onBlobSidecarsByRange(
   db: IBeaconDb
 ): AsyncIterable<ResponseOutgoing> {
   // Non-finalized range of blobs
-  const {startSlot, count} = validateBlobSidecarsByRangeRequest(chain.config, request);
+  const {startSlot, count} = validateBlobSidecarsByRangeRequest(request);
   const endSlot = startSlot + count;
 
   const finalized = db.blobSidecarsArchive;
@@ -92,7 +91,6 @@ export function* iterateBlobBytesFromWrapper(
 }
 
 export function validateBlobSidecarsByRangeRequest(
-  config: BeaconConfig,
   request: deneb.BlobSidecarsByRangeRequest
 ): deneb.BlobSidecarsByRangeRequest {
   const {startSlot} = request;
@@ -106,10 +104,8 @@ export function validateBlobSidecarsByRangeRequest(
     throw new ResponseError(RespStatus.INVALID_REQUEST, "startSlot < genesis");
   }
 
-  const maxRequestBlobSidecars = config.getMaxRequestBlobSidecars(config.getForkName(startSlot));
-
-  if (count > maxRequestBlobSidecars) {
-    count = maxRequestBlobSidecars;
+  if (count > MAX_REQUEST_BLOCKS_DENEB) {
+    count = MAX_REQUEST_BLOCKS_DENEB;
   }
 
   return {startSlot, count};
