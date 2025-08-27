@@ -473,7 +473,7 @@ export async function fetchAndValidateColumns({
   blockRoot,
   columnMeta,
 }: FetchByRootAndValidateColumnsProps): Promise<fulu.DataColumnSidecars> {
-  let columnSidecars: fulu.DataColumnSidecars = [];
+  let columnSidecars: fulu.DataColumnSidecars | null = [];
   try {
     columnSidecars = await fetchGetBlobsV2AndBuildSidecars({
       config,
@@ -490,7 +490,7 @@ export async function fetchAndValidateColumns({
     );
   }
 
-  if (columnSidecars.length) {
+  if (columnSidecars?.length) {
     // limit reconstructed to only the ones we need
     const needed = columnSidecars.filter((c) => columnMeta.missing.includes(c.index));
     // spec states that reconstructed sidecars need to be published to the network, but only requires

@@ -2,6 +2,7 @@ import {randomBytes} from "node:crypto";
 import {BYTES_PER_BLOB, BYTES_PER_CELL, BYTES_PER_COMMITMENT, BYTES_PER_PROOF} from "@crate-crypto/node-eth-kzg";
 import {ForkName, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {deneb, fulu, ssz} from "@lodestar/types";
+import {BlobAndProof} from "@lodestar/types/lib/deneb/types.js";
 import {prettyBytes} from "@lodestar/utils";
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {
@@ -20,6 +21,7 @@ import {
   ValidateColumnSidecarsProps,
   fetchAndValidateBlobs,
   fetchAndValidateBlock,
+  fetchAndValidateColumns,
   // downloadByRoot,
   // fetchAndValidateBlobs,
   // fetchAndValidateBlock,
@@ -35,13 +37,13 @@ import {
   validateColumnSidecars,
 } from "../../../../src/sync/utils/downloadByRoot.js";
 import {kzgCommitmentToVersionedHash} from "../../../../src/util/blobs.js";
+import {CustodyConfig} from "../../../../src/util/dataColumns.js";
 // import {Clock} from "../../../../src/util/clock.js";
 import {kzg} from "../../../../src/util/kzg.js";
 import {ROOT_SIZE} from "../../../../src/util/sszBytes.js";
 // import {getMockedLogger} from "../../../../test/mocks/loggerMock.js";
 import {
   config,
-  gen,
   generateBlock,
   // custodyConfig,
   generateBlockWithBlobSidecars,
@@ -457,7 +459,9 @@ describe("downloadByRoot.ts", () => {
     beforeEach(() => {
       denebBlockWithBlobs = generateBlockWithBlobSidecars({forkName, count: 6});
       blobsAndProofs = denebBlockWithBlobs.blobSidecars.map(({blob, kzgProof}) => ({blob, proof: kzgProof}));
-      blobMeta = denebBlockWithBlobs.versionedHashes.map((versionedHash, index) => ({index, versionedHash}));
+      blobMeta = denebBlockWithBlobs.versionedHashes.map(
+        (versionedHash, index) => ({index, versionedHash}) as BlobMeta
+      );
     });
 
     afterEach(() => {
@@ -558,7 +562,7 @@ describe("downloadByRoot.ts", () => {
     });
 
     it("should handle partial blob response from execution engine", async () => {
-      const engineResponse = [...blobsAndProofs];
+      const engineResponse: (BlobAndProof | null)[] = [...blobsAndProofs];
       engineResponse[2] = null;
       engineResponse[4] = null;
       const getBlobsMock = vi.fn(() => Promise.resolve(engineResponse));
@@ -739,40 +743,369 @@ describe("downloadByRoot.ts", () => {
     });
   });
 
-  // describe("fetchAndValidateColumns", () => {
-  //   it("should fetch columns from execution engine and validate", () => {
-  //     // Test successful fetch from execution engine
-  //   });
+  describe("fetchAndValidateColumns", () => {
+    const forkName = ForkName.fulu;
+    let fuluBlockWithColumns: ReturnType<typeof generateBlockWithColumnSidecars>;
+    let blobAndProofs: fulu.BlobAndProofV2[];
+    let columnMeta: MissingColumnMeta;
+    let versionedHashes: Uint8Array[];
+    let custodyConfig: CustodyConfig;
 
-  //   it("should gracefully handle executionEngine errors", () => {
-  //     // Test needToPublish logic with custody configuration
-  //   });
+    beforeEach(() => {
+      fuluBlockWithColumns = generateBlockWithColumnSidecars({forkName, returnBlobs: true});
+      // biome-ignore lint/style/noNonNullAssertion: returnBlobs = true
+      const blobs = fuluBlockWithColumns.blobs!;
+      blobAndProofs = blobs
+        .map((b) => kzg.computeCellsAndKzgProofs(b))
+        .map(({proofs}, i) => ({proofs, blob: blobs[i]}));
+      versionedHashes = fuluBlockWithColumns.block.message.body.blobKzgCommitments.map((c) =>
+        kzgCommitmentToVersionedHash(c)
+      );
+      columnMeta = {
+        missing: [0, 1, 2, 3, 4, 5, 6, 7], // Sample a subset of columns
+        versionedHashes,
+      };
+      custodyConfig = {
+        custodyColumns: [0, 1, 2, 3],
+        sampledColumns: [0, 1, 2, 3, 4, 5, 6, 7],
+      } as CustodyConfig;
+    });
 
-  //   it("should fetch columns from network when execution engine returns empty", () => {
-  //     // Test fallback to network when execution engine fails
-  //   });
+    afterEach(() => {
+      vi.resetAllMocks();
+    });
 
-  //   it("should publish reconstructed columns to network", () => {
-  //     // Test column publishing after reconstruction
-  //   });
+    it("should successfully fetch columns from execution engine only", async () => {
+      const sendDataColumnSidecarsByRootMock = vi.fn(() => Promise.resolve([]));
+      const publishDataColumnSidecarMock = vi.fn(() => Promise.resolve());
+      network = {
+        sendDataColumnSidecarsByRoot: sendDataColumnSidecarsByRootMock,
+        publishDataColumnSidecar: publishDataColumnSidecarMock,
+        custodyConfig,
+        logger: {
+          error: vi.fn(),
+        },
+      } as unknown as INetwork;
 
-  //   it("should filter needed columns from reconstructed set", () => {
-  //     // Test that only needed columns are returned
-  //   });
+      const getBlobsMock = vi.fn(() => Promise.resolve(blobAndProofs));
+      executionEngine = {
+        getBlobs: getBlobsMock,
+      } as unknown as IExecutionEngine;
 
-  //   it("should handle publishing errors gracefully", () => {
-  //     // Test that publishing errors don't fail the main operation
-  //   });
+      const response = await fetchAndValidateColumns({
+        config,
+        network,
+        executionEngine,
+        forkName,
+        peerIdStr,
+        blockRoot: fuluBlockWithColumns.blockRoot,
+        block: fuluBlockWithColumns.block,
+        columnMeta,
+      });
 
-  //   it("should validate columns correctly in both scenarios", () => {
-  //     // Test validation works for both execution engine and network paths
-  //   });
+      expect(getBlobsMock).toHaveBeenCalledExactlyOnceWith(forkName, versionedHashes);
+      expect(sendDataColumnSidecarsByRootMock).not.toHaveBeenCalled();
+      // Should only return the columns we need (missing)
+      expect(response.map((c) => c.index)).toEqual(columnMeta.missing);
+      // Should publish columns we custody that weren't already published
+      expect(publishDataColumnSidecarMock).toHaveBeenCalled();
+    });
 
-  //   it("should determine correct columns to publish based on custody config", () => {
-  //     // Test needToPublish logic with custody configuration
-  //   });
+    it("should only publish columns that have not already been published", async () => {
+      const publishDataColumnSidecarMock = vi.fn(() => Promise.resolve());
+      network = {
+        sendDataColumnSidecarsByRoot: vi.fn(() => Promise.resolve([])),
+        publishDataColumnSidecar: publishDataColumnSidecarMock,
+        custodyConfig,
+        logger: {
+          error: vi.fn(),
+        },
+      } as unknown as INetwork;
 
-  // });
+      const getBlobsMock = vi.fn(() => Promise.resolve(blobAndProofs));
+      executionEngine = {
+        getBlobs: getBlobsMock,
+      } as unknown as IExecutionEngine;
+
+      // Columns 0, 1 are already published (not in missing)
+      // Columns 2, 3, 4, 5, 6, 7 are missing sampledColumns and need to be fetched
+      // After reconstruction, we should publish columns 2, 3 (we custody them and they weren't published)
+      // Column 5, 6, 7 we sample but do not custody so we don't need to publish
+      const testColumnMeta = {
+        missing: [2, 3, 4, 5, 6, 7],
+        versionedHashes,
+      };
+
+      await fetchAndValidateColumns({
+        config,
+        network,
+        executionEngine,
+        forkName,
+        peerIdStr,
+        blockRoot: fuluBlockWithColumns.blockRoot,
+        block: fuluBlockWithColumns.block,
+        columnMeta: testColumnMeta,
+      });
+
+      // Should publish columns 2, 3, 4 (custody and were missing)
+      const publishedIndices = publishDataColumnSidecarMock.mock.calls.map((call) => (call as any)[0]?.index);
+      expect(publishedIndices).toEqual([2, 3]);
+    });
+
+    it("should only return columns that are needed from reconstruction", async () => {
+      network = {
+        sendDataColumnSidecarsByRoot: vi.fn(() => Promise.resolve([])),
+        publishDataColumnSidecar: vi.fn(() => Promise.resolve()),
+        custodyConfig: {
+          custodyColumns: [0, 2, 4, 6],
+          sampledColumns: [0, 2, 4, 6, 8, 10, 12],
+        },
+        logger: {
+          error: vi.fn(),
+        },
+      } as unknown as INetwork;
+
+      const getBlobsMock = vi.fn(() => Promise.resolve(blobAndProofs));
+      executionEngine = {
+        getBlobs: getBlobsMock,
+      } as unknown as IExecutionEngine;
+
+      const missing = [0, 4, 6, 10, 12];
+      const testColumnMeta = {
+        missing, // Only need these columns
+        versionedHashes,
+      };
+
+      const response = await fetchAndValidateColumns({
+        config,
+        network,
+        executionEngine,
+        forkName,
+        peerIdStr,
+        blockRoot: fuluBlockWithColumns.blockRoot,
+        block: fuluBlockWithColumns.block,
+        columnMeta: testColumnMeta,
+      });
+
+      // Even though reconstruction produces all columns, we should only return what we need
+      expect(response.length).toBe(5);
+      expect(response.map((c) => c.index)).toEqual(missing);
+    });
+
+    it("should successfully fetch columns from network only", async () => {
+      const neededColumns = fuluBlockWithColumns.columnSidecars.filter((c) => columnMeta.missing.includes(c.index));
+      const sendDataColumnSidecarsByRootMock = vi.fn(() => Promise.resolve(neededColumns));
+      network = {
+        sendDataColumnSidecarsByRoot: sendDataColumnSidecarsByRootMock,
+        publishDataColumnSidecar: vi.fn(() => Promise.resolve()),
+        custodyConfig: {
+          custodyColumns: [0, 1, 2, 3, 4, 5],
+          sampledColumns: columnMeta.missing,
+        },
+        logger: {
+          error: vi.fn(),
+        },
+      } as unknown as INetwork;
+
+      const getBlobsMock = vi.fn(() => Promise.resolve(null)); // No blobs from execution engine
+      executionEngine = {
+        getBlobs: getBlobsMock,
+      } as unknown as IExecutionEngine;
+
+      const response = await fetchAndValidateColumns({
+        config,
+        network,
+        executionEngine,
+        forkName,
+        peerIdStr,
+        blockRoot: fuluBlockWithColumns.blockRoot,
+        block: fuluBlockWithColumns.block,
+        columnMeta,
+      });
+
+      expect(getBlobsMock).toHaveBeenCalledExactlyOnceWith(forkName, versionedHashes);
+      expect(sendDataColumnSidecarsByRootMock).toHaveBeenCalledExactlyOnceWith(peerIdStr, [
+        {blockRoot: fuluBlockWithColumns.blockRoot, columns: columnMeta.missing},
+      ]);
+      expect(response.map((c) => c.index)).toEqual(columnMeta.missing);
+    });
+
+    it("should gracefully handle getBlobsV2 failure", async () => {
+      const rejectedError = new Error("TESTING_ERROR");
+      const getBlobsMock = vi.fn(() => Promise.reject(rejectedError));
+      executionEngine = {
+        getBlobs: getBlobsMock,
+      } as unknown as IExecutionEngine;
+
+      const neededColumns = fuluBlockWithColumns.columnSidecars.filter((c) => columnMeta.missing.includes(c.index));
+      const sendDataColumnSidecarsByRootMock = vi.fn(() => Promise.resolve(neededColumns));
+      const loggerMock = {
+        error: vi.fn(),
+      };
+      network = {
+        logger: loggerMock,
+        sendDataColumnSidecarsByRoot: sendDataColumnSidecarsByRootMock,
+        publishDataColumnSidecar: vi.fn(() => Promise.resolve()),
+        custodyConfig: {
+          custodyColumns: [0, 1, 2, 3, 4, 5],
+          sampledColumns: columnMeta.missing,
+        },
+      } as unknown as INetwork;
+
+      const response = await fetchAndValidateColumns({
+        config,
+        network,
+        executionEngine,
+        forkName,
+        peerIdStr,
+        blockRoot: fuluBlockWithColumns.blockRoot,
+        block: fuluBlockWithColumns.block,
+        columnMeta,
+      });
+
+      expect(getBlobsMock).toHaveBeenCalledExactlyOnceWith(forkName, versionedHashes);
+      expect(loggerMock.error).toHaveBeenCalledExactlyOnceWith(
+        `error building columnSidecars for blockRoot=${prettyBytes(fuluBlockWithColumns.blockRoot)} via getBlobsV2`,
+        {},
+        rejectedError
+      );
+      expect(sendDataColumnSidecarsByRootMock).toHaveBeenCalledExactlyOnceWith(peerIdStr, [
+        {blockRoot: fuluBlockWithColumns.blockRoot, columns: columnMeta.missing},
+      ]);
+      expect(response.map((c) => c.index)).toEqual(columnMeta.missing);
+    });
+
+    it("should throw error if column validation fails", async () => {
+      // biome-ignore lint/style/noNonNullAssertion: exists
+      const invalidColumn = ssz.fulu.DataColumnSidecar.clone(fuluBlockWithColumns.columnSidecars.at(1)!);
+      // Corrupt the inclusion proof to make validation fail
+      invalidColumn.kzgCommitmentsInclusionProof[0] = new Uint8Array(32).fill(255);
+
+      const sendDataColumnSidecarsByRootMock = vi.fn(() =>
+        Promise.resolve([
+          fuluBlockWithColumns.columnSidecars[0],
+          invalidColumn,
+          fuluBlockWithColumns.columnSidecars.slice(2, 6),
+        ])
+      );
+      network = {
+        sendDataColumnSidecarsByRoot: sendDataColumnSidecarsByRootMock,
+        publishDataColumnSidecar: vi.fn(() => Promise.resolve()),
+        custodyConfig: {
+          custodyColumns: [0, 1, 2, 3, 4, 5],
+          sampledColumns: [0, 1, 2, 3, 4, 5],
+        },
+        logger: {
+          error: vi.fn(),
+        },
+      } as unknown as INetwork;
+
+      const getBlobsMock = vi.fn(() => Promise.resolve([]));
+      executionEngine = {
+        getBlobs: getBlobsMock,
+      } as unknown as IExecutionEngine;
+
+      try {
+        await fetchAndValidateColumns({
+          config,
+          network,
+          executionEngine,
+          forkName,
+          peerIdStr,
+          blockRoot: fuluBlockWithColumns.blockRoot,
+          block: fuluBlockWithColumns.block,
+          columnMeta: {
+            missing: [0, 1, 2, 3, 4, 5],
+            versionedHashes,
+          },
+        });
+        expect.fail("should have thrown error");
+      } catch (err) {
+        expect(err).toBeInstanceOf(DownloadByRootError);
+        expect((err as any).type.code).toBe(DownloadByRootErrorCode.INVALID_INCLUSION_PROOF);
+        expect((err as any).type.peer).toBe(prettyPrintPeerIdStr(peerIdStr));
+        expect((err as any).type.blockRoot).toBe(prettyBytes(fuluBlockWithColumns.blockRoot));
+      }
+    });
+
+    it("should handle error when publishing reconstructed columns", async () => {
+      const publishError = new Error("PUBLISH_ERROR");
+      const publishDataColumnSidecarMock = vi.fn(() => Promise.reject(publishError));
+      const loggerMock = {
+        error: vi.fn(),
+      };
+      network = {
+        sendDataColumnSidecarsByRoot: vi.fn(() => Promise.resolve([])),
+        publishDataColumnSidecar: publishDataColumnSidecarMock,
+        custodyConfig: {
+          custodyColumns: [0, 1, 2, 3],
+          sampledColumns: [0, 1, 2, 3, 4, 5, 6, 7],
+        },
+        logger: loggerMock,
+      } as unknown as INetwork;
+
+      const getBlobsMock = vi.fn(() => Promise.resolve(blobAndProofs));
+      executionEngine = {
+        getBlobs: getBlobsMock,
+      } as unknown as IExecutionEngine;
+
+      const response = await fetchAndValidateColumns({
+        config,
+        network,
+        executionEngine,
+        forkName,
+        peerIdStr,
+        blockRoot: fuluBlockWithColumns.blockRoot,
+        block: fuluBlockWithColumns.block,
+        columnMeta: {
+          missing: [0, 1, 2, 3, 4, 5, 6, 7],
+          versionedHashes,
+        },
+      });
+
+      // Should still return the columns even if publishing fails
+      expect(response.map((c) => c.index)).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
+
+      // Should log the publishing error
+      expect(loggerMock.error).toHaveBeenCalledTimes(4);
+      expect(loggerMock.error).toHaveBeenNthCalledWith(
+        1,
+        "Error publishing column after getBlobsV2 reconstruct",
+        {
+          index: 0,
+          blockRoot: prettyBytes(fuluBlockWithColumns.blockRoot),
+        },
+        publishError
+      );
+      expect(loggerMock.error).toHaveBeenNthCalledWith(
+        2,
+        "Error publishing column after getBlobsV2 reconstruct",
+        {
+          index: 1,
+          blockRoot: prettyBytes(fuluBlockWithColumns.blockRoot),
+        },
+        publishError
+      );
+      expect(loggerMock.error).toHaveBeenNthCalledWith(
+        3,
+        "Error publishing column after getBlobsV2 reconstruct",
+        {
+          index: 2,
+          blockRoot: prettyBytes(fuluBlockWithColumns.blockRoot),
+        },
+        publishError
+      );
+      expect(loggerMock.error).toHaveBeenNthCalledWith(
+        4,
+        "Error publishing column after getBlobsV2 reconstruct",
+        {
+          index: 3,
+          blockRoot: prettyBytes(fuluBlockWithColumns.blockRoot),
+        },
+        publishError
+      );
+    });
+  });
 
   describe("fetchGetBlobsV2AndBuildSidecars", () => {
     let fuluBlockWithColumns: ReturnType<typeof generateBlockWithColumnSidecars>;
