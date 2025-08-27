@@ -447,6 +447,7 @@ export function validateResponses({
     }
 
     validateBlobsByRangeResponse(
+      blobsRequest,
       [...(blocks ?? []), ...(batchBlocks?.map((blockInput) => blockInput.getBlock()) ?? [])],
       blobSidecars
     );
@@ -598,7 +599,14 @@ export function validateBlockByRangeResponse(
 /**
  * Should not be called directly. Only exported for unit testing purposes
  */
-export function validateBlobsByRangeResponse(blocks: SignedBeaconBlock[], blobSidecars: deneb.BlobSidecars): void {
+export function validateBlobsByRangeResponse(
+  request: deneb.BlobSidecarsByRangeRequest,
+  blocks: SignedBeaconBlock[],
+  blobSidecars: deneb.BlobSidecars
+): void {
+  const startSlot = request.startSlot;
+  const endSlot = startSlot + request.count;
+  blocks = blocks.filter((block) => block.message.slot >= startSlot && block.message.slot <= endSlot);
   const expectedBlobCount = blocks.reduce(
     (acc, block) => (block as SignedBeaconBlock<ForkPostDeneb>).message.body.blobKzgCommitments.length + acc,
     0
