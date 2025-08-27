@@ -5,12 +5,14 @@ import {
   FIELD_ELEMENTS_PER_BLOB,
   ForkName,
   ForkPostBellatrix,
+  ForkPostCapella,
   ForkSeq,
 } from "@lodestar/params";
-import {RootHex, bellatrix, deneb, ssz} from "@lodestar/types";
-import {fromHex, toHex} from "@lodestar/utils";
+import {ExecutionPayload, RootHex, bellatrix, deneb, ssz} from "@lodestar/types";
+import {fromHex, toHex, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {quantityToNum} from "../../eth1/provider/utils.js";
+import {INTEROP_BLOCK_HASH} from "../../node/utils/interop/state.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {kzg} from "../../util/kzg.js";
 import {ClientCode, ExecutionPayloadStatus, PayloadIdCache} from "./interface.js";
@@ -20,10 +22,12 @@ import {
   EngineApiRpcReturnTypes,
   ExecutionPayloadBodyRpc,
   ExecutionPayloadRpc,
+  ExecutionRequestsRpc,
   PayloadStatus,
   deserializePayloadAttributes,
   serializeBlobsBundle,
   serializeExecutionPayload,
+  serializeExecutionRequests,
 } from "./types.js";
 import {JsonRpcBackend} from "./utils.js";
 
@@ -32,10 +36,12 @@ const PRUNE_PAYLOAD_ID_AFTER_MS = 5000;
 
 export type ExecutionEngineMockOpts = {
   genesisBlockHash: string;
+  eth1BlockHash?: string;
   onlyPredefinedResponses?: boolean;
   capellaForkTimestamp?: number;
   denebForkTimestamp?: number;
   electraForkTimestamp?: number;
+  fuluForkTimestamp?: number;
 };
 
 type ExecutionBlock = {
@@ -50,6 +56,7 @@ const TX_TYPE_EIP1559 = 2;
 type PreparedPayload = {
   executionPayload: ExecutionPayloadRpc;
   blobsBundle: BlobsBundleRpc;
+  executionRequests: ExecutionRequestsRpc;
 };
 
 /**
@@ -84,6 +91,15 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       blockNumber: 0,
     });
 
+    const eth1BlockHash = opts.eth1BlockHash ?? toRootHex(INTEROP_BLOCK_HASH);
+
+    this.validBlocks.set(eth1BlockHash, {
+      parentHash: ZERO_HASH_HEX,
+      blockHash: eth1BlockHash,
+      timestamp: 0,
+      blockNumber: 1,
+    });
+
     this.handlers = {
       engine_newPayloadV1: this.notifyNewPayload.bind(this),
       engine_newPayloadV2: this.notifyNewPayload.bind(this),
@@ -92,14 +108,16 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       engine_forkchoiceUpdatedV1: this.notifyForkchoiceUpdate.bind(this),
       engine_forkchoiceUpdatedV2: this.notifyForkchoiceUpdate.bind(this),
       engine_forkchoiceUpdatedV3: this.notifyForkchoiceUpdate.bind(this),
-      engine_getPayloadV1: this.getPayload.bind(this),
-      engine_getPayloadV2: this.getPayload.bind(this),
-      engine_getPayloadV3: this.getPayload.bind(this),
-      engine_getPayloadV4: this.getPayload.bind(this),
+      engine_getPayloadV1: this.getPayloadV1.bind(this),
+      engine_getPayloadV2: this.getPayloadV5.bind(this),
+      engine_getPayloadV3: this.getPayloadV5.bind(this),
+      engine_getPayloadV4: this.getPayloadV5.bind(this),
+      engine_getPayloadV5: this.getPayloadV5.bind(this),
       engine_getPayloadBodiesByHashV1: this.getPayloadBodiesByHash.bind(this),
       engine_getPayloadBodiesByRangeV1: this.getPayloadBodiesByRange.bind(this),
       engine_getClientVersionV1: this.getClientVersionV1.bind(this),
       engine_getBlobsV1: this.getBlobs.bind(this),
+      engine_getBlobsV2: this.getBlobsV2.bind(this),
     };
   }
 
@@ -252,7 +270,6 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       // IF references an unknown payload or a payload that can't be validated because requisite data is missing
       // RETURN {payloadStatus: {status: SYNCING, latestValidHash: null, validationError: null}, payloadId: null}
       //
-      // > TODO: Implement
       return {
         payloadStatus: {status: ExecutionPayloadStatus.SYNCING, latestValidHash: null, validationError: null},
         payloadId: null,
@@ -317,9 +334,21 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       const blobs: deneb.Blob[] = [];
       const proofs: deneb.KZGProof[] = [];
 
-      // if post deneb, add between 0 and 2 blob transactions
-      if (ForkSeq[fork] >= ForkSeq.deneb) {
-        const denebTxCount = Math.round(2 * Math.random());
+      if (ForkSeq[fork] >= ForkSeq.fulu) {
+        // if post fulu, add between 0 and 3 data column transactions based on slot with BlobsBundleV2
+        const fuluTxCount = executionPayload.blockNumber % 4;
+        for (let i = 0; i < fuluTxCount; i++) {
+          const blob = generateRandomBlob();
+          const commitment = kzg.blobToKzgCommitment(blob);
+          const {proofs: cellProofs} = kzg.computeCellsAndKzgProofs(blob);
+          executionPayload.transactions.push(transactionForKzgCommitment(commitment));
+          commitments.push(commitment);
+          blobs.push(blob);
+          proofs.push(...cellProofs);
+        }
+      } else if (ForkSeq[fork] >= ForkSeq.deneb && ForkSeq[fork] < ForkSeq.fulu) {
+        // if post deneb, add between 0 and 2 blob transactions
+        const denebTxCount = executionPayload.blockNumber % 3;
         for (let i = 0; i < denebTxCount; i++) {
           const blob = generateRandomBlob();
           const commitment = kzg.blobToKzgCommitment(blob);
@@ -331,12 +360,21 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
         }
       }
 
+      if (ForkSeq[fork] >= ForkSeq.capella) {
+        (executionPayload as ExecutionPayload<ForkPostCapella>).withdrawals = ssz.capella.Withdrawals.defaultValue();
+      }
+
       this.preparingPayloads.set(payloadId, {
         executionPayload: serializeExecutionPayload(fork, executionPayload),
         blobsBundle: serializeBlobsBundle({
           commitments,
           blobs,
           proofs,
+        }),
+        executionRequests: serializeExecutionRequests({
+          deposits: ssz.electra.DepositRequests.defaultValue(),
+          withdrawals: ssz.electra.WithdrawalRequests.defaultValue(),
+          consolidations: ssz.electra.ConsolidationRequests.defaultValue(),
         }),
       });
 
@@ -364,9 +402,15 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
    * 2. The call MUST be responded with 5: Unavailable payload error if the building process identified by the payloadId doesn't exist.
    * 3. Client software MAY stop the corresponding building process after serving this call.
    */
-  private getPayload(
+  private getPayloadV1(
     payloadId: EngineApiRpcParamTypes["engine_getPayloadV1"][0]
   ): EngineApiRpcReturnTypes["engine_getPayloadV1"] {
+    return this.getPayloadV5(payloadId).executionPayload;
+  }
+
+  private getPayloadV5(
+    payloadId: EngineApiRpcParamTypes["engine_getPayloadV5"][0]
+  ): EngineApiRpcReturnTypes["engine_getPayloadV5"] {
     // 1. Given the payloadId client software MUST return the most recent version of the payload that is available in
     //    the corresponding build process at the time of receiving the call.
     const payloadIdNbr = Number(payloadId);
@@ -389,7 +433,12 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
     }
     this.payloadsForDeletion.set(payloadIdNbr, now);
 
-    return payload.executionPayload;
+    return {
+      executionPayload: payload.executionPayload,
+      blockValue: String(1e9),
+      blobsBundle: payload.blobsBundle,
+      executionRequests: payload.executionRequests,
+    };
   }
 
   private getClientVersionV1(
@@ -404,10 +453,17 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
     return versionedHashes.map((_vh) => null);
   }
 
+  private getBlobsV2(
+    _versionedHashes: EngineApiRpcParamTypes["engine_getBlobsV2"][0]
+  ): EngineApiRpcReturnTypes["engine_getBlobsV2"] {
+    return null;
+  }
+
   private timestampToFork(timestamp: number): ForkPostBellatrix {
-    if (timestamp > (this.opts.electraForkTimestamp ?? Infinity)) return ForkName.electra;
-    if (timestamp > (this.opts.denebForkTimestamp ?? Infinity)) return ForkName.deneb;
-    if (timestamp > (this.opts.capellaForkTimestamp ?? Infinity)) return ForkName.capella;
+    if (timestamp >= (this.opts.fuluForkTimestamp ?? Infinity)) return ForkName.fulu;
+    if (timestamp >= (this.opts.electraForkTimestamp ?? Infinity)) return ForkName.electra;
+    if (timestamp >= (this.opts.denebForkTimestamp ?? Infinity)) return ForkName.deneb;
+    if (timestamp >= (this.opts.capellaForkTimestamp ?? Infinity)) return ForkName.capella;
     return ForkName.bellatrix;
   }
 }

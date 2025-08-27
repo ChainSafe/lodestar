@@ -8,8 +8,20 @@ import {
   ForkSeq,
   WITHDRAWAL_REQUEST_TYPE,
 } from "@lodestar/params";
-import {ExecutionPayload, ExecutionRequests, Root, Wei, bellatrix, capella, deneb, electra, ssz} from "@lodestar/types";
+import {
+  BlobsBundle,
+  ExecutionPayload,
+  ExecutionRequests,
+  Root,
+  Wei,
+  bellatrix,
+  capella,
+  deneb,
+  electra,
+  ssz,
+} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
+import {BlobAndProofV2} from "@lodestar/types/fulu";
 
 import {
   DATA,
@@ -21,7 +33,6 @@ import {
   quantityToNum,
 } from "../../eth1/provider/utils.js";
 import {
-  BlobsBundle,
   ExecutionPayloadStatus,
   ExecutionRequestType,
   PayloadAttributes,
@@ -62,6 +73,7 @@ export type EngineApiRpcParamTypes = {
   engine_getPayloadV2: [QUANTITY];
   engine_getPayloadV3: [QUANTITY];
   engine_getPayloadV4: [QUANTITY];
+  engine_getPayloadV5: [QUANTITY];
 
   /**
    * 1. Array of DATA - Array of block_hash field values of the ExecutionPayload structure
@@ -80,6 +92,7 @@ export type EngineApiRpcParamTypes = {
   engine_getClientVersionV1: [ClientVersionRpc];
 
   engine_getBlobsV1: [DATA[]];
+  engine_getBlobsV2: [DATA[]];
 };
 
 export type PayloadStatus = {
@@ -116,6 +129,7 @@ export type EngineApiRpcReturnTypes = {
   engine_getPayloadV2: ExecutionPayloadResponse;
   engine_getPayloadV3: ExecutionPayloadResponse;
   engine_getPayloadV4: ExecutionPayloadResponse;
+  engine_getPayloadV5: ExecutionPayloadResponse;
 
   engine_getPayloadBodiesByHashV1: (ExecutionPayloadBodyRpc | null)[];
 
@@ -124,6 +138,7 @@ export type EngineApiRpcReturnTypes = {
   engine_getClientVersionV1: ClientVersionRpc[];
 
   engine_getBlobsV1: (BlobAndProofRpc | null)[];
+  engine_getBlobsV2: BlobAndProofV2Rpc[] | null;
 };
 
 type ExecutionPayloadRpcWithValue = {
@@ -134,7 +149,7 @@ type ExecutionPayloadRpcWithValue = {
   executionRequests?: ExecutionRequestsRpc;
   shouldOverrideBuilder?: boolean;
 };
-type ExecutionPayloadResponse = ExecutionPayloadRpc | ExecutionPayloadRpcWithValue;
+type ExecutionPayloadResponse = ExecutionPayloadRpcWithValue;
 
 export type ExecutionPayloadBodyRpc = {
   transactions: DATA[];
@@ -189,6 +204,11 @@ export type ConsolidationRequestsRpc = DATA;
 export type BlobAndProofRpc = {
   blob: DATA;
   proof: DATA;
+};
+
+export type BlobAndProofV2Rpc = {
+  blob: DATA;
+  proofs: DATA[];
 };
 
 export type VersionedHashesRpc = DATA[];
@@ -262,13 +282,15 @@ export function serializeVersionedHashes(vHashes: VersionedHashes): VersionedHas
   return vHashes.map(bytesToData);
 }
 
-export function hasPayloadValue(response: ExecutionPayloadResponse): response is ExecutionPayloadRpcWithValue {
+export function hasPayloadValue(
+  response: ExecutionPayloadResponse | ExecutionPayloadRpc
+): response is ExecutionPayloadRpcWithValue {
   return (response as ExecutionPayloadRpcWithValue).blockValue !== undefined;
 }
 
 export function parseExecutionPayload(
   fork: ForkName,
-  response: ExecutionPayloadResponse
+  response: ExecutionPayloadResponse | ExecutionPayloadRpc
 ): {
   executionPayload: ExecutionPayload;
   executionPayloadValue: Wei;
@@ -390,7 +412,7 @@ export function serializeBlobsBundle(data: BlobsBundle): BlobsBundleRpc {
   return {
     commitments: data.commitments.map((kzg) => bytesToData(kzg)),
     blobs: data.blobs.map((blob) => bytesToData(blob)),
-    proofs: data.blobs.map((proof) => bytesToData(proof)),
+    proofs: data.proofs.map((proof) => bytesToData(proof)),
   };
 }
 
@@ -561,6 +583,13 @@ export function deserializeBlobAndProofs(data: BlobAndProofRpc | null): BlobAndP
         proof: dataToBytes(data.proof, 48),
       }
     : null;
+}
+
+export function deserializeBlobAndProofsV2(data: BlobAndProofV2Rpc): BlobAndProofV2 {
+  return {
+    blob: dataToBytes(data.blob, BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB),
+    proofs: data.proofs.map((proof) => dataToBytes(proof, 48)),
+  };
 }
 
 export function assertReqSizeLimit(blockHashesReqCount: number, count: number): void {

@@ -9,7 +9,7 @@ import {routes} from "@lodestar/api";
 import {BeaconConfig, chainConfigToJson} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {ResponseIncoming, ResponseOutgoing} from "@lodestar/reqresp";
-import {phase0} from "@lodestar/types";
+import {Status} from "@lodestar/types";
 import {Metrics} from "../../metrics/index.js";
 import {AsyncIterableBridgeCaller, AsyncIterableBridgeHandler} from "../../util/asyncIterableToEvents.js";
 import {PeerIdStr, peerIdFromString} from "../../util/peerId.js";
@@ -37,7 +37,8 @@ export type WorkerNetworkCoreOpts = NetworkOptions & {
   peerStoreDir?: string;
   activeValidatorCount: number;
   genesisTime: number;
-  initialStatus: phase0.Status;
+  initialStatus: Status;
+  initialCustodyGroupCount: number;
 };
 
 export type WorkerNetworkCoreInitModules = {
@@ -104,7 +105,15 @@ export class WorkerNetworkCore implements INetworkCore {
 
   static async init(modules: WorkerNetworkCoreInitModules): Promise<WorkerNetworkCore> {
     const {opts, config, privateKey} = modules;
-    const {genesisTime, peerStoreDir, activeValidatorCount, localMultiaddrs, metricsEnabled, initialStatus} = opts;
+    const {
+      genesisTime,
+      peerStoreDir,
+      activeValidatorCount,
+      localMultiaddrs,
+      metricsEnabled,
+      initialStatus,
+      initialCustodyGroupCount,
+    } = opts;
 
     const workerData: NetworkWorkerData = {
       opts,
@@ -116,6 +125,7 @@ export class WorkerNetworkCore implements INetworkCore {
       peerStoreDir,
       genesisTime,
       initialStatus,
+      initialCustodyGroupCount,
       activeValidatorCount,
       loggerOpts: modules.logger.toOpts(),
     };
@@ -172,7 +182,7 @@ export class WorkerNetworkCore implements INetworkCore {
     return this.getApi().scrapeMetrics();
   }
 
-  updateStatus(status: phase0.Status): Promise<void> {
+  updateStatus(status: Status): Promise<void> {
     return this.getApi().updateStatus(status);
   }
   reStatusPeers(peers: PeerIdStr[]): Promise<void> {
@@ -215,6 +225,12 @@ export class WorkerNetworkCore implements INetworkCore {
   }
   publishGossip(topic: string, data: Uint8Array, opts?: PublishOpts): Promise<number> {
     return this.getApi().publishGossip(topic, data, opts);
+  }
+
+  // Custody
+
+  setTargetGroupCount(count: number): Promise<void> {
+    return this.getApi().setTargetGroupCount(count);
   }
 
   // Debug

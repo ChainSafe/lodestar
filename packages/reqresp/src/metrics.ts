@@ -1,11 +1,12 @@
-import {MetricsRegister} from "@lodestar/utils";
+import {MetricsRegisterExtra} from "@lodestar/utils";
+import {RequestErrorCode} from "./request/errors.js";
 
 export type Metrics = ReturnType<typeof getMetrics>;
 
 /**
  * A collection of metrics used throughout the Gossipsub behaviour.
  */
-export function getMetrics(register: MetricsRegister) {
+export function getMetrics(register: MetricsRegisterExtra) {
   // Using function style instead of class to prevent having to re-declare all MetricsPrometheus types.
 
   return {
@@ -25,6 +26,11 @@ export function getMetrics(register: MetricsRegister) {
       name: "beacon_reqresp_outgoing_requests_error_total",
       help: "Counts total failed requests done per method",
       labelNames: ["method"],
+    }),
+    outgoingErrorReasons: register.gauge<{reason: RequestErrorCode}>({
+      name: "beacon_reqresp_outgoing_requests_error_reason_total",
+      help: "Count total outgoing request errors by reason",
+      labelNames: ["reason"],
     }),
     incomingRequests: register.gauge<{method: string}>({
       name: "beacon_reqresp_incoming_requests_total",
@@ -60,6 +66,10 @@ export function getMetrics(register: MetricsRegister) {
     dialErrors: register.gauge({
       name: "beacon_reqresp_dial_errors_total",
       help: "Count total dial errors",
+    }),
+    selfRateLimiterPeerCount: register.gauge({
+      name: "beacon_reqresp_self_rate_limiter_peer_count",
+      help: "Count of peers tracked by the self rate limiter",
     }),
   };
 }

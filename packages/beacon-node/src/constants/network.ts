@@ -18,6 +18,7 @@ export const MAX_CHUNK_SIZE = 2 ** 20;
 export const MAX_CHUNK_SIZE_BELLATRIX = 10 * MAX_CHUNK_SIZE;
 
 export enum GoodByeReasonCode {
+  INBOUND_DISCONNECT = -1,
   CLIENT_SHUTDOWN = 1,
   IRRELEVANT_NETWORK = 2,
   ERROR = 3,
@@ -27,6 +28,7 @@ export enum GoodByeReasonCode {
 }
 
 export const GOODBYE_KNOWN_CODES: Record<string, string> = {
+  "-1": "InboundDisconnect",
   0: "Unknown",
 
   // spec-defined codes

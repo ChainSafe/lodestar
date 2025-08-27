@@ -1,18 +1,24 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkPostBellatrix, ForkSeq} from "@lodestar/params";
+import {
+  ForkName,
+  ForkPostBellatrix,
+  ForkPostDeneb,
+  ForkSeq,
+  isForkPostBellatrix,
+  isForkPostDeneb,
+} from "@lodestar/params";
 import {
   BeaconBlock,
   BeaconBlockHeader,
   BlindedBeaconBlock,
   BlobsBundle,
-  Contents,
   ExecutionPayload,
   ExecutionPayloadAndBlobsBundle,
   ExecutionPayloadHeader,
   Root,
   SignedBeaconBlock,
-  SignedBeaconBlockOrContents,
   SignedBlindedBeaconBlock,
+  SignedBlockContents,
   isBlindedBeaconBlock,
   isExecutionPayloadAndBlobsBundle,
 } from "@lodestar/types";
@@ -78,9 +84,14 @@ export function signedBeaconBlockToBlinded(
 }
 
 export function signedBlindedBlockToFull(
+  fork: ForkName,
   signedBlindedBlock: SignedBlindedBeaconBlock,
   executionPayload: ExecutionPayload | null
 ): SignedBeaconBlock {
+  if (isForkPostBellatrix(fork) && executionPayload === null) {
+    throw Error("Missing executionPayload to reconstruct post-bellatrix full block");
+  }
+
   const signedBlock = {
     ...signedBlindedBlock,
     message: {
@@ -112,24 +123,23 @@ export function parseExecutionPayloadAndBlobsBundle(data: ExecutionPayload | Exe
   };
 }
 
-export function reconstructFullBlockOrContents(
+export function reconstructSignedBlockContents(
+  fork: ForkName,
   signedBlindedBlock: SignedBlindedBeaconBlock,
-  {
-    executionPayload,
-    contents,
-  }: {
-    executionPayload: ExecutionPayload | null;
-    contents: Contents | null;
-  }
-): SignedBeaconBlockOrContents {
-  const signedBlock = signedBlindedBlockToFull(signedBlindedBlock, executionPayload);
+  executionPayload: ExecutionPayload | null,
+  blobsBundle: BlobsBundle | null
+): SignedBlockContents {
+  const signedBlock = signedBlindedBlockToFull(fork, signedBlindedBlock, executionPayload);
 
-  if (contents !== null) {
-    if (executionPayload === null) {
-      throw Error("Missing locally produced executionPayload for deneb+ publishBlindedBlock");
+  if (isForkPostDeneb(fork)) {
+    if (blobsBundle === null) {
+      throw Error("Missing blobs bundle to reconstruct post-deneb block contents");
     }
-
-    return {signedBlock, ...contents} as SignedBeaconBlockOrContents;
+    return {
+      signedBlock: signedBlock as SignedBeaconBlock<ForkPostDeneb>,
+      kzgProofs: blobsBundle.proofs,
+      blobs: blobsBundle.blobs,
+    };
   }
-  return signedBlock as SignedBeaconBlockOrContents;
+  return {signedBlock};
 }

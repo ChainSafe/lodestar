@@ -23,6 +23,7 @@ export interface NetworkOptions
   useWorker?: boolean;
   maxYoungGenerationSizeMb?: number;
   disableLightClientServer?: boolean;
+  supernode?: boolean;
 
   /**
    * During E2E tests observe a lot of following `missing stream`:
@@ -45,8 +46,8 @@ export interface NetworkOptions
 }
 
 export const defaultNetworkOptions: NetworkOptions = {
-  maxPeers: 110, // Allow some room above targetPeers for new inbound peers
-  targetPeers: 100,
+  maxPeers: 210, // Allow some room above targetPeers for new inbound peers
+  targetPeers: 200,
   localMultiaddrs: ["/ip4/0.0.0.0/tcp/9000"],
   bootMultiaddrs: [],
   /** disabled by default */
@@ -61,4 +62,9 @@ export const defaultNetworkOptions: NetworkOptions = {
   slotsToSubscribeBeforeAggregatorDuty: 2,
   // This will enable the light client server by default
   disableLightClientServer: false,
+  // specific option for fulu
+  //   - this is the same to TARGET_SUBNET_PEERS
+  //   - for fusaka-devnets, we have 25-30 peers per subnet
+  //   - for public testnets or mainnet, average number of peers per group is SAMPLES_PER_SLOT * targetPeers / NUMBER_OF_CUSTODY_GROUPS = 6.25 so this should not be an issue
+  targetGroupPeers: 6,
 };

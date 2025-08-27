@@ -5,7 +5,7 @@ import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
-import {ForkSeq} from "@lodestar/params";
+import {ForkSeq, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
 import {computeEpochAtSlot, computeTimeAtSlot} from "@lodestar/state-transition";
 import {
@@ -24,15 +24,19 @@ import {
   altair,
   capella,
   deneb,
+  fulu,
   phase0,
 } from "@lodestar/types";
-import {sleep} from "@lodestar/utils";
-import {IBeaconChain} from "../chain/index.js";
+import {prettyPrintIndices, sleep} from "@lodestar/utils";
+import {ChainEvent, IBeaconChain} from "../chain/index.js";
+import {computeSubnetForDataColumnSidecar} from "../chain/validation/dataColumnSidecar.js";
 import {IBeaconDb} from "../db/interface.js";
 import {Metrics, RegistryMetricCreator} from "../metrics/index.js";
 import {IClock} from "../util/clock.js";
+import {CustodyConfig} from "../util/dataColumns.js";
 import {PeerIdStr, peerIdToString} from "../util/peerId.js";
-import {BlobSidecarsByRootRequest} from "../util/types.js";
+import {promiseAllMaybeAsync} from "../util/promises.js";
+import {BeaconBlocksByRootRequest, BlobSidecarsByRootRequest, DataColumnSidecarsByRootRequest} from "../util/types.js";
 import {INetworkCore, NetworkCore, WorkerNetworkCore} from "./core/index.js";
 import {INetworkEventBus, NetworkEvent, NetworkEventBus, NetworkEventData} from "./events.js";
 import {getActiveForkBoundaries} from "./forks.js";
@@ -41,6 +45,7 @@ import {getGossipSSZType, gossipTopicIgnoreDuplicatePublishError, stringifyGossi
 import {INetwork} from "./interface.js";
 import {NetworkOptions} from "./options.js";
 import {PeerAction, PeerScoreStats} from "./peers/index.js";
+import {PeerSyncMeta} from "./peers/peersData.js";
 import {AggregatorTracker} from "./processor/aggregatorTracker.js";
 import {NetworkProcessor, PendingGossipsubMessage} from "./processor/index.js";
 import {ReqRespMethod} from "./reqresp/index.js";
@@ -52,7 +57,7 @@ import {
 } from "./reqresp/utils/collect.js";
 import {collectSequentialBlocksInRange} from "./reqresp/utils/collectSequentialBlocksInRange.js";
 import {CommitteeSubscription} from "./subnets/index.js";
-import {isPublishToZeroPeersError} from "./util.js";
+import {isPublishToZeroPeersError, prettyPrintPeerIdStr} from "./util.js";
 
 type NetworkModules = {
   opts: NetworkOptions;
@@ -90,6 +95,7 @@ export type NetworkInitModules = {
  */
 export class Network implements INetwork {
   readonly peerId: PeerId;
+  readonly custodyConfig: CustodyConfig;
   // TODO: Make private
   readonly events: INetworkEventBus;
 
@@ -106,11 +112,12 @@ export class Network implements INetwork {
   private readonly aggregatorTracker: AggregatorTracker;
 
   private subscribedToCoreTopics = false;
-  private connectedPeers = new Set<PeerIdStr>();
+  private connectedPeersSyncMeta = new Map<PeerIdStr, Omit<PeerSyncMeta, "peerId">>();
 
   constructor(modules: NetworkModules) {
     this.peerId = peerIdFromPrivateKey(modules.privateKey);
     this.config = modules.config;
+    this.custodyConfig = modules.chain.custodyConfig;
     this.logger = modules.logger;
     this.chain = modules.chain;
     this.clock = modules.chain.clock;
@@ -129,6 +136,9 @@ export class Network implements INetwork {
     this.chain.emitter.on(routes.events.EventType.lightClientOptimisticUpdate, ({data}) =>
       this.onLightClientOptimisticUpdate(data)
     );
+    this.chain.emitter.on(ChainEvent.updateTargetCustodyGroupCount, this.onTargetGroupCountUpdated);
+    this.chain.emitter.on(ChainEvent.publishDataColumns, this.onPublishDataColumns);
+    this.chain.emitter.on(ChainEvent.updateStatus, this.onUpdateStatus);
   }
 
   static async init({
@@ -148,6 +158,7 @@ export class Network implements INetwork {
 
     const activeValidatorCount = chain.getHeadState().epochCtx.currentShuffling.activeIndices.length;
     const initialStatus = chain.getStatus();
+    const initialCustodyGroupCount = chain.custodyConfig.targetCustodyGroupCount;
 
     if (opts.useWorker) {
       logger.info("running libp2p instance in worker thread");
@@ -162,6 +173,7 @@ export class Network implements INetwork {
             activeValidatorCount,
             genesisTime: chain.genesisTime,
             initialStatus,
+            initialCustodyGroupCount,
           },
           config,
           privateKey,
@@ -181,6 +193,7 @@ export class Network implements INetwork {
           getReqRespHandler,
           metricsRegistry: metrics ? new RegistryMetricCreator() : null,
           initialStatus,
+          initialCustodyGroupCount,
           activeValidatorCount,
         });
 
@@ -219,6 +232,9 @@ export class Network implements INetwork {
     this.chain.emitter.off(routes.events.EventType.head, this.onHead);
     this.chain.emitter.off(routes.events.EventType.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
     this.chain.emitter.off(routes.events.EventType.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
+    this.chain.emitter.off(ChainEvent.updateTargetCustodyGroupCount, this.onTargetGroupCountUpdated);
+    this.chain.emitter.off(ChainEvent.publishDataColumns, this.onPublishDataColumns);
+    this.chain.emitter.off(ChainEvent.updateStatus, this.onUpdateStatus);
     await this.core.close();
 
     // Used only for sleep() statements
@@ -265,10 +281,19 @@ export class Network implements INetwork {
 
   // REST API queries
   getConnectedPeers(): PeerIdStr[] {
-    return Array.from(this.connectedPeers.values());
+    return Array.from(this.connectedPeersSyncMeta.keys());
   }
+
+  getConnectedPeerSyncMeta(peerId: PeerIdStr): PeerSyncMeta {
+    const syncMeta = this.connectedPeersSyncMeta.get(peerId);
+    if (!syncMeta) {
+      throw new Error(`peerId=${prettyPrintPeerIdStr(peerId)} not in connectedPeerSyncMeta`);
+    }
+    return {peerId, ...syncMeta};
+  }
+
   getConnectedPeerCount(): number {
-    return this.connectedPeers.size;
+    return this.connectedPeersSyncMeta.size;
   }
 
   async getNetworkIdentity(): Promise<routes.node.NetworkIdentity> {
@@ -325,6 +350,25 @@ export class Network implements INetwork {
     return this.publishGossip<GossipType.blob_sidecar>({type: GossipType.blob_sidecar, boundary, subnet}, blobSidecar, {
       ignoreDuplicatePublishError: true,
     });
+  }
+
+  async publishDataColumnSidecar(dataColumnSidecar: fulu.DataColumnSidecar): Promise<number> {
+    const epoch = computeEpochAtSlot(dataColumnSidecar.signedBlockHeader.message.slot);
+    const boundary = this.config.getForkBoundaryAtEpoch(epoch);
+
+    const subnet = computeSubnetForDataColumnSidecar(this.config, dataColumnSidecar);
+    return this.publishGossip<GossipType.data_column_sidecar>(
+      {type: GossipType.data_column_sidecar, boundary, subnet},
+      dataColumnSidecar,
+      {
+        ignoreDuplicatePublishError: true,
+        // we ensure having all topic peers via prioritizePeers() function
+        // in the worse case, if there is 0 peer on the topic, the overall publish operation could be still a success
+        // because supernode will rebuild and publish missing data column sidecars for us
+        // hence we want to track sent peers as 0 instead of an error
+        allowPublishToZeroTopicPeers: true,
+      }
+    );
   }
 
   async publishBeaconAggregateAndProof(aggregateAndProof: SignedAggregateAndProof): Promise<number> {
@@ -472,7 +516,7 @@ export class Network implements INetwork {
         peerId,
         ReqRespMethod.BeaconBlocksByRange,
         // Before altair, prioritize V2. After altair only request V2
-        this.config.getForkSeq(this.clock.currentSlot) >= ForkSeq.altair ? [Version.V2] : [(Version.V2, Version.V1)],
+        this.config.getForkSeq(this.clock.currentSlot) >= ForkSeq.altair ? [Version.V2] : [Version.V2, Version.V1],
         request
       ),
       request
@@ -481,14 +525,14 @@ export class Network implements INetwork {
 
   async sendBeaconBlocksByRoot(
     peerId: PeerIdStr,
-    request: phase0.BeaconBlocksByRootRequest
+    request: BeaconBlocksByRootRequest
   ): Promise<WithBytes<SignedBeaconBlock>[]> {
     return collectMaxResponseTypedWithBytes(
       this.sendReqRespRequest(
         peerId,
         ReqRespMethod.BeaconBlocksByRoot,
         // Before altair, prioritize V2. After altair only request V2
-        this.config.getForkSeq(this.clock.currentSlot) >= ForkSeq.altair ? [Version.V2] : [(Version.V2, Version.V1)],
+        this.config.getForkSeq(this.clock.currentSlot) >= ForkSeq.altair ? [Version.V2] : [Version.V2, Version.V1],
         request
       ),
       request.length,
@@ -546,6 +590,29 @@ export class Network implements INetwork {
       this.sendReqRespRequest(peerId, ReqRespMethod.BlobSidecarsByRoot, [Version.V1], request),
       request.length,
       responseSszTypeByMethod[ReqRespMethod.BlobSidecarsByRoot]
+    );
+  }
+
+  async sendDataColumnSidecarsByRange(
+    peerId: PeerIdStr,
+    request: fulu.DataColumnSidecarsByRangeRequest
+  ): Promise<fulu.DataColumnSidecar[]> {
+    return collectMaxResponseTyped(
+      this.sendReqRespRequest(peerId, ReqRespMethod.DataColumnSidecarsByRange, [Version.V1], request),
+      // request's count represent the slots, so the actual max count received could be slots * blobs per slot
+      request.count * NUMBER_OF_COLUMNS,
+      responseSszTypeByMethod[ReqRespMethod.DataColumnSidecarsByRange]
+    );
+  }
+
+  async sendDataColumnSidecarsByRoot(
+    peerId: PeerIdStr,
+    request: DataColumnSidecarsByRootRequest
+  ): Promise<fulu.DataColumnSidecar[]> {
+    return collectMaxResponseTyped(
+      this.sendReqRespRequest(peerId, ReqRespMethod.DataColumnSidecarsByRoot, [Version.V1], request),
+      request.reduce((total, {columns}) => total + columns.length, 0),
+      responseSszTypeByMethod[ReqRespMethod.DataColumnSidecarsByRoot]
     );
   }
 
@@ -658,14 +725,38 @@ export class Network implements INetwork {
   };
 
   private onHead = async (): Promise<void> => {
-    await this.core.updateStatus(this.chain.getStatus());
+    await this.onUpdateStatus();
   };
 
   private onPeerConnected = (data: NetworkEventData[NetworkEvent.peerConnected]): void => {
-    this.connectedPeers.add(data.peer);
+    const {peer, clientAgent, custodyGroups, status} = data;
+    const earliestAvailableSlot = (status as fulu.Status).earliestAvailableSlot;
+    this.logger.verbose("onPeerConnected", {
+      peer,
+      clientAgent,
+      custodyGroups: prettyPrintIndices(custodyGroups),
+      earliestAvailableSlot: earliestAvailableSlot ?? "pre-fulu",
+    });
+    this.connectedPeersSyncMeta.set(peer, {
+      client: clientAgent,
+      custodyGroups,
+      earliestAvailableSlot, // can be undefined pre-fulu
+    });
   };
 
   private onPeerDisconnected = (data: NetworkEventData[NetworkEvent.peerDisconnected]): void => {
-    this.connectedPeers.delete(data.peer);
+    this.connectedPeersSyncMeta.delete(data.peer);
+  };
+
+  private onTargetGroupCountUpdated = (count: number): void => {
+    this.core.setTargetGroupCount(count);
+  };
+
+  private onPublishDataColumns = (sidecars: fulu.DataColumnSidecar[]): Promise<number[]> => {
+    return promiseAllMaybeAsync(sidecars.map((sidecar) => () => this.publishDataColumnSidecar(sidecar)));
+  };
+
+  private onUpdateStatus = async (): Promise<void> => {
+    await this.core.updateStatus(this.chain.getStatus());
   };
 }

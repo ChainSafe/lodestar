@@ -1,11 +1,5 @@
 import {BeaconConfig} from "@lodestar/config";
-import {
-  ForkName,
-  MAX_REQUEST_BLOCKS,
-  MAX_REQUEST_BLOCKS_DENEB,
-  MAX_REQUEST_LIGHT_CLIENT_UPDATES,
-  isForkPostDeneb,
-} from "@lodestar/params";
+import {ForkName, MAX_REQUEST_LIGHT_CLIENT_UPDATES, isForkPostDeneb} from "@lodestar/params";
 import {InboundRateLimitQuota} from "@lodestar/reqresp";
 import {ReqRespMethod, RequestBodyByMethod, requestSszTypeByMethod} from "./types.js";
 
@@ -32,12 +26,18 @@ export const rateLimitQuotas: (fork: ForkName, config: BeaconConfig) => Record<R
   // Do not matter
   [ReqRespMethod.BeaconBlocksByRange]: {
     // Rationale: https://github.com/sigp/lighthouse/blob/bf533c8e42cc73c35730e285c21df8add0195369/beacon_node/lighthouse_network/src/rpc/mod.rs#L118-L130
-    byPeer: {quota: isForkPostDeneb(fork) ? MAX_REQUEST_BLOCKS_DENEB : MAX_REQUEST_BLOCKS, quotaTimeMs: 10_000},
+    byPeer: {
+      quota: isForkPostDeneb(fork) ? config.MAX_REQUEST_BLOCKS_DENEB : config.MAX_REQUEST_BLOCKS,
+      quotaTimeMs: 10_000,
+    },
     getRequestCount: getRequestCountFn(fork, config, ReqRespMethod.BeaconBlocksByRange, (req) => req.count),
   },
   [ReqRespMethod.BeaconBlocksByRoot]: {
     // Rationale: https://github.com/sigp/lighthouse/blob/bf533c8e42cc73c35730e285c21df8add0195369/beacon_node/lighthouse_network/src/rpc/mod.rs#L118-L130
-    byPeer: {quota: isForkPostDeneb(fork) ? MAX_REQUEST_BLOCKS_DENEB : MAX_REQUEST_BLOCKS, quotaTimeMs: 10_000},
+    byPeer: {
+      quota: isForkPostDeneb(fork) ? config.MAX_REQUEST_BLOCKS_DENEB : config.MAX_REQUEST_BLOCKS,
+      quotaTimeMs: 10_000,
+    },
     getRequestCount: getRequestCountFn(fork, config, ReqRespMethod.BeaconBlocksByRoot, (req) => req.length),
   },
   [ReqRespMethod.BlobSidecarsByRange]: {
@@ -49,6 +49,16 @@ export const rateLimitQuotas: (fork: ForkName, config: BeaconConfig) => Record<R
     // Rationale: quota of BeaconBlocksByRoot * MAX_BLOBS_PER_BLOCK
     byPeer: {quota: config.getMaxRequestBlobSidecars(fork), quotaTimeMs: 10_000},
     getRequestCount: getRequestCountFn(fork, config, ReqRespMethod.BlobSidecarsByRoot, (req) => req.length),
+  },
+  [ReqRespMethod.DataColumnSidecarsByRange]: {
+    // Rationale: MAX_REQUEST_BLOCKS_DENEB * NUMBER_OF_COLUMNS
+    byPeer: {quota: config.MAX_REQUEST_DATA_COLUMN_SIDECARS, quotaTimeMs: 10_000},
+    getRequestCount: getRequestCountFn(fork, config, ReqRespMethod.DataColumnSidecarsByRange, (req) => req.count),
+  },
+  [ReqRespMethod.DataColumnSidecarsByRoot]: {
+    // Rationale: quota of BeaconBlocksByRoot * NUMBER_OF_COLUMNS
+    byPeer: {quota: config.MAX_REQUEST_DATA_COLUMN_SIDECARS, quotaTimeMs: 10_000},
+    getRequestCount: getRequestCountFn(fork, config, ReqRespMethod.DataColumnSidecarsByRoot, (req) => req.length),
   },
   [ReqRespMethod.LightClientBootstrap]: {
     // As similar in the nature of `Status` protocol so we use the same rate limits.

@@ -9,9 +9,9 @@ import {
 import {
   BYTES_PER_FIELD_ELEMENT,
   FIELD_ELEMENTS_PER_CELL,
+  FIELD_ELEMENTS_PER_EXT_BLOB,
   KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH,
   MAX_BLOB_COMMITMENTS_PER_BLOCK,
-  MAX_REQUEST_DATA_COLUMN_SIDECARS,
   MIN_SEED_LOOKAHEAD,
   NUMBER_OF_COLUMNS,
   SLOTS_PER_EPOCH,
@@ -25,6 +25,9 @@ import {ssz as primitiveSsz} from "../primitive/index.js";
 
 const {Root, ColumnIndex, RowIndex, Bytes32, Slot, UintNum64, ValidatorIndex} = primitiveSsz;
 
+export const KZGProof = denebSsz.KZGProof;
+export const Blob = denebSsz.Blob;
+
 export const Metadata = new ContainerType(
   {
     ...altairSsz.Metadata.fields,
@@ -32,11 +35,23 @@ export const Metadata = new ContainerType(
   },
   {typeName: "Metadata", jsonCase: "eth2"}
 );
+export const Status = new ContainerType(
+  {
+    ...phase0Ssz.Status.fields,
+    earliestAvailableSlot: Slot,
+  },
+  {typeName: "Status", jsonCase: "eth2"}
+);
 
 export const Cell = new ByteVectorType(BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_CELL);
 export const DataColumn = new ListCompositeType(Cell, MAX_BLOB_COMMITMENTS_PER_BLOCK);
+export const DataColumns = new ListCompositeType(DataColumn, NUMBER_OF_COLUMNS);
 export const ExtendedMatrix = new ListCompositeType(Cell, MAX_BLOB_COMMITMENTS_PER_BLOCK * NUMBER_OF_COLUMNS);
 export const KzgCommitmentsInclusionProof = new VectorCompositeType(Bytes32, KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH);
+export const KZGProofs = new ListCompositeType(
+  denebSsz.KZGProof,
+  FIELD_ELEMENTS_PER_EXT_BLOB * MAX_BLOB_COMMITMENTS_PER_BLOCK
+);
 export const ProposerLookahead = new VectorBasicType(ValidatorIndex, (MIN_SEED_LOOKAHEAD + 1) * SLOTS_PER_EPOCH);
 
 export const DataColumnSidecar = new ContainerType(
@@ -63,17 +78,15 @@ export const MatrixEntry = new ContainerType(
   {typeName: "MatrixEntry", jsonCase: "eth2"}
 );
 
-export const DataColumnIdentifier = new ContainerType(
+// ReqResp types
+// =============
+
+export const DataColumnsByRootIdentifier = new ContainerType(
   {
     blockRoot: Root,
-    index: ColumnIndex,
+    columns: new ListBasicType(ColumnIndex, NUMBER_OF_COLUMNS),
   },
-  {typeName: "DataColumnIdentifier", jsonCase: "eth2"}
-);
-
-export const DataColumnSidecarsByRootRequest = new ListCompositeType(
-  DataColumnIdentifier,
-  MAX_REQUEST_DATA_COLUMN_SIDECARS
+  {typeName: "DataColumnsByRootIdentifier", jsonCase: "eth2"}
 );
 
 export const DataColumnSidecarsByRangeRequest = new ContainerType(
@@ -85,10 +98,42 @@ export const DataColumnSidecarsByRangeRequest = new ContainerType(
   {typeName: "DataColumnSidecarsByRangeRequest", jsonCase: "eth2"}
 );
 
+// Explicit aliases for a few common types
+export const BeaconBlock = electraSsz.BeaconBlock;
+export const SignedBeaconBlock = electraSsz.SignedBeaconBlock;
+
+// Containers
+export const BlobsBundle = new ContainerType(
+  {
+    commitments: denebSsz.BlobKzgCommitments,
+    proofs: KZGProofs,
+    blobs: denebSsz.Blobs,
+  },
+  {typeName: "BlobsBundle", jsonCase: "eth2"}
+);
+
 export const BeaconState = new ContainerType(
   {
     ...electraSsz.BeaconState.fields,
     proposerLookahead: ProposerLookahead, // New in FULU:EIP7917
   },
   {typeName: "BeaconState", jsonCase: "eth2"}
+);
+
+export const BlockContents = new ContainerType(
+  {
+    block: electraSsz.BeaconBlock,
+    kzgProofs: KZGProofs,
+    blobs: denebSsz.Blobs,
+  },
+  {typeName: "BlockContents", jsonCase: "eth2"}
+);
+
+export const SignedBlockContents = new ContainerType(
+  {
+    signedBlock: electraSsz.SignedBeaconBlock,
+    kzgProofs: KZGProofs,
+    blobs: denebSsz.Blobs,
+  },
+  {typeName: "SignedBlockContents", jsonCase: "eth2"}
 );
