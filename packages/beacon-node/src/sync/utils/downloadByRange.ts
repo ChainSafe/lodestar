@@ -27,6 +27,10 @@ export type DownloadByRangeResponses = {
   columnSidecars?: fulu.DataColumnSidecars;
 };
 
+export type ValidatedDownloadByRangeResponses = DownloadByRangeResponses & {
+  blockRoots?: Uint8Array[];
+};
+
 export type DownloadAndCacheByRangeProps = DownloadByRangeRequests & {
   config: ChainForkConfig;
   cache: SeenBlockInput;
@@ -34,6 +38,7 @@ export type DownloadAndCacheByRangeProps = DownloadByRangeRequests & {
   logger: Logger;
   peerIdStr: string;
   daOutOfRange: boolean;
+  batchBlocks?: IBlockInput[];
 };
 
 export type DownloadAndCacheByRangeResults = {
@@ -48,7 +53,7 @@ export type CacheByRangeResponsesProps = {
   cache: SeenBlockInput;
   syncType: RangeSyncType;
   peerIdStr: PeerIdStr;
-  responses: DownloadByRangeResponses;
+  responses: ValidatedDownloadByRangeResponses;
   batchBlocks: IBlockInput[];
 };
 
@@ -64,9 +69,12 @@ export function cacheByRangeResponses({
   const seenTimestampSec = Date.now() / 1000;
   const updatedBatchBlocks = [...batchBlocks];
 
-  for (const block of responses.blocks ?? []) {
+  const blocks = responses.blocks ?? [];
+  const blockRoots = responses.blockRoots ?? [];
+  for (let i = 0; i < blocks.length; i++) {
+    const block = blocks[i];
     const existing = updatedBatchBlocks.find((b) => b.slot === block.message.slot);
-    const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
+    const blockRoot = blockRoots[i] ?? config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
     const blockRootHex = toRootHex(blockRoot);
     if (existing) {
       // will throw if root hex does not match (meaning we are following the wrong chain)
@@ -181,18 +189,14 @@ export async function downloadByRange({
   network,
   logger,
   peerIdStr,
-  daOutOfRange,
+  batchBlocks,
   blocksRequest,
   blobsRequest,
   columnsRequest,
-}: Omit<DownloadAndCacheByRangeProps, "cache">): Promise<DownloadByRangeResponses> {
-  const slotRangeString = validateRequests({
-    config,
-    daOutOfRange,
-    blocksRequest,
-    blobsRequest,
-    columnsRequest,
-  });
+}: Omit<DownloadAndCacheByRangeProps, "cache">): Promise<ValidatedDownloadByRangeResponses> {
+  const startSlot = (blocksRequest?.startSlot ?? blobsRequest?.startSlot ?? columnsRequest?.startSlot) as number;
+  const count = (blocksRequest?.count ?? blobsRequest?.count ?? columnsRequest?.count) as number;
+  const slotRangeString = `${startSlot} - ${startSlot + count}`;
 
   let response: DownloadByRangeResponses;
   try {
@@ -212,16 +216,18 @@ export async function downloadByRange({
     });
   }
 
-  validateResponses({
+  const blockRoots = validateResponses({
+    config,
     peerIdStr,
     slotRangeString,
     blocksRequest,
     blobsRequest,
     columnsRequest,
+    batchBlocks,
     ...response,
   });
 
-  return response;
+  return {...response, blockRoots};
 }
 
 /**
@@ -386,6 +392,7 @@ export async function requestByRange({
  * Should not be called directly. Only exported for unit testing purposes
  */
 export function validateResponses({
+  config,
   peerIdStr,
   slotRangeString,
   blocksRequest,
@@ -394,17 +401,27 @@ export function validateResponses({
   blocks,
   blobSidecars,
   columnSidecars,
-}: DownloadByRangeRequests & DownloadByRangeResponses & {peerIdStr: string; slotRangeString: string}): void {
-  if (!blocks) {
+  batchBlocks,
+}: DownloadByRangeRequests &
+  DownloadByRangeResponses & {
+    config: ChainForkConfig;
+    peerIdStr: string;
+    slotRangeString: string;
+    batchBlocks?: IBlockInput[];
+  }): Uint8Array[] | undefined {
+  // Blocks are always required for blob/column validation
+  // If a blocksRequest is provided, blocks have just been downloaded
+  // If no blocksRequest is provided, batchBlocks must have been provided from cache
+  if (blocksRequest && !blocks) {
     throw new DownloadByRangeError(
       {
         code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
         slotRange: slotRangeString,
       },
-      "No blocks to validate requests against"
+      "No blocks request to validate requests against"
     );
   }
-  if (!blocksRequest) {
+  if (!blocksRequest && !batchBlocks) {
     throw new DownloadByRangeError(
       {
         code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
@@ -414,39 +431,10 @@ export function validateResponses({
     );
   }
 
-  const {missingSlots, extraSlots} = compareBlockByRangeRequestAndResponse(blocksRequest, blocks);
-  if (missingSlots) {
-    throw new DownloadByRangeError(
-      {
-        code: DownloadByRangeErrorCode.MISSING_BLOCKS,
-        peerId: prettyPrintPeerIdStr(peerIdStr),
-        missingSlots: prettyPrintIndices(missingSlots),
-      },
-      "Not all blocks included in BeaconBlocksByRange response"
-    );
-  }
-  if (extraSlots) {
-    // extra slots array is allocated when checking requested length against returned array length.  If there are no
-    // extras found that means there are duplicates
-    if (extraSlots.length === 0) {
-      throw new DownloadByRangeError(
-        {
-          code: DownloadByRangeErrorCode.DUPLICATE_BLOCKS,
-          peerId: prettyPrintPeerIdStr(peerIdStr),
-        },
-        "Duplicate blocks in BeaconBlocksByRange response"
-      );
-    }
+  // Set blocks for validation below
+  blocks = blocks ?? batchBlocks?.map((blockInput) => blockInput.getBlock()) ?? [];
 
-    throw new DownloadByRangeError(
-      {
-        code: DownloadByRangeErrorCode.EXTRA_BLOCKS,
-        peerId: prettyPrintPeerIdStr(peerIdStr),
-        extraSlots: prettyPrintIndices(extraSlots),
-      },
-      "Extra blocks outside of requested range in BeaconBlocksByRange response"
-    );
-  }
+  const blockRoots = blocksRequest ? validateBlockByRangeResponse(config, blocksRequest, blocks) : undefined;
 
   if (blobsRequest) {
     if (!blobSidecars) {
@@ -458,6 +446,7 @@ export function validateResponses({
         "No blobSidecars to validate against blobsRequest"
       );
     }
+
     const {
       expectedBlobCount,
       missingBlobCount,
@@ -574,45 +563,51 @@ export function validateResponses({
       });
     }
   }
+  return blockRoots;
 }
 
 /**
  * Should not be called directly. Only exported for unit testing purposes
  */
-export function compareBlockByRangeRequestAndResponse(
+export function validateBlockByRangeResponse(
+  config: ChainForkConfig,
   blocksRequest: phase0.BeaconBlocksByRangeRequest,
   blocks: SignedBeaconBlock[]
-): {missingSlots?: number[]; extraSlots?: number[]} {
+): Uint8Array[] {
   const {startSlot, count} = blocksRequest;
-  const slotsReceived = blocks.map((block) => block.message.slot);
 
-  const extraSlots: number[] = [];
-  if (slotsReceived.length > count) {
-    for (const slot of slotsReceived) {
-      if (slot < startSlot || slot >= startSlot + count) {
-        extraSlots.push(slot);
-      }
+  if (blocks.length > count) {
+    throw new DownloadByRangeError(
+      {
+        code: DownloadByRangeErrorCode.EXTRA_BLOCKS,
+      },
+      "Extra blocks received in BeaconBlocksByRange response"
+    );
+  }
+
+  const lastValidSlot = startSlot + count;
+  for (let i = 0; i < blocks.length; i++) {
+    const slot = blocks[i].message.slot;
+
+    if (slot > lastValidSlot) {
+      throw new DownloadByRangeError(
+        {
+          code: DownloadByRangeErrorCode.OUT_OF_RANGE_BLOCKS,
+        },
+        "Blocks with slots outside of requested range in BeaconBlocksByRange response"
+      );
     }
-
-    return {
-      extraSlots,
-    };
-  }
-
-  const missingSlots: number[] = [];
-  for (let slot = startSlot; slot < startSlot + count; slot++) {
-    if (!slotsReceived.includes(slot)) {
-      missingSlots.push(slot);
+    if (i < blocks.length - 1 && slot >= blocks[i + 1].message.slot) {
+      throw new DownloadByRangeError(
+        {
+          code: DownloadByRangeErrorCode.OUT_OF_ORDER_BLOCKS,
+        },
+        "Blocks out of order in BeaconBlocksByRange response"
+      );
     }
   }
 
-  if (missingSlots.length) {
-    return {
-      missingSlots,
-    };
-  }
-
-  return {};
+  return blocks.map((block) => config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
 }
 
 type BlobComparisonResponse = {
@@ -768,7 +763,8 @@ export enum DownloadByRangeErrorCode {
   REQ_RESP_ERROR = "DOWNLOAD_BY_RANGE_ERROR_REQ_RESP_ERROR",
   MISSING_BLOCKS = "DOWNLOAD_BY_RANGE_ERROR_MISSING_BLOCKS",
   EXTRA_BLOCKS = "DOWNLOAD_BY_RANGE_ERROR_EXTRA_BLOCKS",
-  DUPLICATE_BLOCKS = "DOWNLOAD_BY_RANGE_ERROR_DUPLICATE_BLOCKS",
+  OUT_OF_RANGE_BLOCKS = "DOWNLOAD_BY_RANGE_OUT_OF_RANGE_BLOCKS",
+  OUT_OF_ORDER_BLOCKS = "DOWNLOAD_BY_RANGE_OUT_OF_ORDER_BLOCKS",
   MISSING_BLOBS = "DOWNLOAD_BY_RANGE_ERROR_MISSING_BLOBS",
   EXTRA_BLOBS = "DOWNLOAD_BY_RANGE_ERROR_EXTRA_BLOBS",
   DUPLICATE_BLOBS = "DOWNLOAD_BY_RANGE_ERROR_DUPLICATE_BLOBS",
@@ -804,6 +800,12 @@ export type DownloadByRangeErrorType =
       dataCount: number;
     }
   | {
+      code: DownloadByRangeErrorCode.OUT_OF_RANGE_BLOCKS;
+    }
+  | {
+      code: DownloadByRangeErrorCode.OUT_OF_ORDER_BLOCKS;
+    }
+  | {
       code: DownloadByRangeErrorCode.REQ_RESP_ERROR;
       peerId: string;
       slotRange: string;
@@ -815,22 +817,12 @@ export type DownloadByRangeErrorType =
     }
   | {
       code: DownloadByRangeErrorCode.MISSING_BLOCKS;
-      peerId: string;
-      missingSlots: string;
     }
   | {
       code: DownloadByRangeErrorCode.EXTRA_BLOCKS;
-      peerId: string;
-      extraSlots: string;
-    }
-  | {
-      code: DownloadByRangeErrorCode.DUPLICATE_BLOCKS;
-      peerId: string;
     }
   | {
       code: DownloadByRangeErrorCode.EXTRA_BLOCKS;
-      peerId: string;
-      extraSlots: string;
     }
   | {
       code: DownloadByRangeErrorCode.MISSING_BLOBS;
