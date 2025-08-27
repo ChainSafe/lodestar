@@ -140,7 +140,7 @@ describe("fromHex and fromHexInto", () => {
 
   for (const {input, output} of testCases) {
     it(`should convert hex string ${input} into provided buffer`, () => {
-      const buffer = typeof Buffer !== "undefined" ? Buffer.alloc(output.length) : new Uint8Array(output.length);
+      const buffer = new Uint8Array(output.length);
       fromHexInto(input, buffer);
       expect(toHex(buffer)).toBe(toHex(output));
     });
