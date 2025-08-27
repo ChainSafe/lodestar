@@ -100,7 +100,7 @@ function generateRoots<F extends ForkPostCapella>(
   blockRoot: Uint8Array;
   rootHex: string;
 } {
-  const blockRoot = ssz[forkName].BeaconBlock.hashTreeRoot(block.message);
+  const blockRoot = ssz[forkName].BeaconBlock.hashTreeRoot(block.message as any);
   const rootHex = toRootHex(blockRoot);
   return {
     blockRoot,
@@ -147,7 +147,7 @@ function generateColumnSidecars<F extends ForkPostFulu>(
 ): {
   block: SignedBeaconBlock<F>;
   columnSidecars: fulu.DataColumnSidecars;
-  blobs?: deneb.BlobSidecars;
+  blobs?: deneb.Blob[];
 } {
   const blobs = Array.from({length: numberOfBlobs}, () => generateRandomBlob());
   const kzgCommitments = blobs.map((blob) => kzg.blobToKzgCommitment(blob));
@@ -210,7 +210,7 @@ export function generateChainOfBlocks<F extends ForkPostCapella>({
 
 export type BlockWithBlobsTestSet<F extends ForkPostDeneb> = BlockTestSet<F> & {
   blobSidecars: deneb.BlobSidecars;
-  versionedHashed: VersionedHashes;
+  versionedHashes: VersionedHashes;
 };
 
 export type BlockWithColumnsTestSet<F extends ForkPostFulu> = BlockTestSet<F> & {
@@ -276,9 +276,9 @@ export function generateBlockWithColumnSidecars<F extends ForkPostFulu>({
   };
 }
 
-export type BlocksWithSidecars<F extends ForkPostDeneb> = F extends ForkPostFulu
-  ? BlockWithColumnsTestSet<F>[]
-  : BlockWithBlobsTestSet<F>[];
+export type BlockWithSidecars<F extends ForkPostDeneb> = F extends ForkPostFulu
+  ? BlockWithColumnsTestSet<ForkPostFulu>
+  : BlockWithBlobsTestSet<ForkPostDeneb>;
 
 export function generateChainOfBlocksWithBlobs<F extends ForkPostDeneb>({
   forkName,
@@ -288,25 +288,30 @@ export function generateChainOfBlocksWithBlobs<F extends ForkPostDeneb>({
   forkName: F;
   count: number;
   oomProtection?: boolean;
-}): BlocksWithSidecars<F> {
+}): BlockWithSidecars<F>[] {
   let parentRoot = Uint8Array.from(randomBytes(ROOT_SIZE));
   let slot = slots[forkName];
-  const blocks: BlocksWithSidecars<F> = [];
+  const blocks: BlockWithSidecars<F>[] = [];
   for (; slot < slot + count; slot++) {
-    const blockWithSidecars = isForkPostFulu(forkName)
-      ? generateBlockWithColumnSidecars({forkName, parentRoot, slot, oomProtection})
-      : generateBlockWithBlobSidecars({forkName, parentRoot, slot, oomProtection});
+    const blockWithSidecars = (
+      isForkPostFulu(forkName)
+        ? generateBlockWithColumnSidecars<ForkPostFulu>({forkName, parentRoot, slot, oomProtection})
+        : generateBlockWithBlobSidecars<ForkPostDeneb>({
+            forkName,
+            parentRoot,
+            slot,
+            oomProtection,
+          })
+    ) as BlockWithSidecars<F>;
     parentRoot = blockWithSidecars.blockRoot;
     blocks.push(blockWithSidecars);
   }
   return blocks;
 }
 
-export type ChainOfBlockMaybeSidecars<F extends ForkPostCapella> = F extends ForkPostFulu
-  ? BlockWithColumnsTestSet<F>[]
-  : F extends ForkPostDeneb
-    ? BlockWithBlobsTestSet<F>[]
-    : BlockTestSet<F>[];
+export type ChainOfBlockMaybeSidecars<F extends ForkPostCapella> = F extends ForkPostDeneb
+  ? BlockWithSidecars<F>[]
+  : BlockTestSet<F>[];
 
 export function generateChainOfBlockMaybeSidecars<F extends ForkPostCapella>(
   forkName: F,
@@ -314,7 +319,7 @@ export function generateChainOfBlockMaybeSidecars<F extends ForkPostCapella>(
   oomProtection = false
 ): ChainOfBlockMaybeSidecars<F> {
   if (isForkPostDeneb(forkName)) {
-    return generateChainOfBlocksWithBlobs({forkName, count, oomProtection});
+    return generateChainOfBlocksWithBlobs({forkName, count, oomProtection}) as ChainOfBlockMaybeSidecars<F>;
   }
-  return generateChainOfBlocks({forkName, count});
+  return generateChainOfBlocks({forkName, count}) as ChainOfBlockMaybeSidecars<F>;
 }
