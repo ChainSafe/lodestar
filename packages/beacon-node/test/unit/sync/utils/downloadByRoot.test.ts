@@ -367,6 +367,51 @@ describe("downloadByRoot.ts", () => {
       expect(returnedIndices).toEqual(denebBlockWithBlobs.blobSidecars.map((b) => b.index));
     });
 
+    it("should gracefully handle getBlobsV1 failure", async () => {
+      const rejectedError = new Error("TESTING_ERROR");
+      const getBlobsMock = vi.fn(() => Promise.reject(rejectedError));
+      executionEngine = {
+        getBlobs: getBlobsMock,
+      } as unknown as IExecutionEngine;
+
+      const sendBlobSidecarsByRootMock = vi.fn(() => Promise.resolve(denebBlockWithBlobs.blobSidecars));
+      const loggerMock = {
+        error: vi.fn(),
+      };
+      network = {
+        logger: loggerMock,
+        sendBlobSidecarsByRoot: sendBlobSidecarsByRootMock,
+      } as unknown as INetwork;
+
+      const response = await fetchAndValidateBlobs({
+        config,
+        network,
+        executionEngine,
+        forkName,
+        peerIdStr,
+        blockRoot: denebBlockWithBlobs.blockRoot,
+        block: denebBlockWithBlobs.block,
+        blobMeta,
+      });
+      expect(getBlobsMock).toHaveBeenCalledExactlyOnceWith(
+        forkName,
+        blobMeta.map(({versionedHash}) => versionedHash)
+      );
+      expect(loggerMock.error).toHaveBeenCalledExactlyOnceWith(
+        `error fetching/building blobSidecars for blockRoot=${prettyBytes(denebBlockWithBlobs.blockRoot)} via getBlobsV1`,
+        {},
+        rejectedError
+      );
+      expect(sendBlobSidecarsByRootMock).toHaveBeenCalledExactlyOnceWith(
+        peerIdStr,
+        denebBlockWithBlobs.blobSidecars.map((b) => ({
+          blockRoot: denebBlockWithBlobs.blockRoot,
+          index: b.index,
+        }))
+      );
+      expect(response).toEqual(denebBlockWithBlobs.blobSidecars);
+    });
+
     it("should throw error if blob validation fails", async () => {
       const sendBlobSidecarsByRootMock = vi.fn(() => Promise.resolve([]));
       network = {

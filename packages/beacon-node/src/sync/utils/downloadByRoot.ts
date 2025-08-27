@@ -300,13 +300,22 @@ export async function fetchAndValidateBlobs({
   block,
   blobMeta,
 }: FetchByRootAndValidateBlobsProps): Promise<deneb.BlobSidecars> {
-  const blobSidecars = await fetchGetBlobsV1AndBuildSidecars({
-    config,
-    executionEngine,
-    forkName,
-    block,
-    blobMeta,
-  });
+  let blobSidecars: deneb.BlobSidecars = [];
+  try {
+    blobSidecars = await fetchGetBlobsV1AndBuildSidecars({
+      config,
+      executionEngine,
+      forkName,
+      block,
+      blobMeta,
+    });
+  } catch (err) {
+    network.logger.error(
+      `error fetching/building blobSidecars for blockRoot=${prettyBytes(blockRoot)} via getBlobsV1`,
+      {},
+      err as Error
+    );
+  }
 
   // not all needed blobs were fetched via getBlobs, need to use ReqResp
   if (blobSidecars.length !== blobMeta.length) {
