@@ -1,7 +1,5 @@
-import {ForkName} from "@lodestar/params";
-import {RootHex, ssz} from "@lodestar/types";
+import {RootHex} from "@lodestar/types";
 import {describe, expect, it} from "vitest";
-import {BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {
   BlockInputSyncCacheItem,
   PendingBlockInput,
