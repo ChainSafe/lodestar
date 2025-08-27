@@ -14,6 +14,9 @@ describe("bytes utils", () => {
   // FIELD_ELEMENTS_PER_BLOB * BYTES_PER_FIELD_ELEMENT = 4096 * 32 = 131072
   const BLOB_LEN = 131072;
   const blob = new Uint8Array(BLOB_LEN);
+  for (let i = 0; i < blob.length; i++) {
+    blob[i] = i % 256;
+  }
   const blobHex = toHex(blob);
 
   bench({
