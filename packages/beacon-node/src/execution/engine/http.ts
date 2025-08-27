@@ -110,6 +110,11 @@ const MAX_VERSIONED_HASHES = 128;
 const notifyNewPayloadOpts: ReqOpts = {routeId: "notifyNewPayload"};
 const forkchoiceUpdatedV1Opts: ReqOpts = {routeId: "forkchoiceUpdated"};
 const getPayloadOpts: ReqOpts = {routeId: "getPayload"};
+const getPayloadBodiesByHashOpts: ReqOpts = {routeId: "getPayloadBodiesByHash"};
+const getPayloadBodiesByRangeOpts: ReqOpts = {routeId: "getPayloadBodiesByRange"};
+const getBlobsV1Opts: ReqOpts = {routeId: "getBlobsV1"};
+const getBlobsV2Opts: ReqOpts = {routeId: "getBlobsV2"};
+const getClientVersionOpts: ReqOpts = {routeId: "getClientVersion"};
 
 /**
  * based on Ethereum JSON-RPC API and inherits the following properties of this standard:
@@ -464,7 +469,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     const response = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
-    >({method, params: [blockHashes]}, {routeId: "getPayloadBodiesByHash"});
+    >({method, params: [blockHashes]}, getPayloadBodiesByHashOpts);
     return response.map(deserializeExecutionPayloadBody);
   }
 
@@ -480,7 +485,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     const response = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
-    >({method, params: [start, count]}, {routeId: "getPayloadBodiesByRange"});
+    >({method, params: [start, count]}, getPayloadBodiesByRangeOpts);
     return response.map(deserializeExecutionPayloadBody);
   }
 
@@ -507,7 +512,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         method: "engine_getBlobsV1",
         params: [versionedHashesHex],
       },
-      {routeId: "getBlobsV1"}
+      getBlobsV1Opts
     );
 
     const invalidLength = response.length !== versionedHashesHex.length;
@@ -530,7 +535,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         method: "engine_getBlobsV2",
         params: [versionedHashesHex],
       },
-      {routeId: "getBlobsV2"}
+      getBlobsV2Opts
     );
 
     // engine_getBlobsV2 does not return partial responses. It returns null if any blob is not found
@@ -551,7 +556,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     const response = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
-    >({method, params: [{...clientVersion, commit: `0x${clientVersion.commit}`}]}, {routeId: "getClientVersion"});
+    >({method, params: [{...clientVersion, commit: `0x${clientVersion.commit}`}]}, getClientVersionOpts);
 
     const clientVersions = response.map((cv) => {
       const code = cv.code in ClientCode ? ClientCode[cv.code as keyof typeof ClientCode] : ClientCode.XX;
