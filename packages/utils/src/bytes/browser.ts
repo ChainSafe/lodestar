@@ -60,13 +60,8 @@ export function fromHex(hex: string): Uint8Array {
   const byteLen = hex.length / 2;
   const bytes = new Uint8Array(byteLen);
   for (let i = 0; i < byteLen; i++) {
-    // "a".charCodeAt(0) = 97 => delta = 87
-    // "A".charCodeAt(0) = 65 => delta = 55
-    // "0".charCodeAt(0) = 48
-    const charCode2i = hex.charCodeAt(i * 2);
-    const byte2i = charCode2i >= 97 ? charCode2i - 87 : charCode2i >= 65 ? charCode2i - 55 : charCode2i - 48;
-    const charCode2i1 = hex.charCodeAt(i * 2 + 1);
-    const byte2i1 = charCode2i1 >= 97 ? charCode2i1 - 87 : charCode2i1 >= 65 ? charCode2i1 - 55 : charCode2i1 - 48;
+    const byte2i = charCodeToByte(hex.charCodeAt(i * 2));
+    const byte2i1 = charCodeToByte(hex.charCodeAt(i * 2 + 1));
     bytes[i] = (byte2i << 4) | byte2i1;
   }
   return bytes;
@@ -82,13 +77,8 @@ export function fromHexInto(hex: string, buffer: Uint8Array): void {
   }
 
   for (let i = 0; i < buffer.length; i++) {
-    // "a".charCodeAt(0) = 97 => delta = 87
-    // "A".charCodeAt(0) = 65 => delta = 55
-    // "0".charCodeAt(0) = 48
-    const charCode2i = hex.charCodeAt(i * 2);
-    const byte2i = charCode2i >= 97 ? charCode2i - 87 : charCode2i >= 65 ? charCode2i - 55 : charCode2i - 48;
-    const charCode2i1 = hex.charCodeAt(i * 2 + 1);
-    const byte2i1 = charCode2i1 >= 97 ? charCode2i1 - 87 : charCode2i1 >= 65 ? charCode2i1 - 55 : charCode2i1 - 48;
+    const byte2i = charCodeToByte(hex.charCodeAt(i * 2));
+    const byte2i1 = charCodeToByte(hex.charCodeAt(i * 2 + 1));
     buffer[i] = (byte2i << 4) | byte2i1;
   }
 }
@@ -111,4 +101,23 @@ function bytesIntoCharCodes(bytes: Uint8Array, charCodes: number[]): void {
     charCodes[2 + 2 * i] = first < 10 ? first + 48 : first + 87;
     charCodes[2 + 2 * i + 1] = second < 10 ? second + 48 : second + 87;
   }
+}
+
+function charCodeToByte(charCode: number): number {
+  // "a".charCodeAt(0) = 97, "f".charCodeAt(0) = 102 => delta = 87
+  if (charCode >= 97 && charCode <= 102) {
+    return charCode - 87;
+  }
+
+  // "A".charCodeAt(0) = 65, "F".charCodeAt(0) = 70 => delta = 55
+  if (charCode >= 65 && charCode <= 70) {
+    return charCode - 55;
+  }
+
+  // "0".charCodeAt(0) = 48, "9".charCodeAt(0) = 57 => delta = 48
+  if (charCode >= 48 && charCode <= 57) {
+    return charCode - 48;
+  }
+
+  throw new Error(`Invalid hex character code: ${charCode}`);
 }
