@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {routes} from "@lodestar/api";
-import {AttesterSlashingList, BlockId} from "@lodestar/api/beacon/routes/lodestar.js";
+import {AttesterSlashingList} from "@lodestar/api/beacon/routes/lodestar.js";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {ChainForkConfig} from "@lodestar/config";
 import {Repository} from "@lodestar/db";
@@ -21,7 +21,6 @@ import {QueuedStateRegenerator, RegenCaller, RegenRequest} from "../../../chain/
 import {IBeaconDb} from "../../../db/interface.js";
 import {GossipType} from "../../../network/index.js";
 import {profileNodeJS, writeHeapSnapshot} from "../../../util/profile.js";
-import {getBlockResponse} from "../beacon/blocks/utils.js";
 import {getStateResponseWithRegen} from "../beacon/state/utils.js";
 import {ApiModules} from "../types.js";
 
@@ -227,7 +226,7 @@ export function getLodestarApi({
       };
     },
 
-    async getAttesterSlashingsFromBlocks({block_ids}) {
+    async getAttesterSlashingsFromBlocks({signedBlocks}) {
       const attesterSlashings: AttesterSlashingList = [];
       const validatorIndicesSeen = new Set<ValidatorIndex>();
 
@@ -235,15 +234,7 @@ export function getLodestarApi({
 
       let fork = chain.config.getForkSeq(chain.clock.currentSlot);
 
-      const blockPromises = block_ids.map((blockId: BlockId) => getBlockResponse(chain, blockId));
-      const blockResults = await Promise.allSettled(blockPromises);
-      for (const result of blockResults) {
-        // Missed block
-        if (result.status === "rejected") {
-          continue;
-        }
-        const block = result.value.block;
-
+      for (const block of signedBlocks) {
         const state = await chain.regen.getState(toHex(block.message.stateRoot), RegenCaller.restApi);
         fork = chain.config.getForkSeq(block.message.slot);
         const attestations = block.message.body.attestations;

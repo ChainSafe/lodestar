@@ -1,7 +1,7 @@
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {isForkPostElectra} from "@lodestar/params";
-import {Epoch, RootHex, Slot, ssz} from "@lodestar/types";
+import {ForkName, isForkPostElectra} from "@lodestar/params";
+import {Epoch, RootHex, SignedBeaconBlock, Slot, ssz, sszTypesFor} from "@lodestar/types";
 import {
   ArrayOf,
   EmptyArgs,
@@ -13,10 +13,13 @@ import {
   JsonOnlyResponseCodec,
   WithVersion,
 } from "../../utils/codecs.js";
+import {toForkName} from "../../utils/fork.js";
+import {fromHeaders} from "../../utils/headers.js";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {
   ExecutionOptimisticFinalizedAndVersionCodec,
   ExecutionOptimisticFinalizedAndVersionMeta,
+  MetaHeader,
   VersionCodec,
   VersionMeta,
 } from "../../utils/metadata.js";
@@ -310,9 +313,9 @@ export type Endpoints = {
    * Retrieves AttesterSlashings included in requested blocks.
    */
   getAttesterSlashingsFromBlocks: Endpoint<
-    "GET",
-    {block_ids: BlockId[]},
-    {query: {block_ids: string[]}},
+    "POST",
+    {signedBlocks: SignedBeaconBlock[]},
+    {body: unknown; headers: {[MetaHeader.Version]: string}},
     AttesterSlashingList,
     VersionMeta
   >;
@@ -479,11 +482,48 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
     },
     getAttesterSlashingsFromBlocks: {
       url: "/eth/v1/lodestar/blocks/attester_slashings",
-      method: "GET",
+      method: "POST",
       req: {
-        writeReq: ({block_ids}) => ({query: {block_ids: block_ids.map(String)}}),
-        parseReq: ({query}) => ({block_ids: query.block_ids}),
-        schema: {query: {block_ids: Schema.StringArray}},
+        writeReqJson: ({signedBlocks}) => {
+          // TODO forkName
+          //const forkName = _config.getForkName(signedBlocks[0].message.slot);
+          return {
+            body: signedBlocks,
+            headers: {
+              [MetaHeader.Version]: ForkName.electra,
+            },
+          };
+        },
+        parseReqJson: ({body}) => {
+          return {
+            signedBlocks: (body as unknown[]).map((blockJson) => {
+              // TODO forkName
+              //const forkName = toForkName(fromHeaders(headers, MetaHeader.Version));
+              return ssz[ForkName.electra].SignedBeaconBlock.fromJson(blockJson);
+            }),
+          };
+        },
+        writeReqSsz: () => {
+          // TODO forkName
+          //const forkName = _config.getForkName(signedBlocks[0].message.slot);
+          return {
+            // TODO
+            body: new Uint8Array() as Uint8Array,
+            headers: {
+              [MetaHeader.Version]: ForkName.electra,
+            },
+          };
+        },
+        parseReqSsz: () => {
+          return {
+            // TODO
+            signedBlocks: [] as SignedBeaconBlock[],
+          };
+        },
+        schema: {
+          body: Schema.ObjectArray,
+          headers: {[MetaHeader.Version]: Schema.String},
+        },
       },
       resp: {
         data: WithVersion((fork) =>
