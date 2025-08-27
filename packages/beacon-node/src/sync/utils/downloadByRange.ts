@@ -600,22 +600,22 @@ export function validateBlobsByRangeResponse(blocks: SignedBeaconBlock[], blobSi
     (acc, block) => (block as SignedBeaconBlock<ForkPostDeneb>).message.body.blobKzgCommitments.length + acc,
     0
   );
-  if (blobSidecars.length > expectedBlobCount) {
-    throw new DownloadByRangeError(
-      {
-        code: DownloadByRangeErrorCode.EXTRA_BLOBS,
-        expected: expectedBlobCount,
-        actual: blobSidecars.length - expectedBlobCount,
-      },
-      "Extra blobs received in BlobSidecarsByRange response"
-    );
-  }
+  // if (blobSidecars.length > expectedBlobCount) {
+  //   throw new DownloadByRangeError(
+  //     {
+  //       code: DownloadByRangeErrorCode.EXTRA_BLOBS,
+  //       expected: expectedBlobCount,
+  //       actual: blobSidecars.length,
+  //     },
+  //     "Extra blobs received in BlobSidecarsByRange response"
+  //   );
+  // }
   if (blobSidecars.length < expectedBlobCount) {
     throw new DownloadByRangeError(
       {
         code: DownloadByRangeErrorCode.MISSING_BLOBS,
         expected: expectedBlobCount,
-        actual: expectedBlobCount - blobSidecars.length,
+        actual: blobSidecars.length,
       },
       "Missing blobs in BlobSidecarsByRange response"
     );
