@@ -6,7 +6,7 @@ import {
   toHex as browserToHex,
   toRootHex as browserToRootHex,
 } from "../../src/bytes/browser.js";
-import {fromHex, fromHexInto, toHex, toRootHex} from "../../src/bytes/nodejs.js";
+import {fromHex, toHex, toRootHex} from "../../src/bytes/nodejs.js";
 
 describe("bytes utils", () => {
   const runsFactor = 1000;
@@ -50,7 +50,7 @@ describe("bytes utils", () => {
     id: "nodejs fromHexInto(blob)",
     fn: () => {
       for (let i = 0; i < runsFactor; i++) {
-        fromHexInto(blobHex, buffer);
+        nodeJsFromHexInto(blobHex, buffer);
       }
     },
   });
@@ -105,3 +105,20 @@ describe("bytes utils", () => {
     },
   });
 });
+
+/**
+ * this function is so slow compared to browser's implementation we only maintain it here to compare performance
+ *   - nodejs fromHexInto(blob)                                            3.562495 ops/s    280.7022 ms/op        -         10 runs   3.50 s
+ *   - browser fromHexInto(blob)                                           535.0952 ops/s    1.868826 ms/op        -         10 runs   20.8 s
+ */
+function nodeJsFromHexInto(hex: string, buffer: Buffer): void {
+  if (hex.startsWith("0x")) {
+    hex = hex.slice(2);
+  }
+
+  if (hex.length !== buffer.length * 2) {
+    throw new Error(`hex string length ${hex.length} must be exactly double the buffer length ${buffer.length}`);
+  }
+
+  buffer.write(hex, "hex");
+}

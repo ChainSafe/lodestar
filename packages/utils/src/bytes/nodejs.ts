@@ -62,20 +62,4 @@ export function fromHex(hex: string): Uint8Array {
   return new Uint8Array(b.buffer, b.byteOffset, b.length);
 }
 
-export function fromHexInto(hex: string, buffer: Uint8Array): void {
-  // fallback to browser impl for non-Buffer inputs
-  if (!(buffer instanceof Buffer)) {
-    _fromHexInto(hex, buffer);
-    return;
-  }
-
-  if (hex.startsWith("0x")) {
-    hex = hex.slice(2);
-  }
-
-  if (hex.length !== buffer.length * 2) {
-    throw new Error(`hex string length ${hex.length} must be exactly double the buffer length ${buffer.length}`);
-  }
-
-  buffer.write(hex, "hex");
-}
+/// the performance of fromHexInto using a preallocated buffer is very bad compared to browser so I moved it to the benchmark

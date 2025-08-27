@@ -60,6 +60,9 @@ export function fromHex(hex: string): Uint8Array {
   const byteLen = hex.length / 2;
   const bytes = new Uint8Array(byteLen);
   for (let i = 0; i < byteLen; i++) {
+    // "a".charCodeAt(0) = 97 => delta = 87
+    // "A".charCodeAt(0) = 65 => delta = 55
+    // "0".charCodeAt(0) = 48
     const charCode2i = hex.charCodeAt(i * 2);
     const byte2i = charCode2i >= 97 ? charCode2i - 87 : charCode2i >= 65 ? charCode2i - 55 : charCode2i - 48;
     const charCode2i1 = hex.charCodeAt(i * 2 + 1);
