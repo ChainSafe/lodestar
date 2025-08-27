@@ -12,6 +12,7 @@ import {ResponseIncoming, ResponseOutgoing} from "@lodestar/reqresp";
 import {Status} from "@lodestar/types";
 import {Metrics} from "../../metrics/index.js";
 import {AsyncIterableBridgeCaller, AsyncIterableBridgeHandler} from "../../util/asyncIterableToEvents.js";
+import {IS_BUN} from "../../util/bun.js";
 import {PeerIdStr, peerIdFromString} from "../../util/peerId.js";
 import {terminateWorkerThread, wireEventsOnMainThread} from "../../util/workerEvents.js";
 import {NetworkEventBus, NetworkEventData, networkEventDirection} from "../events.js";
@@ -143,7 +144,8 @@ export class WorkerNetworkCore implements INetworkCore {
        * showed that there is a pretty big window of "correct" values but we can always tune as
        * necessary
        */
-      // resourceLimits: {maxYoungGenerationSizeMb: opts.maxYoungGenerationSizeMb},
+      // Bun does not support resourceLimits
+      ...(IS_BUN ? {} : {resourceLimits: {maxYoungGenerationSizeMb: opts.maxYoungGenerationSizeMb}}),
     } as ConstructorParameters<typeof Worker>[1]);
 
     // biome-ignore lint/suspicious/noExplicitAny: <explanation>
