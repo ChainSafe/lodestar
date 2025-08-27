@@ -60,8 +60,11 @@ export function fromHex(hex: string): Uint8Array {
   const byteLen = hex.length / 2;
   const bytes = new Uint8Array(byteLen);
   for (let i = 0; i < byteLen; i++) {
-    const byte = parseInt(hex.slice(i * 2, (i + 1) * 2), 16);
-    bytes[i] = byte;
+    const charCode2i = hex.charCodeAt(i * 2);
+    const byte2i = charCode2i >= 97 ? charCode2i - 87 : charCode2i >= 65 ? charCode2i - 55 : charCode2i - 48;
+    const charCode2i1 = hex.charCodeAt(i * 2 + 1);
+    const byte2i1 = charCode2i1 >= 97 ? charCode2i1 - 87 : charCode2i1 >= 65 ? charCode2i1 - 55 : charCode2i1 - 48;
+    bytes[i] = (byte2i << 4) | byte2i1;
   }
   return bytes;
 }
@@ -76,8 +79,14 @@ export function fromHexInto(hex: string, buffer: Uint8Array): void {
   }
 
   for (let i = 0; i < buffer.length; i++) {
-    const byte = parseInt(hex.slice(i * 2, (i + 1) * 2), 16);
-    buffer[i] = byte;
+    // "a".charCodeAt(0) = 97 => delta = 87
+    // "A".charCodeAt(0) = 65 => delta = 55
+    // "0".charCodeAt(0) = 48
+    const charCode2i = hex.charCodeAt(i * 2);
+    const byte2i = charCode2i >= 97 ? charCode2i - 87 : charCode2i >= 65 ? charCode2i - 55 : charCode2i - 48;
+    const charCode2i1 = hex.charCodeAt(i * 2 + 1);
+    const byte2i1 = charCode2i1 >= 97 ? charCode2i1 - 87 : charCode2i1 >= 65 ? charCode2i1 - 55 : charCode2i1 - 48;
+    buffer[i] = (byte2i << 4) | byte2i1;
   }
 }
 

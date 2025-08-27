@@ -11,7 +11,10 @@ import {fromHex, fromHexInto, toHex, toRootHex} from "../../src/bytes/nodejs.js"
 describe("bytes utils", () => {
   const runsFactor = 1000;
   const blockRoot = new Uint8Array(Array.from({length: 32}, (_, i) => i));
-  const rootHex = toRootHex(blockRoot);
+  // FIELD_ELEMENTS_PER_BLOB * BYTES_PER_FIELD_ELEMENT = 4096 * 32 = 131072
+  const BLOB_LEN = 131072;
+  const blob = new Uint8Array(BLOB_LEN);
+  const blobHex = toHex(blob);
 
   bench({
     id: "nodejs block root to RootHex using toHex",
@@ -34,20 +37,20 @@ describe("bytes utils", () => {
   });
 
   bench({
-    id: "nodejs fromhex",
+    id: "nodejs fromhex(blob)",
     fn: () => {
       for (let i = 0; i < runsFactor; i++) {
-        fromHex(rootHex);
+        fromHex(blobHex);
       }
     },
   });
 
-  const buffer = Buffer.alloc(32);
+  const buffer = Buffer.alloc(BLOB_LEN);
   bench({
-    id: "nodejs fromHexInto",
+    id: "nodejs fromHexInto(blob)",
     fn: () => {
       for (let i = 0; i < runsFactor; i++) {
-        fromHexInto(rootHex, buffer);
+        fromHexInto(blobHex, buffer);
       }
     },
   });
@@ -82,22 +85,22 @@ describe("bytes utils", () => {
     runsFactor,
   });
 
-  const buf = new Uint8Array(32);
+  const buf = new Uint8Array(BLOB_LEN);
   bench({
-    id: "browser fromHexInto",
+    id: "browser fromHexInto(blob)",
     fn: () => {
       for (let i = 0; i < runsFactor; i++) {
-        browserFromHexInto(rootHex, buf);
+        browserFromHexInto(blobHex, buf);
       }
     },
     runsFactor,
   });
 
   bench({
-    id: "browser fromHex",
+    id: "browser fromHex(blob)",
     fn: () => {
       for (let i = 0; i < runsFactor; i++) {
-        browserFromHex(rootHex);
+        browserFromHex(blobHex);
       }
     },
   });

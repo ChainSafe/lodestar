@@ -116,7 +116,17 @@ describe("fromHex and fromHexInto", () => {
       output: new Uint8Array([72, 101, 108, 108, 111, 44, 32, 87, 111, 114, 108, 100, 33]),
     },
     {
+      // same but with upper case
+      input: "0x48656C6C6F2C20576F726C6421",
+      output: new Uint8Array([72, 101, 108, 108, 111, 44, 32, 87, 111, 114, 108, 100, 33]),
+    },
+    {
       input: "48656c6c6f2c20576f726c6421",
+      output: new Uint8Array([72, 101, 108, 108, 111, 44, 32, 87, 111, 114, 108, 100, 33]),
+    },
+    {
+      // same but with upper case
+      input: "48656C6C6F2C20576F726C6421",
       output: new Uint8Array([72, 101, 108, 108, 111, 44, 32, 87, 111, 114, 108, 100, 33]),
     },
     {input: "0x", output: new Uint8Array([])},
