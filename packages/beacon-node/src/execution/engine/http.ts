@@ -502,10 +502,13 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     const response = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes["engine_getBlobsV1"],
       EngineApiRpcParamTypes["engine_getBlobsV1"]
-    >({
-      method: "engine_getBlobsV1",
-      params: [versionedHashesHex],
-    }, {routeId: "getBlobsV1"});
+    >(
+      {
+        method: "engine_getBlobsV1",
+        params: [versionedHashesHex],
+      },
+      {routeId: "getBlobsV1"}
+    );
 
     const invalidLength = response.length !== versionedHashesHex.length;
 
@@ -522,10 +525,13 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     const response = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes["engine_getBlobsV2"],
       EngineApiRpcParamTypes["engine_getBlobsV2"]
-    >({
-      method: "engine_getBlobsV2",
-      params: [versionedHashesHex],
-    }, {routeId: "getBlobsV2"});
+    >(
+      {
+        method: "engine_getBlobsV2",
+        params: [versionedHashesHex],
+      },
+      {routeId: "getBlobsV2"}
+    );
 
     // engine_getBlobsV2 does not return partial responses. It returns null if any blob is not found
     const invalidLength = !!response && response.length !== versionedHashesHex.length;
