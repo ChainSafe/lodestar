@@ -267,7 +267,7 @@ export class Batch {
         status: this.state.status,
       });
     }
-    if (slots.size === this.count && allComplete) {
+    if (allComplete) {
       this.state = {status: BatchStatus.AwaitingProcessing, blocks};
     } else {
       this.requests = this.getRequests(blocks);
