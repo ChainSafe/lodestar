@@ -6221,7 +6221,7 @@
           "refId": "A"
         }
       ],
-      "title": "Outgoing request error reason",
+      "title": "Outgoing request error rate by reason",
       "type": "timeseries"
     },
     {
