@@ -22,7 +22,6 @@ export function computeTimeAtSlot(config: ChainConfig, slot: Slot, genesisTime: 
 }
 
 // Convert basis points to milliseconds into the slot
-export function getSlotComponentDurationMs(config: ChainConfig, slotComponent: SlotComponent): number {
-  const basisPoints = config[slotComponent];
+export function getSlotComponentDurationMs(config: ChainConfig, basisPoints: number): number {
   return Math.floor((basisPoints * config.SLOT_DURATION_MS) / BASIS_POINTS);
 }

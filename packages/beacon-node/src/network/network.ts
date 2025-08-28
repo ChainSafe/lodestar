@@ -721,7 +721,7 @@ export class Network implements INetwork {
   private waitForSyncMessageCutoff = async (slot: number): Promise<void> => {
     const secAtSlot =
       computeTimeAtSlot(this.config, slot, this.chain.genesisTime) +
-      getSlotComponentDurationMs(this.config, "SYNC_MESSAGE_DUE_BPS") / 1000;
+      getSlotComponentDurationMs(this.config, this.config.SYNC_MESSAGE_DUE_BPS) / 1000;
     const msToSlot = secAtSlot * 1000 - Date.now();
     await sleep(msToSlot, this.controller.signal);
   };

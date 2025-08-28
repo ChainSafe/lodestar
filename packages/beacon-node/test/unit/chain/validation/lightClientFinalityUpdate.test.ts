@@ -89,7 +89,9 @@ describe("Light Client Finality Update validation", () => {
     // make update not too early
     const timeAtSignatureSlot =
       computeTimeAtSlot(config, lightClientFinalityUpdate.signatureSlot, chain.genesisTime) * 1000;
-    vi.advanceTimersByTime(timeAtSignatureSlot + getSlotComponentDurationMs(config, "SYNC_MESSAGE_DUE_BPS") + 1000);
+    vi.advanceTimersByTime(
+      timeAtSignatureSlot + getSlotComponentDurationMs(config, config.SYNC_MESSAGE_DUE_BPS) + 1000
+    );
 
     expect(() => {
       validateLightClientFinalityUpdate(config, chain, lightClientFinalityUpdate);
@@ -110,7 +112,9 @@ describe("Light Client Finality Update validation", () => {
     // make update not too early
     const timeAtSignatureSlot =
       computeTimeAtSlot(config, lightClientFinalityUpdate.signatureSlot, chain.genesisTime) * 1000;
-    vi.advanceTimersByTime(timeAtSignatureSlot + getSlotComponentDurationMs(config, "SYNC_MESSAGE_DUE_BPS") + 1000);
+    vi.advanceTimersByTime(
+      timeAtSignatureSlot + getSlotComponentDurationMs(config, config.SYNC_MESSAGE_DUE_BPS) + 1000
+    );
 
     // chain's getFinalityUpdate not mocked.
     // localFinalityUpdate will be null
@@ -144,7 +148,9 @@ describe("Light Client Finality Update validation", () => {
     // const currentTime = computeTimeAtSlot(config, chain.clock.currentSlotWithGossipDisparity, chain.genesisTime);
     const timeAtSignatureSlot =
       computeTimeAtSlot(config, lightClientFinalityUpdate.signatureSlot, chain.genesisTime) * 1000;
-    vi.advanceTimersByTime(timeAtSignatureSlot + getSlotComponentDurationMs(config, "SYNC_MESSAGE_DUE_BPS") + 1000);
+    vi.advanceTimersByTime(
+      timeAtSignatureSlot + getSlotComponentDurationMs(config, config.SYNC_MESSAGE_DUE_BPS) + 1000
+    );
 
     // satisfy:
     // [IGNORE] The received finality_update matches the locally computed one exactly

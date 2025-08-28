@@ -65,7 +65,7 @@ export function updateReceivedTooEarly(
 ): boolean {
   const updateCutoffMs =
     computeTimeAtSlot(config, update.signatureSlot, genesisTime) * 1000 +
-    getSlotComponentDurationMs(config, "SYNC_MESSAGE_DUE_BPS");
+    getSlotComponentDurationMs(config, config.SYNC_MESSAGE_DUE_BPS);
   const earliestAllowedTimestampMs = updateCutoffMs - MAXIMUM_GOSSIP_CLOCK_DISPARITY;
   return Date.now() < earliestAllowedTimestampMs;
 }

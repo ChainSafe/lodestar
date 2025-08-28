@@ -82,7 +82,7 @@ export class Clock implements IClock {
   msToSlotComponent(slot: Slot, slotComponent: SlotComponent): number {
     const timeAt =
       (this.genesisTime + this.config.SECONDS_PER_SLOT * slot) * 1000 +
-      getSlotComponentDurationMs(this.config, slotComponent);
+      getSlotComponentDurationMs(this.config, this.config[slotComponent]);
     return timeAt - Date.now();
   }
 
@@ -97,7 +97,7 @@ export class Clock implements IClock {
       Date.now() / 1000 -
       (this.genesisTime +
         this.config.SECONDS_PER_SLOT * slot +
-        getSlotComponentDurationMs(this.config, slotComponent) / 1000)
+        getSlotComponentDurationMs(this.config, this.config[slotComponent]) / 1000)
     );
   }
 

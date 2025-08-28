@@ -54,7 +54,7 @@ export class UnknownBlockSync {
     private readonly opts?: SyncOptions
   ) {
     this.maxPendingBlocks = opts?.maxPendingBlocks ?? MAX_PENDING_BLOCKS;
-    this.proposerBoostSecWindow = getSlotComponentDurationMs(config, "ATTESTATION_DUE_BPS") / 1000;
+    this.proposerBoostSecWindow = getSlotComponentDurationMs(config, config.ATTESTATION_DUE_BPS) / 1000;
     this.peerBalancer = new UnknownBlockPeerBalancer(this.network.custodyConfig);
 
     if (metrics) {
