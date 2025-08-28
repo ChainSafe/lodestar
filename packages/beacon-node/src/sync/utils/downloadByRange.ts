@@ -446,11 +446,16 @@ export function validateResponses({
       );
     }
 
-    validateBlobsByRangeResponse(
-      blobsRequest,
-      [...(blocks ?? []), ...(batchBlocks?.map((blockInput) => blockInput.getBlock()) ?? [])],
-      blobSidecars
-    );
+    const startSlot = blobsRequest.startSlot;
+    const endSlot = startSlot + blobsRequest.count;
+    // Prepend batch blocks (pre-fetched blocks) to the blocks received in this response
+    // This is safe because blocks are always downloaded from first to last in the range
+    const blobsRequestBlocks = [
+      ...(batchBlocks?.map((blockInput) => blockInput.getBlock()) ?? []),
+      ...(blocks ?? []),
+    ].filter((block) => block.message.slot >= startSlot && block.message.slot <= endSlot);
+
+    validateBlobsByRangeResponse(blobsRequestBlocks, blobSidecars);
   }
 
   if (columnsRequest) {
@@ -600,27 +605,23 @@ export function validateBlockByRangeResponse(
  * Should not be called directly. Only exported for unit testing purposes
  */
 export function validateBlobsByRangeResponse(
-  request: deneb.BlobSidecarsByRangeRequest,
-  blocks: SignedBeaconBlock[],
+  requestBlocks: SignedBeaconBlock[],
   blobSidecars: deneb.BlobSidecars
 ): void {
-  const startSlot = request.startSlot;
-  const endSlot = startSlot + request.count;
-  blocks = blocks.filter((block) => block.message.slot >= startSlot && block.message.slot <= endSlot);
-  const expectedBlobCount = blocks.reduce(
+  const expectedBlobCount = requestBlocks.reduce(
     (acc, block) => (block as SignedBeaconBlock<ForkPostDeneb>).message.body.blobKzgCommitments.length + acc,
     0
   );
-  // if (blobSidecars.length > expectedBlobCount) {
-  //   throw new DownloadByRangeError(
-  //     {
-  //       code: DownloadByRangeErrorCode.EXTRA_BLOBS,
-  //       expected: expectedBlobCount,
-  //       actual: blobSidecars.length,
-  //     },
-  //     "Extra blobs received in BlobSidecarsByRange response"
-  //   );
-  // }
+  if (blobSidecars.length > expectedBlobCount) {
+    throw new DownloadByRangeError(
+      {
+        code: DownloadByRangeErrorCode.EXTRA_BLOBS,
+        expected: expectedBlobCount,
+        actual: blobSidecars.length,
+      },
+      "Extra blobs received in BlobSidecarsByRange response"
+    );
+  }
   if (blobSidecars.length < expectedBlobCount) {
     throw new DownloadByRangeError(
       {
@@ -632,8 +633,8 @@ export function validateBlobsByRangeResponse(
     );
   }
   // cheap sanity checks (proper validation is done in the caching step)
-  for (let blockIndex = 0, blobSidecarIndex = 0; blockIndex < blocks.length; blockIndex++) {
-    const block = blocks[blockIndex];
+  for (let blockIndex = 0, blobSidecarIndex = 0; blockIndex < requestBlocks.length; blockIndex++) {
+    const block = requestBlocks[blockIndex];
     const expectedBlobs = (block as SignedBeaconBlock<ForkPostDeneb>).message.body.blobKzgCommitments.length;
     for (let i = 0; i < expectedBlobs; i++, blobSidecarIndex++) {
       const blobSidecar = blobSidecars[blobSidecarIndex];

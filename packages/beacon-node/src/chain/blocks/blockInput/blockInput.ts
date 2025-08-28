@@ -428,19 +428,8 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
       );
     }
 
-    if (!opts.throwOnDuplicateAdd) {
-      return;
-    }
-    if (this.state.hasAllData) {
-      throw new BlockInputError(
-        {
-          code: BlockInputErrorCode.INVALID_CONSTRUCTION,
-          blockRoot: this.blockRootHex,
-        },
-        "Cannot addBlob to BlockInputBlobs after it already is complete"
-      );
-    }
-    if (this.blobsCache.has(blobSidecar.index)) {
+    const isDuplicate = this.blobsCache.has(blobSidecar.index);
+    if (opts.throwOnDuplicateAdd && isDuplicate) {
       throw new BlockInputError(
         {
           code: BlockInputErrorCode.INVALID_CONSTRUCTION,
@@ -452,6 +441,10 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
 
     if (this.state.hasBlock) {
       assertBlockAndBlobArePaired(this.blockRootHex, this.state.block, blobSidecar);
+    }
+
+    if (isDuplicate) {
+      return;
     }
 
     this.blobsCache.set(blobSidecar.index, {blobSidecar, source, seenTimestampSec, peerIdStr});
