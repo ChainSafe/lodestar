@@ -75,7 +75,6 @@ import {BuilderStatus, NoBidReceived} from "../../../execution/builder/http.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossipHandlers.js";
 import {CommitteeSubscription} from "../../../network/subnets/index.js";
 import {SyncState} from "../../../sync/index.js";
-import {callInNextEventLoop} from "../../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
 import {getDefaultGraffiti, toGraffitiBytes} from "../../../util/graffiti.js";
 import {getLodestarClientVersion} from "../../../util/metadata.js";
@@ -682,7 +681,7 @@ export function getValidatorApi(
     // Ensure builder and engine HTTP requests are sent before starting common block body production
     // by deferring the call to next event loop iteration, allowing pending I/O operations like
     // HTTP requests to be processed first and sent out early in slot.
-    callInNextEventLoop(() => {
+    setImmediate(() => {
       logger.verbose("Producing common block body", loggerContext);
       const commonBlockBodyStartedAt = Date.now();
 
