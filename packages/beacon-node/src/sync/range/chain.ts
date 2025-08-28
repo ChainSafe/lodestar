@@ -460,7 +460,10 @@ export class SyncChain {
         };
         for (const block of downloadSuccessOutput.blocks) {
           if (isBlockInputBlobs(block)) {
-            logMeta.blobCount = (logMeta.blobCount ?? 0) + block.getLogMeta().receivedBlobs;
+            const blockLogMeta = block.getLogMeta();
+            const expectedBlobs = typeof blockLogMeta.expectedBlobs === "number" ? blockLogMeta.expectedBlobs : 0;
+            logMeta.expectedBlobCount = (logMeta.expecteeBlobCount ?? 0) + expectedBlobs;
+            logMeta.receivedBlobCount = (logMeta.receivedBlobCount ?? 0) + blockLogMeta.receivedBlobs;
           } else if (isBlockInputColumns(block)) {
             logMeta.columnCount = (logMeta.columnCount ?? 0) + block.getLogMeta().receivedColumns;
           }
