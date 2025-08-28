@@ -149,7 +149,7 @@ type ExecutionPayloadRpcWithValue = {
   executionRequests?: ExecutionRequestsRpc;
   shouldOverrideBuilder?: boolean;
 };
-type ExecutionPayloadResponse = ExecutionPayloadRpc | ExecutionPayloadRpcWithValue;
+type ExecutionPayloadResponse = ExecutionPayloadRpcWithValue;
 
 export type ExecutionPayloadBodyRpc = {
   transactions: DATA[];
@@ -282,13 +282,15 @@ export function serializeVersionedHashes(vHashes: VersionedHashes): VersionedHas
   return vHashes.map(bytesToData);
 }
 
-export function hasPayloadValue(response: ExecutionPayloadResponse): response is ExecutionPayloadRpcWithValue {
+export function hasPayloadValue(
+  response: ExecutionPayloadResponse | ExecutionPayloadRpc
+): response is ExecutionPayloadRpcWithValue {
   return (response as ExecutionPayloadRpcWithValue).blockValue !== undefined;
 }
 
 export function parseExecutionPayload(
   fork: ForkName,
-  response: ExecutionPayloadResponse
+  response: ExecutionPayloadResponse | ExecutionPayloadRpc
 ): {
   executionPayload: ExecutionPayload;
   executionPayloadValue: Wei;

@@ -1,4 +1,5 @@
-import {GENESIS_SLOT, MAX_REQUEST_BLOCKS_DENEB} from "@lodestar/params";
+import {ChainConfig} from "@lodestar/config";
+import {GENESIS_SLOT} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {fulu} from "@lodestar/types";
@@ -16,7 +17,7 @@ export async function* onDataColumnSidecarsByRange(
   db: IBeaconDb
 ): AsyncIterable<ResponseOutgoing> {
   // Non-finalized range of columns
-  const {startSlot, count, columns: requestedColumns} = validateDataColumnSidecarsByRangeRequest(request);
+  const {startSlot, count, columns: requestedColumns} = validateDataColumnSidecarsByRangeRequest(chain.config, request);
   const availableColumns = validateRequestedDataColumns(chain, requestedColumns);
   const endSlot = startSlot + count;
 
@@ -98,6 +99,7 @@ export async function* onDataColumnSidecarsByRange(
 }
 
 export function validateDataColumnSidecarsByRangeRequest(
+  config: ChainConfig,
   request: fulu.DataColumnSidecarsByRangeRequest
 ): fulu.DataColumnSidecarsByRangeRequest {
   const {startSlot, columns} = request;
@@ -111,8 +113,8 @@ export function validateDataColumnSidecarsByRangeRequest(
     throw new ResponseError(RespStatus.INVALID_REQUEST, "startSlot < genesis");
   }
 
-  if (count > MAX_REQUEST_BLOCKS_DENEB) {
-    count = MAX_REQUEST_BLOCKS_DENEB;
+  if (count > config.MAX_REQUEST_BLOCKS_DENEB) {
+    count = config.MAX_REQUEST_BLOCKS_DENEB;
   }
 
   return {startSlot, count, columns};

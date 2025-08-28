@@ -36,7 +36,7 @@ import {IClock} from "../util/clock.js";
 import {CustodyConfig} from "../util/dataColumns.js";
 import {PeerIdStr, peerIdToString} from "../util/peerId.js";
 import {promiseAllMaybeAsync} from "../util/promises.js";
-import {BlobSidecarsByRootRequest} from "../util/types.js";
+import {BeaconBlocksByRootRequest, BlobSidecarsByRootRequest, DataColumnSidecarsByRootRequest} from "../util/types.js";
 import {INetworkCore, NetworkCore, WorkerNetworkCore} from "./core/index.js";
 import {INetworkEventBus, NetworkEvent, NetworkEventBus, NetworkEventData} from "./events.js";
 import {getActiveForkBoundaries} from "./forks.js";
@@ -525,7 +525,7 @@ export class Network implements INetwork {
 
   async sendBeaconBlocksByRoot(
     peerId: PeerIdStr,
-    request: phase0.BeaconBlocksByRootRequest
+    request: BeaconBlocksByRootRequest
   ): Promise<WithBytes<SignedBeaconBlock>[]> {
     return collectMaxResponseTypedWithBytes(
       this.sendReqRespRequest(
@@ -607,7 +607,7 @@ export class Network implements INetwork {
 
   async sendDataColumnSidecarsByRoot(
     peerId: PeerIdStr,
-    request: fulu.DataColumnSidecarsByRootRequest
+    request: DataColumnSidecarsByRootRequest
   ): Promise<fulu.DataColumnSidecar[]> {
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.DataColumnSidecarsByRoot, [Version.V1], request),

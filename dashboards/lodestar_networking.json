@@ -6163,7 +6163,6 @@
             "fillOpacity": 0,
             "gradientMode": "none",
             "hideFrom": {
-              "graph": false,
               "legend": false,
               "tooltip": false,
               "viz": false
@@ -6185,8 +6184,7 @@
               "mode": "off"
             }
           },
-          "mappings": [],
-          "unit": "none"
+          "mappings": []
         },
         "overrides": []
       },
@@ -6196,7 +6194,7 @@
         "x": 12,
         "y": 253
       },
-      "id": 606,
+      "id": 629,
       "options": {
         "legend": {
           "calcs": [],
@@ -6205,7 +6203,7 @@
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -6216,15 +6214,14 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "exemplar": false,
-          "expr": "60 * (\n    rate(beacon_reqresp_outgoing_request_roundtrip_time_seconds_count [$rate_interval])\n    - on(method)\n    rate(beacon_reqresp_outgoing_request_roundtrip_time_seconds_bucket{le=\"5\"} [$rate_interval])\n)",
-          "interval": "",
-          "legendFormat": "{{method}}",
+          "expr": "rate(beacon_reqresp_outgoing_requests_error_reason_total[$rate_interval])",
+          "instant": false,
+          "legendFormat": "{{reason}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Outgoing request roundtrip time > 5 sec (req / min)",
+      "title": "Outgoing request error rate by reason",
       "type": "timeseries"
     },
     {
@@ -6354,7 +6351,7 @@
             }
           },
           "mappings": [],
-          "unit": "s"
+          "unit": "none"
         },
         "overrides": []
       },
@@ -6364,7 +6361,7 @@
         "x": 12,
         "y": 261
       },
-      "id": 500,
+      "id": 606,
       "options": {
         "legend": {
           "calcs": [],
@@ -6383,14 +6380,16 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
           "exemplar": false,
-          "expr": "rate(beacon_reqresp_outgoing_request_roundtrip_time_seconds_sum[$rate_interval])\n/\nrate(beacon_reqresp_outgoing_request_roundtrip_time_seconds_count[$rate_interval])",
+          "expr": "60 * (\n    rate(beacon_reqresp_outgoing_request_roundtrip_time_seconds_count [$rate_interval])\n    - on(method)\n    rate(beacon_reqresp_outgoing_request_roundtrip_time_seconds_bucket{le=\"5\"} [$rate_interval])\n)",
           "interval": "",
           "legendFormat": "{{method}}",
+          "range": true,
           "refId": "A"
         }
       ],
-      "title": "Outgoing request roundtrip time avg",
+      "title": "Outgoing request roundtrip time > 5 sec (req / min)",
       "type": "timeseries"
     },
     {
@@ -6520,7 +6519,7 @@
             }
           },
           "mappings": [],
-          "unit": "none"
+          "unit": "s"
         },
         "overrides": []
       },
@@ -6529,6 +6528,89 @@
         "w": 12,
         "x": 12,
         "y": 269
+      },
+      "id": 500,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "exemplar": false,
+          "expr": "rate(beacon_reqresp_outgoing_request_roundtrip_time_seconds_sum[$rate_interval])\n/\nrate(beacon_reqresp_outgoing_request_roundtrip_time_seconds_count[$rate_interval])",
+          "interval": "",
+          "legendFormat": "{{method}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Outgoing request roundtrip time avg",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "graph": false,
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 277
       },
       "id": 501,
       "options": {
