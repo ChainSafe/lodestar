@@ -679,8 +679,8 @@ export function getValidatorApi(
     });
 
     // Ensure builder and engine HTTP requests are sent before starting common block body production
-    // by deferring the call to next event loop iteration, allowing pending I/O operations like
-    // HTTP requests to be processed first and sent out early in slot.
+    // by deferring execution with setImmediate. This guarantees the poll phase runs first in current
+    // event loop iteration, allowing pending I/O operations like HTTP requests to be processed.
     setImmediate(() => {
       logger.verbose("Producing common block body", loggerContext);
       const commonBlockBodyStartedAt = Date.now();
