@@ -751,7 +751,7 @@ export class PeerManager {
       })
       .catch((err) => {
         if (evt.detail.status !== "open") {
-          this.logger.debug("Peer disconnected during identify protocol", {peerId: remotePeerPrettyStr}, err);
+          this.logger.debug("Peer disconnected during identify protocol", {peerId: remotePeerPrettyStr});
         } else {
           this.logger.debug("Error setting agentVersion for the peer", {peerId: remotePeerPrettyStr}, err);
         }
