@@ -368,7 +368,7 @@ export async function unavailableBeaconBlobsByRootPreFulu(
         // verifyBlocksDataAvailability
         cachedData.blobsCache.set(blobSidecar.index, blobSidecar);
 
-        if (emitter.listenerCount(routes.events.EventType.blobSidecar)) {
+        if (emitter.(routes.events.EventType.blobSidecar)>0) {
           emitter.emit(routes.events.EventType.blobSidecar, {
             blockRoot: blockRootHex,
             slot,
@@ -441,7 +441,7 @@ export async function unavailableBeaconBlobsByRootPreFulu(
   for (const blobSidecar of networkResBlobSidecars) {
     cachedData.blobsCache.set(blobSidecar.index, blobSidecar);
 
-    if (emitter.listenerCount(routes.events.EventType.blobSidecar)) {
+    if (emitter.(routes.events.EventType.blobSidecar)>0) {
       emitter.emit(routes.events.EventType.blobSidecar, {
         blockRoot: blockRootHex,
         slot,

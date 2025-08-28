@@ -464,34 +464,34 @@ export async function importBlock(
     // We want to import block asap so call all event handler in the next event loop
     callInNextEventLoop(() => {
       // NOTE: Skip emitting if there are no listeners from the API
-      if (this.emitter.listenerCount(routes.events.EventType.block)) {
+      if (this.emitter.listenerCount(routes.events.EventType.block) > 0) {
         this.emitter.emit(routes.events.EventType.block, {
           block: blockRootHex,
           slot: blockSlot,
           executionOptimistic: blockSummary != null && isOptimisticBlock(blockSummary),
         });
       }
-      if (this.emitter.listenerCount(routes.events.EventType.voluntaryExit)) {
+      if (this.emitter.listenerCount(routes.events.EventType.voluntaryExit) > 0) {
         for (const voluntaryExit of block.message.body.voluntaryExits) {
           this.emitter.emit(routes.events.EventType.voluntaryExit, voluntaryExit);
         }
       }
-      if (this.emitter.listenerCount(routes.events.EventType.blsToExecutionChange)) {
+      if (this.emitter.listenerCount(routes.events.EventType.blsToExecutionChange) > 0) {
         for (const blsToExecutionChange of (block.message as capella.BeaconBlock).body.blsToExecutionChanges ?? []) {
           this.emitter.emit(routes.events.EventType.blsToExecutionChange, blsToExecutionChange);
         }
       }
-      if (this.emitter.listenerCount(routes.events.EventType.attestation)) {
+      if (this.emitter.listenerCount(routes.events.EventType.attestation) > 0) {
         for (const attestation of block.message.body.attestations) {
           this.emitter.emit(routes.events.EventType.attestation, attestation);
         }
       }
-      if (this.emitter.listenerCount(routes.events.EventType.attesterSlashing)) {
+      if (this.emitter.listenerCount(routes.events.EventType.attesterSlashing) > 0) {
         for (const attesterSlashing of block.message.body.attesterSlashings) {
           this.emitter.emit(routes.events.EventType.attesterSlashing, attesterSlashing);
         }
       }
-      if (this.emitter.listenerCount(routes.events.EventType.proposerSlashing)) {
+      if (this.emitter.listenerCount(routes.events.EventType.proposerSlashing) > 0) {
         for (const proposerSlashing of block.message.body.proposerSlashings) {
           this.emitter.emit(routes.events.EventType.proposerSlashing, proposerSlashing);
         }

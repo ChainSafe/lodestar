@@ -308,7 +308,7 @@ export function getBeaconBlockApi({
       }
     }
 
-    if (chain.emitter.listenerCount(routes.events.EventType.blockGossip)) {
+    if (chain.emitter.listenerCount(routes.events.EventType.blockGossip) > 0) {
       chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRoot});
     }
 
@@ -317,7 +317,7 @@ export function getBeaconBlockApi({
         const {dataColumns} = blockForImport.blockData as BlockInputDataColumns;
         metrics?.dataColumns.bySource.inc({source: DataColumnsSource.api}, dataColumns.length);
 
-        if (chain.emitter.listenerCount(routes.events.EventType.dataColumnSidecar)) {
+        if (chain.emitter.listenerCount(routes.events.EventType.dataColumnSidecar) > 0) {
           for (const dataColumnSidecar of dataColumns) {
             chain.emitter.emit(routes.events.EventType.dataColumnSidecar, {
               blockRoot,
@@ -329,7 +329,7 @@ export function getBeaconBlockApi({
         }
       } else if (
         isForkPostDeneb(blockForImport.blockData.fork) &&
-        chain.emitter.listenerCount(routes.events.EventType.blobSidecar)
+        chain.emitter.listenerCount(routes.events.EventType.blobSidecar) > 0
       ) {
         const {blobs} = blockForImport.blockData as BlockInputBlobs;
 
