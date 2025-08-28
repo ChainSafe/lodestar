@@ -5,7 +5,10 @@ import {fulu} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
-import {filterDataColumnForCustody, logDataColumnSidecarUnavailability} from "../utils/dataColumnResponseValidaiton.js";
+import {
+  handleColumnSidecarUnavailability,
+  validateRequestedDataColumns,
+} from "../utils/dataColumnResponseValidaiton.js";
 
 export async function* onDataColumnSidecarsByRange(
   request: fulu.DataColumnSidecarsByRangeRequest,
@@ -14,10 +17,10 @@ export async function* onDataColumnSidecarsByRange(
 ): AsyncIterable<ResponseOutgoing> {
   // Non-finalized range of columns
   const {startSlot, count, columns: requestedColumns} = validateDataColumnSidecarsByRangeRequest(request);
+  const availableColumns = validateRequestedDataColumns(chain, requestedColumns);
   const endSlot = startSlot + count;
 
-  const columns = filterDataColumnForCustody(requestedColumns, chain.custodyConfig.custodyColumns, chain.logger);
-  if (columns.length === 0) {
+  if (availableColumns.length === 0) {
     return;
   }
 
@@ -28,7 +31,7 @@ export async function* onDataColumnSidecarsByRange(
   // Finalized range of columns
   if (startSlot <= finalizedSlot) {
     for (let slot = startSlot; slot < endSlot; slot++) {
-      const dataColumnSidecars = await finalized.getManyBinary(slot, columns);
+      const dataColumnSidecars = await finalized.getManyBinary(slot, availableColumns);
 
       for (const [index, dataColumnSidecarBytes] of dataColumnSidecars.entries()) {
         if (dataColumnSidecarBytes) {
@@ -37,12 +40,13 @@ export async function* onDataColumnSidecarsByRange(
             boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(slot)),
           };
         } else {
-          await logDataColumnSidecarUnavailability({
+          await handleColumnSidecarUnavailability({
             chain,
             db,
-            index: columns[index],
+            unavailableColumnIndex: availableColumns[index],
             slot,
-            logData: {requestStartSlot: startSlot, requestCount: count, requestColumns: columns.join(",")},
+            requestedColumns,
+            availableColumns,
           });
         }
       }
@@ -64,7 +68,7 @@ export async function* onDataColumnSidecarsByRange(
         // at the time of the start of the request. Spec is clear the chain of columns must be consistent, but on
         // re-org there's no need to abort the request
         // Spec: https://github.com/ethereum/consensus-specs/blob/ad36024441cf910d428d03f87f331fbbd2b3e5f1/specs/fulu/p2p-interface.md#L425-L429
-        const dataColumnSidecars = await unfinalized.getManyBinary(fromHex(block.blockRoot), columns);
+        const dataColumnSidecars = await unfinalized.getManyBinary(fromHex(block.blockRoot), availableColumns);
         for (const [index, dataColumnSidecarBytes] of dataColumnSidecars.entries()) {
           if (dataColumnSidecarBytes) {
             yield {
@@ -72,13 +76,14 @@ export async function* onDataColumnSidecarsByRange(
               boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(block.slot)),
             };
           } else {
-            await logDataColumnSidecarUnavailability({
+            await handleColumnSidecarUnavailability({
               chain,
               db,
-              index: columns[index],
+              unavailableColumnIndex: availableColumns[index],
               blockRoot: fromHex(block.blockRoot),
               slot: block.slot,
-              logData: {requestStartSlot: startSlot, requestCount: count, requestColumns: columns.join(",")},
+              requestedColumns,
+              availableColumns,
             });
           }
         }

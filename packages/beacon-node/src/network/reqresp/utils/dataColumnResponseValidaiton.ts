@@ -1,65 +1,72 @@
 import {LogData} from "@lodestar/logger";
-import {ForkSeq, KZG_COMMITMENTS_GINDEX} from "@lodestar/params";
 import {RespStatus, ResponseError} from "@lodestar/reqresp";
 import {ColumnIndex, Slot} from "@lodestar/types";
-import {Logger, bytesToInt, toHex} from "@lodestar/utils";
+import {toRootHex} from "@lodestar/utils/lib/bytes/browser.js";
 import {IBeaconChain} from "../../../chain/interface.js";
 import {IBeaconDb} from "../../../db/interface.js";
+import {getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized} from "../../../util/sszBytes.js";
 
-export async function logDataColumnSidecarUnavailability(opts: {
+export async function handleColumnSidecarUnavailability({
+  chain,
+  db,
+  unavailableColumnIndex,
+  requestedColumns,
+  availableColumns,
+  slot,
+  blockRoot,
+}: {
   chain: IBeaconChain;
   db: IBeaconDb;
-  index: ColumnIndex;
   slot: Slot;
   blockRoot?: Uint8Array;
-  logData: Record<string, LogData>;
+  unavailableColumnIndex: ColumnIndex;
+  requestedColumns: ColumnIndex[];
+  availableColumns: ColumnIndex[];
 }): Promise<void> {
-  const {chain, db, index, slot, blockRoot, logData} = opts;
-  let localLogData: LogData = {...logData, slot};
+  const logData: LogData = {
+    unavailableColumnIndex,
+    requestedColumns: requestedColumns.join(","),
+    availableColumns: availableColumns.join(","),
+    slot,
+  };
+  if (blockRoot) logData.blockRoot = toRootHex(blockRoot);
 
-  if (blockRoot) {
-    localLogData = {...localLogData, blockRoot: toHex(blockRoot)};
-  }
+  chain.logger.debug("dataColumnSidecar requested unavailable", logData);
 
   const blockBytes = blockRoot ? await db.block.getBinary(blockRoot) : await db.blockArchive.getBinary(slot);
-
   if (!blockBytes) {
-    chain.logger.error("Expected unfinalized block not found", localLogData);
+    chain.logger.error(
+      `Expected ${blockRoot ? "unfinalized" : "finalized"} block not found while handling unavailable dataColumnSidecar`
+    );
     return;
   }
 
-  const blobsCount =
-    chain.config.getForkSeq(slot) < ForkSeq.deneb
-      ? 0
-      : bytesToInt(blockBytes.slice(KZG_COMMITMENTS_GINDEX, KZG_COMMITMENTS_GINDEX + 4));
+  // Check for blob count in actual block
+  const blobsCount = getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized(chain.config, blockBytes);
 
-  localLogData = {...localLogData, blobsCount, index};
+  // There are zero blobs for that column index, so we can safely return without any error
+  if (blobsCount > 0) return;
 
-  if (blobsCount > 0) {
-    chain.logger.error("Requested dataColumnSidecar is missing.", localLogData);
-  } else {
-    chain.logger.debug("Requested dataColumnSidecar for empty blobs", localLogData);
-  }
+  // There are blobs for that column index so we should have synced for it
+  // We need to inform to peers that we don't have that expected data
+  // NOTE: We may look to add some metrics to track such scenario
+  throw new ResponseError(
+    RespStatus.RESOURCE_UNAVAILABLE,
+    `dataColumnSidecar requested and within custody not available for columnIndex=${unavailableColumnIndex}`
+  );
 }
 
-export function filterDataColumnForCustody(
-  requestedColumns: ColumnIndex[],
-  custodyColumns: ColumnIndex[],
-  logger: Logger
-): ColumnIndex[] {
+export function validateRequestedDataColumns(chain: IBeaconChain, requestedColumns: ColumnIndex[]): ColumnIndex[] {
   if (requestedColumns.length === 0) {
     throw new ResponseError(RespStatus.INVALID_REQUEST, "dataColumnSidecar requested without column indices");
   }
 
+  const custodyColumns = chain.custodyConfig.custodyColumns;
   const availableColumns = requestedColumns.filter((c) => custodyColumns.includes(c));
   const missingColumns = requestedColumns.filter((c) => !custodyColumns.includes(c));
 
-  if (availableColumns.length !== requestedColumns.length) {
-    logger.debug("Requested for dataColumnsSidecars we do not have custody", {
-      requestedColumns: requestedColumns.join(),
-      custodyColumns: custodyColumns.join(","),
-      missingColumns: missingColumns.join(","),
-    });
+  if (missingColumns.length > 0) {
+    throw new ResponseError(RespStatus.INVALID_REQUEST, "dataColumnSidecar requested for non-custody columns");
   }
 
   return availableColumns;

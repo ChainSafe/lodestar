@@ -4,7 +4,10 @@ import {fulu} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
-import {filterDataColumnForCustody, logDataColumnSidecarUnavailability} from "../utils/dataColumnResponseValidaiton.js";
+import {
+  handleColumnSidecarUnavailability,
+  validateRequestedDataColumns,
+} from "../utils/dataColumnResponseValidaiton.js";
 
 export async function* onDataColumnSidecarsByRoot(
   requestBody: fulu.DataColumnSidecarsByRootRequest,
@@ -22,8 +25,8 @@ export async function* onDataColumnSidecarsByRoot(
 
   for (const dataColumnsByRootIdentifier of requestBody) {
     const {blockRoot, columns: requestedColumns} = dataColumnsByRootIdentifier;
-    const columns = filterDataColumnForCustody(requestedColumns, chain.custodyConfig.custodyColumns, chain.logger);
-    if (columns.length === 0) {
+    const availableColumns = validateRequestedDataColumns(chain, requestedColumns);
+    if (availableColumns.length === 0) {
       return;
     }
 
@@ -39,7 +42,7 @@ export async function* onDataColumnSidecarsByRoot(
       continue;
     }
 
-    const dataColumns = await db.dataColumnSidecar.getManyBinary(fromHex(block.blockRoot), columns);
+    const dataColumns = await db.dataColumnSidecar.getManyBinary(fromHex(block.blockRoot), availableColumns);
     for (const [index, dataColumnBytes] of dataColumns.entries()) {
       if (dataColumnBytes) {
         yield {
@@ -47,13 +50,14 @@ export async function* onDataColumnSidecarsByRoot(
           boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(block.slot)),
         };
       } else {
-        await logDataColumnSidecarUnavailability({
+        await handleColumnSidecarUnavailability({
           chain,
           db,
-          index: columns[index],
+          unavailableColumnIndex: availableColumns[index],
           slot: block.slot,
           blockRoot: fromHex(block.blockRoot),
-          logData: {requestColumns: columns.join(",")},
+          requestedColumns,
+          availableColumns,
         });
       }
     }
