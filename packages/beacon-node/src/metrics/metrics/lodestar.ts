@@ -776,11 +776,17 @@ export function createLodestarMetrics(
         // given TARGET_GROUP_PEERS_PER_SUBNET = 4, we expect sending to 4 peers per subnet
         buckets: [1, 2, 3, 4],
       }),
-      dataColumnELResult: register.gauge<{result: DataColumnELResult}>({
-        name: "lodestar_data_column_el_result_total",
-        help: "The total result of sending data column to execution layer",
-        labelNames: ["result"],
-      }),
+      dataColumnEL: {
+        result: register.gauge<{result: DataColumnELResult}>({
+          name: "lodestar_data_column_el_result_total",
+          help: "The total result of sending data column to execution layer",
+          labelNames: ["result"],
+        }),
+        noBufferCount: register.gauge({
+          name: "lodestar_data_column_el_no_buffer_count",
+          help: "Count of not using buffer when calling getBlobsV2() from execution layer",
+        }),
+      },
     },
     importBlock: {
       persistBlockNoSerializedDataCount: register.gauge({

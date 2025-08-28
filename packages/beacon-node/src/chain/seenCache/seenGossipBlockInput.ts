@@ -1,7 +1,7 @@
 import {toHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, NUMBER_OF_COLUMNS, isForkPostDeneb} from "@lodestar/params";
-import {RootHex, SignedBeaconBlock, deneb, fulu, ssz} from "@lodestar/types";
+import {RootHex, SignedBeaconBlock, Slot, deneb, fulu, ssz} from "@lodestar/types";
 import {Logger, pruneSetToMax} from "@lodestar/utils";
 
 import {IExecutionEngine} from "../../execution/index.js";
@@ -97,6 +97,12 @@ export class SeenGossipBlockInput {
   private readonly blockInputCache = new Map<RootHex, BlockInputCacheType>();
   private readonly custodyConfig: CustodyConfig;
   private readonly executionEngine: IExecutionEngine;
+  // post-fulu getBlobsV2 may return huge data that cause a lot of gc pressure for NodeJS
+  // see https://github.com/ChainSafe/lodestar/issues/8271
+  // so we want to reuse the same buffer for every call
+  // we can do that because getBlobsV2() is called once per slot
+  // note that this can increase its size depending on the number of blobs per block we have seen inside getDataColumnsFromExecution()
+  private readonly blobAndProofV2Buffers: Uint8Array[] = [];
   private readonly clock: IClock;
   private readonly emitter: ChainEventEmitter;
   private readonly logger: Logger;
@@ -160,6 +166,7 @@ export class SeenGossipBlockInput {
     let blockHex: RootHex;
     let blockCache: BlockInputCacheType;
     let fork: ForkName;
+    let slot: Slot;
 
     if (gossipedInput.type === GossipedInputType.block) {
       const {signedBlock} = gossipedInput;
@@ -168,6 +175,7 @@ export class SeenGossipBlockInput {
       blockHex = toHexString(
         config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message)
       );
+      slot = signedBlock.message.slot;
       blockCache = this.blockInputCache.get(blockHex) ?? getEmptyBlockInputCacheEntry(fork, ++this.globalCacheId);
 
       blockCache.block = signedBlock;
@@ -177,6 +185,7 @@ export class SeenGossipBlockInput {
       fork = config.getForkName(blobSidecar.signedBlockHeader.message.slot);
 
       blockHex = toHexString(blockRoot);
+      slot = blobSidecar.signedBlockHeader.message.slot;
       blockCache = this.blockInputCache.get(blockHex) ?? getEmptyBlockInputCacheEntry(fork, ++this.globalCacheId);
       if (blockCache.cachedData?.fork !== ForkName.deneb && blockCache.cachedData?.fork !== ForkName.electra) {
         throw Error(`blob data at non deneb/electra fork=${blockCache.fork}`);
@@ -190,6 +199,7 @@ export class SeenGossipBlockInput {
       fork = config.getForkName(dataColumnSidecar.signedBlockHeader.message.slot);
 
       blockHex = toHexString(blockRoot);
+      slot = dataColumnSidecar.signedBlockHeader.message.slot;
       blockCache = this.blockInputCache.get(blockHex) ?? getEmptyBlockInputCacheEntry(fork, ++this.globalCacheId);
       if (blockCache.cachedData?.fork !== ForkName.fulu) {
         throw Error(`data column data at non fulu fork=${blockCache.fork}`);
@@ -217,12 +227,29 @@ export class SeenGossipBlockInput {
       this.blockInputCache.set(blockHex, blockCache);
       // call getBlobsV2 after the first seen baecon_block or data_column_sidecar
       callInNextEventLoop(() => {
-        getDataColumnsFromExecution(config, this.custodyConfig, this.executionEngine, this.emitter, blockCache, metrics)
+        let buffers: Uint8Array[] | undefined = undefined;
+        // at syncing time when we get close to head, we may receive gossip objects at differerent slots at the same time
+        // so we should not reuse the same buffers in that case
+        if (slot >= this.clock.currentSlot) {
+          buffers = this.blobAndProofV2Buffers;
+        } else {
+          metrics?.dataColumns.dataColumnEL.noBufferCount.inc();
+        }
+
+        getDataColumnsFromExecution(
+          config,
+          this.custodyConfig,
+          this.executionEngine,
+          this.emitter,
+          blockCache,
+          buffers,
+          metrics
+        )
           .then((result) => {
-            metrics?.dataColumns.dataColumnELResult.inc({result});
+            metrics?.dataColumns.dataColumnEL.result.inc({result});
           })
           .catch((error) => {
-            metrics?.dataColumns.dataColumnELResult.inc({result: DataColumnELResult.Failed});
+            metrics?.dataColumns.dataColumnEL.result.inc({result: DataColumnELResult.Failed});
             this.logger.warn("Error getting data columns from execution", {blockHex}, error);
           });
       });

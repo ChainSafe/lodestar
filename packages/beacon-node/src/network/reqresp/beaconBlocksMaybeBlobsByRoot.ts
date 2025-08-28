@@ -26,7 +26,6 @@ import {BlockInputAvailabilitySource} from "../../chain/seenCache/seenGossipBloc
 import {IExecutionEngine} from "../../execution/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {computeInclusionProof, kzgCommitmentToVersionedHash} from "../../util/blobs.js";
-import {getDataColumnsFromExecution} from "../../util/dataColumns.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {BeaconBlocksByRootRequest} from "../../util/types.js";
 import {INetwork} from "../interface.js";

@@ -2,7 +2,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {BYTES_PER_FIELD_ELEMENT, FIELD_ELEMENTS_PER_BLOB, ForkName} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {deneb, fulu, ssz} from "@lodestar/types";
+import {deneb, ssz} from "@lodestar/types";
 import {describe, expect, it, vi} from "vitest";
 import {
   BlobsSource,
@@ -10,7 +10,6 @@ import {
   BlockInputAvailableData,
   BlockInputType,
   BlockSource,
-  CachedData,
   getBlockInput,
 } from "../../../src/chain/blocks/types.js";
 import {ChainEventEmitter} from "../../../src/chain/emitter.js";
@@ -18,11 +17,8 @@ import {getEmptyBlockInputCacheEntry} from "../../../src/chain/seenCache/seenGos
 import {IExecutionEngine} from "../../../src/execution/index.js";
 import {INetwork} from "../../../src/network/interface.js";
 import {unavailableBeaconBlobsByRoot} from "../../../src/network/reqresp/index.js";
-import {computeNodeId} from "../../../src/network/subnets/index.js";
 import {computeInclusionProof, kzgCommitmentToVersionedHash} from "../../../src/util/blobs.js";
-import {CustodyConfig, getDataColumnSidecarsFromBlock} from "../../../src/util/dataColumns.js";
 import {kzg} from "../../../src/util/kzg.js";
-import {getValidPeerId} from "../../utils/peer.js";
 
 describe("unavailableBeaconBlobsByRoot", () => {
   describe("blobs", () => {
@@ -187,89 +183,6 @@ describe("unavailableBeaconBlobsByRoot", () => {
     });
   });
 
-  describe("data columns", () => {
-    const chainConfig = createChainForkConfig({
-      ...defaultChainConfig,
-      ALTAIR_FORK_EPOCH: 0,
-      BELLATRIX_FORK_EPOCH: 0,
-      CAPELLA_FORK_EPOCH: 0,
-      DENEB_FORK_EPOCH: 0,
-      ELECTRA_FORK_EPOCH: 0,
-      FULU_FORK_EPOCH: 0,
-    });
-    const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
-    const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
-
-    const executionEngine = {
-      getBlobs: vi.fn(),
-    };
-
-    const network = {
-      sendBeaconBlocksByRoot: vi.fn(),
-      sendBlobSidecarsByRoot: vi.fn(),
-      custodyConfig: new CustodyConfig({
-        nodeId: computeNodeId(getValidPeerId()),
-        config,
-      }),
-    };
-
-    const peerId = "mockPeerId";
-    const engineGetBlobsCache = new Map();
-
-    it("should successfully resolve all data columns from engine", async () => {
-      // Simulate a block 1 with 3 blobs
-      const signedBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
-      signedBlock.message.slot = 1;
-      const blobscommitmentsandproofs = generateBlobsWithCellProofs(3);
-      signedBlock.message.body.blobKzgCommitments.push(...blobscommitmentsandproofs.map((b) => b.kzgCommitment));
-
-      const unavailableBlockInput: BlockInput = {
-        block: signedBlock,
-        source: BlockSource.gossip,
-        type: BlockInputType.dataPromise,
-        cachedData: getEmptyBlockInputCacheEntry(ForkName.fulu, 1).cachedData as CachedData,
-      };
-
-      const blobAndProof: fulu.BlobAndProofV2[] = blobscommitmentsandproofs.map((b) => ({
-        blob: b.blob,
-        proofs: b.cellsAndProofs.proofs,
-      }));
-
-      // Mock execution engine to return all blobs
-      executionEngine.getBlobs.mockImplementationOnce(
-        (): Promise<fulu.BlobAndProofV2[] | null> => Promise.resolve(blobAndProof)
-      );
-
-      const result = await unavailableBeaconBlobsByRoot(
-        config,
-        network as unknown as INetwork,
-        peerId,
-        "peerClient",
-        unavailableBlockInput,
-        {
-          executionEngine: executionEngine as unknown as IExecutionEngine,
-          emitter: new ChainEventEmitter(),
-          engineGetBlobsCache,
-        }
-      );
-
-      const sampledSidecars = getDataColumnSidecarsFromBlock(
-        config,
-        signedBlock,
-        blobscommitmentsandproofs.map((b) => b.cellsAndProofs)
-      ).filter((s) => network.custodyConfig.sampledColumns.includes(s.index));
-
-      expect(executionEngine.getBlobs).toHaveBeenCalledWith(
-        ForkName.fulu,
-        blobscommitmentsandproofs.map((b) => kzgCommitmentToVersionedHash(b.kzgCommitment))
-      );
-      expect(result.type).toEqual(BlockInputType.availableData);
-      if (result.type !== BlockInputType.availableData) throw new Error("Should not get here");
-      expect(result.blockData.fork).toEqual(ForkName.fulu);
-      if (result.blockData.fork !== ForkName.fulu) throw new Error("Should not get here");
-      expect(result.blockData.dataColumns).toEqual(sampledSidecars);
-    });
-  });
 });
 
 function generateBlobs(count: number): {
@@ -289,18 +202,6 @@ function generateBlobs(count: number): {
     blobVersionedHashes: versionedHash.map((hash) => hash),
     kzgProofs,
   };
-}
-
-function generateBlobsWithCellProofs(
-  count: number
-): {blob: Uint8Array; cellsAndProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}; kzgCommitment: Uint8Array}[] {
-  const blobs = Array.from({length: count}, (_, index) => generateRandomBlob(index));
-
-  return blobs.map((blob) => ({
-    blob,
-    cellsAndProofs: kzg.computeCellsAndKzgProofs(blob),
-    kzgCommitment: kzg.blobToKzgCommitment(blob),
-  }));
 }
 
 function generateRandomBlob(index: number): deneb.Blob {

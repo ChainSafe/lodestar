@@ -26,6 +26,7 @@ import {
 import {ChainEvent, ChainEventEmitter} from "../chain/emitter.js";
 import {BlockInputCacheType} from "../chain/seenCache/seenGossipBlockInput.js";
 import {IExecutionEngine} from "../execution/engine/interface.js";
+import {BLOB_AND_PROOF_V2_RPC_BYTES} from "../execution/engine/types.js";
 import {Metrics} from "../metrics/metrics.js";
 import {NodeId} from "../network/subnets/index.js";
 import {kzgCommitmentToVersionedHash, recoverDataColumnSidecars as recover} from "./blobs.js";
@@ -437,6 +438,7 @@ export function hasSampledDataColumns(custodyConfig: CustodyConfig, dataColumnCa
 
 /**
  * Post fulu, call getBlobsV2 from execution engine once per slot whenever we see either beacon_block or data_column_sidecar gossip message
+ * although blobAndProofV2Buffers is managed by consumer (SeenGossipBlockInput), we may increase its size here if we receive more blobs over time
  */
 export async function getDataColumnsFromExecution(
   config: ChainForkConfig,
@@ -444,7 +446,8 @@ export async function getDataColumnsFromExecution(
   executionEngine: IExecutionEngine,
   emitter: ChainEventEmitter,
   blockCache: BlockInputCacheType,
-  metrics: Metrics | null
+  blobAndProofV2Buffers?: Uint8Array[],
+  metrics: Metrics | null = null
 ): Promise<DataColumnELResult> {
   if (blockCache.fork !== ForkName.fulu) {
     return DataColumnELResult.PreFulu;
@@ -488,7 +491,14 @@ export async function getDataColumnsFromExecution(
   // Get blobs from execution engine
   metrics?.peerDas.getBlobsV2Requests.inc();
   const timer = metrics?.peerDas.getBlobsV2RequestDuration.startTimer();
-  const blobsAndProofs = await executionEngine.getBlobs(blockCache.fork, versionedHashes);
+  if (blobAndProofV2Buffers) {
+    for (let i = 0; i < versionedHashes.length; i++) {
+      if (blobAndProofV2Buffers[i] === undefined) {
+        blobAndProofV2Buffers[i] = new Uint8Array(BLOB_AND_PROOF_V2_RPC_BYTES);
+      }
+    }
+  }
+  const blobsAndProofs = await executionEngine.getBlobs(blockCache.fork, versionedHashes, blobAndProofV2Buffers);
   timer?.();
   // Execution engine was unable to find one or more blobs
   if (blobsAndProofs === null) {
