@@ -575,71 +575,44 @@ export async function unavailableBeaconBlobsByRootPostFulu(
     return acc;
   }, [] as number[]);
 
-  let resolveBlockInput: ((block: BlockInput) => void) | null = null;
-  const blockInputPromise = new Promise<BlockInput>((resolveCB) => {
-    resolveBlockInput = resolveCB;
-  });
-  if (resolveBlockInput === null) {
-    throw Error("Promise Constructor was not executed immediately");
+  const {custodyGroups: peerColumns} = network.getConnectedPeerSyncMeta(peerId);
+
+  // get match
+  const columns = peerColumns.reduce((acc, elem) => {
+    if (neededColumns.includes(elem)) {
+      acc.push(elem);
+    }
+    return acc;
+  }, [] as number[]);
+
+  // this peer can't help fetching columns for this block
+  if (unavailableBlockInput.block !== null && columns.length === 0 && neededColumns.length > 0) {
+    return unavailableBlockInput;
   }
 
-  const gotColumnsFromExecution = await getDataColumnsFromExecution(
-    config,
-    network.custodyConfig,
-    opts.executionEngine,
-    opts.emitter,
-    {
-      fork: config.getForkName(block.message.slot),
-      block: block,
-      cachedData: cachedData,
-      blockInputPromise,
-      resolveBlockInput,
-    },
-    opts.metrics ?? null
-  );
+  let allDataColumnSidecars: fulu.DataColumnSidecar[];
+  if (columns.length > 0) {
+    allDataColumnSidecars = await network.sendDataColumnSidecarsByRoot(peerId, [{blockRoot, columns}]);
+    opts.metrics?.dataColumns.bySource.inc({source: DataColumnsSource.byRoot}, allDataColumnSidecars.length);
+  } else {
+    allDataColumnSidecars = [];
+  }
 
-  if (!gotColumnsFromExecution) {
-    const {custodyGroups: peerColumns} = network.getConnectedPeerSyncMeta(peerId);
+  opts.logger?.verbose("unavailableBeaconBlobsByRootPostFulu: Requested data columns from peer", {
+    slot: block.message.slot,
+    requestedColumns: columns.join(","),
+    respondedColumns: allDataColumnSidecars.map((dcs) => dcs.index).join(","),
+    peerClient,
+  });
 
-    // get match
-    const columns = peerColumns.reduce((acc, elem) => {
-      if (neededColumns.includes(elem)) {
-        acc.push(elem);
-      }
-      return acc;
-    }, [] as number[]);
-
-    // this peer can't help fetching columns for this block
-    if (unavailableBlockInput.block !== null && columns.length === 0 && neededColumns.length > 0) {
-      return unavailableBlockInput;
-    }
-
-    let allDataColumnSidecars: fulu.DataColumnSidecar[];
-    if (columns.length > 0) {
-      allDataColumnSidecars = await network.sendDataColumnSidecarsByRoot(peerId, [{blockRoot, columns}]);
-      opts.metrics?.dataColumns.bySource.inc({source: DataColumnsSource.byRoot}, allDataColumnSidecars.length);
-    } else {
-      allDataColumnSidecars = [];
-    }
-
-    const logCtx = {
-      slot: block.message.slot,
-      requestedColumns: columns.join(","),
-      respondedColumns: allDataColumnSidecars.map((dcs) => dcs.index).join(","),
-      peerClient,
-    };
-
-    opts.logger?.verbose("unavailableBeaconBlobsByRootPostFulu: Requested data columns from peer", logCtx);
-
-    // the same to matchBlockWithDataColumns() without expecting requested data columns = responded data columns
-    // because at gossip time peer may not have enough column to return
-    for (const dataColumnSidecar of allDataColumnSidecars) {
-      dataColumnsCache.set(dataColumnSidecar.index, {
-        dataColumn: dataColumnSidecar,
-        // TODO: req/resp should return bytes here
-        dataColumnBytes: null,
-      });
-    }
+  // the same to matchBlockWithDataColumns() without expecting requested data columns = responded data columns
+  // because at gossip time peer may not have enough column to return
+  for (const dataColumnSidecar of allDataColumnSidecars) {
+    dataColumnsCache.set(dataColumnSidecar.index, {
+      dataColumn: dataColumnSidecar,
+      // TODO: req/resp should return bytes here
+      dataColumnBytes: null,
+    });
   }
 
   // reevaluate needeColumns and resolve availability if possible
