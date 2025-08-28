@@ -229,7 +229,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       metrics?.gossipBlob.recvToValidation.observe(recvToValidation);
       metrics?.gossipBlob.validationTime.observe(validationTime);
 
-      if (chain.emitter.listenerCount(routes.events.EventType.blobSidecar)) {
+      if (chain.emitter.listenerCount(routes.events.EventType.blobSidecar) > 0) {
         chain.emitter.emit(routes.events.EventType.blobSidecar, {
           blockRoot: blockRootHex,
           slot,
