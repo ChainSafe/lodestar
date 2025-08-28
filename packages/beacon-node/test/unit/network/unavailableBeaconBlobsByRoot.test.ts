@@ -182,7 +182,6 @@ describe("unavailableBeaconBlobsByRoot", () => {
       expect(result).toEqual(resolvedBlobs);
     });
   });
-
 });
 
 function generateBlobs(count: number): {
