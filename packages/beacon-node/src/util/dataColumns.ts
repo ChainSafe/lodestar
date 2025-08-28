@@ -45,6 +45,21 @@ export enum RecoverResult {
   Failed = "failed",
 }
 
+export enum DataColumnELResult {
+  PreFulu = "pre_fulu",
+  // the recover is not attempted because it has full data columns
+  NotAttemptedFull = "not_attempted_full",
+  // block has no blob so no need to call EL
+  NotAttemptedNoBlobs = "not_attempted_no_blobs",
+  // EL call returned null, meaning it could not find the blobs
+  SuccessNull = "success_null",
+  // the recover is a success and it helps resolve availability
+  SuccessResolved = "success_resolved",
+  // the recover is a success but it's late, availability is already resolved by either gossip or getBlobsV2
+  SuccessLate = "success_late",
+  Failed = "failed",
+}
+
 export type CustodyConfigOpts = {
   nodeId: NodeId;
   config: ChainForkConfig;
@@ -420,6 +435,9 @@ export function hasSampledDataColumns(custodyConfig: CustodyConfig, dataColumnCa
   );
 }
 
+/**
+ * Post fulu, call getBlobsV2 from execution engine once per slot whenever we see either beacon_block or data_column_sidecar gossip message
+ */
 export async function getDataColumnsFromExecution(
   config: ChainForkConfig,
   custodyConfig: CustodyConfig,
@@ -427,9 +445,9 @@ export async function getDataColumnsFromExecution(
   emitter: ChainEventEmitter,
   blockCache: BlockInputCacheType,
   metrics: Metrics | null
-): Promise<boolean> {
+): Promise<DataColumnELResult> {
   if (blockCache.fork !== ForkName.fulu) {
-    return false;
+    return DataColumnELResult.PreFulu;
   }
 
   if (!blockCache.cachedData) {
@@ -438,12 +456,12 @@ export async function getDataColumnsFromExecution(
   }
 
   if (blockCache.cachedData.fork !== ForkName.fulu) {
-    return false;
+    return DataColumnELResult.PreFulu;
   }
 
   // If already have all columns, exit
   if (hasSampledDataColumns(custodyConfig, blockCache.cachedData.dataColumnsCache)) {
-    return true;
+    return DataColumnELResult.NotAttemptedFull;
   }
 
   let commitments: undefined | Uint8Array[];
@@ -461,7 +479,7 @@ export async function getDataColumnsFromExecution(
 
   // Return if block has no blobs
   if (commitments.length === 0) {
-    return true;
+    return DataColumnELResult.NotAttemptedNoBlobs;
   }
 
   // Process KZG commitments into versioned hashes
@@ -470,22 +488,21 @@ export async function getDataColumnsFromExecution(
   // Get blobs from execution engine
   metrics?.peerDas.getBlobsV2Requests.inc();
   const timer = metrics?.peerDas.getBlobsV2RequestDuration.startTimer();
-  const blobs = await executionEngine.getBlobs(blockCache.fork, versionedHashes);
+  const blobsAndProofs = await executionEngine.getBlobs(blockCache.fork, versionedHashes);
   timer?.();
-
   // Execution engine was unable to find one or more blobs
-  if (blobs === null) {
-    return false;
+  if (blobsAndProofs === null) {
+    return DataColumnELResult.SuccessNull;
   }
   metrics?.peerDas.getBlobsV2Responses.inc();
 
   // Return if we received all data columns while waiting for getBlobs
   if (hasSampledDataColumns(custodyConfig, blockCache.cachedData.dataColumnsCache)) {
-    return true;
+    return DataColumnELResult.SuccessLate;
   }
 
   let dataColumnSidecars: fulu.DataColumnSidecars;
-  const cellsAndProofs = getCellsAndProofs(blobs);
+  const cellsAndProofs = getCellsAndProofs(blobsAndProofs);
   if (blockCache.block) {
     dataColumnSidecars = getDataColumnSidecarsFromBlock(
       config,
@@ -528,5 +545,5 @@ export async function getDataColumnsFromExecution(
     blockCache.resolveBlockInput(blockInput);
   }
 
-  return true;
+  return DataColumnELResult.SuccessResolved;
 }

@@ -9,6 +9,7 @@ import {Metrics} from "../../metrics/index.js";
 import {IClock} from "../../util/clock.js";
 import {
   CustodyConfig,
+  DataColumnELResult,
   RecoverResult,
   getDataColumnsFromExecution,
   hasSampledDataColumns,
@@ -214,12 +215,14 @@ export class SeenGossipBlockInput {
 
     if (!this.blockInputCache.has(blockHex)) {
       this.blockInputCache.set(blockHex, blockCache);
+      // call getBlobsV2 after the first seen baecon_block or data_column_sidecar
       callInNextEventLoop(() => {
         getDataColumnsFromExecution(config, this.custodyConfig, this.executionEngine, this.emitter, blockCache, metrics)
-          .then((_success) => {
-            // TODO: (@matthewkeil) add metrics collection point here
+          .then((result) => {
+            metrics?.dataColumns.dataColumnELResult.inc({result});
           })
           .catch((error) => {
+            metrics?.dataColumns.dataColumnELResult.inc({result: DataColumnELResult.Failed});
             this.logger.warn("Error getting data columns from execution", {blockHex}, error);
           });
       });
