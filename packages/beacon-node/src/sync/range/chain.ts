@@ -462,7 +462,7 @@ export class SyncChain {
           if (isBlockInputBlobs(block)) {
             const blockLogMeta = block.getLogMeta();
             const expectedBlobs = typeof blockLogMeta.expectedBlobs === "number" ? blockLogMeta.expectedBlobs : 0;
-            logMeta.expectedBlobCount = (logMeta.expecteeBlobCount ?? 0) + expectedBlobs;
+            logMeta.expectedBlobCount = (logMeta.expectedBlobCount ?? 0) + expectedBlobs;
             logMeta.receivedBlobCount = (logMeta.receivedBlobCount ?? 0) + blockLogMeta.receivedBlobs;
           } else if (isBlockInputColumns(block)) {
             logMeta.columnCount = (logMeta.columnCount ?? 0) + block.getLogMeta().receivedColumns;
