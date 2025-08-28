@@ -448,12 +448,15 @@ export function validateResponses({
 
     const startSlot = blobsRequest.startSlot;
     const endSlot = startSlot + blobsRequest.count;
-    // Prepend batch blocks (pre-fetched blocks) to the blocks received in this response
-    // This is safe because blocks are always downloaded from first to last in the range
-    const blobsRequestBlocks = [
-      ...(batchBlocks?.map((blockInput) => blockInput.getBlock()) ?? []),
-      ...(blocks ?? []),
-    ].filter((block) => block.message.slot >= startSlot && block.message.slot <= endSlot);
+    // Organize pre-fetched blocks plus the blocks received in this response
+    const blobsRequestBlocks: SignedBeaconBlock[] = [];
+    let lastSlot = startSlot - 1;
+    for (const block of [...(batchBlocks?.map((blockInput) => blockInput.getBlock()) ?? []), ...(blocks ?? [])]) {
+      if (block.message.slot >= startSlot && block.message.slot <= endSlot && block.message.slot > lastSlot) {
+        blobsRequestBlocks.push(block);
+        lastSlot = block.message.slot;
+      }
+    }
 
     validateBlobsByRangeResponse(blobsRequestBlocks, blobSidecars);
   }
