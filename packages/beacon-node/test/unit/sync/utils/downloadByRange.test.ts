@@ -76,6 +76,7 @@ describe("downloadByRange", () => {
       expect(network.sendBeaconBlocksByRange).toHaveBeenCalledWith(peerIdStr, requests.blocksRequest);
       expect(response.blocks).toEqual(expected.blocks);
     });
+
     it("should make blob requests", async () => {
       (network.sendBlobSidecarsByRange as Mock).mockResolvedValueOnce(networkResponse.blobSidecars);
       const response = await requestByRange({
@@ -86,6 +87,7 @@ describe("downloadByRange", () => {
       expect(network.sendBlobSidecarsByRange).toHaveBeenCalledWith(peerIdStr, requests.blobsRequest);
       expect(response.blobSidecars).toEqual(expected.blobSidecars);
     });
+
     // it("should make column requests", async () => {
     //   const response = await requestByRange({
     //     network,
@@ -95,6 +97,7 @@ describe("downloadByRange", () => {
     //   expect(network.sendColumnSidecarsByRange).toHaveBeenCalledWith(peerIdStr, requests.columnsRequest);
     //   expect(response.columnSidecars).toBe(expected.columnSidecars);
     // });
+
     it("should make concurrent block/blob/column requests from the same peer", async () => {
       (network.sendBeaconBlocksByRange as Mock).mockResolvedValueOnce(networkResponse.blocks);
       (network.sendBlobSidecarsByRange as Mock).mockResolvedValueOnce(networkResponse.blobSidecars);
@@ -112,6 +115,7 @@ describe("downloadByRange", () => {
       expect(response.blobSidecars).toEqual(expected.blobSidecars);
       // expect(response.columnSidecars).toBe(expected.columnSidecars);
     });
+
     it("should throw if one of the calls fails", async () => {
       (network.sendBeaconBlocksByRange as Mock).mockResolvedValueOnce(networkResponse.blocks);
       const rejectionError = new Error("TEST_ERROR_MESSAGE");
@@ -162,6 +166,7 @@ describe("downloadByRange", () => {
       expect(blockRoots).toBeInstanceOf(Array);
       expect(blockRoots.length).toEqual(5);
     });
+
     it("should throw if there are duplicates within the given range", () => {
       expect(() =>
         validateBlockByRangeResponse(
@@ -175,6 +180,7 @@ describe("downloadByRange", () => {
         )
       ).toThrow(DownloadByRangeError);
     });
+
     it("should throw if more blocks than were requested", () => {
       expect(() =>
         validateBlockByRangeResponse(
@@ -188,6 +194,7 @@ describe("downloadByRange", () => {
         )
       ).toThrow(DownloadByRangeError);
     });
+
     it("should throw if blocks are returned out of order", () => {
       expect(() =>
         validateBlockByRangeResponse(
@@ -205,19 +212,23 @@ describe("downloadByRange", () => {
   describe("compareBlobsByRangeRequestAndResponse", () => {
     const expectedBlocks = expected.blocks as SignedBeaconBlock[];
     const expectedBlobSidecars = expected.blobSidecars as deneb.BlobSidecars;
+
     it("should not throw when all blobs are present in response", () => {
       expect(() => validateBlobsByRangeResponse(expectedBlocks, expectedBlobSidecars)).not.toThrow();
     });
+
     it("should throw when blobs are missing from response", () => {
       expect(() => validateBlobsByRangeResponse(expectedBlocks, expectedBlobSidecars.slice(0, -4))).toThrow(
         DownloadByRangeError
       );
     });
+
     it("should throw when extra blobs are in response", () => {
       expect(() =>
         validateBlobsByRangeResponse(expectedBlocks.slice(0, 1), expectedBlobSidecars.concat(expectedBlobSidecars))
       ).toThrow(DownloadByRangeError);
     });
+
     it("should throw when blobs are not in order", () => {
       const blobSidecars = expectedBlobSidecars.slice().reverse();
       expect(() => validateBlobsByRangeResponse(expectedBlocks, blobSidecars)).toThrow(DownloadByRangeError);
