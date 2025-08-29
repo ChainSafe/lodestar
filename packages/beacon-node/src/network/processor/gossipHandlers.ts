@@ -176,9 +176,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
       logger.debug("Validated gossip block", {...logCtx, recvToValidation, validationTime});
 
-      if (chain.emitter.listenerCount(routes.events.EventType.blockGossip)) {
-        chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRootHex});
-      }
+      chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRootHex});
 
       return blockInput;
     } catch (e) {

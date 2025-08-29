@@ -535,10 +535,12 @@ export class LightClientServer {
 
     // Emit update
     // Note: Always emit optimistic update even if we have emitted one with higher or equal attested_header.slot
-    this.emitter.emit(routes.events.EventType.lightClientOptimisticUpdate, {
-      version: attestedFork,
-      data: headerUpdate,
-    });
+    if (this.emitter.listenerCount(routes.events.EventType.lightClientOptimisticUpdate) > 0) {
+      this.emitter.emit(routes.events.EventType.lightClientOptimisticUpdate, {
+        version: attestedFork,
+        data: headerUpdate,
+      });
+    }
 
     // Persist latest best update for getLatestHeadUpdate()
     // TODO: Once SyncAggregate are constructed from P2P too, count bits to decide "best"
@@ -570,10 +572,12 @@ export class LightClientServer {
         this.metrics?.lightclientServer.onSyncAggregate.inc({event: "update_latest_finalized_update"});
 
         // Note: Ignores gossip rule to always emit finality_update with higher finalized_header.slot, for simplicity
-        this.emitter.emit(routes.events.EventType.lightClientFinalityUpdate, {
-          version: attestedFork,
-          data: this.finalized,
-        });
+        if (this.emitter.listenerCount(routes.events.EventType.lightClientFinalityUpdate) > 0) {
+          this.emitter.emit(routes.events.EventType.lightClientFinalityUpdate, {
+            version: attestedFork,
+            data: this.finalized,
+          });
+        }
       }
     }
 

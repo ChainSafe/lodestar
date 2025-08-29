@@ -76,7 +76,9 @@ export class ChainHeaderTracker {
         fn(headEventData).catch((e) => this.logger.error("Error calling head event handler", e));
       }
 
-      this.emitter.emit(ValidatorEvent.chainHead, headEventData);
+      if (this.emitter.listenerCount(ValidatorEvent.chainHead) > 0) {
+        this.emitter.emit(ValidatorEvent.chainHead, headEventData);
+      }
 
       this.logger.verbose("Found new chain head", {
         slot: slot,

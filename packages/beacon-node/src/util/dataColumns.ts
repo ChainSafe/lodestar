@@ -501,13 +501,15 @@ export async function getDataColumnsFromExecution(
   }
 
   // Publish columns if and only if subscribed to them
-  const sampledColumns = custodyConfig.sampledColumns.map((columnIndex) => dataColumnSidecars[columnIndex]);
+  if (emitter.listenerCount(ChainEvent.publishDataColumns)) {
+    const sampledColumns = custodyConfig.sampledColumns.map((columnIndex) => dataColumnSidecars[columnIndex]);
 
-  // for columns that we already seen, it will be ignored through `ignoreDuplicatePublishError` gossip option
-  emitter.emit(ChainEvent.publishDataColumns, sampledColumns);
+    // for columns that we already seen, it will be ignored through `ignoreDuplicatePublishError` gossip option
+    emitter.emit(ChainEvent.publishDataColumns, sampledColumns);
 
-  for (const column of sampledColumns) {
-    blockCache.cachedData.dataColumnsCache.set(column.index, {dataColumn: column, dataColumnBytes: null});
+    for (const column of sampledColumns) {
+      blockCache.cachedData.dataColumnsCache.set(column.index, {dataColumn: column, dataColumnBytes: null});
+    }
   }
 
   const allDataColumns = getBlockInputDataColumns(blockCache.cachedData.dataColumnsCache, custodyConfig.sampledColumns);
