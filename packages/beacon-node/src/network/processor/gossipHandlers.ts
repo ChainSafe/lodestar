@@ -933,15 +933,13 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
           );
         } else {
           chain.emitter.emit(routes.events.EventType.attestation, attestation as SingleAttestation<ForkPreElectra>);
-          if (chain.emitter.listenerCount(routes.events.EventType.singleAttestation)) {
-            chain.emitter.emit(
-              routes.events.EventType.singleAttestation,
-              toElectraSingleAttestation(
-                attestation as SingleAttestation<ForkPreElectra>,
-                indexedAttestation.attestingIndices[0]
-              )
-            );
-          }
+          chain.emitter.emit(
+            routes.events.EventType.singleAttestation,
+            toElectraSingleAttestation(
+              attestation as SingleAttestation<ForkPreElectra>,
+              indexedAttestation.attestingIndices[0]
+            )
+          );
         }
       }
 
