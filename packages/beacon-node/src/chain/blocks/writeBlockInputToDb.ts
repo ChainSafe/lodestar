@@ -38,11 +38,12 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInputs: IBloc
       inputType: blockInput.type,
     });
 
+    if (!blockInput.hasAllData()) {
+      await blockInput.waitForAllData(BLOB_AVAILABILITY_TIMEOUT);
+    }
+
     // NOTE: Old data is pruned on archive
     if (isBlockInputColumns(blockInput)) {
-      if (!blockInput.hasAllData()) {
-        await blockInput.waitForAllData(BLOB_AVAILABILITY_TIMEOUT);
-      }
       const {custodyColumns} = this.custodyConfig;
       const blobsLen = (block.message as fulu.BeaconBlock).body.blobKzgCommitments.length;
       let dataColumnsLen: number;
@@ -66,9 +67,6 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInputs: IBloc
         root: blockRootHex,
       });
     } else if (isBlockInputBlobs(blockInput)) {
-      if (!blockInput.hasAllData()) {
-        await blockInput.waitForAllData(BLOB_AVAILABILITY_TIMEOUT);
-      }
       const blobSidecars = blockInput.getBlobs();
       fnPromises.push(this.db.blobSidecars.add({blockRoot, slot: block.message.slot, blobSidecars}));
       this.logger.debug("Persisted blobSidecars to hot DB", {
