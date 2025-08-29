@@ -708,13 +708,6 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
       );
     }
 
-    for (const {columnSidecar} of this.columnsCache.values()) {
-      if (!blockAndColumnArePaired(props.block, columnSidecar)) {
-        this.columnsCache.delete(columnSidecar.index);
-        // this.logger?.error(`Removing columnIndex=${columnSidecar.index} from BlockInput`, {}, err);
-      }
-    }
-
     const hasAllData = props.block.message.body.blobKzgCommitments.length === 0 || this.state.hasAllData;
 
     this.state = {
@@ -750,19 +743,8 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
       );
     }
 
-    if (!opts.throwOnDuplicateAdd) {
-      return;
-    }
-    if (this.state.hasAllData) {
-      throw new BlockInputError(
-        {
-          code: BlockInputErrorCode.INVALID_CONSTRUCTION,
-          blockRoot: this.blockRootHex,
-        },
-        "Cannot addColumn to BlockInputColumns after it already is complete"
-      );
-    }
-    if (this.columnsCache.has(columnSidecar.index)) {
+    const isDuplicate = this.columnsCache.has(columnSidecar.index);
+    if (!opts.throwOnDuplicateAdd && isDuplicate) {
       throw new BlockInputError(
         {
           code: BlockInputErrorCode.INVALID_CONSTRUCTION,
@@ -772,8 +754,8 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
       );
     }
 
-    if (this.state.hasBlock) {
-      assertBlockAndColumnArePaired(this.blockRootHex, this.state.block, columnSidecar);
+    if (isDuplicate) {
+      return;
     }
 
     this.columnsCache.set(columnSidecar.index, {columnSidecar, source, seenTimestampSec, peerIdStr});
@@ -848,35 +830,5 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
       missing,
       versionedHashes: this.state.versionedHashes,
     };
-  }
-}
-
-function blockAndColumnArePaired(
-  block: SignedBeaconBlock<ForkColumnsDA>,
-  columnSidecar: fulu.DataColumnSidecar
-): boolean {
-  return (
-    block.message.body.blobKzgCommitments.length === columnSidecar.kzgCommitments.length &&
-    block.message.body.blobKzgCommitments.every((commitment, index) =>
-      Buffer.compare(commitment, columnSidecar.kzgCommitments[index])
-    )
-  );
-}
-
-function assertBlockAndColumnArePaired(
-  blockRootHex: string,
-  block: SignedBeaconBlock<ForkColumnsDA>,
-  columnSidecar: fulu.DataColumnSidecar
-): void {
-  if (!blockAndColumnArePaired(block, columnSidecar)) {
-    throw new BlockInputError(
-      {
-        code: BlockInputErrorCode.MISMATCHED_KZG_COMMITMENT,
-        blockRoot: blockRootHex,
-        slot: block.message.slot,
-        sidecarIndex: columnSidecar.index,
-      },
-      "DataColumnsSidecar kzgCommitment does not match block kzgCommitment"
-    );
   }
 }
