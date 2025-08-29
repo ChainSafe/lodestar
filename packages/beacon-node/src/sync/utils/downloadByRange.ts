@@ -19,6 +19,47 @@ import {INetwork} from "../../network/index.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {RangeSyncType} from "./remoteSyncType.js";
 
+/**
+ *
+ * blocks
+ * - check all slots are within range of startSlot (inclusive) through startSlot + count (exclusive)
+ * - don't have more than count number of blocks
+ * - slots are in ascending order
+ * - must allow for skip slots
+ * - check is a chain of blocks where via parentRoot matches hashTreeRoot of block before
+ *
+ * blobs
+ * - check that expected sidecar count matches the returned count
+ * - slots are in ascending order
+ * - allows for skip slots in validation
+ * - indices are in ascending order
+ * - check that the number of blobCount for a slot matches block.message.body.blobKzgCommitments.length
+ * - check that blobSidecar.kzgCommitment matches block.message.body.blobKzgCommitments[blobSidecar.index]
+ * - hashTreeRoot(block.message) equals the hashTreeRoot(blobSidecar.signedBlockHeader.message)
+ * - verify_blob_sidecar, verify_kzg_inclusion_proof, verify_kzg_proof (spec verification)
+ *
+ *
+ * Clients MUST respond with at least the blob sidecars of the first blob-carrying block that exists
+ * in the range, if they have it, and no more than MAX_REQUEST_BLOB_SIDECARS sidecars.
+ *
+ * Clients MUST include all blob sidecars of each block from which they include blob sidecars.
+ *
+ * The following blob sidecars, where they exist, MUST be sent in consecutive (slot, index) order.
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ * columns
+ * - check that expected sidecar count matches the returned count (discount slots with 0 blobKzgCommitment.length)
+ * - slots are in ascending order
+ * - indices are in ascending order
+ * - check that blobCount = 0 in a slot (come back to this)
+ * - verify_blob_sidecar, verify_kzg_inclusion_proof, verify_kzg_proof
+ */
+
 export type DownloadByRangeRequests = {
   blocksRequest?: phase0.BeaconBlocksByRangeRequest;
   blobsRequest?: deneb.BlobSidecarsByRangeRequest;
@@ -232,112 +273,6 @@ export async function downloadByRange({
   });
 
   return {...response, blockRoots};
-}
-
-/**
- * Should not be called directly. Only exported for unit testing purposes
- */
-export function validateRequests({
-  config,
-  daOutOfRange,
-  blocksRequest,
-  blobsRequest,
-  columnsRequest,
-}: DownloadByRangeRequests & Pick<DownloadAndCacheByRangeProps, "config" | "daOutOfRange">): string {
-  const startSlot = (blocksRequest?.startSlot ?? blobsRequest?.startSlot ?? columnsRequest?.startSlot) as number;
-  const count = (blocksRequest?.count ?? blobsRequest?.count ?? columnsRequest?.count) as number;
-  const slotRange = `${startSlot} - ${startSlot + count}`;
-  const dataRequest = blobsRequest ?? columnsRequest;
-
-  if (!blocksRequest) {
-    throw new DownloadByRangeError({
-      code: DownloadByRangeErrorCode.MISSING_BLOCKS_REQUEST,
-      slotRange,
-    });
-  }
-
-  if (daOutOfRange) {
-    if (dataRequest) {
-      throw new DownloadByRangeError(
-        {
-          code: DownloadByRangeErrorCode.INVALID_DATA_REQUEST,
-          slotRange,
-        },
-        "Cannot request data if it is outside of the availability range"
-      );
-    }
-
-    return slotRange;
-  }
-
-  if (!dataRequest) {
-    throw new DownloadByRangeError(
-      {
-        code: DownloadByRangeErrorCode.MISSING_DATA_REQUEST,
-        slotRange,
-      },
-      "Must request data if it is available"
-    );
-  }
-
-  if (blobsRequest && columnsRequest) {
-    throw new DownloadByRangeError(
-      {
-        code: DownloadByRangeErrorCode.INVALID_DATA_REQUEST,
-        slotRange,
-      },
-      "Cannot request both blob and column data in the same slot range"
-    );
-  }
-
-  const forkName = config.getForkName(startSlot);
-  if (!isForkPostDeneb(forkName)) {
-    throw new DownloadByRangeError(
-      {
-        code: DownloadByRangeErrorCode.INVALID_DATA_REQUEST,
-        slotRange,
-      },
-      "Cannot request data pre-deneb"
-    );
-  }
-
-  if (isForkPostDeneb(forkName) && !isForkPostFulu(forkName) && !blobsRequest) {
-    throw new DownloadByRangeError(
-      {
-        code: DownloadByRangeErrorCode.MISSING_BLOBS_REQUEST,
-        slotRange,
-      },
-      "Must request blobs for blob-only forks"
-    );
-  }
-
-  if (isForkPostFulu(forkName) && !columnsRequest) {
-    throw new DownloadByRangeError(
-      {
-        code: DownloadByRangeErrorCode.MISSING_COLUMNS_REQUEST,
-        slotRange,
-      },
-      "Must request columns for forks with columns"
-    );
-  }
-
-  if (blocksRequest.startSlot !== dataRequest.startSlot) {
-    throw new DownloadByRangeError({
-      code: DownloadByRangeErrorCode.START_SLOT_MISMATCH,
-      blockStartSlot: blocksRequest.startSlot,
-      dataStartSlot: dataRequest.startSlot,
-    });
-  }
-
-  if (blocksRequest.count !== dataRequest.count) {
-    throw new DownloadByRangeError({
-      code: DownloadByRangeErrorCode.COUNT_MISMATCH,
-      blockCount: blocksRequest.count,
-      dataCount: dataRequest.count,
-    });
-  }
-
-  return slotRange;
 }
 
 /**
