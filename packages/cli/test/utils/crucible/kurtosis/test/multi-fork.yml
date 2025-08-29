@@ -1,0 +1,15 @@
+participants:
+  - el_type: geth
+    cl_type: lodestar
+    count: 4
+  - el_type: geth
+    cl_type: lighthouse
+additional_services:
+  - dora
+network_params:
+  preset: "minimal"
+  # network_idean 1234
+  altair_fork_epoch: 2
+  bellatrix_fork_epoch: 4
+  capella_fork_epoch: 6
+  deneb_fork_epoch: 8

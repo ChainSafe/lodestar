@@ -1,0 +1,9 @@
+participants:
+  - el_type: geth
+    cl_type: lodestar
+  - el_type: geth
+    cl_type: lighthouse
+additional_services:
+  - dora
+network_params:
+  num_validator_keys_per_node: 32 #emulate keysCount
