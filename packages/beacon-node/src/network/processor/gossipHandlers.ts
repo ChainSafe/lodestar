@@ -309,12 +309,14 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       metrics?.gossipBlob.recvToValidation.observe(recvToValidation);
       metrics?.gossipBlob.validationTime.observe(validationTime);
 
-      chain.emitter.emit(routes.events.EventType.dataColumnSidecar, {
-        blockRoot: blockRootHex,
-        slot,
-        index: dataColumnSidecar.index,
-        kzgCommitments: dataColumnSidecar.kzgCommitments.map(toHex),
-      });
+      if (chain.emitter.listenerCount(routes.events.EventType.dataColumnSidecar)) {
+        chain.emitter.emit(routes.events.EventType.dataColumnSidecar, {
+          blockRoot: blockRootHex,
+          slot,
+          index: dataColumnSidecar.index,
+          kzgCommitments: dataColumnSidecar.kzgCommitments.map(toHex),
+        });
+      }
 
       logger.debug("Received gossip dataColumn", {
         slot: slot,
@@ -931,13 +933,15 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
           );
         } else {
           chain.emitter.emit(routes.events.EventType.attestation, attestation as SingleAttestation<ForkPreElectra>);
-          chain.emitter.emit(
-            routes.events.EventType.singleAttestation,
-            toElectraSingleAttestation(
-              attestation as SingleAttestation<ForkPreElectra>,
-              indexedAttestation.attestingIndices[0]
-            )
-          );
+          if (chain.emitter.listenerCount(routes.events.EventType.singleAttestation)) {
+            chain.emitter.emit(
+              routes.events.EventType.singleAttestation,
+              toElectraSingleAttestation(
+                attestation as SingleAttestation<ForkPreElectra>,
+                indexedAttestation.attestingIndices[0]
+              )
+            );
+          }
         }
       }
 
