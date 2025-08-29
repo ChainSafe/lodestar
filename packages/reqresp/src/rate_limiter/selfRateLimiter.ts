@@ -57,13 +57,14 @@ export class SelfRateLimiter {
    * called before we send a request to a peer.
    */
   allows(peerId: PeerIdStr, protocolId: ProtocolID, requestId: RequestId): boolean {
+    const now = Date.now();
     const peerRateLimiter = this.rateLimitersPerPeer.getOrDefault(peerId);
     const trackedRequests = peerRateLimiter.getOrDefault(protocolId);
-    this.lastSeenRequestsByPeer.set(peerId, Date.now());
+    this.lastSeenRequestsByPeer.set(peerId, now);
 
     let inProgressRequests = 0;
     for (const [trackedRequestId, trackedRequestTimeMs] of trackedRequests.entries()) {
-      if (trackedRequestTimeMs + REQUEST_TIMEOUT_MS <= Date.now()) {
+      if (trackedRequestTimeMs + REQUEST_TIMEOUT_MS <= now) {
         // request timed out, remove it
         trackedRequests.delete(trackedRequestId);
         this.logger?.debug("SelfRateLimiter: request timed out, removing it", {
@@ -81,7 +82,7 @@ export class SelfRateLimiter {
       return false;
     }
 
-    trackedRequests.set(requestId, Date.now());
+    trackedRequests.set(requestId, now);
     return true;
   }
 
