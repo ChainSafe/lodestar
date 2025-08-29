@@ -358,6 +358,7 @@ export async function validateBlockDataColumnSidecars(
     );
   }
 
+  const commitments: Uint8Array[] = [];
   const cellIndices: number[] = [];
   const cells: Uint8Array[] = [];
   const proofs: Uint8Array[] = [];
@@ -420,6 +421,7 @@ export async function validateBlockDataColumnSidecars(
       );
     }
 
+    commitments.push(...columnSidecar.kzgCommitments);
     cellIndices.push(...Array.from({length: columnSidecar.column.length}, () => columnSidecar.index));
     cells.push(...columnSidecar.column);
     proofs.push(...columnSidecar.kzgProofs);
@@ -427,7 +429,7 @@ export async function validateBlockDataColumnSidecars(
 
   let reason: string | undefined;
   try {
-    const valid = await kzg.verifyCellKzgProofBatch(blockKzgCommitments, cellIndices, cells, proofs);
+    const valid = await kzg.asyncVerifyCellKzgProofBatch(commitments, cellIndices, cells, proofs);
     if (!valid) {
       reason = "Invalid KZG proof batch";
     }
