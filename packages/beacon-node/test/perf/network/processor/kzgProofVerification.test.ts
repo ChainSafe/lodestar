@@ -4,32 +4,42 @@ import {kzg} from "../../../../src/util/kzg.js";
 
 // KZG proof verification
 //   single data column sidecar verification
-//     ✔ asyncVerifyCellKzgProofBatch - 1 blobs                              229.4809 ops/s    4.357662 ms/op   x1.030         47 runs  0.714 s
-//     ✔ asyncVerifyCellKzgProofBatch - 2 blobs                              195.0225 ops/s    5.127614 ms/op   x1.133        114 runs   1.13 s
-//     ✔ asyncVerifyCellKzgProofBatch - 4 blobs                              158.4515 ops/s    6.311078 ms/op   x0.942         50 runs  0.817 s
-//     ✔ asyncVerifyCellKzgProofBatch - 6 blobs                              146.4209 ops/s    6.829627 ms/op   x0.829         46 runs  0.825 s
-//     ✔ asyncVerifyCellKzgProofBatch - 8 blobs                              122.8380 ops/s    8.140803 ms/op   x0.889         39 runs  0.826 s
-//     ✔ asyncVerifyCellKzgProofBatch - 12 blobs                             112.1575 ops/s    8.916032 ms/op   x0.919         24 runs  0.725 s
-//     ✔ asyncVerifyCellKzgProofBatch - 20 blobs                             85.77360 ops/s    11.65860 ms/op   x0.949         28 runs  0.837 s
-//     ✔ asyncVerifyCellKzgProofBatch - 48 blobs                             51.80505 ops/s    19.30314 ms/op   x0.916         18 runs  0.859 s
-//     ✔ asyncVerifyCellKzgProofBatch - 72 blobs                             37.34696 ops/s    26.77594 ms/op   x1.002         13 runs  0.863 s
+//     ✔ asyncVerifyCellKzgProofBatch - 1 blobs                              288.7284 ops/s    3.463462 ms/op   x0.795         88 runs  0.819 s
+//     ✔ asyncVerifyCellKzgProofBatch - 2 blobs                              207.3141 ops/s    4.823598 ms/op   x0.941         44 runs  0.715 s
+//     ✔ asyncVerifyCellKzgProofBatch - 4 blobs                              177.0196 ops/s    5.649093 ms/op   x0.895         55 runs  0.827 s
+//     ✔ asyncVerifyCellKzgProofBatch - 6 blobs                              135.9839 ops/s    7.353814 ms/op   x1.077         57 runs  0.925 s
+//     ✔ asyncVerifyCellKzgProofBatch - 8 blobs                              133.8985 ops/s    7.468342 ms/op   x0.917         57 runs  0.930 s
+//     ✔ asyncVerifyCellKzgProofBatch - 12 blobs                             115.6600 ops/s    8.646032 ms/op   x0.970         24 runs  0.725 s
+//     ✔ asyncVerifyCellKzgProofBatch - 20 blobs                             84.71706 ops/s    11.80400 ms/op   x1.012         35 runs  0.938 s
+//     ✔ asyncVerifyCellKzgProofBatch - 48 blobs                             48.31236 ops/s    20.69864 ms/op   x1.072         17 runs  0.869 s
+//     ✔ asyncVerifyCellKzgProofBatch - 72 blobs                             37.12524 ops/s    26.93586 ms/op   x1.006         13 runs  0.881 s
 //   parallel column verification
-//     ✔ asyncVerifyCellKzgProofBatch - 1 blobs x 128 columns                14.14275 ops/s    70.70761 ms/op        -         11 runs   1.34 s
-//     ✔ asyncVerifyCellKzgProofBatch - 2 blobs x 128 columns                12.03836 ops/s    83.06779 ms/op        -         11 runs   1.42 s
-//     ✔ asyncVerifyCellKzgProofBatch - 4 blobs x 128 columns                9.231444 ops/s    108.3254 ms/op        -         10 runs   1.64 s
-//     ✔ asyncVerifyCellKzgProofBatch - 6 blobs x 128 columns                7.403973 ops/s    135.0626 ms/op        -         10 runs   1.90 s
-//     ✔ asyncVerifyCellKzgProofBatch - 8 blobs x 128 columns                6.289518 ops/s    158.9947 ms/op        -         10 runs   2.23 s
-//     ✔ asyncVerifyCellKzgProofBatch - 12 blobs x 128 columns               4.757330 ops/s    210.2019 ms/op        -         10 runs   2.73 s
-//     ✔ asyncVerifyCellKzgProofBatch - 20 blobs x 128 columns               3.217188 ops/s    310.8305 ms/op        -         10 runs   3.74 s
-//     ✔ asyncVerifyCellKzgProofBatch - 48 blobs x 128 columns               2.162751 ops/s    462.3741 ms/op        -         10 runs   5.57 s
-//     ✔ asyncVerifyCellKzgProofBatch - 72 blobs x 128 columns               1.526587 ops/s    655.0560 ms/op        -         10 runs   7.19 s
+//     ✔ asyncVerifyCellKzgProofBatch - 1 blobs x 128 columns                12.38361 ops/s    80.75190 ms/op   x1.142         11 runs   1.43 s
+//     ✔ asyncVerifyCellKzgProofBatch - 2 blobs x 128 columns                10.52015 ops/s    95.05567 ms/op   x1.144         12 runs   1.67 s
+//     ✔ asyncVerifyCellKzgProofBatch - 4 blobs x 128 columns                8.611444 ops/s    116.1245 ms/op   x1.072         10 runs   1.76 s
+//     ✔ asyncVerifyCellKzgProofBatch - 6 blobs x 128 columns                7.050198 ops/s    141.8400 ms/op   x1.050         10 runs   2.00 s
+//     ✔ asyncVerifyCellKzgProofBatch - 8 blobs x 128 columns                5.385339 ops/s    185.6893 ms/op   x1.168         10 runs   2.41 s
+//     ✔ asyncVerifyCellKzgProofBatch - 12 blobs x 128 columns               4.064273 ops/s    246.0464 ms/op   x1.171         10 runs   3.20 s
+//     ✔ asyncVerifyCellKzgProofBatch - 20 blobs x 128 columns               2.913910 ops/s    343.1815 ms/op   x1.104         10 runs   4.12 s
+//     ✔ asyncVerifyCellKzgProofBatch - 48 blobs x 128 columns               2.015242 ops/s    496.2183 ms/op   x1.073         10 runs   5.49 s
+//     ✔ asyncVerifyCellKzgProofBatch - 72 blobs x 128 columns               1.447976 ops/s    690.6191 ms/op   x1.054         10 runs   7.71 s
+//   single batch verification
+//     ✔ asyncVerifyCellKzgProofBatch - 1 blobs x 128 columns batch          35.06851 ops/s    28.51562 ms/op        -         13 runs  0.879 s
+//     ✔ asyncVerifyCellKzgProofBatch - 2 blobs x 128 columns batch          19.44367 ops/s    51.43062 ms/op        -         10 runs   1.04 s
+//     ✔ asyncVerifyCellKzgProofBatch - 4 blobs x 128 columns batch          10.05118 ops/s    99.49080 ms/op        -         11 runs   1.61 s
+//     ✔ asyncVerifyCellKzgProofBatch - 6 blobs x 128 columns batch          6.800827 ops/s    147.0409 ms/op        -         10 runs   2.07 s
+//     ✔ asyncVerifyCellKzgProofBatch - 8 blobs x 128 columns batch          5.109904 ops/s    195.6984 ms/op        -         10 runs   2.56 s
+//     ✔ asyncVerifyCellKzgProofBatch - 12 blobs x 128 columns batch         3.369759 ops/s    296.7571 ms/op        -         10 runs   3.56 s
+//     ✔ asyncVerifyCellKzgProofBatch - 20 blobs x 128 columns batch         2.063158 ops/s    484.6938 ms/op        -         10 runs   5.81 s
+//     ✔ asyncVerifyCellKzgProofBatch - 48 blobs x 128 columns batch        0.8347890 ops/s    1.197908  s/op        -         10 runs   13.2 s
+//     ✔ asyncVerifyCellKzgProofBatch - 72 blobs x 128 columns batch        0.5678239 ops/s    1.761109  s/op        -         10 runs   19.6 s
 
 describe("KZG proof verification", () => {
   setBenchOpts({minMs: 30_000});
 
   describe("single data column sidecar verification", () => {
     const blobCounts = [1, 2, 4, 6, 8, 12, 20, 48, 72];
-    const columnIndex = 0; // Test with column 0
+    const columnIndex = 0;
 
     for (const numBlobs of blobCounts) {
       const {commitments, cellIndices, cells, proofs} = generateValidKzgTestData(numBlobs, columnIndex);
@@ -85,15 +95,52 @@ describe("KZG proof verification", () => {
       bench({
         id: `asyncVerifyCellKzgProofBatch - ${numBlobs} blobs x ${numColumns} columns`,
         fn: async () => {
-          // Run all column verifications in parallel (simulating gossip processing)
           const verificationPromises = columnTestData.map(({commitments, cellIndices, cells, proofs}) =>
             kzg.asyncVerifyCellKzgProofBatch(commitments, cellIndices, cells, proofs)
           );
 
           const results = await Promise.all(verificationPromises);
 
-          // Verify all columns passed
           if (!results.every((isValid) => isValid)) {
+            throw new Error("Expected proofs to be valid");
+          }
+        },
+      });
+    }
+  });
+
+  describe("single batch verification", () => {
+    const blobCounts = [1, 2, 4, 6, 8, 12, 20, 48, 72];
+    const numColumns = 128;
+
+    for (const numBlobs of blobCounts) {
+      const blobsData = [];
+      for (let blobIndex = 0; blobIndex < numBlobs; blobIndex++) {
+        const blob = generateBlob(blobIndex);
+        const commitment = kzg.blobToKzgCommitment(blob);
+        const {cells: blobCells, proofs: blobProofs} = kzg.computeCellsAndKzgProofs(blob);
+        blobsData.push({commitment, cells: blobCells, proofs: blobProofs});
+      }
+
+      const allCommitments: Uint8Array[] = [];
+      const allCellIndices: number[] = [];
+      const allCells: Uint8Array[] = [];
+      const allProofs: Uint8Array[] = [];
+
+      for (const blobData of blobsData) {
+        for (let columnIndex = 0; columnIndex < numColumns; columnIndex++) {
+          allCommitments.push(blobData.commitment);
+          allCellIndices.push(columnIndex);
+          allCells.push(blobData.cells[columnIndex]);
+          allProofs.push(blobData.proofs[columnIndex]);
+        }
+      }
+
+      bench({
+        id: `asyncVerifyCellKzgProofBatch - ${numBlobs} blobs x ${numColumns} columns batch`,
+        fn: async () => {
+          const isValid = await kzg.asyncVerifyCellKzgProofBatch(allCommitments, allCellIndices, allCells, allProofs);
+          if (!isValid) {
             throw new Error("Expected proofs to be valid");
           }
         },
