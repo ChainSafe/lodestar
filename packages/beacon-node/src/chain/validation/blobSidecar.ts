@@ -11,11 +11,11 @@ import {
   getBlockHeaderProposerSignatureSet,
 } from "@lodestar/state-transition";
 import {BlobIndex, Root, Slot, SubnetID, deneb, ssz} from "@lodestar/types";
-import {toRootHex, verifyMerkleBranch} from "@lodestar/utils";
+import {toHex, toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 
 import {byteArrayEquals} from "../../util/bytes.js";
 import {kzg} from "../../util/kzg.js";
-import {BlobSidecarErrorCode, BlobSidecarGossipError} from "../errors/blobSidecarError.js";
+import {BlobSidecarErrorCode, BlobSidecarGossipError, BlobSidecarValidationError} from "../errors/blobSidecarError.js";
 import {GossipAction} from "../errors/gossipValidation.js";
 import {IBeaconChain} from "../interface.js";
 import {RegenCaller} from "../regen/index.js";
@@ -216,6 +216,123 @@ export async function validateBlobSidecars(
     if (!opts.skipProofsCheck) {
       await validateBlobsAndBlobProofs(expectedKzgCommitments, blobs, proofs);
     }
+  }
+}
+
+/**
+ * Validate all blob sidecars in a block
+ *
+ * Requires the block to be known to the node
+ */
+export async function validateBlockBlobSidecars(
+  blockSlot: Slot,
+  blockRoot: Root,
+  blockKzgCommitments: deneb.BlobKzgCommitments,
+  blobSidecars: deneb.BlobSidecars
+): Promise<void> {
+  if (blockKzgCommitments.length !== blobSidecars.length) {
+    throw new BlobSidecarValidationError({
+      code: BlobSidecarErrorCode.INCORRECT_SIDECAR_COUNT,
+      slot: blockSlot,
+      expected: blockKzgCommitments.length,
+      actual: blobSidecars.length,
+    });
+  }
+
+  if (blobSidecars.length === 0) {
+    return;
+  }
+
+  // Hash the first sidecar block header and compare the rest via (cheaper) equality
+  const firstSidecarBlockHeader = blobSidecars[0].signedBlockHeader.message;
+  const firstBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(firstSidecarBlockHeader);
+  if (Buffer.compare(blockRoot, firstBlockRoot) !== 0) {
+    throw new BlobSidecarValidationError(
+      {
+        code: BlobSidecarErrorCode.INCORRECT_BLOCK,
+        slot: blockSlot,
+        blobIdx: 0,
+        expected: toRootHex(blockRoot),
+        actual: toRootHex(firstBlockRoot),
+      },
+      "BlobSidecar doesn't match corresponding block"
+    );
+  }
+
+  const blobs = [];
+  const proofs = [];
+  for (let i = 0; i < blobSidecars.length; i++) {
+    const blobSidecar = blobSidecars[i];
+    const blobKzgCommitment = blockKzgCommitments[i];
+    if (blobSidecar.index !== i) {
+      throw new BlobSidecarValidationError(
+        {
+          code: BlobSidecarErrorCode.INCORRECT_INDEX,
+          slot: blockSlot,
+          expected: i,
+          actual: blobSidecar.index,
+        },
+        "BlobSidecar index out of order"
+      );
+    }
+    if (Buffer.compare(blobSidecar.kzgCommitment, blobKzgCommitment) !== 0) {
+      throw new BlobSidecarValidationError(
+        {
+          code: BlobSidecarErrorCode.INCORRECT_KZG_COMMITMENT,
+          slot: blockSlot,
+          blobIdx: i,
+          expected: toHex(blobKzgCommitment),
+          actual: toHex(blobSidecar.kzgCommitment),
+        },
+        "BlobSidecar KZG commitment doesn't match corresponding block commitment"
+      );
+    }
+    if (!ssz.phase0.BeaconBlockHeader.equals(blobSidecar.signedBlockHeader.message, firstSidecarBlockHeader)) {
+      throw new BlobSidecarValidationError(
+        {
+          code: BlobSidecarErrorCode.INCORRECT_BLOCK,
+          slot: blockSlot,
+          blobIdx: i,
+          expected: toRootHex(blockRoot),
+          actual: "unknown - compared via equality",
+        },
+        "BlobSidecar doesn't match corresponding block"
+      );
+    }
+
+    if (!validateBlobSidecarInclusionProof(blobSidecar)) {
+      throw new BlobSidecarValidationError(
+        {
+          code: BlobSidecarErrorCode.INCLUSION_PROOF_INVALID,
+          slot: blockSlot,
+          blobIdx: i,
+        },
+        "BlobSidecar inclusion proof invalid"
+      );
+    }
+
+    blobs.push(blobSidecar.blob);
+    proofs.push(blobSidecar.kzgProof);
+  }
+
+  // Final batch KZG proof verification
+  let reason: string | undefined = undefined;
+  try {
+    if (!(await kzg.asyncVerifyBlobKzgProofBatch(blobs, blockKzgCommitments, proofs))) {
+      reason = "Invalid verifyBlobKzgProofBatch";
+    }
+  } catch (e) {
+    reason = (e as Error).message;
+  }
+  if (reason !== undefined) {
+    throw new BlobSidecarValidationError(
+      {
+        code: BlobSidecarErrorCode.INVALID_KZG_PROOF_BATCH,
+        slot: blockSlot,
+        reason,
+      },
+      "BlobSidecar has invalid KZG proof batch"
+    );
   }
 }
 
