@@ -3,7 +3,7 @@ import {DAType, IBlockInput} from "./blockInput/index.js";
 
 // we can now wait for full 12 seconds because unavailable block sync will try pulling
 // the blobs from the network anyway after 500ms of seeing the block
-const BLOB_AVAILABILITY_TIMEOUT = 12_000;
+export const BLOB_AVAILABILITY_TIMEOUT = 12_000;
 
 /**
  * Verifies that all block inputs have data available.

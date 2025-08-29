@@ -2,6 +2,7 @@ import {fulu} from "@lodestar/types";
 import {prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {BeaconChain} from "../chain.js";
 import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blockInput/index.js";
+import {BLOB_AVAILABILITY_TIMEOUT} from "./verifyBlocksDataAvailability.js";
 
 /**
  * Persists block input data to DB. This operation must be eventually completed if a block is imported to the fork-choice.
@@ -36,6 +37,10 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInputs: IBloc
       root: blockRootHex,
       inputType: blockInput.type,
     });
+
+    if (!blockInput.hasAllData()) {
+      await blockInput.waitForAllData(BLOB_AVAILABILITY_TIMEOUT);
+    }
 
     // NOTE: Old data is pruned on archive
     if (isBlockInputColumns(blockInput)) {
