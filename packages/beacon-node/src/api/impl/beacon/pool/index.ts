@@ -134,13 +134,15 @@ export function getBeaconPoolApi({
               );
             } else {
               chain.emitter.emit(routes.events.EventType.attestation, attestation as SingleAttestation<ForkPreElectra>);
-              chain.emitter.emit(
-                routes.events.EventType.singleAttestation,
-                toElectraSingleAttestation(
-                  attestation as SingleAttestation<ForkPreElectra>,
-                  indexedAttestation.attestingIndices[0]
-                )
-              );
+              if (chain.emitter.listenerCount(routes.events.EventType.singleAttestation)) {
+                chain.emitter.emit(
+                  routes.events.EventType.singleAttestation,
+                  toElectraSingleAttestation(
+                    attestation as SingleAttestation<ForkPreElectra>,
+                    indexedAttestation.attestingIndices[0]
+                  )
+                );
+              }
             }
 
             const sentPeers = await network.publishBeaconAttestation(attestation, subnet);
