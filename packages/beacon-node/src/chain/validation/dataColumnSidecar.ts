@@ -325,7 +325,7 @@ export function verifyDataColumnSidecarInclusionProof(dataColumnSidecar: fulu.Da
 export async function validateBlockDataColumnSidecars(
   blockSlot: Slot,
   blockRoot: Root,
-  blockKzgCommitments: deneb.BlobKzgCommitments,
+  blockBlobCount: number,
   expectedColumnIndices: ColumnIndex[],
   dataColumnSidecars: fulu.DataColumnSidecars
 ): Promise<void> {
@@ -377,12 +377,12 @@ export async function validateBlockDataColumnSidecars(
       );
     }
 
-    if (columnSidecar.kzgCommitments.length !== blockKzgCommitments.length) {
+    if (columnSidecar.kzgCommitments.length !== blockBlobCount) {
       throw new DataColumnSidecarValidationError({
         code: DataColumnSidecarErrorCode.INCORRECT_KZG_COMMITMENTS_COUNT,
         slot: blockSlot,
         columnIdx: columnSidecar.index,
-        expected: blockKzgCommitments.length,
+        expected: blockBlobCount,
         actual: columnSidecar.kzgCommitments.length,
       });
     }
@@ -395,19 +395,6 @@ export async function validateBlockDataColumnSidecars(
         expected: columnSidecar.kzgCommitments.length,
         actual: columnSidecar.kzgProofs.length,
       });
-    }
-
-    if (
-      columnSidecar.kzgCommitments.some((commitment, cIx) => Buffer.compare(commitment, blockKzgCommitments[cIx]) !== 0)
-    ) {
-      throw new DataColumnSidecarValidationError(
-        {
-          code: DataColumnSidecarErrorCode.INCORRECT_KZG_COMMITMENTS,
-          slot: blockSlot,
-          columnIdx: columnSidecar.index,
-        },
-        "DataColumnSidecar has unexpected KZG commitments"
-      );
     }
 
     if (!verifyDataColumnSidecarInclusionProof(columnSidecar)) {

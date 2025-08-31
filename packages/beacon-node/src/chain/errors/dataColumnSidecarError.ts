@@ -19,8 +19,6 @@ export enum DataColumnSidecarErrorCode {
   INCORRECT_INDEX = "DATA_COLUMN_SIDECAR_ERROR_INCORRECT_INDEX",
   /** Sidecar kzg proof count not as expected */
   INCORRECT_KZG_COMMITMENTS_COUNT = "DATA_COLUMN_SIDECAR_ERROR_INCORRECT_KZG_COMMITMENTS_COUNT",
-  /** Sidecar kzg commitments are not as expected */
-  INCORRECT_KZG_COMMITMENTS = "DATA_COLUMN_SIDECAR_ERROR_INCORRECT_KZG_COMMITMENTS",
   /** Sidecar kzg proof count not as expected */
   INCORRECT_KZG_PROOF_COUNT = "DATA_COLUMN_SIDECAR_ERROR_INCORRECT_KZG_PROOF_COUNT",
   /** Sidecars proofs not valid */
@@ -70,11 +68,6 @@ export type DataColumnSidecarErrorType =
       columnIdx: number;
       expected: number;
       actual: number;
-    }
-  | {
-      code: DataColumnSidecarErrorCode.INCORRECT_KZG_COMMITMENTS;
-      slot: number;
-      columnIdx: number;
     }
   | {
       code: DataColumnSidecarErrorCode.INCORRECT_KZG_PROOF_COUNT;

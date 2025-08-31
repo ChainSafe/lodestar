@@ -11,7 +11,7 @@ import {
   getBlockHeaderProposerSignatureSet,
 } from "@lodestar/state-transition";
 import {BlobIndex, Root, Slot, SubnetID, deneb, ssz} from "@lodestar/types";
-import {toHex, toRootHex, verifyMerkleBranch} from "@lodestar/utils";
+import {toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 
 import {byteArrayEquals} from "../../util/bytes.js";
 import {kzg} from "../../util/kzg.js";
@@ -227,14 +227,14 @@ export async function validateBlobSidecars(
 export async function validateBlockBlobSidecars(
   blockSlot: Slot,
   blockRoot: Root,
-  blockKzgCommitments: deneb.BlobKzgCommitments,
+  blockBlobCount: number,
   blobSidecars: deneb.BlobSidecars
 ): Promise<void> {
-  if (blockKzgCommitments.length !== blobSidecars.length) {
+  if (blockBlobCount !== blobSidecars.length) {
     throw new BlobSidecarValidationError({
       code: BlobSidecarErrorCode.INCORRECT_SIDECAR_COUNT,
       slot: blockSlot,
-      expected: blockKzgCommitments.length,
+      expected: blockBlobCount,
       actual: blobSidecars.length,
     });
   }
@@ -259,11 +259,11 @@ export async function validateBlockBlobSidecars(
     );
   }
 
+  const commitments = [];
   const blobs = [];
   const proofs = [];
   for (let i = 0; i < blobSidecars.length; i++) {
     const blobSidecar = blobSidecars[i];
-    const blobKzgCommitment = blockKzgCommitments[i];
     if (blobSidecar.index !== i) {
       throw new BlobSidecarValidationError(
         {
@@ -273,18 +273,6 @@ export async function validateBlockBlobSidecars(
           actual: blobSidecar.index,
         },
         "BlobSidecar index out of order"
-      );
-    }
-    if (Buffer.compare(blobSidecar.kzgCommitment, blobKzgCommitment) !== 0) {
-      throw new BlobSidecarValidationError(
-        {
-          code: BlobSidecarErrorCode.INCORRECT_KZG_COMMITMENT,
-          slot: blockSlot,
-          blobIdx: i,
-          expected: toHex(blobKzgCommitment),
-          actual: toHex(blobSidecar.kzgCommitment),
-        },
-        "BlobSidecar KZG commitment doesn't match corresponding block commitment"
       );
     }
     if (!ssz.phase0.BeaconBlockHeader.equals(blobSidecar.signedBlockHeader.message, firstSidecarBlockHeader)) {
@@ -311,6 +299,7 @@ export async function validateBlockBlobSidecars(
       );
     }
 
+    commitments.push(blobSidecar.kzgCommitment);
     blobs.push(blobSidecar.blob);
     proofs.push(blobSidecar.kzgProof);
   }
@@ -318,7 +307,7 @@ export async function validateBlockBlobSidecars(
   // Final batch KZG proof verification
   let reason: string | undefined = undefined;
   try {
-    if (!(await kzg.asyncVerifyBlobKzgProofBatch(blobs, blockKzgCommitments, proofs))) {
+    if (!(await kzg.asyncVerifyBlobKzgProofBatch(blobs, commitments, proofs))) {
       reason = "Invalid verifyBlobKzgProofBatch";
     }
   } catch (e) {

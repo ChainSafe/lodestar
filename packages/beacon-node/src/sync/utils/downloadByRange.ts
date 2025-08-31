@@ -514,7 +514,7 @@ export async function validateBlobsByRangeResponse(
     blobSidecarIndex += blockKzgCommitments.length;
 
     validateSidecarsPromises.push(
-      validateBlockBlobSidecars(block.message.slot, blockRoot, blockKzgCommitments, blockBlobSidecars)
+      validateBlockBlobSidecars(block.message.slot, blockRoot, blockKzgCommitments.length, blockBlobSidecars)
     );
   }
 
@@ -574,7 +574,7 @@ export async function validateColumnsByRangeResponse(
       validateBlockDataColumnSidecars(
         block.message.slot,
         blockRoot,
-        blockKzgCommitments,
+        blockKzgCommitments.length,
         request.columns,
         blockColumnSidecars
       )
