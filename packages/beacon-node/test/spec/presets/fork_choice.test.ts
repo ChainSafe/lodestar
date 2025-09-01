@@ -29,11 +29,7 @@ import {
 import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.js";
 import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
-import {
-  verifyDataColumnSidecar,
-  verifyDataColumnSidecarInclusionProof,
-  verifyDataColumnSidecarKzgProofs,
-} from "../../../src/chain/validation/dataColumnSidecar.js";
+import {validateBlockDataColumnSidecars} from "../../../src/chain/validation/dataColumnSidecar.js";
 import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
 import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";
 import {PowMergeBlock} from "../../../src/eth1/interface.js";
@@ -221,16 +217,13 @@ const forkChoiceTest =
                     columns = [];
                   }
 
-                  for (const column of columns) {
-                    verifyDataColumnSidecar(column);
-                    verifyDataColumnSidecarInclusionProof(column);
-                    await verifyDataColumnSidecarKzgProofs(
-                      column.kzgCommitments,
-                      Array.from({length: column.column.length}, () => column.index),
-                      column.column,
-                      column.kzgProofs
-                    );
-                  }
+                  await validateBlockDataColumnSidecars(
+                    slot,
+                    blockRoot,
+                    (signedBlock as SignedBeaconBlock<ForkPostFulu>).message.body.blobKzgCommitments.length,
+                    columns.map((c) => c.index),
+                    columns
+                  );
 
                   blockImport = BlockInputColumns.createFromBlock({
                     forkName: fork,

@@ -13,7 +13,6 @@ import {
 import {BlobIndex, Root, Slot, SubnetID, deneb, ssz} from "@lodestar/types";
 import {toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 
-import {byteArrayEquals} from "../../util/bytes.js";
 import {kzg} from "../../util/kzg.js";
 import {BlobSidecarErrorCode, BlobSidecarGossipError, BlobSidecarValidationError} from "../errors/blobSidecarError.js";
 import {GossipAction} from "../errors/gossipValidation.js";
@@ -170,52 +169,6 @@ export async function validateGossipBlobSidecar(
       code: BlobSidecarErrorCode.INVALID_KZG_PROOF,
       blobIdx: blobSidecar.index,
     });
-  }
-}
-
-// https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#validate_blobs_sidecar
-export async function validateBlobSidecars(
-  blockSlot: Slot,
-  blockRoot: Root,
-  expectedKzgCommitments: deneb.BlobKzgCommitments,
-  blobSidecars: deneb.BlobSidecars,
-  opts: {skipProofsCheck: boolean} = {skipProofsCheck: false}
-): Promise<void> {
-  // assert len(expected_kzg_commitments) == len(blobs)
-  if (expectedKzgCommitments.length !== blobSidecars.length) {
-    throw new Error(
-      `blobSidecars length to commitments length mismatch. Blob length: ${blobSidecars.length}, Expected commitments length ${expectedKzgCommitments.length}`
-    );
-  }
-
-  // No need to verify the aggregate proof of zero blobs
-  if (blobSidecars.length > 0) {
-    // Verify the blob slot and root matches
-    const blobs = [];
-    const proofs = [];
-    for (let index = 0; index < blobSidecars.length; index++) {
-      const blobSidecar = blobSidecars[index];
-      const blobBlockHeader = blobSidecar.signedBlockHeader.message;
-      const blobBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blobBlockHeader);
-      if (
-        blobBlockHeader.slot !== blockSlot ||
-        !byteArrayEquals(blobBlockRoot, blockRoot) ||
-        blobSidecar.index !== index ||
-        !byteArrayEquals(expectedKzgCommitments[index], blobSidecar.kzgCommitment)
-      ) {
-        throw new Error(
-          `Invalid blob with slot=${blobBlockHeader.slot} blobBlockRoot=${toRootHex(blobBlockRoot)} index=${
-            blobSidecar.index
-          } for the block blockRoot=${toRootHex(blockRoot)} slot=${blockSlot} index=${index}`
-        );
-      }
-      blobs.push(blobSidecar.blob);
-      proofs.push(blobSidecar.kzgProof);
-    }
-
-    if (!opts.skipProofsCheck) {
-      await validateBlobsAndBlobProofs(expectedKzgCommitments, blobs, proofs);
-    }
   }
 }
 
