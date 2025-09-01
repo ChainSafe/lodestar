@@ -10,10 +10,6 @@ const CONSTANT_NAMES_SKIP_LIST = new Set([
   // This constant can also be derived from existing constants so it's not critical.
   // PARTICIPATION_FLAG_WEIGHTS = [TIMELY_SOURCE_WEIGHT, TIMELY_TARGET_WEIGHT, TIMELY_HEAD_WEIGHT]
   "PARTICIPATION_FLAG_WEIGHTS",
-  // TODO Fulu: remove skipped constant
-  "MAX_BLOBS_PER_BLOCK_FULU",
-  "VALIDATOR_CUSTODY_REQUIREMENT",
-  "BALANCE_PER_ADDITIONAL_CUSTODY_GROUP",
 ]);
 
 describe("api / impl / config", () => {

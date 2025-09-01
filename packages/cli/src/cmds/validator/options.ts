@@ -38,7 +38,6 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     graffiti?: string;
     afterBlockDelaySlotFraction?: number;
     scAfterBlockDelaySlotFraction?: number;
-    disableAttestationGrouping?: boolean;
     suggestedFeeRecipient?: string;
     proposerSettingsFile?: string;
     strictFeeRecipientCheck?: boolean;
@@ -222,13 +221,6 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     description:
       "Delay before publishing SyncCommitteeSignature if block comes early, as a fraction of SECONDS_PER_SLOT (value is from 0 inclusive to 1 exclusive)",
     type: "number",
-  },
-
-  disableAttestationGrouping: {
-    hidden: true,
-    description:
-      "Disables attestation service grouping optimization, attestation tasks will be executed per committee instead of just once for all committees.",
-    type: "boolean",
   },
 
   proposerSettingsFile: {

@@ -38,7 +38,7 @@ import {Libp2p as ILibp2p} from "libp2p";
 import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
 import {CustodyConfig} from "../util/dataColumns.js";
 import {PeerIdStr} from "../util/peerId.js";
-import {BlobSidecarsByRootRequest} from "../util/types.js";
+import {BeaconBlocksByRootRequest, BlobSidecarsByRootRequest, DataColumnSidecarsByRootRequest} from "../util/types.js";
 import {INetworkCorePublic} from "./core/types.js";
 import {INetworkEventBus} from "./events.js";
 import {GossipType} from "./gossip/interface.js";
@@ -77,7 +77,7 @@ export interface INetwork extends INetworkCorePublic {
   ): Promise<WithBytes<SignedBeaconBlock>[]>;
   sendBeaconBlocksByRoot(
     peerId: PeerIdStr,
-    request: phase0.BeaconBlocksByRootRequest
+    request: BeaconBlocksByRootRequest
   ): Promise<WithBytes<SignedBeaconBlock>[]>;
   sendBlobSidecarsByRange(peerId: PeerIdStr, request: deneb.BlobSidecarsByRangeRequest): Promise<deneb.BlobSidecar[]>;
   sendBlobSidecarsByRoot(peerId: PeerIdStr, request: BlobSidecarsByRootRequest): Promise<deneb.BlobSidecar[]>;
@@ -87,7 +87,7 @@ export interface INetwork extends INetworkCorePublic {
   ): Promise<fulu.DataColumnSidecar[]>;
   sendDataColumnSidecarsByRoot(
     peerId: PeerIdStr,
-    request: fulu.DataColumnSidecarsByRootRequest
+    request: DataColumnSidecarsByRootRequest
   ): Promise<fulu.DataColumnSidecar[]>;
 
   // Gossip

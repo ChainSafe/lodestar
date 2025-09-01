@@ -1,6 +1,11 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {EPOCHS_PER_HISTORICAL_VECTOR, isForkPostElectra, isForkPostFulu} from "@lodestar/params";
+import {
+  EPOCHS_PER_HISTORICAL_VECTOR,
+  SYNC_COMMITTEE_SUBNET_SIZE,
+  isForkPostElectra,
+  isForkPostFulu,
+} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   BeaconStateElectra,
@@ -12,7 +17,7 @@ import {
   getRandaoMix,
   loadState,
 } from "@lodestar/state-transition";
-import {getValidatorStatus} from "@lodestar/types";
+import {ValidatorIndex, getValidatorStatus} from "@lodestar/types";
 import {ApiError} from "../../errors.js";
 import {ApiModules} from "../../types.js";
 import {assertUniqueItems} from "../../utils.js";
@@ -305,12 +310,18 @@ export function getBeaconStateApi({
       }
 
       const syncCommitteeCache = stateCached.epochCtx.getIndexedSyncCommitteeAtEpoch(epoch ?? stateEpoch);
+      const validatorIndices = new Array<ValidatorIndex>(...syncCommitteeCache.validatorIndices);
+
+      // Subcommittee assignments of the current sync committee
+      const validatorAggregates: ValidatorIndex[][] = [];
+      for (let i = 0; i < validatorIndices.length; i += SYNC_COMMITTEE_SUBNET_SIZE) {
+        validatorAggregates.push(validatorIndices.slice(i, i + SYNC_COMMITTEE_SUBNET_SIZE));
+      }
 
       return {
         data: {
-          validators: new Array(...syncCommitteeCache.validatorIndices),
-          // TODO: This is not used by the validator and will be deprecated soon
-          validatorAggregates: [],
+          validators: validatorIndices,
+          validatorAggregates,
         },
         meta: {executionOptimistic, finalized},
       };

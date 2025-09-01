@@ -46,8 +46,8 @@ export interface NetworkOptions
 }
 
 export const defaultNetworkOptions: NetworkOptions = {
-  maxPeers: 110, // Allow some room above targetPeers for new inbound peers
-  targetPeers: 100,
+  maxPeers: 210, // Allow some room above targetPeers for new inbound peers
+  targetPeers: 200,
   localMultiaddrs: ["/ip4/0.0.0.0/tcp/9000"],
   bootMultiaddrs: [],
   /** disabled by default */

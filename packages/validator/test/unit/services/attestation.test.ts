@@ -63,8 +63,6 @@ describe("AttestationService", () => {
   const testContexts: [string, AttestationServiceOpts, Partial<ChainConfig>][] = [
     ["With default configuration", {}, {}],
     ["With default configuration post-electra", {}, electraConfig],
-    ["With attestation grouping disabled", {disableAttestationGrouping: true}, {}],
-    ["With attestation grouping disabled post-electra", {disableAttestationGrouping: true}, electraConfig],
     ["With distributed aggregation selection enabled", {distributedAggregationSelection: true}, {}],
   ];
 
