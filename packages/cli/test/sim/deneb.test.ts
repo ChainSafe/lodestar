@@ -8,14 +8,16 @@ import {assertCheckpointSync, assertRangeSync} from "../utils/crucible/utils/syn
 
 const altairForkEpoch = 0;
 const bellatrixForkEpoch = 0;
+const capellaForkEpoch = 0;
+const denebForkEpoch = 0;
 const runTillEpoch = 6;
 const syncWaitEpoch = 2;
 
 const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
-  ALTAIR_FORK_EPOCH: 0,
-  BELLATRIX_FORK_EPOCH: 0,
-  CAPELLA_FORK_EPOCH: 0,
-  DENEB_FORK_EPOCH: 0,
+  ALTAIR_FORK_EPOCH: altairForkEpoch,
+  BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
+  CAPELLA_FORK_EPOCH: capellaForkEpoch,
+  DENEB_FORK_EPOCH: denebForkEpoch,
   runTillEpoch: runTillEpoch + syncWaitEpoch,
   initialNodes: 2,
   additionalSlotsForTTD: 0,
