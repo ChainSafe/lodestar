@@ -132,9 +132,6 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
         "--nodiscover",
         "--datadir",
         rootDirMounted,
-        "--allow-insecure-unlock",
-        "--unlock",
-        EL_GENESIS_ACCOUNT,
         "--password",
         passwordPathMounted,
         "--syncmode",
@@ -144,7 +141,7 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
         // Logging verbosity: 0=silent, 1=error, 2=warn, 3=info, 4=debug, 5=detail
         "--verbosity",
         "5",
-        ...(mining ? ["--mine", "--miner.etherbase", EL_GENESIS_ACCOUNT] : []),
+        ...(mining ? ["--mine"] : []),
         ...(mode === ExecutionStartMode.PreMerge ? ["--nodiscover"] : []),
         ...clientOptions,
       ],

@@ -17,7 +17,7 @@ const capellaForkEpoch = 0;
 const denebForkEpoch = 0;
 const electraForkEpoch = 0;
 const fuluForkEpoch = Infinity;
-const runTillEpoch = 4;
+const runTillEpoch = 2;
 const syncWaitEpoch = 2;
 
 const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
