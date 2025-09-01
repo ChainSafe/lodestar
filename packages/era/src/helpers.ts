@@ -61,6 +61,9 @@ function readInt64(bytes: Uint8Array, offset: number): bigint {
  * Read slot index from end of era file with validation
  */
 export function readSlotIndex(bytes: Uint8Array, expectedType: "state" | "block"): SlotIndex {
+  if (bytes.length < 8) {
+    throw new Error("Buffer too small for SlotIndex count");
+  }
   const countOffset = bytes.length - 8;
   const eofCount = Number(readInt64(bytes, countOffset));
 
@@ -220,5 +223,70 @@ export function decompressSignedBeaconBlock(compressedData: Uint8Array, blockSlo
     return forkTypes.SignedBeaconBlock.deserialize(uncompressed);
   } catch (error) {
     throw new Error(`Failed to deserialize SignedBeaconBlock for slot ${blockSlot}: ${error}`);
+  }
+}
+
+/**
+ * Read & decode the single era BeaconState from an .era file.
+ */
+export function readBeaconStateFromEra(eraBytes: Uint8Array, config: ChainForkConfig, expectedEra?: number) {
+  const {stateSlotIndex} = getEraIndexes(eraBytes, expectedEra);
+
+  const offset = stateSlotIndex.offsets[0];
+  if (!offset) throw new Error("No BeaconState in this era (stateSlotIndex offset is 0)");
+
+  const entry = readEntry(eraBytes.slice(offset));
+  if (entry.type !== E2StoreEntryType.CompressedBeaconState) {
+    throw new Error(`Expected CompressedBeaconState at 0x${offset.toString(16)}, got ${entry.type}`);
+  }
+
+  const era = expectedEra ?? Math.floor(stateSlotIndex.startSlot / SLOTS_PER_HISTORICAL_ROOT);
+  return decompressBeaconState(entry.data, era, config);
+}
+
+/**
+ * Read & decode a SignedBeaconBlock at a given offset inside the era’s block index.
+ */
+export function readBeaconBlockFromEra(
+  eraBytes: Uint8Array,
+  blockOffset: number,
+  config: ChainForkConfig,
+  expectedEra?: number
+) {
+  if (blockOffset < 0 || blockOffset >= SLOTS_PER_HISTORICAL_ROOT) {
+    throw new RangeError(`blockOffset out of range: ${blockOffset}`);
+  }
+
+  const {blockSlotIndex} = getEraIndexes(eraBytes, expectedEra);
+  if (!blockSlotIndex) throw new Error("No block SlotIndex present in this era file");
+
+  const abs = blockSlotIndex.offsets[blockOffset];
+  if (!abs) throw new Error(`No block at offset ${blockOffset} (empty slot)`);
+
+  const entry = readEntry(eraBytes.slice(abs));
+  if (entry.type !== E2StoreEntryType.CompressedSignedBeaconBlock) {
+    throw new Error(`Expected CompressedSignedBeaconBlock at 0x${abs.toString(16)}, got ${entry.type}`);
+  }
+
+  const slot = blockSlotIndex.startSlot + blockOffset;
+  return decompressSignedBeaconBlock(entry.data, slot, config);
+}
+
+/**
+ * Iterate all SignedBeaconBlocks in an era (skips empty slots).
+ */
+export function* readBlocksFromEra(eraBytes: Uint8Array, config: ChainForkConfig, expectedEra?: number) {
+  const {blockSlotIndex} = getEraIndexes(eraBytes, expectedEra);
+  if (!blockSlotIndex) return;
+
+  for (let i = 0; i < blockSlotIndex.offsets.length; i++) {
+    const abs = blockSlotIndex.offsets[i];
+    if (!abs) continue;
+
+    const entry = readEntry(eraBytes.slice(abs));
+    if (entry.type !== E2StoreEntryType.CompressedSignedBeaconBlock) continue;
+
+    const slot = blockSlotIndex.startSlot + i;
+    yield decompressSignedBeaconBlock(entry.data, slot, config);
   }
 }
