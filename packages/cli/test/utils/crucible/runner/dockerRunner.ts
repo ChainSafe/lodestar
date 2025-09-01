@@ -107,7 +107,7 @@ export class DockerRunner implements RunnerEnv<RunnerType.Docker> {
         }
         // TODO: Debug why stopping the process was not killing the container
         // await stopChildProcess(childProcess);
-        await execChildProcess(`docker stop ${jobOption.id} --time 2 || true`, {logger: this.logger});
+        await execChildProcess(`docker stop ${jobOption.id} --timeout 2 || true`, {logger: this.logger});
       },
     };
   }
