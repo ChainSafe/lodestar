@@ -1,12 +1,12 @@
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {fulu} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
+import {DataColumnSidecarsByRootRequest} from "../../../util/types.js";
 
 export async function* onDataColumnSidecarsByRoot(
-  requestBody: fulu.DataColumnSidecarsByRootRequest,
+  requestBody: DataColumnSidecarsByRootRequest,
   chain: IBeaconChain,
   db: IBeaconDb
 ): AsyncIterable<ResponseOutgoing> {

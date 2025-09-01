@@ -3,7 +3,7 @@ import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {RootHex, SignedBeaconBlock, deneb, fulu, phase0} from "@lodestar/types";
+import {RootHex, SignedBeaconBlock, deneb, fulu} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {Logger, fromHex, toHex} from "@lodestar/utils";
 import {
@@ -28,6 +28,7 @@ import {Metrics} from "../../metrics/index.js";
 import {computeInclusionProof, kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {getDataColumnsFromExecution} from "../../util/dataColumns.js";
 import {PeerIdStr} from "../../util/peerId.js";
+import {BeaconBlocksByRootRequest} from "../../util/types.js";
 import {INetwork} from "../interface.js";
 import {
   PartialDownload,
@@ -48,7 +49,7 @@ export async function beaconBlocksMaybeBlobsByRoot(
   config: ChainForkConfig,
   network: INetwork,
   peerId: PeerIdStr,
-  request: phase0.BeaconBlocksByRootRequest,
+  request: BeaconBlocksByRootRequest,
   partialDownload: null | PartialDownload,
   peerClient: string,
   metrics: Metrics | null,
