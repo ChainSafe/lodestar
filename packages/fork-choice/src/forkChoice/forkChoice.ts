@@ -140,19 +140,20 @@ export class ForkChoice implements IForkChoice {
     private readonly fcStore: IForkChoiceStore,
     /** The underlying representation of the block DAG. */
     private readonly protoArray: ProtoArray,
-    private readonly metrics: ForkChoiceMetrics | null,
+    readonly metrics: ForkChoiceMetrics | null,
     private readonly opts?: ForkChoiceOpts,
     private readonly logger?: Logger
   ) {
     this.head = this.updateHead();
     this.balances = this.fcStore.justified.balances;
-    this.metrics?.forkChoice.votes.addCollect(() => {
-      this.metrics?.forkChoice.votes.set(this.votes.length);
-      this.metrics?.forkChoice.queuedAttestations.set(this.queuedAttestationsPreviousSlot);
-      this.metrics?.forkChoice.validatedAttestationDatas.set(this.validatedAttestationDatas.size);
-      this.metrics?.forkChoice.balancesLength.set(this.balances.length);
-      this.metrics?.forkChoice.nodes.set(this.protoArray.nodes.length);
-      this.metrics?.forkChoice.indices.set(this.protoArray.indices.size);
+
+    metrics?.forkChoice.votes.addCollect(() => {
+      metrics.forkChoice.votes.set(this.votes.length);
+      metrics.forkChoice.queuedAttestations.set(this.queuedAttestationsPreviousSlot);
+      metrics.forkChoice.validatedAttestationDatas.set(this.validatedAttestationDatas.size);
+      metrics.forkChoice.balancesLength.set(this.balances.length);
+      metrics.forkChoice.nodes.set(this.protoArray.nodes.length);
+      metrics.forkChoice.indices.set(this.protoArray.indices.size);
     });
   }
 
