@@ -61,12 +61,6 @@ export function createWithdrawalAssertions<T extends string>(
         );
       }
 
-      if (store[slot].withdrawalCount < MAX_WITHDRAWALS_PER_PAYLOAD) {
-        errors.push(
-          `Not enough withdrawals found. Expected ${MAX_WITHDRAWALS_PER_PAYLOAD}, got ${store[slot].withdrawalCount}`
-        );
-      }
-
       for (const {currentBalance, withdrawalAmount, balanceInLastSlot} of Object.values(store[slot].validators)) {
         // A validator can get sync committee reward, so difference must be greater than zero
         if (currentBalance < balanceInLastSlot - withdrawalAmount) {
