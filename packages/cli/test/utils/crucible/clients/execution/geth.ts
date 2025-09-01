@@ -2,13 +2,7 @@ import {writeFile} from "node:fs/promises";
 import path from "node:path";
 import {fetch} from "@lodestar/utils";
 import {Web3} from "web3";
-import {
-  EL_GENESIS_ACCOUNT,
-  EL_GENESIS_PASSWORD,
-  EL_GENESIS_SECRET_KEY,
-  SHARED_JWT_SECRET,
-  SIM_ENV_NETWORK_ID,
-} from "../../constants.js";
+import {EL_GENESIS_PASSWORD, EL_GENESIS_SECRET_KEY, SHARED_JWT_SECRET, SIM_ENV_NETWORK_ID} from "../../constants.js";
 import {ExecutionClient, ExecutionNodeGenerator, ExecutionStartMode, JobOptions, RunnerType} from "../../interfaces.js";
 import {getNodeMountedPaths} from "../../utils/paths.js";
 import {getNodePorts} from "../../utils/ports.js";
