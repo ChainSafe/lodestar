@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/suspicious/noTemplateCurlyInString: The metric templates requires to have `${}` in a normal string */
 import {NotReorgedReason} from "@lodestar/fork-choice";
 import {BlockInputSource} from "../../chain/blocks/blockInput/index.js";
 import {BlobsSource, BlockSource, DataColumnsSource} from "../../chain/blocks/types.js";

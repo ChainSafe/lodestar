@@ -5,7 +5,7 @@ import {ELProof, ELStorageProof} from "../../../src/types.js";
 import {hexToBuffer} from "../../../src/utils/conversion.js";
 import {isValidAccount, isValidStorageKeys} from "../../../src/utils/validation.js";
 import {invalidStorageProof, validStorageProof} from "../../fixtures/index.js";
-import eoaProof from "../../fixtures/sepolia/eth_getBalance_eoa.json" assert {type: "json"};
+import eoaProof from "../../fixtures/sepolia/eth_getBalance_eoa.json" with {type: "json"};
 
 const address = eoaProof.request.params[0] as string;
 const validAccountProof = eoaProof.dependentRequests[0].response.result as unknown as ELProof;

@@ -72,7 +72,7 @@ function jsonLogFormat(opts: LoggerOptions): Format {
  * Winston template function print a human readable string given a log object
  */
 
-// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+// biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
 function humanReadableTemplateFn(_info: {[key: string]: any; level: string; message: string}): string {
   const info = _info as WinstonInfoArg;
 

@@ -5,10 +5,10 @@ import {VERIFICATION_FAILED_RESPONSE_CODE} from "../../../src/constants.js";
 import {ELBlock} from "../../../src/types.js";
 import {getVerificationFailedMessage} from "../../../src/utils/json_rpc.js";
 import {eth_getBlockByNumber} from "../../../src/verified_requests/eth_getBlockByNumber.js";
-import ethGetBlockWithContractCreation from "../../fixtures/sepolia/eth_getBlock_with_contractCreation.json" assert {
+import ethGetBlockWithContractCreation from "../../fixtures/sepolia/eth_getBlock_with_contractCreation.json" with {
   type: "json",
 };
-import ethGetBlockWithNoAccessList from "../../fixtures/sepolia/eth_getBlock_with_no_accessList.json" assert {
+import ethGetBlockWithNoAccessList from "../../fixtures/sepolia/eth_getBlock_with_no_accessList.json" with {
   type: "json",
 };
 import {TestFixture, cloneTestFixture, generateReqHandlerOptionsMock} from "../../mocks/request_handler.js";
