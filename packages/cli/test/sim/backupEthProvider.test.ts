@@ -6,8 +6,8 @@ import {Simulation} from "../utils/crucible/simulation.js";
 import {defineSimTestConfig, logFilesDir, replaceIpFromUrl} from "../utils/crucible/utils/index.js";
 import {connectAllNodes, waitForSlot} from "../utils/crucible/utils/network.js";
 
-const altairForkEpoch = 2;
-const bellatrixForkEpoch = 4;
+const altairForkEpoch = 0;
+const bellatrixForkEpoch = 0;
 const runTillEpoch = 6;
 const syncWaitEpoch = 2;
 

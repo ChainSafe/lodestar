@@ -6,6 +6,8 @@ import {defineSimTestConfig, logFilesDir} from "../utils/crucible/utils/index.js
 import {connectAllNodes, waitForSlot} from "../utils/crucible/utils/network.js";
 import {assertCheckpointSync, assertRangeSync} from "../utils/crucible/utils/syncing.js";
 
+const altairForkEpoch = 0;
+const bellatrixForkEpoch = 0;
 const runTillEpoch = 6;
 const syncWaitEpoch = 2;
 
