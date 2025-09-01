@@ -457,7 +457,7 @@ export class PeerManager {
         dataColumns: prettyPrintIndices(dataColumns),
         matchingSubnetsNum,
         custodyGroups: prettyPrintIndices(custodyGroups),
-        mySampleSubnets: sampleSubnets.join(" "),
+        mySampleSubnets: prettyPrintIndices(sampleSubnets),
         clientAgent,
       });
 
