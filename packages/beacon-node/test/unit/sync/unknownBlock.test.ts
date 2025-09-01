@@ -3,21 +3,33 @@ import {toHexString} from "@chainsafe/ssz";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as minimalConfig} from "@lodestar/config/default";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {ForkName, ZERO_HASH_HEX} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {notNullish, sleep} from "@lodestar/utils";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {BlockSource, getBlockInput} from "../../../src/chain/blocks/types.js";
+import {
+  BlockInput,
+  BlockInputDataColumns,
+  BlockInputType,
+  BlockSource,
+  CachedDataColumns,
+  NullBlockInput,
+  getBlockInput,
+} from "../../../src/chain/blocks/types.js";
 import {BlockError, BlockErrorCode} from "../../../src/chain/errors/blockError.js";
 import {IBeaconChain} from "../../../src/chain/index.js";
 import {SeenBlockProposers} from "../../../src/chain/seenCache/seenBlockProposers.js";
 import {ZERO_HASH} from "../../../src/constants/constants.js";
 import {INetwork, NetworkEvent, NetworkEventBus, PeerAction} from "../../../src/network/index.js";
+import {PeerSyncMeta} from "../../../src/network/peers/peersData.js";
 import {defaultSyncOptions} from "../../../src/sync/options.js";
-import {UnknownBlockSync} from "../../../src/sync/unknownBlock.js";
+import {UnknownBlockPeerBalancer, UnknownBlockSync} from "../../../src/sync/unknownBlock.js";
+import {CustodyConfig} from "../../../src/util/dataColumns.js";
+import {PeerIdStr} from "../../../src/util/peerId.js";
 import {ClockStopped} from "../../mocks/clock.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
 import {testLogger} from "../../utils/logger.js";
-import {getRandPeerIdStr} from "../../utils/peer.js";
+import {getRandPeerIdStr, getRandPeerSyncMeta} from "../../utils/peer.js";
 
 describe.skip(
   "sync by UnknownBlockSync",
@@ -297,5 +309,172 @@ describe("UnknownBlockSync", () => {
         }
       });
     }
+  });
+});
+
+describe("UnknownBlockPeerBalancer", async () => {
+  const custodyConfig = {sampledColumns: [0, 1, 2, 3]} as CustodyConfig;
+  const peer0 = await getRandPeerSyncMeta("peer-0");
+  const peer1 = await getRandPeerSyncMeta("peer-1");
+  const peer2 = await getRandPeerSyncMeta("peer-2");
+  const peer3 = await getRandPeerSyncMeta("peer-3");
+  const peers = [peer0, peer1, peer2, peer3];
+  const peersMeta = new Map<string, PeerSyncMeta>(peers.map((p) => [p.peerId, p]));
+
+  // column 0 and 1 are downloaded
+  // column 2 and 3 are pending
+  const testCases: {
+    custodyGroups: number[][];
+    excludedPeers: PeerIdStr[];
+    activeRequests: number[];
+    bestPeer: PeerSyncMeta | null;
+  }[] = [
+    {
+      // test excludedPeers condition
+      // peers[2] and peers[3] are eligible
+      // peers[2] is excluded because it's requested
+      custodyGroups: [[0], [1], [2], [3]],
+      excludedPeers: [peers[2].peerId],
+      activeRequests: [0, 0, 0, 0],
+      bestPeer: peers[3],
+    },
+    {
+      // test activeRequest condition
+      // peers[2] and peers[3] have custody groups
+      // peers[3] has 2 active requests so it's not eligible
+      custodyGroups: [[0], [1], [2], [3]],
+      excludedPeers: [],
+      activeRequests: [0, 0, 0, 2],
+      bestPeer: peers[2],
+    },
+    {
+      // test all conditions
+      // peers[0] and peers[1] does not have pending columns
+      // peers[2] is excluded because it's requested
+      // peers[3] has 2 active requests so it's not eligible
+      custodyGroups: [[0], [1], [2], [3]],
+      excludedPeers: [peers[2].peerId],
+      activeRequests: [0, 0, 0, 2],
+      bestPeer: null,
+    },
+  ];
+
+  let peerBalancer: UnknownBlockPeerBalancer;
+  beforeEach(() => {
+    peerBalancer = new UnknownBlockPeerBalancer(custodyConfig);
+    for (const [peerId, peerMeta] of peersMeta.entries()) {
+      peerBalancer.onPeerConnected(peerId, peerMeta);
+    }
+  });
+
+  for (const [testCaseIndex, {custodyGroups, excludedPeers, activeRequests, bestPeer}] of testCases.entries()) {
+    for (const [i, groups] of custodyGroups.entries()) {
+      peers[i].custodyGroups = groups;
+    }
+
+    const signedBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
+    const cachedData: CachedDataColumns = {
+      cacheId: 2025,
+      fork: ForkName.fulu,
+      availabilityPromise: Promise.resolve({} as unknown as BlockInputDataColumns),
+      resolveAvailability: () => {},
+      dataColumnsCache: new Map([
+        [0, {dataColumn: ssz.fulu.DataColumnSidecar.defaultValue(), dataColumnBytes: null}],
+        [1, {dataColumn: ssz.fulu.DataColumnSidecar.defaultValue(), dataColumnBytes: null}],
+      ]),
+      calledRecover: false,
+    };
+    const blockInput: BlockInput = {
+      block: signedBlock,
+      source: BlockSource.gossip,
+      type: BlockInputType.dataPromise,
+      cachedData,
+    };
+
+    it(`bestPeerForBlockInput - test case ${testCaseIndex}`, () => {
+      for (const [i, activeRequest] of activeRequests.entries()) {
+        for (let j = 0; j < activeRequest; j++) {
+          peerBalancer.onRequest(peers[i].peerId);
+        }
+      }
+      const peer = peerBalancer.bestPeerForBlockInput(blockInput, new Set(excludedPeers));
+      if (bestPeer) {
+        expect(peer).toEqual(bestPeer);
+      } else {
+        expect(peer).toBeNull();
+      }
+    });
+
+    it(`bestPeerForPendingColumns - test case ${testCaseIndex}`, () => {
+      for (const [i, activeRequest] of activeRequests.entries()) {
+        for (let j = 0; j < activeRequest; j++) {
+          peerBalancer.onRequest(peers[i].peerId);
+        }
+      }
+      const peer = peerBalancer.bestPeerForPendingColumns(new Set([2, 3]), new Set(excludedPeers));
+      if (bestPeer) {
+        expect(peer).toEqual(bestPeer);
+      } else {
+        expect(peer).toBeNull();
+      }
+    });
+  } // end for testCases
+
+  it("bestPeerForBlockInput - NullBlockInput", () => {
+    // there is an edge case where the NullBlockInput has full custody groups but no block, make sure it can return any peers
+    // in case NullBlockInput has some pending columns, it falls on the above test cases
+    const signedBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
+    const cachedData: CachedDataColumns = {
+      cacheId: 2025,
+      fork: ForkName.fulu,
+      availabilityPromise: Promise.resolve({} as unknown as BlockInputDataColumns),
+      resolveAvailability: () => {},
+      dataColumnsCache: new Map([
+        [0, {dataColumn: ssz.fulu.DataColumnSidecar.defaultValue(), dataColumnBytes: null}],
+        [1, {dataColumn: ssz.fulu.DataColumnSidecar.defaultValue(), dataColumnBytes: null}],
+        [2, {dataColumn: ssz.fulu.DataColumnSidecar.defaultValue(), dataColumnBytes: null}],
+        [3, {dataColumn: ssz.fulu.DataColumnSidecar.defaultValue(), dataColumnBytes: null}],
+      ]),
+      calledRecover: false,
+    };
+    const blockInput: BlockInput = {
+      block: signedBlock,
+      source: BlockSource.gossip,
+      type: BlockInputType.dataPromise,
+      cachedData,
+    };
+
+    const nullBlockInput: NullBlockInput = {
+      block: null,
+      blockRootHex: ZERO_HASH_HEX,
+      blockInputPromise: Promise.resolve(blockInput),
+      cachedData,
+    };
+
+    const excludedPeers = new Set<PeerIdStr>();
+    for (let i = 0; i < peers.length; i++) {
+      const peer = peerBalancer.bestPeerForBlockInput(nullBlockInput, excludedPeers);
+      expect(peer).not.toBeNull();
+      if (peer == null) {
+        // should not happen, this is just to make the compiler happy
+        throw new Error("Unexpected null peer");
+      }
+      excludedPeers.add(peer.peerId);
+    }
+
+    // last round, no more peer should be returned because all are requested
+    const peer = peerBalancer.bestPeerForBlockInput(nullBlockInput, excludedPeers);
+    expect(peer).toBeNull();
+  });
+
+  it("onRequest and onRequestCompleted", () => {
+    peerBalancer.onRequest(peers[0].peerId);
+    expect(peerBalancer.activeRequests.get(peers[0].peerId)).toBe(1);
+    peerBalancer.onRequest(peers[0].peerId);
+    expect(peerBalancer.activeRequests.get(peers[0].peerId)).toBe(2);
+    peerBalancer.onRequestCompleted(peers[0].peerId);
+    expect(peerBalancer.activeRequests.get(peers[0].peerId)).toBe(1);
+    peerBalancer.onRequestCompleted(peers[0].peerId);
+    expect(peerBalancer.activeRequests.get(peers[0].peerId)).toBe(0);
   });
 });

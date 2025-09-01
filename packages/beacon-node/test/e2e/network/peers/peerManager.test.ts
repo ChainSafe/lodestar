@@ -205,8 +205,8 @@ describe("network / peers / PeerManager", () => {
       attnets: getAttnets(),
       syncnets: getSyncnets(),
       custodyGroupCount,
-      custodyGroups: getCustodyGroups(computeNodeId(peerId1), custodyGroupCount),
-      samplingGroups: getCustodyGroups(computeNodeId(peerId1), samplingGroupCount),
+      custodyGroups: getCustodyGroups(config, computeNodeId(peerId1), custodyGroupCount),
+      samplingGroups: getCustodyGroups(config, computeNodeId(peerId1), samplingGroupCount),
     };
     reqResp.sendPing.mockResolvedValue(remoteMetadata.seqNumber);
     reqResp.sendStatus.mockResolvedValue(remoteStatus);

@@ -1,7 +1,7 @@
 export {BlobSidecarsRepository} from "./blobSidecars.js";
 export {BlobSidecarsArchiveRepository} from "./blobSidecarsArchive.js";
-export {DataColumnSidecarsRepository} from "./dataColumnSidecars.js";
-export {DataColumnSidecarsArchiveRepository} from "./dataColumnSidecarsArchive.js";
+export {DataColumnSidecarRepository} from "./dataColumnSidecar.js";
+export {DataColumnSidecarArchiveRepository} from "./dataColumnSidecarArchive.js";
 
 export {BlockRepository} from "./block.js";
 export {BlockArchiveRepository} from "./blockArchive.js";
