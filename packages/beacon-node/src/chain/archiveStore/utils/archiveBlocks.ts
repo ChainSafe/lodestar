@@ -306,7 +306,7 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
   currentEpoch: Epoch
 ): Promise<number> {
   // Only Fulu and newer blocks and within the retention window
-  const withinDataColumnWindow = (slot: Slot) =>
+  const withinRetentionWindow = (slot: Slot) =>
     config.getForkSeq(slot) >= ForkSeq.fulu &&
     computeEpochAtSlot(slot) >= currentEpoch - config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS;
   let migratedDataColumnsCount = 0;
@@ -317,7 +317,7 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
     const promises = [];
 
     for (const block of canonicalBlocks) {
-      if (!withinDataColumnWindow(block.slot)) continue;
+      if (!withinRetentionWindow(block.slot)) continue;
 
       const dataColumnSidecars = await db.dataColumnSidecar.valuesBinary(block.root);
       if (!dataColumnSidecars || dataColumnSidecars.length === 0) {
