@@ -1,4 +1,4 @@
-import {EL_GENESIS_ACCOUNT} from "../constants.js";
+import {EL_GENESIS_ACCOUNT, EL_GENESIS_PASSWORD} from "../constants.js";
 import {Assertion, AssertionResult, Match, NodePair} from "../interfaces.js";
 
 const transactionAmount = BigInt(2441406250);
@@ -22,6 +22,7 @@ export function createAccountBalanceAssertion({
       return Match.None;
     },
     async capture({node}) {
+      await node.execution.provider?.eth.personal.unlockAccount(address, EL_GENESIS_PASSWORD, 600);
       await node.execution.provider?.eth.sendTransaction({
         to: address,
         from: EL_GENESIS_ACCOUNT,

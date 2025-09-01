@@ -126,11 +126,8 @@ env.tracker.register({
 env.tracker.register(
   createAccountBalanceAssertion({
     address: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    sendTransactionsAtSlot: [
-      env.clock.getFirstSlotOfEpoch(altairForkEpoch) + 4,
-      env.clock.getFirstSlotOfEpoch(bellatrixForkEpoch) + 4,
-    ],
-    validateTotalBalanceAt: [env.clock.getFirstSlotOfEpoch(bellatrixForkEpoch + 1) + 4],
+    sendTransactionsAtSlot: [env.clock.getFirstSlotOfEpoch(1) + 4, env.clock.getFirstSlotOfEpoch(2) + 4],
+    validateTotalBalanceAt: [env.clock.getFirstSlotOfEpoch(3) + 4],
     targetNode: env.nodes[0],
   })
 );
