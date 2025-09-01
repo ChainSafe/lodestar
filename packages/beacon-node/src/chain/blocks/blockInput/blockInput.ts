@@ -202,6 +202,7 @@ export class BlockInputPreData extends AbstractBlockInput<ForkPreDeneb, null> {
     super(init);
     this.state = state;
     this.dataPromise.resolve(null);
+    this.blockPromise.resolve(state.block);
   }
 
   static createFromBlock(props: AddBlock & CreateBlockInputMeta): BlockInputPreData {
