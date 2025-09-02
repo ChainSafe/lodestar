@@ -148,7 +148,7 @@ export class Batch {
     const neededColumns = new Set<number>();
 
     // ensure blocks are in slot-wise order
-    for (const blockInput of blocks.sort((a, b) => a.slot - b.slot)) {
+    for (const blockInput of blocks) {
       const blockSlot = blockInput.slot;
       // check if block/data is present (hasBlock/hasAllData). If present then check if startSlot is the same as
       // blockSlot. If it is then do not need to pull that slot so increment startSlot by 1. check will fail
@@ -246,6 +246,9 @@ export class Batch {
     if (this.state.status !== BatchStatus.Downloading) {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.Downloading));
     }
+
+    // ensure that blocks are always sorted before getting stored on the batch.state or being used to getRequests
+    blocks.sort((a, b) => b.slot - a.slot);
 
     this.goodPeers.push(peer);
 
