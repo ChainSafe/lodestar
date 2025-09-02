@@ -66,6 +66,16 @@ export function getForkChoiceMetrics(register: MetricsRegisterExtra) {
         help: "Reason why the current head is not re-orged out",
         labelNames: ["reason"],
       }),
+      // TODO: Katya - add metric after refactoring fork-choice metrics
+      inclusionListsEquivocating: register.counter({
+        name: "beacon_inclusion_lists_equivocating_total",
+        help: "Total number of equivocating inclusion lists",
+      }),
+      // TODO: Katya - add metric after implementing FOCIL specs updates
+      unsatisfiedInclusionListBlocks: register.counter({
+        name: "beacon_inclusion_list_unsatisfied_blocks_total",
+        help: "Total number of unsatisfied inclusion list blocks",
+      }),
     },
   };
 }
