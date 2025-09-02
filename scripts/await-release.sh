@@ -1,10 +1,16 @@
 #!/usr/bin/env bash
 
 # Should ONLY run on CI/GA for releases, installing `jq` for Ubuntu latest
-sudo apt install jq # sudo without password on ubuntu-latest
+sudo apt update
+sudo apt install -y jq # sudo without password on ubuntu-latest
 
 # Using the lodestar-cli package to reference against
 declare PACKAGE="@chainsafe/lodestar"
+
+# Inputs
+declare VERSION_EXPECTED=$(echo $1 | tr -d 'v')
+declare DIST_TAG=$2
+declare TIMEOUT=$3
 
 # Using `npm view -j` to get all available versions as JSON
 declare CMD_NPM="npm view -j $PACKAGE"
@@ -13,10 +19,6 @@ declare CMD_NPM="npm view -j $PACKAGE"
 declare VERSION_LATEST=$($CMD_NPM | jq -r ".\"dist-tags\".$DIST_TAG")
 
 # Usage: scripts/await-release.sh $VERSION $TIMEOUT
-declare VERSION_EXPECTED=$(echo $1 | tr -d 'v')
-declare DIST_TAG=$2
-declare TIMEOUT=$3
-
 declare TIME=0
 declare SLEEP=5
 
