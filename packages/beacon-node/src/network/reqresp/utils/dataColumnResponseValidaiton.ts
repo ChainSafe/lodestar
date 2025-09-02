@@ -50,12 +50,10 @@ export async function handleColumnSidecarUnavailability({
   // There are blobs for that column index so we should have synced for it
   // We need to inform to peers that we don't have that expected data
   // NOTE: We may look to add some metrics to track such scenario
-  // TODO: Ideally we should respond with an error but seems rest of the clients are not doing that error
-  // So until we have consensus on specs, we skip the error case
-  // throw new ResponseError(
-  //   RespStatus.RESOURCE_UNAVAILABLE,
-  //   `dataColumnSidecar requested and within custody not available for columnIndex=${unavailableColumnIndex}`
-  // );
+  throw new ResponseError(
+    RespStatus.RESOURCE_UNAVAILABLE,
+    `dataColumnSidecar requested and within custody not available for columnIndex=${unavailableColumnIndex}`
+  );
 }
 
 export function validateRequestedDataColumns(chain: IBeaconChain, requestedColumns: ColumnIndex[]): ColumnIndex[] {
