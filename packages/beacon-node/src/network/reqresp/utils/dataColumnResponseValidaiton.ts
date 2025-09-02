@@ -25,8 +25,8 @@ export async function handleColumnSidecarUnavailability({
 }): Promise<void> {
   const logData: LogData = {
     unavailableColumnIndex,
-    requestedColumns: requestedColumns.join(","),
-    availableColumns: availableColumns.join(","),
+    requestedColumns: prettyPrintIndices(requestedColumns),
+    availableColumns: prettyPrintIndices(availableColumns),
     slot,
   };
   if (blockRoot) {
