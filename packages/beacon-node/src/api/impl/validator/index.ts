@@ -60,6 +60,7 @@ import {
   toRootHex,
 } from "@lodestar/utils";
 import {MAX_BUILDER_BOOST_FACTOR} from "@lodestar/validator";
+import {InclusionListSource} from "../../../chain/blocks/types.js";
 import {
   AttestationError,
   AttestationErrorCode,
@@ -1029,7 +1030,10 @@ export function getValidatorApi(
       const blockHash = toHex(executionPayload.blockHash);
       logger.debug("produce inclusion list", {blockHash});
 
+      const timer = metrics?.eip7805.getInclusionListV1RequestsDuration.startTimer();
       const ilTransactions = await chain.executionEngine.getInclusionList(blockHash);
+      timer?.();
+      metrics?.eip7805.getInclusionListV1Requests.inc();
 
       return {
         data: ilTransactions,
@@ -1520,7 +1524,9 @@ export function getValidatorApi(
         throw new ApiError(400, `Publishing pre-eip7805 inclusion list slot: ${slot}`);
       }
 
+      const timer = metrics?.eip7805.inclusionListsValidationTime.startTimer();
       await validateApiInclusionList(chain, signedInclusionList);
+      timer?.({source: InclusionListSource.api});
 
       chain.inclusionListPool.add(signedInclusionList);
 
@@ -1533,6 +1539,7 @@ export function getValidatorApi(
       });
 
       await network.publishInclusionList(signedInclusionList);
+      metrics?.eip7805.inclusionListsPublished.inc();
     },
 
     async prepareBeaconCommitteeSubnet({subscriptions}) {

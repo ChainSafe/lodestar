@@ -61,6 +61,11 @@ export type CachedBlobs = CachedDataItem &
     blobsCache: BlobsCacheMap;
   };
 
+export enum InclusionListSource {
+  gossip = "gossip",
+  api = "api",
+}
+
 /**
  *
  * PeerDAS Column Format Types
@@ -74,6 +79,7 @@ export enum DataColumnsSource {
   byRange = "req_resp_by_range",
   byRoot = "req_resp_by_root",
 }
+
 type ForkDataColumnsInfo = {
   fork: ForkPostFulu;
 };

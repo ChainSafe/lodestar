@@ -22,6 +22,7 @@ import {
   BlockInputType,
   DataColumnsSource,
   GossipedInputType,
+  InclusionListSource,
   NullBlockInput,
 } from "../../chain/blocks/types.js";
 import {InclusionListError, InclusionListErrorCode} from "../../chain/errors/inclusionList.js";
@@ -857,9 +858,16 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     }: GossipHandlerParamGeneric<GossipType.inclusion_list>) => {
       const {serializedData} = gossipData;
       const inclusionList = sszDeserialize(topic, serializedData);
+      metrics?.eip7805.inclusionListsReceived.inc({source: InclusionListSource.gossip});
+      metrics?.eip7805.inclusionListTransactionsReceived.inc(
+        {source: InclusionListSource.gossip},
+        inclusionList.message.transactions.length
+      );
       // TODO EIP-7805: should we persist invalid ssz value?
       try {
+        const timer = metrics?.eip7805.inclusionListsValidationTime.startTimer();
         await validateGossipInclusionList(chain, inclusionList);
+        timer?.({source: InclusionListSource.gossip});
       } catch (e) {
         chain.logger.debug(`Gossip Inclusion List validation error ${JSON.stringify(e)}`);
         if (e instanceof InclusionListError && e.type.code === InclusionListErrorCode.INVALID_COMMITTEE_ROOT) {
@@ -875,6 +883,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         metrics?.opPool.inclusionListPoolInsertOutcome.inc({insertOutcome});
 
         const secFromSlot = chain.clock.secFromSlot(inclusionList.message.slot, seenTimestampSec);
+        metrics?.eip7805.inclusionListArrivalTime.observe(secFromSlot);
         chain.forkChoice.onInclusionList(inclusionList, secFromSlot);
       } catch (e) {
         logger.error("Error adding inclusionList to pool", {}, e as Error);

@@ -2,7 +2,9 @@ import {UpdateHeadOpt} from "@lodestar/fork-choice";
 import {NotReorgedReason} from "@lodestar/fork-choice";
 import {ProducedBlockSource} from "@lodestar/types";
 import {BlockSelectionResult} from "../../api/impl/validator/index.js";
+import {InclusionListSource} from "../../chain/blocks/types.js";
 import {BlockProductionStep, PayloadPreparationType} from "../../chain/produceBlock/index.js";
+import {InvalidInclusionListReason} from "../../chain/validation/inclusionList.js";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
 
 export type BeaconMetrics = ReturnType<typeof createBeaconMetrics>;
@@ -71,6 +73,76 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       help: "Current number of pending partial withdrawals",
     }),
 
+    eip7805: {
+      inclusionListsValid: register.counter<{source: InclusionListSource}>({
+        name: "beacon_inclusion_lists_valid_total",
+        help: "Total number of valid inclusion lists",
+        labelNames: ["source"],
+      }),
+      inclusionListsInvalid: register.counter<{source: InclusionListSource; reason: InvalidInclusionListReason}>({
+        name: "beacon_inclusion_lists_invalid_total",
+        help: "Total number of invalid inclusion lists",
+        labelNames: ["source", "reason"],
+      }),
+      inclusionListsValidSize: register.counter({
+        name: "beacon_inclusion_lists_valid_size_bytes_total",
+        help: "Total size of valid inclusion lists in bytes",
+      }),
+      inclusionListsInvalidSize: register.counter({
+        name: "beacon_inclusion_lists_invalid_size_bytes_total",
+        help: "Total size of invalid inclusion lists in bytes",
+      }),
+      inclusionListsValidationTime: register.histogram<{source: InclusionListSource}>({
+        name: "beacon_inclusion_lists_validation_time_seconds",
+        help: "Time taken to validate inclusion lists",
+        buckets: [0.1, 0.25, 0.5, 0.75, 1, 2],
+        labelNames: ["source"],
+      }),
+      inclusionListsReceived: register.counter<{source: InclusionListSource}>({
+        name: "beacon_inclusion_lists_received_total",
+        help: "Total number of received inclusion lists",
+        labelNames: ["source"],
+      }),
+      inclusionListTransactionsReceived: register.counter<{source: InclusionListSource}>({
+        name: "beacon_inclusion_list_transactions_received_total",
+        help: "Total number of transactions in received inclusion lists",
+        labelNames: ["source"],
+      }),
+      inclusionListsPublished: register.counter({
+        name: "beacon_inclusion_lists_published_total",
+        help: "Total number of published inclusion lists",
+      }),
+      inclusionListArrivalTime: register.histogram({
+        name: "beacon_inclusion_lists_arrival_time_seconds",
+        help: "Inclusion list arrival time since the beginning of slot",
+        buckets: [0, 1, 2, 3, 4, 6, 8, 9, 10, 11, 12],
+      }),
+      getInclusionListV1Requests: register.counter({
+        name: "beacon_engine_getInclusionListV1_requests_total",
+        help: "Total number of engine_getInclusionListV1 requests sent",
+      }),
+      getInclusionListV1RequestsDuration: register.histogram({
+        name: "beacon_engine_getInclusionListV1_requests_duration_seconds",
+        help: "Duration of engine_getInclusionListV1 requests",
+        buckets: [0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.5],
+      }),
+      // TODO: Katya - add forkchoiceUpdatedV4 metrics after the latest FOCIL spec updates
+      forkchoiceUpdatedV4Requests: register.counter({
+        name: "beacon_engine_forkchoiceUpdatedV4_requests_total",
+        help: "Total number of engine_forkchoiceUpdatedV4 requests sent to the execution client",
+      }),
+      forkchoiceUpdatedV4RequestsDuration: register.histogram({
+        name: "beacon_engine_forkchoiceUpdatedV4_requests_duration_seconds",
+        help: "Duration of engine_forkchoiceUpdatedV4 requests",
+        buckets: [0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.5],
+      }),
+      // TODO: Katya - add metric after focil refactoring
+      inclusionListTransactionsSentToPayload: register.counter({
+        name: "beacon_inclusion_list_transactions_sent_to_payload_total",
+        help: "Total number of inclusion list transactions sent to payload",
+      }),
+    },
+
     // Non-spec'ed
 
     forkChoice: {
@@ -132,6 +204,17 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         name: "beacon_fork_choice_not_reorged_reason_total",
         help: "Reason why the current head is not re-orged out",
         labelNames: ["reason"],
+      }),
+      // TODO: Katya - add metric after refactoring fork-choice metrics
+      inclusionListsEquivocating: register.counter<{source: InclusionListSource}>({
+        name: "beacon_inclusion_lists_equivocating_total",
+        help: "Total number of equivocating inclusion lists",
+        labelNames: ["source"],
+      }),
+      // TODO: Katya - add metric after implementing FOCIL specs updates
+      unsatisfiedInclusionListBlocks: register.counter({
+        name: "beacon_inclusion_list_unsatisfied_blocks_total",
+        help: "Total number of unsatisfied inclusion list blocks",
       }),
     },
 
