@@ -172,6 +172,8 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     DEPOSIT_CONTRACT_ADDRESS: true,
 
     // Networking (non-critical as those do not affect consensus)
+    MAX_REQUEST_BLOCKS: false,
+    MAX_REQUEST_BLOCKS_DENEB: false,
     MIN_EPOCHS_FOR_BLOCK_REQUESTS: false,
     MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: false,
     MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: false,

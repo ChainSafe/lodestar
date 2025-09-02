@@ -19,6 +19,7 @@ import {Slot} from "@lodestar/types";
 
 import {Logger, toRootHex} from "@lodestar/utils";
 import {GENESIS_SLOT} from "../../constants/index.js";
+import {Metrics} from "../../metrics/index.js";
 import {ChainEventEmitter} from "../emitter.js";
 import {ChainEvent} from "../emitter.js";
 
@@ -42,6 +43,7 @@ export function initializeForkChoice(
   state: CachedBeaconStateAllForks,
   opts: ForkChoiceOpts,
   justifiedBalancesGetter: JustifiedBalancesGetter,
+  metrics: Metrics | null,
   logger?: Logger
 ): ForkChoice {
   const {blockHeader, checkpoint} = computeAnchorCheckpoint(config, state);
@@ -105,6 +107,7 @@ export function initializeForkChoice(
       },
       currentSlot
     ),
+    metrics,
     opts,
     logger
   );

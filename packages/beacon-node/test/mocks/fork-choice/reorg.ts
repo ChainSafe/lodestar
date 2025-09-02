@@ -31,7 +31,7 @@ export class ReorgedForkChoice extends ForkChoice {
     protoArray: ProtoArray,
     opts?: ForkChoiceOpts
   ) {
-    super(config, fcStore, protoArray, opts);
+    super(config, fcStore, protoArray, null, opts);
     this._fcStore = fcStore;
   }
 

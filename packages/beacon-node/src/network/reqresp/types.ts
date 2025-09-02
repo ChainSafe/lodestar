@@ -18,7 +18,14 @@ import {
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
-import {BlobSidecarsByRootRequest, BlobSidecarsByRootRequestType} from "../../util/types.js";
+import {
+  BeaconBlocksByRootRequest,
+  BeaconBlocksByRootRequestType,
+  BlobSidecarsByRootRequest,
+  BlobSidecarsByRootRequestType,
+  DataColumnSidecarsByRootRequest,
+  DataColumnSidecarsByRootRequestType,
+} from "../../util/types.js";
 
 export type ProtocolNoHandler = Omit<Protocol, "handler">;
 
@@ -48,11 +55,11 @@ export type RequestBodyByMethod = {
   [ReqRespMethod.Ping]: phase0.Ping;
   [ReqRespMethod.Metadata]: null;
   [ReqRespMethod.BeaconBlocksByRange]: phase0.BeaconBlocksByRangeRequest;
-  [ReqRespMethod.BeaconBlocksByRoot]: phase0.BeaconBlocksByRootRequest;
+  [ReqRespMethod.BeaconBlocksByRoot]: BeaconBlocksByRootRequest;
   [ReqRespMethod.BlobSidecarsByRange]: deneb.BlobSidecarsByRangeRequest;
   [ReqRespMethod.BlobSidecarsByRoot]: BlobSidecarsByRootRequest;
   [ReqRespMethod.DataColumnSidecarsByRange]: fulu.DataColumnSidecarsByRangeRequest;
-  [ReqRespMethod.DataColumnSidecarsByRoot]: fulu.DataColumnSidecarsByRootRequest;
+  [ReqRespMethod.DataColumnSidecarsByRoot]: DataColumnSidecarsByRootRequest;
   [ReqRespMethod.LightClientBootstrap]: Root;
   [ReqRespMethod.LightClientUpdatesByRange]: altair.LightClientUpdatesByRange;
   [ReqRespMethod.LightClientFinalityUpdate]: null;
@@ -93,11 +100,11 @@ export const requestSszTypeByMethod: (
   [ReqRespMethod.Metadata]: null,
 
   [ReqRespMethod.BeaconBlocksByRange]: ssz.phase0.BeaconBlocksByRangeRequest,
-  [ReqRespMethod.BeaconBlocksByRoot]: ssz.phase0.BeaconBlocksByRootRequest,
+  [ReqRespMethod.BeaconBlocksByRoot]: BeaconBlocksByRootRequestType(fork, config),
   [ReqRespMethod.BlobSidecarsByRange]: ssz.deneb.BlobSidecarsByRangeRequest,
   [ReqRespMethod.BlobSidecarsByRoot]: BlobSidecarsByRootRequestType(fork, config),
   [ReqRespMethod.DataColumnSidecarsByRange]: ssz.fulu.DataColumnSidecarsByRangeRequest,
-  [ReqRespMethod.DataColumnSidecarsByRoot]: ssz.fulu.DataColumnSidecarsByRootRequest,
+  [ReqRespMethod.DataColumnSidecarsByRoot]: DataColumnSidecarsByRootRequestType(config),
 
   [ReqRespMethod.LightClientBootstrap]: ssz.Root,
   [ReqRespMethod.LightClientUpdatesByRange]: ssz.altair.LightClientUpdatesByRange,
