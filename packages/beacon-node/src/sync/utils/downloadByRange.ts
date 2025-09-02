@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkPostDeneb, ForkPostFulu, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
+import {ForkPostDeneb, ForkPostFulu} from "@lodestar/params";
 import {SignedBeaconBlock, Slot, deneb, fulu, phase0} from "@lodestar/types";
 import {LodestarError, Logger, fromHex, prettyBytes, toRootHex} from "@lodestar/utils";
 import {
@@ -593,14 +593,32 @@ export async function validateColumnsByRangeResponse(
     const blockColumnSidecars = columnSidecars.slice(columnSidecarIndex, columnSidecarIndex + expectedColumns);
     columnSidecarIndex += expectedColumns;
 
+    // Validate that all requested columns are present and in order
+    if (blockColumnSidecars.length !== expectedColumns) {
+      throw new DownloadByRangeError(
+        {
+          code: DownloadByRangeErrorCode.MISSING_COLUMNS,
+          expected: expectedColumns,
+          actual: blockColumnSidecars.length,
+        },
+        "Missing data columns in DataColumnSidecarsByRange response"
+      );
+    }
+    for (let i = 0; i < blockColumnSidecars.length; i++) {
+      if (blockColumnSidecars[i].index !== request.columns[i]) {
+        throw new DownloadByRangeError(
+          {
+            code: DownloadByRangeErrorCode.MISSING_COLUMNS,
+            expected: expectedColumns,
+            actual: blockColumnSidecars.length,
+          },
+          "Data columns not in order or do not match requested columns in DataColumnSidecarsByRange response"
+        );
+      }
+    }
+
     validateSidecarsPromises.push(
-      validateBlockDataColumnSidecars(
-        block.message.slot,
-        blockRoot,
-        blockKzgCommitments.length,
-        request.columns,
-        blockColumnSidecars
-      )
+      validateBlockDataColumnSidecars(block.message.slot, blockRoot, blockKzgCommitments.length, blockColumnSidecars)
     );
   }
 

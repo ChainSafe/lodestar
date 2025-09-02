@@ -2,13 +2,13 @@ import {fromHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {EventData, EventType} from "@lodestar/api/lib/beacon/routes/events.js";
 import {ChainConfig} from "@lodestar/config";
-import {config} from "@lodestar/config/default";
 import {TimestampFormatCode} from "@lodestar/logger";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {afterEach, describe, it, vi} from "vitest";
-import {BlockSource, getBlockInput} from "../../../src/chain/blocks/types.js";
+import {BlockInputPreData} from "../../../src/chain/blocks/blockInput/blockInput.js";
+import {BlockInputSource} from "../../../src/chain/blocks/blockInput/types.js";
+import {ChainEvent} from "../../../src/chain/emitter.js";
 import {BlockError, BlockErrorCode} from "../../../src/chain/errors/index.js";
-import {NetworkEvent} from "../../../src/network/index.js";
 import {INTEROP_BLOCK_HASH} from "../../../src/node/utils/interop/state.js";
 import {waitForEvent} from "../../utils/events/resolver.js";
 import {LogLevel, TestLoggerOpts, testLogger} from "../../utils/logger.js";
@@ -47,14 +47,14 @@ describe("sync / unknown block sync for fulu", () => {
     }
   });
 
-  const testCases: {id: string; event: NetworkEvent}[] = [
+  const testCases: {id: string; event: ChainEvent}[] = [
     {
       id: "should do an unknown block parent sync from another BN",
-      event: NetworkEvent.unknownBlockParent,
+      event: ChainEvent.unknownParent,
     },
     {
       id: "should do an unknown block sync from another BN",
-      event: NetworkEvent.unknownBlock,
+      event: ChainEvent.unknownBlockRoot,
     },
     // TODO: new event postfulu for unknownBlockInput
   ];
@@ -144,27 +144,36 @@ describe("sync / unknown block sync for fulu", () => {
       await connected;
       loggerNodeA.info("Node A connected to Node B");
 
-      const headInput = getBlockInput.preData(config, head, BlockSource.gossip);
+      const headInput = BlockInputPreData.createFromBlock({
+        block: head,
+        blockRootHex: headSummary.blockRoot,
+        source: BlockInputSource.gossip,
+        seenTimestampSec: Math.floor(Date.now() / 1000),
+        forkName: bn.chain.config.getForkName(head.message.slot),
+        daOutOfRange: false,
+      });
 
       switch (event) {
-        case NetworkEvent.unknownBlockParent:
+        case ChainEvent.unknownParent:
           await bn2.chain.processBlock(headInput).catch((e) => {
-            loggerNodeB.info("Error processing block", {slot: headInput.block.message.slot, code: e.type.code});
+            loggerNodeB.info("Error processing block", {slot: headInput.slot, code: e.type.code});
             if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
               // Expected
-              bn2.network.events.emit(NetworkEvent.unknownBlockParent, {
+              bn2.chain.emitter.emit(ChainEvent.unknownParent, {
                 blockInput: headInput,
                 peer: bn2.network.peerId.toString(),
+                source: BlockInputSource.gossip,
               });
             } else {
               throw e;
             }
           });
           break;
-        case NetworkEvent.unknownBlock:
-          bn2.network.events.emit(NetworkEvent.unknownBlock, {
+        case ChainEvent.unknownBlockRoot:
+          bn2.chain.emitter.emit(ChainEvent.unknownBlockRoot, {
             rootHex: headSummary.blockRoot,
             peer: bn2.network.peerId.toString(),
+            source: BlockInputSource.gossip,
           });
           break;
         default:

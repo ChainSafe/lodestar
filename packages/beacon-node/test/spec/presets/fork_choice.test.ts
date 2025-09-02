@@ -221,7 +221,6 @@ const forkChoiceTest =
                     slot,
                     blockRoot,
                     (signedBlock as SignedBeaconBlock<ForkPostFulu>).message.body.blobKzgCommitments.length,
-                    columns.map((c) => c.index),
                     columns
                   );
 

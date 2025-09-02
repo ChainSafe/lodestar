@@ -4,12 +4,11 @@ import {
   KZG_COMMITMENTS_SUBTREE_INDEX,
   NUMBER_OF_COLUMNS,
 } from "@lodestar/params";
-import {ColumnIndex, Root, Slot, SubnetID, deneb, fulu, ssz} from "@lodestar/types";
+import {Root, Slot, SubnetID, fulu, ssz} from "@lodestar/types";
 import {toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 
 import {computeStartSlotAtEpoch, getBlockHeaderProposerSignatureSet} from "@lodestar/state-transition";
 import {Metrics} from "../../metrics/metrics.js";
-import {byteArrayEquals} from "../../util/bytes.js";
 import {kzg} from "../../util/kzg.js";
 import {
   DataColumnSidecarErrorCode,
@@ -182,90 +181,15 @@ export async function validateGossipDataColumnSidecar(
   //              -- Handled in seenGossipBlockInput
 }
 
-export async function validateDataColumnsSidecars(
-  blockSlot: Slot,
-  blockRoot: Root,
-  blockKzgCommitments: deneb.BlobKzgCommitments,
-  dataColumnSidecars: fulu.DataColumnSidecars,
-  metrics: Metrics | null,
-  opts: {skipProofsCheck: boolean} = {skipProofsCheck: false}
-): Promise<void> {
-  // Skip verification if there are no data columns
-  if (dataColumnSidecars.length === 0) {
-    return;
-  }
-
-  const commitmentBytes: Uint8Array[] = [];
-  const cellIndices: number[] = [];
-  const cells: Uint8Array[] = [];
-  const proofBytes: Uint8Array[] = [];
-
-  for (let sidecarsIndex = 0; sidecarsIndex < dataColumnSidecars.length; sidecarsIndex++) {
-    const columnSidecar = dataColumnSidecars[sidecarsIndex];
-    const {index: columnIndex, column, kzgCommitments, kzgProofs} = columnSidecar;
-    const columnBlockHeader = columnSidecar.signedBlockHeader.message;
-    const columnBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(columnBlockHeader);
-    if (
-      columnBlockHeader.slot !== blockSlot ||
-      !byteArrayEquals(columnBlockRoot, blockRoot) ||
-      kzgCommitments.length === 0 ||
-      blockKzgCommitments.length === 0 ||
-      blockKzgCommitments.length !== kzgCommitments.length ||
-      blockKzgCommitments
-        .map((commitment, i) => byteArrayEquals(commitment, kzgCommitments[i]))
-        .filter((result) => result === false).length
-    ) {
-      throw new Error(
-        `Invalid data column sidecar slot=${columnBlockHeader.slot} columnBlockRoot=${toRootHex(columnBlockRoot)} columnIndex=${columnIndex} for the block blockRoot=${toRootHex(blockRoot)} slot=${blockSlot} sidecarsIndex=${sidecarsIndex} kzgCommitments=${kzgCommitments.length} blockKzgCommitments=${blockKzgCommitments.length}`
-      );
-    }
-
-    if (columnIndex >= NUMBER_OF_COLUMNS) {
-      throw new Error(
-        `Invalid data sidecar columnIndex=${columnIndex} in slot=${blockSlot} blockRoot=${toRootHex(blockRoot)} sidecarsIndex=${sidecarsIndex}`
-      );
-    }
-
-    if (column.length !== kzgCommitments.length || column.length !== kzgProofs.length) {
-      throw new Error(
-        `Invalid data sidecar array lengths for columnIndex=${columnIndex} in slot=${blockSlot} blockRoot=${toRootHex(blockRoot)}`
-      );
-    }
-
-    commitmentBytes.push(...kzgCommitments);
-    cellIndices.push(...Array.from({length: column.length}, () => columnIndex));
-    cells.push(...column);
-    proofBytes.push(...kzgProofs);
-  }
-
-  if (opts.skipProofsCheck) {
-    return;
-  }
-
-  let valid: boolean;
-  try {
-    const timer = metrics?.peerDas.kzgVerificationDataColumnBatchTime.startTimer();
-    valid = await kzg.asyncVerifyCellKzgProofBatch(commitmentBytes, cellIndices, cells, proofBytes);
-    timer?.();
-  } catch (err) {
-    (err as Error).message =
-      `Error in verifyCellKzgProofBatch for slot=${blockSlot} blockRoot=${toRootHex(blockRoot)} commitmentBytes=${commitmentBytes.length} cellIndices=${cellIndices.length} cells=${cells.length} proofBytes=${proofBytes.length}`;
-    throw err;
-  }
-
-  if (!valid) {
-    throw new Error(`Invalid data column sidecars in slot=${blockSlot} blockRoot=${toRootHex(blockRoot)}`);
-  }
-}
-
 /**
  * SPEC FUNCTION
  * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/p2p-interface.md#verify_data_column_sidecar
  */
-export function verifyDataColumnSidecar(dataColumnSidecar: fulu.DataColumnSidecar): void {
+function verifyDataColumnSidecar(dataColumnSidecar: fulu.DataColumnSidecar): void {
   if (dataColumnSidecar.index >= NUMBER_OF_COLUMNS) {
     throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
       code: DataColumnSidecarErrorCode.INVALID_INDEX,
+      slot: dataColumnSidecar.signedBlockHeader.message.slot,
       columnIdx: dataColumnSidecar.index,
     });
   }
@@ -273,6 +197,7 @@ export function verifyDataColumnSidecar(dataColumnSidecar: fulu.DataColumnSideca
   if (dataColumnSidecar.kzgCommitments.length === 0) {
     throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
       code: DataColumnSidecarErrorCode.NO_COMMITMENTS,
+      slot: dataColumnSidecar.signedBlockHeader.message.slot,
       columnIdx: dataColumnSidecar.index,
     });
   }
@@ -335,20 +260,22 @@ export async function validateBlockDataColumnSidecars(
   blockSlot: Slot,
   blockRoot: Root,
   blockBlobCount: number,
-  expectedColumnIndices: ColumnIndex[],
   dataColumnSidecars: fulu.DataColumnSidecars
 ): Promise<void> {
-  if (dataColumnSidecars.length !== expectedColumnIndices.length) {
-    throw new DataColumnSidecarValidationError({
-      code: DataColumnSidecarErrorCode.INCORRECT_SIDECAR_COUNT,
-      slot: blockSlot,
-      expected: expectedColumnIndices.length,
-      actual: dataColumnSidecars.length,
-    });
-  }
-
   if (dataColumnSidecars.length === 0) {
     return;
+  }
+
+  if (blockBlobCount === 0) {
+    throw new DataColumnSidecarValidationError(
+      {
+        code: DataColumnSidecarErrorCode.INCORRECT_SIDECAR_COUNT,
+        slot: blockSlot,
+        expected: 0,
+        actual: dataColumnSidecars.length,
+      },
+      "Block has no blob commitments but data column sidecars were provided"
+    );
   }
 
   // Hash the first sidecar block header and compare the rest via (cheaper) equality
@@ -373,16 +300,15 @@ export async function validateBlockDataColumnSidecars(
   const proofs: Uint8Array[] = [];
   for (let i = 0; i < dataColumnSidecars.length; i++) {
     const columnSidecar = dataColumnSidecars[i];
-    const expectedIndex = expectedColumnIndices[i];
-    if (columnSidecar.index !== expectedIndex) {
+
+    if (columnSidecar.index >= NUMBER_OF_COLUMNS) {
       throw new DataColumnSidecarValidationError(
         {
-          code: DataColumnSidecarErrorCode.INCORRECT_INDEX,
+          code: DataColumnSidecarErrorCode.INVALID_INDEX,
           slot: blockSlot,
-          expected: expectedIndex,
-          actual: columnSidecar.index,
+          columnIdx: columnSidecar.index,
         },
-        "DataColumnSidecar has unexpected index"
+        "DataColumnSidecar has invalid index"
       );
     }
 

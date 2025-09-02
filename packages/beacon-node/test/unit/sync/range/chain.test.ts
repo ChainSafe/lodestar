@@ -4,7 +4,8 @@ import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, Slot, phase0, ssz} from "@lodestar/types";
 import {Logger, fromHex} from "@lodestar/utils";
 import {afterEach, describe, it} from "vitest";
-import {BlockInput, BlockSource, getBlockInput} from "../../../../src/chain/blocks/types.js";
+import {BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
+import {BlockInputSource, IBlockInput} from "../../../../src/chain/blocks/blockInput/types.js";
 import {ZERO_HASH} from "../../../../src/constants/index.js";
 import {ChainTarget, SyncChain, SyncChainFns} from "../../../../src/sync/range/chain.js";
 import {RangeSyncType} from "../../../../src/sync/utils/remoteSyncType.js";
@@ -83,19 +84,16 @@ describe("sync / range / chain", () => {
   for (const {id, startEpoch, targetEpoch, badBlocks, skippedSlots} of testCases) {
     it(id, async () => {
       const processChainSegment: SyncChainFns["processChainSegment"] = async (blocks) => {
-        for (const {block} of blocks) {
+        for (const blockInput of blocks) {
+          const block = blockInput.getBlock();
           if (block.signature === ACCEPT_BLOCK) continue;
           if (block.signature === REJECT_BLOCK) throw Error("REJECT_BLOCK");
         }
       };
 
-      const downloadBeaconBlocksByRange: SyncChainFns["downloadBeaconBlocksByRange"] = async (
-        _peer,
-        request,
-        _partialDownload
-      ) => {
-        const blocks: BlockInput[] = [];
-        for (let i = request.startSlot; i < request.startSlot + request.count; i += request.step) {
+      const downloadByRange: SyncChainFns["downloadByRange"] = async (_peer, request, _partialDownload) => {
+        const blocks: IBlockInput[] = [];
+        for (let i = request.startSlot; i < request.startSlot + request.count; i += 1) {
           if (skippedSlots?.has(i)) {
             continue; // Skip
           }
@@ -104,17 +102,20 @@ describe("sync / range / chain", () => {
           const shouldReject = badBlocks?.has(i);
           if (shouldReject) badBlocks?.delete(i);
           blocks.push(
-            getBlockInput.preData(
-              config,
-              {
+            BlockInputPreData.createFromBlock({
+              block: {
                 message: generateEmptyBlock(i),
                 signature: shouldReject ? REJECT_BLOCK : ACCEPT_BLOCK,
               },
-              BlockSource.byRange
-            )
+              blockRootHex: "0x00",
+              forkName: config.getForkName(i),
+              daOutOfRange: false,
+              source: BlockInputSource.byRange,
+              seenTimestampSec: Math.floor(Date.now() / 1000),
+            })
           );
         }
-        return {blocks, pendingDataColumns: null};
+        return blocks;
       };
 
       const target: ChainTarget = {slot: computeStartSlotAtEpoch(targetEpoch), root: ZERO_HASH};
@@ -128,7 +129,7 @@ describe("sync / range / chain", () => {
           syncType,
           logSyncChainFns(logger, {
             processChainSegment,
-            downloadBeaconBlocksByRange,
+            downloadByRange,
             getConnectedPeerSyncMeta,
             reportPeer,
             onEnd,
@@ -150,25 +151,24 @@ describe("sync / range / chain", () => {
     const peers = [peer];
 
     const processChainSegment: SyncChainFns["processChainSegment"] = async () => {};
-    const downloadBeaconBlocksByRange: SyncChainFns["downloadBeaconBlocksByRange"] = async (
-      _peer,
-      request,
-      _partialDownload
-    ) => {
-      const blocks: BlockInput[] = [];
-      for (let i = request.startSlot; i < request.startSlot + request.count; i += request.step) {
+    const downloadByRange: SyncChainFns["downloadByRange"] = async (_peer, request, _partialDownload) => {
+      const blocks: IBlockInput[] = [];
+      for (let i = request.startSlot; i < request.startSlot + request.count; i += 1) {
         blocks.push(
-          getBlockInput.preData(
-            config,
-            {
+          BlockInputPreData.createFromBlock({
+            block: {
               message: generateEmptyBlock(i),
               signature: ACCEPT_BLOCK,
             },
-            BlockSource.byRange
-          )
+            blockRootHex: "0x00",
+            forkName: config.getForkName(i),
+            seenTimestampSec: Math.floor(Date.now() / 1000),
+            daOutOfRange: false,
+            source: BlockInputSource.byRange,
+          })
         );
       }
-      return {blocks, pendingDataColumns: null};
+      return blocks;
     };
 
     const target: ChainTarget = {slot: computeStartSlotAtEpoch(targetEpoch), root: ZERO_HASH};
@@ -182,7 +182,7 @@ describe("sync / range / chain", () => {
         syncType,
         logSyncChainFns(logger, {
           processChainSegment,
-          downloadBeaconBlocksByRange,
+          downloadByRange,
           reportPeer,
           getConnectedPeerSyncMeta,
           onEnd,
@@ -213,12 +213,12 @@ describe("sync / range / chain", () => {
 function logSyncChainFns(logger: Logger, fns: SyncChainFns): SyncChainFns {
   return {
     processChainSegment(blocks, syncType) {
-      logger.debug("mock processChainSegment", {blocks: blocks.map((b) => b.block.message.slot).join(",")});
+      logger.debug("mock processChainSegment", {blocks: blocks.map((b) => b.slot).join(",")});
       return fns.processChainSegment(blocks, syncType);
     },
-    downloadBeaconBlocksByRange(peer, request, _partialDownload, syncType) {
-      logger.debug("mock downloadBeaconBlocksByRange", request);
-      return fns.downloadBeaconBlocksByRange(peer, request, _partialDownload, syncType);
+    downloadByRange(peer, request, syncType) {
+      logger.debug("mock downloadBeaconBlocksByRange", request.state.status);
+      return fns.downloadByRange(peer, request, syncType);
     },
     getConnectedPeerSyncMeta(peerId) {
       logger.debug("mock getConnectedPeerSyncMeta", peerId);
