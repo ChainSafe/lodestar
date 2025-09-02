@@ -1,23 +1,27 @@
 import fs from "node:fs";
 import path from "node:path";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {routes} from "@lodestar/api";
-import {AttesterSlashingList} from "@lodestar/api/beacon/routes/lodestar.js";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {ChainForkConfig} from "@lodestar/config";
 import {Repository} from "@lodestar/db";
-import {ForkName, ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkSeq, SLOTS_PER_EPOCH, isForkPostElectra} from "@lodestar/params";
 import {
   BeaconStateCapella,
+  CachedBeaconStateAllForks,
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
+  createCachedBeaconState,
   getLatestWeakSubjectivityCheckpointEpoch,
   isSlashableAttestationData,
   loadState,
 } from "@lodestar/state-transition";
-import {IndexedAttestation, ValidatorIndex, ssz} from "@lodestar/types";
+import {Attestation, Slot, phase0, ssz} from "@lodestar/types";
 import {AttesterSlashing} from "@lodestar/types";
 import {toHex, toRootHex} from "@lodestar/utils";
-import {BeaconChain} from "../../../chain/index.js";
-import {QueuedStateRegenerator, RegenCaller, RegenRequest} from "../../../chain/regen/index.js";
+import {BeaconChain, IBeaconChain} from "../../../chain/index.js";
+import {QueuedStateRegenerator, RegenRequest} from "../../../chain/regen/index.js";
 import {IBeaconDb} from "../../../db/interface.js";
 import {GossipType} from "../../../network/index.js";
 import {profileNodeJS, writeHeapSnapshot} from "../../../util/profile.js";
@@ -227,69 +231,90 @@ export function getLodestarApi({
     },
 
     async getAttesterSlashingsFromBlocks({signedBlocks}) {
-      const attesterSlashings: AttesterSlashingList = [];
-      const validatorIndicesSeen = new Set<ValidatorIndex>();
+      const attesterSlashings: AttesterSlashing[] = [];
+      const seenAttestations: {
+        attestation: Attestation;
+        slot: Slot;
+        attestationDataBigInt: phase0.AttestationDataBigint;
+      }[] = [];
+      const beaconStateCache = new Map<Slot, CachedBeaconStateAllForks>();
 
-      const validatorsAttestations = new Map<ValidatorIndex, IndexedAttestation[]>();
+      // helper function to manage the state cache
+      const getState = async (slot: number) => {
+        const epoch = computeEpochAtSlot(slot);
+        const startSlot = computeStartSlotAtEpoch(epoch);
 
-      let fork = chain.config.getForkSeq(chain.clock.currentSlot);
+        if (beaconStateCache.has(startSlot)) {
+          return beaconStateCache.get(startSlot);
+        }
 
+        const state = await getStateWithRegen(startSlot, chain, config);
+        if (state) {
+          beaconStateCache.set(startSlot, state);
+        }
+        return state;
+      };
+
+      // iterate through blocks
       for (const block of signedBlocks) {
-        const state = await chain.regen.getState(toHex(block.message.stateRoot), RegenCaller.restApi);
-        fork = chain.config.getForkSeq(block.message.slot);
+        const blockSlot = block.message.slot;
         const attestations = block.message.body.attestations;
 
-        // iterate through all the attestations in the block
-        for (const attestation of attestations) {
-          const indexedAttestation = state.epochCtx.getIndexedAttestation(fork, attestation);
+        // iterate through attestations
+        for (const newAttestation of attestations) {
+          const newAttestationDataBigInt = ssz.phase0.AttestationDataBigint.fromJson(
+            ssz.phase0.AttestationData.toJson(newAttestation.data)
+          );
+          // Compare the current attestation with all previously seen attestations
+          for (const seenAttestation of seenAttestations) {
+            if (isSlashableAttestationData(newAttestationDataBigInt, seenAttestation.attestationDataBigInt)) {
+              const newAttestationState = await getState(blockSlot);
+              const seenAttestationState = await getState(seenAttestation.slot);
 
-          // extract validators from every attestation
-          // and update the list of unique validators
-          for (const validatorIndex of indexedAttestation.attestingIndices) {
-            if (!validatorIndicesSeen.has(validatorIndex)) {
-              validatorIndicesSeen.add(validatorIndex);
-            }
-
-            // initiate the list of attestations for a first seen validator
-            let validatorAttestationsSeen = validatorsAttestations.get(validatorIndex);
-            if (!validatorAttestationsSeen) {
-              validatorAttestationsSeen = [];
-              validatorsAttestations.set(validatorIndex, validatorAttestationsSeen);
-            }
-
-            // iterate through the existing validator attestations and compare with the current attestation
-            for (const prevIndexedAttestation of validatorAttestationsSeen) {
-              if (
-                isSlashableAttestationData(
-                  // use json to convert to BigInt
-                  ssz.phase0.AttestationDataBigint.fromJson(
-                    ssz.phase0.AttestationData.toJson(prevIndexedAttestation.data)
-                  ),
-                  ssz.phase0.AttestationDataBigint.fromJson(ssz.phase0.AttestationData.toJson(indexedAttestation.data))
-                )
-              ) {
-                // create new slashing and add it to the slashing list
-                const newSlashing: AttesterSlashing = {
-                  attestation1: ssz.phase0.IndexedAttestationBigint.fromJson(
-                    ssz.phase0.IndexedAttestation.toJson(prevIndexedAttestation)
-                  ),
-                  attestation2: ssz.phase0.IndexedAttestationBigint.fromJson(
-                    ssz.phase0.IndexedAttestation.toJson(indexedAttestation)
-                  ),
-                };
-                attesterSlashings.push(newSlashing);
+              if (!newAttestationState || !seenAttestationState) {
+                throw new Error("Failed to retrieve state for one or more attestations.");
               }
-            }
 
-            // update validator attestations list
-            validatorAttestationsSeen.push(indexedAttestation);
+              if (newAttestationState.fork !== seenAttestationState.fork) {
+                throw new Error("Slashable attestations found on different forks.");
+              }
+
+              // get indexed atestations
+              const fork = config.getForkName(blockSlot);
+              const newIndexedAttestation = newAttestationState.epochCtx.getIndexedAttestation(
+                ForkSeq[fork],
+                newAttestation
+              );
+              const seenIndexedAttestation = seenAttestationState.epochCtx.getIndexedAttestation(
+                ForkSeq[fork],
+                seenAttestation.attestation
+              );
+
+              // get attester slashing from indexed atestations
+              const attesterSlashing: AttesterSlashing = {
+                attestation1: ssz.phase0.IndexedAttestationBigint.fromJson(
+                  ssz.phase0.IndexedAttestation.toJson(newIndexedAttestation)
+                ),
+                attestation2: ssz.phase0.IndexedAttestationBigint.fromJson(
+                  ssz.phase0.IndexedAttestation.toJson(seenIndexedAttestation)
+                ),
+              };
+
+              // add attester slashing to list
+              attesterSlashings.push(attesterSlashing);
+            }
           }
+          // add new attestation to seen attestations
+          seenAttestations.push({
+            attestation: newAttestation,
+            slot: blockSlot,
+            attestationDataBigInt: newAttestationDataBigInt,
+          });
         }
       }
 
       return {
         data: attesterSlashings,
-        meta: {version: ForkSeq[fork] as ForkName},
       };
     },
   };
@@ -328,4 +353,31 @@ function stringifyKeys(keys: (Uint8Array | number | string)[]): string[] {
     }
     return `${key}`;
   });
+}
+
+async function getStateWithRegen(
+  slot: Slot,
+  chain: IBeaconChain,
+  config: ChainForkConfig
+): Promise<CachedBeaconStateAllForks | undefined> {
+  const epoch = computeEpochAtSlot(slot);
+  const startSlot = computeStartSlotAtEpoch(epoch);
+
+  const res = await getStateResponseWithRegen(chain, startSlot);
+
+  const stateViewDU =
+    res.state instanceof Uint8Array ? loadState(config, chain.getHeadState(), res.state).state : res.state.clone();
+
+  const state = createCachedBeaconState(
+    stateViewDU,
+    {
+      config: chain.config,
+      // Not required to compute proposers
+      pubkey2index: new PubkeyIndexMap(),
+      index2pubkey: [],
+    },
+    {skipSyncPubkeys: true, skipSyncCommitteeCache: true}
+  );
+
+  return state;
 }

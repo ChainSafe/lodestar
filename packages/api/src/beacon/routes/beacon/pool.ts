@@ -31,8 +31,8 @@ const SingleAttestationListTypePhase0 = ArrayOf(ssz.phase0.Attestation);
 const SingleAttestationListTypeElectra = ArrayOf(ssz.electra.SingleAttestation);
 const AttestationListTypePhase0 = ArrayOf(ssz.phase0.Attestation);
 const AttestationListTypeElectra = ArrayOf(ssz.electra.Attestation);
-const AttesterSlashingListTypePhase0 = ArrayOf(ssz.phase0.AttesterSlashing);
-const AttesterSlashingListTypeElectra = ArrayOf(ssz.electra.AttesterSlashing);
+export const AttesterSlashingListTypePhase0 = ArrayOf(ssz.phase0.AttesterSlashing);
+export const AttesterSlashingListTypeElectra = ArrayOf(ssz.electra.AttesterSlashing);
 const ProposerSlashingListType = ArrayOf(ssz.phase0.ProposerSlashing);
 const SignedVoluntaryExitListType = ArrayOf(ssz.phase0.SignedVoluntaryExit);
 const SignedBLSToExecutionChangeListType = ArrayOf(ssz.capella.SignedBLSToExecutionChange);
@@ -42,9 +42,9 @@ type AttestationListPhase0 = ValueOf<typeof AttestationListTypePhase0>;
 type AttestationListElectra = ValueOf<typeof AttestationListTypeElectra>;
 type AttestationList = AttestationListPhase0 | AttestationListElectra;
 
-type AttesterSlashingListPhase0 = ValueOf<typeof AttesterSlashingListTypePhase0>;
-type AttesterSlashingListElectra = ValueOf<typeof AttesterSlashingListTypeElectra>;
-type AttesterSlashingList = AttesterSlashingListPhase0 | AttesterSlashingListElectra;
+export type AttesterSlashingListPhase0 = ValueOf<typeof AttesterSlashingListTypePhase0>;
+export type AttesterSlashingListElectra = ValueOf<typeof AttesterSlashingListTypeElectra>;
+export type AttesterSlashingList = AttesterSlashingListPhase0 | AttesterSlashingListElectra;
 
 type ProposerSlashingList = ValueOf<typeof ProposerSlashingListType>;
 type SignedVoluntaryExitList = ValueOf<typeof SignedVoluntaryExitListType>;

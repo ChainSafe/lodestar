@@ -12,6 +12,8 @@ import * as state from "./state.js";
 export {block, pool, state, rewards};
 export {BroadcastValidation} from "./block.js";
 export type {BlockId, BlockHeaderResponse} from "./block.js";
+export {AttesterSlashingListTypePhase0, AttesterSlashingListTypeElectra} from "./pool.js";
+export type {AttesterSlashingListPhase0, AttesterSlashingListElectra, AttesterSlashingList} from "./pool.js";
 export type {
   BlockRewards,
   AttestationsRewards,
