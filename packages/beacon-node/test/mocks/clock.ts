@@ -72,9 +72,13 @@ export function getMockedClock(): Mocked<IClock> {
     get currentEpoch() {
       return 0;
     },
-    currentSlotWithGossipDisparity: undefined,
-    isCurrentSlotGivenGossipDisparity: vi.fn(),
-    slotWithPastTolerance: vi.fn(),
-    secFromSlot: vi.fn(),
-  } as unknown as Mocked<IClock>;
+    get currentSlotWithGossipDisparity() {
+      return 0;
+    },
+    isCurrentSlotGivenGossipDisparity: vi.fn(() => true),
+    slotWithPastTolerance: vi.fn(() => 0),
+    slotWithFutureTolerance: vi.fn(() => 0),
+    secFromSlot: vi.fn(() => 0),
+    waitForSlot: vi.fn(async () => {}),
+  };
 }
