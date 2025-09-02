@@ -16,7 +16,6 @@ export {
   EpochDifference,
   type AncestorResult,
   AncestorStatus,
-  type ForkChoiceMetrics,
   NotReorgedReason,
 } from "./forkChoice/interface.js";
 export {
@@ -36,3 +35,4 @@ export {
   ForkChoiceError,
   ForkChoiceErrorCode,
 } from "./forkChoice/errors.js";
+export {type ForkChoiceMetrics, getForkChoiceMetrics} from "./metrics.js";

@@ -15,6 +15,9 @@
   "formatter": {
     "ignore": ["**/lib", "**/.nyc_output", "./packages/*/spec-tests", "**/node_modules", "./packages/*/node_modules/**"]
   },
+  "javascript": {
+    "globals": ["Bun"]
+  },
   "organizeImports": {
     "enabled": true
   },

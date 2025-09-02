@@ -6,6 +6,7 @@ import {fulu} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
+import {validateRequestedDataColumns} from "../utils/dataColumnResponseValidaiton.js";
 
 export async function* onDataColumnSidecarsByRange(
   request: fulu.DataColumnSidecarsByRangeRequest,
@@ -13,8 +14,13 @@ export async function* onDataColumnSidecarsByRange(
   db: IBeaconDb
 ): AsyncIterable<ResponseOutgoing> {
   // Non-finalized range of columns
-  const {startSlot, count, columns} = validateDataColumnSidecarsByRangeRequest(chain.config, request);
+  const {startSlot, count, columns: requestedColumns} = validateDataColumnSidecarsByRangeRequest(chain.config, request);
+  const availableColumns = validateRequestedDataColumns(chain, requestedColumns);
   const endSlot = startSlot + count;
+
+  if (availableColumns.length === 0) {
+    return;
+  }
 
   const finalized = db.dataColumnSidecarArchive;
   const unfinalized = db.dataColumnSidecar;
@@ -23,20 +29,28 @@ export async function* onDataColumnSidecarsByRange(
   // Finalized range of columns
   if (startSlot <= finalizedSlot) {
     for (let slot = startSlot; slot < endSlot; slot++) {
-      const dataColumnSidecars = await finalized.getManyBinary(slot, columns);
+      const dataColumnSidecars = await finalized.getManyBinary(slot, availableColumns);
 
-      for (const [index, dataColumnSidecarBytes] of dataColumnSidecars.entries()) {
-        if (!dataColumnSidecarBytes) {
-          throw new ResponseError(
-            RespStatus.SERVER_ERROR,
-            `No finalized dataColumnSidecar found for slot=${slot}, index=${columns[index]}`
-          );
+      for (const dataColumnSidecarBytes of dataColumnSidecars) {
+        if (dataColumnSidecarBytes) {
+          yield {
+            data: dataColumnSidecarBytes,
+            boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(slot)),
+          };
         }
 
-        yield {
-          data: dataColumnSidecarBytes,
-          boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(slot)),
-        };
+        // TODO: Check blobs for that block and respond resource_unavailable
+        // After we have consensus from other teams on the specs
+        // else {
+        //   await handleColumnSidecarUnavailability({
+        //     chain,
+        //     db,
+        //     unavailableColumnIndex: availableColumns[index],
+        //     slot,
+        //     requestedColumns,
+        //     availableColumns,
+        //   });
+        // }
       }
     }
   }
@@ -56,19 +70,28 @@ export async function* onDataColumnSidecarsByRange(
         // at the time of the start of the request. Spec is clear the chain of columns must be consistent, but on
         // re-org there's no need to abort the request
         // Spec: https://github.com/ethereum/consensus-specs/blob/ad36024441cf910d428d03f87f331fbbd2b3e5f1/specs/fulu/p2p-interface.md#L425-L429
-        const dataColumnSidecars = await unfinalized.getManyBinary(fromHex(block.blockRoot), columns);
-        for (const [index, dataColumnSidecarBytes] of dataColumnSidecars.entries()) {
-          if (!dataColumnSidecarBytes) {
-            throw new ResponseError(
-              RespStatus.SERVER_ERROR,
-              `No unfinalized dataColumnSidecar found for root=${block.blockRoot}, index=${columns[index]}`
-            );
+        const dataColumnSidecars = await unfinalized.getManyBinary(fromHex(block.blockRoot), availableColumns);
+        for (const dataColumnSidecarBytes of dataColumnSidecars) {
+          if (dataColumnSidecarBytes) {
+            yield {
+              data: dataColumnSidecarBytes,
+              boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(block.slot)),
+            };
           }
 
-          yield {
-            data: dataColumnSidecarBytes,
-            boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(block.slot)),
-          };
+          // TODO: Check blobs for that block and respond resource_unavailable
+          // After we have consensus from other teams on the specs
+          // else {
+          //   await handleColumnSidecarUnavailability({
+          //     chain,
+          //     db,
+          //     unavailableColumnIndex: availableColumns[index],
+          //     blockRoot: fromHex(block.blockRoot),
+          //     slot: block.slot,
+          //     requestedColumns,
+          //     availableColumns,
+          //   });
+          // }
         }
       }
 

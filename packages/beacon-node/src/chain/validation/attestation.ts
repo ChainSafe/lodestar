@@ -69,7 +69,7 @@ export type AttestationValidationResult = {
   subnet: SubnetID;
   attDataRootHex: RootHex;
   committeeIndex: CommitteeIndex;
-  committeeValidatorIndex: number;
+  validatorCommitteeIndex: number;
   committeeSize: number;
 };
 
@@ -335,7 +335,7 @@ async function validateAttestationNoSignatureCheck(
   }
 
   let aggregationBits: BitArray | null = null;
-  let committeeValidatorIndex: number | null = null;
+  let validatorCommitteeIndex: number | null = null;
   if (!isForkPostElectra(fork)) {
     // [REJECT] The attestation is unaggregated -- that is, it has exactly one participating validator
     // (len([bit for bit in attestation.aggregation_bits if bit]) == 1, i.e. exactly 1 bit is set).
@@ -355,7 +355,7 @@ async function validateAttestationNoSignatureCheck(
         code: AttestationErrorCode.NOT_EXACTLY_ONE_AGGREGATION_BIT_SET,
       });
     }
-    committeeValidatorIndex = bitIndex;
+    validatorCommitteeIndex = bitIndex;
   }
 
   let committeeValidatorIndices: Uint32Array;
@@ -404,7 +404,7 @@ async function validateAttestationNoSignatureCheck(
 
     // [REJECT] The committee index is within the expected range
     // -- i.e. data.index < get_committee_count_per_slot(state, data.target.epoch)
-    committeeValidatorIndices = getCommitteeIndices(shuffling, attSlot, committeeIndex);
+    committeeValidatorIndices = getCommitteeValidatorIndices(shuffling, attSlot, committeeIndex);
     getSigningRoot = () => getAttestationDataSigningRoot(chain.config, attData);
     expectedSubnet = computeSubnetForSlot(shuffling, attSlot, committeeIndex);
   }
@@ -414,9 +414,9 @@ async function validateAttestationNoSignatureCheck(
   if (!isForkPostElectra(fork)) {
     // The validity of aggregation bits are already checked above
     assert.notNull(aggregationBits);
-    assert.notNull(committeeValidatorIndex);
+    assert.notNull(validatorCommitteeIndex);
 
-    validatorIndex = committeeValidatorIndices[committeeValidatorIndex];
+    validatorIndex = committeeValidatorIndices[validatorCommitteeIndex];
     // [REJECT] The number of aggregation bits matches the committee size
     // -- i.e. len(attestation.aggregation_bits) == len(get_beacon_committee(state, data.slot, data.index)).
     // > TODO: Is this necessary? Lighthouse does not do this check.
@@ -441,8 +441,8 @@ async function validateAttestationNoSignatureCheck(
     // [REJECT] The attester is a member of the committee -- i.e.
     // `attestation.attester_index in get_beacon_committee(state, attestation.data.slot, index)`.
     // Position of the validator in its committee
-    committeeValidatorIndex = committeeValidatorIndices.indexOf(validatorIndex);
-    if (committeeValidatorIndex === -1) {
+    validatorCommitteeIndex = committeeValidatorIndices.indexOf(validatorIndex);
+    if (validatorCommitteeIndex === -1) {
       throw new AttestationError(GossipAction.REJECT, {
         code: AttestationErrorCode.ATTESTER_NOT_IN_COMMITTEE,
       });
@@ -557,7 +557,7 @@ async function validateAttestationNoSignatureCheck(
     signatureSet,
     validatorIndex,
     committeeIndex,
-    committeeValidatorIndex,
+    validatorCommitteeIndex,
     committeeSize: committeeValidatorIndices.length,
   };
 }
@@ -797,10 +797,10 @@ function verifyAttestationTargetRoot(headBlock: ProtoBlock, targetRoot: Root, at
 }
 
 /**
- * Get a list of indices of validators in the given committee
+ * Get a list of validator indices in the given committee
  * attestationIndex - Index of the committee in shuffling.committees
  */
-export function getCommitteeIndices(
+export function getCommitteeValidatorIndices(
   shuffling: EpochShuffling,
   attestationSlot: Slot,
   attestationIndex: number

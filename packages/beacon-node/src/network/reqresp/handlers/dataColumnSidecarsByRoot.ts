@@ -1,9 +1,10 @@
-import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
+import {ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {fromHex, toHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {DataColumnSidecarsByRootRequest} from "../../../util/types.js";
+import {validateRequestedDataColumns} from "../utils/dataColumnResponseValidaiton.js";
 
 export async function* onDataColumnSidecarsByRoot(
   requestBody: DataColumnSidecarsByRootRequest,
@@ -20,7 +21,12 @@ export async function* onDataColumnSidecarsByRoot(
   );
 
   for (const dataColumnsByRootIdentifier of requestBody) {
-    const {blockRoot, columns} = dataColumnsByRootIdentifier;
+    const {blockRoot, columns: requestedColumns} = dataColumnsByRootIdentifier;
+    const availableColumns = validateRequestedDataColumns(chain, requestedColumns);
+    if (availableColumns.length === 0) {
+      return;
+    }
+
     const blockRootHex = toHex(blockRoot);
     const block = chain.forkChoice.getBlockHex(blockRootHex);
 
@@ -33,20 +39,28 @@ export async function* onDataColumnSidecarsByRoot(
       continue;
     }
 
-    const dataColumns = await db.dataColumnSidecar.getManyBinary(fromHex(block.blockRoot), columns);
-    if (!dataColumns) {
-      throw new ResponseError(RespStatus.SERVER_ERROR, `No item for root=${block.blockRoot}, slot=${block.slot}`);
-    }
-
-    for (const [index, dataColumnBytes] of dataColumns.entries()) {
-      if (!dataColumnBytes) {
-        throw new ResponseError(RespStatus.SERVER_ERROR, `dataColumnSidecar index=${columns[index]} not custodied`);
+    const dataColumns = await db.dataColumnSidecar.getManyBinary(fromHex(block.blockRoot), availableColumns);
+    for (const dataColumnBytes of dataColumns) {
+      if (dataColumnBytes) {
+        yield {
+          data: dataColumnBytes,
+          boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(block.slot)),
+        };
       }
 
-      yield {
-        data: dataColumnBytes,
-        boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(block.slot)),
-      };
+      // TODO: Check blobs for that block and respond resource_unavailable
+      // After we have consensus from other teams on the specs
+      // else {
+      //   await handleColumnSidecarUnavailability({
+      //     chain,
+      //     db,
+      //     unavailableColumnIndex: availableColumns[index],
+      //     slot: block.slot,
+      //     blockRoot: fromHex(block.blockRoot),
+      //     requestedColumns,
+      //     availableColumns,
+      //   });
+      // }
     }
   }
 }

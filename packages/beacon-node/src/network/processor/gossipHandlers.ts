@@ -179,9 +179,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
       logger.debug("Validated gossip block", {...logCtx, recvToValidation, validationTime});
 
-      if (chain.emitter.listenerCount(routes.events.EventType.blockGossip)) {
-        chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRootHex});
-      }
+      chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRootHex});
 
       return blockInput;
     } catch (e) {
@@ -314,12 +312,14 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       metrics?.gossipBlob.recvToValidation.observe(recvToValidation);
       metrics?.gossipBlob.validationTime.observe(validationTime);
 
-      chain.emitter.emit(routes.events.EventType.dataColumnSidecar, {
-        blockRoot: blockRootHex,
-        slot,
-        index: dataColumnSidecar.index,
-        kzgCommitments: dataColumnSidecar.kzgCommitments.map(toHex),
-      });
+      if (chain.emitter.listenerCount(routes.events.EventType.dataColumnSidecar)) {
+        chain.emitter.emit(routes.events.EventType.dataColumnSidecar, {
+          blockRoot: blockRootHex,
+          slot,
+          index: dataColumnSidecar.index,
+          kzgCommitments: dataColumnSidecar.kzgCommitments.map(toHex),
+        });
+      }
 
       logger.debug("Received gossip dataColumn", {
         slot: slot,
@@ -669,7 +669,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       }
 
       // Handler
-      const {indexedAttestation, committeeIndices, attDataRootHex} = validationResult;
+      const {indexedAttestation, committeeValidatorIndices, attDataRootHex} = validationResult;
       chain.validatorMonitor?.registerGossipAggregatedAttestation(
         seenTimestampSec,
         signedAggregateAndProof,
@@ -681,7 +681,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         aggregatedAttestation,
         attDataRootHex,
         indexedAttestation.attestingIndices.length,
-        committeeIndices
+        committeeValidatorIndices
       );
       metrics?.opPool.aggregatedAttestationPool.gossipInsertOutcome.inc({insertOutcome});
 
@@ -939,7 +939,7 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
           attDataRootHex,
           attestation,
           committeeIndex,
-          committeeValidatorIndex,
+          validatorCommitteeIndex,
           committeeSize,
         } = validationResult.result;
         chain.validatorMonitor?.registerGossipUnaggregatedAttestation(
@@ -956,7 +956,7 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
               committeeIndex,
               attestation,
               attDataRootHex,
-              committeeValidatorIndex,
+              validatorCommitteeIndex,
               committeeSize
             );
             metrics?.opPool.attestationPool.gossipInsertOutcome.inc({insertOutcome});

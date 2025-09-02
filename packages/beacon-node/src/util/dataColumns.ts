@@ -309,6 +309,12 @@ export function getDataColumnSidecarsFromBlock(
   cellsAndKzgProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[]
 ): fulu.DataColumnSidecars {
   const blobKzgCommitments = signedBlock.message.body.blobKzgCommitments;
+
+  // No need to create data column sidecars if there are no blobs
+  if (blobKzgCommitments.length === 0) {
+    return [];
+  }
+
   const fork = config.getForkName(signedBlock.message.slot);
   const signedBlockHeader = signedBlockToSignedHeader(config, signedBlock);
 

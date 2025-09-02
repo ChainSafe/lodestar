@@ -1,5 +1,3 @@
-import {UpdateHeadOpt} from "@lodestar/fork-choice";
-import {NotReorgedReason} from "@lodestar/fork-choice";
 import {ProducedBlockSource} from "@lodestar/types";
 import {BlockSelectionResult} from "../../api/impl/validator/index.js";
 import {InclusionListSource} from "../../chain/blocks/types.js";
@@ -144,79 +142,6 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
     },
 
     // Non-spec'ed
-
-    forkChoice: {
-      findHead: register.histogram<{caller: string}>({
-        name: "beacon_fork_choice_find_head_seconds",
-        help: "Time taken to find head in seconds",
-        buckets: [0.1, 1, 10],
-        labelNames: ["caller"],
-      }),
-      requests: register.gauge({
-        name: "beacon_fork_choice_requests_total",
-        help: "Count of occasions where fork choice has tried to find a head",
-      }),
-      errors: register.gauge<{entrypoint: UpdateHeadOpt}>({
-        name: "beacon_fork_choice_errors_total",
-        help: "Count of occasions where fork choice has returned an error when trying to find a head",
-        labelNames: ["entrypoint"],
-      }),
-      changedHead: register.gauge({
-        name: "beacon_fork_choice_changed_head_total",
-        help: "Count of occasions fork choice has found a new head",
-      }),
-      reorg: register.gauge({
-        name: "beacon_fork_choice_reorg_total",
-        help: "Count of occasions fork choice has switched to a different chain",
-      }),
-      reorgDistance: register.histogram({
-        name: "beacon_fork_choice_reorg_distance",
-        help: "Histogram of re-org distance",
-        // We need high resolution in the low range, since re-orgs are a rare but critical event.
-        // Add buckets up to 100 to capture high depth re-orgs. Above 100 things are going really bad.
-        buckets: [1, 2, 3, 5, 7, 10, 20, 30, 50, 100],
-      }),
-      votes: register.gauge({
-        name: "beacon_fork_choice_votes_count",
-        help: "Current count of votes in fork choice data structures",
-      }),
-      queuedAttestations: register.gauge({
-        name: "beacon_fork_choice_queued_attestations_count",
-        help: "Count of queued_attestations in fork choice per slot",
-      }),
-      validatedAttestationDatas: register.gauge({
-        name: "beacon_fork_choice_validated_attestation_datas_count",
-        help: "Current count of validatedAttestationDatas in fork choice data structures",
-      }),
-      balancesLength: register.gauge({
-        name: "beacon_fork_choice_balances_length",
-        help: "Current length of balances in fork choice data structures",
-      }),
-      nodes: register.gauge({
-        name: "beacon_fork_choice_nodes_count",
-        help: "Current count of nodes in fork choice data structures",
-      }),
-      indices: register.gauge({
-        name: "beacon_fork_choice_indices_count",
-        help: "Current count of indices in fork choice data structures",
-      }),
-      notReorgedReason: register.counter<{reason: NotReorgedReason}>({
-        name: "beacon_fork_choice_not_reorged_reason_total",
-        help: "Reason why the current head is not re-orged out",
-        labelNames: ["reason"],
-      }),
-      // TODO: Katya - add metric after refactoring fork-choice metrics
-      inclusionListsEquivocating: register.counter<{source: InclusionListSource}>({
-        name: "beacon_inclusion_lists_equivocating_total",
-        help: "Total number of equivocating inclusion lists",
-        labelNames: ["source"],
-      }),
-      // TODO: Katya - add metric after implementing FOCIL specs updates
-      unsatisfiedInclusionListBlocks: register.counter({
-        name: "beacon_inclusion_list_unsatisfied_blocks_total",
-        help: "Total number of unsatisfied inclusion list blocks",
-      }),
-    },
 
     parentBlockDistance: register.histogram({
       name: "beacon_imported_block_parent_distance",
@@ -457,6 +382,11 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         name: "beacon_data_column_sidecar_inclusion_proof_verification_seconds",
         help: "Time taken to verify data_column sidecar inclusion proof",
         buckets: [0.002, 0.004, 0.006, 0.008, 0.01, 0.05, 1, 2],
+      }),
+      dataColumnSidecarKzgProofsVerificationTime: register.histogram({
+        name: "beacon_data_column_sidecar_kzg_proofs_verification_seconds",
+        help: "Time taken to verify data_column sidecar kzg proofs",
+        buckets: [0.01, 0.02, 0.03, 0.04, 0.05, 0.1, 0.2, 0.5, 1],
       }),
       kzgVerificationDataColumnBatchTime: register.histogram({
         name: "beacon_kzg_verification_data_column_batch_seconds",

@@ -199,7 +199,10 @@ export class PrepareNextSlotScheduler {
         this.computeStateHashTreeRoot(updatedPrepareState, isEpochTransition);
 
         // If emitPayloadAttributes is true emit a SSE payloadAttributes event
-        if (this.chain.opts.emitPayloadAttributes === true) {
+        if (
+          this.chain.opts.emitPayloadAttributes === true &&
+          this.chain.emitter.listenerCount(routes.events.EventType.payloadAttributes)
+        ) {
           // TODO EIP-7805: do we wanna emit data about inclusion lists here
           const data = await getPayloadAttributesForSSE(fork as ForkPostBellatrix, this.chain, {
             prepareState: updatedPrepareState,

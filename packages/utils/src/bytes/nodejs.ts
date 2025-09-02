@@ -1,3 +1,5 @@
+import {fromHexInto as _fromHexInto} from "./browser.js";
+
 export function toHex(buffer: Uint8Array | Parameters<typeof Buffer.from>[0]): string {
   if (Buffer.isBuffer(buffer)) {
     return "0x" + buffer.toString("hex");
@@ -59,3 +61,5 @@ export function fromHex(hex: string): Uint8Array {
   const b = Buffer.from(hex, "hex");
   return new Uint8Array(b.buffer, b.byteOffset, b.length);
 }
+
+/// the performance of fromHexInto using a preallocated buffer is very bad compared to browser so I moved it to the benchmark
