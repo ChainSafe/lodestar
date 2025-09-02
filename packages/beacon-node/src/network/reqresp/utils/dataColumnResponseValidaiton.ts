@@ -1,7 +1,7 @@
 import {LogData} from "@lodestar/logger";
 import {RespStatus, ResponseError} from "@lodestar/reqresp";
 import {ColumnIndex, Slot} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/interface.js";
 import {IBeaconDb} from "../../../db/interface.js";
 import {getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized} from "../../../util/sszBytes.js";
@@ -29,7 +29,9 @@ export async function handleColumnSidecarUnavailability({
     availableColumns: availableColumns.join(","),
     slot,
   };
-  if (blockRoot) logData.blockRoot = toRootHex(blockRoot);
+  if (blockRoot) {
+    logData.blockRoot = toRootHex(blockRoot);
+  }
 
   chain.logger.debug("dataColumnSidecar requested unavailable", logData);
 
@@ -67,10 +69,10 @@ export function validateRequestedDataColumns(chain: IBeaconChain, requestedColum
 
   if (missingColumns.length > 0) {
     chain.logger.verbose("Requested dataColumnSidecar for non-custody columns", {
-      requestedColumns: requestedColumns.join(","),
-      custodyColumns: custodyColumns.join(","),
-      availableColumns: availableColumns.join(","),
-      missingColumns: missingColumns.join(","),
+      requestedColumns: prettyPrintIndices(requestedColumns),
+      custodyColumns: prettyPrintIndices(custodyColumns),
+      availableColumns: prettyPrintIndices(availableColumns),
+      missingColumns: prettyPrintIndices(missingColumns),
     });
 
     // TODO: We should throw error and only respond to valid requests
@@ -80,8 +82,8 @@ export function validateRequestedDataColumns(chain: IBeaconChain, requestedColum
 
   if (availableColumns.length === 0) {
     chain.logger.verbose("Requested dataColumnSidecars not available", {
-      requestedColumns: requestedColumns.join(","),
-      custodyColumns: custodyColumns.join(","),
+      requestedColumns: prettyPrintIndices(requestedColumns),
+      custodyColumns: prettyPrintIndices(custodyColumns),
     });
   }
 
