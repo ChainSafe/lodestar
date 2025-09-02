@@ -212,6 +212,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
     });
     const cached = cacheByRangeResponses({
       config: this.config,
+      network: this.network,
       cache: this.chain.seenBlockInputCache,
       syncType,
       peerIdStr: peer.peerId,

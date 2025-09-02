@@ -12,7 +12,7 @@ import {
 import {SeenBlockInput} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {validateBlockBlobSidecars} from "../../chain/validation/blobSidecar.js";
 import {validateBlockDataColumnSidecars} from "../../chain/validation/dataColumnSidecar.js";
-import {INetwork} from "../../network/index.js";
+import {INetwork, PeerAction} from "../../network/index.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {RangeSyncType} from "./remoteSyncType.js";
 
@@ -92,6 +92,7 @@ export type DownloadAndCacheByRangeResults = {
 
 export type CacheByRangeResponsesProps = {
   config: ChainForkConfig;
+  network: INetwork;
   cache: SeenBlockInput;
   syncType: RangeSyncType;
   peerIdStr: PeerIdStr;
@@ -101,45 +102,53 @@ export type CacheByRangeResponsesProps = {
 
 export function cacheByRangeResponses({
   config,
+  network,
   cache,
-  // syncType,
+  syncType,
   peerIdStr,
   responses,
   batchBlocks,
 }: CacheByRangeResponsesProps): IBlockInput[] {
   const source = BlockInputSource.byRange;
   const seenTimestampSec = Date.now() / 1000;
-  const updatedBatchBlocks = [...batchBlocks];
+  const updatedBatchBlocks = new Map<Slot, IBlockInput>(batchBlocks.map((block) => [block.slot, block]));
 
   const blocks = responses.blocks ?? [];
   const blockRoots = responses.blockRoots ?? [];
   for (let i = 0; i < blocks.length; i++) {
     const block = blocks[i];
-    const existing = updatedBatchBlocks.find((b) => b.slot === block.message.slot);
+    const existing = updatedBatchBlocks.get(block.message.slot);
     const blockRoot = blockRoots[i] ?? config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
     const blockRootHex = toRootHex(blockRoot);
     if (existing) {
-      // will throw if root hex does not match (meaning we are following the wrong chain)
-      existing.addBlock(
-        {
-          block,
-          blockRootHex,
-          source,
-          peerIdStr,
-          seenTimestampSec,
-        },
-        {throwOnDuplicateAdd: false}
-      );
+      try {
+        // will throw if root hex does not match (meaning we are following the wrong chain)
+        existing.addBlock(
+          {
+            block,
+            blockRootHex,
+            source,
+            peerIdStr,
+            seenTimestampSec,
+          },
+          {throwOnDuplicateAdd: false}
+        );
+      } catch (err) {
+        network.logger.debug("Following wrong chain for ByRange request", {}, err as Error);
+        if (syncType === RangeSyncType.Finalized) {
+          network.reportPeer(peerIdStr, PeerAction.LowToleranceError, "Missing or mismatching dataColumnSidecars");
+        }
+        break;
+      }
     } else {
-      updatedBatchBlocks.push(
-        cache.getByBlock({
-          block,
-          blockRootHex,
-          source,
-          peerIdStr,
-          seenTimestampSec,
-        })
-      );
+      const blockInput = cache.getByBlock({
+        block,
+        blockRootHex,
+        source,
+        peerIdStr,
+        seenTimestampSec,
+      });
+      updatedBatchBlocks.set(blockInput.slot, blockInput);
     }
   }
 
@@ -148,7 +157,7 @@ export function cacheByRangeResponses({
       .getForkTypes(blobSidecar.signedBlockHeader.message.slot)
       .BeaconBlockHeader.hashTreeRoot(blobSidecar.signedBlockHeader.message);
     const blockRootHex = toRootHex(blockRoot);
-    const existing = updatedBatchBlocks.find((b) => b.slot === blobSidecar.signedBlockHeader.message.slot);
+    const existing = updatedBatchBlocks.get(blobSidecar.signedBlockHeader.message.slot);
     if (existing) {
       if (!isBlockInputBlobs(existing)) {
         throw new DownloadByRangeError({
@@ -159,27 +168,34 @@ export function cacheByRangeResponses({
           blockRoot: prettyBytes(existing.blockRootHex),
         });
       }
-      // will throw if root hex does not match (meaning we are following the wrong chain)
-      existing.addBlob(
-        {
-          blobSidecar,
-          blockRootHex,
-          seenTimestampSec,
-          peerIdStr,
-          source,
-        },
-        {throwOnDuplicateAdd: false}
-      );
+      try {
+        // will throw if root hex does not match (meaning we are following the wrong chain)
+        existing.addBlob(
+          {
+            blobSidecar,
+            blockRootHex,
+            seenTimestampSec,
+            peerIdStr,
+            source,
+          },
+          {throwOnDuplicateAdd: false}
+        );
+      } catch (err) {
+        network.logger.debug("Following wrong chain for ByRange request", {}, err as Error);
+        if (syncType === RangeSyncType.Finalized) {
+          network.reportPeer(peerIdStr, PeerAction.LowToleranceError, "Missing or mismatching dataColumnSidecars");
+        }
+        break;
+      }
     } else {
-      updatedBatchBlocks.push(
-        cache.getByBlob({
-          blockRootHex,
-          blobSidecar,
-          source,
-          peerIdStr,
-          seenTimestampSec,
-        })
-      );
+      const blockInput = cache.getByBlob({
+        blockRootHex,
+        blobSidecar,
+        source,
+        peerIdStr,
+        seenTimestampSec,
+      });
+      updatedBatchBlocks.set(blockInput.slot, blockInput);
     }
   }
 
@@ -188,7 +204,7 @@ export function cacheByRangeResponses({
       .getForkTypes(columnSidecar.signedBlockHeader.message.slot)
       .BeaconBlockHeader.hashTreeRoot(columnSidecar.signedBlockHeader.message);
     const blockRootHex = toRootHex(blockRoot);
-    const existing = updatedBatchBlocks.find((b) => b.slot === columnSidecar.signedBlockHeader.message.slot);
+    const existing = updatedBatchBlocks.get(columnSidecar.signedBlockHeader.message.slot);
     if (existing) {
       if (!isBlockInputColumns(existing)) {
         throw new DownloadByRangeError({
@@ -199,31 +215,38 @@ export function cacheByRangeResponses({
           blockRoot: prettyBytes(existing.blockRootHex),
         });
       }
-      // will throw if root hex does not match (meaning we are following the wrong chain)
-      existing.addColumn(
-        {
-          columnSidecar,
-          blockRootHex,
-          seenTimestampSec,
-          peerIdStr,
-          source,
-        },
-        {throwOnDuplicateAdd: false}
-      );
+      try {
+        // will throw if root hex does not match (meaning we are following the wrong chain)
+        existing.addColumn(
+          {
+            columnSidecar,
+            blockRootHex,
+            seenTimestampSec,
+            peerIdStr,
+            source,
+          },
+          {throwOnDuplicateAdd: false}
+        );
+      } catch (err) {
+        network.logger.debug("Following wrong chain for ByRange request", {}, err as Error);
+        if (syncType === RangeSyncType.Finalized) {
+          network.reportPeer(peerIdStr, PeerAction.LowToleranceError, "Missing or mismatching dataColumnSidecars");
+        }
+        break;
+      }
     } else {
-      updatedBatchBlocks.push(
-        cache.getByColumn({
-          blockRootHex,
-          columnSidecar,
-          source,
-          peerIdStr,
-          seenTimestampSec,
-        })
-      );
+      const blockInput = cache.getByColumn({
+        blockRootHex,
+        columnSidecar,
+        source,
+        peerIdStr,
+        seenTimestampSec,
+      });
+      updatedBatchBlocks.set(blockInput.slot, blockInput);
     }
   }
 
-  return updatedBatchBlocks;
+  return Array.from(updatedBatchBlocks.values());
 }
 
 export async function downloadByRange({
