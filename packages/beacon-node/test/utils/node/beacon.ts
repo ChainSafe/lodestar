@@ -77,6 +77,9 @@ export async function getDevBeaconNode(
         network: {
           discv5: null,
           localMultiaddrs: options.network?.localMultiaddrs || ["/ip4/127.0.0.1/tcp/0"],
+          // Increase of following value is just to circumvent the following error in e2e tests
+          // > libp2p:mplex rate limit hit when receiving messages
+          disconnectThreshold: 255,
           targetPeers: defaultNetworkOptions.targetPeers,
           maxPeers: defaultNetworkOptions.maxPeers,
         },

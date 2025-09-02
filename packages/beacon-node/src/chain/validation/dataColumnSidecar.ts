@@ -186,6 +186,11 @@ export async function validateDataColumnsSidecars(
   metrics: Metrics | null,
   opts: {skipProofsCheck: boolean} = {skipProofsCheck: false}
 ): Promise<void> {
+  // Skip verification if there are no data columns
+  if (dataColumnSidecars.length === 0) {
+    return;
+  }
+
   const commitmentBytes: Uint8Array[] = [];
   const cellIndices: number[] = [];
   const cells: Uint8Array[] = [];

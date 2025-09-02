@@ -371,6 +371,7 @@ export class BeaconChain implements IBeaconChain {
       cachedState,
       opts,
       this.justifiedBalancesGetter.bind(this),
+      metrics,
       logger
     );
     const regen = new QueuedStateRegenerator({
@@ -1103,14 +1104,6 @@ export class BeaconChain implements IBeaconChain {
     // syncContributionAndProofPool tracks metrics on its own
     metrics.opPool.blsToExecutionChangePoolSize.set(this.opPool.blsToExecutionChangeSize);
     metrics.chain.blacklistedBlocks.set(this.blacklistedBlocks.size);
-
-    const forkChoiceMetrics = this.forkChoice.getMetrics();
-    metrics.forkChoice.votes.set(forkChoiceMetrics.votes);
-    metrics.forkChoice.queuedAttestations.set(forkChoiceMetrics.queuedAttestations);
-    metrics.forkChoice.validatedAttestationDatas.set(forkChoiceMetrics.validatedAttestationDatas);
-    metrics.forkChoice.balancesLength.set(forkChoiceMetrics.balancesLength);
-    metrics.forkChoice.nodes.set(forkChoiceMetrics.nodes);
-    metrics.forkChoice.indices.set(forkChoiceMetrics.indices);
 
     const headState = this.getHeadState();
     const fork = this.config.getForkName(headState.slot);

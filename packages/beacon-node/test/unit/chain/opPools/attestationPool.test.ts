@@ -24,7 +24,7 @@ describe("AttestationPool", () => {
   const clockStub = getMockedClock();
   vi.spyOn(clockStub, "secFromSlot").mockReturnValue(0);
 
-  const committeeValidatorIndex = 0;
+  const validatorCommitteeIndex = 0;
   const committeeSize = 128;
 
   const cutOffSecFromSlot = (2 / 3) * config.SECONDS_PER_SLOT;
@@ -40,7 +40,7 @@ describe("AttestationPool", () => {
     signature: validSignature,
   };
   const electraAttestation: electra.Attestation = {
-    aggregationBits: BitArray.fromSingleBit(committeeSize, committeeValidatorIndex),
+    aggregationBits: BitArray.fromSingleBit(committeeSize, validatorCommitteeIndex),
     data: electraAttestationData,
     signature: validSignature,
     committeeBits: BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, electraSingleAttestation.committeeIndex),
@@ -68,7 +68,7 @@ describe("AttestationPool", () => {
       committeeIndex,
       electraSingleAttestation,
       attDataRootHex,
-      committeeValidatorIndex,
+      validatorCommitteeIndex,
       committeeSize
     );
 
@@ -79,7 +79,7 @@ describe("AttestationPool", () => {
   it("add correct phase0 attestation", () => {
     const committeeIndex = null;
     const attDataRootHex = toHexString(ssz.phase0.AttestationData.hashTreeRoot(phase0Attestation.data));
-    const outcome = pool.add(committeeIndex, phase0Attestation, attDataRootHex, committeeValidatorIndex, committeeSize);
+    const outcome = pool.add(committeeIndex, phase0Attestation, attDataRootHex, validatorCommitteeIndex, committeeSize);
 
     expect(outcome).equal(InsertOutcome.NewData);
     expect(pool.getAggregate(phase0AttestationData.slot, attDataRootHex, committeeIndex)).toEqual(phase0Attestation);
@@ -93,7 +93,7 @@ describe("AttestationPool", () => {
     const attDataRootHex = toHexString(ssz.phase0.AttestationData.hashTreeRoot(electraSingleAttestation.data));
 
     expect(() =>
-      pool.add(committeeIndex, electraSingleAttestation, attDataRootHex, committeeValidatorIndex, committeeSize)
+      pool.add(committeeIndex, electraSingleAttestation, attDataRootHex, validatorCommitteeIndex, committeeSize)
     ).toThrow();
     expect(pool.getAggregate(electraAttestationData.slot, attDataRootHex, committeeIndex)).toBeNull();
   });
@@ -101,7 +101,7 @@ describe("AttestationPool", () => {
   it("add phase0 attestation with committee index", () => {
     const committeeIndex = 0;
     const attDataRootHex = toHexString(ssz.phase0.AttestationData.hashTreeRoot(phase0Attestation.data));
-    const outcome = pool.add(committeeIndex, phase0Attestation, attDataRootHex, committeeValidatorIndex, committeeSize);
+    const outcome = pool.add(committeeIndex, phase0Attestation, attDataRootHex, validatorCommitteeIndex, committeeSize);
 
     expect(outcome).equal(InsertOutcome.NewData);
     expect(pool.getAggregate(phase0AttestationData.slot, attDataRootHex, committeeIndex)).toEqual(phase0Attestation);
@@ -119,7 +119,7 @@ describe("AttestationPool", () => {
     };
     const attDataRootHex = toHexString(ssz.phase0.AttestationData.hashTreeRoot(electraAttestationDataWithPhase0Slot));
 
-    expect(() => pool.add(0, singleAttestation, attDataRootHex, committeeValidatorIndex, committeeSize)).toThrow();
+    expect(() => pool.add(0, singleAttestation, attDataRootHex, validatorCommitteeIndex, committeeSize)).toThrow();
   });
 
   it("add phase0 attestation with electra slot", () => {
@@ -134,6 +134,6 @@ describe("AttestationPool", () => {
     };
     const attDataRootHex = toHexString(ssz.phase0.AttestationData.hashTreeRoot(phase0AttestationDataWithElectraSlot));
 
-    expect(() => pool.add(0, attestation, attDataRootHex, committeeValidatorIndex, committeeSize)).toThrow();
+    expect(() => pool.add(0, attestation, attDataRootHex, validatorCommitteeIndex, committeeSize)).toThrow();
   });
 });

@@ -112,7 +112,7 @@ export function getBeaconPoolApi({
             // when a validator is configured with multiple beacon node urls, this attestation data may come from another beacon node
             // and the block hasn't been in our forkchoice since we haven't seen / processing that block
             // see https://github.com/ChainSafe/lodestar/issues/5098
-            const {indexedAttestation, subnet, attDataRootHex, committeeIndex, committeeValidatorIndex, committeeSize} =
+            const {indexedAttestation, subnet, attDataRootHex, committeeIndex, validatorCommitteeIndex, committeeSize} =
               await validateGossipFnRetryUnknownRoot(validateFn, network, chain, slot, beaconBlockRoot);
 
             if (network.shouldAggregate(subnet, slot)) {
@@ -120,7 +120,7 @@ export function getBeaconPoolApi({
                 committeeIndex,
                 attestation,
                 attDataRootHex,
-                committeeValidatorIndex,
+                validatorCommitteeIndex,
                 committeeSize,
                 priority
               );
