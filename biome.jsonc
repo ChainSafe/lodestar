@@ -53,7 +53,7 @@
         "noRestrictedGlobals": {
           "level": "error",
           "options": {
-            "deniedGlobals": { "fetch": "TODO: Add a custom message here." }
+            "deniedGlobals": { "fetch": "Please use 'fetch' from '@lodestar/api' instead." }
           }
         },
         // In some cases the enums are initialized with values of other enums
