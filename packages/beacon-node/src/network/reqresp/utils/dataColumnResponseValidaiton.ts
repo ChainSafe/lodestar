@@ -50,10 +50,12 @@ export async function handleColumnSidecarUnavailability({
   // There are blobs for that column index so we should have synced for it
   // We need to inform to peers that we don't have that expected data
   // NOTE: We may look to add some metrics to track such scenario
-  throw new ResponseError(
-    RespStatus.RESOURCE_UNAVAILABLE,
-    `dataColumnSidecar requested and within custody not available for columnIndex=${unavailableColumnIndex}`
-  );
+  // TODO: Ideally we should respond with an error but seems rest of the clients are not doing that error
+  // So until we have consensus on specs, we skip the error case
+  // throw new ResponseError(
+  //   RespStatus.RESOURCE_UNAVAILABLE,
+  //   `dataColumnSidecar requested and within custody not available for columnIndex=${unavailableColumnIndex}`
+  // );
 }
 
 export function validateRequestedDataColumns(chain: IBeaconChain, requestedColumns: ColumnIndex[]): ColumnIndex[] {
@@ -66,7 +68,23 @@ export function validateRequestedDataColumns(chain: IBeaconChain, requestedColum
   const missingColumns = requestedColumns.filter((c) => !custodyColumns.includes(c));
 
   if (missingColumns.length > 0) {
-    throw new ResponseError(RespStatus.INVALID_REQUEST, "dataColumnSidecar requested for non-custody columns");
+    chain.logger.verbose("Requested dataColumnSidecar for non-custody columns", {
+      requestedColumns: requestedColumns.join(","),
+      custodyColumns: custodyColumns.join(","),
+      availableColumns: availableColumns.join(","),
+      missingColumns: missingColumns.join(","),
+    });
+
+    // TODO: We should throw error and only respond to valid requests
+    // A peer must check what we announced in our custody and only ask for those columns
+    // throw new ResponseError(RespStatus.INVALID_REQUEST, "dataColumnSidecar requested for non-custody columns");
+  }
+
+  if (availableColumns.length === 0) {
+    chain.logger.verbose("Requested dataColumnSidecars not available", {
+      requestedColumns: requestedColumns.join(","),
+      custodyColumns: custodyColumns.join(","),
+    });
   }
 
   return availableColumns;
