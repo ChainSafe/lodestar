@@ -10,6 +10,12 @@ import {
   MAX_COMMITTEES_PER_SLOT,
   MIN_ATTESTATION_INCLUSION_DELAY,
   SLOTS_PER_EPOCH,
+  TIMELY_HEAD_FLAG_INDEX,
+  TIMELY_HEAD_WEIGHT,
+  TIMELY_SOURCE_FLAG_INDEX,
+  TIMELY_SOURCE_WEIGHT,
+  TIMELY_TARGET_FLAG_INDEX,
+  TIMELY_TARGET_WEIGHT,
   isForkPostDeneb,
   isForkPostElectra,
 } from "@lodestar/params";
@@ -18,9 +24,11 @@ import {
   CachedBeaconStateAltair,
   CachedBeaconStatePhase0,
   EffectiveBalanceIncrements,
+  RootCache,
   computeEpochAtSlot,
   computeSlotsSinceEpochStart,
   computeStartSlotAtEpoch,
+  getAttestationParticipationStatus,
   getBlockRootAtSlot,
 } from "@lodestar/state-transition";
 import {
@@ -122,6 +130,11 @@ const MAX_ATTESTATIONS_PER_GROUP_ELECTRA = Math.min(
   MAX_RETAINED_ATTESTATIONS_PER_GROUP_ELECTRA,
   MAX_ATTESTATIONS_ELECTRA
 );
+
+/** Same to https://github.com/ethereum/consensus-specs/blob/v1.5.0/specs/altair/beacon-chain.md#has_flag */
+const TIMELY_SOURCE = 1 << TIMELY_SOURCE_FLAG_INDEX;
+const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
+const TIMELY_HEAD = 1 << TIMELY_HEAD_FLAG_INDEX;
 
 export enum ScannedSlotsTerminationReason {
   MaxConsolidationReached = "max_consolidation_reached",
@@ -346,6 +359,7 @@ export class AggregatedAttestationPool {
     const stateSlot = state.slot;
     const stateEpoch = state.epochCtx.epoch;
     const statePrevEpoch = stateEpoch - 1;
+    const rootCache = new RootCache(state);
 
     const notSeenValidatorsFn = getNotSeenValidatorsFn(state);
     const validateAttestationDataFn = getValidateAttestationDataFn(forkChoice, state);
@@ -466,7 +480,22 @@ export class AggregatedAttestationPool {
 
         // after all committees are processed, we have a list of sameAttDataCons
         for (const consolidation of sameAttDataCons) {
-          const score = consolidation.totalNewSeenEffectiveBalance / inclusionDistance;
+          // Score attestations by profitability to maximize proposer reward
+          const flags = getAttestationParticipationStatus(
+            ForkSeq[fork],
+            consolidation.attData,
+            inclusionDistance,
+            stateEpoch,
+            rootCache
+          );
+
+          const weight =
+            ((flags & TIMELY_SOURCE) === TIMELY_SOURCE ? TIMELY_SOURCE_WEIGHT : 0) +
+            ((flags & TIMELY_TARGET) === TIMELY_TARGET ? TIMELY_TARGET_WEIGHT : 0) +
+            ((flags & TIMELY_HEAD) === TIMELY_HEAD ? TIMELY_HEAD_WEIGHT : 0);
+
+          const score = consolidation.totalNewSeenEffectiveBalance * weight;
+
           consolidations.set(consolidation, score);
           // Stop accumulating attestations there are enough that may have good scoring
           if (consolidations.size >= MAX_ATTESTATIONS_ELECTRA * 2) {

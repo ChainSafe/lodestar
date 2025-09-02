@@ -1,4 +1,4 @@
-import {BeaconConfig} from "@lodestar/config";
+import {ChainConfig} from "@lodestar/config";
 import {BLOBSIDECAR_FIXED_SIZE, GENESIS_SLOT} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
@@ -92,7 +92,7 @@ export function* iterateBlobBytesFromWrapper(
 }
 
 export function validateBlobSidecarsByRangeRequest(
-  config: BeaconConfig,
+  config: ChainConfig,
   request: deneb.BlobSidecarsByRangeRequest
 ): deneb.BlobSidecarsByRangeRequest {
   const {startSlot} = request;
@@ -106,10 +106,8 @@ export function validateBlobSidecarsByRangeRequest(
     throw new ResponseError(RespStatus.INVALID_REQUEST, "startSlot < genesis");
   }
 
-  const maxRequestBlobSidecars = config.getMaxRequestBlobSidecars(config.getForkName(startSlot));
-
-  if (count > maxRequestBlobSidecars) {
-    count = maxRequestBlobSidecars;
+  if (count > config.MAX_REQUEST_BLOCKS_DENEB) {
+    count = config.MAX_REQUEST_BLOCKS_DENEB;
   }
 
   return {startSlot, count};

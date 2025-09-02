@@ -6,7 +6,7 @@ import {VERIFICATION_FAILED_RESPONSE_CODE} from "../../../src/constants.js";
 import {JsonRpcRequest, JsonRpcResponseWithResultPayload} from "../../../src/types.js";
 import {getVerificationFailedMessage} from "../../../src/utils/json_rpc.js";
 import {eth_call} from "../../../src/verified_requests/eth_call.js";
-import ethCallCase1 from "../../fixtures/mainnet/eth_call.json" assert {type: "json"};
+import ethCallCase1 from "../../fixtures/mainnet/eth_call.json" with {type: "json"};
 import {cloneTestFixture, generateReqHandlerOptionsMock} from "../../mocks/request_handler.js";
 
 const testCases = [ethCallCase1];

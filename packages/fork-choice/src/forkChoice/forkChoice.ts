@@ -42,12 +42,12 @@ import {
 } from "../protoArray/interface.js";
 import {ProtoArray} from "../protoArray/protoArray.js";
 
+import {ForkChoiceMetrics} from "../metrics.js";
 import {ForkChoiceError, ForkChoiceErrorCode, InvalidAttestationCode, InvalidBlockCode} from "./errors.js";
 import {
   AncestorResult,
   AncestorStatus,
   EpochDifference,
-  ForkChoiceMetrics,
   IForkChoice,
   LatestMessage,
   NotReorgedReason,
@@ -140,22 +140,21 @@ export class ForkChoice implements IForkChoice {
     private readonly fcStore: IForkChoiceStore,
     /** The underlying representation of the block DAG. */
     private readonly protoArray: ProtoArray,
+    readonly metrics: ForkChoiceMetrics | null,
     private readonly opts?: ForkChoiceOpts,
     private readonly logger?: Logger
   ) {
     this.head = this.updateHead();
     this.balances = this.fcStore.justified.balances;
-  }
 
-  getMetrics(): ForkChoiceMetrics {
-    return {
-      votes: this.votes.length,
-      queuedAttestations: this.queuedAttestationsPreviousSlot,
-      validatedAttestationDatas: this.validatedAttestationDatas.size,
-      balancesLength: this.balances.length,
-      nodes: this.protoArray.nodes.length,
-      indices: this.protoArray.indices.size,
-    };
+    metrics?.forkChoice.votes.addCollect(() => {
+      metrics.forkChoice.votes.set(this.votes.length);
+      metrics.forkChoice.queuedAttestations.set(this.queuedAttestationsPreviousSlot);
+      metrics.forkChoice.validatedAttestationDatas.set(this.validatedAttestationDatas.size);
+      metrics.forkChoice.balancesLength.set(this.balances.length);
+      metrics.forkChoice.nodes.set(this.protoArray.nodes.length);
+      metrics.forkChoice.indices.set(this.protoArray.indices.size);
+    });
   }
 
   /**

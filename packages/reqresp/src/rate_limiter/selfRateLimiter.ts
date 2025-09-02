@@ -1,4 +1,4 @@
-import {MapDef} from "@lodestar/utils";
+import {Logger, MapDef} from "@lodestar/utils";
 
 type PeerIdStr = string;
 type ProtocolID = string;
@@ -12,11 +12,21 @@ export const CHECK_DISCONNECTED_PEERS_INTERVAL_MS = 2 * 60 * 1000;
 const DISCONNECTED_TIMEOUT_MS = 60 * 1000;
 
 /**
+ * Timeout to consider a request is no longer in progress
+ * this is to cover the case where `requestCompleted()` is not called due to unexpected errors
+ * for example https://github.com/ChainSafe/lodestar/issues/8256
+ **/
+export const REQUEST_TIMEOUT_MS = 30 * 1000;
+
+type RequestId = number;
+type RequestIdMs = number;
+
+/**
  * Simple rate limiter that allows a maximum of 2 concurrent requests per protocol per peer.
  * The consumer should either prevent requests from being sent when the limit is reached or handle the case when the request is not allowed.
  */
 export class SelfRateLimiter {
-  private readonly rateLimitersPerPeer: MapDef<PeerIdStr, MapDef<ProtocolID, number>>;
+  private readonly rateLimitersPerPeer: MapDef<PeerIdStr, MapDef<ProtocolID, Map<RequestId, RequestIdMs>>>;
   /**
    * It's not convenient to handle a peer disconnected event so we track the last seen requests by peer.
    * This is the same design to `ReqRespRateLimiter`.
@@ -25,9 +35,9 @@ export class SelfRateLimiter {
   /** Interval to check lastSeenMessagesByPeer */
   private cleanupInterval: NodeJS.Timeout | undefined = undefined;
 
-  constructor() {
-    this.rateLimitersPerPeer = new MapDef<PeerIdStr, MapDef<ProtocolID, number>>(
-      () => new MapDef<ProtocolID, number>(() => 0)
+  constructor(private readonly logger?: Logger) {
+    this.rateLimitersPerPeer = new MapDef<PeerIdStr, MapDef<ProtocolID, Map<RequestId, RequestIdMs>>>(
+      () => new MapDef<ProtocolID, Map<RequestId, RequestIdMs>>(() => new Map())
     );
     this.lastSeenRequestsByPeer = new Map();
   }
@@ -46,15 +56,33 @@ export class SelfRateLimiter {
   /**
    * called before we send a request to a peer.
    */
-  allows(peerId: PeerIdStr, protocolId: ProtocolID): boolean {
+  allows(peerId: PeerIdStr, protocolId: ProtocolID, requestId: RequestId): boolean {
+    const now = Date.now();
     const peerRateLimiter = this.rateLimitersPerPeer.getOrDefault(peerId);
-    const inProgressRequests = peerRateLimiter.getOrDefault(protocolId);
-    this.lastSeenRequestsByPeer.set(peerId, Date.now());
+    const trackedRequests = peerRateLimiter.getOrDefault(protocolId);
+    this.lastSeenRequestsByPeer.set(peerId, now);
+
+    let inProgressRequests = 0;
+    for (const [trackedRequestId, trackedRequestTimeMs] of trackedRequests.entries()) {
+      if (trackedRequestTimeMs + REQUEST_TIMEOUT_MS <= now) {
+        // request timed out, remove it
+        trackedRequests.delete(trackedRequestId);
+        this.logger?.debug("SelfRateLimiter: request timed out, removing it", {
+          requestId: trackedRequestId,
+          requestTime: trackedRequestTimeMs,
+          peerId,
+          protocolId,
+        });
+      } else {
+        inProgressRequests++;
+      }
+    }
+
     if (inProgressRequests >= MAX_CONCURRENT_REQUESTS) {
       return false;
     }
 
-    peerRateLimiter.set(protocolId, inProgressRequests + 1);
+    trackedRequests.set(requestId, now);
     return true;
   }
 
@@ -62,10 +90,10 @@ export class SelfRateLimiter {
    * called when a request to a peer is completed, regardless of success or failure.
    * This should NOT be called when the request was not allowed
    */
-  requestCompleted(peerId: PeerIdStr, protocolId: ProtocolID): void {
+  requestCompleted(peerId: PeerIdStr, protocolId: ProtocolID, requestId: RequestId): void {
     const peerRateLimiter = this.rateLimitersPerPeer.getOrDefault(peerId);
-    const inProgressRequests = peerRateLimiter.getOrDefault(protocolId);
-    peerRateLimiter.set(protocolId, Math.max(0, inProgressRequests - 1));
+    const trackedRequests = peerRateLimiter.getOrDefault(protocolId);
+    trackedRequests.delete(requestId);
   }
 
   getPeerCount(): number {

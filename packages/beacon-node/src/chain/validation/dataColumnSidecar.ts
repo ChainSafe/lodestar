@@ -154,6 +154,7 @@ export async function validateGossipDataColumnSidecar(
     });
   }
 
+  const kzgProofTimer = metrics?.peerDas.dataColumnSidecarKzgProofsVerificationTime.startTimer();
   // 11) [REJECT] The sidecar's column data is valid as verified by verify_data_column_sidecar_kzg_proofs
   try {
     await verifyDataColumnSidecarKzgProofs(
@@ -168,6 +169,8 @@ export async function validateGossipDataColumnSidecar(
       slot: blockHeader.slot,
       columnIdx: dataColumnSidecar.index,
     });
+  } finally {
+    kzgProofTimer?.();
   }
 
   // 12) [IGNORE] The sidecar is the first sidecar for the tuple (block_header.slot, block_header.proposer_index,
@@ -183,6 +186,11 @@ export async function validateDataColumnsSidecars(
   metrics: Metrics | null,
   opts: {skipProofsCheck: boolean} = {skipProofsCheck: false}
 ): Promise<void> {
+  // Skip verification if there are no data columns
+  if (dataColumnSidecars.length === 0) {
+    return;
+  }
+
   const commitmentBytes: Uint8Array[] = [];
   const cellIndices: number[] = [];
   const cells: Uint8Array[] = [];
@@ -204,7 +212,7 @@ export async function validateDataColumnsSidecars(
         .filter((result) => result === false).length
     ) {
       throw new Error(
-        `Invalid data column sidecar slot=${columnBlockHeader.slot} columnBlockRoot=${toRootHex(columnBlockRoot)} columnIndex=${columnIndex} for the block blockRoot=${toRootHex(blockRoot)} slot=${blockSlot} sidecarsIndex=${sidecarsIndex}`
+        `Invalid data column sidecar slot=${columnBlockHeader.slot} columnBlockRoot=${toRootHex(columnBlockRoot)} columnIndex=${columnIndex} for the block blockRoot=${toRootHex(blockRoot)} slot=${blockSlot} sidecarsIndex=${sidecarsIndex} kzgCommitments=${kzgCommitments.length} blockKzgCommitments=${blockKzgCommitments.length}`
       );
     }
 
@@ -236,7 +244,8 @@ export async function validateDataColumnsSidecars(
     valid = await kzg.asyncVerifyCellKzgProofBatch(commitmentBytes, cellIndices, cells, proofBytes);
     timer?.();
   } catch (err) {
-    (err as Error).message = `Error in verifyCellKzgProofBatch for slot=${blockSlot} blockRoot=${toRootHex(blockRoot)}`;
+    (err as Error).message =
+      `Error in verifyCellKzgProofBatch for slot=${blockSlot} blockRoot=${toRootHex(blockRoot)} commitmentBytes=${commitmentBytes.length} cellIndices=${cellIndices.length} cells=${cells.length} proofBytes=${proofBytes.length}`;
     throw err;
   }
 

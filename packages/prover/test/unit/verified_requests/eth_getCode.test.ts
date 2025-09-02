@@ -4,7 +4,7 @@ import {describe, expect, it} from "vitest";
 import {VERIFICATION_FAILED_RESPONSE_CODE} from "../../../src/constants.js";
 import {getVerificationFailedMessage} from "../../../src/utils/json_rpc.js";
 import {eth_getCode} from "../../../src/verified_requests/eth_getCode.js";
-import ethGetCodeCase1 from "../../fixtures/sepolia/eth_getCode.json" assert {type: "json"};
+import ethGetCodeCase1 from "../../fixtures/sepolia/eth_getCode.json" with {type: "json"};
 import {cloneTestFixture, generateReqHandlerOptionsMock} from "../../mocks/request_handler.js";
 
 const testCases = [ethGetCodeCase1];
