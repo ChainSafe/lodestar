@@ -11,15 +11,18 @@ import {defineSimTestConfig, logFilesDir} from "../utils/crucible/utils/index.js
 import {connectAllNodes, waitForSlot} from "../utils/crucible/utils/network.js";
 import {assertCheckpointSync, assertRangeSync, assertUnknownBlockSync} from "../utils/crucible/utils/syncing.js";
 
-const runTillEpoch = 4;
+const altairForkEpoch = 2;
+const bellatrixForkEpoch = 4;
+const capellaForkEpoch = 6;
+const denebForkEpoch = 8;
+const runTillEpoch = 10;
 const syncWaitEpoch = 2;
 
 const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
-  ALTAIR_FORK_EPOCH: 0,
-  BELLATRIX_FORK_EPOCH: 0,
-  CAPELLA_FORK_EPOCH: 0,
-  DENEB_FORK_EPOCH: 0,
-  ELECTRA_FORK_EPOCH: 0,
+  ALTAIR_FORK_EPOCH: altairForkEpoch,
+  BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
+  CAPELLA_FORK_EPOCH: capellaForkEpoch,
+  DENEB_FORK_EPOCH: denebForkEpoch,
   runTillEpoch: runTillEpoch + syncWaitEpoch,
   initialNodes: 5,
 });
@@ -108,28 +111,30 @@ env.tracker.register({
   },
 });
 
-// Merge should already be active from genesis since we start from Electra
 env.tracker.register({
   ...mergeAssertion,
   match: ({slot}) => {
-    // Check at slot 1 since we start post-merge
-    return slot === 1 ? Match.Assert | Match.Remove : Match.None;
+    // Check at the end of bellatrix fork, merge should happen by then
+    return slot === env.clock.getLastSlotOfEpoch(bellatrixForkEpoch) ? Match.Assert | Match.Remove : Match.None;
   },
 });
 
 env.tracker.register(
   createAccountBalanceAssertion({
     address: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    sendTransactionsAtSlot: [env.clock.getFirstSlotOfEpoch(1) + 4, env.clock.getFirstSlotOfEpoch(2) + 4],
-    validateTotalBalanceAt: [env.clock.getFirstSlotOfEpoch(3) + 4],
+    sendTransactionsAtSlot: [
+      env.clock.getFirstSlotOfEpoch(altairForkEpoch) + 4,
+      env.clock.getFirstSlotOfEpoch(bellatrixForkEpoch) + 4,
+    ],
+    validateTotalBalanceAt: [env.clock.getFirstSlotOfEpoch(bellatrixForkEpoch + 1) + 4],
     targetNode: env.nodes[0],
   })
 );
 
 env.tracker.register(
   createExecutionHeadAssertion({
-    // Check execution head at end of first epoch
-    checkForSlot: [env.clock.getLastSlotOfEpoch(1) - 1],
+    // Second last slot of second bellatrix epoch
+    checkForSlot: [env.clock.getLastSlotOfEpoch(bellatrixForkEpoch + 1) - 1],
   })
 );
 
