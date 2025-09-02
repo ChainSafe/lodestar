@@ -55,7 +55,7 @@ export async function* onDataColumnSidecarsByRoot(
       if (dataColumnBytes) {
         yield {
           data: dataColumnBytes,
-          boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(slot)),
+          boundary: chain.config.getForkBoundaryAtEpoch(requestedEpoch),
         };
       }
 
