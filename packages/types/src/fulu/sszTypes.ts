@@ -12,7 +12,6 @@ import {
   FIELD_ELEMENTS_PER_EXT_BLOB,
   KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH,
   MAX_BLOB_COMMITMENTS_PER_BLOCK,
-  MAX_REQUEST_BLOCKS_DENEB,
   MIN_SEED_LOOKAHEAD,
   NUMBER_OF_COLUMNS,
   SLOTS_PER_EPOCH,
@@ -88,11 +87,6 @@ export const DataColumnsByRootIdentifier = new ContainerType(
     columns: new ListBasicType(ColumnIndex, NUMBER_OF_COLUMNS),
   },
   {typeName: "DataColumnsByRootIdentifier", jsonCase: "eth2"}
-);
-
-export const DataColumnSidecarsByRootRequest = new ListCompositeType(
-  DataColumnsByRootIdentifier,
-  MAX_REQUEST_BLOCKS_DENEB
 );
 
 export const DataColumnSidecarsByRangeRequest = new ContainerType(
