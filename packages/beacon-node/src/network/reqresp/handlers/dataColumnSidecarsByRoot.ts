@@ -4,7 +4,7 @@ import {toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {DataColumnSidecarsByRootRequest} from "../../../util/types.js";
-import {validateRequestedDataColumns} from "../utils/dataColumnResponseValidaiton.js";
+import {validateRequestedDataColumns} from "../utils/dataColumnResponseValidation.js";
 
 export async function* onDataColumnSidecarsByRoot(
   requestBody: DataColumnSidecarsByRootRequest,

@@ -6,7 +6,7 @@ import {fulu} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
-import {validateRequestedDataColumns} from "../utils/dataColumnResponseValidaiton.js";
+import {validateRequestedDataColumns} from "../utils/dataColumnResponseValidation.js";
 
 export async function* onDataColumnSidecarsByRange(
   request: fulu.DataColumnSidecarsByRangeRequest,
