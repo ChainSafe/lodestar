@@ -15,8 +15,6 @@ export enum DataColumnSidecarErrorCode {
   INCORRECT_SIDECAR_COUNT = "DATA_COLUMN_SIDECAR_ERROR_INCORRECT_SIDECAR_COUNT",
   /** Sidecar doesn't match block */
   INCORRECT_BLOCK = "DATA_COLUMN_SIDECAR_ERROR_INCORRECT_BLOCK",
-  /** Sidecar index is not as expected */
-  INCORRECT_INDEX = "DATA_COLUMN_SIDECAR_ERROR_INCORRECT_INDEX",
   /** Sidecar kzg proof count not as expected */
   INCORRECT_KZG_COMMITMENTS_COUNT = "DATA_COLUMN_SIDECAR_ERROR_INCORRECT_KZG_COMMITMENTS_COUNT",
   /** Sidecar kzg proof count not as expected */
@@ -36,8 +34,8 @@ export enum DataColumnSidecarErrorCode {
 }
 
 export type DataColumnSidecarErrorType =
-  | {code: DataColumnSidecarErrorCode.INVALID_INDEX; columnIdx: number}
-  | {code: DataColumnSidecarErrorCode.NO_COMMITMENTS; columnIdx: number}
+  | {code: DataColumnSidecarErrorCode.INVALID_INDEX; slot: Slot; columnIdx: number}
+  | {code: DataColumnSidecarErrorCode.NO_COMMITMENTS; slot: Slot; columnIdx: number}
   | {
       code: DataColumnSidecarErrorCode.MISMATCHED_LENGTHS;
       columnLength: number;
@@ -61,7 +59,6 @@ export type DataColumnSidecarErrorType =
       expected: string;
       actual: string;
     }
-  | {code: DataColumnSidecarErrorCode.INCORRECT_INDEX; slot: number; expected: number; actual: number}
   | {
       code: DataColumnSidecarErrorCode.INCORRECT_KZG_COMMITMENTS_COUNT;
       slot: number;
