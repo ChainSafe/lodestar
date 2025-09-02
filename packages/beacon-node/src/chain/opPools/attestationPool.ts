@@ -111,7 +111,7 @@ export class AttestationPool {
     committeeIndex: CommitteeIndex,
     attestation: SingleAttestation,
     attDataRootHex: RootHex,
-    committeeValidatorIndex: number,
+    validatorCommitteeIndex: number,
     committeeSize: number,
     priority?: boolean
   ): InsertOutcome {
@@ -154,10 +154,10 @@ export class AttestationPool {
     const aggregate = aggregateByIndex.get(committeeIndex);
     if (aggregate) {
       // Aggregate mutating
-      return aggregateAttestationInto(aggregate, attestation, committeeValidatorIndex);
+      return aggregateAttestationInto(aggregate, attestation, validatorCommitteeIndex);
     }
     // Create new aggregate
-    aggregateByIndex.set(committeeIndex, attestationToAggregate(attestation, committeeValidatorIndex, committeeSize));
+    aggregateByIndex.set(committeeIndex, attestationToAggregate(attestation, validatorCommitteeIndex, committeeSize));
     return InsertOutcome.NewData;
   }
 
@@ -229,12 +229,12 @@ export class AttestationPool {
 function aggregateAttestationInto(
   aggregate: AggregateFast,
   attestation: SingleAttestation,
-  committeeValidatorIndex: number
+  validatorCommitteeIndex: number
 ): InsertOutcome {
   let bitIndex: number | null;
 
   if (isElectraSingleAttestation(attestation)) {
-    bitIndex = committeeValidatorIndex;
+    bitIndex = validatorCommitteeIndex;
   } else {
     bitIndex = attestation.aggregationBits.getSingleTrueBit();
   }
@@ -256,13 +256,13 @@ function aggregateAttestationInto(
  */
 function attestationToAggregate(
   attestation: SingleAttestation,
-  committeeValidatorIndex: number,
+  validatorCommitteeIndex: number,
   committeeSize: number
 ): AggregateFast {
   if (isElectraSingleAttestation(attestation)) {
     return {
       data: attestation.data,
-      aggregationBits: BitArray.fromSingleBit(committeeSize, committeeValidatorIndex),
+      aggregationBits: BitArray.fromSingleBit(committeeSize, validatorCommitteeIndex),
       committeeBits: BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, attestation.committeeIndex),
       signature: signatureFromBytesNoCheck(attestation.signature),
     };

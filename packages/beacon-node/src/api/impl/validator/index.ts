@@ -75,6 +75,7 @@ import {BuilderStatus, NoBidReceived} from "../../../execution/builder/http.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossipHandlers.js";
 import {CommitteeSubscription} from "../../../network/subnets/index.js";
 import {SyncState} from "../../../sync/index.js";
+import {callInNextEventLoop} from "../../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
 import {getDefaultGraffiti, toGraffitiBytes} from "../../../util/graffiti.js";
 import {getLodestarClientVersion} from "../../../util/metadata.js";
@@ -678,27 +679,32 @@ export function getValidatorApi(
       signal: controller.signal,
     });
 
-    logger.verbose("Producing common block body", loggerContext);
-    const commonBlockBodyStartedAt = Date.now();
+    // Ensure builder and engine HTTP requests are sent before starting common block body production
+    // by deferring the call to next event loop iteration, allowing pending I/O operations like
+    // HTTP requests to be processed first and sent out early in slot.
+    callInNextEventLoop(() => {
+      logger.verbose("Producing common block body", loggerContext);
+      const commonBlockBodyStartedAt = Date.now();
 
-    const produceCommonBlockBodyPromise = chain
-      .produceCommonBlockBody({
-        slot,
-        parentBlockRoot,
-        parentSlot,
-        randaoReveal,
-        graffiti: graffitiBytes,
-      })
-      .then((commonBlockBody) => {
-        deferredCommonBlockBody.resolve(commonBlockBody);
-        logger.verbose("Produced common block body", {
-          ...loggerContext,
-          durationMs: Date.now() - commonBlockBodyStartedAt,
-        });
-      })
-      .catch(deferredCommonBlockBody.reject);
+      chain
+        .produceCommonBlockBody({
+          slot,
+          parentBlockRoot,
+          parentSlot,
+          randaoReveal,
+          graffiti: graffitiBytes,
+        })
+        .then((commonBlockBody) => {
+          deferredCommonBlockBody.resolve(commonBlockBody);
+          logger.verbose("Produced common block body", {
+            ...loggerContext,
+            durationMs: Date.now() - commonBlockBodyStartedAt,
+          });
+        })
+        .catch(deferredCommonBlockBody.reject);
+    });
 
-    const [[builder, engine]] = await Promise.all([blockProductionRacePromise, produceCommonBlockBodyPromise]);
+    const [builder, engine] = await blockProductionRacePromise;
 
     if (builder.status === "pending" && engine.status === "pending") {
       throw Error("Builder and engine both failed to produce the block within timeout");
@@ -1295,19 +1301,14 @@ export function getValidatorApi(
             // when a validator is configured with multiple beacon node urls, this attestation may come from another beacon node
             // and the block hasn't been in our forkchoice since we haven't seen / processing that block
             // see https://github.com/ChainSafe/lodestar/issues/5098
-            const {indexedAttestation, committeeIndices, attDataRootHex} = await validateGossipFnRetryUnknownRoot(
-              validateFn,
-              network,
-              chain,
-              slot,
-              beaconBlockRoot
-            );
+            const {indexedAttestation, committeeValidatorIndices, attDataRootHex} =
+              await validateGossipFnRetryUnknownRoot(validateFn, network, chain, slot, beaconBlockRoot);
 
             const insertOutcome = chain.aggregatedAttestationPool.add(
               signedAggregateAndProof.message.aggregate,
               attDataRootHex,
               indexedAttestation.attestingIndices.length,
-              committeeIndices
+              committeeValidatorIndices
             );
             metrics?.opPool.aggregatedAttestationPool.apiInsertOutcome.inc({insertOutcome});
 

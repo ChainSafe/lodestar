@@ -308,9 +308,7 @@ export function getBeaconBlockApi({
       }
     }
 
-    if (chain.emitter.listenerCount(routes.events.EventType.blockGossip)) {
-      chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRoot});
-    }
+    chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRoot});
 
     if (blockForImport.type === BlockInputType.availableData) {
       if (isForkPostFulu(blockForImport.blockData.fork)) {

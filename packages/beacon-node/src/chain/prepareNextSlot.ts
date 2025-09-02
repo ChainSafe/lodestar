@@ -191,7 +191,10 @@ export class PrepareNextSlotScheduler {
         this.computeStateHashTreeRoot(updatedPrepareState, isEpochTransition);
 
         // If emitPayloadAttributes is true emit a SSE payloadAttributes event
-        if (this.chain.opts.emitPayloadAttributes === true) {
+        if (
+          this.chain.opts.emitPayloadAttributes === true &&
+          this.chain.emitter.listenerCount(routes.events.EventType.payloadAttributes)
+        ) {
           const data = await getPayloadAttributesForSSE(fork as ForkPostBellatrix, this.chain, {
             prepareState: updatedPrepareState,
             prepareSlot,
