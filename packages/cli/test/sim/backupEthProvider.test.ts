@@ -11,7 +11,7 @@ const bellatrixForkEpoch = 0;
 const capellaForkEpoch = 0;
 const denebForkEpoch = 0;
 const electraForkEpoch = 0;
-const runTillEpoch = 6;
+const runTillEpoch = 4;
 
 const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
   ALTAIR_FORK_EPOCH: altairForkEpoch,
@@ -20,6 +20,7 @@ const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
   DENEB_FORK_EPOCH: denebForkEpoch,
   ELECTRA_FORK_EPOCH: electraForkEpoch,
   runTillEpoch: runTillEpoch,
+  additionalSlotsForTTD: 0,
   initialNodes: 3,
 });
 
@@ -79,7 +80,7 @@ await node3.execution.job.stop();
 
 // node2 and node3 will successfully reach TTD if they can communicate to an EL on node1
 await waitForSlot("Wait half additional epoch to bellatrix fork epoch", {
-  slot: env.clock.getLastSlotOfEpoch(bellatrixForkEpoch) + activePreset.SLOTS_PER_EPOCH / 2,
+  slot: env.clock.getLastSlotOfEpoch(2),
   env,
 });
 
