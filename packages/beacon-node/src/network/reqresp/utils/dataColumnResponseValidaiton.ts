@@ -1,7 +1,7 @@
 import {LogData} from "@lodestar/logger";
 import {RespStatus, ResponseError} from "@lodestar/reqresp";
 import {ColumnIndex, Slot} from "@lodestar/types";
-import {prettyPrintIndices, toRootHex} from "@lodestar/utils";
+import {prettyBytes, prettyPrintIndices} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/interface.js";
 import {IBeaconDb} from "../../../db/interface.js";
 import {getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized} from "../../../util/sszBytes.js";
@@ -30,7 +30,7 @@ export async function handleColumnSidecarUnavailability({
     slot,
   };
   if (blockRoot) {
-    logData.blockRoot = toRootHex(blockRoot);
+    logData.blockRoot = prettyBytes(blockRoot);
   }
 
   chain.logger.debug("dataColumnSidecar requested unavailable", logData);
