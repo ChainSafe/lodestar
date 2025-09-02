@@ -235,8 +235,8 @@ export const eventTestData: EventData = {
     }),
   },
   [EventType.payloadAttributes]: {
-    version: ForkName.capella,
-    data: ssz.capella.SSEPayloadAttributes.fromJson({
+    version: ForkName.electra,
+    data: ssz.electra.SSEPayloadAttributes.fromJson({
       proposer_index: "123",
       proposal_slot: "10",
       parent_block_number: "9",
@@ -254,6 +254,7 @@ export const eventTestData: EventData = {
             amount: "15640",
           },
         ],
+        parent_beacon_block_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
       },
     }),
   },

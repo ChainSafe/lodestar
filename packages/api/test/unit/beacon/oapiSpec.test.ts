@@ -68,10 +68,7 @@ const ignoredProperties: Record<string, IgnoredProperty> = {
 const openApiJson = await fetchOpenApiSpec(openApiFile);
 runTestCheckAgainstSpec(openApiJson, definitions, testDatas, ignoredOperations, ignoredProperties);
 
-const ignoredTopics: string[] = [
-  // TODO: fix in follow-up PR
-  "payload_attributes",
-];
+const ignoredTopics: string[] = [];
 
 // eventstream types are defined as comments in the description of "examples".
 // The function runTestCheckAgainstSpec() can't handle those, so the custom code before:
