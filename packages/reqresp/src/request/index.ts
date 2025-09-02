@@ -110,7 +110,7 @@ export async function* sendRequest(
       throw new RequestError({code: RequestErrorCode.DIAL_ERROR, error: e});
     });
 
-    metrics?.outgoingOpennedStreams?.inc({method});
+    metrics?.outgoingOpenedStreams?.inc({method});
 
     // TODO: Does the TTFB timer start on opening stream or after receiving request
     const timerTTFB = metrics?.outgoingResponseTTFB.startTimer({method});

@@ -15,12 +15,12 @@ export function getMetrics(register: MetricsRegisterExtra) {
       help: "Counts total requests done per method",
       labelNames: ["method"],
     }),
-    outgoingOpennedStreams: register.gauge<{method: string}>({
+    outgoingOpenedStreams: register.counter<{method: string}>({
       name: "beacon_reqresp_outgoing_opened_streams_total",
       help: "Counts total opened streams per method",
       labelNames: ["method"],
     }),
-    outgoingClosedStreams: register.gauge<{method: string}>({
+    outgoingClosedStreams: register.counter<{method: string}>({
       name: "beacon_reqresp_outgoing_closed_streams_total",
       help: "Counts total closed streams per method",
       labelNames: ["method"],
@@ -47,12 +47,12 @@ export function getMetrics(register: MetricsRegisterExtra) {
       help: "Counts total responses handled per method",
       labelNames: ["method"],
     }),
-    incomingOpennedStreams: register.gauge<{method: string}>({
+    incomingOpenedStreams: register.counter<{method: string}>({
       name: "beacon_reqresp_incoming_opened_streams_total",
       help: "Counts total incoming opened streams per method",
       labelNames: ["method"],
     }),
-    incomingClosedStreams: register.gauge<{method: string}>({
+    incomingClosedStreams: register.counter<{method: string}>({
       name: "beacon_reqresp_incoming_closed_streams_total",
       help: "Counts total incoming closed streams per method",
       labelNames: ["method"],

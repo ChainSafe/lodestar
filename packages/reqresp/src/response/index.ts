@@ -65,7 +65,7 @@ export async function handleRequest({
     peer: prettyPrintPeerId(peerId),
     requestId,
   };
-  metrics?.incomingOpennedStreams.inc({method: protocol.method});
+  metrics?.incomingOpenedStreams.inc({method: protocol.method});
 
   let responseError: Error | null = null;
   await pipe(
