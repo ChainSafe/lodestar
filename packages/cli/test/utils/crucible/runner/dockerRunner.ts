@@ -31,7 +31,7 @@ export class DockerRunner implements RunnerEnv<RunnerType.Docker> {
     // Wait for couple of seconds to allow docker to cleanup containers to network connections
     for (let i = 0; i < 5; i++) {
       try {
-        await execChildProcess(`docker network rm ${dockerNetworkName}`, {
+        await execChildProcess(`docker network rm ${dockerNetworkName} --force`, {
           logger: this.logger,
         });
         return;
