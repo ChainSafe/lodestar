@@ -9,17 +9,24 @@
   "vcs": {
     "defaultBranch": "unstable"
   },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": { "level": "off", "options": { "identifierOrder": "lexicographic" } },
+        "useSortedKeys": { "level": "off", "options": { "sortOrder": "lexicographic" } }
+      }
+    }
+  },
   "files": {
-    "include": ["packages/*/src/**/*.ts", "packages/*/test/**/*.ts", "configs/**/*.ts", "./vitest.config.ts"]
-  },
-  "formatter": {
-    "ignore": ["**/lib", "**/.nyc_output", "./packages/*/spec-tests", "**/node_modules", "./packages/*/node_modules/**"]
-  },
-  "javascript": {
-    "globals": ["Bun"]
-  },
-  "organizeImports": {
-    "enabled": true
+    "includes": [
+      "**/packages/**/*/src/**/*.ts",
+      "**/packages/**/*/test/**/*.ts",
+      "**/configs/**/*.ts",
+      "vitest.config.ts",
+      "!**/lib",
+      "!packages/**/*/spec-tests",
+      "!packages/**/*/node_modules/"
+    ]
   },
   "linter": {
     "rules": {
@@ -27,13 +34,11 @@
         "useImportExtensions": {
           "level": "error",
           "options": {
-            "suggestedExtensions": {
-              "ts": {
-                "module": "js",
-                "component": "jsx"
-              }
-            }
+            "forceJsExtensions": false
           }
+        },
+        "useParseIntRadix": {
+          "level": "off"
         }
       },
       "performance": {
@@ -41,14 +46,14 @@
         "noDelete": "off"
       },
       "style": {
-        // The code usage looks suspicious so it should be enabled in a separate PR
-        "noCommaOperator": "off",
+        // Will be enabled in a separate PR
+        "useArrayLiterals": "off",
         // There are a lot of places we mutate params, should be fixed in an independent PR.
         "noParameterAssign": "off",
         "noRestrictedGlobals": {
           "level": "error",
           "options": {
-            "deniedGlobals": ["fetch"]
+            "deniedGlobals": { "fetch": "Please use 'fetch' from '@lodestar/api' instead." }
           }
         },
         // In some cases the enums are initialized with values of other enums
@@ -146,19 +151,31 @@
         }
       },
       "suspicious": {
+        // Will be enabled in separate PR
+        "useIterableCallbackReturn": "off",
         // There is a lot of empty code blocks, should be enabled and clean up separately.
-        "noEmptyBlockStatements": "off"
+        "noEmptyBlockStatements": "off",
+        // We are using `Object.prototype.hasOwnProperty` a lot because compiling lib is set to prior 2022
+        "noPrototypeBuiltins": "off"
       },
       "nursery": {
         // Need to enable this rule with exception to anonymous functions
         "useExplicitType": "off"
+      },
+      "complexity": {
+        // Should be done in a separate PR
+        "useIndexOf": "off",
+        // Should be done in a separate PR
+        "useDateNow": "off",
+        // The code usage looks suspicious so it should be enabled in a separate PR
+        "noCommaOperator": "off"
       }
     }
   },
   "overrides": [
     // Code using console output
     {
-      "include": ["packages/cli/src/", "packages/test-utils/src", "packages/flare/src"],
+      "includes": ["**/packages/cli/src/**", "**/packages/test-utils/src/**", "**/packages/flare/src/**"],
       "linter": {
         "rules": {
           "suspicious": {
@@ -169,7 +186,7 @@
     },
     // All test files
     {
-      "include": ["**/test/**/*.ts", "packages/spec-test-util/src"],
+      "includes": ["**/packages/spec-test-util/src/**"],
       "linter": {
         "rules": {
           "complexity": {
@@ -188,20 +205,17 @@
       }
     },
     {
-      "include": [
-        // These files are using mix cases e.g. `engine_newPayloadV4`
-        // It's a mix of snake_case and camelCase, which can't validated by biome
-        "packages/beacon-node/src/db/buckets.ts",
-        "packages/beacon-node/src/execution/engine/mock.ts",
-        "packages/beacon-node/src/execution/engine/types.ts",
-        "packages/beacon-node/src/eth1/provider/eth1Provider.ts",
-        "packages/validator/src/buckets.ts",
-        "packages/prover/src/types.ts",
-        "prover/src/utils/process.ts",
-        "prover/src/verified_requests/**/*.ts",
-        "packages/types/src/utils/**/*.ts",
-        // This file is using snake_case function names
-        "packages/beacon-node/test/spec/bls/bls.ts"
+      "includes": [
+        "**/packages/beacon-node/src/db/buckets.ts",
+        "**/packages/beacon-node/src/execution/engine/mock.ts",
+        "**/packages/beacon-node/src/execution/engine/types.ts",
+        "**/packages/beacon-node/src/eth1/provider/eth1Provider.ts",
+        "**/packages/validator/src/buckets.ts",
+        "**/packages/prover/src/types.ts",
+        "**/prover/src/utils/process.ts",
+        "**/prover/src/verified_requests/**/*.ts",
+        "**/packages/types/src/utils/**/*.ts",
+        "**/packages/beacon-node/test/spec/bls/bls.ts"
       ],
       "linter": {
         "rules": {

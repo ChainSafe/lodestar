@@ -15,7 +15,7 @@ export type LightclientEmitterEvents = {
 
 export type LightclientEmitter = MittEmitter<LightclientEmitterEvents>;
 
-// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+// biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
 export type MittEmitter<T extends Record<string, (...args: any[]) => void>> = {
   on<K extends keyof T>(type: K, handler: T[K]): void;
   off<K extends keyof T>(type: K, handler: T[K]): void;

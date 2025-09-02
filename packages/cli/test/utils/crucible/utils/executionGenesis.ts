@@ -5,7 +5,7 @@ export const getGethGenesisBlock = (
   mode: ExecutionStartMode,
   options: ExecutionGenesisOptions
 ): Record<string, unknown> => {
-  const {ttd, cliqueSealingPeriod, shanghaiTime, genesisTime, cancunTime} = options;
+  const {ttd, cliqueSealingPeriod, shanghaiTime, genesisTime, cancunTime, pragueTime} = options;
 
   const genesis = {
     config: {
@@ -25,6 +25,16 @@ export const getGethGenesisBlock = (
       londonBlock: 0,
       shanghaiTime,
       cancunTime,
+      pragueTime,
+      blobSchedule: {
+        cancun: {
+          target: 3,
+          max: 6,
+          baseFeeUpdateFraction: 3338477,
+        },
+        prague: {target: 6, max: 9, baseFeeUpdateFraction: 5007716},
+        // "osaka":  { "target": 6, "max": 9, "updateFraction": 5007716 }
+      },
       terminalTotalDifficulty: Number(ttd as bigint),
       clique: {period: cliqueSealingPeriod, epoch: 30000},
     },

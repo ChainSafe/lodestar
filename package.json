@@ -42,9 +42,9 @@
   },
   "devDependencies": {
     "@actions/core": "^1.11.1",
-    "@biomejs/biome": "^1.9.4",
+    "@biomejs/biome": "^2.2.0",
     "@chainsafe/benchmark": "^1.2.3",
-    "@chainsafe/biomejs-config": "^0.1.2",
+    "@chainsafe/biomejs-config": "^1.0.0",
     "@types/node": "^20.12.8",
     "@types/react": "^19.1.12",
     "@vitest/browser": "3.0.9",

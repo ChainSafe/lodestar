@@ -9,13 +9,17 @@ import {Simulation} from "../utils/crucible/simulation.js";
 import {defineSimTestConfig, logFilesDir} from "../utils/crucible/utils/index.js";
 import {waitForSlot} from "../utils/crucible/utils/network.js";
 
-const altairForkEpoch = 2;
-const bellatrixForkEpoch = 4;
+const altairForkEpoch = 0;
+const bellatrixForkEpoch = 0;
+const capellaForkEpoch = 0;
+const denebForkEpoch = 0;
 const validatorCount = 2;
 
 const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
   ALTAIR_FORK_EPOCH: altairForkEpoch,
   BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
+  CAPELLA_FORK_EPOCH: capellaForkEpoch,
+  DENEB_FORK_EPOCH: denebForkEpoch,
   runTillEpoch: 2,
   initialNodes: 1,
 });
