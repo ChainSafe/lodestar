@@ -7,7 +7,6 @@ import {
   ForkSeq,
   isForkPostAltair,
   isForkPostBellatrix,
-  isForkPostCapella,
 } from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
