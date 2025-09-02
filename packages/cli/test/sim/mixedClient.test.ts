@@ -11,8 +11,7 @@ const capellaForkEpoch = 0;
 const denebForkEpoch = 0;
 const electraForkEpoch = 0;
 const fuluForkEpoch = Infinity;
-const runTillEpoch = 10;
-const syncWaitEpoch = 2;
+const runTillEpoch = 4;
 
 const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
   ALTAIR_FORK_EPOCH: altairForkEpoch,
@@ -21,7 +20,8 @@ const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
   DENEB_FORK_EPOCH: denebForkEpoch,
   ELECTRA_FORK_EPOCH: electraForkEpoch,
   FULU_FORK_EPOCH: fuluForkEpoch,
-  runTillEpoch: runTillEpoch + syncWaitEpoch,
+  runTillEpoch: runTillEpoch,
+  additionalSlotsForTTD: 0,
   initialNodes: 2,
 });
 

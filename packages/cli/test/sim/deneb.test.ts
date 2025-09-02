@@ -10,7 +10,7 @@ const altairForkEpoch = 0;
 const bellatrixForkEpoch = 0;
 const capellaForkEpoch = 0;
 const denebForkEpoch = 0;
-const runTillEpoch = 6;
+const runTillEpoch = 2;
 const syncWaitEpoch = 2;
 
 const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({

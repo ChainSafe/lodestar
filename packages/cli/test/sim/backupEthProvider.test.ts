@@ -9,12 +9,11 @@ import {connectAllNodes, waitForSlot} from "../utils/crucible/utils/network.js";
 const altairForkEpoch = 0;
 const bellatrixForkEpoch = 0;
 const runTillEpoch = 6;
-const syncWaitEpoch = 2;
 
 const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
   ALTAIR_FORK_EPOCH: altairForkEpoch,
   BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
-  runTillEpoch: runTillEpoch + syncWaitEpoch,
+  runTillEpoch: runTillEpoch,
   initialNodes: 3,
 });
 

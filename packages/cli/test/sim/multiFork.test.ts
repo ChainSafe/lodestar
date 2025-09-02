@@ -28,6 +28,7 @@ const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
   ELECTRA_FORK_EPOCH: electraForkEpoch,
   FULU_FORK_EPOCH: fuluForkEpoch,
   runTillEpoch: runTillEpoch + syncWaitEpoch,
+  additionalSlotsForTTD: 0,
   initialNodes: 5,
 });
 
