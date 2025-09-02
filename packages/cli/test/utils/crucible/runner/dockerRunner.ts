@@ -98,7 +98,7 @@ export class DockerRunner implements RunnerEnv<RunnerType.Docker> {
     return {
       id: jobOption.id,
       start: async () => {
-        this.logger.debug(`Running docker cmd: docker ${jobArgs.join(" ")}`);
+        this.logger.verbose(`Running docker cmd: docker ${jobArgs.join(" ")}`);
         childProcess = await spawnChildProcess("docker", jobArgs, spawnOpts);
       },
       stop: async () => {
