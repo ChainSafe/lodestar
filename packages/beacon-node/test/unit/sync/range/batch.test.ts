@@ -1,10 +1,10 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {beforeAll, beforeEach, describe, expect, it} from "vitest";
-import {BlockSource, getBlockInput} from "../../../../src/chain/blocks/types.js";
+import {beforeEach, describe, expect, it} from "vitest";
+import {BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
+import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/types.js";
 import {computeNodeIdFromPrivateKey} from "../../../../src/network/subnets/index.js";
-import {EPOCHS_PER_BATCH} from "../../../../src/sync/constants.js";
 import {Batch, BatchError, BatchErrorCode, BatchStatus} from "../../../../src/sync/range/batch.js";
 import {CustodyConfig} from "../../../../src/util/dataColumns.js";
 import {config} from "../../../utils/blocksAndData.js";
@@ -67,9 +67,15 @@ describe("sync / range / batch", async () => {
       });
     });
 
-    it("should not request data pre-deneb", () => {});
+    it("should not request data pre-deneb", () => {
+      const startEpoch = config.CAPELLA_FORK_EPOCH - 1;
+      const batch = new Batch(startEpoch, config, custodyConfig);
+      expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
+      expect(batch.requests.blobsRequest).toBeUndefined();
+      expect(batch.requests.columnsRequest).toBeUndefined();
+    });
 
-    // it("should not request data when before availability window", () => {});
+    it("should not request data when before availability window", () => {});
 
     // it("should request data within availability window", () => {});
 
@@ -77,112 +83,138 @@ describe("sync / range / batch", async () => {
 
     // it("should request blobs between post-deneb and pre-fulu ", () => {});
 
-    // it("should request columns post-fulu", () => {});
+    it("should request columns post-fulu", () => {
+      const startEpoch = config.FULU_FORK_EPOCH + 1;
+      const batch = new Batch(startEpoch, config, custodyConfig);
+      expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
+      expect(batch.requests.blobsRequest).toBeUndefined();
+      expect(batch.requests.columnsRequest).toEqual({
+        startSlot: batch.startSlot,
+        count: batch.count,
+        columns: custodyConfig.sampledColumns,
+      });
+    });
 
-    // it("should have same start slot for blocks and data requests", () => {});
-
-    // it("should have same count for blocks and data requests", () => {});
+    it("should have same start slot and count for blocks and data requests", () => {
+      const startEpoch = config.FULU_FORK_EPOCH + 1;
+      const batch = new Batch(startEpoch, config, custodyConfig);
+      expect(batch.requests.blocksRequest?.startSlot).toEqual(batch.requests.columnsRequest?.startSlot);
+      expect(batch.requests.blocksRequest?.count).toEqual(batch.requests.columnsRequest?.count);
+    });
   });
 
   describe("downloadingSuccess", () => {
     it("should handle blocks that are not in slot-wise order", () => {});
   });
 
-  // it("Complete state flow", () => {
-  //   const batch = new Batch(startEpoch, config);
+  it("Complete state flow", () => {
+    const startEpoch = 0;
+    const batch = new Batch(startEpoch, config, custodyConfig);
 
-  //   // Instantion: AwaitingDownload
-  //   expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
+    // Instantion: AwaitingDownload
+    expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
 
-  //   // startDownloading: AwaitingDownload -> Downloading
-  //   batch.startDownloading(peer);
-  //   expect(batch.state.status).toBe(BatchStatus.Downloading);
+    // startDownloading: AwaitingDownload -> Downloading
+    batch.startDownloading(peer);
+    expect(batch.state.status).toBe(BatchStatus.Downloading);
 
-  //   // downloadingError: Downloading -> AwaitingDownload
-  //   batch.downloadingError();
-  //   expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
-  //   expect(batch.getFailedPeers()[0]).toBe(peer);
+    // downloadingError: Downloading -> AwaitingDownload
+    batch.downloadingError(peer);
+    expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
+    expect(batch.getFailedPeers()[0]).toBe(peer);
 
-  //   // As of https://github.com/ChainSafe/lodestar/pull/8150, we abort the batch after a single processing error
-  //   // commented out the rest of the flow for now
+    // As of https://github.com/ChainSafe/lodestar/pull/8150, we abort the batch after a single processing error
+    // commented out the rest of the flow for now
 
-  //   // retry download: AwaitingDownload -> Downloading
-  //   // downloadingSuccess: Downloading -> AwaitingProcessing
-  //   batch.startDownloading(peer);
-  //   batch.downloadingSuccess({blocks: blocksDownloaded, pendingDataColumns: null});
-  //   expect(batch.state.status).toBe(BatchStatus.AwaitingProcessing);
+    // retry download: AwaitingDownload -> Downloading
+    // downloadingSuccess: Downloading -> AwaitingProcessing
+    batch.startDownloading(peer);
+    batch.downloadingSuccess(peer, [
+      BlockInputPreData.createFromBlock({
+        block: ssz.capella.SignedBeaconBlock.defaultValue(),
+        blockRootHex: "0x1234",
+        source: BlockInputSource.byRoot,
+        seenTimestampSec: Date.now() / 1000,
+        forkName: ForkName.capella,
+        daOutOfRange: false,
+      }),
+    ]);
+    expect(batch.state.status).toBe(BatchStatus.AwaitingProcessing);
 
-  //   // startProcessing: AwaitingProcessing -> Processing
-  //   // const blocksToProcess = batch.startProcessing();
-  //   // expect(batch.state.status).toBe(BatchStatus.Processing);
-  //   // expect(blocksToProcess).toBe(blocksDownloaded);
+    // startProcessing: AwaitingProcessing -> Processing
+    // const blocksToProcess = batch.startProcessing();
+    // expect(batch.state.status).toBe(BatchStatus.Processing);
+    // expect(blocksToProcess).toBe(blocksDownloaded);
 
-  //   // processingError: Processing -> AwaitingDownload
+    // processingError: Processing -> AwaitingDownload
 
-  //   // batch.processingError(new Error());
-  //   // expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
+    // batch.processingError(new Error());
+    // expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
 
-  //   // retry download + processing: AwaitingDownload -> Downloading -> AwaitingProcessing -> Processing
-  //   // processingSuccess: Processing -> AwaitingValidation
-  //   // batch.startDownloading(peer);
-  //   // batch.downloadingSuccess({blocks: blocksDownloaded, pendingDataColumns: null});
-  //   // batch.startProcessing();
-  //   // batch.processingSuccess();
-  //   // expect(batch.state.status).toBe(BatchStatus.AwaitingValidation);
+    // retry download + processing: AwaitingDownload -> Downloading -> AwaitingProcessing -> Processing
+    // processingSuccess: Processing -> AwaitingValidation
+    // batch.startDownloading(peer);
+    // batch.downloadingSuccess({blocks: blocksDownloaded, pendingDataColumns: null});
+    // batch.startProcessing();
+    // batch.processingSuccess();
+    // expect(batch.state.status).toBe(BatchStatus.AwaitingValidation);
 
-  //   // validationError: AwaitingValidation -> AwaitingDownload
+    // validationError: AwaitingValidation -> AwaitingDownload
 
-  //   // batch.validationError(new Error());
-  //   // expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
+    // batch.validationError(new Error());
+    // expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
 
-  //   // retry download + processing + validation: AwaitingDownload -> Downloading -> AwaitingProcessing -> Processing -> AwaitingValidation
-  //   // batch.startDownloading(peer);
-  //   // batch.downloadingSuccess({blocks: blocksDownloaded, pendingDataColumns: null});
-  //   batch.startProcessing();
-  //   batch.processingSuccess();
-  //   expect(batch.state.status).toBe(BatchStatus.AwaitingValidation);
-  //   // On validationSuccess() the batch will just be dropped and garbage collected
-  // });
+    // retry download + processing + validation: AwaitingDownload -> Downloading -> AwaitingProcessing -> Processing -> AwaitingValidation
+    // batch.startDownloading(peer);
+    // batch.downloadingSuccess({blocks: blocksDownloaded, pendingDataColumns: null});
+    batch.startProcessing();
+    batch.processingSuccess();
+    expect(batch.state.status).toBe(BatchStatus.AwaitingValidation);
+    // On validationSuccess() the batch will just be dropped and garbage collected
+  });
 
-  // it("Should throw on inconsistent state - downloadingSuccess", () => {
-  //   const batch = new Batch(startEpoch, config);
+  it("Should throw on inconsistent state - downloadingSuccess", () => {
+    const startEpoch = 0;
+    const batch = new Batch(startEpoch, config, custodyConfig);
 
-  //   expectThrowsLodestarError(
-  //     () => batch.downloadingSuccess({blocks: blocksDownloaded, pendingDataColumns: []}),
-  //     new BatchError({
-  //       code: BatchErrorCode.WRONG_STATUS,
-  //       startEpoch,
-  //       status: BatchStatus.AwaitingDownload,
-  //       expectedStatus: BatchStatus.Downloading,
-  //     })
-  //   );
-  // });
+    expectThrowsLodestarError(
+      () => batch.downloadingSuccess(peer, []),
+      new BatchError({
+        code: BatchErrorCode.WRONG_STATUS,
+        startEpoch,
+        status: BatchStatus.AwaitingDownload,
+        expectedStatus: BatchStatus.Downloading,
+      })
+    );
+  });
 
-  // it("Should throw on inconsistent state - startProcessing", () => {
-  //   const batch = new Batch(startEpoch, config);
+  it("Should throw on inconsistent state - startProcessing", () => {
+    const startEpoch = 0;
+    const batch = new Batch(startEpoch, config, custodyConfig);
 
-  //   expectThrowsLodestarError(
-  //     () => batch.startProcessing(),
-  //     new BatchError({
-  //       code: BatchErrorCode.WRONG_STATUS,
-  //       startEpoch,
-  //       status: BatchStatus.AwaitingDownload,
-  //       expectedStatus: BatchStatus.AwaitingProcessing,
-  //     })
-  //   );
-  // });
+    expectThrowsLodestarError(
+      () => batch.startProcessing(),
+      new BatchError({
+        code: BatchErrorCode.WRONG_STATUS,
+        startEpoch,
+        status: BatchStatus.AwaitingDownload,
+        expectedStatus: BatchStatus.AwaitingProcessing,
+      })
+    );
+  });
 
-  // it("Should throw on inconsistent state - processingSuccess", () => {
-  //   const batch = new Batch(startEpoch, config);
+  it("Should throw on inconsistent state - processingSuccess", () => {
+    const startEpoch = 0;
+    const batch = new Batch(startEpoch, config, custodyConfig);
 
-  //   expectThrowsLodestarError(
-  //     () => batch.processingSuccess(),
-  //     new BatchError({
-  //       code: BatchErrorCode.WRONG_STATUS,
-  //       startEpoch,
-  //       status: BatchStatus.AwaitingDownload,
-  //       expectedStatus: BatchStatus.Processing,
-  //     })
-  //   );
-  // });
+    expectThrowsLodestarError(
+      () => batch.processingSuccess(),
+      new BatchError({
+        code: BatchErrorCode.WRONG_STATUS,
+        startEpoch,
+        status: BatchStatus.AwaitingDownload,
+        expectedStatus: BatchStatus.Processing,
+      })
+    );
+  });
 });
