@@ -4,7 +4,7 @@ import {describe, expect, it} from "vitest";
 import {VERIFICATION_FAILED_RESPONSE_CODE} from "../../../src/constants.js";
 import {getVerificationFailedMessage} from "../../../src/utils/json_rpc.js";
 import {eth_getTransactionCount} from "../../../src/verified_requests/eth_getTransactionCount.js";
-import getTransactionCountCase1 from "../../fixtures/sepolia/eth_getTransactionCount.json" assert {type: "json"};
+import getTransactionCountCase1 from "../../fixtures/sepolia/eth_getTransactionCount.json" with {type: "json"};
 import {cloneTestFixture, generateReqHandlerOptionsMock} from "../../mocks/request_handler.js";
 
 const testCases = [getTransactionCountCase1];

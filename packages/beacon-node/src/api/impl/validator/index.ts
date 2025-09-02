@@ -75,6 +75,7 @@ import {BuilderStatus, NoBidReceived} from "../../../execution/builder/http.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossipHandlers.js";
 import {CommitteeSubscription} from "../../../network/subnets/index.js";
 import {SyncState} from "../../../sync/index.js";
+import {callInNextEventLoop} from "../../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
 import {getDefaultGraffiti, toGraffitiBytes} from "../../../util/graffiti.js";
 import {getLodestarClientVersion} from "../../../util/metadata.js";
@@ -678,27 +679,32 @@ export function getValidatorApi(
       signal: controller.signal,
     });
 
-    logger.verbose("Producing common block body", loggerContext);
-    const commonBlockBodyStartedAt = Date.now();
+    // Ensure builder and engine HTTP requests are sent before starting common block body production
+    // by deferring the call to next event loop iteration, allowing pending I/O operations like
+    // HTTP requests to be processed first and sent out early in slot.
+    callInNextEventLoop(() => {
+      logger.verbose("Producing common block body", loggerContext);
+      const commonBlockBodyStartedAt = Date.now();
 
-    const produceCommonBlockBodyPromise = chain
-      .produceCommonBlockBody({
-        slot,
-        parentBlockRoot,
-        parentSlot,
-        randaoReveal,
-        graffiti: graffitiBytes,
-      })
-      .then((commonBlockBody) => {
-        deferredCommonBlockBody.resolve(commonBlockBody);
-        logger.verbose("Produced common block body", {
-          ...loggerContext,
-          durationMs: Date.now() - commonBlockBodyStartedAt,
-        });
-      })
-      .catch(deferredCommonBlockBody.reject);
+      chain
+        .produceCommonBlockBody({
+          slot,
+          parentBlockRoot,
+          parentSlot,
+          randaoReveal,
+          graffiti: graffitiBytes,
+        })
+        .then((commonBlockBody) => {
+          deferredCommonBlockBody.resolve(commonBlockBody);
+          logger.verbose("Produced common block body", {
+            ...loggerContext,
+            durationMs: Date.now() - commonBlockBodyStartedAt,
+          });
+        })
+        .catch(deferredCommonBlockBody.reject);
+    });
 
-    const [[builder, engine]] = await Promise.all([blockProductionRacePromise, produceCommonBlockBodyPromise]);
+    const [builder, engine] = await blockProductionRacePromise;
 
     if (builder.status === "pending" && engine.status === "pending") {
       throw Error("Builder and engine both failed to produce the block within timeout");
