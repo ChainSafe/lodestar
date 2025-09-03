@@ -2,6 +2,7 @@ import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {
   EPOCHS_PER_HISTORICAL_VECTOR,
+  SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SUBNET_SIZE,
   isForkPostElectra,
   isForkPostFulu,
@@ -253,29 +254,20 @@ export function getBeaconStateApi({
         throw new ApiError(400, `No cached state available for stateId: ${stateId}`);
       }
 
-      const epoch = filters.epoch ?? computeEpochAtSlot(state.slot);
       const stateEpoch = computeEpochAtSlot(state.slot);
-      if (filters.slot !== undefined) {
-        const epochStartSlot = computeStartSlotAtEpoch(epoch);
-        const epochEndSlot = epochStartSlot + 32 - 1;
+      const epoch = filters.epoch ?? stateEpoch;
+      const epochStartSlot = computeStartSlotAtEpoch(epoch);
+      const epochEndSlot = epochStartSlot + SLOTS_PER_EPOCH - 1;
 
-        if (filters.slot < epochStartSlot || filters.slot > epochEndSlot) {
-          throw new ApiError(400, `Slot ${filters.slot} is not in epoch ${epoch}`);
-        }
+      if (filters.slot !== undefined && (filters.slot < epochStartSlot || filters.slot > epochEndSlot)) {
+        throw new ApiError(400, `Slot ${filters.slot} is not in epoch ${epoch}`);
       }
+
       if (Math.abs(epoch - stateEpoch) > 1) {
-        throw new ApiError(400, `Invalid epoch value: epoch ${epoch} is out of range`);
+        throw new ApiError(400, `Epoch ${epoch} must be within one epoch of state epoch ${stateEpoch}`);
       }
-      const startSlot = computeStartSlotAtEpoch(epoch);
-      let decisionRoot: string;
-      try {
-        decisionRoot = stateCached.epochCtx.getShufflingDecisionRoot(epoch);
-      } catch (error) {
-        if (error instanceof Error && error.message?.includes("EPOCH_CONTEXT_ERROR_DECISION_ROOT_EPOCH_OUT_OF_RANGE")) {
-          throw new ApiError(400, `Invalid epoch value: epoch ${epoch} is out of range`);
-        }
-        throw error; // Re-throw other unexpected errors
-      }
+
+      const decisionRoot = stateCached.epochCtx.getShufflingDecisionRoot(epoch);
       const shuffling = await chain.shufflingCache.get(epoch, decisionRoot);
       if (!shuffling) {
         throw new ApiError(
@@ -285,7 +277,7 @@ export function getBeaconStateApi({
       }
       const committees = shuffling.committees;
       const committeesFlat = committees.flatMap((slotCommittees, slotInEpoch) => {
-        const slot = startSlot + slotInEpoch;
+        const slot = epochStartSlot + slotInEpoch;
         if (filters.slot !== undefined && filters.slot !== slot) {
           return [];
         }

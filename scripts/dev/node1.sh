@@ -12,7 +12,7 @@ GENESIS_TIME=$(date +%s)
   --rest \
   --rest.namespace '*' \
   --metrics \
-  --logLevel debug \
+  --logLevel info \
   --eth1 false \
   --network.rateLimitMultiplier 0 \
   $@
