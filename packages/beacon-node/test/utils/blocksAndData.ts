@@ -216,7 +216,10 @@ export function generateBlock<F extends ForkPostCapella>({
 export function generateChainOfBlocks<F extends ForkPostCapella>({
   forkName,
   count,
-}: {forkName: F; count: number}): BlockTestSet<F>[] {
+}: {
+  forkName: F;
+  count: number;
+}): BlockTestSet<F>[] {
   let parentRoot = Uint8Array.from(randomBytes(ROOT_SIZE));
   const startSlot = slots[forkName];
   const blocks: BlockTestSet<F>[] = [];
