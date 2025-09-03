@@ -218,11 +218,10 @@ export function generateChainOfBlocks<F extends ForkPostCapella>({
   count,
 }: {forkName: F; count: number}): BlockTestSet<F>[] {
   let parentRoot = Uint8Array.from(randomBytes(ROOT_SIZE));
-  let slot = slots[forkName];
+  const startSlot = slots[forkName];
   const blocks: BlockTestSet<F>[] = [];
-  for (; slot < slot + count; slot++) {
-    const block = generateBeaconBlock({forkName, parentRoot, slot});
-    const {blockRoot, rootHex} = generateRoots(forkName, block);
+  for (let slot = startSlot; slot < startSlot + count; slot++) {
+    const {block, blockRoot, rootHex} = generateBlock({forkName, parentRoot, slot});
     parentRoot = blockRoot;
     blocks.push({
       block,
@@ -338,11 +337,15 @@ export type ChainOfBlockMaybeSidecars<F extends ForkPostCapella> = F extends For
   ? BlockWithSidecars<F>[]
   : BlockTestSet<F>[];
 
-export function generateChainOfBlockMaybeSidecars<F extends ForkPostCapella>(
-  forkName: F,
-  count: number,
-  oomProtection = false
-): ChainOfBlockMaybeSidecars<F> {
+export function generateChainOfBlockMaybeSidecars<F extends ForkPostCapella>({
+  forkName,
+  count,
+  oomProtection = false,
+}: {
+  forkName: F;
+  count: number;
+  oomProtection?: boolean;
+}): ChainOfBlockMaybeSidecars<F> {
   if (isForkPostDeneb(forkName)) {
     return generateChainOfBlocksWithBlobs({forkName, count, oomProtection}) as ChainOfBlockMaybeSidecars<F>;
   }
