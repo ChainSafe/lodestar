@@ -4,7 +4,6 @@ import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, Status, fulu} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
 import {StrictEventEmitter} from "strict-event-emitter-types";
-import {isDaOutOfRange} from "../../chain/blocks/blockInput/utils.js";
 import {AttestationImportOpt, ImportBlockOpts} from "../../chain/blocks/index.js";
 import {IBeaconChain} from "../../chain/index.js";
 import {Metrics} from "../../metrics/index.js";

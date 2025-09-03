@@ -1,27 +1,9 @@
 import {ForkName} from "@lodestar/params";
-import {SignedBeaconBlock, WithBytes, deneb, fulu, ssz} from "@lodestar/types";
-import {fromHex} from "@lodestar/utils";
-import {Mock, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
+import {beforeEach, describe, expect, it} from "vitest";
 import {BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../../../../src/chain/blocks/blockInput/types.js";
-import {INetwork} from "../../../../src/network/index.js";
-import {
-  DownloadByRangeError,
-  DownloadByRangeRequests,
-  DownloadByRangeResponses,
-  ValidatedBlock,
-  getBlocksForDataValidation,
-  requestByRange,
-  validateBlobsByRangeResponse,
-  validateBlockByRangeResponse,
-} from "../../../../src/sync/utils/downloadByRange.js";
-import {
-  config,
-  generateChainOfBlockMaybeSidecars,
-  generateChainOfBlocks,
-  generateChainOfBlocksWithBlobs,
-  slots,
-} from "../../../utils/blocksAndData.js";
+import {ValidatedBlock, getBlocksForDataValidation} from "../../../../src/sync/utils/downloadByRange.js";
+import {generateChainOfBlockMaybeSidecars} from "../../../utils/blocksAndData.js";
 
 /**
  * Logic errors and gaps identified during test case creation:
