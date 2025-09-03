@@ -9,7 +9,7 @@ import {Metrics} from "../../metrics/index.js";
 import {IClock} from "../../util/clock.js";
 import {
   CustodyConfig,
-  DataColumnELResult,
+  DataColumnEngineResult,
   RecoverResult,
   getDataColumnsFromExecution,
   hasSampledDataColumns,
@@ -233,7 +233,7 @@ export class SeenGossipBlockInput {
         if (slot >= this.clock.currentSlot) {
           buffers = this.blobAndProofV2Buffers;
         } else {
-          metrics?.dataColumns.dataColumnEL.noBufferCount.inc();
+          metrics?.dataColumns.dataColumnEngine.noBufferCount.inc();
         }
 
         getDataColumnsFromExecution(
@@ -246,10 +246,10 @@ export class SeenGossipBlockInput {
           metrics
         )
           .then((result) => {
-            metrics?.dataColumns.dataColumnEL.result.inc({result});
+            metrics?.dataColumns.dataColumnEngine.result.inc({result});
           })
           .catch((error) => {
-            metrics?.dataColumns.dataColumnEL.result.inc({result: DataColumnELResult.Failed});
+            metrics?.dataColumns.dataColumnEngine.result.inc({result: DataColumnEngineResult.Failed});
             this.logger.warn("Error getting data columns from execution", {blockHex}, error);
           });
       });

@@ -21,7 +21,7 @@ import {BackfillSyncMethod} from "../../sync/backfill/backfill.js";
 import {PendingBlockType} from "../../sync/index.js";
 import {PeerSyncType, RangeSyncType} from "../../sync/utils/remoteSyncType.js";
 import {AllocSource} from "../../util/bufferPool.js";
-import {DataColumnELResult, RecoverResult} from "../../util/dataColumns.js";
+import {DataColumnEngineResult, RecoverResult} from "../../util/dataColumns.js";
 import {LodestarMetadata} from "../options.js";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
 
@@ -776,14 +776,14 @@ export function createLodestarMetrics(
         // given TARGET_GROUP_PEERS_PER_SUBNET = 4, we expect sending to 4 peers per subnet
         buckets: [1, 2, 3, 4],
       }),
-      dataColumnEL: {
-        result: register.gauge<{result: DataColumnELResult}>({
-          name: "lodestar_data_column_el_result_total",
+      dataColumnEngine: {
+        result: register.gauge<{result: DataColumnEngineResult}>({
+          name: "lodestar_data_column_engine_result_total",
           help: "The total result of sending data column to execution layer",
           labelNames: ["result"],
         }),
         noBufferCount: register.gauge({
-          name: "lodestar_data_column_el_no_buffer_count",
+          name: "lodestar_data_column_engine_no_buffer_count",
           help: "Count of not using buffer when calling getBlobsV2() from execution layer",
         }),
       },

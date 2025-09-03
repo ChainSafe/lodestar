@@ -46,7 +46,7 @@ export enum RecoverResult {
   Failed = "failed",
 }
 
-export enum DataColumnELResult {
+export enum DataColumnEngineResult {
   PreFulu = "pre_fulu",
   // the recover is not attempted because it has full data columns
   NotAttemptedFull = "not_attempted_full",
@@ -448,9 +448,9 @@ export async function getDataColumnsFromExecution(
   blockCache: BlockInputCacheType,
   blobAndProofV2Buffers?: Uint8Array[],
   metrics: Metrics | null = null
-): Promise<DataColumnELResult> {
+): Promise<DataColumnEngineResult> {
   if (blockCache.fork !== ForkName.fulu) {
-    return DataColumnELResult.PreFulu;
+    return DataColumnEngineResult.PreFulu;
   }
 
   if (!blockCache.cachedData) {
@@ -459,12 +459,12 @@ export async function getDataColumnsFromExecution(
   }
 
   if (blockCache.cachedData.fork !== ForkName.fulu) {
-    return DataColumnELResult.PreFulu;
+    return DataColumnEngineResult.PreFulu;
   }
 
   // If already have all columns, exit
   if (hasSampledDataColumns(custodyConfig, blockCache.cachedData.dataColumnsCache)) {
-    return DataColumnELResult.NotAttemptedFull;
+    return DataColumnEngineResult.NotAttemptedFull;
   }
 
   let commitments: undefined | Uint8Array[];
@@ -482,7 +482,7 @@ export async function getDataColumnsFromExecution(
 
   // Return if block has no blobs
   if (commitments.length === 0) {
-    return DataColumnELResult.NotAttemptedNoBlobs;
+    return DataColumnEngineResult.NotAttemptedNoBlobs;
   }
 
   // Process KZG commitments into versioned hashes
@@ -502,13 +502,13 @@ export async function getDataColumnsFromExecution(
   timer?.();
   // Execution engine was unable to find one or more blobs
   if (blobsAndProofs === null) {
-    return DataColumnELResult.SuccessNull;
+    return DataColumnEngineResult.SuccessNull;
   }
   metrics?.peerDas.getBlobsV2Responses.inc();
 
   // Return if we received all data columns while waiting for getBlobs
   if (hasSampledDataColumns(custodyConfig, blockCache.cachedData.dataColumnsCache)) {
-    return DataColumnELResult.SuccessLate;
+    return DataColumnEngineResult.SuccessLate;
   }
 
   let dataColumnSidecars: fulu.DataColumnSidecars;
@@ -555,5 +555,5 @@ export async function getDataColumnsFromExecution(
     blockCache.resolveBlockInput(blockInput);
   }
 
-  return DataColumnELResult.SuccessResolved;
+  return DataColumnEngineResult.SuccessResolved;
 }
