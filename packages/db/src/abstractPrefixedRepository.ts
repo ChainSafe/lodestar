@@ -169,8 +169,11 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
         gte: this.wrapKey(this.getMinKeyRaw(p)),
         lte: this.wrapKey(this.getMaxKeyRaw(p)),
       })) {
+        const {prefix, id} = this.decodeKeyRaw(this.unwrapKey(key));
+
         yield {
-          ...this.decodeKeyRaw(key),
+          prefix,
+          id,
           value,
         };
       }
@@ -245,6 +248,6 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
     if (opts?.limit !== undefined) optsBuff.limit = opts.limit;
 
     const data = await this.db.keys(optsBuff);
-    return (data ?? []).map((data) => this.decodeKeyRaw(data));
+    return (data ?? []).map((data) => this.decodeKeyRaw(this.unwrapKey(data)));
   }
 }
