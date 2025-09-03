@@ -66,6 +66,7 @@ import {sszDeserialize} from "../gossip/topic.js";
 import {INetwork} from "../interface.js";
 import {PeerAction} from "../peers/index.js";
 import {AggregatorTracker} from "./aggregatorTracker.js";
+import {getDataColumnSidecarsFromExecution} from "../../util/execution.js";
 
 /**
  * Gossip handler options as part of network options
@@ -353,6 +354,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         peer: peerIdStr,
         source: BlockInputSource.gossip,
       });
+      // immediately attempt fetch of data columns from execution engine
+      getDataColumnSidecarsFromExecution(config, chain.executionEngine, chain.emitter, blockInput, metrics);
     } else {
       metrics?.blockInputFetchStats.totalDataAvailableBlockInputs.inc();
       metrics?.blockInputFetchStats.totalDataAvailableBlockInputBlobs.inc(
