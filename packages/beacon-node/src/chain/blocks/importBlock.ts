@@ -15,6 +15,7 @@ import {
   INTERVALS_PER_SLOT,
   MAX_SEED_LOOKAHEAD,
   SLOTS_PER_EPOCH,
+  isForkPostEip7805,
 } from "@lodestar/params";
 import {
   CachedBeaconStateAltair,
@@ -86,6 +87,7 @@ export async function importBlock(
   const blockDelaySec = (fullyVerifiedBlock.seenTimestampSec - postState.genesisTime) % this.config.SECONDS_PER_SLOT;
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
   const fork = this.config.getForkSeq(blockSlot);
+  const forkName = this.config.getForkName(blockSlot);
 
   // this is just a type assertion since blockinput with dataPromise type will not end up here
   if (blockInput.type === BlockInputType.dataPromise) {
@@ -397,6 +399,7 @@ export async function importBlock(
     const safeBlockHash = this.forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     if (headBlockHash !== ZERO_HASH_HEX) {
+      const requestStartTime = Date.now() / 1000;
       this.executionEngine
         .notifyForkchoiceUpdate(
           this.config.getForkName(this.forkChoice.getHead().slot),
@@ -409,6 +412,11 @@ export async function importBlock(
             this.logger.error("Error pushing notifyForkchoiceUpdate()", {headBlockHash, finalizedBlockHash}, e);
           }
         });
+      if (isForkPostEip7805(forkName)) {
+        const requestDurationTime = Date.now() / 1000 - requestStartTime;
+        this.metrics?.eip7805.forkchoiceUpdatedV4RequestsDuration.observe(requestDurationTime);
+        this.metrics?.eip7805.forkchoiceUpdatedV4Requests.inc();
+      }
     }
   }
 

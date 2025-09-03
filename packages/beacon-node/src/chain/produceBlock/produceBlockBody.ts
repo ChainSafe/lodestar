@@ -55,6 +55,7 @@ import {
   PayloadId,
   getExpectedGasLimit,
 } from "../../execution/index.js";
+import {Metrics} from "../../metrics/metrics.js";
 import {fromGraffitiBytes} from "../../util/graffiti.js";
 import {kzg} from "../../util/kzg.js";
 import type {BeaconChain} from "../chain.js";
@@ -514,6 +515,7 @@ export async function prepareExecutionPayload(
     eth1: IEth1ForBlockProduction;
     executionEngine: IExecutionEngine;
     config: ChainForkConfig;
+    metrics: Metrics | null;
   },
   logger: Logger,
   fork: ForkPostBellatrix,
@@ -566,6 +568,7 @@ export async function prepareExecutionPayload(
       feeRecipient: suggestedFeeRecipient,
     });
 
+    const requestStartTime = Date.now() / 1000;
     payloadId = await chain.executionEngine.notifyForkchoiceUpdate(
       fork,
       toRootHex(parentHash),
@@ -573,6 +576,11 @@ export async function prepareExecutionPayload(
       finalizedBlockHash,
       attributes
     );
+    if (ForkSeq[fork] >= ForkSeq.eip7805) {
+      const requestDurationTime = Date.now() / 1000 - requestStartTime;
+      chain.metrics?.eip7805.forkchoiceUpdatedV4RequestsDuration.observe(requestDurationTime);
+      chain.metrics?.eip7805.forkchoiceUpdatedV4Requests.inc();
+    }
     logger.verbose("Prepared payload id from execution engine", {payloadId});
   }
 

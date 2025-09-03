@@ -124,7 +124,6 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         help: "Duration of engine_getInclusionListV1 requests",
         buckets: [0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.5],
       }),
-      // TODO: Katya - add forkchoiceUpdatedV4 metrics after the latest FOCIL spec updates
       forkchoiceUpdatedV4Requests: register.counter({
         name: "beacon_engine_forkchoiceUpdatedV4_requests_total",
         help: "Total number of engine_forkchoiceUpdatedV4 requests sent to the execution client",
@@ -134,7 +133,6 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         help: "Duration of engine_forkchoiceUpdatedV4 requests",
         buckets: [0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.5],
       }),
-      // TODO: Katya - add metric after focil refactoring
       inclusionListTransactionsSentToPayload: register.counter({
         name: "beacon_inclusion_list_transactions_sent_to_payload_total",
         help: "Total number of inclusion list transactions sent to payload",

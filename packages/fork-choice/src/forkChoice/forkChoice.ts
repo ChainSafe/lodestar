@@ -884,6 +884,7 @@ export class ForkChoice implements IForkChoice {
         const equivocators = this.fcStore.inclusionListEquivocators.get(storeKey) ?? new Set<ValidatorIndex>();
         equivocators.add(validatorIndex);
         this.fcStore.inclusionListEquivocators.set(storeKey, equivocators);
+        this.metrics?.forkChoice.inclusionListsEquivocating.inc();
       }
     } else if (isBeforeFreezeDeadline) {
       const inclusionLists = this.fcStore.inclusionLists.get(storeKey) ?? [];

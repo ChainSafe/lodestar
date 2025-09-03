@@ -317,6 +317,9 @@ export async function verifyBlockExecutionPayload(
     executionRequests,
     ilTransactions
   );
+  if (ilTransactions) {
+    chain.metrics?.eip7805.inclusionListTransactionsSentToPayload.inc(ilTransactions.length);
+  }
   chain.logger.debug("Receive engine api newPayload result", {...logCtx, status: execResult.status});
 
   chain.metrics?.engineNotifyNewPayloadResult.inc({result: execResult.status});
@@ -386,6 +389,7 @@ export async function verifyBlockExecutionPayload(
         chain.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)
       );
       chain.forkChoice.addInclusionListUnsatisfiedBlock(blockRoot);
+      chain.metrics?.forkChoice.unsatisfiedInclusionListBlocks.inc();
 
       const execError = new BlockError(block, {
         code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
