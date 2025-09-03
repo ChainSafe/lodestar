@@ -18,6 +18,72 @@ import {DownloadByRootErrorCode} from "./downloadByRoot.js";
 import {RangeSyncType} from "./remoteSyncType.js";
 
 /**
+ * WRITE_OPTIMIZATIONS_AND_HEURISTIC_SUGGESTIONS_HERE
+ *
+ * Architecture Analysis & Optimization Suggestions:
+ *
+ * 1. **Reduce Code Duplication**
+ *    - cacheByRangeResponses has nearly identical logic repeated 3 times (blocks, blobs, columns)
+ *    - Extract common caching pattern into a generic helper function
+ *    - Use strategy pattern or polymorphism to handle type-specific operations
+ *
+ * 2. **Improve Error Handling Consistency**
+ *    - Wrong chain errors only break loops but don't propagate properly
+ *    - Consider returning error status alongside partial results for better upstream handling
+ *    - Standardize peer reporting logic across all error cases
+ *
+ * 3. **Optimize Data Structure Usage**
+ *    - updatedBatchBlocks Map could be pre-sized based on expected slot range
+ *    - Consider using a more efficient data structure for slot-based lookups
+ *    - Avoid multiple iterations over same data in validation functions
+ *
+ * 4. **Simplify Validation Flow**
+ *    - validateResponses has complex conditional logic that could be streamlined
+ *    - Consider builder pattern for constructing ValidatedResponses
+ *    - Separate concerns: structural validation vs cryptographic validation
+ *
+ * 5. **Performance Improvements**
+ *    - Parallel validation in validateBlobsByRangeResponse/validateColumnsByRangeResponse is good
+ *    - Consider batching validation operations to reduce Promise overhead
+ *    - Pre-allocate arrays where sizes are known (e.g., expectedBlobCount)
+ *
+ * 6. **Type Safety Enhancements**
+ *    - DAType checking happens after operations in cacheByRangeResponses
+ *    - Move type checks earlier to fail fast
+ *    - Use discriminated unions for better type narrowing
+ *
+ * 7. **Memory Efficiency**
+ *    - Avoid creating intermediate arrays in validation (e.g., blockBlobSidecars slice)
+ *    - Use iterators where possible instead of array slicing
+ *    - Consider streaming validation for large responses
+ *
+ * 8. **API Design Improvements**
+ *    - Too many similar type definitions (ValidatedBlock, ValidatedBlobSidecars, etc.)
+ *    - Consider generic ValidatedData<T> type
+ *    - Reduce number of exported types by using namespaces or modules
+ *
+ * 9. **Logging and Observability**
+ *    - Add structured logging with correlation IDs for request tracking
+ *    - Include metrics for validation performance
+ *    - Log partial success scenarios more clearly
+ *
+ * 10. **Simplify getBlocksForDataValidation**
+ *     - Complex slot filtering logic could be extracted
+ *     - Consider using Set for duplicate detection instead of lastSlot tracking
+ *     - Validate assumption that cached blocks come before current blocks
+ *
+ * 11. **Request Coordination**
+ *     - requestByRange uses mutable variables with Promise.all - consider Promise.allSettled
+ *     - Add timeout handling for network requests
+ *     - Consider request prioritization based on sync type
+ *
+ * 12. **Validation Optimization**
+ *     - validateBlockByRangeResponse computes blockRoot for all blocks even on failure
+ *     - Consider lazy evaluation or early exit strategies
+ *     - Cache fork type lookup instead of calling config.getForkTypes repeatedly
+ */
+
+/**
  *
  * blocks
 
