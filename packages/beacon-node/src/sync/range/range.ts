@@ -200,24 +200,21 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
     }
   };
 
-  private downloadByRange: SyncChainFns["downloadByRange"] = async (peer, batch, syncType) => {
+  private downloadByRange: SyncChainFns["downloadByRange"] = async (peer, batch) => {
+    const batchBlocks = batch.getBlocks();
     const responses = await downloadByRange({
       config: this.config,
       network: this.network,
       logger: this.logger,
       peerIdStr: peer.peerId,
-      daOutOfRange: isDaOutOfRange(this.config, batch.forkName, batch.startSlot, this.chain.clock.currentEpoch),
-      batchBlocks: batch.getBlocks(),
+      batchBlocks,
       ...batch.requests,
     });
     const cached = cacheByRangeResponses({
-      config: this.config,
-      network: this.network,
       cache: this.chain.seenBlockInputCache,
-      syncType,
       peerIdStr: peer.peerId,
       responses,
-      batchBlocks: batch.getBlocks(),
+      batchBlocks,
     });
     return cached;
   };

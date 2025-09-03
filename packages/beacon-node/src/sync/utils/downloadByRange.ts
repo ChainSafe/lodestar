@@ -12,10 +12,9 @@ import {
 import {SeenBlockInput} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {validateBlockBlobSidecars} from "../../chain/validation/blobSidecar.js";
 import {validateBlockDataColumnSidecars} from "../../chain/validation/dataColumnSidecar.js";
-import {INetwork, PeerAction} from "../../network/index.js";
+import {INetwork} from "../../network/index.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {DownloadByRootErrorCode} from "./downloadByRoot.js";
-import {RangeSyncType} from "./remoteSyncType.js";
 
 /**
  * WRITE_OPTIMIZATIONS_AND_HEURISTIC_SUGGESTIONS_HERE
@@ -83,43 +82,6 @@ import {RangeSyncType} from "./remoteSyncType.js";
  *     - Cache fork type lookup instead of calling config.getForkTypes repeatedly
  */
 
-/**
- *
- * blocks
-
- *
- * blobs
- * - check that expected sidecar count matches the returned count
- * - slots are in ascending order
- * - allows for skip slots in validation
- * - indices are in ascending order
- * - check that the number of blobCount for a slot matches block.message.body.blobKzgCommitments.length
- * - check that blobSidecar.kzgCommitment matches block.message.body.blobKzgCommitments[blobSidecar.index]
- * - hashTreeRoot(block.message) equals the hashTreeRoot(blobSidecar.signedBlockHeader.message)
- * - verify_blob_sidecar, verify_kzg_inclusion_proof, verify_kzg_proof (spec verification)
- *
- *
- * Clients MUST respond with at least the blob sidecars of the first blob-carrying block that exists
- * in the range, if they have it, and no more than MAX_REQUEST_BLOB_SIDECARS sidecars.
- *
- * Clients MUST include all blob sidecars of each block from which they include blob sidecars.
- *
- * The following blob sidecars, where they exist, MUST be sent in consecutive (slot, index) order.
- *
- *
- *
- *
- *
- *
- *
- * columns
- * - check that expected sidecar count matches the returned count (discount slots with 0 blobKzgCommitment.length)
- * - slots are in ascending order
- * - indices are in ascending order
- * - check that blobCount = 0 in a slot (come back to this)
- * - verify_blob_sidecar, verify_kzg_inclusion_proof, verify_kzg_proof
- */
-
 export type DownloadByRangeRequests = {
   blocksRequest?: phase0.BeaconBlocksByRangeRequest;
   blobsRequest?: deneb.BlobSidecarsByRangeRequest;
@@ -138,7 +100,6 @@ export type DownloadAndCacheByRangeProps = DownloadByRangeRequests & {
   network: INetwork;
   logger: Logger;
   peerIdStr: string;
-  daOutOfRange: boolean;
   batchBlocks?: IBlockInput[];
 };
 
@@ -150,11 +111,8 @@ export type DownloadAndCacheByRangeResults = {
 };
 
 export type CacheByRangeResponsesProps = {
-  config: ChainForkConfig;
-  network: INetwork;
   cache: SeenBlockInput;
-  syncType: RangeSyncType;
-  peerIdStr: PeerIdStr;
+  peerIdStr: string;
   responses: ValidatedResponses;
   batchBlocks: IBlockInput[];
 };
@@ -180,10 +138,11 @@ export type ValidatedResponses = {
   validatedColumnSidecars?: ValidatedColumnSidecars[];
 };
 
+/**
+ * Given existing cached batch block inputs and newly validated responses, update the cache with the new data
+ */
 export function cacheByRangeResponses({
-  network,
   cache,
-  syncType,
   peerIdStr,
   responses,
   batchBlocks,
@@ -199,25 +158,18 @@ export function cacheByRangeResponses({
 
     const existing = updatedBatchBlocks.get(block.message.slot);
     if (existing) {
-      try {
-        // will throw if root hex does not match (meaning we are following the wrong chain)
-        existing.addBlock(
-          {
-            block,
-            blockRootHex,
-            source,
-            peerIdStr,
-            seenTimestampSec,
-          },
-          {throwOnDuplicateAdd: false}
-        );
-      } catch (err) {
-        network.logger.debug("Following wrong chain for ByRange request", {}, err as Error);
-        if (syncType === RangeSyncType.Finalized) {
-          network.reportPeer(peerIdStr, PeerAction.LowToleranceError, "Missing or mismatching dataColumnSidecars");
-        }
-        break;
-      }
+      // In practice this code block shouldn't be reached because we shouldn't be refetching a block we already have, see Batch#getRequests.
+      // Will throw if root hex does not match (meaning we are following the wrong chain)
+      existing.addBlock(
+        {
+          block,
+          blockRootHex,
+          source,
+          peerIdStr,
+          seenTimestampSec,
+        },
+        {throwOnDuplicateAdd: false}
+      );
     } else {
       const blockInput = cache.getByBlock({
         block,
@@ -233,49 +185,32 @@ export function cacheByRangeResponses({
   for (const {blockRoot, blobSidecars} of responses.validatedBlobSidecars ?? []) {
     const existing = updatedBatchBlocks.get(blobSidecars[0].signedBlockHeader.message.slot);
     const blockRootHex = toRootHex(blockRoot);
-    if (existing) {
-      if (!isBlockInputBlobs(existing)) {
-        throw new DownloadByRangeError({
-          code: DownloadByRangeErrorCode.MISMATCH_BLOCK_INPUT_TYPE,
-          cachedType: existing.type,
-          expectedType: DAType.Blobs,
-          slot: existing.slot,
-          blockRoot: prettyBytes(existing.blockRootHex),
-        });
-      }
-      try {
-        for (const blobSidecar of blobSidecars) {
-          // will throw if root hex does not match (meaning we are following the wrong chain)
-          existing.addBlob(
-            {
-              blobSidecar,
-              blockRootHex,
-              seenTimestampSec,
-              peerIdStr,
-              source,
-            },
-            {throwOnDuplicateAdd: false}
-          );
-        }
-      } catch (err) {
-        network.logger.debug("Following wrong chain for ByRange request", {}, err as Error);
-        if (syncType === RangeSyncType.Finalized) {
-          network.reportPeer(peerIdStr, PeerAction.LowToleranceError, "Missing or mismatching dataColumnSidecars");
-        }
-        break;
-      }
-    } else {
-      let blockInput!: IBlockInput;
-      for (const blobSidecar of blobSidecars) {
-        blockInput = cache.getByBlob({
-          blockRootHex,
+
+    if (!existing) {
+      throw new Error("Coding error: blockInput must exist when adding blobs");
+    }
+
+    if (!isBlockInputBlobs(existing)) {
+      throw new DownloadByRangeError({
+        code: DownloadByRangeErrorCode.MISMATCH_BLOCK_INPUT_TYPE,
+        slot: existing.slot,
+        blockRoot: prettyBytes(existing.blockRootHex),
+        expected: DAType.Blobs,
+        actual: existing.type,
+      });
+    }
+    for (const blobSidecar of blobSidecars) {
+      // will throw if root hex does not match (meaning we are following the wrong chain)
+      existing.addBlob(
+        {
           blobSidecar,
-          source,
-          peerIdStr,
+          blockRootHex,
           seenTimestampSec,
-        });
-      }
-      updatedBatchBlocks.set(blockInput.slot, blockInput);
+          peerIdStr,
+          source,
+        },
+        {throwOnDuplicateAdd: false}
+      );
     }
   }
 
@@ -283,49 +218,31 @@ export function cacheByRangeResponses({
     const existing = updatedBatchBlocks.get(columnSidecars[0].signedBlockHeader.message.slot);
     const blockRootHex = toRootHex(blockRoot);
 
-    if (existing) {
-      if (!isBlockInputColumns(existing)) {
-        throw new DownloadByRangeError({
-          code: DownloadByRangeErrorCode.MISMATCH_BLOCK_INPUT_TYPE,
-          cachedType: existing.type,
-          expectedType: DAType.Columns,
-          slot: existing.slot,
-          blockRoot: prettyBytes(existing.blockRootHex),
-        });
-      }
-      try {
-        for (const columnSidecar of columnSidecars) {
-          // will throw if root hex does not match (meaning we are following the wrong chain)
-          existing.addColumn(
-            {
-              columnSidecar,
-              blockRootHex,
-              seenTimestampSec,
-              peerIdStr,
-              source,
-            },
-            {throwOnDuplicateAdd: false}
-          );
-        }
-      } catch (err) {
-        network.logger.debug("Following wrong chain for ByRange request", {}, err as Error);
-        if (syncType === RangeSyncType.Finalized) {
-          network.reportPeer(peerIdStr, PeerAction.LowToleranceError, "Missing or mismatching dataColumnSidecars");
-        }
-        break;
-      }
-    } else {
-      let blockInput!: IBlockInput;
-      for (const columnSidecar of columnSidecars) {
-        blockInput = cache.getByColumn({
-          blockRootHex,
+    if (!existing) {
+      throw new Error("Coding error: blockInput must exist when adding blobs");
+    }
+
+    if (!isBlockInputColumns(existing)) {
+      throw new DownloadByRangeError({
+        code: DownloadByRangeErrorCode.MISMATCH_BLOCK_INPUT_TYPE,
+        slot: existing.slot,
+        blockRoot: prettyBytes(existing.blockRootHex),
+        expected: DAType.Columns,
+        actual: existing.type,
+      });
+    }
+    for (const columnSidecar of columnSidecars) {
+      // will throw if root hex does not match (meaning we are following the wrong chain)
+      existing.addColumn(
+        {
           columnSidecar,
+          blockRootHex,
+          seenTimestampSec,
           peerIdStr,
           source,
-          seenTimestampSec,
-        });
-      }
-      updatedBatchBlocks.set(blockInput.slot, blockInput);
+        },
+        {throwOnDuplicateAdd: false}
+      );
     }
   }
 
@@ -654,7 +571,7 @@ export async function validateBlobsByRangeResponse(
   }
 
   // Await all sidecar validations in parallel
-  return await Promise.all(validateSidecarsPromises);
+  return Promise.all(validateSidecarsPromises);
 }
 
 /**
@@ -738,7 +655,7 @@ export async function validateColumnsByRangeResponse(
   }
 
   // Await all sidecar validations in parallel
-  return await Promise.all(validateSidecarsPromises);
+  return Promise.all(validateSidecarsPromises);
 }
 
 /**
@@ -791,16 +708,8 @@ function buildSlotRangeString({blocksRequest, blobsRequest, columnsRequest}: Dow
 
 export enum DownloadByRangeErrorCode {
   MISSING_BLOCKS = "DOWNLOAD_BY_RANGE_ERROR_MISSING_BLOCKS",
-  MISSING_BLOCKS_REQUEST = "DOWNLOAD_BY_RANGE_ERROR_MISSING_BLOCKS_REQUEST",
-  MISSING_BLOCKS_RESPONSE = "DOWNLOAD_BY_RANGE_ERROR_MISSING_BLOCKS_RESPONSE",
-  MISSING_BLOBS_REQUEST = "DOWNLOAD_BY_RANGE_ERROR_MISSING_BLOBS_REQUEST",
-  MISSING_COLUMNS_REQUEST = "DOWNLOAD_BY_RANGE_ERROR_MISSING_COLUMNS_REQUEST",
   MISSING_BLOBS_RESPONSE = "DOWNLOAD_BY_RANGE_ERROR_MISSING_BLOBS_RESPONSE",
   MISSING_COLUMNS_RESPONSE = "DOWNLOAD_BY_RANGE_ERROR_MISSING_COLUMNS_RESPONSE",
-  INVALID_DATA_REQUEST = "DOWNLOAD_BY_RANGE_ERROR_INVALID_DATA_REQUEST",
-  MISSING_DATA_REQUEST = "DOWNLOAD_BY_RANGE_ERROR_MISSING_DATA_REQUEST",
-  START_SLOT_MISMATCH = "DOWNLOAD_BY_RANGE_ERROR_START_SLOT_MISMATCH",
-  COUNT_MISMATCH = "DOWNLOAD_BY_RANGE_ERROR_COUNT_MISMATCH",
 
   /** Error at the reqresp layer */
   REQ_RESP_ERROR = "DOWNLOAD_BY_RANGE_ERROR_REQ_RESP_ERROR",
@@ -818,9 +727,8 @@ export enum DownloadByRangeErrorCode {
   MISSING_COLUMNS = "DOWNLOAD_BY_RANGE_ERROR_MISSING_COLUMNS",
   EXTRA_COLUMNS = "DOWNLOAD_BY_RANGE_ERROR_EXTRA_COLUMNS",
 
-  PEER_CUSTODY_FAILURE = "DOWNLOAD_BY_RANGE_ERROR_PEER_CUSTODY_FAILURE",
-  CACHING_ERROR = "DOWNLOAD_BY_RANGE_CACHING_ERROR",
-  MISMATCH_BLOCK_INPUT_TYPE = "DOWNLOAD_BY_RANGE_MISMATCH_BLOCK_INPUT_TYPE",
+  /** Cached block input type mismatches new data */
+  MISMATCH_BLOCK_INPUT_TYPE = "DOWNLOAD_BY_RANGE_ERROR_MISMATCH_BLOCK_INPUT_TYPE",
 }
 
 export type DownloadByRangeErrorType =
@@ -833,27 +741,12 @@ export type DownloadByRangeErrorType =
         | DownloadByRangeErrorCode.MISSING_BLOCKS
         | DownloadByRangeErrorCode.MISSING_BLOBS_RESPONSE
         | DownloadByRangeErrorCode.MISSING_COLUMNS_RESPONSE;
-      // | DownloadByRangeErrorCode.MISSING_BLOCKS_REQUEST
-      // | DownloadByRangeErrorCode.MISSING_BLOBS_REQUEST
-      // | DownloadByRangeErrorCode.MISSING_COLUMNS_REQUEST
-      // | DownloadByRangeErrorCode.INVALID_DATA_REQUEST
-      // | DownloadByRangeErrorCode.MISSING_DATA_REQUEST;
       slotRange: string;
     }
   | {
       code: DownloadByRootErrorCode.MISSING_BLOCK_RESPONSE;
       peer: string;
       expectedCount: number;
-    }
-  | {
-      code: DownloadByRangeErrorCode.START_SLOT_MISMATCH;
-      blockStartSlot: number;
-      dataStartSlot: number;
-    }
-  | {
-      code: DownloadByRangeErrorCode.COUNT_MISMATCH;
-      blockCount: number;
-      dataCount: number;
     }
   | {
       code: DownloadByRangeErrorCode.OUT_OF_RANGE_BLOCKS;
@@ -866,11 +759,6 @@ export type DownloadByRangeErrorType =
       code: DownloadByRangeErrorCode.REQ_RESP_ERROR;
       peerId: string;
       slotRange: string;
-    }
-  | {
-      code: DownloadByRangeErrorCode.CACHING_ERROR;
-      peerId: string;
-      message: string;
     }
   | {
       code: DownloadByRangeErrorCode.PARENT_ROOT_MISMATCH;
@@ -904,16 +792,11 @@ export type DownloadByRangeErrorType =
       actual: number;
     }
   | {
-      code: DownloadByRangeErrorCode.PEER_CUSTODY_FAILURE;
-      peerId: string;
-      missingColumns: string;
-    }
-  | {
       code: DownloadByRangeErrorCode.MISMATCH_BLOCK_INPUT_TYPE;
-      expectedType: DAType;
-      cachedType: DAType;
-      slot: Slot;
+      slot: number;
       blockRoot: string;
+      expected: DAType;
+      actual: DAType;
     };
 
 export class DownloadByRangeError extends LodestarError<DownloadByRangeErrorType> {}

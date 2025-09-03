@@ -1,8 +1,11 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {Epoch, Root, Slot} from "@lodestar/types";
-import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
+import {ErrorAborted, LodestarError, Logger, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
+import {BlockInputErrorCode} from "../../chain/blocks/blockInput/errors.js";
 import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
+import {BlobSidecarErrorCode} from "../../chain/errors/blobSidecarError.js";
+import {DataColumnSidecarErrorCode} from "../../chain/errors/dataColumnSidecarError.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {PeerAction, prettyPrintPeerIdStr} from "../../network/index.js";
 import {PeerSyncMeta} from "../../network/peers/peersData.js";
@@ -11,6 +14,7 @@ import {ItTrigger} from "../../util/itTrigger.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {wrapError} from "../../util/wrapError.js";
 import {BATCH_BUFFER_SIZE, EPOCHS_PER_BATCH, MAX_LOOK_AHEAD_EPOCHS} from "../constants.js";
+import {DownloadByRangeErrorCode} from "../utils/downloadByRange.js";
 import {RangeSyncType} from "../utils/remoteSyncType.js";
 import {Batch, BatchError, BatchErrorCode, BatchMetadata, BatchStatus} from "./batch.js";
 import {
@@ -447,6 +451,38 @@ export class SyncChain {
       const res = await wrapError(this.downloadByRange(peer, batch, this.syncType));
 
       if (res.err) {
+        // There's several known error cases where we want to take action on the peer
+        const errCode = (res.err as LodestarError<{code: string}>).type?.code;
+        if (this.syncType === RangeSyncType.Finalized) {
+          // For finalized sync, we are stricter with peers as there is no ambiguity about which chain we're syncing.
+          // The below cases indicate the peer may be on a different chain, so are not penalized during head sync.
+          switch (errCode) {
+            case BlockInputErrorCode.MISMATCHED_ROOT_HEX:
+            case DownloadByRangeErrorCode.MISSING_BLOBS:
+            case DownloadByRangeErrorCode.EXTRA_BLOBS:
+            case DownloadByRangeErrorCode.MISSING_COLUMNS:
+            case DownloadByRangeErrorCode.EXTRA_COLUMNS:
+            case BlobSidecarErrorCode.INCORRECT_SIDECAR_COUNT:
+            case BlobSidecarErrorCode.INCORRECT_BLOCK:
+            case DataColumnSidecarErrorCode.INCORRECT_SIDECAR_COUNT:
+            case DataColumnSidecarErrorCode.INCORRECT_BLOCK:
+              this.reportPeer(peer.peerId, PeerAction.LowToleranceError, res.err.message);
+          }
+        }
+        switch (errCode) {
+          case DownloadByRangeErrorCode.EXTRA_BLOCKS:
+          case DownloadByRangeErrorCode.OUT_OF_ORDER_BLOCKS:
+          case DownloadByRangeErrorCode.OUT_OF_RANGE_BLOCKS:
+          case DownloadByRangeErrorCode.PARENT_ROOT_MISMATCH:
+          case BlobSidecarErrorCode.INCORRECT_INDEX:
+          case BlobSidecarErrorCode.INCLUSION_PROOF_INVALID:
+          case BlobSidecarErrorCode.INVALID_KZG_PROOF_BATCH:
+          case DataColumnSidecarErrorCode.INCORRECT_KZG_COMMITMENTS_COUNT:
+          case DataColumnSidecarErrorCode.INCORRECT_KZG_PROOF_COUNT:
+          case DataColumnSidecarErrorCode.INVALID_KZG_PROOF_BATCH:
+          case DataColumnSidecarErrorCode.INCLUSION_PROOF_INVALID:
+            this.reportPeer(peer.peerId, PeerAction.LowToleranceError, res.err.message);
+        }
         this.logger.verbose(
           "Batch download error",
           {id: this.logId, ...batch.getMetadata(), peer: prettyPrintPeerIdStr(peer.peerId)},
