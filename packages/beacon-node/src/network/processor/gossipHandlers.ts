@@ -525,6 +525,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
             source: BlockInputSource.gossip,
           });
         });
+        // immediately attempt fetch of data columns from execution engine
+        getDataColumnSidecarsFromExecution(config, chain.executionEngine, chain.emitter, blockInput, metrics);
       }
     },
 
