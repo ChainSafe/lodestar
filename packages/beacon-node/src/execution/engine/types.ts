@@ -623,6 +623,9 @@ export function deserializeBlobAndProofsV2IntoBytes(data: BlobAndProofV2Rpc, buf
       data.proofs[i],
       buffer.subarray(BLOB_BYTES + i * PROOF_BYTES, BLOB_BYTES + (i + 1) * PROOF_BYTES)
     );
+    if (proof.length !== PROOF_BYTES) {
+      throw Error(`Invalid proof length ${proof.length}, expected ${PROOF_BYTES}`);
+    }
     proofs.push(proof);
   }
 
