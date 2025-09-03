@@ -377,7 +377,7 @@ export function matchBlockWithDataColumns(
       neededColumns: prettyPrintIndices(neededColumns),
       requestedColumns: prettyPrintIndices(requestedColumns),
       slot: block.data.message.slot,
-      dataColumnsSlots: dataColumnSidecars.map((dcm) => dcm.signedBlockHeader.message.slot).join(" "),
+      dataColumnsSlots: prettyPrintIndices(dataColumnSidecars.map((dcm) => dcm.signedBlockHeader.message.slot)),
       peerClient,
     });
     if (blobKzgCommitmentsLen === 0) {
@@ -501,7 +501,8 @@ export function matchBlockWithDataColumns(
   }
   logger?.debug("matched BlockWithDataColumns", {
     peerClient,
-    blockInputs: blockInputs.map((bInpt) => `${bInpt.block.message.slot}=${bInpt.type}`).join(" "),
+    slots: prettyPrintIndices(blockInputs.map((b) => Number(b.block.message.slot))),
+    types: blockInputs.map((b) => b.type).join(" "),
   });
   return blockInputs;
 }

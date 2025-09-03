@@ -1,6 +1,6 @@
 import {ForkName, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
 import {fulu} from "@lodestar/types";
-import {toHex, toRootHex} from "@lodestar/utils";
+import {prettyPrintIndices, toHex, toRootHex} from "@lodestar/utils";
 import {BeaconChain} from "../chain.js";
 import {BlockInput, BlockInputBlobs, BlockInputDataColumns, BlockInputType} from "./types.js";
 
@@ -82,7 +82,7 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInput: BlockI
   await Promise.all(fnPromises);
   this.logger.debug("Persisted blocksInput to db", {
     blocksInput: blocksInput.length,
-    slots: blocksInput.map((blockInput) => blockInput.block.message.slot).join(" "),
+    slots: prettyPrintIndices(blocksInput.map((blockInput) => blockInput.block.message.slot)),
   });
 }
 
