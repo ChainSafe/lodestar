@@ -329,7 +329,7 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
       }
 
       const dataColumnSidecarBytes = await db.dataColumnSidecar.valuesBinary(block.root);
-      if (!dataColumnSidecarBytes) {
+      if (dataColumnSidecarBytes.length === 0) {
         throw Error(`No dataColumnSidecars found for slot ${block.slot} root ${toHex(block.root)}`);
       }
       promises.push(
