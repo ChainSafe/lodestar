@@ -248,7 +248,7 @@ export class Batch {
     }
 
     // ensure that blocks are always sorted before getting stored on the batch.state or being used to getRequests
-    blocks.sort((a, b) => b.slot - a.slot);
+    blocks.sort((a, b) => a.slot - b.slot);
 
     this.goodPeers.push(peer);
 
