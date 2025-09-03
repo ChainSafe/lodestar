@@ -259,12 +259,12 @@ export function getBeaconStateApi({
       const startSlot = computeStartSlotAtEpoch(epoch);
       const endSlot = startSlot + SLOTS_PER_EPOCH - 1;
 
-      if (filters.slot !== undefined && (filters.slot < startSlot || filters.slot > endSlot)) {
-        throw new ApiError(400, `Slot ${filters.slot} is not in epoch ${epoch}`);
-      }
-
       if (Math.abs(epoch - stateEpoch) > 1) {
         throw new ApiError(400, `Epoch ${epoch} must be within one epoch of state epoch ${stateEpoch}`);
+      }
+
+      if (filters.slot !== undefined && (filters.slot < startSlot || filters.slot > endSlot)) {
+        throw new ApiError(400, `Slot ${filters.slot} is not in epoch ${epoch}`);
       }
 
       const decisionRoot = stateCached.epochCtx.getShufflingDecisionRoot(epoch);
