@@ -129,6 +129,7 @@ export interface ExecutionGenesisOptions<E extends ExecutionClient = ExecutionCl
   cliqueSealingPeriod: number;
   shanghaiTime: number;
   cancunTime: number;
+  pragueTime: number;
   genesisTime: number;
   clientOptions: ExecutionClientsOptions[E];
 }
