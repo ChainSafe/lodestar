@@ -390,6 +390,16 @@ export async function validateResponses({
     blocksRequest ? validatedResponses.validatedBlocks : undefined
   );
 
+  if (!dataRequestBlocks.length) {
+    throw new DownloadByRangeError(
+      {
+        code: DownloadByRangeErrorCode.MISSING_BLOCKS,
+        slotRange: buildSlotRangeString({blobsRequest, columnsRequest}),
+      },
+      "No blocks in data request slot range to validate data response against"
+    );
+  }
+
   if (blobsRequest) {
     if (!blobSidecars) {
       throw new DownloadByRangeError(
