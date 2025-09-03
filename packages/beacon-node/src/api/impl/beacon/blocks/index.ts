@@ -360,7 +360,7 @@ export function getBeaconBlockApi({
 
     // Either the payload/blobs are cached from i) engine locally or ii) they are from the builder
     const producedResult = chain.blockProductionCache.get(blockRoot);
-    if (producedResult !== undefined) {
+    if (producedResult !== undefined && producedResult.type !== BlockType.Blinded) {
       const source = ProducedBlockSource.engine;
       chain.logger.debug("Reconstructing the full signed block contents", {slot, blockRoot, source});
 
