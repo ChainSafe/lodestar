@@ -12,7 +12,7 @@ import {
   phase0,
   ssz,
 } from "@lodestar/types";
-import {Logger} from "@lodestar/utils";
+import {Logger, prettyPrintIndices} from "@lodestar/utils";
 import {
   BlobsSource,
   BlockInput,
@@ -161,7 +161,7 @@ export async function beaconBlocksMaybeBlobsByRange(
       [`allDataColumnSidecars(${allDataColumnSidecars.length})`]: allDataColumnSidecars
         .map((dCol) => `${dCol.signedBlockHeader.message.slot}:${dCol.index}`)
         .join(" "),
-      peerColumns: peerColumns.join(" "),
+      peerColumns: prettyPrintIndices(peerColumns),
       peerId,
       peerClient,
       prevPartialDownload: !!partialDownload,
@@ -374,8 +374,8 @@ export function matchBlockWithDataColumns(
       blobKzgCommitmentsLen,
       dataColumnSidecars: dataColumnSidecars.length,
       shouldHaveAllData,
-      neededColumns: neededColumns.join(" "),
-      requestedColumns: requestedColumns.join(" "),
+      neededColumns: prettyPrintIndices(neededColumns),
+      requestedColumns: prettyPrintIndices(requestedColumns),
       slot: block.data.message.slot,
       dataColumnsSlots: dataColumnSidecars.map((dcm) => dcm.signedBlockHeader.message.slot).join(" "),
       peerClient,
@@ -407,7 +407,7 @@ export function matchBlockWithDataColumns(
       );
 
       logger?.debug("matchBlockWithDataColumns2", {
-        dataColumnIndexes: dataColumnIndexes.join(" "),
+        dataColumnIndexes: prettyPrintIndices(dataColumnIndexes),
         requestedColumnsPresent,
         slot: block.data.message.slot,
         peerClient,
