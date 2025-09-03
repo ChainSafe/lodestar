@@ -1,12 +1,6 @@
 import {beforeAll, afterAll, beforeEach, describe, it, expect} from "vitest";
 import {getEnvLogger} from "@lodestar/logger/env";
-import {
-  Repository,
-  encodeKey,
-  BUCKET_LENGTH,
-  LevelDbController,
-  type Db,
-} from "../../src/index.js";
+import {Repository, encodeKey, BUCKET_LENGTH, LevelDbController, type Db} from "../../src/index.js";
 
 // Minimal fake SSZ-like type for string values
 const fakeType = {
@@ -162,4 +156,3 @@ describe("abstractRepository", () => {
     await expect(repo.lastEntry()).resolves.toEqual({key: b, value: "y"});
   });
 });
-

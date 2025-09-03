@@ -1,10 +1,6 @@
 import {beforeAll, afterAll, beforeEach, describe, it, expect} from "vitest";
 import {getEnvLogger} from "@lodestar/logger/env";
-import {
-  PrefixedRepository,
-  LevelDbController,
-  type Db,
-} from "../../src/index.js";
+import {PrefixedRepository, LevelDbController, type Db} from "../../src/index.js";
 
 // Fake SSZ-like Type for string values
 const fakeType = {
@@ -139,7 +135,9 @@ describe("abstractPrefixedRepository", () => {
 
     const fromStream: {prefix: number; id: Uint8Array; value: Uint8Array}[] = [];
     for await (const e of repo.valuesStreamBinary(p)) fromStream.push(e);
-    expect(fromStream.map((e) => ({p: e.prefix, id: Buffer.from(e.id), v: Buffer.from(e.value).toString("utf8")}))).toEqual([
+    expect(
+      fromStream.map((e) => ({p: e.prefix, id: Buffer.from(e.id), v: Buffer.from(e.value).toString("utf8")}))
+    ).toEqual([
       {p: p, id: id1, v: "v1"},
       {p: p, id: id2, v: "v2"},
     ]);
@@ -161,7 +159,9 @@ describe("abstractPrefixedRepository", () => {
 
     const entriesBin: {prefix: number; id: Uint8Array; value: Uint8Array}[] = [];
     for await (const e of repo.entriesStreamBinary(p)) entriesBin.push(e);
-    expect(entriesBin.map((e) => ({prefix: e.prefix, id: Buffer.from(e.id), value: Buffer.from(e.value).toString("utf8")}))).toEqual([
+    expect(
+      entriesBin.map((e) => ({prefix: e.prefix, id: Buffer.from(e.id), value: Buffer.from(e.value).toString("utf8")}))
+    ).toEqual([
       {prefix: p, id: idA, value: "a"},
       {prefix: p, id: idB, value: "b"},
     ]);
@@ -198,9 +198,7 @@ describe("abstractPrefixedRepository", () => {
       {key: id2, value: Buffer.from("v2")},
       {key: id3, value: Buffer.from("v3")},
     ]);
-    await repo.putManyBinary(p2, [
-      {key: Buffer.from([0x01]), value: Buffer.from("w1")},
-    ]);
+    await repo.putManyBinary(p2, [{key: Buffer.from([0x01]), value: Buffer.from("w1")}]);
 
     const gte = repo.encodeKeyRaw(p1, Buffer.from([0x00]));
     const lte = repo.encodeKeyRaw(p1, Buffer.from([0xff]));
@@ -218,4 +216,3 @@ describe("abstractPrefixedRepository", () => {
     ]);
   });
 });
-
