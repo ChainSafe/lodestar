@@ -631,28 +631,28 @@ export function getBlocksForDataValidation(
 }
 
 function requestsLogMeta({blocksRequest, blobsRequest, columnsRequest}: DownloadByRangeRequests) {
-    const logMeta: {
-      blockStartSlot?: number;
-      blockCount?: number;
-      blobStartSlot?: number;
-      blobCount?: number;
-      columnStartSlot?: number;
-      columnCount?: number;
-    } = {};
-    if (blocksRequest) {
-      logMeta.blockStartSlot = blocksRequest.startSlot;
-      logMeta.blockCount = blocksRequest.count;
-    }
-    if (blobsRequest) {
-      logMeta.blobStartSlot = blobsRequest.startSlot;
-      logMeta.blobCount = blobsRequest.count;
-    }
-    if (columnsRequest) {
-      logMeta.columnStartSlot = columnsRequest.startSlot;
-      logMeta.columnCount = columnsRequest.count;
-    }
-    return logMeta;
+  const logMeta: {
+    blockStartSlot?: number;
+    blockCount?: number;
+    blobStartSlot?: number;
+    blobCount?: number;
+    columnStartSlot?: number;
+    columnCount?: number;
+  } = {};
+  if (blocksRequest) {
+    logMeta.blockStartSlot = blocksRequest.startSlot;
+    logMeta.blockCount = blocksRequest.count;
   }
+  if (blobsRequest) {
+    logMeta.blobStartSlot = blobsRequest.startSlot;
+    logMeta.blobCount = blobsRequest.count;
+  }
+  if (columnsRequest) {
+    logMeta.columnStartSlot = columnsRequest.startSlot;
+    logMeta.columnCount = columnsRequest.count;
+  }
+  return logMeta;
+}
 
 export enum DownloadByRangeErrorCode {
   MISSING_BLOCKS = "DOWNLOAD_BY_RANGE_ERROR_MISSING_BLOCKS",
