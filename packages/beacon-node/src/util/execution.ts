@@ -18,22 +18,22 @@ export async function getDataColumnSidecarsFromExecution(
   emitter: ChainEventEmitter,
   blockInput: IBlockInput,
   metrics: Metrics | null
-): Promise<boolean> {
+): Promise<void> {
   // If its not a column block input, exit
   if (!isBlockInputColumns(blockInput)) {
-    return false;
+    return;
   }
 
   // If already have all columns, exit
   if (blockInput.hasAllData()) {
-    return true;
+    return;
   }
 
   const versionedHashes = blockInput.getVersionedHashes();
 
   // If there are no blobs in this block, exit
   if (versionedHashes.length === 0) {
-    return true;
+    return;
   }
 
   // Get blobs from execution engine
@@ -44,13 +44,13 @@ export async function getDataColumnSidecarsFromExecution(
 
   // Execution engine was unable to find one or more blobs
   if (blobs === null) {
-    return false;
+    return;
   }
   metrics?.peerDas.getBlobsV2Responses.inc();
 
   // Return if we received all data columns while waiting for getBlobs
   if (blockInput.hasAllData()) {
-    return true;
+    return;
   }
 
   let dataColumnSidecars: fulu.DataColumnSidecars;
@@ -83,6 +83,4 @@ export async function getDataColumnSidecarsFromExecution(
   }
 
   metrics?.dataColumns.bySource.inc({source: BlockInputSource.engine}, previouslyMissingColumns.length);
-
-  return true;
 }
