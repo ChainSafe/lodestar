@@ -33,7 +33,7 @@ export class SyncCommitteeCacheEmpty implements SyncCommitteeCache {
 export function getSyncCommitteeCache(validatorIndices: Uint32Array): SyncCommitteeCache {
   return {
     validatorIndices,
-    validatorIndexMap: computeValidatorSyncComitteeIndexMap(validatorIndices),
+    validatorIndexMap: computeValidatorSyncCommitteeIndexMap(validatorIndices),
   };
 }
 
@@ -42,7 +42,7 @@ export function computeSyncCommitteeCache(
   pubkey2index: PubkeyIndexMap
 ): SyncCommitteeCache {
   const validatorIndices = computeSyncCommitteeValidatorIndices(syncCommittee, pubkey2index);
-  const validatorIndexMap = computeValidatorSyncComitteeIndexMap(validatorIndices);
+  const validatorIndexMap = computeValidatorSyncCommitteeIndexMap(validatorIndices);
   return {
     validatorIndices,
     validatorIndexMap,
@@ -54,7 +54,7 @@ export function computeSyncCommitteeCache(
  * Helps reduce work necessary to verify a validatorIndex belongs in a sync committee and which.
  * This is similar to compute_subnets_for_sync_committee in https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/validator.md
  */
-export function computeValidatorSyncComitteeIndexMap(
+export function computeValidatorSyncCommitteeIndexMap(
   validatorIndices: ArrayLike<ValidatorIndex>
 ): ValidatorSyncCommitteeIndexMap {
   const map = new Map<ValidatorIndex, number[]>();
