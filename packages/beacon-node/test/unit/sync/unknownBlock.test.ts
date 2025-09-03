@@ -292,7 +292,7 @@ describe("UnknownBlockSync", () => {
     for (const {actions, expected} of testCases) {
       const testName = actions.map((action) => (action ? "subscribe" : "unsubscribe")).join(" - ");
       it(testName, () => {
-        const events = network.events as EventEmitter;
+        const events = chain.emitter as EventEmitter;
         service = new BlockInputSync(minimalConfig, network, chain, logger, null, defaultSyncOptions);
         for (const action of actions) {
           if (action) {
@@ -389,7 +389,9 @@ describe("UnknownBlockPeerBalancer", async () => {
       custodyColumns: custodyConfig.custodyColumns,
       sampledColumns: custodyConfig.sampledColumns,
     });
-    for (const sidecar of columnSidecars.slice(1)) {
+
+    // test cases rely on first 2 columns being known, the rest unknown
+    for (const sidecar of columnSidecars.slice(0, 2)) {
       blockInput.addColumn({
         columnSidecar: sidecar,
         blockRootHex: rootHex,
