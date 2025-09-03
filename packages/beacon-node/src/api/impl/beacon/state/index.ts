@@ -256,10 +256,10 @@ export function getBeaconStateApi({
 
       const stateEpoch = computeEpochAtSlot(state.slot);
       const epoch = filters.epoch ?? stateEpoch;
-      const epochStartSlot = computeStartSlotAtEpoch(epoch);
-      const epochEndSlot = epochStartSlot + SLOTS_PER_EPOCH - 1;
+      const startSlot = computeStartSlotAtEpoch(epoch);
+      const endSlot = startSlot + SLOTS_PER_EPOCH - 1;
 
-      if (filters.slot !== undefined && (filters.slot < epochStartSlot || filters.slot > epochEndSlot)) {
+      if (filters.slot !== undefined && (filters.slot < startSlot || filters.slot > endSlot)) {
         throw new ApiError(400, `Slot ${filters.slot} is not in epoch ${epoch}`);
       }
 
@@ -277,7 +277,7 @@ export function getBeaconStateApi({
       }
       const committees = shuffling.committees;
       const committeesFlat = committees.flatMap((slotCommittees, slotInEpoch) => {
-        const slot = epochStartSlot + slotInEpoch;
+        const slot = startSlot + slotInEpoch;
         if (filters.slot !== undefined && filters.slot !== slot) {
           return [];
         }
