@@ -5,7 +5,7 @@ import {IForkChoice} from "@lodestar/fork-choice";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot} from "@lodestar/types";
-import {Logger, fromHex, toHex, toRootHex} from "@lodestar/utils";
+import {Logger, fromHex, toRootHex} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/index.js";
 import {BlockArchiveBatchPutBinaryItem} from "../../../db/repositories/index.js";
 import {ensureDir, writeIfNotExist} from "../../../util/file.js";
@@ -95,6 +95,7 @@ export async function archiveBlocks(
       const migratedEntries = await migrateDataColumnSidecarsFromHotToColdDb(
         config,
         db,
+        logger,
         finalizedCanonicalBlockRoots,
         currentEpoch
       );
@@ -303,6 +304,7 @@ async function migrateBlobSidecarsFromHotToColdDb(
 async function migrateDataColumnSidecarsFromHotToColdDb(
   config: ChainForkConfig,
   db: IBeaconDb,
+  logger: Logger,
   blocks: BlockRootSlot[],
   currentEpoch: Epoch
 ): Promise<number> {
@@ -329,9 +331,12 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
       }
 
       const dataColumnSidecarBytes = await db.dataColumnSidecar.valuesBinary(block.root);
-      if (dataColumnSidecarBytes.length === 0) {
-        throw Error(`No dataColumnSidecars found for slot ${block.slot} root ${toHex(block.root)}`);
-      }
+      // there could be 0 dataColumnSidecarBytes if block has no blob
+      logger.verbose("migrateDataColumnSidecarsFromHotToColdDb", {
+        slot: block.slot,
+        root: toRootHex(block.root),
+        numSidecars: dataColumnSidecarBytes.length,
+      });
       promises.push(
         db.dataColumnSidecarArchive.putManyBinary(
           block.slot,
