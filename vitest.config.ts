@@ -5,6 +5,7 @@ import {e2eMainnetProject, e2eMinimalProject} from "./configs/vitest.config.e2e.
 import {specProjectMainnet, specProjectMinimal} from "./configs/vitest.config.spec.js";
 import {typesTestProject} from "./configs/vitest.config.types.js";
 import {unitTestMainnetProject, unitTestMinimalProject} from "./configs/vitest.config.unit.js";
+import {simTestProject} from "./configs/vitest.config.sim.js";
 
 const isBun = "bun" in process.versions;
 
@@ -50,6 +51,10 @@ export default defineConfig({
       {
         extends: true,
         ...typesTestProject,
+      },
+      {
+        extends: true,
+        ...simTestProject,
       },
     ],
     exclude: [
