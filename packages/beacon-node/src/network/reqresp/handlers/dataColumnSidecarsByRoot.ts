@@ -75,11 +75,9 @@ export async function* onDataColumnSidecarsByRoot(
     await handleColumnSidecarUnavailability({
       chain,
       db,
+      slot,
+      blockRoot,
       unavailableColumnIndices,
-      slot: block?.slot ?? -1, // either the blockRoot or slot must be available. use an invalid value if not so that
-      // error gets thrown inside function when bytes are missing if both are not available
-      // should not happen though in reality
-      blockRoot: block ? fromHex(block.blockRoot) : undefined,
       requestedColumns,
       availableColumns,
     });
