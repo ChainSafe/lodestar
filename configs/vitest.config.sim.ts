@@ -11,7 +11,7 @@ export const simTestProject = defineProject({
       path.join(__dirname, "../scripts/vitest/setupFiles/lodestarPreset.ts"),
     ],
     env: {
-      LODESTAR_PRESET: "minimal",
+      LODESTAR_PRESET: "mainnet",
     },
     pool: "forks",
     poolOptions: {
