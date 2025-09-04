@@ -8,6 +8,7 @@ import {
   handleColumnSidecarUnavailability,
   validateRequestedDataColumns,
 } from "../utils/dataColumnResponseValidation.js";
+import {ColumnIndex} from "@lodestar/types";
 
 export async function* onDataColumnSidecarsByRoot(
   requestBody: DataColumnSidecarsByRootRequest,
@@ -54,7 +55,9 @@ export async function* onDataColumnSidecarsByRoot(
       : // Finalized sidecars are archived and stored by slot
         await db.dataColumnSidecarArchive.getManyBinary(slot, availableColumns);
 
-    for (const dataColumnBytes of dataColumns) {
+    const unavailableColumnIndices: ColumnIndex[] = [];
+    for (let i = 0; i < dataColumns.length; i++) {
+      const dataColumnBytes = dataColumns[i];
       if (dataColumnBytes) {
         yield {
           data: dataColumnBytes,
@@ -65,16 +68,20 @@ export async function* onDataColumnSidecarsByRoot(
       // TODO: Check blobs for that block and respond resource_unavailable
       // After we have consensus from other teams on the specs
       else {
-        await handleColumnSidecarUnavailability({
-          chain,
-          db,
-          unavailableColumnIndex: availableColumns,
-          slot: block.slot,
-          blockRoot: fromHex(block.blockRoot),
-          requestedColumns,
-          availableColumns,
-        });
+        unavailableColumnIndices.push(availableColumns[i]);
       }
     }
+
+    await handleColumnSidecarUnavailability({
+      chain,
+      db,
+      unavailableColumnIndices,
+      slot: block?.slot ?? -1, // either the blockRoot or slot must be available. use an invalid value if not so that
+      // error gets thrown inside function when bytes are missing if both are not available
+      // should not happen though in reality
+      blockRoot: block ? fromHex(block.blockRoot) : undefined,
+      requestedColumns,
+      availableColumns,
+    });
   }
 }
