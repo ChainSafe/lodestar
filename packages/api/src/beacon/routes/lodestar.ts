@@ -1,4 +1,4 @@
-import {ContainerType, ListCompositeType, ValueOf} from "@chainsafe/ssz";
+import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, ForkPostElectra} from "@lodestar/params";
 import {Epoch, RootHex, SignedBeaconBlock, Slot, ssz} from "@lodestar/types";
@@ -102,17 +102,6 @@ const HistoricalSummariesResponseType = new ContainerType(
 );
 
 export type HistoricalSummariesResponse = ValueOf<typeof HistoricalSummariesResponseType>;
-
-const AttesterSlashingResponseType = new ContainerType(
-  {
-    attesterSlashing: ssz.electra.AttesterSlashing,
-  },
-  {
-    jsonCase: "eth2",
-  }
-);
-export const AttesterSlashingListResponseType = new ListCompositeType(AttesterSlashingResponseType, 1000);
-export type AttesterSlashingListResponse = ValueOf<typeof AttesterSlashingListResponseType>;
 
 export type Endpoints = {
   /** Trigger to write a heapdump to disk at `dirpath`. May take > 1min */

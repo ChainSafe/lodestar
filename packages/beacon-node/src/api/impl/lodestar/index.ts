@@ -6,7 +6,7 @@ import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {ChainForkConfig} from "@lodestar/config";
 import {Repository} from "@lodestar/db";
-import {ForkSeq, SLOTS_PER_EPOCH, isForkPostElectra} from "@lodestar/params";
+import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   BeaconStateCapella,
   CachedBeaconStateAllForks,

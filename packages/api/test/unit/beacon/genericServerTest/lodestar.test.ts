@@ -1,8 +1,6 @@
-import fs from "node:fs";
-import path from "node:path";
 import {config} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
-import {SignedBeaconBlock, sszTypesFor} from "@lodestar/types";
+import {AttesterSlashing, SignedBeaconBlock} from "@lodestar/types";
 import {FastifyInstance} from "fastify";
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {getClient} from "../../../../src/beacon/client/lodestar.js";
@@ -58,14 +56,13 @@ describe("beacon / lodestar", () => {
     });
   });
   describe("getAttesterSlashingsFromBlocks", () => {
-    it("should get attester slashings as json", async () => {
-      const json = JSON.parse(
-        fs.readFileSync(path.join(__dirname, "../testData/attesterSlashingBlocks.json"), "utf-8")
-      ) as unknown[];
-      // console.log(json);
-      const mockSignedBlocks: SignedBeaconBlock[] = json.map((b: any) =>
-        sszTypesFor(ForkName.electra).SignedBeaconBlock.fromJson(b)
-      );
+    it("getAttesterSlashingsFromBlocks as json", async () => {
+      const attesterSlashings: AttesterSlashing[] = [];
+      mockApi.getAttesterSlashingsFromBlocks.mockResolvedValue({
+        data: attesterSlashings,
+      });
+
+      const mockSignedBlocks: SignedBeaconBlock[] = [];
 
       const httpClient = new HttpClient({baseUrl});
       const client = getClient(config, httpClient);
@@ -77,12 +74,9 @@ describe("beacon / lodestar", () => {
         }
       );
 
-      console.log(res);
       expect(res.ok).toBe(true);
       expect(res.wireFormat()).toBe(WireFormat.json);
-
-      // const expectedAttesterSlashingsList: AttesterSlashingList = [];
-      // expect(res.json().data.attester_slashings).toStrictEqual(expectedAttesterSlashingsList);
+      expect(res.json().data).toStrictEqual([]);
     });
   });
 });
