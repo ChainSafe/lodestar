@@ -129,6 +129,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           (fork: ForkName) => getPostBellatrixForkTypes(fork).SignedBuilderBid
         ),
         meta: VersionCodec,
+        onlySupport: WireFormat.json,
       },
     },
     submitBlindedBlock: {
