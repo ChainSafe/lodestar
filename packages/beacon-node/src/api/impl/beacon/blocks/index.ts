@@ -43,7 +43,12 @@ import {
 import {verifyBlocksInEpoch} from "../../../../chain/blocks/verifyBlock.js";
 import {BeaconChain} from "../../../../chain/chain.js";
 import {BlockError, BlockErrorCode, BlockGossipError} from "../../../../chain/errors/index.js";
-import {ProduceFullBellatrix, ProduceFullDeneb, ProduceFullFulu} from "../../../../chain/produceBlock/index.js";
+import {
+  BlockType,
+  ProduceFullBellatrix,
+  ProduceFullDeneb,
+  ProduceFullFulu,
+} from "../../../../chain/produceBlock/index.js";
 import {validateGossipBlock} from "../../../../chain/validation/block.js";
 import {OpSource} from "../../../../chain/validatorMonitor.js";
 import {NetworkEvent} from "../../../../network/index.js";
