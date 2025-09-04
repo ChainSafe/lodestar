@@ -1,10 +1,13 @@
 import {ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {toRootHex} from "@lodestar/utils";
+import {fromHex, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {DataColumnSidecarsByRootRequest} from "../../../util/types.js";
-import {validateRequestedDataColumns} from "../utils/dataColumnResponseValidation.js";
+import {
+  handleColumnSidecarUnavailability,
+  validateRequestedDataColumns,
+} from "../utils/dataColumnResponseValidation.js";
 
 export async function* onDataColumnSidecarsByRoot(
   requestBody: DataColumnSidecarsByRootRequest,
@@ -61,17 +64,17 @@ export async function* onDataColumnSidecarsByRoot(
 
       // TODO: Check blobs for that block and respond resource_unavailable
       // After we have consensus from other teams on the specs
-      // else {
-      //   await handleColumnSidecarUnavailability({
-      //     chain,
-      //     db,
-      //     unavailableColumnIndex: availableColumns[index],
-      //     slot: block.slot,
-      //     blockRoot: fromHex(block.blockRoot),
-      //     requestedColumns,
-      //     availableColumns,
-      //   });
-      // }
+      else {
+        await handleColumnSidecarUnavailability({
+          chain,
+          db,
+          unavailableColumnIndex: availableColumns,
+          slot: block.slot,
+          blockRoot: fromHex(block.blockRoot),
+          requestedColumns,
+          availableColumns,
+        });
+      }
     }
   }
 }
