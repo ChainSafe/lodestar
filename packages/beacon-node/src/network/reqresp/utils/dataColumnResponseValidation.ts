@@ -54,6 +54,7 @@ export async function handleColumnSidecarUnavailability({
   // NOTE: We may look to add some metrics to track such scenario
   // throw new ResponseError(
   // RespStatus.RESOURCE_UNAVAILABLE,
+  chain.metrics?.dataColumns.missingCustodyColumns.inc(unavailableColumnIndices.length);
   chain.logger.verbose("dataColumnSidecar requested and within custody but not available", {
     unavailableColumnIndices: prettyPrintIndices(unavailableColumnIndices),
     blockRoot: blockRoot ? prettyBytes(blockRoot) : "unknown blockRoot",
