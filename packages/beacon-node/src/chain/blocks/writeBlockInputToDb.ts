@@ -63,9 +63,12 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInput: BlockI
 
         fnPromises.push(this.db.dataColumnSidecar.putMany(blockRoot, dataColumnSidecars));
         this.logger.debug("Persisted dataColumnSidecars to hot DB", {
-          dataColumnSidecars: dataColumnSidecars.length,
           slot: block.message.slot,
           root: blockRootHex,
+          blockDataColumns: blockDataColumns.length,
+          dataColumnSidecars: dataColumnSidecars.length,
+          numBlobs: blobsLen,
+          custodyColumns: custodyColumns.length,
         });
       } else if (isForkPostDeneb(blockData.fork)) {
         const blobSidecars = (blockData as BlockInputBlobs).blobs;

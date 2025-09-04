@@ -60,8 +60,8 @@ describe("sync / finalized sync for fulu", () => {
       },
     };
 
-    const loggerNodeA = testLogger("FinalizedSync-Node-A", {...testLoggerOpts, level: LogLevel.debug});
-    const loggerNodeB = testLogger("FinalizedSync-Node-B", {...testLoggerOpts, level: LogLevel.debug});
+    const loggerNodeA = testLogger("FinalizedSync-Node-A", testLoggerOpts);
+    const loggerNodeB = testLogger("FinalizedSync-Node-B", testLoggerOpts);
 
     const bn = await getDevBeaconNode({
       params: testParams,
@@ -92,7 +92,21 @@ describe("sync / finalized sync for fulu", () => {
     // stop beacon node after validators
     afterEachCallbacks.push(() => bn.close());
 
-    await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.forkChoiceFinalized, 240000, (finalized) => finalized.epoch >= FULU_FORK_EPOCH),
+    await Promise.all([
+      waitForEvent<phase0.Checkpoint>(
+        bn.chain.emitter,
+        ChainEvent.forkChoiceFinalized,
+        240000,
+        (finalized) => finalized.epoch >= FULU_FORK_EPOCH
+      ),
+      waitForEvent<EventData[EventType.head]>(
+        bn.chain.emitter,
+        routes.events.EventType.head,
+        100000,
+        // at block slot 32 imported, finalized checkpoint epoch 2 is processed
+        ({slot}) => slot === 32
+      ),
+    ]);
     loggerNodeA.info("Node A emitted finalized checkpoint event for fulu");
 
     const bn2 = await getDevBeaconNode({
