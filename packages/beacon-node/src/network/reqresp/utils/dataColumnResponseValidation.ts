@@ -53,9 +53,6 @@ export async function handleColumnSidecarUnavailability({
 
   // There are blobs for that column index so we should have synced for it
   // We need to inform to peers that we don't have that expected data
-  // throw new ResponseError(
-  // RespStatus.RESOURCE_UNAVAILABLE,
-  // );
   metrics?.dataColumns.missingCustodyColumns.inc(unavailableColumnIndices.length);
   chain.logger.verbose("dataColumnSidecar requested and within custody but not available", {
     unavailableColumnIndices: prettyPrintIndices(unavailableColumnIndices),
