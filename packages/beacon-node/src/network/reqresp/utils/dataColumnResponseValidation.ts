@@ -5,6 +5,7 @@ import {prettyBytes, prettyPrintIndices} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/interface.js";
 import {IBeaconDb} from "../../../db/interface.js";
 import {getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized} from "../../../util/sszBytes.js";
+import {Metrics} from "../../../metrics/metrics.js";
 
 export async function handleColumnSidecarUnavailability({
   chain,
