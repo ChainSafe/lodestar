@@ -8,7 +8,7 @@ import {loadConfigYaml} from "../yaml.js";
 // Not e2e, but slow. Run with e2e tests
 
 /** https://github.com/ethereum/consensus-specs/releases */
-const specConfigCommit = "v1.6.0-alpha.1";
+const specConfigCommit = "v1.6.0-alpha.5";
 /**
  * Fields that we filter from local config when doing comparison.
  * Ideally this should be empty as it is not spec compliant
@@ -55,6 +55,10 @@ async function downloadRemoteConfig(preset: "mainnet" | "minimal", commit: strin
   const downloadedParams: Record<string, unknown>[] = [];
 
   for (const forkName of Object.values(ForkName)) {
+    // TODO GLOAS: Remove this when gloas spec is available
+    if (forkName === ForkName.gloas) {
+      continue;
+    }
     const response = await axios({
       url: `https://raw.githubusercontent.com/ethereum/consensus-specs/${commit}/presets/${preset}/${forkName}.yaml`,
       timeout: 30 * 1000,

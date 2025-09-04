@@ -1,6 +1,6 @@
-import {toHexString} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
+import {toHex} from "@lodestar/utils";
 import {
   BlockHeaderResponse,
   BroadcastValidation,
@@ -13,7 +13,8 @@ const root = new Uint8Array(32).fill(1);
 const randao = new Uint8Array(32).fill(1);
 const balance = 32e9;
 const reward = 32e9;
-const pubkeyHex = toHexString(Buffer.alloc(48, 1));
+const pubkeyHex = toHex(Buffer.alloc(48, 1));
+const versionedHash = ssz.deneb.VersionedHash.defaultValue();
 
 const blockHeaderResponse: BlockHeaderResponse = {
   root,
@@ -61,7 +62,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
     res: {data: blockHeaderResponse, meta: {executionOptimistic: true, finalized: false}},
   },
   getBlockHeaders: {
-    args: {slot: 1, parentRoot: toHexString(root)},
+    args: {slot: 1, parentRoot: toHex(root)},
     res: {data: [blockHeaderResponse], meta: {executionOptimistic: true, finalized: false}},
   },
   getBlockRoot: {
@@ -69,12 +70,12 @@ export const testData: GenericServerTestCases<Endpoints> = {
     res: {data: {root}, meta: {executionOptimistic: true, finalized: false}},
   },
   publishBlock: {
-    args: {signedBlockOrContents: ssz.electra.SignedBlockContents.defaultValue()},
+    args: {signedBlockContents: ssz.electra.SignedBlockContents.defaultValue()},
     res: undefined,
   },
   publishBlockV2: {
     args: {
-      signedBlockOrContents: ssz.electra.SignedBlockContents.defaultValue(),
+      signedBlockContents: ssz.electra.SignedBlockContents.defaultValue(),
       broadcastValidation: BroadcastValidation.consensus,
     },
     res: undefined,
@@ -95,6 +96,13 @@ export const testData: GenericServerTestCases<Endpoints> = {
     res: {
       data: [ssz.deneb.BlobSidecar.defaultValue()],
       meta: {executionOptimistic: true, finalized: false, version: ForkName.electra},
+    },
+  },
+  getBlobs: {
+    args: {blockId: "head", versionedHashes: [toHex(versionedHash)]},
+    res: {
+      data: [ssz.deneb.Blob.defaultValue()],
+      meta: {executionOptimistic: true, finalized: false},
     },
   },
 

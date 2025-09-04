@@ -58,7 +58,14 @@ export async function handleRequest({
 }: HandleRequestOpts): Promise<void> {
   const REQUEST_TIMEOUT = requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT;
 
-  const logCtx = {method: protocol.method, client: peerClient, peer: prettyPrintPeerId(peerId), requestId};
+  const logCtx = {
+    method: protocol.method,
+    version: protocol.version,
+    client: peerClient,
+    peer: prettyPrintPeerId(peerId),
+    requestId,
+  };
+  metrics?.incomingOpenedStreams.inc({method: protocol.method});
 
   let responseError: Error | null = null;
   await pipe(
@@ -123,6 +130,7 @@ export async function handleRequest({
   // If `requestDecode()` throws the stream.source must be closed manually
   // To ensure the stream.source it-pushable instance is always closed, stream.close() is called always
   await stream.close();
+  metrics?.incomingClosedStreams.inc({method: protocol.method});
 
   // TODO: It may happen that stream.sink returns before returning stream.source first,
   // so you never see "Resp received request" in the logs and the response ends without

@@ -1,4 +1,4 @@
-import {ChainConfig, ForkDigestContext} from "@lodestar/config";
+import {ForkDigestContext} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
   ForkName,
@@ -10,6 +10,7 @@ import {
 import {Attestation, SingleAttestation, ssz, sszTypesFor} from "@lodestar/types";
 
 import {GossipAction, GossipActionError, GossipErrorCode} from "../../chain/errors/gossipValidation.js";
+import {NetworkConfig} from "../networkConfig.js";
 import {DEFAULT_ENCODING} from "./constants.js";
 import {GossipEncoding, GossipTopic, GossipTopicTypeMap, GossipType, SSZTypeOfGossipTopic} from "./interface.js";
 
@@ -75,6 +76,8 @@ function stringifyGossipTopicType(topic: GossipTopic): string {
       return `${topic.type}_${topic.subnet}`;
     case GossipType.blob_sidecar:
       return `${topic.type}_${topic.subnet}`;
+    case GossipType.data_column_sidecar:
+      return `${topic.type}_${topic.subnet}`;
   }
 }
 
@@ -86,6 +89,8 @@ export function getGossipSSZType(topic: GossipTopic) {
       return ssz[fork].SignedBeaconBlock;
     case GossipType.blob_sidecar:
       return ssz.deneb.BlobSidecar;
+    case GossipType.data_column_sidecar:
+      return ssz.fulu.DataColumnSidecar;
     case GossipType.beacon_aggregate_and_proof:
       return sszTypesFor(fork).SignedAggregateAndProof;
     case GossipType.beacon_attestation:
@@ -205,6 +210,13 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
       return {type: GossipType.blob_sidecar, subnet, boundary, encoding};
     }
 
+    if (gossipTypeStr.startsWith(GossipType.data_column_sidecar)) {
+      const subnetStr = gossipTypeStr.slice(GossipType.data_column_sidecar.length + 1); // +1 for '_' concatenating the topic name and the subnet
+      const subnet = parseInt(subnetStr, 10);
+      if (Number.isNaN(subnet)) throw Error(`subnet ${subnetStr} is not a number`);
+      return {type: GossipType.data_column_sidecar, subnet, boundary, encoding};
+    }
+
     throw Error(`Unknown gossip type ${gossipTypeStr}`);
   } catch (e) {
     (e as Error).message = `Invalid gossip topic ${topicStr}: ${(e as Error).message}`;
@@ -216,7 +228,7 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
  * De-duplicate logic to pick fork topics between subscribeCoreTopicsAtFork and unsubscribeCoreTopicsAtFork
  */
 export function getCoreTopicsAtFork(
-  config: ChainConfig,
+  networkConfig: NetworkConfig,
   fork: ForkName,
   opts: {subscribeAllSubnets?: boolean; disableLightClientServer?: boolean}
 ): GossipTopicTypeMap[keyof GossipTopicTypeMap][] {
@@ -229,8 +241,14 @@ export function getCoreTopicsAtFork(
     {type: GossipType.attester_slashing},
   ];
 
+  // After fulu also track data_column_sidecar_{index}
+  if (ForkSeq[fork] >= ForkSeq.fulu) {
+    topics.push(...getDataColumnSidecarTopics(networkConfig));
+  }
+
   // After Deneb also track blob_sidecar_{subnet_id}
   if (ForkSeq[fork] >= ForkSeq.deneb) {
+    const {config} = networkConfig;
     const subnetCount = isForkPostElectra(fork)
       ? config.BLOB_SIDECAR_SUBNET_COUNT_ELECTRA
       : config.BLOB_SIDECAR_SUBNET_COUNT;
@@ -269,6 +287,22 @@ export function getCoreTopicsAtFork(
 }
 
 /**
+ * Pick data column subnets to subscribe to post-fulu.
+ */
+export function getDataColumnSidecarTopics(
+  networkConfig: NetworkConfig
+): GossipTopicTypeMap[keyof GossipTopicTypeMap][] {
+  const topics: GossipTopicTypeMap[keyof GossipTopicTypeMap][] = [];
+
+  const subnets = networkConfig.custodyConfig.sampledSubnets;
+  for (const subnet of subnets) {
+    topics.push({type: GossipType.data_column_sidecar, subnet});
+  }
+
+  return topics;
+}
+
+/**
  * Validate that a `encodingStr` is a known `GossipEncoding`
  */
 function parseEncodingStr(encodingStr: string): GossipEncoding {
@@ -285,6 +319,7 @@ function parseEncodingStr(encodingStr: string): GossipEncoding {
 export const gossipTopicIgnoreDuplicatePublishError: Record<GossipType, boolean> = {
   [GossipType.beacon_block]: true,
   [GossipType.blob_sidecar]: true,
+  [GossipType.data_column_sidecar]: true,
   [GossipType.beacon_aggregate_and_proof]: true,
   [GossipType.beacon_attestation]: true,
   [GossipType.voluntary_exit]: true,

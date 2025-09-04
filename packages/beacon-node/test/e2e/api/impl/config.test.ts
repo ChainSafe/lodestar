@@ -10,10 +10,25 @@ const CONSTANT_NAMES_SKIP_LIST = new Set([
   // This constant can also be derived from existing constants so it's not critical.
   // PARTICIPATION_FLAG_WEIGHTS = [TIMELY_SOURCE_WEIGHT, TIMELY_TARGET_WEIGHT, TIMELY_HEAD_WEIGHT]
   "PARTICIPATION_FLAG_WEIGHTS",
-  // TODO Fulu: remove skipped constant
-  "MAX_BLOBS_PER_BLOCK_FULU",
-  "VALIDATOR_CUSTODY_REQUIREMENT",
-  "BALANCE_PER_ADDITIONAL_CUSTODY_GROUP",
+  // TODO Gloas: remove skipped constant
+  "SLOT_DURATION_MS",
+  "ATTESTATION_DUE_BPS",
+  "AGGREGRATE_DUE_BPS",
+  "SYNC_MESSAGE_DUE_BPS",
+  "CONTRIBUTION_DUE_BPS",
+  "DOMAIN_BEACON_BUILDER",
+  "DOMAIN_PTC_ATTESTER",
+  "BUILDER_PAYMENT_THRESHOLD_NUMERATOR",
+  "BUILDER_PAYMENT_THRESHOLD_DENOMINATOR",
+  "PTC_SIZE",
+  "MAX_PAYLOAD_ATTESTATIONS",
+  "BUILDER_PENDING_WITHDRAWALS_LIMIT",
+  "BUILDER_WITHDRAWAL_PREFIX",
+  "ATTESTATION_DUE_BPS_GLOAS",
+  "AGGREGRATE_DUE_BPS_GLOAS",
+  "SYNC_MESSAGE_DUE_BPS_GLOAS",
+  "CONTRIBUTION_DUE_BPS_GLOAS",
+  "PAYLOAD_ATTESTATION_DUE_BPS",
 ]);
 
 describe("api / impl / config", () => {
@@ -39,7 +54,7 @@ describe("api / impl / config", () => {
 
     if (missingConstants.length > 0) {
       throw Error(
-        "Some constants delcared in consensus-specs repo are not exposed in API:\n" + missingConstants.join("\n")
+        "Some constants declared in consensus-specs repo are not exposed in API:\n" + missingConstants.join("\n")
       );
     }
   });

@@ -6,7 +6,6 @@ import {YargsError} from "../../util/index.js";
 
 export const defaultListenAddress = "0.0.0.0";
 export const defaultP2pPort = 9000;
-export const defaultP2pPort6 = 9090;
 
 export type NetworkArgs = {
   discv5?: boolean;
@@ -36,6 +35,7 @@ export type NetworkArgs = {
   "network.maxGossipTopicConcurrency"?: number;
   "network.useWorker"?: boolean;
   "network.maxYoungGenerationSizeMb"?: number;
+  "network.targetGroupPeers"?: number;
 
   /** @deprecated This option is deprecated and should be removed in next major release. */
   "network.requestCountPeerLimit"?: number;
@@ -66,8 +66,8 @@ export function parseListenArgs(args: NetworkArgs) {
 
   // Only use listenAddress6 if it is explicitly set
   const listenAddress6 = args.listenAddress6;
-  const port6 = listenAddress6 ? (args.port6 ?? defaultP2pPort6) : undefined;
-  const discoveryPort6 = listenAddress6 ? (args.discoveryPort6 ?? args.port6 ?? defaultP2pPort6) : undefined;
+  const port6 = listenAddress6 ? (args.port6 ?? defaultP2pPort) : undefined;
+  const discoveryPort6 = listenAddress6 ? (args.discoveryPort6 ?? args.port6 ?? defaultP2pPort) : undefined;
 
   return {listenAddress, port, discoveryPort, listenAddress6, port6, discoveryPort6};
 }
@@ -128,7 +128,7 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
             ip6: bindMu6,
           },
           bootEnrs,
-          // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+          // biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
           enr: undefined as any,
         }
       : null,
@@ -153,6 +153,7 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     maxGossipTopicConcurrency: args["network.maxGossipTopicConcurrency"],
     useWorker: args["network.useWorker"],
     maxYoungGenerationSizeMb: args["network.maxYoungGenerationSizeMb"],
+    targetGroupPeers: args["network.targetGroupPeers"] ?? defaultOptions.network.targetGroupPeers,
   };
 }
 
@@ -197,7 +198,7 @@ export const options: CliCommandOptions<NetworkArgs> = {
     description: "The TCP/UDP port to listen on. The UDP port can be modified by the --discoveryPort6 flag.",
     type: "number",
     // TODO: Derive from BeaconNode defaults
-    defaultDescription: String(defaultP2pPort6),
+    defaultDescription: String(defaultP2pPort),
     group: "network",
   },
 
@@ -385,5 +386,13 @@ export const options: CliCommandOptions<NetworkArgs> = {
     group: "network",
     description: "Max size of young generation in megabytes. Defaults to 152mb",
     defaultDescription: String(defaultOptions.network.maxYoungGenerationSizeMb),
+  },
+
+  "network.targetGroupPeers": {
+    type: "number",
+    hidden: true,
+    group: "network",
+    description: "Target number of peers per sampling group",
+    defaultDescription: String(defaultOptions.network.targetGroupPeers),
   },
 };

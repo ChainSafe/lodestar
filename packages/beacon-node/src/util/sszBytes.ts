@@ -1,13 +1,15 @@
 import {BitArray, deserializeUint8ArrayBitListFromBytes} from "@chainsafe/ssz";
+import {ChainForkConfig} from "@lodestar/config";
 import {
   BYTES_PER_FIELD_ELEMENT,
   FIELD_ELEMENTS_PER_BLOB,
   ForkName,
+  ForkPostDeneb,
   ForkSeq,
   MAX_COMMITTEES_PER_SLOT,
   isForkPostElectra,
 } from "@lodestar/params";
-import {BLSSignature, CommitteeIndex, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
+import {BLSSignature, CommitteeIndex, RootHex, Slot, ValidatorIndex, ssz} from "@lodestar/types";
 
 export type BlockRootHex = RootHex;
 // pre-electra, AttestationData is used to cache attestations
@@ -396,6 +398,26 @@ export function getSlotFromBlobSidecarSerialized(data: Uint8Array): Slot | null 
 }
 
 /**
+ * {
+    index: ColumnIndex [ fixed - 8 bytes],
+    column: DataColumn BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_CELL * <some non fixed length>,
+    kzgCommitments: denebSsz.BlobKzgCommitments,
+    kzgProofs: denebSsz.KZGProofs,
+    signedBlockHeader: phase0Ssz.SignedBeaconBlockHeader,
+    kzgCommitmentsInclusionProof: KzgCommitmentsInclusionProof,
+  }
+ */
+
+const SLOT_BYTES_POSITION_IN_SIGNED_DATA_COLUMN_SIDECAR = 20;
+export function getSlotFromDataColumnSidecarSerialized(data: Uint8Array): Slot | null {
+  if (data.length < SLOT_BYTES_POSITION_IN_SIGNED_DATA_COLUMN_SIDECAR + SLOT_SIZE) {
+    return null;
+  }
+
+  return getSlotFromOffset(data, SLOT_BYTES_POSITION_IN_SIGNED_DATA_COLUMN_SIDECAR);
+}
+
+/**
  * Read only the first 4 bytes of Slot, max value is 4,294,967,295 will be reached 1634 years after genesis
  *
  * If the high bytes are not zero, return null
@@ -420,4 +442,40 @@ function getSlotFromOffsetTrusted(data: Uint8Array, offset: number): Slot {
 
 function checkSlotHighBytes(data: Uint8Array, offset: number): boolean {
   return (data[offset + 4] | data[offset + 5] | data[offset + 6] | data[offset + 7]) === 0;
+}
+
+export function getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized(
+  config: ChainForkConfig,
+  blockBytes: Uint8Array
+): number {
+  const slot = getSlotFromSignedBeaconBlockSerialized(blockBytes);
+  if (!slot) throw new Error("Can not parse the slot from block bytes");
+
+  if (config.getForkSeq(slot) < ForkSeq.deneb) return 0;
+
+  const {SignedBeaconBlock, BeaconBlock, BeaconBlockBody, KZGCommitment} =
+    ssz[config.getForkName(slot) as ForkPostDeneb];
+
+  const view = new DataView(blockBytes.buffer, blockBytes.byteOffset, blockBytes.byteLength);
+  const singedBlockFieldRanges = SignedBeaconBlock.getFieldRanges(view, 0, blockBytes.length);
+  const messageIndex = Object.keys(SignedBeaconBlock.fields).indexOf("message");
+  const messageRange = singedBlockFieldRanges[messageIndex];
+
+  const blockFieldRanges = BeaconBlock.getFieldRanges(view, messageRange.start, messageRange.end);
+  const bodyIndex = Object.keys(BeaconBlock.fields).indexOf("body");
+  const bodyRange = blockFieldRanges[bodyIndex];
+
+  const bodyFieldRanges = BeaconBlockBody.getFieldRanges(
+    view,
+    messageRange.start + bodyRange.start,
+    messageRange.end + bodyRange.end
+  );
+  const kzgCommitmentsIndex = Object.keys(BeaconBlockBody.fields).indexOf("blobKzgCommitments");
+  const kzgCommitmentsRange = bodyFieldRanges[kzgCommitmentsIndex];
+  const commitmentSize = KZGCommitment.fixedSize;
+
+  const end = messageRange.end + bodyRange.end + kzgCommitmentsRange.end;
+  const start = messageRange.start + bodyRange.start + kzgCommitmentsRange.start;
+
+  return Math.round(((end > blockBytes.byteLength ? blockBytes.byteLength : end) - start) / commitmentSize);
 }

@@ -101,8 +101,21 @@ export class Clock implements IClock {
         await sleep(this.timeUntilNext(timeItem), signal);
         // calling getCurrentSlot here may not be correct when we're close to the next slot
         // it's safe to call getCurrentSlotAround after we sleep
-        slot = getCurrentSlotAround(this.config, this.genesisTime);
-        slotOrEpoch = timeItem === TimeItem.Slot ? slot : computeEpochAtSlot(slot);
+        const nextSlot = getCurrentSlotAround(this.config, this.genesisTime);
+
+        if (timeItem === TimeItem.Slot) {
+          if (nextSlot > slot + 1) {
+            // It's not very likely that we skip more than one slot as HTTP timeout is set
+            // to SECONDS_PER_SLOT so we will fail task before skipping another slot.
+            this.logger.warn("Skipped slot due to task taking more than one slot to run", {
+              skippedSlot: slot + 1,
+            });
+          }
+          slotOrEpoch = nextSlot;
+        } else {
+          slotOrEpoch = computeEpochAtSlot(nextSlot);
+        }
+        slot = nextSlot;
       } catch (e) {
         if (e instanceof ErrorAborted) {
           return;

@@ -66,6 +66,7 @@ const maxSafeValidators = Math.floor(Number.MAX_SAFE_INTEGER / MAX_EFFECTIVE_BAL
 export enum EpochTransitionStep {
   beforeProcessEpoch = "beforeProcessEpoch",
   afterProcessEpoch = "afterProcessEpoch",
+  finalProcessEpoch = "finalProcessEpoch",
   processJustificationAndFinalization = "processJustificationAndFinalization",
   processInactivityUpdates = "processInactivityUpdates",
   processRegistryUpdates = "processRegistryUpdates",
@@ -214,7 +215,7 @@ export function processEpoch(
       source: StateTransitionSource.stateTransition,
       step: EpochTransitionStep.processProposerLookahead,
     });
-    processProposerLookahead(fork, state as CachedBeaconStateFulu);
+    processProposerLookahead(fork, state as CachedBeaconStateFulu, cache);
     timer?.();
   }
 }

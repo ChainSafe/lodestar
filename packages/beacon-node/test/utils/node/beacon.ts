@@ -6,10 +6,10 @@ import {ChainConfig, createBeaconConfig, createChainForkConfig} from "@lodestar/
 import {config as minimalConfig} from "@lodestar/config/default";
 import {LevelDbController} from "@lodestar/db";
 import {LoggerNode} from "@lodestar/logger/node";
-import {ForkSeq, GENESIS_SLOT} from "@lodestar/params";
-import {BeaconStateAllForks} from "@lodestar/state-transition";
+import {ForkSeq, GENESIS_SLOT, NUMBER_OF_COLUMNS, SLOTS_PER_EPOCH, ZERO_HASH_HEX} from "@lodestar/params";
+import {BeaconStateAllForks, computeTimeAtSlot} from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
-import {RecursivePartial} from "@lodestar/utils";
+import {RecursivePartial, toRootHex} from "@lodestar/utils";
 import {isPlainObject} from "@lodestar/utils";
 import deepmerge from "deepmerge";
 import tmp from "tmp";
@@ -45,32 +45,6 @@ export async function getDevBeaconNode(
 
   const db = new BeaconDb(config, await LevelDbController.create({name: tmpDir.name}, {logger}));
 
-  options = deepmerge(
-    // This deepmerge should NOT merge the array with the defaults but overwrite them
-    defaultOptions,
-    deepmerge(
-      // This deepmerge should merge all the array elements of the api options with the
-      // dev defaults that we wish, especially for the api options
-      {
-        db: {name: tmpDir.name},
-        eth1: {enabled: false},
-        api: {rest: {api: ["beacon", "config", "events", "node", "validator"], port: 19596}},
-        metrics: {enabled: false},
-        network: {
-          discv5: null,
-          localMultiaddrs: options.network?.localMultiaddrs || ["/ip4/127.0.0.1/tcp/0"],
-          targetPeers: defaultNetworkOptions.targetPeers,
-          maxPeers: defaultNetworkOptions.maxPeers,
-        },
-      } as Partial<IBeaconNodeOptions>,
-      options
-    ),
-    {
-      arrayMerge: overwriteTargetArrayIfItems,
-      isMergeableObject: isPlainObject,
-    }
-  );
-
   let anchorState = opts.anchorState;
   if (!anchorState) {
     const {state, deposits} = initDevState(config, validatorCount, opts);
@@ -88,6 +62,64 @@ export async function getDevBeaconNode(
       await db.blobSidecars.add({blobSidecars, slot: GENESIS_SLOT, blockRoot});
     }
   }
+
+  options = deepmerge(
+    // This deepmerge should NOT merge the array with the defaults but overwrite them
+    defaultOptions,
+    deepmerge(
+      // This deepmerge should merge all the array elements of the api options with the
+      // dev defaults that we wish, especially for the api options
+      {
+        db: {name: tmpDir.name},
+        eth1: {enabled: false},
+        api: {rest: {api: ["beacon", "config", "events", "node", "validator"], port: 19596}},
+        metrics: {enabled: false},
+        network: {
+          discv5: null,
+          localMultiaddrs: options.network?.localMultiaddrs || ["/ip4/127.0.0.1/tcp/0"],
+          // Increase of following value is just to circumvent the following error in e2e tests
+          // > libp2p:mplex rate limit hit when receiving messages
+          disconnectThreshold: 255,
+          targetPeers: defaultNetworkOptions.targetPeers,
+          maxPeers: defaultNetworkOptions.maxPeers,
+        },
+        chain: {
+          // configure supernode does not work because we don't get through cli
+          initialCustodyGroupCount: NUMBER_OF_COLUMNS,
+        },
+        executionEngine: {
+          mode: "mock",
+          genesisBlockHash: ZERO_HASH_HEX,
+          eth1BlockHash: opts.eth1BlockHash ? toRootHex(opts.eth1BlockHash) : undefined,
+          fuluForkTimestamp: computeTimeAtSlot(
+            config,
+            config.FULU_FORK_EPOCH * SLOTS_PER_EPOCH,
+            anchorState.genesisTime
+          ),
+          electraForkTimestamp: computeTimeAtSlot(
+            config,
+            config.ELECTRA_FORK_EPOCH * SLOTS_PER_EPOCH,
+            anchorState.genesisTime
+          ),
+          denebForkTimestamp: computeTimeAtSlot(
+            config,
+            config.DENEB_FORK_EPOCH * SLOTS_PER_EPOCH,
+            anchorState.genesisTime
+          ),
+          capellaForkTimestamp: computeTimeAtSlot(
+            config,
+            config.CAPELLA_FORK_EPOCH * SLOTS_PER_EPOCH,
+            anchorState.genesisTime
+          ),
+        },
+      } as Partial<IBeaconNodeOptions>,
+      options
+    ),
+    {
+      arrayMerge: overwriteTargetArrayIfItems,
+      isMergeableObject: isPlainObject,
+    }
+  );
 
   const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
   return BeaconNode.init({

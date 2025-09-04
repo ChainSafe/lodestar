@@ -104,6 +104,7 @@ const core = await NetworkCore.init({
     reqRespBridgeRespCaller.getAsyncIterable({method, req, peerId: peerIdToString(peerId)}),
   activeValidatorCount: workerData.activeValidatorCount,
   initialStatus: workerData.initialStatus,
+  initialCustodyGroupCount: workerData.initialCustodyGroupCount,
 });
 
 wireEventsOnWorkerThread<NetworkEventData>(
@@ -139,6 +140,8 @@ const libp2pWorkerApi: NetworkWorkerApi = {
 
   // sendReqRespRequest - handled via events with AsyncIterableBridgeHandler
   publishGossip: (topic, data, opts) => core.publishGossip(topic, data, opts),
+
+  setTargetGroupCount: (count) => core.setTargetGroupCount(count),
 
   // Debug
 

@@ -215,7 +215,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
 
     await expectRejectedWithLodestarError(
       netA.sendBeaconBlocksByRange(peerIdB, {startSlot: 0, step: 1, count: 3}),
-      new RequestError({code: RequestErrorCode.SERVER_ERROR, errorMessage: "sNaPpYa" + testErrorMessage})
+      new RequestError({code: RequestErrorCode.SERVER_ERROR, errorMessage: testErrorMessage})
     );
   });
 
@@ -238,7 +238,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
 
     await expectRejectedWithLodestarError(
       netA.sendBeaconBlocksByRange(peerIdB, {startSlot: 0, step: 1, count: 3}),
-      new RequestError({code: RequestErrorCode.SERVER_ERROR, errorMessage: "sNaPpYa" + testErrorMessage})
+      new RequestError({code: RequestErrorCode.SERVER_ERROR, errorMessage: testErrorMessage})
     );
   });
 

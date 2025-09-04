@@ -56,6 +56,10 @@ export const chainConfig: ChainConfig = {
   FULU_FORK_VERSION: b("0x06000000"),
   FULU_FORK_EPOCH: Infinity,
 
+  // GLOAS
+  GLOAS_FORK_VERSION: b("0x07000000"),
+  GLOAS_FORK_EPOCH: Infinity,
+
   // Time parameters
   // ---------------------------------------------------------------
   // 12 seconds
@@ -101,10 +105,14 @@ export const chainConfig: ChainConfig = {
 
   // Networking
   // ---------------------------------------------------------------
+  // 2**10 (= 1024)
+  MAX_REQUEST_BLOCKS: 1024,
   // `MIN_VALIDATOR_WITHDRAWABILITY_DELAY + CHURN_LIMIT_QUOTIENT // 2` (= 33024, ~5 months)
   MIN_EPOCHS_FOR_BLOCK_REQUESTS: 33024,
 
   // Deneb
+  // 2**7 (= 128)
+  MAX_REQUEST_BLOCKS_DENEB: 128,
   // `2**12` (= 4096 epochs, ~18 days)
   MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: 4096,
   BLOB_SIDECAR_SUBNET_COUNT: 6,
@@ -123,13 +131,15 @@ export const chainConfig: ChainConfig = {
   MAX_REQUEST_BLOB_SIDECARS_ELECTRA: 1152,
 
   // Fulu
-  // `2**12` (= 4096 epochs, ~18 days)
-  MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 4096,
+  NUMBER_OF_CUSTODY_GROUPS: 128,
+  DATA_COLUMN_SIDECAR_SUBNET_COUNT: 128,
+  MAX_REQUEST_DATA_COLUMN_SIDECARS: 16384,
   SAMPLES_PER_SLOT: 8,
   CUSTODY_REQUIREMENT: 4,
-  NODE_CUSTODY_REQUIREMENT: 1,
   VALIDATOR_CUSTODY_REQUIREMENT: 8,
   BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: 32000000000,
+  // `2**12` (= 4096 epochs, ~18 days)
+  MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 4096,
 
   // Blob Scheduling
   // ---------------------------------------------------------------

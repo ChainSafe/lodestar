@@ -14,6 +14,7 @@ import {
 import {Slot} from "@lodestar/types";
 import {Logger, fromHex, isErrorAborted, sleep} from "@lodestar/utils";
 import {GENESIS_SLOT, ZERO_HASH_HEX} from "../constants/constants.js";
+import {BuilderStatus} from "../execution/builder/http.js";
 import {Metrics} from "../metrics/index.js";
 import {ClockEvent} from "../util/clock.js";
 import {isQueueErrorAborted} from "../util/queue/index.js";
@@ -137,7 +138,7 @@ export class PrepareNextSlotScheduler {
 
           // If we predict we can reorg, update prepareState with proposer head block
           if (proposerHeadRoot !== headRoot || proposerHeadSlot !== headSlot) {
-            this.logger.verbose("Weak head detected. May build on this block instead:", {
+            this.logger.verbose("Weak head detected. May build on parent block instead", {
               proposerHeadSlot,
               proposerHeadRoot,
               headSlot,
@@ -155,7 +156,7 @@ export class PrepareNextSlotScheduler {
 
           // Update the builder status, if enabled shoot an api call to check status
           this.chain.updateBuilderStatus(clockSlot);
-          if (this.chain.executionBuilder?.status) {
+          if (this.chain.executionBuilder?.status === BuilderStatus.enabled) {
             this.chain.executionBuilder.checkStatus().catch((e) => {
               this.logger.error("Builder disabled as the check status api failed", {prepareSlot}, e as Error);
             });
@@ -191,7 +192,10 @@ export class PrepareNextSlotScheduler {
         this.computeStateHashTreeRoot(updatedPrepareState, isEpochTransition);
 
         // If emitPayloadAttributes is true emit a SSE payloadAttributes event
-        if (this.chain.opts.emitPayloadAttributes === true) {
+        if (
+          this.chain.opts.emitPayloadAttributes === true &&
+          this.chain.emitter.listenerCount(routes.events.EventType.payloadAttributes)
+        ) {
           const data = await getPayloadAttributesForSSE(fork as ForkPostBellatrix, this.chain, {
             prepareState: updatedPrepareState,
             prepareSlot,

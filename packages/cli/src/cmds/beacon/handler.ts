@@ -6,9 +6,10 @@ import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db";
 import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
 import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
-import {ErrorAborted} from "@lodestar/utils";
+import {ErrorAborted, bytesToInt} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
+import {SignableENR} from "@chainsafe/enr";
 import {BeaconNodeOptions, getBeaconConfigFromArgs} from "../../config/index.js";
 import {getNetworkBootnodes, getNetworkData, isKnownNetworkName, readBootnodes} from "../../networks/index.js";
 import {GlobalArgs, parseBeaconNodeArgs} from "../../options/index.js";
@@ -185,6 +186,10 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   // Add detailed version string for API node/version endpoint
   beaconNodeOptions.set({api: {commit, version}});
 
+  if (args.supernode) {
+    beaconNodeOptions.set({chain: {supernode: true}, network: {supernode: true}});
+  }
+
   // Set known depositContractDeployBlock
   if (isKnownNetworkName(network)) {
     const {depositContractDeployBlock} = getNetworkData(network);
@@ -206,6 +211,8 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
     // Deduplicate and set combined bootnodes
     beaconNodeOptions.set({network: {discv5: {bootEnrs: [...new Set(bootnodes)]}}});
   }
+
+  beaconNodeOptions.set({chain: {initialCustodyGroupCount: getInitialCustodyGroupCount(args, config, enr)}});
 
   if (args.disableLightClientServer) {
     beaconNodeOptions.set({chain: {disableLightClientServer: true}});
@@ -247,4 +254,15 @@ export function initLogger(
   }
 
   return logger;
+}
+
+function getInitialCustodyGroupCount(args: BeaconArgs & GlobalArgs, config: ChainForkConfig, enr: SignableENR): number {
+  if (args.supernode) {
+    return config.NUMBER_OF_CUSTODY_GROUPS;
+  }
+
+  const enrCgcBytes = enr.kvs.get("cgc");
+  const enrCgc = enrCgcBytes != null ? bytesToInt(enrCgcBytes, "be") : 0;
+
+  return Math.max(enrCgc, config.CUSTODY_REQUIREMENT);
 }

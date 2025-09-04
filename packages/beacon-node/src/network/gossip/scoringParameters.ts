@@ -8,7 +8,7 @@ import {BeaconConfig} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, TARGET_AGGREGATORS_PER_COMMITTEE} from "@lodestar/params";
 import {computeCommitteeCount} from "@lodestar/state-transition";
 import {getActiveForkBoundaries} from "../forks.js";
-import {Eth2Context, Eth2GossipsubModules} from "./gossipsub.js";
+import {Eth2Context} from "./gossipsub.js";
 import {GossipType} from "./interface.js";
 import {stringifyGossipTopic} from "./topic.js";
 
@@ -80,7 +80,10 @@ type TopicScoreInput = {
 export function computeGossipPeerScoreParams({
   config,
   eth2Context,
-}: Pick<Eth2GossipsubModules, "config" | "eth2Context">): Partial<PeerScoreParams> {
+}: {
+  config: BeaconConfig;
+  eth2Context: Eth2Context;
+}): Partial<PeerScoreParams> {
   const decayIntervalMs = config.SECONDS_PER_SLOT * 1000;
   const decayToZero = 0.01;
   const epochDurationMs = config.SECONDS_PER_SLOT * SLOTS_PER_EPOCH * 1000;
