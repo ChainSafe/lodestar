@@ -188,15 +188,18 @@ export interface IExecutionEngine {
   getPayloadBodiesByRange(fork: ForkName, start: number, count: number): Promise<(ExecutionPayloadBody | null)[]>;
 
   /**
-   * buffers is an optional parameter that can be used to pass pre-allocated buffers for the blobs and proofs
+   * getBlobsV2, refer to execution-apis spec https://github.com/ethereum/execution-apis/blob/main/src/engine/osaka.md#engine_getblobsv2
+   * @param buffers is an optional parameter that can be used to pass pre-allocated buffers for the blobs and proofs
    */
   getBlobs(
     fork: ForkPostFulu,
     versionedHashes: VersionedHashes,
     buffers?: Uint8Array[]
   ): Promise<BlobAndProofV2[] | null>;
+
   /**
-   * buffers is not used for pre-fulu forks, keep it for API compatibility
+   * getBlobsV1 refer to execution-apis spec https://github.com/ethereum/execution-apis/blob/main/src/engine/cancun.md#engine_getblobsv1
+   * @param buffers is not used for pre-fulu forks, keep it for API compatibility
    */
   getBlobs(
     fork: ForkPreFulu,
