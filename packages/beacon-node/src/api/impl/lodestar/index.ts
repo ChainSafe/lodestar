@@ -292,11 +292,11 @@ export function getLodestarApi({
 
               // get attester slashing from indexed atestations
               const attesterSlashing: AttesterSlashing = {
-                attestation1: ssz.phase0.IndexedAttestationBigint.fromJson(
-                  ssz.phase0.IndexedAttestation.toJson(newIndexedAttestation)
+                attestation1: ssz[fork].IndexedAttestationBigint.fromJson(
+                  ssz[fork].IndexedAttestation.toJson(newIndexedAttestation)
                 ),
-                attestation2: ssz.phase0.IndexedAttestationBigint.fromJson(
-                  ssz.phase0.IndexedAttestation.toJson(seenIndexedAttestation)
+                attestation2: ssz[fork].IndexedAttestationBigint.fromJson(
+                  ssz[fork].IndexedAttestation.toJson(seenIndexedAttestation)
                 ),
               };
 
