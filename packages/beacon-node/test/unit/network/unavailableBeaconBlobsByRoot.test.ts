@@ -43,6 +43,7 @@ describe("unavailableBeaconBlobsByRoot", () => {
     const network = {
       sendBeaconBlocksByRoot: vi.fn(),
       sendBlobSidecarsByRoot: vi.fn(),
+      publishBlobSidecar: vi.fn().mockResolvedValue(0),
     };
 
     const peerId = "mockPeerId";
