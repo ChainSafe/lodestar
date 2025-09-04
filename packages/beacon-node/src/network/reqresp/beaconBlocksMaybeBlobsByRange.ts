@@ -12,7 +12,7 @@ import {
   phase0,
   ssz,
 } from "@lodestar/types";
-import {Logger} from "@lodestar/utils";
+import {Logger, retry} from "@lodestar/utils";
 import {
   BlobsSource,
   BlockInput,
@@ -147,13 +147,31 @@ export async function beaconBlocksMaybeBlobsByRange(
     }, [] as number[]);
 
     const dataColumnRequest = {...request, columns};
-    const [allBlocks, allDataColumnSidecars] = await Promise.all([
-      // TODO-das: investigate why partialDownload blocks is empty here
+    const allBlocksPromise =
       partialDownload && partialDownload.blocks.length > 0
-        ? partialDownload.blocks.map((blockInput) => ({data: blockInput.block}))
-        : network.sendBeaconBlocksByRange(peerId, request),
-      columns.length === 0 ? [] : network.sendDataColumnSidecarsByRange(peerId, dataColumnRequest),
-    ]);
+        ? Promise.resolve(partialDownload.blocks.map((blockInput) => ({data: blockInput.block})))
+        : network.sendBeaconBlocksByRange(peerId, request);
+
+    // DataColumnSidecars may take time for migration from unfinalized to finalized db
+    // So we retry to fetch the data column sidecars once with a delay
+    const allDataColumnSidecarsPromise =
+      columns.length === 0
+        ? Promise.resolve([])
+        : retry(() => network.sendDataColumnSidecarsByRange(peerId, dataColumnRequest), {retries: 2, retryDelay: 1000});
+
+    // We want to make sure neither of the request does not fail because of other so handled it with `Promise.allSettled`
+    const [blockResp, dataColumnResp] = await Promise.allSettled([allBlocksPromise, allDataColumnSidecarsPromise]);
+
+    if (dataColumnResp.status === "rejected") {
+      logger?.debug("Request for dataColumnSidecarsByRange failed", dataColumnResp.reason);
+    }
+    if (blockResp.status === "rejected") {
+      logger?.debug("Request for beaconBlockByRange failed", blockResp.reason);
+    }
+
+    const allBlocks = blockResp.status === "fulfilled" ? blockResp.value : [];
+    const allDataColumnSidecars = dataColumnResp.status === "fulfilled" ? dataColumnResp.value : [];
+
     logger?.debug("ByRange requests", {
       beaconBlocksRequest: JSON.stringify(ssz.phase0.BeaconBlocksByRangeRequest.toJson(request)),
       dataColumnRequest: JSON.stringify(ssz.fulu.DataColumnSidecarsByRangeRequest.toJson(dataColumnRequest)),
