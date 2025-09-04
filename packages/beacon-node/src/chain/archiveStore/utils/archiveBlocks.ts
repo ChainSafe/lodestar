@@ -95,6 +95,7 @@ export async function archiveBlocks(
       const migratedEntries = await migrateDataColumnSidecarsFromHotToColdDb(
         config,
         db,
+        logger,
         finalizedCanonicalBlockRoots,
         currentEpoch
       );
@@ -303,6 +304,7 @@ async function migrateBlobSidecarsFromHotToColdDb(
 async function migrateDataColumnSidecarsFromHotToColdDb(
   config: ChainForkConfig,
   db: IBeaconDb,
+  logger: Logger,
   blocks: BlockRootSlot[],
   currentEpoch: Epoch
 ): Promise<number> {
@@ -329,10 +331,12 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
       }
 
       const dataColumnSidecarBytes = await db.dataColumnSidecar.valuesBinary(block.root);
-      if (dataColumnSidecarBytes.length === 0) {
-        throw Error(`No dataColumnSidecars found for slot ${block.slot} root ${toHex(block.root)}`);
-      }
-      console.log("@@@ migrateDataColumnSidecarsFromHotToColdDb block slot " + block.slot + " num of sidecars " + dataColumnSidecarBytes.length);
+      // there could be 0 dataColumnSidecarBytes if block has no blob
+      logger.verbose("migrateDataColumnSidecarsFromHotToColdDb", {
+        slot: block.slot,
+        root: toRootHex(block.root),
+        numSidecars: dataColumnSidecarBytes.length,
+      });
       promises.push(
         db.dataColumnSidecarArchive.putManyBinary(
           block.slot,
