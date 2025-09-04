@@ -105,7 +105,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       },
       resp: EmptyResponseCodec,
       init: {
-        requestWireFormat: WireFormat.ssz,
+        requestWireFormat: WireFormat.json,
       },
     },
     getHeader: {
