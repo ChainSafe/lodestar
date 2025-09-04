@@ -5,6 +5,7 @@ import {prettyBytes, prettyPrintIndices} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/interface.js";
 import {IBeaconDb} from "../../../db/interface.js";
 import {getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized} from "../../../util/sszBytes.js";
+import {Metrics} from "../../../metrics/index.js";
 
 export async function handleColumnSidecarUnavailability({
   chain,
@@ -14,6 +15,7 @@ export async function handleColumnSidecarUnavailability({
   availableColumns,
   slot,
   blockRoot,
+  metrics,
 }: {
   chain: IBeaconChain;
   db: IBeaconDb;
@@ -22,6 +24,7 @@ export async function handleColumnSidecarUnavailability({
   unavailableColumnIndex: ColumnIndex;
   requestedColumns: ColumnIndex[];
   availableColumns: ColumnIndex[];
+  metrics: Metrics | null;
 }): Promise<void> {
   const logData: LogData = {
     unavailableColumnIndex,
@@ -52,10 +55,20 @@ export async function handleColumnSidecarUnavailability({
   // There are blobs for that column index so we should have synced for it
   // We need to inform to peers that we don't have that expected data
   // NOTE: We may look to add some metrics to track such scenario
-  throw new ResponseError(
-    RespStatus.RESOURCE_UNAVAILABLE,
-    `dataColumnSidecar requested and within custody not available for columnIndex=${unavailableColumnIndex}`
-  );
+  metrics?.dataColumns.missingCustodyColumns.inc(1);
+
+  // TODO: Check blobs for that block and respond resource_unavailable
+  // After we have consensus from other teams on the specs
+  
+  // throw new ResponseError(
+  //   RespStatus.RESOURCE_UNAVAILABLE,
+  //   `dataColumnSidecar requested and within custody not available for columnIndex=${unavailableColumnIndex}`
+  // );
+
+  chain.logger.verbose("dataColumnSidecar requested and within custody but not available", {
+    unavailableColumn: unavailableColumnIndex,
+    blockRoot: blockRoot ? prettyBytes(blockRoot) : "unknown blockRoot",
+  });
 }
 
 export function validateRequestedDataColumns(chain: IBeaconChain, requestedColumns: ColumnIndex[]): ColumnIndex[] {

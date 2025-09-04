@@ -777,6 +777,10 @@ export function createLodestarMetrics(
         // given TARGET_GROUP_PEERS_PER_SUBNET = 4, we expect sending to 4 peers per subnet
         buckets: [1, 2, 3, 4],
       }),
+      missingCustodyColumns: register.counter({
+        name: "lodestar_data_columns_missing_custody_columns_count",
+        help: "Total number of missing columns that should be in the database but were not when requested",
+      }),
     },
     importBlock: {
       persistBlockNoSerializedDataCount: register.gauge({
