@@ -37,7 +37,6 @@ export async function* onDataColumnSidecarsByRange(
       const unavailableColumnIndices: ColumnIndex[] = [];
       for (let i = 0; i < dataColumnSidecars.length; i++) {
         const dataColumnSidecarBytes = dataColumnSidecars[i];
-        // for (const dataColumnSidecarBytes of dataColumnSidecars) {
         if (dataColumnSidecarBytes) {
           yield {
             data: dataColumnSidecarBytes,
