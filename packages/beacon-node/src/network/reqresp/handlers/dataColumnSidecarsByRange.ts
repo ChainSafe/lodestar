@@ -51,14 +51,16 @@ export async function* onDataColumnSidecarsByRange(
         }
       }
 
-      await handleColumnSidecarUnavailability({
-        chain,
-        db,
-        unavailableColumnIndices,
-        slot,
-        requestedColumns,
-        availableColumns,
-      });
+      if (unavailableColumnIndices.length) {
+        await handleColumnSidecarUnavailability({
+          chain,
+          db,
+          unavailableColumnIndices,
+          slot,
+          requestedColumns,
+          availableColumns,
+        });
+      }
     }
   }
 
@@ -96,15 +98,17 @@ export async function* onDataColumnSidecarsByRange(
           }
         }
 
-        await handleColumnSidecarUnavailability({
-          chain,
-          db,
-          unavailableColumnIndices,
-          blockRoot: fromHex(block.blockRoot),
-          slot: block.slot,
-          requestedColumns,
-          availableColumns,
-        });
+        if (unavailableColumnIndices.length) {
+          await handleColumnSidecarUnavailability({
+            chain,
+            db,
+            unavailableColumnIndices,
+            blockRoot: fromHex(block.blockRoot),
+            slot: block.slot,
+            requestedColumns,
+            availableColumns,
+          });
+        }
       }
 
       // If block is after endSlot, stop iterating

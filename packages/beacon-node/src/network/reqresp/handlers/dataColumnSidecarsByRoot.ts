@@ -72,14 +72,16 @@ export async function* onDataColumnSidecarsByRoot(
       }
     }
 
-    await handleColumnSidecarUnavailability({
-      chain,
-      db,
-      slot,
-      blockRoot,
-      unavailableColumnIndices,
-      requestedColumns,
-      availableColumns,
-    });
+    if (unavailableColumnIndices.length) {
+      await handleColumnSidecarUnavailability({
+        chain,
+        db,
+        slot,
+        blockRoot,
+        unavailableColumnIndices,
+        requestedColumns,
+        availableColumns,
+      });
+    }
   }
 }
