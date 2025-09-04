@@ -43,7 +43,12 @@ import {
 import {verifyBlocksInEpoch} from "../../../../chain/blocks/verifyBlock.js";
 import {BeaconChain} from "../../../../chain/chain.js";
 import {BlockError, BlockErrorCode, BlockGossipError} from "../../../../chain/errors/index.js";
-import {ProduceFullBellatrix, ProduceFullDeneb, ProduceFullFulu} from "../../../../chain/produceBlock/index.js";
+import {
+  BlockType,
+  ProduceFullBellatrix,
+  ProduceFullDeneb,
+  ProduceFullFulu,
+} from "../../../../chain/produceBlock/index.js";
 import {validateGossipBlock} from "../../../../chain/validation/block.js";
 import {OpSource} from "../../../../chain/validatorMonitor.js";
 import {NetworkEvent} from "../../../../network/index.js";
@@ -360,7 +365,7 @@ export function getBeaconBlockApi({
 
     // Either the payload/blobs are cached from i) engine locally or ii) they are from the builder
     const producedResult = chain.blockProductionCache.get(blockRoot);
-    if (producedResult !== undefined) {
+    if (producedResult !== undefined && producedResult.type !== BlockType.Blinded) {
       const source = ProducedBlockSource.engine;
       chain.logger.debug("Reconstructing the full signed block contents", {slot, blockRoot, source});
 
@@ -652,11 +657,11 @@ export function getBeaconBlockApi({
         }
 
         let dataColumnSidecars = await db.dataColumnSidecar.values(blockRoot);
-        if (!dataColumnSidecars) {
+        if (dataColumnSidecars.length === 0) {
           dataColumnSidecars = await db.dataColumnSidecarArchive.values(block.message.slot);
         }
 
-        if (!dataColumnSidecars) {
+        if (dataColumnSidecars.length === 0) {
           throw new ApiError(
             404,
             `dataColumnSidecars not found in db for slot=${block.message.slot} root=${toRootHex(blockRoot)}`

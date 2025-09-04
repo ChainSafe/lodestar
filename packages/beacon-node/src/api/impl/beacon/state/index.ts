@@ -2,6 +2,7 @@ import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {
   EPOCHS_PER_HISTORICAL_VECTOR,
+  SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SUBNET_SIZE,
   isForkPostElectra,
   isForkPostFulu,
@@ -253,8 +254,19 @@ export function getBeaconStateApi({
         throw new ApiError(400, `No cached state available for stateId: ${stateId}`);
       }
 
-      const epoch = filters.epoch ?? computeEpochAtSlot(state.slot);
+      const stateEpoch = computeEpochAtSlot(state.slot);
+      const epoch = filters.epoch ?? stateEpoch;
       const startSlot = computeStartSlotAtEpoch(epoch);
+      const endSlot = startSlot + SLOTS_PER_EPOCH - 1;
+
+      if (Math.abs(epoch - stateEpoch) > 1) {
+        throw new ApiError(400, `Epoch ${epoch} must be within one epoch of state epoch ${stateEpoch}`);
+      }
+
+      if (filters.slot !== undefined && (filters.slot < startSlot || filters.slot > endSlot)) {
+        throw new ApiError(400, `Slot ${filters.slot} is not in epoch ${epoch}`);
+      }
+
       const decisionRoot = stateCached.epochCtx.getShufflingDecisionRoot(epoch);
       const shuffling = await chain.shufflingCache.get(epoch, decisionRoot);
       if (!shuffling) {

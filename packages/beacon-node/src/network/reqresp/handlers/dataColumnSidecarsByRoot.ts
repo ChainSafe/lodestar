@@ -4,7 +4,11 @@ import {toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {DataColumnSidecarsByRootRequest} from "../../../util/types.js";
-import {validateRequestedDataColumns} from "../utils/dataColumnResponseValidation.js";
+import {
+  handleColumnSidecarUnavailability,
+  validateRequestedDataColumns,
+} from "../utils/dataColumnResponseValidation.js";
+import {ColumnIndex} from "@lodestar/types";
 
 export async function* onDataColumnSidecarsByRoot(
   requestBody: DataColumnSidecarsByRootRequest,
@@ -51,7 +55,9 @@ export async function* onDataColumnSidecarsByRoot(
       : // Finalized sidecars are archived and stored by slot
         await db.dataColumnSidecarArchive.getManyBinary(slot, availableColumns);
 
-    for (const dataColumnBytes of dataColumns) {
+    const unavailableColumnIndices: ColumnIndex[] = [];
+    for (let i = 0; i < dataColumns.length; i++) {
+      const dataColumnBytes = dataColumns[i];
       if (dataColumnBytes) {
         yield {
           data: dataColumnBytes,
@@ -61,17 +67,22 @@ export async function* onDataColumnSidecarsByRoot(
 
       // TODO: Check blobs for that block and respond resource_unavailable
       // After we have consensus from other teams on the specs
-      // else {
-      //   await handleColumnSidecarUnavailability({
-      //     chain,
-      //     db,
-      //     unavailableColumnIndex: availableColumns[index],
-      //     slot: block.slot,
-      //     blockRoot: fromHex(block.blockRoot),
-      //     requestedColumns,
-      //     availableColumns,
-      //   });
-      // }
+      else {
+        unavailableColumnIndices.push(availableColumns[i]);
+      }
+    }
+
+    if (unavailableColumnIndices.length) {
+      await handleColumnSidecarUnavailability({
+        chain,
+        db,
+        metrics: chain.metrics,
+        slot,
+        blockRoot,
+        unavailableColumnIndices,
+        requestedColumns,
+        availableColumns,
+      });
     }
   }
 }

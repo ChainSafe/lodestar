@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/style/noNonNullAssertion: values all exist */
 import {beforeAll, afterAll, beforeEach, describe, it, expect} from "vitest";
 import {getEnvLogger} from "@lodestar/logger/env";
 import {Repository, encodeKey, BUCKET_LENGTH, LevelDbController, type Db} from "../../src/index.js";

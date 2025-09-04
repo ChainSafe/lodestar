@@ -1210,12 +1210,12 @@ export function getValidatorApi(
       const pubkeys = getPubkeysForIndices(state.validators, indices);
       // Ensures `epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD <= current_epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1`
       const syncCommitteeCache = state.epochCtx.getIndexedSyncCommitteeAtEpoch(epoch);
-      const syncCommitteeValidatorIndexMap = syncCommitteeCache.validatorIndexMap;
+      const validatorSyncCommitteeIndexMap = syncCommitteeCache.validatorIndexMap;
 
       const duties: routes.validator.SyncDuty[] = [];
       for (let i = 0, len = indices.length; i < len; i++) {
         const validatorIndex = indices[i];
-        const validatorSyncCommitteeIndices = syncCommitteeValidatorIndexMap.get(validatorIndex);
+        const validatorSyncCommitteeIndices = validatorSyncCommitteeIndexMap.get(validatorIndex);
         if (validatorSyncCommitteeIndices) {
           duties.push({
             pubkey: pubkeys[i],
