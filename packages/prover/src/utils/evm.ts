@@ -20,7 +20,7 @@ export async function createVM({proofProvider}: {proofProvider: ProofProvider}):
   const blockchain = await Blockchain.create({common});
 
   // Connect blockchain object with existing proof provider for block history
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+  // biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
   (blockchain as any).getBlock = async (blockId: number) => {
     const payload = await proofProvider.getExecutionPayload(blockId);
     return {

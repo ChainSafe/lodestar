@@ -43,7 +43,12 @@ import {
 import {verifyBlocksInEpoch} from "../../../../chain/blocks/verifyBlock.js";
 import {BeaconChain} from "../../../../chain/chain.js";
 import {BlockError, BlockErrorCode, BlockGossipError} from "../../../../chain/errors/index.js";
-import {ProduceFullBellatrix, ProduceFullDeneb, ProduceFullFulu} from "../../../../chain/produceBlock/index.js";
+import {
+  BlockType,
+  ProduceFullBellatrix,
+  ProduceFullDeneb,
+  ProduceFullFulu,
+} from "../../../../chain/produceBlock/index.js";
 import {validateGossipBlock} from "../../../../chain/validation/block.js";
 import {OpSource} from "../../../../chain/validatorMonitor.js";
 import {NetworkEvent} from "../../../../network/index.js";
@@ -308,9 +313,7 @@ export function getBeaconBlockApi({
       }
     }
 
-    if (chain.emitter.listenerCount(routes.events.EventType.blockGossip)) {
-      chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRoot});
-    }
+    chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRoot});
 
     if (blockForImport.type === BlockInputType.availableData) {
       if (isForkPostFulu(blockForImport.blockData.fork)) {
@@ -362,7 +365,7 @@ export function getBeaconBlockApi({
 
     // Either the payload/blobs are cached from i) engine locally or ii) they are from the builder
     const producedResult = chain.blockProductionCache.get(blockRoot);
-    if (producedResult !== undefined) {
+    if (producedResult !== undefined && producedResult.type !== BlockType.Blinded) {
       const source = ProducedBlockSource.engine;
       chain.logger.debug("Reconstructing the full signed block contents", {slot, blockRoot, source});
 
@@ -636,8 +639,8 @@ export function getBeaconBlockApi({
       };
     },
 
-    async getBlobs({blockId, indices}) {
-      assertUniqueItems(indices, "Duplicate indices provided");
+    async getBlobs({blockId, versionedHashes}) {
+      assertUniqueItems(versionedHashes, "Duplicate versioned hashes provided");
 
       const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
       const fork = config.getForkName(block.message.slot);
@@ -654,11 +657,11 @@ export function getBeaconBlockApi({
         }
 
         let dataColumnSidecars = await db.dataColumnSidecar.values(blockRoot);
-        if (!dataColumnSidecars) {
+        if (dataColumnSidecars.length === 0) {
           dataColumnSidecars = await db.dataColumnSidecarArchive.values(block.message.slot);
         }
 
-        if (!dataColumnSidecars) {
+        if (dataColumnSidecars.length === 0) {
           throw new ApiError(
             404,
             `dataColumnSidecars not found in db for slot=${block.message.slot} root=${toRootHex(blockRoot)}`
@@ -684,8 +687,27 @@ export function getBeaconBlockApi({
         blobs = [];
       }
 
+      if (blobs.length && versionedHashes?.length) {
+        const kzgCommitments = (block as deneb.SignedBeaconBlock).message.body.blobKzgCommitments;
+
+        const blockVersionedHashes = kzgCommitments.map((commitment) =>
+          toHex(kzgCommitmentToVersionedHash(commitment))
+        );
+
+        const requestedIndices: number[] = [];
+        for (const requestedHash of versionedHashes) {
+          const index = blockVersionedHashes.findIndex((hash) => hash === requestedHash);
+          if (index === -1) {
+            throw new ApiError(400, `Versioned hash ${requestedHash} not found in block`);
+          }
+          requestedIndices.push(index);
+        }
+
+        blobs = requestedIndices.sort((a, b) => a - b).map((index) => blobs[index]);
+      }
+
       return {
-        data: indices ? blobs.filter((_, i) => indices.includes(i)) : blobs,
+        data: blobs,
         meta: {
           executionOptimistic,
           finalized,

@@ -32,6 +32,7 @@
     "lint:fix": "yarn run lint --write",
     "test": "yarn test:unit",
     "test:unit": "vitest run --project unit --project unit-minimal",
+    "test:e2e": "vitest run --project e2e",
     "check-readme": "typescript-docs-verifier"
   },
   "dependencies": {
