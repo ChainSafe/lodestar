@@ -55,6 +55,7 @@ export async function* onDataColumnSidecarsByRange(
         await handleColumnSidecarUnavailability({
           chain,
           db,
+          metrics: chain.metrics,
           unavailableColumnIndices,
           slot,
           requestedColumns,
@@ -102,6 +103,7 @@ export async function* onDataColumnSidecarsByRange(
           await handleColumnSidecarUnavailability({
             chain,
             db,
+            metrics: chain.metrics,
             unavailableColumnIndices,
             blockRoot: fromHex(block.blockRoot),
             slot: block.slot,

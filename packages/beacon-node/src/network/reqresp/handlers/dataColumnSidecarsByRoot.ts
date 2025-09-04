@@ -76,6 +76,7 @@ export async function* onDataColumnSidecarsByRoot(
       await handleColumnSidecarUnavailability({
         chain,
         db,
+        metrics: chain.metrics,
         slot,
         blockRoot,
         unavailableColumnIndices,

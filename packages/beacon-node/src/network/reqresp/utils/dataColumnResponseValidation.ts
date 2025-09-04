@@ -9,6 +9,7 @@ import {getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized} from "../../.
 export async function handleColumnSidecarUnavailability({
   chain,
   db,
+  metrics,
   unavailableColumnIndices,
   requestedColumns,
   availableColumns,
@@ -17,6 +18,7 @@ export async function handleColumnSidecarUnavailability({
 }: {
   chain: IBeaconChain;
   db: IBeaconDb;
+  metrics: Metrics | null;
   slot: Slot;
   blockRoot?: Uint8Array;
   unavailableColumnIndices: ColumnIndex[];
@@ -51,15 +53,14 @@ export async function handleColumnSidecarUnavailability({
 
   // There are blobs for that column index so we should have synced for it
   // We need to inform to peers that we don't have that expected data
-  // NOTE: We may look to add some metrics to track such scenario
   // throw new ResponseError(
   // RespStatus.RESOURCE_UNAVAILABLE,
-  chain.metrics?.dataColumns.missingCustodyColumns.inc(unavailableColumnIndices.length);
+  // );
+  metrics?.dataColumns.missingCustodyColumns.inc(unavailableColumnIndices.length);
   chain.logger.verbose("dataColumnSidecar requested and within custody but not available", {
     unavailableColumnIndices: prettyPrintIndices(unavailableColumnIndices),
     blockRoot: blockRoot ? prettyBytes(blockRoot) : "unknown blockRoot",
   });
-  // );
 }
 
 export function validateRequestedDataColumns(chain: IBeaconChain, requestedColumns: ColumnIndex[]): ColumnIndex[] {
