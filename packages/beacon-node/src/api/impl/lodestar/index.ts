@@ -17,7 +17,7 @@ import {
   isSlashableAttestationData,
   loadState,
 } from "@lodestar/state-transition";
-import {Attestation, Slot, phase0, ssz} from "@lodestar/types";
+import {Attestation, Slot, phase0, ssz, sszTypesFor} from "@lodestar/types";
 import {AttesterSlashing} from "@lodestar/types";
 import {toHex, toRootHex} from "@lodestar/utils";
 import {BeaconChain, IBeaconChain} from "../../../chain/index.js";
@@ -27,6 +27,8 @@ import {GossipType} from "../../../network/index.js";
 import {profileNodeJS, writeHeapSnapshot} from "../../../util/profile.js";
 import {getStateResponseWithRegen} from "../beacon/state/utils.js";
 import {ApiModules} from "../types.js";
+
+type HexRoot = string;
 
 export function getLodestarApi({
   chain,
@@ -231,7 +233,8 @@ export function getLodestarApi({
     },
 
     async getAttesterSlashingsFromBlocks({signedBlocks}) {
-      const attesterSlashings: AttesterSlashing[] = [];
+      //const attesterSlashings: AttesterSlashing[] = [];
+      const attesterSlashings = new Map<HexRoot, AttesterSlashing>();
       const seenAttestations: {
         attestation: Attestation;
         slot: Slot;
@@ -293,15 +296,17 @@ export function getLodestarApi({
               // get attester slashing from indexed atestations
               const attesterSlashing: AttesterSlashing = {
                 attestation1: ssz[fork].IndexedAttestationBigint.fromJson(
-                  ssz[fork].IndexedAttestation.toJson(newIndexedAttestation)
+                  sszTypesFor(fork).IndexedAttestation.toJson(newIndexedAttestation)
                 ),
                 attestation2: ssz[fork].IndexedAttestationBigint.fromJson(
-                  ssz[fork].IndexedAttestation.toJson(seenIndexedAttestation)
+                  sszTypesFor(fork).IndexedAttestation.toJson(seenIndexedAttestation)
                 ),
               };
 
               // add attester slashing to list
-              attesterSlashings.push(attesterSlashing);
+              const rootHash = sszTypesFor(fork).AttesterSlashing.hashTreeRoot(attesterSlashing);
+              attesterSlashings.set(toRootHex(rootHash), attesterSlashing);
+              //attesterSlashings.push(attesterSlashing);
             }
           }
           // add new attestation to seen attestations
@@ -314,7 +319,7 @@ export function getLodestarApi({
       }
 
       return {
-        data: attesterSlashings,
+        data: Array.from(attesterSlashings.values()),
       };
     },
   };
