@@ -368,6 +368,16 @@ export async function unavailableBeaconBlobsByRootPreFulu(
         // verifyBlocksDataAvailability
         cachedData.blobsCache.set(blobSidecar.index, blobSidecar);
 
+        // Publish blob sidecar since we haven't seen it yet on gossip
+        network
+          .publishBlobSidecar(blobSidecar)
+          .then(() => {
+            metrics?.gossipBlob.publishedFromEngine.inc();
+          })
+          .catch(() => {
+            // Ignore publishing errors
+          });
+
         if (emitter.listenerCount(routes.events.EventType.blobSidecar)) {
           emitter.emit(routes.events.EventType.blobSidecar, {
             blockRoot: blockRootHex,
