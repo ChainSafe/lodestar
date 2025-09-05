@@ -1,6 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPostDeneb, ForkPostFulu, ForkPreFulu, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
-import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {SignedBeaconBlock, deneb, fulu} from "@lodestar/types";
 import {LodestarError, fromHex, prettyBytes, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
@@ -8,12 +7,10 @@ import {BlobMeta, BlockInputSource, IBlockInput, MissingColumnMeta} from "../../
 import {SeenBlockInput} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {validateBlockBlobSidecars} from "../../chain/validation/blobSidecar.js";
 import {validateBlockDataColumnSidecars} from "../../chain/validation/dataColumnSidecar.js";
-import {IExecutionEngine} from "../../execution/index.js";
 import {INetwork} from "../../network/interface.js";
 import {prettyPrintPeerIdStr} from "../../network/util.js";
-import {computePreFuluKzgCommitmentsInclusionProof, kzgCommitmentToVersionedHash} from "../../util/blobs.js";
+import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {byteArrayEquals} from "../../util/bytes.js";
-import {getCellsAndProofs, getDataColumnSidecarsFromBlock} from "../../util/dataColumns.js";
 import {
   BlockInputSyncCacheItem,
   PendingBlockInput,
@@ -31,7 +28,6 @@ export type FetchByRootCoreProps = {
 };
 export type FetchByRootProps = FetchByRootCoreProps & {
   cacheItem: BlockInputSyncCacheItem;
-  executionEngine: IExecutionEngine;
   blockRoot: Uint8Array;
 };
 export type FetchByRootAndValidateBlockProps = Omit<FetchByRootCoreProps, "peerMeta"> & {
@@ -39,14 +35,12 @@ export type FetchByRootAndValidateBlockProps = Omit<FetchByRootCoreProps, "peerM
   blockRoot: Uint8Array;
 };
 export type FetchByRootAndValidateBlobsProps = FetchByRootAndValidateBlockProps & {
-  executionEngine: IExecutionEngine;
   forkName: ForkPreFulu;
   block: SignedBeaconBlock<ForkPostDeneb>;
   blobMeta: BlobMeta[];
 };
 export type FetchByRootAndValidateColumnsProps = FetchByRootCoreProps & {
   blockRoot: Uint8Array;
-  executionEngine: IExecutionEngine;
   forkName: ForkPostFulu;
   block: SignedBeaconBlock<ForkPostFulu>;
   columnMeta: MissingColumnMeta;
@@ -60,13 +54,11 @@ export type FetchByRootResponses = {
 export type DownloadByRootProps = FetchByRootCoreProps & {
   cacheItem: BlockInputSyncCacheItem;
   seenCache: SeenBlockInput;
-  executionEngine: IExecutionEngine;
 };
 export async function downloadByRoot({
   config,
   seenCache,
   network,
-  executionEngine,
   peerMeta,
   cacheItem,
 }: DownloadByRootProps): Promise<PendingBlockInput> {
@@ -77,7 +69,6 @@ export async function downloadByRoot({
   const {block, blobSidecars, columnSidecars} = await fetchByRoot({
     config,
     network,
-    executionEngine,
     cacheItem,
     blockRoot,
     peerMeta,
@@ -172,7 +163,6 @@ export async function downloadByRoot({
 export async function fetchByRoot({
   config,
   network,
-  executionEngine,
   peerMeta,
   blockRoot,
   cacheItem,
@@ -200,7 +190,6 @@ export async function fetchByRoot({
         blobSidecars = await fetchAndValidateBlobs({
           config,
           network,
-          executionEngine,
           peerIdStr,
           forkName: forkName as ForkPreFulu,
           block: block as SignedBeaconBlock<ForkPostDeneb>,
@@ -212,7 +201,6 @@ export async function fetchByRoot({
         columnSidecars = await fetchAndValidateColumns({
           config,
           network,
-          executionEngine,
           peerMeta,
           forkName: forkName as ForkPostFulu,
           block: block as SignedBeaconBlock<ForkPostFulu>,
@@ -233,7 +221,6 @@ export async function fetchByRoot({
       columnSidecars = await fetchAndValidateColumns({
         config,
         network,
-        executionEngine,
         peerMeta,
         forkName,
         blockRoot,
@@ -251,7 +238,6 @@ export async function fetchByRoot({
       blobSidecars = await fetchAndValidateBlobs({
         config,
         network,
-        executionEngine,
         peerIdStr,
         forkName: forkName as ForkPreFulu,
         blockRoot,
@@ -305,89 +291,19 @@ export async function fetchAndValidateBlock({
 export async function fetchAndValidateBlobs({
   config,
   network,
-  executionEngine,
   forkName,
   peerIdStr,
   blockRoot,
   block,
   blobMeta,
 }: FetchByRootAndValidateBlobsProps): Promise<deneb.BlobSidecars> {
-  let blobSidecars: deneb.BlobSidecars = [];
-  try {
-    blobSidecars = await fetchGetBlobsV1AndBuildSidecars({
-      config,
-      executionEngine,
-      forkName,
-      block,
-      blobMeta,
-    });
-  } catch (err) {
-    network.logger.error(
-      `error fetching/building blobSidecars for blockRoot=${prettyBytes(blockRoot)} via getBlobsV1`,
-      {},
-      err as Error
-    );
-  }
-
-  // not all needed blobs were fetched via getBlobs, need to use ReqResp
-  if (blobSidecars.length !== blobMeta.length) {
-    const networkResponse = await fetchBlobsByRoot({
+  const blobSidecars: deneb.BlobSidecars = await fetchBlobsByRoot({
       network,
       peerIdStr,
       blobMeta,
-      indicesInPossession: blobSidecars.map((b) => b.index),
     });
-    blobSidecars.push(...networkResponse);
-  }
-
-  // responses can be sparse for both types of requests to sort to make sure its in sequential order
-  blobSidecars.sort((a, b) => a.index - b.index);
 
   await validateBlockBlobSidecars(block.message.slot, blockRoot, blobMeta.length, blobSidecars);
-
-  return blobSidecars;
-}
-
-export async function fetchGetBlobsV1AndBuildSidecars({
-  config,
-  executionEngine,
-  forkName,
-  block,
-  blobMeta,
-}: Pick<
-  FetchByRootAndValidateBlobsProps,
-  "config" | "executionEngine" | "forkName" | "block" | "blobMeta"
->): Promise<deneb.BlobSidecars> {
-  const blobSidecars: deneb.BlobSidecars = [];
-
-  const enginedResponse = await executionEngine.getBlobs(
-    forkName,
-    blobMeta.map(({versionedHash}) => versionedHash)
-  );
-
-  if (!enginedResponse.length) {
-    return blobSidecars;
-  }
-
-  // response.length should always match blobMeta.length and they should be in the same order
-  for (let i = 0; i < blobMeta.length; i++) {
-    const blobAndProof = enginedResponse[i];
-    if (blobAndProof) {
-      const {blob, proof} = blobAndProof;
-      const index = blobMeta[i].index;
-      const kzgCommitment = block.message.body.blobKzgCommitments[index];
-      const sidecar: deneb.BlobSidecar = {
-        index,
-        blob,
-        kzgProof: proof,
-        kzgCommitment,
-        // TODO(fulu): refactor this to only calculate the root inside these following two functions once
-        kzgCommitmentInclusionProof: computePreFuluKzgCommitmentsInclusionProof(forkName, block.message.body, index),
-        signedBlockHeader: signedBlockToSignedHeader(config, block),
-      };
-      blobSidecars.push(sidecar);
-    }
-  }
 
   return blobSidecars;
 }
@@ -412,7 +328,6 @@ export async function fetchBlobsByRoot({
 export async function fetchAndValidateColumns({
   config,
   network,
-  executionEngine,
   forkName,
   peerMeta,
   block,
@@ -424,48 +339,6 @@ export async function fetchAndValidateColumns({
   const blobCount = block.message.body.blobKzgCommitments.length;
   if (blobCount === 0) {
     return [];
-  }
-
-  const blobsV2ColumnSidecars = await fetchGetBlobsV2AndBuildSidecars({
-    config,
-    executionEngine,
-    forkName,
-    block,
-    columnMeta,
-  }).catch((err) => {
-    network.logger.error(
-      "error building columnSidecars via getBlobsV2",
-      {slot, blockRoot: prettyBytes(blockRoot)},
-      err as Error
-    );
-    return null;
-  });
-  if (blobsV2ColumnSidecars?.length) {
-    // limit reconstructed to only the ones we need
-    const needed = blobsV2ColumnSidecars.filter((c) => columnMeta.missing.includes(c.index));
-    // spec states that reconstructed sidecars need to be published to the network, but only requires
-    // publishing the ones that we custody and have not already been published.
-    const alreadyPublished = network.custodyConfig.custodyColumns.filter(
-      (index) => !columnMeta.missing.includes(index)
-    );
-    const needToPublish = blobsV2ColumnSidecars.filter(
-      (c) => network.custodyConfig.custodyColumns.includes(c.index) && !alreadyPublished.includes(c.index)
-    );
-    // need to validate both the ones we sample AND ones we will publish
-    await validateBlockDataColumnSidecars(slot, blockRoot, blobCount, [...needed, ...needToPublish]);
-    needToPublish.map((column) =>
-      network.publishDataColumnSidecar(column).catch((err) =>
-        network.logger.error(
-          "Error publishing column after getBlobsV2 reconstruct",
-          {
-            index: column.index,
-            blockRoot: prettyBytes(blockRoot),
-          },
-          err
-        )
-      )
-    );
-    return needed;
   }
 
   const peerColumns = new Set(peerMeta.custodyGroups ?? []);
@@ -490,25 +363,6 @@ export async function fetchAndValidateColumns({
   await validateBlockDataColumnSidecars(slot, blockRoot, blobCount, columnSidecars);
 
   return columnSidecars;
-}
-
-export async function fetchGetBlobsV2AndBuildSidecars({
-  config,
-  executionEngine,
-  forkName,
-  block,
-  columnMeta,
-}: Pick<
-  FetchByRootAndValidateColumnsProps,
-  "config" | "executionEngine" | "forkName" | "block" | "columnMeta"
->): Promise<fulu.DataColumnSidecars> {
-  const response = await executionEngine.getBlobs(forkName, columnMeta.versionedHashes);
-  if (!response) {
-    return [];
-  }
-
-  const cellsAndProofs = await getCellsAndProofs(response);
-  return getDataColumnSidecarsFromBlock(config, block, cellsAndProofs);
 }
 
 // TODO(fulu) not in use, remove?

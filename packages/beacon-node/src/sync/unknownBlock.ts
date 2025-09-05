@@ -513,7 +513,6 @@ export class BlockInputSync {
           config: this.config,
           network: this.network,
           seenCache: this.chain.seenGossipBlockInput,
-          executionEngine: this.chain.executionEngine,
           peerMeta,
           cacheItem,
         });
