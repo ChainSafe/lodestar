@@ -6,6 +6,7 @@ import {
   ArrayOf,
   EmptyArgs,
   EmptyMeta,
+  EmptyMetaCodec,
   EmptyRequest,
   EmptyRequestCodec,
   EmptyResponseCodec,
@@ -17,7 +18,7 @@ import {
   ExecutionOptimisticFinalizedAndVersionCodec,
   ExecutionOptimisticFinalizedAndVersionMeta,
 } from "../../utils/metadata.js";
-import {AttesterSlashingList} from "./beacon/pool.js";
+import {AttesterSlashingList, AttesterSlashingListTypeElectra} from "./beacon/pool.js";
 import {StateArgs} from "./beacon/state.js";
 import {FilterGetPeers, NodePeer, PeerDirection, PeerState} from "./node.js";
 
@@ -502,7 +503,10 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
           body: Schema.ObjectArray,
         },
       },
-      resp: JsonOnlyResponseCodec,
+      resp: {
+        data: AttesterSlashingListTypeElectra,
+        meta: EmptyMetaCodec,
+      },
     },
   };
 }

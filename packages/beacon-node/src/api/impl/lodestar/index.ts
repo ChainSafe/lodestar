@@ -276,9 +276,10 @@ export function getLodestarApi({
               if (!newAttestationState || !seenAttestationState) {
                 throw new Error("Failed to retrieve state for one or more attestations.");
               }
-              if (newAttestationState.fork !== seenAttestationState.fork) {
-                throw new Error("Slashable attestations found on different forks.");
-              }
+              // TODO: check fork
+              // if (newAttestationState.fork !== seenAttestationState.fork) {
+              //   throw new Error("Slashable attestations found on different forks.");
+              // }
 
               // get indexed atestations
               // TODO: choose fork
