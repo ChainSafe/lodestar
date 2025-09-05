@@ -429,7 +429,7 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
     }
 
     const isDuplicate = this.blobsCache.has(blobSidecar.index);
-    if (opts.throwOnDuplicateAdd && isDuplicate) {
+    if (isDuplicate && opts.throwOnDuplicateAdd) {
       throw new BlockInputError(
         {
           code: BlockInputErrorCode.INVALID_CONSTRUCTION,
@@ -744,7 +744,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     }
 
     const isDuplicate = this.columnsCache.has(columnSidecar.index);
-    if (!opts.throwOnDuplicateAdd && isDuplicate) {
+    if (isDuplicate && opts.throwOnDuplicateAdd) {
       throw new BlockInputError(
         {
           code: BlockInputErrorCode.INVALID_CONSTRUCTION,
