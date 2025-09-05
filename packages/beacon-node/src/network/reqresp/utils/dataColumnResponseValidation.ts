@@ -42,7 +42,11 @@ export async function handleColumnSidecarUnavailability({
   if (!blockBytes) {
     chain.logger.verbose(
       `Expected ${blockRoot ? "unfinalized" : "finalized"} block not found while handling unavailable dataColumnSidecar`,
-      {slot, blockRoot: blockRoot ? toRootHex(blockRoot) : "unknown"}
+      {
+        slot,
+        blockRoot: blockRoot ? toRootHex(blockRoot) : "unknown",
+        earliestAvailableSlot: chain.earliestAvailableSlot,
+      }
     );
     return;
   }

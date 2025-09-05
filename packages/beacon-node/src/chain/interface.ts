@@ -142,6 +142,8 @@ export interface IBeaconChain {
 
   readonly opts: IChainOptions;
 
+  readonly earliestAvailableSlot: Slot;
+
   /** Start the processing of chain and load state from disk and related actions */
   init(): Promise<void>;
   /** Stop beacon chain processing */
