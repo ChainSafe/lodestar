@@ -656,19 +656,23 @@ export function getBeaconBlockApi({
           );
         }
 
-        let dataColumnSidecars = await db.dataColumnSidecar.values(blockRoot);
-        if (dataColumnSidecars.length === 0) {
-          dataColumnSidecars = await db.dataColumnSidecarArchive.values(block.message.slot);
-        }
+        if ((block.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length > 0) {
+          let dataColumnSidecars = await db.dataColumnSidecar.values(blockRoot);
+          if (dataColumnSidecars.length === 0) {
+            dataColumnSidecars = await db.dataColumnSidecarArchive.values(block.message.slot);
+          }
 
-        if (dataColumnSidecars.length === 0) {
-          throw new ApiError(
-            404,
-            `dataColumnSidecars not found in db for slot=${block.message.slot} root=${toRootHex(blockRoot)}`
-          );
-        }
+          if (dataColumnSidecars.length === 0) {
+            throw new ApiError(
+              404,
+              `dataColumnSidecars not found in db for slot=${block.message.slot} root=${toRootHex(blockRoot)}`
+            );
+          }
 
-        blobs = await reconstructBlobs(dataColumnSidecars);
+          blobs = await reconstructBlobs(dataColumnSidecars);
+        } else {
+          blobs = [];
+        }
       } else if (isForkPostDeneb(fork)) {
         let {blobSidecars} = (await db.blobSidecars.get(blockRoot)) ?? {};
         if (!blobSidecars) {
