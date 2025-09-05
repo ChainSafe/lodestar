@@ -27,21 +27,21 @@ export class DataColumnSidecarRepository extends PrefixedRepository<BlockRoot, C
   }
 
   encodeKeyRaw(prefix: BlockRoot, id: ColumnIndex): Uint8Array {
-    return Buffer.concat([prefix, intToBytes(id, 4)]);
+    return Buffer.concat([prefix, intToBytes(id, 4, "be")]);
   }
 
   decodeKeyRaw(raw: Uint8Array): {prefix: BlockRoot; id: ColumnIndex} {
     return {
       prefix: raw.slice(0, 32) as BlockRoot,
-      id: bytesToInt(raw.slice(32, 36)) as ColumnIndex,
+      id: bytesToInt(raw.slice(32, 36), "be") as ColumnIndex,
     };
   }
 
   getMaxKeyRaw(prefix: BlockRoot): Uint8Array {
-    return Buffer.concat([prefix, intToBytes(NUMBER_OF_COLUMNS, 4)]);
+    return Buffer.concat([prefix, intToBytes(NUMBER_OF_COLUMNS, 4, "be")]);
   }
 
   getMinKeyRaw(prefix: BlockRoot): Uint8Array {
-    return Buffer.concat([prefix, intToBytes(0, 4)]);
+    return Buffer.concat([prefix, intToBytes(0, 4, "be")]);
   }
 }

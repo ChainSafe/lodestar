@@ -25,21 +25,21 @@ export class DataColumnSidecarArchiveRepository extends PrefixedRepository<Slot,
   }
 
   encodeKeyRaw(prefix: Slot, id: ColumnIndex): Uint8Array {
-    return Buffer.concat([intToBytes(prefix, 4), intToBytes(id, 4)]);
+    return Buffer.concat([intToBytes(prefix, 4, "be"), intToBytes(id, 4, "be")]);
   }
 
   decodeKeyRaw(raw: Uint8Array): {prefix: Slot; id: ColumnIndex} {
     return {
-      prefix: bytesToInt(raw.slice(0, 4)) as Slot,
-      id: bytesToInt(raw.slice(4, 8)) as ColumnIndex,
+      prefix: bytesToInt(raw.slice(0, 4), "be") as Slot,
+      id: bytesToInt(raw.slice(4, 8), "be") as ColumnIndex,
     };
   }
 
   getMaxKeyRaw(prefix: Slot): Uint8Array {
-    return Buffer.concat([intToBytes(prefix, 4), intToBytes(NUMBER_OF_COLUMNS, 4)]);
+    return Buffer.concat([intToBytes(prefix, 4, "be"), intToBytes(NUMBER_OF_COLUMNS, 4, "be")]);
   }
 
   getMinKeyRaw(prefix: Slot): Uint8Array {
-    return Buffer.concat([intToBytes(prefix, 4), intToBytes(0, 4)]);
+    return Buffer.concat([intToBytes(prefix, 4, "be"), intToBytes(0, 4, "be")]);
   }
 }
