@@ -7085,8 +7085,7 @@
             }
           },
           "mappings": [],
-          "unit": "percentunit",
-          "unitScale": true
+          "unit": "percentunit"
         },
         "overrides": []
       },
@@ -7300,8 +7299,7 @@
             }
           },
           "mappings": [],
-          "unit": "percentunit",
-          "unitScale": true
+          "unit": "percentunit"
         },
         "overrides": []
       },
@@ -7499,8 +7497,7 @@
             }
           },
           "mappings": [],
-          "unit": "percentunit",
-          "unitScale": true
+          "unit": "percentunit"
         },
         "overrides": []
       },
@@ -7633,9 +7630,7 @@
               "mode": "off"
             }
           },
-          "mappings": [],
-          "unit": "percentunit",
-          "unitScale": true
+          "mappings": []
         },
         "overrides": []
       },
@@ -7644,6 +7639,89 @@
         "w": 12,
         "x": 12,
         "y": 320
+      },
+      "id": 586,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "12*rate(lodestar_gossip_blob_published_from_engine_total[$rate_interval])",
+          "instant": false,
+          "legendFormat": "count",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Blobs published to gossip / slot",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 328
       },
       "id": 584,
       "options": {
@@ -7752,15 +7830,14 @@
               "mode": "off"
             }
           },
-          "mappings": [],
-          "unitScale": true
+          "mappings": []
         },
         "overrides": []
       },
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 0,
+        "x": 12,
         "y": 328
       },
       "id": 582,
@@ -7854,8 +7931,7 @@
               "mode": "off"
             }
           },
-          "mappings": [],
-          "unitScale": true
+          "mappings": []
         },
         "overrides": []
       },
@@ -7863,7 +7939,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 328
+        "y": 336
       },
       "id": 585,
       "options": {
