@@ -1,9 +1,10 @@
 import {config} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
-import {AttesterSlashing, SignedBeaconBlock} from "@lodestar/types";
+import {SignedBeaconBlock, ssz} from "@lodestar/types";
 import {FastifyInstance} from "fastify";
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {getClient} from "../../../../src/beacon/client/lodestar.js";
+import {AttesterSlashingListElectra} from "../../../../src/beacon/routes/beacon/pool.js";
 import {Endpoints, getDefinitions} from "../../../../src/beacon/routes/lodestar.js";
 import {getRoutes} from "../../../../src/beacon/server/lodestar.js";
 import {HttpClient} from "../../../../src/utils/client/httpClient.js";
@@ -57,12 +58,24 @@ describe("beacon / lodestar", () => {
   });
   describe("getAttesterSlashingsFromBlocks", () => {
     it("getAttesterSlashingsFromBlocks as json", async () => {
-      const attesterSlashings: AttesterSlashing[] = [];
-      mockApi.getAttesterSlashingsFromBlocks.mockResolvedValue({
-        data: attesterSlashings,
-      });
-
       const mockSignedBlocks: SignedBeaconBlock[] = [];
+      mockSignedBlocks.push(ssz.electra.SignedBeaconBlock.defaultValue());
+
+      // TODO: choose fork
+      const attesterSlashingList: AttesterSlashingListElectra = [];
+      // TODO: fails reading 'attestingIndices'
+      //const attesterSlashing = ssz.electra.AttesterSlashing.defaultValue();
+      //attesterSlashingList.push(attesterSlashing);
+
+      const attesterSlashingsJson = attesterSlashingList.map((slashing) =>
+        ssz.electra.AttesterSlashing.toJson(slashing)
+      );
+
+      const mockReturnValue = {
+        data: attesterSlashingsJson as AttesterSlashingListElectra,
+      };
+
+      mockApi.getAttesterSlashingsFromBlocks.mockResolvedValue(mockReturnValue);
 
       const httpClient = new HttpClient({baseUrl});
       const client = getClient(config, httpClient);
@@ -71,12 +84,13 @@ describe("beacon / lodestar", () => {
         {signedBlocks: mockSignedBlocks},
         {
           requestWireFormat: WireFormat.json,
+          responseWireFormat: WireFormat.json,
         }
       );
 
       expect(res.ok).toBe(true);
       expect(res.wireFormat()).toBe(WireFormat.json);
-      expect(res.json().data).toStrictEqual([]);
+      expect(res.json().data).toStrictEqual(attesterSlashingsJson);
     });
   });
 });

@@ -17,7 +17,7 @@ import {
   isSlashableAttestationData,
   loadState,
 } from "@lodestar/state-transition";
-import {Attestation, Slot, phase0, ssz, sszTypesFor} from "@lodestar/types";
+import {Attestation, Slot, phase0, ssz} from "@lodestar/types";
 import {AttesterSlashing} from "@lodestar/types";
 import {toHex, toRootHex} from "@lodestar/utils";
 import {BeaconChain, IBeaconChain} from "../../../chain/index.js";
@@ -233,7 +233,6 @@ export function getLodestarApi({
     },
 
     async getAttesterSlashingsFromBlocks({signedBlocks}) {
-      //const attesterSlashings: AttesterSlashing[] = [];
       const attesterSlashings = new Map<HexRoot, AttesterSlashing>();
       const seenAttestations: {
         attestation: Attestation;
@@ -277,36 +276,37 @@ export function getLodestarApi({
               if (!newAttestationState || !seenAttestationState) {
                 throw new Error("Failed to retrieve state for one or more attestations.");
               }
-
               if (newAttestationState.fork !== seenAttestationState.fork) {
                 throw new Error("Slashable attestations found on different forks.");
               }
 
               // get indexed atestations
-              const fork = config.getForkName(blockSlot);
+              // TODO: choose fork
+              //const fork = config.getForkName(blockSlot);
               const newIndexedAttestation = newAttestationState.epochCtx.getIndexedAttestation(
-                ForkSeq[fork],
+                ForkSeq.electra,
                 newAttestation
               );
               const seenIndexedAttestation = seenAttestationState.epochCtx.getIndexedAttestation(
-                ForkSeq[fork],
+                ForkSeq.electra,
                 seenAttestation.attestation
               );
 
               // get attester slashing from indexed atestations
+              // TODO: choose fork
               const attesterSlashing: AttesterSlashing = {
-                attestation1: ssz[fork].IndexedAttestationBigint.fromJson(
-                  sszTypesFor(fork).IndexedAttestation.toJson(newIndexedAttestation)
+                attestation1: ssz.electra.IndexedAttestationBigint.fromJson(
+                  ssz.electra.IndexedAttestation.toJson(newIndexedAttestation)
                 ),
-                attestation2: ssz[fork].IndexedAttestationBigint.fromJson(
-                  sszTypesFor(fork).IndexedAttestation.toJson(seenIndexedAttestation)
+                attestation2: ssz.electra.IndexedAttestationBigint.fromJson(
+                  ssz.electra.IndexedAttestation.toJson(seenIndexedAttestation)
                 ),
               };
 
               // add attester slashing to list
-              const rootHash = sszTypesFor(fork).AttesterSlashing.hashTreeRoot(attesterSlashing);
+              // TODO: choose fork
+              const rootHash = ssz.electra.AttesterSlashing.hashTreeRoot(attesterSlashing);
               attesterSlashings.set(toRootHex(rootHash), attesterSlashing);
-              //attesterSlashings.push(attesterSlashing);
             }
           }
           // add new attestation to seen attestations
