@@ -177,6 +177,7 @@ export async function archiveBlocks(
         const slotsToDelete = (
           await db.dataColumnSidecarArchive.keys({
             lt: db.dataColumnSidecarArchive.getMaxKeyRaw(computeStartSlotAtEpoch(dataColumnSidecarsMinEpoch)),
+            gte: db.dataColumnSidecarArchive.getMinKeyRaw(computeStartSlotAtEpoch(0)),
           })
         ).map((p) => p.prefix);
 
@@ -340,7 +341,10 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
       promises.push(
         db.dataColumnSidecarArchive.putManyBinary(
           block.slot,
-          dataColumnSidecarBytes.map((p) => ({key: p.id, value: p.value}))
+          dataColumnSidecarBytes.map((p) => {
+            console.log("%%% adding to archive", {slot: block.slot, column: p.id, valueLength: p.value.byteLength});
+            return {key: p.id, value: p.value};
+          })
         )
       );
       migratedWrappedDataColumns += dataColumnSidecarBytes.length;
