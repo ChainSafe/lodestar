@@ -583,7 +583,7 @@ export async function validateColumnsByRangeResponse(
         blockRoot,
         blockKzgCommitments.length,
         blockColumnSidecars
-      ).then(() => ({blockRoot, columnSidecars}))
+      ).then(() => ({blockRoot, columnSidecars: blockColumnSidecars}))
     );
   }
 
