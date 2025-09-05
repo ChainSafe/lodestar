@@ -85,6 +85,7 @@ export enum FindHeadFnName {
 export interface IBeaconChain {
   readonly genesisTime: UintNum64;
   readonly genesisValidatorsRoot: Root;
+  readonly earliestAvailableSlot: Slot;
   readonly eth1: IEth1ForBlockProduction;
   readonly executionEngine: IExecutionEngine;
   readonly executionBuilder?: IExecutionBuilder;
@@ -141,8 +142,6 @@ export interface IBeaconChain {
   readonly serializedCache: SerializedCache;
 
   readonly opts: IChainOptions;
-
-  readonly earliestAvailableSlot: Slot;
 
   /** Start the processing of chain and load state from disk and related actions */
   init(): Promise<void>;
