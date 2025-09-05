@@ -244,6 +244,10 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
       optsBuff.gte = this.wrapKey(opts.gte);
     }
 
+    if((!optsBuff.gt && !optsBuff.gte) || (!optsBuff.lt && !optsBuff.lte)) {
+      throw new Error("Please provide both ranges to fetch the keys")
+    }
+
     if (opts?.reverse !== undefined) optsBuff.reverse = opts.reverse;
     if (opts?.limit !== undefined) optsBuff.limit = opts.limit;
 
