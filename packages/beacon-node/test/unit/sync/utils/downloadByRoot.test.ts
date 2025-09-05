@@ -31,9 +31,16 @@ import {
   generateBlockWithBlobSidecars,
   generateBlockWithColumnSidecars,
 } from "../../../utils/blocksAndData.js";
+import {PeerSyncMeta} from "../../../../src/network/peers/peersData.js";
 
 describe("downloadByRoot.ts", () => {
   const peerIdStr = "1234567890abcdef1234567890abcdef";
+  const peerMeta: PeerSyncMeta = {
+    peerId: peerIdStr,
+    client: "N/A",
+    custodyGroups: Array.from({length: NUMBER_OF_COLUMNS}, (_, i) => i),
+    earliestAvailableSlot: 0,
+  };
   let network: INetwork;
   let executionEngine: IExecutionEngine;
 
@@ -519,7 +526,7 @@ describe("downloadByRoot.ts", () => {
         network,
         executionEngine,
         forkName,
-        peerIdStr,
+        peerMeta,
         blockRoot: fuluBlockWithColumns.blockRoot,
         block: fuluBlockWithColumns.block,
         columnMeta,
@@ -563,7 +570,7 @@ describe("downloadByRoot.ts", () => {
         network,
         executionEngine,
         forkName,
-        peerIdStr,
+        peerMeta,
         blockRoot: fuluBlockWithColumns.blockRoot,
         block: fuluBlockWithColumns.block,
         columnMeta: testColumnMeta,
@@ -603,7 +610,7 @@ describe("downloadByRoot.ts", () => {
         network,
         executionEngine,
         forkName,
-        peerIdStr,
+        peerMeta,
         blockRoot: fuluBlockWithColumns.blockRoot,
         block: fuluBlockWithColumns.block,
         columnMeta: testColumnMeta,
@@ -639,7 +646,7 @@ describe("downloadByRoot.ts", () => {
         network,
         executionEngine,
         forkName,
-        peerIdStr,
+        peerMeta,
         blockRoot: fuluBlockWithColumns.blockRoot,
         block: fuluBlockWithColumns.block,
         columnMeta,
@@ -679,7 +686,7 @@ describe("downloadByRoot.ts", () => {
         network,
         executionEngine,
         forkName,
-        peerIdStr,
+        peerMeta,
         blockRoot: fuluBlockWithColumns.blockRoot,
         block: fuluBlockWithColumns.block,
         columnMeta,
@@ -736,7 +743,7 @@ describe("downloadByRoot.ts", () => {
           network,
           executionEngine,
           forkName,
-          peerIdStr,
+          peerMeta,
           blockRoot: fuluBlockWithColumns.blockRoot,
           block: fuluBlockWithColumns.block,
           columnMeta: {
@@ -773,7 +780,7 @@ describe("downloadByRoot.ts", () => {
         network,
         executionEngine,
         forkName,
-        peerIdStr,
+        peerMeta,
         blockRoot: fuluBlockWithColumns.blockRoot,
         block: fuluBlockWithColumns.block,
         columnMeta: {
@@ -947,7 +954,7 @@ describe("downloadByRoot.ts", () => {
       const missing = fuluBlockWithColumns.columnSidecars.map((c) => c.index);
       const response = await fetchColumnsByRoot({
         network,
-        peerIdStr,
+        peerMeta,
         blockRoot,
         columnMeta: {
           missing,

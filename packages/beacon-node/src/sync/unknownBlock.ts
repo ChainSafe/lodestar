@@ -494,8 +494,8 @@ export class BlockInputSync {
           ? new Set(cacheItem.blockInput.getMissingSampledColumnMeta().missing)
           : defaultPendingColumns;
       // pendingDataColumns is null pre-fulu
-      const peer = this.peerBalancer.bestPeerForPendingColumns(pendingColumns, excludedPeers);
-      if (peer === null) {
+      const peerMeta = this.peerBalancer.bestPeerForPendingColumns(pendingColumns, excludedPeers);
+      if (peerMeta === null) {
         // no more peer with needed columns to try, throw error
         let message = `Error fetching UnknownBlockRoot after ${i}: cannot find peer`;
         if (pendingColumns) {
@@ -503,7 +503,7 @@ export class BlockInputSync {
         }
         throw Error(message);
       }
-      const {peerId, client: peerClient} = peer;
+      const {peerId, client: peerClient} = peerMeta;
       excludedPeers.add(peerId);
 
       cacheItem.peerIdStrings.add(peerId);
@@ -514,7 +514,7 @@ export class BlockInputSync {
           network: this.network,
           seenCache: this.chain.seenGossipBlockInput,
           executionEngine: this.chain.executionEngine,
-          peerIdStr: peerId,
+          peerMeta,
           cacheItem,
         });
       } catch (e) {

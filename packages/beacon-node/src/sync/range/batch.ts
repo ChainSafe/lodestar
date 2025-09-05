@@ -10,6 +10,7 @@ import {PeerIdStr} from "../../util/peerId.js";
 import {MAX_BATCH_DOWNLOAD_ATTEMPTS, MAX_BATCH_PROCESSING_ATTEMPTS} from "../constants.js";
 import {DownloadByRangeRequests} from "../utils/downloadByRange.js";
 import {getBatchSlotRange, hashBlocks} from "./utils/index.js";
+import {PeerSyncMeta} from "../../network/peers/peersData.js";
 
 /**
  * Current state of a batch
@@ -205,6 +206,35 @@ export class Batch {
     }
 
     return requests;
+  }
+
+  /**
+   * Post-fulu we should only get columns that peer has advertised
+   */
+  getRequestsForPeer(peer: PeerSyncMeta): DownloadByRangeRequests {
+    if (!isForkPostFulu(this.forkName)) {
+      return this.requests;
+    }
+
+    // post-fulu we need to ensure that we only request columns that the peer has advertised
+    const {columnsRequest} = this.requests;
+    if (columnsRequest == null) {
+      return this.requests;
+    }
+
+    const peerColumns = new Set(peer.custodyGroups ?? []);
+    const requestedColumns = columnsRequest.columns.filter((c) => peerColumns.has(c));
+    if (requestedColumns.length === columnsRequest.columns.length) {
+      return this.requests;
+    }
+
+    return {
+      ...this.requests,
+      columnsRequest: {
+        ...columnsRequest,
+        columns: requestedColumns,
+      },
+    };
   }
 
   /**
