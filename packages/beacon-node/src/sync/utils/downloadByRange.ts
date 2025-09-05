@@ -510,7 +510,7 @@ export async function validateBlobsByRangeResponse(
 
     validateSidecarsPromises.push(
       validateBlockBlobSidecars(block.message.slot, blockRoot, blockKzgCommitments.length, blockBlobSidecars).then(
-        () => ({blockRoot, blobSidecars})
+        () => ({blockRoot, blobSidecars: blockBlobSidecars})
       )
     );
   }
