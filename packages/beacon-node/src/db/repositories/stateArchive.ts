@@ -10,7 +10,7 @@ import {getRootIndexKey, storeRootIndex} from "./stateArchiveIndex.js";
 export class StateArchiveRepository extends Repository<Slot, BeaconStateAllForks> {
   constructor(config: ChainForkConfig, db: Db) {
     // Pick some type but won't be used. Casted to any because no type can match `BeaconStateAllForks`
-    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+    // biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
     const type = ssz.phase0.BeaconState as any;
     const bucket = Bucket.allForks_stateArchive;
     super(config, db, bucket, type, getBucketNameByValue(bucket));

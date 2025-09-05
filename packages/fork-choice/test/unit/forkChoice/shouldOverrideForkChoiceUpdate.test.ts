@@ -194,7 +194,7 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
 
       const secFromSlot = 0;
       const currentSlot = blockSeenSlot ?? headBlock.slot;
-      const forkChoice = new ForkChoice(config, fcStore, protoArr, {
+      const forkChoice = new ForkChoice(config, fcStore, protoArr, null, {
         proposerBoost: true,
         proposerBoostReorg: true,
       });

@@ -25,7 +25,7 @@ export function registerRoutes(
     // Enforces that we are declaring routes for every routeId in `Endpoints`
     [K in keyof Endpoints]: () => {
       // The Endpoints are enforced in each getRoutes return type
-      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+      // biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
       [K2 in keyof Endpoints[K]]: FastifyRoute<any>;
     };
   } = {

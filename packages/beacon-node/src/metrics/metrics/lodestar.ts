@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/suspicious/noTemplateCurlyInString: The metric templates requires to have `${}` in a normal string */
 import {NotReorgedReason} from "@lodestar/fork-choice";
 import {BlockInputSource} from "../../chain/blocks/blockInput/index.js";
 import {BlobsSource, BlockSource, DataColumnsSource} from "../../chain/blocks/types.js";
@@ -787,6 +788,10 @@ export function createLodestarMetrics(
           help: "Count of not using buffer when calling getBlobsV2() from execution layer",
         }),
       },
+      missingCustodyColumns: register.counter({
+        name: "lodestar_data_columns_missing_custody_columns_count",
+        help: "Total number of missing columns that should be in the database but were not when requested",
+      }),
     },
     importBlock: {
       persistBlockNoSerializedDataCount: register.gauge({
