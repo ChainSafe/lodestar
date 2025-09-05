@@ -243,9 +243,8 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
     } else if (opts?.gte !== undefined) {
       optsBuff.gte = this.wrapKey(opts.gte);
     }
-
-    const hasUpper = !optsBuff.gt || !optsBuff.gte;
-    const hasLower = !optsBuff.lt || !optsBuff.lte;
+    const hasUpper = optsBuff.gt !== undefined || optsBuff.gte !== undefined;
+    const hasLower = optsBuff.lt !== undefined || optsBuff.lte !== undefined;
 
     if(!hasUpper || !hasLower) {
       throw new Error("Please provide both ranges to fetch the keys")
