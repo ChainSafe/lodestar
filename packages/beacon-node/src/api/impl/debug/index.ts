@@ -101,7 +101,6 @@ export function getDebugApi({
 
       if (isForkPostFulu(fork) && (block.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length > 0) {
         dataColumnSidecars = await db.dataColumnSidecar.values(blockRoot);
-
         if (dataColumnSidecars.length === 0) {
           dataColumnSidecars = await db.dataColumnSidecarArchive.values(block.message.slot);
         }
