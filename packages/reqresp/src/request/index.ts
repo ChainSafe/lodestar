@@ -110,6 +110,8 @@ export async function* sendRequest(
       throw new RequestError({code: RequestErrorCode.DIAL_ERROR, error: e});
     });
 
+    metrics?.outgoingOpenedStreams?.inc({method});
+
     // TODO: Does the TTFB timer start on opening stream or after receiving request
     const timerTTFB = metrics?.outgoingResponseTTFB.startTimer({method});
 
@@ -209,6 +211,8 @@ export async function* sendRequest(
       // `stream.close()` libp2p-mplex will .end() the source (it-pushable instance)
       // If collectResponses() exhausts the source, it-pushable.end() can be safely called multiple times
       await stream.close();
+      metrics?.outgoingClosedStreams?.inc({method});
+      logger.verbose("Req  stream closed", logCtx);
     }
   } catch (e) {
     logger.verbose("Req  error", logCtx, e as Error);

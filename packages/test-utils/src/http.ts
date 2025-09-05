@@ -1,4 +1,4 @@
-import {sleep} from "@lodestar/utils";
+import {fetch, sleep} from "@lodestar/utils";
 import axios from "axios";
 
 type Method = "GET" | "POST" | "PUT";
@@ -7,7 +7,7 @@ type Method = "GET" | "POST" | "PUT";
  * Return the status code of a request for given url and method
  */
 export async function getReqStatus(url: string, method: Method = "GET"): Promise<number> {
-  const res = await axios.request({url, method});
+  const res = await fetch(url, {method});
   return res.status;
 }
 

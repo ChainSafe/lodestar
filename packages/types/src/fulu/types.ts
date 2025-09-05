@@ -18,7 +18,6 @@ export type MatrixEntry = ValueOf<typeof ssz.MatrixEntry>;
 export type ProposerLookahead = ValueOf<typeof ssz.ProposerLookahead>;
 
 export type DataColumnsByRootIdentifier = ValueOf<typeof ssz.DataColumnsByRootIdentifier>;
-export type DataColumnSidecarsByRootRequest = ValueOf<typeof ssz.DataColumnSidecarsByRootRequest>;
 export type DataColumnSidecarsByRangeRequest = ValueOf<typeof ssz.DataColumnSidecarsByRangeRequest>;
 export type BeaconBlock = ValueOf<typeof ssz.BeaconBlock>;
 export type SignedBeaconBlock = ValueOf<typeof ssz.SignedBeaconBlock>;

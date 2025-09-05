@@ -1,8 +1,8 @@
 import path from "node:path";
 import {Worker, spawn} from "@chainsafe/threads";
 // `threads` library creates self global variable which breaks `timeout-abort-controller` https://github.com/jacobheun/timeout-abort-controller/issues/9
-// @ts-ignore
-// biome-ignore lint/suspicious/noGlobalAssign: <explanation>
+// @ts-expect-error
+// biome-ignore lint/suspicious/noGlobalAssign: We need the global `self` to reassign module properties later
 self = undefined;
 import {PublicKey} from "@chainsafe/blst";
 import {ISignatureSet} from "@lodestar/state-transition";

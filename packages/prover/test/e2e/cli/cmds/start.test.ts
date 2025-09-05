@@ -7,7 +7,7 @@ import {sleep} from "@lodestar/utils";
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {Web3} from "web3";
 import {getLodestarProverCli} from "../../../../src/cli/cli.js";
-import {beaconUrl, chainId, config, proxyPort, proxyUrl, rpcUrl, waitForCapellaFork} from "../../../utils/e2e_env.js";
+import {beaconUrl, chainId, config, proxyPort, proxyUrl, rpcUrl, waitForFinalized} from "../../../utils/e2e_env.js";
 
 const cli = getLodestarProverCli();
 
@@ -30,7 +30,7 @@ describe("prover/proxy", () => {
     const web3: Web3 = new Web3(proxyUrl);
 
     beforeAll(async () => {
-      await waitForCapellaFork();
+      await waitForFinalized();
       await mkdir(path.dirname(paramsFilePath), {recursive: true});
       await writeFile(paramsFilePath, JSON.stringify(chainConfigToJson(config as ChainConfig)));
 

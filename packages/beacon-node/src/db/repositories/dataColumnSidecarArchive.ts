@@ -13,7 +13,7 @@ import {Bucket, getBucketNameByValue} from "../buckets.js";
  */
 export class DataColumnSidecarArchiveRepository extends PrefixedRepository<Slot, ColumnIndex, fulu.DataColumnSidecar> {
   constructor(config: ChainForkConfig, db: Db) {
-    const bucket = Bucket.allForks_dataColumnSidecars;
+    const bucket = Bucket.allForks_dataColumnSidecarsArchive;
     super(config, db, bucket, ssz.fulu.DataColumnSidecar, getBucketNameByValue(bucket));
   }
 

@@ -164,6 +164,8 @@ export class ReqResp {
 
     const protocols: (MixedProtocol | DialOnlyProtocol)[] = [];
     const protocolIDs: string[] = [];
+    // don't increase this.reqCount until we know request will be sent
+    const requestId = this.reqCount + 1;
 
     for (const version of versions) {
       const protocolID = this.formatProtocolID({method, version, encoding});
@@ -172,7 +174,7 @@ export class ReqResp {
         throw Error(`Request to send to protocol ${protocolID} but it has not been declared`);
       }
 
-      if (!this.selfRateLimiter.allows(peerIdStr, protocolID)) {
+      if (!this.selfRateLimiter.allows(peerIdStr, protocolID, requestId)) {
         // we technically don't send request in this case but would be nice just to track this in the same `outgoingErrorReasons` metric
         this.metrics?.outgoingErrorReasons.inc({reason: RequestErrorCode.REQUEST_SELF_RATE_LIMITED});
         throw new RequestError({code: RequestErrorCode.REQUEST_SELF_RATE_LIMITED});
@@ -183,6 +185,9 @@ export class ReqResp {
       protocolIDs.push(protocolID);
     }
 
+    // requestId is now the same to reqCount
+    this.reqCount++;
+
     try {
       yield* sendRequest(
         {logger: this.logger, libp2p: this.libp2p, metrics: this.metrics, peerClient},
@@ -192,7 +197,7 @@ export class ReqResp {
         body,
         this.controller.signal,
         this.opts,
-        this.reqCount++
+        requestId
       );
     } catch (e) {
       this.metrics?.outgoingErrors.inc({method});
@@ -209,7 +214,7 @@ export class ReqResp {
       throw e;
     } finally {
       for (const protocolID of protocolIDs) {
-        this.selfRateLimiter.requestCompleted(peerIdStr, protocolID);
+        this.selfRateLimiter.requestCompleted(peerIdStr, protocolID, requestId);
       }
       timer?.();
     }

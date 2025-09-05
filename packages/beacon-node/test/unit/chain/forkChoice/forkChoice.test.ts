@@ -69,7 +69,8 @@ describe("LodestarForkChoice", () => {
       currentSlot,
       state,
       {},
-      (_: CheckpointWithHex) => justifiedBalances
+      (_: CheckpointWithHex) => justifiedBalances,
+      null
     );
   });
 
