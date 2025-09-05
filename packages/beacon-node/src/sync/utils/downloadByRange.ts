@@ -496,6 +496,18 @@ export async function validateBlobsByRangeResponse(
     const blockBlobSidecars = blobSidecars.slice(blobSidecarIndex, blobSidecarIndex + blockKzgCommitments.length);
     blobSidecarIndex += blockKzgCommitments.length;
 
+    for (let i = 0; i < blockBlobSidecars.length; i++) {
+      if (blockBlobSidecars[i].index !== i) {
+        throw new DownloadByRangeError(
+          {
+            code: DownloadByRangeErrorCode.OUT_OF_ORDER_BLOBS,
+            slot: block.message.slot,
+          },
+          "Blob sidecars not in order or do not match expected indexes in BlobSidecarsByRange response"
+        );
+      }
+    }
+
     validateSidecarsPromises.push(
       validateBlockBlobSidecars(block.message.slot, blockRoot, blockKzgCommitments.length, blockBlobSidecars).then(
         () => ({blockRoot, blobSidecars})
@@ -670,6 +682,7 @@ export enum DownloadByRangeErrorCode {
   OUT_OF_ORDER_BLOCKS = "DOWNLOAD_BY_RANGE_OUT_OF_ORDER_BLOCKS",
 
   MISSING_BLOBS = "DOWNLOAD_BY_RANGE_ERROR_MISSING_BLOBS",
+  OUT_OF_ORDER_BLOBS = "DOWNLOAD_BY_RANGE_ERROR_OUT_OF_ORDER_BLOBS",
   EXTRA_BLOBS = "DOWNLOAD_BY_RANGE_ERROR_EXTRA_BLOBS",
 
   MISSING_COLUMNS = "DOWNLOAD_BY_RANGE_ERROR_MISSING_COLUMNS",
@@ -732,6 +745,10 @@ export type DownloadByRangeErrorType =
       code: DownloadByRangeErrorCode.MISSING_BLOBS;
       expected: number;
       actual: number;
+    }
+  | {
+      code: DownloadByRangeErrorCode.OUT_OF_ORDER_BLOBS;
+      slot: number;
     }
   | {
       code: DownloadByRangeErrorCode.EXTRA_BLOBS;
