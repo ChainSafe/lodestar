@@ -244,7 +244,10 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
       optsBuff.gte = this.wrapKey(opts.gte);
     }
 
-    if((!optsBuff.gt && !optsBuff.gte) || (!optsBuff.lt && !optsBuff.lte)) {
+    const hasUpper = !optsBuff.gt || !optsBuff.gte;
+    const hasLower = !optsBuff.lt || !optsBuff.lte;
+
+    if(!hasUpper || !hasLower) {
       throw new Error("Please provide both ranges to fetch the keys")
     }
 
