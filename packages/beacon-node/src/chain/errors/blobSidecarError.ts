@@ -22,8 +22,6 @@ export enum BlobSidecarErrorCode {
   INCORRECT_SIDECAR_COUNT = "BLOBS_SIDECAR_ERROR_INCORRECT_SIDECAR_COUNT",
   /** Sidecar doesn't match block */
   INCORRECT_BLOCK = "BLOBS_SIDECAR_ERROR_INCORRECT_BLOCK",
-  /** Sidecar index is not as expected */
-  INCORRECT_INDEX = "BLOBS_SIDECAR_ERROR_INCORRECT_INDEX",
   /** Sidecars proofs not valid */
   INVALID_KZG_PROOF_BATCH = "BLOBS_SIDECAR_ERROR_INVALID_KZG_PROOF_BATCH",
 
@@ -48,7 +46,6 @@ export type BlobSidecarErrorType =
   | {code: BlobSidecarErrorCode.INVALID_KZG_PROOF; blobIdx: number}
   | {code: BlobSidecarErrorCode.INCORRECT_SIDECAR_COUNT; slot: number; expected: number; actual: number}
   | {code: BlobSidecarErrorCode.INCORRECT_BLOCK; slot: number; blobIdx: number; expected: string; actual: string}
-  | {code: BlobSidecarErrorCode.INCORRECT_INDEX; slot: number; expected: number; actual: number}
   | {code: BlobSidecarErrorCode.INVALID_KZG_PROOF_BATCH; slot: number; reason: string}
   | {code: BlobSidecarErrorCode.FUTURE_SLOT; blockSlot: Slot; currentSlot: Slot}
   | {code: BlobSidecarErrorCode.WOULD_REVERT_FINALIZED_SLOT; blockSlot: Slot; finalizedSlot: Slot}

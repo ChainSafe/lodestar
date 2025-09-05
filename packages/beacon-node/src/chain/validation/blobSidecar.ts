@@ -173,7 +173,7 @@ export async function validateGossipBlobSidecar(
 }
 
 /**
- * Validate all blob sidecars in a block
+ * Validate some blob sidecars in a block
  *
  * Requires the block to be known to the node
  */
@@ -183,17 +183,17 @@ export async function validateBlockBlobSidecars(
   blockBlobCount: number,
   blobSidecars: deneb.BlobSidecars
 ): Promise<void> {
-  if (blockBlobCount !== blobSidecars.length) {
+  if (blobSidecars.length === 0) {
+    return;
+  }
+
+  if (blockBlobCount === 0) {
     throw new BlobSidecarValidationError({
       code: BlobSidecarErrorCode.INCORRECT_SIDECAR_COUNT,
       slot: blockSlot,
       expected: blockBlobCount,
       actual: blobSidecars.length,
     });
-  }
-
-  if (blobSidecars.length === 0) {
-    return;
   }
 
   // Hash the first sidecar block header and compare the rest via (cheaper) equality
@@ -215,25 +215,14 @@ export async function validateBlockBlobSidecars(
   const commitments = [];
   const blobs = [];
   const proofs = [];
-  for (let i = 0; i < blobSidecars.length; i++) {
-    const blobSidecar = blobSidecars[i];
-    if (blobSidecar.index !== i) {
-      throw new BlobSidecarValidationError(
-        {
-          code: BlobSidecarErrorCode.INCORRECT_INDEX,
-          slot: blockSlot,
-          expected: i,
-          actual: blobSidecar.index,
-        },
-        "BlobSidecar index out of order"
-      );
-    }
+  for (const blobSidecar of blobSidecars) {
+    const blobIdx = blobSidecar.index;
     if (!ssz.phase0.BeaconBlockHeader.equals(blobSidecar.signedBlockHeader.message, firstSidecarBlockHeader)) {
       throw new BlobSidecarValidationError(
         {
           code: BlobSidecarErrorCode.INCORRECT_BLOCK,
           slot: blockSlot,
-          blobIdx: i,
+          blobIdx,
           expected: toRootHex(blockRoot),
           actual: "unknown - compared via equality",
         },
@@ -246,7 +235,7 @@ export async function validateBlockBlobSidecars(
         {
           code: BlobSidecarErrorCode.INCLUSION_PROOF_INVALID,
           slot: blockSlot,
-          blobIdx: i,
+          blobIdx,
         },
         "BlobSidecar inclusion proof invalid"
       );

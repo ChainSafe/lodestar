@@ -474,7 +474,6 @@ export class SyncChain {
           case DownloadByRangeErrorCode.OUT_OF_ORDER_BLOCKS:
           case DownloadByRangeErrorCode.OUT_OF_RANGE_BLOCKS:
           case DownloadByRangeErrorCode.PARENT_ROOT_MISMATCH:
-          case BlobSidecarErrorCode.INCORRECT_INDEX:
           case BlobSidecarErrorCode.INCLUSION_PROOF_INVALID:
           case BlobSidecarErrorCode.INVALID_KZG_PROOF_BATCH:
           case DataColumnSidecarErrorCode.INCORRECT_KZG_COMMITMENTS_COUNT:
