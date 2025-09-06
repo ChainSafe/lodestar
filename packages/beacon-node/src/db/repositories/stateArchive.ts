@@ -29,7 +29,7 @@ export class StateArchiveRepository extends Repository<Slot, BeaconStateAllForks
   // Handle key as slot
 
   async put(key: Slot, value: BeaconStateAllForks): Promise<void> {
-    await Promise.all([super.put(key, value), storeRootIndex(this.db, key, value.hashTreeRoot(), this.dbReqOpts)]);
+    await Promise.all([super.put(key, value), storeRootIndex(this.db, key, value.hashTreeRoot())]);
   }
 
   getId(state: BeaconStateAllForks): Epoch {

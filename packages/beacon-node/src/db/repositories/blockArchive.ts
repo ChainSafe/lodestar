@@ -5,7 +5,7 @@ import {bytesToInt} from "@lodestar/utils";
 import all from "it-all";
 import {getSignedBlockTypeFromBytes} from "../../util/multifork.js";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
-import {getParentRootIndexKey, getRootIndexKey} from "./blockArchiveIndex.js";
+import {getParentRootIndex, getRootIndex} from "./blockArchiveIndex.js";
 import {deleteParentRootIndex, deleteRootIndex, storeParentRootIndex, storeRootIndex} from "./blockArchiveIndex.js";
 
 export interface BlockFilterOptions extends FilterOptions<Slot> {
@@ -55,8 +55,8 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
     const slot = value.message.slot;
     await Promise.all([
       super.put(key, value),
-      storeRootIndex(this.db, slot, blockRoot, this.dbReqOpts),
-      storeParentRootIndex(this.db, slot, value.message.parentRoot, this.dbReqOpts),
+      storeRootIndex(this.db, slot, blockRoot),
+      storeParentRootIndex(this.db, slot, value.message.parentRoot),
     ]);
   }
 
@@ -66,12 +66,12 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
       Array.from(items).map((item) => {
         const slot = item.value.message.slot;
         const blockRoot = this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(item.value.message);
-        return storeRootIndex(this.db, slot, blockRoot, this.dbReqOpts);
+        return storeRootIndex(this.db, slot, blockRoot);
       }),
       Array.from(items).map((item) => {
         const slot = item.value.message.slot;
         const parentRoot = item.value.message.parentRoot;
-        return storeParentRootIndex(this.db, slot, parentRoot, this.dbReqOpts);
+        return storeParentRootIndex(this.db, slot, parentRoot);
       }),
     ]);
   }
@@ -79,16 +79,16 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
   async batchPutBinary(items: BlockArchiveBatchPutBinaryItem[]): Promise<void> {
     await Promise.all([
       super.batchPutBinary(items),
-      Array.from(items).map((item) => storeRootIndex(this.db, item.slot, item.blockRoot, this.dbReqOpts)),
-      Array.from(items).map((item) => storeParentRootIndex(this.db, item.slot, item.parentRoot, this.dbReqOpts)),
+      Array.from(items).map((item) => storeRootIndex(this.db, item.slot, item.blockRoot)),
+      Array.from(items).map((item) => storeParentRootIndex(this.db, item.slot, item.parentRoot)),
     ]);
   }
 
   async remove(value: SignedBeaconBlock): Promise<void> {
     await Promise.all([
       super.remove(value),
-      deleteRootIndex(this.db, this.config.getForkTypes(value.message.slot).SignedBeaconBlock, value, this.dbReqOpts),
-      deleteParentRootIndex(this.db, value, this.dbReqOpts),
+      deleteRootIndex(this.db, this.config.getForkTypes(value.message.slot).SignedBeaconBlock, value),
+      deleteParentRootIndex(this.db, value),
     ]);
   }
 
@@ -96,9 +96,9 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
     await Promise.all([
       super.batchRemove(values),
       Array.from(values).map((value) =>
-        deleteRootIndex(this.db, this.config.getForkTypes(value.message.slot).SignedBeaconBlock, value, this.dbReqOpts)
+        deleteRootIndex(this.db, this.config.getForkTypes(value.message.slot).SignedBeaconBlock, value)
       ),
-      Array.from(values).map((value) => deleteParentRootIndex(this.db, value, this.dbReqOpts)),
+      Array.from(values).map((value) => deleteParentRootIndex(this.db, value)),
     ]);
   }
 
@@ -136,11 +136,11 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
   }
 
   async getSlotByRoot(root: Root): Promise<Slot | null> {
-    return this.parseSlot(await this.db.get(getRootIndexKey(root), this.dbReqOpts));
+    return this.parseSlot(await getRootIndex(this.db, root));
   }
 
   async getSlotByParentRoot(root: Root): Promise<Slot | null> {
-    return this.parseSlot(await this.db.get(getParentRootIndexKey(root), this.dbReqOpts));
+    return this.parseSlot(await getParentRootIndex(this.db, root));
   }
 
   private parseSlot(slotBytes: Uint8Array | null): Slot | null {
