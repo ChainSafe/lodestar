@@ -3,15 +3,13 @@ import {E2StoreEntryType} from "./constants.js";
 
 /**
  * Parsed components of an .era file name.
- * Format: <config-name>-<era-number>-<era-count>-<short-historical-root>.era
+ * Format: <config-name>-<era-number>-<short-historical-root>.era
  */
 export interface EraFileName {
   /** CONFIG_NAME field of runtime config (mainnet, sepolia, holesky, etc.) */
   configName: string;
   /** Number of the first era stored in file, 5-digit zero-padded (00000, 00001, etc.) */
   eraNumber: number;
-  /** Number of eras stored in file, 5-digit zero-padded (00000, 00001, etc.) */
-  eraCount: number;
   /** First 4 bytes of last historical root, lower-case hex-encoded (8 chars) */
   shortHistoricalRoot: string;
 }

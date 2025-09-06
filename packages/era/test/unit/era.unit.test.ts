@@ -19,10 +19,12 @@ function header(typeBytes: Uint8Array, dataLen: number): Uint8Array {
 describe("e2Store utilities (unit)", () => {
   it("should read the type and data correctly", () => {
     const payload = new Uint8Array([0x01, 0x02, 0x03, 0x04]);
-    const bytes = new Uint8Array([...header(EraTypes[E2StoreEntryType.Version], payload.length), ...payload]);
+    const ver = header(EraTypes[E2StoreEntryType.Version], 0);
+    const bytes = new Uint8Array([...ver, ...header(EraTypes[E2StoreEntryType.Empty], payload.length), ...payload]);
 
-    const entry = readEntry(bytes);
-    assert.equal(entry.type, E2StoreEntryType.Version);
+    // Read the second entry (Empty with payload)
+    const entry = readEntry(bytes.slice(E2STORE_HEADER_SIZE));
+    assert.equal(entry.type, E2StoreEntryType.Empty);
     assert.deepEqual(entry.data, payload);
   });
 
@@ -39,9 +41,10 @@ describe("e2Store utilities (unit)", () => {
 
   it("should iterate and read multiple entries ", () => {
     const firstPayload = new Uint8Array([0x01, 0x02, 0x03, 0x04]);
-    const first = new Uint8Array([...header(EraTypes[E2StoreEntryType.Version], firstPayload.length), ...firstPayload]);
+    const ver = header(EraTypes[E2StoreEntryType.Version], 0);
+    const first = new Uint8Array([...header(EraTypes[E2StoreEntryType.Empty], firstPayload.length), ...firstPayload]);
     const second = header(EraTypes[E2StoreEntryType.Empty], 0);
-    const bytes = new Uint8Array([...first, ...second]);
+    const bytes = new Uint8Array([...ver, ...first, ...second]);
 
     const entries: Array<ReturnType<typeof readEntry>> = [];
     let p = 0;
@@ -51,8 +54,11 @@ describe("e2Store utilities (unit)", () => {
       p += E2STORE_HEADER_SIZE + e.data.length;
     }
 
-    assert.equal(entries.length, 2);
+    assert.equal(entries.length, 3);
     assert.equal(entries[0].type, E2StoreEntryType.Version);
+    assert.equal(entries[0].data.length, 0);
     assert.equal(entries[1].type, E2StoreEntryType.Empty);
+    assert.deepEqual(entries[1].data, firstPayload);
+    assert.equal(entries[2].type, E2StoreEntryType.Empty);
   });
 });
