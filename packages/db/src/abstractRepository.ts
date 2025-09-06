@@ -16,7 +16,7 @@ export type Id = Uint8Array | string | number | bigint;
  * indexed by root
  */
 export abstract class Repository<I extends Id, T> {
-  protected readonly dbReqOpts: DbReqOpts;
+  private readonly dbReqOpts: DbReqOpts;
 
   private readonly minKey: Uint8Array;
   private readonly maxKey: Uint8Array;
