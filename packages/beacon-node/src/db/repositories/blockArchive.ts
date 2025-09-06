@@ -55,8 +55,8 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
     const slot = value.message.slot;
     await Promise.all([
       super.put(key, value),
-      storeRootIndex(this.db, slot, blockRoot),
-      storeParentRootIndex(this.db, slot, value.message.parentRoot),
+      storeRootIndex(this.db, slot, blockRoot, this.dbReqOpts),
+      storeParentRootIndex(this.db, slot, value.message.parentRoot, this.dbReqOpts),
     ]);
   }
 
@@ -66,12 +66,12 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
       Array.from(items).map((item) => {
         const slot = item.value.message.slot;
         const blockRoot = this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(item.value.message);
-        return storeRootIndex(this.db, slot, blockRoot);
+        return storeRootIndex(this.db, slot, blockRoot, this.dbReqOpts);
       }),
       Array.from(items).map((item) => {
         const slot = item.value.message.slot;
         const parentRoot = item.value.message.parentRoot;
-        return storeParentRootIndex(this.db, slot, parentRoot);
+        return storeParentRootIndex(this.db, slot, parentRoot, this.dbReqOpts);
       }),
     ]);
   }
@@ -79,16 +79,16 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
   async batchPutBinary(items: BlockArchiveBatchPutBinaryItem[]): Promise<void> {
     await Promise.all([
       super.batchPutBinary(items),
-      Array.from(items).map((item) => storeRootIndex(this.db, item.slot, item.blockRoot)),
-      Array.from(items).map((item) => storeParentRootIndex(this.db, item.slot, item.parentRoot)),
+      Array.from(items).map((item) => storeRootIndex(this.db, item.slot, item.blockRoot, this.dbReqOpts)),
+      Array.from(items).map((item) => storeParentRootIndex(this.db, item.slot, item.parentRoot, this.dbReqOpts)),
     ]);
   }
 
   async remove(value: SignedBeaconBlock): Promise<void> {
     await Promise.all([
       super.remove(value),
-      deleteRootIndex(this.db, this.config.getForkTypes(value.message.slot).SignedBeaconBlock, value),
-      deleteParentRootIndex(this.db, value),
+      deleteRootIndex(this.db, this.config.getForkTypes(value.message.slot).SignedBeaconBlock, value, this.dbReqOpts),
+      deleteParentRootIndex(this.db, value, this.dbReqOpts),
     ]);
   }
 
@@ -96,9 +96,9 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
     await Promise.all([
       super.batchRemove(values),
       Array.from(values).map((value) =>
-        deleteRootIndex(this.db, this.config.getForkTypes(value.message.slot).SignedBeaconBlock, value)
+        deleteRootIndex(this.db, this.config.getForkTypes(value.message.slot).SignedBeaconBlock, value, this.dbReqOpts)
       ),
-      Array.from(values).map((value) => deleteParentRootIndex(this.db, value)),
+      Array.from(values).map((value) => deleteParentRootIndex(this.db, value, this.dbReqOpts)),
     ]);
   }
 
@@ -136,11 +136,11 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
   }
 
   async getSlotByRoot(root: Root): Promise<Slot | null> {
-    return this.parseSlot(await this.db.get(getRootIndexKey(root)));
+    return this.parseSlot(await this.db.get(getRootIndexKey(root), this.dbReqOpts));
   }
 
   async getSlotByParentRoot(root: Root): Promise<Slot | null> {
-    return this.parseSlot(await this.db.get(getParentRootIndexKey(root)));
+    return this.parseSlot(await this.db.get(getParentRootIndexKey(root), this.dbReqOpts));
   }
 
   private parseSlot(slotBytes: Uint8Array | null): Slot | null {

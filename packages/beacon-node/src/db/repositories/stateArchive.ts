@@ -29,7 +29,7 @@ export class StateArchiveRepository extends Repository<Slot, BeaconStateAllForks
   // Handle key as slot
 
   async put(key: Slot, value: BeaconStateAllForks): Promise<void> {
-    await Promise.all([super.put(key, value), storeRootIndex(this.db, key, value.hashTreeRoot())]);
+    await Promise.all([super.put(key, value), storeRootIndex(this.db, key, value.hashTreeRoot(), this.dbReqOpts)]);
   }
 
   getId(state: BeaconStateAllForks): Epoch {
@@ -54,6 +54,7 @@ export class StateArchiveRepository extends Repository<Slot, BeaconStateAllForks
     const entries = await this.db.entries({
       lte: getRootIndexKey(Buffer.alloc(32, 0xff)),
       gte: getRootIndexKey(Buffer.alloc(32, 0x00)),
+      bucketId: this.bucketId,
     });
     return entries.map((entry) => ({
       root: toHex(entry.key),
@@ -62,7 +63,7 @@ export class StateArchiveRepository extends Repository<Slot, BeaconStateAllForks
   }
 
   private async getSlotByRoot(root: Root): Promise<Slot | null> {
-    const value = await this.db.get(getRootIndexKey(root));
+    const value = await this.db.get(getRootIndexKey(root), this.dbReqOpts);
     return value && bytesToInt(value, "be");
   }
 }
