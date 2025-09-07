@@ -87,7 +87,7 @@ export function processEffectiveBalanceUpdates(
           epochCtx.previousTargetUnslashedBalanceIncrements += deltaEffectiveBalanceIncrement;
         }
 
-        // currentTargetUnslashedBalanceIncrements is transfered to previousTargetUnslashedBalanceIncrements in afterEpochTransitionCache
+        // currentTargetUnslashedBalanceIncrements is transferred to previousTargetUnslashedBalanceIncrements in afterEpochTransitionCache
         // at epoch transition of next epoch (in EpochTransitionCache), prevTargetUnslStake is calculated based on newEffectiveBalanceIncrement
         if (!validator.slashed && (currentEpochParticipation.get(i) & TIMELY_TARGET) === TIMELY_TARGET) {
           epochCtx.currentTargetUnslashedBalanceIncrements += deltaEffectiveBalanceIncrement;
