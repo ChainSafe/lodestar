@@ -43,7 +43,7 @@ export function becomesNewEth1Data(
     return false;
   }
 
-  // Close to half the EPOCHS_PER_ETH1_VOTING_PERIOD it can be expensive to do so many comparisions.
+  // Close to half the EPOCHS_PER_ETH1_VOTING_PERIOD it can be expensive to do so many comparisons.
   // `eth1DataVotes.getAllReadonly()` navigates the tree once to fetch all the LeafNodes efficiently.
   // Then isEqualEth1DataView compares cached roots (HashObject as of Jan 2022) which is much cheaper
   // than doing structural equality, which requires tree -> value conversions
