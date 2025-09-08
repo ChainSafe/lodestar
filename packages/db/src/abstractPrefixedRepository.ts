@@ -16,6 +16,9 @@ type Id = Uint8Array | string | number | bigint;
  */
 export abstract class PrefixedRepository<P, I extends Id, T> {
   private readonly dbReqOpts: DbReqOpts;
+  private readonly minKey: Uint8Array;
+  private readonly maxKey: Uint8Array;
+
 
   protected constructor(
     protected config: ChainForkConfig,
@@ -25,6 +28,8 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
     private readonly bucketId: string
   ) {
     this.dbReqOpts = {bucketId: this.bucketId};
+    this.minKey = encodeKey(bucket, Buffer.alloc(0));
+    this.maxKey = encodeKey(bucket + 1, Buffer.alloc(0));
   }
 
   abstract encodeKeyRaw(prefix: P, id: I): Uint8Array;
@@ -152,17 +157,6 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
     }
   }
 
-  /**
-   * Non iterative version of `valuesStream`.
-   */
-  async values(prefix: P | P[]): Promise<T[]> {
-    const result: T[] = [];
-    for await (const value of this.valuesStream(prefix)) {
-      result.push(value);
-    }
-    return result;
-  }
-
   async *valuesStreamBinary(prefix: P | P[]): AsyncIterable<{prefix: P; id: I; value: Uint8Array}> {
     for (const p of Array.isArray(prefix) ? prefix : [prefix]) {
       for await (const {key, value} of this.db.entriesStream({
@@ -178,17 +172,6 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
         };
       }
     }
-  }
-
-  /**
-   * Non iterative version of `valuesStreamBinary`.
-   */
-  async valuesBinary(prefix: P | P[]): Promise<{prefix: P; id: I; value: Uint8Array}[]> {
-    const result = [];
-    for await (const value of this.valuesStreamBinary(prefix)) {
-      result.push(value);
-    }
-    return result;
   }
 
   async *entriesStream(prefix: P | P[]): AsyncIterable<{prefix: P; id: I; value: T}> {
@@ -235,6 +218,8 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
       optsBuff.lt = this.wrapKey(opts.lt);
     } else if (opts?.lte !== undefined) {
       optsBuff.lte = this.wrapKey(opts.lte);
+    } else {
+      optsBuff.lt = this.maxKey;
     }
 
     // Set at least on max key
@@ -242,12 +227,8 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
       optsBuff.gt = this.wrapKey(opts.gt);
     } else if (opts?.gte !== undefined) {
       optsBuff.gte = this.wrapKey(opts.gte);
-    }
-    const hasUpper = optsBuff.gt !== undefined || optsBuff.gte !== undefined;
-    const hasLower = optsBuff.lt !== undefined || optsBuff.lte !== undefined;
-
-    if(!hasUpper || !hasLower) {
-      throw new Error("Please provide both ranges to fetch the keys")
+    } else {
+      optsBuff.gte = this.minKey;
     }
 
     if (opts?.reverse !== undefined) optsBuff.reverse = opts.reverse;
