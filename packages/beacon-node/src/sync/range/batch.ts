@@ -270,7 +270,6 @@ export class Batch {
 
   /**
    * Downloading -> AwaitingProcessing
-   * pendingDataColumns is null when a complete download is done, otherwise it contains the columns that are still pending
    */
   downloadingSuccess(peer: PeerIdStr, blocks: IBlockInput[]): DownloadSuccessState {
     if (this.state.status !== BatchStatus.Downloading) {

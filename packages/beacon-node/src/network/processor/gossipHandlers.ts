@@ -248,6 +248,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         if (e.type.code === BlobSidecarErrorCode.PARENT_UNKNOWN) {
           logger.debug("Gossip blob has error", {slot, root: blockShortHex, code: e.type.code});
           // no need to trigger `unknownBlockParent` event here, as we already did it in `validateBeaconBlock()`
+          //
+          // TODO(fulu): is this note above correct? Could have random blob that we see that could trigger
+          //        unknownBlockSync.  And duplicate addition of a block will be deduplicated by the
+          //        BlockInputSync event handler. Check this!!
+          // events.emit(NetworkEvent.unknownBlockParent, {blockInput, peer: peerIdStr});
         }
 
         if (e.action === GossipAction.REJECT) {
@@ -327,6 +332,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           `gossip_reject_slot_${slot}_index_${dataColumnSidecar.index}`
         );
         // no need to trigger `unknownBlockParent` event here, as we already did it in `validateBeaconBlock()`
+        //
+        // TODO(fulu): is this note above correct? Could have random column that we see that could trigger
+        //        unknownBlockSync.  And duplicate addition of a block will be deduplicated by the
+        //        BlockInputSync event handler. Check this!!
+        // events.emit(NetworkEvent.unknownBlockParent, {blockInput, peer: peerIdStr});
       }
 
       throw e;
