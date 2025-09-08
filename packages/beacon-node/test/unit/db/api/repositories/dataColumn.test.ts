@@ -1,7 +1,7 @@
 import {createChainForkConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db";
 import {ssz} from "@lodestar/types";
-import {toHex} from "@lodestar/utils";
+import {fromAsync, toHex} from "@lodestar/utils";
 import {rimraf} from "rimraf";
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {DataColumnSidecarRepository} from "../../../../../src/db/repositories/dataColumnSidecar.js";
@@ -51,7 +51,7 @@ describe("block archive repository", () => {
     const dataColumnsLen = dataColumnSidecars.length;
 
     await dataColumnRepo.putMany(blockRoot, dataColumnSidecars);
-    const retrievedDataColumnSidecars = await dataColumnRepo.values(blockRoot);
+    const retrievedDataColumnSidecars = await fromAsync(dataColumnRepo.valuesStream(blockRoot));
 
     expect(retrievedDataColumnSidecars).toHaveLength(dataColumnsLen);
     expect(retrievedDataColumnSidecars.map((c) => c.index)).toEqual(dataColumnSidecars.map((c) => c.index));
@@ -83,7 +83,7 @@ describe("block archive repository", () => {
     const dataColumnsLen = dataColumnSidecars.length;
 
     await dataColumnRepo.putMany(blockRoot, dataColumnSidecars);
-    const retrievedDataColumnSidecarBytes = await dataColumnRepo.valuesBinary(blockRoot);
+    const retrievedDataColumnSidecarBytes = await fromAsync(dataColumnRepo.valuesStreamBinary(blockRoot));
 
     expect(retrievedDataColumnSidecarBytes).toHaveLength(dataColumnsLen);
 
