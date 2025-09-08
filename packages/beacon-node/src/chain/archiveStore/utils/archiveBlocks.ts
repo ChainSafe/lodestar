@@ -176,7 +176,7 @@ export async function archiveBlocks(
       if (dataColumnSidecarsMinEpoch >= config.FULU_FORK_EPOCH) {
         const slotsToDelete = (
           await db.dataColumnSidecarArchive.keys({
-            lt: db.dataColumnSidecarArchive.getMaxKeyRaw(computeStartSlotAtEpoch(dataColumnSidecarsMinEpoch))
+            lt: {prefix: computeStartSlotAtEpoch(dataColumnSidecarsMinEpoch), id: 0},
           })
         ).map((p) => p.prefix);
 

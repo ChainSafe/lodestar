@@ -1,7 +1,13 @@
 /** biome-ignore-all lint/style/noNonNullAssertion: values all exist */
 import {beforeAll, afterAll, beforeEach, describe, it, expect} from "vitest";
 import {getEnvLogger} from "@lodestar/logger/env";
-import {PrefixedRepository, LevelDbController, type Db, encodeNumberForDbKey, decodeNumberForDbKey} from "../../src/index.js";
+import {
+  PrefixedRepository,
+  LevelDbController,
+  type Db,
+  encodeNumberForDbKey,
+  decodeNumberForDbKey,
+} from "../../src/index.js";
 import {fromAsync} from "@lodestar/utils";
 
 type Slot = number;
@@ -27,7 +33,7 @@ class TestPrefixedRepository extends PrefixedRepository<Slot, Column, TestPrefix
   }
 
   decodeKeyRaw(raw: Uint8Array): {prefix: number; id: number} {
-    return {prefix: decodeNumberForDbKey(raw, 2), id:  decodeNumberForDbKey(raw.slice(2), 2)};
+    return {prefix: decodeNumberForDbKey(raw, 2), id: decodeNumberForDbKey(raw.slice(2), 2)};
   }
 
   getMaxKeyRaw(prefix: number): Uint8Array {
@@ -35,7 +41,7 @@ class TestPrefixedRepository extends PrefixedRepository<Slot, Column, TestPrefix
   }
 
   getMinKeyRaw(prefix: number): Uint8Array {
-    return Buffer.concat([encodeNumberForDbKey(prefix, 2), encodeNumberForDbKey(0,2)]);
+    return Buffer.concat([encodeNumberForDbKey(prefix, 2), encodeNumberForDbKey(0, 2)]);
   }
 
   getId(value: TestPrefixedType): number {
@@ -273,7 +279,7 @@ describe("abstractPrefixedRepository", () => {
       );
     });
 
-    it.todo("values should return in correct order of id for single prefix", async () => {
+    it("values should return in correct order of id for single prefix", async () => {
       const p1 = 7;
       const valuesP1 = [testData[p1][10], testData[p1][11], testData[p1][12]];
       await repo.putMany(p1, valuesP1);
@@ -312,8 +318,8 @@ describe("abstractPrefixedRepository", () => {
       await repo.putMany(slot1, [testData[slot1][column1], testData[slot1][column2], testData[slot1][column3]]);
       await repo.putMany(slot2, [testData[slot2][column1], testData[slot2][column2], testData[slot2][column3]]);
 
-      const gte = repo.encodeKeyRaw(slot1, 0);
-      const lte = repo.encodeKeyRaw(slot1, 400);
+      const gte = {prefix: slot1, id: 0};
+      const lte = {prefix: slot1, id: 400};
       const keys = await repo.keys({gte, lte});
 
       expect(keys).toEqual([
@@ -339,15 +345,15 @@ describe("abstractPrefixedRepository", () => {
       await repo.putMany(slot2, testData[slot2]);
 
       // Across single byte
-      const result1 = await repo.keys({gt: repo.encodeKeyRaw(slot1, 5), lt: repo.encodeKeyRaw(slot1, 17)});
+      const result1 = await repo.keys({gt: {prefix: slot1, id: 5}, lt: {prefix: slot1, id: 17}});
       expect(result1).toEqual(getRangeDataInclusive(slot1, 6, 16));
 
       // Across higher byte
-      const result2 = await repo.keys({gt: repo.encodeKeyRaw(slot1, 257), lt: repo.encodeKeyRaw(slot1, 266)});
+      const result2 = await repo.keys({gt: {prefix: slot1, id: 257}, lt: {prefix: slot1, id: 266}});
       expect(result2).toEqual(getRangeDataInclusive(slot1, 258, 265));
 
       // Across multiple byte
-      const result3 = await repo.keys({gt: repo.encodeKeyRaw(slot1, 17), lt: repo.encodeKeyRaw(slot1, 275)});
+      const result3 = await repo.keys({gt: {prefix: slot1, id: 17}, lt: {prefix: slot1, id: 275}});
       expect(result3).toEqual(getRangeDataInclusive(slot1, 18, 274));
     });
 
@@ -360,7 +366,7 @@ describe("abstractPrefixedRepository", () => {
       await repo.putMany(slot2, testData[slot2]);
       await repo.putMany(slot3, testData[slot3]);
 
-      const query = {gt: repo.encodeKeyRaw(slot1, 5), lt: repo.encodeKeyRaw(slot3, 17)};
+      const query = {gt: {prefix: slot1, id: 5}, lt: {prefix: slot3, id: 17}};
       const result = [
         ...getRangeDataInclusive(slot1, 6, 299),
         ...getRangeDataInclusive(slot2, 0, 299),
@@ -376,8 +382,8 @@ describe("abstractPrefixedRepository", () => {
 
       await repo.putMany(slot, testData[slot]);
 
-      const gte = repo.encodeKeyRaw(slot, 19);
-      const lte = repo.encodeKeyRaw(slot, 23);
+      const gte = {prefix: slot, id: 19};
+      const lte = {prefix: slot, id: 23};
       const keys = await repo.keys({gte, lte});
 
       expect(keys).toEqual([
@@ -395,7 +401,7 @@ describe("abstractPrefixedRepository", () => {
       await repo.putMany(slot1, testData[slot1]);
       await repo.putMany(slot2, testData[slot2]);
 
-      const query = {gt: repo.encodeKeyRaw(slot1, 295), lt: repo.encodeKeyRaw(slot2, 4)};
+      const query = {gt: {prefix: slot1, id: 295}, lt: {prefix: slot2, id: 4}};
 
       const keys = await repo.keys(query);
 
@@ -411,13 +417,13 @@ describe("abstractPrefixedRepository", () => {
       ]);
     });
 
-    it("should not cross the bucket boundary", async () => {
+    it("should not cross the bucket boundary towards lower bucket", async () => {
       const repo2 = new TestPrefixedRepository(db, bucket - 1, bucketId);
       const slot = 30;
       await repo.putMany(slot, testData[slot]);
       await repo2.putMany(slot, testData[slot]);
 
-      const query = {lt: repo.encodeKeyRaw(slot, 4)};
+      const query = {lt: {prefix: slot, id: 4}};
 
       const keys = await repo.keys(query);
 
@@ -426,6 +432,24 @@ describe("abstractPrefixedRepository", () => {
         {prefix: slot, id: 1},
         {prefix: slot, id: 2},
         {prefix: slot, id: 3},
+      ]);
+    });
+
+    it("should not cross the bucket boundary towards higher bucket", async () => {
+      const repo2 = new TestPrefixedRepository(db, bucket + 1, bucketId);
+      const slot = 30;
+      await repo.putMany(slot, testData[slot]);
+      await repo2.putMany(slot, testData[slot]);
+
+      const query = {gt: {prefix: slot, id: 295}};
+
+      const keys = await repo.keys(query);
+
+      expect(keys).toEqual([
+        {prefix: slot, id: 296},
+        {prefix: slot, id: 297},
+        {prefix: slot, id: 298},
+        {prefix: slot, id: 299},
       ]);
     });
 
@@ -439,14 +463,11 @@ describe("abstractPrefixedRepository", () => {
       await repo.putMany(slot2, testData[slot2]);
       await repo2.putMany(slot2, testData[slot2]);
 
-      const query = {lt: repo.encodeKeyRaw(slot2, 4)};
+      const query = {lt: {prefix: slot2, id: 4}};
 
       const keys = await repo.keys(query);
 
-      expect(keys).toEqual([
-        ...getRangeDataInclusive(slot1, 0, 299),
-        ...getRangeDataInclusive(slot2, 0, 3)
-      ]);
+      expect(keys).toEqual([...getRangeDataInclusive(slot1, 0, 299), ...getRangeDataInclusive(slot2, 0, 3)]);
     });
   });
 });

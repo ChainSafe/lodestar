@@ -207,31 +207,29 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
     }
   }
 
-  async keys(opts?: FilterOptions<Uint8Array>): Promise<{prefix: P; id: I}[]> {
+  async keys(opts?: FilterOptions<{prefix: P; id: I}>): Promise<{prefix: P; id: I}[]> {
     const optsBuff: FilterOptions<Uint8Array> = {
       bucketId: this.bucketId,
     };
 
-    // Set at least one min key
-    if (opts?.lt !== undefined) {
-      optsBuff.lt = this.wrapKey(opts.lt);
-    } else if (opts?.lte !== undefined) {
-      optsBuff.lte = this.wrapKey(opts.lte);
-    } else {
-      optsBuff.lt = this.maxKey;
-    }
-
-    // Set at least on max key
-    if (opts?.gt !== undefined) {
-      optsBuff.gt = this.wrapKey(opts.gt);
-    } else if (opts?.gte !== undefined) {
-      optsBuff.gte = this.wrapKey(opts.gte);
+    if (opts?.gte !== undefined) {
+      optsBuff.gte = this.wrapKey(this.encodeKeyRaw(opts.gte.prefix, opts.gte.id));
+    } else if (opts?.gt !== undefined) {
+      optsBuff.gt = this.wrapKey(this.encodeKeyRaw(opts.gt.prefix, opts.gt.id));
     } else {
       optsBuff.gte = this.minKey;
     }
 
-    if (opts?.reverse !== undefined) optsBuff.reverse = opts.reverse;
-    if (opts?.limit !== undefined) optsBuff.limit = opts.limit;
+    if (opts?.lte !== undefined) {
+      optsBuff.lte = this.wrapKey(this.encodeKeyRaw(opts.lte.prefix, opts.lte.id));
+    } else if (opts?.lt !== undefined) {
+      optsBuff.lt = this.wrapKey(this.encodeKeyRaw(opts.lt.prefix, opts.lt.id));
+    } else {
+      optsBuff.lte = this.maxKey;
+    }
+
+    if (opts?.reverse !== undefined) optsBuff.reverse = opts?.reverse;
+    if (opts?.limit !== undefined) optsBuff.limit = opts?.limit;
 
     const data = await this.db.keys(optsBuff);
     return (data ?? []).map((data) => this.decodeKeyRaw(this.unwrapKey(data)));
