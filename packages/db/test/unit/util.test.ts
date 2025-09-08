@@ -8,12 +8,12 @@ import {
 
 describe("encode/decode number for DB key", () => {
   it("roundtrips with fixed byte size (2 bytes)", () => {
-    const value = 0xffee; 
+    const value = 0xffee;
     const size = 2;
 
     const encoded = encodeNumberForDbKey(value, size);
     expect(encoded).toEqual(Buffer.from([0xff, 0xee]));
-    
+
     const decoded = decodeNumberForDbKey(encoded, size);
     expect(decoded).toBe(value);
   });
