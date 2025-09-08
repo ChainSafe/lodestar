@@ -19,7 +19,6 @@ import {
   isPendingBlockInput,
 } from "../types.js";
 import {PeerSyncMeta} from "../../network/peers/peersData.js";
-import {PeerIdStr} from "../../util/peerId.js";
 
 export type FetchByRootCoreProps = {
   config: ChainForkConfig;
@@ -30,8 +29,7 @@ export type FetchByRootProps = FetchByRootCoreProps & {
   cacheItem: BlockInputSyncCacheItem;
   blockRoot: Uint8Array;
 };
-export type FetchByRootAndValidateBlockProps = Omit<FetchByRootCoreProps, "peerMeta"> & {
-  peerIdStr: PeerIdStr;
+export type FetchByRootAndValidateBlockProps = FetchByRootCoreProps & {
   blockRoot: Uint8Array;
 };
 export type FetchByRootAndValidateBlobsProps = FetchByRootAndValidateBlockProps & {
@@ -179,7 +177,7 @@ export async function fetchByRoot({
       block = await fetchAndValidateBlock({
         config,
         network,
-        peerIdStr,
+        peerMeta,
         blockRoot,
       });
     }
@@ -190,7 +188,7 @@ export async function fetchByRoot({
         blobSidecars = await fetchAndValidateBlobs({
           config,
           network,
-          peerIdStr,
+          peerMeta,
           forkName: forkName as ForkPreFulu,
           block: block as SignedBeaconBlock<ForkPostDeneb>,
           blockRoot,
@@ -213,7 +211,7 @@ export async function fetchByRoot({
     block = await fetchAndValidateBlock({
       config,
       network,
-      peerIdStr,
+      peerMeta,
       blockRoot,
     });
     const forkName = config.getForkName(block.message.slot);
@@ -238,7 +236,7 @@ export async function fetchByRoot({
       blobSidecars = await fetchAndValidateBlobs({
         config,
         network,
-        peerIdStr,
+        peerMeta,
         forkName: forkName as ForkPreFulu,
         blockRoot,
         block: block as SignedBeaconBlock<ForkPostDeneb>,
@@ -261,9 +259,10 @@ export async function fetchByRoot({
 export async function fetchAndValidateBlock({
   config,
   network,
-  peerIdStr,
+  peerMeta,
   blockRoot,
 }: FetchByRootAndValidateBlockProps): Promise<SignedBeaconBlock> {
+  const {peerId: peerIdStr, client} = peerMeta;
   const response = await network.sendBeaconBlocksByRoot(peerIdStr, [blockRoot]);
   const block = response.at(0)?.data;
   if (!block) {
@@ -279,6 +278,7 @@ export async function fetchAndValidateBlock({
       {
         code: DownloadByRootErrorCode.MISMATCH_BLOCK_ROOT,
         peer: prettyPrintPeerIdStr(peerIdStr),
+        client,
         requestedBlockRoot: prettyBytes(blockRoot),
         receivedBlockRoot: prettyBytes(toRootHex(receivedRoot)),
       },
@@ -292,14 +292,14 @@ export async function fetchAndValidateBlobs({
   config,
   network,
   forkName,
-  peerIdStr,
+  peerMeta,
   blockRoot,
   block,
   blobMeta,
 }: FetchByRootAndValidateBlobsProps): Promise<deneb.BlobSidecars> {
   const blobSidecars: deneb.BlobSidecars = await fetchBlobsByRoot({
       network,
-      peerIdStr,
+      peerMeta,
       blobMeta,
     });
 
@@ -310,12 +310,13 @@ export async function fetchAndValidateBlobs({
 
 export async function fetchBlobsByRoot({
   network,
-  peerIdStr,
+  peerMeta,
   blobMeta,
   indicesInPossession = [],
-}: Pick<FetchByRootAndValidateBlobsProps, "network" | "peerIdStr" | "blobMeta"> & {
+}: Pick<FetchByRootAndValidateBlobsProps, "network" | "peerMeta" | "blobMeta"> & {
   indicesInPossession?: number[];
 }): Promise<deneb.BlobSidecars> {
+  const {peerId: peerIdStr} = peerMeta;
   const blobsRequest = blobMeta
     .filter(({index}) => !indicesInPossession.includes(index))
     .map(({blockRoot, index}) => ({blockRoot, index}));
@@ -334,7 +335,7 @@ export async function fetchAndValidateColumns({
   blockRoot,
   columnMeta,
 }: FetchByRootAndValidateColumnsProps): Promise<fulu.DataColumnSidecars> {
-  const {peerId: peerIdStr} = peerMeta;
+  const {peerId: peerIdStr, client} = peerMeta;
   const slot = block.message.slot;
   const blobCount = block.message.body.blobKzgCommitments.length;
   if (blobCount === 0) {
@@ -354,6 +355,7 @@ export async function fetchAndValidateColumns({
       {
         code: DownloadByRootErrorCode.NOT_ENOUGH_SIDECARS_RECEIVED,
         peer: prettyPrintPeerIdStr(peerIdStr),
+        client,
         blockRoot: prettyBytes(blockRoot),
         missingIndices: prettyPrintIndices(requestedColumns.filter(c => !returnedColumns.has(c))),
       },
@@ -369,6 +371,7 @@ export async function fetchAndValidateColumns({
         {
           code: DownloadByRootErrorCode.EXTRA_SIDECAR_RECEIVED,
           peer: prettyPrintPeerIdStr(peerIdStr),
+          client,
           blockRoot: prettyBytes(blockRoot),
           invalidIndex: columnSidecar.index,
         },
@@ -422,6 +425,7 @@ export async function validateColumnSidecars({
         {
           code: DownloadByRootErrorCode.EXTRA_SIDECAR_RECEIVED,
           peer: prettyPrintPeerIdStr(peerMeta.peerId),
+          client: peerMeta.client,
           blockRoot: prettyBytes(blockRoot),
           invalidIndex: columnSidecar.index,
         },
@@ -447,30 +451,35 @@ export type DownloadByRootErrorType =
   | {
       code: DownloadByRootErrorCode.MISMATCH_BLOCK_ROOT;
       peer: string;
+      client: string;
       requestedBlockRoot: string;
       receivedBlockRoot: string;
     }
   | {
       code: DownloadByRootErrorCode.EXTRA_SIDECAR_RECEIVED;
       peer: string;
+      client: string;
       blockRoot: string;
       invalidIndex: number;
     }
   | {
       code: DownloadByRootErrorCode.NOT_ENOUGH_SIDECARS_RECEIVED;
       peer: string;
+      client: string;
       blockRoot: string;
       missingIndices: string;
     }
   | {
       code: DownloadByRootErrorCode.INVALID_INCLUSION_PROOF;
       peer: string;
+      client: string;
       blockRoot: string;
       sidecarIndex: number;
     }
   | {
       code: DownloadByRootErrorCode.INVALID_KZG_PROOF;
       peer: string;
+      client: string;
       blockRoot: string;
     }
   | {
