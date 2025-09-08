@@ -118,7 +118,7 @@ export class ChainPeersBalancer {
     }
 
     for (const peer of this.peers) {
-      const {earliestAvailableSlot, custodyGroups, target, peerId} = peer;
+      const {earliestAvailableSlot, target, peerId} = peer;
 
       const activeRequest = this.activeRequestsByPeer.get(peerId) ?? 0;
       if (noActiveRequest && activeRequest > 0) {
@@ -163,8 +163,7 @@ export class ChainPeersBalancer {
         continue;
       }
 
-      const peerColumns = custodyGroups;
-      const columns = peerColumns.reduce((acc, elem) => {
+      const columns = peer.custodyGroups.reduce((acc, elem) => {
         if (requestColumns.includes(elem)) {
           acc.push(elem);
         }
