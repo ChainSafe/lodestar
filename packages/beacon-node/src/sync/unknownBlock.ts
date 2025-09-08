@@ -26,8 +26,9 @@ import {
   getBlockInputSyncCacheItemSlot,
   isPendingBlockInput,
 } from "./types.js";
-import {downloadByRoot} from "./utils/downloadByRoot.js";
+import {DownloadByRootError, DownloadByRootErrorCode, downloadByRoot} from "./utils/downloadByRoot.js";
 import {getAllDescendantBlocks, getDescendantBlocks, getUnknownAndAncestorBlocks} from "./utils/pendingBlocksTree.js";
+import {RequestError} from "@lodestar/reqresp";
 
 const MAX_ATTEMPTS_PER_BLOCK = 5;
 const MAX_KNOWN_BAD_BLOCKS = 500;
@@ -516,12 +517,55 @@ export class BlockInputSync {
           peerMeta,
           cacheItem,
         });
+        this.metrics?.blockInputSync.downloadByRoot.success.inc();
       } catch (e) {
         this.logger.debug(
           "Error downloading in BlockInputSync.fetchBlockInput",
           {attempt: i, rootHex, peer: peerId, peerClient},
           e as Error
         );
+        const downloadByRootMetrics = this.metrics?.blockInputSync.downloadByRoot;
+        if (e instanceof DownloadByRootError) {
+          const errorCode = e.type.code;
+          const client = e.type.client;
+          downloadByRootMetrics?.error.inc({code: errorCode});
+          switch(errorCode) {
+            case DownloadByRootErrorCode.MISMATCH_BLOCK_ROOT:
+              downloadByRootMetrics?.mismatchBlockRootError.inc({client});
+              break;
+            case DownloadByRootErrorCode.EXTRA_SIDECAR_RECEIVED:
+              downloadByRootMetrics?.extraSidecarReceivedError.inc({client});
+              break;
+            case DownloadByRootErrorCode.NOT_ENOUGH_SIDECARS_RECEIVED:
+              downloadByRootMetrics?.notEnoughSidecarError.inc({client});
+              break;
+            case DownloadByRootErrorCode.INVALID_INCLUSION_PROOF:
+              downloadByRootMetrics?.invalidInclusionProofError.inc({client});
+              break;
+            case DownloadByRootErrorCode.INVALID_KZG_PROOF:
+              downloadByRootMetrics?.invalidKzgProofError.inc({client});
+              break;
+            case DownloadByRootErrorCode.MISSING_BLOCK_RESPONSE:
+              downloadByRootMetrics?.missingBlockResponseError.inc({client});
+              break;
+            case DownloadByRootErrorCode.MISSING_BLOB_RESPONSE:
+              downloadByRootMetrics?.missingBlobResponseError.inc({client});
+              break;
+            case DownloadByRootErrorCode.MISSING_COLUMN_RESPONSE:
+              downloadByRootMetrics?.missingColumnResponseError.inc({client});
+              break;
+            default:
+              // investigate if this happens
+              downloadByRootMetrics?.unknownError.inc({client});
+              break;
+          }
+        } else if (e instanceof RequestError) {
+          // should look into req_resp metrics in this case
+          downloadByRootMetrics?.error.inc({code: "req_resp"});
+        } else {
+          // investigate if this happens
+          downloadByRootMetrics?.error.inc({code: "unknown"});
+        }
       } finally {
         this.peerBalancer.onRequestCompleted(peerId);
       }

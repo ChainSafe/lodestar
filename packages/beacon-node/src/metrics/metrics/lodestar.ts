@@ -552,6 +552,62 @@ export function createLodestarMetrics(
         help: "Total number of blocks whose data availability was resolved",
         labelNames: ["source"],
       }),
+      downloadByRoot: {
+        success: register.gauge({
+          name: "lodestar_sync_unknown_block_download_by_root_success_total",
+          help: "Total number of successful downloadByRoot calls",
+        }),
+        error: register.gauge<{code: string}>({
+          name: "lodestar_sync_unknown_block_download_by_root_error_total",
+          help: "Total number of errored downloadByRoot calls",
+          labelNames: ["code"],
+        }),
+        mismatchBlockRootError: register.gauge<{client: string}>({
+          name: "lodestar_sync_unknown_block_download_by_root_mismatch_block_root_error_total",
+          help: "Total number of downloadByRoot calls that returned a mismatched root",
+          labelNames: ["client"],
+        }),
+        extraSidecarReceivedError: register.gauge<{client: string}>({
+          name: "lodestar_sync_unknown_block_download_by_root_extra_sidecar_received_error_total",
+          help: "Total number of downloadByRoot calls that returned an unexpected sidecar",
+          labelNames: ["client"],
+        }),
+        notEnoughSidecarError: register.gauge<{client: string}>({
+          name: "lodestar_sync_unknown_block_download_by_root_not_enough_sidecar_error_total",
+          help: "Total number of downloadByRoot calls that returned not enough sidecars",
+          labelNames: ["client"],
+        }),
+        invalidInclusionProofError: register.gauge<{client: string}>({
+          name: "lodestar_sync_unknown_block_download_by_root_invalid_inclusion_proof_error_total",
+          help: "Total number of downloadByRoot calls that returned an invalid inclusion proof",
+          labelNames: ["client"],
+        }),
+        invalidKzgProofError: register.gauge<{client: string}>({
+          name: "lodestar_sync_unknown_block_download_by_root_invalid_kzg_proof_error_total",
+          help: "Total number of downloadByRoot calls that returned an invalid KZG proof",
+          labelNames: ["client"],
+        }),
+        missingBlockResponseError: register.gauge<{client: string}>({
+          name: "lodestar_sync_unknown_block_download_by_root_missing_block_response_error_total",
+          help: "Total number of downloadByRoot calls that returned a missing block response",
+          labelNames: ["client"],
+        }),
+        missingBlobResponseError: register.gauge<{client: string}>({
+          name: "lodestar_sync_unknown_block_download_by_root_missing_blob_response_error_total",
+          help: "Total number of downloadByRoot calls that returned a missing blob response",
+          labelNames: ["client"],
+        }),
+        missingColumnResponseError: register.gauge<{client: string}>({
+          name: "lodestar_sync_unknown_block_download_by_root_missing_column_response_error_total",
+          help: "Total number of downloadByRoot calls that returned a missing column response",
+          labelNames: ["client"],
+        }),
+        unknownError: register.gauge<{client: string}>({
+          name: "lodestar_sync_unknown_block_download_by_root_unknown_error_total",
+          help: "Total number of downloadByRoot calls that returned an unknown error",
+          labelNames: ["client"],
+        }),
+      },
       peerBalancer: {
         peersMetaCount: register.gauge({
           name: "lodestar_sync_unknown_block_peer_balancer_peers_meta_count",

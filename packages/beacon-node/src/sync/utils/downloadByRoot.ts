@@ -62,7 +62,7 @@ export async function downloadByRoot({
 }: DownloadByRootProps): Promise<PendingBlockInput> {
   const rootHex = getBlockInputSyncCacheItemRootHex(cacheItem);
   const blockRoot = fromHex(rootHex);
-  const {peerId: peerIdStr} = peerMeta;
+  const {peerId: peerIdStr, client} = peerMeta;
 
   const {block, blobSidecars, columnSidecars} = await fetchByRoot({
     config,
@@ -103,6 +103,7 @@ export async function downloadByRoot({
         code: DownloadByRootErrorCode.MISSING_BLOB_RESPONSE,
         blockRoot: prettyBytes(rootHex),
         peer: peerIdStr,
+        client,
       });
     }
     for (const blobSidecar of blobSidecars) {
@@ -123,6 +124,7 @@ export async function downloadByRoot({
         code: DownloadByRootErrorCode.MISSING_COLUMN_RESPONSE,
         blockRoot: prettyBytes(rootHex),
         peer: peerIdStr,
+        client,
       });
     }
     for (const columnSidecar of columnSidecars) {
@@ -269,6 +271,7 @@ export async function fetchAndValidateBlock({
     throw new DownloadByRootError({
       code: DownloadByRootErrorCode.MISSING_BLOCK_RESPONSE,
       peer: prettyPrintPeerIdStr(peerIdStr),
+      client,
       blockRoot: prettyBytes(blockRoot),
     });
   }
@@ -485,16 +488,19 @@ export type DownloadByRootErrorType =
   | {
       code: DownloadByRootErrorCode.MISSING_BLOCK_RESPONSE;
       peer: string;
+      client: string;
       blockRoot: string;
     }
   | {
       code: DownloadByRootErrorCode.MISSING_BLOB_RESPONSE;
       peer: string;
+      client: string;
       blockRoot: string;
     }
   | {
       code: DownloadByRootErrorCode.MISSING_COLUMN_RESPONSE;
       peer: string;
+      client: string;
       blockRoot: string;
     };
 
