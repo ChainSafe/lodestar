@@ -55,6 +55,7 @@ import {
   PayloadId,
   getExpectedGasLimit,
 } from "../../execution/index.js";
+import {Metrics} from "../../metrics/metrics.js";
 import {fromGraffitiBytes} from "../../util/graffiti.js";
 import {kzg} from "../../util/kzg.js";
 import type {BeaconChain} from "../chain.js";
@@ -514,6 +515,7 @@ export async function prepareExecutionPayload(
     eth1: IEth1ForBlockProduction;
     executionEngine: IExecutionEngine;
     config: ChainForkConfig;
+    metrics: Metrics | null;
   },
   logger: Logger,
   fork: ForkPostBellatrix,
