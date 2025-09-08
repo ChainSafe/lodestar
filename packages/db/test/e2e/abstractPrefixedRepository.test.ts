@@ -299,6 +299,9 @@ describe("abstractPrefixedRepository", () => {
   });
 
   describe("keys", () => {
+    const getRangeDataInclusive = (slot: number, start: number, end: number) =>
+      Array.from({length: end - start + 1}, (_, index) => ({id: start + index, prefix: slot}));
+
     it("keys returns decoded prefix+id with filters and options", async () => {
       const slot1 = 30;
       const slot2 = 31;
@@ -352,8 +355,6 @@ describe("abstractPrefixedRepository", () => {
       const slot1 = 30;
       const slot2 = 31;
       const slot3 = 32;
-      const getRangeDataInclusive = (slot: number, start: number, end: number) =>
-        Array.from({length: end - start + 1}, (_, index) => ({id: start + index, prefix: slot}));
 
       await repo.putMany(slot1, testData[slot1]);
       await repo.putMany(slot2, testData[slot2]);
@@ -425,6 +426,26 @@ describe("abstractPrefixedRepository", () => {
         {prefix: slot, id: 1},
         {prefix: slot, id: 2},
         {prefix: slot, id: 3},
+      ]);
+    });
+
+    it("should not cross the bucket boundary with multiple prefixes", async () => {
+      const repo2 = new TestPrefixedRepository(db, bucket - 1, bucketId);
+      const slot1 = 30;
+      const slot2 = 31;
+      await repo.putMany(slot1, testData[slot1]);
+      await repo2.putMany(slot1, testData[slot1]);
+
+      await repo.putMany(slot2, testData[slot2]);
+      await repo2.putMany(slot2, testData[slot2]);
+
+      const query = {lt: repo.encodeKeyRaw(slot2, 4)};
+
+      const keys = await repo.keys(query);
+
+      expect(keys).toEqual([
+        ...getRangeDataInclusive(slot1, 0, 299),
+        ...getRangeDataInclusive(slot2, 0, 3)
       ]);
     });
   });

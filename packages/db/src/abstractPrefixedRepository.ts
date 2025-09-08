@@ -19,7 +19,6 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
   private readonly minKey: Uint8Array;
   private readonly maxKey: Uint8Array;
 
-
   protected constructor(
     protected config: ChainForkConfig,
     protected db: Db,
