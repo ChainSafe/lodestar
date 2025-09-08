@@ -287,6 +287,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       }),
     },
 
+    // TODO(fulu): check if these and metrics in lodestar.ts for dataColumns should/can be combined or organized together
     peerDas: {
       dataColumnSidecarProcessingRequests: register.counter({
         name: "beacon_data_column_sidecar_processing_requests_total",
