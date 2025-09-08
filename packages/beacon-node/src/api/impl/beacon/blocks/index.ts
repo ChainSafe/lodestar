@@ -656,7 +656,9 @@ export function getBeaconBlockApi({
           );
         }
 
-        if ((block.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length > 0) {
+        const blobCount = (block.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length;
+
+        if (blobCount > 0) {
           let dataColumnSidecars = await db.dataColumnSidecar.values(blockRoot);
           if (dataColumnSidecars.length === 0) {
             dataColumnSidecars = await db.dataColumnSidecarArchive.values(block.message.slot);
@@ -665,7 +667,7 @@ export function getBeaconBlockApi({
           if (dataColumnSidecars.length === 0) {
             throw new ApiError(
               404,
-              `dataColumnSidecars not found in db for slot=${block.message.slot} root=${toRootHex(blockRoot)}`
+              `dataColumnSidecars not found in db for slot=${block.message.slot} root=${toRootHex(blockRoot)} blobs=${blobCount}`
             );
           }
 

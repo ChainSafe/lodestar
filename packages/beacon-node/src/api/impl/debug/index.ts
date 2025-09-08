@@ -1,7 +1,7 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {ExecutionStatus} from "@lodestar/fork-choice";
-import {isForkPostFulu, ZERO_HASH_HEX} from "@lodestar/params";
+import {isForkPostDeneb, isForkPostFulu, ZERO_HASH_HEX} from "@lodestar/params";
 import {BeaconState, deneb, fulu, sszTypesFor} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
@@ -99,14 +99,20 @@ export function getDebugApi({
 
       let dataColumnSidecars: fulu.DataColumnSidecars;
 
-      if (isForkPostFulu(fork) && (block.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length > 0) {
+      const blobCount = isForkPostDeneb(fork)
+        ? (block.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length
+        : 0;
+
+      if (isForkPostFulu(fork) && blobCount > 0) {
         dataColumnSidecars = await db.dataColumnSidecar.values(blockRoot);
         if (dataColumnSidecars.length === 0) {
           dataColumnSidecars = await db.dataColumnSidecarArchive.values(block.message.slot);
         }
 
         if (dataColumnSidecars.length === 0) {
-          throw Error(`dataColumnSidecars not found in db for slot=${block.message.slot} root=${toRootHex(blockRoot)}`);
+          throw Error(
+            `dataColumnSidecars not found in db for slot=${block.message.slot} root=${toRootHex(blockRoot)} blobs=${blobCount}`
+          );
         }
       } else {
         dataColumnSidecars = [];
