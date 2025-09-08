@@ -1,7 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPostDeneb, ForkPostFulu, ForkPreFulu, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
 import {SignedBeaconBlock, deneb, fulu} from "@lodestar/types";
-import {LodestarError, fromHex, prettyBytes, toRootHex} from "@lodestar/utils";
+import {LodestarError, fromHex, prettyBytes, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {BlobMeta, BlockInputSource, IBlockInput, MissingColumnMeta} from "../../chain/blocks/blockInput/types.js";
 import {SeenBlockInput} from "../../chain/seenCache/seenGossipBlockInput.js";
@@ -349,14 +349,15 @@ export async function fetchAndValidateColumns({
 
   // sanity check if peer returned correct number of columnSidecars
   if (columnSidecars.length < requestedColumns.length) {
+    const returnedColumns = new Set(columnSidecars.map((c) => c.index));
     throw new DownloadByRootError(
       {
         code: DownloadByRootErrorCode.NOT_ENOUGH_SIDECARS_RECEIVED,
         peer: prettyPrintPeerIdStr(peerIdStr),
         blockRoot: prettyBytes(blockRoot),
-        invalidIndex: requestedColumns.length - columnSidecars.length,
+        missingIndices: prettyPrintIndices(requestedColumns.filter(c => !returnedColumns.has(c))),
       },
-      "Did not receive enough columnSidecars"
+      "Did not receive all of the requested columnSidecars"
     );
   }
 
@@ -459,7 +460,7 @@ export type DownloadByRootErrorType =
       code: DownloadByRootErrorCode.NOT_ENOUGH_SIDECARS_RECEIVED;
       peer: string;
       blockRoot: string;
-      invalidIndex: number;
+      missingIndices: string;
     }
   | {
       code: DownloadByRootErrorCode.INVALID_INCLUSION_PROOF;
