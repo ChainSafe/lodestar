@@ -194,7 +194,7 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
     for (const v of Array.isArray(prefix) ? prefix : [prefix]) {
       for await (const {key, value} of this.db.entriesStream({
         gte: this.wrapKey(this.getMinKeyRaw(v)),
-        lt: this.wrapKey(this.getMaxKeyRaw(v)),
+        lte: this.wrapKey(this.getMaxKeyRaw(v)),
       })) {
         const {prefix, id} = this.decodeKeyRaw(this.unwrapKey(key));
 

@@ -1,8 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {Db, PrefixedRepository} from "@lodestar/db";
+import {Db, decodeNumberForDbKey, encodeNumberForDbKey, PrefixedRepository} from "@lodestar/db";
 import {NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {ColumnIndex, Slot, fulu, ssz} from "@lodestar/types";
-import {bytesToInt, intToBytes} from "@lodestar/utils";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 /**
@@ -25,21 +24,21 @@ export class DataColumnSidecarArchiveRepository extends PrefixedRepository<Slot,
   }
 
   encodeKeyRaw(prefix: Slot, id: ColumnIndex): Uint8Array {
-    return Buffer.concat([intToBytes(prefix, 4, "be"), intToBytes(id, 4, "be")]);
+    return Buffer.concat([encodeNumberForDbKey(prefix, 4), encodeNumberForDbKey(id, 4)]);
   }
 
   decodeKeyRaw(raw: Uint8Array): {prefix: Slot; id: ColumnIndex} {
     return {
-      prefix: bytesToInt(raw.slice(0, 4), "be") as Slot,
-      id: bytesToInt(raw.slice(4, 8), "be") as ColumnIndex,
+      prefix: decodeNumberForDbKey(raw, 4) as Slot,
+      id: decodeNumberForDbKey(raw.slice(4), 4) as ColumnIndex,
     };
   }
 
   getMaxKeyRaw(prefix: Slot): Uint8Array {
-    return Buffer.concat([intToBytes(prefix, 4, "be"), intToBytes(NUMBER_OF_COLUMNS, 4, "be")]);
+    return Buffer.concat([encodeNumberForDbKey(prefix, 4), encodeNumberForDbKey(NUMBER_OF_COLUMNS, 4)]);
   }
 
   getMinKeyRaw(prefix: Slot): Uint8Array {
-    return Buffer.concat([intToBytes(prefix, 4, "be"), intToBytes(0, 4, "be")]);
+    return Buffer.concat([encodeNumberForDbKey(prefix, 4), encodeNumberForDbKey(0, 4)]);
   }
 }

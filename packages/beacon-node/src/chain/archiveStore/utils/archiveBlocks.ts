@@ -5,7 +5,7 @@ import {IForkChoice} from "@lodestar/fork-choice";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot} from "@lodestar/types";
-import {Logger, fromHex, toRootHex} from "@lodestar/utils";
+import {Logger, fromAsync, fromHex, toRootHex} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/index.js";
 import {BlockArchiveBatchPutBinaryItem} from "../../../db/repositories/index.js";
 import {ensureDir, writeIfNotExist} from "../../../util/file.js";
@@ -330,7 +330,7 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
         continue;
       }
 
-      const dataColumnSidecarBytes = await db.dataColumnSidecar.valuesBinary(block.root);
+      const dataColumnSidecarBytes = await fromAsync(db.dataColumnSidecar.valuesStreamBinary(block.root));
       // there could be 0 dataColumnSidecarBytes if block has no blob
       logger.verbose("migrateDataColumnSidecarsFromHotToColdDb", {
         slot: block.slot,

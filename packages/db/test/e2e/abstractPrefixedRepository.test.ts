@@ -1,8 +1,8 @@
 /** biome-ignore-all lint/style/noNonNullAssertion: values all exist */
 import {beforeAll, afterAll, beforeEach, describe, it, expect} from "vitest";
 import {getEnvLogger} from "@lodestar/logger/env";
-import {PrefixedRepository, LevelDbController, type Db} from "../../src/index.js";
-import {bytesToInt, fromAsync, intToBytes} from "@lodestar/utils";
+import {PrefixedRepository, LevelDbController, type Db, encodeNumberForDbKey, decodeNumberForDbKey} from "../../src/index.js";
+import {fromAsync} from "@lodestar/utils";
 
 type Slot = number;
 type Column = number;
@@ -23,19 +23,19 @@ class TestPrefixedRepository extends PrefixedRepository<Slot, Column, TestPrefix
   }
 
   encodeKeyRaw(prefix: number, id: number): Uint8Array {
-    return Buffer.concat([intToBytes(prefix, 2, "be"), intToBytes(id, 2, "be")]);
+    return Buffer.concat([encodeNumberForDbKey(prefix, 2), encodeNumberForDbKey(id, 2)]);
   }
 
   decodeKeyRaw(raw: Uint8Array): {prefix: number; id: number} {
-    return {prefix: bytesToInt(raw.slice(0, 2), "be"), id: bytesToInt(raw.slice(2, 4), "be")};
+    return {prefix: decodeNumberForDbKey(raw, 2), id:  decodeNumberForDbKey(raw.slice(2), 2)};
   }
 
   getMaxKeyRaw(prefix: number): Uint8Array {
-    return Buffer.concat([intToBytes(prefix, 2, "be"), intToBytes(0xffff, 2, "be")]);
+    return Buffer.concat([encodeNumberForDbKey(prefix, 2), encodeNumberForDbKey(0xffff, 2)]);
   }
 
   getMinKeyRaw(prefix: number): Uint8Array {
-    return Buffer.concat([intToBytes(prefix, 2, "be"), intToBytes(0, 2, "be")]);
+    return Buffer.concat([encodeNumberForDbKey(prefix, 2), encodeNumberForDbKey(0,2)]);
   }
 
   getId(value: TestPrefixedType): number {
