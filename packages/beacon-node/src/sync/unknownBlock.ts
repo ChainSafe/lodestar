@@ -529,35 +529,22 @@ export class BlockInputSync {
           const errorCode = e.type.code;
           const client = e.type.client;
           downloadByRootMetrics?.error.inc({code: errorCode});
-          switch(errorCode) {
-            case DownloadByRootErrorCode.MISMATCH_BLOCK_ROOT:
-              downloadByRootMetrics?.mismatchBlockRootError.inc({client});
-              break;
-            case DownloadByRootErrorCode.EXTRA_SIDECAR_RECEIVED:
-              downloadByRootMetrics?.extraSidecarReceivedError.inc({client});
-              break;
-            case DownloadByRootErrorCode.NOT_ENOUGH_SIDECARS_RECEIVED:
-              downloadByRootMetrics?.notEnoughSidecarError.inc({client});
-              break;
-            case DownloadByRootErrorCode.INVALID_INCLUSION_PROOF:
-              downloadByRootMetrics?.invalidInclusionProofError.inc({client});
-              break;
-            case DownloadByRootErrorCode.INVALID_KZG_PROOF:
-              downloadByRootMetrics?.invalidKzgProofError.inc({client});
-              break;
-            case DownloadByRootErrorCode.MISSING_BLOCK_RESPONSE:
-              downloadByRootMetrics?.missingBlockResponseError.inc({client});
-              break;
-            case DownloadByRootErrorCode.MISSING_BLOB_RESPONSE:
-              downloadByRootMetrics?.missingBlobResponseError.inc({client});
-              break;
-            case DownloadByRootErrorCode.MISSING_COLUMN_RESPONSE:
-              downloadByRootMetrics?.missingColumnResponseError.inc({client});
-              break;
-            default:
-              // investigate if this happens
-              downloadByRootMetrics?.unknownError.inc({client});
-              break;
+          const metricForCode = {
+            [DownloadByRootErrorCode.MISMATCH_BLOCK_ROOT]: downloadByRootMetrics?.mismatchBlockRootError,
+            [DownloadByRootErrorCode.EXTRA_SIDECAR_RECEIVED]: downloadByRootMetrics?.extraSidecarReceivedError,
+            [DownloadByRootErrorCode.NOT_ENOUGH_SIDECARS_RECEIVED]: downloadByRootMetrics?.notEnoughSidecarError,
+            [DownloadByRootErrorCode.INVALID_INCLUSION_PROOF]: downloadByRootMetrics?.invalidInclusionProofError,
+            [DownloadByRootErrorCode.INVALID_KZG_PROOF]: downloadByRootMetrics?.invalidKzgProofError,
+            [DownloadByRootErrorCode.MISSING_BLOCK_RESPONSE]: downloadByRootMetrics?.missingBlockResponseError,
+            [DownloadByRootErrorCode.MISSING_BLOB_RESPONSE]: downloadByRootMetrics?.missingBlobResponseError,
+            [DownloadByRootErrorCode.MISSING_COLUMN_RESPONSE]: downloadByRootMetrics?.missingColumnResponseError,
+          }[errorCode];
+
+          if (metricForCode) {
+            metricForCode.inc({client});
+          } else {
+            // investigate if this happens
+            downloadByRootMetrics?.unknownError.inc({client});
           }
         } else if (e instanceof RequestError) {
           // should look into req_resp metrics in this case
