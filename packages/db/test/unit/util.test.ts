@@ -1,4 +1,3 @@
-import {intToBytes} from "@lodestar/utils";
 import {describe, it, expect} from "vitest";
 import {
   encodeNumberForDbKey,
@@ -9,19 +8,23 @@ import {
 
 describe("encode/decode number for DB key", () => {
   it("roundtrips with fixed byte size (2 bytes)", () => {
-    const value = 0xffff; // 65535
+    const value = 0xffee; 
     const size = 2;
+
     const encoded = encodeNumberForDbKey(value, size);
-    expect(encoded).toEqual(intToBytes(value, size, "be"));
+    expect(encoded).toEqual(Buffer.from([0xff, 0xee]));
+    
     const decoded = decodeNumberForDbKey(encoded, size);
     expect(decoded).toBe(value);
   });
 
   it("roundtrips with fixed byte size (4 bytes)", () => {
-    const value = 0xdeadbeef >>> 0; // 3735928559
+    const value = 0xdeadbeef >>> 0;
     const size = 4;
+
     const encoded = encodeNumberForDbKey(value, size);
-    expect(encoded).toEqual(intToBytes(value, size, "be"));
+    expect(encoded).toEqual(Buffer.from([0xde, 0xad, 0xbe, 0xef]));
+
     const decoded = decodeNumberForDbKey(encoded, size);
     expect(decoded).toBe(value);
   });
