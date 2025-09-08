@@ -138,6 +138,7 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
       const prefixedKeys = await this.db.keys({
         gte: this.wrapKey(this.getMinKeyRaw(p)),
         lte: this.wrapKey(this.getMaxKeyRaw(p)),
+        bucketId: this.bucketId,
       });
       keys.push(prefixedKeys);
     }
@@ -150,6 +151,7 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
       for await (const vb of this.db.valuesStream({
         gte: this.wrapKey(this.getMinKeyRaw(p)),
         lte: this.wrapKey(this.getMaxKeyRaw(p)),
+        bucketId: this.bucketId,
       })) {
         yield this.decodeValue(vb);
       }
@@ -161,6 +163,7 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
       for await (const {key, value} of this.db.entriesStream({
         gte: this.wrapKey(this.getMinKeyRaw(p)),
         lte: this.wrapKey(this.getMaxKeyRaw(p)),
+        bucketId: this.bucketId,
       })) {
         const {prefix, id} = this.decodeKeyRaw(this.unwrapKey(key));
 
@@ -178,6 +181,7 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
       for await (const {key, value} of this.db.entriesStream({
         gte: this.wrapKey(this.getMinKeyRaw(v)),
         lte: this.wrapKey(this.getMaxKeyRaw(v)),
+        bucketId: this.bucketId,
       })) {
         const {prefix, id} = this.decodeKeyRaw(this.unwrapKey(key));
 
@@ -195,6 +199,7 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
       for await (const {key, value} of this.db.entriesStream({
         gte: this.wrapKey(this.getMinKeyRaw(v)),
         lte: this.wrapKey(this.getMaxKeyRaw(v)),
+        bucketId: this.bucketId,
       })) {
         const {prefix, id} = this.decodeKeyRaw(this.unwrapKey(key));
 
