@@ -97,11 +97,12 @@ export function getDebugApi({
       const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
 
       let dataColumnSidecars = await db.dataColumnSidecar.values(blockRoot);
-      if (!dataColumnSidecars) {
+
+      if (dataColumnSidecars.length === 0) {
         dataColumnSidecars = await db.dataColumnSidecarArchive.values(block.message.slot);
       }
 
-      if (!dataColumnSidecars) {
+      if (dataColumnSidecars.length === 0) {
         throw Error(`dataColumnSidecars not found in db for slot=${block.message.slot} root=${toRootHex(blockRoot)}`);
       }
 

@@ -2,11 +2,14 @@ import {ChainConfig} from "@lodestar/config";
 import {GENESIS_SLOT} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {fulu} from "@lodestar/types";
+import {ColumnIndex, fulu} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
-import {validateRequestedDataColumns} from "../utils/dataColumnResponseValidation.js";
+import {
+  handleColumnSidecarUnavailability,
+  validateRequestedDataColumns,
+} from "../utils/dataColumnResponseValidation.js";
 
 export async function* onDataColumnSidecarsByRange(
   request: fulu.DataColumnSidecarsByRangeRequest,
@@ -31,7 +34,9 @@ export async function* onDataColumnSidecarsByRange(
     for (let slot = startSlot; slot < endSlot; slot++) {
       const dataColumnSidecars = await finalized.getManyBinary(slot, availableColumns);
 
-      for (const dataColumnSidecarBytes of dataColumnSidecars) {
+      const unavailableColumnIndices: ColumnIndex[] = [];
+      for (let i = 0; i < dataColumnSidecars.length; i++) {
+        const dataColumnSidecarBytes = dataColumnSidecars[i];
         if (dataColumnSidecarBytes) {
           yield {
             data: dataColumnSidecarBytes,
@@ -41,16 +46,21 @@ export async function* onDataColumnSidecarsByRange(
 
         // TODO: Check blobs for that block and respond resource_unavailable
         // After we have consensus from other teams on the specs
-        // else {
-        //   await handleColumnSidecarUnavailability({
-        //     chain,
-        //     db,
-        //     unavailableColumnIndex: availableColumns[index],
-        //     slot,
-        //     requestedColumns,
-        //     availableColumns,
-        //   });
-        // }
+        else {
+          unavailableColumnIndices.push(availableColumns[i]);
+        }
+      }
+
+      if (unavailableColumnIndices.length) {
+        await handleColumnSidecarUnavailability({
+          chain,
+          db,
+          metrics: chain.metrics,
+          unavailableColumnIndices,
+          slot,
+          requestedColumns,
+          availableColumns,
+        });
       }
     }
   }
@@ -71,7 +81,10 @@ export async function* onDataColumnSidecarsByRange(
         // re-org there's no need to abort the request
         // Spec: https://github.com/ethereum/consensus-specs/blob/ad36024441cf910d428d03f87f331fbbd2b3e5f1/specs/fulu/p2p-interface.md#L425-L429
         const dataColumnSidecars = await unfinalized.getManyBinary(fromHex(block.blockRoot), availableColumns);
-        for (const dataColumnSidecarBytes of dataColumnSidecars) {
+
+        const unavailableColumnIndices: ColumnIndex[] = [];
+        for (let i = 0; i < dataColumnSidecars.length; i++) {
+          const dataColumnSidecarBytes = dataColumnSidecars[i];
           if (dataColumnSidecarBytes) {
             yield {
               data: dataColumnSidecarBytes,
@@ -81,17 +94,22 @@ export async function* onDataColumnSidecarsByRange(
 
           // TODO: Check blobs for that block and respond resource_unavailable
           // After we have consensus from other teams on the specs
-          // else {
-          //   await handleColumnSidecarUnavailability({
-          //     chain,
-          //     db,
-          //     unavailableColumnIndex: availableColumns[index],
-          //     blockRoot: fromHex(block.blockRoot),
-          //     slot: block.slot,
-          //     requestedColumns,
-          //     availableColumns,
-          //   });
-          // }
+          else {
+            unavailableColumnIndices.push(availableColumns[i]);
+          }
+        }
+
+        if (unavailableColumnIndices.length) {
+          await handleColumnSidecarUnavailability({
+            chain,
+            db,
+            metrics: chain.metrics,
+            unavailableColumnIndices,
+            blockRoot: fromHex(block.blockRoot),
+            slot: block.slot,
+            requestedColumns,
+            availableColumns,
+          });
         }
       }
 
