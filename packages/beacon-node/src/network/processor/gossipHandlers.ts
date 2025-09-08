@@ -130,18 +130,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     // always set block to seen cache for all forks so that we don't need to download it
     // TODO: validate block before adding to cache
     // tracked in https://github.com/ChainSafe/lodestar/issues/7957
-    const blockInput = chain.seenGossipBlockInput.getByBlock({
-      block: signedBlock,
-      blockRootHex,
-      source: BlockInputSource.gossip,
-      seenTimestampSec,
-      peerIdStr,
-    });
-
-    const blockInputMeta = blockInput.getLogMeta();
 
     const logCtx = {
-      ...blockInputMeta,
       currentSlot: chain.clock.currentSlot,
       peerId: peerIdStr,
       delaySec,
@@ -150,8 +140,17 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
     logger.debug("Received gossip block", {...logCtx});
 
+    let blockInput: IBlockInput | undefined;
     try {
       await validateGossipBlock(config, chain, signedBlock, fork);
+      blockInput = chain.seenGossipBlockInput.getByBlock({
+        block: signedBlock,
+        blockRootHex,
+        source: BlockInputSource.gossip,
+        seenTimestampSec,
+        peerIdStr,
+      });
+      const blockInputMeta = blockInput.getLogMeta();
 
       const recvToValidation = Date.now() / 1000 - seenTimestampSec;
       const validationTime = recvToValidation - recvToValLatency;
@@ -159,7 +158,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       metrics?.gossipBlock.gossipValidation.recvToValidation.observe(recvToValidation);
       metrics?.gossipBlock.gossipValidation.validationTime.observe(validationTime);
 
-      logger.debug("Validated gossip block", {...logCtx, recvToValidation, validationTime});
+      logger.debug("Validated gossip block", {...blockInputMeta, ...logCtx, recvToValidation, validationTime});
 
       chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRootHex});
 
@@ -169,8 +168,9 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         // TODO(fulu): check that this is the only error that should trigger resolution of the block and all others
         //    cause the block to get thrown away
         // Don't trigger this yet if full block and blobs haven't arrived yet
-        if (e.type.code === BlockErrorCode.PARENT_UNKNOWN && blockInput !== null) {
+        if (e.type.code === BlockErrorCode.PARENT_UNKNOWN && blockInput) {
           logger.debug("Gossip block has error", {slot, root: blockShortHex, code: e.type.code});
+          // TODO(fulu): should this be unknownParent event?
           chain.emitter.emit(ChainEvent.incompleteBlockInput, {
             blockInput,
             peer: peerIdStr,
