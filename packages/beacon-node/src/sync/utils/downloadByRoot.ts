@@ -1,7 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPostDeneb, ForkPostFulu, ForkPreFulu, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
 import {SignedBeaconBlock, deneb, fulu} from "@lodestar/types";
-import {LodestarError, fromHex, prettyBytes, toRootHex} from "@lodestar/utils";
+import {LodestarError, fromHex, prettyBytes, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {BlobMeta, BlockInputSource, IBlockInput, MissingColumnMeta} from "../../chain/blocks/blockInput/types.js";
 import {SeenBlockInput} from "../../chain/seenCache/seenGossipBlockInput.js";
@@ -346,6 +346,22 @@ export async function fetchAndValidateColumns({
   const columnSidecars = await network.sendDataColumnSidecarsByRoot(peerIdStr, [
     {blockRoot, columns: requestedColumns},
   ]);
+
+  // sanity check if peer returned correct number of columnSidecars
+  if (columnSidecars.length < requestedColumns.length) {
+    const returnedColumns = new Set(columnSidecars.map((c) => c.index));
+    throw new DownloadByRootError(
+      {
+        code: DownloadByRootErrorCode.NOT_ENOUGH_SIDECARS_RECEIVED,
+        peer: prettyPrintPeerIdStr(peerIdStr),
+        blockRoot: prettyBytes(blockRoot),
+        missingIndices: prettyPrintIndices(requestedColumns.filter(c => !returnedColumns.has(c))),
+      },
+      "Did not receive all of the requested columnSidecars"
+    );
+  }
+
+  // check each returned columnSidecar
   for (let i = 0; i < requestedColumns.length; i++) {
     const columnSidecar = columnSidecars[i];
     if (columnSidecar.index !== requestedColumns[i]) {
@@ -419,6 +435,7 @@ export async function validateColumnSidecars({
 export enum DownloadByRootErrorCode {
   MISMATCH_BLOCK_ROOT = "DOWNLOAD_BY_ROOT_ERROR_MISMATCH_BLOCK_ROOT",
   EXTRA_SIDECAR_RECEIVED = "DOWNLOAD_BY_ROOT_ERROR_EXTRA_SIDECAR_RECEIVED",
+  NOT_ENOUGH_SIDECARS_RECEIVED = "DOWNLOAD_BY_ROOT_ERROR_NOT_ENOUGH_SIDECARS_RECEIVED",
   INVALID_INCLUSION_PROOF = "DOWNLOAD_BY_ROOT_ERROR_INVALID_INCLUSION_PROOF",
   INVALID_KZG_PROOF = "DOWNLOAD_BY_ROOT_ERROR_INVALID_KZG_PROOF",
   MISSING_BLOCK_RESPONSE = "DOWNLOAD_BY_ROOT_ERROR_MISSING_BLOCK_RESPONSE",
@@ -438,6 +455,12 @@ export type DownloadByRootErrorType =
       peer: string;
       blockRoot: string;
       invalidIndex: number;
+    }
+  | {
+      code: DownloadByRootErrorCode.NOT_ENOUGH_SIDECARS_RECEIVED;
+      peer: string;
+      blockRoot: string;
+      missingIndices: string;
     }
   | {
       code: DownloadByRootErrorCode.INVALID_INCLUSION_PROOF;
