@@ -15,7 +15,7 @@ jobs:
     runs-on: buildjet-4vcpu-ubuntu-2204
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -61,7 +61,7 @@ jobs:
     needs: [tag, binaries]
     if: needs.tag.outputs.is_stable == 'true'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0 # Needs full depth for changelog generation
 
@@ -128,7 +128,7 @@ jobs:
     needs: [tag, npm]
     if: needs.tag.outputs.is_stable == 'true'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: scripts/await-release.sh ${{ needs.tag.outputs.tag }} latest 900
       # https://github.com/docker/setup-qemu-action
       - name: Set up QEMU
