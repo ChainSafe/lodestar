@@ -512,7 +512,7 @@ export class BlockInputSync {
         cacheItem = await downloadByRoot({
           config: this.config,
           network: this.network,
-          seenCache: this.chain.seenGossipBlockInput,
+          seenCache: this.chain.seenBlockInputCache,
           peerMeta,
           cacheItem,
         });
