@@ -5,7 +5,7 @@ import {IForkChoice} from "@lodestar/fork-choice";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot} from "@lodestar/types";
-import {Logger, fromAsync, fromHex, toRootHex} from "@lodestar/utils";
+import {Logger, fromAsync, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/index.js";
 import {BlockArchiveBatchPutBinaryItem} from "../../../db/repositories/index.js";
 import {ensureDir, writeIfNotExist} from "../../../util/file.js";
@@ -174,20 +174,22 @@ export async function archiveBlocks(
       );
       const dataColumnSidecarsMinEpoch = currentEpoch - dataColumnSidecarsArchiveWindow;
       if (dataColumnSidecarsMinEpoch >= config.FULU_FORK_EPOCH) {
-        const slotsToDelete = (
-          await db.dataColumnSidecarArchive.keys({
+        const prefixedKeys = await db.dataColumnSidecarArchive.keys({
             lt: {prefix: computeStartSlotAtEpoch(dataColumnSidecarsMinEpoch), id: 0},
-          })
-        ).map((p) => p.prefix);
+        });
+        // for each slot there could be multiple dataColumnSidecar, so we need to deduplicate it
+        const slotsToDelete = [...new Set(prefixedKeys.map(({prefix}) => prefix))].sort((a, b) => a - b);
 
         if (slotsToDelete.length > 0) {
           await db.dataColumnSidecarArchive.deleteMany(slotsToDelete);
-          logger.verbose(`dataColumnSidecars prune: batchDelete range ${slotsToDelete[0]}..${slotsToDelete.at(-1)}`);
+          `dataColumnSidecars prune slotRange=${prettyPrintIndices(slotsToDelete)}, numOfSlots=${slotsToDelete.length} totalNumOfSidecars=${prefixedKeys.length}`;
         } else {
           logger.verbose(`dataColumnSidecars prune: no entries before epoch ${dataColumnSidecarsMinEpoch}`);
         }
       } else {
-        logger.verbose(`dataColumnSidecars pruning skipped: ${dataColumnSidecarsMinEpoch} is before fulu fork epoch`);
+        logger.verbose(
+          `dataColumnSidecars pruning skipped: ${dataColumnSidecarsMinEpoch} is before fulu fork epoch ${config.FULU_FORK_EPOCH}`
+        );
       }
     } else {
       logger.verbose("dataColumnSidecars pruning skipped: archiveDataEpochs set to Infinity");
