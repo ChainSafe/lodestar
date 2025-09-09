@@ -62,9 +62,11 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInputs: IBloc
 
       fnPromises.push(this.db.dataColumnSidecar.putMany(blockRoot, dataColumnSidecars));
       this.logger.debug("Persisted dataColumnSidecars to hot DB", {
-        dataColumnSidecars: dataColumnSidecars.length,
         slot: block.message.slot,
         root: blockRootHex,
+        dataColumnSidecars: dataColumnSidecars.length,
+        numBlobs: blobsLen,
+        custodyColumns: custodyColumns.length,
       });
     } else if (isBlockInputBlobs(blockInput)) {
       const blobSidecars = blockInput.getBlobs();

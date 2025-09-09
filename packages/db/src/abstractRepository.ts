@@ -26,7 +26,7 @@ export abstract class Repository<I extends Id, T> {
     protected db: Db,
     protected bucket: number,
     protected type: Type<T>,
-    private readonly bucketId: string
+    protected readonly bucketId: string
   ) {
     this.dbReqOpts = {bucketId: this.bucketId};
     this.minKey = _encodeKey(bucket, Buffer.alloc(0));

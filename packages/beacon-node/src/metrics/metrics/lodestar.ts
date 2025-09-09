@@ -552,6 +552,17 @@ export function createLodestarMetrics(
         help: "Total number of blocks whose data availability was resolved",
         labelNames: ["source"],
       }),
+      downloadByRoot: {
+        success: register.gauge({
+          name: "lodestar_sync_unknown_block_download_by_root_success_total",
+          help: "Total number of successful downloadByRoot calls",
+        }),
+        error: register.gauge<{code: string; client: string}>({
+          name: "lodestar_sync_unknown_block_download_by_root_error_total",
+          help: "Total number of errored downloadByRoot calls",
+          labelNames: ["code", "client"],
+        }),
+      },
       peerBalancer: {
         peersMetaCount: register.gauge({
           name: "lodestar_sync_unknown_block_peer_balancer_peers_meta_count",
