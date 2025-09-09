@@ -385,9 +385,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     metrics?.gossipBlock.elapsedTimeTillReceived.observe({source: OpSource.gossip}, delaySec);
     chain.validatorMonitor?.registerBeaconBlock(OpSource.gossip, delaySec, signedBlock.message);
     if (!blockInput.hasBlockAndAllData()) {
-      chain.logger.debug("Received gossip block, attempting fetch of unavailable data", {
-        ...blockInput.getLogMeta(),
-      });
+      chain.logger.debug("Received gossip block, attempting fetch of unavailable data", blockInput.getLogMeta());
       // The data is not yet fully available, immediately trigger an aggressive pull via unknown block sync
       chain.emitter.emit(ChainEvent.incompleteBlockInput, {
         blockInput,
