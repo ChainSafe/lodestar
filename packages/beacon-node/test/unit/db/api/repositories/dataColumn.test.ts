@@ -90,7 +90,7 @@ describe("block archive repository", () => {
     // same api to writeBlockInputToDb
     await dataColumnRepo.putMany(blockRoot, allDataColumnSidecars);
     // same api to migrateDataColumnSidecarsFromHotToColDb
-    const dataColumnSidecarBytes = await dataColumnRepo.valuesBinary(blockRoot);
+    const dataColumnSidecarBytes = await fromAsync(dataColumnRepo.valuesStreamBinary(blockRoot));
     await dataColumnArchiveRepo.putManyBinary(
       blockSlot,
       dataColumnSidecarBytes.map((p) => ({key: p.id, value: p.value}))
