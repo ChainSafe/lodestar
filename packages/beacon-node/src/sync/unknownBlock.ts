@@ -1,8 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkSeq, INTERVALS_PER_SLOT} from "@lodestar/params";
 import {RootHex} from "@lodestar/types";
-import {Logger, prettyBytes, prettyPrintIndices, pruneSetToMax} from "@lodestar/utils";
-import {sleep} from "@lodestar/utils";
+import {sleep, Logger, prettyBytes, prettyPrintIndices, pruneSetToMax} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
 import {BlockError, BlockErrorCode} from "../chain/errors/index.js";
