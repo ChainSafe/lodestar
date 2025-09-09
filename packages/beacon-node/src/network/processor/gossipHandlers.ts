@@ -549,6 +549,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           dataColumnIndex: index,
           ...blockInput.getLogMeta(),
         });
+        // do not await here to not delay gossip validation
         blockInput.waitForAllData(cutoffTimeMs).catch((_e) => {
           chain.logger.debug(
             "Waited for data after receiving gossip column. Cut-off reached so attempting to fetch remainder of BlockInput",
