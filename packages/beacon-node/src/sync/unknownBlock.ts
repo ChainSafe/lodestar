@@ -527,30 +527,13 @@ export class BlockInputSync {
         const downloadByRootMetrics = this.metrics?.blockInputSync.downloadByRoot;
         if (e instanceof DownloadByRootError) {
           const errorCode = e.type.code;
-          downloadByRootMetrics?.error.inc({code: errorCode});
-          const metricForCode = {
-            [DownloadByRootErrorCode.MISMATCH_BLOCK_ROOT]: downloadByRootMetrics?.mismatchBlockRootError,
-            [DownloadByRootErrorCode.EXTRA_SIDECAR_RECEIVED]: downloadByRootMetrics?.extraSidecarReceivedError,
-            [DownloadByRootErrorCode.NOT_ENOUGH_SIDECARS_RECEIVED]: downloadByRootMetrics?.notEnoughSidecarError,
-            [DownloadByRootErrorCode.INVALID_INCLUSION_PROOF]: downloadByRootMetrics?.invalidInclusionProofError,
-            [DownloadByRootErrorCode.INVALID_KZG_PROOF]: downloadByRootMetrics?.invalidKzgProofError,
-            [DownloadByRootErrorCode.MISSING_BLOCK_RESPONSE]: downloadByRootMetrics?.missingBlockResponseError,
-            [DownloadByRootErrorCode.MISSING_BLOB_RESPONSE]: downloadByRootMetrics?.missingBlobResponseError,
-            [DownloadByRootErrorCode.MISSING_COLUMN_RESPONSE]: downloadByRootMetrics?.missingColumnResponseError,
-          }[errorCode];
-
-          if (metricForCode) {
-            metricForCode.inc({client: peerClient});
-          } else {
-            // investigate if this happens
-            downloadByRootMetrics?.unknownError.inc({client: peerClient});
-          }
+          downloadByRootMetrics?.error.inc({code: errorCode, client: peerClient});
         } else if (e instanceof RequestError) {
           // should look into req_resp metrics in this case
-          downloadByRootMetrics?.error.inc({code: "req_resp"});
+          downloadByRootMetrics?.error.inc({code: "req_resp", client: peerClient});
         } else {
           // investigate if this happens
-          downloadByRootMetrics?.error.inc({code: "unknown"});
+          downloadByRootMetrics?.error.inc({code: "unknown", client: peerClient});
         }
       } finally {
         this.peerBalancer.onRequestCompleted(peerId);
