@@ -25,8 +25,9 @@ import {
   getBlockInputSyncCacheItemSlot,
   isPendingBlockInput,
 } from "./types.js";
-import {downloadByRoot} from "./utils/downloadByRoot.js";
+import {DownloadByRootError, DownloadByRootErrorCode, downloadByRoot} from "./utils/downloadByRoot.js";
 import {getAllDescendantBlocks, getDescendantBlocks, getUnknownAndAncestorBlocks} from "./utils/pendingBlocksTree.js";
+import {RequestError} from "@lodestar/reqresp";
 
 const MAX_ATTEMPTS_PER_BLOCK = 5;
 const MAX_KNOWN_BAD_BLOCKS = 500;
@@ -515,12 +516,24 @@ export class BlockInputSync {
           peerMeta,
           cacheItem,
         });
+        this.metrics?.blockInputSync.downloadByRoot.success.inc();
       } catch (e) {
         this.logger.debug(
           "Error downloading in BlockInputSync.fetchBlockInput",
           {attempt: i, rootHex, peer: peerId, peerClient},
           e as Error
         );
+        const downloadByRootMetrics = this.metrics?.blockInputSync.downloadByRoot;
+        if (e instanceof DownloadByRootError) {
+          const errorCode = e.type.code;
+          downloadByRootMetrics?.error.inc({code: errorCode, client: peerClient});
+        } else if (e instanceof RequestError) {
+          // should look into req_resp metrics in this case
+          downloadByRootMetrics?.error.inc({code: "req_resp", client: peerClient});
+        } else {
+          // investigate if this happens
+          downloadByRootMetrics?.error.inc({code: "unknown", client: peerClient});
+        }
       } finally {
         this.peerBalancer.onRequestCompleted(peerId);
       }
