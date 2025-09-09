@@ -178,12 +178,7 @@ export async function archiveBlocks(
           lt: db.dataColumnSidecarArchive.getMaxKeyRaw(computeStartSlotAtEpoch(dataColumnSidecarsMinEpoch)),
         });
         // for each slot there could be multiple dataColumnSidecar, so we need to deduplicate it
-        const slots = new Set<Slot>();
-        for (const {prefix} of prefixedKeys) {
-          slots.add(prefix);
-        }
-
-        const slotsToDelete = [...slots].sort((a, b) => a - b);
+        const slotsToDelete = [...new Set(prefixedKeys.map(({prefix}) => prefix))].sort((a, b) => a - b);
         if (slotsToDelete.length > 0) {
           await db.dataColumnSidecarArchive.deleteMany(slotsToDelete);
           logger.verbose(
