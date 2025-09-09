@@ -174,20 +174,28 @@ export async function archiveBlocks(
       );
       const dataColumnSidecarsMinEpoch = currentEpoch - dataColumnSidecarsArchiveWindow;
       if (dataColumnSidecarsMinEpoch >= config.FULU_FORK_EPOCH) {
-        const slotsToDelete = (
-          await db.dataColumnSidecarArchive.keys({
-            lt: db.dataColumnSidecarArchive.getMaxKeyRaw(computeStartSlotAtEpoch(dataColumnSidecarsMinEpoch)),
-          })
-        ).map((p) => p.prefix);
+        const prefixedKeys = await db.dataColumnSidecarArchive.keys({
+          lt: db.dataColumnSidecarArchive.getMaxKeyRaw(computeStartSlotAtEpoch(dataColumnSidecarsMinEpoch)),
+        });
+        // for each slot there could be multiple dataColumnSidecar, so we need to deduplicate it
+        const slots = new Set<Slot>();
+        for (const {prefix} of prefixedKeys) {
+          slots.add(prefix);
+        }
 
+        const slotsToDelete = [...slots].sort((a, b) => a - b);
         if (slotsToDelete.length > 0) {
           await db.dataColumnSidecarArchive.deleteMany(slotsToDelete);
-          logger.verbose(`dataColumnSidecars prune: batchDelete range ${slotsToDelete[0]}..${slotsToDelete.at(-1)}`);
+          logger.verbose(
+            `dataColumnSidecars prune: slot range ${slotsToDelete[0]}..${slotsToDelete.at(-1)}, slots: ${slotsToDelete.length}, sidecars: ${prefixedKeys.length}`
+          );
         } else {
           logger.verbose(`dataColumnSidecars prune: no entries before epoch ${dataColumnSidecarsMinEpoch}`);
         }
       } else {
-        logger.verbose(`dataColumnSidecars pruning skipped: ${dataColumnSidecarsMinEpoch} is before fulu fork epoch`);
+        logger.verbose(
+          `dataColumnSidecars pruning skipped: ${dataColumnSidecarsMinEpoch} is before fulu fork epoch ${config.FULU_FORK_EPOCH}`
+        );
       }
     } else {
       logger.verbose("dataColumnSidecars pruning skipped: archiveDataEpochs set to Infinity");
