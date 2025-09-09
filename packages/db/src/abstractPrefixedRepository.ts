@@ -16,7 +16,9 @@ type Id = Uint8Array | string | number | bigint;
  */
 export abstract class PrefixedRepository<P, I extends Id, T> {
   private readonly dbReqOpts: DbReqOpts;
+  // Inclusive range for the minimum key for the bucket
   private readonly minKey: Uint8Array;
+  // Exclusive range for the maximum key for the bucket
   private readonly maxKey: Uint8Array;
 
   protected constructor(
