@@ -235,8 +235,8 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
       optsBuff.lt = this.maxKey;
     }
 
-    if (opts?.reverse !== undefined) optsBuff.reverse = opts?.reverse;
-    if (opts?.limit !== undefined) optsBuff.limit = opts?.limit;
+    if (opts?.reverse !== undefined) optsBuff.reverse = opts.reverse;
+    if (opts?.limit !== undefined) optsBuff.limit = opts.limit;
 
     const data = await this.db.keys(optsBuff);
     return (data ?? []).map((data) => this.decodeKeyRaw(this.unwrapKey(data)));
