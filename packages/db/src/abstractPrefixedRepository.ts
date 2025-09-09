@@ -230,7 +230,7 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
     } else if (opts?.lt !== undefined) {
       optsBuff.lt = this.wrapKey(this.encodeKeyRaw(opts.lt.prefix, opts.lt.id));
     } else {
-      optsBuff.lte = this.maxKey;
+      optsBuff.lt = this.maxKey;
     }
 
     if (opts?.reverse !== undefined) optsBuff.reverse = opts?.reverse;
