@@ -527,16 +527,26 @@ export async function validateColumnsByRangeResponse(
   dataRequestBlocks: ValidatedBlock[],
   columnSidecars: fulu.DataColumnSidecars
 ): Promise<ValidatedColumnSidecars[]> {
+  // Expected column count considering currently-validated batch blocks
   const expectedColumnCount = dataRequestBlocks.reduce((acc, {block}) => {
     return (block as SignedBeaconBlock<ForkPostDeneb>).message.body.blobKzgCommitments.length > 0
       ? request.columns.length + acc
       : acc;
   }, 0);
-  if (columnSidecars.length > expectedColumnCount) {
+  const nextSlot = dataRequestBlocks.length
+    ? (dataRequestBlocks.at(-1) as ValidatedBlock).block.message.slot + 1
+    : request.startSlot;
+  const possiblyMissingBlocks = nextSlot - request.startSlot + request.count;
+
+  // Allow for extra columns if some blocks are missing from the end of a batch
+  // Eg: If we requested 10 blocks but only 8 were returned, allow for up to 2 * columns.length extra columns
+  const maxColumnCount = expectedColumnCount + possiblyMissingBlocks * request.columns.length;
+
+  if (columnSidecars.length > maxColumnCount) {
     throw new DownloadByRangeError(
       {
         code: DownloadByRangeErrorCode.EXTRA_COLUMNS,
-        expected: expectedColumnCount,
+        max: maxColumnCount,
         actual: columnSidecars.length,
       },
       "Extra data columns received in DataColumnSidecarsByRange response"
@@ -762,7 +772,7 @@ export type DownloadByRangeErrorType =
     }
   | {
       code: DownloadByRangeErrorCode.EXTRA_COLUMNS;
-      expected: number;
+      max: number;
       actual: number;
     }
   | {
