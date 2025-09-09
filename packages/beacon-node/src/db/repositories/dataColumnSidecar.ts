@@ -4,7 +4,7 @@ import {NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {ColumnIndex, Root, fulu, ssz} from "@lodestar/types";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 
-const columnIndexByteSize = 4;
+const columnIndexByteSize = 2;
 const blockRootByteSize = 32;
 
 type BlockRoot = Root;
