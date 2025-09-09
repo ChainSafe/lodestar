@@ -289,19 +289,17 @@ export async function fetchAndValidateBlock({
 }
 
 export async function fetchAndValidateBlobs({
-  config,
   network,
-  forkName,
   peerIdStr,
   blockRoot,
   block,
   blobMeta,
 }: FetchByRootAndValidateBlobsProps): Promise<deneb.BlobSidecars> {
   const blobSidecars: deneb.BlobSidecars = await fetchBlobsByRoot({
-      network,
-      peerIdStr,
-      blobMeta,
-    });
+    network,
+    peerIdStr,
+    blobMeta,
+  });
 
   await validateBlockBlobSidecars(block.message.slot, blockRoot, blobMeta.length, blobSidecars);
 
@@ -326,9 +324,7 @@ export async function fetchBlobsByRoot({
 }
 
 export async function fetchAndValidateColumns({
-  config,
   network,
-  forkName,
   peerMeta,
   block,
   blockRoot,
@@ -355,7 +351,7 @@ export async function fetchAndValidateColumns({
         code: DownloadByRootErrorCode.NOT_ENOUGH_SIDECARS_RECEIVED,
         peer: prettyPrintPeerIdStr(peerIdStr),
         blockRoot: prettyBytes(blockRoot),
-        missingIndices: prettyPrintIndices(requestedColumns.filter(c => !returnedColumns.has(c))),
+        missingIndices: prettyPrintIndices(requestedColumns.filter((c) => !returnedColumns.has(c))),
       },
       "Did not receive all of the requested columnSidecars"
     );

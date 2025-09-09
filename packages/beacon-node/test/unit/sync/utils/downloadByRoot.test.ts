@@ -1,15 +1,10 @@
 import {randomBytes} from "node:crypto";
-import {BYTES_PER_BLOB, BYTES_PER_COMMITMENT, BYTES_PER_PROOF} from "@crate-crypto/node-eth-kzg";
 import {ForkName, NUMBER_OF_COLUMNS} from "@lodestar/params";
-import {deneb, fulu, ssz} from "@lodestar/types";
-import {BlobAndProof} from "@lodestar/types/lib/deneb/types.js";
+import {ssz} from "@lodestar/types";
 import {prettyBytes} from "@lodestar/utils";
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {BlobMeta, MissingColumnMeta} from "../../../../src/chain/blocks/blockInput/types.js";
 import {BlobSidecarValidationError} from "../../../../src/chain/errors/blobSidecarError.js";
-import {validateBlockBlobSidecars} from "../../../../src/chain/validation/blobSidecar.js";
-import {validateBlockDataColumnSidecars} from "../../../../src/chain/validation/dataColumnSidecar.js";
-import {IExecutionEngine} from "../../../../src/execution/index.js";
 import {INetwork} from "../../../../src/network/index.js";
 import {
   DownloadByRootError,
@@ -18,12 +13,9 @@ import {
   fetchAndValidateColumns,
   fetchBlobsByRoot,
   fetchColumnsByRoot,
-  fetchGetBlobsV1AndBuildSidecars,
-  fetchGetBlobsV2AndBuildSidecars,
 } from "../../../../src/sync/utils/downloadByRoot.js";
 import {kzgCommitmentToVersionedHash} from "../../../../src/util/blobs.js";
 import {CustodyConfig} from "../../../../src/util/dataColumns.js";
-import {kzg} from "../../../../src/util/kzg.js";
 import {ROOT_SIZE} from "../../../../src/util/sszBytes.js";
 import {
   config,
@@ -42,7 +34,6 @@ describe("downloadByRoot.ts", () => {
     earliestAvailableSlot: 0,
   };
   let network: INetwork;
-  let executionEngine: IExecutionEngine;
 
   describe("fetchAndValidateBlock", () => {
     let capellaBlock: ReturnType<typeof generateBlock>;
@@ -104,12 +95,10 @@ describe("downloadByRoot.ts", () => {
   describe("fetchAndValidateBlobs", () => {
     const forkName = ForkName.deneb;
     let denebBlockWithBlobs: ReturnType<typeof generateBlockWithBlobSidecars>;
-    let blobsAndProofs: deneb.BlobAndProof[];
     let blobMeta: BlobMeta[];
 
     beforeEach(() => {
       denebBlockWithBlobs = generateBlockWithBlobSidecars({forkName, count: 6});
-      blobsAndProofs = denebBlockWithBlobs.blobSidecars.map(({blob, kzgProof}) => ({blob, proof: kzgProof}));
       blobMeta = denebBlockWithBlobs.versionedHashes.map((versionedHash, index) => ({
         index,
         blockRoot: denebBlockWithBlobs.blockRoot,
@@ -127,15 +116,9 @@ describe("downloadByRoot.ts", () => {
         sendBlobSidecarsByRoot: sendBlobSidecarsByRootMock,
       } as unknown as INetwork;
 
-      const getBlobsMock = vi.fn(() => Promise.resolve(blobsAndProofs));
-      executionEngine = {
-        getBlobs: getBlobsMock,
-      } as unknown as IExecutionEngine;
-
       const response = await fetchAndValidateBlobs({
         config,
         network,
-        executionEngine,
         forkName,
         peerIdStr,
         blockRoot: denebBlockWithBlobs.blockRoot,
@@ -152,15 +135,9 @@ describe("downloadByRoot.ts", () => {
         sendBlobSidecarsByRoot: sendBlobSidecarsByRootMock,
       } as unknown as INetwork;
 
-      const getBlobsMock = vi.fn(() => Promise.resolve([]));
-      executionEngine = {
-        getBlobs: getBlobsMock,
-      } as unknown as IExecutionEngine;
-
       const response = await fetchAndValidateBlobs({
         config,
         network,
-        executionEngine,
         forkName,
         peerIdStr,
         blockRoot: denebBlockWithBlobs.blockRoot,
@@ -172,13 +149,6 @@ describe("downloadByRoot.ts", () => {
     });
 
     it("should fetch remaining blobs from network when execution engine is incomplete", async () => {
-      const getBlobsMock = vi.fn(() =>
-        Promise.resolve([blobsAndProofs[0], null, blobsAndProofs[2], null, blobsAndProofs[4], null])
-      );
-      executionEngine = {
-        getBlobs: getBlobsMock,
-      } as unknown as IExecutionEngine;
-
       const sendBlobSidecarsByRootMock = vi.fn(() =>
         Promise.resolve([
           denebBlockWithBlobs.blobSidecars[1],
@@ -193,7 +163,6 @@ describe("downloadByRoot.ts", () => {
       const response = await fetchAndValidateBlobs({
         config,
         network,
-        executionEngine,
         forkName,
         peerIdStr,
         blockRoot: denebBlockWithBlobs.blockRoot,
@@ -201,10 +170,6 @@ describe("downloadByRoot.ts", () => {
         blobMeta,
       });
 
-      expect(getBlobsMock).toHaveBeenCalledExactlyOnceWith(
-        forkName,
-        blobMeta.map(({versionedHash}) => versionedHash)
-      );
       expect(sendBlobSidecarsByRootMock).toHaveBeenCalledExactlyOnceWith(peerIdStr, [
         {blockRoot: denebBlockWithBlobs.blockRoot, index: 1},
         {blockRoot: denebBlockWithBlobs.blockRoot, index: 3},
@@ -218,10 +183,6 @@ describe("downloadByRoot.ts", () => {
 
     it("should gracefully handle getBlobsV1 failure", async () => {
       const rejectedError = new Error("TESTING_ERROR");
-      const getBlobsMock = vi.fn(() => Promise.reject(rejectedError));
-      executionEngine = {
-        getBlobs: getBlobsMock,
-      } as unknown as IExecutionEngine;
 
       const sendBlobSidecarsByRootMock = vi.fn(() => Promise.resolve(denebBlockWithBlobs.blobSidecars));
       const loggerMock = {
@@ -235,17 +196,13 @@ describe("downloadByRoot.ts", () => {
       const response = await fetchAndValidateBlobs({
         config,
         network,
-        executionEngine,
         forkName,
         peerIdStr,
         blockRoot: denebBlockWithBlobs.blockRoot,
         block: denebBlockWithBlobs.block,
         blobMeta,
       });
-      expect(getBlobsMock).toHaveBeenCalledExactlyOnceWith(
-        forkName,
-        blobMeta.map(({versionedHash}) => versionedHash)
-      );
+
       expect(loggerMock.error).toHaveBeenCalledExactlyOnceWith(
         `error fetching/building blobSidecars for blockRoot=${prettyBytes(denebBlockWithBlobs.blockRoot)} via getBlobsV1`,
         {},
@@ -267,18 +224,12 @@ describe("downloadByRoot.ts", () => {
         sendBlobSidecarsByRoot: sendBlobSidecarsByRootMock,
       } as unknown as INetwork;
 
-      const getBlobsMock = vi.fn(() => Promise.resolve(blobsAndProofs));
-      executionEngine = {
-        getBlobs: getBlobsMock,
-      } as unknown as IExecutionEngine;
-
       const requestedBlockRoot = randomBytes(ROOT_SIZE);
 
       await expect(
         fetchAndValidateBlobs({
           config,
           network,
-          executionEngine,
           forkName,
           peerIdStr,
           blockRoot: requestedBlockRoot,
@@ -286,138 +237,6 @@ describe("downloadByRoot.ts", () => {
           blobMeta,
         })
       ).rejects.toThrow(BlobSidecarValidationError);
-    });
-  });
-
-  describe("fetchGetBlobsV1AndBuildSidecars", () => {
-    let denebBlockWithBlobs: ReturnType<typeof generateBlockWithBlobSidecars>;
-    let blobsAndProofs: deneb.BlobAndProof[];
-    let blobMeta: BlobMeta[];
-    const forkName = ForkName.deneb;
-
-    beforeEach(() => {
-      denebBlockWithBlobs = generateBlockWithBlobSidecars({forkName, count: 6});
-      blobsAndProofs = denebBlockWithBlobs.blobSidecars.map(({blob, kzgProof}) => ({blob, proof: kzgProof}));
-      blobMeta = denebBlockWithBlobs.versionedHashes.map(
-        (versionedHash, index) => ({index, versionedHash}) as BlobMeta
-      );
-    });
-
-    afterEach(() => {
-      vi.resetAllMocks();
-    });
-
-    it("should call getBlobs with the correct arguments", async () => {
-      const getBlobsMock = vi.fn(() => Promise.resolve(blobsAndProofs));
-      executionEngine = {
-        getBlobs: getBlobsMock,
-      } as unknown as IExecutionEngine;
-
-      await fetchGetBlobsV1AndBuildSidecars({
-        config,
-        forkName,
-        executionEngine,
-        block: denebBlockWithBlobs.block,
-        blobMeta: blobMeta,
-      });
-
-      expect(getBlobsMock).toHaveBeenCalledOnce();
-      expect(getBlobsMock).toHaveBeenCalledWith(forkName, denebBlockWithBlobs.versionedHashes);
-    });
-
-    it("should return empty array when execution engine returns no blobs", async () => {
-      const getBlobsMock = vi.fn(() => Promise.resolve([]));
-      executionEngine = {
-        getBlobs: getBlobsMock,
-      } as unknown as IExecutionEngine;
-
-      const response = await fetchGetBlobsV1AndBuildSidecars({
-        config,
-        forkName,
-        executionEngine,
-        block: denebBlockWithBlobs.block,
-        blobMeta: blobMeta,
-      });
-      expect(response).toEqual([]);
-    });
-
-    it("should build valid blob sidecars from execution engine response", async () => {
-      const getBlobsMock = vi.fn(() => Promise.resolve(blobsAndProofs));
-      executionEngine = {
-        getBlobs: getBlobsMock,
-      } as unknown as IExecutionEngine;
-
-      const response = await fetchGetBlobsV1AndBuildSidecars({
-        config,
-        forkName,
-        executionEngine,
-        block: denebBlockWithBlobs.block,
-        blobMeta: blobMeta,
-      });
-
-      expect(getBlobsMock).toHaveBeenCalledOnce();
-      expect(response).toBeDefined();
-      expect(response).toBeInstanceOf(Array);
-      expect(response.length).toEqual(blobsAndProofs.length);
-      for (const blobSidecar of response) {
-        blobSidecar.kzgCommitmentInclusionProof;
-        expect(blobSidecar).toHaveProperty("index");
-        expect(blobSidecar.index).toBeTypeOf("number");
-
-        expect(blobSidecar).toHaveProperty("blob");
-        expect(blobSidecar.blob).toBeInstanceOf(Uint8Array);
-        expect(blobSidecar.blob.length).toEqual(BYTES_PER_BLOB);
-
-        expect(blobSidecar).toHaveProperty("kzgProof");
-        expect(blobSidecar.kzgProof).toBeInstanceOf(Uint8Array);
-        expect(blobSidecar.kzgProof.length).toEqual(BYTES_PER_PROOF);
-
-        expect(blobSidecar).toHaveProperty("kzgCommitment");
-        expect(blobSidecar.kzgCommitment).toBeInstanceOf(Uint8Array);
-        expect(blobSidecar.kzgCommitment.length).toEqual(BYTES_PER_COMMITMENT);
-
-        expect(blobSidecar).toHaveProperty("kzgCommitmentInclusionProof");
-        expect(blobSidecar.kzgCommitmentInclusionProof).toBeInstanceOf(Array);
-        blobSidecar.kzgCommitmentInclusionProof.map((proof) => expect(proof).toBeInstanceOf(Uint8Array));
-
-        expect(blobSidecar).toHaveProperty("signedBlockHeader");
-        expect(blobSidecar.signedBlockHeader.message.slot).toBe(denebBlockWithBlobs.block.message.slot);
-        expect(blobSidecar.signedBlockHeader.message.proposerIndex).toBe(
-          denebBlockWithBlobs.block.message.proposerIndex
-        );
-        expect(blobSidecar.signedBlockHeader.message.parentRoot).toEqual(denebBlockWithBlobs.block.message.parentRoot);
-        expect(blobSidecar.signedBlockHeader.message.stateRoot).toEqual(denebBlockWithBlobs.block.message.stateRoot);
-      }
-
-      await expect(
-        validateBlockBlobSidecars(
-          denebBlockWithBlobs.block.message.slot,
-          denebBlockWithBlobs.blockRoot,
-          denebBlockWithBlobs.block.message.body.blobKzgCommitments.length,
-          response
-        )
-      ).resolves.toBeUndefined();
-    });
-
-    it("should handle partial blob response from execution engine", async () => {
-      const engineResponse: (BlobAndProof | null)[] = [...blobsAndProofs];
-      engineResponse[2] = null;
-      engineResponse[4] = null;
-      const getBlobsMock = vi.fn(() => Promise.resolve(engineResponse));
-      executionEngine = {
-        getBlobs: getBlobsMock,
-      } as unknown as IExecutionEngine;
-
-      const response = await fetchGetBlobsV1AndBuildSidecars({
-        config,
-        forkName,
-        executionEngine,
-        block: denebBlockWithBlobs.block,
-        blobMeta: blobMeta,
-      });
-
-      expect(response.length).toEqual(4);
-      expect(response.map(({index}) => index)).toEqual([0, 1, 3, 5]);
     });
   });
 
@@ -475,18 +294,12 @@ describe("downloadByRoot.ts", () => {
   describe("fetchAndValidateColumns", () => {
     const forkName = ForkName.fulu;
     let fuluBlockWithColumns: ReturnType<typeof generateBlockWithColumnSidecars>;
-    let blobAndProofs: fulu.BlobAndProofV2[];
     let columnMeta: MissingColumnMeta;
     let versionedHashes: Uint8Array[];
     let custodyConfig: CustodyConfig;
 
     beforeEach(() => {
       fuluBlockWithColumns = generateBlockWithColumnSidecars({forkName, returnBlobs: true});
-      // biome-ignore lint/style/noNonNullAssertion: returnBlobs = true
-      const blobs = fuluBlockWithColumns.blobs!;
-      blobAndProofs = blobs
-        .map((b) => kzg.computeCellsAndKzgProofs(b))
-        .map(({proofs}, i) => ({proofs, blob: blobs[i]}));
       versionedHashes = fuluBlockWithColumns.block.message.body.blobKzgCommitments.map((c) =>
         kzgCommitmentToVersionedHash(c)
       );
@@ -516,15 +329,9 @@ describe("downloadByRoot.ts", () => {
         },
       } as unknown as INetwork;
 
-      const getBlobsMock = vi.fn(() => Promise.resolve(blobAndProofs));
-      executionEngine = {
-        getBlobs: getBlobsMock,
-      } as unknown as IExecutionEngine;
-
       const response = await fetchAndValidateColumns({
         config,
         network,
-        executionEngine,
         forkName,
         peerMeta,
         blockRoot: fuluBlockWithColumns.blockRoot,
@@ -532,7 +339,6 @@ describe("downloadByRoot.ts", () => {
         columnMeta,
       });
 
-      expect(getBlobsMock).toHaveBeenCalledExactlyOnceWith(forkName, versionedHashes);
       expect(sendDataColumnSidecarsByRootMock).not.toHaveBeenCalled();
       // Should only return the columns we need (missing)
       expect(response.map((c) => c.index)).toEqual(columnMeta.missing);
@@ -551,11 +357,6 @@ describe("downloadByRoot.ts", () => {
         },
       } as unknown as INetwork;
 
-      const getBlobsMock = vi.fn(() => Promise.resolve(blobAndProofs));
-      executionEngine = {
-        getBlobs: getBlobsMock,
-      } as unknown as IExecutionEngine;
-
       // Columns 0, 1 are already published (not in missing)
       // Columns 2, 3, 4, 5, 6, 7 are missing sampledColumns and need to be fetched
       // After reconstruction, we should publish columns 2, 3 (we custody them and they weren't published)
@@ -568,7 +369,6 @@ describe("downloadByRoot.ts", () => {
       await fetchAndValidateColumns({
         config,
         network,
-        executionEngine,
         forkName,
         peerMeta,
         blockRoot: fuluBlockWithColumns.blockRoot,
@@ -594,11 +394,6 @@ describe("downloadByRoot.ts", () => {
         },
       } as unknown as INetwork;
 
-      const getBlobsMock = vi.fn(() => Promise.resolve(blobAndProofs));
-      executionEngine = {
-        getBlobs: getBlobsMock,
-      } as unknown as IExecutionEngine;
-
       const missing = [0, 4, 6, 10, 12];
       const testColumnMeta = {
         missing, // Only need these columns
@@ -608,7 +403,6 @@ describe("downloadByRoot.ts", () => {
       const response = await fetchAndValidateColumns({
         config,
         network,
-        executionEngine,
         forkName,
         peerMeta,
         blockRoot: fuluBlockWithColumns.blockRoot,
@@ -636,15 +430,9 @@ describe("downloadByRoot.ts", () => {
         },
       } as unknown as INetwork;
 
-      const getBlobsMock = vi.fn(() => Promise.resolve(null)); // No blobs from execution engine
-      executionEngine = {
-        getBlobs: getBlobsMock,
-      } as unknown as IExecutionEngine;
-
       const response = await fetchAndValidateColumns({
         config,
         network,
-        executionEngine,
         forkName,
         peerMeta,
         blockRoot: fuluBlockWithColumns.blockRoot,
@@ -652,7 +440,6 @@ describe("downloadByRoot.ts", () => {
         columnMeta,
       });
 
-      expect(getBlobsMock).toHaveBeenCalledExactlyOnceWith(forkName, versionedHashes);
       expect(sendDataColumnSidecarsByRootMock).toHaveBeenCalledExactlyOnceWith(peerIdStr, [
         {blockRoot: fuluBlockWithColumns.blockRoot, columns: columnMeta.missing},
       ]);
@@ -661,10 +448,6 @@ describe("downloadByRoot.ts", () => {
 
     it("should gracefully handle getBlobsV2 failure", async () => {
       const rejectedError = new Error("TESTING_ERROR");
-      const getBlobsMock = vi.fn(() => Promise.reject(rejectedError));
-      executionEngine = {
-        getBlobs: getBlobsMock,
-      } as unknown as IExecutionEngine;
 
       const neededColumns = fuluBlockWithColumns.columnSidecars.filter((c) => columnMeta.missing.includes(c.index));
       const sendDataColumnSidecarsByRootMock = vi.fn(() => Promise.resolve(neededColumns));
@@ -684,7 +467,6 @@ describe("downloadByRoot.ts", () => {
       const response = await fetchAndValidateColumns({
         config,
         network,
-        executionEngine,
         forkName,
         peerMeta,
         blockRoot: fuluBlockWithColumns.blockRoot,
@@ -692,7 +474,6 @@ describe("downloadByRoot.ts", () => {
         columnMeta,
       });
 
-      expect(getBlobsMock).toHaveBeenCalledExactlyOnceWith(forkName, versionedHashes);
       expect(loggerMock.error).toHaveBeenCalledExactlyOnceWith(
         "error building columnSidecars via getBlobsV2",
         {
@@ -732,16 +513,10 @@ describe("downloadByRoot.ts", () => {
         },
       } as unknown as INetwork;
 
-      const getBlobsMock = vi.fn(() => Promise.resolve([]));
-      executionEngine = {
-        getBlobs: getBlobsMock,
-      } as unknown as IExecutionEngine;
-
       await expect(
         fetchAndValidateColumns({
           config,
           network,
-          executionEngine,
           forkName,
           peerMeta,
           blockRoot: fuluBlockWithColumns.blockRoot,
@@ -770,15 +545,9 @@ describe("downloadByRoot.ts", () => {
         logger: loggerMock,
       } as unknown as INetwork;
 
-      const getBlobsMock = vi.fn(() => Promise.resolve(blobAndProofs));
-      executionEngine = {
-        getBlobs: getBlobsMock,
-      } as unknown as IExecutionEngine;
-
       const response = await fetchAndValidateColumns({
         config,
         network,
-        executionEngine,
         forkName,
         peerMeta,
         blockRoot: fuluBlockWithColumns.blockRoot,
@@ -830,111 +599,6 @@ describe("downloadByRoot.ts", () => {
         },
         publishError
       );
-    });
-  });
-
-  describe("fetchGetBlobsV2AndBuildSidecars", () => {
-    let fuluBlockWithColumns: ReturnType<typeof generateBlockWithColumnSidecars>;
-    let blobAndProofs: fulu.BlobAndProofV2[];
-    let versionedHashes: Uint8Array[];
-
-    beforeEach(() => {
-      fuluBlockWithColumns = generateBlockWithColumnSidecars({forkName: ForkName.fulu, returnBlobs: true});
-      // biome-ignore lint/style/noNonNullAssertion: returnBlobs = true
-      const blobs = fuluBlockWithColumns.blobs!;
-      blobAndProofs = blobs
-        .map((b) => kzg.computeCellsAndKzgProofs(b))
-        .map(({proofs}, i) => ({proofs, blob: blobs[i]}));
-      versionedHashes = fuluBlockWithColumns.block.message.body.blobKzgCommitments.map((c) =>
-        kzgCommitmentToVersionedHash(c)
-      );
-    });
-
-    afterEach(() => {
-      vi.resetAllMocks();
-    });
-
-    it("should call getBlobs with the correct arguments", async () => {
-      const getBlobsMock = vi.fn(() => Promise.resolve(blobAndProofs));
-      executionEngine = {
-        getBlobs: getBlobsMock,
-      } as unknown as IExecutionEngine;
-
-      const columnMeta = {
-        missing: fuluBlockWithColumns.columnSidecars.map((c) => c.index),
-        versionedHashes,
-      };
-
-      await fetchGetBlobsV2AndBuildSidecars({
-        config,
-        executionEngine,
-        forkName: ForkName.fulu,
-        block: fuluBlockWithColumns.block,
-        columnMeta,
-      });
-
-      expect(getBlobsMock).toHaveBeenCalledOnce();
-      expect(getBlobsMock).toHaveBeenCalledWith(ForkName.fulu, versionedHashes);
-    });
-
-    it("should return empty array when execution engine returns no response", async () => {
-      const getBlobsMock = vi.fn(() => Promise.resolve(null));
-      executionEngine = {
-        getBlobs: getBlobsMock,
-      } as unknown as IExecutionEngine;
-
-      const columnMeta = {
-        missing: fuluBlockWithColumns.columnSidecars.map((c) => c.index),
-        versionedHashes,
-      };
-
-      const result = await fetchGetBlobsV2AndBuildSidecars({
-        config,
-        executionEngine,
-        forkName: ForkName.fulu,
-        block: fuluBlockWithColumns.block,
-        columnMeta,
-      });
-
-      expect(getBlobsMock).toHaveBeenCalledOnce();
-      expect(result).toEqual([]);
-    });
-
-    it("should build valid columnSidecars from execution engine blobs", async () => {
-      const getBlobsMock = vi.fn(() => Promise.resolve(blobAndProofs));
-      executionEngine = {
-        getBlobs: getBlobsMock,
-      } as unknown as IExecutionEngine;
-
-      const columnMeta = {
-        missing: fuluBlockWithColumns.columnSidecars.map((c) => c.index),
-        versionedHashes,
-      };
-
-      const result = await fetchGetBlobsV2AndBuildSidecars({
-        config,
-        executionEngine,
-        forkName: ForkName.fulu,
-        block: fuluBlockWithColumns.block,
-        columnMeta,
-      });
-
-      expect(getBlobsMock).toHaveBeenCalledOnce();
-      expect(result).toBeDefined();
-      expect(result).toBeInstanceOf(Array);
-      expect(result.length).toEqual(NUMBER_OF_COLUMNS);
-
-      // Verify the structure of the returned column sidecars
-      for (const [_, columnSidecar] of Object.entries(result)) {
-        expect(
-          validateBlockDataColumnSidecars(
-            columnSidecar.signedBlockHeader.message.slot,
-            fuluBlockWithColumns.blockRoot,
-            fuluBlockWithColumns.block.message.body.blobKzgCommitments.length,
-            [columnSidecar]
-          )
-        ).resolves.toBeUndefined();
-      }
     });
   });
 

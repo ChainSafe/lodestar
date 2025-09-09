@@ -25,7 +25,7 @@ import {
   getBlockInputSyncCacheItemSlot,
   isPendingBlockInput,
 } from "./types.js";
-import {DownloadByRootError, DownloadByRootErrorCode, downloadByRoot} from "./utils/downloadByRoot.js";
+import {DownloadByRootError, downloadByRoot} from "./utils/downloadByRoot.js";
 import {getAllDescendantBlocks, getDescendantBlocks, getUnknownAndAncestorBlocks} from "./utils/pendingBlocksTree.js";
 import {RequestError} from "@lodestar/reqresp";
 

@@ -11,7 +11,7 @@ import {Metrics} from "../metrics/index.js";
 import {fulu} from "@lodestar/types";
 import {isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {ForkPostFulu} from "@lodestar/params";
-import { BLOB_AND_PROOF_V2_RPC_BYTES } from "../execution/engine/types.js";
+import {BLOB_AND_PROOF_V2_RPC_BYTES} from "../execution/engine/types.js";
 
 let running = false;
 // Preallocate buffers for getBlobsV2 RPC calls
@@ -56,13 +56,17 @@ export async function getDataColumnSidecarsFromExecution(
     metrics?.peerDas.getBlobsV2Requests.inc();
     const timer = metrics?.peerDas.getBlobsV2RequestDuration.startTimer();
     if (blobAndProofBuffers) {
-    for (let i = 0; i < versionedHashes.length; i++) {
-      if (blobAndProofBuffers[i] === undefined) {
-        blobAndProofBuffers[i] = new Uint8Array(BLOB_AND_PROOF_V2_RPC_BYTES);
+      for (let i = 0; i < versionedHashes.length; i++) {
+        if (blobAndProofBuffers[i] === undefined) {
+          blobAndProofBuffers[i] = new Uint8Array(BLOB_AND_PROOF_V2_RPC_BYTES);
+        }
       }
     }
-  }
-    const blobs = await executionEngine.getBlobs(blockInput.forkName as ForkPostFulu, versionedHashes, blobAndProofBuffers);
+    const blobs = await executionEngine.getBlobs(
+      blockInput.forkName as ForkPostFulu,
+      versionedHashes,
+      blobAndProofBuffers
+    );
     timer?.();
 
     // Execution engine was unable to find one or more blobs

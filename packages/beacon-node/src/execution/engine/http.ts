@@ -491,8 +491,16 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     return response.map(deserializeExecutionPayloadBody);
   }
 
-  async getBlobs(fork: ForkPostFulu, versionedHashes: VersionedHashes, buffers?: Uint8Array[]): Promise<BlobAndProofV2[] | null>;
-  async getBlobs(fork: ForkPreFulu, versionedHashes: VersionedHashes, buffers?: Uint8Array[]): Promise<(BlobAndProof | null)[]>;
+  async getBlobs(
+    fork: ForkPostFulu,
+    versionedHashes: VersionedHashes,
+    buffers?: Uint8Array[]
+  ): Promise<BlobAndProofV2[] | null>;
+  async getBlobs(
+    fork: ForkPreFulu,
+    versionedHashes: VersionedHashes,
+    buffers?: Uint8Array[]
+  ): Promise<(BlobAndProof | null)[]>;
   async getBlobs(
     fork: ForkName,
     versionedHashes: VersionedHashes
@@ -539,7 +547,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
           throw Error(`Invalid buffer[${i}] length=${buffer.length} expected=${BLOB_AND_PROOF_V2_RPC_BYTES}`);
         }
       }
-    }	
+    }
 
     const response = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes["engine_getBlobsV2"],
