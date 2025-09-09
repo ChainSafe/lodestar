@@ -2,7 +2,6 @@ import {
   CachedBeaconStateAllForks,
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
-  StateHashTreeRootSource,
   StateTransitionSource,
   stateTransition,
 } from "@lodestar/state-transition";
@@ -63,9 +62,8 @@ export async function verifyBlocksStateTransitionOnly(
       {metrics, validatorMonitor, stateTransitionSource: StateTransitionSource.block}
     );
 
-    const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
-      source: StateTransitionSource.block,
-      stateHashTreeRootSource: StateHashTreeRootSource.blockTransition,
+    const hashTreeRootTimer = metrics?.stateHashTreeRootTime.blockTransition.startTimer({
+      source: StateTransitionSource.block
     });
     const stateRoot = postState.hashTreeRoot();
     hashTreeRootTimer?.();

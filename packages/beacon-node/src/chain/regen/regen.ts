@@ -5,7 +5,6 @@ import {
   CachedBeaconStateAllForks,
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
-  StateHashTreeRootSource,
   StateTransitionSource,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
@@ -272,9 +271,8 @@ export class StateRegenerator implements IStateRegeneratorInternal {
           {metrics, validatorMonitor, stateTransitionSource: StateTransitionSource.regen}
         );
 
-        const hashTreeRootTimer = this.modules.metrics?.stateHashTreeRootTime.startTimer({
-          source: StateTransitionSource.regen,
-          stateHashTreeRootSource: StateHashTreeRootSource.regenState,
+        const hashTreeRootTimer = this.modules.metrics?.stateHashTreeRootTime.regenState.startTimer({
+          source: StateTransitionSource.regen
         });
         const stateRoot = toRootHex(state.hashTreeRoot());
         hashTreeRootTimer?.();

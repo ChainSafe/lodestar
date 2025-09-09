@@ -2,7 +2,6 @@ export * from "./stateTransition.js";
 export * from "./constants/index.js";
 export * from "./util/index.js";
 export * from "./signatureSets/index.js";
-export type {EpochTransitionStep} from "./epoch/index.js";
 export {type BeaconStateTransitionMetrics, getMetrics} from "./metrics.js";
 
 export type {

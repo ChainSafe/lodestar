@@ -5,7 +5,7 @@ import {BlockExternalData, DataAvailabilityStatus, ExecutionPayloadStatus} from 
 import {processBlock} from "./block/index.js";
 import {ProcessBlockOpts} from "./block/types.js";
 import {EpochTransitionCache, EpochTransitionCacheOpts, beforeProcessEpoch} from "./cache/epochTransitionCache.js";
-import {EpochTransitionStep, processEpoch} from "./epoch/index.js";
+import {processEpoch} from "./epoch/index.js";
 import {BeaconStateTransitionMetrics, onPostStateMetrics, onStateCloneMetrics} from "./metrics.js";
 import {verifyProposerSignature} from "./signatureSets/index.js";
 import {
@@ -80,18 +80,6 @@ export enum StateCloneSource {
 }
 
 /**
- * `state.hashTreeRoot()` invocation source tracked in metrics
- */
-export enum StateHashTreeRootSource {
-  stateTransition = "state_transition",
-  blockTransition = "block_transition",
-  prepareNextSlot = "prepare_next_slot",
-  prepareNextEpoch = "prepare_next_epoch",
-  regenState = "regen_state",
-  computeNewStateRoot = "compute_new_state_root",
-}
-
-/**
  * Implementation Note: follows the optimizations in protolambda's eth2fastspec (https://github.com/protolambda/eth2fastspec)
  */
 export function stateTransition(
@@ -115,7 +103,7 @@ export function stateTransition(
   let postState = state.clone(options.dontTransferCache);
 
   if (metrics) {
-    onStateCloneMetrics(postState, metrics, StateCloneSource.stateTransition);
+    onStateCloneMetrics(postState, metrics, StateCloneSource.stateTransition, stateTransitionSource);
   }
 
   // State is already a ViewDU, which won't commit changes. Equivalent to .setStateCachesAsTransient()
@@ -155,9 +143,8 @@ export function stateTransition(
 
   // Verify state root
   if (verifyStateRoot) {
-    const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
-      source: stateTransitionSource,
-      stateHashTreeRootSource: StateHashTreeRootSource.stateTransition,
+    const hashTreeRootTimer = metrics?.stateHashTreeRootTime.stateTransition.startTimer({
+      source: StateTransitionSource.stateTransition
     });
     const stateRoot = postState.hashTreeRoot();
     hashTreeRootTimer?.();
@@ -256,9 +243,8 @@ function processSlotsWithTransientCache(
 
       let epochTransitionCache: EpochTransitionCache;
       {
-        const timer = metrics?.epochTransitionStepTime.startTimer({
-          source: stateTransitionSource,
-          step: EpochTransitionStep.beforeProcessEpoch,
+        const timer = metrics?.epochTransitionStepTime.beforeProcessEpoch.startTimer({
+          source: stateTransitionSource
         });
         epochTransitionCache = beforeProcessEpoch(postState, epochTransitionCacheOpts);
         timer?.();
@@ -280,7 +266,7 @@ function processSlotsWithTransientCache(
       postState.slot++;
 
       {
-        const timer = metrics?.epochTransitionStepTime.startTimer({source: stateTransitionSource, step: EpochTransitionStep.afterProcessEpoch});
+        const timer = metrics?.epochTransitionStepTime.afterProcessEpoch.startTimer({source: stateTransitionSource});
         // this should be called before `upgradeState*()` below to prepare data for it
         postState.epochCtx.afterProcessEpoch(postState, epochTransitionCache);
         timer?.();
@@ -311,7 +297,7 @@ function processSlotsWithTransientCache(
       }
 
       {
-        const timer = metrics?.epochTransitionStepTime.startTimer({step: EpochTransitionStep.finalProcessEpoch});
+        const timer = metrics?.epochTransitionStepTime.finalProcessEpoch.startTimer({source: stateTransitionSource});
         // last step to prepare epoch data that depends on the upgraded state, for example proposerLookahead of BeaconStateFulu
         postState.epochCtx.finalProcessEpoch(postState);
         timer?.();

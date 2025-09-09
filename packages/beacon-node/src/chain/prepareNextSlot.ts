@@ -5,7 +5,6 @@ import {
   BeaconStateElectra,
   CachedBeaconStateAllForks,
   CachedBeaconStateExecutions,
-  StateHashTreeRootSource,
   StateTransitionSource,
   computeEpochAtSlot,
   computeTimeAtSlot,
@@ -244,12 +243,11 @@ export class PrepareNextSlotScheduler {
   computeStateHashTreeRoot(state: CachedBeaconStateAllForks, isEpochTransition: boolean): void {
     // cache HashObjects for faster hashTreeRoot() later, especially for computeNewStateRoot() if we need to produce a block at slot 0 of epoch
     // see https://github.com/ChainSafe/lodestar/issues/6194
-    const hashTreeRootTimer = this.metrics?.stateHashTreeRootTime.startTimer({
-      source: StateTransitionSource.chain,
-      stateHashTreeRootSource: isEpochTransition
-        ? StateHashTreeRootSource.prepareNextEpoch
-        : StateHashTreeRootSource.prepareNextSlot,
-    });
+    const hashTreeRootTimer = isEpochTransition ? 
+    this.metrics?.stateHashTreeRootTime.prepareNextEpoch.startTimer({
+      source: StateTransitionSource.chain})
+        : this.metrics?.stateHashTreeRootTime.prepareNextSlot.startTimer({
+      source: StateTransitionSource.chain});
     state.hashTreeRoot();
     hashTreeRootTimer?.();
   }

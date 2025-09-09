@@ -60,26 +60,6 @@ export {computeUnrealizedCheckpoints} from "./computeUnrealizedCheckpoints.js";
 const maxValidatorsPerStateSlashing = SLOTS_PER_EPOCH * MAX_ATTESTER_SLASHINGS * MAX_VALIDATORS_PER_COMMITTEE;
 const maxSafeValidators = Math.floor(Number.MAX_SAFE_INTEGER / MAX_EFFECTIVE_BALANCE);
 
-/**
- * Epoch transition steps tracked in metrics
- */
-export enum EpochTransitionStep {
-  beforeProcessEpoch = "beforeProcessEpoch",
-  afterProcessEpoch = "afterProcessEpoch",
-  finalProcessEpoch = "finalProcessEpoch",
-  processJustificationAndFinalization = "processJustificationAndFinalization",
-  processInactivityUpdates = "processInactivityUpdates",
-  processRegistryUpdates = "processRegistryUpdates",
-  processSlashings = "processSlashings",
-  processRewardsAndPenalties = "processRewardsAndPenalties",
-  processEffectiveBalanceUpdates = "processEffectiveBalanceUpdates",
-  processParticipationFlagUpdates = "processParticipationFlagUpdates",
-  processSyncCommitteeUpdates = "processSyncCommitteeUpdates",
-  processPendingDeposits = "processPendingDeposits",
-  processPendingConsolidations = "processPendingConsolidations",
-  processProposerLookahead = "processProposerLookahead",
-}
-
 export function processEpoch(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
@@ -95,18 +75,16 @@ export function processEpoch(
   }
 
   {
-    const timer = metrics?.epochTransitionStepTime.startTimer({
-      source: StateTransitionSource.stateTransition,
-      step: EpochTransitionStep.processJustificationAndFinalization,
+    const timer = metrics?.epochTransitionStepTime.processJustificationAndFinalization.startTimer({
+      source: StateTransitionSource.stateTransition
     });
     processJustificationAndFinalization(state, cache);
     timer?.();
   }
 
   if (fork >= ForkSeq.altair) {
-    const timer = metrics?.epochTransitionStepTime.startTimer({
-      source: StateTransitionSource.stateTransition,
-      step: EpochTransitionStep.processInactivityUpdates,
+    const timer = metrics?.epochTransitionStepTime.processInactivityUpdates.startTimer({
+      source: StateTransitionSource.stateTransition
     });
     processInactivityUpdates(state as CachedBeaconStateAltair, cache);
     timer?.();
@@ -118,9 +96,8 @@ export function processEpoch(
   {
     metrics?.validatorsInActivationQueue.set(cache.indicesEligibleForActivationQueue.length);
     metrics?.validatorsInExitQueue.set(cache.indicesToEject.length);
-    const timer = metrics?.epochTransitionStepTime.startTimer({
-      source: StateTransitionSource.stateTransition,
-      step: EpochTransitionStep.processRegistryUpdates,
+    const timer = metrics?.epochTransitionStepTime.processRegistryUpdates.startTimer({
+      source: StateTransitionSource.stateTransition
     });
     processRegistryUpdates(fork, state, cache);
     timer?.();
@@ -129,18 +106,16 @@ export function processEpoch(
   // accumulate slashing penalties and only update balances once in processRewardsAndPenalties()
   let slashingPenalties: number[];
   {
-    const timer = metrics?.epochTransitionStepTime.startTimer({
-      source: StateTransitionSource.stateTransition,
-      step: EpochTransitionStep.processSlashings,
+    const timer = metrics?.epochTransitionStepTime.processSlashings.startTimer({
+      source: StateTransitionSource.stateTransition
     });
     slashingPenalties = processSlashings(state, cache, false);
     timer?.();
   }
 
   {
-    const timer = metrics?.epochTransitionStepTime.startTimer({
-      source: StateTransitionSource.stateTransition,
-      step: EpochTransitionStep.processRewardsAndPenalties,
+    const timer = metrics?.epochTransitionStepTime.processRewardsAndPenalties.startTimer({
+      source: StateTransitionSource.stateTransition
     });
     processRewardsAndPenalties(state, cache, slashingPenalties);
     timer?.();
@@ -151,18 +126,16 @@ export function processEpoch(
   if (fork >= ForkSeq.electra) {
     const stateElectra = state as CachedBeaconStateElectra;
     {
-      const timer = metrics?.epochTransitionStepTime.startTimer({
-        source: StateTransitionSource.stateTransition,
-        step: EpochTransitionStep.processPendingDeposits,
+      const timer = metrics?.epochTransitionStepTime.processPendingDeposits.startTimer({
+        source: StateTransitionSource.stateTransition
       });
       processPendingDeposits(stateElectra, cache);
       timer?.();
     }
 
     {
-      const timer = metrics?.epochTransitionStepTime.startTimer({
-        source: StateTransitionSource.stateTransition,
-        step: EpochTransitionStep.processPendingConsolidations,
+      const timer = metrics?.epochTransitionStepTime.processPendingConsolidations.startTimer({
+        source: StateTransitionSource.stateTransition
       });
       processPendingConsolidations(stateElectra, cache);
       timer?.();
@@ -170,9 +143,8 @@ export function processEpoch(
   }
 
   {
-    const timer = metrics?.epochTransitionStepTime.startTimer({
-      source: StateTransitionSource.stateTransition,
-      step: EpochTransitionStep.processEffectiveBalanceUpdates,
+    const timer = metrics?.epochTransitionStepTime.processEffectiveBalanceUpdates.startTimer({
+      source: StateTransitionSource.stateTransition
     });
     const numUpdate = processEffectiveBalanceUpdates(fork, state, cache);
     timer?.();
@@ -192,18 +164,16 @@ export function processEpoch(
     processParticipationRecordUpdates(state as CachedBeaconStatePhase0);
   } else {
     {
-      const timer = metrics?.epochTransitionStepTime.startTimer({
-        source: StateTransitionSource.stateTransition,
-        step: EpochTransitionStep.processParticipationFlagUpdates,
+      const timer = metrics?.epochTransitionStepTime.processParticipationFlagUpdates.startTimer({
+        source: StateTransitionSource.stateTransition
       });
       processParticipationFlagUpdates(state as CachedBeaconStateAltair);
       timer?.();
     }
 
     {
-      const timer = metrics?.epochTransitionStepTime.startTimer({
-        source: StateTransitionSource.stateTransition,
-        step: EpochTransitionStep.processSyncCommitteeUpdates,
+      const timer = metrics?.epochTransitionStepTime.processSyncCommitteeUpdates.startTimer({
+        source: StateTransitionSource.stateTransition
       });
       processSyncCommitteeUpdates(fork, state as CachedBeaconStateAltair);
       timer?.();
@@ -211,9 +181,8 @@ export function processEpoch(
   }
 
   if (fork >= ForkSeq.fulu) {
-    const timer = metrics?.epochTransitionStepTime.startTimer({
-      source: StateTransitionSource.stateTransition,
-      step: EpochTransitionStep.processProposerLookahead,
+    const timer = metrics?.epochTransitionStepTime.processProposerLookahead.startTimer({
+      source: StateTransitionSource.stateTransition
     });
     processProposerLookahead(fork, state as CachedBeaconStateFulu, cache);
     timer?.();
