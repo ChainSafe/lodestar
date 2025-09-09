@@ -357,6 +357,8 @@ export class PeerManager {
           (metadata as Partial<fulu.Metadata>).custodyGroupCount ??
           // TODO: spec says that Clients MAY reject peers with a value less than CUSTODY_REQUIREMENT
           this.config.CUSTODY_REQUIREMENT,
+        // TODO(fulu): this should be columns not groups.  need to change everywhere. we consume columns and should
+        //      cache that instead so if groups->columns ever changes from 1-1 we only need to update that here
         custodyGroups,
         samplingGroups,
       };
