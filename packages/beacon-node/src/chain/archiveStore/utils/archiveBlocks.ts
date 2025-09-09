@@ -181,9 +181,7 @@ export async function archiveBlocks(
         const slotsToDelete = [...new Set(prefixedKeys.map(({prefix}) => prefix))].sort((a, b) => a - b);
         if (slotsToDelete.length > 0) {
           await db.dataColumnSidecarArchive.deleteMany(slotsToDelete);
-          logger.verbose(
-            `dataColumnSidecars prune: slot range ${slotsToDelete[0]}..${slotsToDelete.at(-1)}, slots: ${slotsToDelete.length}, sidecars: ${prefixedKeys.length}`
-          );
+          `dataColumnSidecars prune slotRange=${prettyPrintIndices(slotsToDelete)}, numOfSlots=${slotsToDelete.length} totalNumOfSidecars=${prefixedKeys.length}`;
         } else {
           logger.verbose(`dataColumnSidecars prune: no entries before epoch ${dataColumnSidecarsMinEpoch}`);
         }
@@ -430,4 +428,7 @@ export function getNonCheckpointBlocks<T extends {slot: Slot}>(blocks: T[]): T[]
   }
 
   return nonCheckpointBlocks;
+}
+function prettyPrintIndices(slotsToDelete: number[]) {
+  throw new Error("Function not implemented.");
 }
