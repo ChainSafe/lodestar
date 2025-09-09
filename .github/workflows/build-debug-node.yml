@@ -18,7 +18,7 @@ jobs:
         run: apt-get install python3 g++ make python3-pip
 
       - name: Download Node.js source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with: 
           repository: 'nodejs/node'
           ref: 'v${{ github.event.inputs.version }}'
