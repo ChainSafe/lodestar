@@ -3,7 +3,7 @@ import {ApplicationMethods} from "@lodestar/api/server";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {isForkPostDeneb, isForkPostFulu, ZERO_HASH_HEX} from "@lodestar/params";
 import {BeaconState, deneb, fulu, sszTypesFor} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {fromAsync, toRootHex} from "@lodestar/utils";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
 import {getStateSlotFromBytes} from "../../../util/multifork.js";
 import {getBlockResponse} from "../beacon/blocks/utils.js";
@@ -104,9 +104,9 @@ export function getDebugApi({
         : 0;
 
       if (isForkPostFulu(fork) && blobCount > 0) {
-        dataColumnSidecars = await db.dataColumnSidecar.values(blockRoot);
+        dataColumnSidecars = await fromAsync(db.dataColumnSidecar.valuesStream(blockRoot));
         if (dataColumnSidecars.length === 0) {
-          dataColumnSidecars = await db.dataColumnSidecarArchive.values(block.message.slot);
+          dataColumnSidecars = await fromAsync(db.dataColumnSidecarArchive.valuesStream(block.message.slot));
         }
 
         if (dataColumnSidecars.length === 0) {

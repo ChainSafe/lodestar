@@ -27,7 +27,7 @@ import {
   isDenebBlockContents,
   sszTypesFor,
 } from "@lodestar/types";
-import {fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
+import {fromAsync, fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
 import {
   BlobsSource,
   BlockInput,
@@ -659,9 +659,9 @@ export function getBeaconBlockApi({
         const blobCount = (block.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length;
 
         if (blobCount > 0) {
-          let dataColumnSidecars = await db.dataColumnSidecar.values(blockRoot);
+          let dataColumnSidecars = await fromAsync(db.dataColumnSidecar.valuesStream(blockRoot));
           if (dataColumnSidecars.length === 0) {
-            dataColumnSidecars = await db.dataColumnSidecarArchive.values(block.message.slot);
+            dataColumnSidecars = await fromAsync(db.dataColumnSidecarArchive.valuesStream(block.message.slot));
           }
 
           if (dataColumnSidecars.length === 0) {
