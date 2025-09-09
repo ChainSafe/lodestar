@@ -28,7 +28,7 @@ jobs:
     runs-on: buildjet-4vcpu-ubuntu-2204
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: "./.github/actions/setup-and-build"
         with:
           node: 22
@@ -39,7 +39,7 @@ jobs:
     runs-on: buildjet-4vcpu-ubuntu-2204
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: "./.github/actions/setup-and-build"
         with:
           node: 22
@@ -97,7 +97,7 @@ jobs:
     runs-on: buildjet-4vcpu-ubuntu-2204
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: "./.github/actions/setup-and-build"
         with:
           node: 22
@@ -126,7 +126,7 @@ jobs:
     runs-on: buildjet-4vcpu-ubuntu-2204
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: "./.github/actions/setup-and-build"
         with:
           node: 22
@@ -155,7 +155,7 @@ jobs:
     runs-on: buildjet-4vcpu-ubuntu-2204
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: "./.github/actions/setup-and-build"
         with:
           node: 22
