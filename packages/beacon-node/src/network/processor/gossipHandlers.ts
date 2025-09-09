@@ -143,7 +143,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     let blockInput: IBlockInput | undefined;
     try {
       await validateGossipBlock(config, chain, signedBlock, fork);
-      blockInput = chain.seenGossipBlockInput.getByBlock({
+      blockInput = chain.seenBlockInputCache.getByBlock({
         block: signedBlock,
         blockRootHex,
         source: BlockInputSource.gossip,
@@ -185,7 +185,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         }
       }
 
-      chain.seenGossipBlockInput.prune(blockRootHex);
+      chain.seenBlockInputCache.prune(blockRootHex);
       throw e;
     }
   }
@@ -207,7 +207,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
     try {
       await validateGossipBlobSidecar(fork, chain, blobSidecar, subnet);
-      const blockInput = chain.seenGossipBlockInput.getByBlob({
+      const blockInput = chain.seenBlockInputCache.getByBlob({
         blockRootHex,
         blobSidecar,
         source: BlockInputSource.gossip,
@@ -287,7 +287,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
     try {
       await validateGossipDataColumnSidecar(chain, dataColumnSidecar, gossipSubnet, metrics);
-      const blockInput = chain.seenGossipBlockInput.getByColumn({
+      const blockInput = chain.seenBlockInputCache.getByColumn({
         blockRootHex,
         columnSidecar: dataColumnSidecar,
         source: BlockInputSource.gossip,
@@ -398,7 +398,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         // Returns the delay between the start of `block.slot` and `current time`
         const delaySec = chain.clock.secFromSlot(slot);
         metrics?.gossipBlock.elapsedTimeTillProcessed.observe(delaySec);
-        chain.seenGossipBlockInput.prune(blockInput.blockRootHex);
+        chain.seenBlockInputCache.prune(blockInput.blockRootHex);
       })
       .catch((e) => {
         // Adjust verbosity based on error type
@@ -433,7 +433,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         metrics?.gossipBlock.processBlockErrors.inc({error: e instanceof BlockError ? e.type.code : "NOT_BLOCK_ERROR"});
         logger[logLevel]("Error receiving block", {slot, peer: peerIdStr}, e as Error);
         // TODO(fulu): Revisit when we prune block inputs
-        chain.seenGossipBlockInput.prune(blockInput.blockRootHex);
+        chain.seenBlockInputCache.prune(blockInput.blockRootHex);
       });
   }
 
