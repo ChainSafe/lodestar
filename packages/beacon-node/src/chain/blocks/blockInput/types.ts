@@ -20,6 +20,7 @@ export enum BlockInputSource {
   engine = "engine",
   byRange = "req_resp_by_range",
   byRoot = "req_resp_by_root",
+  recovery = "recovery",
 }
 
 export type PromiseParts<T> = {

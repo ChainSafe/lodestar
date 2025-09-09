@@ -607,6 +607,10 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     this.custodyColumns = custodyColumns;
   }
 
+  get columnCount(): number {
+    return this.columnsCache.size;
+  }
+
   static createFromBlock(
     props: AddBlock<ForkColumnsDA> &
       CreateBlockInputMeta & {sampledColumns: ColumnIndex[]; custodyColumns: ColumnIndex[]}

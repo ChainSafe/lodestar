@@ -1,6 +1,13 @@
 import {routes} from "@lodestar/api";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
-import {ForkName, ForkPostElectra, ForkPreElectra, ForkSeq, isForkPostElectra} from "@lodestar/params";
+import {
+  ForkName,
+  ForkPostElectra,
+  ForkPreElectra,
+  ForkSeq,
+  isForkPostElectra,
+  NUMBER_OF_COLUMNS,
+} from "@lodestar/params";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {
   Root,
@@ -67,6 +74,8 @@ import {INetwork} from "../interface.js";
 import {PeerAction} from "../peers/index.js";
 import {AggregatorTracker} from "./aggregatorTracker.js";
 import {getDataColumnSidecarsFromExecution} from "../../util/execution.js";
+import {DataColumnReconstructionError, recoverDataColumnSidecars} from "../../util/dataColumns.js";
+import {callInNextEventLoop} from "../../util/eventLoop.js";
 
 /**
  * Gossip handler options as part of network options
@@ -294,6 +303,27 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         seenTimestampSec,
         peerIdStr,
       });
+
+      // only triggers reconstruction on the 64th column to deduplicate the expensive request
+      if (blockInput.columnCount === NUMBER_OF_COLUMNS / 2) {
+        // do not await to block gossip handler
+        callInNextEventLoop(() => {
+          recoverDataColumnSidecars(blockInput, chain.clock, metrics).catch((err) => {
+            if (err instanceof DataColumnReconstructionError) {
+              metrics?.recoverDataColumnSidecars.reconstructionResult.inc({
+                result: err.type.code,
+              });
+            }
+            logger.debug(
+              "Error recovering column sidecars",
+              {
+                blockRoot: blockRootHex,
+              },
+              err
+            );
+          });
+        });
+      }
 
       const recvToValidation = Date.now() / 1000 - seenTimestampSec;
       const validationTime = recvToValidation - recvToValLatency;

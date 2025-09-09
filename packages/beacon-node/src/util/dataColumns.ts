@@ -14,9 +14,14 @@ import {
   fulu,
 } from "@lodestar/types";
 import {ssz} from "@lodestar/types";
-import {bytesToBigInt} from "@lodestar/utils";
+import {bytesToBigInt, LodestarError} from "@lodestar/utils";
 import {NodeId} from "../network/subnets/index.js";
 import {kzg} from "./kzg.js";
+import {dataColumnMatrixRecovery} from "./blobs.js";
+import {BlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
+import {Metrics} from "../metrics/metrics.js";
+import {IClock} from "./clock.js";
+import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
 
 export enum RecoverResult {
   // the recover is not attempted because we have less than `NUMBER_OF_COLUMNS / 2` columns
@@ -331,3 +336,89 @@ export function getDataColumnSidecarsFromColumnSidecar(
     cellsAndKzgProofs
   );
 }
+
+/**
+ * If we receive more than half of NUMBER_OF_COLUMNS (64) we should recover all remaining columns
+ */
+export async function recoverDataColumnSidecars(
+  blockInput: BlockInputColumns,
+  clock: IClock,
+  metrics: Metrics | null
+): Promise<void> {
+  const existingColumns = blockInput.getAllColumns();
+  const columnCount = existingColumns.length;
+  if (columnCount >= NUMBER_OF_COLUMNS) {
+    // We have all columns
+    throw new DataColumnReconstructionError({code: DataColumnReconstructionCode.NotAttemptedAlreadyFull});
+  }
+
+  if (columnCount < NUMBER_OF_COLUMNS / 2) {
+    // We don't have enough columns to recover
+    throw new DataColumnReconstructionError({code: DataColumnReconstructionCode.NotAttemptedHaveLessThanHalf});
+  }
+
+  metrics?.recoverDataColumnSidecars.custodyBeforeReconstruction.set(columnCount);
+  const partialSidecars = new Map<number, fulu.DataColumnSidecar>();
+  for (const columnSidecar of existingColumns) {
+    // the more columns we put, the slower the recover
+    if (partialSidecars.size >= NUMBER_OF_COLUMNS / 2) {
+      break;
+    }
+    partialSidecars.set(columnSidecar.index, columnSidecar);
+  }
+
+  const timer = metrics?.recoverDataColumnSidecars.recoverTime.startTimer();
+  // if this function throws, we catch at the consumer side
+  const fullSidecars = await dataColumnMatrixRecovery(partialSidecars);
+  timer?.();
+  if (fullSidecars == null) {
+    throw new DataColumnReconstructionError(
+      {code: DataColumnReconstructionCode.ReconstructionFailed},
+      "No sidecars rebuilt via dataColumnMatrixRecovery"
+    );
+  }
+
+  const firstDataColumn = existingColumns.at(0);
+  if (firstDataColumn) {
+    const slot = firstDataColumn.signedBlockHeader.message.slot;
+    const secFromSlot = clock.secFromSlot(slot);
+    metrics?.recoverDataColumnSidecars.elapsedTimeTillReconstructed.observe(secFromSlot);
+  }
+
+  if (blockInput.getAllColumns().length === NUMBER_OF_COLUMNS) {
+    // either gossip or getBlobsV2 resolved availability while we were recovering
+    throw new DataColumnReconstructionError({code: DataColumnReconstructionCode.ReceivedAllDuringReconstruction});
+  }
+
+  // We successfully recovered the data columns, update the cache
+  for (const columnSidecar of fullSidecars) {
+    if (!blockInput.hasColumn(columnSidecar.index)) {
+      blockInput.addColumn({
+        blockRootHex: blockInput.blockRootHex,
+        columnSidecar,
+        seenTimestampSec: Date.now(),
+        source: BlockInputSource.recovery,
+      });
+    }
+  }
+
+  metrics?.recoverDataColumnSidecars.reconstructionResult.inc({result: DataColumnReconstructionCode.Success});
+}
+
+export enum DataColumnReconstructionCode {
+  NotAttemptedAlreadyFull = "DATA_COLUMN_RECONSTRUCTION_NOT_ATTEMPTED_ALREADY_FULL",
+  NotAttemptedHaveLessThanHalf = "DATA_COLUMN_RECONSTRUCTION_NOT_ATTEMPTED_HAVE_LESS_THAN_HALF",
+  ReconstructionFailed = "DATA_COLUMN_RECONSTRUCTION_RECONSTRUCTION_FAILED",
+  ReceivedAllDuringReconstruction = "DATA_COLUMN_RECONSTRUCTION_RECEIVED_ALL_DURING_RECONSTRUCTION",
+  Success = "DATA_COLUMN_RECONSTRUCTION_SUCCESS",
+}
+
+type DataColumnReconstructionErrorType = {
+  code:
+    | DataColumnReconstructionCode.NotAttemptedAlreadyFull
+    | DataColumnReconstructionCode.NotAttemptedHaveLessThanHalf
+    | DataColumnReconstructionCode.ReceivedAllDuringReconstruction
+    | DataColumnReconstructionCode.ReconstructionFailed;
+};
+
+export class DataColumnReconstructionError extends LodestarError<DataColumnReconstructionErrorType> {}

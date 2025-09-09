@@ -20,7 +20,7 @@ import {BackfillSyncMethod} from "../../sync/backfill/backfill.js";
 import {PendingBlockType} from "../../sync/types.js";
 import {PeerSyncType, RangeSyncType} from "../../sync/utils/remoteSyncType.js";
 import {AllocSource} from "../../util/bufferPool.js";
-import {RecoverResult} from "../../util/dataColumns.js";
+import {DataColumnReconstructionCode} from "../../util/dataColumns.js";
 import {LodestarMetadata} from "../options.js";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
 
@@ -763,11 +763,21 @@ export function createLodestarMetrics(
         help: "Time elapsed between block slot time and the time data column sidecar reconstructed",
         buckets: [2, 4, 6, 8, 10, 12],
       }),
+      recoverTime: register.histogram({
+        name: "lodestar_recover_data_column_sidecar_recover_time_seconds",
+        help: "Time elapsed to recover data column sidecar",
+        // this data comes from 20 blobs in `fusaka-devnet-1`, need to reevaluate in the future
+        buckets: [0.4, 0.6, 0.8, 1.0, 1.2],
+      }),
       custodyBeforeReconstruction: register.gauge({
         name: "lodestar_data_columns_in_custody_before_reconstruction",
         help: "Number of data columns in custody before reconstruction",
       }),
-      reconstructionResult: register.gauge<{result: RecoverResult}>({
+      numberOfColumnsRecovered: register.gauge({
+        name: "lodestar_recover_data_column_sidecar_recovered_columns_total",
+        help: "Total number of columns that were recovered",
+      }),
+      reconstructionResult: register.gauge<{result: DataColumnReconstructionCode}>({
         name: "lodestar_data_column_sidecars_reconstruction_result",
         help: "Data column sidecars reconstruction result",
         labelNames: ["result"],
