@@ -4,6 +4,9 @@ import {NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {ColumnIndex, Root, fulu, ssz} from "@lodestar/types";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 
+const columnIndexByteSize = 2;
+const blockRootByteSize = 32;
+
 type BlockRoot = Root;
 
 /**
@@ -26,21 +29,21 @@ export class DataColumnSidecarRepository extends PrefixedRepository<BlockRoot, C
   }
 
   encodeKeyRaw(prefix: BlockRoot, id: ColumnIndex): Uint8Array {
-    return Buffer.concat([prefix, encodeNumberForDbKey(id, 4)]);
+    return Buffer.concat([prefix, encodeNumberForDbKey(id, columnIndexByteSize)]);
   }
 
   decodeKeyRaw(raw: Uint8Array): {prefix: BlockRoot; id: ColumnIndex} {
     return {
-      prefix: raw.slice(0, 32) as BlockRoot,
-      id: decodeNumberForDbKey(raw.slice(32), 4) as ColumnIndex,
+      prefix: raw.slice(0, blockRootByteSize) as BlockRoot,
+      id: decodeNumberForDbKey(raw.slice(blockRootByteSize), columnIndexByteSize) as ColumnIndex,
     };
   }
 
   getMaxKeyRaw(prefix: BlockRoot): Uint8Array {
-    return Buffer.concat([prefix, encodeNumberForDbKey(NUMBER_OF_COLUMNS, 4)]);
+    return Buffer.concat([prefix, encodeNumberForDbKey(NUMBER_OF_COLUMNS, columnIndexByteSize)]);
   }
 
   getMinKeyRaw(prefix: BlockRoot): Uint8Array {
-    return Buffer.concat([prefix, encodeNumberForDbKey(0, 4)]);
+    return Buffer.concat([prefix, encodeNumberForDbKey(0, columnIndexByteSize)]);
   }
 }
