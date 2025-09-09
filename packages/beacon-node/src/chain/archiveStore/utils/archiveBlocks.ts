@@ -175,6 +175,7 @@ export async function archiveBlocks(
       const dataColumnSidecarsMinEpoch = currentEpoch - dataColumnSidecarsArchiveWindow;
       if (dataColumnSidecarsMinEpoch >= config.FULU_FORK_EPOCH) {
         const prefixedKeys = await db.dataColumnSidecarArchive.keys({
+          // The `id` value `0` refers to the column index. So we want to fetch all sidecars less than zero column of `dataColumnSidecarsMinEpoch`
           lt: {prefix: computeStartSlotAtEpoch(dataColumnSidecarsMinEpoch), id: 0},
         });
         // for each slot there could be multiple dataColumnSidecar, so we need to deduplicate it
