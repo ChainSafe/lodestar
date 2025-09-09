@@ -126,7 +126,6 @@ export interface IBeaconChain {
   readonly seenContributionAndProof: SeenContributionAndProof;
   readonly seenAttestationDatas: SeenAttestationDatas;
   readonly seenBlockInputCache: SeenBlockInput;
-  readonly seenGossipBlockInput: SeenBlockInput;
   // Seen cache for liveness checks
   readonly seenBlockAttesters: SeenBlockAttesters;
 

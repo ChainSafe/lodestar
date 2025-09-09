@@ -281,16 +281,6 @@ export class BeaconChain implements IBeaconChain {
       initialCustodyGroupCount,
     });
 
-    this.seenGossipBlockInput = new SeenBlockInput({
-      config: this.config,
-      custodyConfig: this.custodyConfig,
-      chainEvents: emitter,
-      clock,
-      logger,
-      metrics,
-      signal,
-    });
-
     this.beaconProposerCache = new BeaconProposerCache(opts);
     this.checkpointBalancesCache = new CheckpointBalancesCache();
     this.seenBlockInputCache = new SeenBlockInput({
@@ -448,7 +438,7 @@ export class BeaconChain implements IBeaconChain {
   }
 
   seenBlock(blockRoot: RootHex): boolean {
-    return this.seenGossipBlockInput.has(blockRoot) || this.forkChoice.hasBlockHex(blockRoot);
+    return this.seenBlockInputCache.has(blockRoot) || this.forkChoice.hasBlockHex(blockRoot);
   }
 
   regenCanAcceptWork(): boolean {
