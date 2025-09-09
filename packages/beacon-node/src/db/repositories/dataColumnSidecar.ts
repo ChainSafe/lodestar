@@ -40,7 +40,7 @@ export class DataColumnSidecarRepository extends PrefixedRepository<BlockRoot, C
   }
 
   getMaxKeyRaw(prefix: BlockRoot): Uint8Array {
-    return Buffer.concat([prefix, encodeNumberForDbKey(NUMBER_OF_COLUMNS, columnIndexByteSize)]);
+    return Buffer.concat([prefix, encodeNumberForDbKey(NUMBER_OF_COLUMNS - 1, columnIndexByteSize)]);
   }
 
   getMinKeyRaw(prefix: BlockRoot): Uint8Array {

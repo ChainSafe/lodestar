@@ -40,7 +40,7 @@ export class DataColumnSidecarArchiveRepository extends PrefixedRepository<Slot,
   getMaxKeyRaw(prefix: Slot): Uint8Array {
     return Buffer.concat([
       encodeNumberForDbKey(prefix, slotByteSize),
-      encodeNumberForDbKey(NUMBER_OF_COLUMNS, columnIndexByteSize),
+      encodeNumberForDbKey(NUMBER_OF_COLUMNS - 1, columnIndexByteSize),
     ]);
   }
 
