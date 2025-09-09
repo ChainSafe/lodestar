@@ -25,7 +25,7 @@ jobs:
           echo "Deploying ref: $DEPLOY_REF"
 
       # Checkout the correct ref being deployed
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ env.DEPLOY_REF }}
 
