@@ -38,7 +38,10 @@ export class DataColumnSidecarArchiveRepository extends PrefixedRepository<Slot,
   }
 
   getMaxKeyRaw(prefix: Slot): Uint8Array {
-    return Buffer.concat([encodeNumberForDbKey(prefix, slotByteSize), encodeNumberForDbKey(NUMBER_OF_COLUMNS, columnIndexByteSize)]);
+    return Buffer.concat([
+      encodeNumberForDbKey(prefix, slotByteSize),
+      encodeNumberForDbKey(NUMBER_OF_COLUMNS, columnIndexByteSize),
+    ]);
   }
 
   getMinKeyRaw(prefix: Slot): Uint8Array {
