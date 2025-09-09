@@ -13,11 +13,12 @@ import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   createCachedBeaconState,
+  getAttesterSlashableIndices,
   getLatestWeakSubjectivityCheckpointEpoch,
   isSlashableAttestationData,
   loadState,
 } from "@lodestar/state-transition";
-import {Attestation, Slot, phase0, ssz} from "@lodestar/types";
+import {IndexedAttestation, IndexedAttestationBigint, Slot, ssz} from "@lodestar/types";
 import {AttesterSlashing} from "@lodestar/types";
 import {toHex, toRootHex} from "@lodestar/utils";
 import {BeaconChain, IBeaconChain} from "../../../chain/index.js";
@@ -235,11 +236,12 @@ export function getLodestarApi({
     async getAttesterSlashingsFromBlocks({signedBlocks}) {
       const attesterSlashings = new Map<HexRoot, AttesterSlashing>();
       const seenAttestations: {
-        attestation: Attestation;
+        indexedAttestationBigint: IndexedAttestationBigint;
         slot: Slot;
-        attestationDataBigInt: phase0.AttestationDataBigint;
       }[] = [];
       const beaconStateCache = new Map<Slot, CachedBeaconStateAllForks>();
+      // TODO check fork
+      const fork = ForkSeq.electra;
 
       // helper function to manage the state cache
       const getState = async (slot: number) => {
@@ -257,65 +259,45 @@ export function getLodestarApi({
         return state;
       };
 
-      // iterate through blocks
       for (const block of signedBlocks) {
         const blockSlot = block.message.slot;
         const attestations = block.message.body.attestations;
 
-        // iterate through attestations
-        for (const newAttestation of attestations) {
-          const newAttestationDataBigInt = ssz.phase0.AttestationDataBigint.fromJson(
-            ssz.phase0.AttestationData.toJson(newAttestation.data)
-          );
-          // Compare the current attestation with all previously seen attestations
+        const attestationState = await getState(blockSlot);
+        if (!attestationState) {
+          throw new Error("Failed to retrieve state for attestation.");
+        }
+
+        for (const attestation of attestations) {
+          const indexedAttestation = attestationState.epochCtx.getIndexedAttestation(fork, attestation);
+          const indexedAttestationBigint = indexedAttestationToBigInt(indexedAttestation);
+
           for (const seenAttestation of seenAttestations) {
-            if (isSlashableAttestationData(newAttestationDataBigInt, seenAttestation.attestationDataBigInt)) {
-              const newAttestationState = await getState(blockSlot);
-              const seenAttestationState = await getState(seenAttestation.slot);
+            const seenAttestationState = await getState(seenAttestation.slot);
 
-              if (!newAttestationState || !seenAttestationState) {
-                throw new Error("Failed to retrieve state for one or more attestations.");
-              }
-              // TODO: check fork
-              // if (newAttestationState.fork !== seenAttestationState.fork) {
-              //   throw new Error("Slashable attestations found on different forks.");
-              // }
-
-              // get indexed atestations
-              // TODO: choose fork
-              //const fork = config.getForkName(blockSlot);
-              const newIndexedAttestation = newAttestationState.epochCtx.getIndexedAttestation(
-                ForkSeq.electra,
-                newAttestation
-              );
-              const seenIndexedAttestation = seenAttestationState.epochCtx.getIndexedAttestation(
-                ForkSeq.electra,
-                seenAttestation.attestation
-              );
-
-              // get attester slashing from indexed atestations
-              // TODO: choose fork
-              const attesterSlashing: AttesterSlashing = {
-                attestation1: ssz.electra.IndexedAttestationBigint.fromJson(
-                  ssz.electra.IndexedAttestation.toJson(newIndexedAttestation)
-                ),
-                attestation2: ssz.electra.IndexedAttestationBigint.fromJson(
-                  ssz.electra.IndexedAttestation.toJson(seenIndexedAttestation)
-                ),
-              };
-
-              // add attester slashing to list
-              // TODO: choose fork
-              const rootHash = ssz.electra.AttesterSlashing.hashTreeRoot(attesterSlashing);
-              attesterSlashings.set(toRootHex(rootHash), attesterSlashing);
+            if (!seenAttestationState) {
+              throw new Error("Failed to retrieve state for seen attestation.");
             }
+
+            if (
+              isSlashableAttestationData(indexedAttestationBigint.data, seenAttestation.indexedAttestationBigint.data)
+            ) {
+              const attesterSlashing: AttesterSlashing = {
+                attestation1: indexedAttestationBigint,
+                attestation2: seenAttestation.indexedAttestationBigint,
+              };
+              const intersectingIndices = getAttesterSlashableIndices(attesterSlashing);
+              if (intersectingIndices.length > 0) {
+                const rootHash = ssz.electra.AttesterSlashing.hashTreeRoot(attesterSlashing);
+                attesterSlashings.set(toRootHex(rootHash), attesterSlashing);
+              }
+            }
+
+            seenAttestations.push({
+              indexedAttestationBigint: indexedAttestationBigint,
+              slot: blockSlot,
+            });
           }
-          // add new attestation to seen attestations
-          seenAttestations.push({
-            attestation: newAttestation,
-            slot: blockSlot,
-            attestationDataBigInt: newAttestationDataBigInt,
-          });
         }
       }
 
@@ -386,4 +368,24 @@ async function getStateWithRegen(
   );
 
   return state;
+}
+
+function indexedAttestationToBigInt(indexedAttestation: IndexedAttestation): IndexedAttestationBigint {
+  return {
+    attestingIndices: indexedAttestation.attestingIndices,
+    data: {
+      slot: BigInt(indexedAttestation.data.slot),
+      index: BigInt(indexedAttestation.data.index),
+      beaconBlockRoot: indexedAttestation.data.beaconBlockRoot,
+      source: {
+        epoch: BigInt(indexedAttestation.data.source.epoch),
+        root: indexedAttestation.data.source.root,
+      },
+      target: {
+        epoch: BigInt(indexedAttestation.data.target.epoch),
+        root: indexedAttestation.data.target.root,
+      },
+    },
+    signature: indexedAttestation.signature,
+  };
 }
