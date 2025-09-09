@@ -11,7 +11,7 @@ jobs:
     name: Build and run Kurtosis
     runs-on: buildjet-4vcpu-ubuntu-2204
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: Set up Docker Buildx
