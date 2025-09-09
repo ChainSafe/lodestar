@@ -527,7 +527,6 @@ export class BlockInputSync {
         const downloadByRootMetrics = this.metrics?.blockInputSync.downloadByRoot;
         if (e instanceof DownloadByRootError) {
           const errorCode = e.type.code;
-          const client = e.type.client;
           downloadByRootMetrics?.error.inc({code: errorCode});
           const metricForCode = {
             [DownloadByRootErrorCode.MISMATCH_BLOCK_ROOT]: downloadByRootMetrics?.mismatchBlockRootError,
@@ -541,10 +540,10 @@ export class BlockInputSync {
           }[errorCode];
 
           if (metricForCode) {
-            metricForCode.inc({client});
+            metricForCode.inc({client: peerClient});
           } else {
             // investigate if this happens
-            downloadByRootMetrics?.unknownError.inc({client});
+            downloadByRootMetrics?.unknownError.inc({client: peerClient});
           }
         } else if (e instanceof RequestError) {
           // should look into req_resp metrics in this case
