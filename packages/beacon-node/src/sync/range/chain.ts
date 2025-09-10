@@ -147,6 +147,7 @@ export class SyncChain {
     this.processChainSegment = fns.processChainSegment;
     this.downloadByRange = fns.downloadByRange;
     this.reportPeer = fns.reportPeer;
+    this.pruneBlockInputs = fns.pruneBlockInputs;
     this.getConnectedPeerSyncMeta = fns.getConnectedPeerSyncMeta;
     this.config = config;
     this.custodyConfig = custodyConfig;
