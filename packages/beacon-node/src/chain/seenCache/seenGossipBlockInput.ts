@@ -126,21 +126,27 @@ export class SeenBlockInput {
   prune(rootHex: RootHex): void {
     let blockInput = this.blockInputs.get(rootHex);
     let parentRootHex = blockInput?.parentRootHex;
+    let deletedCount = 0;
     while (blockInput) {
+      deletedCount++;
       this.blockInputs.delete(blockInput.blockRootHex);
       blockInput = this.blockInputs.get(parentRootHex ?? "");
       parentRootHex = blockInput?.parentRootHex;
     }
+    this.logger?.debug(`BlockInputCache.prune deleted ${deletedCount} cached BlockInputs`);
     this.pruneToMaxSize();
   }
 
   onFinalized = (checkpoint: CheckpointWithHex) => {
+    let deletedCount = 0;
     const cutoffSlot = computeStartSlotAtEpoch(checkpoint.epoch);
     for (const [rootHex, blockInput] of this.blockInputs) {
       if (blockInput.slot < cutoffSlot) {
+        deletedCount++;
         this.blockInputs.delete(rootHex);
       }
     }
+    this.logger?.debug(`BlockInputCache.onFinalized deleted ${deletedCount} cached BlockInputs`);
     this.pruneToMaxSize();
   };
 
