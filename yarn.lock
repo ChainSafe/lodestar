@@ -550,10 +550,10 @@
     "@chainsafe/blst-linux-x64-musl" "2.2.0"
     "@chainsafe/blst-win32-x64-msvc" "2.2.0"
 
-"@chainsafe/discv5@^11.0.3":
-  version "11.0.3"
-  resolved "https://registry.yarnpkg.com/@chainsafe/discv5/-/discv5-11.0.3.tgz#0f53d2f8a7f015bf2c0c8d897c01e8cb5466c916"
-  integrity sha512-bDvpiHfg7th/YGoOx7+W6x/28kfE/Cob7uE0XWpyPMQ0RTmJmzMYMfT1eulg5unlggALABvKgsct/gQDQT/hFw==
+"@chainsafe/discv5@^11.0.4":
+  version "11.0.4"
+  resolved "https://registry.yarnpkg.com/@chainsafe/discv5/-/discv5-11.0.4.tgz#77da0bef913ded936d97ca23a078de2034f2c94f"
+  integrity sha512-8bUqQXlh3+VBO3f3kzvFL0CLOeShZLjUexlmjCyfXfOgwpP1e46F4G6a9tneEEXaU+AMLPMz8uRCwtP/YsESbw==
   dependencies:
     "@chainsafe/enr" "^5.0.1"
     "@ethereumjs/rlp" "^5.0.2"

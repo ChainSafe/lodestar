@@ -94,7 +94,7 @@
   "dependencies": {
     "@chainsafe/as-sha256": "^1.2.0",
     "@chainsafe/blst": "^2.2.0",
-    "@chainsafe/discv5": "^11.0.3",
+    "@chainsafe/discv5": "^11.0.4",
     "@chainsafe/enr": "^5.0.1",
     "@chainsafe/libp2p-gossipsub": "^14.1.1",
     "@chainsafe/libp2p-noise": "^16.1.0",
