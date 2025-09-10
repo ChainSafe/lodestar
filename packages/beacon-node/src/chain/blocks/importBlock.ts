@@ -80,7 +80,8 @@ export async function importBlock(
   const {slot: blockSlot} = block.message;
   const blockRoot = this.config.getForkTypes(blockSlot).BeaconBlock.hashTreeRoot(block.message);
   const blockRootHex = toRootHex(blockRoot);
-  const currentEpoch = computeEpochAtSlot(this.forkChoice.getTime());
+  const currentSlot = this.forkChoice.getTime();
+  const currentEpoch = computeEpochAtSlot(currentSlot);
   const blockEpoch = computeEpochAtSlot(blockSlot);
   const prevFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
   const blockDelaySec = (fullyVerifiedBlock.seenTimestampSec - postState.genesisTime) % this.config.SECONDS_PER_SLOT;
@@ -106,7 +107,7 @@ export async function importBlock(
     block.message,
     postState,
     blockDelaySec,
-    this.clock.currentSlot,
+    currentSlot,
     executionStatus,
     dataAvailabilityStatus
   );
@@ -326,14 +327,13 @@ export async function importBlock(
   // Suppress fcu call if shouldOverrideFcu is true. This only happens if we have proposer boost reorg enabled
   // and the block is weak and can potentially be reorged out.
   let shouldOverrideFcu = false;
-  let notOverrideFcuReason = NotReorgedReason.Unknown;
 
-  if (opts.isGossipBlock && isExecutionStateType(postState)) {
+  if (blockSlot >= currentSlot && isExecutionStateType(postState)) {
+    let notOverrideFcuReason = NotReorgedReason.Unknown;
     const proposalSlot = blockSlot + 1;
     try {
       const proposerIndex = postState.epochCtx.getBeaconProposer(proposalSlot);
       const feeRecipient = this.beaconProposerCache.get(proposerIndex);
-      const {currentSlot} = this.clock;
 
       if (feeRecipient) {
         // We would set this to true if
@@ -360,20 +360,20 @@ export async function importBlock(
         this.logger.warn("Unable to get beacon proposer. Do not override fcu.", {proposalSlot}, e as Error);
       }
     }
-  }
 
-  if (shouldOverrideFcu) {
-    this.logger.verbose("Weak block detected. Skip fcu call in importBlock", {
-      blockRoot: blockRootHex,
-      slot: blockSlot,
-    });
-  } else {
-    this.metrics?.importBlock.notOverrideFcuReason.inc({reason: notOverrideFcuReason});
-    this.logger.verbose("Strong block detected. Not override fcu call", {
-      blockRoot: blockRootHex,
-      slot: blockSlot,
-      reason: notOverrideFcuReason,
-    });
+    if (shouldOverrideFcu) {
+      this.logger.verbose("Weak block detected. Skip fcu call in importBlock", {
+        blockRoot: blockRootHex,
+        slot: blockSlot,
+      });
+    } else {
+      this.metrics?.importBlock.notOverrideFcuReason.inc({reason: notOverrideFcuReason});
+      this.logger.verbose("Strong block detected. Not override fcu call", {
+        blockRoot: blockRootHex,
+        slot: blockSlot,
+        reason: notOverrideFcuReason,
+      });
+    }
   }
 
   if (
@@ -460,7 +460,7 @@ export async function importBlock(
 
   // Send block events, only for recent enough blocks
 
-  if (this.clock.currentSlot - blockSlot < EVENTSTREAM_EMIT_RECENT_BLOCK_SLOTS) {
+  if (currentSlot - blockSlot < EVENTSTREAM_EMIT_RECENT_BLOCK_SLOTS) {
     // We want to import block asap so call all event handler in the next event loop
     callInNextEventLoop(() => {
       // NOTE: Skip emitting if there are no listeners from the API
