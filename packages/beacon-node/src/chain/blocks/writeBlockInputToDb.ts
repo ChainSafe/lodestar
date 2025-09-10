@@ -55,7 +55,7 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInputs: IBloc
 
       const dataColumnSidecars = blockInput.getCustodyColumns();
       if (dataColumnSidecars.length !== dataColumnsLen) {
-        throw Error(
+        this.logger.debug(
           `Invalid dataColumnSidecars=${dataColumnSidecars.length} for custody expected custodyColumnsLen=${dataColumnsLen}`
         );
       }

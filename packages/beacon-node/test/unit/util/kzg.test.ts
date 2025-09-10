@@ -4,7 +4,7 @@ import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {deneb, fulu, ssz} from "@lodestar/types";
 import {afterEach, describe, expect, it} from "vitest";
 import {validateBlockBlobSidecars, validateGossipBlobSidecar} from "../../../src/chain/validation/blobSidecar.js";
-import {getBlobSidecars, recoverDataColumnSidecars} from "../../../src/util/blobs.js";
+import {getBlobSidecars, dataColumnMatrixRecovery} from "../../../src/util/blobs.js";
 import {getDataColumnSidecarsFromBlock} from "../../../src/util/dataColumns.js";
 import {kzg} from "../../../src/util/kzg.js";
 import {shuffle} from "../../../src/util/shuffle.js";
@@ -137,7 +137,7 @@ describe("KZG", () => {
       }
     }
 
-    const recoveredSidecars = await recoverDataColumnSidecars(shuffledPartial);
+    const recoveredSidecars = await dataColumnMatrixRecovery(shuffledPartial);
     expect(recoveredSidecars !== null).toBeTruthy();
     if (recoveredSidecars == null) {
       // should not happen

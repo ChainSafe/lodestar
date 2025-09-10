@@ -329,17 +329,15 @@ export function getBeaconBlockApi({
     } else if (isBlockInputBlobs(blockForImport) && chain.emitter.listenerCount(routes.events.EventType.blobSidecar)) {
       const blobSidecars = blockForImport.getBlobs();
 
-      if (chain.emitter.listenerCount(routes.events.EventType.blobSidecar)) {
-        for (const blobSidecar of blobSidecars) {
-          const {index, kzgCommitment} = blobSidecar;
-          chain.emitter.emit(routes.events.EventType.blobSidecar, {
-            blockRoot,
-            slot,
-            index,
-            kzgCommitment: toHex(kzgCommitment),
-            versionedHash: toHex(kzgCommitmentToVersionedHash(kzgCommitment)),
-          });
-        }
+      for (const blobSidecar of blobSidecars) {
+        const {index, kzgCommitment} = blobSidecar;
+        chain.emitter.emit(routes.events.EventType.blobSidecar, {
+          blockRoot,
+          slot,
+          index,
+          kzgCommitment: toHex(kzgCommitment),
+          versionedHash: toHex(kzgCommitmentToVersionedHash(kzgCommitment)),
+        });
       }
     }
   };

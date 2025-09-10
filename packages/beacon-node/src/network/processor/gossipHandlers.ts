@@ -1,6 +1,13 @@
 import {routes} from "@lodestar/api";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
-import {ForkName, ForkPostElectra, ForkPreElectra, ForkSeq, isForkPostElectra} from "@lodestar/params";
+import {
+  ForkName,
+  ForkPostElectra,
+  ForkPreElectra,
+  ForkSeq,
+  isForkPostElectra,
+  NUMBER_OF_COLUMNS,
+} from "@lodestar/params";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {
   Root,
@@ -67,6 +74,8 @@ import {INetwork} from "../interface.js";
 import {PeerAction} from "../peers/index.js";
 import {AggregatorTracker} from "./aggregatorTracker.js";
 import {getDataColumnSidecarsFromExecution} from "../../util/execution.js";
+import {DataColumnReconstructionError, recoverDataColumnSidecars} from "../../util/dataColumns.js";
+import {callInNextEventLoop} from "../../util/eventLoop.js";
 
 /**
  * Gossip handler options as part of network options
@@ -295,6 +304,27 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         peerIdStr,
       });
 
+      // only triggers reconstruction on the 64th column to deduplicate the expensive request
+      if (blockInput.columnCount === NUMBER_OF_COLUMNS / 2) {
+        // do not await to block gossip handler
+        callInNextEventLoop(() => {
+          recoverDataColumnSidecars(blockInput, chain.clock, metrics).catch((err) => {
+            if (err instanceof DataColumnReconstructionError) {
+              metrics?.recoverDataColumnSidecars.reconstructionResult.inc({
+                result: err.type.code,
+              });
+            }
+            logger.debug(
+              "Error recovering column sidecars",
+              {
+                blockRoot: blockRootHex,
+              },
+              err
+            );
+          });
+        });
+      }
+
       const recvToValidation = Date.now() / 1000 - seenTimestampSec;
       const validationTime = recvToValidation - recvToValLatency;
 
@@ -355,9 +385,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     metrics?.gossipBlock.elapsedTimeTillReceived.observe({source: OpSource.gossip}, delaySec);
     chain.validatorMonitor?.registerBeaconBlock(OpSource.gossip, delaySec, signedBlock.message);
     if (!blockInput.hasBlockAndAllData()) {
-      chain.logger.debug("Received gossip block, attempting fetch of unavailable data", {
-        ...blockInput.getLogMeta(),
-      });
+      chain.logger.debug("Received gossip block, attempting fetch of unavailable data", blockInput.getLogMeta());
       // The data is not yet fully available, immediately trigger an aggressive pull via unknown block sync
       chain.emitter.emit(ChainEvent.incompleteBlockInput, {
         blockInput,
@@ -431,7 +459,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           logLevel = LogLevel.error;
         }
         metrics?.gossipBlock.processBlockErrors.inc({error: e instanceof BlockError ? e.type.code : "NOT_BLOCK_ERROR"});
-        logger[logLevel]("Error receiving block", {slot, peer: peerIdStr}, e as Error);
+        logger[logLevel]("Error processing block", {slot, peer: peerIdStr}, e as Error);
         // TODO(fulu): Revisit when we prune block inputs
         chain.seenBlockInputCache.prune(blockInput.blockRootHex);
       });
@@ -521,6 +549,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           dataColumnIndex: index,
           ...blockInput.getLogMeta(),
         });
+        // do not await here to not delay gossip validation
         blockInput.waitForAllData(cutoffTimeMs).catch((_e) => {
           chain.logger.debug(
             "Waited for data after receiving gossip column. Cut-off reached so attempting to fetch remainder of BlockInput",

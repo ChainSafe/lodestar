@@ -640,4 +640,3 @@ export function assertReqSizeLimit(blockHashesReqCount: number, count: number): 
   }
   return;
 }
-	

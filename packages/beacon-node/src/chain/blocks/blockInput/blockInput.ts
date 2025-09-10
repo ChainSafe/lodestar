@@ -142,8 +142,8 @@ abstract class AbstractBlockInput<F extends ForkName = ForkName, TData extends D
 
   getLogMeta(): LogMetaBasic {
     return {
-      blockRoot: prettyBytes(this.blockRootHex),
       slot: this.slot,
+      blockRoot: prettyBytes(this.blockRootHex),
       timeCreatedSec: this.timeCreatedSec,
     };
   }
@@ -339,8 +339,8 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
 
   getLogMeta(): LogMetaBlobs {
     return {
-      blockRoot: prettyBytes(this.blockRootHex),
       slot: this.slot,
+      blockRoot: prettyBytes(this.blockRootHex),
       timeCreatedSec: this.timeCreatedSec,
       expectedBlobs: this.state.hasBlock ? this.state.block.message.body.blobKzgCommitments.length : "unknown",
       receivedBlobs: this.blobsCache.size,
@@ -607,6 +607,10 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     this.custodyColumns = custodyColumns;
   }
 
+  get columnCount(): number {
+    return this.columnsCache.size;
+  }
+
   static createFromBlock(
     props: AddBlock<ForkColumnsDA> &
       CreateBlockInputMeta & {sampledColumns: ColumnIndex[]; custodyColumns: ColumnIndex[]}
@@ -671,8 +675,8 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
 
   getLogMeta(): LogMetaColumns {
     return {
-      blockRoot: prettyBytes(this.blockRootHex),
       slot: this.slot,
+      blockRoot: prettyBytes(this.blockRootHex),
       timeCreatedSec: this.timeCreatedSec,
       expectedColumns:
         this.state.hasBlock && this.state.block.message.body.blobKzgCommitments.length === 0
