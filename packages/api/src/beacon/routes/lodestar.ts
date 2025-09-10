@@ -487,16 +487,14 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
             signedBlocks: signedBlocks,
           };
         },
-        writeReqSsz: () => {
+        writeReqSsz: ({signedBlocks}) => {
           return {
-            // TODO
-            body: new Uint8Array() as Uint8Array,
+            body: SignedBeaconBlockListTypeElectra.serialize(signedBlocks as SignedBeaconBlock<ForkPostElectra>[]),
           };
         },
-        parseReqSsz: () => {
+        parseReqSsz: ({body}) => {
           return {
-            // TODO
-            signedBlocks: [] as SignedBeaconBlock[],
+            signedBlocks: SignedBeaconBlockListTypeElectra.deserialize(body),
           };
         },
         schema: {

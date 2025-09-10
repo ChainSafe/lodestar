@@ -4,7 +4,11 @@ import {SignedBeaconBlock, ssz} from "@lodestar/types";
 import {FastifyInstance} from "fastify";
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {getClient} from "../../../../src/beacon/client/lodestar.js";
-import {AttesterSlashingListElectra} from "../../../../src/beacon/routes/beacon/pool.js";
+import {
+  AttesterSlashingList,
+  AttesterSlashingListElectra,
+  AttesterSlashingListTypeElectra,
+} from "../../../../src/beacon/routes/beacon/pool.js";
 import {Endpoints, getDefinitions} from "../../../../src/beacon/routes/lodestar.js";
 import {getRoutes} from "../../../../src/beacon/server/lodestar.js";
 import {HttpClient} from "../../../../src/utils/client/httpClient.js";
@@ -91,6 +95,39 @@ describe("beacon / lodestar", () => {
       expect(res.ok).toBe(true);
       expect(res.wireFormat()).toBe(WireFormat.json);
       expect(res.json().data).toStrictEqual(attesterSlashingsJson);
+    });
+    it("getAttesterSlashingsFromBlocks as ssz", async () => {
+      const mockSignedBlocks: SignedBeaconBlock[] = [];
+      mockSignedBlocks.push(ssz.electra.SignedBeaconBlock.defaultValue());
+
+      // TODO: choose fork
+      const attesterSlashingList: AttesterSlashingListElectra = [];
+
+      const attesterSlashing = ssz.electra.AttesterSlashing.defaultValue();
+      attesterSlashingList.push(attesterSlashing);
+
+      const attesterSlashingsSsz = AttesterSlashingListTypeElectra.serialize(attesterSlashingList);
+
+      const mockReturnValue = {
+        data: attesterSlashingsSsz as Uint8Array,
+      };
+
+      mockApi.getAttesterSlashingsFromBlocks.mockResolvedValue(mockReturnValue);
+
+      const httpClient = new HttpClient({baseUrl});
+      const client = getClient(config, httpClient);
+
+      const res = await client.getAttesterSlashingsFromBlocks(
+        {signedBlocks: mockSignedBlocks},
+        {
+          requestWireFormat: WireFormat.ssz,
+          responseWireFormat: WireFormat.ssz,
+        }
+      );
+
+      expect(res.ok).toBe(true);
+      expect(res.wireFormat()).toBe(WireFormat.ssz);
+      expect(res.ssz()).toStrictEqual(attesterSlashingsSsz);
     });
   });
 });
