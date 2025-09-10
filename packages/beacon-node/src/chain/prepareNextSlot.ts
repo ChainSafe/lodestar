@@ -107,6 +107,7 @@ export class PrepareNextSlotScheduler {
       const precomputeEpochTransitionTimer = isEpochTransition
         ? this.metrics?.precomputeNextEpochTransition.duration.startTimer()
         : null;
+      const start = Date.now();
       // No need to wait for this or the clock drift
       // Pre Bellatrix: we only do precompute state transition for the last slot of epoch
       // For Bellatrix, we always do the `processSlots()` to prepare payload for the next slot
@@ -228,6 +229,7 @@ export class PrepareNextSlotScheduler {
           headSlot,
           prepareSlot,
           previousHits,
+          durationMs: Date.now() - start,
         });
 
         precomputeEpochTransitionTimer?.();
