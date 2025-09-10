@@ -48,6 +48,7 @@ info: discv5 worker started peerId=16Uiu...t9LQ3, initialENR=enr:-Iu4QGE...WRwgi
 ```
 
 Or similar to the following for IPv6 dual-stack nodes (when enabled):
+
 ```txt
 info: discv5 worker started peerId=16Uiu...t9LQ3, initialENR=enr:-Iu4QGE...WRwgiMo, bindAddr4=/ip4/0.0.0.0/udp/9000, bindAddr6=/ip6/::/udp/9000
 ```
