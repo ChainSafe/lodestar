@@ -425,6 +425,7 @@ export class BlockInputSync {
     if (!res.err) {
       // no need to update status to "processed", delete anyway
       this.pendingBlocks.delete(pendingBlock.blockInput.blockRootHex);
+      this.chain.seenBlockInputCache.prune(pendingBlock.blockInput.blockRootHex);
 
       // Send child blocks to the processor
       for (const descendantBlock of getDescendantBlocks(pendingBlock.blockInput.blockRootHex, this.pendingBlocks)) {
@@ -610,6 +611,7 @@ export class BlockInputSync {
     for (const block of badPendingBlocks) {
       const rootHex = getBlockInputSyncCacheItemRootHex(block);
       this.pendingBlocks.delete(rootHex);
+      this.chain.seenBlockInputCache.prune(rootHex);
       this.logger.debug("Removing bad/unknown/incomplete BlockInputSyncCacheItem", {
         blockRoot: rootHex,
       });
