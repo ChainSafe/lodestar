@@ -13,6 +13,7 @@ import {cacheByRangeResponses, downloadByRange} from "../utils/downloadByRange.j
 import {RangeSyncType, getRangeSyncTarget, rangeSyncTypes} from "../utils/remoteSyncType.js";
 import {ChainTarget, SyncChain, SyncChainDebugState, SyncChainFns} from "./chain.js";
 import {updateChains} from "./utils/index.js";
+import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
 
 export enum RangeSyncEvent {
   completedChain = "RangeSync-completedChain",
@@ -218,6 +219,12 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
     return cached;
   };
 
+  private pruneBlockInputs: SyncChainFns["pruneBlockInputs"] = (blocks: IBlockInput[]) => {
+    for (const block of blocks) {
+      this.chain.seenBlockInputCache.prune(block.blockRootHex);
+    }
+  };
+
   /** Convenience method for `SyncChain` */
   private reportPeer: SyncChainFns["reportPeer"] = (peer, action, actionName) => {
     this.network.reportPeer(peer, action, actionName);
@@ -249,6 +256,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
           downloadByRange: this.downloadByRange,
           reportPeer: this.reportPeer,
           getConnectedPeerSyncMeta: this.getConnectedPeerSyncMeta,
+          pruneBlockInputs: this.pruneBlockInputs,
           onEnd: this.onSyncChainEnd,
         },
         {config: this.config, logger: this.logger, custodyConfig: this.chain.custodyConfig, metrics: this.metrics}

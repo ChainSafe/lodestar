@@ -51,6 +51,8 @@ export type SyncChainFns = {
   getConnectedPeerSyncMeta: (peerId: string) => PeerSyncMeta;
   /** Hook called when Chain state completes */
   onEnd: (err: Error | null, target: ChainTarget | null) => void;
+  /** Deletes an array of BlockInputs from the BlockInputCache */
+  pruneBlockInputs: (blockInputs: IBlockInput[]) => void;
 };
 
 /**
@@ -118,6 +120,8 @@ export class SyncChain {
   private readonly downloadByRange: SyncChainFns["downloadByRange"];
   private readonly reportPeer: SyncChainFns["reportPeer"];
   private readonly getConnectedPeerSyncMeta: SyncChainFns["getConnectedPeerSyncMeta"];
+  private readonly pruneBlockInputs: SyncChainFns["pruneBlockInputs"];
+
   /** AsyncIterable that guarantees processChainSegment is run only at once at anytime */
   private readonly batchProcessor = new ItTrigger();
   /** Sorted map of batches undergoing some kind of processing. */
@@ -306,6 +310,10 @@ export class SyncChain {
     } catch (e) {
       if (e instanceof ErrorAborted) {
         return; // Ignore
+      }
+
+      for (const batch of this.batches.values()) {
+        this.pruneBlockInputs(batch.getBlocks());
       }
 
       this.status = SyncChainStatus.Error;
@@ -546,6 +554,7 @@ export class SyncChain {
 
     if (!res.err) {
       batch.processingSuccess();
+      this.pruneBlockInputs(batch.getBlocks());
 
       // If the processed batch is not empty, validate previous AwaitingValidation blocks.
       if (blocks.length > 0) {

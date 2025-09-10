@@ -252,7 +252,7 @@ export class Batch {
     switch (this.state.status) {
       case BatchStatus.AwaitingValidation:
       case BatchStatus.Processing:
-        throw new BatchError(this.wrongStatusErrorType(BatchStatus.AwaitingDownload));
+        return [];
     }
     return this.state.blocks;
   }
