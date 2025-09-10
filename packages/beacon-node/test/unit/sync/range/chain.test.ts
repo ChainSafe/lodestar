@@ -76,6 +76,7 @@ describe("sync / range / chain", () => {
       custodyGroups: [],
     };
   };
+  const pruneBlockInputs: SyncChainFns["pruneBlockInputs"] = (_) => {};
 
   afterEach(() => {
     if (interval !== null) clearInterval(interval);
@@ -132,6 +133,7 @@ describe("sync / range / chain", () => {
             downloadByRange,
             getConnectedPeerSyncMeta,
             reportPeer,
+            pruneBlockInputs,
             onEnd,
           }),
           {config, logger, custodyConfig, metrics: null}
@@ -184,6 +186,7 @@ describe("sync / range / chain", () => {
           processChainSegment,
           downloadByRange,
           reportPeer,
+          pruneBlockInputs,
           getConnectedPeerSyncMeta,
           onEnd,
         }),
@@ -227,6 +230,10 @@ function logSyncChainFns(logger: Logger, fns: SyncChainFns): SyncChainFns {
     reportPeer(peer, action, actionName) {
       logger.debug("mock reportPeer", {peer: peer.toString(), action, actionName});
       return fns.reportPeer(peer, action, actionName);
+    },
+    pruneBlockInputs(blockInputs) {
+      logger.debug("mock pruneBlockInputs", {blockInputsLength: blockInputs.length});
+      return fns.pruneBlockInputs(blockInputs);
     },
     onEnd(err, target) {
       logger.debug("mock onEnd", {target: target?.slot}, err ?? undefined);
