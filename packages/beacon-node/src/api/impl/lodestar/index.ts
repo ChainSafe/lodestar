@@ -270,7 +270,7 @@ export function getLodestarApi({
 
         for (const attestation of attestations) {
           const indexedAttestation = attestationState.epochCtx.getIndexedAttestation(fork, attestation);
-          const indexedAttestationBigint = indexedAttestationToBigInt(indexedAttestation);
+          const indexedAttestationBigint = toIndexedAttestationBigint(indexedAttestation);
 
           for (const seenAttestation of seenAttestations) {
             const seenAttestationState = await getState(seenAttestation.slot);
@@ -292,12 +292,11 @@ export function getLodestarApi({
                 attesterSlashings.set(toRootHex(rootHash), attesterSlashing);
               }
             }
-
-            seenAttestations.push({
-              indexedAttestationBigint: indexedAttestationBigint,
-              slot: blockSlot,
-            });
           }
+          seenAttestations.push({
+            indexedAttestationBigint: indexedAttestationBigint,
+            slot: blockSlot,
+          });
         }
       }
 
@@ -370,7 +369,7 @@ async function getStateWithRegen(
   return state;
 }
 
-function indexedAttestationToBigInt(indexedAttestation: IndexedAttestation): IndexedAttestationBigint {
+function toIndexedAttestationBigint(indexedAttestation: IndexedAttestation): IndexedAttestationBigint {
   return {
     attestingIndices: indexedAttestation.attestingIndices,
     data: {
