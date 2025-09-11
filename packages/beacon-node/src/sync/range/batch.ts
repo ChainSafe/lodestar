@@ -117,7 +117,9 @@ export class Batch {
   private getRequests(blocks: IBlockInput[]): DownloadByRangeRequests {
     const startEpoch = computeEpochAtSlot(this.startSlot);
     const currentEpoch = this.clock.currentEpoch;
-    const withinValidRequestWindow = startEpoch >= currentEpoch - this.config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS;
+    const withinBlobsRequestWindow = startEpoch >= currentEpoch - this.config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS;
+    const withinDataColumnsRequestWindow =
+      startEpoch >= currentEpoch - this.config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS;
 
     // fresh request where no blocks have started to be pulled yet
     if (!blocks.length) {
@@ -126,7 +128,7 @@ export class Batch {
         count: this.count,
         step: 1,
       };
-      if (isForkPostFulu(this.forkName) && withinValidRequestWindow) {
+      if (isForkPostFulu(this.forkName) && withinDataColumnsRequestWindow) {
         return {
           blocksRequest,
           columnsRequest: {
@@ -136,7 +138,7 @@ export class Batch {
           },
         };
       }
-      if (isForkPostDeneb(this.forkName) && withinValidRequestWindow) {
+      if (isForkPostDeneb(this.forkName) && withinBlobsRequestWindow) {
         return {
           blocksRequest,
           blobsRequest: {
@@ -198,13 +200,13 @@ export class Batch {
     if (dataStartSlot <= endSlot) {
       // range of 40 - 63, startSlot will be inclusive but subtraction will exclusive so need to + 1
       const count = endSlot - dataStartSlot + 1;
-      if (isForkPostFulu(this.forkName) && withinValidRequestWindow) {
+      if (isForkPostFulu(this.forkName) && withinDataColumnsRequestWindow) {
         requests.columnsRequest = {
           count,
           startSlot: dataStartSlot,
           columns: Array.from(neededColumns),
         };
-      } else if (isForkPostDeneb(this.forkName) && withinValidRequestWindow) {
+      } else if (isForkPostDeneb(this.forkName) && withinBlobsRequestWindow) {
         requests.blobsRequest = {
           count,
           startSlot: dataStartSlot,
