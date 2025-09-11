@@ -15,7 +15,7 @@ const RECONSTRUCTION_DELAY_MIN_MS = 800;
  */
 const RECONSTRUCTION_DELAY_MAX_MS = 1200;
 
-export type ColumnRecontructionTrackerInit = {
+export type ColumnReconstructionTrackerInit = {
   logger: Logger;
   emitter: ChainEventEmitter;
   metrics: Metrics | null;
@@ -41,7 +41,7 @@ export class ColumnReconstructionTracker {
   /** Track if a reconstruction attempt is in-flight */
   running = false;
 
-  constructor(init: ColumnRecontructionTrackerInit) {
+  constructor(init: ColumnReconstructionTrackerInit) {
     this.logger = init.logger;
     this.emitter = init.emitter;
     this.metrics = init.metrics;
