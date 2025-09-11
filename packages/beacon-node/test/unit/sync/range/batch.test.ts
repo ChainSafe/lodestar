@@ -1,13 +1,13 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {beforeEach, describe, expect, it} from "vitest";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/types.js";
 import {computeNodeIdFromPrivateKey} from "../../../../src/network/subnets/index.js";
 import {Batch, BatchError, BatchErrorCode, BatchStatus} from "../../../../src/sync/range/batch.js";
 import {CustodyConfig} from "../../../../src/util/dataColumns.js";
-import {config} from "../../../utils/blocksAndData.js";
+import {clock, config} from "../../../utils/blocksAndData.js";
 import {expectThrowsLodestarError} from "../../../utils/errors.js";
 import {validPeerIdStr} from "../../../utils/peer.js";
 
@@ -124,13 +124,17 @@ describe("sync / range / batch", async () => {
   const custodyConfig = new CustodyConfig({config, nodeId});
   const peer = validPeerIdStr;
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   describe("getRequests", () => {
     describe("PreDeneb", () => {
       let batch: Batch;
       const startEpoch = config.CAPELLA_FORK_EPOCH + 1;
 
       it("should make default pre-deneb requests if no existing blocks are passed", () => {
-        batch = new Batch(startEpoch, config, custodyConfig);
+        batch = new Batch(startEpoch, config, clock, custodyConfig);
         expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
         expect(batch.requests.blobsRequest).toBeUndefined();
         expect(batch.requests.columnsRequest).toBeUndefined();
@@ -143,13 +147,33 @@ describe("sync / range / batch", async () => {
       let batch: Batch;
       const startEpoch = config.DENEB_FORK_EPOCH + 1;
 
-      beforeEach(() => {
-        batch = new Batch(startEpoch, config, custodyConfig);
-      });
-
       it("should make default ForkDABlobs requests if no existing blocks are passed", () => {
+        batch = new Batch(startEpoch, config, clock, custodyConfig);
+
         expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
         expect(batch.requests.blobsRequest).toEqual({startSlot: batch.startSlot, count: batch.count});
+        expect(batch.requests.columnsRequest).toBeUndefined();
+      });
+
+      it("should make default ForkDABlobs requests if current epoch is the last in request range", () => {
+        vi.spyOn(clock, "currentEpoch", "get").mockReturnValue(
+          startEpoch + config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS
+        );
+        batch = new Batch(startEpoch, config, clock, custodyConfig);
+
+        expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
+        expect(batch.requests.blobsRequest).toEqual({startSlot: batch.startSlot, count: batch.count});
+        expect(batch.requests.columnsRequest).toBeUndefined();
+      });
+
+      it("should not make ForkDABlobs requests if current epoch is ahead of request range", () => {
+        vi.spyOn(clock, "currentEpoch", "get").mockReturnValue(
+          startEpoch + config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS + 1
+        );
+        batch = new Batch(startEpoch, config, clock, custodyConfig);
+
+        expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
+        expect(batch.requests.blobsRequest).toBeUndefined();
         expect(batch.requests.columnsRequest).toBeUndefined();
       });
     });
@@ -159,10 +183,10 @@ describe("sync / range / batch", async () => {
       const startEpoch = config.FULU_FORK_EPOCH + 1;
 
       beforeEach(() => {
-        batch = new Batch(startEpoch, config, custodyConfig);
+        batch = new Batch(startEpoch, config, clock, custodyConfig);
       });
 
-      it("should make default pre-deneb requests if no existing blocks are passed", () => {
+      it("should make ForkDAColumns requests if no existing blocks are passed", () => {
         expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
         expect(batch.requests.blobsRequest).toBeUndefined();
         expect(batch.requests.columnsRequest).toEqual({
@@ -171,11 +195,37 @@ describe("sync / range / batch", async () => {
           columns: custodyConfig.sampledColumns,
         });
       });
+
+      it("should make ForkDAColumns requests if current epoch is the last in request range", () => {
+        vi.spyOn(clock, "currentEpoch", "get").mockReturnValue(
+          startEpoch + config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS
+        );
+        batch = new Batch(startEpoch, config, clock, custodyConfig);
+
+        expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
+        expect(batch.requests.blobsRequest).toBeUndefined();
+        expect(batch.requests.columnsRequest).toEqual({
+          startSlot: batch.startSlot,
+          count: batch.count,
+          columns: custodyConfig.sampledColumns,
+        });
+      });
+
+      it("should not make ForkDAColumns if current epoch is the last in request range", () => {
+        vi.spyOn(clock, "currentEpoch", "get").mockReturnValue(
+          startEpoch + config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS + 1
+        );
+        batch = new Batch(startEpoch, config, clock, custodyConfig);
+
+        expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
+        expect(batch.requests.blobsRequest).toBeUndefined();
+        expect(batch.requests.columnsRequest).toBeUndefined();
+      });
     });
 
     it("should not request data pre-deneb", () => {
       const startEpoch = config.CAPELLA_FORK_EPOCH - 1;
-      const batch = new Batch(startEpoch, config, custodyConfig);
+      const batch = new Batch(startEpoch, config, clock, custodyConfig);
       expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
       expect(batch.requests.blobsRequest).toBeUndefined();
       expect(batch.requests.columnsRequest).toBeUndefined();
@@ -191,7 +241,7 @@ describe("sync / range / batch", async () => {
 
     it("should request columns post-fulu", () => {
       const startEpoch = config.FULU_FORK_EPOCH + 1;
-      const batch = new Batch(startEpoch, config, custodyConfig);
+      const batch = new Batch(startEpoch, config, clock, custodyConfig);
       expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
       expect(batch.requests.blobsRequest).toBeUndefined();
       expect(batch.requests.columnsRequest).toEqual({
@@ -203,7 +253,7 @@ describe("sync / range / batch", async () => {
 
     it("should have same start slot and count for blocks and data requests", () => {
       const startEpoch = config.FULU_FORK_EPOCH + 1;
-      const batch = new Batch(startEpoch, config, custodyConfig);
+      const batch = new Batch(startEpoch, config, clock, custodyConfig);
       expect(batch.requests.blocksRequest?.startSlot).toEqual(batch.requests.columnsRequest?.startSlot);
       expect(batch.requests.blocksRequest?.count).toEqual(batch.requests.columnsRequest?.count);
     });
@@ -215,7 +265,7 @@ describe("sync / range / batch", async () => {
 
   it("Complete state flow", () => {
     const startEpoch = 0;
-    const batch = new Batch(startEpoch, config, custodyConfig);
+    const batch = new Batch(startEpoch, config, clock, custodyConfig);
 
     // Instantion: AwaitingDownload
     expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
@@ -281,7 +331,7 @@ describe("sync / range / batch", async () => {
 
   it("Should throw on inconsistent state - downloadingSuccess", () => {
     const startEpoch = 0;
-    const batch = new Batch(startEpoch, config, custodyConfig);
+    const batch = new Batch(startEpoch, config, clock, custodyConfig);
 
     expectThrowsLodestarError(
       () => batch.downloadingSuccess(peer, []),
@@ -296,7 +346,7 @@ describe("sync / range / batch", async () => {
 
   it("Should throw on inconsistent state - startProcessing", () => {
     const startEpoch = 0;
-    const batch = new Batch(startEpoch, config, custodyConfig);
+    const batch = new Batch(startEpoch, config, clock, custodyConfig);
 
     expectThrowsLodestarError(
       () => batch.startProcessing(),
@@ -311,7 +361,7 @@ describe("sync / range / batch", async () => {
 
   it("Should throw on inconsistent state - processingSuccess", () => {
     const startEpoch = 0;
-    const batch = new Batch(startEpoch, config, custodyConfig);
+    const batch = new Batch(startEpoch, config, clock, custodyConfig);
 
     expectThrowsLodestarError(
       () => batch.processingSuccess(),

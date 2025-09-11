@@ -11,6 +11,7 @@ import {
 } from "../../../../../src/sync/range/utils/batches.js";
 import {CustodyConfig} from "../../../../../src/util/dataColumns.js";
 import {validPeerIdStr} from "../../../../utils/peer.js";
+import {clock} from "../../../../utils/blocksAndData.js";
 
 describe("sync / range / batches", () => {
   const peer = validPeerIdStr;
@@ -221,7 +222,7 @@ describe("sync / range / batches", () => {
   });
 
   function createBatch(status: BatchStatus, startEpoch = 0): Batch {
-    const batch = new Batch(startEpoch, config, new CustodyConfig({config, nodeId: Buffer.alloc(32)}));
+    const batch = new Batch(startEpoch, config, clock, new CustodyConfig({config, nodeId: Buffer.alloc(32)}));
 
     if (status === BatchStatus.AwaitingDownload) return batch;
 

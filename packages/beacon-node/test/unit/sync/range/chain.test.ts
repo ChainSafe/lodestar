@@ -13,6 +13,7 @@ import {CustodyConfig} from "../../../../src/util/dataColumns.js";
 import {linspace} from "../../../../src/util/numpy.js";
 import {testLogger} from "../../../utils/logger.js";
 import {validPeerIdStr} from "../../../utils/peer.js";
+import {Clock} from "../../../../src/util/clock.js";
 
 describe("sync / range / chain", () => {
   const testCases: {
@@ -124,6 +125,7 @@ describe("sync / range / chain", () => {
 
       await new Promise<void>((resolve, reject) => {
         const onEnd: SyncChainFns["onEnd"] = (err) => (err ? reject(err) : resolve());
+        const clock = new Clock({config, genesisTime: 0, signal: new AbortController().signal});
         const initialSync = new SyncChain(
           startEpoch,
           target,
@@ -136,7 +138,7 @@ describe("sync / range / chain", () => {
             pruneBlockInputs,
             onEnd,
           }),
-          {config, logger, custodyConfig, metrics: null}
+          {config, logger, clock, custodyConfig, metrics: null}
         );
 
         const peers = [peer];
@@ -178,6 +180,7 @@ describe("sync / range / chain", () => {
 
     await new Promise<void>((resolve, reject) => {
       const onEnd: SyncChainFns["onEnd"] = (err) => (err ? reject(err) : resolve());
+      const clock = new Clock({config, genesisTime: 0, signal: new AbortController().signal});
       const initialSync = new SyncChain(
         startEpoch,
         target,
@@ -190,7 +193,7 @@ describe("sync / range / chain", () => {
           getConnectedPeerSyncMeta,
           onEnd,
         }),
-        {config, logger, custodyConfig, metrics: null}
+        {config, logger, clock, custodyConfig, metrics: null}
       );
 
       // Add peers after some time
