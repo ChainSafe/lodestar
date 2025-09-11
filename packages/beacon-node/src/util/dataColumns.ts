@@ -20,8 +20,8 @@ import {kzg} from "./kzg.js";
 import {dataColumnMatrixRecovery} from "./blobs.js";
 import {BlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {Metrics} from "../metrics/metrics.js";
-import {IClock} from "./clock.js";
 import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
+import {ChainEvent, ChainEventEmitter} from "../chain/emitter.js";
 
 export enum RecoverResult {
   // the recover is not attempted because we have less than `NUMBER_OF_COLUMNS / 2` columns
@@ -342,14 +342,17 @@ export function getDataColumnSidecarsFromColumnSidecar(
  */
 export async function recoverDataColumnSidecars(
   blockInput: BlockInputColumns,
-  clock: IClock,
+  emitter: ChainEventEmitter,
   metrics: Metrics | null
 ): Promise<void> {
   const existingColumns = blockInput.getAllColumns();
   const columnCount = existingColumns.length;
   if (columnCount >= NUMBER_OF_COLUMNS) {
     // We have all columns
-    throw new DataColumnReconstructionError({code: DataColumnReconstructionCode.NotAttemptedAlreadyFull});
+    metrics?.recoverDataColumnSidecars.reconstructionResult.inc({
+      result: DataColumnReconstructionCode.NotAttemptedAlreadyFull,
+    });
+    return;
   }
 
   if (columnCount < NUMBER_OF_COLUMNS / 2) {
@@ -378,19 +381,20 @@ export async function recoverDataColumnSidecars(
     );
   }
 
-  const firstDataColumn = existingColumns.at(0);
-  if (firstDataColumn) {
-    const slot = firstDataColumn.signedBlockHeader.message.slot;
-    const secFromSlot = clock.secFromSlot(slot);
-    metrics?.recoverDataColumnSidecars.elapsedTimeTillReconstructed.observe(secFromSlot);
-  }
-
   if (blockInput.getAllColumns().length === NUMBER_OF_COLUMNS) {
     // either gossip or getBlobsV2 resolved availability while we were recovering
     throw new DataColumnReconstructionError({code: DataColumnReconstructionCode.ReceivedAllDuringReconstruction});
   }
 
-  // We successfully recovered the data columns, update the cache
+  // Once the node obtains a column through reconstruction,
+  // the node MUST expose the new column as if it had received it over the network.
+  // If the node is subscribed to the subnet corresponding to the column,
+  // it MUST send the reconstructed DataColumnSidecar to its topic mesh neighbors.
+  // If instead the node is not subscribed to the corresponding subnet,
+  // it SHOULD still expose the availability of the DataColumnSidecar as part of the gossip emission process.
+  // After exposing the reconstructed DataColumnSidecar to the network,
+  // the node MAY delete the DataColumnSidecar if it is not part of the node's custody requirement.
+  const sidecarsToPublish = [];
   for (const columnSidecar of fullSidecars) {
     if (!blockInput.hasColumn(columnSidecar.index)) {
       blockInput.addColumn({
@@ -399,8 +403,10 @@ export async function recoverDataColumnSidecars(
         seenTimestampSec: Date.now(),
         source: BlockInputSource.recovery,
       });
+      sidecarsToPublish.push(columnSidecar);
     }
   }
+  emitter.emit(ChainEvent.publishDataColumns, sidecarsToPublish);
 
   metrics?.recoverDataColumnSidecars.reconstructionResult.inc({result: DataColumnReconstructionCode.Success});
 }
@@ -415,7 +421,6 @@ export enum DataColumnReconstructionCode {
 
 type DataColumnReconstructionErrorType = {
   code:
-    | DataColumnReconstructionCode.NotAttemptedAlreadyFull
     | DataColumnReconstructionCode.NotAttemptedHaveLessThanHalf
     | DataColumnReconstructionCode.ReceivedAllDuringReconstruction
     | DataColumnReconstructionCode.ReconstructionFailed;

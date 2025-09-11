@@ -22,7 +22,13 @@ import {
   sszTypesFor,
 } from "@lodestar/types";
 import {LogLevel, Logger, prettyBytes, toHex, toRootHex} from "@lodestar/utils";
-import {BlockInput, BlockInputSource, IBlockInput, isBlockInputColumns} from "../../chain/blocks/blockInput/index.js";
+import {
+  BlockInput,
+  BlockInputColumns,
+  BlockInputSource,
+  IBlockInput,
+  isBlockInputColumns,
+} from "../../chain/blocks/blockInput/index.js";
 import {BlobSidecarValidation} from "../../chain/blocks/types.js";
 import {ChainEvent} from "../../chain/emitter.js";
 import {
@@ -73,8 +79,6 @@ import {sszDeserialize} from "../gossip/topic.js";
 import {INetwork} from "../interface.js";
 import {PeerAction} from "../peers/index.js";
 import {AggregatorTracker} from "./aggregatorTracker.js";
-import {DataColumnReconstructionError, recoverDataColumnSidecars} from "../../util/dataColumns.js";
-import {callInNextEventLoop} from "../../util/eventLoop.js";
 
 /**
  * Gossip handler options as part of network options
@@ -282,7 +286,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     gossipSubnet: SubnetID,
     peerIdStr: string,
     seenTimestampSec: number
-  ): Promise<BlockInput> {
+  ): Promise<BlockInputColumns> {
     metrics?.peerDas.dataColumnSidecarProcessingRequests.inc();
     const dataColumnBlockHeader = dataColumnSidecar.signedBlockHeader.message;
     const slot = dataColumnBlockHeader.slot;
@@ -315,27 +319,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         seenTimestampSec,
         peerIdStr,
       });
-
-      // only triggers reconstruction on the 64th column to deduplicate the expensive request
-      if (blockInput.columnCount === NUMBER_OF_COLUMNS / 2) {
-        // do not await to block gossip handler
-        callInNextEventLoop(() => {
-          recoverDataColumnSidecars(blockInput, chain.clock, metrics).catch((err) => {
-            if (err instanceof DataColumnReconstructionError) {
-              metrics?.recoverDataColumnSidecars.reconstructionResult.inc({
-                result: err.type.code,
-              });
-            }
-            logger.debug(
-              "Error recovering column sidecars",
-              {
-                blockRoot: blockRootHex,
-              },
-              err
-            );
-          });
-        });
-      }
 
       const recvToValidation = Date.now() / 1000 - seenTimestampSec;
       const validationTime = recvToValidation - recvToValLatency;
@@ -578,6 +561,10 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         });
         // immediately attempt fetch of data columns from execution engine
         chain.getBlobsTracker.triggerGetBlobs(blockInput);
+        // if we've received at least half of the columns, trigger reconstruction of the rest
+        if (blockInput.columnCount >= NUMBER_OF_COLUMNS / 2) {
+          chain.columnReconstructionTracker.triggerColumnReconstruction(blockInput);
+        }
       }
     },
 
