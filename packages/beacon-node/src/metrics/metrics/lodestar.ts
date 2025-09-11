@@ -496,6 +496,17 @@ export function createLodestarMetrics(
         help: "Count of finalized sync peers by group index",
         labelNames: ["columnIndex"],
       }),
+      downloadByRange: {
+        success: register.gauge({
+          name: "lodestar_sync_range_download_by_range_success_total",
+          help: "Total number of successful downloadByRange calls",
+        }),
+        error: register.gauge<{code: string; client: string}>({
+          name: "lodestar_sync_range_download_by_range_error_total",
+          help: "Total number of errored downloadByRange calls",
+          labelNames: ["code", "client"],
+        }),
+      },
     },
 
     blockInputSync: {

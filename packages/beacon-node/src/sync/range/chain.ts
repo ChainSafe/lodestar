@@ -130,6 +130,7 @@ export class SyncChain {
 
   private readonly logger: Logger;
   private readonly config: ChainForkConfig;
+  private readonly metrics: Metrics | null;
   private readonly custodyConfig: CustodyConfig;
 
   constructor(
@@ -150,6 +151,7 @@ export class SyncChain {
     this.pruneBlockInputs = fns.pruneBlockInputs;
     this.getConnectedPeerSyncMeta = fns.getConnectedPeerSyncMeta;
     this.config = config;
+    this.metrics = metrics;
     this.custodyConfig = custodyConfig;
     this.logger = logger;
     this.logId = `${syncType}-${nextChainId++}`;
@@ -462,6 +464,7 @@ export class SyncChain {
       if (res.err) {
         // There's several known error cases where we want to take action on the peer
         const errCode = (res.err as LodestarError<{code: string}>).type?.code;
+        this.metrics?.syncRange.downloadByRange.error.inc({client: peer.client, code: errCode});
         if (this.syncType === RangeSyncType.Finalized) {
           // For finalized sync, we are stricter with peers as there is no ambiguity about which chain we're syncing.
           // The below cases indicate the peer may be on a different chain, so are not penalized during head sync.
@@ -498,6 +501,7 @@ export class SyncChain {
         );
         batch.downloadingError(peer.peerId); // Throws after MAX_DOWNLOAD_ATTEMPTS
       } else {
+        this.metrics?.syncRange.downloadByRange.success.inc();
         const downloadSuccessOutput = batch.downloadingSuccess(peer.peerId, res.result);
         const logMeta: Record<string, number> = {
           blockCount: downloadSuccessOutput.blocks.length,
