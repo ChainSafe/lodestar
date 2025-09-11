@@ -36,7 +36,7 @@ import {ChainEvent, ReorgEventData} from "../emitter.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
 import {toCheckpointHex} from "../stateCache/index.js";
-import {isBlockInputBlobs} from "./blockInput/blockInput.js";
+import {isBlockInputBlobs, isBlockInputColumns} from "./blockInput/blockInput.js";
 import {AttestationImportOpt, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {getCheckpointFromState} from "./utils/checkpoint.js";
 import {writeBlockInputToDb} from "./writeBlockInputToDb.js";
@@ -510,6 +510,12 @@ export async function importBlock(
       (block as altair.SignedBeaconBlock).message.body.syncAggregate,
       fullyVerifiedBlock.postState.epochCtx.currentSyncCommitteeIndexed.validatorIndices
     );
+  }
+
+  if (isBlockInputColumns(blockInput)) {
+    for (const {source} of blockInput.getSampledColumnsWithSource()) {
+      this.metrics?.importBlock.columnsBySource.inc({source});
+    }
   }
 
   if (isBlockInputBlobs(blockInput)) {

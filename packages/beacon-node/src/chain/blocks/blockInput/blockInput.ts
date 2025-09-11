@@ -799,6 +799,17 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     return columns;
   }
 
+  getSampledColumnsWithSource(): ColumnWithSource[] {
+    const columns: ColumnWithSource[] = [];
+    for (const index of this.sampledColumns) {
+      const column = this.columnsCache.get(index);
+      if (column) {
+        columns.push(column);
+      }
+    }
+    return columns;
+  }
+
   getSampledColumns(): fulu.DataColumnSidecars {
     const columns: fulu.DataColumnSidecars = [];
     for (const index of this.sampledColumns) {
