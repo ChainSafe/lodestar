@@ -5,6 +5,7 @@ import {Metrics} from "../metrics/metrics.js";
 import {ChainForkConfig} from "@lodestar/config";
 import {IBlockInput} from "./blocks/blockInput/index.js";
 import {getDataColumnSidecarsFromExecution} from "../util/execution.js";
+import {callInNextEventLoop} from "../util/eventLoop.js";
 
 export type GetBlobsTrackerInit = {
   logger: Logger;
@@ -58,15 +59,17 @@ export class GetBlobsTracker {
     // just that it has been triggered for this block root.
     this.running = true;
     this.lastBlockRootHex = blockInput.blockRootHex;
-    getDataColumnSidecarsFromExecution(
-      this.config,
-      this.executionEngine,
-      this.emitter,
-      blockInput,
-      this.metrics,
-      this.blobAndProofBuffers
-    ).finally(() => {
-      this.running = false;
+    callInNextEventLoop(() => {
+      getDataColumnSidecarsFromExecution(
+        this.config,
+        this.executionEngine,
+        this.emitter,
+        blockInput,
+        this.metrics,
+        this.blobAndProofBuffers
+      ).finally(() => {
+        this.running = false;
+      });
     });
   }
 }
