@@ -63,6 +63,7 @@ import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {SeenBlockInput} from "./seenCache/seenGossipBlockInput.js";
 import {ShufflingCache} from "./shufflingCache.js";
 import {ValidatorMonitor} from "./validatorMonitor.js";
+import {GetBlobsTracker} from "./GetBlobsTracker.js";
 
 export {BlockType, type AssembledBlockType};
 export {type ProposerPreparationData};
@@ -139,6 +140,8 @@ export interface IBeaconChain {
   readonly blacklistedBlocks: Map<RootHex, Slot | null>;
   // Cache for serialized objects
   readonly serializedCache: SerializedCache;
+
+  readonly getBlobsTracker: GetBlobsTracker;
 
   readonly opts: IChainOptions;
 

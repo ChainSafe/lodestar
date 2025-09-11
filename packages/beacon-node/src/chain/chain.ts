@@ -100,6 +100,7 @@ import {FIFOBlockStateCache} from "./stateCache/fifoBlockStateCache.js";
 import {InMemoryCheckpointStateCache} from "./stateCache/inMemoryCheckpointsCache.js";
 import {PersistentCheckpointStateCache} from "./stateCache/persistentCheckpointsCache.js";
 import {ValidatorMonitor} from "./validatorMonitor.js";
+import {GetBlobsTracker} from "./GetBlobsTracker.js";
 
 /**
  * The maximum number of cached produced results to keep in memory.
@@ -172,6 +173,8 @@ export class BeaconChain implements IBeaconChain {
   readonly blacklistedBlocks: Map<RootHex, Slot | null>;
 
   readonly serializedCache: SerializedCache;
+
+  readonly getBlobsTracker: GetBlobsTracker;
 
   readonly opts: IChainOptions;
 
@@ -393,6 +396,14 @@ export class BeaconChain implements IBeaconChain {
     this.emitter = emitter;
 
     this.serializedCache = new SerializedCache();
+
+    this.getBlobsTracker = new GetBlobsTracker({
+      logger,
+      executionEngine: this.executionEngine,
+      emitter,
+      metrics,
+      config,
+    });
 
     this.archiveStore = new ArchiveStore(
       {db, chain: this, logger: logger as LoggerNode, metrics},
