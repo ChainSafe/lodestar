@@ -64,6 +64,7 @@ import {SeenBlockInput} from "./seenCache/seenGossipBlockInput.js";
 import {ShufflingCache} from "./shufflingCache.js";
 import {ValidatorMonitor} from "./validatorMonitor.js";
 import {GetBlobsTracker} from "./GetBlobsTracker.js";
+import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
 
 export {BlockType, type AssembledBlockType};
 export {type ProposerPreparationData};
@@ -142,6 +143,7 @@ export interface IBeaconChain {
   readonly serializedCache: SerializedCache;
 
   readonly getBlobsTracker: GetBlobsTracker;
+  readonly columnReconstructionTracker: ColumnReconstructionTracker;
 
   readonly opts: IChainOptions;
 

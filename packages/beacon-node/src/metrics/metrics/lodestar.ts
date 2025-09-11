@@ -769,11 +769,6 @@ export function createLodestarMetrics(
       }),
     },
     recoverDataColumnSidecars: {
-      elapsedTimeTillReconstructed: register.histogram({
-        name: "lodestar_data_column_sidecar_elapsed_time_till_reconstructed_seconds",
-        help: "Time elapsed between block slot time and the time data column sidecar reconstructed",
-        buckets: [2, 4, 6, 8, 10, 12],
-      }),
       recoverTime: register.histogram({
         name: "lodestar_recover_data_column_sidecar_recover_time_seconds",
         help: "Time elapsed to recover data column sidecar",
