@@ -5,7 +5,6 @@ import {FastifyInstance} from "fastify";
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {getClient} from "../../../../src/beacon/client/lodestar.js";
 import {
-  AttesterSlashingList,
   AttesterSlashingListElectra,
   AttesterSlashingListTypeElectra,
 } from "../../../../src/beacon/routes/beacon/pool.js";

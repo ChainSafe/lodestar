@@ -1,6 +1,6 @@
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, ForkPostElectra} from "@lodestar/params";
+import {ForkPostElectra, ForkPreElectra, isForkPostElectra} from "@lodestar/params";
 import {Epoch, RootHex, SignedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {
   ArrayOf,
@@ -13,16 +13,20 @@ import {
   EmptyResponseData,
   JsonOnlyResponseCodec,
 } from "../../utils/codecs.js";
+import {toForkName} from "../../utils/fork.js";
+import {fromHeaders} from "../../utils/headers.js";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {
   ExecutionOptimisticFinalizedAndVersionCodec,
   ExecutionOptimisticFinalizedAndVersionMeta,
+  MetaHeader,
 } from "../../utils/metadata.js";
 import {AttesterSlashingList, AttesterSlashingListTypeElectra} from "./beacon/pool.js";
 import {StateArgs} from "./beacon/state.js";
 import {FilterGetPeers, NodePeer, PeerDirection, PeerState} from "./node.js";
 
 export const SignedBeaconBlockListTypeElectra = ArrayOf(ssz.electra.SignedBeaconBlock);
+export const SignedBeaconBlockListTypePhase0 = ArrayOf(ssz.phase0.SignedBeaconBlock);
 
 export type SyncChainDebugState = {
   targetRoot: string | null;
@@ -304,7 +308,7 @@ export type Endpoints = {
   getAttesterSlashingsFromBlocks: Endpoint<
     "POST",
     {signedBlocks: SignedBeaconBlock[]},
-    {body: unknown},
+    {body: unknown; headers: {[MetaHeader.Version]: string}},
     AttesterSlashingList,
     EmptyMeta
   >;
@@ -474,13 +478,18 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       method: "POST",
       req: {
         writeReqJson: ({signedBlocks}) => {
+          const fork = _config.getForkName(signedBlocks[0]?.message.slot ?? 0);
           return {
-            body: SignedBeaconBlockListTypeElectra.toJson(signedBlocks as SignedBeaconBlock<ForkPostElectra>[]),
+            body: isForkPostElectra(fork)
+              ? SignedBeaconBlockListTypeElectra.toJson(signedBlocks as SignedBeaconBlock<ForkPostElectra>[])
+              : SignedBeaconBlockListTypePhase0.toJson(signedBlocks as SignedBeaconBlock<ForkPreElectra>[]),
+            headers: {[MetaHeader.Version]: fork},
           };
         },
-        parseReqJson: ({body}) => {
+        parseReqJson: ({body, headers}) => {
+          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           const signedBlocks = (body as unknown[]).map((blockJson) => {
-            const convertedBlock = ssz[ForkName.electra].SignedBeaconBlock.fromJson(blockJson);
+            const convertedBlock = ssz[fork].SignedBeaconBlock.fromJson(blockJson);
             return convertedBlock;
           });
           return {
@@ -488,17 +497,25 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
           };
         },
         writeReqSsz: ({signedBlocks}) => {
+          const fork = _config.getForkName(signedBlocks[0]?.message.slot ?? 0);
           return {
-            body: SignedBeaconBlockListTypeElectra.serialize(signedBlocks as SignedBeaconBlock<ForkPostElectra>[]),
+            body: isForkPostElectra(fork)
+              ? SignedBeaconBlockListTypeElectra.serialize(signedBlocks as SignedBeaconBlock<ForkPostElectra>[])
+              : SignedBeaconBlockListTypePhase0.serialize(signedBlocks as SignedBeaconBlock<ForkPreElectra>[]),
+            headers: {[MetaHeader.Version]: fork},
           };
         },
-        parseReqSsz: ({body}) => {
+        parseReqSsz: ({body, headers}) => {
+          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
-            signedBlocks: SignedBeaconBlockListTypeElectra.deserialize(body),
+            signedBlocks: isForkPostElectra(fork)
+              ? SignedBeaconBlockListTypeElectra.deserialize(body)
+              : SignedBeaconBlockListTypePhase0.deserialize(body),
           };
         },
         schema: {
           body: Schema.ObjectArray,
+          headers: {[MetaHeader.Version]: Schema.String},
         },
       },
       resp: {

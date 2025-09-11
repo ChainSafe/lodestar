@@ -241,7 +241,7 @@ export function getLodestarApi({
       }[] = [];
       const beaconStateCache = new Map<Slot, CachedBeaconStateAllForks>();
       // TODO check fork
-      const fork = ForkSeq.electra;
+      const fork = chain.config.getForkSeq(signedBlocks[0]?.message.slot ?? 0);
 
       // helper function to manage the state cache
       const getState = async (slot: number) => {
