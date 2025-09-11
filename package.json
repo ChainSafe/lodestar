@@ -83,6 +83,7 @@
     "dns-over-http-resolver": "^2.1.1",
     "loupe": "^2.3.6",
     "testcontainers/**/nan": "^2.19.0",
-    "vitest": "3.0.9"
+    "vitest": "3.0.9",
+    "elliptic": ">=6.6.1"
   }
 }
