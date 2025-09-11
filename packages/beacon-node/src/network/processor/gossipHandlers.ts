@@ -73,7 +73,6 @@ import {sszDeserialize} from "../gossip/topic.js";
 import {INetwork} from "../interface.js";
 import {PeerAction} from "../peers/index.js";
 import {AggregatorTracker} from "./aggregatorTracker.js";
-import {getDataColumnSidecarsFromExecution} from "../../util/execution.js";
 import {DataColumnReconstructionError, recoverDataColumnSidecars} from "../../util/dataColumns.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 
@@ -393,7 +392,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         source: BlockInputSource.gossip,
       });
       // immediately attempt fetch of data columns from execution engine
-      getDataColumnSidecarsFromExecution(config, chain.executionEngine, chain.emitter, blockInput, metrics);
+      chain.getBlobsTracker.triggerGetBlobs(blockInput);
     } else {
       metrics?.blockInputFetchStats.totalDataAvailableBlockInputs.inc();
       metrics?.blockInputFetchStats.totalDataAvailableBlockInputBlobs.inc(
@@ -565,7 +564,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           });
         });
         // immediately attempt fetch of data columns from execution engine
-        getDataColumnSidecarsFromExecution(config, chain.executionEngine, chain.emitter, blockInput, metrics);
+        chain.getBlobsTracker.triggerGetBlobs(blockInput);
       }
     },
 
