@@ -514,13 +514,13 @@ export async function importBlock(
 
   if (isBlockInputColumns(blockInput)) {
     for (const {source} of blockInput.getSampledColumnsWithSource()) {
-      this.metrics?.importBlock.blobsBySource.inc({blobsSource: source});
+      this.metrics?.importBlock.columnsBySource.inc({source});
     }
   }
 
   if (isBlockInputBlobs(blockInput)) {
     for (const {source} of blockInput.getAllBlobsWithSource()) {
-      this.metrics?.importBlock.columnsBySource.inc({source});
+      this.metrics?.importBlock.blobsBySource.inc({blobsSource: source});
     }
   }
 
