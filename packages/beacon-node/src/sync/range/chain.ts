@@ -464,7 +464,7 @@ export class SyncChain {
       if (res.err) {
         // There's several known error cases where we want to take action on the peer
         const errCode = (res.err as LodestarError<{code: string}>).type?.code;
-        this.metrics?.syncRange.downloadByRange.error.inc({client: peer.client, code: errCode});
+        this.metrics?.syncRange.downloadByRange.error.inc({client: peer.client, code: errCode ?? "UNKNOWN"});
         if (this.syncType === RangeSyncType.Finalized) {
           // For finalized sync, we are stricter with peers as there is no ambiguity about which chain we're syncing.
           // The below cases indicate the peer may be on a different chain, so are not penalized during head sync.
