@@ -100,6 +100,7 @@ export class Batch {
 
   constructor(startEpoch: Epoch, config: ChainForkConfig, clock: IClock, custodyConfig: CustodyConfig) {
     this.config = config;
+    this.clock = clock;
     this.custodyConfig = custodyConfig;
 
     const {startSlot, count} = getBatchSlotRange(startEpoch);
