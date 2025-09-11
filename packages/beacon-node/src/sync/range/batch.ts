@@ -55,8 +55,8 @@ export type BatchState =
   | AwaitingDownloadState
   | {status: BatchStatus.Downloading; peer: PeerIdStr; blocks: IBlockInput[]}
   | DownloadSuccessState
-  | {status: BatchStatus.Processing; attempt: Attempt}
-  | {status: BatchStatus.AwaitingValidation; attempt: Attempt};
+  | {status: BatchStatus.Processing; blocks: IBlockInput[]; attempt: Attempt}
+  | {status: BatchStatus.AwaitingValidation; blocks: IBlockInput[]; attempt: Attempt};
 
 export type BatchMetadata = {
   startEpoch: Epoch;
@@ -249,11 +249,6 @@ export class Batch {
   }
 
   getBlocks(): IBlockInput[] {
-    switch (this.state.status) {
-      case BatchStatus.AwaitingValidation:
-      case BatchStatus.Processing:
-        return [];
-    }
     return this.state.blocks;
   }
 
@@ -339,7 +334,7 @@ export class Batch {
     // that the data came from will be handled by the Attempt that goes for processing
     const peers = this.goodPeers;
     this.goodPeers = [];
-    this.state = {status: BatchStatus.Processing, attempt: {peers, hash}};
+    this.state = {status: BatchStatus.Processing, blocks, attempt: {peers, hash}};
     return blocks;
   }
 
@@ -351,7 +346,7 @@ export class Batch {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.Processing));
     }
 
-    this.state = {status: BatchStatus.AwaitingValidation, attempt: this.state.attempt};
+    this.state = {status: BatchStatus.AwaitingValidation, blocks: this.state.blocks, attempt: this.state.attempt};
   }
 
   /**
