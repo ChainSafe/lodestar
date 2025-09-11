@@ -11,6 +11,8 @@ import {MAX_BATCH_DOWNLOAD_ATTEMPTS, MAX_BATCH_PROCESSING_ATTEMPTS} from "../con
 import {DownloadByRangeRequests} from "../utils/downloadByRange.js";
 import {getBatchSlotRange, hashBlocks} from "./utils/index.js";
 import {PeerSyncMeta} from "../../network/peers/peersData.js";
+import {IClock} from "../../util/clock.js";
+import {isDaOutOfRange} from "../../chain/blocks/blockInput/utils.js";
 
 /**
  * Current state of a batch
@@ -93,10 +95,12 @@ export class Batch {
   /** The number of download retries this batch has undergone due to a failed request. */
   private readonly failedDownloadAttempts: PeerIdStr[] = [];
   private readonly config: ChainForkConfig;
+  private readonly clock: IClock;
   private readonly custodyConfig: CustodyConfig;
 
-  constructor(startEpoch: Epoch, config: ChainForkConfig, custodyConfig: CustodyConfig) {
+  constructor(startEpoch: Epoch, config: ChainForkConfig, clock: IClock, custodyConfig: CustodyConfig) {
     this.config = config;
+    this.clock = clock;
     this.custodyConfig = custodyConfig;
 
     const {startSlot, count} = getBatchSlotRange(startEpoch);
@@ -111,6 +115,13 @@ export class Batch {
    * Builds ByRange requests for block, blobs and columns
    */
   private getRequests(blocks: IBlockInput[]): DownloadByRangeRequests {
+    const withinValidRequestWindow = !isDaOutOfRange(
+      this.config,
+      this.forkName,
+      this.startSlot,
+      this.clock.currentEpoch
+    );
+
     // fresh request where no blocks have started to be pulled yet
     if (!blocks.length) {
       const blocksRequest: phase0.BeaconBlocksByRangeRequest = {
@@ -118,7 +129,7 @@ export class Batch {
         count: this.count,
         step: 1,
       };
-      if (isForkPostFulu(this.forkName)) {
+      if (isForkPostFulu(this.forkName) && withinValidRequestWindow) {
         return {
           blocksRequest,
           columnsRequest: {
@@ -128,7 +139,7 @@ export class Batch {
           },
         };
       }
-      if (isForkPostDeneb(this.forkName)) {
+      if (isForkPostDeneb(this.forkName) && withinValidRequestWindow) {
         return {
           blocksRequest,
           blobsRequest: {
@@ -190,13 +201,13 @@ export class Batch {
     if (dataStartSlot <= endSlot) {
       // range of 40 - 63, startSlot will be inclusive but subtraction will exclusive so need to + 1
       const count = endSlot - dataStartSlot + 1;
-      if (isForkPostFulu(this.forkName)) {
+      if (isForkPostFulu(this.forkName) && withinValidRequestWindow) {
         requests.columnsRequest = {
           count,
           startSlot: dataStartSlot,
           columns: Array.from(neededColumns),
         };
-      } else if (isForkPostDeneb(this.forkName)) {
+      } else if (isForkPostDeneb(this.forkName) && withinValidRequestWindow) {
         requests.blobsRequest = {
           count,
           startSlot: dataStartSlot,

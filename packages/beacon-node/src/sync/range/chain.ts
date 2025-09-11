@@ -29,9 +29,11 @@ import {
   toBeDownloadedStartEpoch,
   validateBatchesStatus,
 } from "./utils/index.js";
+import {IClock} from "../../util/clock.js";
 
 export type SyncChainModules = {
   config: ChainForkConfig;
+  clock: IClock;
   custodyConfig: CustodyConfig;
   logger: Logger;
   metrics: Metrics | null;
@@ -130,6 +132,7 @@ export class SyncChain {
 
   private readonly logger: Logger;
   private readonly config: ChainForkConfig;
+  private readonly clock: IClock;
   private readonly metrics: Metrics | null;
   private readonly custodyConfig: CustodyConfig;
 
@@ -140,7 +143,7 @@ export class SyncChain {
     fns: SyncChainFns,
     modules: SyncChainModules
   ) {
-    const {config, custodyConfig, logger, metrics} = modules;
+    const {config, clock, custodyConfig, logger, metrics} = modules;
     this.firstBatchEpoch = initialBatchEpoch;
     this.lastEpochWithProcessBlocks = initialBatchEpoch;
     this.target = initialTarget;
@@ -151,6 +154,7 @@ export class SyncChain {
     this.pruneBlockInputs = fns.pruneBlockInputs;
     this.getConnectedPeerSyncMeta = fns.getConnectedPeerSyncMeta;
     this.config = config;
+    this.clock = clock;
     this.metrics = metrics;
     this.custodyConfig = custodyConfig;
     this.logger = logger;
@@ -441,7 +445,7 @@ export class SyncChain {
       return null;
     }
 
-    const batch = new Batch(startEpoch, this.config, this.custodyConfig);
+    const batch = new Batch(startEpoch, this.config, this.clock, this.custodyConfig);
     this.batches.set(startEpoch, batch);
     return batch;
   }

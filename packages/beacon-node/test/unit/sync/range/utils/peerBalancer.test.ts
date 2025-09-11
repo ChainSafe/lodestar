@@ -13,6 +13,7 @@ import {RangeSyncType} from "../../../../../src/sync/utils/remoteSyncType.js";
 import {CustodyConfig} from "../../../../../src/util/dataColumns.js";
 import {PeerIdStr} from "../../../../../src/util/peerId.js";
 import {getRandPeerSyncMeta} from "../../../../utils/peer.js";
+import {clock} from "../../../../utils/blocksAndData.js";
 
 describe("sync / range / peerBalancer", () => {
   const custodyConfig = {sampledColumns: [0, 1, 2, 3]} as CustodyConfig;
@@ -144,8 +145,8 @@ describe("sync / range / peerBalancer", () => {
           ? createChainForkConfig({...chainConfig, FULU_FORK_EPOCH: 0})
           : createChainForkConfig(chainConfig);
 
-        const batch0 = new Batch(1, config, custodyConfig);
-        const batch1 = new Batch(2, config, custodyConfig);
+        const batch0 = new Batch(1, config, clock, custodyConfig);
+        const batch1 = new Batch(2, config, clock, custodyConfig);
 
         // Batch zero has a failedDownloadAttempt with peer1
         batch0.startDownloading(peer1.peerId);
@@ -167,7 +168,7 @@ describe("sync / range / peerBalancer", () => {
 
     it("should not retry the batch with a not as up-to-date peer", async () => {
       const config = createChainForkConfig({...chainConfig, FULU_FORK_EPOCH: 0});
-      const batch0 = new Batch(1, config, custodyConfig);
+      const batch0 = new Batch(1, config, clock, custodyConfig);
       const blocksRequest = batch0.requests.blocksRequest as {startSlot: number; count: number};
       // Batch zero has a failedDownloadAttempt with peer1
       batch0.startDownloading(peer1.peerId);
@@ -304,13 +305,13 @@ describe("sync / range / peerBalancer", () => {
           ? createChainForkConfig({...chainConfig, FULU_FORK_EPOCH: 0})
           : createChainForkConfig(chainConfig);
 
-        const batch0 = new Batch(1, config, custodyConfig);
-        const batch1 = new Batch(2, config, custodyConfig);
+        const batch0 = new Batch(1, config, clock, custodyConfig);
+        const batch1 = new Batch(2, config, clock, custodyConfig);
         // peer1 and peer2 are busy downloading
         batch0.startDownloading(peer1.peerId);
         batch1.startDownloading(peer2.peerId);
 
-        const newBatch = new Batch(3, config, custodyConfig);
+        const newBatch = new Batch(3, config, clock, custodyConfig);
         const peerBalancer = new ChainPeersBalancer(peerInfos, [batch0, batch1], custodyConfig, RangeSyncType.Head);
         const idlePeer = peerBalancer.idlePeerForBatch(newBatch);
         expect(idlePeer?.peerId).toBe(expected);

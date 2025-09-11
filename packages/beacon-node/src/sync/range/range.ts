@@ -259,7 +259,13 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
           pruneBlockInputs: this.pruneBlockInputs,
           onEnd: this.onSyncChainEnd,
         },
-        {config: this.config, logger: this.logger, custodyConfig: this.chain.custodyConfig, metrics: this.metrics}
+        {
+          config: this.config,
+          clock: this.chain.clock,
+          logger: this.logger,
+          custodyConfig: this.chain.custodyConfig,
+          metrics: this.metrics,
+        }
       );
       this.chains.set(syncType, syncChain);
 

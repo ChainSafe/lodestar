@@ -8,6 +8,7 @@ import {
   ForkPostDeneb,
   ForkPostFulu,
   NUMBER_OF_COLUMNS,
+  SLOTS_PER_EPOCH,
   isForkPostDeneb,
   isForkPostFulu,
 } from "@lodestar/params";
@@ -20,6 +21,7 @@ import {getBlobSidecars, kzgCommitmentToVersionedHash} from "../../src/util/blob
 import {CustodyConfig, computePostFuluKzgCommitmentsInclusionProof} from "../../src/util/dataColumns.js";
 import {kzg} from "../../src/util/kzg.js";
 import {ROOT_SIZE} from "../../src/util/sszBytes.js";
+import {Clock} from "../../src/util/clock.js";
 
 export const CAPELLA_FORK_EPOCH = 0;
 export const DENEB_FORK_EPOCH = 10;
@@ -33,6 +35,12 @@ export const config = createChainForkConfig({
   ELECTRA_FORK_EPOCH,
   FULU_FORK_EPOCH,
   GLOAS_FORK_EPOCH,
+});
+export const clock = new Clock({
+  config,
+  // For our testing we want the clock to be at head of the latest fork
+  genesisTime: Date.now() / 1000 - SLOTS_PER_EPOCH * GLOAS_FORK_EPOCH * config.SECONDS_PER_SLOT,
+  signal: new AbortController().signal,
 });
 export const privateKey = await generateKeyPair("secp256k1");
 export const nodeId = computeNodeIdFromPrivateKey(privateKey);
