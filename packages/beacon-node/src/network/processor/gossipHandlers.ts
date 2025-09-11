@@ -22,7 +22,7 @@ import {
   sszTypesFor,
 } from "@lodestar/types";
 import {LogLevel, Logger, prettyBytes, toHex, toRootHex} from "@lodestar/utils";
-import {BlockInput, BlockInputSource, IBlockInput} from "../../chain/blocks/blockInput/index.js";
+import {BlockInput, BlockInputSource, IBlockInput, isBlockInputColumns} from "../../chain/blocks/blockInput/index.js";
 import {BlobSidecarValidation} from "../../chain/blocks/types.js";
 import {ChainEvent} from "../../chain/emitter.js";
 import {
@@ -284,11 +284,24 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     seenTimestampSec: number
   ): Promise<BlockInput> {
     metrics?.peerDas.dataColumnSidecarProcessingRequests.inc();
-    const verificationTimer = metrics?.peerDas.dataColumnSidecarGossipVerificationTime.startTimer();
-
     const dataColumnBlockHeader = dataColumnSidecar.signedBlockHeader.message;
     const slot = dataColumnBlockHeader.slot;
     const blockRootHex = toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(dataColumnBlockHeader));
+
+    // first check if we should even process this column (we may have already processed it via getBlobsV2)
+    {
+      const blockInput = chain.seenBlockInputCache.get(blockRootHex);
+      if (blockInput && isBlockInputColumns(blockInput) && blockInput.hasColumn(dataColumnSidecar.index)) {
+        metrics?.peerDas.dataColumnSidecarProcessingSkip.inc();
+        logger.debug("Already have column sidecar, skipping processing", {
+          ...blockInput.getLogMeta(),
+          index: dataColumnSidecar.index,
+        });
+        return blockInput;
+      }
+    }
+
+    const verificationTimer = metrics?.peerDas.dataColumnSidecarGossipVerificationTime.startTimer();
 
     const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
     const recvToValLatency = Date.now() / 1000 - seenTimestampSec;

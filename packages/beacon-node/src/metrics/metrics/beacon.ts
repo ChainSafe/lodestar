@@ -293,6 +293,10 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         name: "beacon_data_column_sidecar_processing_requests_total",
         help: "Number of data column sidecars submitted for processing",
       }),
+      dataColumnSidecarProcessingSkip: register.counter({
+        name: "beacon_data_column_sidecar_processing_skip_total",
+        help: "Number of data column sidecars with processing skipped for gossip",
+      }),
       dataColumnSidecarProcessingSuccesses: register.counter({
         name: "beacon_data_column_sidecar_processing_successes_total",
         help: "Number of data column sidecars verified for gossip",
