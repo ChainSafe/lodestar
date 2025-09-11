@@ -357,7 +357,10 @@ export async function recoverDataColumnSidecars(
 
   if (columnCount < NUMBER_OF_COLUMNS / 2) {
     // We don't have enough columns to recover
-    throw new DataColumnReconstructionError({code: DataColumnReconstructionCode.NotAttemptedHaveLessThanHalf});
+    metrics?.recoverDataColumnSidecars.reconstructionResult.inc({
+      result: DataColumnReconstructionCode.NotAttemptedHaveLessThanHalf,
+    });
+    return;
   }
 
   metrics?.recoverDataColumnSidecars.custodyBeforeReconstruction.set(columnCount);
@@ -372,18 +375,21 @@ export async function recoverDataColumnSidecars(
 
   const timer = metrics?.recoverDataColumnSidecars.recoverTime.startTimer();
   // if this function throws, we catch at the consumer side
-  const fullSidecars = await dataColumnMatrixRecovery(partialSidecars);
+  const fullSidecars = await dataColumnMatrixRecovery(partialSidecars).catch(() => null);
   timer?.();
   if (fullSidecars == null) {
-    throw new DataColumnReconstructionError(
-      {code: DataColumnReconstructionCode.ReconstructionFailed},
-      "No sidecars rebuilt via dataColumnMatrixRecovery"
-    );
+    metrics?.recoverDataColumnSidecars.reconstructionResult.inc({
+      result: DataColumnReconstructionCode.ReconstructionFailed,
+    });
+    return;
   }
 
   if (blockInput.getAllColumns().length === NUMBER_OF_COLUMNS) {
     // either gossip or getBlobsV2 resolved availability while we were recovering
-    throw new DataColumnReconstructionError({code: DataColumnReconstructionCode.ReceivedAllDuringReconstruction});
+    metrics?.recoverDataColumnSidecars.reconstructionResult.inc({
+      result: DataColumnReconstructionCode.ReceivedAllDuringReconstruction,
+    });
+    return;
   }
 
   // Once the node obtains a column through reconstruction,
