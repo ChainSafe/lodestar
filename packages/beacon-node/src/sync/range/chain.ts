@@ -509,19 +509,19 @@ export class SyncChain {
         );
         batch.downloadingError(peer.peerId); // Throws after MAX_DOWNLOAD_ATTEMPTS
       } else {
-        const {warn: warns, result} = res.result;
+        const {warnings, result} = res.result;
         const downloadSuccessOutput = batch.downloadingSuccess(peer.peerId, result);
         const logMeta: Record<string, number> = {
           blockCount: downloadSuccessOutput.blocks.length,
         };
 
-        if (warns && warns.length > 0) {
-          for (const warn of warns) {
-            this.metrics?.syncRange.downloadByRange.warn.inc({client: peer.client, code: warn.type.code});
+        if (warnings && warnings.length > 0) {
+          for (const warning of warnings) {
+            this.metrics?.syncRange.downloadByRange.warn.inc({client: peer.client, code: warning.type.code});
             this.logger.debug(
               "Batch downloaded with warning",
               {id: this.logId, epoch: batch.startEpoch, ...logMeta, peer: prettyPrintPeerIdStr(peer.peerId)},
-              warn
+              warning
             );
           }
         } else {

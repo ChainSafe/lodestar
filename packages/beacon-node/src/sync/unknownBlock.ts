@@ -519,11 +519,11 @@ export class BlockInputSync {
         });
         cacheItem = downloadResult.result;
         const logCtx = {slot: cacheItem.blockInput.slot, rootHex, peerId, peerClient};
-        const warns = downloadResult.warn;
-        if (warns) {
-          for (const warn of warns) {
-            this.logger.debug("BlockInputSync.fetchBlockInput: downloaded with warn", logCtx, warn);
-            this.metrics?.blockInputSync.downloadByRoot.warn.inc({code: warn.type.code, client: peerClient});
+        const warnings = downloadResult.warnings;
+        if (warnings) {
+          for (const warning of warnings) {
+            this.logger.debug("BlockInputSync.fetchBlockInput: downloaded with warning", logCtx, warning);
+            this.metrics?.blockInputSync.downloadByRoot.warn.inc({code: warning.type.code, client: peerClient});
           }
           // TODO: penalize peer?
         } else {

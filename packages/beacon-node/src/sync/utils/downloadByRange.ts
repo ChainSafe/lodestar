@@ -298,7 +298,7 @@ export async function validateResponses({
   }
 
   const validatedResponses: ValidatedResponses = {};
-  let warn: DownloadByRangeError[] | null = null;
+  let warnings: DownloadByRangeError[] | null = null;
 
   if (blocksRequest) {
     validatedResponses.validatedBlocks = validateBlockByRangeResponse(config, blocksRequest, blocks ?? []);
@@ -306,7 +306,7 @@ export async function validateResponses({
 
   const dataRequest = blobsRequest ?? columnsRequest;
   if (!dataRequest) {
-    return {result: validatedResponses, warn: null};
+    return {result: validatedResponses, warnings: null};
   }
 
   const dataRequestBlocks = getBlocksForDataValidation(
@@ -356,10 +356,10 @@ export async function validateResponses({
       columnSidecars
     );
     validatedResponses.validatedColumnSidecars = validatedColumnSidecarsResult.result;
-    warn = validatedColumnSidecarsResult.warn;
+    warnings = validatedColumnSidecarsResult.warnings;
   }
 
-  return {result: validatedResponses, warn};
+  return {result: validatedResponses, warnings};
 }
 
 /**
@@ -558,7 +558,7 @@ export async function validateColumnsByRangeResponse(
     );
   }
 
-  const warn: DownloadByRangeError[] = [];
+  const warnings: DownloadByRangeError[] = [];
   // no need to check for columnSidecars.length  vs expectedColumnCount here, will be checked per-block below
   const requestedColumns = new Set(request.columns);
   const validateSidecarsPromises: Promise<ValidatedColumnSidecars>[] = [];
@@ -586,7 +586,7 @@ export async function validateColumnsByRangeResponse(
     const returnedColumns = new Set(blockColumnSidecars.map((c) => c.index));
     const missingIndices = request.columns.filter((i) => !returnedColumns.has(i));
     if (missingIndices.length > 0) {
-      warn.push(
+      warnings.push(
         new DownloadByRangeError(
           {
             code: DownloadByRangeErrorCode.MISSING_COLUMNS,
@@ -601,7 +601,7 @@ export async function validateColumnsByRangeResponse(
 
     const extraIndices = [...returnedColumns].filter((i) => !requestedColumns.has(i));
     if (extraIndices.length > 0) {
-      warn.push(
+      warnings.push(
         new DownloadByRangeError(
           {
             code: DownloadByRangeErrorCode.EXTRA_COLUMNS,
@@ -624,7 +624,7 @@ export async function validateColumnsByRangeResponse(
 
   // Await all sidecar validations in parallel
   const result = await Promise.all(validateSidecarsPromises);
-  return {result, warn: warn.length ? warn : null};
+  return {result, warnings: warnings.length ? warnings : null};
 }
 
 /**

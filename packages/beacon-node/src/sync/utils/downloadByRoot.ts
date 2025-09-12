@@ -69,7 +69,7 @@ export async function downloadByRoot({
 
   const {
     result: {block, blobSidecars, columnSidecars},
-    warn,
+    warnings: warn,
   } = await fetchByRoot({
     config,
     network,
@@ -163,7 +163,7 @@ export async function downloadByRoot({
       timeAddedSec: cacheItem.timeAddedSec,
       peerIdStrings: cacheItem.peerIdStrings,
     },
-    warn,
+    warnings: warn,
   };
 }
 
@@ -264,7 +264,7 @@ export async function fetchByRoot({
       blobSidecars,
       columnSidecars: columnSidecarResult?.result,
     },
-    warn: columnSidecarResult?.warn ?? null,
+    warnings: columnSidecarResult?.warnings ?? null,
   };
 }
 
@@ -344,7 +344,7 @@ export async function fetchAndValidateColumns({
   const slot = block.message.slot;
   const blobCount = block.message.body.blobKzgCommitments.length;
   if (blobCount === 0) {
-    return {result: [], warn: null};
+    return {result: [], warnings: null};
   }
 
   const blockRootHex = toRootHex(blockRoot);
@@ -354,7 +354,7 @@ export async function fetchAndValidateColumns({
     {blockRoot, columns: requestedColumns},
   ]);
 
-  const warn: DownloadByRootError[] = [];
+  const warnings: DownloadByRootError[] = [];
 
   // it's not acceptable if no sidecar is returned with >0 blobCount
   if (columnSidecars.length === 0) {
@@ -372,7 +372,7 @@ export async function fetchAndValidateColumns({
   const returnedColumnsSet = new Set(returnedColumns);
   const missingIndices = requestedColumns.filter((c) => !returnedColumnsSet.has(c));
   if (missingIndices.length > 0) {
-    warn.push(
+    warnings.push(
       new DownloadByRootError(
         {
           code: DownloadByRootErrorCode.NOT_ENOUGH_SIDECARS_RECEIVED,
@@ -389,7 +389,7 @@ export async function fetchAndValidateColumns({
   // check extra returned columnSidecar
   const extraIndices = returnedColumns.filter((c) => !requestedColumnsSet.has(c));
   if (extraIndices.length > 0) {
-    warn.push(
+    warnings.push(
       new DownloadByRootError(
         {
           code: DownloadByRootErrorCode.EXTRA_SIDECAR_RECEIVED,
@@ -405,7 +405,7 @@ export async function fetchAndValidateColumns({
 
   await validateBlockDataColumnSidecars(slot, blockRoot, blobCount, columnSidecars);
 
-  return {result: columnSidecars, warn: warn.length > 0 ? warn : null};
+  return {result: columnSidecars, warnings: warnings.length > 0 ? warnings : null};
 }
 
 // TODO(fulu) not in use, remove?

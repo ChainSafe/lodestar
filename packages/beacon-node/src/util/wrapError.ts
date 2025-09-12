@@ -24,4 +24,4 @@ export async function wrapError<T>(promise: Promise<T>): Promise<Result<T>> {
 /**
  * Some functions may want to return a result and some warning typed as Error
  */
-export type WarnResult<T, E extends Error> = {result: T; warn: E[] | null};
+export type WarnResult<T, E extends Error> = {result: T; warnings: E[] | null};
