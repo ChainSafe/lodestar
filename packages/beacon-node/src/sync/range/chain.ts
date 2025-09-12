@@ -509,6 +509,12 @@ export class SyncChain {
         );
         batch.downloadingError(peer.peerId); // Throws after MAX_DOWNLOAD_ATTEMPTS
       } else {
+        this.logger.verbose("Batch download success", {
+          id: this.logId,
+          ...batch.getMetadata(),
+          peer: prettyPrintPeerIdStr(peer.peerId),
+        });
+        this.metrics?.syncRange.downloadByRange.success.inc();
         const {warnings, result} = res.result;
         const downloadSuccessOutput = batch.downloadingSuccess(peer.peerId, result);
         const logMeta: Record<string, number> = {
@@ -524,8 +530,6 @@ export class SyncChain {
               warning
             );
           }
-        } else {
-          this.metrics?.syncRange.downloadByRange.success.inc();
         }
 
         for (const block of downloadSuccessOutput.blocks) {

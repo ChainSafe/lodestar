@@ -519,6 +519,8 @@ export class BlockInputSync {
         });
         cacheItem = downloadResult.result;
         const logCtx = {slot: cacheItem.blockInput.slot, rootHex, peerId, peerClient};
+        this.logger.verbose("BlockInputSync.fetchBlockInput: successful download", logCtx);
+        this.metrics?.blockInputSync.downloadByRoot.success.inc();
         const warnings = downloadResult.warnings;
         if (warnings) {
           for (const warning of warnings) {
@@ -526,9 +528,6 @@ export class BlockInputSync {
             this.metrics?.blockInputSync.downloadByRoot.warn.inc({code: warning.type.code, client: peerClient});
           }
           // TODO: penalize peer?
-        } else {
-          this.logger.verbose("BlockInputSync.fetchBlockInput: successful download", logCtx);
-          this.metrics?.blockInputSync.downloadByRoot.success.inc();
         }
       } catch (e) {
         this.logger.debug(
