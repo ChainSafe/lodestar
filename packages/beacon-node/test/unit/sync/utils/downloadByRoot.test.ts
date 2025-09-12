@@ -150,14 +150,10 @@ describe("downloadByRoot.ts", () => {
         blobMeta,
       });
 
-      expect(sendBlobSidecarsByRootMock).toHaveBeenCalledExactlyOnceWith(peerIdStr, [
-        {blockRoot: denebBlockWithBlobs.blockRoot, index: 0},
-        {blockRoot: denebBlockWithBlobs.blockRoot, index: 1},
-        {blockRoot: denebBlockWithBlobs.blockRoot, index: 2},
-        {blockRoot: denebBlockWithBlobs.blockRoot, index: 3},
-        {blockRoot: denebBlockWithBlobs.blockRoot, index: 4},
-        {blockRoot: denebBlockWithBlobs.blockRoot, index: 5},
-      ]);
+      expect(sendBlobSidecarsByRootMock).toHaveBeenCalledExactlyOnceWith(
+        peerIdStr,
+        denebBlockWithBlobs.blobSidecars.map(({index}) => ({blockRoot: denebBlockWithBlobs.blockRoot, index}))
+      );
 
       const returnedIndices = response.map((b) => b.index);
       expect(returnedIndices).toEqual([1, 3, 5]);
