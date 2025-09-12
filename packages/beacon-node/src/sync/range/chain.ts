@@ -12,9 +12,9 @@ import {PeerSyncMeta} from "../../network/peers/peersData.js";
 import {CustodyConfig} from "../../util/dataColumns.js";
 import {ItTrigger} from "../../util/itTrigger.js";
 import {PeerIdStr} from "../../util/peerId.js";
-import {wrapError} from "../../util/wrapError.js";
+import {WarnResult, wrapError} from "../../util/wrapError.js";
 import {BATCH_BUFFER_SIZE, EPOCHS_PER_BATCH, MAX_LOOK_AHEAD_EPOCHS} from "../constants.js";
-import {DownloadByRangeErrorCode} from "../utils/downloadByRange.js";
+import {DownloadByRangeError, DownloadByRangeErrorCode} from "../utils/downloadByRange.js";
 import {RangeSyncType} from "../utils/remoteSyncType.js";
 import {Batch, BatchError, BatchErrorCode, BatchMetadata, BatchStatus} from "./batch.js";
 import {
@@ -46,7 +46,11 @@ export type SyncChainFns = {
    */
   processChainSegment: (blocks: IBlockInput[], syncType: RangeSyncType) => Promise<void>;
   /** Must download blocks, and validate their range */
-  downloadByRange: (peer: PeerSyncMeta, batch: Batch, syncType: RangeSyncType) => Promise<IBlockInput[]>;
+  downloadByRange: (
+    peer: PeerSyncMeta,
+    batch: Batch,
+    syncType: RangeSyncType
+  ) => Promise<WarnResult<IBlockInput[], DownloadByRangeError>>;
   /** Report peer for negative actions. Decouples from the full network instance */
   reportPeer: (peer: PeerIdStr, action: PeerAction, actionName: string) => void;
   /** Gets current peer custodyColumns and earliestAvailableSlot */
@@ -505,11 +509,29 @@ export class SyncChain {
         );
         batch.downloadingError(peer.peerId); // Throws after MAX_DOWNLOAD_ATTEMPTS
       } else {
+        this.logger.verbose("Batch download success", {
+          id: this.logId,
+          ...batch.getMetadata(),
+          peer: prettyPrintPeerIdStr(peer.peerId),
+        });
         this.metrics?.syncRange.downloadByRange.success.inc();
-        const downloadSuccessOutput = batch.downloadingSuccess(peer.peerId, res.result);
+        const {warnings, result} = res.result;
+        const downloadSuccessOutput = batch.downloadingSuccess(peer.peerId, result);
         const logMeta: Record<string, number> = {
           blockCount: downloadSuccessOutput.blocks.length,
         };
+
+        if (warnings && warnings.length > 0) {
+          for (const warning of warnings) {
+            this.metrics?.syncRange.downloadByRange.warn.inc({client: peer.client, code: warning.type.code});
+            this.logger.debug(
+              "Batch downloaded with warning",
+              {id: this.logId, epoch: batch.startEpoch, ...logMeta, peer: prettyPrintPeerIdStr(peer.peerId)},
+              warning
+            );
+          }
+        }
+
         for (const block of downloadSuccessOutput.blocks) {
           if (isBlockInputBlobs(block)) {
             const blockLogMeta = block.getLogMeta();

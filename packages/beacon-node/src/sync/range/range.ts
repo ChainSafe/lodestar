@@ -202,7 +202,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
 
   private downloadByRange: SyncChainFns["downloadByRange"] = async (peer, batch) => {
     const batchBlocks = batch.getBlocks();
-    const responses = await downloadByRange({
+    const {result, warnings} = await downloadByRange({
       config: this.config,
       network: this.network,
       logger: this.logger,
@@ -213,10 +213,10 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
     const cached = cacheByRangeResponses({
       cache: this.chain.seenBlockInputCache,
       peerIdStr: peer.peerId,
-      responses,
+      responses: result,
       batchBlocks,
     });
-    return cached;
+    return {result: cached, warnings};
   };
 
   private pruneBlockInputs: SyncChainFns["pruneBlockInputs"] = (blocks: IBlockInput[]) => {
