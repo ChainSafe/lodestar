@@ -547,45 +547,31 @@ export class BlockInputSync {
       }
     }
 
-    throw this.buildBlockInputSyncError(cacheItem, i);
-  }
+    const message = `Error fetching BlockInput with blockRoot=${prettyBytes(rootHex)} slot=${slot} after ${i} attempts.`;
 
-  private buildBlockInputSyncError(block: BlockInputSyncCacheItem, retries: number): Error {
-    const errors = [
-      `Error fetching BlockInput with blockRoot=${prettyBytes(getBlockInputSyncCacheItemRootHex(block))} slot=${getBlockInputSyncCacheItemSlot(block)} after ${retries} attempts.`,
-    ];
-
-    if (!isPendingBlockInput(block)) {
-      errors.push("No block and no data was found");
-
-      return new Error(errors.join(" "));
+    if (!isPendingBlockInput(cacheItem)) {
+      throw Error(`${message} No block and no data was found.`);
     }
 
-    if (!block.blockInput.hasBlock()) {
-      errors.push("Block was not found.");
-
-      return new Error(errors.join(" "));
+    if (!cacheItem.blockInput.hasBlock()) {
+      throw new Error(`${message} Block was not found.`);
     }
 
-    if (isBlockInputBlobs(block.blockInput)) {
-      const missing = block.blockInput.getMissingBlobMeta().map((b) => b.index);
+    if (isBlockInputBlobs(cacheItem.blockInput)) {
+      const missing = cacheItem.blockInput.getMissingBlobMeta().map((b) => b.index);
       if (missing.length) {
-        errors.push(`Missing blob indices=${prettyPrintIndices(missing)}`);
+        throw new Error(`${message} Missing blob indices=${prettyPrintIndices(missing)}.`);
       }
-
-      return new Error(errors.join(" "));
     }
 
-    if (isBlockInputColumns(block.blockInput)) {
-      const missing = block.blockInput.getMissingSampledColumnMeta().missing;
+    if (isBlockInputColumns(cacheItem.blockInput)) {
+      const missing = cacheItem.blockInput.getMissingSampledColumnMeta().missing;
       if (missing.length) {
-        errors.push(`Missing column indices=${prettyPrintIndices(missing)}`);
+        throw new Error(`${message} Missing column indices=${prettyPrintIndices(missing)}.`);
       }
-
-      return new Error(errors.join(" "));
     }
 
-    return new Error("Unrecognized blockInput type");
+    throw new Error(message);
   }
 
   /**
