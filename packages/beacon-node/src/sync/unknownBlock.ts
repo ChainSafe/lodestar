@@ -482,6 +482,7 @@ export class BlockInputSync {
    */
   private async fetchBlockInput(cacheItem: BlockInputSyncCacheItem): Promise<PendingBlockInput> {
     const rootHex = getBlockInputSyncCacheItemRootHex(cacheItem);
+    const slot = getBlockInputSyncCacheItemSlot(cacheItem);
     const excludedPeers = new Set<PeerIdStr>();
     const defaultPendingColumns =
       this.config.getForkSeq(this.chain.clock.currentSlot) >= ForkSeq.fulu
@@ -521,7 +522,7 @@ export class BlockInputSync {
       } catch (e) {
         this.logger.debug(
           "Error downloading in BlockInputSync.fetchBlockInput",
-          {attempt: i, rootHex, peer: peerId, peerClient},
+          {attempt: i, rootHex, slot, peer: peerId, peerClient},
           e as Error
         );
         const downloadByRootMetrics = this.metrics?.blockInputSync.downloadByRoot;
@@ -546,26 +547,45 @@ export class BlockInputSync {
       }
     }
 
-    let message = `Error fetching BlockInput with blockRoot=${prettyBytes(rootHex)} after ${i} attempts.`;
-    if (!isPendingBlockInput(cacheItem)) {
-      message += " No block and no data was found";
-    } else {
-      if (!cacheItem.blockInput.hasBlock()) {
-        message += " Block was not found.";
-      } else if (isBlockInputBlobs(cacheItem.blockInput)) {
-        const missing = cacheItem.blockInput.getMissingBlobMeta().map((b) => b.index);
-        if (missing.length) {
-          message += ` Missing blob indices=${prettyPrintIndices(missing)}`;
-        }
-      } else if (isBlockInputColumns(cacheItem.blockInput)) {
-        const missing = cacheItem.blockInput.getMissingSampledColumnMeta().missing;
-        if (missing.length) {
-          message += ` Missing column indices=${prettyPrintIndices(missing)}`;
-        }
-      }
+    throw this.buildBlockInputSyncError(cacheItem, i);
+  }
+
+  private buildBlockInputSyncError(block: BlockInputSyncCacheItem, retries: number): Error {
+    const errors = [
+      `Error fetching BlockInput with blockRoot=${prettyBytes(getBlockInputSyncCacheItemRootHex(block))} slot=${getBlockInputSyncCacheItemSlot(block)} after ${retries} attempts.`,
+    ];
+
+    if (!isPendingBlockInput(block)) {
+      errors.push("No block and no data was found");
+
+      return new Error(errors.join(" "));
     }
 
-    throw Error(message);
+    if (!block.blockInput.hasBlock()) {
+      errors.push("Block was not found.");
+
+      return new Error(errors.join(" "));
+    }
+
+    if (isBlockInputBlobs(block.blockInput)) {
+      const missing = block.blockInput.getMissingBlobMeta().map((b) => b.index);
+      if (missing.length) {
+        errors.push(`Missing blob indices=${prettyPrintIndices(missing)}`);
+      }
+
+      return new Error(errors.join(" "));
+    }
+
+    if (isBlockInputColumns(block.blockInput)) {
+      const missing = block.blockInput.getMissingSampledColumnMeta().missing;
+      if (missing.length) {
+        errors.push(`Missing column indices=${prettyPrintIndices(missing)}`);
+      }
+
+      return new Error(errors.join(" "));
+    }
+
+    return new Error("Unrecognized blockInput type");
   }
 
   /**
