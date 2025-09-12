@@ -508,7 +508,7 @@ export function createLodestarMetrics(
         }),
         warn: register.gauge<{code: string; client: string}>({
           name: "lodestar_sync_range_download_by_range_warn_total",
-          help: "Total number of warned downloadByRange calls",
+          help: "Total number of downloadByRange call warnings",
           labelNames: ["code", "client"],
         }),
       },
@@ -580,7 +580,7 @@ export function createLodestarMetrics(
         }),
         warn: register.gauge<{code: string; client: string}>({
           name: "lodestar_sync_unknown_block_download_by_root_warn_total",
-          help: "Total number of warned downloadByRoot calls",
+          help: "Total number of downloadByRoot call warnings",
           labelNames: ["code", "client"],
         }),
       },
