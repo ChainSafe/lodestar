@@ -375,6 +375,7 @@ export class BlockInputSync {
         if (connectedPeers.length === 0) {
           this.logger.debug("No connected peers, skipping download block", {
             blockRoot: pendingBlock.blockInput.blockRootHex,
+            slot: pendingBlock.blockInput.slot,
           });
           return;
         }
@@ -395,7 +396,7 @@ export class BlockInputSync {
       // proposer is known by a gossip block already, wait a bit to make sure this block is not
       // eligible for proposer boost to prevent unbundling attack
       this.logger.verbose("Avoid proposer boost for this block of known proposer", {
-        blockSlot,
+        slot: blockSlot,
         blockRoot: prettyBytes(pendingBlock.blockInput.blockRootHex),
         proposerIndex,
       });
@@ -499,7 +500,7 @@ export class BlockInputSync {
       const peerMeta = this.peerBalancer.bestPeerForPendingColumns(pendingColumns, excludedPeers);
       if (peerMeta === null) {
         // no more peer with needed columns to try, throw error
-        let message = `Error fetching UnknownBlockRoot after ${i}: cannot find peer`;
+        let message = `Error fetching UnknownBlockRoot blockRoot=${prettyBytes(rootHex)} slot=${slot} after ${i}: cannot find peer`;
         if (pendingColumns) {
           message += ` with needed columns=${prettyPrintIndices(Array.from(pendingColumns))}`;
         }
@@ -597,6 +598,7 @@ export class BlockInputSync {
       //   }
       this.logger.debug("ignored Banning unknown block", {
         root: getBlockInputSyncCacheItemRootHex(block),
+        slot: getBlockInputSyncCacheItemSlot(block),
         peerIdStrings: Array.from(block.peerIdStrings)
           .map((id) => prettyPrintPeerIdStr(id))
           .join(","),
@@ -609,6 +611,7 @@ export class BlockInputSync {
 
   private removeAllDescendants(block: BlockInputSyncCacheItem): BlockInputSyncCacheItem[] {
     const rootHex = getBlockInputSyncCacheItemRootHex(block);
+    const slot = getBlockInputSyncCacheItemSlot(block);
     // Get all blocks that are a descendant of this one
     const badPendingBlocks = [block, ...getAllDescendantBlocks(rootHex, this.pendingBlocks)];
 
@@ -620,6 +623,7 @@ export class BlockInputSync {
       this.chain.seenBlockInputCache.prune(rootHex);
       this.logger.debug("Removing bad/unknown/incomplete BlockInputSyncCacheItem", {
         blockRoot: rootHex,
+        slot,
       });
     }
 
