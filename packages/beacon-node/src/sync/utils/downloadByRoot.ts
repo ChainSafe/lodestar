@@ -69,7 +69,7 @@ export async function downloadByRoot({
 
   const {
     result: {block, blobSidecars, columnSidecars},
-    warnings: warn,
+    warnings,
   } = await fetchByRoot({
     config,
     network,
@@ -163,7 +163,7 @@ export async function downloadByRoot({
       timeAddedSec: cacheItem.timeAddedSec,
       peerIdStrings: cacheItem.peerIdStrings,
     },
-    warnings: warn,
+    warnings,
   };
 }
 
