@@ -600,7 +600,7 @@ export async function validateColumnsByRangeResponse(
     }
 
     const extraIndices = [...returnedColumns].filter((i) => !requestedColumns.has(i));
-    if (extraIndices.length) {
+    if (extraIndices.length > 0) {
       warn.push(
         new DownloadByRangeError(
           {
