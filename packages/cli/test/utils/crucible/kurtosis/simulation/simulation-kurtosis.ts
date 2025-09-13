@@ -15,12 +15,12 @@ import tmp from "tmp";
 import {KurtosisSDKRunner} from "../runner/kurtosisSDKRunner.js"; //✅ New Kurtosis Runner
 import {KurtosisNetworkConfig, KurtosisServicesMap, NodeService} from "../runner/kurtosisTypes.js";
 import {loadKurtosisConfig} from "../runner/loadKurtosisConfig.js";
-import {createBeaconNode} from "./clients/beacon/index.js"; //❌ To be removed
-import {createExecutionNode} from "./clients/execution/index.js"; //❌ To be removed
-import {createValidatorNode, getValidatorForBeaconNode} from "./clients/validator/index.js"; //❌ To be removed
-import {MOCK_ETH1_GENESIS_HASH} from "./constants.js";
-import {EpochClock, MS_IN_SEC} from "./epochClock.js";
-import {ExternalSignerServer} from "./externalSignerServer.js";
+//import {createBeaconNode} from "./clients/beacon/index.js"; //❌ To be removed
+//import {createExecutionNode} from "./clients/execution/index.js"; //❌ To be removed
+//import {createValidatorNode, getValidatorForBeaconNode} from "./clients/validator/index.js"; //❌ To be removed
+import {MOCK_ETH1_GENESIS_HASH} from "../../constants.js";
+import {EpochClock, MS_IN_SEC} from "../../epochClock.js";
+import {ExternalSignerServer} from "../../externalSignerServer.js";
 import {
   BeaconClient,
   ExecutionClient,
@@ -32,11 +32,11 @@ import {
   SimulationOptions,
   ValidatorClient,
   ValidatorClientKeys,
-} from "./interfaces.js";
+} from "../../interfaces.js";
 // import {Runner} from "./runner/index.js"; //❌ To be removed
-import {SimulationTracker} from "./simulationTracker.js";
-import {registerProcessHandler, replaceIpFromUrl} from "./utils/index.js";
-import {getNodePaths} from "./utils/paths.js";
+import {SimulationTracker} from "../../simulationTracker.js";
+import {registerProcessHandler, replaceIpFromUrl} from "../../utils/index.js";
+import {getNodePaths} from "../../utils/paths.js";
 
 interface StartOpts {
   runTimeoutMs: number;
@@ -49,7 +49,6 @@ export class Simulation {
   readonly runner: IRunner; // ✅ NEW - Kurtosis-specific
   readonly externalSigner: ExternalSignerServer;
   readonly logger: LoggerNode;
-
   readonly forkConfig: ChainForkConfig;
   readonly options: SimulationOptions;
 
@@ -94,7 +93,7 @@ export class Simulation {
     });
   }
 
-  static async initWithDefaults(
+  /*static async initWithDefaults(
     {forkConfig, logsDir, id, trustedSetup}: SimulationInitOptions,
     clients: NodePairDefinition[]
   ): Promise<Simulation> {
@@ -112,7 +111,7 @@ export class Simulation {
     }
 
     return env;
-  }
+  }*/
 
   /**
    * ===================== Kurtosis Integration =====================
@@ -142,7 +141,7 @@ export class Simulation {
     });
 
     // Start Kurtosis enclave & run the package
-    env.runner = new KurtosisSDKRunner(); // or new KurtosisSDKRunner(id) - enclaveName = id
+    env.runner = new KurtosisSDKRunner(`sim-${id}`);
     await env.runner.start(`sim-${id}`);
 
     // Load the YAML → KurtosisNetworkConfig
@@ -245,7 +244,7 @@ export class Simulation {
   ): Promise<BeaconNode> {
     // 🔄 Recreate the API client with Kurtosis URL
     const api = getClient(
-      {baseUrl: beaconService.beaconApiUrl || ""},
+      {baseUrl: beaconService.apiUrl || ""},
       {config: forkConfig} // Same forkConfig
     );
 
@@ -253,8 +252,8 @@ export class Simulation {
     return {
       client: BeaconClient.Lodestar,
       id: `${beaconService.id}-beacon-lodestar`,
-      restPublicUrl: beaconService.beaconApiUrl || "",
-      restPrivateUrl: beaconService.beaconApiUrl || "",
+      restPublicUrl: beaconService.apiUrl || "",
+      restPrivateUrl: beaconService.apiUrl || "",
       // TODO: implement real Kurtosis API call
       api, //🔄 Placeholder: returning mock api for now
     };
@@ -396,7 +395,7 @@ export class Simulation {
   }
 
   //❌ REMOVE - Docker-specific
-  async createNodePair<B extends BeaconClient, V extends ValidatorClient, E extends ExecutionClient>({
+  /*async createNodePair<B extends BeaconClient, V extends ValidatorClient, E extends ExecutionClient>({
     execution,
     beacon,
     validator,
@@ -495,7 +494,7 @@ export class Simulation {
     this.nodePairCount += 1;
 
     return {id, execution: executionNode, beacon: beaconNode, validator: validatorNode};
-  }
+  }*/
 
   private async initGenesisState(): Promise<void> {
     for (let i = 0; i < this.nodes.length; i++) {

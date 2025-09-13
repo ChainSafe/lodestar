@@ -27,22 +27,15 @@ export type KurtosisNetworkConfig = {
   network_params: Record<string, string | number>;
 };
 
-// Optional enrichment for nodes
-// FIXME: check if boolean is the best way to represent roles
-// Proposed solution: Return a BeaconClient type (i.e. "BeaconClient.Lodestar")
-export type NodeRoles = {
-  beacon?: boolean;
-  validator?: boolean;
-  execution?: boolean;
-};
+// Kurtosis services have only one role - mutually exclusive
+export type NodeRole = "beacon" | "validator" | "execution";
 
 // Service abstraction, intended to be adjusted with the correct metadata
-// FIXME: verify which NodeService parameters are actually required vs optional
 export type NodeService = {
   id: string;
   serviceContext: ServiceContext;
-  beaconApiUrl?: string;
-  roles?: NodeRoles; // TODO: check if required or optional
+  apiUrl?: string; // Generic API URL for beacon, execution, or validator
+  role: NodeRole; // Required - each service has exactly one role
   metadata?: Record<string, string | number>;
 };
 

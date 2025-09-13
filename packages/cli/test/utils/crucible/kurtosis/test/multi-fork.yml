@@ -1,14 +1,25 @@
 participants:
   - el_type: geth
     cl_type: lodestar
-    count: 4
+    #vc_type: lodestar
+    #cl_extra_params: ["--builder.seelction=default"]
+  - el_type: geth
+    cl_type: lodestar
+    #vc_type: lodestar
+    #cl_extra_params: ["--builder.seelction=default"]
+  - el_type: geth
+    cl_type: lodestar
+    #vc_type: lodestar
+    #cl_extra_params: ["--builder.seelction=executiononly"]
+  - el_type: geth
+    cl_type: lodestar
+    #vc_type: lodestar
+    #cl_extra_params: ["--builder.seelction=default"]
   - el_type: geth
     cl_type: lighthouse
-additional_services:
-  - dora
 network_params:
+  num_validator_keys_per_node: 32 # keysCount
   preset: "minimal"
-  # network_idean 1234
   altair_fork_epoch: 2
   bellatrix_fork_epoch: 4
   capella_fork_epoch: 6

@@ -92,8 +92,8 @@ async function main() {
     // Log all NodeService parameters
     console.log("  🔹 Basic Properties:");
     console.log(`    ID: ${svc.id}`);
-    console.log(`    Beacon API URL: ${svc.beaconApiUrl || "undefined"}`);
-    console.log(`    Roles: ${JSON.stringify(svc.roles || {})}`);
+    console.log(`    API URL: ${svc.apiUrl || "undefined"}`);
+    console.log(`    Role: ${svc.role}`);
     console.log(`    Metadata: ${JSON.stringify(svc.metadata || {})}`);
 
     // Log ServiceContext properties and methods

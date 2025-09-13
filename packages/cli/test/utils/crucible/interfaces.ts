@@ -1,4 +1,4 @@
-import {ChildProcess} from "node:child_process";
+//import {ChildProcess} from "node:child_process";
 import {SecretKey} from "@chainsafe/blst";
 import {ApiClient} from "@lodestar/api";
 import {ApiClient as KeyManagerApi} from "@lodestar/api/keymanager";
@@ -6,11 +6,13 @@ import {ChainForkConfig} from "@lodestar/config";
 import {LogLevel, Logger} from "@lodestar/logger";
 import {ForkName} from "@lodestar/params";
 import {Epoch, SignedBeaconBlock, Slot} from "@lodestar/types";
+import {ServiceContext} from "kurtosis-sdk";
 import {Web3} from "web3";
 import {BeaconArgs} from "../../../src/cmds/beacon/options.js";
 import {IValidatorCliArgs} from "../../../src/cmds/validator/options.js";
 import {GlobalArgs} from "../../../src/options/index.js";
 import {EpochClock} from "./epochClock.js";
+import { KurtosisNetworkConfig, KurtosisServicesMap } from "./kurtosis/runner/kurtosisTypes.js";
 
 export type NodeId = string;
 
@@ -18,6 +20,7 @@ export type SimulationInitOptions = {
   id: string;
   logsDir: string;
   forkConfig: ChainForkConfig;
+  trustedSetup?: boolean;
 };
 
 export type SimulationOptions = {
@@ -26,6 +29,7 @@ export type SimulationOptions = {
   rootDir: string;
   controller: AbortController;
   genesisTime: number;
+  trustedSetup?: boolean;
   logLevel?: LogLevel;
 };
 
@@ -43,11 +47,6 @@ export enum ExecutionClient {
   Mock = "execution-mock",
   Geth = "execution-geth",
   Nethermind = "execution-nethermind",
-}
-
-export enum ExecutionStartMode {
-  PreMerge = "pre-merge",
-  PostMerge = "post-merge",
 }
 
 export type BeaconClientsOptions = {
@@ -136,7 +135,7 @@ export interface ExecutionGenesisOptions<E extends ExecutionClient = ExecutionCl
 export interface ExecutionGeneratorOptions<E extends ExecutionClient = ExecutionClient>
   extends ExecutionGenesisOptions<E>,
     GeneratorOptions {
-  mode: ExecutionStartMode;
+  //mode: ExecutionStartMode; //✅ REMOVED - ExecutionStartMode not needed anymore
   mining: boolean;
   paths: ExecutionPaths;
   clientOptions: ExecutionClientsOptions[E];
@@ -164,52 +163,37 @@ export type LighthouseAPI = Omit<ApiClient, "lodestar"> & {
   };
 };
 
+// NEW - Kurtosis-specific BeaconNode
 export interface BeaconNode<C extends BeaconClient = BeaconClient> {
   readonly client: C;
   readonly id: string;
-  /**
-   * Beacon Node Rest API URL accessible form the host machine if the process is running in private network inside docker
-   */
-  readonly restPublicUrl: string;
-  /**
-   * Beacon Node Rest API URL accessible within private network
-   */
-  readonly restPrivateUrl: string;
+  readonly restPublicUrl: string; //🔄 From Kurtosis?
+  readonly restPrivateUrl: string; //🔄 From Kurtosis?
   readonly api: C extends BeaconClient.Lodestar ? LodestarAPI : LighthouseAPI;
-  readonly job: Job;
+  readonly serviceContext: ServiceContext; // ✅ NEW - Kurtosis-native
 }
 
+// NEW - Kurtosis-specific ValidatorNode
 export interface ValidatorNode<C extends ValidatorClient = ValidatorClient> {
   readonly client: C;
   readonly id: string;
   readonly keyManager: KeyManagerApi;
   readonly keys: ValidatorClientKeys;
-  readonly job: Job;
+  readonly serviceContext: ServiceContext; // ✅ NEW - Kurtosis-native
 }
 
+// NEW - Kurtosis-specific executionNode
 export interface ExecutionNode<E extends ExecutionClient = ExecutionClient> {
   readonly client: E;
   readonly id: string;
   readonly ttd: bigint;
-  /**
-   * Engine URL accessible form the host machine if the process is running in private network inside docker
-   */
-  readonly engineRpcPublicUrl: string;
-  /**
-   * Engine URL accessible within private network inside docker
-   */
-  readonly engineRpcPrivateUrl: string;
-  /**
-   * RPC URL accessible form the host machine if the process is running in private network inside docker
-   */
-  readonly ethRpcPublicUrl: string;
-  /**
-   * RPC URL accessible within private network inside docker
-   */
-  readonly ethRpcPrivateUrl: string;
+  readonly engineRpcPublicUrl: string; //🔄 From Kurtosis?
+  readonly engineRpcPrivateUrl: string; //🔄 From Kurtosis?
+  readonly ethRpcPublicUrl: string; //🔄 From Kurtosis?
+  readonly ethRpcPrivateUrl: string; //🔄 From Kurtosis?
   readonly jwtSecretHex: string;
   readonly provider: E extends ExecutionClient.Mock ? null : Web3;
-  readonly job: Job;
+  readonly serviceContext: ServiceContext; // ✅ NEW - Kurtosis-native
 }
 
 export interface NodePair {
@@ -287,17 +271,19 @@ export type RunnerOptions = {
   };
 };
 
+//✅ New Kurtosis Runner
 export interface IRunner {
-  create: (jobOptions: JobOptions[]) => Job;
-  on(event: RunnerEvent, cb: (id: string) => void | Promise<void>): void;
-  start(): Promise<void>;
-  stop(): Promise<void>;
-  getNextIp(): string;
-}
+  // Takes a structured config and instantiates the network
+  create: (config: KurtosisNetworkConfig) => Promise<KurtosisServicesMap>; // ✅ NEW - Kurtosis-native
 
-export interface RunnerEnv<T extends RunnerType> {
-  type: T;
-  create: (jobOption: Omit<JobOptions<T>, "children">) => Job;
+  // Starts the environment (e.g., enclave)
+  start: (enclaveName: string) => Promise<void>; // ✅ NEW - Kurtosis-native
+
+  // Stops or tears down the environment
+  stop: () => Promise<void>;
+
+  // Attach listeners for events, such as service start, stop, crash, etc.
+  on(event: RunnerEvent, cb: (id: string) => void | Promise<void>): void;
 }
 
 export type RunnerEvent = "starting" | "started" | "stopping" | "stop";
@@ -383,7 +369,6 @@ export interface AssertionError {
   message: string;
   data?: Record<string, unknown>;
 }
-export type ChildProcessWithJobOptions = {jobOptions: JobOptions; childProcess: ChildProcess};
 
 export type Eth1GenesisBlock = {
   config: {

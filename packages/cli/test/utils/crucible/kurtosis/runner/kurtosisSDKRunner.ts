@@ -24,11 +24,11 @@ export class KurtosisSDKRunner implements IRunner {
   private enclaveContext?: EnclaveContext;
 
   /**
-   * Creates a new KurtosisSDKRunner instance.
+   * Creates a new KurtosisSDKRunner instance
    *
-   * enclaveName: Default name for the Kurtosis enclave - can be overridden
+   * @param enclaveName - Unique name for the Kurtosis enclave (required for isolation)
    */
-  constructor(enclaveName = "crucible-enclave") {
+  constructor(enclaveName: string) {
     this.enclaveName = enclaveName;
   }
 
@@ -104,8 +104,8 @@ export class KurtosisSDKRunner implements IRunner {
         // FIXME: check if fields are correct
         id: serviceName,
         serviceContext,
-        beaconApiUrl: ports.get("http") ? `http://localhost:${ports.get("http")?.number}` : undefined,
-        roles: this.inferRoles(serviceName),
+        apiUrl: ports.get("http") ? `http://localhost:${ports.get("http")?.number}` : undefined,
+        role: this.inferRole(serviceName),
         metadata: {},
       };
 
@@ -120,12 +120,12 @@ export class KurtosisSDKRunner implements IRunner {
   }
 
   // Helper function as services come back as generic ServiceContext object -> it derives the logical role
-  private inferRoles(serviceName: string): NodeService["roles"] {
-    return {
-      // FIXME: check if inferRoles is necessary
-      beacon: serviceName.includes("cl"), //|| serviceName.includes("beacon")
-      validator: serviceName.includes("vc"), //|| serviceName.includes("validator")
-      execution: serviceName.includes("el"), //|| serviceName.includes("execution")
-    };
+  private inferRole(serviceName: string): NodeService["role"] {
+    if (serviceName.includes("cl")) return "beacon";
+    if (serviceName.includes("vc")) return "validator";
+    if (serviceName.includes("el")) return "execution";
+
+    // Default fallback - could be improved with better service naming detection
+    throw new Error(`Unable to infer role for service: ${serviceName}`);
   }
 }
