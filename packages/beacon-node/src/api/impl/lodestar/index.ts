@@ -28,6 +28,7 @@ import {GossipType} from "../../../network/index.js";
 import {profileNodeJS, writeHeapSnapshot} from "../../../util/profile.js";
 import {getStateResponseWithRegen} from "../beacon/state/utils.js";
 import {ApiModules} from "../types.js";
+import {toIndexedAttestationBigint} from "../utils.js";
 
 type HexRoot = string;
 
@@ -367,24 +368,4 @@ async function getStateWithRegen(
   );
 
   return state;
-}
-
-function toIndexedAttestationBigint(indexedAttestation: IndexedAttestation): IndexedAttestationBigint {
-  return {
-    attestingIndices: indexedAttestation.attestingIndices,
-    data: {
-      slot: BigInt(indexedAttestation.data.slot),
-      index: BigInt(indexedAttestation.data.index),
-      beaconBlockRoot: indexedAttestation.data.beaconBlockRoot,
-      source: {
-        epoch: BigInt(indexedAttestation.data.source.epoch),
-        root: indexedAttestation.data.source.root,
-      },
-      target: {
-        epoch: BigInt(indexedAttestation.data.target.epoch),
-        root: indexedAttestation.data.target.root,
-      },
-    },
-    signature: indexedAttestation.signature,
-  };
 }

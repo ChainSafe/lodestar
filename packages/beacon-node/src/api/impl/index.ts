@@ -1,4 +1,5 @@
 export * from "./validator/index.js";
+export * from "./lodestar/index.js";
 export * from "./beacon/index.js";
 export * from "./node/index.js";
 export * from "./events/index.js";

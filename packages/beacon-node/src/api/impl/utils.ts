@@ -1,3 +1,4 @@
+import {IndexedAttestation, IndexedAttestationBigint} from "@lodestar/types";
 import {ApiError} from "./errors.js";
 
 /**
@@ -22,4 +23,24 @@ export function assertUniqueItems(array: unknown[] | undefined, message: string)
   if (duplicateItems.length) {
     throw new ApiError(400, `${message}: ${duplicateItems.join(", ")}`);
   }
+}
+
+export function toIndexedAttestationBigint(indexedAttestation: IndexedAttestation): IndexedAttestationBigint {
+  return {
+    attestingIndices: indexedAttestation.attestingIndices,
+    data: {
+      slot: BigInt(indexedAttestation.data.slot),
+      index: BigInt(indexedAttestation.data.index),
+      beaconBlockRoot: indexedAttestation.data.beaconBlockRoot,
+      source: {
+        epoch: BigInt(indexedAttestation.data.source.epoch),
+        root: indexedAttestation.data.source.root,
+      },
+      target: {
+        epoch: BigInt(indexedAttestation.data.target.epoch),
+        root: indexedAttestation.data.target.root,
+      },
+    },
+    signature: indexedAttestation.signature,
+  };
 }

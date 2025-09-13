@@ -64,7 +64,6 @@ describe("beacon / lodestar", () => {
       const mockSignedBlocks: SignedBeaconBlock[] = [];
       mockSignedBlocks.push(ssz.electra.SignedBeaconBlock.defaultValue());
 
-      // TODO: choose fork
       const attesterSlashingList: AttesterSlashingListElectra = [];
       // TODO: fails reading 'attestingIndices'
       //const attesterSlashing = ssz.electra.AttesterSlashing.defaultValue();
@@ -99,7 +98,6 @@ describe("beacon / lodestar", () => {
       const mockSignedBlocks: SignedBeaconBlock[] = [];
       mockSignedBlocks.push(ssz.electra.SignedBeaconBlock.defaultValue());
 
-      // TODO: choose fork
       const attesterSlashingList: AttesterSlashingListElectra = [];
 
       const attesterSlashing = ssz.electra.AttesterSlashing.defaultValue();
