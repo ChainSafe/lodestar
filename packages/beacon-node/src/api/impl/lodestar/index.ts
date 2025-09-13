@@ -284,8 +284,8 @@ export function getLodestarApi({
               isSlashableAttestationData(indexedAttestationBigint.data, seenAttestation.indexedAttestationBigint.data)
             ) {
               const attesterSlashing: AttesterSlashing = {
-                attestation1: indexedAttestationBigint,
-                attestation2: seenAttestation.indexedAttestationBigint,
+                attestation1: seenAttestation.indexedAttestationBigint,
+                attestation2: indexedAttestationBigint,
               };
               const intersectingIndices = getAttesterSlashableIndices(attesterSlashing);
               if (intersectingIndices.length > 0) {
