@@ -161,6 +161,25 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       }),
     },
 
+    blobs: {
+      getBlobsV1Requests: register.gauge({
+        name: "beacon_get_blobs_v1_requests_total",
+        help: "Number of getBlobsV1 requests that get made",
+      }),
+      getBlobsV1Error: register.gauge({
+        name: "beacon_get_blobs_v1_response_error_total",
+        help: "Number of getBlobsV1 calls that errored ",
+      }),
+      getBlobsV1Miss: register.gauge({
+        name: "beacon_get_blobs_v1_no_blob_found_response_total",
+        help: "Number of getBlobsV1 hits where a versioned hash returns a blob",
+      }),
+      getBlobsV1Hit: register.gauge({
+        name: "beacon_get_blobs_v1_no_blob_found_response_total",
+        help: "Number of getBlobsV1 miss where a versioned hash returns null",
+      }),
+    },
+
     blockInputFetchStats: {
       // of already available blocks which didn't have to go through blobs pull
       totalDataAvailableBlockInputBlobs: register.gauge({
@@ -193,26 +212,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         name: "beacon_datapromise_blockinput_blobs_notfound_in_getblobs_cache_total",
         help: "Count of blobs that were newly seen and hence in not getblobs cache",
       }),
-      dataPromiseBlobsEngineGetBlobsApiRequests: register.gauge({
-        name: "beacon_datapromise_blockinput_blobs_queried_in_getblobs_api_total",
-        help: "Total number of blobs requested to the getblobs api",
-      }),
-      dataPromiseBlobsEngineGetBlobsApiNotNull: register.gauge({
-        name: "beacon_datapromise_blockinput_blobs_responded_nonnull_in_getblobs_api_total",
-        help: "Count of successful engine API responses that were not null",
-      }),
-      dataPromiseBlobsEngineGetBlobsApiNull: register.gauge({
-        name: "beacon_datapromise_blockinput_blobs_responded_null_in_getblobs_api_total",
-        help: "Count of engine API responses that were null",
-      }),
-      dataPromiseBlobsEngineApiGetBlobsErroredNull: register.gauge({
-        name: "beacon_datapromise_blockinput_blobs_errored_as_null_in_getblobs_api_total",
-        help: "Number of responses marked null due to errors in getblobs api",
-      }),
-      dataPromiseBlobsEngineApiGetBlobsUseful: register.gauge({
-        name: "beacon_datapromise_blockinput_getblobs_api_nonnull_responses_used_total",
-        help: "Count of successful non null engine API responses that were found useful",
-      }),
+
       dataPromiseBlobsFinallyQueriedFromNetwork: register.gauge({
         name: "beacon_datapromise_blockinput_blobs_finally_queried_from_network_total",
         help: "Number of blob requests finally sent to the network",
@@ -325,6 +325,11 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         name: "beacon_kzg_verification_data_column_batch_seconds",
         help: "Runtime of batched data column kzg verification",
         buckets: [0.025, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 1, 2, 5],
+      }),
+      getBlobsV2PreAllocationTime: register.histogram({
+        name: "beacon_engine_getBlobsV2_buffer_preallocation_duration_seconds",
+        help: "Runtime for pre-allocating buffers to use during getBlobsV2 calls",
+        buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 1],
       }),
       getBlobsV2Requests: register.counter({
         name: "beacon_engine_getBlobsV2_requests_total",

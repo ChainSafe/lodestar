@@ -8,10 +8,91 @@ import {IExecutionEngine} from "../execution/index.js";
 import {ChainEvent, ChainEventEmitter} from "../chain/emitter.js";
 import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
 import {Metrics} from "../metrics/index.js";
-import {fulu} from "@lodestar/types";
-import {isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
-import {ForkPostFulu} from "@lodestar/params";
-import {BLOB_AND_PROOF_V2_RPC_BYTES} from "../execution/engine/types.js";
+import {deneb, fulu} from "@lodestar/types";
+import {isBlockInputBlobs, isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
+import {ForkPostFulu, ForkPreFulu} from "@lodestar/params";
+import {computePreFuluKzgCommitmentsInclusionProof} from "./blobs.js";
+import {signedBlockToSignedHeader} from "@lodestar/state-transition";
+import {routes} from "@lodestar/api";
+import {toHex} from "@lodestar/utils";
+
+export async function getBlobSidecarsFromExecution(
+  config: ChainForkConfig,
+  executionEngine: IExecutionEngine,
+  metrics: Metrics | null,
+  emitter: ChainEventEmitter,
+  blockInput: IBlockInput
+) {
+  if (!isBlockInputBlobs(blockInput)) {
+    return;
+  }
+
+  if (blockInput.hasAllData()) {
+    return;
+  }
+
+  const forkName = blockInput.forkName as ForkPreFulu;
+  const blobMeta = blockInput.getMissingBlobMeta();
+
+  metrics?.blobs.getBlobsV1Requests.inc();
+  const enginedResponse = await executionEngine
+    .getBlobs(
+      forkName,
+      blobMeta.map(({versionedHash}) => versionedHash)
+    )
+    .catch((_e) => {
+      metrics?.blobs.getBlobsV1Error.inc();
+      return null;
+    });
+
+  if (enginedResponse === null) {
+    return;
+  }
+
+  const block = blockInput.getBlock();
+
+  // response.length should always match blobMeta.length and they should be in the same order
+  for (let i = 0; i < blobMeta.length; i++) {
+    const blobAndProof = enginedResponse[i];
+
+    if (!blobAndProof) {
+      metrics?.blobs.getBlobsV1Miss.inc();
+    } else {
+      metrics?.blobs.getBlobsV1Hit.inc();
+      const {blob, proof} = blobAndProof;
+      const index = blobMeta[i].index;
+      const kzgCommitment = block.message.body.blobKzgCommitments[index];
+      const blobSidecar: deneb.BlobSidecar = {
+        index,
+        blob,
+        kzgProof: proof,
+        kzgCommitment,
+        // TODO(fulu): refactor this to only calculate the root inside these following two functions once
+        kzgCommitmentInclusionProof: computePreFuluKzgCommitmentsInclusionProof(forkName, block.message.body, index),
+        signedBlockHeader: signedBlockToSignedHeader(config, block),
+      };
+
+      blockInput.addBlob({
+        blobSidecar,
+        blockRootHex: blockInput.blockRootHex,
+        seenTimestampSec: Date.now() / 1000,
+        source: BlockInputSource.engine,
+      });
+
+      if (emitter.listenerCount(routes.events.EventType.blobSidecar)) {
+        emitter.emit(routes.events.EventType.blobSidecar, {
+          blockRoot: blockInput.blockRootHex,
+          slot: blockInput.slot,
+          index,
+          kzgCommitment: toHex(kzgCommitment),
+          versionedHash: toHex(blobMeta[i].versionedHash),
+        });
+      }
+
+      emitter.emit(ChainEvent.publishBlobSidecars, [blobSidecar]);
+    }
+  }
+}
 
 /**
  * Post fulu, call getBlobsV2 from execution engine once per slot whenever we see either beacon_block or data_column_sidecar gossip message
@@ -44,13 +125,6 @@ export async function getDataColumnSidecarsFromExecution(
   // Get blobs from execution engine
   metrics?.peerDas.getBlobsV2Requests.inc();
   const timer = metrics?.peerDas.getBlobsV2RequestDuration.startTimer();
-  if (blobAndProofBuffers) {
-    for (let i = 0; i < versionedHashes.length; i++) {
-      if (blobAndProofBuffers[i] === undefined) {
-        blobAndProofBuffers[i] = new Uint8Array(BLOB_AND_PROOF_V2_RPC_BYTES);
-      }
-    }
-  }
   const blobs = await executionEngine.getBlobs(
     blockInput.forkName as ForkPostFulu,
     versionedHashes,
