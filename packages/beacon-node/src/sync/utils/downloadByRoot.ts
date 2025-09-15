@@ -167,115 +167,134 @@ export async function downloadByRoot({
   };
 }
 
-export async function fetchByRoot({
-  config,
-  network,
-  peerMeta,
-  blockRoot,
-  cacheItem,
-}: FetchByRootProps): Promise<WarnResult<FetchByRootResponses, DownloadByRootError>> {
-  let block: SignedBeaconBlock;
-  let blobSidecars: deneb.BlobSidecars | undefined;
-  let columnSidecarResult: WarnResult<fulu.DataColumnSidecars, DownloadByRootError> | undefined;
-  const {peerId: peerIdStr} = peerMeta;
+export async function fetchByRoot(
+  opts: FetchByRootProps
+): Promise<WarnResult<FetchByRootResponses, DownloadByRootError>> {
+  const {config, network, peerMeta, blockRoot, cacheItem} = opts;
+  let blobSidecars: undefined | deneb.BlobSidecars;
+  let columnSidecars: undefined | fulu.DataColumnSidecars;
+  const allWarnings: DownloadByRootError[] = [];
 
-  if (isPendingBlockInput(cacheItem)) {
-    if (cacheItem.blockInput.hasBlock()) {
-      block = cacheItem.blockInput.getBlock();
-    } else {
-      block = await fetchAndValidateBlock({
-        config,
-        network,
-        peerIdStr,
-        blockRoot,
-      });
-    }
+  const hasBlock = isPendingBlockInput(cacheItem) && cacheItem.blockInput.hasBlock();
+  const hasAllData = isPendingBlockInput(cacheItem) && cacheItem.blockInput.hasAllData();
 
+  const requests: Promise<unknown>[] = [];
+
+  if (hasBlock) {
+    const block = cacheItem.blockInput.getBlock();
     const forkName = config.getForkName(block.message.slot);
-    if (!cacheItem.blockInput.hasAllData()) {
-      if (isBlockInputBlobs(cacheItem.blockInput)) {
-        blobSidecars = await fetchAndValidateBlobs({
-          config,
-          network,
-          peerIdStr,
+
+    if (!hasAllData && isBlockInputBlobs(cacheItem.blockInput)) {
+      const blobMeta = cacheItem.blockInput.getMissingBlobMeta();
+
+      requests.push(
+        fetchAndValidateBlobs({
+          ...opts,
           forkName: forkName as ForkPreFulu,
           block: block as SignedBeaconBlock<ForkPostDeneb>,
-          blockRoot,
-          blobMeta: cacheItem.blockInput.getMissingBlobMeta(),
-        });
-      }
-      if (isBlockInputColumns(cacheItem.blockInput)) {
-        columnSidecarResult = await fetchAndValidateColumns({
-          config,
-          network,
-          peerMeta,
+          peerIdStr: peerMeta.peerId,
+          blobMeta,
+        }).then(async (response) => {
+          blobSidecars = response;
+        })
+      );
+    }
+
+    if (!hasAllData && isBlockInputColumns(cacheItem.blockInput)) {
+      const columnMeta = {
+        missing: network.custodyConfig.sampledColumns,
+        versionedHashes: (block as SignedBeaconBlock<ForkPostFulu>).message.body.blobKzgCommitments.map((c) =>
+          kzgCommitmentToVersionedHash(c)
+        ),
+      };
+
+      requests.push(
+        fetchAndValidateColumns({
+          ...opts,
           forkName: forkName as ForkPostFulu,
           block: block as SignedBeaconBlock<ForkPostFulu>,
-          blockRoot,
-          columnMeta: cacheItem.blockInput.getMissingSampledColumnMeta(),
-        });
-      }
+          columnMeta,
+        }).then(({result, warnings}) => {
+          columnSidecars = result;
+          allWarnings.push(...(warnings ?? []));
+        })
+      );
     }
-  } else {
-    block = await fetchAndValidateBlock({
-      config,
-      network,
-      peerIdStr,
-      blockRoot,
-    });
-    const forkName = config.getForkName(block.message.slot);
-    if (isForkPostFulu(forkName)) {
-      columnSidecarResult = await fetchAndValidateColumns({
-        config,
-        network,
-        peerMeta,
-        forkName,
-        blockRoot,
-        block: block as SignedBeaconBlock<ForkPostFulu>,
-        columnMeta: {
-          missing: network.custodyConfig.sampledColumns,
-          versionedHashes: (block as SignedBeaconBlock<ForkPostFulu>).message.body.blobKzgCommitments.map((c) =>
-            kzgCommitmentToVersionedHash(c)
-          ),
-        },
-      });
-    } else if (isForkPostDeneb(forkName)) {
-      const commitments = (block as SignedBeaconBlock<ForkPostDeneb>).message.body.blobKzgCommitments;
-      const blobCount = commitments.length;
-      blobSidecars = await fetchAndValidateBlobs({
-        config,
-        network,
-        peerIdStr,
-        forkName: forkName as ForkPreFulu,
-        blockRoot,
-        block: block as SignedBeaconBlock<ForkPostDeneb>,
-        blobMeta: Array.from({length: blobCount}, (_, i) => ({
-          index: i,
-          blockRoot,
-          versionedHash: kzgCommitmentToVersionedHash(commitments[i]),
-        })),
-      });
-    }
+
+    await Promise.all(requests);
+
+    return {
+      result: {block, blobSidecars, columnSidecars},
+      warnings: allWarnings,
+    };
   }
 
+  // We have to fetch block before blobs and columns to determine fork
+  const block = await fetchBeaconBlockByRoot({network, config, peerMeta, blockRoot});
+
+  const forkName = config.getForkName(block.message.slot);
+
+  if (isForkPostFulu(forkName)) {
+    const columnMeta = {
+      missing: network.custodyConfig.sampledColumns,
+      versionedHashes: (block as SignedBeaconBlock<ForkPostFulu>).message.body.blobKzgCommitments.map((c) =>
+        kzgCommitmentToVersionedHash(c)
+      ),
+    };
+
+    requests.push(
+      fetchAndValidateColumns({
+        ...opts,
+        forkName: forkName as ForkPostFulu,
+        block: block as SignedBeaconBlock<ForkPostFulu>,
+        columnMeta,
+      }).then(({result, warnings}) => {
+        columnSidecars = result;
+        allWarnings.push(...(warnings ?? []));
+      })
+    );
+  } else if (isForkPostDeneb(forkName)) {
+    const commitments = (block as SignedBeaconBlock<ForkPostDeneb>).message.body.blobKzgCommitments;
+    const blobCount = commitments.length;
+    const blobMeta = Array.from({length: blobCount}, (_, i) => ({
+      index: i,
+      blockRoot,
+      versionedHash: kzgCommitmentToVersionedHash(commitments[i]),
+    }));
+
+    requests.push(
+      fetchAndValidateBlobs({
+        ...opts,
+        forkName: forkName as ForkPreFulu,
+        block: block as SignedBeaconBlock<ForkPostDeneb>,
+        peerIdStr: peerMeta.peerId,
+        blobMeta,
+      }).then((response) => {
+        blobSidecars = response;
+      })
+    );
+  }
+
+  await Promise.all(requests);
+
   return {
-    result: {
-      block,
-      blobSidecars,
-      columnSidecars: columnSidecarResult?.result,
-    },
-    warnings: columnSidecarResult?.warnings ?? null,
+    result: {block, blobSidecars, columnSidecars},
+    warnings: allWarnings,
   };
 }
 
-export async function fetchAndValidateBlock({
-  config,
+export async function fetchBeaconBlockByRoot({
   network,
-  peerIdStr,
+  config,
+  peerMeta,
   blockRoot,
-}: FetchByRootAndValidateBlockProps): Promise<SignedBeaconBlock> {
-  const response = await network.sendBeaconBlocksByRoot(peerIdStr, [blockRoot]);
+}: Pick<
+  FetchByRootAndValidateColumnsProps,
+  "network" | "config" | "peerMeta" | "blockRoot"
+>): Promise<SignedBeaconBlock> {
+  const response = await network.sendBeaconBlocksByRoot(peerMeta.peerId, [blockRoot]);
   const block = response.at(0)?.data;
+  const peerIdStr = peerMeta.peerId;
   if (!block) {
     throw new DownloadByRootError({
       code: DownloadByRootErrorCode.MISSING_BLOCK_RESPONSE,
@@ -299,38 +318,29 @@ export async function fetchAndValidateBlock({
 }
 
 export async function fetchAndValidateBlobs({
-  network,
-  peerIdStr,
-  blockRoot,
   block,
-  blobMeta,
-}: FetchByRootAndValidateBlobsProps): Promise<deneb.BlobSidecars> {
-  const blobSidecars: deneb.BlobSidecars = await fetchBlobsByRoot({
-    network,
-    peerIdStr,
-    blobMeta,
-  });
-
-  await validateBlockBlobSidecars(block.message.slot, blockRoot, blobMeta.length, blobSidecars);
-
-  return blobSidecars;
-}
-
-export async function fetchBlobsByRoot({
   network,
   peerIdStr,
   blobMeta,
-  indicesInPossession = [],
-}: Pick<FetchByRootAndValidateBlobsProps, "network" | "peerIdStr" | "blobMeta"> & {
-  indicesInPossession?: number[];
-}): Promise<deneb.BlobSidecars> {
-  const blobsRequest = blobMeta
-    .filter(({index}) => !indicesInPossession.includes(index))
-    .map(({blockRoot, index}) => ({blockRoot, index}));
-  if (!blobsRequest.length) {
-    return [];
-  }
-  return await network.sendBlobSidecarsByRoot(peerIdStr, blobsRequest);
+  blockRoot,
+}: FetchByRootAndValidateBlobsProps): Promise<deneb.BlobSidecars> {
+  if (!blobMeta.length) return [];
+
+  const blobs = await network.sendBlobSidecarsByRoot(
+    peerIdStr,
+    blobMeta.map(({blockRoot, index}) => ({blockRoot, index}))
+  );
+
+  await validateBlockBlobSidecars(
+    block.message.slot,
+    blockRoot,
+    // Earlier `blobMeta.length` was used. Which feels incorrect as we should validate
+    // against the  `blockBlobCount`
+    (block as deneb.SignedBeaconBlock).message.body.blobKzgCommitments.length,
+    blobs
+  );
+
+  return blobs;
 }
 
 export async function fetchAndValidateColumns({
@@ -406,19 +416,6 @@ export async function fetchAndValidateColumns({
   await validateBlockDataColumnSidecars(slot, blockRoot, blobCount, columnSidecars);
 
   return {result: columnSidecars, warnings: warnings.length > 0 ? warnings : null};
-}
-
-// TODO(fulu) not in use, remove?
-export async function fetchColumnsByRoot({
-  network,
-  peerMeta,
-  blockRoot,
-  columnMeta,
-}: Pick<
-  FetchByRootAndValidateColumnsProps,
-  "network" | "peerMeta" | "blockRoot" | "columnMeta"
->): Promise<fulu.DataColumnSidecars> {
-  return await network.sendDataColumnSidecarsByRoot(peerMeta.peerId, [{blockRoot, columns: columnMeta.missing}]);
 }
 
 // TODO(fulu) not in use, remove?
