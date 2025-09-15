@@ -20,7 +20,6 @@ import {
   PendingBlockInput,
   PendingBlockInputStatus,
   PendingBlockType,
-  PendingRootHex,
   getBlockInputSyncCacheItemRootHex,
   getBlockInputSyncCacheItemSlot,
   isPendingBlockInput,
@@ -178,7 +177,7 @@ export class BlockInputSync {
   };
 
   private addByRootHex = (rootHex: RootHex, peerIdStr?: PeerIdStr): void => {
-    let pendingBlock = this.pendingBlocks.get(rootHex) as PendingRootHex;
+    let pendingBlock = this.pendingBlocks.get(rootHex);
     if (!pendingBlock) {
       pendingBlock = {
         status: PendingBlockInputStatus.pending,
@@ -207,7 +206,7 @@ export class BlockInputSync {
   };
 
   private addByBlockInput = (blockInput: IBlockInput, peerIdStr?: string): void => {
-    let pendingBlock = this.pendingBlocks.get(blockInput.blockRootHex) as PendingBlockInput;
+    let pendingBlock = this.pendingBlocks.get(blockInput.blockRootHex);
     // if entry is missing or was added via rootHex and now we have more complete information overwrite
     // the existing information with the more complete cache entry
     if (!pendingBlock || !isPendingBlockInput(pendingBlock)) {

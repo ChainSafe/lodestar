@@ -97,10 +97,10 @@ export type NetworkInitModules = {
 export class Network implements INetwork {
   readonly peerId: PeerId;
   readonly custodyConfig: CustodyConfig;
-  readonly logger: LoggerNode;
   // TODO: Make private
   readonly events: INetworkEventBus;
 
+  private readonly logger: LoggerNode;
   private readonly config: BeaconConfig;
   private readonly clock: IClock;
   private readonly chain: IBeaconChain;
