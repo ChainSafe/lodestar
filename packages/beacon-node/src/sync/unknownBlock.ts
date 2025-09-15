@@ -500,7 +500,7 @@ export class BlockInputSync {
       const peerMeta = this.peerBalancer.bestPeerForPendingColumns(pendingColumns, excludedPeers);
       if (peerMeta === null) {
         // no more peer with needed columns to try, throw error
-        let message = `Error fetching UnknownBlockRoot blockRoot=${prettyBytes(rootHex)} slot=${slot} after ${i}: cannot find peer`;
+        let message = `Error fetching UnknownBlockRoot slot=${slot} blockRoot=${prettyBytes(rootHex)} after ${i}: cannot find peer`;
         if (pendingColumns) {
           message += ` with needed columns=${prettyPrintIndices(Array.from(pendingColumns))}`;
         }
@@ -548,7 +548,7 @@ export class BlockInputSync {
       }
     }
 
-    const message = `Error fetching BlockInput with blockRoot=${prettyBytes(rootHex)} slot=${slot} after ${i} attempts.`;
+    const message = `Error fetching BlockInput with slot=${slot} blockRoot=${prettyBytes(rootHex)} after ${i} attempts.`;
 
     if (!isPendingBlockInput(cacheItem)) {
       throw Error(`${message} No block and no data was found.`);
