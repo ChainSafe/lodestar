@@ -123,7 +123,7 @@ export function getBeaconBlockApi({
       dataColumnSidecars = [];
     }
 
-    if (dataColumnSidecars.length > 0 && isBlockInputColumns(blockForImport)) {
+    if (isBlockInputColumns(blockForImport)) {
       for (const dataColumnSidecar of dataColumnSidecars) {
         blockForImport.addColumn({
           blockRootHex: blockRoot,
@@ -132,10 +132,14 @@ export function getBeaconBlockApi({
           seenTimestampSec,
         });
       }
-    }
-    if (blobSidecars.length > 0 && isBlockInputBlobs(blockForImport)) {
+    } else if (isBlockInputBlobs(blockForImport)) {
       for (const blobSidecar of blobSidecars) {
-        blockForImport.addBlob({blockRootHex: blockRoot, blobSidecar, source: BlockInputSource.api, seenTimestampSec});
+        blockForImport.addBlob({
+          blockRootHex: blockRoot,
+          blobSidecar,
+          source: BlockInputSource.api,
+          seenTimestampSec,
+        });
       }
     }
 

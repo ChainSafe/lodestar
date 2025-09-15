@@ -516,9 +516,7 @@ export async function importBlock(
     for (const {source} of blockInput.getSampledColumnsWithSource()) {
       this.metrics?.importBlock.columnsBySource.inc({source});
     }
-  }
-
-  if (isBlockInputBlobs(blockInput)) {
+  } else if (isBlockInputBlobs(blockInput)) {
     for (const {source} of blockInput.getAllBlobsWithSource()) {
       this.metrics?.importBlock.blobsBySource.inc({blobsSource: source});
     }
