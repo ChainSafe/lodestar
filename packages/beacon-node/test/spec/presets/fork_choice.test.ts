@@ -229,6 +229,10 @@ const forkChoiceTest =
                     block: signedBlock as SignedBeaconBlock<ForkPostFulu>,
                     blockRootHex,
                     custodyColumns:
+                      // in most test case instances we do not want to assign any custody as there are no columns provided
+                      // with the test case.  For on_block_peerdas__not_available the exact situation that is being tested
+                      // is no availability so block processing should fail.  For this one test case add some default
+                      // custody so that the await will fail in verifyBlocksDataAvailability.ts
                       testCaseName !== "on_block_peerdas__not_available" ? columns.map((c) => c.index) : [2, 4, 6, 8],
                     sampledColumns:
                       testCaseName !== "on_block_peerdas__not_available"
