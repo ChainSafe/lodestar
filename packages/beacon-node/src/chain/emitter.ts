@@ -4,7 +4,7 @@ import {StrictEventEmitter} from "strict-event-emitter-types";
 import {routes} from "@lodestar/api";
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {RootHex, fulu, phase0} from "@lodestar/types";
+import {RootHex, deneb, fulu, phase0} from "@lodestar/types";
 import {PeerIdStr} from "../util/peerId.js";
 import {BlockInputSource, IBlockInput} from "./blocks/blockInput/types.js";
 
@@ -46,6 +46,11 @@ export enum ChainEvent {
    */
   publishDataColumns = "publishDataColumns",
   /**
+   * This event signals that data columns have been fetched from the execution engine
+   * and are ready to be published.
+   */
+  publishBlobSidecars = "publishBlobSidecars",
+  /**
    * Trigger an update of status so reqresp by peers have current earliestAvailableSlot
    */
   updateStatus = "updateStatus",
@@ -84,6 +89,8 @@ export type IChainEvents = ApiEvents & {
   [ChainEvent.updateTargetCustodyGroupCount]: (targetGroupCount: number) => void;
 
   [ChainEvent.publishDataColumns]: (sidecars: fulu.DataColumnSidecar[]) => void;
+
+  [ChainEvent.publishBlobSidecars]: (sidecars: deneb.BlobSidecar[]) => void;
 
   [ChainEvent.updateStatus]: () => void;
 
