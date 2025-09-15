@@ -172,11 +172,11 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       }),
       getBlobsV1Miss: register.gauge({
         name: "beacon_get_blobs_v1_missing_blob_response_total",
-        help: "Number of getBlobsV1 hits where a versioned hash returns a blob",
+        help: "Number of getBlobsV1 misses where a versioned hash returns a null",
       }),
       getBlobsV1Hit: register.gauge({
         name: "beacon_get_blobs_v1_blob_returned_response_total",
-        help: "Number of getBlobsV1 miss where a versioned hash returns null",
+        help: "Number of getBlobsV1 hits where a versioned hash returns blob",
       }),
     },
 
