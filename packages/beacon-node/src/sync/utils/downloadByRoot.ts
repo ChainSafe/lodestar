@@ -100,9 +100,9 @@ export async function downloadByRoot({
     });
   }
 
-  const hasAllData = blockInput.hasBlockAndAllData();
+  const hasAllDataPreDownload = blockInput.hasBlockAndAllData();
 
-  if (isBlockInputBlobs(blockInput) && !hasAllData) {
+  if (isBlockInputBlobs(blockInput) && !hasAllDataPreDownload) {
     // blobSidecars could be undefined if gossip resulted in full block+blobs so we don't download any
     if (!blobSidecars) {
       throw new DownloadByRootError({
@@ -122,7 +122,7 @@ export async function downloadByRoot({
     }
   }
 
-  if (isBlockInputColumns(blockInput) && !hasAllData) {
+  if (isBlockInputColumns(blockInput) && !hasAllDataPreDownload) {
     // columnSidecars could be undefined if gossip resulted in full block+columns so we don't download any
     if (!columnSidecars) {
       throw new DownloadByRootError({
@@ -148,7 +148,7 @@ export async function downloadByRoot({
 
   let status: PendingBlockInputStatus;
   let timeSyncedSec: number | undefined;
-  if (hasAllData) {
+  if (blockInput.hasBlockAndAllData()) {
     status = PendingBlockInputStatus.downloaded;
     timeSyncedSec = Date.now() / 1000;
   } else {
