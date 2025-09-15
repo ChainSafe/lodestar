@@ -51,6 +51,7 @@ export async function getBlobSidecarsFromExecution(
 
   const block = blockInput.getBlock();
 
+  const blobSidecars: deneb.BlobSidecars = [];
   // response.length should always match blobMeta.length and they should be in the same order
   for (let i = 0; i < blobMeta.length; i++) {
     const blobAndProof = enginedResponse[i];
@@ -89,8 +90,10 @@ export async function getBlobSidecarsFromExecution(
         });
       }
 
-      emitter.emit(ChainEvent.publishBlobSidecars, [blobSidecar]);
+      blobSidecars.push(blobSidecar);
     }
+
+    emitter.emit(ChainEvent.publishBlobSidecars, blobSidecars);
   }
 }
 
