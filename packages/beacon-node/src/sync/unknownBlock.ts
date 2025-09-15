@@ -548,7 +548,7 @@ export class BlockInputSync {
       }
     }
 
-    const message = `Error fetching BlockInput with slot=${slot} blockRoot=${prettyBytes(rootHex)} after ${i} attempts.`;
+    const message = `Error fetching BlockInput with slot=${slot} blockRoot=${prettyBytes(rootHex)} after ${i - 1} attempts.`;
 
     if (!isPendingBlockInput(cacheItem)) {
       throw Error(`${message} No block and no data was found.`);
