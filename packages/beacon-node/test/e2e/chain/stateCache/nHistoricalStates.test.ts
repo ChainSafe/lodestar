@@ -284,14 +284,14 @@ describe("regen/reload states with n-historical states configuration", () => {
     wrappedIt(`${name} reorgedSlot=${reorgedSlot} reorgDistance=${reorgDistance}`, async () => {
       // the node needs time to transpile/initialize bls worker threads
       const genesisSlotsDelay = 7;
-      const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
+      const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * SECONDS_PER_SLOT;
       const testLoggerOpts: TestLoggerOpts = {
         level: LogLevel.debug,
         timestampFormat: {
           format: TimestampFormatCode.EpochSlot,
           genesisTime,
           slotsPerEpoch: SLOTS_PER_EPOCH,
-          secondsPerSlot: testParams.SECONDS_PER_SLOT,
+          secondsPerSlot: SECONDS_PER_SLOT,
         },
       };
 
@@ -369,7 +369,7 @@ describe("regen/reload states with n-historical states configuration", () => {
           waitForEvent<phase0.Checkpoint>(
             bn.chain.emitter,
             ChainEvent.checkpoint,
-            (cpSlot + genesisSlotsDelay + 1) * testParams.SECONDS_PER_SLOT * 1000,
+            (cpSlot + genesisSlotsDelay + 1) * SECONDS_PER_SLOT * 1000,
             (cp) => cp.epoch === cpEpoch
           )
         )
@@ -392,7 +392,7 @@ describe("regen/reload states with n-historical states configuration", () => {
             bn.chain.emitter,
             routes.events.EventType.chainReorg,
             // reorged event happens at reorgedSlot + 1
-            (reorgedSlot + 1 - cpSlot + 1) * testParams.SECONDS_PER_SLOT * 1000,
+            (reorgedSlot + 1 - cpSlot + 1) * SECONDS_PER_SLOT * 1000,
             (reorgData) => reorgData.slot === reorgedSlot + 1
           )
         )
