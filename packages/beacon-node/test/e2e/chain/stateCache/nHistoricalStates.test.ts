@@ -23,8 +23,23 @@ describe("regen/reload states with n-historical states configuration", () => {
   vi.setConfig({testTimeout: 96_000});
 
   const validatorCount = 8;
-  const testParams: Pick<ChainConfig, "SECONDS_PER_SLOT"> = {
-    SECONDS_PER_SLOT: 2,
+  const ELECTRA_FORK_EPOCH = 0;
+  const FULU_FORK_EPOCH = 1;
+  const SECONDS_PER_SLOT = 2;
+  const testParams: Partial<ChainConfig> = {
+    SECONDS_PER_SLOT,
+    ALTAIR_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+    BELLATRIX_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+    CAPELLA_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+    DENEB_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+    ELECTRA_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+    FULU_FORK_EPOCH: FULU_FORK_EPOCH,
+    BLOB_SCHEDULE: [
+      {
+        EPOCH: 1,
+        MAX_BLOBS_PER_BLOCK: 3,
+      },
+    ],
   };
 
   const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];
