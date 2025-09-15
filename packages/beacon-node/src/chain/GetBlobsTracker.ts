@@ -59,19 +59,18 @@ export class GetBlobsTracker {
       return;
     }
 
-    const maxBlobs = this.config.getMaxBlobsPerBlock(computeEpochAtSlot(blockInput.slot));
-
     let freeIndex = this.blobsAndProofsBuffers.findIndex(({inUse}) => !inUse);
     if (freeIndex === -1) {
       freeIndex = this.blobsAndProofsBuffers.length;
       this.blobsAndProofsBuffers[freeIndex] = {inUse: false, buffers: []};
     }
 
+    const maxBlobs = this.config.getMaxBlobsPerBlock(computeEpochAtSlot(blockInput.slot));
     // double check that there is enough pre-allocated space (blob schedule may have changed since the last use)
     const timer = this.metrics?.peerDas.getBlobsV2PreAllocationTime.startTimer();
     for (let i = 0; i < maxBlobs; i++) {
-      if (this.blobsAndProofsBuffers[length].buffers[i] === undefined) {
-        this.blobsAndProofsBuffers[length].buffers[i] = new Uint8Array(BLOB_AND_PROOF_V2_RPC_BYTES);
+      if (this.blobsAndProofsBuffers[freeIndex].buffers[i] === undefined) {
+        this.blobsAndProofsBuffers[freeIndex].buffers[i] = new Uint8Array(BLOB_AND_PROOF_V2_RPC_BYTES);
       }
     }
     timer?.();
