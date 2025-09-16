@@ -16,7 +16,7 @@ const shuffling: TestRunnerFn<ShufflingTestCase, string> = () => {
         seed,
         SHUFFLE_ROUND_COUNT
       );
-      return Buffer.from(output).toString("hex");
+      return Buffer.from(Array.from(output)).toString("hex");
     },
     options: {
       inputTypes: {mapping: InputType.YAML},

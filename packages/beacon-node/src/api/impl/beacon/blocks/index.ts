@@ -27,7 +27,7 @@ import {
   isDenebBlockContents,
   sszTypesFor,
 } from "@lodestar/types";
-import {fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
+import {fromAsync, fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
 import {
   BlobsSource,
   BlockInput,
@@ -656,19 +656,25 @@ export function getBeaconBlockApi({
           );
         }
 
-        let dataColumnSidecars = await db.dataColumnSidecar.values(blockRoot);
-        if (dataColumnSidecars.length === 0) {
-          dataColumnSidecars = await db.dataColumnSidecarArchive.values(block.message.slot);
-        }
+        const blobCount = (block.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length;
 
-        if (dataColumnSidecars.length === 0) {
-          throw new ApiError(
-            404,
-            `dataColumnSidecars not found in db for slot=${block.message.slot} root=${toRootHex(blockRoot)}`
-          );
-        }
+        if (blobCount > 0) {
+          let dataColumnSidecars = await fromAsync(db.dataColumnSidecar.valuesStream(blockRoot));
+          if (dataColumnSidecars.length === 0) {
+            dataColumnSidecars = await fromAsync(db.dataColumnSidecarArchive.valuesStream(block.message.slot));
+          }
 
-        blobs = await reconstructBlobs(dataColumnSidecars);
+          if (dataColumnSidecars.length === 0) {
+            throw new ApiError(
+              404,
+              `dataColumnSidecars not found in db for slot=${block.message.slot} root=${toRootHex(blockRoot)} blobs=${blobCount}`
+            );
+          }
+
+          blobs = await reconstructBlobs(dataColumnSidecars);
+        } else {
+          blobs = [];
+        }
       } else if (isForkPostDeneb(fork)) {
         let {blobSidecars} = (await db.blobSidecars.get(blockRoot)) ?? {};
         if (!blobSidecars) {

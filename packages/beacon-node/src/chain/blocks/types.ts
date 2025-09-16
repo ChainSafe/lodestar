@@ -285,8 +285,6 @@ export type ImportBlockOpts = {
   seenTimestampSec?: number;
   /** Set to true if persist block right at verification time */
   eagerPersistBlock?: boolean;
-  /** Set to true if the importing block is from gossip */
-  isGossipBlock?: boolean;
 };
 
 /**

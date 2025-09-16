@@ -334,7 +334,7 @@ describe("getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized", () => {
     FULU_FORK_EPOCH: 15,
   });
 
-  it("should return blob count pre electra", async () => {
+  it("should return 0 blob count pre deneb", async () => {
     const slot = 1;
     const block = config.getForkTypes(slot).SignedBeaconBlock.defaultValue();
     block.message.slot = slot;
