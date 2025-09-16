@@ -773,7 +773,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
       // has all sampled columns
       sampledColumns.length === this.sampledColumns.length ||
       // has enough columns to reconstruct the rest
-      sampledColumns.length >= NUMBER_OF_COLUMNS / 2;
+      this.columnsCache.size >= NUMBER_OF_COLUMNS / 2;
 
     this.state = {
       ...this.state,
