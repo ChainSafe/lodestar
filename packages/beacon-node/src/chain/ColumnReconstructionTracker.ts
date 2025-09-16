@@ -6,14 +6,12 @@ import {BlockInputColumns} from "./blocks/blockInput/index.js";
 import {ChainEventEmitter} from "./emitter.js";
 
 /**
- * Minimum time to wait before attempting reconstruction
+ * Maximum added delay before attempting reconstruction
+ *
+ * From the spec:
+ * If delaying reconstruction, nodes may use a random delay in order to desynchronize reconstruction among nodes, thus reducing overall CPU load.
  */
-const RECONSTRUCTION_DELAY_MIN_MS = 800;
-
-/**
- * Maximum time to wait before attempting reconstruction
- */
-const RECONSTRUCTION_DELAY_MAX_MS = 1200;
+const RECONSTRUCTION_RANDOM_DELAY_MAX_MS = 200;
 
 export type ColumnReconstructionTrackerInit = {
   logger: Logger;
@@ -48,7 +46,7 @@ export class ColumnReconstructionTracker {
     this.config = init.config;
   }
 
-  triggerColumnReconstruction(blockInput: BlockInputColumns): void {
+  triggerColumnReconstruction(delay: number, blockInput: BlockInputColumns): void {
     if (this.running) {
       return;
     }
@@ -61,9 +59,7 @@ export class ColumnReconstructionTracker {
     // just that it has been triggered for this block root.
     this.running = true;
     this.lastBlockRootHex = blockInput.blockRootHex;
-    const delay =
-      RECONSTRUCTION_DELAY_MIN_MS + Math.random() * (RECONSTRUCTION_DELAY_MAX_MS - RECONSTRUCTION_DELAY_MIN_MS);
-    sleep(delay)
+    sleep(delay + Math.random() * RECONSTRUCTION_RANDOM_DELAY_MAX_MS)
       .then(() => {
         const logCtx = {slot: blockInput.slot, root: blockInput.blockRootHex};
         this.logger.debug("Attempting data column sidecar reconstruction", logCtx);
