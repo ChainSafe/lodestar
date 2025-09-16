@@ -1,15 +1,14 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPostDeneb, ForkPostFulu, ForkPreFulu, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
-import {SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
+import {BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
 import {LodestarError, fromHex, prettyBytes, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
-import {BlobMeta, BlockInputSource, IBlockInput, MissingColumnMeta} from "../../chain/blocks/blockInput/types.js";
+import {BlockInputSource, IBlockInput} from "../../chain/blocks/blockInput/types.js";
 import {SeenBlockInput} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {validateBlockBlobSidecars} from "../../chain/validation/blobSidecar.js";
 import {validateBlockDataColumnSidecars} from "../../chain/validation/dataColumnSidecar.js";
 import {INetwork} from "../../network/interface.js";
 import {prettyPrintPeerIdStr} from "../../network/util.js";
-import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {byteArrayEquals} from "../../util/bytes.js";
 import {
   BlockInputSyncCacheItem,
@@ -38,13 +37,14 @@ export type FetchByRootAndValidateBlockProps = Omit<FetchByRootCoreProps, "peerM
 export type FetchByRootAndValidateBlobsProps = FetchByRootAndValidateBlockProps & {
   forkName: ForkPreFulu;
   block: SignedBeaconBlock<ForkPostDeneb>;
-  blobMeta: BlobMeta[];
+  blockRoot: Uint8Array;
+  missing: BlobIndex[];
 };
 export type FetchByRootAndValidateColumnsProps = FetchByRootCoreProps & {
   blockRoot: Uint8Array;
   forkName: ForkPostFulu;
   block: SignedBeaconBlock<ForkPostFulu>;
-  columnMeta: MissingColumnMeta;
+  missing: ColumnIndex[];
 };
 export type FetchByRootResponses = {
   block: SignedBeaconBlock;
@@ -201,7 +201,7 @@ export async function fetchByRoot({
           forkName: forkName as ForkPreFulu,
           block: block as SignedBeaconBlock<ForkPostDeneb>,
           blockRoot,
-          blobMeta: cacheItem.blockInput.getMissingBlobMeta(),
+          missing: cacheItem.blockInput.getMissingBlobMeta().map(({index}) => index),
         });
       }
       if (isBlockInputColumns(cacheItem.blockInput)) {
@@ -212,7 +212,7 @@ export async function fetchByRoot({
           forkName: forkName as ForkPostFulu,
           block: block as SignedBeaconBlock<ForkPostFulu>,
           blockRoot,
-          columnMeta: cacheItem.blockInput.getMissingSampledColumnMeta(),
+          missing: cacheItem.blockInput.getMissingSampledColumnMeta().missing,
         });
       }
     }
@@ -232,12 +232,7 @@ export async function fetchByRoot({
         forkName,
         blockRoot,
         block: block as SignedBeaconBlock<ForkPostFulu>,
-        columnMeta: {
-          missing: network.custodyConfig.sampledColumns,
-          versionedHashes: (block as SignedBeaconBlock<ForkPostFulu>).message.body.blobKzgCommitments.map((c) =>
-            kzgCommitmentToVersionedHash(c)
-          ),
-        },
+        missing: network.custodyConfig.sampledColumns,
       });
     } else if (isForkPostDeneb(forkName)) {
       const commitments = (block as SignedBeaconBlock<ForkPostDeneb>).message.body.blobKzgCommitments;
@@ -249,11 +244,7 @@ export async function fetchByRoot({
         forkName: forkName as ForkPreFulu,
         blockRoot,
         block: block as SignedBeaconBlock<ForkPostDeneb>,
-        blobMeta: Array.from({length: blobCount}, (_, i) => ({
-          index: i,
-          blockRoot,
-          versionedHash: kzgCommitmentToVersionedHash(commitments[i]),
-        })),
+        missing: Array.from({length: blobCount}, (_, i) => i),
       });
     }
   }
@@ -303,15 +294,16 @@ export async function fetchAndValidateBlobs({
   peerIdStr,
   blockRoot,
   block,
-  blobMeta,
+  missing,
 }: FetchByRootAndValidateBlobsProps): Promise<deneb.BlobSidecars> {
   const blobSidecars: deneb.BlobSidecars = await fetchBlobsByRoot({
     network,
     peerIdStr,
-    blobMeta,
+    blockRoot,
+    missing,
   });
 
-  await validateBlockBlobSidecars(block.message.slot, blockRoot, blobMeta.length, blobSidecars);
+  await validateBlockBlobSidecars(block.message.slot, blockRoot, missing.length, blobSidecars);
 
   return blobSidecars;
 }
@@ -319,14 +311,15 @@ export async function fetchAndValidateBlobs({
 export async function fetchBlobsByRoot({
   network,
   peerIdStr,
-  blobMeta,
+  blockRoot,
+  missing,
   indicesInPossession = [],
-}: Pick<FetchByRootAndValidateBlobsProps, "network" | "peerIdStr" | "blobMeta"> & {
+}: Pick<FetchByRootAndValidateBlobsProps, "network" | "peerIdStr" | "blockRoot" | "missing"> & {
   indicesInPossession?: number[];
 }): Promise<deneb.BlobSidecars> {
-  const blobsRequest = blobMeta
-    .filter(({index}) => !indicesInPossession.includes(index))
-    .map(({blockRoot, index}) => ({blockRoot, index}));
+  const blobsRequest = missing
+    .filter((index) => !indicesInPossession.includes(index))
+    .map((index) => ({blockRoot, index}));
   if (!blobsRequest.length) {
     return [];
   }
@@ -338,7 +331,7 @@ export async function fetchAndValidateColumns({
   peerMeta,
   block,
   blockRoot,
-  columnMeta,
+  missing,
 }: FetchByRootAndValidateColumnsProps): Promise<WarnResult<fulu.DataColumnSidecars, DownloadByRootError>> {
   const {peerId: peerIdStr} = peerMeta;
   const slot = block.message.slot;
@@ -349,7 +342,7 @@ export async function fetchAndValidateColumns({
 
   const blockRootHex = toRootHex(blockRoot);
   const peerColumns = new Set(peerMeta.custodyGroups ?? []);
-  const requestedColumns = columnMeta.missing.filter((c) => peerColumns.has(c));
+  const requestedColumns = missing.filter((c) => peerColumns.has(c));
   const columnSidecars = await network.sendDataColumnSidecarsByRoot(peerIdStr, [
     {blockRoot, columns: requestedColumns},
   ]);
@@ -413,18 +406,18 @@ export async function fetchColumnsByRoot({
   network,
   peerMeta,
   blockRoot,
-  columnMeta,
+  missing,
 }: Pick<
   FetchByRootAndValidateColumnsProps,
-  "network" | "peerMeta" | "blockRoot" | "columnMeta"
+  "network" | "peerMeta" | "blockRoot" | "missing"
 >): Promise<fulu.DataColumnSidecars> {
-  return await network.sendDataColumnSidecarsByRoot(peerMeta.peerId, [{blockRoot, columns: columnMeta.missing}]);
+  return await network.sendDataColumnSidecarsByRoot(peerMeta.peerId, [{blockRoot, columns: missing}]);
 }
 
 // TODO(fulu) not in use, remove?
 export type ValidateColumnSidecarsProps = Pick<
   FetchByRootAndValidateColumnsProps,
-  "config" | "peerMeta" | "blockRoot" | "columnMeta"
+  "config" | "peerMeta" | "blockRoot" | "missing"
 > & {
   slot: number;
   blobCount: number;
@@ -438,11 +431,11 @@ export async function validateColumnSidecars({
   slot,
   blockRoot,
   blobCount,
-  columnMeta,
+  missing,
   needed = [],
   needToPublish = [],
 }: ValidateColumnSidecarsProps): Promise<void> {
-  const requestedIndices = columnMeta.missing;
+  const requestedIndices = missing;
   const extraIndices: number[] = [];
   for (const columnSidecar of needed) {
     if (!requestedIndices.includes(columnSidecar.index)) {
