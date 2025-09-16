@@ -414,7 +414,8 @@ export class BlockInputSync {
         ignoreIfFinalized: true,
         blsVerifyOnMainThread: true,
         // block is validated with correct root, we want to process it as soon as possible
-        eagerPersistBlock: true,
+        // however, due to other optimizations, we don't eagerly persist the block
+        eagerPersistBlock: false,
       })
     );
 

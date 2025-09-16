@@ -1,5 +1,5 @@
 import {routes} from "@lodestar/api";
-import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {
   ForkName,
   ForkPostElectra,
@@ -9,14 +9,12 @@ import {
   isForkPostElectra,
   NUMBER_OF_COLUMNS,
 } from "@lodestar/params";
-import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {
   Root,
   SignedBeaconBlock,
   SingleAttestation,
   Slot,
   SubnetID,
-  UintNum64,
   deneb,
   fulu,
   ssz,
@@ -80,6 +78,7 @@ import {sszDeserialize} from "../gossip/topic.js";
 import {INetwork} from "../interface.js";
 import {PeerAction} from "../peers/index.js";
 import {AggregatorTracker} from "./aggregatorTracker.js";
+import {getCutoffTimeMs} from "../../util/clock.js";
 
 /**
  * Gossip handler options as part of network options
@@ -415,7 +414,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         // to track block process steps
         seenTimestampSec,
         // gossip block is validated, we want to process it asap
-        eagerPersistBlock: true,
+        // however, due to other optimizations, we don't eagerly persist the block
+        eagerPersistBlock: false,
         isGossipBlock: true,
       })
       .then(() => {
@@ -923,15 +923,4 @@ export async function validateGossipFnRetryUnknownRoot<T>(
       throw e;
     }
   }
-}
-
-function getCutoffTimeMs(
-  chain: {config: ChainForkConfig; genesisTime: UintNum64; logger: Logger},
-  blockSlot: Slot,
-  cutoffMsFromSlotStart: number
-): number {
-  return Math.max(
-    computeTimeAtSlot(chain.config, blockSlot, chain.genesisTime) * 1000 + cutoffMsFromSlotStart - Date.now(),
-    0
-  );
 }
