@@ -13,6 +13,7 @@ import {ValidatorEventEmitter} from "./emitter.js";
 import {SyncingStatusTracker} from "./syncingStatusTracker.js";
 import {groupAttDutiesByCommitteeIndex} from "./utils.js";
 import {ValidatorStore} from "./validatorStore.js";
+import {ISlotComponentClock} from "../util/slotComponentClock.js";
 
 export type AttestationServiceOpts = {
   afterBlockDelaySlotFraction?: number;
@@ -37,7 +38,7 @@ export class AttestationService {
   constructor(
     private readonly logger: LoggerVc,
     private readonly api: ApiClient,
-    private readonly clock: IClock,
+    private readonly clock: IClock & ISlotComponentClock,
     private readonly validatorStore: ValidatorStore,
     private readonly emitter: ValidatorEventEmitter,
     chainHeadTracker: ChainHeaderTracker,
@@ -89,13 +90,8 @@ export class AttestationService {
     // A validator should create and broadcast the attestation to the associated attestation subnet when either
     // (a) the validator has received a valid block from the expected block proposer for the assigned slot or
     // (b) 33.33% (ATTESTATION_DUE_BPS) of the slot has transpired -- whichever comes first.
-    await Promise.race([
-      sleep(this.clock.msToSlotComponent(slot, "ATTESTATION_DUE_BPS"), signal),
-      this.emitter.waitForBlockSlot(slot),
-    ]);
-    this.metrics?.attesterStepCallProduceAttestation.observe(
-      this.clock.secFromSlotComponent(slot, "ATTESTATION_DUE_BPS")
-    );
+    await Promise.race([sleep(this.clock.msToAttestationDue(slot), signal), this.emitter.waitForBlockSlot(slot)]);
+    this.metrics?.attesterStepCallProduceAttestation.observe(this.clock.secFromAttestationDue(slot));
 
     // Beacon node's endpoint produceAttestationData return data is not dependent on committeeIndex.
     // Produce a single attestation for all committees and submit unaggregated attestations in one go.
@@ -173,7 +169,7 @@ export class AttestationService {
     // they reach our peers before the block. To prevent that, we wait 2 extra seconds AFTER block arrival, but
     // never beyond the 33% cutoff time.
     // https://github.com/status-im/nimbus-eth2/blob/7b64c1dce4392731a4a59ee3a36caef2e0a8357a/beacon_chain/validators/validator_duties.nim#L1123
-    const msToCutoffTime = this.clock.msToSlotComponent(slot, "ATTESTATION_DUE_BPS");
+    const msToCutoffTime = this.clock.msToAttestationDue(slot);
     // submitting attestations asap to avoid busy time at around 1/3 of slot
     const afterBlockDelayMs =
       1000 *
@@ -181,9 +177,7 @@ export class AttestationService {
       (this.opts?.afterBlockDelaySlotFraction ?? DEFAULT_AFTER_BLOCK_DELAY_SLOT_FRACTION);
     await sleep(Math.min(msToCutoffTime, afterBlockDelayMs));
 
-    this.metrics?.attesterStepCallPublishAttestation.observe(
-      this.clock.secFromSlotComponent(slot, "ATTESTATION_DUE_BPS")
-    );
+    this.metrics?.attesterStepCallPublishAttestation.observe(this.clock.secFromAttestationDue(slot));
 
     // Step 2. Publish all `Attestations` in one go
     try {
@@ -253,9 +247,7 @@ export class AttestationService {
       })
     );
 
-    this.metrics?.attesterStepCallPublishAggregate.observe(
-      this.clock.secFromSlotComponent(attestation.slot, "AGGREGATE_DUE_BPS")
-    );
+    this.metrics?.attesterStepCallPublishAggregate.observe(this.clock.secFromAttestationDue(attestation.slot));
 
     if (signedAggregateAndProofs.length > 0) {
       try {
@@ -304,7 +296,7 @@ export class AttestationService {
       // Note that the aggregations flow is not explicitly exited but rather will be skipped
       // due to the fact that calculation of `is_aggregator` in AttestationDutiesService is not done
       // and selectionProof is set to null, meaning no validator will be considered an aggregator.
-      sleep(this.clock.msToSlotComponent(slot, "ATTESTATION_DUE_BPS"), signal),
+      sleep(this.clock.msToAttestationDue(slot), signal),
     ]);
 
     if (!res) {
