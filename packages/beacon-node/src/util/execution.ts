@@ -63,7 +63,7 @@ export async function getBlobSidecarsFromExecution(
     } else {
       metrics?.blobs.getBlobsV1Hit.inc();
 
-      if (blockInput.hasBlob()) {
+      if (blockInput.hasBlob(blobMeta[i].index)) {
         // blob arrived and was cached while waiting for API response
         metrics?.blobs.getBlobsV1HitButArrivedWhileWaiting.inc();
         continue;
