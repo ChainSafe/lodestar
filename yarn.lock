@@ -550,10 +550,10 @@
     "@chainsafe/blst-linux-x64-musl" "2.2.0"
     "@chainsafe/blst-win32-x64-msvc" "2.2.0"
 
-"@chainsafe/discv5@^11.0.3":
-  version "11.0.3"
-  resolved "https://registry.yarnpkg.com/@chainsafe/discv5/-/discv5-11.0.3.tgz#0f53d2f8a7f015bf2c0c8d897c01e8cb5466c916"
-  integrity sha512-bDvpiHfg7th/YGoOx7+W6x/28kfE/Cob7uE0XWpyPMQ0RTmJmzMYMfT1eulg5unlggALABvKgsct/gQDQT/hFw==
+"@chainsafe/discv5@^11.0.4":
+  version "11.0.4"
+  resolved "https://registry.yarnpkg.com/@chainsafe/discv5/-/discv5-11.0.4.tgz#77da0bef913ded936d97ca23a078de2034f2c94f"
+  integrity sha512-8bUqQXlh3+VBO3f3kzvFL0CLOeShZLjUexlmjCyfXfOgwpP1e46F4G6a9tneEEXaU+AMLPMz8uRCwtP/YsESbw==
   dependencies:
     "@chainsafe/enr" "^5.0.1"
     "@ethereumjs/rlp" "^5.0.2"
@@ -5999,10 +5999,10 @@ electron@^26.2.2:
     "@types/node" "^18.11.18"
     extract-zip "^2.0.1"
 
-elliptic@6.5.4, elliptic@^6.5.3, elliptic@^6.5.4:
-  version "6.5.4"
-  resolved "https://registry.npmjs.org/elliptic/-/elliptic-6.5.4.tgz"
-  integrity sha512-iLhC6ULemrljPZb+QutR5TQGB+pdW6KGD5RSegS+8sorOZT+rdQFbsQFJgvN3eRqNALqJer4oQ16YvJHlU8hzQ==
+elliptic@6.5.4, elliptic@>=6.6.1, elliptic@^6.5.3, elliptic@^6.5.4:
+  version "6.6.1"
+  resolved "https://registry.yarnpkg.com/elliptic/-/elliptic-6.6.1.tgz#3b8ffb02670bf69e382c7f65bf524c97c5405c06"
+  integrity sha512-RaddvvMatK2LJHqFJ+YA4WysVN5Ita9E35botqIYspQ4TkRAlCicdzKOjlyv/1Za5RyTNn7di//eEV0uTAfe3g==
   dependencies:
     bn.js "^4.11.9"
     brorand "^1.1.0"

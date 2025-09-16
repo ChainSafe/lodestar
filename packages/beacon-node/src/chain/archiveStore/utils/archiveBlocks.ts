@@ -183,7 +183,11 @@ export async function archiveBlocks(
 
         if (slotsToDelete.length > 0) {
           await db.dataColumnSidecarArchive.deleteMany(slotsToDelete);
-          `dataColumnSidecars prune slotRange=${prettyPrintIndices(slotsToDelete)}, numOfSlots=${slotsToDelete.length} totalNumOfSidecars=${prefixedKeys.length}`;
+          logger.verbose("dataColumnSidecars prune", {
+            slotRange: prettyPrintIndices(slotsToDelete),
+            numOfSlots: slotsToDelete.length,
+            totalNumOfSidecars: prefixedKeys.length,
+          });
         } else {
           logger.verbose(`dataColumnSidecars prune: no entries before epoch ${dataColumnSidecarsMinEpoch}`);
         }
