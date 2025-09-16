@@ -55,15 +55,16 @@ export enum ChainEvent {
    */
   updateStatus = "updateStatus",
   /**
-   *
+   * Trigger a BlockInputSync for blocks where the parentRoot is not known to fork choice
    */
   unknownParent = "unknownParent",
   /**
-   *
+   * Trigger BlockInputSync for objects that correspond to a block that is not known to fork choice
    */
   unknownBlockRoot = "unknownBlockRoot",
   /**
-   *
+   * Trigger BlockInputSync for blocks that are partially received via gossip but are not complete by time the
+   * cut-off window passes for waiting on gossip
    */
   incompleteBlockInput = "incompleteBlockInput",
 }
