@@ -176,7 +176,7 @@ export function getValidatorsCustodyRequirement(config: ChainForkConfig, effecti
  * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/das-core.md#compute_columns_for_custody_group
  */
 export function computeColumnsForCustodyGroup(config: ChainForkConfig, custodyIndex: CustodyIndex): ColumnIndex[] {
-  if (custodyIndex > config.NUMBER_OF_CUSTODY_GROUPS) {
+  if (custodyIndex >= config.NUMBER_OF_CUSTODY_GROUPS) {
     throw Error(`Invalid custody index ${custodyIndex} > ${config.NUMBER_OF_CUSTODY_GROUPS}`);
   }
   const columnsPerCustodyGroup = Number(NUMBER_OF_COLUMNS / config.NUMBER_OF_CUSTODY_GROUPS);
