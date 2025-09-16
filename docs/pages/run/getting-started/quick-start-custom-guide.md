@@ -287,7 +287,7 @@ The following are links to client documentation for CLI commands:
 - [**Besu CLI Commands**](https://besu.hyperledger.org/en/stable/Reference/CLI/CLI-Syntax/)
 - [**Go Ethereum CLI commands**](https://geth.ethereum.org/docs/interface/command-line-options)
 - [**Erigon CLI commands**](https://github.com/ledgerwatch/erigon#beacon-chain)
-- [**Reth CLI commands**](https://reth.rs/cli/reth.html)
+- [**Reth CLI commands**](https://reth.rs/cli/reth/)
   :::
 
 Once complete, press `CTRL` + `x` then `y` then `Enter` to save and exit.
