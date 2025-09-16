@@ -7,7 +7,7 @@ import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
 import {ForkSeq, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
-import {computeEpochAtSlot, computeTimeAtSlot, getSlotComponentDurationMs} from "@lodestar/state-transition";
+import {computeEpochAtSlot, computeTimeAtSlot, getSyncMessageDueMs} from "@lodestar/state-transition";
 import {
   AttesterSlashing,
   LightClientBootstrap,
@@ -720,8 +720,7 @@ export class Network implements INetwork {
 
   private waitForSyncMessageCutoff = async (slot: number): Promise<void> => {
     const secAtSlot =
-      computeTimeAtSlot(this.config, slot, this.chain.genesisTime) +
-      getSlotComponentDurationMs(this.config, this.config.SYNC_MESSAGE_DUE_BPS) / 1000;
+      computeTimeAtSlot(this.config, slot, this.chain.genesisTime) + getSyncMessageDueMs(this.config) / 1000;
     const msToSlot = secAtSlot * 1000 - Date.now();
     await sleep(msToSlot, this.controller.signal);
   };

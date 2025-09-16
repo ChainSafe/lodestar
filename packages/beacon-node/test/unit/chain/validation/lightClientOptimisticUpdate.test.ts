@@ -1,5 +1,5 @@
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {computeTimeAtSlot, getSlotComponentDurationMs} from "@lodestar/state-transition";
+import {computeTimeAtSlot, getSyncMessageDueMs} from "@lodestar/state-transition";
 import {altair, ssz} from "@lodestar/types";
 import {RequiredSelective} from "@lodestar/utils";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
@@ -81,9 +81,7 @@ describe("Light Client Optimistic Update validation", () => {
 
     const timeAtSignatureSlot =
       computeTimeAtSlot(config, lightclientOptimisticUpdate.signatureSlot, chain.genesisTime) * 1000;
-    vi.advanceTimersByTime(
-      timeAtSignatureSlot + getSlotComponentDurationMs(config, config.SYNC_MESSAGE_DUE_BPS) + 1000
-    );
+    vi.advanceTimersByTime(timeAtSignatureSlot + getSyncMessageDueMs(config) + 1000);
 
     // make lightclientserver return another update with different value from gossiped
     chain.lightClientServer.getOptimisticUpdate = () => {
@@ -107,9 +105,7 @@ describe("Light Client Optimistic Update validation", () => {
 
     const timeAtSignatureSlot =
       computeTimeAtSlot(config, lightclientOptimisticUpdate.signatureSlot, chain.genesisTime) * 1000;
-    vi.advanceTimersByTime(
-      timeAtSignatureSlot + getSlotComponentDurationMs(config, config.SYNC_MESSAGE_DUE_BPS) + 1000
-    );
+    vi.advanceTimersByTime(timeAtSignatureSlot + getSyncMessageDueMs(config) + 1000);
 
     // chain getOptimisticUpdate not mocked.
     // localOptimisticUpdate will be null
@@ -134,9 +130,7 @@ describe("Light Client Optimistic Update validation", () => {
     // (SECONDS_PER_SLOT / INTERVALS_PER_SLOT seconds after the start of the slot, with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
     const timeAtSignatureSlot =
       computeTimeAtSlot(config, lightclientOptimisticUpdate.signatureSlot, chain.genesisTime) * 1000;
-    vi.advanceTimersByTime(
-      timeAtSignatureSlot + getSlotComponentDurationMs(config, config.SYNC_MESSAGE_DUE_BPS) + 1000
-    );
+    vi.advanceTimersByTime(timeAtSignatureSlot + getSyncMessageDueMs(config) + 1000);
 
     // satisfy:
     // [IGNORE] The received optimistic_update matches the locally computed one exactly

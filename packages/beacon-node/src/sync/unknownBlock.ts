@@ -1,6 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, ForkSeq} from "@lodestar/params";
-import {getSlotComponentDurationMs} from "@lodestar/state-transition";
 import {ColumnIndex, Root, RootHex, deneb} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {Logger, fromHex, pruneSetToMax, toRootHex} from "@lodestar/utils";
@@ -26,6 +25,7 @@ import {MAX_CONCURRENT_REQUESTS} from "./constants.js";
 import {PendingBlock, PendingBlockStatus, PendingBlockType} from "./interface.js";
 import {SyncOptions} from "./options.js";
 import {getAllDescendantBlocks, getDescendantBlocks, getUnknownAndAncestorBlocks} from "./utils/pendingBlocksTree.js";
+import {getAttestationDueMs} from "@lodestar/state-transition";
 
 const MAX_ATTEMPTS_PER_BLOCK = 5;
 const MAX_KNOWN_BAD_BLOCKS = 500;
@@ -54,7 +54,7 @@ export class UnknownBlockSync {
     private readonly opts?: SyncOptions
   ) {
     this.maxPendingBlocks = opts?.maxPendingBlocks ?? MAX_PENDING_BLOCKS;
-    this.proposerBoostSecWindow = getSlotComponentDurationMs(config, config.ATTESTATION_DUE_BPS) / 1000;
+    this.proposerBoostSecWindow = getAttestationDueMs(config) / 1000;
     this.peerBalancer = new UnknownBlockPeerBalancer(this.network.custodyConfig);
 
     if (metrics) {

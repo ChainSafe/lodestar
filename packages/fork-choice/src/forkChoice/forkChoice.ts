@@ -8,8 +8,9 @@ import {
   computeEpochAtSlot,
   computeSlotsSinceEpochStart,
   computeStartSlotAtEpoch,
+  getAttestationDueMs,
   getAttesterSlashableIndices,
-  getSlotComponentDurationMs,
+  getProposerReorgCutoffMs,
   isExecutionBlockBodyType,
   isExecutionEnabled,
   isExecutionStateType,
@@ -1192,8 +1193,7 @@ export class ForkChoice implements IForkChoice {
    * Child class can overwrite this for testing purpose.
    */
   protected isBlockTimely(block: BeaconBlock, blockDelaySec: number): boolean {
-    const isBeforeLateBlockCutoff =
-      blockDelaySec * 1000 < getSlotComponentDurationMs(this.config, this.config.ATTESTATION_DUE_BPS);
+    const isBeforeLateBlockCutoff = blockDelaySec * 1000 < getAttestationDueMs(this.config);
     return this.fcStore.currentSlot === block.slot && isBeforeLateBlockCutoff;
   }
 
@@ -1201,7 +1201,7 @@ export class ForkChoice implements IForkChoice {
    * https://github.com/ethereum/consensus-specs/blob/v1.5.0/specs/phase0/fork-choice.md#is_proposing_on_time
    */
   private isProposingOnTime(secFromSlot: number): boolean {
-    const proposerReorgCutoff = getSlotComponentDurationMs(this.config, this.config.PROPOSER_REORG_CUTOFF_BPS);
+    const proposerReorgCutoff = getProposerReorgCutoffMs(this.config);
     return secFromSlot * 1000 <= proposerReorgCutoff;
   }
 

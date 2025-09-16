@@ -229,10 +229,6 @@ export function isBlobSchedule(value: unknown): value is BlobSchedule {
   );
 }
 
-export type SlotComponent = {
-  [K in keyof ChainConfig]: K extends `${string}_BPS` ? K : never;
-}[keyof ChainConfig];
-
 /** Allows values in a Spec file */
 export type SpecValue = number | bigint | Uint8Array | string | BlobSchedule;
 

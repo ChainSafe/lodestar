@@ -21,7 +21,27 @@ export function computeTimeAtSlot(config: ChainConfig, slot: Slot, genesisTime: 
   return genesisTime + slot * config.SECONDS_PER_SLOT;
 }
 
+export function getAttestationDueMs(config: ChainConfig): number {
+  return getSlotComponentDurationMs(config, config.ATTESTATION_DUE_BPS);
+}
+
+export function getAggregateDueMs(config: ChainConfig): number {
+  return getSlotComponentDurationMs(config, config.AGGREGATE_DUE_BPS);
+}
+
+export function getSyncMessageDueMs(config: ChainConfig): number {
+  return getSlotComponentDurationMs(config, config.SYNC_MESSAGE_DUE_BPS);
+}
+
+export function getSyncContributionDueMs(config: ChainConfig): number {
+  return getSlotComponentDurationMs(config, config.CONTRIBUTION_DUE_BPS);
+}
+
+export function getProposerReorgCutoffMs(config: ChainConfig): number {
+  return getSlotComponentDurationMs(config, config.PROPOSER_REORG_CUTOFF_BPS);
+}
+
 // Convert basis points to milliseconds into the slot
-export function getSlotComponentDurationMs(config: ChainConfig, basisPoints: number): number {
+function getSlotComponentDurationMs(config: ChainConfig, basisPoints: number): number {
   return Math.floor((basisPoints * config.SLOT_DURATION_MS) / BASIS_POINTS);
 }

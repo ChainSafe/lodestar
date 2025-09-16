@@ -1,6 +1,6 @@
-import {ChainForkConfig, SlotComponent} from "@lodestar/config";
-import {GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {computeEpochAtSlot, getCurrentSlot, getSlotComponentDurationMs} from "@lodestar/state-transition";
+import {ChainForkConfig} from "@lodestar/config";
+import {BASIS_POINTS, GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {computeEpochAtSlot, getCurrentSlot} from "@lodestar/state-transition";
 import {Epoch, Slot, TimeSeconds} from "@lodestar/types";
 import {ErrorAborted, Logger, isErrorAborted, sleep} from "@lodestar/utils";
 import {ISlotComponentClock} from "./slotComponentClock.js";
@@ -83,46 +83,36 @@ export class Clock implements IClock, ISlotComponentClock {
   }
 
   msToAttestationDue(slot: number): number {
-    return this.msToSlotComponent(slot, "ATTESTATION_DUE_BPS");
+    const slotFraction = this.config.ATTESTATION_DUE_BPS / BASIS_POINTS;
+    return this.msToSlot(slot + slotFraction);
   }
   secFromAttestationDue(slot: number): number {
-    return this.secFromSlotComponent(slot, "ATTESTATION_DUE_BPS");
+    const slotFraction = this.config.ATTESTATION_DUE_BPS / BASIS_POINTS;
+    return this.secFromSlot(slot + slotFraction);
   }
   msToAggregateDue(slot: number): number {
-    return this.msToSlotComponent(slot, "AGGREGATE_DUE_BPS");
+    const slotFraction = this.config.AGGREGATE_DUE_BPS / BASIS_POINTS;
+    return this.msToSlot(slot + slotFraction);
   }
   secFromAggregateDue(slot: number): number {
-    return this.secFromSlotComponent(slot, "AGGREGATE_DUE_BPS");
+    const slotFraction = this.config.AGGREGATE_DUE_BPS / BASIS_POINTS;
+    return this.secFromSlot(slot + slotFraction);
   }
   msToSyncMessageDue(slot: number): number {
-    return this.msToSlotComponent(slot, "SYNC_MESSAGE_DUE_BPS");
+    const slotFraction = this.config.SYNC_MESSAGE_DUE_BPS / BASIS_POINTS;
+    return this.msToSlot(slot + slotFraction);
   }
   secFromSyncMessageDue(slot: number): number {
-    return this.secFromSlotComponent(slot, "SYNC_MESSAGE_DUE_BPS");
+    const slotFraction = this.config.SYNC_MESSAGE_DUE_BPS / BASIS_POINTS;
+    return this.secFromSlot(slot + slotFraction);
   }
   msToSyncContributionDue(slot: number): number {
-    return this.msToSlotComponent(slot, "CONTRIBUTION_DUE_BPS");
+    const slotFraction = this.config.CONTRIBUTION_DUE_BPS / BASIS_POINTS;
+    return this.msToSlot(slot + slotFraction);
   }
   secFromSyncContributionDue(slot: number): number {
-    return this.secFromSlotComponent(slot, "CONTRIBUTION_DUE_BPS");
-  }
-
-  /** Milliseconds from now to a specific slot's slot component */
-  private msToSlotComponent(slot: Slot, slotComponent: SlotComponent): number {
-    const timeAt =
-      (this.genesisTime + this.config.SECONDS_PER_SLOT * slot) * 1000 +
-      getSlotComponentDurationMs(this.config, this.config[slotComponent]);
-    return timeAt - Date.now();
-  }
-
-  /** Seconds elapsed from a specific slot's slot component to now */
-  private secFromSlotComponent(slot: Slot, slotComponent: SlotComponent): number {
-    return (
-      Date.now() / 1000 -
-      (this.genesisTime +
-        this.config.SECONDS_PER_SLOT * slot +
-        getSlotComponentDurationMs(this.config, this.config[slotComponent]) / 1000)
-    );
+    const slotFraction = this.config.CONTRIBUTION_DUE_BPS / BASIS_POINTS;
+    return this.secFromSlot(slot + slotFraction);
   }
 
   /**
