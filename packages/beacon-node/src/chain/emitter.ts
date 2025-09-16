@@ -46,7 +46,7 @@ export enum ChainEvent {
    */
   publishDataColumns = "publishDataColumns",
   /**
-   * This event signals that data columns have been fetched from the execution engine
+   * This event signals that blobs have been fetched from the execution engine
    * and are ready to be published.
    */
   publishBlobSidecars = "publishBlobSidecars",
