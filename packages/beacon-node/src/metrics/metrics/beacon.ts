@@ -168,7 +168,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       }),
       getBlobsV1RequestedBlobCount: register.gauge({
         name: "beacon_get_blobs_v1_requested_blobs_count_total",
-        help: "Number of getBlobsV1 requests that get made",
+        help: "Number of versioned hashes that get sent in getBlobsV1 request",
       }),
       getBlobsV1Error: register.gauge({
         name: "beacon_get_blobs_v1_response_error_total",
