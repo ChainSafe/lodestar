@@ -909,7 +909,8 @@ export function getValidatorApi(
       const headState = chain.getHeadState();
       const headSlot = headState.slot;
       const attEpoch = computeEpochAtSlot(slot);
-      const headBlockRootHex = chain.forkChoice.getHead().blockRoot;
+      const headBlock = chain.forkChoice.getHead();
+      const headBlockRootHex = headBlock.blockRoot;
       const headBlockRoot = fromHex(headBlockRootHex);
       const fork = config.getForkName(slot);
 
@@ -943,10 +944,6 @@ export function getValidatorApi(
       notOnOptimisticBlockRoot(targetRoot);
       notOnOutOfRangeData(targetRoot);
 
-      // To get the correct source we must get a state in the same epoch as the attestation's epoch.
-      // An epoch transition may change state.currentJustifiedCheckpoint
-      const attEpochState = await chain.getHeadStateAtEpoch(attEpoch, RegenCaller.produceAttestationData);
-
       // TODO confirm if the below is correct assertion
       // notOnOutOfRangeData(attEpochState.currentJustifiedCheckpoint.root);
 
@@ -955,7 +952,7 @@ export function getValidatorApi(
           slot,
           index,
           beaconBlockRoot,
-          source: attEpochState.currentJustifiedCheckpoint,
+          source: {epoch: headBlock.justifiedEpoch, root: fromHex(headBlock.justifiedRoot)},
           target: {epoch: attEpoch, root: targetRoot},
         },
       };
