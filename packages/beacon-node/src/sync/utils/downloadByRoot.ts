@@ -180,63 +180,32 @@ export async function fetchByRoot(
 
   const requests: Promise<unknown>[] = [];
 
-  if (hasBlock) {
-    const block = cacheItem.blockInput.getBlock();
-    const forkName = config.getForkName(block.message.slot);
-
-    if (!hasAllData && isBlockInputBlobs(cacheItem.blockInput)) {
-      const blobMeta = cacheItem.blockInput.getMissingBlobMeta();
-
-      requests.push(
-        fetchAndValidateBlobs({
-          ...opts,
-          forkName: forkName as ForkPreFulu,
-          block: block as SignedBeaconBlock<ForkPostDeneb>,
-          peerIdStr: peerMeta.peerId,
-          blobMeta,
-        }).then(async (response) => {
-          blobSidecars = response;
-        })
-      );
-    }
-
-    if (!hasAllData && isBlockInputColumns(cacheItem.blockInput)) {
-      const columnMeta = {
-        missing: network.custodyConfig.sampledColumns,
-        versionedHashes: (block as SignedBeaconBlock<ForkPostFulu>).message.body.blobKzgCommitments.map((c) =>
-          kzgCommitmentToVersionedHash(c)
-        ),
-      };
-
-      requests.push(
-        fetchAndValidateColumns({
-          ...opts,
-          forkName: forkName as ForkPostFulu,
-          block: block as SignedBeaconBlock<ForkPostFulu>,
-          columnMeta,
-        }).then(({result, warnings}) => {
-          columnSidecars = result;
-          allWarnings.push(...(warnings ?? []));
-        })
-      );
-    }
-
-    await Promise.all(requests);
-
-    return {
-      result: {block, blobSidecars, columnSidecars},
-      warnings: allWarnings,
-    };
-  }
-
   // TODO: Make the block request in parallel to blob/column requests
   // Once we have the way to know the fork and and blob count before requesting the block
   // We can then add this request to array of requests and make all requests in parallel
-  const block = await fetchBeaconBlockByRoot({network, config, peerMeta, blockRoot});
+  const block = hasBlock
+    ? cacheItem.blockInput.getBlock()
+    : await fetchBeaconBlockByRoot({network, config, peerMeta, blockRoot});
 
   const forkName = config.getForkName(block.message.slot);
 
-  if (isForkPostFulu(forkName)) {
+  if (hasBlock && !hasAllData && isBlockInputBlobs(cacheItem.blockInput)) {
+    const blobMeta = cacheItem.blockInput.getMissingBlobMeta();
+
+    requests.push(
+      fetchAndValidateBlobs({
+        ...opts,
+        forkName: forkName as ForkPreFulu,
+        block: block as SignedBeaconBlock<ForkPostDeneb>,
+        peerIdStr: peerMeta.peerId,
+        blobMeta,
+      }).then(async (response) => {
+        blobSidecars = response;
+      })
+    );
+  }
+
+  if (hasBlock && !hasAllData && isBlockInputColumns(cacheItem.blockInput)) {
     const columnMeta = {
       missing: network.custodyConfig.sampledColumns,
       versionedHashes: (block as SignedBeaconBlock<ForkPostFulu>).message.body.blobKzgCommitments.map((c) =>
@@ -255,7 +224,28 @@ export async function fetchByRoot(
         allWarnings.push(...(warnings ?? []));
       })
     );
-  } else if (isForkPostDeneb(forkName)) {
+  }
+
+  if (!hasBlock && isForkPostFulu(forkName)) {
+    const columnMeta = {
+      missing: network.custodyConfig.sampledColumns,
+      versionedHashes: (block as SignedBeaconBlock<ForkPostFulu>).message.body.blobKzgCommitments.map((c) =>
+        kzgCommitmentToVersionedHash(c)
+      ),
+    };
+
+    requests.push(
+      fetchAndValidateColumns({
+        ...opts,
+        forkName: forkName as ForkPostFulu,
+        block: block as SignedBeaconBlock<ForkPostFulu>,
+        columnMeta,
+      }).then(({result, warnings}) => {
+        columnSidecars = result;
+        allWarnings.push(...(warnings ?? []));
+      })
+    );
+  } else if (!hasBlock && isForkPostDeneb(forkName)) {
     const commitments = (block as SignedBeaconBlock<ForkPostDeneb>).message.body.blobKzgCommitments;
     const blobCount = commitments.length;
     const blobMeta = Array.from({length: blobCount}, (_, i) => ({
