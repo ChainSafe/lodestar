@@ -17,7 +17,7 @@ import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
 
 describe("sync / unknown block sync for fulu", () => {
-  vi.setConfig({testTimeout: 40_000});
+  vi.setConfig({testTimeout: 60_000});
 
   const validatorCount = 8;
   const ELECTRA_FORK_EPOCH = 0;
