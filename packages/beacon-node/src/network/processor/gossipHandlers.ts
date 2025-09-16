@@ -576,7 +576,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         if (blockInput.columnCount >= NUMBER_OF_COLUMNS / 2) {
           chain.columnReconstructionTracker.triggerColumnReconstruction(
             // wait to reconstruct until after head vote
-            getCutoffTimeMs(chain, dataColumnSlot, config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT),
+            getCutoffTimeMs(chain, dataColumnSlot, (config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT) * 1000),
             blockInput
           );
         }
