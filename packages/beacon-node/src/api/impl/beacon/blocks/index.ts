@@ -332,6 +332,7 @@ export function getBeaconBlockApi({
       }
     } else if (isBlockInputBlobs(blockForImport) && chain.emitter.listenerCount(routes.events.EventType.blobSidecar)) {
       const blobSidecars = blockForImport.getBlobs();
+      const versionedHashes = blockForImport.getVersionedHashes();
 
       for (const blobSidecar of blobSidecars) {
         const {index, kzgCommitment} = blobSidecar;
@@ -340,7 +341,7 @@ export function getBeaconBlockApi({
           slot,
           index,
           kzgCommitment: toHex(kzgCommitment),
-          versionedHash: toHex(kzgCommitmentToVersionedHash(kzgCommitment)),
+          versionedHash: toHex(versionedHashes[index]),
         });
       }
     }

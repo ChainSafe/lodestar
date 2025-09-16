@@ -1,8 +1,8 @@
 import {randomBytes} from "node:crypto";
 import {ForkName, NUMBER_OF_COLUMNS} from "@lodestar/params";
-import {ssz} from "@lodestar/types";
+import {BlobIndex, ColumnIndex, ssz} from "@lodestar/types";
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
-import {BlobMeta, MissingColumnMeta} from "../../../../src/chain/blocks/blockInput/types.js";
+import {BlobMeta} from "../../../../src/chain/blocks/blockInput/types.js";
 import {BlobSidecarValidationError} from "../../../../src/chain/errors/blobSidecarError.js";
 import {INetwork} from "../../../../src/network/index.js";
 import {
@@ -13,7 +13,6 @@ import {
   fetchBlobsByRoot,
   fetchColumnsByRoot,
 } from "../../../../src/sync/utils/downloadByRoot.js";
-import {kzgCommitmentToVersionedHash} from "../../../../src/util/blobs.js";
 import {ROOT_SIZE} from "../../../../src/util/sszBytes.js";
 import {
   config,
@@ -94,15 +93,11 @@ describe("downloadByRoot.ts", () => {
   describe("fetchAndValidateBlobs", () => {
     const forkName = ForkName.deneb;
     let denebBlockWithBlobs: ReturnType<typeof generateBlockWithBlobSidecars>;
-    let blobMeta: BlobMeta[];
+    let missing: BlobIndex[];
 
     beforeEach(() => {
       denebBlockWithBlobs = generateBlockWithBlobSidecars({forkName, count: 6});
-      blobMeta = denebBlockWithBlobs.versionedHashes.map((versionedHash, index) => ({
-        index,
-        blockRoot: denebBlockWithBlobs.blockRoot,
-        versionedHash,
-      }));
+      missing = denebBlockWithBlobs.blobSidecars.map(({index}) => index);
     });
 
     afterEach(() => {
@@ -122,7 +117,7 @@ describe("downloadByRoot.ts", () => {
         peerIdStr,
         blockRoot: denebBlockWithBlobs.blockRoot,
         block: denebBlockWithBlobs.block,
-        blobMeta,
+        missing,
       });
 
       expect(response).toEqual(denebBlockWithBlobs.blobSidecars);
@@ -147,12 +142,12 @@ describe("downloadByRoot.ts", () => {
         peerIdStr,
         blockRoot: denebBlockWithBlobs.blockRoot,
         block: denebBlockWithBlobs.block,
-        blobMeta,
+        missing,
       });
 
       expect(sendBlobSidecarsByRootMock).toHaveBeenCalledExactlyOnceWith(
         peerIdStr,
-        denebBlockWithBlobs.blobSidecars.map(({index}) => ({blockRoot: denebBlockWithBlobs.blockRoot, index}))
+        missing.map((index) => ({blockRoot: denebBlockWithBlobs.blockRoot, index}))
       );
 
       const returnedIndices = response.map((b) => b.index);
@@ -175,7 +170,7 @@ describe("downloadByRoot.ts", () => {
           peerIdStr,
           blockRoot: requestedBlockRoot,
           block: denebBlockWithBlobs.block,
-          blobMeta,
+          missing,
         })
       ).rejects.toThrow(BlobSidecarValidationError);
     });
@@ -184,11 +179,13 @@ describe("downloadByRoot.ts", () => {
   describe("fetchBlobsByRoot", () => {
     let denebBlockWithColumns: ReturnType<typeof generateBlockWithBlobSidecars>;
     let blockRoot: Uint8Array;
+    let missing: BlobIndex[];
     let blobMeta: BlobMeta[];
     beforeAll(() => {
       denebBlockWithColumns = generateBlockWithBlobSidecars({forkName: ForkName.deneb, count: 6});
       blockRoot = denebBlockWithColumns.blockRoot;
-      blobMeta = denebBlockWithColumns.blobSidecars.map((_, index) => ({blockRoot, index}) as BlobMeta);
+      missing = denebBlockWithColumns.blobSidecars.map(({index}) => index);
+      blobMeta = missing.map((index) => ({blockRoot, index}) as BlobMeta);
       network = {
         sendBlobSidecarsByRoot: vi.fn(() => denebBlockWithColumns.blobSidecars),
       } as unknown as INetwork;
@@ -201,7 +198,8 @@ describe("downloadByRoot.ts", () => {
       const response = await fetchBlobsByRoot({
         network,
         peerIdStr,
-        blobMeta,
+        blockRoot,
+        missing,
       });
       expect(response).toEqual(denebBlockWithColumns.blobSidecars);
       expect(network.sendBlobSidecarsByRoot).toHaveBeenCalledOnce();
@@ -212,7 +210,8 @@ describe("downloadByRoot.ts", () => {
       await fetchBlobsByRoot({
         network,
         peerIdStr,
-        blobMeta,
+        blockRoot,
+        missing,
         // biome-ignore lint/style/noNonNullAssertion: its there
         indicesInPossession: [0, denebBlockWithColumns.blobSidecars.at(-1)?.index!],
       });
@@ -224,7 +223,8 @@ describe("downloadByRoot.ts", () => {
       const response = await fetchBlobsByRoot({
         network,
         peerIdStr,
-        blobMeta,
+        blockRoot,
+        missing,
         indicesInPossession: blobMeta.map(({index}) => index),
       });
       expect(response).toEqual([]);
@@ -235,18 +235,11 @@ describe("downloadByRoot.ts", () => {
   describe("fetchAndValidateColumns", () => {
     const forkName = ForkName.fulu;
     let fuluBlockWithColumns: ReturnType<typeof generateBlockWithColumnSidecars>;
-    let columnMeta: MissingColumnMeta;
-    let versionedHashes: Uint8Array[];
+    let missing: ColumnIndex[];
 
     beforeEach(() => {
       fuluBlockWithColumns = generateBlockWithColumnSidecars({forkName, returnBlobs: true});
-      versionedHashes = fuluBlockWithColumns.block.message.body.blobKzgCommitments.map((c) =>
-        kzgCommitmentToVersionedHash(c)
-      );
-      columnMeta = {
-        missing: [0, 1, 2, 3, 4, 5, 6, 7], // Sample a subset of columns
-        versionedHashes,
-      };
+      missing = [0, 1, 2, 3, 4, 5, 6, 7]; // Sample a subset of columns
     });
 
     afterEach(() => {
@@ -254,13 +247,13 @@ describe("downloadByRoot.ts", () => {
     });
 
     it("should successfully fetch columns from network only", async () => {
-      const neededColumns = fuluBlockWithColumns.columnSidecars.filter((c) => columnMeta.missing.includes(c.index));
+      const neededColumns = fuluBlockWithColumns.columnSidecars.filter((c) => missing.includes(c.index));
       const sendDataColumnSidecarsByRootMock = vi.fn(() => Promise.resolve(neededColumns));
       network = {
         sendDataColumnSidecarsByRoot: sendDataColumnSidecarsByRootMock,
         custodyConfig: {
           custodyColumns: [0, 1, 2, 3, 4, 5],
-          sampledColumns: columnMeta.missing,
+          sampledColumns: missing,
         },
         logger: {
           error: vi.fn(),
@@ -274,13 +267,13 @@ describe("downloadByRoot.ts", () => {
         peerMeta,
         blockRoot: fuluBlockWithColumns.blockRoot,
         block: fuluBlockWithColumns.block,
-        columnMeta,
+        missing,
       });
 
       expect(sendDataColumnSidecarsByRootMock).toHaveBeenCalledExactlyOnceWith(peerIdStr, [
-        {blockRoot: fuluBlockWithColumns.blockRoot, columns: columnMeta.missing},
+        {blockRoot: fuluBlockWithColumns.blockRoot, columns: missing},
       ]);
-      expect(response.result.map((c) => c.index)).toEqual(columnMeta.missing);
+      expect(response.result.map((c) => c.index)).toEqual(missing);
     });
 
     it("should throw error if column validation fails", async () => {
@@ -315,10 +308,7 @@ describe("downloadByRoot.ts", () => {
           peerMeta,
           blockRoot: fuluBlockWithColumns.blockRoot,
           block: fuluBlockWithColumns.block,
-          columnMeta: {
-            missing: [0, 1, 2, 3, 4, 5],
-            versionedHashes,
-          },
+          missing: [0, 1, 2, 3, 4, 5],
         })
       ).rejects.toThrow(DataColumnSidecarValidationError);
     });
@@ -342,10 +332,7 @@ describe("downloadByRoot.ts", () => {
         network,
         peerMeta,
         blockRoot,
-        columnMeta: {
-          missing,
-          versionedHashes: [],
-        },
+        missing,
       });
       expect(response).toEqual(fuluBlockWithColumns.columnSidecars);
       expect(network.sendDataColumnSidecarsByRoot).toHaveBeenCalledOnce();

@@ -233,12 +233,19 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       metrics?.gossipBlob.validationTime.observe(validationTime);
 
       if (chain.emitter.listenerCount(routes.events.EventType.blobSidecar)) {
+        let versionedHash: Uint8Array;
+        if (blockInput.hasBlock()) {
+          // if block hasn't arrived yet then this will throw and need to calculate the versionedHash as a 1-off
+          versionedHash = blockInput.getVersionedHashes()[blobSidecar.index];
+        } else {
+          versionedHash = kzgCommitmentToVersionedHash(blobSidecar.kzgCommitment);
+        }
         chain.emitter.emit(routes.events.EventType.blobSidecar, {
           blockRoot: blockRootHex,
           slot,
           index: blobSidecar.index,
           kzgCommitment: toHex(blobSidecar.kzgCommitment),
-          versionedHash: toHex(kzgCommitmentToVersionedHash(blobSidecar.kzgCommitment)),
+          versionedHash: toHex(versionedHash),
         });
       }
 
