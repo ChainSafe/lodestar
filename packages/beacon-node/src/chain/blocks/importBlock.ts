@@ -96,8 +96,9 @@ export async function importBlock(
 
   // 1. Persist block to hot DB (pre-emptively)
   // If eagerPersistBlock = true we do that in verifyBlocksInEpoch to batch all I/O operations to save block time to head
+  let writeBlockInputPromise: Promise<void> | undefined;
   if (!opts.eagerPersistBlock) {
-    await writeBlockInputToDb.call(this, [blockInput]);
+    writeBlockInputPromise = writeBlockInputToDb.call(this, [blockInput]);
   }
 
   // 2. Import block to fork choice
@@ -511,6 +512,9 @@ export async function importBlock(
       fullyVerifiedBlock.postState.epochCtx.currentSyncCommitteeIndexed.validatorIndices
     );
   }
+
+  // Await writeBlockInputToDb if it was started above
+  await writeBlockInputPromise;
 
   if (isBlockInputColumns(blockInput)) {
     for (const {source} of blockInput.getSampledColumnsWithSource()) {

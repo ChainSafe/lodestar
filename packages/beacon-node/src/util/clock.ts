@@ -1,5 +1,5 @@
 import EventEmitter from "node:events";
-import {ChainForkConfig} from "@lodestar/config";
+import {ChainConfig, ChainForkConfig} from "@lodestar/config";
 import {computeEpochAtSlot, computeTimeAtSlot, getCurrentSlot} from "@lodestar/state-transition";
 import type {Epoch, Slot} from "@lodestar/types";
 import {ErrorAborted} from "@lodestar/utils";
@@ -201,4 +201,15 @@ export class Clock extends EventEmitter implements IClock {
     const diffInMilliSeconds = Date.now() - this.genesisTime * 1000;
     return milliSecondsPerSlot - (diffInMilliSeconds % milliSecondsPerSlot);
   }
+}
+
+export function getCutoffTimeMs(
+  chain: {config: ChainConfig; genesisTime: number},
+  blockSlot: Slot,
+  cutoffMsFromSlotStart: number
+): number {
+  return Math.max(
+    computeTimeAtSlot(chain.config, blockSlot, chain.genesisTime) * 1000 + cutoffMsFromSlotStart - Date.now(),
+    0
+  );
 }

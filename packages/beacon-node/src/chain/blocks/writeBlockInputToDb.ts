@@ -3,6 +3,8 @@ import {prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {BeaconChain} from "../chain.js";
 import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blockInput/index.js";
 import {BLOB_AVAILABILITY_TIMEOUT} from "./verifyBlocksDataAvailability.js";
+import {getCutoffTimeMs} from "../../util/clock.js";
+import {INTERVALS_PER_SLOT} from "@lodestar/params";
 
 /**
  * Persists block input data to DB. This operation must be eventually completed if a block is imported to the fork-choice.
@@ -48,7 +50,9 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInputs: IBloc
         // Supernodes may only have a subset of the data columns by the time the block begins to be imported
         // because full data availability can be assumed after NUMBER_OF_COLUMNS / 2 columns are available.
         // Here, however, all data columns must be fully available/reconstructed before persisting to the DB.
-        this.columnReconstructionTracker.triggerColumnReconstruction(0, blockInput);
+        // Wait for normal gossip to received any missing columns and attempt reconstruction after this delay.
+        const delay = getCutoffTimeMs(this, slot, (this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT) * 1000);
+        this.columnReconstructionTracker.triggerColumnReconstruction(delay, blockInput);
         await blockInput.waitForComputedAllData(BLOB_AVAILABILITY_TIMEOUT);
       }
 
