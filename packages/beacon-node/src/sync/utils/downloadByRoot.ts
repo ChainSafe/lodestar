@@ -229,7 +229,9 @@ export async function fetchByRoot(
     };
   }
 
-  // We have to fetch block before blobs and columns to determine fork
+  // TODO: Make the block request in parallel to blob/column requests
+  // Once we have the way to know the fork and and blob count before requesting the block
+  // We can then add this request to array of requests and make all requests in parallel
   const block = await fetchBeaconBlockByRoot({network, config, peerMeta, blockRoot});
 
   const forkName = config.getForkName(block.message.slot);
