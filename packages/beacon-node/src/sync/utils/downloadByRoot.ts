@@ -396,49 +396,6 @@ export async function fetchAndValidateColumns({
   return {result: columnSidecars, warnings: warnings.length > 0 ? warnings : null};
 }
 
-// TODO(fulu) not in use, remove?
-export type ValidateColumnSidecarsProps = Pick<
-  FetchByRootAndValidateColumnsProps,
-  "config" | "peerMeta" | "blockRoot" | "columnMeta"
-> & {
-  slot: number;
-  blobCount: number;
-  needed?: fulu.DataColumnSidecars;
-  needToPublish?: fulu.DataColumnSidecars;
-};
-
-// TODO(fulu) not in use, remove?
-export async function validateColumnSidecars({
-  peerMeta,
-  slot,
-  blockRoot,
-  blobCount,
-  columnMeta,
-  needed = [],
-  needToPublish = [],
-}: ValidateColumnSidecarsProps): Promise<void> {
-  const requestedIndices = columnMeta.missing;
-  const extraIndices: number[] = [];
-  for (const columnSidecar of needed) {
-    if (!requestedIndices.includes(columnSidecar.index)) {
-      extraIndices.push(columnSidecar.index);
-    }
-  }
-  if (extraIndices.length > 0) {
-    throw new DownloadByRootError(
-      {
-        code: DownloadByRootErrorCode.EXTRA_SIDECAR_RECEIVED,
-        peer: prettyPrintPeerIdStr(peerMeta.peerId),
-        slot,
-        blockRoot: prettyBytes(blockRoot),
-        invalidIndices: prettyPrintIndices(extraIndices),
-      },
-      "Received a columnSidecar that was not requested"
-    );
-  }
-  await validateBlockDataColumnSidecars(slot, blockRoot, blobCount, [...needed, ...needToPublish]);
-}
-
 export enum DownloadByRootErrorCode {
   MISMATCH_BLOCK_ROOT = "DOWNLOAD_BY_ROOT_ERROR_MISMATCH_BLOCK_ROOT",
   EXTRA_SIDECAR_RECEIVED = "DOWNLOAD_BY_ROOT_ERROR_EXTRA_SIDECAR_RECEIVED",
