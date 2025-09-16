@@ -102,9 +102,9 @@ export async function getBlobSidecarsFromExecution(
 
       blobSidecars.push(blobSidecar);
     }
-
-    emitter.emit(ChainEvent.publishBlobSidecars, blobSidecars);
   }
+
+  emitter.emit(ChainEvent.publishBlobSidecars, blobSidecars);
 }
 
 /**
