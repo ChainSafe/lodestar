@@ -454,7 +454,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           logLevel = LogLevel.error;
         }
         metrics?.gossipBlock.processBlockErrors.inc({error: e instanceof BlockError ? e.type.code : "NOT_BLOCK_ERROR"});
-        logger[logLevel]("Error processing block", {slot, peer: peerIdStr}, e as Error);
+        logger[logLevel](
+          "Error processing block",
+          {slot, peer: peerIdStr, blockRoot: prettyBytes(blockInput.blockRootHex)},
+          e as Error
+        );
         // TODO(fulu): Revisit when we prune block inputs
         chain.seenBlockInputCache.prune(blockInput.blockRootHex);
       });
