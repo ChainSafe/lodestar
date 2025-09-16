@@ -163,7 +163,11 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
 
     blobs: {
       getBlobsV1Requests: register.gauge({
-        name: "beacon_get_blobs_v1_requests_total",
+        name: "beacon_get_blobs_v1_calls_total",
+        help: "Number of getBlobsV1 requests that get made",
+      }),
+      getBlobsV1RequestedBlobCount: register.gauge({
+        name: "beacon_get_blobs_v1_requested_blobs_count_total",
         help: "Number of getBlobsV1 requests that get made",
       }),
       getBlobsV1Error: register.gauge({
@@ -177,6 +181,14 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       getBlobsV1Hit: register.gauge({
         name: "beacon_get_blobs_v1_blob_returned_response_total",
         help: "Number of getBlobsV1 hits where a versioned hash returns blob",
+      }),
+      getBlobsV1HitButArrivedWhileWaiting: register.gauge({
+        name: "beacon_get_blobs_v1_blob_returned_but_arrived_during_response_total",
+        help: "Number of getBlobsV1 hits where a versioned hash returns blob but the blob already arrived via gossip",
+      }),
+      getBlobsV1HitUseful: register.gauge({
+        name: "beacon_get_blobs_v1_blob_useful_response_total",
+        help: "Number of getBlobsV1 hits where a versioned hash returns blob and the blob is needed so call is useful",
       }),
     },
 

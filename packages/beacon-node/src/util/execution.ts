@@ -35,13 +35,15 @@ export async function getBlobSidecarsFromExecution(
   const blobMeta = blockInput.getMissingBlobMeta();
 
   metrics?.blobs.getBlobsV1Requests.inc();
+  metrics?.blobs.getBlobsV1RequestedBlobCount.inc(blobMeta.length);
   const enginedResponse = await executionEngine
     .getBlobs(
       forkName,
       blobMeta.map(({versionedHash}) => versionedHash)
     )
     .catch((_e) => {
-      metrics?.blobs.getBlobsV1Error.inc();
+      // TODO(fulu): this should only count as a single error? need to update the promql to reflect this
+      metrics?.blobs.getBlobsV1Error.inc(blobMeta.length);
       return null;
     });
 
@@ -60,6 +62,14 @@ export async function getBlobSidecarsFromExecution(
       metrics?.blobs.getBlobsV1Miss.inc();
     } else {
       metrics?.blobs.getBlobsV1Hit.inc();
+
+      if (blockInput.hasBlob()) {
+        // blob arrived and was cached while waiting for API response
+        metrics?.blobs.getBlobsV1HitButArrivedWhileWaiting.inc();
+        continue;
+      }
+
+      metrics?.blobs.getBlobsV1HitUseful.inc();
       const {blob, proof} = blobAndProof;
       const index = blobMeta[i].index;
       const kzgCommitment = block.message.body.blobKzgCommitments[index];
