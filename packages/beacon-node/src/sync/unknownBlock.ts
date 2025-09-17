@@ -318,7 +318,7 @@ export class BlockInputSync {
     const rootHex = getBlockInputSyncCacheItemRootHex(block);
     const logCtx = {
       slot: getBlockInputSyncCacheItemSlot(block),
-      blockRoot: rootHex,
+      blockRoot: prettyBytes(rootHex),
       pendingBlocks: this.pendingBlocks.size,
     };
 
@@ -384,6 +384,7 @@ export class BlockInputSync {
         const connectedPeers = this.network.getConnectedPeers();
         if (connectedPeers.length === 0) {
           this.logger.debug("No connected peers, skipping download block", {
+            slot: pendingBlock.blockInput.slot,
             blockRoot: pendingBlock.blockInput.blockRootHex,
           });
           return;
@@ -405,7 +406,7 @@ export class BlockInputSync {
       // proposer is known by a gossip block already, wait a bit to make sure this block is not
       // eligible for proposer boost to prevent unbundling attack
       this.logger.verbose("Avoid proposer boost for this block of known proposer", {
-        blockSlot,
+        slot: blockSlot,
         blockRoot: prettyBytes(pendingBlock.blockInput.blockRootHex),
         proposerIndex,
       });
@@ -446,7 +447,7 @@ export class BlockInputSync {
         }
       }
     } else {
-      const errorData = {root: pendingBlock.blockInput.blockRootHex, slot: pendingBlock.blockInput.slot};
+      const errorData = {slot: pendingBlock.blockInput.slot, root: pendingBlock.blockInput.blockRootHex};
       if (res.err instanceof BlockError) {
         switch (res.err.type.code) {
           // This cases are already handled with `{ignoreIfKnown: true}`
@@ -514,7 +515,7 @@ export class BlockInputSync {
       const peerMeta = this.peerBalancer.bestPeerForPendingColumns(pendingColumns, excludedPeers);
       if (peerMeta === null) {
         // no more peer with needed columns to try, throw error
-        let message = `Error fetching UnknownBlockRoot after ${i}: cannot find peer`;
+        let message = `Error fetching UnknownBlockRoot slot=${slot} blockRoot=${prettyBytes(rootHex)} after ${i}: cannot find peer`;
         if (pendingColumns) {
           message += ` with needed columns=${prettyPrintIndices(Array.from(pendingColumns))}`;
         }
@@ -559,7 +560,7 @@ export class BlockInputSync {
       } catch (e) {
         this.logger.debug(
           "Error downloading in BlockInputSync.fetchBlockInput",
-          {attempt: i, rootHex, peer: peerId, peerClient},
+          {slot, rootHex, attempt: i, peer: peerId, peerClient},
           e as Error
         );
         const downloadByRootMetrics = this.metrics?.blockInputSync.downloadByRoot;
@@ -593,22 +594,27 @@ export class BlockInputSync {
       }
     } // end while loop over peers
 
-    let message = `Error fetching BlockInput with blockRoot=${prettyBytes(rootHex)} after ${i} attempts.`;
+    const message = `Error fetching BlockInput with slot=${slot} blockRoot=${prettyBytes(rootHex)} after ${i - 1} attempts.`;
+
     if (!isPendingBlockInput(cacheItem)) {
-      message += " No block and no data was found";
-    } else {
-      if (!cacheItem.blockInput.hasBlock()) {
-        message += " Block was not found.";
-      } else if (isBlockInputBlobs(cacheItem.blockInput)) {
-        const missing = cacheItem.blockInput.getMissingBlobMeta().map((b) => b.index);
-        if (missing.length) {
-          message += ` Missing blob indices=${prettyPrintIndices(missing)}`;
-        }
-      } else if (isBlockInputColumns(cacheItem.blockInput)) {
-        const missing = cacheItem.blockInput.getMissingSampledColumnMeta().missing;
-        if (missing.length) {
-          message += ` Missing column indices=${prettyPrintIndices(missing)}`;
-        }
+      throw Error(`${message} No block and no data was found.`);
+    }
+
+    if (!cacheItem.blockInput.hasBlock()) {
+      throw new Error(`${message} Block was not found.`);
+    }
+
+    if (isBlockInputBlobs(cacheItem.blockInput)) {
+      const missing = cacheItem.blockInput.getMissingBlobMeta().map((b) => b.index);
+      if (missing.length) {
+        throw new Error(`${message} Missing blob indices=${prettyPrintIndices(missing)}.`);
+      }
+    }
+
+    if (isBlockInputColumns(cacheItem.blockInput)) {
+      const missing = cacheItem.blockInput.getMissingSampledColumnMeta().missing;
+      if (missing.length) {
+        throw new Error(`${message} Missing column indices=${prettyPrintIndices(missing)}.`);
       }
     }
 
@@ -643,6 +649,7 @@ export class BlockInputSync {
       //     this.network.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadBlockByRoot");
       //   }
       this.logger.debug("ignored Banning unknown block", {
+        slot: getBlockInputSyncCacheItemSlot(block),
         root: getBlockInputSyncCacheItemRootHex(block),
         peerIdStrings: Array.from(block.peerIdStrings)
           .map((id) => prettyPrintPeerIdStr(id))
@@ -656,6 +663,7 @@ export class BlockInputSync {
 
   private removeAllDescendants(block: BlockInputSyncCacheItem): BlockInputSyncCacheItem[] {
     const rootHex = getBlockInputSyncCacheItemRootHex(block);
+    const slot = getBlockInputSyncCacheItemSlot(block);
     // Get all blocks that are a descendant of this one
     const badPendingBlocks = [block, ...getAllDescendantBlocks(rootHex, this.pendingBlocks)];
 
@@ -666,6 +674,7 @@ export class BlockInputSync {
       this.pendingBlocks.delete(rootHex);
       this.chain.seenBlockInputCache.prune(rootHex);
       this.logger.debug("Removing bad/unknown/incomplete BlockInputSyncCacheItem", {
+        slot,
         blockRoot: rootHex,
       });
     }
