@@ -68,7 +68,7 @@
     "supertest": "^6.3.3",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.2",
-    "typescript-docs-verifier": "^2.5.3",
+    "typescript-docs-verifier": "^3.0.1",
     "vite": "^6.0.11",
     "vite-plugin-dts": "^4.5.0",
     "vite-plugin-node-polyfills": "^0.23.0",
