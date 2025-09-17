@@ -32,6 +32,9 @@
     "./electra": {
       "import": "./lib/electra/index.js"
     },
+    "./fulu": {
+      "import": "./lib/fulu/index.js"
+    },
     "./phase0": {
       "import": "./lib/phase0/index.js"
     }
