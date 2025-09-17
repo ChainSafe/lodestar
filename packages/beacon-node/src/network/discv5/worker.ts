@@ -59,7 +59,7 @@ const discv5 = Discv5.create({
   },
   config: workerData.config,
   metricsRegistry,
-});
+}) as Discv5 & Discv5EventEmitter;
 
 // Load boot enrs
 for (const bootEnr of workerData.bootEnrs) {
@@ -80,7 +80,7 @@ const onDiscovered = (enr: ENR): void => {
     subject.next(enr.toObject());
   }
 };
-(discv5 as Discv5EventEmitter).addListener("discovered", onDiscovered);
+discv5.addListener("discovered", onDiscovered);
 
 // Discv5 will now begin accepting request/responses
 await discv5.start();
@@ -118,7 +118,7 @@ const module: Discv5WorkerApi = {
   },
   async close() {
     closeMetrics?.();
-    (discv5 as Discv5EventEmitter).removeListener("discovered", onDiscovered);
+    discv5.removeListener("discovered", onDiscovered);
     subject.complete();
     await discv5.stop();
   },

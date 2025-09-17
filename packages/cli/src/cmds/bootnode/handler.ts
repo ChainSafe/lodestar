@@ -66,7 +66,7 @@ export async function bootnodeHandler(args: BootnodeArgs & GlobalArgs): Promise<
       },
       config: {enrUpdate: !enr.ip && !enr.ip6},
       metricsRegistry,
-    });
+    }) as Discv5 & Discv5EventEmitter;
 
     // If there are any bootnodes, add them to the routing table
     for (const bootEnrStr of Array.from(new Set(discv5Args.bootEnrs).values())) {
@@ -88,7 +88,7 @@ export async function bootnodeHandler(args: BootnodeArgs & GlobalArgs): Promise<
       void discv5.findRandomNode();
     }
 
-    (discv5 as Discv5EventEmitter).on("multiaddrUpdated", (addr: ENRData) => {
+    discv5.on("multiaddrUpdated", (addr: ENRData) => {
       logger.info("Advertised socket address updated", {addr: addr.toString()});
     });
 
@@ -138,7 +138,7 @@ export async function bootnodeHandler(args: BootnodeArgs & GlobalArgs): Promise<
       "abort",
       async () => {
         try {
-          (discv5 as Discv5EventEmitter).removeAllListeners();
+          discv5.removeAllListeners();
           clearInterval(printInterval);
 
           await metricsServer?.close();
