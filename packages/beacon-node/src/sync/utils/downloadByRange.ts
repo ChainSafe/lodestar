@@ -1,7 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPostDeneb, ForkPostFulu} from "@lodestar/params";
 import {SignedBeaconBlock, Slot, deneb, fulu, phase0} from "@lodestar/types";
-import {LodestarError, Logger, fromHex, prettyBytes, toRootHex} from "@lodestar/utils";
+import {LodestarError, Logger, fromHex, prettyBytes, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {
   BlockInputSource,
   DAType,
@@ -15,6 +15,7 @@ import {validateBlockDataColumnSidecars} from "../../chain/validation/dataColumn
 import {INetwork} from "../../network/index.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {DownloadByRootErrorCode} from "./downloadByRoot.js";
+import {WarnResult} from "../../util/wrapError.js";
 
 export type DownloadByRangeRequests = {
   blocksRequest?: phase0.BeaconBlocksByRangeRequest;
@@ -184,7 +185,7 @@ export async function downloadByRange({
   blocksRequest,
   blobsRequest,
   columnsRequest,
-}: Omit<DownloadAndCacheByRangeProps, "cache">): Promise<ValidatedResponses> {
+}: Omit<DownloadAndCacheByRangeProps, "cache">): Promise<WarnResult<ValidatedResponses, DownloadByRangeError>> {
   let response: DownloadByRangeResponses;
   try {
     response = await requestByRange({
@@ -282,7 +283,7 @@ export async function validateResponses({
   DownloadByRangeResponses & {
     config: ChainForkConfig;
     batchBlocks?: IBlockInput[];
-  }): Promise<ValidatedResponses> {
+  }): Promise<WarnResult<ValidatedResponses, DownloadByRangeError>> {
   // Blocks are always required for blob/column validation
   // If a blocksRequest is provided, blocks have just been downloaded
   // If no blocksRequest is provided, batchBlocks must have been provided from cache
@@ -297,6 +298,7 @@ export async function validateResponses({
   }
 
   const validatedResponses: ValidatedResponses = {};
+  let warnings: DownloadByRangeError[] | null = null;
 
   if (blocksRequest) {
     validatedResponses.validatedBlocks = validateBlockByRangeResponse(config, blocksRequest, blocks ?? []);
@@ -304,7 +306,7 @@ export async function validateResponses({
 
   const dataRequest = blobsRequest ?? columnsRequest;
   if (!dataRequest) {
-    return validatedResponses;
+    return {result: validatedResponses, warnings: null};
   }
 
   const dataRequestBlocks = getBlocksForDataValidation(
@@ -348,14 +350,16 @@ export async function validateResponses({
       );
     }
 
-    validatedResponses.validatedColumnSidecars = await validateColumnsByRangeResponse(
+    const validatedColumnSidecarsResult = await validateColumnsByRangeResponse(
       columnsRequest,
       dataRequestBlocks,
       columnSidecars
     );
+    validatedResponses.validatedColumnSidecars = validatedColumnSidecarsResult.result;
+    warnings = validatedColumnSidecarsResult.warnings;
   }
 
-  return validatedResponses;
+  return {result: validatedResponses, warnings};
 }
 
 /**
@@ -526,7 +530,7 @@ export async function validateColumnsByRangeResponse(
   request: fulu.DataColumnSidecarsByRangeRequest,
   dataRequestBlocks: ValidatedBlock[],
   columnSidecars: fulu.DataColumnSidecars
-): Promise<ValidatedColumnSidecars[]> {
+): Promise<WarnResult<ValidatedColumnSidecars[], DownloadByRangeError>> {
   // Expected column count considering currently-validated batch blocks
   const expectedColumnCount = dataRequestBlocks.reduce((acc, {block}) => {
     return (block as SignedBeaconBlock<ForkPostDeneb>).message.body.blobKzgCommitments.length > 0
@@ -543,74 +547,84 @@ export async function validateColumnsByRangeResponse(
   const maxColumnCount = expectedColumnCount + possiblyMissingBlocks * request.columns.length;
 
   if (columnSidecars.length > maxColumnCount) {
+    // this never happens on devnet, so throw error for now
     throw new DownloadByRangeError(
       {
-        code: DownloadByRangeErrorCode.EXTRA_COLUMNS,
+        code: DownloadByRangeErrorCode.OVER_COLUMNS,
         max: maxColumnCount,
         actual: columnSidecars.length,
       },
       "Extra data columns received in DataColumnSidecarsByRange response"
     );
   }
-  if (columnSidecars.length < expectedColumnCount) {
-    throw new DownloadByRangeError(
-      {
-        code: DownloadByRangeErrorCode.MISSING_COLUMNS,
-        expected: expectedColumnCount,
-        actual: columnSidecars.length,
-      },
-      "Missing data columns in DataColumnSidecarsByRange response"
-    );
-  }
 
+  const warnings: DownloadByRangeError[] = [];
+  // no need to check for columnSidecars.length  vs expectedColumnCount here, will be checked per-block below
+  const requestedColumns = new Set(request.columns);
   const validateSidecarsPromises: Promise<ValidatedColumnSidecars>[] = [];
   for (let blockIndex = 0, columnSidecarIndex = 0; blockIndex < dataRequestBlocks.length; blockIndex++) {
     const {block, blockRoot} = dataRequestBlocks[blockIndex];
+    const slot = block.message.slot;
+    const blockRootHex = toRootHex(blockRoot);
     const blockKzgCommitments = (block as SignedBeaconBlock<ForkPostFulu>).message.body.blobKzgCommitments;
     const expectedColumns = blockKzgCommitments.length ? request.columns.length : 0;
 
     if (expectedColumns === 0) {
       continue;
     }
-    const blockColumnSidecars = columnSidecars.slice(columnSidecarIndex, columnSidecarIndex + expectedColumns);
-    columnSidecarIndex += expectedColumns;
-
-    // Validate that all requested columns are present and in order
-    if (blockColumnSidecars.length !== expectedColumns) {
-      throw new DownloadByRangeError(
-        {
-          code: DownloadByRangeErrorCode.MISSING_COLUMNS,
-          expected: expectedColumns,
-          actual: blockColumnSidecars.length,
-        },
-        "Missing data columns in DataColumnSidecarsByRange response"
-      );
+    const blockColumnSidecars: fulu.DataColumnSidecar[] = [];
+    while (columnSidecarIndex < columnSidecars.length) {
+      const columnSidecar = columnSidecars[columnSidecarIndex];
+      if (columnSidecar.signedBlockHeader.message.slot !== block.message.slot) {
+        // We've reached columns for the next block
+        break;
+      }
+      blockColumnSidecars.push(columnSidecar);
+      columnSidecarIndex++;
     }
-    for (let i = 0; i < blockColumnSidecars.length; i++) {
-      if (blockColumnSidecars[i].index !== request.columns[i]) {
-        throw new DownloadByRangeError(
+
+    const returnedColumns = new Set(blockColumnSidecars.map((c) => c.index));
+    const missingIndices = request.columns.filter((i) => !returnedColumns.has(i));
+    if (missingIndices.length > 0) {
+      warnings.push(
+        new DownloadByRangeError(
           {
             code: DownloadByRangeErrorCode.MISSING_COLUMNS,
-            expected: expectedColumns,
-            actual: blockColumnSidecars.length,
+            slot,
+            blockRoot: blockRootHex,
+            missingIndices: prettyPrintIndices(missingIndices),
           },
-          "Data columns not in order or do not match requested columns in DataColumnSidecarsByRange response"
-        );
-      }
+          "Missing data columns in DataColumnSidecarsByRange response"
+        )
+      );
+    }
+
+    const extraIndices = [...returnedColumns].filter((i) => !requestedColumns.has(i));
+    if (extraIndices.length > 0) {
+      warnings.push(
+        new DownloadByRangeError(
+          {
+            code: DownloadByRangeErrorCode.EXTRA_COLUMNS,
+            slot,
+            blockRoot: blockRootHex,
+            invalidIndices: prettyPrintIndices(extraIndices),
+          },
+          "Data column in not in requested columns in DataColumnSidecarsByRange response"
+        )
+      );
     }
 
     validateSidecarsPromises.push(
-      validateBlockDataColumnSidecars(
-        block.message.slot,
+      validateBlockDataColumnSidecars(slot, blockRoot, blockKzgCommitments.length, blockColumnSidecars).then(() => ({
         blockRoot,
-        blockKzgCommitments.length,
-        blockColumnSidecars
-      ).then(() => ({blockRoot, columnSidecars: blockColumnSidecars}))
+        columnSidecars: blockColumnSidecars,
+      }))
     );
   }
 
   // Await all sidecar validations in parallel
-  return Promise.all(validateSidecarsPromises);
+  const result = await Promise.all(validateSidecarsPromises);
+  return {result, warnings: warnings.length ? warnings : null};
 }
 
 /**
@@ -696,6 +710,7 @@ export enum DownloadByRangeErrorCode {
   EXTRA_BLOBS = "DOWNLOAD_BY_RANGE_ERROR_EXTRA_BLOBS",
 
   MISSING_COLUMNS = "DOWNLOAD_BY_RANGE_ERROR_MISSING_COLUMNS",
+  OVER_COLUMNS = "DOWNLOAD_BY_RANGE_ERROR_OVER_COLUMNS",
   EXTRA_COLUMNS = "DOWNLOAD_BY_RANGE_ERROR_EXTRA_COLUMNS",
 
   /** Cached block input type mismatches new data */
@@ -766,14 +781,21 @@ export type DownloadByRangeErrorType =
       actual: number;
     }
   | {
-      code: DownloadByRangeErrorCode.MISSING_COLUMNS;
-      expected: number;
+      code: DownloadByRangeErrorCode.OVER_COLUMNS;
+      max: number;
       actual: number;
     }
   | {
+      code: DownloadByRangeErrorCode.MISSING_COLUMNS;
+      slot: Slot;
+      blockRoot: string;
+      missingIndices: string;
+    }
+  | {
       code: DownloadByRangeErrorCode.EXTRA_COLUMNS;
-      max: number;
-      actual: number;
+      slot: Slot;
+      blockRoot: string;
+      invalidIndices: string;
     }
   | {
       code: DownloadByRangeErrorCode.MISMATCH_BLOCK_INPUT_TYPE;

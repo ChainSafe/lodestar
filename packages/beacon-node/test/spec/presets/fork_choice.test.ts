@@ -63,7 +63,7 @@ const forkChoiceTest =
   (opts: {onlyPredefinedResponses: boolean}): TestRunnerFn<ForkChoiceTestCase, void> =>
   (fork) => {
     return {
-      testFunction: async (testcase) => {
+      testFunction: async (testcase, _directoryName, testCaseName) => {
         const {steps, anchorState} = testcase;
         const currentSlot = anchorState.slot;
         const config = getConfig(fork);
@@ -228,8 +228,16 @@ const forkChoiceTest =
                     forkName: fork,
                     block: signedBlock as SignedBeaconBlock<ForkPostFulu>,
                     blockRootHex,
-                    custodyColumns: columns.map((c) => c.index),
-                    sampledColumns: columns.map((c) => c.index),
+                    custodyColumns:
+                      // in most test case instances we do not want to assign any custody as there are no columns provided
+                      // with the test case.  For on_block_peerdas__not_available the exact situation that is being tested
+                      // is no availability so block processing should fail.  For this one test case add some default
+                      // custody so that the await will fail in verifyBlocksDataAvailability.ts
+                      testCaseName !== "on_block_peerdas__not_available" ? columns.map((c) => c.index) : [2, 4, 6, 8],
+                    sampledColumns:
+                      testCaseName !== "on_block_peerdas__not_available"
+                        ? columns.map((c) => c.index)
+                        : [2, 4, 6, 8, 10, 12, 14, 16],
                     source: BlockInputSource.gossip,
                     seenTimestampSec: 0,
                     daOutOfRange: false,
@@ -489,7 +497,8 @@ const forkChoiceTest =
             attesterSlashings,
           };
         },
-        timeout: 10000,
+        // timeout needs to be set longer than BLOB_AVAILABILITY_TIMEOUT so that on_block_peerdas__not_available fails
+        timeout: 15000,
         expectFunc: () => {},
         // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
         // EXCEPTION : this test skipped here because prefix match can't be don't for this particular test

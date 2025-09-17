@@ -506,6 +506,11 @@ export function createLodestarMetrics(
           help: "Total number of errored downloadByRange calls",
           labelNames: ["code", "client"],
         }),
+        warn: register.gauge<{code: string; client: string}>({
+          name: "lodestar_sync_range_download_by_range_warn_total",
+          help: "Total number of downloadByRange call warnings",
+          labelNames: ["code", "client"],
+        }),
       },
     },
 
@@ -571,6 +576,11 @@ export function createLodestarMetrics(
         error: register.gauge<{code: string; client: string}>({
           name: "lodestar_sync_unknown_block_download_by_root_error_total",
           help: "Total number of errored downloadByRoot calls",
+          labelNames: ["code", "client"],
+        }),
+        warn: register.gauge<{code: string; client: string}>({
+          name: "lodestar_sync_unknown_block_download_by_root_warn_total",
+          help: "Total number of downloadByRoot call warnings",
           labelNames: ["code", "client"],
         }),
       },
@@ -1477,7 +1487,7 @@ export function createLodestarMetrics(
       duration: register.histogram({
         name: "lodestar_precompute_next_epoch_transition_duration_seconds",
         help: "Duration of precomputeNextEpochTransition, including epoch transition and hashTreeRoot",
-        buckets: [1, 2, 3, 4, 8],
+        buckets: [0.2, 0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3, 10],
       }),
     },
 

@@ -20,7 +20,6 @@ import {
   PendingBlockInput,
   PendingBlockInputStatus,
   PendingBlockType,
-  PendingRootHex,
   getBlockInputSyncCacheItemRootHex,
   getBlockInputSyncCacheItemSlot,
   isPendingBlockInput,
@@ -178,7 +177,7 @@ export class BlockInputSync {
   };
 
   private addByRootHex = (rootHex: RootHex, peerIdStr?: PeerIdStr): void => {
-    let pendingBlock = this.pendingBlocks.get(rootHex) as PendingRootHex;
+    let pendingBlock = this.pendingBlocks.get(rootHex);
     if (!pendingBlock) {
       pendingBlock = {
         status: PendingBlockInputStatus.pending,
@@ -207,7 +206,7 @@ export class BlockInputSync {
   };
 
   private addByBlockInput = (blockInput: IBlockInput, peerIdStr?: string): void => {
-    let pendingBlock = this.pendingBlocks.get(blockInput.blockRootHex) as PendingBlockInput;
+    let pendingBlock = this.pendingBlocks.get(blockInput.blockRootHex);
     // if entry is missing or was added via rootHex and now we have more complete information overwrite
     // the existing information with the more complete cache entry
     if (!pendingBlock || !isPendingBlockInput(pendingBlock)) {
@@ -328,16 +327,17 @@ export class BlockInputSync {
       this.metrics?.blockInputSync.elapsedTimeTillReceived.observe(delaySec);
 
       const parentInForkChoice = this.chain.forkChoice.hasBlockHex(pending.blockInput.parentRootHex);
-      this.logger.verbose("Downloaded unknown block", {
-        blockRoot: rootHex,
-        pendingBlocks: this.pendingBlocks.size,
+      const logCtx2 = {
+        ...logCtx,
+        slot: blockSlot,
         parentInForkChoice,
-      });
+      };
+      this.logger.verbose("Downloaded unknown block", logCtx2);
 
       if (parentInForkChoice) {
         // Bingo! Process block. Add to pending blocks anyway for recycle the cache that prevents duplicate processing
         this.processBlock(pending).catch((e) => {
-          this.logger.debug("Unexpected error - process newly downloaded block", {}, e);
+          this.logger.debug("Unexpected error - process newly downloaded block", logCtx2, e);
         });
       } else if (blockSlot <= finalizedSlot) {
         // the common ancestor of the downloading chain and canonical chain should be at least the finalized slot and
@@ -346,9 +346,8 @@ export class BlockInputSync {
         //                \
         //                parent 1 - parent 2 - ... - unknownParent block
         this.logger.debug("Downloaded block is before finalized slot", {
+          ...logCtx2,
           finalizedSlot,
-          blockSlot,
-          blockRoot: pending.blockInput.blockRootHex,
         });
         this.removeAndDownScoreAllDescendants(block);
       } else {
@@ -356,7 +355,7 @@ export class BlockInputSync {
       }
     } else {
       this.metrics?.blockInputSync.downloadedBlocksError.inc();
-      this.logger.debug("Ignoring unknown block root after many failed downloads", {blockRoot: rootHex}, res.err);
+      this.logger.debug("Ignoring unknown block root after many failed downloads", logCtx, res.err);
       this.removeAndDownScoreAllDescendants(block);
     }
   }
@@ -512,14 +511,25 @@ export class BlockInputSync {
       cacheItem.peerIdStrings.add(peerId);
 
       try {
-        cacheItem = await downloadByRoot({
+        const downloadResult = await downloadByRoot({
           config: this.config,
           network: this.network,
           seenCache: this.chain.seenBlockInputCache,
           peerMeta,
           cacheItem,
         });
+        cacheItem = downloadResult.result;
+        const logCtx = {slot: cacheItem.blockInput.slot, rootHex, peerId, peerClient};
+        this.logger.verbose("BlockInputSync.fetchBlockInput: successful download", logCtx);
         this.metrics?.blockInputSync.downloadByRoot.success.inc();
+        const warnings = downloadResult.warnings;
+        if (warnings) {
+          for (const warning of warnings) {
+            this.logger.debug("BlockInputSync.fetchBlockInput: downloaded with warning", logCtx, warning);
+            this.metrics?.blockInputSync.downloadByRoot.warn.inc({code: warning.type.code, client: peerClient});
+          }
+          // TODO: penalize peer?
+        }
       } catch (e) {
         this.logger.debug(
           "Error downloading in BlockInputSync.fetchBlockInput",
@@ -527,6 +537,7 @@ export class BlockInputSync {
           e as Error
         );
         const downloadByRootMetrics = this.metrics?.blockInputSync.downloadByRoot;
+        // TODO: penalize peer?
         if (e instanceof DownloadByRootError) {
           const errorCode = e.type.code;
           downloadByRootMetrics?.error.inc({code: errorCode, client: peerClient});
