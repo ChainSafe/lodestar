@@ -1,9 +1,14 @@
-import Ajv, {ErrorObject} from "ajv";
+import ajvPkg, {ErrorObject} from "ajv";
 import {beforeAll, describe, expect, it} from "vitest";
 import {Endpoint, RequestWithBodyCodec, RouteDefinitions, isRequestWithoutBody} from "../../src/utils/types.js";
 import {WireFormat} from "../../src/utils/wireFormat.js";
 import {GenericServerTestCases} from "./genericServerTest.js";
 import {JsonSchema, OpenApiJson, applyRecursively, parseOpenApiSpec} from "./parseOpenApiSpec.js";
+
+// Current Ajv package is a commonjs package which cause problem
+// when we have moduleResolution set to node16
+// This syntax works and tested with Node and Bun both
+const Ajv = ajvPkg.default;
 
 const ajv = new Ajv({
   strict: true,

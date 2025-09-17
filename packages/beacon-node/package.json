@@ -102,7 +102,7 @@
     "@chainsafe/prometheus-gc-stats": "^1.0.0",
     "@chainsafe/pubkey-index-map": "^3.0.0",
     "@chainsafe/ssz": "^1.2.2",
-    "@chainsafe/threads": "^1.11.2",
+    "@chainsafe/threads": "^1.11.3",
     "@crate-crypto/node-eth-kzg": "0.8.0",
     "@ethersproject/abi": "^5.7.0",
     "@fastify/bearer-auth": "^10.0.1",

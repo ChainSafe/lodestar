@@ -6,7 +6,8 @@ export async function registerSwaggerUIRoutes(
   opts: BeaconRestApiServerOpts,
   version = ""
 ): Promise<void> {
-  await server.register(await import("@fastify/swagger"), {
+  const {fastifySwagger} = await import("@fastify/swagger");
+  await server.register(fastifySwagger, {
     openapi: {
       info: {
         title: "Lodestar API",
@@ -24,7 +25,8 @@ export async function registerSwaggerUIRoutes(
       tags: opts.api.map((namespace) => ({name: namespace})),
     },
   });
-  await server.register(await import("@fastify/swagger-ui"), {
+  const {fastifySwaggerUi} = await import("@fastify/swagger-ui");
+  await server.register(fastifySwaggerUi, {
     theme: {
       title: "Lodestar API",
       favicon: await getFavicon(),

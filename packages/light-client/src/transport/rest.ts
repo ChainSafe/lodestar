@@ -7,8 +7,7 @@ import {
   LightClientUpdate,
   type SyncPeriod,
 } from "@lodestar/types";
-import mitt from "mitt";
-import {MittEmitter} from "../events.js";
+import mitt, {Emitter as MittEmitter} from "mitt";
 import {type LightClientTransport} from "./interface.js";
 
 export type LightClientRestEvents = {

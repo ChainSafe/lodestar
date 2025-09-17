@@ -11,5 +11,5 @@ export function removeUndefinedRecursive<T extends {[key: string]: any}>(obj: T)
     if (value && typeof value === "object") removeUndefinedRecursive(value);
     else if (value === undefined) delete obj[key];
   }
-  return obj;
+  return obj as RecursivePartial<T>;
 }

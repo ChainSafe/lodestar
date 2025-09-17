@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import worker from "node:worker_threads";
-import {Discv5} from "@chainsafe/discv5";
+import {Discv5, Discv5EventEmitter} from "@chainsafe/discv5";
 import {ENR, ENRData, SignableENR, SignableENRData} from "@chainsafe/enr";
 import {Observable, Subject} from "@chainsafe/threads/observable";
 import {expose} from "@chainsafe/threads/worker";
@@ -80,7 +80,7 @@ const onDiscovered = (enr: ENR): void => {
     subject.next(enr.toObject());
   }
 };
-discv5.addListener("discovered", onDiscovered);
+(discv5 as Discv5EventEmitter).addListener("discovered", onDiscovered);
 
 // Discv5 will now begin accepting request/responses
 await discv5.start();
@@ -118,7 +118,7 @@ const module: Discv5WorkerApi = {
   },
   async close() {
     closeMetrics?.();
-    discv5.removeListener("discovered", onDiscovered);
+    (discv5 as Discv5EventEmitter).removeListener("discovered", onDiscovered);
     subject.complete();
     await discv5.stop();
   },
