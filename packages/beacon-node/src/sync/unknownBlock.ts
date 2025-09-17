@@ -307,9 +307,9 @@ export class BlockInputSync {
 
     const rootHex = getBlockInputSyncCacheItemRootHex(block);
     const logCtx = {
+      slot: getBlockInputSyncCacheItemSlot(block),
       blockRoot: prettyBytes(rootHex),
       pendingBlocks: this.pendingBlocks.size,
-      slot: getBlockInputSyncCacheItemSlot(block),
     };
 
     this.logger.verbose("BlockInputSync.downloadBlock()", logCtx);
@@ -374,8 +374,8 @@ export class BlockInputSync {
         const connectedPeers = this.network.getConnectedPeers();
         if (connectedPeers.length === 0) {
           this.logger.debug("No connected peers, skipping download block", {
-            blockRoot: pendingBlock.blockInput.blockRootHex,
             slot: pendingBlock.blockInput.slot,
+            blockRoot: pendingBlock.blockInput.blockRootHex,
           });
           return;
         }
@@ -437,7 +437,7 @@ export class BlockInputSync {
         }
       }
     } else {
-      const errorData = {root: pendingBlock.blockInput.blockRootHex, slot: pendingBlock.blockInput.slot};
+      const errorData = {slot: pendingBlock.blockInput.slot, root: pendingBlock.blockInput.blockRootHex};
       if (res.err instanceof BlockError) {
         switch (res.err.type.code) {
           // This cases are already handled with `{ignoreIfKnown: true}`
@@ -523,7 +523,7 @@ export class BlockInputSync {
       } catch (e) {
         this.logger.debug(
           "Error downloading in BlockInputSync.fetchBlockInput",
-          {attempt: i, rootHex, slot, peer: peerId, peerClient},
+          {slot, rootHex, attempt: i, peer: peerId, peerClient},
           e as Error
         );
         const downloadByRootMetrics = this.metrics?.blockInputSync.downloadByRoot;
@@ -597,8 +597,8 @@ export class BlockInputSync {
       //     this.network.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadBlockByRoot");
       //   }
       this.logger.debug("ignored Banning unknown block", {
-        root: getBlockInputSyncCacheItemRootHex(block),
         slot: getBlockInputSyncCacheItemSlot(block),
+        root: getBlockInputSyncCacheItemRootHex(block),
         peerIdStrings: Array.from(block.peerIdStrings)
           .map((id) => prettyPrintPeerIdStr(id))
           .join(","),
@@ -622,8 +622,8 @@ export class BlockInputSync {
       this.pendingBlocks.delete(rootHex);
       this.chain.seenBlockInputCache.prune(rootHex);
       this.logger.debug("Removing bad/unknown/incomplete BlockInputSyncCacheItem", {
-        blockRoot: rootHex,
         slot,
+        blockRoot: rootHex,
       });
     }
 
