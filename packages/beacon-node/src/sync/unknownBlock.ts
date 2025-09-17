@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkSeq, INTERVALS_PER_SLOT} from "@lodestar/params";
-import {RootHex} from "@lodestar/types";
+import {RootHex, Slot} from "@lodestar/types";
 import {sleep, Logger, prettyBytes, prettyPrintIndices, pruneSetToMax} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
@@ -31,6 +31,14 @@ import {RequestError} from "@lodestar/reqresp";
 const MAX_ATTEMPTS_PER_BLOCK = 5;
 const MAX_KNOWN_BAD_BLOCKS = 500;
 const MAX_PENDING_BLOCKS = 100;
+
+enum FetchResult {
+  SuccessResolved = "success_resolved",
+  SuccessMissingParent = "success_missing_parent",
+  SuccessLate = "success_late",
+  FailureTriedAllPeers = "failure_tried_all_peers",
+  FailureMaxAttempts = "failure_max_attempts",
+}
 
 /**
  * BlockInputSync is a class that handles ReqResp to find blocks and data related to a specific blockRoot.  The
@@ -138,7 +146,8 @@ export class BlockInputSync {
    */
   private onUnknownBlockRoot = (data: ChainEventData[ChainEvent.unknownBlockRoot]): void => {
     try {
-      this.addByRootHex(data.rootHex, data.peer);
+      const {root, slot} = data.rootSlot;
+      this.addByRootHex(root, slot, data.peer);
       this.triggerUnknownBlockSearch();
       this.metrics?.blockInputSync.requests.inc({type: PendingBlockType.UNKNOWN_BLOCK_ROOT});
       this.metrics?.blockInputSync.source.inc({source: data.source});
@@ -166,7 +175,8 @@ export class BlockInputSync {
    */
   private onUnknownParent = (data: ChainEventData[ChainEvent.unknownParent]): void => {
     try {
-      this.addByRootHex(data.blockInput.parentRootHex, data.peer);
+      // we don't know the slot of parent, hence make it undefined
+      this.addByRootHex(data.blockInput.parentRootHex, undefined, data.peer);
       this.addByBlockInput(data.blockInput, data.peer);
       this.triggerUnknownBlockSearch();
       this.metrics?.blockInputSync.requests.inc({type: PendingBlockType.UNKNOWN_PARENT});
@@ -176,11 +186,12 @@ export class BlockInputSync {
     }
   };
 
-  private addByRootHex = (rootHex: RootHex, peerIdStr?: PeerIdStr): void => {
+  private addByRootHex = (rootHex: RootHex, slot?: Slot, peerIdStr?: PeerIdStr): void => {
     let pendingBlock = this.pendingBlocks.get(rootHex);
     if (!pendingBlock) {
       pendingBlock = {
         status: PendingBlockInputStatus.pending,
+        slot,
         rootHex: rootHex,
         peerIdStrings: new Set(),
         timeAddedSec: Date.now() / 1000,
@@ -351,7 +362,7 @@ export class BlockInputSync {
         });
         this.removeAndDownScoreAllDescendants(block);
       } else {
-        this.onUnknownBlockRoot({rootHex: pending.blockInput.parentRootHex, source: BlockInputSource.byRoot});
+        this.onUnknownBlockRoot({rootSlot: {root: pending.blockInput.parentRootHex}, source: BlockInputSource.byRoot});
       }
     } else {
       this.metrics?.blockInputSync.downloadedBlocksError.inc();
@@ -489,6 +500,12 @@ export class BlockInputSync {
         ? new Set(this.network.custodyConfig.sampledColumns)
         : null;
 
+    const fetchStartSec = Date.now() / 1000;
+    let slot = isPendingBlockInput(cacheItem) ? cacheItem.blockInput.slot : cacheItem.slot;
+    if (slot !== undefined) {
+      this.metrics?.blockInputSync.fetchBegin.observe(this.chain.clock.secFromSlot(slot, fetchStartSec));
+    }
+
     let i = 0;
     while (i++ < this.getMaxDownloadAttempts()) {
       const pendingColumns =
@@ -503,6 +520,11 @@ export class BlockInputSync {
         if (pendingColumns) {
           message += ` with needed columns=${prettyPrintIndices(Array.from(pendingColumns))}`;
         }
+        this.metrics?.blockInputSync.fetchTimeSec.observe(
+          {result: FetchResult.FailureTriedAllPeers},
+          Date.now() / 1000 - fetchStartSec
+        );
+        this.metrics?.blockInputSync.fetchPeers.set({result: FetchResult.FailureTriedAllPeers}, i);
         throw Error(message);
       }
       const {peerId, client: peerClient} = peerMeta;
@@ -519,7 +541,13 @@ export class BlockInputSync {
           cacheItem,
         });
         cacheItem = downloadResult.result;
-        const logCtx = {slot: cacheItem.blockInput.slot, rootHex, peerId, peerClient};
+        if (slot === undefined) {
+          slot = cacheItem.blockInput.slot;
+          // we were not able to observe the time into slot when starting the fetch, do it now
+          this.metrics?.blockInputSync.fetchBegin.observe(this.chain.clock.secFromSlot(slot, fetchStartSec));
+        }
+
+        const logCtx = {slot, rootHex, peerId, peerClient};
         this.logger.verbose("BlockInputSync.fetchBlockInput: successful download", logCtx);
         this.metrics?.blockInputSync.downloadByRoot.success.inc();
         const warnings = downloadResult.warnings;
@@ -555,9 +583,17 @@ export class BlockInputSync {
       this.pendingBlocks.set(getBlockInputSyncCacheItemRootHex(cacheItem), cacheItem);
 
       if (cacheItem.status === PendingBlockInputStatus.downloaded) {
+        // download was successful, no need to go with another peer, return
+        const result = this.chain.forkChoice.hasBlockHex(cacheItem.blockInput.blockRootHex)
+          ? FetchResult.SuccessLate
+          : this.chain.forkChoice.hasBlockHex(cacheItem.blockInput.parentRootHex)
+            ? FetchResult.SuccessResolved
+            : FetchResult.SuccessMissingParent;
+        this.metrics?.blockInputSync.fetchTimeSec.observe({result}, Date.now() / 1000 - fetchStartSec);
+        this.metrics?.blockInputSync.fetchPeers.set({result}, i);
         return cacheItem;
       }
-    }
+    } // end while loop over peers
 
     const message = `Error fetching BlockInput with slot=${slot} blockRoot=${prettyBytes(rootHex)} after ${i - 1} attempts.`;
 
@@ -583,7 +619,14 @@ export class BlockInputSync {
       }
     }
 
-    throw new Error(message);
+
+    this.metrics?.blockInputSync.fetchTimeSec.observe(
+      {result: FetchResult.FailureMaxAttempts},
+      Date.now() / 1000 - fetchStartSec
+    );
+    this.metrics?.blockInputSync.fetchPeers.set({result: FetchResult.FailureMaxAttempts}, i - 1);
+
+    throw Error(message);
   }
 
   /**

@@ -568,6 +568,23 @@ export function createLodestarMetrics(
         help: "Total number of blocks whose data availability was resolved",
         labelNames: ["source"],
       }),
+      fetchBegin: register.histogram({
+        name: "lodestar_sync_unknown_block_fetch_begin_since_slot_start_seconds",
+        help: "Time into the slot when the block was fetched",
+        buckets: [0, 1, 2, 4],
+      }),
+      // we may not have slot in case of failure, so track fetch time from start to done (either success or failure)
+      fetchTimeSec: register.histogram<{result: string}>({
+        name: "lodestar_sync_unknown_block_fetch_time_seconds",
+        help: "Fetch time from start to done (either success or failure)",
+        labelNames: ["result"],
+        buckets: [0, 1, 2, 4, 8],
+      }),
+      fetchPeers: register.gauge<{result: string}>({
+        name: "lodestar_sync_unknown_block_fetch_peers_count",
+        help: "Number of peers that node fetched from",
+        labelNames: ["result"],
+      }),
       downloadByRoot: {
         success: register.gauge({
           name: "lodestar_sync_unknown_block_download_by_root_success_total",
