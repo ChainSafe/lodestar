@@ -341,7 +341,7 @@ export async function fetchAndValidateColumns({
   }
 
   const blockRootHex = toRootHex(blockRoot);
-  const peerColumns = new Set(peerMeta.custodyGroups ?? []);
+  const peerColumns = new Set(peerMeta.custodyColumns ?? []);
   const requestedColumns = missing.filter((c) => peerColumns.has(c));
   const columnSidecars = await network.sendDataColumnSidecarsByRoot(peerIdStr, [
     {blockRoot, columns: requestedColumns},

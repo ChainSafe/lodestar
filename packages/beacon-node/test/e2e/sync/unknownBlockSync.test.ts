@@ -5,7 +5,7 @@ import {ChainConfig} from "@lodestar/config";
 import {TimestampFormatCode} from "@lodestar/logger";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {afterEach, describe, it, vi} from "vitest";
-import {BlockInputPreData} from "../../../src/chain/blocks/blockInput/blockInput.js";
+import {BlockInputColumns} from "../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../src/chain/blocks/blockInput/types.js";
 import {ChainEvent} from "../../../src/chain/emitter.js";
 import {BlockError, BlockErrorCode} from "../../../src/chain/errors/index.js";
@@ -15,6 +15,7 @@ import {LogLevel, TestLoggerOpts, testLogger} from "../../utils/logger.js";
 import {connect, onPeerConnect} from "../../utils/network.js";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
+import {fulu} from "@lodestar/types";
 
 describe("sync / unknown block sync for fulu", () => {
   vi.setConfig({testTimeout: 40_000});
@@ -100,10 +101,10 @@ describe("sync / unknown block sync for fulu", () => {
         testLoggerOpts,
       });
 
-      afterEachCallbacks.push(() => Promise.all(validators.map((v) => v.close())));
+      afterEachCallbacks.push(() => Promise.all(validators.map((v) => v.close().catch(() => {}))));
 
       // stop bn after validators
-      afterEachCallbacks.push(() => bn.close());
+      afterEachCallbacks.push(() => bn.close().catch(() => {}));
 
       // wait until the 2nd slot of fulu
       await waitForEvent<EventData[EventType.head]>(
@@ -127,7 +128,7 @@ describe("sync / unknown block sync for fulu", () => {
         eth1BlockHash: Uint8Array.from(INTEROP_BLOCK_HASH),
       });
 
-      afterEachCallbacks.push(() => bn2.close());
+      afterEachCallbacks.push(() => bn2.close().catch(() => {}));
 
       const headSummary = bn.chain.forkChoice.getHead();
       const head = await bn.db.block.get(fromHexString(headSummary.blockRoot));
@@ -144,13 +145,15 @@ describe("sync / unknown block sync for fulu", () => {
       await connected;
       loggerNodeA.info("Node A connected to Node B");
 
-      const headInput = BlockInputPreData.createFromBlock({
-        block: head,
+      const headInput = BlockInputColumns.createFromBlock({
+        block: head as fulu.SignedBeaconBlock,
         blockRootHex: headSummary.blockRoot,
         source: BlockInputSource.gossip,
         seenTimestampSec: Math.floor(Date.now() / 1000),
         forkName: bn.chain.config.getForkName(head.message.slot),
         daOutOfRange: false,
+        sampledColumns: bn2.network.custodyConfig.sampledColumns,
+        custodyColumns: bn2.network.custodyConfig.custodyColumns,
       });
 
       switch (event) {

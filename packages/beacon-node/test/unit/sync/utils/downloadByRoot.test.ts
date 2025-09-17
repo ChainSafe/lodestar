@@ -28,7 +28,7 @@ describe("downloadByRoot.ts", () => {
   const peerMeta: PeerSyncMeta = {
     peerId: peerIdStr,
     client: "N/A",
-    custodyGroups: Array.from({length: NUMBER_OF_COLUMNS}, (_, i) => i),
+    custodyColumns: Array.from({length: NUMBER_OF_COLUMNS}, (_, i) => i),
     earliestAvailableSlot: 0,
   };
   let network: INetwork;
