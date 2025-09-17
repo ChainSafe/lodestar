@@ -493,7 +493,6 @@ export class BlockInputSync {
    */
   private async fetchBlockInput(cacheItem: BlockInputSyncCacheItem): Promise<PendingBlockInput> {
     const rootHex = getBlockInputSyncCacheItemRootHex(cacheItem);
-    const slot = getBlockInputSyncCacheItemSlot(cacheItem);
     const excludedPeers = new Set<PeerIdStr>();
     const defaultPendingColumns =
       this.config.getForkSeq(this.chain.clock.currentSlot) >= ForkSeq.fulu
@@ -618,7 +617,6 @@ export class BlockInputSync {
         throw new Error(`${message} Missing column indices=${prettyPrintIndices(missing)}.`);
       }
     }
-
 
     this.metrics?.blockInputSync.fetchTimeSec.observe(
       {result: FetchResult.FailureMaxAttempts},
