@@ -228,7 +228,7 @@ export function generateChainOfBlocks<F extends ForkPostCapella>({
   forkName: F;
   count: number;
 }): BlockTestSet<F>[] {
-  let parentRoot = Uint8Array.from(randomBytes(ROOT_SIZE));
+  let parentRoot: Uint8Array = Uint8Array.from(randomBytes(ROOT_SIZE));
   const startSlot = slots[forkName];
   const blocks: BlockTestSet<F>[] = [];
   for (let slot = startSlot; slot < startSlot + count; slot++) {
@@ -324,7 +324,7 @@ export function generateChainOfBlocksWithBlobs<F extends ForkPostDeneb>({
   count: number;
   oomProtection?: boolean;
 }): BlockWithSidecars<F>[] {
-  let parentRoot = Uint8Array.from(randomBytes(ROOT_SIZE));
+  let parentRoot: Uint8Array = Uint8Array.from(randomBytes(ROOT_SIZE));
   let slot = slots[forkName];
   const blocks: BlockWithSidecars<F>[] = [];
   for (; slot < slot + count; slot++) {

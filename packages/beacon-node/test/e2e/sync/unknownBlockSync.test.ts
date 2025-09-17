@@ -171,7 +171,7 @@ describe("sync / unknown block sync for fulu", () => {
           break;
         case ChainEvent.unknownBlockRoot:
           bn2.chain.emitter.emit(ChainEvent.unknownBlockRoot, {
-            rootHex: headSummary.blockRoot,
+            rootSlot: {root: headSummary.blockRoot},
             peer: bn2.network.peerId.toString(),
             source: BlockInputSource.gossip,
           });

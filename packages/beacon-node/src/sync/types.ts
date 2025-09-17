@@ -1,5 +1,5 @@
-import {IBlockInput} from "@lodestar/beacon-node/src/chain/blocks/blockInput/index.js";
 import {RootHex, Slot} from "@lodestar/types";
+import {IBlockInput} from "../chain/blocks/blockInput/index.js";
 
 export enum PendingBlockType {
   /**
@@ -37,6 +37,8 @@ export type PendingBlockInput = {
 export type PendingRootHex = {
   status: PendingBlockInputStatus.pending | PendingBlockInputStatus.fetching;
   rootHex: RootHex;
+  // optional because we may not know the slot of parent_unknown event
+  slot?: Slot;
   timeAddedSec: number;
   timeSyncedSec?: number;
   peerIdStrings: Set<string>;

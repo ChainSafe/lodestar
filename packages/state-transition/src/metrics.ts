@@ -16,8 +16,8 @@ export function getMetrics(register: MetricsRegister) {
     epochTransitionTime: register.histogram({
       name: "lodestar_stfn_epoch_transition_seconds",
       help: "Time to process a single epoch transition in seconds",
-      // Epoch transitions are 100ms on very fast clients, and average 800ms on heavy networks
-      buckets: [0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1, 1.25, 1.5, 3, 10],
+      // as of Sep 2025, on mainnet, epoch transition time of lodestar is never less than 0.5s, and it could be up to 3s
+      buckets: [0.2, 0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3, 10],
     }),
     epochTransitionCommitTime: register.histogram({
       name: "lodestar_stfn_epoch_transition_commit_seconds",

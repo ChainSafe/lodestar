@@ -233,12 +233,19 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       metrics?.gossipBlob.validationTime.observe(validationTime);
 
       if (chain.emitter.listenerCount(routes.events.EventType.blobSidecar)) {
+        let versionedHash: Uint8Array;
+        if (blockInput.hasBlock()) {
+          // if block hasn't arrived yet then this will throw and need to calculate the versionedHash as a 1-off
+          versionedHash = blockInput.getVersionedHashes()[blobSidecar.index];
+        } else {
+          versionedHash = kzgCommitmentToVersionedHash(blobSidecar.kzgCommitment);
+        }
         chain.emitter.emit(routes.events.EventType.blobSidecar, {
           blockRoot: blockRootHex,
           slot,
           index: blobSidecar.index,
           kzgCommitment: toHex(blobSidecar.kzgCommitment),
-          versionedHash: toHex(kzgCommitmentToVersionedHash(blobSidecar.kzgCommitment)),
+          versionedHash: toHex(versionedHash),
         });
       }
 
@@ -415,7 +422,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         seenTimestampSec,
         // gossip block is validated, we want to process it asap
         eagerPersistBlock: true,
-        isGossipBlock: true,
       })
       .then(() => {
         // Returns the delay between the start of `block.slot` and `current time`
@@ -454,7 +460,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           logLevel = LogLevel.error;
         }
         metrics?.gossipBlock.processBlockErrors.inc({error: e instanceof BlockError ? e.type.code : "NOT_BLOCK_ERROR"});
-        logger[logLevel]("Error processing block", {slot, peer: peerIdStr}, e as Error);
+        logger[logLevel](
+          "Error processing block",
+          {slot, peer: peerIdStr, blockRoot: prettyBytes(blockInput.blockRootHex)},
+          e as Error
+        );
         // TODO(fulu): Revisit when we prune block inputs
         chain.seenBlockInputCache.prune(blockInput.blockRootHex);
       });

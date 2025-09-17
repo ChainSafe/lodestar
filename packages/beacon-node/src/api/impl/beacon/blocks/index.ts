@@ -123,7 +123,7 @@ export function getBeaconBlockApi({
       dataColumnSidecars = [];
     }
 
-    if (dataColumnSidecars.length > 0 && isBlockInputColumns(blockForImport)) {
+    if (isBlockInputColumns(blockForImport)) {
       for (const dataColumnSidecar of dataColumnSidecars) {
         blockForImport.addColumn({
           blockRootHex: blockRoot,
@@ -132,10 +132,14 @@ export function getBeaconBlockApi({
           seenTimestampSec,
         });
       }
-    }
-    if (blobSidecars.length > 0 && isBlockInputBlobs(blockForImport)) {
+    } else if (isBlockInputBlobs(blockForImport)) {
       for (const blobSidecar of blobSidecars) {
-        blockForImport.addBlob({blockRootHex: blockRoot, blobSidecar, source: BlockInputSource.api, seenTimestampSec});
+        blockForImport.addBlob({
+          blockRootHex: blockRoot,
+          blobSidecar,
+          source: BlockInputSource.api,
+          seenTimestampSec,
+        });
       }
     }
 
@@ -328,6 +332,7 @@ export function getBeaconBlockApi({
       }
     } else if (isBlockInputBlobs(blockForImport) && chain.emitter.listenerCount(routes.events.EventType.blobSidecar)) {
       const blobSidecars = blockForImport.getBlobs();
+      const versionedHashes = blockForImport.getVersionedHashes();
 
       for (const blobSidecar of blobSidecars) {
         const {index, kzgCommitment} = blobSidecar;
@@ -336,7 +341,7 @@ export function getBeaconBlockApi({
           slot,
           index,
           kzgCommitment: toHex(kzgCommitment),
-          versionedHash: toHex(kzgCommitmentToVersionedHash(kzgCommitment)),
+          versionedHash: toHex(versionedHashes[index]),
         });
       }
     }

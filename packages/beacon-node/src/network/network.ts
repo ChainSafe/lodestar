@@ -97,10 +97,10 @@ export type NetworkInitModules = {
 export class Network implements INetwork {
   readonly peerId: PeerId;
   readonly custodyConfig: CustodyConfig;
-  readonly logger: LoggerNode;
   // TODO: Make private
   readonly events: INetworkEventBus;
 
+  private readonly logger: LoggerNode;
   private readonly config: BeaconConfig;
   private readonly clock: IClock;
   private readonly chain: IBeaconChain;
@@ -139,6 +139,7 @@ export class Network implements INetwork {
     );
     this.chain.emitter.on(ChainEvent.updateTargetCustodyGroupCount, this.onTargetGroupCountUpdated);
     this.chain.emitter.on(ChainEvent.publishDataColumns, this.onPublishDataColumns);
+    this.chain.emitter.on(ChainEvent.publishBlobSidecars, this.onPublishBlobSidecars);
     this.chain.emitter.on(ChainEvent.updateStatus, this.onUpdateStatus);
   }
 
@@ -755,6 +756,10 @@ export class Network implements INetwork {
 
   private onPublishDataColumns = (sidecars: fulu.DataColumnSidecar[]): Promise<number[]> => {
     return promiseAllMaybeAsync(sidecars.map((sidecar) => () => this.publishDataColumnSidecar(sidecar)));
+  };
+
+  private onPublishBlobSidecars = (sidecars: deneb.BlobSidecar[]): Promise<number[]> => {
+    return promiseAllMaybeAsync(sidecars.map((sidecar) => () => this.publishBlobSidecar(sidecar)));
   };
 
   private onUpdateStatus = async (): Promise<void> => {

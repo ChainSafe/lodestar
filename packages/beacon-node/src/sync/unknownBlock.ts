@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkSeq, INTERVALS_PER_SLOT} from "@lodestar/params";
-import {RootHex} from "@lodestar/types";
+import {RootHex, Slot} from "@lodestar/types";
 import {sleep, Logger, prettyBytes, prettyPrintIndices, pruneSetToMax} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
@@ -20,7 +20,6 @@ import {
   PendingBlockInput,
   PendingBlockInputStatus,
   PendingBlockType,
-  PendingRootHex,
   getBlockInputSyncCacheItemRootHex,
   getBlockInputSyncCacheItemSlot,
   isPendingBlockInput,
@@ -32,6 +31,14 @@ import {RequestError} from "@lodestar/reqresp";
 const MAX_ATTEMPTS_PER_BLOCK = 5;
 const MAX_KNOWN_BAD_BLOCKS = 500;
 const MAX_PENDING_BLOCKS = 100;
+
+enum FetchResult {
+  SuccessResolved = "success_resolved",
+  SuccessMissingParent = "success_missing_parent",
+  SuccessLate = "success_late",
+  FailureTriedAllPeers = "failure_tried_all_peers",
+  FailureMaxAttempts = "failure_max_attempts",
+}
 
 /**
  * BlockInputSync is a class that handles ReqResp to find blocks and data related to a specific blockRoot.  The
@@ -139,7 +146,8 @@ export class BlockInputSync {
    */
   private onUnknownBlockRoot = (data: ChainEventData[ChainEvent.unknownBlockRoot]): void => {
     try {
-      this.addByRootHex(data.rootHex, data.peer);
+      const {root, slot} = data.rootSlot;
+      this.addByRootHex(root, slot, data.peer);
       this.triggerUnknownBlockSearch();
       this.metrics?.blockInputSync.requests.inc({type: PendingBlockType.UNKNOWN_BLOCK_ROOT});
       this.metrics?.blockInputSync.source.inc({source: data.source});
@@ -167,7 +175,8 @@ export class BlockInputSync {
    */
   private onUnknownParent = (data: ChainEventData[ChainEvent.unknownParent]): void => {
     try {
-      this.addByRootHex(data.blockInput.parentRootHex, data.peer);
+      // we don't know the slot of parent, hence make it undefined
+      this.addByRootHex(data.blockInput.parentRootHex, undefined, data.peer);
       this.addByBlockInput(data.blockInput, data.peer);
       this.triggerUnknownBlockSearch();
       this.metrics?.blockInputSync.requests.inc({type: PendingBlockType.UNKNOWN_PARENT});
@@ -177,11 +186,12 @@ export class BlockInputSync {
     }
   };
 
-  private addByRootHex = (rootHex: RootHex, peerIdStr?: PeerIdStr): void => {
-    let pendingBlock = this.pendingBlocks.get(rootHex) as PendingRootHex;
+  private addByRootHex = (rootHex: RootHex, slot?: Slot, peerIdStr?: PeerIdStr): void => {
+    let pendingBlock = this.pendingBlocks.get(rootHex);
     if (!pendingBlock) {
       pendingBlock = {
         status: PendingBlockInputStatus.pending,
+        slot,
         rootHex: rootHex,
         peerIdStrings: new Set(),
         timeAddedSec: Date.now() / 1000,
@@ -207,7 +217,7 @@ export class BlockInputSync {
   };
 
   private addByBlockInput = (blockInput: IBlockInput, peerIdStr?: string): void => {
-    let pendingBlock = this.pendingBlocks.get(blockInput.blockRootHex) as PendingBlockInput;
+    let pendingBlock = this.pendingBlocks.get(blockInput.blockRootHex);
     // if entry is missing or was added via rootHex and now we have more complete information overwrite
     // the existing information with the more complete cache entry
     if (!pendingBlock || !isPendingBlockInput(pendingBlock)) {
@@ -308,7 +318,7 @@ export class BlockInputSync {
     const rootHex = getBlockInputSyncCacheItemRootHex(block);
     const logCtx = {
       slot: getBlockInputSyncCacheItemSlot(block),
-      blockRoot: rootHex,
+      blockRoot: prettyBytes(rootHex),
       pendingBlocks: this.pendingBlocks.size,
     };
 
@@ -352,7 +362,7 @@ export class BlockInputSync {
         });
         this.removeAndDownScoreAllDescendants(block);
       } else {
-        this.onUnknownBlockRoot({rootHex: pending.blockInput.parentRootHex, source: BlockInputSource.byRoot});
+        this.onUnknownBlockRoot({rootSlot: {root: pending.blockInput.parentRootHex}, source: BlockInputSource.byRoot});
       }
     } else {
       this.metrics?.blockInputSync.downloadedBlocksError.inc();
@@ -374,6 +384,7 @@ export class BlockInputSync {
         const connectedPeers = this.network.getConnectedPeers();
         if (connectedPeers.length === 0) {
           this.logger.debug("No connected peers, skipping download block", {
+            slot: pendingBlock.blockInput.slot,
             blockRoot: pendingBlock.blockInput.blockRootHex,
           });
           return;
@@ -395,7 +406,7 @@ export class BlockInputSync {
       // proposer is known by a gossip block already, wait a bit to make sure this block is not
       // eligible for proposer boost to prevent unbundling attack
       this.logger.verbose("Avoid proposer boost for this block of known proposer", {
-        blockSlot,
+        slot: blockSlot,
         blockRoot: prettyBytes(pendingBlock.blockInput.blockRootHex),
         proposerIndex,
       });
@@ -436,7 +447,7 @@ export class BlockInputSync {
         }
       }
     } else {
-      const errorData = {root: pendingBlock.blockInput.blockRootHex, slot: pendingBlock.blockInput.slot};
+      const errorData = {slot: pendingBlock.blockInput.slot, root: pendingBlock.blockInput.blockRootHex};
       if (res.err instanceof BlockError) {
         switch (res.err.type.code) {
           // This cases are already handled with `{ignoreIfKnown: true}`
@@ -488,6 +499,12 @@ export class BlockInputSync {
         ? new Set(this.network.custodyConfig.sampledColumns)
         : null;
 
+    const fetchStartSec = Date.now() / 1000;
+    let slot = isPendingBlockInput(cacheItem) ? cacheItem.blockInput.slot : cacheItem.slot;
+    if (slot !== undefined) {
+      this.metrics?.blockInputSync.fetchBegin.observe(this.chain.clock.secFromSlot(slot, fetchStartSec));
+    }
+
     let i = 0;
     while (i++ < this.getMaxDownloadAttempts()) {
       const pendingColumns =
@@ -498,10 +515,15 @@ export class BlockInputSync {
       const peerMeta = this.peerBalancer.bestPeerForPendingColumns(pendingColumns, excludedPeers);
       if (peerMeta === null) {
         // no more peer with needed columns to try, throw error
-        let message = `Error fetching UnknownBlockRoot after ${i}: cannot find peer`;
+        let message = `Error fetching UnknownBlockRoot slot=${slot} blockRoot=${prettyBytes(rootHex)} after ${i}: cannot find peer`;
         if (pendingColumns) {
           message += ` with needed columns=${prettyPrintIndices(Array.from(pendingColumns))}`;
         }
+        this.metrics?.blockInputSync.fetchTimeSec.observe(
+          {result: FetchResult.FailureTriedAllPeers},
+          Date.now() / 1000 - fetchStartSec
+        );
+        this.metrics?.blockInputSync.fetchPeers.set({result: FetchResult.FailureTriedAllPeers}, i);
         throw Error(message);
       }
       const {peerId, client: peerClient} = peerMeta;
@@ -518,7 +540,13 @@ export class BlockInputSync {
           cacheItem,
         });
         cacheItem = downloadResult.result;
-        const logCtx = {slot: cacheItem.blockInput.slot, rootHex, peerId, peerClient};
+        if (slot === undefined) {
+          slot = cacheItem.blockInput.slot;
+          // we were not able to observe the time into slot when starting the fetch, do it now
+          this.metrics?.blockInputSync.fetchBegin.observe(this.chain.clock.secFromSlot(slot, fetchStartSec));
+        }
+
+        const logCtx = {slot, rootHex, peerId, peerClient};
         this.logger.verbose("BlockInputSync.fetchBlockInput: successful download", logCtx);
         this.metrics?.blockInputSync.downloadByRoot.success.inc();
         const warnings = downloadResult.warnings;
@@ -532,7 +560,7 @@ export class BlockInputSync {
       } catch (e) {
         this.logger.debug(
           "Error downloading in BlockInputSync.fetchBlockInput",
-          {attempt: i, rootHex, peer: peerId, peerClient},
+          {slot, rootHex, attempt: i, peer: peerId, peerClient},
           e as Error
         );
         const downloadByRootMetrics = this.metrics?.blockInputSync.downloadByRoot;
@@ -554,28 +582,47 @@ export class BlockInputSync {
       this.pendingBlocks.set(getBlockInputSyncCacheItemRootHex(cacheItem), cacheItem);
 
       if (cacheItem.status === PendingBlockInputStatus.downloaded) {
+        // download was successful, no need to go with another peer, return
+        const result = this.chain.forkChoice.hasBlockHex(cacheItem.blockInput.blockRootHex)
+          ? FetchResult.SuccessLate
+          : this.chain.forkChoice.hasBlockHex(cacheItem.blockInput.parentRootHex)
+            ? FetchResult.SuccessResolved
+            : FetchResult.SuccessMissingParent;
+        this.metrics?.blockInputSync.fetchTimeSec.observe({result}, Date.now() / 1000 - fetchStartSec);
+        this.metrics?.blockInputSync.fetchPeers.set({result}, i);
         return cacheItem;
+      }
+    } // end while loop over peers
+
+    const message = `Error fetching BlockInput with slot=${slot} blockRoot=${prettyBytes(rootHex)} after ${i - 1} attempts.`;
+
+    if (!isPendingBlockInput(cacheItem)) {
+      throw Error(`${message} No block and no data was found.`);
+    }
+
+    if (!cacheItem.blockInput.hasBlock()) {
+      throw new Error(`${message} Block was not found.`);
+    }
+
+    if (isBlockInputBlobs(cacheItem.blockInput)) {
+      const missing = cacheItem.blockInput.getMissingBlobMeta().map((b) => b.index);
+      if (missing.length) {
+        throw new Error(`${message} Missing blob indices=${prettyPrintIndices(missing)}.`);
       }
     }
 
-    let message = `Error fetching BlockInput with blockRoot=${prettyBytes(rootHex)} after ${i} attempts.`;
-    if (!isPendingBlockInput(cacheItem)) {
-      message += " No block and no data was found";
-    } else {
-      if (!cacheItem.blockInput.hasBlock()) {
-        message += " Block was not found.";
-      } else if (isBlockInputBlobs(cacheItem.blockInput)) {
-        const missing = cacheItem.blockInput.getMissingBlobMeta().map((b) => b.index);
-        if (missing.length) {
-          message += ` Missing blob indices=${prettyPrintIndices(missing)}`;
-        }
-      } else if (isBlockInputColumns(cacheItem.blockInput)) {
-        const missing = cacheItem.blockInput.getMissingSampledColumnMeta().missing;
-        if (missing.length) {
-          message += ` Missing column indices=${prettyPrintIndices(missing)}`;
-        }
+    if (isBlockInputColumns(cacheItem.blockInput)) {
+      const missing = cacheItem.blockInput.getMissingSampledColumnMeta().missing;
+      if (missing.length) {
+        throw new Error(`${message} Missing column indices=${prettyPrintIndices(missing)}.`);
       }
     }
+
+    this.metrics?.blockInputSync.fetchTimeSec.observe(
+      {result: FetchResult.FailureMaxAttempts},
+      Date.now() / 1000 - fetchStartSec
+    );
+    this.metrics?.blockInputSync.fetchPeers.set({result: FetchResult.FailureMaxAttempts}, i - 1);
 
     throw Error(message);
   }
@@ -602,6 +649,7 @@ export class BlockInputSync {
       //     this.network.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadBlockByRoot");
       //   }
       this.logger.debug("ignored Banning unknown block", {
+        slot: getBlockInputSyncCacheItemSlot(block),
         root: getBlockInputSyncCacheItemRootHex(block),
         peerIdStrings: Array.from(block.peerIdStrings)
           .map((id) => prettyPrintPeerIdStr(id))
@@ -615,6 +663,7 @@ export class BlockInputSync {
 
   private removeAllDescendants(block: BlockInputSyncCacheItem): BlockInputSyncCacheItem[] {
     const rootHex = getBlockInputSyncCacheItemRootHex(block);
+    const slot = getBlockInputSyncCacheItemSlot(block);
     // Get all blocks that are a descendant of this one
     const badPendingBlocks = [block, ...getAllDescendantBlocks(rootHex, this.pendingBlocks)];
 
@@ -625,6 +674,7 @@ export class BlockInputSync {
       this.pendingBlocks.delete(rootHex);
       this.chain.seenBlockInputCache.prune(rootHex);
       this.logger.debug("Removing bad/unknown/incomplete BlockInputSyncCacheItem", {
+        slot,
         blockRoot: rootHex,
       });
     }

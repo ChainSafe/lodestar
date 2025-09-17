@@ -147,7 +147,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
 
     // Time parameters
     SECONDS_PER_SLOT: true,
-    SECONDS_PER_ETH1_BLOCK: true,
+    SECONDS_PER_ETH1_BLOCK: false, // Legacy
     MIN_VALIDATOR_WITHDRAWABILITY_DELAY: true,
     SHARD_COMMITTEE_PERIOD: true,
     ETH1_FOLLOW_DISTANCE: true,
