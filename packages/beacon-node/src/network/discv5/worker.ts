@@ -93,13 +93,13 @@ const module: Discv5WorkerApi = {
     discv5.enr.set(key, value);
   },
   async kadValues(): Promise<ENRData[]> {
-    return discv5.kadValues().map((enr) => enr.toObject());
+    return discv5.kadValues().map((enr: ENR) => enr.toObject());
   },
   async discoverKadValues(): Promise<void> {
     discv5.kadValues().map(onDiscovered);
   },
   async findRandomNode(): Promise<ENRData[]> {
-    return (await discv5.findRandomNode()).map((enr) => enr.toObject());
+    return (await discv5.findRandomNode()).map((enr: ENR) => enr.toObject());
   },
   discovered() {
     return Observable.from(subject);
