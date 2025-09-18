@@ -794,6 +794,10 @@ export function createLodestarMetrics(
         help: "Time elapsed for blob validation",
         buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
       }),
+      publishedFromEngine: register.counter({
+        name: "lodestar_gossip_blob_published_from_engine_total",
+        help: "Total number of blobs retrieved from execution engine and published to gossip",
+      }),
     },
     recoverDataColumnSidecars: {
       recoverTime: register.histogram({

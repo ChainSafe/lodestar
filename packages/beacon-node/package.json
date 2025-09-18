@@ -96,7 +96,7 @@
     "@chainsafe/blst": "^2.2.0",
     "@chainsafe/discv5": "^11.0.4",
     "@chainsafe/enr": "^5.0.1",
-    "@chainsafe/libp2p-gossipsub": "^14.1.1",
+    "@chainsafe/libp2p-gossipsub": "^14.1.2",
     "@chainsafe/libp2p-noise": "^16.1.0",
     "@chainsafe/persistent-merkle-tree": "^1.2.1",
     "@chainsafe/prometheus-gc-stats": "^1.0.0",

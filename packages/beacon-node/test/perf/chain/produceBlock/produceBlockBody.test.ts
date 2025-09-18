@@ -77,6 +77,14 @@ describe("produceBlockBody", () => {
     fn: async ({chain, state, head, proposerIndex, proposerPubKey}) => {
       const slot = state.slot;
 
+      const commonBlockBodyPromise = chain.produceCommonBlockBody({
+        parentSlot: slot,
+        slot: slot + 1,
+        graffiti: Buffer.alloc(32),
+        randaoReveal: Buffer.alloc(96),
+        parentBlockRoot: fromHexString(head.blockRoot),
+      });
+
       await produceBlockBody.call(chain, BlockType.Full, state, {
         parentSlot: slot,
         slot: slot + 1,
@@ -85,6 +93,7 @@ describe("produceBlockBody", () => {
         parentBlockRoot: fromHexString(head.blockRoot),
         proposerIndex,
         proposerPubKey,
+        commonBlockBodyPromise,
       });
     },
   });

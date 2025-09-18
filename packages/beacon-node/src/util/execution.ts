@@ -105,6 +105,7 @@ export async function getBlobSidecarsFromExecution(
   }
 
   emitter.emit(ChainEvent.publishBlobSidecars, blobSidecars);
+  metrics?.gossipBlob.publishedFromEngine.inc(blobSidecars.length);
 }
 
 /**

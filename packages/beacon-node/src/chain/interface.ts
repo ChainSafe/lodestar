@@ -203,13 +203,13 @@ export interface IBeaconChain {
   ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null>;
 
   produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody>;
-  produceBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise?: Promise<CommonBlockBody>}): Promise<{
+  produceBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}): Promise<{
     block: BeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Wei;
     shouldOverrideBuilder?: boolean;
   }>;
-  produceBlindedBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise?: Promise<CommonBlockBody>}): Promise<{
+  produceBlindedBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}): Promise<{
     block: BlindedBeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Wei;
