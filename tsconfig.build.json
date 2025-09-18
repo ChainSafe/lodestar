@@ -1,10 +1,10 @@
 {
   "compilerOptions": {
-    "target": "es2021",
-    "lib": ["es2021", "dom"],
+    "target": "es2022",
+    "lib": ["es2022", "dom"],
 
-    "module": "esnext",
-    "moduleResolution": "node",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
 
     "pretty": true,
     "strict": true,
@@ -19,6 +19,7 @@
     "noImplicitThis": true,
     "noImplicitReturns": true,
 
+    "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "declaration": true,
     "declarationMap": true,
@@ -28,8 +29,6 @@
     // TODO: Investigate following errors:
     // - Cannot find module 'rollup/parseAst' or its corresponding type declarations
     "skipLibCheck": true,
-
-    "types": ["node", "bun", "vitest"],
     
     // Required to run benchmark command from root directory
     "typeRoots": [

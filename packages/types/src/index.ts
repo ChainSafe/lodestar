@@ -10,3 +10,4 @@ export {StringType, stringType} from "./utils/stringType.js";
 // Container utils
 export * from "./utils/container.js";
 export * from "./utils/validatorStatus.js";
+export {ExecutionAddressType} from "./utils/executionAddress.js";

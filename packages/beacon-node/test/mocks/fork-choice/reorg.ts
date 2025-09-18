@@ -1,6 +1,13 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkChoice, ForkChoiceOpts, IForkChoiceStore, ProtoArray, ProtoBlock, ProtoNode} from "@lodestar/fork-choice";
-import {NotReorgedReason} from "@lodestar/fork-choice/lib/forkChoice/interface.js";
+import {
+  ForkChoice,
+  ForkChoiceOpts,
+  IForkChoiceStore,
+  ProtoArray,
+  ProtoBlock,
+  ProtoNode,
+  NotReorgedReason,
+} from "@lodestar/fork-choice";
 import {Slot} from "@lodestar/types";
 
 /**

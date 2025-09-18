@@ -1,6 +1,5 @@
 import {fromHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
-import {EventData, EventType} from "@lodestar/api/lib/beacon/routes/events.js";
 import {ChainConfig} from "@lodestar/config";
 import {TimestampFormatCode} from "@lodestar/logger";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -107,7 +106,7 @@ describe("sync / unknown block sync for fulu", () => {
       afterEachCallbacks.push(() => bn.close().catch(() => {}));
 
       // wait until the 2nd slot of fulu
-      await waitForEvent<EventData[EventType.head]>(
+      await waitForEvent<routes.events.EventData[routes.events.EventType.head]>(
         bn.chain.emitter,
         routes.events.EventType.head,
         240000,
@@ -133,7 +132,7 @@ describe("sync / unknown block sync for fulu", () => {
       const headSummary = bn.chain.forkChoice.getHead();
       const head = await bn.db.block.get(fromHexString(headSummary.blockRoot));
       if (!head) throw Error("First beacon node has no head block");
-      const waitForSynced = waitForEvent<EventData[EventType.head]>(
+      const waitForSynced = waitForEvent<routes.events.EventData[routes.events.EventType.head]>(
         bn2.chain.emitter,
         routes.events.EventType.head,
         100000,

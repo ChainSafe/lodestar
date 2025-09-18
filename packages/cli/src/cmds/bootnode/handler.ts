@@ -1,8 +1,13 @@
 import path from "node:path";
-import {Discv5} from "@chainsafe/discv5";
-import {ENR} from "@chainsafe/enr";
-import {HttpMetricsServer, RegistryMetricCreator, getHttpMetricsServer} from "@lodestar/beacon-node";
-import {ErrorAborted} from "@lodestar/utils";
+import {Discv5, Discv5EventEmitter} from "@chainsafe/discv5";
+import {ENR, ENRData, SignableENR} from "@chainsafe/enr";
+import {
+  HttpMetricsServer,
+  IBeaconNodeOptions,
+  RegistryMetricCreator,
+  getHttpMetricsServer,
+} from "@lodestar/beacon-node";
+import {ErrorAborted, Logger} from "@lodestar/utils";
 import {Multiaddr, multiaddr} from "@multiformats/multiaddr";
 
 import {getBeaconConfigFromArgs} from "../../config/index.js";
@@ -17,6 +22,7 @@ import {initPrivateKeyAndEnr} from "../beacon/initPeerIdAndEnr.js";
 import {BeaconArgs} from "../beacon/options.js";
 import {getBeaconPaths} from "../beacon/paths.js";
 import {BootnodeArgs} from "./options.js";
+import {PrivateKey} from "@libp2p/interface";
 
 /**
  * Runs a bootnode.
@@ -60,7 +66,7 @@ export async function bootnodeHandler(args: BootnodeArgs & GlobalArgs): Promise<
       },
       config: {enrUpdate: !enr.ip && !enr.ip6},
       metricsRegistry,
-    });
+    }) as Discv5 & Discv5EventEmitter;
 
     // If there are any bootnodes, add them to the routing table
     for (const bootEnrStr of Array.from(new Set(discv5Args.bootEnrs).values())) {
@@ -82,7 +88,7 @@ export async function bootnodeHandler(args: BootnodeArgs & GlobalArgs): Promise<
       void discv5.findRandomNode();
     }
 
-    discv5.on("multiaddrUpdated", (addr) => {
+    discv5.on("multiaddrUpdated", (addr: ENRData) => {
       logger.info("Advertised socket address updated", {addr: addr.toString()});
     });
 
@@ -155,8 +161,20 @@ export async function bootnodeHandler(args: BootnodeArgs & GlobalArgs): Promise<
   }
 }
 
+export type BootNodeInitOptions = {
+  discv5Args: Exclude<IBeaconNodeOptions["network"]["discv5"], null>;
+  metricsArgs: IBeaconNodeOptions["metrics"];
+  bootnodeDir: string;
+  network: string;
+  version: string;
+  commit: string;
+  privateKey: PrivateKey;
+  enr: SignableENR;
+  logger: Logger;
+};
+
 /** Separate function to simplify unit testing of options merging */
-export async function bootnodeHandlerInit(args: BootnodeArgs & GlobalArgs) {
+export async function bootnodeHandlerInit(args: BootnodeArgs & GlobalArgs): Promise<BootNodeInitOptions> {
   const {config, network} = getBeaconConfigFromArgs(args);
   const {version, commit} = getVersionData();
   const beaconPaths = getBeaconPaths(args, network);

@@ -1,6 +1,6 @@
 import path from "node:path";
 import workerThreads from "node:worker_threads";
-import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/dist/src/score/peer-score.js";
+import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {ModuleThread, Thread, Worker, spawn} from "@chainsafe/threads";
 import {privateKeyToProtobuf} from "@libp2p/crypto/keys";
