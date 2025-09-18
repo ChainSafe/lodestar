@@ -539,7 +539,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         throw new GossipActionError(GossipAction.REJECT, {code: "PRE_FULU_BLOCK"});
       }
       const delaySec = chain.clock.secFromSlot(dataColumnSlot, seenTimestampSec);
-      metrics?.dataColumns.elapsedTimeTillReceived.observe({source: BlockInputSource.gossip}, delaySec);
       const blockInput = await validateBeaconDataColumn(
         dataColumnSidecar,
         serializedData,
@@ -547,12 +546,24 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         peerIdStr,
         seenTimestampSec
       );
+      const blockInputMeta = blockInput.getLogMeta();
+      const {receivedColumns} = blockInputMeta;
+      // it's not helpful to track every single column received
+      // instead of that, track 1st, 32th, 64th, and 128th column
+      if (
+        receivedColumns === 1 ||
+        receivedColumns === NUMBER_OF_COLUMNS / 4 ||
+        receivedColumns === NUMBER_OF_COLUMNS / 2 ||
+        receivedColumns === NUMBER_OF_COLUMNS
+      ) {
+        metrics?.dataColumns.elapsedTimeTillReceived.observe({receivedOrder: receivedColumns}, delaySec);
+      }
       if (!blockInput.hasBlockAndAllData()) {
         const cutoffTimeMs = getCutoffTimeMs(chain, dataColumnSlot, BLOCK_AVAILABILITY_CUTOFF_MS);
         chain.logger.debug("Received gossip data column, waiting for full data availability", {
           msToWait: cutoffTimeMs,
           dataColumnIndex: index,
-          ...blockInput.getLogMeta(),
+          ...blockInputMeta,
         });
         // do not await here to not delay gossip validation
         blockInput.waitForAllData(cutoffTimeMs).catch((_e) => {
@@ -560,7 +571,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
             "Waited for data after receiving gossip column. Cut-off reached so attempting to fetch remainder of BlockInput",
             {
               dataColumnIndex: index,
-              ...blockInput.getLogMeta(),
+              ...blockInputMeta,
             }
           );
           chain.emitter.emit(ChainEvent.incompleteBlockInput, {

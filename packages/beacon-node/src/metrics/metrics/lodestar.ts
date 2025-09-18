@@ -822,10 +822,10 @@ export function createLodestarMetrics(
         help: "Number of received data columns by source",
         labelNames: ["source"],
       }),
-      elapsedTimeTillReceived: register.histogram<{source: BlockInputSource}>({
+      elapsedTimeTillReceived: register.histogram<{receivedOrder: number}>({
         name: "lodestar_data_column_elapsed_time_till_received_seconds",
         help: "Time elapsed between block slot time and the time data column received",
-        labelNames: ["source"],
+        labelNames: ["receivedOrder"],
         buckets: [1, 2, 3, 4, 6, 12],
       }),
       sentPeersPerSubnet: register.histogram({
