@@ -19,6 +19,7 @@ import {
   capella,
   deneb,
   electra,
+  gloas,
   ssz,
 } from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
@@ -51,6 +52,7 @@ export type EngineApiRpcParamTypes = {
   engine_newPayloadV2: [ExecutionPayloadRpc];
   engine_newPayloadV3: [ExecutionPayloadRpc, VersionedHashesRpc, DATA];
   engine_newPayloadV4: [ExecutionPayloadRpc, VersionedHashesRpc, DATA, ExecutionRequestsRpc];
+  engine_newPayloadV5: [ExecutionPayloadRpc, VersionedHashesRpc, DATA, ExecutionRequestsRpc];
   /**
    * 1. Object - Payload validity status with respect to the consensus rules:
    *   - blockHash: DATA, 32 Bytes - block hash value of the payload
@@ -76,6 +78,7 @@ export type EngineApiRpcParamTypes = {
   engine_getPayloadV3: [QUANTITY];
   engine_getPayloadV4: [QUANTITY];
   engine_getPayloadV5: [QUANTITY];
+  engine_getPayloadV6: [QUANTITY];
 
   /**
    * 1. Array of DATA - Array of block_hash field values of the ExecutionPayload structure
@@ -112,6 +115,7 @@ export type EngineApiRpcReturnTypes = {
   engine_newPayloadV2: PayloadStatus;
   engine_newPayloadV3: PayloadStatus;
   engine_newPayloadV4: PayloadStatus;
+  engine_newPayloadV5: PayloadStatus;
   engine_forkchoiceUpdatedV1: {
     payloadStatus: PayloadStatus;
     payloadId: QUANTITY | null;
@@ -132,6 +136,7 @@ export type EngineApiRpcReturnTypes = {
   engine_getPayloadV3: ExecutionPayloadResponse;
   engine_getPayloadV4: ExecutionPayloadResponse;
   engine_getPayloadV5: ExecutionPayloadResponse;
+  engine_getPayloadV6: ExecutionPayloadResponse;
 
   engine_getPayloadBodiesByHashV1: (ExecutionPayloadBodyRpc | null)[];
 
@@ -182,6 +187,7 @@ export type ExecutionPayloadRpc = {
   blobGasUsed?: QUANTITY; // DENEB
   excessBlobGas?: QUANTITY; // DENEB
   parentBeaconBlockRoot?: QUANTITY; // DENEB
+  blockAccessList?: DATA; // GLOAS
 };
 
 export type WithdrawalRpc = {
@@ -282,6 +288,11 @@ export function serializeExecutionPayload(fork: ForkName, data: ExecutionPayload
 
   // No changes in Electra
 
+  if (ForkSeq[fork] >= ForkSeq.gloas) {
+    const {blockAccessList} = data as gloas.ExecutionPayload;
+    payload.blockAccessList = bytesToData(blockAccessList);
+  }
+
   return payload;
 }
 
@@ -376,6 +387,18 @@ export function parseExecutionPayload(
   }
 
   // No changes in Electra
+
+  if (ForkSeq[fork] >= ForkSeq.gloas) {
+    const {blockAccessList} = data;
+
+    if (blockAccessList == null) {
+      throw Error(
+        `blockAccessList missing for ${fork} >= gloas executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
+      );
+    }
+
+    (executionPayload as gloas.ExecutionPayload).blockAccessList = dataToBytes(blockAccessList, null);
+  }
 
   return {executionPayload, executionPayloadValue, blobsBundle, executionRequests, shouldOverrideBuilder};
 }

@@ -237,6 +237,7 @@ export function initializeBeaconStateFromEth1(
     | typeof ssz.capella.ExecutionPayloadHeader
     | typeof ssz.deneb.ExecutionPayloadHeader
     | typeof ssz.electra.ExecutionPayloadHeader
+    | typeof ssz.gloas.ExecutionPayloadHeader
   >
 ): CachedBeaconStateAllForks {
   const stateView = getGenesisBeaconState(
@@ -330,10 +331,10 @@ export function initializeBeaconStateFromEth1(
   }
 
   if (fork >= ForkSeq.gloas) {
-    const stateFulu = state as CompositeViewDU<typeof ssz.gloas.BeaconState>;
-    stateFulu.fork.previousVersion = config.GLOAS_FORK_VERSION;
-    stateFulu.fork.currentVersion = config.GLOAS_FORK_VERSION;
-    stateFulu.latestExecutionPayloadHeader =
+    const stateGloas = state as CompositeViewDU<typeof ssz.gloas.BeaconState>;
+    stateGloas.fork.previousVersion = config.GLOAS_FORK_VERSION;
+    stateGloas.fork.currentVersion = config.GLOAS_FORK_VERSION;
+    stateGloas.latestExecutionPayloadHeader =
       (executionPayloadHeader as CompositeViewDU<typeof ssz.gloas.ExecutionPayloadHeader>) ??
       ssz.gloas.ExecutionPayloadHeader.defaultViewDU();
   }
