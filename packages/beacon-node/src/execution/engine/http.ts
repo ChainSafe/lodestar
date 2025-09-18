@@ -29,12 +29,14 @@ import {
 } from "./interface.js";
 import {PayloadIdCache} from "./payloadIdCache.js";
 import {
+  BLOB_AND_PROOF_V2_RPC_BYTES,
   EngineApiRpcParamTypes,
   EngineApiRpcReturnTypes,
   ExecutionPayloadBody,
   assertReqSizeLimit,
   deserializeBlobAndProofs,
   deserializeBlobAndProofsV2,
+  deserializeBlobAndProofsV2IntoBytes,
   deserializeExecutionPayloadBody,
   parseExecutionPayload,
   serializeBeaconBlockRoot,
@@ -489,8 +491,16 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     return response.map(deserializeExecutionPayloadBody);
   }
 
-  async getBlobs(fork: ForkPostFulu, versionedHashes: VersionedHashes): Promise<BlobAndProofV2[] | null>;
-  async getBlobs(fork: ForkPreFulu, versionedHashes: VersionedHashes): Promise<(BlobAndProof | null)[]>;
+  async getBlobs(
+    fork: ForkPostFulu,
+    versionedHashes: VersionedHashes,
+    buffers?: Uint8Array[]
+  ): Promise<BlobAndProofV2[] | null>;
+  async getBlobs(
+    fork: ForkPreFulu,
+    versionedHashes: VersionedHashes,
+    buffers?: Uint8Array[]
+  ): Promise<(BlobAndProof | null)[]>;
   async getBlobs(
     fork: ForkName,
     versionedHashes: VersionedHashes
@@ -526,7 +536,19 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     return response.map(deserializeBlobAndProofs);
   }
 
-  private async getBlobsV2(versionedHashesHex: string[]) {
+  private async getBlobsV2(versionedHashesHex: string[], buffers?: Uint8Array[]) {
+    if (buffers) {
+      if (buffers.length !== versionedHashesHex.length) {
+        throw Error(`Invalid buffers length=${buffers.length} versionedHashes=${versionedHashesHex.length}`);
+      }
+
+      for (const [i, buffer] of buffers.entries()) {
+        if (buffer.length !== BLOB_AND_PROOF_V2_RPC_BYTES) {
+          throw Error(`Invalid buffer[${i}] length=${buffer.length} expected=${BLOB_AND_PROOF_V2_RPC_BYTES}`);
+        }
+      }
+    }
+
     const response = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes["engine_getBlobsV2"],
       EngineApiRpcParamTypes["engine_getBlobsV2"]
@@ -547,7 +569,16 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       throw Error(error);
     }
 
-    return !response ? null : response.map(deserializeBlobAndProofsV2);
+    if (response == null) {
+      return null;
+    }
+
+    if (buffers) {
+      // getBlobsV2() is designed to called once per slot so we expect to have buffers
+      return response.map((data, i) => deserializeBlobAndProofsV2IntoBytes(data, buffers[i]));
+    }
+
+    return response.map(deserializeBlobAndProofsV2);
   }
 
   private async getClientVersion(clientVersion: ClientVersion): Promise<ClientVersion[]> {

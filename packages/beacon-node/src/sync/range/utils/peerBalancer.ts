@@ -1,3 +1,4 @@
+import {isForkPostFulu} from "@lodestar/params";
 import {PeerSyncMeta} from "../../../network/peers/peersData.js";
 import {CustodyConfig} from "../../../util/dataColumns.js";
 import {PeerIdStr} from "../../../util/peerId.js";
@@ -57,8 +58,9 @@ export class ChainPeersBalancer {
     if (batch.state.status !== BatchStatus.AwaitingDownload) {
       return;
     }
-    const {partialDownload} = batch.state;
-    const pendingDataColumns = partialDownload?.pendingDataColumns ?? this.custodyConfig.sampledColumns;
+    const {columnsRequest} = batch.requests;
+    // TODO(fulu): This is fulu specific and hinders our peer selection PreFulu
+    const pendingDataColumns = columnsRequest?.columns ?? this.custodyConfig.sampledColumns;
     const eligiblePeers = this.filterPeers(batch, pendingDataColumns, false);
 
     const failedPeers = new Set(batch.getFailedPeers());
@@ -116,7 +118,7 @@ export class ChainPeersBalancer {
     }
 
     for (const peer of this.peers) {
-      const {earliestAvailableSlot, custodyGroups, target, peerId} = peer;
+      const {earliestAvailableSlot, target, peerId} = peer;
 
       const activeRequest = this.activeRequestsByPeer.get(peerId) ?? 0;
       if (noActiveRequest && activeRequest > 0) {
@@ -129,23 +131,23 @@ export class ChainPeersBalancer {
         continue;
       }
 
-      if (target.slot < batch.request.startSlot) {
+      if (target.slot < batch.startSlot) {
         continue;
       }
 
-      if (batch.isPostFulu() && this.syncType === RangeSyncType.Head) {
+      if (isForkPostFulu(batch.forkName) && this.syncType === RangeSyncType.Head) {
         // for head sync, target slot is head slot and each peer may have a different head slot
         // we don't want to retry a batch with a peer that's not as up-to-date as the previous peer
         // see https://github.com/ChainSafe/lodestar/issues/8193
-        const blocks = batch.state.partialDownload?.blocks;
-        const lastBlock = blocks?.at(-1)?.block;
-        const lastBlockSlot = lastBlock?.message?.slot;
+        const blocks = batch.state?.blocks;
+        const lastBlock = blocks?.at(-1);
+        const lastBlockSlot = lastBlock?.slot;
         if (lastBlockSlot && lastBlockSlot > target.slot) {
           continue;
         }
       }
 
-      if (!batch.isPostFulu()) {
+      if (!isForkPostFulu(batch.forkName)) {
         // pre-fulu logic, we don't care columns and earliestAvailableSlot
         eligiblePeers.push({syncInfo: peer, columns: 0, hasEarliestAvailableSlots: false});
         continue;
@@ -157,12 +159,11 @@ export class ChainPeersBalancer {
         continue;
       }
 
-      if (earliestAvailableSlot > batch.request.startSlot) {
+      if (earliestAvailableSlot > batch.startSlot) {
         continue;
       }
 
-      const peerColumns = custodyGroups;
-      const columns = peerColumns.reduce((acc, elem) => {
+      const columns = peer.custodyColumns.reduce((acc, elem) => {
         if (requestColumns.includes(elem)) {
           acc.push(elem);
         }

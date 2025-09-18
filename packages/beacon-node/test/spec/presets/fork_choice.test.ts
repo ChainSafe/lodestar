@@ -3,7 +3,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {createBeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
-import {ACTIVE_PRESET, ForkName, ForkSeq} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkPostDeneb, ForkPostFulu, ForkSeq} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {BeaconStateAllForks, isExecutionStateType, signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {
@@ -18,31 +18,25 @@ import {
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
-import {bnToNum, fromHex} from "@lodestar/utils";
+import {bnToNum, fromHex, toHex} from "@lodestar/utils";
 import {expect} from "vitest";
 import {
-  AttestationImportOpt,
-  BlobSidecarValidation,
-  BlobsSource,
-  BlockInputDataColumns,
-  BlockSource,
-  DataColumnsSource,
-  getBlockInput,
-} from "../../../src/chain/blocks/types.js";
+  BlockInputBlobs,
+  BlockInputColumns,
+  BlockInputPreData,
+  BlockInputSource,
+} from "../../../src/chain/blocks/blockInput/index.js";
+import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.js";
 import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
-import {
-  verifyDataColumnSidecar,
-  verifyDataColumnSidecarInclusionProof,
-  verifyDataColumnSidecarKzgProofs,
-} from "../../../src/chain/validation/dataColumnSidecar.js";
+import {validateBlockDataColumnSidecars} from "../../../src/chain/validation/dataColumnSidecar.js";
 import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
 import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";
 import {PowMergeBlock} from "../../../src/eth1/interface.js";
 import {ExecutionPayloadStatus} from "../../../src/execution/engine/interface.js";
 import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js";
 import {getExecutionEngineFromBackend} from "../../../src/execution/index.js";
-import {computeInclusionProof} from "../../../src/util/blobs.js";
+import {computePreFuluKzgCommitmentsInclusionProof} from "../../../src/util/blobs.js";
 import {ClockEvent} from "../../../src/util/clock.js";
 import {ClockStopped} from "../../mocks/clock.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
@@ -69,7 +63,7 @@ const forkChoiceTest =
   (opts: {onlyPredefinedResponses: boolean}): TestRunnerFn<ForkChoiceTestCase, void> =>
   (fork) => {
     return {
-      testFunction: async (testcase) => {
+      testFunction: async (testcase, _directoryName, testCaseName) => {
         const {steps, anchorState} = testcase;
         const currentSlot = anchorState.slot;
         const config = getConfig(fork);
@@ -205,6 +199,7 @@ const forkChoiceTest =
               const blockRoot = config
                 .getForkTypes(signedBlock.message.slot)
                 .BeaconBlock.hashTreeRoot(signedBlock.message);
+              const blockRootHex = toHex(blockRoot);
               logger.debug(`Step ${i}/${stepsLen} block`, {
                 slot,
                 id: step.block,
@@ -222,25 +217,40 @@ const forkChoiceTest =
                     columns = [];
                   }
 
+                  await validateBlockDataColumnSidecars(
+                    slot,
+                    blockRoot,
+                    (signedBlock as SignedBeaconBlock<ForkPostFulu>).message.body.blobKzgCommitments.length,
+                    columns
+                  );
+
+                  blockImport = BlockInputColumns.createFromBlock({
+                    forkName: fork,
+                    block: signedBlock as SignedBeaconBlock<ForkPostFulu>,
+                    blockRootHex,
+                    custodyColumns:
+                      // in most test case instances we do not want to assign any custody as there are no columns provided
+                      // with the test case.  For on_block_peerdas__not_available the exact situation that is being tested
+                      // is no availability so block processing should fail.  For this one test case add some default
+                      // custody so that the await will fail in verifyBlocksDataAvailability.ts
+                      testCaseName !== "on_block_peerdas__not_available" ? columns.map((c) => c.index) : [2, 4, 6, 8],
+                    sampledColumns:
+                      testCaseName !== "on_block_peerdas__not_available"
+                        ? columns.map((c) => c.index)
+                        : [2, 4, 6, 8, 10, 12, 14, 16],
+                    source: BlockInputSource.gossip,
+                    seenTimestampSec: 0,
+                    daOutOfRange: false,
+                  });
                   for (const column of columns) {
-                    verifyDataColumnSidecar(column);
-                    verifyDataColumnSidecarInclusionProof(column);
-                    await verifyDataColumnSidecarKzgProofs(
-                      column.kzgCommitments,
-                      Array.from({length: column.column.length}, () => column.index),
-                      column.column,
-                      column.kzgProofs
-                    );
+                    blockImport.addColumn({
+                      blockRootHex,
+                      columnSidecar: column,
+                      source: BlockInputSource.gossip,
+                      seenTimestampSec: 0,
+                    });
                   }
-
-                  const blockData = {
-                    fork,
-                    dataColumns: columns,
-                    dataColumnsBytes: columns.map(() => null),
-                    dataColumnsSource: DataColumnsSource.gossip,
-                  } as BlockInputDataColumns;
-
-                  blockImport = getBlockInput.availableData(config, signedBlock, BlockSource.gossip, blockData);
+                  // getBlockInput.availableData(config, signedBlock, BlockSource.gossip, blockData);
                 } else if (forkSeq >= ForkSeq.deneb && forkSeq < ForkSeq.fulu) {
                   if (blobs === undefined) {
                     // seems like some deneb tests don't have this and we are supposed to assume empty
@@ -266,17 +276,39 @@ const forkChoiceTest =
                       kzgCommitment: commitments[index],
                       kzgProof: (proofs ?? [])[index],
                       signedBlockHeader: signedBlockToSignedHeader(config, signedBlock),
-                      kzgCommitmentInclusionProof: computeInclusionProof(fork, signedBlock.message.body, index),
+                      kzgCommitmentInclusionProof: computePreFuluKzgCommitmentsInclusionProof(
+                        fork,
+                        signedBlock.message.body,
+                        index
+                      ),
                     };
                   });
 
-                  blockImport = getBlockInput.availableData(config, signedBlock, BlockSource.gossip, {
-                    fork: ForkName.deneb,
-                    blobs: blobSidecars,
-                    blobsSource: BlobsSource.gossip,
+                  blockImport = BlockInputBlobs.createFromBlock({
+                    forkName: fork,
+                    block: signedBlock as SignedBeaconBlock<ForkPostDeneb>,
+                    blockRootHex,
+                    source: BlockInputSource.gossip,
+                    seenTimestampSec: 0,
+                    daOutOfRange: false,
                   });
+                  for (const blob of blobSidecars) {
+                    blockImport.addBlob({
+                      blockRootHex,
+                      blobSidecar: blob,
+                      source: BlockInputSource.gossip,
+                      seenTimestampSec: 0,
+                    });
+                  }
                 } else {
-                  blockImport = getBlockInput.preData(config, signedBlock, BlockSource.gossip);
+                  blockImport = BlockInputPreData.createFromBlock({
+                    forkName: fork,
+                    block: signedBlock as SignedBeaconBlock<ForkPostDeneb>,
+                    blockRootHex,
+                    source: BlockInputSource.gossip,
+                    seenTimestampSec: 0,
+                    daOutOfRange: false,
+                  });
                 }
 
                 await chain.processBlock(blockImport, {
@@ -465,7 +497,8 @@ const forkChoiceTest =
             attesterSlashings,
           };
         },
-        timeout: 10000,
+        // timeout needs to be set longer than BLOB_AVAILABILITY_TIMEOUT so that on_block_peerdas__not_available fails
+        timeout: 15000,
         expectFunc: () => {},
         // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
         // EXCEPTION : this test skipped here because prefix match can't be don't for this particular test

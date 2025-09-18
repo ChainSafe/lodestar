@@ -3,31 +3,25 @@ import {toHexString} from "@chainsafe/ssz";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as minimalConfig} from "@lodestar/config/default";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {ForkName, ZERO_HASH_HEX} from "@lodestar/params";
+import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {notNullish, sleep} from "@lodestar/utils";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {
-  BlockInput,
-  BlockInputDataColumns,
-  BlockInputType,
-  BlockSource,
-  CachedDataColumns,
-  NullBlockInput,
-  getBlockInput,
-} from "../../../src/chain/blocks/types.js";
+import {BlockInputColumns, BlockInputPreData} from "../../../src/chain/blocks/blockInput/blockInput.js";
+import {BlockInputSource} from "../../../src/chain/blocks/blockInput/types.js";
 import {BlockError, BlockErrorCode} from "../../../src/chain/errors/blockError.js";
-import {IBeaconChain} from "../../../src/chain/index.js";
+import {ChainEvent, IBeaconChain} from "../../../src/chain/index.js";
 import {SeenBlockProposers} from "../../../src/chain/seenCache/seenBlockProposers.js";
 import {ZERO_HASH} from "../../../src/constants/constants.js";
-import {INetwork, NetworkEvent, NetworkEventBus, PeerAction} from "../../../src/network/index.js";
+import {INetwork, NetworkEventBus, PeerAction} from "../../../src/network/index.js";
 import {PeerSyncMeta} from "../../../src/network/peers/peersData.js";
 import {defaultSyncOptions} from "../../../src/sync/options.js";
-import {UnknownBlockPeerBalancer, UnknownBlockSync} from "../../../src/sync/unknownBlock.js";
+import {BlockInputSync, UnknownBlockPeerBalancer} from "../../../src/sync/unknownBlock.js";
 import {CustodyConfig} from "../../../src/util/dataColumns.js";
 import {PeerIdStr} from "../../../src/util/peerId.js";
 import {ClockStopped} from "../../mocks/clock.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
+import {generateBlockWithColumnSidecars} from "../../utils/blocksAndData.js";
 import {testLogger} from "../../utils/logger.js";
 import {getRandPeerIdStr, getRandPeerSyncMeta} from "../../utils/peer.js";
 
@@ -48,7 +42,7 @@ describe.skip(
 
     const testCases: {
       id: string;
-      event: NetworkEvent.unknownBlockParent | NetworkEvent.unknownBlock;
+      event: ChainEvent.unknownParent | ChainEvent.unknownBlockRoot;
       finalizedSlot: number;
       reportPeer?: boolean;
       seenBlock?: boolean;
@@ -57,23 +51,23 @@ describe.skip(
     }[] = [
       {
         id: "fetch and process multiple unknown blocks",
-        event: NetworkEvent.unknownBlock,
+        event: ChainEvent.unknownBlockRoot,
         finalizedSlot: 0,
       },
       {
         id: "fetch and process multiple unknown block parents",
-        event: NetworkEvent.unknownBlockParent,
+        event: ChainEvent.unknownParent,
         finalizedSlot: 0,
       },
       {
         id: "downloaded parent is before finalized slot",
-        event: NetworkEvent.unknownBlockParent,
+        event: ChainEvent.unknownParent,
         finalizedSlot: 2,
         reportPeer: true,
       },
       {
         id: "unbundling attack",
-        event: NetworkEvent.unknownBlock,
+        event: ChainEvent.unknownBlockRoot,
         finalizedSlot: 0,
         seenBlock: true,
       },
@@ -86,12 +80,12 @@ describe.skip(
       // },
       {
         id: "peer returns prefinalized block",
-        event: NetworkEvent.unknownBlock,
+        event: ChainEvent.unknownBlockRoot,
         finalizedSlot: 1,
       },
       {
         id: "downloaded blocks only",
-        event: NetworkEvent.unknownBlockParent,
+        event: ChainEvent.unknownParent,
         finalizedSlot: 0,
         maxPendingBlocks: 1,
       },
@@ -182,7 +176,8 @@ describe.skip(
         const chain: Partial<IBeaconChain> = {
           clock: new ClockStopped(0),
           forkChoice: forkChoice as IForkChoice,
-          processBlock: async ({block}, opts) => {
+          processBlock: async (blockInput, opts) => {
+            const block = blockInput.getBlock();
             if (!forkChoice.hasBlock(block.message.parentRoot)) throw Error("Unknown parent");
             const blockSlot = block.message.slot;
             if (blockSlot <= finalizedSlot && !opts?.ignoreIfFinalized) {
@@ -200,28 +195,37 @@ describe.skip(
 
         const setTimeoutSpy = vi.spyOn(global, "setTimeout");
         const processBlockSpy = vi.spyOn(chain, "processBlock");
-        const syncService = new UnknownBlockSync(config, network as INetwork, chain as IBeaconChain, logger, null, {
+        const syncService = new BlockInputSync(config, network as INetwork, chain as IBeaconChain, logger, null, {
           ...defaultSyncOptions,
           maxPendingBlocks,
         });
         syncService.subscribeToNetwork();
-        if (event === NetworkEvent.unknownBlockParent) {
-          network.events?.emit(NetworkEvent.unknownBlockParent, {
-            blockInput: getBlockInput.preData(config, blockC, BlockSource.gossip),
+        if (event === ChainEvent.unknownParent) {
+          chain.emitter?.emit(ChainEvent.unknownParent, {
+            blockInput: BlockInputPreData.createFromBlock({
+              block: blockC,
+              blockRootHex: blockRootHexC,
+              forkName: config.getForkName(blockC.message.slot),
+              daOutOfRange: false,
+              seenTimestampSec: Math.floor(Date.now() / 1000),
+              source: BlockInputSource.gossip,
+            }),
             peer,
+            source: BlockInputSource.gossip,
           });
         } else {
-          network.events?.emit(NetworkEvent.unknownBlock, {rootHex: blockRootHexC, peer});
+          chain.emitter?.emit(ChainEvent.unknownBlockRoot, {
+            rootSlot: {root: blockRootHexC},
+            peer,
+            source: BlockInputSource.gossip,
+          });
         }
 
         if (wrongBlockRoot) {
-          const [_, requestedRoots] = await sendBeaconBlocksByRootPromise;
+          await sendBeaconBlocksByRootPromise;
           await sleep(200);
           // should not send the invalid root block to chain
           expect(processBlockSpy).toHaveBeenCalledOnce();
-          for (const requestedRoot of requestedRoots) {
-            expect(syncService["pendingBlocks"].get(toHexString(requestedRoot))?.downloadAttempts).toEqual(1);
-          }
         } else if (reportPeer) {
           const err = await reportPeerPromise;
           expect(err[0]).toBe(peer);
@@ -259,7 +263,7 @@ describe("UnknownBlockSync", () => {
   let network: INetwork;
   let chain: MockedBeaconChain;
   const logger = testLogger();
-  let service: UnknownBlockSync;
+  let service: BlockInputSync;
 
   beforeEach(() => {
     network = {
@@ -288,8 +292,8 @@ describe("UnknownBlockSync", () => {
     for (const {actions, expected} of testCases) {
       const testName = actions.map((action) => (action ? "subscribe" : "unsubscribe")).join(" - ");
       it(testName, () => {
-        const events = network.events as EventEmitter;
-        service = new UnknownBlockSync(minimalConfig, network, chain, logger, null, defaultSyncOptions);
+        const events = chain.emitter as EventEmitter;
+        service = new BlockInputSync(minimalConfig, network, chain, logger, null, defaultSyncOptions);
         for (const action of actions) {
           if (action) {
             service.subscribeToNetwork();
@@ -299,12 +303,12 @@ describe("UnknownBlockSync", () => {
         }
 
         if (expected) {
-          expect(events.listenerCount(NetworkEvent.unknownBlock)).toBe(1);
-          expect(events.listenerCount(NetworkEvent.unknownBlockParent)).toBe(1);
+          expect(events.listenerCount(ChainEvent.unknownBlockRoot)).toBe(1);
+          expect(events.listenerCount(ChainEvent.unknownParent)).toBe(1);
           expect(service.isSubscribedToNetwork()).toBe(true);
         } else {
-          expect(events.listenerCount(NetworkEvent.unknownBlock)).toBe(0);
-          expect(events.listenerCount(NetworkEvent.unknownBlockParent)).toBe(0);
+          expect(events.listenerCount(ChainEvent.unknownBlockRoot)).toBe(0);
+          expect(events.listenerCount(ChainEvent.unknownParent)).toBe(0);
           expect(service.isSubscribedToNetwork()).toBe(false);
         }
       });
@@ -361,7 +365,7 @@ describe("UnknownBlockPeerBalancer", async () => {
 
   let peerBalancer: UnknownBlockPeerBalancer;
   beforeEach(() => {
-    peerBalancer = new UnknownBlockPeerBalancer(custodyConfig);
+    peerBalancer = new UnknownBlockPeerBalancer();
     for (const [peerId, peerMeta] of peersMeta.entries()) {
       peerBalancer.onPeerConnected(peerId, peerMeta);
     }
@@ -369,27 +373,32 @@ describe("UnknownBlockPeerBalancer", async () => {
 
   for (const [testCaseIndex, {custodyGroups, excludedPeers, activeRequests, bestPeer}] of testCases.entries()) {
     for (const [i, groups] of custodyGroups.entries()) {
-      peers[i].custodyGroups = groups;
+      peers[i].custodyColumns = groups;
     }
 
     const signedBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
-    const cachedData: CachedDataColumns = {
-      cacheId: 2025,
-      fork: ForkName.fulu,
-      availabilityPromise: Promise.resolve({} as unknown as BlockInputDataColumns),
-      resolveAvailability: () => {},
-      dataColumnsCache: new Map([
-        [0, {dataColumn: ssz.fulu.DataColumnSidecar.defaultValue(), dataColumnBytes: null}],
-        [1, {dataColumn: ssz.fulu.DataColumnSidecar.defaultValue(), dataColumnBytes: null}],
-      ]),
-      calledRecover: false,
-    };
-    const blockInput: BlockInput = {
-      block: signedBlock,
-      source: BlockSource.gossip,
-      type: BlockInputType.dataPromise,
-      cachedData,
-    };
+    signedBlock.message.body.blobKzgCommitments = [ssz.fulu.KZGCommitment.defaultValue()];
+    const {block, rootHex, columnSidecars} = generateBlockWithColumnSidecars({forkName: ForkName.fulu});
+    const blockInput = BlockInputColumns.createFromBlock({
+      block: block,
+      blockRootHex: rootHex,
+      forkName: ForkName.fulu,
+      daOutOfRange: false,
+      source: BlockInputSource.gossip,
+      seenTimestampSec: Math.floor(Date.now() / 1000),
+      custodyColumns: custodyConfig.custodyColumns,
+      sampledColumns: custodyConfig.sampledColumns,
+    });
+
+    // test cases rely on first 2 columns being known, the rest unknown
+    for (const sidecar of columnSidecars.slice(0, 2)) {
+      blockInput.addColumn({
+        columnSidecar: sidecar,
+        blockRootHex: rootHex,
+        seenTimestampSec: Math.floor(Date.now() / 1000),
+        source: BlockInputSource.gossip,
+      });
+    }
 
     it(`bestPeerForBlockInput - test case ${testCaseIndex}`, () => {
       for (const [i, activeRequest] of activeRequests.entries()) {
@@ -419,62 +428,4 @@ describe("UnknownBlockPeerBalancer", async () => {
       }
     });
   } // end for testCases
-
-  it("bestPeerForBlockInput - NullBlockInput", () => {
-    // there is an edge case where the NullBlockInput has full custody groups but no block, make sure it can return any peers
-    // in case NullBlockInput has some pending columns, it falls on the above test cases
-    const signedBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
-    const cachedData: CachedDataColumns = {
-      cacheId: 2025,
-      fork: ForkName.fulu,
-      availabilityPromise: Promise.resolve({} as unknown as BlockInputDataColumns),
-      resolveAvailability: () => {},
-      dataColumnsCache: new Map([
-        [0, {dataColumn: ssz.fulu.DataColumnSidecar.defaultValue(), dataColumnBytes: null}],
-        [1, {dataColumn: ssz.fulu.DataColumnSidecar.defaultValue(), dataColumnBytes: null}],
-        [2, {dataColumn: ssz.fulu.DataColumnSidecar.defaultValue(), dataColumnBytes: null}],
-        [3, {dataColumn: ssz.fulu.DataColumnSidecar.defaultValue(), dataColumnBytes: null}],
-      ]),
-      calledRecover: false,
-    };
-    const blockInput: BlockInput = {
-      block: signedBlock,
-      source: BlockSource.gossip,
-      type: BlockInputType.dataPromise,
-      cachedData,
-    };
-
-    const nullBlockInput: NullBlockInput = {
-      block: null,
-      blockRootHex: ZERO_HASH_HEX,
-      blockInputPromise: Promise.resolve(blockInput),
-      cachedData,
-    };
-
-    const excludedPeers = new Set<PeerIdStr>();
-    for (let i = 0; i < peers.length; i++) {
-      const peer = peerBalancer.bestPeerForBlockInput(nullBlockInput, excludedPeers);
-      expect(peer).not.toBeNull();
-      if (peer == null) {
-        // should not happen, this is just to make the compiler happy
-        throw new Error("Unexpected null peer");
-      }
-      excludedPeers.add(peer.peerId);
-    }
-
-    // last round, no more peer should be returned because all are requested
-    const peer = peerBalancer.bestPeerForBlockInput(nullBlockInput, excludedPeers);
-    expect(peer).toBeNull();
-  });
-
-  it("onRequest and onRequestCompleted", () => {
-    peerBalancer.onRequest(peers[0].peerId);
-    expect(peerBalancer.activeRequests.get(peers[0].peerId)).toBe(1);
-    peerBalancer.onRequest(peers[0].peerId);
-    expect(peerBalancer.activeRequests.get(peers[0].peerId)).toBe(2);
-    peerBalancer.onRequestCompleted(peers[0].peerId);
-    expect(peerBalancer.activeRequests.get(peers[0].peerId)).toBe(1);
-    peerBalancer.onRequestCompleted(peers[0].peerId);
-    expect(peerBalancer.activeRequests.get(peers[0].peerId)).toBe(0);
-  });
 });

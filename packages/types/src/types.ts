@@ -42,6 +42,7 @@ export type WithOptionalBytes<T> = {
 
 export type SlotRootHex = {slot: Slot; root: RootHex};
 export type SlotOptionalRoot = {slot: Slot; root?: RootHex};
+export type RootOptionalSlot = {root: RootHex; slot?: Slot};
 
 type TypesByFork = {
   [ForkName.phase0]: {

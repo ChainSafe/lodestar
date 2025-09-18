@@ -57,8 +57,8 @@ import {SerializedCache} from "../util/serializedCache.js";
 import {ArchiveStore} from "./archiveStore/archiveStore.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
+import {IBlockInput} from "./blocks/blockInput/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
-import {BlockInput} from "./blocks/types.js";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
 import {ChainEvent, ChainEventEmitter} from "./emitter.js";
 import {ForkchoiceCaller, initializeForkChoice} from "./forkChoice/index.js";
@@ -88,11 +88,10 @@ import {
   SeenContributionAndProof,
   SeenSyncCommitteeMessages,
 } from "./seenCache/index.js";
-import {SeenGossipBlockInput} from "./seenCache/index.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
-import {SeenBlockInputCache} from "./seenCache/seenBlockInput.js";
+import {SeenBlockInput} from "./seenCache/seenGossipBlockInput.js";
 import {ShufflingCache} from "./shufflingCache.js";
 import {BlockStateCacheImpl} from "./stateCache/blockStateCacheImpl.js";
 import {DbCPStateDatastore} from "./stateCache/datastore/db.js";
@@ -101,6 +100,8 @@ import {FIFOBlockStateCache} from "./stateCache/fifoBlockStateCache.js";
 import {InMemoryCheckpointStateCache} from "./stateCache/inMemoryCheckpointsCache.js";
 import {PersistentCheckpointStateCache} from "./stateCache/persistentCheckpointsCache.js";
 import {ValidatorMonitor} from "./validatorMonitor.js";
+import {GetBlobsTracker} from "./GetBlobsTracker.js";
+import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
 
 /**
  * The maximum number of cached produced results to keep in memory.
@@ -151,8 +152,7 @@ export class BeaconChain implements IBeaconChain {
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
   readonly seenContributionAndProof: SeenContributionAndProof;
   readonly seenAttestationDatas: SeenAttestationDatas;
-  readonly seenGossipBlockInput: SeenGossipBlockInput;
-  readonly seenBlockInputCache: SeenBlockInputCache;
+  readonly seenBlockInputCache: SeenBlockInput;
   // Seen cache for liveness checks
   readonly seenBlockAttesters = new SeenBlockAttesters();
 
@@ -174,6 +174,9 @@ export class BeaconChain implements IBeaconChain {
   readonly blacklistedBlocks: Map<RootHex, Slot | null>;
 
   readonly serializedCache: SerializedCache;
+
+  readonly getBlobsTracker: GetBlobsTracker;
+  readonly columnReconstructionTracker: ColumnReconstructionTracker;
 
   readonly opts: IChainOptions;
 
@@ -282,18 +285,11 @@ export class BeaconChain implements IBeaconChain {
       initialCustodyGroupCount,
     });
 
-    this.seenGossipBlockInput = new SeenGossipBlockInput(
-      this.custodyConfig,
-      this.executionEngine,
-      emitter,
-      clock,
-      logger
-    );
-
     this.beaconProposerCache = new BeaconProposerCache(opts);
     this.checkpointBalancesCache = new CheckpointBalancesCache();
-    this.seenBlockInputCache = new SeenBlockInputCache({
+    this.seenBlockInputCache = new SeenBlockInput({
       config,
+      custodyConfig: this.custodyConfig,
       clock,
       chainEvents: emitter,
       signal,
@@ -403,6 +399,20 @@ export class BeaconChain implements IBeaconChain {
 
     this.serializedCache = new SerializedCache();
 
+    this.getBlobsTracker = new GetBlobsTracker({
+      logger,
+      executionEngine: this.executionEngine,
+      emitter,
+      metrics,
+      config,
+    });
+    this.columnReconstructionTracker = new ColumnReconstructionTracker({
+      logger,
+      emitter,
+      metrics,
+      config,
+    });
+
     this.archiveStore = new ArchiveStore(
       {db, chain: this, logger: logger as LoggerNode, metrics},
       {...opts, dbName, anchorState: {finalizedCheckpoint: anchorState.finalizedCheckpoint}},
@@ -446,7 +456,7 @@ export class BeaconChain implements IBeaconChain {
   }
 
   seenBlock(blockRoot: RootHex): boolean {
-    return this.seenGossipBlockInput.hasBlock(blockRoot) || this.forkChoice.hasBlockHex(blockRoot);
+    return this.seenBlockInputCache.has(blockRoot) || this.forkChoice.hasBlockHex(blockRoot);
   }
 
   regenCanAcceptWork(): boolean {
@@ -791,11 +801,11 @@ export class BeaconChain implements IBeaconChain {
     return {block, executionPayloadValue, consensusBlockValue: gweiToWei(proposerReward), shouldOverrideBuilder};
   }
 
-  async processBlock(block: BlockInput, opts?: ImportBlockOpts): Promise<void> {
+  async processBlock(block: IBlockInput, opts?: ImportBlockOpts): Promise<void> {
     return this.blockProcessor.processBlocksJob([block], opts);
   }
 
-  async processChainSegment(blocks: BlockInput[], opts?: ImportBlockOpts): Promise<void> {
+  async processChainSegment(blocks: IBlockInput[], opts?: ImportBlockOpts): Promise<void> {
     return this.blockProcessor.processBlocksJob(blocks, opts);
   }
 
