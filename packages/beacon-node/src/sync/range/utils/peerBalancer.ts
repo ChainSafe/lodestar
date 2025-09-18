@@ -163,7 +163,7 @@ export class ChainPeersBalancer {
         continue;
       }
 
-      const columns = peer.custodyGroups.reduce((acc, elem) => {
+      const columns = peer.custodyColumns.reduce((acc, elem) => {
         if (requestColumns.includes(elem)) {
           acc.push(elem);
         }

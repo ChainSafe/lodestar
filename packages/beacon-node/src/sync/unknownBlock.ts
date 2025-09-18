@@ -26,7 +26,7 @@ import {
 } from "./types.js";
 import {DownloadByRootError, downloadByRoot} from "./utils/downloadByRoot.js";
 import {getAllDescendantBlocks, getDescendantBlocks, getUnknownAndAncestorBlocks} from "./utils/pendingBlocksTree.js";
-import {RequestError} from "@lodestar/reqresp";
+import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
 
 const MAX_ATTEMPTS_PER_BLOCK = 5;
 const MAX_KNOWN_BAD_BLOCKS = 500;
@@ -527,7 +527,6 @@ export class BlockInputSync {
         throw Error(message);
       }
       const {peerId, client: peerClient} = peerMeta;
-      excludedPeers.add(peerId);
 
       cacheItem.peerIdStrings.add(peerId);
 
@@ -568,12 +567,23 @@ export class BlockInputSync {
         if (e instanceof DownloadByRootError) {
           const errorCode = e.type.code;
           downloadByRootMetrics?.error.inc({code: errorCode, client: peerClient});
+          excludedPeers.add(peerId);
         } else if (e instanceof RequestError) {
           // should look into req_resp metrics in this case
           downloadByRootMetrics?.error.inc({code: "req_resp", client: peerClient});
+          switch (e.type.code) {
+            case RequestErrorCode.REQUEST_RATE_LIMITED:
+            case RequestErrorCode.REQUEST_TIMEOUT:
+              // do not exclude peer for these errors
+              break;
+            default:
+              excludedPeers.add(peerId);
+              break;
+          }
         } else {
           // investigate if this happens
           downloadByRootMetrics?.error.inc({code: "unknown", client: peerClient});
+          excludedPeers.add(peerId);
         }
       } finally {
         this.peerBalancer.onRequestCompleted(peerId);
@@ -821,7 +831,7 @@ export class UnknownBlockPeerBalancer {
       }
 
       // postfulu, find peers that have custody columns that we need
-      const {custodyGroups: peerColumns} = syncMeta;
+      const {custodyColumns: peerColumns} = syncMeta;
       // check if the peer has all needed columns
       // get match
       const columns = peerColumns.reduce((acc, elem) => {

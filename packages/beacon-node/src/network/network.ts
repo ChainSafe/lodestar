@@ -731,17 +731,17 @@ export class Network implements INetwork {
   };
 
   private onPeerConnected = (data: NetworkEventData[NetworkEvent.peerConnected]): void => {
-    const {peer, clientAgent, custodyGroups, status} = data;
+    const {peer, clientAgent, custodyColumns, status} = data;
     const earliestAvailableSlot = (status as fulu.Status).earliestAvailableSlot;
     this.logger.verbose("onPeerConnected", {
       peer,
       clientAgent,
-      custodyGroups: prettyPrintIndices(custodyGroups),
+      custodyColumns: prettyPrintIndices(custodyColumns),
       earliestAvailableSlot: earliestAvailableSlot ?? "pre-fulu",
     });
     this.connectedPeersSyncMeta.set(peer, {
       client: clientAgent,
-      custodyGroups,
+      custodyColumns,
       earliestAvailableSlot, // can be undefined pre-fulu
     });
   };

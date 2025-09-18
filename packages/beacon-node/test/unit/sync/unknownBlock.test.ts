@@ -373,7 +373,7 @@ describe("UnknownBlockPeerBalancer", async () => {
 
   for (const [testCaseIndex, {custodyGroups, excludedPeers, activeRequests, bestPeer}] of testCases.entries()) {
     for (const [i, groups] of custodyGroups.entries()) {
-      peers[i].custodyGroups = groups;
+      peers[i].custodyColumns = groups;
     }
 
     const signedBlock = ssz.fulu.SignedBeaconBlock.defaultValue();

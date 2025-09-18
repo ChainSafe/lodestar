@@ -25,7 +25,7 @@ export type NetworkEventData = {
   [NetworkEvent.peerConnected]: {
     peer: PeerIdStr;
     status: Status;
-    custodyGroups: CustodyIndex[];
+    custodyColumns: CustodyIndex[];
     clientAgent: string;
   };
   [NetworkEvent.peerDisconnected]: {peer: PeerIdStr};

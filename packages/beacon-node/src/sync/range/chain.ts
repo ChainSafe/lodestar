@@ -676,8 +676,8 @@ export class SyncChain {
 
     const peersByColumnIndex = new Map<number, number>();
     for (const [columnIndex, column] of this.custodyConfig.sampledColumns.entries()) {
-      for (const {custodyGroups} of peersSyncMeta.values()) {
-        if (custodyGroups.includes(column)) {
+      for (const {custodyColumns} of peersSyncMeta.values()) {
+        if (custodyColumns.includes(column)) {
           peersByColumnIndex.set(columnIndex, (peersByColumnIndex.get(columnIndex) ?? 0) + 1);
         }
       }

@@ -233,7 +233,7 @@ export class Batch {
       return this.requests;
     }
 
-    const peerColumns = new Set(peer.custodyGroups ?? []);
+    const peerColumns = new Set(peer.custodyColumns ?? []);
     const requestedColumns = columnsRequest.columns.filter((c) => peerColumns.has(c));
     if (requestedColumns.length === columnsRequest.columns.length) {
       return this.requests;
