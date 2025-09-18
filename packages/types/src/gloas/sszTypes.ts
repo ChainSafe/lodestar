@@ -118,7 +118,7 @@ export const SignedBuilderBid = new ContainerType(
   {typeName: "SignedBuilderBid", jsonCase: "eth2"}
 );
 
-// We don't spread capella.BeaconState fields since we need to replace
+// We don't spread fulu.BeaconState fields since we need to replace
 // latestExecutionPayloadHeader and we cannot keep order doing that
 export const BeaconState = new ContainerType(
   {
