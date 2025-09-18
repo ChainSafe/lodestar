@@ -549,14 +549,16 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const blockInputMeta = blockInput.getLogMeta();
       const {receivedColumns} = blockInputMeta;
       // it's not helpful to track every single column received
-      // instead of that, track 1st, 32th, 64th, and 128th column
-      if (
-        receivedColumns === 1 ||
-        receivedColumns === NUMBER_OF_COLUMNS / 4 ||
-        receivedColumns === NUMBER_OF_COLUMNS / 2 ||
-        receivedColumns === NUMBER_OF_COLUMNS
-      ) {
-        metrics?.dataColumns.elapsedTimeTillReceived.observe({receivedOrder: receivedColumns}, delaySec);
+      // instead of that, track 1st, 8th, 16th 32th, 64th, and 128th column
+      switch (receivedColumns) {
+        case 1:
+        case config.SAMPLES_PER_SLOT:
+        case 2 * config.SAMPLES_PER_SLOT:
+        case NUMBER_OF_COLUMNS / 4:
+        case NUMBER_OF_COLUMNS / 2:
+        case NUMBER_OF_COLUMNS:
+          metrics?.dataColumns.elapsedTimeTillReceived.observe({receivedOrder: receivedColumns}, delaySec);
+          break;
       }
       if (!blockInput.hasBlockAndAllData()) {
         const cutoffTimeMs = getCutoffTimeMs(chain, dataColumnSlot, BLOCK_AVAILABILITY_CUTOFF_MS);
