@@ -35,7 +35,8 @@ import {SerializedCache} from "../util/serializedCache.js";
 import {IArchiveStore} from "./archiveStore/interface.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache, ProposerPreparationData} from "./beaconProposerCache.js";
-import {BlockInput, ImportBlockOpts} from "./blocks/types.js";
+import {IBlockInput} from "./blocks/blockInput/index.js";
+import {ImportBlockOpts} from "./blocks/types.js";
 import {IBlsVerifier} from "./bls/index.js";
 import {ChainEventEmitter} from "./emitter.js";
 import {ForkchoiceCaller} from "./forkChoice/index.js";
@@ -56,13 +57,14 @@ import {
   SeenContributionAndProof,
   SeenSyncCommitteeMessages,
 } from "./seenCache/index.js";
-import {SeenGossipBlockInput} from "./seenCache/index.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
-import {SeenBlockInputCache} from "./seenCache/seenBlockInput.js";
+import {SeenBlockInput} from "./seenCache/seenGossipBlockInput.js";
 import {ShufflingCache} from "./shufflingCache.js";
 import {ValidatorMonitor} from "./validatorMonitor.js";
+import {GetBlobsTracker} from "./GetBlobsTracker.js";
+import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
 
 export {BlockType, type AssembledBlockType};
 export {type ProposerPreparationData};
@@ -126,8 +128,7 @@ export interface IBeaconChain {
   readonly seenSyncCommitteeMessages: SeenSyncCommitteeMessages;
   readonly seenContributionAndProof: SeenContributionAndProof;
   readonly seenAttestationDatas: SeenAttestationDatas;
-  readonly seenBlockInputCache: SeenBlockInputCache;
-  readonly seenGossipBlockInput: SeenGossipBlockInput;
+  readonly seenBlockInputCache: SeenBlockInput;
   // Seen cache for liveness checks
   readonly seenBlockAttesters: SeenBlockAttesters;
 
@@ -140,6 +141,9 @@ export interface IBeaconChain {
   readonly blacklistedBlocks: Map<RootHex, Slot | null>;
   // Cache for serialized objects
   readonly serializedCache: SerializedCache;
+
+  readonly getBlobsTracker: GetBlobsTracker;
+  readonly columnReconstructionTracker: ColumnReconstructionTracker;
 
   readonly opts: IChainOptions;
 
@@ -212,9 +216,9 @@ export interface IBeaconChain {
   }>;
 
   /** Process a block until complete */
-  processBlock(block: BlockInput, opts?: ImportBlockOpts): Promise<void>;
+  processBlock(block: IBlockInput, opts?: ImportBlockOpts): Promise<void>;
   /** Process a chain of blocks until complete */
-  processChainSegment(blocks: BlockInput[], opts?: ImportBlockOpts): Promise<void>;
+  processChainSegment(blocks: IBlockInput[], opts?: ImportBlockOpts): Promise<void>;
 
   getStatus(): Status;
 

@@ -3,8 +3,8 @@ import {NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {deneb, fulu, ssz} from "@lodestar/types";
 import {afterEach, describe, expect, it} from "vitest";
-import {validateBlobSidecars, validateGossipBlobSidecar} from "../../../src/chain/validation/blobSidecar.js";
-import {getBlobSidecars, recoverDataColumnSidecars} from "../../../src/util/blobs.js";
+import {validateBlockBlobSidecars, validateGossipBlobSidecar} from "../../../src/chain/validation/blobSidecar.js";
+import {getBlobSidecars, dataColumnMatrixRecovery} from "../../../src/util/blobs.js";
 import {getDataColumnSidecarsFromBlock} from "../../../src/util/dataColumns.js";
 import {kzg} from "../../../src/util/kzg.js";
 import {shuffle} from "../../../src/util/shuffle.js";
@@ -62,7 +62,7 @@ describe("KZG", () => {
     expect(blobSidecars.length).toBe(2);
 
     // Full validation
-    await validateBlobSidecars(slot, blockRoot, kzgCommitments, blobSidecars);
+    await validateBlockBlobSidecars(slot, blockRoot, kzgCommitments.length, blobSidecars);
 
     for (const blobSidecar of blobSidecars) {
       try {
@@ -137,7 +137,7 @@ describe("KZG", () => {
       }
     }
 
-    const recoveredSidecars = await recoverDataColumnSidecars(shuffledPartial);
+    const recoveredSidecars = await dataColumnMatrixRecovery(shuffledPartial);
     expect(recoveredSidecars !== null).toBeTruthy();
     if (recoveredSidecars == null) {
       // should not happen

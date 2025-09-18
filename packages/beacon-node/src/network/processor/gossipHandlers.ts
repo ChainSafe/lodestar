@@ -1,6 +1,13 @@
 import {routes} from "@lodestar/api";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
-import {ForkName, ForkPostElectra, ForkPreElectra, ForkSeq, isForkPostElectra} from "@lodestar/params";
+import {
+  ForkName,
+  ForkPostElectra,
+  ForkPreElectra,
+  ForkSeq,
+  isForkPostElectra,
+  NUMBER_OF_COLUMNS,
+} from "@lodestar/params";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {
   Root,
@@ -16,14 +23,14 @@ import {
 } from "@lodestar/types";
 import {LogLevel, Logger, prettyBytes, toHex, toRootHex} from "@lodestar/utils";
 import {
-  BlobSidecarValidation,
   BlockInput,
-  BlockInputAvailableData,
-  BlockInputType,
-  DataColumnsSource,
-  GossipedInputType,
-  NullBlockInput,
-} from "../../chain/blocks/types.js";
+  BlockInputColumns,
+  BlockInputSource,
+  IBlockInput,
+  isBlockInputColumns,
+} from "../../chain/blocks/blockInput/index.js";
+import {BlobSidecarValidation} from "../../chain/blocks/types.js";
+import {ChainEvent} from "../../chain/emitter.js";
 import {
   AttestationError,
   AttestationErrorCode,
@@ -60,7 +67,7 @@ import {OpSource} from "../../chain/validatorMonitor.js";
 import {Metrics} from "../../metrics/index.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {INetworkCore} from "../core/index.js";
-import {NetworkEvent, NetworkEventBus} from "../events.js";
+import {NetworkEventBus} from "../events.js";
 import {
   BatchGossipHandlers,
   GossipHandlerParamGeneric,
@@ -117,14 +124,14 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
  * We only have a choice to do batch validation for beacon_attestation topic.
  */
 function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): SequentialGossipHandlers {
-  const {chain, config, metrics, events, logger, core} = modules;
+  const {chain, config, metrics, logger, core} = modules;
 
   async function validateBeaconBlock(
     signedBlock: SignedBeaconBlock,
     fork: ForkName,
     peerIdStr: string,
     seenTimestampSec: number
-  ): Promise<BlockInput> {
+  ): Promise<IBlockInput> {
     const slot = signedBlock.message.slot;
     const forkTypes = config.getForkTypes(slot);
     const blockRootHex = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
@@ -135,38 +142,27 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     // always set block to seen cache for all forks so that we don't need to download it
     // TODO: validate block before adding to cache
     // tracked in https://github.com/ChainSafe/lodestar/issues/7957
-    const blockInputRes = chain.seenGossipBlockInput.getGossipBlockInput(
-      config,
-      {
-        type: GossipedInputType.block,
-        signedBlock,
-      },
-      metrics
-    );
-    const blockInput = blockInputRes.blockInput;
-    // blockInput can't be returned null, improve by enforcing via return types
-    if (blockInput.block === null) {
-      throw Error(
-        `Invalid null blockInput returned by getGossipBlockInput for type=${GossipedInputType.block} blockHex=${blockShortHex} slot=${slot}`
-      );
-    }
-    const blockInputMeta =
-      config.getForkSeq(signedBlock.message.slot) >= ForkSeq.deneb ? blockInputRes.blockInputMeta : {};
 
     const logCtx = {
-      slot: slot,
-      root: blockShortHex,
       currentSlot: chain.clock.currentSlot,
       peerId: peerIdStr,
       delaySec,
-      ...blockInputMeta,
       recvToValLatency,
     };
 
     logger.debug("Received gossip block", {...logCtx});
 
+    let blockInput: IBlockInput | undefined;
     try {
       await validateGossipBlock(config, chain, signedBlock, fork);
+      blockInput = chain.seenBlockInputCache.getByBlock({
+        block: signedBlock,
+        blockRootHex,
+        source: BlockInputSource.gossip,
+        seenTimestampSec,
+        peerIdStr,
+      });
+      const blockInputMeta = blockInput.getLogMeta();
 
       const recvToValidation = Date.now() / 1000 - seenTimestampSec;
       const validationTime = recvToValidation - recvToValLatency;
@@ -174,17 +170,26 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       metrics?.gossipBlock.gossipValidation.recvToValidation.observe(recvToValidation);
       metrics?.gossipBlock.gossipValidation.validationTime.observe(validationTime);
 
-      logger.debug("Validated gossip block", {...logCtx, recvToValidation, validationTime});
+      logger.debug("Validated gossip block", {...blockInputMeta, ...logCtx, recvToValidation, validationTime});
 
       chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRootHex});
 
       return blockInput;
     } catch (e) {
       if (e instanceof BlockGossipError) {
+        // TODO(fulu): check that this is the only error that should trigger resolution of the block and all others
+        //    cause the block to get thrown away
         // Don't trigger this yet if full block and blobs haven't arrived yet
-        if (e.type.code === BlockErrorCode.PARENT_UNKNOWN && blockInput !== null) {
+        if (e.type.code === BlockErrorCode.PARENT_UNKNOWN && blockInput) {
           logger.debug("Gossip block has error", {slot, root: blockShortHex, code: e.type.code});
-          events.emit(NetworkEvent.unknownBlockParent, {blockInput, peer: peerIdStr});
+          // TODO(fulu): should this be unknownParent event?
+          chain.emitter.emit(ChainEvent.incompleteBlockInput, {
+            blockInput,
+            peer: peerIdStr,
+            source: BlockInputSource.gossip,
+          });
+          // throw error (don't prune the blockInput)
+          throw e;
         }
 
         if (e.action === GossipAction.REJECT) {
@@ -192,6 +197,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         }
       }
 
+      chain.seenBlockInputCache.prune(blockRootHex);
       throw e;
     }
   }
@@ -201,7 +207,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     subnet: SubnetID,
     peerIdStr: string,
     seenTimestampSec: number
-  ): Promise<BlockInput | NullBlockInput> {
+  ): Promise<BlockInput> {
     const blobBlockHeader = blobSidecar.signedBlockHeader.message;
     const slot = blobBlockHeader.slot;
     const fork = config.getForkName(slot);
@@ -213,14 +219,13 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
     try {
       await validateGossipBlobSidecar(fork, chain, blobSidecar, subnet);
-      const {blockInput, blockInputMeta} = chain.seenGossipBlockInput.getGossipBlockInput(
-        config,
-        {
-          type: GossipedInputType.blob,
-          blobSidecar,
-        },
-        metrics
-      );
+      const blockInput = chain.seenBlockInputCache.getByBlob({
+        blockRootHex,
+        blobSidecar,
+        source: BlockInputSource.gossip,
+        seenTimestampSec,
+        peerIdStr,
+      });
       const recvToValidation = Date.now() / 1000 - seenTimestampSec;
       const validationTime = recvToValidation - recvToValLatency;
 
@@ -228,23 +233,28 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       metrics?.gossipBlob.validationTime.observe(validationTime);
 
       if (chain.emitter.listenerCount(routes.events.EventType.blobSidecar)) {
+        let versionedHash: Uint8Array;
+        if (blockInput.hasBlock()) {
+          // if block hasn't arrived yet then this will throw and need to calculate the versionedHash as a 1-off
+          versionedHash = blockInput.getVersionedHashes()[blobSidecar.index];
+        } else {
+          versionedHash = kzgCommitmentToVersionedHash(blobSidecar.kzgCommitment);
+        }
         chain.emitter.emit(routes.events.EventType.blobSidecar, {
           blockRoot: blockRootHex,
           slot,
           index: blobSidecar.index,
           kzgCommitment: toHex(blobSidecar.kzgCommitment),
-          versionedHash: toHex(kzgCommitmentToVersionedHash(blobSidecar.kzgCommitment)),
+          versionedHash: toHex(versionedHash),
         });
       }
 
       logger.debug("Received gossip blob", {
-        slot: slot,
-        root: blockShortHex,
+        ...blockInput.getLogMeta(),
         currentSlot: chain.clock.currentSlot,
         peerId: peerIdStr,
         delaySec,
         subnet,
-        ...blockInputMeta,
         recvToValLatency,
         recvToValidation,
         validationTime,
@@ -257,6 +267,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         if (e.type.code === BlobSidecarErrorCode.PARENT_UNKNOWN) {
           logger.debug("Gossip blob has error", {slot, root: blockShortHex, code: e.type.code});
           // no need to trigger `unknownBlockParent` event here, as we already did it in `validateBeaconBlock()`
+          //
+          // TODO(fulu): is this note above correct? Could have random blob that we see that could trigger
+          //        unknownBlockSync.  And duplicate addition of a block will be deduplicated by the
+          //        BlockInputSync event handler. Check this!!
+          // events.emit(NetworkEvent.unknownBlockParent, {blockInput, peer: peerIdStr});
         }
 
         if (e.action === GossipAction.REJECT) {
@@ -274,33 +289,43 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
   async function validateBeaconDataColumn(
     dataColumnSidecar: fulu.DataColumnSidecar,
-    dataColumnBytes: Uint8Array,
+    _dataColumnBytes: Uint8Array,
     gossipSubnet: SubnetID,
     peerIdStr: string,
     seenTimestampSec: number
-  ): Promise<BlockInput | NullBlockInput> {
+  ): Promise<BlockInputColumns> {
     metrics?.peerDas.dataColumnSidecarProcessingRequests.inc();
-    const verificationTimer = metrics?.peerDas.dataColumnSidecarGossipVerificationTime.startTimer();
-
     const dataColumnBlockHeader = dataColumnSidecar.signedBlockHeader.message;
     const slot = dataColumnBlockHeader.slot;
     const blockRootHex = toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(dataColumnBlockHeader));
-    const blockShortHex = prettyBytes(blockRootHex);
+
+    // first check if we should even process this column (we may have already processed it via getBlobsV2)
+    {
+      const blockInput = chain.seenBlockInputCache.get(blockRootHex);
+      if (blockInput && isBlockInputColumns(blockInput) && blockInput.hasColumn(dataColumnSidecar.index)) {
+        metrics?.peerDas.dataColumnSidecarProcessingSkip.inc();
+        logger.debug("Already have column sidecar, skipping processing", {
+          ...blockInput.getLogMeta(),
+          index: dataColumnSidecar.index,
+        });
+        return blockInput;
+      }
+    }
+
+    const verificationTimer = metrics?.peerDas.dataColumnSidecarGossipVerificationTime.startTimer();
 
     const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
     const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
 
     try {
       await validateGossipDataColumnSidecar(chain, dataColumnSidecar, gossipSubnet, metrics);
-      const {blockInput, blockInputMeta} = chain.seenGossipBlockInput.getGossipBlockInput(
-        config,
-        {
-          type: GossipedInputType.dataColumn,
-          dataColumnSidecar,
-          dataColumnBytes,
-        },
-        metrics
-      );
+      const blockInput = chain.seenBlockInputCache.getByColumn({
+        blockRootHex,
+        columnSidecar: dataColumnSidecar,
+        source: BlockInputSource.gossip,
+        seenTimestampSec,
+        peerIdStr,
+      });
 
       const recvToValidation = Date.now() / 1000 - seenTimestampSec;
       const validationTime = recvToValidation - recvToValLatency;
@@ -319,14 +344,12 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       }
 
       logger.debug("Received gossip dataColumn", {
-        slot: slot,
-        root: blockShortHex,
+        ...blockInput.getLogMeta(),
         currentSlot: chain.clock.currentSlot,
         peerId: peerIdStr,
         delaySec,
         gossipSubnet,
         columnIndex: dataColumnSidecar.index,
-        ...blockInputMeta,
         recvToValLatency,
         recvToValidation,
         validationTime,
@@ -341,6 +364,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           `gossip_reject_slot_${slot}_index_${dataColumnSidecar.index}`
         );
         // no need to trigger `unknownBlockParent` event here, as we already did it in `validateBeaconBlock()`
+        //
+        // TODO(fulu): is this note above correct? Could have random column that we see that could trigger
+        //        unknownBlockSync.  And duplicate addition of a block will be deduplicated by the
+        //        BlockInputSync event handler. Check this!!
+        // events.emit(NetworkEvent.unknownBlockParent, {blockInput, peer: peerIdStr});
       }
 
       throw e;
@@ -349,21 +377,29 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     }
   }
 
-  function handleValidBeaconBlock(blockInput: BlockInput, peerIdStr: string, seenTimestampSec: number): void {
-    const signedBlock = blockInput.block;
+  function handleValidBeaconBlock(blockInput: IBlockInput, peerIdStr: string, seenTimestampSec: number): void {
+    const signedBlock = blockInput.getBlock();
+    const slot = signedBlock.message.slot;
 
     // Handler - MUST NOT `await`, to allow validation result to be propagated
 
-    const delaySec = seenTimestampSec - (chain.genesisTime + signedBlock.message.slot * config.SECONDS_PER_SLOT);
+    const delaySec = seenTimestampSec - (chain.genesisTime + slot * config.SECONDS_PER_SLOT);
     metrics?.gossipBlock.elapsedTimeTillReceived.observe({source: OpSource.gossip}, delaySec);
     chain.validatorMonitor?.registerBeaconBlock(OpSource.gossip, delaySec, signedBlock.message);
-    // if blobs are not yet fully available start an aggressive blob pull
-    if (blockInput.type === BlockInputType.dataPromise) {
-      events.emit(NetworkEvent.unknownBlockInput, {blockInput, peer: peerIdStr});
-    } else if (blockInput.type === BlockInputType.availableData) {
+    if (!blockInput.hasBlockAndAllData()) {
+      chain.logger.debug("Received gossip block, attempting fetch of unavailable data", blockInput.getLogMeta());
+      // The data is not yet fully available, immediately trigger an aggressive pull via unknown block sync
+      chain.emitter.emit(ChainEvent.incompleteBlockInput, {
+        blockInput,
+        peer: peerIdStr,
+        source: BlockInputSource.gossip,
+      });
+      // immediately attempt fetch of data columns from execution engine
+      chain.getBlobsTracker.triggerGetBlobs(blockInput);
+    } else {
       metrics?.blockInputFetchStats.totalDataAvailableBlockInputs.inc();
       metrics?.blockInputFetchStats.totalDataAvailableBlockInputBlobs.inc(
-        (blockInput.block.message as deneb.BeaconBlock).body.blobKzgCommitments.length
+        (signedBlock.message as deneb.BeaconBlock).body.blobKzgCommitments.length
       );
     }
 
@@ -389,9 +425,9 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       })
       .then(() => {
         // Returns the delay between the start of `block.slot` and `current time`
-        const delaySec = chain.clock.secFromSlot(signedBlock.message.slot);
+        const delaySec = chain.clock.secFromSlot(slot);
         metrics?.gossipBlock.elapsedTimeTillProcessed.observe(delaySec);
-        chain.seenGossipBlockInput.prune();
+        chain.seenBlockInputCache.prune(blockInput.blockRootHex);
       })
       .catch((e) => {
         // Adjust verbosity based on error type
@@ -400,12 +436,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         if (e instanceof BlockError) {
           switch (e.type.code) {
             case BlockErrorCode.DATA_UNAVAILABLE: {
-              const slot = signedBlock.message.slot;
-              const forkTypes = config.getForkTypes(slot);
-              const rootHex = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
-
-              events.emit(NetworkEvent.unknownBlock, {rootHex, peer: peerIdStr});
-
               // Error is quite frequent and not critical
               logLevel = LogLevel.debug;
               break;
@@ -430,29 +460,14 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           logLevel = LogLevel.error;
         }
         metrics?.gossipBlock.processBlockErrors.inc({error: e instanceof BlockError ? e.type.code : "NOT_BLOCK_ERROR"});
-        logger[logLevel]("Error receiving block", {slot: signedBlock.message.slot, peer: peerIdStr}, e as Error);
-        chain.seenGossipBlockInput.prune();
+        logger[logLevel](
+          "Error processing block",
+          {slot, peer: peerIdStr, blockRoot: prettyBytes(blockInput.blockRootHex)},
+          e as Error
+        );
+        // TODO(fulu): Revisit when we prune block inputs
+        chain.seenBlockInputCache.prune(blockInput.blockRootHex);
       });
-
-    if (blockInput.type === BlockInputType.dataPromise) {
-      const blockSlot = blockInput.block.message.slot;
-      // if blobs are not yet fully available start an aggressive blob pull
-      chain.logger.debug("Block under processing is not available, racing with cutoff to add to unknownBlockInput", {
-        blockSlot,
-      });
-      raceWithCutoff(
-        chain,
-        blockSlot,
-        blockInput.cachedData.availabilityPromise as Promise<BlockInputAvailableData>,
-        BLOCK_AVAILABILITY_CUTOFF_MS
-      ).catch((_e) => {
-        chain.logger.debug("Block under processing not yet available, racing with cutoff to add to unknownBlockInput", {
-          blockSlot,
-        });
-        events.emit(NetworkEvent.unknownBlockInput, {blockInput, peer: peerIdStr});
-        return null;
-      });
-    }
   }
 
   return {
@@ -485,70 +500,27 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         throw new GossipActionError(GossipAction.REJECT, {code: "PRE_DENEB_BLOCK"});
       }
       const blockInput = await validateBeaconBlob(blobSidecar, topic.subnet, peerIdStr, seenTimestampSec);
-      if (blockInput.block !== null) {
-        if (blockInput.type === BlockInputType.dataPromise) {
-          chain.logger.debug("Block corresponding to blob is available but waiting for data availability", {
-            blobSlot,
-            index,
-          });
-          await raceWithCutoff(
-            chain,
-            blobSlot,
-            blockInput.cachedData.availabilityPromise as Promise<BlockInputAvailableData>,
-            BLOCK_AVAILABILITY_CUTOFF_MS
-          ).catch((_e) => {
-            chain.logger.debug("Block under processing not yet fully available adding to unknownBlockInput", {
-              blobSlot,
-            });
-            events.emit(NetworkEvent.unknownBlockInput, {blockInput, peer: peerIdStr});
-          });
-        }
-      } else {
-        // wait for the block to arrive till some cutoff else emit unknownBlockInput event
-        chain.logger.debug("Block not yet available, racing with cutoff", {blobSlot, index});
-        const normalBlockInput = await raceWithCutoff(
-          chain,
-          blobSlot,
-          blockInput.blockInputPromise,
-          BLOCK_AVAILABILITY_CUTOFF_MS
-        ).catch((_e) => {
-          return null;
+      if (!blockInput.hasBlockAndAllData()) {
+        const cutoffTimeMs = getCutoffTimeMs(chain, blobSlot, BLOCK_AVAILABILITY_CUTOFF_MS);
+        chain.logger.debug("Received gossip blob, waiting for full data availability", {
+          msToWait: cutoffTimeMs,
+          blobIndex: index,
+          ...blockInput.getLogMeta(),
         });
-
-        if (normalBlockInput !== null) {
-          // we can directly send it for processing but block gossip handler will queue it up anyway
-          // if we see any issues later, we can send it to handleValidBeaconBlock
-          //
-          // handleValidBeaconBlock(normalBlockInput, peerIdStr, seenTimestampSec);
-          //
-          // however we can emit the event which will atleast add the peer to the list of peers to pull
-          // data from
-          if (normalBlockInput.type === BlockInputType.dataPromise) {
-            chain.logger.debug("Block corresponding to blob is now available but waiting for data availability", {
-              blobSlot,
-              index,
-            });
-            await raceWithCutoff(
-              chain,
-              blobSlot,
-              normalBlockInput.cachedData.availabilityPromise as Promise<BlockInputAvailableData>,
-              BLOCK_AVAILABILITY_CUTOFF_MS
-            ).catch((_e) => {
-              chain.logger.debug("Block under processing not yet fully available adding to unknownBlockInput", {
-                blobSlot,
-              });
-              events.emit(NetworkEvent.unknownBlockInput, {blockInput: normalBlockInput, peer: peerIdStr});
-            });
-          } else {
-            chain.logger.debug("Block corresponding to blob is now available for processing", {blobSlot, index});
-          }
-        } else {
+        blockInput.waitForAllData(cutoffTimeMs).catch((_e) => {
           chain.logger.debug(
-            "Block corresponding to blob not available till BLOCK_AVAILABILITY_CUTOFF_MS adding to unknownBlockInput",
-            {blobSlot, index}
+            "Waited for data after receiving gossip blob. Cut-off reached so attempting to fetch remainder of BlockInput",
+            {
+              blobIndex: index,
+              ...blockInput.getLogMeta(),
+            }
           );
-          events.emit(NetworkEvent.unknownBlockInput, {blockInput, peer: peerIdStr});
-        }
+          chain.emitter.emit(ChainEvent.incompleteBlockInput, {
+            blockInput,
+            peer: peerIdStr,
+            source: BlockInputSource.gossip,
+          });
+        });
       }
     },
 
@@ -567,7 +539,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         throw new GossipActionError(GossipAction.REJECT, {code: "PRE_FULU_BLOCK"});
       }
       const delaySec = chain.clock.secFromSlot(dataColumnSlot, seenTimestampSec);
-      metrics?.dataColumns.elapsedTimeTillReceived.observe({source: DataColumnsSource.gossip}, delaySec);
       const blockInput = await validateBeaconDataColumn(
         dataColumnSidecar,
         serializedData,
@@ -575,68 +546,47 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         peerIdStr,
         seenTimestampSec
       );
-      if (blockInput.block !== null) {
-        if (blockInput.type === BlockInputType.dataPromise) {
-          chain.logger.debug("Block corresponding to data column is available but waiting for data availability", {
-            dataColumnSlot,
-            index,
-          });
-          await raceWithCutoff(
-            chain,
-            dataColumnSlot,
-            blockInput.cachedData.availabilityPromise as Promise<BlockInputAvailableData>,
-            BLOCK_AVAILABILITY_CUTOFF_MS
-          ).catch((_e) => {
-            chain.logger.debug("Block under processing not yet fully available adding to unknownBlockInput", {
-              dataColumnSlot,
-            });
-            events.emit(NetworkEvent.unknownBlockInput, {blockInput, peer: peerIdStr});
-          });
-        }
-      } else {
-        // wait for the block to arrive till some cutoff else emit unknownBlockInput event
-        chain.logger.debug("Block not yet available, racing with cutoff", {dataColumnSlot, index});
-        const normalBlockInput = await raceWithCutoff(
-          chain,
-          dataColumnSlot,
-          blockInput.blockInputPromise,
-          BLOCK_AVAILABILITY_CUTOFF_MS
-        ).catch((_e) => {
-          return null;
+      const blockInputMeta = blockInput.getLogMeta();
+      const {receivedColumns} = blockInputMeta;
+      // it's not helpful to track every single column received
+      // instead of that, track 1st, 8th, 16th 32th, 64th, and 128th column
+      switch (receivedColumns) {
+        case 1:
+        case config.SAMPLES_PER_SLOT:
+        case 2 * config.SAMPLES_PER_SLOT:
+        case NUMBER_OF_COLUMNS / 4:
+        case NUMBER_OF_COLUMNS / 2:
+        case NUMBER_OF_COLUMNS:
+          metrics?.dataColumns.elapsedTimeTillReceived.observe({receivedOrder: receivedColumns}, delaySec);
+          break;
+      }
+      if (!blockInput.hasBlockAndAllData()) {
+        const cutoffTimeMs = getCutoffTimeMs(chain, dataColumnSlot, BLOCK_AVAILABILITY_CUTOFF_MS);
+        chain.logger.debug("Received gossip data column, waiting for full data availability", {
+          msToWait: cutoffTimeMs,
+          dataColumnIndex: index,
+          ...blockInputMeta,
         });
-
-        if (normalBlockInput !== null) {
-          if (normalBlockInput.type === BlockInputType.dataPromise) {
-            chain.logger.debug(
-              "Block corresponding to data column is now available but waiting for data availability",
-              {
-                dataColumnSlot,
-                index,
-              }
-            );
-            await raceWithCutoff(
-              chain,
-              dataColumnSlot,
-              normalBlockInput.cachedData.availabilityPromise as Promise<BlockInputAvailableData>,
-              BLOCK_AVAILABILITY_CUTOFF_MS
-            ).catch((_e) => {
-              chain.logger.debug("Block under processing not yet fully available adding to unknownBlockInput", {
-                dataColumnSlot,
-              });
-              events.emit(NetworkEvent.unknownBlockInput, {blockInput: normalBlockInput, peer: peerIdStr});
-            });
-          } else {
-            chain.logger.debug("Block corresponding to data column is now available for processing", {
-              dataColumnSlot,
-              index,
-            });
-          }
-        } else {
-          chain.logger.debug("Block not available till BLOCK_AVAILABILITY_CUTOFF_MS", {
-            dataColumnSlot,
-            index,
+        // do not await here to not delay gossip validation
+        blockInput.waitForAllData(cutoffTimeMs).catch((_e) => {
+          chain.logger.debug(
+            "Waited for data after receiving gossip column. Cut-off reached so attempting to fetch remainder of BlockInput",
+            {
+              dataColumnIndex: index,
+              ...blockInputMeta,
+            }
+          );
+          chain.emitter.emit(ChainEvent.incompleteBlockInput, {
+            blockInput,
+            peer: peerIdStr,
+            source: BlockInputSource.gossip,
           });
-          events.emit(NetworkEvent.unknownBlockInput, {blockInput, peer: peerIdStr});
+        });
+        // immediately attempt fetch of data columns from execution engine
+        chain.getBlobsTracker.triggerGetBlobs(blockInput);
+        // if we've received at least half of the columns, trigger reconstruction of the rest
+        if (blockInput.columnCount >= NUMBER_OF_COLUMNS / 2) {
+          chain.columnReconstructionTracker.triggerColumnReconstruction(blockInput);
         }
       }
     },
@@ -975,7 +925,7 @@ export async function validateGossipFnRetryUnknownRoot<T>(
         if (unknownBlockRootRetries === 0) {
           // Trigger unknown block root search here
           const rootHex = toRootHex(blockRoot);
-          network.searchUnknownSlotRoot({slot, root: rootHex});
+          network.searchUnknownSlotRoot({slot, root: rootHex}, BlockInputSource.gossip);
         }
 
         if (unknownBlockRootRetries++ < MAX_UNKNOWN_BLOCK_ROOT_RETRIES) {
@@ -993,18 +943,13 @@ export async function validateGossipFnRetryUnknownRoot<T>(
   }
 }
 
-async function raceWithCutoff<T>(
+function getCutoffTimeMs(
   chain: {config: ChainForkConfig; genesisTime: UintNum64; logger: Logger},
   blockSlot: Slot,
-  availabilityPromise: Promise<T>,
   cutoffMsFromSlotStart: number
-): Promise<T> {
-  const cutoffTimeMs = Math.max(
+): number {
+  return Math.max(
     computeTimeAtSlot(chain.config, blockSlot, chain.genesisTime) * 1000 + cutoffMsFromSlotStart - Date.now(),
     0
   );
-  const cutoffTimeout = new Promise((_resolve, reject) => setTimeout(reject, cutoffTimeMs));
-  await Promise.race([availabilityPromise, cutoffTimeout]);
-  // we can only be here if availabilityPromise has resolved else an error will be thrown
-  return availabilityPromise;
 }

@@ -5,6 +5,7 @@ import {multiaddr} from "@multiformats/multiaddr";
 import {YargsError} from "../../util/index.js";
 
 export const defaultListenAddress = "0.0.0.0";
+export const defaultListenAddress6 = "::";
 export const defaultP2pPort = 9000;
 
 export type NetworkArgs = {
@@ -64,8 +65,9 @@ export function parseListenArgs(args: NetworkArgs) {
   const port = listenAddress ? (args.port ?? defaultP2pPort) : undefined;
   const discoveryPort = listenAddress ? (args.discoveryPort ?? args.port ?? defaultP2pPort) : undefined;
 
-  // Only use listenAddress6 if it is explicitly set
-  const listenAddress6 = args.listenAddress6;
+  // If listenAddress6 is explicitly set, use it
+  // If listenAddress is not set, use defaultListenAddress6
+  const listenAddress6 = args.listenAddress6 ?? (args.listenAddress ? undefined : defaultListenAddress6);
   const port6 = listenAddress6 ? (args.port6 ?? defaultP2pPort) : undefined;
   const discoveryPort6 = listenAddress6 ? (args.discoveryPort6 ?? args.port6 ?? defaultP2pPort) : undefined;
 
@@ -191,6 +193,7 @@ export const options: CliCommandOptions<NetworkArgs> = {
   listenAddress6: {
     type: "string",
     description: "The IPv6 address to listen for p2p UDP and TCP connections",
+    defaultDescription: defaultListenAddress6,
     group: "network",
   },
 

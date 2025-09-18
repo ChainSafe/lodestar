@@ -1,5 +1,5 @@
 import {RootHex} from "@lodestar/types";
-import {bigIntToBytes, bytesToBigInt, fromHex, toHex} from "@lodestar/utils";
+import {bigIntToBytes, bytesToBigInt, fromHex, fromHexInto, toHex} from "@lodestar/utils";
 import {ErrorParseJson} from "./jsonRpcHttpClient.js";
 
 /** QUANTITY as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API */
@@ -116,6 +116,15 @@ export function dataToBytes(hex: DATA, fixedLength: number | null): Uint8Array {
     (e as Error).message = `Invalid hex string: ${(e as Error).message}`;
     throw e;
   }
+}
+
+/**
+ * Convert DATA into a preallocated buffer
+ * fromHexInto will throw if buffer's length is not the same as the decoded hex length
+ */
+export function dataIntoBytes(hex: DATA, buffer: Uint8Array): Uint8Array {
+  fromHexInto(hex, buffer);
+  return buffer;
 }
 
 /**

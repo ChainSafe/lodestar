@@ -187,6 +187,14 @@ export interface IExecutionEngine {
 
   getPayloadBodiesByRange(fork: ForkName, start: number, count: number): Promise<(ExecutionPayloadBody | null)[]>;
 
-  getBlobs(fork: ForkPostFulu, versionedHashes: VersionedHashes): Promise<BlobAndProofV2[] | null>;
-  getBlobs(fork: ForkPreFulu, versionedHashes: VersionedHashes): Promise<(BlobAndProof | null)[]>;
+  getBlobs(
+    fork: ForkPostFulu,
+    versionedHashes: VersionedHashes,
+    buffers?: Uint8Array[]
+  ): Promise<BlobAndProofV2[] | null>;
+  getBlobs(
+    fork: ForkPreFulu,
+    versionedHashes: VersionedHashes,
+    buffers?: Uint8Array[]
+  ): Promise<(BlobAndProof | null)[]>;
 }

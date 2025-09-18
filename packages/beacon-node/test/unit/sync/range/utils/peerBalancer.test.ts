@@ -2,8 +2,10 @@ import {createChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {ZERO_HASH} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {ssz} from "@lodestar/types";
 import {describe, expect, it} from "vitest";
-import {BlockInput} from "../../../../../src/chain/blocks/types.js";
+import {BlockInputColumns} from "../../../../../src/chain/blocks/blockInput/blockInput.js";
+import {BlockInputSource} from "../../../../../src/chain/blocks/blockInput/types.js";
 import {Batch} from "../../../../../src/sync/range/batch.js";
 import {ChainTarget} from "../../../../../src/sync/range/chain.js";
 import {ChainPeersBalancer, PeerSyncInfo} from "../../../../../src/sync/range/utils/peerBalancer.js";
@@ -11,7 +13,7 @@ import {RangeSyncType} from "../../../../../src/sync/utils/remoteSyncType.js";
 import {CustodyConfig} from "../../../../../src/util/dataColumns.js";
 import {PeerIdStr} from "../../../../../src/util/peerId.js";
 import {getRandPeerSyncMeta} from "../../../../utils/peer.js";
-import {generateSignedBlockAtSlot} from "../../../../utils/typeGenerator.js";
+import {clock} from "../../../../utils/blocksAndData.js";
 
 describe("sync / range / peerBalancer", () => {
   const custodyConfig = {sampledColumns: [0, 1, 2, 3]} as CustodyConfig;
@@ -134,7 +136,7 @@ describe("sync / range / peerBalancer", () => {
 
         const peerInfos: PeerSyncInfo[] = peers.map((p) => ({
           ...p,
-          custodyGroups: columnsByPeer.get(p.peerId)?.custodyColumns ?? [],
+          custodyColumns: columnsByPeer.get(p.peerId)?.custodyColumns ?? [],
           target: targetByPeer.get(p.peerId) ?? ({slot: 0, root: ZERO_HASH} as ChainTarget),
           earliestAvailableSlot: earliestAvailableSlotByPeers.get(p.peerId) ?? undefined,
         }));
@@ -143,12 +145,12 @@ describe("sync / range / peerBalancer", () => {
           ? createChainForkConfig({...chainConfig, FULU_FORK_EPOCH: 0})
           : createChainForkConfig(chainConfig);
 
-        const batch0 = new Batch(1, config);
-        const batch1 = new Batch(2, config);
+        const batch0 = new Batch(1, config, clock, custodyConfig);
+        const batch1 = new Batch(2, config, clock, custodyConfig);
 
         // Batch zero has a failedDownloadAttempt with peer1
         batch0.startDownloading(peer1.peerId);
-        batch0.downloadingError();
+        batch0.downloadingError(peer1.peerId);
 
         // peer2 is busy downloading batch1
         batch1.startDownloading(peer2.peerId);
@@ -166,28 +168,41 @@ describe("sync / range / peerBalancer", () => {
 
     it("should not retry the batch with a not as up-to-date peer", async () => {
       const config = createChainForkConfig({...chainConfig, FULU_FORK_EPOCH: 0});
-      const batch0 = new Batch(1, config);
+      const batch0 = new Batch(1, config, clock, custodyConfig);
+      const blocksRequest = batch0.requests.blocksRequest as {startSlot: number; count: number};
       // Batch zero has a failedDownloadAttempt with peer1
       batch0.startDownloading(peer1.peerId);
-      const block: BlockInput = {
-        block: generateSignedBlockAtSlot(batch0.request.startSlot + batch0.request.count - 1),
-      } as BlockInput;
-      batch0.downloadingSuccess({blocks: [block], pendingDataColumns: [1, 2, 3]});
+      const block = ssz.fulu.SignedBeaconBlock.defaultValue();
+      block.message.slot = blocksRequest.startSlot + blocksRequest.count - 1;
+      block.message.body.blobKzgCommitments = [ssz.fulu.KZGCommitment.defaultValue()];
+      const blockInput = BlockInputColumns.createFromBlock({
+        block,
+        blockRootHex: "0x00",
+        source: BlockInputSource.gossip,
+        seenTimestampSec: Math.floor(Date.now() / 1000),
+        forkName: config.getForkName(block.message.slot),
+        daOutOfRange: false,
+        custodyColumns: [0, 1, 2, 3],
+        sampledColumns: [0, 1, 2, 3],
+      });
+      console.log(blockInput.hasAllData());
+      const x = batch0.downloadingSuccess(peer1.peerId, [blockInput]);
+      console.log("x", x);
 
       // peer2 and peer3 are the same but peer3 has a lower target slot than the previous download
       const peerInfos: PeerSyncInfo[] = [
         {
           peerId: peer2.peerId,
           client: peer2.client,
-          custodyGroups: [0, 1, 2, 3],
-          target: {slot: batch0.request.startSlot + batch0.request.count - 1, root: ZERO_HASH},
+          custodyColumns: [0, 1, 2, 3],
+          target: {slot: blocksRequest.startSlot + blocksRequest.count - 1, root: ZERO_HASH},
           earliestAvailableSlot: 0,
         },
         {
           peerId: peer3.peerId,
           client: peer3.client,
-          custodyGroups: [0, 1, 2, 3],
-          target: {slot: batch0.request.startSlot + batch0.request.count - 2, root: ZERO_HASH},
+          custodyColumns: [0, 1, 2, 3],
+          target: {slot: blocksRequest.startSlot + blocksRequest.count - 2, root: ZERO_HASH},
           earliestAvailableSlot: 0,
         },
       ];
@@ -281,7 +296,7 @@ describe("sync / range / peerBalancer", () => {
 
         const peerInfos: PeerSyncInfo[] = peers.map((p) => ({
           ...p,
-          custodyGroups: columnsByPeer.get(p.peerId)?.custodyColumns ?? [],
+          custodyColumns: columnsByPeer.get(p.peerId)?.custodyColumns ?? [],
           target: targetByPeer.get(p.peerId) ?? {slot: 0, root: ZERO_HASH},
           earliestAvailableSlot: earliestAvailableSlotByPeers.get(p.peerId) ?? undefined,
         }));
@@ -290,13 +305,13 @@ describe("sync / range / peerBalancer", () => {
           ? createChainForkConfig({...chainConfig, FULU_FORK_EPOCH: 0})
           : createChainForkConfig(chainConfig);
 
-        const batch0 = new Batch(1, config);
-        const batch1 = new Batch(2, config);
+        const batch0 = new Batch(1, config, clock, custodyConfig);
+        const batch1 = new Batch(2, config, clock, custodyConfig);
         // peer1 and peer2 are busy downloading
         batch0.startDownloading(peer1.peerId);
         batch1.startDownloading(peer2.peerId);
 
-        const newBatch = new Batch(3, config);
+        const newBatch = new Batch(3, config, clock, custodyConfig);
         const peerBalancer = new ChainPeersBalancer(peerInfos, [batch0, batch1], custodyConfig, RangeSyncType.Head);
         const idlePeer = peerBalancer.idlePeerForBatch(newBatch);
         expect(idlePeer?.peerId).toBe(expected);

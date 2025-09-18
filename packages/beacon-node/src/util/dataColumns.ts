@@ -14,23 +14,14 @@ import {
   fulu,
 } from "@lodestar/types";
 import {ssz} from "@lodestar/types";
-import {bytesToBigInt} from "@lodestar/utils";
-import {
-  BlockInputDataColumns,
-  BlockSource,
-  DataColumnsCacheMap,
-  DataColumnsSource,
-  getBlockInput,
-  getBlockInputDataColumns,
-} from "../chain/blocks/types.js";
-import {ChainEvent, ChainEventEmitter} from "../chain/emitter.js";
-import {BlockInputCacheType} from "../chain/seenCache/seenGossipBlockInput.js";
-import {IExecutionEngine} from "../execution/engine/interface.js";
-import {Metrics} from "../metrics/metrics.js";
+import {bytesToBigInt, LodestarError} from "@lodestar/utils";
 import {NodeId} from "../network/subnets/index.js";
-import {kzgCommitmentToVersionedHash, recoverDataColumnSidecars as recover} from "./blobs.js";
-import {IClock} from "./clock.js";
 import {kzg} from "./kzg.js";
+import {dataColumnMatrixRecovery} from "./blobs.js";
+import {BlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
+import {Metrics} from "../metrics/metrics.js";
+import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
+import {ChainEvent, ChainEventEmitter} from "../chain/emitter.js";
 
 export enum RecoverResult {
   // the recover is not attempted because we have less than `NUMBER_OF_COLUMNS / 2` columns
@@ -231,7 +222,7 @@ export function getCustodyGroups(config: ChainForkConfig, nodeId: NodeId, custod
   return custodyGroups;
 }
 
-export function computeKzgCommitmentsInclusionProof(
+export function computePostFuluKzgCommitmentsInclusionProof(
   fork: ForkName,
   body: BeaconBlockBody
 ): fulu.KzgCommitmentsInclusionProof {
@@ -252,11 +243,15 @@ export function getDataColumns(config: ChainForkConfig, nodeId: NodeId, custodyG
  * SPEC FUNCTION (note: spec currently computes proofs, but we already have them)
  * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/das-core.md#compute_matrix
  */
-export function getCellsAndProofs(blobBundles: fulu.BlobAndProofV2[]): {cells: Uint8Array[]; proofs: Uint8Array[]}[] {
-  return blobBundles.map(({blob, proofs}) => {
-    const cells = kzg.computeCells(blob);
-    return {cells, proofs};
-  });
+export async function getCellsAndProofs(
+  blobBundles: fulu.BlobAndProofV2[]
+): Promise<{cells: Uint8Array[]; proofs: Uint8Array[]}[]> {
+  const blobsAndProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[] = [];
+  for (const {blob, proofs} of blobBundles) {
+    const cells = await kzg.asyncComputeCells(blob);
+    blobsAndProofs.push({cells, proofs});
+  }
+  return blobsAndProofs;
 }
 
 /**
@@ -318,7 +313,7 @@ export function getDataColumnSidecarsFromBlock(
   const fork = config.getForkName(signedBlock.message.slot);
   const signedBlockHeader = signedBlockToSignedHeader(config, signedBlock);
 
-  const kzgCommitmentsInclusionProof = computeKzgCommitmentsInclusionProof(fork, signedBlock.message.body);
+  const kzgCommitmentsInclusionProof = computePostFuluKzgCommitmentsInclusionProof(fork, signedBlock.message.body);
 
   return getDataColumnSidecars(signedBlockHeader, blobKzgCommitments, kzgCommitmentsInclusionProof, cellsAndKzgProofs);
 }
@@ -346,187 +341,95 @@ export function getDataColumnSidecarsFromColumnSidecar(
  * If we receive more than half of NUMBER_OF_COLUMNS (64) we should recover all remaining columns
  */
 export async function recoverDataColumnSidecars(
-  dataColumnCache: DataColumnsCacheMap,
-  clock: IClock,
+  blockInput: BlockInputColumns,
+  emitter: ChainEventEmitter,
   metrics: Metrics | null
-): Promise<RecoverResult> {
-  const columnCount = dataColumnCache.size;
+): Promise<void> {
+  const existingColumns = blockInput.getAllColumns();
+  const columnCount = existingColumns.length;
   if (columnCount >= NUMBER_OF_COLUMNS) {
     // We have all columns
-    return RecoverResult.NotAttemptedFull;
+    metrics?.recoverDataColumnSidecars.reconstructionResult.inc({
+      result: DataColumnReconstructionCode.NotAttemptedAlreadyFull,
+    });
+    return;
   }
 
   if (columnCount < NUMBER_OF_COLUMNS / 2) {
     // We don't have enough columns to recover
-    return RecoverResult.NotAttemptedLessThanHalf;
+    metrics?.recoverDataColumnSidecars.reconstructionResult.inc({
+      result: DataColumnReconstructionCode.NotAttemptedHaveLessThanHalf,
+    });
+    return;
   }
 
-  const partialColumns = dataColumnCache.size;
-  metrics?.recoverDataColumnSidecars.custodyBeforeReconstruction.set(partialColumns);
+  metrics?.recoverDataColumnSidecars.custodyBeforeReconstruction.set(columnCount);
   const partialSidecars = new Map<number, fulu.DataColumnSidecar>();
-  for (const [columnIndex, {dataColumn}] of dataColumnCache.entries()) {
+  for (const columnSidecar of existingColumns) {
     // the more columns we put, the slower the recover
     if (partialSidecars.size >= NUMBER_OF_COLUMNS / 2) {
       break;
     }
-    partialSidecars.set(columnIndex, dataColumn);
+    partialSidecars.set(columnSidecar.index, columnSidecar);
   }
 
-  const timer = metrics?.peerDas.dataColumnsReconstructionTime.startTimer();
+  const timer = metrics?.recoverDataColumnSidecars.recoverTime.startTimer();
   // if this function throws, we catch at the consumer side
-  const fullSidecars = await recover(partialSidecars);
+  const fullSidecars = await dataColumnMatrixRecovery(partialSidecars).catch(() => null);
   timer?.();
   if (fullSidecars == null) {
-    return RecoverResult.Failed;
+    metrics?.recoverDataColumnSidecars.reconstructionResult.inc({
+      result: DataColumnReconstructionCode.ReconstructionFailed,
+    });
+    return;
   }
 
-  const firstDataColumn = dataColumnCache.values().next().value?.dataColumn;
-  if (firstDataColumn == null) {
-    // should not happen because we checked the size of the cache before this
-    throw new Error("No data column found in cache to recover from");
-  }
-
-  const slot = firstDataColumn.signedBlockHeader.message.slot;
-  const secFromSlot = clock.secFromSlot(slot);
-  metrics?.recoverDataColumnSidecars.elapsedTimeTillReconstructed.observe(secFromSlot);
-
-  if (dataColumnCache.size === NUMBER_OF_COLUMNS) {
+  if (blockInput.getAllColumns().length === NUMBER_OF_COLUMNS) {
     // either gossip or getBlobsV2 resolved availability while we were recovering
-    return RecoverResult.SuccessLate;
+    metrics?.recoverDataColumnSidecars.reconstructionResult.inc({
+      result: DataColumnReconstructionCode.ReceivedAllDuringReconstruction,
+    });
+    return;
   }
 
-  // We successfully recovered the data columns, update the cache
-  for (let columnIndex = 0; columnIndex < NUMBER_OF_COLUMNS; columnIndex++) {
-    if (dataColumnCache.has(columnIndex)) {
-      // We already have this column
-      continue;
+  // Once the node obtains a column through reconstruction,
+  // the node MUST expose the new column as if it had received it over the network.
+  // If the node is subscribed to the subnet corresponding to the column,
+  // it MUST send the reconstructed DataColumnSidecar to its topic mesh neighbors.
+  // If instead the node is not subscribed to the corresponding subnet,
+  // it SHOULD still expose the availability of the DataColumnSidecar as part of the gossip emission process.
+  // After exposing the reconstructed DataColumnSidecar to the network,
+  // the node MAY delete the DataColumnSidecar if it is not part of the node's custody requirement.
+  const sidecarsToPublish = [];
+  for (const columnSidecar of fullSidecars) {
+    if (!blockInput.hasColumn(columnSidecar.index)) {
+      blockInput.addColumn({
+        blockRootHex: blockInput.blockRootHex,
+        columnSidecar,
+        seenTimestampSec: Date.now(),
+        source: BlockInputSource.recovery,
+      });
+      sidecarsToPublish.push(columnSidecar);
     }
-
-    const sidecar = fullSidecars[columnIndex];
-    if (sidecar === undefined) {
-      throw new Error(`full sidecars is undefined at index ${columnIndex}`);
-    }
-    dataColumnCache.set(columnIndex, {dataColumn: sidecar, dataColumnBytes: null});
-    metrics?.peerDas.reconstructedColumns.inc(NUMBER_OF_COLUMNS - partialColumns);
   }
+  emitter.emit(ChainEvent.publishDataColumns, sidecarsToPublish);
 
-  return RecoverResult.SuccessResolved;
+  metrics?.recoverDataColumnSidecars.reconstructionResult.inc({result: DataColumnReconstructionCode.Success});
 }
 
-export function hasSampledDataColumns(custodyConfig: CustodyConfig, dataColumnCache: DataColumnsCacheMap): boolean {
-  return (
-    dataColumnCache.size >= custodyConfig.sampledColumns.length &&
-    custodyConfig.sampledColumns.reduce((acc, columnIndex) => acc && dataColumnCache.has(columnIndex), true)
-  );
+export enum DataColumnReconstructionCode {
+  NotAttemptedAlreadyFull = "DATA_COLUMN_RECONSTRUCTION_NOT_ATTEMPTED_ALREADY_FULL",
+  NotAttemptedHaveLessThanHalf = "DATA_COLUMN_RECONSTRUCTION_NOT_ATTEMPTED_HAVE_LESS_THAN_HALF",
+  ReconstructionFailed = "DATA_COLUMN_RECONSTRUCTION_RECONSTRUCTION_FAILED",
+  ReceivedAllDuringReconstruction = "DATA_COLUMN_RECONSTRUCTION_RECEIVED_ALL_DURING_RECONSTRUCTION",
+  Success = "DATA_COLUMN_RECONSTRUCTION_SUCCESS",
 }
 
-export async function getDataColumnsFromExecution(
-  config: ChainForkConfig,
-  custodyConfig: CustodyConfig,
-  executionEngine: IExecutionEngine,
-  emitter: ChainEventEmitter,
-  blockCache: BlockInputCacheType,
-  metrics: Metrics | null
-): Promise<boolean> {
-  if (blockCache.fork !== ForkName.fulu) {
-    return false;
-  }
+type DataColumnReconstructionErrorType = {
+  code:
+    | DataColumnReconstructionCode.NotAttemptedHaveLessThanHalf
+    | DataColumnReconstructionCode.ReceivedAllDuringReconstruction
+    | DataColumnReconstructionCode.ReconstructionFailed;
+};
 
-  if (!blockCache.cachedData) {
-    // this condition should never get hit... just a sanity check
-    throw new Error("invalid blockCache");
-  }
-
-  if (blockCache.cachedData.fork !== ForkName.fulu) {
-    return false;
-  }
-
-  // If already have all columns, exit
-  if (hasSampledDataColumns(custodyConfig, blockCache.cachedData.dataColumnsCache)) {
-    return true;
-  }
-
-  let commitments: undefined | Uint8Array[];
-  if (blockCache.block) {
-    const block = blockCache.block as fulu.SignedBeaconBlock;
-    commitments = block.message.body.blobKzgCommitments;
-  } else {
-    const firstSidecar = blockCache.cachedData.dataColumnsCache.values().next().value;
-    commitments = firstSidecar?.dataColumn.kzgCommitments;
-  }
-
-  if (!commitments) {
-    throw new Error("blockInputCache missing both block and cachedData");
-  }
-
-  // Return if block has no blobs
-  if (commitments.length === 0) {
-    return true;
-  }
-
-  // Process KZG commitments into versioned hashes
-  const versionedHashes: Uint8Array[] = commitments.map(kzgCommitmentToVersionedHash);
-
-  // Get blobs from execution engine
-  metrics?.peerDas.getBlobsV2Requests.inc();
-  const timer = metrics?.peerDas.getBlobsV2RequestDuration.startTimer();
-  const blobs = await executionEngine.getBlobs(blockCache.fork, versionedHashes);
-  timer?.();
-
-  // Execution engine was unable to find one or more blobs
-  if (blobs === null) {
-    return false;
-  }
-  metrics?.peerDas.getBlobsV2Responses.inc();
-
-  // Return if we received all data columns while waiting for getBlobs
-  if (hasSampledDataColumns(custodyConfig, blockCache.cachedData.dataColumnsCache)) {
-    return true;
-  }
-
-  let dataColumnSidecars: fulu.DataColumnSidecars;
-  const cellsAndProofs = getCellsAndProofs(blobs);
-  if (blockCache.block) {
-    dataColumnSidecars = getDataColumnSidecarsFromBlock(
-      config,
-      blockCache.block as fulu.SignedBeaconBlock,
-      cellsAndProofs
-    );
-  } else {
-    const firstSidecar = blockCache.cachedData.dataColumnsCache.values().next().value;
-    if (!firstSidecar) {
-      throw new Error("blockInputCache missing both block and data column sidecar");
-    }
-    dataColumnSidecars = getDataColumnSidecarsFromColumnSidecar(firstSidecar.dataColumn, cellsAndProofs);
-  }
-
-  // Publish columns if and only if subscribed to them
-  const sampledColumns = custodyConfig.sampledColumns.map((columnIndex) => dataColumnSidecars[columnIndex]);
-
-  // for columns that we already seen, it will be ignored through `ignoreDuplicatePublishError` gossip option
-  emitter.emit(ChainEvent.publishDataColumns, sampledColumns);
-
-  for (const column of sampledColumns) {
-    blockCache.cachedData.dataColumnsCache.set(column.index, {dataColumn: column, dataColumnBytes: null});
-  }
-
-  const allDataColumns = getBlockInputDataColumns(blockCache.cachedData.dataColumnsCache, custodyConfig.sampledColumns);
-  // TODO: Add metrics
-  // metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.GOSSIP});
-  const blockData: BlockInputDataColumns = {
-    fork: blockCache.cachedData.fork,
-    ...allDataColumns,
-    dataColumnsSource: DataColumnsSource.engine,
-  };
-  const partialColumns = blockCache.cachedData.dataColumnsCache.size;
-  blockCache.cachedData.resolveAvailability(blockData);
-  metrics?.dataColumns.bySource.inc({source: DataColumnsSource.engine}, NUMBER_OF_COLUMNS - partialColumns);
-
-  if (blockCache.block !== undefined) {
-    const blockInput = getBlockInput.availableData(config, blockCache.block, BlockSource.gossip, blockData);
-
-    blockCache.resolveBlockInput(blockInput);
-  }
-
-  return true;
-}
+export class DataColumnReconstructionError extends LodestarError<DataColumnReconstructionErrorType> {}

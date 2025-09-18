@@ -25,7 +25,7 @@ export function kzgCommitmentToVersionedHash(kzgCommitment: deneb.KZGCommitment)
   return hash;
 }
 
-export function computeInclusionProof(
+export function computePreFuluKzgCommitmentsInclusionProof(
   fork: ForkName,
   body: BeaconBlockBody,
   index: number
@@ -56,7 +56,11 @@ export function getBlobSidecars(
   return blobKzgCommitments.map((kzgCommitment, index) => {
     const blob = blobs[index];
     const kzgProof = proofs[index];
-    const kzgCommitmentInclusionProof = computeInclusionProof(fork, signedBlock.message.body, index);
+    const kzgCommitmentInclusionProof = computePreFuluKzgCommitmentsInclusionProof(
+      fork,
+      signedBlock.message.body,
+      index
+    );
 
     return {index, blob, kzgCommitment, kzgProof, signedBlockHeader, kzgCommitmentInclusionProof};
   });
@@ -66,7 +70,7 @@ export function getBlobSidecars(
  * If the node obtains 50%+ of all the columns, it SHOULD reconstruct the full data matrix via the recover_matrix helper
  * See https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/das-core.md#recover_matrix
  */
-export async function recoverDataColumnSidecars(
+export async function dataColumnMatrixRecovery(
   partialSidecars: Map<number, fulu.DataColumnSidecar>
 ): Promise<fulu.DataColumnSidecars | null> {
   const columnCount = partialSidecars.size;
@@ -156,7 +160,7 @@ export async function reconstructBlobs(sidecars: fulu.DataColumnSidecars): Promi
     fullSidecars = sidecars;
   } else {
     const sidecarsByIndex = new Map<number, fulu.DataColumnSidecar>(sidecars.map((sc) => [sc.index, sc]));
-    const recoveredSidecars = await recoverDataColumnSidecars(sidecarsByIndex);
+    const recoveredSidecars = await dataColumnMatrixRecovery(sidecarsByIndex);
     if (recoveredSidecars === null) {
       // Should not happen because we check the column count above
       throw Error("Failed to reconstruct the full data matrix");

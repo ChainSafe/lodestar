@@ -5,7 +5,6 @@ import {config} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
-import {BlockInput, BlockInputType, BlockSource, DataColumnsSource} from "../../../../src/chain/blocks/types.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../../../src/constants/constants.js";
 import {ReqRespBridgeEventData} from "../../../../src/network/core/events.js";
 import {ReqRespBridgeEvent} from "../../../../src/network/core/events.js";
@@ -73,27 +72,11 @@ describe("data serialization through worker boundary", () => {
 
   // Defining tests in this notation ensures that any event data is tested and probably safe to send
   const networkEventData = filterByUsedEvents<NetworkEventData>(networkEventDirection, {
-    [NetworkEvent.peerConnected]: {peer, status: statusZero, custodyGroups: [1, 2, 3, 4], clientAgent: "CLIENT_AGENT"},
+    [NetworkEvent.peerConnected]: {peer, status: statusZero, custodyColumns: [1, 2, 3, 4], clientAgent: "CLIENT_AGENT"},
     [NetworkEvent.peerDisconnected]: {peer},
     [NetworkEvent.reqRespRequest]: {
       request: {method: ReqRespMethod.Status, body: statusZero},
       peer: getValidPeerId(),
-    },
-    [NetworkEvent.unknownBlockParent]: {
-      blockInput: {
-        type: BlockInputType.preData,
-        block: ssz.capella.SignedBeaconBlock.defaultValue(),
-        source: BlockSource.gossip,
-      },
-      peer,
-    },
-    [NetworkEvent.unknownBlock]: {
-      rootHex: ZERO_HASH_HEX,
-      peer,
-    },
-    [NetworkEvent.unknownBlockInput]: {
-      blockInput: getEmptyBlockInput(),
-      peer,
     },
     [NetworkEvent.pendingGossipsubMessage]: {
       topic: {type: GossipType.beacon_block, boundary: {fork: ForkName.altair, epoch: config.ALTAIR_FORK_EPOCH}},
@@ -253,18 +236,3 @@ describe("data serialization through worker boundary", () => {
 });
 
 type Resolves<T extends Promise<unknown>> = T extends Promise<infer U> ? (U extends void ? null : U) : never;
-
-function getEmptyBlockInput(): BlockInput {
-  // cannot return BlockInputType.dataPromise because it cannot be cloned through worker boundary
-  return {
-    block: ssz.fulu.SignedBeaconBlock.defaultValue(),
-    source: BlockSource.gossip,
-    type: BlockInputType.availableData,
-    blockData: {
-      fork: ForkName.fulu,
-      dataColumns: ssz.fulu.DataColumnSidecars.defaultValue(),
-      dataColumnsBytes: [],
-      dataColumnsSource: DataColumnsSource.gossip,
-    },
-  };
-}

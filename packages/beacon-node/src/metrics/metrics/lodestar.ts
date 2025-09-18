@@ -1,7 +1,6 @@
 /** biome-ignore-all lint/suspicious/noTemplateCurlyInString: The metric templates requires to have `${}` in a normal string */
 import {NotReorgedReason} from "@lodestar/fork-choice";
 import {BlockInputSource} from "../../chain/blocks/blockInput/index.js";
-import {BlobsSource, BlockSource, DataColumnsSource} from "../../chain/blocks/types.js";
 import {JobQueueItemType} from "../../chain/bls/index.js";
 import {AttestationErrorCode, BlockErrorCode} from "../../chain/errors/index.js";
 import {
@@ -12,17 +11,16 @@ import {InsertOutcome} from "../../chain/opPools/types.js";
 import {RegenCaller, RegenFnName} from "../../chain/regen/interface.js";
 import {ReprocessStatus} from "../../chain/reprocess.js";
 import {RejectReason} from "../../chain/seenCache/seenAttestationData.js";
-import {BlockInputAvailabilitySource} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {CacheItemType} from "../../chain/stateCache/types.js";
 import {OpSource} from "../../chain/validatorMonitor.js";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {GossipType} from "../../network/index.js";
 import {CannotAcceptWorkReason, ReprocessRejectReason} from "../../network/processor/index.js";
 import {BackfillSyncMethod} from "../../sync/backfill/backfill.js";
-import {PendingBlockType} from "../../sync/index.js";
+import {PendingBlockType} from "../../sync/types.js";
 import {PeerSyncType, RangeSyncType} from "../../sync/utils/remoteSyncType.js";
 import {AllocSource} from "../../util/bufferPool.js";
-import {RecoverResult} from "../../util/dataColumns.js";
+import {DataColumnReconstructionCode} from "../../util/dataColumns.js";
 import {LodestarMetadata} from "../options.js";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
 
@@ -498,9 +496,25 @@ export function createLodestarMetrics(
         help: "Count of finalized sync peers by group index",
         labelNames: ["columnIndex"],
       }),
+      downloadByRange: {
+        success: register.gauge({
+          name: "lodestar_sync_range_download_by_range_success_total",
+          help: "Total number of successful downloadByRange calls",
+        }),
+        error: register.gauge<{code: string; client: string}>({
+          name: "lodestar_sync_range_download_by_range_error_total",
+          help: "Total number of errored downloadByRange calls",
+          labelNames: ["code", "client"],
+        }),
+        warn: register.gauge<{code: string; client: string}>({
+          name: "lodestar_sync_range_download_by_range_warn_total",
+          help: "Total number of downloadByRange call warnings",
+          labelNames: ["code", "client"],
+        }),
+      },
     },
 
-    syncUnknownBlock: {
+    blockInputSync: {
       switchNetworkSubscriptions: register.gauge<{action: string}>({
         name: "lodestar_sync_unknown_block_network_subscriptions_count",
         help: "Switch network subscriptions on/off",
@@ -510,6 +524,11 @@ export function createLodestarMetrics(
         name: "lodestar_sync_unknown_block_requests_total",
         help: "Total number of unknown block events or requests",
         labelNames: ["type"],
+      }),
+      source: register.gauge<{source: BlockInputSource}>({
+        name: "lodestar_block_input_sync_source_total",
+        help: "The origination source of one of the BlockInputSync triggers",
+        labelNames: ["source"],
       }),
       pendingBlocks: register.gauge({
         name: "lodestar_sync_unknown_block_pending_blocks_size",
@@ -544,11 +563,44 @@ export function createLodestarMetrics(
         help: "Time elapsed between block slot time and the time block received via unknown block sync",
         buckets: [0.5, 1, 2, 4, 6, 12],
       }),
-      resolveAvailabilitySource: register.gauge<{source: BlockInputAvailabilitySource}>({
+      resolveAvailabilitySource: register.gauge<{source: BlockInputSource}>({
         name: "lodestar_sync_blockinput_availability_source",
         help: "Total number of blocks whose data availability was resolved",
         labelNames: ["source"],
       }),
+      fetchBegin: register.histogram({
+        name: "lodestar_sync_unknown_block_fetch_begin_since_slot_start_seconds",
+        help: "Time into the slot when the block was fetched",
+        buckets: [0, 1, 2, 4],
+      }),
+      // we may not have slot in case of failure, so track fetch time from start to done (either success or failure)
+      fetchTimeSec: register.histogram<{result: string}>({
+        name: "lodestar_sync_unknown_block_fetch_time_seconds",
+        help: "Fetch time from start to done (either success or failure)",
+        labelNames: ["result"],
+        buckets: [0, 1, 2, 4, 8],
+      }),
+      fetchPeers: register.gauge<{result: string}>({
+        name: "lodestar_sync_unknown_block_fetch_peers_count",
+        help: "Number of peers that node fetched from",
+        labelNames: ["result"],
+      }),
+      downloadByRoot: {
+        success: register.gauge({
+          name: "lodestar_sync_unknown_block_download_by_root_success_total",
+          help: "Total number of successful downloadByRoot calls",
+        }),
+        error: register.gauge<{code: string; client: string}>({
+          name: "lodestar_sync_unknown_block_download_by_root_error_total",
+          help: "Total number of errored downloadByRoot calls",
+          labelNames: ["code", "client"],
+        }),
+        warn: register.gauge<{code: string; client: string}>({
+          name: "lodestar_sync_unknown_block_download_by_root_warn_total",
+          help: "Total number of downloadByRoot call warnings",
+          labelNames: ["code", "client"],
+        }),
+      },
       peerBalancer: {
         peersMetaCount: register.gauge({
           name: "lodestar_sync_unknown_block_peer_balancer_peers_meta_count",
@@ -744,31 +796,35 @@ export function createLodestarMetrics(
       }),
     },
     recoverDataColumnSidecars: {
-      elapsedTimeTillReconstructed: register.histogram({
-        name: "lodestar_data_column_sidecar_elapsed_time_till_reconstructed_seconds",
-        help: "Time elapsed between block slot time and the time data column sidecar reconstructed",
-        buckets: [2, 4, 6, 8, 10, 12],
+      recoverTime: register.histogram({
+        name: "lodestar_recover_data_column_sidecar_recover_time_seconds",
+        help: "Time elapsed to recover data column sidecar",
+        buckets: [0.5, 1.0, 1.5, 2],
       }),
       custodyBeforeReconstruction: register.gauge({
         name: "lodestar_data_columns_in_custody_before_reconstruction",
         help: "Number of data columns in custody before reconstruction",
       }),
-      reconstructionResult: register.gauge<{result: RecoverResult}>({
+      numberOfColumnsRecovered: register.gauge({
+        name: "lodestar_recover_data_column_sidecar_recovered_columns_total",
+        help: "Total number of columns that were recovered",
+      }),
+      reconstructionResult: register.gauge<{result: DataColumnReconstructionCode}>({
         name: "lodestar_data_column_sidecars_reconstruction_result",
         help: "Data column sidecars reconstruction result",
         labelNames: ["result"],
       }),
     },
     dataColumns: {
-      bySource: register.gauge<{source: DataColumnsSource}>({
+      bySource: register.gauge<{source: BlockInputSource}>({
         name: "lodestar_data_columns_by_source",
         help: "Number of received data columns by source",
         labelNames: ["source"],
       }),
-      elapsedTimeTillReceived: register.histogram<{source: DataColumnsSource}>({
+      elapsedTimeTillReceived: register.histogram<{receivedOrder: number}>({
         name: "lodestar_data_column_elapsed_time_till_received_seconds",
         help: "Time elapsed between block slot time and the time data column received",
-        labelNames: ["source"],
+        labelNames: ["receivedOrder"],
         buckets: [1, 2, 3, 4, 6, 12],
       }),
       sentPeersPerSubnet: register.histogram({
@@ -800,15 +856,20 @@ export function createLodestarMetrics(
         name: "lodestar_import_block_set_head_after_first_interval_total",
         help: "Total times an imported block is set as head after the first slot interval",
       }),
-      bySource: register.gauge<{source: BlockSource}>({
+      bySource: register.gauge<{source: BlockInputSource}>({
         name: "lodestar_import_block_by_source_total",
         help: "Total number of imported blocks by source",
         labelNames: ["source"],
       }),
-      blobsBySource: register.gauge<{blobsSource: BlobsSource}>({
+      blobsBySource: register.gauge<{blobsSource: BlockInputSource}>({
         name: "lodestar_import_blobs_by_source_total",
         help: "Total number of imported blobs by source",
         labelNames: ["blobsSource"],
+      }),
+      columnsBySource: register.gauge<{source: BlockInputSource}>({
+        name: "lodestar_import_columns_by_source_total",
+        help: "Total number of imported columns (sampled columns) by source",
+        labelNames: ["source"],
       }),
       notOverrideFcuReason: register.counter<{reason: NotReorgedReason}>({
         name: "lodestar_import_block_not_override_fcu_reason_total",
@@ -1331,6 +1392,11 @@ export function createLodestarMetrics(
         duplicateBlobCount: register.gauge<{source: BlockInputSource}>({
           name: "lodestar_seen_block_input_cache_duplicate_blob_count",
           help: "Total number of duplicate blobs that pass validation and attempt to be cached but are known",
+          labelNames: ["source"],
+        }),
+        duplicateColumnCount: register.gauge<{source: BlockInputSource}>({
+          name: "lodestar_seen_block_input_cache_duplicate_column_count",
+          help: "Total number of duplicate columns that pass validation and attempt to be cached but are known",
           labelNames: ["source"],
         }),
         createdByBlock: register.gauge({

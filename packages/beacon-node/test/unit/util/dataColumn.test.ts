@@ -5,7 +5,7 @@ import {ssz} from "@lodestar/types";
 import {bigIntToBytes, fromHex} from "@lodestar/utils";
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
 
-import {validateDataColumnsSidecars} from "../../../src/chain/validation/dataColumnSidecar.js";
+import {validateBlockDataColumnSidecars} from "../../../src/chain/validation/dataColumnSidecar.js";
 import {
   CustodyConfig,
   getDataColumnSidecarsFromBlock,
@@ -175,7 +175,7 @@ describe("data column sidecars", () => {
     expect(columnSidecars[0].column.length).toEqual(blobs.length);
 
     await expect(
-      validateDataColumnsSidecars(slot, blockRoot, kzgCommitments, columnSidecars, null)
+      validateBlockDataColumnSidecars(slot, blockRoot, kzgCommitments.length, columnSidecars)
     ).resolves.toBeUndefined();
   });
 
@@ -211,8 +211,8 @@ describe("data column sidecars", () => {
     expect(columnSidecars.length).toEqual(NUMBER_OF_COLUMNS);
     expect(columnSidecars[0].column.length).toEqual(blobs.length);
 
-    await expect(validateDataColumnsSidecars(slot, blockRoot, [], columnSidecars, null)).rejects.toThrow(
-      `Invalid data column sidecar slot=${slot}`
+    await expect(validateBlockDataColumnSidecars(slot, blockRoot, 0, columnSidecars)).rejects.toThrow(
+      "Block has no blob commitments but data column sidecars were provided"
     );
   });
 });
