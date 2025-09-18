@@ -10,7 +10,7 @@ import {BlockArchiveRepository} from "../../../../../src/db/repositories/index.j
 import {testLogger} from "../../../../utils/logger.js";
 
 describe("block archive repository", () => {
-  const testDir = "./.tmp";
+  const testDir = "./.tmp_block_archive_unit_test";
   let blockArchive: BlockArchiveRepository;
   let db: LevelDbController;
 
