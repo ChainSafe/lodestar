@@ -1,4 +1,5 @@
 import {RootHex, Slot, SubnetID} from "@lodestar/types";
+import {LodestarError} from "@lodestar/utils";
 import {GossipActionError} from "./gossipValidation.js";
 
 export enum DataColumnSidecarErrorCode {
@@ -7,6 +8,19 @@ export enum DataColumnSidecarErrorCode {
   MISMATCHED_LENGTHS = "DATA_COLUMN_SIDECAR_ERROR_MISMATCHED_LENGTHS",
   INVALID_SUBNET = "DATA_COLUMN_SIDECAR_ERROR_INVALID_SUBNET",
   INVALID_KZG_PROOF = "DATA_COLUMN_SIDECAR_ERROR_INVALID_KZG_PROOF",
+
+  // Validation errors when validating against an existing block
+
+  /** Block and sidecars data column count mismatch */
+  INCORRECT_SIDECAR_COUNT = "DATA_COLUMN_SIDECAR_ERROR_INCORRECT_SIDECAR_COUNT",
+  /** Sidecar doesn't match block */
+  INCORRECT_BLOCK = "DATA_COLUMN_SIDECAR_ERROR_INCORRECT_BLOCK",
+  /** Sidecar kzg proof count not as expected */
+  INCORRECT_KZG_COMMITMENTS_COUNT = "DATA_COLUMN_SIDECAR_ERROR_INCORRECT_KZG_COMMITMENTS_COUNT",
+  /** Sidecar kzg proof count not as expected */
+  INCORRECT_KZG_PROOF_COUNT = "DATA_COLUMN_SIDECAR_ERROR_INCORRECT_KZG_PROOF_COUNT",
+  /** Sidecars proofs not valid */
+  INVALID_KZG_PROOF_BATCH = "DATA_COLUMN_SIDECAR_ERROR_INVALID_KZG_PROOF_BATCH",
 
   // following errors are adapted from the block errors
   ALREADY_KNOWN = "DATA_COLUMN_SIDECAR_ERROR_ALREADY_KNOWN",
@@ -20,8 +34,8 @@ export enum DataColumnSidecarErrorCode {
 }
 
 export type DataColumnSidecarErrorType =
-  | {code: DataColumnSidecarErrorCode.INVALID_INDEX; columnIdx: number}
-  | {code: DataColumnSidecarErrorCode.NO_COMMITMENTS; columnIdx: number}
+  | {code: DataColumnSidecarErrorCode.INVALID_INDEX; slot: Slot; columnIdx: number}
+  | {code: DataColumnSidecarErrorCode.NO_COMMITMENTS; slot: Slot; columnIdx: number}
   | {
       code: DataColumnSidecarErrorCode.MISMATCHED_LENGTHS;
       columnLength: number;
@@ -37,6 +51,30 @@ export type DataColumnSidecarErrorType =
   | {code: DataColumnSidecarErrorCode.NOT_LATER_THAN_PARENT; parentSlot: Slot; slot: Slot}
   | {code: DataColumnSidecarErrorCode.INCLUSION_PROOF_INVALID; slot: Slot; columnIdx: number}
   | {code: DataColumnSidecarErrorCode.INVALID_KZG_PROOF; slot: Slot; columnIdx: number}
+  | {code: DataColumnSidecarErrorCode.INCORRECT_SIDECAR_COUNT; slot: number; expected: number; actual: number}
+  | {
+      code: DataColumnSidecarErrorCode.INCORRECT_BLOCK;
+      slot: number;
+      columnIdx: number;
+      expected: string;
+      actual: string;
+    }
+  | {
+      code: DataColumnSidecarErrorCode.INCORRECT_KZG_COMMITMENTS_COUNT;
+      slot: number;
+      columnIdx: number;
+      expected: number;
+      actual: number;
+    }
+  | {
+      code: DataColumnSidecarErrorCode.INCORRECT_KZG_PROOF_COUNT;
+      slot: number;
+      columnIdx: number;
+      expected: number;
+      actual: number;
+    }
+  | {code: DataColumnSidecarErrorCode.INVALID_KZG_PROOF_BATCH; slot: number; reason: string}
   | {code: DataColumnSidecarErrorCode.INCORRECT_PROPOSER; actualProposerIndex: number; expectedProposerIndex: number};
 
 export class DataColumnSidecarGossipError extends GossipActionError<DataColumnSidecarErrorType> {}
+export class DataColumnSidecarValidationError extends LodestarError<DataColumnSidecarErrorType> {}

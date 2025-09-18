@@ -15,7 +15,7 @@ export type SyncOptions = {
   /** USE FOR TESTING ONLY. Disable range sync completely */
   disableRangeSync?: boolean;
   /** USE FOR TESTING ONLY. Disable unknown block sync completely */
-  disableUnknownBlockSync?: boolean;
+  disableBlockInputSync?: boolean;
   /**
    * The batch size of slots for backfill sync can attempt to sync/process before yielding
    * to sync loop. This number can be increased or decreased to make a suitable resource

@@ -10,7 +10,6 @@ import {
   isForkPostAltair,
   isForkPostBellatrix,
   isForkPostDeneb,
-  isForkPostElectra,
 } from "@lodestar/params";
 import {Epoch, SSZTypesFor, Slot, Version, sszTypesFor} from "@lodestar/types";
 import {ChainConfig} from "../chainConfig/index.js";
@@ -199,9 +198,6 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
       }
 
       return {epoch: config.ELECTRA_FORK_EPOCH, maxBlobsPerBlock: config.MAX_BLOBS_PER_BLOCK_ELECTRA};
-    },
-    getMaxRequestBlobSidecars(fork: ForkName): number {
-      return isForkPostElectra(fork) ? config.MAX_REQUEST_BLOB_SIDECARS_ELECTRA : config.MAX_REQUEST_BLOB_SIDECARS;
     },
   };
 }

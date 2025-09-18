@@ -135,10 +135,8 @@ describe("BlockInput", () => {
           blockRootHex: rootHex,
           daOutOfRange: false,
           forkName: ForkName.deneb,
-          source: {
-            source: BlockInputSource.gossip,
-            seenTimestampSec: Date.now(),
-          },
+          source: BlockInputSource.gossip,
+          seenTimestampSec: Date.now(),
         } as AddBlock<ForkBlobsDA> & CreateBlockInputMeta);
         for (const blobSidecar of blobSidecars) {
           testArray.push({

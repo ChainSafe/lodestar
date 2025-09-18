@@ -1,11 +1,18 @@
 import {RootHex} from "@lodestar/types";
 import {describe, expect, it} from "vitest";
-import {PendingBlock, PendingBlockStatus, UnknownAndAncestorBlocks} from "../../../../src/sync/index.js";
 import {
+  BlockInputSyncCacheItem,
+  PendingBlockInput,
+  PendingBlockInputStatus,
+  getBlockInputSyncCacheItemRootHex,
+} from "../../../../src/sync/types.js";
+import {
+  UnknownAndAncestorBlocks,
   getAllDescendantBlocks,
   getDescendantBlocks,
   getUnknownAndAncestorBlocks,
 } from "../../../../src/sync/utils/pendingBlocksTree.js";
+import {MockBlockInput} from "../../../utils/blockInput.js";
 
 describe("sync / pendingBlocksTree", () => {
   const testCases: {
@@ -49,13 +56,15 @@ describe("sync / pendingBlocksTree", () => {
   ];
 
   for (const testCase of testCases) {
-    const blocks = new Map<RootHex, PendingBlock>();
+    const blocks = new Map<RootHex, BlockInputSyncCacheItem>();
     for (const block of testCase.blocks) {
-      blocks.set(block.block, {
-        blockRootHex: block.block,
-        parentBlockRootHex: block.parent,
-        status: block.parent == null ? PendingBlockStatus.pending : PendingBlockStatus.downloaded,
-      } as PendingBlock);
+      const pending: PendingBlockInput = {
+        status: block.parent === null ? PendingBlockInputStatus.pending : PendingBlockInputStatus.downloaded,
+        blockInput: new MockBlockInput({blockRootHex: block.block, parentRootHex: block.parent}),
+        peerIdStrings: new Set(),
+        timeAddedSec: 0,
+      };
+      blocks.set(pending.blockInput.blockRootHex, pending);
     }
 
     describe(testCase.id, () => {
@@ -78,13 +87,13 @@ describe("sync / pendingBlocksTree", () => {
   }
 });
 
-function toRes(blocks: PendingBlock[]): string[] {
-  return blocks.map((block) => block.blockRootHex);
+function toRes(blocks: BlockInputSyncCacheItem[]): string[] {
+  return blocks.map((block) => getBlockInputSyncCacheItemRootHex(block));
 }
 
 function toRes2(blocks: UnknownAndAncestorBlocks): {unknowns: string[]; ancestors: string[]} {
   return {
-    unknowns: blocks.unknowns.map((block) => block.blockRootHex),
-    ancestors: blocks.ancestors.map((block) => block.blockRootHex),
+    unknowns: blocks.unknowns.map((block) => getBlockInputSyncCacheItemRootHex(block)),
+    ancestors: blocks.ancestors.map((block) => getBlockInputSyncCacheItemRootHex(block)),
   };
 }

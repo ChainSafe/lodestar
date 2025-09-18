@@ -8,6 +8,7 @@ export * from "./diff.js";
 export * from "./err.js";
 export * from "./errors.js";
 export * from "./format.js";
+export * from "./iterator.js";
 export * from "./logger.js";
 export * from "./map.js";
 export * from "./math.js";

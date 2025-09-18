@@ -52,8 +52,10 @@ export async function* onBeaconBlocksByRange(
 
         const blockBytes = await unfinalized.getBinary(fromHex(block.blockRoot));
         if (!blockBytes) {
-          // Handle the same to onBeaconBlocksByRange
-          throw new ResponseError(RespStatus.SERVER_ERROR, `No item for root ${block.blockRoot} slot ${block.slot}`);
+          throw new ResponseError(
+            RespStatus.SERVER_ERROR,
+            `No block for root ${block.blockRoot} slot ${block.slot}, startSlot=${startSlot} endSlot=${endSlot} finalizedSlot=${finalizedSlot}`
+          );
         }
 
         yield {

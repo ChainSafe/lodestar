@@ -87,7 +87,7 @@ const defaultOptions: SpecTestOptions<any, any> = {
 export function describeDirectorySpecTest<TestCase extends {meta?: any}, Result>(
   name: string,
   testCaseDirectoryPath: string,
-  testFunction: (testCase: TestCase, directoryName: string) => Result | Promise<Result>,
+  testFunction: (testCase: TestCase, directoryName: string, testCaseName: string) => Result | Promise<Result>,
   options: Partial<SpecTestOptions<TestCase, Result>>
 ): void {
   options = {...defaultOptions, ...options};
@@ -124,12 +124,12 @@ export function describeDirectorySpecTest<TestCase extends {meta?: any}, Result>
 
         if (options.shouldError?.(testCase)) {
           try {
-            await testFunction(testCase, name);
+            await testFunction(testCase, name, testSubDirname);
           } catch (_e) {
             return;
           }
         } else {
-          const result = await testFunction(testCase, name);
+          const result = await testFunction(testCase, name, testSubDirname);
           if (!options.getExpected) throw Error("getExpected is not defined");
           if (!options.expectFunc) throw Error("expectFunc is not defined");
           const expected = options.getExpected(testCase);

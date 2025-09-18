@@ -11,6 +11,14 @@ import {MockedBeaconDb, getMockedBeaconDb} from "../../../mocks/mockedBeaconDb.j
 import {testLogger} from "../../../utils/logger.js";
 import {generateProtoBlock} from "../../../utils/typeGenerator.js";
 
+function toAsyncIterable<T>(items: T[]): AsyncIterable<T> {
+  return {
+    async *[Symbol.asyncIterator]() {
+      for (const it of items) yield it;
+    },
+  };
+}
+
 describe("block archiver task", () => {
   const logger = testLogger();
 
@@ -102,9 +110,9 @@ describe("block archiver task", () => {
     const dataColumnBytes = ssz.fulu.DataColumnSidecar.serialize(dataColumn);
 
     vi.spyOn(dbStub.block, "getBinary").mockResolvedValue(blockBytes);
-    vi.spyOn(dbStub.dataColumnSidecar, "valuesBinary").mockResolvedValue([
-      {id: dataColumn.index, prefix: block.message.stateRoot, value: dataColumnBytes},
-    ]);
+    vi.spyOn(dbStub.dataColumnSidecar, "valuesStreamBinary").mockReturnValue(
+      toAsyncIterable([{id: dataColumn.index, prefix: block.message.stateRoot, value: dataColumnBytes}])
+    );
 
     // Create blocks after fulu fork
     const blocks = Array.from({length: 5}, (_, i) =>
@@ -158,9 +166,7 @@ describe("block archiver task", () => {
     );
 
     expect(dbStub.dataColumnSidecarArchive.keys).toBeCalledWith({
-      lt: dbStub.dataColumnSidecarArchive.getMaxKeyRaw(
-        computeStartSlotAtEpoch(currentEpoch - config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS)
-      ),
+      lt: {prefix: computeStartSlotAtEpoch(currentEpoch - config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS), id: 0},
     });
   });
 });
