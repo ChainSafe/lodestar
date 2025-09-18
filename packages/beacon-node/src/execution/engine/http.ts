@@ -446,8 +446,8 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       case ForkName.electra:
         method = "engine_getPayloadV4";
         break;
-      case ForkName.gloas:
-        method = "engine_getPayloadV6";
+      case ForkName.fulu:
+        method = "engine_getPayloadV5";
         break;
       default:
         method = "engine_getPayloadV6";
