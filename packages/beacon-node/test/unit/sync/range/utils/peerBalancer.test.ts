@@ -136,7 +136,7 @@ describe("sync / range / peerBalancer", () => {
 
         const peerInfos: PeerSyncInfo[] = peers.map((p) => ({
           ...p,
-          custodyGroups: columnsByPeer.get(p.peerId)?.custodyColumns ?? [],
+          custodyColumns: columnsByPeer.get(p.peerId)?.custodyColumns ?? [],
           target: targetByPeer.get(p.peerId) ?? ({slot: 0, root: ZERO_HASH} as ChainTarget),
           earliestAvailableSlot: earliestAvailableSlotByPeers.get(p.peerId) ?? undefined,
         }));
@@ -296,7 +296,7 @@ describe("sync / range / peerBalancer", () => {
 
         const peerInfos: PeerSyncInfo[] = peers.map((p) => ({
           ...p,
-          custodyGroups: columnsByPeer.get(p.peerId)?.custodyColumns ?? [],
+          custodyColumns: columnsByPeer.get(p.peerId)?.custodyColumns ?? [],
           target: targetByPeer.get(p.peerId) ?? {slot: 0, root: ZERO_HASH},
           earliestAvailableSlot: earliestAvailableSlotByPeers.get(p.peerId) ?? undefined,
         }));
