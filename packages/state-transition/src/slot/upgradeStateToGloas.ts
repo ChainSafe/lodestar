@@ -10,7 +10,7 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
   const {config} = stateFulu;
 
   const stateFuluNode = ssz.fulu.BeaconState.commitViewDU(stateFulu);
-  const stateGloasView = ssz.fulu.BeaconState.getViewDU(stateFuluNode);
+  const stateGloasView = ssz.gloas.BeaconState.getViewDU(stateFuluNode);
 
   const stateGloas = getCachedBeaconState(stateGloasView, stateFulu);
 
@@ -21,7 +21,7 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
   });
 
   stateGloas.commit();
-  // Clear cache to ensure the cache of electra fields is not used by new fulu fields
+  // Clear cache to ensure the cache of fulu fields is not used by new gloas fields
   // biome-ignore lint/complexity/useLiteralKeys: It is a protected attribute
   stateGloas["clearCache"]();
 

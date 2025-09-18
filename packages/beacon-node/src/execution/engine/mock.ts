@@ -42,6 +42,7 @@ export type ExecutionEngineMockOpts = {
   denebForkTimestamp?: number;
   electraForkTimestamp?: number;
   fuluForkTimestamp?: number;
+  gloasForkTimestamp?: number;
 };
 
 type ExecutionBlock = {
@@ -460,6 +461,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
   }
 
   private timestampToFork(timestamp: number): ForkPostBellatrix {
+    if (timestamp >= (this.opts.gloasForkTimestamp ?? Infinity)) return ForkName.gloas;
     if (timestamp >= (this.opts.fuluForkTimestamp ?? Infinity)) return ForkName.fulu;
     if (timestamp >= (this.opts.electraForkTimestamp ?? Infinity)) return ForkName.electra;
     if (timestamp >= (this.opts.denebForkTimestamp ?? Infinity)) return ForkName.deneb;
