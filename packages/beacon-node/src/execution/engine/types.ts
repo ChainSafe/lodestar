@@ -181,7 +181,6 @@ export type ExecutionPayloadRpc = {
   withdrawals?: WithdrawalRpc[]; // Capella hardfork
   blobGasUsed?: QUANTITY; // DENEB
   excessBlobGas?: QUANTITY; // DENEB
-  parentBeaconBlockRoot?: QUANTITY; // DENEB
 };
 
 export type WithdrawalRpc = {
