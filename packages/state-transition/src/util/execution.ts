@@ -9,6 +9,7 @@ import {
   bellatrix,
   capella,
   deneb,
+  gloas,
   isBlindedBeaconBlockBody,
   isExecutionPayload,
   ssz,
@@ -173,6 +174,11 @@ export function executionPayloadToPayloadHeader(fork: ForkSeq, payload: Executio
   }
 
   // No change in Electra
+
+  if (fork >= ForkSeq.gloas) {
+    (bellatrixPayloadFields as gloas.ExecutionPayloadHeader).blockAccessListRoot =
+      ssz.gloas.BlockAccessList.hashTreeRoot((payload as gloas.ExecutionPayload).blockAccessList);
+  }
 
   return bellatrixPayloadFields;
 }
