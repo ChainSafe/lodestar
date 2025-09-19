@@ -14,7 +14,7 @@ import {
   fulu,
 } from "@lodestar/types";
 import {ssz} from "@lodestar/types";
-import {bytesToBigInt, LodestarError} from "@lodestar/utils";
+import {bytesToBigInt} from "@lodestar/utils";
 import {NodeId} from "../network/subnets/index.js";
 import {kzg} from "./kzg.js";
 import {dataColumnMatrixRecovery} from "./blobs.js";
@@ -344,23 +344,17 @@ export async function recoverDataColumnSidecars(
   blockInput: BlockInputColumns,
   emitter: ChainEventEmitter,
   metrics: Metrics | null
-): Promise<void> {
+): Promise<DataColumnReconstructionCode> {
   const existingColumns = blockInput.getAllColumns();
   const columnCount = existingColumns.length;
   if (columnCount >= NUMBER_OF_COLUMNS) {
     // We have all columns
-    metrics?.recoverDataColumnSidecars.reconstructionResult.inc({
-      result: DataColumnReconstructionCode.NotAttemptedAlreadyFull,
-    });
-    return;
+    return DataColumnReconstructionCode.NotAttemptedAlreadyFull;
   }
 
   if (columnCount < NUMBER_OF_COLUMNS / 2) {
     // We don't have enough columns to recover
-    metrics?.recoverDataColumnSidecars.reconstructionResult.inc({
-      result: DataColumnReconstructionCode.NotAttemptedHaveLessThanHalf,
-    });
-    return;
+    return DataColumnReconstructionCode.NotAttemptedHaveLessThanHalf;
   }
 
   metrics?.recoverDataColumnSidecars.custodyBeforeReconstruction.set(columnCount);
@@ -378,18 +372,12 @@ export async function recoverDataColumnSidecars(
   const fullSidecars = await dataColumnMatrixRecovery(partialSidecars).catch(() => null);
   timer?.();
   if (fullSidecars == null) {
-    metrics?.recoverDataColumnSidecars.reconstructionResult.inc({
-      result: DataColumnReconstructionCode.ReconstructionFailed,
-    });
-    return;
+    return DataColumnReconstructionCode.NullReturned;
   }
 
   if (blockInput.getAllColumns().length === NUMBER_OF_COLUMNS) {
     // either gossip or getBlobsV2 resolved availability while we were recovering
-    metrics?.recoverDataColumnSidecars.reconstructionResult.inc({
-      result: DataColumnReconstructionCode.ReceivedAllDuringReconstruction,
-    });
-    return;
+    return DataColumnReconstructionCode.SuccessLate;
   }
 
   // Once the node obtains a column through reconstruction,
@@ -414,22 +402,14 @@ export async function recoverDataColumnSidecars(
   }
   emitter.emit(ChainEvent.publishDataColumns, sidecarsToPublish);
 
-  metrics?.recoverDataColumnSidecars.reconstructionResult.inc({result: DataColumnReconstructionCode.Success});
+  return DataColumnReconstructionCode.SuccessResolved;
 }
 
 export enum DataColumnReconstructionCode {
-  NotAttemptedAlreadyFull = "DATA_COLUMN_RECONSTRUCTION_NOT_ATTEMPTED_ALREADY_FULL",
-  NotAttemptedHaveLessThanHalf = "DATA_COLUMN_RECONSTRUCTION_NOT_ATTEMPTED_HAVE_LESS_THAN_HALF",
-  ReconstructionFailed = "DATA_COLUMN_RECONSTRUCTION_RECONSTRUCTION_FAILED",
-  ReceivedAllDuringReconstruction = "DATA_COLUMN_RECONSTRUCTION_RECEIVED_ALL_DURING_RECONSTRUCTION",
-  Success = "DATA_COLUMN_RECONSTRUCTION_SUCCESS",
+  NotAttemptedAlreadyFull = "not_attempted_full",
+  NotAttemptedHaveLessThanHalf = "not_attempted_less_than_half",
+  NullReturned = "null_returned",
+  SuccessLate = "success_late",
+  SuccessResolved = "success_resolved",
+  Failed = "failed",
 }
-
-type DataColumnReconstructionErrorType = {
-  code:
-    | DataColumnReconstructionCode.NotAttemptedHaveLessThanHalf
-    | DataColumnReconstructionCode.ReceivedAllDuringReconstruction
-    | DataColumnReconstructionCode.ReconstructionFailed;
-};
-
-export class DataColumnReconstructionError extends LodestarError<DataColumnReconstructionErrorType> {}
