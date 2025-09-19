@@ -70,7 +70,7 @@ export class ColumnReconstructionTracker {
         });
       })
       .catch((err) => {
-        this.logger.error("ColumnReconstructionTracker occurred an error", err);
+        this.logger.debug("ColumnReconstructionTracker occurred an error", err);
       });
   }
 }
