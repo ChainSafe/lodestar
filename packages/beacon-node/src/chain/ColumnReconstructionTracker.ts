@@ -84,7 +84,7 @@ export class ColumnReconstructionTracker {
           });
       })
       .catch((err) => {
-        this.logger.debug("ColumnReconstructionTracker occurred an error.", {}, err);
+        this.logger.debug("ColumnReconstructionTracker unreachable error", {}, err);
       });
   }
 }
