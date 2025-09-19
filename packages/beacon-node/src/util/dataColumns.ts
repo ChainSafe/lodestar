@@ -14,7 +14,7 @@ import {
   fulu,
 } from "@lodestar/types";
 import {ssz} from "@lodestar/types";
-import {bytesToBigInt, LodestarError} from "@lodestar/utils";
+import {bytesToBigInt} from "@lodestar/utils";
 import {NodeId} from "../network/subnets/index.js";
 import {kzg} from "./kzg.js";
 import {dataColumnMatrixRecovery} from "./blobs.js";
