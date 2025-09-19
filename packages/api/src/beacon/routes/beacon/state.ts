@@ -13,6 +13,7 @@ import {
   phase0,
   ssz,
 } from "@lodestar/types";
+
 import {ArrayOf, JsonOnlyReq} from "../../../utils/codecs.js";
 import {Endpoint, RequestCodec, RouteDefinitions, Schema} from "../../../utils/index.js";
 import {

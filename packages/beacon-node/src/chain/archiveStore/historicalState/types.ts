@@ -1,6 +1,7 @@
 import {ModuleThread} from "@chainsafe/threads";
 import {BeaconConfig, SpecJson} from "@lodestar/config";
 import {LoggerNode, LoggerNodeOpts} from "@lodestar/logger/node";
+
 import {Metrics} from "../../../metrics/index.js";
 
 export type HistoricalStateRegenInitModules = {

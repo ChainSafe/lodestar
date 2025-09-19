@@ -2,8 +2,10 @@ import {toHexString} from "@chainsafe/ssz";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
+
 import {FastifyInstance} from "fastify";
 import {afterAll, beforeAll, describe, expect, it, vi} from "vitest";
+
 import {getClient} from "../../../../src/beacon/client/debug.js";
 import {Endpoints, getDefinitions} from "../../../../src/beacon/routes/debug.js";
 import {getRoutes} from "../../../../src/beacon/server/debug.js";

@@ -1,6 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkSeq} from "@lodestar/params";
 import {deserializeContainerIgnoreFields, ssz} from "@lodestar/types";
+
 import {BeaconStateAllForks, BeaconStateAltair} from "../../types.js";
 import {VALIDATOR_BYTES_SIZE, getForkFromStateBytes, getStateTypeFromBytes} from "../sszBytes.js";
 import {findModifiedInactivityScores} from "./findModifiedInactivityScores.js";

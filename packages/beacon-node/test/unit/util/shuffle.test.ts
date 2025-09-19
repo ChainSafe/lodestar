@@ -1,4 +1,5 @@
 import {describe, expect, it} from "vitest";
+
 import {shuffle} from "../../../src/util/shuffle.js";
 
 describe("util / shuffle", () => {

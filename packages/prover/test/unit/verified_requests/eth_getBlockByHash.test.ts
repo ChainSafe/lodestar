@@ -1,6 +1,8 @@
 import {createForkConfig} from "@lodestar/config";
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
+
 import {describe, expect, it} from "vitest";
+
 import {VERIFICATION_FAILED_RESPONSE_CODE} from "../../../src/constants.js";
 import {ELBlock} from "../../../src/types.js";
 import {getVerificationFailedMessage} from "../../../src/utils/json_rpc.js";

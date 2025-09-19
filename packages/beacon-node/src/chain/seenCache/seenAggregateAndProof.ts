@@ -1,6 +1,7 @@
 import {BitArray} from "@chainsafe/ssz";
 import {CommitteeIndex, Epoch, RootHex} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
+
 import {Metrics} from "../../metrics/index.js";
 import {isSuperSetOrEqual} from "../../util/bitArray.js";
 

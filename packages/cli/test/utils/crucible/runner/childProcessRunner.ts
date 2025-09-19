@@ -1,6 +1,8 @@
 import {ChildProcess} from "node:child_process";
+
 import {Logger} from "@lodestar/logger";
 import {ChildProcessResolve, SpawnChildProcessOptions, spawnChildProcess, stopChildProcess} from "@lodestar/test-utils";
+
 import {Job, JobOptions, RunnerEnv, RunnerType} from "../interfaces.js";
 
 export class ChildProcessRunner implements RunnerEnv<RunnerType.ChildProcess> {

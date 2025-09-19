@@ -1,4 +1,5 @@
 import path from "node:path";
+
 import {ACTIVE_PRESET} from "@lodestar/params";
 import {
   BeaconStateAllForks,
@@ -10,7 +11,9 @@ import {
 } from "@lodestar/state-transition";
 import * as epochFns from "@lodestar/state-transition/epoch";
 import {ssz} from "@lodestar/types";
+
 import {expect} from "vitest";
+
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {getConfig} from "../../utils/config.js";
 import {assertCorrectProgressiveBalances} from "../config.js";

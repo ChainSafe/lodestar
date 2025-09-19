@@ -1,4 +1,5 @@
 import {EFFECTIVE_BALANCE_INCREMENT} from "@lodestar/params";
+
 import {BeaconStateAllForks} from "../types.js";
 
 /**

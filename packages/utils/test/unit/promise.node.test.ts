@@ -1,4 +1,5 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+
 import {callFnWhenAwait} from "../../src/promise.js";
 
 // TODO: Need to debug why vi.useFakeTimers() is not working for the browsers

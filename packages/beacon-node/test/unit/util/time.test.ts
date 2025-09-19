@@ -1,4 +1,5 @@
 import {describe, expect, it} from "vitest";
+
 import {prettyTimeDiffSec} from "../../../src/util/time.js";
 
 describe("util / time / prettyTimeDiffSec", () => {

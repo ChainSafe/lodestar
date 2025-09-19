@@ -22,6 +22,7 @@ import {ApiError} from "@lodestar/api/server";
 import {Epoch} from "@lodestar/types";
 import {fromHex, isValidHttpUrl} from "@lodestar/utils";
 import {Interchange, SignerType, Validator} from "@lodestar/validator";
+
 import {getPubkeyHexFromKeystore, isValidatePubkeyHex} from "../../../util/format.js";
 import {parseFeeRecipient} from "../../../util/index.js";
 import {DecryptKeystoresThreadPool} from "./decryptKeystores/index.js";

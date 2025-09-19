@@ -1,4 +1,5 @@
 import {ssz} from "@lodestar/types";
+
 import {Endpoints, NodePeer} from "../../../../src/beacon/routes/node.js";
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 

@@ -1,5 +1,7 @@
 import {MAX_BLOB_COMMITMENTS_PER_BLOCK} from "@lodestar/params";
+
 import {describe, expect, it} from "vitest";
+
 import {chainConfig} from "../../src/default.js";
 import {BlobSchedule, chainConfigFromJson, chainConfigToJson} from "../../src/index.js";
 

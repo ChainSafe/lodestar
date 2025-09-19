@@ -10,6 +10,7 @@ import {
   SYNC_COMMITTEE_SUBNET_COUNT,
   VALIDATOR_REGISTRY_LIMIT,
 } from "@lodestar/params";
+
 import * as phase0Ssz from "../phase0/sszTypes.js";
 import * as primitiveSsz from "../primitive/sszTypes.js";
 

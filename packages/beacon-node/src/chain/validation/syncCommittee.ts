@@ -2,6 +2,7 @@ import {SYNC_COMMITTEE_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {SubnetID, altair} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
+
 import {GossipAction, SyncCommitteeError, SyncCommitteeErrorCode} from "../errors/index.js";
 import {IBeaconChain} from "../interface.js";
 import {getSyncCommitteeSignatureSet} from "./signatureSets/index.js";

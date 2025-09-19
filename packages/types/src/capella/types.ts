@@ -1,4 +1,5 @@
 import {ValueOf} from "@chainsafe/ssz";
+
 import * as ssz from "./sszTypes.js";
 
 export type Withdrawal = ValueOf<typeof ssz.Withdrawal>;

@@ -1,4 +1,5 @@
 import path from "node:path";
+
 import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {

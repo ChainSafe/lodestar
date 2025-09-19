@@ -1,10 +1,12 @@
-import {PeerId} from "@libp2p/interface";
 import {getEmptyLogger} from "@lodestar/logger/empty";
 import {LodestarError, sleep} from "@lodestar/utils";
+
+import {PeerId} from "@libp2p/interface";
 import all from "it-all";
 import {pipe} from "it-pipe";
 import {Libp2p} from "libp2p";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+
 import {RespStatus} from "../../../src/interface.js";
 import {RequestError, RequestErrorCode, SendRequestOpts, sendRequest} from "../../../src/request/index.js";
 import {MixedProtocol, Protocol, ResponseIncoming} from "../../../src/types.js";

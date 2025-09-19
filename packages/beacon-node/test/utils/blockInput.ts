@@ -1,5 +1,6 @@
 import {ForkName} from "@lodestar/params";
 import {SignedBeaconBlock} from "@lodestar/types";
+
 import {
   AddBlock,
   BlockInputSource,

@@ -1,5 +1,6 @@
 import {ForkSeq, MAX_DEPOSITS} from "@lodestar/params";
 import {UintNum64, phase0} from "@lodestar/types";
+
 import {CachedBeaconStateAllForks, CachedBeaconStateElectra} from "../types.js";
 
 export function getEth1DepositCount(state: CachedBeaconStateAllForks, eth1Data?: phase0.Eth1Data): UintNum64 {

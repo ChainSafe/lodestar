@@ -1,6 +1,8 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {DasContextJs} from "@crate-crypto/node-eth-kzg";
 import {InputType} from "@lodestar/spec-test-util";
+
+import {DasContextJs} from "@crate-crypto/node-eth-kzg";
+
 import {TestRunnerFn} from "../utils/types.js";
 
 const kzg = DasContextJs.create({usePrecomp: true});

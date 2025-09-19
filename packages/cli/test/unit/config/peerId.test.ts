@@ -1,5 +1,6 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {describe, expect, it} from "vitest";
+
 import {readPrivateKey, writePrivateKey} from "../../../src/config/index.js";
 import {getTestdirPath} from "../../utils.js";
 

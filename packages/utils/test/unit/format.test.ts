@@ -1,4 +1,5 @@
 import {describe, expect, it} from "vitest";
+
 import {formatBigDecimal, groupSequentialIndices, prettyPrintIndices} from "../../src/format.js";
 
 describe("format", () => {

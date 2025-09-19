@@ -18,6 +18,7 @@ import {
 } from "@lodestar/types";
 import {ValidatorRegistrationV1} from "@lodestar/types/bellatrix";
 import {fetch, toHex, toRootHex} from "@lodestar/utils";
+
 import {PubkeyHex} from "../types.js";
 
 export enum SignableMessageType {

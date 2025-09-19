@@ -1,5 +1,7 @@
 import path from "node:path";
+
 import {ModuleThread, Pool, QueuedTask, Worker, spawn} from "@chainsafe/threads";
+
 import {maxPoolSize} from "./poolSize.js";
 import {DecryptKeystoreArgs, DecryptKeystoreWorkerAPI} from "./types.js";
 

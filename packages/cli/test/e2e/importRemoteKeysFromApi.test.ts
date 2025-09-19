@@ -1,13 +1,16 @@
 import path from "node:path";
+
 import {HttpStatusCode} from "@lodestar/api";
 import {ApiClient, DeleteRemoteKeyStatus, ImportRemoteKeyStatus, getClient} from "@lodestar/api/keymanager";
 import {config} from "@lodestar/config/default";
+
 import {rimraf} from "rimraf";
 import {beforeAll, describe, expect, it, onTestFinished, vi} from "vitest";
-import {testFilesDir} from "../utils.js";
+
 import {cachedPubkeysHex} from "../utils/cachedKeys.js";
 import {expectDeepEquals} from "../utils/runUtils.js";
 import {startValidatorWithKeyManager} from "../utils/validator.js";
+import {testFilesDir} from "../utils.js";
 
 const url = "https://remote.signer";
 

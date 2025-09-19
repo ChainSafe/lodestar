@@ -1,4 +1,5 @@
 import {PeerId} from "@libp2p/interface";
+
 import {GoodByeReasonCode} from "../../../constants/network.js";
 import {PeerIdStr} from "../../../util/peerId.js";
 import {NetworkCoreMetrics} from "../../core/metrics.js";

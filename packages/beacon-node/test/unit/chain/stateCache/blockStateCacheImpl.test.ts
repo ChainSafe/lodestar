@@ -2,7 +2,9 @@ import {toHexString} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {EpochShuffling} from "@lodestar/state-transition";
 import {Root} from "@lodestar/types";
+
 import {beforeEach, describe, expect, it} from "vitest";
+
 import {BlockStateCacheImpl} from "../../../../src/chain/stateCache/index.js";
 import {ZERO_HASH} from "../../../../src/constants/index.js";
 import {generateCachedState} from "../../../utils/state.js";

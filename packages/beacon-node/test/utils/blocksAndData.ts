@@ -1,7 +1,6 @@
 import {randomBytes} from "node:crypto";
+
 import {SIGNATURE_LENGTH_UNCOMPRESSED} from "@chainsafe/blst";
-import {BYTES_PER_BLOB, BYTES_PER_FIELD_ELEMENT} from "@crate-crypto/node-eth-kzg";
-import {generateKeyPair} from "@libp2p/crypto/keys";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {
   ForkPostCapella,
@@ -15,13 +14,17 @@ import {
 import {computeStartSlotAtEpoch, signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {SignedBeaconBlock, Slot, deneb, fulu, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
+
+import {BYTES_PER_BLOB, BYTES_PER_FIELD_ELEMENT} from "@crate-crypto/node-eth-kzg";
+import {generateKeyPair} from "@libp2p/crypto/keys";
+
 import {VersionedHashes} from "../../src/execution/index.js";
 import {computeNodeIdFromPrivateKey} from "../../src/network/subnets/index.js";
 import {getBlobSidecars, kzgCommitmentToVersionedHash} from "../../src/util/blobs.js";
+import {Clock} from "../../src/util/clock.js";
 import {CustodyConfig, computePostFuluKzgCommitmentsInclusionProof} from "../../src/util/dataColumns.js";
 import {kzg} from "../../src/util/kzg.js";
 import {ROOT_SIZE} from "../../src/util/sszBytes.js";
-import {Clock} from "../../src/util/clock.js";
 
 export const CAPELLA_FORK_EPOCH = 0;
 export const DENEB_FORK_EPOCH = 10;

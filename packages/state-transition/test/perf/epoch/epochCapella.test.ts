@@ -1,5 +1,6 @@
 import {bench, describe, setBenchOpts} from "@chainsafe/benchmark";
 import {ForkSeq} from "@lodestar/params";
+
 import {processEpoch} from "../../../src/epoch/index.js";
 import {processEffectiveBalanceUpdates} from "../../../src/epoch/processEffectiveBalanceUpdates.js";
 import {processEth1DataReset} from "../../../src/epoch/processEth1DataReset.js";

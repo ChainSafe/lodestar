@@ -1,4 +1,5 @@
 import {CliCommandOptions, CliOptionDefinition} from "@lodestar/utils";
+
 import {MetricsArgs, options as metricsOptions} from "../../options/beaconNodeOptions/metrics.js";
 import {defaultListenAddress, defaultListenAddress6, defaultP2pPort} from "../../options/beaconNodeOptions/network.js";
 import {LogArgs, logOptions} from "../../options/logOptions.js";

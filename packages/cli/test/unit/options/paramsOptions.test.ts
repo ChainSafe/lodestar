@@ -1,4 +1,5 @@
 import {describe, expect, it} from "vitest";
+
 import {IBeaconParamsUnparsed} from "../../../src/config/types.js";
 import {parseBeaconParamsArgs} from "../../../src/options/paramsOptions.js";
 

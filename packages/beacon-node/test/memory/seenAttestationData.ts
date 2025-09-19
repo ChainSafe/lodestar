@@ -1,5 +1,7 @@
 import crypto from "node:crypto";
+
 import {toHexString} from "@chainsafe/ssz";
+
 import {AttestationDataCacheEntry, SeenAttestationDatas} from "../../src/chain/seenCache/seenAttestationData.js";
 import {testRunnerMemory} from "./testRunnerMemory.js";
 

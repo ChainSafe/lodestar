@@ -1,5 +1,7 @@
 import {ContainerType} from "@chainsafe/ssz";
+
 import {describe, expect, it} from "vitest";
+
 import {ssz} from "../../../src/index.js";
 import {ValidatorType} from "../../../src/phase0/validator.js";
 

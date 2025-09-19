@@ -18,6 +18,7 @@ import {
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
+
 import {
   BeaconBlocksByRootRequest,
   BeaconBlocksByRootRequestType,

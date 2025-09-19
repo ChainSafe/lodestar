@@ -2,6 +2,7 @@ import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lo
 import {upgradeLightClientHeader} from "@lodestar/light-client/spec";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {LightClientHeader, ssz} from "@lodestar/types";
+
 import {beforeEach, describe, expect, it} from "vitest";
 
 describe("UpgradeLightClientHeader", () => {

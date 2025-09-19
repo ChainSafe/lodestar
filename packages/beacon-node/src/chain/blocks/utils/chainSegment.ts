@@ -1,5 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ssz} from "@lodestar/types";
+
 import {BlockError, BlockErrorCode} from "../../errors/index.js";
 import {IBlockInput} from "../blockInput/types.js";
 

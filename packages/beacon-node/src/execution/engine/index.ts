@@ -1,4 +1,5 @@
 import {fromHex, toPrintableUrl} from "@lodestar/utils";
+
 import {JsonRpcHttpClient} from "../../eth1/provider/jsonRpcHttpClient.js";
 import {ExecutionEngineDisabled} from "./disabled.js";
 import {

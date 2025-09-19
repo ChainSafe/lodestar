@@ -8,6 +8,7 @@ import {
   computeStartSlotAtEpoch,
 } from "@lodestar/state-transition";
 import {Slot, SubnetID, phase0, ssz} from "@lodestar/types";
+
 import {
   generateTestCachedBeaconStateOnlyValidators,
   getSecretKeyFromIndexCached,

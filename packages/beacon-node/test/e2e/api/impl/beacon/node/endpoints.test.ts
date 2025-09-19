@@ -3,7 +3,9 @@ import {ApiClient, getClient} from "@lodestar/api/beacon";
 import {createBeaconConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {sleep} from "@lodestar/utils";
+
 import {afterAll, beforeAll, describe, expect, it, vi} from "vitest";
+
 import {BeaconNode} from "../../../../../../src/node/nodejs.js";
 import {LogLevel, testLogger} from "../../../../../utils/logger.js";
 import {getDevBeaconNode} from "../../../../../utils/node/beacon.js";

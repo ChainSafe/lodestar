@@ -1,4 +1,5 @@
 import {ByteViews, ContainerNodeStructType, ValueOfFields} from "@chainsafe/ssz";
+
 import * as primitiveSsz from "../primitive/sszTypes.js";
 
 // biome-ignore lint/suspicious/noShadowRestrictedNames: We explicitly want `Boolean` name to be imported

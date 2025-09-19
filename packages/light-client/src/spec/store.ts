@@ -1,6 +1,7 @@
 import type {PublicKey} from "@chainsafe/bls/types";
 import {BeaconConfig} from "@lodestar/config";
 import {LightClientBootstrap, LightClientHeader, LightClientUpdate, SyncPeriod} from "@lodestar/types";
+
 import {computeSyncPeriodAtSlot, deserializeSyncCommittee} from "../utils/index.js";
 import {LightClientUpdateSummary} from "./isBetterUpdate.js";
 

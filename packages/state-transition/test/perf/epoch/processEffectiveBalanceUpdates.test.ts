@@ -2,6 +2,7 @@ import {bench, describe} from "@chainsafe/benchmark";
 import {config} from "@lodestar/config/default";
 import {ForkSeq} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
+
 import {processEffectiveBalanceUpdates} from "../../../src/epoch/processEffectiveBalanceUpdates.js";
 import {CachedBeaconStateAllForks, EpochTransitionCache, beforeProcessEpoch} from "../../../src/index.js";
 import {createCachedBeaconStateTest} from "../../utils/state.js";

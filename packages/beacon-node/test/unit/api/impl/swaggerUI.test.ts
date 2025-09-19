@@ -1,4 +1,5 @@
 import {describe, expect, it} from "vitest";
+
 import {getFavicon, getLogo} from "../../../../src/api/rest/swaggerUI.js";
 
 describe("swaggerUI", () => {

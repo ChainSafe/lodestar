@@ -1,5 +1,7 @@
 import {MapDef} from "@lodestar/utils";
+
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+
 import {
   PeerAction,
   PeerRpcScoreStore,

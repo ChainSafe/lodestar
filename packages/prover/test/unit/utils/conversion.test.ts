@@ -1,4 +1,5 @@
 import {describe, expect, it} from "vitest";
+
 import {chunkIntoN} from "../../../src/utils/conversion.js";
 
 describe("utils/conversion", () => {

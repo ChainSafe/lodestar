@@ -1,13 +1,14 @@
-import {Logger} from "@lodestar/utils";
-import {IExecutionEngine} from "../execution/index.js";
-import {ChainEventEmitter} from "./emitter.js";
-import {Metrics} from "../metrics/metrics.js";
 import {ChainForkConfig} from "@lodestar/config";
-import {IBlockInput, isBlockInputBlobs} from "./blocks/blockInput/index.js";
-import {getBlobSidecarsFromExecution, getDataColumnSidecarsFromExecution} from "../util/execution.js";
-import {callInNextEventLoop} from "../util/eventLoop.js";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
+import {Logger} from "@lodestar/utils";
+
 import {BLOB_AND_PROOF_V2_RPC_BYTES} from "../execution/engine/types.js";
+import {IExecutionEngine} from "../execution/index.js";
+import {Metrics} from "../metrics/metrics.js";
+import {callInNextEventLoop} from "../util/eventLoop.js";
+import {getBlobSidecarsFromExecution, getDataColumnSidecarsFromExecution} from "../util/execution.js";
+import {IBlockInput, isBlockInputBlobs} from "./blocks/blockInput/index.js";
+import {ChainEventEmitter} from "./emitter.js";
 
 export type GetBlobsTrackerInit = {
   logger: Logger;

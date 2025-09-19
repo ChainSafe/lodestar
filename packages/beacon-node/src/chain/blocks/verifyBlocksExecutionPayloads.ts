@@ -20,15 +20,14 @@ import {Slot, bellatrix, electra} from "@lodestar/types";
 import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
 
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
-import {IExecutionEngine} from "../../execution/engine/interface.js";
-import {ExecutionPayloadStatus} from "../../execution/engine/interface.js";
+import {ExecutionPayloadStatus, IExecutionEngine} from "../../execution/engine/interface.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {IClock} from "../../util/clock.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
-import {ImportBlockOpts} from "./types.js";
-import {IBlockInput} from "./blockInput/types.js";
 import {isBlockInputBlobs, isBlockInputColumns} from "./blockInput/blockInput.js";
+import {IBlockInput} from "./blockInput/types.js";
+import {ImportBlockOpts} from "./types.js";
 
 export type VerifyBlockExecutionPayloadModules = {
   eth1: IEth1ForBlockProduction;

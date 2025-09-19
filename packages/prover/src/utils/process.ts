@@ -1,4 +1,5 @@
 import {Logger} from "@lodestar/logger";
+
 import {ELVerifiedRequestHandler} from "../interfaces.js";
 import {ProofProvider} from "../proof_provider/proof_provider.js";
 import {JsonRpcBatchRequest, JsonRpcBatchResponse, JsonRpcRequestOrBatch, JsonRpcResponseOrBatch} from "../types.js";

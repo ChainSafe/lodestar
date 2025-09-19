@@ -1,7 +1,9 @@
 import {config} from "@lodestar/config/default";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Epoch, Slot} from "@lodestar/types";
+
 import {describe, expect, it} from "vitest";
+
 import {Batch, BatchStatus} from "../../../../../src/sync/range/batch.js";
 import {
   getNextBatchToProcess,
@@ -10,8 +12,8 @@ import {
   validateBatchesStatus,
 } from "../../../../../src/sync/range/utils/batches.js";
 import {CustodyConfig} from "../../../../../src/util/dataColumns.js";
-import {validPeerIdStr} from "../../../../utils/peer.js";
 import {clock} from "../../../../utils/blocksAndData.js";
+import {validPeerIdStr} from "../../../../utils/peer.js";
 
 describe("sync / range / batches", () => {
   const peer = validPeerIdStr;

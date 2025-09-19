@@ -1,6 +1,7 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ValidatorIndex} from "@lodestar/types";
 import {Logger, MapDef, toPubkeyHex} from "@lodestar/utils";
+
 import {Metrics} from "../metrics.js";
 import {batchItems} from "../util/index.js";
 

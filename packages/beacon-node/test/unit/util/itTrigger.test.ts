@@ -1,5 +1,6 @@
 import all from "it-all";
 import {describe, expect, it} from "vitest";
+
 import {ItTrigger} from "../../../src/util/itTrigger.js";
 
 describe("util / itTrigger", () => {

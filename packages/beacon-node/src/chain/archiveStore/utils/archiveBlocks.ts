@@ -1,4 +1,5 @@
 import path from "node:path";
+
 import {ChainForkConfig} from "@lodestar/config";
 import {KeyValue} from "@lodestar/db";
 import {IForkChoice} from "@lodestar/fork-choice";
@@ -6,6 +7,7 @@ import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot} from "@lodestar/types";
 import {Logger, fromAsync, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
+
 import {IBeaconDb} from "../../../db/index.js";
 import {BlockArchiveBatchPutBinaryItem} from "../../../db/repositories/index.js";
 import {ensureDir, writeIfNotExist} from "../../../util/file.js";

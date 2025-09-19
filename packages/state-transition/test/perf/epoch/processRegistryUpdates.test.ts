@@ -1,5 +1,6 @@
 import {bench, describe} from "@chainsafe/benchmark";
 import {ForkSeq} from "@lodestar/params";
+
 import {processRegistryUpdates} from "../../../src/epoch/processRegistryUpdates.js";
 import {CachedBeaconStateAllForks, EpochTransitionCache, beforeProcessEpoch} from "../../../src/index.js";
 import {StateEpoch} from "../types.js";

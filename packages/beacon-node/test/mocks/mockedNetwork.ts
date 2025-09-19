@@ -1,4 +1,5 @@
 import {Mocked, vi} from "vitest";
+
 import {INetwork, Network} from "../../src/network/index.js";
 
 vi.mock("../../src/network/index.js", async (importActual) => {

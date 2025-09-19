@@ -21,6 +21,7 @@ setHasher(hashtreeHasher);
 
 // IMPORTANT: only import Lodestar code here which does not import any other Lodestar libraries
 import {PresetName, presetFromJson, setActivePreset} from "@lodestar/params/setPreset";
+
 import {readFile} from "./util/file.js";
 
 const network = valueOfArg("network");

@@ -10,6 +10,7 @@ import {
 } from "@lodestar/state-transition";
 import {BLSSignature, Epoch, Slot, SyncPeriod, ValidatorIndex} from "@lodestar/types";
 import {toPubkeyHex} from "@lodestar/utils";
+
 import {Metrics} from "../metrics.js";
 import {PubkeyHex} from "../types.js";
 import {IClock, LoggerVc} from "../util/index.js";

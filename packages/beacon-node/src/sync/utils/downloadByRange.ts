@@ -2,6 +2,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {ForkPostDeneb, ForkPostFulu} from "@lodestar/params";
 import {SignedBeaconBlock, Slot, deneb, fulu, phase0} from "@lodestar/types";
 import {LodestarError, Logger, fromHex, prettyBytes, prettyPrintIndices, toRootHex} from "@lodestar/utils";
+
 import {
   BlockInputSource,
   DAType,
@@ -14,8 +15,8 @@ import {validateBlockBlobSidecars} from "../../chain/validation/blobSidecar.js";
 import {validateBlockDataColumnSidecars} from "../../chain/validation/dataColumnSidecar.js";
 import {INetwork} from "../../network/index.js";
 import {PeerIdStr} from "../../util/peerId.js";
-import {DownloadByRootErrorCode} from "./downloadByRoot.js";
 import {WarnResult} from "../../util/wrapError.js";
+import {DownloadByRootErrorCode} from "./downloadByRoot.js";
 
 export type DownloadByRangeRequests = {
   blocksRequest?: phase0.BeaconBlocksByRangeRequest;

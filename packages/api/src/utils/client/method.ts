@@ -1,4 +1,5 @@
 import {mapValues} from "@lodestar/utils";
+
 import {Endpoint, HasOnlyOptionalProps, RouteDefinition, RouteDefinitions} from "../types.js";
 import {compileRouteUrlFormatter} from "../urlFormat.js";
 import {IHttpClient} from "./httpClient.js";

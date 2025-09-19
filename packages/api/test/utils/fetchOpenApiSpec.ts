@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import {fetch} from "@lodestar/utils";
+
 import {OpenApiFile, OpenApiJson} from "./parseOpenApiSpec.js";
 
 export async function fetchOpenApiSpec(openApiFile: OpenApiFile): Promise<OpenApiJson> {

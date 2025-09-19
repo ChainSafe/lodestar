@@ -1,4 +1,5 @@
 import {CliCommandOptions} from "@lodestar/utils";
+
 import {IValidatorCliArgs, validatorOptions} from "../options.js";
 
 export type ISlashingProtectionArgs = Pick<IValidatorCliArgs, "beaconNodes"> & {

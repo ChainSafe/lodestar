@@ -9,6 +9,7 @@ import {
   MIN_ACTIVATION_BALANCE,
   TIMELY_TARGET_FLAG_INDEX,
 } from "@lodestar/params";
+
 import {BeaconStateAltair, CachedBeaconStateAllForks, EpochTransitionCache} from "../types.js";
 
 /** Same to https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/beacon-chain.md#has_flag */

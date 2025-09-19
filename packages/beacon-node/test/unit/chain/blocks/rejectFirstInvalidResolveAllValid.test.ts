@@ -1,4 +1,5 @@
 import {describe, expect, it} from "vitest";
+
 import {rejectFirstInvalidResolveAllValid} from "../../../../src/chain/blocks/verifyBlocksSignatures.js";
 
 describe("chain / blocks / rejectFirstInvalidResolveAllValid", () => {

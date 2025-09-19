@@ -1,4 +1,5 @@
 import {describe, expect, it} from "vitest";
+
 import {decodeJwtToken, encodeJwtToken} from "../../../src/eth1/provider/jwt.js";
 
 describe("ExecutionEngine / jwt", () => {

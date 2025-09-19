@@ -12,7 +12,9 @@ import {
 } from "@lodestar/params";
 import {computeSigningRoot} from "@lodestar/state-transition";
 import {capella, ssz} from "@lodestar/types";
+
 import {afterEach, beforeEach, describe, it, vi} from "vitest";
+
 import {BlsToExecutionChangeErrorCode} from "../../../../src/chain/errors/blsToExecutionChangeError.js";
 import {validateGossipBlsToExecutionChange} from "../../../../src/chain/validation/blsToExecutionChange.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";

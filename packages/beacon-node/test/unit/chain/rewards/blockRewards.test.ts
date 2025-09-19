@@ -6,7 +6,9 @@ import {
   stateTransition,
 } from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
+
 import {describe, expect, it, vi} from "vitest";
+
 import {BlockAltairOpts, getBlockAltair} from "../../../../../state-transition/test/perf/block/util.js";
 import {
   cachedStateAltairPopulateCaches,

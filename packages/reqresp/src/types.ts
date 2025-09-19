@@ -1,7 +1,9 @@
-import {PeerId} from "@libp2p/interface";
 import {BeaconConfig, ForkBoundary} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {LodestarError} from "@lodestar/utils";
+
+import {PeerId} from "@libp2p/interface";
+
 import {RateLimiterQuota} from "./rate_limiter/rateLimiterGRCA.js";
 
 export const protocolPrefix = "/eth2/beacon_chain/req";

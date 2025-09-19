@@ -1,5 +1,7 @@
 import {writeFile} from "node:fs/promises";
+
 import {BeaconStateAllForks} from "@lodestar/state-transition";
+
 import {EL_ENGINE_BASE_PORT, SHARED_JWT_SECRET} from "../../constants.js";
 import {AtLeast, BeaconClient, BeaconGeneratorOptions, BeaconNode} from "../../interfaces.js";
 import {makeUniqueArray} from "../../utils/index.js";

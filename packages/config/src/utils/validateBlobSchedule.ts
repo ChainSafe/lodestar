@@ -1,4 +1,5 @@
 import {MAX_BLOB_COMMITMENTS_PER_BLOCK} from "@lodestar/params";
+
 import {BlobSchedule} from "../chainConfig/types.js";
 
 export function validateBlobSchedule(blobSchedule: BlobSchedule): void {

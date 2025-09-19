@@ -1,9 +1,13 @@
 import {EventEmitter} from "node:events";
+
 import {BeaconConfig} from "@lodestar/config";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, Status, fulu} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
+
 import {StrictEventEmitter} from "strict-event-emitter-types";
+
+import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
 import {AttestationImportOpt, ImportBlockOpts} from "../../chain/blocks/index.js";
 import {IBeaconChain} from "../../chain/index.js";
 import {Metrics} from "../../metrics/index.js";
@@ -13,7 +17,6 @@ import {cacheByRangeResponses, downloadByRange} from "../utils/downloadByRange.j
 import {RangeSyncType, getRangeSyncTarget, rangeSyncTypes} from "../utils/remoteSyncType.js";
 import {ChainTarget, SyncChain, SyncChainDebugState, SyncChainFns} from "./chain.js";
 import {updateChains} from "./utils/index.js";
-import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
 
 export enum RangeSyncEvent {
   completedChain = "RangeSync-completedChain",

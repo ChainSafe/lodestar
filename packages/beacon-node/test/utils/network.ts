@@ -1,9 +1,11 @@
 import {BitArray} from "@chainsafe/ssz";
-import {generateKeyPair} from "@libp2p/crypto/keys";
-import {PrivateKey} from "@libp2p/interface";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {SubnetID} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
+
+import {generateKeyPair} from "@libp2p/crypto/keys";
+import {PrivateKey} from "@libp2p/interface";
+
 import {INetwork, Network, NetworkEvent} from "../../src/network/index.js";
 import {Libp2p} from "../../src/network/interface.js";
 import {createNodeJsLibp2p} from "../../src/network/libp2p/index.js";

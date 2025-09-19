@@ -1,4 +1,5 @@
 import {CliCommand} from "@lodestar/utils";
+
 import {GlobalArgs} from "../../options/index.js";
 import {blsToExecutionChange} from "./blsToExecutionChange.js";
 import {validatorHandler} from "./handler.js";

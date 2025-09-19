@@ -1,6 +1,7 @@
 import {BeaconConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {ContextBytesFactory, ContextBytesType, Encoding} from "@lodestar/reqresp";
+
 import {rateLimitQuotas} from "./rateLimit.js";
 import {ProtocolNoHandler, ReqRespMethod, Version, requestSszTypeByMethod, responseSszTypeByMethod} from "./types.js";
 

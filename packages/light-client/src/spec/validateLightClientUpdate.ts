@@ -15,6 +15,7 @@ import {
   NEXT_SYNC_COMMITTEE_INDEX_ELECTRA,
 } from "@lodestar/params";
 import {LightClientUpdate, Root, isElectraLightClientUpdate, ssz} from "@lodestar/types";
+
 import {SyncCommitteeFast} from "../types.js";
 import {isValidMerkleBranch} from "../utils/index.js";
 import {getParticipantPubkeys, sumBits} from "../utils/utils.js";

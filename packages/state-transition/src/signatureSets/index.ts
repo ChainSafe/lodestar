@@ -1,5 +1,6 @@
 import {ForkSeq} from "@lodestar/params";
 import {SignedBeaconBlock, altair, capella} from "@lodestar/types";
+
 import {getSyncCommitteeSignatureSet} from "../block/processSyncCommittee.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../types.js";
 import {ISignatureSet} from "../util/index.js";
@@ -12,12 +13,12 @@ import {getRandaoRevealSignatureSet} from "./randao.js";
 import {getVoluntaryExitsSignatureSets} from "./voluntaryExits.js";
 
 export * from "./attesterSlashings.js";
+export * from "./blsToExecutionChange.js";
 export * from "./indexedAttestation.js";
 export * from "./proposer.js";
 export * from "./proposerSlashings.js";
 export * from "./randao.js";
 export * from "./voluntaryExits.js";
-export * from "./blsToExecutionChange.js";
 
 /**
  * Includes all signatures on the block (except the deposit signatures) for verification.

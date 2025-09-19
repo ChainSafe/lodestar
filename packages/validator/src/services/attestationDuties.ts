@@ -3,6 +3,7 @@ import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, isAggregatorFromCommitteeLength, isStartSlotOfEpoch} from "@lodestar/state-transition";
 import {BLSSignature, Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {sleep, toPubkeyHex} from "@lodestar/utils";
+
 import {Metrics} from "../metrics.js";
 import {PubkeyHex} from "../types.js";
 import {IClock, LoggerVc, batchItems} from "../util/index.js";

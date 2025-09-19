@@ -1,4 +1,5 @@
 import {describe, expect, it} from "vitest";
+
 import {MinMaxSurround, MinMaxSurroundAttestation} from "../../../../src/slashingProtection/minMaxSurround/index.js";
 import {DistanceStoreMemory, emptyPubkey, storeToSpansPerEpoch} from "./utils.js";
 

@@ -1,4 +1,5 @@
 import {BLSPubkey} from "@lodestar/types";
+
 import {SurroundAttestationError, SurroundAttestationErrorCode} from "./errors.js";
 import {DistanceEntry, IDistanceStore, IMinMaxSurround, MinMaxSurroundAttestation} from "./interface.js";
 

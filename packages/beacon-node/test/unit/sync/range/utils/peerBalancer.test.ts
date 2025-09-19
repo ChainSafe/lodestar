@@ -3,7 +3,9 @@ import {chainConfig} from "@lodestar/config/default";
 import {ZERO_HASH} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
+
 import {describe, expect, it} from "vitest";
+
 import {BlockInputColumns} from "../../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../../../src/chain/blocks/blockInput/types.js";
 import {Batch} from "../../../../../src/sync/range/batch.js";
@@ -12,8 +14,8 @@ import {ChainPeersBalancer, PeerSyncInfo} from "../../../../../src/sync/range/ut
 import {RangeSyncType} from "../../../../../src/sync/utils/remoteSyncType.js";
 import {CustodyConfig} from "../../../../../src/util/dataColumns.js";
 import {PeerIdStr} from "../../../../../src/util/peerId.js";
-import {getRandPeerSyncMeta} from "../../../../utils/peer.js";
 import {clock} from "../../../../utils/blocksAndData.js";
+import {getRandPeerSyncMeta} from "../../../../utils/peer.js";
 
 describe("sync / range / peerBalancer", () => {
   const custodyConfig = {sampledColumns: [0, 1, 2, 3]} as CustodyConfig;

@@ -1,4 +1,5 @@
 import {Logger} from "@lodestar/utils";
+
 import {ProofProvider} from "../proof_provider/proof_provider.js";
 import {ELBlock, ELProof, HexString, JsonRpcRequest} from "../types.js";
 import {bufferToHex} from "./conversion.js";

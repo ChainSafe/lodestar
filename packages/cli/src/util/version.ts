@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
+
 import {findUpSync} from "find-up";
+
 import {readAndGetGitData} from "./gitData/index.js";
 
 // Global variable __dirname no longer available in ES6 modules.

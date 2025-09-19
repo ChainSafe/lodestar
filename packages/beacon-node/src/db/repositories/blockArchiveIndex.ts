@@ -2,6 +2,7 @@ import {Db, encodeKey} from "@lodestar/db";
 import {ForkAll} from "@lodestar/params";
 import {Root, SSZTypesFor, SignedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {intToBytes} from "@lodestar/utils";
+
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 export const rootIndexBucketId = getBucketNameByValue(Bucket.index_blockArchiveRootIndex);

@@ -1,4 +1,5 @@
 import {describe, expect, it} from "vitest";
+
 import {assertConsecutiveDeposits} from "../../../../src/eth1/utils/eth1DepositEvent.js";
 
 describe("eth1 / util / assertConsecutiveDeposits", () => {

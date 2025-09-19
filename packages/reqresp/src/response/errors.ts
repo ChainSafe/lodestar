@@ -1,4 +1,5 @@
 import {LodestarError, LodestarErrorMetaData, LodestarErrorObject} from "@lodestar/utils";
+
 import {RespStatus, RpcResponseStatusError} from "../interface.js";
 
 type RpcResponseStatusNotSuccess = Exclude<RespStatus, RespStatus.SUCCESS>;

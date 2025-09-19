@@ -2,6 +2,7 @@ import {CompactMultiProof, ProofType, createProof} from "@chainsafe/persistent-m
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {loadState} from "@lodestar/state-transition";
+
 import {ApiOptions} from "../../options.js";
 import {getBlockResponse} from "../beacon/blocks/utils.js";
 import {getStateResponseWithRegen} from "../beacon/state/utils.js";

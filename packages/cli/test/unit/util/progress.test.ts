@@ -1,4 +1,5 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+
 import {showProgress} from "../../../src/util/progress.js";
 
 describe("progress", () => {

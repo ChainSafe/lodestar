@@ -1,4 +1,5 @@
 import {phase0, ssz} from "@lodestar/types";
+
 import {IBeaconDb} from "../../../db/interface.js";
 import {CPStateDatastore, DatastoreKey} from "./types.js";
 

@@ -1,4 +1,5 @@
 import {describe, expect, it} from "vitest";
+
 import {IntersectResult, intersectUint8Arrays} from "../../../src/util/bitArray.js";
 
 describe("util / bitArray / intersectUint8Arrays", () => {

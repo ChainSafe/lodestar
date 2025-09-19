@@ -1,4 +1,5 @@
 import {FAR_FUTURE_EPOCH} from "@lodestar/params";
+
 import {Epoch, phase0} from "../types.js";
 
 /**

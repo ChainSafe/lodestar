@@ -1,11 +1,13 @@
+import {NetworkName} from "@lodestar/config/networks";
+import {ExecutionPayload} from "@lodestar/types";
+import {Logger} from "@lodestar/utils";
+
 import {Block, BlockHeader} from "@ethereumjs/block";
 import {Blockchain} from "@ethereumjs/blockchain";
 import {TransactionFactory} from "@ethereumjs/tx";
 import {Account, Address} from "@ethereumjs/util";
 import {RunTxResult, VM} from "@ethereumjs/vm";
-import {NetworkName} from "@lodestar/config/networks";
-import {ExecutionPayload} from "@lodestar/types";
-import {Logger} from "@lodestar/utils";
+
 import {ZERO_ADDRESS} from "../constants.js";
 import {ProofProvider} from "../proof_provider/proof_provider.js";
 import {ELBlock, ELProof, ELTransaction, JsonRpcVersion} from "../types.js";

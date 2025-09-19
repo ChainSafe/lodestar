@@ -1,6 +1,8 @@
 import {LevelDbController} from "@lodestar/db";
+
 import {rimraf} from "rimraf";
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
+
 import {
   InvalidAttestationError,
   InvalidBlockError,

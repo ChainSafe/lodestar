@@ -6,6 +6,7 @@ import {
   stateTransition,
 } from "@lodestar/state-transition";
 import {BeaconBlock, BlindedBeaconBlock, Gwei, Root} from "@lodestar/types";
+
 import {ZERO_HASH} from "../../constants/index.js";
 import {Metrics} from "../../metrics/index.js";
 

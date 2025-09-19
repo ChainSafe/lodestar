@@ -1,4 +1,5 @@
 import {CliCommand} from "@lodestar/utils";
+
 import {selfSlashAttester} from "./selfSlashAttester.js";
 import {selfSlashProposer} from "./selfSlashProposer.js";
 

@@ -1,4 +1,5 @@
 import {EPOCHS_PER_HISTORICAL_VECTOR} from "@lodestar/params";
+
 import {CachedBeaconStateAllForks, EpochTransitionCache} from "../types.js";
 
 /**

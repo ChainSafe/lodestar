@@ -1,4 +1,5 @@
 import {LodestarError} from "@lodestar/utils";
+
 import {LogData, LogFormat} from "../../src/index.js";
 
 type TestCase = {

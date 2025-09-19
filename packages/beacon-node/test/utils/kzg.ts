@@ -4,6 +4,7 @@ import {
   FIELD_ELEMENTS_PER_BLOB as FIELD_ELEMENTS_PER_BLOB_MAINNET,
 } from "@lodestar/params";
 import {bellatrix, deneb} from "@lodestar/types";
+
 import {kzgCommitmentToVersionedHash} from "../../src/util/blobs.js";
 
 export function transactionForKzgCommitment(kzgCommitment: deneb.KZGCommitment): bellatrix.Transaction {

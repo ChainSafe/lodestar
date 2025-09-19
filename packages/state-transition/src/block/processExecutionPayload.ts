@@ -2,6 +2,7 @@ import {byteArrayEquals} from "@chainsafe/ssz";
 import {ForkName, ForkSeq, isForkPostDeneb} from "@lodestar/params";
 import {BeaconBlockBody, BlindedBeaconBlockBody, deneb, isExecutionPayload} from "@lodestar/types";
 import {toHex, toRootHex} from "@lodestar/utils";
+
 import {CachedBeaconStateBellatrix, CachedBeaconStateCapella} from "../types.js";
 import {
   executionPayloadToPayloadHeader,

@@ -1,4 +1,5 @@
 import {MIN_EPOCHS_TO_INACTIVITY_PENALTY} from "@lodestar/params";
+
 import {CachedBeaconStateAllForks} from "../types.js";
 
 export function getFinalityDelay(state: CachedBeaconStateAllForks): number {

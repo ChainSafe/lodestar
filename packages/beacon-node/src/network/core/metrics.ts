@@ -1,4 +1,5 @@
 import {SubnetID} from "@lodestar/types";
+
 import {RegistryMetricCreator} from "../../metrics/utils/registryMetricCreator.js";
 import {Libp2pError} from "../libp2p/error.js";
 import {SubnetType} from "../metadata.js";

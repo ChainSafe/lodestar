@@ -12,6 +12,7 @@ import {
   SYNC_COMMITTEE_SIZE,
 } from "@lodestar/params";
 import {LightClientBootstrap, Slot, SyncPeriod, altair, phase0, ssz} from "@lodestar/types";
+
 import {SyncCommitteeFast} from "../../src/types.js";
 import {computeSigningRoot} from "../../src/utils/domain.js";
 import {getConsoleLogger} from "../../src/utils/logger.js";

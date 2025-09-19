@@ -1,7 +1,8 @@
 import {toHexString} from "@chainsafe/ssz";
+import {Root} from "@lodestar/types";
+
 import {Direction, ReadStatus, Stream, StreamStatus, WriteStatus} from "@libp2p/interface";
 import {logger} from "@libp2p/logger";
-import {Root} from "@lodestar/types";
 import {Uint8ArrayList} from "uint8arraylist";
 import {expect} from "vitest";
 

@@ -2,6 +2,7 @@ import {Signature} from "@chainsafe/blst";
 import {BLS_WITHDRAWAL_PREFIX} from "@lodestar/params";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {Slot, capella} from "@lodestar/types";
+
 import {AggregateFast, AggregateFastElectra} from "./attestationPool.js";
 
 /**

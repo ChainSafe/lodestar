@@ -2,14 +2,18 @@ import {ChainForkConfig} from "@lodestar/config";
 import {ForkPostDeneb, ForkPostFulu, ForkPreFulu, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
 import {BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
 import {LodestarError, fromHex, prettyBytes, prettyPrintIndices, toRootHex} from "@lodestar/utils";
+
 import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../../chain/blocks/blockInput/types.js";
 import {SeenBlockInput} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {validateBlockBlobSidecars} from "../../chain/validation/blobSidecar.js";
 import {validateBlockDataColumnSidecars} from "../../chain/validation/dataColumnSidecar.js";
 import {INetwork} from "../../network/interface.js";
+import {PeerSyncMeta} from "../../network/peers/peersData.js";
 import {prettyPrintPeerIdStr} from "../../network/util.js";
 import {byteArrayEquals} from "../../util/bytes.js";
+import {PeerIdStr} from "../../util/peerId.js";
+import {WarnResult} from "../../util/wrapError.js";
 import {
   BlockInputSyncCacheItem,
   PendingBlockInput,
@@ -17,9 +21,6 @@ import {
   getBlockInputSyncCacheItemRootHex,
   isPendingBlockInput,
 } from "../types.js";
-import {PeerSyncMeta} from "../../network/peers/peersData.js";
-import {PeerIdStr} from "../../util/peerId.js";
-import {WarnResult} from "../../util/wrapError.js";
 
 export type FetchByRootCoreProps = {
   config: ChainForkConfig;

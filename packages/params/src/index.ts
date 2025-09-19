@@ -5,9 +5,9 @@ import {mainnetPreset} from "./presets/mainnet.js";
 import {minimalPreset} from "./presets/minimal.js";
 import {userOverrides, userSelectedPreset} from "./setPreset.js";
 
-export type {BeaconPreset} from "./types.js";
 export * from "./forkName.js";
 export {presetToJson} from "./json.js";
+export type {BeaconPreset} from "./types.js";
 export {PresetName};
 
 const presets = {

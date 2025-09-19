@@ -1,6 +1,7 @@
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
+
 import {
   BlockHeaderResponse,
   BroadcastValidation,

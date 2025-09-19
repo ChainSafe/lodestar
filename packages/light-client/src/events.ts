@@ -1,5 +1,7 @@
-import {Emitter as MittEmitter} from "mitt";
 import {LightClientHeader} from "@lodestar/types";
+
+import {Emitter as MittEmitter} from "mitt";
+
 import {RunStatusCode} from "./index.js";
 
 export enum LightclientEvent {

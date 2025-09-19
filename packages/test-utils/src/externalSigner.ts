@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import {ForkSeq} from "@lodestar/params";
+
 import {GenericContainer, StartedTestContainer, Wait} from "testcontainers";
 import {dirSync as tmpDirSync} from "tmp";
 

@@ -4,6 +4,7 @@ import {
   getAttesterSlashingSignatureSets,
 } from "@lodestar/state-transition";
 import {AttesterSlashing} from "@lodestar/types";
+
 import {AttesterSlashingError, AttesterSlashingErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
 

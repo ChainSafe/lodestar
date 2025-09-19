@@ -3,6 +3,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {computeEpochAtSlot, isSyncCommitteeAggregator} from "@lodestar/state-transition";
 import {BLSSignature, CommitteeIndex, Root, Slot, altair} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
+
 import {Metrics} from "../metrics.js";
 import {PubkeyHex} from "../types.js";
 import {IClock, LoggerVc} from "../util/index.js";

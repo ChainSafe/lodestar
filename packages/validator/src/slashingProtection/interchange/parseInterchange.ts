@@ -1,4 +1,5 @@
 import {Root} from "@lodestar/types";
+
 import {isEqualRoot} from "../utils.js";
 import {InterchangeError, InterchangeErrorErrorCode} from "./errors.js";
 import {InterchangeCompleteV4, parseInterchangeCompleteV4} from "./formats/completeV4.js";

@@ -2,6 +2,7 @@ import {ApiClient, routes} from "@lodestar/api";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, ValidatorIndex} from "@lodestar/types";
 import {Logger, fromHex, sleep, truncBytes} from "@lodestar/utils";
+
 import {Metrics} from "../metrics.js";
 import {ISlashingProtection} from "../slashingProtection/index.js";
 import {ProcessShutdownCallback, PubkeyHex} from "../types.js";

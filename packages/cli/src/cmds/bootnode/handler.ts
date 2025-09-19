@@ -1,4 +1,5 @@
 import path from "node:path";
+
 import {Discv5, Discv5EventEmitter} from "@chainsafe/discv5";
 import {ENR, ENRData, SignableENR} from "@chainsafe/enr";
 import {
@@ -8,6 +9,8 @@ import {
   getHttpMetricsServer,
 } from "@lodestar/beacon-node";
 import {ErrorAborted, Logger} from "@lodestar/utils";
+
+import {PrivateKey} from "@libp2p/interface";
 import {Multiaddr, multiaddr} from "@multiformats/multiaddr";
 
 import {getBeaconConfigFromArgs} from "../../config/index.js";
@@ -22,7 +25,6 @@ import {initPrivateKeyAndEnr} from "../beacon/initPeerIdAndEnr.js";
 import {BeaconArgs} from "../beacon/options.js";
 import {getBeaconPaths} from "../beacon/paths.js";
 import {BootnodeArgs} from "./options.js";
-import {PrivateKey} from "@libp2p/interface";
 
 /**
  * Runs a bootnode.

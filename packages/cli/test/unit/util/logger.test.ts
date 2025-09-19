@@ -1,4 +1,5 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+
 import {shouldDeleteLogFile} from "../../../src/util/logger.js";
 
 describe("shouldDeleteLogFile", () => {

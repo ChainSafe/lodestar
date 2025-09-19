@@ -10,6 +10,7 @@ import {
 } from "@lodestar/params";
 import {altair} from "@lodestar/types";
 import {bigIntSqrt} from "@lodestar/utils";
+
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
 import {BeaconStateAllForks} from "../types.js";
 import {getNextSyncCommitteeIndices} from "./seed.js";

@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import {fromHex} from "@lodestar/utils";
+
 import yaml from "js-yaml";
 
 interface BlobCellAndProofMock {

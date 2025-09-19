@@ -3,10 +3,10 @@ import {
   ForkChoice,
   ForkChoiceOpts,
   IForkChoiceStore,
+  NotReorgedReason,
   ProtoArray,
   ProtoBlock,
   ProtoNode,
-  NotReorgedReason,
 } from "@lodestar/fork-choice";
 import {Slot} from "@lodestar/types";
 

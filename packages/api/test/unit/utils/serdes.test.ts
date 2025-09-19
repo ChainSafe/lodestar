@@ -1,4 +1,5 @@
 import {describe, expect, it} from "vitest";
+
 import {fromGraffitiHex, toGraffitiHex} from "../../../src/utils/serdes.js";
 
 describe("utils / serdes", () => {

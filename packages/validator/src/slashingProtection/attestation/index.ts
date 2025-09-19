@@ -1,4 +1,5 @@
 import {BLSPubkey, Epoch} from "@lodestar/types";
+
 import {MinMaxSurround, SurroundAttestationError, SurroundAttestationErrorCode} from "../minMaxSurround/index.js";
 import {SlashingProtectionAttestation} from "../types.js";
 import {isEqualNonZeroRoot, minEpoch} from "../utils.js";

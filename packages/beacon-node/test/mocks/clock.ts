@@ -1,7 +1,10 @@
 import EventEmitter from "node:events";
+
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Epoch, Slot} from "@lodestar/types";
+
 import {Mocked, vi} from "vitest";
+
 import {IClock} from "../../src/util/clock.js";
 
 /**

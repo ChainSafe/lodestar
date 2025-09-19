@@ -6,6 +6,7 @@ import {DOMAIN_BEACON_PROPOSER} from "@lodestar/params";
 import {computeSigningRoot} from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
 import {CliCommand, toPubkeyHex} from "@lodestar/utils";
+
 import {SecretKeysArgs, deriveSecretKeys, secretKeysOptions} from "../util/deriveSecretKeys.js";
 
 type SelfSlashArgs = SecretKeysArgs & {

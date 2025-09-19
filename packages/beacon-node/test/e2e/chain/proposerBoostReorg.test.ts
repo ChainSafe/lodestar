@@ -4,7 +4,9 @@ import {TimestampFormatCode} from "@lodestar/logger";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {RootHex, Slot} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
+
 import {afterEach, describe, expect, it, vi} from "vitest";
+
 import {ReorgEventData} from "../../../src/chain/emitter.js";
 import {TimelinessForkChoice} from "../../mocks/fork-choice/timeliness.js";
 import {waitForEvent} from "../../utils/events/resolver.js";

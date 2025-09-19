@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+
 import {bench, describe} from "@chainsafe/benchmark";
 import {toHexString} from "@chainsafe/ssz";
 

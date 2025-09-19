@@ -3,6 +3,7 @@ import {BitArray} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {Root, Slot, SubcommitteeIndex, SubnetID, altair} from "@lodestar/types";
 import {MapDef, toRootHex} from "@lodestar/utils";
+
 import {IClock} from "../../util/clock.js";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
 import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";

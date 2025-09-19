@@ -1,4 +1,5 @@
 import {describe, expect, it} from "vitest";
+
 import {RetryOptions, retry} from "../../src/retry.js";
 
 describe("retry", () => {

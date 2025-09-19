@@ -1,4 +1,5 @@
 import {describe, expect, it} from "vitest";
+
 import {getGlobalPaths} from "../../../src/paths/global.js";
 
 describe("paths / global", () => {

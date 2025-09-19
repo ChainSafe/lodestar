@@ -10,6 +10,7 @@ import {
   SYNC_COMMITTEE_SIZE,
 } from "@lodestar/params";
 import {ssz} from "@lodestar/types";
+
 import {
   CachedBeaconStateAltair,
   DataAvailabilityStatus,

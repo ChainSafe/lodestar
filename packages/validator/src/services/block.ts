@@ -13,6 +13,7 @@ import {
   isBlindedSignedBeaconBlock,
 } from "@lodestar/types";
 import {extendError, prettyBytes, prettyWeiToEth, toPubkeyHex} from "@lodestar/utils";
+
 import {Metrics} from "../metrics.js";
 import {PubkeyHex} from "../types.js";
 import {IClock, LoggerVc} from "../util/index.js";

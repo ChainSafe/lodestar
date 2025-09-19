@@ -1,5 +1,6 @@
 import {CELLS_PER_EXT_BLOB} from "@lodestar/params";
 import {deneb, fulu} from "@lodestar/types";
+
 import {kzg} from "../../util/kzg.js";
 
 /**

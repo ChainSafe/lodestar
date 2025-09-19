@@ -1,4 +1,5 @@
 import {FINALIZED_ROOT_DEPTH_ELECTRA, ForkPostBellatrix, ForkPostDeneb, ForkPostElectra} from "@lodestar/params";
+
 import {
   Attestation,
   BeaconBlock,

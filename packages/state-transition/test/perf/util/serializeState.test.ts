@@ -1,5 +1,6 @@
 import {bench, describe, setBenchOpts} from "@chainsafe/benchmark";
 import {ssz} from "@lodestar/types";
+
 import {cachedStateAltairPopulateCaches, generatePerfTestCachedStateAltair} from "../util.js";
 
 /**

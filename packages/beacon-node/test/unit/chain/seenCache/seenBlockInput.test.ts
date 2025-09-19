@@ -1,9 +1,11 @@
-import {generateKeyPair} from "@libp2p/crypto/keys";
 import {ForkName, ForkPostFulu} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {SignedBeaconBlock} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
+
+import {generateKeyPair} from "@libp2p/crypto/keys";
 import {beforeEach, describe, expect, it} from "vitest";
+
 import {
   BlockInputSource,
   IBlockInput,

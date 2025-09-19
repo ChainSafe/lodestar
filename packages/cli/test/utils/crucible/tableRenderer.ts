@@ -1,4 +1,5 @@
 import {Logger} from "@lodestar/logger";
+
 import {strFixedSize} from "./utils/index.js";
 
 const V_SEP_M = " │ ";

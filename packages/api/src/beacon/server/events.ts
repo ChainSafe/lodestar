@@ -1,4 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
+
 import {ApiError, ApplicationMethods, FastifyRoutes, createFastifyRoutes} from "../../utils/server/index.js";
 import {Endpoints, eventTypes, getDefinitions, getEventSerdes} from "../routes/events.js";
 

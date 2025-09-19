@@ -4,6 +4,7 @@ import {computeEpochAtSlot, getCurrentSlot} from "@lodestar/state-transition";
 import {BLSPubkey, phase0, ssz} from "@lodestar/types";
 import {Genesis} from "@lodestar/types/phase0";
 import {Logger, toPrintableUrl, toRootHex} from "@lodestar/utils";
+
 import {waitForGenesis} from "./genesis.js";
 import {Metrics} from "./metrics.js";
 import {MetaDataRepository} from "./repositories/metaDataRepository.js";

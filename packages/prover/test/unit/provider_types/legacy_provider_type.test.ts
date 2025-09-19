@@ -1,6 +1,7 @@
 import {ethers} from "ethers";
 import {describe, expect, it} from "vitest";
 import {Web3} from "web3";
+
 import legacyProviderType from "../../../src/provider_types/legacy_provider_type.js";
 
 describe("send provider", () => {

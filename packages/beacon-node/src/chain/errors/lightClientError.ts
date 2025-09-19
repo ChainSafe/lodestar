@@ -1,4 +1,5 @@
 import {LodestarError} from "@lodestar/utils";
+
 import {GossipActionError} from "./gossipValidation.js";
 
 export enum LightClientErrorCode {

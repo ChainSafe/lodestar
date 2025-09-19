@@ -1,5 +1,6 @@
 import {PublicKey, aggregatePublicKeys} from "@chainsafe/blst";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
+
 import {Metrics} from "../../metrics/metrics.js";
 
 export function getAggregatedPubkey(signatureSet: ISignatureSet, metrics: Metrics | null = null): PublicKey {

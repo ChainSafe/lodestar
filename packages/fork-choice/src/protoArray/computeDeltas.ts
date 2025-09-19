@@ -1,5 +1,6 @@
 import {EffectiveBalanceIncrements} from "@lodestar/state-transition";
 import {ValidatorIndex} from "@lodestar/types";
+
 import {ProtoArrayError, ProtoArrayErrorCode} from "./errors.js";
 import {VoteTracker} from "./interface.js";
 

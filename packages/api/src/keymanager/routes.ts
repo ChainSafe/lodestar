@@ -1,6 +1,7 @@
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {Epoch, phase0, ssz, stringType} from "@lodestar/types";
+
 import {
   EmptyArgs,
   EmptyMeta,

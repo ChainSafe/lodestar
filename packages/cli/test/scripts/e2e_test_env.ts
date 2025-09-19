@@ -1,4 +1,5 @@
 import path from "node:path";
+
 import {BeaconClient, ExecutionClient} from "../utils/crucible/interfaces.js";
 import {Simulation} from "../utils/crucible/simulation.js";
 import {defineSimTestConfig, logFilesDir} from "../utils/crucible/utils/index.js";

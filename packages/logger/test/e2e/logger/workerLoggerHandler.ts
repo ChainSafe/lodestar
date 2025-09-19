@@ -1,4 +1,5 @@
 import workerThreads from "node:worker_threads";
+
 import {Worker, spawn} from "@chainsafe/threads";
 
 export type LoggerWorker = {

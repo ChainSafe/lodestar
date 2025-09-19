@@ -1,7 +1,10 @@
 import fs from "node:fs";
+
 import {nodeUtils} from "@lodestar/beacon-node";
 import {fromHex, toHex} from "@lodestar/utils";
+
 import {rimraf} from "rimraf";
+
 import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
 import {GlobalArgs} from "../../options/index.js";
 import {mkdir, onGracefulShutdown} from "../../util/index.js";

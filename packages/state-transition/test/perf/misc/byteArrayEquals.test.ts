@@ -1,6 +1,8 @@
 import crypto from "node:crypto";
+
 import {bench, describe} from "@chainsafe/benchmark";
 import {byteArrayEquals} from "@chainsafe/ssz";
+
 import {generateState} from "../../utils/state.js";
 import {generateValidators} from "../../utils/validator.js";
 

@@ -1,6 +1,7 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, Slot} from "@lodestar/types";
+
 import {BATCH_SLOT_OFFSET, EPOCHS_PER_BATCH} from "../../constants.js";
 import {Batch, BatchStatus} from "../batch.js";
 

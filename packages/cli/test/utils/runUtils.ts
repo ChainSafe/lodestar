@@ -1,5 +1,7 @@
 import fs from "node:fs";
+
 import {expect} from "vitest";
+
 import {apiTokenFileName} from "../../src/cmds/validator/keymanager/server.js";
 import {recursiveLookup} from "../../src/util/index.js";
 

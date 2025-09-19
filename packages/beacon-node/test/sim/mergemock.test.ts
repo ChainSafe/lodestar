@@ -1,4 +1,5 @@
 import fs from "node:fs";
+
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {ChainConfig} from "@lodestar/config";
@@ -7,6 +8,7 @@ import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Epoch, SignedBeaconBlock, bellatrix} from "@lodestar/types";
 import {LogLevel, sleep} from "@lodestar/utils";
 import {ValidatorProposerConfig} from "@lodestar/validator";
+
 import {afterAll, afterEach, describe, it, vi} from "vitest";
 
 import {BeaconRestApiServerOpts} from "../../src/api/index.js";

@@ -5,7 +5,9 @@ import {InputType} from "@lodestar/spec-test-util";
 import {computeSyncPeriodAtSlot} from "@lodestar/state-transition";
 import {RootHex, Slot, altair, phase0, ssz, sszTypesFor} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
+
 import {expect} from "vitest";
+
 import {testLogger} from "../../../utils/logger.js";
 import {TestRunnerFn} from "../../utils/types.js";
 

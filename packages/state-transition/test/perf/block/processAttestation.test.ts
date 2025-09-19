@@ -11,6 +11,7 @@ import {
   SYNC_COMMITTEE_SIZE,
 } from "@lodestar/params";
 import {phase0} from "@lodestar/types";
+
 import {processAttestationsAltair} from "../../../src/block/processAttestationsAltair.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../../../src/index.js";
 import {generatePerfTestCachedStateAltair, perfStateId} from "../util.js";

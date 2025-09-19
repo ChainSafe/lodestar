@@ -1,4 +1,5 @@
 import {describe, expect, it} from "vitest";
+
 import {ClientCode} from "../../../src/execution/index.js";
 import {getDefaultGraffiti, toGraffitiBytes} from "../../../src/util/graffiti.js";
 

@@ -1,4 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
+
 import {getEventSource} from "../../utils/client/eventSource.js";
 import {stringifyQuery, urlJoin} from "../../utils/client/format.js";
 import {ApiClientMethods} from "../../utils/client/method.js";

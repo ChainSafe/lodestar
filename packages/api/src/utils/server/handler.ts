@@ -1,4 +1,5 @@
 import type * as fastify from "fastify";
+
 import {HttpHeader, MediaType, SUPPORTED_MEDIA_TYPES, parseAcceptHeader, parseContentTypeHeader} from "../headers.js";
 import {
   Endpoint,

@@ -1,6 +1,8 @@
 import {getEnvLogger} from "@lodestar/logger/env";
+
 import deepmerge from "deepmerge";
 import {describe, expect, it} from "vitest";
+
 import {ELProof, ELStorageProof} from "../../../src/types.js";
 import {hexToBuffer} from "../../../src/utils/conversion.js";
 import {isValidAccount, isValidStorageKeys} from "../../../src/utils/validation.js";

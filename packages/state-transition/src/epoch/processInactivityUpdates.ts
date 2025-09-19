@@ -1,4 +1,5 @@
 import {GENESIS_EPOCH} from "@lodestar/params";
+
 import {CachedBeaconStateAltair, EpochTransitionCache} from "../types.js";
 import * as attesterStatusUtil from "../util/attesterStatus.js";
 import {isInInactivityLeak} from "../util/index.js";

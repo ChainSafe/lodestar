@@ -1,10 +1,15 @@
 import {randomBytes} from "node:crypto";
+
 import {ForkName, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {BlobIndex, ColumnIndex, ssz} from "@lodestar/types";
+
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
+
 import {BlobMeta} from "../../../../src/chain/blocks/blockInput/types.js";
 import {BlobSidecarValidationError} from "../../../../src/chain/errors/blobSidecarError.js";
+import {DataColumnSidecarValidationError} from "../../../../src/chain/errors/dataColumnSidecarError.js";
 import {INetwork} from "../../../../src/network/index.js";
+import {PeerSyncMeta} from "../../../../src/network/peers/peersData.js";
 import {
   DownloadByRootError,
   fetchAndValidateBlobs,
@@ -20,8 +25,6 @@ import {
   generateBlockWithBlobSidecars,
   generateBlockWithColumnSidecars,
 } from "../../../utils/blocksAndData.js";
-import {PeerSyncMeta} from "../../../../src/network/peers/peersData.js";
-import {DataColumnSidecarValidationError} from "../../../../src/chain/errors/dataColumnSidecarError.js";
 
 describe("downloadByRoot.ts", () => {
   const peerIdStr = "1234567890abcdef1234567890abcdef";

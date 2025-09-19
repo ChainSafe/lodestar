@@ -2,6 +2,7 @@ import {BeaconConfig} from "@lodestar/config";
 import {GENESIS_SLOT} from "@lodestar/params";
 import {CachedBeaconStateAllForks, ISignatureSet, getBlockProposerSignatureSet} from "@lodestar/state-transition";
 import {Root, SignedBeaconBlock, Slot, WithBytes, ssz} from "@lodestar/types";
+
 import {IBlsVerifier} from "../../chain/bls/index.js";
 import {BackfillSyncError, BackfillSyncErrorCode} from "./errors.js";
 

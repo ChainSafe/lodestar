@@ -1,5 +1,6 @@
-import {Direction, PeerId} from "@libp2p/interface";
 import {routes} from "@lodestar/api";
+
+import {Direction, PeerId} from "@libp2p/interface";
 
 export function lodestarNodePeer(
   peer: PeerId,

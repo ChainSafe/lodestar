@@ -5,7 +5,9 @@ import {ApplicationMethods} from "@lodestar/api/server";
 import {ForkName} from "@lodestar/params";
 import {RootHex, SyncPeriod, altair} from "@lodestar/types";
 import {notNullish} from "@lodestar/utils";
+
 import {concat} from "uint8arrays/concat";
+
 import {BeaconStateAltair} from "../utils/types.js";
 
 type ProofApi = ApplicationMethods<routes.proof.Endpoints>;

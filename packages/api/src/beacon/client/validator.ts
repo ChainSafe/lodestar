@@ -1,4 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
+
 import {ApiClientMethods, IHttpClient, createApiClientMethods} from "../../utils/client/index.js";
 import {Endpoints, getDefinitions} from "../routes/validator.js";
 

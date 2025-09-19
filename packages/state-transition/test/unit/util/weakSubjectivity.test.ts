@@ -1,5 +1,7 @@
 import {config} from "@lodestar/config/default";
+
 import {describe, expect, it} from "vitest";
+
 import {getBalanceChurnLimit, getChurnLimit} from "../../../src/util/validator.js";
 import {
   computeWeakSubjectivityPeriodFromConstituentsElectra,

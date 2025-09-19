@@ -1,4 +1,5 @@
 import {describe, expect, it} from "vitest";
+
 import {ErrorAborted, TimeoutError} from "../../src/errors.js";
 import {sleep} from "../../src/sleep.js";
 import {createElapsedTimeTracker, waitFor} from "../../src/waitFor.js";

@@ -11,6 +11,7 @@ import {
 } from "@lodestar/state-transition";
 import {SignedBeaconBlock, deneb} from "@lodestar/types";
 import {sleep, toRootHex} from "@lodestar/utils";
+
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants/index.js";
 import {BlockErrorCode, BlockGossipError, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../interface.js";

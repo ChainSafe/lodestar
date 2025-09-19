@@ -5,8 +5,8 @@ import {
   ForkPostElectra,
   ForkPreElectra,
   ForkSeq,
-  isForkPostElectra,
   NUMBER_OF_COLUMNS,
+  isForkPostElectra,
 } from "@lodestar/params";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {
@@ -22,6 +22,7 @@ import {
   sszTypesFor,
 } from "@lodestar/types";
 import {LogLevel, Logger, prettyBytes, toHex, toRootHex} from "@lodestar/utils";
+
 import {
   BlockInput,
   BlockInputColumns,

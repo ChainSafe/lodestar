@@ -1,6 +1,7 @@
 import {LevelDatastore} from "datastore-level";
 import {Key} from "interface-datastore";
 import {MockedObject, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+
 import {Eth2PeerDataStore} from "../../../../src/network/peers/datastore.js";
 
 vi.mock("datastore-level");

@@ -1,6 +1,7 @@
 import {Db, encodeKey} from "@lodestar/db";
 import {Root, Slot} from "@lodestar/types";
 import {intToBytes} from "@lodestar/utils";
+
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 const bucketId = getBucketNameByValue(Bucket.index_stateArchiveRootIndex);

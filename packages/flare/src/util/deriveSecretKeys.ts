@@ -2,6 +2,7 @@ import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-key
 import {SecretKey} from "@chainsafe/blst";
 import {interopSecretKey} from "@lodestar/state-transition";
 import {CliCommandOptions} from "@lodestar/utils";
+
 import {YargsError} from "./errors.js";
 import {parseRange} from "./format.js";
 

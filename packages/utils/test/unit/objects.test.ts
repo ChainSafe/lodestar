@@ -1,4 +1,5 @@
 import {describe, expect, it} from "vitest";
+
 import {isPlainObject, objectToExpectedCase} from "../../src/index.js";
 
 describe("Objects helper", () => {

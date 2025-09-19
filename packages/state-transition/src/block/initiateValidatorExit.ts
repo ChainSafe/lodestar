@@ -1,6 +1,7 @@
 import {CompositeViewDU} from "@chainsafe/ssz";
 import {FAR_FUTURE_EPOCH, ForkSeq} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
+
 import {CachedBeaconStateAllForks, CachedBeaconStateElectra} from "../types.js";
 import {computeExitEpochAndUpdateChurn} from "../util/epoch.js";
 

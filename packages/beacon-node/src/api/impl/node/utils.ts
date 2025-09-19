@@ -1,5 +1,6 @@
-import {Connection, StreamStatus} from "@libp2p/interface";
 import {routes} from "@lodestar/api";
+
+import {Connection, StreamStatus} from "@libp2p/interface";
 
 /**
  * Format a list of connections from libp2p connections manager into the API's format NodePeer

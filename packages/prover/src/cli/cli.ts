@@ -1,7 +1,9 @@
 import {registerCommandToYargs} from "@lodestar/utils";
+
 // Must not use `* as yargs`, see https://github.com/yargs/yargs/issues/1131
 import yargs, {Argv} from "yargs";
 import {hideBin} from "yargs/helpers";
+
 import {getVersionData} from "../utils/version.js";
 import {cmds, proverProxyStartCommand} from "./cmds/index.js";
 import {globalOptions} from "./options.js";

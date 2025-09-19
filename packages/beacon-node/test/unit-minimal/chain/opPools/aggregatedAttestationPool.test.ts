@@ -11,10 +11,16 @@ import {
   PresetName,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
-import {CachedBeaconStateAllForks, CachedBeaconStateElectra, newFilledArray} from "@lodestar/state-transition";
-import {CachedBeaconStateAltair} from "@lodestar/state-transition";
+import {
+  CachedBeaconStateAllForks,
+  CachedBeaconStateAltair,
+  CachedBeaconStateElectra,
+  newFilledArray,
+} from "@lodestar/state-transition";
 import {Attestation, electra, phase0, ssz} from "@lodestar/types";
+
 import {afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
+
 import {
   AggregatedAttestationPool,
   AttestationsConsolidation,

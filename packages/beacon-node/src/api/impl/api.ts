@@ -1,4 +1,5 @@
 import {BeaconApiMethods} from "@lodestar/api/beacon/server";
+
 import {ApiOptions} from "../options.js";
 import {getBeaconApi} from "./beacon/index.js";
 import {getConfigApi} from "./config/index.js";

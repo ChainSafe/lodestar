@@ -1,5 +1,6 @@
 import {DOMAIN_BEACON_ATTESTER} from "@lodestar/params";
 import {IndexedAttestation, SignedBeaconBlock, phase0, ssz} from "@lodestar/types";
+
 import {CachedBeaconStateAllForks} from "../types.js";
 import {
   ISignatureSet,

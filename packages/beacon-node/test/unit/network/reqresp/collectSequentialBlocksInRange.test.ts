@@ -1,7 +1,9 @@
 import {ForkName} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
 import {SignedBeaconBlock, phase0, ssz} from "@lodestar/types";
+
 import {describe, expect, it} from "vitest";
+
 import {
   BlocksByRangeError,
   BlocksByRangeErrorCode,

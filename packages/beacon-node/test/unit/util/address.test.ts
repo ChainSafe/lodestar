@@ -1,4 +1,5 @@
 import {describe, expect, it} from "vitest";
+
 import {isValidAddress} from "../../../src/util/address.js";
 
 describe("Eth address helper", () => {

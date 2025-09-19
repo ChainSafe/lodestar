@@ -3,7 +3,10 @@ import {routes} from "@lodestar/api";
 import {ChainConfig} from "@lodestar/config";
 import {TimestampFormatCode} from "@lodestar/logger";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {fulu} from "@lodestar/types";
+
 import {afterEach, describe, it, vi} from "vitest";
+
 import {BlockInputColumns} from "../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../src/chain/blocks/blockInput/types.js";
 import {ChainEvent} from "../../../src/chain/emitter.js";
@@ -14,7 +17,6 @@ import {LogLevel, TestLoggerOpts, testLogger} from "../../utils/logger.js";
 import {connect, onPeerConnect} from "../../utils/network.js";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
-import {fulu} from "@lodestar/types";
 
 describe("sync / unknown block sync for fulu", () => {
   vi.setConfig({testTimeout: 40_000});

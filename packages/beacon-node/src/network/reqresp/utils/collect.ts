@@ -1,6 +1,7 @@
 import {Type} from "@chainsafe/ssz";
 import {RequestError, RequestErrorCode, ResponseIncoming} from "@lodestar/reqresp";
 import {WithBytes} from "@lodestar/types";
+
 import {ResponseTypeGetter} from "../types.js";
 
 /**

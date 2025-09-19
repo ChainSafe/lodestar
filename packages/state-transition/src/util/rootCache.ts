@@ -1,4 +1,5 @@
 import {Epoch, Root, Slot, phase0} from "@lodestar/types";
+
 import {CachedBeaconStateAllForks} from "../types.js";
 import {getBlockRoot, getBlockRootAtSlot} from "./blockRoot.js";
 

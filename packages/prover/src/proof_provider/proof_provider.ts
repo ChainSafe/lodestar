@@ -6,6 +6,7 @@ import {LightClientRestTransport} from "@lodestar/light-client/transport";
 import {ForkName, isForkPostCapella} from "@lodestar/params";
 import {ExecutionPayload, LightClientHeader} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
+
 import {LCTransport, RootProviderInitOptions} from "../interfaces.js";
 import {assertLightClient} from "../utils/assertion.js";
 import {

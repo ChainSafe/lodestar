@@ -12,16 +12,17 @@ import {
   SignedBeaconBlockHeader,
   deneb,
   fulu,
+  ssz,
 } from "@lodestar/types";
-import {ssz} from "@lodestar/types";
-import {bytesToBigInt, LodestarError} from "@lodestar/utils";
-import {NodeId} from "../network/subnets/index.js";
-import {kzg} from "./kzg.js";
-import {dataColumnMatrixRecovery} from "./blobs.js";
+import {LodestarError, bytesToBigInt} from "@lodestar/utils";
+
 import {BlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
-import {Metrics} from "../metrics/metrics.js";
 import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
 import {ChainEvent, ChainEventEmitter} from "../chain/emitter.js";
+import {Metrics} from "../metrics/metrics.js";
+import {NodeId} from "../network/subnets/index.js";
+import {dataColumnMatrixRecovery} from "./blobs.js";
+import {kzg} from "./kzg.js";
 
 export enum RecoverResult {
   // the recover is not attempted because we have less than `NUMBER_OF_COLUMNS / 2` columns

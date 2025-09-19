@@ -3,6 +3,7 @@ import {ChainConfig} from "@lodestar/config";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {BLSPubkey, Epoch, RootHex, Slot} from "@lodestar/types";
 import {sleep, toPubkeyHex} from "@lodestar/utils";
+
 import {Metrics} from "../metrics.js";
 import {PubkeyHex} from "../types.js";
 import {IClock, LoggerVc, differenceHex} from "../util/index.js";

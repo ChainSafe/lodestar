@@ -1,5 +1,6 @@
 import http, {Server} from "node:http";
 import {Socket} from "node:net";
+
 import {Gauge, GaugeExtra, waitFor} from "@lodestar/utils";
 
 export type SocketMetrics = {

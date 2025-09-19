@@ -9,6 +9,7 @@ import {
   TIMELY_TARGET_FLAG_INDEX,
   WEIGHT_DENOMINATOR,
 } from "@lodestar/params";
+
 import {CachedBeaconStateAltair, EpochTransitionCache} from "../types.js";
 import {
   FLAG_ELIGIBLE_ATTESTER,

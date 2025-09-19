@@ -1,6 +1,7 @@
 import {beforeAll, bench, describe, setBenchOpts} from "@chainsafe/benchmark";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
+
 import {InMemoryCheckpointStateCache, toCheckpointHex} from "../../../../src/chain/stateCache/index.js";
 import {generateCachedState} from "../../../utils/state.js";
 

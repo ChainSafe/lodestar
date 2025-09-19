@@ -2,8 +2,8 @@ import {routes} from "@lodestar/api";
 import {ForkSeq} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex, Slot, SlotRootHex} from "@lodestar/types";
-import {Logger, MapDef, mapValues, sleep} from "@lodestar/utils";
-import {pruneSetToMax} from "@lodestar/utils";
+import {Logger, MapDef, mapValues, pruneSetToMax, sleep} from "@lodestar/utils";
+
 import {BlockInputSource} from "../../chain/blocks/blockInput/types.js";
 import {ChainEvent} from "../../chain/emitter.js";
 import {GossipErrorCode} from "../../chain/errors/gossipValidation.js";

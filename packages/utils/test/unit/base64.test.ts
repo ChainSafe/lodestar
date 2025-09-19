@@ -1,4 +1,5 @@
 import {describe, expect, it} from "vitest";
+
 import {fromBase64, toBase64} from "../../src/index.js";
 
 describe("toBase64", () => {

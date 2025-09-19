@@ -1,10 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import {routes} from "@lodestar/api";
 import {ValidatorProposerConfig} from "@lodestar/validator";
 
 import {parseFeeRecipient} from "./feeRecipient.js";
-
 import {readFile} from "./file.js";
 
 type ProposerConfig = ValidatorProposerConfig["defaultConfig"];

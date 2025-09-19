@@ -1,4 +1,5 @@
 import {beforeAll, bench, describe} from "@chainsafe/benchmark";
+
 import {generatePerfTestCachedStatePhase0, numValidators} from "../../../../../../state-transition/test/perf/util.js";
 import {getPubkeysForIndices} from "../../../../../src/api/impl/validator/utils.js";
 import {linspace} from "../../../../../src/util/numpy.js";

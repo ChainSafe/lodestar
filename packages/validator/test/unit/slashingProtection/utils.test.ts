@@ -1,4 +1,5 @@
 import {describe, expect, it} from "vitest";
+
 import {minEpoch} from "../../../src/slashingProtection/utils.js";
 
 describe("slashingProtection / utils / minEpoch", () => {

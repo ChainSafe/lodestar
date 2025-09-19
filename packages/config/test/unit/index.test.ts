@@ -1,6 +1,8 @@
 import {toHexString} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
+
 import {describe, expect, it} from "vitest";
+
 import {chainConfig, config} from "../../src/default.js";
 import {createForkConfig} from "../../src/index.js";
 

@@ -1,4 +1,5 @@
 import {describe, expect, it} from "vitest";
+
 import {OrderedMap} from "../../../src/proof_provider/ordered_map.js";
 
 describe("proof_provider/ordered_map", () => {

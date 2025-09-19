@@ -5,6 +5,7 @@ import {
   createChainConfig,
   createChainForkConfig,
 } from "@lodestar/config";
+
 import {NetworkName, getNetworkBeaconParams} from "../networks/index.js";
 import {
   GlobalArgs,

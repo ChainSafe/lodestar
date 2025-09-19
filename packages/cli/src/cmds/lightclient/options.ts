@@ -1,4 +1,5 @@
 import {CliCommandOptions} from "@lodestar/utils";
+
 import {LogArgs, logOptions} from "../../options/logOptions.js";
 
 export type ILightClientArgs = LogArgs & {

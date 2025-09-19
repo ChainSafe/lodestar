@@ -13,6 +13,7 @@ import {
   deneb,
   electra,
 } from "@lodestar/types";
+
 import {ValidatorRegistration} from "./cache.js";
 import {BuilderStatus} from "./http.js";
 

@@ -1,4 +1,5 @@
 import {MetricsRegisterExtra} from "@lodestar/utils";
+
 import {RequestErrorCode} from "./request/errors.js";
 
 export type Metrics = ReturnType<typeof getMetrics>;

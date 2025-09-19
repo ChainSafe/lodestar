@@ -1,5 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {phase0} from "@lodestar/types";
+
 import {IBeaconDb} from "../db/index.js";
 
 export class Eth1DataCache {

@@ -1,4 +1,5 @@
 import {describe, it} from "vitest";
+
 import {Bucket} from "../../../src/db/buckets.js";
 
 describe("db buckets", () => {

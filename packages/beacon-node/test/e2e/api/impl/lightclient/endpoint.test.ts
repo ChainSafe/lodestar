@@ -6,7 +6,9 @@ import {ForkName, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {phase0, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {Validator} from "@lodestar/validator";
+
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
+
 import {BeaconNode} from "../../../../../src/node/nodejs.js";
 import {waitForEvent} from "../../../../utils/events/resolver.js";
 import {LogLevel, TestLoggerOpts, testLogger} from "../../../../utils/logger.js";

@@ -1,4 +1,5 @@
 import {Logger, transports} from "winston";
+
 import {LEVEL, LogLevel, WinstonLogInfo} from "../interface.js";
 
 export class ConsoleDynamicLevel extends transports.Console {

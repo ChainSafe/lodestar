@@ -1,6 +1,7 @@
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
 import {StringType, ssz, stringType} from "@lodestar/types";
+
 import {toForkName} from "./fork.js";
 import {HttpHeader} from "./headers.js";
 import {toBoolean} from "./serdes.js";

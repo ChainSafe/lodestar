@@ -1,4 +1,5 @@
 import {MetricsRegister} from "@lodestar/utils";
+
 import {ProposerRewardType} from "./block/types.js";
 import {EpochTransitionStep} from "./epoch/index.js";
 import {StateCloneSource, StateHashTreeRootSource} from "./stateTransition.js";

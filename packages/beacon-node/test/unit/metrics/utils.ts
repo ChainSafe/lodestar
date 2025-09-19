@@ -1,4 +1,5 @@
 import {ssz} from "@lodestar/types";
+
 import {Metrics, createMetrics} from "../../../src/metrics/index.js";
 
 export function createMetricsTest(): Metrics {

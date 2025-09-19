@@ -2,6 +2,7 @@ import {routes} from "@lodestar/api";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {BeaconBlock, Epoch, RootHex, Slot, phase0} from "@lodestar/types";
+
 import {CheckpointHex} from "../stateCache/index.js";
 
 export enum RegenCaller {

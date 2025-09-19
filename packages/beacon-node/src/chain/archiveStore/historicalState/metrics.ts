@@ -6,6 +6,7 @@ import {
   StateHashTreeRootSource,
 } from "@lodestar/state-transition";
 import {Gauge, Histogram} from "@lodestar/utils";
+
 import {RegistryMetricCreator} from "../../../metrics/index.js";
 import {QueueMetrics} from "../../../util/queue/options.js";
 import {RegenErrorType} from "./types.js";

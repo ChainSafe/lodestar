@@ -1,5 +1,6 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {pruneSetToMax} from "@lodestar/utils";
+
 import {DATA, QUANTITY} from "../../eth1/provider/utils.js";
 import {PayloadAttributesRpc} from "./types.js";
 

@@ -1,5 +1,6 @@
 import {EPOCHS_PER_ETH1_VOTING_PERIOD} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
+
 import {CachedBeaconStateAllForks, EpochTransitionCache} from "../types.js";
 
 /**

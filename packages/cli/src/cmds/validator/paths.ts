@@ -1,4 +1,5 @@
 import path from "node:path";
+
 import {GlobalArgs} from "../../options/index.js";
 import {GlobalPaths, getGlobalPaths} from "../../paths/global.js";
 

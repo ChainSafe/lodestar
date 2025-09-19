@@ -1,4 +1,5 @@
 import {bench, describe} from "@chainsafe/benchmark";
+
 import {processSlot} from "../../../src/slot/index.js";
 import {State} from "../types.js";
 import {generatePerfTestCachedStatePhase0} from "../util.js";

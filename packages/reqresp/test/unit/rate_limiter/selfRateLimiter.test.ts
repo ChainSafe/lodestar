@@ -1,4 +1,5 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+
 import {
   CHECK_DISCONNECTED_PEERS_INTERVAL_MS,
   REQUEST_TIMEOUT_MS,

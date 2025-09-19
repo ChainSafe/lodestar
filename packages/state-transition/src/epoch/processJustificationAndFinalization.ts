@@ -1,6 +1,7 @@
 import {BitArray} from "@chainsafe/ssz";
 import {GENESIS_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
+
 import {CachedBeaconStateAllForks, EpochTransitionCache} from "../types.js";
 import {computeEpochAtSlot, getBlockRoot} from "../util/index.js";
 

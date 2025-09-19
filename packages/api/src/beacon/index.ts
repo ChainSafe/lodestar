@@ -4,7 +4,8 @@ import type {Endpoints} from "./routes/index.js";
 
 import * as routes from "./routes/index.js";
 export {routes};
-export {getClient, type ApiClient} from "./client/index.js";
+
+export {type ApiClient, getClient} from "./client/index.js";
 export type {Endpoints};
 
 // Declare namespaces for CLI options

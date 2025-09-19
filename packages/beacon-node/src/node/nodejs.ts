@@ -1,8 +1,6 @@
 import {setMaxListeners} from "node:events";
-import {Registry} from "prom-client";
 
 import {hasher} from "@chainsafe/persistent-merkle-tree";
-import {PrivateKey} from "@libp2p/interface";
 import {BeaconApiMethods} from "@lodestar/api/beacon/server";
 import {BeaconConfig} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
@@ -10,6 +8,9 @@ import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {phase0} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
+
+import {PrivateKey} from "@libp2p/interface";
+import {Registry} from "prom-client";
 
 import {BeaconRestApiServer, getApi} from "../api/index.js";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";

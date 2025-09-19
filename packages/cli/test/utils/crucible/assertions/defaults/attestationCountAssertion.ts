@@ -1,4 +1,5 @@
 import {MAX_COMMITTEES_PER_SLOT} from "@lodestar/params";
+
 import {Assertion, AssertionResult, Match} from "../../interfaces.js";
 import {expectedMaxInclusionDelay, inclusionDelayAssertion} from "./inclusionDelayAssertion.js";
 

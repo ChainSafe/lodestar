@@ -1,4 +1,5 @@
 import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
+
 import {PeerAction} from "../peers/score/index.js";
 import {ReqRespMethod} from "./types.js";
 

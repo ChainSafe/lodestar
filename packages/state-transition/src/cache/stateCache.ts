@@ -1,5 +1,6 @@
 import {PublicKey} from "@chainsafe/blst";
 import {BeaconConfig} from "@lodestar/config";
+
 import {loadState} from "../util/loadState/loadState.js";
 import {EpochCache, EpochCacheImmutableData, EpochCacheOpts} from "./epochCache.js";
 import {RewardCache, createEmptyRewardCache} from "./rewardCache.js";

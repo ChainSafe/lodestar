@@ -1,4 +1,5 @@
 import {Epoch, Slot} from "@lodestar/types";
+
 import {IClock} from "../../src/util/index.js";
 
 type RunEveryFn = (slot: Slot, signal: AbortSignal) => Promise<void>;

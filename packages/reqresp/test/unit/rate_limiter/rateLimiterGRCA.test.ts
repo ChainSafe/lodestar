@@ -1,4 +1,5 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+
 import {RateLimiterGRCA} from "../../../src/rate_limiter/rateLimiterGRCA.js";
 
 describe("rateLimiterGRCA", () => {

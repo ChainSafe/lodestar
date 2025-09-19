@@ -1,4 +1,5 @@
 import {bench, describe} from "@chainsafe/benchmark";
+
 import {compileRouteUrlFormatter} from "../../src/utils/urlFormat.js";
 
 describe("route parse", () => {

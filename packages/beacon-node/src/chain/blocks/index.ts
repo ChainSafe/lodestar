@@ -1,5 +1,6 @@
 import {SignedBeaconBlock} from "@lodestar/types";
 import {isErrorAborted, toRootHex} from "@lodestar/utils";
+
 import {Metrics} from "../../metrics/metrics.js";
 import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
 import type {BeaconChain} from "../chain.js";
@@ -12,7 +13,8 @@ import {assertLinearChainSegment} from "./utils/chainSegment.js";
 import {verifyBlocksInEpoch} from "./verifyBlock.js";
 import {verifyBlocksSanityChecks} from "./verifyBlocksSanityChecks.js";
 import {removeEagerlyPersistedBlockInputs} from "./writeBlockInputToDb.js";
-export {type ImportBlockOpts, AttestationImportOpt} from "./types.js";
+
+export {AttestationImportOpt, type ImportBlockOpts} from "./types.js";
 
 const QUEUE_MAX_LENGTH = 256;
 

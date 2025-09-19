@@ -1,5 +1,6 @@
 import {getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
+
 import {getInfuraBeaconUrl} from "../utils/infura.js";
 
 // Analyze how Ethereum Consensus blocks are in a target network to prepare accurate performance states and blocks

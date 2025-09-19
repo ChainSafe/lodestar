@@ -1,9 +1,10 @@
-import {Logger, sleep} from "@lodestar/utils";
-import {ChainEventEmitter} from "./emitter.js";
-import {Metrics} from "../metrics/metrics.js";
 import {ChainForkConfig} from "@lodestar/config";
-import {BlockInputColumns} from "./blocks/blockInput/index.js";
+import {Logger, sleep} from "@lodestar/utils";
+
+import {Metrics} from "../metrics/metrics.js";
 import {recoverDataColumnSidecars} from "../util/dataColumns.js";
+import {BlockInputColumns} from "./blocks/blockInput/index.js";
+import {ChainEventEmitter} from "./emitter.js";
 
 /**
  * Minimum time to wait before attempting reconstruction

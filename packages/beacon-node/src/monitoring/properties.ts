@@ -1,4 +1,5 @@
 import {MetricObjectWithValues, MetricValue as MetricValueObject, Registry} from "prom-client";
+
 import {JsonRecord, JsonType, MetricValue, RecordValue} from "./types.js";
 
 type PropertyDefinition = {

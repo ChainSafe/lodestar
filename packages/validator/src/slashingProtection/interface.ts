@@ -1,5 +1,6 @@
 import {BLSPubkey, Epoch, Root} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
+
 import {Interchange, InterchangeFormatVersion} from "./interchange/types.js";
 import {SlashingProtectionAttestation, SlashingProtectionBlock} from "./types.js";
 

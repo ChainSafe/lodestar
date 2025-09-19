@@ -1,8 +1,10 @@
 import childProcess from "node:child_process";
+
 import {ApiClient, getClient} from "@lodestar/api/keymanager";
 import {config} from "@lodestar/config/default";
 import {gracefullyStopChildProcess, spawnCliCommand} from "@lodestar/test-utils";
 import {retry} from "@lodestar/utils";
+
 import {getMockBeaconApiServer} from "./mockBeaconApiServer.js";
 import {expectDeepEqualsUnordered, findApiToken} from "./runUtils.js";
 

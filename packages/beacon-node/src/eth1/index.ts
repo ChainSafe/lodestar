@@ -1,6 +1,7 @@
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {Root} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
+
 import {Eth1DepositDataTracker, Eth1DepositDataTrackerModules} from "./eth1DepositDataTracker.js";
 import {Eth1MergeBlockTracker, Eth1MergeBlockTrackerModules} from "./eth1MergeBlockTracker.js";
 import {Eth1DataAndDeposits, IEth1ForBlockProduction, IEth1Provider, PowMergeBlock, TDProgress} from "./interface.js";

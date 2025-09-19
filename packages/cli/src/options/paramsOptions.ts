@@ -1,5 +1,6 @@
 import {ChainConfig, chainConfigTypes} from "@lodestar/config";
 import {CliCommandOptions, CliOptionDefinition} from "@lodestar/utils";
+
 import {IBeaconParamsUnparsed} from "../config/types.js";
 import {ObjectKeys} from "../util/index.js";
 

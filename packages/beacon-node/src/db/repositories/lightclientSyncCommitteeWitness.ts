@@ -2,6 +2,7 @@ import {ContainerType, VectorCompositeType} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {DatabaseController, Repository} from "@lodestar/db";
 import {ssz} from "@lodestar/types";
+
 import {SyncCommitteeWitness} from "../../chain/lightClient/types.js";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 

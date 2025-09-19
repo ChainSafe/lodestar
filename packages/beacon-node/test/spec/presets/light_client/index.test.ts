@@ -1,5 +1,7 @@
 import path from "node:path";
+
 import {ACTIVE_PRESET} from "@lodestar/params";
+
 import {ethereumConsensusSpecsTests} from "../../specTestVersioning.js";
 import {specTestIterator} from "../../utils/specTestIterator.js";
 import {RunnerType, TestRunnerFn} from "../../utils/types.js";

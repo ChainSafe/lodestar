@@ -1,6 +1,7 @@
 import {SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {CachedBeaconStateAltair, isSyncCommitteeAggregator} from "@lodestar/state-transition";
 import {ValidatorIndex, altair} from "@lodestar/types";
+
 import {GossipAction, SyncCommitteeError, SyncCommitteeErrorCode} from "../errors/index.js";
 import {IBeaconChain} from "../interface.js";
 import {

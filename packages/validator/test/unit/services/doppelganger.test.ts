@@ -2,7 +2,9 @@ import {ApiClient} from "@lodestar/api";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, Slot, ValidatorIndex} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
+
 import {describe, expect, it} from "vitest";
+
 import {DoppelgangerService, DoppelgangerStatus} from "../../../src/services/doppelgangerService.js";
 import {IndicesService} from "../../../src/services/indices.js";
 import {mockApiResponse} from "../../utils/apiStub.js";

@@ -1,4 +1,5 @@
 import {describe, expect, it} from "vitest";
+
 import {stripOffNewlines} from "../../../src/util/index.js";
 
 describe("stripOffNewlines", () => {

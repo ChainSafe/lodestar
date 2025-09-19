@@ -13,7 +13,9 @@ import {
   NoLabels,
   StaticConfig,
 } from "@lodestar/utils";
+
 import {Counter, Gauge, Histogram, Registry} from "prom-client";
+
 import {AvgMinMax} from "./avgMinMax.js";
 import {GaugeExtra} from "./gauge.js";
 

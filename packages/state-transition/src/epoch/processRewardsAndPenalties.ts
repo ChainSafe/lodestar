@@ -1,5 +1,6 @@
 import {ForkSeq, GENESIS_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
+
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,

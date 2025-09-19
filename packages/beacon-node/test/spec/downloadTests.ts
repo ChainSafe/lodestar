@@ -1,4 +1,5 @@
 import {downloadTests} from "@lodestar/spec-test-util/downloadTests";
+
 import {blsSpecTests, ethereumConsensusSpecsTests} from "./specTestVersioning.js";
 
 for (const downloadTestOpts of [ethereumConsensusSpecsTests, blsSpecTests]) {

@@ -4,6 +4,7 @@ import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei} fr
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
 import {strip0xPrefix} from "@lodestar/utils";
+
 import {
   ErrorJsonRpcResponse,
   HttpRpcError,

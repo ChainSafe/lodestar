@@ -1,4 +1,5 @@
 import {describe, expect, it} from "vitest";
+
 import {phase0} from "../../src/types.js";
 import {getValidatorStatus} from "../../src/utils/validatorStatus.js";
 

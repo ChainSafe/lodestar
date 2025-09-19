@@ -2,6 +2,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {Db, Repository} from "@lodestar/db";
 import {phase0, ssz} from "@lodestar/types";
 import {bytesToInt} from "@lodestar/utils";
+
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 export class Eth1DataRepository extends Repository<number, phase0.Eth1DataOrdered> {

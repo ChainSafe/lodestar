@@ -1,4 +1,5 @@
 import {beforeEach, describe, expect, it} from "vitest";
+
 import {BeaconProposerCache} from "../../../src/chain/beaconProposerCache.js";
 
 describe("BeaconProposerCache", () => {

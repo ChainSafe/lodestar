@@ -1,8 +1,10 @@
-import {PeerId} from "@libp2p/interface";
 import {ErrorAborted, Logger, TimeoutError, withTimeout} from "@lodestar/utils";
+
+import {PeerId} from "@libp2p/interface";
 import {pipe} from "it-pipe";
 import type {Libp2p} from "libp2p";
 import {Uint8ArrayList} from "uint8arraylist";
+
 import {requestEncode} from "../encoders/requestEncode.js";
 import {responseDecode} from "../encoders/responseDecode.js";
 import {Metrics} from "../metrics.js";

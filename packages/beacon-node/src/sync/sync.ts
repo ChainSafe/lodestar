@@ -1,6 +1,7 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
+
 import {IBeaconChain} from "../chain/index.js";
 import {GENESIS_SLOT} from "../constants/constants.js";
 import {ExecutionEngineState} from "../execution/index.js";
@@ -9,8 +10,7 @@ import {INetwork, NetworkEvent, NetworkEventData} from "../network/index.js";
 import {ClockEvent} from "../util/clock.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
 import {MIN_EPOCH_TO_START_GOSSIP} from "./constants.js";
-import {IBeaconSync, SyncModules, SyncingStatus} from "./interface.js";
-import {SyncChainDebugState, SyncState, syncStateMetric} from "./interface.js";
+import {IBeaconSync, SyncChainDebugState, SyncModules, SyncState, SyncingStatus, syncStateMetric} from "./interface.js";
 import {SyncOptions} from "./options.js";
 import {RangeSync, RangeSyncEvent, RangeSyncStatus} from "./range/range.js";
 import {BlockInputSync} from "./unknownBlock.js";

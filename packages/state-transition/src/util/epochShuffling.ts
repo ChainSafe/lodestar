@@ -10,6 +10,7 @@ import {
 } from "@lodestar/params";
 import {Epoch, RootHex, ValidatorIndex, ssz} from "@lodestar/types";
 import {GaugeExtra, Logger, NoLabels, intDiv, toRootHex} from "@lodestar/utils";
+
 import {BeaconStateAllForks} from "../types.js";
 import {getBlockRootAtSlot} from "./blockRoot.js";
 import {computeAnchorCheckpoint} from "./computeAnchorCheckpoint.js";

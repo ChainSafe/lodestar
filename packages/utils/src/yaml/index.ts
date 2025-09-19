@@ -1,4 +1,5 @@
 import yaml from "js-yaml";
+
 import {schema} from "./schema.js";
 
 const {load, dump} = yaml;

@@ -1,5 +1,6 @@
-import {RLP} from "@ethereumjs/rlp";
 import {fromHex} from "@lodestar/utils";
+
+import {RLP} from "@ethereumjs/rlp";
 import {keccak256} from "ethereum-cryptography/keccak.js";
 import {
   FeeMarketEIP1559Transaction,

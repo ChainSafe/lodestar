@@ -1,6 +1,8 @@
 import crypto from "node:crypto";
+
 import {bench, describe, setBenchOpts} from "@chainsafe/benchmark";
 import {BitArray} from "@chainsafe/ssz";
+
 import {intersectUint8Arrays} from "../../../src/util/bitArray.js";
 
 /**

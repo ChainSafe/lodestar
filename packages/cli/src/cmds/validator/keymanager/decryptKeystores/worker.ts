@@ -1,7 +1,9 @@
 import fs from "node:fs";
+
 import {Keystore} from "@chainsafe/bls-keystore";
 import {Transfer, TransferDescriptor} from "@chainsafe/threads";
 import {expose} from "@chainsafe/threads/worker";
+
 import {DecryptKeystoreArgs, DecryptKeystoreWorkerAPI, isLocalKeystoreDefinition} from "./types.js";
 
 /**

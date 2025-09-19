@@ -1,4 +1,5 @@
 import {bench, describe} from "@chainsafe/benchmark";
+
 import {beforeProcessEpoch} from "../../../src/index.js";
 import {StateEpoch} from "../types.js";
 import {generatePerfTestCachedStatePhase0, perfStateId} from "../util.js";

@@ -1,4 +1,5 @@
 import path from "node:path";
+
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {SkipOpts, specTestIterator} from "../utils/specTestIterator.js";
 import {RunnerType} from "../utils/types.js";

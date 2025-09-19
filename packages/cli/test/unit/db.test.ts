@@ -1,4 +1,5 @@
 import {describe, it} from "vitest";
+
 import {Bucket as BeaconBucket} from "../../../beacon-node/src/db/buckets.js";
 import {Bucket as ValidatorBucket} from "../../../validator/src/buckets.js";
 

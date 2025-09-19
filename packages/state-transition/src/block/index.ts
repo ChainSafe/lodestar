@@ -1,5 +1,6 @@
 import {ForkSeq} from "@lodestar/params";
 import {BeaconBlock, BlindedBeaconBlock, altair, capella} from "@lodestar/types";
+
 import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateBellatrix, CachedBeaconStateCapella} from "../types.js";
 import {getFullOrBlindedPayload, isExecutionEnabled} from "../util/execution.js";
@@ -23,11 +24,11 @@ export {
   processSyncAggregate,
   processWithdrawals,
 };
-export * from "./processOperations.js";
 
+export * from "./externalData.js";
 export * from "./initiateValidatorExit.js";
 export * from "./isValidIndexedAttestation.js";
-export * from "./externalData.js";
+export * from "./processOperations.js";
 
 export function processBlock(
   fork: ForkSeq,

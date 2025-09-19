@@ -1,4 +1,5 @@
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
+
 import {AllocSource, BufferPool} from "../util/bufferPool.js";
 
 type ProcessStateBytesFn<T> = (stateBytes: Uint8Array) => Promise<T>;

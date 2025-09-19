@@ -10,7 +10,9 @@ import {
   SYNC_COMMITTEE_SIZE,
 } from "@lodestar/params";
 import {altair, ssz} from "@lodestar/types";
+
 import {beforeAll, describe, expect, it, vi} from "vitest";
+
 import {LightClientSnapshotFast, SyncCommitteeFast} from "../../src/types.js";
 import {assertValidLightClientUpdate} from "../../src/validation.js";
 import {defaultBeaconBlockHeader, getSyncAggregateSigningRoot, signAndAggregate} from "../utils/utils.js";

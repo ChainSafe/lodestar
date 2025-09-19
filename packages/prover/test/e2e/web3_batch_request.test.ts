@@ -1,5 +1,6 @@
 import {beforeAll, describe, expect, it, vi} from "vitest";
 import {Web3} from "web3";
+
 import {LCTransport} from "../../src/interfaces.js";
 import {getVerificationFailedMessage} from "../../src/utils/json_rpc.js";
 import {createVerifiedExecutionProvider} from "../../src/web3_provider.js";

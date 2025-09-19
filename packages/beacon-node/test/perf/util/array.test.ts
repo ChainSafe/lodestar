@@ -1,4 +1,5 @@
 import {bench, describe, setBenchOpts} from "@chainsafe/benchmark";
+
 import {LinkedList} from "../../../src/util/array.js";
 
 /**

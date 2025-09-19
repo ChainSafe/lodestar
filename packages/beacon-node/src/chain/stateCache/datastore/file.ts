@@ -1,6 +1,8 @@
 import path from "node:path";
+
 import {phase0, ssz} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
+
 import {ensureDir, readFile, readFileNames, removeFile, writeIfNotExist} from "../../../util/file.js";
 import {CPStateDatastore, DatastoreKey} from "./types.js";
 

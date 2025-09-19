@@ -4,6 +4,7 @@ import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params"
 import {G2_POINT_AT_INFINITY} from "@lodestar/state-transition";
 import {Root, Slot, SubnetID, altair, ssz} from "@lodestar/types";
 import {Logger, MapDef, toRootHex} from "@lodestar/utils";
+
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants/constants.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {IClock} from "../../util/clock.js";

@@ -3,6 +3,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {IForkChoice} from "@lodestar/fork-choice";
 import {blockToHeader} from "@lodestar/state-transition";
 import {RootHex, SignedBeaconBlock, Slot} from "@lodestar/types";
+
 import {IBeaconChain} from "../../../../chain/interface.js";
 import {GENESIS_SLOT} from "../../../../constants/index.js";
 import {rootHexRegex} from "../../../../eth1/provider/utils.js";

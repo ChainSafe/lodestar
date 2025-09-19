@@ -1,4 +1,5 @@
 import {ssz} from "@lodestar/types";
+
 import {getCachedBeaconState} from "../cache/stateCache.js";
 import {CachedBeaconStateBellatrix, CachedBeaconStateCapella} from "../types.js";
 

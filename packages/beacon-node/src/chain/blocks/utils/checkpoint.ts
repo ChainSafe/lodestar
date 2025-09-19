@@ -1,6 +1,7 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
+
 import {ZERO_HASH} from "../../../constants/index.js";
 
 /**

@@ -2,17 +2,18 @@ import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
 import {Epoch, RootHex, Slot, phase0} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
+
 import {isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
+import {isDaOutOfRange} from "../../chain/blocks/blockInput/utils.js";
 import {BlockError, BlockErrorCode} from "../../chain/errors/index.js";
+import {PeerSyncMeta} from "../../network/peers/peersData.js";
+import {IClock} from "../../util/clock.js";
 import {CustodyConfig} from "../../util/dataColumns.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {MAX_BATCH_DOWNLOAD_ATTEMPTS, MAX_BATCH_PROCESSING_ATTEMPTS} from "../constants.js";
 import {DownloadByRangeRequests} from "../utils/downloadByRange.js";
 import {getBatchSlotRange, hashBlocks} from "./utils/index.js";
-import {PeerSyncMeta} from "../../network/peers/peersData.js";
-import {IClock} from "../../util/clock.js";
-import {isDaOutOfRange} from "../../chain/blocks/blockInput/utils.js";
 
 /**
  * Current state of a batch

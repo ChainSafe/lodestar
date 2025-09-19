@@ -1,5 +1,6 @@
 import {SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {LightClientUpdate, Slot} from "@lodestar/types";
+
 import {computeSyncPeriodAtSlot} from "../utils/index.js";
 import {isFinalityUpdate, isSyncCommitteeUpdate, sumBits} from "./utils.js";
 

@@ -1,7 +1,9 @@
 import {BlobSchedule, ChainConfig, ChainForkConfig, ForkBoundary, createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
+
 import {describe, expect, it} from "vitest";
+
 import {getActiveForkBoundaries} from "../../../src/network/forks.js";
 
 function getForkConfig({

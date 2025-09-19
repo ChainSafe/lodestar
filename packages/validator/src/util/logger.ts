@@ -1,5 +1,6 @@
 import {ApiError} from "@lodestar/api";
 import {LogData, Logger, isErrorAborted} from "@lodestar/utils";
+
 import {IClock} from "./clock.js";
 
 export type LoggerVc = Logger & {

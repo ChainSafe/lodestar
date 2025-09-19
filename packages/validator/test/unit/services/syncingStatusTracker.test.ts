@@ -1,4 +1,5 @@
 import {MockedFunction, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+
 import {SyncingStatus, SyncingStatusTracker} from "../../../src/services/syncingStatusTracker.js";
 import {getApiClientStub, mockApiResponse} from "../../utils/apiStub.js";
 import {ClockMock} from "../../utils/clock.js";

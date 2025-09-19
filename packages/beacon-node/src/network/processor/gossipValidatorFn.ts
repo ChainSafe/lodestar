@@ -1,6 +1,8 @@
-import {TopicValidatorResult} from "@libp2p/interface";
 import {ChainForkConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
+
+import {TopicValidatorResult} from "@libp2p/interface";
+
 import {AttestationError, GossipAction, GossipActionError} from "../../chain/errors/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {

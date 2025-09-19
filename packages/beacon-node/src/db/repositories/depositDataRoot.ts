@@ -3,6 +3,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {Db, KeyValue, Repository} from "@lodestar/db";
 import {Root, ssz} from "@lodestar/types";
 import {bytesToInt} from "@lodestar/utils";
+
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 // TODO: Review where is best to put this type

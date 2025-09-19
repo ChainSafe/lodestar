@@ -1,5 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
+
 import {ApiModules} from "../types.js";
 
 export function getEventsApi({

@@ -1,6 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {Db, Repository} from "@lodestar/db";
 import {ValidatorIndex, phase0, ssz} from "@lodestar/types";
+
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 export class VoluntaryExitRepository extends Repository<ValidatorIndex, phase0.SignedVoluntaryExit> {

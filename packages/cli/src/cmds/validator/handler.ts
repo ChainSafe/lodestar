@@ -1,5 +1,6 @@
 import {setMaxListeners} from "node:events";
 import path from "node:path";
+
 import {WireFormat, routes} from "@lodestar/api";
 import {
   MonitoringService,
@@ -15,12 +16,20 @@ import {
   Validator,
   ValidatorProposerConfig,
   defaultOptions,
+  getMetrics,
 } from "@lodestar/validator";
-import {getMetrics} from "@lodestar/validator";
+
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {GlobalArgs} from "../../options/index.js";
-import {YargsError, cleanOldLogFiles, mkdir, parseLoggerArgs} from "../../util/index.js";
-import {onGracefulShutdown, parseFeeRecipient, parseProposerConfig} from "../../util/index.js";
+import {
+  YargsError,
+  cleanOldLogFiles,
+  mkdir,
+  onGracefulShutdown,
+  parseFeeRecipient,
+  parseLoggerArgs,
+  parseProposerConfig,
+} from "../../util/index.js";
 import {parseBuilderBoostFactor, parseBuilderSelection} from "../../util/proposerConfig.js";
 import {getVersionData} from "../../util/version.js";
 import {KeymanagerApi} from "./keymanager/impl.js";

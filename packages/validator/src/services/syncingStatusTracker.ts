@@ -1,6 +1,7 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {Slot} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
+
 import {BeaconHealth, Metrics} from "../metrics.js";
 import {IClock} from "../util/clock.js";
 

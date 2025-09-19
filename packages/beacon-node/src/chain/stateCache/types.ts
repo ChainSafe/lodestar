@@ -1,6 +1,7 @@
 import {routes} from "@lodestar/api";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {Epoch, RootHex, phase0} from "@lodestar/types";
+
 import {StateRegenerationOpts} from "../regen/interface.js";
 
 export type CheckpointHex = {epoch: Epoch; rootHex: RootHex};

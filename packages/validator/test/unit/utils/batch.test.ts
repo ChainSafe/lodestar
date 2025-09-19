@@ -1,4 +1,5 @@
 import {describe, expect, it} from "vitest";
+
 import {batchItems} from "../../../src/util/index.js";
 
 describe("util / batch", () => {

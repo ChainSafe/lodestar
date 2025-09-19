@@ -1,4 +1,5 @@
 import {RootHex, Slot, ValidatorIndex} from "@lodestar/types";
+
 import {GossipActionError} from "./gossipValidation.js";
 
 export enum SyncCommitteeErrorCode {

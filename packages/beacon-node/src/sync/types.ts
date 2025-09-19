@@ -1,4 +1,5 @@
 import {RootHex, Slot} from "@lodestar/types";
+
 import {IBlockInput} from "../chain/blocks/blockInput/index.js";
 
 export enum PendingBlockType {

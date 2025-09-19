@@ -6,7 +6,9 @@ import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateAllForks, BeaconStateAltair} from "@lodestar/state-transition";
 import {altair, ssz} from "@lodestar/types";
+
 import {afterEach, describe, expect, it, vi} from "vitest";
+
 import {Lightclient, LightclientEvent} from "../../src/index.js";
 import {LightClientRestTransport} from "../../src/transport/rest.js";
 import {computeSyncPeriodAtSlot} from "../../src/utils/clock.js";

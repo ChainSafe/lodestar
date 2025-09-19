@@ -3,6 +3,8 @@
 
 // 1. Import from not only @lodestar/params/setPreset will trigger an error
 import "../../lib/index.js";
+
 import {PresetName, setActivePreset} from "../../lib/setPreset.js";
+
 // This line should throw
 setActivePreset(PresetName.minimal);

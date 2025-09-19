@@ -1,5 +1,7 @@
 import EventEmitter from "node:events";
+
 import {ResponseIncoming, ResponseOutgoing} from "@lodestar/reqresp";
+
 import {AsyncIterableEventBus, IteratorEvent, RequestEvent} from "../../util/asyncIterableToEvents.js";
 import {StrictEventEmitterSingleArg} from "../../util/strictEvents.js";
 import {EventDirection} from "../../util/workerEvents.js";

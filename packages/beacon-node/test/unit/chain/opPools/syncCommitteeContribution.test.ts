@@ -3,7 +3,9 @@ import {BitArray} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {newFilledArray} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
+
 import {beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
+
 import {
   SyncContributionAndProofPool,
   SyncContributionFast,

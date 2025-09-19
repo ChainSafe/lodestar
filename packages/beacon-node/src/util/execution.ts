@@ -1,20 +1,21 @@
+import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
+import {ForkPostFulu, ForkPreFulu} from "@lodestar/params";
+import {signedBlockToSignedHeader} from "@lodestar/state-transition";
+import {deneb, fulu} from "@lodestar/types";
+import {toHex} from "@lodestar/utils";
+
+import {isBlockInputBlobs, isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
+import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
+import {ChainEvent, ChainEventEmitter} from "../chain/emitter.js";
+import {IExecutionEngine} from "../execution/index.js";
+import {Metrics} from "../metrics/index.js";
+import {computePreFuluKzgCommitmentsInclusionProof} from "./blobs.js";
 import {
   getCellsAndProofs,
   getDataColumnSidecarsFromBlock,
   getDataColumnSidecarsFromColumnSidecar,
 } from "./dataColumns.js";
-import {IExecutionEngine} from "../execution/index.js";
-import {ChainEvent, ChainEventEmitter} from "../chain/emitter.js";
-import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
-import {Metrics} from "../metrics/index.js";
-import {deneb, fulu} from "@lodestar/types";
-import {isBlockInputBlobs, isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
-import {ForkPostFulu, ForkPreFulu} from "@lodestar/params";
-import {computePreFuluKzgCommitmentsInclusionProof} from "./blobs.js";
-import {signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {routes} from "@lodestar/api";
-import {toHex} from "@lodestar/utils";
 
 export async function getBlobSidecarsFromExecution(
   config: ChainForkConfig,

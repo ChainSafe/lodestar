@@ -2,6 +2,7 @@ import {ChainConfig} from "@lodestar/config";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
+
 import {IBeaconDb} from "../../../db/interface.js";
 import {Metrics} from "../../../metrics/index.js";
 

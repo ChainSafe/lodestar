@@ -1,6 +1,7 @@
 import {ChainConfig} from "@lodestar/config";
 import {GENESIS_SLOT, INTERVALS_PER_SLOT} from "@lodestar/params";
 import {Epoch, Slot, TimeSeconds} from "@lodestar/types";
+
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "./epoch.js";
 
 export function getSlotsSinceGenesis(config: ChainConfig, genesisTime: TimeSeconds): Slot {

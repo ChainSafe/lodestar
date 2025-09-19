@@ -1,4 +1,5 @@
 import {bench, describe} from "@chainsafe/benchmark";
+
 import {getEffectiveBalanceIncrementsZeroInactive} from "../../../src/util/index.js";
 import {State} from "../types.js";
 import {generatePerfTestCachedStatePhase0, perfStateId} from "../util.js";

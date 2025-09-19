@@ -45,6 +45,7 @@ import {
   sszTypesFor,
 } from "@lodestar/types";
 import {Logger, sleep, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
+
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
 import {numToQuantity} from "../../eth1/provider/utils.js";

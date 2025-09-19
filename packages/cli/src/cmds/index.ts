@@ -1,4 +1,5 @@
 import {CliCommand} from "@lodestar/utils";
+
 import {GlobalArgs} from "../options/index.js";
 import {beacon} from "./beacon/index.js";
 import {bootnode} from "./bootnode/index.js";

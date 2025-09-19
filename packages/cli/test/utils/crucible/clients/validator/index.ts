@@ -1,4 +1,5 @@
 import {writeFile} from "node:fs/promises";
+
 import {BN_REST_BASE_PORT, SHARED_JWT_SECRET, SHARED_VALIDATOR_PASSWORD} from "../../constants.js";
 import {AtLeast, BeaconClient, ValidatorClient, ValidatorGeneratorOptions, ValidatorNode} from "../../interfaces.js";
 import {makeUniqueArray} from "../../utils/index.js";

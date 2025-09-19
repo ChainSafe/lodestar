@@ -1,6 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {Epoch, Root, Slot} from "@lodestar/types";
 import {ErrorAborted, LodestarError, Logger, toRootHex} from "@lodestar/utils";
+
 import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {BlockInputErrorCode} from "../../chain/blocks/blockInput/errors.js";
 import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
@@ -9,6 +10,7 @@ import {DataColumnSidecarErrorCode} from "../../chain/errors/dataColumnSidecarEr
 import {Metrics} from "../../metrics/metrics.js";
 import {PeerAction, prettyPrintPeerIdStr} from "../../network/index.js";
 import {PeerSyncMeta} from "../../network/peers/peersData.js";
+import {IClock} from "../../util/clock.js";
 import {CustodyConfig} from "../../util/dataColumns.js";
 import {ItTrigger} from "../../util/itTrigger.js";
 import {PeerIdStr} from "../../util/peerId.js";
@@ -29,7 +31,6 @@ import {
   toBeDownloadedStartEpoch,
   validateBatchesStatus,
 } from "./utils/index.js";
-import {IClock} from "../../util/clock.js";
 
 export type SyncChainModules = {
   config: ChainForkConfig;

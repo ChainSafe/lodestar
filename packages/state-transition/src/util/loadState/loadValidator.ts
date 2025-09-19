@@ -1,6 +1,7 @@
 import {CompositeViewDU} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {ValidatorIndex, deserializeContainerIgnoreFields, ssz} from "@lodestar/types";
+
 import {getStateTypeFromBytes} from "../sszBytes.js";
 
 /**

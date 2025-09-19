@@ -1,4 +1,5 @@
 import {describe, expect, it} from "vitest";
+
 import {Eth1Block} from "../../../../src/eth1/interface.js";
 import {optimizeNextBlockDiffForGenesis} from "../../../../src/eth1/utils/optimizeNextBlockDiffForGenesis.js";
 

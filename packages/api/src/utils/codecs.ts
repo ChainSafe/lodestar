@@ -1,6 +1,7 @@
 import {ArrayType, ListBasicType, ListCompositeType, Type, isBasicType, isCompositeType} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
 import {objectToExpectedCase} from "@lodestar/utils";
+
 import {
   Endpoint,
   RequestWithBodyCodec,

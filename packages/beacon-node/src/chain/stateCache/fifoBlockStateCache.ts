@@ -2,6 +2,7 @@ import {routes} from "@lodestar/api";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {RootHex} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
+
 import {Metrics} from "../../metrics/index.js";
 import {LinkedList} from "../../util/array.js";
 import {StateRegenerationOpts} from "../regen/interface.js";

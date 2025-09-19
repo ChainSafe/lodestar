@@ -1,9 +1,11 @@
 import path from "node:path";
+
 import {getClient} from "@lodestar/api";
 import {Lightclient} from "@lodestar/light-client";
 import {LightClientRestTransport} from "@lodestar/light-client/transport";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {fromHex} from "@lodestar/utils";
+
 import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
 import {GlobalArgs} from "../../options/index.js";
 import {getGlobalPaths} from "../../paths/global.js";

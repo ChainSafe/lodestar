@@ -1,4 +1,5 @@
 import {bench, describe} from "@chainsafe/benchmark";
+
 import {processInactivityUpdates} from "../../../src/epoch/processInactivityUpdates.js";
 import {StateAltairEpoch} from "../types.js";
 import {generatePerfTestCachedStateAltair, numValidators} from "../util.js";

@@ -1,6 +1,7 @@
 import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {intDiv} from "@lodestar/utils";
+
 import {CachedBeaconStateCapella, EpochTransitionCache} from "../types.js";
 
 /**

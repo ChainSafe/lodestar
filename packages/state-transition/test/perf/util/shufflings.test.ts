@@ -1,6 +1,7 @@
 import {beforeAll, bench, describe} from "@chainsafe/benchmark";
 import {DOMAIN_BEACON_PROPOSER} from "@lodestar/params";
 import {Epoch} from "@lodestar/types";
+
 import {
   CachedBeaconStateAllForks,
   computeEpochAtSlot,

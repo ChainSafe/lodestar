@@ -1,6 +1,7 @@
 import {ChainConfig, ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {activePreset} from "@lodestar/params";
 import {Epoch} from "@lodestar/types";
+
 import {
   CLIQUE_SEALING_PERIOD,
   ETH_TTD_INCREMENT,

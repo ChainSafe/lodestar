@@ -1,5 +1,6 @@
 import {ProtocolHandler} from "@lodestar/reqresp";
 import {ssz} from "@lodestar/types";
+
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {

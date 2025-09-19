@@ -1,4 +1,5 @@
 import {BLSPubkey, ssz} from "@lodestar/types";
+
 import {DistanceEntry, IDistanceStore} from "../../../../src/slashingProtection/minMaxSurround/index.js";
 
 export const emptyPubkey = ssz.BLSPubkey.defaultValue();

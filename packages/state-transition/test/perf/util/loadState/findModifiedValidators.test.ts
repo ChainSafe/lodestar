@@ -1,8 +1,10 @@
 import assert from "node:assert";
+
 import {bench, describe} from "@chainsafe/benchmark";
 import {CompositeViewDU} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
 import {bytesToInt} from "@lodestar/utils";
+
 import {findModifiedValidators} from "../../../../src/util/loadState/findModifiedValidators.js";
 import {VALIDATOR_BYTES_SIZE} from "../../../../src/util/sszBytes.js";
 import {generateState} from "../../../utils/state.js";

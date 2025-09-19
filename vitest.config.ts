@@ -1,5 +1,7 @@
 import path from "node:path";
+
 import {ViteUserConfig, defineConfig} from "vitest/config";
+
 import {browserTestProject} from "./configs/vitest.config.browser.js";
 import {e2eMainnetProject, e2eMinimalProject} from "./configs/vitest.config.e2e.js";
 import {specProjectMainnet, specProjectMinimal} from "./configs/vitest.config.spec.js";

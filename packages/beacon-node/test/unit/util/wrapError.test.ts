@@ -1,4 +1,5 @@
 import {describe, expect, it} from "vitest";
+
 import {wrapError} from "../../../src/util/wrapError.js";
 
 describe("util / wrapError", () => {

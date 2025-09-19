@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import {loadYaml} from "@lodestar/utils";
+
 import {uncompress} from "snappyjs";
 import {describe, expect, it, vi} from "vitest";
 
