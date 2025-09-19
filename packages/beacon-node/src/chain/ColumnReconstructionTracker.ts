@@ -81,9 +81,6 @@ export class ColumnReconstructionTracker {
           this.logger.debug("Data column sidecar reconstruction attempt finished", logCtx);
           this.running = false;
         });
-    })
-    .catch((err) => {
-      this.logger.debug("ColumnReconstructionTracker occurred an error", {}, err);
     });
   }
 }
