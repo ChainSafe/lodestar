@@ -842,7 +842,7 @@ export function createLodestarMetrics(
         name: "lodestar_data_columns_missing_custody_columns_count",
         help: "Total number of missing columns that should be in the database but were not when requested",
       }),
-      dataColumnEngineResult: register.gauge<{result: DataColumnEngineResult}>({
+      dataColumnEngineResult: register.counter<{result: DataColumnEngineResult}>({
         name: "lodestar_data_column_engine_result_total",
         help: "The total result of sending data column to execution layer",
         labelNames: ["result"],

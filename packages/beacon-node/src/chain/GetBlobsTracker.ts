@@ -98,6 +98,7 @@ export class GetBlobsTracker {
         this.blobsAndProofsBuffers[freeIndex].buffers
       )
         .then((result) => {
+          this.logger.debug("getBlobsV2 result for block", {...logCtx, result});
           this.metrics?.dataColumns.dataColumnEngineResult.inc({result});
         })
         .catch((error) => {
