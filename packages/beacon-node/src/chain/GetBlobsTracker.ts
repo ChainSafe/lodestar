@@ -4,7 +4,11 @@ import {ChainEventEmitter} from "./emitter.js";
 import {Metrics} from "../metrics/metrics.js";
 import {ChainForkConfig} from "@lodestar/config";
 import {IBlockInput, isBlockInputBlobs} from "./blocks/blockInput/index.js";
-import {getBlobSidecarsFromExecution, getDataColumnSidecarsFromExecution} from "../util/execution.js";
+import {
+  DataColumnEngineResult,
+  getBlobSidecarsFromExecution,
+  getDataColumnSidecarsFromExecution,
+} from "../util/execution.js";
 import {callInNextEventLoop} from "../util/eventLoop.js";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {BLOB_AND_PROOF_V2_RPC_BYTES} from "../execution/engine/types.js";
@@ -92,11 +96,19 @@ export class GetBlobsTracker {
         blockInput,
         this.metrics,
         this.blobsAndProofsBuffers[freeIndex].buffers
-      ).finally(() => {
-        this.logger.verbose("Completed getBlobsV2 for block", logCtx);
-        this.activeReconstructions.delete(blockInput.blockRootHex);
-        this.blobsAndProofsBuffers[freeIndex].inUse = false;
-      });
+      )
+        .then((result) => {
+          this.metrics?.dataColumns.dataColumnEngineResult.inc({result});
+        })
+        .catch((error) => {
+          this.logger.debug("Error during getBlobsV2 for block", logCtx, error as Error);
+          this.metrics?.dataColumns.dataColumnEngineResult.inc({result: DataColumnEngineResult.Failed});
+        })
+        .finally(() => {
+          this.logger.verbose("Completed getBlobsV2 for block", logCtx);
+          this.activeReconstructions.delete(blockInput.blockRootHex);
+          this.blobsAndProofsBuffers[freeIndex].inUse = false;
+        });
     });
   }
 }
