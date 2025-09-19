@@ -28,6 +28,9 @@
       "!packages/**/*/node_modules/"
     ]
   },
+  "javascript": {
+    "globals": ["Bun"]
+  },
   "linter": {
     "rules": {
       "correctness": {

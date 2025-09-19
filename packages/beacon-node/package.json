@@ -51,6 +51,12 @@
       "import": "./lib/util/index.js"
     }
   },
+  "imports": {
+    "#prometheus-gc-stats-wrapper": {
+      "bun": "./lib/bun-wrappers/prometheus-gc-stats.js",
+      "default": "@chainsafe/prometheus-gc-stats"
+    }
+  },
   "typesVersions": {
     "*": {
       "*": [
