@@ -177,13 +177,9 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       return blockInput;
     } catch (e) {
       if (e instanceof BlockGossipError) {
-        // TODO(fulu): check that this is the only error that should trigger resolution of the block and all others
-        //    cause the block to get thrown away
-        // Don't trigger this yet if full block and blobs haven't arrived yet
         if (e.type.code === BlockErrorCode.PARENT_UNKNOWN && blockInput) {
           logger.debug("Gossip block has error", {slot, root: blockShortHex, code: e.type.code});
-          // TODO(fulu): should this be unknownParent event?
-          chain.emitter.emit(ChainEvent.incompleteBlockInput, {
+          chain.emitter.emit(ChainEvent.unknownParent, {
             blockInput,
             peer: peerIdStr,
             source: BlockInputSource.gossip,

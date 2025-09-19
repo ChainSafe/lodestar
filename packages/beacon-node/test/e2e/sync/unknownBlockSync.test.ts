@@ -56,7 +56,10 @@ describe("sync / unknown block sync for fulu", () => {
       id: "should do an unknown block sync from another BN",
       event: ChainEvent.unknownBlockRoot,
     },
-    // TODO: new event postfulu for unknownBlockInput
+    {
+      id: "should do an incompleteBlockInput sync from another BN",
+      event: ChainEvent.incompleteBlockInput,
+    },
   ];
 
   for (const {id, event} of testCases) {
@@ -174,6 +177,13 @@ describe("sync / unknown block sync for fulu", () => {
         case ChainEvent.unknownBlockRoot:
           bn2.chain.emitter.emit(ChainEvent.unknownBlockRoot, {
             rootSlot: {root: headSummary.blockRoot},
+            peer: bn2.network.peerId.toString(),
+            source: BlockInputSource.gossip,
+          });
+          break;
+        case ChainEvent.incompleteBlockInput:
+          bn2.chain.emitter.emit(ChainEvent.incompleteBlockInput, {
+            blockInput: headInput,
             peer: bn2.network.peerId.toString(),
             source: BlockInputSource.gossip,
           });
