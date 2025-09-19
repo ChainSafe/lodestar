@@ -63,24 +63,28 @@ export class ColumnReconstructionTracker {
     this.lastBlockRootHex = blockInput.blockRootHex;
     const delay =
       RECONSTRUCTION_DELAY_MIN_MS + Math.random() * (RECONSTRUCTION_DELAY_MAX_MS - RECONSTRUCTION_DELAY_MIN_MS);
-    sleep(delay).then(() => {
-      const logCtx = {slot: blockInput.slot, root: blockInput.blockRootHex};
-      this.logger.debug("Attempting data column sidecar reconstruction", logCtx);
-      recoverDataColumnSidecars(blockInput, this.emitter, this.metrics)
-        .then((result) => {
-          this.metrics?.recoverDataColumnSidecars.reconstructionResult.inc({result});
-          this.logger.debug("Data column sidecar reconstruction complete", {...logCtx, result});
-        })
-        .catch((e) => {
-          this.metrics?.recoverDataColumnSidecars.reconstructionResult.inc({
-            result: DataColumnReconstructionCode.Failed,
+    sleep(delay)
+      .then(() => {
+        const logCtx = {slot: blockInput.slot, root: blockInput.blockRootHex};
+        this.logger.debug("Attempting data column sidecar reconstruction", logCtx);
+        recoverDataColumnSidecars(blockInput, this.emitter, this.metrics)
+          .then((result) => {
+            this.metrics?.recoverDataColumnSidecars.reconstructionResult.inc({result});
+            this.logger.debug("Data column sidecar reconstruction complete", {...logCtx, result});
+          })
+          .catch((e) => {
+            this.metrics?.recoverDataColumnSidecars.reconstructionResult.inc({
+              result: DataColumnReconstructionCode.Failed,
+            });
+            this.logger.debug("Error during data column sidecar reconstruction", logCtx, e as Error);
+          })
+          .finally(() => {
+            this.logger.debug("Data column sidecar reconstruction attempt finished", logCtx);
+            this.running = false;
           });
-          this.logger.debug("Error during data column sidecar reconstruction", logCtx, e as Error);
-        })
-        .finally(() => {
-          this.logger.debug("Data column sidecar reconstruction attempt finished", logCtx);
-          this.running = false;
-        });
-    });
+      })
+      .catch((err) => {
+        this.logger.debug("ColumnReconstructionTracker unreachable error", {}, err);
+      });
   }
 }
