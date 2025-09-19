@@ -59,12 +59,19 @@ export const rateLimitQuotas: (fork: ForkName, config: BeaconConfig) => Record<R
   [ReqRespMethod.DataColumnSidecarsByRange]: {
     // Rationale: MAX_REQUEST_BLOCKS_DENEB * NUMBER_OF_COLUMNS
     byPeer: {quota: config.MAX_REQUEST_DATA_COLUMN_SIDECARS, quotaTimeMs: 10_000},
-    getRequestCount: getRequestCountFn(fork, config, ReqRespMethod.DataColumnSidecarsByRange, (req) => req.count),
+    getRequestCount: getRequestCountFn(
+      fork,
+      config,
+      ReqRespMethod.DataColumnSidecarsByRange,
+      (req) => req.count * req.columns.length
+    ),
   },
   [ReqRespMethod.DataColumnSidecarsByRoot]: {
     // Rationale: quota of BeaconBlocksByRoot * NUMBER_OF_COLUMNS
     byPeer: {quota: config.MAX_REQUEST_DATA_COLUMN_SIDECARS, quotaTimeMs: 10_000},
-    getRequestCount: getRequestCountFn(fork, config, ReqRespMethod.DataColumnSidecarsByRoot, (req) => req.length),
+    getRequestCount: getRequestCountFn(fork, config, ReqRespMethod.DataColumnSidecarsByRoot, (req) =>
+      req.reduce((total, item) => total + item.columns.length, 0)
+    ),
   },
   [ReqRespMethod.LightClientBootstrap]: {
     // As similar in the nature of `Status` protocol so we use the same rate limits.

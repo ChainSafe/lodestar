@@ -23,6 +23,7 @@ import {AllocSource} from "../../util/bufferPool.js";
 import {DataColumnReconstructionCode} from "../../util/dataColumns.js";
 import {LodestarMetadata} from "../options.js";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
+import {DataColumnEngineResult} from "../../util/execution.js";
 
 export type LodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 
@@ -813,7 +814,7 @@ export function createLodestarMetrics(
         name: "lodestar_recover_data_column_sidecar_recovered_columns_total",
         help: "Total number of columns that were recovered",
       }),
-      reconstructionResult: register.gauge<{result: DataColumnReconstructionCode}>({
+      reconstructionResult: register.counter<{result: DataColumnReconstructionCode}>({
         name: "lodestar_data_column_sidecars_reconstruction_result",
         help: "Data column sidecars reconstruction result",
         labelNames: ["result"],
@@ -840,6 +841,11 @@ export function createLodestarMetrics(
       missingCustodyColumns: register.counter({
         name: "lodestar_data_columns_missing_custody_columns_count",
         help: "Total number of missing columns that should be in the database but were not when requested",
+      }),
+      dataColumnEngineResult: register.counter<{result: DataColumnEngineResult}>({
+        name: "lodestar_data_column_engine_result_total",
+        help: "The total result of sending data column to execution layer",
+        labelNames: ["result"],
       }),
     },
     importBlock: {

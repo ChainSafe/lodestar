@@ -16,6 +16,21 @@ import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {routes} from "@lodestar/api";
 import {toHex} from "@lodestar/utils";
 
+export enum DataColumnEngineResult {
+  PreFulu = "pre_fulu",
+  // the recover is not attempted because it has full data columns
+  NotAttemptedFull = "not_attempted_full",
+  // block has no blob so no need to call EL
+  NotAttemptedNoBlobs = "not_attempted_no_blobs",
+  // EL call returned null, meaning it could not find the blobs
+  NullResponse = "null_response",
+  // the recover is a success and it helps resolve availability
+  SuccessResolved = "success_resolved",
+  // the recover is a success but it's late, availability is already resolved by either gossip or getBlobsV2
+  SuccessLate = "success_late",
+  Failed = "failed",
+}
+
 export async function getBlobSidecarsFromExecution(
   config: ChainForkConfig,
   executionEngine: IExecutionEngine,
@@ -118,22 +133,22 @@ export async function getDataColumnSidecarsFromExecution(
   blockInput: IBlockInput,
   metrics: Metrics | null,
   blobAndProofBuffers?: Uint8Array[]
-): Promise<void> {
+): Promise<DataColumnEngineResult> {
   // If its not a column block input, exit
   if (!isBlockInputColumns(blockInput)) {
-    return;
+    return DataColumnEngineResult.PreFulu;
   }
 
   // If already have all columns, exit
   if (blockInput.hasAllData()) {
-    return;
+    return DataColumnEngineResult.NotAttemptedFull;
   }
 
   const versionedHashes = blockInput.getVersionedHashes();
 
   // If there are no blobs in this block, exit
   if (versionedHashes.length === 0) {
-    return;
+    return DataColumnEngineResult.NotAttemptedNoBlobs;
   }
 
   // Get blobs from execution engine
@@ -148,13 +163,13 @@ export async function getDataColumnSidecarsFromExecution(
 
   // Execution engine was unable to find one or more blobs
   if (blobs === null) {
-    return;
+    return DataColumnEngineResult.NullResponse;
   }
   metrics?.peerDas.getBlobsV2Responses.inc();
 
   // Return if we received all data columns while waiting for getBlobs
   if (blockInput.hasAllData()) {
-    return;
+    return DataColumnEngineResult.SuccessLate;
   }
 
   let dataColumnSidecars: fulu.DataColumnSidecars;
@@ -187,4 +202,5 @@ export async function getDataColumnSidecarsFromExecution(
   }
 
   metrics?.dataColumns.bySource.inc({source: BlockInputSource.engine}, previouslyMissingColumns.length);
+  return DataColumnEngineResult.SuccessResolved;
 }
