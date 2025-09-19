@@ -75,7 +75,7 @@ export class ColumnReconstructionTracker {
           this.metrics?.recoverDataColumnSidecars.reconstructionResult.inc({
             result: DataColumnReconstructionCode.Failed,
           });
-          this.logger.error("Error during data column sidecar reconstruction", logCtx, e as Error);
+          this.logger.debug("Error during data column sidecar reconstruction", logCtx, e as Error);
         })
         .finally(() => {
           this.logger.debug("Data column sidecar reconstruction attempt finished", logCtx);
