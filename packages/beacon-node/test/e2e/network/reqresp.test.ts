@@ -1,3 +1,4 @@
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
@@ -5,7 +6,6 @@ import {RequestError, RequestErrorCode, ResponseOutgoing} from "@lodestar/reqres
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Root, SignedBeaconBlock, altair, phase0, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
-import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {Network, ReqRespBeaconNodeOpts} from "../../../src/network/index.js";
 import {GetReqRespHandlerFn, ReqRespMethod} from "../../../src/network/reqresp/types.js";
 import {PeerIdStr} from "../../../src/util/peerId.js";

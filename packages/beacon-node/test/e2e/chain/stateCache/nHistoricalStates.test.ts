@@ -1,10 +1,10 @@
+import {Gauge, Histogram} from "prom-client";
+import {afterEach, describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
 import {ChainConfig} from "@lodestar/config";
 import {TimestampFormatCode} from "@lodestar/logger";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Slot, phase0} from "@lodestar/types";
-import {Gauge, Histogram} from "prom-client";
-import {afterEach, describe, expect, it, vi} from "vitest";
 import {ChainEvent, ReorgEventData} from "../../../../src/chain/emitter.js";
 import {CacheItemType} from "../../../../src/chain/stateCache/types.js";
 import {ReorgedForkChoice} from "../../../mocks/fork-choice/reorg.js";

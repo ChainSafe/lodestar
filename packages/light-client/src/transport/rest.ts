@@ -1,3 +1,4 @@
+import mitt, {Emitter as MittEmitter} from "mitt";
 import {type ApiClient, routes} from "@lodestar/api";
 import {type ForkName} from "@lodestar/params";
 import {
@@ -7,7 +8,6 @@ import {
   LightClientUpdate,
   type SyncPeriod,
 } from "@lodestar/types";
-import mitt, {Emitter as MittEmitter} from "mitt";
 import {type LightClientTransport} from "./interface.js";
 
 export type LightClientRestEvents = {

@@ -1,6 +1,6 @@
+import {describe, expect, it} from "vitest";
 import {ForkName, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {describe, expect, it} from "vitest";
 import {DataColumnSidecarValidationError} from "../../../../src/chain/errors/dataColumnSidecarError.js";
 import {validateBlockDataColumnSidecars} from "../../../../src/chain/validation/dataColumnSidecar.js";
 import {generateBlockWithColumnSidecars} from "../../../utils/blocksAndData.js";

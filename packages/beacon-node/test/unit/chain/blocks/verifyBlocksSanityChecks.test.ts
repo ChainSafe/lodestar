@@ -1,9 +1,9 @@
+import {beforeEach, describe, expect, it} from "vitest";
 import {config} from "@lodestar/config/default";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {SignedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {toHex, toRootHex} from "@lodestar/utils";
-import {beforeEach, describe, expect, it} from "vitest";
 import {BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/index.js";
 import {verifyBlocksSanityChecks as verifyBlocksImportSanityChecks} from "../../../../src/chain/blocks/verifyBlocksSanityChecks.js";

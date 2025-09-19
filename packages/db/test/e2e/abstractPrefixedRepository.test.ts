@@ -1,8 +1,8 @@
 /** biome-ignore-all lint/style/noNonNullAssertion: values all exist */
 
+import {afterAll, beforeAll, beforeEach, describe, expect, it} from "vitest";
 import {getEnvLogger} from "@lodestar/logger/env";
 import {fromAsync} from "@lodestar/utils";
-import {afterAll, beforeAll, beforeEach, describe, expect, it} from "vitest";
 import {
   type Db,
   LevelDbController,

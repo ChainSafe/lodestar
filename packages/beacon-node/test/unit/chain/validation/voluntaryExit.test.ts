@@ -1,3 +1,4 @@
+import {afterEach, beforeAll, beforeEach, describe, it, vi} from "vitest";
 import {SecretKey} from "@chainsafe/blst";
 import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
@@ -9,7 +10,6 @@ import {
   computeSigningRoot,
 } from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
-import {afterEach, beforeAll, beforeEach, describe, it, vi} from "vitest";
 import {VoluntaryExitErrorCode} from "../../../../src/chain/errors/voluntaryExitError.js";
 import {validateGossipVoluntaryExit} from "../../../../src/chain/validation/voluntaryExit.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";

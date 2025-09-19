@@ -1,5 +1,3 @@
-import {ENR} from "@chainsafe/enr";
-import {noise} from "@chainsafe/libp2p-noise";
 import {bootstrap} from "@libp2p/bootstrap";
 import {identify} from "@libp2p/identify";
 import {PrivateKey} from "@libp2p/interface";
@@ -9,6 +7,8 @@ import {prometheusMetrics} from "@libp2p/prometheus-metrics";
 import {tcp} from "@libp2p/tcp";
 import {createLibp2p} from "libp2p";
 import {Registry} from "prom-client";
+import {ENR} from "@chainsafe/enr";
+import {noise} from "@chainsafe/libp2p-noise";
 import {Libp2p, LodestarComponents} from "../interface.js";
 import {NetworkOptions, defaultNetworkOptions} from "../options.js";
 import {Eth2PeerDataStore} from "../peers/datastore.js";

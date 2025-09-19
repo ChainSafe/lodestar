@@ -1,3 +1,4 @@
+import {describe, expect, it} from "vitest";
 import {BitArray} from "@chainsafe/ssz";
 import {createChainForkConfig} from "@lodestar/config";
 import {ForkName, MAX_COMMITTEES_PER_SLOT} from "@lodestar/params";
@@ -17,7 +18,6 @@ import {
   sszTypesFor,
 } from "@lodestar/types";
 import {fromHex, toHex, toRootHex} from "@lodestar/utils";
-import {describe, expect, it} from "vitest";
 import {kzg} from "../../../src/util/kzg.js";
 import {
   getAggregationBitsFromAttestationSerialized,

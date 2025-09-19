@@ -1,5 +1,5 @@
-import {sleep} from "@lodestar/utils";
 import {beforeAll, describe, expect, it, vi} from "vitest";
+import {sleep} from "@lodestar/utils";
 // biome-ignore lint/correctness/useImportExtensions: We have this hardcoded extension for bundle build
 import {Lightclient, LightclientEvent, transport, utils} from "../../dist/lightclient.min.mjs";
 

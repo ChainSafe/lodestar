@@ -1,6 +1,6 @@
+import {describe, expect, it} from "vitest";
 import {createForkConfig} from "@lodestar/config";
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
-import {describe, expect, it} from "vitest";
 import {ELTransaction} from "../../../lib/types.js";
 import {VERIFICATION_FAILED_RESPONSE_CODE} from "../../../src/constants.js";
 import {JsonRpcRequest, JsonRpcResponseWithResultPayload} from "../../../src/types.js";

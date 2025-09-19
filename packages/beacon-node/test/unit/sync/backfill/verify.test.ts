@@ -1,10 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
+import {describe, expect, it} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {WithBytes, phase0, ssz} from "@lodestar/types";
-import {describe, expect, it} from "vitest";
 import {ZERO_HASH} from "../../../../src/constants/constants.js";
 import {BackfillSyncError, BackfillSyncErrorCode} from "./../../../../src/sync/backfill/errors.js";
 import {verifyBlockSequence} from "../../../../src/sync/backfill/verify.js";

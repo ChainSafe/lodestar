@@ -1,9 +1,9 @@
+import {afterEach, describe, expect, it, vi} from "vitest";
 import {getClient} from "@lodestar/api";
 import {ChainConfig, createBeaconConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {phase0} from "@lodestar/types";
-import {afterEach, describe, expect, it, vi} from "vitest";
 import {BeaconNode} from "../../../../src/index.js";
 import {ClockEvent} from "../../../../src/util/clock.js";
 import {waitForEvent} from "../../../utils/events/resolver.js";

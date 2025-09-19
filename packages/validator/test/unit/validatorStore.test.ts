@@ -1,10 +1,10 @@
+import {toBufferBE} from "bigint-buffer";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {SecretKey} from "@chainsafe/blst";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {chainConfig} from "@lodestar/config/default";
 import {bellatrix} from "@lodestar/types";
-import {toBufferBE} from "bigint-buffer";
-import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {ValidatorProposerConfig, ValidatorStore} from "../../src/services/validatorStore.js";
 import {getApiClientStub} from "../utils/apiStub.js";
 import {initValidatorStore} from "../utils/validatorStore.js";

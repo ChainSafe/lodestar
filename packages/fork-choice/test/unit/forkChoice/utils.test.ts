@@ -1,6 +1,6 @@
+import {describe, expect, it} from "vitest";
 import {createChainForkConfig} from "@lodestar/config";
 import {ssz} from "@lodestar/types";
-import {describe, expect, it} from "vitest";
 import {ExecutionStatus, assertValidTerminalPowBlock} from "../../../src/index.js";
 
 describe("assertValidTerminalPowBlock", () => {

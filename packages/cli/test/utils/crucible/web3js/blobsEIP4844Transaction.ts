@@ -1,4 +1,3 @@
-import {fromHex} from "@lodestar/utils";
 import {RLP} from "@ethereumjs/rlp";
 import {keccak256} from "ethereum-cryptography/keccak.js";
 import {
@@ -8,6 +7,7 @@ import {
   bigIntToUnpaddedUint8Array,
   uint8ArrayToBigInt,
 } from "web3-eth-accounts";
+import {fromHex} from "@lodestar/utils";
 
 function uint8ArrayConcat(...arrays: Uint8Array[]): Uint8Array {
   const totalLength = arrays.reduce((acc, arr) => acc + arr.length, 0);

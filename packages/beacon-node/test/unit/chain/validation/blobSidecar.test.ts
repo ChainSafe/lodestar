@@ -1,6 +1,6 @@
+import {describe, expect, it} from "vitest";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {describe, expect, it} from "vitest";
 import {BlobSidecarValidationError} from "../../../../src/chain/errors/blobSidecarError.js";
 import {validateBlockBlobSidecars} from "../../../../src/chain/validation/blobSidecar.js";
 import {generateBlockWithBlobSidecars} from "../../../utils/blocksAndData.js";

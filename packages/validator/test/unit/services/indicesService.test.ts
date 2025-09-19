@@ -1,7 +1,7 @@
-import {SecretKey} from "@chainsafe/blst";
-import {toHexString} from "@chainsafe/ssz";
 import {toBufferBE} from "bigint-buffer";
 import {beforeAll, describe, expect, it} from "vitest";
+import {SecretKey} from "@chainsafe/blst";
+import {toHexString} from "@chainsafe/ssz";
 import {IndicesService} from "../../../src/services/indices.js";
 import {getApiClientStub} from "../../utils/apiStub.js";
 import {testLogger} from "../../utils/logger.js";

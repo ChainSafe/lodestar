@@ -1,7 +1,7 @@
+import {describe, expect, it} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {IForkChoice} from "@lodestar/fork-choice";
 import {Root, phase0} from "@lodestar/types";
-import {describe, expect, it} from "vitest";
 import {ZERO_HASH} from "../../../../src/constants/index.js";
 import {
   PeerSyncType,

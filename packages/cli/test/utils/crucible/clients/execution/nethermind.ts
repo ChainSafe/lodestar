@@ -1,7 +1,7 @@
 import {writeFile} from "node:fs/promises";
 import path from "node:path";
-import {fetch} from "@lodestar/utils";
 import {Web3} from "web3";
+import {fetch} from "@lodestar/utils";
 import {SHARED_JWT_SECRET} from "../../constants.js";
 import {ExecutionClient, ExecutionNodeGenerator, JobOptions, RunnerType} from "../../interfaces.js";
 import {getNethermindChainSpec} from "../../utils/executionGenesis.js";

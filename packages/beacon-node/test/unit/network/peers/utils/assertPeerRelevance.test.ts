@@ -1,6 +1,6 @@
+import {describe, expect, it} from "vitest";
 import {ForkName} from "@lodestar/params";
 import {phase0} from "@lodestar/types";
-import {describe, expect, it} from "vitest";
 import {IrrelevantPeerCode, assertPeerRelevance} from "../../../../../src/network/peers/utils/assertPeerRelevance.js";
 
 describe("network / peers / utils / assertPeerRelevance", () => {

@@ -1,9 +1,9 @@
+import {Mock, Mocked, vi} from "vitest";
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {ChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {EpochDifference, ForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {Logger} from "@lodestar/utils";
-import {Mock, Mocked, vi} from "vitest";
 import {BeaconProposerCache} from "../../src/chain/beaconProposerCache.js";
 import {BeaconChain} from "../../src/chain/chain.js";
 import {ChainEventEmitter} from "../../src/chain/emitter.js";

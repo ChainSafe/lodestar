@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
-import {getKeystoresStr} from "@lodestar/test-utils";
 import {rimraf} from "rimraf";
 import {beforeEach, describe, expect, it, vi} from "vitest";
+import {getKeystoresStr} from "@lodestar/test-utils";
 import {
   KeystoreDecryptOptions,
   decryptKeystoreDefinitions,

@@ -1,7 +1,7 @@
+import {describe, expect, it} from "vitest";
 import {config} from "@lodestar/config/default";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Epoch, Slot} from "@lodestar/types";
-import {describe, expect, it} from "vitest";
 import {Batch, BatchStatus} from "../../../../../src/sync/range/batch.js";
 import {
   getNextBatchToProcess,

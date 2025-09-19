@@ -1,9 +1,9 @@
+import {describe, expect, it} from "vitest";
 import {createChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {ZERO_HASH} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {describe, expect, it} from "vitest";
 import {BlockInputColumns} from "../../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../../../src/chain/blocks/blockInput/types.js";
 import {Batch} from "../../../../../src/sync/range/batch.js";

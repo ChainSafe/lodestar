@@ -1,4 +1,6 @@
 import path from "node:path";
+import {generateKeyPair} from "@libp2p/crypto/keys";
+import {expect} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
@@ -18,8 +20,6 @@ import {
   sszTypesFor,
 } from "@lodestar/types";
 import {bnToNum, fromHex, toHex} from "@lodestar/utils";
-import {generateKeyPair} from "@libp2p/crypto/keys";
-import {expect} from "vitest";
 import {
   BlockInputBlobs,
   BlockInputColumns,

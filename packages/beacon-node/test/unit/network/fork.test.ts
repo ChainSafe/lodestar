@@ -1,6 +1,6 @@
+import {describe, expect, it} from "vitest";
 import {BeaconConfig, ForkInfo} from "@lodestar/config";
 import {ForkName, ForkSeq} from "@lodestar/params";
-import {describe, expect, it} from "vitest";
 import {getCurrentAndNextForkBoundary} from "../../../src/network/forks.js";
 
 function getForkConfig({

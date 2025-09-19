@@ -1,6 +1,6 @@
+import {Interface} from "@ethersproject/abi";
 import {phase0, ssz} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
-import {Interface} from "@ethersproject/abi";
 
 const depositEventFragment =
   "event DepositEvent(bytes pubkey, bytes withdrawal_credentials, bytes amount, bytes signature, bytes index)";

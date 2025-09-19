@@ -1,7 +1,7 @@
-import {config} from "@lodestar/config/default";
-import {sleep} from "@lodestar/utils";
 import {FastifyInstance} from "fastify";
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it} from "vitest";
+import {config} from "@lodestar/config/default";
+import {sleep} from "@lodestar/utils";
 import {getClient} from "../../../../src/beacon/client/events.js";
 import {BeaconEvent, Endpoints, EventType, getDefinitions} from "../../../../src/beacon/routes/events.js";
 import {getRoutes} from "../../../../src/beacon/server/events.js";

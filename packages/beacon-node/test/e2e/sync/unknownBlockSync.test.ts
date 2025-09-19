@@ -1,10 +1,10 @@
+import {afterEach, describe, it, vi} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {ChainConfig} from "@lodestar/config";
 import {TimestampFormatCode} from "@lodestar/logger";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {fulu} from "@lodestar/types";
-import {afterEach, describe, it, vi} from "vitest";
 import {BlockInputColumns} from "../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../src/chain/blocks/blockInput/types.js";
 import {ChainEvent} from "../../../src/chain/emitter.js";
