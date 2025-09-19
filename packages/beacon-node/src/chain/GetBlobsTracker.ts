@@ -49,8 +49,11 @@ export class GetBlobsTracker {
       // store the index for the preallocated buffers
       this.activeReconstructions.add(blockInput.blockRootHex);
       callInNextEventLoop(() => {
+        const logCtx = {slot: blockInput.slot, root: blockInput.blockRootHex};
+        this.logger.verbose("Trigger getBlobsV1 for block", logCtx);
         getBlobSidecarsFromExecution(this.config, this.executionEngine, this.metrics, this.emitter, blockInput).finally(
           () => {
+            this.logger.verbose("Completed getBlobsV1 for block", logCtx);
             this.activeReconstructions.delete(blockInput.blockRootHex);
           }
         );
@@ -80,6 +83,8 @@ export class GetBlobsTracker {
     this.activeReconstructions.add(blockInput.blockRootHex);
     this.blobsAndProofsBuffers[freeIndex].inUse = true;
     callInNextEventLoop(() => {
+      const logCtx = {slot: blockInput.slot, root: blockInput.blockRootHex};
+      this.logger.verbose("Trigger getBlobsV2 for block", logCtx);
       getDataColumnSidecarsFromExecution(
         this.config,
         this.executionEngine,
@@ -88,6 +93,7 @@ export class GetBlobsTracker {
         this.metrics,
         this.blobsAndProofsBuffers[freeIndex].buffers
       ).finally(() => {
+        this.logger.verbose("Completed getBlobsV2 for block", logCtx);
         this.activeReconstructions.delete(blockInput.blockRootHex);
         this.blobsAndProofsBuffers[freeIndex].inUse = false;
       });
