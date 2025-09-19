@@ -28,12 +28,13 @@
                 "npm:*",
                 "npm:*/**"
               ],
-              ["@chainsafe/**", "@lodestar/**", "@/**"],
               [
                 // Libraries
                 ":PACKAGE:",
                 // Libraries
-                ":PACKAGE_WITH_PROTOCOL:"
+                ":PACKAGE_WITH_PROTOCOL:",
+                "!@chainsafe/**",
+                "!@lodestar/**"
               ],
               [
                 // URLs
@@ -41,6 +42,7 @@
                 // Sharp aliases
                 ":ALIAS:"
               ],
+              ["@chainsafe/**", "@lodestar/**"],
               // All other paths
               ":PATH:"
             ]
