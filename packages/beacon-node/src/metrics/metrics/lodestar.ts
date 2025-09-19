@@ -814,7 +814,7 @@ export function createLodestarMetrics(
         name: "lodestar_recover_data_column_sidecar_recovered_columns_total",
         help: "Total number of columns that were recovered",
       }),
-      reconstructionResult: register.gauge<{result: DataColumnReconstructionCode}>({
+      reconstructionResult: register.counter<{result: DataColumnReconstructionCode}>({
         name: "lodestar_data_column_sidecars_reconstruction_result",
         help: "Data column sidecars reconstruction result",
         labelNames: ["result"],
