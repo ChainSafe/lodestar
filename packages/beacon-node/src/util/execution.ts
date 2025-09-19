@@ -23,7 +23,7 @@ export enum DataColumnEngineResult {
   // block has no blob so no need to call EL
   NotAttemptedNoBlobs = "not_attempted_no_blobs",
   // EL call returned null, meaning it could not find the blobs
-  SuccessNull = "success_null",
+  NullResponse = "null_response",
   // the recover is a success and it helps resolve availability
   SuccessResolved = "success_resolved",
   // the recover is a success but it's late, availability is already resolved by either gossip or getBlobsV2
@@ -163,7 +163,7 @@ export async function getDataColumnSidecarsFromExecution(
 
   // Execution engine was unable to find one or more blobs
   if (blobs === null) {
-    return DataColumnEngineResult.SuccessNull;
+    return DataColumnEngineResult.NullResponse;
   }
   metrics?.peerDas.getBlobsV2Responses.inc();
 
