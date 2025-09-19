@@ -21,9 +21,9 @@ import {PendingBlockType} from "../../sync/types.js";
 import {PeerSyncType, RangeSyncType} from "../../sync/utils/remoteSyncType.js";
 import {AllocSource} from "../../util/bufferPool.js";
 import {DataColumnReconstructionCode} from "../../util/dataColumns.js";
+import {DataColumnEngineResult} from "../../util/execution.js";
 import {LodestarMetadata} from "../options.js";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
-import {DataColumnEngineResult} from "../../util/execution.js";
 
 export type LodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 
