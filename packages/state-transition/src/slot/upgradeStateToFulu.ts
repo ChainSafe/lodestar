@@ -1,5 +1,4 @@
 import {ssz} from "@lodestar/types";
-
 import {getCachedBeaconState} from "../cache/stateCache.js";
 import {CachedBeaconStateElectra, CachedBeaconStateFulu} from "../types.js";
 import {initializeProposerLookahead} from "../util/fulu.js";

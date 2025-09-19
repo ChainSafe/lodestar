@@ -1,5 +1,4 @@
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
-
 import {DAType, IBlockInput} from "./blockInput/index.js";
 
 // we can now wait for full 12 seconds because unavailable block sync will try pulling

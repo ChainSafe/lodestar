@@ -1,6 +1,5 @@
 import {RootHex} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
-
 import {
   BlockInputSyncCacheItem,
   PendingBlockInput,

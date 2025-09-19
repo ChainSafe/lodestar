@@ -1,5 +1,4 @@
 import {describe, expect, it} from "vitest";
-
 import {parseBootnodesFile} from "../../../src/util/index.js";
 
 describe("config / bootnodes / parsing", () => {

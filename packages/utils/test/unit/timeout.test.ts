@@ -1,5 +1,4 @@
 import {afterEach, describe, expect, it, vi} from "vitest";
-
 import {ErrorAborted, TimeoutError} from "../../src/errors.js";
 import {withTimeout} from "../../src/timeout.js";
 

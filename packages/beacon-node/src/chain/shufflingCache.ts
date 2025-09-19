@@ -8,7 +8,6 @@ import {
 } from "@lodestar/state-transition";
 import {Epoch, RootHex} from "@lodestar/types";
 import {LodestarError, Logger, MapDef, pruneSetToMax} from "@lodestar/utils";
-
 import {Metrics} from "../metrics/metrics.js";
 
 /**

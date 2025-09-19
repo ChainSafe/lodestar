@@ -1,9 +1,7 @@
 import {ENR} from "@chainsafe/enr";
 import {IBeaconNodeOptions, defaultOptions} from "@lodestar/beacon-node";
 import {CliCommandOptions} from "@lodestar/utils";
-
 import {multiaddr} from "@multiformats/multiaddr";
-
 import {YargsError} from "../../util/index.js";
 
 export const defaultListenAddress = "0.0.0.0";

@@ -10,9 +10,7 @@ import {
 import {Epoch, ValidatorIndex, phase0, ssz} from "@lodestar/types";
 import {CliCommand, fromHex, toPubkeyHex} from "@lodestar/utils";
 import {SignableMessageType, Signer, SignerType, externalSignerPostSignature} from "@lodestar/validator";
-
 import inquirer from "inquirer";
-
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {GlobalArgs} from "../../options/index.js";
 import {YargsError, ensure0xPrefix, wrapError} from "../../util/index.js";

@@ -1,5 +1,4 @@
 import {CliCommandOptions} from "@lodestar/utils";
-
 import {DEFAULT_PROXY_REQUEST_TIMEOUT} from "../../../constants.js";
 import {LCTransport} from "../../../interfaces.js";
 import {alwaysAllowedMethods} from "../../../utils/process.js";

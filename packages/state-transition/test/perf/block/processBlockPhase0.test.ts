@@ -8,7 +8,6 @@ import {
   MAX_VOLUNTARY_EXITS,
   PresetName,
 } from "@lodestar/params";
-
 import {DataAvailabilityStatus, ExecutionPayloadStatus, stateTransition} from "../../../src/index.js";
 import {StateBlock} from "../types.js";
 import {generatePerfTestCachedStatePhase0, perfStateId} from "../util.js";

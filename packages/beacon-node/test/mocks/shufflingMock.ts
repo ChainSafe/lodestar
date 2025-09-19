@@ -1,5 +1,4 @@
 import {Mocked, vi} from "vitest";
-
 import {ShufflingCache} from "../../src/chain/shufflingCache.js";
 
 export type MockedShufflingCache = Mocked<ShufflingCache>;

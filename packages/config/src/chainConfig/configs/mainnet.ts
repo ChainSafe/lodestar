@@ -1,6 +1,5 @@
 import {PresetName} from "@lodestar/params";
 import {fromHex as b} from "@lodestar/utils";
-
 import {ChainConfig} from "../types.js";
 
 // Mainnet config

@@ -1,5 +1,4 @@
 import {ForkSeq} from "@lodestar/params";
-
 import {initiateValidatorExit} from "../block/index.js";
 import {CachedBeaconStateAllForks, EpochTransitionCache} from "../types.js";
 import {computeActivationExitEpoch} from "../util/index.js";

@@ -1,5 +1,4 @@
 import crypto from "node:crypto";
-
 import {bench, describe} from "@chainsafe/benchmark";
 import {
   PublicKey,
@@ -10,7 +9,6 @@ import {
   verify,
   verifyMultipleAggregateSignatures,
 } from "@chainsafe/blst";
-
 import {linspace} from "../../../src/util/numpy.js";
 
 describe("BLS ops", () => {

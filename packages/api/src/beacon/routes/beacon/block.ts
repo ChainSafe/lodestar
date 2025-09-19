@@ -20,7 +20,6 @@ import {
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
-
 import {EmptyMeta, EmptyResponseCodec, EmptyResponseData, WithVersion} from "../../../utils/codecs.js";
 import {getPostBellatrixForkTypes, toForkName} from "../../../utils/fork.js";
 import {fromHeaders} from "../../../utils/headers.js";

@@ -8,7 +8,6 @@ import type {PrivateKey} from "@libp2p/interface";
 import {peerIdFromPrivateKey, peerIdFromString} from "@libp2p/peer-id";
 import {fromString as uint8ArrayFromString} from "uint8arrays/from-string";
 import {toString as uint8ArrayToString} from "uint8arrays/to-string";
-
 import {readFile, writeFile600Perm} from "../util/index.js";
 
 // Peer id to / from JSON taken from peer-id-factory

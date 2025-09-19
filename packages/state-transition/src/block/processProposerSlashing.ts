@@ -1,6 +1,5 @@
 import {ForkSeq} from "@lodestar/params";
 import {phase0, ssz} from "@lodestar/types";
-
 import {getProposerSlashingSignatureSets} from "../signatureSets/index.js";
 import {CachedBeaconStateAllForks} from "../types.js";
 import {isSlashableValidator} from "../util/index.js";

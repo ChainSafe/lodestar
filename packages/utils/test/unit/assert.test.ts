@@ -1,5 +1,4 @@
 import {describe, expect, it} from "vitest";
-
 import {assert} from "../../src/index.js";
 
 describe("assert", () => {

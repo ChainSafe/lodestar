@@ -4,7 +4,6 @@ import {ExecutionStatus} from "@lodestar/fork-choice";
 import {ZERO_HASH_HEX, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
 import {BeaconState, deneb, fulu, sszTypesFor} from "@lodestar/types";
 import {fromAsync, toRootHex} from "@lodestar/utils";
-
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
 import {getStateSlotFromBytes} from "../../../util/multifork.js";
 import {getBlockResponse} from "../beacon/blocks/utils.js";

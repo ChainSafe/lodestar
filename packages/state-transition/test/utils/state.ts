@@ -9,7 +9,6 @@ import {
   SLOTS_PER_HISTORICAL_ROOT,
 } from "@lodestar/params";
 import {phase0, ssz} from "@lodestar/types";
-
 import {EpochCacheOpts} from "../../src/cache/epochCache.js";
 import {BeaconStateCache} from "../../src/cache/stateCache.js";
 import {ZERO_HASH} from "../../src/constants/index.js";

@@ -1,5 +1,4 @@
 import {Slot} from "@lodestar/types";
-
 import {Assertion, AssertionResult} from "../../interfaces.js";
 import {everySlotMatcher} from "../matchers.js";
 

@@ -1,7 +1,6 @@
 import {LogLevel} from "@lodestar/logger";
 import {getBrowserLogger} from "@lodestar/logger/browser";
 import {Logger} from "@lodestar/utils";
-
 import {AnyWeb3Provider, ELRequestHandler, VerifiedExecutionInitOptions} from "./interfaces.js";
 import {ProofProvider} from "./proof_provider/proof_provider.js";
 import {processAndVerifyRequest} from "./utils/process.js";

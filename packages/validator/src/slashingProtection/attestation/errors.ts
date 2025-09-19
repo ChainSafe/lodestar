@@ -1,6 +1,5 @@
 import {Epoch} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
-
 import {SlashingProtectionAttestation} from "../types.js";
 
 export enum InvalidAttestationErrorCode {

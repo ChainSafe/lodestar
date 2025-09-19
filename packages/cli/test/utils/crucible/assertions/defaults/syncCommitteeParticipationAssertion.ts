@@ -1,6 +1,5 @@
 import {ForkName} from "@lodestar/params";
 import {altair} from "@lodestar/types";
-
 import {Assertion, AssertionResult, Match} from "../../interfaces.js";
 import {avg} from "../../utils/index.js";
 

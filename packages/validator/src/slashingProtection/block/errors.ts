@@ -1,6 +1,5 @@
 import {Slot} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
-
 import {SlashingProtectionBlock} from "../types.js";
 
 export enum InvalidBlockErrorCode {

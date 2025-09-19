@@ -1,7 +1,5 @@
 import {ForkName} from "@lodestar/params";
-
 import {Uint8ArrayList} from "uint8arraylist";
-
 import {readEncodedPayload} from "../encodingStrategies/index.js";
 import {RespStatus} from "../interface.js";
 import {ResponseError} from "../response/index.js";

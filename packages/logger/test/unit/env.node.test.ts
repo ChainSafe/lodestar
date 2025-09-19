@@ -1,8 +1,6 @@
 import {stubLoggerForConsole} from "@lodestar/test-utils/doubles";
 import {LogLevel} from "@lodestar/utils";
-
 import {describe, expect, it} from "vitest";
-
 import {getEnvLogger} from "../../src/env.js";
 import {TimestampFormatCode, logFormats} from "../../src/index.js";
 import {formatsTestCases} from "../fixtures/loggerFormats.js";

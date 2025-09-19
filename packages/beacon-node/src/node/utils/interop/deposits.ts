@@ -9,7 +9,6 @@ import {
 } from "@lodestar/params";
 import {ZERO_HASH, computeDomain, computeSigningRoot, interopSecretKeys} from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
-
 import {DepositTree} from "../../../db/repositories/depositDataRoot.js";
 
 /**

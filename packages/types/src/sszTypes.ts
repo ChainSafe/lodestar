@@ -1,6 +1,5 @@
 import {CompositeType, CompositeView, CompositeViewDU, ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
-
 import {ssz as altairSsz} from "./altair/index.js";
 import {ssz as bellatrixSsz} from "./bellatrix/index.js";
 import {ssz as capellaSsz} from "./capella/index.js";

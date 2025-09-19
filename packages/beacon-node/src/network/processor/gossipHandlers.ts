@@ -22,7 +22,6 @@ import {
   sszTypesFor,
 } from "@lodestar/types";
 import {LogLevel, Logger, prettyBytes, toHex, toRootHex} from "@lodestar/utils";
-
 import {
   BlockInput,
   BlockInputColumns,

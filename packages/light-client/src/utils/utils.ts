@@ -4,7 +4,6 @@ import {BitArray} from "@chainsafe/ssz";
 import {ApiClient} from "@lodestar/api";
 import {Bytes32, Root, altair, ssz} from "@lodestar/types";
 import {BeaconBlockHeader} from "@lodestar/types/phase0";
-
 import {GenesisData} from "../index.js";
 import {SyncCommitteeFast} from "../types.js";
 

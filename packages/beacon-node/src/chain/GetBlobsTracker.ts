@@ -1,7 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Logger} from "@lodestar/utils";
-
 import {BLOB_AND_PROOF_V2_RPC_BYTES} from "../execution/engine/types.js";
 import {IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/metrics.js";

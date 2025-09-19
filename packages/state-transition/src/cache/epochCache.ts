@@ -27,7 +27,6 @@ import {
   phase0,
 } from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
-
 import {getTotalSlashingsByIncrement} from "../epoch/processSlashings.js";
 import {AttesterDuty, calculateCommitteeAssignments} from "../util/calculateCommitteeAssignments.js";
 import {

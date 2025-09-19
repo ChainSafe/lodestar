@@ -1,5 +1,4 @@
 import path from "node:path";
-
 import {ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {
@@ -14,7 +13,6 @@ import {
 } from "@lodestar/state-transition";
 import * as slotFns from "@lodestar/state-transition/slot";
 import {phase0, ssz} from "@lodestar/types";
-
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";

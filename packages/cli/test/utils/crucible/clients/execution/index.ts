@@ -1,5 +1,4 @@
 import {writeFile} from "node:fs/promises";
-
 import {CLIQUE_SEALING_PERIOD, SHARED_JWT_SECRET} from "../../constants.js";
 import {
   AtLeast,

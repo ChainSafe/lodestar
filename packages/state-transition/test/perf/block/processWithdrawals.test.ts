@@ -1,6 +1,5 @@
 import {bench, describe} from "@chainsafe/benchmark";
 import {ForkSeq} from "@lodestar/params";
-
 import {getExpectedWithdrawals} from "../../../src/block/processWithdrawals.js";
 import {CachedBeaconStateCapella} from "../../../src/index.js";
 import {WithdrawalOpts, getExpectedWithdrawalsTestData} from "../../utils/capella.js";

@@ -1,7 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {RootHex, SignedBeaconBlock} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-
 import {IBlockInput} from "../../../chain/blocks/blockInput/types.js";
 
 /**

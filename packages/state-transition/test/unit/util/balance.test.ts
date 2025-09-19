@@ -1,9 +1,7 @@
 import {config as minimalConfig} from "@lodestar/config/default";
 import {EFFECTIVE_BALANCE_INCREMENT} from "@lodestar/params";
 import {ValidatorIndex} from "@lodestar/types";
-
 import {describe, expect, it} from "vitest";
-
 import {getEffectiveBalanceIncrementsZeroInactive, getEffectiveBalanceIncrementsZeroed} from "../../../src/index.js";
 import {decreaseBalance, getTotalBalance, increaseBalance, isActiveValidator} from "../../../src/util/index.js";
 import {generateCachedState, generateState} from "../../utils/state.js";

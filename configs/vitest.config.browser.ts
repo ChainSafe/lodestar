@@ -1,10 +1,8 @@
 /// <reference types="@vitest/browser/providers/webdriverio" />
 
 import path from "node:path";
-
 import {nodePolyfills} from "vite-plugin-node-polyfills";
 import {defineProject} from "vitest/config";
-
 import {blsBrowserPlugin} from "../scripts/vite/plugins/blsBrowserPlugin.js";
 
 const isBun = "bun" in process.versions;

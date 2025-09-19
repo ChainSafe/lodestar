@@ -1,7 +1,5 @@
 import childProcess from "node:child_process";
-
 import type {Argv} from "yargs";
-
 import {
   ExecChildProcessOptions,
   SpawnChildProcessOptions,

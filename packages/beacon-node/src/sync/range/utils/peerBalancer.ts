@@ -1,5 +1,4 @@
 import {isForkPostFulu} from "@lodestar/params";
-
 import {PeerSyncMeta} from "../../../network/peers/peersData.js";
 import {CustodyConfig} from "../../../util/dataColumns.js";
 import {PeerIdStr} from "../../../util/peerId.js";

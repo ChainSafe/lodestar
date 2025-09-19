@@ -1,6 +1,5 @@
 import {fromHexString} from "@chainsafe/ssz";
 import {phase0} from "@lodestar/types";
-
 import {FAR_FUTURE_EPOCH} from "../../src/constants/index.js";
 
 /**

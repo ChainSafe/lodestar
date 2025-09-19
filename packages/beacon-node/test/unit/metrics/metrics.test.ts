@@ -1,5 +1,4 @@
 import {describe, expect, it} from "vitest";
-
 import {createMetricsTest} from "./utils.js";
 
 describe("Metrics", () => {

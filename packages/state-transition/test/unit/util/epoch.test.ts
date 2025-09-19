@@ -1,8 +1,6 @@
 import {GENESIS_SLOT, MAX_SEED_LOOKAHEAD} from "@lodestar/params";
 import {Epoch, Slot} from "@lodestar/types";
-
 import {describe, expect, it} from "vitest";
-
 import {
   computeActivationExitEpoch,
   computeEpochAtSlot,

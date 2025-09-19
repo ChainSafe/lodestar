@@ -1,6 +1,5 @@
 import {assertValidProposerSlashing, getProposerSlashingSignatureSets} from "@lodestar/state-transition";
 import {phase0} from "@lodestar/types";
-
 import {GossipAction, ProposerSlashingError, ProposerSlashingErrorCode} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
 

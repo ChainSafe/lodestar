@@ -1,5 +1,4 @@
 import {SignedBeaconBlock} from "@lodestar/types";
-
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStatePhase0} from "../../src/index.js";
 import {EpochTransitionCache} from "../../src/types.js";
 

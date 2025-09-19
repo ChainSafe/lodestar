@@ -1,5 +1,4 @@
 import {describe, expect, it} from "vitest";
-
 import {ClientCode} from "../../../src/execution/index.js";
 import {getLodestarClientVersion, serializeCgc} from "../../../src/util/metadata.js";
 

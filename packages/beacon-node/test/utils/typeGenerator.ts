@@ -2,7 +2,6 @@ import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {Slot, phase0, ssz} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
-
 import {ZERO_HASH_HEX} from "../../src/constants/index.js";
 
 // Only add functions for types that need some property changed.

@@ -13,7 +13,6 @@ import {
   isExecutionPayload,
   ssz,
 } from "@lodestar/types";
-
 import {
   BeaconStateAllForks,
   BeaconStateBellatrix,

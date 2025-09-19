@@ -1,5 +1,4 @@
 import crypto from "node:crypto";
-
 import {
   BLOB_TX_TYPE,
   BYTES_PER_FIELD_ELEMENT,
@@ -11,7 +10,6 @@ import {
 } from "@lodestar/params";
 import {ExecutionPayload, RootHex, bellatrix, deneb, ssz} from "@lodestar/types";
 import {fromHex, toHex, toRootHex} from "@lodestar/utils";
-
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {quantityToNum} from "../../eth1/provider/utils.js";
 import {INTEROP_BLOCK_HASH} from "../../node/utils/interop/state.js";

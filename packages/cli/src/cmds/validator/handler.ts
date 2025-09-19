@@ -1,6 +1,5 @@
 import {setMaxListeners} from "node:events";
 import path from "node:path";
-
 import {WireFormat, routes} from "@lodestar/api";
 import {
   MonitoringService,
@@ -18,7 +17,6 @@ import {
   defaultOptions,
   getMetrics,
 } from "@lodestar/validator";
-
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {GlobalArgs} from "../../options/index.js";
 import {

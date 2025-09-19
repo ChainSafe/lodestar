@@ -10,7 +10,6 @@ import {
 } from "@lodestar/state-transition";
 import {Epoch} from "@lodestar/types";
 import {ErrorAborted, Logger, prettyBytes, prettyBytesShort, sleep} from "@lodestar/utils";
-
 import {IBeaconChain} from "../chain/index.js";
 import {ExecutionEngineState} from "../execution/index.js";
 import {INetwork} from "../network/index.js";

@@ -7,7 +7,6 @@ import {
   LightClientUpdate,
   Slot,
 } from "@lodestar/types";
-
 import {computeSyncPeriodAtSlot} from "../utils/index.js";
 import {ProcessUpdateOpts, getSyncCommitteeAtPeriod, processLightClientUpdate} from "./processLightClientUpdate.js";
 import {ILightClientStore, LightClientStore, LightClientStoreEvents} from "./store.js";

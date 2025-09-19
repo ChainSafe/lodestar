@@ -1,7 +1,5 @@
 import {ForkName, isForkPostBellatrix} from "@lodestar/params";
-
 import {describe, expect, it} from "vitest";
-
 import {ssz} from "../../src/index.js";
 
 describe("blinded data structures", () => {

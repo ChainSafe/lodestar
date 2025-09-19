@@ -1,5 +1,4 @@
 import {KeystoreStr} from "@lodestar/api/keymanager";
-
 import {LocalKeystoreDefinition} from "../interface.js";
 
 export type DecryptKeystoreWorkerAPI = {

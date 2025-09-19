@@ -1,7 +1,5 @@
 import {LogLevel} from "@lodestar/utils";
-
 import {Mock, afterEach, describe, expect, it, vi} from "vitest";
-
 import {TimestampFormatCode, logFormats} from "../../src/index.js";
 import {getNodeLogger} from "../../src/node.js";
 import {formatsTestCases} from "../fixtures/loggerFormats.js";

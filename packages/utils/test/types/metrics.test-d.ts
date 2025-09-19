@@ -1,6 +1,5 @@
 import {Counter as PromCounter, Gauge as PromGauge, Histogram as PromHistogram} from "prom-client";
 import {describe, expectTypeOf, it} from "vitest";
-
 import {Counter, Gauge, Histogram, MetricsRegister} from "../../src/metrics.js";
 
 describe("Metric types", () => {

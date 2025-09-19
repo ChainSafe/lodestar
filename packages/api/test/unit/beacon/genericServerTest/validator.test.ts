@@ -1,7 +1,5 @@
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-
 import {describe} from "vitest";
-
 import {getClient} from "../../../../src/beacon/client/validator.js";
 import {Endpoints} from "../../../../src/beacon/routes/validator.js";
 import {getRoutes} from "../../../../src/beacon/server/validator.js";

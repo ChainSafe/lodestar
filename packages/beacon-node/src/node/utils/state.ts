@@ -1,7 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
-
 import {IBeaconDb} from "../../db/index.js";
 import {interopDeposits} from "./interop/deposits.js";
 import {InteropStateOpts, getInteropState} from "./interop/state.js";

@@ -26,7 +26,6 @@ import {
   sszTypesFor,
 } from "@lodestar/types";
 import {fromHex, toHex, toRootHex} from "@lodestar/utils";
-
 import {IBeaconDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {SignedBLSToExecutionChangeVersioned} from "../../util/types.js";

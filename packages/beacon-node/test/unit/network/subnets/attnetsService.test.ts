@@ -10,9 +10,7 @@ import {
 import {ZERO_HASH, getCurrentSlot} from "@lodestar/state-transition";
 import {SubnetID} from "@lodestar/types";
 import {bigIntToBytes} from "@lodestar/utils";
-
 import {MockedObject, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-
 import {Eth2Gossipsub} from "../../../../src/network/gossip/gossipsub.js";
 import {MetadataController} from "../../../../src/network/metadata.js";
 import {NetworkConfig} from "../../../../src/network/networkConfig.js";

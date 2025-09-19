@@ -1,5 +1,4 @@
 import path from "node:path";
-
 import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {
@@ -10,9 +9,7 @@ import {
 } from "@lodestar/state-transition";
 import {ExecutionPayloadHeader, Root, TimeSeconds, phase0, ssz, sszTypesFor} from "@lodestar/types";
 import {bnToNum} from "@lodestar/utils";
-
 import {expect} from "vitest";
-
 import {getConfig} from "../../utils/config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {expectEqualBeaconState} from "../utils/expectEqualBeaconState.js";

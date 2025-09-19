@@ -9,7 +9,6 @@ import {
 } from "@lodestar/state-transition";
 import {bellatrix, deneb} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
-
 import type {BeaconChain} from "../chain.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";

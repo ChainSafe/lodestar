@@ -2,9 +2,7 @@ import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {KeyValue, LevelDbController} from "@lodestar/db";
 import {phase0, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
-
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
-
 import {BeaconDb} from "../../../src/db/index.js";
 import {Eth1ForBlockProduction} from "../../../src/eth1/index.js";
 import {Eth1Options} from "../../../src/eth1/options.js";

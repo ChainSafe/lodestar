@@ -1,5 +1,4 @@
 import path from "node:path";
-
 import {createBlobsAssertion} from "../utils/crucible/assertions/blobsAssertion.js";
 import {BeaconClient, ExecutionClient, ValidatorClient} from "../utils/crucible/interfaces.js";
 import {Simulation} from "../utils/crucible/simulation.js";

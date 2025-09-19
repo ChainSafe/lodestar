@@ -22,7 +22,6 @@ import {
   isElectraLightClientUpdate,
   ssz,
 } from "@lodestar/types";
-
 import {computeEpochAtSlot, computeSyncPeriodAtSlot, isValidMerkleBranch} from "../utils/index.js";
 import {normalizeMerkleBranch} from "../utils/normalizeMerkleBranch.js";
 import {LightClientStore} from "./store.js";

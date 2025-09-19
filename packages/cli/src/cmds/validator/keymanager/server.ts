@@ -1,12 +1,10 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-
 import {KeymanagerApiMethods, registerRoutes} from "@lodestar/api/keymanager/server";
 import {RestApiServer, RestApiServerModules, RestApiServerOpts} from "@lodestar/beacon-node";
 import {ChainForkConfig} from "@lodestar/config";
 import {toHex} from "@lodestar/utils";
-
 import {writeFile600Perm} from "../../../util/index.js";
 
 export type KeymanagerRestApiServerOpts = RestApiServerOpts & {

@@ -1,5 +1,4 @@
 import {describe, expect, it} from "vitest";
-
 import {parseDepositLog} from "../../../../src/eth1/utils/depositContract.js";
 import {goerliTestnetDepositEvents, goerliTestnetLogs} from "../../../utils/testnet.js";
 

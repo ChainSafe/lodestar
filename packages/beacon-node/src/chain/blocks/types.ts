@@ -3,7 +3,6 @@ import {MaybeValidExecutionStatus} from "@lodestar/fork-choice";
 import {ForkSeq} from "@lodestar/params";
 import {CachedBeaconStateAllForks, DataAvailabilityStatus, computeEpochAtSlot} from "@lodestar/state-transition";
 import type {Slot, fulu} from "@lodestar/types";
-
 import {IBlockInput} from "./blockInput/types.js";
 
 export enum GossipedInputType {

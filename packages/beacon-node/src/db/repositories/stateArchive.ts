@@ -3,7 +3,6 @@ import {Db, Repository} from "@lodestar/db";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {Epoch, Root, RootHex, Slot, ssz} from "@lodestar/types";
 import {bytesToInt, toHex} from "@lodestar/utils";
-
 import {getStateTypeFromBytes} from "../../util/multifork.js";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 import {getRootIndex, getRootIndexKey, storeRootIndex} from "./stateArchiveIndex.js";

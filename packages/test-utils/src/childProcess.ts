@@ -2,7 +2,6 @@ import childProcess, {ChildProcess, ChildProcessWithoutNullStreams} from "node:c
 import fs from "node:fs";
 import path from "node:path";
 import stream from "node:stream";
-
 import {Logger, prettyMsToTime, retry, sleep} from "@lodestar/utils";
 
 export type ChildProcessLogOptions = {

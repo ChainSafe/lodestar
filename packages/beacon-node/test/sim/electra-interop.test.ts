@@ -1,6 +1,5 @@
 import assert from "node:assert";
 import fs from "node:fs";
-
 import {ChainConfig} from "@lodestar/config";
 import {TimestampFormatCode} from "@lodestar/logger";
 import {ForkName, SLOTS_PER_EPOCH, UNSET_DEPOSIT_REQUESTS_START_INDEX} from "@lodestar/params";
@@ -8,9 +7,7 @@ import {CachedBeaconStateElectra} from "@lodestar/state-transition";
 import {Epoch, Slot, electra} from "@lodestar/types";
 import {LogLevel, sleep} from "@lodestar/utils";
 import {ValidatorProposerConfig} from "@lodestar/validator";
-
 import {afterAll, afterEach, describe, it, vi} from "vitest";
-
 import {bytesToData} from "../../lib/eth1/provider/utils.js";
 import {BeaconRestApiServerOpts} from "../../src/api/index.js";
 import {dataToBytes} from "../../src/eth1/provider/utils.js";

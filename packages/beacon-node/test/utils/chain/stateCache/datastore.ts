@@ -1,5 +1,4 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-
 import {CPStateDatastore, checkpointToDatastoreKey} from "../../../../src/chain/stateCache/datastore/index.js";
 
 export function getTestDatastore(fileApisBuffer: Map<string, Uint8Array>): CPStateDatastore {

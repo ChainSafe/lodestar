@@ -1,7 +1,5 @@
 import {AvgMinMax as IAvgMinMax, LabelKeys, LabelsGeneric} from "@lodestar/utils";
-
 import {GaugeConfiguration} from "prom-client";
-
 import {GaugeExtra} from "./gauge.js";
 
 type GetValuesFn = () => number[];

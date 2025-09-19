@@ -1,6 +1,5 @@
 import {Slot} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
-
 import {PeerIdStr} from "../../../util/peerId.js";
 import {BlockInputSource, LogMetaBlobs, LogMetaColumns} from "./types.js";
 

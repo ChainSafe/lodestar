@@ -14,7 +14,6 @@ import {
 } from "@lodestar/params";
 import {Attestation, Epoch, phase0} from "@lodestar/types";
 import {intSqrt} from "@lodestar/utils";
-
 import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {getAttestationWithIndicesSignatureSet} from "../signatureSets/indexedAttestation.js";
 import {CachedBeaconStateAltair} from "../types.js";

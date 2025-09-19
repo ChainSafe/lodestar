@@ -1,5 +1,4 @@
 import {CliCommand} from "@lodestar/utils";
-
 import {GlobalArgs} from "../options.js";
 import {proverProxyStartCommand} from "./start/index.js";
 

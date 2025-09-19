@@ -1,9 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-
 import jsyaml from "js-yaml";
 import {describe, expect, it} from "vitest";
-
 import {blsSpecTests} from "../specTestVersioning.js";
 import {readdirSyncSpec} from "../utils/specTestIterator.js";
 import {testFnByType} from "./bls.js";

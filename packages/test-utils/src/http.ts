@@ -1,5 +1,4 @@
 import {fetch, sleep} from "@lodestar/utils";
-
 import axios from "axios";
 
 type Method = "GET" | "POST" | "PUT";

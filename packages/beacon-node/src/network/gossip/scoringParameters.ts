@@ -7,7 +7,6 @@ import {
 import {BeaconConfig} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, TARGET_AGGREGATORS_PER_COMMITTEE} from "@lodestar/params";
 import {computeCommitteeCount} from "@lodestar/state-transition";
-
 import {getActiveForkBoundaries} from "../forks.js";
 import {Eth2Context} from "./gossipsub.js";
 import {GossipType} from "./interface.js";

@@ -4,9 +4,7 @@ import {LoggerNode} from "@lodestar/logger/node";
 import {ForkSeq, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {Metadata, Status, altair, fulu, phase0} from "@lodestar/types";
 import {prettyPrintIndices, toHex, withTimeout} from "@lodestar/utils";
-
 import {Connection, PeerId, PrivateKey} from "@libp2p/interface";
-
 import {GOODBYE_KNOWN_CODES, GoodByeReasonCode, Libp2pEvent} from "../../constants/index.js";
 import {IClock} from "../../util/clock.js";
 import {computeColumnsForCustodyGroup, getCustodyGroups} from "../../util/dataColumns.js";

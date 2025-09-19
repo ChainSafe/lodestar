@@ -1,5 +1,4 @@
 import fs from "node:fs";
-
 import {stripOffNewlines} from "./stripOffNewlines.js";
 
 /**

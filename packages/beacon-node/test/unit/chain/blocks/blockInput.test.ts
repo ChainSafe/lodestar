@@ -3,9 +3,7 @@ import {ForkName, ForkPostCapella, ForkPostDeneb} from "@lodestar/params";
 import {computeStartSlotAtEpoch, signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {SignedBeaconBlock, deneb, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-
 import {describe, expect, it} from "vitest";
-
 import {
   AddBlob,
   AddBlock,

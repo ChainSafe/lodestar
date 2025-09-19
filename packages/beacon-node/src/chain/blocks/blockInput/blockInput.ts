@@ -1,7 +1,6 @@
 import {ForkName, ForkPreDeneb} from "@lodestar/params";
 import {BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
 import {fromHex, prettyBytes, toRootHex, withTimeout} from "@lodestar/utils";
-
 import {VersionedHashes} from "../../../execution/index.js";
 import {kzgCommitmentToVersionedHash} from "../../../util/blobs.js";
 import {BlockInputError, BlockInputErrorCode} from "./errors.js";

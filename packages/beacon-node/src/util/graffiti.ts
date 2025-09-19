@@ -1,5 +1,4 @@
 import {Bytes32} from "@lodestar/types";
-
 import {GRAFFITI_SIZE} from "../constants/index.js";
 import {ClientVersion} from "../execution/index.js";
 

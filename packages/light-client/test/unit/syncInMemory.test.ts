@@ -3,9 +3,7 @@ import {createBeaconConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {SyncPeriod, altair, ssz} from "@lodestar/types";
-
 import {beforeAll, describe, expect, it, vi} from "vitest";
-
 import {LightClientStoreFast} from "../../src/types.js";
 import {BeaconChainLcMock} from "../mocks/BeaconChainLcMock.js";
 import {processLightClientUpdate} from "../utils/naive/update.js";

@@ -1,7 +1,5 @@
 import {ssz} from "@lodestar/types";
-
 import {describe, expect, it} from "vitest";
-
 import {computeEpochAtSlot} from "../../../src/index.js";
 import {computeEpochShuffling, computeEpochShufflingAsync} from "../../../src/util/epochShuffling.js";
 import {generateState} from "../../utils/state.js";

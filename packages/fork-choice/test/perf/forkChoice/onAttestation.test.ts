@@ -4,7 +4,6 @@ import {ATTESTATION_SUBNET_COUNT} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {AttestationData, IndexedAttestation} from "@lodestar/types/phase0";
-
 import {initializeForkChoice} from "./util.js";
 
 describe("ForkChoice onAttestation", () => {

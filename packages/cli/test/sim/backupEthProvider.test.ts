@@ -1,5 +1,4 @@
 import path from "node:path";
-
 import {nodeAssertion} from "../utils/crucible/assertions/nodeAssertion.js";
 import {BeaconClient, ExecutionClient, Match} from "../utils/crucible/interfaces.js";
 import {Simulation} from "../utils/crucible/simulation.js";

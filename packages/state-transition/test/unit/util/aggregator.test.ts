@@ -5,9 +5,7 @@ import {
   TARGET_AGGREGATORS_PER_COMMITTEE,
   TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE,
 } from "@lodestar/params";
-
 import {beforeAll, describe, expect, it} from "vitest";
-
 import {isAggregatorFromCommitteeLength, isSyncCommitteeAggregator} from "../../../src/util/aggregator.js";
 
 describe("isAttestationAggregator", () => {

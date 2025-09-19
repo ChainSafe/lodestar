@@ -14,7 +14,6 @@ import {
   SLOTS_PER_HISTORICAL_ROOT,
 } from "@lodestar/params";
 import {BeaconState, Slot, phase0, ssz} from "@lodestar/types";
-
 import {getEffectiveBalanceIncrements} from "../../src/cache/effectiveBalanceIncrements.js";
 import {
   computeCommitteeCount,

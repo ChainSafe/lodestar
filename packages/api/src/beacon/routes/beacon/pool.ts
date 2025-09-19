@@ -11,7 +11,6 @@ import {
   phase0,
   ssz,
 } from "@lodestar/types";
-
 import {
   ArrayOf,
   EmptyArgs,

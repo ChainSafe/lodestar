@@ -1,9 +1,7 @@
 import path from "node:path";
-
 import {getNodeLogger} from "@lodestar/logger/node";
 import {CliCommand, toPubkeyHex} from "@lodestar/utils";
 import {InterchangeFormatVersion} from "@lodestar/validator";
-
 import {getBeaconConfigFromArgs} from "../../../config/index.js";
 import {GlobalArgs} from "../../../options/index.js";
 import {LogArgs} from "../../../options/logOptions.js";

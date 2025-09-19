@@ -1,8 +1,6 @@
 import {randomBytes} from "node:crypto";
-
 import {digest} from "@chainsafe/as-sha256";
 import {bench, describe} from "@chainsafe/benchmark";
-
 import xxhashFactory from "xxhash-wasm";
 
 const hasher = await xxhashFactory();

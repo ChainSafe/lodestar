@@ -1,5 +1,4 @@
 import {describe, expect, it} from "vitest";
-
 import {parseFeeRecipient} from "../../../src/util/index.js";
 
 const feeRecipient = Buffer.from(Array.from({length: 20}, () => Math.round(Math.random() * 255)));

@@ -1,6 +1,5 @@
 import {ForkName} from "@lodestar/params";
 import {SlotOptionalRoot, SlotRootHex} from "@lodestar/types";
-
 import {
   getBlockRootFromBeaconAttestationSerialized,
   getBlockRootFromSignedAggregateAndProofSerialized,

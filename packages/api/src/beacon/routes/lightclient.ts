@@ -11,7 +11,6 @@ import {
   ssz,
 } from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
-
 import {
   EmptyArgs,
   EmptyMeta,

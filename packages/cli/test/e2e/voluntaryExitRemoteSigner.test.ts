@@ -1,5 +1,4 @@
 import path from "node:path";
-
 import {getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {interopSecretKey, interopSecretKeys} from "@lodestar/state-transition";
@@ -12,9 +11,7 @@ import {
   stopChildProcess,
 } from "@lodestar/test-utils";
 import {retry} from "@lodestar/utils";
-
 import {afterAll, beforeAll, describe, it, onTestFinished, vi} from "vitest";
-
 import {testFilesDir} from "../utils.js";
 
 describe("voluntaryExit using remote signer", () => {

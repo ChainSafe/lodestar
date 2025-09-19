@@ -2,9 +2,7 @@ import {BitArray} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
-
 import {describe, expect, it} from "vitest";
-
 import {deserializeEnrSubnets} from "../../../../../src/network/peers/utils/enrSubnetsDeserialize.js";
 
 describe("ENR syncnets", () => {

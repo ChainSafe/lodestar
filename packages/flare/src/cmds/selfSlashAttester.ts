@@ -6,7 +6,6 @@ import {DOMAIN_BEACON_ATTESTER, MAX_VALIDATORS_PER_COMMITTEE} from "@lodestar/pa
 import {computeSigningRoot} from "@lodestar/state-transition";
 import {AttesterSlashing, phase0, ssz} from "@lodestar/types";
 import {CliCommand, toPubkeyHex} from "@lodestar/utils";
-
 import {SecretKeysArgs, deriveSecretKeys, secretKeysOptions} from "../util/deriveSecretKeys.js";
 
 type SelfSlashArgs = SecretKeysArgs & {

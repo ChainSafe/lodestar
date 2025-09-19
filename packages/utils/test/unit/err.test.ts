@@ -1,5 +1,4 @@
 import {describe, expect, it} from "vitest";
-
 import {Err, Result, isErr, mapOkResults, mapOkResultsAsync} from "../../src/err.js";
 
 describe("Result Err", () => {

@@ -1,6 +1,5 @@
 import {ForkSeq, MIN_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-
 import {CachedBeaconStateFulu, EpochTransitionCache} from "../types.js";
 import {computeEpochShuffling} from "../util/epochShuffling.js";
 import {computeProposerIndices} from "../util/seed.js";

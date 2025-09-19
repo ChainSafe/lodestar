@@ -16,7 +16,6 @@ import {
 import {ssz} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {Logger, formatBytes, toRootHex} from "@lodestar/utils";
-
 import {
   fetchWeakSubjectivityState,
   getCheckpointFromArg,

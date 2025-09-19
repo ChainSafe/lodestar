@@ -1,5 +1,4 @@
 import {describe, expect, it} from "vitest";
-
 import {formatEpochSlotTime} from "../../../src/utils/timeFormat.js";
 
 describe("logger / util / formatEpochSlotTime", () => {

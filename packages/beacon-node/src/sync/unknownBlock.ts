@@ -3,7 +3,6 @@ import {ForkSeq, INTERVALS_PER_SLOT} from "@lodestar/params";
 import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
 import {RootHex, Slot} from "@lodestar/types";
 import {Logger, prettyBytes, prettyPrintIndices, pruneSetToMax, sleep} from "@lodestar/utils";
-
 import {isBlockInputBlobs, isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
 import {BlockError, BlockErrorCode} from "../chain/errors/index.js";

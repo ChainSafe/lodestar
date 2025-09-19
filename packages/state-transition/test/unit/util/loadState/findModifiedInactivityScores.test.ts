@@ -1,5 +1,4 @@
 import {describe, expect, it} from "vitest";
-
 import {
   INACTIVITY_SCORE_SIZE,
   findModifiedInactivityScores,

@@ -1,5 +1,4 @@
 import {EFFECTIVE_BALANCE_INCREMENT, EPOCHS_PER_SLASHINGS_VECTOR} from "@lodestar/params";
-
 import {CachedBeaconStateAllForks, EpochTransitionCache} from "../types.js";
 
 /**

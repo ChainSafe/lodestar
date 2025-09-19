@@ -1,6 +1,5 @@
 import {RootHex, Slot} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
-
 import {Assertion, AssertionResult} from "../../interfaces.js";
 import {everySlotMatcher} from "../matchers.js";
 

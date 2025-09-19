@@ -1,10 +1,8 @@
 import path from "node:path";
-
 import {config} from "@lodestar/config/default";
 import {ACTIVE_PRESET} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {bigIntToBytes} from "@lodestar/utils";
-
 import {computeColumnsForCustodyGroup, getCustodyGroups} from "../../../src/util/dataColumns.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {specTestIterator} from "../utils/specTestIterator.js";

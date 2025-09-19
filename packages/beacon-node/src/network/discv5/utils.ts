@@ -1,6 +1,5 @@
 import {ENR} from "@chainsafe/enr";
 import {BeaconConfig} from "@lodestar/config";
-
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants/constants.js";
 import {IClock} from "../../util/clock.js";
 import {ENRKey} from "../metadata.js";

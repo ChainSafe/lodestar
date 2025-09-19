@@ -1,7 +1,6 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
-
 import {IBeaconChain} from "../chain/index.js";
 import {GENESIS_SLOT} from "../constants/constants.js";
 import {ExecutionEngineState} from "../execution/index.js";

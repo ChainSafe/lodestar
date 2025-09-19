@@ -1,6 +1,5 @@
 import {DOMAIN_RANDAO} from "@lodestar/params";
 import {BeaconBlock, ssz} from "@lodestar/types";
-
 import {CachedBeaconStateAllForks} from "../types.js";
 import {
   ISignatureSet,

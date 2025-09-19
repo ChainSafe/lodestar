@@ -1,9 +1,7 @@
 import path from "node:path";
-
 import {ModuleThread, Thread, Worker, spawn} from "@chainsafe/threads";
 import {chainConfigToJson} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
-
 import {
   HistoricalStateRegenInitModules,
   HistoricalStateRegenModules,

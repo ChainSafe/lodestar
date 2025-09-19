@@ -3,7 +3,6 @@ import {createBeaconConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-
 import {ResponseIncoming, TypeSizes} from "../../src/types.js";
 import {ZERO_HASH} from "../utils/index.js";
 

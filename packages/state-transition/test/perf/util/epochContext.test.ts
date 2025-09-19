@@ -1,6 +1,5 @@
 import {beforeAll, bench, describe} from "@chainsafe/benchmark";
 import {Epoch} from "@lodestar/types";
-
 import {CachedBeaconStateAllForks, computeEpochAtSlot} from "../../../src/index.js";
 import {generatePerfTestCachedStatePhase0, numValidators} from "../util.js";
 

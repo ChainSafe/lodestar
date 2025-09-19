@@ -1,5 +1,4 @@
 import {LevelDbControllerMetrics} from "@lodestar/db";
-
 import {CheckpointStateRepository} from "./repositories/checkpointState.js";
 import {
   AttesterSlashingRepository,

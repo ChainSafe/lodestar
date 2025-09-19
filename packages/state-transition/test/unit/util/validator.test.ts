@@ -1,7 +1,5 @@
 import {phase0, ssz} from "@lodestar/types";
-
 import {beforeEach, describe, expect, it} from "vitest";
-
 import {getActiveValidatorIndices, isActiveValidator, isSlashableValidator} from "../../../src/util/index.js";
 import {randBetween} from "../../utils/misc.js";
 import {generateState} from "../../utils/state.js";

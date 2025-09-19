@@ -1,6 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {phase0, ssz} from "@lodestar/types";
-
 import {EmptyArgs, EmptyMeta, EmptyMetaCodec, EmptyRequest, EmptyRequestCodec} from "../../../utils/codecs.js";
 import {Endpoint, RouteDefinitions} from "../../../utils/types.js";
 import * as block from "./block.js";

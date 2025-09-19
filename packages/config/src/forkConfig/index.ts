@@ -12,7 +12,6 @@ import {
   isForkPostDeneb,
 } from "@lodestar/params";
 import {Epoch, SSZTypesFor, Slot, Version, sszTypesFor} from "@lodestar/types";
-
 import {ChainConfig} from "../chainConfig/index.js";
 import {BlobParameters, ForkBoundary, ForkConfig, ForkInfo} from "./types.js";
 

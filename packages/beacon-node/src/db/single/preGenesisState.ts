@@ -3,7 +3,6 @@ import {Db, DbReqOpts} from "@lodestar/db";
 import {ForkAll, GENESIS_SLOT} from "@lodestar/params";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {SSZTypesFor} from "@lodestar/types";
-
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 export class PreGenesisState {

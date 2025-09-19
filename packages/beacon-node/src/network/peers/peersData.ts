@@ -1,8 +1,6 @@
 import {Encoding} from "@lodestar/reqresp";
 import {CustodyIndex, Slot, Status, fulu} from "@lodestar/types";
-
 import {PeerId} from "@libp2p/interface";
-
 import {NodeId} from "../subnets/interface.js";
 import {ClientKind} from "./client.js";
 

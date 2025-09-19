@@ -17,9 +17,7 @@ import {
   sszTypesFor,
 } from "@lodestar/types";
 import {fromHex, toHex, toRootHex} from "@lodestar/utils";
-
 import {describe, expect, it} from "vitest";
-
 import {kzg} from "../../../src/util/kzg.js";
 import {
   getAggregationBitsFromAttestationSerialized,

@@ -36,7 +36,6 @@ import {
   ssz,
 } from "@lodestar/types";
 import {assert, toRootHex} from "@lodestar/utils";
-
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC} from "../../constants/index.js";
 import {sszDeserializeSingleAttestation} from "../../network/gossip/topic.js";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";

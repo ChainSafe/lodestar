@@ -1,7 +1,6 @@
 import {CompositeViewDU} from "@chainsafe/ssz";
 import {ForkSeq} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-
 import {getAttestationParticipationStatus} from "../block/processAttestationsAltair.js";
 import {getCachedBeaconState} from "../cache/stateCache.js";
 import {CachedBeaconStateAltair, CachedBeaconStatePhase0} from "../types.js";

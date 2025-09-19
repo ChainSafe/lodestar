@@ -1,7 +1,5 @@
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
-
 import {describe, expect, it} from "vitest";
-
 import {
   BlockExtraMeta,
   ExecutionStatus,

@@ -1,6 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/logger";
-
 import {Metrics} from "../../metrics/metrics.js";
 import {IExecutionBuilder} from "./interface.js";
 

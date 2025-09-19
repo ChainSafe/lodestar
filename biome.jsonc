@@ -23,29 +23,24 @@
                 // Node.js modules
                 ":NODE:"
               ],
-              ":BLANK_LINE:",
               [
                 // Modules imported with the `npm:` protocol
                 "npm:*",
                 "npm:*/**"
               ],
-              ":BLANK_LINE:",
               ["@chainsafe/**", "@lodestar/**", "@/**"],
-              ":BLANK_LINE:",
               [
                 // Libraries
                 ":PACKAGE:",
                 // Libraries
                 ":PACKAGE_WITH_PROTOCOL:"
               ],
-              ":BLANK_LINE:",
               [
                 // URLs
                 ":URL:",
                 // Sharp aliases
                 ":ALIAS:"
               ],
-              ":BLANK_LINE:",
               // All other paths
               ":PATH:"
             ]

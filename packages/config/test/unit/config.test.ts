@@ -1,5 +1,4 @@
 import {beforeAll, describe, expect, it} from "vitest";
-
 import {chainConfig} from "../../src/default.js";
 import {ChainConfig, createForkConfig} from "../../src/index.js";
 

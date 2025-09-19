@@ -2,7 +2,6 @@ import {getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {spawnCliCommand, stopChildProcess} from "@lodestar/test-utils";
 import {retry} from "@lodestar/utils";
-
 import {describe, it, onTestFinished, vi} from "vitest";
 
 describe("Run dev command", () => {

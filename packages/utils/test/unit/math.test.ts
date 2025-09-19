@@ -1,5 +1,4 @@
 import {describe, expect, it} from "vitest";
-
 import {bigIntMax, bigIntMin, bigIntSqrt, intDiv, intSqrt} from "../../src/index.js";
 
 describe("util/maths", () => {

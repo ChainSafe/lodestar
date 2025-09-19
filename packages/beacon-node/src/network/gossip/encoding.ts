@@ -3,11 +3,9 @@ import {RPC} from "@chainsafe/libp2p-gossipsub/message";
 import {DataTransform} from "@chainsafe/libp2p-gossipsub/types";
 import {ForkName} from "@lodestar/params";
 import {intToBytes} from "@lodestar/utils";
-
 import {Message} from "@libp2p/interface";
 import {compress, uncompress} from "snappyjs";
 import xxhashFactory from "xxhash-wasm";
-
 import {MESSAGE_DOMAIN_VALID_SNAPPY} from "./constants.js";
 import {GossipTopicCache, getGossipSSZType} from "./topic.js";
 

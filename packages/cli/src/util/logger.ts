@@ -1,12 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
-
 import {ChainForkConfig} from "@lodestar/config";
 import {LogFormat, TimestampFormatCode, logFormats} from "@lodestar/logger";
 import {LoggerNodeOpts} from "@lodestar/logger/node";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {LogLevel} from "@lodestar/utils";
-
 import {GlobalArgs} from "../options/globalOptions.js";
 import {LogArgs} from "../options/logOptions.js";
 

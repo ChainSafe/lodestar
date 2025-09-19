@@ -1,5 +1,4 @@
 import {BeaconConfig} from "@lodestar/config";
-
 import {CustodyConfig} from "../util/dataColumns.js";
 import {NodeId} from "./subnets/interface.js";
 

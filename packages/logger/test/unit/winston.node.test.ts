@@ -1,10 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-
 import {LogLevel} from "@lodestar/utils";
-
 import {Mock, afterAll, afterEach, beforeAll, describe, expect, it, vi} from "vitest";
-
 import {TimestampFormatCode} from "../../src/index.js";
 import {getNodeLogger} from "../../src/node.js";
 import {readFileWhenExists} from "../utils/files.js";

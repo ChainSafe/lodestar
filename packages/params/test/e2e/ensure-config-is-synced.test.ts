@@ -1,6 +1,5 @@
 import axios from "axios";
 import {describe, expect, it, vi} from "vitest";
-
 import {BeaconPreset, ForkName} from "../../src/index.js";
 import {mainnetPreset} from "../../src/presets/mainnet.js";
 import {minimalPreset} from "../../src/presets/minimal.js";

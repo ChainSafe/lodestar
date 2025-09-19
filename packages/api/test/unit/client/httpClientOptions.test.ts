@@ -1,5 +1,4 @@
 import {describe, expect, it} from "vitest";
-
 import {HttpClient} from "../../../src/index.js";
 
 describe("HTTPClient options", () => {

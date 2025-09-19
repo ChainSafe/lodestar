@@ -1,5 +1,4 @@
 import {beforeEach, describe, expect, it} from "vitest";
-
 import {InsertOutcome} from "../../../../src/chain/opPools/types.js";
 import {
   AttestationDataCacheEntry,

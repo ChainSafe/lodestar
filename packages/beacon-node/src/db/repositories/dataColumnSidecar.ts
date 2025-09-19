@@ -2,7 +2,6 @@ import {ChainForkConfig} from "@lodestar/config";
 import {Db, PrefixedRepository, decodeNumberForDbKey, encodeNumberForDbKey} from "@lodestar/db";
 import {NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {ColumnIndex, Root, fulu, ssz} from "@lodestar/types";
-
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 const COLUMN_INDEX_BYTE_SIZE = 2;

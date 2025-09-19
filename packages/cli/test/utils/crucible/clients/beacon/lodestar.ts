@@ -1,10 +1,8 @@
 import {writeFile} from "node:fs/promises";
 import path from "node:path";
-
 import {getClient} from "@lodestar/api/beacon";
 import {chainConfigToJson} from "@lodestar/config";
 import {LogLevel, fetch} from "@lodestar/utils";
-
 import {BeaconArgs} from "../../../../../src/cmds/beacon/options.js";
 import {GlobalArgs} from "../../../../../src/options/globalOptions.js";
 import {LODESTAR_BINARY_PATH} from "../../constants.js";

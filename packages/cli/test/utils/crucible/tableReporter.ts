@@ -1,5 +1,4 @@
 import {Slot} from "@lodestar/types";
-
 import {isNullish} from "../../utils.js";
 import {HeadSummary} from "./assertions/defaults/headAssertion.js";
 import {defaultAssertions} from "./assertions/defaults/index.js";

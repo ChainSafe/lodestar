@@ -28,7 +28,6 @@ import {
   ssz,
 } from "@lodestar/types";
 import {Logger, MapDef, fromHex, toRootHex} from "@lodestar/utils";
-
 import {ForkChoiceMetrics} from "../metrics.js";
 import {computeDeltas} from "../protoArray/computeDeltas.js";
 import {ProtoArrayError, ProtoArrayErrorCode} from "../protoArray/errors.js";

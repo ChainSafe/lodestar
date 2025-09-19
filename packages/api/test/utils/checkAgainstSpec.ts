@@ -1,6 +1,5 @@
 import ajvPkg, {ErrorObject} from "ajv";
 import {beforeAll, describe, expect, it} from "vitest";
-
 import {Endpoint, RequestWithBodyCodec, RouteDefinitions, isRequestWithoutBody} from "../../src/utils/types.js";
 import {WireFormat} from "../../src/utils/wireFormat.js";
 import {GenericServerTestCases} from "./genericServerTest.js";

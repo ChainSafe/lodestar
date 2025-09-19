@@ -1,5 +1,4 @@
 import {Epoch, ValidatorIndex} from "@lodestar/types";
-
 import {SeenAttesters} from "./seenAttesters.js";
 // TODO abstract out the Seen* caches into an abstract abstract data structure
 // that all the caches can extend since they share similar structure.

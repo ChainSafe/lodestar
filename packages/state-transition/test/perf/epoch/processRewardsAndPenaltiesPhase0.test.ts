@@ -1,5 +1,4 @@
 import {bench, describe} from "@chainsafe/benchmark";
-
 import {getAttestationDeltas} from "../../../src/epoch/getAttestationDeltas.js";
 import {StatePhase0Epoch} from "../types.js";
 import {generatePerfTestCachedStatePhase0, numValidators} from "../util.js";

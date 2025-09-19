@@ -9,7 +9,6 @@ import {
   retry,
   toPrintableUrl,
 } from "@lodestar/utils";
-
 import {mergeHeaders} from "../headers.js";
 import {HttpStatusCode} from "../httpStatusCode.js";
 import {Endpoint} from "../types.js";

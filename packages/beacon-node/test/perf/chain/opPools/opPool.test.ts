@@ -8,7 +8,6 @@ import {
 } from "@lodestar/params";
 import {CachedBeaconStateAltair} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-
 import {generatePerfTestCachedStateAltair} from "../../../../../state-transition/test/perf/util.js";
 import {BlockType} from "../../../../src/chain/interface.js";
 import {OpPool} from "../../../../src/chain/opPools/opPool.js";

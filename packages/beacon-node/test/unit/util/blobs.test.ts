@@ -1,9 +1,7 @@
 import {createChainForkConfig} from "@lodestar/config";
 import {NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-
 import {describe, expect, it} from "vitest";
-
 import {reconstructBlobs} from "../../../src/util/blobs.js";
 import {getDataColumnSidecarsFromBlock} from "../../../src/util/dataColumns.js";
 import {kzg} from "../../../src/util/kzg.js";

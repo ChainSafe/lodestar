@@ -1,5 +1,4 @@
 import {ValueOf} from "@chainsafe/ssz";
-
 import * as ssz from "./sszTypes.js";
 
 export type BeaconBlock = ValueOf<typeof ssz.BeaconBlock>;

@@ -4,10 +4,8 @@ import {LoggerNode} from "@lodestar/logger/node";
 import {ATTESTATION_SUBNET_COUNT, ForkSeq, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {CustodyIndex, SubnetID} from "@lodestar/types";
 import {bytesToInt, pruneSetToMax, sleep, toHex} from "@lodestar/utils";
-
 import type {PeerId, PeerInfo, PrivateKey} from "@libp2p/interface";
 import {Multiaddr} from "@multiformats/multiaddr";
-
 import {IClock} from "../../util/clock.js";
 import {getCustodyGroups} from "../../util/dataColumns.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";

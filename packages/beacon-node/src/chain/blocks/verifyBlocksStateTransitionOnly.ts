@@ -6,7 +6,6 @@ import {
   stateTransition,
 } from "@lodestar/state-transition";
 import {ErrorAborted, Logger} from "@lodestar/utils";
-
 import {Metrics} from "../../metrics/index.js";
 import {byteArrayEquals} from "../../util/bytes.js";
 import {nextEventLoop} from "../../util/eventLoop.js";

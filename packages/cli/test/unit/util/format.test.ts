@@ -1,5 +1,4 @@
 import {describe, expect, it} from "vitest";
-
 import {isValidatePubkeyHex, parseRange} from "../../../src/util/index.js";
 
 describe("util / format / parseRange", () => {

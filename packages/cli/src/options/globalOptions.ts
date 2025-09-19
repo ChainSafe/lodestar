@@ -1,6 +1,5 @@
 import {ACTIVE_PRESET} from "@lodestar/params";
 import {CliCommandOptions} from "@lodestar/utils";
-
 import {NetworkName, networkNames} from "../networks/index.js";
 import {readFile} from "../util/index.js";
 import {IParamsArgs, paramsOptions} from "./paramsOptions.js";

@@ -9,7 +9,6 @@ import {
   SignedBeaconBlockHeader,
   Slot,
 } from "@lodestar/types";
-
 import {ZERO_HASH} from "../constants/index.js";
 import {BeaconStateAllForks} from "../types.js";
 import {computeStartSlotAtEpoch} from "./epoch.js";

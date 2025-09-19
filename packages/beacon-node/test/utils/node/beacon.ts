@@ -8,12 +8,10 @@ import {ForkSeq, GENESIS_SLOT, NUMBER_OF_COLUMNS, SLOTS_PER_EPOCH, ZERO_HASH_HEX
 import {BeaconStateAllForks, computeTimeAtSlot} from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
 import {RecursivePartial, isPlainObject, toRootHex} from "@lodestar/utils";
-
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {PrivateKey} from "@libp2p/interface";
 import deepmerge from "deepmerge";
 import tmp from "tmp";
-
 import {BeaconDb} from "../../../src/db/index.js";
 import {BeaconNode} from "../../../src/index.js";
 import {defaultNetworkOptions} from "../../../src/network/options.js";

@@ -1,9 +1,7 @@
 import {registerCommandToYargs} from "@lodestar/utils";
-
 // Must not use `* as yargs`, see https://github.com/yargs/yargs/issues/1131
 import yargs, {Argv} from "yargs";
 import {hideBin} from "yargs/helpers";
-
 import {cmds} from "./cmds/index.js";
 
 const topBanner = `Beacon chain multi-purpose and debugging tool.

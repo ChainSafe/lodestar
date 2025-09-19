@@ -1,6 +1,5 @@
 import {SignedBeaconBlock} from "@lodestar/types";
 import {isErrorAborted, toRootHex} from "@lodestar/utils";
-
 import {Metrics} from "../../metrics/metrics.js";
 import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
 import type {BeaconChain} from "../chain.js";

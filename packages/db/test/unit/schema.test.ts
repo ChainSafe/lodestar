@@ -1,7 +1,5 @@
 import {intToBytes} from "@lodestar/utils";
-
 import {describe, expect, it} from "vitest";
-
 import {BUCKET_LENGTH, encodeKey} from "../../src/index.js";
 
 describe("encodeKey", () => {

@@ -1,5 +1,4 @@
 import {CliCommand, CliCommandOptions} from "@lodestar/utils";
-
 import {GlobalArgs} from "../../options/index.js";
 import {devHandler} from "./handler.js";
 import {IDevArgs, devOptions} from "./options.js";

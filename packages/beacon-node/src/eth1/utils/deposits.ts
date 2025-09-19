@@ -3,7 +3,6 @@ import {FilterOptions} from "@lodestar/db";
 import {CachedBeaconStateAllForks, getEth1DepositCount} from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-
 import {DepositTree} from "../../db/repositories/depositDataRoot.js";
 import {Eth1Error, Eth1ErrorCode} from "../errors.js";
 

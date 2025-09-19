@@ -1,7 +1,5 @@
 import {LodestarError, isEmptyObject} from "@lodestar/utils";
-
 import winston, {format} from "winston";
-
 import {LoggerOptions, TimestampFormatCode} from "../interface.js";
 import {LogData, logCtxToJson, logCtxToString} from "./json.js";
 import {formatEpochSlotTime} from "./timeFormat.js";

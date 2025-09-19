@@ -1,7 +1,5 @@
 import {EventEmitter} from "node:events";
-
 import {LoggerNode} from "@lodestar/logger/node";
-
 import {IRunner, Job, JobOptions, RunnerEvent, RunnerType} from "../interfaces.js";
 import {ChildProcessRunner} from "./childProcessRunner.js";
 import {DockerRunner} from "./dockerRunner.js";

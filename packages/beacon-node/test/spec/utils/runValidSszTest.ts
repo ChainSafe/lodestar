@@ -1,6 +1,5 @@
 import {Node} from "@chainsafe/persistent-merkle-tree";
 import {CompositeType, Type, fromHexString, toHexString} from "@chainsafe/ssz";
-
 import {expect} from "vitest";
 
 type ValidTestCaseData = {

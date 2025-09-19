@@ -1,8 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-
 import {expect, it} from "vitest";
-
 import {runValidSszTest} from "../utils/runValidSszTest.js";
 import {parseSszGenericInvalidTestcase, parseSszGenericValidTestcase} from "../utils/sszTestCaseParser.js";
 import {TestRunnerCustom} from "../utils/types.js";

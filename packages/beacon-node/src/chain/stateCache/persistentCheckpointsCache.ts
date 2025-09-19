@@ -8,7 +8,6 @@ import {
 } from "@lodestar/state-transition";
 import {Epoch, RootHex, phase0} from "@lodestar/types";
 import {Logger, MapDef, fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
-
 import {Metrics} from "../../metrics/index.js";
 import {AllocSource, BufferPool, BufferWithKey} from "../../util/bufferPool.js";
 import {IClock} from "../../util/clock.js";

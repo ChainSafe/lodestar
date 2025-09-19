@@ -2,7 +2,6 @@ import {UintNumberType} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {Db, DbReqOpts} from "@lodestar/db";
 import {ssz} from "@lodestar/types";
-
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 export class PreGenesisStateLastProcessedBlock {

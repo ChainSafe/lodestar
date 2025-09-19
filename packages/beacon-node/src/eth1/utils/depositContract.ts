@@ -1,6 +1,5 @@
 import {phase0, ssz} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
-
 import {Interface} from "@ethersproject/abi";
 
 const depositEventFragment =

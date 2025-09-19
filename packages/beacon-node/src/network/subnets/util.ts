@@ -8,7 +8,6 @@ import {
 } from "@lodestar/params";
 import {computeShuffledIndex} from "@lodestar/state-transition";
 import {Epoch, ssz} from "@lodestar/types";
-
 import {NodeId} from "./interface.js";
 
 /**

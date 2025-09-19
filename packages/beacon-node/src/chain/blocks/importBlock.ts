@@ -27,7 +27,6 @@ import {
 } from "@lodestar/state-transition";
 import {Attestation, BeaconBlock, altair, capella, electra, phase0, ssz} from "@lodestar/types";
 import {isErrorAborted, toRootHex} from "@lodestar/utils";
-
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";

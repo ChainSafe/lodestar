@@ -2,7 +2,6 @@ import {visualizer} from "rollup-plugin-visualizer";
 import {UserConfig, defineConfig} from "vite";
 import {nodePolyfills} from "vite-plugin-node-polyfills";
 import topLevelAwait from "vite-plugin-top-level-await";
-
 import {blsBrowserPlugin} from "../scripts/vite/plugins/blsBrowserPlugin.js";
 
 export function getBaseViteConfig(

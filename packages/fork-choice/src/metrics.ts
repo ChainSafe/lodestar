@@ -1,5 +1,4 @@
 import {MetricsRegisterExtra} from "@lodestar/utils";
-
 import {UpdateHeadOpt} from "./forkChoice/forkChoice.js";
 import {NotReorgedReason} from "./forkChoice/interface.js";
 

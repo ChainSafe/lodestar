@@ -1,6 +1,5 @@
 import {RootHex, Slot, SubnetID, ValidatorIndex} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
-
 import {GossipActionError} from "./gossipValidation.js";
 
 export enum BlobSidecarErrorCode {

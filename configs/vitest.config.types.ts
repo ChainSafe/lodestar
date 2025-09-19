@@ -1,5 +1,4 @@
 import path from "node:path";
-
 import {defineProject} from "vitest/config";
 
 export const typesTestProject = defineProject({

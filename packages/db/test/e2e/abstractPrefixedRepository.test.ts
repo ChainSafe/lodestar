@@ -2,9 +2,7 @@
 
 import {getEnvLogger} from "@lodestar/logger/env";
 import {fromAsync} from "@lodestar/utils";
-
 import {afterAll, beforeAll, beforeEach, describe, expect, it} from "vitest";
-
 import {
   type Db,
   LevelDbController,

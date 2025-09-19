@@ -1,5 +1,4 @@
 import {BLSPubkey, Epoch} from "@lodestar/types";
-
 import {ISlashingProtection} from "../../src/index.js";
 
 /**

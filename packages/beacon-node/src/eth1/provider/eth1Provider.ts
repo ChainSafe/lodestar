@@ -10,7 +10,6 @@ import {
   toHex,
   toPrintableUrl,
 } from "@lodestar/utils";
-
 import {HTTP_CONNECTION_ERROR_CODES, HTTP_FATAL_ERROR_CODES} from "../../execution/engine/utils.js";
 import {isValidAddress} from "../../util/address.js";
 import {linspace} from "../../util/numpy.js";

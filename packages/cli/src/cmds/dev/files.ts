@@ -1,12 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
-
 import {Keystore} from "@chainsafe/bls-keystore";
 import {nodeUtils} from "@lodestar/beacon-node";
 import {ChainForkConfig, chainConfigToJson} from "@lodestar/config";
 import {interopSecretKey} from "@lodestar/state-transition";
 import {dumpYaml} from "@lodestar/utils";
-
 import {PersistedKeysBackend} from "../validator/keymanager/persistedKeys.js";
 
 export async function writeTestnetFiles(

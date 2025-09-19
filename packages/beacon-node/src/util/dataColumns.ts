@@ -15,7 +15,6 @@ import {
   ssz,
 } from "@lodestar/types";
 import {LodestarError, bytesToBigInt} from "@lodestar/utils";
-
 import {BlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
 import {ChainEvent, ChainEventEmitter} from "../chain/emitter.js";

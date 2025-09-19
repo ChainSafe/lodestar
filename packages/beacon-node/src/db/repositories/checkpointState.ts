@@ -2,7 +2,6 @@ import {ChainForkConfig} from "@lodestar/config";
 import {Db, Repository} from "@lodestar/db";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 /**

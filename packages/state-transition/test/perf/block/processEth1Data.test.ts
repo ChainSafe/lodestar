@@ -1,7 +1,6 @@
 import {bench, describe} from "@chainsafe/benchmark";
 import {ACTIVE_PRESET, PresetName, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {phase0} from "@lodestar/types";
-
 import {processEth1Data} from "../../../src/block/processEth1Data.js";
 import {CachedBeaconStateAllForks} from "../../../src/index.js";
 import {generatePerfTestCachedStateAltair, perfStateId} from "../util.js";

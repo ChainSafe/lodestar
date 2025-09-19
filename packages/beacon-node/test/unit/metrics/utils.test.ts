@@ -1,6 +1,5 @@
 import {Gauge, Registry} from "prom-client";
 import {describe, expect, it} from "vitest";
-
 import {GaugeExtra} from "../../../src/metrics/utils/gauge.js";
 
 type MetricValue = {

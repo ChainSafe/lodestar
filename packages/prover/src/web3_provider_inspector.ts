@@ -1,5 +1,4 @@
 import {Logger} from "@lodestar/logger";
-
 import {AnyWeb3Provider, Web3ProviderType} from "./interfaces.js";
 import eip1193ProviderType from "./provider_types/eip1193_provider_type.js";
 import ethersProviderType from "./provider_types/ethers_provider_type.js";

@@ -1,6 +1,5 @@
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {RootHex} from "@lodestar/types";
-
 import {Metrics} from "../../metrics/metrics.js";
 
 export enum ArchiveMode {

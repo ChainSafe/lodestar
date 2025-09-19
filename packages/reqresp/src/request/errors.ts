@@ -1,5 +1,4 @@
 import {LodestarError, LodestarErrorObject} from "@lodestar/utils";
-
 import {RespStatus, RpcResponseStatusError} from "../interface.js";
 import {ResponseError} from "../response/index.js";
 

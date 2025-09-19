@@ -1,12 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
-
 import {getClient} from "@lodestar/api";
 import {ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
 import {SignedBeaconBlock} from "@lodestar/types";
 import {fetch} from "@lodestar/utils";
-
 import {CachedBeaconStateAllForks} from "../../src/index.js";
 import {testCachePath} from "../cache.js";
 import {createCachedBeaconStateTest} from "../utils/state.js";

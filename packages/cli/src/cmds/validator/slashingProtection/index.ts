@@ -1,5 +1,4 @@
 import {CliCommand} from "@lodestar/utils";
-
 import {AccountValidatorArgs} from "../options.js";
 import {exportCmd} from "./export.js";
 import {importCmd} from "./import.js";

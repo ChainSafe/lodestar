@@ -1,5 +1,4 @@
 import {isErrorAborted, isFetchError} from "@lodestar/utils";
-
 import {IJson, RpcPayload} from "../../eth1/interface.js";
 import {
   ErrorJsonRpcResponse,

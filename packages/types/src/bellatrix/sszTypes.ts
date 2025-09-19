@@ -6,7 +6,6 @@ import {
   MAX_EXTRA_DATA_BYTES,
   MAX_TRANSACTIONS_PER_PAYLOAD,
 } from "@lodestar/params";
-
 import {ssz as altairSsz} from "../altair/index.js";
 import {ssz as phase0Ssz} from "../phase0/index.js";
 import {ssz as primitiveSsz} from "../primitive/index.js";

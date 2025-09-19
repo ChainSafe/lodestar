@@ -11,7 +11,6 @@ import {
 } from "@lodestar/params";
 import {BLSPubkey, Bytes32, UintNum64, electra, phase0, ssz} from "@lodestar/types";
 import {verifyMerkleBranch} from "@lodestar/utils";
-
 import {ZERO_HASH} from "../constants/index.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStateElectra} from "../types.js";
 import {computeDomain, computeSigningRoot, getMaxEffectiveBalance, increaseBalance} from "../util/index.js";

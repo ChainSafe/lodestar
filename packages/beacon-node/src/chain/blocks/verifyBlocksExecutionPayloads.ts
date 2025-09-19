@@ -18,7 +18,6 @@ import {
 } from "@lodestar/state-transition";
 import {Slot, bellatrix, electra} from "@lodestar/types";
 import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
-
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
 import {ExecutionPayloadStatus, IExecutionEngine} from "../../execution/engine/interface.js";
 import {Metrics} from "../../metrics/metrics.js";

@@ -1,6 +1,5 @@
 import {FAR_FUTURE_EPOCH, ForkSeq, GENESIS_SLOT, MAX_PENDING_DEPOSITS_PER_EPOCH} from "@lodestar/params";
 import {electra} from "@lodestar/types";
-
 import {addValidatorToRegistry, isValidDepositSignature} from "../block/processDeposit.js";
 import {CachedBeaconStateElectra, EpochTransitionCache} from "../types.js";
 import {increaseBalance} from "../util/balance.js";

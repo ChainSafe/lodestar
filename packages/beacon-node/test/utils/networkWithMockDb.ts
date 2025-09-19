@@ -1,9 +1,7 @@
 import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
-
 import {generateKeyPair} from "@libp2p/crypto/keys";
-
 import {BeaconChain} from "../../src/chain/chain.js";
 import {Eth1ForBlockProductionDisabled} from "../../src/eth1/index.js";
 import {ExecutionEngineDisabled} from "../../src/execution/index.js";

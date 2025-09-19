@@ -1,7 +1,6 @@
 import {bench, describe} from "@chainsafe/benchmark";
 import {BitArray} from "@chainsafe/ssz";
 import {TARGET_AGGREGATORS_PER_COMMITTEE} from "@lodestar/params";
-
 import {SeenAggregatedAttestations} from "../../../../src/chain/seenCache/seenAggregateAndProof.js";
 
 describe("SeenAggregatedAttestations perf test", () => {

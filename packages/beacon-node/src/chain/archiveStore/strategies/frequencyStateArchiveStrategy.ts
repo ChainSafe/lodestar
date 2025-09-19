@@ -3,7 +3,6 @@ import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
-
 import {IBeaconDb} from "../../../db/index.js";
 import {Metrics} from "../../../metrics/metrics.js";
 import {AllocSource, BufferPool} from "../../../util/bufferPool.js";

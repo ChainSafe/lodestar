@@ -4,9 +4,7 @@ import {LevelDbController} from "@lodestar/db";
 import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {sleep, toHex} from "@lodestar/utils";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
-
 import {generateKeyPair} from "@libp2p/crypto/keys";
-
 import {rangeSyncTest} from "../../../../state-transition/test/perf/params.js";
 import {beforeValue} from "../../../../state-transition/test/utils/beforeValueBenchmark.js";
 import {getNetworkCachedBlock, getNetworkCachedState} from "../../../../state-transition/test/utils/testFileCache.js";

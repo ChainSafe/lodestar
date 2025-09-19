@@ -1,7 +1,6 @@
 import {toHexString} from "@chainsafe/ssz";
 import {BeaconStateAltair} from "@lodestar/state-transition";
 import {Root, altair, ssz} from "@lodestar/types";
-
 import {IBeaconChainLc} from "../utils/prepareUpdateNaive.js";
 
 /**

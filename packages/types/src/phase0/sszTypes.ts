@@ -26,7 +26,6 @@ import {
   SLOTS_PER_HISTORICAL_ROOT,
   VALIDATOR_REGISTRY_LIMIT,
 } from "@lodestar/params";
-
 import * as primitiveSsz from "../primitive/sszTypes.js";
 import {ValidatorNodeStruct} from "./validator.js";
 

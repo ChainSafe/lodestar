@@ -1,5 +1,4 @@
 import {ChainForkConfig} from "@lodestar/config";
-
 import {ApplicationMethods, FastifyRoutes, createFastifyRoutes} from "../../utils/server/index.js";
 import {Endpoints, getDefinitions} from "../routes/validator.js";
 

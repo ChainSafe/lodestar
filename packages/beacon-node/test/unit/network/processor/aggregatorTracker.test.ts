@@ -1,5 +1,4 @@
 import {beforeEach, describe, expect, it} from "vitest";
-
 import {AggregatorTracker} from "../../../../src/network/processor/aggregatorTracker.js";
 
 describe("AggregatorTracker", () => {

@@ -1,6 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {LightClientFinalityUpdate} from "@lodestar/types";
-
 import {assertLightClientServer} from "../../node/utils/lightclient.js";
 import {GossipAction} from "../errors/index.js";
 import {LightClientError, LightClientErrorCode} from "../errors/lightClientError.js";

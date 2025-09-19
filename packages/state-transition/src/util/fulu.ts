@@ -1,6 +1,5 @@
 import {ForkSeq, MIN_SEED_LOOKAHEAD} from "@lodestar/params";
 import {ValidatorIndex} from "@lodestar/types";
-
 import {CachedBeaconStateElectra} from "../types.js";
 import {computeEpochShuffling} from "./epochShuffling.js";
 import {computeProposerIndices} from "./seed.js";

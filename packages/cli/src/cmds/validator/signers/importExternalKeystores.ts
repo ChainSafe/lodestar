@@ -1,5 +1,4 @@
 import inquirer from "inquirer";
-
 import {readPassphraseFile, recursiveLookup} from "../../../util/index.js";
 import {LocalKeystoreDefinition} from "../keymanager/interface.js";
 

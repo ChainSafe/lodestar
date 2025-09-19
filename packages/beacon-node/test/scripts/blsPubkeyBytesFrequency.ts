@@ -1,5 +1,4 @@
 import fs from "node:fs";
-
 import {digest} from "@chainsafe/as-sha256";
 import {getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";

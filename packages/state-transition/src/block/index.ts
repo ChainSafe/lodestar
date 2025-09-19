@@ -1,6 +1,5 @@
 import {ForkSeq} from "@lodestar/params";
 import {BeaconBlock, BlindedBeaconBlock, altair, capella} from "@lodestar/types";
-
 import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateBellatrix, CachedBeaconStateCapella} from "../types.js";
 import {getFullOrBlindedPayload, isExecutionEnabled} from "../util/execution.js";

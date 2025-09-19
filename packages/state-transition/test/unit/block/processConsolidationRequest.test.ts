@@ -7,9 +7,7 @@ import {
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-
 import {describe, expect, it} from "vitest";
-
 import {generateCachedElectraState} from "../../../../beacon-node/test/utils/state.js";
 import {processConsolidationRequest} from "../../../src/block/processConsolidationRequest.js";
 import {generateValidators} from "../../utils/validator.js";

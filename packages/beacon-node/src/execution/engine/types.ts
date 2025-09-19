@@ -23,7 +23,6 @@ import {
 } from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
-
 import {
   DATA,
   QUANTITY,

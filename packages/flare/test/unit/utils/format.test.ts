@@ -1,5 +1,4 @@
 import {describe, expect, it} from "vitest";
-
 import {parseRange} from "../../../src/util/format.js";
 
 describe("utils / format", () => {

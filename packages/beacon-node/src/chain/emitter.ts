@@ -1,12 +1,9 @@
 import {EventEmitter} from "node:events";
-
 import {routes} from "@lodestar/api";
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {RootOptionalSlot, deneb, fulu, phase0} from "@lodestar/types";
-
 import {StrictEventEmitter} from "strict-event-emitter-types";
-
 import {PeerIdStr} from "../util/peerId.js";
 import {BlockInputSource, IBlockInput} from "./blocks/blockInput/types.js";
 

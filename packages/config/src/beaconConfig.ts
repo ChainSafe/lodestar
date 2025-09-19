@@ -1,5 +1,4 @@
 import {Root} from "@lodestar/types";
-
 import {ChainConfig, createChainConfig} from "./chainConfig/index.js";
 import {ForkConfig, createForkConfig} from "./forkConfig/index.js";
 import {createCachedGenesis} from "./genesisConfig/index.js";

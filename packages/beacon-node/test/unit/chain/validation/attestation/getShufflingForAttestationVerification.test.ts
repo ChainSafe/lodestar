@@ -1,8 +1,6 @@
 import {EpochDifference, ProtoBlock} from "@lodestar/fork-choice";
 import {EpochShuffling, computeStartSlotAtEpoch} from "@lodestar/state-transition";
-
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-
 import {RegenCaller} from "../../../../../src/chain/regen/interface.js";
 import {getShufflingForAttestationVerification} from "../../../../../src/chain/validation/index.js";
 import {ZERO_HASH_HEX} from "../../../../../src/constants/constants.js";

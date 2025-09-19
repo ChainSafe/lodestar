@@ -1,6 +1,5 @@
 /* Causing this error on usage of expect.any(Number)  */
 import {describe, expect, it} from "vitest";
-
 import {PromiseFulfilledResult, PromiseRejectedResult, wrapPromise} from "../../src/promise.js";
 
 describe("promise", () => {

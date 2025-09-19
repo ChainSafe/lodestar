@@ -1,5 +1,4 @@
 import {beforeAll, describe, expect, it} from "vitest";
-
 import {ACTIVE_PRESET, PresetName} from "../../src/index.js";
 import {gnosisPreset as gnosisParams} from "../../src/presets/gnosis.js";
 import {mainnetPreset} from "../../src/presets/mainnet.js";

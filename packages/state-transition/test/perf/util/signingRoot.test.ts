@@ -2,7 +2,6 @@ import {digest} from "@chainsafe/as-sha256";
 import {bench, describe, setBenchOpts} from "@chainsafe/benchmark";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {phase0, ssz} from "@lodestar/types";
-
 import {computeSigningRoot} from "../../../src/util/signingRoot.js";
 
 /**

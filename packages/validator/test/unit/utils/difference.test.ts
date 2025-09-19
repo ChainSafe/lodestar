@@ -1,5 +1,4 @@
 import {describe, expect, it} from "vitest";
-
 import {differenceHex} from "../../../src/util/difference.js";
 
 describe("utils / differenceHex", () => {

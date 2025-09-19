@@ -1,5 +1,4 @@
 import {ChainConfig, chainConfigFromJson} from "@lodestar/config";
-
 import {readFile} from "../../../utils/file.js";
 import {VerifiedProxyOptions, createVerifiedExecutionProxy} from "../../../web3_proxy.js";
 import {GlobalArgs, parseGlobalArgs} from "../../options.js";

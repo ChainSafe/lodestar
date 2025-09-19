@@ -1,6 +1,5 @@
 import {fulu} from "@lodestar/types";
 import {prettyPrintIndices, toRootHex} from "@lodestar/utils";
-
 import {BeaconChain} from "../chain.js";
 import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blockInput/index.js";
 import {BLOB_AVAILABILITY_TIMEOUT} from "./verifyBlocksDataAvailability.js";

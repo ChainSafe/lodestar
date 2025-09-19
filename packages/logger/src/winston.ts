@@ -2,7 +2,6 @@
 
 import type {Logger as Winston} from "winston";
 import winston from "winston";
-
 import {LogLevel, Logger, LoggerOptions, logLevelNum} from "./interface.js";
 import {getFormat} from "./utils/format.js";
 import {LogData} from "./utils/json.js";

@@ -1,10 +1,8 @@
 import {spawn} from "node:child_process";
 import fs from "node:fs";
 import net from "node:net";
-
 import {ChainConfig} from "@lodestar/config";
 import {sleep} from "@lodestar/utils";
-
 import {ZERO_HASH} from "../../src/constants/index.js";
 import {Eth1Provider} from "../../src/index.js";
 import {shell} from "../sim/shell.js";

@@ -1,5 +1,4 @@
 import {bench, describe} from "@chainsafe/benchmark";
-
 import {RootCache, computeStartSlotAtEpoch, getBlockRootAtSlot} from "../../../src/util/index.js";
 import {State} from "../types.js";
 import {generatePerfTestCachedStatePhase0, perfStateEpoch, perfStateId} from "../util.js";

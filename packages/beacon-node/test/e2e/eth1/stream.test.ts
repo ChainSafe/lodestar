@@ -1,5 +1,4 @@
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
-
 import {Eth1Options} from "../../../src/eth1/options.js";
 import {Eth1Provider} from "../../../src/eth1/provider/eth1Provider.js";
 import {getDepositsAndBlockStreamForGenesis, getDepositsStream} from "../../../src/eth1/stream.js";

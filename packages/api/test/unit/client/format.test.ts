@@ -1,5 +1,4 @@
 import {describe, expect, it} from "vitest";
-
 import {EventType} from "../../../src/beacon/routes/events.js";
 import {stringifyQuery} from "../../../src/utils/client/format.js";
 

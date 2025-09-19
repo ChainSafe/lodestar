@@ -1,7 +1,5 @@
 import {ssz} from "@lodestar/types";
-
 import {beforeEach, describe, expect, it} from "vitest";
-
 import {ValidatorRegistrationCache} from "../../../../src/execution/builder/cache.js";
 
 describe("ValidatorRegistrationCache", () => {

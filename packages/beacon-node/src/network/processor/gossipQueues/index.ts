@@ -1,5 +1,4 @@
 import {mapValues} from "@lodestar/utils";
-
 import {getBeaconAttestationGossipIndex} from "../../../util/sszBytes.js";
 import {BatchGossipType, GossipType, SequentialGossipType} from "../../gossip/interface.js";
 import {PendingGossipsubMessage} from "../types.js";

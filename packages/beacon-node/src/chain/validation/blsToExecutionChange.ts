@@ -4,7 +4,6 @@ import {
   isValidBlsToExecutionChange,
 } from "@lodestar/state-transition";
 import {capella} from "@lodestar/types";
-
 import {BlsToExecutionChangeError, BlsToExecutionChangeErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
 

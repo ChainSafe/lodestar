@@ -5,10 +5,8 @@ import {LevelDbController} from "@lodestar/db";
 import {interopSecretKey} from "@lodestar/state-transition";
 import {mapValues} from "@lodestar/utils";
 import {Signer, SignerType, SlashingProtection, Validator, ValidatorProposerConfig} from "@lodestar/validator";
-
 import tmp from "tmp";
 import {vi} from "vitest";
-
 import {BeaconNode} from "../../../src/index.js";
 import {TestLoggerOpts, testLogger} from "../logger.js";
 

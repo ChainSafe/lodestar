@@ -1,7 +1,5 @@
 import {Slot} from "@lodestar/types";
-
 import {describe, expect, it} from "vitest";
-
 import {computeSlotsSinceEpochStart} from "../../../src/util/index.js";
 
 describe("computeSlotsSinceEpochStart", () => {

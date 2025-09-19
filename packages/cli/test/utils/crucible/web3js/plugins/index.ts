@@ -1,5 +1,4 @@
 import {Web3} from "web3";
-
 import {Web3AdminPlugin} from "./web3AdminPlugin.js";
 import {Web3ExtendedEthPlugin} from "./web3ExtendedEthPlugin.js";
 

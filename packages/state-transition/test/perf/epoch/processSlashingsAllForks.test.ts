@@ -1,6 +1,5 @@
 import {bench, describe} from "@chainsafe/benchmark";
 import {MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
-
 import {processSlashings} from "../../../src/epoch/processSlashings.js";
 import {
   CachedBeaconStateAllForks,

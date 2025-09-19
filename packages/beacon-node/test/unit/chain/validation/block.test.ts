@@ -3,9 +3,7 @@ import {config} from "@lodestar/config/default";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName, ForkPostDeneb} from "@lodestar/params";
 import {SignedBeaconBlock, ssz} from "@lodestar/types";
-
 import {Mock, Mocked, beforeEach, describe, it, vi} from "vitest";
-
 import {BlockErrorCode} from "../../../../src/chain/errors/index.js";
 import {QueuedStateRegenerator} from "../../../../src/chain/regen/index.js";
 import {SeenBlockProposers} from "../../../../src/chain/seenCache/index.js";

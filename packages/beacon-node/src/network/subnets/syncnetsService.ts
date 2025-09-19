@@ -3,7 +3,6 @@ import {SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, ssz} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
-
 import {ClockEvent, IClock} from "../../util/clock.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
 import {getActiveForkBoundaries} from "../forks.js";

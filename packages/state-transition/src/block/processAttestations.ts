@@ -1,6 +1,5 @@
 import {ForkSeq} from "@lodestar/params";
 import {Attestation} from "@lodestar/types";
-
 import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStatePhase0} from "../types.js";
 import {processAttestationPhase0} from "./processAttestationPhase0.js";

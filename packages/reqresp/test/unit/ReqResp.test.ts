@@ -1,9 +1,7 @@
 import {getEmptyLogger} from "@lodestar/logger/empty";
 import {Logger} from "@lodestar/utils";
-
 import {Libp2p} from "libp2p";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-
 import {RespStatus} from "../../src/interface.js";
 import {ReqResp} from "../../src/ReqResp.js";
 import {RateLimiterQuota} from "../../src/rate_limiter/rateLimiterGRCA.js";

@@ -1,5 +1,4 @@
 import {FastifyInstance} from "fastify";
-
 import {BeaconRestApiServerOpts} from "./index.js";
 
 export async function registerSwaggerUIRoutes(

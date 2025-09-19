@@ -1,5 +1,4 @@
 import {encode as varintEncode} from "uint8-varint";
-
 import {encodeSnappy} from "./snappyFrames/compress.js";
 
 /**

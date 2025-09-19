@@ -1,9 +1,7 @@
 /** biome-ignore-all lint/style/noNonNullAssertion: values all exist */
 
 import {getEnvLogger} from "@lodestar/logger/env";
-
 import {afterAll, beforeAll, beforeEach, describe, expect, it} from "vitest";
-
 import {BUCKET_LENGTH, type Db, LevelDbController, Repository, encodeKey} from "../../src/index.js";
 
 // Minimal fake SSZ-like type for string values

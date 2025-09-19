@@ -1,5 +1,4 @@
 import {sleep} from "@lodestar/utils";
-
 import {describe, expect, it} from "vitest";
 
 type ValidateOpts = {

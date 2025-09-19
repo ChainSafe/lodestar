@@ -1,8 +1,6 @@
 import crypto from "node:crypto";
 import http from "node:http";
-
 import {afterEach, describe, expect, it} from "vitest";
-
 import {FetchError, FetchErrorType, fetch} from "../../src/fetch.js";
 
 const isBun = "bun" in process.versions;

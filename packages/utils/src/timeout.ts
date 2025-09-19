@@ -1,5 +1,4 @@
 import {anySignal} from "any-signal";
-
 import {ErrorAborted, TimeoutError} from "./errors.js";
 import {sleep} from "./sleep.js";
 

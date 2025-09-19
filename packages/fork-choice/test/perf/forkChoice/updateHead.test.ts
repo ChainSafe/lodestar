@@ -1,6 +1,5 @@
 import {bench, describe} from "@chainsafe/benchmark";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-
 import {ForkChoice, ProtoBlock} from "../../../src/index.js";
 import {Opts, initializeForkChoice} from "./util.js";
 

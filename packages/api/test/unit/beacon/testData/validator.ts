@@ -1,6 +1,5 @@
 import {ForkName} from "@lodestar/params";
 import {ProducedBlockSource, ssz} from "@lodestar/types";
-
 import {BuilderSelection, Endpoints} from "../../../../src/beacon/routes/validator.js";
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 

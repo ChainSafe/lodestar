@@ -1,6 +1,5 @@
 import {zeroNode} from "@chainsafe/persistent-merkle-tree";
 import {ssz} from "@lodestar/types";
-
 import {CachedBeaconStateAltair} from "../types.js";
 
 /**

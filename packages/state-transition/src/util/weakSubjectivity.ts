@@ -9,7 +9,6 @@ import {
 import {Epoch, Root, ssz} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {toRootHex} from "@lodestar/utils";
-
 import {ZERO_HASH} from "../constants/constants.js";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "../types.js";
 import {computeCheckpointEpochAtStateSlot, computeEpochAtSlot, getCurrentEpoch} from "./epoch.js";

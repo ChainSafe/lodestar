@@ -1,6 +1,5 @@
 import {PublicKey, asyncAggregateWithRandomness} from "@chainsafe/blst";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
-
 import {Metrics} from "../../../metrics/metrics.js";
 import {LinkedList} from "../../../util/array.js";
 import {VerifySignatureOpts} from "../interface.js";

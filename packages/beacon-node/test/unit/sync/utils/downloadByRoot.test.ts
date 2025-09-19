@@ -1,10 +1,7 @@
 import {randomBytes} from "node:crypto";
-
 import {ForkName, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {BlobIndex, ColumnIndex, ssz} from "@lodestar/types";
-
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
-
 import {BlobMeta} from "../../../../src/chain/blocks/blockInput/types.js";
 import {BlobSidecarValidationError} from "../../../../src/chain/errors/blobSidecarError.js";
 import {DataColumnSidecarValidationError} from "../../../../src/chain/errors/dataColumnSidecarError.js";

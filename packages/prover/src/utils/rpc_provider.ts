@@ -1,5 +1,4 @@
 import {Logger} from "@lodestar/logger";
-
 import {ZERO_ADDRESS} from "../constants.js";
 import {ELRequestHandler} from "../interfaces.js";
 import {

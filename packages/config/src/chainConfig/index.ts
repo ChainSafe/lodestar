@@ -1,5 +1,4 @@
 import {ACTIVE_PRESET} from "@lodestar/params";
-
 import {defaultChainConfig} from "./default.js";
 import {ChainConfig} from "./types.js";
 

@@ -4,7 +4,6 @@ import {BitArray} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
 import {DOMAIN_DEPOSIT, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {altair, phase0, ssz} from "@lodestar/types";
-
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,

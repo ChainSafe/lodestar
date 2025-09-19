@@ -1,6 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {Logger, sleep} from "@lodestar/utils";
-
 import {Metrics} from "../metrics/metrics.js";
 import {recoverDataColumnSidecars} from "../util/dataColumns.js";
 import {BlockInputColumns} from "./blocks/blockInput/index.js";

@@ -2,10 +2,8 @@ import {config} from "@lodestar/config/default";
 import {LevelDbController, encodeKey} from "@lodestar/db";
 import {ssz} from "@lodestar/types";
 import {intToBytes} from "@lodestar/utils";
-
 import {rimraf} from "rimraf";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-
 import {Bucket, getBucketNameByValue} from "../../../../../src/db/buckets.js";
 import {BlockArchiveRepository} from "../../../../../src/db/repositories/index.js";
 import {testLogger} from "../../../../utils/logger.js";

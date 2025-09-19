@@ -15,7 +15,6 @@ import {
 } from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
-
 import {DepositTree} from "../../db/repositories/depositDataRoot.js";
 import {IEth1Provider} from "../../eth1/index.js";
 import {IEth1StreamParams} from "../../eth1/interface.js";

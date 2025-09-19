@@ -5,9 +5,7 @@ import {LevelDbController} from "@lodestar/db";
 import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@lodestar/params";
 import {CachedBeaconStateAltair} from "@lodestar/state-transition";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
-
 import {generateKeyPair} from "@libp2p/crypto/keys";
-
 import {generatePerfTestCachedStateAltair} from "../../../../../state-transition/test/perf/util.js";
 import {BeaconChain} from "../../../../src/chain/index.js";
 import {BlockType, produceBlockBody} from "../../../../src/chain/produceBlock/produceBlockBody.js";

@@ -1,5 +1,4 @@
 import {CollectFn, Gauge as IGauge, LabelKeys, LabelsGeneric} from "@lodestar/utils";
-
 import {Gauge} from "prom-client";
 
 /**

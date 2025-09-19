@@ -1,5 +1,4 @@
 import {Logger} from "@lodestar/logger";
-
 import {Mocked, vi} from "vitest";
 
 export type MockedLogger = Mocked<Logger>;

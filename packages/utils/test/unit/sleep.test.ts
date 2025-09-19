@@ -1,5 +1,4 @@
 import {describe, expect, it} from "vitest";
-
 import {ErrorAborted} from "../../src/errors.js";
 import {sleep} from "../../src/sleep.js";
 

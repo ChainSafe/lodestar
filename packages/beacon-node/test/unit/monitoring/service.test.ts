@@ -1,8 +1,6 @@
 import {ErrorAborted, TimeoutError} from "@lodestar/utils";
-
 import {Histogram} from "prom-client";
 import {MockInstance, afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
-
 import {RegistryMetricCreator} from "../../../src/index.js";
 import {MonitoringOptions} from "../../../src/monitoring/options.js";
 import {MonitoringService} from "../../../src/monitoring/service.js";

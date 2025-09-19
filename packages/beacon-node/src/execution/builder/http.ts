@@ -19,7 +19,6 @@ import {
   electra,
 } from "@lodestar/types";
 import {toPrintableUrl} from "@lodestar/utils";
-
 import {Metrics} from "../../metrics/metrics.js";
 import {ValidatorRegistration, ValidatorRegistrationCache} from "./cache.js";
 import {IExecutionBuilder} from "./interface.js";

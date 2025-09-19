@@ -4,7 +4,6 @@ import {ForkSeq} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, fulu, phase0, ssz} from "@lodestar/types";
 import {Logger, toHex} from "@lodestar/utils";
-
 import {FAR_FUTURE_EPOCH} from "../constants/index.js";
 import {serializeCgc} from "../util/metadata.js";
 import {getCurrentAndNextForkBoundary} from "./forks.js";

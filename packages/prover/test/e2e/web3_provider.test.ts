@@ -1,7 +1,6 @@
 import {ethers} from "ethers";
 import {beforeAll, describe, expect, it, vi} from "vitest";
 import {Web3} from "web3";
-
 import {LCTransport} from "../../src/interfaces.js";
 import {createVerifiedExecutionProvider} from "../../src/web3_provider.js";
 import {beaconUrl, config, minFinalizedTimeMs, rpcUrl, waitForFinalized} from "../utils/e2e_env.js";

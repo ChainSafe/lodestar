@@ -1,5 +1,4 @@
 import {ProducedBlockSource} from "@lodestar/types";
-
 import {BlockSelectionResult} from "../../api/impl/validator/index.js";
 import {BlockProductionStep, PayloadPreparationType} from "../../chain/produceBlock/index.js";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";

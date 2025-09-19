@@ -2,7 +2,6 @@ import {routes} from "@lodestar/api";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {Epoch, RootHex} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-
 import {Metrics} from "../../metrics/index.js";
 import {StateRegenerationOpts} from "../regen/interface.js";
 import {MapTracker} from "./mapMetrics.js";

@@ -1,5 +1,4 @@
 import {PeerId} from "@libp2p/interface";
-
 import {InboundRateLimitQuota, ReqRespRateLimiterOpts} from "../types.js";
 import {RateLimiterGRCA} from "./rateLimiterGRCA.js";
 

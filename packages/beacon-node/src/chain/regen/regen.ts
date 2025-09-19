@@ -13,7 +13,6 @@ import {
 } from "@lodestar/state-transition";
 import {BeaconBlock, RootHex, SignedBeaconBlock, Slot, phase0} from "@lodestar/types";
 import {Logger, fromHex, toRootHex} from "@lodestar/utils";
-
 import {IBeaconDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {nextEventLoop} from "../../util/eventLoop.js";

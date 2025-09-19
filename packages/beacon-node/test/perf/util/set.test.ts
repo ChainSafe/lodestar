@@ -1,5 +1,4 @@
 import {bench, describe} from "@chainsafe/benchmark";
-
 import {OrderedSet} from "../../../src/util/set.js";
 
 enum DeleteType {

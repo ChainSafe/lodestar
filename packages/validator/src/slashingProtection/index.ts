@@ -1,6 +1,5 @@
 import {BLSPubkey, Epoch, Root} from "@lodestar/types";
 import {Logger, toPubkeyHex} from "@lodestar/utils";
-
 import {uniqueVectorArr} from "../slashingProtection/utils.js";
 import {LodestarValidatorDatabaseController} from "../types.js";
 import {

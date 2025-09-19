@@ -1,6 +1,5 @@
 import {ForkName} from "@lodestar/params";
 import {ColumnIndex, RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
-
 import {VersionedHashes} from "../../../execution/index.js";
 
 export enum DAType {

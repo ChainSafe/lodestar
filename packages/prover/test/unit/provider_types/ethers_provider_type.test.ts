@@ -1,7 +1,6 @@
 import {ethers} from "ethers";
 import {describe, expect, it} from "vitest";
 import {Web3} from "web3";
-
 import ethersProviderType from "../../../src/provider_types/ethers_provider_type.js";
 
 describe("matched", () => {

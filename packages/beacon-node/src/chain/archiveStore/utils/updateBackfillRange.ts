@@ -1,6 +1,5 @@
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {Logger} from "@lodestar/logger";
-
 import {IBeaconDb} from "../../../db/interface.js";
 import {IBeaconChain} from "../../interface.js";
 

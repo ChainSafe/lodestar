@@ -14,7 +14,6 @@ import {
   WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA,
 } from "@lodestar/params";
 import {ValidatorIndex} from "@lodestar/types";
-
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../types.js";
 import {decreaseBalance, increaseBalance} from "../util/index.js";
 import {initiateValidatorExit} from "./initiateValidatorExit.js";

@@ -1,6 +1,5 @@
 import {IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {RecursivePartial} from "@lodestar/utils";
-
 import {removeUndefinedRecursive} from "../../util/index.js";
 import * as api from "./api.js";
 import * as builder from "./builder.js";

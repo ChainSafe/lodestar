@@ -27,7 +27,6 @@ import {
   stringType,
 } from "@lodestar/types";
 import {fromHex, toHex, toRootHex} from "@lodestar/utils";
-
 import {
   ArrayOf,
   EmptyMeta,

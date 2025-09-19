@@ -1,5 +1,4 @@
 import {bench, describe} from "@chainsafe/benchmark";
-
 import {processRewardsAndPenalties} from "../../../src/epoch/processRewardsAndPenalties.js";
 import {StateAltairEpoch} from "../types.js";
 import {generatePerfTestCachedStateAltair, numValidators} from "../util.js";

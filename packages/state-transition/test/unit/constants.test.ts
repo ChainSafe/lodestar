@@ -1,7 +1,5 @@
 import * as blst from "@chainsafe/blst";
-
 import {describe, expect, it} from "vitest";
-
 import {G2_POINT_AT_INFINITY} from "../../src/index.js";
 
 describe("constants", () => {

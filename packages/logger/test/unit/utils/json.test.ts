@@ -1,8 +1,6 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {LodestarError} from "@lodestar/utils";
-
 import {describe, expect, it} from "vitest";
-
 import {logCtxToJson, logCtxToString} from "../../../src/utils/json.js";
 
 describe("Json helper", () => {

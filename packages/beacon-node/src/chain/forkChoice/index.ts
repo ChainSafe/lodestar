@@ -17,7 +17,6 @@ import {
 } from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
-
 import {GENESIS_SLOT} from "../../constants/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";

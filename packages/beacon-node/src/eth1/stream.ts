@@ -1,6 +1,5 @@
 import {phase0} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
-
 import {BatchDepositEvents, Eth1Block, IEth1Provider, IEth1StreamParams} from "./interface.js";
 import {parseEth1Block} from "./provider/eth1Provider.js";
 import {groupDepositEventsByBlock} from "./utils/groupDepositEventsByBlock.js";

@@ -1,5 +1,4 @@
 import {ChainForkConfig} from "@lodestar/config";
-
 import {
   ApiClientMethods,
   HttpClient,

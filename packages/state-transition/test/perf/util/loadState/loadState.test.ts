@@ -1,7 +1,6 @@
 import {bench, describe, setBenchOpts} from "@chainsafe/benchmark";
 import {PublicKey} from "@chainsafe/blst";
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
-
 import {Index2PubkeyCache} from "../../../../src/cache/pubkeyCache.js";
 import {createCachedBeaconState} from "../../../../src/cache/stateCache.js";
 import {loadState} from "../../../../src/util/loadState/loadState.js";

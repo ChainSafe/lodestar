@@ -1,10 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
-
 import {getNodeLogger} from "@lodestar/logger/node";
 import {CliCommand} from "@lodestar/utils";
 import {Interchange} from "@lodestar/validator";
-
 import {getBeaconConfigFromArgs} from "../../../config/index.js";
 import {GlobalArgs} from "../../../options/index.js";
 import {LogArgs} from "../../../options/logOptions.js";

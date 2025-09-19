@@ -1,5 +1,4 @@
 import {phase0} from "@lodestar/types";
-
 import {BatchDepositEvents} from "../interface.js";
 
 /**

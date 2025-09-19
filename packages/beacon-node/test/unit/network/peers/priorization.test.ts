@@ -2,12 +2,10 @@ import {BitArray} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {PeerId} from "@libp2p/interface";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {describe, expect, it} from "vitest";
-
 import {RequestedSubnet} from "../../../../src/network/peers/utils/index.js";
 import {
   ExcessPeerDisconnectReason,

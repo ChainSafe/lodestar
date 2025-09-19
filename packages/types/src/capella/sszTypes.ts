@@ -7,7 +7,6 @@ import {
   MAX_WITHDRAWALS_PER_PAYLOAD,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
-
 import {ssz as altairSsz} from "../altair/index.js";
 import {ssz as bellatrixSsz} from "../bellatrix/index.js";
 import {ssz as phase0Ssz} from "../phase0/index.js";

@@ -1,7 +1,5 @@
 import {fromHexString} from "@chainsafe/ssz";
-
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
-
 import {Eth1Block} from "../../../src/eth1/interface.js";
 import {Eth1Options} from "../../../src/eth1/options.js";
 import {Eth1Provider, parseEth1Block} from "../../../src/eth1/provider/eth1Provider.js";

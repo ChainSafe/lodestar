@@ -1,5 +1,4 @@
 import {BLSPubkey, Root} from "@lodestar/types";
-
 import {SlashingProtectionAttestation, SlashingProtectionBlock} from "../types.js";
 import {InterchangeCompleteV4} from "./formats/completeV4.js";
 import {InterchangeV5} from "./formats/v5.js";

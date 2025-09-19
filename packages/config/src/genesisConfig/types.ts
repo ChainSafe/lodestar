@@ -1,6 +1,5 @@
 import {ForkName} from "@lodestar/params";
 import {DomainType, ForkDigest, Root, Slot} from "@lodestar/types";
-
 import {ForkBoundary} from "../forkConfig/types.js";
 
 export type ForkDigestHex = string;

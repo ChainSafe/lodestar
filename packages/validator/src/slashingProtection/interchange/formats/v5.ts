@@ -1,5 +1,4 @@
 import {fromHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
-
 import {fromOptionalHexString, numToString, toOptionalHexString} from "../../utils.js";
 import {InterchangeLodestar} from "../types.js";
 

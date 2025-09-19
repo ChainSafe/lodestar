@@ -1,5 +1,4 @@
 import {BlockData, HeaderData} from "@ethereumjs/block";
-
 import {ELBlock, ELTransaction} from "../types.js";
 import {isTruthy} from "./assertion.js";
 

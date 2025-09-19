@@ -2,9 +2,7 @@ import {ChainForkConfig, createBeaconConfig, createChainForkConfig, defaultChain
 import {NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {bigIntToBytes, fromHex} from "@lodestar/utils";
-
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
-
 import {validateBlockDataColumnSidecars} from "../../../src/chain/validation/dataColumnSidecar.js";
 import {
   CustodyConfig,

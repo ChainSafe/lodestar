@@ -1,7 +1,6 @@
 import {ResponseIncoming} from "@lodestar/reqresp";
 import {SignedBeaconBlock, WithBytes, phase0} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
-
 import {ReqRespMethod, responseSszTypeByMethod} from "../types.js";
 import {sszDeserializeResponse} from "./collect.js";
 

@@ -24,7 +24,6 @@ import {
   PENDING_PARTIAL_WITHDRAWALS_LIMIT,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
-
 import {ssz as altairSsz} from "../altair/index.js";
 import {ssz as bellatrixSsz} from "../bellatrix/index.js";
 import {ssz as capellaSsz} from "../capella/index.js";

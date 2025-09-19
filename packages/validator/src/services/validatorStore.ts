@@ -43,7 +43,6 @@ import {
   ssz,
 } from "@lodestar/types";
 import {fromHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
-
 import {Metrics} from "../metrics.js";
 import {ISlashingProtection} from "../slashingProtection/index.js";
 import {PubkeyHex} from "../types.js";

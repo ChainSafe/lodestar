@@ -25,7 +25,6 @@ import {
   phase0,
 } from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
-
 import {IEth1ForBlockProduction} from "../eth1/index.js";
 import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/metrics.js";

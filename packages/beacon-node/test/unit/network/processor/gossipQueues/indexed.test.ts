@@ -1,5 +1,4 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-
 import {IndexedGossipQueueMinSize} from "../../../../../src/network/processor/gossipQueues/indexed.js";
 
 type Item = {

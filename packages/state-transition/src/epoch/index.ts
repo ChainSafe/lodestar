@@ -5,7 +5,6 @@ import {
   MAX_VALIDATORS_PER_COMMITTEE,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
-
 import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {
   CachedBeaconStateAllForks,

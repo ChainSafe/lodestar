@@ -1,6 +1,5 @@
 import {SignedBeaconBlock, Slot} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
-
 import {BeaconClient, BeaconNode, ExecutionClient, ExecutionNode, NodePair} from "../interfaces.js";
 import {Simulation} from "../simulation.js";
 import {SimulationTrackerEvent} from "../simulationTracker.js";

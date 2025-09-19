@@ -1,9 +1,7 @@
 import assert from "node:assert";
-
 import {beforeAll, bench, describe} from "@chainsafe/benchmark";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-
 import {deserializeEnrSubnets} from "../../../../src/network/peers/utils/enrSubnetsDeserialize.js";
 
 /**

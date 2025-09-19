@@ -2,7 +2,6 @@ import {digest} from "@chainsafe/as-sha256";
 import {EPOCHS_PER_HISTORICAL_VECTOR} from "@lodestar/params";
 import {BeaconBlock} from "@lodestar/types";
 import {xor} from "@lodestar/utils";
-
 import {verifyRandaoSignature} from "../signatureSets/index.js";
 import {CachedBeaconStateAllForks} from "../types.js";
 import {getRandaoMix} from "../util/index.js";

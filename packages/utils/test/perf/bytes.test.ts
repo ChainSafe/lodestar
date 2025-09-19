@@ -1,5 +1,4 @@
 import {bench, describe} from "@chainsafe/benchmark";
-
 import {
   fromHex as browserFromHex,
   fromHexInto as browserFromHexInto,

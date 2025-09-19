@@ -1,11 +1,9 @@
 import path from "node:path";
-
 import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-keygen";
 import {SecretKey} from "@chainsafe/blst";
 import {interopSecretKey} from "@lodestar/state-transition";
 import {LogLevel, Logger, isValidHttpUrl} from "@lodestar/utils";
 import {Signer, SignerType, externalSignerGetKeys} from "@lodestar/validator";
-
 import {GlobalArgs, defaultNetwork} from "../../../options/index.js";
 import {YargsError, assertValidPubkeysHex, parseRange} from "../../../util/index.js";
 import {showProgress} from "../../../util/progress.js";

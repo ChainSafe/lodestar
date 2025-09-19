@@ -1,5 +1,4 @@
 import {describe, expect, it} from "vitest";
-
 import {toChecksumAddress} from "../../src/utils/executionAddress.js";
 
 describe("toChecksumAddress", () => {

@@ -1,5 +1,4 @@
 import {ChainForkConfig} from "@lodestar/config";
-
 import {HttpClient, HttpClientModules, HttpClientOptions, IHttpClient} from "../utils/client/httpClient.js";
 import type {ApiClient} from "./client.js";
 import * as builder from "./client.js";

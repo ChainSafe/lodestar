@@ -1,7 +1,6 @@
 import {BeaconConfig} from "@lodestar/config";
 import {ForkName, MAX_REQUEST_LIGHT_CLIENT_UPDATES, isForkPostDeneb, isForkPostElectra} from "@lodestar/params";
 import {InboundRateLimitQuota} from "@lodestar/reqresp";
-
 import {ReqRespMethod, RequestBodyByMethod, requestSszTypeByMethod} from "./types.js";
 
 export const rateLimitQuotas: (fork: ForkName, config: BeaconConfig) => Record<ReqRespMethod, InboundRateLimitQuota> = (

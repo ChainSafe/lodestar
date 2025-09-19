@@ -1,7 +1,6 @@
 import {bench, describe} from "@chainsafe/benchmark";
 import {ForkSeq} from "@lodestar/params";
 import {fromHex} from "@lodestar/utils";
-
 import {
   computeProposerIndex,
   computeShuffledIndex,

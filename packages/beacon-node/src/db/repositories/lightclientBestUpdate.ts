@@ -1,7 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {DatabaseController, Repository} from "@lodestar/db";
 import {LightClientUpdate, SyncPeriod, ssz} from "@lodestar/types";
-
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 const SLOT_BYTE_COUNT = 8;

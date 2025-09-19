@@ -1,6 +1,5 @@
 import {Root} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
-
 import {PeerId} from "@libp2p/interface";
 
 export enum BackfillSyncErrorCode {

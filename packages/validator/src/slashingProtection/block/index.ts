@@ -1,5 +1,4 @@
 import {BLSPubkey} from "@lodestar/types";
-
 import {SlashingProtectionBlock} from "../types.js";
 import {isEqualNonZeroRoot} from "../utils.js";
 import {BlockBySlotRepository} from "./blockBySlotRepository.js";

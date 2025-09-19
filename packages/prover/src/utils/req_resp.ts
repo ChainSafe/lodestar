@@ -1,5 +1,4 @@
 import http from "node:http";
-
 import {JsonRpcRequestPayload, JsonRpcResponse} from "../types.js";
 
 export const fetchRequestPayload = async (req: http.IncomingMessage): Promise<JsonRpcRequestPayload> => {

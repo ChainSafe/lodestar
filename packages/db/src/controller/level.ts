@@ -1,7 +1,5 @@
 import {Logger} from "@lodestar/utils";
-
 import {ClassicLevel} from "classic-level";
-
 import {DatabaseController, DatabaseOptions, DbReqOpts, FilterOptions, KeyValue} from "./interface.js";
 import {LevelDbControllerMetrics} from "./metrics.js";
 

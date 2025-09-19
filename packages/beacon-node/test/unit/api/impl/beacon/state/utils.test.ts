@@ -1,7 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
-
 import {describe, expect, it} from "vitest";
-
 import {getStateValidatorIndex} from "../../../../../../src/api/impl/beacon/state/utils.js";
 import {generateCachedAltairState} from "../../../../../utils/state.js";
 

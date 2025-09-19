@@ -1,6 +1,5 @@
 import {IBeaconNodeOptions, defaultOptions} from "@lodestar/beacon-node";
 import {RecursivePartial, isPlainObject} from "@lodestar/utils";
-
 import deepmerge from "deepmerge";
 
 export class BeaconNodeOptions {

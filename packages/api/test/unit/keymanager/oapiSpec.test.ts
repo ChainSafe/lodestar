@@ -1,8 +1,6 @@
 import path from "node:path";
 import {fileURLToPath} from "node:url";
-
 import {config} from "@lodestar/config/default";
-
 import {getDefinitions} from "../../../src/keymanager/routes.js";
 import {runTestCheckAgainstSpec} from "../../utils/checkAgainstSpec.js";
 import {fetchOpenApiSpec} from "../../utils/fetchOpenApiSpec.js";

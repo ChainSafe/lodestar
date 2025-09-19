@@ -13,7 +13,6 @@ import {
   newFilledArray,
 } from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-
 import {generatePerfTestCachedStateAltair} from "../../../../../state-transition/test/perf/util.js";
 import {AggregatedAttestationPool} from "../../../../src/chain/opPools/aggregatedAttestationPool.js";
 

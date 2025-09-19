@@ -11,7 +11,6 @@ import {
   UNSET_DEPOSIT_REQUESTS_START_INDEX,
 } from "@lodestar/params";
 import {Bytes32, Root, TimeSeconds, phase0, ssz} from "@lodestar/types";
-
 import {processDeposit} from "../block/processDeposit.js";
 import {EpochCacheImmutableData} from "../cache/epochCache.js";
 import {createCachedBeaconState} from "../cache/stateCache.js";

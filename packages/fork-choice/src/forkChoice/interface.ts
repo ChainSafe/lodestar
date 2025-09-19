@@ -13,7 +13,6 @@ import {
   Slot,
   ValidatorIndex,
 } from "@lodestar/types";
-
 import {LVHExecResponse, MaybeValidExecutionStatus, ProtoBlock, ProtoNode} from "../protoArray/interface.js";
 import {UpdateAndGetHeadOpt} from "./forkChoice.js";
 import {CheckpointWithHex} from "./store.js";

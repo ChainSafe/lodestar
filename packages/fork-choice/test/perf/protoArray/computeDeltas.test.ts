@@ -1,6 +1,5 @@
 import {beforeAll, bench, describe, setBenchOpts} from "@chainsafe/benchmark";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsZeroed} from "@lodestar/state-transition";
-
 import {computeDeltas} from "../../../src/protoArray/computeDeltas.js";
 import {VoteTracker} from "../../../src/protoArray/interface.js";
 

@@ -1,5 +1,4 @@
 import {describe, expect, it} from "vitest";
-
 import {DOMAIN_APPLICATION_BUILDER, DOMAIN_APPLICATION_MASK} from "../../src/index.js";
 
 describe("validate application domains", () => {

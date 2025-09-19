@@ -1,5 +1,4 @@
 import type * as fastify from "fastify";
-
 import {MediaType} from "../headers.js";
 
 export function addSszContentTypeParser(server: fastify.FastifyInstance): void {

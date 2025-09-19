@@ -1,8 +1,6 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Epoch, phase0, ssz} from "@lodestar/types";
-
 import {describe, expect, it} from "vitest";
-
 import {isSlashableAttestationData} from "../../../src/util/index.js";
 import {randBetween} from "../../utils/misc.js";
 

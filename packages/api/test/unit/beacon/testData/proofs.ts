@@ -1,6 +1,5 @@
 import {ProofType} from "@chainsafe/persistent-merkle-tree";
 import {ForkName} from "@lodestar/params";
-
 import {Endpoints} from "../../../../src/beacon/routes/proof.js";
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 

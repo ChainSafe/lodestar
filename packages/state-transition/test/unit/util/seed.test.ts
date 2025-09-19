@@ -1,11 +1,8 @@
 import crypto from "node:crypto";
-
 import {toHexString} from "@chainsafe/ssz";
 import {ForkSeq, GENESIS_EPOCH, GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {bytesToInt} from "@lodestar/utils";
-
 import {describe, expect, it} from "vitest";
-
 import {
   computeProposerIndex,
   computeShuffledIndex,

@@ -8,9 +8,7 @@ import {
   isExecutionPayload,
   isExecutionPayloadHeader,
 } from "@lodestar/types";
-
 import {afterAll, beforeAll, describe, expect, it, vi} from "vitest";
-
 import {BeaconNode} from "../../../../../../src/node/nodejs.js";
 import {getConfig} from "../../../../../utils/config.js";
 import {LogLevel, testLogger} from "../../../../../utils/logger.js";

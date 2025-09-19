@@ -2,7 +2,6 @@ import {Endpoints} from "@lodestar/api";
 import {BeaconApiMethods, registerRoutes} from "@lodestar/api/beacon/server";
 import {ChainForkConfig} from "@lodestar/config";
 import {ErrorAborted, Logger} from "@lodestar/utils";
-
 import {NodeIsSyncing} from "../impl/errors.js";
 import {RestApiServer, RestApiServerMetrics, RestApiServerModules, RestApiServerOpts} from "./base.js";
 import {registerSwaggerUIRoutes} from "./swaggerUI.js";

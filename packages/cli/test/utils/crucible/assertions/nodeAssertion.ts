@@ -1,7 +1,6 @@
 import {SecretKey} from "@chainsafe/blst";
 import {routes} from "@lodestar/api/beacon";
 import {toHex} from "@lodestar/utils";
-
 import {Assertion, AssertionResult, ValidatorClient, ValidatorClientKeys} from "../interfaces.js";
 import {arrayEquals} from "../utils/index.js";
 import {neverMatcher} from "./matchers.js";

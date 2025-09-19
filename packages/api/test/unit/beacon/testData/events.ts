@@ -1,6 +1,5 @@
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-
 import {
   Endpoints,
   EventData,

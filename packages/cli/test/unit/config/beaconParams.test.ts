@@ -1,10 +1,7 @@
 import fs from "node:fs";
-
 import {toHexString} from "@chainsafe/ssz";
-
 import yaml from "js-yaml";
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
-
 import {getBeaconParams} from "../../../src/config/index.js";
 import {getTestdirPath} from "../../utils.js";
 

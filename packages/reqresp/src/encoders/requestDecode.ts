@@ -1,6 +1,5 @@
 import type {Sink} from "it-stream-types";
 import {Uint8ArrayList} from "uint8arraylist";
-
 import {readEncodedPayload} from "../encodingStrategies/index.js";
 import {MixedProtocol} from "../types.js";
 import {BufferedSource} from "../utils/index.js";

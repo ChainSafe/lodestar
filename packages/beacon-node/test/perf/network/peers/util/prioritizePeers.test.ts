@@ -2,11 +2,9 @@ import {beforeAll, bench, describe} from "@chainsafe/benchmark";
 import {config} from "@lodestar/config/default";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {altair, phase0, ssz} from "@lodestar/types";
-
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {PeerId} from "@libp2p/interface";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
-
 import {defaultNetworkOptions} from "../../../../../src/network/options.js";
 import {RequestedSubnet, prioritizePeers} from "../../../../../src/network/peers/utils/index.js";
 import {getAttnets, getSyncnets} from "../../../../utils/network.js";

@@ -3,10 +3,8 @@ import {LevelDbController} from "@lodestar/db";
 import {NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {Root, fulu, ssz} from "@lodestar/types";
 import {fromAsync, toHex} from "@lodestar/utils";
-
 import {rimraf} from "rimraf";
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
-
 import {DataColumnSidecarRepository} from "../../../../../src/db/repositories/dataColumnSidecar.js";
 import {DataColumnSidecarArchiveRepository} from "../../../../../src/db/repositories/dataColumnSidecarArchive.js";
 import {getDataColumnSidecarsFromBlock} from "../../../../../src/util/dataColumns.js";

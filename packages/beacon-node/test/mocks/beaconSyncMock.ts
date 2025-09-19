@@ -1,5 +1,4 @@
 import {Mocked, vi} from "vitest";
-
 import {BeaconSync} from "../../src/sync/index.js";
 
 export type MockedBeaconSync = Mocked<BeaconSync>;

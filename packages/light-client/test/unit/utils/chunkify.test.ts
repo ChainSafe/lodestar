@@ -1,5 +1,4 @@
 import {describe, expect, it} from "vitest";
-
 import {chunkifyInclusiveRange} from "../../../src/utils/chunkify.js";
 
 describe("utils / chunkifyInclusiveRange", () => {

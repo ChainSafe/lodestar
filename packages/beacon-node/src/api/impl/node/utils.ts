@@ -1,5 +1,4 @@
 import {routes} from "@lodestar/api";
-
 import {Connection, StreamStatus} from "@libp2p/interface";
 
 /**

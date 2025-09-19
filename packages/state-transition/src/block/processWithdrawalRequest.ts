@@ -7,7 +7,6 @@ import {
 } from "@lodestar/params";
 import {electra, phase0, ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
-
 import {CachedBeaconStateElectra} from "../types.js";
 import {hasCompoundingWithdrawalCredential, hasExecutionWithdrawalCredential} from "../util/electra.js";
 import {computeExitEpochAndUpdateChurn} from "../util/epoch.js";

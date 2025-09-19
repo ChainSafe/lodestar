@@ -1,6 +1,5 @@
 import {RootHex} from "@lodestar/types";
 import {bigIntToBytes, bytesToBigInt, fromHex, fromHexInto, toHex} from "@lodestar/utils";
-
 import {ErrorParseJson} from "./jsonRpcHttpClient.js";
 
 /** QUANTITY as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API */

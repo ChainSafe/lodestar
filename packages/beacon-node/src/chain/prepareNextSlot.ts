@@ -12,7 +12,6 @@ import {
 } from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
 import {Logger, fromHex, isErrorAborted, sleep} from "@lodestar/utils";
-
 import {GENESIS_SLOT, ZERO_HASH_HEX} from "../constants/constants.js";
 import {BuilderStatus} from "../execution/builder/http.js";
 import {Metrics} from "../metrics/index.js";

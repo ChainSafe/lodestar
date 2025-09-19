@@ -23,7 +23,6 @@ import {
   isElectraLightClientUpdate,
   ssz,
 } from "@lodestar/types";
-
 import {SyncCommitteeFast} from "./types.js";
 import {computeSyncPeriodAtSlot} from "./utils/clock.js";
 import {assertZeroHashes, getParticipantPubkeys, isEmptyHeader} from "./utils/utils.js";

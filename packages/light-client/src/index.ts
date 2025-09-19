@@ -12,9 +12,7 @@ import {
   phase0,
 } from "@lodestar/types";
 import {fromHex, isErrorAborted, sleep, toRootHex} from "@lodestar/utils";
-
 import mitt from "mitt";
-
 import {LightclientEmitter, LightclientEvent} from "./events.js";
 import {LightclientSpec} from "./spec/index.js";
 import {ProcessUpdateOpts} from "./spec/processLightClientUpdate.js";

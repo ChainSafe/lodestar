@@ -1,5 +1,4 @@
 import {fromHex, toHex} from "@lodestar/utils";
-
 import {validateBlobSchedule} from "../utils/validateBlobSchedule.js";
 import {
   BlobSchedule,

@@ -1,5 +1,4 @@
 import {fromHex as b} from "@lodestar/utils";
-
 import {ChainConfig} from "../types.js";
 import {gnosisChainConfig as gnosis} from "./gnosis.js";
 

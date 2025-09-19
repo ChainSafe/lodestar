@@ -4,7 +4,6 @@ import {LevelDbController} from "@lodestar/db";
 import {Root} from "@lodestar/types";
 import {Logger, fromHex} from "@lodestar/utils";
 import {MetaDataRepository, SlashingProtection} from "@lodestar/validator";
-
 import {getBeaconConfigFromArgs} from "../../../config/index.js";
 import {GlobalArgs} from "../../../options/index.js";
 import {getValidatorPaths} from "../paths.js";

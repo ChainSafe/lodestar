@@ -15,7 +15,6 @@ import {
   fulu,
   phase0,
 } from "@lodestar/types";
-
 import {Identify} from "@libp2p/identify";
 import {
   ComponentLogger,
@@ -35,7 +34,6 @@ import {
 import type {AddressManager, ConnectionManager, Registrar, TransportManager} from "@libp2p/interface-internal";
 import type {Datastore} from "interface-datastore";
 import {Libp2p as ILibp2p} from "libp2p";
-
 import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
 import {CustodyConfig} from "../util/dataColumns.js";
 import {PeerIdStr} from "../util/peerId.js";

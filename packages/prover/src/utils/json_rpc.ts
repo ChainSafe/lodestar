@@ -1,5 +1,4 @@
 import {Logger} from "@lodestar/logger";
-
 import {VERIFICATION_FAILED_RESPONSE_CODE} from "../constants.js";
 import {
   JsonRpcBatchRequest,

@@ -1,5 +1,4 @@
 import {describe, expect, it} from "vitest";
-
 import {ErrorNoValueMinValue, ErrorNoValues, binarySearchLte} from "../../../src/util/binarySearch.js";
 
 describe("util / binarySearch", () => {

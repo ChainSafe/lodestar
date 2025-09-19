@@ -1,6 +1,5 @@
 import {bellatrix} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
-
 import {Assertion, AssertionResult, Match} from "../interfaces.js";
 
 export function createExecutionHeadAssertion({

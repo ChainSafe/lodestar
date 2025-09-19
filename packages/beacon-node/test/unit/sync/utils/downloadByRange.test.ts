@@ -1,7 +1,5 @@
 import {ForkName} from "@lodestar/params";
-
 import {beforeEach, describe, expect, it} from "vitest";
-
 import {BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../../../../src/chain/blocks/blockInput/types.js";
 import {ValidatedBlock, getBlocksForDataValidation} from "../../../../src/sync/utils/downloadByRange.js";
