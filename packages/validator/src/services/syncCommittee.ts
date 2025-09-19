@@ -86,7 +86,7 @@ export class SyncCommitteeService {
       // unlike Attestation, SyncCommitteeSignature could be published asap
       // especially with lodestar, it's very busy at 33% into the slot
       // see https://github.com/ChainSafe/lodestar/issues/4608
-      await Promise.race([sleep(this.clock.secFromSyncMessageDue(slot), signal), this.emitter.waitForBlockSlot(slot)]);
+      await Promise.race([sleep(this.clock.msToSyncMessageDue(slot), signal), this.emitter.waitForBlockSlot(slot)]);
       this.metrics?.syncCommitteeStepCallProduceMessage.observe(this.clock.secFromSyncMessageDue(slot));
 
       // Step 1. Download, sign and publish an `SyncCommitteeMessage` for each validator.
@@ -95,7 +95,7 @@ export class SyncCommitteeService {
 
       // Step 2. If an attestation was produced, make an aggregate.
       // First, wait until the `CONTRIBUTION_DUE_BPS` (67% into the slot)
-      await sleep(this.clock.secFromSyncContributionDue(slot), signal);
+      await sleep(this.clock.msToSyncContributionDue(slot), signal);
       this.metrics?.syncCommitteeStepCallProduceAggregate.observe(this.clock.secFromSyncContributionDue(slot));
 
       // await for all so if the Beacon node is overloaded it auto-throttles
