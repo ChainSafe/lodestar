@@ -63,10 +63,14 @@ export class ColumnReconstructionTracker {
     this.lastBlockRootHex = blockInput.blockRootHex;
     const delay =
       RECONSTRUCTION_DELAY_MIN_MS + Math.random() * (RECONSTRUCTION_DELAY_MAX_MS - RECONSTRUCTION_DELAY_MIN_MS);
-    sleep(delay).then(() => {
-      recoverDataColumnSidecars(blockInput, this.emitter, this.metrics).finally(() => {
-        this.running = false;
+    sleep(delay)
+      .then(() => {
+        recoverDataColumnSidecars(blockInput, this.emitter, this.metrics).finally(() => {
+          this.running = false;
+        });
+      })
+      .catch((err) => {
+        this.logger.error("ColumnReconstructionTracker occurred an error", err);
       });
-    });
   }
 }
