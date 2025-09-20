@@ -55,6 +55,12 @@ export type ChainConfig = {
   SHARD_COMMITTEE_PERIOD: number;
   ETH1_FOLLOW_DISTANCE: number;
 
+  ATTESTATION_DUE_BPS_GLOAS: number;
+  AGGREGATE_DUE_BPS_GLOAS: number;
+  SYNC_MESSAGE_DUE_BPS_GLOAS: number;
+  CONTRIBUTION_DUE_BPS_GLOAS: number;
+  PAYLOAD_ATTESTATION_DUE_BPS: number;
+
   // Validator cycle
   INACTIVITY_SCORE_BIAS: number;
   INACTIVITY_SCORE_RECOVERY_RATE: number;
@@ -146,6 +152,12 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   MIN_VALIDATOR_WITHDRAWABILITY_DELAY: "number",
   SHARD_COMMITTEE_PERIOD: "number",
   ETH1_FOLLOW_DISTANCE: "number",
+
+  ATTESTATION_DUE_BPS_GLOAS: "number",
+  AGGREGATE_DUE_BPS_GLOAS: "number",
+  SYNC_MESSAGE_DUE_BPS_GLOAS: "number",
+  CONTRIBUTION_DUE_BPS_GLOAS: "number",
+  PAYLOAD_ATTESTATION_DUE_BPS: "number",
 
   // Validator cycle
   INACTIVITY_SCORE_BIAS: "number",

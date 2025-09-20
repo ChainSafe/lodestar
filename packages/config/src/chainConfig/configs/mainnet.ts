@@ -73,6 +73,17 @@ export const chainConfig: ChainConfig = {
   // 2**11 (= 2,048) Eth1 blocks ~8 hours
   ETH1_FOLLOW_DISTANCE: 2048,
 
+  // 25% of SLOT_DURATION_MS
+  ATTESTATION_DUE_BPS_GLOAS: 2500,
+  // 50% of SLOT_DURATION_MS
+  AGGREGATE_DUE_BPS_GLOAS: 5000,
+  // 25% of SLOT_DURATION_MS
+  SYNC_MESSAGE_DUE_BPS_GLOAS: 2500,
+  // 50% of SLOT_DURATION_MS
+  CONTRIBUTION_DUE_BPS_GLOAS: 5000,
+  // 75% of SLOT_DURATION_MS
+  PAYLOAD_ATTESTATION_DUE_BPS: 7500,
+
   // Validator cycle
   // ---------------------------------------------------------------
   // 2**2 (= 4)

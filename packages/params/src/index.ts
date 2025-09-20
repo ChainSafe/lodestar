@@ -114,6 +114,10 @@ export const {
   FIELD_ELEMENTS_PER_CELL,
   FIELD_ELEMENTS_PER_EXT_BLOB,
   KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH,
+
+  PTC_SIZE,
+  MAX_PAYLOAD_ATTESTATIONS,
+  BUILDER_PENDING_WITHDRAWALS_LIMIT,
 } = activePreset;
 
 ////////////
@@ -138,6 +142,7 @@ export const ZERO_HASH_HEX = "0x" + "00".repeat(32);
 export const BLS_WITHDRAWAL_PREFIX = 0;
 export const ETH1_ADDRESS_WITHDRAWAL_PREFIX = 1;
 export const COMPOUNDING_WITHDRAWAL_PREFIX = 2;
+export const BUILDER_WITHDRAWAL_PREFIX = 3;
 
 // Domain types
 
@@ -152,6 +157,8 @@ export const DOMAIN_SYNC_COMMITTEE = Uint8Array.from([7, 0, 0, 0]);
 export const DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF = Uint8Array.from([8, 0, 0, 0]);
 export const DOMAIN_CONTRIBUTION_AND_PROOF = Uint8Array.from([9, 0, 0, 0]);
 export const DOMAIN_BLS_TO_EXECUTION_CHANGE = Uint8Array.from([10, 0, 0, 0]);
+export const DOMAIN_BEACON_BUILDER = Uint8Array.from([27, 0, 0, 0]);
+export const DOMAIN_PTC_ATTESTER = Uint8Array.from([12, 0, 0, 0]);
 
 // Application specific domains
 
@@ -298,3 +305,7 @@ export const BYTES_PER_CELL = FIELD_ELEMENTS_PER_CELL * BYTES_PER_FIELD_ELEMENT;
 // ssz.fulu.BeaconBlockBody.getPathInfo(['blobKzgCommitments']).gindex
 export const KZG_COMMITMENTS_GINDEX = 27;
 export const KZG_COMMITMENTS_SUBTREE_INDEX = KZG_COMMITMENTS_GINDEX - 2 ** KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH;
+
+// Gloas Misc
+export const BUILDER_PAYMENT_THRESHOLD_NUMERATOR = 6;
+export const BUILDER_PAYMENT_THRESHOLD_DENOMINATOR = 10;

@@ -299,5 +299,15 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     VALIDATOR_CUSTODY_REQUIREMENT: fuluForkRelevant,
     BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: fuluForkRelevant,
     BLOB_SCHEDULE: fuluForkRelevant,
+
+    // GLOAS
+    ATTESTATION_DUE_BPS_GLOAS: gloasForkRelevant,
+    AGGREGATE_DUE_BPS_GLOAS: gloasForkRelevant,
+    SYNC_MESSAGE_DUE_BPS_GLOAS: gloasForkRelevant,
+    CONTRIBUTION_DUE_BPS_GLOAS: gloasForkRelevant,
+    PAYLOAD_ATTESTATION_DUE_BPS: gloasForkRelevant,
+    PTC_SIZE: gloasForkRelevant,
+    MAX_PAYLOAD_ATTESTATIONS: gloasForkRelevant,
+    BUILDER_PENDING_WITHDRAWALS_LIMIT: gloasForkRelevant,
   };
 }
