@@ -1,6 +1,21 @@
 version: "3.4"
 
-# TODO: How to use?
+# Configuration for local monitoring setup with Prometheus and Grafana
+# This setup provides monitoring dashboards for a local Lodestar node
+#
+# HOW TO USE:
+# 1. Start your Lodestar beacon node and validator client locally
+# 2. Ensure they are running on the default ports:
+#    - Beacon node: http://localhost:8008
+#    - Validator client: http://localhost:5064
+# 3. Run this docker-compose file:
+#    docker-compose -f docker/docker-compose.local.yml up --build
+# 4. Access the services:
+#    - Prometheus metrics: http://localhost:9090
+#    - Grafana dashboards: http://localhost:3000
+#
+# Note: This configuration uses host.docker.internal to connect to your
+# local Lodestar instance from within the Docker containers.
 
 services:
   prometheus:
