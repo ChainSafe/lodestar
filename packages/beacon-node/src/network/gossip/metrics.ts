@@ -1,4 +1,3 @@
-import {ForkName} from "@lodestar/params";
 import {SubnetID} from "@lodestar/types";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {ForkBoundaryLabel} from "./gossipsub.js";

@@ -3,13 +3,7 @@ import {MetricsRegister, TopicLabel, TopicStrToLabel} from "@chainsafe/libp2p-go
 import {PeerScoreParams} from "@chainsafe/libp2p-gossipsub/score";
 import {SignaturePolicy, TopicStr} from "@chainsafe/libp2p-gossipsub/types";
 import {BeaconConfig, ForkBoundary} from "@lodestar/config";
-import {
-  ATTESTATION_SUBNET_COUNT,
-  ForkName,
-  NUMBER_OF_COLUMNS,
-  SLOTS_PER_EPOCH,
-  SYNC_COMMITTEE_SUBNET_COUNT,
-} from "@lodestar/params";
+import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {SubnetID} from "@lodestar/types";
 import {Logger, Map2d, Map2dArr} from "@lodestar/utils";
 import {GOSSIP_MAX_SIZE, GOSSIP_MAX_SIZE_BELLATRIX} from "../../constants/network.js";
@@ -158,7 +152,7 @@ export class Eth2Gossipsub extends GossipSub {
 
     if (metricsRegister) {
       const metrics = createEth2GossipsubMetrics(metricsRegister);
-      metrics.gossipMesh.peersByType.addCollect(() => this.onScrapeLodestarMetrics(metrics));
+      metrics.gossipMesh.peersByType.addCollect(() => this.onScrapeLodestarMetrics(metrics, networkConfig));
     }
 
     this.addEventListener("gossipsub:message", this.onGossipsubMessage.bind(this));
@@ -192,7 +186,7 @@ export class Eth2Gossipsub extends GossipSub {
     this.unsubscribe(topicStr);
   }
 
-  private onScrapeLodestarMetrics(metrics: Eth2GossipsubMetrics): void {
+  private onScrapeLodestarMetrics(metrics: Eth2GossipsubMetrics, networkConfig: NetworkConfig): void {
     const mesh = this.mesh;
     // biome-ignore lint/complexity/useLiteralKeys: `topics` is a private attribute
     const topics = this["topics"] as Map<string, Set<string>>;
@@ -265,7 +259,7 @@ export class Eth2Gossipsub extends GossipSub {
         }
       }
       for (const [boundary, peersByDataColumnSubnet] of peersByDataColumnSubnetByBoundary.map) {
-        for (let subnet = 0; subnet < NUMBER_OF_COLUMNS; subnet++) {
+        for (const subnet of networkConfig.custodyConfig.sampleGroups) {
           metricsGossip.peersByDataColumnSubnet.set({boundary, subnet}, peersByDataColumnSubnet[subnet] ?? 0);
         }
       }
