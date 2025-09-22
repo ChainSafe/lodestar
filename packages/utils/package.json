@@ -13,7 +13,12 @@
   },
   "version": "1.34.1",
   "type": "module",
-  "exports": "./lib/index.js",
+  "exports": {
+    ".": {
+      "bun": "./src/index.ts",
+      "import": "./lib/index.js"
+    }
+  },
   "files": [
     "lib/**/*.d.ts",
     "lib/**/*.js",

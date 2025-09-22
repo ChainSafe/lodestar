@@ -15,15 +15,19 @@
   "type": "module",
   "exports": {
     ".": {
+      "bun": "./src/index.ts",
       "import": "./lib/index.js"
     },
     "./block": {
+      "bun": "./src/block/index.ts",
       "import": "./lib/block/index.js"
     },
     "./epoch": {
+      "bun": "./src/epoch/index.ts",
       "import": "./lib/epoch/index.js"
     },
     "./slot": {
+      "bun": "./src/slot/index.ts",
       "import": "./lib/slot/index.js"
     }
   },

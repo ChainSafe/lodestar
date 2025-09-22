@@ -11,18 +11,23 @@
   "type": "module",
   "exports": {
     ".": {
+      "bun": "./src/index.ts",
       "import": "./lib/index.js"
     },
     "./presets/mainnet": {
+      "bun": "./src/presets/mainnet.ts",
       "import": "./lib/presets/mainnet.js"
     },
     "./presets/minimal": {
+      "bun": "./src/presets/minimal.ts",
       "import": "./lib/presets/minimal.js"
     },
     "./presets/gnosis": {
+      "bun": "./src/presets/gnosis.ts",
       "import": "./lib/presets/gnosis.js"
     },
     "./setPreset": {
+      "bun": "./src/setPreset.ts",
       "import": "./lib/setPreset.js"
     }
   },

@@ -15,39 +15,51 @@
   "type": "module",
   "exports": {
     ".": {
+      "bun": "./src/index.ts",
       "import": "./lib/index.js"
     },
     "./api": {
+      "bun": "./src/api/index.ts",
       "import": "./lib/api/index.js"
     },
     "./chain": {
+      "bun": "./src/chain/index.ts",
       "import": "./lib/chain/index.js"
     },
     "./constants": {
+      "bun": "./src/constants/index.ts",
       "import": "./lib/constants/index.js"
     },
     "./db": {
+      "bun": "./src/db/index.ts",
       "import": "./lib/db/index.js"
     },
     "./eth1": {
+      "bun": "./src/eth1/index.ts",
       "import": "./lib/eth1/index.js"
     },
     "./metrics": {
+      "bun": "./src/metrics/index.ts",
       "import": "./lib/metrics/index.js"
     },
     "./monitoring": {
+      "bun": "./src/monitoring/index.ts",
       "import": "./lib/monitoring/index.js"
     },
     "./network": {
+      "bun": "./src/network/index.ts",
       "import": "./lib/network/index.js"
     },
     "./node": {
+      "bun": "./src/node/index.ts",
       "import": "./lib/node/index.js"
     },
     "./sync": {
+      "bun": "./src/sync/index.ts",
       "import": "./lib/sync/index.js"
     },
     "./util": {
+      "bun": "./src/util/index.ts",
       "import": "./lib/util/index.js"
     }
   },

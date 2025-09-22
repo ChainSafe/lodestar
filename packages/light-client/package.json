@@ -15,18 +15,23 @@
   "type": "module",
   "exports": {
     ".": {
+      "bun": "./src/index.ts",
       "import": "./lib/index.js"
     },
     "./utils": {
+      "bun": "./src/utils/index.ts",
       "import": "./lib/utils/index.js"
     },
     "./validation": {
+      "bun": "./src/validation.ts",
       "import": "./lib/validation.js"
     },
     "./spec": {
+      "bun": "./src/spec/index.ts",
       "import": "./lib/spec/index.js"
     },
     "./transport": {
+      "bun": "./src/transport/index.ts",
       "import": "./lib/transport/index.js"
     }
   },

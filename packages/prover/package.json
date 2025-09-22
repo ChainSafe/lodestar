@@ -15,9 +15,11 @@
   "type": "module",
   "exports": {
     ".": {
+      "bun": "./src/index.ts",
       "import": "./lib/index.js"
     },
     "./browser": {
+      "bun": "./src/browser/index.ts",
       "import": "./lib/browser/index.js"
     }
   },
