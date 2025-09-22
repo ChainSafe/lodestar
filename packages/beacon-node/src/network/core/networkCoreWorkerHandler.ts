@@ -130,8 +130,12 @@ export class WorkerNetworkCore implements INetworkCore {
       loggerOpts: modules.logger.toOpts(),
     };
 
-    const worker = new Worker(path.join(workerDir, "networkCoreWorker.js"), {
+    const workerOpts: ConstructorParameters<typeof Worker>[1] = {
       workerData,
+    };
+    if (globalThis.Bun) {
+      workerOpts.suppressTranspileTS = true;
+    } else {
       /**
        * maxYoungGenerationSizeMb defaults to 152mb through the cli option defaults.
        * That default value was determined via https://github.com/ChainSafe/lodestar/issues/2115 and
@@ -143,8 +147,10 @@ export class WorkerNetworkCore implements INetworkCore {
        * showed that there is a pretty big window of "correct" values but we can always tune as
        * necessary
        */
-      resourceLimits: {maxYoungGenerationSizeMb: opts.maxYoungGenerationSizeMb},
-    } as ConstructorParameters<typeof Worker>[1]);
+      workerOpts.resourceLimits = {maxYoungGenerationSizeMb: opts.maxYoungGenerationSizeMb};
+    }
+
+    const worker = new Worker(path.join(workerDir, "networkCoreWorker.js"), workerOpts);
 
     // biome-ignore lint/suspicious/noExplicitAny: Don't know any specific interface for the spawn
     const networkThreadApi = (await spawn<any>(worker, {
