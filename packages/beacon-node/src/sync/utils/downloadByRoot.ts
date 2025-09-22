@@ -86,7 +86,7 @@ export async function downloadByRoot({
         block,
         blockRootHex: rootHex,
         source: BlockInputSource.byRoot,
-        seenTimestampSec: Date.now(),
+        seenTimestampSec: Date.now() / 1000,
         peerIdStr,
       });
     }
@@ -95,7 +95,7 @@ export async function downloadByRoot({
       block,
       peerIdStr,
       blockRootHex: rootHex,
-      seenTimestampSec: Date.now(),
+      seenTimestampSec: Date.now() / 1000,
       source: BlockInputSource.byRoot,
     });
   }
@@ -115,7 +115,7 @@ export async function downloadByRoot({
       blockInput.addBlob({
         blobSidecar,
         blockRootHex: rootHex,
-        seenTimestampSec: Date.now(),
+        seenTimestampSec: Date.now() / 1000,
         source: BlockInputSource.byRoot,
         peerIdStr,
       });
@@ -136,7 +136,7 @@ export async function downloadByRoot({
         {
           columnSidecar,
           blockRootHex: rootHex,
-          seenTimestampSec: Date.now(),
+          seenTimestampSec: Date.now() / 1000,
           source: BlockInputSource.byRoot,
           peerIdStr,
         },

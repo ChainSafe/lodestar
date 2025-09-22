@@ -178,7 +178,7 @@ describe("getBlocksForDataValidation", () => {
         forkName,
         blockRootHex: rootHex,
         daOutOfRange: true,
-        seenTimestampSec: Date.now(),
+        seenTimestampSec: Date.now() / 1000,
         source: BlockInputSource.gossip,
       })
     );
