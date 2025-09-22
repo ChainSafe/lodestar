@@ -394,7 +394,7 @@ export async function recoverDataColumnSidecars(
       blockInput.addColumn({
         blockRootHex: blockInput.blockRootHex,
         columnSidecar,
-        seenTimestampSec: Date.now(),
+        seenTimestampSec: Date.now() / 1000,
         source: BlockInputSource.recovery,
       });
       sidecarsToPublish.push(columnSidecar);

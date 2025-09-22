@@ -57,7 +57,7 @@ describe("SeenBlockInputCache", async () => {
         block,
         blockRootHex: rootHex,
         source: BlockInputSource.gossip,
-        seenTimestampSec: Date.now(),
+        seenTimestampSec: Date.now() / 1000,
       });
       expect(cache.has(rootHex)).toBeTruthy();
     });
@@ -68,7 +68,7 @@ describe("SeenBlockInputCache", async () => {
         block,
         blockRootHex: rootHex,
         source: BlockInputSource.gossip,
-        seenTimestampSec: Date.now(),
+        seenTimestampSec: Date.now() / 1000,
       });
       expect(cache.has(rootHex)).toBeTruthy();
       blockRoot[0] = (blockRoot[0] + 1) % 255;
@@ -85,7 +85,7 @@ describe("SeenBlockInputCache", async () => {
         block,
         blockRootHex: rootHex,
         source: BlockInputSource.gossip,
-        seenTimestampSec: Date.now(),
+        seenTimestampSec: Date.now() / 1000,
       });
       expect(cache.get(rootHex)).toBe(blockInput);
     });
@@ -96,7 +96,7 @@ describe("SeenBlockInputCache", async () => {
         block,
         blockRootHex: rootHex,
         source: BlockInputSource.gossip,
-        seenTimestampSec: Date.now(),
+        seenTimestampSec: Date.now() / 1000,
       });
       expect(cache.get(rootHex)).toBe(blockInput);
       blockRoot[0] = (blockRoot[0] + 1) % 255;
@@ -113,7 +113,7 @@ describe("SeenBlockInputCache", async () => {
         block,
         blockRootHex: rootHex,
         source: BlockInputSource.gossip,
-        seenTimestampSec: Date.now(),
+        seenTimestampSec: Date.now() / 1000,
       });
       expect(cache.get(rootHex)).toBe(blockInput);
       cache.remove(rootHex);
@@ -126,7 +126,7 @@ describe("SeenBlockInputCache", async () => {
         block,
         blockRootHex: rootHex,
         source: BlockInputSource.gossip,
-        seenTimestampSec: Date.now(),
+        seenTimestampSec: Date.now() / 1000,
       });
       expect(cache.get(rootHex)).toBe(blockInput);
       blockRoot[0] = (blockRoot[0] + 1) % 255;
@@ -144,7 +144,7 @@ describe("SeenBlockInputCache", async () => {
         block,
         blockRootHex: rootHex,
         source: BlockInputSource.gossip,
-        seenTimestampSec: Date.now(),
+        seenTimestampSec: Date.now() / 1000,
       });
       expect(cache.get(rootHex)).toBe(blockInput);
       cache.prune(rootHex);
@@ -162,7 +162,7 @@ describe("SeenBlockInputCache", async () => {
         block: parentBlock,
         blockRootHex: parentRootHex,
         source: BlockInputSource.gossip,
-        seenTimestampSec: Date.now(),
+        seenTimestampSec: Date.now() / 1000,
       });
       expect(cache.get(parentRootHex)).toBe(parentBlockInput);
 
@@ -170,7 +170,7 @@ describe("SeenBlockInputCache", async () => {
         block: childBlock,
         blockRootHex: childRootHex,
         source: BlockInputSource.gossip,
-        seenTimestampSec: Date.now(),
+        seenTimestampSec: Date.now() / 1000,
       });
       expect(cache.get(childRootHex)).toBe(childBlockInput);
 
@@ -200,7 +200,7 @@ describe("SeenBlockInputCache", async () => {
         block: parentBlock,
         blockRootHex: parentRootHex,
         source: BlockInputSource.gossip,
-        seenTimestampSec: Date.now(),
+        seenTimestampSec: Date.now() / 1000,
       });
       expect(cache.get(parentRootHex)).toBe(parentBlockInput);
 
@@ -208,7 +208,7 @@ describe("SeenBlockInputCache", async () => {
         block: childBlock,
         blockRootHex: childRootHex,
         source: BlockInputSource.gossip,
-        seenTimestampSec: Date.now(),
+        seenTimestampSec: Date.now() / 1000,
       });
       expect(cache.get(childRootHex)).toBe(childBlockInput);
     });
@@ -242,7 +242,7 @@ describe("SeenBlockInputCache", async () => {
         block,
         blockRootHex: rootHex,
         source: BlockInputSource.gossip,
-        seenTimestampSec: Date.now(),
+        seenTimestampSec: Date.now() / 1000,
       });
       expect(cache.get(rootHex)).toBe(blockInput);
     });
@@ -254,7 +254,7 @@ describe("SeenBlockInputCache", async () => {
           block,
           blockRootHex: rootHex,
           source: BlockInputSource.gossip,
-          seenTimestampSec: Date.now(),
+          seenTimestampSec: Date.now() / 1000,
         });
         expect(isBlockInputPreDeneb(blockInput)).toBeTruthy();
       });
@@ -265,7 +265,7 @@ describe("SeenBlockInputCache", async () => {
           block,
           blockRootHex: rootHex,
           source: BlockInputSource.gossip,
-          seenTimestampSec: Date.now(),
+          seenTimestampSec: Date.now() / 1000,
         });
         expect(isBlockInputBlobs(blockInput)).toBeTruthy();
       });
@@ -276,7 +276,7 @@ describe("SeenBlockInputCache", async () => {
           block,
           blockRootHex: rootHex,
           source: BlockInputSource.gossip,
-          seenTimestampSec: Date.now(),
+          seenTimestampSec: Date.now() / 1000,
         });
         expect(isBlockInputColumns(blockInput)).toBeTruthy();
       });
@@ -288,14 +288,14 @@ describe("SeenBlockInputCache", async () => {
         block,
         blockRootHex: rootHex,
         source: BlockInputSource.gossip,
-        seenTimestampSec: Date.now(),
+        seenTimestampSec: Date.now() / 1000,
       });
       expect(cache.get(rootHex)).toBe(blockInput1);
       const blockInput2 = cache.getByBlock({
         block,
         blockRootHex: rootHex,
         source: BlockInputSource.gossip,
-        seenTimestampSec: Date.now(),
+        seenTimestampSec: Date.now() / 1000,
       });
       expect(blockInput1).toBe(blockInput2);
     });
@@ -306,14 +306,14 @@ describe("SeenBlockInputCache", async () => {
         block,
         blockRootHex: rootHex,
         source: BlockInputSource.gossip,
-        seenTimestampSec: Date.now(),
+        seenTimestampSec: Date.now() / 1000,
       });
       expect(() =>
         blockInput.addBlock({
           block: block as SignedBeaconBlock<ForkPostFulu>,
           blockRootHex: rootHex,
           source: BlockInputSource.gossip,
-          seenTimestampSec: Date.now(),
+          seenTimestampSec: Date.now() / 1000,
         })
       ).toThrow();
       expect(() =>
@@ -321,7 +321,7 @@ describe("SeenBlockInputCache", async () => {
           block,
           blockRootHex: rootHex,
           source: BlockInputSource.gossip,
-          seenTimestampSec: Date.now(),
+          seenTimestampSec: Date.now() / 1000,
         })
       ).not.toThrow();
     });
@@ -333,13 +333,13 @@ describe("SeenBlockInputCache", async () => {
         blobSidecar: blobSidecars[0],
         blockRootHex: rootHex,
         source: BlockInputSource.gossip,
-        seenTimestampSec: Date.now(),
+        seenTimestampSec: Date.now() / 1000,
       });
       const blockInput2 = cache.getByBlock({
         block,
         blockRootHex: rootHex,
         source: BlockInputSource.gossip,
-        seenTimestampSec: Date.now(),
+        seenTimestampSec: Date.now() / 1000,
       });
 
       expect(blockInput1).toBe(blockInput2);
@@ -350,12 +350,12 @@ describe("SeenBlockInputCache", async () => {
       // const blockInput1 = cache.getByColumn({
       //   columnSidecar,
       //   source: BlockInputSource.gossip,
-      //   seenTimestampSec: Date.now(),
+      //   seenTimestampSec: Date.now() / 1000,
       // });
       // const blockInput2 = cache.getByBlock({
       //   block,
       //   source: BlockInputSource.gossip,
-      //   seenTimestampSec: Date.now(),
+      //   seenTimestampSec: Date.now() / 1000,
       // });
       // expect(blockInput1).toBe(blockInput2);
     });
@@ -369,7 +369,7 @@ describe("SeenBlockInputCache", async () => {
         blobSidecar: blobSidecars[0],
         blockRootHex: rootHex,
         source: BlockInputSource.gossip,
-        seenTimestampSec: Date.now(),
+        seenTimestampSec: Date.now() / 1000,
       });
       expect(cache.get(rootHex)).toBe(blockInput);
     });
@@ -381,14 +381,14 @@ describe("SeenBlockInputCache", async () => {
         blobSidecar: blobSidecars[0],
         blockRootHex: rootHex,
         source: BlockInputSource.gossip,
-        seenTimestampSec: Date.now(),
+        seenTimestampSec: Date.now() / 1000,
       });
       expect(cache.get(rootHex)).toBe(blockInput1);
       const blockInput2 = cache.getByBlob({
         blobSidecar: blobSidecars[0],
         blockRootHex: rootHex,
         source: BlockInputSource.gossip,
-        seenTimestampSec: Date.now(),
+        seenTimestampSec: Date.now() / 1000,
       });
       expect(blockInput1).toBe(blockInput2);
     });
@@ -399,7 +399,7 @@ describe("SeenBlockInputCache", async () => {
         block,
         blockRootHex: rootHex,
         source: BlockInputSource.gossip,
-        seenTimestampSec: Date.now(),
+        seenTimestampSec: Date.now() / 1000,
       });
       expect(isBlockInputPreDeneb(blockInput)).toBeTruthy();
 
@@ -410,7 +410,7 @@ describe("SeenBlockInputCache", async () => {
           blobSidecar: blobSidecars[0],
           blockRootHex: rootHex,
           source: BlockInputSource.gossip,
-          seenTimestampSec: Date.now(),
+          seenTimestampSec: Date.now() / 1000,
         })
       ).toThrow();
     });
@@ -422,13 +422,13 @@ describe("SeenBlockInputCache", async () => {
         block,
         blockRootHex: rootHex,
         source: BlockInputSource.gossip,
-        seenTimestampSec: Date.now(),
+        seenTimestampSec: Date.now() / 1000,
       });
       const blockInput2 = cache.getByBlob({
         blobSidecar: blobSidecars[0],
         blockRootHex: rootHex,
         source: BlockInputSource.gossip,
-        seenTimestampSec: Date.now(),
+        seenTimestampSec: Date.now() / 1000,
       });
 
       expect(blockInput1).toBe(blockInput2);
@@ -443,14 +443,14 @@ describe("SeenBlockInputCache", async () => {
         blobSidecar: blobSidecars[0],
         blockRootHex: rootHex,
         source: BlockInputSource.gossip,
-        seenTimestampSec: Date.now(),
+        seenTimestampSec: Date.now() / 1000,
       });
       expect(cache.get(rootHex)).toBe(blockInput);
       expect(() =>
         blockInput.addBlob({
           blobSidecar: blobSidecars[0],
           source: BlockInputSource.gossip,
-          seenTimestampSec: Date.now(),
+          seenTimestampSec: Date.now() / 1000,
           blockRootHex: rootHex,
         })
       ).toThrow();
@@ -459,7 +459,7 @@ describe("SeenBlockInputCache", async () => {
           blobSidecar: blobSidecars[0],
           blockRootHex: rootHex,
           source: BlockInputSource.gossip,
-          seenTimestampSec: Date.now(),
+          seenTimestampSec: Date.now() / 1000,
         })
       ).not.toThrow();
     });
@@ -473,7 +473,7 @@ describe("SeenBlockInputCache", async () => {
           blobSidecar: blobSidecars[0],
           blockRootHex: rootHex,
           source: BlockInputSource.gossip,
-          seenTimestampSec: Date.now(),
+          seenTimestampSec: Date.now() / 1000,
         },
         {throwErrorIfAlreadyKnown: true}
       );
@@ -484,7 +484,7 @@ describe("SeenBlockInputCache", async () => {
             blobSidecar: blobSidecars[0],
             blockRootHex: rootHex,
             source: BlockInputSource.gossip,
-            seenTimestampSec: Date.now(),
+            seenTimestampSec: Date.now() / 1000,
           },
           {throwErrorIfAlreadyKnown: true}
         )
@@ -499,7 +499,7 @@ describe("SeenBlockInputCache", async () => {
   //     const blockInput = cache.getByBlob({
   //       blobSidecar,
   //       source: BlockInputSource.gossip,
-  //       seenTimestampSec: Date.now(),
+  //       seenTimestampSec: Date.now() / 1000,
   //     });
   //     expect(cache.get(rootHex)).toBe(blockInput);
   //   });
@@ -509,13 +509,13 @@ describe("SeenBlockInputCache", async () => {
   //     const blockInput1 = cache.getByBlob({
   //       blobSidecar,
   //       source: BlockInputSource.gossip,
-  //       seenTimestampSec: Date.now(),
+  //       seenTimestampSec: Date.now() / 1000,
   //     });
   //     expect(cache.get(rootHex)).toBe(blockInput1);
   //     const blockInput2 = cache.getByBlob({
   //       blobSidecar,
   //       source: BlockInputSource.gossip,
-  //       seenTimestampSec: Date.now(),
+  //       seenTimestampSec: Date.now() / 1000,
   //     });
   //     expect(blockInput1).toBe(blockInput2);
   //   });
@@ -524,7 +524,7 @@ describe("SeenBlockInputCache", async () => {
   //     const blockInput = cache.getByBlock({
   //       block,
   //       source: BlockInputSource.gossip,
-  //       seenTimestampSec: Date.now(),
+  //       seenTimestampSec: Date.now() / 1000,
   //     });
   //     expect(isBlockInputPreDeneb(blockInput)).toBeTruthy();
 
@@ -540,12 +540,12 @@ describe("SeenBlockInputCache", async () => {
   //     const blockInput1 = cache.getByBlock({
   //       block,
   //       source: BlockInputSource.gossip,
-  //       seenTimestampSec: Date.now(),
+  //       seenTimestampSec: Date.now() / 1000,
   //     });
   //     const blockInput2 = cache.getByBlob({
   //       blobSidecar,
   //       source: BlockInputSource.gossip,
-  //       seenTimestampSec: Date.now(),
+  //       seenTimestampSec: Date.now() / 1000,
   //     });
 
   //     expect(blockInput1).toBe(blockInput2);
@@ -558,14 +558,14 @@ describe("SeenBlockInputCache", async () => {
   //     const blockInput = cache.getByBlob({
   //       blobSidecar,
   //       source: BlockInputSource.gossip,
-  //       seenTimestampSec: Date.now(),
+  //       seenTimestampSec: Date.now() / 1000,
   //     });
   //     expect(cache.get(rootHex)).toBe(blockInput);
   //     expect(() =>
   //       blockInput.addBlob({
   //         blobSidecar,
   //         source: BlockInputSource.gossip,
-  //         seenTimestampSec: Date.now(),
+  //         seenTimestampSec: Date.now() / 1000,
   //         blockRootHex: rootHex,
   //       })
   //     ).toThrow();
@@ -573,7 +573,7 @@ describe("SeenBlockInputCache", async () => {
   //       cache.getByBlob({
   //         blobSidecar,
   //         source: BlockInputSource.gossip,
-  //         seenTimestampSec: Date.now(),
+  //         seenTimestampSec: Date.now() / 1000,
   //       })
   //     ).not.toThrow();
   //   });
@@ -585,7 +585,7 @@ describe("SeenBlockInputCache", async () => {
   //       {
   //         blobSidecar,
   //         source: BlockInputSource.gossip,
-  //         seenTimestampSec: Date.now(),
+  //         seenTimestampSec: Date.now() / 1000,
   //       },
   //       {throwErrorIfAlreadyKnown: true}
   //     );
@@ -595,7 +595,7 @@ describe("SeenBlockInputCache", async () => {
   //         {
   //           blobSidecar,
   //           source: BlockInputSource.gossip,
-  //           seenTimestampSec: Date.now(),
+  //           seenTimestampSec: Date.now() / 1000,
   //         },
   //         {throwErrorIfAlreadyKnown: true}
   //       )

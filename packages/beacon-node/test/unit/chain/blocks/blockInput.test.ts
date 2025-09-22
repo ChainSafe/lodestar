@@ -126,7 +126,7 @@ describe("BlockInput", () => {
             blockRootHex: rootHex,
             daOutOfRange: false,
             forkName: ForkName.deneb,
-            seenTimestampSec: Date.now(),
+            seenTimestampSec: Date.now() / 1000,
             source: BlockInputSource.gossip,
           } as AddBlob & CreateBlockInputMeta);
         }
@@ -136,7 +136,7 @@ describe("BlockInput", () => {
           daOutOfRange: false,
           forkName: ForkName.deneb,
           source: BlockInputSource.gossip,
-          seenTimestampSec: Date.now(),
+          seenTimestampSec: Date.now() / 1000,
         } as AddBlock<ForkBlobsDA> & CreateBlockInputMeta);
         for (const blobSidecar of blobSidecars) {
           testArray.push({
@@ -144,7 +144,7 @@ describe("BlockInput", () => {
             blockRootHex: rootHex,
             daOutOfRange: false,
             forkName: ForkName.deneb,
-            seenTimestampSec: Date.now(),
+            seenTimestampSec: Date.now() / 1000,
             source: BlockInputSource.gossip,
           } as AddBlob & CreateBlockInputMeta);
         }
