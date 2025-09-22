@@ -199,6 +199,15 @@ export async function getDataColumnSidecarsFromExecution(
       {columnSidecar, blockRootHex: blockInput.blockRootHex, source: BlockInputSource.engine, seenTimestampSec},
       {throwOnDuplicateAdd: false} // columns may have been added while waiting
     );
+
+    if (emitter.listenerCount(routes.events.EventType.dataColumnSidecar)) {
+      emitter.emit(routes.events.EventType.dataColumnSidecar, {
+        blockRoot: blockInput.blockRootHex,
+        slot: blockInput.slot,
+        index: columnSidecar.index,
+        kzgCommitments: columnSidecar.kzgCommitments.map(toHex),
+      });
+    }
   }
 
   metrics?.dataColumns.bySource.inc({source: BlockInputSource.engine}, previouslyMissingColumns.length);
