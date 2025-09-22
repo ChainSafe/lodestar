@@ -3,7 +3,13 @@ import {MetricsRegister, TopicLabel, TopicStrToLabel} from "@chainsafe/libp2p-go
 import {PeerScoreParams} from "@chainsafe/libp2p-gossipsub/score";
 import {SignaturePolicy, TopicStr} from "@chainsafe/libp2p-gossipsub/types";
 import {BeaconConfig, ForkBoundary} from "@lodestar/config";
-import {ATTESTATION_SUBNET_COUNT, ForkName, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+import {
+  ATTESTATION_SUBNET_COUNT,
+  ForkName,
+  NUMBER_OF_COLUMNS,
+  SLOTS_PER_EPOCH,
+  SYNC_COMMITTEE_SUBNET_COUNT,
+} from "@lodestar/params";
 import {SubnetID} from "@lodestar/types";
 import {Logger, Map2d, Map2dArr} from "@lodestar/utils";
 import {GOSSIP_MAX_SIZE, GOSSIP_MAX_SIZE_BELLATRIX} from "../../constants/network.js";
@@ -200,9 +206,10 @@ export class Eth2Gossipsub extends GossipSub {
       {peersMap: topics, metricsGossip: metrics.gossipTopic, type: "topics"},
     ]) {
       // Pre-aggregate results by fork so we can fill the remaining metrics with 0
-      const peersByTypeByFork = new Map2d<ForkBoundaryLabel, GossipType, number>();
-      const peersByBeaconAttSubnetByFork = new Map2dArr<ForkBoundaryLabel, number>();
-      const peersByBeaconSyncSubnetByFork = new Map2dArr<ForkBoundaryLabel, number>();
+      const peersByTypeByBoundary = new Map2d<ForkBoundaryLabel, GossipType, number>();
+      const peersByBeaconAttSubnetByBoundary = new Map2dArr<ForkBoundaryLabel, number>();
+      const peersByBeaconSyncSubnetByBoundary = new Map2dArr<ForkBoundaryLabel, number>();
+      const peersByDataColumnSubnetByBoundary = new Map2dArr<ForkBoundaryLabel, number>();
 
       // loop through all mesh entries, count each set size
       for (const [topicString, peers] of peersMap) {
@@ -215,11 +222,13 @@ export class Eth2Gossipsub extends GossipSub {
         if (topic !== undefined) {
           const boundary = getForkBoundaryLabel(topic.boundary);
           if (topic.type === GossipType.beacon_attestation) {
-            peersByBeaconAttSubnetByFork.set(boundary, topic.subnet, peers.size);
+            peersByBeaconAttSubnetByBoundary.set(boundary, topic.subnet, peers.size);
           } else if (topic.type === GossipType.sync_committee) {
-            peersByBeaconSyncSubnetByFork.set(boundary, topic.subnet, peers.size);
+            peersByBeaconSyncSubnetByBoundary.set(boundary, topic.subnet, peers.size);
+          } else if (topic.type === GossipType.data_column_sidecar) {
+            peersByDataColumnSubnetByBoundary.set(boundary, topic.subnet, peers.size);
           } else {
-            peersByTypeByFork.set(boundary, topic.type, peers.size);
+            peersByTypeByBoundary.set(boundary, topic.type, peers.size);
           }
         }
 
@@ -236,12 +245,12 @@ export class Eth2Gossipsub extends GossipSub {
 
       // beacon attestation mesh gets counted separately so we can track mesh peers by subnet
       // zero out all gossip type & subnet choices, so the dashboard will register them
-      for (const [boundary, peersByType] of peersByTypeByFork.map) {
+      for (const [boundary, peersByType] of peersByTypeByBoundary.map) {
         for (const type of Object.values(GossipType)) {
           metricsGossip.peersByType.set({boundary, type}, peersByType.get(type) ?? 0);
         }
       }
-      for (const [boundary, peersByBeaconAttSubnet] of peersByBeaconAttSubnetByFork.map) {
+      for (const [boundary, peersByBeaconAttSubnet] of peersByBeaconAttSubnetByBoundary.map) {
         for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
           metricsGossip.peersByBeaconAttestationSubnet.set(
             {boundary, subnet: attSubnetLabel(subnet)},
@@ -249,10 +258,15 @@ export class Eth2Gossipsub extends GossipSub {
           );
         }
       }
-      for (const [boundary, peersByBeaconSyncSubnet] of peersByBeaconSyncSubnetByFork.map) {
+      for (const [boundary, peersByBeaconSyncSubnet] of peersByBeaconSyncSubnetByBoundary.map) {
         for (let subnet = 0; subnet < SYNC_COMMITTEE_SUBNET_COUNT; subnet++) {
           // SYNC_COMMITTEE_SUBNET_COUNT is < 9, no need to prepend a 0 to the label
           metricsGossip.peersBySyncCommitteeSubnet.set({boundary, subnet}, peersByBeaconSyncSubnet[subnet] ?? 0);
+        }
+      }
+      for (const [boundary, peersByDataColumnSubnet] of peersByDataColumnSubnetByBoundary.map) {
+        for (let subnet = 0; subnet < NUMBER_OF_COLUMNS; subnet++) {
+          metricsGossip.peersByDataColumnSubnet.set({boundary, subnet}, peersByDataColumnSubnet[subnet] ?? 0);
         }
       }
     }

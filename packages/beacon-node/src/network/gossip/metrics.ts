@@ -40,6 +40,11 @@ export function createEth2GossipsubMetrics(register: RegistryMetricCreator) {
         help: "Number of connected mesh peers per sync committee subnet",
         labelNames: ["subnet", "boundary"],
       }),
+      peersByDataColumnSubnet: register.gauge<{subnet: SubnetID; boundary: ForkBoundaryLabel}>({
+        name: "lodestar_gossip_mesh_peers_by_data_column_subnet_count",
+        help: "Number of connected mesh peers per data column subnet",
+        labelNames: ["subnet", "boundary"],
+      }),
     },
     gossipTopic: {
       peersByType: register.gauge<{type: GossipType; boundary: ForkBoundaryLabel}>({
@@ -55,6 +60,11 @@ export function createEth2GossipsubMetrics(register: RegistryMetricCreator) {
       peersBySyncCommitteeSubnet: register.gauge<{subnet: SubnetID; boundary: ForkBoundaryLabel}>({
         name: "lodestar_gossip_topic_peers_by_sync_committee_subnet_count",
         help: "Number of connected topic peers per sync committee subnet",
+        labelNames: ["subnet", "boundary"],
+      }),
+      peersByDataColumnSubnet: register.gauge<{subnet: SubnetID; boundary: ForkBoundaryLabel}>({
+        name: "lodestar_gossip_topic_peers_by_data_column_subnet_count",
+        help: "Number of connected topic peers per data column subnet",
         labelNames: ["subnet", "boundary"],
       }),
     },
