@@ -1,5 +1,11 @@
 import {ChainConfig, ChainForkConfig} from "@lodestar/config";
-import {ForkName, ForkSeq, INTERVALS_PER_SLOT, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {
+  ForkName,
+  ForkSeq,
+  INTERVALS_PER_SLOT,
+  MIN_ATTESTATION_INCLUSION_DELAY,
+  SLOTS_PER_EPOCH,
+} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
@@ -453,7 +459,8 @@ export function createValidatorMonitor(
       // Returns the duration between when the attestation `data` could be produced (ATTESTATION_DUE_BPS through the slot) and `seenTimestamp`.
       // TODO GLOAS: Pass in a real fork name
       const delaySec =
-        seenTimestampSec - (genesisTime + data.slot * config.SECONDS_PER_SLOT + config.getAttestationDueMs(ForkName.phase0) / 1000);
+        seenTimestampSec -
+        (genesisTime + data.slot * config.SECONDS_PER_SLOT + config.getAttestationDueMs(ForkName.phase0) / 1000);
       for (const index of indexedAttestation.attestingIndices) {
         const validator = validators.get(index);
         if (validator) {
@@ -488,7 +495,8 @@ export function createValidatorMonitor(
       // Returns the duration between when the attestation `data` could be produced (ATTESTATION_DUE_BPS through the slot) and `seenTimestamp`.
       // TODO GLOAS: Pass in a real fork name
       const delaySec =
-        seenTimestampSec - (genesisTime + data.slot * config.SECONDS_PER_SLOT + config.getAttestationDueMs(ForkName.phase0) / 1000);
+        seenTimestampSec -
+        (genesisTime + data.slot * config.SECONDS_PER_SLOT + config.getAttestationDueMs(ForkName.phase0) / 1000);
 
       for (const index of indexedAttestation.attestingIndices) {
         const validator = validators.get(index);
@@ -507,7 +515,8 @@ export function createValidatorMonitor(
       // Returns the duration between when a `AggregateAndproof` with `data` could be produced (AGGREGATE_DUE_BPS through the slot) and `seenTimestamp`.
       // TODO GLOAS: Pass in a real fork name
       const delaySec =
-        seenTimestampSec - (genesisTime + data.slot * config.SECONDS_PER_SLOT + config.getAggregateDueMs(ForkName.phase0) / 1000);
+        seenTimestampSec -
+        (genesisTime + data.slot * config.SECONDS_PER_SLOT + config.getAggregateDueMs(ForkName.phase0) / 1000);
 
       for (const index of indexedAttestation.attestingIndices) {
         const validator = validators.get(index);
@@ -536,9 +545,8 @@ export function createValidatorMonitor(
       // Returns the duration between when a `AggregateAndproof` with `data` could be produced (AGGREGATE_DUE_BPS through the slot) and `seenTimestamp`.
       // TODO GLOAS: Pass in a real fork name
       const delaySec =
-        seenTimestampSec - (genesisTime +
-          data.slot * config.SECONDS_PER_SLOT +
-          config.getAggregateDueMs(ForkName.phase0) / 1000);
+        seenTimestampSec -
+        (genesisTime + data.slot * config.SECONDS_PER_SLOT + config.getAggregateDueMs(ForkName.phase0) / 1000);
 
       const aggregatorIndex = signedAggregateAndProof.message.aggregatorIndex;
       const validatorAggregator = validators.get(aggregatorIndex);

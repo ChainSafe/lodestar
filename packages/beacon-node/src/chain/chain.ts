@@ -5,7 +5,13 @@ import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
-import {EFFECTIVE_BALANCE_INCREMENT, ForkName, GENESIS_SLOT, SLOTS_PER_EPOCH, isForkPostElectra} from "@lodestar/params";
+import {
+  EFFECTIVE_BALANCE_INCREMENT,
+  ForkName,
+  GENESIS_SLOT,
+  SLOTS_PER_EPOCH,
+  isForkPostElectra,
+} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   BeaconStateElectra,

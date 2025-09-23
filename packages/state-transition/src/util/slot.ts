@@ -1,5 +1,5 @@
 import {ChainConfig} from "@lodestar/config";
-import {BASIS_POINTS, ForkName, GENESIS_SLOT} from "@lodestar/params";
+import {GENESIS_SLOT} from "@lodestar/params";
 import {Epoch, Slot, TimeSeconds} from "@lodestar/types";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "./epoch.js";
 

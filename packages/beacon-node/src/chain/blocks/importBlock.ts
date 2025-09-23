@@ -8,6 +8,7 @@ import {
   NotReorgedReason,
 } from "@lodestar/fork-choice";
 import {
+  ForkName,
   ForkPostAltair,
   ForkPostElectra,
   ForkSeq,

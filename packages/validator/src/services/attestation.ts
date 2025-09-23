@@ -90,8 +90,13 @@ export class AttestationService {
     // (a) the validator has received a valid block from the expected block proposer for the assigned slot or
     // (b) ATTESTATION_DUE_BPS of the slot has transpired -- whichever comes first.
     // TODO GLOAS: Pass in a real fork name
-    await Promise.race([sleep(this.clock.msToSlot(slot) + this.config.getAttestationDueMs(ForkName.phase0), signal), this.emitter.waitForBlockSlot(slot)]);
-    this.metrics?.attesterStepCallProduceAttestation.observe(this.clock.secFromSlot(slot) + this.config.getAttestationDueMs(ForkName.phase0) / 1000);
+    await Promise.race([
+      sleep(this.clock.msToSlot(slot) + this.config.getAttestationDueMs(ForkName.phase0), signal),
+      this.emitter.waitForBlockSlot(slot),
+    ]);
+    this.metrics?.attesterStepCallProduceAttestation.observe(
+      this.clock.secFromSlot(slot) + this.config.getAttestationDueMs(ForkName.phase0) / 1000
+    );
 
     // Beacon node's endpoint produceAttestationData return data is not dependent on committeeIndex.
     // Produce a single attestation for all committees and submit unaggregated attestations in one go.
@@ -179,7 +184,9 @@ export class AttestationService {
     await sleep(Math.min(msToCutoffTime, afterBlockDelayMs));
 
     // TODO GLOAS: Pass in a real fork name
-    this.metrics?.attesterStepCallPublishAttestation.observe(this.clock.secFromSlot(slot) + this.config.getAttestationDueMs(ForkName.phase0) / 1000);
+    this.metrics?.attesterStepCallPublishAttestation.observe(
+      this.clock.secFromSlot(slot) + this.config.getAttestationDueMs(ForkName.phase0) / 1000
+    );
 
     // Step 2. Publish all `Attestations` in one go
     try {
@@ -250,7 +257,9 @@ export class AttestationService {
     );
 
     // TODO GLOAS: Pass in a real fork name
-    this.metrics?.attesterStepCallPublishAggregate.observe(this.clock.secFromSlot(attestation.slot) + this.config.getAttestationDueMs(ForkName.phase0) / 1000);
+    this.metrics?.attesterStepCallPublishAggregate.observe(
+      this.clock.secFromSlot(attestation.slot) + this.config.getAttestationDueMs(ForkName.phase0) / 1000
+    );
 
     if (signedAggregateAndProofs.length > 0) {
       try {
@@ -300,7 +309,7 @@ export class AttestationService {
       // due to the fact that calculation of `is_aggregator` in AttestationDutiesService is not done
       // and selectionProof is set to null, meaning no validator will be considered an aggregator.
       // TODO GLOAS: Pass in a real fork name
-      sleep(this.clock.msToSlot(slot)+ this.config.getAttestationDueMs(ForkName.phase0), signal),
+      sleep(this.clock.msToSlot(slot) + this.config.getAttestationDueMs(ForkName.phase0), signal),
     ]);
 
     if (!res) {

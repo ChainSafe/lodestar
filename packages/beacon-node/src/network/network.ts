@@ -723,7 +723,8 @@ export class Network implements INetwork {
   private waitForSyncMessageCutoff = async (slot: number): Promise<void> => {
     // TODO GLOAS: Pass in a real fork name
     const secAtSlot =
-      computeTimeAtSlot(this.config, slot, this.chain.genesisTime) + this.config.getSyncMessageDueMs(ForkName.phase0) / 1000;
+      computeTimeAtSlot(this.config, slot, this.chain.genesisTime) +
+      this.config.getSyncMessageDueMs(ForkName.phase0) / 1000;
     const msToSlot = secAtSlot * 1000 - Date.now();
     await sleep(msToSlot, this.controller.signal);
   };

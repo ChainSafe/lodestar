@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkSeq, ForkName, INTERVALS_PER_SLOT} from "@lodestar/params";
+import {ForkName, ForkSeq} from "@lodestar/params";
 import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
 import {RootHex, Slot} from "@lodestar/types";
 import {Logger, prettyBytes, prettyPrintIndices, pruneSetToMax, sleep} from "@lodestar/utils";

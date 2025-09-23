@@ -1,4 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
+import {ForkName} from "@lodestar/params";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {LightClientOptimisticUpdate} from "@lodestar/types";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants/index.js";
@@ -6,7 +7,6 @@ import {assertLightClientServer} from "../../node/utils/lightclient.js";
 import {GossipAction} from "../errors/index.js";
 import {LightClientError, LightClientErrorCode} from "../errors/lightClientError.js";
 import {IBeaconChain} from "../interface.js";
-import { ForkName } from "@lodestar/params";
 
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#light_client_optimistic_update
 export function validateLightClientOptimisticUpdate(

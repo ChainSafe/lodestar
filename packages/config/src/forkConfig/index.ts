@@ -218,6 +218,6 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     // Convert basis points to milliseconds into the slot
     getSlotComponentDurationMs(basisPoints: number): number {
       return Math.floor((basisPoints * config.SLOT_DURATION_MS) / BASIS_POINTS);
-    }
+    },
   };
 }

@@ -1,5 +1,6 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
+import {ForkName} from "@lodestar/params";
 import {computeEpochAtSlot, isSyncCommitteeAggregator} from "@lodestar/state-transition";
 import {BLSSignature, CommitteeIndex, Root, Slot, altair} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
@@ -12,7 +13,6 @@ import {SyncCommitteeDutiesService, SyncDutyAndProofs} from "./syncCommitteeDuti
 import {SyncingStatusTracker} from "./syncingStatusTracker.js";
 import {SubcommitteeDuty, groupSyncDutiesBySubcommitteeIndex} from "./utils.js";
 import {ValidatorStore} from "./validatorStore.js";
-import { ForkName } from "@lodestar/params";
 
 export type SyncCommitteeServiceOpts = {
   scAfterBlockDelaySlotFraction?: number;
@@ -87,8 +87,13 @@ export class SyncCommitteeService {
       // especially with lodestar, it's very busy at 33% (ATTESTATION_DUE_BPS and SYNC_MESSAGE_DUE_BPS) into the slot
       // see https://github.com/ChainSafe/lodestar/issues/4608
       // TODO GLOAS: Pass in a real fork name
-      await Promise.race([sleep(this.clock.msToSlot(slot) + this.config.getSyncMessageDueMs(ForkName.phase0), signal), this.emitter.waitForBlockSlot(slot)]);
-      this.metrics?.syncCommitteeStepCallProduceMessage.observe(this.clock.secFromSlot(slot) + this.config.getSyncMessageDueMs(ForkName.phase0) / 1000);
+      await Promise.race([
+        sleep(this.clock.msToSlot(slot) + this.config.getSyncMessageDueMs(ForkName.phase0), signal),
+        this.emitter.waitForBlockSlot(slot),
+      ]);
+      this.metrics?.syncCommitteeStepCallProduceMessage.observe(
+        this.clock.secFromSlot(slot) + this.config.getSyncMessageDueMs(ForkName.phase0) / 1000
+      );
 
       // Step 1. Download, sign and publish an `SyncCommitteeMessage` for each validator.
       //         Differs from AttestationService, `SyncCommitteeMessage` are equal for all
@@ -98,7 +103,9 @@ export class SyncCommitteeService {
       // First, wait until the `CONTRIBUTION_DUE_BPS` of the slot
       // TODO GLOAS: Pass in a real fork name
       await sleep(this.clock.msToSlot(slot) + this.config.getSyncContributionDueMs(ForkName.phase0), signal);
-      this.metrics?.syncCommitteeStepCallProduceAggregate.observe(this.clock.secFromSlot(slot) + this.config.getSyncContributionDueMs(ForkName.phase0) / 1000);
+      this.metrics?.syncCommitteeStepCallProduceAggregate.observe(
+        this.clock.secFromSlot(slot) + this.config.getSyncContributionDueMs(ForkName.phase0) / 1000
+      );
 
       // await for all so if the Beacon node is overloaded it auto-throttles
       // TODO: This approach is conservative to reduce the node's load, review
@@ -168,7 +175,9 @@ export class SyncCommitteeService {
     }
 
     // TODO GLOAS: Pass in a real fork name
-    this.metrics?.syncCommitteeStepCallPublishMessage.observe(this.clock.secFromSlot(slot) + this.config.getSyncMessageDueMs(ForkName.phase0) / 1000);
+    this.metrics?.syncCommitteeStepCallPublishMessage.observe(
+      this.clock.secFromSlot(slot) + this.config.getSyncMessageDueMs(ForkName.phase0) / 1000
+    );
 
     if (signatures.length > 0) {
       try {
@@ -228,7 +237,9 @@ export class SyncCommitteeService {
       })
     );
 
-    this.metrics?.syncCommitteeStepCallPublishAggregate.observe(this.clock.secFromSlot(slot) + this.config.getSyncContributionDueMs(ForkName.phase0) / 1000);
+    this.metrics?.syncCommitteeStepCallPublishAggregate.observe(
+      this.clock.secFromSlot(slot) + this.config.getSyncContributionDueMs(ForkName.phase0) / 1000
+    );
 
     if (signedContributions.length > 0) {
       try {
