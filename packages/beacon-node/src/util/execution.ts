@@ -197,6 +197,7 @@ export async function getDataColumnSidecarsFromExecution(
   for (const columnSidecar of sampledColumns) {
     if (blockInput.hasColumn(columnSidecar.index)) {
       // columns may have been added while waiting
+      // TODO(fulu): add metrics for this condition
       continue;
     }
 
