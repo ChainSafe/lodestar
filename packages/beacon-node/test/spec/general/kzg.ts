@@ -169,6 +169,9 @@ type RecoverCellsAndKzgProofsInput = {
   cells: string[];
 };
 function recoverCellsAndKzgProofs(input: RecoverCellsAndKzgProofsInput): [string[], string[]] | null {
+  const isSorted = input.cell_indices.every((val, i, arr) => i === 0 || arr[i - 1] < val);
+  // If cell indices are not in ascending order, they are deemed invalid and cannot pass it to kzg
+  if (!isSorted) return null;
   const cellIndices = input.cell_indices.map(BigInt);
   const cells = input.cells.map(fromHexString);
   try {

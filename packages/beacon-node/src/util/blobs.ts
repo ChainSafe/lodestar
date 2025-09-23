@@ -79,12 +79,15 @@ export async function dataColumnMatrixRecovery(
     return null;
   }
 
+  // Sort data columns by index in ascending order before passing for kzg operations
+  const partialSidecarsSorted = [...partialSidecars.values()].sort((a, b) => a.index - b.index);
+
   if (columnCount === NUMBER_OF_COLUMNS) {
     // full columns, no need to recover
-    return Array.from(partialSidecars.values());
+    return partialSidecarsSorted;
   }
 
-  const firstDataColumn = partialSidecars.values().next().value;
+  const firstDataColumn = partialSidecarsSorted.length > 0 ? partialSidecarsSorted[0] : null;
   if (firstDataColumn == null) {
     // should not happen because we check the size of the cache before this
     throw new Error("No data column found in cache to recover from");
@@ -101,7 +104,7 @@ export async function dataColumnMatrixRecovery(
     blobProofs.map((_, blobIndex) => {
       const cellIndices: number[] = [];
       const cells: Uint8Array[] = [];
-      for (const [columnIndex, dataColumn] of partialSidecars.entries()) {
+      for (const [columnIndex, dataColumn] of partialSidecarsSorted.entries()) {
         cellIndices.push(columnIndex);
         cells.push(dataColumn.column[blobIndex]);
       }
