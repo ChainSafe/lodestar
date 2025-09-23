@@ -89,7 +89,7 @@ export class AttestationService {
 
     // A validator should create and broadcast the attestation to the associated attestation subnet when either
     // (a) the validator has received a valid block from the expected block proposer for the assigned slot or
-    // (b) 33.33% (ATTESTATION_DUE_BPS) of the slot has transpired -- whichever comes first.
+    // (b) ATTESTATION_DUE_BPS of the slot has transpired -- whichever comes first.
     await Promise.race([sleep(this.clock.msToAttestationDue(slot), signal), this.emitter.waitForBlockSlot(slot)]);
     this.metrics?.attesterStepCallProduceAttestation.observe(this.clock.secFromAttestationDue(slot));
 
@@ -164,10 +164,10 @@ export class AttestationService {
       })
     );
 
-    // signAndPublishAttestations() may be called before the 33% cutoff time if the block was received early.
+    // signAndPublishAttestations() may be called before the ATTESTATION_DUE_BPS cutoff time if the block was received early.
     // If we produced the block or we got the block sooner than our peers, our attestations can be dropped because
     // they reach our peers before the block. To prevent that, we wait 2 extra seconds AFTER block arrival, but
-    // never beyond the 33% cutoff time.
+    // never beyond the ATTESTATION_DUE_BPS cutoff time.
     // https://github.com/status-im/nimbus-eth2/blob/7b64c1dce4392731a4a59ee3a36caef2e0a8357a/beacon_chain/validators/validator_duties.nim#L1123
     const msToCutoffTime = this.clock.msToAttestationDue(slot);
     // submitting attestations asap to avoid busy time at around 1/3 of slot
@@ -291,7 +291,7 @@ export class AttestationService {
 
     const res = await Promise.race([
       this.api.validator.submitBeaconCommitteeSelections({selections: partialSelections}),
-      // Exit attestation aggregation flow if there is no response after 33% into the slot as
+      // Exit attestation aggregation flow if there is no response after ATTESTATION_DUE_BPS of the slot as
       // beacon node would likely not have enough time to prepare an aggregate attestation.
       // Note that the aggregations flow is not explicitly exited but rather will be skipped
       // due to the fact that calculation of `is_aggregator` in AttestationDutiesService is not done
@@ -300,7 +300,7 @@ export class AttestationService {
     ]);
 
     if (!res) {
-      throw new Error("Failed to receive combined selection proofs before 33% into the slot");
+      throw new Error("Failed to receive combined selection proofs before ATTESTATION_DUE_BPS of the slot");
     }
 
     const combinedSelections = res.value();

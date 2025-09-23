@@ -84,7 +84,7 @@ export class SyncCommitteeService {
       }
 
       // unlike Attestation, SyncCommitteeSignature could be published asap
-      // especially with lodestar, it's very busy at 33% into the slot
+      // especially with lodestar, it's very busy at 33% (ATTESTATION_DUE_BPS and SYNC_MESSAGE_DUE_BPS) into the slot
       // see https://github.com/ChainSafe/lodestar/issues/4608
       await Promise.race([sleep(this.clock.msToSyncMessageDue(slot), signal), this.emitter.waitForBlockSlot(slot)]);
       this.metrics?.syncCommitteeStepCallProduceMessage.observe(this.clock.secFromSyncMessageDue(slot));
@@ -94,7 +94,7 @@ export class SyncCommitteeService {
       const beaconBlockRoot = await this.produceAndPublishSyncCommittees(slot, dutiesAtSlot);
 
       // Step 2. If an attestation was produced, make an aggregate.
-      // First, wait until the `CONTRIBUTION_DUE_BPS` (67% into the slot)
+      // First, wait until the `CONTRIBUTION_DUE_BPS` of the slot
       await sleep(this.clock.msToSyncContributionDue(slot), signal);
       this.metrics?.syncCommitteeStepCallProduceAggregate.observe(this.clock.secFromSyncContributionDue(slot));
 
@@ -271,8 +271,8 @@ export class SyncCommitteeService {
 
     const res = await Promise.race([
       this.api.validator.submitSyncCommitteeSelections({selections: partialSelections}),
-      // Exit sync committee contributions flow if there is no response after 67% into the slot.
-      // This is in contrast to attestations aggregations flow which is already exited at 33% into the slot
+      // Exit sync committee contributions flow if there is no response after CONTRIBUTION_DUE_BPS of the slot.
+      // This is in contrast to attestations aggregations flow which is already exited at ATTESTATION_DUE_BPS of the slot
       // because for sync committee is not required to resubscribe to subnets as beacon node will assume
       // validator always aggregates. This allows us to wait until we have to produce sync committee contributions.
       // Note that the sync committee contributions flow is not explicitly exited but rather will be skipped
@@ -282,7 +282,7 @@ export class SyncCommitteeService {
     ]);
 
     if (!res) {
-      throw new Error("Failed to receive combined selection proofs before 67% of the slot");
+      throw new Error("Failed to receive combined selection proofs before CONTRIBUTION_DUE_BPS of the slot");
     }
 
     const combinedSelections = res.value();

@@ -798,7 +798,7 @@ export function createLodestarMetrics(
       }),
       setHeadAfterCutoff: register.gauge({
         name: "lodestar_import_block_set_head_after_cutoff_total",
-        help: "Total times an imported block is set as head after 33% of the slot",
+        help: "Total times an imported block is set as head after ATTESTATION_DUE_BPS of the slot",
       }),
       bySource: register.gauge<{source: BlockSource}>({
         name: "lodestar_import_block_by_source_total",
