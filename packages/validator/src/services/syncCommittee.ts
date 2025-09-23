@@ -12,7 +12,7 @@ import {SyncCommitteeDutiesService, SyncDutyAndProofs} from "./syncCommitteeDuti
 import {SyncingStatusTracker} from "./syncingStatusTracker.js";
 import {SubcommitteeDuty, groupSyncDutiesBySubcommitteeIndex} from "./utils.js";
 import {ValidatorStore} from "./validatorStore.js";
-import {ISlotComponentClock} from "../util/slotComponentClock.js";
+import { ForkName } from "@lodestar/params";
 
 export type SyncCommitteeServiceOpts = {
   scAfterBlockDelaySlotFraction?: number;
@@ -29,7 +29,7 @@ export class SyncCommitteeService {
     private readonly config: ChainForkConfig,
     private readonly logger: LoggerVc,
     private readonly api: ApiClient,
-    private readonly clock: IClock & ISlotComponentClock,
+    private readonly clock: IClock,
     private readonly validatorStore: ValidatorStore,
     private readonly emitter: ValidatorEventEmitter,
     private readonly chainHeaderTracker: ChainHeaderTracker,
@@ -86,8 +86,9 @@ export class SyncCommitteeService {
       // unlike Attestation, SyncCommitteeSignature could be published asap
       // especially with lodestar, it's very busy at 33% (ATTESTATION_DUE_BPS and SYNC_MESSAGE_DUE_BPS) into the slot
       // see https://github.com/ChainSafe/lodestar/issues/4608
-      await Promise.race([sleep(this.clock.msToSyncMessageDue(slot), signal), this.emitter.waitForBlockSlot(slot)]);
-      this.metrics?.syncCommitteeStepCallProduceMessage.observe(this.clock.secFromSyncMessageDue(slot));
+      // TODO GLOAS: Pass in a real fork name
+      await Promise.race([sleep(this.clock.msToSlot(slot) + this.config.getSyncMessageDueMs(ForkName.phase0), signal), this.emitter.waitForBlockSlot(slot)]);
+      this.metrics?.syncCommitteeStepCallProduceMessage.observe(this.clock.secFromSlot(slot) + this.config.getSyncMessageDueMs(ForkName.phase0) / 1000);
 
       // Step 1. Download, sign and publish an `SyncCommitteeMessage` for each validator.
       //         Differs from AttestationService, `SyncCommitteeMessage` are equal for all
@@ -95,8 +96,9 @@ export class SyncCommitteeService {
 
       // Step 2. If an attestation was produced, make an aggregate.
       // First, wait until the `CONTRIBUTION_DUE_BPS` of the slot
-      await sleep(this.clock.msToSyncContributionDue(slot), signal);
-      this.metrics?.syncCommitteeStepCallProduceAggregate.observe(this.clock.secFromSyncContributionDue(slot));
+      // TODO GLOAS: Pass in a real fork name
+      await sleep(this.clock.msToSlot(slot) + this.config.getSyncContributionDueMs(ForkName.phase0), signal);
+      this.metrics?.syncCommitteeStepCallProduceAggregate.observe(this.clock.secFromSlot(slot) + this.config.getSyncContributionDueMs(ForkName.phase0) / 1000);
 
       // await for all so if the Beacon node is overloaded it auto-throttles
       // TODO: This approach is conservative to reduce the node's load, review
@@ -157,14 +159,16 @@ export class SyncCommitteeService {
     // by default we want to submit SyncCommitteeSignature asap after we receive block
     // provide a delay option just in case any client implementation validate the existence of block in
     // SyncCommitteeSignature gossip validation.
-    const msToCutoffTime = this.clock.msToSyncMessageDue(slot);
+    // TODO GLOAS: Pass in a real fork name
+    const msToCutoffTime = this.clock.msToSlot(slot) + this.config.getSyncMessageDueMs(ForkName.phase0);
     const afterBlockDelayMs = 1000 * this.clock.secondsPerSlot * (this.opts?.scAfterBlockDelaySlotFraction ?? 0);
     const toDelayMs = Math.min(msToCutoffTime, afterBlockDelayMs);
     if (toDelayMs > 0) {
       await sleep(toDelayMs);
     }
 
-    this.metrics?.syncCommitteeStepCallPublishMessage.observe(this.clock.secFromSyncMessageDue(slot));
+    // TODO GLOAS: Pass in a real fork name
+    this.metrics?.syncCommitteeStepCallPublishMessage.observe(this.clock.secFromSlot(slot) + this.config.getSyncMessageDueMs(ForkName.phase0) / 1000);
 
     if (signatures.length > 0) {
       try {
@@ -224,7 +228,7 @@ export class SyncCommitteeService {
       })
     );
 
-    this.metrics?.syncCommitteeStepCallPublishAggregate.observe(this.clock.secFromSyncContributionDue(slot));
+    this.metrics?.syncCommitteeStepCallPublishAggregate.observe(this.clock.secFromSlot(slot) + this.config.getSyncContributionDueMs(ForkName.phase0) / 1000);
 
     if (signedContributions.length > 0) {
       try {
@@ -278,7 +282,8 @@ export class SyncCommitteeService {
       // Note that the sync committee contributions flow is not explicitly exited but rather will be skipped
       // due to the fact that calculation of `is_sync_committee_aggregator` in SyncCommitteeDutiesService is not done
       // and selectionProof is set to null, meaning no validator will be considered an aggregator.
-      sleep(this.clock.msToSyncContributionDue(slot), signal),
+      // TODO GLOAS: Pass in a real fork name
+      sleep(this.clock.msToSlot(slot) + this.config.getSyncContributionDueMs(ForkName.phase0), signal),
     ]);
 
     if (!res) {
