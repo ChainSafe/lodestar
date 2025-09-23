@@ -1,6 +1,6 @@
+import {Mocked} from "vitest";
 import {config} from "@lodestar/config/default";
 import {ForkChoice} from "@lodestar/fork-choice";
-import {Mocked} from "vitest";
 import {ApiModules} from "../../src/api/index.js";
 import {getMockedBeaconSync} from "../mocks/beaconSyncMock.js";
 import {MockedBeaconChain, MockedBeaconChainOptions, getMockedBeaconChain} from "../mocks/mockedBeaconChain.js";

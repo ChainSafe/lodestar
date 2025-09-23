@@ -1,6 +1,8 @@
-import {DataAvailabilityStatus, EffectiveBalanceIncrements} from "@lodestar/state-transition";
-import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {eip7805} from "@lodestar/types";
+import {
+  CachedBeaconStateAllForks,
+  DataAvailabilityStatus,
+  EffectiveBalanceIncrements,
+} from "@lodestar/state-transition";
 import {
   AttesterSlashing,
   BeaconBlock,
@@ -10,6 +12,7 @@ import {
   RootHex,
   Slot,
   ValidatorIndex,
+  eip7805,
 } from "@lodestar/types";
 import {LVHExecResponse, MaybeValidExecutionStatus, ProtoBlock, ProtoNode} from "../protoArray/interface.js";
 import {UpdateAndGetHeadOpt} from "./forkChoice.js";

@@ -107,6 +107,11 @@ export type BeaconPreset = {
   // EIP7805
   ///////////
   INCLUSION_LIST_COMMITTEE_SIZE: number;
+
+  // GLOAS
+  PTC_SIZE: number;
+  MAX_PAYLOAD_ATTESTATIONS: number;
+  BUILDER_PENDING_WITHDRAWALS_LIMIT: number;
 };
 
 /**
@@ -219,6 +224,11 @@ export const beaconPresetTypes: BeaconPresetTypes = {
   // EIP7805
   ///////////
   INCLUSION_LIST_COMMITTEE_SIZE: "number",
+
+  // GLOAS
+  PTC_SIZE: "number",
+  MAX_PAYLOAD_ATTESTATIONS: "number",
+  BUILDER_PENDING_WITHDRAWALS_LIMIT: "number",
 };
 
 type BeaconPresetTypes = {

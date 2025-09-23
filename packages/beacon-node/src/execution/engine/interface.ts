@@ -18,7 +18,6 @@ import {
 } from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
-
 import {DATA} from "../../eth1/provider/utils.js";
 import {PayloadId, PayloadIdCache, WithdrawalV1} from "./payloadIdCache.js";
 import {ExecutionPayloadBody} from "./types.js";
@@ -205,8 +204,16 @@ export interface IExecutionEngine {
 
   getPayloadBodiesByRange(fork: ForkName, start: number, count: number): Promise<(ExecutionPayloadBody | null)[]>;
 
-  getBlobs(fork: ForkPostFulu, versionedHashes: VersionedHashes): Promise<BlobAndProofV2[] | null>;
-  getBlobs(fork: ForkPreFulu, versionedHashes: VersionedHashes): Promise<(BlobAndProof | null)[]>;
+  getBlobs(
+    fork: ForkPostFulu,
+    versionedHashes: VersionedHashes,
+    buffers?: Uint8Array[]
+  ): Promise<BlobAndProofV2[] | null>;
+  getBlobs(
+    fork: ForkPreFulu,
+    versionedHashes: VersionedHashes,
+    buffers?: Uint8Array[]
+  ): Promise<(BlobAndProof | null)[]>;
 
   getInclusionList(parentHash: RootHex): Promise<bellatrix.Transactions>;
 }

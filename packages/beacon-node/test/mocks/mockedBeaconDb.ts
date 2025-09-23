@@ -1,5 +1,5 @@
-import {config as minimalConfig} from "@lodestar/config/default";
 import {Mocked, vi} from "vitest";
+import {config as minimalConfig} from "@lodestar/config/default";
 import {BeaconDb} from "../../src/db/index.js";
 import {
   AttesterSlashingRepository,

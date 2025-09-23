@@ -1,6 +1,6 @@
+import {Mocked, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {EpochDifference, ForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {Mocked, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {getShufflingDependentRoot} from "../../../src/util/dependentRoot.js";
 
 vi.mock("@lodestar/fork-choice");

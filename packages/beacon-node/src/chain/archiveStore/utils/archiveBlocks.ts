@@ -5,7 +5,7 @@ import {IForkChoice} from "@lodestar/fork-choice";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot} from "@lodestar/types";
-import {Logger, fromHex, toHex, toRootHex} from "@lodestar/utils";
+import {Logger, fromAsync, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/index.js";
 import {BlockArchiveBatchPutBinaryItem} from "../../../db/repositories/index.js";
 import {ensureDir, writeIfNotExist} from "../../../util/file.js";
@@ -95,6 +95,7 @@ export async function archiveBlocks(
       const migratedEntries = await migrateDataColumnSidecarsFromHotToColdDb(
         config,
         db,
+        logger,
         finalizedCanonicalBlockRoots,
         currentEpoch
       );
@@ -173,20 +174,27 @@ export async function archiveBlocks(
       );
       const dataColumnSidecarsMinEpoch = currentEpoch - dataColumnSidecarsArchiveWindow;
       if (dataColumnSidecarsMinEpoch >= config.FULU_FORK_EPOCH) {
-        const slotsToDelete = (
-          await db.dataColumnSidecarArchive.keys({
-            lt: db.dataColumnSidecarArchive.getMaxKeyRaw(computeStartSlotAtEpoch(dataColumnSidecarsMinEpoch)),
-          })
-        ).map((p) => p.prefix);
+        const prefixedKeys = await db.dataColumnSidecarArchive.keys({
+          // The `id` value `0` refers to the column index. So we want to fetch all sidecars less than zero column of `dataColumnSidecarsMinEpoch`
+          lt: {prefix: computeStartSlotAtEpoch(dataColumnSidecarsMinEpoch), id: 0},
+        });
+        // for each slot there could be multiple dataColumnSidecar, so we need to deduplicate it
+        const slotsToDelete = [...new Set(prefixedKeys.map(({prefix}) => prefix))].sort((a, b) => a - b);
 
         if (slotsToDelete.length > 0) {
           await db.dataColumnSidecarArchive.deleteMany(slotsToDelete);
-          logger.verbose(`dataColumnSidecars prune: batchDelete range ${slotsToDelete[0]}..${slotsToDelete.at(-1)}`);
+          logger.verbose("dataColumnSidecars prune", {
+            slotRange: prettyPrintIndices(slotsToDelete),
+            numOfSlots: slotsToDelete.length,
+            totalNumOfSidecars: prefixedKeys.length,
+          });
         } else {
           logger.verbose(`dataColumnSidecars prune: no entries before epoch ${dataColumnSidecarsMinEpoch}`);
         }
       } else {
-        logger.verbose(`dataColumnSidecars pruning skipped: ${dataColumnSidecarsMinEpoch} is before fulu fork epoch`);
+        logger.verbose(
+          `dataColumnSidecars pruning skipped: ${dataColumnSidecarsMinEpoch} is before fulu fork epoch ${config.FULU_FORK_EPOCH}`
+        );
       }
     } else {
       logger.verbose("dataColumnSidecars pruning skipped: archiveDataEpochs set to Infinity");
@@ -303,6 +311,7 @@ async function migrateBlobSidecarsFromHotToColdDb(
 async function migrateDataColumnSidecarsFromHotToColdDb(
   config: ChainForkConfig,
   db: IBeaconDb,
+  logger: Logger,
   blocks: BlockRootSlot[],
   currentEpoch: Epoch
 ): Promise<number> {
@@ -328,10 +337,13 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
         continue;
       }
 
-      const dataColumnSidecarBytes = await db.dataColumnSidecar.valuesBinary(block.root);
-      if (!dataColumnSidecarBytes) {
-        throw Error(`No dataColumnSidecars found for slot ${block.slot} root ${toHex(block.root)}`);
-      }
+      const dataColumnSidecarBytes = await fromAsync(db.dataColumnSidecar.valuesStreamBinary(block.root));
+      // there could be 0 dataColumnSidecarBytes if block has no blob
+      logger.verbose("migrateDataColumnSidecarsFromHotToColdDb", {
+        slot: block.slot,
+        root: toRootHex(block.root),
+        numSidecars: dataColumnSidecarBytes.length,
+      });
       promises.push(
         db.dataColumnSidecarArchive.putManyBinary(
           block.slot,

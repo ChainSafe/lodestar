@@ -1,11 +1,10 @@
+import {afterEach, describe, expect, it} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api/beacon";
 import {ChainConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BLSPubkey, Epoch, Slot, phase0, ssz} from "@lodestar/types";
 import {Validator} from "@lodestar/validator";
-import {PubkeyHex} from "@lodestar/validator/src/types";
-import {afterEach, describe, expect, it} from "vitest";
 import {BeaconNode} from "../../../src/node/index.js";
 import {ClockEvent} from "../../../src/util/clock.js";
 import {waitForEvent} from "../../utils/events/resolver.js";
@@ -13,6 +12,8 @@ import {LogLevel, TestLoggerOpts, testLogger} from "../../utils/logger.js";
 import {connect} from "../../utils/network.js";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
+
+type PubkeyHex = string;
 
 // TODO: Reconsider this tests latter.
 // Doppelganger testing can be split in two items:

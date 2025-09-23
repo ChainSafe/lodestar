@@ -12,7 +12,8 @@ import {nextEventLoop} from "../../util/eventLoop.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {ValidatorMonitor} from "../validatorMonitor.js";
-import {BlockInput, ImportBlockOpts} from "./types.js";
+import {IBlockInput} from "./blockInput/index.js";
+import {ImportBlockOpts} from "./types.js";
 
 /**
  * Verifies 1 or more blocks are fully valid running the full state transition; from a linear sequence of blocks.
@@ -24,7 +25,7 @@ import {BlockInput, ImportBlockOpts} from "./types.js";
  */
 export async function verifyBlocksStateTransitionOnly(
   preState0: CachedBeaconStateAllForks,
-  blocks: BlockInput[],
+  blocks: IBlockInput[],
   dataAvailabilityStatuses: DataAvailabilityStatus[],
   logger: Logger,
   metrics: Metrics | null,
@@ -38,7 +39,7 @@ export async function verifyBlocksStateTransitionOnly(
 
   for (let i = 0; i < blocks.length; i++) {
     const {validProposerSignature, validSignatures} = opts;
-    const {block} = blocks[i];
+    const block = blocks[i].getBlock();
     const preState = i === 0 ? preState0 : postStates[i - 1];
     const dataAvailabilityStatus = dataAvailabilityStatuses[i];
 
@@ -99,7 +100,7 @@ export async function verifyBlocksStateTransitionOnly(
 
   const verifyStateTime = Date.now();
   if (blocks.length === 1 && opts.seenTimestampSec !== undefined) {
-    const slot = blocks[0].block.message.slot;
+    const slot = blocks[0].getBlock().message.slot;
     const recvToValidation = verifyStateTime / 1000 - opts.seenTimestampSec;
     const validationTime = recvToValidation - recvToValLatency;
 

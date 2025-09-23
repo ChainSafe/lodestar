@@ -3,7 +3,7 @@ import {BitArray} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {MAX_COMMITTEES_PER_SLOT, isForkPostElectra} from "@lodestar/params";
 import {Attestation, RootHex, SingleAttestation, Slot, isElectraSingleAttestation} from "@lodestar/types";
-import {assert, MapDef} from "@lodestar/utils";
+import {MapDef, assert} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {IClock} from "../../util/clock.js";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";

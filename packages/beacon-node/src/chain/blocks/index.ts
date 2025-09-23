@@ -5,13 +5,15 @@ import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
 import type {BeaconChain} from "../chain.js";
 import {BlockError, BlockErrorCode, isBlockErrorAborted} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
+import {IBlockInput} from "./blockInput/types.js";
 import {importBlock} from "./importBlock.js";
-import {BlockInput, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
+import {FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {assertLinearChainSegment} from "./utils/chainSegment.js";
 import {verifyBlocksInEpoch} from "./verifyBlock.js";
 import {verifyBlocksSanityChecks} from "./verifyBlocksSanityChecks.js";
 import {removeEagerlyPersistedBlockInputs} from "./writeBlockInputToDb.js";
-export {type ImportBlockOpts, AttestationImportOpt} from "./types.js";
+
+export {AttestationImportOpt, type ImportBlockOpts} from "./types.js";
 
 const QUEUE_MAX_LENGTH = 256;
 
@@ -19,10 +21,10 @@ const QUEUE_MAX_LENGTH = 256;
  * BlockProcessor processes block jobs in a queued fashion, one after the other.
  */
 export class BlockProcessor {
-  readonly jobQueue: JobItemQueue<[BlockInput[], ImportBlockOpts], void>;
+  readonly jobQueue: JobItemQueue<[IBlockInput[], ImportBlockOpts], void>;
 
   constructor(chain: BeaconChain, metrics: Metrics | null, opts: BlockProcessOpts, signal: AbortSignal) {
-    this.jobQueue = new JobItemQueue<[BlockInput[], ImportBlockOpts], void>(
+    this.jobQueue = new JobItemQueue<[IBlockInput[], ImportBlockOpts], void>(
       (job, importOpts) => {
         return processBlocks.call(chain, job, {...opts, ...importOpts});
       },
@@ -31,7 +33,7 @@ export class BlockProcessor {
     );
   }
 
-  async processBlocksJob(job: BlockInput[], opts: ImportBlockOpts = {}): Promise<void> {
+  async processBlocksJob(job: IBlockInput[], opts: ImportBlockOpts = {}): Promise<void> {
     await this.jobQueue.push(job, opts);
   }
 }
@@ -48,7 +50,7 @@ export class BlockProcessor {
  */
 export async function processBlocks(
   this: BeaconChain,
-  blocks: BlockInput[],
+  blocks: IBlockInput[],
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<void> {
   if (blocks.length === 0) {
@@ -70,7 +72,7 @@ export async function processBlocks(
 
     // Fully verify a block to be imported immediately after. Does not produce any side-effects besides adding intermediate
     // states in the state cache through regen.
-    const {postStates, dataAvailabilityStatuses, proposerBalanceDeltas, segmentExecStatus, availableBlockInputs} =
+    const {postStates, dataAvailabilityStatuses, proposerBalanceDeltas, segmentExecStatus} =
       await verifyBlocksInEpoch.call(this, parentBlock, relevantBlocks, opts);
 
     // If segmentExecStatus has lvhForkchoice then, the entire segment should be invalid
@@ -83,7 +85,7 @@ export async function processBlocks(
     }
 
     const {executionStatuses} = segmentExecStatus;
-    const fullyVerifiedBlocks = availableBlockInputs.map(
+    const fullyVerifiedBlocks = relevantBlocks.map(
       (block, i): FullyVerifiedBlock => ({
         blockInput: block,
         postState: postStates[i],
@@ -108,7 +110,7 @@ export async function processBlocks(
     }
 
     // above functions should only throw BlockError
-    const err = getBlockError(e, blocks[0].block);
+    const err = getBlockError(e, blocks[0].getBlock());
 
     // TODO: De-duplicate with logic above
     // ChainEvent.errorBlock
@@ -152,7 +154,7 @@ export async function processBlocks(
       await removeEagerlyPersistedBlockInputs.call(this, blocks).catch((e) => {
         this.logger.warn(
           "Error pruning eagerly imported block inputs, DB may grow in size if this error happens frequently",
-          {slot: blocks.map((block) => block.block.message.slot).join(",")},
+          {slot: blocks.map((block) => block.getBlock().message.slot).join(",")},
           e
         );
       });

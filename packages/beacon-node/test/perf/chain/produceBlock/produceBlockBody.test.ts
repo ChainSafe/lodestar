@@ -1,6 +1,6 @@
+import {generateKeyPair} from "@libp2p/crypto/keys";
 import {afterAll, beforeAll, bench, describe} from "@chainsafe/benchmark";
 import {fromHexString} from "@chainsafe/ssz";
-import {generateKeyPair} from "@libp2p/crypto/keys";
 import {config} from "@lodestar/config/default";
 import {LevelDbController} from "@lodestar/db";
 import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@lodestar/params";
@@ -77,6 +77,14 @@ describe("produceBlockBody", () => {
     fn: async ({chain, state, head, proposerIndex, proposerPubKey}) => {
       const slot = state.slot;
 
+      const commonBlockBodyPromise = chain.produceCommonBlockBody({
+        parentSlot: slot,
+        slot: slot + 1,
+        graffiti: Buffer.alloc(32),
+        randaoReveal: Buffer.alloc(96),
+        parentBlockRoot: fromHexString(head.blockRoot),
+      });
+
       await produceBlockBody.call(chain, BlockType.Full, state, {
         parentSlot: slot,
         slot: slot + 1,
@@ -85,6 +93,7 @@ describe("produceBlockBody", () => {
         parentBlockRoot: fromHexString(head.blockRoot),
         proposerIndex,
         proposerPubKey,
+        commonBlockBodyPromise,
       });
     },
   });

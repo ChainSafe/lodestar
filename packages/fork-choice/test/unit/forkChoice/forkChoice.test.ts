@@ -1,10 +1,10 @@
+import {beforeAll, beforeEach, describe, expect, it} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {DataAvailabilityStatus, computeEpochAtSlot} from "@lodestar/state-transition";
 import {RootHex, Slot} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
-import {beforeAll, beforeEach, describe, expect, it} from "vitest";
 import {
   EpochDifference,
   ExecutionStatus,

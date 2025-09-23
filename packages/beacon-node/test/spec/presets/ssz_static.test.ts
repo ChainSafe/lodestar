@@ -1,9 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
+import {expect, it, vi} from "vitest";
 import {Type} from "@chainsafe/ssz";
 import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {ssz, sszTypesFor} from "@lodestar/types";
-import {expect, it, vi} from "vitest";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {replaceUintTypeWithUintBigintType} from "../utils/replaceUintTypeWithUintBigintType.js";
 import {runValidSszTest} from "../utils/runValidSszTest.js";

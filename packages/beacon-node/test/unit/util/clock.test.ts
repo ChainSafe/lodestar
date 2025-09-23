@@ -1,6 +1,6 @@
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {config} from "@lodestar/config/default";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../../src/constants/index.js";
 import {Clock, ClockEvent} from "../../../src/util/clock.js";
 

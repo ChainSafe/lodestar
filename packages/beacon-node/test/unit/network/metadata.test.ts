@@ -1,8 +1,8 @@
+import {describe, expect, it, vi} from "vitest";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {ZERO_HASH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
-import {describe, expect, it, vi} from "vitest";
 import {ENRKey, MetadataController, getENRForkID} from "../../../src/network/metadata.js";
 import {NetworkConfig} from "../../../src/network/networkConfig.js";
 import {computeNodeId} from "../../../src/network/subnets/index.js";

@@ -1,8 +1,10 @@
 import path from "node:path";
+import {PrivateKey} from "@libp2p/interface";
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
+import {LoggerNode} from "@lodestar/logger/node";
 import {EFFECTIVE_BALANCE_INCREMENT, GENESIS_SLOT, SLOTS_PER_EPOCH, isForkPostElectra} from "@lodestar/params";
 import {
   BeaconStateAllForks,
@@ -38,9 +40,6 @@ import {
 } from "@lodestar/types";
 import {Logger, fromHex, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
-
-import {PrivateKey} from "@libp2p/interface";
-import {LoggerNode} from "@lodestar/logger/node";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
@@ -57,11 +56,13 @@ import {SerializedCache} from "../util/serializedCache.js";
 import {ArchiveStore} from "./archiveStore/archiveStore.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
+import {IBlockInput} from "./blocks/blockInput/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
-import {BlockInput} from "./blocks/types.js";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
+import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
 import {ChainEvent, ChainEventEmitter} from "./emitter.js";
 import {ForkchoiceCaller, initializeForkChoice} from "./forkChoice/index.js";
+import {GetBlobsTracker} from "./GetBlobsTracker.js";
 import {CommonBlockBody, FindHeadFnName, IBeaconChain, ProposerPreparationData, StateGetOpts} from "./interface.js";
 import {LightClientServer} from "./lightClient/index.js";
 import {
@@ -89,11 +90,10 @@ import {
   SeenContributionAndProof,
   SeenSyncCommitteeMessages,
 } from "./seenCache/index.js";
-import {SeenGossipBlockInput} from "./seenCache/index.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
-import {SeenBlockInputCache} from "./seenCache/seenBlockInput.js";
+import {SeenBlockInput} from "./seenCache/seenGossipBlockInput.js";
 import {ShufflingCache} from "./shufflingCache.js";
 import {BlockStateCacheImpl} from "./stateCache/blockStateCacheImpl.js";
 import {DbCPStateDatastore} from "./stateCache/datastore/db.js";
@@ -153,8 +153,7 @@ export class BeaconChain implements IBeaconChain {
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
   readonly seenContributionAndProof: SeenContributionAndProof;
   readonly seenAttestationDatas: SeenAttestationDatas;
-  readonly seenGossipBlockInput: SeenGossipBlockInput;
-  readonly seenBlockInputCache: SeenBlockInputCache;
+  readonly seenBlockInputCache: SeenBlockInput;
   // Seen cache for liveness checks
   readonly seenBlockAttesters = new SeenBlockAttesters();
 
@@ -176,6 +175,9 @@ export class BeaconChain implements IBeaconChain {
   readonly blacklistedBlocks: Map<RootHex, Slot | null>;
 
   readonly serializedCache: SerializedCache;
+
+  readonly getBlobsTracker: GetBlobsTracker;
+  readonly columnReconstructionTracker: ColumnReconstructionTracker;
 
   readonly opts: IChainOptions;
 
@@ -285,18 +287,11 @@ export class BeaconChain implements IBeaconChain {
       initialCustodyGroupCount,
     });
 
-    this.seenGossipBlockInput = new SeenGossipBlockInput(
-      this.custodyConfig,
-      this.executionEngine,
-      emitter,
-      clock,
-      logger
-    );
-
     this.beaconProposerCache = new BeaconProposerCache(opts);
     this.checkpointBalancesCache = new CheckpointBalancesCache();
-    this.seenBlockInputCache = new SeenBlockInputCache({
+    this.seenBlockInputCache = new SeenBlockInput({
       config,
+      custodyConfig: this.custodyConfig,
       clock,
       chainEvents: emitter,
       signal,
@@ -406,6 +401,20 @@ export class BeaconChain implements IBeaconChain {
 
     this.serializedCache = new SerializedCache();
 
+    this.getBlobsTracker = new GetBlobsTracker({
+      logger,
+      executionEngine: this.executionEngine,
+      emitter,
+      metrics,
+      config,
+    });
+    this.columnReconstructionTracker = new ColumnReconstructionTracker({
+      logger,
+      emitter,
+      metrics,
+      config,
+    });
+
     this.archiveStore = new ArchiveStore(
       {db, chain: this, logger: logger as LoggerNode, metrics},
       {...opts, dbName, anchorState: {finalizedCheckpoint: anchorState.finalizedCheckpoint}},
@@ -449,7 +458,7 @@ export class BeaconChain implements IBeaconChain {
   }
 
   seenBlock(blockRoot: RootHex): boolean {
-    return this.seenGossipBlockInput.hasBlock(blockRoot) || this.forkChoice.hasBlockHex(blockRoot);
+    return this.seenBlockInputCache.has(blockRoot) || this.forkChoice.hasBlockHex(blockRoot);
   }
 
   regenCanAcceptWork(): boolean {
@@ -709,7 +718,7 @@ export class BeaconChain implements IBeaconChain {
     return produceCommonBlockBody.call(this, blockType, state, blockAttributes);
   }
 
-  produceBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise?: Promise<CommonBlockBody>}): Promise<{
+  produceBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}): Promise<{
     block: BeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Wei;
@@ -718,7 +727,7 @@ export class BeaconChain implements IBeaconChain {
     return this.produceBlockWrapper<BlockType.Full>(BlockType.Full, blockAttributes);
   }
 
-  produceBlindedBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise?: Promise<CommonBlockBody>}): Promise<{
+  produceBlindedBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}): Promise<{
     block: BlindedBeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Wei;
@@ -736,7 +745,7 @@ export class BeaconChain implements IBeaconChain {
       commonBlockBodyPromise,
       parentBlockRoot,
       parentSlot,
-    }: BlockAttributes & {commonBlockBodyPromise?: Promise<CommonBlockBody>}
+    }: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}
   ): Promise<{
     block: AssembledBlockType<T>;
     executionPayloadValue: Wei;
@@ -805,11 +814,11 @@ export class BeaconChain implements IBeaconChain {
     return {block, executionPayloadValue, consensusBlockValue: gweiToWei(proposerReward), shouldOverrideBuilder};
   }
 
-  async processBlock(block: BlockInput, opts?: ImportBlockOpts): Promise<void> {
+  async processBlock(block: IBlockInput, opts?: ImportBlockOpts): Promise<void> {
     return this.blockProcessor.processBlocksJob([block], opts);
   }
 
-  async processChainSegment(blocks: BlockInput[], opts?: ImportBlockOpts): Promise<void> {
+  async processChainSegment(blocks: IBlockInput[], opts?: ImportBlockOpts): Promise<void> {
     return this.blockProcessor.processBlocksJob(blocks, opts);
   }
 

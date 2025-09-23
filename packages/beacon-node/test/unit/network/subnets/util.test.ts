@@ -1,6 +1,6 @@
+import {describe, expect, it} from "vitest";
 import {ATTESTATION_SUBNET_PREFIX_BITS, NODE_ID_BITS} from "@lodestar/params";
 import {bigIntToBytes} from "@lodestar/utils";
-import {describe, expect, it} from "vitest";
 import {computeSubscribedSubnet, getNodeIdPrefix, getNodeOffset} from "../../../../src/network/subnets/util.js";
 
 const nodeIds: string[] = [

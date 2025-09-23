@@ -1,10 +1,10 @@
 import path from "node:path";
+import {describe, it, onTestFinished, vi} from "vitest";
 import {getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {interopSecretKey} from "@lodestar/state-transition";
 import {execCliCommand, spawnCliCommand, stopChildProcess} from "@lodestar/test-utils";
 import {retry} from "@lodestar/utils";
-import {describe, it, onTestFinished, vi} from "vitest";
 import {testFilesDir} from "../utils.js";
 
 describe("voluntaryExit cmd", () => {

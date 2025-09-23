@@ -1,5 +1,3 @@
-import {bench, describe} from "@chainsafe/benchmark";
-import {noise} from "@chainsafe/libp2p-noise";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {Upgrader} from "@libp2p/interface";
 import {defaultLogger} from "@libp2p/logger";
@@ -8,6 +6,8 @@ import drain from "it-drain";
 import {duplexPair} from "it-pair/duplex";
 import {pipe} from "it-pipe";
 import {Uint8ArrayList} from "uint8arraylist";
+import {bench, describe} from "@chainsafe/benchmark";
+import {noise} from "@chainsafe/libp2p-noise";
 
 describe("network / noise / sendData", () => {
   const numberOfMessages = 1000;

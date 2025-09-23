@@ -21,7 +21,7 @@ export function upgradeStateToGloas(stateEip7805: CachedBeaconStateEip7805): Cac
   });
 
   stateGloas.commit();
-  // Clear cache to ensure the cache of electra fields is not used by new fulu fields
+  // Clear cache to ensure the cache of eip7805 fields is not used by new gloas fields
   // biome-ignore lint/complexity/useLiteralKeys: It is a protected attribute
   stateGloas["clearCache"]();
 

@@ -1,7 +1,7 @@
 import path from "node:path";
 import {fileURLToPath} from "node:url";
-import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {beforeAll, describe, expect, it} from "vitest";
+import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {routes} from "../../../src/beacon/index.js";
 import {IgnoredProperty, runTestCheckAgainstSpec} from "../../utils/checkAgainstSpec.js";
 import {fetchOpenApiSpec} from "../../utils/fetchOpenApiSpec.js";
@@ -20,7 +20,7 @@ import {testData as validatorTestData} from "./testData/validator.js";
 // Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const version = "v4.0.0-alpha.0";
+const version = "v4.0.0-alpha.1";
 const openApiFile: OpenApiFile = {
   url: `https://github.com/ethereum/beacon-APIs/releases/download/${version}/beacon-node-oapi.json`,
   filepath: path.join(__dirname, "../../../oapi-schemas/beacon-node-oapi.json"),

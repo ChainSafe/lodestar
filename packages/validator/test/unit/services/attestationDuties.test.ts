@@ -1,11 +1,11 @@
+import {toBufferBE} from "bigint-buffer";
+import {Mocked, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {SecretKey} from "@chainsafe/blst";
 import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {chainConfig} from "@lodestar/config/default";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {toBufferBE} from "bigint-buffer";
-import {Mocked, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {AttestationDutiesService} from "../../../src/services/attestationDuties.js";
 import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker.js";
 import {SyncingStatusTracker} from "../../../src/services/syncingStatusTracker.js";

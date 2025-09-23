@@ -6,7 +6,6 @@ import {
   PENDING_PARTIAL_WITHDRAWALS_LIMIT,
 } from "@lodestar/params";
 import {electra, phase0, ssz} from "@lodestar/types";
-
 import {toHex} from "@lodestar/utils";
 import {CachedBeaconStateElectra} from "../types.js";
 import {hasCompoundingWithdrawalCredential, hasExecutionWithdrawalCredential} from "../util/electra.js";

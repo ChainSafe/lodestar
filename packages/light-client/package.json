@@ -11,22 +11,27 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.33.0",
+  "version": "1.34.1",
   "type": "module",
   "exports": {
     ".": {
+      "bun": "./src/index.ts",
       "import": "./lib/index.js"
     },
     "./utils": {
+      "bun": "./src/utils/index.ts",
       "import": "./lib/utils/index.js"
     },
     "./validation": {
+      "bun": "./src/validation.ts",
       "import": "./lib/validation.js"
     },
     "./spec": {
+      "bun": "./src/spec/index.ts",
       "import": "./lib/spec/index.js"
     },
     "./transport": {
+      "bun": "./src/transport/index.ts",
       "import": "./lib/transport/index.js"
     }
   },
@@ -74,11 +79,11 @@
     "@chainsafe/blst": "^2.2.0",
     "@chainsafe/persistent-merkle-tree": "^1.2.1",
     "@chainsafe/ssz": "^1.2.2",
-    "@lodestar/api": "^1.33.0",
-    "@lodestar/config": "^1.33.0",
-    "@lodestar/params": "^1.33.0",
-    "@lodestar/types": "^1.33.0",
-    "@lodestar/utils": "^1.33.0",
+    "@lodestar/api": "^1.34.1",
+    "@lodestar/config": "^1.34.1",
+    "@lodestar/params": "^1.34.1",
+    "@lodestar/types": "^1.34.1",
+    "@lodestar/utils": "^1.34.1",
     "mitt": "^3.0.0"
   },
   "devDependencies": {

@@ -1,7 +1,7 @@
+import {describe, expect, it} from "vitest";
 import {ChainConfig, chainConfigToJson} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {networksChainConfig} from "@lodestar/config/networks";
-import {describe, expect, it} from "vitest";
 import {NotEqualParamsError, assertEqualParams} from "../../../src/util/params.js";
 import {lighthouseHoleskyConfig, nimbusHoleskyConfig, prysmHoleskyConfig, tekuHoleskyConfig} from "./interopConfigs.js";
 

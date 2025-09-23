@@ -1,7 +1,7 @@
+import {describe, expect, it} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {config as chainConfig} from "@lodestar/config/default";
 import {ForkName, GENESIS_EPOCH, ZERO_HASH} from "@lodestar/params";
-import {describe, expect, it} from "vitest";
 import {GossipEncoding, GossipTopicMap, GossipType} from "../../../../src/network/gossip/index.js";
 import {parseGossipTopic, stringifyGossipTopic} from "../../../../src/network/gossip/topic.js";
 

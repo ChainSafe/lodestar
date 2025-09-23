@@ -1,5 +1,6 @@
 import {ForkName} from "@lodestar/params";
-import {RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
+import {ColumnIndex, RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
+import {VersionedHashes} from "../../../execution/index.js";
 
 export enum DAType {
   PreData = "pre-data",
@@ -19,6 +20,7 @@ export enum BlockInputSource {
   engine = "engine",
   byRange = "req_resp_by_range",
   byRoot = "req_resp_by_root",
+  recovery = "recovery",
 }
 
 export type PromiseParts<T> = {
@@ -49,6 +51,8 @@ export type SourceMeta = {
   peerIdStr?: string;
 };
 
+export type BlockWithSource = SourceMeta & {block: SignedBeaconBlock; blockRootHex: RootHex};
+
 export type BlobWithSource = SourceMeta & {blobSidecar: deneb.BlobSidecar};
 
 export type ColumnWithSource = SourceMeta & {columnSidecar: fulu.DataColumnSidecar};
@@ -71,10 +75,9 @@ export type BlockInputInit = BlockHeaderMeta & {
   timeCreated: number;
 };
 
-export type AddBlock<F extends ForkName = ForkName> = {
+export type AddBlock<F extends ForkName = ForkName> = SourceMeta & {
   block: SignedBeaconBlock<F>;
   blockRootHex: string;
-  source: SourceMeta;
 };
 
 export type AddBlob = BlobWithSource & {
@@ -85,11 +88,15 @@ export type AddColumn = ColumnWithSource & {
   blockRootHex: RootHex;
 };
 
-export type BlobMeta = ColumnMeta & {versionHash: Uint8Array};
-
-export type ColumnMeta = {
-  blockRoot: Uint8Array;
+export type BlobMeta = {
   index: number;
+  blockRoot: Uint8Array;
+  versionedHash: Uint8Array;
+};
+
+export type MissingColumnMeta = {
+  missing: ColumnIndex[];
+  versionedHashes: VersionedHashes;
 };
 
 /**
@@ -111,7 +118,7 @@ export interface IBlockInput<F extends ForkName = ForkName, TData extends DAData
   blockRootHex: string;
   parentRootHex: string;
 
-  addBlock(props: AddBlock<F>): void;
+  addBlock(props: AddBlock<F>, opts?: {throwOnDuplicateAdd: boolean}): void;
   /** Whether the block has been seen and validated. If true, `getBlock` is guaranteed to not throw */
   hasBlock(): boolean;
   getBlock(): SignedBeaconBlock<F>;

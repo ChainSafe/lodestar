@@ -1,5 +1,5 @@
-import {ErrorAborted, FetchError} from "@lodestar/utils";
 import {describe, expect, it} from "vitest";
+import {ErrorAborted, FetchError} from "@lodestar/utils";
 import {ErrorJsonRpcResponse, HttpRpcError} from "../../../../src/eth1/provider/jsonRpcHttpClient.js";
 import {
   HTTP_CONNECTION_ERROR_CODES,

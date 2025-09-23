@@ -7,6 +7,7 @@ import {
   ProtoArray,
   ForkChoiceOpts as RawForkChoiceOpts,
 } from "@lodestar/fork-choice";
+import {isForkPostEip7805} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   DataAvailabilityStatus,
@@ -16,13 +17,10 @@ import {
   isMergeTransitionComplete,
 } from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
-
-import {isForkPostEip7805} from "@lodestar/params";
 import {Logger, toRootHex} from "@lodestar/utils";
 import {GENESIS_SLOT} from "../../constants/index.js";
 import {Metrics} from "../../metrics/index.js";
-import {ChainEventEmitter} from "../emitter.js";
-import {ChainEvent} from "../emitter.js";
+import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 
 export type ForkChoiceOpts = RawForkChoiceOpts & {
   // for testing only

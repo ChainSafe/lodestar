@@ -1,3 +1,4 @@
+import {afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {SecretKey, Signature, aggregateSignatures, fastAggregateVerify} from "@chainsafe/blst";
 import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
@@ -11,10 +12,13 @@ import {
   PresetName,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
-import {CachedBeaconStateAllForks, CachedBeaconStateElectra, newFilledArray} from "@lodestar/state-transition";
-import {CachedBeaconStateAltair} from "@lodestar/state-transition/src/types.js";
+import {
+  CachedBeaconStateAllForks,
+  CachedBeaconStateAltair,
+  CachedBeaconStateElectra,
+  newFilledArray,
+} from "@lodestar/state-transition";
 import {Attestation, electra, phase0, ssz} from "@lodestar/types";
-import {afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {
   AggregatedAttestationPool,
   AttestationsConsolidation,

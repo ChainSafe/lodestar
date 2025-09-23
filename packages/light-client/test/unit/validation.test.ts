@@ -1,3 +1,4 @@
+import {beforeAll, describe, expect, it, vi} from "vitest";
 import bls from "@chainsafe/bls";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {createBeaconConfig} from "@lodestar/config";
@@ -10,7 +11,6 @@ import {
   SYNC_COMMITTEE_SIZE,
 } from "@lodestar/params";
 import {altair, ssz} from "@lodestar/types";
-import {beforeAll, describe, expect, it, vi} from "vitest";
 import {LightClientSnapshotFast, SyncCommitteeFast} from "../../src/types.js";
 import {assertValidLightClientUpdate} from "../../src/validation.js";
 import {defaultBeaconBlockHeader, getSyncAggregateSigningRoot, signAndAggregate} from "../utils/utils.js";

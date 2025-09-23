@@ -37,7 +37,7 @@ export const hoodiChainConfig: ChainConfig = {
   ELECTRA_FORK_EPOCH: 2048,
   // Fulu
   FULU_FORK_VERSION: b("0x70000910"),
-  FULU_FORK_EPOCH: Infinity,
+  FULU_FORK_EPOCH: 50688,
 
   // Time parameters
   // ---------------------------------------------------------------
@@ -51,5 +51,14 @@ export const hoodiChainConfig: ChainConfig = {
 
   // Blob Scheduling
   // ---------------------------------------------------------------
-  BLOB_SCHEDULE: [],
+  BLOB_SCHEDULE: [
+    {
+      EPOCH: 52480,
+      MAX_BLOBS_PER_BLOCK: 15,
+    },
+    {
+      EPOCH: 54016,
+      MAX_BLOBS_PER_BLOCK: 21,
+    },
+  ],
 };

@@ -38,7 +38,7 @@ export const sepoliaChainConfig: ChainConfig = {
   ELECTRA_FORK_EPOCH: 222464,
   // Fulu
   FULU_FORK_VERSION: b("0x90000075"),
-  FULU_FORK_EPOCH: Infinity,
+  FULU_FORK_EPOCH: 272640,
 
   // Deposit contract
   // ---------------------------------------------------------------
@@ -48,5 +48,14 @@ export const sepoliaChainConfig: ChainConfig = {
 
   // Blob Scheduling
   // ---------------------------------------------------------------
-  BLOB_SCHEDULE: [],
+  BLOB_SCHEDULE: [
+    {
+      EPOCH: 274176,
+      MAX_BLOBS_PER_BLOCK: 15,
+    },
+    {
+      EPOCH: 275712,
+      MAX_BLOBS_PER_BLOCK: 21,
+    },
+  ],
 };

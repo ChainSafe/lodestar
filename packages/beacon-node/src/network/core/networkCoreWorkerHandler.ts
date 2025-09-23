@@ -1,10 +1,10 @@
 import path from "node:path";
 import workerThreads from "node:worker_threads";
-import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/dist/src/score/peer-score.js";
-import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
-import {ModuleThread, Thread, Worker, spawn} from "@chainsafe/threads";
 import {privateKeyToProtobuf} from "@libp2p/crypto/keys";
 import {PrivateKey} from "@libp2p/interface";
+import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
+import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
+import {ModuleThread, Thread, Worker, spawn} from "@chainsafe/threads";
 import {routes} from "@lodestar/api";
 import {BeaconConfig, chainConfigToJson} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
@@ -130,8 +130,12 @@ export class WorkerNetworkCore implements INetworkCore {
       loggerOpts: modules.logger.toOpts(),
     };
 
-    const worker = new Worker(path.join(workerDir, "networkCoreWorker.js"), {
+    const workerOpts: ConstructorParameters<typeof Worker>[1] = {
       workerData,
+    };
+    if (globalThis.Bun) {
+      workerOpts.suppressTranspileTS = true;
+    } else {
       /**
        * maxYoungGenerationSizeMb defaults to 152mb through the cli option defaults.
        * That default value was determined via https://github.com/ChainSafe/lodestar/issues/2115 and
@@ -143,10 +147,12 @@ export class WorkerNetworkCore implements INetworkCore {
        * showed that there is a pretty big window of "correct" values but we can always tune as
        * necessary
        */
-      resourceLimits: {maxYoungGenerationSizeMb: opts.maxYoungGenerationSizeMb},
-    } as ConstructorParameters<typeof Worker>[1]);
+      workerOpts.resourceLimits = {maxYoungGenerationSizeMb: opts.maxYoungGenerationSizeMb};
+    }
 
-    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+    const worker = new Worker(path.join(workerDir, "networkCoreWorker.js"), workerOpts);
+
+    // biome-ignore lint/suspicious/noExplicitAny: Don't know any specific interface for the spawn
     const networkThreadApi = (await spawn<any>(worker, {
       // A Lodestar Node may do very expensive task at start blocking the event loop and causing
       // the initialization to timeout. The number below is big enough to almost disable the timeout

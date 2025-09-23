@@ -1,5 +1,4 @@
-import {isFetchError} from "@lodestar/utils";
-import {isErrorAborted} from "@lodestar/utils";
+import {isErrorAborted, isFetchError} from "@lodestar/utils";
 import {IJson, RpcPayload} from "../../eth1/interface.js";
 import {
   ErrorJsonRpcResponse,
@@ -12,7 +11,7 @@ import {isQueueErrorAborted} from "../../util/queue/errors.js";
 import {ExecutionEngineState, ExecutionPayloadStatus} from "./interface.js";
 
 export type JsonRpcBackend = {
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+  // biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
   readonly handlers: Record<string, (...args: any[]) => any>;
 };
 
@@ -27,7 +26,7 @@ export class ExecutionEngineMockJsonRpcClient implements IJsonRpcHttpClient {
       if (handler === undefined) {
         throw Error(`Unknown method ${payload.method}`);
       }
-      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+      // biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
       return handler(...(payload.params as any[])) as R;
     }, payload);
   }

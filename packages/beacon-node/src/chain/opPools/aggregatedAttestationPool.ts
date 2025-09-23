@@ -42,7 +42,7 @@ import {
   phase0,
   ssz,
 } from "@lodestar/types";
-import {assert, MapDef, toRootHex} from "@lodestar/utils";
+import {MapDef, assert, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {IntersectResult, intersectUint8Arrays} from "../../util/bitArray.js";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";

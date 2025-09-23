@@ -7,7 +7,6 @@ import {
 } from "@lodestar/params";
 import {Epoch, RootHex, ValidatorIndex} from "@lodestar/types";
 import {intDiv, toRootHex} from "@lodestar/utils";
-
 import {processPendingAttestations} from "../epoch/processPendingAttestations.js";
 import {
   CachedBeaconStateAllForks,

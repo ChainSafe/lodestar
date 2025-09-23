@@ -1,7 +1,6 @@
 import path from "node:path";
 import {fileURLToPath} from "node:url";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-
 import {getDefinitions} from "../../../src/builder/routes.js";
 import {runTestCheckAgainstSpec} from "../../utils/checkAgainstSpec.js";
 import {fetchOpenApiSpec} from "../../utils/fetchOpenApiSpec.js";

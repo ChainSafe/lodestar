@@ -5,9 +5,9 @@ import {mainnetPreset} from "./presets/mainnet.js";
 import {minimalPreset} from "./presets/minimal.js";
 import {userOverrides, userSelectedPreset} from "./setPreset.js";
 
-export type {BeaconPreset} from "./types.js";
 export * from "./forkName.js";
 export {presetToJson} from "./json.js";
+export type {BeaconPreset} from "./types.js";
 export {PresetName};
 
 const presets = {
@@ -114,6 +114,10 @@ export const {
   FIELD_ELEMENTS_PER_CELL,
   FIELD_ELEMENTS_PER_EXT_BLOB,
   KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH,
+
+  PTC_SIZE,
+  MAX_PAYLOAD_ATTESTATIONS,
+  BUILDER_PENDING_WITHDRAWALS_LIMIT,
 } = activePreset;
 
 ////////////
@@ -138,6 +142,7 @@ export const ZERO_HASH_HEX = "0x" + "00".repeat(32);
 export const BLS_WITHDRAWAL_PREFIX = 0;
 export const ETH1_ADDRESS_WITHDRAWAL_PREFIX = 1;
 export const COMPOUNDING_WITHDRAWAL_PREFIX = 2;
+export const BUILDER_WITHDRAWAL_PREFIX = 3;
 
 // Domain types
 
@@ -153,6 +158,8 @@ export const DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF = Uint8Array.from([8, 0, 0, 0
 export const DOMAIN_CONTRIBUTION_AND_PROOF = Uint8Array.from([9, 0, 0, 0]);
 export const DOMAIN_BLS_TO_EXECUTION_CHANGE = Uint8Array.from([10, 0, 0, 0]);
 export const DOMAIN_INCLUSION_LIST_COMMITTEE = Uint8Array.from([12, 0, 0, 0]);
+export const DOMAIN_BEACON_BUILDER = Uint8Array.from([27, 0, 0, 0]);
+export const DOMAIN_PTC_ATTESTER = Uint8Array.from([12, 0, 0, 0]);
 
 // Application specific domains
 
@@ -272,11 +279,11 @@ export const BLOB_TX_TYPE = 0x03;
 export const VERSIONED_HASH_VERSION_KZG = 0x01;
 
 // ssz.deneb.BeaconBlockBody.getPathInfo(['blobKzgCommitments',0]).gindex
-export const KZG_COMMITMENT_GINDEX0 = ACTIVE_PRESET === PresetName.minimal ? 1728 : 221184;
+export const KZG_COMMITMENT_GINDEX0 = 221184;
 export const KZG_COMMITMENT_SUBTREE_INDEX0 = KZG_COMMITMENT_GINDEX0 - 2 ** KZG_COMMITMENT_INCLUSION_PROOF_DEPTH;
 
 // ssz.deneb.BlobSidecars.elementType.fixedSize
-export const BLOBSIDECAR_FIXED_SIZE = ACTIVE_PRESET === PresetName.minimal ? 131704 : 131928;
+export const BLOBSIDECAR_FIXED_SIZE = 131928;
 
 // Electra Misc
 export const UNSET_DEPOSIT_REQUESTS_START_INDEX = 2n ** 64n - 1n;
@@ -302,3 +309,6 @@ export const KZG_COMMITMENTS_SUBTREE_INDEX = KZG_COMMITMENTS_GINDEX - 2 ** KZG_C
 
 // EIP-7805
 export const INCLUSION_LIST_COMMITTEE_SIZE = 16;
+// Gloas Misc
+export const BUILDER_PAYMENT_THRESHOLD_NUMERATOR = 6;
+export const BUILDER_PAYMENT_THRESHOLD_DENOMINATOR = 10;

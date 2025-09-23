@@ -56,6 +56,7 @@ export {
 };
 
 export {computeUnrealizedCheckpoints} from "./computeUnrealizedCheckpoints.js";
+
 const maxValidatorsPerStateSlashing = SLOTS_PER_EPOCH * MAX_ATTESTER_SLASHINGS * MAX_VALIDATORS_PER_COMMITTEE;
 const maxSafeValidators = Math.floor(Number.MAX_SAFE_INTEGER / MAX_EFFECTIVE_BALANCE);
 

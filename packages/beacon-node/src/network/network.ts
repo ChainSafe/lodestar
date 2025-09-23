@@ -1,7 +1,7 @@
-import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
-import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {PeerId, PrivateKey} from "@libp2p/interface";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
+import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
+import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
@@ -29,6 +29,7 @@ import {
   phase0,
 } from "@lodestar/types";
 import {prettyPrintIndices, sleep} from "@lodestar/utils";
+import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
 import {ChainEvent, IBeaconChain} from "../chain/index.js";
 import {computeSubnetForDataColumnSidecar} from "../chain/validation/dataColumnSidecar.js";
 import {IBeaconDb} from "../db/interface.js";
@@ -139,6 +140,7 @@ export class Network implements INetwork {
     );
     this.chain.emitter.on(ChainEvent.updateTargetCustodyGroupCount, this.onTargetGroupCountUpdated);
     this.chain.emitter.on(ChainEvent.publishDataColumns, this.onPublishDataColumns);
+    this.chain.emitter.on(ChainEvent.publishBlobSidecars, this.onPublishBlobSidecars);
     this.chain.emitter.on(ChainEvent.updateStatus, this.onUpdateStatus);
   }
 
@@ -272,8 +274,8 @@ export class Network implements INetwork {
     return this.core.reStatusPeers(peers);
   }
 
-  searchUnknownSlotRoot(slotRoot: SlotRootHex, peer?: PeerIdStr): void {
-    this.networkProcessor.searchUnknownSlotRoot(slotRoot, peer);
+  searchUnknownSlotRoot(slotRoot: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void {
+    this.networkProcessor.searchUnknownSlotRoot(slotRoot, source, peer);
   }
 
   async reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): Promise<void> {
@@ -752,17 +754,17 @@ export class Network implements INetwork {
   };
 
   private onPeerConnected = (data: NetworkEventData[NetworkEvent.peerConnected]): void => {
-    const {peer, clientAgent, custodyGroups, status} = data;
+    const {peer, clientAgent, custodyColumns, status} = data;
     const earliestAvailableSlot = (status as fulu.Status).earliestAvailableSlot;
     this.logger.verbose("onPeerConnected", {
       peer,
       clientAgent,
-      custodyGroups: prettyPrintIndices(custodyGroups),
+      custodyColumns: prettyPrintIndices(custodyColumns),
       earliestAvailableSlot: earliestAvailableSlot ?? "pre-fulu",
     });
     this.connectedPeersSyncMeta.set(peer, {
       client: clientAgent,
-      custodyGroups,
+      custodyColumns,
       earliestAvailableSlot, // can be undefined pre-fulu
     });
   };
@@ -777,6 +779,10 @@ export class Network implements INetwork {
 
   private onPublishDataColumns = (sidecars: fulu.DataColumnSidecar[]): Promise<number[]> => {
     return promiseAllMaybeAsync(sidecars.map((sidecar) => () => this.publishDataColumnSidecar(sidecar)));
+  };
+
+  private onPublishBlobSidecars = (sidecars: deneb.BlobSidecar[]): Promise<number[]> => {
+    return promiseAllMaybeAsync(sidecars.map((sidecar) => () => this.publishBlobSidecar(sidecar)));
   };
 
   private onUpdateStatus = async (): Promise<void> => {

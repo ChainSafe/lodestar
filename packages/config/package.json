@@ -1,6 +1,6 @@
 {
   "name": "@lodestar/config",
-  "version": "1.33.0",
+  "version": "1.34.1",
   "description": "Chain configuration required for lodestar",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
@@ -11,15 +11,19 @@
   "type": "module",
   "exports": {
     ".": {
+      "bun": "./src/index.ts",
       "import": "./lib/index.js"
     },
     "./default": {
+      "bun": "./src/default.ts",
       "import": "./lib/default.js"
     },
     "./networks": {
+      "bun": "./src/networks.ts",
       "import": "./lib/networks.js"
     },
     "./configs": {
+      "bun": "./src/configs.ts",
       "import": "./lib/configs.js"
     }
   },
@@ -65,8 +69,8 @@
   ],
   "dependencies": {
     "@chainsafe/ssz": "^1.2.2",
-    "@lodestar/params": "^1.33.0",
-    "@lodestar/types": "^1.33.0",
-    "@lodestar/utils": "^1.33.0"
+    "@lodestar/params": "^1.34.1",
+    "@lodestar/types": "^1.34.1",
+    "@lodestar/utils": "^1.34.1"
   }
 }

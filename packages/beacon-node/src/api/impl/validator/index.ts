@@ -983,7 +983,7 @@ export function getValidatorApi(
       // see https://github.com/ChainSafe/lodestar/issues/5063
       if (!chain.forkChoice.hasBlock(beaconBlockRoot)) {
         const rootHex = toRootHex(beaconBlockRoot);
-        network.searchUnknownSlotRoot({slot, root: rootHex});
+        network.searchUnknownSlotRoot({slot, root: rootHex}, BlockInputSource.api);
         // if result of this call is false, i.e. block hasn't seen after 1 slot then the below notOnOptimisticBlockRoot call will throw error
         await chain.waitForBlock(slot, rootHex);
       }
@@ -1255,12 +1255,12 @@ export function getValidatorApi(
       const pubkeys = getPubkeysForIndices(state.validators, indices);
       // Ensures `epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD <= current_epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1`
       const syncCommitteeCache = state.epochCtx.getIndexedSyncCommitteeAtEpoch(epoch);
-      const syncCommitteeValidatorIndexMap = syncCommitteeCache.validatorIndexMap;
+      const validatorSyncCommitteeIndexMap = syncCommitteeCache.validatorIndexMap;
 
       const duties: routes.validator.SyncDuty[] = [];
       for (let i = 0, len = indices.length; i < len; i++) {
         const validatorIndex = indices[i];
-        const validatorSyncCommitteeIndices = syncCommitteeValidatorIndexMap.get(validatorIndex);
+        const validatorSyncCommitteeIndices = validatorSyncCommitteeIndexMap.get(validatorIndex);
         if (validatorSyncCommitteeIndices) {
           duties.push({
             pubkey: pubkeys[i],

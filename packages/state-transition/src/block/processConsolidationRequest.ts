@@ -1,6 +1,5 @@
 import {FAR_FUTURE_EPOCH, MIN_ACTIVATION_BALANCE, PENDING_CONSOLIDATIONS_LIMIT} from "@lodestar/params";
 import {electra, ssz} from "@lodestar/types";
-
 import {CachedBeaconStateElectra} from "../types.js";
 import {hasEth1WithdrawalCredential} from "../util/capella.js";
 import {

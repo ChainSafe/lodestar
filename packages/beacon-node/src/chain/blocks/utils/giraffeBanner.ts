@@ -1,3 +1,4 @@
+// biome-ignore lint/complexity/noUselessStringRaw: We want to have code block in string as raw
 export const ELECTRA_GIRAFFE_BANNER = String.raw`
 
                                               2048                   

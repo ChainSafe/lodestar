@@ -1,15 +1,17 @@
 import {LogData} from "@lodestar/logger";
 import {RespStatus, ResponseError} from "@lodestar/reqresp";
 import {ColumnIndex, Slot} from "@lodestar/types";
-import {prettyBytes, prettyPrintIndices} from "@lodestar/utils";
+import {prettyBytes, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/interface.js";
 import {IBeaconDb} from "../../../db/interface.js";
+import {Metrics} from "../../../metrics/metrics.js";
 import {getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized} from "../../../util/sszBytes.js";
 
 export async function handleColumnSidecarUnavailability({
   chain,
   db,
-  unavailableColumnIndex,
+  metrics,
+  unavailableColumnIndices,
   requestedColumns,
   availableColumns,
   slot,
@@ -17,17 +19,18 @@ export async function handleColumnSidecarUnavailability({
 }: {
   chain: IBeaconChain;
   db: IBeaconDb;
+  metrics: Metrics | null;
   slot: Slot;
   blockRoot?: Uint8Array;
-  unavailableColumnIndex: ColumnIndex;
+  unavailableColumnIndices: ColumnIndex[];
   requestedColumns: ColumnIndex[];
   availableColumns: ColumnIndex[];
 }): Promise<void> {
   const logData: LogData = {
-    unavailableColumnIndex,
+    slot,
+    unavailableColumnIndices: prettyPrintIndices(unavailableColumnIndices),
     requestedColumns: prettyPrintIndices(requestedColumns),
     availableColumns: prettyPrintIndices(availableColumns),
-    slot,
   };
   if (blockRoot) {
     logData.blockRoot = prettyBytes(blockRoot);
@@ -37,8 +40,13 @@ export async function handleColumnSidecarUnavailability({
 
   const blockBytes = blockRoot ? await db.block.getBinary(blockRoot) : await db.blockArchive.getBinary(slot);
   if (!blockBytes) {
-    chain.logger.error(
-      `Expected ${blockRoot ? "unfinalized" : "finalized"} block not found while handling unavailable dataColumnSidecar`
+    chain.logger.verbose(
+      `Expected ${blockRoot ? "unfinalized" : "finalized"} block not found while handling unavailable dataColumnSidecar`,
+      {
+        slot,
+        blockRoot: blockRoot ? toRootHex(blockRoot) : "unknown",
+        earliestAvailableSlot: chain.earliestAvailableSlot,
+      }
     );
     return;
   }
@@ -51,11 +59,11 @@ export async function handleColumnSidecarUnavailability({
 
   // There are blobs for that column index so we should have synced for it
   // We need to inform to peers that we don't have that expected data
-  // NOTE: We may look to add some metrics to track such scenario
-  throw new ResponseError(
-    RespStatus.RESOURCE_UNAVAILABLE,
-    `dataColumnSidecar requested and within custody not available for columnIndex=${unavailableColumnIndex}`
-  );
+  metrics?.dataColumns.missingCustodyColumns.inc(unavailableColumnIndices.length);
+  chain.logger.verbose("dataColumnSidecar requested and within custody but not available", {
+    unavailableColumnIndices: prettyPrintIndices(unavailableColumnIndices),
+    blockRoot: blockRoot ? prettyBytes(blockRoot) : "unknown",
+  });
 }
 
 export function validateRequestedDataColumns(chain: IBeaconChain, requestedColumns: ColumnIndex[]): ColumnIndex[] {

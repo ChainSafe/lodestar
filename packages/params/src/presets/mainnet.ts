@@ -145,4 +145,9 @@ export const mainnetPreset: BeaconPreset = {
   // EIP7805
   ///////////
   INCLUSION_LIST_COMMITTEE_SIZE: 16,
+
+  // GLOAS
+  PTC_SIZE: 512,
+  MAX_PAYLOAD_ATTESTATIONS: 4,
+  BUILDER_PENDING_WITHDRAWALS_LIMIT: 1048576, // 2**20
 };

@@ -1,6 +1,6 @@
+import {afterEach, describe, expect, it} from "vitest";
 import {config} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
-import {afterEach, describe, expect, it} from "vitest";
 import {getCurrentAndNextForkBoundary} from "../../../src/network/forks.js";
 import {getDiscv5Multiaddrs} from "../../../src/network/libp2p/index.js";
 

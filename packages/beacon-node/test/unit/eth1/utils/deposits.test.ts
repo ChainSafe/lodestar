@@ -1,8 +1,8 @@
+import {describe, expect, it} from "vitest";
 import {createChainForkConfig} from "@lodestar/config";
 import {MAX_DEPOSITS, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {phase0, ssz} from "@lodestar/types";
 import {verifyMerkleBranch} from "@lodestar/utils";
-import {describe, expect, it} from "vitest";
 import {DepositTree} from "../../../../src/db/repositories/depositDataRoot.js";
 import {Eth1ErrorCode} from "../../../../src/eth1/errors.js";
 import {DepositGetter, getDeposits, getDepositsWithProofs} from "../../../../src/eth1/utils/deposits.js";

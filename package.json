@@ -42,9 +42,9 @@
   },
   "devDependencies": {
     "@actions/core": "^1.11.1",
-    "@biomejs/biome": "^1.9.4",
+    "@biomejs/biome": "^2.2.0",
     "@chainsafe/benchmark": "^1.2.3",
-    "@chainsafe/biomejs-config": "^0.1.2",
+    "@chainsafe/biomejs-config": "^1.0.0",
     "@types/node": "^20.12.8",
     "@types/react": "^19.1.12",
     "@vitest/browser": "3.0.9",
@@ -67,8 +67,8 @@
     "stream-http": "^3.2.0",
     "supertest": "^6.3.3",
     "ts-node": "^10.9.2",
-    "typescript": "^5.7.3",
-    "typescript-docs-verifier": "^2.5.3",
+    "typescript": "^5.9.2",
+    "typescript-docs-verifier": "^3.0.1",
     "vite": "^6.0.11",
     "vite-plugin-dts": "^4.5.0",
     "vite-plugin-node-polyfills": "^0.23.0",
@@ -83,6 +83,7 @@
     "dns-over-http-resolver": "^2.1.1",
     "loupe": "^2.3.6",
     "testcontainers/**/nan": "^2.19.0",
-    "vitest": "3.0.9"
+    "vitest": "3.0.9",
+    "elliptic": ">=6.6.1"
   }
 }

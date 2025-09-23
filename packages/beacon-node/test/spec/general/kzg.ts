@@ -1,5 +1,5 @@
-import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {DasContextJs} from "@crate-crypto/node-eth-kzg";
+import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {InputType} from "@lodestar/spec-test-util";
 import {TestRunnerFn} from "../utils/types.js";
 

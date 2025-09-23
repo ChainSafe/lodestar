@@ -5,7 +5,6 @@ import {
   PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR,
   PROPORTIONAL_SLASHING_MULTIPLIER_BELLATRIX,
 } from "@lodestar/params";
-
 import {BeaconStateAllForks, CachedBeaconStateAllForks, EpochTransitionCache} from "../types.js";
 import {decreaseBalance} from "../util/index.js";
 

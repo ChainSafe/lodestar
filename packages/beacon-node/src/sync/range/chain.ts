@@ -1,17 +1,21 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, isForkPostFulu} from "@lodestar/params";
-import {Epoch, Root, Slot, phase0} from "@lodestar/types";
-import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
-import {BlockInput, BlockInputDataColumns, BlockInputType} from "../../chain/blocks/types.js";
+import {Epoch, Root, Slot} from "@lodestar/types";
+import {ErrorAborted, LodestarError, Logger, toRootHex} from "@lodestar/utils";
+import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
+import {BlockInputErrorCode} from "../../chain/blocks/blockInput/errors.js";
+import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
+import {BlobSidecarErrorCode} from "../../chain/errors/blobSidecarError.js";
+import {DataColumnSidecarErrorCode} from "../../chain/errors/dataColumnSidecarError.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {PeerAction, prettyPrintPeerIdStr} from "../../network/index.js";
 import {PeerSyncMeta} from "../../network/peers/peersData.js";
-import {PartialDownload} from "../../network/reqresp/beaconBlocksMaybeBlobsByRange.js";
+import {IClock} from "../../util/clock.js";
 import {CustodyConfig} from "../../util/dataColumns.js";
 import {ItTrigger} from "../../util/itTrigger.js";
 import {PeerIdStr} from "../../util/peerId.js";
-import {wrapError} from "../../util/wrapError.js";
+import {WarnResult, wrapError} from "../../util/wrapError.js";
 import {BATCH_BUFFER_SIZE, EPOCHS_PER_BATCH, MAX_LOOK_AHEAD_EPOCHS} from "../constants.js";
+import {DownloadByRangeError, DownloadByRangeErrorCode} from "../utils/downloadByRange.js";
 import {RangeSyncType} from "../utils/remoteSyncType.js";
 import {Batch, BatchError, BatchErrorCode, BatchMetadata, BatchStatus} from "./batch.js";
 import {
@@ -29,6 +33,7 @@ import {
 
 export type SyncChainModules = {
   config: ChainForkConfig;
+  clock: IClock;
   custodyConfig: CustodyConfig;
   logger: Logger;
   metrics: Metrics | null;
@@ -39,20 +44,21 @@ export type SyncChainFns = {
    * Must return if ALL blocks are processed successfully
    * If SOME blocks are processed must throw BlockProcessorError()
    */
-  processChainSegment: (blocks: BlockInput[], syncType: RangeSyncType) => Promise<void>;
+  processChainSegment: (blocks: IBlockInput[], syncType: RangeSyncType) => Promise<void>;
   /** Must download blocks, and validate their range */
-  downloadBeaconBlocksByRange: (
+  downloadByRange: (
     peer: PeerSyncMeta,
-    request: phase0.BeaconBlocksByRangeRequest,
-    partialDownload: PartialDownload,
+    batch: Batch,
     syncType: RangeSyncType
-  ) => Promise<{blocks: BlockInput[]; pendingDataColumns: null | number[]}>;
+  ) => Promise<WarnResult<IBlockInput[], DownloadByRangeError>>;
   /** Report peer for negative actions. Decouples from the full network instance */
   reportPeer: (peer: PeerIdStr, action: PeerAction, actionName: string) => void;
   /** Gets current peer custodyColumns and earliestAvailableSlot */
   getConnectedPeerSyncMeta: (peerId: string) => PeerSyncMeta;
   /** Hook called when Chain state completes */
   onEnd: (err: Error | null, target: ChainTarget | null) => void;
+  /** Deletes an array of BlockInputs from the BlockInputCache */
+  pruneBlockInputs: (blockInputs: IBlockInput[]) => void;
 };
 
 /**
@@ -117,9 +123,11 @@ export class SyncChain {
   private status = SyncChainStatus.Stopped;
 
   private readonly processChainSegment: SyncChainFns["processChainSegment"];
-  private readonly downloadBeaconBlocksByRange: SyncChainFns["downloadBeaconBlocksByRange"];
+  private readonly downloadByRange: SyncChainFns["downloadByRange"];
   private readonly reportPeer: SyncChainFns["reportPeer"];
   private readonly getConnectedPeerSyncMeta: SyncChainFns["getConnectedPeerSyncMeta"];
+  private readonly pruneBlockInputs: SyncChainFns["pruneBlockInputs"];
+
   /** AsyncIterable that guarantees processChainSegment is run only at once at anytime */
   private readonly batchProcessor = new ItTrigger();
   /** Sorted map of batches undergoing some kind of processing. */
@@ -128,6 +136,8 @@ export class SyncChain {
 
   private readonly logger: Logger;
   private readonly config: ChainForkConfig;
+  private readonly clock: IClock;
+  private readonly metrics: Metrics | null;
   private readonly custodyConfig: CustodyConfig;
 
   constructor(
@@ -137,16 +147,19 @@ export class SyncChain {
     fns: SyncChainFns,
     modules: SyncChainModules
   ) {
-    const {config, custodyConfig, logger, metrics} = modules;
+    const {config, clock, custodyConfig, logger, metrics} = modules;
     this.firstBatchEpoch = initialBatchEpoch;
     this.lastEpochWithProcessBlocks = initialBatchEpoch;
     this.target = initialTarget;
     this.syncType = syncType;
     this.processChainSegment = fns.processChainSegment;
-    this.downloadBeaconBlocksByRange = fns.downloadBeaconBlocksByRange;
+    this.downloadByRange = fns.downloadByRange;
     this.reportPeer = fns.reportPeer;
+    this.pruneBlockInputs = fns.pruneBlockInputs;
     this.getConnectedPeerSyncMeta = fns.getConnectedPeerSyncMeta;
     this.config = config;
+    this.clock = clock;
+    this.metrics = metrics;
     this.custodyConfig = custodyConfig;
     this.logger = logger;
     this.logId = `${syncType}-${nextChainId++}`;
@@ -310,6 +323,10 @@ export class SyncChain {
         return; // Ignore
       }
 
+      for (const batch of this.batches.values()) {
+        this.pruneBlockInputs(batch.getBlocks());
+      }
+
       this.status = SyncChainStatus.Error;
       this.logger.verbose("SyncChain Error", {id: this.logId}, e as Error);
 
@@ -432,7 +449,7 @@ export class SyncChain {
       return null;
     }
 
-    const batch = new Batch(startEpoch, this.config);
+    const batch = new Batch(startEpoch, this.config, this.clock, this.custodyConfig);
     this.batches.set(startEpoch, batch);
     return batch;
   }
@@ -447,70 +464,107 @@ export class SyncChain {
       peer: prettyPrintPeerIdStr(peer.peerId),
     });
     try {
-      const partialDownload = batch.startDownloading(peer.peerId);
+      batch.startDownloading(peer.peerId);
 
       // wrapError ensures to never call both batch success() and batch error()
-      const res = await wrapError(
-        this.downloadBeaconBlocksByRange(peer, batch.request, partialDownload, this.syncType)
-      );
+      const res = await wrapError(this.downloadByRange(peer, batch, this.syncType));
 
-      if (!res.err) {
-        const downloadSuccessOutput = batch.downloadingSuccess(res.result);
-        if (downloadSuccessOutput.status === BatchStatus.AwaitingProcessing) {
-          const blocks = downloadSuccessOutput.blocks;
-          let hasPostDenebBlocks = false;
-          const blobs = blocks.reduce((acc, blockInput) => {
-            hasPostDenebBlocks ||= blockInput.type === BlockInputType.availableData;
-            return hasPostDenebBlocks
-              ? acc +
-                  (blockInput.type === BlockInputType.availableData &&
-                  (blockInput.blockData.fork === ForkName.deneb || blockInput.blockData.fork === ForkName.electra)
-                    ? blockInput.blockData.blobs.length
-                    : 0)
-              : 0;
-          }, 0);
-          const dataColumns = blocks.reduce((acc, blockInput) => {
-            hasPostDenebBlocks ||= blockInput.type === BlockInputType.availableData;
-            return hasPostDenebBlocks
-              ? acc +
-                  (blockInput.type === BlockInputType.availableData && isForkPostFulu(blockInput.blockData.fork)
-                    ? (blockInput.blockData as BlockInputDataColumns).dataColumns.length
-                    : 0)
-              : 0;
-          }, 0);
-
-          const downloadInfo = {blocks: blocks.length};
-          if (hasPostDenebBlocks) {
-            Object.assign(downloadInfo, {blobs, dataColumns});
+      if (res.err) {
+        // There's several known error cases where we want to take action on the peer
+        const errCode = (res.err as LodestarError<{code: string}>).type?.code;
+        this.metrics?.syncRange.downloadByRange.error.inc({client: peer.client, code: errCode ?? "UNKNOWN"});
+        if (this.syncType === RangeSyncType.Finalized) {
+          // For finalized sync, we are stricter with peers as there is no ambiguity about which chain we're syncing.
+          // The below cases indicate the peer may be on a different chain, so are not penalized during head sync.
+          switch (errCode) {
+            case BlockInputErrorCode.MISMATCHED_ROOT_HEX:
+            case DownloadByRangeErrorCode.MISSING_BLOBS:
+            case DownloadByRangeErrorCode.EXTRA_BLOBS:
+            case DownloadByRangeErrorCode.MISSING_COLUMNS:
+            case DownloadByRangeErrorCode.EXTRA_COLUMNS:
+            case BlobSidecarErrorCode.INCORRECT_SIDECAR_COUNT:
+            case BlobSidecarErrorCode.INCORRECT_BLOCK:
+            case DataColumnSidecarErrorCode.INCORRECT_SIDECAR_COUNT:
+            case DataColumnSidecarErrorCode.INCORRECT_BLOCK:
+              this.reportPeer(peer.peerId, PeerAction.LowToleranceError, res.err.message);
           }
-          this.logger.debug("Downloaded batch", {
-            id: this.logId,
-            ...batch.getMetadata(),
-            ...downloadInfo,
-            peer: prettyPrintPeerIdStr(peer.peerId),
-          });
-          this.triggerBatchProcessor();
-        } else {
-          const pendingDataColumns = downloadSuccessOutput.pendingDataColumns.join(",");
-          this.logger.debug("Partially downloaded batch", {
-            id: this.logId,
-            ...batch.getMetadata(),
-            pendingDataColumns,
-            peer: peer.peerId,
-          });
-          // the flow will continue to call triggerBatchDownloader() below
         }
-      } else {
+        switch (errCode) {
+          case DownloadByRangeErrorCode.EXTRA_BLOCKS:
+          case DownloadByRangeErrorCode.OUT_OF_ORDER_BLOCKS:
+          case DownloadByRangeErrorCode.OUT_OF_RANGE_BLOCKS:
+          case DownloadByRangeErrorCode.PARENT_ROOT_MISMATCH:
+          case BlobSidecarErrorCode.INCLUSION_PROOF_INVALID:
+          case BlobSidecarErrorCode.INVALID_KZG_PROOF_BATCH:
+          case DataColumnSidecarErrorCode.INCORRECT_KZG_COMMITMENTS_COUNT:
+          case DataColumnSidecarErrorCode.INCORRECT_KZG_PROOF_COUNT:
+          case DataColumnSidecarErrorCode.INVALID_KZG_PROOF_BATCH:
+          case DataColumnSidecarErrorCode.INCLUSION_PROOF_INVALID:
+            this.reportPeer(peer.peerId, PeerAction.LowToleranceError, res.err.message);
+        }
         this.logger.verbose(
           "Batch download error",
           {id: this.logId, ...batch.getMetadata(), peer: prettyPrintPeerIdStr(peer.peerId)},
           res.err
         );
-        batch.downloadingError(); // Throws after MAX_DOWNLOAD_ATTEMPTS
+        batch.downloadingError(peer.peerId); // Throws after MAX_DOWNLOAD_ATTEMPTS
+      } else {
+        this.logger.verbose("Batch download success", {
+          id: this.logId,
+          ...batch.getMetadata(),
+          peer: prettyPrintPeerIdStr(peer.peerId),
+        });
+        this.metrics?.syncRange.downloadByRange.success.inc();
+        const {warnings, result} = res.result;
+        const downloadSuccessOutput = batch.downloadingSuccess(peer.peerId, result);
+        const logMeta: Record<string, number> = {
+          blockCount: downloadSuccessOutput.blocks.length,
+        };
+
+        if (warnings && warnings.length > 0) {
+          for (const warning of warnings) {
+            this.metrics?.syncRange.downloadByRange.warn.inc({client: peer.client, code: warning.type.code});
+            this.logger.debug(
+              "Batch downloaded with warning",
+              {id: this.logId, epoch: batch.startEpoch, ...logMeta, peer: prettyPrintPeerIdStr(peer.peerId)},
+              warning
+            );
+          }
+        }
+
+        for (const block of downloadSuccessOutput.blocks) {
+          if (isBlockInputBlobs(block)) {
+            const blockLogMeta = block.getLogMeta();
+            const expectedBlobs = typeof blockLogMeta.expectedBlobs === "number" ? blockLogMeta.expectedBlobs : 0;
+            logMeta.expectedBlobCount = (logMeta.expectedBlobCount ?? 0) + expectedBlobs;
+            logMeta.receivedBlobCount = (logMeta.receivedBlobCount ?? 0) + blockLogMeta.receivedBlobs;
+          } else if (isBlockInputColumns(block)) {
+            logMeta.columnCount = (logMeta.columnCount ?? 0) + block.getLogMeta().receivedColumns;
+          }
+        }
+
+        let logMessage: string;
+        if (downloadSuccessOutput.status === BatchStatus.AwaitingProcessing) {
+          logMessage = "Finished downloading batch by range";
+          this.triggerBatchProcessor();
+        } else {
+          logMessage = "Partially downloaded batch by range. Attempting another round of downloads";
+          // the flow will continue to call triggerBatchDownloader() below
+        }
+
+        this.logger.debug(logMessage, {
+          id: this.logId,
+          epoch: batch.startEpoch,
+          ...logMeta,
+          peer: prettyPrintPeerIdStr(peer.peerId),
+        });
       }
 
       // Preemptively request more blocks from peers whilst we process current blocks
-      this.triggerBatchDownloader();
+      //
+      // TODO(fulu): why is this second call here.  should fall through to the one below the catch block. commenting
+      //      for now and will resolve during PR process
+      // this.triggerBatchDownloader();
     } catch (e) {
       // bubble the error up to the main async iterable loop
       this.batchProcessor.end(e as Error);
@@ -531,6 +585,7 @@ export class SyncChain {
 
     if (!res.err) {
       batch.processingSuccess();
+      this.pruneBlockInputs(batch.getBlocks());
 
       // If the processed batch is not empty, validate previous AwaitingValidation blocks.
       if (blocks.length > 0) {
@@ -583,12 +638,14 @@ export class SyncChain {
         const attemptOk = batch.validationSuccess();
         for (const attempt of batch.failedProcessingAttempts) {
           if (attempt.hash !== attemptOk.hash) {
-            if (attemptOk.peer === attempt.peer.toString()) {
-              // The same peer corrected its previous attempt
-              this.reportPeer(attempt.peer, PeerAction.MidToleranceError, "SyncChainInvalidBatchSelf");
-            } else {
-              // A different peer sent an bad batch
-              this.reportPeer(attempt.peer, PeerAction.LowToleranceError, "SyncChainInvalidBatchOther");
+            for (const badAttemptPeer of attempt.peers) {
+              if (attemptOk.peers.find((goodPeer) => goodPeer === badAttemptPeer)) {
+                // The same peer corrected its previous attempt
+                this.reportPeer(badAttemptPeer, PeerAction.MidToleranceError, "SyncChainInvalidBatchSelf");
+              } else {
+                // A different peer sent an bad batch
+                this.reportPeer(badAttemptPeer, PeerAction.LowToleranceError, "SyncChainInvalidBatchOther");
+              }
             }
           }
         }
@@ -619,8 +676,8 @@ export class SyncChain {
 
     const peersByColumnIndex = new Map<number, number>();
     for (const [columnIndex, column] of this.custodyConfig.sampledColumns.entries()) {
-      for (const {custodyGroups} of peersSyncMeta.values()) {
-        if (custodyGroups.includes(column)) {
+      for (const {custodyColumns} of peersSyncMeta.values()) {
+        if (custodyColumns.includes(column)) {
           peersByColumnIndex.set(columnIndex, (peersByColumnIndex.get(columnIndex) ?? 0) + 1);
         }
       }
@@ -649,8 +706,9 @@ export function shouldReportPeerOnBatchError(
       return {action: PeerAction.LowToleranceError, reason: "SyncChainMaxProcessingAttempts"};
 
     // TODO: Should peers be reported for MAX_DOWNLOAD_ATTEMPTS?
-    case BatchErrorCode.WRONG_STATUS:
     case BatchErrorCode.MAX_DOWNLOAD_ATTEMPTS:
+    case BatchErrorCode.INVALID_COUNT:
+    case BatchErrorCode.WRONG_STATUS:
     case BatchErrorCode.MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS:
       return null;
   }

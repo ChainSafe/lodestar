@@ -1,8 +1,8 @@
+import {afterEach, describe, expect, it, vi} from "vitest";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
-import {afterEach, describe, expect, it, vi} from "vitest";
 import {GossipHandlerParamGeneric, GossipHandlers, GossipType} from "../../../src/network/gossip/index.js";
 import {Network} from "../../../src/network/index.js";
 import {connect, onPeerConnect} from "../../utils/network.js";

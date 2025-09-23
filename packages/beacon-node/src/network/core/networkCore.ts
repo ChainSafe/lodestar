@@ -1,14 +1,14 @@
-import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/dist/src/score/peer-score.js";
-import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {Connection, PrivateKey} from "@libp2p/interface";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
+import {multiaddr} from "@multiformats/multiaddr";
+import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
+import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {routes} from "@lodestar/api";
 import {BeaconConfig, ForkBoundary} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {isForkPostFulu} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
 import {Epoch, Status, fulu, sszTypesFor} from "@lodestar/types";
-import {multiaddr} from "@multiformats/multiaddr";
 import {formatNodePeer} from "../../api/impl/node/utils.js";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {ClockEvent, IClock} from "../../util/clock.js";
@@ -156,7 +156,6 @@ export class NetworkCore implements INetworkCore {
 
     // Bind discv5's ENR to local metadata
     // resolve circular dependency by setting `discv5` variable after the peer manager is instantiated
-    // biome-ignore lint/style/useConst: <explanation>
     let discv5: Discv5Worker | undefined;
     const onMetadataSetValue = function onMetadataSetValue(key: string, value: Uint8Array): void {
       discv5?.setEnrValue(key, value).catch((e) => logger.error("error on setEnrValue", {key}, e));

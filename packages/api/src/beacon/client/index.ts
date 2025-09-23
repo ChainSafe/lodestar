@@ -7,7 +7,6 @@ import {
   IHttpClient,
 } from "../../utils/client/index.js";
 import {Endpoints} from "../routes/index.js";
-
 import * as beacon from "./beacon.js";
 import * as configApi from "./config.js";
 import * as debug from "./debug.js";

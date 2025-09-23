@@ -1,3 +1,4 @@
+import {afterAll, beforeAll, describe, expect, it, vi} from "vitest";
 import {getClient, routes} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
@@ -7,7 +8,6 @@ import {computeStartSlotAtEpoch, interopSecretKey, interopSecretKeys} from "@lod
 import {StartedExternalSigner, getKeystoresStr, startExternalSigner} from "@lodestar/test-utils";
 import {ssz, sszTypesFor} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
-import {afterAll, beforeAll, describe, expect, it, vi} from "vitest";
 import {ISlashingProtection, Interchange, Signer, SignerType, ValidatorStore} from "../../src/index.js";
 import {IndicesService} from "../../src/services/indices.js";
 import {testLogger} from "../utils/logger.js";

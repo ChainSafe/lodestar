@@ -1,8 +1,8 @@
+import {beforeAll, describe, expect, it} from "vitest";
 import {ForkName, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {BeaconStateAltair, BeaconStateElectra} from "@lodestar/state-transition";
 import {altair, ssz} from "@lodestar/types";
 import {hash, verifyMerkleBranch} from "@lodestar/utils";
-import {beforeAll, describe, expect, it} from "vitest";
 import {getNextSyncCommitteeBranch, getSyncCommitteesWitness} from "../../../../src/chain/lightClient/proofs.js";
 import {NUM_WITNESS, NUM_WITNESS_ELECTRA} from "../../../../src/db/repositories/lightclientSyncCommitteeWitness.js";
 

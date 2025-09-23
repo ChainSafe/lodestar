@@ -1,22 +1,23 @@
 import assert from "node:assert";
 import fs from "node:fs";
 import {afterAll, afterEach, describe, it, vi} from "vitest";
-
+import {ChainConfig, ChainConfig} from "@lodestar/config";
+import {TimestampFormatCode, TimestampFormatCode} from "@lodestar/logger";
 import {ForkName, SLOTS_PER_EPOCH, UNSET_DEPOSIT_REQUESTS_START_INDEX} from "@lodestar/params";
+import {CachedBeaconStateElectra, CachedBeaconStateElectra} from "@lodestar/state-transition";
 import {Epoch, Slot, electra} from "@lodestar/types";
 import {LogLevel, sleep} from "@lodestar/utils";
 import {ValidatorProposerConfig} from "@lodestar/validator";
-
-import {ChainConfig} from "@lodestar/config";
-import {TimestampFormatCode} from "@lodestar/logger";
-import {CachedBeaconStateElectra} from "@lodestar/state-transition";
-import {ExecutionPayloadStatus, PayloadAttributes} from "../../src/execution/engine/interface.js";
-import {initializeExecutionEngine} from "../../src/execution/index.js";
-
 import {BeaconRestApiServerOpts} from "../../src/api/index.js";
-import {bytesToData} from "../../src/eth1/provider/utils.js";
-import {dataToBytes} from "../../src/eth1/provider/utils.js";
+import {bytesToData, dataToBytes} from "../../src/eth1/provider/utils.js";
 import {defaultExecutionEngineHttpOpts} from "../../src/execution/engine/http.js";
+import {
+  ExecutionPayloadStatus,
+  ExecutionPayloadStatus,
+  PayloadAttributes,
+  PayloadAttributes,
+} from "../../src/execution/engine/interface.js";
+import {initializeExecutionEngine, initializeExecutionEngine} from "../../src/execution/index.js";
 import {BeaconNode} from "../../src/index.js";
 import {ClockEvent} from "../../src/util/clock.js";
 import {TestLoggerOpts, testLogger} from "../utils/logger.js";

@@ -1,10 +1,10 @@
 import path from "node:path";
+import {expect} from "vitest";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {ACTIVE_PRESET, ForkAll} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {BeaconBlockBody, SSZTypesFor, ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
-import {expect} from "vitest";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
 import {RunnerType, TestRunnerFn} from "../utils/types.js";

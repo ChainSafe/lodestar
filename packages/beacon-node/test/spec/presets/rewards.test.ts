@@ -1,10 +1,10 @@
 import path from "node:path";
+import {expect} from "vitest";
 import {VectorCompositeType} from "@chainsafe/ssz";
 import {ACTIVE_PRESET} from "@lodestar/params";
 import {BeaconStateAllForks, beforeProcessEpoch} from "@lodestar/state-transition";
 import {getRewardsAndPenalties} from "@lodestar/state-transition/epoch";
 import {ssz} from "@lodestar/types";
-import {expect} from "vitest";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {getConfig} from "../../utils/config.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
