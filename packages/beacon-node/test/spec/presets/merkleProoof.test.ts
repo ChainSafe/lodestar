@@ -1,9 +1,9 @@
 import path from "node:path";
 import {expect} from "vitest";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
-import {ACTIVE_PRESET, ForkAll} from "@lodestar/params";
+import {ACTIVE_PRESET} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
-import {BeaconBlockBody, SSZTypesFor, ssz} from "@lodestar/types";
+import {BeaconBlockBody, sszTypesFor} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
@@ -12,7 +12,7 @@ import {RunnerType, TestRunnerFn} from "../utils/types.js";
 const merkleProof: TestRunnerFn<MerkleTestCase, string[]> = (fork) => {
   return {
     testFunction: (testcase) => {
-      const bodyView = (ssz[fork].BeaconBlockBody as SSZTypesFor<ForkAll, "BeaconBlockBody">).toView(testcase.object);
+      const bodyView = sszTypesFor(fork).BeaconBlockBody.toView(testcase.object);
       const branch = new Tree(bodyView.node).getSingleProof(testcase.proof.leaf_index);
       return branch.map(toHex);
     },
@@ -22,7 +22,7 @@ const merkleProof: TestRunnerFn<MerkleTestCase, string[]> = (fork) => {
         proof: InputType.YAML,
       },
       getSszTypes: () => ({
-        object: ssz[fork].BeaconBlockBody,
+        object: sszTypesFor(fork).BeaconBlockBody,
       }),
       timeout: 10000,
       shouldSkip: (_testCase, name) => {
