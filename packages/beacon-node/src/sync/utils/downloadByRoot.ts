@@ -157,6 +157,7 @@ export async function downloadByRoot({
     for (const columnSidecar of columnSidecars) {
       if (blockInput.hasColumn(columnSidecar.index)) {
         // the same DataColumnSidecar may be added by gossip while waiting for fetchByRoot
+        // TODO(fulu): add metric here to track this
         continue;
       }
 
