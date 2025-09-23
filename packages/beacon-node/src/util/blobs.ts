@@ -88,6 +88,10 @@ export async function dataColumnMatrixRecovery(
   }
 
   const firstDataColumn = partialSidecarsSorted[0];
+  if (firstDataColumn == null) {
+    // should not happen because we check the size of the cache before this
+    throw new Error("No data column found in cache to recover from");
+  }
   const blobCount = firstDataColumn.kzgCommitments.length;
 
   const fullColumns: Array<Uint8Array[]> = Array.from(
