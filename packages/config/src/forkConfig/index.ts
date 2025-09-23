@@ -115,6 +115,10 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
 
   const forkBoundariesDescendingEpochOrder = [...forkBoundariesAscendingEpochOrder].reverse();
 
+  // Convert basis points to milliseconds into the slot
+  const getSlotComponentDurationMs = (basisPoints: number): number =>
+    Math.floor((basisPoints * config.SLOT_DURATION_MS) / BASIS_POINTS);
+
   return {
     forks,
     forksAscendingEpochOrder,
@@ -201,23 +205,19 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
       return {epoch: config.ELECTRA_FORK_EPOCH, maxBlobsPerBlock: config.MAX_BLOBS_PER_BLOCK_ELECTRA};
     },
     getAttestationDueMs(_fork: ForkName): number {
-      return this.getSlotComponentDurationMs(config.ATTESTATION_DUE_BPS);
+      return getSlotComponentDurationMs(config.ATTESTATION_DUE_BPS);
     },
     getAggregateDueMs(_fork: ForkName): number {
-      return this.getSlotComponentDurationMs(config.AGGREGATE_DUE_BPS);
+      return getSlotComponentDurationMs(config.AGGREGATE_DUE_BPS);
     },
     getSyncMessageDueMs(_fork: ForkName): number {
-      return this.getSlotComponentDurationMs(config.SYNC_MESSAGE_DUE_BPS);
+      return getSlotComponentDurationMs(config.SYNC_MESSAGE_DUE_BPS);
     },
     getSyncContributionDueMs(_fork: ForkName): number {
-      return this.getSlotComponentDurationMs(config.CONTRIBUTION_DUE_BPS);
+      return getSlotComponentDurationMs(config.CONTRIBUTION_DUE_BPS);
     },
     getProposerReorgCutoffMs(_fork: ForkName): number {
-      return this.getSlotComponentDurationMs(config.PROPOSER_REORG_CUTOFF_BPS);
-    },
-    // Convert basis points to milliseconds into the slot
-    getSlotComponentDurationMs(basisPoints: number): number {
-      return Math.floor((basisPoints * config.SLOT_DURATION_MS) / BASIS_POINTS);
+      return getSlotComponentDurationMs(config.PROPOSER_REORG_CUTOFF_BPS);
     },
   };
 }
