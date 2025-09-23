@@ -1,6 +1,7 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {computeTimeAtSlot, getSyncMessageDueMs} from "@lodestar/state-transition";
+import {ForkName} from "@lodestar/params";
+import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {altair, ssz} from "@lodestar/types";
 import {RequiredSelective} from "@lodestar/utils";
 import {LightClientErrorCode} from "../../../../src/chain/errors/lightClientError.js";
@@ -89,7 +90,7 @@ describe("Light Client Finality Update validation", () => {
     // make update not too early
     const timeAtSignatureSlot =
       computeTimeAtSlot(config, lightClientFinalityUpdate.signatureSlot, chain.genesisTime) * 1000;
-    vi.advanceTimersByTime(timeAtSignatureSlot + getSyncMessageDueMs(config) + 1000);
+    vi.advanceTimersByTime(timeAtSignatureSlot + config.getSyncMessageDueMs(ForkName.phase0) + 1000);
 
     expect(() => {
       validateLightClientFinalityUpdate(config, chain, lightClientFinalityUpdate);
@@ -110,7 +111,7 @@ describe("Light Client Finality Update validation", () => {
     // make update not too early
     const timeAtSignatureSlot =
       computeTimeAtSlot(config, lightClientFinalityUpdate.signatureSlot, chain.genesisTime) * 1000;
-    vi.advanceTimersByTime(timeAtSignatureSlot + getSyncMessageDueMs(config) + 1000);
+    vi.advanceTimersByTime(timeAtSignatureSlot + config.getSyncMessageDueMs(ForkName.phase0) + 1000);
 
     // chain's getFinalityUpdate not mocked.
     // localFinalityUpdate will be null
@@ -144,7 +145,7 @@ describe("Light Client Finality Update validation", () => {
     // const currentTime = computeTimeAtSlot(config, chain.clock.currentSlotWithGossipDisparity, chain.genesisTime);
     const timeAtSignatureSlot =
       computeTimeAtSlot(config, lightClientFinalityUpdate.signatureSlot, chain.genesisTime) * 1000;
-    vi.advanceTimersByTime(timeAtSignatureSlot + getSyncMessageDueMs(config) + 1000);
+    vi.advanceTimersByTime(timeAtSignatureSlot + config.getSyncMessageDueMs(ForkName.phase0) + 1000);
 
     // satisfy:
     // [IGNORE] The received finality_update matches the locally computed one exactly
