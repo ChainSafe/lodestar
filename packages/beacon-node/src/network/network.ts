@@ -602,7 +602,7 @@ export class Network implements INetwork {
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.DataColumnSidecarsByRange, [Version.V1], request),
       // request's count represent the slots, so the actual max count received could be slots * blobs per slot
-      request.count * NUMBER_OF_COLUMNS,
+      request.count * request.columns.length,
       responseSszTypeByMethod[ReqRespMethod.DataColumnSidecarsByRange]
     );
   }
