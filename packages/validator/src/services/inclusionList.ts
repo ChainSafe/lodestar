@@ -1,5 +1,4 @@
-import {ApiClient} from "@lodestar/api";
-import {InclusionListDutyList} from "@lodestar/api/lib/beacon/routes/validator.js";
+import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {Slot, bellatrix, eip7805} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
@@ -77,7 +76,7 @@ export class InclusionListService {
 
   private async signAndPublishInclusionList(
     inclusionListTransactions: bellatrix.Transactions,
-    duties: InclusionListDutyList
+    duties: routes.validator.InclusionListDutyList
   ) {
     const signedInclusionLists: eip7805.SignedInclusionList[] = [];
 

@@ -1,5 +1,6 @@
 import {beforeAll, bench, describe} from "@chainsafe/benchmark";
 import {BitArray, toHexString} from "@chainsafe/ssz";
+import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {
   ExecutionStatus,
   ForkChoice,

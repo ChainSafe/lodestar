@@ -2,7 +2,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {CachedBeaconStateEip7805, computeEpochAtSlot} from "@lodestar/state-transition";
 import {Slot, ValidatorIndex, bellatrix, eip7805} from "@lodestar/types";
-import {Transactions} from "@lodestar/types/lib/bellatrix/types.js";
+import {Transactions} from "@lodestar/types/bellatrix";
 import {MapDef, toRootHex} from "@lodestar/utils";
 import {byteArrayArrayEquals, byteArrayEquals} from "../../util/bytes.js";
 import {IClock} from "../../util/clock.js";

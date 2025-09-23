@@ -22,18 +22,9 @@ import {
   sszTypesFor,
 } from "@lodestar/types";
 import {LogLevel, Logger, prettyBytes, toHex, toRootHex} from "@lodestar/utils";
-import {BlockInputColumns, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
+import {BlockInput, BlockInputColumns, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../../chain/blocks/blockInput/types.js";
-import {
-  BlobSidecarValidation,
-  BlockInput,
-  BlockInputAvailableData,
-  BlockInputType,
-  DataColumnsSource,
-  GossipedInputType,
-  InclusionListSource,
-  NullBlockInput,
-} from "../../chain/blocks/types.js";
+import {BlobSidecarValidation, InclusionListSource} from "../../chain/blocks/types.js";
 import {ChainEvent} from "../../chain/emitter.js";
 import {InclusionListError, InclusionListErrorCode} from "../../chain/errors/inclusionList.js";
 import {

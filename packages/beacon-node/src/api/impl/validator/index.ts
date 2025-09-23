@@ -60,6 +60,7 @@ import {
   toRootHex,
 } from "@lodestar/utils";
 import {MAX_BUILDER_BOOST_FACTOR} from "@lodestar/validator";
+import {BlockInputSource} from "../../../chain/blocks/blockInput/types.js";
 import {InclusionListSource} from "../../../chain/blocks/types.js";
 import {
   AttestationError,

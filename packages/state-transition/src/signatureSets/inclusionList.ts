@@ -1,6 +1,5 @@
 import {DOMAIN_INCLUSION_LIST_COMMITTEE} from "@lodestar/params";
 import {eip7805, ssz} from "@lodestar/types";
-
 import {CachedBeaconStateAllForks} from "../types.js";
 import {ISignatureSet, SignatureSetType, computeSigningRoot} from "../util/index.js";
 
