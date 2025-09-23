@@ -3,8 +3,9 @@ import path from "node:path";
 import {Readable} from "node:stream";
 import stream from "node:stream/promises";
 import {ReadableStream as NodeReadableStream} from "node:stream/web";
-import {fetch} from "@lodestar/utils";
 import yaml from "js-yaml";
+import {fetch} from "@lodestar/utils";
+
 const {load, dump, FAILSAFE_SCHEMA, Type} = yaml;
 
 import {mkdir} from "./fs.js";

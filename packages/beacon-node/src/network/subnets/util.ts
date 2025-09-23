@@ -1,11 +1,11 @@
 import {digest} from "@chainsafe/as-sha256";
 import {
+  ATTESTATION_SUBNET_COUNT,
   ATTESTATION_SUBNET_PREFIX_BITS,
   EPOCHS_PER_SUBNET_SUBSCRIPTION,
   NODE_ID_BITS,
   SUBNETS_PER_NODE,
 } from "@lodestar/params";
-import {ATTESTATION_SUBNET_COUNT} from "@lodestar/params";
 import {computeShuffledIndex} from "@lodestar/state-transition";
 import {Epoch, ssz} from "@lodestar/types";
 import {NodeId} from "./interface.js";

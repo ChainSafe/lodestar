@@ -20,8 +20,7 @@ import {Bytes32, DomainType, Epoch, ValidatorIndex} from "@lodestar/types";
 import {assert, bytesToBigInt, bytesToInt, intToBytes} from "@lodestar/utils";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "../types.js";
-import {computeStartSlotAtEpoch} from "./epoch.js";
-import {computeEpochAtSlot} from "./epoch.js";
+import {computeEpochAtSlot, computeStartSlotAtEpoch} from "./epoch.js";
 
 /**
  * Compute proposer indices for an epoch

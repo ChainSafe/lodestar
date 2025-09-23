@@ -1,9 +1,9 @@
 import EventEmitter from "node:events";
+import type {StrictEventEmitter} from "strict-event-emitter-types";
 import {ChainForkConfig} from "@lodestar/config";
 import {computeEpochAtSlot, computeTimeAtSlot, getCurrentSlot} from "@lodestar/state-transition";
 import type {Epoch, Slot} from "@lodestar/types";
 import {ErrorAborted} from "@lodestar/utils";
-import type {StrictEventEmitter} from "strict-event-emitter-types";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../constants/constants.js";
 
 export enum ClockEvent {

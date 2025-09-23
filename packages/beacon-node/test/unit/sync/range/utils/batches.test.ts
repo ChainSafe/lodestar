@@ -1,7 +1,7 @@
+import {describe, expect, it} from "vitest";
 import {config} from "@lodestar/config/default";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Epoch, Slot} from "@lodestar/types";
-import {describe, expect, it} from "vitest";
 import {Batch, BatchStatus} from "../../../../../src/sync/range/batch.js";
 import {
   getNextBatchToProcess,
@@ -9,6 +9,8 @@ import {
   toBeDownloadedStartEpoch,
   validateBatchesStatus,
 } from "../../../../../src/sync/range/utils/batches.js";
+import {CustodyConfig} from "../../../../../src/util/dataColumns.js";
+import {clock} from "../../../../utils/blocksAndData.js";
 import {validPeerIdStr} from "../../../../utils/peer.js";
 
 describe("sync / range / batches", () => {
@@ -220,14 +222,14 @@ describe("sync / range / batches", () => {
   });
 
   function createBatch(status: BatchStatus, startEpoch = 0): Batch {
-    const batch = new Batch(startEpoch, config);
+    const batch = new Batch(startEpoch, config, clock, new CustodyConfig({config, nodeId: Buffer.alloc(32)}));
 
     if (status === BatchStatus.AwaitingDownload) return batch;
 
     batch.startDownloading(peer);
     if (status === BatchStatus.Downloading) return batch;
 
-    batch.downloadingSuccess({blocks: [], pendingDataColumns: null});
+    batch.downloadingSuccess(peer, []);
     if (status === BatchStatus.AwaitingProcessing) return batch;
 
     batch.startProcessing();

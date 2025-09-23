@@ -1,12 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
-import {execCliCommand} from "@lodestar/test-utils";
-import {getKeystoresStr} from "@lodestar/test-utils";
 import {rimraf} from "rimraf";
 import {beforeAll, describe, expect, it, onTestFinished, vi} from "vitest";
-import {testFilesDir} from "../utils.js";
+import {execCliCommand, getKeystoresStr} from "@lodestar/test-utils";
 import {cachedPubkeysHex, cachedSeckeysHex} from "../utils/cachedKeys.js";
 import {expectKeys, startValidatorWithKeyManager} from "../utils/validator.js";
+import {testFilesDir} from "../utils.js";
 
 describe("import from fs then validate", () => {
   vi.setConfig({testTimeout: 30_000});

@@ -1,7 +1,7 @@
 import {setMaxListeners} from "node:events";
 import {Connection, PeerId, Stream} from "@libp2p/interface";
-import {Logger, MetricsRegisterExtra} from "@lodestar/utils";
 import type {Libp2p} from "libp2p";
+import {Logger, MetricsRegisterExtra} from "@lodestar/utils";
 import {Metrics, getMetrics} from "./metrics.js";
 import {ReqRespRateLimiter} from "./rate_limiter/ReqRespRateLimiter.js";
 import {SelfRateLimiter} from "./rate_limiter/selfRateLimiter.js";

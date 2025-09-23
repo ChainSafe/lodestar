@@ -1,9 +1,9 @@
 import path from "node:path";
+import {rimraf} from "rimraf";
+import {afterAll, beforeAll, beforeEach, describe, expect, it} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
 import {LevelDbController} from "@lodestar/db";
 import {ZERO_HASH} from "@lodestar/state-transition";
-import {rimraf} from "rimraf";
-import {afterAll, beforeAll, beforeEach, describe, expect, it} from "vitest";
 import {
   InterchangeError,
   InvalidAttestationError,

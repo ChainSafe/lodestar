@@ -1,7 +1,7 @@
-import {LodestarError} from "@lodestar/utils";
 import all from "it-all";
 import {pipe} from "it-pipe";
 import {describe, expect, it} from "vitest";
+import {LodestarError} from "@lodestar/utils";
 import {responseDecode} from "../../../src/encoders/responseDecode.js";
 import {ResponseIncoming} from "../../../src/types.js";
 import {responseEncodersErrorTestCases, responseEncodersTestCases} from "../../fixtures/encoders.js";

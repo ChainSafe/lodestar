@@ -1,9 +1,9 @@
 import http from "node:http";
 import https from "node:https";
 import url from "node:url";
+import httpProxy from "http-proxy";
 import {LogLevel} from "@lodestar/logger";
 import {getNodeLogger} from "@lodestar/logger/node";
-import httpProxy from "http-proxy";
 import {ELRequestHandler, VerifiedExecutionInitOptions} from "./interfaces.js";
 import {ProofProvider} from "./proof_provider/proof_provider.js";
 import {JsonRpcRequestOrBatch, JsonRpcRequestPayload, JsonRpcResponseOrBatch} from "./types.js";

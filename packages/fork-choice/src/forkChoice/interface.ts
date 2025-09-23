@@ -1,5 +1,8 @@
-import {DataAvailabilityStatus, EffectiveBalanceIncrements} from "@lodestar/state-transition";
-import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
+import {
+  CachedBeaconStateAllForks,
+  DataAvailabilityStatus,
+  EffectiveBalanceIncrements,
+} from "@lodestar/state-transition";
 import {
   AttesterSlashing,
   BeaconBlock,

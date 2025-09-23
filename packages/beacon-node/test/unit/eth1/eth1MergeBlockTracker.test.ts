@@ -1,7 +1,7 @@
+import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {ChainConfig} from "@lodestar/config";
 import {sleep} from "@lodestar/utils";
-import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {ZERO_HASH} from "../../../src/constants/index.js";
 import {Eth1MergeBlockTracker, StatusCode, toPowBlock} from "../../../src/eth1/eth1MergeBlockTracker.js";
 import {Eth1ProviderState, EthJsonRpcBlockRaw} from "../../../src/eth1/interface.js";

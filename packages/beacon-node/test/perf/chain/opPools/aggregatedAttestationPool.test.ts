@@ -1,10 +1,11 @@
 import {beforeAll, bench, describe} from "@chainsafe/benchmark";
 import {BitArray, toHexString} from "@chainsafe/ssz";
+import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ExecutionStatus, ForkChoice, IForkChoiceStore, ProtoArray} from "@lodestar/fork-choice";
 import {HISTORICAL_ROOTS_LIMIT, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {
   CachedBeaconStateAltair,
+  DataAvailabilityStatus,
   computeAnchorCheckpoint,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
@@ -12,8 +13,6 @@ import {
   newFilledArray,
 } from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-
-import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {generatePerfTestCachedStateAltair} from "../../../../../state-transition/test/perf/util.js";
 import {AggregatedAttestationPool} from "../../../../src/chain/opPools/aggregatedAttestationPool.js";
 

@@ -1,5 +1,5 @@
-import {config} from "@lodestar/config/default";
 import {describe} from "vitest";
+import {config} from "@lodestar/config/default";
 import {getClient} from "../../../src/keymanager/client.js";
 import {Endpoints} from "../../../src/keymanager/routes.js";
 import {getRoutes} from "../../../src/keymanager/server/index.js";

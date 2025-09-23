@@ -1,7 +1,8 @@
 /** biome-ignore-all lint/style/noNonNullAssertion: values all exist */
-import {beforeAll, afterAll, beforeEach, describe, it, expect} from "vitest";
+
+import {afterAll, beforeAll, beforeEach, describe, expect, it} from "vitest";
 import {getEnvLogger} from "@lodestar/logger/env";
-import {Repository, encodeKey, BUCKET_LENGTH, LevelDbController, type Db} from "../../src/index.js";
+import {BUCKET_LENGTH, type Db, LevelDbController, Repository, encodeKey} from "../../src/index.js";
 
 // Minimal fake SSZ-like type for string values
 const fakeType = {

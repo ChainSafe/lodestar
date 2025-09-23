@@ -1,3 +1,4 @@
+import {afterEach, describe, expect, it, vi} from "vitest";
 import {CompactMultiProof, computeDescriptor} from "@chainsafe/persistent-merkle-tree";
 import {JsonPath, fromHexString, toHexString} from "@chainsafe/ssz";
 import {ApiClient, getClient, routes} from "@lodestar/api";
@@ -8,7 +9,6 @@ import {TimestampFormatCode} from "@lodestar/logger";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {altair, ssz} from "@lodestar/types";
-import {afterEach, describe, expect, it, vi} from "vitest";
 import {HeadEventData} from "../../../src/chain/index.js";
 import {LogLevel, TestLoggerOpts, testLogger} from "../../utils/logger.js";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";

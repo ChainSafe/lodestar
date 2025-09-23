@@ -1,5 +1,5 @@
-import {fetch, sleep} from "@lodestar/utils";
 import axios from "axios";
+import {fetch, sleep} from "@lodestar/utils";
 
 type Method = "GET" | "POST" | "PUT";
 

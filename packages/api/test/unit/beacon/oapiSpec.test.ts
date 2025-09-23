@@ -1,7 +1,7 @@
 import path from "node:path";
 import {fileURLToPath} from "node:url";
-import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {beforeAll, describe, expect, it} from "vitest";
+import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {routes} from "../../../src/beacon/index.js";
 import {IgnoredProperty, runTestCheckAgainstSpec} from "../../utils/checkAgainstSpec.js";
 import {fetchOpenApiSpec} from "../../utils/fetchOpenApiSpec.js";

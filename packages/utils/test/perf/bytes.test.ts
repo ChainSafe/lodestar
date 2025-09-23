@@ -1,5 +1,4 @@
 import {bench, describe} from "@chainsafe/benchmark";
-import {toHexString} from "../../src/bytes.js";
 import {
   fromHex as browserFromHex,
   fromHexInto as browserFromHexInto,
@@ -7,6 +6,7 @@ import {
   toRootHex as browserToRootHex,
 } from "../../src/bytes/browser.js";
 import {fromHex, toHex, toRootHex} from "../../src/bytes/nodejs.js";
+import {toHexString} from "../../src/bytes.js";
 
 describe("bytes utils", () => {
   const runsFactor = 1000;

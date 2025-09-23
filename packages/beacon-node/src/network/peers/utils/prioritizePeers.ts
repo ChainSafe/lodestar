@@ -1,5 +1,5 @@
-import {BitArray} from "@chainsafe/ssz";
 import {Direction, PeerId} from "@libp2p/interface";
+import {BitArray} from "@chainsafe/ssz";
 import {ChainConfig} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {CustodyIndex, Status, SubnetID, altair, phase0} from "@lodestar/types";

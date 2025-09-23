@@ -1,5 +1,5 @@
-import {phase0, ssz} from "@lodestar/types";
 import {afterEach, beforeEach, describe, it, vi} from "vitest";
+import {phase0, ssz} from "@lodestar/types";
 import {AttesterSlashingErrorCode} from "../../../../src/chain/errors/attesterSlashingError.js";
 import {validateGossipAttesterSlashing} from "../../../../src/chain/validation/attesterSlashing.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";

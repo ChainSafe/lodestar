@@ -1,7 +1,7 @@
+import {describe, expect, it} from "vitest";
 import {CompositeViewDU} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
 import {phase0, ssz} from "@lodestar/types";
-import {describe, expect, it} from "vitest";
 import {getEffectiveBalancesFromStateBytes, loadValidator} from "../../../../src/util/loadState/loadValidator.js";
 import {generateState} from "../../../utils/state.js";
 import {generateValidators} from "../../../utils/validator.js";

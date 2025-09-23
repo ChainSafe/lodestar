@@ -4,7 +4,6 @@ import {BLS_WITHDRAWAL_PREFIX, ETH1_ADDRESS_WITHDRAWAL_PREFIX} from "@lodestar/p
 import {capella} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {verifyBlsToExecutionChangeSignature} from "../signatureSets/index.js";
-
 import {CachedBeaconStateCapella} from "../types.js";
 
 export function processBlsToExecutionChange(

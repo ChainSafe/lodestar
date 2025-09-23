@@ -1,3 +1,4 @@
+import {describe, expect, it} from "vitest";
 import {PublicKey, SecretKey} from "@chainsafe/blst";
 import {toHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
@@ -5,7 +6,6 @@ import {DOMAIN_DEPOSIT, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
 import {ZERO_HASH, computeDomain, computeSigningRoot, interopSecretKey} from "@lodestar/state-transition";
 import {ValidatorIndex, phase0, ssz} from "@lodestar/types";
 import {ErrorAborted} from "@lodestar/utils";
-import {describe, expect, it} from "vitest";
 import {GenesisBuilder} from "../../../../src/chain/genesis/genesis.js";
 import {ZERO_HASH_HEX} from "../../../../src/constants/index.js";
 import {Eth1ProviderState, EthJsonRpcBlockRaw, IEth1Provider} from "../../../../src/eth1/interface.js";

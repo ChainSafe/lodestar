@@ -1,11 +1,10 @@
+import {afterEach, describe, expect, it, vi} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
-import {EventData, EventType} from "@lodestar/api/lib/beacon/routes/events.js";
 import {ChainConfig} from "@lodestar/config";
 import {TimestampFormatCode} from "@lodestar/logger";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {phase0} from "@lodestar/types";
-import {afterEach, describe, expect, it, vi} from "vitest";
 import {ChainEvent} from "../../../src/chain/index.js";
 import {waitForEvent} from "../../utils/events/resolver.js";
 import {LogLevel, TestLoggerOpts, testLogger} from "../../utils/logger.js";
@@ -101,7 +100,7 @@ describe("sync / finalized sync for fulu", () => {
         240000,
         (finalized) => finalized.epoch >= FULU_FORK_EPOCH
       ),
-      waitForEvent<EventData[EventType.head]>(
+      waitForEvent<routes.events.EventData[routes.events.EventType.head]>(
         bn.chain.emitter,
         routes.events.EventType.head,
         100000,
@@ -130,7 +129,7 @@ describe("sync / finalized sync for fulu", () => {
     const headSummary = bn.chain.forkChoice.getHead();
     const head = await bn.db.block.get(fromHexString(headSummary.blockRoot));
     if (!head) throw Error("First beacon node has no head block");
-    const waitForSynced = waitForEvent<EventData[EventType.head]>(
+    const waitForSynced = waitForEvent<routes.events.EventData[routes.events.EventType.head]>(
       bn2.chain.emitter,
       routes.events.EventType.head,
       100000,

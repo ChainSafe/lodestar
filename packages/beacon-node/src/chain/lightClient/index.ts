@@ -45,7 +45,6 @@ import {
   sszTypesFor,
 } from "@lodestar/types";
 import {Logger, MapDef, pruneSetToMax, toRootHex} from "@lodestar/utils";
-
 import {ZERO_HASH} from "../../constants/index.js";
 import {IBeaconDb} from "../../db/index.js";
 import {NUM_WITNESS, NUM_WITNESS_ELECTRA} from "../../db/repositories/lightclientSyncCommitteeWitness.js";

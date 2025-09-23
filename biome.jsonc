@@ -12,7 +12,42 @@
   "assist": {
     "actions": {
       "source": {
-        "organizeImports": { "level": "off", "options": { "identifierOrder": "lexicographic" } },
+        "organizeImports": {
+          "level": "on",
+          "options": {
+            "identifierOrder": "lexicographic",
+            "groups": [
+              [
+                // Bun modules
+                ":BUN:",
+                // Node.js modules
+                ":NODE:"
+              ],
+              [
+                // Modules imported with the `npm:` protocol
+                "npm:*",
+                "npm:*/**"
+              ],
+              [
+                // Libraries
+                ":PACKAGE:",
+                // Libraries
+                ":PACKAGE_WITH_PROTOCOL:",
+                "!@chainsafe/**",
+                "!@lodestar/**"
+              ],
+              [
+                // URLs
+                ":URL:",
+                // Sharp aliases
+                ":ALIAS:"
+              ],
+              ["@chainsafe/**", "@lodestar/**"],
+              // All other paths
+              ":PATH:"
+            ]
+          }
+        },
         "useSortedKeys": { "level": "off", "options": { "sortOrder": "lexicographic" } }
       }
     }
@@ -28,6 +63,9 @@
       "!packages/**/*/node_modules/"
     ]
   },
+  "javascript": {
+    "globals": ["Bun"]
+  },
   "linter": {
     "rules": {
       "correctness": {
@@ -39,7 +77,8 @@
         },
         "useParseIntRadix": {
           "level": "off"
-        }
+        },
+        "noPrivateImports": "error"
       },
       "performance": {
         // This rule should be enabled but with considerations and careful review
@@ -148,6 +187,20 @@
               }
             ]
           }
+        },
+        // Currently there is no way to validate `imports` against package `exports` unless
+        // we change the tsconfig `moduleResolution`. This is a workaround for most common pattern
+        // used to export the files from packages
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "patterns": [
+              {
+                "group": "**/lib/**",
+                "message": "Avoid importing directly from a package's internal 'lib' directory. This can cause issues when the package is updated."
+              }
+            ]
+          }
         }
       },
       "suspicious": {
@@ -160,7 +213,9 @@
       },
       "nursery": {
         // Need to enable this rule with exception to anonymous functions
-        "useExplicitType": "off"
+        "useExplicitType": "off",
+        "noFloatingPromises": "error",
+        "noMisusedPromises": "error"
       },
       "complexity": {
         // Should be done in a separate PR
@@ -173,6 +228,15 @@
     }
   },
   "overrides": [
+    {
+      "includes": ["**/packages/**/test/**"],
+      "linter": {
+        "rules": {
+          "correctness": { "noPrivateImports": "off" },
+          "style": { "noRestrictedImports": "off" }
+        }
+      }
+    },
     // Code using console output
     {
       "includes": ["**/packages/cli/src/**", "**/packages/test-utils/src/**", "**/packages/flare/src/**"],

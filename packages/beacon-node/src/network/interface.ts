@@ -15,6 +15,8 @@ import {
   Upgrader,
 } from "@libp2p/interface";
 import type {AddressManager, ConnectionManager, Registrar, TransportManager} from "@libp2p/interface-internal";
+import type {Datastore} from "interface-datastore";
+import {Libp2p as ILibp2p} from "libp2p";
 import {
   AttesterSlashing,
   LightClientFinalityUpdate,
@@ -32,8 +34,7 @@ import {
   fulu,
   phase0,
 } from "@lodestar/types";
-import type {Datastore} from "interface-datastore";
-import {Libp2p as ILibp2p} from "libp2p";
+import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
 import {CustodyConfig} from "../util/dataColumns.js";
 import {PeerIdStr} from "../util/peerId.js";
 import {BeaconBlocksByRootRequest, BlobSidecarsByRootRequest, DataColumnSidecarsByRootRequest} from "../util/types.js";
@@ -66,7 +67,7 @@ export interface INetwork extends INetworkCorePublic {
   reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): void;
   shouldAggregate(subnet: SubnetID, slot: Slot): boolean;
   reStatusPeers(peers: PeerIdStr[]): Promise<void>;
-  searchUnknownSlotRoot(slotRoot: SlotRootHex, peer?: PeerIdStr): void;
+  searchUnknownSlotRoot(slotRoot: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void;
   // ReqResp
   sendBeaconBlocksByRange(
     peerId: PeerIdStr,

@@ -1,16 +1,16 @@
 import fs from "node:fs";
 import path from "node:path";
-import {getKeystoresStr} from "@lodestar/test-utils";
 import {rimraf} from "rimraf";
 import {beforeEach, describe, expect, it, vi} from "vitest";
+import {getKeystoresStr} from "@lodestar/test-utils";
 import {
   KeystoreDecryptOptions,
   decryptKeystoreDefinitions,
 } from "../../../src/cmds/validator/keymanager/decryptKeystoreDefinitions.js";
 import {LocalKeystoreDefinition} from "../../../src/cmds/validator/keymanager/interface.js";
 import {LockfileError, unlockFilepath} from "../../../src/util/lockfile.js";
-import {testFilesDir} from "../../utils.js";
 import {cachedSeckeysHex} from "../../utils/cachedKeys.js";
+import {testFilesDir} from "../../utils.js";
 
 describe("decryptKeystoreDefinitions", () => {
   vi.setConfig({testTimeout: 100_000, hookTimeout: 50_000});

@@ -2,7 +2,6 @@ import {ApiClient, routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {GENESIS_EPOCH, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Epoch, bellatrix} from "@lodestar/types";
-
 import {Metrics} from "../metrics.js";
 import {IClock, LoggerVc, batchItems} from "../util/index.js";
 import {ValidatorStore} from "./validatorStore.js";

@@ -1,9 +1,9 @@
-import {describe, it, expect} from "vitest";
+import {describe, expect, it} from "vitest";
 import {
-  encodeNumberForDbKey,
   decodeNumberForDbKey,
-  encodeStringForDbKey,
   decodeStringForDbKey,
+  encodeNumberForDbKey,
+  encodeStringForDbKey,
 } from "../../src/index.js";
 
 describe("encode/decode number for DB key", () => {

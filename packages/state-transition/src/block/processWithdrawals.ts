@@ -9,7 +9,6 @@ import {
   MIN_ACTIVATION_BALANCE,
 } from "@lodestar/params";
 import {ValidatorIndex, capella, ssz} from "@lodestar/types";
-
 import {MapDef, toRootHex} from "@lodestar/utils";
 import {CachedBeaconStateCapella, CachedBeaconStateElectra} from "../types.js";
 import {

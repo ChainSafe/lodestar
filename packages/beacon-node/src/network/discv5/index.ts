@@ -1,11 +1,11 @@
 import EventEmitter from "node:events";
-import {ENR, ENRData, SignableENR} from "@chainsafe/enr";
-import {Thread, Worker, spawn} from "@chainsafe/threads";
 import {privateKeyToProtobuf} from "@libp2p/crypto/keys";
 import {PrivateKey} from "@libp2p/interface";
+import {StrictEventEmitter} from "strict-event-emitter-types";
+import {ENR, ENRData, SignableENR} from "@chainsafe/enr";
+import {Thread, Worker, spawn} from "@chainsafe/threads";
 import {BeaconConfig, chainConfigFromJson, chainConfigToJson} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
-import {StrictEventEmitter} from "strict-event-emitter-types";
 import {NetworkCoreMetrics} from "../core/metrics.js";
 import {Discv5WorkerApi, Discv5WorkerData, LodestarDiscv5Opts} from "./types.js";
 

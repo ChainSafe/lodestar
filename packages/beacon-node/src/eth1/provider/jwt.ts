@@ -1,5 +1,6 @@
-import type {TAlgorithm} from "jwt-simple";
 // TODO: fix jwt-simple types
+
+import type {TAlgorithm} from "jwt-simple";
 import jwt from "jwt-simple";
 
 const {encode, decode} = jwt;

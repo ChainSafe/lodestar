@@ -1,5 +1,5 @@
-import {gcStats} from "@chainsafe/prometheus-gc-stats";
 import {Registry, collectDefaultMetrics} from "prom-client";
+import {gcStats} from "#prometheus-gc-stats-wrapper";
 
 export function collectNodeJSMetrics(register: Registry, prefix?: string): () => void {
   collectDefaultMetrics({

@@ -1,3 +1,4 @@
+import {MockedObject, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
@@ -7,11 +8,9 @@ import {
   SLOTS_PER_EPOCH,
   SUBNETS_PER_NODE,
 } from "@lodestar/params";
-import {ZERO_HASH} from "@lodestar/state-transition";
-import {getCurrentSlot} from "@lodestar/state-transition";
+import {ZERO_HASH, getCurrentSlot} from "@lodestar/state-transition";
 import {SubnetID} from "@lodestar/types";
 import {bigIntToBytes} from "@lodestar/utils";
-import {MockedObject, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {Eth2Gossipsub} from "../../../../src/network/gossip/gossipsub.js";
 import {MetadataController} from "../../../../src/network/metadata.js";
 import {NetworkConfig} from "../../../../src/network/networkConfig.js";

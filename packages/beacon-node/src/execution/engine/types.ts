@@ -1,6 +1,7 @@
 import {
   BYTES_PER_FIELD_ELEMENT,
   BYTES_PER_LOGS_BLOOM,
+  CELLS_PER_EXT_BLOB,
   CONSOLIDATION_REQUEST_TYPE,
   DEPOSIT_REQUEST_TYPE,
   FIELD_ELEMENTS_PER_BLOB,
@@ -22,11 +23,11 @@ import {
 } from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
-
 import {
   DATA,
   QUANTITY,
   bytesToData,
+  dataIntoBytes,
   dataToBytes,
   numToQuantity,
   quantityToBigint,
@@ -179,7 +180,6 @@ export type ExecutionPayloadRpc = {
   withdrawals?: WithdrawalRpc[]; // Capella hardfork
   blobGasUsed?: QUANTITY; // DENEB
   excessBlobGas?: QUANTITY; // DENEB
-  parentBeaconBlockRoot?: QUANTITY; // DENEB
 };
 
 export type WithdrawalRpc = {
@@ -210,6 +210,11 @@ export type BlobAndProofV2Rpc = {
   blob: DATA;
   proofs: DATA[];
 };
+
+const BLOB_BYTES = BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB;
+const PROOF_BYTES = 48;
+
+export const BLOB_AND_PROOF_V2_RPC_BYTES = BLOB_BYTES + PROOF_BYTES * CELLS_PER_EXT_BLOB;
 
 export type VersionedHashesRpc = DATA[];
 
@@ -403,8 +408,8 @@ export function parseBlobsBundle(data: BlobsBundleRpc): BlobsBundle {
   return {
     // As of Nov 17th 2022 according to Dan's tests Geth returns null if no blobs in block
     commitments: (data.commitments ?? []).map((kzg) => dataToBytes(kzg, 48)),
-    blobs: (data.blobs ?? []).map((blob) => dataToBytes(blob, BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB)),
-    proofs: (data.proofs ?? []).map((kzg) => dataToBytes(kzg, 48)),
+    blobs: (data.blobs ?? []).map((blob) => dataToBytes(blob, BLOB_BYTES)),
+    proofs: (data.proofs ?? []).map((kzg) => dataToBytes(kzg, PROOF_BYTES)),
   };
 }
 
@@ -579,16 +584,51 @@ export function serializeExecutionPayloadBody(data: ExecutionPayloadBody | null)
 export function deserializeBlobAndProofs(data: BlobAndProofRpc | null): BlobAndProof | null {
   return data
     ? {
-        blob: dataToBytes(data.blob, BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB),
-        proof: dataToBytes(data.proof, 48),
+        blob: dataToBytes(data.blob, BLOB_BYTES),
+        proof: dataToBytes(data.proof, PROOF_BYTES),
       }
     : null;
 }
 
 export function deserializeBlobAndProofsV2(data: BlobAndProofV2Rpc): BlobAndProofV2 {
   return {
-    blob: dataToBytes(data.blob, BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB),
-    proofs: data.proofs.map((proof) => dataToBytes(proof, 48)),
+    blob: dataToBytes(data.blob, BLOB_BYTES),
+    proofs: data.proofs.map((proof) => dataToBytes(proof, PROOF_BYTES)),
+  };
+}
+
+/**
+ * The same to deserializeBlobAndProofsV2 but using preallocated buffers since BlobAndProofV2Rpc is fixed size
+ */
+export function deserializeBlobAndProofsV2IntoBytes(data: BlobAndProofV2Rpc, buffer: Uint8Array): BlobAndProofV2 {
+  if (buffer.length !== BLOB_AND_PROOF_V2_RPC_BYTES) {
+    throw Error(
+      `Invalid buffer length ${buffer.length}, expected ${BLOB_AND_PROOF_V2_RPC_BYTES} to hold BlobAndProofV2Rpc`
+    );
+  }
+
+  // https://github.com/ethereum/execution-apis/blob/main/src/engine/osaka.md#blobandproofv2
+  // proofs MUST contain exactly CELLS_PER_EXT_BLOB cell proofs.
+  if (data.proofs.length !== CELLS_PER_EXT_BLOB) {
+    throw Error(`Invalid proofs length ${data.proofs.length}, expected ${CELLS_PER_EXT_BLOB}`);
+  }
+
+  const blob = dataIntoBytes(data.blob, buffer.subarray(0, BLOB_BYTES));
+  const proofs: Uint8Array[] = [];
+  for (let i = 0; i < CELLS_PER_EXT_BLOB; i++) {
+    const proof = dataIntoBytes(
+      data.proofs[i],
+      buffer.subarray(BLOB_BYTES + i * PROOF_BYTES, BLOB_BYTES + (i + 1) * PROOF_BYTES)
+    );
+    if (proof.length !== PROOF_BYTES) {
+      throw Error(`Invalid proof length ${proof.length}, expected ${PROOF_BYTES}`);
+    }
+    proofs.push(proof);
+  }
+
+  return {
+    blob,
+    proofs,
   };
 }
 

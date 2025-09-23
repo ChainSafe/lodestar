@@ -38,7 +38,7 @@ export const holeskyChainConfig: ChainConfig = {
   ELECTRA_FORK_EPOCH: 115968,
   // Fulu
   FULU_FORK_VERSION: b("0x07017000"),
-  FULU_FORK_EPOCH: Infinity,
+  FULU_FORK_EPOCH: 165120,
 
   // # 28,000,000,000 Gwei to ensure quicker ejection
   EJECTION_BALANCE: 28000000000,
@@ -51,5 +51,14 @@ export const holeskyChainConfig: ChainConfig = {
 
   // Blob Scheduling
   // ---------------------------------------------------------------
-  BLOB_SCHEDULE: [],
+  BLOB_SCHEDULE: [
+    {
+      EPOCH: 166400,
+      MAX_BLOBS_PER_BLOCK: 15,
+    },
+    {
+      EPOCH: 167936,
+      MAX_BLOBS_PER_BLOCK: 21,
+    },
+  ],
 };
