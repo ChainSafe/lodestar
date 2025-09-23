@@ -87,11 +87,7 @@ export async function dataColumnMatrixRecovery(
     return partialSidecarsSorted;
   }
 
-  const firstDataColumn = partialSidecarsSorted.length > 0 ? partialSidecarsSorted[0] : null;
-  if (firstDataColumn == null) {
-    // should not happen because we check the size of the cache before this
-    throw new Error("No data column found in cache to recover from");
-  }
+  const firstDataColumn = partialSidecarsSorted[0];
   const blobCount = firstDataColumn.kzgCommitments.length;
 
   const fullColumns: Array<Uint8Array[]> = Array.from(
@@ -104,8 +100,8 @@ export async function dataColumnMatrixRecovery(
     blobProofs.map((_, blobIndex) => {
       const cellIndices: number[] = [];
       const cells: Uint8Array[] = [];
-      for (const [columnIndex, dataColumn] of partialSidecarsSorted.entries()) {
-        cellIndices.push(columnIndex);
+      for (const dataColumn of partialSidecarsSorted) {
+        cellIndices.push(dataColumn.index);
         cells.push(dataColumn.column[blobIndex]);
       }
       // recovered cells and proofs are of the same row/blob, their length should be NUMBER_OF_COLUMNS
