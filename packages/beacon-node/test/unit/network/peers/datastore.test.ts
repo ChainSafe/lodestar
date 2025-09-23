@@ -1,18 +1,18 @@
-import {LevelDatastore} from "datastore-level";
+import {FsDatastore} from "datastore-fs";
 import {Key} from "interface-datastore";
 import {MockedObject, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {Eth2PeerDataStore} from "../../../../src/network/peers/datastore.js";
 
-vi.mock("datastore-level");
+vi.mock("datastore-fs");
 
 describe("Eth2PeerDataStore", () => {
   let eth2Datastore: Eth2PeerDataStore;
-  let dbDatastoreStub: MockedObject<LevelDatastore>;
+  let dbDatastoreStub: MockedObject<FsDatastore>;
 
   beforeEach(() => {
     vi.useFakeTimers({now: Date.now()});
 
-    dbDatastoreStub = vi.mocked(new LevelDatastore({} as any));
+    dbDatastoreStub = vi.mocked(new FsDatastore({} as any));
     eth2Datastore = new Eth2PeerDataStore(dbDatastoreStub, {threshold: 2, maxMemoryItems: 3});
 
     vi.spyOn(dbDatastoreStub, "put").mockResolvedValue({} as any);

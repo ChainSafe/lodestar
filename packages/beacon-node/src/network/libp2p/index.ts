@@ -9,6 +9,7 @@ import {createLibp2p} from "libp2p";
 import {Registry} from "prom-client";
 import {ENR} from "@chainsafe/enr";
 import {noise} from "@chainsafe/libp2p-noise";
+import {asCrypto, defaultCrypto} from "@chainsafe/libp2p-noise/crypto";
 import {Libp2p, LodestarComponents} from "../interface.js";
 import {NetworkOptions, defaultNetworkOptions} from "../options.js";
 import {Eth2PeerDataStore} from "../peers/datastore.js";
@@ -63,13 +64,21 @@ export async function createNodeJsLibp2p(
     }
   }
 
+  const noiseCrypto = {
+    ...defaultCrypto,
+  };
+  if (globalThis.Bun) {
+    noiseCrypto.chaCha20Poly1305Decrypt = asCrypto.chaCha20Poly1305Decrypt;
+    noiseCrypto.chaCha20Poly1305Encrypt = asCrypto.chaCha20Poly1305Encrypt;
+  }
+
   return createLibp2p({
     privateKey,
     addresses: {
       listen: localMultiaddrs,
       announce: [],
     },
-    connectionEncrypters: [noise()],
+    connectionEncrypters: [noise({crypto: noiseCrypto})],
     // Reject connections when the server's connection count gets high
     transports: [
       tcp({

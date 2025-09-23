@@ -195,10 +195,27 @@ export async function getDataColumnSidecarsFromExecution(
   // add all sampled columns to the block input, even if we didn't sample them
   const seenTimestampSec = Date.now() / 1000;
   for (const columnSidecar of sampledColumns) {
-    blockInput.addColumn(
-      {columnSidecar, blockRootHex: blockInput.blockRootHex, source: BlockInputSource.engine, seenTimestampSec},
-      {throwOnDuplicateAdd: false} // columns may have been added while waiting
-    );
+    if (blockInput.hasColumn(columnSidecar.index)) {
+      // columns may have been added while waiting
+      // TODO(fulu): add metrics for this condition
+      continue;
+    }
+
+    blockInput.addColumn({
+      columnSidecar,
+      blockRootHex: blockInput.blockRootHex,
+      source: BlockInputSource.engine,
+      seenTimestampSec,
+    });
+
+    if (emitter.listenerCount(routes.events.EventType.dataColumnSidecar)) {
+      emitter.emit(routes.events.EventType.dataColumnSidecar, {
+        blockRoot: blockInput.blockRootHex,
+        slot: blockInput.slot,
+        index: columnSidecar.index,
+        kzgCommitments: columnSidecar.kzgCommitments.map(toHex),
+      });
+    }
   }
 
   metrics?.dataColumns.bySource.inc({source: BlockInputSource.engine}, previouslyMissingColumns.length);
