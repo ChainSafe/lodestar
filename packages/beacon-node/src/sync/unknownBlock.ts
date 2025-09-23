@@ -25,7 +25,6 @@ import {MAX_CONCURRENT_REQUESTS} from "./constants.js";
 import {PendingBlock, PendingBlockStatus, PendingBlockType} from "./interface.js";
 import {SyncOptions} from "./options.js";
 import {getAllDescendantBlocks, getDescendantBlocks, getUnknownAndAncestorBlocks} from "./utils/pendingBlocksTree.js";
-import {getAttestationDueMs} from "@lodestar/state-transition";
 
 const MAX_ATTEMPTS_PER_BLOCK = 5;
 const MAX_KNOWN_BAD_BLOCKS = 500;
@@ -54,7 +53,8 @@ export class UnknownBlockSync {
     private readonly opts?: SyncOptions
   ) {
     this.maxPendingBlocks = opts?.maxPendingBlocks ?? MAX_PENDING_BLOCKS;
-    this.proposerBoostSecWindow = getAttestationDueMs(config) / 1000;
+    // TODO GLOAS: Pass in a real fork name
+    this.proposerBoostSecWindow = config.getAttestationDueMs(ForkName.phase0) / 1000;
     this.peerBalancer = new UnknownBlockPeerBalancer(this.network.custodyConfig);
 
     if (metrics) {

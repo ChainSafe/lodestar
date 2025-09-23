@@ -3,7 +3,7 @@ import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
-import {EFFECTIVE_BALANCE_INCREMENT, GENESIS_SLOT, SLOTS_PER_EPOCH, isForkPostElectra} from "@lodestar/params";
+import {EFFECTIVE_BALANCE_INCREMENT, ForkName, GENESIS_SLOT, SLOTS_PER_EPOCH, isForkPostElectra} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   BeaconStateElectra,
@@ -18,7 +18,6 @@ import {
   createCachedBeaconState,
   getEffectiveBalanceIncrementsZeroInactive,
   getEffectiveBalancesFromStateBytes,
-  getAggregateDueMs,
   isCachedBeaconState,
   processSlots,
 } from "@lodestar/state-transition";
@@ -253,7 +252,8 @@ export class BeaconChain implements IBeaconChain {
     if (!clock) clock = new Clock({config, genesisTime: this.genesisTime, signal});
 
     this.blacklistedBlocks = new Map((opts.blacklistedBlocks ?? []).map((hex) => [hex, null]));
-    const preAggregateCutOffTime = getAggregateDueMs(config) / 1000;
+    // TODO GLOAS: Pass in a real fork name
+    const preAggregateCutOffTime = config.getAggregateDueMs(ForkName.phase0) / 1000;
     this.attestationPool = new AttestationPool(
       config,
       clock,

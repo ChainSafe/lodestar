@@ -58,4 +58,12 @@ export type ForkConfig = {
   getBlobParameters(epoch: Epoch): BlobParameters;
   /** Get max request blob sidecars by hard-fork */
   getMaxRequestBlobSidecars(fork: ForkName): number;
+
+  getAttestationDueMs(_fork: ForkName): number;
+  getAggregateDueMs(_fork: ForkName): number;
+  getSyncMessageDueMs(_fork: ForkName): number;
+  getSyncContributionDueMs(_fork: ForkName): number;
+  getProposerReorgCutoffMs(_fork: ForkName): number;
+  // Convert basis points to milliseconds into the slot
+  getSlotComponentDurationMs(basisPoints: number): number;
 };

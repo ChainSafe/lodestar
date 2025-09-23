@@ -1,4 +1,5 @@
 import {
+  BASIS_POINTS,
   ForkAll,
   ForkName,
   ForkPostAltair,
@@ -203,5 +204,29 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     getMaxRequestBlobSidecars(fork: ForkName): number {
       return isForkPostElectra(fork) ? config.MAX_REQUEST_BLOB_SIDECARS_ELECTRA : config.MAX_REQUEST_BLOB_SIDECARS;
     },
+    getAttestationDueMs(_fork: ForkName): number {
+      return this.getSlotComponentDurationMs(config.ATTESTATION_DUE_BPS);
+    },
+
+    getAggregateDueMs(_fork: ForkName): number {
+      return this.getSlotComponentDurationMs(config.AGGREGATE_DUE_BPS);
+    },
+
+    getSyncMessageDueMs(_fork: ForkName): number {
+      return this.getSlotComponentDurationMs(config.SYNC_MESSAGE_DUE_BPS);
+    },
+
+    getSyncContributionDueMs(_fork: ForkName): number {
+      return this.getSlotComponentDurationMs(config.CONTRIBUTION_DUE_BPS);
+    },
+
+    getProposerReorgCutoffMs(_fork: ForkName): number {
+      return this.getSlotComponentDurationMs(config.PROPOSER_REORG_CUTOFF_BPS);
+    },
+
+    // Convert basis points to milliseconds into the slot
+    getSlotComponentDurationMs(basisPoints: number): number {
+      return Math.floor((basisPoints * config.SLOT_DURATION_MS) / BASIS_POINTS);
+    }
   };
 }

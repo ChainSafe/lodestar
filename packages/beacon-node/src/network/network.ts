@@ -5,9 +5,9 @@ import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
-import {ForkSeq, NUMBER_OF_COLUMNS} from "@lodestar/params";
+import {ForkName, ForkSeq, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
-import {computeEpochAtSlot, computeTimeAtSlot, getSyncMessageDueMs} from "@lodestar/state-transition";
+import {computeEpochAtSlot, computeTimeAtSlot} from "@lodestar/state-transition";
 import {
   AttesterSlashing,
   LightClientBootstrap,
@@ -719,8 +719,9 @@ export class Network implements INetwork {
   };
 
   private waitForSyncMessageCutoff = async (slot: number): Promise<void> => {
+    // TODO GLOAS: Pass in a real fork name
     const secAtSlot =
-      computeTimeAtSlot(this.config, slot, this.chain.genesisTime) + getSyncMessageDueMs(this.config) / 1000;
+      computeTimeAtSlot(this.config, slot, this.chain.genesisTime) + this.config.getSyncMessageDueMs(ForkName.phase0) / 1000;
     const msToSlot = secAtSlot * 1000 - Date.now();
     await sleep(msToSlot, this.controller.signal);
   };

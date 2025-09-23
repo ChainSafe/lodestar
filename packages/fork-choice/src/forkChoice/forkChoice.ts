@@ -1,5 +1,5 @@
 import {ChainConfig, ChainForkConfig} from "@lodestar/config";
-import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {ForkName, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   DataAvailabilityStatus,
@@ -8,9 +8,7 @@ import {
   computeEpochAtSlot,
   computeSlotsSinceEpochStart,
   computeStartSlotAtEpoch,
-  getAttestationDueMs,
   getAttesterSlashableIndices,
-  getProposerReorgCutoffMs,
   isExecutionBlockBodyType,
   isExecutionEnabled,
   isExecutionStateType,
@@ -1193,7 +1191,8 @@ export class ForkChoice implements IForkChoice {
    * Child class can overwrite this for testing purpose.
    */
   protected isBlockTimely(block: BeaconBlock, blockDelaySec: number): boolean {
-    const isBeforeLateBlockCutoff = blockDelaySec * 1000 < getAttestationDueMs(this.config);
+    // TODO GLOAS: Pass in a real fork name
+    const isBeforeLateBlockCutoff = blockDelaySec * 1000 < this.config.getAttestationDueMs(ForkName.phase0);
     return this.fcStore.currentSlot === block.slot && isBeforeLateBlockCutoff;
   }
 
@@ -1201,7 +1200,8 @@ export class ForkChoice implements IForkChoice {
    * https://github.com/ethereum/consensus-specs/blob/v1.5.0/specs/phase0/fork-choice.md#is_proposing_on_time
    */
   private isProposingOnTime(secFromSlot: number): boolean {
-    const proposerReorgCutoff = getProposerReorgCutoffMs(this.config);
+    // TODO GLOAS: Pass in a real fork name
+    const proposerReorgCutoff = this.config.getProposerReorgCutoffMs(ForkName.phase0);
     return secFromSlot * 1000 <= proposerReorgCutoff;
   }
 

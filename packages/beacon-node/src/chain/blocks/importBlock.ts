@@ -21,7 +21,6 @@ import {
   RootCache,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
-  getAttestationDueMs,
   isExecutionStateType,
   isStartSlotOfEpoch,
   isStateValidatorsNodesPopulated,
@@ -266,7 +265,8 @@ export async function importBlock(
       // We want to track recent blocks coming from gossip, unknown block sync, and API.
       if (delaySec < SLOTS_PER_EPOCH * this.config.SECONDS_PER_SLOT) {
         this.metrics.importBlock.elapsedTimeTillBecomeHead.observe(delaySec);
-        const cutOffSec = getAttestationDueMs(this.config) / 1000;
+        // TODO GLOAS: Pass in a real fork name
+        const cutOffSec = this.config.getAttestationDueMs(ForkName.phase0) / 1000;
         if (delaySec > cutOffSec) {
           this.metrics.importBlock.setHeadAfterCutoff.inc();
         }
