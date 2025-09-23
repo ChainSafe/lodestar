@@ -119,6 +119,7 @@ export async function downloadByRoot({
     for (const blobSidecar of blobSidecars) {
       if (blockInput.hasBlob(blobSidecar.index)) {
         // the same BlobSidecar may be added by gossip while waiting for fetchByRoot
+        // TODO(fulu): add metric here to track this
         continue;
       }
 
