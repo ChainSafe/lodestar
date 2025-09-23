@@ -9,7 +9,7 @@ import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
 import {RunnerType, TestRunnerFn} from "../utils/types.js";
 
-const merkle: TestRunnerFn<MerkleTestCase, string[]> = (fork) => {
+const merkleProof: TestRunnerFn<MerkleTestCase, string[]> = (fork) => {
   return {
     testFunction: (testcase) => {
       const bodyView = (ssz[fork].BeaconBlockBody as SSZTypesFor<ForkAll, "BeaconBlockBody">).toView(testcase.object);
@@ -51,5 +51,5 @@ interface IProof {
 }
 
 specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
-  merkle_proof: {type: RunnerType.default, fn: merkle},
+  merkle_proof: {type: RunnerType.default, fn: merkleProof},
 });
