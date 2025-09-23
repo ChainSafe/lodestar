@@ -290,17 +290,6 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA: electraForkRelevant,
     MAX_BLOBS_PER_BLOCK_ELECTRA: electraForkRelevant,
 
-    // EIP-7805
-    ATTESTATION_DEADLINE: eip7805ForkRelevant,
-    PROPOSER_INCLUSION_LIST_CUT_OFF: eip7805ForkRelevant,
-    VIEW_FREEZE_DEADLINE: eip7805ForkRelevant,
-    INCLUSION_LIST_SUBMISSION_DUE_BPS: eip7805ForkRelevant,
-    PROPOSER_INCLUSION_LIST_CUTOFF_BPS: eip7805ForkRelevant,
-    VIEW_FREEZE_CUTOFF_BPS: eip7805ForkRelevant,
-    MAX_REQUEST_INCLUSION_LIST: eip7805ForkRelevant,
-    MAX_BYTES_PER_INCLUSION_LIST: eip7805ForkRelevant,
-    INCLUSION_LIST_COMMITTEE_SIZE: eip7805ForkRelevant,
-
     // FULU
     /////////////////
     CELLS_PER_EXT_BLOB: fuluForkRelevant,
@@ -314,6 +303,17 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     VALIDATOR_CUSTODY_REQUIREMENT: fuluForkRelevant,
     BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: fuluForkRelevant,
     BLOB_SCHEDULE: fuluForkRelevant,
+
+    // EIP-7805
+    ATTESTATION_DEADLINE: eip7805ForkRelevant,
+    PROPOSER_INCLUSION_LIST_CUT_OFF: eip7805ForkRelevant,
+    VIEW_FREEZE_DEADLINE: eip7805ForkRelevant,
+    INCLUSION_LIST_SUBMISSION_DUE_BPS: eip7805ForkRelevant,
+    PROPOSER_INCLUSION_LIST_CUTOFF_BPS: eip7805ForkRelevant,
+    VIEW_FREEZE_CUTOFF_BPS: eip7805ForkRelevant,
+    MAX_REQUEST_INCLUSION_LIST: eip7805ForkRelevant,
+    MAX_BYTES_PER_INCLUSION_LIST: eip7805ForkRelevant,
+    INCLUSION_LIST_COMMITTEE_SIZE: eip7805ForkRelevant,
 
     // GLOAS
     ATTESTATION_DUE_BPS_GLOAS: gloasForkRelevant,

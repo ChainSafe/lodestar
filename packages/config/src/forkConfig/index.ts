@@ -185,7 +185,6 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
       const fork = this.getForkInfoAtEpoch(epoch).name;
 
       switch (fork) {
-        case ForkName.eip7805:
         case ForkName.electra:
           return config.MAX_BLOBS_PER_BLOCK_ELECTRA;
         case ForkName.deneb:
