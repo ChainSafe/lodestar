@@ -115,13 +115,13 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
   addPeer(peerId: PeerIdStr, localStatus: Status, peerStatus: Status): void {
     // Compute if we should do a Finalized or Head sync with this peer
     const {syncType, startEpoch, target} = getRangeSyncTarget(localStatus, peerStatus, this.chain.forkChoice);
-    this.logger.debug("Sync peer joined", {
+    this.logger.debug("RangeSync.addPeer", {
       peer: peerId,
       syncType,
       startEpoch,
       targetSlot: target.slot,
       targetRoot: toRootHex(target.root),
-      earliestAvailableSlot: (peerStatus as fulu.Status).earliestAvailableSlot ?? Infinity,
+      earliestAvailableSlot: (peerStatus as fulu.Status).earliestAvailableSlot ?? "pre-fulu",
     });
 
     // If the peer existed in any other chain, remove it.

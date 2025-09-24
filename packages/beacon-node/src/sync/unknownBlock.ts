@@ -1,7 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkSeq, INTERVALS_PER_SLOT} from "@lodestar/params";
 import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
-import {RootHex, Slot} from "@lodestar/types";
+import {RootHex, Slot, fulu} from "@lodestar/types";
 import {Logger, prettyBytes, prettyPrintIndices, pruneSetToMax, sleep} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
@@ -248,9 +248,19 @@ export class BlockInputSync {
 
   private onPeerConnected = (data: NetworkEventData[NetworkEvent.peerConnected]): void => {
     try {
-      const peerId = data.peer;
-      const peerSyncMeta = this.network.getConnectedPeerSyncMeta(peerId);
-      this.peerBalancer.onPeerConnected(data.peer, peerSyncMeta);
+      const earliestAvailableSlot = (data.status as fulu.Status).earliestAvailableSlot; // could be undefined pre-fulu
+      this.logger.verbose("BlockInputSync.onPeerConnected", {
+        peer: prettyPrintPeerIdStr(data.peer),
+        clientAgent: data.clientAgent,
+        custodyColumns: prettyPrintIndices(data.custodyColumns),
+        earliestAvailableSlot: earliestAvailableSlot ?? "pre-fulu",
+      });
+      this.peerBalancer.onPeerConnected(data.peer, {
+        peerId: data.peer,
+        client: data.clientAgent,
+        custodyColumns: data.custodyColumns,
+        earliestAvailableSlot,
+      });
       this.triggerUnknownBlockSearch();
     } catch (e) {
       this.logger.debug("Error handling peerConnected event", {}, e as Error);

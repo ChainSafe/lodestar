@@ -733,7 +733,7 @@ export class Network implements INetwork {
     const {peer, clientAgent, custodyColumns, status} = data;
     const earliestAvailableSlot = (status as fulu.Status).earliestAvailableSlot;
     this.logger.verbose("onPeerConnected", {
-      peer,
+      peer: prettyPrintPeerIdStr(peer),
       clientAgent,
       custodyColumns: prettyPrintIndices(custodyColumns),
       earliestAvailableSlot: earliestAvailableSlot ?? "pre-fulu",
