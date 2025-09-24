@@ -8,7 +8,7 @@ import {Bytes32, ssz} from "@lodestar/types";
 import {Bucket} from "../../../../src/db/buckets.js";
 
 vi.mock("@lodestar/db", async (importOriginal) => {
-  const mod = await importOriginal<typeof import("@lodestar/db")>();
+  const mod = await importOriginal<typeof import("@lodestar/db/controller/level")>();
 
   return {
     ...mod,
