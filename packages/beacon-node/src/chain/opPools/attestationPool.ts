@@ -74,7 +74,6 @@ export class AttestationPool {
   constructor(
     private readonly config: ChainForkConfig,
     private readonly clock: IClock,
-    private readonly cutOffSecFromSlot: number,
     private readonly preaggregateSlotDistance = 0,
     private readonly metrics: Metrics | null = null
   ) {}
@@ -126,7 +125,7 @@ export class AttestationPool {
 
     // Reject gossip attestations in the current slot but come to this pool very late
     // for api attestations, we allow them to be added to the pool
-    if (!priority && this.clock.secFromSlot(slot) > this.cutOffSecFromSlot) {
+    if (!priority && this.clock.msFromSlot(slot) > this.config.getAggregateDueMs(fork)) {
       return InsertOutcome.Late;
     }
 

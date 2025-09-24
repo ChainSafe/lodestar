@@ -58,6 +58,10 @@ export type IClock = StrictEventEmitter<EventEmitter, ClockEvents> & {
    * Return second from a slot to either toSec or now.
    */
   secFromSlot(slot: Slot, toSec?: number): number;
+  /**
+   * Return milliseconds from a slot to either toMs or now.
+   */
+  msFromSlot(slot: Slot, toMs?: number): number;
 };
 
 /**
@@ -171,6 +175,10 @@ export class Clock extends EventEmitter implements IClock {
 
   secFromSlot(slot: Slot, toSec = Date.now() / 1000): number {
     return toSec - (this.genesisTime + slot * this.config.SECONDS_PER_SLOT);
+  }
+
+  msFromSlot(slot: Slot, toMs = Date.now()): number {
+    return toMs - (this.genesisTime * 1000 + slot * this.config.SLOT_DURATION_MS);
   }
 
   private onNextSlot = (slot?: Slot): void => {

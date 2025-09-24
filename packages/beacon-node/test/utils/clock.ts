@@ -42,4 +42,9 @@ export class ClockStatic extends EventEmitter implements IClock {
     // SECONDS_PER_SLOT = 6 in minimal config
     return (toSec ?? Date.now() / 1000) - slot * 6;
   }
+
+  msFromSlot(slot: Slot, toMs?: number): number {
+    // SLOT_DURATION_MS = 6000 in minimal config
+    return (toMs ?? Date.now()) - slot * 6000;
+  }
 }

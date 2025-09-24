@@ -1,7 +1,7 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
 import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {ForkName, GENESIS_SLOT, MAX_COMMITTEES_PER_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {GENESIS_SLOT, MAX_COMMITTEES_PER_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {electra, phase0, ssz} from "@lodestar/types";
 import {AttestationPool} from "../../../../src/chain/opPools/attestationPool.js";
 import {InsertOutcome} from "../../../../src/chain/opPools/types.js";
@@ -26,8 +26,6 @@ describe("AttestationPool", () => {
 
   const validatorCommitteeIndex = 0;
   const committeeSize = 128;
-
-  const cutOffSecFromSlot = config.getAggregateDueMs(ForkName.phase0) / 1000;
 
   // Mock attestations
   const electraAttestationData: phase0.AttestationData = {
@@ -58,7 +56,7 @@ describe("AttestationPool", () => {
   let pool: AttestationPool;
 
   beforeEach(() => {
-    pool = new AttestationPool(config, clockStub, cutOffSecFromSlot);
+    pool = new AttestationPool(config, clockStub);
   });
 
   it("add correct electra attestation", () => {
