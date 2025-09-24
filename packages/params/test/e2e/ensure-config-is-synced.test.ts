@@ -8,12 +8,18 @@ import {loadConfigYaml} from "../yaml.js";
 // Not e2e, but slow. Run with e2e tests
 
 /** https://github.com/ethereum/consensus-specs/releases */
-const specConfigCommit = "v1.6.0-alpha.5";
+const specConfigCommit = "v1.6.0-alpha.6";
 /**
  * Fields that we filter from local config when doing comparison.
  * Ideally this should be empty as it is not spec compliant
  */
-const ignoredLocalPresetFields: (keyof BeaconPreset)[] = [];
+// TODO GLOAS: These fields are supposed to be in the preset. However Gloas's preset in consensus-specs are still not up to date.
+/// Remove these fields after a spec is released that includes this fix https://github.com/ethereum/consensus-specs/pull/4607
+const ignoredLocalPresetFields: (keyof BeaconPreset)[] = [
+  "MAX_PAYLOAD_ATTESTATIONS",
+  "PTC_SIZE",
+  "BUILDER_PENDING_WITHDRAWALS_LIMIT",
+];
 
 describe("Ensure config is synced", () => {
   vi.setConfig({testTimeout: 60 * 1000});

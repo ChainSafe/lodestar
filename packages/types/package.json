@@ -15,27 +15,35 @@
   "type": "module",
   "exports": {
     ".": {
+      "bun": "./src/index.ts",
       "import": "./lib/index.js"
     },
     "./altair": {
+      "bun": "./src/altair/index.ts",
       "import": "./lib/altair/index.js"
     },
     "./capella": {
+      "bun": "./src/capella/index.ts",
       "import": "./lib/capella/index.js"
     },
     "./bellatrix": {
+      "bun": "./src/bellatrix/index.ts",
       "import": "./lib/bellatrix/index.js"
     },
     "./deneb": {
+      "bun": "./src/deneb/index.ts",
       "import": "./lib/deneb/index.js"
     },
     "./electra": {
+      "bun": "./src/electra/index.ts",
       "import": "./lib/electra/index.js"
     },
     "./fulu": {
+      "bun": "./src/fulu/index.ts",
       "import": "./lib/fulu/index.js"
     },
     "./phase0": {
+      "bun": "./src/phase0/index.ts",
       "import": "./lib/phase0/index.js"
     }
   },

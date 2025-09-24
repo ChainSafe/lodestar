@@ -12,9 +12,11 @@
   "type": "module",
   "exports": {
     ".": {
+      "bun": "./src/index.ts",
       "import": "./lib/index.js"
     },
     "./doubles": {
+      "bun": "./src/doubles.ts",
       "import": "./lib/doubles.js"
     }
   },

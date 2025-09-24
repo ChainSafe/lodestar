@@ -12,7 +12,12 @@
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
   "type": "module",
-  "exports": "./lib/index.js",
+  "exports": {
+    ".": {
+      "bun": "./src/index.ts",
+      "import": "./lib/index.js"
+    }
+  },
   "types": "./lib/index.d.ts",
   "files": [
     "lib/**/*.d.ts",

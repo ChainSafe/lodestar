@@ -15,18 +15,23 @@
   "type": "module",
   "exports": {
     ".": {
+      "bun": "./src/index.ts",
       "import": "./lib/index.js"
     },
     "./browser": {
+      "bun": "./src/browser.ts",
       "import": "./lib/browser.js"
     },
     "./env": {
+      "bun": "./src/env.ts",
       "import": "./lib/env.js"
     },
     "./node": {
+      "bun": "./src/node.ts",
       "import": "./lib/node.js"
     },
     "./empty": {
+      "bun": "./src/empty.ts",
       "import": "./lib/empty.js"
     }
   },

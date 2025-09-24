@@ -64,7 +64,7 @@ export class MetadataController {
     if (config.getForkSeq(computeStartSlotAtEpoch(currentEpoch)) >= ForkSeq.altair) {
       // Only persist syncnets if altair fork is already activated. If currentFork is altair but head is phase0
       // adding syncnets to the ENR is not a problem, we will just have a useless field for a few hours.
-      this.onSetValue(ENRKey.syncnets, ssz.phase0.AttestationSubnets.serialize(this._metadata.syncnets));
+      this.onSetValue(ENRKey.syncnets, ssz.altair.SyncSubnets.serialize(this._metadata.syncnets));
     }
 
     // Set CGC regardless of fork. It may be useful to clients before Fulu, and will be ignored otherwise.
@@ -81,6 +81,7 @@ export class MetadataController {
 
   set syncnets(syncnets: BitArray) {
     this.onSetValue(ENRKey.syncnets, ssz.altair.SyncSubnets.serialize(syncnets));
+    this._metadata.seqNumber++;
     this._metadata.syncnets = syncnets;
   }
 

@@ -1,6 +1,6 @@
 import {AbortOptions} from "@libp2p/interface";
 import {BaseDatastore} from "datastore-core";
-import {LevelDatastore} from "datastore-level";
+import {FsDatastore} from "datastore-fs";
 import {Key, KeyQuery, Pair, Query} from "interface-datastore";
 
 type MemoryItem = {
@@ -22,7 +22,7 @@ type MemoryItem = {
  *     -  Update lastAccessedMs
  */
 export class Eth2PeerDataStore extends BaseDatastore {
-  private _dbDatastore: LevelDatastore;
+  private _dbDatastore: FsDatastore;
   private _memoryDatastore: Map<string, MemoryItem>;
   /** Same to PersistentPeerStore of the old libp2p implementation */
   private _dirtyItems = new Set<string>();
@@ -32,7 +32,7 @@ export class Eth2PeerDataStore extends BaseDatastore {
   private _maxMemoryItems: number;
 
   constructor(
-    dbDatastore: LevelDatastore | string,
+    dbDatastore: FsDatastore | string,
     {threshold = 5, maxMemoryItems = 50}: {threshold?: number | undefined; maxMemoryItems?: number | undefined} = {}
   ) {
     super();
@@ -44,7 +44,7 @@ export class Eth2PeerDataStore extends BaseDatastore {
       throw Error(`Threshold ${threshold} should be at most maxMemoryItems ${maxMemoryItems}`);
     }
 
-    this._dbDatastore = typeof dbDatastore === "string" ? new LevelDatastore(dbDatastore) : dbDatastore;
+    this._dbDatastore = typeof dbDatastore === "string" ? new FsDatastore(dbDatastore) : dbDatastore;
     this._memoryDatastore = new Map();
     this._threshold = threshold;
     this._maxMemoryItems = maxMemoryItems;

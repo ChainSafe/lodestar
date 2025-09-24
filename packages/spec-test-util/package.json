@@ -11,9 +11,11 @@
   "type": "module",
   "exports": {
     ".": {
+      "bun": "./src/index.ts",
       "import": "./lib/index.js"
     },
     "./downloadTests": {
+      "bun": "./src/downloadTests.ts",
       "import": "./lib/downloadTests.js"
     }
   },

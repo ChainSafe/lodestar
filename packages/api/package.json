@@ -15,27 +15,35 @@
   "type": "module",
   "exports": {
     ".": {
+      "bun": "./src/index.ts",
       "import": "./lib/index.js"
     },
     "./server": {
+      "bun": "./src/server/index.ts",
       "import": "./lib/server/index.js"
     },
     "./beacon": {
+      "bun": "./src/beacon/index.ts",
       "import": "./lib/beacon/index.js"
     },
     "./beacon/server": {
+      "bun": "./src/beacon/server/index.ts",
       "import": "./lib/beacon/server/index.js"
     },
     "./builder": {
+      "bun": "./src/builder/index.ts",
       "import": "./lib/builder/index.js"
     },
     "./builder/server": {
+      "bun": "./src/builder/server/index.ts",
       "import": "./lib/builder/server/index.js"
     },
     "./keymanager": {
+      "bun": "./src/keymanager/index.ts",
       "import": "./lib/keymanager/index.js"
     },
     "./keymanager/server": {
+      "bun": "./src/keymanager/server/index.ts",
       "import": "./lib/keymanager/server/index.js"
     }
   },

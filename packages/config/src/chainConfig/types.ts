@@ -63,6 +63,12 @@ export type ChainConfig = {
   SYNC_MESSAGE_DUE_BPS: number;
   CONTRIBUTION_DUE_BPS: number;
 
+  ATTESTATION_DUE_BPS_GLOAS: number;
+  AGGREGATE_DUE_BPS_GLOAS: number;
+  SYNC_MESSAGE_DUE_BPS_GLOAS: number;
+  CONTRIBUTION_DUE_BPS_GLOAS: number;
+  PAYLOAD_ATTESTATION_DUE_BPS: number;
+
   // Validator cycle
   INACTIVITY_SCORE_BIAS: number;
   INACTIVITY_SCORE_RECOVERY_RATE: number;
@@ -161,6 +167,12 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   // Altair
   SYNC_MESSAGE_DUE_BPS: "number",
   CONTRIBUTION_DUE_BPS: "number",
+
+  ATTESTATION_DUE_BPS_GLOAS: "number",
+  AGGREGATE_DUE_BPS_GLOAS: "number",
+  SYNC_MESSAGE_DUE_BPS_GLOAS: "number",
+  CONTRIBUTION_DUE_BPS_GLOAS: "number",
+  PAYLOAD_ATTESTATION_DUE_BPS: "number",
 
   // Validator cycle
   INACTIVITY_SCORE_BIAS: "number",

@@ -11,15 +11,19 @@
   "type": "module",
   "exports": {
     ".": {
+      "bun": "./src/index.ts",
       "import": "./lib/index.js"
     },
     "./default": {
+      "bun": "./src/default.ts",
       "import": "./lib/default.js"
     },
     "./networks": {
+      "bun": "./src/networks.ts",
       "import": "./lib/networks.js"
     },
     "./configs": {
+      "bun": "./src/configs.ts",
       "import": "./lib/configs.js"
     }
   },

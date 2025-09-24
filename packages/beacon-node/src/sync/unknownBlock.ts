@@ -536,6 +536,7 @@ export class BlockInputSync {
           config: this.config,
           network: this.network,
           seenCache: this.chain.seenBlockInputCache,
+          emitter: this.chain.emitter,
           peerMeta,
           cacheItem,
         });

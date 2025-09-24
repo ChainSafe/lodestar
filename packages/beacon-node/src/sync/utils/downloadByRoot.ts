@@ -1,9 +1,11 @@
+import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPostDeneb, ForkPostFulu, ForkPreFulu, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
 import {BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
-import {LodestarError, fromHex, prettyBytes, prettyPrintIndices, toRootHex} from "@lodestar/utils";
+import {LodestarError, fromHex, prettyBytes, prettyPrintIndices, toHex, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../../chain/blocks/blockInput/types.js";
+import {ChainEventEmitter} from "../../chain/emitter.js";
 import {SeenBlockInput} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {validateBlockBlobSidecars} from "../../chain/validation/blobSidecar.js";
 import {validateBlockDataColumnSidecars} from "../../chain/validation/dataColumnSidecar.js";
@@ -55,11 +57,14 @@ export type FetchByRootResponses = {
 export type DownloadByRootProps = FetchByRootCoreProps & {
   cacheItem: BlockInputSyncCacheItem;
   seenCache: SeenBlockInput;
+  emitter: ChainEventEmitter;
 };
+
 export async function downloadByRoot({
   config,
   seenCache,
   network,
+  emitter,
   peerMeta,
   cacheItem,
 }: DownloadByRootProps): Promise<WarnResult<PendingBlockInput, DownloadByRootError>> {
@@ -112,6 +117,12 @@ export async function downloadByRoot({
       });
     }
     for (const blobSidecar of blobSidecars) {
+      if (blockInput.hasBlob(blobSidecar.index)) {
+        // the same BlobSidecar may be added by gossip while waiting for fetchByRoot
+        // TODO(fulu): add metric here to track this
+        continue;
+      }
+
       blockInput.addBlob({
         blobSidecar,
         blockRootHex: rootHex,
@@ -119,6 +130,18 @@ export async function downloadByRoot({
         source: BlockInputSource.byRoot,
         peerIdStr,
       });
+
+      if (emitter.listenerCount(routes.events.EventType.blobSidecar)) {
+        const versionedHashes = blockInput.getVersionedHashes();
+
+        emitter.emit(routes.events.EventType.blobSidecar, {
+          blockRoot: rootHex,
+          slot: blockInput.slot,
+          index: blobSidecar.index,
+          kzgCommitment: toHex(blobSidecar.kzgCommitment),
+          versionedHash: toHex(versionedHashes[blobSidecar.index]),
+        });
+      }
     }
   }
 
@@ -132,17 +155,28 @@ export async function downloadByRoot({
       });
     }
     for (const columnSidecar of columnSidecars) {
-      blockInput.addColumn(
-        {
-          columnSidecar,
-          blockRootHex: rootHex,
-          seenTimestampSec: Date.now() / 1000,
-          source: BlockInputSource.byRoot,
-          peerIdStr,
-        },
+      if (blockInput.hasColumn(columnSidecar.index)) {
         // the same DataColumnSidecar may be added by gossip while waiting for fetchByRoot
-        {throwOnDuplicateAdd: false}
-      );
+        // TODO(fulu): add metric here to track this
+        continue;
+      }
+
+      blockInput.addColumn({
+        columnSidecar,
+        blockRootHex: rootHex,
+        seenTimestampSec: Date.now() / 1000,
+        source: BlockInputSource.byRoot,
+        peerIdStr,
+      });
+
+      if (emitter.listenerCount(routes.events.EventType.dataColumnSidecar)) {
+        emitter.emit(routes.events.EventType.dataColumnSidecar, {
+          blockRoot: rootHex,
+          slot: blockInput.slot,
+          index: columnSidecar.index,
+          kzgCommitments: columnSidecar.kzgCommitments.map(toHex),
+        });
+      }
     }
   }
 
