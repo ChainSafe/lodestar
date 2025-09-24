@@ -291,7 +291,6 @@ export class Network implements INetwork {
     if (!syncMeta) {
       throw new Error(`peerId=${prettyPrintPeerIdStr(peerId)} not in connectedPeerSyncMeta`);
     }
-    afterBlockDelayMs;
     return {peerId, ...syncMeta};
   }
 
