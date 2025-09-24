@@ -2,8 +2,8 @@ import {execSync} from "node:child_process";
 import os from "node:os";
 import all from "it-all";
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
+import {LevelDbController} from "#controller/level";
 import {getEnvLogger} from "@lodestar/logger/env";
-import {LevelDbController} from "../../../src/controller/index.js";
 
 describe("LevelDB controller", () => {
   const dbLocation = "./.__testdb";
