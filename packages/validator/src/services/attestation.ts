@@ -95,7 +95,7 @@ export class AttestationService {
       this.emitter.waitForBlockSlot(slot),
     ]);
     this.metrics?.attesterStepCallProduceAttestation.observe(
-      this.clock.secFromSlot(slot) + this.config.getAttestationDueMs(ForkName.phase0) / 1000
+      this.clock.secFromSlot(slot) - this.config.getAttestationDueMs(ForkName.phase0) / 1000
     );
 
     // Beacon node's endpoint produceAttestationData return data is not dependent on committeeIndex.
@@ -112,7 +112,7 @@ export class AttestationService {
       // TODO GLOAS: Pass in a real fork name
       await sleep(this.clock.msToSlot(slot) + this.config.getAggregateDueMs(ForkName.phase0), signal);
       this.metrics?.attesterStepCallProduceAggregate.observe(
-        this.clock.secFromSlot(slot) + this.config.getAggregateDueMs(ForkName.phase0) / 1000
+        this.clock.secFromSlot(slot) - this.config.getAggregateDueMs(ForkName.phase0) / 1000
       );
 
       const dutiesByCommitteeIndex = groupAttDutiesByCommitteeIndex(duties);
@@ -188,7 +188,7 @@ export class AttestationService {
 
     // TODO GLOAS: Pass in a real fork name
     this.metrics?.attesterStepCallPublishAttestation.observe(
-      this.clock.secFromSlot(slot) + this.config.getAttestationDueMs(ForkName.phase0) / 1000
+      this.clock.secFromSlot(slot) - this.config.getAttestationDueMs(ForkName.phase0) / 1000
     );
 
     // Step 2. Publish all `Attestations` in one go
@@ -261,7 +261,7 @@ export class AttestationService {
 
     // TODO GLOAS: Pass in a real fork name
     this.metrics?.attesterStepCallPublishAggregate.observe(
-      this.clock.secFromSlot(attestation.slot) + this.config.getAggregateDueMs(ForkName.phase0) / 1000
+      this.clock.secFromSlot(attestation.slot) - this.config.getAggregateDueMs(ForkName.phase0) / 1000
     );
 
     if (signedAggregateAndProofs.length > 0) {

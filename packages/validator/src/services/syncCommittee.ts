@@ -92,7 +92,7 @@ export class SyncCommitteeService {
         this.emitter.waitForBlockSlot(slot),
       ]);
       this.metrics?.syncCommitteeStepCallProduceMessage.observe(
-        this.clock.secFromSlot(slot) + this.config.getSyncMessageDueMs(ForkName.phase0) / 1000
+        this.clock.secFromSlot(slot) - this.config.getSyncMessageDueMs(ForkName.phase0) / 1000
       );
 
       // Step 1. Download, sign and publish an `SyncCommitteeMessage` for each validator.
@@ -104,7 +104,7 @@ export class SyncCommitteeService {
       // TODO GLOAS: Pass in a real fork name
       await sleep(this.clock.msToSlot(slot) + this.config.getSyncContributionDueMs(ForkName.phase0), signal);
       this.metrics?.syncCommitteeStepCallProduceAggregate.observe(
-        this.clock.secFromSlot(slot) + this.config.getSyncContributionDueMs(ForkName.phase0) / 1000
+        this.clock.secFromSlot(slot) - this.config.getSyncContributionDueMs(ForkName.phase0) / 1000
       );
 
       // await for all so if the Beacon node is overloaded it auto-throttles
@@ -176,7 +176,7 @@ export class SyncCommitteeService {
 
     // TODO GLOAS: Pass in a real fork name
     this.metrics?.syncCommitteeStepCallPublishMessage.observe(
-      this.clock.secFromSlot(slot) + this.config.getSyncMessageDueMs(ForkName.phase0) / 1000
+      this.clock.secFromSlot(slot) - this.config.getSyncMessageDueMs(ForkName.phase0) / 1000
     );
 
     if (signatures.length > 0) {
@@ -238,7 +238,7 @@ export class SyncCommitteeService {
     );
 
     this.metrics?.syncCommitteeStepCallPublishAggregate.observe(
-      this.clock.secFromSlot(slot) + this.config.getSyncContributionDueMs(ForkName.phase0) / 1000
+      this.clock.secFromSlot(slot) - this.config.getSyncContributionDueMs(ForkName.phase0) / 1000
     );
 
     if (signedContributions.length > 0) {
