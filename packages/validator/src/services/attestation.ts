@@ -92,7 +92,7 @@ export class AttestationService {
     // (b) ATTESTATION_DUE_BPS of the slot has transpired -- whichever comes first.
     const attestationDueMs = this.config.getAttestationDueMs(fork);
     await Promise.race([
-      sleep(this.clock.msToSlot(slot) + attestationDueMs, signal),
+      sleep(attestationDueMs - this.clock.msFromSlot(slot), signal),
       this.emitter.waitForBlockSlot(slot),
     ]);
     this.metrics?.attesterStepCallProduceAttestation.observe(this.clock.secFromSlot(slot) - attestationDueMs / 1000);
@@ -109,7 +109,7 @@ export class AttestationService {
       // Step 2. after all attestations are submitted, make an aggregate.
       // First, wait until the `aggregation_production_instant` (AGGREGATE_DUE_BPS of the way through the slot)
       const aggregateDueMs = this.config.getAggregateDueMs(fork);
-      await sleep(this.clock.msToSlot(slot) + aggregateDueMs, signal);
+      await sleep(aggregateDueMs - this.clock.msFromSlot(slot), signal);
       this.metrics?.attesterStepCallProduceAggregate.observe(this.clock.secFromSlot(slot) - aggregateDueMs / 1000);
 
       const dutiesByCommitteeIndex = groupAttDutiesByCommitteeIndex(duties);
@@ -177,7 +177,7 @@ export class AttestationService {
     // never beyond the ATTESTATION_DUE_BPS cutoff time.
     // https://github.com/status-im/nimbus-eth2/blob/7b64c1dce4392731a4a59ee3a36caef2e0a8357a/beacon_chain/validators/validator_duties.nim#L1123
     const attestationDueMs = this.config.getAttestationDueMs(fork);
-    const msToCutoffTime = this.clock.msToSlot(slot) + attestationDueMs;
+    const msToCutoffTime = attestationDueMs - this.clock.msFromSlot(slot);
     // submitting attestations asap to avoid busy time at around ATTESTATION_DUE_BPS of slot
     const afterBlockDelayMs =
       1000 *
@@ -308,7 +308,7 @@ export class AttestationService {
       // Note that the aggregations flow is not explicitly exited but rather will be skipped
       // due to the fact that calculation of `is_aggregator` in AttestationDutiesService is not done
       // and selectionProof is set to null, meaning no validator will be considered an aggregator.
-      sleep(this.clock.msToSlot(slot) + this.config.getAttestationDueMs(fork), signal),
+      sleep(this.config.getAttestationDueMs(fork) - this.clock.msFromSlot(slot), signal),
     ]);
 
     if (!res) {

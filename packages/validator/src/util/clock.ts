@@ -16,6 +16,7 @@ export interface IClock {
   runEverySlot(fn: (slot: Slot, signal: AbortSignal) => Promise<void>): void;
   runEveryEpoch(fn: (epoch: Epoch, signal: AbortSignal) => Promise<void>): void;
   msToSlot(slot: Slot): number;
+  msFromSlot(slot: Slot): number;
   secFromSlot(slot: Slot): number;
   getCurrentSlot(): Slot;
   getCurrentEpoch(): Epoch;
@@ -76,6 +77,11 @@ export class Clock implements IClock {
     return timeAt * 1000 - Date.now();
   }
 
+  /** Milliseconds elapsed from a specific slot to now */
+  msFromSlot(slot: Slot): number {
+    return Date.now() - (this.genesisTime * 1000 + this.config.SLOT_DURATION_MS * slot);
+  }
+
   /** Seconds elapsed from a specific slot to now */
   secFromSlot(slot: Slot): number {
     return Date.now() / 1000 - (this.genesisTime + this.config.SECONDS_PER_SLOT * slot);
@@ -126,7 +132,7 @@ export class Clock implements IClock {
   }
 
   private timeUntilNext(timeItem: TimeItem): number {
-    const milliSecondsPerSlot = this.config.SECONDS_PER_SLOT * 1000;
+    const milliSecondsPerSlot = this.config.SLOT_DURATION_MS;
     const msFromGenesis = Date.now() - this.genesisTime * 1000;
 
     if (timeItem === TimeItem.Slot) {
@@ -148,7 +154,7 @@ export class Clock implements IClock {
  */
 export function getCurrentSlotAround(config: ChainForkConfig, genesisTime: TimeSeconds): Slot {
   const diffInSeconds = Date.now() / 1000 - genesisTime;
-  const slotsSinceGenesis = Math.round(diffInSeconds / config.SECONDS_PER_SLOT);
+  const slotsSinceGenesis = Math.round(diffInSeconds / (config.SLOT_DURATION_MS / 1000));
   return GENESIS_SLOT + slotsSinceGenesis;
 }
 
