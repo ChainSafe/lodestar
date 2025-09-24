@@ -132,7 +132,7 @@ export class Clock implements IClock {
   }
 
   private timeUntilNext(timeItem: TimeItem): number {
-    const milliSecondsPerSlot = this.config.SLOT_DURATION_MS;
+    const milliSecondsPerSlot = this.config.SECONDS_PER_SLOT * 1000;
     const msFromGenesis = Date.now() - this.genesisTime * 1000;
 
     if (timeItem === TimeItem.Slot) {
@@ -154,7 +154,7 @@ export class Clock implements IClock {
  */
 export function getCurrentSlotAround(config: ChainForkConfig, genesisTime: TimeSeconds): Slot {
   const diffInSeconds = Date.now() / 1000 - genesisTime;
-  const slotsSinceGenesis = Math.round(diffInSeconds / (config.SLOT_DURATION_MS / 1000));
+  const slotsSinceGenesis = Math.round(diffInSeconds / config.SECONDS_PER_SLOT);
   return GENESIS_SLOT + slotsSinceGenesis;
 }
 
