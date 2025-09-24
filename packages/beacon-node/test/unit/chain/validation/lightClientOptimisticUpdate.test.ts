@@ -82,7 +82,7 @@ describe("Light Client Optimistic Update validation", () => {
 
     const timeAtSignatureSlot =
       computeTimeAtSlot(config, lightclientOptimisticUpdate.signatureSlot, chain.genesisTime) * 1000;
-    vi.advanceTimersByTime(timeAtSignatureSlot + config.getSyncMessageDueMs(ForkName.phase0) + 1000);
+    vi.advanceTimersByTime(timeAtSignatureSlot + config.getSyncMessageDueMs(ForkName.altair) + 1000);
 
     // make lightclientserver return another update with different value from gossiped
     chain.lightClientServer.getOptimisticUpdate = () => {
@@ -106,7 +106,7 @@ describe("Light Client Optimistic Update validation", () => {
 
     const timeAtSignatureSlot =
       computeTimeAtSlot(config, lightclientOptimisticUpdate.signatureSlot, chain.genesisTime) * 1000;
-    vi.advanceTimersByTime(timeAtSignatureSlot + config.getSyncMessageDueMs(ForkName.phase0) + 1000);
+    vi.advanceTimersByTime(timeAtSignatureSlot + config.getSyncMessageDueMs(ForkName.altair) + 1000);
 
     // chain getOptimisticUpdate not mocked.
     // localOptimisticUpdate will be null

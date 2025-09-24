@@ -108,6 +108,8 @@ export const SYNC_TOLERANCE_EPOCHS = 1;
  * Empirically the builder block resolves in ~1 second, and execution block resolves in <500 ms.
  * A cutoff of 2 seconds gives enough time and if there are unexpected delays it ensures we publish
  * in time as proposals post 4 seconds into the slot will likely be orphaned due to proposer boost reorg.
+ *
+ * TODO GLOAS: re-evaluate cutoff timing
  */
 const BLOCK_PRODUCTION_RACE_CUTOFF_MS = 2_000;
 /** Overall timeout for execution and block production apis */

@@ -90,7 +90,7 @@ describe("Light Client Finality Update validation", () => {
     // make update not too early
     const timeAtSignatureSlot =
       computeTimeAtSlot(config, lightClientFinalityUpdate.signatureSlot, chain.genesisTime) * 1000;
-    vi.advanceTimersByTime(timeAtSignatureSlot + config.getSyncMessageDueMs(ForkName.phase0) + 1000);
+    vi.advanceTimersByTime(timeAtSignatureSlot + config.getSyncMessageDueMs(ForkName.altair) + 1000);
 
     expect(() => {
       validateLightClientFinalityUpdate(config, chain, lightClientFinalityUpdate);
@@ -111,7 +111,7 @@ describe("Light Client Finality Update validation", () => {
     // make update not too early
     const timeAtSignatureSlot =
       computeTimeAtSlot(config, lightClientFinalityUpdate.signatureSlot, chain.genesisTime) * 1000;
-    vi.advanceTimersByTime(timeAtSignatureSlot + config.getSyncMessageDueMs(ForkName.phase0) + 1000);
+    vi.advanceTimersByTime(timeAtSignatureSlot + config.getSyncMessageDueMs(ForkName.altair) + 1000);
 
     // chain's getFinalityUpdate not mocked.
     // localFinalityUpdate will be null
