@@ -8,7 +8,7 @@ import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js
 import {BlockError, BlockErrorCode} from "../chain/errors/index.js";
 import {ChainEvent, ChainEventData, IBeaconChain} from "../chain/index.js";
 import {Metrics} from "../metrics/index.js";
-import {INetwork, NetworkEvent, NetworkEventData, prettyPrintPeerIdStr} from "../network/index.js";
+import {INetwork, NetworkEvent, NetworkEventData, PeerAction, prettyPrintPeerIdStr} from "../network/index.js";
 import {PeerSyncMeta} from "../network/peers/peersData.js";
 import {PeerIdStr} from "../util/peerId.js";
 import {shuffle} from "../util/shuffle.js";
@@ -651,14 +651,11 @@ export class BlockInputSync {
     // console.log("removeAndDownscoreAllDescendants", {block});
 
     for (const block of badPendingBlocks) {
-      //
-      // TODO(fulu): why is this commented out here?
-      //
-      //   this.knownBadBlocks.add(block.blockRootHex);
-      //   for (const peerIdStr of block.peerIdStrs) {
-      //     // TODO: Refactor peerRpcScores to work with peerIdStr only
-      //     this.network.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadBlockByRoot");
-      //   }
+      this.knownBadBlocks.add(getBlockInputSyncCacheItemRootHex(block));
+      for (const peerIdStr of block.peerIdStrings) {
+        // TODO: Refactor peerRpcScores to work with peerIdStr only
+        this.network.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadBlockByRoot");
+      }
       this.logger.debug("ignored Banning unknown block", {
         slot: getBlockInputSyncCacheItemSlot(block),
         root: getBlockInputSyncCacheItemRootHex(block),
