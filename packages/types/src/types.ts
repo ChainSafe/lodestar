@@ -278,7 +278,7 @@ type TypesByFork = {
     BeaconBlockHeader: phase0.BeaconBlockHeader;
     SignedBeaconBlockHeader: phase0.SignedBeaconBlockHeader;
     BeaconBlock: gloas.BeaconBlock;
-    BeaconBlockBody: gloas.BeaconBlockBody;
+    BeaconBlockBody: electra.BeaconBlockBody;
     BeaconState: gloas.BeaconState;
     SignedBeaconBlock: gloas.SignedBeaconBlock;
     Metadata: fulu.Metadata;
@@ -289,7 +289,7 @@ type TypesByFork = {
     LightClientFinalityUpdate: electra.LightClientFinalityUpdate;
     LightClientOptimisticUpdate: electra.LightClientOptimisticUpdate;
     LightClientStore: electra.LightClientStore;
-    BlindedBeaconBlock: electra.BlindedBeaconBlock; // TODO GLOAS: blinded may no longer be used
+    BlindedBeaconBlock: electra.BlindedBeaconBlock;
     BlindedBeaconBlockBody: electra.BlindedBeaconBlockBody;
     SignedBlindedBeaconBlock: electra.SignedBlindedBeaconBlock;
     ExecutionPayload: deneb.ExecutionPayload;
