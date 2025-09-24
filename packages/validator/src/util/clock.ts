@@ -16,6 +16,7 @@ export interface IClock {
   runEverySlot(fn: (slot: Slot, signal: AbortSignal) => Promise<void>): void;
   runEveryEpoch(fn: (epoch: Epoch, signal: AbortSignal) => Promise<void>): void;
   msToSlot(slot: Slot): number;
+  msFromSlot(slot: Slot): number;
   secFromSlot(slot: Slot): number;
   getCurrentSlot(): Slot;
   getCurrentEpoch(): Epoch;
@@ -74,6 +75,11 @@ export class Clock implements IClock {
   msToSlot(slot: Slot): number {
     const timeAt = this.genesisTime + this.config.SECONDS_PER_SLOT * slot;
     return timeAt * 1000 - Date.now();
+  }
+
+  /** Milliseconds elapsed from a specific slot to now */
+  msFromSlot(slot: Slot): number {
+    return Date.now() - (this.genesisTime * 1000 + this.config.SLOT_DURATION_MS * slot);
   }
 
   /** Seconds elapsed from a specific slot to now */

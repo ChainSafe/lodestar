@@ -90,7 +90,7 @@ export class SyncCommitteeService {
       // see https://github.com/ChainSafe/lodestar/issues/4608
       const syncMessageDueMs = this.config.getSyncMessageDueMs(fork);
       await Promise.race([
-        sleep(this.clock.msToSlot(slot) + syncMessageDueMs, signal),
+        sleep(syncMessageDueMs - this.clock.msFromSlot(slot), signal),
         this.emitter.waitForBlockSlot(slot),
       ]);
       this.metrics?.syncCommitteeStepCallProduceMessage.observe(this.clock.secFromSlot(slot) - syncMessageDueMs / 1000);
@@ -102,7 +102,7 @@ export class SyncCommitteeService {
       // Step 2. If an attestation was produced, make an aggregate.
       // First, wait until the `CONTRIBUTION_DUE_BPS` of the slot
       const syncContributionDueMs = this.config.getSyncContributionDueMs(fork);
-      await sleep(this.clock.msToSlot(slot) + syncContributionDueMs, signal);
+      await sleep(syncContributionDueMs - this.clock.msFromSlot(slot), signal);
       this.metrics?.syncCommitteeStepCallProduceAggregate.observe(
         this.clock.secFromSlot(slot) - syncContributionDueMs / 1000
       );
@@ -173,7 +173,7 @@ export class SyncCommitteeService {
     // provide a delay option just in case any client implementation validate the existence of block in
     // SyncCommitteeSignature gossip validation.
     const syncMessageDueMs = this.config.getSyncMessageDueMs(fork);
-    const msToCutoffTime = this.clock.msToSlot(slot) + syncMessageDueMs;
+    const msToCutoffTime = syncMessageDueMs - this.clock.msFromSlot(slot);
     const afterBlockDelayMs = 1000 * this.clock.secondsPerSlot * (this.opts?.scAfterBlockDelaySlotFraction ?? 0);
     const toDelayMs = Math.min(msToCutoffTime, afterBlockDelayMs);
     if (toDelayMs > 0) {
@@ -298,7 +298,7 @@ export class SyncCommitteeService {
       // Note that the sync committee contributions flow is not explicitly exited but rather will be skipped
       // due to the fact that calculation of `is_sync_committee_aggregator` in SyncCommitteeDutiesService is not done
       // and selectionProof is set to null, meaning no validator will be considered an aggregator.
-      sleep(this.clock.msToSlot(slot) + this.config.getSyncContributionDueMs(fork), signal),
+      sleep(this.config.getSyncContributionDueMs(fork) - this.clock.msFromSlot(slot), signal),
     ]);
 
     if (!res) {
