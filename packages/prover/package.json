@@ -38,11 +38,12 @@
   "types": "./lib/index.d.ts",
   "files": [
     "src",
-    "lib/**/*.d.ts",
-    "lib/**/*.js",
-    "lib/**/*.js.map",
+    "lib",
+    "bin",
     "*.d.ts",
-    "*.js"
+    "*.d.ts.map",
+    "*.js",
+    "*.js.map"
   ],
   "scripts": {
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",

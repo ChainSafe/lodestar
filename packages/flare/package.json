@@ -27,11 +27,11 @@
   "types": "lib/index.d.ts",
   "files": [
     "src",
-    "lib/**/*.js",
-    "lib/**/*.js.map",
-    "lib/**/*.d.ts",
+    "lib",
     "*.d.ts",
-    "*.js"
+    "*.d.ts.map",
+    "*.js",
+    "*.js.map"
   ],
   "bin": {
     "flare": "lib/index.js"

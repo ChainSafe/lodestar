@@ -31,11 +31,11 @@
   },
   "files": [
     "src",
-    "lib/**/*.js",
-    "lib/**/*.js.map",
-    "lib/**/*.d.ts",
+    "lib",
     "*.d.ts",
-    "*.js"
+    "*.d.ts.map",
+    "*.js",
+    "*.js.map"
   ],
   "bin": {
     "eth2-spec-test-download": "lib/downloadTestsCli.js"

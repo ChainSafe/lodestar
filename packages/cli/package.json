@@ -12,9 +12,12 @@
   "exports": "./lib/index.js",
   "files": [
     "src",
-    "lib/**/*.d.ts",
-    "lib/**/*.js",
-    "lib/**/*.js.map",
+    "lib",
+    "bin",
+    "*.d.ts",
+    "*.d.ts.map",
+    "*.js",
+    "*.js.map",
     ".git-data.json"
   ],
   "bin": {

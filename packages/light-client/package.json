@@ -47,17 +47,18 @@
   },
   "files": [
     "src",
-    "lib/**/*.d.ts",
-    "lib/**/*.js",
-    "lib/**/*.js.map",
+    "lib",
     "*.d.ts",
+    "*.d.ts.map",
     "*.js",
+    "*.js.map",
     "dist/**/*.js",
     "dist/**/*.mjs",
     "dist/**/*.cjs",
     "dist/**/*.map",
     "dist/**/*.json",
-    "dist/**/*.d.ts"
+    "dist/**/*.d.ts",
+    "dist/**/*.d.ts.map"
   ],
   "scripts": {
     "clean": "rm -rf lib && rm -rf dist && rm -f *.tsbuildinfo",
