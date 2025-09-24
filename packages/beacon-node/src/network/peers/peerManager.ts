@@ -318,8 +318,8 @@ export class PeerManager {
     if (!metadata || metadata.seqNumber < seqNumber) {
       // re-status happens at end of requestMetadata to keep peer info up to date
       void this.requestMetadata(peer);
-    } else {
-      // if metadata didn't change just re-status to check for earliestAvailableSlot updates
+    } else if (this.clock.currentEpoch > this.config.FULU_FORK_EPOCH) {
+      // if metadata didn't change just re-status when post-fulu to check for earliestAvailableSlot updates
       void this.requestStatus(peer, this.statusCache.get());
     }
   }
@@ -362,9 +362,13 @@ export class PeerManager {
         custodyGroups,
         samplingGroups,
       };
-      // always call requestStatus to make sure earliestAvailableSlot is up to date. also peerConnected event will trigger
-      // sending updates to the cached sync meta
-      void this.requestStatus(peer, this.statusCache.get());
+
+      if (oldMetadata === null || this.clock.currentEpoch > this.config.FULU_FORK_EPOCH) {
+        // status peer if there was no existing metadata or always re-status post-fulu to make sure
+        // earliestAvailableSlot is up to date. The peerConnected event will trigger at end of response handling to
+        // send updates to the cached sync meta on main thread
+        void this.requestStatus(peer, this.statusCache.get());
+      }
     }
   }
 
