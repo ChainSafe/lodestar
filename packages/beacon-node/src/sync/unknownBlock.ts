@@ -256,7 +256,6 @@ export class BlockInputSync {
         earliestAvailableSlot: earliestAvailableSlot ?? "pre-fulu",
       });
       this.peerBalancer.onPeerConnected(data.peer, {
-        peerId: data.peer,
         client: data.clientAgent,
         custodyColumns: data.custodyColumns,
         earliestAvailableSlot,
@@ -721,7 +720,7 @@ export class BlockInputSync {
  * Class to track active byRoots requests and balance them across eligible peers.
  */
 export class UnknownBlockPeerBalancer {
-  readonly peersMeta: Map<PeerIdStr, PeerSyncMeta>;
+  readonly peersMeta: Map<PeerIdStr, Omit<PeerSyncMeta, "peerId">>;
   readonly activeRequests: Map<PeerIdStr, number>;
 
   constructor() {
@@ -730,7 +729,7 @@ export class UnknownBlockPeerBalancer {
   }
 
   /** Trigger on each peer re-status */
-  onPeerConnected(peerId: PeerIdStr, syncMeta: PeerSyncMeta): void {
+  onPeerConnected(peerId: PeerIdStr, syncMeta: Omit<PeerSyncMeta, "peerId">): void {
     this.peersMeta.set(peerId, syncMeta);
 
     if (!this.activeRequests.has(peerId)) {
@@ -761,8 +760,12 @@ export class UnknownBlockPeerBalancer {
     );
 
     const bestPeerId = sortedEligiblePeers[0];
+    const peerMeta = this.peersMeta.get(bestPeerId);
+    if (!peerMeta) {
+      return null;
+    }
     this.onRequest(bestPeerId);
-    return this.peersMeta.get(bestPeerId) ?? null;
+    return {peerId: bestPeerId, ...peerMeta};
   }
 
   /**
@@ -792,8 +795,12 @@ export class UnknownBlockPeerBalancer {
     );
 
     const bestPeerId = sortedEligiblePeers[0];
+    const peerMeta = this.peersMeta.get(bestPeerId);
+    if (!peerMeta) {
+      return null;
+    }
     this.onRequest(bestPeerId);
-    return this.peersMeta.get(bestPeerId) ?? null;
+    return {peerId: bestPeerId, ...peerMeta};
   }
 
   /**
