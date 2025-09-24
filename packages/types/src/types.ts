@@ -5,7 +5,6 @@ import {ts as capella} from "./capella/index.js";
 import {ts as deneb} from "./deneb/index.js";
 import {ts as electra} from "./electra/index.js";
 import {ts as fulu} from "./fulu/index.js";
-import {ts as gloas} from "./gloas/index.js";
 import {ts as phase0} from "./phase0/index.js";
 import {Slot} from "./primitive/types.js";
 
@@ -277,10 +276,10 @@ type TypesByFork = {
   [ForkName.gloas]: {
     BeaconBlockHeader: phase0.BeaconBlockHeader;
     SignedBeaconBlockHeader: phase0.SignedBeaconBlockHeader;
-    BeaconBlock: gloas.BeaconBlock;
-    BeaconBlockBody: electra.BeaconBlockBody;
-    BeaconState: gloas.BeaconState;
-    SignedBeaconBlock: gloas.SignedBeaconBlock;
+    BeaconBlock: electra.BeaconBlock; // TODO GLOAS: Use Gloas type
+    BeaconBlockBody: electra.BeaconBlockBody; // TODO GLOAS: Use Gloas type
+    BeaconState: electra.BeaconState; // TODO GLOAS: Use Gloas type
+    SignedBeaconBlock: electra.SignedBeaconBlock; // TODO GLOAS: Use Gloas type
     Metadata: fulu.Metadata;
     Status: fulu.Status;
     LightClientHeader: deneb.LightClientHeader;

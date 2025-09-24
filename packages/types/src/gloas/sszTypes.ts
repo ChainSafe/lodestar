@@ -1,15 +1,24 @@
-import { BitVectorType, ContainerType, ListBasicType, ListCompositeType, VectorCompositeType } from "@chainsafe/ssz";
-import {ssz as phase0Ssz} from "../phase0/index.js";
+import {BitVectorType, ContainerType, ListBasicType, ListCompositeType, VectorCompositeType} from "@chainsafe/ssz";
+import {
+  BUILDER_PENDING_WITHDRAWALS_LIMIT,
+  HISTORICAL_ROOTS_LIMIT,
+  MAX_PAYLOAD_ATTESTATIONS,
+  NUMBER_OF_COLUMNS,
+  PTC_SIZE,
+  SLOTS_PER_EPOCH,
+  SLOTS_PER_HISTORICAL_ROOT,
+} from "@lodestar/params";
 import {ssz as altairSsz} from "../altair/index.js";
 import {ssz as capellaSsz} from "../capella/index.js";
 import {ssz as denebSsz} from "../deneb/index.js";
 import {ssz as electraSsz} from "../electra/index.js";
 import {ssz as fuluSsz} from "../fulu/index.js";
+import {ssz as phase0Ssz} from "../phase0/index.js";
 import {ssz as primitiveSsz} from "../primitive/index.js";
-import { BUILDER_PENDING_WITHDRAWALS_LIMIT, HISTORICAL_ROOTS_LIMIT, MAX_PAYLOAD_ATTESTATIONS, NUMBER_OF_COLUMNS, PTC_SIZE, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT } from "@lodestar/params";
 
-
-const {Gwei, ExecutionAddress, ValidatorIndex, Epoch, BLSSignature, Bytes32, Root, Slot, Boolean, UintBn64, UintNum64} = primitiveSsz;
+// biome-ignore lint/suspicious/noShadowRestrictedNames: We explicitly want `Boolean` name to be imported
+const {Gwei, ExecutionAddress, ValidatorIndex, Epoch, BLSSignature, Bytes32, Root, Slot, Boolean, UintBn64, UintNum64} =
+  primitiveSsz;
 
 export const BuilderPendingWithdrawal = new ContainerType(
   {
@@ -76,7 +85,7 @@ export const ExecutionPayloadBid = new ContainerType(
     builderIndex: ValidatorIndex,
     slot: Slot,
     value: Gwei,
-    blobKzgCommittmentsRoot: Root, 
+    blobKzgCommittmentsRoot: Root,
   },
   {typeName: "BuilderPendingPayment", jsonCase: "eth2"}
 );
@@ -149,7 +158,7 @@ export const SignedBeaconBlock = new ContainerType(
 );
 
 export const BeaconState = new ContainerType(
-  { 
+  {
     genesisTime: UintNum64,
     genesisValidatorsRoot: Root,
     slot: primitiveSsz.Slot,
