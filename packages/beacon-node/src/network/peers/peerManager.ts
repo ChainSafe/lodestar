@@ -318,7 +318,11 @@ export class PeerManager {
     // if the sequence number is unknown update the peer's metadata
     const metadata = this.connectedPeers.get(peer.toString())?.metadata;
     if (!metadata || metadata.seqNumber < seqNumber) {
+      // re-status happens at end of requestMetadata to keep peer info up to date
       void this.requestMetadata(peer);
+    } else {
+      // if metadata didn't change just re-status to check for earliestAvailableSlot updates
+      void this.requestStatus(peer, this.statusCache.get());
     }
   }
 
@@ -357,14 +361,12 @@ export class PeerManager {
           (metadata as Partial<fulu.Metadata>).custodyGroupCount ??
           // TODO: spec says that Clients MAY reject peers with a value less than CUSTODY_REQUIREMENT
           this.config.CUSTODY_REQUIREMENT,
-        // TODO(fulu): this should be columns not groups.  need to change everywhere. we consume columns and should
-        //      cache that instead so if groups->columns ever changes from 1-1 we only need to update that here
         custodyGroups,
         samplingGroups,
       };
-      if (oldMetadata === null || oldMetadata.custodyGroupCount !== peerData.metadata.custodyGroupCount) {
-        void this.requestStatus(peer, this.statusCache.get());
-      }
+      // always call requestStatus to make sure earliestAvailableSlot is up to date. also peerConnected event will trigger
+      // sending updates to the cached sync meta
+      void this.requestStatus(peer, this.statusCache.get());
     }
   }
 
@@ -454,15 +456,12 @@ export class PeerManager {
 
       this.logger.debug("onStatus", {
         nodeId: toHex(nodeId),
-        myNodeId: toHex(this.nodeId),
         peerId: peer.toString(),
+        clientAgent,
         custodyGroupCount,
         hasAllColumns,
         matchingSubnetsNum,
-        custodyGroups: prettyPrintIndices(custodyGroups),
         custodyColumns: prettyPrintIndices(custodyColumns),
-        mySampleSubnets: prettyPrintIndices(sampleSubnets),
-        clientAgent,
       });
 
       this.networkEventBus.emit(NetworkEvent.peerConnected, {
