@@ -25,7 +25,7 @@ export function validateLightClientFinalityUpdate(
   }
 
   // [IGNORE] The finality_update is received after the block at signature_slot was given enough time to propagate
-  // through the network -- i.e. validatate that `get_slot_component_duration_ms(SYNC_MESSAGE_DUE_BPS)`
+  // through the network -- i.e. validate that `get_sync_message_due_ms(epoch)`
   // milliseconds (with a `MAXIMUM_GOSSIP_CLOCK_DISPARITY` allowance) has
   // transpired since the start of `signature_slot`.
   if (updateReceivedTooEarly(config, chain.genesisTime, gossipedFinalityUpdate)) {
