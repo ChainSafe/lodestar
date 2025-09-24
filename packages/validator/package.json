@@ -17,6 +17,7 @@
   },
   "types": "./lib/index.d.ts",
   "files": [
+    "src",
     "lib/**/*.js",
     "lib/**/*.js.map",
     "lib/**/*.d.ts",

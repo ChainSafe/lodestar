@@ -11,6 +11,7 @@
   "type": "module",
   "exports": "./lib/index.js",
   "files": [
+    "src",
     "lib/**/*.d.ts",
     "lib/**/*.js",
     "lib/**/*.js.map",

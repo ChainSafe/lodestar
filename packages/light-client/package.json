@@ -46,6 +46,7 @@
     }
   },
   "files": [
+    "src",
     "lib/**/*.d.ts",
     "lib/**/*.js",
     "lib/**/*.js.map",
