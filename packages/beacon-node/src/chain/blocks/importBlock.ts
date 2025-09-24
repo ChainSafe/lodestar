@@ -7,14 +7,7 @@ import {
   ForkChoiceErrorCode,
   NotReorgedReason,
 } from "@lodestar/fork-choice";
-import {
-  ForkName,
-  ForkPostAltair,
-  ForkPostElectra,
-  ForkSeq,
-  MAX_SEED_LOOKAHEAD,
-  SLOTS_PER_EPOCH,
-} from "@lodestar/params";
+import {ForkPostAltair, ForkPostElectra, ForkSeq, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   CachedBeaconStateAltair,
   EpochCache,
