@@ -57,9 +57,9 @@ export type ForkConfig = {
   /** Get blob parameters at a given epoch */
   getBlobParameters(epoch: Epoch): BlobParameters;
 
-  getAttestationDueMs(_fork: ForkName): number;
-  getAggregateDueMs(_fork: ForkName): number;
-  getSyncMessageDueMs(_fork: ForkName): number;
-  getSyncContributionDueMs(_fork: ForkName): number;
-  getProposerReorgCutoffMs(_fork: ForkName): number;
+  getAttestationDueMs(fork: ForkName): number;
+  getAggregateDueMs(fork: ForkName): number;
+  getSyncMessageDueMs(fork: ForkName): number;
+  getSyncContributionDueMs(fork: ForkName): number;
+  getProposerReorgCutoffMs(fork: ForkName): number;
 };
