@@ -17,7 +17,7 @@ import {SubnetType} from "../metadata.js";
 import {NetworkConfig} from "../networkConfig.js";
 import {ReqRespMethod} from "../reqresp/ReqRespBeaconNode.js";
 import {StatusCache} from "../statusCache.js";
-import {NodeId, SubnetsService, computeNodeId} from "../subnets/index.js";
+import {SubnetsService, computeNodeId} from "../subnets/index.js";
 import {getConnection, getConnectionsMap, prettyPrintPeerId, prettyPrintPeerIdStr} from "../util.js";
 import {ClientKind, getKnownClientFromAgentVersion} from "./client.js";
 import {PeerDiscovery, SubnetDiscvQueryMs} from "./discover.js";
@@ -140,7 +140,6 @@ enum RelevantPeerStatus {
  * - Disconnect peers if over target peers
  */
 export class PeerManager {
-  private nodeId: NodeId;
   private readonly libp2p: Libp2p;
   private readonly logger: LoggerNode;
   private readonly metrics: NetworkCoreMetrics | null;
@@ -182,7 +181,6 @@ export class PeerManager {
     this.connectedPeers = modules.peersData.connectedPeers;
     this.opts = opts;
     this.discovery = discovery;
-    this.nodeId = networkConfig.nodeId;
 
     const {metrics} = modules;
     if (metrics) {
