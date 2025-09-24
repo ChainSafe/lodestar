@@ -98,7 +98,7 @@ export class AttestationPool {
    * `SignedAggregateAndProof`.
    *
    * If the attestation is too old (low slot) to be included in the pool it is simply dropped
-   * and no error is returned. Also if it's at clock slot but come to the pool later than 2/3
+   * and no error is returned. Also if it's at clock slot but come to the pool later than AGGREGATE_DUE_BPS
    * of slot time, it's dropped too since it's not helpful for the validator anymore
    *
    * Expects the attestation to be fully validated:

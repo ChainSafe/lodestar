@@ -50,7 +50,7 @@ export function validateLightClientOptimisticUpdate(
 /**
  * Returns true, if the spec condition below triggers an IGNORE.
  *
- *      Sig +1/3 time
+ *      Sig + SYNC_MESSAGE_DUE_BPS time
  * -----|-----
  * xxx|-------  (x is not okay)
  *

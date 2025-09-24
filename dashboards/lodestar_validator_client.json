@@ -1339,7 +1339,7 @@
           "refId": "A"
         }
       ],
-      "title": "Publish aggregate diff from slot 2/3",
+      "title": "Publish aggregate diff from slot AGGREGATE_DUE_BPS",
       "tooltip": {
         "show": true,
         "showHistogram": false

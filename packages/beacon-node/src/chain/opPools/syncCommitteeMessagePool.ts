@@ -76,7 +76,7 @@ export class SyncCommitteeMessagePool {
       return InsertOutcome.Old;
     }
 
-    // validator gets SyncCommitteeContribution at 2/3 of slot, it's no use to preaggregate later than that time
+    // validator gets SyncCommitteeContribution at CONTRIBUTION_DUE_BPS of slot, it's no use to preaggregate later than that time
     if (!priority && this.clock.secFromSlot(slot) > this.cutOffSecFromSlot) {
       return InsertOutcome.Late;
     }

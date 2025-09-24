@@ -179,7 +179,7 @@ export class AttestationService {
     // https://github.com/status-im/nimbus-eth2/blob/7b64c1dce4392731a4a59ee3a36caef2e0a8357a/beacon_chain/validators/validator_duties.nim#L1123
     // TODO GLOAS: Pass in a real fork name
     const msToCutoffTime = this.clock.msToSlot(slot) + this.config.getAttestationDueMs(ForkName.phase0);
-    // submitting attestations asap to avoid busy time at around 1/3 of slot
+    // submitting attestations asap to avoid busy time at around ATTESTATION_DUE_BPS of slot
     const afterBlockDelayMs =
       1000 *
       this.clock.secondsPerSlot *
