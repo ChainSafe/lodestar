@@ -86,15 +86,14 @@ export class SyncCommitteeService {
       }
 
       // unlike Attestation, SyncCommitteeSignature could be published asap
-      // especially with lodestar, it's very busy at 33% (ATTESTATION_DUE_BPS and SYNC_MESSAGE_DUE_BPS) into the slot
+      // especially with lodestar, it's very busy at ATTESTATION_DUE_BPS of the slot
       // see https://github.com/ChainSafe/lodestar/issues/4608
+      const syncMessageDueMs = this.config.getSyncMessageDueMs(fork);
       await Promise.race([
-        sleep(this.clock.msToSlot(slot) + this.config.getSyncMessageDueMs(fork), signal),
+        sleep(this.clock.msToSlot(slot) + syncMessageDueMs, signal),
         this.emitter.waitForBlockSlot(slot),
       ]);
-      this.metrics?.syncCommitteeStepCallProduceMessage.observe(
-        this.clock.secFromSlot(slot) - this.config.getSyncMessageDueMs(fork) / 1000
-      );
+      this.metrics?.syncCommitteeStepCallProduceMessage.observe(this.clock.secFromSlot(slot) - syncMessageDueMs / 1000);
 
       // Step 1. Download, sign and publish an `SyncCommitteeMessage` for each validator.
       //         Differs from AttestationService, `SyncCommitteeMessage` are equal for all
@@ -102,9 +101,10 @@ export class SyncCommitteeService {
 
       // Step 2. If an attestation was produced, make an aggregate.
       // First, wait until the `CONTRIBUTION_DUE_BPS` of the slot
-      await sleep(this.clock.msToSlot(slot) + this.config.getSyncContributionDueMs(fork), signal);
+      const syncContributionDueMs = this.config.getSyncContributionDueMs(fork);
+      await sleep(this.clock.msToSlot(slot) + syncContributionDueMs, signal);
       this.metrics?.syncCommitteeStepCallProduceAggregate.observe(
-        this.clock.secFromSlot(slot) - this.config.getSyncContributionDueMs(fork) / 1000
+        this.clock.secFromSlot(slot) - syncContributionDueMs / 1000
       );
 
       // await for all so if the Beacon node is overloaded it auto-throttles
@@ -172,16 +172,15 @@ export class SyncCommitteeService {
     // by default we want to submit SyncCommitteeSignature asap after we receive block
     // provide a delay option just in case any client implementation validate the existence of block in
     // SyncCommitteeSignature gossip validation.
-    const msToCutoffTime = this.clock.msToSlot(slot) + this.config.getSyncMessageDueMs(fork);
+    const syncMessageDueMs = this.config.getSyncMessageDueMs(fork);
+    const msToCutoffTime = this.clock.msToSlot(slot) + syncMessageDueMs;
     const afterBlockDelayMs = 1000 * this.clock.secondsPerSlot * (this.opts?.scAfterBlockDelaySlotFraction ?? 0);
     const toDelayMs = Math.min(msToCutoffTime, afterBlockDelayMs);
     if (toDelayMs > 0) {
       await sleep(toDelayMs);
     }
 
-    this.metrics?.syncCommitteeStepCallPublishMessage.observe(
-      this.clock.secFromSlot(slot) - this.config.getSyncMessageDueMs(fork) / 1000
-    );
+    this.metrics?.syncCommitteeStepCallPublishMessage.observe(this.clock.secFromSlot(slot) - syncMessageDueMs / 1000);
 
     if (signatures.length > 0) {
       try {

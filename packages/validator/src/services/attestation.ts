@@ -90,13 +90,12 @@ export class AttestationService {
     // A validator should create and broadcast the attestation to the associated attestation subnet when either
     // (a) the validator has received a valid block from the expected block proposer for the assigned slot or
     // (b) ATTESTATION_DUE_BPS of the slot has transpired -- whichever comes first.
+    const attestationDueMs = this.config.getAttestationDueMs(fork);
     await Promise.race([
-      sleep(this.clock.msToSlot(slot) + this.config.getAttestationDueMs(fork), signal),
+      sleep(this.clock.msToSlot(slot) + attestationDueMs, signal),
       this.emitter.waitForBlockSlot(slot),
     ]);
-    this.metrics?.attesterStepCallProduceAttestation.observe(
-      this.clock.secFromSlot(slot) - this.config.getAttestationDueMs(fork) / 1000
-    );
+    this.metrics?.attesterStepCallProduceAttestation.observe(this.clock.secFromSlot(slot) - attestationDueMs / 1000);
 
     // Beacon node's endpoint produceAttestationData return data is not dependent on committeeIndex.
     // Produce a single attestation for all committees and submit unaggregated attestations in one go.
@@ -109,10 +108,9 @@ export class AttestationService {
 
       // Step 2. after all attestations are submitted, make an aggregate.
       // First, wait until the `aggregation_production_instant` (AGGREGATE_DUE_BPS of the way through the slot)
-      await sleep(this.clock.msToSlot(slot) + this.config.getAggregateDueMs(fork), signal);
-      this.metrics?.attesterStepCallProduceAggregate.observe(
-        this.clock.secFromSlot(slot) - this.config.getAggregateDueMs(fork) / 1000
-      );
+      const aggregateDueMs = this.config.getAggregateDueMs(fork);
+      await sleep(this.clock.msToSlot(slot) + aggregateDueMs, signal);
+      this.metrics?.attesterStepCallProduceAggregate.observe(this.clock.secFromSlot(slot) - aggregateDueMs / 1000);
 
       const dutiesByCommitteeIndex = groupAttDutiesByCommitteeIndex(duties);
 
@@ -178,7 +176,8 @@ export class AttestationService {
     // they reach our peers before the block. To prevent that, we wait 2 extra seconds AFTER block arrival, but
     // never beyond the ATTESTATION_DUE_BPS cutoff time.
     // https://github.com/status-im/nimbus-eth2/blob/7b64c1dce4392731a4a59ee3a36caef2e0a8357a/beacon_chain/validators/validator_duties.nim#L1123
-    const msToCutoffTime = this.clock.msToSlot(slot) + this.config.getAttestationDueMs(fork);
+    const attestationDueMs = this.config.getAttestationDueMs(fork);
+    const msToCutoffTime = this.clock.msToSlot(slot) + attestationDueMs;
     // submitting attestations asap to avoid busy time at around ATTESTATION_DUE_BPS of slot
     const afterBlockDelayMs =
       1000 *
@@ -186,9 +185,7 @@ export class AttestationService {
       (this.opts?.afterBlockDelaySlotFraction ?? DEFAULT_AFTER_BLOCK_DELAY_SLOT_FRACTION);
     await sleep(Math.min(msToCutoffTime, afterBlockDelayMs));
 
-    this.metrics?.attesterStepCallPublishAttestation.observe(
-      this.clock.secFromSlot(slot) - this.config.getAttestationDueMs(fork) / 1000
-    );
+    this.metrics?.attesterStepCallPublishAttestation.observe(this.clock.secFromSlot(slot) - attestationDueMs / 1000);
 
     // Step 2. Publish all `Attestations` in one go
     try {
