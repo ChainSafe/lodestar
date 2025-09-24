@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, ForkSeq} from "@lodestar/params";
+import {ForkSeq} from "@lodestar/params";
 import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
 import {RootHex, Slot} from "@lodestar/types";
 import {Logger, prettyBytes, prettyPrintIndices, pruneSetToMax, sleep} from "@lodestar/utils";
@@ -78,7 +78,6 @@ export class BlockInputSync {
    */
   private readonly pendingBlocks = new Map<RootHex, BlockInputSyncCacheItem>();
   private readonly knownBadBlocks = new Set<RootHex>();
-  private readonly proposerBoostSecWindow: number;
   private readonly maxPendingBlocks;
   private subscribedToNetworkEvents = false;
   private peerBalancer: UnknownBlockPeerBalancer;
@@ -92,8 +91,6 @@ export class BlockInputSync {
     private readonly opts?: SyncOptions
   ) {
     this.maxPendingBlocks = opts?.maxPendingBlocks ?? MAX_PENDING_BLOCKS;
-    // TODO GLOAS: Pass in a real fork name
-    this.proposerBoostSecWindow = config.getAttestationDueMs(ForkName.phase0) / 1000;
     this.peerBalancer = new UnknownBlockPeerBalancer();
 
     if (metrics) {
@@ -400,8 +397,10 @@ export class BlockInputSync {
     // this prevents unbundling attack
     // see https://lighthouse-blog.sigmaprime.io/mev-unbundling-rpc.html
     const {slot: blockSlot, proposerIndex} = pendingBlock.blockInput.getBlock().message;
+    const fork = this.config.getForkName(blockSlot);
+    const proposerBoostWindowMs = this.config.getAttestationDueMs(fork);
     if (
-      this.chain.clock.secFromSlot(blockSlot) < this.proposerBoostSecWindow &&
+      this.chain.clock.msFromSlot(blockSlot) < proposerBoostWindowMs &&
       this.chain.seenBlockProposers.isKnown(blockSlot, proposerIndex)
     ) {
       // proposer is known by a gossip block already, wait a bit to make sure this block is not
@@ -411,7 +410,7 @@ export class BlockInputSync {
         blockRoot: prettyBytes(pendingBlock.blockInput.blockRootHex),
         proposerIndex,
       });
-      await sleep(this.proposerBoostSecWindow * 1000);
+      await sleep(proposerBoostWindowMs);
     }
     // At gossip time, it's critical to keep a good number of mesh peers.
     // To do that, the Gossip Job Wait Time should be consistently <3s to avoid the behavior penalties in gossip

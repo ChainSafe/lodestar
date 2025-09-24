@@ -666,7 +666,7 @@ export function getValidatorApi(
       : Promise.reject(new Error("Engine disabled"));
 
     // Calculate cutoff time based on start of the slot
-    const cutoffMs = Math.max(0, BLOCK_PRODUCTION_RACE_CUTOFF_MS - Math.round(chain.clock.secFromSlot(slot) * 1000));
+    const cutoffMs = Math.max(0, BLOCK_PRODUCTION_RACE_CUTOFF_MS - chain.clock.msFromSlot(slot));
 
     logger.verbose("Block production race (builder vs execution) starting", {
       ...loggerContext,

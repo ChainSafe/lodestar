@@ -5,13 +5,7 @@ import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
-import {
-  EFFECTIVE_BALANCE_INCREMENT,
-  ForkName,
-  GENESIS_SLOT,
-  SLOTS_PER_EPOCH,
-  isForkPostElectra,
-} from "@lodestar/params";
+import {EFFECTIVE_BALANCE_INCREMENT, GENESIS_SLOT, SLOTS_PER_EPOCH, isForkPostElectra} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   BeaconStateElectra,
@@ -260,21 +254,9 @@ export class BeaconChain implements IBeaconChain {
     if (!clock) clock = new Clock({config, genesisTime: this.genesisTime, signal});
 
     this.blacklistedBlocks = new Map((opts.blacklistedBlocks ?? []).map((hex) => [hex, null]));
-    // TODO GLOAS: Pass in a real fork name
-    const preAggregateCutOffTime = config.getAggregateDueMs(ForkName.phase0) / 1000;
-    this.attestationPool = new AttestationPool(
-      config,
-      clock,
-      preAggregateCutOffTime,
-      this.opts?.preaggregateSlotDistance,
-      metrics
-    );
+    this.attestationPool = new AttestationPool(config, clock, this.opts?.preaggregateSlotDistance, metrics);
     this.aggregatedAttestationPool = new AggregatedAttestationPool(this.config, metrics);
-    this.syncCommitteeMessagePool = new SyncCommitteeMessagePool(
-      clock,
-      preAggregateCutOffTime,
-      this.opts?.preaggregateSlotDistance
-    );
+    this.syncCommitteeMessagePool = new SyncCommitteeMessagePool(config, clock, this.opts?.preaggregateSlotDistance);
     this.syncContributionAndProofPool = new SyncContributionAndProofPool(clock, metrics, logger);
 
     this.seenAggregatedAttestations = new SeenAggregatedAttestations(metrics);
