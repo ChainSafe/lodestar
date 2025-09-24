@@ -1,7 +1,6 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
-import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {altair, ssz} from "@lodestar/types";
 import {RequiredSelective} from "@lodestar/utils";
 import {LightClientErrorCode} from "../../../../src/chain/errors/lightClientError.js";
@@ -33,7 +32,6 @@ describe("Light Client Optimistic Update validation", () => {
 
   function mockChain(): RequiredSelective<IBeaconChain, "lightClientServer"> {
     const chain = getMockedBeaconChain({config});
-    vi.spyOn(chain, "genesisTime", "get").mockReturnValue(0);
     vi.spyOn(chain.lightClientServer, "getOptimisticUpdate");
     return chain;
   }
@@ -68,6 +66,9 @@ describe("Light Client Optimistic Update validation", () => {
     defaultValue.attestedHeader.beacon.slot = 1;
     vi.spyOn(chain.lightClientServer, "getOptimisticUpdate").mockReturnValue(defaultValue);
 
+    // make update too early
+    vi.spyOn(chain.clock, "msFromSlot").mockReturnValue(0);
+
     expect(() => {
       validateLightClientOptimisticUpdate(config, chain, lightclientOptimisticUpdate);
     }).toThrow(LightClientErrorCode.OPTIMISTIC_UPDATE_RECEIVED_TOO_EARLY);
@@ -80,9 +81,8 @@ describe("Light Client Optimistic Update validation", () => {
 
     const chain = mockChain();
 
-    const timeAtSignatureSlot =
-      computeTimeAtSlot(config, lightclientOptimisticUpdate.signatureSlot, chain.genesisTime) * 1000;
-    vi.advanceTimersByTime(timeAtSignatureSlot + config.getSyncMessageDueMs(ForkName.altair) + 1000);
+    // make update not too early
+    vi.spyOn(chain.clock, "msFromSlot").mockReturnValue(config.getSyncMessageDueMs(ForkName.altair) + 1000);
 
     // make lightclientserver return another update with different value from gossiped
     chain.lightClientServer.getOptimisticUpdate = () => {
@@ -104,9 +104,8 @@ describe("Light Client Optimistic Update validation", () => {
     const chain = mockChain();
     chain.lightClientServer.getOptimisticUpdate = () => ssz.altair.LightClientOptimisticUpdate.defaultValue();
 
-    const timeAtSignatureSlot =
-      computeTimeAtSlot(config, lightclientOptimisticUpdate.signatureSlot, chain.genesisTime) * 1000;
-    vi.advanceTimersByTime(timeAtSignatureSlot + config.getSyncMessageDueMs(ForkName.altair) + 1000);
+    // make update not too early
+    vi.spyOn(chain.clock, "msFromSlot").mockReturnValue(config.getSyncMessageDueMs(ForkName.altair) + 1000);
 
     // chain getOptimisticUpdate not mocked.
     // localOptimisticUpdate will be null
@@ -129,9 +128,7 @@ describe("Light Client Optimistic Update validation", () => {
     // [IGNORE] The optimistic_update is received after the block at `signature_slot` was given enough time to propagate
     // through the network -- i.e. validate that `get_sync_message_due_ms(epoch)` milliseconds
     // (with a `MAXIMUM_GOSSIP_CLOCK_DISPARITY` allowance) has transpired since the start of `signature_slot`.
-    const timeAtSignatureSlot =
-      computeTimeAtSlot(config, lightclientOptimisticUpdate.signatureSlot, chain.genesisTime) * 1000;
-    vi.advanceTimersByTime(timeAtSignatureSlot + config.getSyncMessageDueMs(ForkName.altair) + 1000);
+    vi.spyOn(chain.clock, "msFromSlot").mockReturnValue(config.getSyncMessageDueMs(ForkName.altair) + 1000);
 
     // satisfy:
     // [IGNORE] The received optimistic_update matches the locally computed one exactly
