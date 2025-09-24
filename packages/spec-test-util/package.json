@@ -32,10 +32,7 @@
   "files": [
     "src",
     "lib",
-    "*.d.ts",
-    "*.d.ts.map",
-    "*.js",
-    "*.js.map"
+    "!**/*.tsbuildinfo"
   ],
   "bin": {
     "eth2-spec-test-download": "lib/downloadTestsCli.js"

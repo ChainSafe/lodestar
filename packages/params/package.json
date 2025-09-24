@@ -35,10 +35,7 @@
   "files": [
     "src",
     "lib",
-    "*.d.ts",
-    "*.d.ts.map",
-    "*.js",
-    "*.js.map"
+    "!**/*.tsbuildinfo"
   ],
   "typesVersions": {
     "*": {

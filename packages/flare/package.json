@@ -28,10 +28,7 @@
   "files": [
     "src",
     "lib",
-    "*.d.ts",
-    "*.d.ts.map",
-    "*.js",
-    "*.js.map"
+    "!**/*.tsbuildinfo"
   ],
   "bin": {
     "flare": "lib/index.js"

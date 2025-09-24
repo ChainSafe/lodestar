@@ -14,11 +14,8 @@
     "src",
     "lib",
     "bin",
-    "*.d.ts",
-    "*.d.ts.map",
-    "*.js",
-    "*.js.map",
-    ".git-data.json"
+    ".git-data.json",
+    "!**/*.tsbuildinfo"
   ],
   "bin": {
     "lodestar": "lib/index.js"

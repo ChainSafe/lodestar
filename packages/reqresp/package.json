@@ -36,10 +36,7 @@
   "files": [
     "src",
     "lib",
-    "*.d.ts",
-    "*.d.ts.map",
-    "*.js",
-    "*.js.map"
+    "!**/*.tsbuildinfo"
   ],
   "scripts": {
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",
