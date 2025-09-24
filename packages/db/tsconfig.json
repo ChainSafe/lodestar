@@ -1,7 +1,6 @@
 {
   "extends": "../../tsconfig.json",
   "include": ["src", "test"],
-  "exclude": ["src/controller/level_bun.ts"],
   "compilerOptions": {
     "rootDir": ".",
     "outDir": "lib"
