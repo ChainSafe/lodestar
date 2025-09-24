@@ -108,9 +108,12 @@ export class AttestationService {
       await this.signAndPublishAttestations(slot, attestationNoCommittee, duties);
 
       // Step 2. after all attestations are submitted, make an aggregate.
-      // First, wait until the `aggregation_production_instant` (2/3rds of the way through the slot)
-      await sleep(this.clock.msToSlot(slot + 2 / 3), signal);
-      this.metrics?.attesterStepCallProduceAggregate.observe(this.clock.secFromSlot(slot + 2 / 3));
+      // First, wait until the `aggregation_production_instant` (AGGREGATE_DUE_BPS of the way through the slot)
+      // TODO GLOAS: Pass in a real fork name
+      await sleep(this.clock.msToSlot(slot) + this.config.getAggregateDueMs(ForkName.phase0), signal);
+      this.metrics?.attesterStepCallProduceAggregate.observe(
+        this.clock.secFromSlot(slot) + this.config.getAggregateDueMs(ForkName.phase0) / 1000
+      );
 
       const dutiesByCommitteeIndex = groupAttDutiesByCommitteeIndex(duties);
       const isPostElectra = this.config.getForkSeq(slot) >= ForkSeq.electra;
@@ -258,7 +261,7 @@ export class AttestationService {
 
     // TODO GLOAS: Pass in a real fork name
     this.metrics?.attesterStepCallPublishAggregate.observe(
-      this.clock.secFromSlot(attestation.slot) + this.config.getAttestationDueMs(ForkName.phase0) / 1000
+      this.clock.secFromSlot(attestation.slot) + this.config.getAggregateDueMs(ForkName.phase0) / 1000
     );
 
     if (signedAggregateAndProofs.length > 0) {
