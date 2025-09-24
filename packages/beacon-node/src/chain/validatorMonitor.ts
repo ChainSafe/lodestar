@@ -34,7 +34,7 @@ const MAX_CACHED_EPOCHS = 4;
 
 const MAX_CACHED_DISTINCT_TARGETS = 4;
 
-// TODO GLOAS: this needs to be adapted to use BPS
+// TODO GLOAS: update to use BPS and re-evaluate values
 const INTERVALS_LATE_ATTESTATION_SUBMISSION = 1.5;
 const INTERVALS_LATE_BLOCK_SUBMISSION = 0.75;
 
@@ -451,8 +451,8 @@ export function createValidatorMonitor(
 
     onPoolSubmitUnaggregatedAttestation(seenTimestampSec, indexedAttestation, subnet, sentPeers) {
       const data = indexedAttestation.data;
-      // Returns the duration between when the attestation `data` could be produced (ATTESTATION_DUE_BPS through the slot) and `seenTimestamp`.
       const fork = config.getForkName(data.slot);
+      // Returns the duration between when the attestation `data` could be produced (ATTESTATION_DUE_BPS through the slot) and `seenTimestamp`.
       const delaySec =
         seenTimestampSec -
         (genesisTime + data.slot * config.SECONDS_PER_SLOT + config.getAttestationDueMs(fork) / 1000);
