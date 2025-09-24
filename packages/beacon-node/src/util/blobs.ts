@@ -79,13 +79,13 @@ export async function dataColumnMatrixRecovery(
     return null;
   }
 
-  // Sort data columns by index in ascending order before passing for kzg operations
-  const partialSidecarsSorted = [...partialSidecars.values()].sort((a, b) => a.index - b.index);
-
   if (columnCount === NUMBER_OF_COLUMNS) {
     // full columns, no need to recover
-    return partialSidecarsSorted;
+    return Array.from(partialSidecars.values());
   }
+
+  // Sort data columns by index in ascending order before passing for kzg operations
+  const partialSidecarsSorted = Array.from(partialSidecars.values()).sort((a, b) => a.index - b.index);
 
   const firstDataColumn = partialSidecarsSorted[0];
   if (firstDataColumn == null) {
