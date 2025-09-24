@@ -11,22 +11,14 @@
   "type": "module",
   "exports": {
     ".": {
+      "types": "./lib/index.d.ts",
       "bun": "./src/index.ts",
       "import": "./lib/index.js"
     },
     "./downloadTests": {
+      "types": "./lib/downloadTests.d.ts",
       "bun": "./src/downloadTests.ts",
       "import": "./lib/downloadTests.js"
-    }
-  },
-  "types": "lib/index.d.ts",
-  "typesVersions": {
-    "*": {
-      "*": [
-        "*",
-        "lib/*",
-        "lib/*/index"
-      ]
     }
   },
   "files": [

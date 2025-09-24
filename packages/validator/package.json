@@ -11,11 +11,11 @@
   "type": "module",
   "exports": {
     ".": {
+      "types": "./lib/index.d.ts",
       "bun": "./src/index.ts",
       "import": "./lib/index.js"
     }
   },
-  "types": "./lib/index.d.ts",
   "files": [
     "lib/**/*.js",
     "lib/**/*.js.map",

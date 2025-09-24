@@ -15,6 +15,7 @@
   "type": "module",
   "exports": {
     ".": {
+      "types": "./lib/index.d.ts",
       "bun": "./src/index.ts",
       "import": "./lib/index.js"
     }

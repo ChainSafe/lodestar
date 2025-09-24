@@ -9,7 +9,13 @@
   },
   "homepage": "https://github.com/ChainSafe/lodestar#readme",
   "type": "module",
-  "exports": "./lib/index.js",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "bun": "./src/index.ts",
+      "import": "./lib/index.js"
+    }
+  },
   "files": [
     "lib/**/*.d.ts",
     "lib/**/*.js",

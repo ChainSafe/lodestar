@@ -12,24 +12,16 @@
   "type": "module",
   "exports": {
     ".": {
+      "types": "./lib/index.d.ts",
       "bun": "./src/index.ts",
       "import": "./lib/index.js"
     },
     "./doubles": {
+      "types": "./lib/doubles.d.ts",
       "bun": "./src/doubles.ts",
       "import": "./lib/doubles.js"
     }
   },
-  "typesVersions": {
-    "*": {
-      "*": [
-        "*",
-        "lib/*",
-        "lib/*/index"
-      ]
-    }
-  },
-  "types": "lib/index.d.ts",
   "files": [
     "lib/**/*.js",
     "lib/**/*.js.map",

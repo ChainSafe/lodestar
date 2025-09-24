@@ -15,50 +15,62 @@
   "type": "module",
   "exports": {
     ".": {
+      "types": "./lib/index.d.ts",
       "bun": "./src/index.ts",
       "import": "./lib/index.js"
     },
     "./api": {
+      "types": "./lib/api/index.d.ts",
       "bun": "./src/api/index.ts",
       "import": "./lib/api/index.js"
     },
     "./chain": {
+      "types": "./lib/chain/index.d.ts",
       "bun": "./src/chain/index.ts",
       "import": "./lib/chain/index.js"
     },
     "./constants": {
+      "types": "./lib/constants/index.d.ts",
       "bun": "./src/constants/index.ts",
       "import": "./lib/constants/index.js"
     },
     "./db": {
+      "types": "./lib/db/index.d.ts",
       "bun": "./src/db/index.ts",
       "import": "./lib/db/index.js"
     },
     "./eth1": {
+      "types": "./lib/eth1/index.d.ts",
       "bun": "./src/eth1/index.ts",
       "import": "./lib/eth1/index.js"
     },
     "./metrics": {
+      "types": "./lib/metrics/index.d.ts",
       "bun": "./src/metrics/index.ts",
       "import": "./lib/metrics/index.js"
     },
     "./monitoring": {
+      "types": "./lib/monitoring/index.d.ts",
       "bun": "./src/monitoring/index.ts",
       "import": "./lib/monitoring/index.js"
     },
     "./network": {
+      "types": "./lib/network/index.d.ts",
       "bun": "./src/network/index.ts",
       "import": "./lib/network/index.js"
     },
     "./node": {
+      "types": "./lib/node/index.d.ts",
       "bun": "./src/node/index.ts",
       "import": "./lib/node/index.js"
     },
     "./sync": {
+      "types": "./lib/sync/index.d.ts",
       "bun": "./src/sync/index.ts",
       "import": "./lib/sync/index.js"
     },
     "./util": {
+      "types": "./lib/util/index.d.ts",
       "bun": "./src/util/index.ts",
       "import": "./lib/util/index.js"
     }
@@ -69,16 +81,6 @@
       "default": "@chainsafe/prometheus-gc-stats"
     }
   },
-  "typesVersions": {
-    "*": {
-      "*": [
-        "*",
-        "lib/*",
-        "lib/*/index"
-      ]
-    }
-  },
-  "types": "./lib/index.d.ts",
   "files": [
     "lib/**/*.d.ts",
     "lib/**/*.js",
