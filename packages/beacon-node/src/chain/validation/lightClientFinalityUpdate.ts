@@ -28,7 +28,7 @@ export function validateLightClientFinalityUpdate(
   // through the network -- i.e. validate that `get_sync_message_due_ms(epoch)`
   // milliseconds (with a `MAXIMUM_GOSSIP_CLOCK_DISPARITY` allowance) has
   // transpired since the start of `signature_slot`.
-  if (updateReceivedTooEarly(config, chain.genesisTime, gossipedFinalityUpdate)) {
+  if (updateReceivedTooEarly(config, chain.clock, gossipedFinalityUpdate)) {
     throw new LightClientError(GossipAction.IGNORE, {
       code: LightClientErrorCode.FINALITY_UPDATE_RECEIVED_TOO_EARLY,
     });

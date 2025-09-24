@@ -1,8 +1,8 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {LightClientOptimisticUpdate} from "@lodestar/types";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants/index.js";
 import {assertLightClientServer} from "../../node/utils/lightclient.js";
+import {IClock} from "../../util/clock.js";
 import {GossipAction} from "../errors/index.js";
 import {LightClientError, LightClientErrorCode} from "../errors/lightClientError.js";
 import {IBeaconChain} from "../interface.js";
@@ -29,7 +29,7 @@ export function validateLightClientOptimisticUpdate(
   // through the network -- i.e. validate that `get_sync_message_due_ms(epoch)`
   // milliseconds (with a `MAXIMUM_GOSSIP_CLOCK_DISPARITY` allowance) has
   // transpired since the start of `signature_slot`.
-  if (updateReceivedTooEarly(config, chain.genesisTime, gossipedOptimisticUpdate)) {
+  if (updateReceivedTooEarly(config, chain.clock, gossipedOptimisticUpdate)) {
     throw new LightClientError(GossipAction.IGNORE, {
       code: LightClientErrorCode.OPTIMISTIC_UPDATE_RECEIVED_TOO_EARLY,
     });
@@ -60,12 +60,9 @@ export function validateLightClientOptimisticUpdate(
  */
 export function updateReceivedTooEarly(
   config: ChainForkConfig,
-  genesisTime: number,
+  clock: IClock,
   update: Pick<LightClientOptimisticUpdate, "signatureSlot">
 ): boolean {
   const fork = config.getForkName(update.signatureSlot);
-  const updateCutoffMs =
-    computeTimeAtSlot(config, update.signatureSlot, genesisTime) * 1000 + config.getSyncMessageDueMs(fork);
-  const earliestAllowedTimestampMs = updateCutoffMs - MAXIMUM_GOSSIP_CLOCK_DISPARITY;
-  return Date.now() < earliestAllowedTimestampMs;
+  return clock.msFromSlot(update.signatureSlot) < config.getSyncMessageDueMs(fork) - MAXIMUM_GOSSIP_CLOCK_DISPARITY;
 }
