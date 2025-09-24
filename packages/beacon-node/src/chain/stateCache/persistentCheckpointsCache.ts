@@ -464,6 +464,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     }
 
     const blockSlot = state.slot;
+    // TODO GLOAS: this needs to be re-evaluated, should it be based on AGGREGATE_DUE_BPS?
     const twoThirdsSlot = (2 * state.config.SECONDS_PER_SLOT) / INTERVALS_PER_SLOT;
     // we always have clock in production, fallback value is only for test
     const secFromSlot = this.clock?.secFromSlot(blockSlot) ?? twoThirdsSlot;
