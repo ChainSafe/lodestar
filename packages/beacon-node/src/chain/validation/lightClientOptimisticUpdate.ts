@@ -1,5 +1,4 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName} from "@lodestar/params";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {LightClientOptimisticUpdate} from "@lodestar/types";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants/index.js";
@@ -64,9 +63,9 @@ export function updateReceivedTooEarly(
   genesisTime: number,
   update: Pick<LightClientOptimisticUpdate, "signatureSlot">
 ): boolean {
-  // TODO GLOAS: Pass in a real fork name
+  const fork = config.getForkName(update.signatureSlot);
   const updateCutoffMs =
-    computeTimeAtSlot(config, update.signatureSlot, genesisTime) * 1000 + config.getSyncMessageDueMs(ForkName.phase0);
+    computeTimeAtSlot(config, update.signatureSlot, genesisTime) * 1000 + config.getSyncMessageDueMs(fork);
   const earliestAllowedTimestampMs = updateCutoffMs - MAXIMUM_GOSSIP_CLOCK_DISPARITY;
   return Date.now() < earliestAllowedTimestampMs;
 }

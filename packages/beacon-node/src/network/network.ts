@@ -5,7 +5,7 @@ import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
-import {ForkName, ForkSeq} from "@lodestar/params";
+import {ForkSeq} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
 import {computeEpochAtSlot, computeTimeAtSlot} from "@lodestar/state-transition";
 import {
@@ -720,10 +720,9 @@ export class Network implements INetwork {
   };
 
   private waitForSyncMessageCutoff = async (slot: number): Promise<void> => {
-    // TODO GLOAS: Pass in a real fork name
+    const fork = this.config.getForkName(slot);
     const secAtSlot =
-      computeTimeAtSlot(this.config, slot, this.chain.genesisTime) +
-      this.config.getSyncMessageDueMs(ForkName.phase0) / 1000;
+      computeTimeAtSlot(this.config, slot, this.chain.genesisTime) + this.config.getSyncMessageDueMs(fork) / 1000;
     const msToSlot = secAtSlot * 1000 - Date.now();
     await sleep(msToSlot, this.controller.signal);
   };
