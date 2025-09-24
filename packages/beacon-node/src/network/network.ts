@@ -7,7 +7,7 @@ import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
 import {ForkSeq} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
-import {computeEpochAtSlot, computeTimeAtSlot} from "@lodestar/state-transition";
+import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {
   AttesterSlashing,
   LightClientBootstrap,
@@ -291,6 +291,7 @@ export class Network implements INetwork {
     if (!syncMeta) {
       throw new Error(`peerId=${prettyPrintPeerIdStr(peerId)} not in connectedPeerSyncMeta`);
     }
+    afterBlockDelayMs;
     return {peerId, ...syncMeta};
   }
 
@@ -721,10 +722,8 @@ export class Network implements INetwork {
 
   private waitForSyncMessageCutoff = async (slot: number): Promise<void> => {
     const fork = this.config.getForkName(slot);
-    const secAtSlot =
-      computeTimeAtSlot(this.config, slot, this.chain.genesisTime) + this.config.getSyncMessageDueMs(fork) / 1000;
-    const msToSlot = secAtSlot * 1000 - Date.now();
-    await sleep(msToSlot, this.controller.signal);
+    const msToCutoffTime = this.config.getSyncMessageDueMs(fork) - this.chain.clock.msFromSlot(slot);
+    await sleep(msToCutoffTime, this.controller.signal);
   };
 
   private onHead = async (): Promise<void> => {
