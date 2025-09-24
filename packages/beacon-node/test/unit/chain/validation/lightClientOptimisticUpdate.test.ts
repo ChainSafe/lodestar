@@ -126,12 +126,12 @@ describe("Light Client Optimistic Update validation", () => {
     lightclientOptimisticUpdate.attestedHeader.beacon.slot = 2;
 
     // satisfy:
-    // [IGNORE] The optimistic_update is received after the block at signature_slot was given enough time to propagate
-    // through the network -- i.e. validate that one-third of optimistic_update.signature_slot has transpired
-    // (SECONDS_PER_SLOT / INTERVALS_PER_SLOT seconds after the start of the slot, with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
+    // [IGNORE] The optimistic_update is received after the block at `signature_slot` was given enough time to propagate
+    // through the network -- i.e. validate that `get_sync_message_due_ms(epoch)` milliseconds
+    // (with a `MAXIMUM_GOSSIP_CLOCK_DISPARITY` allowance) has transpired since the start of `signature_slot`.
     const timeAtSignatureSlot =
       computeTimeAtSlot(config, lightclientOptimisticUpdate.signatureSlot, chain.genesisTime) * 1000;
-    vi.advanceTimersByTime(timeAtSignatureSlot + config.getSyncMessageDueMs(ForkName.phase0) + 1000);
+    vi.advanceTimersByTime(timeAtSignatureSlot + config.getSyncMessageDueMs(ForkName.altair) + 1000);
 
     // satisfy:
     // [IGNORE] The received optimistic_update matches the locally computed one exactly
