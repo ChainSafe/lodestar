@@ -40,7 +40,7 @@ describe("chain / opPools / SyncCommitteeMessagePool", () => {
   });
 
   it("should propagate SyncCommitteeContribution", () => {
-    clockStub.secFromSlot.mockReturnValue(0);
+    clockStub.msFromSlot.mockReturnValue(0);
     let contribution = cache.getContribution(subcommitteeIndex, syncCommittee.slot, syncCommittee.beaconBlockRoot);
     expect(contribution).not.toBeNull();
     const newSecretKey = SecretKey.fromBytes(Buffer.alloc(32, 2));

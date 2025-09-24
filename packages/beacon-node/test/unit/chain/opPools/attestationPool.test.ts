@@ -22,7 +22,7 @@ describe("AttestationPool", () => {
     ALTAIR_FORK_EPOCH: 1,
   });
   const clockStub = getMockedClock();
-  vi.spyOn(clockStub, "secFromSlot").mockReturnValue(0);
+  vi.spyOn(clockStub, "msFromSlot").mockReturnValue(0);
 
   const validatorCommitteeIndex = 0;
   const committeeSize = 128;
