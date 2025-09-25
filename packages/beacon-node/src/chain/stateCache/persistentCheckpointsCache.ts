@@ -471,7 +471,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     const msFromSlot = this.clock?.msFromSlot(blockSlot) ?? processCPStatesTimeMs;
     const msToProcessCPStates = processCPStatesTimeMs - msFromSlot;
     if (msToProcessCPStates > 0) {
-      // 67% of slot is the most free time of every slot, take that chance to persist checkpoint states
+      // At ~67% of slot is the most free time of every slot, take that chance to persist checkpoint states
       // normally it should only persist checkpoint states at ~67% of slot 0 of epoch
       await sleep(msToProcessCPStates, this.signal);
     }
