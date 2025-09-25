@@ -1,5 +1,5 @@
 import {ApiClient, routes} from "@lodestar/api";
-import {ChainConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {BLSPubkey, Epoch, RootHex, Slot} from "@lodestar/types";
 import {sleep, toPubkeyHex} from "@lodestar/utils";
@@ -9,10 +9,11 @@ import {IClock, LoggerVc, differenceHex} from "../util/index.js";
 import {ValidatorStore} from "./validatorStore.js";
 
 /** This polls block duties 1s before the next epoch */
-// TODO: change to 6 to do it 2s before the next epoch
+// TODO: change to 8333 (5/6 of slot) to do it 2s before the next epoch
 // once we have some improvement on epoch transition time
 // see https://github.com/ChainSafe/lodestar/issues/5792#issuecomment-1647457442
-const BLOCK_DUTIES_LOOKAHEAD_FACTOR = 12;
+// TODO GLOAS: re-evaluate timing
+const BLOCK_DUTIES_LOOKAHEAD_BPS = 9167;
 /** Only retain `HISTORICAL_DUTIES_EPOCHS` duties prior to the current epoch */
 const HISTORICAL_DUTIES_EPOCHS = 2;
 // Re-declaring to not have to depend on `lodestar-params` just for this 0
@@ -30,7 +31,7 @@ export class BlockDutiesService {
   private readonly proposers = new Map<Epoch, BlockDutyAtEpoch>();
 
   constructor(
-    private readonly config: ChainConfig,
+    private readonly config: ChainForkConfig,
     private readonly logger: LoggerVc,
     private readonly api: ApiClient,
     private readonly clock: IClock,
@@ -169,7 +170,8 @@ export class BlockDutiesService {
    */
   private async pollBeaconProposersNextEpoch(currentSlot: Slot, nextEpoch: Epoch, signal: AbortSignal): Promise<void> {
     const nextSlot = currentSlot + 1;
-    const lookAheadMs = (this.config.SECONDS_PER_SLOT * 1000) / BLOCK_DUTIES_LOOKAHEAD_FACTOR;
+    const lookAheadMs =
+      this.config.SLOT_DURATION_MS - this.config.getSlotComponentDurationMs(BLOCK_DUTIES_LOOKAHEAD_BPS);
     await sleep(this.clock.msToSlot(nextSlot) - lookAheadMs, signal);
     this.logger.debug("Polling proposers for next epoch", {nextEpoch, nextSlot});
     // Poll proposers for the next epoch
