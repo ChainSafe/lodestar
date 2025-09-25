@@ -11,10 +11,11 @@
   "type": "module",
   "exports": "./lib/index.js",
   "files": [
-    "lib/**/*.d.ts",
-    "lib/**/*.js",
-    "lib/**/*.js.map",
-    ".git-data.json"
+    "src",
+    "lib",
+    "bin",
+    ".git-data.json",
+    "!**/*.tsbuildinfo"
   ],
   "bin": {
     "lodestar": "lib/index.js"

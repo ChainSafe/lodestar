@@ -3,7 +3,7 @@ import {StrictEventEmitter} from "strict-event-emitter-types";
 import {routes} from "@lodestar/api";
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {RootOptionalSlot, deneb, fulu, phase0} from "@lodestar/types";
+import {RootHex, deneb, fulu, phase0} from "@lodestar/types";
 import {PeerIdStr} from "../util/peerId.js";
 import {BlockInputSource, IBlockInput} from "./blocks/blockInput/types.js";
 
@@ -76,7 +76,7 @@ type ApiEvents = {[K in routes.events.EventType]: (data: routes.events.EventData
 
 export type ChainEventData = {
   [ChainEvent.unknownParent]: {blockInput: IBlockInput; peer: PeerIdStr; source: BlockInputSource};
-  [ChainEvent.unknownBlockRoot]: {rootSlot: RootOptionalSlot; peer?: PeerIdStr; source: BlockInputSource};
+  [ChainEvent.unknownBlockRoot]: {rootHex: RootHex; peer?: PeerIdStr; source: BlockInputSource};
   [ChainEvent.incompleteBlockInput]: {blockInput: IBlockInput; peer: PeerIdStr; source: BlockInputSource};
 };
 
