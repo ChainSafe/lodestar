@@ -17,7 +17,9 @@ const merkleProof: TestRunnerFn<MerkleTestCase, {leaf: string; branch: string[];
       // This is causing clipping of integers during deserialization.
       // For testing purpose we replace the uint types with bigint
       const BeaconBlockBody =
-        testCaseName.includes("random") || testCaseName.includes("max_blobs") || testCaseName.includes("multiple_blobs")
+        testCaseName.includes("random_block") ||
+        testCaseName.endsWith("max_blobs") ||
+        testCaseName.endsWith("multiple_blobs")
           ? replaceUintTypeWithUintBigintType(sszTypesFor(fork).BeaconBlockBody)
           : sszTypesFor(fork).BeaconBlockBody;
 
