@@ -230,14 +230,13 @@ export class NetworkProcessor {
     return queue.getAll();
   }
 
-  searchUnknownSlotRoot(slotRoot: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void {
-    const {slot, root} = slotRoot;
+  searchUnknownSlotRoot({slot, root}: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void {
     if (this.chain.seenBlock(root) || this.unknownRootsBySlot.getOrDefault(slot).has(root)) {
       return;
     }
     // Search for the unknown block
     this.unknownRootsBySlot.getOrDefault(slot).add(root);
-    this.chain.emitter.emit(ChainEvent.unknownBlockRoot, {rootSlot: slotRoot, peer, source});
+    this.chain.emitter.emit(ChainEvent.unknownBlockRoot, {rootHex: root, peer, source});
   }
 
   private onPendingGossipsubMessage(message: PendingGossipsubMessage): void {

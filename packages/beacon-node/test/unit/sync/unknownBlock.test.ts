@@ -215,7 +215,7 @@ describe.skip(
           });
         } else {
           chain.emitter?.emit(ChainEvent.unknownBlockRoot, {
-            rootSlot: {root: blockRootHexC},
+            rootHex: blockRootHexC,
             peer,
             source: BlockInputSource.gossip,
           });
