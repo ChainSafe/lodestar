@@ -16,6 +16,16 @@
     ".": {
       "bun": "./src/index.ts",
       "import": "./lib/index.js"
+    },
+    "./controller/level": {
+      "bun": "./src/controller/level_bun.ts",
+      "import": "./lib/controller/level.js"
+    }
+  },
+  "imports": {
+    "#controller/level": {
+      "bun": "./src/controller/level_bun.ts",
+      "import": "./src/controller/level.js"
     }
   },
   "types": "./lib/index.d.ts",
@@ -40,6 +50,7 @@
   },
   "dependencies": {
     "@chainsafe/ssz": "^1.2.2",
+    "@lodestar/bun": "git+https://github.com/ChainSafe/lodestar-bun.git",
     "@lodestar/config": "^1.34.1",
     "@lodestar/utils": "^1.34.1",
     "classic-level": "^1.4.1",

@@ -2,7 +2,7 @@ import path from "node:path";
 import {rimraf} from "rimraf";
 import {afterAll, beforeAll, beforeEach, describe, expect, it} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
-import {LevelDbController} from "@lodestar/db";
+import {LevelDbController} from "@lodestar/db/controller/level";
 import {ZERO_HASH} from "@lodestar/state-transition";
 import {
   InterchangeError,

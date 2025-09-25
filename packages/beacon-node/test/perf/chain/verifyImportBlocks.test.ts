@@ -1,7 +1,7 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {afterAll, beforeAll, bench, describe, setBenchOpts} from "@chainsafe/benchmark";
 import {config} from "@lodestar/config/default";
-import {LevelDbController} from "@lodestar/db";
+import {LevelDbController} from "@lodestar/db/controller/level";
 import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {sleep, toHex} from "@lodestar/utils";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
