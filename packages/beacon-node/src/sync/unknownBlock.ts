@@ -2,7 +2,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {ForkSeq, INTERVALS_PER_SLOT} from "@lodestar/params";
 import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
 import {RootHex} from "@lodestar/types";
-import {Logger, prettyBytes, prettyPrintIndices, pruneSetToMax, sleep} from "@lodestar/utils";
+import {Logger, prettyPrintIndices, pruneSetToMax, sleep} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
 import {BlockError, BlockErrorCode} from "../chain/errors/index.js";
@@ -196,7 +196,7 @@ export class BlockInputSync {
       this.pendingBlocks.set(rootHex, pendingBlock);
 
       this.logger.verbose("Added new rootHex to BlockInputSync.pendingBlocks", {
-        rootHex: prettyBytes(pendingBlock.rootHex),
+        root: pendingBlock.rootHex,
         peerIdStr: peerIdStr ?? "unknown peer",
       });
     }
@@ -315,7 +315,7 @@ export class BlockInputSync {
     const rootHex = getBlockInputSyncCacheItemRootHex(block);
     const logCtx = {
       slot: getBlockInputSyncCacheItemSlot(block),
-      blockRoot: prettyBytes(rootHex),
+      root: rootHex,
       pendingBlocks: this.pendingBlocks.size,
     };
 
@@ -404,7 +404,7 @@ export class BlockInputSync {
       // eligible for proposer boost to prevent unbundling attack
       this.logger.verbose("Avoid proposer boost for this block of known proposer", {
         slot: blockSlot,
-        blockRoot: prettyBytes(pendingBlock.blockInput.blockRootHex),
+        root: pendingBlock.blockInput.blockRootHex,
         proposerIndex,
       });
       await sleep(this.proposerBoostSecWindow * 1000);
@@ -512,7 +512,7 @@ export class BlockInputSync {
       const peerMeta = this.peerBalancer.bestPeerForPendingColumns(pendingColumns, excludedPeers);
       if (peerMeta === null) {
         // no more peer with needed columns to try, throw error
-        let message = `Error fetching UnknownBlockRoot slot=${slot} blockRoot=${prettyBytes(rootHex)} after ${i}: cannot find peer`;
+        let message = `Error fetching UnknownBlockRoot slot=${slot} root=${rootHex} after ${i}: cannot find peer`;
         if (pendingColumns) {
           message += ` with needed columns=${prettyPrintIndices(Array.from(pendingColumns))}`;
         }
@@ -602,7 +602,7 @@ export class BlockInputSync {
       }
     } // end while loop over peers
 
-    const message = `Error fetching BlockInput with slot=${slot} blockRoot=${prettyBytes(rootHex)} after ${i - 1} attempts.`;
+    const message = `Error fetching BlockInput with slot=${slot} root=${rootHex} after ${i - 1} attempts.`;
 
     if (!isPendingBlockInput(cacheItem)) {
       throw Error(`${message} No block and no data was found.`);
