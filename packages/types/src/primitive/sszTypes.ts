@@ -13,6 +13,19 @@ export const Bytes96 = new ByteVectorType(96);
 export const Uint8 = new UintNumberType(1);
 export const Uint16 = new UintNumberType(2);
 export const Uint32 = new UintNumberType(4);
+/**
+ * A JS number is an IEEE-754 double which have 53 bits integer precision. That implies it can store
+ * value upto 2^53-1 without loosing any precision and `Number.MAX_SAFE_INTEGER` represent that exact limit.
+ *
+ * So theoretically we can't store a number of 64 bits with correct precision.
+ *
+ * We learned that JS bigint arithmetics is a couple of fold slower than number.
+ * So we intentionally use `number` for 64 bits values here. Because with heuristics we know our
+ * intended values will never cross `Number.MAX_SAFE_INTEGER` limit.
+ *
+ * If you are not fully sure about the limit of a certain value where you use this type, particularly
+ * types related to network interaction, then we would encourage to use `UintBn64` instead.
+ */
 export const UintNum64 = new UintNumberType(8);
 export const UintNumInf64 = new UintNumberType(8, {clipInfinity: true});
 export const UintBn64 = new UintBigintType(8);
