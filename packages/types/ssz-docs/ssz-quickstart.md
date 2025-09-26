@@ -402,10 +402,26 @@ const fromJson = ssz.phase0.Attestation.fromJson(json);
 To understand how Lodestar’s SSZ library implements serialization and deserialization. Read this article [Under the Hood: How serialize() and deserialize() Work in Lodestar]()
 
 ### Merkleization and Hashing
-Hashing and Merkleization are the heart of SSZ because they’re what make consensus proofs possible.
+In SSZ every object can be turned into a Merkle root — a single 32-byte hash that represents the entire structure.Hashing and Merkleization are the heart of SSZ because they’re what make consensus proofs possible. 
+
+#### What is Hashing?
+Hashing turns data of any size into a fixed-size digest.
+
+- Function used: SHA-256 (always outputs 32 bytes).
+- Deterministic: same input → same output.
+- Secure: infeasible to reverse or find collisions.
+
+Example:
+```
+sha256("hello") 
+= 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
+
+```
+
+
 #### What is Merkleization?
 
-- Merkleization is process of hashing SSZ objects into a binary Merkle tree.
+-[ Merkleization ](https://www.investopedia.com/terms/m/merkle-tree.asp) is process of hashing SSZ objects into a binary Merkle tree.
 - Each field → a leaf node.
 - The tree’s root hash = Merkle root → uniquely represents the entire object.
 - This is what Ethereum consensus uses for proofs and state commitments.
