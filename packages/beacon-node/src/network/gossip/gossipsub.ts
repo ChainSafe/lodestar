@@ -105,7 +105,7 @@ export class Eth2Gossipsub extends GossipSub {
       mcacheLength: 6,
       mcacheGossip: 3,
       // this should be in ms
-      seenTTL: config.SECONDS_PER_SLOT * SLOTS_PER_EPOCH * 2 * 1000,
+      seenTTL: config.SLOT_DURATION_MS * SLOTS_PER_EPOCH * 2,
       scoreParams,
       scoreThresholds: gossipScoreThresholds,
       // For a single stream, await processing each RPC before processing the next

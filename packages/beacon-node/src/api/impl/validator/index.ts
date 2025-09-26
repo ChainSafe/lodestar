@@ -180,7 +180,7 @@ export function getValidatorApi(
    * This value is the same to MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC.
    * For very fast networks, reduce clock disparity to half a slot.
    */
-  const MAX_API_CLOCK_DISPARITY_SEC = Math.min(0.5, config.SECONDS_PER_SLOT / 2);
+  const MAX_API_CLOCK_DISPARITY_SEC = Math.min(0.5, config.SLOT_DURATION_MS / 2000);
   const MAX_API_CLOCK_DISPARITY_MS = MAX_API_CLOCK_DISPARITY_SEC * 1000;
 
   /** Compute and cache the genesis block root */
@@ -213,7 +213,7 @@ export function getValidatorApi(
       return;
     }
 
-    const slotStartSec = chain.genesisTime + slot * config.SECONDS_PER_SLOT;
+    const slotStartSec = chain.genesisTime + (slot * config.SLOT_DURATION_MS) / 1000;
     const msToSlot = slotStartSec * 1000 - Date.now();
 
     if (msToSlot > MAX_API_CLOCK_DISPARITY_MS) {
@@ -244,7 +244,7 @@ export function getValidatorApi(
    */
   function msToNextEpoch(): number {
     const nextEpoch = chain.clock.currentEpoch + 1;
-    const secPerEpoch = SLOTS_PER_EPOCH * config.SECONDS_PER_SLOT;
+    const secPerEpoch = (SLOTS_PER_EPOCH * config.SLOT_DURATION_MS) / 1000;
     const nextEpochStartSec = chain.genesisTime + nextEpoch * secPerEpoch;
     return nextEpochStartSec * 1000 - Date.now();
   }
@@ -1018,7 +1018,7 @@ export function getValidatorApi(
       const head = chain.forkChoice.getHead();
       let state: CachedBeaconStateAllForks | undefined = undefined;
       const startSlot = computeStartSlotAtEpoch(epoch);
-      const slotMs = config.SECONDS_PER_SLOT * 1000;
+      const slotMs = config.SLOT_DURATION_MS;
       const prepareNextSlotLookAheadMs = slotMs - config.getSlotComponentDurationMs(PREPARE_NEXT_SLOT_BPS);
       const toNextEpochMs = msToNextEpoch();
       // validators may request next epoch's duties when it's close to next epoch

@@ -455,7 +455,7 @@ export function createValidatorMonitor(
       // Returns the duration between when the attestation `data` could be produced (ATTESTATION_DUE_BPS through the slot) and `seenTimestamp`.
       const delaySec =
         seenTimestampSec -
-        (genesisTime + data.slot * config.SECONDS_PER_SLOT + config.getAttestationDueMs(fork) / 1000);
+        (genesisTime + (data.slot * config.SLOT_DURATION_MS) / 1000 + config.getAttestationDueMs(fork) / 1000);
       for (const index of indexedAttestation.attestingIndices) {
         const validator = validators.get(index);
         if (validator) {
@@ -491,7 +491,7 @@ export function createValidatorMonitor(
       // Returns the duration between when the attestation `data` could be produced (ATTESTATION_DUE_BPS through the slot) and `seenTimestamp`.
       const delaySec =
         seenTimestampSec -
-        (genesisTime + data.slot * config.SECONDS_PER_SLOT + config.getAttestationDueMs(fork) / 1000);
+        (genesisTime + (data.slot * config.SLOT_DURATION_MS) / 1000 + config.getAttestationDueMs(fork) / 1000);
 
       for (const index of indexedAttestation.attestingIndices) {
         const validator = validators.get(index);
@@ -510,7 +510,8 @@ export function createValidatorMonitor(
       const fork = config.getForkName(data.slot);
       // Returns the duration between when a `AggregateAndproof` with `data` could be produced (AGGREGATE_DUE_BPS through the slot) and `seenTimestamp`.
       const delaySec =
-        seenTimestampSec - (genesisTime + data.slot * config.SECONDS_PER_SLOT + config.getAggregateDueMs(fork) / 1000);
+        seenTimestampSec -
+        (genesisTime + (data.slot * config.SLOT_DURATION_MS) / 1000 + config.getAggregateDueMs(fork) / 1000);
 
       for (const index of indexedAttestation.attestingIndices) {
         const validator = validators.get(index);
@@ -539,7 +540,8 @@ export function createValidatorMonitor(
       const fork = config.getForkName(data.slot);
       // Returns the duration between when a `AggregateAndproof` with `data` could be produced (AGGREGATE_DUE_BPS through the slot) and `seenTimestamp`.
       const delaySec =
-        seenTimestampSec - (genesisTime + data.slot * config.SECONDS_PER_SLOT + config.getAggregateDueMs(fork) / 1000);
+        seenTimestampSec -
+        (genesisTime + (data.slot * config.SLOT_DURATION_MS) / 1000 + config.getAggregateDueMs(fork) / 1000);
 
       const aggregatorIndex = signedAggregateAndProof.message.aggregatorIndex;
       const validatorAggregator = validators.get(aggregatorIndex);

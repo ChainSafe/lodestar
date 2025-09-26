@@ -5,7 +5,7 @@ import {computeEpochAtSlot, computeStartSlotAtEpoch} from "./epoch.js";
 
 export function getSlotsSinceGenesis(config: ChainConfig, genesisTime: TimeSeconds): Slot {
   const diffInSeconds = Date.now() / 1000 - genesisTime;
-  return Math.floor(diffInSeconds / config.SECONDS_PER_SLOT);
+  return Math.floor(diffInSeconds / (config.SLOT_DURATION_MS / 1000));
 }
 
 export function getCurrentSlot(config: ChainConfig, genesisTime: TimeSeconds): Slot {
@@ -18,5 +18,5 @@ export function computeSlotsSinceEpochStart(slot: Slot, epoch?: Epoch): Slot {
 }
 
 export function computeTimeAtSlot(config: ChainConfig, slot: Slot, genesisTime: TimeSeconds): TimeSeconds {
-  return genesisTime + slot * config.SECONDS_PER_SLOT;
+  return genesisTime + slot * (config.SLOT_DURATION_MS / 1000);
 }

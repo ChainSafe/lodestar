@@ -157,7 +157,7 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
 }
 
 function timeToNextHalfSlot(config: BeaconConfig, chain: IBeaconChain, isFirstTime: boolean): number {
-  const msPerSlot = config.SECONDS_PER_SLOT * 1000;
+  const msPerSlot = config.SLOT_DURATION_MS;
   const msPerHalfSlot = msPerSlot / 2;
   const msFromGenesis = Date.now() - chain.genesisTime * 1000;
   const msToNextSlot =

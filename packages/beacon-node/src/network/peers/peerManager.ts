@@ -599,7 +599,7 @@ export class PeerManager {
             subnet: query.subnet,
             type,
             maxPeersToDiscover: query.maxPeersToDiscover,
-            toUnixMs: 1000 * (this.clock.genesisTime + query.toSlot * this.config.SECONDS_PER_SLOT),
+            toUnixMs: this.clock.genesisTime * 1000 + query.toSlot * this.config.SLOT_DURATION_MS,
           });
         }
 

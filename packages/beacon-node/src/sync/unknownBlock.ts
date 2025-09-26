@@ -329,7 +329,7 @@ export class BlockInputSync {
       this.pendingBlocks.set(pending.blockInput.blockRootHex, pending);
       const blockSlot = pending.blockInput.slot;
       const finalizedSlot = this.chain.forkChoice.getFinalizedBlock().slot;
-      const delaySec = Date.now() / 1000 - (this.chain.genesisTime + blockSlot * this.config.SECONDS_PER_SLOT);
+      const delaySec = Date.now() / 1000 - (this.chain.genesisTime + (blockSlot * this.config.SLOT_DURATION_MS) / 1000);
       this.metrics?.blockInputSync.elapsedTimeTillReceived.observe(delaySec);
 
       const parentInForkChoice = this.chain.forkChoice.hasBlockHex(pending.blockInput.parentRootHex);
