@@ -510,3 +510,39 @@ fromJson parses hex strings back into Uint8Arrays.
 The result is a valid SSZ object, usable with all SSZ functions (serialize, hashTreeRoot, etc.).
 
 It is that simple to convert data from JSON back into a SSZ object.
+
+### JSON + Serialization Pipeline
+Here is how JSON interacts with SSZ:
+```
+JSON <-> (toJson/fromJson) <-> SSZ Object <-> (serialize/deserialize) <-> Binary
+```
+This allows:
+
+- Storage in JSON (e.g., configs).
+- Transmission over REST APIs.
+- Interoperability with frontend/backends that don’t handle binary well.
+
+#### Sending a SSZ object over the API
+```
+// Example API payload
+const payload = JSON.stringify(Keypair.toJson(kp));
+
+// Send to API...
+fetch("/api/keypair", {
+  method: "POST",
+  headers: {"Content-Type": "application/json"},
+  body: payload,
+});
+
+// Receiving side
+const parsed = JSON.parse(payload);
+const receivedKeypair = Keypair.fromJson(parsed);
+
+// Now it's a valid SSZ object again
+console.log(receivedKeypair.privateKey);
+```
+
+### JSON Conversion Gotchas
+- Always use .toJson and .fromJson instead of JSON.stringify/parse directly on SSZ objects — otherwise Uint8Arrays will break.
+- Hex encoding is the standard format for all byte arrays.
+- Nested containers and lists are handled automatically — you don’t need to recurse manually.
