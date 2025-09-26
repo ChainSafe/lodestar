@@ -22,6 +22,7 @@ import {
   calculateCommitteeAssignments,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
+  computeTimeAtSlot,
   createCachedBeaconState,
   getBlockRootAtSlot,
   getCurrentSlot,
@@ -213,7 +214,7 @@ export function getValidatorApi(
       return;
     }
 
-    const slotStartSec = chain.genesisTime + (slot * config.SLOT_DURATION_MS) / 1000;
+    const slotStartSec = computeTimeAtSlot(config, slot, chain.genesisTime);
     const msToSlot = slotStartSec * 1000 - Date.now();
 
     if (msToSlot > MAX_API_CLOCK_DISPARITY_MS) {

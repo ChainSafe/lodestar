@@ -174,11 +174,11 @@ export class Clock extends EventEmitter implements IClock {
   }
 
   secFromSlot(slot: Slot, toSec = Date.now() / 1000): number {
-    return toSec - (this.genesisTime + (slot * this.config.SLOT_DURATION_MS) / 1000);
+    return toSec - computeTimeAtSlot(this.config, slot, this.genesisTime);
   }
 
   msFromSlot(slot: Slot, toMs = Date.now()): number {
-    return toMs - (this.genesisTime * 1000 + slot * this.config.SLOT_DURATION_MS);
+    return toMs - computeTimeAtSlot(this.config, slot, this.genesisTime) * 1000;
   }
 
   private onNextSlot = (slot?: Slot): void => {

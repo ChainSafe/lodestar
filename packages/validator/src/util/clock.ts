@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {computeEpochAtSlot, getCurrentSlot} from "@lodestar/state-transition";
+import {computeEpochAtSlot, computeTimeAtSlot, getCurrentSlot} from "@lodestar/state-transition";
 import {Epoch, Slot, TimeSeconds} from "@lodestar/types";
 import {ErrorAborted, Logger, isErrorAborted, sleep} from "@lodestar/utils";
 
@@ -73,18 +73,17 @@ export class Clock implements IClock {
 
   /** Milliseconds from now to a specific slot */
   msToSlot(slot: Slot): number {
-    const timeAt = this.genesisTime + (this.config.SLOT_DURATION_MS * slot) / 1000;
-    return timeAt * 1000 - Date.now();
+    return computeTimeAtSlot(this.config, slot, this.genesisTime) * 1000 - Date.now();
   }
 
   /** Milliseconds elapsed from a specific slot to now */
   msFromSlot(slot: Slot): number {
-    return Date.now() - (this.genesisTime * 1000 + this.config.SLOT_DURATION_MS * slot);
+    return Date.now() - computeTimeAtSlot(this.config, slot, this.genesisTime) * 1000;
   }
 
   /** Seconds elapsed from a specific slot to now */
   secFromSlot(slot: Slot): number {
-    return Date.now() / 1000 - (this.genesisTime + (this.config.SLOT_DURATION_MS * slot) / 1000);
+    return Date.now() / 1000 - computeTimeAtSlot(this.config, slot, this.genesisTime);
   }
 
   /**
