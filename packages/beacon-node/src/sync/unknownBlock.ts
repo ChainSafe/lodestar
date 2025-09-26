@@ -1,6 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkSeq} from "@lodestar/params";
 import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
+import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {RootHex} from "@lodestar/types";
 import {Logger, prettyPrintIndices, pruneSetToMax, sleep} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
@@ -329,7 +330,7 @@ export class BlockInputSync {
       this.pendingBlocks.set(pending.blockInput.blockRootHex, pending);
       const blockSlot = pending.blockInput.slot;
       const finalizedSlot = this.chain.forkChoice.getFinalizedBlock().slot;
-      const delaySec = Date.now() / 1000 - (this.chain.genesisTime + (blockSlot * this.config.SLOT_DURATION_MS) / 1000);
+      const delaySec = Date.now() / 1000 - computeTimeAtSlot(this.config, blockSlot, this.chain.genesisTime);
       this.metrics?.blockInputSync.elapsedTimeTillReceived.observe(delaySec);
 
       const parentInForkChoice = this.chain.forkChoice.hasBlockHex(pending.blockInput.parentRootHex);
