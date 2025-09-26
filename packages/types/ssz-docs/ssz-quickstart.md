@@ -418,10 +418,46 @@ sha256("hello")
 
 ```
 
-
 #### What is Merkleization?
 
 -[ Merkleization ](https://www.investopedia.com/terms/m/merkle-tree.asp) is process of hashing SSZ objects into a binary Merkle tree.
 - Each field → a leaf node.
 - The tree’s root hash = Merkle root → uniquely represents the entire object.
 - This is what Ethereum consensus uses for proofs and state commitments.
+
+#### How Merkleization Works?
+1. Serialize values into fixed-size 32-byte chunks.
+   Example: a uint64 (8 bytes) → padded to 32 bytes.
+
+2. Hash the  leaves:
+Each 32-byte chunk is considered a Merkle leaf. (What you got after serialization)
+
+3. Pairwise hashing:
+
+Concatenate two 32-byte nodes (64 bytes).
+
+Hash them with SHA-256 → 32-byte parent.
+```
+H(left || right) → parent
+```
+4. Repeat until root:
+
+Continue combining until a single 32-byte Merkle root remains.
+NB// The root is the merkle roots. Merkle roots are stored in block headers, they prove contents of the entire block.
+
+To learn more about merkleization read this article. 
+[ Merkleization simplified ](https://www.investopedia.com/terms/m/merkle-tree.asp)
+
+Example:  Merkleizing a simple number with no siblings just the root.
+```
+import { ssz } from "@lodestar/types";
+
+const num = 5n;
+const root = ssz.uint64.hashTreeRoot(num);
+
+console.log(root.toString("hex"));
+// e.g. 8c0f... (32-byte Merkle root)
+
+```
+
+
