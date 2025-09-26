@@ -9,6 +9,9 @@ import {InclusionListDutiesService} from "./inclusionListDuties.js";
 import {SyncingStatusTracker} from "./syncingStatusTracker.js";
 import {ValidatorStore} from "./validatorStore.js";
 
+// TODO EIP-7805: review this, not clear from spec
+export const PRODUCE_INCLUSION_LIST_BPS = 5000;
+
 /**
  * Service that sets up and handles validator inclusion list duties.
  */
@@ -16,7 +19,7 @@ export class InclusionListService {
   private readonly dutiesService: InclusionListDutiesService;
 
   constructor(
-    config: ChainForkConfig,
+    private readonly config: ChainForkConfig,
     private readonly logger: LoggerVc,
     private readonly api: ApiClient,
     private readonly clock: IClock,
@@ -53,7 +56,10 @@ export class InclusionListService {
     // (a) the validator has received a valid block from the expected block proposer for the assigned slot or
     // (b) one-third of the slot has transpired (SECONDS_PER_SLOT / 3 seconds after the start of slot) -- whichever comes first.
     // TODO EIP-7805: Review this timing. Spec says only mandates us to broadcast before 11s
-    await sleep(this.clock.msToSlot(slot + 2 / 3), signal);
+    await sleep(
+      this.config.getSlotComponentDurationMs(PRODUCE_INCLUSION_LIST_BPS) - this.clock.msFromSlot(slot),
+      signal
+    );
 
     // If there is more than one duty, all validators on duty will sign and publish the same IL
     const inclusionListTransactions = await this.produceInclusionList(slot);
