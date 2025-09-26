@@ -14,6 +14,7 @@ import {
   RootCache,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
+  computeTimeAtSlot,
   isExecutionStateType,
   isStartSlotOfEpoch,
   isStateValidatorsNodesPopulated,
@@ -78,8 +79,7 @@ export async function importBlock(
   const currentEpoch = computeEpochAtSlot(currentSlot);
   const blockEpoch = computeEpochAtSlot(blockSlot);
   const prevFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
-  const blockDelaySec =
-    (fullyVerifiedBlock.seenTimestampSec - postState.genesisTime) % (this.config.SLOT_DURATION_MS / 1000);
+  const blockDelaySec = fullyVerifiedBlock.seenTimestampSec - computeTimeAtSlot(this.config, blockSlot, postState.genesisTime);
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
   const fork = this.config.getForkSeq(blockSlot);
 

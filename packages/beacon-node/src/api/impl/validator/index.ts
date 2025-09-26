@@ -1019,8 +1019,8 @@ export function getValidatorApi(
       const head = chain.forkChoice.getHead();
       let state: CachedBeaconStateAllForks | undefined = undefined;
       const startSlot = computeStartSlotAtEpoch(epoch);
-      const slotMs = config.SLOT_DURATION_MS;
-      const prepareNextSlotLookAheadMs = slotMs - config.getSlotComponentDurationMs(PREPARE_NEXT_SLOT_BPS);
+      const prepareNextSlotLookAheadMs =
+        config.SLOT_DURATION_MS - config.getSlotComponentDurationMs(PREPARE_NEXT_SLOT_BPS);
       const toNextEpochMs = msToNextEpoch();
       // validators may request next epoch's duties when it's close to next epoch
       // this is to avoid missed block proposal due to 0 epoch look ahead
