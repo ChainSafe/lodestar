@@ -857,8 +857,8 @@ export class ForkChoice implements IForkChoice {
     const msFromSlot = secFromSlot * 1000;
 
     // If the inclusion list is from the previous slot, ignore it if already past the attestation deadline
-    const isBeforeAttestingInterval = msFromSlot < this.config.getAttestationDueMs(fork);
-    if (slot === currentSlot - 1 && !isBeforeAttestingInterval) {
+    const isBeforeAttestationDeadline = msFromSlot < this.config.getAttestationDueMs(fork);
+    if (slot === currentSlot - 1 && !isBeforeAttestationDeadline) {
       return;
     }
 
