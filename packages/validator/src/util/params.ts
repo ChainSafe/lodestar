@@ -146,7 +146,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     GLOAS_FORK_EPOCH: gloasForkRelevant,
 
     // Time parameters
-    SECONDS_PER_SLOT: true, // Deprecated
+    SECONDS_PER_SLOT: false, // Deprecated
     SLOT_DURATION_MS: true,
     SECONDS_PER_ETH1_BLOCK: false, // Legacy
     MIN_VALIDATOR_WITHDRAWABILITY_DELAY: true,
