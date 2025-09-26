@@ -19,7 +19,7 @@ describe("chain / lightclient", () => {
 
   /**
    * Max distance between beacon node head and lightclient head
-   * If SECONDS_PER_SLOT === 1, there should be some margin for slow blocks,
+   * If SLOT_DURATION_MS === 1000, there should be some margin for slow blocks,
    * 4 = 4 sec should be good enough.
    */
   const maxLcHeadTrackingDiffSlots = 4;
@@ -33,8 +33,7 @@ describe("chain / lightclient", () => {
   const targetSlotToReach = computeStartSlotAtEpoch(finalizedEpochToReach + 2) - 1;
   const restPort = 9000;
 
-  const testParams: Pick<ChainConfig, "SECONDS_PER_SLOT" | "SLOT_DURATION_MS" | "ALTAIR_FORK_EPOCH"> = {
-    SECONDS_PER_SLOT: 1,
+  const testParams: Pick<ChainConfig, "SLOT_DURATION_MS" | "ALTAIR_FORK_EPOCH"> = {
     SLOT_DURATION_MS: 1000,
     ALTAIR_FORK_EPOCH: 0,
   };
@@ -51,7 +50,7 @@ describe("chain / lightclient", () => {
     // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
     // also delay to allow bls workers to be transpiled/initialized
     const genesisSlotsDelay = 7;
-    const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
+    const genesisTime = Math.floor(Date.now() / 1000) + (genesisSlotsDelay * testParams.SLOT_DURATION_MS) / 1000;
 
     const testLoggerOpts: TestLoggerOpts = {
       level: LogLevel.info,
@@ -59,7 +58,7 @@ describe("chain / lightclient", () => {
         format: TimestampFormatCode.EpochSlot,
         genesisTime,
         slotsPerEpoch: SLOTS_PER_EPOCH,
-        secondsPerSlot: testParams.SECONDS_PER_SLOT,
+        secondsPerSlot: testParams.SLOT_DURATION_MS / 1000,
       },
     };
 

@@ -19,10 +19,8 @@ describe("sync / finalized sync for fulu", () => {
   const validatorCount = 8;
   const ELECTRA_FORK_EPOCH = 0;
   const FULU_FORK_EPOCH = 1;
-  const SECONDS_PER_SLOT = 2;
   const SLOT_DURATION_MS = 2000;
   const testParams: Partial<ChainConfig> = {
-    SECONDS_PER_SLOT,
     SLOT_DURATION_MS,
     ALTAIR_FORK_EPOCH: ELECTRA_FORK_EPOCH,
     BELLATRIX_FORK_EPOCH: ELECTRA_FORK_EPOCH,
@@ -49,7 +47,7 @@ describe("sync / finalized sync for fulu", () => {
   it("should do a finalized sync from another BN", async () => {
     // single node at beginning, use main thread to verify bls
     const genesisSlotsDelay = 4;
-    const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * SECONDS_PER_SLOT;
+    const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * (SLOT_DURATION_MS / 1000);
 
     const testLoggerOpts: TestLoggerOpts = {
       level: LogLevel.info,
@@ -57,7 +55,7 @@ describe("sync / finalized sync for fulu", () => {
         format: TimestampFormatCode.EpochSlot,
         genesisTime,
         slotsPerEpoch: SLOTS_PER_EPOCH,
-        secondsPerSlot: SECONDS_PER_SLOT,
+        secondsPerSlot: SLOT_DURATION_MS / 1000,
       },
     };
 

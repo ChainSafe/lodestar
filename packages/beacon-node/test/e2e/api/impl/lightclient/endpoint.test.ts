@@ -14,11 +14,10 @@ import {getDevBeaconNode} from "../../../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../../../utils/node/validator.js";
 
 describe("lightclient api", () => {
-  const SECONDS_PER_SLOT = 1;
   const SLOT_DURATION_MS = 1000;
   const ALTAIR_FORK_EPOCH = 0;
   const restPort = 9596;
-  const chainConfig: ChainConfig = {...chainConfigDef, SECONDS_PER_SLOT, SLOT_DURATION_MS, ALTAIR_FORK_EPOCH};
+  const chainConfig: ChainConfig = {...chainConfigDef, SLOT_DURATION_MS, ALTAIR_FORK_EPOCH};
   const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
   const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
   const testLoggerOpts: TestLoggerOpts = {level: LogLevel.info};
@@ -72,13 +71,9 @@ describe("lightclient api", () => {
 
   const waitForBestUpdate = async (): Promise<void> => {
     // should see this event in 5 slots
-    await waitForEvent(
-      bn.chain.emitter,
-      routes.events.EventType.lightClientOptimisticUpdate,
-      5 * SECONDS_PER_SLOT * 1000
-    );
+    await waitForEvent(bn.chain.emitter, routes.events.EventType.lightClientOptimisticUpdate, 5 * SLOT_DURATION_MS);
     // wait for 1 slot to persist the best update
-    await sleep(2 * SECONDS_PER_SLOT * 1000);
+    await sleep(2 * SLOT_DURATION_MS);
   };
 
   it("getLightClientUpdatesByRange()", async () => {

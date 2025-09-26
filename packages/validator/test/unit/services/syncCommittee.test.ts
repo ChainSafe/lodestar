@@ -34,7 +34,6 @@ describe("SyncCommitteeService", () => {
 
   const config = createChainForkConfig({
     ...mainnetConfig,
-    SECONDS_PER_SLOT: 1 / 1000, // Make slot time super short: 1 ms
     SLOT_DURATION_MS: 1, // Make slot time super short: 1 ms
     ALTAIR_FORK_EPOCH: 0, // Activate Altair immediately
   });

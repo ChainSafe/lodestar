@@ -39,7 +39,7 @@ export class ClockStatic extends EventEmitter implements IClock {
   }
 
   secFromSlot(slot: number, toSec?: number): number {
-    // SECONDS_PER_SLOT = 6 in minimal config
+    // SLOT_DURATION_MS / 1000 = 6 in minimal config
     return (toSec ?? Date.now() / 1000) - slot * 6;
   }
 

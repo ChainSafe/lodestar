@@ -32,7 +32,6 @@ describe.skip(
     const slotSec = 0.3;
     const config = createChainForkConfig({
       ...minimalConfig,
-      SECONDS_PER_SLOT: slotSec,
       SLOT_DURATION_MS: slotSec * 1000,
     });
 

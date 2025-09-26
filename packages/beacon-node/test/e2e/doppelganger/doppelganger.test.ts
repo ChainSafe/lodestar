@@ -34,12 +34,11 @@ describe.skip("doppelganger / doppelganger test", () => {
 
   const validatorCount = 1;
   const genesisSlotsDelay = 5;
-  const beaconParams: Pick<ChainConfig, "SECONDS_PER_SLOT" | "SLOT_DURATION_MS"> = {
-    SECONDS_PER_SLOT: 2,
+  const beaconParams: Pick<ChainConfig, "SLOT_DURATION_MS"> = {
     SLOT_DURATION_MS: 2000,
   };
 
-  const timeout = (SLOTS_PER_EPOCH + genesisSlotsDelay) * beaconParams.SECONDS_PER_SLOT * 1000;
+  const timeout = (SLOTS_PER_EPOCH + genesisSlotsDelay) * beaconParams.SLOT_DURATION_MS;
 
   type TestConfig = {
     genesisTime?: number;
@@ -117,7 +116,7 @@ describe.skip("doppelganger / doppelganger test", () => {
 
   it("should shut down validator if same key is active and started after genesis", async () => {
     // set genesis time to allow at least an epoch
-    const genesisTime = Math.floor(Date.now() / 1000) - SLOTS_PER_EPOCH * beaconParams.SECONDS_PER_SLOT;
+    const genesisTime = Math.floor(Date.now() / 1000) - SLOTS_PER_EPOCH * (beaconParams.SLOT_DURATION_MS / 1000);
 
     const {beaconNode: bn, validators: validatorsWithDoppelganger} = await createBNAndVC({
       genesisTime,
@@ -156,7 +155,7 @@ describe.skip("doppelganger / doppelganger test", () => {
     const testLoggerOpts: TestLoggerOpts = {level: LogLevel.info};
 
     // set genesis time to allow at least an epoch
-    const genesisTime = Math.floor(Date.now() / 1000) - SLOTS_PER_EPOCH * beaconParams.SECONDS_PER_SLOT;
+    const genesisTime = Math.floor(Date.now() / 1000) - SLOTS_PER_EPOCH * (beaconParams.SLOT_DURATION_MS / 1000);
 
     const {beaconNode: bn, validators: validator0WithDoppelganger} = await createBNAndVC({
       genesisTime,
@@ -233,7 +232,7 @@ describe.skip("doppelganger / doppelganger test", () => {
     const doppelgangerProtection = true;
 
     // set genesis time to allow at least an epoch
-    const genesisTime = Math.floor(Date.now() / 1000) - SLOTS_PER_EPOCH * beaconParams.SECONDS_PER_SLOT;
+    const genesisTime = Math.floor(Date.now() / 1000) - SLOTS_PER_EPOCH * (beaconParams.SLOT_DURATION_MS / 1000);
 
     const {beaconNode: bn, validators: validatorsWithDoppelganger} = await createBNAndVC({
       genesisTime,
@@ -264,7 +263,7 @@ describe.skip("doppelganger / doppelganger test", () => {
     const doppelgangerProtection = true;
 
     // set genesis time to allow at least an epoch
-    const genesisTime = Math.floor(Date.now() / 1000) - SLOTS_PER_EPOCH * beaconParams.SECONDS_PER_SLOT;
+    const genesisTime = Math.floor(Date.now() / 1000) - SLOTS_PER_EPOCH * (beaconParams.SLOT_DURATION_MS / 1000);
 
     const {beaconNode: bn, validators: validatorsWithDoppelganger} = await createBNAndVC({
       genesisTime,

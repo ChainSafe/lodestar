@@ -39,7 +39,7 @@ export const config = createChainForkConfig({
 export const clock = new Clock({
   config,
   // For our testing we want the clock to be at head of the latest fork
-  genesisTime: Date.now() / 1000 - SLOTS_PER_EPOCH * GLOAS_FORK_EPOCH * config.SECONDS_PER_SLOT,
+  genesisTime: Date.now() / 1000 - SLOTS_PER_EPOCH * GLOAS_FORK_EPOCH * (config.SLOT_DURATION_MS / 1000),
   signal: new AbortController().signal,
 });
 export const privateKey = await generateKeyPair("secp256k1");

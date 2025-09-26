@@ -19,10 +19,8 @@ describe("api / impl / validator", () => {
     const validatorCount = 8;
     const ELECTRA_FORK_EPOCH = 0;
     const FULU_FORK_EPOCH = 1;
-    const SECONDS_PER_SLOT = 2;
-    const SLOT_DURATION_MS = 2 * 1000;
+    const SLOT_DURATION_MS = 2000;
     const testParams: Partial<ChainConfig> = {
-      SECONDS_PER_SLOT,
       SLOT_DURATION_MS,
       ALTAIR_FORK_EPOCH: ELECTRA_FORK_EPOCH,
       BELLATRIX_FORK_EPOCH: ELECTRA_FORK_EPOCH,
@@ -38,7 +36,7 @@ describe("api / impl / validator", () => {
       ],
     };
     const genesisSlotsDelay = 5;
-    const timeout = (SLOTS_PER_EPOCH + genesisSlotsDelay) * SECONDS_PER_SLOT * 1000;
+    const timeout = (SLOTS_PER_EPOCH + genesisSlotsDelay) * (SLOT_DURATION_MS / 1000) * 1000;
 
     afterEach(async () => {
       if (bn) await bn.close();
