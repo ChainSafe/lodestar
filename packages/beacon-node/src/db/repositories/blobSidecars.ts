@@ -23,7 +23,7 @@ export const BLOB_SIDECARS_IN_WRAPPER_INDEX = 44;
  */
 export class BlobSidecarsRepository extends Repository<Uint8Array, BlobSidecarsWrapper> {
   constructor(config: ChainForkConfig, db: Db) {
-    const bucket = Bucket.allForks_blobSidecars;
+    const bucket = Bucket.deneb_blobSidecars;
     super(config, db, bucket, blobSidecarsWrapperSsz, getBucketNameByValue(bucket));
   }
 

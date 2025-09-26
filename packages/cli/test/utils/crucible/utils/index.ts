@@ -6,7 +6,7 @@ import {
   ETH_TTD_INCREMENT,
   SIM_ENV_CHAIN_ID,
   SIM_ENV_NETWORK_ID,
-  SIM_TESTS_SECONDS_PER_SLOT,
+  SIM_TESTS_SLOT_DURATION_MS,
 } from "../constants.js";
 import {Simulation} from "../simulation.js";
 
@@ -37,7 +37,8 @@ function getGenesisDelaySlots(initialNodes?: number): number {
   const initialLaunchScript = 10;
 
   return Math.ceil(
-    ((execution + beacon + validator + keyManager) * initialNodes + initialLaunchScript) / SIM_TESTS_SECONDS_PER_SLOT
+    ((execution + beacon + validator + keyManager) * initialNodes + initialLaunchScript) /
+      (SIM_TESTS_SLOT_DURATION_MS / 1000)
   );
 }
 
@@ -53,12 +54,12 @@ export function defineSimTestConfig(
   estimatedTimeoutMs: number;
   forkConfig: ChainForkConfig;
 } {
-  const genesisDelaySeconds = getGenesisDelaySlots(opts.initialNodes) * SIM_TESTS_SECONDS_PER_SLOT;
+  const genesisDelaySeconds = getGenesisDelaySlots(opts.initialNodes) * (SIM_TESTS_SLOT_DURATION_MS / 1000);
 
   const estimatedTimeoutMs =
     getEstimatedTimeInSecForRun({
       genesisDelaySeconds,
-      secondsPerSlot: SIM_TESTS_SECONDS_PER_SLOT,
+      secondsPerSlot: SIM_TESTS_SLOT_DURATION_MS / 1000,
       runTill: opts.runTillEpoch,
       // After adding Nethermind its took longer to complete
       graceExtraTimeFraction: 0.3,
@@ -66,7 +67,7 @@ export function defineSimTestConfig(
 
   const ttd = getEstimatedTTD({
     bellatrixForkEpoch: opts.BELLATRIX_FORK_EPOCH ?? Infinity,
-    secondsPerSlot: opts.SECONDS_PER_SLOT ?? SIM_TESTS_SECONDS_PER_SLOT,
+    secondsPerSlot: opts.SLOT_DURATION_MS ? opts.SLOT_DURATION_MS / 1000 : SIM_TESTS_SLOT_DURATION_MS / 1000,
     cliqueSealingPeriod: opts.cliqueSealingPeriod ?? CLIQUE_SEALING_PERIOD,
     // To make sure bellatrix already started
     additionalSlots: opts.additionalSlotsForTTD ?? 2,
@@ -75,7 +76,8 @@ export function defineSimTestConfig(
   const forkConfig = createChainForkConfig({
     ...opts,
     GENESIS_DELAY: genesisDelaySeconds,
-    SECONDS_PER_SLOT: opts.SECONDS_PER_SLOT ?? SIM_TESTS_SECONDS_PER_SLOT,
+    SECONDS_PER_SLOT: (opts.SLOT_DURATION_MS ?? SIM_TESTS_SLOT_DURATION_MS) / 1000,
+    SLOT_DURATION_MS: opts.SLOT_DURATION_MS ?? SIM_TESTS_SLOT_DURATION_MS,
     TERMINAL_TOTAL_DIFFICULTY: ttd,
     DEPOSIT_CHAIN_ID: SIM_ENV_CHAIN_ID,
     DEPOSIT_NETWORK_ID: SIM_ENV_NETWORK_ID,

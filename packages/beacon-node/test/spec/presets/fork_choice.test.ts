@@ -134,7 +134,7 @@ const forkChoiceTest =
           for (const [i, step] of steps.entries()) {
             if (isTick(step)) {
               tickTime = bnToNum(step.tick);
-              const currentSlot = Math.floor(tickTime / config.SECONDS_PER_SLOT);
+              const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
               logger.debug(`Step ${i}/${stepsLen} tick`, {currentSlot, valid: Boolean(step.valid), time: tickTime});
               clock.emit(ClockEvent.slot, currentSlot);
               clock.setSlot(currentSlot);
@@ -378,7 +378,7 @@ const forkChoiceTest =
               // slot boundary.
               if (step.checks.time !== undefined && step.checks.time > 0)
                 expect(chain.forkChoice.getTime()).toEqualWithMessage(
-                  Math.floor(bnToNum(step.checks.time) / config.SECONDS_PER_SLOT),
+                  Math.floor(bnToNum(step.checks.time) / (config.SLOT_DURATION_MS / 1000)),
                   `Invalid forkchoice time at step ${i}`
                 );
               if (step.checks.justified_checkpoint) {
@@ -394,10 +394,10 @@ const forkChoiceTest =
                 );
               }
               if (step.checks.get_proposer_head) {
-                const currentSlot = Math.floor(tickTime / config.SECONDS_PER_SLOT);
+                const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
                 const {proposerHead, notReorgedReason} = (chain.forkChoice as ForkChoice).getProposerHead(
                   head,
-                  tickTime % config.SECONDS_PER_SLOT,
+                  tickTime % (config.SLOT_DURATION_MS / 1000),
                   currentSlot
                 );
                 logger.debug(`Not reorged reason ${notReorgedReason} at step ${i}`);
@@ -407,10 +407,10 @@ const forkChoiceTest =
                 );
               }
               if (step.checks.should_override_forkchoice_update) {
-                const currentSlot = Math.floor(tickTime / config.SECONDS_PER_SLOT);
+                const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
                 const result = chain.forkChoice.shouldOverrideForkChoiceUpdate(
                   head.blockRoot,
-                  tickTime % config.SECONDS_PER_SLOT,
+                  tickTime % (config.SLOT_DURATION_MS / 1000),
                   currentSlot
                 );
                 if (result.shouldOverrideFcu === false) {

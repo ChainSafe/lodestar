@@ -5,9 +5,9 @@ import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
-import {ForkSeq, NUMBER_OF_COLUMNS} from "@lodestar/params";
+import {ForkSeq} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
-import {computeEpochAtSlot, computeTimeAtSlot} from "@lodestar/state-transition";
+import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {
   AttesterSlashing,
   LightClientBootstrap,
@@ -612,8 +612,7 @@ export class Network implements INetwork {
   ): Promise<fulu.DataColumnSidecar[]> {
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.DataColumnSidecarsByRange, [Version.V1], request),
-      // request's count represent the slots, so the actual max count received could be slots * blobs per slot
-      request.count * NUMBER_OF_COLUMNS,
+      request.count * request.columns.length,
       responseSszTypeByMethod[ReqRespMethod.DataColumnSidecarsByRange]
     );
   }
@@ -713,9 +712,9 @@ export class Network implements INetwork {
     // TODO: Review is OK to remove if (this.hasAttachedSyncCommitteeMember())
 
     try {
-      // messages SHOULD be broadcast after one-third of slot has transpired
+      // messages SHOULD be broadcast after SYNC_MESSAGE_DUE_BPS of slot has transpired
       // https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#sync-committee
-      await this.waitOneThirdOfSlot(finalityUpdate.signatureSlot);
+      await this.waitForSyncMessageCutoff(finalityUpdate.signatureSlot);
       await this.publishLightClientFinalityUpdate(finalityUpdate);
     } catch (e) {
       // Non-mandatory route on most of network as of Oct 2022. May not have found any peers on topic yet
@@ -730,9 +729,9 @@ export class Network implements INetwork {
     // TODO: Review is OK to remove if (this.hasAttachedSyncCommitteeMember())
 
     try {
-      // messages SHOULD be broadcast after one-third of slot has transpired
+      // messages SHOULD be broadcast after SYNC_MESSAGE_DUE_BPS of slot has transpired
       // https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#sync-committee
-      await this.waitOneThirdOfSlot(optimisticUpdate.signatureSlot);
+      await this.waitForSyncMessageCutoff(optimisticUpdate.signatureSlot);
       await this.publishLightClientOptimisticUpdate(optimisticUpdate);
     } catch (e) {
       // Non-mandatory route on most of network as of Oct 2022. May not have found any peers on topic yet
@@ -743,10 +742,10 @@ export class Network implements INetwork {
     }
   };
 
-  private waitOneThirdOfSlot = async (slot: number): Promise<void> => {
-    const secAtSlot = computeTimeAtSlot(this.config, slot + 1 / 3, this.chain.genesisTime);
-    const msToSlot = secAtSlot * 1000 - Date.now();
-    await sleep(msToSlot, this.controller.signal);
+  private waitForSyncMessageCutoff = async (slot: number): Promise<void> => {
+    const fork = this.config.getForkName(slot);
+    const msToCutoffTime = this.config.getSyncMessageDueMs(fork) - this.chain.clock.msFromSlot(slot);
+    await sleep(msToCutoffTime, this.controller.signal);
   };
 
   private onHead = async (): Promise<void> => {

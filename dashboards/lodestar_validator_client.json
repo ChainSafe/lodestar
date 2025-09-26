@@ -1224,7 +1224,7 @@
           "refId": "A"
         }
       ],
-      "title": "Publish attestation diff from slot 1/3",
+      "title": "Publish attestation diff from slot ATTESTATION_DUE_BPS",
       "tooltip": {
         "show": true,
         "showHistogram": false
@@ -1339,7 +1339,7 @@
           "refId": "A"
         }
       ],
-      "title": "Publish aggregate diff from slot 2/3",
+      "title": "Publish aggregate diff from slot AGGREGATE_DUE_BPS",
       "tooltip": {
         "show": true,
         "showHistogram": false
@@ -1452,7 +1452,7 @@
           "refId": "A"
         }
       ],
-      "title": "Publish sync committee message diff from slot 1/3",
+      "title": "Publish sync committee message diff from slot SYNC_MESSAGE_DUE_BPS",
       "tooltip": {
         "show": true,
         "showHistogram": false
@@ -1565,7 +1565,7 @@
           "refId": "A"
         }
       ],
-      "title": "Publish block diff from slot 0/3",
+      "title": "Publish block diff from start of slot",
       "tooltip": {
         "show": true,
         "showHistogram": false

@@ -134,6 +134,7 @@ export class AttestationDutiesService {
       return;
     }
 
+    // TODO GLOAS: re-evaluate this timing
     // during the 1 / 3 of epoch, last block of epoch may come
     await sleep(this.clock.msToSlot(slot + 1 / 3), signal);
 

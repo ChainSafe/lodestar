@@ -212,14 +212,14 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
   afterBlockDelaySlotFraction: {
     hidden: true,
     description:
-      "Delay before publishing attestations if block comes early, as a fraction of SECONDS_PER_SLOT (value is from 0 inclusive to 1 exclusive)",
+      "Delay before publishing attestations if block comes early, as a fraction of SLOT_DURATION_MS (value is from 0 inclusive to 1 exclusive)",
     type: "number",
   },
 
   scAfterBlockDelaySlotFraction: {
     hidden: true,
     description:
-      "Delay before publishing SyncCommitteeSignature if block comes early, as a fraction of SECONDS_PER_SLOT (value is from 0 inclusive to 1 exclusive)",
+      "Delay before publishing SyncCommitteeSignature if block comes early, as a fraction of SLOT_DURATION_MS (value is from 0 inclusive to 1 exclusive)",
     type: "number",
   },
 

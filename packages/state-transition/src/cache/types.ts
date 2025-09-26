@@ -1,5 +1,5 @@
 import {CompositeViewDU} from "@chainsafe/ssz";
-import {ForkAll, ForkName, ForkPostBellatrix} from "@lodestar/params";
+import {ForkAll, ForkName, ForkPostBellatrix, ForkPreGloas} from "@lodestar/params";
 import {Epoch, RootHex, SSZTypesFor} from "@lodestar/types";
 import {EpochShuffling} from "../util/epochShuffling.js";
 
@@ -14,6 +14,6 @@ export type BeaconStateEip7805 = CompositeViewDU<SSZTypesFor<ForkName.eip7805, "
 export type BeaconStateGloas = CompositeViewDU<SSZTypesFor<ForkName.gloas, "BeaconState">>;
 
 export type BeaconStateAllForks = CompositeViewDU<SSZTypesFor<ForkAll, "BeaconState">>;
-export type BeaconStateExecutions = CompositeViewDU<SSZTypesFor<ForkPostBellatrix, "BeaconState">>;
+export type BeaconStateExecutions = CompositeViewDU<SSZTypesFor<ForkPostBellatrix & ForkPreGloas, "BeaconState">>;
 
 export type ShufflingGetter = (shufflingEpoch: Epoch, dependentRoot: RootHex) => EpochShuffling | null;

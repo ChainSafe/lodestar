@@ -96,7 +96,7 @@ describe("beacon node api", () => {
       });
 
       // Give node sometime to communicate with EL
-      await sleep(chainConfigDef.SECONDS_PER_SLOT * 2 * 1000);
+      await sleep(chainConfigDef.SLOT_DURATION_MS * 2);
 
       const res = await clientElOffline.node.getSyncingStatus();
 
@@ -132,7 +132,7 @@ describe("beacon node api", () => {
       });
       clientSyncing = getClient({baseUrl: `http://127.0.0.1:${portSyncing}`}, {config});
       // Must at least wait for one slot else node considers itself synced pre/at genesis
-      await sleep(chainConfigDef.SECONDS_PER_SLOT * 1000);
+      await sleep(chainConfigDef.SLOT_DURATION_MS);
     });
 
     afterAll(async () => {

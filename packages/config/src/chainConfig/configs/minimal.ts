@@ -59,8 +59,10 @@ export const chainConfig: ChainConfig = {
 
   // Time parameters
   // ---------------------------------------------------------------
-  // [customized] Faster for testing purposes
+  // [customized] Faster for testing purposes (DEPRECATED)
   SECONDS_PER_SLOT: 6,
+  // [customized] 6000 milliseconds, 6 seconds
+  SLOT_DURATION_MS: 6000,
   // 14 (estimate from Eth1 mainnet)
   SECONDS_PER_ETH1_BLOCK: 14,
   // 2**8 (= 256) epochs
@@ -69,15 +71,24 @@ export const chainConfig: ChainConfig = {
   SHARD_COMMITTEE_PERIOD: 64,
   // [customized] process deposits more quickly, but insecure
   ETH1_FOLLOW_DISTANCE: 16,
-  ATTESTATION_DEADLINE: 2,
-  PROPOSER_INCLUSION_LIST_CUT_OFF: 5,
-  VIEW_FREEZE_DEADLINE: 3,
   // 67% of `SLOT_DURATION_MS`
   INCLUSION_LIST_SUBMISSION_DUE_BPS: 6667,
   // 92% of `SLOT_DURATION_MS`
   PROPOSER_INCLUSION_LIST_CUTOFF_BPS: 9167,
   // 75% of `SLOT_DURATION_MS`
   VIEW_FREEZE_CUTOFF_BPS: 7500,
+  // 1667 basis points, ~17% of SLOT_DURATION_MS
+  PROPOSER_REORG_CUTOFF_BPS: 1667,
+  // 3333 basis points, ~33% of SLOT_DURATION_MS
+  ATTESTATION_DUE_BPS: 3333,
+  // 6667 basis points, ~67% of SLOT_DURATION_MS
+  AGGREGATE_DUE_BPS: 6667,
+
+  // Altair
+  // 3333 basis points, ~33% of SLOT_DURATION_MS
+  SYNC_MESSAGE_DUE_BPS: 3333,
+  // 6667 basis points, ~67% of SLOT_DURATION_MS
+  CONTRIBUTION_DUE_BPS: 6667,
 
   // 25% of SLOT_DURATION_MS
   ATTESTATION_DUE_BPS_GLOAS: 2500,
@@ -89,6 +100,10 @@ export const chainConfig: ChainConfig = {
   CONTRIBUTION_DUE_BPS_GLOAS: 5000,
   // 75% of SLOT_DURATION_MS
   PAYLOAD_ATTESTATION_DUE_BPS: 7500,
+
+  ATTESTATION_DEADLINE: 2,
+  PROPOSER_INCLUSION_LIST_CUT_OFF: 5,
+  VIEW_FREEZE_DEADLINE: 3,
 
   // Validator cycle
   // ---------------------------------------------------------------

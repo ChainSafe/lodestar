@@ -81,7 +81,7 @@ export async function downloadGenericSpecTests<TestNames extends string>(
           log(`Downloading ${url} - ${totalSize} bytes`);
 
           // stream download to local .tar.gz file
-          await pipeline(res.body as NodeReadableStream, fs.createWriteStream(tarball));
+          await pipeline(res.body as unknown as NodeReadableStream, fs.createWriteStream(tarball));
           log(`Downloaded ${url} - ${fs.statSync(tarball).size} bytes`);
 
           // extract tar into output directory

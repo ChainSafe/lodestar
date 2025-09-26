@@ -25,7 +25,7 @@ export const config = {
   DENEB_FORK_EPOCH: denebForkEpoch,
   ELECTRA_FORK_EPOCH: electraForkEpoch,
   GENESIS_DELAY: genesisDelaySeconds,
-  SECONDS_PER_SLOT: secondsPerSlot,
+  SLOT_DURATION_MS: secondsPerSlot * 1000,
 };
 
 export function waitForFinalized(): Promise<void> {
