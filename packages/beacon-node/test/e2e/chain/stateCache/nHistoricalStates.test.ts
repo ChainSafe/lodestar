@@ -369,7 +369,7 @@ describe("regen/reload states with n-historical states configuration", () => {
           waitForEvent<phase0.Checkpoint>(
             bn.chain.emitter,
             ChainEvent.checkpoint,
-            (cpSlot + genesisSlotsDelay + 1) * (SLOT_DURATION_MS / 1000) * 1000,
+            (cpSlot + genesisSlotsDelay + 1) * SLOT_DURATION_MS,
             (cp) => cp.epoch === cpEpoch
           )
         )
@@ -392,7 +392,7 @@ describe("regen/reload states with n-historical states configuration", () => {
             bn.chain.emitter,
             routes.events.EventType.chainReorg,
             // reorged event happens at reorgedSlot + 1
-            (reorgedSlot + 1 - cpSlot + 1) * (SLOT_DURATION_MS / 1000) * 1000,
+            (reorgedSlot + 1 - cpSlot + 1) * SLOT_DURATION_MS,
             (reorgData) => reorgData.slot === reorgedSlot + 1
           )
         )

@@ -36,7 +36,7 @@ describe("api / impl / validator", () => {
       ],
     };
     const genesisSlotsDelay = 5;
-    const timeout = (SLOTS_PER_EPOCH + genesisSlotsDelay) * (SLOT_DURATION_MS / 1000) * 1000;
+    const timeout = (SLOTS_PER_EPOCH + genesisSlotsDelay) * SLOT_DURATION_MS;
 
     afterEach(async () => {
       if (bn) await bn.close();
