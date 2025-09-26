@@ -11,12 +11,12 @@ import {readFileWhenExists} from "../utils/files.js";
 // biome-ignore lint/style/useNamingConvention: Need property name _stdout for testing
 type TestConsole = typeof console & {_stdout: {write: Mock}};
 
-describe("winston logger", () => {
+describe("node logger", () => {
   afterEach(() => {
     vi.resetAllMocks();
   });
 
-  describe("winston dynamic level by module", () => {
+  describe("dynamic level by module", () => {
     it("should log to child at a lower log level", async () => {
       vi.spyOn((console as TestConsole)._stdout, "write");
 
@@ -54,11 +54,11 @@ describe("winston logger", () => {
     });
   });
 
-  describe("winston transport log to file", () => {
+  describe("transport log to file", () => {
     let tmpDir: string;
 
     beforeAll(() => {
-      tmpDir = fs.mkdtempSync("test-lodestar-winston-test");
+      tmpDir = fs.mkdtempSync("test-lodestar-logger-test");
     });
 
     afterAll(() => {

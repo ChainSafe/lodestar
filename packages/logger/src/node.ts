@@ -1,14 +1,11 @@
-import path from "node:path";
-import type {Logger as Winston} from "winston";
-// We want to keep `winston` export as it's more readable and easier to understand
-import winston from "winston";
-import DailyRotateFile from "winston-daily-rotate-file";
-import TransportStream from "winston-transport";
-import {LogLevel, Logger, TimestampFormat} from "./interface.js";
-import {ConsoleDynamicLevel} from "./utils/consoleTransport.js";
-import {WinstonLogger} from "./winston.js";
-
-const DATE_PATTERN = "YYYY-MM-DD";
+import type {LoggerOptions as PinoLoggerOptions} from "pino";
+import pino from "pino";
+import pinoPretty from "pino-pretty";
+import {LodestarError, isEmptyObject} from "@lodestar/utils";
+import {LogLevel, Logger, TimestampFormat, TimestampFormatCode} from "./interface.js";
+import {PinoLogger} from "./pino.js";
+import {logCtxToJson, logCtxToString} from "./utils/json.js";
+import {formatEpochSlotTime} from "./utils/timeFormat.js";
 
 export type LoggerNodeOpts = {
   level: LogLevel;
@@ -65,94 +62,224 @@ export type LoggerNode = Logger & {
  * Setup a CLI logger, common for beacon, validator and dev commands
  */
 export function getNodeLogger(opts: LoggerNodeOpts): LoggerNode {
-  return WinstonLoggerNode.fromNewTransports(opts);
+  return PinoLoggerNode.fromOpts(opts);
 }
 
-function getNodeLoggerTransports(opts: LoggerNodeOpts): winston.transport[] {
-  const consoleTransport = new ConsoleDynamicLevel({
-    // Set defaultLevel, not level for dynamic level setting of ConsoleDynamicLvevel
-    defaultLevel: opts.level,
-    debugStdout: true,
-    handleExceptions: true,
-  });
+// Map our log levels to pino levels
+const levelToPinoLevel: Record<LogLevel, string> = {
+  [LogLevel.error]: "error",
+  [LogLevel.warn]: "warn",
+  [LogLevel.info]: "info",
+  [LogLevel.verbose]: "debug",
+  [LogLevel.debug]: "debug",
+  [LogLevel.trace]: "trace",
+};
 
-  if (opts.levelModule) {
-    for (const [module, level] of Object.entries(opts.levelModule)) {
-      consoleTransport.setModuleLevel(module, level);
+export class PinoLoggerNode extends PinoLogger implements LoggerNode {
+  private levelByModule = new Map<string, LogLevel>();
+
+  constructor(
+    protected readonly pino: pino.Logger,
+    private readonly opts: LoggerNodeOpts
+  ) {
+    super(pino);
+
+    // Set module levels if provided
+    if (opts.levelModule) {
+      for (const [module, level] of Object.entries(opts.levelModule)) {
+        this.levelByModule.set(module, level);
+      }
     }
   }
 
-  const transports: TransportStream[] = [consoleTransport];
-
-  if (opts.file) {
-    const filename = opts.file.filepath;
-
-    // `lodestar --logFileDailyRotate` -> enable daily rotate with default value
-    // `lodestar --logFileDailyRotate 10` -> set daily rotate to custom value 10
-    // `lodestar --logFileDailyRotate 0` -> disable daily rotate and accumulate in same file
-    const enableDailyRotate = opts.file.dailyRotate != null && opts.file.dailyRotate > 0;
-
-    transports.push(
-      enableDailyRotate
-        ? new DailyRotateFile({
-            level: opts.file.level,
-            //insert the date pattern in filename before the file extension.
-            filename: filename.replace(/\.(?=[^.]*$)|$/, "-%DATE%$&"),
-            datePattern: DATE_PATTERN,
-            handleExceptions: true,
-            maxFiles: opts.file.dailyRotate,
-            auditFile: path.join(path.dirname(filename), ".log_rotate_audit.json"),
-          })
-        : new winston.transports.File({
-            level: opts.file.level,
-            filename: filename,
-            handleExceptions: true,
-          })
-    );
+  static fromOpts(opts: LoggerNodeOpts): PinoLoggerNode {
+    const pinoLogger = PinoLoggerNode.createNodePinoInstance(opts);
+    return new PinoLoggerNode(pinoLogger, opts);
   }
 
-  return transports;
-}
+  static createNodePinoInstance(opts: LoggerNodeOpts): pino.Logger {
+    const module = opts.module || "";
 
-interface DefaultMeta {
-  module: string;
-}
+    // For console output, we'll use a custom prettifier directly on the main logger
+    // instead of using transports to avoid worker thread issues
+    if (!opts.file || opts.format === "human") {
+      // Human-readable format for console - use pino-pretty directly
+      const stream = getPrettyStream(opts);
 
-export class WinstonLoggerNode extends WinstonLogger implements LoggerNode {
-  constructor(
-    protected readonly winston: Winston,
-    private readonly opts: LoggerNodeOpts
-  ) {
-    super(winston);
-  }
+      const pinoOptions: PinoLoggerOptions = {
+        level: levelToPinoLevel[opts.level],
+        base: {module},
+        formatters: {
+          level: (label) => ({level: label}),
+          bindings: (bindings) => ({module: bindings.module || module})
+        }
+      };
 
-  static fromOpts(opts: LoggerNodeOpts, transports: winston.transport[]): WinstonLoggerNode {
-    return new WinstonLoggerNode(WinstonLoggerNode.createWinstonInstance(opts, transports), opts);
-  }
+      // If we have a file transport, we need to use multistream
+      if (opts.file) {
+        const multistream = pino.multistream([
+          {stream, level: levelToPinoLevel[opts.level]},
+          getFileStream(opts)
+        ]);
+        return pino(pinoOptions, multistream);
+      }
 
-  static fromNewTransports(opts: LoggerNodeOpts): WinstonLoggerNode {
-    return WinstonLoggerNode.fromOpts(opts, getNodeLoggerTransports(opts));
+      // Console only
+      return pino(pinoOptions, stream);
+    } else {
+      // JSON format - simpler setup
+      const pinoOptions: PinoLoggerOptions = {
+        level: levelToPinoLevel[opts.level],
+        base: {module},
+        formatters: {
+          level: (label) => ({level: label}),
+          bindings: (bindings) => ({module: bindings.module || module}),
+          log: (obj) => {
+            if (obj.context) obj.context = logCtxToJson(obj.context);
+            if (obj.error) obj.error = logCtxToJson(obj.error);
+            return obj;
+          }
+        }
+      };
+
+      if (opts.file) {
+        const multistream = pino.multistream([
+          {stream: process.stdout, level: levelToPinoLevel[opts.level]},
+          getFileStream(opts)
+        ]);
+        return pino(pinoOptions, multistream);
+      }
+
+      return pino(pinoOptions);
+    }
   }
 
   child(opts: LoggerNodeChildOpts): LoggerNode {
-    const parentMeta = this.winston.defaultMeta as DefaultMeta | undefined;
-    const childModule = [parentMeta?.module, opts.module].filter(Boolean).join("/");
+    const currentModule = this.opts.module || "";
+    const childModule = [currentModule, opts.module].filter(Boolean).join("/");
     const childOpts: LoggerNodeOpts = {...this.opts, module: childModule};
-    const defaultMeta: DefaultMeta = {module: childModule};
 
-    // Same strategy as Winston's source .child.
-    // However, their implementation of child is to merge info objects where parent takes precedence, so it's
-    // impossible for child to overwrite 'module' field. Instead the winston class is cloned as defaultMeta
-    // overwritten completely.
-    // https://github.com/winstonjs/winston/blob/3f1dcc13cda384eb30fe3b941764e47a5a5efc26/lib/winston/logger.js#L47
-    const childWinston = Object.create(this.winston) as typeof this.winston;
-
-    childWinston.defaultMeta = defaultMeta;
-
-    return new WinstonLoggerNode(childWinston, childOpts);
+    const childPino = this.pino.child({module: childModule});
+    return new PinoLoggerNode(childPino, childOpts);
   }
 
   toOpts(): LoggerNodeOpts {
     return this.opts;
+  }
+
+  // Override createLogEntry to check module levels
+  // biome-ignore lint/suspicious/noExplicitAny: LogData compatibility
+  protected createLogEntry(level: LogLevel, message: string, context?: any, error?: Error): void {
+    const module = this.pino.bindings().module || "";
+    const moduleLevel = this.levelByModule.get(module) ?? this.opts.level;
+
+    // Check if this log should be output based on module level
+    const levelNum = {
+      [LogLevel.error]: 0,
+      [LogLevel.warn]: 1,
+      [LogLevel.info]: 2,
+      [LogLevel.verbose]: 3,
+      [LogLevel.debug]: 4,
+      [LogLevel.trace]: 5,
+    };
+
+    if (levelNum[level] > levelNum[moduleLevel]) {
+      return; // Skip this log
+    }
+
+    super.createLogEntry(level, message, context, error);
+  }
+}
+
+function getPrettyStream(opts: LoggerNodeOpts): NodeJS.WritableStream {
+  // Use pino-pretty programmatically for better control
+  return pinoPretty({
+    colorize: true,
+    translateTime: opts.timestampFormat?.format === TimestampFormatCode.Hidden
+      ? false
+      : "SYS:mmm-dd HH:MM:ss.l",
+    // biome-ignore lint/suspicious/noExplicitAny: Pino log object type
+    messageFormat: (log: any, messageKey: string) => {
+      const msg = log[messageKey];
+      const moduleStr = String(log.module || "");
+      const paddingBetweenInfo = 30;
+      const infoPad = paddingBetweenInfo - moduleStr.length;
+
+      let str = "";
+      // Handle epoch/slot time format
+      if (opts.timestampFormat?.format === TimestampFormatCode.EpochSlot) {
+        // biome-ignore lint/suspicious/noExplicitAny: Type narrowing for EpochSlot format
+        str += formatEpochSlotTime(opts.timestampFormat as any) + " ";
+      }
+      if (moduleStr) {
+        str += `[${moduleStr}]`;
+      }
+      const levelStr = String(log.level || "");
+      str += ` ${levelStr.padStart(infoPad)}: ${msg}`;
+
+      // Add context if present
+      if (log.context && !isEmptyObject(log.context)) {
+        str += " " + logCtxToString(log.context);
+      }
+
+      // Add error if present
+      if (log.error) {
+        const error = log.error;
+        if (error instanceof LodestarError) {
+          str += (isEmptyObject(log.context) ? " " : ", ") + logCtxToString(error);
+        } else if (error instanceof Error) {
+          str += " - " + error.message;
+          if (error.stack) str += "\n" + error.stack;
+        } else {
+          str += " - " + logCtxToString(error);
+        }
+      }
+
+      return str;
+    },
+    ignore: "pid,hostname,module,context,error,err"
+  });
+}
+
+function getFileStream(opts: LoggerNodeOpts): {stream: NodeJS.WritableStream; level: string} {
+  if (!opts.file) {
+    throw new Error("File options required");
+  }
+
+  if (opts.file.dailyRotate && opts.file.dailyRotate > 0) {
+    // Use pino-roll transport for file rotation
+    // Note: This requires the transport to be loaded separately
+    const transport = pino.transport({
+      target: "pino-roll",
+      options: {
+        file: opts.file.filepath,
+        frequency: "daily",
+        mkdir: true,
+        dateFormat: "yyyy-MM-dd",
+        limit: {
+          count: opts.file.dailyRotate
+        }
+      }
+    });
+
+    return {
+      stream: transport,
+      level: levelToPinoLevel[opts.file.level]
+    };
+  } else {
+    // Simple file stream
+    const transport = pino.transport({
+      target: "pino/file",
+      options: {
+        destination: opts.file.filepath,
+        mkdir: true,
+        append: true
+      }
+    });
+
+    return {
+      stream: transport,
+      level: levelToPinoLevel[opts.file.level]
+    };
   }
 }

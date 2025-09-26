@@ -1,7 +1,6 @@
-import {LEVEL, MESSAGE} from "triple-beam";
 import {LogData, LogHandler, LogLevel, Logger} from "@lodestar/utils";
 
-export {LogLevel, LEVEL, MESSAGE};
+export {LogLevel};
 export type {Logger, LogHandler, LogData};
 
 export const logLevelNum: {[K in LogLevel]: number} = {
@@ -39,10 +38,4 @@ export interface LoggerOptions {
   module?: string;
   format?: LogFormat;
   timestampFormat?: TimestampFormat;
-}
-
-export interface WinstonLogInfo {
-  module: string;
-  [LEVEL]: LogLevel;
-  [MESSAGE]: string;
 }

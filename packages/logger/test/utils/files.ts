@@ -11,7 +11,7 @@ export async function readFileWhenExists(dirpath: string, filenameRx: RegExp): P
       const filename = files.find((file) => filenameRx.test(file));
       if (filename !== undefined) {
         const data = fs.readFileSync(path.join(dirpath, filename), "utf8").trim();
-        // Winston will first create the file then write to it
+        // Logger will first create the file then write to it
         if (data) return data;
       }
     } catch (e) {
