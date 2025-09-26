@@ -73,9 +73,6 @@ export type ChainConfig = {
   CONTRIBUTION_DUE_BPS_GLOAS: number;
   PAYLOAD_ATTESTATION_DUE_BPS: number;
 
-  ATTESTATION_DEADLINE: number; // TODO EIP-7805: Deprecate this
-  PROPOSER_INCLUSION_LIST_CUT_OFF: number; // TODO EIP-7805: Deprecate this
-  VIEW_FREEZE_DEADLINE: number; // TODO EIP-7805: Deprecate this
   INCLUSION_LIST_SUBMISSION_DUE_BPS: number;
   PROPOSER_INCLUSION_LIST_CUTOFF_BPS: number;
   VIEW_FREEZE_CUTOFF_BPS: number;
@@ -193,9 +190,6 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   CONTRIBUTION_DUE_BPS_GLOAS: "number",
   PAYLOAD_ATTESTATION_DUE_BPS: "number",
 
-  ATTESTATION_DEADLINE: "number",
-  PROPOSER_INCLUSION_LIST_CUT_OFF: "number",
-  VIEW_FREEZE_DEADLINE: "number",
   INCLUSION_LIST_SUBMISSION_DUE_BPS: "number",
   PROPOSER_INCLUSION_LIST_CUTOFF_BPS: "number",
   VIEW_FREEZE_CUTOFF_BPS: "number",

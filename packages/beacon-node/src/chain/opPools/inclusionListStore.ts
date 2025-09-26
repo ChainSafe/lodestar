@@ -69,6 +69,7 @@ export class InclusionListStore {
   processInclusionList(inclusionList: eip7805.InclusionList): InclusionListInsertOutcome {
     const {slot, validatorIndex, inclusionListCommitteeRoot, transactions} = inclusionList;
     const inclusionListCommitteeRootHex = toRootHex(inclusionListCommitteeRoot);
+    const fork = this.config.getForkName(slot);
 
     // Reject any inclusion lists that are too old.
     if (slot < this.lowestPermissibleSlot) {
@@ -76,7 +77,7 @@ export class InclusionListStore {
     }
 
     // Reject inclusion lists in the current slot but come to this pool very late
-    if (this.clock.secFromSlot(slot) > this.config.PROPOSER_INCLUSION_LIST_CUT_OFF) {
+    if (this.clock.msFromSlot(slot) > this.config.getProposerInclusionListCutoffMs(fork)) {
       return InclusionListInsertOutcome.Late;
     }
 
