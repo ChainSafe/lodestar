@@ -102,15 +102,7 @@ export async function removeEagerlyPersistedBlockInputs(this: BeaconChain, block
     if (!this.forkChoice.hasBlockHex(blockRootHex)) {
       blockToRemove.push(block);
 
-      if (isBlockInputColumns(blockInput)) {
-        const {custodyColumns} = this.custodyConfig;
-        const dataColumnsLen = custodyColumns.length;
-        const dataColumnSidecars = blockInput.getCustodyColumns();
-        if (dataColumnSidecars.length !== dataColumnsLen) {
-          throw Error(
-            `Invalid dataColumnSidecars=${dataColumnSidecars.length} for custody expected custodyColumnsLen=${dataColumnsLen}`
-          );
-        }
+      if (isBlockInputColumns(blockInput) && blockInput.getCustodyColumns().length > 0) {
         dataColumnsToRemove.push(blockRoot);
       } else if (isBlockInputBlobs(blockInput)) {
         const blobSidecars = blockInput.getBlobs();
