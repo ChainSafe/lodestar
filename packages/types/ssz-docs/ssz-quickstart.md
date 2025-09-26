@@ -499,3 +499,14 @@ console.log(kpJSON);
 }
 */
 ```
+
+#### Decoding from JSON
+To convert back from JSON into a usable SSZ object:
+```
+const kp2 = Keypair.fromJson(kpJSON);
+```
+fromJson parses hex strings back into Uint8Arrays.
+
+The result is a valid SSZ object, usable with all SSZ functions (serialize, hashTreeRoot, etc.).
+
+It is that simple to convert data from JSON back into a SSZ object.
