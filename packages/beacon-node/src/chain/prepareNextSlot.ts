@@ -172,13 +172,13 @@ export class PrepareNextSlotScheduler {
           // awaiting here instead of throwing an async call because there is no other task
           // left for scheduler and this gives nice sematics to catch and log errors in the
           // try/catch wrapper here.
-          // EIP7805: We need to sleep until `PROPOSER_INCLUSION_LIST_CUTOFF_BPS` (~11s) to make sure
+          // EIP7805: We need to sleep until `PROPOSER_INCLUSION_LIST_CUTOFF_BPS` (~92% of slot) to make sure
           // we have gathered all ILs
           if (isForkPostEip7805(fork)) {
-            const secToNextSlot = this.config.SECONDS_PER_SLOT - this.chain.clock.secFromSlot(clockSlot);
-            const secToCutOff = this.config.PROPOSER_INCLUSION_LIST_CUT_OFF - this.chain.clock.secFromSlot(clockSlot);
-            const sleepTime = Math.min(secToNextSlot, secToCutOff) * 1000;
-            await sleep(sleepTime, this.signal);
+            await sleep(
+              this.chain.config.getProposerInclusionListCutoffMs(fork) - this.chain.clock.msFromSlot(clockSlot),
+              this.signal
+            );
           }
           await prepareExecutionPayload(
             this.chain,

@@ -1,5 +1,5 @@
 import {ChainConfig, ChainForkConfig} from "@lodestar/config";
-import {INTERVALS_PER_SLOT, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT, isForkPostEip7805} from "@lodestar/params";
+import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT, isForkPostEip7805} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   DataAvailabilityStatus,
@@ -853,15 +853,16 @@ export class ForkChoice implements IForkChoice {
   onInclusionList(inclusionList: eip7805.SignedInclusionList, secFromSlot: number): void {
     const currentSlot = this.fcStore.currentSlot;
     const {slot, inclusionListCommitteeRoot, validatorIndex} = inclusionList.message;
+    const fork = this.config.getForkName(slot);
+    const msFromSlot = secFromSlot * 1000;
 
     // If the inclusion list is from the previous slot, ignore it if already past the attestation deadline
-    const isBeforeAttestingInterval = secFromSlot >= Math.floor(this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT);
-    if (slot === currentSlot - 1 && !isBeforeAttestingInterval) {
+    const isBeforeAttestationDeadline = msFromSlot < this.config.getAttestationDueMs(fork);
+    if (slot === currentSlot - 1 && !isBeforeAttestationDeadline) {
       return;
     }
 
-    // TODO EIP-7805: Remove magic number
-    const isBeforeFreezeDeadline = slot === currentSlot && secFromSlot < 9; // VIEW_FREEZE_DEADLINE
+    const isBeforeFreezeDeadline = slot === currentSlot && msFromSlot < this.config.getViewFreezeCutoffMs(fork);
 
     const equivocators = this.fcStore.inclusionListEquivocators.get([slot, inclusionListCommitteeRoot]);
 

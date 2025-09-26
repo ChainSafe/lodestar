@@ -62,6 +62,7 @@ export class InclusionListPool {
 
   add(inclusionList: eip7805.SignedInclusionList): InclusionListInsertOutcome {
     const {slot, validatorIndex, transactions} = inclusionList.message;
+    const fork = this.config.getForkName(slot);
 
     // Reject any inclusion lists that are too old.
     if (slot < this.lowestPermissibleSlot) {
@@ -70,7 +71,7 @@ export class InclusionListPool {
 
     // Reject inclusion lists in the current slot but come to this pool very late
     // TODO EIP-7805: review if this is correct
-    if (this.clock.secFromSlot(slot) > this.config.PROPOSER_INCLUSION_LIST_CUT_OFF) {
+    if (this.clock.msFromSlot(slot) > this.config.getProposerInclusionListCutoffMs(fork)) {
       return InclusionListInsertOutcome.Late;
     }
 

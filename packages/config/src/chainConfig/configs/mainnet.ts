@@ -109,10 +109,6 @@ export const chainConfig: ChainConfig = {
   // 75% of SLOT_DURATION_MS
   PAYLOAD_ATTESTATION_DUE_BPS: 7500,
 
-  ATTESTATION_DEADLINE: 4,
-  PROPOSER_INCLUSION_LIST_CUT_OFF: 11,
-  VIEW_FREEZE_DEADLINE: 9,
-
   // Validator cycle
   // ---------------------------------------------------------------
   // 2**2 (= 4)
