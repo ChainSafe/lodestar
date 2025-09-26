@@ -460,4 +460,42 @@ console.log(root.toString("hex"));
 
 ```
 
+### JSON Conversion in SSZ
+### Why JSON?
+- SSZ is a binary serialization format, optimized for hashing and Merkle proofs.
+- But APIs, config files, and REST/GraphQL endpoints typically use JSON.
+- To bridge the two, SSZ types expose helper functions for converting to/from JSON.
 
+#### 1. Encoding to JSON.
+Every SSZ type has the following:
+```
+const jsonValue = SomeSSZType.toJson(sszObject);
+```
+- Converts SSZ binary-friendly objects into JSON-serializable values.
+- Byte arrays (Uint8Array) become hex strings (human-readable).
+- Nested containers and lists also convert recursively.
+
+Example:
+```
+import {ContainerType, ByteVectorType, ValueOf} from "@chainsafe/ssz";
+
+const Keypair = new ContainerType({
+  privateKey: new ByteVectorType(32),
+  publicKey: new ByteVectorType(48),
+});
+
+type Keypair = ValueOf<typeof Keypair>;
+
+const kp: Keypair = Keypair.defaultValue();
+
+// Convert to JSON
+const kpJSON = Keypair.toJson(kp);
+
+console.log(kpJSON);
+/*
+{
+  privateKey: "0x0000000000000000000000000000000000000000000000000000000000000000",
+  publicKey: "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000"
+}
+*/
+```
