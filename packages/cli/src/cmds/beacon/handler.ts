@@ -189,11 +189,6 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
     beaconNodeOptions.set({chain: {supernode: true}, network: {supernode: true}});
   }
 
-  // Set known depositContractDeployBlock
-  if (isKnownNetworkName(network)) {
-    const {depositContractDeployBlock} = getNetworkData(network);
-    beaconNodeOptions.set({eth1: {depositContractDeployBlock}});
-  }
 
   const logger = initLogger(args, beaconPaths.dataDir, config);
   const {privateKey, enr} = await initPrivateKeyAndEnr(args, beaconPaths.beaconDir, logger);
@@ -227,7 +222,7 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
     // Add User-Agent header to all builder requests
     beaconNodeOptions.set({executionBuilder: {userAgent: versionStr}});
     // Set jwt version with version string
-    beaconNodeOptions.set({executionEngine: {jwtVersion: versionStr}, eth1: {jwtVersion: versionStr}});
+    beaconNodeOptions.set({executionEngine: {jwtVersion: versionStr}});
     // Set commit and version for ClientVersion
     beaconNodeOptions.set({executionEngine: {commit, version}});
   }

@@ -10,7 +10,6 @@ export {DataColumnSidecarRepository} from "./dataColumnSidecar.js";
 export {DataColumnSidecarArchiveRepository} from "./dataColumnSidecarArchive.js";
 export {DepositDataRootRepository} from "./depositDataRoot.js";
 export {DepositEventRepository} from "./depositEvent.js";
-export {Eth1DataRepository} from "./eth1Data.js";
 export {BestLightClientUpdateRepository} from "./lightclientBestUpdate.js";
 export {CheckpointHeaderRepository} from "./lightclientCheckpointHeader.js";
 export {SyncCommitteeRepository} from "./lightclientSyncCommittee.js";

@@ -16,7 +16,6 @@ import {
   DataColumnSidecarRepository,
   DepositDataRootRepository,
   DepositEventRepository,
-  Eth1DataRepository,
   ProposerSlashingRepository,
   StateArchiveRepository,
   SyncCommitteeRepository,
@@ -49,7 +48,6 @@ export class BeaconDb implements IBeaconDb {
   blsToExecutionChange: BLSToExecutionChangeRepository;
 
   depositDataRoot: DepositDataRootRepository;
-  eth1Data: Eth1DataRepository;
   preGenesisState: PreGenesisState;
   preGenesisStateLastProcessedBlock: PreGenesisStateLastProcessedBlock;
 
@@ -82,7 +80,6 @@ export class BeaconDb implements IBeaconDb {
     this.attesterSlashing = new AttesterSlashingRepository(config, db);
     this.depositEvent = new DepositEventRepository(config, db);
     this.depositDataRoot = new DepositDataRootRepository(config, db);
-    this.eth1Data = new Eth1DataRepository(config, db);
     this.preGenesisState = new PreGenesisState(config, db);
     this.preGenesisStateLastProcessedBlock = new PreGenesisStateLastProcessedBlock(config, db);
 

@@ -1,6 +1,6 @@
 import {describe, expect, it} from "vitest";
 import {ErrorAborted, FetchError} from "@lodestar/utils";
-import {ErrorJsonRpcResponse, HttpRpcError} from "../../../../src/eth1/provider/jsonRpcHttpClient.js";
+import {HttpRpcError} from "../../../../src/execution/engine/jsonRpcHttpClient.js";
 import {
   HTTP_CONNECTION_ERROR_CODES,
   HTTP_FATAL_ERROR_CODES,
@@ -106,7 +106,7 @@ describe("execution / engine / utils", () => {
       ],
       [
         "rpc error",
-        new HttpRpcError(12, "error"),
+        new HttpRpcError("error", {jsonrpc: "2.0", id: 123, error: {code: 12, message: "error"}}),
         [
           [ExecutionEngineState.ONLINE, ExecutionEngineState.SYNCING],
           [ExecutionEngineState.AUTH_FAILED, ExecutionEngineState.SYNCING],
@@ -117,7 +117,7 @@ describe("execution / engine / utils", () => {
       ],
       [
         "rpc response error",
-        new ErrorJsonRpcResponse({jsonrpc: "2.0", id: 123, error: {code: 123, message: "error"}}, "error"),
+        new HttpRpcError("error", {jsonrpc: "2.0", id: 123, error: {code: 123, message: "error"}}),
         [
           [ExecutionEngineState.ONLINE, ExecutionEngineState.SYNCING],
           [ExecutionEngineState.AUTH_FAILED, ExecutionEngineState.SYNCING],

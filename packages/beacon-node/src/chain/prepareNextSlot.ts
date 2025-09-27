@@ -1,8 +1,7 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH, isForkPostElectra} from "@lodestar/params";
+import {ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
-  BeaconStateElectra,
   CachedBeaconStateAllForks,
   CachedBeaconStateExecutions,
   StateHashTreeRootSource,
@@ -253,25 +252,9 @@ export class PrepareNextSlotScheduler {
   }
 
   /**
-   * Stop eth1 data polling after eth1_deposit_index has reached deposit_requests_start_index in Electra as described in EIP-6110
+   * After Electra, eth1 polling is no longer needed
    */
   stopEth1Polling(): void {
-    // Only continue if eth1 is still polling and finalized checkpoint is in Electra. State regen is expensive
-    if (this.chain.eth1.isPollingEth1Data()) {
-      const finalizedCheckpoint = this.chain.forkChoice.getFinalizedCheckpoint();
-      const checkpointFork = this.config.getForkInfoAtEpoch(finalizedCheckpoint.epoch).name;
-
-      if (isForkPostElectra(checkpointFork)) {
-        const finalizedState = this.chain.getStateByCheckpoint(finalizedCheckpoint)?.state;
-
-        if (
-          finalizedState !== undefined &&
-          finalizedState.eth1DepositIndex === Number((finalizedState as BeaconStateElectra).depositRequestsStartIndex)
-        ) {
-          // Signal eth1 to stop polling eth1Data
-          this.chain.eth1.stopPollingEth1Data();
-        }
-      }
-    }
+    // No-op: eth1 polling has been removed post-Electra
   }
 }

@@ -4,7 +4,6 @@ import {removeUndefinedRecursive} from "../../util/index.js";
 import * as api from "./api.js";
 import * as builder from "./builder.js";
 import * as chain from "./chain.js";
-import * as eth1 from "./eth1.js";
 import * as execution from "./execution.js";
 import * as metrics from "./metrics.js";
 import * as monitoring from "./monitoring.js";
@@ -13,7 +12,6 @@ import * as sync from "./sync.js";
 
 export type BeaconNodeArgs = api.ApiArgs &
   chain.ChainArgs &
-  eth1.Eth1Args &
   execution.ExecutionEngineArgs &
   builder.ExecutionBuilderArgs &
   metrics.MetricsArgs &
@@ -27,7 +25,6 @@ export function parseBeaconNodeArgs(args: BeaconNodeArgs): RecursivePartial<IBea
     api: api.parseArgs(args),
     chain: chain.parseArgs(args),
     // db: {},
-    eth1: eth1.parseArgs(args),
     executionEngine: execution.parseArgs(args),
     executionBuilder: builder.parseArgs(args),
     metrics: metrics.parseArgs(args),
@@ -40,7 +37,6 @@ export function parseBeaconNodeArgs(args: BeaconNodeArgs): RecursivePartial<IBea
 export const beaconNodeOptions = {
   ...api.options,
   ...chain.options,
-  ...eth1.options,
   ...execution.options,
   ...builder.options,
   ...metrics.options,

@@ -11,7 +11,6 @@ import {
 import {ExecutionPayload, RootHex, bellatrix, deneb, ssz} from "@lodestar/types";
 import {fromHex, toHex, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
-import {quantityToNum} from "../../eth1/provider/utils.js";
 import {INTEROP_BLOCK_HASH} from "../../node/utils/interop/state.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {kzg} from "../../util/kzg.js";
@@ -29,6 +28,7 @@ import {
   serializeExecutionPayload,
   serializeExecutionRequests,
 } from "./types.js";
+import {quantityToNum} from "./utils/jsonRpcUtils.js";
 import {JsonRpcBackend} from "./utils.js";
 
 const INTEROP_GAS_LIMIT = 30e6;

@@ -14,7 +14,6 @@ import {
   DataColumnSidecarRepository,
   DepositDataRootRepository,
   DepositEventRepository,
-  Eth1DataRepository,
   ProposerSlashingRepository,
   StateArchiveRepository,
   SyncCommitteeRepository,
@@ -57,7 +56,6 @@ export interface IBeaconDb {
 
   // all deposit data roots and merkle tree
   depositDataRoot: DepositDataRootRepository;
-  eth1Data: Eth1DataRepository;
 
   // lightclient
   bestLightClientUpdate: BestLightClientUpdateRepository;

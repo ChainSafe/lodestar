@@ -3,7 +3,6 @@ import {
   IBeaconNodeOptions,
   checkAndPersistAnchorState,
   getStateTypeFromBytes,
-  initStateFromEth1,
 } from "@lodestar/beacon-node";
 import {BeaconConfig, ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {
@@ -202,9 +201,11 @@ export async function initBeaconState(
     return {anchorState};
   }
 
-  // Only place we will not bother checking isWithinWeakSubjectivityPeriod as forceGenesis passed by user
-  const anchorState = await initStateFromEth1({config: chainForkConfig, db, logger, opts: options.eth1, signal});
-  return {anchorState};
+  // Genesis state from eth1 is no longer supported post-Electra
+  throw new Error(
+    "No genesis state available. Please provide a genesis state file using --genesisStateFile, " +
+    "use checkpoint sync with --checkpointSyncUrl, or provide a checkpoint state with --checkpointState"
+  );
 }
 
 async function readWSState(

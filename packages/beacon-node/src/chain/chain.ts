@@ -3,7 +3,7 @@ import {PrivateKey} from "@libp2p/interface";
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
+import {CheckpointWithHex, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {EFFECTIVE_BALANCE_INCREMENT, GENESIS_SLOT, SLOTS_PER_EPOCH, isForkPostElectra} from "@lodestar/params";
 import {
@@ -42,7 +42,6 @@ import {Logger, fromHex, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toRoot
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
-import {IEth1ForBlockProduction} from "../eth1/index.js";
 import {BuilderStatus} from "../execution/builder/http.js";
 import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
@@ -114,7 +113,6 @@ const DEFAULT_MAX_CACHED_PRODUCED_RESULTS = 4;
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: UintNum64;
   readonly genesisValidatorsRoot: Root;
-  readonly eth1: IEth1ForBlockProduction;
   readonly executionEngine: IExecutionEngine;
   readonly executionBuilder?: IExecutionBuilder;
   // Expose config for convenience in modularized functions
@@ -210,7 +208,6 @@ export class BeaconChain implements IBeaconChain {
       metrics,
       validatorMonitor,
       anchorState,
-      eth1,
       executionEngine,
       executionBuilder,
     }: {
@@ -226,7 +223,6 @@ export class BeaconChain implements IBeaconChain {
       metrics: Metrics | null;
       validatorMonitor: ValidatorMonitor | null;
       anchorState: BeaconStateAllForks;
-      eth1: IEth1ForBlockProduction;
       executionEngine: IExecutionEngine;
       executionBuilder?: IExecutionBuilder;
     }
@@ -241,7 +237,6 @@ export class BeaconChain implements IBeaconChain {
     this.genesisTime = anchorState.genesisTime;
     this.anchorStateLatestBlockSlot = anchorState.latestBlockHeader.slot;
     this.genesisValidatorsRoot = anchorState.genesisValidatorsRoot;
-    this.eth1 = eth1;
     this.executionEngine = executionEngine;
     this.executionBuilder = executionBuilder;
     const signal = this.abortController.signal;
@@ -288,7 +283,7 @@ export class BeaconChain implements IBeaconChain {
     // Restore state caches
     // anchorState may already by a CachedBeaconState. If so, don't create the cache again, since deserializing all
     // pubkeys takes ~30 seconds for 350k keys (mainnet 2022Q2).
-    // When the BeaconStateCache is created in eth1 genesis builder it may be incorrect. Until we can ensure that
+    // When the BeaconStateCache is created in genesis builder it may be incorrect. Until we can ensure that
     // it's safe to re-use _ANY_ BeaconStateCache, this option is disabled by default and only used in tests.
     const cachedState =
       isCachedBeaconState(anchorState) && opts.skipCreateStateCacheIfAvailable
@@ -406,15 +401,6 @@ export class BeaconChain implements IBeaconChain {
       {...opts, dbName, anchorState: {finalizedCheckpoint: anchorState.finalizedCheckpoint}},
       signal
     );
-
-    // Stop polling eth1 data if anchor state is in Electra AND deposit_requests_start_index is reached
-    const anchorStateFork = this.config.getForkName(anchorState.slot);
-    if (isForkPostElectra(anchorStateFork)) {
-      const {eth1DepositIndex, depositRequestsStartIndex} = anchorState as BeaconStateElectra;
-      if (eth1DepositIndex === Number(depositRequestsStartIndex)) {
-        this.eth1.stopPollingEth1Data();
-      }
-    }
 
     // always run PrepareNextSlotScheduler except for fork_choice spec tests
     if (!opts?.disablePrepareNextSlot) {
@@ -1161,10 +1147,7 @@ export class BeaconChain implements IBeaconChain {
     // - Beacon node synced
     // - head state not isMergeTransitionComplete
     if (this.config.BELLATRIX_FORK_EPOCH - epoch < 1) {
-      const head = this.forkChoice.getHead();
-      if (epoch - computeEpochAtSlot(head.slot) < 5 && head.executionStatus === ExecutionStatus.PreMerge) {
-        this.eth1.startPollingMergeBlock();
-      }
+      // Pre-merge eth1 polling removed after Electra
     }
   }
 

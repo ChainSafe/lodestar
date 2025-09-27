@@ -1,14 +1,9 @@
+import {EventEmitter} from "node:events";
 import {isErrorAborted, isFetchError} from "@lodestar/utils";
-import {IJson, RpcPayload} from "../../eth1/interface.js";
-import {
-  ErrorJsonRpcResponse,
-  HttpRpcError,
-  IJsonRpcHttpClient,
-  JsonRpcHttpClientEvent,
-  JsonRpcHttpClientEventEmitter,
-} from "../../eth1/provider/jsonRpcHttpClient.js";
 import {isQueueErrorAborted} from "../../util/queue/errors.js";
+import {IJson, RpcPayload} from "./interface/json.js";
 import {ExecutionEngineState, ExecutionPayloadStatus} from "./interface.js";
+import {HttpRpcError, IJsonRpcHttpClient, JsonRpcHttpClientEvent} from "./jsonRpcHttpClient.js";
 
 export type JsonRpcBackend = {
   // biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
@@ -16,7 +11,7 @@ export type JsonRpcBackend = {
 };
 
 export class ExecutionEngineMockJsonRpcClient implements IJsonRpcHttpClient {
-  readonly emitter = new JsonRpcHttpClientEventEmitter();
+  readonly emitter = new EventEmitter();
 
   constructor(private readonly backend: JsonRpcBackend) {}
 
@@ -86,7 +81,7 @@ function getExecutionEngineStateForPayloadError(
   }
 
   // Originally this case was handled with {status: ExecutePayloadStatus.ELERROR}
-  if (payloadError instanceof HttpRpcError || payloadError instanceof ErrorJsonRpcResponse) {
+  if (payloadError instanceof HttpRpcError) {
     return ExecutionEngineState.SYNCING;
   }
 

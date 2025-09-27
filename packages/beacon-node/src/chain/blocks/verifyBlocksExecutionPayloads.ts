@@ -6,7 +6,6 @@ import {
   LVHValidResponse,
   MaybeValidExecutionStatus,
   ProtoBlock,
-  assertValidTerminalPowBlock,
 } from "@lodestar/fork-choice";
 import {ForkSeq, SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@lodestar/params";
 import {
@@ -18,7 +17,6 @@ import {
 } from "@lodestar/state-transition";
 import {Slot, bellatrix, electra} from "@lodestar/types";
 import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
-import {IEth1ForBlockProduction} from "../../eth1/index.js";
 import {ExecutionPayloadStatus, IExecutionEngine} from "../../execution/engine/interface.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {IClock} from "../../util/clock.js";
@@ -29,7 +27,6 @@ import {IBlockInput} from "./blockInput/types.js";
 import {ImportBlockOpts} from "./types.js";
 
 export type VerifyBlockExecutionPayloadModules = {
-  eth1: IEth1ForBlockProduction;
   executionEngine: IExecutionEngine;
   clock: IClock;
   logger: Logger;
@@ -72,7 +69,7 @@ export async function verifyBlocksExecutionPayload(
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<SegmentExecStatus> {
   const executionStatuses: MaybeValidExecutionStatus[] = [];
-  let mergeBlockFound: bellatrix.BeaconBlock | null = null;
+  const mergeBlockFound: bellatrix.BeaconBlock | null = null;
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
   const lastBlock = blockInputs.at(-1);
 
@@ -179,7 +176,7 @@ export async function verifyBlocksExecutionPayload(
     executionStatuses.push(executionStatus);
 
     const blockBody = blockInput.getBlock().message.body;
-    const isMergeTransitionBlock =
+    const _isMergeTransitionBlock =
       // If the merge block is found, stop the search as the isMergeTransitionBlockFn condition
       // will still evaluate to true for the following blocks leading to errors (while syncing)
       // as the preState0 still belongs to the pre state of the first block on segment
@@ -201,44 +198,8 @@ export async function verifyBlocksExecutionPayload(
     //  2. It makes logical sense to pair it with the block validations and
     //     deal it with the external services like eth1 tracker here than
     //     in import block
-    if (isMergeTransitionBlock) {
-      const mergeBlock = blockInput.getBlock().message as bellatrix.BeaconBlock;
-      const mergeBlockHash = toRootHex(chain.config.getForkTypes(mergeBlock.slot).BeaconBlock.hashTreeRoot(mergeBlock));
-      const powBlockRootHex = toRootHex(mergeBlock.body.executionPayload.parentHash);
-      const powBlock = await chain.eth1.getPowBlock(powBlockRootHex).catch((error) => {
-        // Lets just warn the user here, errors if any will be reported on
-        // `assertValidTerminalPowBlock` checks
-        chain.logger.warn(
-          "Error fetching terminal PoW block referred in the merge transition block",
-          {powBlockHash: powBlockRootHex, mergeBlockHash},
-          error
-        );
-        return null;
-      });
-
-      const powBlockParent =
-        powBlock &&
-        (await chain.eth1.getPowBlock(powBlock.parentHash).catch((error) => {
-          // Lets just warn the user here, errors if any will be reported on
-          // `assertValidTerminalPowBlock` checks
-          chain.logger.warn(
-            "Error fetching parent of the terminal PoW block referred in the merge transition block",
-            {powBlockParentHash: powBlock.parentHash, powBlock: powBlockRootHex, mergeBlockHash},
-            error
-          );
-          return null;
-        }));
-
-      // executionStatus will never == ExecutionStatus.PreMerge if it's the mergeBlock. But gotta make TS happy =D
-      if (executionStatus === ExecutionStatus.PreMerge) {
-        throw Error("Merge block must not have executionStatus == PreMerge");
-      }
-
-      assertValidTerminalPowBlock(chain.config, mergeBlock, {executionStatus, powBlock, powBlockParent});
-      // Valid execution payload, but may not be in a valid beacon chain block. Delay printing the POS ACTIVATED banner
-      // to the end of the verify block routine, which confirms that this block is fully valid.
-      mergeBlockFound = mergeBlock;
-    }
+    // After Electra, merge transition block logic is no longer needed
+    // The merge has already happened, so we skip terminal PoW block verification
   }
 
   const executionTime = Date.now();

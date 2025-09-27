@@ -14,7 +14,6 @@ import {
   CachedBeaconStateCapella,
   CachedBeaconStateExecutions,
   computeTimeAtSlot,
-  getCurrentEpoch,
   getExpectedWithdrawals,
   getRandaoMix,
   isMergeTransitionComplete,
@@ -41,13 +40,12 @@ import {
   deneb,
   electra,
   fulu,
-  ssz,
+  phase0,
   sszTypesFor,
 } from "@lodestar/types";
 import {Logger, sleep, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
-import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
-import {IEth1ForBlockProduction} from "../../eth1/index.js";
-import {numToQuantity} from "../../eth1/provider/utils.js";
+import {ZERO_HASH_HEX} from "../../constants/index.js";
+import {numToQuantity} from "../../execution/engine/utils/jsonRpcUtils.js";
 import {
   IExecutionBuilder,
   IExecutionEngine,
@@ -80,7 +78,6 @@ export enum BlockProductionStep {
   voluntaryExits = "voluntaryExits",
   blsToExecutionChanges = "blsToExecutionChanges",
   attestations = "attestations",
-  eth1DataAndDeposits = "eth1DataAndDeposits",
   syncAggregate = "syncAggregate",
   executionPayload = "executionPayload",
 }
@@ -502,7 +499,6 @@ export async function produceBlockBody<T extends BlockType>(
  */
 export async function prepareExecutionPayload(
   chain: {
-    eth1: IEth1ForBlockProduction;
     executionEngine: IExecutionEngine;
     config: ChainForkConfig;
   },
@@ -581,7 +577,6 @@ export async function prepareExecutionPayload(
 
 async function prepareExecutionPayloadHeader(
   chain: {
-    eth1: IEth1ForBlockProduction;
     executionBuilder?: IExecutionBuilder;
     config: ChainForkConfig;
   },
@@ -608,43 +603,19 @@ async function prepareExecutionPayloadHeader(
 }
 
 export async function getExecutionPayloadParentHash(
-  chain: {
-    eth1: IEth1ForBlockProduction;
+  _chain: {
     config: ChainForkConfig;
   },
   state: CachedBeaconStateExecutions
 ): Promise<{isPremerge: true} | {isPremerge: false; parentHash: Root}> {
-  // Use different POW block hash parent for block production based on merge status.
-  // Returned value of null == using an empty ExecutionPayload value
-  if (isMergeTransitionComplete(state)) {
-    // Post-merge, normal payload
-    return {isPremerge: false, parentHash: state.latestExecutionPayloadHeader.blockHash};
-  }
-
-  if (
-    !ssz.Root.equals(chain.config.TERMINAL_BLOCK_HASH, ZERO_HASH) &&
-    getCurrentEpoch(state) < chain.config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH
-  ) {
-    throw new Error(
-      `InvalidMergeTBH epoch: expected >= ${
-        chain.config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH
-      }, actual: ${getCurrentEpoch(state)}`
-    );
-  }
-
-  const terminalPowBlockHash = await chain.eth1.getTerminalPowBlock();
-  if (terminalPowBlockHash === null) {
-    // Pre-merge, no prepare payload call is needed
-    return {isPremerge: true};
-  }
-  // Signify merge via producing on top of the last PoW block
-  return {isPremerge: false, parentHash: terminalPowBlockHash};
+  // After Electra, all blocks use execution payload
+  // Always return the parent hash from the latest execution payload header
+  return {isPremerge: false, parentHash: state.latestExecutionPayloadHeader.blockHash};
 }
 
 export async function getPayloadAttributesForSSE(
   fork: ForkPostBellatrix,
   chain: {
-    eth1: IEth1ForBlockProduction;
     config: ChainForkConfig;
   },
   {
@@ -760,11 +731,10 @@ export async function produceCommonBlockBody<T extends BlockType>(
     step: BlockProductionStep.attestations,
   });
 
-  const endEth1DataAndDeposits = stepsMetrics?.startTimer();
-  const {eth1Data, deposits} = await this.eth1.getEth1DataAndDeposits(currentState);
-  endEth1DataAndDeposits?.({
-    step: BlockProductionStep.eth1DataAndDeposits,
-  });
+  // After Electra, deposits are provided by execution layer
+  // Use state's eth1Data and empty deposits array
+  const eth1Data = currentState.eth1Data;
+  const deposits: phase0.Deposit[] = [];
 
   const blockBody: Omit<CommonBlockBody, "blsToExecutionChanges" | "syncAggregate"> = {
     randaoReveal,

@@ -24,16 +24,6 @@ import {
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
 import {
-  DATA,
-  QUANTITY,
-  bytesToData,
-  dataIntoBytes,
-  dataToBytes,
-  numToQuantity,
-  quantityToBigint,
-  quantityToNum,
-} from "../../eth1/provider/utils.js";
-import {
   ExecutionPayloadStatus,
   ExecutionRequestType,
   PayloadAttributes,
@@ -41,6 +31,15 @@ import {
   isExecutionRequestType,
 } from "./interface.js";
 import {WithdrawalV1} from "./payloadIdCache.js";
+import {
+  DATA,
+  QUANTITY,
+  bytesToData,
+  dataToBytes,
+  numToQuantity,
+  quantityToBigint,
+  quantityToNum,
+} from "./utils/jsonRpcUtils.js";
 
 export type EngineApiRpcParamTypes = {
   /**
@@ -337,10 +336,10 @@ export function parseExecutionPayload(
     gasLimit: quantityToNum(data.gasLimit),
     gasUsed: quantityToNum(data.gasUsed),
     timestamp: quantityToNum(data.timestamp),
-    extraData: dataToBytes(data.extraData, null),
+    extraData: dataToBytes(data.extraData),
     baseFeePerGas: quantityToBigint(data.baseFeePerGas),
     blockHash: dataToBytes(data.blockHash, 32),
-    transactions: data.transactions.map((tran) => dataToBytes(tran, null)),
+    transactions: data.transactions.map((tran) => dataToBytes(tran)),
   };
 
   if (ForkSeq[fork] >= ForkSeq.capella) {
@@ -458,7 +457,7 @@ function serializeDepositRequests(depositRequests: electra.DepositRequests): Dep
 }
 
 function deserializeDepositRequests(serialized: DepositRequestsRpc): electra.DepositRequests {
-  return ssz.electra.DepositRequests.deserialize(dataToBytes(serialized, null));
+  return ssz.electra.DepositRequests.deserialize(dataToBytes(serialized));
 }
 
 function serializeWithdrawalRequests(withdrawalRequests: electra.WithdrawalRequests): WithdrawalRequestsRpc {
@@ -467,7 +466,7 @@ function serializeWithdrawalRequests(withdrawalRequests: electra.WithdrawalReque
 }
 
 function deserializeWithdrawalRequests(serialized: WithdrawalRequestsRpc): electra.WithdrawalRequests {
-  return ssz.electra.WithdrawalRequests.deserialize(dataToBytes(serialized, null));
+  return ssz.electra.WithdrawalRequests.deserialize(dataToBytes(serialized));
 }
 
 function serializeConsolidationRequests(
@@ -478,7 +477,7 @@ function serializeConsolidationRequests(
 }
 
 function deserializeConsolidationRequests(serialized: ConsolidationRequestsRpc): electra.ConsolidationRequests {
-  return ssz.electra.ConsolidationRequests.deserialize(dataToBytes(serialized, null));
+  return ssz.electra.ConsolidationRequests.deserialize(dataToBytes(serialized));
 }
 
 /**
@@ -566,7 +565,7 @@ export function deserializeExecutionRequests(serialized: ExecutionRequestsRpc): 
 export function deserializeExecutionPayloadBody(data: ExecutionPayloadBodyRpc | null): ExecutionPayloadBody | null {
   return data
     ? {
-        transactions: data.transactions.map((tran) => dataToBytes(tran, null)),
+        transactions: data.transactions.map((tran) => dataToBytes(tran)),
         withdrawals: data.withdrawals ? data.withdrawals.map(deserializeWithdrawal) : null,
       }
     : null;
@@ -613,13 +612,10 @@ export function deserializeBlobAndProofsV2IntoBytes(data: BlobAndProofV2Rpc, buf
     throw Error(`Invalid proofs length ${data.proofs.length}, expected ${CELLS_PER_EXT_BLOB}`);
   }
 
-  const blob = dataIntoBytes(data.blob, buffer.subarray(0, BLOB_BYTES));
+  const blob = dataToBytes(data.blob);
   const proofs: Uint8Array[] = [];
   for (let i = 0; i < CELLS_PER_EXT_BLOB; i++) {
-    const proof = dataIntoBytes(
-      data.proofs[i],
-      buffer.subarray(BLOB_BYTES + i * PROOF_BYTES, BLOB_BYTES + (i + 1) * PROOF_BYTES)
-    );
+    const proof = dataToBytes(data.proofs[i]);
     if (proof.length !== PROOF_BYTES) {
       throw Error(`Invalid proof length ${proof.length}, expected ${PROOF_BYTES}`);
     }

@@ -31,8 +31,6 @@ import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
 import {validateBlockDataColumnSidecars} from "../../../src/chain/validation/dataColumnSidecar.js";
 import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
-import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";
-import {PowMergeBlock} from "../../../src/eth1/interface.js";
 import {ExecutionPayloadStatus} from "../../../src/execution/engine/interface.js";
 import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js";
 import {getExecutionEngineFromBackend} from "../../../src/execution/index.js";
@@ -72,7 +70,6 @@ const forkChoiceTest =
         /** This is to track test's tickTime to be used in proposer boost */
         let tickTime = 0;
         const clock = new ClockStopped(currentSlot);
-        const eth1 = new Eth1ForBlockProductionMock();
         const executionEngineBackend = new ExecutionEngineMockBackend({
           onlyPredefinedResponses: opts.onlyPredefinedResponses,
           genesisBlockHash: isExecutionStateType(anchorState)
@@ -118,7 +115,6 @@ const forkChoiceTest =
             metrics: null,
             validatorMonitor: null,
             anchorState,
-            eth1,
             executionEngine,
             executionBuilder: undefined,
           }
@@ -333,8 +329,6 @@ const forkChoiceTest =
                 blockHash: toHexString(powBlock.blockHash),
                 parentHash: toHexString(powBlock.parentHash),
               });
-              // Register PowBlock for `get_pow_block(hash: Hash32)` calls in verifyBlock
-              eth1.addPowBlock(powBlock);
               // Register PowBlock to allow validation in execution engine
               executionEngineBackend.addPowBlock(powBlock);
             }
@@ -642,25 +636,6 @@ function isOnPayloadInfoStep(step: Step): step is OnPayloadInfo {
 
 function isCheck(step: Step): step is Checks {
   return typeof (step as Checks).checks === "object";
-}
-
-// Extend Eth1ForBlockProductionDisabled to not have to re-implement new methods
-class Eth1ForBlockProductionMock extends Eth1ForBlockProductionDisabled {
-  private items = new Map<string, PowMergeBlock>();
-
-  async getPowBlock(powBlockHash: string): Promise<PowMergeBlock | null> {
-    return this.items.get(powBlockHash) ?? null;
-  }
-
-  addPowBlock(powBlock: bellatrix.PowBlock): void {
-    this.items.set(toHexString(powBlock.blockHash), {
-      // not used by verifyBlock()
-      number: 0,
-      blockHash: toHexString(powBlock.blockHash),
-      parentHash: toHexString(powBlock.parentHash),
-      totalDifficulty: powBlock.totalDifficulty,
-    });
-  }
 }
 
 specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {

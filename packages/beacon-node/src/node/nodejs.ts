@@ -13,7 +13,6 @@ import {BeaconRestApiServer, getApi} from "../api/index.js";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
 import {ValidatorMonitor, createValidatorMonitor} from "../chain/validatorMonitor.js";
 import {IBeaconDb} from "../db/index.js";
-import {initializeEth1ForBlockProduction} from "../eth1/index.js";
 import {initializeExecutionBuilder, initializeExecutionEngine} from "../execution/index.js";
 import {HttpMetricsServer, Metrics, createMetrics, getHttpMetricsServer} from "../metrics/index.js";
 import {MonitoringService} from "../monitoring/index.js";
@@ -67,7 +66,6 @@ enum LoggerModule {
   api = "api",
   backfill = "backfill",
   chain = "chain",
-  eth1 = "eth1",
   execution = "execution",
   metrics = "metrics",
   monitoring = "monitoring",
@@ -217,13 +215,6 @@ export class BeaconNode {
       metrics,
       validatorMonitor,
       anchorState,
-      eth1: initializeEth1ForBlockProduction(opts.eth1, {
-        config,
-        db,
-        metrics,
-        logger: logger.child({module: LoggerModule.eth1}),
-        signal,
-      }),
       executionEngine: initializeExecutionEngine(opts.executionEngine, {
         metrics,
         signal,

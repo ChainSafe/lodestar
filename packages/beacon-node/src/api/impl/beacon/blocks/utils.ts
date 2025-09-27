@@ -5,7 +5,10 @@ import {blockToHeader} from "@lodestar/state-transition";
 import {RootHex, SignedBeaconBlock, Slot} from "@lodestar/types";
 import {IBeaconChain} from "../../../../chain/interface.js";
 import {GENESIS_SLOT} from "../../../../constants/index.js";
-import {rootHexRegex} from "../../../../eth1/provider/utils.js";
+
+// rootHexRegex moved from eth1/provider/utils.js
+const rootHexRegex = /^0x[a-fA-F0-9]{64}$/;
+
 import {ApiError, ValidationError} from "../../errors.js";
 
 export function toBeaconHeaderResponse(
