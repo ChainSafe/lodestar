@@ -39,6 +39,7 @@ import {
   altair,
   capella,
   deneb,
+  eip7805,
   electra,
   fulu,
   ssz,
@@ -60,6 +61,7 @@ import {fromGraffitiBytes} from "../../util/graffiti.js";
 import {kzg} from "../../util/kzg.js";
 import type {BeaconChain} from "../chain.js";
 import {CommonBlockBody} from "../interface.js";
+import {InclusionListPool} from "../opPools/inclusionListPool.ts";
 import {validateBlobsAndKzgCommitments, validateCellsAndKzgCommitments} from "./validateBlobsAndKzgCommitments.js";
 
 // Time to provide the EL to generate a payload from new payload id
@@ -506,6 +508,7 @@ export async function prepareExecutionPayload(
   chain: {
     eth1: IEth1ForBlockProduction;
     executionEngine: IExecutionEngine;
+    inclusionListPool: InclusionListPool;
     config: ChainForkConfig;
     metrics: Metrics | null;
   },
@@ -648,6 +651,7 @@ export async function getPayloadAttributesForSSE(
   fork: ForkPostBellatrix,
   chain: {
     eth1: IEth1ForBlockProduction;
+    inclusionListPool: InclusionListPool;
     config: ChainForkConfig;
   },
   {
@@ -686,6 +690,7 @@ function preparePayloadAttributes(
   fork: ForkPostBellatrix,
   chain: {
     config: ChainForkConfig;
+    inclusionListPool: InclusionListPool;
   },
   {
     prepareState,
@@ -717,6 +722,11 @@ function preparePayloadAttributes(
 
   if (ForkSeq[fork] >= ForkSeq.deneb) {
     (payloadAttributes as deneb.SSEPayloadAttributes["payloadAttributes"]).parentBeaconBlockRoot = parentBlockRoot;
+  }
+
+  if (ForkSeq[fork] >= ForkSeq.eip7805) {
+    (payloadAttributes as eip7805.SSEPayloadAttributes["payloadAttributes"]).inclusionListTransactions =
+      chain.inclusionListPool.getTransactions(prepareSlot - 1);
   }
 
   return payloadAttributes;
