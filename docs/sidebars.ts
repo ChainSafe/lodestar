@@ -4,7 +4,7 @@ const sidebars: SidebarsConfig = {
   tutorialSidebar: [
     "index",
     "introduction",
-    "security",
+   // "security",
     {
       type: "category",
       label: "Run A Node",
@@ -24,7 +24,7 @@ const sidebars: SidebarsConfig = {
           label: "Beacon Node",
           items: [
             "run/beacon-management/starting-a-node",
-            "run/beacon-management/beacon-cli",
+            //"run/beacon-management/beacon-cli",
             "run/beacon-management/data-retention",
             "run/beacon-management/networking",
             "run/beacon-management/mev-and-builder-integration",
@@ -36,9 +36,10 @@ const sidebars: SidebarsConfig = {
           label: "Validator Client",
           items: [
             "run/validator-management/vc-configuration",
-            "run/validator-management/validator-cli",
+           // "run/validator-management/validator-cli",
             "run/validator-management/external-signer",
             "run/validator-management/proposer-config",
+            "run/validator-management/monitoring-attestation",
           ],
         },
         {
@@ -49,35 +50,39 @@ const sidebars: SidebarsConfig = {
             "run/logging-and-metrics/client-monitoring",
           ],
         },
-        {
-          type: "category",
-          label: "Discv5 Bootnode",
-          items: [
-            "run/bootnode/bootnode-cli",
-          ],
-        },
+        // COMMENTED OUT - Missing document file
+        // {
+        //   type: "category",
+        //   label: "Discv5 Bootnode",
+        //   items: [
+        //    "run/bootnode/bootnode-cli",
+        //   ],
+        // },
       ],
     },
-    {
-      type: "category",
-      label: "Developer Tools",
-      collapsed: false,
-      items: [
-        {
-          type: "category",
-          label: "Light Client",
-          items: [
-            {type: "doc", label: "Getting Started", id: "libraries/lightclient-prover/lightclient"},
-            "libraries/lightclient-prover/lightclient-cli",
-          ],
-        },
-        {
-          type: "category",
-          label: "Prover",
-          items: [{type: "doc", label: "Getting Started", id: "libraries/lightclient-prover/prover"}],
-        },
-      ],
-    },
+    // COMMENTED OUT - Missing document files
+    // {
+    //   type: "category",
+    //   label: "Developer Tools",
+    //   collapsed: false,
+    //   items: [
+    //     {
+    //       type: "category",
+    //       label: "Light Client",
+    //       items: [
+    //         {type: "doc", label: "Getting Started", id: "libraries/lightclient-prover/lightclient"
+    //         },
+    //         //"libraries/lightclient-prover/lightclient-cli",
+    //       ],
+    //     },
+    //     {
+    //       type: "category",
+    //       label: "Prover",
+    //       items: [{type: "doc", label: "Getting Started", id: "libraries/lightclient-prover/prover"
+    //       }],
+    //     },
+    //   ],
+    // },
 
     "supporting-libraries/index",
     {
@@ -85,11 +90,12 @@ const sidebars: SidebarsConfig = {
       label: "Contributing",
       collapsed: false,
       items: [
-        {
-          type: "doc",
-          label: "Getting Started",
-          id: "contribution/getting-started",
-        },
+        // COMMENTED OUT - Missing document file
+        // {
+        //   type: "doc",
+        //   label: "Getting Started",
+        //   id: "contribution/getting-started",
+        // },
         {
           type: "category",
           label: "Advanced Topics",
@@ -100,7 +106,7 @@ const sidebars: SidebarsConfig = {
           type: "category",
           label: "Development Tools",
           items: [
-            "contribution/dev-cli",
+            //"contribution/dev-cli",
             "contribution/tools/debugging",
             "contribution/tools/flamegraphs",
             "contribution/tools/heap-dumps",
