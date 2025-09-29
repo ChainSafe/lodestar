@@ -2140,7 +2140,7 @@
 
 "@lodestar/bun@git+https://github.com/ChainSafe/lodestar-bun.git":
   version "0.1.0"
-  resolved "git+https://github.com/ChainSafe/lodestar-bun.git#10833f8c2fd0b4fd372143edd23b68f842ee4a79"
+  resolved "git+https://github.com/ChainSafe/lodestar-bun.git#e1b7001df927619284c1a29320240c4834278777"
   dependencies:
     "@chainsafe/bun-ffi-z" "^1.1.4"
 
