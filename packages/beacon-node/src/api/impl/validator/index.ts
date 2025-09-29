@@ -83,7 +83,7 @@ import {getDefaultGraffiti, toGraffitiBytes} from "../../../util/graffiti.js";
 import {getLodestarClientVersion} from "../../../util/metadata.js";
 import {ApiOptions} from "../../options.js";
 import {getStateResponseWithRegen} from "../beacon/state/utils.js";
-import {ApiError, NodeIsSyncing, OnlySupportedByDVT} from "../errors.js";
+import {ApiError, FailureList, IndexedError, NodeIsSyncing, OnlySupportedByDVT} from "../errors.js";
 import {ApiModules} from "../types.js";
 import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices, selectBlockProductionSource} from "./utils.js";
 
@@ -1293,7 +1293,7 @@ export function getValidatorApi(
       notWhileSyncing();
 
       const seenTimestampSec = Date.now() / 1000;
-      const errors: Error[] = [];
+      const failures: FailureList = [];
       const fork = chain.config.getForkName(chain.clock.currentSlot);
 
       await Promise.all(
@@ -1329,8 +1329,8 @@ export function getValidatorApi(
               return; // Ok to submit the same aggregate twice
             }
 
-            errors.push(e as Error);
-            logger.error(`Error on publishAggregateAndProofs [${i}]`, logCtx, e as Error);
+            failures.push({index: i, message: (e as Error).message});
+            logger.verbose(`Error on publishAggregateAndProofs [${i}]`, logCtx, e as Error);
             if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
               chain.persistInvalidSszValue(ssz.phase0.SignedAggregateAndProof, signedAggregateAndProof, "api_reject");
             }
@@ -1338,12 +1338,8 @@ export function getValidatorApi(
         })
       );
 
-      if (errors.length > 1) {
-        throw Error("Multiple errors on publishAggregateAndProofs\n" + errors.map((e) => e.message).join("\n"));
-      }
-
-      if (errors.length === 1) {
-        throw errors[0];
+      if (failures.length > 0) {
+        throw new IndexedError("Error processing aggregate and proofs", failures);
       }
     },
 
@@ -1357,7 +1353,7 @@ export function getValidatorApi(
     async publishContributionAndProofs({contributionAndProofs}) {
       notWhileSyncing();
 
-      const errors: Error[] = [];
+      const failures: FailureList = [];
 
       await Promise.all(
         contributionAndProofs.map(async (contributionAndProof, i) => {
@@ -1389,8 +1385,8 @@ export function getValidatorApi(
               return; // Ok to submit the same aggregate twice
             }
 
-            errors.push(e as Error);
-            logger.error(`Error on publishContributionAndProofs [${i}]`, logCtx, e as Error);
+            failures.push({index: i, message: (e as Error).message});
+            logger.verbose(`Error on publishContributionAndProofs [${i}]`, logCtx, e as Error);
             if (e instanceof SyncCommitteeError && e.action === GossipAction.REJECT) {
               chain.persistInvalidSszValue(ssz.altair.SignedContributionAndProof, contributionAndProof, "api_reject");
             }
@@ -1398,12 +1394,8 @@ export function getValidatorApi(
         })
       );
 
-      if (errors.length > 1) {
-        throw Error("Multiple errors on publishContributionAndProofs\n" + errors.map((e) => e.message).join("\n"));
-      }
-
-      if (errors.length === 1) {
-        throw errors[0];
+      if (failures.length > 0) {
+        throw new IndexedError("Error processing contribution and proofs", failures);
       }
     },
 
