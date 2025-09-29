@@ -7,13 +7,15 @@ import {
   ForkPostCapella,
   ForkPostDeneb,
   ForkPostFulu,
+  ForkPreFulu,
+  ForkPreGloas,
   NUMBER_OF_COLUMNS,
   SLOTS_PER_EPOCH,
   isForkPostDeneb,
   isForkPostFulu,
 } from "@lodestar/params";
 import {computeStartSlotAtEpoch, signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {SignedBeaconBlock, Slot, deneb, fulu, ssz} from "@lodestar/types";
+import {BeaconBlockBody, SignedBeaconBlock, Slot, deneb, fulu, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {VersionedHashes} from "../../src/execution/index.js";
 import {computeNodeIdFromPrivateKey} from "../../src/network/subnets/index.js";
@@ -123,11 +125,11 @@ function generateRoots<F extends ForkPostCapella>(
 }
 
 function generateBlobSidecars(
-  block: SignedBeaconBlock<ForkPostDeneb>,
+  block: SignedBeaconBlock<ForkPostDeneb & ForkPreFulu>,
   count: number,
   oomProtection = false
 ): {
-  block: SignedBeaconBlock<ForkPostDeneb>;
+  block: SignedBeaconBlock<ForkPostDeneb & ForkPreFulu>;
   blobSidecars: deneb.BlobSidecars;
   versionedHashes: VersionedHashes;
 } {
@@ -165,7 +167,7 @@ function generateColumnSidecars<F extends ForkPostFulu>(
 } {
   const blobs = Array.from({length: numberOfBlobs}, () => generateRandomBlob());
   const kzgCommitments = blobs.map((blob) => kzg.blobToKzgCommitment(blob));
-  block.message.body.blobKzgCommitments = kzgCommitments;
+  (block.message.body as BeaconBlockBody<ForkPostFulu & ForkPreGloas>).blobKzgCommitments = kzgCommitments;
 
   const signedBlockHeader = signedBlockToSignedHeader(config, block);
   const cellsAndProofs = blobs.map((blob) => kzg.computeCellsAndKzgProofs(blob));
@@ -253,7 +255,7 @@ export type BlockWithColumnsTestSet<F extends ForkPostFulu> = BlockTestSet<F> & 
   blobs?: deneb.Blob[];
 };
 
-export function generateBlockWithBlobSidecars<F extends ForkPostDeneb>({
+export function generateBlockWithBlobSidecars<F extends ForkPostDeneb & ForkPreFulu>({
   forkName,
   slot,
   count,
@@ -331,7 +333,7 @@ export function generateChainOfBlocksWithBlobs<F extends ForkPostDeneb>({
     const blockWithSidecars = (
       isForkPostFulu(forkName)
         ? generateBlockWithColumnSidecars<ForkPostFulu>({forkName, parentRoot, slot, oomProtection})
-        : generateBlockWithBlobSidecars<ForkPostDeneb>({
+        : generateBlockWithBlobSidecars<ForkPostDeneb & ForkPreFulu>({
             forkName,
             parentRoot,
             slot,

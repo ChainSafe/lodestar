@@ -1,7 +1,14 @@
 import {digest} from "@chainsafe/as-sha256";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkAll, ForkName, ForkPostFulu, KZG_COMMITMENTS_GINDEX, NUMBER_OF_COLUMNS} from "@lodestar/params";
+import {
+  ForkAll,
+  ForkName,
+  ForkPostFulu,
+  ForkPreGloas,
+  KZG_COMMITMENTS_GINDEX,
+  NUMBER_OF_COLUMNS,
+} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {
   BeaconBlockBody,
@@ -303,7 +310,9 @@ export function getDataColumnSidecarsFromBlock(
   signedBlock: SignedBeaconBlock<ForkPostFulu>,
   cellsAndKzgProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[]
 ): fulu.DataColumnSidecars {
-  const blobKzgCommitments = signedBlock.message.body.blobKzgCommitments;
+  // TODO GLOAS: Need to get blobKzgCommitments from somewhere else
+  const blobKzgCommitments = (signedBlock.message.body as BeaconBlockBody<ForkPostFulu & ForkPreGloas>)
+    .blobKzgCommitments;
 
   // No need to create data column sidecars if there are no blobs
   if (blobKzgCommitments.length === 0) {

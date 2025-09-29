@@ -3,12 +3,14 @@ import {ApiError, ApplicationMethods} from "@lodestar/api/server";
 import {
   ForkPostBellatrix,
   ForkPostFulu,
+  ForkPreGloas,
   NUMBER_OF_COLUMNS,
   SLOTS_PER_HISTORICAL_ROOT,
   isForkPostBellatrix,
   isForkPostDeneb,
   isForkPostElectra,
   isForkPostFulu,
+  isForkPostGloas,
 } from "@lodestar/params";
 import {
   computeEpochAtSlot,
@@ -360,6 +362,10 @@ export function getBeaconBlockApi({
     );
     const fork = config.getForkName(slot);
 
+    if (isForkPostGloas(fork)) {
+      throw new ApiError(400, `Blinded blocks are not available for post-gloas fork=${fork}`);
+    }
+
     // Either the payload/blobs are cached from i) engine locally or ii) they are from the builder
     const producedResult = chain.blockProductionCache.get(blockRoot);
     if (producedResult !== undefined && producedResult.type !== BlockType.Blinded) {
@@ -518,9 +524,12 @@ export function getBeaconBlockApi({
     async getBlindedBlock({blockId}) {
       const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
       const fork = config.getForkName(block.message.slot);
+      if (isForkPostGloas(fork)) {
+        throw new ApiError(400, `Blinded blocks are not available for post-gloas fork=${fork}`);
+      }
       return {
         data: isForkPostBellatrix(fork)
-          ? signedBeaconBlockToBlinded(config, block as SignedBeaconBlock<ForkPostBellatrix>)
+          ? signedBeaconBlockToBlinded(config, block as SignedBeaconBlock<ForkPostBellatrix & ForkPreGloas>)
           : block,
         meta: {
           executionOptimistic,

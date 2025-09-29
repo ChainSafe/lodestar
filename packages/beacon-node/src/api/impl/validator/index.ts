@@ -5,6 +5,7 @@ import {ExecutionStatus} from "@lodestar/fork-choice";
 import {
   ForkName,
   ForkPostBellatrix,
+  ForkPreGloas,
   ForkSeq,
   GENESIS_SLOT,
   SLOTS_PER_EPOCH,
@@ -884,13 +885,17 @@ export function getValidatorApi(
         opts
       );
 
-      if (opts.blindedLocal === true && ForkSeq[meta.version] >= ForkSeq.bellatrix) {
+      if (
+        opts.blindedLocal === true &&
+        ForkSeq[meta.version] >= ForkSeq.bellatrix &&
+        ForkSeq[meta.version] < ForkSeq.gloas
+      ) {
         if (meta.executionPayloadBlinded) {
           return {data, meta};
         }
 
         const {block} = data as BlockContents;
-        const blindedBlock = beaconBlockToBlinded(config, block as BeaconBlock<ForkPostBellatrix>);
+        const blindedBlock = beaconBlockToBlinded(config, block as BeaconBlock<ForkPostBellatrix & ForkPreGloas>);
         return {
           data: blindedBlock,
           meta: {...meta, executionPayloadBlinded: true},

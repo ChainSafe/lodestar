@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkPostDeneb, ForkPostFulu} from "@lodestar/params";
+import {ForkPostDeneb, ForkPostFulu, ForkPreFulu, ForkPreGloas} from "@lodestar/params";
 import {SignedBeaconBlock, Slot, deneb, fulu, phase0} from "@lodestar/types";
 import {LodestarError, Logger, fromHex, prettyBytes, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {
@@ -458,14 +458,16 @@ export function validateBlockByRangeResponse(
 }
 
 /**
- * Should not be called directly. Only exported for unit testing purposes
+ * Should not be called directly. Only exported for unit testing purposes.
+ * This is used only in Deneb and Electra
  */
 export async function validateBlobsByRangeResponse(
   dataRequestBlocks: ValidatedBlock[],
   blobSidecars: deneb.BlobSidecars
 ): Promise<ValidatedBlobSidecars[]> {
   const expectedBlobCount = dataRequestBlocks.reduce(
-    (acc, {block}) => (block as SignedBeaconBlock<ForkPostDeneb>).message.body.blobKzgCommitments.length + acc,
+    (acc, {block}) =>
+      (block as SignedBeaconBlock<ForkPostDeneb & ForkPreFulu>).message.body.blobKzgCommitments.length + acc,
     0
   );
   if (blobSidecars.length > expectedBlobCount) {
@@ -492,7 +494,8 @@ export async function validateBlobsByRangeResponse(
   const validateSidecarsPromises: Promise<ValidatedBlobSidecars>[] = [];
   for (let blockIndex = 0, blobSidecarIndex = 0; blockIndex < dataRequestBlocks.length; blockIndex++) {
     const {block, blockRoot} = dataRequestBlocks[blockIndex];
-    const blockKzgCommitments = (block as SignedBeaconBlock<ForkPostDeneb>).message.body.blobKzgCommitments;
+    const blockKzgCommitments = (block as SignedBeaconBlock<ForkPostDeneb & ForkPreFulu>).message.body
+      .blobKzgCommitments;
     if (blockKzgCommitments.length === 0) {
       continue;
     }
@@ -532,8 +535,9 @@ export async function validateColumnsByRangeResponse(
   columnSidecars: fulu.DataColumnSidecars
 ): Promise<WarnResult<ValidatedColumnSidecars[], DownloadByRangeError>> {
   // Expected column count considering currently-validated batch blocks
+  // TODO GLOAS: Post-gloas's blobKzgCommitments is not in beacon block body. Need to source it from somewhere else.
   const expectedColumnCount = dataRequestBlocks.reduce((acc, {block}) => {
-    return (block as SignedBeaconBlock<ForkPostDeneb>).message.body.blobKzgCommitments.length > 0
+    return (block as SignedBeaconBlock<ForkPostDeneb & ForkPreGloas>).message.body.blobKzgCommitments.length > 0
       ? request.columns.length + acc
       : acc;
   }, 0);
@@ -566,7 +570,9 @@ export async function validateColumnsByRangeResponse(
     const {block, blockRoot} = dataRequestBlocks[blockIndex];
     const slot = block.message.slot;
     const blockRootHex = toRootHex(blockRoot);
-    const blockKzgCommitments = (block as SignedBeaconBlock<ForkPostFulu>).message.body.blobKzgCommitments;
+    // TODO GLOAS: Post-gloas's blobKzgCommitments is not in beacon block body. Need to source it from somewhere else.
+    const blockKzgCommitments = (block as SignedBeaconBlock<ForkPostFulu & ForkPreGloas>).message.body
+      .blobKzgCommitments;
     const expectedColumns = blockKzgCommitments.length ? request.columns.length : 0;
 
     if (expectedColumns === 0) {

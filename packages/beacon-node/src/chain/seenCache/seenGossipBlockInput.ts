@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {CheckpointWithHex} from "@lodestar/fork-choice";
-import {ForkName, ForkPostFulu, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
+import {ForkName, ForkPostFulu, ForkPreGloas, isForkPostDeneb, isForkPostFulu, isForkPostGloas} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
 import {LodestarError, Logger} from "@lodestar/utils";
@@ -155,6 +155,12 @@ export class SeenBlockInput {
     let blockInput = this.blockInputs.get(blockRootHex) as IBlockInput;
     if (!blockInput) {
       const {forkName, daOutOfRange} = this.buildCommonProps(block.message.slot);
+
+      // TODO GLOAS: Implement
+      if (isForkPostGloas(forkName)) {
+        throw Error("Not implemented");
+      }
+      // Pre-deneb
       if (!isForkPostDeneb(forkName)) {
         blockInput = BlockInputPreData.createFromBlock({
           block,
@@ -165,9 +171,10 @@ export class SeenBlockInput {
           seenTimestampSec,
           peerIdStr,
         });
+        // Fulu Only
       } else if (isForkPostFulu(forkName)) {
         blockInput = BlockInputColumns.createFromBlock({
-          block: block as SignedBeaconBlock<ForkPostFulu>,
+          block: block as SignedBeaconBlock<ForkPostFulu & ForkPreGloas>,
           blockRootHex,
           daOutOfRange,
           forkName,
@@ -177,6 +184,7 @@ export class SeenBlockInput {
           seenTimestampSec,
           peerIdStr,
         });
+        // Deneb and Electra
       } else {
         blockInput = BlockInputBlobs.createFromBlock({
           block: block as SignedBeaconBlock<ForkBlobsDA>,

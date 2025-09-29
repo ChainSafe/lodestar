@@ -4,9 +4,11 @@ import {
   ForkPostBellatrix,
   ForkPostDeneb,
   ForkPostFulu,
+  ForkPreGloas,
   ForkSeq,
   isForkPostAltair,
   isForkPostBellatrix,
+  isForkPostGloas,
 } from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
@@ -182,7 +184,14 @@ export async function produceBlockBody<T extends BlockType>(
   };
   this.logger.verbose("Producing beacon block body", logMeta);
 
-  if (isForkPostBellatrix(fork)) {
+  if (isForkPostGloas(fork)) {
+    // TODO GLOAS: Set body.signedExecutionPayloadBid and body.payloadAttestation
+    const commonBlockBody = await commonBlockBodyPromise;
+    blockBody = Object.assign({}, commonBlockBody) as AssembledBodyType<T>;
+    executionPayloadValue = BigInt(0);
+
+    // We don't deal with blinded blocks, execution engine, blobs and execution requests post-gloas
+  } else if (isForkPostBellatrix(fork)) {
     const safeBlockHash = this.forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const feeRecipient = requestedFeeRecipient ?? this.beaconProposerCache.getOrDefault(proposerIndex);
@@ -307,6 +316,7 @@ export async function produceBlockBody<T extends BlockType>(
 
     // blockType === BlockType.Full
     else {
+      // enginePromise only supports pre-gloas
       const enginePromise = (async () => {
         const endExecutionPayload = this.metrics?.executionBlockProductionTimeSteps.startTimer();
 
@@ -384,13 +394,13 @@ export async function produceBlockBody<T extends BlockType>(
       blockBody = Object.assign({}, commonBlockBody) as AssembledBodyType<BlockType.Blinded>;
 
       if (engineRes.isPremerge) {
-        (blockBody as BeaconBlockBody<ForkPostBellatrix>).executionPayload = engineRes.executionPayload;
+        (blockBody as BeaconBlockBody<ForkPostBellatrix & ForkPreGloas>).executionPayload = engineRes.executionPayload;
         executionPayloadValue = engineRes.executionPayloadValue;
       } else {
         const {prepType, payloadId, executionPayload, blobsBundle, executionRequests} = engineRes;
         shouldOverrideBuilder = engineRes.shouldOverrideBuilder;
 
-        (blockBody as BeaconBlockBody<ForkPostBellatrix>).executionPayload = executionPayload;
+        (blockBody as BeaconBlockBody<ForkPostBellatrix & ForkPreGloas>).executionPayload = executionPayload;
         (produceResult as ProduceFullBellatrix).executionPayload = executionPayload;
         executionPayloadValue = engineRes.executionPayloadValue;
         Object.assign(logMeta, {transactions: executionPayload.transactions.length, shouldOverrideBuilder});

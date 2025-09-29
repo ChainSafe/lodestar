@@ -123,6 +123,10 @@ export const forkPostGloas = exclude(forkAll, [
   ForkName.electra,
   ForkName.fulu,
 ]);
+export const forkPreGloas = exclude(forkAll, forkPostGloas);
+export function isForkPreGloas(fork: ForkName): fork is ForkPreGloas {
+  return forkPreGloas.includes(fork as ForkPreGloas);
+}
 export function isForkPostGloas(fork: ForkName): fork is ForkPostGloas {
   return isForkPostFulu(fork) && fork !== ForkName.fulu;
 }
@@ -144,7 +148,7 @@ export type ForkPreExecution = ForkPreBellatrix;
 /**
  * @deprecated Use `ForkPostBellatrix` instead.
  */
-export type ForkExecution = ForkPostBellatrix;
+export type ForkExecution = ForkPostBellatrix & ForkPreGloas;
 /**
  * @deprecated Use `ForkPreCapella` instead.
  */
@@ -172,11 +176,11 @@ export const isForkLightClient = isForkPostAltair;
 /**
  * @deprecated Use `forkPostBellatrix` instead.
  */
-export const forkExecution = forkPostBellatrix;
+export const forkExecution = forkPostBellatrix.filter((fork) => isForkPreGloas(fork));
 /**
  * @deprecated Use `isForkPostBellatrix` instead.
  */
-export const isForkExecution = isForkPostBellatrix;
+export const isForkExecution = (f: ForkName) => isForkPostBellatrix(f) && !isForkPostGloas(f);
 /**
  * @deprecated Use `forkPostCapella` instead.
  */

@@ -4,7 +4,15 @@ import {expect} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
-import {ACTIVE_PRESET, ForkPostDeneb, ForkPostFulu, ForkSeq} from "@lodestar/params";
+import {
+  ACTIVE_PRESET,
+  ForkPostDeneb,
+  ForkPostFulu,
+  ForkPreDeneb,
+  ForkPreFulu,
+  ForkPreGloas,
+  ForkSeq,
+} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {BeaconStateAllForks, isExecutionStateType, signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {
@@ -220,13 +228,14 @@ const forkChoiceTest =
                   await validateBlockDataColumnSidecars(
                     slot,
                     blockRoot,
-                    (signedBlock as SignedBeaconBlock<ForkPostFulu>).message.body.blobKzgCommitments.length,
+                    (signedBlock as SignedBeaconBlock<ForkPostFulu & ForkPreGloas>).message.body.blobKzgCommitments
+                      .length,
                     columns
                   );
 
                   blockImport = BlockInputColumns.createFromBlock({
                     forkName: fork,
-                    block: signedBlock as SignedBeaconBlock<ForkPostFulu>,
+                    block: signedBlock as SignedBeaconBlock<ForkPostFulu & ForkPreGloas>,
                     blockRootHex,
                     custodyColumns:
                       // in most test case instances we do not want to assign any custody as there are no columns provided
@@ -286,7 +295,7 @@ const forkChoiceTest =
 
                   blockImport = BlockInputBlobs.createFromBlock({
                     forkName: fork,
-                    block: signedBlock as SignedBeaconBlock<ForkPostDeneb>,
+                    block: signedBlock as SignedBeaconBlock<ForkPostDeneb & ForkPreFulu>,
                     blockRootHex,
                     source: BlockInputSource.gossip,
                     seenTimestampSec: 0,
@@ -303,7 +312,7 @@ const forkChoiceTest =
                 } else {
                   blockImport = BlockInputPreData.createFromBlock({
                     forkName: fork,
-                    block: signedBlock as SignedBeaconBlock<ForkPostDeneb>,
+                    block: signedBlock as SignedBeaconBlock<ForkPreDeneb>,
                     blockRootHex,
                     source: BlockInputSource.gossip,
                     seenTimestampSec: 0,
