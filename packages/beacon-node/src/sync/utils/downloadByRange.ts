@@ -526,6 +526,149 @@ export async function validateBlobsByRangeResponse(
   return Promise.all(validateSidecarsPromises);
 }
 
+export type ValidatedSlot = {
+  blockRoot: Uint8Array;
+  block: SignedBeaconBlock;
+  blobs?: deneb.BlobSidecars;
+  columns?: fulu.DataColumnSidecars;
+};
+export type ValidatedSlots = Map<Slot, ValidateSlot>;
+
+/**
+ * Spec states:
+ * 1) must be within range [start_slot, start_slot + count]
+ * 2) should respond with all columns in the range or and 3:ResourceUnavailable (and potentially get down-scored)
+ * 3) must response with at least the sidecars of the first blob-carrying block that exists in the range
+ * 4) must include all sidecars from each block from which there are blobs
+ * 5) where they exists, sidecars must be sent in (slot, index) order
+ * 6) clients may limit the number of sidecars in a response
+ * 7) clients may stop responding mid-response if their view of fork-choice changes
+ *
+ * We will interpret the spec as follows
+ * - Errors when validating: 1, 3, 5
+ * - Warnings when validating: 2, 4, 6, 7
+ *
+ * For "warning" cases, where we get a partial response but sidecars are validated and correct with respect to the
+ * blocks, then they will be kept.  This loosening of the spec is to help ensure sync goes smoothly and we can find
+ * the data needed in difficult network situations.
+ *
+ * Assume for thw following two examples we request indices 5, 10, 15 for a range of slots 32-63
+ *
+ * For slots where we receive no sidecars, example slot 45, but blobs exist we will stop validating subsequent
+ * slots, 45-63.  The next round of requests will get structured to pull the from the slot that had columns
+ * missing to the end of the range for all columns indices that were requested for the current partially failed
+ * request (slots 45-63 and indices 5, 10, 15).
+ *
+ * For slots where only some of the requested sidecars are received we will proceed with validation. For simplicity sake
+ * we will assume that if we only get some indices back for a (or several) slot(s) that the indices we get will be
+ * consistent. IE if a peer returns only index 5, they will most likely return that same index for subsequent slot
+ * (index 5 for slots 34, 35, 36, etc). They will not likely return 5 on slot 34, 10 on slot 35, 15 on slot 36, etc.
+ * This assumption makes the code simpler. For both cases the request for the next round will be structured correctly
+ * to pull any missing column indices for whatever range remains.  The simplification just leads to re-verification
+ * of the columns but the number of columns downloaded will be the same regardless of if they are validated twice.
+ *
+ * validateColumnsByRangeResponse makes some assumptions about the data being passed in
+ * blocks are:
+ * - slotwise in order
+ * - form a chain
+ * - non-sparse response (any missing block is a skipped slot not a bad response)
+ * - last block is last slot received
+ */
+export async function validateColumnsByRangeResponse2(
+  request: fulu.DataColumnSidecarsByRangeRequest,
+  blocks: ValidatedSlot[],
+  columnSidecars: fulu.DataColumnSidecars
+): Promise<WarnResult<ValidatedSlots, DownloadByRangeError>> {
+  const seenColumns = new Map<Slot, fulu.DataColumnSidecars>();
+
+  const currentSlot = -1;
+  for (const columnSidecar of columnSidecars) {
+    const slot = columnSidecar.signedBlockHeader.message.slot;
+    if (slot < currentSlot) {
+      // out of order
+    } else if (slot > currentSlot) {
+      // increment currentSlot
+    } else {
+      // push and proceed
+    }
+    const seenSlot = seenColumns.get(slot) ?? [];
+    seenSlot.push(columnSidecar);
+    seenColumns.set(slot, seenSlot);
+  }
+
+  const validationPromises: Promise<void>[] = [];
+  const validatedColumns = [];
+  const warnings: DownloadByRangeError[] = [];
+
+  for (const {blockRoot, block} of blocks) {
+    const slot = block.message.slot;
+    const blobCount = (block as SignedBeaconBlock<ForkPostDeneb>).message.body.blobKzgCommitments.length;
+    const dataColumns = seenColumns.get(slot);
+    // conditional a bit wonky so TSC knows we have dataColumns[] below
+    if (!dataColumns) {
+      if (!blobCount) {
+        // no columns in the slot
+        continue;
+      }
+
+      /**
+       * If no columns are found for a block and there are commitments on the block then stop checking and just
+       * return early.  Even if there were columns returned for subsequent slots that doesn't matter because
+       * we will be re-requesting them again anyway.  Leftovers just get ignored
+       */
+      warnings.push(new DownloadByRangeError({}));
+      break;
+    }
+
+    if (!blobCount) {
+      // columns for a block that does not have blobs
+      // TODO(fulu): should this be a hard error with no data retained from peer?
+      throw new DownloadByRangeError({});
+    }
+
+    const returnedColumns = new Set(blockColumnSidecars.map((c) => c.index));
+    const missingIndices = request.columns.filter((i) => !returnedColumns.has(i));
+    if (missingIndices.length > 0) {
+      warnings.push(
+        new DownloadByRangeError(
+          {
+            code: DownloadByRangeErrorCode.MISSING_COLUMNS,
+            slot,
+            blockRoot: blockRootHex,
+            missingIndices: prettyPrintIndices(missingIndices),
+          },
+          "Missing data columns in DataColumnSidecarsByRange response"
+        )
+      );
+    }
+
+    const extraIndices = [...returnedColumns].filter((i) => !requestedColumns.has(i));
+    if (extraIndices.length > 0) {
+      warnings.push(
+        new DownloadByRangeError(
+          {
+            code: DownloadByRangeErrorCode.EXTRA_COLUMNS,
+            slot,
+            blockRoot: blockRootHex,
+            invalidIndices: prettyPrintIndices(extraIndices),
+          },
+          "Data column in not in requested columns in DataColumnSidecarsByRange response"
+        )
+      );
+    }
+
+    validateSidecarsPromises.push(
+      validateBlockDataColumnSidecars(slot, blockRoot, blockKzgCommitments.length, blockColumnSidecars).then(() => ({
+        blockRoot,
+        columnSidecars: blockColumnSidecars,
+      }))
+    );
+  }
+
+  await Promise.all(validationPromises);
+  return {result: validatedColumns, warnings};
+}
+
 /**
  * Should not be called directly. Only exported for unit testing purposes
  */
@@ -566,6 +709,10 @@ export async function validateColumnsByRangeResponse(
   // no need to check for columnSidecars.length  vs expectedColumnCount here, will be checked per-block below
   const requestedColumns = new Set(request.columns);
   const validateSidecarsPromises: Promise<ValidatedColumnSidecars>[] = [];
+
+  /**
+   * loop through the block to validate
+   */
   for (let blockIndex = 0, columnSidecarIndex = 0; blockIndex < dataRequestBlocks.length; blockIndex++) {
     const {block, blockRoot} = dataRequestBlocks[blockIndex];
     const slot = block.message.slot;
@@ -587,6 +734,9 @@ export async function validateColumnsByRangeResponse(
       }
       blockColumnSidecars.push(columnSidecar);
       columnSidecarIndex++;
+    }
+
+    if (blockColumnSidecars.length === 0) {
     }
 
     const returnedColumns = new Set(blockColumnSidecars.map((c) => c.index));
