@@ -20,6 +20,7 @@ For a quick local monitoring setup, you can use the provided Docker Compose conf
 ### Setup Instructions
 
 1. Run the Docker Compose file in detached mode:
+
    ```bash
    docker-compose -f docker/docker-compose.local.yml up -d --build
    ```
