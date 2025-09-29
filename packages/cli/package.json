@@ -9,11 +9,16 @@
   },
   "homepage": "https://github.com/ChainSafe/lodestar#readme",
   "type": "module",
-  "exports": "./lib/index.js",
+  "exports": {
+    ".": {
+      "bun": "./src/index.ts",
+      "import": "./lib/index.js"
+    }
+  },
   "imports": {
     "#hashtree-hasher": {
       "bun": "./src/util/hasher_bun.ts",
-      "import": "./src/util/hasher_nodejs.ts"
+      "import": "./lib/util/hasher_nodejs.js"
     }
   },
   "files": [
