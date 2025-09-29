@@ -26,6 +26,7 @@ For a quick local monitoring setup, you can use the provided Docker Compose conf
    ```
 
 2. Access the monitoring services:
+
    - **Prometheus metrics**: http://localhost:9090
    - **Grafana dashboards**: http://localhost:3000
 
