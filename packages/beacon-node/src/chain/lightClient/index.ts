@@ -742,7 +742,7 @@ export function sumBits(bits: BitArray): number {
   return bits.getTrueBitIndexes().length;
 }
 
-// TODO GLOAS: Pending light-client spec but this function probably won't be used 
+// TODO GLOAS: Pending light-client spec but this function probably won't be used
 // in Gloas. So we can assume any types here are pre-gloas
 export function blockToLightClientHeader(
   fork: ForkName,
