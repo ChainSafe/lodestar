@@ -321,7 +321,7 @@ export async function verifyBlockExecutionPayload(
     ilTransactions
   );
   if (ilTransactions) {
-    chain.metrics?.eip7805.inclusionListTransactionsSentToPayload.inc(ilTransactions.length);
+    chain.metrics?.eip7805.inclusionListTransactionsNotifyNewPayload.inc(ilTransactions.length);
   }
   chain.logger.debug("Receive engine api newPayload result", {...logCtx, status: execResult.status});
 

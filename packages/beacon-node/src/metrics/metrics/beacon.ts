@@ -124,9 +124,13 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         help: "Duration of engine_getInclusionListV1 requests",
         buckets: [0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.5],
       }),
-      inclusionListTransactionsSentToPayload: register.counter({
-        name: "beacon_inclusion_list_transactions_sent_to_payload_total",
-        help: "Total number of inclusion list transactions sent to payload",
+      inclusionListTransactionsNotifyNewPayload: register.counter({
+        name: "beacon_inclusion_list_transactions_notify_new_payload_total",
+        help: "Total number of inclusion list transactions sent when notifying new payload",
+      }),
+      inclusionListTransactionsPrepareExecutionPayload: register.counter({
+        name: "beacon_inclusion_list_transactions_prepare_execution_payload_total",
+        help: "Total number of inclusion list transactions sent when preparing execution payload",
       }),
     },
 

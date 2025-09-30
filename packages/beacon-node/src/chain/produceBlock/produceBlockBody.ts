@@ -653,6 +653,7 @@ export async function getPayloadAttributesForSSE(
     eth1: IEth1ForBlockProduction;
     inclusionListPool: InclusionListPool;
     config: ChainForkConfig;
+    metrics: Metrics | null;
   },
   {
     prepareState,
@@ -691,6 +692,7 @@ function preparePayloadAttributes(
   chain: {
     config: ChainForkConfig;
     inclusionListPool: InclusionListPool;
+    metrics: Metrics | null;
   },
   {
     prepareState,
@@ -725,8 +727,9 @@ function preparePayloadAttributes(
   }
 
   if (ForkSeq[fork] >= ForkSeq.eip7805) {
-    (payloadAttributes as eip7805.SSEPayloadAttributes["payloadAttributes"]).inclusionListTransactions =
-      chain.inclusionListPool.getTransactions(prepareSlot - 1);
+    const transactions = chain.inclusionListPool.getTransactions(prepareSlot - 1);
+    (payloadAttributes as eip7805.SSEPayloadAttributes["payloadAttributes"]).inclusionListTransactions = transactions;
+    chain.metrics?.eip7805.inclusionListTransactionsPrepareExecutionPayload.inc(transactions.length);
   }
 
   return payloadAttributes;
