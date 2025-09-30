@@ -1,9 +1,12 @@
-import {Epoch, phase0, ssz} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {IBeaconDb} from "../../../db/interface.js";
-import {CPStateDatastore, DatastoreKey} from "./types.js";
+import {Epoch, phase0, ssz} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
-import {getLastProcessedSlotFromBeaconStateSerialized, getSlotFromBeaconStateSerialized} from "../../../util/sszBytes.js";
+import {IBeaconDb} from "../../../db/interface.js";
+import {
+  getLastProcessedSlotFromBeaconStateSerialized,
+  getSlotFromBeaconStateSerialized,
+} from "../../../util/sszBytes.js";
+import {CPStateDatastore, DatastoreKey} from "./types.js";
 
 /**
  * Implementation of CPStateDatastore using db.
@@ -55,7 +58,10 @@ export function checkpointToDatastoreKey(cp: phase0.Checkpoint): DatastoreKey {
  * return the serialzied data of Current Root Checkpoint State (CRCS) or Previous Root Checkpoint State (PRCS)
  *
  */
-export async function getLatestSafeDatastoreKey(allKeys: DatastoreKey[], readFn: (key: DatastoreKey) => Promise<Uint8Array | null>): Promise<Uint8Array | null> {
+export async function getLatestSafeDatastoreKey(
+  allKeys: DatastoreKey[],
+  readFn: (key: DatastoreKey) => Promise<Uint8Array | null>
+): Promise<Uint8Array | null> {
   const checkpointsByEpoch = new MapDef<Epoch, DatastoreKey[]>(() => []);
   for (const key of allKeys) {
     const cp = datastoreKeyToCheckpoint(key);

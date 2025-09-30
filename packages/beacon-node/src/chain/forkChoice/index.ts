@@ -47,10 +47,20 @@ export function initializeForkChoice(
   isFinalizedState: boolean,
   opts: ForkChoiceOpts,
   justifiedBalancesGetter: JustifiedBalancesGetter,
+  metrics: Metrics | null,
   logger?: Logger
 ): ForkChoice {
   return isFinalizedState
-    ? initializeForkChoiceFromFinalizedState(config, emitter, currentSlot, state, opts, justifiedBalancesGetter, logger)
+    ? initializeForkChoiceFromFinalizedState(
+        config,
+        emitter,
+        currentSlot,
+        state,
+        opts,
+        justifiedBalancesGetter,
+        metrics,
+        logger
+      )
     : initializeForkChoiceFromUnfinalizedState(
         config,
         emitter,
@@ -58,6 +68,7 @@ export function initializeForkChoice(
         state,
         opts,
         justifiedBalancesGetter,
+        metrics,
         logger
       );
 }
@@ -152,6 +163,7 @@ export function initializeForkChoiceFromUnfinalizedState(
   unFinalizedState: CachedBeaconStateAllForks,
   opts: ForkChoiceOpts,
   justifiedBalancesGetter: JustifiedBalancesGetter,
+  metrics: Metrics | null,
   logger?: Logger
 ): ForkChoice {
   const {blockHeader} = computeAnchorCheckpoint(config, unFinalizedState);
@@ -263,5 +275,5 @@ export function initializeForkChoiceFromUnfinalizedState(
   // production code use ForkChoice constructor directly
   const forkchoiceConstructor = opts.forkchoiceConstructor ?? ForkChoice;
 
-  return new forkchoiceConstructor(config, store, protoArray, opts, logger);
+  return new forkchoiceConstructor(config, store, protoArray, metrics, opts, logger);
 }

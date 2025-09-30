@@ -118,6 +118,7 @@ const forkChoiceTest =
             metrics: null,
             validatorMonitor: null,
             anchorState,
+            isAnchorStateFinalized: true,
             eth1,
             executionEngine,
             executionBuilder: undefined,

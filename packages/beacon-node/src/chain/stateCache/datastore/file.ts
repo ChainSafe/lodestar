@@ -2,8 +2,8 @@ import path from "node:path";
 import {phase0, ssz} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
 import {ensureDir, readFile, readFileNames, removeFile, writeIfNotExist} from "../../../util/file.js";
-import {CPStateDatastore, DatastoreKey} from "./types.js";
 import {getLatestSafeDatastoreKey} from "./db.js";
+import {CPStateDatastore, DatastoreKey} from "./types.js";
 
 const CHECKPOINT_STATES_FOLDER = "checkpoint_states";
 const CHECKPOINT_FILE_NAME_LENGTH = 82;
