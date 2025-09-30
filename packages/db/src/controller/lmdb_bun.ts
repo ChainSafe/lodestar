@@ -42,7 +42,7 @@ export class LmdbController implements DatabaseController<Uint8Array, Uint8Array
   ) {}
 
   static async create(options: DatabaseOptions, {metrics}: LmdbControllerModules): Promise<LmdbController> {
-    const db = environmentInit(options.name);
+    const db = environmentInit(options.name, {mapSize: });
     return new LmdbController(db, metrics ?? null);
   }
 
@@ -331,32 +331,32 @@ export class LmdbController implements DatabaseController<Uint8Array, Uint8Array
       try {
         if (opts.gt) {
           cursorSeek(iterator, opts.gt);
-          const first = cursorGoToNext(iterator);
+          const first = cursorGoToNext(iterator)?.slice();
           if (!first) return;
-          const value = cursorGetCurrentValue(iterator);
+          const value = cursorGetCurrentValue(iterator).slice();
           itemsRead++;
-          yield {key: first.slice(), value: value.slice()};
+          yield {key: first, value};
         } else if (opts.gte) {
-          const first = cursorSeek(iterator, opts.gte);
+          const first = cursorSeek(iterator, opts.gte)?.slice();
           if (!first) return;
-          const value = cursorGetCurrentValue(iterator);
+          const value = cursorGetCurrentValue(iterator).slice();
           itemsRead++;
-          yield {key: first.slice(), value: value.slice()};
+          yield {key: first, value};
         } else {
-          const first = cursorGoToFirst(iterator);
+          const first = cursorGoToFirst(iterator)?.slice();
           if (!first) return;
-          const value = cursorGetCurrentValue(iterator);
+          const value = cursorGetCurrentValue(iterator).slice();
           itemsRead++;
-          yield {key: first.slice(), value: value.slice()};
+          yield {key: first, value};
         }
         while (true) {
-          const key = cursorGoToNext(iterator);
+          const key = cursorGoToNext(iterator)?.slice();
           if (!key) return;
           if (opts.lt && Buffer.compare(key, opts.lt) >= 0) break;
           if (opts.lte && Buffer.compare(key, opts.lte) > 0) break;
-          const value = cursorGetCurrentValue(iterator);
+          const value = cursorGetCurrentValue(iterator).slice();
           itemsRead++;
-          yield {key: key.slice(), value: value.slice()};
+          yield {key, value};
         }
       } finally {
         metrics?.dbReadItems.inc({bucket}, itemsRead);
@@ -375,28 +375,28 @@ export class LmdbController implements DatabaseController<Uint8Array, Uint8Array
     try {
       if (opts.gt) {
         cursorSeek(iterator, opts.gt);
-        const first = cursorGoToNext(iterator);
+        const first = cursorGoToNext(iterator)?.slice();
         if (!first) return entries;
-        const value = cursorGetCurrentValue(iterator);
-        entries.push({key: first.slice(), value: value.slice()});
+        const value = cursorGetCurrentValue(iterator).slice();
+        entries.push({key: first, value});
       } else if (opts.gte) {
-        const first = cursorSeek(iterator, opts.gte);
+        const first = cursorSeek(iterator, opts.gte)?.slice();
         if (!first) return entries;
-        const value = cursorGetCurrentValue(iterator);
-        entries.push({key: first.slice(), value: value.slice()});
+        const value = cursorGetCurrentValue(iterator).slice();
+        entries.push({key: first, value});
       } else {
-        const first = cursorGoToFirst(iterator);
+        const first = cursorGoToFirst(iterator)?.slice();
         if (!first) return entries;
-        const value = cursorGetCurrentValue(iterator);
-        entries.push({key: first.slice(), value: value.slice()});
+        const value = cursorGetCurrentValue(iterator).slice();
+        entries.push({key: first, value});
       }
       while (true) {
-        const key = cursorGoToNext(iterator);
+        const key = cursorGoToNext(iterator)?.slice();
         if (!key) break;
         if (opts.lt && Buffer.compare(key, opts.lt) >= 0) break;
         if (opts.lte && Buffer.compare(key, opts.lte) > 0) break;
-        const value = cursorGetCurrentValue(iterator);
-        entries.push({key: key.slice(), value: value.slice()});
+        const value = cursorGetCurrentValue(iterator).slice();
+        entries.push({key, value});
       }
       return entries;
     } finally {
