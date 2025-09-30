@@ -39,6 +39,9 @@ export const holeskyChainConfig: ChainConfig = {
   // Fulu
   FULU_FORK_VERSION: b("0x07017000"),
   FULU_FORK_EPOCH: 165120,
+  // Gloas
+  GLOAS_FORK_VERSION: b("0x08017000"),
+  GLOAS_FORK_EPOCH: Infinity,
 
   // # 28,000,000,000 Gwei to ensure quicker ejection
   EJECTION_BALANCE: 28000000000,
