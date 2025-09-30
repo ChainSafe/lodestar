@@ -579,33 +579,53 @@ export async function validateColumnsByRangeResponse2(
   blocks: ValidatedSlot[],
   columnSidecars: fulu.DataColumnSidecars
 ): Promise<WarnResult<ValidatedSlots, DownloadByRangeError>> {
+  const warnings: DownloadByRangeError[] = [];
   const seenColumns = new Map<Slot, fulu.DataColumnSidecars>();
 
-  const currentSlot = -1;
+  let currentSlot = -1;
+  let currentSlotSeen = [];
   for (const columnSidecar of columnSidecars) {
     const slot = columnSidecar.signedBlockHeader.message.slot;
-    if (slot < currentSlot) {
-      // out of order
+    if (slot === currentSlot) {
+      // push and proceed
+      const lastIndex = currentSlotSeen.at(currentSlotSeen.length)?.index;
+      if (lastIndex && lastIndex > columnSidecar.index) {
+        warnings.push();
+      }
+      currentSlotSeen.push(columnSidecar);
     } else if (slot > currentSlot) {
       // increment currentSlot
+      seenColumns.set(currentSlot, currentSlotSeen);
+      currentSlot = slot;
+      currentSlotSeen = seenColumns.get(slot) ?? [];
+      if (currentSlotSeen.length) {
+        throw new Error();
+      }
+      currentSlotSeen.push(columnSidecar);
     } else {
-      // push and proceed
+      // out of order
+      warnings.push();
+      const slotColumns = seenColumns.get(slot) ?? [];
+      const lastIndex = slotColumns.at(slotColumns.length)?.index;
+      if (lastIndex && lastIndex > columnSidecar.index) {
+        warnings.push();
+      }
+      slotColumns.push(columnSidecar);
+      seenColumns.set(slot, slotColumns);
     }
-    const seenSlot = seenColumns.get(slot) ?? [];
-    seenSlot.push(columnSidecar);
-    seenColumns.set(slot, seenSlot);
+
+    // const seenSlot = seenSlot.push(columnSidecar);
+    // seenColumns.set(slot, seenSlot);
   }
 
-  const validationPromises: Promise<void>[] = [];
-  const validatedColumns = [];
-  const warnings: DownloadByRangeError[] = [];
+  const validationPromises: Promise<ValidatedColumnSidecars[]>[] = [];
 
   for (const {blockRoot, block} of blocks) {
     const slot = block.message.slot;
     const blobCount = (block as SignedBeaconBlock<ForkPostDeneb>).message.body.blobKzgCommitments.length;
-    const dataColumns = seenColumns.get(slot);
+    const columnSidecars = seenColumns.get(slot);
     // conditional a bit wonky so TSC knows we have dataColumns[] below
-    if (!dataColumns) {
+    if (!columnSidecars) {
       if (!blobCount) {
         // no columns in the slot
         continue;
@@ -616,25 +636,40 @@ export async function validateColumnsByRangeResponse2(
        * return early.  Even if there were columns returned for subsequent slots that doesn't matter because
        * we will be re-requesting them again anyway.  Leftovers just get ignored
        */
-      warnings.push(new DownloadByRangeError({}));
+      warnings.push(
+        new DownloadByRangeError({
+          code: DownloadByRangeErrorCode.MISSING_COLUMNS,
+          slot,
+          blockRoot: prettyBytes(blockRoot),
+          missingIndices: prettyPrintIndices(request.columns),
+        })
+      );
       break;
     }
 
+    const returnedColumns = columnSidecars.map((c) => c.index);
     if (!blobCount) {
       // columns for a block that does not have blobs
-      // TODO(fulu): should this be a hard error with no data retained from peer?
-      throw new DownloadByRangeError({});
+      // TODO(fulu): should this be a hard error with no data retained from peer or just a warning
+      throw new DownloadByRangeError(
+        {
+          code: DownloadByRangeErrorCode.EXTRA_COLUMNS,
+          slot,
+          blockRoot: prettyBytes(blockRoot),
+          invalidIndices: prettyPrintIndices(returnedColumns),
+        },
+        "Block has no blob commitments but data column sidecars were provided"
+      );
     }
 
-    const returnedColumns = new Set(blockColumnSidecars.map((c) => c.index));
-    const missingIndices = request.columns.filter((i) => !returnedColumns.has(i));
+    const missingIndices = request.columns.filter((i) => !returnedColumns.includes(i));
     if (missingIndices.length > 0) {
       warnings.push(
         new DownloadByRangeError(
           {
             code: DownloadByRangeErrorCode.MISSING_COLUMNS,
             slot,
-            blockRoot: blockRootHex,
+            blockRoot: prettyBytes(blockRoot),
             missingIndices: prettyPrintIndices(missingIndices),
           },
           "Missing data columns in DataColumnSidecarsByRange response"
@@ -642,14 +677,14 @@ export async function validateColumnsByRangeResponse2(
       );
     }
 
-    const extraIndices = [...returnedColumns].filter((i) => !requestedColumns.has(i));
+    const extraIndices = returnedColumns.filter((i) => !request.columns.includes(i));
     if (extraIndices.length > 0) {
       warnings.push(
         new DownloadByRangeError(
           {
             code: DownloadByRangeErrorCode.EXTRA_COLUMNS,
             slot,
-            blockRoot: blockRootHex,
+            blockRoot: prettyBytes(blockRoot),
             invalidIndices: prettyPrintIndices(extraIndices),
           },
           "Data column in not in requested columns in DataColumnSidecarsByRange response"
@@ -657,16 +692,19 @@ export async function validateColumnsByRangeResponse2(
       );
     }
 
-    validateSidecarsPromises.push(
-      validateBlockDataColumnSidecars(slot, blockRoot, blockKzgCommitments.length, blockColumnSidecars).then(() => ({
+    validationPromises.push(
+      validateBlockDataColumnSidecars(slot, blockRoot, blobCount, columnSidecars).then(() => ({
         blockRoot,
-        columnSidecars: blockColumnSidecars,
+        columnSidecars: columnSidecars,
       }))
     );
   }
 
-  await Promise.all(validationPromises);
-  return {result: validatedColumns, warnings};
+  const validatedColumns = await Promise.all(validationPromises);
+  return {
+    result: validatedColumns.flat(),
+    warnings,
+  };
 }
 
 /**
