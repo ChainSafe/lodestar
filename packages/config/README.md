@@ -28,14 +28,14 @@ The Lodestar config package contains several interfaces used in downstream Lodes
 
 ### Chain config
 
-The Ethereum consensus spec defines a bunch of variables that may be easily configured per testnet. These include the `GENESIS_TIME`, `SECONDS_PER_SLOT`, and various `*_FORK_EPOCH`s, `*_FORK_VERSION`s, etc. The Lodestar config package exports the `ChainConfig` interface and matching `ChainConfig` SSZ type, which include all of these variables, named verbatim from the spec.
+The Ethereum consensus spec defines a bunch of variables that may be easily configured per testnet. These include the `GENESIS_TIME`, `SLOT_DURATION_MS`, and various `*_FORK_EPOCH`s, `*_FORK_VERSION`s, etc. The Lodestar config package exports the `ChainConfig` interface and matching `ChainConfig` SSZ type, which include all of these variables, named verbatim from the spec.
 
 ```typescript
 import {ChainConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 
 let config: ChainConfig = chainConfig;
-const x: number = config.SECONDS_PER_SLOT;
+const x: number = config.SLOT_DURATION_MS;
 ```
 
 Mainnet default values are available as a singleton `ChainConfig` under the `default` import path.
@@ -43,7 +43,7 @@ Mainnet default values are available as a singleton `ChainConfig` under the `def
 ```typescript
 import {chainConfig} from "@lodestar/config/default";
 
-chainConfig.SECONDS_PER_SLOT === 12;
+chainConfig.SLOT_DURATION_MS === 12000;
 ```
 
 There are also utility functions to help create a `ChainConfig` from unknown input and partial configs.
@@ -66,7 +66,7 @@ let chainConfigObj: Record<string, unknown> = {
   EJECTION_BALANCE: 16000000000,
   GENESIS_FORK_VERSION: "0x00004811",
   GENESIS_DELAY: 1100642,
-  SECONDS_PER_SLOT: 12,
+  SLOT_DURATION_MS: 12000,
   MIN_VALIDATOR_WITHDRAWABILITY_DELAY: 256,
   SHARD_COMMITTEE_PERIOD: 256,
 

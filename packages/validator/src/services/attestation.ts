@@ -1,6 +1,6 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkSeq} from "@lodestar/params";
+import {ForkName, isForkPostElectra} from "@lodestar/params";
 import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@lodestar/state-transition";
 import {BLSSignature, SignedAggregateAndProof, SingleAttestation, Slot, phase0, ssz} from "@lodestar/types";
 import {prettyBytes, sleep, toRootHex} from "@lodestar/utils";
@@ -73,6 +73,7 @@ export class AttestationService {
     if (duties.length === 0) {
       return;
     }
+    const fork = this.config.getForkName(slot);
 
     if (this.opts?.distributedAggregationSelection) {
       // Validator in distributed cluster only has a key share, not the full private key.
@@ -81,16 +82,20 @@ export class AttestationService {
       // This will run in parallel to other attestation tasks but must be finished before starting
       // attestation aggregation as it is required to correctly determine if validator is aggregator
       // and to produce a AggregateAndProof that can be threshold aggregated by the middleware client.
-      this.runDistributedAggregationSelectionTasks(duties, slot, signal).catch((e) =>
+      this.runDistributedAggregationSelectionTasks(fork, duties, slot, signal).catch((e) =>
         this.logger.error("Error on attestation aggregation selection", {slot}, e)
       );
     }
 
     // A validator should create and broadcast the attestation to the associated attestation subnet when either
     // (a) the validator has received a valid block from the expected block proposer for the assigned slot or
-    // (b) one-third of the slot has transpired (SECONDS_PER_SLOT / 3 seconds after the start of slot) -- whichever comes first.
-    await Promise.race([sleep(this.clock.msToSlot(slot + 1 / 3), signal), this.emitter.waitForBlockSlot(slot)]);
-    this.metrics?.attesterStepCallProduceAttestation.observe(this.clock.secFromSlot(slot + 1 / 3));
+    // (b) ATTESTATION_DUE_BPS of the slot has transpired -- whichever comes first.
+    const attestationDueMs = this.config.getAttestationDueMs(fork);
+    await Promise.race([
+      sleep(attestationDueMs - this.clock.msFromSlot(slot), signal),
+      this.emitter.waitForBlockSlot(slot),
+    ]);
+    this.metrics?.attesterStepCallProduceAttestation.observe(this.clock.secFromSlot(slot) - attestationDueMs / 1000);
 
     // Beacon node's endpoint produceAttestationData return data is not dependent on committeeIndex.
     // Produce a single attestation for all committees and submit unaggregated attestations in one go.
@@ -99,22 +104,25 @@ export class AttestationService {
       const attestationNoCommittee = await this.produceAttestation(0, slot);
 
       // Step 1. Mutate, and sign `Attestation` for each validator. Then publish all `Attestations` in one go
-      await this.signAndPublishAttestations(slot, attestationNoCommittee, duties);
+      await this.signAndPublishAttestations(fork, slot, attestationNoCommittee, duties);
 
       // Step 2. after all attestations are submitted, make an aggregate.
-      // First, wait until the `aggregation_production_instant` (2/3rds of the way through the slot)
-      await sleep(this.clock.msToSlot(slot + 2 / 3), signal);
-      this.metrics?.attesterStepCallProduceAggregate.observe(this.clock.secFromSlot(slot + 2 / 3));
+      // First, wait until the `aggregation_production_instant` (AGGREGATE_DUE_BPS of the way through the slot)
+      const aggregateDueMs = this.config.getAggregateDueMs(fork);
+      await sleep(aggregateDueMs - this.clock.msFromSlot(slot), signal);
+      this.metrics?.attesterStepCallProduceAggregate.observe(this.clock.secFromSlot(slot) - aggregateDueMs / 1000);
 
       const dutiesByCommitteeIndex = groupAttDutiesByCommitteeIndex(duties);
-      const isPostElectra = this.config.getForkSeq(slot) >= ForkSeq.electra;
 
       // Then download, sign and publish a `SignedAggregateAndProof` for each
       // validator that is elected to aggregate for this `slot` and `committeeIndex`.
       await Promise.all(
         Array.from(dutiesByCommitteeIndex.entries()).map(([index, dutiesSameCommittee]) => {
-          const attestationData: phase0.AttestationData = {...attestationNoCommittee, index: isPostElectra ? 0 : index};
-          return this.produceAndPublishAggregates(attestationData, index, dutiesSameCommittee);
+          const attestationData: phase0.AttestationData = {
+            ...attestationNoCommittee,
+            index: isForkPostElectra(fork) ? 0 : index,
+          };
+          return this.produceAndPublishAggregates(fork, attestationData, index, dutiesSameCommittee);
         })
       );
     } catch (e) {
@@ -138,6 +146,7 @@ export class AttestationService {
    * validator and the list of individually-signed `Attestation` objects is returned to the BN.
    */
   private async signAndPublishAttestations(
+    fork: ForkName,
     slot: Slot,
     attestationNoCommittee: phase0.AttestationData,
     duties: AttDutyAndProof[]
@@ -145,11 +154,10 @@ export class AttestationService {
     const signedAttestations: SingleAttestation[] = [];
     const headRootHex = toRootHex(attestationNoCommittee.beaconBlockRoot);
     const currentEpoch = computeEpochAtSlot(slot);
-    const isPostElectra = this.config.getForkSeq(slot) >= ForkSeq.electra;
 
     await Promise.all(
       duties.map(async ({duty}) => {
-        const index = isPostElectra ? 0 : duty.committeeIndex;
+        const index = isForkPostElectra(fork) ? 0 : duty.committeeIndex;
         const attestationData: phase0.AttestationData = {...attestationNoCommittee, index};
         const logCtxValidator = {slot, index, head: headRootHex, validatorIndex: duty.validatorIndex};
 
@@ -163,20 +171,21 @@ export class AttestationService {
       })
     );
 
-    // signAndPublishAttestations() may be called before the 1/3 cutoff time if the block was received early.
+    // signAndPublishAttestations() may be called before the ATTESTATION_DUE_BPS cutoff time if the block was received early.
     // If we produced the block or we got the block sooner than our peers, our attestations can be dropped because
     // they reach our peers before the block. To prevent that, we wait 2 extra seconds AFTER block arrival, but
-    // never beyond the 1/3 cutoff time.
+    // never beyond the ATTESTATION_DUE_BPS cutoff time.
     // https://github.com/status-im/nimbus-eth2/blob/7b64c1dce4392731a4a59ee3a36caef2e0a8357a/beacon_chain/validators/validator_duties.nim#L1123
-    const msToOneThirdSlot = this.clock.msToSlot(slot + 1 / 3);
-    // submitting attestations asap to avoid busy time at around 1/3 of slot
+    const attestationDueMs = this.config.getAttestationDueMs(fork);
+    const msToCutoffTime = attestationDueMs - this.clock.msFromSlot(slot);
+    // submitting attestations asap to avoid busy time at around ATTESTATION_DUE_BPS of slot
     const afterBlockDelayMs =
       1000 *
       this.clock.secondsPerSlot *
       (this.opts?.afterBlockDelaySlotFraction ?? DEFAULT_AFTER_BLOCK_DELAY_SLOT_FRACTION);
-    await sleep(Math.min(msToOneThirdSlot, afterBlockDelayMs));
+    await sleep(Math.min(msToCutoffTime, afterBlockDelayMs));
 
-    this.metrics?.attesterStepCallPublishAttestation.observe(this.clock.secFromSlot(slot + 1 / 3));
+    this.metrics?.attesterStepCallPublishAttestation.observe(this.clock.secFromSlot(slot) - attestationDueMs / 1000);
 
     // Step 2. Publish all `Attestations` in one go
     try {
@@ -205,6 +214,7 @@ export class AttestationService {
    * returned to the BN.
    */
   private async produceAndPublishAggregates(
+    fork: ForkName,
     attestation: phase0.AttestationData,
     committeeIndex: number,
     duties: AttDutyAndProof[]
@@ -246,7 +256,9 @@ export class AttestationService {
       })
     );
 
-    this.metrics?.attesterStepCallPublishAggregate.observe(this.clock.secFromSlot(attestation.slot + 2 / 3));
+    this.metrics?.attesterStepCallPublishAggregate.observe(
+      this.clock.secFromSlot(attestation.slot) - this.config.getAggregateDueMs(fork) / 1000
+    );
 
     if (signedAggregateAndProofs.length > 0) {
       try {
@@ -274,6 +286,7 @@ export class AttestationService {
    * See https://docs.google.com/document/d/1q9jOTPcYQa-3L8luRvQJ-M0eegtba4Nmon3dpO79TMk/mobilebasic
    */
   private async runDistributedAggregationSelectionTasks(
+    fork: ForkName,
     duties: AttDutyAndProof[],
     slot: number,
     signal: AbortSignal
@@ -290,16 +303,16 @@ export class AttestationService {
 
     const res = await Promise.race([
       this.api.validator.submitBeaconCommitteeSelections({selections: partialSelections}),
-      // Exit attestation aggregation flow if there is no response after 1/3 of slot as
+      // Exit attestation aggregation flow if there is no response after ATTESTATION_DUE_BPS of the slot as
       // beacon node would likely not have enough time to prepare an aggregate attestation.
       // Note that the aggregations flow is not explicitly exited but rather will be skipped
       // due to the fact that calculation of `is_aggregator` in AttestationDutiesService is not done
       // and selectionProof is set to null, meaning no validator will be considered an aggregator.
-      sleep(this.clock.msToSlot(slot + 1 / 3), signal),
+      sleep(this.config.getAttestationDueMs(fork) - this.clock.msFromSlot(slot), signal),
     ]);
 
     if (!res) {
-      throw new Error("Failed to receive combined selection proofs before 1/3 of slot");
+      throw new Error("Failed to receive combined selection proofs before ATTESTATION_DUE_BPS of the slot");
     }
 
     const combinedSelections = res.value();

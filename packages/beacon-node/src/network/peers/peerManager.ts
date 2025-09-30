@@ -3,6 +3,7 @@ import {BitArray} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
 import {ForkSeq, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {Metadata, Status, altair, fulu, phase0} from "@lodestar/types";
 import {prettyPrintIndices, toHex, withTimeout} from "@lodestar/utils";
 import {GOODBYE_KNOWN_CODES, GoodByeReasonCode, Libp2pEvent} from "../../constants/index.js";
@@ -599,7 +600,7 @@ export class PeerManager {
             subnet: query.subnet,
             type,
             maxPeersToDiscover: query.maxPeersToDiscover,
-            toUnixMs: 1000 * (this.clock.genesisTime + query.toSlot * this.config.SECONDS_PER_SLOT),
+            toUnixMs: computeTimeAtSlot(this.config, query.toSlot, this.clock.genesisTime) * 1000,
           });
         }
 

@@ -254,20 +254,9 @@ export class BeaconChain implements IBeaconChain {
     if (!clock) clock = new Clock({config, genesisTime: this.genesisTime, signal});
 
     this.blacklistedBlocks = new Map((opts.blacklistedBlocks ?? []).map((hex) => [hex, null]));
-    const preAggregateCutOffTime = (2 / 3) * this.config.SECONDS_PER_SLOT;
-    this.attestationPool = new AttestationPool(
-      config,
-      clock,
-      preAggregateCutOffTime,
-      this.opts?.preaggregateSlotDistance,
-      metrics
-    );
+    this.attestationPool = new AttestationPool(config, clock, this.opts?.preaggregateSlotDistance, metrics);
     this.aggregatedAttestationPool = new AggregatedAttestationPool(this.config, metrics);
-    this.syncCommitteeMessagePool = new SyncCommitteeMessagePool(
-      clock,
-      preAggregateCutOffTime,
-      this.opts?.preaggregateSlotDistance
-    );
+    this.syncCommitteeMessagePool = new SyncCommitteeMessagePool(config, clock, this.opts?.preaggregateSlotDistance);
     this.syncContributionAndProofPool = new SyncContributionAndProofPool(clock, metrics, logger);
 
     this.seenAggregatedAttestations = new SeenAggregatedAttestations(metrics);
@@ -1150,7 +1139,7 @@ export class BeaconChain implements IBeaconChain {
     const metrics = this.metrics;
     if (metrics && (slot + 1) % SLOTS_PER_EPOCH === 0) {
       // On the last slot of the epoch
-      sleep((1000 * this.config.SECONDS_PER_SLOT) / 2)
+      sleep(this.config.SLOT_DURATION_MS / 2)
         .then(() => this.validatorMonitor?.onceEveryEndOfEpoch(this.getHeadState()))
         .catch((e) => {
           if (!isErrorAborted(e)) this.logger.error("Error on validator monitor onceEveryEndOfEpoch", {slot}, e);

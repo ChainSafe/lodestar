@@ -1,7 +1,7 @@
 import {rimraf} from "rimraf";
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {createChainForkConfig} from "@lodestar/config";
-import {LevelDbController} from "@lodestar/db";
+import {LevelDbController} from "@lodestar/db/controller/level";
 import {NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {Root, fulu, ssz} from "@lodestar/types";
 import {fromAsync, toHex} from "@lodestar/utils";

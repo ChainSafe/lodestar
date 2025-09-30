@@ -379,7 +379,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
     // Handler - MUST NOT `await`, to allow validation result to be propagated
 
-    const delaySec = seenTimestampSec - (chain.genesisTime + slot * config.SECONDS_PER_SLOT);
+    const delaySec = seenTimestampSec - computeTimeAtSlot(config, slot, chain.genesisTime);
     metrics?.gossipBlock.elapsedTimeTillReceived.observe({source: OpSource.gossip}, delaySec);
     chain.validatorMonitor?.registerBeaconBlock(OpSource.gossip, delaySec, signedBlock.message);
     if (!blockInput.hasBlockAndAllData()) {

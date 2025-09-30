@@ -6,7 +6,7 @@ import {setHasher} from "@chainsafe/persistent-merkle-tree";
 import {hasher} from "@chainsafe/persistent-merkle-tree/hasher/hashtree";
 import {ChainConfig, createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config as minimalConfig} from "@lodestar/config/default";
-import {LevelDbController} from "@lodestar/db";
+import {LevelDbController} from "@lodestar/db/controller/level";
 import {LoggerNode} from "@lodestar/logger/node";
 import {ForkSeq, GENESIS_SLOT, NUMBER_OF_COLUMNS, SLOTS_PER_EPOCH, ZERO_HASH_HEX} from "@lodestar/params";
 import {BeaconStateAllForks, computeTimeAtSlot} from "@lodestar/state-transition";

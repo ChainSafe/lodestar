@@ -23,9 +23,9 @@ const {Gwei, ExecutionAddress, ValidatorIndex, Epoch, BLSSignature, Bytes32, Roo
 export const BuilderPendingWithdrawal = new ContainerType(
   {
     feeRecipient: ExecutionAddress,
-    weight: Gwei,
+    amount: Gwei,
     builderIndex: ValidatorIndex,
-    withdrawalEpoch: Epoch,
+    withdrawableEpoch: Epoch,
   },
   {typeName: "BuilderPendingWithdrawal", jsonCase: "eth2"}
 );
@@ -85,7 +85,7 @@ export const ExecutionPayloadBid = new ContainerType(
     builderIndex: ValidatorIndex,
     slot: Slot,
     value: Gwei,
-    blobKzgCommittmentsRoot: Root,
+    blobKzgCommitmentsRoot: Root,
   },
   {typeName: "ExecutionPayloadBid", jsonCase: "eth2"}
 );
@@ -135,7 +135,7 @@ export const BeaconBlockBody = new ContainerType(
     // blobKzgCommitments: denebSsz.BeaconBlockBody.fields.blobKzgCommitments, // Removed in GLOAS:EIP7732
     // executionRequests: ExecutionRequests, // Removed in GLOAS:EIP7732
     signedExecutionPayloadBid: SignedExecutionPayloadBid, // New in GLOAS:EIP7732
-    payloadAttestation: new ListCompositeType(PayloadAttestation, MAX_PAYLOAD_ATTESTATIONS), // New in GLOAS:EIP7732
+    payloadAttestations: new ListCompositeType(PayloadAttestation, MAX_PAYLOAD_ATTESTATIONS), // New in GLOAS:EIP7732
   },
   {typeName: "BeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
@@ -193,6 +193,7 @@ export const BeaconState = new ContainerType(
     nextSyncCommittee: altairSsz.SyncCommittee,
     // Execution
     // latestExecutionPayloadHeader: ExecutionPayloadHeader, // Removed in GLOAS:EIP7732
+    latestExecutionPayloadBid: ExecutionPayloadBid, // New in GLOAS:EIP7732
     // Withdrawals
     nextWithdrawalIndex: capellaSsz.BeaconState.fields.nextWithdrawalIndex,
     nextWithdrawalValidatorIndex: capellaSsz.BeaconState.fields.nextWithdrawalValidatorIndex,
@@ -210,7 +211,7 @@ export const BeaconState = new ContainerType(
     proposerLookahead: fuluSsz.BeaconState.fields.proposerLookahead,
     executionPayloadAvailability: new BitVectorType(SLOTS_PER_HISTORICAL_ROOT), // New in GLOAS:EIP7732
     builderPendingPayments: new VectorCompositeType(BuilderPendingPayment, 2 * SLOTS_PER_EPOCH), // New in GLOAS:EIP7732
-    buliderPendingWithdrawals: new ListCompositeType(BuilderPendingWithdrawal, BUILDER_PENDING_WITHDRAWALS_LIMIT), // New in GLOAS:EIP7732
+    builderPendingWithdrawals: new ListCompositeType(BuilderPendingWithdrawal, BUILDER_PENDING_WITHDRAWALS_LIMIT), // New in GLOAS:EIP7732
     latestBlockHash: Bytes32, // New in GLOAS:EIP7732
     latestWithdrawalsRoot: Root, // New in GLOAS:EIP7732
   },

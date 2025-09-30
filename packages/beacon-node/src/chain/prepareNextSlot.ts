@@ -22,17 +22,18 @@ import {IBeaconChain} from "./interface.js";
 import {getPayloadAttributesForSSE, prepareExecutionPayload} from "./produceBlock/produceBlockBody.js";
 import {RegenCaller} from "./regen/index.js";
 
-/* With 12s slot times, this scheduler will run 4s before the start of each slot (`12 / 3 = 4`). */
-export const SCHEDULER_LOOKAHEAD_FACTOR = 3;
+// TODO GLOAS: re-evaluate this timing
+/* With 12s slot times, this scheduler will run 4s before the start of each slot (`12 - 0.6667 * 12 = 4`). */
+export const PREPARE_NEXT_SLOT_BPS = 6667;
 
 /* We don't want to do more epoch transition than this */
 const PREPARE_EPOCH_LIMIT = 1;
 
 /**
  * At Bellatrix, if we are responsible for proposing in next slot, we want to prepare payload
- * 4s (1/3 slot) before the start of next slot
+ * 4s before the start of next slot at PREPARE_NEXT_SLOT_BPS of the current slot.
  *
- * For all forks, when clock is 1/3 slot before an epoch, we want to prepare for the next epoch
+ * For all forks, when clock reaches PREPARE_NEXT_SLOT_BPS of slot before an epoch, we want to prepare for the next epoch
  * transition from our head so that:
  * + validators vote for block head on time through attestation
  * + validators propose blocks on time
@@ -74,10 +75,9 @@ export class PrepareNextSlotScheduler {
     }
 
     try {
-      // At 1/3 slot time before the next slot, we either prepare payload or precompute
-      // epoch transition
-      const slotMs = this.config.SECONDS_PER_SLOT * 1000;
-      await sleep(slotMs - slotMs / SCHEDULER_LOOKAHEAD_FACTOR, this.signal);
+      // At PREPARE_NEXT_SLOT_BPS (~67%) of the current slot we prepare payload for the next slot
+      // or precompute epoch transition
+      await sleep(this.config.getSlotComponentDurationMs(PREPARE_NEXT_SLOT_BPS), this.signal);
 
       // calling updateHead() here before we produce a block to reduce reorg possibility
       const {slot: headSlot, blockRoot: headRoot} = this.chain.recomputeForkChoiceHead(

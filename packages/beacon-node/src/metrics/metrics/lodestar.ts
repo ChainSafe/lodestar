@@ -862,9 +862,9 @@ export function createLodestarMetrics(
         help: "Time elapsed between block slot time and the time block becomes head",
         buckets: [0.5, 1, 2, 4, 6, 12],
       }),
-      setHeadAfterFirstInterval: register.gauge({
-        name: "lodestar_import_block_set_head_after_first_interval_total",
-        help: "Total times an imported block is set as head after the first slot interval",
+      setHeadAfterCutoff: register.gauge({
+        name: "lodestar_import_block_set_head_after_cutoff_total",
+        help: "Total times an imported block is set as head after ATTESTATION_DUE_BPS of the slot",
       }),
       bySource: register.gauge<{source: BlockInputSource}>({
         name: "lodestar_import_block_by_source_total",

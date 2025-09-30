@@ -56,8 +56,10 @@ export const chainConfig: ChainConfig = {
 
   // Time parameters
   // ---------------------------------------------------------------
-  // [customized] Faster for testing purposes
+  // [customized] Faster for testing purposes (DEPRECATED)
   SECONDS_PER_SLOT: 6,
+  // [customized] 6000 milliseconds, 6 seconds
+  SLOT_DURATION_MS: 6000,
   // 14 (estimate from Eth1 mainnet)
   SECONDS_PER_ETH1_BLOCK: 14,
   // 2**8 (= 256) epochs
@@ -66,6 +68,18 @@ export const chainConfig: ChainConfig = {
   SHARD_COMMITTEE_PERIOD: 64,
   // [customized] process deposits more quickly, but insecure
   ETH1_FOLLOW_DISTANCE: 16,
+  // 1667 basis points, ~17% of SLOT_DURATION_MS
+  PROPOSER_REORG_CUTOFF_BPS: 1667,
+  // 3333 basis points, ~33% of SLOT_DURATION_MS
+  ATTESTATION_DUE_BPS: 3333,
+  // 6667 basis points, ~67% of SLOT_DURATION_MS
+  AGGREGATE_DUE_BPS: 6667,
+
+  // Altair
+  // 3333 basis points, ~33% of SLOT_DURATION_MS
+  SYNC_MESSAGE_DUE_BPS: 3333,
+  // 6667 basis points, ~67% of SLOT_DURATION_MS
+  CONTRIBUTION_DUE_BPS: 6667,
 
   // 25% of SLOT_DURATION_MS
   ATTESTATION_DUE_BPS_GLOAS: 2500,

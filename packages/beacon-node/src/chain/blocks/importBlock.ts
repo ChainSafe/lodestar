@@ -7,20 +7,14 @@ import {
   ForkChoiceErrorCode,
   NotReorgedReason,
 } from "@lodestar/fork-choice";
-import {
-  ForkPostAltair,
-  ForkPostElectra,
-  ForkSeq,
-  INTERVALS_PER_SLOT,
-  MAX_SEED_LOOKAHEAD,
-  SLOTS_PER_EPOCH,
-} from "@lodestar/params";
+import {ForkPostAltair, ForkPostElectra, ForkSeq, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   CachedBeaconStateAltair,
   EpochCache,
   RootCache,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
+  computeTimeAtSlot,
   isExecutionStateType,
   isStartSlotOfEpoch,
   isStateValidatorsNodesPopulated,
@@ -85,7 +79,8 @@ export async function importBlock(
   const currentEpoch = computeEpochAtSlot(currentSlot);
   const blockEpoch = computeEpochAtSlot(blockSlot);
   const prevFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
-  const blockDelaySec = (fullyVerifiedBlock.seenTimestampSec - postState.genesisTime) % this.config.SECONDS_PER_SLOT;
+  const blockDelaySec =
+    fullyVerifiedBlock.seenTimestampSec - computeTimeAtSlot(this.config, blockSlot, postState.genesisTime);
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
   const fork = this.config.getForkSeq(blockSlot);
 
@@ -265,10 +260,11 @@ export async function importBlock(
       this.metrics.headSlot.set(newHead.slot);
       // Only track "recent" blocks. Otherwise sync can distort this metrics heavily.
       // We want to track recent blocks coming from gossip, unknown block sync, and API.
-      if (delaySec < SLOTS_PER_EPOCH * this.config.SECONDS_PER_SLOT) {
+      if (delaySec < (SLOTS_PER_EPOCH * this.config.SLOT_DURATION_MS) / 1000) {
         this.metrics.importBlock.elapsedTimeTillBecomeHead.observe(delaySec);
-        if (delaySec > this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT) {
-          this.metrics.importBlock.setHeadAfterFirstInterval.inc();
+        const cutOffSec = this.config.getAttestationDueMs(this.config.getForkName(blockSlot)) / 1000;
+        if (delaySec > cutOffSec) {
+          this.metrics.importBlock.setHeadAfterCutoff.inc();
         }
       }
     }

@@ -270,7 +270,9 @@ export const MAX_REQUEST_LIGHT_CLIENT_COMMITTEE_HASHES = 128;
  * Optimistic sync
  */
 export const SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY = 128;
+/** @deprecated */
 export const INTERVALS_PER_SLOT = 3;
+export const BASIS_POINTS = 10000;
 
 // EIP-4844: Crypto const
 export const BYTES_PER_FIELD_ELEMENT = 32;

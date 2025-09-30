@@ -74,7 +74,6 @@ export class AttestationPool {
   constructor(
     private readonly config: ChainForkConfig,
     private readonly clock: IClock,
-    private readonly cutOffSecFromSlot: number,
     private readonly preaggregateSlotDistance = 0,
     private readonly metrics: Metrics | null = null
   ) {}
@@ -98,7 +97,7 @@ export class AttestationPool {
    * `SignedAggregateAndProof`.
    *
    * If the attestation is too old (low slot) to be included in the pool it is simply dropped
-   * and no error is returned. Also if it's at clock slot but come to the pool later than 2/3
+   * and no error is returned. Also if it's at clock slot but come to the pool later than AGGREGATE_DUE_BPS
    * of slot time, it's dropped too since it's not helpful for the validator anymore
    *
    * Expects the attestation to be fully validated:
@@ -126,7 +125,7 @@ export class AttestationPool {
 
     // Reject gossip attestations in the current slot but come to this pool very late
     // for api attestations, we allow them to be added to the pool
-    if (!priority && this.clock.secFromSlot(slot) > this.cutOffSecFromSlot) {
+    if (!priority && this.clock.msFromSlot(slot) > this.config.getAggregateDueMs(fork)) {
       return InsertOutcome.Late;
     }
 

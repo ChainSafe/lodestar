@@ -1,6 +1,6 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {computeTimeAtSlot} from "@lodestar/state-transition";
+import {ForkName} from "@lodestar/params";
 import {altair, ssz} from "@lodestar/types";
 import {RequiredSelective} from "@lodestar/utils";
 import {LightClientErrorCode} from "../../../../src/chain/errors/lightClientError.js";
@@ -32,7 +32,6 @@ describe("Light Client Finality Update validation", () => {
 
   function mockChain(): RequiredSelective<IBeaconChain, "lightClientServer"> {
     const chain = getMockedBeaconChain();
-    vi.spyOn(chain, "genesisTime", "get").mockReturnValue(0);
     return chain;
   }
 
@@ -66,6 +65,9 @@ describe("Light Client Finality Update validation", () => {
     defaultValue.finalizedHeader.beacon.slot = 1;
     vi.spyOn(chain.lightClientServer, "getFinalityUpdate").mockReturnValue(defaultValue);
 
+    // make update too early
+    vi.spyOn(chain.clock, "msFromSlot").mockReturnValue(0);
+
     expect(() => {
       validateLightClientFinalityUpdate(config, chain, lightClientFinalityUpdate);
     }).toThrow(LightClientErrorCode.FINALITY_UPDATE_RECEIVED_TOO_EARLY);
@@ -87,9 +89,7 @@ describe("Light Client Finality Update validation", () => {
     });
 
     // make update not too early
-    const timeAtSignatureSlot =
-      computeTimeAtSlot(config, lightClientFinalityUpdate.signatureSlot, chain.genesisTime) * 1000;
-    vi.advanceTimersByTime(timeAtSignatureSlot + (1 / 3) * (config.SECONDS_PER_SLOT + 1) * 1000);
+    vi.spyOn(chain.clock, "msFromSlot").mockReturnValue(config.getSyncMessageDueMs(ForkName.altair) + 1000);
 
     expect(() => {
       validateLightClientFinalityUpdate(config, chain, lightClientFinalityUpdate);
@@ -108,9 +108,7 @@ describe("Light Client Finality Update validation", () => {
     });
 
     // make update not too early
-    const timeAtSignatureSlot =
-      computeTimeAtSlot(config, lightClientFinalityUpdate.signatureSlot, chain.genesisTime) * 1000;
-    vi.advanceTimersByTime(timeAtSignatureSlot + (1 / 3) * (config.SECONDS_PER_SLOT + 1) * 1000);
+    vi.spyOn(chain.clock, "msFromSlot").mockReturnValue(config.getSyncMessageDueMs(ForkName.altair) + 1000);
 
     // chain's getFinalityUpdate not mocked.
     // localFinalityUpdate will be null
@@ -138,13 +136,10 @@ describe("Light Client Finality Update validation", () => {
     });
 
     // satisfy:
-    // [IGNORE] The finality_update is received after the block at signature_slot was given enough time to propagate
-    // through the network -- i.e. validate that one-third of finality_update.signature_slot has transpired
-    // (SECONDS_PER_SLOT / INTERVALS_PER_SLOT seconds after the start of the slot, with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
-    // const currentTime = computeTimeAtSlot(config, chain.clock.currentSlotWithGossipDisparity, chain.genesisTime);
-    const timeAtSignatureSlot =
-      computeTimeAtSlot(config, lightClientFinalityUpdate.signatureSlot, chain.genesisTime) * 1000;
-    vi.advanceTimersByTime(timeAtSignatureSlot + (1 / 3) * (config.SECONDS_PER_SLOT + 1) * 1000);
+    // [IGNORE] The finality_update is received after the block at `signature_slot` was given enough time to propagate
+    // through the network -- i.e. validate that `get_sync_message_due_ms(epoch)` milliseconds
+    // (with a `MAXIMUM_GOSSIP_CLOCK_DISPARITY` allowance) has transpired since the start of `signature_slot`.
+    vi.spyOn(chain.clock, "msFromSlot").mockReturnValue(config.getSyncMessageDueMs(ForkName.altair) + 1000);
 
     // satisfy:
     // [IGNORE] The received finality_update matches the locally computed one exactly

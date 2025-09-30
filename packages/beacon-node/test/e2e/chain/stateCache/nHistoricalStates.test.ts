@@ -25,9 +25,9 @@ describe("regen/reload states with n-historical states configuration", () => {
   const validatorCount = 8;
   const ELECTRA_FORK_EPOCH = 0;
   const FULU_FORK_EPOCH = 1;
-  const SECONDS_PER_SLOT = 2;
+  const SLOT_DURATION_MS = 2 * 1000;
   const testParams: Partial<ChainConfig> = {
-    SECONDS_PER_SLOT,
+    SLOT_DURATION_MS,
     ALTAIR_FORK_EPOCH: ELECTRA_FORK_EPOCH,
     BELLATRIX_FORK_EPOCH: ELECTRA_FORK_EPOCH,
     CAPELLA_FORK_EPOCH: ELECTRA_FORK_EPOCH,
@@ -284,14 +284,14 @@ describe("regen/reload states with n-historical states configuration", () => {
     wrappedIt(`${name} reorgedSlot=${reorgedSlot} reorgDistance=${reorgDistance}`, async () => {
       // the node needs time to transpile/initialize bls worker threads
       const genesisSlotsDelay = 7;
-      const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * SECONDS_PER_SLOT;
+      const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * (SLOT_DURATION_MS / 1000);
       const testLoggerOpts: TestLoggerOpts = {
         level: LogLevel.debug,
         timestampFormat: {
           format: TimestampFormatCode.EpochSlot,
           genesisTime,
           slotsPerEpoch: SLOTS_PER_EPOCH,
-          secondsPerSlot: SECONDS_PER_SLOT,
+          secondsPerSlot: SLOT_DURATION_MS / 1000,
         },
       };
 
@@ -369,7 +369,7 @@ describe("regen/reload states with n-historical states configuration", () => {
           waitForEvent<phase0.Checkpoint>(
             bn.chain.emitter,
             ChainEvent.checkpoint,
-            (cpSlot + genesisSlotsDelay + 1) * SECONDS_PER_SLOT * 1000,
+            (cpSlot + genesisSlotsDelay + 1) * SLOT_DURATION_MS,
             (cp) => cp.epoch === cpEpoch
           )
         )
@@ -392,7 +392,7 @@ describe("regen/reload states with n-historical states configuration", () => {
             bn.chain.emitter,
             routes.events.EventType.chainReorg,
             // reorged event happens at reorgedSlot + 1
-            (reorgedSlot + 1 - cpSlot + 1) * SECONDS_PER_SLOT * 1000,
+            (reorgedSlot + 1 - cpSlot + 1) * SLOT_DURATION_MS,
             (reorgData) => reorgData.slot === reorgedSlot + 1
           )
         )

@@ -8,7 +8,7 @@ import {
   getFullOrBlindedPayloadFromBody,
   isMergeTransitionComplete,
 } from "../util/execution.js";
-import {computeEpochAtSlot, getRandaoMix} from "../util/index.js";
+import {computeEpochAtSlot, computeTimeAtSlot, getRandaoMix} from "../util/index.js";
 import {BlockExternalData, ExecutionPayloadStatus} from "./externalData.js";
 
 export function processExecutionPayload(
@@ -43,8 +43,8 @@ export function processExecutionPayload(
   // Note: inlined function in if statement
   // def compute_timestamp_at_slot(state: BeaconState, slot: Slot) -> uint64:
   //   slots_since_genesis = slot - GENESIS_SLOT
-  //   return uint64(state.genesis_time + slots_since_genesis * SECONDS_PER_SLOT)
-  if (payload.timestamp !== state.genesisTime + state.slot * state.config.SECONDS_PER_SLOT) {
+  //   return uint64(state.genesis_time + slots_since_genesis * SLOT_DURATION_MS / 1000)
+  if (payload.timestamp !== computeTimeAtSlot(state.config, state.slot, state.genesisTime)) {
     throw Error(`Invalid timestamp ${payload.timestamp} genesisTime=${state.genesisTime} slot=${state.slot}`);
   }
 

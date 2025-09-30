@@ -652,7 +652,8 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
   static createFromColumn(
     props: AddColumn & CreateBlockInputMeta & {sampledColumns: ColumnIndex[]; custodyColumns: ColumnIndex[]}
   ): BlockInputColumns {
-    const hasAllData = props.sampledColumns.length === 0;
+    const hasAllData =
+      props.daOutOfRange || props.columnSidecar.kzgCommitments.length === 0 || props.sampledColumns.length === 0;
     const state: BlockInputColumnsState = {
       hasBlock: false,
       hasAllData,

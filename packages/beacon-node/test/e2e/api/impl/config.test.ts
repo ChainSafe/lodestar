@@ -10,12 +10,6 @@ const CONSTANT_NAMES_SKIP_LIST = new Set([
   // This constant can also be derived from existing constants so it's not critical.
   // PARTICIPATION_FLAG_WEIGHTS = [TIMELY_SOURCE_WEIGHT, TIMELY_TARGET_WEIGHT, TIMELY_HEAD_WEIGHT]
   "PARTICIPATION_FLAG_WEIGHTS",
-  // TODO Gloas: remove skipped constant
-  "SLOT_DURATION_MS",
-  "ATTESTATION_DUE_BPS",
-  "AGGREGATE_DUE_BPS",
-  "SYNC_MESSAGE_DUE_BPS",
-  "CONTRIBUTION_DUE_BPS",
 ]);
 
 describe("api / impl / config", () => {

@@ -2,7 +2,7 @@ import {generateKeyPair} from "@libp2p/crypto/keys";
 import {afterAll, beforeAll, bench, describe} from "@chainsafe/benchmark";
 import {fromHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
-import {LevelDbController} from "@lodestar/db";
+import {LevelDbController} from "@lodestar/db/controller/level";
 import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@lodestar/params";
 import {CachedBeaconStateAltair} from "@lodestar/state-transition";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";

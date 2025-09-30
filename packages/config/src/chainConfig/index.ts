@@ -17,6 +17,12 @@ export function createChainConfig(input: Partial<ChainConfig>): ChainConfig {
     ...input,
   };
 
+  // Set SLOT_DURATION_MS if SECONDS_PER_SLOT is provided but SLOT_DURATION_MS is not.
+  // This is to provide backward compatibility until Gloas is live
+  if (input.SLOT_DURATION_MS === undefined) {
+    config.SLOT_DURATION_MS = config.SECONDS_PER_SLOT * 1000;
+  }
+
   // Assert that the preset matches the active preset
   if (config.PRESET_BASE !== ACTIVE_PRESET) {
     throw new Error(

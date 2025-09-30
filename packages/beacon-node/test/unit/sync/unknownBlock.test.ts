@@ -30,7 +30,10 @@ describe.skip(
   () => {
     const logger = testLogger();
     const slotSec = 0.3;
-    const config = createChainForkConfig({...minimalConfig, SECONDS_PER_SLOT: slotSec});
+    const config = createChainForkConfig({
+      ...minimalConfig,
+      SLOT_DURATION_MS: slotSec * 1000,
+    });
 
     beforeEach(() => {
       vi.useFakeTimers({shouldAdvanceTime: true});
@@ -215,7 +218,7 @@ describe.skip(
           });
         } else {
           chain.emitter?.emit(ChainEvent.unknownBlockRoot, {
-            rootSlot: {root: blockRootHexC},
+            rootHex: blockRootHexC,
             peer,
             source: BlockInputSource.gossip,
           });

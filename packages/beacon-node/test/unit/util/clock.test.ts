@@ -29,7 +29,7 @@ describe("Clock", () => {
   it.skip("Should notify on new slot", () => {
     const spy = vi.fn();
     clock.on(ClockEvent.slot, spy);
-    vi.advanceTimersByTime(config.SECONDS_PER_SLOT * 1000);
+    vi.advanceTimersByTime(config.SLOT_DURATION_MS);
     expect(spy).toHaveBeenCalledTimes(1);
     expect(spy).toBeCalledWith(clock.currentSlot);
   });
@@ -37,14 +37,14 @@ describe("Clock", () => {
   it("Should notify on new epoch", () => {
     const spy = vi.fn();
     clock.on(ClockEvent.epoch, spy);
-    vi.advanceTimersByTime(SLOTS_PER_EPOCH * config.SECONDS_PER_SLOT * 1000);
+    vi.advanceTimersByTime(SLOTS_PER_EPOCH * config.SLOT_DURATION_MS);
     expect(spy).toHaveBeenCalledTimes(1);
     expect(spy).toBeCalledWith(clock.currentEpoch);
   });
 
   describe("currentSlotWithGossipDisparity", () => {
     it("should be next slot", () => {
-      vi.advanceTimersByTime(config.SECONDS_PER_SLOT * 1000 - (MAXIMUM_GOSSIP_CLOCK_DISPARITY - 50));
+      vi.advanceTimersByTime(config.SLOT_DURATION_MS - (MAXIMUM_GOSSIP_CLOCK_DISPARITY - 50));
       expect(clock.currentSlotWithGossipDisparity).toBe(clock.currentSlot + 1);
     });
 
@@ -64,7 +64,7 @@ describe("Clock", () => {
       const nextSlot = clock.currentSlot + 1;
       // "current slot could NOT be next slot if it's far away from next slot"
       expect(clock.isCurrentSlotGivenGossipDisparity(nextSlot)).toBe(false);
-      vi.advanceTimersByTime(config.SECONDS_PER_SLOT * 1000 - (MAXIMUM_GOSSIP_CLOCK_DISPARITY - 50));
+      vi.advanceTimersByTime(config.SLOT_DURATION_MS - (MAXIMUM_GOSSIP_CLOCK_DISPARITY - 50));
       // "current slot could be next slot if it's too close to next slot"
       expect(clock.isCurrentSlotGivenGossipDisparity(nextSlot)).toBe(true);
     });
