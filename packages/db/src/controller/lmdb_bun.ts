@@ -1,5 +1,4 @@
 import {
-  Database,
   Environment,
   cursorDeinit,
   cursorGetCurrentValue,
@@ -42,7 +41,7 @@ export class LmdbController implements DatabaseController<Uint8Array, Uint8Array
   ) {}
 
   static async create(options: DatabaseOptions, {metrics}: LmdbControllerModules): Promise<LmdbController> {
-    const db = environmentInit(options.name, {mapSize: });
+    const db = environmentInit(options.name, {mapSize: 500_000_000_000});
     return new LmdbController(db, metrics ?? null);
   }
 
@@ -164,20 +163,26 @@ export class LmdbController implements DatabaseController<Uint8Array, Uint8Array
       try {
         if (opts.gt) {
           cursorSeek(iterator, opts.gt);
-          const first = cursorGoToNext(iterator);
-          if (!first) return;
+          const key = cursorGoToNext(iterator);
+          if (!key) return;
+          if (opts.lt && Buffer.compare(key, opts.lt) >= 0) return;
+          if (opts.lte && Buffer.compare(key, opts.lte) > 0) return;
           itemsRead++;
-          yield first.slice();
+          yield key.slice();
         } else if (opts.gte) {
-          const first = cursorSeek(iterator, opts.gte);
-          if (!first) return;
+          const key = cursorSeek(iterator, opts.gte);
+          if (!key) return;
+          if (opts.lt && Buffer.compare(key, opts.lt) >= 0) return;
+          if (opts.lte && Buffer.compare(key, opts.lte) > 0) return;
           itemsRead++;
-          yield first.slice();
+          yield key.slice();
         } else {
-          const first = cursorGoToFirst(iterator);
-          if (!first) return;
+          const key = cursorGoToFirst(iterator);
+          if (!key) return;
+          if (opts.lt && Buffer.compare(key, opts.lt) >= 0) return;
+          if (opts.lte && Buffer.compare(key, opts.lte) > 0) return;
           itemsRead++;
-          yield first.slice();
+          yield key.slice();
         }
 
         while (true) {
@@ -205,17 +210,23 @@ export class LmdbController implements DatabaseController<Uint8Array, Uint8Array
     try {
       if (opts.gt) {
         cursorSeek(iterator, opts.gt);
-        const first = cursorGoToNext(iterator);
-        if (!first) return keys;
-        keys.push(first.slice());
+        const key = cursorGoToNext(iterator);
+        if (!key) return keys;
+        if (opts.lt && Buffer.compare(key, opts.lt) >= 0) return keys;
+        if (opts.lte && Buffer.compare(key, opts.lte) > 0) return keys;
+        keys.push(key.slice());
       } else if (opts.gte) {
-        const first = cursorSeek(iterator, opts.gte);
-        if (!first) return keys;
-        keys.push(first.slice());
+        const key = cursorSeek(iterator, opts.gte);
+        if (!key) return keys;
+        if (opts.lt && Buffer.compare(key, opts.lt) >= 0) return keys;
+        if (opts.lte && Buffer.compare(key, opts.lte) > 0) return keys;
+        keys.push(key.slice());
       } else {
-        const first = cursorGoToFirst(iterator);
-        if (!first) return keys;
-        keys.push(first.slice());
+        const key = cursorGoToFirst(iterator);
+        if (!key) return keys;
+        if (opts.lt && Buffer.compare(key, opts.lt) >= 0) return keys;
+        if (opts.lte && Buffer.compare(key, opts.lte) > 0) return keys;
+        keys.push(key.slice());
       }
       while (true) {
         const key = cursorGoToNext(iterator);
@@ -244,20 +255,26 @@ export class LmdbController implements DatabaseController<Uint8Array, Uint8Array
       try {
         if (opts.gt) {
           cursorSeek(iterator, opts.gt);
-          const first = cursorGoToNext(iterator);
-          if (!first) return;
+          const key = cursorGoToNext(iterator);
+          if (!key) return;
+          if (opts.lt && Buffer.compare(key, opts.lt) >= 0) return;
+          if (opts.lte && Buffer.compare(key, opts.lte) > 0) return;
           const value = cursorGetCurrentValue(iterator);
           itemsRead++;
           yield value.slice();
         } else if (opts.gte) {
-          const first = cursorSeek(iterator, opts.gte);
-          if (!first) return;
+          const key = cursorSeek(iterator, opts.gte);
+          if (!key) return;
+          if (opts.lt && Buffer.compare(key, opts.lt) >= 0) return;
+          if (opts.lte && Buffer.compare(key, opts.lte) > 0) return;
           const value = cursorGetCurrentValue(iterator);
           itemsRead++;
           yield value.slice();
         } else {
-          const first = cursorGoToFirst(iterator);
-          if (!first) return;
+          const key = cursorGoToFirst(iterator);
+          if (!key) return;
+          if (opts.lt && Buffer.compare(key, opts.lt) >= 0) return;
+          if (opts.lte && Buffer.compare(key, opts.lte) > 0) return;
           const value = cursorGetCurrentValue(iterator);
           itemsRead++;
           yield value.slice();
@@ -288,18 +305,24 @@ export class LmdbController implements DatabaseController<Uint8Array, Uint8Array
     try {
       if (opts.gt) {
         cursorSeek(iterator, opts.gt);
-        const first = cursorGoToNext(iterator);
-        if (!first) return values;
+        const key = cursorGoToNext(iterator);
+        if (!key) return values;
+        if (opts.lt && Buffer.compare(key, opts.lt) >= 0) return values;
+        if (opts.lte && Buffer.compare(key, opts.lte) > 0) return values;
         const value = cursorGetCurrentValue(iterator);
         values.push(value.slice());
       } else if (opts.gte) {
-        const first = cursorSeek(iterator, opts.gte);
-        if (!first) return values;
+        const key = cursorSeek(iterator, opts.gte);
+        if (!key) return values;
+        if (opts.lt && Buffer.compare(key, opts.lt) >= 0) return values;
+        if (opts.lte && Buffer.compare(key, opts.lte) > 0) return values;
         const value = cursorGetCurrentValue(iterator);
         values.push(value.slice());
       } else {
-        const first = cursorGoToFirst(iterator);
-        if (!first) return values;
+        const key = cursorGoToFirst(iterator);
+        if (!key) return values;
+        if (opts.lt && Buffer.compare(key, opts.lt) >= 0) return values;
+        if (opts.lte && Buffer.compare(key, opts.lte) > 0) return values;
         const value = cursorGetCurrentValue(iterator);
         values.push(value.slice());
       }
@@ -331,23 +354,29 @@ export class LmdbController implements DatabaseController<Uint8Array, Uint8Array
       try {
         if (opts.gt) {
           cursorSeek(iterator, opts.gt);
-          const first = cursorGoToNext(iterator)?.slice();
-          if (!first) return;
+          const key = cursorGoToNext(iterator)?.slice();
+          if (!key) return;
+          if (opts.lt && Buffer.compare(key, opts.lt) >= 0) return;
+          if (opts.lte && Buffer.compare(key, opts.lte) > 0) return;
           const value = cursorGetCurrentValue(iterator).slice();
           itemsRead++;
-          yield {key: first, value};
+          yield {key, value};
         } else if (opts.gte) {
-          const first = cursorSeek(iterator, opts.gte)?.slice();
-          if (!first) return;
+          const key = cursorSeek(iterator, opts.gte)?.slice();
+          if (!key) return;
+          if (opts.lt && Buffer.compare(key, opts.lt) >= 0) return;
+          if (opts.lte && Buffer.compare(key, opts.lte) > 0) return;
           const value = cursorGetCurrentValue(iterator).slice();
           itemsRead++;
-          yield {key: first, value};
+          yield {key, value};
         } else {
-          const first = cursorGoToFirst(iterator)?.slice();
-          if (!first) return;
+          const key = cursorGoToFirst(iterator)?.slice();
+          if (!key) return;
+          if (opts.lt && Buffer.compare(key, opts.lt) >= 0) return;
+          if (opts.lte && Buffer.compare(key, opts.lte) > 0) return;
           const value = cursorGetCurrentValue(iterator).slice();
           itemsRead++;
-          yield {key: first, value};
+          yield {key, value};
         }
         while (true) {
           const key = cursorGoToNext(iterator)?.slice();
@@ -375,20 +404,26 @@ export class LmdbController implements DatabaseController<Uint8Array, Uint8Array
     try {
       if (opts.gt) {
         cursorSeek(iterator, opts.gt);
-        const first = cursorGoToNext(iterator)?.slice();
-        if (!first) return entries;
+        const key = cursorGoToNext(iterator)?.slice();
+        if (!key) return entries;
+        if (opts.lt && Buffer.compare(key, opts.lt) >= 0) return entries;
+        if (opts.lte && Buffer.compare(key, opts.lte) > 0) return entries;
         const value = cursorGetCurrentValue(iterator).slice();
-        entries.push({key: first, value});
+        entries.push({key, value});
       } else if (opts.gte) {
-        const first = cursorSeek(iterator, opts.gte)?.slice();
-        if (!first) return entries;
+        const key = cursorSeek(iterator, opts.gte)?.slice();
+        if (!key) return entries;
+        if (opts.lt && Buffer.compare(key, opts.lt) >= 0) return entries;
+        if (opts.lte && Buffer.compare(key, opts.lte) > 0) return entries;
         const value = cursorGetCurrentValue(iterator).slice();
-        entries.push({key: first, value});
+        entries.push({key, value});
       } else {
-        const first = cursorGoToFirst(iterator)?.slice();
-        if (!first) return entries;
+        const key = cursorGoToFirst(iterator)?.slice();
+        if (!key) return entries;
+        if (opts.lt && Buffer.compare(key, opts.lt) >= 0) return entries;
+        if (opts.lte && Buffer.compare(key, opts.lte) > 0) return entries;
         const value = cursorGetCurrentValue(iterator).slice();
-        entries.push({key: first, value});
+        entries.push({key, value});
       }
       while (true) {
         const key = cursorGoToNext(iterator)?.slice();
