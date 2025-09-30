@@ -9,6 +9,7 @@ import {
   databaseCursor,
   databaseDelete,
   databaseGet,
+  databaseOpen,
   databaseSet,
   environmentDeinit,
   environmentInit,
@@ -69,7 +70,7 @@ export class LmdbController implements DatabaseController<Uint8Array, Uint8Array
     this.metrics?.dbReadReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
     this.metrics?.dbReadItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
     const tx = transactionBegin(this.db);
-    const db = 0 as Database;
+    const db = databaseOpen(tx, null);
 
     const raw = databaseGet(tx, db, key);
     const value = raw ? raw.slice() : null;
@@ -84,7 +85,7 @@ export class LmdbController implements DatabaseController<Uint8Array, Uint8Array
     this.metrics?.dbReadItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, keys.length);
 
     const tx = transactionBegin(this.db);
-    const db = 0 as Database;
+    const db = databaseOpen(tx, null);
 
     const values = [];
     for (const key of keys) {
@@ -101,7 +102,7 @@ export class LmdbController implements DatabaseController<Uint8Array, Uint8Array
     this.metrics?.dbWriteItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
 
     const tx = transactionBegin(this.db, false);
-    const db = 0 as Database;
+    const db = databaseOpen(tx, null);
 
     databaseSet(tx, db, key, value);
 
@@ -113,7 +114,7 @@ export class LmdbController implements DatabaseController<Uint8Array, Uint8Array
     this.metrics?.dbWriteItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
 
     const tx = transactionBegin(this.db, false);
-    const db = 0 as Database;
+    const db = databaseOpen(tx, null);
 
     databaseDelete(tx, db, key);
 
@@ -125,7 +126,7 @@ export class LmdbController implements DatabaseController<Uint8Array, Uint8Array
     this.metrics?.dbWriteItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, items.length);
 
     const tx = transactionBegin(this.db, false);
-    const db = 0 as Database;
+    const db = databaseOpen(tx, null);
 
     for (const {key, value} of items) {
       databaseSet(tx, db, key, value);
@@ -139,7 +140,7 @@ export class LmdbController implements DatabaseController<Uint8Array, Uint8Array
     this.metrics?.dbWriteItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, keys.length);
 
     const tx = transactionBegin(this.db, false);
-    const db = 0 as Database;
+    const db = databaseOpen(tx, null);
 
     for (const key of keys) {
       databaseDelete(tx, db, key);
@@ -150,7 +151,7 @@ export class LmdbController implements DatabaseController<Uint8Array, Uint8Array
 
   keysStream(opts: FilterOptions<Uint8Array> = {}): AsyncIterable<Uint8Array> {
     const tx = transactionBegin(this.db);
-    const db = 0 as Database;
+    const db = databaseOpen(tx, null);
 
     const iterator = databaseCursor(tx, db);
 
@@ -197,7 +198,7 @@ export class LmdbController implements DatabaseController<Uint8Array, Uint8Array
 
   async keys(opts: FilterOptions<Uint8Array> = {}): Promise<Uint8Array[]> {
     const tx = transactionBegin(this.db);
-    const db = 0 as Database;
+    const db = databaseOpen(tx, null);
     const iterator = databaseCursor(tx, db);
     this.metrics?.dbReadReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
     const keys: Uint8Array[] = [];
@@ -233,7 +234,7 @@ export class LmdbController implements DatabaseController<Uint8Array, Uint8Array
 
   valuesStream(opts: FilterOptions<Uint8Array> = {}): AsyncIterable<Uint8Array> {
     const tx = transactionBegin(this.db);
-    const db = 0 as Database;
+    const db = databaseOpen(tx, null);
     const iterator = databaseCursor(tx, db);
     const bucket = opts.bucketId ?? BUCKET_ID_UNKNOWN;
     const metrics = this.metrics;
@@ -280,7 +281,7 @@ export class LmdbController implements DatabaseController<Uint8Array, Uint8Array
 
   async values(opts: FilterOptions<Uint8Array> = {}): Promise<Uint8Array[]> {
     const tx = transactionBegin(this.db);
-    const db = 0 as Database;
+    const db = databaseOpen(tx, null);
     const iterator = databaseCursor(tx, db);
     const values: Uint8Array[] = [];
     this.metrics?.dbReadReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
@@ -320,7 +321,7 @@ export class LmdbController implements DatabaseController<Uint8Array, Uint8Array
 
   entriesStream(opts: FilterOptions<Uint8Array> = {}): AsyncIterable<KeyValue<Uint8Array, Uint8Array>> {
     const tx = transactionBegin(this.db);
-    const db = 0 as Database;
+    const db = databaseOpen(tx, null);
     const iterator = databaseCursor(tx, db);
     const bucket = opts.bucketId ?? BUCKET_ID_UNKNOWN;
     const metrics = this.metrics;
@@ -367,7 +368,7 @@ export class LmdbController implements DatabaseController<Uint8Array, Uint8Array
 
   async entries(opts: FilterOptions<Uint8Array> = {}): Promise<KeyValue<Uint8Array, Uint8Array>[]> {
     const tx = transactionBegin(this.db);
-    const db = 0 as Database;
+    const db = databaseOpen(tx, null);
     const iterator = databaseCursor(tx, db);
     const entries: KeyValue<Uint8Array, Uint8Array>[] = [];
     this.metrics?.dbReadReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
