@@ -23,7 +23,11 @@ type ArchiveStoreModules = {
   metrics: Metrics | null;
 };
 
-type ArchiveStoreInitOpts = ArchiveStoreOpts & {dbName: string; anchorState: {finalizedCheckpoint: Checkpoint}};
+type ArchiveStoreInitOpts = ArchiveStoreOpts & {
+  dbName: string;
+  dbType: "level" | "lmdb";
+  anchorState: {finalizedCheckpoint: Checkpoint};
+};
 
 /**
  * Used for running tasks that depends on some events or are executed
@@ -110,6 +114,7 @@ export class ArchiveStore {
         opts: {
           genesisTime: this.chain.clock.genesisTime,
           dbLocation: this.opts.dbName,
+          dbType: this.opts.dbType,
         },
         config: this.chain.config,
         metrics: this.metrics,

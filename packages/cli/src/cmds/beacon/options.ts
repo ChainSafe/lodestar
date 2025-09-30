@@ -15,6 +15,7 @@ type BeaconExtraArgs = {
   ignoreWeakSubjectivityCheck?: boolean;
   beaconDir?: string;
   dbDir?: string;
+  dbType?: "level" | "lmdb";
   persistInvalidSszObjectsDir?: string;
   persistInvalidSszObjectsRetentionHours?: number;
   persistOrphanedBlocksDir?: string;
@@ -94,6 +95,14 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
   dbDir: {
     description: "Beacon DB directory",
     defaultDescription: defaultBeaconPaths.dbDir,
+    hidden: true,
+    type: "string",
+  },
+
+  dbType: {
+    description: "Database backend type",
+    choices: ["level", "lmdb"],
+    default: "level",
     hidden: true,
     type: "string",
   },

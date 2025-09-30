@@ -33,6 +33,7 @@ export class HistoricalStateRegen implements HistoricalStateWorkerApi {
       maxConcurrency: 1,
       maxLength: 50,
       dbLocation: modules.opts.dbLocation,
+      dbType: modules.opts.dbType,
       metricsEnabled: Boolean(modules.metrics),
       loggerOpts: modules.logger.toOpts(),
     };

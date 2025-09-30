@@ -203,6 +203,7 @@ export class BeaconChain implements IBeaconChain {
       config,
       db,
       dbName,
+      dbType,
       dataDir,
       logger,
       processShutdownCallback,
@@ -218,6 +219,7 @@ export class BeaconChain implements IBeaconChain {
       config: BeaconConfig;
       db: IBeaconDb;
       dbName: string;
+      dbType: "level" | "lmdb";
       dataDir: string;
       logger: Logger;
       processShutdownCallback: ProcessShutdownCallback;
@@ -403,7 +405,7 @@ export class BeaconChain implements IBeaconChain {
 
     this.archiveStore = new ArchiveStore(
       {db, chain: this, logger: logger as LoggerNode, metrics},
-      {...opts, dbName, anchorState: {finalizedCheckpoint: anchorState.finalizedCheckpoint}},
+      {...opts, dbName, dbType, anchorState: {finalizedCheckpoint: anchorState.finalizedCheckpoint}},
       signal
     );
 

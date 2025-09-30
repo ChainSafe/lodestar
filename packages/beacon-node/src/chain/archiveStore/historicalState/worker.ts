@@ -3,6 +3,7 @@ import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {Transfer, expose} from "@chainsafe/threads/worker";
 import {chainConfigFromJson, createBeaconConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db/controller/level";
+import {LmdbController} from "@lodestar/db/controller/lmdb";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {BeaconDb} from "../../../db/index.js";
 import {RegistryMetricCreator, collectNodeJSMetrics} from "../../../metrics/index.js";
@@ -26,7 +27,11 @@ logger.info("Historical state worker started");
 
 const config = createBeaconConfig(chainConfigFromJson(workerData.chainConfigJson), workerData.genesisValidatorsRoot);
 
-const db = new BeaconDb(config, await LevelDbController.create({name: workerData.dbLocation}, {logger}));
+const controller =
+  workerData.dbType === "level"
+    ? await LevelDbController.create({name: workerData.dbLocation}, {logger})
+    : await LmdbController.create({name: workerData.dbLocation}, {logger});
+const db = new BeaconDb(config, controller);
 
 const abortController = new AbortController();
 

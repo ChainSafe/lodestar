@@ -96,6 +96,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
           db,
           dataDir: ".",
           dbName: ".",
+          dbType: "level",
           logger,
           processShutdownCallback: () => {},
           metrics: null,

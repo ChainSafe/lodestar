@@ -20,6 +20,10 @@
     "./controller/level": {
       "bun": "./src/controller/level_bun.ts",
       "import": "./lib/controller/level.js"
+    },
+    "./controller/lmdb": {
+      "bun": "./src/controller/lmdb_bun.ts",
+      "import": "./lib/controller/lmdb.js"
     }
   },
   "imports": {

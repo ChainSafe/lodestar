@@ -112,6 +112,7 @@ const forkChoiceTest =
             db: getMockedBeaconDb(),
             dataDir: ".",
             dbName: ",",
+            dbType: "level",
             logger,
             processShutdownCallback: () => {},
             clock,

@@ -45,6 +45,7 @@ describe("produceBlockBody", () => {
         db,
         dataDir: ".",
         dbName: ".",
+        dbType: "level",
         logger,
         processShutdownCallback: () => {},
         metrics: null,

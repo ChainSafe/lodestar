@@ -65,6 +65,7 @@ export async function getNetworkForTest(
       db,
       dataDir: ".",
       dbName: ".",
+      dbType: "level",
       logger,
       processShutdownCallback: () => {},
       // set genesis time so that we are at ALTAIR_FORK_EPOCH

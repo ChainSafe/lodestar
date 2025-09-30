@@ -212,6 +212,7 @@ export class BeaconNode {
       dataDir,
       db,
       dbName: opts.db.name,
+      dbType: opts.db.type,
       logger: logger.child({module: LoggerModule.chain}),
       processShutdownCallback,
       metrics,

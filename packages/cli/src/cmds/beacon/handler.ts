@@ -5,6 +5,7 @@ import {hasher} from "@chainsafe/persistent-merkle-tree";
 import {BeaconDb, BeaconNode} from "@lodestar/beacon-node";
 import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db/controller/level";
+import {LmdbController} from "@lodestar/db/controller/lmdb";
 import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
 import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
 import {ErrorAborted, bytesToInt} from "@lodestar/utils";
@@ -65,8 +66,17 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
 
   if (ACTIVE_PRESET === PresetName.minimal) logger.info("ACTIVE_PRESET == minimal preset");
 
-  const db = new BeaconDb(config, await LevelDbController.create(options.db, {metrics: null, logger}));
-  logger.info("Connected to LevelDB database", {path: options.db.name});
+  let controller: LevelDbController | LmdbController;
+  if (options.db.type === "level") {
+    controller = await LevelDbController.create(options.db, {metrics: null, logger});
+    logger.info("Connected to LevelDB database", {path: options.db.name});
+  } else if (options.db.type === "lmdb") {
+    controller = await LmdbController.create(options.db, {metrics: null, logger});
+    logger.info("Connected to LMDB database", {path: options.db.name});
+  } else {
+    throw new Error(`Unsupported db type: ${options.db.type}`);
+  }
+  const db = new BeaconDb(config, controller);
 
   // BeaconNode setup
   try {
@@ -172,7 +182,7 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   const {version, commit} = getVersionData();
   const beaconPaths = getBeaconPaths(args, network);
   // TODO: Rename db.name to db.path or db.location
-  beaconNodeOptions.set({db: {name: beaconPaths.dbDir}});
+  beaconNodeOptions.set({db: {name: beaconPaths.dbDir, type: args.dbType}});
   beaconNodeOptions.set({
     chain: {
       validatorMonitorLogs: args.validatorMonitorLogs,
