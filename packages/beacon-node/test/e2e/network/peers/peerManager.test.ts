@@ -1,11 +1,11 @@
-import {BitArray} from "@chainsafe/ssz";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {Connection} from "@libp2p/interface";
+import {afterEach, describe, expect, it, vi} from "vitest";
+import {BitArray} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {phase0, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
-import {afterEach, describe, expect, it, vi} from "vitest";
 import {Eth2Gossipsub, NetworkEvent, NetworkEventBus, getConnectionsMap} from "../../../../src/network/index.js";
 import {NetworkConfig} from "../../../../src/network/networkConfig.js";
 import {IReqRespBeaconNodePeerManager, PeerManager, PeerRpcScoreStore} from "../../../../src/network/peers/index.js";
@@ -17,8 +17,7 @@ import {Clock} from "../../../../src/util/clock.js";
 import {CustodyConfig, getCustodyGroups} from "../../../../src/util/dataColumns.js";
 import {waitForEvent} from "../../../utils/events/resolver.js";
 import {testLogger} from "../../../utils/logger.js";
-import {createNode} from "../../../utils/network.js";
-import {getAttnets, getSyncnets} from "../../../utils/network.js";
+import {createNode, getAttnets, getSyncnets} from "../../../utils/network.js";
 import {getValidPeerId} from "../../../utils/peer.js";
 import {generateState} from "../../../utils/state.js";
 

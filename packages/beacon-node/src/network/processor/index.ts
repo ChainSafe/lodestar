@@ -2,8 +2,9 @@ import {routes} from "@lodestar/api";
 import {ForkSeq} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex, Slot, SlotRootHex} from "@lodestar/types";
-import {Logger, MapDef, mapValues, sleep} from "@lodestar/utils";
-import {pruneSetToMax} from "@lodestar/utils";
+import {Logger, MapDef, mapValues, pruneSetToMax, sleep} from "@lodestar/utils";
+import {BlockInputSource} from "../../chain/blocks/blockInput/types.js";
+import {ChainEvent} from "../../chain/emitter.js";
 import {GossipErrorCode} from "../../chain/errors/gossipValidation.js";
 import {IBeaconChain} from "../../chain/interface.js";
 import {IBeaconDb} from "../../db/interface.js";
@@ -229,13 +230,13 @@ export class NetworkProcessor {
     return queue.getAll();
   }
 
-  searchUnknownSlotRoot({slot, root}: SlotRootHex, peer?: PeerIdStr): void {
+  searchUnknownSlotRoot({slot, root}: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void {
     if (this.chain.seenBlock(root) || this.unknownRootsBySlot.getOrDefault(slot).has(root)) {
       return;
     }
     // Search for the unknown block
     this.unknownRootsBySlot.getOrDefault(slot).add(root);
-    this.events.emit(NetworkEvent.unknownBlock, {rootHex: root, peer});
+    this.chain.emitter.emit(ChainEvent.unknownBlockRoot, {rootHex: root, peer, source});
   }
 
   private onPendingGossipsubMessage(message: PendingGossipsubMessage): void {
@@ -268,7 +269,7 @@ export class NetworkProcessor {
         // check if we processed a block with this root
         // no need to check if root is a descendant of the current finalized block, it will be checked once we validate the message if needed
         if (root && !this.chain.forkChoice.hasBlockHexUnsafe(root)) {
-          this.searchUnknownSlotRoot({slot, root}, message.propagationSource.toString());
+          this.searchUnknownSlotRoot({slot, root}, BlockInputSource.gossip, message.propagationSource.toString());
 
           if (this.unknownBlockGossipsubMessagesCount > MAX_QUEUED_UNKNOWN_BLOCK_GOSSIP_OBJECTS) {
             // TODO: Should report the dropped job to gossip? It will be eventually pruned from the mcache

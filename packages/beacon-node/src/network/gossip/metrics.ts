@@ -1,6 +1,6 @@
-import {ForkName} from "@lodestar/params";
 import {SubnetID} from "@lodestar/types";
 import {RegistryMetricCreator} from "../../metrics/index.js";
+import {ForkBoundaryLabel} from "./gossipsub.js";
 import {GossipType} from "./interface.js";
 
 export type Eth2GossipsubMetrics = ReturnType<typeof createEth2GossipsubMetrics>;
@@ -24,37 +24,47 @@ export function createEth2GossipsubMetrics(register: RegistryMetricCreator) {
       }),
     },
     gossipMesh: {
-      peersByType: register.gauge<{type: GossipType; fork: ForkName}>({
+      peersByType: register.gauge<{type: GossipType; boundary: ForkBoundaryLabel}>({
         name: "lodestar_gossip_mesh_peers_by_type_count",
         help: "Number of connected mesh peers per gossip type",
-        labelNames: ["type", "fork"],
+        labelNames: ["type", "boundary"],
       }),
-      peersByBeaconAttestationSubnet: register.gauge<{subnet: string; fork: ForkName}>({
+      peersByBeaconAttestationSubnet: register.gauge<{subnet: string; boundary: ForkBoundaryLabel}>({
         name: "lodestar_gossip_mesh_peers_by_beacon_attestation_subnet_count",
         help: "Number of connected mesh peers per beacon attestation subnet",
-        labelNames: ["subnet", "fork"],
+        labelNames: ["subnet", "boundary"],
       }),
-      peersBySyncCommitteeSubnet: register.gauge<{subnet: SubnetID; fork: ForkName}>({
+      peersBySyncCommitteeSubnet: register.gauge<{subnet: SubnetID; boundary: ForkBoundaryLabel}>({
         name: "lodestar_gossip_mesh_peers_by_sync_committee_subnet_count",
         help: "Number of connected mesh peers per sync committee subnet",
-        labelNames: ["subnet", "fork"],
+        labelNames: ["subnet", "boundary"],
+      }),
+      peersByDataColumnSubnet: register.gauge<{subnet: SubnetID; boundary: ForkBoundaryLabel}>({
+        name: "lodestar_gossip_mesh_peers_by_data_column_subnet_count",
+        help: "Number of connected mesh peers per data column subnet",
+        labelNames: ["subnet", "boundary"],
       }),
     },
     gossipTopic: {
-      peersByType: register.gauge<{type: GossipType; fork: ForkName}>({
+      peersByType: register.gauge<{type: GossipType; boundary: ForkBoundaryLabel}>({
         name: "lodestar_gossip_topic_peers_by_type_count",
         help: "Number of connected topic peers per gossip type",
-        labelNames: ["type", "fork"],
+        labelNames: ["type", "boundary"],
       }),
-      peersByBeaconAttestationSubnet: register.gauge<{subnet: string; fork: ForkName}>({
+      peersByBeaconAttestationSubnet: register.gauge<{subnet: string; boundary: ForkBoundaryLabel}>({
         name: "lodestar_gossip_topic_peers_by_beacon_attestation_subnet_count",
         help: "Number of connected topic peers per beacon attestation subnet",
-        labelNames: ["subnet", "fork"],
+        labelNames: ["subnet", "boundary"],
       }),
-      peersBySyncCommitteeSubnet: register.gauge<{subnet: SubnetID; fork: ForkName}>({
+      peersBySyncCommitteeSubnet: register.gauge<{subnet: SubnetID; boundary: ForkBoundaryLabel}>({
         name: "lodestar_gossip_topic_peers_by_sync_committee_subnet_count",
         help: "Number of connected topic peers per sync committee subnet",
-        labelNames: ["subnet", "fork"],
+        labelNames: ["subnet", "boundary"],
+      }),
+      peersByDataColumnSubnet: register.gauge<{subnet: SubnetID; boundary: ForkBoundaryLabel}>({
+        name: "lodestar_gossip_topic_peers_by_data_column_subnet_count",
+        help: "Number of connected topic peers per data column subnet",
+        labelNames: ["subnet", "boundary"],
       }),
     },
   };

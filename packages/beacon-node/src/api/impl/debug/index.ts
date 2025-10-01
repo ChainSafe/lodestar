@@ -1,9 +1,9 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {ExecutionStatus} from "@lodestar/fork-choice";
-import {ZERO_HASH_HEX} from "@lodestar/params";
-import {BeaconState} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {ZERO_HASH_HEX, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
+import {BeaconState, deneb, fulu, sszTypesFor} from "@lodestar/types";
+import {fromAsync, toRootHex} from "@lodestar/utils";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
 import {getStateSlotFromBytes} from "../../../util/multifork.js";
 import {getBlockResponse} from "../beacon/blocks/utils.js";
@@ -94,15 +94,28 @@ export function getDebugApi({
       assertUniqueItems(indices, "Duplicate indices provided");
 
       const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
-      const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
+      const fork = config.getForkName(block.message.slot);
+      const blockRoot = sszTypesFor(fork).BeaconBlock.hashTreeRoot(block.message);
 
-      let dataColumnSidecars = await db.dataColumnSidecar.values(blockRoot);
-      if (!dataColumnSidecars) {
-        dataColumnSidecars = await db.dataColumnSidecarArchive.values(block.message.slot);
-      }
+      let dataColumnSidecars: fulu.DataColumnSidecars;
 
-      if (!dataColumnSidecars) {
-        throw Error(`dataColumnSidecars not found in db for slot=${block.message.slot} root=${toRootHex(blockRoot)}`);
+      const blobCount = isForkPostDeneb(fork)
+        ? (block.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length
+        : 0;
+
+      if (isForkPostFulu(fork) && blobCount > 0) {
+        dataColumnSidecars = await fromAsync(db.dataColumnSidecar.valuesStream(blockRoot));
+        if (dataColumnSidecars.length === 0) {
+          dataColumnSidecars = await fromAsync(db.dataColumnSidecarArchive.valuesStream(block.message.slot));
+        }
+
+        if (dataColumnSidecars.length === 0) {
+          throw Error(
+            `dataColumnSidecars not found in db for slot=${block.message.slot} root=${toRootHex(blockRoot)} blobs=${blobCount}`
+          );
+        }
+      } else {
+        dataColumnSidecars = [];
       }
 
       return {
@@ -110,7 +123,7 @@ export function getDebugApi({
         meta: {
           executionOptimistic,
           finalized,
-          version: config.getForkName(block.message.slot),
+          version: fork,
         },
       };
     },

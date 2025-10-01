@@ -1,6 +1,6 @@
-import {getV4Crypto} from "@chainsafe/enr";
 import type {PeerId, PrivateKey} from "@libp2p/interface";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
+import {getV4Crypto} from "@chainsafe/enr";
 import {ForkBoundary} from "@lodestar/config";
 import {Bytes32, Slot, SubnetID, ValidatorIndex} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";

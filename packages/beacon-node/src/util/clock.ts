@@ -1,20 +1,20 @@
 import EventEmitter from "node:events";
+import type {StrictEventEmitter} from "strict-event-emitter-types";
 import {ChainForkConfig} from "@lodestar/config";
 import {computeEpochAtSlot, computeTimeAtSlot, getCurrentSlot} from "@lodestar/state-transition";
 import type {Epoch, Slot} from "@lodestar/types";
 import {ErrorAborted} from "@lodestar/utils";
-import type {StrictEventEmitter} from "strict-event-emitter-types";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../constants/constants.js";
 
 export enum ClockEvent {
   /**
    * This event signals the start of a new slot, and that subsequent calls to `clock.currentSlot` will equal `slot`.
-   * This event is guaranteed to be emitted every `SECONDS_PER_SLOT` seconds.
+   * This event is guaranteed to be emitted every `SLOT_DURATION_MS` milliseconds.
    */
   slot = "clock:slot",
   /**
    * This event signals the start of a new epoch, and that subsequent calls to `clock.currentEpoch` will return `epoch`.
-   * This event is guaranteed to be emitted every `SECONDS_PER_SLOT * SLOTS_PER_EPOCH` seconds.
+   * This event is guaranteed to be emitted every `SLOT_DURATION_MS * SLOTS_PER_EPOCH` milliseconds.
    */
   epoch = "clock:epoch",
 }
@@ -29,7 +29,7 @@ export type ClockEvents = {
  *
  * The time is dependent on:
  * - `state.genesisTime` - the genesis time
- * - `SECONDS_PER_SLOT` - # of seconds per slot
+ * - `SLOT_DURATION_MS` - # of milliseconds per slot
  * - `SLOTS_PER_EPOCH` - # of slots per epoch
  */
 export type IClock = StrictEventEmitter<EventEmitter, ClockEvents> & {
@@ -58,6 +58,10 @@ export type IClock = StrictEventEmitter<EventEmitter, ClockEvents> & {
    * Return second from a slot to either toSec or now.
    */
   secFromSlot(slot: Slot, toSec?: number): number;
+  /**
+   * Return milliseconds from a slot to either toMs or now.
+   */
+  msFromSlot(slot: Slot, toMs?: number): number;
 };
 
 /**
@@ -170,12 +174,16 @@ export class Clock extends EventEmitter implements IClock {
   }
 
   secFromSlot(slot: Slot, toSec = Date.now() / 1000): number {
-    return toSec - (this.genesisTime + slot * this.config.SECONDS_PER_SLOT);
+    return toSec - computeTimeAtSlot(this.config, slot, this.genesisTime);
+  }
+
+  msFromSlot(slot: Slot, toMs = Date.now()): number {
+    return toMs - computeTimeAtSlot(this.config, slot, this.genesisTime) * 1000;
   }
 
   private onNextSlot = (slot?: Slot): void => {
     const clockSlot = slot ?? getCurrentSlot(this.config, this.genesisTime);
-    // process multiple clock slots in the case the main thread has been saturated for > SECONDS_PER_SLOT
+    // process multiple clock slots in the case the main thread has been saturated for > SLOT_DURATION_MS
     while (this._currentSlot < clockSlot && !this.signal.aborted) {
       const previousSlot = this._currentSlot;
       this._currentSlot++;
@@ -197,7 +205,7 @@ export class Clock extends EventEmitter implements IClock {
   };
 
   private msUntilNextSlot(): number {
-    const milliSecondsPerSlot = this.config.SECONDS_PER_SLOT * 1000;
+    const milliSecondsPerSlot = this.config.SLOT_DURATION_MS;
     const diffInMilliSeconds = Date.now() - this.genesisTime * 1000;
     return milliSecondsPerSlot - (diffInMilliSeconds % milliSecondsPerSlot);
   }

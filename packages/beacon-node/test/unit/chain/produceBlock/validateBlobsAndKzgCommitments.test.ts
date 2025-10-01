@@ -1,5 +1,5 @@
-import {deneb, fulu} from "@lodestar/types";
 import {describe, expect, it} from "vitest";
+import {deneb, fulu} from "@lodestar/types";
 import {
   validateBlobsAndKzgCommitments,
   validateCellsAndKzgCommitments,

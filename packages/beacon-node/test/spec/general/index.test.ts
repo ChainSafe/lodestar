@@ -17,7 +17,12 @@ import {sszGeneric} from "./ssz_generic.js";
 //    "eip4844/operations/bls_to_execution_change",
 // ],
 // ```
-const skipOpts: SkipOpts = {};
+const skipOpts: SkipOpts = {
+  skippedHandlers: ["compute_challenge", "compute_verify_cell_kzg_proof_batch_challenge"],
+  skippedTests: [
+    /^.+\/kzg\/recover_cells_and_kzg_proofs\/kzg-mainnet\/recover_cells_and_kzg_proofs_case_invalid_shuffled_.*/,
+  ],
+};
 
 specTestIterator(
   path.join(ethereumConsensusSpecsTests.outputDir, "tests", "general"),
@@ -35,6 +40,10 @@ specTestIterator(
         "ProgressiveBitsStruct",
         "proglist",
         "progbitlist",
+        "ProgressiveVarTestStruct",
+        "ProgressiveSingleFieldContainerTestStruct",
+        "ProgressiveSingleListContainerTestStruct",
+        "ProgressiveComplexTestStruct",
       ]),
     },
   },

@@ -1,6 +1,6 @@
 {
   "name": "@lodestar/flare",
-  "version": "1.33.0",
+  "version": "1.34.1",
   "description": "Beacon chain debugging tool",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
@@ -11,6 +11,7 @@
   "type": "module",
   "exports": {
     ".": {
+      "bun": "./src/index.ts",
       "import": "./lib/index.js"
     }
   },
@@ -25,11 +26,9 @@
   },
   "types": "lib/index.d.ts",
   "files": [
-    "lib/**/*.js",
-    "lib/**/*.js.map",
-    "lib/**/*.d.ts",
-    "*.d.ts",
-    "*.js"
+    "src",
+    "lib",
+    "!**/*.tsbuildinfo"
   ],
   "bin": {
     "flare": "lib/index.js"
@@ -60,12 +59,12 @@
   "dependencies": {
     "@chainsafe/bls-keygen": "^0.4.0",
     "@chainsafe/blst": "^2.2.0",
-    "@lodestar/api": "^1.33.0",
-    "@lodestar/config": "^1.33.0",
-    "@lodestar/params": "^1.33.0",
-    "@lodestar/state-transition": "^1.33.0",
-    "@lodestar/types": "^1.33.0",
-    "@lodestar/utils": "^1.33.0",
+    "@lodestar/api": "^1.34.1",
+    "@lodestar/config": "^1.34.1",
+    "@lodestar/params": "^1.34.1",
+    "@lodestar/state-transition": "^1.34.1",
+    "@lodestar/types": "^1.34.1",
+    "@lodestar/utils": "^1.34.1",
     "source-map-support": "^0.5.21",
     "yargs": "^17.7.1"
   },

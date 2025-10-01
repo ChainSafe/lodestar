@@ -1,3 +1,4 @@
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {SecretKey} from "@chainsafe/blst";
 import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
@@ -5,7 +6,6 @@ import {ChainConfig, createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {AttestationService, AttestationServiceOpts} from "../../../src/services/attestation.js";
 import {AttDutyAndProof} from "../../../src/services/attestationDuties.js";
 import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker.js";
@@ -63,8 +63,6 @@ describe("AttestationService", () => {
   const testContexts: [string, AttestationServiceOpts, Partial<ChainConfig>][] = [
     ["With default configuration", {}, {}],
     ["With default configuration post-electra", {}, electraConfig],
-    ["With attestation grouping disabled", {disableAttestationGrouping: true}, {}],
-    ["With attestation grouping disabled post-electra", {disableAttestationGrouping: true}, electraConfig],
     ["With distributed aggregation selection enabled", {distributedAggregationSelection: true}, {}],
   ];
 

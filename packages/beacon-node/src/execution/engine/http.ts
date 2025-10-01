@@ -29,12 +29,14 @@ import {
 } from "./interface.js";
 import {PayloadIdCache} from "./payloadIdCache.js";
 import {
+  BLOB_AND_PROOF_V2_RPC_BYTES,
   EngineApiRpcParamTypes,
   EngineApiRpcReturnTypes,
   ExecutionPayloadBody,
   assertReqSizeLimit,
   deserializeBlobAndProofs,
   deserializeBlobAndProofsV2,
+  deserializeBlobAndProofsV2IntoBytes,
   deserializeExecutionPayloadBody,
   parseExecutionPayload,
   serializeBeaconBlockRoot,
@@ -110,6 +112,11 @@ const MAX_VERSIONED_HASHES = 128;
 const notifyNewPayloadOpts: ReqOpts = {routeId: "notifyNewPayload"};
 const forkchoiceUpdatedV1Opts: ReqOpts = {routeId: "forkchoiceUpdated"};
 const getPayloadOpts: ReqOpts = {routeId: "getPayload"};
+const getPayloadBodiesByHashOpts: ReqOpts = {routeId: "getPayloadBodiesByHash"};
+const getPayloadBodiesByRangeOpts: ReqOpts = {routeId: "getPayloadBodiesByRange"};
+const getBlobsV1Opts: ReqOpts = {routeId: "getBlobsV1"};
+const getBlobsV2Opts: ReqOpts = {routeId: "getBlobsV2"};
+const getClientVersionOpts: ReqOpts = {routeId: "getClientVersion"};
 
 /**
  * based on Ethereum JSON-RPC API and inherits the following properties of this standard:
@@ -464,7 +471,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     const response = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
-    >({method, params: [blockHashes]});
+    >({method, params: [blockHashes]}, getPayloadBodiesByHashOpts);
     return response.map(deserializeExecutionPayloadBody);
   }
 
@@ -480,12 +487,20 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     const response = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
-    >({method, params: [start, count]});
+    >({method, params: [start, count]}, getPayloadBodiesByRangeOpts);
     return response.map(deserializeExecutionPayloadBody);
   }
 
-  async getBlobs(fork: ForkPostFulu, versionedHashes: VersionedHashes): Promise<BlobAndProofV2[] | null>;
-  async getBlobs(fork: ForkPreFulu, versionedHashes: VersionedHashes): Promise<(BlobAndProof | null)[]>;
+  async getBlobs(
+    fork: ForkPostFulu,
+    versionedHashes: VersionedHashes,
+    buffers?: Uint8Array[]
+  ): Promise<BlobAndProofV2[] | null>;
+  async getBlobs(
+    fork: ForkPreFulu,
+    versionedHashes: VersionedHashes,
+    buffers?: Uint8Array[]
+  ): Promise<(BlobAndProof | null)[]>;
   async getBlobs(
     fork: ForkName,
     versionedHashes: VersionedHashes
@@ -502,10 +517,13 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     const response = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes["engine_getBlobsV1"],
       EngineApiRpcParamTypes["engine_getBlobsV1"]
-    >({
-      method: "engine_getBlobsV1",
-      params: [versionedHashesHex],
-    });
+    >(
+      {
+        method: "engine_getBlobsV1",
+        params: [versionedHashesHex],
+      },
+      getBlobsV1Opts
+    );
 
     const invalidLength = response.length !== versionedHashesHex.length;
 
@@ -518,14 +536,29 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     return response.map(deserializeBlobAndProofs);
   }
 
-  private async getBlobsV2(versionedHashesHex: string[]) {
+  private async getBlobsV2(versionedHashesHex: string[], buffers?: Uint8Array[]) {
+    if (buffers) {
+      if (buffers.length !== versionedHashesHex.length) {
+        throw Error(`Invalid buffers length=${buffers.length} versionedHashes=${versionedHashesHex.length}`);
+      }
+
+      for (const [i, buffer] of buffers.entries()) {
+        if (buffer.length !== BLOB_AND_PROOF_V2_RPC_BYTES) {
+          throw Error(`Invalid buffer[${i}] length=${buffer.length} expected=${BLOB_AND_PROOF_V2_RPC_BYTES}`);
+        }
+      }
+    }
+
     const response = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes["engine_getBlobsV2"],
       EngineApiRpcParamTypes["engine_getBlobsV2"]
-    >({
-      method: "engine_getBlobsV2",
-      params: [versionedHashesHex],
-    });
+    >(
+      {
+        method: "engine_getBlobsV2",
+        params: [versionedHashesHex],
+      },
+      getBlobsV2Opts
+    );
 
     // engine_getBlobsV2 does not return partial responses. It returns null if any blob is not found
     const invalidLength = !!response && response.length !== versionedHashesHex.length;
@@ -536,7 +569,16 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       throw Error(error);
     }
 
-    return !response ? null : response.map(deserializeBlobAndProofsV2);
+    if (response == null) {
+      return null;
+    }
+
+    if (buffers) {
+      // getBlobsV2() is designed to called once per slot so we expect to have buffers
+      return response.map((data, i) => deserializeBlobAndProofsV2IntoBytes(data, buffers[i]));
+    }
+
+    return response.map(deserializeBlobAndProofsV2);
   }
 
   private async getClientVersion(clientVersion: ClientVersion): Promise<ClientVersion[]> {
@@ -545,7 +587,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     const response = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
-    >({method, params: [{...clientVersion, commit: `0x${clientVersion.commit}`}]});
+    >({method, params: [{...clientVersion, commit: `0x${clientVersion.commit}`}]}, getClientVersionOpts);
 
     const clientVersions = response.map((cv) => {
       const code = cv.code in ClientCode ? ClientCode[cv.code as keyof typeof ClientCode] : ClientCode.XX;

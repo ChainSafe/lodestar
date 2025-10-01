@@ -56,8 +56,10 @@ export const chainConfig: ChainConfig = {
 
   // Time parameters
   // ---------------------------------------------------------------
-  // [customized] Faster for testing purposes
+  // [customized] Faster for testing purposes (DEPRECATED)
   SECONDS_PER_SLOT: 6,
+  // [customized] 6000 milliseconds, 6 seconds
+  SLOT_DURATION_MS: 6000,
   // 14 (estimate from Eth1 mainnet)
   SECONDS_PER_ETH1_BLOCK: 14,
   // 2**8 (= 256) epochs
@@ -66,6 +68,29 @@ export const chainConfig: ChainConfig = {
   SHARD_COMMITTEE_PERIOD: 64,
   // [customized] process deposits more quickly, but insecure
   ETH1_FOLLOW_DISTANCE: 16,
+  // 1667 basis points, ~17% of SLOT_DURATION_MS
+  PROPOSER_REORG_CUTOFF_BPS: 1667,
+  // 3333 basis points, ~33% of SLOT_DURATION_MS
+  ATTESTATION_DUE_BPS: 3333,
+  // 6667 basis points, ~67% of SLOT_DURATION_MS
+  AGGREGATE_DUE_BPS: 6667,
+
+  // Altair
+  // 3333 basis points, ~33% of SLOT_DURATION_MS
+  SYNC_MESSAGE_DUE_BPS: 3333,
+  // 6667 basis points, ~67% of SLOT_DURATION_MS
+  CONTRIBUTION_DUE_BPS: 6667,
+
+  // 25% of SLOT_DURATION_MS
+  ATTESTATION_DUE_BPS_GLOAS: 2500,
+  // 50% of SLOT_DURATION_MS
+  AGGREGATE_DUE_BPS_GLOAS: 5000,
+  // 25% of SLOT_DURATION_MS
+  SYNC_MESSAGE_DUE_BPS_GLOAS: 2500,
+  // 50% of SLOT_DURATION_MS
+  CONTRIBUTION_DUE_BPS_GLOAS: 5000,
+  // 75% of SLOT_DURATION_MS
+  PAYLOAD_ATTESTATION_DUE_BPS: 7500,
 
   // Validator cycle
   // ---------------------------------------------------------------
@@ -100,10 +125,14 @@ export const chainConfig: ChainConfig = {
 
   // Networking
   // ---------------------------------------------------------------
+  // 2**10 (= 1024)
+  MAX_REQUEST_BLOCKS: 1024,
   // [customized] `MIN_VALIDATOR_WITHDRAWABILITY_DELAY + CHURN_LIMIT_QUOTIENT // 2` (= 272)
   MIN_EPOCHS_FOR_BLOCK_REQUESTS: 272,
 
   // Deneb
+  // 2**7 (= 128)
+  MAX_REQUEST_BLOCKS_DENEB: 128,
   // `2**12` (= 4096 epochs, ~18 days)
   MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: 4096,
   BLOB_SIDECAR_SUBNET_COUNT: 6,

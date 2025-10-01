@@ -1,13 +1,14 @@
-import {BitArray} from "@chainsafe/ssz";
 import {Connection, PeerId, PrivateKey} from "@libp2p/interface";
+import {BitArray} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
 import {ForkSeq, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {Metadata, Status, altair, fulu, phase0} from "@lodestar/types";
 import {prettyPrintIndices, toHex, withTimeout} from "@lodestar/utils";
 import {GOODBYE_KNOWN_CODES, GoodByeReasonCode, Libp2pEvent} from "../../constants/index.js";
 import {IClock} from "../../util/clock.js";
-import {getCustodyGroups, getDataColumns} from "../../util/dataColumns.js";
+import {computeColumnsForCustodyGroup, getCustodyGroups} from "../../util/dataColumns.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
 import {LodestarDiscv5Opts} from "../discv5/types.js";
 import {INetworkEventBus, NetworkEvent, NetworkEventData} from "../events.js";
@@ -357,6 +358,8 @@ export class PeerManager {
           (metadata as Partial<fulu.Metadata>).custodyGroupCount ??
           // TODO: spec says that Clients MAY reject peers with a value less than CUSTODY_REQUIREMENT
           this.config.CUSTODY_REQUIREMENT,
+        // TODO(fulu): this should be columns not groups.  need to change everywhere. we consume columns and should
+        //      cache that instead so if groups->columns ever changes from 1-1 we only need to update that here
         custodyGroups,
         samplingGroups,
       };
@@ -441,10 +444,12 @@ export class PeerManager {
       const custodyGroupCount = peerData?.metadata?.custodyGroupCount ?? this.config.CUSTODY_REQUIREMENT;
       const custodyGroups =
         peerData?.metadata?.custodyGroups ?? getCustodyGroups(this.config, nodeId, custodyGroupCount);
-      const dataColumns = getDataColumns(this.config, nodeId, custodyGroupCount);
+      const custodyColumns = custodyGroups
+        .flatMap((g) => computeColumnsForCustodyGroup(this.config, g))
+        .sort((a, b) => a - b);
 
       const sampleSubnets = this.networkConfig.custodyConfig.sampledSubnets;
-      const matchingSubnetsNum = sampleSubnets.reduce((acc, elem) => acc + (dataColumns.includes(elem) ? 1 : 0), 0);
+      const matchingSubnetsNum = sampleSubnets.reduce((acc, elem) => acc + (custodyColumns.includes(elem) ? 1 : 0), 0);
       const hasAllColumns = matchingSubnetsNum === sampleSubnets.length;
       const clientAgent = peerData?.agentClient ?? ClientKind.Unknown;
 
@@ -454,10 +459,10 @@ export class PeerManager {
         peerId: peer.toString(),
         custodyGroupCount,
         hasAllColumns,
-        dataColumns: prettyPrintIndices(dataColumns),
         matchingSubnetsNum,
         custodyGroups: prettyPrintIndices(custodyGroups),
-        mySampleSubnets: sampleSubnets.join(" "),
+        custodyColumns: prettyPrintIndices(custodyColumns),
+        mySampleSubnets: prettyPrintIndices(sampleSubnets),
         clientAgent,
       });
 
@@ -465,7 +470,7 @@ export class PeerManager {
         peer: peer.toString(),
         status,
         clientAgent,
-        custodyGroups,
+        custodyColumns,
       });
     }
   }
@@ -595,7 +600,7 @@ export class PeerManager {
             subnet: query.subnet,
             type,
             maxPeersToDiscover: query.maxPeersToDiscover,
-            toUnixMs: 1000 * (this.clock.genesisTime + query.toSlot * this.config.SECONDS_PER_SLOT),
+            toUnixMs: computeTimeAtSlot(this.config, query.toSlot, this.clock.genesisTime) * 1000,
           });
         }
 
@@ -751,7 +756,10 @@ export class PeerManager {
       })
       .catch((err) => {
         if (evt.detail.status !== "open") {
-          this.logger.debug("Peer disconnected during identify protocol", {peerId: remotePeerPrettyStr}, err);
+          this.logger.debug("Peer disconnected during identify protocol", {
+            peerId: remotePeerPrettyStr,
+            error: (err as Error).message,
+          });
         } else {
           this.logger.debug("Error setting agentVersion for the peer", {peerId: remotePeerPrettyStr}, err);
         }

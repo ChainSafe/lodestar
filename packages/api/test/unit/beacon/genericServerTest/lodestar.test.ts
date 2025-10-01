@@ -1,7 +1,7 @@
-import {config} from "@lodestar/config/default";
-import {ForkName} from "@lodestar/params";
 import {FastifyInstance} from "fastify";
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
+import {config} from "@lodestar/config/default";
+import {ForkName} from "@lodestar/params";
 import {getClient} from "../../../../src/beacon/client/lodestar.js";
 import {Endpoints, getDefinitions} from "../../../../src/beacon/routes/lodestar.js";
 import {getRoutes} from "../../../../src/beacon/server/lodestar.js";

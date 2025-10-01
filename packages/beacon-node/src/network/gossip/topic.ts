@@ -8,7 +8,6 @@ import {
   isForkPostElectra,
 } from "@lodestar/params";
 import {Attestation, SingleAttestation, ssz, sszTypesFor} from "@lodestar/types";
-
 import {GossipAction, GossipActionError, GossipErrorCode} from "../../chain/errors/gossipValidation.js";
 import {NetworkConfig} from "../networkConfig.js";
 import {DEFAULT_ENCODING} from "./constants.js";

@@ -1,7 +1,7 @@
-import {mapValues} from "@lodestar/utils";
 import {FastifyInstance, fastify} from "fastify";
 import {parse as parseQueryString} from "qs";
 import {MockedObject, vi} from "vitest";
+import {mapValues} from "@lodestar/utils";
 import {Endpoint} from "../../src/utils/index.js";
 import {ApplicationMethods, addSszContentTypeParser} from "../../src/utils/server/index.js";
 

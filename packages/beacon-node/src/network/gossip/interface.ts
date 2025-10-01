@@ -1,5 +1,6 @@
-import {PeerIdStr} from "@chainsafe/libp2p-gossipsub/types";
 import {Message, TopicValidatorResult} from "@libp2p/interface";
+import {Libp2p} from "libp2p";
+import {PeerIdStr} from "@chainsafe/libp2p-gossipsub/types";
 import {BeaconConfig, ForkBoundary} from "@lodestar/config";
 import {
   AttesterSlashing,
@@ -17,7 +18,6 @@ import {
   phase0,
 } from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
-import {Libp2p} from "libp2p";
 import {AttestationError, AttestationErrorType} from "../../chain/errors/attestationError.js";
 import {GossipActionError} from "../../chain/errors/gossipValidation.js";
 import {IBeaconChain} from "../../chain/index.js";
@@ -209,7 +209,7 @@ export type BatchGossipHandler<K extends GossipType> = (
   gossipHandlerParams: GossipHandlerParamGeneric<K>[]
 ) => Promise<(null | GossipActionError<AttestationErrorType>)[]>;
 
-// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+// biome-ignore lint/suspicious/noExplicitAny: Need the usage of `any` here to infer any type
 export type ResolvedType<F extends (...args: any) => Promise<any>> = F extends (...args: any) => Promise<infer T>
   ? T
   : never;

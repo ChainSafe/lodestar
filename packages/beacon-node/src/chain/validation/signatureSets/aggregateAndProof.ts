@@ -7,8 +7,7 @@ import {
   computeStartSlotAtEpoch,
   createSingleSignatureSetFromComponents,
 } from "@lodestar/state-transition";
-import {SignedAggregateAndProof, ssz} from "@lodestar/types";
-import {Epoch} from "@lodestar/types";
+import {Epoch, SignedAggregateAndProof, ssz} from "@lodestar/types";
 
 export function getAggregateAndProofSigningRoot(
   config: BeaconConfig,

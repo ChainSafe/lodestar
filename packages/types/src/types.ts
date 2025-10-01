@@ -5,12 +5,9 @@ import {ts as capella} from "./capella/index.js";
 import {ts as deneb} from "./deneb/index.js";
 import {ts as electra} from "./electra/index.js";
 import {ts as fulu} from "./fulu/index.js";
-import {ts as gloas} from "./gloas/index.js";
 import {ts as phase0} from "./phase0/index.js";
 import {Slot} from "./primitive/types.js";
 
-export * from "./primitive/types.js";
-export {ts as phase0} from "./phase0/index.js";
 export {ts as altair} from "./altair/index.js";
 export {ts as bellatrix} from "./bellatrix/index.js";
 export {ts as capella} from "./capella/index.js";
@@ -18,6 +15,8 @@ export {ts as deneb} from "./deneb/index.js";
 export {ts as electra} from "./electra/index.js";
 export {ts as fulu} from "./fulu/index.js";
 export {ts as gloas} from "./gloas/index.js";
+export {ts as phase0} from "./phase0/index.js";
+export * from "./primitive/types.js";
 
 /** Common non-spec type to represent roots as strings */
 export type RootHex = string;
@@ -42,6 +41,7 @@ export type WithOptionalBytes<T> = {
 
 export type SlotRootHex = {slot: Slot; root: RootHex};
 export type SlotOptionalRoot = {slot: Slot; root?: RootHex};
+export type RootOptionalSlot = {root: RootHex; slot?: Slot};
 
 type TypesByFork = {
   [ForkName.phase0]: {
@@ -276,10 +276,10 @@ type TypesByFork = {
   [ForkName.gloas]: {
     BeaconBlockHeader: phase0.BeaconBlockHeader;
     SignedBeaconBlockHeader: phase0.SignedBeaconBlockHeader;
-    BeaconBlock: gloas.BeaconBlock;
-    BeaconBlockBody: electra.BeaconBlockBody;
-    BeaconState: gloas.BeaconState;
-    SignedBeaconBlock: gloas.SignedBeaconBlock;
+    BeaconBlock: electra.BeaconBlock; // TODO GLOAS: Use Gloas type
+    BeaconBlockBody: electra.BeaconBlockBody; // TODO GLOAS: Use Gloas type
+    BeaconState: electra.BeaconState; // TODO GLOAS: Use Gloas type
+    SignedBeaconBlock: electra.SignedBeaconBlock; // TODO GLOAS: Use Gloas type
     Metadata: fulu.Metadata;
     Status: fulu.Status;
     LightClientHeader: deneb.LightClientHeader;

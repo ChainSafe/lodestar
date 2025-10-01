@@ -1,10 +1,10 @@
+import {Gauge, Histogram} from "prom-client";
+import {afterEach, describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
 import {ChainConfig} from "@lodestar/config";
 import {TimestampFormatCode} from "@lodestar/logger";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Slot, phase0} from "@lodestar/types";
-import {Gauge, Histogram} from "prom-client";
-import {afterEach, describe, expect, it, vi} from "vitest";
 import {ChainEvent, ReorgEventData} from "../../../../src/chain/emitter.js";
 import {CacheItemType} from "../../../../src/chain/stateCache/types.js";
 import {ReorgedForkChoice} from "../../../mocks/fork-choice/reorg.js";
@@ -23,8 +23,23 @@ describe("regen/reload states with n-historical states configuration", () => {
   vi.setConfig({testTimeout: 96_000});
 
   const validatorCount = 8;
-  const testParams: Pick<ChainConfig, "SECONDS_PER_SLOT"> = {
-    SECONDS_PER_SLOT: 2,
+  const ELECTRA_FORK_EPOCH = 0;
+  const FULU_FORK_EPOCH = 1;
+  const SLOT_DURATION_MS = 2 * 1000;
+  const testParams: Partial<ChainConfig> = {
+    SLOT_DURATION_MS,
+    ALTAIR_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+    BELLATRIX_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+    CAPELLA_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+    DENEB_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+    ELECTRA_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+    FULU_FORK_EPOCH: FULU_FORK_EPOCH,
+    BLOB_SCHEDULE: [
+      {
+        EPOCH: 1,
+        MAX_BLOBS_PER_BLOCK: 3,
+      },
+    ],
   };
 
   const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];
@@ -269,14 +284,14 @@ describe("regen/reload states with n-historical states configuration", () => {
     wrappedIt(`${name} reorgedSlot=${reorgedSlot} reorgDistance=${reorgDistance}`, async () => {
       // the node needs time to transpile/initialize bls worker threads
       const genesisSlotsDelay = 7;
-      const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
+      const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * (SLOT_DURATION_MS / 1000);
       const testLoggerOpts: TestLoggerOpts = {
         level: LogLevel.debug,
         timestampFormat: {
           format: TimestampFormatCode.EpochSlot,
           genesisTime,
           slotsPerEpoch: SLOTS_PER_EPOCH,
-          secondsPerSlot: testParams.SECONDS_PER_SLOT,
+          secondsPerSlot: SLOT_DURATION_MS / 1000,
         },
       };
 
@@ -354,7 +369,7 @@ describe("regen/reload states with n-historical states configuration", () => {
           waitForEvent<phase0.Checkpoint>(
             bn.chain.emitter,
             ChainEvent.checkpoint,
-            (cpSlot + genesisSlotsDelay + 1) * testParams.SECONDS_PER_SLOT * 1000,
+            (cpSlot + genesisSlotsDelay + 1) * SLOT_DURATION_MS,
             (cp) => cp.epoch === cpEpoch
           )
         )
@@ -377,7 +392,7 @@ describe("regen/reload states with n-historical states configuration", () => {
             bn.chain.emitter,
             routes.events.EventType.chainReorg,
             // reorged event happens at reorgedSlot + 1
-            (reorgedSlot + 1 - cpSlot + 1) * testParams.SECONDS_PER_SLOT * 1000,
+            (reorgedSlot + 1 - cpSlot + 1) * SLOT_DURATION_MS,
             (reorgData) => reorgData.slot === reorgedSlot + 1
           )
         )

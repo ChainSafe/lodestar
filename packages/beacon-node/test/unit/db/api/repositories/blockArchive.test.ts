@@ -1,16 +1,16 @@
-import {config} from "@lodestar/config/default";
-import {LevelDbController, encodeKey} from "@lodestar/db";
-import {ssz} from "@lodestar/types";
-import {intToBytes} from "@lodestar/utils";
 import {rimraf} from "rimraf";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-
-import {Bucket} from "../../../../../src/db/buckets.js";
+import {config} from "@lodestar/config/default";
+import {encodeKey} from "@lodestar/db";
+import {LevelDbController} from "@lodestar/db/controller/level";
+import {ssz} from "@lodestar/types";
+import {intToBytes} from "@lodestar/utils";
+import {Bucket, getBucketNameByValue} from "../../../../../src/db/buckets.js";
 import {BlockArchiveRepository} from "../../../../../src/db/repositories/index.js";
 import {testLogger} from "../../../../utils/logger.js";
 
 describe("block archive repository", () => {
-  const testDir = "./.tmp";
+  const testDir = "./.tmp_block_archive_unit_test";
   let blockArchive: BlockArchiveRepository;
   let db: LevelDbController;
 
@@ -112,11 +112,13 @@ describe("block archive repository", () => {
     await blockArchive.add(block);
     expect(spy).toHaveBeenCalledWith(
       encodeKey(Bucket.index_blockArchiveRootIndex, ssz.phase0.BeaconBlock.hashTreeRoot(block.message)),
-      intToBytes(block.message.slot, 8, "be")
+      intToBytes(block.message.slot, 8, "be"),
+      {bucketId: getBucketNameByValue(Bucket.index_blockArchiveRootIndex)}
     );
     expect(spy).toHaveBeenCalledWith(
       encodeKey(Bucket.index_blockArchiveParentRootIndex, block.message.parentRoot),
-      intToBytes(block.message.slot, 8, "be")
+      intToBytes(block.message.slot, 8, "be"),
+      {bucketId: getBucketNameByValue(Bucket.index_blockArchiveParentRootIndex)}
     );
   });
 
@@ -131,10 +133,12 @@ describe("block archive repository", () => {
         [
           encodeKey(Bucket.index_blockArchiveRootIndex, ssz.phase0.BeaconBlock.hashTreeRoot(blocks[0].message)),
           intToBytes(blocks[0].message.slot, 8, "be"),
+          {bucketId: getBucketNameByValue(Bucket.index_blockArchiveRootIndex)},
         ],
         [
           encodeKey(Bucket.index_blockArchiveRootIndex, ssz.phase0.BeaconBlock.hashTreeRoot(blocks[0].message)),
           intToBytes(blocks[0].message.slot, 8, "be"),
+          {bucketId: getBucketNameByValue(Bucket.index_blockArchiveRootIndex)},
         ],
       ])
     );
@@ -143,10 +147,12 @@ describe("block archive repository", () => {
         [
           encodeKey(Bucket.index_blockArchiveParentRootIndex, blocks[0].message.parentRoot),
           intToBytes(blocks[0].message.slot, 8, "be"),
+          {bucketId: getBucketNameByValue(Bucket.index_blockArchiveParentRootIndex)},
         ],
         [
           encodeKey(Bucket.index_blockArchiveParentRootIndex, blocks[0].message.parentRoot),
           intToBytes(blocks[0].message.slot, 8, "be"),
+          {bucketId: getBucketNameByValue(Bucket.index_blockArchiveParentRootIndex)},
         ],
       ])
     );

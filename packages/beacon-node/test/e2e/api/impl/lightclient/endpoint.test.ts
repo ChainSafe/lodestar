@@ -1,3 +1,4 @@
+import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {aggregateSerializedPublicKeys} from "@chainsafe/blst";
 import {HttpHeader, getClient, routes} from "@lodestar/api";
 import {ChainConfig, createBeaconConfig} from "@lodestar/config";
@@ -6,7 +7,6 @@ import {ForkName, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {phase0, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {Validator} from "@lodestar/validator";
-import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {BeaconNode} from "../../../../../src/node/nodejs.js";
 import {waitForEvent} from "../../../../utils/events/resolver.js";
 import {LogLevel, TestLoggerOpts, testLogger} from "../../../../utils/logger.js";
@@ -14,10 +14,10 @@ import {getDevBeaconNode} from "../../../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../../../utils/node/validator.js";
 
 describe("lightclient api", () => {
-  const SECONDS_PER_SLOT = 1;
+  const SLOT_DURATION_MS = 1000;
   const ALTAIR_FORK_EPOCH = 0;
   const restPort = 9596;
-  const chainConfig: ChainConfig = {...chainConfigDef, SECONDS_PER_SLOT, ALTAIR_FORK_EPOCH};
+  const chainConfig: ChainConfig = {...chainConfigDef, SLOT_DURATION_MS, ALTAIR_FORK_EPOCH};
   const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
   const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
   const testLoggerOpts: TestLoggerOpts = {level: LogLevel.info};
@@ -71,13 +71,9 @@ describe("lightclient api", () => {
 
   const waitForBestUpdate = async (): Promise<void> => {
     // should see this event in 5 slots
-    await waitForEvent(
-      bn.chain.emitter,
-      routes.events.EventType.lightClientOptimisticUpdate,
-      5 * SECONDS_PER_SLOT * 1000
-    );
+    await waitForEvent(bn.chain.emitter, routes.events.EventType.lightClientOptimisticUpdate, 5 * SLOT_DURATION_MS);
     // wait for 1 slot to persist the best update
-    await sleep(2 * SECONDS_PER_SLOT * 1000);
+    await sleep(2 * SLOT_DURATION_MS);
   };
 
   it("getLightClientUpdatesByRange()", async () => {
@@ -108,7 +104,7 @@ describe("lightclient api", () => {
   it.skip("getLightClientFinalityUpdate()", async () => {
     // TODO: not sure how this causes subsequent tests failed
     await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, routes.events.EventType.finalizedCheckpoint, 240000);
-    await sleep(SECONDS_PER_SLOT * 1000);
+    await sleep(SLOT_DURATION_MS);
     const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).lightclient;
     const finalityUpdate = (await client.getLightClientFinalityUpdate()).value();
     expect(finalityUpdate).toBeDefined();

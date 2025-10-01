@@ -1,19 +1,29 @@
-import {ChainConfig, ChainForkConfig} from "@lodestar/config";
-import {ForkSeq, INTERVALS_PER_SLOT, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ChainForkConfig} from "@lodestar/config";
+import {ForkSeq, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
   ParticipationFlags,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
+  computeTimeAtSlot,
   getBlockRootAtSlot,
   getCurrentSlot,
   parseAttesterFlags,
   parseParticipationFlags,
 } from "@lodestar/state-transition";
-import {BeaconBlock, RootHex, SubnetID, altair, deneb} from "@lodestar/types";
-import {Epoch, Slot, ValidatorIndex} from "@lodestar/types";
-import {IndexedAttestation, SignedAggregateAndProof} from "@lodestar/types";
+import {
+  BeaconBlock,
+  Epoch,
+  IndexedAttestation,
+  RootHex,
+  SignedAggregateAndProof,
+  Slot,
+  SubnetID,
+  ValidatorIndex,
+  altair,
+  deneb,
+} from "@lodestar/types";
 import {LogData, LogHandler, LogLevel, Logger, MapDef, MapDefMax, toRootHex} from "@lodestar/utils";
 import {GENESIS_SLOT} from "../constants/constants.js";
 import {RegistryMetricCreator} from "../metrics/index.js";
@@ -25,8 +35,9 @@ const MAX_CACHED_EPOCHS = 4;
 
 const MAX_CACHED_DISTINCT_TARGETS = 4;
 
-const INTERVALS_LATE_ATTESTATION_SUBMISSION = 1.5;
-const INTERVALS_LATE_BLOCK_SUBMISSION = 0.75;
+// TODO GLOAS: re-evaluate these timings
+const LATE_ATTESTATION_SUBMISSION_BPS = 5000;
+const LATE_BLOCK_SUBMISSION_BPS = 2500;
 
 const RETAIN_REGISTERED_VALIDATORS_MS = 1 * 3600 * 1000; // 1 hour
 
@@ -441,8 +452,11 @@ export function createValidatorMonitor(
 
     onPoolSubmitUnaggregatedAttestation(seenTimestampSec, indexedAttestation, subnet, sentPeers) {
       const data = indexedAttestation.data;
-      // Returns the duration between when the attestation `data` could be produced (1/3rd through the slot) and `seenTimestamp`.
-      const delaySec = seenTimestampSec - (genesisTime + (data.slot + 1 / 3) * config.SECONDS_PER_SLOT);
+      const fork = config.getForkName(data.slot);
+      // Returns the duration between when the attestation `data` could be produced (ATTESTATION_DUE_BPS through the slot) and `seenTimestamp`.
+      const delaySec =
+        seenTimestampSec -
+        (computeTimeAtSlot(config, data.slot, genesisTime) + config.getAttestationDueMs(fork) / 1000);
       for (const index of indexedAttestation.attestingIndices) {
         const validator = validators.get(index);
         if (validator) {
@@ -474,8 +488,11 @@ export function createValidatorMonitor(
       const src = OpSource.gossip;
       const data = indexedAttestation.data;
       const epoch = computeEpochAtSlot(data.slot);
-      // Returns the duration between when the attestation `data` could be produced (1/3rd through the slot) and `seenTimestamp`.
-      const delaySec = seenTimestampSec - (genesisTime + (data.slot + 1 / 3) * config.SECONDS_PER_SLOT);
+      const fork = config.getForkName(data.slot);
+      // Returns the duration between when the attestation `data` could be produced (ATTESTATION_DUE_BPS through the slot) and `seenTimestamp`.
+      const delaySec =
+        seenTimestampSec -
+        (computeTimeAtSlot(config, data.slot, genesisTime) + config.getAttestationDueMs(fork) / 1000);
 
       for (const index of indexedAttestation.attestingIndices) {
         const validator = validators.get(index);
@@ -491,8 +508,10 @@ export function createValidatorMonitor(
 
     onPoolSubmitAggregatedAttestation(seenTimestampSec, indexedAttestation, sentPeers) {
       const data = indexedAttestation.data;
-      // Returns the duration between when a `AggregateAndproof` with `data` could be produced (2/3rd through the slot) and `seenTimestamp`.
-      const delaySec = seenTimestampSec - (genesisTime + (data.slot + 2 / 3) * config.SECONDS_PER_SLOT);
+      const fork = config.getForkName(data.slot);
+      // Returns the duration between when a `AggregateAndproof` with `data` could be produced (AGGREGATE_DUE_BPS through the slot) and `seenTimestamp`.
+      const delaySec =
+        seenTimestampSec - (computeTimeAtSlot(config, data.slot, genesisTime) + config.getAggregateDueMs(fork) / 1000);
 
       for (const index of indexedAttestation.attestingIndices) {
         const validator = validators.get(index);
@@ -518,8 +537,10 @@ export function createValidatorMonitor(
       const src = OpSource.gossip;
       const data = indexedAttestation.data;
       const epoch = computeEpochAtSlot(data.slot);
-      // Returns the duration between when a `AggregateAndProof` with `data` could be produced (2/3rd through the slot) and `seenTimestamp`.
-      const delaySec = seenTimestampSec - (genesisTime + (data.slot + 2 / 3) * config.SECONDS_PER_SLOT);
+      const fork = config.getForkName(data.slot);
+      // Returns the duration between when a `AggregateAndproof` with `data` could be produced (AGGREGATE_DUE_BPS through the slot) and `seenTimestamp`.
+      const delaySec =
+        seenTimestampSec - (computeTimeAtSlot(config, data.slot, genesisTime) + config.getAggregateDueMs(fork) / 1000);
 
       const aggregatorIndex = signedAggregateAndProof.message.aggregatorIndex;
       const validatorAggregator = validators.get(aggregatorIndex);
@@ -813,7 +834,7 @@ export function createValidatorMonitor(
  * - Was the attestation seen in a block?
  */
 function renderAttestationSummary(
-  config: ChainConfig,
+  config: ChainForkConfig,
   rootCache: RootHexCache,
   summary: AttestationSummary | undefined,
   flags: ParticipationFlags
@@ -916,8 +937,7 @@ function renderAttestationSummary(
   }
 
   const submittedLate =
-    summary.poolSubmitDelayMinSec >
-    (INTERVALS_LATE_ATTESTATION_SUBMISSION * config.SECONDS_PER_SLOT) / INTERVALS_PER_SLOT;
+    summary.poolSubmitDelayMinSec > config.getSlotComponentDurationMs(LATE_ATTESTATION_SUBMISSION_BPS) / 1000;
 
   const aggregateInclusion = summary.aggregateInclusionDelaysSec.length > 0;
 
@@ -1021,7 +1041,7 @@ function isMissedSlot(rootCache: RootHexCache, slot: Slot): boolean {
 }
 
 function renderBlockProposalSummary(
-  config: ChainConfig,
+  config: ChainForkConfig,
   rootCache: RootHexCache,
   summary: EpochSummary | undefined,
   proposalSlot: Slot
@@ -1044,7 +1064,7 @@ function renderBlockProposalSummary(
 
   if (
     proposal.poolSubmitDelaySec !== null &&
-    proposal.poolSubmitDelaySec > (INTERVALS_LATE_BLOCK_SUBMISSION * config.SECONDS_PER_SLOT) / INTERVALS_PER_SLOT
+    proposal.poolSubmitDelaySec > config.getSlotComponentDurationMs(LATE_BLOCK_SUBMISSION_BPS) / 1000
   ) {
     out += "_late";
   }

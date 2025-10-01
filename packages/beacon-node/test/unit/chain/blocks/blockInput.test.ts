@@ -1,9 +1,9 @@
+import {describe, expect, it} from "vitest";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ForkName, ForkPostCapella, ForkPostDeneb} from "@lodestar/params";
 import {computeStartSlotAtEpoch, signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {SignedBeaconBlock, deneb, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {describe, expect, it} from "vitest";
 import {
   AddBlob,
   AddBlock,
@@ -126,7 +126,7 @@ describe("BlockInput", () => {
             blockRootHex: rootHex,
             daOutOfRange: false,
             forkName: ForkName.deneb,
-            seenTimestampSec: Date.now(),
+            seenTimestampSec: Date.now() / 1000,
             source: BlockInputSource.gossip,
           } as AddBlob & CreateBlockInputMeta);
         }
@@ -135,10 +135,8 @@ describe("BlockInput", () => {
           blockRootHex: rootHex,
           daOutOfRange: false,
           forkName: ForkName.deneb,
-          source: {
-            source: BlockInputSource.gossip,
-            seenTimestampSec: Date.now(),
-          },
+          source: BlockInputSource.gossip,
+          seenTimestampSec: Date.now() / 1000,
         } as AddBlock<ForkBlobsDA> & CreateBlockInputMeta);
         for (const blobSidecar of blobSidecars) {
           testArray.push({
@@ -146,7 +144,7 @@ describe("BlockInput", () => {
             blockRootHex: rootHex,
             daOutOfRange: false,
             forkName: ForkName.deneb,
-            seenTimestampSec: Date.now(),
+            seenTimestampSec: Date.now() / 1000,
             source: BlockInputSource.gossip,
           } as AddBlob & CreateBlockInputMeta);
         }

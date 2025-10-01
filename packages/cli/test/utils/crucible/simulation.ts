@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import {mkdir, writeFile} from "node:fs/promises";
 import path from "node:path";
+import tmp from "tmp";
 import {fromHexString} from "@chainsafe/ssz";
 import {nodeUtils} from "@lodestar/beacon-node";
 import {ChainForkConfig} from "@lodestar/config";
@@ -9,7 +10,6 @@ import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
 import {activePreset} from "@lodestar/params";
 import {BeaconStateAllForks, interopSecretKey} from "@lodestar/state-transition";
 import {prettyMsToTime} from "@lodestar/utils";
-import tmp from "tmp";
 import {createBeaconNode} from "./clients/beacon/index.js";
 import {createExecutionNode} from "./clients/execution/index.js";
 import {createValidatorNode, getValidatorForBeaconNode} from "./clients/validator/index.js";
@@ -70,7 +70,7 @@ export class Simulation {
     });
     this.clock = new EpochClock({
       genesisTime: this.options.genesisTime + this.forkConfig.GENESIS_DELAY,
-      secondsPerSlot: this.forkConfig.SECONDS_PER_SLOT,
+      secondsPerSlot: this.forkConfig.SLOT_DURATION_MS / 1000,
       slotsPerEpoch: activePreset.SLOTS_PER_EPOCH,
       signal: this.options.controller.signal,
     });

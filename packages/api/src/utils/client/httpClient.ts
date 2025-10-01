@@ -1,5 +1,14 @@
-import {ErrorAborted, Logger, MapDef, TimeoutError, isValidHttpUrl, retry, toPrintableUrl} from "@lodestar/utils";
-import {fetch, isFetchError} from "@lodestar/utils";
+import {
+  ErrorAborted,
+  Logger,
+  MapDef,
+  TimeoutError,
+  fetch,
+  isFetchError,
+  isValidHttpUrl,
+  retry,
+  toPrintableUrl,
+} from "@lodestar/utils";
 import {mergeHeaders} from "../headers.js";
 import {HttpStatusCode} from "../httpStatusCode.js";
 import {Endpoint} from "../types.js";

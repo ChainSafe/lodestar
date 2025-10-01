@@ -1,6 +1,5 @@
-import {getEffectiveBalanceIncrementsZeroed} from "@lodestar/state-transition";
 import {describe, expect, it} from "vitest";
-
+import {getEffectiveBalanceIncrementsZeroed} from "@lodestar/state-transition";
 import {computeDeltas} from "../../../src/protoArray/computeDeltas.js";
 
 describe("computeDeltas", () => {

@@ -5,9 +5,9 @@ import {mainnetPreset} from "./presets/mainnet.js";
 import {minimalPreset} from "./presets/minimal.js";
 import {userOverrides, userSelectedPreset} from "./setPreset.js";
 
-export type {BeaconPreset} from "./types.js";
 export * from "./forkName.js";
 export {presetToJson} from "./json.js";
+export type {BeaconPreset} from "./types.js";
 export {PresetName};
 
 const presets = {
@@ -114,6 +114,10 @@ export const {
   FIELD_ELEMENTS_PER_CELL,
   FIELD_ELEMENTS_PER_EXT_BLOB,
   KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH,
+
+  PTC_SIZE,
+  MAX_PAYLOAD_ATTESTATIONS,
+  BUILDER_PENDING_WITHDRAWALS_LIMIT,
 } = activePreset;
 
 ////////////
@@ -138,6 +142,7 @@ export const ZERO_HASH_HEX = "0x" + "00".repeat(32);
 export const BLS_WITHDRAWAL_PREFIX = 0;
 export const ETH1_ADDRESS_WITHDRAWAL_PREFIX = 1;
 export const COMPOUNDING_WITHDRAWAL_PREFIX = 2;
+export const BUILDER_WITHDRAWAL_PREFIX = 3;
 
 // Domain types
 
@@ -152,6 +157,8 @@ export const DOMAIN_SYNC_COMMITTEE = Uint8Array.from([7, 0, 0, 0]);
 export const DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF = Uint8Array.from([8, 0, 0, 0]);
 export const DOMAIN_CONTRIBUTION_AND_PROOF = Uint8Array.from([9, 0, 0, 0]);
 export const DOMAIN_BLS_TO_EXECUTION_CHANGE = Uint8Array.from([10, 0, 0, 0]);
+export const DOMAIN_BEACON_BUILDER = Uint8Array.from([27, 0, 0, 0]);
+export const DOMAIN_PTC_ATTESTER = Uint8Array.from([12, 0, 0, 0]);
 
 // Application specific domains
 
@@ -200,9 +207,6 @@ export const EPOCHS_PER_SUBNET_SUBSCRIPTION = 256;
 export const TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE = 16;
 export const SYNC_COMMITTEE_SUBNET_COUNT = 4;
 export const SYNC_COMMITTEE_SUBNET_SIZE = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
-
-export const MAX_REQUEST_BLOCKS = 2 ** 10; // 1024
-export const MAX_REQUEST_BLOCKS_DENEB = 2 ** 7; // 128
 
 // Lightclient pre-computed
 /**
@@ -266,7 +270,9 @@ export const MAX_REQUEST_LIGHT_CLIENT_COMMITTEE_HASHES = 128;
  * Optimistic sync
  */
 export const SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY = 128;
+/** @deprecated */
 export const INTERVALS_PER_SLOT = 3;
+export const BASIS_POINTS = 10000;
 
 // EIP-4844: Crypto const
 export const BYTES_PER_FIELD_ELEMENT = 32;
@@ -274,11 +280,11 @@ export const BLOB_TX_TYPE = 0x03;
 export const VERSIONED_HASH_VERSION_KZG = 0x01;
 
 // ssz.deneb.BeaconBlockBody.getPathInfo(['blobKzgCommitments',0]).gindex
-export const KZG_COMMITMENT_GINDEX0 = ACTIVE_PRESET === PresetName.minimal ? 1728 : 221184;
+export const KZG_COMMITMENT_GINDEX0 = 221184;
 export const KZG_COMMITMENT_SUBTREE_INDEX0 = KZG_COMMITMENT_GINDEX0 - 2 ** KZG_COMMITMENT_INCLUSION_PROOF_DEPTH;
 
 // ssz.deneb.BlobSidecars.elementType.fixedSize
-export const BLOBSIDECAR_FIXED_SIZE = ACTIVE_PRESET === PresetName.minimal ? 131704 : 131928;
+export const BLOBSIDECAR_FIXED_SIZE = 131928;
 
 // Electra Misc
 export const UNSET_DEPOSIT_REQUESTS_START_INDEX = 2n ** 64n - 1n;
@@ -301,3 +307,7 @@ export const BYTES_PER_CELL = FIELD_ELEMENTS_PER_CELL * BYTES_PER_FIELD_ELEMENT;
 // ssz.fulu.BeaconBlockBody.getPathInfo(['blobKzgCommitments']).gindex
 export const KZG_COMMITMENTS_GINDEX = 27;
 export const KZG_COMMITMENTS_SUBTREE_INDEX = KZG_COMMITMENTS_GINDEX - 2 ** KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH;
+
+// Gloas Misc
+export const BUILDER_PAYMENT_THRESHOLD_NUMERATOR = 6;
+export const BUILDER_PAYMENT_THRESHOLD_DENOMINATOR = 10;

@@ -12,7 +12,6 @@ import {
 } from "@lodestar/state-transition";
 import * as blockFns from "@lodestar/state-transition/block";
 import {AttesterSlashing, altair, bellatrix, capella, electra, phase0, ssz, sszTypesFor} from "@lodestar/types";
-
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {getConfig} from "../../utils/config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";

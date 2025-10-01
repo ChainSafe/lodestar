@@ -1,5 +1,8 @@
-import {DataAvailabilityStatus, EffectiveBalanceIncrements} from "@lodestar/state-transition";
-import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
+import {
+  CachedBeaconStateAllForks,
+  DataAvailabilityStatus,
+  EffectiveBalanceIncrements,
+} from "@lodestar/state-transition";
 import {
   AttesterSlashing,
   BeaconBlock,
@@ -70,15 +73,6 @@ export enum NotReorgedReason {
   Unknown = "unknown", // A placeholder in case reason is not provided
 }
 
-export type ForkChoiceMetrics = {
-  votes: number;
-  queuedAttestations: number;
-  validatedAttestationDatas: number;
-  balancesLength: number;
-  nodes: number;
-  indices: number;
-};
-
 export type ShouldOverrideForkChoiceUpdateResult =
   | {shouldOverrideFcu: true; parentBlock: ProtoBlock}
   | {shouldOverrideFcu: false; reason: NotReorgedReason};
@@ -86,7 +80,6 @@ export type ShouldOverrideForkChoiceUpdateResult =
 export interface IForkChoice {
   irrecoverableError?: Error;
 
-  getMetrics(): ForkChoiceMetrics;
   /**
    * Returns the block root of an ancestor of `block_root` at the given `slot`. (Note: `slot` refers
    * to the block that is *returned*, not the one that is supplied.)

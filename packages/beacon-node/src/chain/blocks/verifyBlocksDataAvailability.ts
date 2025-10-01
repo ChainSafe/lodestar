@@ -1,177 +1,42 @@
-import {ChainForkConfig} from "@lodestar/config";
-import {isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
-import {DataAvailabilityStatus, computeTimeAtSlot} from "@lodestar/state-transition";
-import {UintNum64, deneb} from "@lodestar/types";
-import {ErrorAborted, Logger} from "@lodestar/utils";
-import {Metrics} from "../../metrics/metrics.js";
-import {BlockError, BlockErrorCode} from "../errors/index.js";
-import {validateBlobSidecars} from "../validation/blobSidecar.js";
-import {validateDataColumnsSidecars} from "../validation/dataColumnSidecar.js";
-import {
-  BlobSidecarValidation,
-  BlockInput,
-  BlockInputAvailableData,
-  BlockInputBlobs,
-  BlockInputDataColumns,
-  BlockInputType,
-  ImportBlockOpts,
-  getBlockInput,
-} from "./types.js";
+import {DataAvailabilityStatus} from "@lodestar/state-transition";
+import {DAData, DAType, IBlockInput} from "./blockInput/index.js";
 
 // we can now wait for full 12 seconds because unavailable block sync will try pulling
 // the blobs from the network anyway after 500ms of seeing the block
-const BLOB_AVAILABILITY_TIMEOUT = 12_000;
+export const BLOB_AVAILABILITY_TIMEOUT = 12_000;
 
 /**
- * Verifies some early cheap sanity checks on the block before running the full state transition.
- *
- * - Parent is known to the fork-choice
- * - Check skipped slots limit
- * - check_block_relevancy()
- *   - Block not in the future
- *   - Not genesis block
- *   - Block's slot is < Infinity
- *   - Not finalized slot
- *   - Not already known
+ * Verifies that all block inputs have data available.
+ * - Waits a max of BLOB_AVAILABILITY_TIMEOUT for all data to be available
+ * - Returns the time at which all data was available
+ * - Returns the data availability status for each block input
  */
 export async function verifyBlocksDataAvailability(
-  chain: {config: ChainForkConfig; genesisTime: UintNum64; logger: Logger; metrics: Metrics | null},
-  blocks: BlockInput[],
-  signal: AbortSignal,
-  opts: ImportBlockOpts
+  blocks: IBlockInput[],
+  signal: AbortSignal
 ): Promise<{
   dataAvailabilityStatuses: DataAvailabilityStatus[];
   availableTime: number;
-  availableBlockInputs: BlockInput[];
 }> {
-  const lastBlock = blocks.at(-1);
-  if (!lastBlock) {
-    throw Error("Empty partiallyVerifiedBlocks");
-  }
-
-  const dataAvailabilityStatuses: DataAvailabilityStatus[] = [];
-  const seenTime = opts.seenTimestampSec !== undefined ? opts.seenTimestampSec * 1000 : Date.now();
-
-  const availableBlockInputs: BlockInput[] = [];
-
+  const promises: Promise<DAData>[] = [];
   for (const blockInput of blocks) {
-    if (signal.aborted) {
-      throw new ErrorAborted("verifyBlocksDataAvailability");
-    }
-    // Validate status of only not yet finalized blocks, we don't need yet to propogate the status
-    // as it is not used upstream anywhere
-    const {dataAvailabilityStatus, availableBlockInput} = await maybeValidateBlobs(chain, blockInput, signal, opts);
-    dataAvailabilityStatuses.push(dataAvailabilityStatus);
-    availableBlockInputs.push(availableBlockInput);
-  }
-
-  const availableTime = lastBlock.type === BlockInputType.dataPromise ? Date.now() : seenTime;
-  if (blocks.length === 1 && opts.seenTimestampSec !== undefined && blocks[0].type !== BlockInputType.preData) {
-    const recvToAvailableTime = availableTime / 1000 - opts.seenTimestampSec;
-    const numBlobs = (blocks[0].block as deneb.SignedBeaconBlock).message.body.blobKzgCommitments.length;
-
-    chain.metrics?.gossipBlock.receivedToBlobsAvailabilityTime.observe({numBlobs}, recvToAvailableTime);
-    chain.logger.verbose("Verified blobs availability", {
-      slot: blocks[0].block.message.slot,
-      recvToAvailableTime,
-      type: blocks[0].type,
-    });
-  }
-
-  return {dataAvailabilityStatuses, availableTime, availableBlockInputs};
-}
-
-async function maybeValidateBlobs(
-  chain: {config: ChainForkConfig; genesisTime: UintNum64; metrics: Metrics | null; logger: Logger},
-  blockInput: BlockInput,
-  signal: AbortSignal,
-  opts: ImportBlockOpts
-): Promise<{dataAvailabilityStatus: DataAvailabilityStatus; availableBlockInput: BlockInput}> {
-  switch (blockInput.type) {
-    case BlockInputType.preData:
-      return {dataAvailabilityStatus: DataAvailabilityStatus.PreData, availableBlockInput: blockInput};
-
-    case BlockInputType.outOfRangeData:
-      return {dataAvailabilityStatus: DataAvailabilityStatus.OutOfRange, availableBlockInput: blockInput};
-
-    // biome-ignore lint/suspicious/noFallthroughSwitchClause: We need fall-through behavior here
-    case BlockInputType.availableData:
-      if (opts.validBlobSidecars === BlobSidecarValidation.Full) {
-        return {dataAvailabilityStatus: DataAvailabilityStatus.Available, availableBlockInput: blockInput};
-      }
-
-    case BlockInputType.dataPromise: {
-      // run full validation
-      const {block} = blockInput;
-      const blockSlot = block.message.slot;
-      const {blobKzgCommitments} = (block as deneb.SignedBeaconBlock).message.body;
-      const beaconBlockRoot = chain.config.getForkTypes(blockSlot).BeaconBlock.hashTreeRoot(block.message);
-      const blockData =
-        blockInput.type === BlockInputType.availableData
-          ? blockInput.blockData
-          : await raceWithCutoff(
-              chain,
-              blockInput,
-              blockInput.cachedData.availabilityPromise as Promise<BlockInputAvailableData>,
-              signal
-            );
-
-      if (isForkPostFulu(blockData.fork)) {
-        const {dataColumns} = blockData as BlockInputDataColumns;
-        const skipProofsCheck = opts.validBlobSidecars === BlobSidecarValidation.Individual;
-        await validateDataColumnsSidecars(blockSlot, beaconBlockRoot, blobKzgCommitments, dataColumns, chain.metrics, {
-          skipProofsCheck,
-        });
-      } else if (isForkPostDeneb(blockData.fork)) {
-        const {blobs} = blockData as BlockInputBlobs;
-
-        // if the blob sidecars have been individually verified then we can skip kzg proof check
-        // but other checks to match blobs with block data still need to be performed
-        const skipProofsCheck = opts.validBlobSidecars === BlobSidecarValidation.Individual;
-        await validateBlobSidecars(blockSlot, beaconBlockRoot, blobKzgCommitments, blobs, {skipProofsCheck});
-      }
-
-      const availableBlockInput = getBlockInput.availableData(
-        chain.config,
-        blockInput.block,
-        blockInput.source,
-        blockData
-      );
-      return {dataAvailabilityStatus: DataAvailabilityStatus.Available, availableBlockInput: availableBlockInput};
+    // block verification is triggered on a verified gossip block so we only need to wait for all data
+    if (!blockInput.hasAllData()) {
+      promises.push(blockInput.waitForAllData(BLOB_AVAILABILITY_TIMEOUT, signal));
     }
   }
-}
+  await Promise.all(promises);
 
-/**
- * Wait for blobs to become available with a cutoff time. If fails then throw DATA_UNAVAILABLE error
- * which may try unknownblock/blobs fill (by root).
- */
-async function raceWithCutoff<T>(
-  chain: {config: ChainForkConfig; genesisTime: UintNum64; logger: Logger},
-  blockInput: BlockInput,
-  availabilityPromise: Promise<T>,
-  signal: AbortSignal
-): Promise<T> {
-  const {block} = blockInput;
-  const blockSlot = block.message.slot;
+  const availableTime = Math.max(0, Math.max(...blocks.map((blockInput) => blockInput.getTimeComplete())));
+  const dataAvailabilityStatuses: DataAvailabilityStatus[] = blocks.map((blockInput) => {
+    if (blockInput.type === DAType.PreData) {
+      return DataAvailabilityStatus.PreData;
+    }
+    if (blockInput.daOutOfRange) {
+      return DataAvailabilityStatus.OutOfRange;
+    }
+    return DataAvailabilityStatus.Available;
+  });
 
-  const cutoffTime =
-    computeTimeAtSlot(chain.config, blockSlot, chain.genesisTime) * 1000 + BLOB_AVAILABILITY_TIMEOUT - Date.now();
-  const cutoffTimeout =
-    cutoffTime > 0
-      ? new Promise((_resolve, reject) => {
-          setTimeout(() => reject(new Error("Timeout exceeded")), cutoffTime);
-          signal.addEventListener("abort", () => reject(signal.reason));
-        })
-      : Promise.reject(new Error("Cutoff time must be greater than 0"));
-  chain.logger.debug("Racing for blob availabilityPromise", {blockSlot, cutoffTime});
-
-  try {
-    await Promise.race([availabilityPromise, cutoffTimeout]);
-  } catch (_e) {
-    // throw unavailable so that the unknownblock/blobs can be triggered to pull the block
-    throw new BlockError(block, {code: BlockErrorCode.DATA_UNAVAILABLE});
-  }
-  // we can only be here if availabilityPromise has resolved else an error will be thrown
-  return availabilityPromise;
+  return {dataAvailabilityStatuses, availableTime};
 }

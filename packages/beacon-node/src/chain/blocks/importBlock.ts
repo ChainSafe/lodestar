@@ -7,21 +7,14 @@ import {
   ForkChoiceErrorCode,
   NotReorgedReason,
 } from "@lodestar/fork-choice";
-import {
-  ForkName,
-  ForkPostAltair,
-  ForkPostElectra,
-  ForkSeq,
-  INTERVALS_PER_SLOT,
-  MAX_SEED_LOOKAHEAD,
-  SLOTS_PER_EPOCH,
-} from "@lodestar/params";
+import {ForkPostAltair, ForkPostElectra, ForkSeq, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   CachedBeaconStateAltair,
   EpochCache,
   RootCache,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
+  computeTimeAtSlot,
   isExecutionStateType,
   isStartSlotOfEpoch,
   isStateValidatorsNodesPopulated,
@@ -37,7 +30,8 @@ import {ChainEvent, ReorgEventData} from "../emitter.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
 import {toCheckpointHex} from "../stateCache/index.js";
-import {AttestationImportOpt, BlockInputType, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
+import {isBlockInputBlobs, isBlockInputColumns} from "./blockInput/blockInput.js";
+import {AttestationImportOpt, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {getCheckpointFromState} from "./utils/checkpoint.js";
 import {writeBlockInputToDb} from "./writeBlockInputToDb.js";
 
@@ -76,19 +70,22 @@ export async function importBlock(
   opts: ImportBlockOpts
 ): Promise<void> {
   const {blockInput, postState, parentBlockSlot, executionStatus, dataAvailabilityStatus} = fullyVerifiedBlock;
-  const {block, source} = blockInput;
+  const block = blockInput.getBlock();
+  const source = blockInput.getBlockSource();
   const {slot: blockSlot} = block.message;
   const blockRoot = this.config.getForkTypes(blockSlot).BeaconBlock.hashTreeRoot(block.message);
   const blockRootHex = toRootHex(blockRoot);
-  const currentEpoch = computeEpochAtSlot(this.forkChoice.getTime());
+  const currentSlot = this.forkChoice.getTime();
+  const currentEpoch = computeEpochAtSlot(currentSlot);
   const blockEpoch = computeEpochAtSlot(blockSlot);
   const prevFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
-  const blockDelaySec = (fullyVerifiedBlock.seenTimestampSec - postState.genesisTime) % this.config.SECONDS_PER_SLOT;
+  const blockDelaySec =
+    fullyVerifiedBlock.seenTimestampSec - computeTimeAtSlot(this.config, blockSlot, postState.genesisTime);
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
   const fork = this.config.getForkSeq(blockSlot);
 
   // this is just a type assertion since blockinput with dataPromise type will not end up here
-  if (blockInput.type === BlockInputType.dataPromise) {
+  if (!blockInput.hasAllData) {
     throw Error("Unavailable block can not be imported in forkchoice");
   }
 
@@ -106,7 +103,7 @@ export async function importBlock(
     block.message,
     postState,
     blockDelaySec,
-    this.clock.currentSlot,
+    currentSlot,
     executionStatus,
     dataAvailabilityStatus
   );
@@ -115,7 +112,7 @@ export async function importBlock(
   // Some block event handlers require state being in state cache so need to do this before emitting EventType.block
   this.regen.processState(blockRootHex, postState);
 
-  this.metrics?.importBlock.bySource.inc({source});
+  this.metrics?.importBlock.bySource.inc({source: source.source});
   this.logger.verbose("Added block to forkchoice and state cache", {slot: blockSlot, root: blockRootHex});
 
   // 3. Import attestations to fork choice
@@ -263,10 +260,11 @@ export async function importBlock(
       this.metrics.headSlot.set(newHead.slot);
       // Only track "recent" blocks. Otherwise sync can distort this metrics heavily.
       // We want to track recent blocks coming from gossip, unknown block sync, and API.
-      if (delaySec < SLOTS_PER_EPOCH * this.config.SECONDS_PER_SLOT) {
+      if (delaySec < (SLOTS_PER_EPOCH * this.config.SLOT_DURATION_MS) / 1000) {
         this.metrics.importBlock.elapsedTimeTillBecomeHead.observe(delaySec);
-        if (delaySec > this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT) {
-          this.metrics.importBlock.setHeadAfterFirstInterval.inc();
+        const cutOffSec = this.config.getAttestationDueMs(this.config.getForkName(blockSlot)) / 1000;
+        if (delaySec > cutOffSec) {
+          this.metrics.importBlock.setHeadAfterCutoff.inc();
         }
       }
     }
@@ -326,14 +324,13 @@ export async function importBlock(
   // Suppress fcu call if shouldOverrideFcu is true. This only happens if we have proposer boost reorg enabled
   // and the block is weak and can potentially be reorged out.
   let shouldOverrideFcu = false;
-  let notOverrideFcuReason = NotReorgedReason.Unknown;
 
-  if (opts.isGossipBlock && isExecutionStateType(postState)) {
+  if (blockSlot >= currentSlot && isExecutionStateType(postState)) {
+    let notOverrideFcuReason = NotReorgedReason.Unknown;
     const proposalSlot = blockSlot + 1;
     try {
       const proposerIndex = postState.epochCtx.getBeaconProposer(proposalSlot);
       const feeRecipient = this.beaconProposerCache.get(proposerIndex);
-      const {currentSlot} = this.clock;
 
       if (feeRecipient) {
         // We would set this to true if
@@ -360,20 +357,20 @@ export async function importBlock(
         this.logger.warn("Unable to get beacon proposer. Do not override fcu.", {proposalSlot}, e as Error);
       }
     }
-  }
 
-  if (shouldOverrideFcu) {
-    this.logger.verbose("Weak block detected. Skip fcu call in importBlock", {
-      blockRoot: blockRootHex,
-      slot: blockSlot,
-    });
-  } else {
-    this.metrics?.importBlock.notOverrideFcuReason.inc({reason: notOverrideFcuReason});
-    this.logger.verbose("Strong block detected. Not override fcu call", {
-      blockRoot: blockRootHex,
-      slot: blockSlot,
-      reason: notOverrideFcuReason,
-    });
+    if (shouldOverrideFcu) {
+      this.logger.verbose("Weak block detected. Skip fcu call in importBlock", {
+        blockRoot: blockRootHex,
+        slot: blockSlot,
+      });
+    } else {
+      this.metrics?.importBlock.notOverrideFcuReason.inc({reason: notOverrideFcuReason});
+      this.logger.verbose("Strong block detected. Not override fcu call", {
+        blockRoot: blockRootHex,
+        slot: blockSlot,
+        reason: notOverrideFcuReason,
+      });
+    }
   }
 
   if (
@@ -460,7 +457,7 @@ export async function importBlock(
 
   // Send block events, only for recent enough blocks
 
-  if (this.clock.currentSlot - blockSlot < EVENTSTREAM_EMIT_RECENT_BLOCK_SLOTS) {
+  if (currentSlot - blockSlot < EVENTSTREAM_EMIT_RECENT_BLOCK_SLOTS) {
     // We want to import block asap so call all event handler in the next event loop
     callInNextEventLoop(() => {
       // NOTE: Skip emitting if there are no listeners from the API
@@ -510,15 +507,15 @@ export async function importBlock(
       fullyVerifiedBlock.postState.epochCtx.currentSyncCommitteeIndexed.validatorIndices
     );
   }
-  // dataPromise will not end up here, but preDeneb could. In future we might also allow syncing
-  // out of data range blocks and import then in forkchoice although one would not be able to
-  // attest and propose with such head similar to optimistic sync
-  if (
-    blockInput.type === BlockInputType.availableData &&
-    (blockInput.blockData.fork === ForkName.deneb || blockInput.blockData.fork === ForkName.electra)
-  ) {
-    const {blobsSource} = blockInput.blockData;
-    this.metrics?.importBlock.blobsBySource.inc({blobsSource});
+
+  if (isBlockInputColumns(blockInput)) {
+    for (const {source} of blockInput.getSampledColumnsWithSource()) {
+      this.metrics?.importBlock.columnsBySource.inc({source});
+    }
+  } else if (isBlockInputBlobs(blockInput)) {
+    for (const {source} of blockInput.getAllBlobsWithSource()) {
+      this.metrics?.importBlock.blobsBySource.inc({blobsSource: source});
+    }
   }
 
   const advancedSlot = this.clock.slotWithFutureTolerance(REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC);

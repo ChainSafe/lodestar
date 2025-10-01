@@ -1,14 +1,16 @@
-import {afterAll, beforeAll, bench, describe, setBenchOpts} from "@chainsafe/benchmark";
 import {generateKeyPair} from "@libp2p/crypto/keys";
+import {afterAll, beforeAll, bench, describe, setBenchOpts} from "@chainsafe/benchmark";
 import {config} from "@lodestar/config/default";
-import {LevelDbController} from "@lodestar/db";
+import {LevelDbController} from "@lodestar/db/controller/level";
 import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {sleep} from "@lodestar/utils";
+import {sleep, toHex} from "@lodestar/utils";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {rangeSyncTest} from "../../../../state-transition/test/perf/params.js";
 import {beforeValue} from "../../../../state-transition/test/utils/beforeValueBenchmark.js";
 import {getNetworkCachedBlock, getNetworkCachedState} from "../../../../state-transition/test/utils/testFileCache.js";
-import {AttestationImportOpt, BlockSource, getBlockInput} from "../../../src/chain/blocks/types.js";
+import {BlockInputPreData} from "../../../src/chain/blocks/blockInput/blockInput.js";
+import {BlockInputSource} from "../../../src/chain/blocks/blockInput/types.js";
+import {AttestationImportOpt} from "../../../src/chain/blocks/types.js";
 import {BeaconChain} from "../../../src/chain/index.js";
 import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";
 import {ExecutionEngineDisabled} from "../../../src/execution/engine/index.js";
@@ -110,7 +112,20 @@ describe.skip("verify+import blocks - range sync perf test", () => {
       return chain;
     },
     fn: async (chain) => {
-      const blocksImport = blocks.value.map((block) => getBlockInput.preData(chain.config, block, BlockSource.byRange));
+      const blocksImport = blocks.value.map((block) => {
+        const blockRootHex = toHex(
+          chain.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)
+        );
+        const forkName = chain.config.getForkName(block.message.slot);
+        return BlockInputPreData.createFromBlock({
+          block,
+          blockRootHex,
+          forkName,
+          daOutOfRange: true,
+          source: BlockInputSource.byRange,
+          seenTimestampSec: Math.floor(Date.now() / 1000),
+        });
+      });
 
       await chain.processChainSegment(blocksImport, {
         // Only skip importing attestations for finalized sync. For head sync attestation are valuable.

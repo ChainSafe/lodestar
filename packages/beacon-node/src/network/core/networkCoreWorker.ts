@@ -1,10 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import worker from "node:worker_threads";
-import type {ModuleThread} from "@chainsafe/threads";
-import {expose} from "@chainsafe/threads/worker";
 import {privateKeyFromProtobuf} from "@libp2p/crypto/keys";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
+import type {ModuleThread} from "@chainsafe/threads";
+import {expose} from "@chainsafe/threads/worker";
 import {chainConfigFromJson, createBeaconConfig} from "@lodestar/config";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {RegistryMetricCreator, collectNodeJSMetrics} from "../../metrics/index.js";

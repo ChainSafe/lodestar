@@ -1,5 +1,4 @@
 import {describe, expect, it} from "vitest";
-
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Epoch, phase0, ssz} from "@lodestar/types";
 import {isSlashableAttestationData} from "../../../src/util/index.js";

@@ -1,15 +1,16 @@
 import {EventEmitter} from "node:events";
+import {StrictEventEmitter} from "strict-event-emitter-types";
 import {BeaconConfig} from "@lodestar/config";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, Status, fulu} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
-import {StrictEventEmitter} from "strict-event-emitter-types";
+import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
 import {AttestationImportOpt, ImportBlockOpts} from "../../chain/blocks/index.js";
 import {IBeaconChain} from "../../chain/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {INetwork} from "../../network/index.js";
-import {beaconBlocksMaybeBlobsByRange} from "../../network/reqresp/beaconBlocksMaybeBlobsByRange.js";
 import {PeerIdStr} from "../../util/peerId.js";
+import {cacheByRangeResponses, downloadByRange} from "../utils/downloadByRange.js";
 import {RangeSyncType, getRangeSyncTarget, rangeSyncTypes} from "../utils/remoteSyncType.js";
 import {ChainTarget, SyncChain, SyncChainDebugState, SyncChainFns} from "./chain.js";
 import {updateChains} from "./utils/index.js";
@@ -199,24 +200,29 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
     }
   };
 
-  /** Convenience method for `SyncChain` */
-  private downloadBeaconBlocksByRange: SyncChainFns["downloadBeaconBlocksByRange"] = async (
-    peer,
-    request,
-    partialDownload,
-    syncType: RangeSyncType
-  ) => {
-    return beaconBlocksMaybeBlobsByRange(
-      this.config,
-      this.network,
-      peer,
-      request,
-      this.chain.clock.currentEpoch,
-      partialDownload,
-      syncType,
-      this.metrics,
-      this.logger
-    );
+  private downloadByRange: SyncChainFns["downloadByRange"] = async (peer, batch) => {
+    const batchBlocks = batch.getBlocks();
+    const {result, warnings} = await downloadByRange({
+      config: this.config,
+      network: this.network,
+      logger: this.logger,
+      peerIdStr: peer.peerId,
+      batchBlocks,
+      ...batch.getRequestsForPeer(peer),
+    });
+    const cached = cacheByRangeResponses({
+      cache: this.chain.seenBlockInputCache,
+      peerIdStr: peer.peerId,
+      responses: result,
+      batchBlocks,
+    });
+    return {result: cached, warnings};
+  };
+
+  private pruneBlockInputs: SyncChainFns["pruneBlockInputs"] = (blocks: IBlockInput[]) => {
+    for (const block of blocks) {
+      this.chain.seenBlockInputCache.prune(block.blockRootHex);
+    }
   };
 
   /** Convenience method for `SyncChain` */
@@ -247,12 +253,19 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
         syncType,
         {
           processChainSegment: this.processChainSegment,
-          downloadBeaconBlocksByRange: this.downloadBeaconBlocksByRange,
+          downloadByRange: this.downloadByRange,
           reportPeer: this.reportPeer,
           getConnectedPeerSyncMeta: this.getConnectedPeerSyncMeta,
+          pruneBlockInputs: this.pruneBlockInputs,
           onEnd: this.onSyncChainEnd,
         },
-        {config: this.config, logger: this.logger, custodyConfig: this.chain.custodyConfig, metrics: this.metrics}
+        {
+          config: this.config,
+          clock: this.chain.clock,
+          logger: this.logger,
+          custodyConfig: this.chain.custodyConfig,
+          metrics: this.metrics,
+        }
       );
       this.chains.set(syncType, syncChain);
 

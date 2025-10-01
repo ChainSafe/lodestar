@@ -1,16 +1,15 @@
 import path from "node:path";
+import {rimraf} from "rimraf";
+import {beforeAll, describe, expect, it, onTestFinished, vi} from "vitest";
 import {HttpStatusCode} from "@lodestar/api";
 import {DeletionStatus, ImportStatus, getClient} from "@lodestar/api/keymanager";
 import {config} from "@lodestar/config/default";
-import {bufferStderr, spawnCliCommand} from "@lodestar/test-utils";
-import {getKeystoresStr} from "@lodestar/test-utils";
+import {bufferStderr, getKeystoresStr, spawnCliCommand} from "@lodestar/test-utils";
 import {Interchange} from "@lodestar/validator";
-import {rimraf} from "rimraf";
-import {beforeAll, describe, expect, it, onTestFinished, vi} from "vitest";
-import {testFilesDir} from "../utils.js";
 import {cachedPubkeysHex, cachedSeckeysHex} from "../utils/cachedKeys.js";
 import {expectDeepEquals} from "../utils/runUtils.js";
 import {expectKeys, startValidatorWithKeyManager} from "../utils/validator.js";
+import {testFilesDir} from "../utils.js";
 
 describe("import keystores from api", () => {
   vi.setConfig({testTimeout: 30_000});

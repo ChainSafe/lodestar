@@ -11,7 +11,6 @@ import {
   UNSET_DEPOSIT_REQUESTS_START_INDEX,
 } from "@lodestar/params";
 import {Bytes32, Root, TimeSeconds, phase0, ssz} from "@lodestar/types";
-
 import {processDeposit} from "../block/processDeposit.js";
 import {EpochCacheImmutableData} from "../cache/epochCache.js";
 import {createCachedBeaconState} from "../cache/stateCache.js";
@@ -330,12 +329,9 @@ export function initializeBeaconStateFromEth1(
   }
 
   if (fork >= ForkSeq.gloas) {
-    const stateFulu = state as CompositeViewDU<typeof ssz.gloas.BeaconState>;
-    stateFulu.fork.previousVersion = config.GLOAS_FORK_VERSION;
-    stateFulu.fork.currentVersion = config.GLOAS_FORK_VERSION;
-    stateFulu.latestExecutionPayloadHeader =
-      (executionPayloadHeader as CompositeViewDU<typeof ssz.gloas.ExecutionPayloadHeader>) ??
-      ssz.gloas.ExecutionPayloadHeader.defaultViewDU();
+    const stateGloas = state as CompositeViewDU<typeof ssz.gloas.BeaconState>;
+    stateGloas.fork.previousVersion = config.GLOAS_FORK_VERSION;
+    stateGloas.fork.currentVersion = config.GLOAS_FORK_VERSION;
   }
 
   state.commit();

@@ -15,6 +15,16 @@ export function getMetrics(register: MetricsRegisterExtra) {
       help: "Counts total requests done per method",
       labelNames: ["method"],
     }),
+    outgoingOpenedStreams: register.counter<{method: string}>({
+      name: "beacon_reqresp_outgoing_opened_streams_total",
+      help: "Counts total opened streams per method",
+      labelNames: ["method"],
+    }),
+    outgoingClosedStreams: register.counter<{method: string}>({
+      name: "beacon_reqresp_outgoing_closed_streams_total",
+      help: "Counts total closed streams per method",
+      labelNames: ["method"],
+    }),
     outgoingRequestRoundtripTime: register.histogram<{method: string}>({
       name: "beacon_reqresp_outgoing_request_roundtrip_time_seconds",
       help: "Histogram of outgoing requests round-trip time",
@@ -35,6 +45,16 @@ export function getMetrics(register: MetricsRegisterExtra) {
     incomingRequests: register.gauge<{method: string}>({
       name: "beacon_reqresp_incoming_requests_total",
       help: "Counts total responses handled per method",
+      labelNames: ["method"],
+    }),
+    incomingOpenedStreams: register.counter<{method: string}>({
+      name: "beacon_reqresp_incoming_opened_streams_total",
+      help: "Counts total incoming opened streams per method",
+      labelNames: ["method"],
+    }),
+    incomingClosedStreams: register.counter<{method: string}>({
+      name: "beacon_reqresp_incoming_closed_streams_total",
+      help: "Counts total incoming closed streams per method",
       labelNames: ["method"],
     }),
     incomingRequestHandlerTime: register.histogram<{method: string}>({

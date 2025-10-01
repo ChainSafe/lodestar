@@ -1,5 +1,5 @@
-import {ForkSeq} from "@lodestar/params";
 import {describe, expect, it} from "vitest";
+import {ForkSeq} from "@lodestar/params";
 import {getExpectedWithdrawals} from "../../../src/block/processWithdrawals.js";
 import {numValidators} from "../../perf/util.js";
 import {beforeValue} from "../../utils/beforeValue.js";

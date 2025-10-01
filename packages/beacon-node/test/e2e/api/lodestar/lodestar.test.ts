@@ -1,9 +1,9 @@
+import {afterEach, describe, expect, it, vi} from "vitest";
 import {getClient} from "@lodestar/api";
 import {ChainConfig, createBeaconConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {phase0} from "@lodestar/types";
-import {afterEach, describe, expect, it, vi} from "vitest";
 import {BeaconNode} from "../../../../src/index.js";
 import {ClockEvent} from "../../../../src/util/clock.js";
 import {waitForEvent} from "../../../utils/events/resolver.js";
@@ -15,23 +15,35 @@ describe("api / impl / validator", () => {
 
   describe("getLiveness endpoint", () => {
     let bn: BeaconNode | undefined;
-    const SECONDS_PER_SLOT = 2;
-    const ALTAIR_FORK_EPOCH = 0;
-    const validatorCount = 8;
     const restPort = 9596;
-    const testParams: Pick<ChainConfig, "SECONDS_PER_SLOT" | "ALTAIR_FORK_EPOCH"> = {
-      SECONDS_PER_SLOT: SECONDS_PER_SLOT,
-      ALTAIR_FORK_EPOCH: ALTAIR_FORK_EPOCH,
+    const validatorCount = 8;
+    const ELECTRA_FORK_EPOCH = 0;
+    const FULU_FORK_EPOCH = 1;
+    const SLOT_DURATION_MS = 2000;
+    const testParams: Partial<ChainConfig> = {
+      SLOT_DURATION_MS,
+      ALTAIR_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+      BELLATRIX_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+      CAPELLA_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+      DENEB_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+      ELECTRA_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+      FULU_FORK_EPOCH: FULU_FORK_EPOCH,
+      BLOB_SCHEDULE: [
+        {
+          EPOCH: 1,
+          MAX_BLOBS_PER_BLOCK: 3,
+        },
+      ],
     };
     const genesisSlotsDelay = 5;
-    const timeout = (SLOTS_PER_EPOCH + genesisSlotsDelay) * testParams.SECONDS_PER_SLOT * 1000;
+    const timeout = (SLOTS_PER_EPOCH + genesisSlotsDelay) * SLOT_DURATION_MS;
 
     afterEach(async () => {
       if (bn) await bn.close();
     });
 
     it("Should return validator indices that are live", async () => {
-      const chainConfig: ChainConfig = {...chainConfigDef, SECONDS_PER_SLOT, ALTAIR_FORK_EPOCH};
+      const chainConfig: ChainConfig = {...chainConfigDef, ...testParams};
       const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
       const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
 
@@ -72,7 +84,7 @@ describe("api / impl / validator", () => {
     });
 
     it("Should return only for previous, current and next epoch", async () => {
-      const chainConfig: ChainConfig = {...chainConfigDef, SECONDS_PER_SLOT, ALTAIR_FORK_EPOCH};
+      const chainConfig: ChainConfig = {...chainConfigDef, ...testParams};
       const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
       const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
 

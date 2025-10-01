@@ -57,6 +57,9 @@ export const gnosisChainConfig: ChainConfig = {
   // Fulu
   FULU_FORK_VERSION: b("0x06000064"),
   FULU_FORK_EPOCH: Infinity,
+  // Gloas
+  GLOAS_FORK_VERSION: b("0x07000064"),
+  GLOAS_FORK_EPOCH: Infinity,
 
   // Deneb
   MAX_BLOBS_PER_BLOCK: 2,

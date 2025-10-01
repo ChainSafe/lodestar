@@ -22,7 +22,6 @@ import {
   isBlindedBeaconBlock,
   isExecutionPayloadAndBlobsBundle,
 } from "@lodestar/types";
-
 import {executionPayloadToPayloadHeader} from "./execution.js";
 
 export function blindedOrFullBlockHashTreeRoot(

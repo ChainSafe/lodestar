@@ -6,6 +6,47 @@ Prometheus is an open-source monitoring system with efficient time series databa
 
 The Lodestar team has setup a script which will copy the latest dashboards compiled by our team for development purposes. By utilizing the script located in `/docker/docker-compose.local_dev.sh`, you can instantly setup the latest dockerized metrics alongside your local beacon node.
 
+## Local Monitoring with Docker Compose
+
+For a quick local monitoring setup, you can use the provided Docker Compose configuration that includes both Prometheus and Grafana with pre-configured dashboards.
+
+### Prerequisites
+
+1. Start your Lodestar beacon node and validator client locally
+2. Ensure they are running on the default ports:
+   - Beacon node: http://localhost:8008
+   - Validator client: http://localhost:5064
+
+### Setup Instructions
+
+1. Run the Docker Compose file in detached mode:
+
+   ```bash
+   docker-compose -f docker/docker-compose.local.yml up -d --build
+   ```
+
+2. Access the monitoring services:
+
+   - **Prometheus metrics**: http://localhost:9090
+   - **Grafana dashboards**: http://localhost:3000
+
+3. To stop and remove the containers:
+   ```bash
+   docker-compose -f docker/docker-compose.local.yml down
+   ```
+
+### Configuration Details
+
+This setup uses `host.docker.internal` to connect to your local Lodestar instance from within the Docker containers. The configuration automatically:
+
+- Scrapes metrics from your local beacon node and validator client
+- Provides pre-configured Grafana dashboards for Lodestar monitoring
+- Sets up proper networking between Prometheus and Grafana services
+
+:::info
+The Docker Compose setup is ideal for local development and testing. For production deployments, consider using the manual setup described in the sections below.
+:::
+
 ## Prometheus Setup
 
 To start, download Prometheus from https://prometheus.io/download/.

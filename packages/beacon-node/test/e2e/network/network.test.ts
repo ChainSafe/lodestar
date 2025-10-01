@@ -1,8 +1,8 @@
 import {PeerId} from "@libp2p/interface";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {config} from "@lodestar/config/default";
 import {phase0} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
-import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {GoodByeReasonCode} from "../../../src/constants/index.js";
 import {Network, NetworkEvent, ReqRespMethod} from "../../../src/network/index.js";
 import {connect, disconnect, onPeerConnect, onPeerDisconnect} from "../../utils/network.js";

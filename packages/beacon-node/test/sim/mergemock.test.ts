@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import {afterAll, afterEach, describe, it, vi} from "vitest";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {ChainConfig} from "@lodestar/config";
@@ -7,8 +8,6 @@ import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Epoch, SignedBeaconBlock, bellatrix} from "@lodestar/types";
 import {LogLevel, sleep} from "@lodestar/utils";
 import {ValidatorProposerConfig} from "@lodestar/validator";
-import {afterAll, afterEach, describe, it, vi} from "vitest";
-
 import {BeaconRestApiServerOpts} from "../../src/api/index.js";
 import {ZERO_HASH} from "../../src/constants/index.js";
 import {BuilderStatus} from "../../src/execution/builder/http.js";
@@ -85,8 +84,8 @@ describe("executionEngine / ExecutionEngineHttp", () => {
     const validatorClientCount = 1;
     const validatorsPerClient = 32;
 
-    const testParams: Pick<ChainConfig, "SECONDS_PER_SLOT"> = {
-      SECONDS_PER_SLOT: 2,
+    const testParams: Pick<ChainConfig, "SLOT_DURATION_MS"> = {
+      SLOT_DURATION_MS: 2000,
     };
 
     // Should reach justification in 6 epochs max.
@@ -112,13 +111,11 @@ describe("executionEngine / ExecutionEngineHttp", () => {
     const genesisSlotsDelay = 8;
 
     const timeout =
-      ((epochsOfMargin + expectedEpochsToFinish) * SLOTS_PER_EPOCH + genesisSlotsDelay) *
-      testParams.SECONDS_PER_SLOT *
-      1000;
+      ((epochsOfMargin + expectedEpochsToFinish) * SLOTS_PER_EPOCH + genesisSlotsDelay) * testParams.SLOT_DURATION_MS;
 
     vi.setConfig({testTimeout: timeout + 2 * timeoutSetupMargin});
 
-    const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
+    const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * (testParams.SLOT_DURATION_MS / 1000);
 
     const testLoggerOpts: TestLoggerOpts = {
       level: LogLevel.info,
@@ -130,7 +127,7 @@ describe("executionEngine / ExecutionEngineHttp", () => {
         format: TimestampFormatCode.EpochSlot,
         genesisTime,
         slotsPerEpoch: SLOTS_PER_EPOCH,
-        secondsPerSlot: testParams.SECONDS_PER_SLOT,
+        secondsPerSlot: testParams.SLOT_DURATION_MS / 1000,
       },
     };
     const loggerNodeA = testLogger("Node-A", testLoggerOpts);
@@ -269,7 +266,7 @@ describe("executionEngine / ExecutionEngineHttp", () => {
     }
 
     // wait for 1 slot to print current epoch stats
-    await sleep(1 * bn.config.SECONDS_PER_SLOT * 1000);
+    await sleep(1 * bn.config.SLOT_DURATION_MS);
     stopInfoTracker();
     console.log("\n\nDone\n\n");
   }

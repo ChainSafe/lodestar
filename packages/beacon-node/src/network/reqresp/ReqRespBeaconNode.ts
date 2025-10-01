@@ -1,4 +1,5 @@
 import {PeerId} from "@libp2p/interface";
+import {Libp2p} from "libp2p";
 import {BeaconConfig, ForkBoundary} from "@lodestar/config";
 import {ForkName, ForkSeq, GENESIS_EPOCH} from "@lodestar/params";
 import {
@@ -14,7 +15,6 @@ import {
 } from "@lodestar/reqresp";
 import {Metadata, Status, phase0, ssz} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
-import {Libp2p} from "libp2p";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
 import {INetworkEventBus, NetworkEvent} from "../events.js";

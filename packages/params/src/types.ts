@@ -103,6 +103,11 @@ export type BeaconPreset = {
   FIELD_ELEMENTS_PER_CELL: number;
   FIELD_ELEMENTS_PER_EXT_BLOB: number;
   KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH: number;
+
+  // GLOAS
+  PTC_SIZE: number;
+  MAX_PAYLOAD_ATTESTATIONS: number;
+  BUILDER_PENDING_WITHDRAWALS_LIMIT: number;
 };
 
 /**
@@ -211,6 +216,11 @@ export const beaconPresetTypes: BeaconPresetTypes = {
   FIELD_ELEMENTS_PER_CELL: "number",
   FIELD_ELEMENTS_PER_EXT_BLOB: "number",
   KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH: "number",
+
+  // GLOAS
+  PTC_SIZE: "number",
+  MAX_PAYLOAD_ATTESTATIONS: "number",
+  BUILDER_PENDING_WITHDRAWALS_LIMIT: "number",
 };
 
 type BeaconPresetTypes = {

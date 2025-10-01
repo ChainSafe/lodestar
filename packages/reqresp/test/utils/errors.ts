@@ -1,5 +1,5 @@
-import {LodestarError, mapValues} from "@lodestar/utils";
 import {expect} from "vitest";
+import {LodestarError, mapValues} from "@lodestar/utils";
 
 export function expectThrowsLodestarError(fn: () => void, expectedErr: LodestarError<any> | string): void {
   try {

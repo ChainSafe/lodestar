@@ -7,7 +7,6 @@ import {
 } from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
 import {ErrorAborted, Logger, TimeoutError, fromHex, isErrorAborted, sleep} from "@lodestar/utils";
-
 import {IBeaconDb} from "../db/index.js";
 import {Metrics} from "../metrics/index.js";
 import {Eth1DataCache} from "./eth1DataCache.js";

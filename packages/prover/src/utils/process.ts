@@ -13,7 +13,7 @@ import {getResponseForRequest, isBatchRequest, isRequest} from "./json_rpc.js";
 import {ELRpcProvider} from "./rpc_provider.js";
 import {isNullish} from "./validation.js";
 
-// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+// biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
 export const verifiableMethodHandlers: Record<string, ELVerifiedRequestHandler<any, any>> = {
   eth_getBalance: eth_getBalance,
   eth_getTransactionCount: eth_getTransactionCount,

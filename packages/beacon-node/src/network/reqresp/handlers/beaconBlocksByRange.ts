@@ -1,5 +1,5 @@
 import {BeaconConfig} from "@lodestar/config";
-import {GENESIS_SLOT, MAX_REQUEST_BLOCKS, MAX_REQUEST_BLOCKS_DENEB, isForkPostDeneb} from "@lodestar/params";
+import {GENESIS_SLOT, isForkPostDeneb} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {deneb, phase0} from "@lodestar/types";
@@ -52,8 +52,10 @@ export async function* onBeaconBlocksByRange(
 
         const blockBytes = await unfinalized.getBinary(fromHex(block.blockRoot));
         if (!blockBytes) {
-          // Handle the same to onBeaconBlocksByRange
-          throw new ResponseError(RespStatus.SERVER_ERROR, `No item for root ${block.blockRoot} slot ${block.slot}`);
+          throw new ResponseError(
+            RespStatus.SERVER_ERROR,
+            `No block for root ${block.blockRoot} slot ${block.slot}, startSlot=${startSlot} endSlot=${endSlot} finalizedSlot=${finalizedSlot}`
+          );
         }
 
         yield {
@@ -88,8 +90,8 @@ export function validateBeaconBlocksByRangeRequest(
   // step > 1 is deprecated, see https://github.com/ethereum/consensus-specs/pull/2856
 
   const maxRequestBlocks = isForkPostDeneb(config.getForkName(startSlot))
-    ? MAX_REQUEST_BLOCKS_DENEB
-    : MAX_REQUEST_BLOCKS;
+    ? config.MAX_REQUEST_BLOCKS_DENEB
+    : config.MAX_REQUEST_BLOCKS;
 
   if (count > maxRequestBlocks) {
     count = maxRequestBlocks;

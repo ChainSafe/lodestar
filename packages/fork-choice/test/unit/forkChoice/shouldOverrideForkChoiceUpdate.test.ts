@@ -1,10 +1,10 @@
+import {beforeEach, describe, expect, it} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
-import {beforeEach, describe, expect, it} from "vitest";
 import {NotReorgedReason} from "../../../src/forkChoice/interface.js";
 import {ExecutionStatus, ForkChoice, IForkChoiceStore, ProtoArray, ProtoBlock} from "../../../src/index.js";
 import {getBlockRoot, getStateRoot} from "../../utils/index.js";
@@ -194,7 +194,7 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
 
       const secFromSlot = 0;
       const currentSlot = blockSeenSlot ?? headBlock.slot;
-      const forkChoice = new ForkChoice(config, fcStore, protoArr, {
+      const forkChoice = new ForkChoice(config, fcStore, protoArr, null, {
         proposerBoost: true,
         proposerBoostReorg: true,
       });

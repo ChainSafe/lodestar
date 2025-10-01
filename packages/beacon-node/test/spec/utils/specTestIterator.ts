@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+import {describe, it} from "vitest";
 import {ForkName} from "@lodestar/params";
 import {describeDirectorySpecTest} from "@lodestar/spec-test-util";
-import {describe, it} from "vitest";
 import {RunnerType, TestRunner} from "./types.js";
 
 const ARTIFACT_FILENAMES = new Set([
@@ -59,7 +59,7 @@ const coveredTestRunners = [
 // ],
 // ```
 export const defaultSkipOpts: SkipOpts = {
-  skippedForks: ["eip7594", "eip7732", "eip7805"],
+  skippedForks: ["eip7732", "eip7805", "gloas"],
   // TODO: capella
   // BeaconBlockBody proof in lightclient is the new addition in v1.3.0-rc.2-hotfix
   // Skip them for now to enable subsequently

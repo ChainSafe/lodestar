@@ -26,7 +26,7 @@ export function getLodestarApi({
 }: Pick<ApiModules, "chain" | "config" | "db" | "network" | "sync">): ApplicationMethods<routes.lodestar.Endpoints> {
   let writingHeapdump = false;
   let writingProfile = false;
-  const defaultProfileMs = SLOTS_PER_EPOCH * config.SECONDS_PER_SLOT * 1000;
+  const defaultProfileMs = SLOTS_PER_EPOCH * config.SLOT_DURATION_MS;
 
   return {
     async writeHeapdump({thread = "main", dirpath = "."}) {
@@ -115,7 +115,7 @@ export function getLodestarApi({
         data: (chain as BeaconChain)["blockProcessor"].jobQueue.getItems().map((item) => {
           const [blockInputs, opts] = item.args;
           return {
-            blockSlots: blockInputs.map((blockInput) => blockInput.block.message.slot),
+            blockSlots: blockInputs.map((blockInput) => blockInput.slot),
             jobOpts: opts,
             addedTimeMs: item.addedTimeMs,
           };

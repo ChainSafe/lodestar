@@ -11,8 +11,9 @@ import {
   computeDomain,
   computeEpochAtSlot,
   computeSigningRoot,
+  getBlockRoot,
+  getBlockRootAtSlot,
 } from "../../../src/index.js";
-import {getBlockRoot, getBlockRootAtSlot} from "../../../src/index.js";
 
 export type BlockOpts = {
   proposerSlashingLen: number;

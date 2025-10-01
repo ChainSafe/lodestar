@@ -1,8 +1,8 @@
+import {describe, expect, it} from "vitest";
 import {ChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
-import {describe, expect, it} from "vitest";
 import {
   Eth1DataGetter,
   getEth1VotesToConsider,

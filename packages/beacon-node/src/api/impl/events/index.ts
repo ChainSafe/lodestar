@@ -10,7 +10,7 @@ export function getEventsApi({
       const onAbortFns: (() => void)[] = [];
 
       for (const topic of topics) {
-        // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+        // biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
         const handler = (data: any): void => {
           // TODO: What happens if this handler throws? Does it break the other chain.emitter listeners?
 
