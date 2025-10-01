@@ -93,18 +93,23 @@ export class InclusionListService {
         try {
           signedInclusionLists.push(await this.validatorStore.signInclusionList(duty, inclusionList));
         } catch (e) {
-          this.logger.error("Error signing inclusion list", {}, e as Error);
+          this.logger.error("Error signing inclusion list", {slot: duty.slot}, e as Error);
         }
       })
     );
 
     // Publish ILs right away
     for (const signedInclusionList of signedInclusionLists) {
+      const {slot, validatorIndex, transactions} = signedInclusionList.message;
       try {
         (await this.api.validator.publishInclusionList({signedInclusionList})).assertOk();
-        this.logger.info(`Published inclusionList ${signedInclusionList.message}`);
+        this.logger.info("Published inclusionList", {
+          slot,
+          validatorIndex,
+          transactions: transactions.length,
+        });
       } catch (e) {
-        this.logger.error("Error publishing inclusionList", {}, e as Error);
+        this.logger.error("Error publishing inclusionList", {slot}, e as Error);
       }
     }
   }
