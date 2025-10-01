@@ -580,7 +580,7 @@ export async function validateColumnsByRangeResponse(
   request: fulu.DataColumnSidecarsByRangeRequest,
   blocks: ValidatedSlot[],
   columnSidecars: fulu.DataColumnSidecars
-): Promise<WarnResult<ValidatedSlots, DownloadByRangeError>> {
+): Promise<WarnResult<ValidatedColumnSidecars[], DownloadByRangeError>> {
   const warnings: DownloadByRangeError[] = [];
   const seenColumns = new Map<Slot, fulu.DataColumnSidecars>();
 
@@ -590,6 +590,18 @@ export async function validateColumnsByRangeResponse(
     const slot = columnSidecar.signedBlockHeader.message.slot;
 
     if (slot === currentSlot) {
+      if (currentSlotSeen.find((c) => c.index === columnSidecar.index)) {
+        warnings.push(
+          new DownloadByRangeError({
+            code: DownloadByRangeErrorCode.DUPLICATE_COLUMN,
+            slot,
+            index: columnSidecar.index,
+          })
+        );
+
+        continue;
+      }
+
       // check for index order, then push and proceed
       const lastIndex = currentSlotSeen.at(-1)?.index;
 
@@ -610,15 +622,30 @@ export async function validateColumnsByRangeResponse(
       }
     } else if (slot > currentSlot) {
       // increment currentSlot
-      seenColumns.set(currentSlot, currentSlotSeen);
+      if (currentSlotSeen.length) {
+        // avoid setting on first iteration or if no columns in the array
+        seenColumns.set(currentSlot, currentSlotSeen);
+      }
 
       currentSlot = slot;
-      const existingCurrentSlotSee = seenColumns.has(slot);
+      const existingCurrentSlotSeen = seenColumns.has(slot);
       currentSlotSeen = seenColumns.get(slot) ?? [];
+
+      if (currentSlotSeen.find((c) => c.index === columnSidecar.index)) {
+        warnings.push(
+          new DownloadByRangeError({
+            code: DownloadByRangeErrorCode.DUPLICATE_COLUMN,
+            slot,
+            index: columnSidecar.index,
+          })
+        );
+
+        continue;
+      }
 
       currentSlotSeen.push(columnSidecar);
 
-      if (existingCurrentSlotSee) {
+      if (existingCurrentSlotSeen) {
         warnings.push(
           new DownloadByRangeError(
             {
@@ -646,6 +673,18 @@ export async function validateColumnsByRangeResponse(
       const slotColumns = seenColumns.get(slot) ?? [];
       const lastIndex = slotColumns.at(-1)?.index;
 
+      if (slotColumns.find((c) => c.index === columnSidecar.index)) {
+        warnings.push(
+          new DownloadByRangeError({
+            code: DownloadByRangeErrorCode.DUPLICATE_COLUMN,
+            slot,
+            index: columnSidecar.index,
+          })
+        );
+
+        continue;
+      }
+
       slotColumns.push(columnSidecar);
 
       if (lastIndex && lastIndex > columnSidecar.index) {
@@ -658,18 +697,24 @@ export async function validateColumnsByRangeResponse(
             "Column indices out of order within a slot"
           )
         );
+        // sort as they could be out of order
+        slotColumns.sort((a, b) => a.index - b.index);
       }
 
       seenColumns.set(slot, slotColumns);
     }
+
+    seenColumns.set(currentSlot, currentSlotSeen);
   }
 
-  const validationPromises: Promise<ValidatedColumnSidecars[]>[] = [];
+  const validationPromises: Promise<ValidatedColumnSidecars>[] = [];
 
   for (const {blockRoot, block} of blocks) {
     const slot = block.message.slot;
     // TODO(gloas): Post-gloas's blobKzgCommitments is not in beacon block body. Need to source it from somewhere else.
-    const blobCount = (block as SignedBeaconBlock<ForkPostFulu & ForkPreGloas>).message.body.blobKzgCommitments.length;
+    // if block without columns is passed default to zero and throw below
+    const blobCount =
+      (block as SignedBeaconBlock<ForkPostFulu & ForkPreGloas>).message.body.blobKzgCommitments?.length ?? 0;
     const columnSidecars = seenColumns.get(slot);
     // conditional a bit wonky so TSC knows we have dataColumns[] below
     if (!columnSidecars) {
@@ -839,6 +884,7 @@ export enum DownloadByRangeErrorCode {
   MISSING_COLUMNS = "DOWNLOAD_BY_RANGE_ERROR_MISSING_COLUMNS",
   OVER_COLUMNS = "DOWNLOAD_BY_RANGE_ERROR_OVER_COLUMNS",
   EXTRA_COLUMNS = "DOWNLOAD_BY_RANGE_ERROR_EXTRA_COLUMNS",
+  DUPLICATE_COLUMN = "DOWNLOAD_BY_RANGE_ERROR_DUPLICATE_COLUMN",
   OUT_OF_ORDER_COLUMNS = "DOWNLOAD_BY_RANGE_OUT_OF_ORDER_COLUMNS",
 
   /** Cached block input type mismatches new data */
@@ -918,6 +964,11 @@ export type DownloadByRangeErrorType =
       slot: Slot;
       blockRoot: string;
       missingIndices: string;
+    }
+  | {
+      code: DownloadByRangeErrorCode.DUPLICATE_COLUMN;
+      slot: Slot;
+      index: number;
     }
   | {
       code: DownloadByRangeErrorCode.EXTRA_COLUMNS;
