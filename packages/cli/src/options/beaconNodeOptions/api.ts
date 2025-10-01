@@ -1,8 +1,8 @@
 import {IBeaconNodeOptions, allNamespaces, defaultOptions} from "@lodestar/beacon-node";
 import {CliCommandOptions} from "@lodestar/utils";
 
-const enabledAll = "*";
-const enabledAllBashFriendly = "all";
+export const enabledAll = "*";
+export const enabledAllBashFriendly = "all";
 
 export type ApiArgs = {
   "api.maxGindicesInProof"?: number;

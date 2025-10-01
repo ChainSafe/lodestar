@@ -30,6 +30,7 @@ import {
 } from "../../util/index.js";
 import {parseBuilderBoostFactor, parseBuilderSelection} from "../../util/proposerConfig.js";
 import {getVersionData} from "../../util/version.js";
+import {enabledAll, enabledAllBashFriendly} from "../../options/beaconNodeOptions/api.js";
 import {KeymanagerApi} from "./keymanager/impl.js";
 import {IPersistedKeysBackend} from "./keymanager/interface.js";
 import {PersistedKeysBackend} from "./keymanager/persistedKeys.js";
@@ -207,7 +208,7 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
       proposerConfigWriteDisabled
     );
     // Map bash-friendly 'all' to CORS spec '*'
-    const cors = args["keymanager.cors"] === "all" ? "*" : args["keymanager.cors"];
+    const cors = args["keymanager.cors"] === enabledAllBashFriendly ? enabledAll : args["keymanager.cors"];
     const keymanagerServer = new KeymanagerRestApiServer(
       {
         address: args["keymanager.address"],

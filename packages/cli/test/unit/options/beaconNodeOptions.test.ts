@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import {describe, expect, it} from "vitest";
-import {ArchiveMode, IBeaconNodeOptions} from "@lodestar/beacon-node";
+import {ArchiveMode, IBeaconNodeOptions, allNamespaces} from "@lodestar/beacon-node";
 import {RecursivePartial} from "@lodestar/utils";
 import {BeaconNodeArgs, parseBeaconNodeArgs} from "../../../src/options/beaconNodeOptions/index.js";
 import {getTestdirPath} from "../../utils.js";
@@ -263,17 +263,7 @@ describe("options / beaconNodeOptions", () => {
 
     const options = parseBeaconNodeArgs(beaconNodeArgsPartial);
     // 'all' should expand to all namespaces
-    expect(options.api?.rest?.api).toEqual([
-      "beacon",
-      "config",
-      "debug",
-      "events",
-      "lightclient",
-      "lodestar",
-      "node",
-      "proof",
-      "validator",
-    ]);
+    expect(options.api?.rest?.api).toEqual(allNamespaces);
   });
 
   it("Should parse bash-friendly 'all' for rest.cors", () => {
@@ -295,17 +285,7 @@ describe("options / beaconNodeOptions", () => {
 
     const options = parseBeaconNodeArgs(beaconNodeArgsPartial);
     // '*' should still work and expand to all namespaces
-    expect(options.api?.rest?.api).toEqual([
-      "beacon",
-      "config",
-      "debug",
-      "events",
-      "lightclient",
-      "lodestar",
-      "node",
-      "proof",
-      "validator",
-    ]);
+    expect(options.api?.rest?.api).toEqual(allNamespaces);
   });
 
   it("Should maintain backward compatibility with '*' for rest.cors", () => {
