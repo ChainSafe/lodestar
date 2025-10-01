@@ -535,6 +535,8 @@ export type ValidatedSlot = {
 export type ValidatedSlots = Map<Slot, ValidateSlot>;
 
 /**
+ * Should not be called directly. Only exported for unit testing purposes
+ *
  * Spec states:
  * 1) must be within range [start_slot, start_slot + count]
  * 2) should respond with all columns in the range or and 3:ResourceUnavailable (and potentially get down-scored)
@@ -574,7 +576,7 @@ export type ValidatedSlots = Map<Slot, ValidateSlot>;
  * - non-sparse response (any missing block is a skipped slot not a bad response)
  * - last block is last slot received
  */
-export async function validateColumnsByRangeResponse2(
+export async function validateColumnsByRangeResponse(
   request: fulu.DataColumnSidecarsByRangeRequest,
   blocks: ValidatedSlot[],
   columnSidecars: fulu.DataColumnSidecars
@@ -583,39 +585,83 @@ export async function validateColumnsByRangeResponse2(
   const seenColumns = new Map<Slot, fulu.DataColumnSidecars>();
 
   let currentSlot = -1;
-  let currentSlotSeen = [];
+  let currentSlotSeen: fulu.DataColumnSidecars = [];
   for (const columnSidecar of columnSidecars) {
     const slot = columnSidecar.signedBlockHeader.message.slot;
+
     if (slot === currentSlot) {
-      // push and proceed
-      const lastIndex = currentSlotSeen.at(currentSlotSeen.length)?.index;
-      if (lastIndex && lastIndex > columnSidecar.index) {
-        warnings.push();
-      }
+      // check for index order, then push and proceed
+      const lastIndex = currentSlotSeen.at(-1)?.index;
+
       currentSlotSeen.push(columnSidecar);
+
+      // check for out of order and sort if incorrect
+      if (lastIndex && lastIndex > columnSidecar.index) {
+        warnings.push(
+          new DownloadByRangeError(
+            {
+              code: DownloadByRangeErrorCode.OUT_OF_ORDER_COLUMNS,
+              slot,
+            },
+            "Column indices out of order within a slot"
+          )
+        );
+        currentSlotSeen.sort((a, b) => a.index - b.index);
+      }
     } else if (slot > currentSlot) {
       // increment currentSlot
       seenColumns.set(currentSlot, currentSlotSeen);
+
       currentSlot = slot;
+      const existingCurrentSlotSee = seenColumns.has(slot);
       currentSlotSeen = seenColumns.get(slot) ?? [];
-      if (currentSlotSeen.length) {
-        throw new Error();
-      }
+
       currentSlotSeen.push(columnSidecar);
+
+      if (existingCurrentSlotSee) {
+        warnings.push(
+          new DownloadByRangeError(
+            {
+              code: DownloadByRangeErrorCode.OUT_OF_ORDER_COLUMNS,
+              slot,
+            },
+            "Existing currentSlotSeen was found, slots delivered out of order"
+          )
+        );
+        // sort as they could be out of order
+        currentSlotSeen.sort((a, b) => a.index - b.index);
+      }
     } else {
       // out of order
-      warnings.push();
+      warnings.push(
+        new DownloadByRangeError(
+          {
+            code: DownloadByRangeErrorCode.OUT_OF_ORDER_COLUMNS,
+            slot,
+          },
+          "ColumnSidecars received out of slot order"
+        )
+      );
+
       const slotColumns = seenColumns.get(slot) ?? [];
-      const lastIndex = slotColumns.at(slotColumns.length)?.index;
-      if (lastIndex && lastIndex > columnSidecar.index) {
-        warnings.push();
-      }
+      const lastIndex = slotColumns.at(-1)?.index;
+
       slotColumns.push(columnSidecar);
+
+      if (lastIndex && lastIndex > columnSidecar.index) {
+        warnings.push(
+          new DownloadByRangeError(
+            {
+              code: DownloadByRangeErrorCode.OUT_OF_ORDER_COLUMNS,
+              slot,
+            },
+            "Column indices out of order within a slot"
+          )
+        );
+      }
+
       seenColumns.set(slot, slotColumns);
     }
-
-    // const seenSlot = seenSlot.push(columnSidecar);
-    // seenColumns.set(slot, seenSlot);
   }
 
   const validationPromises: Promise<ValidatedColumnSidecars[]>[] = [];
@@ -906,6 +952,7 @@ export enum DownloadByRangeErrorCode {
   MISSING_COLUMNS = "DOWNLOAD_BY_RANGE_ERROR_MISSING_COLUMNS",
   OVER_COLUMNS = "DOWNLOAD_BY_RANGE_ERROR_OVER_COLUMNS",
   EXTRA_COLUMNS = "DOWNLOAD_BY_RANGE_ERROR_EXTRA_COLUMNS",
+  OUT_OF_ORDER_COLUMNS = "DOWNLOAD_BY_RANGE_OUT_OF_ORDER_COLUMNS",
 
   /** Cached block input type mismatches new data */
   MISMATCH_BLOCK_INPUT_TYPE = "DOWNLOAD_BY_RANGE_ERROR_MISMATCH_BLOCK_INPUT_TYPE",
@@ -966,7 +1013,7 @@ export type DownloadByRangeErrorType =
       actual: number;
     }
   | {
-      code: DownloadByRangeErrorCode.OUT_OF_ORDER_BLOBS;
+      code: DownloadByRangeErrorCode.OUT_OF_ORDER_BLOBS | DownloadByRangeErrorCode.OUT_OF_ORDER_COLUMNS;
       slot: number;
     }
   | {
