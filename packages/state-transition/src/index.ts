@@ -11,6 +11,7 @@ export {becomesNewEth1Data} from "./block/processEth1Data.js";
 export {assertValidProposerSlashing} from "./block/processProposerSlashing.js";
 // BeaconChain validation
 export {isValidVoluntaryExit} from "./block/processVoluntaryExit.js";
+export {VoluntaryExitValidity, getVoluntaryExitValidity} from "./block/processVoluntaryExit.js";
 // Withdrawals for new blocks
 export {getExpectedWithdrawals} from "./block/processWithdrawals.js";
 export {ProposerRewardType} from "./block/types.js";

@@ -49,7 +49,7 @@ export type GetByBlobOptions = {
  * - beaconBlocksMaybeBlobsByRange
  * - unavailableBeaconBlobsByRoot (beaconBlocksMaybeBlobsByRoot)
  * - publishBlock in the beacon/blocks/index.ts API
- *   https://github.com/ChainSafe/lodestar/blob/unstable/packages/beacon-node/src/api/impl/beacon/blocks/index.ts#L62
+ *   https://github.com/ChainSafe/lodestar/blob/unstable/packages/beacon-node/src/api/impl/beacon/blocks/#L62
  * - maybeValidateBlobs in verifyBlocksDataAvailability (is_data_available spec function)
  *   https://github.com/ChainSafe/lodestar/blob/unstable/packages/beacon-node/src/chain/blocks/verifyBlocksDataAvailability.ts#L111
  *
