@@ -4,11 +4,11 @@ import {Readable} from "node:stream";
 import stream from "node:stream/promises";
 import {ReadableStream as NodeReadableStream} from "node:stream/web";
 import yaml from "js-yaml";
+import {HttpHeader, MediaType} from "@lodestar/api";
 import {fetch} from "@lodestar/utils";
 
 const {load, dump, FAILSAFE_SCHEMA, Type} = yaml;
 
-import {HttpHeader, MediaType} from "@lodestar/api";
 import {mkdir} from "./fs.js";
 
 export const yamlSchema = FAILSAFE_SCHEMA.extend({
