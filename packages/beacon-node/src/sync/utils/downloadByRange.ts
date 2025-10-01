@@ -15,7 +15,6 @@ import {validateBlockDataColumnSidecars} from "../../chain/validation/dataColumn
 import {INetwork} from "../../network/index.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {WarnResult} from "../../util/wrapError.js";
-import {DownloadByRootErrorCode} from "./downloadByRoot.js";
 
 export type DownloadByRangeRequests = {
   blocksRequest?: phase0.BeaconBlocksByRangeRequest;
@@ -290,7 +289,7 @@ export async function validateResponses({
   if ((blobsRequest || columnsRequest) && !(blocks || batchBlocks)) {
     throw new DownloadByRangeError(
       {
-        code: DownloadByRangeErrorCode.MISSING_BLOCKS,
+        code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
         ...requestsLogMeta({blobsRequest, columnsRequest}),
       },
       "No blocks to validate data requests against"
@@ -318,7 +317,7 @@ export async function validateResponses({
   if (!dataRequestBlocks.length) {
     throw new DownloadByRangeError(
       {
-        code: DownloadByRangeErrorCode.MISSING_BLOCKS,
+        code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
         ...requestsLogMeta({blobsRequest, columnsRequest}),
       },
       "No blocks in data request slot range to validate data response against"
@@ -863,7 +862,7 @@ function requestsLogMeta({blocksRequest, blobsRequest, columnsRequest}: Download
 }
 
 export enum DownloadByRangeErrorCode {
-  MISSING_BLOCKS = "DOWNLOAD_BY_RANGE_ERROR_MISSING_BLOCKS",
+  MISSING_BLOCK_RESPONSE = "DOWNLOAD_BY_RANGE_ERROR_MISSING_BLOCK_RESPONSE",
   MISSING_BLOBS_RESPONSE = "DOWNLOAD_BY_RANGE_ERROR_MISSING_BLOBS_RESPONSE",
   MISSING_COLUMNS_RESPONSE = "DOWNLOAD_BY_RANGE_ERROR_MISSING_COLUMNS_RESPONSE",
 
@@ -893,12 +892,12 @@ export enum DownloadByRangeErrorCode {
 
 export type DownloadByRangeErrorType =
   | {
-      code: DownloadByRootErrorCode.MISSING_BLOCK_RESPONSE;
+      code: DownloadByRangeErrorCode.MISSING_BLOCK_RESPONSE;
       expectedCount: number;
     }
   | {
       code:
-        | DownloadByRangeErrorCode.MISSING_BLOCKS
+        | DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE
         | DownloadByRangeErrorCode.MISSING_BLOBS_RESPONSE
         | DownloadByRangeErrorCode.MISSING_COLUMNS_RESPONSE;
       blockStartSlot?: number;
@@ -907,10 +906,6 @@ export type DownloadByRangeErrorType =
       blobCount?: number;
       columnStartSlot?: number;
       columnCount?: number;
-    }
-  | {
-      code: DownloadByRootErrorCode.MISSING_BLOCK_RESPONSE;
-      expectedCount: number;
     }
   | {
       code: DownloadByRangeErrorCode.OUT_OF_RANGE_BLOCKS;
