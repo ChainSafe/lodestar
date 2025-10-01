@@ -99,7 +99,7 @@ export async function validateGossipDataColumnSidecar(
   // this is something we should change this in the future to make the code airtight to the spec.
   // 7) [REJECT] The sidecar's block's parent passes validation.
   const blockState = await chain.regen
-    .getBlockSlotState(parentRoot, blockHeader.slot, {dontTransferCache: true}, RegenCaller.validateGossipBlock)
+    .getBlockSlotState(parentRoot, blockHeader.slot, {dontTransferCache: true}, RegenCaller.validateGossipDataColumn)
     .catch(() => {
       throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
         code: DataColumnSidecarErrorCode.PARENT_UNKNOWN,
