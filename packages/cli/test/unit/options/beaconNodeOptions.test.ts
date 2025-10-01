@@ -254,4 +254,68 @@ describe("options / beaconNodeOptions", () => {
     const options = parseBeaconNodeArgs(beaconNodeArgsPartial);
     expect(options.eth1).toEqual(expectedOptions.eth1);
   });
+
+  it("Should parse bash-friendly 'all' for rest.namespace", () => {
+    const beaconNodeArgsPartial = {
+      rest: true,
+      "rest.namespace": ["all"],
+    } as BeaconNodeArgs;
+
+    const options = parseBeaconNodeArgs(beaconNodeArgsPartial);
+    // 'all' should expand to all namespaces
+    expect(options.api?.rest?.api).toEqual([
+      "beacon",
+      "config",
+      "debug",
+      "events",
+      "lightclient",
+      "lodestar",
+      "node",
+      "proof",
+      "validator",
+    ]);
+  });
+
+  it("Should parse bash-friendly 'all' for rest.cors", () => {
+    const beaconNodeArgsPartial = {
+      rest: true,
+      "rest.cors": "all",
+    } as BeaconNodeArgs;
+
+    const options = parseBeaconNodeArgs(beaconNodeArgsPartial);
+    // 'all' should be mapped to '*' for CORS spec compliance
+    expect(options.api?.rest?.cors).toEqual("*");
+  });
+
+  it("Should maintain backward compatibility with '*' for rest.namespace", () => {
+    const beaconNodeArgsPartial = {
+      rest: true,
+      "rest.namespace": ["*"],
+    } as BeaconNodeArgs;
+
+    const options = parseBeaconNodeArgs(beaconNodeArgsPartial);
+    // '*' should still work and expand to all namespaces
+    expect(options.api?.rest?.api).toEqual([
+      "beacon",
+      "config",
+      "debug",
+      "events",
+      "lightclient",
+      "lodestar",
+      "node",
+      "proof",
+      "validator",
+    ]);
+  });
+
+  it("Should maintain backward compatibility with '*' for rest.cors", () => {
+    const beaconNodeArgsPartial = {
+      rest: true,
+      "rest.cors": "*",
+    } as BeaconNodeArgs;
+
+    const options = parseBeaconNodeArgs(beaconNodeArgsPartial);
+    // '*' should still work
+    expect(options.api?.rest?.cors).toEqual("*");
+  });
 });

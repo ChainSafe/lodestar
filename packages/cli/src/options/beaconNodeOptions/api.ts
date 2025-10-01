@@ -2,6 +2,7 @@ import {IBeaconNodeOptions, allNamespaces, defaultOptions} from "@lodestar/beaco
 import {CliCommandOptions} from "@lodestar/utils";
 
 const enabledAll = "*";
+const enabledAllBashFriendly = "all";
 
 export type ApiArgs = {
   "api.maxGindicesInProof"?: number;
@@ -17,11 +18,29 @@ export type ApiArgs = {
 };
 
 export function parseArgs(args: ApiArgs): IBeaconNodeOptions["api"] {
+  // Apply namespace coerce logic
+  let namespaces = args["rest.namespace"];
+  if (namespaces) {
+    // Enable all - support both '*' (backward compat) and 'all' (bash-friendly)
+    if (namespaces.includes(enabledAll) || namespaces.includes(enabledAllBashFriendly)) {
+      namespaces = allNamespaces;
+    } else {
+      // Parse ["debug,lodestar"] to ["debug", "lodestar"]
+      namespaces = namespaces.flatMap((val) => val.split(","));
+    }
+  }
+
+  // Apply cors coerce logic
+  let cors = args["rest.cors"];
+  if (cors === enabledAllBashFriendly) {
+    cors = enabledAll;
+  }
+
   return {
     maxGindicesInProof: args["api.maxGindicesInProof"],
     rest: {
-      api: args["rest.namespace"] as IBeaconNodeOptions["api"]["rest"]["api"],
-      cors: args["rest.cors"],
+      api: namespaces as IBeaconNodeOptions["api"]["rest"]["api"],
+      cors,
       enabled: args.rest,
       address: args["rest.address"],
       port: args["rest.port"],
@@ -51,21 +70,15 @@ export const options: CliCommandOptions<ApiArgs> = {
 
   "rest.namespace": {
     type: "array",
-    choices: [...allNamespaces, enabledAll],
-    description: `Pick namespaces to expose for HTTP API. Set to '${enabledAll}' to enable all namespaces`,
+    choices: [...allNamespaces, enabledAll, enabledAllBashFriendly],
+    description: `Pick namespaces to expose for HTTP API. Set to '${enabledAllBashFriendly}' (or '${enabledAll}') to enable all namespaces`,
     defaultDescription: JSON.stringify(defaultOptions.api.rest.api),
     group: "api",
-    coerce: (namespaces: string[]): string[] => {
-      // Enable all
-      if (namespaces.includes(enabledAll)) return allNamespaces;
-      // Parse ["debug,lodestar"] to ["debug", "lodestar"]
-      return namespaces.flatMap((val) => val.split(","));
-    },
   },
 
   "rest.cors": {
     type: "string",
-    description: "Configures the Access-Control-Allow-Origin CORS header for HTTP API",
+    description: `Configures the Access-Control-Allow-Origin CORS header for HTTP API. Use '${enabledAllBashFriendly}' to allow all origins`,
     defaultDescription: defaultOptions.api.rest.cors,
     group: "api",
   },

@@ -128,7 +128,8 @@ export const keymanagerOptions: CliCommandOptions<KeymanagerArgs> = {
   },
   "keymanager.cors": {
     type: "string",
-    description: "Configures the Access-Control-Allow-Origin CORS header for key manager API",
+    description:
+      "Configures the Access-Control-Allow-Origin CORS header for key manager API. Use 'all' to allow all origins",
     defaultDescription: keymanagerRestApiServerOptsDefault.cors,
     group: "keymanager",
   },

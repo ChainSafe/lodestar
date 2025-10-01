@@ -206,11 +206,13 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
       abortController.signal,
       proposerConfigWriteDisabled
     );
+    // Map bash-friendly 'all' to CORS spec '*'
+    const cors = args["keymanager.cors"] === "all" ? "*" : args["keymanager.cors"];
     const keymanagerServer = new KeymanagerRestApiServer(
       {
         address: args["keymanager.address"],
         port: args["keymanager.port"],
-        cors: args["keymanager.cors"],
+        cors,
         isAuthEnabled: args["keymanager.auth"],
         headerLimit: args["keymanager.headerLimit"],
         bodyLimit: args["keymanager.bodyLimit"],
