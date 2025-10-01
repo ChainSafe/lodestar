@@ -668,7 +668,8 @@ export async function validateColumnsByRangeResponse(
 
   for (const {blockRoot, block} of blocks) {
     const slot = block.message.slot;
-    const blobCount = (block as SignedBeaconBlock<ForkPostDeneb>).message.body.blobKzgCommitments.length;
+    // TODO(gloas): Post-gloas's blobKzgCommitments is not in beacon block body. Need to source it from somewhere else.
+    const blobCount = (block as SignedBeaconBlock<ForkPostFulu & ForkPreGloas>).message.body.blobKzgCommitments.length;
     const columnSidecars = seenColumns.get(slot);
     // conditional a bit wonky so TSC knows we have dataColumns[] below
     if (!columnSidecars) {
@@ -749,122 +750,8 @@ export async function validateColumnsByRangeResponse(
   const validatedColumns = await Promise.all(validationPromises);
   return {
     result: validatedColumns.flat(),
-    warnings,
+    warnings: warnings.length ? warnings : null,
   };
-}
-
-/**
- * Should not be called directly. Only exported for unit testing purposes
- */
-export async function validateColumnsByRangeResponse(
-  request: fulu.DataColumnSidecarsByRangeRequest,
-  dataRequestBlocks: ValidatedBlock[],
-  columnSidecars: fulu.DataColumnSidecars
-): Promise<WarnResult<ValidatedColumnSidecars[], DownloadByRangeError>> {
-  // Expected column count considering currently-validated batch blocks
-  // TODO GLOAS: Post-gloas's blobKzgCommitments is not in beacon block body. Need to source it from somewhere else.
-  const expectedColumnCount = dataRequestBlocks.reduce((acc, {block}) => {
-    return (block as SignedBeaconBlock<ForkPostDeneb & ForkPreGloas>).message.body.blobKzgCommitments.length > 0
-      ? request.columns.length + acc
-      : acc;
-  }, 0);
-  const nextSlot = dataRequestBlocks.length
-    ? (dataRequestBlocks.at(-1) as ValidatedBlock).block.message.slot + 1
-    : request.startSlot;
-  const possiblyMissingBlocks = nextSlot - request.startSlot + request.count;
-
-  // Allow for extra columns if some blocks are missing from the end of a batch
-  // Eg: If we requested 10 blocks but only 8 were returned, allow for up to 2 * columns.length extra columns
-  const maxColumnCount = expectedColumnCount + possiblyMissingBlocks * request.columns.length;
-
-  if (columnSidecars.length > maxColumnCount) {
-    // this never happens on devnet, so throw error for now
-    throw new DownloadByRangeError(
-      {
-        code: DownloadByRangeErrorCode.OVER_COLUMNS,
-        max: maxColumnCount,
-        actual: columnSidecars.length,
-      },
-      "Extra data columns received in DataColumnSidecarsByRange response"
-    );
-  }
-
-  const warnings: DownloadByRangeError[] = [];
-  // no need to check for columnSidecars.length  vs expectedColumnCount here, will be checked per-block below
-  const requestedColumns = new Set(request.columns);
-  const validateSidecarsPromises: Promise<ValidatedColumnSidecars>[] = [];
-
-  /**
-   * loop through the block to validate
-   */
-  for (let blockIndex = 0, columnSidecarIndex = 0; blockIndex < dataRequestBlocks.length; blockIndex++) {
-    const {block, blockRoot} = dataRequestBlocks[blockIndex];
-    const slot = block.message.slot;
-    const blockRootHex = toRootHex(blockRoot);
-    // TODO GLOAS: Post-gloas's blobKzgCommitments is not in beacon block body. Need to source it from somewhere else.
-    const blockKzgCommitments = (block as SignedBeaconBlock<ForkPostFulu & ForkPreGloas>).message.body
-      .blobKzgCommitments;
-    const expectedColumns = blockKzgCommitments.length ? request.columns.length : 0;
-
-    if (expectedColumns === 0) {
-      continue;
-    }
-    const blockColumnSidecars: fulu.DataColumnSidecar[] = [];
-    while (columnSidecarIndex < columnSidecars.length) {
-      const columnSidecar = columnSidecars[columnSidecarIndex];
-      if (columnSidecar.signedBlockHeader.message.slot !== block.message.slot) {
-        // We've reached columns for the next block
-        break;
-      }
-      blockColumnSidecars.push(columnSidecar);
-      columnSidecarIndex++;
-    }
-
-    if (blockColumnSidecars.length === 0) {
-    }
-
-    const returnedColumns = new Set(blockColumnSidecars.map((c) => c.index));
-    const missingIndices = request.columns.filter((i) => !returnedColumns.has(i));
-    if (missingIndices.length > 0) {
-      warnings.push(
-        new DownloadByRangeError(
-          {
-            code: DownloadByRangeErrorCode.MISSING_COLUMNS,
-            slot,
-            blockRoot: blockRootHex,
-            missingIndices: prettyPrintIndices(missingIndices),
-          },
-          "Missing data columns in DataColumnSidecarsByRange response"
-        )
-      );
-    }
-
-    const extraIndices = [...returnedColumns].filter((i) => !requestedColumns.has(i));
-    if (extraIndices.length > 0) {
-      warnings.push(
-        new DownloadByRangeError(
-          {
-            code: DownloadByRangeErrorCode.EXTRA_COLUMNS,
-            slot,
-            blockRoot: blockRootHex,
-            invalidIndices: prettyPrintIndices(extraIndices),
-          },
-          "Data column in not in requested columns in DataColumnSidecarsByRange response"
-        )
-      );
-    }
-
-    validateSidecarsPromises.push(
-      validateBlockDataColumnSidecars(slot, blockRoot, blockKzgCommitments.length, blockColumnSidecars).then(() => ({
-        blockRoot,
-        columnSidecars: blockColumnSidecars,
-      }))
-    );
-  }
-
-  // Await all sidecar validations in parallel
-  const result = await Promise.all(validateSidecarsPromises);
-  return {result, warnings: warnings.length ? warnings : null};
 }
 
 /**
