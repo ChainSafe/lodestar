@@ -550,10 +550,10 @@
     "@chainsafe/blst-linux-x64-musl" "2.2.0"
     "@chainsafe/blst-win32-x64-msvc" "2.2.0"
 
-"@chainsafe/bun-ffi-z@^1.1.3":
-  version "1.1.3"
-  resolved "https://registry.yarnpkg.com/@chainsafe/bun-ffi-z/-/bun-ffi-z-1.1.3.tgz#152a06a9cde8e0050ac400703ec5c438fcbcd221"
-  integrity sha512-KlhcVDUYdcAI7KRy4UTQvxMtaFGpSodHizNy/1aHFaC+sjCKBoTTaVdQhbcVF1Jy3O12WK7ZzTlljpKgEvma+Q==
+"@chainsafe/bun-ffi-z@^1.1.4":
+  version "1.1.4"
+  resolved "https://registry.yarnpkg.com/@chainsafe/bun-ffi-z/-/bun-ffi-z-1.1.4.tgz#7f069f4c66771ca0850d675193be707dbc06922b"
+  integrity sha512-yegYWjcj9pMwrf554iuFGoUc+Kq8EWDrVpeGiPl/nmXu/lm5EaUzxsiLG6WR1J9tpTQk012213y9RA5PwDrUTQ==
 
 "@chainsafe/discv5@^11.0.4":
   version "11.0.4"
@@ -2140,9 +2140,9 @@
 
 "@lodestar/bun@git+https://github.com/ChainSafe/lodestar-bun.git":
   version "0.1.0"
-  resolved "git+https://github.com/ChainSafe/lodestar-bun.git#368dfa6e112171231d23edbc34e55ad53054442e"
+  resolved "git+https://github.com/ChainSafe/lodestar-bun.git#e1b7001df927619284c1a29320240c4834278777"
   dependencies:
-    "@chainsafe/bun-ffi-z" "^1.1.3"
+    "@chainsafe/bun-ffi-z" "^1.1.4"
 
 "@lukeed/ms@^2.0.2":
   version "2.0.2"
