@@ -92,7 +92,6 @@ export type BlockAttributes = {
   graffiti: Bytes32;
   slot: Slot;
   parentBlockRoot: Root;
-  parentSlot: Slot;
   feeRecipient?: string;
 };
 
@@ -733,15 +732,7 @@ export async function produceCommonBlockBody<T extends BlockType>(
   this: BeaconChain,
   blockType: T,
   currentState: CachedBeaconStateAllForks,
-  {
-    randaoReveal,
-    graffiti,
-    slot,
-    parentSlot,
-    parentBlockRoot,
-  }: BlockAttributes & {
-    parentSlot: Slot;
-  }
+  {randaoReveal, graffiti, slot, parentBlockRoot}: BlockAttributes
 ): Promise<CommonBlockBody> {
   const stepsMetrics =
     blockType === BlockType.Full
@@ -793,7 +784,8 @@ export async function produceCommonBlockBody<T extends BlockType>(
 
   const endSyncAggregate = stepsMetrics?.startTimer();
   if (ForkSeq[fork] >= ForkSeq.altair) {
-    const syncAggregate = this.syncContributionAndProofPool.getAggregate(parentSlot, parentBlockRoot);
+    const previousSlot = slot - 1;
+    const syncAggregate = this.syncContributionAndProofPool.getAggregate(previousSlot, parentBlockRoot);
     this.metrics?.production.producedSyncAggregateParticipants.observe(
       syncAggregate.syncCommitteeBits.getTrueBitIndexes().length
     );

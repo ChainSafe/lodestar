@@ -411,11 +411,9 @@ export function getValidatorApi(
     {
       commonBlockBodyPromise,
       parentBlockRoot,
-      parentSlot,
     }: Omit<routes.validator.ExtraProduceBlockOpts, "builderSelection"> & {
       commonBlockBodyPromise: Promise<CommonBlockBody>;
       parentBlockRoot: Root;
-      parentSlot: Slot;
     }
   ): Promise<ProduceBlindedBlockRes> {
     const version = config.getForkName(slot);
@@ -447,7 +445,6 @@ export function getValidatorApi(
       const {block, executionPayloadValue, consensusBlockValue} = await chain.produceBlindedBlock({
         slot,
         parentBlockRoot,
-        parentSlot,
         randaoReveal,
         graffiti,
         commonBlockBodyPromise,
@@ -483,11 +480,9 @@ export function getValidatorApi(
       strictFeeRecipientCheck,
       commonBlockBodyPromise,
       parentBlockRoot,
-      parentSlot,
     }: Omit<routes.validator.ExtraProduceBlockOpts, "builderSelection"> & {
       commonBlockBodyPromise: Promise<CommonBlockBody>;
       parentBlockRoot: Root;
-      parentSlot: Slot;
     }
   ): Promise<ProduceBlockContentsRes & {shouldOverrideBuilder?: boolean}> {
     const source = ProducedBlockSource.engine;
@@ -499,7 +494,6 @@ export function getValidatorApi(
       const {block, executionPayloadValue, consensusBlockValue, shouldOverrideBuilder} = await chain.produceBlock({
         slot,
         parentBlockRoot,
-        parentSlot,
         randaoReveal,
         graffiti,
         feeRecipient,
@@ -642,7 +636,6 @@ export function getValidatorApi(
           strictFeeRecipientCheck: false,
           commonBlockBodyPromise,
           parentBlockRoot,
-          parentSlot,
         })
       : Promise.reject(new Error("Builder disabled"));
 
@@ -652,7 +645,6 @@ export function getValidatorApi(
           strictFeeRecipientCheck,
           commonBlockBodyPromise,
           parentBlockRoot,
-          parentSlot,
         }).then((engineBlock) => {
           // Once the engine returns a block, in the event of either:
           // - suspected builder censorship
@@ -695,7 +687,6 @@ export function getValidatorApi(
         .produceCommonBlockBody({
           slot,
           parentBlockRoot,
-          parentSlot,
           randaoReveal,
           graffiti: graffitiBytes,
         })
