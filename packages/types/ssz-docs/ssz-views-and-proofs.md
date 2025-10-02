@@ -39,17 +39,52 @@ In SSZ you will see two ways in which you can create Objects.
 
 They may look similar but they behave different under the hood.
 
-```
-// Plain value
-const val = ssz.phase0.Attestation.defaultValue()
-val.data.source.epoch = 10
-const root1 = ssz.phase0.Attestation.hashTreeRoot(val) // full recompute whenever you want to get the root
+Plain Values '(defaultValue())'
 
-// Tree-backed view
-const view = ssz.phase0.Attestation.defaultView()
-view.data.source.epoch = 10
-const root2 = view.hashTreeRoot() // fast incremental update
+Just a regular JS object.
+Easy to use, but not Merkle-aware.
+Every time you hash, SSZ has to recompute the entire Merkle tree from scratch.
+
 ```
+Import { ssz} from '@lodestar/types'
+
+//creating the object
+const val = ssz.phase0.Attestation.defaultValue()
+
+//changing the data
+val.data.source.epoch = 100;
+
+//calculating the root
+const root1 = ssz.phase0.Attestation.hashTreeRoot(val)
+```
+---
+Tree-backed Views '(defaultView())'
+
+- Looks like a normal object, but wrapped in a Merkle tree internally.
+- Updates are incremental → only the changed branch of the tree is rehashed.
+- Perfect for large objects, frequent updates, or when you need proofs.
+
+```
+// Create a tree-backed attestation view
+const view = ssz.phase0.Attestation.defaultView()
+
+// Modify a field (updates the tree branch automatically)
+view.data.source.epoch = 10
+
+// Get the root (only rehashes the changed branch, not the whole tree)
+const root2 = view.hashTreeRoot()
+
+```
+
+| Feature                | `defaultValue()` (Plain Object) | `defaultView()` (Tree-backed View)    |
+| ---------------------- | ------------------------------- | ------------------------------------- |
+| Backed by Merkle tree? | ❌ No                            | ✅ Yes                                 |
+| Update efficiency      | Slow (rehash full tree)         | Fast (rehash only changed branch)     |
+| Proof support          | ❌ No                            | ✅ Yes                                 |
+| Usage style            | Simple JS object                | Object-like, but with sub-views       |
+| Best for               | Small objects, quick examples   | Large state, frequent updates, proofs |
+
+
 ### 2. Tree-backed Views (deep dive)
 ### 3. Common Operations with views
 ### 4. Proofs
