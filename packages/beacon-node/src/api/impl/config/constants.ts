@@ -128,5 +128,8 @@ export const specConstants = {
 
 /** Convert single-byte numbers to hex strings for API spec compliance */
 function toHexByte(n: number): string {
-  return `0x${n.toString(16).padStart(2, "0")}`;
+  if (n < 0 || n > 255 || !Number.isInteger(n)) {
+    throw new Error("toHexByte expected a single-byte integer, but received " + n);
+  }
+  return "0x" + n.toString(16).padStart(2, "0");
 }
