@@ -123,7 +123,6 @@ export const forkPostGloas = exclude(forkAll, [
   ForkName.electra,
   ForkName.fulu,
 ]);
-export const forkPreGloas = exclude(forkAll, forkPostGloas);
 export function isForkPostGloas(fork: ForkName): fork is ForkPostGloas {
   return isForkPostFulu(fork) && fork !== ForkName.fulu;
 }
