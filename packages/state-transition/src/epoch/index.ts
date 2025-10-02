@@ -12,9 +12,11 @@ import {
   CachedBeaconStateCapella,
   CachedBeaconStateElectra,
   CachedBeaconStateFulu,
+  CachedBeaconStateGloas,
   CachedBeaconStatePhase0,
   EpochTransitionCache,
 } from "../types.js";
+import {processBuilderPendingPayments} from "./processBuilderPendingPayments.ts";
 import {processEffectiveBalanceUpdates} from "./processEffectiveBalanceUpdates.js";
 import {processEth1DataReset} from "./processEth1DataReset.js";
 import {processHistoricalRootsUpdate} from "./processHistoricalRootsUpdate.js";
@@ -78,6 +80,7 @@ export enum EpochTransitionStep {
   processPendingDeposits = "processPendingDeposits",
   processPendingConsolidations = "processPendingConsolidations",
   processProposerLookahead = "processProposerLookahead",
+  processBuilderPendingPayments = "processBuilderPendingPayments",
 }
 
 export function processEpoch(
@@ -197,6 +200,14 @@ export function processEpoch(
       step: EpochTransitionStep.processProposerLookahead,
     });
     processProposerLookahead(fork, state as CachedBeaconStateFulu, cache);
+    timer?.();
+  }
+
+  if (fork >= ForkSeq.gloas) {
+    const timer = metrics?.epochTransitionStepTime.startTimer({
+      step: EpochTransitionStep.processBuilderPendingPayments,
+    });
+    processBuilderPendingPayments(state as CachedBeaconStateGloas);
     timer?.();
   }
 }

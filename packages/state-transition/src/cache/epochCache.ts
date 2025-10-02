@@ -24,6 +24,7 @@ import {
   SyncPeriod,
   ValidatorIndex,
   electra,
+  gloas,
   phase0,
 } from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
@@ -1150,6 +1151,10 @@ export class EpochCache {
 
   isPostElectra(): boolean {
     return this.epoch >= this.config.ELECTRA_FORK_EPOCH;
+  }
+
+  getIndexedPayloadAttestation(payloadAttestation: gloas.PayloadAttestation): gloas.IndexedPayloadAttestation {
+    throw Error("Unimplemented");
   }
 }
 

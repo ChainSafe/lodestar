@@ -41,9 +41,7 @@ export function processBlock(
 
   processBlockHeader(state, block);
 
-  // The call to the process_execution_payload must happen before the call to the process_randao as the former depends
-  // on the randao_mix computed with the reveal of the previous block.
-  if (fork >= ForkSeq.bellatrix && isExecutionEnabled(state as CachedBeaconStateBellatrix, block)) {
+  if (fork >= ForkSeq.capella) {
     const fullOrBlindedPayload = getFullOrBlindedPayload(block);
     // TODO Deneb: Allow to disable withdrawals for interop testing
     // https://github.com/ethereum/consensus-specs/blob/b62c9e877990242d63aa17a2a59a49bc649a2f2e/specs/eip4844/beacon-chain.md#disabling-withdrawals
@@ -54,8 +52,21 @@ export function processBlock(
         fullOrBlindedPayload as capella.FullOrBlindedExecutionPayload
       );
     }
+  }
 
+  // The call to the process_execution_payload must happen before the call to the process_randao as the former depends
+  // on the randao_mix computed with the reveal of the previous block.
+  // We call processExecutionPayload somehwere else post-gloas
+  if (
+    fork >= ForkSeq.bellatrix &&
+    fork < ForkSeq.gloas &&
+    isExecutionEnabled(state as CachedBeaconStateBellatrix, block)
+  ) {
     processExecutionPayload(fork, state as CachedBeaconStateBellatrix, block.body, externalData);
+  }
+
+  if (fork >= ForkSeq.gloas) {
+    // process_execution_payload_bid
   }
 
   processRandao(state, block, verifySignatures);

@@ -1,14 +1,15 @@
+import {PublicKey, Signature, verify} from "@chainsafe/blst";
 import {byteArrayEquals} from "@chainsafe/ssz";
-import {ForkName, ForkSeq, isForkPostDeneb} from "@lodestar/params";
-import {BeaconBlockBody, BlindedBeaconBlockBody, deneb, isExecutionPayload} from "@lodestar/types";
+import {DOMAIN_BEACON_BUILDER, ForkName, ForkSeq, isForkPostDeneb} from "@lodestar/params";
+import {BeaconBlockBody, BlindedBeaconBlockBody, deneb, gloas, isExecutionPayload, ssz} from "@lodestar/types";
 import {toHex, toRootHex} from "@lodestar/utils";
-import {CachedBeaconStateBellatrix, CachedBeaconStateCapella} from "../types.js";
+import {CachedBeaconStateBellatrix, CachedBeaconStateCapella, CachedBeaconStateGloas} from "../types.js";
 import {
   executionPayloadToPayloadHeader,
   getFullOrBlindedPayloadFromBody,
   isMergeTransitionComplete,
 } from "../util/execution.js";
-import {computeEpochAtSlot, computeTimeAtSlot, getRandaoMix} from "../util/index.js";
+import {computeEpochAtSlot, computeSigningRoot, computeTimeAtSlot, getRandaoMix} from "../util/index.js";
 import {BlockExternalData, ExecutionPayloadStatus} from "./externalData.js";
 
 export function processExecutionPayload(
@@ -81,4 +82,22 @@ export function processExecutionPayload(
   state.latestExecutionPayloadHeader = state.config
     .getPostBellatrixForkTypes(state.slot)
     .ExecutionPayloadHeader.toViewDU(payloadHeader) as typeof state.latestExecutionPayloadHeader;
+}
+
+function verifyExecutionPayloadEnvelopeSignature(
+  state: CachedBeaconStateGloas,
+  pubkey: Uint8Array,
+  signedEnvelope: gloas.SignedExecutionPayloadEnvelope
+): boolean {
+  const domain = state.config.getDomain(state.slot, DOMAIN_BEACON_BUILDER);
+  const signingRoot = computeSigningRoot(ssz.gloas.ExecutionPayloadEnvelope, signedEnvelope.message, domain);
+
+  try {
+    const publicKey = PublicKey.fromBytes(pubkey);
+    const signature = Signature.fromBytes(signedEnvelope.signature, true);
+
+    return verify(signingRoot, publicKey, signature);
+  } catch (_e) {
+    return false; // Catch all BLS errors: failed key validation, failed signature validation, invalid signature
+  }
 }

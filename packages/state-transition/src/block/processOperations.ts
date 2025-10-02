@@ -64,7 +64,7 @@ export function processOperations(
     }
   }
 
-  if (fork >= ForkSeq.electra) {
+  if (fork >= ForkSeq.electra && fork < ForkSeq.gloas) {
     const stateElectra = state as CachedBeaconStateElectra;
     const bodyElectra = body as electra.BeaconBlockBody;
 
@@ -79,5 +79,9 @@ export function processOperations(
     for (const elConsolidationRequest of bodyElectra.executionRequests.consolidations) {
       processConsolidationRequest(stateElectra, elConsolidationRequest);
     }
+  }
+
+  if (fork >= ForkSeq.gloas) {
+
   }
 }

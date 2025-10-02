@@ -3,9 +3,12 @@ import {ValidatorIndex, ssz} from "@lodestar/types";
 import {G2_POINT_AT_INFINITY} from "../constants/constants.js";
 import {CachedBeaconStateElectra} from "../types.js";
 import {hasEth1WithdrawalCredential} from "./capella.js";
+import {hasBuilderWithdrawalCredential} from "./gloas.ts";
 
 export function hasCompoundingWithdrawalCredential(withdrawalCredentials: Uint8Array): boolean {
-  return withdrawalCredentials[0] === COMPOUNDING_WITHDRAWAL_PREFIX;
+  return (
+    withdrawalCredentials[0] === COMPOUNDING_WITHDRAWAL_PREFIX || hasBuilderWithdrawalCredential(withdrawalCredentials)
+  );
 }
 
 export function hasExecutionWithdrawalCredential(withdrawalCredentials: Uint8Array): boolean {
