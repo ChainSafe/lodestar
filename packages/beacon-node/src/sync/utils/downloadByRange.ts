@@ -300,21 +300,25 @@ export async function validateResponses({
   let warnings: DownloadByRangeError[] | null = null;
 
   if (blocksRequest) {
-    validatedResponses.validatedBlocks = validateBlockByRangeResponse(config, blocksRequest, blocks ?? []);
+    const result = validateBlockByRangeResponse(config, blocksRequest, blocks ?? []);
+    if (result.warnings?.length) {
+      warnings = result.warnings;
+    }
+    validatedResponses.validatedBlocks = result.result;
   }
 
   const dataRequest = blobsRequest ?? columnsRequest;
   if (!dataRequest) {
-    return {result: validatedResponses, warnings: null};
+    return {result: validatedResponses, warnings};
   }
 
-  const dataRequestBlocks = getBlocksForDataValidation(
+  const blocksForDataValidation = getBlocksForDataValidation(
     dataRequest,
     batchBlocks,
-    blocksRequest ? validatedResponses.validatedBlocks : undefined
+    validatedResponses.validatedBlocks?.length ? validatedResponses.validatedBlocks : undefined
   );
 
-  if (!dataRequestBlocks.length) {
+  if (!blocksForDataValidation.length) {
     throw new DownloadByRangeError(
       {
         code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
@@ -335,7 +339,10 @@ export async function validateResponses({
       );
     }
 
-    validatedResponses.validatedBlobSidecars = await validateBlobsByRangeResponse(dataRequestBlocks, blobSidecars);
+    validatedResponses.validatedBlobSidecars = await validateBlobsByRangeResponse(
+      blocksForDataValidation,
+      blobSidecars
+    );
   }
 
   if (columnsRequest) {
@@ -351,7 +358,7 @@ export async function validateResponses({
 
     const validatedColumnSidecarsResult = await validateColumnsByRangeResponse(
       columnsRequest,
-      dataRequestBlocks,
+      blocksForDataValidation,
       columnSidecars
     );
     validatedResponses.validatedColumnSidecars = validatedColumnSidecarsResult.result;
@@ -374,20 +381,25 @@ export function validateBlockByRangeResponse(
   config: ChainForkConfig,
   blocksRequest: phase0.BeaconBlocksByRangeRequest,
   blocks: SignedBeaconBlock[]
-): ValidatedBlock[] {
+): WarnResult<ValidatedBlock[], DownloadByRangeError> {
   const {startSlot, count} = blocksRequest;
 
-  // TODO(fulu): This was added by @twoeths in #8150 but it breaks for epochs with 0 blocks during chain
-  //    liveness issues. See comment https://github.com/ChainSafe/lodestar/issues/8147#issuecomment-3246434697
-  // if (!blocks.length) {
-  //   throw new DownloadByRangeError(
-  //     {
-  //       code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
-  //       expectedCount: blocksRequest.count,
-  //     },
-  //     "Zero blocks in response"
-  //   );
-  // }
+  // An error was thrown here by @twoeths in #8150 but it breaks for epochs with 0 blocks during chain
+  // liveness issues. See comment https://github.com/ChainSafe/lodestar/issues/8147#issuecomment-3246434697
+  // There are instances where clients return no blocks though.  Need to monitor this via the warns to see
+  // if what the correct behavior should be
+  if (!blocks.length) {
+    return {
+      result: [],
+      warnings: [
+        new DownloadByRangeError({
+          code: DownloadByRangeErrorCode.MISSING_BLOCK_RESPONSE,
+          expectedCount: count,
+          blockStartSlot: startSlot,
+        }),
+      ],
+    };
+  }
 
   if (blocks.length > count) {
     throw new DownloadByRangeError(
@@ -453,7 +465,10 @@ export function validateBlockByRangeResponse(
     }
   }
 
-  return response;
+  return {
+    result: response,
+    warnings: null,
+  };
 }
 
 /**
@@ -703,6 +718,7 @@ export async function validateColumnsByRangeResponse(
       seenColumns.set(slot, slotColumns);
     }
 
+    // make sure last iteration gets set to seenColumns
     seenColumns.set(currentSlot, currentSlotSeen);
   }
 
