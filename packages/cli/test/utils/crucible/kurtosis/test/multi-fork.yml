@@ -1,26 +1,38 @@
 participants:
   - el_type: geth
     cl_type: lodestar
-    #vc_type: lodestar
-    #cl_extra_params: ["--builder.seelction=default"]
+    count: 1
+    vc_extra_params: ["--builder.selection=default"]
+    el_extra_params: ["--mine"]
+
   - el_type: geth
     cl_type: lodestar
-    #vc_type: lodestar
-    #cl_extra_params: ["--builder.seelction=default"]
+    count: 1
+    vc_extra_params:
+      ["--builder.selection=default", "--blindedLocal=true"]
+
   - el_type: geth
     cl_type: lodestar
-    #vc_type: lodestar
-    #cl_extra_params: ["--builder.seelction=executiononly"]
+    count: 1
+    vc_extra_params: ["--builder.selection=executiononly"]
+
   - el_type: geth
     cl_type: lodestar
-    #vc_type: lodestar
-    #cl_extra_params: ["--builder.seelction=default"]
+    count: 1
+    vc_extra_params: ["--builder.selection=default"]
+
   - el_type: geth
     cl_type: lighthouse
+    count: 1
+
 network_params:
-  num_validator_keys_per_node: 32 # keysCount
-  preset: "minimal"
-  altair_fork_epoch: 2
-  bellatrix_fork_epoch: 4
-  capella_fork_epoch: 6
-  deneb_fork_epoch: 8
+  num_validator_keys_per_node: 32 #emulate keysCount
+  preset: minimal
+  altair_fork_epoch: 0
+  bellatrix_fork_epoch: 0
+  capella_fork_epoch: 0
+  deneb_fork_epoch: 0
+  electra_fork_epoch: 0
+  fulu_fork_epoch: 1000000
+  perfect_peerdas_enabled: true
+  genesis_delay: 120

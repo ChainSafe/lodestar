@@ -46,7 +46,7 @@ export class Simulation {
   readonly nodes: NodePair[] = [];
   readonly clock: EpochClock;
   readonly tracker: SimulationTracker;
-  readonly runner: IRunner; // ✅ NEW - Kurtosis-specific
+  readonly runner!: IRunner; // ✅ NEW - Kurtosis-specific
   readonly externalSigner: ExternalSignerServer;
   readonly logger: LoggerNode;
   readonly forkConfig: ChainForkConfig;
@@ -81,7 +81,7 @@ export class Simulation {
 
     this.externalSigner = new ExternalSignerServer([]);
     //this.runner = new Runner({logger: this.logger}); //❌ REMOVE - Docker-specific
-    // this.runner = new KurtosisSDKRunner(); // ✅ NEW - Kurtosis-specific
+    //this.runner = new KurtosisSDKRunner(`sim-${this.options.id}`); // ✅ NEW - Kurtosis-specific if "readonly runner!: IRunner;" is not the most optimal solution 
     this.tracker = SimulationTracker.initWithDefaults({
       //🔄 Refactored for Kurtosis?
       logsDir: options.logsDir,
@@ -321,9 +321,7 @@ export class Simulation {
       }
 
       this.logger.info("Starting the simulation runner");
-      await this.runner.start(); //❌ REMOVE - Docker-specific
-      // await this.runner.start(); // NEW - Kurtosis-specific
-      // await this.runner.start(`sim-${this.options.id}`); // NEW - Kurtosis-specific (??)
+      await this.runner.start(`sim-${this.options.id}`);
 
       this.logger.info("Starting execution nodes");
       await Promise.all(this.nodes.map((node) => node.execution.job.start())); //REMOVE - Docker-specific
@@ -394,107 +392,6 @@ export class Simulation {
     }
   }
 
-  //❌ REMOVE - Docker-specific
-  /*async createNodePair<B extends BeaconClient, V extends ValidatorClient, E extends ExecutionClient>({
-    execution,
-    beacon,
-    validator,
-    keysCount,
-    id,
-    remote,
-    mining,
-  }: NodePairDefinition<B, E, V>): Promise<NodePair> {
-    if (this.genesisState && keysCount > 0) {
-      throw new Error("Genesis state already initialized. Can not add more keys to it.");
-    }
-    const interopKeys = Array.from({length: keysCount}, (_, vi) => {
-      return interopSecretKey(this.keysCount + vi);
-    });
-    this.keysCount += keysCount;
-
-    const keys: ValidatorClientKeys =
-      interopKeys.length > 0 && remote
-        ? {type: "remote", secretKeys: interopKeys}
-        : interopKeys.length > 0
-          ? {type: "local", secretKeys: interopKeys}
-          : {type: "no-keys"};
-
-    const commonOptions: GeneratorOptions = {
-      id,
-      nodeIndex: this.nodePairCount,
-      forkConfig: this.forkConfig,
-      runner: this.runner,
-      address: "0.0.0.0",
-      genesisTime: this.options.genesisTime + this.forkConfig.GENESIS_DELAY,
-    };
-
-    // Execution Node
-    const executionType = typeof execution === "object" ? execution.type : execution;
-    const executionOptions = typeof execution === "object" ? execution.options : {};
-    const executionNode = await createExecutionNode(executionType, {
-      //❌ createExecutionNode() will be removed with Kurtosis migration
-      ...executionOptions,
-      ...commonOptions,
-      mining,
-      paths: getNodePaths({
-        root: this.options.rootDir,
-        id,
-        client: executionType,
-        logsDir: this.options.logsDir,
-      }),
-    });
-
-    // Beacon Node
-    const beaconType = typeof beacon === "object" ? beacon.type : beacon;
-    const beaconOptions = typeof beacon === "object" ? beacon.options : {};
-    const engineUrls = [
-      // As lodestar is running on host machine, need to connect through local exposed ports
-      beaconType === BeaconClient.Lodestar ? executionNode.engineRpcPublicUrl : executionNode.engineRpcPrivateUrl,
-      ...(beaconOptions?.engineUrls ?? []),
-    ];
-    const beaconNode = await createBeaconNode(beaconType, {
-      //❌ createBeaconNode() will be removed with Kurtosis migration
-      ...beaconOptions,
-      ...commonOptions,
-      genesisState: this.genesisState,
-      engineUrls,
-      paths: getNodePaths({id, logsDir: this.options.logsDir, client: beaconType, root: this.options.rootDir}),
-    });
-
-    if (keys.type === "no-keys") {
-      this.nodePairCount += 1;
-      return {id, execution: executionNode, beacon: beaconNode};
-    }
-
-    // If no validator configuration is specified we will consider that beacon type is also same as validator type
-    const validatorType =
-      typeof validator === "object"
-        ? validator.type
-        : validator === undefined
-          ? getValidatorForBeaconNode(beaconType) //❌ getValidatorForBeaconNode() will be removed with Kurtosis migration
-          : validator;
-    const validatorOptions = typeof validator === "object" ? validator.options : {};
-    const beaconUrls = [
-      // As lodestar is running on host machine, need to connect through docker named host
-      beaconType === BeaconClient.Lodestar && validatorType !== ValidatorClient.Lodestar
-        ? replaceIpFromUrl(beaconNode.restPrivateUrl, "host.docker.internal")
-        : beaconNode.restPrivateUrl,
-      ...(validatorOptions?.beaconUrls ?? []),
-    ];
-
-    const validatorNode = await createValidatorNode(validatorType, {
-      //❌ createValidatorNode() will be removed with Kurtosis migration
-      ...validatorOptions,
-      ...commonOptions,
-      keys,
-      beaconUrls,
-      paths: getNodePaths({id, logsDir: this.options.logsDir, client: validatorType, root: this.options.rootDir}),
-    });
-
-    this.nodePairCount += 1;
-
-    return {id, execution: executionNode, beacon: beaconNode, validator: validatorNode};
-  }*/
 
   private async initGenesisState(): Promise<void> {
     for (let i = 0; i < this.nodes.length; i++) {
