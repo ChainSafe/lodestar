@@ -888,11 +888,8 @@ export function getValidatorApi(
         opts
       );
 
-      if (
-        opts.blindedLocal === true &&
-        ForkSeq[meta.version] >= ForkSeq.bellatrix &&
-        ForkSeq[meta.version] < ForkSeq.gloas
-      ) {
+      const fork = ForkSeq[meta.version];
+      if (opts.blindedLocal === true && fork >= ForkSeq.bellatrix && fork < ForkSeq.gloas) {
         if (meta.executionPayloadBlinded) {
           return {data, meta};
         }
