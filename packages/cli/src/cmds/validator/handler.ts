@@ -18,6 +18,7 @@ import {
   getMetrics,
 } from "@lodestar/validator";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
+import {enabledAll, enabledAllBashFriendly} from "../../options/beaconNodeOptions/api.js";
 import {GlobalArgs} from "../../options/index.js";
 import {
   YargsError,
@@ -30,7 +31,6 @@ import {
 } from "../../util/index.js";
 import {parseBuilderBoostFactor, parseBuilderSelection} from "../../util/proposerConfig.js";
 import {getVersionData} from "../../util/version.js";
-import {enabledAll, enabledAllBashFriendly} from "../../options/beaconNodeOptions/api.js";
 import {KeymanagerApi} from "./keymanager/impl.js";
 import {IPersistedKeysBackend} from "./keymanager/interface.js";
 import {PersistedKeysBackend} from "./keymanager/persistedKeys.js";

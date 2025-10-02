@@ -1,8 +1,8 @@
 import {WireFormat, defaultInit} from "@lodestar/api";
 import {CliCommandOptions} from "@lodestar/utils";
 import {defaultOptions} from "@lodestar/validator";
-import {LogArgs, logOptions} from "../../options/logOptions.js";
 import {enabledAllBashFriendly} from "../../options/beaconNodeOptions/api.js";
+import {LogArgs, logOptions} from "../../options/logOptions.js";
 import {ensure0xPrefix} from "../../util/index.js";
 import {keymanagerRestApiServerOptsDefault} from "./keymanager/server.js";
 import {defaultAccountPaths, defaultValidatorPaths} from "./paths.js";
