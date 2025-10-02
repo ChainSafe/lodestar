@@ -30,3 +30,28 @@ They behave like normal objects, but every change you make is tracked in the tre
 
  **Analogy:**  
 A View is like a **live SSZ object plugged into its Merkle tree**. You don’t have to rebuild the tree every time — it stays updated as you edit the object.  
+
+#### 1. Views vs Values (side-by-side)
+
+In SSZ you will see two ways in which you can create Objects.
+- 'defaultValue()' -> this creates a Plain JS object.
+- 'defaultView()'  -> This creates a tree backed oject.
+
+They may look similar but they behave different under the hood.
+
+```
+// Plain value
+const val = ssz.phase0.Attestation.defaultValue()
+val.data.source.epoch = 10
+const root1 = ssz.phase0.Attestation.hashTreeRoot(val) // full recompute whenever you want to get the root
+
+// Tree-backed view
+const view = ssz.phase0.Attestation.defaultView()
+view.data.source.epoch = 10
+const root2 = view.hashTreeRoot() // fast incremental update
+```
+### 2. Tree-backed Views (deep dive)
+### 3. Common Operations with views
+### 4. Proofs
+### 5. TypeScript Tips
+### 6. Pitfalls & Best Practices
