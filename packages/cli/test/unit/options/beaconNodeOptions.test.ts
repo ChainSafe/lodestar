@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import {describe, expect, it} from "vitest";
-import {ArchiveMode, IBeaconNodeOptions, allNamespaces} from "@lodestar/beacon-node";
+import {ArchiveMode, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {RecursivePartial} from "@lodestar/utils";
 import {BeaconNodeArgs, parseBeaconNodeArgs} from "../../../src/options/beaconNodeOptions/index.js";
 import {getTestdirPath} from "../../utils.js";
