@@ -1,7 +1,7 @@
 import {ForkSeq} from "@lodestar/params";
-import {BeaconBlockBody, capella, electra} from "@lodestar/types";
+import {BeaconBlockBody, capella, electra, gloas} from "@lodestar/types";
 import {BeaconStateTransitionMetrics} from "../metrics.js";
-import {CachedBeaconStateAllForks, CachedBeaconStateCapella, CachedBeaconStateElectra} from "../types.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateCapella, CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.js";
 import {getEth1DepositCount} from "../util/deposit.js";
 import {processAttestations} from "./processAttestations.js";
 import {processAttesterSlashing} from "./processAttesterSlashing.js";
@@ -13,6 +13,7 @@ import {processProposerSlashing} from "./processProposerSlashing.js";
 import {processVoluntaryExit} from "./processVoluntaryExit.js";
 import {processWithdrawalRequest} from "./processWithdrawalRequest.js";
 import {ProcessBlockOpts} from "./types.js";
+import { processPayloadAttestation } from "./processPayloadAttestation.ts";
 
 export {
   processProposerSlashing,
@@ -82,6 +83,8 @@ export function processOperations(
   }
 
   if (fork >= ForkSeq.gloas) {
-
+    for (const payloadAttestation of (body as gloas.BeaconBlockBody).payloadAttestations) {
+      processPayloadAttestation(state as CachedBeaconStateGloas, payloadAttestation);
+    }
   }
 }

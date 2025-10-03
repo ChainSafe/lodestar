@@ -5,23 +5,21 @@ import {isValidIndexedPayloadAttestation} from "./isValidIndexedPayloadAttestati
 
 export function processPayloadAttestation(
   state: CachedBeaconStateGloas,
-  payloadAttestations: gloas.PayloadAttestation[]
+  payloadAttestation: gloas.PayloadAttestation,
 ): void {
-  for (const payloadAttestation of payloadAttestations) {
-    const data = payloadAttestation.data;
+  const data = payloadAttestation.data;
 
-    if (byteArrayEquals(data.beaconBlockRoot, state.latestBlockHeader.parentRoot)) {
-      throw Error("Payload attestation is referring to the wrong block");
-    }
+  if (byteArrayEquals(data.beaconBlockRoot, state.latestBlockHeader.parentRoot)) {
+    throw Error("Payload attestation is referring to the wrong block");
+  }
 
-    if (data.slot + 1 !== state.slot) {
-      throw Error("Payload attestation is not from previous slot");
-    }
+  if (data.slot + 1 !== state.slot) {
+    throw Error("Payload attestation is not from previous slot");
+  }
 
-    const indexedPayloadAttestation = state.epochCtx.getIndexedPayloadAttestation(payloadAttestation);
+  const indexedPayloadAttestation = state.epochCtx.getIndexedPayloadAttestation(payloadAttestation);
 
-    if (!isValidIndexedPayloadAttestation(state, indexedPayloadAttestation, true)) {
-      throw Error("Invalid payload attestation");
-    }
+  if (!isValidIndexedPayloadAttestation(state, indexedPayloadAttestation, true)) {
+    throw Error("Invalid payload attestation");
   }
 }
