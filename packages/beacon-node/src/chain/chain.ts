@@ -731,7 +731,6 @@ export class BeaconChain implements IBeaconChain {
       feeRecipient,
       commonBlockBodyPromise,
       parentBlockRoot,
-      parentSlot,
     }: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}
   ): Promise<{
     block: AssembledBlockType<T>;
@@ -757,7 +756,6 @@ export class BeaconChain implements IBeaconChain {
         graffiti,
         slot,
         feeRecipient,
-        parentSlot,
         parentBlockRoot,
         proposerIndex,
         proposerPubKey,
