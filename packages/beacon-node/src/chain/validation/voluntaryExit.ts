@@ -4,55 +4,250 @@ import {GossipAction, VoluntaryExitError, VoluntaryExitErrorCode} from "../error
 import {IBeaconChain} from "../index.js";
 import {RegenCaller} from "../regen/index.js";
 
-export async function validateApiVoluntaryExit(
-  chain: IBeaconChain,
-  voluntaryExit: phase0.SignedVoluntaryExit
-): Promise<void> {
-  const prioritizeBls = true;
-  return validateVoluntaryExit(chain, voluntaryExit, prioritizeBls);
+/**
+ * Helper to get human-readable error code name
+ */
+function getVoluntaryExitErrorCodeName(code: VoluntaryExitErrorCode): string {
+  switch (code) {
+    case VoluntaryExitErrorCode.ALREADY_EXISTS:
+      return "ALREADY_EXISTS";
+    case VoluntaryExitErrorCode.INVALID:
+      return "INVALID";
+    case VoluntaryExitErrorCode.INVALID_SIGNATURE:
+      return "INVALID_SIGNATURE";
+    default:
+      return `UNKNOWN_CODE_${code}`;
+  }
 }
 
+/**
+ * Validation result that distinguishes between permanent and transient failures
+ */
+interface ValidationResult {
+  isValid: boolean;
+  error?: {
+    action: GossipAction;
+    code: VoluntaryExitErrorCode;
+    isTransient: boolean; // True if the error might resolve over time
+  };
+}
+
+/**
+ * Cached voluntary exit awaiting transient conditions to be met
+ */
+interface CachedVoluntaryExit {
+  exit: phase0.SignedVoluntaryExit;
+  submittedAt: number; // Timestamp
+  lastCheckedEpoch: number;
+  failureReason: string;
+}
+
+/**
+ * Pool for managing pending voluntary exits that failed transient checks
+ */
+class PendingVoluntaryExitPool {
+  private pending = new Map<number, CachedVoluntaryExit>(); // validatorIndex -> exit
+  private readonly MAX_CACHE_TIME_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+  add(validatorIndex: number, exit: phase0.SignedVoluntaryExit, reason: string, epoch: number): void {
+    this.pending.set(validatorIndex, {
+      exit,
+      submittedAt: Date.now(),
+      lastCheckedEpoch: epoch,
+      failureReason: reason,
+    });
+  }
+
+  get(validatorIndex: number): CachedVoluntaryExit | undefined {
+    return this.pending.get(validatorIndex);
+  }
+
+  delete(validatorIndex: number): void {
+    this.pending.delete(validatorIndex);
+  }
+
+  /**
+   * Clean up stale cached exits
+   */
+  prune(): void {
+    const now = Date.now();
+    for (const [validatorIndex, cached] of this.pending.entries()) {
+      if (now - cached.submittedAt > this.MAX_CACHE_TIME_MS) {
+        this.pending.delete(validatorIndex);
+      }
+    }
+  }
+
+  getAllPending(): Map<number, CachedVoluntaryExit> {
+    return new Map(this.pending);
+  }
+
+  size(): number {
+    return this.pending.size;
+  }
+}
+
+/**
+ * Validates a voluntary exit with detailed error classification
+ */
+async function validateVoluntaryExitDetailed(
+  chain: IBeaconChain,
+  voluntaryExit: phase0.SignedVoluntaryExit,
+  prioritizeBls = false
+): Promise<ValidationResult> {
+  const validatorIndex = voluntaryExit.message.validatorIndex;
+
+  // Check if already seen (this is always permanent)
+  if (chain.opPool.hasSeenVoluntaryExit(validatorIndex)) {
+    return {
+      isValid: false,
+      error: {
+        action: GossipAction.IGNORE,
+        code: VoluntaryExitErrorCode.ALREADY_EXISTS,
+        isTransient: false,
+      },
+    };
+  }
+
+  const state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.validateGossipVoluntaryExit);
+
+  // First verify signature (permanent failure if invalid)
+  const signatureSet = getVoluntaryExitSignatureSet(state, voluntaryExit);
+  if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true, priority: prioritizeBls}))) {
+    return {
+      isValid: false,
+      error: {
+        action: GossipAction.REJECT,
+        code: VoluntaryExitErrorCode.INVALID_SIGNATURE,
+        isTransient: false,
+      },
+    };
+  }
+
+  // Validate state transition rules
+  // verifySignature = false since we already verified it above
+  if (!isValidVoluntaryExit(chain.config.getForkSeq(state.slot), state, voluntaryExit, false)) {
+    // Determine if the failure is transient
+    const validator = state.validators.get(validatorIndex);
+    const isTransient = validator !== undefined && (
+      // Validator not yet active (could become active)
+      !validator.activationEpoch ||
+      // Validator has initiated exit but epoch hasn't passed (time-based)
+      validator.exitEpoch !== Infinity ||
+      // Post-Electra: pending withdrawals (can be processed)
+      // This would need additional state checks for post-Electra
+      false
+    );
+
+    return {
+      isValid: false,
+      error: {
+        action: GossipAction.REJECT,
+        code: VoluntaryExitErrorCode.INVALID,
+        isTransient,
+      },
+    };
+  }
+
+  return {isValid: true};
+}
+
+/**
+ * API validation that accepts and caches transient failures
+ */
+export async function validateApiVoluntaryExit(
+  chain: IBeaconChain,
+  voluntaryExit: phase0.SignedVoluntaryExit,
+  pendingPool?: PendingVoluntaryExitPool
+): Promise<{shouldPublish: boolean; isCached: boolean}> {
+  const prioritizeBls = true;
+  const result = await validateVoluntaryExitDetailed(chain, voluntaryExit, prioritizeBls);
+
+  if (result.isValid) {
+    return {shouldPublish: true, isCached: false};
+  }
+
+  // If we have a transient error and a pending pool, cache it
+  if (result.error?.isTransient && pendingPool) {
+    const state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.validateGossipVoluntaryExit);
+    const errorCodeName = getVoluntaryExitErrorCodeName(result.error.code);
+    pendingPool.add(
+      voluntaryExit.message.validatorIndex,
+      voluntaryExit,
+      `Transient failure: ${errorCodeName}`,
+      state.epochCtx.epoch
+    );
+    return {shouldPublish: false, isCached: true};
+  }
+
+  // Permanent failure - throw error
+  throw new VoluntaryExitError(result.error!.action, {
+    code: result.error!.code,
+  });
+}
+
+/**
+ * Gossip validation (strict, no caching)
+ */
 export async function validateGossipVoluntaryExit(
   chain: IBeaconChain,
   voluntaryExit: phase0.SignedVoluntaryExit
 ): Promise<void> {
-  return validateVoluntaryExit(chain, voluntaryExit);
+  const result = await validateVoluntaryExitDetailed(chain, voluntaryExit);
+
+  if (!result.isValid) {
+    throw new VoluntaryExitError(result.error!.action, {
+      code: result.error!.code,
+    });
+  }
 }
 
-async function validateVoluntaryExit(
+/**
+ * Process pending voluntary exits at each epoch
+ * Should be called by the beacon chain on epoch transitions
+ */
+export async function processPendingVoluntaryExits(
   chain: IBeaconChain,
-  voluntaryExit: phase0.SignedVoluntaryExit,
-  prioritizeBls = false
+  pendingPool: PendingVoluntaryExitPool,
+  network: any // network module for publishing
 ): Promise<void> {
-  // [IGNORE] The voluntary exit is the first valid voluntary exit received for the validator with index
-  // signed_voluntary_exit.message.validator_index.
-  if (chain.opPool.hasSeenVoluntaryExit(voluntaryExit.message.validatorIndex)) {
-    throw new VoluntaryExitError(GossipAction.IGNORE, {
-      code: VoluntaryExitErrorCode.ALREADY_EXISTS,
-    });
-  }
-
-  // What state should the voluntaryExit validate against?
-  //
-  // The only condition that is time sensitive and may require a non-head state is
-  // -> Validator is active && validator has not initiated exit
-  // The voluntaryExit.epoch must be in the past but the validator's status may change in recent epochs.
-  // We dial the head state to the current epoch to get the current status of the validator. This is
-  // relevant on periods of many skipped slots.
   const state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.validateGossipVoluntaryExit);
+  const currentEpoch = state.epochCtx.epoch;
 
-  // [REJECT] All of the conditions within process_voluntary_exit pass validation.
-  // verifySignature = false, verified in batch below
-  if (!isValidVoluntaryExit(chain.config.getForkSeq(state.slot), state, voluntaryExit, false)) {
-    throw new VoluntaryExitError(GossipAction.REJECT, {
-      code: VoluntaryExitErrorCode.INVALID,
-    });
+  const toRemove: number[] = [];
+
+  for (const [validatorIndex, cached] of pendingPool.getAllPending()) {
+    // Skip if we checked this epoch already
+    if (cached.lastCheckedEpoch === currentEpoch) {
+      continue;
+    }
+
+    try {
+      const result = await validateVoluntaryExitDetailed(chain, cached.exit);
+
+      if (result.isValid) {
+        // Now valid! Add to pool and publish
+        chain.opPool.insertVoluntaryExit(cached.exit);
+        await network.publishVoluntaryExit(cached.exit);
+        toRemove.push(validatorIndex);
+      } else if (!result.error?.isTransient) {
+        // No longer transient (became permanently invalid)
+        toRemove.push(validatorIndex);
+      }
+      // If still transient, keep in cache
+    } catch (e) {
+      // If validation throws, remove from cache
+      toRemove.push(validatorIndex);
+    }
   }
 
-  const signatureSet = getVoluntaryExitSignatureSet(state, voluntaryExit);
-  if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true, priority: prioritizeBls}))) {
-    throw new VoluntaryExitError(GossipAction.REJECT, {
-      code: VoluntaryExitErrorCode.INVALID_SIGNATURE,
-    });
+  // Remove processed exits
+  for (const validatorIndex of toRemove) {
+    pendingPool.delete(validatorIndex);
   }
+
+  // Clean up old entries
+  pendingPool.prune();
 }
+
+export {PendingVoluntaryExitPool};
