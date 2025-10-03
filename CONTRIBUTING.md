@@ -41,7 +41,7 @@ Most of all, it is disrespectful to our time. Please be respectful to our mainta
 1. Make sure you're familiar with our contribution guidelines _(this document)_!
 2. Create your [own fork](https://github.com/ChainSafe/lodestar/fork) of this repository.
 3. Make your changes in your local fork.
-4. If you've made a code change, make sure to lint and test your changes (`yarn lint` and `yarn test:unit`).
+4. If you've made a code change, make sure to lint and test your changes (`yarn lint`, `yarn check-types` and `yarn test:unit`).
 5. Make an open pull request when you're ready for it to be reviewed. We review PRs on a regular basis. See Pull request etiquette for more information.
 
 > [!IMPORTANT]
