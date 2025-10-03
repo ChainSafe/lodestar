@@ -18,7 +18,6 @@ import {
   getMetrics,
 } from "@lodestar/validator";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
-import {enabledAll, enabledAllBashFriendly} from "../../options/beaconNodeOptions/api.js";
 import {GlobalArgs} from "../../options/index.js";
 import {
   YargsError,
@@ -207,13 +206,11 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
       abortController.signal,
       proposerConfigWriteDisabled
     );
-    // Map bash-friendly 'all' to CORS spec '*'
-    const cors = args["keymanager.cors"] === enabledAllBashFriendly ? enabledAll : args["keymanager.cors"];
     const keymanagerServer = new KeymanagerRestApiServer(
       {
         address: args["keymanager.address"],
         port: args["keymanager.port"],
-        cors,
+        cors: args["keymanager.cors"],
         isAuthEnabled: args["keymanager.auth"],
         headerLimit: args["keymanager.headerLimit"],
         bodyLimit: args["keymanager.bodyLimit"],
