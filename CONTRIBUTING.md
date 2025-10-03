@@ -30,7 +30,7 @@ In a perfect world, AI assistance would produce equal or higher quality of work 
 
 When using AI assistance, we expect contributors to understand the code that is produced and be able to answer critical questions about what was submitted. It isn't a maintainers job to review a PR so broken that it requires significant rework to be acceptable.
 
-Most of all, it is disrespectful to our time. Please be respectful to maintainers and disclose AI assistance.
+Most of all, it is disrespectful to our time. Please be respectful to our maintainers and **disclose AI assistance.** There is no long-term benefit to using AI without the thorough review and understanding of the output, as this does not enhance your reputation as a valuable contributor nor increases the likelihood of future opportunities on this project.
 
 ## Reporting A Bug?
 
