@@ -24,9 +24,9 @@ An example disclosure:
 > This PR was written primarily by Claude Code.
 > I consulted Claude Code to understand the codebase, but the solution was fully authored manually by myself.
 
-Failure to disclose this is first and foremost, rude to the human maintainers on the other end of the pull request and it makes it difficult to determine how much scruitiny to apply to the contribution.
+Failure to disclose this is first and foremost, rude to the human maintainers on the other end of the pull request and it makes it difficult to determine how much scrutiny to apply to the contribution.
 
-In a perfect world, AI assistance would produce equal or higher quality of work than any human. This is currently not the case and most of the time is generating AI slop which is noticable in patterns and lack of context to solving the problem. We say this as heavy users of AI to help maintain this project (with careful supervision).
+In a perfect world, AI assistance would produce equal or higher quality of work than any human. This is currently not the case and most of the time is generating AI slop which is noticeable in patterns and lack of context to solving the problem. We say this as heavy users of AI to help maintain this project (with careful supervision).
 
 When using AI assistance, we expect contributors to understand the code that is produced and be able to answer critical questions about what was submitted. It isn't a maintainer's job to review a PR so broken that it requires significant rework to be acceptable.
 
