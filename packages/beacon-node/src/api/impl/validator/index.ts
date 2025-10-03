@@ -5,6 +5,7 @@ import {ExecutionStatus} from "@lodestar/fork-choice";
 import {
   ForkName,
   ForkPostBellatrix,
+  ForkPreGloas,
   ForkSeq,
   GENESIS_SLOT,
   SLOTS_PER_EPOCH,
@@ -410,11 +411,9 @@ export function getValidatorApi(
     {
       commonBlockBodyPromise,
       parentBlockRoot,
-      parentSlot,
     }: Omit<routes.validator.ExtraProduceBlockOpts, "builderSelection"> & {
       commonBlockBodyPromise: Promise<CommonBlockBody>;
       parentBlockRoot: Root;
-      parentSlot: Slot;
     }
   ): Promise<ProduceBlindedBlockRes> {
     const version = config.getForkName(slot);
@@ -446,7 +445,6 @@ export function getValidatorApi(
       const {block, executionPayloadValue, consensusBlockValue} = await chain.produceBlindedBlock({
         slot,
         parentBlockRoot,
-        parentSlot,
         randaoReveal,
         graffiti,
         commonBlockBodyPromise,
@@ -482,11 +480,9 @@ export function getValidatorApi(
       strictFeeRecipientCheck,
       commonBlockBodyPromise,
       parentBlockRoot,
-      parentSlot,
     }: Omit<routes.validator.ExtraProduceBlockOpts, "builderSelection"> & {
       commonBlockBodyPromise: Promise<CommonBlockBody>;
       parentBlockRoot: Root;
-      parentSlot: Slot;
     }
   ): Promise<ProduceBlockContentsRes & {shouldOverrideBuilder?: boolean}> {
     const source = ProducedBlockSource.engine;
@@ -498,7 +494,6 @@ export function getValidatorApi(
       const {block, executionPayloadValue, consensusBlockValue, shouldOverrideBuilder} = await chain.produceBlock({
         slot,
         parentBlockRoot,
-        parentSlot,
         randaoReveal,
         graffiti,
         feeRecipient,
@@ -641,7 +636,6 @@ export function getValidatorApi(
           strictFeeRecipientCheck: false,
           commonBlockBodyPromise,
           parentBlockRoot,
-          parentSlot,
         })
       : Promise.reject(new Error("Builder disabled"));
 
@@ -651,7 +645,6 @@ export function getValidatorApi(
           strictFeeRecipientCheck,
           commonBlockBodyPromise,
           parentBlockRoot,
-          parentSlot,
         }).then((engineBlock) => {
           // Once the engine returns a block, in the event of either:
           // - suspected builder censorship
@@ -694,7 +687,6 @@ export function getValidatorApi(
         .produceCommonBlockBody({
           slot,
           parentBlockRoot,
-          parentSlot,
           randaoReveal,
           graffiti: graffitiBytes,
         })
@@ -887,13 +879,14 @@ export function getValidatorApi(
         opts
       );
 
-      if (opts.blindedLocal === true && ForkSeq[meta.version] >= ForkSeq.bellatrix) {
+      const fork = ForkSeq[meta.version];
+      if (opts.blindedLocal === true && fork >= ForkSeq.bellatrix && fork < ForkSeq.gloas) {
         if (meta.executionPayloadBlinded) {
           return {data, meta};
         }
 
         const {block} = data as BlockContents;
-        const blindedBlock = beaconBlockToBlinded(config, block as BeaconBlock<ForkPostBellatrix>);
+        const blindedBlock = beaconBlockToBlinded(config, block as BeaconBlock<ForkPostBellatrix & ForkPreGloas>);
         return {
           data: blindedBlock,
           meta: {...meta, executionPayloadBlinded: true},

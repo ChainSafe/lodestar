@@ -1,6 +1,6 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {beforeEach, describe, expect, it} from "vitest";
-import {ForkName, ForkPostFulu} from "@lodestar/params";
+import {ForkName, ForkPostFulu, ForkPreGloas} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {SignedBeaconBlock} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
@@ -310,7 +310,7 @@ describe("SeenBlockInputCache", async () => {
       });
       expect(() =>
         blockInput.addBlock({
-          block: block as SignedBeaconBlock<ForkPostFulu>,
+          block: block as SignedBeaconBlock<ForkPostFulu & ForkPreGloas>,
           blockRootHex: rootHex,
           source: BlockInputSource.gossip,
           seenTimestampSec: Date.now() / 1000,
