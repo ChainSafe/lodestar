@@ -12,7 +12,7 @@ export enum VoluntaryExitValidity {
   earlyEpoch = "early_epoch",
   shortTimeActive = "short_time_active",
   invalidSignature = "invalid_signature",
-  pendingWithdrawals = "pending_withdrawals"
+  pendingWithdrawals = "pending_withdrawals",
 }
 
 /**
@@ -34,7 +34,6 @@ export function processVoluntaryExit(
   initiateValidatorExit(fork, state, validator);
 }
 
-
 export function getVoluntaryExitValidity(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
@@ -55,20 +54,23 @@ export function getVoluntaryExitValidity(
   if (validator.exitEpoch !== FAR_FUTURE_EPOCH) {
     return VoluntaryExitValidity.alreadyExited;
   }
-    // exits must specify an epoch when they become valid; they are not valid before then
-  
+  // exits must specify an epoch when they become valid; they are not valid before then
+
   if (currentEpoch < voluntaryExit.epoch) {
     return VoluntaryExitValidity.earlyEpoch;
   }
-    // verify the validator had been active long enough
+  // verify the validator had been active long enough
   if (currentEpoch < validator.activationEpoch + config.SHARD_COMMITTEE_PERIOD) {
     return VoluntaryExitValidity.shortTimeActive;
   }
-  if (fork >= ForkSeq.electra) {
-  if (getPendingBalanceToWithdraw(state as CachedBeaconStateElectra, voluntaryExit.validatorIndex) !== 0) {
+
+  if (
+    fork >= ForkSeq.electra &&
+    getPendingBalanceToWithdraw(state as CachedBeaconStateElectra, voluntaryExit.validatorIndex) !== 0
+  ) {
     return VoluntaryExitValidity.pendingWithdrawals;
   }
-}
+
   if (verifySignature && !verifyVoluntaryExitSignature(state, signedVoluntaryExit)) {
     return VoluntaryExitValidity.invalidSignature;
   }
@@ -82,6 +84,5 @@ export function isValidVoluntaryExit(
   signedVoluntaryExit: phase0.SignedVoluntaryExit,
   verifySignature = true
 ): boolean {
-  return getVoluntaryExitValidity(fork, state, signedVoluntaryExit, verifySignature) 
-    === VoluntaryExitValidity.valid;
+  return getVoluntaryExitValidity(fork, state, signedVoluntaryExit, verifySignature) === VoluntaryExitValidity.valid;
 }

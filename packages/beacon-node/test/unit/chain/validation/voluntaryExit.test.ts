@@ -87,7 +87,7 @@ describe("validate voluntary exit", () => {
     );
   });
 
-  it("should return invalid Voluntary Exit - invalid", async () => {
+  it("should return invalid Voluntary Exit - early epoch", async () => {
     const signedVoluntaryExitInvalid: phase0.SignedVoluntaryExit = {
       message: {
         // Force an invalid epoch
@@ -99,7 +99,60 @@ describe("validate voluntary exit", () => {
 
     await expectRejectedWithLodestarError(
       validateGossipVoluntaryExit(chainStub, signedVoluntaryExitInvalid),
-      VoluntaryExitErrorCode.INVALID
+      VoluntaryExitErrorCode.EARLY_EPOCH
+    );
+  });
+
+  it("should return invalid Voluntary Exit - inactive validator", async () => {
+    const inactiveValidator = ssz.phase0.Validator.toViewDU({
+      ...state.validators.get(0).toValue(),
+      activationEpoch: FAR_FUTURE_EPOCH, // Make validator inactive
+    });
+
+    const stateWithInactive = state.clone();
+    stateWithInactive.validators.set(0, inactiveValidator);
+
+    vi.spyOn(chainStub, "getHeadStateAtCurrentEpoch").mockResolvedValue(stateWithInactive);
+
+    await expectRejectedWithLodestarError(
+      validateGossipVoluntaryExit(chainStub, signedVoluntaryExit),
+      VoluntaryExitErrorCode.INACTIVE
+    );
+  });
+
+  it("should return invalid Voluntary Exit - already exited", async () => {
+    const currentEpoch = computeEpochAtSlot(state.slot);
+    const exitedValidator = ssz.phase0.Validator.toViewDU({
+      ...state.validators.get(0).toValue(),
+      exitEpoch: currentEpoch + 10,
+      activationEpoch: 0,
+    });
+
+    const stateWithExited = state.clone();
+    stateWithExited.validators.set(0, exitedValidator);
+
+    vi.spyOn(chainStub, "getHeadStateAtCurrentEpoch").mockResolvedValue(stateWithExited);
+
+    await expectRejectedWithLodestarError(
+      validateGossipVoluntaryExit(chainStub, signedVoluntaryExit),
+      VoluntaryExitErrorCode.ALREADY_EXITED
+    );
+  });
+
+  it("should return invalid Voluntary Exit - short time active", async () => {
+    const recentlyActivated = ssz.phase0.Validator.toViewDU({
+      ...state.validators.get(0).toValue(),
+      activationEpoch: computeEpochAtSlot(state.slot) - 1, // Recently activated
+    });
+
+    const stateRecent = state.clone();
+    stateRecent.validators.set(0, recentlyActivated);
+
+    vi.spyOn(chainStub, "getHeadStateAtCurrentEpoch").mockResolvedValue(stateRecent);
+
+    await expectRejectedWithLodestarError(
+      validateGossipVoluntaryExit(chainStub, signedVoluntaryExit),
+      VoluntaryExitErrorCode.SHORT_TIME_ACTIVE
     );
   });
 

@@ -1,4 +1,4 @@
-import { VoluntaryExitValidity } from "@lodestar/state-transition";
+import {VoluntaryExitValidity} from "@lodestar/state-transition";
 import {GossipActionError} from "./gossipValidation.js";
 
 export enum VoluntaryExitErrorCode {
@@ -16,8 +16,8 @@ export type VoluntaryExitErrorType =
   | {code: VoluntaryExitErrorCode.INVALID_SIGNATURE}
   | {code: VoluntaryExitErrorCode.INACTIVE}
   | {code: VoluntaryExitErrorCode.ALREADY_EXITED}
-  | {code: VoluntaryExitErrorCode.EARLY_EPOCH} 
-  | {code: VoluntaryExitErrorCode.SHORT_TIME_ACTIVE}
+  | {code: VoluntaryExitErrorCode.EARLY_EPOCH}
+  | {code: VoluntaryExitErrorCode.SHORT_TIME_ACTIVE};
 
 export class VoluntaryExitError extends GossipActionError<VoluntaryExitErrorType> {}
 
