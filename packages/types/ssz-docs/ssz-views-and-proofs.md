@@ -54,7 +54,7 @@ const val = ssz.phase0.Attestation.defaultValue()
 //changing the data
 val.data.source.epoch = 100;
 
-//calculating the root
+//calculating the root/ rehashing
 const root1 = ssz.phase0.Attestation.hashTreeRoot(val)
 ```
 ---
@@ -86,6 +86,8 @@ const root2 = view.hashTreeRoot()
 
 
 ### 2. Tree-backed Views (deep dive)
+Tree views are one of the ackings used by SSZ.  A backing is basically and underlying representation of the SSZ data. 
+It represents SSZ values, directly as merkle tree.
 ### 3. Common Operations with views
 ### 4. Proofs
 ### 5. TypeScript Tips
