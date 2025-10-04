@@ -13,7 +13,6 @@ import {
   fetchAndValidateBlock,
   fetchAndValidateColumns,
   fetchBlobsByRoot,
-  fetchColumnsByRoot,
 } from "../../../../src/sync/utils/downloadByRoot.js";
 import {ROOT_SIZE} from "../../../../src/util/sszBytes.js";
 import {
@@ -314,29 +313,4 @@ describe("downloadByRoot.ts", () => {
     });
   });
 
-  describe("fetchColumnsByRoot", () => {
-    let fuluBlockWithColumns: ReturnType<typeof generateBlockWithColumnSidecars>;
-    beforeAll(() => {
-      fuluBlockWithColumns = generateBlockWithColumnSidecars({forkName: ForkName.fulu});
-      network = {
-        sendDataColumnSidecarsByRoot: vi.fn(() => fuluBlockWithColumns.columnSidecars),
-      } as unknown as INetwork;
-    });
-    afterAll(() => {
-      vi.resetAllMocks();
-    });
-    it("should fetch missing columnSidecars ByRoot from network", async () => {
-      const blockRoot = fuluBlockWithColumns.blockRoot;
-      const missing = fuluBlockWithColumns.columnSidecars.map((c) => c.index);
-      const response = await fetchColumnsByRoot({
-        network,
-        peerMeta,
-        blockRoot,
-        missing,
-      });
-      expect(response).toEqual(fuluBlockWithColumns.columnSidecars);
-      expect(network.sendDataColumnSidecarsByRoot).toHaveBeenCalledOnce();
-      expect(network.sendDataColumnSidecarsByRoot).toHaveBeenCalledWith(peerIdStr, [{blockRoot, columns: missing}]);
-    });
-  });
 });
