@@ -10,7 +10,7 @@ type BeaconExtraArgs = {
   bootnodesFile?: string;
   checkpointSyncUrl?: string;
   checkpointState?: string;
-  lastPersistedCheckpointState: boolean;
+  lastPersistedCheckpointState?: boolean;
   wssCheckpoint?: string;
   forceCheckpointSync?: boolean;
   ignoreWeakSubjectivityCheck?: boolean;
@@ -67,8 +67,6 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
   lastPersistedCheckpointState: {
     description: "Use the last safe persisted checkpoint state to start syncing from",
     type: "boolean",
-    // this saves sync time for holesky-rescue
-    default: true,
     group: "weak subjectivity",
   },
 

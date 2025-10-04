@@ -74,7 +74,7 @@ export function initializeForkChoice(
 }
 
 /**
- * Initialized forkchoice from a finalized state.
+ * Initialize forkchoice from a finalized state.
  */
 export function initializeForkChoiceFromFinalizedState(
   config: ChainForkConfig,
@@ -154,7 +154,7 @@ export function initializeForkChoiceFromFinalizedState(
 }
 
 /**
- * Initialized forkchoice from an unfinalized state.
+ * Initialize forkchoice from an unfinalized state.
  */
 export function initializeForkChoiceFromUnfinalizedState(
   config: ChainForkConfig,
@@ -204,7 +204,7 @@ export function initializeForkChoiceFromUnfinalizedState(
     stateRoot: toRootHex(blockHeader.stateRoot),
     blockRoot: headRoot,
     targetRoot: headRoot,
-    timeliness: true, // Optimisitcally assume is timely
+    timeliness: true, // Optimistically assume is timely
 
     justifiedEpoch: justifiedCheckpoint.epoch,
     justifiedRoot: toRootHex(justifiedCheckpoint.root),
@@ -269,7 +269,7 @@ export function initializeForkChoiceFromUnfinalizedState(
   protoArray.onBlock(parentBlock, currentSlot);
   protoArray.onBlock(headBlock, currentSlot);
 
-  logger?.info("Initialized protoArray successfully", {...logCtx, length: protoArray.length()});
+  logger?.verbose("Initialized protoArray successfully", {...logCtx, length: protoArray.length()});
 
   // forkchoiceConstructor is only used for some test cases
   // production code use ForkChoice constructor directly

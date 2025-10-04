@@ -55,7 +55,7 @@ export function checkpointToDatastoreKey(cp: phase0.Checkpoint): DatastoreKey {
  *   - state slot should be at epoch boundary
  *   - state slot should be equal to epoch * SLOTS_PER_EPOCH
  *
- * return the serialzied data of Current Root Checkpoint State (CRCS) or Previous Root Checkpoint State (PRCS)
+ * return the serialized data of Current Root Checkpoint State (CRCS) or Previous Root Checkpoint State (PRCS)
  *
  */
 export async function getLatestSafeDatastoreKey(

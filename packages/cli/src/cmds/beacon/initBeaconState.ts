@@ -284,7 +284,7 @@ export async function initBeaconState(
 }
 
 /**
- * Starting from Feb 2025, reading a user provided state or local checkpoint state is consider non-finalized.
+ * Starting from Oct 2025, reading a user provided state or local checkpoint state is consider non-finalized.
  */
 async function readWSState(
   lastDbStateBytes: StateWithBytes | null,

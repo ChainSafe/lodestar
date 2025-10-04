@@ -268,7 +268,6 @@ function regenRequestToJson(config: ChainForkConfig, regenRequest: RegenRequest)
 
 /**
  * Extract a checkpoint from a string in the format `rootHex:epoch`.
- * TODO: dedup to cli package
  */
 export function getCheckpointFromArg(checkpointStr: string): Checkpoint {
   const checkpointRegex = /^(?:0x)?([0-9a-f]{64}):([0-9]+)$/;

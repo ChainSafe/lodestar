@@ -145,8 +145,8 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
           // See https://github.com/ChainSafe/lodestar/issues/5642
           process.exit(0);
         } catch (e) {
-          // for holesky-rescue, if we start from unfinalized state, we don't have checkpoint state so there is this error
-          // "No state in cache for finalized checkpoint state epoch #115967"
+          // If we start from unfinalized state, we don't have checkpoint state so there is this error
+          // "No state in cache for finalized checkpoint state epoch"
           logger.warn("Error closing beacon node", {}, e as Error);
           // Make sure db is always closed gracefully
           await db.close();

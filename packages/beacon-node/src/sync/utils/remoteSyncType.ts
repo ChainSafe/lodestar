@@ -147,7 +147,7 @@ export function getRangeSyncTarget(
     // The new peer has the same finalized (earlier filters should prevent a peer with an
     // earlier finalized chain from reaching here).
     // startEpoch: Math.min(computeEpochAtSlot(local.headSlot), remote.finalizedEpoch),
-    // for holesky-rescue, we don't want to sync from finalizedEpoch which is too far away (115967)
+    // during long non-finality, we don't want to sync from finalizedEpoch which is too far away
     startEpoch: Math.min(computeEpochAtSlot(local.headSlot), minEpoch),
     target: {
       slot: remote.headSlot,
