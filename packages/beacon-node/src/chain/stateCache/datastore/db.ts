@@ -70,7 +70,7 @@ export async function getLatestSafeDatastoreKey(
 
   const dataStoreKeyByEpoch: Map<Epoch, DatastoreKey> = new Map();
   for (const [epoch, keys] of checkpointsByEpoch.entries()) {
-    // filter out epochs with only 1 checkpoint
+    // only consider epochs with a single checkpoint to avoid ambiguity from forks
     if (keys.length === 1) {
       dataStoreKeyByEpoch.set(epoch, keys[0]);
     }
