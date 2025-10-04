@@ -105,6 +105,32 @@ attestation.data.source.epoch = 10;
 const root = attestation.hashTreeRoot();
 ```
 
+Example 2:
+```
+// Create a type
+const C = new ContainerType({
+  a: new VectorBasicType(new UintNumberType(1), 2),
+});
+
+// Create a tree view based on the default value
+const c = C.defaultView();
+
+// SSZ operations
+c.serialize() === C.hashTreeRoot(C.defaultValue());
+const root = c.hashTreeRoot();
+
+// Getters
+c.a.get(0) === 0;
+
+// Setters
+// Changes are applied immediately to the tree
+c.a.set(0, 1);
+
+// Subsequent calls to `hashTreeRoot` reflect the changes to the tree
+assert(root.toString() !== c.hashTreeRoot().toString());
+```
+
+
 
 ### 3. Common Operations with views
 ### 4. Proofs
