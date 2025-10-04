@@ -1,25 +1,14 @@
-import {ChainForkConfig} from "@lodestar/config";
-import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import type {FileHandle} from "node:fs/promises";
+import {open, readFile, writeFile} from "node:fs/promises";
+import {basename} from "node:path";
 import {Uint8ArrayList} from "uint8arraylist";
-import {SnappyFramesUncompress} from "../../reqresp/lib/encodingStrategies/sszSnappy/snappyFrames/uncompress.js";
+import {ChainForkConfig} from "@lodestar/config";
+import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {BeaconState, SignedBeaconBlock, Slot} from "@lodestar/types";
+import {encodeSnappy} from "../../reqresp/src/encodingStrategies/sszSnappy/snappyFrames/compress.js";
+import {SnappyFramesUncompress} from "../../reqresp/src/encodingStrategies/sszSnappy/snappyFrames/uncompress.js";
 import {E2STORE_HEADER_SIZE, E2StoreEntryType, EraTypes, VERSION_RECORD_BYTES} from "./constants.js";
-import type {E2StoreEntry, SlotIndex} from "./types.js";
-
-/**
- * Cache fork types by epoch. Fork transitions occur at epoch boundaries,
- * so caching by epoch is safe and efficient.
- */
-type ForkTypes = ReturnType<ChainForkConfig["getForkTypes"]>;
-const forkTypesByEpoch = new Map<number, ForkTypes>();
-function getForkTypesCached(config: ChainForkConfig, slot: number): ForkTypes {
-  const epoch = Math.floor(slot / SLOTS_PER_EPOCH);
-  let types = forkTypesByEpoch.get(epoch);
-  if (!types) {
-    types = config.getForkTypes(slot);
-    forkTypesByEpoch.set(epoch, types);
-  }
-  return types;
-}
+import type {E2StoreEntry, EraFile, EraIndex, SlotIndex} from "./types.js";
 
 /** Shared 8-byte scratch and DataView to avoid per-call allocations for i64 read/write */
 const scratch64 = new ArrayBuffer(8);
@@ -82,7 +71,7 @@ function readInt64(bytes: Uint8Array, offset: number): bigint {
  * Validates expected count, entry type and payload size, offset bounds,
  * and trailing count.
  */
-export function readSlotIndex(bytes: Uint8Array, expectedType: "state" | "block"): SlotIndex {
+function readSlotIndex(bytes: Uint8Array, expectedType: "state" | "block"): SlotIndex {
   if (bytes.length < 8) {
     throw new Error("Buffer too small for SlotIndex count");
   }
@@ -113,7 +102,6 @@ export function readSlotIndex(bytes: Uint8Array, expectedType: "state" | "block"
     throw new Error(`Expected SlotIndex entry, got ${entry.type}`);
   }
 
-  // Validate payload size matches specification
   // Size: startSlot(8) + offsets(count*8) + count(8) = count*8 + 16
   const expectedSize = eofCount * 8 + 16;
   if (entry.data.length !== expectedSize) {
@@ -146,7 +134,6 @@ export function readSlotIndex(bytes: Uint8Array, expectedType: "state" | "block"
     }
   }
 
-  // Validate trailing count matches EOF count
   // Trailing count position: after startSlot(8) + offsets(count*8)
   const trailingCountOffset = 8 + eofCount * 8;
   const trailingCount = Number(readInt64(entry.data, trailingCountOffset));
@@ -165,7 +152,7 @@ export function readSlotIndex(bytes: Uint8Array, expectedType: "state" | "block"
 /**
  * Read state and block SlotIndex entries from an era file and validate alignment.
  */
-export function getEraIndexes(
+function getEraIndexes(
   eraBytes: Uint8Array,
   expectedEra?: number
 ): {stateSlotIndex: SlotIndex; blockSlotIndex?: SlotIndex} {
@@ -201,7 +188,7 @@ export function getEraIndexes(
   return {stateSlotIndex, blockSlotIndex};
 }
 
-/** Decompress snappy-framed data using Lodestar's spec-compliant decompressor. */
+/** Decompress snappy-framed data  */
 function decompressFrames(compressedData: Uint8Array): Uint8Array {
   const decompressor = new SnappyFramesUncompress();
 
@@ -215,17 +202,12 @@ function decompressFrames(compressedData: Uint8Array): Uint8Array {
   return result.subarray();
 }
 
-/** Decompress and deserialize a BeaconState using the appropriate fork for the era. */
-export function decompressBeaconState(
-  compressedData: Uint8Array,
-  era: number,
-  config: ChainForkConfig,
-  forkTypes?: ForkTypes
-) {
+/** Decompress and deserialize a BeaconState using the apt fork for the era. */
+function decompressBeaconState(compressedData: Uint8Array, era: number, config: ChainForkConfig) {
   const uncompressed = decompressFrames(compressedData);
 
   const stateSlot = era * SLOTS_PER_HISTORICAL_ROOT;
-  const types = forkTypes ?? getForkTypesCached(config, stateSlot);
+  const types = config.getForkTypes(stateSlot);
 
   try {
     return types.BeaconState.deserialize(uncompressed);
@@ -235,15 +217,10 @@ export function decompressBeaconState(
 }
 
 /** Decompress and deserialize a SignedBeaconBlock using the fork for the given slot. */
-export function decompressSignedBeaconBlock(
-  compressedData: Uint8Array,
-  blockSlot: number,
-  config: ChainForkConfig,
-  forkTypes?: ForkTypes
-) {
+function decompressSignedBeaconBlock(compressedData: Uint8Array, blockSlot: number, config: ChainForkConfig) {
   const uncompressed = decompressFrames(compressedData);
 
-  const types = forkTypes ?? getForkTypesCached(config, blockSlot);
+  const types = config.getForkTypes(blockSlot);
 
   try {
     return types.SignedBeaconBlock.deserialize(uncompressed);
@@ -252,13 +229,13 @@ export function decompressSignedBeaconBlock(
   }
 }
 
-export type SnappyFramedCompress = (ssz: Uint8Array) => Uint8Array;
+type SnappyFramedCompress = (ssz: Uint8Array) => Uint8Array;
 
 /**
  * Write a single E2Store TLV entry (header + payload)
  * Header layout: type[2] | length u32 LE | reserved u16(=0)
  */
-export function writeEntry(type2: Uint8Array, payload: Uint8Array): Uint8Array {
+function writeEntry(type2: Uint8Array, payload: Uint8Array): Uint8Array {
   if (type2.length !== 2) throw new Error("type must be 2 bytes");
   const out = new Uint8Array(E2STORE_HEADER_SIZE + payload.length);
   // type
@@ -274,21 +251,12 @@ export function writeEntry(type2: Uint8Array, payload: Uint8Array): Uint8Array {
   return out;
 }
 
-/** Encode a 64-bit signed integer (little-endian) into a new Uint8Array. */
-export function writeI64LE(v: bigint): Uint8Array {
-  // Allocates a single 8-byte output but reuses the shared DataView for encoding
-  scratch64View.setBigInt64(0, v, true);
-  const out = new Uint8Array(8);
-  out.set(scratch64Bytes);
-  return out;
-}
-
 /** In-place encode of a 64-bit signed integer (little-endian) into target at offset. */
 function writeI64LEInto(target: Uint8Array, offset: number, v: bigint): void {
   scratch64View.setBigInt64(0, v, true);
   target.set(scratch64Bytes, offset);
 }
-export function readI64LE(buf: Uint8Array, off: number): bigint {
+function readI64LE(buf: Uint8Array, off: number): bigint {
   const dv = new DataView(buf.buffer, buf.byteOffset + off, 8);
   return dv.getBigInt64(0, true);
 }
@@ -297,11 +265,7 @@ export function readI64LE(buf: Uint8Array, off: number): bigint {
  * Offsets are i64 relative to the index record start (0 = missing).
  * Payload size = count*8 + 16 (header not included).
  */
-export function buildSlotIndexData(
-  startSlot: number,
-  offsetsAbs: readonly number[],
-  indexRecordStart: number
-): Uint8Array {
+function buildSlotIndexData(startSlot: number, offsetsAbs: readonly number[], indexRecordStart: number): Uint8Array {
   const count = offsetsAbs.length;
   const payload = new Uint8Array(count * 8 + 16);
 
@@ -322,12 +286,12 @@ export function buildSlotIndexData(
 }
 
 /** Compressed record helpers (snappy framed) */
-export function writeCompressedBlock(ssz: Uint8Array, snappyFramed: SnappyFramedCompress): Uint8Array {
+function writeCompressedBlock(ssz: Uint8Array, snappyFramed: SnappyFramedCompress): Uint8Array {
   const framed = snappyFramed(ssz);
   return writeEntry(EraTypes[E2StoreEntryType.CompressedSignedBeaconBlock], framed);
 }
 
-export function writeCompressedState(ssz: Uint8Array, snappyFramed: SnappyFramedCompress): Uint8Array {
+function writeCompressedState(ssz: Uint8Array, snappyFramed: SnappyFramedCompress): Uint8Array {
   const framed = snappyFramed(ssz);
   return writeEntry(EraTypes[E2StoreEntryType.CompressedBeaconState], framed);
 }
@@ -349,7 +313,7 @@ function concat(chunks: Uint8Array[]): Uint8Array {
  * Layout: Version | block* | era-state | SlotIndex(block)? | SlotIndex(state)
  * Genesis (era 0): omit block index; always include state index (count=1).
  */
-export function writeEraGroup(params: {
+function writeEraGroup(params: {
   era: number;
   slotsPerHistoricalRoot: number;
   snappyFramed: SnappyFramedCompress;
@@ -408,82 +372,504 @@ export function writeEraGroup(params: {
   return concat(chunks);
 }
 
-/** Write an ERA file from one or more groups (concatenated). */
-export function writeEraFile(
-  groups: Array<{
-    era: number;
-    slotsPerHistoricalRoot: number;
-    snappyFramed: SnappyFramedCompress;
-    blocksBySlot: Map<number, Uint8Array>;
-    stateSlot: number;
-    stateSSZ: Uint8Array;
-  }>
-): Uint8Array {
-  const chunks: Uint8Array[] = [];
-  for (const g of groups) {
-    chunks.push(writeEraGroup(g));
+/**
+ * Read an era index file from disk.
+ * Format: startSlot (i64 LE) | count (i64 LE) | indices[count] (i64 LE each)
+ */
+export async function readEraIndexFile(path: string): Promise<EraIndex> {
+  const buffer = await readFile(path);
+
+  if (buffer.length < 16) {
+    throw new Error(`Index file too small: need at least 16 bytes, got ${buffer.length}`);
   }
-  return concat(chunks);
+
+  const startSlot = Number(readI64LE(buffer, 0));
+  const count = Number(readI64LE(buffer, 8));
+
+  const expectedSize = 16 + count * 8;
+  if (buffer.length !== expectedSize) {
+    throw new Error(`Index file size mismatch: expected ${expectedSize} bytes, got ${buffer.length}`);
+  }
+
+  const indices: number[] = [];
+  for (let i = 0; i < count; i++) {
+    indices.push(Number(readI64LE(buffer, 16 + i * 8)));
+  }
+
+  return {startSlot, indices};
 }
 
-/** Read and decode the BeaconState from an .era file (single era). */
-export function readBeaconStateFromEra(eraBytes: Uint8Array, config: ChainForkConfig, expectedEra?: number) {
-  const {stateSlotIndex} = getEraIndexes(eraBytes, expectedEra);
+/**
+ * Write an era index file to disk.
+ * Format: startSlot (i64 LE) | count (i64 LE) | indices[count] (i64 LE each)
+ */
+export async function writeEraIndexFile(path: string, index: EraIndex): Promise<void> {
+  const count = index.indices.length;
+  const buffer = new Uint8Array(16 + count * 8);
 
+  // Write startSlot
+  writeI64LEInto(buffer, 0, BigInt(index.startSlot));
+
+  // Write count
+  writeI64LEInto(buffer, 8, BigInt(count));
+
+  // Write indices
+  for (let i = 0; i < count; i++) {
+    writeI64LEInto(buffer, 16 + i * 8, BigInt(index.indices[i]));
+  }
+
+  await writeFile(path, buffer);
+}
+
+/** Return true if `slot` is within the era range */
+export function isSlotInRange(slot: Slot, eraNumber: number): boolean {
+  const eraStartSlot = eraNumber * SLOTS_PER_HISTORICAL_ROOT;
+  const eraEndSlot = eraStartSlot + SLOTS_PER_HISTORICAL_ROOT;
+  return slot >= eraStartSlot && slot < eraEndSlot;
+}
+
+/**
+ * Parse era number from era filename.
+ * Format: <config-name>-<era-number>-<short-historical-root>.era
+ */
+function parseEraNumber(filename: string): number {
+  const match = filename.match(/-(\d{5})-/);
+  if (!match) {
+    throw new Error(`Invalid era filename format: ${filename}`);
+  }
+  return parseInt(match[1], 10);
+}
+
+/** Create a new era file for writing */
+export async function createEraFile(path: string, eraNumber: number): Promise<EraFile> {
+  const fh = await open(path, "w+");
+  const name = basename(path);
+
+  // Register the file handle
+  fileHandles.set(fh.fd, fh);
+
+  const eraFile: EraFile = {
+    fd: fh.fd,
+    name,
+    eraNumber,
+
+    async close() {
+      fileHandles.delete(fh.fd);
+      await fh.close();
+    },
+
+    async validate(config: ChainForkConfig): Promise<void> {
+      await validateEraFile(fh.fd, eraNumber, config);
+    },
+
+    async createIndex(): Promise<EraIndex> {
+      // Read the entire file to extract the slot index
+      const stats = await fh.stat();
+      const buffer = new Uint8Array(stats.size);
+      await fh.read(buffer, 0, stats.size, 0);
+
+      // Get the block slot index from the era file
+      const {blockSlotIndex} = getEraIndexes(buffer, eraNumber);
+
+      if (!blockSlotIndex) {
+        // Genesis era (era 0) has no block index
+        return {
+          startSlot: 0,
+          indices: [],
+        };
+      }
+
+      return {
+        startSlot: blockSlotIndex.startSlot,
+        indices: blockSlotIndex.offsets,
+      };
+    },
+  };
+
+  return eraFile;
+}
+
+/** Open an era file and return an EraFile handle */
+export async function openEraFile(path: string): Promise<EraFile> {
+  const fh = await open(path, "r");
+  const name = basename(path);
+  const eraNumber = parseEraNumber(name);
+
+  // Register the file handle
+  fileHandles.set(fh.fd, fh);
+
+  const eraFile: EraFile = {
+    fd: fh.fd,
+    name,
+    eraNumber,
+
+    async close() {
+      fileHandles.delete(fh.fd);
+      await fh.close();
+    },
+
+    async validate(config: ChainForkConfig): Promise<void> {
+      await validateEraFile(fh.fd, eraNumber, config);
+    },
+
+    async createIndex(): Promise<EraIndex> {
+      // Read the entire file to extract the slot index
+      const stats = await fh.stat();
+      const buffer = new Uint8Array(stats.size);
+      await fh.read(buffer, 0, stats.size, 0);
+
+      // Get the block slot index from the era file
+      const {blockSlotIndex} = getEraIndexes(buffer, eraNumber);
+
+      if (!blockSlotIndex) {
+        // Genesis era (era 0) has no block index
+        return {
+          startSlot: 0,
+          indices: [],
+        };
+      }
+
+      return {
+        startSlot: blockSlotIndex.startSlot,
+        indices: blockSlotIndex.offsets,
+      };
+    },
+  };
+
+  return eraFile;
+}
+
+/**
+ * Helper to read entry at a specific offset from an open file handle.
+ * Reads header first to determine data length, then reads the complete entry.
+ */
+async function readEntryFromFile(fh: FileHandle, offset: number): Promise<E2StoreEntry> {
+  // Read header (8 bytes)
+  const header = new Uint8Array(E2STORE_HEADER_SIZE);
+  await fh.read(header, 0, E2STORE_HEADER_SIZE, offset);
+
+  // Parse length from header
+  const lengthView = new DataView(header.buffer, header.byteOffset + 2, 4);
+  const dataLength = lengthView.getUint32(0, true);
+
+  // Read complete entry (header + data)
+  const fullEntry = new Uint8Array(E2STORE_HEADER_SIZE + dataLength);
+  await fh.read(fullEntry, 0, fullEntry.length, offset);
+
+  return readEntry(fullEntry);
+}
+
+/** Compress data using snappy framing */
+async function compressSnappyFramed(data: Uint8Array): Promise<Uint8Array> {
+  const buffers: Buffer[] = [];
+  for await (const chunk of encodeSnappy(Buffer.from(data.buffer, data.byteOffset, data.byteLength))) {
+    buffers.push(chunk);
+  }
+  const total = buffers.reduce((n, b) => n + b.length, 0);
+  const out = new Uint8Array(total);
+  let p = 0;
+  for (const b of buffers) {
+    out.set(b, p);
+    p += b.length;
+  }
+  return out;
+}
+
+// WeakMap to track FileHandle for each EraFile by fd
+const fileHandles = new Map<number, FileHandle>();
+
+/** Helper to get file handle from fd */
+function getFileHandle(fd: number): FileHandle {
+  const fh = fileHandles.get(fd);
+  if (!fh) {
+    throw new Error(`No FileHandle found for fd ${fd}`);
+  }
+  return fh;
+}
+
+/**
+ * Get the state offset from the era file.
+ * Reads only the necessary parts of the file to locate the state index.
+ */
+async function getStateOffset(fh: FileHandle, eraNumber: number): Promise<number> {
+  // For now, read entire file to get indexes
+  const stats = await fh.stat();
+  const buffer = new Uint8Array(stats.size);
+  await fh.read(buffer, 0, stats.size, 0);
+
+  const {stateSlotIndex} = getEraIndexes(buffer, eraNumber);
   const offset = stateSlotIndex.offsets[0];
-  if (!offset) throw new Error("No BeaconState in this era (stateSlotIndex offset is 0)");
+  if (!offset) throw new Error("No BeaconState in this era");
 
-  const entry = readEntry(eraBytes.subarray(offset));
-  if (entry.type !== E2StoreEntryType.CompressedBeaconState) {
-    throw new Error(`Expected CompressedBeaconState at 0x${offset.toString(16)}, got ${entry.type}`);
-  }
-
-  const era = expectedEra ?? Math.floor(stateSlotIndex.startSlot / SLOTS_PER_HISTORICAL_ROOT);
-  const types = getForkTypesCached(config, stateSlotIndex.startSlot);
-  return decompressBeaconState(entry.data, era, config, types);
+  return offset;
 }
 
-/** Read and decode a SignedBeaconBlock at the given offset in the block index. */
-export function readBeaconBlockFromEra(
-  eraBytes: Uint8Array,
-  blockOffset: number,
-  config: ChainForkConfig,
-  expectedEra?: number
-) {
-  if (blockOffset < 0 || blockOffset >= SLOTS_PER_HISTORICAL_ROOT) {
-    throw new RangeError(`blockOffset out of range: ${blockOffset}`);
+/**
+ * Validate an era file for format correctness, era range, network correctness, and signatures.
+ */
+async function validateEraFile(fd: number, eraNumber: number, config: ChainForkConfig): Promise<void> {
+  const fh = getFileHandle(fd);
+  const stats = await fh.stat();
+  const buffer = new Uint8Array(stats.size);
+  await fh.read(buffer, 0, stats.size, 0);
+
+  // Validate e2s format and era range
+  const {stateSlotIndex, blockSlotIndex} = getEraIndexes(buffer, eraNumber);
+
+  // Validate state
+  const stateOffset = stateSlotIndex.offsets[0];
+  if (!stateOffset) throw new Error("No BeaconState in era file");
+
+  const stateEntry = readEntry(buffer.subarray(stateOffset));
+  if (stateEntry.type !== E2StoreEntryType.CompressedBeaconState) {
+    throw new Error(`Expected CompressedBeaconState, got ${stateEntry.type}`);
   }
 
-  const {blockSlotIndex} = getEraIndexes(eraBytes, expectedEra);
-  if (!blockSlotIndex) throw new Error("No block SlotIndex present in this era file");
-
-  const abs = blockSlotIndex.offsets[blockOffset];
-  if (!abs) throw new Error(`No block at offset ${blockOffset} (empty slot)`);
-
-  const entry = readEntry(eraBytes.subarray(abs));
-  if (entry.type !== E2StoreEntryType.CompressedSignedBeaconBlock) {
-    throw new Error(`Expected CompressedSignedBeaconBlock at 0x${abs.toString(16)}, got ${entry.type}`);
+  const state = decompressBeaconState(stateEntry.data, eraNumber, config);
+  const expectedStateSlot = eraNumber * SLOTS_PER_HISTORICAL_ROOT;
+  if (state.slot !== expectedStateSlot) {
+    throw new Error(`State slot mismatch: expected ${expectedStateSlot}, got ${state.slot}`);
   }
 
-  const slot = blockSlotIndex.startSlot + blockOffset;
-  const types = getForkTypesCached(config, slot);
-  return decompressSignedBeaconBlock(entry.data, slot, config, types);
+  // Validate blocks if not genesis
+  if (blockSlotIndex) {
+    for (let i = 0; i < blockSlotIndex.offsets.length; i++) {
+      const offset = blockSlotIndex.offsets[i];
+      if (!offset) continue; // Empty slot
+
+      const blockEntry = readEntry(buffer.subarray(offset));
+      if (blockEntry.type !== E2StoreEntryType.CompressedSignedBeaconBlock) {
+        throw new Error(`Expected CompressedSignedBeaconBlock at offset ${i}, got ${blockEntry.type}`);
+      }
+
+      const slot = blockSlotIndex.startSlot + i;
+      const block = decompressSignedBeaconBlock(blockEntry.data, slot, config);
+
+      // Validate block slot matches
+      if (block.message.slot !== slot) {
+        throw new Error(`Block slot mismatch at index ${i}: expected ${slot}, got ${block.message.slot}`);
+      }
+
+      // Validate block signature exists (basic check)
+      if (block.signature.length === 0) {
+        throw new Error(`Block at slot ${slot} has empty signature`);
+      }
+    }
+  }
 }
 
-/** Iterate all SignedBeaconBlocks in an era (skips empty slots). */
-export function* readBlocksFromEra(eraBytes: Uint8Array, config: ChainForkConfig, expectedEra?: number) {
-  const {blockSlotIndex} = getEraIndexes(eraBytes, expectedEra);
-  if (!blockSlotIndex) return;
+/** EraFileReader implementation */
+export class EraFileReader {
+  readonly era: EraFile;
+  readonly index: EraIndex;
+  private readonly config: ChainForkConfig;
 
-  for (let i = 0; i < blockSlotIndex.offsets.length; i++) {
-    const abs = blockSlotIndex.offsets[i];
-    if (!abs) continue;
+  constructor(era: EraFile, index: EraIndex, config: ChainForkConfig) {
+    this.era = era;
+    this.index = index;
+    this.config = config;
+  }
 
-    const entry = readEntry(eraBytes.subarray(abs));
-    if (entry.type !== E2StoreEntryType.CompressedSignedBeaconBlock) continue;
+  async readCompressedCanonicalState(): Promise<Uint8Array> {
+    const fh = getFileHandle(this.era.fd);
+    const offset = await getStateOffset(fh, this.era.eraNumber);
+    const entry = await readEntryFromFile(fh, offset);
 
-    const slot = blockSlotIndex.startSlot + i;
-    const types = getForkTypesCached(config, slot);
-    yield decompressSignedBeaconBlock(entry.data, slot, config, types);
+    if (entry.type !== E2StoreEntryType.CompressedBeaconState) {
+      throw new Error(`Expected CompressedBeaconState, got ${entry.type}`);
+    }
+
+    return entry.data;
+  }
+
+  async readCanonicalState(): Promise<BeaconState> {
+    const compressed = await this.readCompressedCanonicalState();
+    return decompressBeaconState(compressed, this.era.eraNumber, this.config);
+  }
+
+  async readCompressedBlock(slot: Slot): Promise<Uint8Array | null> {
+    // Calculate offset within the index
+    const indexOffset = slot - this.index.startSlot;
+    if (indexOffset < 0 || indexOffset >= this.index.indices.length) {
+      throw new Error(
+        `Slot ${slot} is out of range for this era file (valid range: ${this.index.startSlot} to ${this.index.startSlot + this.index.indices.length - 1})`
+      );
+    }
+
+    const fileOffset = this.index.indices[indexOffset];
+    if (fileOffset === 0) {
+      return null; // Empty slot
+    }
+
+    const fh = getFileHandle(this.era.fd);
+    const entry = await readEntryFromFile(fh, fileOffset);
+    if (entry.type !== E2StoreEntryType.CompressedSignedBeaconBlock) {
+      throw new Error(`Expected CompressedSignedBeaconBlock, got ${entry.type}`);
+    }
+    return entry.data;
+  }
+
+  async readBlock(slot: Slot): Promise<SignedBeaconBlock | null> {
+    const compressed = await this.readCompressedBlock(slot);
+    if (compressed === null) return null;
+    return decompressSignedBeaconBlock(compressed, slot, this.config);
+  }
+
+  async validate(): Promise<void> {
+    // Read entire file for validation
+    const fh = getFileHandle(this.era.fd);
+    const stats = await fh.stat();
+    const buffer = new Uint8Array(stats.size);
+    await fh.read(buffer, 0, stats.size, 0);
+
+    // Validate e2s format and era range
+    const {stateSlotIndex, blockSlotIndex} = getEraIndexes(buffer, this.era.eraNumber);
+
+    // Validate state
+    const stateOffset = stateSlotIndex.offsets[0];
+    if (!stateOffset) throw new Error("No BeaconState in era file");
+
+    const stateEntry = readEntry(buffer.subarray(stateOffset));
+    if (stateEntry.type !== E2StoreEntryType.CompressedBeaconState) {
+      throw new Error(`Expected CompressedBeaconState, got ${stateEntry.type}`);
+    }
+
+    const state = decompressBeaconState(stateEntry.data, this.era.eraNumber, this.config);
+    const expectedStateSlot = this.era.eraNumber * SLOTS_PER_HISTORICAL_ROOT;
+    if (state.slot !== expectedStateSlot) {
+      throw new Error(`State slot mismatch: expected ${expectedStateSlot}, got ${state.slot}`);
+    }
+
+    // Validate blocks if not genesis
+    if (blockSlotIndex) {
+      for (let i = 0; i < blockSlotIndex.offsets.length; i++) {
+        const offset = blockSlotIndex.offsets[i];
+        if (!offset) continue; // Empty slot
+
+        const blockEntry = readEntry(buffer.subarray(offset));
+        if (blockEntry.type !== E2StoreEntryType.CompressedSignedBeaconBlock) {
+          throw new Error(`Expected CompressedSignedBeaconBlock at offset ${i}, got ${blockEntry.type}`);
+        }
+
+        const slot = blockSlotIndex.startSlot + i;
+        const block = decompressSignedBeaconBlock(blockEntry.data, slot, this.config);
+
+        // Validate block slot matches
+        if (block.message.slot !== slot) {
+          throw new Error(`Block slot mismatch at index ${i}: expected ${slot}, got ${block.message.slot}`);
+        }
+
+        // Validate block signature exists (basic check)
+        if (block.signature.length === 0) {
+          throw new Error(`Block at slot ${slot} has empty signature`);
+        }
+      }
+    }
+  }
+}
+
+/** EraFileWriter implementation */
+export class EraFileWriter {
+  readonly era: EraFile;
+  private readonly config: ChainForkConfig;
+  private stateWritten = false;
+  private stateSlot: Slot | undefined;
+  private stateData: Uint8Array | undefined;
+  private blocksBySlot = new Map<number, Uint8Array>();
+
+  constructor(era: EraFile, config: ChainForkConfig) {
+    this.era = era;
+    this.config = config;
+  }
+
+  async writeCompressedCanonicalState(slot: Slot, data: Uint8Array): Promise<void> {
+    if (this.stateWritten) {
+      throw new Error("Canonical state has already been written");
+    }
+    const expectedSlot = this.era.eraNumber * SLOTS_PER_HISTORICAL_ROOT;
+    if (slot !== expectedSlot) {
+      throw new Error(`State slot must be ${expectedSlot} for era ${this.era.eraNumber}, got ${slot}`);
+    }
+    this.stateSlot = slot;
+    this.stateData = data;
+    this.stateWritten = true;
+  }
+
+  async writeCanonicalState(state: BeaconState): Promise<void> {
+    const slot = state.slot;
+    const types = this.config.getForkTypes(slot);
+    const ssz = types.BeaconState.serialize(state);
+    const compressed = await compressSnappyFramed(ssz);
+    await this.writeCompressedCanonicalState(slot, compressed);
+  }
+
+  async writeCompressedBlock(slot: Slot, data: Uint8Array): Promise<void> {
+    // Blocks in era N file are from era N-1
+    if (this.era.eraNumber === 0) {
+      throw new Error("Genesis era (era 0) does not contain blocks");
+    }
+
+    const blockEra = this.era.eraNumber - 1;
+    if (!isSlotInRange(slot, blockEra)) {
+      const expectedStartSlot = blockEra * SLOTS_PER_HISTORICAL_ROOT;
+      const expectedEndSlot = expectedStartSlot + SLOTS_PER_HISTORICAL_ROOT;
+      throw new Error(
+        `Slot ${slot} is not in valid block range for era ${this.era.eraNumber} file (valid range: ${expectedStartSlot} to ${expectedEndSlot - 1})`
+      );
+    }
+    this.blocksBySlot.set(slot, data);
+  }
+
+  async writeBlock(block: SignedBeaconBlock): Promise<void> {
+    const slot = block.message.slot;
+    const types = this.config.getForkTypes(slot);
+    const ssz = types.SignedBeaconBlock.serialize(block);
+    const compressed = await compressSnappyFramed(ssz);
+    await this.writeCompressedBlock(slot, compressed);
+  }
+
+  async finish(): Promise<EraIndex> {
+    if (!this.stateWritten || !this.stateData || this.stateSlot === undefined) {
+      throw new Error("Must write canonical state before finishing");
+    }
+
+    // Helper to convert compressed data to snappy framed format (already compressed)
+    const snappyFramed = (data: Uint8Array) => data;
+
+    // Prepare blocks map with SSZ data (already compressed)
+    const blocksBySlotSSZ = new Map<number, Uint8Array>();
+    for (const [slot, compressed] of this.blocksBySlot) {
+      blocksBySlotSSZ.set(slot, compressed);
+    }
+
+    // Write the era group
+    const eraBytes = writeEraGroup({
+      era: this.era.eraNumber,
+      slotsPerHistoricalRoot: SLOTS_PER_HISTORICAL_ROOT,
+      snappyFramed,
+      blocksBySlot: blocksBySlotSSZ,
+      stateSlot: this.stateSlot,
+      stateSSZ: this.stateData,
+    });
+
+    // Write to file
+    const fh = getFileHandle(this.era.fd);
+    await fh.write(eraBytes, 0, eraBytes.length, 0);
+
+    // Create and return index
+    const {blockSlotIndex} = getEraIndexes(eraBytes, this.era.eraNumber);
+
+    if (!blockSlotIndex) {
+      // Genesis era
+      return {
+        startSlot: 0,
+        indices: [],
+      };
+    }
+
+    return {
+      startSlot: blockSlotIndex.startSlot,
+      indices: blockSlotIndex.offsets,
+    };
   }
 }

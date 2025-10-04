@@ -1,250 +1,165 @@
-import {existsSync, mkdirSync, readFileSync, writeFileSync} from "node:fs";
+import {existsSync, mkdirSync} from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
 import {assert, beforeAll, describe, it} from "vitest";
-
 import {ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
-import {encodeSnappy} from "../../../reqresp/src/encodingStrategies/sszSnappy/snappyFrames/compress.js";
-
-import {
-  E2StoreEntryType,
-  decompressBeaconState,
-  decompressSignedBeaconBlock,
-  getEraIndexes,
-  readEntry,
-  readI64LE,
-  writeEraGroup,
-} from "../../src/index.js";
+import {EraFileReader, EraFileWriter, createEraFile, openEraFile} from "../../src/index.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 describe.runIf(!process.env.CI)("read original era and re-write our own era file", () => {
-  let data: Uint8Array;
   let cfg: ChainForkConfig;
   const eraPath = path.resolve(__dirname, "../mainnet-01506-4781865b.era");
   const expectedEra = 1506;
 
   beforeAll(() => {
-    try {
-      data = new Uint8Array(readFileSync(eraPath));
-    } catch {
-      throw new Error(". Run the downloader script first:\n  ./packages/era/test/era_downloader.sh\n");
-    }
     cfg = createChainForkConfig(defaultConfig);
   });
 
-  let snappyTimeMs = 0;
-  async function encodeSnappyToUint8Array(data: Uint8Array): Promise<Uint8Array> {
-    const t0 = Date.now();
-    const buffers: Buffer[] = [];
-    for await (const chunk of encodeSnappy(Buffer.from(data.buffer, data.byteOffset, data.byteLength))) {
-      buffers.push(chunk);
-    }
-    snappyTimeMs += Date.now() - t0;
-    const total = buffers.reduce((n, b) => n + b.length, 0);
-    const out = new Uint8Array(total);
-    let p = 0;
-    for (const b of buffers) {
-      out.set(b, p);
-      p += b.length;
-    }
-    return out;
-  }
-  const framedBySSZ = new WeakMap<Uint8Array, Uint8Array>();
-  function snappyFramed(data: Uint8Array): Uint8Array {
-    const out = framedBySSZ.get(data);
-    if (!out) throw new Error("missing precomputed snappy frame for provided SSZ bytes");
-    return out;
-  }
-
-  it("reads an existing era group and writes a full group that round-trips", async () => {
-    console.log("stage: read+parse indexes");
-    const {stateSlotIndex, blockSlotIndex} = getEraIndexes(data, expectedEra);
-
-    // Build uncompressed SSZ for state from original file
-    const stateOffset = stateSlotIndex.offsets[0];
-    assert.ok(stateOffset > 0, "original state must exist");
-    const stateEntry = readEntry(data.subarray(stateOffset));
-    assert.equal(stateEntry.type, E2StoreEntryType.CompressedBeaconState);
-    let scanDeserializeMs = 0;
-    let serializeMs = 0;
-    let tlvWriteMs = 0;
-
-    console.log("stage: state decompress+serialize");
-    // Decompress + deserialize state
-    const stateValue = (() => {
-      const t0 = Date.now();
-      const v = decompressBeaconState(stateEntry.data, expectedEra, cfg);
-      scanDeserializeMs += Date.now() - t0;
-      return v;
-    })();
-    const stateSlot = stateSlotIndex.startSlot;
-    const stateSSZ = (() => {
-      const t0 = Date.now();
-      const ssz = cfg.getForkTypes(stateSlot).BeaconState.serialize(stateValue);
-      serializeMs += Date.now() - t0;
-      return ssz;
-    })();
-
-    console.log("stage: scan+serialize blocks window");
-    // Build all available blocks in the window as SSZ
+  it("reads an existing era file and writes a new era file that round-trips", async () => {
     const SPR = SLOTS_PER_HISTORICAL_ROOT;
-    const blocksBySlot = new Map<number, Uint8Array>();
-    let originalNonEmpty = 0;
-    let scanned = 0;
-    if (blockSlotIndex) {
-      for (let i = 0; i < blockSlotIndex.offsets.length; i++) {
-        const abs = blockSlotIndex.offsets[i];
-        scanned++;
-        if (!abs) continue;
-        originalNonEmpty++;
-        const entry = readEntry(data.subarray(abs));
-        if (entry.type !== E2StoreEntryType.CompressedSignedBeaconBlock) continue;
-        const slot = blockSlotIndex.startSlot + i;
-        const blockValue = (() => {
-          const t0 = Date.now();
-          const v = decompressSignedBeaconBlock(entry.data, slot, cfg);
-          scanDeserializeMs += Date.now() - t0;
-          return v;
-        })();
-        const blockSSZ = (() => {
-          const t0 = Date.now();
-          const ssz = cfg.getForkTypes(slot).SignedBeaconBlock.serialize(blockValue);
-          serializeMs += Date.now() - t0;
-          return ssz;
-        })();
-        blocksBySlot.set(slot, blockSSZ);
+    const stateSlot = expectedEra * SPR;
+    const blockStartSlot = stateSlot - SPR;
 
-        if ((scanned & 0x1ff) === 0) {
-          console.log(`progress: scanned ${scanned}/${SPR} slots, non-empty ${originalNonEmpty}`);
-        }
+    const startTime = Date.now();
+    let t0 = startTime;
+
+    console.log("stage: open and read original era file");
+    const originalEraFile = await openEraFile(eraPath);
+    const originalIndex = await originalEraFile.createIndex();
+    const reader = new EraFileReader(originalEraFile, originalIndex, cfg);
+    console.log(`  time: ${Date.now() - t0}ms`);
+    t0 = Date.now();
+
+    console.log("stage: read state from original file");
+    const originalState = await reader.readCanonicalState();
+    assert.equal(Number(originalState.slot), stateSlot);
+    console.log(`  time: ${Date.now() - t0}ms`);
+    t0 = Date.now();
+
+    console.log("stage: read blocks from original file");
+    const blocks: {slot: number; block: any}[] = [];
+    for (let i = 0; i < originalIndex.indices.length; i++) {
+      if (originalIndex.indices[i] === 0) continue;
+      const slot = blockStartSlot + i;
+      const block = await reader.readBlock(slot);
+      assert.ok(block !== null, `Expected block at slot ${slot} but got null`);
+      blocks.push({slot, block});
+      if ((i & 0x1ff) === 0) {
+        console.log(`progress: scanned ${i}/${SPR} slots, non-empty ${blocks.length}`);
       }
     }
-    console.log("stage: precompute snappy frames (original encoder)");
-    // Precompute snappy frames
-    framedBySSZ.set(stateSSZ, await encodeSnappyToUint8Array(stateSSZ));
-    for (const ssz of blocksBySlot.values()) {
-      framedBySSZ.set(ssz, await encodeSnappyToUint8Array(ssz));
-    }
-    console.log(`stage: blocks prepared (non-empty=${originalNonEmpty})`);
+    console.log(`stage: read complete (non-empty blocks=${blocks.length})`);
+    console.log(`  time: ${Date.now() - t0}ms`);
+    t0 = Date.now();
 
-    // Write a new era group and then a full era file with that single group
-    console.log("stage: write group (snappy+TLV+index)");
-    const groupBytes = (() => {
-      const t0 = Date.now();
-      const bytes = writeEraGroup({
-        era: expectedEra,
-        slotsPerHistoricalRoot: SPR,
-        snappyFramed,
-        blocksBySlot,
-        stateSlot,
-        stateSSZ,
-      });
-      tlvWriteMs += Date.now() - t0;
-      return bytes;
-    })();
-    console.log(`stage: validate new group (bytes=${groupBytes.length})`);
+    await originalEraFile.close();
 
-    // Validate group round-trip
-    const newIdx = getEraIndexes(groupBytes, expectedEra);
-    assert.equal(newIdx.stateSlotIndex.startSlot, stateSlot);
-    assert.equal(stateSlot, expectedEra * SPR);
-    if (blockSlotIndex) {
-      const bsi = newIdx.blockSlotIndex;
-      assert.ok(bsi);
-      assert.equal(bsi.startSlot, blockSlotIndex.startSlot);
-      assert.equal(bsi.offsets.length, SPR);
-      assert.equal(bsi.startSlot, stateSlot - SPR);
-      const newNonEmpty = bsi.offsets.filter((o) => o !== 0).length;
-      assert.equal(newNonEmpty, originalNonEmpty);
-    } else {
-      assert.equal(newIdx.blockSlotIndex, undefined);
-    }
-
-    // Validate state decodes from new file
-    const newStateOffset = newIdx.stateSlotIndex.offsets[0];
-    const newStateEntry = readEntry(groupBytes.subarray(newStateOffset));
-    assert.equal(newStateEntry.type, E2StoreEntryType.CompressedBeaconState);
-    const newState = decompressBeaconState(newStateEntry.data, expectedEra, cfg);
-    assert.equal(Number(newState.slot), stateSlot);
-
-    // State index: count=1, relative = headerStart - indexHeaderStart (header-start semantics)
-    {
-      const ssi = newIdx.stateSlotIndex;
-      const ssiEntry = readEntry(groupBytes.subarray(ssi.recordStart));
-      // startSlot(8) + offsets(8) + count(8)
-      const recordedRel = readI64LE(ssiEntry.data, 8);
-      const expectedRel = BigInt(newStateOffset - ssi.recordStart);
-      assert.equal(recordedRel, expectedRel);
-    }
-
-    // Block index (if present): each non-zero offset obeys the same relation
-    if (newIdx.blockSlotIndex) {
-      const bsi = newIdx.blockSlotIndex;
-      const bsiEntry = readEntry(groupBytes.subarray(bsi.recordStart));
-      for (let i = 0; i < bsi.offsets.length; i++) {
-        const headerStart = bsi.offsets[i];
-        const rel = readI64LE(bsiEntry.data, 8 + i * 8);
-        if (headerStart === 0) {
-          assert.equal(rel, 0n);
-        } else {
-          const expectedRel = BigInt(headerStart - bsi.recordStart);
-          assert.equal(rel, expectedRel);
-        }
-      }
-    }
-
-    // Validate first and last non-empty blocks decode from new file
-    if (newIdx.blockSlotIndex) {
-      const offsets = newIdx.blockSlotIndex.offsets;
-      const firstIdx = offsets.findIndex((o) => o !== 0);
-      let lastIdx = -1;
-      for (let i = offsets.length - 1; i >= 0; i--) {
-        if (offsets[i] !== 0) {
-          lastIdx = i;
-          break;
-        }
-      }
-      if (firstIdx !== -1) {
-        const off = offsets[firstIdx];
-        const be = readEntry(groupBytes.subarray(off));
-        assert.equal(be.type, E2StoreEntryType.CompressedSignedBeaconBlock);
-        const slot = newIdx.blockSlotIndex.startSlot + firstIdx;
-        const blk = decompressSignedBeaconBlock(be.data, slot, cfg);
-        assert.equal(Number(blk.message.slot), slot);
-      }
-      if (lastIdx !== -1 && lastIdx !== firstIdx) {
-        const off2 = offsets[lastIdx];
-        const be2 = readEntry(groupBytes.subarray(off2));
-        assert.equal(be2.type, E2StoreEntryType.CompressedSignedBeaconBlock);
-        const slot2 = newIdx.blockSlotIndex.startSlot + lastIdx;
-        const blk2 = decompressSignedBeaconBlock(be2.data, slot2, cfg);
-        assert.equal(Number(blk2.message.slot), slot2);
-      }
-
-      // For remaining non-empty blocks,  validate TLV type/length without decoding SSZ
-      for (let i = 0; i < offsets.length; i++) {
-        if (i === firstIdx || i === lastIdx) continue;
-        const off = offsets[i];
-        if (!off) continue;
-        const e = readEntry(groupBytes.subarray(off));
-        assert.equal(e.type, E2StoreEntryType.CompressedSignedBeaconBlock);
-        assert.ok(e.data.length >= 0);
-      }
-    }
-
-    // Write the produced ERA file
-    console.log("stage: write to disk");
+    console.log("stage: create and write new era file");
+    console.log("stage: create and write new era file");
     const outDir = path.resolve(__dirname, "../out");
     if (!existsSync(outDir)) mkdirSync(outDir, {recursive: true});
     const outFile = path.resolve(outDir, `mainnet-${String(expectedEra).padStart(5, "0")}-rewrite.era`);
-    writeFileSync(outFile, groupBytes);
 
-    console.log(
-      `timings(ms): scan+deserialize=${scanDeserializeMs} serialize=${serializeMs} snappy=${snappyTimeMs} tlvWrite+index=${tlvWriteMs}`
-    );
+    const newEraFile = await createEraFile(outFile, expectedEra);
+    const writer = new EraFileWriter(newEraFile, cfg);
+
+    // Write state
+    console.log("stage: write state");
+    await writer.writeCanonicalState(originalState);
+    console.log(`  time: ${Date.now() - t0}ms`);
+    t0 = Date.now();
+
+    // Write all blocks
+    console.log("stage: write blocks");
+    for (const {block} of blocks) {
+      await writer.writeBlock(block);
+    }
+    console.log(`  time: ${Date.now() - t0}ms`);
+    t0 = Date.now();
+
+    // Finish writing
+    console.log("stage: finish writing");
+    await writer.finish();
+    await newEraFile.close();
+    console.log(`  time: ${Date.now() - t0}ms`);
+    t0 = Date.now();
+
+    console.log("stage: validate new era file");
+    // Open and validate the new file
+    const validationEraFile = await openEraFile(outFile);
+    const validationIndex = await validationEraFile.createIndex();
+    const validationReader = new EraFileReader(validationEraFile, validationIndex, cfg);
+    console.log(`  time: ${Date.now() - t0}ms`);
+    t0 = Date.now();
+
+    // Validate entire era file format and correctness
+    console.log("stage: validate era file format");
+    await validationEraFile.validate(cfg);
+    console.log(`  time: ${Date.now() - t0}ms`);
+    t0 = Date.now();
+
+    // Validate index matches
+    assert.equal(validationIndex.startSlot, blockStartSlot);
+    assert.equal(validationIndex.indices.length, SPR);
+    const newNonEmpty = validationIndex.indices.filter((o) => o !== 0).length;
+    assert.equal(newNonEmpty, blocks.length);
+
+    // Validate empty/non-empty slot pattern matches original
+    for (let i = 0; i < SPR; i++) {
+      const originalIsEmpty = originalIndex.indices[i] === 0;
+      const newIsEmpty = validationIndex.indices[i] === 0;
+      assert.equal(newIsEmpty, originalIsEmpty, `Slot ${blockStartSlot + i} empty/non-empty status should match`);
+    }
+
+    // Validate state matches (full comparison via SSZ serialization)
+    console.log("stage: validate state");
+    const validatedState = await validationReader.readCanonicalState();
+
+    // Serialize both states and compare bytes - this proves they're 100% identical
+    const originalTypes = cfg.getForkTypes(originalState.slot);
+    const validatedTypes = cfg.getForkTypes(validatedState.slot);
+    const originalSSZ = originalTypes.BeaconState.serialize(originalState);
+    const validatedSSZ = validatedTypes.BeaconState.serialize(validatedState);
+
+    assert.deepEqual(validatedSSZ, originalSSZ, "State SSZ bytes should match exactly");
+    console.log(`  time: ${Date.now() - t0}ms`);
+    t0 = Date.now();
+
+    // Validate ALL blocks match exactly (full comparison via SSZ serialization)
+    console.log("stage: validate all blocks");
+    for (const {slot, block} of blocks) {
+      const validatedBlock = await validationReader.readBlock(slot);
+      assert.ok(validatedBlock !== null, `Block at slot ${slot} should not be null`);
+
+      // Serialize both blocks and compare bytes - this proves they're 100% identical
+      const types = cfg.getForkTypes(slot);
+      const originalSSZ = types.SignedBeaconBlock.serialize(block);
+      const validatedSSZ = types.SignedBeaconBlock.serialize(validatedBlock);
+      assert.deepEqual(validatedSSZ, originalSSZ, `Block at slot ${slot} SSZ bytes should match exactly`);
+    }
+    console.log(`  time: ${Date.now() - t0}ms`);
+    t0 = Date.now();
+
+    // Validate empty slots remain empty
+    console.log("stage: validate empty slots");
+    for (let i = 0; i < originalIndex.indices.length; i++) {
+      if (originalIndex.indices[i] === 0) {
+        const slot = blockStartSlot + i;
+        const validatedBlock = await validationReader.readBlock(slot);
+        assert.equal(validatedBlock, null, `Slot ${slot} should be empty`);
+      }
+    }
+    console.log(`  time: ${Date.now() - t0}ms`);
+
+    // Cleanup
+    await validationEraFile.close();
+
+    const totalTime = Date.now() - startTime;
+    console.log(`Round-trip test passed: ${blocks.length} blocks written and fully validated`);
+    console.log(`  Total time: ${totalTime}ms (${(totalTime / 1000).toFixed(2)}s)`);
   }, 120000);
 });
