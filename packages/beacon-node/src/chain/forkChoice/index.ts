@@ -124,7 +124,7 @@ export function initializeForkChoiceFromFinalizedState(
         parentRoot: toRootHex(blockHeader.parentRoot),
         stateRoot: toRootHex(blockHeader.stateRoot),
         blockRoot: toRootHex(checkpoint.root),
-        timeliness: true, // Optimisitcally assume is timely
+        timeliness: true, // Optimistically assume is timely
 
         justifiedEpoch: justifiedCheckpoint.epoch,
         justifiedRoot: toRootHex(justifiedCheckpoint.root),
@@ -160,20 +160,20 @@ export function initializeForkChoiceFromUnfinalizedState(
   config: ChainForkConfig,
   emitter: ChainEventEmitter,
   currentSlot: Slot,
-  unFinalizedState: CachedBeaconStateAllForks,
+  unfinalizedState: CachedBeaconStateAllForks,
   opts: ForkChoiceOpts,
   justifiedBalancesGetter: JustifiedBalancesGetter,
   metrics: Metrics | null,
   logger?: Logger
 ): ForkChoice {
-  const {blockHeader} = computeAnchorCheckpoint(config, unFinalizedState);
-  const finalizedCheckpoint = unFinalizedState.finalizedCheckpoint.toValue();
-  const justifiedCheckpoint = unFinalizedState.currentJustifiedCheckpoint.toValue();
+  const {blockHeader} = computeAnchorCheckpoint(config, unfinalizedState);
+  const finalizedCheckpoint = unfinalizedState.finalizedCheckpoint.toValue();
+  const justifiedCheckpoint = unfinalizedState.currentJustifiedCheckpoint.toValue();
   const headRoot = toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader));
 
   const logCtx = {
     currentSlot: currentSlot,
-    stateSlot: unFinalizedState.slot,
+    stateSlot: unfinalizedState.slot,
     headSlot: blockHeader.slot,
     headRoot: headRoot,
     finalizedEpoch: finalizedCheckpoint.epoch,
@@ -184,7 +184,7 @@ export function initializeForkChoiceFromUnfinalizedState(
   logger?.warn("Initializing fork choice from unfinalized state", logCtx);
 
   // this is not the justified state, but there is no other ways to get justified balances
-  const justifiedBalances = getEffectiveBalanceIncrementsZeroInactive(unFinalizedState);
+  const justifiedBalances = getEffectiveBalanceIncrementsZeroInactive(unfinalizedState);
   const store = new ForkChoiceStore(
     currentSlot,
     justifiedCheckpoint,
@@ -215,10 +215,10 @@ export function initializeForkChoiceFromUnfinalizedState(
     unrealizedFinalizedEpoch: finalizedCheckpoint.epoch,
     unrealizedFinalizedRoot: toRootHex(finalizedCheckpoint.root),
 
-    ...(isExecutionStateType(unFinalizedState) && isMergeTransitionComplete(unFinalizedState)
+    ...(isExecutionStateType(unfinalizedState) && isMergeTransitionComplete(unfinalizedState)
       ? {
-          executionPayloadBlockHash: toRootHex(unFinalizedState.latestExecutionPayloadHeader.blockHash),
-          executionPayloadNumber: unFinalizedState.latestExecutionPayloadHeader.blockNumber,
+          executionPayloadBlockHash: toRootHex(unfinalizedState.latestExecutionPayloadHeader.blockHash),
+          executionPayloadNumber: unfinalizedState.latestExecutionPayloadHeader.blockNumber,
           executionStatus: blockHeader.slot === GENESIS_SLOT ? ExecutionStatus.Valid : ExecutionStatus.Syncing,
         }
       : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
@@ -237,7 +237,7 @@ export function initializeForkChoiceFromUnfinalizedState(
     // dummy data, we're not able to regen state before headBlock
     stateRoot: ZERO_HASH_HEX,
     blockRoot: headBlock.parentRoot,
-    targetRoot: toRootHex(getBlockRootAtSlot(unFinalizedState, computeStartSlotAtEpoch(parentEpoch))),
+    targetRoot: toRootHex(getBlockRootAtSlot(unfinalizedState, computeStartSlotAtEpoch(parentEpoch))),
   };
 
   const justifiedBlock: ProtoBlock = {
