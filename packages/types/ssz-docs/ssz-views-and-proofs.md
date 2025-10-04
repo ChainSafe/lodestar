@@ -93,6 +93,16 @@ IN summary:
 - Setters → require sub-views for composites, native values for primitives.
 - Updates are incremental → only the changed branch is rehashed.
 - Best for containers (like Attestation, BlockHeader) where updates are small and infrequent.
+
+```
+// Create a tree-backed attestation view
+const attestation = ssz.phase0.Attestation.defaultView();
+
+// Modify a field (updates tree branch immediately)
+attestation.data.source.epoch = 10;
+
+// Get the root (rehashes only changed branch)
+const root = attestation.hashTreeRoot();
 ```
 
 
