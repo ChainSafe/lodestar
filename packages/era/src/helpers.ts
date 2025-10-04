@@ -4,9 +4,8 @@ import {basename} from "node:path";
 import {Uint8ArrayList} from "uint8arraylist";
 import {ChainForkConfig} from "@lodestar/config";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {SnappyFramesUncompress, encodeSnappy} from "@lodestar/reqresp/encodingStrategies/sszSnappy";
 import {BeaconState, SignedBeaconBlock, Slot} from "@lodestar/types";
-import {encodeSnappy} from "../../reqresp/src/encodingStrategies/sszSnappy/snappyFrames/compress.js";
-import {SnappyFramesUncompress} from "../../reqresp/src/encodingStrategies/sszSnappy/snappyFrames/uncompress.js";
 import {E2STORE_HEADER_SIZE, E2StoreEntryType, EraTypes, VERSION_RECORD_BYTES} from "./constants.js";
 import type {E2StoreEntry, EraFile, EraIndex, SlotIndex} from "./types.js";
 

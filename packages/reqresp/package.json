@@ -21,6 +21,10 @@
     "./utils": {
       "bun": "./src/utils/index.ts",
       "import": "./lib/utils/index.js"
+    },
+    "./encodingStrategies/sszSnappy": {
+      "bun": "./src/encodingStrategies/sszSnappy/index.ts",
+      "import": "./lib/encodingStrategies/sszSnappy/index.js"
     }
   },
   "typesVersions": {
