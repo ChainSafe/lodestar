@@ -74,10 +74,25 @@ So View is the umbrella term.
 Lodestar has two main tree-backed views for composite SSZ types:
 
 TreeView → immediate updates
-
 TreeViewDU → deferred (commit-based) updates
 
 Both are wrappers around a Merkle tree + SSZ type schema, exposing an object-like API for convenient property access.
+
+1. **TreeView**
+A tree view is a wrapper around a Tree and a Type that provides methods for convenient property access and ssz operations. [ merkle-backed view where every change is applied immediately.
+]
+
+Property getters return sub-views, except for basic types, which return native values. Setters, likewise, require sub-views, except for basic types, which require native views.
+
+This tree view is a simple wrapper to tree backed data that commits any changes immediately to the tree. Changes are propagated upwards to the root parent tree.
+
+IN summary:
+
+- Looks like a normal object, but is backed by a persistent Merkle tree.
+- Getters → return sub-views (for composites) or native JS values (for primitives).
+- Setters → require sub-views for composites, native values for primitives.
+- Updates are incremental → only the changed branch is rehashed.
+- Best for containers (like Attestation, BlockHeader) where updates are small and infrequent.
 ```
 
 
