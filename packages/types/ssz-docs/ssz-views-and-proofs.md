@@ -69,8 +69,15 @@ A View can be:
 
 So View is the umbrella term.
 
+#### Tree-backed Views
 
+Lodestar has two main tree-backed views for composite SSZ types:
 
+TreeView → immediate updates
+
+TreeViewDU → deferred (commit-based) updates
+
+Both are wrappers around a Merkle tree + SSZ type schema, exposing an object-like API for convenient property access.
 ```
 
 
