@@ -66,6 +66,7 @@ describe("validate voluntary exit", () => {
     vi.spyOn(chainStub, "getHeadStateAtCurrentEpoch").mockResolvedValue(state);
     vi.spyOn(opPool, "hasSeenBlsToExecutionChange");
     vi.spyOn(opPool, "hasSeenVoluntaryExit");
+    vi.spyOn(chainStub.bls, "verifySignatureSets").mockResolvedValue(true);
   });
 
   afterEach(() => {
@@ -153,6 +154,22 @@ describe("validate voluntary exit", () => {
     await expectRejectedWithLodestarError(
       validateGossipVoluntaryExit(chainStub, signedVoluntaryExit),
       VoluntaryExitErrorCode.SHORT_TIME_ACTIVE
+    );
+  });
+
+  it("should return invalid Voluntary Exit - invalid signature", async () => {
+    const signedVoluntaryExitInvalidSig: phase0.SignedVoluntaryExit = {
+      message: signedVoluntaryExit.message,
+      signature: Buffer.alloc(96, 1),
+    };
+
+    opPool.hasSeenVoluntaryExit.mockReturnValue(false);
+
+    vi.spyOn(chainStub.bls, "verifySignatureSets").mockResolvedValue(false);
+
+    await expectRejectedWithLodestarError(
+      validateGossipVoluntaryExit(chainStub, signedVoluntaryExitInvalidSig),
+      VoluntaryExitErrorCode.INVALID_SIGNATURE
     );
   });
 
