@@ -277,7 +277,7 @@ export function getCheckpointFromArg(checkpointStr: string): Checkpoint {
   const checkpointRegex = /^(?:0x)?([0-9a-f]{64}):([0-9]+)$/;
   const match = checkpointRegex.exec(checkpointStr.toLowerCase());
   if (!match) {
-    throw new Error(`Could not parse checkpoint string: ${checkpointStr}`);
+    throw new ApiError(400, `Could not parse checkpoint string: ${checkpointStr}`);
   }
   return {root: fromHex(match[1]), epoch: parseInt(match[2])};
 }
