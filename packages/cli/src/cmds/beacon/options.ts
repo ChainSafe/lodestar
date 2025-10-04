@@ -65,6 +65,7 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
   },
 
   lastPersistedCheckpointState: {
+    hidden: true,
     description: "Use the last safe persisted checkpoint state to start syncing from",
     type: "boolean",
     group: "weak subjectivity",
