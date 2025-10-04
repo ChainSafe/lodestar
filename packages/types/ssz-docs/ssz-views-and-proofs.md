@@ -151,6 +151,16 @@ c1.a.set(0, 2);
 c2.a.set(0, 3);
 ```
 2. **Tree ViewDu**
+ViewDU = View Deferred Update. This tree view caches all mutations to data and applies the changes to the tree only when requested by calling the commit method. This allows to pay to cost of navigating and updating the tree only once. This strategy is optimal for large tree manipulations that require very high performance (i.e. the Ethereum consensus beacon chain state transition).
+
+
+Tree ViewDU is also Merkle-backed, but it lets you batch multiple updates before committing.
+Great for lists and vectors (like the validator registry) where you may push/pop/replace often.
+Mutations are staged in memory/ stashed someh
+Call .commit() to flush all changes to the tree and update the root.
+Much more efficient for frequent edits.
+
+
 
 
 ### 3. Common Operations with views
