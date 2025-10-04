@@ -39,7 +39,7 @@ In SSZ you will see two ways in which you can create Objects.
 
 They may look similar but they behave different under the hood.
 
-Plain Values '(defaultValue())'
+Plain Values **'(defaultValue())'**
 
 Just a regular JS object.
 Easy to use, but not Merkle-aware.
@@ -58,64 +58,18 @@ val.data.source.epoch = 100;
 const root1 = ssz.phase0.Attestation.hashTreeRoot(val)
 ```
 ---
-Tree-backed Views '(defaultView())'
 
-- Looks like a normal object, but wrapped in a Merkle tree internally.
-- Updates are incremental → only the changed branch of the tree is rehashed.
-- Perfect for large objects, frequent updates, or when you need proofs.
+#### What are 'View'?
+In Lodestar, View is the general term for any SSZ-backed object that you interact with.
+It represents an SSZ type in memory, exposes fields, and knows how to serialize, Merkleize, and create proofs.
+A View can be:
+- a BasicView (for primitives),
+- a TreeView (for composite types),
+- or a TreeViewDU (mutable, updatable view).
 
-```
-// Create a tree-backed attestation view
-const view = ssz.phase0.Attestation.defaultView()
-
-// Modify a field (updates the tree branch automatically)
-view.data.source.epoch = 10
-
-// Get the root (only rehashes the changed branch, not the whole tree)
-const root2 = view.hashTreeRoot()
-
-```
-
-| Feature                | `defaultValue()` (Plain Object) | `defaultView()` (Tree-backed View)    |
-| ---------------------- | ------------------------------- | ------------------------------------- |
-| Backed by Merkle tree? | ❌ No                            | ✅ Yes                                 |
-| Update efficiency      | Slow (rehash full tree)         | Fast (rehash only changed branch)     |
-| Proof support          | ❌ No                            | ✅ Yes                                 |
-| Usage style            | Simple JS object                | Object-like, but with sub-views       |
-| Best for               | Small objects, quick examples   | Large state, frequent updates, proofs |
+So View is the umbrella term.
 
 
-### 2. Tree-backed Views (deep dive)
-Tree views are one of the backings used by SSZ.  A backing is basically and underlying representation of the SSZ data. 
-It represents SSZ values, directly as merkle tree.
-
-A tree view is a wrapper around a Tree and a Type that provides methods for convenient property access and ssz operations.
-
-Property getters return sub-views, except for basic types, which return native values. Setters, likewise, require sub-views, except for basic types, which require native views.
-
-This tree view is a simple wrapper to tree backed data that commits any changes immediately to the tree. Changes are propagated upwards to the root parent tree.
-```
-// Create a type
-const C = new ContainerType({
-  a: new VectorBasicType(new UintNumberType(1), 2),
-});
-
-// Create a tree view based on the default value
-const c = C.defaultView();
-
-// SSZ operations
-c.serialize() === C.hashTreeRoot(C.defaultValue());
-const root = c.hashTreeRoot();
-
-// Getters
-c.a.get(0) === 0;
-
-// Setters
-// Changes are applied immediately to the tree
-c.a.set(0, 1);
-
-// Subsequent calls to `hashTreeRoot` reflect the changes to the tree
-assert(root.toString() !== c.hashTreeRoot().toString());
 
 ```
 
