@@ -17,6 +17,7 @@ import {GossipType} from "../../../network/index.js";
 import {getStateSlotFromBytes} from "../../../util/multifork.js";
 import {profileNodeJS, writeHeapSnapshot} from "../../../util/profile.js";
 import {getStateResponseWithRegen} from "../beacon/state/utils.js";
+import {ApiError} from "../errors.js";
 import {ApiModules} from "../types.js";
 
 export function getLodestarApi({
@@ -226,7 +227,10 @@ export function getLodestarApi({
       const checkpoint = checkpointId ? getCheckpointFromArg(checkpointId) : undefined;
       const stateBytes = await chain.getPersistedCheckpointState(checkpoint);
       if (stateBytes === null) {
-        throw new Error(`Checkpoint state not found for id ${checkpointId}`);
+        if (checkpointId) {
+          throw new ApiError(400, `Checkpoint state not found for id ${checkpointId}`);
+        }
+        throw Error("Latest safe checkpoint state not found");
       }
 
       const slot = getStateSlotFromBytes(stateBytes);
