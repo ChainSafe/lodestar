@@ -160,6 +160,34 @@ Mutations are staged in memory/ stashed someh
 Call .commit() to flush all changes to the tree and update the root.
 Much more efficient for frequent edits.
 
+```
+// Create a type
+const C = new ContainerType({
+  a: new VectorBasicType(new UintNumberType(1), 2),
+});
+
+// Create a tree view DU based on the default value
+const c = C.defaultViewDU();
+
+// SSZ operations
+c.serialize() === C.hashTreeRoot(C.defaultValue());
+const root = c.hashTreeRoot();
+
+// Getters
+c.a.get(0) === 0;
+
+// Setters
+// Changes are NOT applied immediately to the tree
+c.a.set(0, 1);
+
+// Subsequent calls to `hashTreeRoot` do NOT reflect the changes to the tree
+assert(root.toString() === c.hashTreeRoot().toString());
+
+// Until commit is called
+c.commit();
+
+assert(root.toString() !== c.hashTreeRoot().toString());
+```
 
 
 
