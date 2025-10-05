@@ -132,7 +132,7 @@ assert(root.toString() !== c.hashTreeRoot().toString());
 
 If you need to do many mutations at once see ViewDU, which defers all updates to a later commit step, paying the cost of updating the tree only once.
 
-#### SubView behaviour
+#### SubView behaviour for tree view
 Each View manages its own Merkle tree.
 If you assign one *subview* to another, Lodestar copies the tree data, but doesn’t link the views together. This means mutating one view will not affect the other, even if you originally set one equal to the other.
 View implementations don't contain any internal caches beyond their internal Trees, and setting one *subview* to another will not link the views.
@@ -192,6 +192,10 @@ assert(root.toString() !== c.hashTreeRoot().toString());
 
 Defer tree updates until commit is called, allowing multiple nodes to tree to be set in a batch and navigating through the tree at most once
 Persist caches of sub-properties to prevent tree navigation when re-reading data.
+
+#### Subview behaviour for the viewDU
+In TreeViewDU, each subview has a mutable cache for its children.
+When you assign c1.a = c2.a, they share the same cache reference (the same in-memory child view). Updating one also updates the other, because both point to the same cached view.
 
 
 ### 3. Common Operations with views
