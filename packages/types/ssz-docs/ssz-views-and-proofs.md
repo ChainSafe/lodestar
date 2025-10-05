@@ -197,6 +197,20 @@ Persist caches of sub-properties to prevent tree navigation when re-reading data
 In TreeViewDU, each subview has a mutable cache for its children.
 When you assign c1.a = c2.a, they share the same cache reference (the same in-memory child view). Updating one also updates the other, because both point to the same cached view.
 
+```
+const c1 = C.toViewDU({a: [0, 0]});
+const c2 = C.toViewDU({a: [1, 1]});
+
+// Now both c1 and c2 have a reference to the exact same cached child view
+// Warning: this is different behaviour than View
+c1.a = c2.a;
+
+// This statement mutates c1 AND c2 data
+c1.a.set(0, 2);
+// This statement mutates c1 AND c2 data
+c2.a.set(0, 3);
+```
+
 
 ### 3. Common Operations with views
 ### 4. Proofs
