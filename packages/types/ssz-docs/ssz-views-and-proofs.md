@@ -188,7 +188,10 @@ c.commit();
 
 assert(root.toString() !== c.hashTreeRoot().toString());
 ```
+Key features
 
+Defer tree updates until commit is called, allowing multiple nodes to tree to be set in a batch and navigating through the tree at most once
+Persist caches of sub-properties to prevent tree navigation when re-reading data.
 
 
 ### 3. Common Operations with views
