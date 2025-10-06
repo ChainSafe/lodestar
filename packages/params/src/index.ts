@@ -139,10 +139,10 @@ export const ZERO_HASH_HEX = "0x" + "00".repeat(32);
 
 // Withdrawal prefixes
 // Since the prefixes are just 1 byte, we define and use them as number
-export const BLS_WITHDRAWAL_PREFIX = 0;
-export const ETH1_ADDRESS_WITHDRAWAL_PREFIX = 1;
-export const COMPOUNDING_WITHDRAWAL_PREFIX = 2;
-export const BUILDER_WITHDRAWAL_PREFIX = 3;
+export const BLS_WITHDRAWAL_PREFIX = 0x00;
+export const ETH1_ADDRESS_WITHDRAWAL_PREFIX = 0x01;
+export const COMPOUNDING_WITHDRAWAL_PREFIX = 0x02;
+export const BUILDER_WITHDRAWAL_PREFIX = 0x03;
 
 // Domain types
 

@@ -245,8 +245,8 @@ export function getCoreTopicsAtFork(
     topics.push(...getDataColumnSidecarTopics(networkConfig));
   }
 
-  // After Deneb also track blob_sidecar_{subnet_id}
-  if (ForkSeq[fork] >= ForkSeq.deneb) {
+  // After Deneb and before Fulu also track blob_sidecar_{subnet_id}
+  if (ForkSeq[fork] >= ForkSeq.deneb && ForkSeq[fork] < ForkSeq.fulu) {
     const {config} = networkConfig;
     const subnetCount = isForkPostElectra(fork)
       ? config.BLOB_SIDECAR_SUBNET_COUNT_ELECTRA

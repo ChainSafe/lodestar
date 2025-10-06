@@ -67,6 +67,10 @@
     "#prometheus-gc-stats-wrapper": {
       "bun": "./src/bun-wrappers/prometheus-gc-stats.ts",
       "default": "@chainsafe/prometheus-gc-stats"
+    },
+    "#datastore-wrapper": {
+      "bun": "./src/network/peers/datastore_bun.ts",
+      "default": "datastore-level"
     }
   },
   "typesVersions": {
@@ -149,6 +153,7 @@
     "@multiformats/multiaddr": "^12.1.3",
     "datastore-core": "^10.0.2",
     "datastore-fs": "^10.0.6",
+    "datastore-level": "^11.0.3",
     "deepmerge": "^4.3.1",
     "fastify": "^5.2.1",
     "interface-datastore": "^8.3.0",
