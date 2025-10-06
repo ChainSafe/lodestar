@@ -3,7 +3,7 @@ import {MockedObject, afterEach, beforeEach, describe, expect, it, vi} from "vit
 import {LevelDatastore} from "#datastore-wrapper";
 import {Eth2PeerDataStore} from "../../../../src/network/peers/datastore.js";
 
-vi.mock("datastore-fs");
+vi.mock(globalThis.Bun ? "datastore-fs" : "datastore-level");
 
 describe("Eth2PeerDataStore", () => {
   let eth2Datastore: Eth2PeerDataStore;
