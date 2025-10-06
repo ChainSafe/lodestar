@@ -60,8 +60,8 @@ const root1 = ssz.phase0.Attestation.hashTreeRoot(val)
 ---
 
 #### What are 'View'?
-In Lodestar, View is the general term for any SSZ-backed object that you interact with.
-It represents an SSZ type in memory, exposes fields, and knows how to serialize, Merkleize, and create proofs.
+In Lodestar, **View** is the general term for any SSZ-backed object that you interact with.
+It represents an SSZ type in memory, **exposes fields, and knows how to serialize, Merkleize, and create proofs**.
 A View can be:
 - a BasicView (for primitives),
 - a TreeView (for composite types),
@@ -71,7 +71,7 @@ So View is the umbrella term.
 
 #### Tree-backed Views
 
-Lodestar has two main tree-backed views for composite SSZ types:
+Lodestar has two main tree-backed views for **composite SSZ types**:
 
 TreeView → immediate updates
 TreeViewDU → deferred (commit-based) updates
@@ -134,7 +134,7 @@ If you need to do many mutations at once see ViewDU, which defers all updates to
 
 #### SubView behaviour for tree view
 Each View manages its own Merkle tree.
-If you assign one *subview* to another, Lodestar copies the tree data, but doesn’t link the views together. This means mutating one view will not affect the other, even if you originally set one equal to the other.
+If you assign one **subview** to another, Lodestar copies the tree data, but doesn’t link the views together. This means mutating one view will not affect the other, even if you originally set one equal to the other.
 View implementations don't contain any internal caches beyond their internal Trees, and setting one *subview* to another will not link the views.
 
 ```
@@ -154,7 +154,7 @@ c2.a.set(0, 3);
 ViewDU = View Deferred Update. This tree view caches all mutations to data and applies the changes to the tree only when requested by calling the commit method. This allows to pay to cost of navigating and updating the tree only once. This strategy is optimal for large tree manipulations that require very high performance (i.e. the Ethereum consensus beacon chain state transition).
 
 
-Tree ViewDU is also Merkle-backed, but it lets you batch multiple updates before committing.
+Tree `ViewDU` is also Merkle-backed, but it lets you batch multiple updates before committing.
 Great for lists and vectors (like the validator registry) where you may push/pop/replace often.
 Mutations are staged in memory/ stashed someh
 Call .commit() to flush all changes to the tree and update the root.
@@ -262,5 +262,7 @@ const restoredView = ContainerType.fromJson(json);
 ```
 
 ### 4. Proofs
+
+
 ### 5. TypeScript Tips
 ### 6. Pitfalls & Best Practices
