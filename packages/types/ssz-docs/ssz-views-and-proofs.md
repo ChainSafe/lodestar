@@ -211,8 +211,27 @@ c1.a.set(0, 2);
 c2.a.set(0, 3);
 ```
 
-
 ### 3. Common Operations with views
+Hhow to actually work with views in everyday SSZ use — things like serializing, hashing, cloning, committing, etc.
+
+Views in SSZ are mutable, Merkle-tree–backed representations of data.
+They allow efficient updates and partial reads without re-serializing entire objects.
+
+Here are the main operations:
+
+a. Serialize and Deserialize
+```
+const serialized = containerView.serialize();
+const deserializedView = ContainerType.deserializeToView(serialized);
+```
+
+
+serialize() converts the view to raw SSZ bytes.
+
+deserializeToView() reconstructs the same tree-backed structure.
+
+
+
 ### 4. Proofs
 ### 5. TypeScript Tips
 ### 6. Pitfalls & Best Practices
