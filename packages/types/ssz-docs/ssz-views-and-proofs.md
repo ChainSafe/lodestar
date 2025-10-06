@@ -230,7 +230,36 @@ serialize() converts the view to raw SSZ bytes.
 
 deserializeToView() reconstructs the same tree-backed structure.
 
+b. Hashing
+```
+const root = containerView.hashTreeRoot();
 
+```
+Computes the Merkle root of the current state.
+
+Used for proofs, state commitments, and verifying equality.
+
+c. Committing Changes
+```
+containerView.commit();
+```
+
+Applies any pending mutations to the backing Merkle tree.
+
+Needed when building proofs or comparing roots.
+
+d. Cloning Views
+```
+const copyView = containerView.clone();
+```
+
+Produces an independent copy with its own backing tree.
+
+e. JSON Conversion (for APIs or logs)
+```
+const json = ContainerType.toJson(containerView);
+const restoredView = ContainerType.fromJson(json);
+```
 
 ### 4. Proofs
 ### 5. TypeScript Tips
