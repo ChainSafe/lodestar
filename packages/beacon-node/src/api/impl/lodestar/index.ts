@@ -227,10 +227,10 @@ export function getLodestarApi({
       const checkpoint = checkpointId ? getCheckpointFromArg(checkpointId) : undefined;
       const stateBytes = await chain.getPersistedCheckpointState(checkpoint);
       if (stateBytes === null) {
-        if (checkpointId) {
-          throw new ApiError(404, `Checkpoint state not found for id ${checkpointId}`);
-        }
-        throw Error("Latest safe checkpoint state not found");
+        throw new ApiError(
+          404,
+          checkpointId ? `Checkpoint state not found for id ${checkpointId}` : "Latest safe checkpoint state not found"
+        );
       }
 
       const slot = getStateSlotFromBytes(stateBytes);
