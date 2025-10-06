@@ -223,7 +223,7 @@ export async function initBeaconState(
 
   if (args.checkpointSyncUrl) {
     isFinalized = true;
-    logger.info("Found checkpoint sync url", {isFinalized});
+    logger.verbose("Found checkpoint sync url");
     // the real url is logged in fetchWSStateFromBeaconApi to hide username/password
     const stateAndCp = await fetchWSStateFromBeaconApi(
       lastDbStateWithBytes,
@@ -239,7 +239,7 @@ export async function initBeaconState(
     );
 
     const {epoch, root} = computeAnchorCheckpoint(chainForkConfig, stateAndCp.anchorState).checkpoint;
-    logger.info("Loaded downloaded state from checkpointSyncUrl", {
+    logger.info("Loaded checkpoint state", {
       stateSlot: stateAndCp.anchorState.slot,
       root: toRootHex(root),
       epoch,
@@ -252,7 +252,7 @@ export async function initBeaconState(
   const genesisStateFile = args.genesisStateFile || getGenesisFileUrl(args.network || defaultNetwork);
   if (genesisStateFile && !args.forceGenesis) {
     isFinalized = true;
-    logger.info("Fetching genesis state", {genesisStateFile, isFinalized});
+    logger.info("Fetching genesis state", {genesisStateFile});
     let stateBytes = await downloadOrLoadFile(genesisStateFile);
     logger.info("Fetched genesis state", {size: formatBytes(stateBytes.length)});
     // Convert to `Uint8Array` to avoid unexpected behavior such as `Buffer.prototype.slice` not copying memory
@@ -266,7 +266,7 @@ export async function initBeaconState(
     }
     logger.info("Loaded genesis state", {
       stateSlot: anchorState.slot,
-      root: toRootHex(anchorState.hashTreeRoot()),
+      stateRoot,
       isFinalized,
     });
     const config = createBeaconConfig(chainForkConfig, anchorState.genesisValidatorsRoot);
