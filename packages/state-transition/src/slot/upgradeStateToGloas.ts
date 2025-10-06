@@ -4,7 +4,7 @@ import {CachedBeaconStateFulu, CachedBeaconStateGloas} from "../types.js";
 
 /**
  * Upgrade a state from Fulu to Gloas.
- */
+* TODO GLOAS: Implement this
 export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBeaconStateGloas {
   const {config} = stateFulu;
 
