@@ -308,5 +308,44 @@ console.log(proof);
 The proof includes only the paths to those two fields `(source.epoch, target.epoch)`
 Lodestar automatically collects the necessary sibling hashes
 
+#### Reconstructing from a Proof
+
+Later, someone else can use that proof to reconstruct a partial view of the object:
+```
+const partialAttestation = ssz.phase0.Attestation.createFromProof(proof);
+
+// Access included fields
+console.log(partialAttestation.data.source.epoch); // ✅ Works
+
+// Access excluded fields
+try {
+  console.log(partialAttestation.aggregationBits);
+} catch (e) {
+  console.error("❌ Field not included in proof");
+}
+```
+The partial view only contains the fields included in the proof — accessing anything else throws an error.
+
+#### Anatomy of a Proof
+
+A Lodestar SSZ proof is an object that contains:
+
+1. type – the SSZ type definition
+2. gindices – generalized indices for each field (tree positions)
+3. leaves – serialized field values
+4. witnesses – sibling hashes needed to recompute the root
+You rarely need to inspect these manually, but here’s a conceptual breakdown:
+```
+Proof {
+  type: Attestation,
+  leaves: [
+    { path: ['data', 'source', 'epoch'], value: 100 },
+    { path: ['data', 'target', 'epoch'], value: 120 }
+  ],
+  witnesses: [ <hash1>, <hash2>, ... ]
+}
+
+```
+
 ### 5. TypeScript Tips
 ### 6. Pitfalls & Best Practices
