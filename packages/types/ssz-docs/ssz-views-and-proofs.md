@@ -270,6 +270,20 @@ It’s built using a Merkle tree, where:
 - Every parent node represents the hash of its two children
 - The top node (root) represents the entire dataset
 
+#### How Merkle proofs work.
+To verify a proof, you only need:
+
+- The root hash of the full dataset, and
+- The proof (a minimal set of sibling hashes + the leaf value)
+- If the proof recomputes the same root, the data is valid.
+
+In Lodestar SSZ, proofs let you generate a Merkle proof for selected fields, send or store only those parts (great for light clients) and verify or reconstruct the partial object later.
+
+Every View in Lodestar comes with methods for working with proofs.
+| Method                        | Purpose                                 |
+| ----------------------------- | --------------------------------------- |
+| `view.createProof(paths)`     | Create a proof for selected subfields   |
+| `Type.createFromProof(proof)` | Reconstruct a partial view from a proof |
 
 
 ### 5. TypeScript Tips
