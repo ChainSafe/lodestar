@@ -3,9 +3,9 @@ import path from "node:path";
 import {fileURLToPath} from "node:url";
 import {assert, beforeAll, describe, it} from "vitest";
 import {ChainForkConfig, createChainForkConfig} from "@lodestar/config";
-import {config as defaultConfig} from "@lodestar/config/default";
+import {mainnetChainConfig} from "@lodestar/config/networks";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
-import {EraFileReader, EraFileWriter, createEraFile, openEraFile} from "../../src/index.js";
+import {EraFile, EraFileReader, EraFileWriter} from "../../src/index.ts";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,7 +16,7 @@ describe.runIf(!process.env.CI)("read original era and re-write our own era file
   const expectedEra = 1506;
 
   beforeAll(() => {
-    cfg = createChainForkConfig(defaultConfig);
+    cfg = createChainForkConfig(mainnetChainConfig);
   });
 
   it("reads an existing era file and writes a new era file that round-trips", async () => {
@@ -28,7 +28,7 @@ describe.runIf(!process.env.CI)("read original era and re-write our own era file
     let t0 = startTime;
 
     console.log("stage: open and read original era file");
-    const originalEraFile = await openEraFile(eraPath);
+    const originalEraFile = await EraFile.open(eraPath);
     const originalIndex = await originalEraFile.createIndex();
     const reader = new EraFileReader(originalEraFile, originalIndex, cfg);
     console.log(`  time: ${Date.now() - t0}ms`);
@@ -64,7 +64,7 @@ describe.runIf(!process.env.CI)("read original era and re-write our own era file
     if (!existsSync(outDir)) mkdirSync(outDir, {recursive: true});
     const outFile = path.resolve(outDir, `mainnet-${String(expectedEra).padStart(5, "0")}-rewrite.era`);
 
-    const newEraFile = await createEraFile(outFile, expectedEra);
+    const newEraFile = await EraFile.create(outFile, expectedEra);
     const writer = new EraFileWriter(newEraFile, cfg);
 
     // Write state
@@ -90,7 +90,7 @@ describe.runIf(!process.env.CI)("read original era and re-write our own era file
 
     console.log("stage: validate new era file");
     // Open and validate the new file
-    const validationEraFile = await openEraFile(outFile);
+    const validationEraFile = await EraFile.open(outFile);
     const validationIndex = await validationEraFile.createIndex();
     const validationReader = new EraFileReader(validationEraFile, validationIndex, cfg);
     console.log(`  time: ${Date.now() - t0}ms`);

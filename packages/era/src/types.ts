@@ -1,4 +1,3 @@
-import type {ChainForkConfig} from "@lodestar/config";
 import {Slot} from "@lodestar/types";
 import {E2StoreEntryType} from "./constants.js";
 
@@ -43,32 +42,4 @@ export interface SlotIndex {
 export interface EraIndex {
   startSlot: number;
   indices: number[];
-}
-
-/** An open Era file */
-export interface EraFile {
-  /** file descriptor */
-  fd: number;
-  name: string;
-  eraNumber: number;
-
-  /**
-   * Convenience method to close the underlying file descriptor.
-   * No further actions can be taken after this operation.
-   */
-  close(): Promise<void>;
-
-  /**
-   * Fully validate the era file for:
-   *  - e2s format correctness
-   *  - era range correctness
-   *  - network correctness for state and blocks
-   *  - block root and signature matches
-   */
-  validate(config: ChainForkConfig): Promise<void>;
-
-  /**
-   * Create an Era index from the contents of this file.
-   */
-  createIndex(): Promise<EraIndex>;
 }
