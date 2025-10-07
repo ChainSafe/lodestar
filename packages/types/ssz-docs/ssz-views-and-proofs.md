@@ -285,6 +285,28 @@ Every View in Lodestar comes with methods for working with proofs.
 | `view.createProof(paths)`     | Create a proof for selected subfields   |
 | `Type.createFromProof(proof)` | Reconstruct a partial view from a proof |
 
+Creating proofs:
+```
+
+import { ssz } from "@lodestar/types";
+
+// Create a tree-backed view
+const attestation = ssz.phase0.Attestation.defaultView();
+
+// Update a field
+attestation.data.source.epoch = 100;
+attestation.data.target.epoch = 120;
+
+// Create a proof for only specific subfields
+const proof = attestation.createProof([
+  ['data', 'source', 'epoch'],
+  ['data', 'target', 'epoch'],
+]);
+
+console.log(proof);
+```
+The proof includes only the paths to those two fields `(source.epoch, target.epoch)`
+Lodestar automatically collects the necessary sibling hashes
 
 ### 5. TypeScript Tips
 ### 6. Pitfalls & Best Practices
