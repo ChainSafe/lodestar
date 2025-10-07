@@ -685,7 +685,10 @@ export function getBeaconBlockApi({
         }
 
         if (!blobSidecars) {
-          throw Error(`blobSidecars not found in db for slot=${block.message.slot} root=${toRootHex(blockRoot)}`);
+          throw new ApiError(
+            404,
+            `blobSidecars not found in db for slot=${block.message.slot} root=${toRootHex(blockRoot)}`
+          );
         }
 
         data = indices ? blobSidecars.filter(({index}) => indices.includes(index)) : blobSidecars;
