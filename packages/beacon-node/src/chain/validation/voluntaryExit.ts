@@ -124,8 +124,7 @@ async function validateVoluntaryExitDetailed(
     };
   }
 
-  // Validate state transition rules
-  // verifySignature = false since we already verified it above
+  
   if (!isValidVoluntaryExit(chain.config.getForkSeq(state.slot), state, voluntaryExit, false)) {
     // Determine if the failure is transient
     const validator = state.validators.get(validatorIndex);
@@ -134,8 +133,7 @@ async function validateVoluntaryExitDetailed(
       !validator.activationEpoch ||
       // Validator has initiated exit but epoch hasn't passed (time-based)
       validator.exitEpoch !== Infinity ||
-      // Post-Electra: pending withdrawals (can be processed)
-      // This would need additional state checks for post-Electra
+      
       false
     );
 
@@ -209,7 +207,7 @@ export async function validateGossipVoluntaryExit(
 export async function processPendingVoluntaryExits(
   chain: IBeaconChain,
   pendingPool: PendingVoluntaryExitPool,
-  network: any // network module for publishing
+  network: {publishVoluntaryExit(exit: phase0.SignedVoluntaryExit): Promise<void>}
 ): Promise<void> {
   const state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.validateGossipVoluntaryExit);
   const currentEpoch = state.epochCtx.epoch;
@@ -217,7 +215,7 @@ export async function processPendingVoluntaryExits(
   const toRemove: number[] = [];
 
   for (const [validatorIndex, cached] of pendingPool.getAllPending()) {
-    // Skip if we checked this epoch already
+    
     if (cached.lastCheckedEpoch === currentEpoch) {
       continue;
     }
@@ -226,17 +224,13 @@ export async function processPendingVoluntaryExits(
       const result = await validateVoluntaryExitDetailed(chain, cached.exit);
 
       if (result.isValid) {
-        // Now valid! Add to pool and publish
         chain.opPool.insertVoluntaryExit(cached.exit);
         await network.publishVoluntaryExit(cached.exit);
         toRemove.push(validatorIndex);
       } else if (!result.error?.isTransient) {
-        // No longer transient (became permanently invalid)
         toRemove.push(validatorIndex);
       }
-      // If still transient, keep in cache
     } catch (e) {
-      // If validation throws, remove from cache
       toRemove.push(validatorIndex);
     }
   }
