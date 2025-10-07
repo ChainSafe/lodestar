@@ -346,6 +346,17 @@ Proof {
 }
 
 ```
+#### Verifying a Proof
 
+To verify a proof, Lodestar recomputes the Merkle root from the provided values and sibling hashes, then compares it to the expected root.
+
+```
+const root = attestation.hashTreeRoot();
+const proofRoot = partialAttestation.hashTreeRoot();
+
+console.log(root.equals(proofRoot)); // ✅ true if proof is valid
+```
+
+This is the same logic that Ethereum’s light clients and consensus layer use to verify data efficiently without downloading the whole chain.
 ### 5. TypeScript Tips
 ### 6. Pitfalls & Best Practices
