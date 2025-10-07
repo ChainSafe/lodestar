@@ -632,8 +632,7 @@ export function getBeaconBlockApi({
       if (isForkPostFulu(fork)) {
         const {targetCustodyGroupCount} = chain.custodyConfig;
         if (targetCustodyGroupCount < NUMBER_OF_COLUMNS / 2) {
-          throw new ApiError(
-            503,
+          throw Error(
             `Custody group count of ${targetCustodyGroupCount} is not sufficient to serve blob sidecars, must custody at least ${NUMBER_OF_COLUMNS / 2} data columns`
           );
         }
