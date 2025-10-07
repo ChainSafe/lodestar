@@ -262,6 +262,7 @@ const restoredView = ContainerType.fromJson(json);
 ```
 
 ### 4. Proofs
+A **Merkle proof** is a compact, cryptographic way to prove that a specific piece of data exists inside a larger dataset — without revealing the entire dataset.
 
 
 ### 5. TypeScript Tips
