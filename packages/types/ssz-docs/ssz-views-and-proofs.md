@@ -359,4 +359,21 @@ console.log(root.equals(proofRoot)); // ✅ true if proof is valid
 
 This is the same logic that Ethereum’s light clients and consensus layer use to verify data efficiently without downloading the whole chain.
 ### 5. TypeScript Tips
+Working with Lodestar’s SSZ proofs in TypeScript gives you type safety and better autocompletion — but it can also get tricky when mixing Views, Proofs, and raw objects.
+
+This section gives you practical TypeScript tips to avoid the most common pitfalls.
+
+1. Always Use the SSZ Schema to Create Views
+
+SSZ Views and Proofs are type-driven.
+Always create them through their schema (type definition), not manually.
+```
+// Correct
+const attestation = ssz.phase0.Attestation.defaultView();
+
+// Avoid creating Views manually — this loses type information
+const attestation = {} as any;
+```
+
+Using `.defaultView()`, `.toView()`, or `.createFromProof()` ensures TypeScript knows what type of data and subviews you’re working with.
 ### 6. Pitfalls & Best Practices
