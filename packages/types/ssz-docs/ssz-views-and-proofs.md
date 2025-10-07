@@ -264,6 +264,13 @@ const restoredView = ContainerType.fromJson(json);
 ### 4. Proofs
 A **Merkle proof** is a compact, cryptographic way to prove that a specific piece of data exists inside a larger dataset — without revealing the entire dataset.
 
+It’s built using a Merkle tree, where:
+
+- Every leaf node represents a piece of data (e.g. a field value)
+- Every parent node represents the hash of its two children
+- The top node (root) represents the entire dataset
+
+
 
 ### 5. TypeScript Tips
 ### 6. Pitfalls & Best Practices
