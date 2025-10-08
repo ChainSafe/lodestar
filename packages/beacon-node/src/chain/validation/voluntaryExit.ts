@@ -177,9 +177,9 @@ export async function validateApiVoluntaryExit(
     );
     return { shouldPublish: false, isCached: true };
   }
-
-  // Permanent failure - throw error
-  throw new VoluntaryExitError(result.error!.action, {
+   //biome-ignore lint/style/noNonNullAssertion: error is guaranteed to exist when isValid is false
+    throw new VoluntaryExitError(result.error!.action, {
+    //biome-ignore lint/style/noNonNullAssertion: error is guaranteed to exist when isValid is false
     code: result.error!.code,
   });
 }
@@ -194,8 +194,10 @@ export async function validateGossipVoluntaryExit(
   const result = await validateVoluntaryExitDetailed(chain, voluntaryExit);
 
   if (!result.isValid) {
+    //biome-ignore lint/style/noNonNullAssertion: error is guaranteed to exist when isValid is false
     throw new VoluntaryExitError(result.error!.action, {
-      code: result.error!.code,
+       //biome-ignore lint/style/noNonNullAssertion: error is guaranteed to exist when isValid is false
+            code: result.error!.code,
     });
   }
 }
@@ -230,6 +232,7 @@ export async function processPendingVoluntaryExits(
       } else if (!result.error?.isTransient) {
         toRemove.push(validatorIndex);
       }
+    // biome-ignore lint/correctness/noUnusedVariables: error variable unused but required by catch syntax
     } catch (e) {
       toRemove.push(validatorIndex);
     }
