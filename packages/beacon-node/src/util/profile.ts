@@ -70,7 +70,7 @@ async function profileBun(thread: ProfileThread, durationMs: number): Promise<st
     now = Date.now();
   }
 
-  return `Time taken to profile Bun ${thread} thread: ${now - start}ms`;
+  return `Successfully take Bun ${thread} thread profile in ${now - start}ms. Check your inspector to see the profile.`;
 }
 
 /**
