@@ -422,6 +422,20 @@ const attestation = {} as any;
 
 Using `.defaultView()`, `.toView()`, or `.createFromProof()` ensures TypeScript knows what type of data and subviews you’re working with.
 ### 6. Pitfalls & Best Practices
+Even though SSZ Views and Proofs feel like simple JS objects, they have Merkle-aware behavior under the hood.
+These best practices will save you from hours of debugging.
+
+| Pitfall                                  | Why It Happens                                                     | How to Fix                                                           |
+| ---------------------------------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------- |
+| **Confusing View and ViewDU behavior**   | `ViewDU` caches child subviews — assigning one links them together | Use `View` for isolated trees, `ViewDU` for batched updates          |
+| **Accessing fields missing from proofs** | Proofs may not include all fields                                  | Only access paths you included in the proof                          |
+| **Mixing JS objects with Views**         | Plain objects don’t update the Merkle tree                         | Always use `defaultView()` or `toView()` to wrap data                |
+| **Forgetting to commit ViewDU changes**  | `ViewDU` is lazy and needs manual commits                          | Always call `.commit()` after modifying nested fields                |
+| **Confusing serialization with hashing** | Both return bytes but represent different data                     | Use `.serialize()` for transport, `.hashTreeRoot()` for verification |
+| **Mutating subviews incorrectly**        | Direct assignments skip the internal tree                          | Use setters or `.set()` for lists/vectors                            |
+| **Comparing roots before commit**        | Uncommitted changes don’t affect root hash                         | Call `.commit()` or `.hashTreeRoot()` after updates                  |
+
+
 (Further Reading)[https://ethereum.org/developers/docs/data-structures-and-encoding/ssz/]
 (Building blocks ssz)[https://eth2book.info/altair/part2/building_blocks/ssz/]
 (merkle multiproofs)[https://github.com/ethereum/consensus-specs/blob/dev/ssz/merkle-proofs.md#merkle-multiproofs]
