@@ -421,7 +421,7 @@ const attestation = {} as any;
 ```
 
 Using `.defaultView()`, `.toView()`, or `.createFromProof()` ensures TypeScript knows what type of data and subviews you’re working with.
-### 6. Pitfalls & Best Practices
+### 7. Pitfalls & Best Practices
 Even though SSZ Views and Proofs feel like simple JS objects, they have Merkle-aware behavior under the hood.
 These best practices will save you from hours of debugging.
 
@@ -435,6 +435,31 @@ These best practices will save you from hours of debugging.
 | **Mutating subviews incorrectly**        | Direct assignments skip the internal tree                          | Use setters or `.set()` for lists/vectors                            |
 | **Comparing roots before commit**        | Uncommitted changes don’t affect root hash                         | Call `.commit()` or `.hashTreeRoot()` after updates                  |
 
+### 8. Best Practices
+
+Prefer ViewDU for many small updates
+```
+const v = ssz.phase0.BeaconState.defaultViewDU();
+v.validators.get(0).effectiveBalance = 32000000000n;
+v.commit(); // Apply all at once
+
+```
+Use view when correctness matters more than batching
+```
+const v = ssz.phase0.Attestation.defaultView();
+v.data.source.epoch = 100; // applied immediately
+```
+Always validate roots after proof verification.
+```
+const valid = partialAttestation.hashTreeRoot().toString() === root.toString();
+```
+Avoid reusing Views across unrelated trees
+Each View holds its own tree reference — reusing it may mutate the wrong branch.
+
+Leverage TypeScript type inference
+Let Lodestar infer the type whenever possible — it reduces mismatches and improves editor hints.
+
+### 9. Resources
 
 (Further Reading)[https://ethereum.org/developers/docs/data-structures-and-encoding/ssz/]
 (Building blocks ssz)[https://eth2book.info/altair/part2/building_blocks/ssz/]
