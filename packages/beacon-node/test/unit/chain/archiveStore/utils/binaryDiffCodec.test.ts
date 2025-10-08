@@ -1,9 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
+import {beforeAll, describe, expect, it} from "vitest";
 import {ForkName} from "@lodestar/params";
 import {BeaconState, Epoch, RootHex, Slot, phase0, ssz} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
-import {beforeAll, describe, expect, it} from "vitest";
 import {IStateDiffCodec} from "../../../../../src/chain/archiveStore/interface.js";
 import {BinaryDiffCodec} from "../../../../../src/chain/archiveStore/utils/binaryDiffCodec.js";
 import {generateState} from "../../../../utils/state.js";

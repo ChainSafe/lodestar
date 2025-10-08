@@ -323,7 +323,7 @@ export const nonOverlappingLayersData: LayersTest[] = [
     path: [0, computeStartSlotAtEpoch(3)],
   },
   {
-    title: "after slot of first diff layer",
+    title: "one slot after first diff layer",
     slot: computeStartSlotAtEpoch(3) + 1,
     path: [0, computeStartSlotAtEpoch(3)],
     blockReplay: {
@@ -346,7 +346,7 @@ export const nonOverlappingLayersData: LayersTest[] = [
     path: [0, computeStartSlotAtEpoch(5)],
   },
   {
-    title: "after slot of second diff layer",
+    title: "one slot after second diff layer",
     slot: computeStartSlotAtEpoch(5) + 1,
     path: [0, computeStartSlotAtEpoch(5)],
     blockReplay: {
