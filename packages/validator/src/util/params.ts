@@ -179,6 +179,13 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     DEPOSIT_CONTRACT_ADDRESS: true,
 
     // Networking (non-critical as those do not affect consensus)
+    MAX_PAYLOAD_SIZE: false,
+    EPOCHS_PER_SUBNET_SUBSCRIPTION: false,
+    ATTESTATION_PROPAGATION_SLOT_RANGE: false,
+    MAXIMUM_GOSSIP_CLOCK_DISPARITY: false,
+    MESSAGE_DOMAIN_INVALID_SNAPPY: false,
+    MESSAGE_DOMAIN_VALID_SNAPPY: false,
+    SUBNETS_PER_NODE: false,
     MAX_REQUEST_BLOCKS: false,
     MAX_REQUEST_BLOCKS_DENEB: false,
     MIN_EPOCHS_FOR_BLOCK_REQUESTS: false,
@@ -190,6 +197,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     MAX_REQUEST_BLOB_SIDECARS: false,
     MAX_REQUEST_BLOB_SIDECARS_ELECTRA: false,
     MAX_REQUEST_DATA_COLUMN_SIDECARS: false,
+    MAX_REQUEST_PAYLOADS: false,
 
     // # Phase0Preset
     /////////////////

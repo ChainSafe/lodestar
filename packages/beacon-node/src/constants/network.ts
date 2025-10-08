@@ -5,11 +5,6 @@
 
 // Gossip constants
 
-/**
- * The maximum number of slots during which an attestation can be propagated.
- */
-export const ATTESTATION_PROPAGATION_SLOT_RANGE = 32;
-
 /** The maximum allowed size of uncompressed gossip messages. */
 export const GOSSIP_MAX_SIZE = 2 ** 20;
 export const GOSSIP_MAX_SIZE_BELLATRIX = 10 * GOSSIP_MAX_SIZE;
