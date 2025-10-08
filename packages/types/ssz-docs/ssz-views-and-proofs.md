@@ -358,7 +358,42 @@ console.log(root.equals(proofRoot)); // ✅ true if proof is valid
 ```
 
 This is the same logic that Ethereum’s light clients and consensus layer use to verify data efficiently without downloading the whole chain.
-### 5. TypeScript Tips
+### 7. Generalized Indicies
+In SSZ (Simple Serialize), every node in a Merkle tree — whether a leaf or an internal node — can be uniquely identified using a number called a generalized index (or gindex for short).
+
+🔢 What is a Generalized Index?
+
+A generalized index is an integer that represents the position of a node in a binary Merkle tree.
+
+Think of the Merkle tree as a binary heap (like in computer science):
+Each level doubles in size, and each node’s position can be calculated from its depth and offset.
+
+The formula is:
+gindex = 2depth+index at that depth
+
+Let's visualize:
+```
+         1              <-- depth = 0 → 2^0 + 0 = 1
+      /     \
+     2       3          <-- depth = 1 → 2^1 + 0 = 2, 2^1 + 1 = 3
+    / \     / \
+   4   5   6   7        <-- depth = 2 → 2^2 + 0 = 4, 2^2 + 1 = 5, etc.
+  / \ / \ / \ / \
+ 8 9 10 11 12 13 14 15  <-- depth = 3 → 2^3 + index = 8–15
+```
+So:
+
+- Node 1 → root
+- Node 2 → left child of root
+- Node 3 → right child of root
+- Node 4 → left child of Node 2
+- Node 9 → right child of Node 4
+
+…and so on.
+
+Each node has a unique gindex, allowing us to refer to it precisely in the tree.
+
+### 6. TypeScript Tips
 Working with Lodestar’s SSZ proofs in TypeScript gives you type safety and better autocompletion — but it can also get tricky when mixing Views, Proofs, and raw objects.
 
 This section gives you practical TypeScript tips to avoid the most common pitfalls.
