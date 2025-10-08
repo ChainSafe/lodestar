@@ -1,7 +1,6 @@
 import {ssz} from "@lodestar/types";
 import {getCachedBeaconState} from "../cache/stateCache.js";
-import {CachedBeaconStateDeneb} from "../types.js";
-import {CachedBeaconStateCapella} from "../types.js";
+import {CachedBeaconStateCapella, CachedBeaconStateDeneb} from "../types.js";
 
 /**
  * Upgrade a state from Capella to Deneb.

@@ -1,7 +1,8 @@
+import {generateKeyPair} from "@libp2p/crypto/keys";
 import {afterAll, beforeAll, bench, describe} from "@chainsafe/benchmark";
 import {fromHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
-import {LevelDbController} from "@lodestar/db";
+import {LevelDbController} from "@lodestar/db/controller/level";
 import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@lodestar/params";
 import {CachedBeaconStateAltair} from "@lodestar/state-transition";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
@@ -28,7 +29,7 @@ describe("produceBlockBody", () => {
     chain = new BeaconChain(
       {
         proposerBoost: true,
-        proposerBoostReorg: false,
+        proposerBoostReorg: true,
         computeUnrealized: false,
         safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
         disableArchiveOnCheckpoint: true,
@@ -39,6 +40,7 @@ describe("produceBlockBody", () => {
         archiveMode: ArchiveMode.Frequency,
       },
       {
+        privateKey: await generateKeyPair("secp256k1"),
         config: state.config,
         db,
         dataDir: ".",
@@ -75,14 +77,21 @@ describe("produceBlockBody", () => {
     fn: async ({chain, state, head, proposerIndex, proposerPubKey}) => {
       const slot = state.slot;
 
+      const commonBlockBodyPromise = chain.produceCommonBlockBody({
+        slot: slot + 1,
+        graffiti: Buffer.alloc(32),
+        randaoReveal: Buffer.alloc(96),
+        parentBlockRoot: fromHexString(head.blockRoot),
+      });
+
       await produceBlockBody.call(chain, BlockType.Full, state, {
-        parentSlot: slot,
         slot: slot + 1,
         graffiti: Buffer.alloc(32),
         randaoReveal: Buffer.alloc(96),
         parentBlockRoot: fromHexString(head.blockRoot),
         proposerIndex,
         proposerPubKey,
+        commonBlockBodyPromise,
       });
     },
   });

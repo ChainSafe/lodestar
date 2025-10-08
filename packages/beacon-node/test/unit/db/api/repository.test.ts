@@ -1,13 +1,14 @@
-import {ContainerType} from "@chainsafe/ssz";
-import {config} from "@lodestar/config/default";
-import {Db, LevelDbController, Repository} from "@lodestar/db";
-import {Bytes32, ssz} from "@lodestar/types";
 import all from "it-all";
 import {MockedObject, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {ContainerType} from "@chainsafe/ssz";
+import {config} from "@lodestar/config/default";
+import {Db, Repository} from "@lodestar/db";
+import {LevelDbController} from "@lodestar/db/controller/level";
+import {Bytes32, ssz} from "@lodestar/types";
 import {Bucket} from "../../../../src/db/buckets.js";
 
-vi.mock("@lodestar/db", async (importOriginal) => {
-  const mod = await importOriginal<typeof import("@lodestar/db")>();
+vi.mock("@lodestar/db/controller/level", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("@lodestar/db/controller/level")>();
 
   return {
     ...mod,

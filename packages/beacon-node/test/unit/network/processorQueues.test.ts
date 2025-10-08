@@ -1,5 +1,5 @@
-import {sleep} from "@lodestar/utils";
 import {describe, expect, it} from "vitest";
+import {sleep} from "@lodestar/utils";
 
 type ValidateOpts = {
   skipAsync1: boolean;

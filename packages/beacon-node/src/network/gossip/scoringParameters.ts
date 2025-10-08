@@ -7,8 +7,8 @@ import {
 import {BeaconConfig} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, TARGET_AGGREGATORS_PER_COMMITTEE} from "@lodestar/params";
 import {computeCommitteeCount} from "@lodestar/state-transition";
-import {getActiveForks} from "../forks.js";
-import {Eth2Context, Eth2GossipsubModules} from "./gossipsub.js";
+import {getActiveForkBoundaries} from "../forks.js";
+import {Eth2Context} from "./gossipsub.js";
 import {GossipType} from "./interface.js";
 import {stringifyGossipTopic} from "./topic.js";
 
@@ -80,11 +80,14 @@ type TopicScoreInput = {
 export function computeGossipPeerScoreParams({
   config,
   eth2Context,
-}: Pick<Eth2GossipsubModules, "config" | "eth2Context">): Partial<PeerScoreParams> {
-  const decayIntervalMs = config.SECONDS_PER_SLOT * 1000;
+}: {
+  config: BeaconConfig;
+  eth2Context: Eth2Context;
+}): Partial<PeerScoreParams> {
+  const decayIntervalMs = config.SLOT_DURATION_MS;
   const decayToZero = 0.01;
-  const epochDurationMs = config.SECONDS_PER_SLOT * SLOTS_PER_EPOCH * 1000;
-  const slotDurationMs = config.SECONDS_PER_SLOT * 1000;
+  const epochDurationMs = config.SLOT_DURATION_MS * SLOTS_PER_EPOCH;
+  const slotDurationMs = config.SLOT_DURATION_MS;
   const scoreParameterDecayFn = (decayTimeMs: number): number => {
     return scoreParameterDecayWithBase(decayTimeMs, decayIntervalMs, decayToZero);
   };
@@ -123,14 +126,14 @@ function getAllTopicsScoreParams(
   const {epochDurationMs, slotDurationMs} = precomputedParams;
   const epoch = eth2Context.currentEpoch;
   const topicsParams: Record<string, TopicScoreParams> = {};
-  const forks = getActiveForks(config, epoch);
+  const boundaries = getActiveForkBoundaries(config, epoch);
   const beaconAttestationSubnetWeight = 1 / ATTESTATION_SUBNET_COUNT;
-  for (const fork of forks) {
+  for (const boundary of boundaries) {
     //first all fixed topics
     topicsParams[
       stringifyGossipTopic(config, {
         type: GossipType.voluntary_exit,
-        fork,
+        boundary,
       })
     ] = getTopicScoreParams(config, precomputedParams, {
       topicWeight: VOLUNTARY_EXIT_WEIGHT,
@@ -141,7 +144,7 @@ function getAllTopicsScoreParams(
     topicsParams[
       stringifyGossipTopic(config, {
         type: GossipType.bls_to_execution_change,
-        fork,
+        boundary,
       })
     ] = getTopicScoreParams(config, precomputedParams, {
       topicWeight: BLS_TO_EXECUTION_CHANGE_WEIGHT,
@@ -152,7 +155,7 @@ function getAllTopicsScoreParams(
     topicsParams[
       stringifyGossipTopic(config, {
         type: GossipType.attester_slashing,
-        fork,
+        boundary,
       })
     ] = getTopicScoreParams(config, precomputedParams, {
       topicWeight: ATTESTER_SLASHING_WEIGHT,
@@ -162,7 +165,7 @@ function getAllTopicsScoreParams(
     topicsParams[
       stringifyGossipTopic(config, {
         type: GossipType.proposer_slashing,
-        fork,
+        boundary,
       })
     ] = getTopicScoreParams(config, precomputedParams, {
       topicWeight: PROPOSER_SLASHING_WEIGHT,
@@ -174,7 +177,7 @@ function getAllTopicsScoreParams(
     topicsParams[
       stringifyGossipTopic(config, {
         type: GossipType.beacon_block,
-        fork,
+        boundary,
       })
     ] = getTopicScoreParams(config, precomputedParams, {
       topicWeight: BEACON_BLOCK_WEIGHT,
@@ -201,7 +204,7 @@ function getAllTopicsScoreParams(
     topicsParams[
       stringifyGossipTopic(config, {
         type: GossipType.beacon_aggregate_and_proof,
-        fork,
+        boundary,
       })
     ] = getTopicScoreParams(config, precomputedParams, {
       topicWeight: BEACON_AGGREGATE_PROOF_WEIGHT,
@@ -231,8 +234,8 @@ function getAllTopicsScoreParams(
     for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
       const topicStr = stringifyGossipTopic(config, {
         type: GossipType.beacon_attestation,
-        fork,
         subnet,
+        boundary,
       });
       topicsParams[topicStr] = beaconAttestationParams;
     }
@@ -262,7 +265,7 @@ function getTopicScoreParams(
 
   if (meshMessageInfo) {
     const {decaySlots, capFactor, activationWindow, currentSlot} = meshMessageInfo;
-    const decayTimeMs = config.SECONDS_PER_SLOT * decaySlots * 1000;
+    const decayTimeMs = config.SLOT_DURATION_MS * decaySlots;
     params.meshMessageDeliveriesDecay = scoreParameterDecayFn(decayTimeMs);
     params.meshMessageDeliveriesThreshold = threshold(params.meshMessageDeliveriesDecay, expectedMessageRate / 50);
     params.meshMessageDeliveriesCap = Math.max(capFactor * params.meshMessageDeliveriesThreshold, 2);

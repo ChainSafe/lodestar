@@ -1,3 +1,4 @@
+// biome-ignore assist/source/organizeImports: We want to keep these groups of imports together for better readability
 import {Endpoints as BeaconEndpoints} from "./beacon/index.js";
 import {Endpoints as ConfigEndpoints} from "./config.js";
 import {Endpoints as DebugEndpoints} from "./debug.js";

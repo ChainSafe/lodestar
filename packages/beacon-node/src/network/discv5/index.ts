@@ -1,11 +1,11 @@
 import EventEmitter from "node:events";
-import {ENR, ENRData, SignableENR} from "@chainsafe/enr";
-import {Thread, Worker, spawn} from "@chainsafe/threads";
 import {privateKeyToProtobuf} from "@libp2p/crypto/keys";
 import {PrivateKey} from "@libp2p/interface";
+import {StrictEventEmitter} from "strict-event-emitter-types";
+import {ENR, ENRData, SignableENR} from "@chainsafe/enr";
+import {Thread, Worker, spawn} from "@chainsafe/threads";
 import {BeaconConfig, chainConfigFromJson, chainConfigToJson} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
-import {StrictEventEmitter} from "strict-event-emitter-types";
 import {NetworkCoreMetrics} from "../core/metrics.js";
 import {Discv5WorkerApi, Discv5WorkerData, LodestarDiscv5Opts} from "./types.js";
 
@@ -14,6 +14,7 @@ export type Discv5Opts = {
   discv5: LodestarDiscv5Opts;
   logger: LoggerNode;
   config: BeaconConfig;
+  genesisTime: number;
   metrics?: NetworkCoreMetrics;
 };
 
@@ -48,8 +49,12 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
       chainConfig: chainConfigFromJson(chainConfigToJson(opts.config)),
       genesisValidatorsRoot: opts.config.genesisValidatorsRoot,
       loggerOpts: opts.logger.toOpts(),
+      genesisTime: opts.genesisTime,
     };
-    const worker = new Worker("./worker.js", {workerData} as ConstructorParameters<typeof Worker>[1]);
+    const worker = new Worker("./worker.js", {
+      suppressTranspileTS: Boolean(globalThis.Bun),
+      workerData,
+    } as ConstructorParameters<typeof Worker>[1]);
 
     const workerApi = await spawn<Discv5WorkerApi>(worker, {
       // A Lodestar Node may do very expensive task at start blocking the event loop and causing

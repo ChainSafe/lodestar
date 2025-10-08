@@ -1,10 +1,17 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {Epoch, RootHex, phase0} from "@lodestar/types";
+import {ForkName, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
+import {Epoch, RootHex, Slot, phase0} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
-import {BlockInput} from "../../chain/blocks/types.js";
+import {isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
+import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
+import {isDaOutOfRange} from "../../chain/blocks/blockInput/utils.js";
 import {BlockError, BlockErrorCode} from "../../chain/errors/index.js";
+import {PeerSyncMeta} from "../../network/peers/peersData.js";
+import {IClock} from "../../util/clock.js";
+import {CustodyConfig} from "../../util/dataColumns.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {MAX_BATCH_DOWNLOAD_ATTEMPTS, MAX_BATCH_PROCESSING_ATTEMPTS} from "../constants.js";
+import {DownloadByRangeRequests} from "../utils/downloadByRange.js";
 import {getBatchSlotRange, hashBlocks} from "./utils/index.js";
 
 /**
@@ -31,17 +38,27 @@ export enum BatchStatus {
 
 export type Attempt = {
   /** The peer that made the attempt */
-  peer: PeerIdStr;
+  peers: PeerIdStr[];
   /** The hash of the blocks of the attempt */
   hash: RootHex;
 };
 
+export type AwaitingDownloadState = {
+  status: BatchStatus.AwaitingDownload;
+  blocks: IBlockInput[];
+};
+
+export type DownloadSuccessState = {
+  status: BatchStatus.AwaitingProcessing;
+  blocks: IBlockInput[];
+};
+
 export type BatchState =
-  | {status: BatchStatus.AwaitingDownload}
-  | {status: BatchStatus.Downloading; peer: PeerIdStr}
-  | {status: BatchStatus.AwaitingProcessing; peer: PeerIdStr; blocks: BlockInput[]}
-  | {status: BatchStatus.Processing; attempt: Attempt}
-  | {status: BatchStatus.AwaitingValidation; attempt: Attempt};
+  | AwaitingDownloadState
+  | {status: BatchStatus.Downloading; peer: PeerIdStr; blocks: IBlockInput[]}
+  | DownloadSuccessState
+  | {status: BatchStatus.Processing; blocks: IBlockInput[]; attempt: Attempt}
+  | {status: BatchStatus.AwaitingValidation; blocks: IBlockInput[]; attempt: Attempt};
 
 export type BatchMetadata = {
   startEpoch: Epoch;
@@ -60,11 +77,17 @@ export type BatchMetadata = {
  * Jul2022: Offset changed from 1 to 0, see rationale in {@link BATCH_SLOT_OFFSET}
  */
 export class Batch {
+  readonly forkName: ForkName;
   readonly startEpoch: Epoch;
+  readonly startSlot: Slot;
+  readonly count: number;
+
+  /** Block, blob and column requests that are used to determine the best peer and are used in downloadByRange */
+  requests: DownloadByRangeRequests;
   /** State of the batch. */
-  state: BatchState = {status: BatchStatus.AwaitingDownload};
-  /** BeaconBlocksByRangeRequest */
-  readonly request: phase0.BeaconBlocksByRangeRequest;
+  state: BatchState = {status: BatchStatus.AwaitingDownload, blocks: []};
+  /** Peers that provided good data */
+  goodPeers: PeerIdStr[] = [];
   /** The `Attempts` that have been made and failed to send us this batch. */
   readonly failedProcessingAttempts: Attempt[] = [];
   /** The `Attempts` that have been made and failed because of execution malfunction. */
@@ -72,16 +95,156 @@ export class Batch {
   /** The number of download retries this batch has undergone due to a failed request. */
   private readonly failedDownloadAttempts: PeerIdStr[] = [];
   private readonly config: ChainForkConfig;
+  private readonly clock: IClock;
+  private readonly custodyConfig: CustodyConfig;
 
-  constructor(startEpoch: Epoch, config: ChainForkConfig) {
-    const {startSlot, count} = getBatchSlotRange(startEpoch);
-
+  constructor(startEpoch: Epoch, config: ChainForkConfig, clock: IClock, custodyConfig: CustodyConfig) {
     this.config = config;
+    this.clock = clock;
+    this.custodyConfig = custodyConfig;
+
+    const {startSlot, count} = getBatchSlotRange(startEpoch);
+    this.forkName = this.config.getForkName(startSlot);
     this.startEpoch = startEpoch;
-    this.request = {
-      startSlot,
-      count,
-      step: 1,
+    this.startSlot = startSlot;
+    this.count = count;
+    this.requests = this.getRequests([]);
+  }
+
+  /**
+   * Builds ByRange requests for block, blobs and columns
+   */
+  private getRequests(blocks: IBlockInput[]): DownloadByRangeRequests {
+    const withinValidRequestWindow = !isDaOutOfRange(
+      this.config,
+      this.forkName,
+      this.startSlot,
+      this.clock.currentEpoch
+    );
+
+    // fresh request where no blocks have started to be pulled yet
+    if (!blocks.length) {
+      const blocksRequest: phase0.BeaconBlocksByRangeRequest = {
+        startSlot: this.startSlot,
+        count: this.count,
+        step: 1,
+      };
+      if (isForkPostFulu(this.forkName) && withinValidRequestWindow) {
+        return {
+          blocksRequest,
+          columnsRequest: {
+            startSlot: this.startSlot,
+            count: this.count,
+            columns: this.custodyConfig.sampledColumns,
+          },
+        };
+      }
+      if (isForkPostDeneb(this.forkName) && withinValidRequestWindow) {
+        return {
+          blocksRequest,
+          blobsRequest: {
+            startSlot: this.startSlot,
+            count: this.count,
+          },
+        };
+      }
+      return {
+        blocksRequest,
+      };
+    }
+
+    // subsequent request where part of the epoch has already been downloaded. Need to figure out what is the beginning
+    // of the range where download needs to resume
+    let blockStartSlot = this.startSlot;
+    let dataStartSlot = this.startSlot;
+    const neededColumns = new Set<number>();
+
+    // ensure blocks are in slot-wise order
+    for (const blockInput of blocks) {
+      const blockSlot = blockInput.slot;
+      // check if block/data is present (hasBlock/hasAllData). If present then check if startSlot is the same as
+      // blockSlot. If it is then do not need to pull that slot so increment startSlot by 1. check will fail
+      // if there is a gap and then the blocks/data is present again. to simplify the request just re-pull remainder
+      // of range.
+      //
+      // ie startSlot = 32 and count = 32. so for slots = [32, 33, 34, 35, 36, _, 38, 39, _, _, ... _endSlot=63_]
+      // will return an updated startSlot of 37 and pull range 37-63 on the next request.
+      //
+      // if all slot have already been pulled then the startSlot will eventually get incremented to the slot after
+      // the desired end slot
+      if (blockInput.hasBlock() && blockStartSlot === blockSlot) {
+        blockStartSlot = blockSlot + 1;
+      }
+      if (!blockInput.hasAllData()) {
+        if (isBlockInputColumns(blockInput)) {
+          for (const index of blockInput.getMissingSampledColumnMeta().missing) {
+            neededColumns.add(index);
+          }
+        }
+      } else if (dataStartSlot === blockSlot) {
+        dataStartSlot = blockSlot + 1;
+      }
+    }
+
+    // if the blockStartSlot or dataStartSlot is after the desired endSlot then no request will be made for the batch
+    // because it is complete
+    const endSlot = this.startSlot + this.count - 1;
+    const requests: DownloadByRangeRequests = {};
+    if (blockStartSlot <= endSlot) {
+      requests.blocksRequest = {
+        startSlot: blockStartSlot,
+        // range of 40 - 63, startSlot will be inclusive but subtraction will exclusive so need to + 1
+        count: endSlot - blockStartSlot + 1,
+        step: 1,
+      };
+    }
+    if (dataStartSlot <= endSlot) {
+      // range of 40 - 63, startSlot will be inclusive but subtraction will exclusive so need to + 1
+      const count = endSlot - dataStartSlot + 1;
+      if (isForkPostFulu(this.forkName) && withinValidRequestWindow) {
+        requests.columnsRequest = {
+          count,
+          startSlot: dataStartSlot,
+          columns: Array.from(neededColumns),
+        };
+      } else if (isForkPostDeneb(this.forkName) && withinValidRequestWindow) {
+        requests.blobsRequest = {
+          count,
+          startSlot: dataStartSlot,
+        };
+      }
+      // dataSlot will still have a value but do not create a request for preDeneb forks
+    }
+
+    return requests;
+  }
+
+  /**
+   * Post-fulu we should only get columns that peer has advertised
+   */
+  getRequestsForPeer(peer: PeerSyncMeta): DownloadByRangeRequests {
+    if (!isForkPostFulu(this.forkName)) {
+      return this.requests;
+    }
+
+    // post-fulu we need to ensure that we only request columns that the peer has advertised
+    const {columnsRequest} = this.requests;
+    if (columnsRequest == null) {
+      return this.requests;
+    }
+
+    const peerColumns = new Set(peer.custodyColumns ?? []);
+    const requestedColumns = columnsRequest.columns.filter((c) => peerColumns.has(c));
+    if (requestedColumns.length === columnsRequest.columns.length) {
+      return this.requests;
+    }
+
+    return {
+      ...this.requests,
+      columnsRequest: {
+        ...columnsRequest,
+        columns: requestedColumns,
+      },
     };
   }
 
@@ -89,11 +252,15 @@ export class Batch {
    * Gives a list of peers from which this batch has had a failed download or processing attempt.
    */
   getFailedPeers(): PeerIdStr[] {
-    return [...this.failedDownloadAttempts, ...this.failedProcessingAttempts.map((a) => a.peer)];
+    return [...this.failedDownloadAttempts, ...this.failedProcessingAttempts.flatMap((a) => a.peers)];
   }
 
   getMetadata(): BatchMetadata {
     return {startEpoch: this.startEpoch, status: this.state.status};
+  }
+
+  getBlocks(): IBlockInput[] {
+    return this.state.blocks;
   }
 
   /**
@@ -104,47 +271,81 @@ export class Batch {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.AwaitingDownload));
     }
 
-    this.state = {status: BatchStatus.Downloading, peer};
+    this.state = {status: BatchStatus.Downloading, peer, blocks: this.state.blocks};
   }
 
   /**
    * Downloading -> AwaitingProcessing
    */
-  downloadingSuccess(blocks: BlockInput[]): void {
+  downloadingSuccess(peer: PeerIdStr, blocks: IBlockInput[]): DownloadSuccessState {
     if (this.state.status !== BatchStatus.Downloading) {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.Downloading));
     }
 
-    this.state = {status: BatchStatus.AwaitingProcessing, peer: this.state.peer, blocks};
+    // ensure that blocks are always sorted before getting stored on the batch.state or being used to getRequests
+    blocks.sort((a, b) => a.slot - b.slot);
+
+    this.goodPeers.push(peer);
+
+    let allComplete = true;
+    const slots = new Set<number>();
+    for (const block of blocks) {
+      slots.add(block.slot);
+      if (!block.hasBlockAndAllData()) {
+        allComplete = false;
+      }
+    }
+
+    if (slots.size > this.count) {
+      throw new BatchError({
+        code: BatchErrorCode.INVALID_COUNT,
+        startEpoch: this.startEpoch,
+        count: slots.size,
+        expected: this.count,
+        status: this.state.status,
+      });
+    }
+    if (allComplete) {
+      this.state = {status: BatchStatus.AwaitingProcessing, blocks};
+    } else {
+      this.requests = this.getRequests(blocks);
+      this.state = {status: BatchStatus.AwaitingDownload, blocks};
+    }
+
+    return this.state as DownloadSuccessState;
   }
 
   /**
    * Downloading -> AwaitingDownload
    */
-  downloadingError(): void {
+  downloadingError(peer: PeerIdStr): void {
     if (this.state.status !== BatchStatus.Downloading) {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.Downloading));
     }
 
-    this.failedDownloadAttempts.push(this.state.peer);
+    this.failedDownloadAttempts.push(peer);
     if (this.failedDownloadAttempts.length > MAX_BATCH_DOWNLOAD_ATTEMPTS) {
       throw new BatchError(this.errorType({code: BatchErrorCode.MAX_DOWNLOAD_ATTEMPTS}));
     }
 
-    this.state = {status: BatchStatus.AwaitingDownload};
+    this.state = {status: BatchStatus.AwaitingDownload, blocks: this.state.blocks};
   }
 
   /**
    * AwaitingProcessing -> Processing
    */
-  startProcessing(): BlockInput[] {
+  startProcessing(): IBlockInput[] {
     if (this.state.status !== BatchStatus.AwaitingProcessing) {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.AwaitingProcessing));
     }
 
     const blocks = this.state.blocks;
     const hash = hashBlocks(blocks, this.config); // tracks blocks to report peer on processing error
-    this.state = {status: BatchStatus.Processing, attempt: {peer: this.state.peer, hash}};
+    // Reset goodPeers in case another download attempt needs to be made.  When Attempt is successful or not the peers
+    // that the data came from will be handled by the Attempt that goes for processing
+    const peers = this.goodPeers;
+    this.goodPeers = [];
+    this.state = {status: BatchStatus.Processing, blocks, attempt: {peers, hash}};
     return blocks;
   }
 
@@ -156,7 +357,7 @@ export class Batch {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.Processing));
     }
 
-    this.state = {status: BatchStatus.AwaitingValidation, attempt: this.state.attempt};
+    this.state = {status: BatchStatus.AwaitingValidation, blocks: this.state.blocks, attempt: this.state.attempt};
   }
 
   /**
@@ -205,7 +406,9 @@ export class Batch {
       throw new BatchError(this.errorType({code: BatchErrorCode.MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS}));
     }
 
-    this.state = {status: BatchStatus.AwaitingDownload};
+    // remove any downloaded blocks and re-attempt
+    // TODO(fulu): need to remove the bad blocks from the SeenBlockInputCache
+    this.state = {status: BatchStatus.AwaitingDownload, blocks: []};
   }
 
   private onProcessingError(attempt: Attempt): void {
@@ -214,7 +417,9 @@ export class Batch {
       throw new BatchError(this.errorType({code: BatchErrorCode.MAX_PROCESSING_ATTEMPTS}));
     }
 
-    this.state = {status: BatchStatus.AwaitingDownload};
+    // remove any downloaded blocks and re-attempt
+    // TODO(fulu): need to remove the bad blocks from the SeenBlockInputCache
+    this.state = {status: BatchStatus.AwaitingDownload, blocks: []};
   }
 
   /** Helper to construct typed BatchError. Stack traces are correct as the error is thrown above */
@@ -229,6 +434,7 @@ export class Batch {
 
 export enum BatchErrorCode {
   WRONG_STATUS = "BATCH_ERROR_WRONG_STATUS",
+  INVALID_COUNT = "BATCH_ERROR_INVALID_COUNT",
   MAX_DOWNLOAD_ATTEMPTS = "BATCH_ERROR_MAX_DOWNLOAD_ATTEMPTS",
   MAX_PROCESSING_ATTEMPTS = "BATCH_ERROR_MAX_PROCESSING_ATTEMPTS",
   MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS = "MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS",
@@ -236,6 +442,7 @@ export enum BatchErrorCode {
 
 type BatchErrorType =
   | {code: BatchErrorCode.WRONG_STATUS; expectedStatus: BatchStatus}
+  | {code: BatchErrorCode.INVALID_COUNT; count: number; expected: number}
   | {code: BatchErrorCode.MAX_DOWNLOAD_ATTEMPTS}
   | {code: BatchErrorCode.MAX_PROCESSING_ATTEMPTS}
   | {code: BatchErrorCode.MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS};

@@ -1,16 +1,15 @@
 import fs from "node:fs";
 import {mkdir, writeFile} from "node:fs/promises";
 import path from "node:path";
+import tmp from "tmp";
 import {fromHexString} from "@chainsafe/ssz";
 import {nodeUtils} from "@lodestar/beacon-node";
-import {initCKZG, loadEthereumTrustedSetup} from "@lodestar/beacon-node/util";
 import {ChainForkConfig} from "@lodestar/config";
 import {LogLevel, TimestampFormatCode} from "@lodestar/logger";
 import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
 import {activePreset} from "@lodestar/params";
 import {BeaconStateAllForks, interopSecretKey} from "@lodestar/state-transition";
 import {prettyMsToTime} from "@lodestar/utils";
-import tmp from "tmp";
 import {createBeaconNode} from "./clients/beacon/index.js";
 import {createExecutionNode} from "./clients/execution/index.js";
 import {createValidatorNode, getValidatorForBeaconNode} from "./clients/validator/index.js";
@@ -71,7 +70,7 @@ export class Simulation {
     });
     this.clock = new EpochClock({
       genesisTime: this.options.genesisTime + this.forkConfig.GENESIS_DELAY,
-      secondsPerSlot: this.forkConfig.SECONDS_PER_SLOT,
+      secondsPerSlot: this.forkConfig.SLOT_DURATION_MS / 1000,
       slotsPerEpoch: activePreset.SLOTS_PER_EPOCH,
       signal: this.options.controller.signal,
     });
@@ -89,7 +88,7 @@ export class Simulation {
   }
 
   static async initWithDefaults(
-    {forkConfig, logsDir, id, trustedSetup}: SimulationInitOptions,
+    {forkConfig, logsDir, id}: SimulationInitOptions,
     clients: NodePairDefinition[]
   ): Promise<Simulation> {
     const env = new Simulation(forkConfig, {
@@ -97,7 +96,6 @@ export class Simulation {
       id,
       genesisTime: Math.floor(Date.now() / 1000),
       controller: new AbortController(),
-      trustedSetup,
       rootDir: path.join(tmp.dirSync({unsafeCleanup: true, tmpdir: "/tmp", template: "sim-XXXXXX"}).name, id),
     });
 
@@ -115,11 +113,6 @@ export class Simulation {
         currentTime
       ).toISOString()} simulationTimeout=${prettyMsToTime(opts.runTimeoutMs)} rootDir=${this.options.rootDir}`
     );
-
-    if (this.options.trustedSetup) {
-      await initCKZG();
-      loadEthereumTrustedSetup();
-    }
 
     if (opts.runTimeoutMs > 0) {
       this.runTimeout = setTimeout(() => {

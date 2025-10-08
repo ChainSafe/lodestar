@@ -1,11 +1,10 @@
 import {EventEmitter} from "node:events";
+import {StrictEventEmitter} from "strict-event-emitter-types";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateAllForks, blockToHeader, computeAnchorCheckpoint} from "@lodestar/state-transition";
 import {Root, SignedBeaconBlock, Slot, phase0, ssz} from "@lodestar/types";
 import {ErrorAborted, Logger, sleep, toRootHex} from "@lodestar/utils";
-import {StrictEventEmitter} from "strict-event-emitter-types";
-
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {IBeaconChain} from "../../chain/index.js";
 import {GENESIS_SLOT, ZERO_HASH} from "../../constants/index.js";
 import {IBeaconDb} from "../../db/index.js";
@@ -17,6 +16,7 @@ import {PeerIdStr} from "../../util/peerId.js";
 import {shuffleOne} from "../../util/shuffle.js";
 import {BackfillSyncError, BackfillSyncErrorCode} from "./errors.js";
 import {BackfillBlock, BackfillBlockHeader, verifyBlockProposerSignature, verifyBlockSequence} from "./verify.js";
+
 /**
  * Timeout in ms to take a break from reading a backfillBatchSize from db, as just yielding
  * to sync loop gives hardly any.
@@ -679,7 +679,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     let isPrevFinWsConfirmedAnchorParent = false;
     while (
       backCount !== this.opts.backfillBatchSize &&
-      // biome-ignore lint/suspicious/noAssignInExpressions: <explanation>
+      // biome-ignore lint/suspicious/noAssignInExpressions: May be refactored later
       (parentBlock = await this.db.blockArchive.getByRoot(anchorBlock.message.parentRoot))
     ) {
       // Before moving anchorBlock back, we need check for prevFinalizedCheckpointBlock

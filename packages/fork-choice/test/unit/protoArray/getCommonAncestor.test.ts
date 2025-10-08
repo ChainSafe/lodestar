@@ -1,5 +1,5 @@
-import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {describe, expect, it} from "vitest";
+import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {ExecutionStatus, ProtoArray} from "../../../src/index.js";
 
 describe("getCommonAncestor", () => {
@@ -78,7 +78,7 @@ describe("getCommonAncestor", () => {
 
   for (const {nodeA, nodeB, ancestor} of testCases) {
     it(`${nodeA} & ${nodeB} -> ${ancestor}`, () => {
-      // biome-ignore lint/style/noNonNullAssertion: <explanation>
+      // biome-ignore lint/style/noNonNullAssertion: We know the node can not be null here
       const ancestorNode = fc.getCommonAncestor(fc.getNode(nodeA)!, fc.getNode(nodeB)!);
       if (ancestor) {
         expect(ancestorNode?.blockRoot).toBe(ancestor);

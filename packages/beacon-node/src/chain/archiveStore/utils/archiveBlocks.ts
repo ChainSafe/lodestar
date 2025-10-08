@@ -1,12 +1,15 @@
+import path from "node:path";
 import {ChainForkConfig} from "@lodestar/config";
 import {KeyValue} from "@lodestar/db";
 import {IForkChoice} from "@lodestar/fork-choice";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot} from "@lodestar/types";
-import {Logger, fromHex, toRootHex} from "@lodestar/utils";
+import {Logger, fromAsync, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/index.js";
 import {BlockArchiveBatchPutBinaryItem} from "../../../db/repositories/index.js";
+import {ensureDir, writeIfNotExist} from "../../../util/file.js";
+import {BlockRootHex} from "../../../util/sszBytes.js";
 import {LightClientServer} from "../../lightClient/index.js";
 
 // Process in chunks to avoid OOM
@@ -17,6 +20,23 @@ const BLOB_SIDECAR_BATCH_SIZE = 32;
 
 type BlockRootSlot = {slot: Slot; root: Uint8Array};
 type CheckpointHex = {epoch: Epoch; rootHex: RootHex};
+
+/**
+ * Persist orphaned block to disk
+ */
+async function persistOrphanedBlock(
+  slot: Slot,
+  blockRoot: BlockRootHex,
+  bytes: Uint8Array,
+  opts: {
+    persistOrphanedBlocksDir: string;
+  }
+) {
+  const dirpath = path.join(opts.persistOrphanedBlocksDir ?? "orphaned_blocks");
+  const filepath = path.join(dirpath, `${slot}_${blockRoot}.ssz`);
+  await ensureDir(dirpath);
+  await writeIfNotExist(filepath, bytes);
+}
 
 /**
  * Archives finalized blocks from active bucket to archive bucket.
@@ -35,7 +55,9 @@ export async function archiveBlocks(
   logger: Logger,
   finalizedCheckpoint: CheckpointHex,
   currentEpoch: Epoch,
-  archiveBlobEpochs?: number
+  archiveDataEpochs?: number,
+  persistOrphanedBlocks?: boolean,
+  persistOrphanedBlocksDir?: string
 ): Promise<void> {
   // Use fork choice to determine the blocks to archive and delete
   // getAllAncestorBlocks response includes the finalized block, so it's also moved to the cold db
@@ -44,6 +66,7 @@ export async function archiveBlocks(
 
   // NOTE: The finalized block will be exactly the first block of `epoch` or previous
   const finalizedPostDeneb = finalizedCheckpoint.epoch >= config.DENEB_FORK_EPOCH;
+  const finalizedPostFulu = finalizedCheckpoint.epoch >= config.FULU_FORK_EPOCH;
 
   const finalizedCanonicalBlockRoots: BlockRootSlot[] = finalizedCanonicalBlocks.map((block) => ({
     slot: block.slot,
@@ -59,8 +82,24 @@ export async function archiveBlocks(
     });
 
     if (finalizedPostDeneb) {
-      const migrate = await migrateBlobSidecarsFromHotToColdDb(config, db, finalizedCanonicalBlockRoots, currentEpoch);
-      logger.verbose(migrate ? "Migrated blobSidecars from hot DB to cold DB" : "Skip blobSidecars migration");
+      const migratedEntries = await migrateBlobSidecarsFromHotToColdDb(
+        config,
+        db,
+        finalizedCanonicalBlockRoots,
+        currentEpoch
+      );
+      logger.verbose("Migrated blobSidecars from hot DB to cold DB", {migratedEntries});
+    }
+
+    if (finalizedPostFulu) {
+      const migratedEntries = await migrateDataColumnSidecarsFromHotToColdDb(
+        config,
+        db,
+        logger,
+        finalizedCanonicalBlockRoots,
+        currentEpoch
+      );
+      logger.verbose("Migrated dataColumnSidecars from hot DB to cold DB", {migratedEntries});
     }
   }
 
@@ -69,6 +108,25 @@ export async function archiveBlocks(
 
   const nonCanonicalBlockRoots = finalizedNonCanonicalBlocks.map((summary) => fromHex(summary.blockRoot));
   if (nonCanonicalBlockRoots.length > 0) {
+    if (persistOrphanedBlocks) {
+      // Persist orphaned blocks to disk before deleting them from hot db
+      await Promise.all(
+        nonCanonicalBlockRoots.map(async (root, index) => {
+          const block = finalizedNonCanonicalBlocks[index];
+          const blockBytes = await db.block.getBinary(root);
+          const logCtx = {slot: block.slot, root: block.blockRoot};
+          if (blockBytes) {
+            await persistOrphanedBlock(block.slot, block.blockRoot, blockBytes, {
+              persistOrphanedBlocksDir: persistOrphanedBlocksDir ?? "orphaned_blocks",
+            });
+            logger.verbose("Persisted orphaned block", logCtx);
+          } else {
+            logger.warn("Tried to persist orphaned block but no block found", logCtx);
+          }
+        })
+      );
+    }
+
     await db.block.batchDelete(nonCanonicalBlockRoots);
     logger.verbose("Deleted non canonical blocks from hot DB", {
       slots: finalizedNonCanonicalBlocks.map((summary) => summary.slot).join(","),
@@ -76,16 +134,21 @@ export async function archiveBlocks(
 
     if (finalizedPostDeneb) {
       await db.blobSidecars.batchDelete(nonCanonicalBlockRoots);
-      logger.verbose("Deleted non canonical blobsSider from hot DB");
+      logger.verbose("Deleted non canonical blobSidecars from hot DB");
+    }
+
+    if (finalizedPostFulu) {
+      await db.dataColumnSidecar.deleteMany(nonCanonicalBlockRoots);
+      logger.verbose("Deleted non canonical dataColumnSidecars from hot DB");
     }
   }
 
   // Delete expired blobs
-  // Keep only `[current_epoch - max(MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, archiveBlobEpochs)]
-  // if archiveBlobEpochs set to Infinity do not prune`
+  // Keep only `[current_epoch - max(MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, archiveDataEpochs)]`
+  // if archiveDataEpochs set to Infinity do not prune`
   if (finalizedPostDeneb) {
-    if (archiveBlobEpochs !== Infinity) {
-      const blobsArchiveWindow = Math.max(config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, archiveBlobEpochs ?? 0);
+    if (archiveDataEpochs !== Infinity) {
+      const blobsArchiveWindow = Math.max(config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, archiveDataEpochs ?? 0);
       const blobSidecarsMinEpoch = currentEpoch - blobsArchiveWindow;
       if (blobSidecarsMinEpoch >= config.DENEB_FORK_EPOCH) {
         const slotsToDelete = await db.blobSidecarsArchive.keys({lt: computeStartSlotAtEpoch(blobSidecarsMinEpoch)});
@@ -97,7 +160,44 @@ export async function archiveBlocks(
         }
       }
     } else {
-      logger.verbose("blobSidecars pruning skipped: archiveBlobEpochs set to Infinity");
+      logger.verbose("blobSidecars pruning skipped: archiveDataEpochs set to Infinity");
+    }
+  }
+
+  // Delete expired data column sidecars
+  // Keep only `[current_epoch - max(MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS, archiveDataEpochs)]`
+  if (finalizedPostFulu) {
+    if (archiveDataEpochs !== Infinity) {
+      const dataColumnSidecarsArchiveWindow = Math.max(
+        config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS,
+        archiveDataEpochs ?? 0
+      );
+      const dataColumnSidecarsMinEpoch = currentEpoch - dataColumnSidecarsArchiveWindow;
+      if (dataColumnSidecarsMinEpoch >= config.FULU_FORK_EPOCH) {
+        const prefixedKeys = await db.dataColumnSidecarArchive.keys({
+          // The `id` value `0` refers to the column index. So we want to fetch all sidecars less than zero column of `dataColumnSidecarsMinEpoch`
+          lt: {prefix: computeStartSlotAtEpoch(dataColumnSidecarsMinEpoch), id: 0},
+        });
+        // for each slot there could be multiple dataColumnSidecar, so we need to deduplicate it
+        const slotsToDelete = [...new Set(prefixedKeys.map(({prefix}) => prefix))].sort((a, b) => a - b);
+
+        if (slotsToDelete.length > 0) {
+          await db.dataColumnSidecarArchive.deleteMany(slotsToDelete);
+          logger.verbose("dataColumnSidecars prune", {
+            slotRange: prettyPrintIndices(slotsToDelete),
+            numOfSlots: slotsToDelete.length,
+            totalNumOfSidecars: prefixedKeys.length,
+          });
+        } else {
+          logger.verbose(`dataColumnSidecars prune: no entries before epoch ${dataColumnSidecarsMinEpoch}`);
+        }
+      } else {
+        logger.verbose(
+          `dataColumnSidecars pruning skipped: ${dataColumnSidecarsMinEpoch} is before fulu fork epoch ${config.FULU_FORK_EPOCH}`
+        );
+      }
+    } else {
+      logger.verbose("dataColumnSidecars pruning skipped: archiveDataEpochs set to Infinity");
     }
   }
 
@@ -164,15 +264,14 @@ async function migrateBlobSidecarsFromHotToColdDb(
   db: IBeaconDb,
   blocks: BlockRootSlot[],
   currentEpoch: Epoch
-): Promise<boolean> {
-  let result = false;
-
+): Promise<number> {
+  let migratedWrappedBlobSidecars = 0;
   for (let i = 0; i < blocks.length; i += BLOB_SIDECAR_BATCH_SIZE) {
     const toIdx = Math.min(i + BLOB_SIDECAR_BATCH_SIZE, blocks.length);
     const canonicalBlocks = blocks.slice(i, toIdx);
 
     // processCanonicalBlocks
-    if (canonicalBlocks.length === 0) return false;
+    if (canonicalBlocks.length === 0) break;
 
     // load Buffer instead of ssz deserialized to improve performance
     const canonicalBlobSidecarsEntries: KeyValue<Slot, Uint8Array>[] = await Promise.all(
@@ -180,8 +279,11 @@ async function migrateBlobSidecarsFromHotToColdDb(
         .filter((block) => {
           const blockSlot = block.slot;
           const blockEpoch = computeEpochAtSlot(blockSlot);
+          const forkSeq = config.getForkSeq(blockSlot);
           return (
-            config.getForkSeq(blockSlot) >= ForkSeq.deneb &&
+            forkSeq >= ForkSeq.deneb &&
+            forkSeq < ForkSeq.fulu &&
+            // if block is out of ${config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS}, skip this step
             blockEpoch >= currentEpoch - config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS
           );
         })
@@ -194,20 +296,70 @@ async function migrateBlobSidecarsFromHotToColdDb(
         })
     );
 
-    const migrate = canonicalBlobSidecarsEntries.length > 0;
-
-    if (migrate) {
-      // put to blockArchive db and delete block db
-      await Promise.all([
-        db.blobSidecarsArchive.batchPutBinary(canonicalBlobSidecarsEntries),
-        db.blobSidecars.batchDelete(canonicalBlocks.map((block) => block.root)),
-      ]);
-    }
-
-    result = result || migrate;
+    // put to blockArchive db and delete block db
+    await Promise.all([
+      db.blobSidecarsArchive.batchPutBinary(canonicalBlobSidecarsEntries),
+      db.blobSidecars.batchDelete(canonicalBlocks.map((block) => block.root)),
+    ]);
+    migratedWrappedBlobSidecars += canonicalBlobSidecarsEntries.length;
   }
 
-  return result;
+  return migratedWrappedBlobSidecars;
+}
+
+// TODO: This function can be simplified further by reducing layers of promises in a loop
+async function migrateDataColumnSidecarsFromHotToColdDb(
+  config: ChainForkConfig,
+  db: IBeaconDb,
+  logger: Logger,
+  blocks: BlockRootSlot[],
+  currentEpoch: Epoch
+): Promise<number> {
+  let migratedWrappedDataColumns = 0;
+  for (let i = 0; i < blocks.length; i += BLOB_SIDECAR_BATCH_SIZE) {
+    const toIdx = Math.min(i + BLOB_SIDECAR_BATCH_SIZE, blocks.length);
+    const canonicalBlocks = blocks.slice(i, toIdx);
+
+    // processCanonicalBlocks
+    if (canonicalBlocks.length === 0) break;
+    const promises = [];
+
+    // load Buffer instead of ssz deserialized to improve performance
+    for (const block of canonicalBlocks) {
+      const blockSlot = block.slot;
+      const blockEpoch = computeEpochAtSlot(blockSlot);
+
+      if (
+        config.getForkSeq(blockSlot) < ForkSeq.fulu ||
+        // if block is out of ${config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS}, skip this step
+        blockEpoch < currentEpoch - config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS
+      ) {
+        continue;
+      }
+
+      const dataColumnSidecarBytes = await fromAsync(db.dataColumnSidecar.valuesStreamBinary(block.root));
+      // there could be 0 dataColumnSidecarBytes if block has no blob
+      logger.verbose("migrateDataColumnSidecarsFromHotToColdDb", {
+        slot: block.slot,
+        root: toRootHex(block.root),
+        numSidecars: dataColumnSidecarBytes.length,
+      });
+      promises.push(
+        db.dataColumnSidecarArchive.putManyBinary(
+          block.slot,
+          dataColumnSidecarBytes.map((p) => ({key: p.id, value: p.value}))
+        )
+      );
+      migratedWrappedDataColumns += dataColumnSidecarBytes.length;
+    }
+
+    promises.push(db.dataColumnSidecar.deleteMany(canonicalBlocks.map((block) => block.root)));
+
+    // put to blockArchive db and delete block db
+    await Promise.all(promises);
+  }
+
+  return migratedWrappedDataColumns;
 }
 
 /**

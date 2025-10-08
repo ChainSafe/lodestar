@@ -11,19 +11,23 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.30.0",
+  "version": "1.34.1",
   "type": "module",
   "exports": {
     ".": {
+      "bun": "./src/index.ts",
       "import": "./lib/index.js"
     },
     "./block": {
+      "bun": "./src/block/index.ts",
       "import": "./lib/block/index.js"
     },
     "./epoch": {
+      "bun": "./src/epoch/index.ts",
       "import": "./lib/epoch/index.js"
     },
     "./slot": {
+      "bun": "./src/slot/index.ts",
       "import": "./lib/slot/index.js"
     }
   },
@@ -37,11 +41,9 @@
     }
   },
   "files": [
-    "lib/**/*.d.ts",
-    "lib/**/*.js",
-    "lib/**/*.js.map",
-    "*.d.ts",
-    "*.js"
+    "src",
+    "lib",
+    "!**/*.tsbuildinfo"
   ],
   "scripts": {
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",
@@ -60,15 +62,15 @@
   "dependencies": {
     "@chainsafe/as-sha256": "^1.2.0",
     "@chainsafe/blst": "^2.2.0",
-    "@chainsafe/persistent-merkle-tree": "^1.2.0",
+    "@chainsafe/persistent-merkle-tree": "^1.2.1",
     "@chainsafe/persistent-ts": "^1.0.0",
     "@chainsafe/pubkey-index-map": "^3.0.0",
-    "@chainsafe/ssz": "^1.2.1",
+    "@chainsafe/ssz": "^1.2.2",
     "@chainsafe/swap-or-not-shuffle": "^1.2.1",
-    "@lodestar/config": "^1.30.0",
-    "@lodestar/params": "^1.30.0",
-    "@lodestar/types": "^1.30.0",
-    "@lodestar/utils": "^1.30.0",
+    "@lodestar/config": "^1.34.1",
+    "@lodestar/params": "^1.34.1",
+    "@lodestar/types": "^1.34.1",
+    "@lodestar/utils": "^1.34.1",
     "bigint-buffer": "^1.1.5"
   },
   "keywords": [

@@ -1,9 +1,16 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {EPOCHS_PER_HISTORICAL_VECTOR, isForkPostElectra} from "@lodestar/params";
+import {
+  EPOCHS_PER_HISTORICAL_VECTOR,
+  SLOTS_PER_EPOCH,
+  SYNC_COMMITTEE_SUBNET_SIZE,
+  isForkPostElectra,
+  isForkPostFulu,
+} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   BeaconStateElectra,
+  BeaconStateFulu,
   CachedBeaconStateAltair,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
@@ -11,10 +18,10 @@ import {
   getRandaoMix,
   loadState,
 } from "@lodestar/state-transition";
-import {getValidatorStatus} from "@lodestar/types";
-import {fromHex} from "@lodestar/utils";
+import {ValidatorIndex, getValidatorStatus} from "@lodestar/types";
 import {ApiError} from "../../errors.js";
 import {ApiModules} from "../../types.js";
+import {assertUniqueItems} from "../../utils.js";
 import {
   filterStateValidatorsByStatus,
   getStateResponseWithRegen,
@@ -92,6 +99,8 @@ export function getBeaconStateApi({
 
       const validatorResponses: routes.beacon.ValidatorResponse[] = [];
       if (validatorIds.length) {
+        assertUniqueItems(validatorIds, "Duplicate validator IDs provided");
+
         for (const id of validatorIds) {
           const resp = getStateValidatorIndex(id, state, pubkey2index);
           if (resp.valid) {
@@ -116,6 +125,8 @@ export function getBeaconStateApi({
       }
 
       if (statuses.length) {
+        assertUniqueItems(statuses, "Duplicate statuses provided");
+
         const validatorsByStatus = filterStateValidatorsByStatus(statuses, state, pubkey2index, currentEpoch);
         return {
           data: validatorsByStatus,
@@ -148,6 +159,8 @@ export function getBeaconStateApi({
       let validatorIdentities: routes.beacon.ValidatorIdentities;
 
       if (validatorIds.length) {
+        assertUniqueItems(validatorIds, "Duplicate validator IDs provided");
+
         validatorIdentities = [];
         for (const id of validatorIds) {
           const resp = getStateValidatorIndex(id, state, pubkey2index);
@@ -197,19 +210,18 @@ export function getBeaconStateApi({
       const {state, executionOptimistic, finalized} = await getState(stateId);
 
       if (validatorIds.length) {
+        assertUniqueItems(validatorIds, "Duplicate validator IDs provided");
+
         const headState = chain.getHeadState();
         const balances: routes.beacon.ValidatorBalance[] = [];
         for (const id of validatorIds) {
-          if (typeof id === "number") {
-            if (state.validators.length <= id) {
-              continue;
-            }
-            balances.push({index: id, balance: state.balances.get(id)});
-          } else {
-            const index = headState.epochCtx.pubkey2index.get(fromHex(id));
-            if (index != null && index <= state.validators.length) {
-              balances.push({index, balance: state.balances.get(index)});
-            }
+          const resp = getStateValidatorIndex(id, state, headState.epochCtx.pubkey2index);
+
+          if (resp.valid) {
+            balances.push({
+              index: resp.validatorIndex,
+              balance: state.balances.get(resp.validatorIndex),
+            });
           }
         }
         return {
@@ -242,8 +254,19 @@ export function getBeaconStateApi({
         throw new ApiError(400, `No cached state available for stateId: ${stateId}`);
       }
 
-      const epoch = filters.epoch ?? computeEpochAtSlot(state.slot);
+      const stateEpoch = computeEpochAtSlot(state.slot);
+      const epoch = filters.epoch ?? stateEpoch;
       const startSlot = computeStartSlotAtEpoch(epoch);
+      const endSlot = startSlot + SLOTS_PER_EPOCH - 1;
+
+      if (Math.abs(epoch - stateEpoch) > 1) {
+        throw new ApiError(400, `Epoch ${epoch} must be within one epoch of state epoch ${stateEpoch}`);
+      }
+
+      if (filters.slot !== undefined && (filters.slot < startSlot || filters.slot > endSlot)) {
+        throw new ApiError(400, `Slot ${filters.slot} is not in epoch ${epoch}`);
+      }
+
       const decisionRoot = stateCached.epochCtx.getShufflingDecisionRoot(epoch);
       const shuffling = await chain.shufflingCache.get(epoch, decisionRoot);
       if (!shuffling) {
@@ -299,12 +322,18 @@ export function getBeaconStateApi({
       }
 
       const syncCommitteeCache = stateCached.epochCtx.getIndexedSyncCommitteeAtEpoch(epoch ?? stateEpoch);
+      const validatorIndices = new Array<ValidatorIndex>(...syncCommitteeCache.validatorIndices);
+
+      // Subcommittee assignments of the current sync committee
+      const validatorAggregates: ValidatorIndex[][] = [];
+      for (let i = 0; i < validatorIndices.length; i += SYNC_COMMITTEE_SUBNET_SIZE) {
+        validatorAggregates.push(validatorIndices.slice(i, i + SYNC_COMMITTEE_SUBNET_SIZE));
+      }
 
       return {
         data: {
-          validators: new Array(...syncCommitteeCache.validatorIndices),
-          // TODO: This is not used by the validator and will be deprecated soon
-          validatorAggregates: [],
+          validators: validatorIndices,
+          validatorAggregates,
         },
         meta: {executionOptimistic, finalized},
       };
@@ -354,6 +383,22 @@ export function getBeaconStateApi({
 
       return {
         data: context?.returnBytes ? pendingConsolidations.serialize() : pendingConsolidations.toValue(),
+        meta: {executionOptimistic, finalized, version: fork},
+      };
+    },
+
+    async getProposerLookahead({stateId}, context) {
+      const {state, executionOptimistic, finalized} = await getState(stateId);
+      const fork = config.getForkName(state.slot);
+
+      if (!isForkPostFulu(fork)) {
+        throw new ApiError(400, `Cannot retrieve proposer lookahead for pre-fulu state fork=${fork}`);
+      }
+
+      const {proposerLookahead} = state as BeaconStateFulu;
+
+      return {
+        data: context?.returnBytes ? proposerLookahead.serialize() : proposerLookahead.toValue(),
         meta: {executionOptimistic, finalized, version: fork},
       };
     },

@@ -1,11 +1,10 @@
+import {afterEach, describe, expect, it, vi} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
-import {EventData, EventType} from "@lodestar/api/lib/beacon/routes/events.js";
 import {ChainConfig} from "@lodestar/config";
 import {TimestampFormatCode} from "@lodestar/logger";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {phase0} from "@lodestar/types";
-import {afterEach, describe, expect, it, vi} from "vitest";
 import {ChainEvent} from "../../../src/chain/index.js";
 import {waitForEvent} from "../../utils/events/resolver.js";
 import {LogLevel, TestLoggerOpts, testLogger} from "../../utils/logger.js";
@@ -13,13 +12,28 @@ import {connect, onPeerConnect} from "../../utils/network.js";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
 
-describe("sync / finalized sync", () => {
+describe("sync / finalized sync for fulu", () => {
   // chain is finalized at slot 32, plus 4 slots for genesis delay => ~72s it should sync pretty fast
   vi.setConfig({testTimeout: 90_000});
 
   const validatorCount = 8;
-  const testParams: Pick<ChainConfig, "SECONDS_PER_SLOT"> = {
-    SECONDS_PER_SLOT: 2,
+  const ELECTRA_FORK_EPOCH = 0;
+  const FULU_FORK_EPOCH = 1;
+  const SLOT_DURATION_MS = 2000;
+  const testParams: Partial<ChainConfig> = {
+    SLOT_DURATION_MS,
+    ALTAIR_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+    BELLATRIX_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+    CAPELLA_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+    DENEB_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+    ELECTRA_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+    FULU_FORK_EPOCH: FULU_FORK_EPOCH,
+    BLOB_SCHEDULE: [
+      {
+        EPOCH: 1,
+        MAX_BLOBS_PER_BLOCK: 3,
+      },
+    ],
   };
 
   const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];
@@ -33,7 +47,7 @@ describe("sync / finalized sync", () => {
   it("should do a finalized sync from another BN", async () => {
     // single node at beginning, use main thread to verify bls
     const genesisSlotsDelay = 4;
-    const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
+    const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * (SLOT_DURATION_MS / 1000);
 
     const testLoggerOpts: TestLoggerOpts = {
       level: LogLevel.info,
@@ -41,7 +55,7 @@ describe("sync / finalized sync", () => {
         format: TimestampFormatCode.EpochSlot,
         genesisTime,
         slotsPerEpoch: SLOTS_PER_EPOCH,
-        secondsPerSlot: testParams.SECONDS_PER_SLOT,
+        secondsPerSlot: SLOT_DURATION_MS / 1000,
       },
     };
 
@@ -77,8 +91,22 @@ describe("sync / finalized sync", () => {
     // stop beacon node after validators
     afterEachCallbacks.push(() => bn.close());
 
-    await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.forkChoiceFinalized, 240000);
-    loggerNodeA.info("Node A emitted finalized checkpoint event");
+    await Promise.all([
+      waitForEvent<phase0.Checkpoint>(
+        bn.chain.emitter,
+        ChainEvent.forkChoiceFinalized,
+        240000,
+        (finalized) => finalized.epoch >= FULU_FORK_EPOCH
+      ),
+      waitForEvent<routes.events.EventData[routes.events.EventType.head]>(
+        bn.chain.emitter,
+        routes.events.EventType.head,
+        100000,
+        // at block slot 32 imported, finalized checkpoint epoch 2 is processed
+        ({slot}) => slot === 32
+      ),
+    ]);
+    loggerNodeA.info("Node A emitted finalized checkpoint event for fulu");
 
     const bn2 = await getDevBeaconNode({
       params: testParams,
@@ -99,7 +127,7 @@ describe("sync / finalized sync", () => {
     const headSummary = bn.chain.forkChoice.getHead();
     const head = await bn.db.block.get(fromHexString(headSummary.blockRoot));
     if (!head) throw Error("First beacon node has no head block");
-    const waitForSynced = waitForEvent<EventData[EventType.head]>(
+    const waitForSynced = waitForEvent<routes.events.EventData[routes.events.EventType.head]>(
       bn2.chain.emitter,
       routes.events.EventType.head,
       100000,
@@ -111,7 +139,7 @@ describe("sync / finalized sync", () => {
 
     try {
       await waitForSynced;
-      loggerNodeB.info("Node B synced to Node A, received head block", {slot: head.message.slot});
+      loggerNodeB.info("Node B synced to Node A, received fulu head block", {slot: head.message.slot});
     } catch (_e) {
       expect.fail("Failed to sync to other node in time");
     }

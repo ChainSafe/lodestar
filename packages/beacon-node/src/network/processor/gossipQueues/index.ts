@@ -31,6 +31,11 @@ const linearGossipQueueOpts: {
     type: QueueType.FIFO,
     dropOpts: {type: DropType.count, count: 1},
   },
+  [GossipType.data_column_sidecar]: {
+    maxLength: 4096,
+    type: QueueType.FIFO,
+    dropOpts: {type: DropType.count, count: 1},
+  },
   // lighthoue has aggregate_queue 4096 and unknown_block_aggregate_queue 1024, we use single queue
   [GossipType.beacon_aggregate_and_proof]: {
     maxLength: 5120,
@@ -72,7 +77,7 @@ const indexedGossipQueueOpts: {
     // this topic may cause node to be overload and drop 100% of lower priority queues
     maxLength: 24576,
     indexFn: (item: PendingGossipsubMessage) => {
-      return getBeaconAttestationGossipIndex(item.topic.fork, item.msg.data);
+      return getBeaconAttestationGossipIndex(item.topic.boundary.fork, item.msg.data);
     },
     minChunkSize: MIN_SIGNATURE_SETS_TO_BATCH_VERIFY,
     maxChunkSize: MAX_GOSSIP_ATTESTATION_BATCH_SIZE,

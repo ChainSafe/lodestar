@@ -1,5 +1,5 @@
-import {ProtoBlock} from "@lodestar/fork-choice";
 import {beforeEach, describe, expect, it, vi} from "vitest";
+import {ProtoBlock} from "@lodestar/fork-choice";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
 import {SyncState} from "../../../../../src/sync/interface.js";

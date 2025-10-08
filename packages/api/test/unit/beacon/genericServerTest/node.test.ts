@@ -1,5 +1,5 @@
-import {config} from "@lodestar/config/default";
 import {describe} from "vitest";
+import {config} from "@lodestar/config/default";
 import {getClient} from "../../../../src/beacon/client/node.js";
 import {Endpoints} from "../../../../src/beacon/routes/node.js";
 import {getRoutes} from "../../../../src/beacon/server/node.js";

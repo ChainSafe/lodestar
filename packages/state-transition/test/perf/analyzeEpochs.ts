@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import {getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
-import {NetworkName} from "@lodestar/config/networks.js";
+import {NetworkName} from "@lodestar/config/networks";
 import {phase0, ssz} from "@lodestar/types";
 import {
   AttesterFlags,

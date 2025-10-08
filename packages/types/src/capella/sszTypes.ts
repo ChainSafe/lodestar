@@ -26,6 +26,8 @@ const {
   Bytes32,
 } = primitiveSsz;
 
+export const ExecutionBranch = new VectorCompositeType(Bytes32, EXECUTION_PAYLOAD_DEPTH);
+
 export const Withdrawal = new ContainerType(
   {
     index: WithdrawalIndex,
@@ -206,7 +208,7 @@ export const LightClientHeader = new ContainerType(
   {
     beacon: phase0Ssz.BeaconBlockHeader,
     execution: ExecutionPayloadHeader,
-    executionBranch: new VectorCompositeType(Bytes32, EXECUTION_PAYLOAD_DEPTH),
+    executionBranch: ExecutionBranch,
   },
   {typeName: "LightClientHeader", jsonCase: "eth2"}
 );

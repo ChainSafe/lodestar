@@ -1,12 +1,18 @@
+import all from "it-all";
 import {ChainForkConfig} from "@lodestar/config";
 import {Db, FilterOptions, KeyValue, Repository} from "@lodestar/db";
 import {Root, SignedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {bytesToInt} from "@lodestar/utils";
-import all from "it-all";
 import {getSignedBlockTypeFromBytes} from "../../util/multifork.js";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
-import {getParentRootIndexKey, getRootIndexKey} from "./blockArchiveIndex.js";
-import {deleteParentRootIndex, deleteRootIndex, storeParentRootIndex, storeRootIndex} from "./blockArchiveIndex.js";
+import {
+  deleteParentRootIndex,
+  deleteRootIndex,
+  getParentRootIndex,
+  getRootIndex,
+  storeParentRootIndex,
+  storeRootIndex,
+} from "./blockArchiveIndex.js";
 
 export interface BlockFilterOptions extends FilterOptions<Slot> {
   step?: number;
@@ -136,11 +142,11 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
   }
 
   async getSlotByRoot(root: Root): Promise<Slot | null> {
-    return this.parseSlot(await this.db.get(getRootIndexKey(root)));
+    return this.parseSlot(await getRootIndex(this.db, root));
   }
 
   async getSlotByParentRoot(root: Root): Promise<Slot | null> {
-    return this.parseSlot(await this.db.get(getParentRootIndexKey(root)));
+    return this.parseSlot(await getParentRootIndex(this.db, root));
   }
 
   private parseSlot(slotBytes: Uint8Array | null): Slot | null {

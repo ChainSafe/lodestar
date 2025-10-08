@@ -1,8 +1,8 @@
+import {Mock, MockInstance, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {Mock, MockInstance, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {IChainOptions} from "../../../src/chain/options.js";
 import {PrepareNextSlotScheduler} from "../../../src/chain/prepareNextSlot.js";
 import {PayloadIdCache} from "../../../src/execution/engine/payloadIdCache.js";
@@ -59,7 +59,7 @@ describe("PrepareNextSlot scheduler", () => {
     chainStub.recomputeForkChoiceHead.mockReturnValue({slot: SLOTS_PER_EPOCH - 2} as ProtoBlock);
     await Promise.all([
       scheduler.prepareForNextSlot(2 * SLOTS_PER_EPOCH - 1),
-      vi.advanceTimersByTimeAsync((config.SECONDS_PER_SLOT * 1000 * 2) / 3),
+      vi.advanceTimersByTimeAsync((config.SLOT_DURATION_MS * 2) / 3),
     ]);
     expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalledOnce();
     expect(regenStub.getBlockSlotState).not.toHaveBeenCalled();
@@ -71,7 +71,7 @@ describe("PrepareNextSlot scheduler", () => {
     (regenStub.getBlockSlotState as Mock).mockResolvedValue(undefined);
     await Promise.all([
       scheduler.prepareForNextSlot(SLOTS_PER_EPOCH - 1),
-      vi.advanceTimersByTimeAsync((config.SECONDS_PER_SLOT * 1000 * 2) / 3),
+      vi.advanceTimersByTimeAsync((config.SLOT_DURATION_MS * 2) / 3),
     ]);
     expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalledOnce();
     expect(regenStub.getBlockSlotState).toHaveBeenCalledOnce();
@@ -84,7 +84,7 @@ describe("PrepareNextSlot scheduler", () => {
     expect(loggerStub.error).not.toHaveBeenCalled();
     await Promise.all([
       scheduler.prepareForNextSlot(SLOTS_PER_EPOCH - 1),
-      vi.advanceTimersByTimeAsync((config.SECONDS_PER_SLOT * 1000 * 2) / 3),
+      vi.advanceTimersByTimeAsync((config.SLOT_DURATION_MS * 2) / 3),
     ]);
     expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalledOnce();
     expect(regenStub.getBlockSlotState).toHaveBeenCalledOnce();
@@ -96,7 +96,7 @@ describe("PrepareNextSlot scheduler", () => {
     chainStub.recomputeForkChoiceHead.mockReturnValue({slot: SLOTS_PER_EPOCH - 2} as ProtoBlock);
     await Promise.all([
       scheduler.prepareForNextSlot(2 * SLOTS_PER_EPOCH - 1),
-      vi.advanceTimersByTimeAsync((config.SECONDS_PER_SLOT * 1000 * 2) / 3),
+      vi.advanceTimersByTimeAsync((config.SLOT_DURATION_MS * 2) / 3),
     ]);
     expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalledOnce();
     expect(regenStub.getBlockSlotState).not.toHaveBeenCalled();
@@ -109,7 +109,7 @@ describe("PrepareNextSlot scheduler", () => {
     regenStub.getBlockSlotState.mockResolvedValue(state);
     await Promise.all([
       scheduler.prepareForNextSlot(SLOTS_PER_EPOCH - 1),
-      vi.advanceTimersByTimeAsync((config.SECONDS_PER_SLOT * 1000 * 2) / 3),
+      vi.advanceTimersByTimeAsync((config.SLOT_DURATION_MS * 2) / 3),
     ]);
     expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalledOnce();
     expect(regenStub.getBlockSlotState).toHaveBeenCalledOnce();
@@ -132,7 +132,7 @@ describe("PrepareNextSlot scheduler", () => {
 
     await Promise.all([
       scheduler.prepareForNextSlot(SLOTS_PER_EPOCH - 2),
-      vi.advanceTimersByTimeAsync((config.SECONDS_PER_SLOT * 1000 * 2) / 3),
+      vi.advanceTimersByTimeAsync((config.SLOT_DURATION_MS * 2) / 3),
     ]);
 
     expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalledOnce();

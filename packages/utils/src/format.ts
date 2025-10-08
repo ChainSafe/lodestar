@@ -72,3 +72,48 @@ export function prettyMsToTime(timeMs: number): string {
 export function strip0xPrefix(hex: string): string {
   return hex.startsWith("0x") ? hex.slice(2) : hex;
 }
+
+export function groupSequentialIndices(indices: number[]): string[] {
+  if (indices.length === 0) {
+    return [];
+  }
+
+  // Get unique values and sort them
+  const uniqueValues = Array.from(new Set(indices)).sort((a, b) => a - b);
+
+  const result: string[] = [];
+  let start = uniqueValues[0];
+  let end = uniqueValues[0];
+
+  for (let i = 1; i < uniqueValues.length; i++) {
+    const current = uniqueValues[i];
+
+    if (current === end + 1) {
+      end = current; // extend the range
+    } else {
+      result.push(start === end ? `${start}` : `${start}-${end}`);
+      start = current;
+      end = current;
+    }
+  }
+
+  // Push the last range
+  result.push(start === end ? `${start}` : `${start}-${end}`);
+
+  return result;
+}
+
+/**
+ * Pretty print indices from an array of numbers.
+ *
+ * example:
+ * ```ts
+ * const indices = [1, 3, 109, 110, 111, 112, 113, 127];
+ * console.log(prettyPrintIndices(indices));
+ * // `1,3,110-113,127`
+ * ```
+ */
+export function prettyPrintIndices(indices: number[]): string {
+  const increments = groupSequentialIndices(indices);
+  return `[${increments.join(", ")}]`;
+}

@@ -6,6 +6,7 @@ import {
   ResponseError,
   ResponseOutgoing,
 } from "@lodestar/reqresp";
+import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {altair} from "@lodestar/types";
 import {IBeaconChain} from "../../../chain/index.js";
 import {assertLightClientServer} from "../../../node/utils/lightclient.js";
@@ -21,12 +22,12 @@ export async function* onLightClientUpdatesByRange(
   for (let period = requestBody.startPeriod; period < requestBody.startPeriod + count; period++) {
     try {
       const update = await chain.lightClientServer.getUpdate(period);
-      const fork = chain.config.getForkName(update.signatureSlot);
-      const type = responseSszTypeByMethod[ReqRespMethod.LightClientUpdatesByRange](fork, 0);
+      const boundary = chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(update.signatureSlot));
+      const type = responseSszTypeByMethod[ReqRespMethod.LightClientUpdatesByRange](boundary.fork, 0);
 
       yield {
         data: type.serialize(update),
-        fork,
+        boundary,
       };
     } catch (e) {
       if ((e as LightClientServerError).type?.code === LightClientServerErrorCode.RESOURCE_UNAVAILABLE) {

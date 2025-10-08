@@ -3,6 +3,7 @@ import {RegistryMetricCreator} from "../../metrics/utils/registryMetricCreator.j
 import {Libp2pError} from "../libp2p/error.js";
 import {SubnetType} from "../metadata.js";
 import {DiscoveredPeerStatus, NotDialReason} from "../peers/discover.js";
+import {PeerRequestedSubnetType} from "../peers/peerManager.js";
 import {SubnetSource} from "../subnets/attnetsService.js";
 
 export type NetworkCoreMetrics = ReturnType<typeof createNetworkCoreMetrics>;
@@ -31,6 +32,11 @@ export function createNetworkCoreMetrics(register: RegistryMetricCreator) {
       name: "lodestar_peer_long_lived_attnets_count",
       help: "Histogram of current count of long lived attnets of connected peers",
       buckets: [0, 4, 16, 32, 64],
+    }),
+    peerColumnGroupCount: register.histogram({
+      name: "lodestar_peer_column_group_count",
+      help: "Histogram of current count of column groups of connected peers",
+      buckets: [0, 4, 8, 16, 32, 64, 128],
     }),
     peerScoreByClient: register.histogram<{client: string}>({
       name: "lodestar_app_peer_score",
@@ -91,12 +97,12 @@ export function createNetworkCoreMetrics(register: RegistryMetricCreator) {
       help: "Prioritization results total peers count requested to disconnect",
       labelNames: ["reason"],
     }),
-    peersRequestedSubnetsToQuery: register.gauge<{type: SubnetType}>({
+    peersRequestedSubnetsToQuery: register.gauge<{type: PeerRequestedSubnetType}>({
       name: "lodestar_peers_requested_total_subnets_to_query",
       help: "Prioritization results total subnets to query and discover peers in",
       labelNames: ["type"],
     }),
-    peersRequestedSubnetsPeerCount: register.gauge<{type: SubnetType}>({
+    peersRequestedSubnetsPeerCount: register.gauge<{type: PeerRequestedSubnetType}>({
       name: "lodestar_peers_requested_total_subnets_peers_count",
       help: "Prioritization results total peers in subnets to query and discover peers in",
       labelNames: ["type"],
@@ -105,6 +111,11 @@ export function createNetworkCoreMetrics(register: RegistryMetricCreator) {
       name: "lodestar_peers_report_peer_count",
       help: "network.reportPeer count by reason",
       labelNames: ["reason"],
+    }),
+    peerCountPerSamplingGroup: register.gauge<{groupIndex: number}>({
+      name: "lodestar_peer_count_per_sampling_group",
+      help: "Current count of peers per sampling group",
+      labelNames: ["groupIndex"],
     }),
     peerManager: {
       heartbeatDuration: register.histogram({
@@ -132,10 +143,18 @@ export function createNetworkCoreMetrics(register: RegistryMetricCreator) {
         help: "Current peers to connect count from discoverPeers requests",
         labelNames: ["type"],
       }),
+      custodyGroupPeersToConnect: register.gauge({
+        name: "lodestar_discovery_custody_group_peers_to_connect",
+        help: "Current PeerDAS custodyGroup peers to connect count from discoverPeers requests",
+      }),
       subnetsToConnect: register.gauge<{type: SubnetType}>({
         name: "lodestar_discovery_subnets_to_connect",
         help: "Current subnets to connect count from discoverPeers requests",
         labelNames: ["type"],
+      }),
+      custodyGroupsToConnect: register.gauge({
+        name: "lodestar_discovery_custody_groups_to_connect",
+        help: "PeerDAS custodyGroups to connect count from discoverPeers requests",
       }),
       cachedENRsSize: register.gauge({
         name: "lodestar_discovery_cached_enrs_size",
@@ -160,14 +179,14 @@ export function createNetworkCoreMetrics(register: RegistryMetricCreator) {
         help: "Total count of status results of PeerDiscovery.onDiscovered() function",
         labelNames: ["status"],
       }),
-      dialAttempts: register.gauge({
-        name: "lodestar_discovery_total_dial_attempts",
-        help: "Total dial attempts by peer discovery",
-      }),
       notDialReason: register.gauge<{reason: NotDialReason}>({
         name: "lodestar_discovery_not_dial_reason_total_count",
         help: "Total count of not dial reasons",
         labelNames: ["reason"],
+      }),
+      dialAttempts: register.gauge({
+        name: "lodestar_discovery_total_dial_attempts",
+        help: "Total dial attempts by peer discovery",
       }),
       dialTime: register.histogram<{status: string}>({
         name: "lodestar_discovery_dial_time_seconds",

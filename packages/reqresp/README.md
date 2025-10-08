@@ -15,7 +15,7 @@ Typescript implementation of the [Ethereum Consensus Req/Resp protocol](https://
 import {Libp2p} from "libp2p";
 import {ssz} from "@lodestar/types";
 import {ReqResp, ContextBytesType, Protocol, Encoding} from "@lodestar/reqresp";
-import {ForkName} from "@lodestar/params";
+import {ForkName, GENESIS_EPOCH} from "@lodestar/params";
 import {Logger} from "@lodestar/utils";
 
 async function getReqResp(libp2p: Libp2p, logger: Logger): Promise<void> {
@@ -32,7 +32,7 @@ async function getReqResp(libp2p: Libp2p, logger: Logger): Promise<void> {
     handler: async function* (req) {
       yield {
         data: req.data,
-        fork: ForkName.phase0,
+        boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH},
       };
     },
   };

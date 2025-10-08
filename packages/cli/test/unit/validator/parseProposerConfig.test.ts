@@ -1,8 +1,7 @@
 import path from "node:path";
 import {fileURLToPath} from "node:url";
-import {routes} from "@lodestar/api";
 import {describe, expect, it} from "vitest";
-
+import {routes} from "@lodestar/api";
 import {parseProposerConfig} from "../../../src/util/index.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -14,7 +13,7 @@ const testValue = {
       strictFeeRecipientCheck: true,
       feeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       builder: {
-        gasLimit: 36000000,
+        gasLimit: 45000000,
         selection: undefined,
         boostFactor: undefined,
       },
@@ -35,7 +34,7 @@ const testValue = {
     strictFeeRecipientCheck: true,
     feeRecipient: "0xcccccccccccccccccccccccccccccccccccccccc",
     builder: {
-      gasLimit: 36000000,
+      gasLimit: 45000000,
       selection: routes.validator.BuilderSelection.MaxProfit,
       boostFactor: BigInt(50),
     },

@@ -3,15 +3,15 @@ import {Web3} from "web3";
 import {LCTransport} from "../../src/interfaces.js";
 import {getVerificationFailedMessage} from "../../src/utils/json_rpc.js";
 import {createVerifiedExecutionProvider} from "../../src/web3_provider.js";
-import {beaconUrl, config, minCapellaTimeMs, rpcUrl, waitForCapellaFork} from "../utils/e2e_env.js";
+import {beaconUrl, config, minFinalizedTimeMs, rpcUrl, waitForFinalized} from "../utils/e2e_env.js";
 
 describe("web3_batch_requests", () => {
-  vi.setConfig({hookTimeout: minCapellaTimeMs});
+  vi.setConfig({hookTimeout: minFinalizedTimeMs});
 
   let web3: Web3;
 
   beforeAll(async () => {
-    await waitForCapellaFork();
+    await waitForFinalized();
 
     const {provider} = createVerifiedExecutionProvider(new Web3.providers.HttpProvider(rpcUrl), {
       transport: LCTransport.Rest,

@@ -1,5 +1,6 @@
 import {BLOBSIDECAR_FIXED_SIZE} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
+import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {RootHex} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
@@ -55,7 +56,7 @@ export async function* onBlobSidecarsByRoot(
 
     yield {
       data: blobSidecarBytes,
-      fork: chain.config.getForkName(block.slot),
+      boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(block.slot)),
     };
   }
 }

@@ -4,6 +4,7 @@ import {
   computeSyncCommitteeIndices as nativeComputeSyncCommitteeIndices,
 } from "@chainsafe/swap-or-not-shuffle";
 import {
+  DOMAIN_BEACON_PROPOSER,
   DOMAIN_SYNC_COMMITTEE,
   EFFECTIVE_BALANCE_INCREMENT,
   EPOCHS_PER_HISTORICAL_VECTOR,
@@ -18,9 +19,8 @@ import {
 import {Bytes32, DomainType, Epoch, ValidatorIndex} from "@lodestar/types";
 import {assert, bytesToBigInt, bytesToInt, intToBytes} from "@lodestar/utils";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
-import {BeaconStateAllForks} from "../types.js";
-import {computeStartSlotAtEpoch} from "./epoch.js";
-import {computeEpochAtSlot} from "./epoch.js";
+import {BeaconStateAllForks, CachedBeaconStateAllForks} from "../types.js";
+import {computeEpochAtSlot, computeStartSlotAtEpoch} from "./epoch.js";
 
 /**
  * Compute proposer indices for an epoch
@@ -136,6 +136,33 @@ export function computeProposerIndex(
 }
 
 /**
+ * Return the proposer indices for the given `epoch`.
+ * A more generic version of `computeProposers`
+ */
+export function computeProposerIndices(
+  fork: ForkSeq,
+  state: CachedBeaconStateAllForks,
+  shuffling: {activeIndices: Uint32Array},
+  epoch: Epoch
+): ValidatorIndex[] {
+  const startSlot = computeStartSlotAtEpoch(epoch);
+  const proposers = [];
+  const epochSeed = getSeed(state, epoch, DOMAIN_BEACON_PROPOSER);
+
+  for (let slot = startSlot; slot < startSlot + SLOTS_PER_EPOCH; slot++) {
+    proposers.push(
+      computeProposerIndex(
+        fork,
+        state.epochCtx.effectiveBalanceIncrements,
+        shuffling.activeIndices,
+        digest(Buffer.concat([epochSeed, intToBytes(slot, 8)]))
+      )
+    );
+  }
+  return proposers;
+}
+
+/**
  * Naive version, this is not supposed to be used in production.
  * See `computeProposerIndex` for the optimized version.
  *
@@ -152,7 +179,7 @@ export function naiveGetNextSyncCommitteeIndices(
   activeValidatorIndices: ArrayLike<ValidatorIndex>,
   effectiveBalanceIncrements: EffectiveBalanceIncrements
 ): ValidatorIndex[] {
-  const syncCommitteeIndices = [];
+  const syncCommitteeValidatorIndices = [];
 
   if (fork >= ForkSeq.electra) {
     const MAX_RANDOM_VALUE = 2 ** 16 - 1;
@@ -163,7 +190,7 @@ export function naiveGetNextSyncCommitteeIndices(
     const seed = getSeed(state, epoch, DOMAIN_SYNC_COMMITTEE);
 
     let i = 0;
-    while (syncCommitteeIndices.length < SYNC_COMMITTEE_SIZE) {
+    while (syncCommitteeValidatorIndices.length < SYNC_COMMITTEE_SIZE) {
       const shuffledIndex = computeShuffledIndex(i % activeValidatorCount, activeValidatorCount, seed);
       const candidateIndex = activeValidatorIndices[shuffledIndex];
       const randomBytes = digest(Buffer.concat([seed, intToBytes(Math.floor(i / 16), 8, "le")]));
@@ -172,7 +199,7 @@ export function naiveGetNextSyncCommitteeIndices(
 
       const effectiveBalanceIncrement = effectiveBalanceIncrements[candidateIndex];
       if (effectiveBalanceIncrement * MAX_RANDOM_VALUE >= MAX_EFFECTIVE_BALANCE_INCREMENT * randomValue) {
-        syncCommitteeIndices.push(candidateIndex);
+        syncCommitteeValidatorIndices.push(candidateIndex);
       }
 
       i += 1;
@@ -186,21 +213,21 @@ export function naiveGetNextSyncCommitteeIndices(
     const seed = getSeed(state, epoch, DOMAIN_SYNC_COMMITTEE);
 
     let i = 0;
-    while (syncCommitteeIndices.length < SYNC_COMMITTEE_SIZE) {
+    while (syncCommitteeValidatorIndices.length < SYNC_COMMITTEE_SIZE) {
       const shuffledIndex = computeShuffledIndex(i % activeValidatorCount, activeValidatorCount, seed);
       const candidateIndex = activeValidatorIndices[shuffledIndex];
       const randomByte = digest(Buffer.concat([seed, intToBytes(Math.floor(i / 32), 8, "le")]))[i % 32];
 
       const effectiveBalanceIncrement = effectiveBalanceIncrements[candidateIndex];
       if (effectiveBalanceIncrement * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE_INCREMENT * randomByte) {
-        syncCommitteeIndices.push(candidateIndex);
+        syncCommitteeValidatorIndices.push(candidateIndex);
       }
 
       i += 1;
     }
   }
 
-  return syncCommitteeIndices;
+  return syncCommitteeValidatorIndices;
 }
 
 /**

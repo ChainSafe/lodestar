@@ -1,7 +1,7 @@
+import {describe, expect, it} from "vitest";
 import {CONSOLIDATION_REQUEST_TYPE, DEPOSIT_REQUEST_TYPE, WITHDRAWAL_REQUEST_TYPE} from "@lodestar/params";
 import {ExecutionRequests, ssz} from "@lodestar/types";
 import {fromHex, strip0xPrefix} from "@lodestar/utils";
-import {describe, expect, it} from "vitest";
 import {deserializeExecutionRequests, serializeExecutionRequests} from "../../../../src/execution/engine/types.js";
 
 describe("execution / engine / types", () => {

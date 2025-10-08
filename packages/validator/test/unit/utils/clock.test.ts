@@ -1,7 +1,7 @@
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {BeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {Clock, getCurrentSlotAround} from "../../../src/util/clock.js";
 import {testLogger} from "../../utils/logger.js";
 
@@ -20,7 +20,7 @@ describe("util / Clock", () => {
   });
 
   it("Should call on slot", async () => {
-    const genesisTime = Math.floor(Date.now() / 1000) - config.SECONDS_PER_SLOT / 2;
+    const genesisTime = Math.floor(Date.now() / 1000) - config.SLOT_DURATION_MS / 2000;
     const clock = new Clock(config, logger, {genesisTime});
 
     const onSlot = vi.fn().mockResolvedValue(undefined);
@@ -31,36 +31,36 @@ describe("util / Clock", () => {
     expect(onSlot).toHaveBeenCalledOnce();
     expect(onSlot).toHaveBeenNthCalledWith(1, 0, expect.any(AbortSignal));
 
-    await vi.advanceTimersByTimeAsync(config.SECONDS_PER_SLOT * 1000);
+    await vi.advanceTimersByTimeAsync(config.SLOT_DURATION_MS);
     expect(onSlot).toHaveBeenCalledTimes(2);
     expect(onSlot).toHaveBeenNthCalledWith(2, 1, expect.any(AbortSignal));
 
-    await vi.advanceTimersByTimeAsync(config.SECONDS_PER_SLOT * 1000);
+    await vi.advanceTimersByTimeAsync(config.SLOT_DURATION_MS);
     expect(onSlot).toHaveBeenCalledTimes(3);
     expect(onSlot).toHaveBeenNthCalledWith(3, 2, expect.any(AbortSignal));
   });
 
   it("Should stop calling on slot after stop()", async () => {
-    const genesisTime = Math.floor(Date.now() / 1000) - config.SECONDS_PER_SLOT / 2;
+    const genesisTime = Math.floor(Date.now() / 1000) - config.SLOT_DURATION_MS / 2000;
     const clock = new Clock(config, logger, {genesisTime});
 
     const onSlot = vi.fn().mockResolvedValue(undefined);
     clock.runEverySlot(onSlot);
     clock.start(controller.signal);
 
-    await vi.advanceTimersByTimeAsync(config.SECONDS_PER_SLOT * 1000);
+    await vi.advanceTimersByTimeAsync(config.SLOT_DURATION_MS);
     expect(onSlot).toBeCalledTimes(2);
     expect(onSlot).toHaveBeenNthCalledWith(2, 1, expect.any(AbortSignal));
 
     // Stop clock
     controller.abort();
-    await vi.advanceTimersByTimeAsync(config.SECONDS_PER_SLOT * 1000);
+    await vi.advanceTimersByTimeAsync(config.SLOT_DURATION_MS);
     expect(onSlot).toBeCalledTimes(2);
   });
 
   it("Should call on epoch", async () => {
     // Start halfway through an epoch, so advancing a slot does not cross to the next epoch
-    const genesisTime = Math.floor(Date.now() / 1000) - (SLOTS_PER_EPOCH * config.SECONDS_PER_SLOT) / 2;
+    const genesisTime = Math.floor(Date.now() / 1000) - (SLOTS_PER_EPOCH * config.SLOT_DURATION_MS) / 2000;
 
     const clock = new Clock(config, logger, {genesisTime});
 
@@ -72,16 +72,16 @@ describe("util / Clock", () => {
     expect(onEpoch).toHaveBeenCalledOnce();
     expect(onEpoch).toHaveBeenCalledWith(0, expect.any(AbortSignal));
 
-    await vi.advanceTimersByTimeAsync(config.SECONDS_PER_SLOT * 1000);
+    await vi.advanceTimersByTimeAsync(config.SLOT_DURATION_MS);
     expect(onEpoch).toHaveBeenCalledOnce();
 
-    await vi.advanceTimersByTimeAsync(SLOTS_PER_EPOCH * config.SECONDS_PER_SLOT * 1000);
+    await vi.advanceTimersByTimeAsync(SLOTS_PER_EPOCH * config.SLOT_DURATION_MS);
     expect(onEpoch).toHaveBeenCalledTimes(2);
     expect(onEpoch).toHaveBeenNthCalledWith(2, 1, expect.any(AbortSignal));
   });
 
   describe("getCurrentSlot", () => {
-    const testConfig = {SECONDS_PER_SLOT: 12} as BeaconConfig;
+    const testConfig = {SLOT_DURATION_MS: 12 * 1000} as BeaconConfig;
     const genesisTime = Math.floor(new Date("2021-01-01").getTime() / 1000);
 
     // Tests can fail under certain time slots, overriding the system time

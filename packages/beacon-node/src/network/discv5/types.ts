@@ -39,6 +39,7 @@ export interface Discv5WorkerData {
   chainConfig: ChainConfig;
   genesisValidatorsRoot: Uint8Array;
   loggerOpts: LoggerNodeOpts;
+  genesisTime: number;
 }
 
 /**

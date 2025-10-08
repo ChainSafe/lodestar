@@ -1,3 +1,4 @@
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {SecretKey} from "@chainsafe/blst";
 import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
@@ -6,7 +7,6 @@ import {config as mainnetConfig} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
 import {ProducedBlockSource, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
-import {afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {BlockProposingService} from "../../../src/services/block.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
 import {getApiClientStub, mockApiResponse} from "../../utils/apiStub.js";
@@ -19,20 +19,27 @@ vi.mock("../../../src/services/validatorStore.js");
 describe("BlockDutiesService", () => {
   const api = getApiClientStub();
   // @ts-expect-error - Mocked class don't need parameters
-  const validatorStore = vi.mocked(new ValidatorStore());
+  const validatorStore = vi.mocked(new ValidatorStore({}, {defaultConfig: {}}));
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
 
   const config = createChainForkConfig(mainnetConfig);
 
-  beforeAll(() => {
-    const secretKeys = Array.from({length: 2}, (_, i) => SecretKey.fromBytes(Buffer.alloc(32, i + 1)));
-    pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
-    validatorStore.votingPubkeys.mockReturnValue(pubkeys.map(toHexString));
-  });
-
   let controller: AbortController; // To stop clock
   beforeEach(() => {
     controller = new AbortController();
+    const secretKeys = Array.from({length: 2}, (_, i) => SecretKey.fromBytes(Buffer.alloc(32, i + 1)));
+    pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
+
+    // vi.mock does not automock all objects in Bun runtime, so we have to explicitly spy on needed methods
+    vi.spyOn(validatorStore, "votingPubkeys");
+    vi.spyOn(validatorStore, "signRandao");
+    vi.spyOn(validatorStore, "signBlock");
+    vi.spyOn(validatorStore, "getBuilderSelectionParams");
+    vi.spyOn(validatorStore, "getGraffiti");
+    vi.spyOn(validatorStore, "getFeeRecipient");
+    vi.spyOn(validatorStore, "strictFeeRecipientCheck");
+
+    validatorStore.votingPubkeys.mockReturnValue(pubkeys.map(toHexString));
   });
   afterEach(() => controller.abort());
 
@@ -68,7 +75,7 @@ describe("BlockDutiesService", () => {
 
     api.validator.produceBlockV3.mockResolvedValue(
       mockApiResponse({
-        data: signedBlock.message,
+        data: {block: signedBlock.message},
         meta: {
           version: ForkName.bellatrix,
           executionPayloadValue: BigInt(1),
@@ -90,7 +97,7 @@ describe("BlockDutiesService", () => {
     // Must have submitted the block received on signBlock()
     expect(api.beacon.publishBlockV2).toHaveBeenCalledOnce();
     expect(api.beacon.publishBlockV2.mock.calls[0]).toEqual([
-      {signedBlockOrContents: signedBlock, broadcastValidation: routes.beacon.BroadcastValidation.consensus},
+      {signedBlockContents: {signedBlock}, broadcastValidation: routes.beacon.BroadcastValidation.consensus},
     ]);
 
     // ProduceBlockV3 is called with all correct arguments

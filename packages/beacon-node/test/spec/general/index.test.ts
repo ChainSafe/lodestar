@@ -3,6 +3,7 @@ import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {SkipOpts, specTestIterator} from "../utils/specTestIterator.js";
 import {RunnerType} from "../utils/types.js";
 import {blsTestRunner} from "./bls.js";
+import {kzgTestRunner} from "./kzg.js";
 import {sszGeneric} from "./ssz_generic.js";
 
 // NOTE: You MUST always provide a detailed reason of why a spec test is skipped plus link
@@ -17,14 +18,17 @@ import {sszGeneric} from "./ssz_generic.js";
 // ],
 // ```
 const skipOpts: SkipOpts = {
-  // Add kzg runner, tracked here: https://github.com/ChainSafe/lodestar/issues/5279
-  skippedRunners: ["kzg"],
+  skippedHandlers: ["compute_challenge", "compute_verify_cell_kzg_proof_batch_challenge"],
+  skippedTests: [
+    /^.+\/kzg\/recover_cells_and_kzg_proofs\/kzg-mainnet\/recover_cells_and_kzg_proofs_case_invalid_shuffled_.*/,
+  ],
 };
 
 specTestIterator(
   path.join(ethereumConsensusSpecsTests.outputDir, "tests", "general"),
   {
     bls: {type: RunnerType.default, fn: blsTestRunner},
+    kzg: {type: RunnerType.default, fn: kzgTestRunner},
     ssz_generic: {
       type: RunnerType.custom,
       fn: sszGeneric([
@@ -32,6 +36,14 @@ specTestIterator(
         // where deserialized .d value is D: '0x00'. However the tests guide mark that field as D: Bytes[256].
         // Those test won't be fixed since most implementations staticly compile types.
         "ComplexTestStruct",
+        "ProgressiveTestStruct",
+        "ProgressiveBitsStruct",
+        "proglist",
+        "progbitlist",
+        "ProgressiveVarTestStruct",
+        "ProgressiveSingleFieldContainerTestStruct",
+        "ProgressiveSingleListContainerTestStruct",
+        "ProgressiveComplexTestStruct",
       ]),
     },
   },

@@ -1,12 +1,12 @@
-import {SignableENR} from "@chainsafe/enr";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {PrivateKey} from "@libp2p/interface";
+import {multiaddr} from "@multiformats/multiaddr";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {SignableENR} from "@chainsafe/enr";
 import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {multiaddr} from "@multiformats/multiaddr";
-import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {GossipHandlers} from "../../../src/network/gossip/index.js";
 import {Network, NetworkInitModules, getReqRespHandlers} from "../../../src/network/index.js";
 import {NetworkOptions, defaultNetworkOptions} from "../../../src/network/options.js";

@@ -1,4 +1,5 @@
 import {MetricsRegister} from "@lodestar/utils";
+import {ProposerRewardType} from "./block/types.js";
 import {EpochTransitionStep} from "./epoch/index.js";
 import {StateCloneSource, StateHashTreeRootSource} from "./stateTransition.js";
 import {CachedBeaconStateAllForks} from "./types.js";
@@ -15,8 +16,8 @@ export function getMetrics(register: MetricsRegister) {
     epochTransitionTime: register.histogram({
       name: "lodestar_stfn_epoch_transition_seconds",
       help: "Time to process a single epoch transition in seconds",
-      // Epoch transitions are 100ms on very fast clients, and average 800ms on heavy networks
-      buckets: [0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1, 1.25, 1.5, 3, 10],
+      // as of Sep 2025, on mainnet, epoch transition time of lodestar is never less than 0.5s, and it could be up to 3s
+      buckets: [0.2, 0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3, 10],
     }),
     epochTransitionCommitTime: register.histogram({
       name: "lodestar_stfn_epoch_transition_commit_seconds",
@@ -50,6 +51,14 @@ export function getMetrics(register: MetricsRegister) {
     numEffectiveBalanceUpdates: register.gauge({
       name: "lodestar_stfn_effective_balance_updates_count",
       help: "Total count of effective balance updates",
+    }),
+    validatorsInActivationQueue: register.gauge({
+      name: "lodestar_stfn_validators_in_activation_queue",
+      help: "Current number of validators in the activation queue",
+    }),
+    validatorsInExitQueue: register.gauge({
+      name: "lodestar_stfn_validators_in_exit_queue",
+      help: "Current number of validators in the exit queue",
     }),
     preStateBalancesNodesPopulatedMiss: register.gauge<{source: StateCloneSource}>({
       name: "lodestar_stfn_balances_nodes_populated_miss_total",
@@ -103,6 +112,11 @@ export function getMetrics(register: MetricsRegister) {
     attestationsPerBlock: register.gauge({
       name: "lodestar_stfn_attestations_per_block_total",
       help: "Total count of attestations per block",
+    }),
+    proposerRewards: register.gauge<{type: ProposerRewardType}>({
+      name: "lodestar_stfn_proposer_rewards_total",
+      help: "Proposer reward by type per block",
+      labelNames: ["type"],
     }),
   };
 }

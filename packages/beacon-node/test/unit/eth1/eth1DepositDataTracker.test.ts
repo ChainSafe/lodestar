@@ -1,6 +1,6 @@
+import {MockInstance, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {config} from "@lodestar/config/default";
 import {TimeoutError} from "@lodestar/utils";
-import {MockInstance, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {BeaconDb} from "../../../src/db/beacon.js";
 import {Eth1DepositDataTracker} from "../../../src/eth1/eth1DepositDataTracker.js";
 import {defaultEth1Options} from "../../../src/eth1/options.js";

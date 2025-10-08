@@ -1,9 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
+import {afterAll, beforeAll} from "vitest";
 import {ContainerType, Type} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
-import {afterAll, beforeAll} from "vitest";
 import {InputType, describeDirectorySpecTest, loadYamlFile} from "../../../src/single.js";
 
 // Global variable __dirname no longer available in ES6 modules.

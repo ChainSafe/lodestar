@@ -11,22 +11,27 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.30.0",
+  "version": "1.34.1",
   "type": "module",
   "exports": {
     ".": {
+      "bun": "./src/index.ts",
       "import": "./lib/index.js"
     },
     "./utils": {
+      "bun": "./src/utils/index.ts",
       "import": "./lib/utils/index.js"
     },
     "./validation": {
+      "bun": "./src/validation.ts",
       "import": "./lib/validation.js"
     },
     "./spec": {
+      "bun": "./src/spec/index.ts",
       "import": "./lib/spec/index.js"
     },
     "./transport": {
+      "bun": "./src/transport/index.ts",
       "import": "./lib/transport/index.js"
     }
   },
@@ -41,17 +46,10 @@
     }
   },
   "files": [
-    "lib/**/*.d.ts",
-    "lib/**/*.js",
-    "lib/**/*.js.map",
-    "*.d.ts",
-    "*.js",
-    "dist/**/*.js",
-    "dist/**/*.mjs",
-    "dist/**/*.cjs",
-    "dist/**/*.map",
-    "dist/**/*.json",
-    "dist/**/*.d.ts"
+    "src",
+    "lib",
+    "dist",
+    "!**/*.tsbuildinfo"
   ],
   "scripts": {
     "clean": "rm -rf lib && rm -rf dist && rm -f *.tsbuildinfo",
@@ -70,15 +68,15 @@
     "check-readme": "typescript-docs-verifier"
   },
   "dependencies": {
-    "@chainsafe/bls": "7.1.3",
-    "@chainsafe/blst": "^0.2.0",
-    "@chainsafe/persistent-merkle-tree": "^1.2.0",
-    "@chainsafe/ssz": "^1.2.1",
-    "@lodestar/api": "^1.30.0",
-    "@lodestar/config": "^1.30.0",
-    "@lodestar/params": "^1.30.0",
-    "@lodestar/types": "^1.30.0",
-    "@lodestar/utils": "^1.30.0",
+    "@chainsafe/bls": "8.2.0",
+    "@chainsafe/blst": "^2.2.0",
+    "@chainsafe/persistent-merkle-tree": "^1.2.1",
+    "@chainsafe/ssz": "^1.2.2",
+    "@lodestar/api": "^1.34.1",
+    "@lodestar/config": "^1.34.1",
+    "@lodestar/params": "^1.34.1",
+    "@lodestar/types": "^1.34.1",
+    "@lodestar/utils": "^1.34.1",
     "mitt": "^3.0.0"
   },
   "devDependencies": {

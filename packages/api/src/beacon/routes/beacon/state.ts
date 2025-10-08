@@ -1,7 +1,18 @@
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {MAX_VALIDATORS_PER_COMMITTEE} from "@lodestar/params";
-import {CommitteeIndex, Epoch, RootHex, Slot, StringType, ValidatorStatus, electra, phase0, ssz} from "@lodestar/types";
+import {
+  CommitteeIndex,
+  Epoch,
+  RootHex,
+  Slot,
+  StringType,
+  ValidatorStatus,
+  electra,
+  fulu,
+  phase0,
+  ssz,
+} from "@lodestar/types";
 import {ArrayOf, JsonOnlyReq} from "../../../utils/codecs.js";
 import {Endpoint, RequestCodec, RouteDefinitions, Schema} from "../../../utils/index.js";
 import {
@@ -66,7 +77,6 @@ export const EpochSyncCommitteeResponseType = new ContainerType(
   {
     /** All of the validator indices in the current sync committee */
     validators: ArrayOf(ssz.ValidatorIndex),
-    // TODO: This property will likely be deprecated
     /** Subcommittee slices of the current sync committee */
     validatorAggregates: ArrayOf(ArrayOf(ssz.ValidatorIndex)),
   },
@@ -308,9 +318,22 @@ export type Endpoints = {
     electra.PendingConsolidations,
     ExecutionOptimisticFinalizedAndVersionMeta
   >;
+
+  /**
+   * Get State Proposer Lookahead
+   *
+   * Returns proposer lookahead for state with given 'stateId'.
+   */
+  getProposerLookahead: Endpoint<
+    "GET",
+    StateArgs,
+    {params: {state_id: string}},
+    fulu.ProposerLookahead,
+    ExecutionOptimisticFinalizedAndVersionMeta
+  >;
 };
 
-// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+// biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
 const stateIdOnlyReq: RequestCodec<Endpoint<"GET", {stateId: StateId}, {params: {state_id: string}}, any, any>> = {
   writeReq: ({stateId}) => ({params: {state_id: stateId.toString()}}),
   parseReq: ({params}) => ({stateId: params.state_id}),
@@ -452,7 +475,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         parseReqJson: ({params, body = {}}) => ({
           stateId: params.state_id,
           validatorIds: fromValidatorIdsStr(body.ids),
-          statuses: body.statuses,
+          statuses: body.statuses ?? undefined,
         }),
         schema: {
           params: {state_id: Schema.StringRequired},
@@ -549,6 +572,15 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       req: stateIdOnlyReq,
       resp: {
         data: ssz.electra.PendingConsolidations,
+        meta: ExecutionOptimisticFinalizedAndVersionCodec,
+      },
+    },
+    getProposerLookahead: {
+      url: "/eth/v1/beacon/states/{state_id}/proposer_lookahead",
+      method: "GET",
+      req: stateIdOnlyReq,
+      resp: {
+        data: ssz.fulu.ProposerLookahead,
         meta: ExecutionOptimisticFinalizedAndVersionCodec,
       },
     },

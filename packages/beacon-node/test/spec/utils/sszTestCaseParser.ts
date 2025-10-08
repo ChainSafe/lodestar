@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
-import {loadYaml} from "@lodestar/utils";
 import jsyaml from "js-yaml";
 import {uncompress} from "snappyjs";
+import {loadYaml} from "@lodestar/utils";
 
 export type ValidTestCaseData = {
   root: string;

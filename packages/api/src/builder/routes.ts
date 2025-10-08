@@ -13,7 +13,6 @@ import {
   ssz,
 } from "@lodestar/types";
 import {fromHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
-
 import {
   ArrayOf,
   EmptyArgs,
@@ -74,6 +73,14 @@ export type Endpoints = {
     {body: unknown; headers: {[MetaHeader.Version]: string}},
     ExecutionPayload | ExecutionPayloadAndBlobsBundle,
     VersionMeta
+  >;
+
+  submitBlindedBlockV2: Endpoint<
+    "POST",
+    {signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>},
+    {body: unknown; headers: {[MetaHeader.Version]: string}},
+    EmptyResponseData,
+    EmptyMeta
   >;
 };
 
@@ -172,6 +179,49 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         }),
         meta: VersionCodec,
       },
+    },
+    submitBlindedBlockV2: {
+      url: "/eth/v2/builder/blinded_blocks",
+      method: "POST",
+      req: {
+        writeReqJson: ({signedBlindedBlock}) => {
+          const fork = config.getForkName(signedBlindedBlock.data.message.slot);
+          return {
+            body: getPostBellatrixForkTypes(fork).SignedBlindedBeaconBlock.toJson(signedBlindedBlock.data),
+            headers: {
+              [MetaHeader.Version]: fork,
+            },
+          };
+        },
+        parseReqJson: ({body, headers}) => {
+          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
+          return {
+            signedBlindedBlock: {data: getPostBellatrixForkTypes(fork).SignedBlindedBeaconBlock.fromJson(body)},
+          };
+        },
+        writeReqSsz: ({signedBlindedBlock}) => {
+          const fork = config.getForkName(signedBlindedBlock.data.message.slot);
+          return {
+            body:
+              signedBlindedBlock.bytes ??
+              getPostBellatrixForkTypes(fork).SignedBlindedBeaconBlock.serialize(signedBlindedBlock.data),
+            headers: {
+              [MetaHeader.Version]: fork,
+            },
+          };
+        },
+        parseReqSsz: ({body, headers}) => {
+          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
+          return {
+            signedBlindedBlock: {data: getPostBellatrixForkTypes(fork).SignedBlindedBeaconBlock.deserialize(body)},
+          };
+        },
+        schema: {
+          body: Schema.Object,
+          headers: {[MetaHeader.Version]: Schema.String},
+        },
+      },
+      resp: EmptyResponseCodec,
     },
   };
 }

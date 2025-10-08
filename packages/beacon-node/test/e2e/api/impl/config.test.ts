@@ -1,7 +1,7 @@
+import {describe, it} from "vitest";
 import {chainConfig} from "@lodestar/config/default";
 import {ForkName, activePreset} from "@lodestar/params";
 import {fetch} from "@lodestar/utils";
-import {describe, it} from "vitest";
 import {specConstants} from "../../../../src/api/impl/config/constants.js";
 import {ethereumConsensusSpecsTests} from "../../../spec/specTestVersioning.js";
 
@@ -10,10 +10,6 @@ const CONSTANT_NAMES_SKIP_LIST = new Set([
   // This constant can also be derived from existing constants so it's not critical.
   // PARTICIPATION_FLAG_WEIGHTS = [TIMELY_SOURCE_WEIGHT, TIMELY_TARGET_WEIGHT, TIMELY_HEAD_WEIGHT]
   "PARTICIPATION_FLAG_WEIGHTS",
-  // TODO Fulu: remove skipped constant
-  "MAX_BLOBS_PER_BLOCK_FULU",
-  "VALIDATOR_CUSTODY_REQUIREMENT",
-  "BALANCE_PER_ADDITIONAL_CUSTODY_GROUP",
 ]);
 
 describe("api / impl / config", () => {
@@ -39,7 +35,7 @@ describe("api / impl / config", () => {
 
     if (missingConstants.length > 0) {
       throw Error(
-        "Some constants delcared in consensus-specs repo are not exposed in API:\n" + missingConstants.join("\n")
+        "Some constants declared in consensus-specs repo are not exposed in API:\n" + missingConstants.join("\n")
       );
     }
   });

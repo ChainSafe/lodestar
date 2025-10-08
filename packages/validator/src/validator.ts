@@ -56,7 +56,6 @@ export type ValidatorOptions = {
   abortController: AbortController;
   afterBlockDelaySlotFraction?: number;
   scAfterBlockDelaySlotFraction?: number;
-  disableAttestationGrouping?: boolean;
   doppelgangerProtection?: boolean;
   closed?: boolean;
   valProposerConfig?: ValidatorProposerConfig;
@@ -179,7 +178,7 @@ export class Validator {
           urls: typeof clientOrUrls === "string" ? [clientOrUrls] : clientOrUrls,
           // Validator would need the beacon to respond within the slot
           // See https://github.com/ChainSafe/lodestar/issues/5315 for rationale
-          globalInit: {timeoutMs: config.SECONDS_PER_SLOT * 1000, signal: controller.signal, ...globalInit},
+          globalInit: {timeoutMs: config.SLOT_DURATION_MS, signal: controller.signal, ...globalInit},
         },
         {config, logger, metrics: metrics?.restApiClient}
       );
@@ -241,7 +240,6 @@ export class Validator {
       config,
       {
         afterBlockDelaySlotFraction: opts.afterBlockDelaySlotFraction,
-        disableAttestationGrouping: opts.disableAttestationGrouping || opts.distributed,
         distributedAggregationSelection: opts.distributed,
       }
     );

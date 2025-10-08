@@ -11,11 +11,13 @@ import {defineSimTestConfig, logFilesDir} from "../utils/crucible/utils/index.js
 import {connectAllNodes, waitForSlot} from "../utils/crucible/utils/network.js";
 import {assertCheckpointSync, assertRangeSync, assertUnknownBlockSync} from "../utils/crucible/utils/syncing.js";
 
-const altairForkEpoch = 2;
-const bellatrixForkEpoch = 4;
-const capellaForkEpoch = 6;
-const denebForkEpoch = 8;
-const runTillEpoch = 10;
+const altairForkEpoch = 0;
+const bellatrixForkEpoch = 0;
+const capellaForkEpoch = 0;
+const denebForkEpoch = 0;
+const electraForkEpoch = 0;
+const fuluForkEpoch = Infinity;
+const runTillEpoch = 4;
 const syncWaitEpoch = 2;
 
 const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
@@ -23,7 +25,10 @@ const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
   BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
   CAPELLA_FORK_EPOCH: capellaForkEpoch,
   DENEB_FORK_EPOCH: denebForkEpoch,
+  ELECTRA_FORK_EPOCH: electraForkEpoch,
+  FULU_FORK_EPOCH: fuluForkEpoch,
   runTillEpoch: runTillEpoch + syncWaitEpoch,
+  additionalSlotsForTTD: 0,
   initialNodes: 5,
 });
 
@@ -122,11 +127,8 @@ env.tracker.register({
 env.tracker.register(
   createAccountBalanceAssertion({
     address: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    sendTransactionsAtSlot: [
-      env.clock.getFirstSlotOfEpoch(altairForkEpoch) + 4,
-      env.clock.getFirstSlotOfEpoch(bellatrixForkEpoch) + 4,
-    ],
-    validateTotalBalanceAt: [env.clock.getFirstSlotOfEpoch(bellatrixForkEpoch + 1) + 4],
+    sendTransactionsAtSlot: [env.clock.getFirstSlotOfEpoch(1) + 4, env.clock.getFirstSlotOfEpoch(2) + 4],
+    validateTotalBalanceAt: [env.clock.getFirstSlotOfEpoch(3) + 4],
     targetNode: env.nodes[0],
   })
 );

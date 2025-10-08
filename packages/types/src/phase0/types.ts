@@ -43,5 +43,4 @@ export type Goodbye = ValueOf<typeof ssz.Goodbye>;
 export type Ping = ValueOf<typeof ssz.Ping>;
 export type Metadata = ValueOf<typeof ssz.Metadata>;
 export type BeaconBlocksByRangeRequest = ValueOf<typeof ssz.BeaconBlocksByRangeRequest>;
-export type BeaconBlocksByRootRequest = ValueOf<typeof ssz.BeaconBlocksByRootRequest>;
 export type Genesis = ValueOf<typeof ssz.Genesis>;

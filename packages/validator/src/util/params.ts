@@ -102,6 +102,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
   const denebForkRelevant = localConfig.DENEB_FORK_EPOCH < Infinity;
   const electraForkRelevant = localConfig.ELECTRA_FORK_EPOCH < Infinity;
   const fuluForkRelevant = localConfig.FULU_FORK_EPOCH < Infinity;
+  const gloasForkRelevant = localConfig.GLOAS_FORK_EPOCH < Infinity;
 
   return {
     // # Config
@@ -140,13 +141,23 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     // fulu
     FULU_FORK_VERSION: fuluForkRelevant,
     FULU_FORK_EPOCH: fuluForkRelevant,
+    // gloas
+    GLOAS_FORK_VERSION: gloasForkRelevant,
+    GLOAS_FORK_EPOCH: gloasForkRelevant,
 
     // Time parameters
-    SECONDS_PER_SLOT: true,
-    SECONDS_PER_ETH1_BLOCK: true,
+    SECONDS_PER_SLOT: false, // Deprecated
+    SLOT_DURATION_MS: true,
+    SECONDS_PER_ETH1_BLOCK: false, // Legacy
     MIN_VALIDATOR_WITHDRAWABILITY_DELAY: true,
     SHARD_COMMITTEE_PERIOD: true,
     ETH1_FOLLOW_DISTANCE: true,
+    PROPOSER_REORG_CUTOFF_BPS: true,
+    ATTESTATION_DUE_BPS: true,
+    AGGREGATE_DUE_BPS: true,
+    // Altair
+    SYNC_MESSAGE_DUE_BPS: altairForkRelevant,
+    CONTRIBUTION_DUE_BPS: altairForkRelevant,
 
     // Validator cycle
     INACTIVITY_SCORE_BIAS: true,
@@ -168,13 +179,17 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     DEPOSIT_CONTRACT_ADDRESS: true,
 
     // Networking (non-critical as those do not affect consensus)
+    MAX_REQUEST_BLOCKS: false,
+    MAX_REQUEST_BLOCKS_DENEB: false,
     MIN_EPOCHS_FOR_BLOCK_REQUESTS: false,
     MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: false,
     MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: false,
     BLOB_SIDECAR_SUBNET_COUNT: false,
     BLOB_SIDECAR_SUBNET_COUNT_ELECTRA: false,
+    DATA_COLUMN_SIDECAR_SUBNET_COUNT: false,
     MAX_REQUEST_BLOB_SIDECARS: false,
     MAX_REQUEST_BLOB_SIDECARS_ELECTRA: false,
+    MAX_REQUEST_DATA_COLUMN_SIDECARS: false,
 
     // # Phase0Preset
     /////////////////
@@ -280,14 +295,26 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
 
     // FULU
     /////////////////
+    CELLS_PER_EXT_BLOB: fuluForkRelevant,
     FIELD_ELEMENTS_PER_CELL: fuluForkRelevant,
     FIELD_ELEMENTS_PER_EXT_BLOB: fuluForkRelevant,
     KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH: fuluForkRelevant,
+    NUMBER_OF_COLUMNS: fuluForkRelevant,
+    NUMBER_OF_CUSTODY_GROUPS: fuluForkRelevant,
     SAMPLES_PER_SLOT: fuluForkRelevant,
     CUSTODY_REQUIREMENT: fuluForkRelevant,
-    NODE_CUSTODY_REQUIREMENT: false,
     VALIDATOR_CUSTODY_REQUIREMENT: fuluForkRelevant,
     BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: fuluForkRelevant,
     BLOB_SCHEDULE: fuluForkRelevant,
+
+    // GLOAS
+    ATTESTATION_DUE_BPS_GLOAS: gloasForkRelevant,
+    AGGREGATE_DUE_BPS_GLOAS: gloasForkRelevant,
+    SYNC_MESSAGE_DUE_BPS_GLOAS: gloasForkRelevant,
+    CONTRIBUTION_DUE_BPS_GLOAS: gloasForkRelevant,
+    PAYLOAD_ATTESTATION_DUE_BPS: gloasForkRelevant,
+    PTC_SIZE: gloasForkRelevant,
+    MAX_PAYLOAD_ATTESTATIONS: gloasForkRelevant,
+    BUILDER_PENDING_WITHDRAWALS_LIMIT: gloasForkRelevant,
   };
 }

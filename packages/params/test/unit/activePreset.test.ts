@@ -3,8 +3,7 @@ import {ACTIVE_PRESET, PresetName} from "../../src/index.js";
 import {gnosisPreset as gnosisParams} from "../../src/presets/gnosis.js";
 import {mainnetPreset} from "../../src/presets/mainnet.js";
 import {minimalPreset} from "../../src/presets/minimal.js";
-import {setActivePreset} from "../../src/setPreset.js";
-import {setActivePreset as setActivePresetLib} from "../../src/setPreset.js";
+import {setActivePreset, setActivePreset as setActivePresetLib} from "../../src/setPreset.js";
 
 describe("active preset", () => {
   let exports: Record<string, unknown>;

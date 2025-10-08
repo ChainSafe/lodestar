@@ -1,8 +1,8 @@
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {when} from "vitest-when";
 import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {ssz} from "@lodestar/types";
-import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {when} from "vitest-when";
 import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks/index.js";
 import {ApiTestModules, getApiTestModules} from "../../../../../utils/api.js";
 import {generateProtoBlock, generateSignedBlockAtSlot} from "../../../../../utils/typeGenerator.js";

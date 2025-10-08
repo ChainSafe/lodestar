@@ -67,5 +67,6 @@ docs/site
 **/dist
 *.log
 **/*.log
+**/*.tsbuildinfo
 .idea
 .tmp

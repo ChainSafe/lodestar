@@ -1,4 +1,3 @@
-import * as path from "node:path";
 import {ArchiveMode, DEFAULT_ARCHIVE_MODE, IBeaconNodeOptions, defaultOptions} from "@lodestar/beacon-node";
 import {CliCommandOptions} from "@lodestar/utils";
 import {ensure0xPrefix} from "../../util/format.js";
@@ -15,6 +14,7 @@ export type ChainArgs = {
   // No need to define chain.persistInvalidSszObjects as part of ChainArgs
   // as this is defined as part of BeaconPaths
   // "chain.persistInvalidSszObjectsDir": string;
+  "chain.persistOrphanedBlocks"?: boolean;
   "chain.proposerBoost"?: boolean;
   "chain.proposerBoostReorg"?: boolean;
   "chain.disableImportExecutionFcU"?: boolean;
@@ -23,14 +23,13 @@ export type ChainArgs = {
   "chain.computeUnrealized"?: boolean;
   "chain.assertCorrectProgressiveBalances"?: boolean;
   "chain.maxSkipSlots"?: number;
-  "chain.trustedSetup"?: string;
   "safe-slots-to-import-optimistically": number;
   emitPayloadAttributes?: boolean;
   broadcastValidationStrictness?: string;
   "chain.minSameMessageSignatureSetsToBatch"?: number;
   "chain.maxShufflingCacheEpochs"?: number;
   "chain.archiveStateEpochFrequency": number;
-  "chain.archiveBlobEpochs"?: number;
+  "chain.archiveDataEpochs"?: number;
   "chain.archiveMode": ArchiveMode;
   "chain.nHistoricalStates"?: boolean;
   "chain.nHistoricalStatesFileDataStore"?: boolean;
@@ -50,8 +49,11 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     disableBlsBatchVerify: args["chain.disableBlsBatchVerify"],
     persistProducedBlocks: args["chain.persistProducedBlocks"],
     persistInvalidSszObjects: args["chain.persistInvalidSszObjects"],
-    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+    // biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
     persistInvalidSszObjectsDir: undefined as any,
+    persistOrphanedBlocks: args["chain.persistOrphanedBlocks"],
+    // biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
+    persistOrphanedBlocksDir: undefined as any,
     proposerBoost: args["chain.proposerBoost"],
     proposerBoostReorg: args["chain.proposerBoostReorg"],
     disableImportExecutionFcU: args["chain.disableImportExecutionFcU"],
@@ -60,7 +62,6 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     computeUnrealized: args["chain.computeUnrealized"],
     assertCorrectProgressiveBalances: args["chain.assertCorrectProgressiveBalances"],
     maxSkipSlots: args["chain.maxSkipSlots"],
-    trustedSetup: args["chain.trustedSetup"],
     safeSlotsToImportOptimistically: args["safe-slots-to-import-optimistically"],
     emitPayloadAttributes: args.emitPayloadAttributes,
     broadcastValidationStrictness: args.broadcastValidationStrictness,
@@ -68,7 +69,7 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
       args["chain.minSameMessageSignatureSetsToBatch"] ?? defaultOptions.chain.minSameMessageSignatureSetsToBatch,
     maxShufflingCacheEpochs: args["chain.maxShufflingCacheEpochs"] ?? defaultOptions.chain.maxShufflingCacheEpochs,
     archiveStateEpochFrequency: args["chain.archiveStateEpochFrequency"],
-    archiveBlobEpochs: args["chain.archiveBlobEpochs"],
+    archiveDataEpochs: args["chain.archiveDataEpochs"],
     archiveMode: args["chain.archiveMode"] ?? defaultOptions.chain.archiveMode,
     nHistoricalStates: args["chain.nHistoricalStates"] ?? defaultOptions.chain.nHistoricalStates,
     nHistoricalStatesFileDataStore:
@@ -157,6 +158,13 @@ Will double processing times. Use only for debugging purposes.",
     group: "chain",
   },
 
+  "chain.persistOrphanedBlocks": {
+    hidden: true,
+    type: "boolean",
+    description: "Whether to persist orphaned blocks",
+    group: "chain",
+  },
+
   "chain.proposerBoost": {
     alias: ["chain.proposerBoostEnabled"],
     hidden: true,
@@ -208,14 +216,6 @@ Will double processing times. Use only for debugging purposes.",
     type: "number",
     description: "Refuse to skip more than this many slots when processing a block or attestation",
     group: "chain",
-  },
-
-  "chain.trustedSetup": {
-    hidden: true,
-    type: "string",
-    description: "Use a customized trustedSetup to verify blobSidecars",
-    group: "chain",
-    coerce: (arg: string) => (arg ? path.resolve(arg) : undefined),
   },
 
   "chain.assertCorrectProgressiveBalances": {
@@ -275,8 +275,10 @@ Will double processing times. Use only for debugging purposes.",
     group: "chain",
   },
 
-  "chain.archiveBlobEpochs": {
-    description: "Number of epochs to retain finalized blobs (minimum of MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS)",
+  "chain.archiveDataEpochs": {
+    alias: "chain.archiveBlobEpochs",
+    description:
+      "Number of epochs to retain finalized blobs/columns (minimum of MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS/MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS)",
     type: "number",
     group: "chain",
   },

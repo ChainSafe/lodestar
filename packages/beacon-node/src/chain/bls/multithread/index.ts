@@ -1,9 +1,11 @@
 import path from "node:path";
 import {Worker, spawn} from "@chainsafe/threads";
+
 // `threads` library creates self global variable which breaks `timeout-abort-controller` https://github.com/jacobheun/timeout-abort-controller/issues/9
-// @ts-ignore
-// biome-ignore lint/suspicious/noGlobalAssign: <explanation>
+// @ts-expect-error
+// biome-ignore lint/suspicious/noGlobalAssign: We need the global `self` to reassign module properties later
 self = undefined;
+
 import {PublicKey} from "@chainsafe/blst";
 import {ISignatureSet} from "@lodestar/state-transition";
 import {Logger} from "@lodestar/utils";
@@ -262,6 +264,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     for (let i = 0; i < poolSize; i++) {
       const workerData: WorkerData = {workerId: i};
       const worker = new Worker(path.join(workerDir, "worker.js"), {
+        suppressTranspileTS: Boolean(globalThis.Bun),
         workerData,
       } as ConstructorParameters<typeof Worker>[1]);
 

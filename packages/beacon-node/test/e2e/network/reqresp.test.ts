@@ -1,10 +1,11 @@
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
 import {RequestError, RequestErrorCode, ResponseOutgoing} from "@lodestar/reqresp";
+import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Root, SignedBeaconBlock, altair, phase0, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
-import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {Network, ReqRespBeaconNodeOpts} from "../../../src/network/index.js";
 import {GetReqRespHandlerFn, ReqRespMethod} from "../../../src/network/reqresp/types.js";
 import {PeerIdStr} from "../../../src/util/peerId.js";
@@ -115,7 +116,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
           if (method === ReqRespMethod.LightClientBootstrap) {
             yield {
               data: ssz.altair.LightClientBootstrap.serialize(expectedValue),
-              fork: ForkName.altair,
+              boundary: {fork: ForkName.altair, epoch: config.ALTAIR_FORK_EPOCH},
             };
           }
         }
@@ -136,7 +137,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
           if (method === ReqRespMethod.LightClientOptimisticUpdate) {
             yield {
               data: ssz.altair.LightClientOptimisticUpdate.serialize(expectedValue),
-              fork: ForkName.altair,
+              boundary: {fork: ForkName.altair, epoch: config.ALTAIR_FORK_EPOCH},
             };
           }
         }
@@ -157,7 +158,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
           if (method === ReqRespMethod.LightClientFinalityUpdate) {
             yield {
               data: ssz.altair.LightClientFinalityUpdate.serialize(expectedValue),
-              fork: ForkName.altair,
+              boundary: {fork: ForkName.altair, epoch: config.ALTAIR_FORK_EPOCH},
             };
           }
         }
@@ -177,7 +178,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
       update.signatureSlot = slot;
       lightClientUpdates.push({
         data: ssz.altair.LightClientUpdate.serialize(update),
-        fork: ForkName.altair,
+        boundary: {fork: ForkName.altair, epoch: config.ALTAIR_FORK_EPOCH},
       });
     }
 
@@ -214,7 +215,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
 
     await expectRejectedWithLodestarError(
       netA.sendBeaconBlocksByRange(peerIdB, {startSlot: 0, step: 1, count: 3}),
-      new RequestError({code: RequestErrorCode.SERVER_ERROR, errorMessage: "sNaPpYa" + testErrorMessage})
+      new RequestError({code: RequestErrorCode.SERVER_ERROR, errorMessage: testErrorMessage})
     );
   });
 
@@ -237,7 +238,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
 
     await expectRejectedWithLodestarError(
       netA.sendBeaconBlocksByRange(peerIdB, {startSlot: 0, step: 1, count: 3}),
-      new RequestError({code: RequestErrorCode.SERVER_ERROR, errorMessage: "sNaPpYa" + testErrorMessage})
+      new RequestError({code: RequestErrorCode.SERVER_ERROR, errorMessage: testErrorMessage})
     );
   });
 
@@ -332,6 +333,6 @@ function getEmptyEncodedPayloadSignedBeaconBlock(config: ChainForkConfig): Respo
 function wrapBlockAsEncodedPayload(config: ChainForkConfig, block: SignedBeaconBlock): ResponseOutgoing {
   return {
     data: config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block),
-    fork: config.getForkName(block.message.slot),
+    boundary: config.getForkBoundaryAtEpoch(computeEpochAtSlot(block.message.slot)),
   };
 }

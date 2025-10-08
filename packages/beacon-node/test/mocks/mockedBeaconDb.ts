@@ -1,5 +1,5 @@
-import {config as minimalConfig} from "@lodestar/config/default";
 import {Mocked, vi} from "vitest";
+import {config as minimalConfig} from "@lodestar/config/default";
 import {BeaconDb} from "../../src/db/index.js";
 import {
   AttesterSlashingRepository,
@@ -10,6 +10,8 @@ import {
   BlobSidecarsRepository,
   BlockArchiveRepository,
   BlockRepository,
+  DataColumnSidecarArchiveRepository,
+  DataColumnSidecarRepository,
   DepositDataRootRepository,
   DepositEventRepository,
   Eth1DataRepository,
@@ -24,6 +26,9 @@ export type MockedBeaconDb = Mocked<BeaconDb> & {
 
   blobSidecars: Mocked<BlobSidecarsRepository>;
   blobSidecarsArchive: Mocked<BlobSidecarsArchiveRepository>;
+
+  dataColumnSidecar: Mocked<DataColumnSidecarRepository>;
+  dataColumnSidecarArchive: Mocked<DataColumnSidecarArchiveRepository>;
 
   stateArchive: Mocked<StateArchiveRepository>;
   beaconStateSnapshotArchive: Mocked<BeaconStateSnapshotArchiveRepository>;
@@ -63,6 +68,9 @@ vi.mock("../../src/db/index.js", async (importActual) => {
 
       blobSidecars: vi.mocked(new BlobSidecarsRepository({} as any, {} as any)),
       blobSidecarsArchive: vi.mocked(new BlobSidecarsArchiveRepository({} as any, {} as any)),
+
+      dataColumnSidecar: vi.mocked(new DataColumnSidecarRepository({} as any, {} as any)),
+      dataColumnSidecarArchive: vi.mocked(new DataColumnSidecarArchiveRepository({} as any, {} as any)),
     };
   });
 

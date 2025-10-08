@@ -1,3 +1,4 @@
+import {expect} from "vitest";
 import {ChainConfig, createBeaconConfig} from "@lodestar/config";
 import {LightclientSpec, toLightClientUpdateSummary} from "@lodestar/light-client/spec";
 import {isForkPostAltair} from "@lodestar/params";
@@ -5,7 +6,6 @@ import {InputType} from "@lodestar/spec-test-util";
 import {computeSyncPeriodAtSlot} from "@lodestar/state-transition";
 import {RootHex, Slot, altair, phase0, ssz, sszTypesFor} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
-import {expect} from "vitest";
 import {testLogger} from "../../../utils/logger.js";
 import {TestRunnerFn} from "../../utils/types.js";
 
@@ -196,7 +196,13 @@ function pickConfigForkEpochs(config: Partial<ChainConfig>): Partial<ChainConfig
   const configOnlyFork: Record<string, number> = {};
   for (const key of Object.keys(config) as (keyof ChainConfig)[]) {
     if (key.endsWith("_FORK_EPOCH")) {
-      configOnlyFork[key] = config[key] as number;
+      const value = config[key];
+      // Overwrite 2^64 to Infinity
+      if (typeof value === "bigint" && value > BigInt(Number.MAX_SAFE_INTEGER)) {
+        configOnlyFork[key] = Infinity;
+      } else {
+        configOnlyFork[key] = Number(value);
+      }
     }
   }
   return configOnlyFork;

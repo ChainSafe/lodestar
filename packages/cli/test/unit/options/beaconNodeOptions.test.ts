@@ -1,7 +1,7 @@
 import fs from "node:fs";
+import {describe, expect, it} from "vitest";
 import {ArchiveMode, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {RecursivePartial} from "@lodestar/utils";
-import {describe, expect, it} from "vitest";
 import {BeaconNodeArgs, parseBeaconNodeArgs} from "../../../src/options/beaconNodeOptions/index.js";
 import {getTestdirPath} from "../../utils.js";
 
@@ -35,10 +35,9 @@ describe("options / beaconNodeOptions", () => {
       "chain.maxSkipSlots": 100,
       "safe-slots-to-import-optimistically": 256,
       "chain.archiveStateEpochFrequency": 1024,
-      "chain.trustedSetup": "",
       "chain.minSameMessageSignatureSetsToBatch": 32,
       "chain.maxShufflingCacheEpochs": 100,
-      "chain.archiveBlobEpochs": 10000,
+      "chain.archiveDataEpochs": 10000,
       "chain.nHistoricalStates": true,
       "chain.nHistoricalStatesFileDataStore": true,
       "chain.maxBlockStates": 100,
@@ -64,7 +63,7 @@ describe("options / beaconNodeOptions", () => {
       "builder.url": "http://localhost:8661",
       "builder.timeout": 12000,
       "builder.faultInspectionWindow": 32,
-      "builder.allowedFaults": 16,
+      "builder.allowedFaults": 8,
 
       metrics: true,
       "metrics.port": 8765,
@@ -105,6 +104,7 @@ describe("options / beaconNodeOptions", () => {
       "network.maxGossipTopicConcurrency": 64,
       "network.useWorker": true,
       "network.maxYoungGenerationSizeMb": 152,
+      "network.targetGroupPeers": 12,
 
       "sync.isSingleNode": true,
       "sync.disableProcessAsChainSegment": true,
@@ -144,10 +144,9 @@ describe("options / beaconNodeOptions", () => {
         maxSkipSlots: 100,
         archiveStateEpochFrequency: 1024,
         emitPayloadAttributes: false,
-        trustedSetup: "",
         minSameMessageSignatureSetsToBatch: 32,
         maxShufflingCacheEpochs: 100,
-        archiveBlobEpochs: 10000,
+        archiveDataEpochs: 10000,
         archiveMode: ArchiveMode.Frequency,
         nHistoricalStates: true,
         nHistoricalStatesFileDataStore: true,
@@ -174,7 +173,7 @@ describe("options / beaconNodeOptions", () => {
         url: "http://localhost:8661",
         timeout: 12000,
         faultInspectionWindow: 32,
-        allowedFaults: 16,
+        allowedFaults: 8,
       },
       metrics: {
         enabled: true,
@@ -217,6 +216,7 @@ describe("options / beaconNodeOptions", () => {
         maxGossipTopicConcurrency: 64,
         useWorker: true,
         maxYoungGenerationSizeMb: 152,
+        targetGroupPeers: 12,
       },
       sync: {
         isSingleNode: true,

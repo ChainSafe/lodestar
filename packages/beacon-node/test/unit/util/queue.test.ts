@@ -1,6 +1,5 @@
-import {sleep} from "@lodestar/utils";
 import {describe, expect, it} from "vitest";
-
+import {sleep} from "@lodestar/utils";
 import {JobFnQueue, QueueError, QueueErrorCode, QueueType} from "../../../src/util/queue/index.js";
 import {expectLodestarError, expectRejectedWithLodestarError} from "../../utils/errors.js";
 

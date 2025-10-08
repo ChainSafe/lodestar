@@ -11,6 +11,7 @@ import {
   ForkName,
   ForkPostAltair,
   ForkPostBellatrix,
+  ForkPreGloas,
   ForkSeq,
   MIN_SYNC_COMMITTEE_PARTICIPANTS,
   SYNC_COMMITTEE_SIZE,
@@ -45,7 +46,6 @@ import {
   sszTypesFor,
 } from "@lodestar/types";
 import {Logger, MapDef, pruneSetToMax, toRootHex} from "@lodestar/utils";
-
 import {ZERO_HASH} from "../../constants/index.js";
 import {IBeaconDb} from "../../db/index.js";
 import {NUM_WITNESS, NUM_WITNESS_ELECTRA} from "../../db/repositories/lightclientSyncCommitteeWitness.js";
@@ -742,17 +742,24 @@ export function sumBits(bits: BitArray): number {
   return bits.getTrueBitIndexes().length;
 }
 
-export function blockToLightClientHeader(fork: ForkName, block: BeaconBlock<ForkPostAltair>): LightClientHeader {
+// TODO GLOAS: Pending light-client spec but this function probably won't be used
+// in Gloas. So we can assume any types here are pre-gloas
+export function blockToLightClientHeader(
+  fork: ForkName,
+  block: BeaconBlock<ForkPostAltair & ForkPreGloas>
+): LightClientHeader {
   const blockSlot = block.slot;
   const beacon: phase0.BeaconBlockHeader = {
     slot: blockSlot,
     proposerIndex: block.proposerIndex,
     parentRoot: block.parentRoot,
     stateRoot: block.stateRoot,
-    bodyRoot: (ssz[fork].BeaconBlockBody as SSZTypesFor<ForkPostAltair, "BeaconBlockBody">).hashTreeRoot(block.body),
+    bodyRoot: (ssz[fork].BeaconBlockBody as SSZTypesFor<ForkPostAltair & ForkPreGloas, "BeaconBlockBody">).hashTreeRoot(
+      block.body
+    ),
   };
   if (ForkSeq[fork] >= ForkSeq.capella) {
-    const blockBody = block.body as BeaconBlockBody<ForkPostBellatrix>;
+    const blockBody = block.body as BeaconBlockBody<ForkPostBellatrix & ForkPreGloas>;
     const execution = executionPayloadToPayloadHeader(ForkSeq[fork], blockBody.executionPayload);
     return {
       beacon,

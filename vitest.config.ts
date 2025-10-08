@@ -1,10 +1,20 @@
 import path from "node:path";
-import {defineConfig} from "vitest/config";
+import {ViteUserConfig, defineConfig} from "vitest/config";
 import {browserTestProject} from "./configs/vitest.config.browser.js";
 import {e2eMainnetProject, e2eMinimalProject} from "./configs/vitest.config.e2e.js";
 import {specProjectMainnet, specProjectMinimal} from "./configs/vitest.config.spec.js";
 import {typesTestProject} from "./configs/vitest.config.types.js";
 import {unitTestMainnetProject, unitTestMinimalProject} from "./configs/vitest.config.unit.js";
+
+const isBun = "bun" in process.versions;
+
+export function getReporters(): ViteUserConfig["test"]["reporters"] {
+  if (isBun) return [["default", {summary: false}]];
+  if (process.env.GITHUB_ACTIONS) return ["verbose", "hanging-process", "github-actions"];
+  if (process.env.TEST_COMPACT_OUTPUT) return ["basic", "hanging-process"];
+
+  return ["verbose", "hanging-process"];
+}
 
 export default defineConfig({
   test: {
@@ -60,9 +70,7 @@ export default defineConfig({
     teardownTimeout: 5_000,
     // We have a few spec tests suits (specially spec tests) which don't have individual tests
     passWithNoTests: true,
-    reporters: process.env.GITHUB_ACTIONS
-      ? ["verbose", "hanging-process", "github-actions"]
-      : [process.env.TEST_COMPACT_OUTPUT ? "basic" : "verbose", "hanging-process"],
+    reporters: getReporters(),
     diff: process.env.TEST_COMPACT_DIFF
       ? path.join(import.meta.dirname, "../scripts/vitest/vitest.diff.ts")
       : undefined,

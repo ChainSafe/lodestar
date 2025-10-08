@@ -1,10 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import worker from "node:worker_threads";
-import type {ModuleThread} from "@chainsafe/threads";
-import {expose} from "@chainsafe/threads/worker";
 import {privateKeyFromProtobuf} from "@libp2p/crypto/keys";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
+import type {ModuleThread} from "@chainsafe/threads";
+import {expose} from "@chainsafe/threads/worker";
 import {chainConfigFromJson, createBeaconConfig} from "@lodestar/config";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {RegistryMetricCreator, collectNodeJSMetrics} from "../../metrics/index.js";
@@ -104,6 +104,7 @@ const core = await NetworkCore.init({
     reqRespBridgeRespCaller.getAsyncIterable({method, req, peerId: peerIdToString(peerId)}),
   activeValidatorCount: workerData.activeValidatorCount,
   initialStatus: workerData.initialStatus,
+  initialCustodyGroupCount: workerData.initialCustodyGroupCount,
 });
 
 wireEventsOnWorkerThread<NetworkEventData>(
@@ -139,6 +140,8 @@ const libp2pWorkerApi: NetworkWorkerApi = {
 
   // sendReqRespRequest - handled via events with AsyncIterableBridgeHandler
   publishGossip: (topic, data, opts) => core.publishGossip(topic, data, opts),
+
+  setTargetGroupCount: (count) => core.setTargetGroupCount(count),
 
   // Debug
 

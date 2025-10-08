@@ -1,5 +1,6 @@
 import {
   fromHex as browserFromHex,
+  fromHexInto as browserFromHexInto,
   toHex as browserToHex,
   toPubkeyHex as browserToPubkeyHex,
   toRootHex as browserToRootHex,
@@ -15,6 +16,8 @@ let toHex = browserToHex;
 let toRootHex = browserToRootHex;
 let toPubkeyHex = browserToPubkeyHex;
 let fromHex = browserFromHex;
+// there is no fromHexInto for NodeJs as the performance of browserFromHexInto is >100x faster
+const fromHexInto = browserFromHexInto;
 
 if (typeof Buffer !== "undefined") {
   toHex = nodeToHex;
@@ -23,4 +26,4 @@ if (typeof Buffer !== "undefined") {
   fromHex = nodeFromHex;
 }
 
-export {toHex, toRootHex, toPubkeyHex, fromHex};
+export {toHex, toRootHex, toPubkeyHex, fromHex, fromHexInto};

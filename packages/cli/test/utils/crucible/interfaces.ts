@@ -1,4 +1,5 @@
 import {ChildProcess} from "node:child_process";
+import {Web3} from "web3";
 import {SecretKey} from "@chainsafe/blst";
 import {ApiClient} from "@lodestar/api";
 import {ApiClient as KeyManagerApi} from "@lodestar/api/keymanager";
@@ -6,7 +7,6 @@ import {ChainForkConfig} from "@lodestar/config";
 import {LogLevel, Logger} from "@lodestar/logger";
 import {ForkName} from "@lodestar/params";
 import {Epoch, SignedBeaconBlock, Slot} from "@lodestar/types";
-import {Web3} from "web3";
 import {BeaconArgs} from "../../../src/cmds/beacon/options.js";
 import {IValidatorCliArgs} from "../../../src/cmds/validator/options.js";
 import {GlobalArgs} from "../../../src/options/index.js";
@@ -18,7 +18,6 @@ export type SimulationInitOptions = {
   id: string;
   logsDir: string;
   forkConfig: ChainForkConfig;
-  trustedSetup?: boolean;
 };
 
 export type SimulationOptions = {
@@ -27,7 +26,6 @@ export type SimulationOptions = {
   rootDir: string;
   controller: AbortController;
   genesisTime: number;
-  trustedSetup?: boolean;
   logLevel?: LogLevel;
 };
 
@@ -131,6 +129,7 @@ export interface ExecutionGenesisOptions<E extends ExecutionClient = ExecutionCl
   cliqueSealingPeriod: number;
   shanghaiTime: number;
   cancunTime: number;
+  pragueTime: number;
   genesisTime: number;
   clientOptions: ExecutionClientsOptions[E];
 }

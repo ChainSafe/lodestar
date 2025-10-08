@@ -1,6 +1,5 @@
 import {UNSET_DEPOSIT_REQUESTS_START_INDEX} from "@lodestar/params";
 import {electra, ssz} from "@lodestar/types";
-
 import {CachedBeaconStateElectra} from "../types.js";
 
 export function processDepositRequest(state: CachedBeaconStateElectra, depositRequest: electra.DepositRequest): void {

@@ -1,10 +1,10 @@
+import deepmerge from "deepmerge";
+import {expect, vi} from "vitest";
+import {when} from "vitest-when";
 import {ForkConfig} from "@lodestar/config";
 import {NetworkName} from "@lodestar/config/networks";
 import {getEmptyLogger} from "@lodestar/logger/empty";
 import {PresetName} from "@lodestar/params";
-import deepmerge from "deepmerge";
-import {expect, vi} from "vitest";
-import {when} from "vitest-when";
 import {ELVerifiedRequestHandlerOpts} from "../../src/interfaces.js";
 import {ProofProvider} from "../../src/proof_provider/proof_provider.js";
 import {

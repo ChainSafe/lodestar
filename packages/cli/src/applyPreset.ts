@@ -1,23 +1,10 @@
 // MUST import this file first before anything and not import any Lodestar code.
-import {setHasher} from "@chainsafe/persistent-merkle-tree";
-import {hasher as asSha256Hasher} from "@chainsafe/persistent-merkle-tree/hasher/as-sha256";
-import {hasher as hashtreeHasher} from "@chainsafe/persistent-merkle-tree/hasher/hashtree";
-import CpuFeatures from "cpu-features";
 
-// without setting this first, persistent-merkle-tree will use noble instead
-const cpuFeatures = CpuFeatures();
-if (
-  cpuFeatures.arch === "x86" &&
-  !(
-    (cpuFeatures.flags.avx512f && cpuFeatures.flags.avx512vl) ||
-    (cpuFeatures.flags.avx2 && cpuFeatures.flags.bmi2) ||
-    (cpuFeatures.flags.avx && cpuFeatures.flags.sha)
-  )
-) {
-  setHasher(asSha256Hasher);
-} else {
-  setHasher(hashtreeHasher);
-}
+import {hasher as hashtreeHasher} from "#hashtree-hasher";
+import {setHasher} from "@chainsafe/persistent-merkle-tree";
+
+// Without setting this first, persistent-merkle-tree will use noble instead
+setHasher(hashtreeHasher);
 
 //
 // ## Rationale
@@ -55,7 +42,7 @@ else if (process.env.LODESTAR_PRESET) {
 else if (network) {
   if (network === "dev") {
     process.env.LODESTAR_PRESET = "minimal";
-    // "c-kzg" has hardcoded the mainnet value, do not use presets
+    // the kzg library has hardcoded the mainnet value, do not use presets
     setActivePreset(PresetName.minimal, {FIELD_ELEMENTS_PER_BLOB: 4096});
   } else if (network === "gnosis" || network === "chiado") {
     process.env.LODESTAR_PRESET = "gnosis";
@@ -66,7 +53,7 @@ else if (network) {
 else if (process.argv[2] === "dev") {
   process.env.LODESTAR_PRESET = "minimal";
   process.env.LODESTAR_NETWORK = "dev";
-  // "c-kzg" has hardcoded the mainnet value, do not use presets
+  // the kzg library has hardcoded the mainnet value, do not use presets
   setActivePreset(PresetName.minimal, {FIELD_ELEMENTS_PER_BLOB: 4096});
 }
 

@@ -1,6 +1,5 @@
 import {ForkSeq} from "@lodestar/params";
 import {AttesterSlashing} from "@lodestar/types";
-
 import {CachedBeaconStateAllForks} from "../types.js";
 import {getAttesterSlashableIndices, isSlashableAttestationData, isSlashableValidator} from "../util/index.js";
 import {isValidIndexedAttestationBigint} from "./isValidIndexedAttestation.js";

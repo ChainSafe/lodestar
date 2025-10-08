@@ -98,9 +98,16 @@ export type BeaconPreset = {
 
   // FULU
   ///////////
+  NUMBER_OF_COLUMNS: number;
+  CELLS_PER_EXT_BLOB: number;
   FIELD_ELEMENTS_PER_CELL: number;
   FIELD_ELEMENTS_PER_EXT_BLOB: number;
   KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH: number;
+
+  // GLOAS
+  PTC_SIZE: number;
+  MAX_PAYLOAD_ATTESTATIONS: number;
+  BUILDER_PENDING_WITHDRAWALS_LIMIT: number;
 };
 
 /**
@@ -204,9 +211,16 @@ export const beaconPresetTypes: BeaconPresetTypes = {
 
   // FULU
   ///////////
+  NUMBER_OF_COLUMNS: "number",
+  CELLS_PER_EXT_BLOB: "number",
   FIELD_ELEMENTS_PER_CELL: "number",
   FIELD_ELEMENTS_PER_EXT_BLOB: "number",
   KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH: "number",
+
+  // GLOAS
+  PTC_SIZE: "number",
+  MAX_PAYLOAD_ATTESTATIONS: "number",
+  BUILDER_PENDING_WITHDRAWALS_LIMIT: "number",
 };
 
 type BeaconPresetTypes = {

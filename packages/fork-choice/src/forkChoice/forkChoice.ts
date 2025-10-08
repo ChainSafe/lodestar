@@ -1,5 +1,5 @@
 import {ChainConfig, ChainForkConfig} from "@lodestar/config";
-import {INTERVALS_PER_SLOT, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   DataAvailabilityStatus,
@@ -28,7 +28,7 @@ import {
   ssz,
 } from "@lodestar/types";
 import {Logger, MapDef, fromHex, toRootHex} from "@lodestar/utils";
-
+import {ForkChoiceMetrics} from "../metrics.js";
 import {computeDeltas} from "../protoArray/computeDeltas.js";
 import {ProtoArrayError, ProtoArrayErrorCode} from "../protoArray/errors.js";
 import {
@@ -41,17 +41,16 @@ import {
   VoteTracker,
 } from "../protoArray/interface.js";
 import {ProtoArray} from "../protoArray/protoArray.js";
-
 import {ForkChoiceError, ForkChoiceErrorCode, InvalidAttestationCode, InvalidBlockCode} from "./errors.js";
 import {
   AncestorResult,
   AncestorStatus,
   EpochDifference,
-  ForkChoiceMetrics,
   IForkChoice,
   LatestMessage,
   NotReorgedReason,
   PowBlockHex,
+  ShouldOverrideForkChoiceUpdateResult,
 } from "./interface.js";
 import {CheckpointWithHex, IForkChoiceStore, JustifiedBalances, toCheckpointWithHex} from "./store.js";
 
@@ -62,15 +61,15 @@ export type ForkChoiceOpts = {
 };
 
 export enum UpdateHeadOpt {
-  GetCanonicialHead = "getCanonicialHead", // Skip getProposerHead
+  GetCanonicalHead = "getCanonicalHead", // Skip getProposerHead
   GetProposerHead = "getProposerHead", // With getProposerHead
   GetPredictedProposerHead = "getPredictedProposerHead", // With predictProposerHead
 }
 
 export type UpdateAndGetHeadOpt =
-  | {mode: UpdateHeadOpt.GetCanonicialHead}
+  | {mode: UpdateHeadOpt.GetCanonicalHead}
   | {mode: UpdateHeadOpt.GetProposerHead; secFromSlot: number; slot: Slot}
-  | {mode: UpdateHeadOpt.GetPredictedProposerHead; slot: Slot};
+  | {mode: UpdateHeadOpt.GetPredictedProposerHead; secFromSlot: number; slot: Slot};
 
 /**
  * Provides an implementation of "Ethereum Consensus -- Beacon Chain Fork Choice":
@@ -139,22 +138,21 @@ export class ForkChoice implements IForkChoice {
     private readonly fcStore: IForkChoiceStore,
     /** The underlying representation of the block DAG. */
     private readonly protoArray: ProtoArray,
+    readonly metrics: ForkChoiceMetrics | null,
     private readonly opts?: ForkChoiceOpts,
     private readonly logger?: Logger
   ) {
     this.head = this.updateHead();
     this.balances = this.fcStore.justified.balances;
-  }
 
-  getMetrics(): ForkChoiceMetrics {
-    return {
-      votes: this.votes.length,
-      queuedAttestations: this.queuedAttestationsPreviousSlot,
-      validatedAttestationDatas: this.validatedAttestationDatas.size,
-      balancesLength: this.balances.length,
-      nodes: this.protoArray.nodes.length,
-      indices: this.protoArray.indices.size,
-    };
+    metrics?.forkChoice.votes.addCollect(() => {
+      metrics.forkChoice.votes.set(this.votes.length);
+      metrics.forkChoice.queuedAttestations.set(this.queuedAttestationsPreviousSlot);
+      metrics.forkChoice.validatedAttestationDatas.set(this.validatedAttestationDatas.size);
+      metrics.forkChoice.balancesLength.set(this.balances.length);
+      metrics.forkChoice.nodes.set(this.protoArray.nodes.length);
+      metrics.forkChoice.indices.set(this.protoArray.indices.size);
+    });
   }
 
   /**
@@ -204,23 +202,78 @@ export class ForkChoice implements IForkChoice {
   } {
     const {mode} = opt;
 
-    const canonicialHeadBlock = mode === UpdateHeadOpt.GetPredictedProposerHead ? this.getHead() : this.updateHead();
+    const canonicalHeadBlock = mode === UpdateHeadOpt.GetPredictedProposerHead ? this.getHead() : this.updateHead();
     switch (mode) {
       case UpdateHeadOpt.GetPredictedProposerHead:
-        return {head: this.predictProposerHead(canonicialHeadBlock, opt.slot)};
+        return {head: this.predictProposerHead(canonicalHeadBlock, opt.secFromSlot, opt.slot)};
       case UpdateHeadOpt.GetProposerHead: {
         const {
           proposerHead: head,
           isHeadTimely,
           notReorgedReason,
-        } = this.getProposerHead(canonicialHeadBlock, opt.secFromSlot, opt.slot);
+        } = this.getProposerHead(canonicalHeadBlock, opt.secFromSlot, opt.slot);
         return {head, isHeadTimely, notReorgedReason};
       }
-      case UpdateHeadOpt.GetCanonicialHead:
-        return {head: canonicialHeadBlock};
+      case UpdateHeadOpt.GetCanonicalHead:
+        return {head: canonicalHeadBlock};
       default:
-        return {head: canonicialHeadBlock};
+        return {head: canonicalHeadBlock};
     }
+  }
+
+  // Called by `predictProposerHead` and `importBlock`. If the result is not same as blockRoot's block, return true else false
+  // See https://github.com/ethereum/consensus-specs/blob/v1.5.0/specs/bellatrix/fork-choice.md#should_override_forkchoice_update
+  // Return true if the given block passes all criteria to be re-orged out
+  // Return false otherwise.
+  // Note when proposer boost reorg is disabled, it always returns false
+  shouldOverrideForkChoiceUpdate(
+    blockRoot: RootHex,
+    secFromSlot: number,
+    currentSlot: Slot
+  ): ShouldOverrideForkChoiceUpdateResult {
+    const headBlock = this.getBlockHex(blockRoot);
+    if (headBlock === null) {
+      // should not happen because this block just got imported. Fall back to no-reorg.
+      return {shouldOverrideFcu: false, reason: NotReorgedReason.HeadBlockNotAvailable};
+    }
+    const {proposerBoost, proposerBoostReorg} = this.opts ?? {};
+    // Skip re-org attempt if proposer boost (reorg) are disabled
+    if (!proposerBoost || !proposerBoostReorg) {
+      this.logger?.verbose("Skip shouldOverrideForkChoiceUpdate check since the related flags are disabled", {
+        slot: currentSlot,
+        proposerBoost,
+        proposerBoostReorg,
+      });
+      return {shouldOverrideFcu: false, reason: NotReorgedReason.ProposerBoostReorgDisabled};
+    }
+
+    const parentBlock = this.protoArray.getBlock(headBlock.parentRoot);
+    const proposalSlot = headBlock.slot + 1;
+
+    // No reorg if parentBlock isn't available
+    if (parentBlock === undefined) {
+      return {shouldOverrideFcu: false, reason: NotReorgedReason.ParentBlockNotAvailable};
+    }
+
+    const {prelimProposerHead, prelimNotReorgedReason} = this.getPreliminaryProposerHead(
+      headBlock,
+      parentBlock,
+      proposalSlot
+    );
+
+    if (prelimProposerHead === headBlock) {
+      return {shouldOverrideFcu: false, reason: prelimNotReorgedReason ?? NotReorgedReason.Unknown};
+    }
+
+    const currentTimeOk =
+      headBlock.slot === currentSlot ||
+      (proposalSlot === currentSlot && this.isProposingOnTime(secFromSlot, currentSlot));
+    if (!currentTimeOk) {
+      return {shouldOverrideFcu: false, reason: NotReorgedReason.ReorgMoreThanOneSlot};
+    }
+
+    this.logger?.verbose("Block is weak. Should override forkchoice update", {blockRoot, slot: currentSlot});
+    return {shouldOverrideFcu: true, parentBlock};
   }
 
   /**
@@ -239,37 +292,38 @@ export class ForkChoice implements IForkChoice {
    *
    * By calling this function, we assume we are the proposer of next slot
    *
-   * https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/bellatrix/fork-choice.md#should_override_forkchoice_update
    */
-  predictProposerHead(headBlock: ProtoBlock, currentSlot?: Slot): ProtoBlock {
+  predictProposerHead(headBlock: ProtoBlock, secFromSlot: number, currentSlot: Slot): ProtoBlock {
+    const {proposerBoost, proposerBoostReorg} = this.opts ?? {};
     // Skip re-org attempt if proposer boost (reorg) are disabled
-    if (!this.opts?.proposerBoost || !this.opts?.proposerBoostReorg) {
-      this.logger?.verbose("No proposer boot reorg prediction since the related flags are disabled");
+    if (!proposerBoost || !proposerBoostReorg) {
+      this.logger?.verbose("No proposer boost reorg prediction since the related flags are disabled", {
+        slot: currentSlot,
+        proposerBoost,
+        proposerBoostReorg,
+      });
       return headBlock;
     }
 
-    const parentBlock = this.protoArray.getBlock(headBlock.parentRoot);
-    const proposalSlot = headBlock.slot + 1;
-    currentSlot = currentSlot ?? this.fcStore.currentSlot;
+    const blockRoot = headBlock.blockRoot;
+    const result = this.shouldOverrideForkChoiceUpdate(blockRoot, secFromSlot, currentSlot);
 
-    // No reorg if parentBlock isn't available
-    if (parentBlock === undefined) {
-      return headBlock;
+    if (result.shouldOverrideFcu) {
+      this.logger?.verbose("Current head is weak. Predicting next block to be built on parent of head.", {
+        slot: currentSlot,
+        proposerHead: result.parentBlock.blockRoot,
+        weakHead: blockRoot,
+      });
+      return result.parentBlock;
     }
 
-    const {prelimProposerHead} = this.getPreliminaryProposerHead(headBlock, parentBlock, proposalSlot);
+    this.logger?.verbose("Current head is strong. Predicting next block to be built on head", {
+      slot: currentSlot,
+      head: headBlock.blockRoot,
+      reason: result.reason,
+    });
 
-    if (prelimProposerHead === headBlock) {
-      return headBlock;
-    }
-
-    const currentTimeOk = headBlock.slot === currentSlot;
-    if (!currentTimeOk) {
-      return headBlock;
-    }
-
-    this.logger?.info("Current head is weak. Predicting next block to be built on parent of head");
-    return parentBlock;
+    return headBlock;
   }
 
   /**
@@ -289,8 +343,13 @@ export class ForkChoice implements IForkChoice {
     let proposerHead = headBlock;
 
     // Skip re-org attempt if proposer boost (reorg) are disabled
-    if (!this.opts?.proposerBoost || !this.opts?.proposerBoostReorg) {
-      this.logger?.verbose("No proposer boot reorg attempt since the related flags are disabled");
+    const {proposerBoost, proposerBoostReorg} = this.opts ?? {};
+    if (!proposerBoost || !proposerBoostReorg) {
+      this.logger?.verbose("No proposer boost reorg attempt since the related flags are disabled", {
+        slot,
+        proposerBoost,
+        proposerBoostReorg,
+      });
       return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.ProposerBoostReorgDisabled};
     }
 
@@ -307,10 +366,8 @@ export class ForkChoice implements IForkChoice {
       return {proposerHead, isHeadTimely, notReorgedReason: prelimNotReorgedReason};
     }
 
-    // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_proposing_on_time
-    const proposerReorgCutoff = this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT / 2;
-    const isProposingOnTime = secFromSlot <= proposerReorgCutoff;
-    if (!isProposingOnTime) {
+    // Only re-org if we are proposing on-time
+    if (!this.isProposingOnTime(secFromSlot, slot)) {
       return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.NotProposingOnTime};
     }
 
@@ -352,7 +409,11 @@ export class ForkChoice implements IForkChoice {
     }
 
     // Reorg if all above checks fail
-    this.logger?.info("Will perform single-slot reorg to reorg out current weak head");
+    this.logger?.verbose("Performing single-slot reorg to remove current weak head", {
+      slot,
+      proposerHead: parentBlock.blockRoot,
+      weakHead: headBlock.blockRoot,
+    });
     proposerHead = parentBlock;
 
     return {proposerHead, isHeadTimely};
@@ -1129,8 +1190,18 @@ export class ForkChoice implements IForkChoice {
    * Child class can overwrite this for testing purpose.
    */
   protected isBlockTimely(block: BeaconBlock, blockDelaySec: number): boolean {
-    const isBeforeAttestingInterval = blockDelaySec < this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT;
-    return this.fcStore.currentSlot === block.slot && isBeforeAttestingInterval;
+    const fork = this.config.getForkName(block.slot);
+    const isBeforeLateBlockCutoff = blockDelaySec * 1000 < this.config.getAttestationDueMs(fork);
+    return this.fcStore.currentSlot === block.slot && isBeforeLateBlockCutoff;
+  }
+
+  /**
+   * https://github.com/ethereum/consensus-specs/blob/v1.5.0/specs/phase0/fork-choice.md#is_proposing_on_time
+   */
+  private isProposingOnTime(secFromSlot: number, slot: Slot): boolean {
+    const fork = this.config.getForkName(slot);
+    const proposerReorgCutoff = this.config.getProposerReorgCutoffMs(fork);
+    return secFromSlot * 1000 <= proposerReorgCutoff;
   }
 
   private getPreMergeExecStatus(executionStatus: MaybeValidExecutionStatus): ExecutionStatus.PreMerge {

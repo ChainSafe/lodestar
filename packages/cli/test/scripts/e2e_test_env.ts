@@ -4,15 +4,20 @@ import {Simulation} from "../utils/crucible/simulation.js";
 import {defineSimTestConfig, logFilesDir} from "../utils/crucible/utils/index.js";
 import {connectAllNodes} from "../utils/crucible/utils/network.js";
 
-const altairForkEpoch = 1;
-const bellatrixForkEpoch = 2;
-const capellaForkEpoch = 3;
+const altairForkEpoch = 0;
+const bellatrixForkEpoch = 0;
+const capellaForkEpoch = 0;
+const denebForkEpoch = 0;
+const electraForkEpoch = 0;
 
 const {forkConfig} = defineSimTestConfig({
   ALTAIR_FORK_EPOCH: altairForkEpoch,
   BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
   CAPELLA_FORK_EPOCH: capellaForkEpoch,
+  DENEB_FORK_EPOCH: denebForkEpoch,
+  ELECTRA_FORK_EPOCH: electraForkEpoch,
   runTillEpoch: Infinity,
+  additionalSlotsForTTD: 0,
   initialNodes: 2,
 });
 

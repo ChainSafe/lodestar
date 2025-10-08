@@ -2,12 +2,18 @@ import {ProtocolHandler} from "@lodestar/reqresp";
 import {ssz} from "@lodestar/types";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
-import {BlobSidecarsByRootRequestType} from "../../../util/types.js";
+import {
+  BeaconBlocksByRootRequestType,
+  BlobSidecarsByRootRequestType,
+  DataColumnSidecarsByRootRequestType,
+} from "../../../util/types.js";
 import {GetReqRespHandlerFn, ReqRespMethod} from "../types.js";
 import {onBeaconBlocksByRange} from "./beaconBlocksByRange.js";
 import {onBeaconBlocksByRoot} from "./beaconBlocksByRoot.js";
 import {onBlobSidecarsByRange} from "./blobSidecarsByRange.js";
 import {onBlobSidecarsByRoot} from "./blobSidecarsByRoot.js";
+import {onDataColumnSidecarsByRange} from "./dataColumnSidecarsByRange.js";
+import {onDataColumnSidecarsByRoot} from "./dataColumnSidecarsByRoot.js";
 import {onLightClientBootstrap} from "./lightClientBootstrap.js";
 import {onLightClientFinalityUpdate} from "./lightClientFinalityUpdate.js";
 import {onLightClientOptimisticUpdate} from "./lightClientOptimisticUpdate.js";
@@ -34,7 +40,8 @@ export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconCh
       return onBeaconBlocksByRange(body, chain, db);
     },
     [ReqRespMethod.BeaconBlocksByRoot]: (req) => {
-      const body = ssz.phase0.BeaconBlocksByRootRequest.deserialize(req.data);
+      const fork = chain.config.getForkName(chain.clock.currentSlot);
+      const body = BeaconBlocksByRootRequestType(fork, chain.config).deserialize(req.data);
       return onBeaconBlocksByRoot(body, chain, db);
     },
     [ReqRespMethod.BlobSidecarsByRoot]: (req) => {
@@ -46,6 +53,15 @@ export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconCh
       const body = ssz.deneb.BlobSidecarsByRangeRequest.deserialize(req.data);
       return onBlobSidecarsByRange(body, chain, db);
     },
+    [ReqRespMethod.DataColumnSidecarsByRange]: (req) => {
+      const body = ssz.fulu.DataColumnSidecarsByRangeRequest.deserialize(req.data);
+      return onDataColumnSidecarsByRange(body, chain, db);
+    },
+    [ReqRespMethod.DataColumnSidecarsByRoot]: (req) => {
+      const body = DataColumnSidecarsByRootRequestType(chain.config).deserialize(req.data);
+      return onDataColumnSidecarsByRoot(body, chain, db);
+    },
+
     [ReqRespMethod.LightClientBootstrap]: (req) => {
       const body = ssz.Root.deserialize(req.data);
       return onLightClientBootstrap(body, chain);

@@ -1,15 +1,16 @@
 import path from "node:path";
+import {expect} from "vitest";
 import {ACTIVE_PRESET} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
+  CachedBeaconStateFulu,
   EpochTransitionCache,
   beforeProcessEpoch,
 } from "@lodestar/state-transition";
 import * as epochFns from "@lodestar/state-transition/epoch";
 import {ssz} from "@lodestar/types";
-import {expect} from "vitest";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {getConfig} from "../../utils/config.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
@@ -46,6 +47,10 @@ const epochTransitionFns: Record<string, EpochTransitionFn> = {
   historical_summaries_update: epochFns.processHistoricalSummariesUpdate as EpochTransitionFn,
   pending_deposits: epochFns.processPendingDeposits as EpochTransitionFn,
   pending_consolidations: epochFns.processPendingConsolidations as EpochTransitionFn,
+  proposer_lookahead: (state, epochTransitionCache) => {
+    const fork = state.config.getForkSeq(state.slot);
+    epochFns.processProposerLookahead(fork, state as CachedBeaconStateFulu, epochTransitionCache);
+  },
 };
 
 /**
@@ -61,6 +66,7 @@ type EpochTransitionCacheingTestCase = {
  * @param fork
  * @param epochTransitionFns Describe with which function to run each directory of tests
  */
+// TODO FULU: Add verification for pre_epoch and post_epoch states too
 const epochProcessing =
   (skipTestNames?: string[]): TestRunnerFn<EpochTransitionCacheingTestCase, BeaconStateAllForks> =>
   (fork, testName) => {
@@ -95,6 +101,8 @@ const epochProcessing =
         sszTypes: {
           pre: ssz[fork].BeaconState,
           post: ssz[fork].BeaconState,
+          pre_epoch: ssz[fork].BeaconState,
+          post_epoch: ssz[fork].BeaconState,
         },
         getExpected: (testCase) => testCase.post,
         expectFunc: (_testCase, expected, actual) => {

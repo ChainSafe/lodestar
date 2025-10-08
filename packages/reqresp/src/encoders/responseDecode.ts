@@ -1,5 +1,5 @@
-import {ForkName} from "@lodestar/params";
 import {Uint8ArrayList} from "uint8arraylist";
+import {ForkName} from "@lodestar/params";
 import {readEncodedPayload} from "../encodingStrategies/index.js";
 import {RespStatus} from "../interface.js";
 import {ResponseError} from "../response/index.js";
@@ -147,7 +147,7 @@ export async function readContextBytes(
 
     case ContextBytesType.ForkDigest: {
       const forkDigest = await readContextBytesForkDigest(bufferedSource);
-      return contextBytes.forkDigestContext.forkDigest2ForkName(forkDigest);
+      return contextBytes.config.forkDigest2ForkBoundary(forkDigest).fork;
     }
   }
 }
