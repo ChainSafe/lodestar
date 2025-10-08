@@ -392,7 +392,17 @@ So:
 …and so on.
 
 Each node has a unique gindex, allowing us to refer to it precisely in the tree.
+#### Why Do We Use Generalized Indices?
 
+Generalized indices let us:
+
+- Refer to any node unambiguously (without needing a path string).
+- Build Merkle proofs efficiently, since each gindex tells you where in the tree data belongs.
+- Reconstruct roots or subtrees from partial data.
+- They’re used heavily in:
+- SSZ multiproofs
+- Lodestar’s internal tree operations
+- Proof verification in Ethereum’s consensus layer
 ### 6. TypeScript Tips
 Working with Lodestar’s SSZ proofs in TypeScript gives you type safety and better autocompletion — but it can also get tricky when mixing Views, Proofs, and raw objects.
 
