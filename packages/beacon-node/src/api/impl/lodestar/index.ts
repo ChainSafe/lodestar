@@ -75,7 +75,7 @@ export function getLodestarApi({
             filepath = await profileThread(ProfileThread.MAIN, duration);
             break;
         }
-        return {data: {filepath}};
+        return {data: {result: filepath}};
       } finally {
         writingProfile = false;
       }
