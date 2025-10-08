@@ -116,11 +116,6 @@ export class Eth2Gossipsub extends GossipSub {
       fastMsgIdFn: fastMsgIdFn,
       msgIdFn: msgIdFn.bind(msgIdFn, gossipTopicCache),
       msgIdToStrFn: msgIdToStrFn,
-      // Use the bellatrix max size if the merge is configured. pre-merge using this size
-      // could only be an issue on outgoing payloads, its highly unlikely we will send out
-      // a chunk bigger than MAX_PAYLOAD_SIZE pre merge even on mainnet network.
-      //
-      // TODO: figure out a way to dynamically transition to the size
       dataTransform: new DataTransformSnappy(gossipTopicCache, config.MAX_PAYLOAD_SIZE),
       metricsRegister: metricsRegister as MetricsRegister | null,
       metricsTopicStrToLabel: metricsRegister
