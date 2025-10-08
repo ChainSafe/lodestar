@@ -53,6 +53,10 @@ export async function applyStateRegenPlan(
     throw new Error(`Can not find required state diffs ${plan.diffSlots.join(",")}`);
   }
 
+  if (plan.blockReplay && orderedDiffs.at(-1)?.slot !== plan.blockReplay.fromSlot - 1) {
+    throw new Error(`Can not replay blocks due to missing state diffs ${artifacts.missingDiffs.join(",")}`);
+  }
+
   ctx.logger?.verbose("Replaying state diffs", {
     snapshotSlot: plan.snapshotSlot,
     diffPath: plan.diffSlots.join(","),
