@@ -377,3 +377,9 @@ const attestation = {} as any;
 
 Using `.defaultView()`, `.toView()`, or `.createFromProof()` ensures TypeScript knows what type of data and subviews you’re working with.
 ### 6. Pitfalls & Best Practices
+(Further Reading)[https://ethereum.org/developers/docs/data-structures-and-encoding/ssz/]
+(Building blocks ssz)[https://eth2book.info/altair/part2/building_blocks/ssz/]
+(merkle multiproofs)[https://github.com/ethereum/consensus-specs/blob/dev/ssz/merkle-proofs.md#merkle-multiproofs]
+(simple serialize)[https://github.com/ethereum/consensus-specs/blob/dev/ssz/simple-serialize.md]
+(Lodestar types)[https://github.com/ChainSafe/lodestar/tree/unstable/packages/types]
+
