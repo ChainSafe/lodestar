@@ -49,7 +49,7 @@ async function profileNodeJS(thread: ProfileThread, durationMs: number): Promise
     });
   });
 
-  const filePath = path.join(".", `main_thread_${new Date().toISOString()}.cpuprofile`);
+  const filePath = path.join(".", `${thread}_thread_${new Date().toISOString()}.cpuprofile`);
   fs.writeFileSync(filePath, profile);
   return filePath;
 }
