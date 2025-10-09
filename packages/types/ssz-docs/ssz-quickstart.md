@@ -18,7 +18,7 @@
    -[Merkleization and Hashing](#merkleization-and-Hashing)
    -[JSON Conversion in SSZ](#JSON-Conversion-in-SSZ)
 
-**SSZ** (Simple Serialize) is a standard(serialization format) used in the Ethereum consensus layer(beacon chain) to serialize and Merkleize structured data. It is used heavily in Ethereum 2.0 (the consensus layer) to serialize and Merkleize data structures such as blocks, validator records, the beacon state, and data used in light client proofs. It is the official serialization and Merkleization format used in Ethereum 2.0 (now Ethereum consensus layer).
+**SSZ** (Simple Serialize) is a standard(serialization format) used in the Ethereum consensus layer(beacon chain) to serialize and Merkleize structured data. It is heavily used in Ethereum 2.0 (the consensus layer) to serialize and Merkleize data structures such as blocks, validator records, the beacon state, and data used in light client proofs. It is the official serialization and Merkleization format used in Ethereum 2.0 (now Ethereum consensus layer).
 
 [_SSZ_](https://github.com/ChainSafe/ssz/tree/master/packages/ssz) provides a standardized way to:
 
@@ -56,23 +56,31 @@ Simpler defination: Serialization: Turn object → bytes, Deserialization: Turn 
 
 ## 3. SSZ Components in Detail
 
-The Simple Serialize(SSZ) system has two layers of components.
+The **Simple Serialize (SSZ)** system has two main layers of components:
 
-- _Fork Specific Schemas_ : Ethereum upgrades (eg. Altair, Bellatrix) They define new structures using the core types.
-- _Core SSZ types_ :This is a set of composite types used to define data Structures.
+- **Fork-Specific Schemas** — Defined for each Ethereum upgrade (e.g., Altair, Bellatrix, Capella)
+- **Core SSZ Types** — A set of fundamental composite types used to define data structures
 
-This section will break down the different layers of components so you understand how SSZ is used in Lodestar and Ethereum consensus. Understanding this components help in grasping how SSZ transforms structured data into merkle-friendly format for ethereum consensus.
-
-### 3.1. Fork-Specific Schemas
-
-Ethereum upgrades like Phase0, Altair, Bellatrix, Capella, etc., introduce new data structures that reflect changes in the protocol.
-
-These schemas are defined using the core SSZ types.
-For example: BeaconBlock, Attestation, Validator in Phase0, SyncCommittee in Altair, ExecutionPayload in Bellatrix
-Each of these is structured using Containers, Lists, Bitlists, etc., and lives in its own directory in the Lodestar codebase:
-/src/phase0, /src/altair, /src/bellatrix, and so on.
+This section explains how SSZ components are structured in **Lodestar** and the **Ethereum consensus layer**.  
+Understanding these helps you grasp how SSZ transforms structured data into **Merkle-friendly formats**.
 
 ---
+
+### 3.1 Fork-Specific Schemas
+
+Ethereum upgrades such as **Phase0**, **Altair**, **Bellatrix**, and **Capella** introduce new data structures reflecting protocol changes.
+
+These schemas are **defined using the core SSZ types**.  
+Examples include:
+
+- **Phase0** → `BeaconBlock`, `Attestation`, `Validator`  
+- **Altair** → `SyncCommittee`  
+- **Bellatrix** → `ExecutionPayload`
+
+Each schema is organized in its own Lodestar directory:
+/src/phase0
+/src/altair
+
 
 ### 3.2. Core SSZ types
 
