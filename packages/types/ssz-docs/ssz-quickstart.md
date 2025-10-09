@@ -1,13 +1,24 @@
 # SSZ Quickstart Guide
 
+# Table of content
+1. [🔍 Why Does SSZ Exist?](#1🔍-why-does-ssz-exist)
+2. [🛠️ What Does SSZ Do?](#2🛠️-what-does-ssz-do)
+3. [SSZ Components in Detail](#3-ssz-components-in-detail)
+   - [Fork-Specific Schemas](#31-fork-specific-schemas)
+   - [Core SSZ Types](#32-core-ssz-types)
+     - [Constants](#321-consonants)
+     - [Typing System](#322-typing-system)
+     - [Primitive Types](#primitive-typesbasic-types)
+     - [Composite Types](#composite-types)
+     - [Type Aliases](#type-aliases)
+4. 
+
 **SSZ** (Simple Serialize) is a standard(serialization format) used in the Ethereum consensus layer(beacon chain) to serialize and Merkleize structured data. It is used heavily in Ethereum 2.0 (the consensus layer) to serialize and Merkleize data structures such as blocks, validator records, the beacon state, and data used in light client proofs. It is the official serialization and Merkleization format used in Ethereum 2.0 (now Ethereum consensus layer).
 
 [_SSZ_](https://github.com/ChainSafe/ssz/tree/master/packages/ssz) provides a standardized way to:
 
 - **Serialize** structured data into bytes (for storage or transmission)
 - **Merkleize** that data into a secure hash (Merkle root) for validation and proofs
-
----
 
 ## 1.🔍 Why Does SSZ Exist?
 
@@ -23,7 +34,6 @@ SSZ helps by:
 - Supporting static typing (like in TypeScript or Rust)
 - Making Merkle root generation and verification fast and consistent
 
----
 
 ## 2.🛠️ What Does SSZ Do?
 
@@ -37,7 +47,7 @@ SSZ = Serialization + Merkleization
 
 Simpler defination: Serialization: Turn object → bytes, Deserialization: Turn bytes → object, Merkleization: Turn object → tree of hashes → 1 final secure root
 
----
+
 
 ## 3. SSZ Components in Detail
 
@@ -48,7 +58,7 @@ The Simple Serialize(SSZ) system has two layers of components.
 
 This section will break down the different layers of components so you understand how SSZ is used in Lodestar and Ethereum consensus. Understanding this components help in grasping how SSZ transforms structured data into merkle-friendly format for ethereum consensus.
 
-## 3.1. Fork-Specific Schemas
+### 3.1. Fork-Specific Schemas
 
 Ethereum upgrades like Phase0, Altair, Bellatrix, Capella, etc., introduce new data structures that reflect changes in the protocol.
 
@@ -59,9 +69,9 @@ Each of these is structured using Containers, Lists, Bitlists, etc., and lives i
 
 ---
 
-## 3.2. Core SSZ types
+### 3.2. Core SSZ types
 
-### 3.2.1 Consonants
+#### 3.2.1 Consonants
 
 _SSZ_ uses a few constants to standardize Serialization and merkleization.
 | Constant | Value | Description |
@@ -72,7 +82,7 @@ _SSZ_ uses a few constants to standardize Serialization and merkleization.
 
 These constants ensure compatibility across implementations and define how data is packed and hashed.
 
-### 3.2.2 Typing System
+#### 3.2.2 Typing System
 
 ### Core SSZ Types.
 
@@ -150,7 +160,12 @@ The whole structure is fixed-size — so it’s encoded without any offsets.
 
 ## To learn more about lodestar types go to this repository - [ ChainSafe/Lodestar](https://github.com/ChainSafe/lodestar/tree/unstable/packages/types)
 
-## 4. Working with Default values
+---
+
+## 4. Core SSZ Workflows in Lodestar
+Before we dive into advanced operations like Views, Proofs, and Tree Handling, let’s look at the core workflows — creating, serializing, merkleizing, and converting data.
+
+### Working with Default values
 
 In this section we will intoduce how to generate SSZ objects with default (zero-initialized) values, explain how to modify them, and demonstrate how TypeScript ensures type-safe interaction.
 
@@ -256,7 +271,7 @@ When we say “TypeScript safety,” we mean:
 -Confidence when refactoring – if a field changes, TypeScript will highlight every affected place.
 -It has compiler checks that ensure values match expected types.
 
-#### How Lodestar ENhances TYpescript Safety
+#### How Lodestar Enhances TYpescript Safety
 
 The Lodestar SSZ library:
 
@@ -273,17 +288,17 @@ import { ssz } from "@lodestar/types";
 // Create a zero-initialized attestation
 const attestation = ssz.phase0.Attestation.defaultValue();
 
-// ✅ Autocomplete works for deeply nested fields
+// Autocomplete works for deeply nested fields
 attestation.data.source.epoch = 100;
 
-// ❌ Type error: Trying to assign a string where a number is expected
+//  Type error: Trying to assign a string where a number is expected
 attestation.data.source.epoch = "100";
 // Error: Type 'string' is not assignable to type 'number'
 
-// ✅ Correct way to set the signature (96-byte array)
+//  Correct way to set the signature (96-byte array)
 attestation.signature = new Uint8Array(96);
 
-// ❌ Wrong type: TypeScript will reject this immediately
+// Wrong type: TypeScript will reject this immediately
 attestation.signature = "0xabc";
 // Error: Type 'string' is not assignable to type 'Uint8Array'
 
