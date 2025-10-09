@@ -44,7 +44,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
   const heapSizeLimit = getHeapStatistics().heap_size_limit;
   if (heapSizeLimit < EIGHT_GB) {
     logger.warn(
-      `Node.js heap size limit is too low, consider increasing it to at least ${EIGHT_GB}. See https://chainsafe.github.io/lodestar/faqs/#running-a-beacon-node for more details.`
+      `Node.js heap size limit is too low at ${heapSizeLimit}, consider increasing it to at least ${EIGHT_GB}. See https://chainsafe.github.io/lodestar/faqs/#running-a-beacon-node for more details.`
     );
   }
 
