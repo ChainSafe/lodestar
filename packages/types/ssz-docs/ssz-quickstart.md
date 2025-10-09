@@ -287,6 +287,7 @@ attestation.aggregationBits = new Uint8Array([1, 0, 1]);
 ```
 
 ### TypeScript Safety with Lodestar SSZ Library.
+Lodestar’s SSZ library provides strong TypeScript safety for Ethereum data structures.
 
 One of the biggest advantages of using Lodestar’s SSZ library in TypeScript is its strong type safety.
 Ethereum’s data structures (like Attestation, Block, or Validator) are deeply nested and have strict formats — TypeScript + Lodestar ensures you can work with them without guessing field names or data types.
@@ -294,12 +295,11 @@ Ethereum’s data structures (like Attestation, Block, or Validator) are deeply 
 #### What Type Safety Means Here
 
 It has compiler checks that ensure values match expected types.
-When we say “TypeScript safety,” we mean:
--Correct types only – you cannot assign a wrong type to a field.
--Autocomplete support – your IDE (e.g., VSCode) can suggest valid field names and their types.
--Compile-time error checking – mistakes are caught before you run the code.
--Confidence when refactoring – if a field changes, TypeScript will highlight every affected place.
--It has compiler checks that ensure values match expected types.
+Benefits:
+- Compiler checks for correct types
+- Autocomplete for nested fields
+- Compile-time error detection
+- Confidence when refactoring
 
 #### How Lodestar Enhances TYpescript Safety
 
@@ -311,7 +311,7 @@ The Lodestar SSZ library:
 
 For example:
 
-```
+```ts
 
 import { ssz } from "@lodestar/types";
 
@@ -321,7 +321,7 @@ const attestation = ssz.phase0.Attestation.defaultValue();
 // Autocomplete works for deeply nested fields
 attestation.data.source.epoch = 100;
 
-//  Type error: Trying to assign a string where a number is expected
+//  Type error
 attestation.data.source.epoch = "100";
 // Error: Type 'string' is not assignable to type 'number'
 
@@ -333,11 +333,6 @@ attestation.signature = "0xabc";
 // Error: Type 'string' is not assignable to type 'Uint8Array'
 
 ```
-
-This is is important for _Ethereum_ Development.
-Ethereum SSZ structures have very precise rules, some fields have fixed-length bytes arrays(eg. Uint8Array(96) for the signatures), some will have different sizes etc.
-Without type safety, it is easy to Assign a wrong-sized array, mistype a field name, pass data in the wrong format hence breakinf serialization.
-
 Lodestar + TypeScript ensures these mistakes never make it to runtime — they’re caught instantly in your editor.
 
 ### Lodestar SSZ Type Safety Flow
@@ -389,26 +384,34 @@ Lodestar + TypeScript ensures these mistakes never make it to runtime — they�
 ---
 
 ### Serialization and Deserialization
-SSZ provides serialize() to turn a value into bytes and deserialize() to restore it. Both follow Ethereum’s standardized format so all clients produce identical results.
+SSZ provides `serialize()` to turn a value into bytes and `deserialize()` to restore it. Both follow Ethereum’s standardized format so all clients produce identical results.
 
 We recursively define the serialize function which consumes an object value (of the type specified) and returns a bytestring of type bytes. To learn more about the different type bytes go here. [SimpleSerialize.md](https://github.com/ethereum/consensus-specs/blob/dev/ssz/simple-serialize.md)
 
 Example: 
-```
+```ts
 const serialized = ssz.phase0.Attestation.serialize(attestation);
 console.log(serialized); // Uint8Array([...])
 ```
 Here, serialized is a Uint8Array — a compact binary representation of your object.
+use `.equals()` to verify equality
 
 #### What is Deserialization?
 Deserialization is the reverse process — it converts a byte array back into the original structured object.
 
 example:
-```
+```ts
 const attestation2 = ssz.phase0.Attestation.deserialize(serialized);
 console.log(attestation2); // Object same as the original
 
 ```
+
+For JSON-freindly representation
+```ts
+const json = ssz.phase0.Attestation.toJson(attestation);
+const fromJson = ssz.phase0.Attestation.fromJson(json);
+```
+
 #### Why Do We Need This in Ethereum?
 In Ethereum consensus:
 
@@ -417,7 +420,7 @@ In Ethereum consensus:
 -SSZ ensures the process is consistent across all clients.
 
 #### Full Round example
-```
+```ts
 import { ssz } from "@lodestar/types";
 
 // Step 1: Create default attestation
@@ -448,7 +451,16 @@ To understand how Lodestar’s SSZ library implements serialization and deserial
 ---
 
 ### Merkleization and Hashing
-In SSZ every object can be turned into a Merkle root — a single 32-byte hash that represents the entire structure.Hashing and Merkleization are the heart of SSZ because they’re what make consensus proofs possible. 
+Every SSZ object can be turned into a Merkle root — a single 32-byte hash that represents the entire structure.
+Example:
+
+```ts
+import { ssz } from "@lodestar/types";
+
+const num = 5n;
+const root = ssz.uint64.hashTreeRoot(num);
+console.log(root.toString("hex"));
+```
 
 #### What is Hashing?
 Hashing turns data of any size into a fixed-size digest.
@@ -458,7 +470,7 @@ Hashing turns data of any size into a fixed-size digest.
 - Secure: infeasible to reverse or find collisions.
 
 Example:
-```
+```ts
 sha256("hello") 
 = 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
 
@@ -483,7 +495,7 @@ Each 32-byte chunk is considered a Merkle leaf. (What you got after serializatio
 Concatenate two 32-byte nodes (64 bytes).
 
 Hash them with SHA-256 → 32-byte parent.
-```
+```ts
 H(left || right) → parent
 ```
 4. Repeat until root:
@@ -495,7 +507,7 @@ To learn more about merkleization read this article.
 [ Merkleization simplified ](https://www.investopedia.com/terms/m/merkle-tree.asp)
 
 Example:  Merkleizing a simple number with no siblings just the root.
-```
+```ts
 import { ssz } from "@lodestar/types";
 
 const num = 5n;
@@ -507,6 +519,8 @@ console.log(root.toString("hex"));
 ```
 ---
 ### JSON Conversion in SSZ
+While SSZ is binary, JSON is human-readable and API-friendly.
+Use Lodestar helpers instead of JSON.stringify directly.
 ### Why JSON?
 - SSZ is a binary serialization format, optimized for hashing and Merkle proofs.
 - But APIs, config files, and REST/GraphQL endpoints typically use JSON.
@@ -514,7 +528,7 @@ console.log(root.toString("hex"));
 
 #### 1. Encoding to JSON.
 Every SSZ type has the following:
-```
+```ts
 const jsonValue = SomeSSZType.toJson(sszObject);
 ```
 - Converts SSZ binary-friendly objects into JSON-serializable values.
@@ -522,7 +536,7 @@ const jsonValue = SomeSSZType.toJson(sszObject);
 - Nested containers and lists also convert recursively.
 
 Example:
-```
+```ts
 import {ContainerType, ByteVectorType, ValueOf} from "@chainsafe/ssz";
 
 const Keypair = new ContainerType({
@@ -548,7 +562,7 @@ console.log(kpJSON);
 
 #### Decoding from JSON
 To convert back from JSON into a usable SSZ object:
-```
+```ts
 const kp2 = Keypair.fromJson(kpJSON);
 ```
 fromJson parses hex strings back into Uint8Arrays.
@@ -569,7 +583,7 @@ This allows:
 - Interoperability with frontend/backends that don’t handle binary well.
 
 #### Sending a SSZ object over the API
-```
+```ts
 // Example API payload
 const payload = JSON.stringify(Keypair.toJson(kp));
 
