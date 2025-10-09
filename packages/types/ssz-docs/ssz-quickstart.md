@@ -173,6 +173,7 @@ type Validator = Container({
   exit_epoch: uint64,
   withdrawable_epoch: uint64,
 });
+```
 
 The whole structure is fixed-size — so it’s encoded without any offsets.
 
@@ -198,40 +199,38 @@ Before we dive into advanced operations like Views, Proofs, and Tree Handling, l
 
 In this section we will intoduce how to generate SSZ objects with default (zero-initialized) values, explain how to modify them, and demonstrate how TypeScript ensures type-safe interaction.
 
-### What is a default Value?
-
-In SSZ, a default value is an object where all fields are initialized to their zero-equivalent values.
+A **default value** is an object where all fields are initialized to their zero-equivalent values.
 Assuming a helper function default(type) which returns the default value for type, we can recursively define the default value for all types.
 
 This is useful when:
--You want to create new SSZ data from scratch.
--You’re preparing data to be filled step-by-step.
--You want to ensure consistency with SSZ schemas
+-Creating new SSZ data from scratch.
+-preparing data to be filled step-by-step.
+-ensuring consistency with SSZ schemas
 
-Each schema (like Attestation, BeaconBlock, etc.) provides a defaultValue() method to create such an object.
+Each schema (like `Attestation`, `BeaconBlock`, etc.) provides a `defaultValue() method` to create such an object.
 
 Here is a table of the different types and their default values.
 
 | Type                       | Default Value                         |
 | -------------------------- | ------------------------------------- |
-| uintN                      | 0                                     |
-| boolean                    | False                                 |
-| Container                  | [default(type) for type in container] |
-| Vector[type, N]            | [default(type)] \* N                  |
-| Bitvector[N]               | [False] \* N                          |
-| List[type, N]              | []                                    |
-| Bitlist[N]                 | []                                    |
-| Union[type_0, type_1, ...] | default(type_0)                       |
+| `uintN`                      | 0                                     |
+| `boolean`                    | False                                 |
+| `Container`                  | [default(type) for type in container] |
+| `Vector[type, N]`            | [default(type)] \* N                  |
+| `Bitvector[N]`               | [False] \* N                          |
+| `List[type, N]`              | []                                    |
+| `Bitlist[N]`                 | []                                    |
+| `Union[type_0, type_1, ...]` | default(type_0)                       |
 
 is_zero
-An SSZ object is called zeroed (and thus, is_zero(object) returns true) if it is equal to the default value for that type.
+An SSZ object is “zeroed” if it equals its default value.
 
 ### How to use default value()
 
 You can create a default object like so:
 
-```
-import { ssz} from "@lpdestar/types";
+```ts
+import { ssz} from "@lodestar/types";
 
 //Creating an SSZ Phase0 Attestation with all fields zero-initialized
 const attestation = ssz.phase0.Attestation.defultValue();
@@ -240,7 +239,7 @@ const attestation = ssz.phase0.Attestation.defultValue();
 
 The Attestation object now looks something like this:
 
-```
+```ts
 {
   aggregationBits: Uint8Array[],
   data: {
@@ -256,7 +255,7 @@ The Attestation object now looks something like this:
 }
 ```
 
-In our example above we use the _Attestation_ schema as an example - It is a common data structure in Ethereum consesus, representing a validators signed vote.
+We use the _Attestation_ schema as an example - It is a common data structure in Ethereum consesus, representing a validators signed vote.
 
 ```
 
@@ -273,14 +272,16 @@ Attestations are bundled together and included in new blocks to help the network
 
 Once you have a default object, you can update it's values directly:
 
-```
+```ts
 attestation.data.source.epoch = 100;
 attestation.data.target.epoch = 200;
+attestation.data.slot = 123456;
+attestation.aggregationBits = new Uint8Array([1, 0, 1]);
 ```
 
 You can also modify primitive values like numbers, boolean, bigint easilly:
 
-```
+```ts
 attestation.data.slot = 123456;
 attestation.aggregationBits = new Uint8Array([1, 0, 1]);
 ```
