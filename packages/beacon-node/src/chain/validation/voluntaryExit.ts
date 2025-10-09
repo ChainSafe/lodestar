@@ -232,8 +232,7 @@ export async function processPendingVoluntaryExits(
       } else if (!result.error?.isTransient) {
         toRemove.push(validatorIndex);
       }
-    // biome-ignore lint/correctness/noUnusedVariables: error variable unused but required by catch syntax
-    } catch (e) {
+    } catch {
       toRemove.push(validatorIndex);
     }
   }
