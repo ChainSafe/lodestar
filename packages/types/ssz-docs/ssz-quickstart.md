@@ -11,7 +11,12 @@
      - [Primitive Types](#primitive-typesbasic-types)
      - [Composite Types](#composite-types)
      - [Type Aliases](#type-aliases)
-4. 
+4. [Core SSZ Workflows](#4-core-ssz-workflows-in-lodestar)
+   -[Working with default Values](#working-with-default-values)
+   -[Typescript Safety with Lodestar Librar](#typescript-safety-with-lodestar-ssz-library)
+   -[Serializantion and deserialization](#serialization-and-deserialization)
+   -[Merkleization and Hashing](#merkleization-and-Hashing)
+   -[JSON Conversion in SSZ](#JSON-Conversion-in-SSZ)
 
 **SSZ** (Simple Serialize) is a standard(serialization format) used in the Ethereum consensus layer(beacon chain) to serialize and Merkleize structured data. It is used heavily in Ethereum 2.0 (the consensus layer) to serialize and Merkleize data structures such as blocks, validator records, the beacon state, and data used in light client proofs. It is the official serialization and Merkleization format used in Ethereum 2.0 (now Ethereum consensus layer).
 
@@ -415,6 +420,7 @@ const json = ssz.phase0.Attestation.toJson(attestation);
 const fromJson = ssz.phase0.Attestation.fromJson(json);
 ```
 To understand how Lodestar’s SSZ library implements serialization and deserialization. Read this article [Under the Hood: How serialize() and deserialize() Work in Lodestar]()
+---
 
 ### Merkleization and Hashing
 In SSZ every object can be turned into a Merkle root — a single 32-byte hash that represents the entire structure.Hashing and Merkleization are the heart of SSZ because they’re what make consensus proofs possible. 
@@ -474,7 +480,7 @@ console.log(root.toString("hex"));
 // e.g. 8c0f... (32-byte Merkle root)
 
 ```
-
+---
 ### JSON Conversion in SSZ
 ### Why JSON?
 - SSZ is a binary serialization format, optimized for hashing and Merkle proofs.
