@@ -82,70 +82,87 @@ Each schema is organized in its own Lodestar directory:
 /src/altair
 
 
-### 3.2. Core SSZ types
+---
 
-#### 3.2.1 Consonants
+### 3.2 Core SSZ Types
 
-_SSZ_ uses a few constants to standardize Serialization and merkleization.
+#### 3.2.1 Constants
+
+SSZ uses constants to **standardize serialization and Merkleization**.
+
 | Constant | Value | Description |
-| ------------------------- | ----- | ------------------------------------------- |
+|-----------|-------|-------------|
 | `BYTES_PER_CHUNK` | 32 | Size of each Merkle tree leaf (in bytes) |
 | `BITS_PER_BYTE` | 8 | Number of bits in a byte |
 | `BYTES_PER_LENGTH_OFFSET` | 4 | Bytes used to store variable-length offsets |
 
-These constants ensure compatibility across implementations and define how data is packed and hashed.
+These constants ensure **compatibility across implementations** and define how data is packed and hashed.
+
+---
 
 #### 3.2.2 Typing System
 
-### Core SSZ Types.
+The SSZ **typing system** defines how all structured data is represented.
 
-This are the _building blocks_ of all SSZ structures.They fall into two types/categories. Primitive types and composite types.
+---
 
-#### Primitive types(Basic types)
+#####  Primitive Types (Basic Types)
 
-These types represent single, atomic values and have a fixed size in bytes. They are the building blocks of all other types.
+These represent single, atomic values of fixed byte size.
+
 | Type | Description | Example |
-|----------|------------------------------------------------------|----------------------|
-| boolean | A single byte, true or false | Serialized as 0x00 or 0x01 |
-| uintN | Unsigned Integers: uint8, uint16, ..., up to uint256 | uint64 = 8 bytes |
-| bytesN | Fixed-length byte arrays, e.g. bytes4, bytes32 | bytes32 = 32 bytes |
+|------|--------------|----------|
+| `boolean` | A single byte, true or false | Serialized as `0x00` or `0x01` |
+| `uintN` | Unsigned integers: `uint8`, `uint16`, ..., up to `uint256` | `uint64` = 8 bytes |
+| `bytesN` | Fixed-length byte arrays, e.g. `bytes4`, `bytes32` | `bytes32` = 32 bytes |
 
-Basic types are always a fixed size and will always occupy the same number of bytes.
+Basic types are **always fixed-size** and occupy the same number of bytes.
 
-#### Composite types
+---
 
-Composite types are constructed by combining other types(basic or composite).They represent structured or grouped data and may be fixed or variable size, depending on their contents.
+#####  Composite Types
 
-| Type               | Description                                                                |
-| ------------------ | -------------------------------------------------------------------------- |
-| `Container`        | Like a struct: named fields with different types                           |
-| `Vector[T, N]`     | Fixed-length array of N elements of type T                                 |
-| `List[T, N]`       | Variable-length array with maximum N elements                              |
-| `Bitvector[N]`     | Fixed-length array of bits (booleans) — serialized compactly               |
-| `Bitlist[N]`       | Variable-length array of bits, up to N bits — with special length encoding |
-| `Union[T0, T1...]` | Holds one of several possible types, along with an index/selector byte     |
+Constructed by combining **basic** or **composite** types.  
+They can be **fixed-size** or **variable-size**, depending on their contents.
 
-Composite types enable grouping of data which is very important on ethereum. Ethereum uses containers, lists, and bitvectors extensively for organizing consensus messages (e.g., BeaconBlock, Attestation, SyncCommittee).
+| Type | Description |
+|------|--------------|
+| `Container` | Struct-like: named fields with different types |
+| `Vector[T, N]` | Fixed-length array of N elements of type T |
+| `List[T, N]` | Variable-length array with a maximum of N elements |
+| `Bitvector[N]` | Fixed-length array of bits (compact) |
+| `Bitlist[N]` | Variable-length bit array (up to N bits) |
+| `Union[T0, T1...]` | Holds one of several possible types |
 
-Tip: Any type that includes a List, Bitlist, or Union (or contains them nested) becomes variable-sized.
+Composite types allow **grouping and nesting** of data.  
+Ethereum uses `Container`, `List`, and `Bitvector` extensively for consensus messages such as:
+
+- `BeaconBlock`
+- `Attestation`
+- `SyncCommittee`
+
+ **Tip:** Any type that includes a `List`, `Bitlist`, or `Union` (or contains them nested) becomes **variable-sized**.
+
+---
 
 #### Type Aliases
 
-To make SSZ more readable, common type aliases are used:
+Aliases make SSZ more readable without changing encoding behavior.
+
 | Alias | Equivalent SSZ Type |
-| --------------- | ------------------- |
+|--------|----------------------|
 | `bit` | `boolean` |
 | `BytesN` | `Vector[byte, N]` |
 | `ByteList[N]` | `List[byte, N]` |
 | `ByteVector[N]` | `Vector[byte, N]` |
 
-These aliases don't change the encoding — they’re just semantic conveniences.
+These aliases improve readability but **do not affect the encoded output**.
 
-#### Real World Example
+---
 
-Defining a validator container using SSZ.
+####  Real World Example
 
-```
+```ts
 type Validator = Container({
   pubkey: ByteVector[48],
   withdrawal_credentials: Bytes32,
@@ -154,9 +171,8 @@ type Validator = Container({
   activation_eligibility_epoch: uint64,
   activation_epoch: uint64,
   exit_epoch: uint64,
-  withdrawable_epoch: uint64
+  withdrawable_epoch: uint64,
 });
-```
 
 The whole structure is fixed-size — so it’s encoded without any offsets.
 
