@@ -106,7 +106,7 @@ const module: Discv5WorkerApi = {
     return (await metricsRegistry?.metrics()) ?? "";
   },
   writeProfile: async (durationMs: number, dirpath: string) => {
-    return profileThread(ProfileThread.DISC5, durationMs);
+    return profileThread(ProfileThread.DISC5, durationMs, dirpath);
   },
   writeHeapSnapshot: async (prefix: string, dirpath: string) => {
     return writeHeapSnapshot(prefix, dirpath);

@@ -15,14 +15,14 @@ export enum ProfileThread {
  */
 const BUN_PROFILE_MS = 3 * 1000;
 
-export async function profileThread(thread: ProfileThread, durationMs: number): Promise<string> {
-  return globalThis.Bun ? profileBun(thread, durationMs) : profileNodeJS(thread, durationMs);
+export async function profileThread(thread: ProfileThread, durationMs: number, dirpath: string): Promise<string> {
+  return globalThis.Bun ? profileBun(thread, durationMs) : profileNodeJS(thread, durationMs, dirpath);
 }
 
 /**
  * Take `durationMs` profile of the current thread and return the persisted file path.
  */
-async function profileNodeJS(thread: ProfileThread, durationMs: number): Promise<string> {
+async function profileNodeJS(thread: ProfileThread, durationMs: number, dirpath: string): Promise<string> {
   const inspector = await import("node:inspector");
 
   // due to some typing issues, not able to use promisify here
@@ -49,7 +49,7 @@ async function profileNodeJS(thread: ProfileThread, durationMs: number): Promise
     });
   });
 
-  const filePath = path.join(".", `${thread}_thread_${new Date().toISOString()}.cpuprofile`);
+  const filePath = path.join(dirpath, `${thread}_thread_${new Date().toISOString()}.cpuprofile`);
   fs.writeFileSync(filePath, profile);
   return filePath;
 }

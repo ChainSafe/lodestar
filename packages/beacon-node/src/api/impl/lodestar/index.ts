@@ -72,7 +72,7 @@ export function getLodestarApi({
             break;
           default:
             // main thread
-            filepath = await profileThread(ProfileThread.MAIN, duration);
+            filepath = await profileThread(ProfileThread.MAIN, duration, dirpath);
             break;
         }
         return {data: {result: filepath}};

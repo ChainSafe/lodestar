@@ -155,7 +155,7 @@ const libp2pWorkerApi: NetworkWorkerApi = {
   dumpDiscv5KadValues: () => core.dumpDiscv5KadValues(),
   dumpMeshPeers: () => core.dumpMeshPeers(),
   writeProfile: async (durationMs: number, dirpath: string) => {
-    return profileThread(ProfileThread.NETWORK, durationMs);
+    return profileThread(ProfileThread.NETWORK, durationMs, dirpath);
   },
   writeDiscv5Profile: async (durationMs: number, dirpath: string) => {
     return core.writeDiscv5Profile(durationMs, dirpath);
