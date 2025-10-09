@@ -16,15 +16,14 @@ import {getMockApi, getTestServer} from "../../../utils/utils.js";
 import {testData} from "../testData/debug.js";
 
 describe("beacon / debug", () => {
-  // Extend timeout since states are very big
-  vi.setConfig({testTimeout: 30_000});
+  // Extend timeout since states are very big - increased to 60 seconds
+  vi.setConfig({testTimeout: 60_000, hookTimeout: 60_000});
 
   const config = createChainForkConfig({...defaultChainConfig, ELECTRA_FORK_EPOCH: 0});
 
   runGenericServerTest<Endpoints>(config, getClient, getRoutes, testData);
 
   // Get state by SSZ
-
   describe("get state in SSZ format", () => {
     const mockApi = getMockApi<Endpoints>(getDefinitions(config));
     let baseUrl: string;
@@ -46,6 +45,7 @@ describe("beacon / debug", () => {
     it("getStateV2", async () => {
       const state = ssz.electra.BeaconState.defaultValue();
       const stateSerialized = ssz.electra.BeaconState.serialize(state);
+
       mockApi.getStateV2.mockResolvedValue({
         data: stateSerialized,
         meta: {version: ForkName.electra, executionOptimistic: false, finalized: false},

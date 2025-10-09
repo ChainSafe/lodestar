@@ -1,8 +1,8 @@
-import { getVoluntaryExitSignatureSet, isValidVoluntaryExit } from "@lodestar/state-transition";
-import { phase0 } from "@lodestar/types";
-import { GossipAction, VoluntaryExitError, VoluntaryExitErrorCode } from "../errors/index.js";
-import { IBeaconChain } from "../index.js";
-import { RegenCaller } from "../regen/index.js";
+import {getVoluntaryExitSignatureSet, isValidVoluntaryExit} from "@lodestar/state-transition";
+import {phase0} from "@lodestar/types";
+import {GossipAction, VoluntaryExitError, VoluntaryExitErrorCode} from "../errors/index.js";
+import {IBeaconChain} from "../index.js";
+import {RegenCaller} from "../regen/index.js";
 
 /**
  * Helper to get human-readable error code name
@@ -113,7 +113,7 @@ async function validateVoluntaryExitDetailed(
 
   // First verify signature (permanent failure if invalid)
   const signatureSet = getVoluntaryExitSignatureSet(state, voluntaryExit);
-  if (!(await chain.bls.verifySignatureSets([signatureSet], { batchable: true, priority: prioritizeBls }))) {
+  if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true, priority: prioritizeBls}))) {
     return {
       isValid: false,
       error: {
@@ -124,18 +124,16 @@ async function validateVoluntaryExitDetailed(
     };
   }
 
-
   if (!isValidVoluntaryExit(chain.config.getForkSeq(state.slot), state, voluntaryExit, false)) {
     // Determine if the failure is transient
     const validator = state.validators.get(validatorIndex);
-    const isTransient = validator !== undefined && (
+    const isTransient =
+      validator !== undefined &&
       // Validator not yet active (could become active)
-      !validator.activationEpoch ||
-      // Validator has initiated exit but epoch hasn't passed (time-based)
-      validator.exitEpoch !== Infinity ||
-
-      false
-    );
+      (!validator.activationEpoch ||
+        // Validator has initiated exit but epoch hasn't passed (time-based)
+        validator.exitEpoch !== Infinity ||
+        false);
 
     return {
       isValid: false,
@@ -147,7 +145,7 @@ async function validateVoluntaryExitDetailed(
     };
   }
 
-  return { isValid: true };
+  return {isValid: true};
 }
 
 /**
@@ -157,12 +155,12 @@ export async function validateApiVoluntaryExit(
   chain: IBeaconChain,
   voluntaryExit: phase0.SignedVoluntaryExit,
   pendingPool?: PendingVoluntaryExitPool
-): Promise<{ shouldPublish: boolean; isCached: boolean }> {
+): Promise<{shouldPublish: boolean; isCached: boolean}> {
   const prioritizeBls = true;
   const result = await validateVoluntaryExitDetailed(chain, voluntaryExit, prioritizeBls);
 
   if (result.isValid) {
-    return { shouldPublish: true, isCached: false };
+    return {shouldPublish: true, isCached: false};
   }
 
   // If we have a transient error and a pending pool, cache it
@@ -175,10 +173,10 @@ export async function validateApiVoluntaryExit(
       `Transient failure: ${errorCodeName}`,
       state.epochCtx.epoch
     );
-    return { shouldPublish: false, isCached: true };
+    return {shouldPublish: false, isCached: true};
   }
-   //biome-ignore lint/style/noNonNullAssertion: error is guaranteed to exist when isValid is false
-    throw new VoluntaryExitError(result.error!.action, {
+  //biome-ignore lint/style/noNonNullAssertion: error is guaranteed to exist when isValid is false
+  throw new VoluntaryExitError(result.error!.action, {
     //biome-ignore lint/style/noNonNullAssertion: error is guaranteed to exist when isValid is false
     code: result.error!.code,
   });
@@ -196,8 +194,8 @@ export async function validateGossipVoluntaryExit(
   if (!result.isValid) {
     //biome-ignore lint/style/noNonNullAssertion: error is guaranteed to exist when isValid is false
     throw new VoluntaryExitError(result.error!.action, {
-       //biome-ignore lint/style/noNonNullAssertion: error is guaranteed to exist when isValid is false
-            code: result.error!.code,
+      //biome-ignore lint/style/noNonNullAssertion: error is guaranteed to exist when isValid is false
+      code: result.error!.code,
     });
   }
 }
@@ -209,7 +207,7 @@ export async function validateGossipVoluntaryExit(
 export async function processPendingVoluntaryExits(
   chain: IBeaconChain,
   pendingPool: PendingVoluntaryExitPool,
-  network: { publishVoluntaryExit(exit: phase0.SignedVoluntaryExit): Promise<void> }
+  network: {publishVoluntaryExit(exit: phase0.SignedVoluntaryExit): Promise<void>}
 ): Promise<void> {
   const state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.validateGossipVoluntaryExit);
   const currentEpoch = state.epochCtx.epoch;
@@ -217,7 +215,6 @@ export async function processPendingVoluntaryExits(
   const toRemove: number[] = [];
 
   for (const [validatorIndex, cached] of pendingPool.getAllPending()) {
-
     if (cached.lastCheckedEpoch === currentEpoch) {
       continue;
     }
@@ -246,4 +243,4 @@ export async function processPendingVoluntaryExits(
   pendingPool.prune();
 }
 
-export { PendingVoluntaryExitPool };
+export {PendingVoluntaryExitPool};

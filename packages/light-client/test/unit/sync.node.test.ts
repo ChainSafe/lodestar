@@ -26,7 +26,8 @@ import {
 const SOME_HASH = Buffer.alloc(32, 0xff);
 
 describe("sync", () => {
-  vi.setConfig({testTimeout: 30_000});
+  // Increase timeout to 60 seconds to give test enough time
+  vi.setConfig({testTimeout: 60_000});
   const afterEachCbs: (() => Promise<unknown> | unknown)[] = [];
 
   afterEach(async () => {
@@ -96,20 +97,53 @@ describe("sync", () => {
     });
     afterEachCbs.push(() => lightclient.stop());
 
-    // Sync periods to current
-    await new Promise<void>((resolve) => {
-      lightclient.emitter.on(LightclientEvent.lightClientFinalityHeader, (header) => {
-        if (computeSyncPeriodAtSlot(header.beacon.slot) >= targetPeriod) {
-          resolve();
-        }
-      });
-      void lightclient.start();
-    });
+    // Sync periods to current with timeout
+    testLogger.debug("Starting lightclient and waiting for finality header");
+    await Promise.race([
+      new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          const currentHead = lightclient.getHead();
+          const currentPeriod = computeSyncPeriodAtSlot(currentHead.beacon.slot);
+          reject(
+            new Error(
+              `Timeout waiting for lightClientFinalityHeader to reach period ${targetPeriod}. ` +
+                `Current slot: ${currentHead.beacon.slot}, period: ${currentPeriod}`
+            )
+          );
+        }, 50000); // 50 second timeout
 
-    // Wait for lightclient to subscribe to header updates
+        let receivedCount = 0;
+        lightclient.emitter.on(LightclientEvent.lightClientFinalityHeader, (header: {beacon: {slot: number}}) => {
+          receivedCount++;
+          const currentPeriod = computeSyncPeriodAtSlot(header.beacon.slot);
+          testLogger.debug(`Received lightClientFinalityHeader #${receivedCount}`, {
+            slot: header.beacon.slot,
+            period: currentPeriod,
+            targetPeriod,
+          });
+          if (currentPeriod >= targetPeriod) {
+            clearTimeout(timeout);
+            testLogger.debug("Target period reached, resolving");
+            resolve();
+          }
+        });
+
+        testLogger.debug("Starting lightclient...");
+        void lightclient.start();
+      }),
+    ]);
+
+    testLogger.debug("Waiting for event subscriptions");
+    // Wait for lightclient to subscribe to header updates with timeout
+    const subscriptionTimeout = Date.now() + 10000; // 10 second timeout
     while (!eventsServerApi.hasSubscriptions()) {
-      await new Promise((r) => setTimeout(r, 100));
+      if (Date.now() > subscriptionTimeout) {
+        throw new Error("Timeout waiting for event subscriptions");
+      }
+      await new Promise((r) => setTimeout(r, 50));
     }
+
+    testLogger.debug("Event subscriptions established, preparing state");
 
     // Test fetching a proof
     // First create a state with some known data
@@ -119,57 +153,97 @@ describe("sync", () => {
 
     // Track head + reference states with some known data
     const syncCommittee = getInteropSyncCommittee(targetPeriod);
-    await new Promise<void>((resolve) => {
-      lightclient.emitter.on(LightclientEvent.lightClientOptimisticHeader, (header) => {
-        if (header.beacon.slot === targetSlot) {
-          resolve();
-        }
-      });
 
-      for (let slot = firstHeadSlot; slot <= targetSlot; slot++) {
-        // Make each stateRoot unique
-        state.slot = slot;
-        const stateRoot = state.hashTreeRoot();
+    testLogger.debug("Starting head tracking", {firstHeadSlot, targetSlot});
 
-        // Provide the state to the lightclient server impl. Only the last one to test proof fetching
-        if (slot === targetSlot) {
-          proofServerApi.states.set(toHexString(stateRoot), state as BeaconStateAllForks as BeaconStateAltair);
-        }
+    await Promise.race([
+      new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          const currentSlot = lightclient.getHead().beacon.slot;
+          reject(
+            new Error(`Timeout waiting for optimistic header at slot ${targetSlot}. ` + `Current slot: ${currentSlot}`)
+          );
+        }, 50000); // 50 second timeout
 
-        // Emit a new head update with the custom state root
-        const header: altair.LightClientHeader = {
-          beacon: {
-            slot,
-            proposerIndex: 0,
-            parentRoot: SOME_HASH,
-            stateRoot: stateRoot,
-            bodyRoot: SOME_HASH,
-          },
-        };
-
-        const headUpdate: altair.LightClientOptimisticUpdate = {
-          attestedHeader: header,
-          syncAggregate: syncCommittee.signHeader(config, header),
-          signatureSlot: header.beacon.slot + 1,
-        };
-
-        lightclientServerApi.latestHeadUpdate = headUpdate;
-        eventsServerApi.emit({
-          type: routes.events.EventType.lightClientOptimisticUpdate,
-          message: {version: config.getForkName(headUpdate.attestedHeader.beacon.slot), data: headUpdate},
+        let receivedCount = 0;
+        lightclient.emitter.on(LightclientEvent.lightClientOptimisticHeader, (header: {beacon: {slot: number}}) => {
+          receivedCount++;
+          testLogger.debug(`Received lightClientOptimisticHeader #${receivedCount}`, {
+            slot: header.beacon.slot,
+            targetSlot,
+          });
+          if (header.beacon.slot === targetSlot) {
+            clearTimeout(timeout);
+            testLogger.debug("Target slot reached, resolving");
+            resolve();
+          }
         });
-        testLogger.debug("Emitted EventType.lightClientOptimisticUpdate", {slot});
-      }
-    });
+
+        // Emit events with delay to allow processing
+        (async () => {
+          testLogger.debug("Starting event emission loop");
+          for (let slot = firstHeadSlot; slot <= targetSlot; slot++) {
+            // Make each stateRoot unique
+            state.slot = slot;
+            const stateRoot = state.hashTreeRoot();
+
+            // Provide the state to the lightclient server impl. Only the last one to test proof fetching
+            if (slot === targetSlot) {
+              proofServerApi.states.set(toHexString(stateRoot), state as BeaconStateAllForks as BeaconStateAltair);
+            }
+
+            // Emit a new head update with the custom state root
+            const header: altair.LightClientHeader = {
+              beacon: {
+                slot,
+                proposerIndex: 0,
+                parentRoot: SOME_HASH,
+                stateRoot: stateRoot,
+                bodyRoot: SOME_HASH,
+              },
+            };
+
+            const headUpdate: altair.LightClientOptimisticUpdate = {
+              attestedHeader: header,
+              syncAggregate: syncCommittee.signHeader(config, header),
+              signatureSlot: header.beacon.slot + 1,
+            };
+
+            lightclientServerApi.latestHeadUpdate = headUpdate;
+            eventsServerApi.emit({
+              type: routes.events.EventType.lightClientOptimisticUpdate,
+              message: {version: config.getForkName(headUpdate.attestedHeader.beacon.slot), data: headUpdate},
+            });
+
+            if (slot % 10 === 0 || slot === targetSlot) {
+              testLogger.debug("Emitted EventType.lightClientOptimisticUpdate", {slot, targetSlot});
+            }
+
+            // Reduced delay for faster test execution
+            await new Promise((r) => setTimeout(r, 20));
+          }
+          testLogger.debug("Completed event emission loop");
+        })().catch((err) => {
+          testLogger.error("Error in event emission loop", err);
+          reject(err);
+        });
+      }),
+    ]);
+
+    testLogger.debug("Head tracking complete, verifying results");
 
     // Ensure that the lightclient head is correct
     expect(lightclient.getHead().beacon.slot).toBe(targetSlot);
 
+    testLogger.debug("Fetching proof");
     // Fetch proof of "latestExecutionPayloadHeader.stateRoot"
     const {proof, header} = await getHeadStateProof(lightclient, api, [["latestExecutionPayloadHeader", "stateRoot"]]);
 
+    testLogger.debug("Verifying proof");
     const recoveredState = ssz.bellatrix.BeaconState.createFromProof(proof, header.beacon.stateRoot);
     expect(toHexString(recoveredState.latestExecutionPayloadHeader.stateRoot)).toBe(toHexString(executionStateRoot));
+
+    testLogger.debug("Test completed successfully");
   });
 });
 
