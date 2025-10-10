@@ -1,5 +1,8 @@
 import {Signature} from "@chainsafe/blst";
 import {ApiClient, getClient} from "@lodestar/api";
+// 
+
+
 import {BeaconConfig, createBeaconConfig} from "@lodestar/config";
 import {
   computeEpochAtSlot,
@@ -16,6 +19,9 @@ import {GlobalArgs} from "../../options/index.js";
 import {YargsError, ensure0xPrefix, wrapError} from "../../util/index.js";
 import {IValidatorCliArgs} from "./options.js";
 import {getSignersFromArgs} from "./signers/index.js";
+import fs from "fs";
+
+
 
 type VoluntaryExitArgs = {
   exitEpoch?: number;
@@ -255,3 +261,14 @@ function getSignerPubkeyHex(signer: Signer): string {
       return signer.pubkey;
   }
 }
+
+
+// export async function handler(args: any) {
+//   // ... does voluntary exit work
+// }
+
+export async function runVoluntaryExitHandler(args: any) {
+  // ...logic...
+}
+
+
