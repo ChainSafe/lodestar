@@ -68,6 +68,10 @@
       "bun": "./src/bun-wrappers/prometheus-gc-stats.ts",
       "default": "@chainsafe/prometheus-gc-stats"
     },
+    "#profile-wrapper": {
+      "bun": "./src/bun-wrappers/profile.ts",
+      "default": "./src/util/profile.ts"
+    },
     "#datastore-wrapper": {
       "bun": "./src/network/peers/datastore_bun.ts",
       "default": "datastore-level"
@@ -94,7 +98,7 @@
     "build:watch": "yarn run build --watch",
     "build:release": "yarn clean && yarn run build",
     "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\"",
-    "check-types": "tsc",
+    "check-types": "tsc -p tsconfig.build.json",
     "lint": "biome check src/ test/",
     "lint:fix": "yarn run lint --write",
     "test": "yarn test:unit && yarn test:e2e",

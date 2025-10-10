@@ -1,6 +1,7 @@
 import worker from "node:worker_threads";
 import {privateKeyFromProtobuf} from "@libp2p/crypto/keys";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
+import {profileThread} from "#profile-wrapper";
 import type {ModuleThread} from "@chainsafe/threads";
 import {expose} from "@chainsafe/threads/worker";
 import {chainConfigFromJson, createBeaconConfig} from "@lodestar/config";
@@ -9,7 +10,7 @@ import {RegistryMetricCreator, collectNodeJSMetrics} from "../../metrics/index.j
 import {AsyncIterableBridgeCaller, AsyncIterableBridgeHandler} from "../../util/asyncIterableToEvents.js";
 import {Clock} from "../../util/clock.js";
 import {peerIdToString} from "../../util/peerId.js";
-import {ProfileThread, profileThread, writeHeapSnapshot} from "../../util/profile.js";
+import {ProfileThread, writeHeapSnapshot} from "../../util/profile.js";
 import {wireEventsOnWorkerThread} from "../../util/workerEvents.js";
 import {NetworkEventBus, NetworkEventData, networkEventDirection} from "../events.js";
 import {

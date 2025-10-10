@@ -2,6 +2,7 @@ import worker from "node:worker_threads";
 import {privateKeyFromProtobuf} from "@libp2p/crypto/keys";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {Multiaddr, multiaddr} from "@multiformats/multiaddr";
+import {profileThread} from "#profile-wrapper";
 import {Discv5, Discv5EventEmitter} from "@chainsafe/discv5";
 import {ENR, ENRData, SignableENR, SignableENRData} from "@chainsafe/enr";
 import {Observable, Subject} from "@chainsafe/threads/observable";
@@ -12,7 +13,7 @@ import {Gauge} from "@lodestar/utils";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {collectNodeJSMetrics} from "../../metrics/nodeJsMetrics.js";
 import {Clock} from "../../util/clock.js";
-import {ProfileThread, profileThread, writeHeapSnapshot} from "../../util/profile.js";
+import {ProfileThread, writeHeapSnapshot} from "../../util/profile.js";
 import {Discv5WorkerApi, Discv5WorkerData} from "./types.js";
 import {ENRRelevance, enrRelevance} from "./utils.js";
 
