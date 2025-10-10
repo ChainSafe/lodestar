@@ -1,4 +1,37 @@
 # SSZ Views & Proofs
+---
+title: SSZ views and Proofs
+description: Understanding Lodestar’s SSZ Views, Merkle Proofs, and Generalized Indices.
+tags: [ssz, lodestar, merkle-trees, proofs, ethereum, typescript]
+---
+# Table of Contents
+
+- [SSZ Views & Proofs](#ssz-views--proofs)
+  - [Introduction to views and proofs](#introduction-to-views-and-proofs)
+    - [What are Views in SSZ?](#what-are-views-in-ssz)
+    - [Why Views?](#why-views)
+      - [ Views vs Values (side-by-side)](#1-views-vs-values-side-by-side)
+      - [What are 'View'?](#what-are-view)
+      - [Tree-backed Views](#tree-backed-views)
+        - [1. TreeView](#1-treeview)
+        - [Subview behaviour for tree view](#subview-behaviour-for-tree-view)
+        - [2. TreeViewDU](#2-treeviewdu)
+        - [Subview behaviour for the viewDU](#subview-behaviour-for-the-viewdu)
+    - [ Common Operations with views](#3-common-operations-with-views)
+  - [ Proofs](#4-proofs)
+    - [How Merkle proofs work](#how-merkle-proofs-work)
+    - [Creating proofs](#creating-proofs)
+    - [Reconstructing from a Proof](#reconstructing-from-a-proof)
+    - [Anatomy of a Proof](#anatomy-of-a-proof)
+    - [Verifying a Proof](#verifying-a-proof)
+  - [ Generalized Indices](#5-generalized-indices)
+    - [What is a Generalized Index?](#what-is-a-generalized-index)
+    - [Why Do We Use Generalized Indices?](#why-do-we-use-generalized-indices)
+  - [ TypeScript Tips](#6-typescript-tips)
+  - [ Pitfalls & Best Practices](#7-pitfalls--best-practices)
+  - [ Best Practices](#8-best-practices)
+  - [ Resources](#9-resources)
+
 
 This guide covers **tree-backed views** and **proofs**, which are advanced SSZ features for performance and verifiability.  
 If you’re new, start with the [SSZ Quickstart](./ssz-quickstart.md).
@@ -31,7 +64,7 @@ They behave like normal objects, but every change you make is tracked in the tre
  **Analogy:**  
 A View is like a **live SSZ object plugged into its Merkle tree**. You don’t have to rebuild the tree every time — it stays updated as you edit the object.  
 
-#### 1. Views vs Values (side-by-side)
+#### Views vs Values (side-by-side)
 
 In SSZ you will see two ways in which you can create Objects.
 - 'defaultValue()' -> this creates a Plain JS object.
@@ -45,7 +78,7 @@ Just a regular JS object.
 Easy to use, but not Merkle-aware.
 Every time you hash, SSZ has to recompute the entire Merkle tree from scratch.
 
-```
+```ts
 Import { ssz} from '@lodestar/types'
 
 //creating the object
@@ -86,7 +119,7 @@ Property getters return sub-views, except for basic types, which return native v
 
 This tree view is a simple wrapper to tree backed data that commits any changes immediately to the tree. Changes are propagated upwards to the root parent tree.
 
-IN summary:
+In summary:
 
 - Looks like a normal object, but is backed by a persistent Merkle tree.
 - Getters → return sub-views (for composites) or native JS values (for primitives).
@@ -94,7 +127,7 @@ IN summary:
 - Updates are incremental → only the changed branch is rehashed.
 - Best for containers (like Attestation, BlockHeader) where updates are small and infrequent.
 
-```
+```ts
 // Create a tree-backed attestation view
 const attestation = ssz.phase0.Attestation.defaultView();
 
@@ -106,7 +139,7 @@ const root = attestation.hashTreeRoot();
 ```
 
 Example 2:
-```
+```ts
 // Create a type
 const C = new ContainerType({
   a: new VectorBasicType(new UintNumberType(1), 2),
@@ -137,7 +170,7 @@ Each View manages its own Merkle tree.
 If you assign one **subview** to another, Lodestar copies the tree data, but doesn’t link the views together. This means mutating one view will not affect the other, even if you originally set one equal to the other.
 View implementations don't contain any internal caches beyond their internal Trees, and setting one *subview* to another will not link the views.
 
-```
+```ts
 const c1 = C.toView({a: [0, 0]});
 const c2 = C.toView({a: [1, 1]});
 
@@ -160,7 +193,7 @@ Mutations are staged in memory/ stashed someh
 Call .commit() to flush all changes to the tree and update the root.
 Much more efficient for frequent edits.
 
-```
+```ts
 // Create a type
 const C = new ContainerType({
   a: new VectorBasicType(new UintNumberType(1), 2),
@@ -197,7 +230,7 @@ Persist caches of sub-properties to prevent tree navigation when re-reading data
 In TreeViewDU, each subview has a mutable cache for its children.
 When you assign c1.a = c2.a, they share the same cache reference (the same in-memory child view). Updating one also updates the other, because both point to the same cached view.
 
-```
+```ts
 const c1 = C.toViewDU({a: [0, 0]});
 const c2 = C.toViewDU({a: [1, 1]});
 
@@ -211,7 +244,7 @@ c1.a.set(0, 2);
 c2.a.set(0, 3);
 ```
 
-### 3. Common Operations with views
+### Common Operations with views
 Hhow to actually work with views in everyday SSZ use — things like serializing, hashing, cloning, committing, etc.
 
 Views in SSZ are mutable, Merkle-tree–backed representations of data.
@@ -220,7 +253,7 @@ They allow efficient updates and partial reads without re-serializing entire obj
 Here are the main operations:
 
 a. Serialize and Deserialize
-```
+```ts
 const serialized = containerView.serialize();
 const deserializedView = ContainerType.deserializeToView(serialized);
 ```
@@ -231,7 +264,7 @@ serialize() converts the view to raw SSZ bytes.
 deserializeToView() reconstructs the same tree-backed structure.
 
 b. Hashing
-```
+```ts
 const root = containerView.hashTreeRoot();
 
 ```
@@ -240,7 +273,7 @@ Computes the Merkle root of the current state.
 Used for proofs, state commitments, and verifying equality.
 
 c. Committing Changes
-```
+```ts
 containerView.commit();
 ```
 
@@ -249,19 +282,19 @@ Applies any pending mutations to the backing Merkle tree.
 Needed when building proofs or comparing roots.
 
 d. Cloning Views
-```
+```ts
 const copyView = containerView.clone();
 ```
 
 Produces an independent copy with its own backing tree.
 
 e. JSON Conversion (for APIs or logs)
-```
+```ts
 const json = ContainerType.toJson(containerView);
 const restoredView = ContainerType.fromJson(json);
 ```
 
-### 4. Proofs
+### Proofs
 A **Merkle proof** is a compact, cryptographic way to prove that a specific piece of data exists inside a larger dataset — without revealing the entire dataset.
 
 It’s built using a Merkle tree, where:
@@ -286,7 +319,7 @@ Every View in Lodestar comes with methods for working with proofs.
 | `Type.createFromProof(proof)` | Reconstruct a partial view from a proof |
 
 Creating proofs:
-```
+```ts
 
 import { ssz } from "@lodestar/types";
 
@@ -311,7 +344,7 @@ Lodestar automatically collects the necessary sibling hashes
 #### Reconstructing from a Proof
 
 Later, someone else can use that proof to reconstruct a partial view of the object:
-```
+```ts
 const partialAttestation = ssz.phase0.Attestation.createFromProof(proof);
 
 // Access included fields
@@ -335,7 +368,7 @@ A Lodestar SSZ proof is an object that contains:
 3. leaves – serialized field values
 4. witnesses – sibling hashes needed to recompute the root
 You rarely need to inspect these manually, but here’s a conceptual breakdown:
-```
+```ts
 Proof {
   type: Attestation,
   leaves: [
@@ -350,7 +383,7 @@ Proof {
 
 To verify a proof, Lodestar recomputes the Merkle root from the provided values and sibling hashes, then compares it to the expected root.
 
-```
+```ts
 const root = attestation.hashTreeRoot();
 const proofRoot = partialAttestation.hashTreeRoot();
 
@@ -358,7 +391,7 @@ console.log(root.equals(proofRoot)); // ✅ true if proof is valid
 ```
 
 This is the same logic that Ethereum’s light clients and consensus layer use to verify data efficiently without downloading the whole chain.
-### 7. Generalized Indicies
+### Generalized Indicies
 In SSZ (Simple Serialize), every node in a Merkle tree — whether a leaf or an internal node — can be uniquely identified using a number called a generalized index (or gindex for short).
 
 🔢 What is a Generalized Index?
@@ -412,7 +445,7 @@ This section gives you practical TypeScript tips to avoid the most common pitfal
 
 SSZ Views and Proofs are type-driven.
 Always create them through their schema (type definition), not manually.
-```
+```ts
 // Correct
 const attestation = ssz.phase0.Attestation.defaultView();
 
@@ -421,7 +454,7 @@ const attestation = {} as any;
 ```
 
 Using `.defaultView()`, `.toView()`, or `.createFromProof()` ensures TypeScript knows what type of data and subviews you’re working with.
-### 7. Pitfalls & Best Practices
+###  Pitfalls & Best Practices
 Even though SSZ Views and Proofs feel like simple JS objects, they have Merkle-aware behavior under the hood.
 These best practices will save you from hours of debugging.
 
@@ -435,22 +468,22 @@ These best practices will save you from hours of debugging.
 | **Mutating subviews incorrectly**        | Direct assignments skip the internal tree                          | Use setters or `.set()` for lists/vectors                            |
 | **Comparing roots before commit**        | Uncommitted changes don’t affect root hash                         | Call `.commit()` or `.hashTreeRoot()` after updates                  |
 
-### 8. Best Practices
+### Best Practices
 
 Prefer ViewDU for many small updates
-```
+```ts
 const v = ssz.phase0.BeaconState.defaultViewDU();
 v.validators.get(0).effectiveBalance = 32000000000n;
 v.commit(); // Apply all at once
 
 ```
 Use view when correctness matters more than batching
-```
+```ts
 const v = ssz.phase0.Attestation.defaultView();
 v.data.source.epoch = 100; // applied immediately
 ```
 Always validate roots after proof verification.
-```
+```ts
 const valid = partialAttestation.hashTreeRoot().toString() === root.toString();
 ```
 Avoid reusing Views across unrelated trees
@@ -459,7 +492,7 @@ Each View holds its own tree reference — reusing it may mutate the wrong branc
 Leverage TypeScript type inference
 Let Lodestar infer the type whenever possible — it reduces mismatches and improves editor hints.
 
-### 9. Resources
+### Resources
 
 (Further Reading)[https://ethereum.org/developers/docs/data-structures-and-encoding/ssz/]
 (Building blocks ssz)[https://eth2book.info/altair/part2/building_blocks/ssz/]
