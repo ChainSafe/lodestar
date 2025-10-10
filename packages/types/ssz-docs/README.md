@@ -8,26 +8,19 @@ It is designed for Ethereum developers, researchers, and contributors working wi
 ## 📁 Structure
 ```
 
-docs/
+ssz-docs/
 ├─ ssz-quickstart.md
 ├─ ssz-views-and-proofs.md
+├─ ssz-examples.md
 └─ ...
-examples/
-├─ simple-container.ts
-├─ nested-container.ts
-├─ lists-vectors.ts
-├─ hashing.ts
-├─ simple-container-json.ts
-├─ nested-container-json.ts
-├─ list-json.ts
-└─ hashing-json.ts
+ 
 ```
 
 ## 📁 Structure Overview
 
 - **`ssz-quickstart.md`**: A beginner-friendly introduction to working with SSZ — how to serialize, deserialize, and compute `hashTreeRoot`.
 - **`ssz-views-and-proofs.md`**: Details advanced usage of SSZ views, how to generate Merkle proofs, and common caveats when accessing nested data.
-- **`Examples `**:  contains runnable **TypeScript demos** that complement the docs.  
+- **`ssz-Examples.md `**: this file contains runnable **TypeScript demos** that complement the docs.  
 
 ---
 
