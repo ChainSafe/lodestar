@@ -13,103 +13,94 @@ ssz-docs/
 ├─ ssz-views-and-proofs.md
 ├─ ssz-examples.md
 └─ ...
- 
-```
-
-## 📁 Structure Overview
-
-- **`ssz-quickstart.md`**: A beginner-friendly introduction to working with SSZ — how to serialize, deserialize, and compute `hashTreeRoot`.
-- **`ssz-views-and-proofs.md`**: Details advanced usage of SSZ views, how to generate Merkle proofs, and common caveats when accessing nested data.
-- **`ssz-Examples.md `**: this file contains runnable **TypeScript demos** that complement the docs.  
+ ```
 
 ---
 
-This documentation is intended as a quick reference and learning tool for new contributors, client developers, and researchers working with Lodestar’s type system.
-It is detailed description of the method's purpose, includes working code examples that users can run and tutorials on how to use them.
+### Overview
 
+- **`ssz-quickstart.md`** — Beginner-friendly guide to SSZ. Learn serialization, deserialization, and `hashTreeRoot`.
+- **`ssz-views-and-proofs.md`** — Advanced guide on SSZ views, Merkle proofs, and efficient data access.
+- **`ssz-examples.md`** — Runnable **TypeScript demos** that complement the docs.
+
+This documentation serves as a **quick reference and tutorial set** for Lodestar contributors, client developers, and researchers exploring the SSZ type system.
 
 ---
 
 ## 📘 Documentation
 
 ### **1. `ssz-quickstart.md`**
-- Beginner-friendly introduction to SSZ.  
 - Covers primitive types (`uint64`), containers, lists, and vectors.  
-- Explains serialization, deserialization, hashing (`hashTreeRoot`).  
-- Includes **JSON conversion** (`toJson`, `fromJson`) for working with APIs.  
-- Best place to start if you’re **new to SSZ in TypeScript**.
+- Explains **serialization**, **deserialization**, and **hashing** (`hashTreeRoot`).  
+- Includes **JSON conversion** (`toJson`, `fromJson`) for API use.  
+- Ideal starting point for newcomers.
 
 ### **2. `ssz-views-and-proofs.md`**
-- Advanced usage guide.  
-- Explains **tree-backed views** (mutable, efficient access to SSZ objects).  
-- Covers **Merkle proofs** for light clients and stateless validation.  
-- Shows how to combine views, proofs, and JSON conversion.  
-- Recommended after you understand the quickstart basics.
+- Explains **tree-backed views** for efficient, mutable access.  
+- Demonstrates how to **generate and verify Merkle proofs**.  
+- Covers **light client use cases**, and **nested data access**.  
+- Recommended after completing the quickstart.
 
+### **3. `ssz-examples.md`**
+- Runnable **TypeScript demos** that complement the docs.
+- Ideal for beginners who want to test ou different concepts in the SSZ.
 
 ---
 
-## 💻 Examples
+## 💻 Running the Examples
 
-The `examples/` folder contains runnable **TypeScript demos** that complement the docs.  
-Each file is **self-contained** and can be run directly with `ts-node`.  
+The `examples` are in the ssz-examples.md,  contains runnable **TypeScript demos** that match the topics covered in the docs.  
+Each example is self-contained and can be run directly with `ts-node`.
 
-👉 Use these to **validate what you learned from the docs** and to copy/paste working patterns into your own projects.
-
-### How to run
-1. Install dependencies:
-   ```bash
-   npm install
-   # or, directly:
-   npm install @chainsafe/ssz @lodestar/types typescript ts-node
-
+### **Setup**
+```bash
+npm install
+# or, directly:
+npm install @chainsafe/ssz @lodestar/types typescript ts-node
+```
 Run an Example: 
-Pick a file.
+Pick an example from the file and transfer it in you it's own file eg. Container.ts  then run the file with the following command.
+
 ```
 npx ts-node examples/simple-container.ts
-```
-## Example Files Explained.
-1. simple-container.ts
 
-Defines a basic SSZ container with primitive fields (e.g., uint64).
+```
+
+Example Explained
+1. simple-container
+
+Defines a basic SSZ container with primitive fields (e.g. uint64).
 
 Demonstrates:
+`serialize()` — convert container to SSZ bytes
+`deserialize()` — parse bytes back into structured data
+Useful for: learning container patterns and core SSZ workflow.
 
-serialize() — convert container to SSZ bytes.
-
-deserialize() — parse bytes back into structured data.
-
-Useful for: learning the container pattern and the core SSZ workflow.
-
-2. nested-container.ts
+2. nested-container
 
 Shows how containers can contain other containers.
-
-Demonstrates serialization and deserialization of nested structures.
-
-Useful for: building real-world Ethereum objects (validators, blocks, etc.), which are typically deeply nested containers.
+Demonstrates:
+Serialization and deserialization of nested structures
+Useful for: building real-world Ethereum objects (validators, blocks, etc.).
 
 3. lists-vectors.ts
-
 Introduces SSZ lists (variable-length) and vectors (fixed-length).
 
 Demonstrates:
+Creating dynamic lists
+Enforcing fixed-size vectors
+Serializing both forms
+Useful for: handling validator lists, committees, or signatures in consensus types.
 
-Creating lists with dynamic sizes.
-
-Creating vectors with enforced fixed size.
-
-Serializing both forms.
-
-Useful for: handling validator lists, committees, or fixed-size signatures in consensus types.
-
-Find more examples in the examples folder.
+FInd more examples in the ssz-examples files.
 
 ## 📘 Learn More
 
-Resources
+### Resources
 
-- [SSZ Quickstart](./ssz-quickstart.md)
-- [ Working with SSZ Views & Proofs](./ssz-views-and-proofs.md)
-- [Ethereum Consensus Specs]()
+[Further Reading](https://ethereum.org/developers/docs/data-structures-and-encoding/ssz/)
+[Building blocks ssz](https://eth2book.info/altair/part2/building_blocks/ssz/)
+[merkle multiproofs](https://github.com/ethereum/consensus-specs/blob/dev/ssz/merkle-proofs.md#merkle-multiproofs)
+[simple serialize](https://github.com/ethereum/consensus-specs/blob/dev/ssz/simple-serialize.md)
+[Lodestar types](https://github.com/ChainSafe/lodestar/tree/unstable/packages/types)
 

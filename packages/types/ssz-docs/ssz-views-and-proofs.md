@@ -494,9 +494,8 @@ Let Lodestar infer the type whenever possible — it reduces mismatches and impr
 
 ### Resources
 
-(Further Reading)[https://ethereum.org/developers/docs/data-structures-and-encoding/ssz/]
-(Building blocks ssz)[https://eth2book.info/altair/part2/building_blocks/ssz/]
-(merkle multiproofs)[https://github.com/ethereum/consensus-specs/blob/dev/ssz/merkle-proofs.md#merkle-multiproofs]
-(simple serialize)[https://github.com/ethereum/consensus-specs/blob/dev/ssz/simple-serialize.md]
-(Lodestar types)[https://github.com/ChainSafe/lodestar/tree/unstable/packages/types]
-
+[Further Reading](https://ethereum.org/developers/docs/data-structures-and-encoding/ssz/)
+[Building blocks ssz](https://eth2book.info/altair/part2/building_blocks/ssz/)
+[merkle multiproofs](https://github.com/ethereum/consensus-specs/blob/dev/ssz/merkle-proofs.md#merkle-multiproofs)
+[simple serialize](https://github.com/ethereum/consensus-specs/blob/dev/ssz/simple-serialize.md)
+[Lodestar types](https://github.com/ChainSafe/lodestar/tree/unstable/packages/types)
