@@ -26,3 +26,13 @@ export async function profileThread(thread: ProfileThread, durationMs: number): 
 
   return `Successfully take Bun ${thread} thread profile in ${now - start}ms. Check your inspector to see the profile.`;
 }
+
+/**
+ * Write heap snapshot of the current thread to the specified file and return file path.
+ */
+export async function writeHeapSnapshot(prefix: string, dirpath: string): Promise<string> {
+  const filepath = `${dirpath}/${prefix}_${new Date().toISOString()}.json`;
+  const snapshot = Bun.generateHeapSnapshot("jsc");
+  await Bun.write(filepath, JSON.stringify(snapshot, null, 2));
+  return filepath;
+}

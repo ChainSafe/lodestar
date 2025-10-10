@@ -1,4 +1,4 @@
-import {profileThread} from "#profile-wrapper";
+import {profileThread, writeHeapSnapshot} from "#profile-wrapper";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
@@ -12,7 +12,7 @@ import {BeaconChain} from "../../../chain/index.js";
 import {QueuedStateRegenerator, RegenRequest} from "../../../chain/regen/index.js";
 import {IBeaconDb} from "../../../db/interface.js";
 import {GossipType} from "../../../network/index.js";
-import {ProfileThread, writeHeapSnapshot} from "../../../util/profile.js";
+import {ProfileThread} from "../../../util/profile.js";
 import {getStateResponseWithRegen} from "../beacon/state/utils.js";
 import {ApiModules} from "../types.js";
 
