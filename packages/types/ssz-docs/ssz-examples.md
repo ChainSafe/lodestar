@@ -215,3 +215,5 @@ examples/
  └─ hashing-json.ts
 
 ```
+
+I hope this docs help you understand `SSZ` better.
