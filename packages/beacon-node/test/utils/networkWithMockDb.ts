@@ -69,7 +69,10 @@ export async function getNetworkForTest(
       processShutdownCallback: () => {},
       // set genesis time so that we are at ALTAIR_FORK_EPOCH
       // mock timer does not work on worker thread
-      clock: new ClockStatic(startSlot, Math.floor(Date.now() / 1000) - startSlot * beaconConfig.SECONDS_PER_SLOT),
+      clock: new ClockStatic(
+        startSlot,
+        Math.floor(Date.now() / 1000) - startSlot * (beaconConfig.SLOT_DURATION_MS / 1000)
+      ),
       metrics: null,
       validatorMonitor: null,
       anchorState: createCachedBeaconStateTest(state, beaconConfig),

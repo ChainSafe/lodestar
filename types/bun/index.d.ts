@@ -1,7 +1,7 @@
 
 // We have to override Bun types to disallow mutating global types provide by NodeJS
 // This breaks our CI build process
-// <reference path="../../node_modules/bun-types/globals.d.ts" />
+/// <reference path="../../node_modules/bun-types/globals.d.ts" />
 
 /// <reference path="../../node_modules/bun-types/s3.d.ts" />
 /// <reference path="../../node_modules/bun-types/fetch.d.ts" />

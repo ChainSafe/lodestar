@@ -1,5 +1,4 @@
 import {routes} from "@lodestar/api";
-import {INTERVALS_PER_SLOT} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   computeStartSlotAtEpoch,
@@ -58,6 +57,9 @@ type LoadedStateBytesData = {persistedKey: DatastoreKey; stateBytes: Uint8Array}
  * may not be available in memory, and stay on disk instead.
  */
 export const DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY = 3;
+
+// TODO GLOAS: re-evaluate this timing
+const PROCESS_CHECKPOINT_STATES_BPS = 6667;
 
 /**
  * An implementation of CheckpointStateCache that keep up to n epoch checkpoint states in memory and persist the rest to disk
@@ -464,14 +466,14 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     }
 
     const blockSlot = state.slot;
-    const twoThirdsSlot = (2 * state.config.SECONDS_PER_SLOT) / INTERVALS_PER_SLOT;
+    const processCPStatesTimeMs = state.config.getSlotComponentDurationMs(PROCESS_CHECKPOINT_STATES_BPS);
     // we always have clock in production, fallback value is only for test
-    const secFromSlot = this.clock?.secFromSlot(blockSlot) ?? twoThirdsSlot;
-    const secToTwoThirdsSlot = twoThirdsSlot - secFromSlot;
-    if (secToTwoThirdsSlot > 0) {
-      // 2/3 of slot is the most free time of every slot, take that chance to persist checkpoint states
-      // normally it should only persist checkpoint states at 2/3 of slot 0 of epoch
-      await sleep(secToTwoThirdsSlot * 1000, this.signal);
+    const msFromSlot = this.clock?.msFromSlot(blockSlot) ?? processCPStatesTimeMs;
+    const msToProcessCPStates = processCPStatesTimeMs - msFromSlot;
+    if (msToProcessCPStates > 0) {
+      // At ~67% of slot is the most free time of every slot, take that chance to persist checkpoint states
+      // normally it should only persist checkpoint states at ~67% of slot 0 of epoch
+      await sleep(msToProcessCPStates, this.signal);
     }
     // at syncing time, it's critical to persist checkpoint states as soon as possible to avoid OOM during unfinality time
     // if node is synced this is not a hot time because block comes late, we'll likely miss attestation already, or the block is orphaned

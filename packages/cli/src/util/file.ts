@@ -139,7 +139,7 @@ export async function downloadFile(pathDest: string, url: string): Promise<void>
       throw new Error("Response body is null");
     }
 
-    await stream.pipeline(Readable.fromWeb(res.body as NodeReadableStream), fs.createWriteStream(pathDest));
+    await stream.pipeline(Readable.fromWeb(res.body as unknown as NodeReadableStream), fs.createWriteStream(pathDest));
   }
 }
 

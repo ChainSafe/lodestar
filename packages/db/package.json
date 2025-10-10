@@ -1,6 +1,6 @@
 {
   "name": "@lodestar/db",
-  "version": "1.34.1",
+  "version": "1.35.0",
   "description": "DB modules of Lodestar",
   "author": "ChainSafe Systems",
   "homepage": "https://github.com/ChainSafe/lodestar#readme",
@@ -16,15 +16,23 @@
     ".": {
       "bun": "./src/index.ts",
       "import": "./lib/index.js"
+    },
+    "./controller/level": {
+      "bun": "./src/controller/level_bun.ts",
+      "import": "./lib/controller/level.js"
+    }
+  },
+  "imports": {
+    "#controller/level": {
+      "bun": "./src/controller/level_bun.ts",
+      "import": "./src/controller/level.js"
     }
   },
   "types": "./lib/index.d.ts",
   "files": [
-    "lib/**/*.d.ts",
-    "lib/**/*.js",
-    "lib/**/*.js.map",
-    "*.d.ts",
-    "*.js"
+    "src",
+    "lib",
+    "!**/*.tsbuildinfo"
   ],
   "scripts": {
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",
@@ -42,12 +50,13 @@
   },
   "dependencies": {
     "@chainsafe/ssz": "^1.2.2",
-    "@lodestar/config": "^1.34.1",
-    "@lodestar/utils": "^1.34.1",
+    "@lodestar/bun": "git+https://github.com/ChainSafe/lodestar-bun.git",
+    "@lodestar/config": "^1.35.0",
+    "@lodestar/utils": "^1.35.0",
     "classic-level": "^1.4.1",
     "it-all": "^3.0.4"
   },
   "devDependencies": {
-    "@lodestar/logger": "^1.34.1"
+    "@lodestar/logger": "^1.35.0"
   }
 }

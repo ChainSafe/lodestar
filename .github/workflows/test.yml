@@ -53,7 +53,7 @@ jobs:
         run: scripts/assert_no_yarn_warnings.sh
 
       - name: Lint yarn lockfile
-        run: npx lockfile-lint --path yarn.lock --allowed-hosts npm yarn --validate-https
+        run: npx lockfile-lint --path yarn.lock --allowed-hosts npm yarn github.com --allowed-schemes "https:" "git+https:"
 
       - name: Lint Code
         run: yarn lint

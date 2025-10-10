@@ -39,6 +39,9 @@ export const sepoliaChainConfig: ChainConfig = {
   // Fulu
   FULU_FORK_VERSION: b("0x90000075"),
   FULU_FORK_EPOCH: 272640,
+  // Gloas
+  GLOAS_FORK_VERSION: b("0x90000076"),
+  GLOAS_FORK_EPOCH: Infinity,
 
   // Deposit contract
   // ---------------------------------------------------------------

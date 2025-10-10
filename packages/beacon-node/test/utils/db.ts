@@ -1,6 +1,7 @@
 import childProcess from "node:child_process";
 import {ChainForkConfig} from "@lodestar/config";
-import {FilterOptions, LevelDbController} from "@lodestar/db";
+import {FilterOptions} from "@lodestar/db";
+import {LevelDbController} from "@lodestar/db/controller/level";
 import {BeaconDb} from "../../src/index.js";
 import {testLogger} from "./logger.js";
 

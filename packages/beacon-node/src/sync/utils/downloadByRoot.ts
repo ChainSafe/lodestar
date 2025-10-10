@@ -1,7 +1,14 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkPostDeneb, ForkPostFulu, ForkPreFulu, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
-import {BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
+import {
+  ForkPostDeneb,
+  ForkPostFulu,
+  ForkPreFulu,
+  ForkPreGloas,
+  isForkPostDeneb,
+  isForkPostFulu,
+} from "@lodestar/params";
+import {BeaconBlockBody, BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
 import {LodestarError, fromHex, prettyBytes, prettyPrintIndices, toHex, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../../chain/blocks/blockInput/types.js";
@@ -269,7 +276,7 @@ export async function fetchByRoot({
         missing: network.custodyConfig.sampledColumns,
       });
     } else if (isForkPostDeneb(forkName)) {
-      const commitments = (block as SignedBeaconBlock<ForkPostDeneb>).message.body.blobKzgCommitments;
+      const commitments = (block as SignedBeaconBlock<ForkPostDeneb & ForkPreFulu>).message.body.blobKzgCommitments;
       const blobCount = commitments.length;
       blobSidecars = await fetchAndValidateBlobs({
         config,
@@ -369,7 +376,8 @@ export async function fetchAndValidateColumns({
 }: FetchByRootAndValidateColumnsProps): Promise<WarnResult<fulu.DataColumnSidecars, DownloadByRootError>> {
   const {peerId: peerIdStr} = peerMeta;
   const slot = block.message.slot;
-  const blobCount = block.message.body.blobKzgCommitments.length;
+  // TODO GLOAS: Get blob count from somewhere else since blobKzgCommitments is absent from block body
+  const blobCount = (block.message.body as BeaconBlockBody<ForkPostFulu & ForkPreGloas>).blobKzgCommitments.length;
   if (blobCount === 0) {
     return {result: [], warnings: null};
   }

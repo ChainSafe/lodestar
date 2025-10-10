@@ -31,7 +31,7 @@ export async function createExecutionNode<E extends ExecutionClient>(
       getEstimatedForkTime({
         forkEpoch: forkConfig.CAPELLA_FORK_EPOCH,
         genesisTime: options.genesisTime,
-        secondsPerSlot: forkConfig.SECONDS_PER_SLOT,
+        secondsPerSlot: forkConfig.SLOT_DURATION_MS / 1000,
         additionalSlots: 0,
       }),
     cancunTime:
@@ -39,7 +39,7 @@ export async function createExecutionNode<E extends ExecutionClient>(
       getEstimatedForkTime({
         forkEpoch: forkConfig.DENEB_FORK_EPOCH,
         genesisTime: options.genesisTime,
-        secondsPerSlot: forkConfig.SECONDS_PER_SLOT,
+        secondsPerSlot: forkConfig.SLOT_DURATION_MS / 1000,
         additionalSlots: 0,
       }),
     pragueTime:
@@ -47,7 +47,7 @@ export async function createExecutionNode<E extends ExecutionClient>(
       getEstimatedForkTime({
         forkEpoch: forkConfig.ELECTRA_FORK_EPOCH,
         genesisTime: options.genesisTime,
-        secondsPerSlot: forkConfig.SECONDS_PER_SLOT,
+        secondsPerSlot: forkConfig.SLOT_DURATION_MS / 1000,
         additionalSlots: 0,
       }),
     clientOptions: options.clientOptions ?? [],

@@ -38,7 +38,7 @@ describe("AttnetsService", () => {
       config,
     }),
   };
-  // const {SECONDS_PER_SLOT} = config;
+
   let service: AttnetsService;
   let gossipStub: MockedObject<Eth2Gossipsub>;
   let metadata: MetadataController;
@@ -79,7 +79,7 @@ describe("AttnetsService", () => {
   it("should change long lived subnets after EPOCHS_PER_SUBNET_SUBSCRIPTION", () => {
     expect(gossipStub.subscribeTopic).toBeCalledTimes(2);
     expect(gossipStub.subscribeTopic).toBeCalledTimes(SUBNETS_PER_NODE);
-    vi.advanceTimersByTime(config.SECONDS_PER_SLOT * SLOTS_PER_EPOCH * EPOCHS_PER_SUBNET_SUBSCRIPTION * 1000);
+    vi.advanceTimersByTime(config.SLOT_DURATION_MS * SLOTS_PER_EPOCH * EPOCHS_PER_SUBNET_SUBSCRIPTION);
     // SUBNETS_PER_NODE = 2 => 2 more calls
     expect(gossipStub.subscribeTopic).toBeCalledTimes(2 * SUBNETS_PER_NODE);
   });
@@ -95,7 +95,7 @@ describe("AttnetsService", () => {
     const firstSubnet = (gossipStub.subscribeTopic.mock.calls[0][0] as unknown as {subnet: SubnetID}).subnet;
     const secondSubnet = (gossipStub.subscribeTopic.mock.calls[1][0] as unknown as {subnet: SubnetID}).subnet;
     expect(gossipStub.subscribeTopic).toBeCalledTimes(SUBNETS_PER_NODE);
-    vi.advanceTimersByTime(config.SECONDS_PER_SLOT * SLOTS_PER_EPOCH * (ALTAIR_FORK_EPOCH - 2) * 1000);
+    vi.advanceTimersByTime(config.SLOT_DURATION_MS * SLOTS_PER_EPOCH * (ALTAIR_FORK_EPOCH - 2));
     service.subscribeSubnetsNextBoundary({fork: ForkName.altair, epoch: config.ALTAIR_FORK_EPOCH});
     // SUBNETS_PER_NODE = 2 => 2 more calls
     // same subnets were called
@@ -110,7 +110,7 @@ describe("AttnetsService", () => {
     );
     expect(gossipStub.subscribeTopic).toBeCalledTimes(2 * SUBNETS_PER_NODE);
     // 2 epochs after the fork
-    vi.advanceTimersByTime(config.SECONDS_PER_SLOT * 4 * 1000);
+    vi.advanceTimersByTime(config.SLOT_DURATION_MS * 4);
     service.unsubscribeSubnetsPrevBoundary({fork: ForkName.phase0, epoch: GENESIS_EPOCH});
     expect(gossipStub.unsubscribeTopic).toHaveBeenCalledWith(
       expect.objectContaining({boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH}, subnet: firstSubnet})
@@ -157,11 +157,11 @@ describe("AttnetsService", () => {
     service.addCommitteeSubscriptions([subscription]);
     // it does not subscribe immediately
     expect(gossipStub.subscribeTopic).toBeCalledTimes(SUBNETS_PER_NODE);
-    vi.advanceTimersByTime(config.SECONDS_PER_SLOT * (subscription.slot - 2) * 1000);
+    vi.advanceTimersByTime(config.SLOT_DURATION_MS * (subscription.slot - 2));
     // then subscribe 2 slots before dutied slot
     expect(gossipStub.subscribeTopic).toBeCalledTimes(SUBNETS_PER_NODE + 1);
     // then unsubscribe after the expiration
-    vi.advanceTimersByTime(config.SECONDS_PER_SLOT * (subscription.slot + 1) * 1000);
+    vi.advanceTimersByTime(config.SLOT_DURATION_MS * (subscription.slot + 1));
     expect(gossipStub.unsubscribeTopic).toHaveBeenCalledWith(expect.objectContaining({subnet: newSubnet}));
   });
 
@@ -178,7 +178,7 @@ describe("AttnetsService", () => {
     service.addCommitteeSubscriptions([subscription]);
     expect(gossipStub.subscribeTopic).toBeCalledTimes(SUBNETS_PER_NODE);
     // then should not subscribe after the expiration
-    vi.advanceTimersByTime(config.SECONDS_PER_SLOT * (subscription.slot + 1) * 1000);
+    vi.advanceTimersByTime(config.SLOT_DURATION_MS * (subscription.slot + 1));
     expect(gossipStub.unsubscribeTopic).not.toHaveBeenCalled();
   });
 });

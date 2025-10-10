@@ -7,7 +7,7 @@ import {
   collectNodeJSMetrics,
   getHttpMetricsServer,
 } from "@lodestar/beacon-node";
-import {LevelDbController} from "@lodestar/db";
+import {LevelDbController} from "@lodestar/db/controller/level";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {
   ProcessShutdownCallback,
