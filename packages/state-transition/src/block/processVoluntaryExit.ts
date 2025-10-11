@@ -11,8 +11,8 @@ export enum VoluntaryExitValidity {
   alreadyExited = "already_exited",
   earlyEpoch = "early_epoch",
   shortTimeActive = "short_time_active",
-  invalidSignature = "invalid_signature",
   pendingWithdrawals = "pending_withdrawals",
+  invalidSignature = "invalid_signature",
 }
 
 /**
@@ -26,8 +26,9 @@ export function processVoluntaryExit(
   signedVoluntaryExit: phase0.SignedVoluntaryExit,
   verifySignature = true
 ): void {
-  if (!isValidVoluntaryExit(fork, state, signedVoluntaryExit, verifySignature)) {
-    throw Error(`Invalid voluntary exit at forkSeq=${fork}`);
+  const validity = getVoluntaryExitValidity(fork, state, signedVoluntaryExit, verifySignature);
+  if (validity !== VoluntaryExitValidity.valid) {
+    throw Error(`Invalid voluntary exit at forkSeq=${fork} reason=${validity}`);
   }
 
   const validator = state.validators.get(signedVoluntaryExit.message.validatorIndex);
@@ -45,25 +46,27 @@ export function getVoluntaryExitValidity(
   const validator = state.validators.get(voluntaryExit.validatorIndex);
   const currentEpoch = epochCtx.epoch;
 
-  // Check each condition separately and return specific error
   // verify the validator is active
   if (!isActiveValidator(validator, currentEpoch)) {
     return VoluntaryExitValidity.inactive;
   }
+
   // verify exit has not been initiated
   if (validator.exitEpoch !== FAR_FUTURE_EPOCH) {
     return VoluntaryExitValidity.alreadyExited;
   }
-  // exits must specify an epoch when they become valid; they are not valid before then
 
+  // exits must specify an epoch when they become valid; they are not valid before then
   if (currentEpoch < voluntaryExit.epoch) {
     return VoluntaryExitValidity.earlyEpoch;
   }
+
   // verify the validator had been active long enough
   if (currentEpoch < validator.activationEpoch + config.SHARD_COMMITTEE_PERIOD) {
     return VoluntaryExitValidity.shortTimeActive;
   }
 
+  // only exit validator if it has no pending withdrawals in the queue
   if (
     fork >= ForkSeq.electra &&
     getPendingBalanceToWithdraw(state as CachedBeaconStateElectra, voluntaryExit.validatorIndex) !== 0

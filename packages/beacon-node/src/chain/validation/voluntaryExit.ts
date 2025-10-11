@@ -4,7 +4,12 @@ import {
   getVoluntaryExitValidity,
 } from "@lodestar/state-transition";
 import {phase0} from "@lodestar/types";
-import {GossipAction, VoluntaryExitError, VoluntaryExitErrorCode, mapValidityToErrorCode} from "../errors/index.js";
+import {
+  GossipAction,
+  VoluntaryExitError,
+  VoluntaryExitErrorCode,
+  voluntaryExitValidityToErrorCode,
+} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
 import {RegenCaller} from "../regen/index.js";
 
@@ -48,10 +53,9 @@ async function validateVoluntaryExit(
   // [REJECT] All of the conditions within process_voluntary_exit pass validation.
   // verifySignature = false, verified in batch below
   const validity = getVoluntaryExitValidity(chain.config.getForkSeq(state.slot), state, voluntaryExit, false);
-
   if (validity !== VoluntaryExitValidity.valid) {
     throw new VoluntaryExitError(GossipAction.REJECT, {
-      code: mapValidityToErrorCode(validity),
+      code: voluntaryExitValidityToErrorCode(validity),
     });
   }
 
