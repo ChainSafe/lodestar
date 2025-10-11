@@ -12,12 +12,12 @@ export enum VoluntaryExitErrorCode {
 }
 export type VoluntaryExitErrorType =
   | {code: VoluntaryExitErrorCode.ALREADY_EXISTS}
-  | {code: VoluntaryExitErrorCode.INVALID_SIGNATURE}
   | {code: VoluntaryExitErrorCode.INACTIVE}
   | {code: VoluntaryExitErrorCode.ALREADY_EXITED}
   | {code: VoluntaryExitErrorCode.EARLY_EPOCH}
   | {code: VoluntaryExitErrorCode.SHORT_TIME_ACTIVE}
-  | {code: VoluntaryExitErrorCode.PENDING_WITHDRAWALS};
+  | {code: VoluntaryExitErrorCode.PENDING_WITHDRAWALS}
+  | {code: VoluntaryExitErrorCode.INVALID_SIGNATURE};
 
 export class VoluntaryExitError extends GossipActionError<VoluntaryExitErrorType> {}
 
@@ -33,9 +33,9 @@ export function voluntaryExitValidityToErrorCode(
       return VoluntaryExitErrorCode.EARLY_EPOCH;
     case VoluntaryExitValidity.shortTimeActive:
       return VoluntaryExitErrorCode.SHORT_TIME_ACTIVE;
-    case VoluntaryExitValidity.invalidSignature:
-      return VoluntaryExitErrorCode.INVALID_SIGNATURE;
     case VoluntaryExitValidity.pendingWithdrawals:
       return VoluntaryExitErrorCode.PENDING_WITHDRAWALS;
+    case VoluntaryExitValidity.invalidSignature:
+      return VoluntaryExitErrorCode.INVALID_SIGNATURE;
   }
 }
