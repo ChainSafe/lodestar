@@ -1,4 +1,4 @@
-import {ForkName, ForkPostBellatrix, ForkSeq} from "@lodestar/params";
+import {ForkName, ForkPostBellatrix, ForkPreGloas, ForkSeq} from "@lodestar/params";
 import {
   BeaconBlock,
   BeaconBlockBody,
@@ -98,8 +98,10 @@ export function isExecutionCachedStateType(state: CachedBeaconStateAllForks): st
 }
 
 /** Type guard for ExecutionBlockBody */
-export function isExecutionBlockBodyType(blockBody: BeaconBlockBody): blockBody is BeaconBlockBody<ForkPostBellatrix> {
-  return (blockBody as BeaconBlockBody<ForkPostBellatrix>).executionPayload !== undefined;
+export function isExecutionBlockBodyType(
+  blockBody: BeaconBlockBody
+): blockBody is BeaconBlockBody<ForkPostBellatrix & ForkPreGloas> {
+  return (blockBody as BeaconBlockBody<ForkPostBellatrix & ForkPreGloas>).executionPayload !== undefined;
 }
 
 export function getFullOrBlindedPayload(block: BeaconBlock): ExecutionPayload | ExecutionPayloadHeader {

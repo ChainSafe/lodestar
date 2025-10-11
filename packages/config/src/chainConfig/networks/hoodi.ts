@@ -38,6 +38,9 @@ export const hoodiChainConfig: ChainConfig = {
   // Fulu
   FULU_FORK_VERSION: b("0x70000910"),
   FULU_FORK_EPOCH: 50688,
+  // Gloas
+  GLOAS_FORK_VERSION: b("0x80000910"),
+  GLOAS_FORK_EPOCH: Infinity,
 
   // Time parameters
   // ---------------------------------------------------------------

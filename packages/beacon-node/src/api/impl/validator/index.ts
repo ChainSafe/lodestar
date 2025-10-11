@@ -5,6 +5,7 @@ import {ExecutionStatus} from "@lodestar/fork-choice";
 import {
   ForkName,
   ForkPostBellatrix,
+  ForkPreGloas,
   ForkSeq,
   GENESIS_SLOT,
   SLOTS_PER_EPOCH,
@@ -83,7 +84,7 @@ import {getDefaultGraffiti, toGraffitiBytes} from "../../../util/graffiti.js";
 import {getLodestarClientVersion} from "../../../util/metadata.js";
 import {ApiOptions} from "../../options.js";
 import {getStateResponseWithRegen} from "../beacon/state/utils.js";
-import {ApiError, NodeIsSyncing, OnlySupportedByDVT} from "../errors.js";
+import {ApiError, FailureList, IndexedError, NodeIsSyncing, OnlySupportedByDVT} from "../errors.js";
 import {ApiModules} from "../types.js";
 import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices, selectBlockProductionSource} from "./utils.js";
 
@@ -410,11 +411,9 @@ export function getValidatorApi(
     {
       commonBlockBodyPromise,
       parentBlockRoot,
-      parentSlot,
     }: Omit<routes.validator.ExtraProduceBlockOpts, "builderSelection"> & {
       commonBlockBodyPromise: Promise<CommonBlockBody>;
       parentBlockRoot: Root;
-      parentSlot: Slot;
     }
   ): Promise<ProduceBlindedBlockRes> {
     const version = config.getForkName(slot);
@@ -446,7 +445,6 @@ export function getValidatorApi(
       const {block, executionPayloadValue, consensusBlockValue} = await chain.produceBlindedBlock({
         slot,
         parentBlockRoot,
-        parentSlot,
         randaoReveal,
         graffiti,
         commonBlockBodyPromise,
@@ -482,11 +480,9 @@ export function getValidatorApi(
       strictFeeRecipientCheck,
       commonBlockBodyPromise,
       parentBlockRoot,
-      parentSlot,
     }: Omit<routes.validator.ExtraProduceBlockOpts, "builderSelection"> & {
       commonBlockBodyPromise: Promise<CommonBlockBody>;
       parentBlockRoot: Root;
-      parentSlot: Slot;
     }
   ): Promise<ProduceBlockContentsRes & {shouldOverrideBuilder?: boolean}> {
     const source = ProducedBlockSource.engine;
@@ -498,7 +494,6 @@ export function getValidatorApi(
       const {block, executionPayloadValue, consensusBlockValue, shouldOverrideBuilder} = await chain.produceBlock({
         slot,
         parentBlockRoot,
-        parentSlot,
         randaoReveal,
         graffiti,
         feeRecipient,
@@ -641,7 +636,6 @@ export function getValidatorApi(
           strictFeeRecipientCheck: false,
           commonBlockBodyPromise,
           parentBlockRoot,
-          parentSlot,
         })
       : Promise.reject(new Error("Builder disabled"));
 
@@ -651,7 +645,6 @@ export function getValidatorApi(
           strictFeeRecipientCheck,
           commonBlockBodyPromise,
           parentBlockRoot,
-          parentSlot,
         }).then((engineBlock) => {
           // Once the engine returns a block, in the event of either:
           // - suspected builder censorship
@@ -694,7 +687,6 @@ export function getValidatorApi(
         .produceCommonBlockBody({
           slot,
           parentBlockRoot,
-          parentSlot,
           randaoReveal,
           graffiti: graffitiBytes,
         })
@@ -887,13 +879,14 @@ export function getValidatorApi(
         opts
       );
 
-      if (opts.blindedLocal === true && ForkSeq[meta.version] >= ForkSeq.bellatrix) {
+      const fork = ForkSeq[meta.version];
+      if (opts.blindedLocal === true && fork >= ForkSeq.bellatrix && fork < ForkSeq.gloas) {
         if (meta.executionPayloadBlinded) {
           return {data, meta};
         }
 
         const {block} = data as BlockContents;
-        const blindedBlock = beaconBlockToBlinded(config, block as BeaconBlock<ForkPostBellatrix>);
+        const blindedBlock = beaconBlockToBlinded(config, block as BeaconBlock<ForkPostBellatrix & ForkPreGloas>);
         return {
           data: blindedBlock,
           meta: {...meta, executionPayloadBlinded: true},
@@ -1293,7 +1286,7 @@ export function getValidatorApi(
       notWhileSyncing();
 
       const seenTimestampSec = Date.now() / 1000;
-      const errors: Error[] = [];
+      const failures: FailureList = [];
       const fork = chain.config.getForkName(chain.clock.currentSlot);
 
       await Promise.all(
@@ -1329,8 +1322,8 @@ export function getValidatorApi(
               return; // Ok to submit the same aggregate twice
             }
 
-            errors.push(e as Error);
-            logger.error(`Error on publishAggregateAndProofs [${i}]`, logCtx, e as Error);
+            failures.push({index: i, message: (e as Error).message});
+            logger.verbose(`Error on publishAggregateAndProofs [${i}]`, logCtx, e as Error);
             if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
               chain.persistInvalidSszValue(ssz.phase0.SignedAggregateAndProof, signedAggregateAndProof, "api_reject");
             }
@@ -1338,12 +1331,8 @@ export function getValidatorApi(
         })
       );
 
-      if (errors.length > 1) {
-        throw Error("Multiple errors on publishAggregateAndProofs\n" + errors.map((e) => e.message).join("\n"));
-      }
-
-      if (errors.length === 1) {
-        throw errors[0];
+      if (failures.length > 0) {
+        throw new IndexedError("Error processing aggregate and proofs", failures);
       }
     },
 
@@ -1357,7 +1346,7 @@ export function getValidatorApi(
     async publishContributionAndProofs({contributionAndProofs}) {
       notWhileSyncing();
 
-      const errors: Error[] = [];
+      const failures: FailureList = [];
 
       await Promise.all(
         contributionAndProofs.map(async (contributionAndProof, i) => {
@@ -1389,8 +1378,8 @@ export function getValidatorApi(
               return; // Ok to submit the same aggregate twice
             }
 
-            errors.push(e as Error);
-            logger.error(`Error on publishContributionAndProofs [${i}]`, logCtx, e as Error);
+            failures.push({index: i, message: (e as Error).message});
+            logger.verbose(`Error on publishContributionAndProofs [${i}]`, logCtx, e as Error);
             if (e instanceof SyncCommitteeError && e.action === GossipAction.REJECT) {
               chain.persistInvalidSszValue(ssz.altair.SignedContributionAndProof, contributionAndProof, "api_reject");
             }
@@ -1398,12 +1387,8 @@ export function getValidatorApi(
         })
       );
 
-      if (errors.length > 1) {
-        throw Error("Multiple errors on publishContributionAndProofs\n" + errors.map((e) => e.message).join("\n"));
-      }
-
-      if (errors.length === 1) {
-        throw errors[0];
+      if (failures.length > 0) {
+        throw new IndexedError("Error processing contribution and proofs", failures);
       }
     },
 
