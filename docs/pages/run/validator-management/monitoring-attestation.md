@@ -368,7 +368,7 @@ Attestation at slot S, included at slot I.
 
 earliest_possible_inclusion equals E, which is the first slot after S with a block.
 
-Formula: effectiveness = E - S / I - S 
+Formula: effectiveness = (E - S) / (I - S) 
 
 Key point: If next slot had no block because proposer was offline, you're not penalized. Can still hit 100% even with distance greater than 1.
 
