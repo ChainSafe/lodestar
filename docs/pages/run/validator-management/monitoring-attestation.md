@@ -1,216 +1,480 @@
 # Monitoring Attestations: Complete Guide for Lodestar Validators
 
-
 ## Introduction to Attestations
 
-Validators are participants in Ethereum's consensus mechanism which is Proof of Stake, they are expected to create, sign, and broadcast an attestation during each epoch, and this enhances the security of the blockchain, to be a validator you stake 32 ETH as collateral. This ensures they have economic incentive to attest to the correct blocks for the chain.
+Validators participate in Ethereum's Proof of Stake by creating, signing, and broadcasting attestations each epoch. This helps secure the blockchain. You need 32 ETH staked to be a validator - this gives you skin in the game.
 
-Every validator has two primary responsibilities on the beacon chain:
-1. **Proposing blocks** 
-2. **Creating attestations** 
+Validators do two main jobs on the beacon chain:
+1. Proposing blocks 
+2. Creating attestations
 
-The beacon chain happens to be an extension of the main chain which stores and manage the registry of validators. 
+The beacon chain extends the main chain. It stores and manages validator information.
 
-**What are attestations?** Think of attestations as votes on the validity of blocks, and these votes get aggregated into the Beacon Chain to ensure the network reaches consensus on the correct state.
+Attestations are votes on whether blocks are valid. These votes get combined in the Beacon Chain so the network can agree on the correct state.
 
 ### Why Attestations Matter for Your Rewards
 
-Attestations make up the majority of a validator's rewards, and if an attestation is late or missed, it affects the validator's rewards and the security of the entire network is weakened.
+Most of your validator rewards come from attestations. Miss one or submit it late, you lose money. The network also loses some security.
 
-A validator should create, sign, and broadcast an attestation to the associated subnet when either:
-- (a) You receive a valid block from the expected proposer for your assigned slot, or
-- (b) 1/3 of the slot time has passed (4 seconds after slot start), whichever comes first
+You should create, sign, and broadcast an attestation when either:
+- You get a valid block from the expected proposer, or
+- 4 seconds pass since the slot started - whichever comes first
 
 ## Understanding the Attestation Workflow
 
-
-
 ![Attestation Workflow Diagram](../validator-management/images/attestation_stage.png)
 
-Every successful attestation follows these five critical stages:
+Every successful attestation goes through five stages:
 
-### Stage 1: Vote Creation & Signing (0-1 seconds)
-The validator examines the current chain state and creates attestation data containing:
-- **Head block**: The block they believe is the current head
-- **Source checkpoint**: The most recent justified block  
-- **Target checkpoint**: The first block of the current epoch
+### Stage 1: Vote Creation and Signing
 
-The validator signs this data with their private key. Note that, the committee index isn't included in the signed root, and this is because it allows identical votes to look the same across different committees.
+Takes about 0-1 seconds. Your validator checks the current chain state and creates attestation data with:
+- Head block: The block you think is at the head right now
+- Source checkpoint: Most recent justified block  
+- Target checkpoint: First block of the current epoch
 
-### Stage 2: P2P Network Propagation (1-2 seconds)
-Your signed attestation gets broadcast through Ethereum's gossip subnet system. The network has built-in protection - if someone tampers with the committee index, the gossip rules automatically reject it.
+You sign this with your validator's private key. The committee index doesn't go in the signed root, so identical votes from different committees look the same.
 
-### Stage 3: Committee Aggregation (2-3 seconds)  
-This is where the magic of efficiency happens. Aggregators collect and bundle identical votes together. Thanks to **EIP-7549** (post-Electra upgrade), identical votes from different committees can now be aggregated together efficiently.
+### Stage 2: P2P Network Propagation
 
-**Why this matters:** Instead of checking 1,366 individual signatures, the system only needs to verify 22 aggregate signatures - a massive efficiency gain that benefits the entire network.
+Takes about 1-2 seconds. Your signed attestation broadcasts through Ethereum's gossip subnet system. If someone tries messing with the committee index, gossip rules reject it.
 
-### Stage 4: Broadcast to Block Proposers (3-4 seconds)
-The aggregated attestations get sent to block proposers as compact bitfields. This space-efficient format means blocks can carry more attestations per slot, directly boosting chain security and finality.
+### Stage 3: Committee Aggregation
 
-### Stage 5: Block Inclusion (Next slot)
-Finally, block proposers include your aggregated attestations in their beacon blocks. More votes fitting into each block strengthens the network's consensus and finality guarantees.
+Takes about 2-3 seconds. Aggregators collect and bundle identical votes together. After the EIP-7549 upgrade, identical votes from different committees can be aggregated together.
+
+Why this matters: Instead of checking 1,366 individual signatures, the system only verifies 22 aggregate signatures. Way more efficient.
+
+### Stage 4: Broadcast to Block Proposers
+
+Takes about 3-4 seconds. Aggregated attestations go to block proposers as compact bitfields. This format means blocks can fit more attestations per slot, boosting chain security and finality.
+
+### Stage 5: Block Inclusion
+
+Happens in the next slot. Block proposers include your aggregated attestations in their beacon blocks. More votes per block means stronger consensus and better finality.
 
 ## Critical Timing Requirements
 
 ![Beacon Chain Timeline](../validator-management/images/beacon-chain.png)
 
-**The 4-Second Rule:** In every 12-second slot, timing is everything. Here's how the time gets allocated:
+The 4-Second Rule: Each 12-second slot has strict timing:
 
-- **0-4 seconds**: Validator attestation window
-- **4-8 seconds**: Aggregation happens  
-- **8-12 seconds**: Block proposer preparation for next slot
+- First 4 seconds: You attest during this window
+- Next 4 seconds: Aggregation happens  
+- Last 4 seconds: Block proposer prepares for next slot
 
-Missing that first 4-second window dramatically reduces your chances of aggregation, which directly lowers your rewards.
+Miss that first 4-second window and your chances of getting aggregated drop. This hurts your rewards.
 
-### Timeline Breakdown
-```
-Slot start (0s) → Attestation duty (0-4s) → Aggregation (4-8s) → Next slot prep (8-12s)
-```
+Timeline breakdown in seconds:
+- 0 to 4: Attestation duty
+- 4 to 8: Aggregation
+- 8 to 12: Next slot prep
 
-## Each Flags Explained
+## Flags Explained
 
-Ethereum measures validator performance using timing-based participation flags. Each flag determines how much of your total rewards you'll get:
+Ethereum tracks validator performance with timing-based flags. Each flag affects your reward.
 
-| Flag | Timing Requirement | Reward % | Reason |
-|------|-------------------|----------|---------|
-| **Timely Head** | ≤ 1 slot (12s) | 100% | Confirms latest block as head |
-| **Timely Target** | ≤ 32 slots (~6.4 min) | ~75% | Confirms finality checkpoints |
-| **Timely Source** | ≤ 6 slots (~1.2 min) | ~25% | Confirms justified checkpoints |
-| **Missed/Late** | Too late or not included | 0% + penalties | No rewards, weakens security |
+**Timely Head** - Included within 1 slot or 12 seconds. Gets you 100% reward. Confirms latest block as head.
 
-### What The Flags Mean
+**Timely Target** - Included within 32 slots or about 6.4 minutes. Gets you roughly 75% reward. Confirms finality checkpoints.
 
-**Timely Head** - Perfect performance! Your attestation was included in the very next slot, meaning you voted on the correct head block and submitted on time.
+**Timely Source** - Included within 6 slots or about 1.2 minutes. Gets you roughly 25% reward. Confirms justified checkpoints.
 
-**Timely Target** - Good performance, but not perfect. Your attestation was included within the same epoch, confirming important finality checkpoints for Casper FFG.
+**Missed or Late** - Too late or not included. Zero rewards plus penalties. Weakens security.
 
-**Timely Source** - Minimal performance. Your attestation was quite delayed but still made it within 6 slots, at least confirming some older justified checkpoints.
+### What the Flags Mean
 
-**Missed** - You really want to avoid this. This happens if your attestation either arrived too late or wasn't included at all, leading to zero rewards and potential penalties.
+Timely Head means perfect! Your attestation made it into the very next slot. You voted on the correct head block and submitted on time.
+
+Timely Target is good, but not perfect. Your attestation got included within the same epoch, confirming important finality checkpoints for Casper FFG.
+
+Timely Source is minimal performance. Your attestation was delayed but made it within 6 slots, confirming some older justified checkpoints.
+
+Missed means avoid this. Your attestation arrived too late or wasn't included. Zero rewards plus penalties.
 
 ## Lodestar Attestation Status Reference
 
-The Lodestar `attestation_summary` metric provides detailed diagnostic labels to help you understand exactly what happened with each attestation attempt.
+Lodestar's attestation_summary metric gives diagnostic labels showing what happened with each attestation.
 
 ### Maximum Success
-| Label | Meaning | Action Needed |
-|-------|---------|---------------|
-| `timely_head` | Perfect performance - all timing requirements met | None - celebrate this! |
 
-### Partial Success - Target Met
-| Label | Explanation | Possible Reasons |
-|-------|-------------|--------------|
-| `timely_target_next_slot_missed` | Would have been perfect, but next slot was skipped by network | Not your fault - network issue |
-| `timely_target_wrong_head_vote` | Included on time but voted for wrong head block | You set the head block too late |
-| `timely_target_no_aggregate_inclusion` | Never seen in any aggregate, causing delay | Network propagation or aggregator problems |
-| `timely_target_late_unknown` | Inclusion distance > 1, but reason unclear | Check your logs for patterns |
+**timely_head** - Perfect, all timing requirements met. No action needed, keep going!
 
-### Partial Success - Combined Issues  
-| Label | Description |
-|-------|-------------|
-| `timely_target_wrong_head_vote_late_unknown` | Wrong head vote plus unknown delay causes |
-| `timely_target_wrong_head_vote_next_slot_missed` | Wrong head vote plus next slot was missed |
-| `timely_target_wrong_head_vote_no_aggregate_inclusion` | Wrong head vote plus no aggregation seen |
+### Partial Success when Target Met
+
+**timely_target_next_slot_missed** - Would've been perfect, but network skipped next slot. Not your fault.
+
+**timely_target_wrong_head_vote** - Included on time but wrong head block. You set head block too late.
+
+**timely_target_no_aggregate_inclusion** - Never seen in aggregate, caused delay. Network or aggregator problems.
+
+**timely_target_late_unknown** - Inclusion distance greater than 1, reason unclear. Check logs.
+
+### Partial Success with Combined Issues
+
+**timely_target_wrong_head_vote_late_unknown** - Wrong head plus unknown delay.
+
+**timely_target_wrong_head_vote_next_slot_missed** - Wrong head plus next slot missed.
+
+**timely_target_wrong_head_vote_no_aggregate_inclusion** - Wrong head plus no aggregation.
 
 ### Critical Failures
-| Label | Description | Severity |
-|-------|-------------|-----------|
-| `no_submission` | Your validator never submitted an attestation | **CRITICAL** - Check validator client immediately |
-| `no_aggregate_inclusion` | You submitted but it was never seen in aggregates | **HIGH** - Network/aggregation issues |
-| `aggregate_inclusion_but_missed` | Seen in aggregates but not included in any blocks | **MEDIUM** - Block proposer issues |
+
+**no_submission** - Validator never submitted attestation. CRITICAL - Check validator client.
+
+**no_aggregate_inclusion** - Submitted but never seen in aggregates. HIGH priority - Network or aggregation issues.
+
+**aggregate_inclusion_but_missed** - Seen in aggregates but not in blocks. MEDIUM priority - Block proposer issues.
 
 ### Advanced Diagnostic Labels
-| Label | Description | Investigation Focus |
-|-------|-------------|-------------------|
-| `unexpected_timely_target_without_summary` | Attestation appeared on-chain despite not being submitted to your beacon node | Check for multiple beacon node conflicts |
-| `wrong_target_timely_source` | Correct source but wrong target (happens on first slot of epoch) | Check your head block import timing |
-| `unexpected_*` | Bad beacon node states preventing proper diagnosis | Check overall beacon node health |
 
-## Debugging Unsatisfactory Attestation Performance
+**unexpected_timely_target_without_summary** - Attestation on-chain despite not submitted to beacon node. Check for multiple beacon nodes.
 
-If it happens that your attestation performance isn't meeting the requirements, follow this systematic approach to know the issue:
+**wrong_target_timely_source** - Correct source but wrong target, happens on first slot of epoch. Check head block import timing.
 
-### Step 1: Identify The Patterns in Your Performance
-Start by checking your recent attestation summary logs:
+**unexpected with asterisk** - Bad beacon node states preventing diagnosis. Check beacon node health.
 
+## Debugging Sub-Optimal Attestation Performance
+
+Not earning what you expected? Let's find out why and fix it.
+
+## Monitor Your Validator Performance
+
+Use monitoring tools instead of digging through logs manually.
+
+### Check Attestation Success in Logs
+
+Watch for successful submissions:
 ```bash
-grep "attestation_summary" /path/to/lodestar/logs | tail -100
+tail -f /var/log/lodestar/validator.log | grep "Published attestations"
 ```
 
-Look for repeatitive patterns - are you getting the same type of failures always? This helps identify the source of the issue.
-
-### Step 2: Verify Network Connectivity  
-Ensure your node is keeping healthy peer connections:
-
+If you're an aggregator:
 ```bash
-# Check peer connections
-grep "peer.*connect" /path/to/lodestar/logs | tail -20
-
-# Verify subnet subscriptions
-grep "subnet.*subscription" /path/to/lodestar/logs | tail -10
+tail -f /var/log/lodestar/validator.log | grep "Published aggregateAndProofs"
 ```
 
-If there are insufficient peers on your required subnets this will cause attestation publishing failures.
-
-### Step 3: Analyze Block Timing Issues
-Late blocks are a common cause of attestation problems:
-
-```bash
-# Find blocks that arrived late
-grep "block.*late" /path/to/lodestar/logs | tail -20
-
-# Check for execution layer delays
-grep "execution.*delay" /path/to/lodestar/logs | tail -10
+Healthy output looks like:
+```
+INFO [timestamp] Published attestations: slot=123456
+INFO [timestamp] Published aggregateAndProofs: slot=123457
 ```
 
-If blocks usually arrive after the 4-second mark, you'll find it difficult to make timely head votes.
+Seeing these regularly means your validator is submitting attestations.
 
-### Step 4: System Health Check
-Ensure your system isn't the cause any issue also:
+## Use the HTTP API for Network Health
 
+Lodestar has an HTTP API for checking node health. More reliable than searching logs.
+
+### Check Peer Connections
+
+View peer count:
 ```bash
-# Check time synchronization (crucial for validators)
+curl -s http://localhost:9596/eth/v1/node/peer_count | jq
+```
+
+You'll see something like:
+```json
+{
+  "data": {
+    "disconnected": 0,
+    "connecting": 0,
+    "connected": 72,
+    "disconnecting": 0
+  }
+}
+```
+
+What these mean:
+- 50 to 100 peers: Good
+- 20 to 49 peers: Okay, could be better
+- Under 20 peers: Problem, attestations might not propagate
+
+### Verify Sync Status
+
+Check if synced:
+```bash
+curl -s http://localhost:9596/eth/v1/node/syncing | jq
+```
+
+When synced you'll see:
+```json
+{
+  "data": {
+    "is_syncing": false
+  }
+}
+```
+
+If is_syncing shows true, your node is catching up. Wait for sync before worrying about attestations.
+
+### View Connected Peers
+
+Get peer count:
+```bash
+curl -s http://localhost:9596/eth/v1/node/peers | jq '.data | length'
+```
+
+This shows total connected peers.
+
+## Check System Health
+
+Many performance issues come from resource constraints.
+
+### Time Synchronization
+
+Check system clock:
+```bash
 timedatectl status
+```
 
-# Monitor resource usage
-top -p $(pgrep lodestar)
+You want System clock synchronized: yes - if no, attestations will fail.
 
-# Check disk I/O performance  
+Fix it:
+```bash
+sudo timedatectl set-ntp true
+```
+
+### Monitor System Resources
+
+Check CPU and memory:
+```bash
+top -p $(pgrep -d',' -f lodestar)
+```
+
+View memory:
+```bash
+ps aux | grep '[l]odestar'
+```
+
+Check disk:
+```bash
 iostat -x 1 5
 ```
 
-When your system performs poorly, it also affects your ability to process blocks quickly enough for timely attestations.
+Watch for:
+- CPU above 80%
+- Memory climbing
+- High disk wait times
+- Swap usage, check with free -h
 
-### Step 5: Compare with Network Data
-Cross-reference your performance with external data:
-- Check your validator on **beaconcha.in** for inclusion rates
-- Compare your effectiveness percentage with network averages
-- Look for patterns that might indicate ISP or geographical issues
+## Enable Prometheus Metrics
 
-## Better Ways to Improve Perfomance
+Prometheus gives time-series data for spotting trends.
 
-### Having a Maintenance Schedule
-- **Daily**: Watch out for the validator client logs for warnings or errors
-- **Weekly**: Keep clients updated to latest stable versions  
-- **Monthly**: Check hardware performance metrics and optimize as needed
-- **Ongoing**: Verify network connectivity and maintain healthy peer counts
+### Enable Metrics
 
-### Hardware Considerations
-- **CPU**: Ensure sufficient processing power for timely block imports
-- **RAM**: Adequate memory for chain state management
-- **Storage**: Fast SSD storage for rapid data access
-- **Network**: Stable, low-latency internet connection
+Start with metrics enabled:
+```bash
+lodestar beacon --metrics=true --metrics.port=8008
+```
 
-### Network Optimization
-- Configure proper firewall settings for P2P connections
-- Consider multiple execution client connections for redundancy
-- Monitor and maintain diverse peer connections across all subnets
+Check it works:
+```bash
+curl http://localhost:8008/metrics | head -20
+```
 
-## Conclusion
+### Key Metrics to Watch
 
-Effective attestation monitoring is important to get your full validator rewards while contributing to Ethereum's security. With this guide, you'll be able to identify and resolve issues before they significantly affect your rewards.
+**nodejs_heap_space_size_used_bytes** - Shows memory usage. Healthy is 100 to 500 MB. Problem when above 1.5 GB.
 
-Remember that attestations represent the majority of your validator rewards - investing time in optimizing this process pays dividends in both profitability and network contribution. Use the debugging tools and systematic approach outlined in this guide to maintain peak performance.
+**nodejs_eventloop_lag_seconds** - Shows CPU responsiveness. Healthy is under 0.05 seconds. Problem when above 0.1 seconds.
 
-The key to success is consistent monitoring, prompt issue resolution, and staying updated with the latest client improvements and network changes.
+**beaconchain_peers** - Shows connected peers. Healthy is 50 to 100. Problem when under 20.
+
+**beaconchain_current_slot** - Shows chain position. Should match network. Problem when lagging.
+
+### Understanding Metrics
+
+Memory metric: Above 1.5 GB, garbage collection kicks in and pauses your node. If this happens during attestation, you miss it.
+
+Event Loop Lag: Shows if CPU keeps up. High lag means tasks queue up, including attestation duties.
+
+Peer Count: Low peers mean attestations might not reach aggregators. Sudden drops often match network issues.
+
+## Set Up Grafana
+
+Quick setup steps:
+
+1. Get Prometheus from prometheus.io
+2. Configure to scrape localhost:8008
+3. Get Grafana from grafana.com
+4. Add Prometheus as data source
+5. Import Lodestar's dashboard
+
+### Configure Prometheus
+
+Create prometheus.yml:
+```yaml
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'lodestar_beacon'
+    static_configs:
+      - targets: ['localhost:8008']
+```
+
+Start it:
+```bash
+./prometheus --config.file=prometheus.yml
+```
+
+### Configure Grafana
+
+Steps:
+1. Open at http://localhost:3000
+2. Go to Configuration then Data Sources
+3. Add Prometheus with URL http://localhost:9090
+4. Import or create dashboards
+
+Look for: Correlate events. Peer count drops at 3:17 AM, attestations fail at 3:17:30 - you found it.
+
+## Use beaconcha.in
+
+Your node shows what it thinks. beaconcha.in shows what happened on-chain.
+
+### Enable Monitoring
+
+```bash
+lodestar beacon \
+  --monitoring.endpoint="https://beaconcha.in/api/v1/client/metrics?apikey=YOUR_KEY&machine=my-validator" \
+  --monitoring.interval=60000
+```
+
+Get API key from beaconcha.in settings.
+
+Why do this:
+- Mobile alerts for offline validators
+- Historical data
+- Compare with network averages
+- Track earnings
+
+### Check Dashboard
+
+Go to beaconcha.in, search your validator index. You'll see:
+- Attestation effectiveness percentage
+- Inclusion distance trends
+- Missed attestations
+- Income
+
+Earning less than network average? Dig deeper. Everyone down? Network-wide issues.
+
+## Effectiveness vs Inclusion Distance
+
+Effectiveness accounts for network conditions, not just speed.
+
+Attestation at slot S, included at slot I.
+
+earliest_possible_inclusion equals E, which is the first slot after S with a block.
+
+Formula: effectiveness = E - S / I - S 
+
+Key point: If next slot had no block because proposer was offline, you're not penalized. Can still hit 100% even with distance greater than 1.
+
+Examples:
+- Slot 5, included slot 6: 100% perfect
+- Slot 5, no block slot 6, included slot 7: 100% not your fault
+- Slot 5, block at slot 6, included slot 7: 50% you were slow
+
+Check beaconcha.in for intervening slots.
+
+## Common Issues
+
+### Low Peer Count
+
+Seeing: Under 20 peers
+
+Fix:
+- Check firewall, open LibP2P ports
+- Port forwarding if behind NAT
+- Add bootstrap nodes with --network.bootMultiaddrs
+- Increase max peers with --network.maxPeers=100
+
+### High Resource Usage
+
+Seeing: CPU above 80%, memory climbing, high iowait
+
+Quick fix:
+- Restart Lodestar
+- Stop other services
+- Check for known bugs
+
+Long-term:
+- Upgrade hardware, more RAM and SSD
+- Use NVMe instead of SATA
+- Give more CPU cores
+
+### Clock Issues
+
+Seeing: is_syncing true won't clear, slot number off
+
+Fix:
+- Enable NTP with sudo timedatectl set-ntp true
+- Check with timedatectl status
+- Restart Lodestar
+
+### Behind on Sync
+
+Seeing: beaconchain_current_slot way behind network
+
+Fix:
+- Wait for sync
+- Check execution layer synced
+- Verify bandwidth for blocks
+- Check disk I/O
+
+## Debug Logging
+
+For deep investigation, run with debug logs:
+```bash
+lodestar beacon --logLevel=debug 2>&1 | tee /var/log/lodestar/debug.log
+```
+
+Or with systemd:
+```bash
+sudo journalctl -u lodestar.service -f
+```
+
+Note: Debug logs are verbose. Only use when troubleshooting. Set up log rotation so disk doesn't fill.
+
+## Regular Maintenance
+
+Daily tasks:
+- Check beaconcha.in for earnings
+- Verify peer count via API
+- Scan logs for errors
+
+Weekly tasks:
+- Review Grafana trends
+- Update to latest stable
+- Check resource usage
+
+Monthly tasks:
+- Analyze long-term patterns
+- Compare with network average
+- Tweak configuration
+
+## Ask for Help
+
+Tried everything? Reach out.
+
+Lodestar Discord - The validator-support channel has experienced folks.
+
+GitHub Issues - Search or open new issue.
+
+Include:
+- Lodestar version from lodestar --version
+- Hardware specs
+- Network setup like home, VPS, or cloud
+- API health check output
+- Log snippets with sensitive data removed
+- When it started
+
+## Goal: Consistent Performance
+
+Perfect attestations every time is unrealistic. Network has reorgs, proposers miss slots, connectivity varies. Aim for above 98% effectiveness.
+
+Hitting 99% or more means you're doing well. Everyone misses some. Patterns matter - consistent issues at specific times or with specific errors.
+
+Watch metrics, use HTTP API for health checks, fix problems methodically. This maximizes earnings while helping secure Ethereum.
