@@ -132,7 +132,7 @@ Lodestar's attestation_summary metric gives diagnostic labels showing what happe
 
 **wrong_target_timely_source** - Correct source but wrong target, happens on first slot of epoch. Check head block import timing.
 
-**unexpected with asterisk** - Bad beacon node states preventing diagnosis. Check beacon node health.
+**unexpected*** - Bad beacon node states preventing diagnosis. This is a catch-all for any label starting with `unexpected_` where a more specific reason could not be determined. Check beacon node health and logs.
 
 ## Debugging Sub-Optimal Attestation Performance
 
