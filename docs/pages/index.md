@@ -15,7 +15,7 @@ title: Home
 - Run a beacon node on [mainnet or a public testnet](./run/beacon-management/starting-a-node.md).
 - Utilize the whole stack by [starting a local testnet](./contribution/advanced-topics/setting-up-a-testnet.md).
 - View the Lodestar Beacon [CLI commands and options](./run/beacon-management/beacon-cli.md)
-- Prospective contributors can read the [contributing section](./contribution/getting-started.md) to understand how we develop and test on Lodestar.
+- Prospective contributors can read the [contributing section](./contribution) to understand how we develop and test on Lodestar.
 - If you have questions [submit an issue](https://github.com/ChainSafe/lodestar/issues/new/choose) or join us on [Discord](https://discord.gg/yjyvFRP)!
 - Please note our [security policy](./security.md).
 
