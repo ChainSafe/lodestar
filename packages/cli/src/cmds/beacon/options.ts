@@ -57,14 +57,12 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
       "Server url hosting Beacon Node APIs to fetch weak subjectivity state. Fetch latest finalized by default, else set --wssCheckpoint",
     type: "string",
     group: "weak subjectivity",
-    conflicts: ["checkpointState", "unsafeCheckpointState"],
   },
 
   checkpointState: {
     description: "File path or url to finalized checkpoint state to start syncing from",
     type: "string",
     group: "weak subjectivity",
-    conflicts: ["checkpointSyncUrl", "unsafeCheckpointState"],
   },
 
   unsafeCheckpointState: {
@@ -72,7 +70,6 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
     description: "File path or url to unfinalized checkpoint state to start syncing from",
     type: "string",
     group: "weak subjectivity",
-    conflicts: ["checkpointSyncUrl", "checkpointState"],
   },
 
   lastPersistedCheckpointState: {
