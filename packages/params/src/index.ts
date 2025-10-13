@@ -193,14 +193,17 @@ export const PARTICIPATION_FLAG_WEIGHTS = [TIMELY_SOURCE_WEIGHT, TIMELY_TARGET_W
 // phase0 validator
 
 export const TARGET_AGGREGATORS_PER_COMMITTEE = 16;
-export const RANDOM_SUBNETS_PER_VALIDATOR = 1;
-export const EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION = 256;
+
+// phase0 networking
+
+export const NODE_ID_BITS = 256;
+export const MAX_CONCURRENT_REQUESTS = 2;
+
 /** Rationale: https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#why-are-there-attestation_subnet_count-attestation-subnets */
 export const ATTESTATION_SUBNET_COUNT = 64;
-export const SUBNETS_PER_NODE = 2;
-export const NODE_ID_BITS = 256;
-export const ATTESTATION_SUBNET_PREFIX_BITS = Math.log2(ATTESTATION_SUBNET_COUNT);
-export const EPOCHS_PER_SUBNET_SUBSCRIPTION = 256;
+export const ATTESTATION_SUBNET_EXTRA_BITS = 0;
+export const ATTESTATION_SUBNET_PREFIX_BITS =
+  Math.ceil(Math.log2(ATTESTATION_SUBNET_COUNT)) + ATTESTATION_SUBNET_EXTRA_BITS;
 
 // altair validator
 
@@ -284,7 +287,7 @@ export const KZG_COMMITMENT_GINDEX0 = 221184;
 export const KZG_COMMITMENT_SUBTREE_INDEX0 = KZG_COMMITMENT_GINDEX0 - 2 ** KZG_COMMITMENT_INCLUSION_PROOF_DEPTH;
 
 // ssz.deneb.BlobSidecars.elementType.fixedSize
-export const BLOBSIDECAR_FIXED_SIZE = 131928;
+export const BLOB_SIDECAR_FIXED_SIZE = 131928;
 
 // Electra Misc
 export const UNSET_DEPOSIT_REQUESTS_START_INDEX = 2n ** 64n - 1n;

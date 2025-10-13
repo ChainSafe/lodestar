@@ -179,10 +179,13 @@ export function getValidatorApi(
   /**
    * Validator clock may be advanced from beacon's clock. If the validator requests a resource in a
    * future slot, wait some time instead of rejecting the request because it's in the future.
-   * This value is the same to MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC.
+   * This value is the same to MAXIMUM_GOSSIP_CLOCK_DISPARITY.
    * For very fast networks, reduce clock disparity to half a slot.
    */
-  const MAX_API_CLOCK_DISPARITY_SEC = Math.min(0.5, config.SLOT_DURATION_MS / 2000);
+  const MAX_API_CLOCK_DISPARITY_SEC = Math.min(
+    config.MAXIMUM_GOSSIP_CLOCK_DISPARITY / 1000,
+    config.SLOT_DURATION_MS / 2000
+  );
   const MAX_API_CLOCK_DISPARITY_MS = MAX_API_CLOCK_DISPARITY_SEC * 1000;
 
   /** Compute and cache the genesis block root */

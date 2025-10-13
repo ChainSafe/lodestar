@@ -1,6 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {LightClientOptimisticUpdate} from "@lodestar/types";
-import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants/index.js";
 import {assertLightClientServer} from "../../node/utils/lightclient.js";
 import {IClock} from "../../util/clock.js";
 import {GossipAction} from "../errors/index.js";
@@ -64,5 +63,7 @@ export function updateReceivedTooEarly(
   update: Pick<LightClientOptimisticUpdate, "signatureSlot">
 ): boolean {
   const fork = config.getForkName(update.signatureSlot);
-  return clock.msFromSlot(update.signatureSlot) < config.getSyncMessageDueMs(fork) - MAXIMUM_GOSSIP_CLOCK_DISPARITY;
+  return (
+    clock.msFromSlot(update.signatureSlot) < config.getSyncMessageDueMs(fork) - config.MAXIMUM_GOSSIP_CLOCK_DISPARITY
+  );
 }

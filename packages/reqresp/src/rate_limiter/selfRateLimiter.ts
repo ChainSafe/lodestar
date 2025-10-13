@@ -1,9 +1,8 @@
+import {MAX_CONCURRENT_REQUESTS} from "@lodestar/params";
 import {Logger, MapDef} from "@lodestar/utils";
 
 type PeerIdStr = string;
 type ProtocolID = string;
-/** https://github.com/ethereum/consensus-specs/blob/master/specs/phase0/p2p-interface.md#constants */
-const MAX_CONCURRENT_REQUESTS = 2;
 
 /** Sometimes a peer request comes AFTER libp2p disconnect event, check for such peers every 2 minutes */
 export const CHECK_DISCONNECTED_PEERS_INTERVAL_MS = 2 * 60 * 1000;
