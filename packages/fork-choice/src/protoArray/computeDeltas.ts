@@ -28,6 +28,10 @@ export function computeDeltas(
   // avoid creating new variables in the loop to potentially reduce GC pressure
   let oldBalance: number, newBalance: number;
   let currentIndex: number | null, nextIndex: number | null;
+  // sort equivocating indices to avoid Set.has() in the loop
+  const equivocatingArray = Array.from(equivocatingIndices).sort((a, b) => a - b);
+  let equivocatingIndex = 0;
+  let equivocatingValidatorIndex = equivocatingArray[equivocatingIndex];
 
   for (let vIndex = 0; vIndex < votes.length; vIndex++) {
     const vote = votes[vIndex];
@@ -50,7 +54,7 @@ export function computeDeltas(
     // on-boarded fewer validators than the prior fork.
     newBalance = newBalances === oldBalances ? oldBalance : (newBalances[vIndex] ?? 0);
 
-    if (equivocatingIndices.size > 0 && equivocatingIndices.has(vIndex)) {
+    if (vIndex === equivocatingValidatorIndex) {
       // this function could be called multiple times but we only want to process slashing validator for 1 time
       if (currentIndex !== null) {
         if (currentIndex >= numProtoNodes) {
@@ -62,6 +66,8 @@ export function computeDeltas(
         deltas[currentIndex] -= oldBalance;
       }
       vote.currentIndex = null;
+      equivocatingIndex++;
+      equivocatingValidatorIndex = equivocatingArray[equivocatingIndex];
       continue;
     }
 
