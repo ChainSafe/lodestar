@@ -1,5 +1,6 @@
 import {
   DB,
+  Iterator,
   dbBatchDelete,
   dbBatchPut,
   dbClose,
@@ -12,8 +13,10 @@ import {
   iteratorDestroy,
   iteratorKey,
   iteratorNext,
+  iteratorPrev,
   iteratorSeek,
   iteratorSeekToFirst,
+  iteratorSeekToLast,
   iteratorValid,
   iteratorValue,
 } from "@lodestar/bun";
@@ -109,14 +112,16 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
   }
 
   keysStream(opts: FilterOptions<Uint8Array> = {}): AsyncIterable<Uint8Array> {
+    const {limit, next, seekToFirst, gt, gte, lt, lte} = consumeFilterOptions(opts);
     const iterator = dbIterator(this.db);
-    if (opts.gt) {
-      iteratorSeek(iterator, opts.gt);
-      iteratorNext(iterator);
-    } else if (opts.gte) {
-      iteratorSeek(iterator, opts.gte);
+
+    if (gt) {
+      iteratorSeek(iterator, gt);
+      next(iterator);
+    } else if (gte) {
+      iteratorSeek(iterator, gte);
     } else {
-      iteratorSeekToFirst(iterator);
+      seekToFirst(iterator);
     }
     const bucket = opts.bucketId ?? BUCKET_ID_UNKNOWN;
     const metrics = this.metrics;
@@ -124,13 +129,13 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
     let itemsRead = 0;
     return (async function* () {
       try {
-        while (iteratorValid(iterator)) {
+        while (iteratorValid(iterator) && itemsRead < limit) {
           const key = iteratorKey(iterator);
-          if (opts.lt && Buffer.compare(key, opts.lt) >= 0) break;
-          if (opts.lte && Buffer.compare(key, opts.lte) > 0) break;
+          if (lt?.(key)) break;
+          if (lte?.(key)) break;
           itemsRead++;
           yield key;
-          iteratorNext(iterator);
+          next(iterator);
         }
       } finally {
         metrics?.dbReadItems.inc({bucket}, itemsRead);
@@ -140,24 +145,26 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
   }
 
   async keys(opts: FilterOptions<Uint8Array> = {}): Promise<Uint8Array[]> {
+    const {limit, next, seekToFirst, gt, gte, lt, lte} = consumeFilterOptions(opts);
     const iterator = dbIterator(this.db);
-    if (opts.gt) {
-      iteratorSeek(iterator, opts.gt);
-      iteratorNext(iterator);
-    } else if (opts.gte) {
-      iteratorSeek(iterator, opts.gte);
+
+    if (gt) {
+      iteratorSeek(iterator, gt);
+      next(iterator);
+    } else if (gte) {
+      iteratorSeek(iterator, gte);
     } else {
-      iteratorSeekToFirst(iterator);
+      seekToFirst(iterator);
     }
     const keys = [];
     this.metrics?.dbReadReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
     try {
-      while (iteratorValid(iterator)) {
+      while (iteratorValid(iterator) && keys.length < limit) {
         const key = iteratorKey(iterator);
-        if (opts.lt && Buffer.compare(key, opts.lt) >= 0) break;
-        if (opts.lte && Buffer.compare(key, opts.lte) > 0) break;
+        if (lt?.(key)) break;
+        if (lte?.(key)) break;
         keys.push(key);
-        iteratorNext(iterator);
+        next(iterator);
       }
       return keys;
     } finally {
@@ -167,14 +174,16 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
   }
 
   valuesStream(opts: FilterOptions<Uint8Array> = {}): AsyncIterable<Uint8Array> {
+    const {limit, next, seekToFirst, gt, gte, lt, lte} = consumeFilterOptions(opts);
     const iterator = dbIterator(this.db);
-    if (opts.gt) {
-      iteratorSeek(iterator, opts.gt);
-      iteratorNext(iterator);
-    } else if (opts.gte) {
-      iteratorSeek(iterator, opts.gte);
+
+    if (gt) {
+      iteratorSeek(iterator, gt);
+      next(iterator);
+    } else if (gte) {
+      iteratorSeek(iterator, gte);
     } else {
-      iteratorSeekToFirst(iterator);
+      seekToFirst(iterator);
     }
     const bucket = opts.bucketId ?? BUCKET_ID_UNKNOWN;
     const metrics = this.metrics;
@@ -182,14 +191,14 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
     let itemsRead = 0;
     return (async function* () {
       try {
-        while (iteratorValid(iterator)) {
+        while (iteratorValid(iterator) && itemsRead < limit) {
           const key = iteratorKey(iterator);
-          if (opts.lt && Buffer.compare(key, opts.lt) >= 0) break;
-          if (opts.lte && Buffer.compare(key, opts.lte) > 0) break;
+          if (lt?.(key)) break;
+          if (lte?.(key)) break;
           itemsRead++;
           const value = iteratorValue(iterator);
           yield value;
-          iteratorNext(iterator);
+          next(iterator);
         }
       } finally {
         metrics?.dbReadItems.inc({bucket}, itemsRead);
@@ -199,25 +208,27 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
   }
 
   async values(opts: FilterOptions<Uint8Array> = {}): Promise<Uint8Array[]> {
+    const {limit, next, seekToFirst, gt, gte, lt, lte} = consumeFilterOptions(opts);
     const iterator = dbIterator(this.db);
-    if (opts.gt) {
-      iteratorSeek(iterator, opts.gt);
-      iteratorNext(iterator);
-    } else if (opts.gte) {
-      iteratorSeek(iterator, opts.gte);
+
+    if (gt) {
+      iteratorSeek(iterator, gt);
+      next(iterator);
+    } else if (gte) {
+      iteratorSeek(iterator, gte);
     } else {
-      iteratorSeekToFirst(iterator);
+      seekToFirst(iterator);
     }
     const values = [];
     this.metrics?.dbReadReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
     try {
-      while (iteratorValid(iterator)) {
+      while (iteratorValid(iterator) && values.length < limit) {
         const key = iteratorKey(iterator);
-        if (opts.lt && Buffer.compare(key, opts.lt) >= 0) break;
-        if (opts.lte && Buffer.compare(key, opts.lte) > 0) break;
+        if (lt?.(key)) break;
+        if (lte?.(key)) break;
         const value = iteratorValue(iterator);
         values.push(value);
-        iteratorNext(iterator);
+        next(iterator);
       }
       return values;
     } finally {
@@ -227,14 +238,16 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
   }
 
   entriesStream(opts: FilterOptions<Uint8Array> = {}): AsyncIterable<KeyValue<Uint8Array, Uint8Array>> {
+    const {limit, next, seekToFirst, gt, gte, lt, lte} = consumeFilterOptions(opts);
     const iterator = dbIterator(this.db);
-    if (opts.gt) {
-      iteratorSeek(iterator, opts.gt);
-      iteratorNext(iterator);
-    } else if (opts.gte) {
-      iteratorSeek(iterator, opts.gte);
+
+    if (gt) {
+      iteratorSeek(iterator, gt);
+      next(iterator);
+    } else if (gte) {
+      iteratorSeek(iterator, gte);
     } else {
-      iteratorSeekToFirst(iterator);
+      seekToFirst(iterator);
     }
     const bucket = opts.bucketId ?? BUCKET_ID_UNKNOWN;
     const metrics = this.metrics;
@@ -242,14 +255,14 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
     let itemsRead = 0;
     return (async function* () {
       try {
-        while (iteratorValid(iterator)) {
+        while (iteratorValid(iterator) && itemsRead < limit) {
           const key = iteratorKey(iterator);
-          if (opts.lt && Buffer.compare(key, opts.lt) >= 0) break;
-          if (opts.lte && Buffer.compare(key, opts.lte) > 0) break;
+          if (lt?.(key)) break;
+          if (lte?.(key)) break;
           itemsRead++;
           const value = iteratorValue(iterator);
           yield {key, value};
-          iteratorNext(iterator);
+          next(iterator);
         }
       } finally {
         metrics?.dbReadItems.inc({bucket}, itemsRead);
@@ -259,25 +272,27 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
   }
 
   async entries(opts: FilterOptions<Uint8Array> = {}): Promise<KeyValue<Uint8Array, Uint8Array>[]> {
+    const {limit, next, seekToFirst, gt, gte, lt, lte} = consumeFilterOptions(opts);
     const iterator = dbIterator(this.db);
-    if (opts.gt) {
-      iteratorSeek(iterator, opts.gt);
-      iteratorNext(iterator);
-    } else if (opts.gte) {
-      iteratorSeek(iterator, opts.gte);
+
+    if (gt) {
+      iteratorSeek(iterator, gt);
+      next(iterator);
+    } else if (gte) {
+      iteratorSeek(iterator, gte);
     } else {
-      iteratorSeekToFirst(iterator);
+      seekToFirst(iterator);
     }
     const entries = [];
     this.metrics?.dbReadReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
     try {
-      while (iteratorValid(iterator)) {
+      while (iteratorValid(iterator) && entries.length < limit) {
         const key = iteratorKey(iterator);
-        if (opts.lt && Buffer.compare(key, opts.lt) >= 0) break;
-        if (opts.lte && Buffer.compare(key, opts.lte) > 0) break;
+        if (lt?.(key)) break;
+        if (lte?.(key)) break;
         const value = iteratorValue(iterator);
         entries.push({key, value});
-        iteratorNext(iterator);
+        next(iterator);
       }
       return entries;
     } finally {
@@ -285,4 +300,31 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
       iteratorDestroy(iterator);
     }
   }
+}
+
+/** Return filter options and operations which consider `reverse` and `limit` */
+function consumeFilterOptions(opts: FilterOptions<Uint8Array>) {
+  const limit = opts.limit ?? Number.POSITIVE_INFINITY;
+  let next: (it: Iterator) => void;
+  let seekToFirst: (it: Iterator) => void;
+  let gt: Uint8Array | undefined;
+  let gte: Uint8Array | undefined;
+  let lt: ((k: Uint8Array) => boolean) | undefined;
+  let lte: ((k: Uint8Array) => boolean) | undefined;
+  if (opts.reverse) {
+    next = iteratorNext;
+    seekToFirst = iteratorSeekToFirst;
+    gt = opts.lt;
+    gte = opts.lte;
+    lt = opts.gt ? (k: Uint8Array) => Buffer.compare(k, opts.gt as Uint8Array) <= 0 : undefined;
+    lte = opts.gte ? (k: Uint8Array) => Buffer.compare(k, opts.gte as Uint8Array) < 0 : undefined;
+  } else {
+    next = iteratorPrev;
+    seekToFirst = iteratorSeekToLast;
+    gt = opts.gt;
+    gte = opts.gte;
+    lt = opts.lt ? (k: Uint8Array) => Buffer.compare(k, opts.lt as Uint8Array) >= 0 : undefined;
+    lte = opts.lte ? (k: Uint8Array) => Buffer.compare(k, opts.lte as Uint8Array) > 0 : undefined;
+  }
+  return {limit, next, seekToFirst, gt, gte, lt, lte};
 }
