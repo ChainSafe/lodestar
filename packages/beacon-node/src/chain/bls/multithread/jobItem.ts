@@ -1,4 +1,4 @@
-import {PublicKey, asyncAggregateWithRandomness} from "@chainsafe/blst";
+import {PublicKey, aggregateWithRandomness, asyncAggregateWithRandomness} from "@chainsafe/blst";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {Metrics} from "../../../metrics/metrics.js";
 import {LinkedList} from "../../../util/array.js";
@@ -62,7 +62,7 @@ export async function jobItemWorkReq(job: JobQueueItem, metrics: Metrics | null)
       };
     case JobQueueItemType.sameMessage: {
       const timer = metrics?.blsThreadPool.aggregateWithRandomnessAsyncDuration.startTimer();
-      const {pk, sig} = await asyncAggregateWithRandomness(
+      const {pk, sig} = aggregateWithRandomness(
         job.sets.map((set) => ({pk: set.publicKey, sig: set.signature}))
       );
       timer?.();
