@@ -148,9 +148,15 @@ export async function initBeaconState(
       }
     } else {
       // All cases when we want to directly use lastDbState as the anchor state:
-      //  - if no checkpoint sync args provided, or
+      //  - if no checkpoint state args provided, or
       //  - the lastDbState is within weak subjectivity period:
-      if ((!args.checkpointState && !args.unsafeCheckpointState && !args.checkpointSyncUrl) || wssCheck) {
+      if (
+        (!args.checkpointState &&
+          !args.unsafeCheckpointState &&
+          !args.lastPersistedCheckpointState &&
+          !args.checkpointSyncUrl) ||
+        wssCheck
+      ) {
         if (stateBytes === null) {
           // this never happens
           throw Error(`There is no stateBytes for the lastDbState at slot ${lastDbState.slot}`);
