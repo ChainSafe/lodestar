@@ -205,6 +205,35 @@ export async function initBeaconState(
     return {...stateAndCp, isFinalized};
   }
 
+  if (args.checkpointSyncUrl) {
+    isFinalized = true;
+    logger.verbose("Found checkpoint sync url");
+    // the real url is logged in fetchWSStateFromBeaconApi to hide username/password
+    const stateAndCp = await fetchWSStateFromBeaconApi(
+      lastDbStateWithBytes,
+      lastDbValidatorsBytes,
+      {
+        checkpointSyncUrl: args.checkpointSyncUrl,
+        wssCheckpoint: args.wssCheckpoint,
+        ignoreWeakSubjectivityCheck: args.ignoreWeakSubjectivityCheck,
+      },
+      chainForkConfig,
+      db,
+      logger
+    );
+
+    const {epoch, root} = computeAnchorCheckpoint(chainForkConfig, stateAndCp.anchorState).checkpoint;
+
+    logger.info("Loaded checkpoint state", {
+      stateSlot: stateAndCp.anchorState.slot,
+      root: toRootHex(root),
+      epoch,
+      isFinalized,
+    });
+
+    return {...stateAndCp, isFinalized};
+  }
+
   if (args.unsafeCheckpointState || args.lastPersistedCheckpointState) {
     let stateBytes: Uint8Array | null = null;
     isFinalized = false;
@@ -259,35 +288,6 @@ export async function initBeaconState(
 
       return {...stateAndCp, isFinalized};
     }
-  }
-
-  if (args.checkpointSyncUrl) {
-    isFinalized = true;
-    logger.verbose("Found checkpoint sync url");
-    // the real url is logged in fetchWSStateFromBeaconApi to hide username/password
-    const stateAndCp = await fetchWSStateFromBeaconApi(
-      lastDbStateWithBytes,
-      lastDbValidatorsBytes,
-      {
-        checkpointSyncUrl: args.checkpointSyncUrl,
-        wssCheckpoint: args.wssCheckpoint,
-        ignoreWeakSubjectivityCheck: args.ignoreWeakSubjectivityCheck,
-      },
-      chainForkConfig,
-      db,
-      logger
-    );
-
-    const {epoch, root} = computeAnchorCheckpoint(chainForkConfig, stateAndCp.anchorState).checkpoint;
-
-    logger.info("Loaded checkpoint state", {
-      stateSlot: stateAndCp.anchorState.slot,
-      root: toRootHex(root),
-      epoch,
-      isFinalized,
-    });
-
-    return {...stateAndCp, isFinalized};
   }
 
   const genesisStateFile = args.genesisStateFile || getGenesisFileUrl(args.network || defaultNetwork);
