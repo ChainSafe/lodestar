@@ -312,15 +312,15 @@ function consumeFilterOptions(opts: FilterOptions<Uint8Array>) {
   let lt: ((k: Uint8Array) => boolean) | undefined;
   let lte: ((k: Uint8Array) => boolean) | undefined;
   if (opts.reverse) {
-    next = iteratorNext;
-    seekToFirst = iteratorSeekToFirst;
+    next = iteratorPrev;
+    seekToFirst = iteratorSeekToLast;
     gt = opts.lt;
     gte = opts.lte;
     lt = opts.gt ? (k: Uint8Array) => Buffer.compare(k, opts.gt as Uint8Array) <= 0 : undefined;
     lte = opts.gte ? (k: Uint8Array) => Buffer.compare(k, opts.gte as Uint8Array) < 0 : undefined;
   } else {
-    next = iteratorPrev;
-    seekToFirst = iteratorSeekToLast;
+    next = iteratorNext;
+    seekToFirst = iteratorSeekToFirst;
     gt = opts.gt;
     gte = opts.gte;
     lt = opts.lt ? (k: Uint8Array) => Buffer.compare(k, opts.lt as Uint8Array) >= 0 : undefined;
