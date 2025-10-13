@@ -1596,6 +1596,10 @@ export function createLodestarMetrics(
         name: "lodestar_lightclient_server_attested_data_diff_period_total",
         help: "Total number of times a syncAggregate is a different period than attested data",
       }),
+      staleLightClientUpdates: register.counter({
+        name: "lodestar_lightclient_server_stale_updates_total",
+        help: "Total number of stale light client updates that were not emitted",
+      }),
     },
 
     eth1: {

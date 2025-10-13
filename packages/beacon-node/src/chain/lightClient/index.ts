@@ -548,6 +548,8 @@ export class LightClientServer {
         version: attestedFork,
         data: headerUpdate,
       });
+    } else {
+      this.metrics?.lightclientServer.staleLightClientUpdates.inc();
     }
 
     // Persist latest best update for getLatestHeadUpdate()
