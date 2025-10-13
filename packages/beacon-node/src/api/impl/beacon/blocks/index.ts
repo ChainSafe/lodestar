@@ -17,6 +17,7 @@ import {
   computeTimeAtSlot,
   reconstructSignedBlockContents,
   signedBeaconBlockToBlinded,
+  signedBlockToSignedHeader,
 } from "@lodestar/state-transition";
 import {
   ProducedBlockSource,
@@ -44,7 +45,12 @@ import {
 } from "../../../../chain/produceBlock/index.js";
 import {validateGossipBlock} from "../../../../chain/validation/block.js";
 import {OpSource} from "../../../../chain/validatorMonitor.js";
-import {getBlobSidecars, kzgCommitmentToVersionedHash, reconstructBlobs} from "../../../../util/blobs.js";
+import {
+  computePreFuluKzgCommitmentsInclusionProof,
+  getBlobSidecars,
+  kzgCommitmentToVersionedHash,
+  reconstructBlobs,
+} from "../../../../util/blobs.js";
 import {getDataColumnSidecarsFromBlock} from "../../../../util/dataColumns.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 import {kzg} from "../../../../util/kzg.js";
@@ -619,24 +625,79 @@ export function getBeaconBlockApi({
 
       const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
       const fork = config.getForkName(block.message.slot);
-
-      if (isForkPostFulu(fork)) {
-        throw new ApiError(400, `Use getBlobs to retrieve blobs for post-fulu fork=${fork}`);
-      }
-
       const blockRoot = sszTypesFor(fork).BeaconBlock.hashTreeRoot(block.message);
 
-      let {blobSidecars} = (await db.blobSidecars.get(blockRoot)) ?? {};
-      if (!blobSidecars) {
-        ({blobSidecars} = (await db.blobSidecarsArchive.get(block.message.slot)) ?? {});
-      }
+      let data: deneb.BlobSidecars;
 
-      if (!blobSidecars) {
-        throw Error(`blobSidecars not found in db for slot=${block.message.slot} root=${toRootHex(blockRoot)}`);
+      if (isForkPostFulu(fork)) {
+        const {targetCustodyGroupCount} = chain.custodyConfig;
+        if (targetCustodyGroupCount < NUMBER_OF_COLUMNS / 2) {
+          throw new ApiError(
+            503,
+            `Custody group count of ${targetCustodyGroupCount} is not sufficient to serve blob sidecars, must custody at least ${NUMBER_OF_COLUMNS / 2} data columns`
+          );
+        }
+
+        const blobKzgCommitments = (block.message.body as deneb.BeaconBlockBody).blobKzgCommitments;
+        const blobCount = blobKzgCommitments.length;
+
+        if (blobCount > 0) {
+          let dataColumnSidecars = await fromAsync(db.dataColumnSidecar.valuesStream(blockRoot));
+          if (dataColumnSidecars.length === 0) {
+            dataColumnSidecars = await fromAsync(db.dataColumnSidecarArchive.valuesStream(block.message.slot));
+          }
+
+          if (dataColumnSidecars.length === 0) {
+            throw new ApiError(
+              404,
+              `dataColumnSidecars not found in db for slot=${block.message.slot} root=${toRootHex(blockRoot)} blobs=${blobCount}`
+            );
+          }
+
+          const blobs = await reconstructBlobs(dataColumnSidecars);
+          const signedBlockHeader = signedBlockToSignedHeader(config, block);
+          const requestedIndices = indices ?? Array.from({length: blobKzgCommitments.length}, (_, i) => i);
+
+          data = await Promise.all(
+            requestedIndices.map(async (index) => {
+              // Reconstruct blob sidecar from blob
+              const kzgCommitment = blobKzgCommitments[index];
+              if (kzgCommitment === undefined) {
+                throw new ApiError(400, `Blob index ${index} not found in block`);
+              }
+              const blob = blobs[index];
+              const kzgProof = await kzg.asyncComputeBlobKzgProof(blob, kzgCommitment);
+              const kzgCommitmentInclusionProof = computePreFuluKzgCommitmentsInclusionProof(
+                fork,
+                block.message.body,
+                index
+              );
+              return {index, blob, kzgCommitment, kzgProof, signedBlockHeader, kzgCommitmentInclusionProof};
+            })
+          );
+        } else {
+          data = [];
+        }
+      } else if (isForkPostDeneb(fork)) {
+        let {blobSidecars} = (await db.blobSidecars.get(blockRoot)) ?? {};
+        if (!blobSidecars) {
+          ({blobSidecars} = (await db.blobSidecarsArchive.get(block.message.slot)) ?? {});
+        }
+
+        if (!blobSidecars) {
+          throw new ApiError(
+            404,
+            `blobSidecars not found in db for slot=${block.message.slot} root=${toRootHex(blockRoot)}`
+          );
+        }
+
+        data = indices ? blobSidecars.filter(({index}) => indices.includes(index)) : blobSidecars;
+      } else {
+        data = [];
       }
 
       return {
-        data: indices ? blobSidecars.filter(({index}) => indices.includes(index)) : blobSidecars,
+        data,
         meta: {
           executionOptimistic,
           finalized,
@@ -657,7 +718,8 @@ export function getBeaconBlockApi({
       if (isForkPostFulu(fork)) {
         const {targetCustodyGroupCount} = chain.custodyConfig;
         if (targetCustodyGroupCount < NUMBER_OF_COLUMNS / 2) {
-          throw Error(
+          throw new ApiError(
+            503,
             `Custody group count of ${targetCustodyGroupCount} is not sufficient to serve blobs, must custody at least ${NUMBER_OF_COLUMNS / 2} data columns`
           );
         }
