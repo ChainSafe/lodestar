@@ -211,10 +211,9 @@ export async function initBeaconState(
       logger.verbose(`Finding last persisted checkpoint state from ${cpDataStore.constructor.name}`);
       stateBytes = await cpDataStore.readLatestSafe();
       if (stateBytes === null) {
-        logger.verbose("Last persisted checkpoint state not found");
-      } else {
-        logger.info("Found last persisted checkpoint state", {size: formatBytes(stateBytes.length)});
+        throw Error("Last persisted checkpoint state not found");
       }
+      logger.info("Found last persisted checkpoint state", {size: formatBytes(stateBytes.length)});
     }
 
     if (stateBytes == null && args.unsafeCheckpointState) {
