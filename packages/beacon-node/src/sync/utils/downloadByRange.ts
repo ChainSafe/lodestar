@@ -539,14 +539,6 @@ export async function validateBlobsByRangeResponse(
   return Promise.all(validateSidecarsPromises);
 }
 
-export type ValidatedSlot = {
-  blockRoot: Uint8Array;
-  block: SignedBeaconBlock;
-  blobs?: deneb.BlobSidecars;
-  columns?: fulu.DataColumnSidecars;
-};
-export type ValidatedSlots = Map<Slot, ValidatedSlot>;
-
 /**
  * Should not be called directly. Only exported for unit testing purposes
  *
@@ -591,7 +583,7 @@ export type ValidatedSlots = Map<Slot, ValidatedSlot>;
  */
 export async function validateColumnsByRangeResponse(
   request: fulu.DataColumnSidecarsByRangeRequest,
-  blocks: ValidatedSlot[],
+  blocks: ValidatedBlock[],
   columnSidecars: fulu.DataColumnSidecars
 ): Promise<WarnResult<ValidatedColumnSidecars[], DownloadByRangeError>> {
   const warnings: DownloadByRangeError[] = [];
