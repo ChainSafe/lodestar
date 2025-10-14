@@ -66,6 +66,41 @@ export function getForkChoiceMetrics(register: MetricsRegisterExtra) {
         help: "Reason why the current head is not re-orged out",
         labelNames: ["reason"],
       }),
+      computeDeltas: {
+        duration: register.histogram({
+          name: "beacon_fork_choice_compute_deltas_seconds",
+          help: "Time taken to compute deltas in seconds",
+          buckets: [0.01, 0.05, 0.1, 0.2],
+        }),
+        deltasCount: register.gauge({
+          name: "beacon_fork_choice_compute_deltas_deltas_count",
+          help: "Count of deltas computed",
+        }),
+        zeroDeltasCount: register.gauge({
+          name: "beacon_fork_choice_compute_deltas_zero_deltas_count",
+          help: "Count of zero deltas processed",
+        }),
+        equivocatingValidators: register.gauge({
+          name: "beacon_fork_choice_compute_deltas_equivocating_validators_count",
+          help: "Count of equivocating validators processed",
+        }),
+        oldInactiveValidators: register.gauge({
+          name: "beacon_fork_choice_compute_deltas_old_inactive_validators_count",
+          help: "Count of old inactive validators processed",
+        }),
+        newInactiveValidators: register.gauge({
+          name: "beacon_fork_choice_compute_deltas_new_inactive_validators_count",
+          help: "Count of new inactive validators processed",
+        }),
+        unchangedVoteValidators: register.gauge({
+          name: "beacon_fork_choice_compute_deltas_unchanged_vote_validators_count",
+          help: "Count of unchanged vote validators processed",
+        }),
+        newVoteValidators: register.gauge({
+          name: "beacon_fork_choice_compute_deltas_new_vote_validators_count",
+          help: "Count of new vote validators processed",
+        }),
+      },
     },
   };
 }
