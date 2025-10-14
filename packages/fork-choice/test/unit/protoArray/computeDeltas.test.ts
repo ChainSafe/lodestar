@@ -22,7 +22,7 @@ describe("computeDeltas", () => {
       newBalances[i] = 0;
     }
 
-    const deltas = computeDeltas(indices.size, votes, oldBalances, newBalances, new Set());
+    const {deltas} = computeDeltas(indices.size, votes, oldBalances, newBalances, new Set());
 
     expect(deltas.length).toEqual(validatorCount);
     expect(deltas).toEqual(Array.from({length: validatorCount}, () => 0));
@@ -52,7 +52,7 @@ describe("computeDeltas", () => {
       newBalances[i] = balance;
     }
 
-    const deltas = computeDeltas(indices.size, votes, oldBalances, newBalances, new Set());
+    const {deltas} = computeDeltas(indices.size, votes, oldBalances, newBalances, new Set());
 
     expect(deltas.length).toEqual(validatorCount);
 
@@ -85,7 +85,7 @@ describe("computeDeltas", () => {
       newBalances[i] = balance;
     }
 
-    const deltas = computeDeltas(indices.size, votes, oldBalances, newBalances, new Set());
+    const {deltas} = computeDeltas(indices.size, votes, oldBalances, newBalances, new Set());
 
     expect(deltas.length).toEqual(validatorCount);
 
@@ -114,7 +114,7 @@ describe("computeDeltas", () => {
       newBalances[i] = balance;
     }
 
-    const deltas = computeDeltas(indices.size, votes, oldBalances, newBalances, new Set());
+    const {deltas} = computeDeltas(indices.size, votes, oldBalances, newBalances, new Set());
 
     expect(deltas.length).toEqual(validatorCount);
 
@@ -152,7 +152,7 @@ describe("computeDeltas", () => {
       newBalances[i] = newBalance;
     }
 
-    const deltas = computeDeltas(indices.size, votes, oldBalances, newBalances, new Set());
+    const {deltas} = computeDeltas(indices.size, votes, oldBalances, newBalances, new Set());
 
     expect(deltas.length).toEqual(validatorCount);
 
@@ -190,7 +190,7 @@ describe("computeDeltas", () => {
     newBalances[0] = balance;
     newBalances[1] = balance;
 
-    const deltas = computeDeltas(indices.size, votes, oldBalances, newBalances, new Set());
+    const {deltas} = computeDeltas(indices.size, votes, oldBalances, newBalances, new Set());
 
     expect(deltas.length).toEqual(2);
 
@@ -224,7 +224,7 @@ describe("computeDeltas", () => {
     const newBalances = getEffectiveBalanceIncrementsZeroed(1);
     newBalances[0] = balance;
 
-    const deltas = computeDeltas(indices.size, votes, oldBalances, newBalances, new Set());
+    const {deltas} = computeDeltas(indices.size, votes, oldBalances, newBalances, new Set());
 
     expect(deltas.length).toEqual(2);
 
@@ -255,13 +255,13 @@ describe("computeDeltas", () => {
     const balances = new Uint16Array([firstBalance, secondBalance]);
     // 1st validator is part of an attester slashing
     const equivocatingIndices = new Set([0]);
-    let deltas = computeDeltas(indices.size, votes, balances, balances, equivocatingIndices);
+    let {deltas} = computeDeltas(indices.size, votes, balances, balances, equivocatingIndices);
     expect(deltas[0]).toBeWithMessage(
       -1 * (firstBalance + secondBalance),
       "should disregard the 1st validator due to attester slashing"
     );
     expect(deltas[1]).toBeWithMessage(secondBalance, "should move 2nd balance from 1st root to 2nd root");
-    deltas = computeDeltas(indices.size, votes, balances, balances, equivocatingIndices);
+    deltas = computeDeltas(indices.size, votes, balances, balances, equivocatingIndices).deltas;
     expect(deltas).toEqualWithMessage([0, 0], "calling computeDeltas again should not have any affect on the weight");
   });
 });
