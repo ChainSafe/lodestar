@@ -814,7 +814,7 @@ function fromCacheKey(key: CacheKey): CheckpointHex {
   const [rootHex, epoch] = key.split("_");
   return {
     rootHex,
-    epoch: Number(epoch),
+    epoch: parseInt(epoch),
   };
 }
 

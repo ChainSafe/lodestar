@@ -27,7 +27,7 @@ import {
   fulu,
   phase0,
 } from "@lodestar/types";
-import {prettyPrintIndices, sleep} from "@lodestar/utils";
+import {prettyPrintIndices,bigintToNumber, sleep} from "@lodestar/utils";
 import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
 import {ChainEvent, IBeaconChain} from "../chain/index.js";
 import {computeSubnetForDataColumnSidecar} from "../chain/validation/dataColumnSidecar.js";
@@ -59,6 +59,8 @@ import {
 import {collectSequentialBlocksInRange} from "./reqresp/utils/collectSequentialBlocksInRange.js";
 import {CommitteeSubscription} from "./subnets/index.js";
 import {isPublishToZeroPeersError, prettyPrintPeerIdStr} from "./util.js";
+
+
 
 type NetworkModules = {
   opts: NetworkOptions;
@@ -427,7 +429,7 @@ export class Network implements INetwork {
   }
 
   async publishProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<number> {
-    const epoch = computeEpochAtSlot(Number(proposerSlashing.signedHeader1.message.slot as bigint));
+    const epoch = computeEpochAtSlot(bigintToNumber(proposerSlashing.signedHeader1.message.slot as bigint));
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);
 
     return this.publishGossip<GossipType.proposer_slashing>(
@@ -437,7 +439,7 @@ export class Network implements INetwork {
   }
 
   async publishAttesterSlashing(attesterSlashing: AttesterSlashing): Promise<number> {
-    const epoch = computeEpochAtSlot(Number(attesterSlashing.attestation1.data.slot as bigint));
+    const epoch = computeEpochAtSlot(bigintToNumber(attesterSlashing.attestation1.data.slot as bigint));
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);
 
     return this.publishGossip<GossipType.attester_slashing>(

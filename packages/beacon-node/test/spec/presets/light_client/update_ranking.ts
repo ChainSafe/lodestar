@@ -4,6 +4,8 @@ import {isForkPostAltair} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {LightClientUpdate, altair, ssz, sszTypesFor} from "@lodestar/types";
 import {TestRunnerFn} from "../../utils/types.js";
+import {bigintToNumber} from "@lodestar/utils";
+
 
 // https://github.com/ethereum/consensus-specs/blob/da3f5af919be4abb5a6db5a80b235deb8b4b5cba/tests/formats/light_client/update_ranking.md
 type UpdateRankingTestCase = {
@@ -19,7 +21,7 @@ export const updateRanking: TestRunnerFn<UpdateRankingTestCase, void> = (fork) =
   return {
     testFunction: (testcase) => {
       // Parse update files
-      const updatesCount = Number(testcase.meta.updates_count as bigint);
+      const updatesCount = bigintToNumber(testcase.meta.updates_count as bigint);
       const updates: LightClientUpdate[] = [];
 
       for (let i = 0; i < updatesCount; i++) {

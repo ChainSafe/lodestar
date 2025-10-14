@@ -1,6 +1,6 @@
 import {ChainConfig} from "@lodestar/config";
 import {RootHex} from "@lodestar/types";
-import {Logger, pruneSetToMax, toRootHex} from "@lodestar/utils";
+import {Logger, bigintToNumber, pruneSetToMax, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../constants/index.js";
 import {Metrics} from "../metrics/index.js";
 import {enumToIndexMap} from "../util/enum.js";
@@ -75,8 +75,8 @@ export class Eth1MergeBlockTracker {
     // Only run metrics if necessary
     if (metrics) {
       // TTD can't be dynamically changed during execution, register metric once
-      metrics.eth1.eth1MergeTTD.set(Number(scaledTTD as bigint));
-      metrics.eth1.eth1MergeTDFactor.set(Number(this.safeTDFactor as bigint));
+      metrics.eth1.eth1MergeTTD.set(bigintToNumber(scaledTTD as bigint));
+      metrics.eth1.eth1MergeTDFactor.set(bigintToNumber(this.safeTDFactor as bigint));
 
       metrics.eth1.eth1MergeStatus.addCollect(() => {
         // Set merge ttd, merge status and merge block status
@@ -85,7 +85,7 @@ export class Eth1MergeBlockTracker {
         if (this.latestEth1Block !== null) {
           // Set latestBlock stats
           metrics.eth1.eth1LatestBlockNumber.set(this.latestEth1Block.number);
-          metrics.eth1.eth1LatestBlockTD.set(Number(this.latestEth1Block.totalDifficulty / this.safeTDFactor));
+          metrics.eth1.eth1LatestBlockTD.set(bigintToNumber(this.latestEth1Block.totalDifficulty / this.safeTDFactor));
           metrics.eth1.eth1LatestBlockTimestamp.set(this.latestEth1Block.timestamp);
         }
       });
@@ -121,7 +121,7 @@ export class Eth1MergeBlockTracker {
       return {
         ttdHit: false,
         tdFactor: this.safeTDFactor,
-        tdDiffScaled: Number((tdDiff / this.safeTDFactor) as bigint),
+        tdDiffScaled: bigintToNumber((tdDiff / this.safeTDFactor) as bigint),
         ttd: this.config.TERMINAL_TOTAL_DIFFICULTY,
         td: this.latestEth1Block.totalDifficulty,
         timestamp: this.latestEth1Block.timestamp,

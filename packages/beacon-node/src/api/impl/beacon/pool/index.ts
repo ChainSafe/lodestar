@@ -17,6 +17,8 @@ import {validateApiVoluntaryExit} from "../../../../chain/validation/voluntaryEx
 import {validateGossipFnRetryUnknownRoot} from "../../../../network/processor/gossipHandlers.js";
 import {ApiError, FailureList, IndexedError} from "../../errors.js";
 import {ApiModules} from "../../types.js";
+import {bigintToNumber} from "@lodestar/utils";
+
 
 export function getBeaconPoolApi({
   chain,
@@ -180,7 +182,7 @@ export function getBeaconPoolApi({
 
     async submitPoolAttesterSlashingsV2({attesterSlashing}) {
       await validateApiAttesterSlashing(chain, attesterSlashing);
-      const fork = chain.config.getForkName(Number(attesterSlashing.attestation1.data.slot));
+      const fork = chain.config.getForkName(bigintToNumber(attesterSlashing.attestation1.data.slot));
       chain.opPool.insertAttesterSlashing(fork, attesterSlashing);
       await network.publishAttesterSlashing(attesterSlashing);
     },

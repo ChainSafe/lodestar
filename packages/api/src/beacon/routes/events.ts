@@ -23,6 +23,8 @@ import {EmptyMeta, EmptyResponseCodec, EmptyResponseData} from "../../utils/code
 import {getPostAltairForkTypes, getPostBellatrixForkTypes} from "../../utils/fork.js";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {VersionType} from "../../utils/metadata.js";
+import {bigintToNumber} from "@lodestar/utils";
+
 
 const stringType = new StringType();
 export const blobSidecarSSE = new ContainerType(

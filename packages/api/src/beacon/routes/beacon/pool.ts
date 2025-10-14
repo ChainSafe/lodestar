@@ -26,6 +26,8 @@ import {toForkName} from "../../../utils/fork.js";
 import {fromHeaders} from "../../../utils/headers.js";
 import {Endpoint, RouteDefinitions, Schema} from "../../../utils/index.js";
 import {MetaHeader, VersionCodec, VersionMeta} from "../../../utils/metadata.js";
+import {bigintToNumber} from "@lodestar/utils";
+
 
 const SingleAttestationListTypePhase0 = ArrayOf(ssz.phase0.Attestation);
 const SingleAttestationListTypeElectra = ArrayOf(ssz.electra.SingleAttestation);
@@ -399,7 +401,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       method: "POST",
       req: {
         writeReqJson: ({attesterSlashing}) => {
-          const fork = config.getForkName(Number(attesterSlashing.attestation1.data.slot));
+          const fork = config.getForkName(bigintToNumber(attesterSlashing.attestation1.data.slot));
           return {
             body: isForkPostElectra(fork)
               ? ssz.electra.AttesterSlashing.toJson(attesterSlashing)
@@ -416,7 +418,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           };
         },
         writeReqSsz: ({attesterSlashing}) => {
-          const fork = config.getForkName(Number(attesterSlashing.attestation1.data.slot));
+          const fork = config.getForkName(bigintToNumber(attesterSlashing.attestation1.data.slot));
           return {
             body: isForkPostElectra(fork)
               ? ssz.electra.AttesterSlashing.serialize(attesterSlashing as electra.AttesterSlashing)
