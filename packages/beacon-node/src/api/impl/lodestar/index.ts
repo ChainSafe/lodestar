@@ -181,9 +181,15 @@ export function getLodestarApi({
 
     async dumpDbBucketKeys({bucket}) {
       for (const repo of Object.values(db) as IBeaconDb[keyof IBeaconDb][]) {
-        // biome-ignore lint/complexity/useLiteralKeys: `bucket` is protected and `bucketId` is private
-        if (repo instanceof Repository && (String(repo["bucket"]) === bucket || repo["bucketId"] === bucket)) {
-          return {data: stringifyKeys(await repo.keys())};
+        if (
+          // biome-ignore lint/complexity/useLiteralKeys: `bucket` is protected and `bucketId` is private
+          // biome-ignore lint/suspicious/noExplicitAny: make TS happy... and me sad... sigh
+          String((repo as Repository<any, any>)["bucket"]) === bucket ||
+          // biome-ignore lint/suspicious/noExplicitAny: make TS happy... and me sad... sigh
+          (repo as Repository<any, any>)["bucketId"] === bucket
+        ) {
+          // biome-ignore lint/suspicious/noExplicitAny: make TS happy... and me sad... sigh
+          return {data: stringifyKeys(await (repo as Repository<any, any>).keys())};
         }
       }
 
