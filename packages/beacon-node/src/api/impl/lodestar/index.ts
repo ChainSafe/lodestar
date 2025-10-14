@@ -270,12 +270,12 @@ function regenRequestToJson(config: ChainForkConfig, regenRequest: RegenRequest)
   }
 }
 
+const CHECKPOINT_REGEX = /^(?:0x)?([0-9a-f]{64}):([0-9]+)$/;
 /**
  * Extract a checkpoint from a string in the format `rootHex:epoch`.
  */
 export function getCheckpointFromArg(checkpointStr: string): Checkpoint {
-  const checkpointRegex = /^(?:0x)?([0-9a-f]{64}):([0-9]+)$/;
-  const match = checkpointRegex.exec(checkpointStr.toLowerCase());
+  const match = CHECKPOINT_REGEX.exec(checkpointStr.toLowerCase());
   if (!match) {
     throw new ApiError(400, `Could not parse checkpoint string: ${checkpointStr}`);
   }
