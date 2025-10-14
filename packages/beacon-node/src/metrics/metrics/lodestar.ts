@@ -1,5 +1,7 @@
 /** biome-ignore-all lint/suspicious/noTemplateCurlyInString: The metric templates requires to have `${}` in a normal string */
 import {NotReorgedReason} from "@lodestar/fork-choice";
+import {ArchiveStoreTask} from "../../chain/archiveStore/archiveStore.js";
+import {FrequencyStateArchiveStep} from "../../chain/archiveStore/strategies/frequencyStateArchiveStrategy.js";
 import {BlockInputSource} from "../../chain/blocks/blockInput/index.js";
 import {JobQueueItemType} from "../../chain/bls/index.js";
 import {AttestationErrorCode, BlockErrorCode} from "../../chain/errors/index.js";
@@ -1418,6 +1420,21 @@ export function createLodestarMetrics(
           help: "Number of BlockInputs created via a blob being seen first",
         }),
       },
+    },
+
+    processFinalizedCheckpoint: {
+      durationByTask: register.histogram<{source: ArchiveStoreTask}>({
+        name: "lodestar_process_finalized_checkpoint_seconds",
+        help: "Histogram of time to process finalized checkpoint",
+        buckets: [0.1, 0.5, 1, 2, 4, 8],
+        labelNames: ["source"],
+      }),
+      frequencyStateArchive: register.histogram<{step: FrequencyStateArchiveStep}>({
+        name: "lodestar_process_finalized_checkpoint_frequency_state_archive_seconds",
+        help: "Histogram of FrequencyStateArchive duration by step",
+        buckets: [0.1, 0.5, 1, 2, 4, 8],
+        labelNames: ["step"],
+      }),
     },
 
     regenFnCallTotal: register.gauge<{entrypoint: RegenFnName; caller: RegenCaller}>({

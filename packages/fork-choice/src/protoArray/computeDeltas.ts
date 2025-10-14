@@ -6,6 +6,18 @@ import {VoteTracker} from "./interface.js";
 // reuse arrays to avoid memory reallocation and gc
 const deltas = new Array<number>();
 
+export type DeltasResult = {
+  deltas: number[];
+  equivocatingValidators: number;
+  // inactive validators before beacon node started
+  oldInactiveValidators: number;
+  // new inactive validators after beacon node started
+  newInactiveValidators: number;
+  // below is for active validators
+  unchangedVoteValidators: number;
+  newVoteValidators: number;
+};
+
 /**
  * Returns a list of `deltas`, where there is one delta for each of the indices in `indices`
  *
@@ -21,7 +33,7 @@ export function computeDeltas(
   oldBalances: EffectiveBalanceIncrements,
   newBalances: EffectiveBalanceIncrements,
   equivocatingIndices: Set<ValidatorIndex>
-): number[] {
+): DeltasResult {
   deltas.length = numProtoNodes;
   deltas.fill(0);
 
@@ -33,11 +45,18 @@ export function computeDeltas(
   let equivocatingIndex = 0;
   let equivocatingValidatorIndex = equivocatingArray[equivocatingIndex];
 
+  const equivocatingValidators = equivocatingIndices.size;
+  let oldInactiveValidators = 0;
+  let newInactiveValidators = 0;
+  let unchangedVoteValidators = 0;
+  let newVoteValidators = 0;
+
   for (let vIndex = 0; vIndex < votes.length; vIndex++) {
     const vote = votes[vIndex];
     // There is no need to create a score change if the validator has never voted or both of their
     // votes are for the zero hash (genesis block)
     if (vote === undefined) {
+      oldInactiveValidators++;
       continue;
     }
     currentIndex = vote.currentIndex;
@@ -71,6 +90,11 @@ export function computeDeltas(
       continue;
     }
 
+    if (oldBalance === 0 && newBalance === 0) {
+      newInactiveValidators++;
+      continue;
+    }
+
     if (currentIndex !== nextIndex || oldBalance !== newBalance) {
       // We ignore the vote if it is not known in `indices .
       // We assume that it is outside of our tree (ie: pre-finalization) and therefore not interesting
@@ -95,9 +119,19 @@ export function computeDeltas(
         }
         deltas[nextIndex] += newBalance;
       }
+      vote.currentIndex = nextIndex;
+      newVoteValidators++;
+    } else {
+      unchangedVoteValidators++;
     }
-    vote.currentIndex = nextIndex;
-  }
+  } // end validator loop
 
-  return deltas;
+  return {
+    deltas,
+    equivocatingValidators,
+    oldInactiveValidators,
+    newInactiveValidators,
+    unchangedVoteValidators,
+    newVoteValidators,
+  };
 }

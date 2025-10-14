@@ -8,6 +8,7 @@ export enum DataColumnSidecarErrorCode {
   MISMATCHED_LENGTHS = "DATA_COLUMN_SIDECAR_ERROR_MISMATCHED_LENGTHS",
   INVALID_SUBNET = "DATA_COLUMN_SIDECAR_ERROR_INVALID_SUBNET",
   INVALID_KZG_PROOF = "DATA_COLUMN_SIDECAR_ERROR_INVALID_KZG_PROOF",
+  TOO_MANY_KZG_COMMITMENTS = "DATA_COLUMN_SIDECAR_ERROR_TOO_MANY_KZG_COMMITMENTS",
 
   // Validation errors when validating against an existing block
 
@@ -47,6 +48,13 @@ export type DataColumnSidecarErrorType =
       proofsLength: number;
     }
   | {code: DataColumnSidecarErrorCode.INVALID_SUBNET; columnIndex: number; gossipSubnet: SubnetID}
+  | {
+      code: DataColumnSidecarErrorCode.TOO_MANY_KZG_COMMITMENTS;
+      slot: number;
+      columnIndex: number;
+      count: number;
+      limit: number;
+    }
   | {code: DataColumnSidecarErrorCode.ALREADY_KNOWN; columnIndex: number; slot: Slot}
   | {code: DataColumnSidecarErrorCode.FUTURE_SLOT; blockSlot: Slot; currentSlot: Slot}
   | {code: DataColumnSidecarErrorCode.WOULD_REVERT_FINALIZED_SLOT; blockSlot: Slot; finalizedSlot: Slot}
