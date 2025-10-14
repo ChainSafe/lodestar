@@ -393,9 +393,8 @@ export function validateBlockByRangeResponse(
       result: [],
       warnings: [
         new DownloadByRangeError({
-          code: DownloadByRangeErrorCode.MISSING_BLOCK_RESPONSE,
-          expectedCount: count,
-          blockStartSlot: startSlot,
+          code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
+          ...requestsLogMeta({blocksRequest}),
         }),
       ],
     };
@@ -546,7 +545,7 @@ export type ValidatedSlot = {
   blobs?: deneb.BlobSidecars;
   columns?: fulu.DataColumnSidecars;
 };
-export type ValidatedSlots = Map<Slot, ValidateSlot>;
+export type ValidatedSlots = Map<Slot, ValidatedSlot>;
 
 /**
  * Should not be called directly. Only exported for unit testing purposes
@@ -878,7 +877,7 @@ function requestsLogMeta({blocksRequest, blobsRequest, columnsRequest}: Download
 }
 
 export enum DownloadByRangeErrorCode {
-  MISSING_BLOCK_RESPONSE = "DOWNLOAD_BY_RANGE_ERROR_MISSING_BLOCK_RESPONSE",
+  MISSING_BLOCKS_RESPONSE = "DOWNLOAD_BY_RANGE_ERROR_MISSING_BLOCK_RESPONSE",
   MISSING_BLOBS_RESPONSE = "DOWNLOAD_BY_RANGE_ERROR_MISSING_BLOBS_RESPONSE",
   MISSING_COLUMNS_RESPONSE = "DOWNLOAD_BY_RANGE_ERROR_MISSING_COLUMNS_RESPONSE",
 
@@ -907,10 +906,6 @@ export enum DownloadByRangeErrorCode {
 }
 
 export type DownloadByRangeErrorType =
-  | {
-      code: DownloadByRangeErrorCode.MISSING_BLOCK_RESPONSE;
-      expectedCount: number;
-    }
   | {
       code:
         | DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE
