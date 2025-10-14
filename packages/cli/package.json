@@ -32,25 +32,7 @@
     "lodestar": "lib/index.js"
   },
   "scripts": {
-    "clean": "rm -rf lib && rm -f *.tsbuildinfo",
-    "build": "tsc -p tsconfig.build.json && yarn write-git-data",
-    "build:release": "yarn clean && yarn run build",
-    "build:watch": "tsc -p tsconfig.build.json --watch",
-    "write-git-data": "node lib/util/gitData/writeGitData.js",
-    "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\" lodestar --help",
-    "check-types": "tsc",
-    "docs:build": "node --loader ts-node/esm ./docsgen/index.ts",
-    "lint": "biome check src/ test/",
-    "lint:fix": "yarn run lint --write",
-    "test:unit": "vitest run --project unit --project unit-minimal",
-    "test:e2e": "vitest run --project e2e --project e2e-mainnet",
-    "test:sim:multifork": "LODESTAR_PRESET=minimal DOTENV_CONFIG_PATH=../../.env.test node -r dotenv/config --loader ts-node/esm test/sim/multiFork.test.ts",
-    "test:sim:mixedclient": "LODESTAR_PRESET=minimal DOTENV_CONFIG_PATH=../../.env.test node -r dotenv/config --loader ts-node/esm test/sim/mixedClient.test.ts",
-    "test:sim:endpoints": "LODESTAR_PRESET=minimal DOTENV_CONFIG_PATH=../../.env.test node -r dotenv/config --loader ts-node/esm test/sim/endpoints.test.ts",
-    "test:sim:deneb": "LODESTAR_PRESET=minimal DOTENV_CONFIG_PATH=../../.env.test node -r dotenv/config --loader ts-node/esm test/sim/deneb.test.ts",
-    "test:sim:backup_eth_provider": "LODESTAR_PRESET=minimal DOTENV_CONFIG_PATH=../../.env.test node -r dotenv/config --loader ts-node/esm test/sim/backupEthProvider.test.ts",
-    "test": "yarn test:unit && yarn test:e2e",
-    "check-readme": "typescript-docs-verifier"
+    "test": "jest --config ./jest.config.mjs"
   },
   "repository": {
     "type": "git",
@@ -103,8 +85,16 @@
     "@lodestar/test-utils": "^1.34.1",
     "@types/debug": "^4.1.7",
     "@types/inquirer": "^9.0.3",
+    "@types/jest": "^30.0.0",
     "@types/proper-lockfile": "^4.1.4",
     "@types/yargs": "^17.0.24",
-    "fastify": "^5.2.1"
+    "@typescript-eslint/eslint-plugin": "^8.46.0",
+    "@typescript-eslint/parser": "^8.46.0",
+    "chai": "^6.2.0",
+    "eslint": "^9.37.0",
+    "fastify": "^5.2.1",
+    "jest": "^30.2.0",
+    "mocha": "^11.7.4",
+    "ts-jest": "^29.4.5"
   }
 }
