@@ -393,6 +393,8 @@ export function validateBlockByRangeResponse(
       code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
       ...requestsLogMeta({blocksRequest}),
     });
+    // TODO: this was causing deadlock again. need to come back and fix this so that its possible to process through
+    //       an empty epoch for periods with poor liveness
     // return {
     //   result: [],
     //   warnings: [

@@ -212,7 +212,7 @@ function verifyDataColumnSidecar(config: ChainForkConfig, dataColumnSidecar: ful
     throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
       code: DataColumnSidecarErrorCode.TOO_MANY_KZG_COMMITMENTS,
       slot: dataColumnSidecar.signedBlockHeader.message.slot,
-      columnIdx: dataColumnSidecar.index,
+      columnIndex: dataColumnSidecar.index,
       count: dataColumnSidecar.kzgCommitments.length,
       limit: maxBlobsPerBlock,
     });
