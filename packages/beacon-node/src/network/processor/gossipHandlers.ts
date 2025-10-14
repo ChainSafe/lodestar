@@ -578,11 +578,14 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
             source: BlockInputSource.gossip,
           });
         });
-        // immediately attempt fetch of data columns from execution engine
-        chain.getBlobsTracker.triggerGetBlobs(blockInput);
-        // if we've received at least half of the columns, trigger reconstruction of the rest
-        if (blockInput.columnCount >= NUMBER_OF_COLUMNS / 2) {
-          chain.columnReconstructionTracker.triggerColumnReconstruction(blockInput);
+
+        if (!blockInput.hasAllData()) {
+          // immediately attempt fetch of data columns from execution engine
+          chain.getBlobsTracker.triggerGetBlobs(blockInput);
+          // if we've received at least half of the columns, trigger reconstruction of the rest
+          if (blockInput.columnCount >= NUMBER_OF_COLUMNS / 2) {
+            chain.columnReconstructionTracker.triggerColumnReconstruction(blockInput);
+          }
         }
       }
     },
