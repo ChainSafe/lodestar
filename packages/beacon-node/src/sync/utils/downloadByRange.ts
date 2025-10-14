@@ -389,15 +389,19 @@ export function validateBlockByRangeResponse(
   // There are instances where clients return no blocks though.  Need to monitor this via the warns to see
   // if what the correct behavior should be
   if (!blocks.length) {
-    return {
-      result: [],
-      warnings: [
-        new DownloadByRangeError({
-          code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
-          ...requestsLogMeta({blocksRequest}),
-        }),
-      ],
-    };
+    throw new DownloadByRangeError({
+      code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
+      ...requestsLogMeta({blocksRequest}),
+    });
+    // return {
+    //   result: [],
+    //   warnings: [
+    //     new DownloadByRangeError({
+    //       code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
+    //       ...requestsLogMeta({blocksRequest}),
+    //     }),
+    //   ],
+    // };
   }
 
   if (blocks.length > count) {
