@@ -7,12 +7,12 @@ import {ssz} from "../../../src/index.js";
 // guarantee that these constants are correct.
 
 describe(`${constants.ACTIVE_PRESET}/ blobs pre-computed constants`, () => {
-  const BLOBSIDECAR_FIXED_SIZE = ssz.deneb.BlobSidecars.elementType.fixedSize;
+  const BLOB_SIDECAR_FIXED_SIZE = ssz.deneb.BlobSidecars.elementType.fixedSize;
   const KZG_COMMITMENT_GINDEX0 = Number(ssz.deneb.BeaconBlockBody.getPathInfo(["blobKzgCommitments", 0]).gindex);
   const KZG_COMMITMENT_SUBTREE_INDEX0 = KZG_COMMITMENT_GINDEX0 - 2 ** constants.KZG_COMMITMENT_INCLUSION_PROOF_DEPTH;
 
   const correctConstants = {
-    BLOBSIDECAR_FIXED_SIZE,
+    BLOB_SIDECAR_FIXED_SIZE,
     KZG_COMMITMENT_GINDEX0,
     KZG_COMMITMENT_SUBTREE_INDEX0,
   };

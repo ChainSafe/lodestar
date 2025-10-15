@@ -4,7 +4,15 @@ import {expect} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
-import {ACTIVE_PRESET, ForkPostDeneb, ForkPostFulu, ForkSeq} from "@lodestar/params";
+import {
+  ACTIVE_PRESET,
+  ForkPostDeneb,
+  ForkPostFulu,
+  ForkPreDeneb,
+  ForkPreFulu,
+  ForkPreGloas,
+  ForkSeq,
+} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {BeaconStateAllForks, isExecutionStateType, signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {
@@ -134,7 +142,7 @@ const forkChoiceTest =
           for (const [i, step] of steps.entries()) {
             if (isTick(step)) {
               tickTime = bnToNum(step.tick);
-              const currentSlot = Math.floor(tickTime / config.SECONDS_PER_SLOT);
+              const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
               logger.debug(`Step ${i}/${stepsLen} tick`, {currentSlot, valid: Boolean(step.valid), time: tickTime});
               clock.emit(ClockEvent.slot, currentSlot);
               clock.setSlot(currentSlot);
@@ -220,13 +228,14 @@ const forkChoiceTest =
                   await validateBlockDataColumnSidecars(
                     slot,
                     blockRoot,
-                    (signedBlock as SignedBeaconBlock<ForkPostFulu>).message.body.blobKzgCommitments.length,
+                    (signedBlock as SignedBeaconBlock<ForkPostFulu & ForkPreGloas>).message.body.blobKzgCommitments
+                      .length,
                     columns
                   );
 
                   blockImport = BlockInputColumns.createFromBlock({
                     forkName: fork,
-                    block: signedBlock as SignedBeaconBlock<ForkPostFulu>,
+                    block: signedBlock as SignedBeaconBlock<ForkPostFulu & ForkPreGloas>,
                     blockRootHex,
                     custodyColumns:
                       // in most test case instances we do not want to assign any custody as there are no columns provided
@@ -286,7 +295,7 @@ const forkChoiceTest =
 
                   blockImport = BlockInputBlobs.createFromBlock({
                     forkName: fork,
-                    block: signedBlock as SignedBeaconBlock<ForkPostDeneb>,
+                    block: signedBlock as SignedBeaconBlock<ForkPostDeneb & ForkPreFulu>,
                     blockRootHex,
                     source: BlockInputSource.gossip,
                     seenTimestampSec: 0,
@@ -303,7 +312,7 @@ const forkChoiceTest =
                 } else {
                   blockImport = BlockInputPreData.createFromBlock({
                     forkName: fork,
-                    block: signedBlock as SignedBeaconBlock<ForkPostDeneb>,
+                    block: signedBlock as SignedBeaconBlock<ForkPreDeneb>,
                     blockRootHex,
                     source: BlockInputSource.gossip,
                     seenTimestampSec: 0,
@@ -378,7 +387,7 @@ const forkChoiceTest =
               // slot boundary.
               if (step.checks.time !== undefined && step.checks.time > 0)
                 expect(chain.forkChoice.getTime()).toEqualWithMessage(
-                  Math.floor(bnToNum(step.checks.time) / config.SECONDS_PER_SLOT),
+                  Math.floor(bnToNum(step.checks.time) / (config.SLOT_DURATION_MS / 1000)),
                   `Invalid forkchoice time at step ${i}`
                 );
               if (step.checks.justified_checkpoint) {
@@ -394,10 +403,10 @@ const forkChoiceTest =
                 );
               }
               if (step.checks.get_proposer_head) {
-                const currentSlot = Math.floor(tickTime / config.SECONDS_PER_SLOT);
+                const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
                 const {proposerHead, notReorgedReason} = (chain.forkChoice as ForkChoice).getProposerHead(
                   head,
-                  tickTime % config.SECONDS_PER_SLOT,
+                  tickTime % (config.SLOT_DURATION_MS / 1000),
                   currentSlot
                 );
                 logger.debug(`Not reorged reason ${notReorgedReason} at step ${i}`);
@@ -407,10 +416,10 @@ const forkChoiceTest =
                 );
               }
               if (step.checks.should_override_forkchoice_update) {
-                const currentSlot = Math.floor(tickTime / config.SECONDS_PER_SLOT);
+                const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
                 const result = chain.forkChoice.shouldOverrideForkChoiceUpdate(
                   head.blockRoot,
-                  tickTime % config.SECONDS_PER_SLOT,
+                  tickTime % (config.SLOT_DURATION_MS / 1000),
                   currentSlot
                 );
                 if (result.shouldOverrideFcu === false) {

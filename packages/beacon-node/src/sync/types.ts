@@ -37,8 +37,6 @@ export type PendingBlockInput = {
 export type PendingRootHex = {
   status: PendingBlockInputStatus.pending | PendingBlockInputStatus.fetching;
   rootHex: RootHex;
-  // optional because we may not know the slot of parent_unknown event
-  slot?: Slot;
   timeAddedSec: number;
   timeSyncedSec?: number;
   peerIdStrings: Set<string>;

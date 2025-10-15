@@ -278,7 +278,7 @@ type TypesByFork = {
     BeaconBlockHeader: phase0.BeaconBlockHeader;
     SignedBeaconBlockHeader: phase0.SignedBeaconBlockHeader;
     BeaconBlock: gloas.BeaconBlock;
-    BeaconBlockBody: electra.BeaconBlockBody;
+    BeaconBlockBody: gloas.BeaconBlockBody;
     BeaconState: gloas.BeaconState;
     SignedBeaconBlock: gloas.SignedBeaconBlock;
     Metadata: fulu.Metadata;

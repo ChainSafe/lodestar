@@ -68,7 +68,7 @@ export function pollExternalSignerPubkeys(
     fetchExternalSignerPubkeys,
     externalSigner.fetchInterval ??
       // Once per epoch by default
-      SLOTS_PER_EPOCH * config.SECONDS_PER_SLOT * 1000
+      SLOTS_PER_EPOCH * config.SLOT_DURATION_MS
   );
   signal.addEventListener("abort", () => clearInterval(interval), {once: true});
 }

@@ -22,12 +22,10 @@ describe("AttestationPool", () => {
     ALTAIR_FORK_EPOCH: 1,
   });
   const clockStub = getMockedClock();
-  vi.spyOn(clockStub, "secFromSlot").mockReturnValue(0);
+  vi.spyOn(clockStub, "msFromSlot").mockReturnValue(0);
 
   const validatorCommitteeIndex = 0;
   const committeeSize = 128;
-
-  const cutOffSecFromSlot = (2 / 3) * config.SECONDS_PER_SLOT;
 
   // Mock attestations
   const electraAttestationData: phase0.AttestationData = {
@@ -58,7 +56,7 @@ describe("AttestationPool", () => {
   let pool: AttestationPool;
 
   beforeEach(() => {
-    pool = new AttestationPool(config, clockStub, cutOffSecFromSlot);
+    pool = new AttestationPool(config, clockStub);
   });
 
   it("add correct electra attestation", () => {

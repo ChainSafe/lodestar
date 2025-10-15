@@ -134,8 +134,8 @@ export function getRangeSyncTarget(
   return {
     syncType: RangeSyncType.Head,
     // The new peer has the same finalized (earlier filters should prevent a peer with an
-    // earlier finalized chain from reaching here).
-    startEpoch: Math.min(computeEpochAtSlot(local.headSlot), remote.finalizedEpoch),
+    // earlier finalized chain from reaching here) and local head will always be >= local finalized.
+    startEpoch: computeEpochAtSlot(local.headSlot),
     target: {
       slot: remote.headSlot,
       root: remote.headRoot,

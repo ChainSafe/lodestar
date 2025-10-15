@@ -1,5 +1,5 @@
 import {ChainConfig, ChainForkConfig} from "@lodestar/config";
-import {INTERVALS_PER_SLOT, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   DataAvailabilityStatus,
@@ -266,7 +266,8 @@ export class ForkChoice implements IForkChoice {
     }
 
     const currentTimeOk =
-      headBlock.slot === currentSlot || (proposalSlot === currentSlot && this.isProposingOnTime(secFromSlot));
+      headBlock.slot === currentSlot ||
+      (proposalSlot === currentSlot && this.isProposingOnTime(secFromSlot, currentSlot));
     if (!currentTimeOk) {
       return {shouldOverrideFcu: false, reason: NotReorgedReason.ReorgMoreThanOneSlot};
     }
@@ -366,7 +367,7 @@ export class ForkChoice implements IForkChoice {
     }
 
     // Only re-org if we are proposing on-time
-    if (!this.isProposingOnTime(secFromSlot)) {
+    if (!this.isProposingOnTime(secFromSlot, slot)) {
       return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.NotProposingOnTime};
     }
 
@@ -442,13 +443,33 @@ export class ForkChoice implements IForkChoice {
     // Check if scores need to be calculated/updated
     const oldBalances = this.balances;
     const newBalances = this.fcStore.justified.balances;
-    const deltas = computeDeltas(
+    const computeDeltasMetrics = this.metrics?.forkChoice.computeDeltas;
+
+    const timer = computeDeltasMetrics?.duration.startTimer();
+    const {
+      deltas,
+      equivocatingValidators,
+      oldInactiveValidators,
+      newInactiveValidators,
+      unchangedVoteValidators,
+      newVoteValidators,
+    } = computeDeltas(
       this.protoArray.nodes.length,
       this.votes,
       oldBalances,
       newBalances,
       this.fcStore.equivocatingIndices
     );
+    timer?.();
+
+    computeDeltasMetrics?.deltasCount.set(deltas.length);
+    computeDeltasMetrics?.zeroDeltasCount.set(deltas.filter((d) => d === 0).length);
+    computeDeltasMetrics?.equivocatingValidators.set(equivocatingValidators);
+    computeDeltasMetrics?.oldInactiveValidators.set(oldInactiveValidators);
+    computeDeltasMetrics?.newInactiveValidators.set(newInactiveValidators);
+    computeDeltasMetrics?.unchangedVoteValidators.set(unchangedVoteValidators);
+    computeDeltasMetrics?.newVoteValidators.set(newVoteValidators);
+
     this.balances = newBalances;
     /**
      * The structure in line with deltas to propagate boost up the branch
@@ -1189,16 +1210,18 @@ export class ForkChoice implements IForkChoice {
    * Child class can overwrite this for testing purpose.
    */
   protected isBlockTimely(block: BeaconBlock, blockDelaySec: number): boolean {
-    const isBeforeAttestingInterval = blockDelaySec < this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT;
-    return this.fcStore.currentSlot === block.slot && isBeforeAttestingInterval;
+    const fork = this.config.getForkName(block.slot);
+    const isBeforeLateBlockCutoff = blockDelaySec * 1000 < this.config.getAttestationDueMs(fork);
+    return this.fcStore.currentSlot === block.slot && isBeforeLateBlockCutoff;
   }
 
   /**
    * https://github.com/ethereum/consensus-specs/blob/v1.5.0/specs/phase0/fork-choice.md#is_proposing_on_time
    */
-  private isProposingOnTime(secFromSlot: number): boolean {
-    const proposerReorgCutoff = this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT / 2;
-    return secFromSlot <= proposerReorgCutoff;
+  private isProposingOnTime(secFromSlot: number, slot: Slot): boolean {
+    const fork = this.config.getForkName(slot);
+    const proposerReorgCutoff = this.config.getProposerReorgCutoffMs(fork);
+    return secFromSlot * 1000 <= proposerReorgCutoff;
   }
 
   private getPreMergeExecStatus(executionStatus: MaybeValidExecutionStatus): ExecutionStatus.PreMerge {

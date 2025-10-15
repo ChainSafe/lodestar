@@ -1,15 +1,10 @@
 /** biome-ignore-all lint/style/noNonNullAssertion: values all exist */
 
 import {afterAll, beforeAll, beforeEach, describe, expect, it} from "vitest";
+import {LevelDbController} from "#controller/level";
 import {getEnvLogger} from "@lodestar/logger/env";
 import {fromAsync} from "@lodestar/utils";
-import {
-  type Db,
-  LevelDbController,
-  PrefixedRepository,
-  decodeNumberForDbKey,
-  encodeNumberForDbKey,
-} from "../../src/index.js";
+import {type Db, PrefixedRepository, decodeNumberForDbKey, encodeNumberForDbKey} from "../../src/index.js";
 
 type Slot = number;
 type Column = number;

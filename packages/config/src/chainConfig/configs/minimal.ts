@@ -56,8 +56,10 @@ export const chainConfig: ChainConfig = {
 
   // Time parameters
   // ---------------------------------------------------------------
-  // [customized] Faster for testing purposes
+  // [customized] Faster for testing purposes (DEPRECATED)
   SECONDS_PER_SLOT: 6,
+  // [customized] 6000 milliseconds, 6 seconds
+  SLOT_DURATION_MS: 6000,
   // 14 (estimate from Eth1 mainnet)
   SECONDS_PER_ETH1_BLOCK: 14,
   // 2**8 (= 256) epochs
@@ -66,6 +68,18 @@ export const chainConfig: ChainConfig = {
   SHARD_COMMITTEE_PERIOD: 64,
   // [customized] process deposits more quickly, but insecure
   ETH1_FOLLOW_DISTANCE: 16,
+  // 1667 basis points, ~17% of SLOT_DURATION_MS
+  PROPOSER_REORG_CUTOFF_BPS: 1667,
+  // 3333 basis points, ~33% of SLOT_DURATION_MS
+  ATTESTATION_DUE_BPS: 3333,
+  // 6667 basis points, ~67% of SLOT_DURATION_MS
+  AGGREGATE_DUE_BPS: 6667,
+
+  // Altair
+  // 3333 basis points, ~33% of SLOT_DURATION_MS
+  SYNC_MESSAGE_DUE_BPS: 3333,
+  // 6667 basis points, ~67% of SLOT_DURATION_MS
+  CONTRIBUTION_DUE_BPS: 6667,
 
   // 25% of SLOT_DURATION_MS
   ATTESTATION_DUE_BPS_GLOAS: 2500,
@@ -111,10 +125,22 @@ export const chainConfig: ChainConfig = {
 
   // Networking
   // ---------------------------------------------------------------
-  // 2**10 (= 1024)
+  // 10 * 2**20 (= 10,485,760) bytes, 10 MiB
+  MAX_PAYLOAD_SIZE: 10485760,
+  // 2**10 (= 1,024) blocks
   MAX_REQUEST_BLOCKS: 1024,
-  // [customized] `MIN_VALIDATOR_WITHDRAWABILITY_DELAY + CHURN_LIMIT_QUOTIENT // 2` (= 272)
+  // 2**8 (= 256) epochs
+  EPOCHS_PER_SUBNET_SUBSCRIPTION: 256,
+  // [customized] MIN_VALIDATOR_WITHDRAWABILITY_DELAY + CHURN_LIMIT_QUOTIENT // 2 (= 272) epochs
   MIN_EPOCHS_FOR_BLOCK_REQUESTS: 272,
+  // 2**5 (= 32) slots
+  ATTESTATION_PROPAGATION_SLOT_RANGE: 32,
+  // 500ms
+  MAXIMUM_GOSSIP_CLOCK_DISPARITY: 500,
+  MESSAGE_DOMAIN_INVALID_SNAPPY: b("0x00000000"),
+  MESSAGE_DOMAIN_VALID_SNAPPY: b("0x01000000"),
+  // 2 subnets per node
+  SUBNETS_PER_NODE: 2,
 
   // Deneb
   // 2**7 (= 128)
@@ -146,6 +172,10 @@ export const chainConfig: ChainConfig = {
   BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: 32000000000,
   // `2**12` (= 4096 epochs, ~18 days)
   MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 4096,
+
+  // Gloas
+  // 2**7 (= 128) payloads
+  MAX_REQUEST_PAYLOADS: 128,
 
   // Blob Scheduling
   // ---------------------------------------------------------------

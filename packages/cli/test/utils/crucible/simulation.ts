@@ -70,7 +70,7 @@ export class Simulation {
     });
     this.clock = new EpochClock({
       genesisTime: this.options.genesisTime + this.forkConfig.GENESIS_DELAY,
-      secondsPerSlot: this.forkConfig.SECONDS_PER_SLOT,
+      secondsPerSlot: this.forkConfig.SLOT_DURATION_MS / 1000,
       slotsPerEpoch: activePreset.SLOTS_PER_EPOCH,
       signal: this.options.controller.signal,
     });

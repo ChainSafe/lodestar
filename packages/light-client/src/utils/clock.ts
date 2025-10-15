@@ -4,7 +4,7 @@ import {Epoch, Slot, SyncPeriod} from "@lodestar/types";
 
 export function getCurrentSlot(config: ChainConfig, genesisTime: number): Slot {
   const diffInSeconds = Date.now() / 1000 - genesisTime;
-  return Math.floor(diffInSeconds / config.SECONDS_PER_SLOT);
+  return Math.floor((diffInSeconds * 1000) / config.SLOT_DURATION_MS);
 }
 
 /** Returns the slot if the internal clock were advanced by `toleranceSec`. */
@@ -34,8 +34,8 @@ export function computeSyncPeriodAtEpoch(epoch: Epoch): SyncPeriod {
   return Math.floor(epoch / EPOCHS_PER_SYNC_COMMITTEE_PERIOD);
 }
 
-export function timeUntilNextEpoch(config: Pick<ChainConfig, "SECONDS_PER_SLOT">, genesisTime: number): number {
-  const milliSecondsPerEpoch = SLOTS_PER_EPOCH * config.SECONDS_PER_SLOT * 1000;
+export function timeUntilNextEpoch(config: Pick<ChainConfig, "SLOT_DURATION_MS">, genesisTime: number): number {
+  const milliSecondsPerEpoch = SLOTS_PER_EPOCH * config.SLOT_DURATION_MS;
   const msFromGenesis = Date.now() - genesisTime * 1000;
   if (msFromGenesis >= 0) {
     return milliSecondsPerEpoch - (msFromGenesis % milliSecondsPerEpoch);

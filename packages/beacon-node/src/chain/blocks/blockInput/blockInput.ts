@@ -1,5 +1,5 @@
-import {ForkName, ForkPreDeneb} from "@lodestar/params";
-import {BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
+import {ForkName, ForkPostFulu, ForkPreDeneb, ForkPreGloas} from "@lodestar/params";
+import {BeaconBlockBody, BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
 import {fromHex, prettyBytes, toRootHex, withTimeout} from "@lodestar/utils";
 import {VersionedHashes} from "../../../execution/index.js";
 import {kzgCommitmentToVersionedHash} from "../../../util/blobs.js";
@@ -652,7 +652,8 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
   static createFromColumn(
     props: AddColumn & CreateBlockInputMeta & {sampledColumns: ColumnIndex[]; custodyColumns: ColumnIndex[]}
   ): BlockInputColumns {
-    const hasAllData = props.sampledColumns.length === 0;
+    const hasAllData =
+      props.daOutOfRange || props.columnSidecar.kzgCommitments.length === 0 || props.sampledColumns.length === 0;
     const state: BlockInputColumnsState = {
       hasBlock: false,
       hasAllData,
@@ -714,7 +715,9 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
       );
     }
 
-    const hasAllData = props.block.message.body.blobKzgCommitments.length === 0 || this.state.hasAllData;
+    const hasAllData =
+      (props.block.message.body as BeaconBlockBody<ForkPostFulu & ForkPreGloas>).blobKzgCommitments.length === 0 ||
+      this.state.hasAllData;
 
     this.state = {
       ...this.state,

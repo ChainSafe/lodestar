@@ -38,7 +38,7 @@ export function parseLoggerArgs(
         ? {
             format: TimestampFormatCode.EpochSlot,
             genesisTime: args.logFormatGenesisTime,
-            secondsPerSlot: config.SECONDS_PER_SLOT,
+            secondsPerSlot: config.SLOT_DURATION_MS / 1000,
             slotsPerEpoch: SLOTS_PER_EPOCH,
           }
         : {

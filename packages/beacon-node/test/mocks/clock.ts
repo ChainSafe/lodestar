@@ -57,6 +57,13 @@ export class ClockStopped extends EventEmitter implements IClock {
     return 0;
   }
 
+  /**
+   * Return milliseconds from a slot to either toMs or now.
+   */
+  msFromSlot(): number {
+    return 0;
+  }
+
   // MOCK Methods
 
   setSlot(slot: Slot): void {
@@ -76,5 +83,6 @@ export function getMockedClock(): Mocked<IClock> {
     isCurrentSlotGivenGossipDisparity: vi.fn(),
     slotWithPastTolerance: vi.fn(),
     secFromSlot: vi.fn(),
+    msFromSlot: vi.fn(),
   } as unknown as Mocked<IClock>;
 }

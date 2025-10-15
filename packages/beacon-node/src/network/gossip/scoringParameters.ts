@@ -84,10 +84,10 @@ export function computeGossipPeerScoreParams({
   config: BeaconConfig;
   eth2Context: Eth2Context;
 }): Partial<PeerScoreParams> {
-  const decayIntervalMs = config.SECONDS_PER_SLOT * 1000;
+  const decayIntervalMs = config.SLOT_DURATION_MS;
   const decayToZero = 0.01;
-  const epochDurationMs = config.SECONDS_PER_SLOT * SLOTS_PER_EPOCH * 1000;
-  const slotDurationMs = config.SECONDS_PER_SLOT * 1000;
+  const epochDurationMs = config.SLOT_DURATION_MS * SLOTS_PER_EPOCH;
+  const slotDurationMs = config.SLOT_DURATION_MS;
   const scoreParameterDecayFn = (decayTimeMs: number): number => {
     return scoreParameterDecayWithBase(decayTimeMs, decayIntervalMs, decayToZero);
   };
@@ -265,7 +265,7 @@ function getTopicScoreParams(
 
   if (meshMessageInfo) {
     const {decaySlots, capFactor, activationWindow, currentSlot} = meshMessageInfo;
-    const decayTimeMs = config.SECONDS_PER_SLOT * decaySlots * 1000;
+    const decayTimeMs = config.SLOT_DURATION_MS * decaySlots;
     params.meshMessageDeliveriesDecay = scoreParameterDecayFn(decayTimeMs);
     params.meshMessageDeliveriesThreshold = threshold(params.meshMessageDeliveriesDecay, expectedMessageRate / 50);
     params.meshMessageDeliveriesCap = Math.max(capFactor * params.meshMessageDeliveriesThreshold, 2);

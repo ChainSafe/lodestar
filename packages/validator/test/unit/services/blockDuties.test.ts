@@ -3,7 +3,8 @@ import {afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest
 import {SecretKey} from "@chainsafe/blst";
 import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
-import {chainConfig} from "@lodestar/config/default";
+import {createChainForkConfig} from "@lodestar/config";
+import {config as defaultConfig} from "@lodestar/config/default";
 import {toHex} from "@lodestar/utils";
 import {BlockDutiesService} from "../../../src/services/blockDuties.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
@@ -15,6 +16,7 @@ import {initValidatorStore} from "../../utils/validatorStore.js";
 
 describe("BlockDutiesService", () => {
   const api = getApiClientStub();
+  const config = createChainForkConfig(defaultConfig);
   let validatorStore: ValidatorStore;
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
 
@@ -43,7 +45,7 @@ describe("BlockDutiesService", () => {
 
     const clock = new ClockMock();
     const dutiesService = new BlockDutiesService(
-      chainConfig,
+      config,
       loggerVc,
       api,
       clock,
@@ -74,7 +76,7 @@ describe("BlockDutiesService", () => {
     // Clock will call runAttesterDutiesTasks() immediately
     const clock = new ClockMock();
     const dutiesService = new BlockDutiesService(
-      chainConfig,
+      config,
       loggerVc,
       api,
       clock,
@@ -127,7 +129,7 @@ describe("BlockDutiesService", () => {
 
     const clock = new ClockMock();
     const dutiesService = new BlockDutiesService(
-      chainConfig,
+      config,
       loggerVc,
       api,
       clock,

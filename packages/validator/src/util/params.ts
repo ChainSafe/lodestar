@@ -146,11 +146,18 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     GLOAS_FORK_EPOCH: gloasForkRelevant,
 
     // Time parameters
-    SECONDS_PER_SLOT: true,
+    SECONDS_PER_SLOT: false, // Deprecated
+    SLOT_DURATION_MS: true,
     SECONDS_PER_ETH1_BLOCK: false, // Legacy
     MIN_VALIDATOR_WITHDRAWABILITY_DELAY: true,
     SHARD_COMMITTEE_PERIOD: true,
     ETH1_FOLLOW_DISTANCE: true,
+    PROPOSER_REORG_CUTOFF_BPS: true,
+    ATTESTATION_DUE_BPS: true,
+    AGGREGATE_DUE_BPS: true,
+    // Altair
+    SYNC_MESSAGE_DUE_BPS: altairForkRelevant,
+    CONTRIBUTION_DUE_BPS: altairForkRelevant,
 
     // Validator cycle
     INACTIVITY_SCORE_BIAS: true,
@@ -172,6 +179,13 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     DEPOSIT_CONTRACT_ADDRESS: true,
 
     // Networking (non-critical as those do not affect consensus)
+    MAX_PAYLOAD_SIZE: false,
+    EPOCHS_PER_SUBNET_SUBSCRIPTION: false,
+    ATTESTATION_PROPAGATION_SLOT_RANGE: false,
+    MAXIMUM_GOSSIP_CLOCK_DISPARITY: false,
+    MESSAGE_DOMAIN_INVALID_SNAPPY: false,
+    MESSAGE_DOMAIN_VALID_SNAPPY: false,
+    SUBNETS_PER_NODE: false,
     MAX_REQUEST_BLOCKS: false,
     MAX_REQUEST_BLOCKS_DENEB: false,
     MIN_EPOCHS_FOR_BLOCK_REQUESTS: false,
@@ -183,6 +197,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     MAX_REQUEST_BLOB_SIDECARS: false,
     MAX_REQUEST_BLOB_SIDECARS_ELECTRA: false,
     MAX_REQUEST_DATA_COLUMN_SIDECARS: false,
+    MAX_REQUEST_PAYLOADS: false,
 
     // # Phase0Preset
     /////////////////

@@ -1,4 +1,4 @@
-import {BLOBSIDECAR_FIXED_SIZE} from "@lodestar/params";
+import {BLOB_SIDECAR_FIXED_SIZE} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {RootHex} from "@lodestar/types";
@@ -45,12 +45,12 @@ export async function* onBlobSidecarsByRoot(
     }
 
     const blobSidecarBytes = lastFetchedSideCars.bytes.slice(
-      index * BLOBSIDECAR_FIXED_SIZE,
-      (index + 1) * BLOBSIDECAR_FIXED_SIZE
+      index * BLOB_SIDECAR_FIXED_SIZE,
+      (index + 1) * BLOB_SIDECAR_FIXED_SIZE
     );
-    if (blobSidecarBytes.length !== BLOBSIDECAR_FIXED_SIZE) {
+    if (blobSidecarBytes.length !== BLOB_SIDECAR_FIXED_SIZE) {
       throw Error(
-        `Inconsistent state, blobSidecar blockRoot=${blockRootHex} index=${index} blobSidecarBytes=${blobSidecarBytes.length} expected=${BLOBSIDECAR_FIXED_SIZE}`
+        `Inconsistent state, blobSidecar blockRoot=${blockRootHex} index=${index} blobSidecarBytes=${blobSidecarBytes.length} expected=${BLOB_SIDECAR_FIXED_SIZE}`
       );
     }
 

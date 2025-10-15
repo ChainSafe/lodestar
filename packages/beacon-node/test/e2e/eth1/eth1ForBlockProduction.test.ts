@@ -1,6 +1,7 @@
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {KeyValue, LevelDbController} from "@lodestar/db";
+import {KeyValue} from "@lodestar/db";
+import {LevelDbController} from "@lodestar/db/controller/level";
 import {phase0, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {BeaconDb} from "../../../src/db/index.js";
