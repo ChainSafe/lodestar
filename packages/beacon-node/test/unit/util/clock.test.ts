@@ -1,7 +1,6 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {config} from "@lodestar/config/default";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../../src/constants/index.js";
 import {Clock, ClockEvent} from "../../../src/util/clock.js";
 
 describe("Clock", () => {
@@ -44,7 +43,7 @@ describe("Clock", () => {
 
   describe("currentSlotWithGossipDisparity", () => {
     it("should be next slot", () => {
-      vi.advanceTimersByTime(config.SLOT_DURATION_MS - (MAXIMUM_GOSSIP_CLOCK_DISPARITY - 50));
+      vi.advanceTimersByTime(config.SLOT_DURATION_MS - (config.MAXIMUM_GOSSIP_CLOCK_DISPARITY - 50));
       expect(clock.currentSlotWithGossipDisparity).toBe(clock.currentSlot + 1);
     });
 
@@ -64,14 +63,14 @@ describe("Clock", () => {
       const nextSlot = clock.currentSlot + 1;
       // "current slot could NOT be next slot if it's far away from next slot"
       expect(clock.isCurrentSlotGivenGossipDisparity(nextSlot)).toBe(false);
-      vi.advanceTimersByTime(config.SLOT_DURATION_MS - (MAXIMUM_GOSSIP_CLOCK_DISPARITY - 50));
+      vi.advanceTimersByTime(config.SLOT_DURATION_MS - (config.MAXIMUM_GOSSIP_CLOCK_DISPARITY - 50));
       // "current slot could be next slot if it's too close to next slot"
       expect(clock.isCurrentSlotGivenGossipDisparity(nextSlot)).toBe(true);
     });
 
     it("should accept previous slot if it's just passed current slot", () => {
       const previousSlot = clock.currentSlot - 1;
-      vi.advanceTimersByTime(MAXIMUM_GOSSIP_CLOCK_DISPARITY - 50);
+      vi.advanceTimersByTime(config.MAXIMUM_GOSSIP_CLOCK_DISPARITY - 50);
       // "current slot could be previous slot if it's just passed to a slot"
       expect(clock.isCurrentSlotGivenGossipDisparity(previousSlot)).toBe(true);
       vi.advanceTimersByTime(100);

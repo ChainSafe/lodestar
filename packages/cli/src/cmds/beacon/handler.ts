@@ -7,7 +7,7 @@ import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
 import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
-import {ErrorAborted, bytesToInt} from "@lodestar/utils";
+import {ErrorAborted, bytesToInt, formatBytes} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {BeaconNodeOptions, getBeaconConfigFromArgs} from "../../config/index.js";
 import {getNetworkBootnodes, getNetworkData, isKnownNetworkName, readBootnodes} from "../../networks/index.js";
@@ -44,7 +44,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
   const heapSizeLimit = getHeapStatistics().heap_size_limit;
   if (heapSizeLimit < EIGHT_GB) {
     logger.warn(
-      `Node.js heap size limit is too low, consider increasing it to at least ${EIGHT_GB}. See https://chainsafe.github.io/lodestar/faqs/#running-a-beacon-node for more details.`
+      `Node.js heap size limit is too low at ${formatBytes(heapSizeLimit)}, consider increasing it to at least ${formatBytes(EIGHT_GB)}. See https://chainsafe.github.io/lodestar/faqs/#running-a-beacon-node for more details.`
     );
   }
 

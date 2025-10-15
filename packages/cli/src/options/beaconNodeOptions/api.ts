@@ -1,7 +1,15 @@
 import {IBeaconNodeOptions, allNamespaces, defaultOptions} from "@lodestar/beacon-node";
 import {CliCommandOptions} from "@lodestar/utils";
 
-const enabledAll = "*";
+export const enabledAll = "*";
+export const enabledAllBashFriendly = "all";
+
+/**
+ * Coerce function to transform bash-friendly 'all' to CORS spec '*'
+ */
+export function coerceCors(cors: string): string {
+  return cors === enabledAllBashFriendly ? enabledAll : cors;
+}
 
 export type ApiArgs = {
   "api.maxGindicesInProof"?: number;
@@ -51,13 +59,14 @@ export const options: CliCommandOptions<ApiArgs> = {
 
   "rest.namespace": {
     type: "array",
-    choices: [...allNamespaces, enabledAll],
-    description: `Pick namespaces to expose for HTTP API. Set to '${enabledAll}' to enable all namespaces`,
+    choices: [...allNamespaces, enabledAll, enabledAllBashFriendly],
+    description: `Pick namespaces to expose for HTTP API. Set to '${enabledAllBashFriendly}' (or '${enabledAll}') to enable all namespaces`,
     defaultDescription: JSON.stringify(defaultOptions.api.rest.api),
     group: "api",
     coerce: (namespaces: string[]): string[] => {
-      // Enable all
-      if (namespaces.includes(enabledAll)) return allNamespaces;
+      if (namespaces.includes(enabledAll) || namespaces.includes(enabledAllBashFriendly)) {
+        return allNamespaces;
+      }
       // Parse ["debug,lodestar"] to ["debug", "lodestar"]
       return namespaces.flatMap((val) => val.split(","));
     },
@@ -65,9 +74,10 @@ export const options: CliCommandOptions<ApiArgs> = {
 
   "rest.cors": {
     type: "string",
-    description: "Configures the Access-Control-Allow-Origin CORS header for HTTP API",
+    description: `Configures the Access-Control-Allow-Origin CORS header for HTTP API. Use '${enabledAllBashFriendly}' to allow all origins`,
     defaultDescription: defaultOptions.api.rest.cors,
     group: "api",
+    coerce: coerceCors,
   },
 
   "rest.address": {

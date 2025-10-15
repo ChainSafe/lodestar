@@ -1,4 +1,5 @@
 import {describe, expect, it} from "vitest";
+import {config} from "@lodestar/config/default";
 import {ATTESTATION_SUBNET_PREFIX_BITS, NODE_ID_BITS} from "@lodestar/params";
 import {bigIntToBytes} from "@lodestar/utils";
 import {computeSubscribedSubnet, getNodeIdPrefix, getNodeOffset} from "../../../../src/network/subnets/util.js";
@@ -99,7 +100,7 @@ describe("computeSubscribedSubnet", () => {
   for (const [index, {nodeId, epoch, expected}] of testCases.entries()) {
     it(`test case ${index}`, () => {
       // node is is of type uint256 = 32 bytes
-      expect(computeSubscribedSubnet(bigIntToBytes(BigInt(nodeId), 32, "be"), epoch)).toEqual(expected);
+      expect(computeSubscribedSubnet(config, bigIntToBytes(BigInt(nodeId), 32, "be"), epoch)).toEqual(expected);
     });
   }
 });

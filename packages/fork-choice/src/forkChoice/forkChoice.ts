@@ -443,13 +443,33 @@ export class ForkChoice implements IForkChoice {
     // Check if scores need to be calculated/updated
     const oldBalances = this.balances;
     const newBalances = this.fcStore.justified.balances;
-    const deltas = computeDeltas(
+    const computeDeltasMetrics = this.metrics?.forkChoice.computeDeltas;
+
+    const timer = computeDeltasMetrics?.duration.startTimer();
+    const {
+      deltas,
+      equivocatingValidators,
+      oldInactiveValidators,
+      newInactiveValidators,
+      unchangedVoteValidators,
+      newVoteValidators,
+    } = computeDeltas(
       this.protoArray.nodes.length,
       this.votes,
       oldBalances,
       newBalances,
       this.fcStore.equivocatingIndices
     );
+    timer?.();
+
+    computeDeltasMetrics?.deltasCount.set(deltas.length);
+    computeDeltasMetrics?.zeroDeltasCount.set(deltas.filter((d) => d === 0).length);
+    computeDeltasMetrics?.equivocatingValidators.set(equivocatingValidators);
+    computeDeltasMetrics?.oldInactiveValidators.set(oldInactiveValidators);
+    computeDeltasMetrics?.newInactiveValidators.set(newInactiveValidators);
+    computeDeltasMetrics?.unchangedVoteValidators.set(unchangedVoteValidators);
+    computeDeltasMetrics?.newVoteValidators.set(newVoteValidators);
+
     this.balances = newBalances;
     /**
      * The structure in line with deltas to propagate boost up the branch

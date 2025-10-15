@@ -236,6 +236,7 @@ export class Network implements INetwork {
     this.chain.emitter.off(routes.events.EventType.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
     this.chain.emitter.off(ChainEvent.updateTargetCustodyGroupCount, this.onTargetGroupCountUpdated);
     this.chain.emitter.off(ChainEvent.publishDataColumns, this.onPublishDataColumns);
+    this.chain.emitter.off(ChainEvent.publishBlobSidecars, this.onPublishBlobSidecars);
     this.chain.emitter.off(ChainEvent.updateStatus, this.onUpdateStatus);
     await this.core.close();
 

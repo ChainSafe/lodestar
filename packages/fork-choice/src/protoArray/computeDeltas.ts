@@ -6,6 +6,18 @@ import {VoteTracker} from "./interface.js";
 // reuse arrays to avoid memory reallocation and gc
 const deltas = new Array<number>();
 
+export type DeltasResult = {
+  deltas: number[];
+  equivocatingValidators: number;
+  // inactive validators before beacon node started
+  oldInactiveValidators: number;
+  // new inactive validators after beacon node started
+  newInactiveValidators: number;
+  // below is for active validators
+  unchangedVoteValidators: number;
+  newVoteValidators: number;
+};
+
 /**
  * Returns a list of `deltas`, where there is one delta for each of the indices in `indices`
  *
@@ -21,19 +33,30 @@ export function computeDeltas(
   oldBalances: EffectiveBalanceIncrements,
   newBalances: EffectiveBalanceIncrements,
   equivocatingIndices: Set<ValidatorIndex>
-): number[] {
+): DeltasResult {
   deltas.length = numProtoNodes;
   deltas.fill(0);
 
   // avoid creating new variables in the loop to potentially reduce GC pressure
   let oldBalance: number, newBalance: number;
   let currentIndex: number | null, nextIndex: number | null;
+  // sort equivocating indices to avoid Set.has() in the loop
+  const equivocatingArray = Array.from(equivocatingIndices).sort((a, b) => a - b);
+  let equivocatingIndex = 0;
+  let equivocatingValidatorIndex = equivocatingArray[equivocatingIndex];
+
+  const equivocatingValidators = equivocatingIndices.size;
+  let oldInactiveValidators = 0;
+  let newInactiveValidators = 0;
+  let unchangedVoteValidators = 0;
+  let newVoteValidators = 0;
 
   for (let vIndex = 0; vIndex < votes.length; vIndex++) {
     const vote = votes[vIndex];
     // There is no need to create a score change if the validator has never voted or both of their
     // votes are for the zero hash (genesis block)
     if (vote === undefined) {
+      oldInactiveValidators++;
       continue;
     }
     currentIndex = vote.currentIndex;
@@ -50,7 +73,7 @@ export function computeDeltas(
     // on-boarded fewer validators than the prior fork.
     newBalance = newBalances === oldBalances ? oldBalance : (newBalances[vIndex] ?? 0);
 
-    if (equivocatingIndices.size > 0 && equivocatingIndices.has(vIndex)) {
+    if (vIndex === equivocatingValidatorIndex) {
       // this function could be called multiple times but we only want to process slashing validator for 1 time
       if (currentIndex !== null) {
         if (currentIndex >= numProtoNodes) {
@@ -62,6 +85,13 @@ export function computeDeltas(
         deltas[currentIndex] -= oldBalance;
       }
       vote.currentIndex = null;
+      equivocatingIndex++;
+      equivocatingValidatorIndex = equivocatingArray[equivocatingIndex];
+      continue;
+    }
+
+    if (oldBalance === 0 && newBalance === 0) {
+      newInactiveValidators++;
       continue;
     }
 
@@ -89,9 +119,19 @@ export function computeDeltas(
         }
         deltas[nextIndex] += newBalance;
       }
+      vote.currentIndex = nextIndex;
+      newVoteValidators++;
+    } else {
+      unchangedVoteValidators++;
     }
-    vote.currentIndex = nextIndex;
-  }
+  } // end validator loop
 
-  return deltas;
+  return {
+    deltas,
+    equivocatingValidators,
+    oldInactiveValidators,
+    newInactiveValidators,
+    unchangedVoteValidators,
+    newVoteValidators,
+  };
 }
