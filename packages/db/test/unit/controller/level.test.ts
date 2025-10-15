@@ -140,9 +140,9 @@ describe("LevelDB controller", () => {
     const values = indexes.map((i) => Buffer.from([i]));
     await db.batchPut(keys.map((key, i) => ({key, value: values[i]})));
 
-    const result = await db.entries({reverse: true, limit: 1});
+    const result = await db.entries({reverse: true, limit: 1, lt: Buffer.from([9])});
     expect(result.length).toBe(1);
-    expect(Uint8Array.from(result[0].key)).toEqual(Uint8Array.from([9]));
+    expect(Uint8Array.from(result[0].key)).toEqual(Uint8Array.from([8]));
   });
 
   it("test compactRange + approximateSize", async () => {
