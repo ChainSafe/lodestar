@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 // ESM modules now reference build files on (package.json).exports
-// This script ensure that the referenced files exist
+// This script ensures that the referenced files exist
 
 const pkgsDirpath = path.resolve("./packages");
 

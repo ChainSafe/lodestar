@@ -163,7 +163,7 @@ describe("executionStatus / normal updates", () => {
   );
 
   const invalidate3CValidate2CForkChoice = collectProtoarrayValidationStatus(fc);
-  it("correcly invalidate 3C and validate 2C only", () => {
+  it("correctly invalidate 3C and validate 2C only", () => {
     expect(invalidate3CValidate2CForkChoice).toEqual(
       toFcTestCase([
         ["0", "1A", "3B", ExecutionStatus.PreMerge],

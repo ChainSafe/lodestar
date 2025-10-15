@@ -36,11 +36,11 @@ describe("forkName", () => {
       expect(highestFork([ForkName.altair])).toBe(ForkName.altair);
     });
 
-    it("should return the the highest fork", () => {
+    it("should return the highest fork", () => {
       expect(highestFork([ForkName.altair, ForkName.bellatrix])).toBe(ForkName.bellatrix);
     });
 
-    it("should return the the highest fork if given in random order", () => {
+    it("should return the highest fork if given in random order", () => {
       expect(highestFork([ForkName.altair, ForkName.bellatrix, ForkName.deneb, ForkName.phase0])).toBe(ForkName.deneb);
     });
   });
@@ -50,11 +50,11 @@ describe("forkName", () => {
       expect(lowestFork([ForkName.altair])).toBe(ForkName.altair);
     });
 
-    it("should return the the lowest fork", () => {
+    it("should return the lowest fork", () => {
       expect(lowestFork([ForkName.altair, ForkName.bellatrix])).toBe(ForkName.altair);
     });
 
-    it("should return the the lowest fork if given in random order", () => {
+    it("should return the lowest fork if given in random order", () => {
       expect(lowestFork([ForkName.altair, ForkName.bellatrix, ForkName.deneb, ForkName.phase0])).toBe(ForkName.phase0);
     });
   });

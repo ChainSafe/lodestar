@@ -231,7 +231,7 @@ export function naiveGetNextSyncCommitteeIndices(
 }
 
 /**
- * Optmized version of `naiveGetNextSyncCommitteeIndices`.
+ * Optimized version of `naiveGetNextSyncCommitteeIndices`.
  *
  * In the worse case scenario, this could be >1000x speedup according to the perf test.
  */

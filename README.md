@@ -6,7 +6,7 @@
 [![Docker Image Version (latest by date)](https://img.shields.io/docker/v/chainsafe/lodestar?color=blue&label=Docker&sort=semver)](https://hub.docker.com/r/chainsafe/lodestar)
 [![Eth Consensus Spec v1.5.0](https://img.shields.io/badge/ETH%20consensus--spec-1.5.0-blue)](https://github.com/ethereum/consensus-specs/releases/tag/v1.5.0)
 ![ES Version](https://img.shields.io/badge/ES-2021-yellow)
-![Node Version](https://img.shields.io/badge/node-22.x-green)
+[![Node Version](https://img.shields.io/badge/node-22.x-green)](https://nodejs.org/en/about/previous-releases)
 [![codecov](https://codecov.io/gh/ChainSafe/lodestar/graph/badge.svg)](https://codecov.io/gh/ChainSafe/lodestar)
 [![gitpoap badge](https://public-api.gitpoap.io/v1/repo/ChainSafe/lodestar/badge)](https://www.gitpoap.io/gh/ChainSafe/lodestar)
 
@@ -24,7 +24,7 @@
 - :writing_hand: If you have questions [submit an issue](https://github.com/ChainSafe/lodestar/issues/new/choose) or join us on [Discord](https://discord.gg/yjyvFRP)!
   [![Discord](https://img.shields.io/discord/593655374469660673.svg?label=Discord&logo=discord)](https://discord.gg/aMxzVcr)
 - :rotating_light: Please note our [security policy](./SECURITY.md).
-- :bird: Follow Lodestar on [Twitter](https://twitter.com/lodestar_eth) for announcements and updates! [![Twitter Follow](https://img.shields.io/twitter/follow/lodestar_eth)](https://twitter.com/lodestar_eth)
+- :bird: Follow Lodestar on [X](https://x.com/lodestar_eth) for announcements and updates! [![X Follow](https://img.shields.io/twitter/follow/lodestar_eth)](https://x.com/lodestar_eth)
 
 ## Prerequisites
 

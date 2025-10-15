@@ -4,7 +4,7 @@
 
 Vitest and other utility to reuse across testing of other packages.
 
-For usage see [spec tests]("https://github.com/ChainSafe/lodestar/tree/unstable/packages/beacon-node/test/spec")
+For usage see [spec tests](https://github.com/ChainSafe/lodestar/tree/unstable/packages/beacon-node/test/spec)
 
 ## License
 

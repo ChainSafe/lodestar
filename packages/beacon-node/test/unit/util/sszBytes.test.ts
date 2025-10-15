@@ -42,7 +42,7 @@ import {
 } from "../../../src/util/sszBytes.js";
 import {generateRandomBlob} from "../../utils/kzg.js";
 
-describe("SinlgeAttestation SSZ serialized picking", () => {
+describe("SingleAttestation SSZ serialized picking", () => {
   const testCases: SingleAttestation[] = [
     ssz.phase0.Attestation.defaultValue(),
     phase0SingleAttestationFromValues(

@@ -37,7 +37,7 @@ export function isExecutionEnabled(state: BeaconStateExecutions, block: BeaconBl
   // TODO: Consider comparing with the payload root if this assumption is not correct.
   // return !byteArrayEquals(payload.stateRoot, ZERO_HASH);
 
-  // UPDATE: stateRoot comparision should have been enough with zero hash, but spec tests were failing
+  // UPDATE: stateRoot comparison should have been enough with zero hash, but spec tests were failing
   // Revisit this later to fix specs and make this efficient
   return isExecutionPayload(payload)
     ? !ssz.bellatrix.ExecutionPayload.equals(payload, ssz.bellatrix.ExecutionPayload.defaultValue())
@@ -164,7 +164,7 @@ export function executionPayloadToPayloadHeader(fork: ForkSeq, payload: Executio
   }
 
   if (fork >= ForkSeq.deneb) {
-    // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#process_execution_payload
+    // https://github.com/ethereum/consensus-specs/blob/dev/specs/deneb/beacon-chain.md#process_execution_payload
     (bellatrixPayloadFields as deneb.ExecutionPayloadHeader).blobGasUsed = (
       payload as deneb.ExecutionPayloadHeader | deneb.ExecutionPayload
     ).blobGasUsed;

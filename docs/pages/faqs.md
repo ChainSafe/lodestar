@@ -17,7 +17,7 @@ For MacOS, there is no direct equivalent package to Linux's `python3-distutils`.
 
 :::note "Package manager issues"
 
-Lodestar relies on [Corepack](https://nodejs.org/api/corepack.html) and associated `packageManager` value to manage its package manager version.
+Lodestar relies on [Corepack](https://github.com/nodejs/corepack#readme) and associated `packageManager` value to manage its package manager version.
 
 Make sure `corepack` is correctly enabled if you encounter some package manager related issues:
 

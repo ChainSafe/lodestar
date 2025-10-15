@@ -185,7 +185,7 @@ export class NetworkProcessor {
       () => new MapDef<RootHex, Set<PendingGossipsubMessage>>(() => new Set())
     );
 
-    // TODO: Implement queues and priorization for ReqResp incoming requests
+    // TODO: Implement queues and prioritization for ReqResp incoming requests
     // Listens to NetworkEvent.reqRespIncomingRequest event
 
     if (metrics) {
@@ -368,7 +368,7 @@ export class NetworkProcessor {
       const reason = this.checkAcceptWork();
 
       for (const topic of executeGossipWorkOrder) {
-        // beacon block is guaranteed to be processed immedately
+        // beacon block is guaranteed to be processed immediately
         // reason !== null means cannot accept work
         if (reason !== null && !executeGossipWorkOrderObj[topic]?.bypassQueue) {
           this.metrics?.networkProcessor.canNotAcceptWork.inc({reason});
@@ -393,7 +393,7 @@ export class NetworkProcessor {
             .catch((e) => this.logger.error("processGossipAttestations must not throw", {}, e));
 
           jobsSubmitted += numMessages;
-          // Attempt to find more work, but check canAcceptWork() again and run executeGossipWorkOrder priorization
+          // Attempt to find more work, but check canAcceptWork() again and run executeGossipWorkOrder prioritization
           continue job_loop;
         }
       }

@@ -104,7 +104,7 @@ export function signedBlindedBlockToFull(
     },
   } as SignedBeaconBlock;
 
-  // state transition can't seem to handle executionPayloadHeader presense in merge block
+  // state transition can't seem to handle executionPayloadHeader presence in merge block
   // so just delete the extra field we don't require
   delete (signedBlock.message.body as {executionPayloadHeader?: ExecutionPayloadHeader}).executionPayloadHeader;
   return signedBlock;

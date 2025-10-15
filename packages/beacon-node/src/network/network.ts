@@ -250,7 +250,7 @@ export class Network implements INetwork {
   }
 
   /**
-   * Request att subnets up `toSlot`. Network will ensure to mantain some peers for each
+   * Request att subnets up `toSlot`. Network will ensure to maintain some peers for each
    */
   async prepareBeaconCommitteeSubnets(subscriptions: CommitteeSubscription[]): Promise<void> {
     for (const subscription of subscriptions) {

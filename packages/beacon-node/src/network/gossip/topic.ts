@@ -46,7 +46,7 @@ export class GossipTopicCache implements IGossipTopicCache {
 }
 
 /**
- * Stringify a GossipTopic into a spec-ed formated topic string
+ * Stringify a GossipTopic into a spec-ed formatted topic string
  */
 export function stringifyGossipTopic(forkDigestContext: ForkDigestContext, topic: GossipTopic): string {
   const forkDigestHexNoPrefix = forkDigestContext.forkBoundary2ForkDigestHex(topic.boundary);
@@ -118,7 +118,7 @@ export function getGossipSSZType(topic: GossipTopic) {
 }
 
 /**
- * Deserialize a gossip serialized data into an ssz object.
+ * Deserialize a gossip serialized data into a ssz object.
  */
 export function sszDeserialize<T extends GossipTopic>(topic: T, serializedData: Uint8Array): SSZTypeOfGossipTopic<T> {
   const sszType = getGossipSSZType(topic);
@@ -143,7 +143,7 @@ export function sszDeserializeAttestation(fork: ForkName, serializedData: Uint8A
 }
 
 /**
- * Deserialize a gossip seralized data into an SingleAttestation object.
+ * Deserialize a gossip seralized data into a SingleAttestation object.
  */
 export function sszDeserializeSingleAttestation(fork: ForkName, serializedData: Uint8Array): SingleAttestation {
   try {

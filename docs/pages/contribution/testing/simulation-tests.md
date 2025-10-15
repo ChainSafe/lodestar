@@ -2,7 +2,7 @@
 
 "Sim" testing for Lodestar is the most comprehensive, and complex, testing that is run. The goal is to fully simulate a testnet and to actuate the code in a way that closely mimics what will happen when turning on Lodestar in the wild. This is a very complex task and requires a lot of moving parts to work together. The following sections will describe the various components and how they work together.
 
-At a very high level, simulation testing will setup a testnet from genesis and let proceed through "normal" execution exactly as the nodes would under production circumstances. To get feedback there are regular checks along the way to asses how the testnet nodes are working. These "assertions" can be added and removed at will to allow developers to check for specific conditions in a tightly controlled, reproducible, environment to get high quality and actionable feedback on how Lodestar performs. The end goal of these tests is to to run a full Lodestar client in an environment that is as close to what an end user would experience.
+At a very high level, simulation testing will setup a testnet from genesis and let proceed through "normal" execution exactly as the nodes would under production circumstances. To get feedback there are regular checks along the way to assess how the testnet nodes are working. These "assertions" can be added and removed at will to allow developers to check for specific conditions in a tightly controlled, reproducible, environment to get high quality and actionable feedback on how Lodestar performs. The end goal of these tests is to to run a full Lodestar client in an environment that is as close to what an end user would experience.
 
 These tests usually setup full testnets with multiple consensus clients and their paired execution node. In many instance we are looking to just exercise the Lodestar code but there are some places where there is also testing to see how Lodestar works in relation to the other consensus clients, like Lighthouse. As you can imagine, there is quite a bit of machinery that is responsible for setting up and managing the simulations and assertions. This section will help to go over those bits and pieces. Many, but not all, of these classes can be found in `packages/cli/test/utils/simulation`.
 
@@ -38,7 +38,7 @@ yarn workspace @chainsafe/lodestar test:sim:endpoints
 
 This test is still included in our CI but is no longer as important as it once was. Lodestar is often the first client to implement new features and this test was created before geth was upgraded with the features required to support the Deneb fork. To test that Lodestar was ready this test uses mocked geth instances. It is left as a placeholder for when the next fork comes along that requires a similar approach.
 
-### `test:sim:mixedcleint`
+### `test:sim:mixedclient`
 
 Checks that Lodestar is compatible with other consensus validators and vice-versa. All tests use Geth as the EL.
 
@@ -48,7 +48,7 @@ yarn workspace @chainsafe/lodestar test:sim:mixedclient
 
 ## Sim Test Infrastructure
 
-When setting up and running the simulations, interactions with the nodes is through the published node API's. All functionality is actuated via http request and by "plugging in" this way it is possible to run the nodes in a stand-alone fashion, as they would be run in production, but to still achieve a tightly monitored and controlled environment. If code needs to be executed on a "class by class" basis or with mocking involved then the test is not a simulation test and would fall into one of the other testing categories. See the [Testing Overview](./index.md) page for more information on the other types of tests available for Lodestar.
+When setting up and running the simulations, interactions with the nodes is through the published node API's. All functionality is activated via http request and by "plugging in" this way it is possible to run the nodes in a stand-alone fashion, as they would be run in production, but to still achieve a tightly monitored and controlled environment. If code needs to be executed on a "class by class" basis or with mocking involved then the test is not a simulation test and would fall into one of the other testing categories. See the [Testing Overview](./index.md) page for more information on the other types of tests available for Lodestar.
 
 ### Simulation Environment
 

@@ -36,7 +36,7 @@ When starting up a Lodestar beacon node in any configuration, ensure you add the
 Use the `--authrpc.jwtsecret /path/to/jwtsecret.hex` flag to configure the secret. Use their documentation [here](https://geth.ethereum.org/docs/getting-started#start-geth).
 
 **For Nethermind:**
-Use the `--JsonRpc.JwtSecretFile /path/to/jwtsecret.hex` flag to configure the secret. Use their documentation [here](https://docs.nethermind.io/get-started/consensus-clients/#configuring-json-rpc-interface).
+Use the `--JsonRpc.JwtSecretFile /path/to/jwtsecret.hex` flag to configure the secret. Use their documentation [here](https://docs.nethermind.io/get-started/running-node/consensus-clients/#configuring-json-rpc-interface).
 
 **For Besu:**
 Use the `--engine-jwt-secret=/path/to/jwtsecret.hex` flag to configure the secret. Use their documentation [here](https://besu.hyperledger.org/public-networks/how-to/use-besu-api/authenticate#2-create-the-jwt).

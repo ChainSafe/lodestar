@@ -9,7 +9,7 @@ This guide specifically focuses on using Lodestar's Quickstart scripts which all
 
 - [Ubuntu v22.04 (LTS) x64 server](https://releases.ubuntu.com/22.04/)
 - Ethereum Execution (eth1) clients:
-  - [Erigon](https://github.com/ledgerwatch/erigon/releases) | [Github](https://github.com/ledgerwatch/erigon)
+  - [Erigon](https://github.com/erigontech/erigon/releases) | [Github](https://github.com/erigontech/erigon)
   - [Go-Ethereum (Geth)](https://geth.ethereum.org/) | [Github](https://github.com/ethereum/go-ethereum/releases/)
   - [Hyperledger Besu](https://www.hyperledger.org/) | [Github](https://github.com/hyperledger/besu)
   - [Nethermind](https://nethermind.io/) | [Github](https://github.com/NethermindEth/nethermind)
@@ -282,12 +282,12 @@ Under the selected client, modify or add the custom arguments on their correspon
 :::note
 The following are links to client documentation for CLI commands:
 
-- [**Lodestar CLI Commands**](https://chainsafe.github.io/lodestar/reference/cli/)
+- [**Lodestar CLI Commands**](https://chainsafe.github.io/lodestar/run/beacon-management/beacon-cli)
 - [**Nethermind CLI Commands**](https://docs.nethermind.io/fundamentals/configuration#command-line-options)
-- [**Besu CLI Commands**](https://besu.hyperledger.org/en/stable/Reference/CLI/CLI-Syntax/)
+- [**Besu CLI Commands**](https://besu.hyperledger.org/public-networks/reference/cli/options)
 - [**Go Ethereum CLI commands**](https://geth.ethereum.org/docs/interface/command-line-options)
-- [**Erigon CLI commands**](https://github.com/ledgerwatch/erigon#beacon-chain)
-- [**Reth CLI commands**](https://reth.rs/cli/reth.html)
+- [**Erigon CLI commands**](https://github.com/erigontech/erigon?tab=readme-ov-file#usage)
+- [**Reth CLI commands**](https://reth.rs/cli/reth)
   :::
 
 Once complete, press `CTRL` + `x` then `y` then `Enter` to save and exit.

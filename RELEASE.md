@@ -6,7 +6,7 @@ Lodestar uses a modified version of gitflow to manage releases. [Gitflow](https:
 
 ## Stable release
 
-### When to a release
+### When to release
 
 Lodestar does not have a fixed schedule for releases. Instead, they are published as the developers see fit.
 
@@ -74,7 +74,7 @@ If there is a bug discovered during the testing period which significantly impac
 For example: After 3-5 days of testing, is performance equal to or better than latest stable?
 
 - **Yes**: Continue to the next release step
-- **No**: If it a small issue fixable quickly (hotfix)?
+- **No**: If it isa small issue fixable quickly (hotfix)?
   - **Yes**: Merge fix(es) to `unstable`, push the fix(es) to `rc/v1.1.0` branch, go to step 2, incrementing the rc version
   - **No**: abort the release. Close the `chore: v1.1.0 release` PR, delete the branch, and start the whole release process over.
 
@@ -171,9 +171,9 @@ If the hotfix does not address the purpose of the hotfix release, or there is an
 For example: After modified hotfix testing period, is the original bug resolved? Is performance equal to or better than latest stable?
 
 - **Yes**: Continue to the next release step
-- **No**: If it a small issue fixable quickly with another hotfix?
+- **No**: If it is a small issue fixable quickly with another hotfix?
   - **Yes**: Merge fix(es) to `unstable`, push the fix(es) to `rc/v1.1.1` hotfix branch, go to step 2, incrementing the rc version
-  - **No**: Abort the release. Close the `chore: v1.1.v release` PR, delete the branch, and start the whole release process over.
+  - **No**: Abort the release. Close the `chore: v1.1.1 release` PR, delete the branch, and start the whole release process over.
 
 ### 4. Merge hotfix release candidate
 
@@ -292,7 +292,7 @@ Have someone else review the release notes and then edit the release.
 The release should be announced on the following social channels:
 
 - Discord: Use the #lodestar-announcements channel. Ensure it is published to all downstream channels
-- Twitter: Short and sweet in a single tweet or thread with twitter.com/lodestar_eth
+- X: Short and sweet in a single tweet or thread with X.com/lodestar_eth
 - Blog post (if necessary): To outline specific changes that require additional context for users
 
 # Release Manager Checklist

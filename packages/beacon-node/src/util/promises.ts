@@ -1,5 +1,5 @@
 /**
- * Promise.all() but allows all functions to run even if one throws syncronously
+ * Promise.all() but allows all functions to run even if one throws synchronously
  */
 export function promiseAllMaybeAsync<T>(fns: Array<() => Promise<T>>): Promise<T[]> {
   return Promise.all(

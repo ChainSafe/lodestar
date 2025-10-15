@@ -46,7 +46,7 @@ export class SyncnetsService implements SubnetsService {
   }
 
   /**
-   * Get all active subnets for the hearbeat.
+   * Get all active subnets for the heartbeat.
    */
   getActiveSubnets(): RequestedSubnet[] {
     return this.subscriptionsCommittee.getActiveTtl(this.clock.currentSlot);

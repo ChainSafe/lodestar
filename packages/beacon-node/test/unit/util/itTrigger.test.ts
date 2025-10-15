@@ -14,7 +14,7 @@ describe("util / itTrigger", () => {
     expect(res).toHaveLength(0);
   });
 
-  it("When triggered multiple times syncronously should yield only twice", async () => {
+  it("When triggered multiple times synchronously should yield only twice", async () => {
     const itTrigger = new ItTrigger();
 
     setTimeout(() => {

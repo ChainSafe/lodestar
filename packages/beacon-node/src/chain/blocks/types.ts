@@ -31,10 +31,10 @@ export enum AttestationImportOpt {
 }
 
 export enum BlobSidecarValidation {
-  /** When recieved in gossip the blobs are individually verified before import */
+  /** When received in gossip the blobs are individually verified before import */
   Individual,
   /**
-   * Blobs when recieved in req/resp can be fully verified before import
+   * Blobs when received in req/resp can be fully verified before import
    * but currently used in spec tests where blobs come without proofs and assumed
    * to be valid
    */

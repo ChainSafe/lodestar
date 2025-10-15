@@ -41,7 +41,7 @@ $dataDir # specified by --dataDir on the validator command
 
 ## Data Management
 
-Configuring your node to store and prune data is key to success. On average you can expect for the database to grow by the follow amounts:
+Configuring your node to store and prune data is key to success. On average you can expect for the database to grow by the following amounts:
 
 - `execution-db` grows at 2-30GB per week
 - `chain-db` grows at 1GB per month

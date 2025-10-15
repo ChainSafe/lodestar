@@ -88,7 +88,7 @@ const indexedGossipQueueOpts: {
  * Wraps a GossipValidatorFn with a queue, to limit the processing of gossip objects by type.
  *
  * A queue here is essential to protect against DOS attacks, where a peer may send many messages at once.
- * Queues also protect the node against overloading. If the node gets bussy with an expensive epoch transition,
+ * Queues also protect the node against overloading. If the node gets busy with an expensive epoch transition,
  * it may buffer too many gossip objects causing an Out of memory (OOM) error. With a queue the node will reject
  * new objects to fit its current throughput.
  *

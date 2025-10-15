@@ -17,7 +17,7 @@ export function readAndGetGitData(): GitData {
     const currentGitData = getGitData();
 
     return {
-      // If the CLI is run from source, prioritze current git data
+      // If the CLI is run from source, prioritize current git data
       // over `.git-data.json` file, which might be stale here.
       branch:
         currentGitData.branch && currentGitData.branch.length > 0

@@ -3,7 +3,7 @@ import {CachedBeaconStateAllForks} from "../types.js";
 import {getBlockRoot, getBlockRootAtSlot} from "./blockRoot.js";
 
 /**
- * Cache to prevent accessing the state tree to fetch block roots repeteadly.
+ * Cache to prevent accessing the state tree to fetch block roots repeatedly.
  * In normal network conditions the same root is read multiple times, specially the target.
  */
 export class RootCache {

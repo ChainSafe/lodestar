@@ -1073,7 +1073,7 @@ function renderBlockProposalSummary(
 }
 
 /**
- * Cache to prevent accessing the state tree to fetch block roots repeteadly.
+ * Cache to prevent accessing the state tree to fetch block roots repeatedly.
  * In normal network conditions the same root is read multiple times, specially the target.
  */
 export class RootHexCache {

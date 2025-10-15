@@ -17,7 +17,7 @@ import {computeDomain, computeSigningRoot, getMaxEffectiveBalance, increaseBalan
 
 /**
  * Process a Deposit operation. Potentially adds a new validator to the registry. Mutates the validators and balances
- * trees, pushing contigious values at the end.
+ * trees, pushing contiguous values at the end.
  *
  * PERF: Work depends on number of Deposit per block. On regular networks the average is 0 / block.
  */
@@ -145,7 +145,7 @@ export function isValidDepositSignature(
   amount: number,
   depositSignature: Uint8Array
 ): boolean {
-  // verify the deposit signature (proof of posession) which is not checked by the deposit contract
+  // verify the deposit signature (proof of possession) which is not checked by the deposit contract
   const depositMessage = {
     pubkey,
     withdrawalCredentials,

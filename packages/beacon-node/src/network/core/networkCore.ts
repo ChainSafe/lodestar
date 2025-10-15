@@ -321,7 +321,7 @@ export class NetworkCore implements INetworkCore {
   }
 
   /**
-   * Request att subnets up `toSlot`. Network will ensure to mantain some peers for each
+   * Request att subnets up `toSlot`. Network will ensure to maintain some peers for each
    */
   async prepareBeaconCommitteeSubnets(subscriptions: CommitteeSubscription[]): Promise<void> {
     this.attnetsService.addCommitteeSubscriptions(subscriptions);
@@ -377,7 +377,7 @@ export class NetworkCore implements INetworkCore {
   async setTargetGroupCount(count: number): Promise<void> {
     this.networkConfig.custodyConfig.updateTargetCustodyGroupCount(count);
     this.metadata.custodyGroupCount = count;
-    // cannot call subscribeGossipCoreTopics() because we subsribed to core topics already
+    // cannot call subscribeGossipCoreTopics() because we subscribed to core topics already
     // we only need to subscribe to more data_column_sidecar topics
     const dataColumnSubnetTopics = getDataColumnSidecarTopics(this.networkConfig);
     const activeBoundaries = getActiveForkBoundaries(this.config, this.clock.currentEpoch);

@@ -3,7 +3,7 @@ import {pruneSetToMax} from "@lodestar/utils";
 import {DATA, QUANTITY} from "../../eth1/provider/utils.js";
 import {PayloadAttributesRpc} from "./types.js";
 
-// Idealy this only need to be set to the max head reorgs number
+// Ideally this only need to be set to the max head reorgs number
 const MAX_PAYLOAD_IDS = SLOTS_PER_EPOCH;
 
 // An execution engine can produce a payload id anywhere the uint64 range

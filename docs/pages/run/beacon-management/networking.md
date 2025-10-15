@@ -1,6 +1,6 @@
 # Networking
 
-Lodestar will automatically connect to peers on the network. Peers are found through the discv5 protocol and once peers are established communications happen via gossipsub over libp2p. While not necessary, having a basic understanding of how the various protocols and transports work will help with debugging and troubleshooting as some of the more common challenges come up with [firewalls](#firewall-management) and [NAT traversal](#nat-traversal).
+Lodestar will automatically connect to peers on the network. Peers are found through the DiscV5 protocol and once peers are established communications happen via gossipsub over libp2p. While not necessary, having a basic understanding of how the various protocols and transports work will help with debugging and troubleshooting as some of the more common challenges come up with [firewalls](#firewall-management) and [NAT traversal](#nat-traversal).
 
 ## Networking Flags
 
@@ -27,11 +27,11 @@ Some of the important Lodestar flags related to networking are:
 
 ## Peer Discovery (Discv5)
 
-In Ethereum, discv5 plays a pivotal role in the peer discovery process, facilitating nodes to find and locate each other in order to form the peer-to-peer network​. The process begins with an interaction between new nodes and bootnodes at start-up. Bootnodes are nodes with hard-coded addresses, or can be overridden via the cli flag [`--bootnodes`](./beacon-cli#--bootnodes), to bootstrap the discovery process​. Through a method called FINDNODE-NODES, a new node establishes a bond with each bootnode, and it returns a list of peers for the new node to connect to. Following this trail, the new node engages through FINDNODE-NODES with the provided peers to further establish a web of connections​.
+In Ethereum, DiscV5 plays a pivotal role in the peer discovery process, facilitating nodes to find and locate each other in order to form the peer-to-peer network​. The process begins with an interaction between new nodes and bootnodes at start-up. Bootnodes are nodes with hard-coded addresses, or can be overridden via the cli flag [`--bootnodes`](./beacon-cli#--bootnodes), to bootstrap the discovery process​. Through a method called FINDNODE-NODES, a new node establishes a bond with each bootnode, and it returns a list of peers for the new node to connect to. Following this trail, the new node engages through FINDNODE-NODES with the provided peers to further establish a web of connections​.
 
-Discv5 operates as a peer advertisement medium in this network, where nodes can act as both providers and consumers of data. Every participating node in the Discv5 protocol discovers peer data from other nodes and later relays it, making the discovery process dynamic and efficient​.
+DiscV5 operates as a peer advertisement medium in this network, where nodes can act as both providers and consumers of data. Every participating node in the DiscV5 protocol discovers peer data from other nodes and later relays it, making the discovery process dynamic and efficient​.
 
-Discv5 is designed to be a standalone protocol running via UDP on a dedicated port solely for peer discovery. Peer data is exchanged via self-certified, flexible peer records (ENRs). These key features cater to the Ethereum network​ and being a good peer often means running a discv5 worker​. Lodestar offers simple configuration to setup and run a bootnode independently of a beacon node. See the [bootnode cli](../bootnode/bootnode-cli.md) page for more information and configuration options.
+DiscV5 is designed to be a standalone protocol running via UDP on a dedicated port solely for peer discovery. Peer data is exchanged via self-certified, flexible peer records (ENRs). These key features cater to the Ethereum network​ and being a good peer often means running a DiscV5 worker​. Lodestar offers simple configuration to setup and run a bootnode independently of a beacon node. See the [bootnode cli](../bootnode/bootnode-cli.md) page for more information and configuration options.
 
 ## ENR
 
@@ -57,7 +57,7 @@ Alternatively, the ENR can also be retrieved from the beacon node API by queryin
 
 [ENR Viewer](https://enr-viewer.com/) provides a simple and convenient option to decode and inspect ENRs.
 
-## Peer Communication (gossipsub and Req/Resp)
+## Peer Communication (Gossipsub and Req/Resp)
 
 Gossipsub and Req/Resp are the two mechanisms that beacon nodes use to exchange chain data. Gossipsub is used disseminate the most recent relevant data proactively throughout the network. Req/Resp is used to directly ask specific peers for specific information (eg: during syncing).
 
@@ -75,7 +75,7 @@ Req/Resp is the domain of protocols that establish a flexible, on-demand mechani
 
 ## Data Transport (libp2p)
 
-Libp2p is a modular and extensible network stack that serves as the data transport layer below both gossipsub and Req/Resp and facilitates the lower-level peer-to-peer communications. It provides a suite of protocols for various networking functionalities including network transports, connection encryption and protocol multiplexing. Its modular design allows for the easy addition, replacement, or upgrading of protocols, ensuring an adaptable and evolving networking stack.
+Libp2p is a modular and extensible network stack that serves as the data transport layer below both Gossipsub and Req/Resp and facilitates the lower-level peer-to-peer communications. It provides a suite of protocols for various networking functionalities including network transports, connection encryption and protocol multiplexing. Its modular design allows for the easy addition, replacement, or upgrading of protocols, ensuring an adaptable and evolving networking stack.
 
 Libp2p operates at the lower levels of the OSI model, particularly at the Transport and Network layers. Libp2p supports both TCP and UDP protocols for establishing connections and data transmission. Combined with libp2p's modular design it can integrate with various networking technologies to facilitating both routing and addressing.
 
