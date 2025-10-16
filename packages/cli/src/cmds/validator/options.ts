@@ -1,6 +1,7 @@
 import {WireFormat, defaultInit} from "@lodestar/api";
 import {CliCommandOptions} from "@lodestar/utils";
 import {defaultOptions} from "@lodestar/validator";
+import {coerceCors, enabledAllBashFriendly} from "../../options/beaconNodeOptions/api.js";
 import {LogArgs, logOptions} from "../../options/logOptions.js";
 import {ensure0xPrefix} from "../../util/index.js";
 import {keymanagerRestApiServerOptsDefault} from "./keymanager/server.js";
@@ -128,9 +129,10 @@ export const keymanagerOptions: CliCommandOptions<KeymanagerArgs> = {
   },
   "keymanager.cors": {
     type: "string",
-    description: "Configures the Access-Control-Allow-Origin CORS header for key manager API",
+    description: `Configures the Access-Control-Allow-Origin CORS header for key manager API. Use '${enabledAllBashFriendly}' to allow all origins`,
     defaultDescription: keymanagerRestApiServerOptsDefault.cors,
     group: "keymanager",
+    coerce: coerceCors,
   },
   "keymanager.headerLimit": {
     hidden: true,

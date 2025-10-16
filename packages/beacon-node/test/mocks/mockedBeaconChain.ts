@@ -138,7 +138,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
         eth1: new Eth1ForBlockProduction(),
         opPool: new OpPool(),
         aggregatedAttestationPool: new AggregatedAttestationPool(config),
-        syncContributionAndProofPool: new SyncContributionAndProofPool(clock),
+        syncContributionAndProofPool: new SyncContributionAndProofPool(config, clock),
         // @ts-expect-error
         beaconProposerCache: new BeaconProposerCache(),
         shufflingCache: new ShufflingCache(),

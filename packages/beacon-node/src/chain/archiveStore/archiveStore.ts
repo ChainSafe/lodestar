@@ -29,6 +29,16 @@ type ArchiveStoreInitOpts = ArchiveStoreOpts & {
   anchorState: {finalizedCheckpoint: Checkpoint};
 };
 
+export enum ArchiveStoreTask {
+  ArchiveBlocks = "archive_blocks",
+  PruneHistory = "prune_history",
+  OnFinalizedCheckpoint = "on_finalized_checkpoint",
+  MaybeArchiveState = "maybe_archive_state",
+  RegenPruneOnFinalized = "regen_prune_on_finalized",
+  ForkchoicePrune = "forkchoice_prune",
+  UpdateBackfillRange = "update_backfill_range",
+}
+
 /**
  * Used for running tasks that depends on some events or are executed
  * periodically.
@@ -181,6 +191,8 @@ export class ArchiveStore {
     try {
       const finalizedEpoch = finalized.epoch;
       this.logger.verbose("Start processing finalized checkpoint", {epoch: finalizedEpoch, rootHex: finalized.rootHex});
+
+      let timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
       await archiveBlocks(
         this.chain.config,
         this.db,
@@ -193,7 +205,10 @@ export class ArchiveStore {
         this.chain.opts.persistOrphanedBlocks,
         this.chain.opts.persistOrphanedBlocksDir
       );
+      timer?.({source: ArchiveStoreTask.ArchiveBlocks});
+
       if (this.opts.pruneHistory) {
+        timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
         await pruneHistory(
           this.chain.config,
           this.db,
@@ -202,18 +217,30 @@ export class ArchiveStore {
           finalizedEpoch,
           this.chain.clock.currentEpoch
         );
+        timer?.({source: ArchiveStoreTask.PruneHistory});
       }
 
+      timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
       await this.statesArchiverStrategy.onFinalizedCheckpoint(finalized, this.metrics);
+      timer?.({source: ArchiveStoreTask.OnFinalizedCheckpoint});
 
       // should be after ArchiveBlocksTask to handle restart cleanly
+      timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
       await this.statesArchiverStrategy.maybeArchiveState(finalized, this.metrics);
+      timer?.({source: ArchiveStoreTask.MaybeArchiveState});
 
+      timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
       this.chain.regen.pruneOnFinalized(finalizedEpoch);
+      timer?.({source: ArchiveStoreTask.RegenPruneOnFinalized});
 
       // tasks rely on extended fork choice
+      timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
       const prunedBlocks = this.chain.forkChoice.prune(finalized.rootHex);
+      timer?.({source: ArchiveStoreTask.ForkchoicePrune});
+
+      timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
       await updateBackfillRange({chain: this.chain, db: this.db, logger: this.logger}, finalized);
+      timer?.({source: ArchiveStoreTask.UpdateBackfillRange});
 
       this.logger.verbose("Finish processing finalized checkpoint", {
         epoch: finalizedEpoch,

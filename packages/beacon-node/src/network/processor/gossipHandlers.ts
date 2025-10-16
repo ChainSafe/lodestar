@@ -556,6 +556,16 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           metrics?.dataColumns.elapsedTimeTillReceived.observe({receivedOrder: receivedColumns}, delaySec);
           break;
       }
+
+      if (!blockInput.hasAllData()) {
+        // immediately attempt fetch of data columns from execution engine
+        chain.getBlobsTracker.triggerGetBlobs(blockInput);
+        // if we've received at least half of the columns, trigger reconstruction of the rest
+        if (blockInput.columnCount >= NUMBER_OF_COLUMNS / 2) {
+          chain.columnReconstructionTracker.triggerColumnReconstruction(blockInput);
+        }
+      }
+
       if (!blockInput.hasBlockAndAllData()) {
         const cutoffTimeMs = getCutoffTimeMs(chain, dataColumnSlot, BLOCK_AVAILABILITY_CUTOFF_MS);
         chain.logger.debug("Received gossip data column, waiting for full data availability", {
@@ -578,12 +588,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
             source: BlockInputSource.gossip,
           });
         });
-        // immediately attempt fetch of data columns from execution engine
-        chain.getBlobsTracker.triggerGetBlobs(blockInput);
-        // if we've received at least half of the columns, trigger reconstruction of the rest
-        if (blockInput.columnCount >= NUMBER_OF_COLUMNS / 2) {
-          chain.columnReconstructionTracker.triggerColumnReconstruction(blockInput);
-        }
       }
     },
 

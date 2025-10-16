@@ -43,6 +43,9 @@ const baseChainConfig: ChainConfig = {
   // Fulu
   FULU_FORK_VERSION: b("0x7000101b"),
   FULU_FORK_EPOCH: Infinity,
+  // Gloas
+  GLOAS_FORK_VERSION: b("0x8000101b"),
+  GLOAS_FORK_EPOCH: Infinity,
 
   // Deposit contract
   // ---------------------------------------------------------------

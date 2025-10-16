@@ -259,7 +259,7 @@ export class BeaconChain implements IBeaconChain {
     this.attestationPool = new AttestationPool(config, clock, this.opts?.preaggregateSlotDistance, metrics);
     this.aggregatedAttestationPool = new AggregatedAttestationPool(this.config, metrics);
     this.syncCommitteeMessagePool = new SyncCommitteeMessagePool(config, clock, this.opts?.preaggregateSlotDistance);
-    this.syncContributionAndProofPool = new SyncContributionAndProofPool(clock, metrics, logger);
+    this.syncContributionAndProofPool = new SyncContributionAndProofPool(config, clock, metrics, logger);
 
     this.seenAggregatedAttestations = new SeenAggregatedAttestations(metrics);
     this.seenContributionAndProof = new SeenContributionAndProof(metrics);
@@ -374,7 +374,7 @@ export class BeaconChain implements IBeaconChain {
     });
 
     if (!opts.disableLightClientServer) {
-      this.lightClientServer = new LightClientServer(opts, {config, db, metrics, emitter, logger});
+      this.lightClientServer = new LightClientServer(opts, {config, clock, db, metrics, emitter, logger});
     }
 
     this.reprocessController = new ReprocessController(this.metrics);
@@ -721,7 +721,6 @@ export class BeaconChain implements IBeaconChain {
       feeRecipient,
       commonBlockBodyPromise,
       parentBlockRoot,
-      parentSlot,
     }: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}
   ): Promise<{
     block: AssembledBlockType<T>;
@@ -747,7 +746,6 @@ export class BeaconChain implements IBeaconChain {
         graffiti,
         slot,
         feeRecipient,
-        parentSlot,
         parentBlockRoot,
         proposerIndex,
         proposerPubKey,
