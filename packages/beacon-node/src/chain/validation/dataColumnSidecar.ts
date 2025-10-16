@@ -1,10 +1,14 @@
-import {ChainConfig} from "@lodestar/config";
+import {ChainConfig, ChainForkConfig} from "@lodestar/config";
 import {
   KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH,
   KZG_COMMITMENTS_SUBTREE_INDEX,
   NUMBER_OF_COLUMNS,
 } from "@lodestar/params";
-import {computeStartSlotAtEpoch, getBlockHeaderProposerSignatureSet} from "@lodestar/state-transition";
+import {
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
+  getBlockHeaderProposerSignatureSet,
+} from "@lodestar/state-transition";
 import {Root, Slot, SubnetID, fulu, ssz} from "@lodestar/types";
 import {toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
@@ -29,7 +33,7 @@ export async function validateGossipDataColumnSidecar(
   const blockHeader = dataColumnSidecar.signedBlockHeader.message;
 
   // 1) [REJECT] The sidecar is valid as verified by verify_data_column_sidecar
-  verifyDataColumnSidecar(dataColumnSidecar);
+  verifyDataColumnSidecar(chain.config, dataColumnSidecar);
 
   // 2) [REJECT] The sidecar is for the correct subnet -- i.e. compute_subnet_for_data_column_sidecar(sidecar.index) == subnet_id
   if (computeSubnetForDataColumnSidecar(chain.config, dataColumnSidecar) !== gossipSubnet) {
@@ -184,7 +188,7 @@ export async function validateGossipDataColumnSidecar(
  * SPEC FUNCTION
  * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/p2p-interface.md#verify_data_column_sidecar
  */
-function verifyDataColumnSidecar(dataColumnSidecar: fulu.DataColumnSidecar): void {
+function verifyDataColumnSidecar(config: ChainForkConfig, dataColumnSidecar: fulu.DataColumnSidecar): void {
   if (dataColumnSidecar.index >= NUMBER_OF_COLUMNS) {
     throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
       code: DataColumnSidecarErrorCode.INVALID_INDEX,
@@ -198,6 +202,19 @@ function verifyDataColumnSidecar(dataColumnSidecar: fulu.DataColumnSidecar): voi
       code: DataColumnSidecarErrorCode.NO_COMMITMENTS,
       slot: dataColumnSidecar.signedBlockHeader.message.slot,
       columnIdx: dataColumnSidecar.index,
+    });
+  }
+
+  const epoch = computeEpochAtSlot(dataColumnSidecar.signedBlockHeader.message.slot);
+  const maxBlobsPerBlock = config.getMaxBlobsPerBlock(epoch);
+
+  if (dataColumnSidecar.kzgCommitments.length > maxBlobsPerBlock) {
+    throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+      code: DataColumnSidecarErrorCode.TOO_MANY_KZG_COMMITMENTS,
+      slot: dataColumnSidecar.signedBlockHeader.message.slot,
+      columnIdx: dataColumnSidecar.index,
+      count: dataColumnSidecar.kzgCommitments.length,
+      limit: maxBlobsPerBlock,
     });
   }
 
