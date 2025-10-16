@@ -39,6 +39,7 @@ import {
   BlockError,
   BlockErrorCode,
   BlockGossipError,
+  DataColumnSidecarErrorCode,
   DataColumnSidecarGossipError,
   GossipAction,
   GossipActionError,
@@ -304,7 +305,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           ...blockInput.getLogMeta(),
           index: dataColumnSidecar.index,
         });
-        return blockInput;
+        throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
+          code: DataColumnSidecarErrorCode.ALREADY_KNOWN,
+          columnIdx: dataColumnSidecar.index,
+          slot,
+        });
       }
     }
 
