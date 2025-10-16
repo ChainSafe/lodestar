@@ -5,7 +5,8 @@
 Validators participate in Ethereum's Proof of Stake by creating, signing, and broadcasting attestations each epoch. This helps secure the blockchain. You need 32 ETH staked to be a validator - this gives you skin in the game.
 
 Validators do two main jobs on the beacon chain:
-1. Proposing blocks 
+
+1. Proposing blocks
 2. Creating attestations
 
 The beacon chain extends the main chain. It stores and manages validator information.
@@ -17,6 +18,7 @@ Attestations are votes on whether blocks are valid. These votes get combined in 
 Most of your validator rewards come from attestations. Miss one or submit it late, you lose money. The network also loses some security.
 
 You should create, sign, and broadcast an attestation when either:
+
 - You get a valid block from the expected proposer, or
 - 4 seconds pass since the slot started - whichever comes first
 
@@ -29,8 +31,9 @@ Every successful attestation goes through five stages:
 ### Stage 1: Vote Creation and Signing
 
 Takes about 0-1 seconds. Your validator checks the current chain state and creates attestation data with:
+
 - Head block: The block you think is at the head right now
-- Source checkpoint: Most recent justified block  
+- Source checkpoint: Most recent justified block
 - Target checkpoint: First block of the current epoch
 
 You sign this with your validator's private key. The committee index doesn't go in the signed root, so identical votes from different committees look the same.
@@ -60,12 +63,13 @@ Happens in the next slot. Block proposers include your aggregated attestations i
 The 4-Second Rule: Each 12-second slot has strict timing:
 
 - First 4 seconds: You attest during this window
-- Next 4 seconds: Aggregation happens  
+- Next 4 seconds: Aggregation happens
 - Last 4 seconds: Block proposer prepares for next slot
 
 Miss that first 4-second window and your chances of getting aggregated drop. This hurts your rewards.
 
 Timeline breakdown in seconds:
+
 - 0 to 4: Attestation duty
 - 4 to 8: Aggregation
 - 8 to 12: Next slot prep
@@ -132,7 +136,7 @@ Lodestar's attestation_summary metric gives diagnostic labels showing what happe
 
 **wrong_target_timely_source** - Correct source but wrong target, happens on first slot of epoch. Check head block import timing.
 
-**unexpected*** - Bad beacon node states preventing diagnosis. This is a catch-all for any label starting with `unexpected_` where a more specific reason could not be determined. Check beacon node health and logs.
+**unexpected\*** - Bad beacon node states preventing diagnosis. This is a catch-all for any label starting with `unexpected_` where a more specific reason could not be determined. Check beacon node health and logs.
 
 ## Debugging Sub-Optimal Attestation Performance
 
@@ -145,16 +149,19 @@ Use monitoring tools instead of digging through logs manually.
 ### Check Attestation Success in Logs
 
 Watch for successful submissions:
+
 ```bash
 tail -f /var/log/lodestar/validator.log | grep "Published attestations"
 ```
 
 If you're an aggregator:
+
 ```bash
 tail -f /var/log/lodestar/validator.log | grep "Published aggregateAndProofs"
 ```
 
 Healthy output looks like:
+
 ```
 INFO [timestamp] Published attestations: slot=123456
 INFO [timestamp] Published aggregateAndProofs: slot=123457
@@ -169,11 +176,13 @@ Lodestar has an HTTP API for checking node health. More reliable than searching 
 ### Check Peer Connections
 
 View peer count:
+
 ```bash
 curl -s http://localhost:9596/eth/v1/node/peer_count | jq
 ```
 
 You'll see something like:
+
 ```json
 {
   "data": {
@@ -186,6 +195,7 @@ You'll see something like:
 ```
 
 What these mean:
+
 - 50 to 100 peers: Good
 - 20 to 49 peers: Okay, could be better
 - Under 20 peers: Problem, attestations might not propagate
@@ -193,11 +203,13 @@ What these mean:
 ### Verify Sync Status
 
 Check if synced:
+
 ```bash
 curl -s http://localhost:9596/eth/v1/node/syncing | jq
 ```
 
 When synced you'll see:
+
 ```json
 {
   "data": {
@@ -211,6 +223,7 @@ If is_syncing shows true, your node is catching up. Wait for sync before worryin
 ### View Connected Peers
 
 Get peer count:
+
 ```bash
 curl -s http://localhost:9596/eth/v1/node/peers | jq '.data | length'
 ```
@@ -224,6 +237,7 @@ Many performance issues come from resource constraints.
 ### Time Synchronization
 
 Check system clock:
+
 ```bash
 timedatectl status
 ```
@@ -231,6 +245,7 @@ timedatectl status
 You want System clock synchronized: yes - if no, attestations will fail.
 
 Fix it:
+
 ```bash
 sudo timedatectl set-ntp true
 ```
@@ -238,21 +253,25 @@ sudo timedatectl set-ntp true
 ### Monitor System Resources
 
 Check CPU and memory:
+
 ```bash
 top -p $(pgrep -d',' -f lodestar)
 ```
 
 View memory:
+
 ```bash
 ps aux | grep '[l]odestar'
 ```
 
 Check disk:
+
 ```bash
 iostat -x 1 5
 ```
 
 Watch for:
+
 - CPU above 80%
 - Memory climbing
 - High disk wait times
@@ -265,11 +284,13 @@ Prometheus gives time-series data for spotting trends.
 ### Enable Metrics
 
 Start with metrics enabled:
+
 ```bash
 lodestar beacon --metrics=true --metrics.port=8008
 ```
 
 Check it works:
+
 ```bash
 curl http://localhost:8008/metrics | head -20
 ```
@@ -305,17 +326,19 @@ Quick setup steps:
 ### Configure Prometheus
 
 Create prometheus.yml:
+
 ```yaml
 global:
   scrape_interval: 15s
 
 scrape_configs:
-  - job_name: 'lodestar_beacon'
+  - job_name: "lodestar_beacon"
     static_configs:
-      - targets: ['localhost:8008']
+      - targets: ["localhost:8008"]
 ```
 
 Start it:
+
 ```bash
 ./prometheus --config.file=prometheus.yml
 ```
@@ -323,6 +346,7 @@ Start it:
 ### Configure Grafana
 
 Steps:
+
 1. Open at http://localhost:3000
 2. Go to Configuration then Data Sources
 3. Add Prometheus with URL http://localhost:9090
@@ -345,6 +369,7 @@ lodestar beacon \
 Get API key from beaconcha.in settings.
 
 Why do this:
+
 - Mobile alerts for offline validators
 - Historical data
 - Compare with network averages
@@ -353,6 +378,7 @@ Why do this:
 ### Check Dashboard
 
 Go to beaconcha.in, search your validator index. You'll see:
+
 - Attestation effectiveness percentage
 - Inclusion distance trends
 - Missed attestations
@@ -368,11 +394,12 @@ Attestation at slot S, included at slot I.
 
 earliest_possible_inclusion equals E, which is the first slot after S with a block.
 
-Formula: effectiveness = (E - S) / (I - S) 
+Formula: effectiveness = (E - S) / (I - S)
 
 Key point: If next slot had no block because proposer was offline, you're not penalized. Can still hit 100% even with distance greater than 1.
 
 Examples:
+
 - Slot 5, included slot 6: 100% perfect
 - Slot 5, no block slot 6, included slot 7: 100% not your fault
 - Slot 5, block at slot 6, included slot 7: 50% you were slow
@@ -386,6 +413,7 @@ Check beaconcha.in for intervening slots.
 Seeing: Under 20 peers
 
 Fix:
+
 - Check firewall, open LibP2P ports
 - Port forwarding if behind NAT
 - Add bootstrap nodes with --network.bootMultiaddrs
@@ -396,11 +424,13 @@ Fix:
 Seeing: CPU above 80%, memory climbing, high iowait
 
 Quick fix:
+
 - Restart Lodestar
 - Stop other services
 - Check for known bugs
 
 Long-term:
+
 - Upgrade hardware, more RAM and SSD
 - Use NVMe instead of SATA
 - Give more CPU cores
@@ -410,6 +440,7 @@ Long-term:
 Seeing: is_syncing true won't clear, slot number off
 
 Fix:
+
 - Enable NTP with sudo timedatectl set-ntp true
 - Check with timedatectl status
 - Restart Lodestar
@@ -419,6 +450,7 @@ Fix:
 Seeing: beaconchain_current_slot way behind network
 
 Fix:
+
 - Wait for sync
 - Check execution layer synced
 - Verify bandwidth for blocks
@@ -427,11 +459,13 @@ Fix:
 ## Debug Logging
 
 For deep investigation, run with debug logs:
+
 ```bash
 lodestar beacon --logLevel=debug 2>&1 | tee /var/log/lodestar/debug.log
 ```
 
 Or with systemd:
+
 ```bash
 sudo journalctl -u lodestar.service -f
 ```
@@ -441,16 +475,19 @@ Note: Debug logs are verbose. Only use when troubleshooting. Set up log rotation
 ## Regular Maintenance
 
 Daily tasks:
+
 - Check beaconcha.in for earnings
 - Verify peer count via API
 - Scan logs for errors
 
 Weekly tasks:
+
 - Review Grafana trends
 - Update to latest stable
 - Check resource usage
 
 Monthly tasks:
+
 - Analyze long-term patterns
 - Compare with network average
 - Tweak configuration
@@ -464,6 +501,7 @@ Lodestar Discord - The validator-support channel has experienced folks.
 GitHub Issues - Search or open new issue.
 
 Include:
+
 - Lodestar version from lodestar --version
 - Hardware specs
 - Network setup like home, VPS, or cloud
