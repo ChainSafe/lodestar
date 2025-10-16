@@ -63,7 +63,9 @@ export class FrequencyStateArchiveStrategy implements StateArchiveStrategy {
     const lastStoredEpoch = computeEpochAtSlot(lastStoredSlot ?? 0);
     const {archiveStateEpochFrequency} = this.opts;
 
+    const logCtx = {finalizedEpoch: finalized.epoch, lastStoredEpoch, archiveStateEpochFrequency};
     if (finalized.epoch - lastStoredEpoch >= Math.min(PERSIST_TEMP_STATE_EVERY_EPOCHS, archiveStateEpochFrequency)) {
+      this.logger.verbose("Start archiving state", logCtx);
       await this.archiveState(finalized, metrics);
 
       // Only check the current and previous intervals
@@ -88,11 +90,13 @@ export class FrequencyStateArchiveStrategy implements StateArchiveStrategy {
 
       // More logs to investigate the rss spike issue https://github.com/ChainSafe/lodestar/issues/5591
       this.logger.verbose("Archived state completed", {
-        finalizedEpoch: finalized.epoch,
+        ...logCtx,
         minEpoch,
         storedStateSlots: storedStateSlots.join(","),
         statesSlotsToDelete: statesSlotsToDelete.join(","),
       });
+    } else {
+      this.logger.verbose("Skip archiving state", logCtx);
     }
   }
 
