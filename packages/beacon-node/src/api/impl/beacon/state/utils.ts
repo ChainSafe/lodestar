@@ -161,7 +161,7 @@ export function getStateValidatorIndex(
         return {valid: false, code: 400, reason: "Invalid pubkey hex encoding"};
       }
     } else {
-      id = parseInt(id);
+      id = parseInt(id, 10);
     }
   }
 
