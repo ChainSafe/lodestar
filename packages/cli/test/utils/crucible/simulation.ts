@@ -75,6 +75,7 @@ export class Simulation {
       signal: this.options.controller.signal,
     });
 
+    
     this.externalSigner = new ExternalSignerServer([]);
     this.runner = new Runner({logger: this.logger});
     this.tracker = SimulationTracker.initWithDefaults({

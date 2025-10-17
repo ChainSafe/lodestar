@@ -1,7 +1,6 @@
 import path from "node:path";
 import {createBlobsAssertion} from "../utils/crucible/assertions/blobsAssertion.js";
-import {BeaconClient, ExecutionClient, ValidatorClient} from "../utils/crucible/interfaces.js";
-import {Simulation} from "../utils/crucible/simulation.js";
+import {Simulation} from "../utils/crucible/kurtosis/simulation/simulation-kurtosis.js";
 import {defineSimTestConfig, logFilesDir} from "../utils/crucible/utils/index.js";
 import {connectAllNodes, waitForSlot} from "../utils/crucible/utils/network.js";
 import {assertCheckpointSync, assertRangeSync} from "../utils/crucible/utils/syncing.js";
@@ -19,36 +18,13 @@ const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
   additionalSlotsForTTD: 0,
 });
 
-const env = await Simulation.initWithDefaults(
+const env = await Simulation.initWithKurtosisConfig(
   {
     id: "deneb",
     logsDir: path.join(logFilesDir, "deneb"),
     forkConfig,
   },
-  [
-    {
-      id: "node-1",
-      beacon: BeaconClient.Lodestar,
-      validator: {
-        type: ValidatorClient.Lodestar,
-        options: {},
-      },
-      execution: ExecutionClient.Geth,
-      keysCount: 32,
-      mining: true,
-    },
-    {
-      id: "node-2",
-      beacon: BeaconClient.Lodestar,
-      validator: {
-        type: ValidatorClient.Lodestar,
-        options: {},
-      },
-      execution: ExecutionClient.Geth,
-      keysCount: 32,
-      remote: true,
-    },
-  ]
+  "deneb.yml"
 );
 
 await env.start({runTimeoutMs: estimatedTimeoutMs});

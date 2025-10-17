@@ -1,4 +1,4 @@
-import {EL_GENESIS_ACCOUNT} from "../constants.js";
+import {EL_GENESIS_ACCOUNT, EL_GENESIS_SECRET_KEY} from "../constants.js";
 import {Assertion, AssertionResult, Match, NodePair} from "../interfaces.js";
 
 const transactionAmount = BigInt(2441406250);
@@ -22,13 +22,19 @@ export function createAccountBalanceAssertion({
       return Match.None;
     },
     async capture({node}) {
-      await node.execution.provider?.eth.sendTransaction({
+      const account = await node.execution.provider?.accountProvider?.privateKeyToAccount(`0x${EL_GENESIS_SECRET_KEY}`);
+      if (!account) throw new Error("Can not deserialize the genesis account from key");
+
+      const tx = await account.signTransaction({
         to: address,
         from: EL_GENESIS_ACCOUNT,
         gas: "0x76c0",
         gasPrice: "0x9184e72a000",
         value: transactionAmount,
       });
+      if (!tx) throw new Error("Can not send tx from el genesis account");
+
+      await node.execution.provider?.eth.sendSignedTransaction(tx.rawTransaction);
 
       // Capture the value transferred to account
       return transactionAmount;

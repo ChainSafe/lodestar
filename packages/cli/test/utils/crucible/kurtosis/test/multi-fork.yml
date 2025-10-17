@@ -1,0 +1,42 @@
+participants:
+  - el_type: geth
+    cl_type: lodestar
+    count: 1
+    vc_extra_params: ["--builder.selection=default"]
+    el_extra_params: ["--mine"]
+    
+  - el_type: geth
+    cl_type: lodestar
+    count: 1
+    vc_extra_params:
+      ["--builder.selection=default", "--blindedLocal=true"]
+    el_extra_params: ["--mine"]  
+
+  - el_type: geth
+    cl_type: lodestar
+    count: 1
+    vc_extra_params: ["--builder.selection=executiononly"]
+    el_extra_params: ["--mine"]
+
+  - el_type: geth
+    cl_type: lodestar
+    count: 1
+    vc_extra_params: ["--builder.selection=default"]
+    el_extra_params: ["--mine"]
+
+  - el_type: geth
+    cl_type: lighthouse
+    count: 1
+    el_extra_params: ["--mine"]
+    
+keymanager_enabled: true
+network_params:
+  prefunded_accounts: '{"0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b": {"balance": "100ETH"}, "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": {"balance": "100ETH"}}'
+  num_validator_keys_per_node: 32 #emulate keysCount
+  preset: minimal
+  altair_fork_epoch: 0
+  bellatrix_fork_epoch: 0
+  capella_fork_epoch: 0
+  deneb_fork_epoch: 0
+  genesis_delay: 120
+  

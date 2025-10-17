@@ -5,17 +5,17 @@ import {createForkAssertion} from "../utils/crucible/assertions/forkAssertion.js
 import {mergeAssertion} from "../utils/crucible/assertions/mergeAssertion.js";
 import {nodeAssertion} from "../utils/crucible/assertions/nodeAssertion.js";
 import {createWithdrawalAssertions} from "../utils/crucible/assertions/withdrawalsAssertion.js";
-import {BeaconClient, ExecutionClient, Match, ValidatorClient} from "../utils/crucible/interfaces.js";
-import {Simulation} from "../utils/crucible/simulation.js";
+import {Match} from "../utils/crucible/interfaces.js";
+import {Simulation} from "../utils/crucible/kurtosis/simulation/simulation-kurtosis.js";
 import {defineSimTestConfig, logFilesDir} from "../utils/crucible/utils/index.js";
 import {connectAllNodes, waitForSlot} from "../utils/crucible/utils/network.js";
 import {assertCheckpointSync, assertRangeSync, assertUnknownBlockSync} from "../utils/crucible/utils/syncing.js";
 
-const altairForkEpoch = 2;
-const bellatrixForkEpoch = 4;
-const capellaForkEpoch = 6;
-const denebForkEpoch = 8;
-const runTillEpoch = 10;
+const altairForkEpoch = 0;
+const bellatrixForkEpoch = 0;
+const capellaForkEpoch = 0;
+const denebForkEpoch = 0;
+const runTillEpoch = 4;
 const syncWaitEpoch = 2;
 
 const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
@@ -27,81 +27,15 @@ const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
   initialNodes: 5,
 });
 
-const env = await Simulation.initWithDefaults(
+
+// Load configuration and create simulation (services not started yet)
+const env = await Simulation.initWithKurtosisConfig(
   {
     id: "multi-fork",
     logsDir: path.join(logFilesDir, "multi-fork"),
     forkConfig,
   },
-  [
-    {
-      id: "node-1",
-      beacon: BeaconClient.Lodestar,
-      validator: {
-        type: ValidatorClient.Lodestar,
-        options: {
-          // this will cause race in beacon but since builder is not attached will
-          // return with engine full block and publish via publishBlockV2
-          clientOptions: {
-            "builder.selection": "default",
-          },
-        },
-      },
-      execution: ExecutionClient.Geth,
-      keysCount: 32,
-      mining: true,
-    },
-    {
-      id: "node-2",
-      beacon: BeaconClient.Lodestar,
-      validator: {
-        type: ValidatorClient.Lodestar,
-        options: {
-          // this will make the beacon respond with blinded version of the local block as no
-          // builder is attached to beacon, and publish via publishBlindedBlockV2
-          clientOptions: {
-            "builder.selection": "default",
-            blindedLocal: true,
-          },
-        },
-      },
-      execution: ExecutionClient.Geth,
-      keysCount: 32,
-      remote: true,
-    },
-    {
-      id: "node-3",
-      beacon: BeaconClient.Lodestar,
-      validator: {
-        type: ValidatorClient.Lodestar,
-        options: {
-          // this builder selection will make it respond with full block
-          clientOptions: {
-            "builder.selection": "executiononly",
-          },
-        },
-      },
-      execution: ExecutionClient.Geth,
-      keysCount: 32,
-    },
-    {
-      id: "node-4",
-      beacon: BeaconClient.Lodestar,
-      validator: {
-        type: ValidatorClient.Lodestar,
-        options: {
-          // this builder selection will make it respond with blinded version
-          // of local block and subsequent publishing via publishBlindedBlockV2
-          clientOptions: {
-            "builder.selection": "default",
-          },
-        },
-      },
-      execution: ExecutionClient.Geth,
-      keysCount: 32,
-    },
-    {id: "node-5", beacon: BeaconClient.Lighthouse, execution: ExecutionClient.Geth, keysCount: 32},
-  ]
+  "multi-fork.yml"  // Kurtosis network configuration
 );
 
 env.tracker.register({

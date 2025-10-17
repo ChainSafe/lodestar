@@ -1,7 +1,7 @@
 import {SignedBeaconBlock, Slot} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {BeaconClient, BeaconNode, ExecutionClient, ExecutionNode, NodePair} from "../interfaces.js";
-import {Simulation} from "../simulation.js";
+import {Simulation} from "../kurtosis/simulation/simulation-kurtosis.js";
 import {SimulationTrackerEvent} from "../simulationTracker.js";
 
 export async function connectAllNodes(nodes: NodePair[]): Promise<void> {
@@ -22,26 +22,34 @@ export async function connectNewNode(newNode: NodePair, nodes: NodePair[]): Prom
 }
 
 export async function connectNewCLNode(newNode: BeaconNode, nodes: BeaconNode[]): Promise<void> {
-  const clIdentity = (await newNode.api.node.getNetworkIdentity()).value();
-  if (!clIdentity.peerId) return;
+  const target = (await newNode.api.node.getNetworkIdentity()).value();
+  const targetPeerId = target.peerId;
+  if (!targetPeerId) return;
 
+  // Kurtosis-specific: Only dial Lodestar here; Lighthouse usually auto-discovers
   for (const node of nodes) {
-    if (node === newNode) continue;
+    // 1) Don’t dial yourself by reference 
+    if (node === newNode) continue; // Skip as a node can't connect to itself
 
-    if (node.client === BeaconClient.Lodestar) {
-      (
-        await (node as BeaconNode<BeaconClient.Lodestar>).api.lodestar.connectPeer({
-          peerId: clIdentity.peerId,
-          // As the lodestar is always running on host
-          // convert the address to local host to connect the container node
-          multiaddrs: clIdentity.p2pAddresses.map((str) =>
-            str.replace(/(\/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\/)/, "/127.0.0.1/")
-          ),
-        })
-      ).assertOk();
-    }
+    // 2) Only dial Lodestar here; Lighthouse usually auto-discovers
+    if (node.client !== BeaconClient.Lodestar) continue;
+
+    // 3) Don’t dial yourself by ID (extra safety)
+    const src = (await node.api.node.getNetworkIdentity()).value();
+    if (src?.peerId === targetPeerId) continue;
+
+    // 4) In Kurtosis, do NOT rewrite to 127.0.0.1
+    const multiaddrs = target.p2pAddresses;
+
+    (
+      await (node as BeaconNode<typeof BeaconClient.Lodestar>).api.lodestar.connectPeer({
+        peerId: targetPeerId,
+        multiaddrs,
+      })
+    ).assertOk();
   }
 }
+
 
 export async function connectNewELNode(newNode: ExecutionNode, nodes: ExecutionNode[]): Promise<void> {
   const elIdentity = newNode.provider === null ? null : await newNode.provider?.admin.nodeInfo();

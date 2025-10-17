@@ -1,4 +1,4 @@
-//import {ChildProcess} from "node:child_process";
+import {ChildProcess} from "node:child_process";
 import {SecretKey} from "@chainsafe/blst";
 import {ApiClient} from "@lodestar/api";
 import {ApiClient as KeyManagerApi} from "@lodestar/api/keymanager";
@@ -8,11 +8,11 @@ import {ForkName} from "@lodestar/params";
 import {Epoch, SignedBeaconBlock, Slot} from "@lodestar/types";
 import {ServiceContext} from "kurtosis-sdk";
 import {Web3} from "web3";
-import {BeaconArgs} from "../../../src/cmds/beacon/options.js";
-import {IValidatorCliArgs} from "../../../src/cmds/validator/options.js";
-import {GlobalArgs} from "../../../src/options/index.js";
-import {EpochClock} from "./epochClock.js";
-import { KurtosisNetworkConfig, KurtosisServicesMap } from "./kurtosis/runner/kurtosisTypes.js";
+import {BeaconArgs} from "../../../../../src/cmds/beacon/options.js";
+import {IValidatorCliArgs} from "../../../../../src/cmds/validator/options.js";
+import {GlobalArgs} from "../../../../../src/options/index.js";
+import {EpochClock} from "../../epochClock.js";
+import {KurtosisNetworkConfig, KurtosisServicesMap} from "../runner/kurtosisTypes.js";
 
 export type NodeId = string;
 
@@ -47,6 +47,11 @@ export enum ExecutionClient {
   Mock = "execution-mock",
   Geth = "execution-geth",
   Nethermind = "execution-nethermind",
+}
+
+export enum ExecutionStartMode {
+  PreMerge = "pre-merge",
+  PostMerge = "post-merge",
 }
 
 export type BeaconClientsOptions = {
@@ -135,13 +140,13 @@ export interface ExecutionGenesisOptions<E extends ExecutionClient = ExecutionCl
 export interface ExecutionGeneratorOptions<E extends ExecutionClient = ExecutionClient>
   extends ExecutionGenesisOptions<E>,
     GeneratorOptions {
-  //mode: ExecutionStartMode; //✅ REMOVED - ExecutionStartMode not needed anymore
+  mode: ExecutionStartMode;
   mining: boolean;
   paths: ExecutionPaths;
   clientOptions: ExecutionClientsOptions[E];
 }
 
-export type LodestarAPI = ApiClient;
+export type LodestarAPI = ApiClient; //TODO: To be removed?
 export type LighthouseAPI = Omit<ApiClient, "lodestar"> & {
   lighthouse: {
     getPeers(): Promise<{
@@ -163,8 +168,23 @@ export type LighthouseAPI = Omit<ApiClient, "lodestar"> & {
   };
 };
 
-// NEW - Kurtosis-specific BeaconNode
 export interface BeaconNode<C extends BeaconClient = BeaconClient> {
+  readonly client: C;
+  readonly id: string;
+  /**
+   * Beacon Node Rest API URL accessible form the host machine if the process is running in private network inside docker
+   */
+  readonly restPublicUrl: string;
+  /**
+   * Beacon Node Rest API URL accessible within private network
+   */
+  readonly restPrivateUrl: string;
+  readonly api: C extends BeaconClient.Lodestar ? LodestarAPI : LighthouseAPI; //🔄 Removed or adjusted-> based on Docker?
+  readonly job: Job;
+}
+
+// NEW - Kurtosis-specific BeaconNode
+export interface BeaconNodeKurtosis<C extends BeaconClient = BeaconClient> {
   readonly client: C;
   readonly id: string;
   readonly restPublicUrl: string; //🔄 From Kurtosis?
@@ -173,8 +193,16 @@ export interface BeaconNode<C extends BeaconClient = BeaconClient> {
   readonly serviceContext: ServiceContext; // ✅ NEW - Kurtosis-native
 }
 
-// NEW - Kurtosis-specific ValidatorNode
 export interface ValidatorNode<C extends ValidatorClient = ValidatorClient> {
+  readonly client: C;
+  readonly id: string;
+  readonly keyManager: KeyManagerApi;
+  readonly keys: ValidatorClientKeys;
+  readonly job: Job;
+}
+
+// NEW - Kurtosis-specific ValidatorNode
+export interface ValidatorNodeKurtosis<C extends ValidatorClient = ValidatorClient> {
   readonly client: C;
   readonly id: string;
   readonly keyManager: KeyManagerApi;
@@ -182,8 +210,33 @@ export interface ValidatorNode<C extends ValidatorClient = ValidatorClient> {
   readonly serviceContext: ServiceContext; // ✅ NEW - Kurtosis-native
 }
 
-// NEW - Kurtosis-specific executionNode
 export interface ExecutionNode<E extends ExecutionClient = ExecutionClient> {
+  readonly client: E;
+  readonly id: string;
+  readonly ttd: bigint;
+  /**
+   * Engine URL accessible form the host machine if the process is running in private network inside docker
+   */
+  readonly engineRpcPublicUrl: string; // TODO - Use Kurtosis public URLs?
+  /**
+   * Engine URL accessible within private network inside docker
+   */
+  readonly engineRpcPrivateUrl: string; // TODO - (Is this Docker-specific?)
+  /**
+   * RPC URL accessible form the host machine if the process is running in private network inside docker
+   */
+  readonly ethRpcPublicUrl: string; // TODO - Use Kurtosis public URLs?
+  /**
+   * RPC URL accessible within private network inside docker
+   */
+  readonly ethRpcPrivateUrl: string; // TODO - Use Kurtosis private URLs?
+  readonly jwtSecretHex: string;
+  readonly provider: E extends ExecutionClient.Mock ? null : Web3;
+  readonly job: Job; //❌ REMOVE - Docker-specific
+}
+
+// NEW - Kurtosis-specific executionNode
+export interface ExecutionNodeKurtosis<E extends ExecutionClient = ExecutionClient> {
   readonly client: E;
   readonly id: string;
   readonly ttd: bigint;
@@ -191,16 +244,16 @@ export interface ExecutionNode<E extends ExecutionClient = ExecutionClient> {
   readonly engineRpcPrivateUrl: string; //🔄 From Kurtosis?
   readonly ethRpcPublicUrl: string; //🔄 From Kurtosis?
   readonly ethRpcPrivateUrl: string; //🔄 From Kurtosis?
-  readonly jwtSecretHex?: string;
+  readonly jwtSecretHex: string;
   readonly provider: E extends ExecutionClient.Mock ? null : Web3;
   readonly serviceContext: ServiceContext; // ✅ NEW - Kurtosis-native
 }
 
 export interface NodePair {
   readonly id: string;
-  readonly beacon: BeaconNode;
-  readonly execution: ExecutionNode;
-  readonly validator?: ValidatorNode;
+  readonly beacon: BeaconNode; //🔄 Will contain Kurtosis ServiceConext reference (e.g., for API calls)
+  readonly execution: ExecutionNode; //🔄 Will contain Kurtosis ServiceConext reference (e.g., for API calls)
+  readonly validator?: ValidatorNode; //🔄 Will contain Kurtosis ServiceConext reference (e.g., for API calls)
 }
 
 export type BeaconNodeGenerator<C extends BeaconClient> = (
@@ -250,17 +303,20 @@ export type JobOptions<T extends RunnerType = RunnerType.ChildProcess | RunnerTy
   [T2 in T]: RunnerOptions[T2] extends never ? {readonly options?: undefined} : {readonly options: RunnerOptions[T2]};
 }[T];
 
+//❌ REMOVE - Docker-specific
 export interface Job {
   id: string;
   start(): Promise<void>;
   stop(): Promise<void>;
 }
 
+//❌ REMOVE - Docker-specific
 export enum RunnerType {
   ChildProcess = "child_process",
   Docker = "docker",
 }
 
+//❌ REMOVE - Docker-specific
 export type RunnerOptions = {
   [RunnerType.ChildProcess]: never;
   [RunnerType.Docker]: {
@@ -270,6 +326,17 @@ export type RunnerOptions = {
     dockerNetworkIp?: string;
   };
 };
+
+// Old IRunner
+/*
+export interface IRunner {
+  create: (jobOptions: JobOptions[]) => Job;
+  on(event: RunnerEvent, cb: (id: string) => void | Promise<void>): void;
+  start(): Promise<void>;
+  stop(): Promise<void>;
+  getNextIp(): string;
+}
+*/
 
 //✅ New Kurtosis Runner
 export interface IRunner {
@@ -284,6 +351,12 @@ export interface IRunner {
 
   // Attach listeners for events, such as service start, stop, crash, etc.
   on(event: RunnerEvent, cb: (id: string) => void | Promise<void>): void;
+}
+
+//❌ REMOVE - Docker-specific
+export interface RunnerEnv<T extends RunnerType> {
+  type: T;
+  create: (jobOption: Omit<JobOptions<T>, "children">) => Job;
 }
 
 export type RunnerEvent = "starting" | "started" | "stopping" | "stop";
@@ -369,6 +442,7 @@ export interface AssertionError {
   message: string;
   data?: Record<string, unknown>;
 }
+export type ChildProcessWithJobOptions = {jobOptions: JobOptions; childProcess: ChildProcess};
 
 export type Eth1GenesisBlock = {
   config: {

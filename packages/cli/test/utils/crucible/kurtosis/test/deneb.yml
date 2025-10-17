@@ -1,0 +1,35 @@
+participants:
+  - el_type: geth
+    cl_type: lodestar
+    vc_type: lodestar
+    count: 1
+    el_extra_params: ["--mine"]
+    
+  - el_type: geth
+    cl_type: lodestar
+    vc_type: lodestar
+    count: 1
+
+  - el_type: geth
+    cl_type: lodestar
+    count: 1
+    vc_extra_params: ["--builder.selection=executiononly"]
+
+  - el_type: geth
+    cl_type: lodestar
+    count: 1
+    vc_extra_params: ["--builder.selection=default"]
+
+  - el_type: geth
+    cl_type: lighthouse
+    count: 1
+    
+keymanager_enabled: true
+network_params:
+  num_validator_keys_per_node: 32 #emulate keysCount
+  preset: minimal
+  altair_fork_epoch: 0
+  bellatrix_fork_epoch: 0
+  capella_fork_epoch: 0
+  deneb_fork_epoch: 0
+  genesis_delay: 120
