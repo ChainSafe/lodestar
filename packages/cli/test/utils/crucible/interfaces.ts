@@ -191,7 +191,7 @@ export interface ExecutionNode<E extends ExecutionClient = ExecutionClient> {
   readonly engineRpcPrivateUrl: string; //🔄 From Kurtosis?
   readonly ethRpcPublicUrl: string; //🔄 From Kurtosis?
   readonly ethRpcPrivateUrl: string; //🔄 From Kurtosis?
-  readonly jwtSecretHex: string;
+  readonly jwtSecretHex?: string;
   readonly provider: E extends ExecutionClient.Mock ? null : Web3;
   readonly serviceContext: ServiceContext; // ✅ NEW - Kurtosis-native
 }

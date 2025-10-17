@@ -8,7 +8,7 @@ import {
   SIM_ENV_NETWORK_ID,
   SIM_TESTS_SECONDS_PER_SLOT,
 } from "../constants.js";
-import {Simulation} from "../simulation.js";
+import {Simulation} from "../kurtosis/simulation/simulation-kurtosis.js";
 
 export const logFilesDir = "test-logs";
 

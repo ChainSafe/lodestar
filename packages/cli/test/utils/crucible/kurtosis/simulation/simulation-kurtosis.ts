@@ -1,42 +1,36 @@
 import fs from "node:fs";
-import {mkdir, writeFile} from "node:fs/promises";
+import {mkdir} from "node:fs/promises";
 import path from "node:path";
-import {fromHexString} from "@chainsafe/ssz";
 import {getClient} from "@lodestar/api";
-import {BeaconNode, nodeUtils} from "@lodestar/beacon-node";
+import {getClient as keyManagerGetClient} from "@lodestar/api/keymanager";
 import {initCKZG, loadEthereumTrustedSetup} from "@lodestar/beacon-node/util";
 import {ChainForkConfig} from "@lodestar/config";
 import {LogLevel, TimestampFormatCode} from "@lodestar/logger";
 import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
 import {activePreset} from "@lodestar/params";
-import {BeaconStateAllForks, interopSecretKey} from "@lodestar/state-transition";
 import {prettyMsToTime} from "@lodestar/utils";
 import tmp from "tmp";
 import {KurtosisSDKRunner} from "../runner/kurtosisSDKRunner.js"; //✅ New Kurtosis Runner
 import {KurtosisNetworkConfig, KurtosisServicesMap, NodeService} from "../runner/kurtosisTypes.js";
 import {loadKurtosisConfig} from "../runner/loadKurtosisConfig.js";
-//import {createBeaconNode} from "./clients/beacon/index.js"; //❌ To be removed
-//import {createExecutionNode} from "./clients/execution/index.js"; //❌ To be removed
-//import {createValidatorNode, getValidatorForBeaconNode} from "./clients/validator/index.js"; //❌ To be removed
-import {MOCK_ETH1_GENESIS_HASH} from "../../constants.js";
 import {EpochClock, MS_IN_SEC} from "../../epochClock.js";
 import {ExternalSignerServer} from "../../externalSignerServer.js";
+
 import {
   BeaconClient,
+  BeaconNode,
   ExecutionClient,
-  GeneratorOptions,
+  ExecutionNode,
   IRunner,
   NodePair,
-  NodePairDefinition,
   SimulationInitOptions,
   SimulationOptions,
   ValidatorClient,
-  ValidatorClientKeys,
+  ValidatorNode,
 } from "../../interfaces.js";
-// import {Runner} from "./runner/index.js"; //❌ To be removed
 import {SimulationTracker} from "../../simulationTracker.js";
-import {registerProcessHandler, replaceIpFromUrl} from "../../utils/index.js";
-import {getNodePaths} from "../../utils/paths.js";
+import {registerProcessHandler} from "../../utils/index.js";
+import { randomUUID } from "node:crypto";
 
 interface StartOpts {
   runTimeoutMs: number;
@@ -46,15 +40,14 @@ export class Simulation {
   readonly nodes: NodePair[] = [];
   readonly clock: EpochClock;
   readonly tracker: SimulationTracker;
-  readonly runner!: IRunner; // ✅ NEW - Kurtosis-specific
+  runner!: IRunner; // ✅ NEW - Kurtosis-specific
   readonly externalSigner: ExternalSignerServer;
   readonly logger: LoggerNode;
   readonly forkConfig: ChainForkConfig;
   readonly options: SimulationOptions;
 
-  private keysCount = 0;
-  private nodePairCount = 0;
-  private genesisState?: BeaconStateAllForks;
+  // private nodePairCount = 0;
+  //private genesisState?: BeaconStateAllForks;
   private runTimeout?: NodeJS.Timeout;
 
   private constructor(forkConfig: ChainForkConfig, options: SimulationOptions) {
@@ -80,8 +73,6 @@ export class Simulation {
     });
 
     this.externalSigner = new ExternalSignerServer([]);
-    //this.runner = new Runner({logger: this.logger}); //❌ REMOVE - Docker-specific
-    //this.runner = new KurtosisSDKRunner(`sim-${this.options.id}`); // ✅ NEW - Kurtosis-specific if "readonly runner!: IRunner;" is not the most optimal solution 
     this.tracker = SimulationTracker.initWithDefaults({
       //🔄 Refactored for Kurtosis?
       logsDir: options.logsDir,
@@ -126,7 +117,6 @@ export class Simulation {
    *
    */
 
-  // NEW - Kurtosis initWithKurtosisConfig()
   static async initWithKurtosisConfig(
     {forkConfig, logsDir, id, trustedSetup}: SimulationInitOptions,
     kurtosisConfigPath: string // Path to .yaml config file
@@ -141,18 +131,57 @@ export class Simulation {
     });
 
     // Start Kurtosis enclave & run the package
-    env.runner = new KurtosisSDKRunner(`sim-${id}`);
-    await env.runner.start(`sim-${id}`);
+    //env.runner = new KurtosisSDKRunner(`sim-${id}`);
+    //await env.runner.start(`sim-${id}`);
+
+    // Start Kurtosis enclave & run the package (unique per run) with dynamic name with timestamp and UUID
+    const enclaveName = `enclave-${Date.now()}-${randomUUID().slice(0, 8)}`;
+
+    env.runner = new KurtosisSDKRunner(enclaveName);
+    await env.runner.start(enclaveName);
+
+    env.logger.info(`-- Created unique Kurtosis enclave: ${enclaveName}`);
 
     // Load the YAML → KurtosisNetworkConfig
     const kurtosisConfig = await loadKurtosisConfig(kurtosisConfigPath);
     const services = await env.runner.create(kurtosisConfig);
 
     // Convert to NodePair structure from Kurtosis services
-    env.nodes = await env.createNodePairsFromKurtosis(services, kurtosisConfig); // placeholder: mock point for the logic
+    env.nodes.push(
+      ...(await env.createNodePairsFromKurtosis(services, kurtosisConfig))
+    ); // placeholder: mock point for the logic
 
     return env;
   }
+
+  // Flexible port discovery from Kurtosis service contexts
+  // Allows for different port names (http, rpc, http-beacon, http-validator)
+  private getPort(service: NodeService, ...names: string[]): number | undefined {
+    const ports = service.serviceContext.getPublicPorts();
+    for (const n of names) {
+      const p = ports.get(n)?.number;
+      if (p) return p;
+    }
+    return undefined;
+  }
+  
+  // Build HTTP URLs for API clients from service ports
+  // Standardized URL construction: Converts port numbers to full HTTP URLs
+  private httpUrlFrom(service: NodeService): string {
+    const p = this.getPort(service, "http", "rpc", "http-beacon", "http-validator");
+    if (!p) throw new Error(`No HTTP-like port exposed for service ${service.id}`);
+    return `http://localhost:${p}`;
+  }
+
+  // Deterministic service pairing for NodePair creation - matched by exact nodeIndex (1,2,3,...)
+  private findServiceByNodeIndex(
+    services: KurtosisServicesMap,
+    role: "beacon" | "execution" | "validator",
+    nodeIndex: number
+  ): NodeService | undefined {
+    return [...services.values()].find(s => s.role === role && s.metadata?.nodeIndex === nodeIndex);
+  }
+
 
   /**
    * Assertions expect a standardized input format: NodePair[]
@@ -160,122 +189,162 @@ export class Simulation {
    * Goal: Ensure Kurtosis creates NodePair objects with the same structure that Docker creates
    *
    * createNodePairFromKurtosis() emulates createNodePair(): create and return a NodePair
-   * NodePair has Docker Job reference, with migration Job will be substituted with a Kurtosis-native ServiceContext
    *
    */
 
   private async createNodePairsFromKurtosis(
-    // Iterates over participants in the config
     services: KurtosisServicesMap,
     config: KurtosisNetworkConfig
   ): Promise<NodePair[]> {
+    const mapBeacon = (s: string) => s.toLowerCase() === "lighthouse" ? BeaconClient.Lighthouse : BeaconClient.Lodestar;
+    const mapExecution = (s: string) => s.toLowerCase() === "nethermind"
+      ? ExecutionClient.Nethermind
+      : s.toLowerCase() === "mock"
+        ? ExecutionClient.Mock
+        : ExecutionClient.Geth;
+
     const nodePairs: NodePair[] = [];
+    let globalNodeIndex = 1;
 
-    const participantCount = config.participants.reduce((total: number, participant: {count?: number}) => {
-      // iterates over all the participants and sum their count
-      return total + (participant.count || 1);
-    }, 0);
+    for (const p of config.participants) {
+      const count = p.count ?? 1;
+      const beaconType = mapBeacon(p.cl_type);
+      const executionType = mapExecution(p.el_type);
 
-    for (let i = 0; i < participantCount; i++) {
-      const nodeId = `node-${i + 1}`;
-      // Converts Kurtosis services to Crucible NodePair[]
-      const nodePair = await this.createNodePairFromKurtosis(nodeId, services, config, i); //Placeholder for the NodePair creation
-      nodePairs.push(nodePair);
+      for (let i = 0; i < count; i++) {
+        const idx = globalNodeIndex++;            // This is the CL/EL/VC index used by the package
+        const id = `node-${idx}`;
+        const clSvc = this.findServiceByNodeIndex(services, "beacon", idx);
+        const elSvc = this.findServiceByNodeIndex(services, "execution", idx);
+        const vcSvc = this.findServiceByNodeIndex(services, "validator", idx);
+
+        // Helpful error with context
+        if (!clSvc || !elSvc) {
+          const dump = [...services.values()]
+            .map(s => `${s.id} role=${s.role} idx=${s.metadata?.nodeIndex}`).join(", ");
+          throw new Error(`Missing services for nodeIndex=${idx}: CL=${!!clSvc} EL=${!!elSvc}, services=[${dump}]`);
+        }
+
+        const beacon = await this.createBeaconNodeFromKurtosis(clSvc, beaconType);
+        const execution = await this.createExecutionNodeFromKurtosis(
+          elSvc,
+          executionType
+        );
+
+        const validator = vcSvc
+          ? await this.createValidatorNodeFromKurtosis(vcSvc, beacon, p.vc_extra_params ?? [])
+          : undefined;
+
+        nodePairs.push({id, beacon, execution, validator});
+      }
     }
 
     return nodePairs;
   }
+  
+  // Extract numeric node index from service ID
+  /*private extractNodeIndex(serviceId: string): number {
+    // Handle patterns like "cl-1", "el-2", "vc-3", "lodestar-1", "geth-2", etc.
+    const match = serviceId.match(/(\d+)$/);
+    return match ? parseInt(match[1], 10) : 0;
+  }*/
 
-  private async createNodePairFromKurtosis(
-    nodeId: string,
-    services: KurtosisServicesMap,
-    config: KurtosisNetworkConfig,
-    nodeIndex: number
-  ): Promise<NodePair> {
-    const forkConfig = this.forkConfig; //🔄 TODO: check if forkConfig is necessary for the NodePair creation
 
-    // Kurtosis naming convention: beacon (CL) services are prefixed with "cl-", execution (EL) with "el-", validator (VC) with "vc-"
-    //🔄 TODO: check correctness of nomenclature and returned object
-    const beaconService = [...services.keys()].filter((n) => n.startsWith("cl-"));
-    const executionService = [...services.keys()].filter((n) => n.startsWith("el-"));
-    const validatorService = [...services.keys()].filter((n) => n.startsWith("vc-"));
+  private async createBeaconNodeFromKurtosis(
+    service: NodeService,
+    beaconType: BeaconClient
+  ): Promise<BeaconNode> {
+    const restUrl = this.httpUrlFrom(service);
+    const api = getClient({baseUrl: restUrl}, {config: this.forkConfig});
+  
+    return {
+      client: beaconType,
+      id: `${service.id}-beacon-${beaconType}`,
+      restPublicUrl: restUrl,
+      restPrivateUrl: restUrl,
+      api,
+      serviceContext: service.serviceContext,
+    };
+  }  
 
-    if (!beaconService || !executionService) {
-      throw new Error(`Required services not found for node ${nodeId}`);
+
+  private async createExecutionNodeFromKurtosis(
+    service: NodeService,
+    executionType: ExecutionClient
+  ): Promise<ExecutionNode> {
+
+    // Ports for public and private URLs for the execution node (Kurtosis services)
+    const httpPort = this.getPort(service, "rpc", "http");
+    const engPort  = this.getPort(service, "engine-rpc", "engine");
+    const ethRpcPublicUrl = httpPort ? `http://localhost:${httpPort}` : "";
+    const engineRpcPublicUrl = engPort ? `http://localhost:${engPort}` : "";
+  
+    const provider = executionType === ExecutionClient.Mock ? null : new (await import("web3")).Web3(ethRpcPublicUrl);
+    if (provider) {
+      const {registerWeb3JsPlugins} = await import("../../web3js/plugins/index.js");
+      registerWeb3JsPlugins(provider);
+    }
+  
+    return {
+      client: executionType,
+      id: `${service.id}-execution-${executionType}`,
+      ttd: BigInt(this.forkConfig.TERMINAL_TOTAL_DIFFICULTY),
+      engineRpcPublicUrl,
+      engineRpcPrivateUrl: engineRpcPublicUrl,
+      ethRpcPublicUrl,
+      ethRpcPrivateUrl: ethRpcPublicUrl,
+      jwtSecretHex: undefined, //Lodestar uses 'SHARED_JWT_SECRET', ethereum-package is hardcoded, 
+      provider,
+      serviceContext: service.serviceContext,
+    };
+  }
+
+  private async createValidatorNodeFromKurtosis(
+    service: NodeService,
+    beacon: BeaconNode,
+    vcExtraParams: string[]
+  ): Promise<ValidatorNode> {
+    
+    // Preferred: dedicated Key Manager HTTP on the VC (kurtosis: "http-validator")
+    const httpValidatorPort = this.getPort(service, "http-validator");
+    const httpPort = this.getPort(service, "http");
+
+    let kmBaseUrl: string | undefined;
+    if (httpValidatorPort) {
+      kmBaseUrl = `http://localhost:${httpValidatorPort}`;
+    } else if (httpPort) {
+      // Some packages may still expose VC HTTP as "http"
+      this.logger?.warn?.(
+        `[${service.id}] no 'http-validator' port; using generic 'http' port for Key Manager`
+      );
+      kmBaseUrl = `http://localhost:${httpPort}`;
+    } else if (beacon.restPublicUrl) {
+      // Key Manager is often exposedon the beacon REST when VC HTTP is not published (Fallback solution)
+      this.logger?.warn?.(
+        `[${service.id}] no VC HTTP exposed; falling back to beacon REST for Key Manager: ${beacon.restPublicUrl}`
+      );
+      kmBaseUrl = beacon.restPublicUrl;
     }
 
-    // Placeholder for the NodePair creation
+    if (!kmBaseUrl) {
+      throw new Error(
+        `Validator ${service.id} has no 'http-validator' or 'http' port and beacon has no REST URL. ` +
+        `Expose 'http-validator' on the VC or enable Key Manager on the beacon REST.`
+      );
+    }
+  
+    if (vcExtraParams.length > 0) {
+      this.logger.info(`VC ${service.id} extra params: ${vcExtraParams.join(" ")}`);
+    }
+  
     return {
-      id: nodeId,
-      beacon: await this.createBeaconNodeFromKurtosis(beaconService, config, nodeIndex, forkConfig), //🔄 TODO: check input parameters for beaconNode creation
-      execution: await this.createExecutionNodeFromKurtosis(executionService, config, nodeIndex, forkConfig), //🔄 TODO: check input parameters for executionNode creation
-      validator: validatorService
-        ? await this.createValidatorNodeFromKurtosis(validatorService, config, nodeIndex, forkConfig)
-        : undefined, //🔄 TODO: check input parameters for validatorNode creation
+      client: beacon.client === BeaconClient.Lighthouse ? ValidatorClient.Lighthouse : ValidatorClient.Lodestar,
+      id: `${service.id}-validator`,
+      keyManager: keyManagerGetClient({baseUrl: kmBaseUrl}, {config: this.forkConfig}),
+      keys: {type: "no-keys"},
+      serviceContext: service.serviceContext,
     };
   }
-
-  // 🔄 Initial logic draft: Convert Kurtosis NodeService to Beacon/Execution/ValidatorNode
-  /**
-   * - Create BeaconNode/ExecutionNode from Kurtosis NodeService
-   * - Use Kurtosis public URLs for API calls
-   * - Use forkConfig for API client configuration
-   * - Return BeaconNode/ExecutionNode with API client
-   *
-   * Example signatures:
-   * 1. Basic
-   * function createBeaconNodeFromKurtosis(service: NodeService): BeaconNode
-   *
-   * 2. & 3. With Config and Context
-   * this.createBeaconNodeFromKurtosis(beaconService, config, nodeIndex)
-   * this.createBeaconNodeFromKurtosis(beaconService, config, nodeIndex, forkConfig)  // Most complete
-   *
-   * 4. Simplified Index
-   * this.createBeaconNodeFromKurtosis(beaconService, config, i)
-   *
-   */
-
-  //🔄 Initial logic draft: Create BeaconNode with Kurtosis service context
-  private async createBeaconNodeFromKurtosis(
-    beaconService: NodeService,
-    _config: KurtosisNetworkConfig,
-    _nodeIndex: number,
-    forkConfig: ChainForkConfig
-  ): Promise<BeaconNode> {
-    // 🔄 Recreate the API client with Kurtosis URL
-    const api = getClient(
-      {baseUrl: beaconService.apiUrl || ""},
-      {config: forkConfig} // Same forkConfig
-    );
-
-    //Placeholder for the BeaconNode creation
-    return {
-      client: BeaconClient.Lodestar,
-      id: `${beaconService.id}-beacon-lodestar`,
-      restPublicUrl: beaconService.apiUrl || "",
-      restPrivateUrl: beaconService.apiUrl || "",
-      // TODO: implement real Kurtosis API call
-      api, //🔄 Placeholder: returning mock api for now
-    };
-  }
-
-  /*
-  private async createExecutionNodeFromKurtosis(
-    beaconService: NodeService,
-    config: KurtosisNetworkConfig,
-    nodeIndex: number,
-    forkConfig: ChainForkConfig
-  ): Promise<ExecutionNode> {}
-  */
-
-  /*
-  private async createValidatorNodeFromKurtosis(
-    validatorService: NodeService,
-    config: KurtosisNetworkConfig,
-    nodeIndex: number,
-    forkConfig: ChainForkConfig
-  ): Promise<ValidatorNode> {}
-  */
 
   async start(opts: StartOpts): Promise<void> {
     const currentTime = Date.now();
@@ -320,23 +389,10 @@ export class Simulation {
         await mkdir(this.options.rootDir);
       }
 
-      this.logger.info("Starting the simulation runner");
-      await this.runner.start(`sim-${this.options.id}`);
-
-      this.logger.info("Starting execution nodes");
-      await Promise.all(this.nodes.map((node) => node.execution.job.start())); //REMOVE - Docker-specific
-
+      // Ensure all beacon nodes reach genesis and are health-ready before proceeding 
+      // This avoids failures in subsequent operations like validator key imports and tracker start
       this.logger.info("Initializing genesis state for beacon nodes");
-      await this.initGenesisState();
-      if (!this.genesisState) {
-        throw new Error("The genesis state for CL clients is not defined.");
-      }
-
-      this.logger.info("Starting beacon nodes");
-      await Promise.all(this.nodes.map((node) => node.beacon.job.start())); //❌ REMOVE - Docker-specific
-
-      this.logger.info("Starting validators");
-      await Promise.all(this.nodes.map((node) => node.validator?.job.start())); //❌ REMOVE - Docker-specific
+      await this.waitForBeaconGenesis({timeoutMs: Math.max(60_000, msToGenesis + 30_000)});
 
       if (this.nodes.some((node) => node.validator?.keys.type === "remote")) {
         this.logger.info("Starting external signer");
@@ -373,11 +429,8 @@ export class Simulation {
     process.removeAllListeners("SIGINT");
     this.logger.info(`Simulation environment "${this.options.id}" is stopping: ${message}`);
     await this.tracker.stop({dumpStores: true});
-    await Promise.all(this.nodes.map((node) => node.validator?.job.stop())); //❌ REMOVE - Docker-specific
-    await Promise.all(this.nodes.map((node) => node.beacon.job.stop())); //❌ REMOVE - Docker-specific
-    await Promise.all(this.nodes.map((node) => node.execution.job.stop())); //❌ REMOVE - Docker-specific
     await this.externalSigner.stop();
-    await this.runner.stop(); //❌ REMOVE - Docker-specific
+    await this.runner.stop(); //TODO: is this runner.stop() needed?
     this.options.controller.abort();
 
     if (this.runTimeout) {
@@ -392,37 +445,65 @@ export class Simulation {
     }
   }
 
-
-  private async initGenesisState(): Promise<void> {
-    for (let i = 0; i < this.nodes.length; i++) {
-      // Get genesis block hash
-      const el = this.nodes[i].execution;
-
-      // If eth1 is mock then genesis hash would be empty
-      const eth1Genesis = el.provider === null ? {hash: MOCK_ETH1_GENESIS_HASH} : await el.provider?.eth.getBlock(0);
-
-      if (!eth1Genesis.hash) {
-        throw new Error(`Eth1 genesis not found for node "${this.nodes[i].id}"`);
-      }
-
-      const genesisState = nodeUtils.initDevState(this.forkConfig, this.keysCount, {
-        genesisTime: this.options.genesisTime + this.forkConfig.GENESIS_DELAY,
-        eth1BlockHash: fromHexString(eth1Genesis.hash),
-        withEth1Credentials: true,
-      }).state;
-
-      this.genesisState = genesisState;
-
-      // Write the genesis state for all nodes
-      for (const node of this.nodes) {
-        const {genesisFilePath} = getNodePaths({
-          root: this.options.rootDir,
-          id: node.id,
-          logsDir: this.options.logsDir,
-          client: node.beacon.client,
-        });
-        await writeFile(genesisFilePath, this.genesisState.serialize());
+  /* Simple waitForBeaconGenesis function for Kurtosis simulation -> First version (simple, per-node, sequential)
+  private async waitForBeaconGenesis({timeoutMs}: {timeoutMs: number}): Promise<void> {
+    const deadline = Date.now() + timeoutMs;
+    
+    for (const n of this.nodes) {
+      const base = n.beacon.restPublicUrl;
+      // optional log
+      //[this.logger.info](http://this.logger.info/)(`Waiting for beacon genesis at ${base} ...`);
+      
+      // use existing api client
+      while(true) {
+        try {
+          const res = await n.beacon.api.beacon.getGenesis();
+          // a successful response means genesis is ready
+          this.logger.info(`Beacon ready: ${n.id} genesis_time=${res.value().genesisTime}`);
+          break;
+        } catch (e) {
+          if (Date.now() > deadline) {
+            throw new Error(`Timed out waiting for beacon genesis at ${base}: ${(e as Error).message}`);
+          }
+          await new Promise(r => setTimeout(r, intervalMs));
+        }
       }
     }
   }
+  */
+
+  // More complex waitForBeaconGenesis function for Kurtosis simulation -> Second version (parallel, all beacons)
+  private async waitForBeaconGenesis({timeoutMs}: {timeoutMs: number}) {
+    const deadline = Date.now() + timeoutMs;
+    const poll = async (fn: () => Promise<boolean>, label: string, everyMs = 1000) => {
+      while (true) {
+        try {
+          if (await fn()) return;
+        } catch {}
+        if (Date.now() > deadline) throw new Error(`Timeout waiting for ${label}`);
+        await new Promise((r) => setTimeout(r, everyMs));
+      }
+    };
+
+    // All beacons respond to /genesis
+    await Promise.all(
+      this.nodes.map((n) =>
+        poll(async () => {
+          const res = await n.beacon.api.beacon.getGenesis(); // Wait for genesis endpoint to respond
+          return !!res.value()?.genesisTime;
+        }, `${n.id} /genesis`)
+      )
+    );
+
+    // Health is SYNCING or READY
+    await Promise.all(
+      this.nodes.map((n) =>
+        poll(async () => {
+          const {status} = await n.beacon.api.node.getHealth();
+          return status === 200 || status === 206;
+        }, `${n.id} health`)
+      )
+    );
+  }
+
 }

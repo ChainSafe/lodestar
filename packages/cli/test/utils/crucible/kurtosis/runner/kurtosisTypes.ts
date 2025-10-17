@@ -22,6 +22,7 @@ export type KurtosisNetworkConfig = {
     count?: number;
     cl_extra_params?: string[];
     el_extra_params?: string[];
+    vc_extra_params?: string[];
   }>;
   additional_services?: string[];
   network_params: Record<string, string | number>;

@@ -5,18 +5,17 @@ import {createForkAssertion} from "../utils/crucible/assertions/forkAssertion.js
 import {mergeAssertion} from "../utils/crucible/assertions/mergeAssertion.js";
 import {nodeAssertion} from "../utils/crucible/assertions/nodeAssertion.js";
 import {createWithdrawalAssertions} from "../utils/crucible/assertions/withdrawalsAssertion.js";
-import {BeaconClient, ExecutionClient, Match, ValidatorClient} from "../utils/crucible/interfaces.js";
-//import {Simulation} from "../utils/crucible/simulation.js"; // TODO: Merge simulation-kurtosis.js logic into simulation.js
+import {Match} from "../utils/crucible/interfaces.js";
 import {Simulation} from "../utils/crucible/kurtosis/simulation/simulation-kurtosis.js";
 import {defineSimTestConfig, logFilesDir} from "../utils/crucible/utils/index.js";
 import {connectAllNodes, waitForSlot} from "../utils/crucible/utils/network.js";
 import {assertCheckpointSync, assertRangeSync, assertUnknownBlockSync} from "../utils/crucible/utils/syncing.js";
 
-const altairForkEpoch = 2;
-const bellatrixForkEpoch = 4;
-const capellaForkEpoch = 6;
-const denebForkEpoch = 8;
-const runTillEpoch = 10;
+const altairForkEpoch = 0;
+const bellatrixForkEpoch = 0;
+const capellaForkEpoch = 0;
+const denebForkEpoch = 0;
+const runTillEpoch = 4;
 const syncWaitEpoch = 2;
 
 const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
@@ -36,7 +35,7 @@ const env = await Simulation.initWithKurtosisConfig(
     logsDir: path.join(logFilesDir, "multi-fork"),
     forkConfig,
   },
-  "configs/multi-fork.yml"  // Kurtosis network configuration
+  "multi-fork.yml"  // Kurtosis network configuration
 );
 
 env.tracker.register({

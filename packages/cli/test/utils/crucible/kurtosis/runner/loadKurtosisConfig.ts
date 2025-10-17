@@ -1,41 +1,61 @@
 /**
  * Loader for YAML input into a KurtosisNetworkConfig
- * Used with *.test.ts files and during the testing phase
+ * Tries multiple sensible locations so tests don't need to care about cwd.
  */
-
-// Loader for YAML input into a KurtosisNetworkConfig
-// Used with *.test.ts files and during the testing phase
 
 import fs from "node:fs/promises";
 import path from "node:path";
+import {fileURLToPath} from "node:url";
 import {parse} from "yaml";
 import type {KurtosisNetworkConfig} from "../runner/kurtosisTypes.js";
 
-export async function loadKurtosisConfig(fileName: string, baseDir?: string): Promise<KurtosisNetworkConfig> {
-  let fullPath: string;
-
-  if (baseDir) {
-    // If baseDir is provided, treat fileName as relative to baseDir
-    fullPath = path.join(baseDir, fileName);
-  } else {
-    // If no baseDir, treat fileName as absolute path
-    fullPath = fileName;
+export async function loadKurtosisConfig(
+  fileName: string,
+  baseDir?: string
+): Promise<KurtosisNetworkConfig> {
+  // If the file name is an absolute path, use it as-is.
+  if (path.isAbsolute(fileName)) {
+    const raw = await fs.readFile(fileName, "utf8");
+    return parse(raw) as KurtosisNetworkConfig;
   }
 
-  const raw = await fs.readFile(fullPath, "utf8");
-  return parse(raw) as KurtosisNetworkConfig;
-}
+  // Resolve module dir (where this loader lives)
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
 
-//move the baseDir inside taking inspo from this code snippet?
-/*
-export class KurtosisConfigLoader {
-  private static readonly CONFIG_DIR = "./test/sim/configs";
+  // If a base directory is provided, use it to construct a candidate path
+  const candidates: string[] = baseDir ? [path.join(baseDir, fileName)] : [];
+
   
-  static loadConfig(configName: string): KurtosisNetworkConfig {
-    const configPath = resolve(this.CONFIG_DIR, `${configName}.yml`);
-    const yamlContent = readFileSync(configPath, 'utf8');
-    return yamlLoad(yamlContent) as KurtosisNetworkConfig;
+  candidates.push(path.resolve(process.cwd(), fileName));
+
+  // 4) Try the default Kurtosis test configs folder relative to this module:
+  //    utils/crucible/kurtosis/test/*.yml
+  const defaultTestDir = path.resolve(__dirname, "..", "test");
+  candidates.push(path.join(defaultTestDir, fileName));
+
+  // 5) Fallback to relative to this module’s dir
+  candidates.push(path.resolve(__dirname, fileName));
+
+  // Read the first existing candidate; collect missing ones for a nice error
+  const tried: string[] = [];
+  for (const p of candidates) {
+    try {
+      const raw = await fs.readFile(p, "utf8");
+      return parse(raw) as KurtosisNetworkConfig;
+    } catch (e: any) {
+      if (e?.code === "ENOENT") {
+        tried.push(p);
+        continue;
+      }
+      // Surface non-ENOENT errors immediately (e.g. perms, YAML syntax)
+      throw e;
     }
   }
+
+  // Initiate an error response that enumerates each attempted route.
+  throw new Error(
+    `Kurtosis config not found for "${fileName}". Tried:\n` +
+    tried.map((p) => `  - ${p}`).join("\n")
+  );
 }
-*/
