@@ -414,7 +414,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
   ): EngineApiRpcReturnTypes["engine_getPayloadV5"] {
     // 1. Given the payloadId client software MUST return the most recent version of the payload that is available in
     //    the corresponding build process at the time of receiving the call.
-    const payloadIdNbr = parseInt(payloadId);
+    const payloadIdNbr = parseInt(payloadId, 10);
     const payload = this.preparingPayloads.get(payloadIdNbr);
 
     // 2. The call MUST return -38001: Unknown payload error if the build process identified by the payloadId does not
