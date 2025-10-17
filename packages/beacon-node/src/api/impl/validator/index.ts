@@ -455,8 +455,8 @@ export function getValidatorApi(
 
       metrics?.blockProductionSuccess.inc({source});
       metrics?.blockProductionNumAggregated.observe({source}, block.body.attestations.length);
-      metrics?.blockProductionConsensusBlockValue.observe({source}, bigintToNumber(consensusBlockValue));
-      metrics?.blockProductionExecutionPayloadValue.observe({source}, bigintToNumber(executionPayloadValue));
+      metrics?.blockProductionConsensusBlockValue.observe({source}, parseFloat(prettyWeiToEth(consensusBlockValue)));
+      metrics?.blockProductionExecutionPayloadValue.observe({source}, parseFloat(prettyWeiToEth(executionPayloadValue)));
       logger.verbose("Produced blinded block", {
         slot,
         executionPayloadValue,
