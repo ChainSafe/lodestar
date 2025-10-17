@@ -11,6 +11,7 @@ import {
   phase0,
   ssz,
 } from "@lodestar/types";
+import {bigintToNumber} from "@lodestar/utils";
 import {
   ArrayOf,
   EmptyArgs,
@@ -26,8 +27,6 @@ import {toForkName} from "../../../utils/fork.js";
 import {fromHeaders} from "../../../utils/headers.js";
 import {Endpoint, RouteDefinitions, Schema} from "../../../utils/index.js";
 import {MetaHeader, VersionCodec, VersionMeta} from "../../../utils/metadata.js";
-import {bigintToNumber} from "@lodestar/utils";
-
 
 const SingleAttestationListTypePhase0 = ArrayOf(ssz.phase0.Attestation);
 const SingleAttestationListTypeElectra = ArrayOf(ssz.electra.SingleAttestation);

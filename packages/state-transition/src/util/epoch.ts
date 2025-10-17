@@ -1,5 +1,6 @@
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, GENESIS_EPOCH, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconState, Epoch, Gwei, Slot, SyncPeriod} from "@lodestar/types";
+import {bigintToNumber} from "@lodestar/utils";
 import {CachedBeaconStateElectra} from "../types.js";
 import {getActivationExitChurnLimit, getConsolidationChurnLimit} from "./validator.js";
 
@@ -47,11 +48,11 @@ export function computeExitEpochAndUpdateChurn(state: CachedBeaconStateElectra, 
 
   // New epoch for exits.
   let exitBalanceToConsume =
-    state.earliestExitEpoch < earliestExitEpoch ? perEpochChurn : Number(state.exitBalanceToConsume);
+    state.earliestExitEpoch < earliestExitEpoch ? perEpochChurn : bigintToNumber(state.exitBalanceToConsume);
 
   // Exit doesn't fit in the current earliest epoch.
   if (exitBalance > exitBalanceToConsume) {
-    const balanceToProcess = Number(exitBalance) - exitBalanceToConsume;
+    const balanceToProcess = bigintToNumber(exitBalance) - exitBalanceToConsume;
     const additionalEpochs = Math.floor((balanceToProcess - 1) / perEpochChurn) + 1;
     earliestExitEpoch += additionalEpochs;
     exitBalanceToConsume += additionalEpochs * perEpochChurn;
@@ -78,11 +79,11 @@ export function computeConsolidationEpochAndUpdateChurn(
   let consolidationBalanceToConsume =
     state.earliestConsolidationEpoch < earliestConsolidationEpoch
       ? perEpochConsolidationChurn
-      : Number(state.consolidationBalanceToConsume);
+      : bigintToNumber(state.consolidationBalanceToConsume);
 
   // Consolidation doesn't fit in the current earliest epoch.
   if (consolidationBalance > consolidationBalanceToConsume) {
-    const balanceToProcess = Number(consolidationBalance) - consolidationBalanceToConsume;
+    const balanceToProcess = bigintToNumber(consolidationBalance) - consolidationBalanceToConsume;
     const additionalEpochs = Math.floor((balanceToProcess - 1) / perEpochConsolidationChurn) + 1;
     earliestConsolidationEpoch += additionalEpochs;
     consolidationBalanceToConsume += additionalEpochs * perEpochConsolidationChurn;

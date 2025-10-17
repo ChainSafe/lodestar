@@ -9,7 +9,7 @@ import {
   MIN_ACTIVATION_BALANCE,
 } from "@lodestar/params";
 import {ValidatorIndex, capella, ssz} from "@lodestar/types";
-import {MapDef, toRootHex} from "@lodestar/utils";
+import {MapDef, bigintToNumber, toRootHex} from "@lodestar/utils";
 import {CachedBeaconStateCapella, CachedBeaconStateElectra} from "../types.js";
 import {
   decreaseBalance,
@@ -52,7 +52,7 @@ export function processWithdrawals(
 
   for (let i = 0; i < numWithdrawals; i++) {
     const withdrawal = expectedWithdrawals[i];
-    decreaseBalance(state, withdrawal.validatorIndex, Number(withdrawal.amount));
+    decreaseBalance(state, withdrawal.validatorIndex, bigintToNumber(withdrawal.amount));
   }
 
   if (fork >= ForkSeq.electra) {
@@ -141,7 +141,7 @@ export function getExpectedWithdrawals(
           amount: withdrawableBalance,
         });
         withdrawalIndex++;
-        withdrawnBalances.set(withdrawal.validatorIndex, totalWithdrawn + Number(withdrawableBalance));
+        withdrawnBalances.set(withdrawal.validatorIndex, totalWithdrawn + bigintToNumber(withdrawableBalance));
       }
       processedPartialWithdrawalsCount++;
     }

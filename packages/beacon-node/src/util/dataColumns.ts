@@ -21,7 +21,7 @@ import {
   fulu,
   ssz,
 } from "@lodestar/types";
-import {bytesToBigInt} from "@lodestar/utils";
+import {bigintToNumber, bytesToBigInt} from "@lodestar/utils";
 import {BlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
 import {ChainEvent, ChainEventEmitter} from "../chain/emitter.js";
@@ -209,7 +209,7 @@ export function getCustodyGroups(config: ChainForkConfig, nodeId: NodeId, custod
   while (custodyGroups.length < custodyGroupCount) {
     // could be optimized
     const currentIdBytes = ssz.UintBn256.serialize(currentId);
-    const custodyGroup = Number(
+    const custodyGroup = bigintToNumber(
       ssz.UintBn64.deserialize(digest(currentIdBytes).slice(0, 8)) % BigInt(config.NUMBER_OF_CUSTODY_GROUPS)
     );
 

@@ -2,8 +2,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {EPOCHS_PER_ETH1_VOTING_PERIOD, SLOTS_PER_EPOCH, isForkPostElectra} from "@lodestar/params";
 import {BeaconStateAllForks, BeaconStateElectra, computeTimeAtSlot} from "@lodestar/state-transition";
 import {RootHex, phase0} from "@lodestar/types";
-import {toRootHex, bigintToNumber} from "@lodestar/utils";
-
+import {bigintToNumber, toRootHex} from "@lodestar/utils";
 
 export type Eth1DataGetter = ({
   timestampRange,

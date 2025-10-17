@@ -2,6 +2,7 @@ import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {ForkPostElectra, ForkPreElectra, SYNC_COMMITTEE_SUBNET_SIZE, isForkPostElectra} from "@lodestar/params";
 import {Attestation, Epoch, SingleAttestation, isElectraAttestation, ssz, sszTypesFor} from "@lodestar/types";
+import {bigintToNumber} from "@lodestar/utils";
 import {
   AttestationError,
   AttestationErrorCode,
@@ -17,8 +18,6 @@ import {validateApiVoluntaryExit} from "../../../../chain/validation/voluntaryEx
 import {validateGossipFnRetryUnknownRoot} from "../../../../network/processor/gossipHandlers.js";
 import {ApiError, FailureList, IndexedError} from "../../errors.js";
 import {ApiModules} from "../../types.js";
-import {bigintToNumber} from "@lodestar/utils";
-
 
 export function getBeaconPoolApi({
   chain,

@@ -17,7 +17,7 @@ import {
   SYNC_COMMITTEE_SIZE,
 } from "@lodestar/params";
 import {Bytes32, DomainType, Epoch, ValidatorIndex} from "@lodestar/types";
-import {assert, bytesToBigInt, bytesToInt, intToBytes} from "@lodestar/utils";
+import {assert, bigintToNumber, bytesToBigInt, bytesToInt, intToBytes} from "@lodestar/utils";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "../types.js";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "./epoch.js";
@@ -282,7 +282,7 @@ export function computeShuffledIndex(index: number, indexCount: number, seed: By
   assert.lte(indexCount, 2 ** 40, "indexCount too big");
   const _seed = seed;
   for (let i = 0; i < SHUFFLE_ROUND_COUNT; i++) {
-    const pivot = Number(
+    const pivot = bigintToNumber(
       bytesToBigInt(digest(Buffer.concat([_seed, intToBytes(i, 1)])).slice(0, 8)) % BigInt(indexCount)
     );
     const flip = (pivot + indexCount - permuted) % indexCount;
@@ -332,7 +332,7 @@ export function getComputeShuffledIndexFn(indexCount: number, seed: Bytes32): Co
         //   bytesToBigInt(digest(Buffer.concat([_seed, intToBytes(i, 1)])).slice(0, 8)) % BigInt(indexCount)
         // );
         pivotBuffer[32] = i % 256;
-        pivot = Number(bytesToBigInt(digest(pivotBuffer).subarray(0, 8)) % BigInt(indexCount));
+        pivot = bigintToNumber(bytesToBigInt(digest(pivotBuffer).subarray(0, 8)) % BigInt(indexCount));
         pivotByIndex.set(i, pivot);
       }
 

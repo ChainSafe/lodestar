@@ -1,4 +1,5 @@
 import {toBigIntBE, toBigIntLE, toBufferBE, toBufferLE} from "bigint-buffer";
+import {bigintToNumber} from "./bigint.js";
 
 type Endianness = "le" | "be";
 
@@ -28,7 +29,7 @@ export function intToBytes(value: bigint | number, length: number, endianness: E
  * Convert byte array in LE to integer.
  */
 export function bytesToInt(value: Uint8Array, endianness: Endianness = "le"): number {
-  return Number(bytesToBigInt(value, endianness));
+  return bigintToNumber(bytesToBigInt(value, endianness));
 }
 
 export function bigIntToBytes(value: bigint, length: number, endianness: Endianness = "le"): Buffer {

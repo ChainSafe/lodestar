@@ -50,8 +50,8 @@ import {
 } from "@lodestar/types";
 import {
   TimeoutError,
-  defer,
   bigintToNumber,
+  defer,
   fromHex,
   prettyWeiToEth,
   resolveOrRacePromises,

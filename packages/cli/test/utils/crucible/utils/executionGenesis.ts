@@ -1,3 +1,4 @@
+import {bigintToNumber} from "@lodestar/utils";
 import {SIM_ENV_CHAIN_ID, SIM_ENV_NETWORK_ID} from "../constants.js";
 import {Eth1GenesisBlock, ExecutionGenesisOptions, ExecutionStartMode} from "../interfaces.js";
 
@@ -35,7 +36,7 @@ export const getGethGenesisBlock = (
         prague: {target: 6, max: 9, baseFeeUpdateFraction: 5007716},
         // "osaka":  { "target": 6, "max": 9, "updateFraction": 5007716 }
       },
-      terminalTotalDifficulty: Number(ttd as bigint),
+      terminalTotalDifficulty: bigintToNumber(ttd as bigint),
       clique: {period: cliqueSealingPeriod, epoch: 30000},
     },
     nonce: "0x0",
@@ -113,7 +114,7 @@ export const getNethermindChainSpec = (
       eip3198Transition: "0x0",
       eip3529Transition: "0x0",
       eip3541Transition: "0x0",
-      terminalTotalDifficulty: Number(ttd as bigint),
+      terminalTotalDifficulty: bigintToNumber(ttd as bigint),
       gasLimitBoundDivisor: "0x400",
       maxCodeSize: "0x6000",
       maxCodeSizeTransition: "0x0",

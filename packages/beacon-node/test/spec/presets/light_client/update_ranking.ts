@@ -3,9 +3,8 @@ import {LightClientUpdateSummary, isBetterUpdate, toLightClientUpdateSummary} fr
 import {isForkPostAltair} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {LightClientUpdate, altair, ssz, sszTypesFor} from "@lodestar/types";
-import {TestRunnerFn} from "../../utils/types.js";
 import {bigintToNumber} from "@lodestar/utils";
-
+import {TestRunnerFn} from "../../utils/types.js";
 
 // https://github.com/ethereum/consensus-specs/blob/da3f5af919be4abb5a6db5a80b235deb8b4b5cba/tests/formats/light_client/update_ranking.md
 type UpdateRankingTestCase = {

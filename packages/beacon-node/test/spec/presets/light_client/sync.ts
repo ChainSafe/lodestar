@@ -5,10 +5,9 @@ import {isForkPostAltair} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {computeSyncPeriodAtSlot} from "@lodestar/state-transition";
 import {RootHex, Slot, altair, phase0, ssz, sszTypesFor} from "@lodestar/types";
-import {fromHex, toHex, bigintToNumber} from "@lodestar/utils";
+import {bigintToNumber, fromHex, toHex} from "@lodestar/utils";
 import {testLogger} from "../../../utils/logger.js";
 import {TestRunnerFn} from "../../utils/types.js";
-
 
 // https://github.com/ethereum/consensus-specs/blob/da3f5af919be4abb5a6db5a80b235deb8b4b5cba/tests/formats/light_client/single_merkle_proof.md
 type SyncTestCase = {

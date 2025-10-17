@@ -266,7 +266,8 @@ export class PrepareNextSlotScheduler {
 
         if (
           finalizedState !== undefined &&
-          finalizedState.eth1DepositIndex === bigintToNumber((finalizedState as BeaconStateElectra).depositRequestsStartIndex)
+          finalizedState.eth1DepositIndex ===
+            bigintToNumber((finalizedState as BeaconStateElectra).depositRequestsStartIndex)
         ) {
           // Signal eth1 to stop polling eth1Data
           this.chain.eth1.stopPollingEth1Data();

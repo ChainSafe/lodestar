@@ -1,5 +1,6 @@
 import {ForkSeq, MAX_DEPOSITS} from "@lodestar/params";
 import {UintNum64, phase0} from "@lodestar/types";
+import {bigintToNumber} from "@lodestar/utils";
 import {CachedBeaconStateAllForks, CachedBeaconStateElectra} from "../types.js";
 
 export function getEth1DepositCount(state: CachedBeaconStateAllForks, eth1Data?: phase0.Eth1Data): UintNum64 {
@@ -11,7 +12,7 @@ export function getEth1DepositCount(state: CachedBeaconStateAllForks, eth1Data?:
     const eth1DataIndexLimit: UintNum64 =
       eth1DataToUse.depositCount < electraState.depositRequestsStartIndex
         ? eth1DataToUse.depositCount
-        : Number(electraState.depositRequestsStartIndex);
+        : bigintToNumber(electraState.depositRequestsStartIndex);
 
     if (state.eth1DepositIndex < eth1DataIndexLimit) {
       return Math.min(MAX_DEPOSITS, eth1DataIndexLimit - state.eth1DepositIndex);

@@ -27,7 +27,7 @@ import {
   fulu,
   phase0,
 } from "@lodestar/types";
-import {prettyPrintIndices,bigintToNumber, sleep} from "@lodestar/utils";
+import {bigintToNumber, prettyPrintIndices, sleep} from "@lodestar/utils";
 import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
 import {ChainEvent, IBeaconChain} from "../chain/index.js";
 import {computeSubnetForDataColumnSidecar} from "../chain/validation/dataColumnSidecar.js";
@@ -59,8 +59,6 @@ import {
 import {collectSequentialBlocksInRange} from "./reqresp/utils/collectSequentialBlocksInRange.js";
 import {CommitteeSubscription} from "./subnets/index.js";
 import {isPublishToZeroPeersError, prettyPrintPeerIdStr} from "./util.js";
-
-
 
 type NetworkModules = {
   opts: NetworkOptions;

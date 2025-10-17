@@ -1,5 +1,6 @@
 import {DOMAIN_BEACON_PROPOSER} from "@lodestar/params";
 import {SignedBeaconBlock, phase0, ssz} from "@lodestar/types";
+import {bigintToNumber} from "@lodestar/utils";
 import {CachedBeaconStateAllForks} from "../types.js";
 import {ISignatureSet, SignatureSetType, computeSigningRoot} from "../util/index.js";
 
@@ -19,7 +20,7 @@ export function getProposerSlashingSignatureSets(
     const domain = state.config.getDomain(
       state.slot,
       DOMAIN_BEACON_PROPOSER,
-      Number(signedHeader.message.slot as bigint)
+      bigintToNumber(signedHeader.message.slot as bigint)
     );
 
     return {

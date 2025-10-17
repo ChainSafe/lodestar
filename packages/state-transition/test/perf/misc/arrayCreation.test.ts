@@ -1,4 +1,5 @@
 import {bench, describe} from "@chainsafe/benchmark";
+import {bigintToNumber} from "@lodestar/utils";
 
 describe.skip("array creation", () => {
   const testCases: {id: string; fn: (n: number) => void}[] = [
@@ -37,7 +38,7 @@ describe.skip("array creation", () => {
         fn(elem);
       }
       const to = process.hrtime.bigint();
-      const diffMs = Number(to - from) / 1e6;
+      const diffMs = bigintToNumber(to - from) / 1e6;
       console.log(`${id}: ${diffMs / opsRun} ms`);
     });
   }

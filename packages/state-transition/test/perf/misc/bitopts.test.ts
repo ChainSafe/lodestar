@@ -1,4 +1,5 @@
 import {bench, describe} from "@chainsafe/benchmark";
+import {bigintToNumber} from "@lodestar/utils";
 import {FLAG_PREV_SOURCE_ATTESTER, FLAG_UNSLASHED} from "../../../src/index.js";
 
 describe.skip("bit opts", () => {
@@ -12,7 +13,7 @@ describe.skip("bit opts", () => {
       FLAG_PREV_SOURCE_ATTESTER | FLAG_UNSLASHED;
     }
     const to = process.hrtime.bigint();
-    const diffMs = Number(to - from) / 1e6;
+    const diffMs = bigintToNumber(to - from) / 1e6;
     console.log(`Time spent on OR in getAttestationDeltas: ${diffMs * ((orOptsPerRun * validators) / opsRun)} ms`);
   });
 });

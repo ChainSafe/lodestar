@@ -1,5 +1,6 @@
 export * from "./assert.js";
 export * from "./base64.js";
+export * from "./bigint.ts";
 export * from "./bytes/index.js";
 export * from "./bytes.js";
 export * from "./command.js";
@@ -26,4 +27,3 @@ export * from "./url.js";
 export * from "./verifyMerkleBranch.js";
 export * from "./waitFor.js";
 export * from "./yaml/index.js";
-export * from "./bigint.ts";
