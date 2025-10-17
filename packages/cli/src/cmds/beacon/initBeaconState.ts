@@ -288,12 +288,14 @@ export async function initBeaconState(
         logger
       );
 
+      const lastProcessedSlot = stateAndCp.anchorState.latestBlockHeader.slot;
       const {checkpoint} = computeAnchorCheckpoint(chainForkConfig, stateAndCp.anchorState);
 
       logger.info("Initialized checkpoint state", {
         slot: stateAndCp.anchorState.slot,
         epoch: checkpoint.epoch,
         checkpointRoot: toRootHex(checkpoint.root),
+        lastProcessedSlot,
         isFinalized,
       });
 
