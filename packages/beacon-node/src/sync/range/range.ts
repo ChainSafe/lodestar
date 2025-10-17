@@ -114,7 +114,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
    */
   addPeer(peerId: PeerIdStr, localStatus: Status, peerStatus: Status): void {
     // Compute if we should do a Finalized or Head sync with this peer
-    const {syncType, startEpoch, target} = getRangeSyncTarget(localStatus, peerStatus, this.chain.forkChoice);
+    const {syncType, startEpoch, target} = getRangeSyncTarget(localStatus, peerStatus, this.chain);
     this.logger.debug("Sync peer joined", {
       peer: peerId,
       syncType,

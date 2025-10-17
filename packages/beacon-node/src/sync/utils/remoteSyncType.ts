@@ -1,6 +1,7 @@
 import {IForkChoice} from "@lodestar/fork-choice";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Slot, Status} from "@lodestar/types";
+import {IBeaconChain} from "../../chain/interface.ts";
 import {ChainTarget} from "../range/utils/index.js";
 
 /** The type of peer relative to our current state */
@@ -103,8 +104,10 @@ export function getRangeSyncType(local: Status, remote: Status, forkChoice: IFor
 export function getRangeSyncTarget(
   local: Status,
   remote: Status,
-  forkChoice: IForkChoice
+  chain: IBeaconChain
 ): {syncType: RangeSyncType; startEpoch: Slot; target: ChainTarget} {
+  const forkChoice = chain.forkChoice;
+
   // finalized sync
   if (remote.finalizedEpoch > local.finalizedEpoch && !forkChoice.hasBlock(remote.finalizedRoot)) {
     return {
@@ -133,12 +136,18 @@ export function getRangeSyncTarget(
     };
   }
 
+  // we don't want to sync from epoch < minEpoch
+  // if we boot from an unfinalized checkpoint state, we don't want to sync before anchorStateLatestBlockSlot
+  // if we boot from a finalized checkpoint state, anchorStateLatestBlockSlot is trusted and we also don't want to sync before it
+  const minEpoch = Math.max(remote.finalizedEpoch, computeEpochAtSlot(chain.anchorStateLatestBlockSlot));
+
   // head sync
   return {
     syncType: RangeSyncType.Head,
     // The new peer has the same finalized (earlier filters should prevent a peer with an
-    // earlier finalized chain from reaching here) and local head will always be >= local finalized.
-    startEpoch: computeEpochAtSlot(local.headSlot),
+    // earlier finalized chain from reaching here). During long non-finality, we don't want
+    // to sync from finalizedEpoch which is too far away.
+    startEpoch: Math.min(computeEpochAtSlot(local.headSlot), minEpoch),
     target: {
       slot: remote.headSlot,
       root: remote.headRoot,
