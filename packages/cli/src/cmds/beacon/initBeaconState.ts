@@ -271,7 +271,7 @@ export async function initBeaconState(
 
     if (stateBytes !== null) {
       logger.warn(
-        "Initializing from unfinalized checkpoint state is unsafe and may cause the node to follow a wrong chain"
+        "Initializing from unfinalized checkpoint state is unsafe and may cause the node to follow a minority chain"
       );
       const stateAndCp = await readWSState(
         lastDbStateWithBytes,
