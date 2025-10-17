@@ -165,7 +165,7 @@ export async function initBeaconState(
           isWithinWeakSubjectivityPeriod: wssCheck,
           isCheckpointState: false,
         });
-        logger.info("Initialized last db state", {
+        logger.info("Initialized state from db", {
           slot: lastDbState.slot,
           epoch: computeEpochAtSlot(lastDbState.slot),
           stateRoot: toRootHex(lastDbState.hashTreeRoot()),
