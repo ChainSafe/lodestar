@@ -12,7 +12,7 @@ describe("Perf test sanity check", () => {
 
   const numValidators = 250000;
   const targetStakeYWei = 7;
-  const targetStake = BigInt(targetStakeYWei) * BigInt(1) ** BigInt(15);
+  const targetStake = BigInt(targetStakeYWei) * BigInt(10) ** BigInt(15);
 
   beforeAll(() => {
     expect(perfStateId).toEqualWithMessage(`${numValidators} vs - ${targetStakeYWei}PWei`, "perfStateId has changed");
