@@ -23,7 +23,7 @@ const merkleProof: TestRunnerFn<MerkleTestCase, {leaf: string; branch: string[];
     testFunction: (testcase, _, testCaseName) => {
       // TODO Gloas: implement new test cases
       if (isForkPostGloas(fork)) {
-        throw Error(`${testcase} not implemented for fork=${fork}`);
+        throw Error(`${testCaseName} not implemented for fork=${fork}`);
       }
 
       // Some of the specs in below conditions have uint(8 bytes) values greater than 2^53-1
