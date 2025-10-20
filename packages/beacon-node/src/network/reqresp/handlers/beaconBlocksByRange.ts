@@ -1,3 +1,4 @@
+import {PeerId} from "@libp2p/interface";
 import {BeaconConfig} from "@lodestar/config";
 import {GENESIS_SLOT, isForkPostDeneb} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
@@ -6,13 +7,16 @@ import {deneb, phase0} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
+import {prettyPrintPeerId} from "../../util.ts";
 
 // TODO: Unit test
 
 export async function* onBeaconBlocksByRange(
   request: phase0.BeaconBlocksByRangeRequest,
   chain: IBeaconChain,
-  db: IBeaconDb
+  db: IBeaconDb,
+  peerId: PeerId,
+  peerClient: string
 ): AsyncIterable<ResponseOutgoing> {
   const {startSlot, count} = validateBeaconBlocksByRangeRequest(chain.config, request);
   const endSlot = startSlot + count;
@@ -20,6 +24,14 @@ export async function* onBeaconBlocksByRange(
   const finalized = db.blockArchive;
   const unfinalized = db.block;
   const finalizedSlot = chain.forkChoice.getFinalizedBlock().slot;
+
+  if (startSlot < chain.earliestAvailableSlot) {
+    chain.logger.verbose("Peer did not respect earliestAvailableSlot for BeaconBlocksByRange ", {
+      peer: prettyPrintPeerId(peerId),
+      client: peerClient,
+    });
+    return;
+  }
 
   // Finalized range of blocks
   if (startSlot <= finalizedSlot) {
