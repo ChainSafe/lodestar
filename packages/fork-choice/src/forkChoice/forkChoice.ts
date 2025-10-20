@@ -71,6 +71,9 @@ export type UpdateAndGetHeadOpt =
   | {mode: UpdateHeadOpt.GetProposerHead; secFromSlot: number; slot: Slot}
   | {mode: UpdateHeadOpt.GetPredictedProposerHead; secFromSlot: number; slot: Slot};
 
+// the initial vote epoch for all validators
+const INIT_VOTE_EPOCH: Epoch = 0;
+
 /**
  * Provides an implementation of "Ethereum Consensus -- Beacon Chain Fork Choice":
  *
@@ -149,7 +152,7 @@ export class ForkChoice implements IForkChoice {
     this.voteCurrentIndices = new Array(validatorCount).fill(NULL_VOTE_INDEX);
     this.voteNextIndices = new Array(validatorCount).fill(NULL_VOTE_INDEX);
     // when compute deltas, we ignore epoch if voteNextIndex is NULL_VOTE_INDEX anyway
-    this.voteNextEpochs = new Array(validatorCount).fill(0);
+    this.voteNextEpochs = new Array(validatorCount).fill(INIT_VOTE_EPOCH);
 
     metrics?.forkChoice.votes.addCollect(() => {
       metrics.forkChoice.votes.set(this.voteNextEpochs.length);
@@ -1461,7 +1464,7 @@ export class ForkChoice implements IForkChoice {
 
     const existingNextEpoch = this.voteNextEpochs[validatorIndex];
 
-    if (existingNextEpoch === undefined) {
+    if (existingNextEpoch === undefined || existingNextEpoch === INIT_VOTE_EPOCH) {
       this.voteCurrentIndices[validatorIndex] = NULL_VOTE_INDEX;
       this.voteNextIndices[validatorIndex] = nextIndex;
       this.voteNextEpochs[validatorIndex] = nextEpoch;
