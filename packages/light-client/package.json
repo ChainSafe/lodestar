@@ -16,33 +16,28 @@
   "exports": {
     ".": {
       "bun": "./src/index.ts",
+      "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     },
     "./utils": {
       "bun": "./src/utils/index.ts",
+      "types": "./lib/utils/index.d.ts",
       "import": "./lib/utils/index.js"
     },
     "./validation": {
       "bun": "./src/validation.ts",
+      "types": "./lib/validation.d.ts",
       "import": "./lib/validation.js"
     },
     "./spec": {
       "bun": "./src/spec/index.ts",
+      "types": "./lib/spec/index.d.ts",
       "import": "./lib/spec/index.js"
     },
     "./transport": {
       "bun": "./src/transport/index.ts",
+      "types": "./lib/transport/index.d.ts",
       "import": "./lib/transport/index.js"
-    }
-  },
-  "types": "./lib/index.d.ts",
-  "typesVersions": {
-    "*": {
-      "*": [
-        "*",
-        "lib/*",
-        "lib/*/index"
-      ]
     }
   },
   "files": [

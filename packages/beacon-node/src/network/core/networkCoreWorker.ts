@@ -1,5 +1,3 @@
-import fs from "node:fs";
-import path from "node:path";
 import worker from "node:worker_threads";
 import {privateKeyFromProtobuf} from "@libp2p/crypto/keys";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
@@ -11,7 +9,7 @@ import {RegistryMetricCreator, collectNodeJSMetrics} from "../../metrics/index.j
 import {AsyncIterableBridgeCaller, AsyncIterableBridgeHandler} from "../../util/asyncIterableToEvents.js";
 import {Clock} from "../../util/clock.js";
 import {peerIdToString} from "../../util/peerId.js";
-import {profileNodeJS, writeHeapSnapshot} from "../../util/profile.js";
+import {ProfileThread, profileThread, writeHeapSnapshot} from "../../util/profile.js";
 import {wireEventsOnWorkerThread} from "../../util/workerEvents.js";
 import {NetworkEventBus, NetworkEventData, networkEventDirection} from "../events.js";
 import {
@@ -157,10 +155,7 @@ const libp2pWorkerApi: NetworkWorkerApi = {
   dumpDiscv5KadValues: () => core.dumpDiscv5KadValues(),
   dumpMeshPeers: () => core.dumpMeshPeers(),
   writeProfile: async (durationMs: number, dirpath: string) => {
-    const profile = await profileNodeJS(durationMs);
-    const filePath = path.join(dirpath, `network_thread_${new Date().toISOString()}.cpuprofile`);
-    fs.writeFileSync(filePath, profile);
-    return filePath;
+    return profileThread(ProfileThread.NETWORK, durationMs, dirpath);
   },
   writeDiscv5Profile: async (durationMs: number, dirpath: string) => {
     return core.writeDiscv5Profile(durationMs, dirpath);

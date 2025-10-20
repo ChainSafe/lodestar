@@ -16,26 +16,18 @@
   "exports": {
     ".": {
       "bun": "./src/index.ts",
+      "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     },
     "./browser": {
       "bun": "./src/browser/index.ts",
+      "types": "./lib/browser/index.d.ts",
       "import": "./lib/browser/index.js"
     }
   },
   "bin": {
     "lodestar-prover": "lib/cli/index.js"
   },
-  "typesVersions": {
-    "*": {
-      "*": [
-        "*",
-        "lib/*",
-        "lib/*/index"
-      ]
-    }
-  },
-  "types": "./lib/index.d.ts",
   "files": [
     "src",
     "lib",
