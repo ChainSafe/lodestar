@@ -197,7 +197,7 @@ export type MockedForkChoice = Mocked<ForkChoice>;
 
 export function getMockedForkChoice(): MockedForkChoice {
   // ForkChoice package is mocked globally
-  return vi.mocked(new ForkChoice({} as any, {} as any, {} as any, {} as any));
+  return vi.mocked(new ForkChoice({} as any, {} as any, {} as any, {} as any, {} as any));
 }
 
 // To avoid loading the package in test while mocked, exporting frequently used types and constants

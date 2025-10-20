@@ -3,16 +3,7 @@ import {
   DataAvailabilityStatus,
   EffectiveBalanceIncrements,
 } from "@lodestar/state-transition";
-import {
-  AttesterSlashing,
-  BeaconBlock,
-  Epoch,
-  IndexedAttestation,
-  Root,
-  RootHex,
-  Slot,
-  ValidatorIndex,
-} from "@lodestar/types";
+import {AttesterSlashing, BeaconBlock, Epoch, IndexedAttestation, Root, RootHex, Slot} from "@lodestar/types";
 import {LVHExecResponse, MaybeValidExecutionStatus, ProtoBlock, ProtoNode} from "../protoArray/interface.js";
 import {UpdateAndGetHeadOpt} from "./forkChoice.js";
 import {CheckpointWithHex} from "./store.js";
@@ -178,7 +169,6 @@ export interface IForkChoice {
    * https://github.com/ethereum/consensus-specs/blob/v1.2.0-rc.3/specs/phase0/fork-choice.md#on_attester_slashing
    */
   onAttesterSlashing(slashing: AttesterSlashing): void;
-  getLatestMessage(validatorIndex: ValidatorIndex): LatestMessage | undefined;
   /**
    * Call `onTick` for all slots between `fcStore.getCurrentSlot()` and the provided `currentSlot`.
    */
@@ -261,9 +251,4 @@ export type PowBlockHex = {
   blockHash: RootHex;
   parentHash: RootHex;
   totalDifficulty: bigint;
-};
-
-export type LatestMessage = {
-  epoch: Epoch;
-  root: RootHex;
 };

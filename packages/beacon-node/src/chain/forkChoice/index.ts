@@ -105,6 +105,7 @@ export function initializeForkChoice(
       },
       currentSlot
     ),
+    state.validators.length,
     metrics,
     opts,
     logger

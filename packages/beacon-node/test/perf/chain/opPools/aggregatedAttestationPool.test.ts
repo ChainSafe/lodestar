@@ -118,7 +118,7 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
         justifiedBalancesGetter: () => originalState.epochCtx.effectiveBalanceIncrements,
         equivocatingIndices: new Set(),
       };
-      forkchoice = new ForkChoice(originalState.config, fcStore, protoArray, null);
+      forkchoice = new ForkChoice(originalState.config, fcStore, protoArray, originalState.validators.length, null);
     },
     5 * 60 * 1000
   );
