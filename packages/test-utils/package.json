@@ -12,13 +12,13 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": "./lib/index.d.ts",
       "bun": "./src/index.ts",
+      "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     },
     "./doubles": {
-      "types": "./lib/doubles.d.ts",
       "bun": "./src/doubles.ts",
+      "types": "./lib/doubles.d.ts",
       "import": "./lib/doubles.js"
     }
   },

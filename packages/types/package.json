@@ -15,43 +15,43 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": "./lib/index.d.ts",
       "bun": "./src/index.ts",
+      "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     },
     "./altair": {
-      "types": "./lib/altair/index.d.ts",
       "bun": "./src/altair/index.ts",
+      "types": "./lib/altair/index.d.ts",
       "import": "./lib/altair/index.js"
     },
     "./capella": {
-      "types": "./lib/capella/index.d.ts",
       "bun": "./src/capella/index.ts",
+      "types": "./lib/capella/index.d.ts",
       "import": "./lib/capella/index.js"
     },
     "./bellatrix": {
-      "types": "./lib/bellatrix/index.d.ts",
       "bun": "./src/bellatrix/index.ts",
+      "types": "./lib/bellatrix/index.d.ts",
       "import": "./lib/bellatrix/index.js"
     },
     "./deneb": {
-      "types": "./lib/deneb/index.d.ts",
       "bun": "./src/deneb/index.ts",
+      "types": "./lib/deneb/index.d.ts",
       "import": "./lib/deneb/index.js"
     },
     "./electra": {
-      "types": "./lib/electra/index.d.ts",
       "bun": "./src/electra/index.ts",
+      "types": "./lib/electra/index.d.ts",
       "import": "./lib/electra/index.js"
     },
     "./fulu": {
-      "types": "./lib/fulu/index.d.ts",
       "bun": "./src/fulu/index.ts",
+      "types": "./lib/fulu/index.d.ts",
       "import": "./lib/fulu/index.js"
     },
     "./phase0": {
-      "types": "./lib/phase0/index.d.ts",
       "bun": "./src/phase0/index.ts",
+      "types": "./lib/phase0/index.d.ts",
       "import": "./lib/phase0/index.js"
     }
   },

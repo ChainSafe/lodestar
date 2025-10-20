@@ -11,23 +11,23 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": "./lib/index.d.ts",
       "bun": "./src/index.ts",
+      "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     },
     "./default": {
-      "types": "./lib/default.d.ts",
       "bun": "./src/default.ts",
+      "types": "./lib/default.d.ts",
       "import": "./lib/default.js"
     },
     "./networks": {
-      "types": "./lib/networks.d.ts",
       "bun": "./src/networks.ts",
+      "types": "./lib/networks.d.ts",
       "import": "./lib/networks.js"
     },
     "./configs": {
-      "types": "./lib/configs.d.ts",
       "bun": "./src/configs.ts",
+      "types": "./lib/configs.d.ts",
       "import": "./lib/configs.js"
     }
   },

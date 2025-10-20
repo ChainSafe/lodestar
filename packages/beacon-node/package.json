@@ -15,63 +15,63 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": "./lib/index.d.ts",
       "bun": "./src/index.ts",
+      "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     },
     "./api": {
-      "types": "./lib/api/index.d.ts",
       "bun": "./src/api/index.ts",
+      "types": "./lib/api/index.d.ts",
       "import": "./lib/api/index.js"
     },
     "./chain": {
-      "types": "./lib/chain/index.d.ts",
       "bun": "./src/chain/index.ts",
+      "types": "./lib/chain/index.d.ts",
       "import": "./lib/chain/index.js"
     },
     "./constants": {
-      "types": "./lib/constants/index.d.ts",
       "bun": "./src/constants/index.ts",
+      "types": "./lib/constants/index.d.ts",
       "import": "./lib/constants/index.js"
     },
     "./db": {
-      "types": "./lib/db/index.d.ts",
       "bun": "./src/db/index.ts",
+      "types": "./lib/db/index.d.ts",
       "import": "./lib/db/index.js"
     },
     "./eth1": {
-      "types": "./lib/eth1/index.d.ts",
       "bun": "./src/eth1/index.ts",
+      "types": "./lib/eth1/index.d.ts",
       "import": "./lib/eth1/index.js"
     },
     "./metrics": {
-      "types": "./lib/metrics/index.d.ts",
       "bun": "./src/metrics/index.ts",
+      "types": "./lib/metrics/index.d.ts",
       "import": "./lib/metrics/index.js"
     },
     "./monitoring": {
-      "types": "./lib/monitoring/index.d.ts",
       "bun": "./src/monitoring/index.ts",
+      "types": "./lib/monitoring/index.d.ts",
       "import": "./lib/monitoring/index.js"
     },
     "./network": {
-      "types": "./lib/network/index.d.ts",
       "bun": "./src/network/index.ts",
+      "types": "./lib/network/index.d.ts",
       "import": "./lib/network/index.js"
     },
     "./node": {
-      "types": "./lib/node/index.d.ts",
       "bun": "./src/node/index.ts",
+      "types": "./lib/node/index.d.ts",
       "import": "./lib/node/index.js"
     },
     "./sync": {
-      "types": "./lib/sync/index.d.ts",
       "bun": "./src/sync/index.ts",
+      "types": "./lib/sync/index.d.ts",
       "import": "./lib/sync/index.js"
     },
     "./util": {
-      "types": "./lib/util/index.d.ts",
       "bun": "./src/util/index.ts",
+      "types": "./lib/util/index.d.ts",
       "import": "./lib/util/index.js"
     }
   },

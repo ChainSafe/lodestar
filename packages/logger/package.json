@@ -15,28 +15,28 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": "./lib/index.d.ts",
       "bun": "./src/index.ts",
+      "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     },
     "./browser": {
-      "types": "./lib/browser.d.ts",
       "bun": "./src/browser.ts",
+      "types": "./lib/browser.d.ts",
       "import": "./lib/browser.js"
     },
     "./env": {
-      "types": "./lib/env.d.ts",
       "bun": "./src/env.ts",
+      "types": "./lib/env.d.ts",
       "import": "./lib/env.js"
     },
     "./node": {
-      "types": "./lib/node.d.ts",
       "bun": "./src/node.ts",
+      "types": "./lib/node.d.ts",
       "import": "./lib/node.js"
     },
     "./empty": {
-      "types": "./lib/empty.d.ts",
       "bun": "./src/empty.ts",
+      "types": "./lib/empty.d.ts",
       "import": "./lib/empty.js"
     }
   },

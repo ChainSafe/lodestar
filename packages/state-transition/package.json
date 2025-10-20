@@ -15,23 +15,23 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": "./lib/index.d.ts",
       "bun": "./src/index.ts",
+      "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     },
     "./block": {
-      "types": "./lib/block/index.d.ts",
       "bun": "./src/block/index.ts",
+      "types": "./lib/block/index.d.ts",
       "import": "./lib/block/index.js"
     },
     "./epoch": {
-      "types": "./lib/epoch/index.d.ts",
       "bun": "./src/epoch/index.ts",
+      "types": "./lib/epoch/index.d.ts",
       "import": "./lib/epoch/index.js"
     },
     "./slot": {
-      "types": "./lib/slot/index.d.ts",
       "bun": "./src/slot/index.ts",
+      "types": "./lib/slot/index.d.ts",
       "import": "./lib/slot/index.js"
     }
   },

@@ -15,13 +15,13 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": "./lib/index.d.ts",
       "bun": "./src/index.ts",
+      "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     },
     "./browser": {
-      "types": "./lib/browser/index.d.ts",
       "bun": "./src/browser/index.ts",
+      "types": "./lib/browser/index.d.ts",
       "import": "./lib/browser/index.js"
     }
   },

@@ -15,13 +15,13 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": "./lib/index.d.ts",
       "bun": "./src/index.ts",
+      "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     },
     "./utils": {
-      "types": "./lib/utils/index.d.ts",
       "bun": "./src/utils/index.ts",
+      "types": "./lib/utils/index.d.ts",
       "import": "./lib/utils/index.js"
     }
   },

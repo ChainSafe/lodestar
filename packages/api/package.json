@@ -15,43 +15,43 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": "./lib/index.d.ts",
       "bun": "./src/index.ts",
+      "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     },
     "./server": {
-      "types": "./lib/server/index.d.ts",
       "bun": "./src/server/index.ts",
+      "types": "./lib/server/index.d.ts",
       "import": "./lib/server/index.js"
     },
     "./beacon": {
-      "types": "./lib/beacon/index.d.ts",
       "bun": "./src/beacon/index.ts",
+      "types": "./lib/beacon/index.d.ts",
       "import": "./lib/beacon/index.js"
     },
     "./beacon/server": {
-      "types": "./lib/beacon/server/index.d.ts",
       "bun": "./src/beacon/server/index.ts",
+      "types": "./lib/beacon/server/index.d.ts",
       "import": "./lib/beacon/server/index.js"
     },
     "./builder": {
-      "types": "./lib/builder/index.d.ts",
       "bun": "./src/builder/index.ts",
+      "types": "./lib/builder/index.d.ts",
       "import": "./lib/builder/index.js"
     },
     "./builder/server": {
-      "types": "./lib/builder/server/index.d.ts",
       "bun": "./src/builder/server/index.ts",
+      "types": "./lib/builder/server/index.d.ts",
       "import": "./lib/builder/server/index.js"
     },
     "./keymanager": {
-      "types": "./lib/keymanager/index.d.ts",
       "bun": "./src/keymanager/index.ts",
+      "types": "./lib/keymanager/index.d.ts",
       "import": "./lib/keymanager/index.js"
     },
     "./keymanager/server": {
-      "types": "./lib/keymanager/server/index.d.ts",
       "bun": "./src/keymanager/server/index.ts",
+      "types": "./lib/keymanager/server/index.d.ts",
       "import": "./lib/keymanager/server/index.js"
     }
   },
