@@ -38,14 +38,19 @@ const merkleProof: TestRunnerFn<MerkleTestCase, {leaf: string; branch: string[];
         ? BeaconBlockBody.getPathInfo(["blobKzgCommitments"]).gindex
         : BeaconBlockBody.getPathInfo(["blobKzgCommitments", 0]).gindex;
 
-      const leaf =
-        isForkPostFulu(fork) && !isForkPostGloas(fork)
-          ? ssz.deneb.BlobKzgCommitments.hashTreeRoot(
-              (body as BeaconBlockBody<ForkPostFulu & ForkPreGloas>).blobKzgCommitments
-            )
-          : ssz.deneb.KZGCommitment.hashTreeRoot(
-              (body as BeaconBlockBody<ForkPostDeneb & ForkPreFulu>).blobKzgCommitments[0]
-            );
+      let leaf: Uint8Array;
+      if (isForkPostGloas(fork)) {
+        throw Error(`Not implemented for ${fork}`);
+      }
+      if (isForkPostFulu(fork)) {
+        leaf = ssz.deneb.BlobKzgCommitments.hashTreeRoot(
+          (body as BeaconBlockBody<ForkPostFulu & ForkPreGloas>).blobKzgCommitments
+        );
+      } else {
+        leaf = ssz.deneb.KZGCommitment.hashTreeRoot(
+          (body as BeaconBlockBody<ForkPostDeneb & ForkPreFulu>).blobKzgCommitments[0]
+        );
+      }
 
       const bodyView = BeaconBlockBody.toView(body);
       const tree = new Tree(bodyView.node);
