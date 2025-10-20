@@ -279,11 +279,6 @@ describe("computeDeltas", () => {
     indices.set("3", 1);
 
     // Both validators move votes from block1 to block2
-    // const votes = Array.from({length: 2}, () => ({
-    //   currentIndex: 0,
-    //   nextIndex: 1,
-    //   nextEpoch: 0,
-    // }));
     const voteCurrentIndices = Array.from({length: 2}, () => 0);
     const voteNextIndices = Array.from({length: 2}, () => 1);
 

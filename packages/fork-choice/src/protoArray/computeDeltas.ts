@@ -138,10 +138,8 @@ export function computeDeltas(
   } // end validator loop
 
   if (deltas.length !== numProtoNodes) {
-    // deltas array could be growed in the loop, especially if we mistakenly set the [NULL_VOTE_INDEX] to it , we check to be safe
-    throw new Error(
-      `deltas length mismatch: expected ${numProtoNodes}, got ${deltas.length}`
-    );
+    // deltas array could be growed in the loop, especially if we mistakenly set the [NULL_VOTE_INDEX] to it , just to be safe
+    throw new Error(`deltas length mismatch: expected ${numProtoNodes}, got ${deltas.length}`);
   }
 
   return {
