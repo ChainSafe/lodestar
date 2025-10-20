@@ -21,6 +21,11 @@ import {RunnerType, TestRunnerFn} from "../utils/types.js";
 const merkleProof: TestRunnerFn<MerkleTestCase, {leaf: string; branch: string[]; leaf_index: bigint}> = (fork) => {
   return {
     testFunction: (testcase, _, testCaseName) => {
+      // TODO Gloas: implement new test cases
+      if (isForkPostGloas(fork)) {
+        throw Error(`${testcase} not implemented for fork=${fork}`);
+      }
+
       // Some of the specs in below conditions have uint(8 bytes) values greater than 2^53-1
       // This is causing clipping of integers during deserialization.
       // For testing purpose we replace the uint types with bigint
@@ -38,19 +43,13 @@ const merkleProof: TestRunnerFn<MerkleTestCase, {leaf: string; branch: string[];
         ? BeaconBlockBody.getPathInfo(["blobKzgCommitments"]).gindex
         : BeaconBlockBody.getPathInfo(["blobKzgCommitments", 0]).gindex;
 
-      let leaf: Uint8Array;
-      if (isForkPostGloas(fork)) {
-        throw Error(`Not implemented for ${fork}`);
-      }
-      if (isForkPostFulu(fork)) {
-        leaf = ssz.deneb.BlobKzgCommitments.hashTreeRoot(
-          (body as BeaconBlockBody<ForkPostFulu & ForkPreGloas>).blobKzgCommitments
-        );
-      } else {
-        leaf = ssz.deneb.KZGCommitment.hashTreeRoot(
-          (body as BeaconBlockBody<ForkPostDeneb & ForkPreFulu>).blobKzgCommitments[0]
-        );
-      }
+      const leaf = isForkPostFulu(fork)
+        ? ssz.deneb.BlobKzgCommitments.hashTreeRoot(
+            (body as BeaconBlockBody<ForkPostFulu & ForkPreGloas>).blobKzgCommitments
+          )
+        : ssz.deneb.KZGCommitment.hashTreeRoot(
+            (body as BeaconBlockBody<ForkPostDeneb & ForkPreFulu>).blobKzgCommitments[0]
+          );
 
       const bodyView = BeaconBlockBody.toView(body);
       const tree = new Tree(bodyView.node);
