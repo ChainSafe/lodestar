@@ -1,0 +1,13 @@
+[console]
+# See https://bun.com/docs/runtime/bunfig#console-depth
+depth = 3
+
+[install]
+# See https://bun.com/docs/runtime/bunfig#install-linker
+# TODO revisit this once we move to bun-only and can use catalogues
+linker = "hoisted"
+
+[run]
+# See https://bun.com/docs/runtime/bunfig#run-bun-auto-alias-node-to-bun
+bun = true
+
