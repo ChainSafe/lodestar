@@ -1,7 +1,15 @@
 import path from "node:path";
 import {expect} from "vitest";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
-import {ACTIVE_PRESET, ForkPostDeneb, ForkPostFulu, isForkPostFulu} from "@lodestar/params";
+import {
+  ACTIVE_PRESET,
+  ForkPostDeneb,
+  ForkPostFulu,
+  ForkPreFulu,
+  ForkPreGloas,
+  isForkPostFulu,
+  isForkPostGloas,
+} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {BeaconBlockBody, ssz, sszTypesFor} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
@@ -13,6 +21,11 @@ import {RunnerType, TestRunnerFn} from "../utils/types.js";
 const merkleProof: TestRunnerFn<MerkleTestCase, {leaf: string; branch: string[]; leaf_index: bigint}> = (fork) => {
   return {
     testFunction: (testcase, _, testCaseName) => {
+      // TODO Gloas: implement new test cases
+      if (isForkPostGloas(fork)) {
+        throw Error(`${testCaseName} not implemented for fork=${fork}`);
+      }
+
       // Some of the specs in below conditions have uint(8 bytes) values greater than 2^53-1
       // This is causing clipping of integers during deserialization.
       // For testing purpose we replace the uint types with bigint
@@ -31,8 +44,12 @@ const merkleProof: TestRunnerFn<MerkleTestCase, {leaf: string; branch: string[];
         : BeaconBlockBody.getPathInfo(["blobKzgCommitments", 0]).gindex;
 
       const leaf = isForkPostFulu(fork)
-        ? ssz.deneb.BlobKzgCommitments.hashTreeRoot((body as BeaconBlockBody<ForkPostFulu>).blobKzgCommitments)
-        : ssz.deneb.KZGCommitment.hashTreeRoot((body as BeaconBlockBody<ForkPostDeneb>).blobKzgCommitments[0]);
+        ? ssz.deneb.BlobKzgCommitments.hashTreeRoot(
+            (body as BeaconBlockBody<ForkPostFulu & ForkPreGloas>).blobKzgCommitments
+          )
+        : ssz.deneb.KZGCommitment.hashTreeRoot(
+            (body as BeaconBlockBody<ForkPostDeneb & ForkPreFulu>).blobKzgCommitments[0]
+          );
 
       const bodyView = BeaconBlockBody.toView(body);
       const tree = new Tree(bodyView.node);
