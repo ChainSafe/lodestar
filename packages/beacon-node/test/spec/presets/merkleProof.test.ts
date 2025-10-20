@@ -1,7 +1,15 @@
 import path from "node:path";
 import {expect} from "vitest";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
-import {ACTIVE_PRESET, ForkPostDeneb, ForkPostFulu, isForkPostFulu} from "@lodestar/params";
+import {
+  ACTIVE_PRESET,
+  ForkPostDeneb,
+  ForkPostFulu,
+  ForkPreFulu,
+  ForkPreGloas,
+  isForkPostFulu,
+  isForkPostGloas,
+} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {BeaconBlockBody, ssz, sszTypesFor} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
@@ -30,9 +38,14 @@ const merkleProof: TestRunnerFn<MerkleTestCase, {leaf: string; branch: string[];
         ? BeaconBlockBody.getPathInfo(["blobKzgCommitments"]).gindex
         : BeaconBlockBody.getPathInfo(["blobKzgCommitments", 0]).gindex;
 
-      const leaf = isForkPostFulu(fork)
-        ? ssz.deneb.BlobKzgCommitments.hashTreeRoot((body as BeaconBlockBody<ForkPostFulu>).blobKzgCommitments)
-        : ssz.deneb.KZGCommitment.hashTreeRoot((body as BeaconBlockBody<ForkPostDeneb>).blobKzgCommitments[0]);
+      const leaf =
+        isForkPostFulu(fork) && !isForkPostGloas(fork)
+          ? ssz.deneb.BlobKzgCommitments.hashTreeRoot(
+              (body as BeaconBlockBody<ForkPostFulu & ForkPreGloas>).blobKzgCommitments
+            )
+          : ssz.deneb.KZGCommitment.hashTreeRoot(
+              (body as BeaconBlockBody<ForkPostDeneb & ForkPreFulu>).blobKzgCommitments[0]
+            );
 
       const bodyView = BeaconBlockBody.toView(body);
       const tree = new Tree(bodyView.node);
