@@ -3,7 +3,7 @@ import {StrictEventEmitter} from "strict-event-emitter-types";
 import {BeaconConfig} from "@lodestar/config";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, Status, fulu} from "@lodestar/types";
-import {Logger, toRootHex} from "@lodestar/utils";
+import {Logger, prettyBytes, toRootHex} from "@lodestar/utils";
 import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
 import {AttestationImportOpt, ImportBlockOpts} from "../../chain/blocks/index.js";
 import {IBeaconChain} from "../../chain/index.js";
@@ -172,6 +172,15 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
 
   /** Convenience method for `SyncChain` */
   private processChainSegment: SyncChainFns["processChainSegment"] = async (blocks, syncType) => {
+    const startSlot = blocks.at(0)?.slot ?? -1;
+    const startRootHex = blocks.at(0)?.blockRootHex ?? "no first block";
+    const endSlot = blocks.at(-1)?.slot ?? -1;
+    this.logger.debug("RangeSync.processChainSegment", {
+      blockCount: blocks.length,
+      startSlot,
+      endSlot,
+      startRootHex: prettyBytes(startRootHex),
+    });
     // Not trusted, verify signatures
     const flags: ImportBlockOpts = {
       // Only skip importing attestations for finalized sync. For head sync attestation are valuable.

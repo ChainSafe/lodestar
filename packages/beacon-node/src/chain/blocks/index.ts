@@ -1,5 +1,5 @@
 import {SignedBeaconBlock} from "@lodestar/types";
-import {isErrorAborted, toRootHex} from "@lodestar/utils";
+import {isErrorAborted, prettyBytes, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
 import type {BeaconChain} from "../chain.js";
@@ -53,6 +53,16 @@ export async function processBlocks(
   blocks: IBlockInput[],
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<void> {
+  const startSlot = blocks.at(0)?.slot ?? -1;
+  const startRootHex = blocks.at(0)?.blockRootHex ?? "no first block";
+  const endSlot = blocks.at(-1)?.slot ?? -1;
+  this.logger.debug("start BlockProcessor.processBlocks", {
+    blockCount: blocks.length,
+    startSlot,
+    endSlot,
+    startRootHex: prettyBytes(startRootHex),
+  });
+
   if (blocks.length === 0) {
     return; // TODO: or throw?
   }
@@ -106,6 +116,11 @@ export async function processBlocks(
     }
   } catch (e) {
     if (isErrorAborted(e) || isQueueErrorAborted(e) || isBlockErrorAborted(e)) {
+      this.logger.debug(
+        "Ignoring caught error in BlockProcessor.processBlocks",
+        {startSlot, endSlot, startRootHex: prettyBytes(startRootHex)},
+        e
+      );
       return; // Ignore
     }
 

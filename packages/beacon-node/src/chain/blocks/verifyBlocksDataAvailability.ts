@@ -1,4 +1,6 @@
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
+import {prettyBytes} from "@lodestar/utils";
+import {BeaconChain} from "../chain.ts";
 import {DAData, DAType, IBlockInput} from "./blockInput/index.js";
 
 // we can now wait for full 12 seconds because unavailable block sync will try pulling
@@ -12,6 +14,7 @@ export const BLOB_AVAILABILITY_TIMEOUT = 12_000;
  * - Returns the data availability status for each block input
  */
 export async function verifyBlocksDataAvailability(
+  this: BeaconChain,
   blocks: IBlockInput[],
   signal: AbortSignal
 ): Promise<{
@@ -22,7 +25,16 @@ export async function verifyBlocksDataAvailability(
   for (const blockInput of blocks) {
     // block verification is triggered on a verified gossip block so we only need to wait for all data
     if (!blockInput.hasAllData()) {
-      promises.push(blockInput.waitForAllData(BLOB_AVAILABILITY_TIMEOUT, signal));
+      promises.push(
+        blockInput.waitForAllData(BLOB_AVAILABILITY_TIMEOUT, signal).catch((e) => {
+          this.logger.debug(
+            "blockInput.waitForAllData caught",
+            {slot: blockInput.slot, blockRoot: prettyBytes(blockInput.blockRootHex)},
+            e
+          );
+          throw e;
+        })
+      );
     }
   }
   await Promise.all(promises);
