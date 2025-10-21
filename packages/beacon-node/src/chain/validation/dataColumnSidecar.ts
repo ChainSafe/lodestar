@@ -287,9 +287,9 @@ export async function validateBlockDataColumnSidecars(
       {
         code: DataColumnSidecarErrorCode.INCORRECT_KZG_COMMITMENTS_COUNT,
         actual: blockBlobCount,
-        expected: dataColumnSidecars[0].kzgCommitments.length,
-        slot: dataColumnSidecars[0].signedBlockHeader.message.slot,
-        columnIndex: prettyPrintIndices(dataColumnSidecars.map((s) => s.index)),
+        slot: dataColumnSidecars.at(0)?.signedBlockHeader.message.slot ?? -1,
+        expected: dataColumnSidecars.at(0)?.kzgCommitments.length ?? -1,
+        columnIndex: dataColumnSidecars.at(0)?.index ?? -1,
       },
       "Block has no blob commitments but data column sidecars were provided"
     );
