@@ -10,7 +10,7 @@ import {
   getBlockHeaderProposerSignatureSet,
 } from "@lodestar/state-transition";
 import {Root, Slot, SubnetID, fulu, ssz} from "@lodestar/types";
-import {prettyBytes, prettyPrintIndices, toRootHex, verifyMerkleBranch} from "@lodestar/utils";
+import {prettyBytes, toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {kzg} from "../../util/kzg.js";
 import {
