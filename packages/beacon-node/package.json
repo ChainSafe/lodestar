@@ -16,50 +16,62 @@
   "exports": {
     ".": {
       "bun": "./src/index.ts",
+      "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     },
     "./api": {
       "bun": "./src/api/index.ts",
+      "types": "./lib/api/index.d.ts",
       "import": "./lib/api/index.js"
     },
     "./chain": {
       "bun": "./src/chain/index.ts",
+      "types": "./lib/chain/index.d.ts",
       "import": "./lib/chain/index.js"
     },
     "./constants": {
       "bun": "./src/constants/index.ts",
+      "types": "./lib/constants/index.d.ts",
       "import": "./lib/constants/index.js"
     },
     "./db": {
       "bun": "./src/db/index.ts",
+      "types": "./lib/db/index.d.ts",
       "import": "./lib/db/index.js"
     },
     "./eth1": {
       "bun": "./src/eth1/index.ts",
+      "types": "./lib/eth1/index.d.ts",
       "import": "./lib/eth1/index.js"
     },
     "./metrics": {
       "bun": "./src/metrics/index.ts",
+      "types": "./lib/metrics/index.d.ts",
       "import": "./lib/metrics/index.js"
     },
     "./monitoring": {
       "bun": "./src/monitoring/index.ts",
+      "types": "./lib/monitoring/index.d.ts",
       "import": "./lib/monitoring/index.js"
     },
     "./network": {
       "bun": "./src/network/index.ts",
+      "types": "./lib/network/index.d.ts",
       "import": "./lib/network/index.js"
     },
     "./node": {
       "bun": "./src/node/index.ts",
+      "types": "./lib/node/index.d.ts",
       "import": "./lib/node/index.js"
     },
     "./sync": {
       "bun": "./src/sync/index.ts",
+      "types": "./lib/sync/index.d.ts",
       "import": "./lib/sync/index.js"
     },
     "./util": {
       "bun": "./src/util/index.ts",
+      "types": "./lib/util/index.d.ts",
       "import": "./lib/util/index.js"
     }
   },
@@ -73,16 +85,6 @@
       "default": "datastore-level"
     }
   },
-  "typesVersions": {
-    "*": {
-      "*": [
-        "*",
-        "lib/*",
-        "lib/*/index"
-      ]
-    }
-  },
-  "types": "./lib/index.d.ts",
   "files": [
     "src",
     "lib",

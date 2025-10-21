@@ -12,21 +12,13 @@
   "exports": {
     ".": {
       "bun": "./src/index.ts",
+      "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     },
     "./downloadTests": {
       "bun": "./src/downloadTests.ts",
+      "types": "./lib/downloadTests.d.ts",
       "import": "./lib/downloadTests.js"
-    }
-  },
-  "types": "lib/index.d.ts",
-  "typesVersions": {
-    "*": {
-      "*": [
-        "*",
-        "lib/*",
-        "lib/*/index"
-      ]
     }
   },
   "files": [

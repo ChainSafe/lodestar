@@ -117,7 +117,7 @@ export type Endpoints = {
       dirpath?: string;
     },
     {query: {thread?: LodestarThreadType; duration?: number; dirpath?: string}},
-    {filepath: string},
+    {result: string},
     EmptyMeta
   >;
   /** TODO: description */

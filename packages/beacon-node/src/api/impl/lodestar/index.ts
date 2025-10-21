@@ -1,5 +1,3 @@
-import fs from "node:fs";
-import path from "node:path";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
@@ -13,7 +11,7 @@ import {BeaconChain} from "../../../chain/index.js";
 import {QueuedStateRegenerator, RegenRequest} from "../../../chain/regen/index.js";
 import {IBeaconDb} from "../../../db/interface.js";
 import {GossipType} from "../../../network/index.js";
-import {profileNodeJS, writeHeapSnapshot} from "../../../util/profile.js";
+import {ProfileThread, profileThread, writeHeapSnapshot} from "../../../util/profile.js";
 import {getStateResponseWithRegen} from "../beacon/state/utils.js";
 import {ApiModules} from "../types.js";
 
@@ -26,7 +24,9 @@ export function getLodestarApi({
 }: Pick<ApiModules, "chain" | "config" | "db" | "network" | "sync">): ApplicationMethods<routes.lodestar.Endpoints> {
   let writingHeapdump = false;
   let writingProfile = false;
-  const defaultProfileMs = SLOTS_PER_EPOCH * config.SLOT_DURATION_MS;
+  // for NodeJS, profile the whole epoch
+  // for Bun, profile 1 slot. Otherwise it will either crash the app, and/or inspector cannot render the profile
+  const defaultProfileMs = globalThis.Bun ? config.SLOT_DURATION_MS : SLOTS_PER_EPOCH * config.SLOT_DURATION_MS;
 
   return {
     async writeHeapdump({thread = "main", dirpath = "."}) {
@@ -63,7 +63,6 @@ export function getLodestarApi({
 
       try {
         let filepath: string;
-        let profile: string;
         switch (thread) {
           case "network":
             filepath = await network.writeNetworkThreadProfile(duration, dirpath);
@@ -73,12 +72,10 @@ export function getLodestarApi({
             break;
           default:
             // main thread
-            profile = await profileNodeJS(duration);
-            filepath = path.join(dirpath, `main_thread_${new Date().toISOString()}.cpuprofile`);
-            fs.writeFileSync(filepath, profile);
+            filepath = await profileThread(ProfileThread.MAIN, duration, dirpath);
             break;
         }
-        return {data: {filepath}};
+        return {data: {result: filepath}};
       } finally {
         writingProfile = false;
       }

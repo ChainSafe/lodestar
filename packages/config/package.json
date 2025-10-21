@@ -12,31 +12,25 @@
   "exports": {
     ".": {
       "bun": "./src/index.ts",
+      "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     },
     "./default": {
       "bun": "./src/default.ts",
+      "types": "./lib/default.d.ts",
       "import": "./lib/default.js"
     },
     "./networks": {
       "bun": "./src/networks.ts",
+      "types": "./lib/networks.d.ts",
       "import": "./lib/networks.js"
     },
     "./configs": {
       "bun": "./src/configs.ts",
+      "types": "./lib/configs.d.ts",
       "import": "./lib/configs.js"
     }
   },
-  "typesVersions": {
-    "*": {
-      "*": [
-        "*",
-        "lib/*",
-        "lib/*/index"
-      ]
-    }
-  },
-  "types": "lib/index.d.ts",
   "files": [
     "src",
     "lib",
