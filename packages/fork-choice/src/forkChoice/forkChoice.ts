@@ -951,7 +951,7 @@ export class ForkChoice implements IForkChoice {
     return block;
   }
 
-  getFinalizedBlockSlot(): Slot {
+  getFinalizedCheckpointSlot(): Slot {
     const finalizedEpoch = this.fcStore.finalizedCheckpoint.epoch;
     return computeStartSlotAtEpoch(finalizedEpoch);
   }
