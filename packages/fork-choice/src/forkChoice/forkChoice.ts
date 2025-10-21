@@ -97,9 +97,9 @@ export class ForkChoice implements IForkChoice {
    * Votes currently tracked in the protoArray. Instead of tracking a VoteTracker of currentIndex, nextIndex and epoch,
    * we decompose the struct and track them in 3 separate arrays for performance reason.
    */
-  private readonly voteCurrentIndices: VoteIndex[] = [];
-  private readonly voteNextIndices: VoteIndex[] = [];
-  private readonly voteNextEpochs: Epoch[] = [];
+  private readonly voteCurrentIndices: VoteIndex[];
+  private readonly voteNextIndices: VoteIndex[];
+  private readonly voteNextEpochs: Epoch[];
 
   /**
    * Attestations that arrived at the current slot and must be queued for later processing.
@@ -147,12 +147,14 @@ export class ForkChoice implements IForkChoice {
     private readonly opts?: ForkChoiceOpts,
     private readonly logger?: Logger
   ) {
-    this.head = this.updateHead();
-    this.balances = this.fcStore.justified.balances;
+    // initialize votes, they will grow in addLatestMessage() function below
     this.voteCurrentIndices = new Array(validatorCount).fill(NULL_VOTE_INDEX);
     this.voteNextIndices = new Array(validatorCount).fill(NULL_VOTE_INDEX);
     // when compute deltas, we ignore epoch if voteNextIndex is NULL_VOTE_INDEX anyway
     this.voteNextEpochs = new Array(validatorCount).fill(INIT_VOTE_EPOCH);
+
+    this.head = this.updateHead();
+    this.balances = this.fcStore.justified.balances;
 
     metrics?.forkChoice.votes.addCollect(() => {
       metrics.forkChoice.votes.set(this.voteNextEpochs.length);
@@ -1462,13 +1464,16 @@ export class ForkChoice implements IForkChoice {
       throw new Error(`Could not find proto index for nextRoot ${nextRoot}`);
     }
 
-    const existingNextEpoch = this.voteNextEpochs[validatorIndex];
+    // ensure there is no undefined entries in Votes arrays
+    if (this.voteNextEpochs.length < validatorIndex + 1) {
+      for (let i = this.voteNextEpochs.length; i < validatorIndex + 1; i++) {
+        this.voteNextEpochs[i] = INIT_VOTE_EPOCH;
+        this.voteCurrentIndices[i] = this.voteNextIndices[i] = NULL_VOTE_INDEX;
+      }
+    }
 
-    if (existingNextEpoch === undefined || existingNextEpoch === INIT_VOTE_EPOCH) {
-      this.voteCurrentIndices[validatorIndex] = NULL_VOTE_INDEX;
-      this.voteNextIndices[validatorIndex] = nextIndex;
-      this.voteNextEpochs[validatorIndex] = nextEpoch;
-    } else if (nextEpoch > existingNextEpoch) {
+    const existingNextEpoch = this.voteNextEpochs[validatorIndex];
+    if (existingNextEpoch === INIT_VOTE_EPOCH || nextEpoch > existingNextEpoch) {
       // nextIndex is transfered to currentIndex in computeDeltas()
       this.voteNextIndices[validatorIndex] = nextIndex;
       this.voteNextEpochs[validatorIndex] = nextEpoch;
