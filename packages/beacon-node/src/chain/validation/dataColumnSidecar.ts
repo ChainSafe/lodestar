@@ -10,7 +10,7 @@ import {
   getBlockHeaderProposerSignatureSet,
 } from "@lodestar/state-transition";
 import {Root, Slot, SubnetID, fulu, ssz} from "@lodestar/types";
-import {prettyBytes, toRootHex, verifyMerkleBranch} from "@lodestar/utils";
+import {prettyBytes, prettyPrintIndices, toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {kzg} from "../../util/kzg.js";
 import {
@@ -278,6 +278,22 @@ export async function validateBlockDataColumnSidecars(
   blockBlobCount: number,
   dataColumnSidecars: fulu.DataColumnSidecars
 ): Promise<void> {
+  if (dataColumnSidecars.length === 0) {
+    return;
+  }
+
+  if (blockBlobCount === 0) {
+    throw new DataColumnSidecarValidationError(
+      {
+        code: DataColumnSidecarErrorCode.INCORRECT_KZG_COMMITMENTS_COUNT,
+        actual: blockBlobCount,
+        expected: dataColumnSidecars[0].kzgCommitments.length,
+        slot: dataColumnSidecars[0].signedBlockHeader.message.slot,
+        columnIndex: prettyPrintIndices(dataColumnSidecars.map((s) => s.index)),
+      },
+      "Block has no blob commitments but data column sidecars were provided"
+    );
+  }
   // Hash the first sidecar block header and compare the rest via (cheaper) equality
   const firstSidecarBlockHeader = dataColumnSidecars[0].signedBlockHeader.message;
   const firstBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(firstSidecarBlockHeader);
