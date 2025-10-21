@@ -1,24 +1,25 @@
 # SSZ Quickstart Guide
 
-# Table of content
+# Table of Contents
+
 1. [🔍 Why Does SSZ Exist?](#1🔍-why-does-ssz-exist)
 2. [🛠️ What Does SSZ Do?](#2🛠️-what-does-ssz-do)
 3. [SSZ Components in Detail](#3-ssz-components-in-detail)
    - [Fork-Specific Schemas](#31-fork-specific-schemas)
    - [Core SSZ Types](#32-core-ssz-types)
-     - [Constants](#321-consonants)
+     - [Constants](#321-constants)
      - [Typing System](#322-typing-system)
      - [Primitive Types](#primitive-typesbasic-types)
      - [Composite Types](#composite-types)
      - [Type Aliases](#type-aliases)
 4. [Core SSZ Workflows](#4-core-ssz-workflows-in-lodestar)
-   -[Working with default Values](#working-with-default-values)
-   -[Typescript Safety with Lodestar Librar](#typescript-safety-with-lodestar-ssz-library)
-   -[Serializantion and deserialization](#serialization-and-deserialization)
-   -[Merkleization and Hashing](#merkleization-and-Hashing)
-   -[JSON Conversion in SSZ](#JSON-Conversion-in-SSZ)
+   - [Working with Default Values](#working-with-default-values)
+   - [TypeScript Safety with Lodestar Library](#typescript-safety-with-lodestar-ssz-library)
+   - [Serialization and Deserialization](#serialization-and-deserialization)
+   - [Merkleization and Hashing](#merkleization-and-hashing)
+   - [JSON Conversion in SSZ](#json-conversion-in-ssz)
 
-**SSZ** (Simple Serialize) is a standard(serialization format) used in the Ethereum consensus layer(beacon chain) to serialize and Merkleize structured data. It is heavily used in Ethereum 2.0 (the consensus layer) to serialize and Merkleize data structures such as blocks, validator records, the beacon state, and data used in light client proofs. It is the official serialization and Merkleization format used in Ethereum 2.0 (now Ethereum consensus layer).
+**SSZ** (Simple Serialize) is a standard(serialization format) used in the Ethereum consensus layer(beacon chain) to serialize and Merkleize structured data structures such as blocks, validator records, the beacon state, and data used in light client proofs.
 
 [_SSZ_](https://github.com/ChainSafe/ssz/tree/master/packages/ssz) provides a standardized way to:
 
@@ -39,7 +40,6 @@ SSZ helps by:
 - Supporting static typing (like in TypeScript or Rust)
 - Making Merkle root generation and verification fast and consistent
 
-
 ## 2.🛠️ What Does SSZ Do?
 
 SSZ = Serialization + Merkleization
@@ -48,11 +48,9 @@ SSZ = Serialization + Merkleization
 | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Serialization**   | It is the process of converting data into a format that can be stored , transmitted and later restructured. Turning structured data (like a block, validator, or state object) into a sequence of bytes so it can be stored, sent over the network, or hashed. |
 | **Deserialization** | This is the reverse of serialization. You turn the data back into a usable project. Reconstructs the original structured data from the serialized byte array.                                                                                                  |
-| **Merkleization**   | This is the process of turning a list of data into a merkle tree. You Buil a Merkle tree from the data and computes a single 32-byte Merkle root (hash) that summarizes it.                                                                                    |
+| **Merkleization**   | This is the process of turning a list of data into a merkle tree. You Build a Merkle tree from the data and computes a single 32-byte Merkle root (hash) that summarizes it.                                                                                   |
 
-Simpler defination: Serialization: Turn object → bytes, Deserialization: Turn bytes → object, Merkleization: Turn object → tree of hashes → 1 final secure root
-
-
+Simpler definition: Serialization: Turn object → bytes, Deserialization: Turn bytes → object, Merkleization: Turn object → tree of hashes → 1 final secure root
 
 ## 3. SSZ Components in Detail
 
@@ -68,19 +66,18 @@ Understanding these helps you grasp how SSZ transforms structured data into **Me
 
 ### 3.1 Fork-Specific Schemas
 
-Ethereum upgrades such as **Phase0**, **Altair**, **Bellatrix**, and **Capella** introduce new data structures reflecting protocol changes.
+Ethereum upgrades such as **Phase 0**, **Altair**, **Bellatrix**, and **Capella** introduce new data structures reflecting protocol changes.
 
 These schemas are **defined using the core SSZ types**.  
 Examples include:
 
-- **Phase0** → `BeaconBlock`, `Attestation`, `Validator`  
-- **Altair** → `SyncCommittee`  
+- **Phase 0** → `BeaconBlock`, `Attestation`, `Validator`
+- **Altair** → `SyncCommittee`
 - **Bellatrix** → `ExecutionPayload`
 
 Each schema is organized in its own Lodestar directory:
-/src/phase0
+/src/phase 0
 /src/altair
-
 
 ---
 
@@ -90,11 +87,11 @@ Each schema is organized in its own Lodestar directory:
 
 SSZ uses constants to **standardize serialization and Merkleization**.
 
-| Constant | Value | Description |
-|-----------|-------|-------------|
-| `BYTES_PER_CHUNK` | 32 | Size of each Merkle tree leaf (in bytes) |
-| `BITS_PER_BYTE` | 8 | Number of bits in a byte |
-| `BYTES_PER_LENGTH_OFFSET` | 4 | Bytes used to store variable-length offsets |
+| Constant                  | Value | Description                                 |
+| ------------------------- | ----- | ------------------------------------------- |
+| `BYTES_PER_CHUNK`         | 32    | Size of each Merkle tree leaf (in bytes)    |
+| `BITS_PER_BYTE`           | 8     | Number of bits in a byte                    |
+| `BYTES_PER_LENGTH_OFFSET` | 4     | Bytes used to store variable-length offsets |
 
 These constants ensure **compatibility across implementations** and define how data is packed and hashed.
 
@@ -106,33 +103,33 @@ The SSZ **typing system** defines how all structured data is represented.
 
 ---
 
-#####  Primitive Types (Basic Types)
+##### Primitive Types (Basic Types)
 
 These represent single, atomic values of fixed byte size.
 
-| Type | Description | Example |
-|------|--------------|----------|
-| `boolean` | A single byte, true or false | Serialized as `0x00` or `0x01` |
-| `uintN` | Unsigned integers: `uint8`, `uint16`, ..., up to `uint256` | `uint64` = 8 bytes |
-| `bytesN` | Fixed-length byte arrays, e.g. `bytes4`, `bytes32` | `bytes32` = 32 bytes |
+| Type      | Description                                                | Example                        |
+| --------- | ---------------------------------------------------------- | ------------------------------ |
+| `boolean` | A single byte, true or false                               | Serialized as `0x00` or `0x01` |
+| `uintN`   | Unsigned integers: `uint8`, `uint16`, ..., up to `uint256` | `uint64` = 8 bytes             |
+| `bytesN`  | Fixed-length byte arrays, e.g. `bytes4`, `bytes32`         | `bytes32` = 32 bytes           |
 
 Basic types are **always fixed-size** and occupy the same number of bytes.
 
 ---
 
-#####  Composite Types
+##### Composite Types
 
 Constructed by combining **basic** or **composite** types.  
 They can be **fixed-size** or **variable-size**, depending on their contents.
 
-| Type | Description |
-|------|--------------|
-| `Container` | Struct-like: named fields with different types |
-| `Vector[T, N]` | Fixed-length array of N elements of type T |
-| `List[T, N]` | Variable-length array with a maximum of N elements |
-| `Bitvector[N]` | Fixed-length array of bits (compact) |
-| `Bitlist[N]` | Variable-length bit array (up to N bits) |
-| `Union[T0, T1...]` | Holds one of several possible types |
+| Type               | Description                                        |
+| ------------------ | -------------------------------------------------- |
+| `Container`        | Struct-like: named fields with different types     |
+| `Vector[T, N]`     | Fixed-length array of N elements of type T         |
+| `List[T, N]`       | Variable-length array with a maximum of N elements |
+| `Bitvector[N]`     | Fixed-length array of bits (compact)               |
+| `Bitlist[N]`       | Variable-length bit array (up to N bits)           |
+| `Union[T0, T1...]` | Holds one of several possible types                |
 
 Composite types allow **grouping and nesting** of data.  
 Ethereum uses `Container`, `List`, and `Bitvector` extensively for consensus messages such as:
@@ -141,7 +138,7 @@ Ethereum uses `Container`, `List`, and `Bitvector` extensively for consensus mes
 - `Attestation`
 - `SyncCommittee`
 
- **Tip:** Any type that includes a `List`, `Bitlist`, or `Union` (or contains them nested) becomes **variable-sized**.
+  **Tip:** Any type that includes a `List`, `Bitlist`, or `Union` (or contains them nested) becomes **variable-sized**.
 
 ---
 
@@ -149,18 +146,18 @@ Ethereum uses `Container`, `List`, and `Bitvector` extensively for consensus mes
 
 Aliases make SSZ more readable without changing encoding behavior.
 
-| Alias | Equivalent SSZ Type |
-|--------|----------------------|
-| `bit` | `boolean` |
-| `BytesN` | `Vector[byte, N]` |
-| `ByteList[N]` | `List[byte, N]` |
-| `ByteVector[N]` | `Vector[byte, N]` |
+| Alias           | Equivalent SSZ Type |
+| --------------- | ------------------- |
+| `bit`           | `boolean`           |
+| `BytesN`        | `Vector[byte, N]`   |
+| `ByteList[N]`   | `List[byte, N]`     |
+| `ByteVector[N]` | `Vector[byte, N]`   |
 
 These aliases improve readability but **do not affect the encoded output**.
 
 ---
 
-####  Real World Example
+#### Real World Example
 
 ```ts
 type Validator = Container({
@@ -193,26 +190,28 @@ The whole structure is fixed-size — so it’s encoded without any offsets.
 ---
 
 ## 4. Core SSZ Workflows in Lodestar
+
 Before we dive into advanced operations like Views, Proofs, and Tree Handling, let’s look at the core workflows — creating, serializing, merkleizing, and converting data.
 
-### Working with Default values
+### Working with Default Values
 
-In this section we will intoduce how to generate SSZ objects with default (zero-initialized) values, explain how to modify them, and demonstrate how TypeScript ensures type-safe interaction.
+In this section we will introduce how to generate SSZ objects with default (zero-initialized) values, explain how to modify them, and demonstrate how TypeScript ensures type-safe interaction.
 
 A **default value** is an object where all fields are initialized to their zero-equivalent values.
 Assuming a helper function default(type) which returns the default value for type, we can recursively define the default value for all types.
 
 This is useful when:
--Creating new SSZ data from scratch.
--preparing data to be filled step-by-step.
--ensuring consistency with SSZ schemas
+
+- Creating new SSZ data from scratch.
+- preparing data to be filled step-by-step.
+- ensuring consistency with SSZ schemas
 
 Each schema (like `Attestation`, `BeaconBlock`, etc.) provides a `defaultValue() method` to create such an object.
 
 Here is a table of the different types and their default values.
 
-| Type                       | Default Value                         |
-| -------------------------- | ------------------------------------- |
+| Type                         | Default Value                         |
+| ---------------------------- | ------------------------------------- |
 | `uintN`                      | 0                                     |
 | `boolean`                    | False                                 |
 | `Container`                  | [default(type) for type in container] |
@@ -230,11 +229,10 @@ An SSZ object is “zeroed” if it equals its default value.
 You can create a default object like so:
 
 ```ts
-import { ssz} from "@lodestar/types";
+import {ssz} from "@lodestar/types";
 
 //Creating an SSZ Phase0 Attestation with all fields zero-initialized
-const attestation = ssz.phase0.Attestation.defultValue();
-
+const attestation = ssz.phase0.Attestation.defaultValue();
 ```
 
 The Attestation object now looks something like this:
@@ -255,7 +253,7 @@ The Attestation object now looks something like this:
 }
 ```
 
-We use the _Attestation_ schema as an example - It is a common data structure in Ethereum consesus, representing a validators signed vote.
+We use the _Attestation_ schema as an example - It is a common data structure in Ethereum consensus, representing a validators signed vote.
 
 ```
 
@@ -265,12 +263,12 @@ It includes:
 -Which epoch checkpoints they agree on.
 -A cryptographic signature to prove it’s from them.
 
-Attestations are bundled together and included in new blocks to help the network agree on the canonical.
+NB// Attestations are bundled together and included in new blocks to help the network agree on the canonical chain.
 ```
 
 ### Setting Values in your Attestation object
 
-Once you have a default object, you can update it's values directly:
+Once you have a default object, you can update its values directly:
 
 ```ts
 attestation.data.source.epoch = 100;
@@ -279,7 +277,7 @@ attestation.data.slot = 123456;
 attestation.aggregationBits = new Uint8Array([1, 0, 1]);
 ```
 
-You can also modify primitive values like numbers, boolean, bigint easilly:
+You can also modify primitive values like numbers, boolean, bigint easily:
 
 ```ts
 attestation.data.slot = 123456;
@@ -287,6 +285,7 @@ attestation.aggregationBits = new Uint8Array([1, 0, 1]);
 ```
 
 ### TypeScript Safety with Lodestar SSZ Library.
+
 Lodestar’s SSZ library provides strong TypeScript safety for Ethereum data structures.
 
 One of the biggest advantages of using Lodestar’s SSZ library in TypeScript is its strong type safety.
@@ -296,12 +295,13 @@ Ethereum’s data structures (like Attestation, Block, or Validator) are deeply 
 
 It has compiler checks that ensure values match expected types.
 Benefits:
+
 - Compiler checks for correct types
 - Autocomplete for nested fields
 - Compile-time error detection
 - Confidence when refactoring
 
-#### How Lodestar Enhances TYpescript Safety
+#### How Lodestar Enhances Typescript Safety
 
 The Lodestar SSZ library:
 
@@ -312,8 +312,7 @@ The Lodestar SSZ library:
 For example:
 
 ```ts
-
-import { ssz } from "@lodestar/types";
+import {ssz} from "@lodestar/types";
 
 // Create a zero-initialized attestation
 const attestation = ssz.phase0.Attestation.defaultValue();
@@ -331,8 +330,8 @@ attestation.signature = new Uint8Array(96);
 // Wrong type: TypeScript will reject this immediately
 attestation.signature = "0xabc";
 // Error: Type 'string' is not assignable to type 'Uint8Array'
-
 ```
+
 Lodestar + TypeScript ensures these mistakes never make it to runtime — they’re caught instantly in your editor.
 
 ### Lodestar SSZ Type Safety Flow
@@ -384,35 +383,41 @@ Lodestar + TypeScript ensures these mistakes never make it to runtime — they�
 ---
 
 ### Serialization and Deserialization
+
 SSZ provides `serialize()` to turn a value into bytes and `deserialize()` to restore it. Both follow Ethereum’s standardized format so all clients produce identical results.
 
-We recursively define the serialize function which consumes an object value (of the type specified) and returns a bytestring of type bytes. To learn more about the different type bytes go here. [SimpleSerialize.md](https://github.com/ethereum/consensus-specs/blob/dev/ssz/simple-serialize.md)
+We recursively define the `serialize()` function which consumes an object value (of the type specified) and returns a byte string. To learn more about the different type bytes go here. [SimpleSerialize.md](https://github.com/ethereum/consensus-specs/blob/dev/ssz/simple-serialize.md)
 
-Example: 
+Example:
+
 ```ts
 const serialized = ssz.phase0.Attestation.serialize(attestation);
 console.log(serialized); // Uint8Array([...])
 ```
+
 Here, serialized is a Uint8Array — a compact binary representation of your object.
 use `.equals()` to verify equality
 
 #### What is Deserialization?
+
 Deserialization is the reverse process — it converts a byte array back into the original structured object.
 
 example:
+
 ```ts
 const attestation2 = ssz.phase0.Attestation.deserialize(serialized);
 console.log(attestation2); // Object same as the original
-
 ```
 
-For JSON-freindly representation
+For JSON-friendly representation
+
 ```ts
 const json = ssz.phase0.Attestation.toJson(attestation);
 const fromJson = ssz.phase0.Attestation.fromJson(json);
 ```
 
 #### Why Do We Need This in Ethereum?
+
 In Ethereum consensus:
 
 -Blocks, attestations, and other state objects are sent over the network as bytes.
@@ -420,8 +425,9 @@ In Ethereum consensus:
 -SSZ ensures the process is consistent across all clients.
 
 #### Full Round example
+
 ```ts
-import { ssz } from "@lodestar/types";
+import {ssz} from "@lodestar/types";
 
 // Step 1: Create default attestation
 const attestation = ssz.phase0.Attestation.defaultValue();
@@ -443,19 +449,21 @@ console.log(
 
 Tip: Serialization in SSZ is not JSON serialization — it’s binary, so the result is not human-readable.
 If you want a JSON-friendly format, use:
+
 ```
 const json = ssz.phase0.Attestation.toJson(attestation);
 const fromJson = ssz.phase0.Attestation.fromJson(json);
 ```
-To understand how Lodestar’s SSZ library implements serialization and deserialization. Read this article [Under the Hood: How serialize() and deserialize() Work in Lodestar]()
----
+
+## To understand how Lodestar’s SSZ library implements serialization and deserialization. Read this article [Under the Hood: How serialize() and deserialize() Work in Lodestar]()
 
 ### Merkleization and Hashing
+
 Every SSZ object can be turned into a Merkle root — a single 32-byte hash that represents the entire structure.
 Example:
 
 ```ts
-import { ssz } from "@lodestar/types";
+import {ssz} from "@lodestar/types";
 
 const num = 5n;
 const root = ssz.uint64.hashTreeRoot(num);
@@ -463,6 +471,7 @@ console.log(root.toString("hex"));
 ```
 
 #### What is Hashing?
+
 Hashing turns data of any size into a fixed-size digest.
 
 - Function used: SHA-256 (always outputs 32 bytes).
@@ -470,72 +479,86 @@ Hashing turns data of any size into a fixed-size digest.
 - Secure: infeasible to reverse or find collisions.
 
 Example:
+
 ```ts
-sha256("hello") 
+sha256("hello")
 = 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
 
 ```
 
 #### What is Merkleization?
 
--[ Merkleization ](https://www.investopedia.com/terms/m/merkle-tree.asp) is process of hashing SSZ objects into a binary Merkle tree.
+-[ Merkleization ](https://www.investopedia.com/terms/m/merkle-tree.asp) is the process of hashing SSZ objects into a binary Merkle tree.
+
 - Each field → a leaf node.
 - The tree’s root hash = Merkle root → uniquely represents the entire object.
 - This is what Ethereum consensus uses for proofs and state commitments.
 
 #### How Merkleization Works?
+
 1. Serialize values into fixed-size 32-byte chunks.
    Example: a uint64 (8 bytes) → padded to 32 bytes.
 
-2. Hash the  leaves:
-Each 32-byte chunk is considered a Merkle leaf. (What you got after serialization)
+2. Hash the leaves:
+   Each 32-byte chunk is considered a Merkle leaf. (What you got after serialization)
 
 3. Pairwise hashing:
 
 Concatenate two 32-byte nodes (64 bytes).
 
 Hash them with SHA-256 → 32-byte parent.
+
 ```ts
 H(left || right) → parent
 ```
+
 4. Repeat until root:
 
 Continue combining until a single 32-byte Merkle root remains.
-NB// The root is the merkle roots. Merkle roots are stored in block headers, they prove contents of the entire block.
+NB// The root is the Merkle root. Merkle roots are stored in block headers, they prove contents of the entire block.
 
-To learn more about merkleization read this article. 
+To learn more about merkleization read this article.
 [ Merkleization simplified ](https://www.investopedia.com/terms/m/merkle-tree.asp)
 
-Example:  Merkleizing a simple number with no siblings just the root.
+Example: Merkleizing a simple number with no siblings, just the root.
+
 ```ts
-import { ssz } from "@lodestar/types";
+import {ssz} from "@lodestar/types";
 
 const num = 5n;
 const root = ssz.uint64.hashTreeRoot(num);
 
 console.log(root.toString("hex"));
 // e.g. 8c0f... (32-byte Merkle root)
-
 ```
+
 ---
+
 ### JSON Conversion in SSZ
+
 While SSZ is binary, JSON is human-readable and API-friendly.
 Use Lodestar helpers instead of JSON.stringify directly.
+
 ### Why JSON?
+
 - SSZ is a binary serialization format, optimized for hashing and Merkle proofs.
 - But APIs, config files, and REST/GraphQL endpoints typically use JSON.
 - To bridge the two, SSZ types expose helper functions for converting to/from JSON.
 
 #### 1. Encoding to JSON.
+
 Every SSZ type has the following:
+
 ```ts
 const jsonValue = SomeSSZType.toJson(sszObject);
 ```
+
 - Converts SSZ binary-friendly objects into JSON-serializable values.
 - Byte arrays (Uint8Array) become hex strings (human-readable).
 - Nested containers and lists also convert recursively.
 
 Example:
+
 ```ts
 import {ContainerType, ByteVectorType, ValueOf} from "@chainsafe/ssz";
 
@@ -561,10 +584,13 @@ console.log(kpJSON);
 ```
 
 #### Decoding from JSON
+
 To convert back from JSON into a usable SSZ object:
+
 ```ts
 const kp2 = Keypair.fromJson(kpJSON);
 ```
+
 fromJson parses hex strings back into Uint8Arrays.
 
 The result is a valid SSZ object, usable with all SSZ functions (serialize, hashTreeRoot, etc.).
@@ -572,10 +598,13 @@ The result is a valid SSZ object, usable with all SSZ functions (serialize, hash
 It is that simple to convert data from JSON back into a SSZ object.
 
 ### JSON + Serialization Pipeline
+
 Here is how JSON interacts with SSZ:
+
 ```
 JSON <-> (toJson/fromJson) <-> SSZ Object <-> (serialize/deserialize) <-> Binary
 ```
+
 This allows:
 
 - Storage in JSON (e.g., configs).
@@ -583,6 +612,7 @@ This allows:
 - Interoperability with frontend/backends that don’t handle binary well.
 
 #### Sending a SSZ object over the API
+
 ```ts
 // Example API payload
 const payload = JSON.stringify(Keypair.toJson(kp));
@@ -603,6 +633,7 @@ console.log(receivedKeypair.privateKey);
 ```
 
 ### JSON Conversion Gotchas
+
 - Always use .toJson and .fromJson instead of JSON.stringify/parse directly on SSZ objects — otherwise Uint8Arrays will break.
 - Hex encoding is the standard format for all byte arrays.
 - Nested containers and lists are handled automatically — you don’t need to recurse manually.
