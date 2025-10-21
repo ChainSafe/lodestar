@@ -10,8 +10,7 @@ describe("computeDeltas", () => {
   const oneHourProtoNodes = (60 * 60) / 12;
   const fourHourProtoNodes = 4 * oneHourProtoNodes;
   const oneDayProtoNodes = 24 * oneHourProtoNodes;
-  // 2 first numbers are respective to number of validators in goerli, mainnet as of Aug 2023
-  const numValidators = [500_000, 750_000, 1_400_000, 2_100_000];
+  const numValidators = [1_400_000, 2_100_000];
   for (const numValidator of numValidators) {
     beforeAll(
       () => {
@@ -47,7 +46,7 @@ describe("computeDeltas", () => {
           return votes;
         },
         fn: (votes) => {
-          computeDeltas(numProtoNode, votes, oldBalances, newBalances, new Set());
+          computeDeltas(numProtoNode, votes, oldBalances, newBalances, new Set([1, 2, 3, 4, 5]));
         },
       });
     }

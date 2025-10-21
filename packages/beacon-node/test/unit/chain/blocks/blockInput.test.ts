@@ -1,8 +1,8 @@
 import {describe, expect, it} from "vitest";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {ForkName, ForkPostCapella, ForkPostDeneb} from "@lodestar/params";
+import {ForkName, ForkPostCapella, ForkPostDeneb, ForkPreGloas} from "@lodestar/params";
 import {computeStartSlotAtEpoch, signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {SignedBeaconBlock, deneb, ssz} from "@lodestar/types";
+import {BeaconBlockBody, SignedBeaconBlock, deneb, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {
   AddBlob,
@@ -58,7 +58,7 @@ type BlockAndBlobTestSet<F extends ForkPostDeneb = ForkPostDeneb> = BlockTestSet
 function buildBlockAndBlobsTestSet(forkName: ForkPostDeneb, numberOfBlobs: number): BlockAndBlobTestSet<ForkPostDeneb> {
   const {block, blockRoot, rootHex} = buildBlockTestSet<ForkPostDeneb>(forkName);
   const commitments = Array.from({length: numberOfBlobs}, () => Buffer.alloc(48, 0x77));
-  block.message.body.blobKzgCommitments = commitments;
+  (block.message.body as BeaconBlockBody<ForkPostDeneb & ForkPreGloas>).blobKzgCommitments = commitments;
   const signedBlockHeader = signedBlockToSignedHeader(config, block);
   const blobSidecars: deneb.BlobSidecars = [];
   for (const kzgCommitment of commitments) {
