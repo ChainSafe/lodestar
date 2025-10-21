@@ -1,17 +1,13 @@
-import {
-  VoluntaryExitValidity,
-  getVoluntaryExitSignatureSet,
-  getVoluntaryExitValidity,
-} from "@lodestar/state-transition";
+
 import {phase0} from "@lodestar/types";
 import {
   GossipAction,
   VoluntaryExitError,
   VoluntaryExitErrorCode,
-  voluntaryExitValidityToErrorCode,
 } from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
 import {RegenCaller} from "../regen/index.js";
+import { getVoluntaryExitSignatureSet, isValidVoluntaryExit } from "@lodestar/state-transition";
 
 
 /**
@@ -37,7 +33,14 @@ interface ValidationResult {
   isValid: boolean;
   error?: {
     action: GossipAction;
-    code: VoluntaryExitErrorCode;
+    code:
+      | VoluntaryExitErrorCode.ALREADY_EXISTS
+      | VoluntaryExitErrorCode.INACTIVE
+      | VoluntaryExitErrorCode.ALREADY_EXITED
+      | VoluntaryExitErrorCode.EARLY_EPOCH
+      | VoluntaryExitErrorCode.SHORT_TIME_ACTIVE
+      | VoluntaryExitErrorCode.PENDING_WITHDRAWALS
+      | VoluntaryExitErrorCode.INVALID_SIGNATURE;
     isTransient: boolean; // True if the error might resolve over time
   };
 }
@@ -135,7 +138,7 @@ async function validateVoluntaryExitDetailed(
   }
 
   if (!isValidVoluntaryExit(chain.config.getForkSeq(state.slot), state, voluntaryExit, false)) {
-    // Determine if the failure is transient
+    // Determine if the failure is transient and map to a specific VoluntaryExitErrorCode
     const validator = state.validators.get(validatorIndex);
     const isTransient =
       validator !== undefined &&
@@ -145,11 +148,22 @@ async function validateVoluntaryExitDetailed(
         validator.exitEpoch !== Infinity ||
         false);
 
+    // Map general INVALID reason to a more specific code expected by VoluntaryExitError
+    let code: VoluntaryExitErrorCode;
+    if (validator === undefined || !validator.activationEpoch) {
+      code = VoluntaryExitErrorCode.INACTIVE;
+    } else if (validator.exitEpoch !== Infinity) {
+      code = VoluntaryExitErrorCode.ALREADY_EXITED;
+    } else {
+      // Fallback to EARLY_EPOCH for time-based invalid reasons
+      code = VoluntaryExitErrorCode.EARLY_EPOCH;
+    }
+
     return {
       isValid: false,
       error: {
         action: GossipAction.REJECT,
-        code: VoluntaryExitErrorCode.INVALID,
+        code,
         isTransient,
       },
     };
@@ -242,13 +256,6 @@ export async function processPendingVoluntaryExits(
     } catch {
       toRemove.push(validatorIndex);
     }
-  // [REJECT] All of the conditions within process_voluntary_exit pass validation.
-  // verifySignature = false, verified in batch below
-  const validity = getVoluntaryExitValidity(chain.config.getForkSeq(state.slot), state, voluntaryExit, false);
-  if (validity !== VoluntaryExitValidity.valid) {
-    throw new VoluntaryExitError(GossipAction.REJECT, {
-      code: voluntaryExitValidityToErrorCode(validity),
-    });
   }
 
   // Remove processed exits
