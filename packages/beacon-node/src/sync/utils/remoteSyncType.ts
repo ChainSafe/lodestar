@@ -144,9 +144,16 @@ export function getRangeSyncTarget(
   // head sync
   return {
     syncType: RangeSyncType.Head,
-    // The new peer has the same finalized (earlier filters should prevent a peer with an
-    // earlier finalized chain from reaching here). During long non-finality, we don't want
-    // to sync from finalizedEpoch which is too far away.
+    // The new peer has the same finalized `remote.finalizedEpoch == local.finalizedEpoch` since
+    // previous filters should prevent a peer with an earlier finalized chain from reaching here.
+    //
+    // By default and during stable network conditions, the head sync always starts from
+    // the finalized epoch (even though it's the head sync) because finalized epoch is < local head.
+    // This is to prevent the issue noted here https://github.com/ChainSafe/lodestar/pull/7509#discussion_r1984353063.
+    //
+    // During non-finality of the network, when starting from an unfinalized checkpoint state, we don't want
+    // to sync before anchorStateLatestBlockSlot as finalized epoch is too far away. Local head will also be
+    // the same to that value at startup, the head sync always starts from anchorStateLatestBlockSlot in this case.
     startEpoch: Math.min(computeEpochAtSlot(local.headSlot), minEpoch),
     target: {
       slot: remote.headSlot,
