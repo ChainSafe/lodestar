@@ -6,6 +6,7 @@ It is designed for Ethereum developers, researchers, and contributors working wi
 ---
 
 ## 📁 Structure
+
 ```
 
 ssz-docs/
@@ -13,7 +14,7 @@ ssz-docs/
 ├─ ssz-views-and-proofs.md
 ├─ ssz-examples.md
 └─ ...
- ```
+```
 
 ---
 
@@ -30,43 +31,49 @@ This documentation serves as a **quick reference and tutorial set** for Lodestar
 ## 📘 Documentation
 
 ### **1. `ssz-quickstart.md`**
-- Covers primitive types (`uint64`), containers, lists, and vectors.  
-- Explains **serialization**, **deserialization**, and **hashing** (`hashTreeRoot`).  
-- Includes **JSON conversion** (`toJson`, `fromJson`) for API use.  
+
+- Covers primitive types (`uint64`), containers, lists, and vectors.
+- Explains **serialization**, **deserialization**, and **hashing** (`hashTreeRoot`).
+- Includes **JSON conversion** (`toJson`, `fromJson`) for API use.
 - Ideal starting point for newcomers.
 
 ### **2. `ssz-views-and-proofs.md`**
-- Explains **tree-backed views** for efficient, mutable access.  
-- Demonstrates how to **generate and verify Merkle proofs**.  
-- Covers **light client use cases**, and **nested data access**.  
+
+- Explains **tree-backed views** for efficient, mutable access.
+- Demonstrates how to **generate and verify Merkle proofs**.
+- Covers **light client use cases**, and **nested data access**.
 - Recommended after completing the quickstart.
 
 ### **3. `ssz-examples.md`**
+
 - Runnable **TypeScript demos** that complement the docs.
-- Ideal for beginners who want to test ou different concepts in the SSZ.
+- Ideal for beginners who want to test out different concepts in the SSZ.
 
 ---
 
 ## 💻 Running the Examples
 
-The `examples` are in the ssz-examples.md,  contains runnable **TypeScript demos** that match the topics covered in the docs.  
-Each example is self-contained and can be run directly with `ts-node`.
+The `examples` are in the ssz-examples.md, contains runnable **TypeScript demos** that match the topics covered in the docs.  
+Each example in `ssz-examples.md` is self-contained and can be run directly with `ts-node`.
 
 ### **Setup**
+
 ```bash
 npm install
 # or, directly:
 npm install @chainsafe/ssz @lodestar/types typescript ts-node
 ```
-Run an Example: 
-Pick an example from the file and transfer it in you it's own file eg. Container.ts  then run the file with the following command.
+
+Run an Example:
+Pick an example from the file and place it in its own file, e.g. Container.ts, then run the file with the following command.
 
 ```
 npx ts-node examples/simple-container.ts
 
 ```
 
-Example Explained
+Examples Explained
+
 1. simple-container
 
 Defines a basic SSZ container with primitive fields (e.g. uint64).
@@ -84,7 +91,7 @@ Serialization and deserialization of nested structures
 Useful for: building real-world Ethereum objects (validators, blocks, etc.).
 
 3. lists-vectors.ts
-Introduces SSZ lists (variable-length) and vectors (fixed-length).
+   Introduces SSZ lists (variable-length) and vectors (fixed-length).
 
 Demonstrates:
 Creating dynamic lists
@@ -92,7 +99,7 @@ Enforcing fixed-size vectors
 Serializing both forms
 Useful for: handling validator lists, committees, or signatures in consensus types.
 
-FInd more examples in the ssz-examples files.
+Find more examples in the `ssz-examples.md` file.
 
 ## 📘 Learn More
 
@@ -103,4 +110,3 @@ FInd more examples in the ssz-examples files.
 [merkle multiproofs](https://github.com/ethereum/consensus-specs/blob/dev/ssz/merkle-proofs.md#merkle-multiproofs)
 [simple serialize](https://github.com/ethereum/consensus-specs/blob/dev/ssz/simple-serialize.md)
 [Lodestar types](https://github.com/ChainSafe/lodestar/tree/unstable/packages/types)
-
