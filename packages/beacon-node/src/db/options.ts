@@ -1,6 +1,8 @@
+export type DatabaseType = "level" | "lmdb" | "sqlite";
+
 export type DatabaseOptions = {
   name: string;
-  type: "level" | "lmdb" | "sqlite";
+  type: DatabaseType;
 };
 
 export const defaultDbOptions: DatabaseOptions = {

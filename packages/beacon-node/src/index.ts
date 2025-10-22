@@ -5,7 +5,7 @@ export {RestApiServer} from "./api/rest/base.js";
 export {checkAndPersistAnchorState, initStateFromDb, initStateFromEth1} from "./chain/index.js";
 export {DbCPStateDatastore} from "./chain/stateCache/datastore/db.js";
 export {FileCPStateDatastore} from "./chain/stateCache/datastore/file.js";
-export {BeaconDb, type IBeaconDb, bucketNames} from "./db/index.js";
+export {BeaconDb, type DatabaseType, type IBeaconDb, bucketNames} from "./db/index.js";
 export {Eth1Provider, type IEth1Provider} from "./eth1/index.js";
 // Export metrics utilities to de-duplicate validator metrics
 export {

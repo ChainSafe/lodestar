@@ -1,3 +1,4 @@
+import {DatabaseType} from "@lodestar/beacon-node";
 import {CliCommandOptions, CliOptionDefinition} from "@lodestar/utils";
 import {BeaconNodeArgs, beaconNodeOptions, paramsOptions} from "../../options/index.js";
 import {LogArgs, logOptions} from "../../options/logOptions.js";
@@ -17,7 +18,7 @@ type BeaconExtraArgs = {
   ignoreWeakSubjectivityCheck?: boolean;
   beaconDir?: string;
   dbDir?: string;
-  dbType?: "level" | "lmdb" | "sqlite";
+  dbType?: DatabaseType;
   persistInvalidSszObjectsDir?: string;
   persistInvalidSszObjectsRetentionHours?: number;
   persistOrphanedBlocksDir?: string;

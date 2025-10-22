@@ -1,13 +1,14 @@
 import {ModuleThread} from "@chainsafe/threads";
 import {BeaconConfig, SpecJson} from "@lodestar/config";
 import {LoggerNode, LoggerNodeOpts} from "@lodestar/logger/node";
+import {DatabaseType} from "../../../db/index.ts";
 import {Metrics} from "../../../metrics/index.js";
 
 export type HistoricalStateRegenInitModules = {
   opts: {
     genesisTime: number;
     dbLocation: string;
-    dbType: "level" | "lmdb" | "sqlite";
+    dbType: DatabaseType;
   };
   config: BeaconConfig;
   logger: LoggerNode;
@@ -25,7 +26,7 @@ export type HistoricalStateWorkerData = {
   maxConcurrency: number;
   maxLength: number;
   dbLocation: string;
-  dbType: "level" | "lmdb" | "sqlite";
+  dbType: DatabaseType;
   metricsEnabled: boolean;
   loggerOpts: LoggerNodeOpts;
 };

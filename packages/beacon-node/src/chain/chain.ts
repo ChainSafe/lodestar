@@ -42,7 +42,7 @@ import {
 import {Logger, fromHex, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
-import {IBeaconDb} from "../db/index.js";
+import {DatabaseType, IBeaconDb} from "../db/index.js";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
 import {BuilderStatus} from "../execution/builder/http.js";
 import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
@@ -225,7 +225,7 @@ export class BeaconChain implements IBeaconChain {
       config: BeaconConfig;
       db: IBeaconDb;
       dbName: string;
-      dbType: "level" | "lmdb" | "sqlite";
+      dbType: DatabaseType;
       dataDir: string;
       logger: Logger;
       processShutdownCallback: ProcessShutdownCallback;

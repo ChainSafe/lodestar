@@ -2,7 +2,7 @@ import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {callFnWhenAwait} from "@lodestar/utils";
-import {IBeaconDb} from "../../db/index.js";
+import {DatabaseType, IBeaconDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {JobItemQueue} from "../../util/queue/index.js";
@@ -25,7 +25,7 @@ type ArchiveStoreModules = {
 
 type ArchiveStoreInitOpts = ArchiveStoreOpts & {
   dbName: string;
-  dbType: "level" | "lmdb" | "sqlite";
+  dbType: DatabaseType;
   anchorState: {finalizedCheckpoint: Checkpoint};
 };
 
