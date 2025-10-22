@@ -9,6 +9,7 @@ import {
   doMerkleizeBlocksBytes,
 } from "@chainsafe/persistent-merkle-tree";
 import {hashtree} from "@lodestar/bun";
+
 const {digest2Bytes32, digest2Bytes32Into, hashInto} = hashtree;
 
 /**
