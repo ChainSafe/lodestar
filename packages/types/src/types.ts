@@ -261,7 +261,7 @@ type TypesByFork = {
     SSEPayloadAttributes: electra.SSEPayloadAttributes;
     BlockContents: fulu.BlockContents;
     SignedBlockContents: fulu.SignedBlockContents;
-    ExecutionPayloadAndBlobsBundle: deneb.ExecutionPayloadAndBlobsBundle;
+    ExecutionPayloadAndBlobsBundle: fulu.ExecutionPayloadAndBlobsBundle;
     BlobsBundle: fulu.BlobsBundle;
     SyncCommittee: altair.SyncCommittee;
     SyncAggregate: altair.SyncAggregate;
@@ -299,7 +299,7 @@ type TypesByFork = {
     SSEPayloadAttributes: electra.SSEPayloadAttributes;
     BlockContents: fulu.BlockContents;
     SignedBlockContents: fulu.SignedBlockContents;
-    ExecutionPayloadAndBlobsBundle: deneb.ExecutionPayloadAndBlobsBundle;
+    ExecutionPayloadAndBlobsBundle: fulu.ExecutionPayloadAndBlobsBundle;
     BlobsBundle: fulu.BlobsBundle;
     SyncCommittee: altair.SyncCommittee;
     SyncAggregate: altair.SyncAggregate;

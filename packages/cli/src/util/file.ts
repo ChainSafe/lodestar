@@ -4,6 +4,7 @@ import {Readable} from "node:stream";
 import stream from "node:stream/promises";
 import {ReadableStream as NodeReadableStream} from "node:stream/web";
 import yaml from "js-yaml";
+import {HttpHeader, MediaType} from "@lodestar/api";
 import {fetch} from "@lodestar/utils";
 
 const {load, dump, FAILSAFE_SCHEMA, Type} = yaml;
@@ -149,7 +150,10 @@ export async function downloadFile(pathDest: string, url: string): Promise<void>
  */
 export async function downloadOrLoadFile(pathOrUrl: string): Promise<Uint8Array> {
   if (isUrl(pathOrUrl)) {
-    const res = await fetch(pathOrUrl);
+    const res = await fetch(pathOrUrl, {
+      // Ensure we only receive SSZ responses if REST API is queried
+      headers: {[HttpHeader.Accept]: MediaType.ssz},
+    });
     if (!res.ok) {
       throw new Error(`Failed to download file from ${pathOrUrl}: ${res.status} ${res.statusText}`);
     }

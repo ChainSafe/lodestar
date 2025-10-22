@@ -32,9 +32,11 @@ import {
   getBlockRootFromSingleAttestationSerialized,
   getCommitteeBitsFromSignedAggregateAndProofElectra,
   getCommitteeIndexFromSingleAttestationSerialized,
+  getLastProcessedSlotFromBeaconStateSerialized,
   getSignatureFromAttestationSerialized,
   getSignatureFromSingleAttestationSerialized,
   getSlotFromAttestationSerialized,
+  getSlotFromBeaconStateSerialized,
   getSlotFromBlobSidecarSerialized,
   getSlotFromSignedAggregateAndProofSerialized,
   getSlotFromSignedBeaconBlockSerialized,
@@ -369,6 +371,38 @@ describe("getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized", () => {
     const blobsCount = getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized(config, blockBytes);
 
     expect(blobsCount).toBe(blobs.length);
+  });
+});
+
+describe("BeaconState ssz serialized picking", () => {
+  it("getLastProcessedSlotFromBeaconStateSerialized", () => {
+    const slot = 1_000_000;
+    const state = ssz.phase0.BeaconState.defaultValue();
+    state.latestBlockHeader.slot = slot;
+    const bytes = ssz.phase0.BeaconState.serialize(state);
+    expect(getLastProcessedSlotFromBeaconStateSerialized(bytes)).toBe(slot);
+  });
+
+  it("getLastProcessedSlotFromBeaconStateSerialized - invalid data", () => {
+    const invalidSlotDataSizes = [0, 50, 60];
+    for (const size of invalidSlotDataSizes) {
+      expect(getLastProcessedSlotFromBeaconStateSerialized(Buffer.alloc(size))).toBeNull();
+    }
+  });
+
+  it("getSlotFromBeaconStateSerialized", () => {
+    const slot = 1_000_000;
+    const state = ssz.phase0.BeaconState.defaultValue();
+    state.slot = slot;
+    const bytes = ssz.phase0.BeaconState.serialize(state);
+    expect(getSlotFromBeaconStateSerialized(bytes)).toBe(slot);
+  });
+
+  it("getSlotFromBeaconStateSerialized - invalid data", () => {
+    const invalidSlotDataSizes = [0, 20, 39];
+    for (const size of invalidSlotDataSizes) {
+      expect(getSlotFromBeaconStateSerialized(Buffer.alloc(size))).toBeNull();
+    }
   });
 });
 

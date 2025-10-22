@@ -70,9 +70,10 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
 
   // BeaconNode setup
   try {
-    const {anchorState, wsCheckpoint} = await initBeaconState(
+    const {anchorState, isFinalized, wsCheckpoint} = await initBeaconState(
       options,
       args,
+      beaconPaths.dataDir,
       config,
       db,
       logger,
@@ -89,6 +90,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
       dataDir: beaconPaths.dataDir,
       peerStoreDir: beaconPaths.peerStoreDir,
       anchorState,
+      isAnchorStateFinalized: isFinalized,
       wsCheckpoint,
     });
 
@@ -143,7 +145,9 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
           // See https://github.com/ChainSafe/lodestar/issues/5642
           process.exit(0);
         } catch (e) {
-          logger.error("Error closing beacon node", {}, e as Error);
+          // If we start from unfinalized state, we don't have checkpoint state so there is this error
+          // "No state in cache for finalized checkpoint state epoch"
+          logger.warn("Error closing beacon node", {}, e as Error);
           // Make sure db is always closed gracefully
           await db.close();
           // Must explicitly exit process due to potential active handles

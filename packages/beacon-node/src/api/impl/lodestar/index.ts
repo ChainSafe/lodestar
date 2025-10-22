@@ -6,13 +6,16 @@ import {Repository} from "@lodestar/db";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateCapella, getLatestWeakSubjectivityCheckpointEpoch, loadState} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {toHex, toRootHex} from "@lodestar/utils";
+import {Checkpoint} from "@lodestar/types/phase0";
+import {fromHex, toHex, toRootHex} from "@lodestar/utils";
 import {BeaconChain} from "../../../chain/index.js";
 import {QueuedStateRegenerator, RegenRequest} from "../../../chain/regen/index.js";
 import {IBeaconDb} from "../../../db/interface.js";
 import {GossipType} from "../../../network/index.js";
+import {getStateSlotFromBytes} from "../../../util/multifork.js";
 import {ProfileThread, profileThread, writeHeapSnapshot} from "../../../util/profile.js";
 import {getStateResponseWithRegen} from "../beacon/state/utils.js";
+import {ApiError} from "../errors.js";
 import {ApiModules} from "../types.js";
 
 export function getLodestarApi({
@@ -215,6 +218,26 @@ export function getLodestarApi({
         meta: {executionOptimistic, finalized, version: fork},
       };
     },
+
+    // the optional checkpoint is in root:epoch format
+    async getPersistedCheckpointState({checkpointId}) {
+      const checkpoint = checkpointId ? getCheckpointFromArg(checkpointId) : undefined;
+      const stateBytes = await chain.getPersistedCheckpointState(checkpoint);
+      if (stateBytes === null) {
+        throw new ApiError(
+          404,
+          checkpointId ? `Checkpoint state not found for id ${checkpointId}` : "Latest safe checkpoint state not found"
+        );
+      }
+
+      const slot = getStateSlotFromBytes(stateBytes);
+      return {
+        data: stateBytes,
+        meta: {
+          version: config.getForkName(slot),
+        },
+      };
+    },
   };
 }
 
@@ -242,6 +265,18 @@ function regenRequestToJson(config: ChainForkConfig, regenRequest: RegenRequest)
         root: regenRequest.args[0],
       };
   }
+}
+
+const CHECKPOINT_REGEX = /^(?:0x)?([0-9a-f]{64}):([0-9]+)$/;
+/**
+ * Extract a checkpoint from a string in the format `rootHex:epoch`.
+ */
+export function getCheckpointFromArg(checkpointStr: string): Checkpoint {
+  const match = CHECKPOINT_REGEX.exec(checkpointStr.toLowerCase());
+  if (!match) {
+    throw new ApiError(400, `Could not parse checkpoint string: ${checkpointStr}`);
+  }
+  return {root: fromHex(match[1]), epoch: parseInt(match[2])};
 }
 
 function stringifyKeys(keys: (Uint8Array | number | string)[]): string[] {
