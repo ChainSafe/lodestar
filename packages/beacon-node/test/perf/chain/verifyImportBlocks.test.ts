@@ -102,6 +102,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
           metrics: null,
           validatorMonitor: null,
           anchorState: state,
+          isAnchorStateFinalized: true,
           eth1: new Eth1ForBlockProductionDisabled(),
           executionEngine: new ExecutionEngineDisabled(),
         }

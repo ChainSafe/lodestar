@@ -131,6 +131,7 @@ export async function getDevBeaconNode(
     peerStoreDir,
     anchorState,
     wsCheckpoint: opts.wsCheckpoint,
+    isAnchorStateFinalized: true,
   });
 }
 

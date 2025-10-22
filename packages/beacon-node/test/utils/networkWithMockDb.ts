@@ -77,6 +77,7 @@ export async function getNetworkForTest(
       metrics: null,
       validatorMonitor: null,
       anchorState: createCachedBeaconStateTest(state, beaconConfig),
+      isAnchorStateFinalized: true,
       eth1: new Eth1ForBlockProductionDisabled(),
       executionEngine: new ExecutionEngineDisabled(),
     }

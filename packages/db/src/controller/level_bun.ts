@@ -1,6 +1,9 @@
-import {
-  DB,
-  Iterator,
+import {leveldb} from "@lodestar/bun";
+import {Logger} from "@lodestar/utils";
+import {DatabaseController, DatabaseOptions, DbReqOpts, FilterOptions, KeyValue} from "./interface.js";
+import {LevelDbControllerMetrics} from "./metrics.js";
+
+const {
   dbBatchDelete,
   dbBatchPut,
   dbClose,
@@ -19,10 +22,7 @@ import {
   iteratorSeekToLast,
   iteratorValid,
   iteratorValue,
-} from "@lodestar/bun";
-import {Logger} from "@lodestar/utils";
-import {DatabaseController, DatabaseOptions, DbReqOpts, FilterOptions, KeyValue} from "./interface.js";
-import {LevelDbControllerMetrics} from "./metrics.js";
+} = leveldb;
 
 export type LevelDbControllerModules = {
   logger: Logger;
@@ -40,7 +40,7 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
   private status = Status.started;
 
   constructor(
-    private readonly db: DB,
+    private readonly db: leveldb.DB,
     private metrics: LevelDbControllerMetrics | null
   ) {}
 
@@ -237,12 +237,12 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
 /**
  * Return initialized iterator, filter options and operations.
  */
-function consumeFilterOptions(db: DB, opts: FilterOptions<Uint8Array>) {
+function consumeFilterOptions(db: leveldb.DB, opts: FilterOptions<Uint8Array>) {
   const iterator = dbIterator(db);
 
   const limit = opts.limit ?? Number.POSITIVE_INFINITY;
-  let next: (it: Iterator) => void;
-  let seekToFirst: (it: Iterator) => void;
+  let next: (it: leveldb.Iterator) => void;
+  let seekToFirst: (it: leveldb.Iterator) => void;
   let gt: Uint8Array | undefined;
   let gte: Uint8Array | undefined;
   let outOfRange: ((k: Uint8Array) => boolean) | undefined;

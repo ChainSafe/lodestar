@@ -54,7 +54,7 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
     equivocatingIndices: new Set(Array.from({length: opts.initialEquivocatedCount}, (_, i) => i)),
   };
 
-  const forkchoice = new ForkChoice(config, fcStore, protoArr, null);
+  const forkchoice = new ForkChoice(config, fcStore, protoArr, opts.initialValidatorCount, null);
   let parentBlockRoot = genesisRoot;
 
   for (let slot = 1; slot < opts.initialBlockCount; slot++) {
