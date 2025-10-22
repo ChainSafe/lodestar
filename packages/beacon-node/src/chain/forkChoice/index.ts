@@ -276,5 +276,13 @@ export function initializeForkChoiceFromUnfinalizedState(
   // production code use ForkChoice constructor directly
   const forkchoiceConstructor = opts.forkchoiceConstructor ?? ForkChoice;
 
-  return new forkchoiceConstructor(config, store, protoArray, metrics, opts, logger);
+  return new forkchoiceConstructor(
+    config,
+    store,
+    protoArray,
+    unfinalizedState.validators.length,
+    metrics,
+    opts,
+    logger
+  );
 }
