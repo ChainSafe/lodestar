@@ -1,5 +1,9 @@
-import {
-  Environment,
+import {lmdb} from "@lodestar/bun";
+import {Logger} from "@lodestar/utils";
+import {DatabaseController, DatabaseOptions, DbReqOpts, FilterOptions, KeyValue} from "./interface.ts";
+import {LevelDbControllerMetrics} from "./metrics.ts";
+
+const {
   cursorDeinit,
   cursorGetCurrentValue,
   cursorGoToFirst,
@@ -15,10 +19,7 @@ import {
   transactionAbort,
   transactionBegin,
   transactionCommit,
-} from "@lodestar/bun";
-import {Logger} from "@lodestar/utils";
-import {DatabaseController, DatabaseOptions, DbReqOpts, FilterOptions, KeyValue} from "./interface.ts";
-import {LevelDbControllerMetrics} from "./metrics.ts";
+} = lmdb;
 
 export type LmdbControllerModules = {
   logger: Logger;
@@ -36,7 +37,7 @@ export class LmdbController implements DatabaseController<Uint8Array, Uint8Array
   private status = Status.started;
 
   constructor(
-    private readonly db: Environment,
+    private readonly db: lmdb.Environment,
     private metrics: LevelDbControllerMetrics | null
   ) {}
 
