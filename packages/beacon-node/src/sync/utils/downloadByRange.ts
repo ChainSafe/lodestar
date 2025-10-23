@@ -1,9 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {
-  ForkName,
   ForkPostDeneb,
   ForkPostFulu,
-  ForkPostGloas,
   ForkPreFulu,
   ForkPreGloas,
   isForkPostFulu,
