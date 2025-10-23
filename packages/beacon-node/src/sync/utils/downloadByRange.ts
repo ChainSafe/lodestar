@@ -662,8 +662,13 @@ export async function validateColumnsByRangeResponse(
     }
 
     seenSlotColumns.set(columnSidecar.index, columnSidecar);
+    if (currentSlot !== slot) {
+      // a new slot has started, reset index
+      currentIndex = -1;
+    } else {
+      currentIndex = columnSidecar.index;
+    }
     currentSlot = slot;
-    currentIndex = columnSidecar.index;
   }
 
   const validationPromises: Promise<ValidatedColumnSidecars>[] = [];
