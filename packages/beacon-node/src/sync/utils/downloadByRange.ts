@@ -677,7 +677,7 @@ export async function validateColumnsByRangeResponse(
     const slot = block.message.slot;
     const forkName = config.getForkName(slot);
     const columnSidecarsMap: Map<number, fulu.DataColumnSidecar> = seenColumns.get(slot) ?? new Map();
-    const columnSidecars = Array.from(columnSidecarsMap.values());
+    const columnSidecars = Array.from(columnSidecarsMap.values()).sort((a, b) => a.index - b.index);
 
     let blobCount: number;
     if (!isForkPostFulu(forkName)) {
