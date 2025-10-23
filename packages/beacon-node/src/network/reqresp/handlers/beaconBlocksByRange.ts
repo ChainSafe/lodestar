@@ -1,6 +1,6 @@
 import {PeerId} from "@libp2p/interface";
 import {BeaconConfig} from "@lodestar/config";
-import {GENESIS_SLOT, isForkPostDeneb} from "@lodestar/params";
+import {GENESIS_SLOT, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {deneb, phase0} from "@lodestar/types";
@@ -25,7 +25,8 @@ export async function* onBeaconBlocksByRange(
   const unfinalized = db.block;
   const finalizedSlot = chain.forkChoice.getFinalizedBlock().slot;
 
-  if (startSlot < chain.earliestAvailableSlot) {
+  const forkName = chain.config.getForkName(startSlot);
+  if (isForkPostFulu(forkName) && startSlot < chain.earliestAvailableSlot) {
     chain.logger.verbose("Peer did not respect earliestAvailableSlot for BeaconBlocksByRange ", {
       peer: prettyPrintPeerId(peerId),
       client: peerClient,
