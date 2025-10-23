@@ -83,6 +83,10 @@
     "#datastore-wrapper": {
       "bun": "./src/network/peers/datastore_bun.ts",
       "default": "datastore-level"
+    },
+    "#snappy": {
+      "bun": "./src/network/gossip/snappy_bun.ts",
+      "default": "snappyjs"
     }
   },
   "files": [

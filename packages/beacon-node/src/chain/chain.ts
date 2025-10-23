@@ -273,8 +273,7 @@ export class BeaconChain implements IBeaconChain {
     this.seenAttestationDatas = new SeenAttestationDatas(metrics, this.opts?.attDataCacheSlotDistance);
 
     const nodeId = computeNodeIdFromPrivateKey(privateKey);
-    const initialCustodyGroupCount =
-      opts.initialCustodyGroupCount ?? (opts.supernode ? config.NUMBER_OF_CUSTODY_GROUPS : config.CUSTODY_REQUIREMENT);
+    const initialCustodyGroupCount = opts.initialCustodyGroupCount ?? config.CUSTODY_REQUIREMENT;
     this.metrics?.peerDas.targetCustodyGroupCount.set(initialCustodyGroupCount);
     this.custodyConfig = new CustodyConfig({
       nodeId,
@@ -1243,9 +1242,10 @@ export class BeaconChain implements IBeaconChain {
   }
 
   private async updateValidatorsCustodyRequirement(finalizedCheckpoint: CheckpointWithHex): Promise<void> {
-    if (this.opts.supernode) {
-      // Disable dynamic custody updates for supernodes since they must maintain custody
-      // of all custody groups regardless of validator effective balances
+    if (this.custodyConfig.targetCustodyGroupCount === this.config.NUMBER_OF_CUSTODY_GROUPS) {
+      // Custody requirements can only be increased, we can disable dynamic custody updates
+      // if the node already maintains custody of all custody groups in case it is configured
+      // as a supernode or has validators attached with a total effective balance of at least 4096 ETH.
       return;
     }
 
