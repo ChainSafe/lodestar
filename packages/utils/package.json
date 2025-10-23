@@ -20,6 +20,13 @@
       "import": "./lib/index.js"
     }
   },
+  "imports": {
+    "#bytes": {
+      "bun": "./src/bytes/bun.ts",
+      "browser": "./lib/bytes/browser.js",
+      "default": "./lib/bytes/nodejs.js"
+    }
+  },
   "files": [
     "src",
     "lib",
