@@ -1,5 +1,5 @@
-import {RootHex} from "@lodestar/types";
-import {bigIntToBytes, bytesToBigInt, fromHex, fromHexInto, toHex} from "@lodestar/utils";
+import {RootHex, ssz} from "@lodestar/types";
+import {fromHex, fromHexInto, toHex} from "@lodestar/utils";
 import {ErrorParseJson} from "./jsonRpcHttpClient.js";
 
 /** QUANTITY as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API */
@@ -74,7 +74,7 @@ export function quantityToBigint(hex: QUANTITY, id = ""): bigint {
  */
 export function quantityToBytes(hex: QUANTITY): Uint8Array {
   const bn = quantityToBigint(hex);
-  return bigIntToBytes(bn, 32, "le");
+  return ssz.UintBn256.serialize(bn);
 }
 
 /**
@@ -82,7 +82,7 @@ export function quantityToBytes(hex: QUANTITY): Uint8Array {
  * Compress a 32 ByteVector into a QUANTITY
  */
 export function bytesToQuantity(bytes: Uint8Array): QUANTITY {
-  const bn = bytesToBigInt(bytes, "le");
+  const bn = ssz.UintBn256.deserialize(bytes);
   return numToQuantity(bn);
 }
 

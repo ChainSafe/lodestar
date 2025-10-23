@@ -205,7 +205,7 @@ export function getCustodyGroups(config: ChainForkConfig, nodeId: NodeId, custod
 
   const custodyGroups: CustodyIndex[] = [];
   // nodeId is in bigendian and all computes are in little endian
-  let currentId = bytesToBigInt(nodeId, "be");
+  let currentId = ssz.UintBn256.deserialize(nodeId.slice().reverse());
   while (custodyGroups.length < custodyGroupCount) {
     // could be optimized
     const currentIdBytes = ssz.UintBn256.serialize(currentId);
