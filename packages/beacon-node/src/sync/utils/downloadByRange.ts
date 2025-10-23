@@ -722,7 +722,7 @@ export async function validateColumnsByRangeResponse(
 
   for (const {blockRoot, block} of blocks) {
     const slot = block.message.slot;
-    // TODO(gloas): Post-gloas's blobKzgCommitments is not in beacon block body. Need to source it from somewhere else.
+    // TODO GLOAS: Post-gloas's blobKzgCommitments is not in beacon block body. Need to source it from somewhere else.
     // if block without columns is passed default to zero and throw below
     const blobCount =
       (block as SignedBeaconBlock<ForkPostFulu & ForkPreGloas>).message.body.blobKzgCommitments?.length ?? 0;
