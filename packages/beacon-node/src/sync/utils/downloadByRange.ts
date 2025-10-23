@@ -118,7 +118,7 @@ export function cacheByRangeResponses({
 
   for (const {blockRoot, blobSidecars} of responses.validatedBlobSidecars ?? []) {
     const dataSlot = blobSidecars.at(0)?.signedBlockHeader.message.slot;
-    if (!dataSlot) {
+    if (dataSlot === undefined) {
       throw new Error(`Coding Error: empty blobSidecars returned for blockRoot=${blockRoot} from validation functions`);
     }
     const existing = updatedBatchBlocks.get(dataSlot);
@@ -154,7 +154,7 @@ export function cacheByRangeResponses({
 
   for (const {blockRoot, columnSidecars} of responses.validatedColumnSidecars ?? []) {
     const dataSlot = columnSidecars.at(0)?.signedBlockHeader.message.slot;
-    if (!dataSlot) {
+    if (dataSlot === undefined) {
       throw new Error(
         `Coding Error: empty columnSidecars returned for blockRoot=${blockRoot} from validation functions`
       );
