@@ -612,84 +612,32 @@ export async function validateColumnsByRangeResponse(
   columnSidecars: fulu.DataColumnSidecars
 ): Promise<WarnResult<ValidatedColumnSidecars[], DownloadByRangeError>> {
   const warnings: DownloadByRangeError[] = [];
-  const seenColumns = new Map<Slot, fulu.DataColumnSidecars>();
 
+  const seenColumns = new Map<Slot, Map<number, fulu.DataColumnSidecar>>();
   let currentSlot = -1;
-  let currentSlotSeen: fulu.DataColumnSidecars = [];
+  let currentIndex = -1;
+  // Check for duplicates and order
   for (const columnSidecar of columnSidecars) {
     const slot = columnSidecar.signedBlockHeader.message.slot;
+    let seenSlotColumns = seenColumns.get(slot);
+    if (!seenSlotColumns) {
+      seenSlotColumns = new Map();
+      seenColumns.set(slot, seenSlotColumns);
+    }
 
-    if (slot === currentSlot) {
-      if (currentSlotSeen.find((c) => c.index === columnSidecar.index)) {
-        warnings.push(
-          new DownloadByRangeError({
-            code: DownloadByRangeErrorCode.DUPLICATE_COLUMN,
-            slot,
-            index: columnSidecar.index,
-          })
-        );
+    if (seenSlotColumns.has(columnSidecar.index)) {
+      warnings.push(
+        new DownloadByRangeError({
+          code: DownloadByRangeErrorCode.DUPLICATE_COLUMN,
+          slot,
+          index: columnSidecar.index,
+        })
+      );
 
-        continue;
-      }
+      continue;
+    }
 
-      // check for index order, then push and proceed
-      const lastIndex = currentSlotSeen.at(-1)?.index;
-
-      currentSlotSeen.push(columnSidecar);
-
-      // check for out of order and sort if incorrect
-      if (lastIndex && lastIndex > columnSidecar.index) {
-        warnings.push(
-          new DownloadByRangeError(
-            {
-              code: DownloadByRangeErrorCode.OUT_OF_ORDER_COLUMNS,
-              slot,
-            },
-            "Column indices out of order within a slot"
-          )
-        );
-        currentSlotSeen.sort((a, b) => a.index - b.index);
-      }
-    } else if (slot > currentSlot) {
-      // increment currentSlot
-      if (currentSlotSeen.length) {
-        // avoid setting on first iteration or if no columns in the array
-        seenColumns.set(currentSlot, currentSlotSeen);
-      }
-
-      currentSlot = slot;
-      const existingCurrentSlotSeen = seenColumns.has(slot);
-      currentSlotSeen = seenColumns.get(slot) ?? [];
-
-      if (currentSlotSeen.find((c) => c.index === columnSidecar.index)) {
-        warnings.push(
-          new DownloadByRangeError({
-            code: DownloadByRangeErrorCode.DUPLICATE_COLUMN,
-            slot,
-            index: columnSidecar.index,
-          })
-        );
-
-        continue;
-      }
-
-      currentSlotSeen.push(columnSidecar);
-
-      if (existingCurrentSlotSeen) {
-        warnings.push(
-          new DownloadByRangeError(
-            {
-              code: DownloadByRangeErrorCode.OUT_OF_ORDER_COLUMNS,
-              slot,
-            },
-            "Existing currentSlotSeen was found, slots delivered out of order"
-          )
-        );
-        // sort as they could be out of order
-        currentSlotSeen.sort((a, b) => a.index - b.index);
-      }
-    } else {
-      // out of order
+    if (currentSlot > slot) {
       warnings.push(
         new DownloadByRangeError(
           {
@@ -699,54 +647,41 @@ export async function validateColumnsByRangeResponse(
           "ColumnSidecars received out of slot order"
         )
       );
-
-      const slotColumns = seenColumns.get(slot) ?? [];
-      const lastIndex = slotColumns.at(-1)?.index;
-
-      if (slotColumns.find((c) => c.index === columnSidecar.index)) {
-        warnings.push(
-          new DownloadByRangeError({
-            code: DownloadByRangeErrorCode.DUPLICATE_COLUMN,
-            slot,
-            index: columnSidecar.index,
-          })
-        );
-
-        continue;
-      }
-
-      slotColumns.push(columnSidecar);
-
-      if (lastIndex && lastIndex > columnSidecar.index) {
-        warnings.push(
-          new DownloadByRangeError(
-            {
-              code: DownloadByRangeErrorCode.OUT_OF_ORDER_COLUMNS,
-              slot,
-            },
-            "Column indices out of order within a slot"
-          )
-        );
-        // sort as they could be out of order
-        slotColumns.sort((a, b) => a.index - b.index);
-      }
-
-      seenColumns.set(slot, slotColumns);
     }
+
+    if (currentSlot === slot && currentIndex > columnSidecar.index) {
+      warnings.push(
+        new DownloadByRangeError(
+          {
+            code: DownloadByRangeErrorCode.OUT_OF_ORDER_COLUMNS,
+            slot,
+          },
+          "Column indices out of order within a slot"
+        )
+      );
+    }
+
+    seenSlotColumns.set(columnSidecar.index, columnSidecar);
+    if (currentSlot !== slot) {
+      // a new slot has started, reset index
+      currentIndex = -1;
+    } else {
+      currentIndex = columnSidecar.index;
+    }
+    currentSlot = slot;
   }
-  // make sure last iteration gets set to seenColumns
-  seenColumns.set(currentSlot, currentSlotSeen);
 
   const validationPromises: Promise<ValidatedColumnSidecars>[] = [];
 
   for (const {blockRoot, block} of blocks) {
     const slot = block.message.slot;
     const forkName = config.getForkName(slot);
-    const columnSidecars = seenColumns.get(slot);
+    const columnSidecarsMap: Map<number, fulu.DataColumnSidecar> = seenColumns.get(slot) ?? new Map();
+    const columnSidecars = Array.from(columnSidecarsMap.values()).sort((a, b) => a.index - b.index);
 
     let blobCount: number;
     if (!isForkPostFulu(forkName)) {
-      const dataSlot = columnSidecars?.at(0)?.signedBlockHeader.message.slot;
+      const dataSlot = columnSidecars.at(0)?.signedBlockHeader.message.slot;
       throw new DownloadByRangeError({
         code: DownloadByRangeErrorCode.MISMATCH_BLOCK_FORK,
         slot,
@@ -762,8 +697,7 @@ export async function validateColumnsByRangeResponse(
       blobCount = (block as SignedBeaconBlock<ForkPostFulu & ForkPreGloas>).message.body.blobKzgCommitments.length;
     }
 
-    // conditional a bit wonky so TSC knows we have dataColumns[] below
-    if (!columnSidecars) {
+    if (columnSidecars.length === 0) {
       if (!blobCount) {
         // no columns in the slot
         continue;
@@ -771,7 +705,7 @@ export async function validateColumnsByRangeResponse(
 
       /**
        * If no columns are found for a block and there are commitments on the block then stop checking and just
-       * return early.  Even if there were columns returned for subsequent slots that doesn't matter because
+       * return early. Even if there were columns returned for subsequent slots that doesn't matter because
        * we will be re-requesting them again anyway.  Leftovers just get ignored
        */
       warnings.push(
@@ -785,7 +719,7 @@ export async function validateColumnsByRangeResponse(
       break;
     }
 
-    const returnedColumns = columnSidecars.map((c) => c.index);
+    const returnedColumns = Array.from(columnSidecarsMap.keys()).sort();
     if (!blobCount) {
       // columns for a block that does not have blobs
       // TODO(fulu): should this be a hard error with no data retained from peer or just a warning
@@ -800,7 +734,7 @@ export async function validateColumnsByRangeResponse(
       );
     }
 
-    const missingIndices = request.columns.filter((i) => !returnedColumns.includes(i));
+    const missingIndices = request.columns.filter((i) => !columnSidecarsMap.has(i));
     if (missingIndices.length > 0) {
       warnings.push(
         new DownloadByRangeError(
@@ -833,7 +767,7 @@ export async function validateColumnsByRangeResponse(
     validationPromises.push(
       validateBlockDataColumnSidecars(slot, blockRoot, blobCount, columnSidecars).then(() => ({
         blockRoot,
-        columnSidecars: columnSidecars,
+        columnSidecars,
       }))
     );
   }
