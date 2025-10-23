@@ -44,5 +44,11 @@ export function fromHexInto(hex: string, buffer: Uint8Array): void {
 
 export const toHexString = toHex;
 
-export const {intToBytes, bytesToInt, intToBytes: bigIntToBytes, bytesToBigint: bytesToBigInt} = bytes;
+export const {
+  intToBytes,
+  bytesToInt,
+  // naming differences from upstream
+  intToBytes: bigIntToBytes,
+  bytesToBigint: bytesToBigInt,
+} = bytes;
 export {xor} from "./browser.ts";
