@@ -189,10 +189,6 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   // Add detailed version string for API node/version endpoint
   beaconNodeOptions.set({api: {commit, version}});
 
-  if (args.supernode) {
-    beaconNodeOptions.set({chain: {supernode: true}, network: {supernode: true}});
-  }
-
   // Set known depositContractDeployBlock
   if (isKnownNetworkName(network)) {
     const {depositContractDeployBlock} = getNetworkData(network);
