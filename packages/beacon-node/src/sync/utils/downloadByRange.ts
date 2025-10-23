@@ -8,7 +8,7 @@ import {
   isForkPostGloas,
 } from "@lodestar/params";
 import {SignedBeaconBlock, Slot, deneb, fulu, phase0} from "@lodestar/types";
-import {LodestarError, Logger, fromHex, prettyBytes, prettyPrintIndices, toRootHex} from "@lodestar/utils";
+import {LodestarError, Logger, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {
   BlockInputSource,
   DAType,
@@ -132,7 +132,7 @@ export function cacheByRangeResponses({
       throw new DownloadByRangeError({
         code: DownloadByRangeErrorCode.MISMATCH_BLOCK_INPUT_TYPE,
         slot: existing.slot,
-        blockRoot: prettyBytes(existing.blockRootHex),
+        blockRoot: existing.blockRootHex,
         expected: DAType.Blobs,
         actual: existing.type,
       });
@@ -170,7 +170,7 @@ export function cacheByRangeResponses({
       throw new DownloadByRangeError({
         code: DownloadByRangeErrorCode.MISMATCH_BLOCK_INPUT_TYPE,
         slot: existing.slot,
-        blockRoot: prettyBytes(existing.blockRootHex),
+        blockRoot: existing.blockRootHex,
         expected: DAType.Columns,
         actual: existing.type,
       });
@@ -479,8 +479,8 @@ export function validateBlockByRangeResponse(
           {
             code: DownloadByRangeErrorCode.PARENT_ROOT_MISMATCH,
             slot: blocks[i].message.slot,
-            expected: prettyBytes(blockRoot),
-            actual: prettyBytes(parentRoot),
+            expected: toRootHex(blockRoot),
+            actual: toRootHex(parentRoot),
           },
           `Block parent root does not match the previous block's root in BeaconBlocksByRange response`
         );
@@ -778,7 +778,7 @@ export async function validateColumnsByRangeResponse(
         new DownloadByRangeError({
           code: DownloadByRangeErrorCode.MISSING_COLUMNS,
           slot,
-          blockRoot: prettyBytes(blockRoot),
+          blockRoot: toRootHex(blockRoot),
           missingIndices: prettyPrintIndices(request.columns),
         })
       );
@@ -793,7 +793,7 @@ export async function validateColumnsByRangeResponse(
         {
           code: DownloadByRangeErrorCode.EXTRA_COLUMNS,
           slot,
-          blockRoot: prettyBytes(blockRoot),
+          blockRoot: toRootHex(blockRoot),
           invalidIndices: prettyPrintIndices(returnedColumns),
         },
         "Block has no blob commitments but data column sidecars were provided"
@@ -807,7 +807,7 @@ export async function validateColumnsByRangeResponse(
           {
             code: DownloadByRangeErrorCode.MISSING_COLUMNS,
             slot,
-            blockRoot: prettyBytes(blockRoot),
+            blockRoot: toRootHex(blockRoot),
             missingIndices: prettyPrintIndices(missingIndices),
           },
           "Missing data columns in DataColumnSidecarsByRange response"
@@ -822,7 +822,7 @@ export async function validateColumnsByRangeResponse(
           {
             code: DownloadByRangeErrorCode.EXTRA_COLUMNS,
             slot,
-            blockRoot: prettyBytes(blockRoot),
+            blockRoot: toRootHex(blockRoot),
             invalidIndices: prettyPrintIndices(extraIndices),
           },
           "Data column in not in requested columns in DataColumnSidecarsByRange response"
