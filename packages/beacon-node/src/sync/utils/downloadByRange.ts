@@ -649,7 +649,7 @@ export async function validateColumnsByRangeResponse(
       );
     }
 
-    if (currentIndex > columnSidecar.index) {
+    if (currentSlot === slot && currentIndex > columnSidecar.index) {
       warnings.push(
         new DownloadByRangeError(
           {
@@ -677,7 +677,7 @@ export async function validateColumnsByRangeResponse(
     const slot = block.message.slot;
     const forkName = config.getForkName(slot);
     const columnSidecarsMap: Map<number, fulu.DataColumnSidecar> = seenColumns.get(slot) ?? new Map();
-    const columnSidecars = Array.from(columnSidecarsMap.values() ?? []);
+    const columnSidecars = Array.from(columnSidecarsMap.values());
 
     let blobCount: number;
     if (!isForkPostFulu(forkName)) {
