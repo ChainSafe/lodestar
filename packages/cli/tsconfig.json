@@ -1,9 +1,22 @@
-{
-  "extends": "../../tsconfig.json",
-  "include": ["src", "test", "packages/**/*", "packages/cli/test/**/*"],
-  "compilerOptions": {
-  "types": ["vitest/globals"],
-  "outDir": "lib"
-  }
-}
+// {
+//   "extends": "../../tsconfig.json",
+//   "include": ["src", "test", "**/*.test.ts", "packages/**/*", "packages/cli/test/**/*"],
+//   "compilerOptions": {
+//   "types": ["vitest/globals"],
+//   "outDir": "lib",
+  
+//   }
+  
+// }
 
+{
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./lib",
+    "baseUrl": ".",
+    "paths": {
+      "*": ["src/*"]
+    }
+  },
+  "include": ["src"]
+}
