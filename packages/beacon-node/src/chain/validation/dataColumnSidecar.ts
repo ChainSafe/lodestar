@@ -302,8 +302,8 @@ export async function validateBlockDataColumnSidecars(
         code: DataColumnSidecarErrorCode.INCORRECT_BLOCK,
         slot: blockSlot,
         columnIndex: 0,
-        expected: blockRoot,
-        actual: firstBlockRoot,
+        expected: toRootHex(blockRoot),
+        actual: toRootHex(firstBlockRoot),
       },
       "DataColumnSidecar doesn't match corresponding block"
     );
@@ -320,8 +320,8 @@ export async function validateBlockDataColumnSidecars(
       throw new DataColumnSidecarValidationError({
         code: DataColumnSidecarErrorCode.INCORRECT_HEADER_ROOT,
         slot: blockSlot,
-        expected: blockRoot,
-        actual: ssz.phase0.BeaconBlockHeader.hashTreeRoot(columnSidecar.signedBlockHeader.message),
+        expected: toRootHex(blockRoot),
+        actual: toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(columnSidecar.signedBlockHeader.message)),
       });
     }
 

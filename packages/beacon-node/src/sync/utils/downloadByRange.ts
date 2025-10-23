@@ -366,6 +366,7 @@ export async function validateResponses({
     }
 
     const validatedColumnSidecarsResult = await validateColumnsByRangeResponse(
+      config,
       columnsRequest,
       blocksForDataValidation,
       columnSidecars
