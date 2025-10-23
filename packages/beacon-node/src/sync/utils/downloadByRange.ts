@@ -714,10 +714,9 @@ export async function validateColumnsByRangeResponse(
 
       seenColumns.set(slot, slotColumns);
     }
-
-    // make sure last iteration gets set to seenColumns
-    seenColumns.set(currentSlot, currentSlotSeen);
   }
+  // make sure last iteration gets set to seenColumns
+  seenColumns.set(currentSlot, currentSlotSeen);
 
   const validationPromises: Promise<ValidatedColumnSidecars>[] = [];
 
