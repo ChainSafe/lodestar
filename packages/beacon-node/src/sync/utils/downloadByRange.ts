@@ -163,7 +163,7 @@ export function cacheByRangeResponses({
     const blockRootHex = toRootHex(blockRoot);
 
     if (!existing) {
-      throw new Error("Coding error: blockInput must exist when adding blobs");
+      throw new Error("Coding error: blockInput must exist when adding columns");
     }
 
     if (!isBlockInputColumns(existing)) {
