@@ -119,7 +119,11 @@ export function cacheByRangeResponses({
   }
 
   for (const {blockRoot, blobSidecars} of responses.validatedBlobSidecars ?? []) {
-    const existing = updatedBatchBlocks.get(blobSidecars[0].signedBlockHeader.message.slot);
+    const dataSlot = blobSidecars.at(0)?.signedBlockHeader.message.slot;
+    if (!dataSlot) {
+      throw new Error(`Coding Error: empty blobSidecars returned for blockRoot=${blockRoot} from validation functions`);
+    }
+    const existing = updatedBatchBlocks.get(dataSlot);
     const blockRootHex = toRootHex(blockRoot);
 
     if (!existing) {
@@ -151,7 +155,13 @@ export function cacheByRangeResponses({
   }
 
   for (const {blockRoot, columnSidecars} of responses.validatedColumnSidecars ?? []) {
-    const existing = updatedBatchBlocks.get(columnSidecars[0].signedBlockHeader.message.slot);
+    const dataSlot = columnSidecars.at(0)?.signedBlockHeader.message.slot;
+    if (!dataSlot) {
+      throw new Error(
+        `Coding Error: empty columnSidecars returned for blockRoot=${blockRoot} from validation functions`
+      );
+    }
+    const existing = updatedBatchBlocks.get(dataSlot);
     const blockRootHex = toRootHex(blockRoot);
 
     if (!existing) {
