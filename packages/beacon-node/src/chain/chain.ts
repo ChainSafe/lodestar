@@ -1241,9 +1241,9 @@ export class BeaconChain implements IBeaconChain {
 
   private async updateValidatorsCustodyRequirement(finalizedCheckpoint: CheckpointWithHex): Promise<void> {
     if (this.custodyConfig.targetCustodyGroupCount === this.config.NUMBER_OF_CUSTODY_GROUPS) {
-      // Custody requirements can only be increased. Disable dynamic custody updates if we already
-      // maintain custody of all custody groups in case the node is configured as a supernode
-      // or has validators attached with a total effective balance of at least 4096 ETH.
+      // Custody requirements can only be increased, we can disable dynamic custody updates
+      // if the node already maintains custody of all custody groups in case it is configured
+      // as a supernode or has validators attached with a total effective balance of at least 4096 ETH.
       return;
     }
 
