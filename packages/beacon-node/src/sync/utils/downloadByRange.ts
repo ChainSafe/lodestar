@@ -1,5 +1,14 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkPostDeneb, ForkPostFulu, ForkPreFulu, ForkPreGloas} from "@lodestar/params";
+import {
+  ForkName,
+  ForkPostDeneb,
+  ForkPostFulu,
+  ForkPostGloas,
+  ForkPreFulu,
+  ForkPreGloas,
+  isForkPostFulu,
+  isForkPostGloas,
+} from "@lodestar/params";
 import {SignedBeaconBlock, Slot, deneb, fulu, phase0} from "@lodestar/types";
 import {LodestarError, Logger, fromHex, prettyBytes, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {
@@ -588,6 +597,7 @@ export async function validateBlobsByRangeResponse(
  * - last block is last slot received
  */
 export async function validateColumnsByRangeResponse(
+  config: ChainForkConfig,
   request: fulu.DataColumnSidecarsByRangeRequest,
   blocks: ValidatedBlock[],
   columnSidecars: fulu.DataColumnSidecars
@@ -722,11 +732,27 @@ export async function validateColumnsByRangeResponse(
 
   for (const {blockRoot, block} of blocks) {
     const slot = block.message.slot;
-    // TODO GLOAS: Post-gloas's blobKzgCommitments is not in beacon block body. Need to source it from somewhere else.
-    // if block without columns is passed default to zero and throw below
-    const blobCount =
-      (block as SignedBeaconBlock<ForkPostFulu & ForkPreGloas>).message.body.blobKzgCommitments?.length ?? 0;
+    const forkName = config.getForkName(slot);
     const columnSidecars = seenColumns.get(slot);
+
+    let blobCount: number;
+    if (!isForkPostFulu(forkName)) {
+      const dataSlot = columnSidecars?.at(0)?.signedBlockHeader.message.slot;
+      throw new DownloadByRangeError({
+        code: DownloadByRangeErrorCode.MISMATCH_BLOCK_FORK,
+        slot,
+        blockFork: forkName,
+        dataFork: dataSlot ? config.getForkName(dataSlot) : "unknown",
+      });
+    }
+    if (isForkPostGloas(forkName)) {
+      // TODO GLOAS: Post-gloas's blobKzgCommitments is not in beacon block body. Need to source it from somewhere else.
+      // if block without columns is passed default to zero and throw below
+      blobCount = 0;
+    } else {
+      blobCount = (block as SignedBeaconBlock<ForkPostFulu & ForkPreGloas>).message.body.blobKzgCommitments.length;
+    }
+
     // conditional a bit wonky so TSC knows we have dataColumns[] below
     if (!columnSidecars) {
       if (!blobCount) {
@@ -899,6 +925,7 @@ export enum DownloadByRangeErrorCode {
   OUT_OF_ORDER_COLUMNS = "DOWNLOAD_BY_RANGE_OUT_OF_ORDER_COLUMNS",
 
   /** Cached block input type mismatches new data */
+  MISMATCH_BLOCK_FORK = "DOWNLOAD_BY_RANGE_ERROR_MISMATCH_BLOCK_FORK",
   MISMATCH_BLOCK_INPUT_TYPE = "DOWNLOAD_BY_RANGE_ERROR_MISMATCH_BLOCK_INPUT_TYPE",
 }
 
@@ -918,6 +945,12 @@ export type DownloadByRangeErrorType =
   | {
       code: DownloadByRangeErrorCode.OUT_OF_RANGE_BLOCKS;
       slot: number;
+    }
+  | {
+      code: DownloadByRangeErrorCode.MISMATCH_BLOCK_FORK;
+      slot: number;
+      dataFork: string;
+      blockFork: string;
     }
   | {
       code: DownloadByRangeErrorCode.OUT_OF_ORDER_BLOCKS;
