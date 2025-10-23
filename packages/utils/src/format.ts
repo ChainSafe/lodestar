@@ -1,4 +1,4 @@
-import {toRootHex} from "./bytes/index.js";
+import {toRootHex} from "#bytes";
 import {ETH_TO_WEI} from "./ethConversion.js";
 
 /**
@@ -116,4 +116,24 @@ export function groupSequentialIndices(indices: number[]): string[] {
 export function prettyPrintIndices(indices: number[]): string {
   const increments = groupSequentialIndices(indices);
   return `[${increments.join(", ")}]`;
+}
+
+export function formatBytes(bytes: number): string {
+  if (bytes < 0) {
+    throw new Error("bytes must be a positive number, got " + bytes);
+  }
+
+  if (bytes === 0) {
+    return "0 Bytes";
+  }
+
+  // size of a kb
+  const k = 1024;
+
+  // only support up to GB
+  const units = ["Bytes", "KB", "MB", "GB"];
+  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), units.length - 1);
+  const formattedSize = (bytes / Math.pow(k, i)).toFixed(2);
+
+  return `${formattedSize} ${units[i]}`;
 }
