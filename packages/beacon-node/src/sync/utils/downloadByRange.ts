@@ -565,7 +565,7 @@ export async function validateBlobsByRangeResponse(
  * blocks, then they will be kept.  This loosening of the spec is to help ensure sync goes smoothly and we can find
  * the data needed in difficult network situations.
  *
- * Assume for thw following two examples we request indices 5, 10, 15 for a range of slots 32-63
+ * Assume for the following two examples we request indices 5, 10, 15 for a range of slots 32-63
  *
  * For slots where we receive no sidecars, example slot 45, but blobs exist we will stop validating subsequent
  * slots, 45-63.  The next round of requests will get structured to pull the from the slot that had columns
