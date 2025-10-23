@@ -10,7 +10,7 @@ import {
   getBlockHeaderProposerSignatureSet,
 } from "@lodestar/state-transition";
 import {Root, Slot, SubnetID, fulu, ssz} from "@lodestar/types";
-import {prettyBytes, toRootHex, verifyMerkleBranch} from "@lodestar/utils";
+import {toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {kzg} from "../../util/kzg.js";
 import {
@@ -285,11 +285,10 @@ export async function validateBlockDataColumnSidecars(
   if (blockBlobCount === 0) {
     throw new DataColumnSidecarValidationError(
       {
-        code: DataColumnSidecarErrorCode.INCORRECT_KZG_COMMITMENTS_COUNT,
-        actual: blockBlobCount,
-        slot: dataColumnSidecars.at(0)?.signedBlockHeader.message.slot ?? -1,
-        expected: dataColumnSidecars.at(0)?.kzgCommitments.length ?? -1,
-        columnIndex: dataColumnSidecars.at(0)?.index ?? -1,
+        code: DataColumnSidecarErrorCode.INCORRECT_SIDECAR_COUNT,
+        slot: blockSlot,
+        expected: 0,
+        actual: dataColumnSidecars.length,
       },
       "Block has no blob commitments but data column sidecars were provided"
     );
@@ -303,8 +302,8 @@ export async function validateBlockDataColumnSidecars(
         code: DataColumnSidecarErrorCode.INCORRECT_BLOCK,
         slot: blockSlot,
         columnIndex: 0,
-        expected: prettyBytes(blockRoot),
-        actual: prettyBytes(firstBlockRoot),
+        expected: blockRoot,
+        actual: firstBlockRoot,
       },
       "DataColumnSidecar doesn't match corresponding block"
     );
@@ -321,8 +320,8 @@ export async function validateBlockDataColumnSidecars(
       throw new DataColumnSidecarValidationError({
         code: DataColumnSidecarErrorCode.INCORRECT_HEADER_ROOT,
         slot: blockSlot,
-        expected: prettyBytes(blockRoot),
-        actual: prettyBytes(ssz.phase0.BeaconBlockHeader.hashTreeRoot(columnSidecar.signedBlockHeader.message)),
+        expected: blockRoot,
+        actual: ssz.phase0.BeaconBlockHeader.hashTreeRoot(columnSidecar.signedBlockHeader.message),
       });
     }
 
