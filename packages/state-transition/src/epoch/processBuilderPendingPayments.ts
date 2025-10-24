@@ -12,7 +12,7 @@ export function processBuilderPendingPayments(state: CachedBeaconStateGloas): vo
   for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
     const payment = builderPendingPayments[i];
     if (payment.weight > quorum) {
-      const exitQueueEpoch = computeExitEpochAndUpdateChurn(state, payment.withdrawal.amount);
+      const exitQueueEpoch = computeExitEpochAndUpdateChurn(state, BigInt(payment.withdrawal.amount));
       payment.withdrawal.withdrawableEpoch = exitQueueEpoch + state.config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY;
 
       state.builderPendingWithdrawals.push(payment.withdrawal);

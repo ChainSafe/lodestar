@@ -46,7 +46,7 @@ export function isValidVoluntaryExit(
     currentEpoch >= validator.activationEpoch + config.SHARD_COMMITTEE_PERIOD &&
     (fork >= ForkSeq.electra
       ? // only exit validator if it has no pending withdrawals in the queue
-        getPendingBalanceToWithdraw(state as CachedBeaconStateElectra, voluntaryExit.validatorIndex) === 0
+        getPendingBalanceToWithdraw(fork, state as CachedBeaconStateElectra, voluntaryExit.validatorIndex) === 0
       : // there are no pending withdrawals in previous forks
         true) &&
     // verify signature

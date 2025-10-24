@@ -26,10 +26,18 @@ export function processProposerSlashing(
     const currentEpoch = state.epochCtx.epoch;
     const previousEpoch = currentEpoch - 1;
 
-    const paymentIndex = proposalEpoch === currentEpoch ? SLOTS_PER_EPOCH + slot % SLOTS_PER_EPOCH : proposalEpoch === previousEpoch ? slot % SLOTS_PER_EPOCH : undefined;
+    const paymentIndex =
+      proposalEpoch === currentEpoch
+        ? SLOTS_PER_EPOCH + (slot % SLOTS_PER_EPOCH)
+        : proposalEpoch === previousEpoch
+          ? slot % SLOTS_PER_EPOCH
+          : undefined;
 
     if (paymentIndex !== undefined) {
-      (state as CachedBeaconStateGloas).builderPendingPayments.set(paymentIndex, ssz.gloas.BuilderPendingPayment.defaultViewDU());
+      (state as CachedBeaconStateGloas).builderPendingPayments.set(
+        paymentIndex,
+        ssz.gloas.BuilderPendingPayment.defaultViewDU()
+      );
     }
   }
 

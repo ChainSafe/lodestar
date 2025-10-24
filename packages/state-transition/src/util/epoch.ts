@@ -43,7 +43,7 @@ export function computeActivationExitEpoch(epoch: Epoch): Epoch {
 
 export function computeExitEpochAndUpdateChurn(
   state: CachedBeaconStateElectra | CachedBeaconStateGloas,
-  exitBalance: number
+  exitBalance: Gwei
 ): number {
   let earliestExitEpoch = Math.max(state.earliestExitEpoch, computeActivationExitEpoch(state.epochCtx.epoch));
   const perEpochChurn = getActivationExitChurnLimit(state.epochCtx);
@@ -61,7 +61,7 @@ export function computeExitEpochAndUpdateChurn(
   }
 
   // Consume the balance and update state variables.
-  state.exitBalanceToConsume = BigInt(exitBalanceToConsume - exitBalance);
+  state.exitBalanceToConsume = BigInt(exitBalanceToConsume) - exitBalance;
   state.earliestExitEpoch = earliestExitEpoch;
 
   return state.earliestExitEpoch;

@@ -1,3 +1,4 @@
+import {byteArrayEquals} from "@chainsafe/ssz";
 import {
   BUILDER_PAYMENT_THRESHOLD_DENOMINATOR,
   BUILDER_PAYMENT_THRESHOLD_NUMERATOR,
@@ -5,7 +6,11 @@ import {
   EFFECTIVE_BALANCE_INCREMENT,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
+import {gloas} from "@lodestar/types";
+import {AttestationData} from "@lodestar/types/phase0";
 import {CachedBeaconStateGloas} from "../types.ts";
+import {getBlockRootAtSlot} from "./blockRoot.ts";
+import {computeEpochAtSlot} from "./epoch.ts";
 
 export function hasBuilderWithdrawalCredential(withdrawalCredentials: Uint8Array): boolean {
   return withdrawalCredentials[0] === BUILDER_WITHDRAWAL_PREFIX;
@@ -16,4 +21,23 @@ export function getBuilderPaymentQuorumThreshold(state: CachedBeaconStateGloas):
     Math.floor(state.epochCtx.totalActiveBalanceIncrements / SLOTS_PER_EPOCH) * BUILDER_PAYMENT_THRESHOLD_NUMERATOR;
 
   return Math.floor(quorum / BUILDER_PAYMENT_THRESHOLD_DENOMINATOR) * EFFECTIVE_BALANCE_INCREMENT;
+}
+
+export function isBuilderPaymentWithdrawable(
+  state: CachedBeaconStateGloas,
+  withdrawal: gloas.BuilderPendingWithdrawal
+): boolean {
+  const builder = state.validators.getReadonly(withdrawal.builderIndex);
+  const currentEpoch = computeEpochAtSlot(state.slot);
+
+  return builder.withdrawableEpoch >= currentEpoch || !builder.slashed;
+}
+
+export function isAttestationSameSlot(state: CachedBeaconStateGloas, data: AttestationData): boolean {
+  if (data.slot === 0) return true;
+
+  const isMatchingBlockRoot = byteArrayEquals(data.beaconBlockRoot, getBlockRootAtSlot(state, data.slot));
+  const isCurrentBlockRoot = !byteArrayEquals(data.beaconBlockRoot, getBlockRootAtSlot(state, data.slot - 1));
+
+  return isMatchingBlockRoot && isCurrentBlockRoot;
 }

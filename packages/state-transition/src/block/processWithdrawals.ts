@@ -10,7 +10,8 @@ import {
 } from "@lodestar/params";
 import {ValidatorIndex, capella, ssz} from "@lodestar/types";
 import {MapDef, toRootHex} from "@lodestar/utils";
-import {CachedBeaconStateCapella, CachedBeaconStateElectra} from "../types.js";
+import {CachedBeaconStateCapella, CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.js";
+import {isBuilderPaymentWithdrawable} from "../util/gloas.ts";
 import {
   decreaseBalance,
   getMaxEffectiveBalance,
@@ -21,11 +22,16 @@ import {
 
 export function processWithdrawals(
   fork: ForkSeq,
-  state: CachedBeaconStateCapella | CachedBeaconStateElectra,
+  state: CachedBeaconStateCapella | CachedBeaconStateElectra | CachedBeaconStateGloas,
   payload: capella.FullOrBlindedExecutionPayload
 ): void {
   // processedPartialWithdrawalsCount is withdrawals coming from EL since electra (EIP-7002)
-  const {withdrawals: expectedWithdrawals, processedPartialWithdrawalsCount} = getExpectedWithdrawals(fork, state);
+  // processedBuilderWithdrawalsCount is withdrawals coming from builder payment since gloas (EIP-7732)
+  const {
+    withdrawals: expectedWithdrawals,
+    processedPartialWithdrawalsCount,
+    processedBuilderWithdrawalsCount,
+  } = getExpectedWithdrawals(fork, state);
   const numWithdrawals = expectedWithdrawals.length;
 
   if (isCapellaPayloadHeader(payload)) {
@@ -60,6 +66,23 @@ export function processWithdrawals(
     stateElectra.pendingPartialWithdrawals = stateElectra.pendingPartialWithdrawals.sliceFrom(
       processedPartialWithdrawalsCount
     );
+  }
+
+  if (fork >= ForkSeq.gloas) {
+    const stateGloas = state as CachedBeaconStateGloas;
+
+    const unprocessedWithdrawals = stateGloas.builderPendingWithdrawals
+      .getAllReadonly()
+      .slice(0, processedBuilderWithdrawalsCount)
+      .filter((w) => !isBuilderPaymentWithdrawable(stateGloas, w));
+    const remainingWithdrawals = stateGloas.builderPendingWithdrawals
+      .sliceFrom(processedBuilderWithdrawalsCount)
+      .getAllReadonly();
+
+    stateGloas.builderPendingWithdrawals = ssz.gloas.BeaconState.fields.builderPendingWithdrawals.toViewDU([
+      ...unprocessedWithdrawals,
+      ...remainingWithdrawals,
+    ]);
   }
 
   // Update the nextWithdrawalIndex
@@ -109,48 +132,53 @@ export function getExpectedWithdrawals(
   if (isPostGloas) {
     const stateGloas = state as CachedBeaconStateGloas;
 
-    const allBuilderPendingWithdrawals = stateGloas.builderPendingWithdrawals.length <= MAX_WITHDRAWALS_PER_PAYLOAD ? stateGloas.builderPendingWithdrawals.getAllReadonly() : null;
+    const allBuilderPendingWithdrawals =
+      stateGloas.builderPendingWithdrawals.length <= MAX_WITHDRAWALS_PER_PAYLOAD
+        ? stateGloas.builderPendingWithdrawals.getAllReadonly()
+        : null;
 
     for (let i = 0; i < stateGloas.builderPendingWithdrawals.length; i++) {
-      const withdrawal = allBuilderPendingWithdrawals ? allBuilderPendingWithdrawals[i] : stateGloas.builderPendingWithdrawals.getReadonly(i);
+      const withdrawal = allBuilderPendingWithdrawals
+        ? allBuilderPendingWithdrawals[i]
+        : stateGloas.builderPendingWithdrawals.getReadonly(i);
 
       if (withdrawal.withdrawableEpoch > epoch || withdrawals.length === MAX_WITHDRAWALS_PER_PAYLOAD) {
         break;
       }
 
-      // TODO
-      if (true) {
+      if (isBuilderPaymentWithdrawable(stateGloas, withdrawal)) {
         const totalWithdrawn = withdrawnBalances.getOrDefault(withdrawal.builderIndex);
         const balance = state.balances.get(withdrawal.builderIndex) - totalWithdrawn;
         const builder = state.validators.get(withdrawal.builderIndex);
 
-        let withdrawableBalance = 0n;
+        let withdrawableBalance = 0;
 
         if (builder.slashed) {
-          withdrawableBalance = balance < withdrawal.amount ? BigInt(balance) : withdrawal.amount;
+          withdrawableBalance = balance < withdrawal.amount ? balance : withdrawal.amount;
         } else if (balance > MIN_ACTIVATION_BALANCE) {
-          withdrawableBalance = (balance - MIN_ACTIVATION_BALANCE) < withdrawal.amount ? BigInt(balance - MIN_ACTIVATION_BALANCE) : withdrawal.amount;
+          withdrawableBalance =
+            balance - MIN_ACTIVATION_BALANCE < withdrawal.amount ? balance - MIN_ACTIVATION_BALANCE : withdrawal.amount;
         }
 
         withdrawals.push({
           index: withdrawalIndex,
           validatorIndex: withdrawal.builderIndex,
           address: withdrawal.feeRecipient,
-          amount: withdrawableBalance,
+          amount: BigInt(withdrawableBalance),
         });
         withdrawalIndex++;
         withdrawnBalances.set(withdrawal.builderIndex, totalWithdrawn + Number(withdrawableBalance));
-
       }
       processedBuilderWithdrawalsCount++;
     }
-
   }
-
 
   if (isPostElectra) {
     // In pre-gloas, partialWithdrawalBound == MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP
-    const partialWithdrawalBound =  Math.min(withdrawals.length + MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP, MAX_WITHDRAWALS_PER_PAYLOAD - 1);
+    const partialWithdrawalBound = Math.min(
+      withdrawals.length + MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP,
+      MAX_WITHDRAWALS_PER_PAYLOAD - 1
+    );
     const stateElectra = state as CachedBeaconStateElectra;
 
     // MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP = 8, PENDING_PARTIAL_WITHDRAWALS_LIMIT: 134217728 so we should only call getAllReadonly() if it makes sense

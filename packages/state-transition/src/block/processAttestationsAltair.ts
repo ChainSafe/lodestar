@@ -1,5 +1,6 @@
 import {byteArrayEquals} from "@chainsafe/ssz";
 import {
+  EFFECTIVE_BALANCE_INCREMENT,
   ForkSeq,
   MIN_ATTESTATION_INCLUSION_DELAY,
   PROPOSER_WEIGHT,
@@ -12,11 +13,12 @@ import {
   TIMELY_TARGET_WEIGHT,
   WEIGHT_DENOMINATOR,
 } from "@lodestar/params";
-import {Attestation, Epoch, phase0} from "@lodestar/types";
+import {Attestation, Epoch, phase0, ssz} from "@lodestar/types";
 import {intSqrt} from "@lodestar/utils";
 import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {getAttestationWithIndicesSignatureSet} from "../signatureSets/indexedAttestation.js";
-import {CachedBeaconStateAltair} from "../types.js";
+import {CachedBeaconStateAltair, CachedBeaconStateGloas} from "../types.js";
+import {isAttestationSameSlot} from "../util/gloas.ts";
 import {increaseBalance, verifySignatureSet} from "../util/index.js";
 import {RootCache} from "../util/rootCache.js";
 import {checkpointToStr, isTimelyTarget, validateAttestation} from "./processAttestationPhase0.js";
@@ -31,7 +33,7 @@ const SLOTS_PER_EPOCH_SQRT = intSqrt(SLOTS_PER_EPOCH);
 
 export function processAttestationsAltair(
   fork: ForkSeq,
-  state: CachedBeaconStateAltair,
+  state: CachedBeaconStateAltair | CachedBeaconStateGloas,
   attestations: Attestation[],
   verifySignature = true,
   metrics?: BeaconStateTransitionMetrics | null
@@ -46,6 +48,7 @@ export function processAttestationsAltair(
   let proposerReward = 0;
   let newSeenAttesters = 0;
   let newSeenAttestersEffectiveBalance = 0;
+
   for (const attestation of attestations) {
     const data = attestation.data;
 
@@ -66,6 +69,8 @@ export function processAttestationsAltair(
 
     const inCurrentEpoch = data.target.epoch === currentEpoch;
     const epochParticipation = inCurrentEpoch ? state.currentEpochParticipation : state.previousEpochParticipation;
+    // Count how much additional weight added to current or previous epoch's builder pending payment (in ETH increment)
+    let paymentWeightToAdd = 0;
 
     const flagsAttestation = getAttestationParticipationStatus(
       fork,
@@ -121,12 +126,32 @@ export function processAttestationsAltair(
           }
         }
       }
+
+      if (fork >= ForkSeq.gloas && flagsNewSet !== 0 && isAttestationSameSlot(state as CachedBeaconStateGloas, data)) {
+        paymentWeightToAdd += effectiveBalanceIncrements[validatorIndex];
+      }
     }
 
     // Do the discrete math inside the loop to ensure a deterministic result
     const totalIncrements = totalBalanceIncrementsWithWeight;
     const proposerRewardNumerator = totalIncrements * state.epochCtx.baseRewardPerIncrement;
     proposerReward += Math.floor(proposerRewardNumerator / PROPOSER_REWARD_DOMINATOR);
+
+    if (fork >= ForkSeq.gloas) {
+      const builderPendingPaymentIndex = inCurrentEpoch
+        ? SLOTS_PER_EPOCH + (data.slot % SLOTS_PER_EPOCH)
+        : data.slot % SLOTS_PER_EPOCH;
+      const payment = (state as CachedBeaconStateGloas).builderPendingPayments.get(builderPendingPaymentIndex);
+      const updatedWeight = payment.weight + paymentWeightToAdd * EFFECTIVE_BALANCE_INCREMENT;
+
+      (state as CachedBeaconStateGloas).builderPendingPayments.set(
+        builderPendingPaymentIndex,
+        ssz.gloas.BuilderPendingPayment.toViewDU({
+          ...payment,
+          weight: updatedWeight,
+        })
+      );
+    }
   }
 
   metrics?.newSeenAttestersPerBlock.set(newSeenAttesters);

@@ -5,7 +5,7 @@ import {isValidIndexedPayloadAttestation} from "./isValidIndexedPayloadAttestati
 
 export function processPayloadAttestation(
   state: CachedBeaconStateGloas,
-  payloadAttestation: gloas.PayloadAttestation,
+  payloadAttestation: gloas.PayloadAttestation
 ): void {
   const data = payloadAttestation.data;
 
