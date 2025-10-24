@@ -1,7 +1,7 @@
 import {beforeAll, describe, expect, it, vi} from "vitest";
 import {sleep} from "@lodestar/utils";
-// biome-ignore lint/correctness/useImportExtensions: We have this hardcoded extension for bundle build
-import {Lightclient, LightclientEvent, transport, utils} from "../../dist/lightclient.min.mjs";
+
+// load bundle exports from the global window at runtime in browser tests
 
 describe("web bundle for lightclient", () => {
   vi.setConfig({testTimeout: 20_000});
@@ -30,6 +30,8 @@ describe("web bundle for lightclient", () => {
   });
 
   it("should start the lightclient and sync", async () => {
+    const {Lightclient, LightclientEvent, transport, utils} = (window as any)["lodestar"]["lightclient"];
+
     const logger = utils.getConsoleLogger({logDebug: true});
     const config = utils.getChainForkConfigFromNetwork("mainnet");
 

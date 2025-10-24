@@ -1,14 +1,8 @@
-
+import {getVoluntaryExitSignatureSet, isValidVoluntaryExit} from "@lodestar/state-transition";
 import {phase0} from "@lodestar/types";
-import {
-  GossipAction,
-  VoluntaryExitError,
-  VoluntaryExitErrorCode,
-} from "../errors/index.js";
+import {GossipAction, VoluntaryExitError, VoluntaryExitErrorCode} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
 import {RegenCaller} from "../regen/index.js";
-import { getVoluntaryExitSignatureSet, isValidVoluntaryExit } from "@lodestar/state-transition";
-
 
 /**
  * Helper to get human-readable error code name

@@ -1,9 +1,8 @@
 import {BlobScheduleEntry, ChainConfig, SpecJson, chainConfigToJson, deserializeBlobSchedule} from "@lodestar/config";
-import {BeaconPreset, activePreset, presetToJson} from "@lodestar/params";
+import {activePreset, presetToJson} from "@lodestar/params";
 
 export class NotEqualParamsError extends Error {}
 
-type ConfigWithPreset = ChainConfig & BeaconPreset;
 
 /**
  * Assert localConfig values match externalSpecJson. externalSpecJson may contain more values than localConfig.
@@ -95,7 +94,7 @@ export function assertEqualParams(localConfig: ChainConfig, externalSpecJson: Sp
   }
 }
 
-function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWithPreset, boolean> {
+function getSpecCriticalParams(localConfig: ChainConfig): Record<string, boolean> {
   const altairForkRelevant = localConfig.ALTAIR_FORK_EPOCH < Infinity;
   const bellatrixForkRelevant = localConfig.BELLATRIX_FORK_EPOCH < Infinity;
   const capellaForkRelevant = localConfig.CAPELLA_FORK_EPOCH < Infinity;
