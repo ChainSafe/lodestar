@@ -47,6 +47,32 @@ export interface CliCommand<OwnArgs = Record<never, never>, ParentArgs = Record<
 }
 
 /**
+ * Validates that single-value options don't have duplicate values
+ * @param argv Parsed arguments from yargs
+ * @param options Command option definitions
+ * @throws Error if a single-value flag is duplicated
+ */
+// biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
+function validateNoDuplicateSingleValueFlags(argv: any, options?: CliCommandOptions<any>): void {
+  if (!options) return;
+
+  for (const [optionName, optionDef] of Object.entries(options)) {
+    // Skip array-type options as they're allowed to have multiple values
+    if (optionDef.type === "array") continue;
+
+    const value = argv[optionName];
+
+    // Check if this single-value option received multiple values (became an array)
+    if (Array.isArray(value)) {
+      throw new Error(
+        `Option '--${optionName}' is a single-value flag but was provided multiple times. ` +
+          `Received values: [${value.join(", ")}]. Please provide only one value.`
+      );
+    }
+  }
+}
+
+/**
  * Register a CliCommand type to yargs. Recursively registers subcommands too.
  * @param yargs
  * @param cliCommand
@@ -59,6 +85,12 @@ export function registerCommandToYargs(yargs: Argv, cliCommand: CliCommand<any, 
     describe: cliCommand.describe,
     builder: (yargsBuilder) => {
       yargsBuilder.options(cliCommand.options ?? {});
+
+      // Add middleware to validate no duplicate single-value flags
+      yargsBuilder.middleware((argv) => {
+        validateNoDuplicateSingleValueFlags(argv, cliCommand.options);
+      }, true);
+
       for (const subcommand of cliCommand.subcommands ?? []) {
         registerCommandToYargs(yargsBuilder, subcommand);
       }
