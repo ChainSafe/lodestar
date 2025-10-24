@@ -131,7 +131,8 @@ const MAX_ATTESTATIONS_PER_GROUP_ELECTRA = Math.min(
   MAX_ATTESTATIONS_ELECTRA
 );
 
-/** Same to https://github.com/ethereum/consensus-specs/blob/v1.5.0/specs/altair/beacon-chain.md#has_flag */
+//Reference : has_flag
+/** Same to https://github.com/ethereum/consensus-specs/blob/372e9e0ca53c066bee008f6fcb66ae1f94204ad0/specs/altair/beacon-chain.md#has_flag */
 const TIMELY_SOURCE = 1 << TIMELY_SOURCE_FLAG_INDEX;
 const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
 const TIMELY_HEAD = 1 << TIMELY_HEAD_FLAG_INDEX;
