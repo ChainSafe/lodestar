@@ -7,7 +7,8 @@ import {GossipAction} from "../errors/index.js";
 import {LightClientError, LightClientErrorCode} from "../errors/lightClientError.js";
 import {IBeaconChain} from "../interface.js";
 
-// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#light_client_optimistic_update
+// Reference : light_client_optimistic_update
+// https://github.com/ethereum/consensus-specs/blob/03c4ea240fccfa78469aa039a4a7177beca54074/specs/altair/light-client/p2p-interface.md#light_client_optimistic_update
 export function validateLightClientOptimisticUpdate(
   config: ChainForkConfig,
   chain: IBeaconChain,
