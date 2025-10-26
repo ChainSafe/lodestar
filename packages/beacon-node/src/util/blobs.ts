@@ -159,7 +159,7 @@ export async function reconstructBlobs(sidecars: fulu.DataColumnSidecars, indice
 
   for (const index of indices ?? []) {
     if (index < 0 || index >= blobCount) {
-      throw new Error(`Invalid blob index ${index}, must be between 0 and ${blobCount - 1}`);
+      throw Error(`Invalid blob index ${index}, must be between 0 and ${blobCount - 1}`);
     }
   }
   const indicesToReconstruct = indices ?? Array.from({length: blobCount}, (_, i) => i);
@@ -167,7 +167,7 @@ export async function reconstructBlobs(sidecars: fulu.DataColumnSidecars, indice
   const recoveredCells = await recoverBlobCells(sidecars, indicesToReconstruct);
   if (recoveredCells === null) {
     // Should not happen because we check the column count above
-    throw Error("Failed to recover blob cells");
+    throw Error("Failed to recover cells to reconstruct blobs");
   }
 
   const blobs: deneb.Blobs = new Array(indicesToReconstruct.length);
