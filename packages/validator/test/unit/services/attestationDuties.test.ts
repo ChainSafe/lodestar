@@ -241,4 +241,76 @@ describe("AttestationDutiesService", () => {
 
     expect(api.validator.prepareBeaconCommitteeSubnet).toHaveBeenCalledOnce();
   });
+
+  it("Should resubscribe to beacon subnets when current epoch dependent root changes", async () => {
+    const slot = 1;
+    const epoch = computeEpochAtSlot(slot);
+    
+    // Setup initial duties setup
+    const duty: routes.validator.AttesterDuty = {
+      slot: slot,
+      committeeIndex: 1,
+      committeeLength: 120,
+      committeesAtSlot: 120,
+      validatorCommitteeIndex: 1,
+      validatorIndex: index,
+      pubkey: pubkeys[0],
+    };
+    
+    api.validator.getAttesterDuties.mockResolvedValue(
+      mockApiResponse({
+        data: [duty], 
+        meta: {dependentRoot: "0xOLD_ROOT", executionOptimistic: false}
+      })
+    );
+    api.validator.prepareBeaconCommitteeSubnet.mockResolvedValue(mockApiResponse({}));
+
+    const clock = new ClockMock();
+    const syncingStatusTracker = new SyncingStatusTracker(loggerVc, api, clock, null);
+    const dutiesService = new AttestationDutiesService(
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      chainHeadTracker,
+      syncingStatusTracker,
+      null
+    );
+
+    // Initial duties fetch
+    await clock.tickEpochFns(0, controller.signal);
+    
+    // Verify initial subscription
+    expect(api.validator.prepareBeaconCommitteeSubnet).toHaveBeenCalledTimes(1);
+
+    // Seting up new duties with different dependent root (REORG!)
+    const newDuty = {...duty, slot: 2, committeeIndex: 3};
+    api.validator.getAttesterDuties.mockResolvedValue(
+      mockApiResponse({
+        data: [newDuty], 
+        meta: {dependentRoot: "0xNEW_ROOT", executionOptimistic: false}
+      })
+    );
+
+    // Call handleAttesterDutiesReorg (simulates reorg)
+    await dutiesService["handleAttesterDutiesReorg"](
+      epoch,
+      slot,
+      "0xOLD_ROOT",
+      "0xNEW_ROOT"
+    );
+
+    expect(api.validator.prepareBeaconCommitteeSubnet).toHaveBeenCalledTimes(2);
+  
+    // Verify the new subscription contains updated duties
+    const lastCallArgs = api.validator.prepareBeaconCommitteeSubnet.mock.calls[1][0];
+    expect(lastCallArgs.subscriptions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          slot: newDuty.slot,
+          committeeIndex: newDuty.committeeIndex,
+        })
+      ])
+    );
+  });
 });

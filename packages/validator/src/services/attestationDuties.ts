@@ -371,6 +371,30 @@ export class AttestationDutiesService {
       .catch((e: Error) => {
         this.logger.error("Failed to redownload attester duties when reorg happens", logContext, e);
       });
+
+      const beaconCommitteeSubscriptions: routes.validator.BeaconCommitteeSubscription[] = [];
+      const epochDuties = this.dutiesByIndexByEpoch.get(dutyEpoch)?.dutiesByIndex;
+    
+    if (epochDuties) {
+      for (const {duty, selectionProof} of epochDuties.values()) {
+        beaconCommitteeSubscriptions.push({
+          validatorIndex: duty.validatorIndex,
+          committeesAtSlot: duty.committeesAtSlot,
+          committeeIndex: duty.committeeIndex,
+          slot: duty.slot,
+          isAggregator: selectionProof !== null,
+        });
+      }
+    }
+
+    if (beaconCommitteeSubscriptions.length > 0) {
+      const subscriptionsBatches = batchItems(beaconCommitteeSubscriptions, {batchSize: SUBSCRIPTIONS_PER_REQUEST});
+      await Promise.all(
+        subscriptionsBatches.map((subscriptions) => 
+          this.api.validator.prepareBeaconCommitteeSubnet({subscriptions})
+        )
+      );
+    }
   }
 
   private async getDutyAndProof(duty: routes.validator.AttesterDuty): Promise<AttDutyAndProof> {
