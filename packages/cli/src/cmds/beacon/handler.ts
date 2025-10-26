@@ -269,7 +269,7 @@ function getInitialCustodyGroupCount(
   const enrCgc = enrCgcBytes != null ? bytesToInt(enrCgcBytes, "be") : 0;
 
   if (args.semiSupernode) {
-    const semiSupernodeCgc = config.NUMBER_OF_CUSTODY_GROUPS / 2;
+    const semiSupernodeCgc = Math.floor(config.NUMBER_OF_CUSTODY_GROUPS / 2);
     if (enrCgc > semiSupernodeCgc) {
       logger.warn(
         `Reducing custody requirements is not supported, will continue to use custody group count of ${enrCgc}`
