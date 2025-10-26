@@ -190,14 +190,14 @@ export async function reconstructBlobs(sidecars: fulu.DataColumnSidecars, indice
 async function recoverBlobCells(
   partialSidecars: fulu.DataColumnSidecar[],
   blobIndices: number[]
-): Promise<Map<number, Uint8Array[]> | null> {
+): Promise<Map<number, fulu.Cell[]> | null> {
   const columnCount = partialSidecars.length;
   if (columnCount < NUMBER_OF_COLUMNS / 2) {
     // We don't have enough columns to recover
     return null;
   }
 
-  const recoveredCells = new Map<number, Uint8Array[]>();
+  const recoveredCells = new Map<number, fulu.Cell[]>();
   // Sort data columns by index in ascending order
   const partialSidecarsSorted = partialSidecars.slice().sort((a, b) => a.index - b.index);
 
@@ -214,7 +214,7 @@ async function recoverBlobCells(
   await Promise.all(
     blobIndices.map(async (blobIndex) => {
       const cellIndices: number[] = [];
-      const cells: Uint8Array[] = [];
+      const cells: fulu.Cell[] = [];
       for (const dataColumn of partialSidecarsSorted) {
         cellIndices.push(dataColumn.index);
         cells.push(dataColumn.column[blobIndex]);
