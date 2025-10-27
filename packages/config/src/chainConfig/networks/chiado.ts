@@ -3,7 +3,8 @@ import {ChainConfig} from "../types.js";
 import {gnosisChainConfig as gnosis} from "./gnosis.js";
 
 // Chiado beacon chain config:
-// https://github.com/gnosischain/configs/blob/main/chiado/config.yaml
+// Reference : config
+// https://github.com/gnosischain/configs/blob/3f44fafa888439f56fc60d2f6173bfe63f31c962/chiado/config.yaml
 
 export const chiadoChainConfig: ChainConfig = {
   ...gnosis,

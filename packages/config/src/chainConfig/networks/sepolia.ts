@@ -3,7 +3,8 @@ import {chainConfig as mainnet} from "../configs/mainnet.js";
 import {ChainConfig} from "../types.js";
 
 // Sepolia beacon chain config:
-// https://github.com/eth-clients/sepolia/blob/main/metadata/config.yaml
+//Reference : config
+// https://github.com/eth-clients/sepolia/blob/56f0bff41cecab6c661251d72b73ceecc52c5701/metadata/config.yaml
 
 export const sepoliaChainConfig: ChainConfig = {
   ...mainnet,

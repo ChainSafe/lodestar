@@ -3,7 +3,8 @@ import {chainConfig as mainnet} from "../configs/mainnet.js";
 import {ChainConfig} from "../types.js";
 
 // Ephemery dynamic beacon chain config:
-// https://github.com/ephemery-testnet/ephemery-genesis/blob/master/cl-config.yaml
+//Reference : config
+// https://github.com/ephemery-testnet/ephemery-genesis/blob/dbc3377143c6fc1a688d4a9c648f89d8812ec7aa/cl-config.yaml
 
 // Ephemery specification:
 // https://eips.ethereum.org/EIPS/eip-6916

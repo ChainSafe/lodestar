@@ -25,7 +25,8 @@ export const testFnByType: Record<string, "skip" | ((data: any) => any)> = {
 };
 
 /**
- * https://github.com/ethereum/bls12-381-tests/blob/master/formats/aggregate_verify.md
+ * Reference : aggregate_verify
+ * https://github.com/ethereum/bls12-381-tests/blob/7a1e2f64adf524d7c53c33c7bfbed6afcc73f664/formats/aggregate_verify.md
  * ```
  * input:
  *   pubkeys: List[bytes48] -- the pubkeys
@@ -89,7 +90,8 @@ function fast_aggregate_verify(input: {pubkeys: string[]; message: string; signa
  *   signatures: List[bytes96] -- the signatures to verify against pubkeys and messages
  * output: bool  -- VALID or INVALID
  * ```
- * https://github.com/ethereum/bls12-381-tests/blob/master/formats/batch_verify.md
+ * Reference : batch_verify
+ * https://github.com/ethereum/bls12-381-tests/blob/2e357bf380a3eb72883f529d0e303ae03251767c/formats/batch_verify.md
  */
 function batch_verify(input: {pubkeys: string[]; messages: string[]; signatures: string[]}): boolean | null {
   const {pubkeys, messages, signatures} = input;
@@ -113,7 +115,8 @@ function batch_verify(input: {pubkeys: string[]; messages: string[]; signatures:
  *   message: bytes32 -- input message to sign (a hash)
  * output: BLS Signature -- expected output, single BLS signature or empty.
  * ```
- * https://github.com/ethereum/bls12-381-tests/blob/master/formats/sign.md
+ * Reference - sign.md
+ * https://github.com/ethereum/bls12-381-tests/blob/c01854d47b936b65404e5f08181f05db48792679/formats/sign.md
  */
 function sign(input: {privkey: string; message: string}): string | null {
   const {privkey, message} = input;
@@ -145,7 +148,8 @@ function verify(input: {pubkey: string; message: string; signature: string}): bo
  * input: pubkey: bytes48 -- the pubkey
  * output: bool  -- VALID or INVALID
  * ```
- * https://github.com/ethereum/bls12-381-tests/blob/master/formats/deserialization_G1.md
+ * Reference : deserialization_G1
+ * https://github.com/ethereum/bls12-381-tests/blob/f61f5f01e41c0e422d812d1254f06e89c2531c5b/formats/deserialization_G1.md
  */
 function deserialization_G1(input: {pubkey: string}): boolean {
   try {
