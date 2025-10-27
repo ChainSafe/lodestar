@@ -44,7 +44,7 @@ export async function* onDataColumnSidecarsByRoot(
     }
 
     if (slot < chain.earliestAvailableSlot) {
-      chain.logger.verbose("Peer did not respect earliestAvailableSlot for DataColumnSidecarsByRoot ", {
+      chain.logger.verbose("Peer did not respect earliestAvailableSlot for DataColumnSidecarsByRoot", {
         peer: prettyPrintPeerId(peerId),
         client: peerClient,
       });
