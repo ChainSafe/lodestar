@@ -27,7 +27,7 @@ export async function* onBeaconBlocksByRange(
 
   const forkName = chain.config.getForkName(startSlot);
   if (isForkPostFulu(forkName) && startSlot < chain.earliestAvailableSlot) {
-    chain.logger.verbose("Peer did not respect earliestAvailableSlot for BeaconBlocksByRange ", {
+    chain.logger.verbose("Peer did not respect earliestAvailableSlot for BeaconBlocksByRange", {
       peer: prettyPrintPeerId(peerId),
       client: peerClient,
     });
