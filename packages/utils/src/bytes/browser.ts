@@ -156,9 +156,6 @@ export function bytesToInt(value: Uint8Array, endianness: Endianness = "le"): nu
 }
 
 export function bigIntToBytes(value: bigint, length: number, endianness: Endianness = "le"): Uint8Array {
-  if (length > 8) {
-    throw new Error("length greater than 8 is not supported");
-  }
   if (endianness === "le") {
     return toBufferLE(value, length);
   }
@@ -171,9 +168,6 @@ export function bigIntToBytes(value: bigint, length: number, endianness: Endiann
 export function bytesToBigInt(value: Uint8Array, endianness: Endianness = "le"): bigint {
   if (!(value instanceof Uint8Array)) {
     throw new TypeError("expected a Uint8Array");
-  }
-  if (value.length > 8) {
-    throw new Error("length greater than 8 is not supported");
   }
 
   if (endianness === "le") {
