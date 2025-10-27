@@ -728,7 +728,7 @@ export async function validateColumnsByRangeResponse(
       // TODO(fulu): should this be a hard error with no data retained from peer or just a warning
       throw new DownloadByRangeError(
         {
-          code: DownloadByRangeErrorCode.EXTRA_COLUMNS,
+          code: DownloadByRangeErrorCode.NO_COLUMNS_FOR_BLOCK,
           slot,
           blockRoot: rootHex,
           invalidIndices: prettyPrintIndices(returnedColumns),
@@ -867,6 +867,7 @@ export enum DownloadByRangeErrorCode {
   MISSING_COLUMNS = "DOWNLOAD_BY_RANGE_ERROR_MISSING_COLUMNS",
   OVER_COLUMNS = "DOWNLOAD_BY_RANGE_ERROR_OVER_COLUMNS",
   EXTRA_COLUMNS = "DOWNLOAD_BY_RANGE_ERROR_EXTRA_COLUMNS",
+  NO_COLUMNS_FOR_BLOCK = "DOWNLOAD_BY_RANGE_ERROR_NO_COLUMNS_FOR_BLOCK",
   DUPLICATE_COLUMN = "DOWNLOAD_BY_RANGE_ERROR_DUPLICATE_COLUMN",
   OUT_OF_ORDER_COLUMNS = "DOWNLOAD_BY_RANGE_OUT_OF_ORDER_COLUMNS",
 
@@ -953,7 +954,7 @@ export type DownloadByRangeErrorType =
       index: number;
     }
   | {
-      code: DownloadByRangeErrorCode.EXTRA_COLUMNS;
+      code: DownloadByRangeErrorCode.EXTRA_COLUMNS | DownloadByRangeErrorCode.NO_COLUMNS_FOR_BLOCK;
       slot: Slot;
       blockRoot: string;
       invalidIndices: string;
