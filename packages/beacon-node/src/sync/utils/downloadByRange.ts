@@ -1,7 +1,14 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkPostDeneb, ForkPostFulu, ForkPreFulu, ForkPreGloas} from "@lodestar/params";
+import {
+  ForkPostDeneb,
+  ForkPostFulu,
+  ForkPreFulu,
+  ForkPreGloas,
+  isForkPostFulu,
+  isForkPostGloas,
+} from "@lodestar/params";
 import {SignedBeaconBlock, Slot, deneb, fulu, phase0} from "@lodestar/types";
-import {LodestarError, Logger, fromHex, prettyBytes, prettyPrintIndices, toRootHex} from "@lodestar/utils";
+import {LodestarError, Logger, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {
   BlockInputSource,
   DAType,
@@ -15,7 +22,6 @@ import {validateBlockDataColumnSidecars} from "../../chain/validation/dataColumn
 import {INetwork} from "../../network/index.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {WarnResult} from "../../util/wrapError.js";
-import {DownloadByRootErrorCode} from "./downloadByRoot.js";
 
 export type DownloadByRangeRequests = {
   blocksRequest?: phase0.BeaconBlocksByRangeRequest;
@@ -111,7 +117,13 @@ export function cacheByRangeResponses({
   }
 
   for (const {blockRoot, blobSidecars} of responses.validatedBlobSidecars ?? []) {
-    const existing = updatedBatchBlocks.get(blobSidecars[0].signedBlockHeader.message.slot);
+    const dataSlot = blobSidecars.at(0)?.signedBlockHeader.message.slot;
+    if (dataSlot === undefined) {
+      throw new Error(
+        `Coding Error: empty blobSidecars returned for blockRoot=${toRootHex(blockRoot)} from validation functions`
+      );
+    }
+    const existing = updatedBatchBlocks.get(dataSlot);
     const blockRootHex = toRootHex(blockRoot);
 
     if (!existing) {
@@ -122,7 +134,7 @@ export function cacheByRangeResponses({
       throw new DownloadByRangeError({
         code: DownloadByRangeErrorCode.MISMATCH_BLOCK_INPUT_TYPE,
         slot: existing.slot,
-        blockRoot: prettyBytes(existing.blockRootHex),
+        blockRoot: existing.blockRootHex,
         expected: DAType.Blobs,
         actual: existing.type,
       });
@@ -143,18 +155,24 @@ export function cacheByRangeResponses({
   }
 
   for (const {blockRoot, columnSidecars} of responses.validatedColumnSidecars ?? []) {
-    const existing = updatedBatchBlocks.get(columnSidecars[0].signedBlockHeader.message.slot);
+    const dataSlot = columnSidecars.at(0)?.signedBlockHeader.message.slot;
+    if (dataSlot === undefined) {
+      throw new Error(
+        `Coding Error: empty columnSidecars returned for blockRoot=${toRootHex(blockRoot)} from validation functions`
+      );
+    }
+    const existing = updatedBatchBlocks.get(dataSlot);
     const blockRootHex = toRootHex(blockRoot);
 
     if (!existing) {
-      throw new Error("Coding error: blockInput must exist when adding blobs");
+      throw new Error("Coding error: blockInput must exist when adding columns");
     }
 
     if (!isBlockInputColumns(existing)) {
       throw new DownloadByRangeError({
         code: DownloadByRangeErrorCode.MISMATCH_BLOCK_INPUT_TYPE,
         slot: existing.slot,
-        blockRoot: prettyBytes(existing.blockRootHex),
+        blockRoot: existing.blockRootHex,
         expected: DAType.Columns,
         actual: existing.type,
       });
@@ -290,7 +308,7 @@ export async function validateResponses({
   if ((blobsRequest || columnsRequest) && !(blocks || batchBlocks)) {
     throw new DownloadByRangeError(
       {
-        code: DownloadByRangeErrorCode.MISSING_BLOCKS,
+        code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
         ...requestsLogMeta({blobsRequest, columnsRequest}),
       },
       "No blocks to validate data requests against"
@@ -301,24 +319,28 @@ export async function validateResponses({
   let warnings: DownloadByRangeError[] | null = null;
 
   if (blocksRequest) {
-    validatedResponses.validatedBlocks = validateBlockByRangeResponse(config, blocksRequest, blocks ?? []);
+    const result = validateBlockByRangeResponse(config, blocksRequest, blocks ?? []);
+    if (result.warnings?.length) {
+      warnings = result.warnings;
+    }
+    validatedResponses.validatedBlocks = result.result;
   }
 
   const dataRequest = blobsRequest ?? columnsRequest;
   if (!dataRequest) {
-    return {result: validatedResponses, warnings: null};
+    return {result: validatedResponses, warnings};
   }
 
-  const dataRequestBlocks = getBlocksForDataValidation(
+  const blocksForDataValidation = getBlocksForDataValidation(
     dataRequest,
     batchBlocks,
-    blocksRequest ? validatedResponses.validatedBlocks : undefined
+    validatedResponses.validatedBlocks?.length ? validatedResponses.validatedBlocks : undefined
   );
 
-  if (!dataRequestBlocks.length) {
+  if (!blocksForDataValidation.length) {
     throw new DownloadByRangeError(
       {
-        code: DownloadByRangeErrorCode.MISSING_BLOCKS,
+        code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
         ...requestsLogMeta({blobsRequest, columnsRequest}),
       },
       "No blocks in data request slot range to validate data response against"
@@ -336,7 +358,10 @@ export async function validateResponses({
       );
     }
 
-    validatedResponses.validatedBlobSidecars = await validateBlobsByRangeResponse(dataRequestBlocks, blobSidecars);
+    validatedResponses.validatedBlobSidecars = await validateBlobsByRangeResponse(
+      blocksForDataValidation,
+      blobSidecars
+    );
   }
 
   if (columnsRequest) {
@@ -351,8 +376,9 @@ export async function validateResponses({
     }
 
     const validatedColumnSidecarsResult = await validateColumnsByRangeResponse(
+      config,
       columnsRequest,
-      dataRequestBlocks,
+      blocksForDataValidation,
       columnSidecars
     );
     validatedResponses.validatedColumnSidecars = validatedColumnSidecarsResult.result;
@@ -375,20 +401,30 @@ export function validateBlockByRangeResponse(
   config: ChainForkConfig,
   blocksRequest: phase0.BeaconBlocksByRangeRequest,
   blocks: SignedBeaconBlock[]
-): ValidatedBlock[] {
+): WarnResult<ValidatedBlock[], DownloadByRangeError> {
   const {startSlot, count} = blocksRequest;
 
-  // TODO(fulu): This was added by @twoeths in #8150 but it breaks for epochs with 0 blocks during chain
-  //    liveness issues. See comment https://github.com/ChainSafe/lodestar/issues/8147#issuecomment-3246434697
-  // if (!blocks.length) {
-  //   throw new DownloadByRangeError(
-  //     {
-  //       code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
-  //       expectedCount: blocksRequest.count,
-  //     },
-  //     "Zero blocks in response"
-  //   );
-  // }
+  // An error was thrown here by @twoeths in #8150 but it breaks for epochs with 0 blocks during chain
+  // liveness issues. See comment https://github.com/ChainSafe/lodestar/issues/8147#issuecomment-3246434697
+  // There are instances where clients return no blocks though.  Need to monitor this via the warns to see
+  // if what the correct behavior should be
+  if (!blocks.length) {
+    throw new DownloadByRangeError({
+      code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
+      ...requestsLogMeta({blocksRequest}),
+    });
+    // TODO: this was causing deadlock again. need to come back and fix this so that its possible to process through
+    //       an empty epoch for periods with poor liveness
+    // return {
+    //   result: [],
+    //   warnings: [
+    //     new DownloadByRangeError({
+    //       code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
+    //       ...requestsLogMeta({blocksRequest}),
+    //     }),
+    //   ],
+    // };
+  }
 
   if (blocks.length > count) {
     throw new DownloadByRangeError(
@@ -445,8 +481,8 @@ export function validateBlockByRangeResponse(
           {
             code: DownloadByRangeErrorCode.PARENT_ROOT_MISMATCH,
             slot: blocks[i].message.slot,
-            expected: prettyBytes(blockRoot),
-            actual: prettyBytes(parentRoot),
+            expected: toRootHex(blockRoot),
+            actual: toRootHex(parentRoot),
           },
           `Block parent root does not match the previous block's root in BeaconBlocksByRange response`
         );
@@ -454,7 +490,10 @@ export function validateBlockByRangeResponse(
     }
   }
 
-  return response;
+  return {
+    result: response,
+    warnings: null,
+  };
 }
 
 /**
@@ -528,76 +567,184 @@ export async function validateBlobsByRangeResponse(
 
 /**
  * Should not be called directly. Only exported for unit testing purposes
+ *
+ * Spec states:
+ * 1) must be within range [start_slot, start_slot + count]
+ * 2) should respond with all columns in the range or and 3:ResourceUnavailable (and potentially get down-scored)
+ * 3) must response with at least the sidecars of the first blob-carrying block that exists in the range
+ * 4) must include all sidecars from each block from which there are blobs
+ * 5) where they exists, sidecars must be sent in (slot, index) order
+ * 6) clients may limit the number of sidecars in a response
+ * 7) clients may stop responding mid-response if their view of fork-choice changes
+ *
+ * We will interpret the spec as follows
+ * - Errors when validating: 1, 3, 5
+ * - Warnings when validating: 2, 4, 6, 7
+ *
+ * For "warning" cases, where we get a partial response but sidecars are validated and correct with respect to the
+ * blocks, then they will be kept.  This loosening of the spec is to help ensure sync goes smoothly and we can find
+ * the data needed in difficult network situations.
+ *
+ * Assume for the following two examples we request indices 5, 10, 15 for a range of slots 32-63
+ *
+ * For slots where we receive no sidecars, example slot 45, but blobs exist we will stop validating subsequent
+ * slots, 45-63.  The next round of requests will get structured to pull the from the slot that had columns
+ * missing to the end of the range for all columns indices that were requested for the current partially failed
+ * request (slots 45-63 and indices 5, 10, 15).
+ *
+ * For slots where only some of the requested sidecars are received we will proceed with validation. For simplicity sake
+ * we will assume that if we only get some indices back for a (or several) slot(s) that the indices we get will be
+ * consistent. IE if a peer returns only index 5, they will most likely return that same index for subsequent slot
+ * (index 5 for slots 34, 35, 36, etc). They will not likely return 5 on slot 34, 10 on slot 35, 15 on slot 36, etc.
+ * This assumption makes the code simpler. For both cases the request for the next round will be structured correctly
+ * to pull any missing column indices for whatever range remains.  The simplification just leads to re-verification
+ * of the columns but the number of columns downloaded will be the same regardless of if they are validated twice.
+ *
+ * validateColumnsByRangeResponse makes some assumptions about the data being passed in
+ * blocks are:
+ * - slotwise in order
+ * - form a chain
+ * - non-sparse response (any missing block is a skipped slot not a bad response)
+ * - last block is last slot received
  */
 export async function validateColumnsByRangeResponse(
+  config: ChainForkConfig,
   request: fulu.DataColumnSidecarsByRangeRequest,
-  dataRequestBlocks: ValidatedBlock[],
+  blocks: ValidatedBlock[],
   columnSidecars: fulu.DataColumnSidecars
 ): Promise<WarnResult<ValidatedColumnSidecars[], DownloadByRangeError>> {
-  // Expected column count considering currently-validated batch blocks
-  // TODO GLOAS: Post-gloas's blobKzgCommitments is not in beacon block body. Need to source it from somewhere else.
-  const expectedColumnCount = dataRequestBlocks.reduce((acc, {block}) => {
-    return (block as SignedBeaconBlock<ForkPostDeneb & ForkPreGloas>).message.body.blobKzgCommitments.length > 0
-      ? request.columns.length + acc
-      : acc;
-  }, 0);
-  const nextSlot = dataRequestBlocks.length
-    ? (dataRequestBlocks.at(-1) as ValidatedBlock).block.message.slot + 1
-    : request.startSlot;
-  const possiblyMissingBlocks = nextSlot - request.startSlot + request.count;
-
-  // Allow for extra columns if some blocks are missing from the end of a batch
-  // Eg: If we requested 10 blocks but only 8 were returned, allow for up to 2 * columns.length extra columns
-  const maxColumnCount = expectedColumnCount + possiblyMissingBlocks * request.columns.length;
-
-  if (columnSidecars.length > maxColumnCount) {
-    // this never happens on devnet, so throw error for now
-    throw new DownloadByRangeError(
-      {
-        code: DownloadByRangeErrorCode.OVER_COLUMNS,
-        max: maxColumnCount,
-        actual: columnSidecars.length,
-      },
-      "Extra data columns received in DataColumnSidecarsByRange response"
-    );
-  }
-
   const warnings: DownloadByRangeError[] = [];
-  // no need to check for columnSidecars.length  vs expectedColumnCount here, will be checked per-block below
-  const requestedColumns = new Set(request.columns);
-  const validateSidecarsPromises: Promise<ValidatedColumnSidecars>[] = [];
-  for (let blockIndex = 0, columnSidecarIndex = 0; blockIndex < dataRequestBlocks.length; blockIndex++) {
-    const {block, blockRoot} = dataRequestBlocks[blockIndex];
-    const slot = block.message.slot;
-    const blockRootHex = toRootHex(blockRoot);
-    // TODO GLOAS: Post-gloas's blobKzgCommitments is not in beacon block body. Need to source it from somewhere else.
-    const blockKzgCommitments = (block as SignedBeaconBlock<ForkPostFulu & ForkPreGloas>).message.body
-      .blobKzgCommitments;
-    const expectedColumns = blockKzgCommitments.length ? request.columns.length : 0;
 
-    if (expectedColumns === 0) {
+  const seenColumns = new Map<Slot, Map<number, fulu.DataColumnSidecar>>();
+  let currentSlot = -1;
+  let currentIndex = -1;
+  // Check for duplicates and order
+  for (const columnSidecar of columnSidecars) {
+    const slot = columnSidecar.signedBlockHeader.message.slot;
+    let seenSlotColumns = seenColumns.get(slot);
+    if (!seenSlotColumns) {
+      seenSlotColumns = new Map();
+      seenColumns.set(slot, seenSlotColumns);
+    }
+
+    if (seenSlotColumns.has(columnSidecar.index)) {
+      warnings.push(
+        new DownloadByRangeError({
+          code: DownloadByRangeErrorCode.DUPLICATE_COLUMN,
+          slot,
+          index: columnSidecar.index,
+        })
+      );
+
       continue;
     }
-    const blockColumnSidecars: fulu.DataColumnSidecar[] = [];
-    while (columnSidecarIndex < columnSidecars.length) {
-      const columnSidecar = columnSidecars[columnSidecarIndex];
-      if (columnSidecar.signedBlockHeader.message.slot !== block.message.slot) {
-        // We've reached columns for the next block
-        break;
-      }
-      blockColumnSidecars.push(columnSidecar);
-      columnSidecarIndex++;
+
+    if (currentSlot > slot) {
+      warnings.push(
+        new DownloadByRangeError(
+          {
+            code: DownloadByRangeErrorCode.OUT_OF_ORDER_COLUMNS,
+            slot,
+          },
+          "ColumnSidecars received out of slot order"
+        )
+      );
     }
 
-    const returnedColumns = new Set(blockColumnSidecars.map((c) => c.index));
-    const missingIndices = request.columns.filter((i) => !returnedColumns.has(i));
+    if (currentSlot === slot && currentIndex > columnSidecar.index) {
+      warnings.push(
+        new DownloadByRangeError(
+          {
+            code: DownloadByRangeErrorCode.OUT_OF_ORDER_COLUMNS,
+            slot,
+          },
+          "Column indices out of order within a slot"
+        )
+      );
+    }
+
+    seenSlotColumns.set(columnSidecar.index, columnSidecar);
+    if (currentSlot !== slot) {
+      // a new slot has started, reset index
+      currentIndex = -1;
+    } else {
+      currentIndex = columnSidecar.index;
+    }
+    currentSlot = slot;
+  }
+
+  const validationPromises: Promise<ValidatedColumnSidecars>[] = [];
+
+  for (const {blockRoot, block} of blocks) {
+    const slot = block.message.slot;
+    const rootHex = toRootHex(blockRoot);
+    const forkName = config.getForkName(slot);
+    const columnSidecarsMap: Map<number, fulu.DataColumnSidecar> = seenColumns.get(slot) ?? new Map();
+    const columnSidecars = Array.from(columnSidecarsMap.values()).sort((a, b) => a.index - b.index);
+
+    let blobCount: number;
+    if (!isForkPostFulu(forkName)) {
+      const dataSlot = columnSidecars.at(0)?.signedBlockHeader.message.slot;
+      throw new DownloadByRangeError({
+        code: DownloadByRangeErrorCode.MISMATCH_BLOCK_FORK,
+        slot,
+        blockFork: forkName,
+        dataFork: dataSlot ? config.getForkName(dataSlot) : "unknown",
+      });
+    }
+    if (isForkPostGloas(forkName)) {
+      // TODO GLOAS: Post-gloas's blobKzgCommitments is not in beacon block body. Need to source it from somewhere else.
+      // if block without columns is passed default to zero and throw below
+      blobCount = 0;
+    } else {
+      blobCount = (block as SignedBeaconBlock<ForkPostFulu & ForkPreGloas>).message.body.blobKzgCommitments.length;
+    }
+
+    if (columnSidecars.length === 0) {
+      if (!blobCount) {
+        // no columns in the slot
+        continue;
+      }
+
+      /**
+       * If no columns are found for a block and there are commitments on the block then stop checking and just
+       * return early. Even if there were columns returned for subsequent slots that doesn't matter because
+       * we will be re-requesting them again anyway.  Leftovers just get ignored
+       */
+      warnings.push(
+        new DownloadByRangeError({
+          code: DownloadByRangeErrorCode.MISSING_COLUMNS,
+          slot,
+          blockRoot: rootHex,
+          missingIndices: prettyPrintIndices(request.columns),
+        })
+      );
+      break;
+    }
+
+    const returnedColumns = Array.from(columnSidecarsMap.keys()).sort();
+    if (!blobCount) {
+      // columns for a block that does not have blobs
+      // TODO(fulu): should this be a hard error with no data retained from peer or just a warning
+      throw new DownloadByRangeError(
+        {
+          code: DownloadByRangeErrorCode.NO_COLUMNS_FOR_BLOCK,
+          slot,
+          blockRoot: rootHex,
+          invalidIndices: prettyPrintIndices(returnedColumns),
+        },
+        "Block has no blob commitments but data column sidecars were provided"
+      );
+    }
+
+    const missingIndices = request.columns.filter((i) => !columnSidecarsMap.has(i));
     if (missingIndices.length > 0) {
       warnings.push(
         new DownloadByRangeError(
           {
             code: DownloadByRangeErrorCode.MISSING_COLUMNS,
             slot,
-            blockRoot: blockRootHex,
+            blockRoot: rootHex,
             missingIndices: prettyPrintIndices(missingIndices),
           },
           "Missing data columns in DataColumnSidecarsByRange response"
@@ -605,14 +752,14 @@ export async function validateColumnsByRangeResponse(
       );
     }
 
-    const extraIndices = [...returnedColumns].filter((i) => !requestedColumns.has(i));
+    const extraIndices = returnedColumns.filter((i) => !request.columns.includes(i));
     if (extraIndices.length > 0) {
       warnings.push(
         new DownloadByRangeError(
           {
             code: DownloadByRangeErrorCode.EXTRA_COLUMNS,
             slot,
-            blockRoot: blockRootHex,
+            blockRoot: rootHex,
             invalidIndices: prettyPrintIndices(extraIndices),
           },
           "Data column in not in requested columns in DataColumnSidecarsByRange response"
@@ -620,17 +767,19 @@ export async function validateColumnsByRangeResponse(
       );
     }
 
-    validateSidecarsPromises.push(
-      validateBlockDataColumnSidecars(slot, blockRoot, blockKzgCommitments.length, blockColumnSidecars).then(() => ({
+    validationPromises.push(
+      validateBlockDataColumnSidecars(slot, blockRoot, blobCount, columnSidecars).then(() => ({
         blockRoot,
-        columnSidecars: blockColumnSidecars,
+        columnSidecars,
       }))
     );
   }
 
-  // Await all sidecar validations in parallel
-  const result = await Promise.all(validateSidecarsPromises);
-  return {result, warnings: warnings.length ? warnings : null};
+  const validatedColumns = await Promise.all(validationPromises);
+  return {
+    result: validatedColumns,
+    warnings: warnings.length ? warnings : null,
+  };
 }
 
 /**
@@ -697,7 +846,7 @@ function requestsLogMeta({blocksRequest, blobsRequest, columnsRequest}: Download
 }
 
 export enum DownloadByRangeErrorCode {
-  MISSING_BLOCKS = "DOWNLOAD_BY_RANGE_ERROR_MISSING_BLOCKS",
+  MISSING_BLOCKS_RESPONSE = "DOWNLOAD_BY_RANGE_ERROR_MISSING_BLOCK_RESPONSE",
   MISSING_BLOBS_RESPONSE = "DOWNLOAD_BY_RANGE_ERROR_MISSING_BLOBS_RESPONSE",
   MISSING_COLUMNS_RESPONSE = "DOWNLOAD_BY_RANGE_ERROR_MISSING_COLUMNS_RESPONSE",
 
@@ -718,19 +867,19 @@ export enum DownloadByRangeErrorCode {
   MISSING_COLUMNS = "DOWNLOAD_BY_RANGE_ERROR_MISSING_COLUMNS",
   OVER_COLUMNS = "DOWNLOAD_BY_RANGE_ERROR_OVER_COLUMNS",
   EXTRA_COLUMNS = "DOWNLOAD_BY_RANGE_ERROR_EXTRA_COLUMNS",
+  NO_COLUMNS_FOR_BLOCK = "DOWNLOAD_BY_RANGE_ERROR_NO_COLUMNS_FOR_BLOCK",
+  DUPLICATE_COLUMN = "DOWNLOAD_BY_RANGE_ERROR_DUPLICATE_COLUMN",
+  OUT_OF_ORDER_COLUMNS = "DOWNLOAD_BY_RANGE_OUT_OF_ORDER_COLUMNS",
 
   /** Cached block input type mismatches new data */
+  MISMATCH_BLOCK_FORK = "DOWNLOAD_BY_RANGE_ERROR_MISMATCH_BLOCK_FORK",
   MISMATCH_BLOCK_INPUT_TYPE = "DOWNLOAD_BY_RANGE_ERROR_MISMATCH_BLOCK_INPUT_TYPE",
 }
 
 export type DownloadByRangeErrorType =
   | {
-      code: DownloadByRootErrorCode.MISSING_BLOCK_RESPONSE;
-      expectedCount: number;
-    }
-  | {
       code:
-        | DownloadByRangeErrorCode.MISSING_BLOCKS
+        | DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE
         | DownloadByRangeErrorCode.MISSING_BLOBS_RESPONSE
         | DownloadByRangeErrorCode.MISSING_COLUMNS_RESPONSE;
       blockStartSlot?: number;
@@ -741,12 +890,14 @@ export type DownloadByRangeErrorType =
       columnCount?: number;
     }
   | {
-      code: DownloadByRootErrorCode.MISSING_BLOCK_RESPONSE;
-      expectedCount: number;
-    }
-  | {
       code: DownloadByRangeErrorCode.OUT_OF_RANGE_BLOCKS;
       slot: number;
+    }
+  | {
+      code: DownloadByRangeErrorCode.MISMATCH_BLOCK_FORK;
+      slot: number;
+      dataFork: string;
+      blockFork: string;
     }
   | {
       code: DownloadByRangeErrorCode.OUT_OF_ORDER_BLOCKS;
@@ -778,7 +929,7 @@ export type DownloadByRangeErrorType =
       actual: number;
     }
   | {
-      code: DownloadByRangeErrorCode.OUT_OF_ORDER_BLOBS;
+      code: DownloadByRangeErrorCode.OUT_OF_ORDER_BLOBS | DownloadByRangeErrorCode.OUT_OF_ORDER_COLUMNS;
       slot: number;
     }
   | {
@@ -798,7 +949,12 @@ export type DownloadByRangeErrorType =
       missingIndices: string;
     }
   | {
-      code: DownloadByRangeErrorCode.EXTRA_COLUMNS;
+      code: DownloadByRangeErrorCode.DUPLICATE_COLUMN;
+      slot: Slot;
+      index: number;
+    }
+  | {
+      code: DownloadByRangeErrorCode.EXTRA_COLUMNS | DownloadByRangeErrorCode.NO_COLUMNS_FOR_BLOCK;
       slot: Slot;
       blockRoot: string;
       invalidIndices: string;

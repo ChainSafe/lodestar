@@ -654,18 +654,21 @@ export function getBeaconBlockApi({
             );
           }
 
-          const blobs = await reconstructBlobs(dataColumnSidecars);
+          for (const index of indices ?? []) {
+            if (index < 0 || index >= blobCount) {
+              throw new ApiError(400, `Invalid blob index ${index}, must be between 0 and ${blobCount - 1}`);
+            }
+          }
+
+          const indicesToReconstruct = indices ?? Array.from({length: blobCount}, (_, i) => i);
+          const blobs = await reconstructBlobs(dataColumnSidecars, indicesToReconstruct);
           const signedBlockHeader = signedBlockToSignedHeader(config, block);
-          const requestedIndices = indices ?? Array.from({length: blobKzgCommitments.length}, (_, i) => i);
 
           data = await Promise.all(
-            requestedIndices.map(async (index) => {
+            indicesToReconstruct.map(async (index, i) => {
               // Reconstruct blob sidecar from blob
               const kzgCommitment = blobKzgCommitments[index];
-              if (kzgCommitment === undefined) {
-                throw new ApiError(400, `Blob index ${index} not found in block`);
-              }
-              const blob = blobs[index];
+              const blob = blobs[i]; // Use i since blobs only contains requested indices
               const kzgProof = await kzg.asyncComputeBlobKzgProof(blob, kzgCommitment);
               const kzgCommitmentInclusionProof = computePreFuluKzgCommitmentsInclusionProof(
                 fork,
@@ -724,7 +727,8 @@ export function getBeaconBlockApi({
           );
         }
 
-        const blobCount = (block.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length;
+        const blobKzgCommitments = (block.message.body as deneb.BeaconBlockBody).blobKzgCommitments;
+        const blobCount = blobKzgCommitments.length;
 
         if (blobCount > 0) {
           let dataColumnSidecars = await fromAsync(db.dataColumnSidecar.valuesStream(blockRoot));
@@ -739,7 +743,25 @@ export function getBeaconBlockApi({
             );
           }
 
-          blobs = await reconstructBlobs(dataColumnSidecars);
+          let indicesToReconstruct: number[];
+          if (versionedHashes) {
+            const blockVersionedHashes = blobKzgCommitments.map((commitment) =>
+              toHex(kzgCommitmentToVersionedHash(commitment))
+            );
+            indicesToReconstruct = [];
+            for (const requestedHash of versionedHashes) {
+              const index = blockVersionedHashes.findIndex((hash) => hash === requestedHash);
+              if (index === -1) {
+                throw new ApiError(400, `Versioned hash ${requestedHash} not found in block`);
+              }
+              indicesToReconstruct.push(index);
+            }
+            indicesToReconstruct.sort((a, b) => a - b);
+          } else {
+            indicesToReconstruct = Array.from({length: blobCount}, (_, i) => i);
+          }
+
+          blobs = await reconstructBlobs(dataColumnSidecars, indicesToReconstruct);
         } else {
           blobs = [];
         }
@@ -757,27 +779,27 @@ export function getBeaconBlockApi({
         }
 
         blobs = blobSidecars.sort((a, b) => a.index - b.index).map(({blob}) => blob);
+
+        if (blobs.length && versionedHashes) {
+          const kzgCommitments = (block as deneb.SignedBeaconBlock).message.body.blobKzgCommitments;
+
+          const blockVersionedHashes = kzgCommitments.map((commitment) =>
+            toHex(kzgCommitmentToVersionedHash(commitment))
+          );
+
+          const requestedIndices: number[] = [];
+          for (const requestedHash of versionedHashes) {
+            const index = blockVersionedHashes.findIndex((hash) => hash === requestedHash);
+            if (index === -1) {
+              throw new ApiError(400, `Versioned hash ${requestedHash} not found in block`);
+            }
+            requestedIndices.push(index);
+          }
+
+          blobs = requestedIndices.sort((a, b) => a - b).map((index) => blobs[index]);
+        }
       } else {
         blobs = [];
-      }
-
-      if (blobs.length && versionedHashes?.length) {
-        const kzgCommitments = (block as deneb.SignedBeaconBlock).message.body.blobKzgCommitments;
-
-        const blockVersionedHashes = kzgCommitments.map((commitment) =>
-          toHex(kzgCommitmentToVersionedHash(commitment))
-        );
-
-        const requestedIndices: number[] = [];
-        for (const requestedHash of versionedHashes) {
-          const index = blockVersionedHashes.findIndex((hash) => hash === requestedHash);
-          if (index === -1) {
-            throw new ApiError(400, `Versioned hash ${requestedHash} not found in block`);
-          }
-          requestedIndices.push(index);
-        }
-
-        blobs = requestedIndices.sort((a, b) => a - b).map((index) => blobs[index]);
       }
 
       return {

@@ -144,7 +144,7 @@ export function toHexString(bytes: Uint8Array): string {
 /**
  * Return a byte array from a number or BigInt
  */
-export function intToBytes(value: bigint | number, length: number, endianness: Endianness = "le"): Buffer {
+export function intToBytes(value: bigint | number, length: number, endianness: Endianness = "le"): Uint8Array {
   return bigIntToBytes(BigInt(value), length, endianness);
 }
 
@@ -155,7 +155,7 @@ export function bytesToInt(value: Uint8Array, endianness: Endianness = "le"): nu
   return Number(bytesToBigInt(value, endianness));
 }
 
-export function bigIntToBytes(value: bigint, length: number, endianness: Endianness = "le"): Buffer {
+export function bigIntToBytes(value: bigint, length: number, endianness: Endianness = "le"): Uint8Array {
   if (endianness === "le") {
     return toBufferLE(value, length);
   }
