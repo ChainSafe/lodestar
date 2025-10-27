@@ -70,7 +70,8 @@ export function generateBlocksSZZTypeMapping(fork: ForkName, n: number): BlocksS
  * ```
  * {blocks_count: 16}
  * ```
- * https://github.com/ethereum/consensus-specs/blob/dev/tests/formats/finality/README.md
+ * Reference : README.md
+ * https://github.com/ethereum/consensus-specs/blob/e660623d12f8a99d39c5341a2848202974fa1848/tests/formats/finality/README.md
  */
 type FinalityTestCase = {
   [k: string]: altair.SignedBeaconBlock | unknown | null | undefined;
