@@ -74,7 +74,7 @@ export class NoBidReceived extends Error {
  * Additional duration to account for potential event loop lag which causes
  * builder blocks to be rejected even though the response was sent in time.
  */
-const EVENT_LOOP_LAG_BUFFER = 250;
+const EVENT_LOOP_LAG_BUFFER = 500;
 
 /**
  * Duration given to the builder to provide a `SignedBuilderBid` before the deadline
