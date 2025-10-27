@@ -23,7 +23,7 @@
       "import": "./lib/controller/level.js"
     },
     "./controller/lmdb": {
-      "bun": "./src/controller/lmdb_bun.ts",
+      "bun": "./src/controller/lmdb.ts",
       "import": "./lib/controller/lmdb.js"
     },
     "./controller/sqlite": {
