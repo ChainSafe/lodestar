@@ -66,7 +66,8 @@
     "@lodestar/config": "^1.35.0",
     "@lodestar/utils": "^1.35.0",
     "classic-level": "^1.4.1",
-    "it-all": "^3.0.4"
+    "it-all": "^3.0.4",
+    "lmdb": "^3.4.3"
   },
   "devDependencies": {
     "@lodestar/logger": "^1.35.0"
