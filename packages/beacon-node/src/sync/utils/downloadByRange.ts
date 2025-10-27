@@ -777,7 +777,7 @@ export async function validateColumnsByRangeResponse(
 
   const validatedColumns = await Promise.all(validationPromises);
   return {
-    result: validatedColumns.flat(),
+    result: validatedColumns,
     warnings: warnings.length ? warnings : null,
   };
 }
