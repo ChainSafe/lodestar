@@ -48,7 +48,7 @@ export async function* onDataColumnSidecarsByRoot(
         peer: prettyPrintPeerId(peerId),
         client: peerClient,
       });
-      return;
+      continue;
     }
 
     const requestedEpoch = computeEpochAtSlot(slot);
