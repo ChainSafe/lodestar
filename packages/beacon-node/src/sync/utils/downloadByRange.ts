@@ -677,6 +677,7 @@ export async function validateColumnsByRangeResponse(
 
   for (const {blockRoot, block} of blocks) {
     const slot = block.message.slot;
+    const rootHex = toRootHex(blockRoot);
     const forkName = config.getForkName(slot);
     const columnSidecarsMap: Map<number, fulu.DataColumnSidecar> = seenColumns.get(slot) ?? new Map();
     const columnSidecars = Array.from(columnSidecarsMap.values()).sort((a, b) => a.index - b.index);
@@ -714,7 +715,7 @@ export async function validateColumnsByRangeResponse(
         new DownloadByRangeError({
           code: DownloadByRangeErrorCode.MISSING_COLUMNS,
           slot,
-          blockRoot: toRootHex(blockRoot),
+          blockRoot: rootHex,
           missingIndices: prettyPrintIndices(request.columns),
         })
       );
@@ -729,7 +730,7 @@ export async function validateColumnsByRangeResponse(
         {
           code: DownloadByRangeErrorCode.EXTRA_COLUMNS,
           slot,
-          blockRoot: toRootHex(blockRoot),
+          blockRoot: rootHex,
           invalidIndices: prettyPrintIndices(returnedColumns),
         },
         "Block has no blob commitments but data column sidecars were provided"
@@ -743,7 +744,7 @@ export async function validateColumnsByRangeResponse(
           {
             code: DownloadByRangeErrorCode.MISSING_COLUMNS,
             slot,
-            blockRoot: toRootHex(blockRoot),
+            blockRoot: rootHex,
             missingIndices: prettyPrintIndices(missingIndices),
           },
           "Missing data columns in DataColumnSidecarsByRange response"
@@ -758,7 +759,7 @@ export async function validateColumnsByRangeResponse(
           {
             code: DownloadByRangeErrorCode.EXTRA_COLUMNS,
             slot,
-            blockRoot: toRootHex(blockRoot),
+            blockRoot: rootHex,
             invalidIndices: prettyPrintIndices(extraIndices),
           },
           "Data column in not in requested columns in DataColumnSidecarsByRange response"
