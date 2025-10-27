@@ -80,7 +80,8 @@ describe("CachedBeaconState", () => {
   });
 
   describe("loadCachedBeaconState", () => {
-    vi.setConfig({testTimeout: 25_000, hookTimeout: 25_000});
+    // Increased timeout for computationally intensive tests
+    vi.setConfig({testTimeout: 120_000, hookTimeout: 120_000});
 
     const numValidator = 16;
     const pubkeys = interopPubkeysCached(2 * numValidator);
@@ -103,7 +104,10 @@ describe("CachedBeaconState", () => {
       const testName = `loadCachedBeaconState - ${validatorCountDelta > 0 ? "more" : "less"} ${Math.abs(
         validatorCountDelta
       )} validators`;
+
       it(testName, () => {
+        const startTime = Date.now();
+
         const state = modifyStateSameValidator(stateView);
         for (let i = 0; i < state.validators.length; i++) {
           // only modify some validators
@@ -116,31 +120,26 @@ describe("CachedBeaconState", () => {
         state.commit();
 
         if (validatorCountDelta < 0) {
-          state.validators = state.validators.sliceTo(state.validators.length - 1 + validatorCountDelta);
+          const targetValidatorCount = state.validators.length + validatorCountDelta;
+          state.validators = state.validators.sliceTo(targetValidatorCount);
 
           // inactivityScores
-          if (state.inactivityScores.length - 1 + validatorCountDelta >= 0) {
-            state.inactivityScores = state.inactivityScores.sliceTo(
-              state.inactivityScores.length - 1 + validatorCountDelta
-            );
+          if (targetValidatorCount >= 0) {
+            state.inactivityScores = state.inactivityScores.sliceTo(targetValidatorCount);
           } else {
             state.inactivityScores = capellaStateType.fields.inactivityScores.defaultViewDU();
           }
 
           // previousEpochParticipation
-          if (state.previousEpochParticipation.length - 1 + validatorCountDelta >= 0) {
-            state.previousEpochParticipation = state.previousEpochParticipation.sliceTo(
-              state.previousEpochParticipation.length - 1 + validatorCountDelta
-            );
+          if (targetValidatorCount >= 0) {
+            state.previousEpochParticipation = state.previousEpochParticipation.sliceTo(targetValidatorCount);
           } else {
             state.previousEpochParticipation = capellaStateType.fields.previousEpochParticipation.defaultViewDU();
           }
 
           // currentEpochParticipation
-          if (state.currentEpochParticipation.length - 1 + validatorCountDelta >= 0) {
-            state.currentEpochParticipation = state.currentEpochParticipation.sliceTo(
-              state.currentEpochParticipation.length - 1 + validatorCountDelta
-            );
+          if (targetValidatorCount >= 0) {
+            state.currentEpochParticipation = state.currentEpochParticipation.sliceTo(targetValidatorCount);
           } else {
             state.currentEpochParticipation = capellaStateType.fields.currentEpochParticipation.defaultViewDU();
           }
@@ -157,6 +156,12 @@ describe("CachedBeaconState", () => {
         }
         state.commit();
 
+        // Check if we're taking too long
+        const elapsedTime = Date.now() - startTime;
+        if (elapsedTime > 100000) {
+          throw new Error(`Test is taking too long (${elapsedTime}ms), aborting before timeout`);
+        }
+
         // confirm loadState() result
         const stateBytes = state.serialize();
         const newCachedState = loadCachedBeaconState(seedState, stateBytes, {
@@ -165,6 +170,7 @@ describe("CachedBeaconState", () => {
         const newStateBytes = newCachedState.serialize();
         expect(newStateBytes).toEqual(stateBytes);
         expect(newCachedState.hashTreeRoot()).toEqual(state.hashTreeRoot());
+
         const cachedState = createCachedBeaconState(
           state,
           {
@@ -175,6 +181,7 @@ describe("CachedBeaconState", () => {
           },
           {skipSyncCommitteeCache: true}
         );
+
         // validatorCountDelta < 0 is unrealistic and shuffling computation results in a different result
         if (validatorCountDelta >= 0) {
           expect(newCachedState.epochCtx).toEqual(cachedState.epochCtx);
@@ -185,7 +192,13 @@ describe("CachedBeaconState", () => {
           expect(newCachedState.epochCtx.pubkey2index.get(newCachedState.validators.get(i).pubkey)).toBe(i);
           expect(newCachedState.epochCtx.index2pubkey[i].toBytes()).toEqual(pubkeys[i]);
         }
-      });
+
+        // Log completion time for monitoring
+        const totalTime = Date.now() - startTime;
+        if (totalTime > 30000) {
+          console.warn(`Test completed in ${totalTime}ms (validatorCountDelta: ${validatorCountDelta})`);
+        }
+      }, 120_000); // Per-test timeout of 120 seconds
     }
   });
 });

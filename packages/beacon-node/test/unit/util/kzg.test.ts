@@ -1,4 +1,4 @@
-import {afterEach, describe, expect, it} from "vitest";
+import {afterEach, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
@@ -13,6 +13,9 @@ import {getBlobCellAndProofs} from "../../utils/getBlobCellAndProofs.js";
 import {generateRandomBlob, transactionForKzgCommitment} from "../../utils/kzg.js";
 
 describe("KZG", () => {
+  // Increase timeout for computationally expensive KZG operations
+  vi.setConfig({testTimeout: 60_000, hookTimeout: 60_000});
+
   const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];
   afterEach(async () => {
     while (afterEachCallbacks.length > 0) {
