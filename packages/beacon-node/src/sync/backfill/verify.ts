@@ -14,39 +14,19 @@ export type BackfillBlock = BackfillBlockHeader & {block: SignedBeaconBlock};
 
 export function verifyBlockSequence(
   config: BeaconConfig,
-  blocks: WithBytes<SignedBeaconBlock>[], // 12850304 to 12850273
+  blocks: WithBytes<SignedBeaconBlock>[],
   anchorRoot: Root
 ): {
   nextAnchor: BackfillBlock | null;
   verifiedBlocks: WithBytes<SignedBeaconBlock>[];
   error?: BackfillSyncErrorCode.NOT_LINEAR;
 } {
-  let nextRoot: Root = anchorRoot; // slot: 12850304
+  let nextRoot: Root = anchorRoot;
   let nextAnchor: BackfillBlock | null = null;
 
   const verifiedBlocks: WithBytes<SignedBeaconBlock>[] = [];
-  let iteration = 0;
   for (const block of blocks.reverse()) {
-    // 12850304 to 12850273
-    // 12850273 to 12850304
-    iteration++;
     const blockRoot = config.getForkTypes(block.data.message.slot).BeaconBlock.hashTreeRoot(block.data.message);
-    // biome-ignore lint/suspicious/noConsole: testing
-    console.log(
-      "Iteration: ",
-      iteration,
-      "\nblockSlot:",
-      block.data.message.slot,
-      "\nblockRoot: ",
-      blockRoot,
-      blockRoot.buffer,
-      "\nnextRoot: ",
-      nextRoot,
-      nextRoot.buffer,
-      "\nanchorRoot: ",
-      anchorRoot,
-      anchorRoot.buffer
-    );
     if (!ssz.Root.equals(blockRoot, nextRoot)) {
       if (ssz.Root.equals(nextRoot, anchorRoot)) {
         throw new BackfillSyncError({code: BackfillSyncErrorCode.NOT_ANCHORED});
