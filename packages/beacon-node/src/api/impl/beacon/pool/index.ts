@@ -192,10 +192,18 @@ export function getBeaconPoolApi({
     },
 
     async submitPoolVoluntaryExit({signedVoluntaryExit}) {
+      // Validate the voluntary exit
       await validateApiVoluntaryExit(chain, signedVoluntaryExit);
+      // Insert into the operation pool
+      // The opPool will handle validation and delayed broadcasting
       chain.opPool.insertVoluntaryExit(signedVoluntaryExit);
+      // Emit event immediately so monitoring/logging can track it
       chain.emitter.emit(routes.events.EventType.voluntaryExit, signedVoluntaryExit);
-      await network.publishVoluntaryExit(signedVoluntaryExit);
+      // Note: Network publishing is now handled by the opPool when conditions are met
+      // instead of publishing immediately here
+      logger.info("Voluntary exit accepted and added to pool", {
+        validatorIndex: signedVoluntaryExit.message.validatorIndex,
+      });
     },
 
     async submitPoolBLSToExecutionChange({blsToExecutionChanges}) {
