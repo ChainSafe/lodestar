@@ -691,7 +691,7 @@ function parseGasLimit(gasLimitInput: string | number): number {
   if ((typeof gasLimitInput !== "string" && typeof gasLimitInput !== "number") || `${gasLimitInput}`.trim() === "") {
     throw Error("Not valid Gas Limit");
   }
-  const gasLimit = typeof gasLimitInput === "string" ? parseInt(gasLimitInput, 10) : gasLimitInput;;
+  const gasLimit = typeof gasLimitInput === "string" ? parseInt(gasLimitInput, 10) : gasLimitInput;
   if (Number.isNaN(gasLimit) || gasLimit === 0) {
     throw Error(`Gas Limit is not valid gasLimit=${gasLimit}`);
   }
