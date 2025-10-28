@@ -63,7 +63,8 @@ export const DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY = 3;
 /**
  * By default we don't prune any persistent checkpoint states as it's not safe to delete them during
  * long non-finality as we don't know the state of the chain and there could be a deep (hundreds of epochs) reorg
- * if there two competing chains with similar weight.
+ * if there two competing chains with similar weight but we wouldn't have a close enough state to pivot to this chain
+ * and instead require a resync from last finalized checkpoint state which could be very far in the past.
  */
 export const DEFAULT_MAX_CP_STATE_ON_DISK = Infinity;
 
