@@ -7,7 +7,7 @@ import {RootHex, ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {TestRunnerFn} from "../../utils/types.js";
 
-// https://github.com/ethereum/consensus-specs/blob/da3f5af919be4abb5a6db5a80b235deb8b4b5cba/tests/formats/light_client/single_merkle_proof.md
+// https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.6/tests/formats/light_client/single_merkle_proof.md
 type SingleMerkleProofTestCase = {
   meta?: any;
   object: TreeViewDU<any>;
