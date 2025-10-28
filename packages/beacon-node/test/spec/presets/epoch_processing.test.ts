@@ -54,8 +54,7 @@ const epochTransitionFns: Record<string, EpochTransitionFn> = {
 };
 
 /**
- * Reference : ReadMe.md
- * https://github.com/ethereum/consensus-specs/blob/e660623d12f8a99d39c5341a2848202974fa1848/tests/formats/epoch_processing/README.md
+ * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.6/tests/formats/epoch_processing/README.md
  */
 type EpochTransitionCacheingTestCase = {
   meta?: {bls_setting?: bigint};
@@ -87,8 +86,7 @@ const epochProcessing =
 
         if (testcase.post === undefined) {
           // If post.ssz_snappy is not value, the sub-transition processing is aborted
-          // Reference : postssz_snappy
-          // https://github.com/ethereum/consensus-specs/blob/e660623d12f8a99d39c5341a2848202974fa1848/tests/formats/epoch_processing/README.md#postssz_snappy
+          // https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.6/tests/formats/epoch_processing/README.md#postssz_snappy
           expect(() => epochTransitionFn(state, epochTransitionCache)).toThrow();
         } else {
           epochTransitionFn(state, epochTransitionCache);
@@ -124,7 +122,7 @@ specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIV
       // TODO: invalid_large_withdrawable_epoch asserts an overflow on a u64 for its exit epoch.
       // Currently unable to reproduce in Lodestar, skipping for now
       // Reference : L349
-      // https://github.com/ethereum/consensus-specs/blob/bbc3ec02ff4154b08ccddf275d6ef51571da5ded/tests/core/pyspec/eth2spec/test/phase0/epoch_processing/test_process_registry_updates.py#L349
+      // https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.6/tests/core/pyspec/eth2spec/test/phase0/epoch_processing/test_process_registry_updates.py#L349
       "invalid_large_withdrawable_epoch",
     ]),
   },
