@@ -2,8 +2,8 @@ import {PresetName} from "@lodestar/params";
 import {fromHex as b} from "@lodestar/utils";
 import {ChainConfig} from "../types.js";
 
-// Minimal config
-// https://github.com/ethereum/consensus-specs/blob/a58c80d3a76ed7b0c1b4f318647675268f3d1abf/configs/minimal.yaml
+
+// https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.6/configs/minimal.yaml
 
 export const chainConfig: ChainConfig = {
   // Extends the minimal preset

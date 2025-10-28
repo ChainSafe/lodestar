@@ -20,8 +20,8 @@ import {RunnerType} from "../utils/types.js";
 //       | value.yaml
 //
 // 
-// Reference : core
-// Docs: https://github.com/ethereum/consensus-specs/blob/e660623d12f8a99d39c5341a2848202974fa1848/tests/formats/ssz_static/core.md
+// 
+// Docs: https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.6/tests/formats/ssz_static/core.md
 
 type Types = Record<string, Type<any>>;
 

@@ -2,8 +2,8 @@ import {PresetName} from "@lodestar/params";
 import {fromHex as b} from "@lodestar/utils";
 import {ChainConfig} from "../types.js";
 
-// Mainnet config
-// https://github.com/ethereum/consensus-specs/blob/a58c80d3a76ed7b0c1b4f318647675268f3d1abf/configs/mainnet.yaml
+
+// https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.6/configs/mainnet.yaml
 
 export const chainConfig: ChainConfig = {
   // Extends the mainnet preset
