@@ -205,6 +205,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
     const batchBlocks = batch.getBlocks();
     const {result, warnings} = await downloadByRange({
       config: this.config,
+      chain: this.chain,
       network: this.network,
       logger: this.logger,
       peerIdStr: peer.peerId,

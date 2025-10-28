@@ -273,6 +273,7 @@ export function verifyDataColumnSidecarInclusionProof(dataColumnSidecar: fulu.Da
  * Requires the block to be known to the node
  */
 export async function validateBlockDataColumnSidecars(
+  chain: IBeaconChain,
   blockSlot: Slot,
   blockRoot: Root,
   blockBlobCount: number,
@@ -294,7 +295,8 @@ export async function validateBlockDataColumnSidecars(
     );
   }
   // Hash the first sidecar block header and compare the rest via (cheaper) equality
-  const firstSidecarBlockHeader = dataColumnSidecars[0].signedBlockHeader.message;
+  const firstSidecarSignedBlockHeader = dataColumnSidecars[0].signedBlockHeader;
+  const firstSidecarBlockHeader = firstSidecarSignedBlockHeader.message;
   const firstBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(firstSidecarBlockHeader);
   if (Buffer.compare(blockRoot, firstBlockRoot) !== 0) {
     throw new DataColumnSidecarValidationError(
@@ -309,6 +311,39 @@ export async function validateBlockDataColumnSidecars(
     );
   }
 
+  const parentRootHex = toRootHex(firstSidecarBlockHeader.parentRoot);
+  const blockState = await chain.regen
+    .getBlockSlotState(
+      parentRootHex,
+      firstSidecarBlockHeader.slot,
+      {dontTransferCache: true},
+      RegenCaller.validateReqRespDataColumn
+    )
+    .catch(() => {
+      throw new DataColumnSidecarValidationError({
+        code: DataColumnSidecarErrorCode.PARENT_UNKNOWN,
+        slot: blockSlot,
+        blockRoot: toRootHex(blockRoot),
+        parentRoot: parentRootHex,
+      });
+    });
+
+  const signatureSet = getBlockHeaderProposerSignatureSet(blockState, firstSidecarSignedBlockHeader);
+  if (
+    !(await chain.bls.verifySignatureSets([signatureSet], {
+      batchable: true,
+      priority: false,
+      verifyOnMainThread: false,
+    }))
+  ) {
+    throw new DataColumnSidecarValidationError({
+      code: DataColumnSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID,
+      blockRoot: toRootHex(blockRoot),
+      slot: blockSlot,
+      index: dataColumnSidecars[0].index,
+    });
+  }
+
   const commitments: Uint8Array[] = [];
   const cellIndices: number[] = [];
   const cells: Uint8Array[] = [];
@@ -316,7 +351,7 @@ export async function validateBlockDataColumnSidecars(
   for (let i = 0; i < dataColumnSidecars.length; i++) {
     const columnSidecar = dataColumnSidecars[i];
 
-    if (!ssz.phase0.BeaconBlockHeader.equals(firstSidecarBlockHeader, columnSidecar.signedBlockHeader.message)) {
+    if (!ssz.phase0.SignedBeaconBlockHeader.equals(firstSidecarSignedBlockHeader, columnSidecar.signedBlockHeader)) {
       throw new DataColumnSidecarValidationError({
         code: DataColumnSidecarErrorCode.INCORRECT_HEADER_ROOT,
         slot: blockSlot,

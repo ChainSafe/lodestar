@@ -16,6 +16,7 @@ import {
   isBlockInputBlobs,
   isBlockInputColumns,
 } from "../../chain/blocks/blockInput/index.js";
+import {IBeaconChain} from "../../chain/interface.ts";
 import {SeenBlockInput} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {validateBlockBlobSidecars} from "../../chain/validation/blobSidecar.js";
 import {validateBlockDataColumnSidecars} from "../../chain/validation/dataColumnSidecar.js";
@@ -37,7 +38,7 @@ export type DownloadByRangeResponses = {
 
 export type DownloadAndCacheByRangeProps = DownloadByRangeRequests & {
   config: ChainForkConfig;
-  cache: SeenBlockInput;
+  chain: IBeaconChain;
   network: INetwork;
   logger: Logger;
   peerIdStr: string;
@@ -197,13 +198,14 @@ export function cacheByRangeResponses({
 
 export async function downloadByRange({
   config,
+  chain,
   network,
   peerIdStr,
   batchBlocks,
   blocksRequest,
   blobsRequest,
   columnsRequest,
-}: Omit<DownloadAndCacheByRangeProps, "cache">): Promise<WarnResult<ValidatedResponses, DownloadByRangeError>> {
+}: DownloadAndCacheByRangeProps): Promise<WarnResult<ValidatedResponses, DownloadByRangeError>> {
   let response: DownloadByRangeResponses;
   try {
     response = await requestByRange({
@@ -223,6 +225,7 @@ export async function downloadByRange({
 
   const validated = await validateResponses({
     config,
+    chain,
     batchBlocks,
     blocksRequest,
     blobsRequest,
@@ -290,6 +293,7 @@ export async function requestByRange({
  */
 export async function validateResponses({
   config,
+  chain,
   batchBlocks,
   blocksRequest,
   blobsRequest,
@@ -300,6 +304,7 @@ export async function validateResponses({
 }: DownloadByRangeRequests &
   DownloadByRangeResponses & {
     config: ChainForkConfig;
+    chain: IBeaconChain;
     batchBlocks?: IBlockInput[];
   }): Promise<WarnResult<ValidatedResponses, DownloadByRangeError>> {
   // Blocks are always required for blob/column validation
@@ -377,6 +382,7 @@ export async function validateResponses({
 
     const validatedColumnSidecarsResult = await validateColumnsByRangeResponse(
       config,
+      chain,
       columnsRequest,
       blocksForDataValidation,
       columnSidecars
@@ -609,6 +615,7 @@ export async function validateBlobsByRangeResponse(
  */
 export async function validateColumnsByRangeResponse(
   config: ChainForkConfig,
+  chain: IBeaconChain,
   request: fulu.DataColumnSidecarsByRangeRequest,
   blocks: ValidatedBlock[],
   columnSidecars: fulu.DataColumnSidecars
@@ -768,7 +775,7 @@ export async function validateColumnsByRangeResponse(
     }
 
     validationPromises.push(
-      validateBlockDataColumnSidecars(slot, blockRoot, blobCount, columnSidecars).then(() => ({
+      validateBlockDataColumnSidecars(chain, slot, blockRoot, blobCount, columnSidecars).then(() => ({
         blockRoot,
         columnSidecars,
       }))

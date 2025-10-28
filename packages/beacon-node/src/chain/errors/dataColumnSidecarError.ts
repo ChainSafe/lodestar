@@ -58,8 +58,18 @@ export type DataColumnSidecarErrorType =
   | {code: DataColumnSidecarErrorCode.ALREADY_KNOWN; columnIndex: number; slot: Slot}
   | {code: DataColumnSidecarErrorCode.FUTURE_SLOT; blockSlot: Slot; currentSlot: Slot}
   | {code: DataColumnSidecarErrorCode.WOULD_REVERT_FINALIZED_SLOT; blockSlot: Slot; finalizedSlot: Slot}
-  | {code: DataColumnSidecarErrorCode.PARENT_UNKNOWN; parentRoot: RootHex}
-  | {code: DataColumnSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID}
+  | {
+      code: DataColumnSidecarErrorCode.PARENT_UNKNOWN;
+      parentRoot: string;
+      slot?: Slot;
+      blockRoot?: string;
+    }
+  | {
+      code: DataColumnSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID;
+      slot?: Slot;
+      blockRoot?: string;
+      index?: number;
+    }
   | {code: DataColumnSidecarErrorCode.NOT_LATER_THAN_PARENT; parentSlot: Slot; slot: Slot}
   | {code: DataColumnSidecarErrorCode.INCLUSION_PROOF_INVALID; slot: Slot; columnIndex: number}
   | {code: DataColumnSidecarErrorCode.INVALID_KZG_PROOF; slot: Slot; columnIndex: number}
