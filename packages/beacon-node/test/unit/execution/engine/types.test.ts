@@ -17,9 +17,9 @@ describe("execution / engine / types", () => {
 
       // Assert 1-byte request_type prefix is set correctly
       expect(serialized.length).toBe(3);
-      expect(parseInt(serialized[0].substring(0, 2))).toBe(DEPOSIT_REQUEST_TYPE);
-      expect(parseInt(serialized[1].substring(0, 2))).toBe(WITHDRAWAL_REQUEST_TYPE);
-      expect(parseInt(serialized[2].substring(0, 2))).toBe(CONSOLIDATION_REQUEST_TYPE);
+      expect(parseInt(serialized[0].substring(0, 2), 16)).toBe(DEPOSIT_REQUEST_TYPE);
+      expect(parseInt(serialized[1].substring(0, 2), 16)).toBe(WITHDRAWAL_REQUEST_TYPE);
+      expect(parseInt(serialized[2].substring(0, 2), 16)).toBe(CONSOLIDATION_REQUEST_TYPE);
 
       // Assert execution requests can be deserialized
       expect(ssz.electra.DepositRequests.deserialize(fromHex(serialized[0].slice(2)))).toEqual(
