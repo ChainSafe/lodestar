@@ -193,7 +193,7 @@ describe("monitoring / service", () => {
     });
 
     it("should properly handle errors if remote service is unreachable", async () => {
-      const differentPort = parseInt(remoteServiceUrl.port) - 1;
+      const differentPort = parseInt(remoteServiceUrl.port, 10) - 1;
       const endpoint = `http://127.0.0.1:${differentPort}/`;
       service = new MonitoringService("beacon", {endpoint}, {register, logger});
 
