@@ -58,7 +58,7 @@ export type ReqRespBeaconNodeOpts = ReqRespOpts & {disableLightClientServer?: bo
  * For the spec that this code is based on, see:
  * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-reqresp-domain
  * Reference : the-reqresp-domain
- * https://github.com/ethereum/consensus-specs/blob/03c4ea240fccfa78469aa039a4a7177beca54074/specs/altair/light-client/p2p-interface.md#the-reqresp-domain
+ * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.6/specs/altair/light-client/p2p-interface.md#the-reqresp-domain
  */
 export class ReqRespBeaconNode extends ReqResp {
   private readonly metadataController: MetadataController;

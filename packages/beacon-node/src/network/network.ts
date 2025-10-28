@@ -692,7 +692,7 @@ export class Network implements INetwork {
       // messages SHOULD be broadcast after SYNC_MESSAGE_DUE_BPS of slot has transpired
       //Reference : Sync committee
 
-      // https://github.com/ethereum/consensus-specs/blob/03c4ea240fccfa78469aa039a4a7177beca54074/specs/altair/light-client/p2p-interface.md#sync-committee
+      // https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.6/specs/altair/light-client/p2p-interface.md#sync-committee
       await this.waitForSyncMessageCutoff(finalityUpdate.signatureSlot);
       await this.publishLightClientFinalityUpdate(finalityUpdate);
     } catch (e) {
@@ -709,7 +709,7 @@ export class Network implements INetwork {
 
     try {
       // messages SHOULD be broadcast after SYNC_MESSAGE_DUE_BPS of slot has transpired
-      // https://github.com/ethereum/consensus-specs/blob/03c4ea240fccfa78469aa039a4a7177beca54074/specs/altair/light-client/p2p-interface.md#sync-committee
+      // https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.6/specs/altair/light-client/p2p-interface.md#sync-committee
       await this.waitForSyncMessageCutoff(optimisticUpdate.signatureSlot);
       await this.publishLightClientOptimisticUpdate(optimisticUpdate);
     } catch (e) {
