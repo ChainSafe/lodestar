@@ -23,7 +23,7 @@ import {PeerSyncMeta} from "../../network/peers/peersData.js";
 import {ItTrigger} from "../../util/itTrigger.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {BackfillSyncError, BackfillSyncErrorCode} from "./errors.ts";
-import {BackfillBlock, BackfillBlockHeader, verifyBlockSequence} from "./verify.js";
+import {BackfillBlock, BackfillBlockHeader, verifyBlockProposerSignature, verifyBlockSequence} from "./verify.js";
 
 export type BackfillSyncModules = {
   chain: IBeaconChain;
@@ -453,8 +453,8 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
           const anchorParentRoot = this.syncAnchor.anchorBlockParentRoot;
           // Note that blocks in res are in reverse order
           const {nextAnchor, verifiedBlocks /* , error */} = verifyBlockSequence(this.config, res, anchorParentRoot);
-          if (!nextAnchor) throw Error("Didn't receive nextAnchor. Retry!");
           // Mark: F
+          if (!nextAnchor || verifiedBlocks?.length === 0) throw Error("Didn't receive nextAnchor. Retry!");
           this.logger.info("Verified Block Sequence", {
             nextAnchor: nextAnchor?.slot,
             verifiedBlocks: verifiedBlocks?.length,
@@ -467,6 +467,32 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
             // error: error,
           });
 
+          await verifyBlockProposerSignature(this.chain.bls, this.chain.getHeadState(), verifiedBlocks);
+          this.logger.info("Verified Block Proposer Signatures.");
+
+          // Mark: G
+          // Store in db: blockarchive in the format: KeyValue<Slot, SignedBeaconBlock>[]
+          try {
+            await this.db.blockArchive.batchPutBinary(
+              verifiedBlocks.map((block) => ({
+                key: block.data.message.slot,
+                value: block.bytes,
+                slot: block.data.message.slot,
+                blockRoot: this.config
+                  .getForkTypes(block.data.message.slot)
+                  .BeaconBlock.hashTreeRoot(block.data.message),
+                parentRoot: block.data.message.parentRoot,
+              }))
+            );
+          } catch (error) {
+            this.logger.error("Error storing backfill batch to db.", {
+              firstBlockSlot: verifiedBlocks[0].data.message.slot,
+              // biome-ignore lint/style/useAtIndex: this is correct
+              lastBlockSlot: verifiedBlocks[verifiedBlocks?.length - 1].data.message.slot,
+            });
+            throw error as Error;
+          }
+
           // Update lastBackSyncedBlock
           this.syncAnchor = {
             lastBackSyncedBlock: nextAnchor,
@@ -475,26 +501,6 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
             anchorBlockRoot: nextAnchor?.root,
             anchorSlot: nextAnchor?.slot,
           };
-          // Mark: G
-
-          // Store in db: blockarchive in the format: KeyValue<Slot, SignedBeaconBlock>[]
-          try {
-            this.db.blockArchive.batchPut(
-              verifiedBlocks.map((val) => {
-                return {
-                  key: val.data.message.slot,
-                  value: val.data,
-                };
-              })
-            );
-          } catch (error) {
-            this.logger.error("Error storing backfill batch to db.", {
-              firstBlockSlot: res[0].data.message.slot,
-              // biome-ignore lint/style/useAtIndex: this is correct
-              lastBlockSlot: res[res?.length - 1].data.message.slot,
-            });
-            throw error as Error;
-          }
 
           // Mark: H
           // Todo: update db singleton object: BackfillRange and BackfillState
