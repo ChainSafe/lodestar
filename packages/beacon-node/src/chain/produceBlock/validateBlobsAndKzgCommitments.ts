@@ -4,7 +4,7 @@ import {kzg} from "../../util/kzg.js";
 
 /**
  * Optionally sanity-check that the KZG commitments match the versioned hashes in the transactions
- * https://github.com/ethereum/consensus-specs/blob/11a037fd9227e29ee809c9397b09f8cc3383a8c0/specs/eip4844/validator.md#blob-kzg-commitments
+ * https://github.com/ethereum/consensus-specs/blob/v1.2.0/specs/eip4844/validator.md#blob-kzg-commitments
  */
 export async function validateBlobsAndKzgCommitments(
   commitments: deneb.KZGCommitment[],

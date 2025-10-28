@@ -1,7 +1,6 @@
 /**
  * For more info on some of these constants:
- * Reference : Configuration
- * https://github.com/ethereum/consensus-specs/blob/3f2d5ecda7c16187db9b1ad95820273be3ff2700/specs/phase0/p2p-interface.md#configuration
+ * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.6/specs/phase0/p2p-interface.md#configuration
  */
 
 // Gossip constants

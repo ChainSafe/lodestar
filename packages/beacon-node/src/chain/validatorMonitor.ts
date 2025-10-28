@@ -839,8 +839,8 @@ function renderAttestationSummary(
   summary: AttestationSummary | undefined,
   flags: ParticipationFlags
 ): string {
-  // Reference : get_attestation_participation_flag_indices
-  // https://github.com/ethereum/consensus-specs/blob/46306c4f8addef64defc2a52d85f46992ba2421b/specs/altair/beacon-chain.md#get_attestation_participation_flag_indices
+  
+  // https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.6/specs/altair/beacon-chain.md#get_attestation_participation_flag_indices
   //
   // is_matching_source = data.source == justified_checkpoint
   // is_matching_target = is_matching_source and data.target.root == get_block_root(state, data.target.epoch)
