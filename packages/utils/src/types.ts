@@ -1,3 +1,5 @@
+import { bigintToNumber } from "./bigint.ts";
+
 /**
  * Recursively make all properties optional
  */
@@ -26,7 +28,7 @@ export type RecursivePartial<T> =
 
 /** Type safe wrapper for Number constructor that takes 'any' */
 export function bnToNum(bn: bigint): number {
-  return Number(bn);
+  return bigintToNumber(bn);
 }
 
 export type NonEmptyArray<T> = [T, ...T[]];

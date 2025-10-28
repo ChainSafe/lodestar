@@ -6,7 +6,7 @@ import {
   MIN_ACTIVATION_BALANCE,
 } from "@lodestar/params";
 import {Epoch, ValidatorIndex, phase0} from "@lodestar/types";
-import {intDiv} from "@lodestar/utils";
+import {bigintToNumber, intDiv} from "@lodestar/utils";
 import {BeaconStateAllForks, CachedBeaconStateElectra, EpochCache} from "../types.js";
 import {hasCompoundingWithdrawalCredential} from "./electra.js";
 
@@ -98,7 +98,7 @@ export function getPendingBalanceToWithdraw(state: CachedBeaconStateElectra, val
   let total = 0;
   for (const item of state.pendingPartialWithdrawals.getAllReadonly()) {
     if (item.validatorIndex === validatorIndex) {
-      total += Number(item.amount);
+      total += bigintToNumber(item.amount);
     }
   }
   return total;

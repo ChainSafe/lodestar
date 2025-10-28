@@ -5,7 +5,7 @@ import {isForkPostAltair} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {computeSyncPeriodAtSlot} from "@lodestar/state-transition";
 import {RootHex, Slot, altair, phase0, ssz, sszTypesFor} from "@lodestar/types";
-import {fromHex, toHex} from "@lodestar/utils";
+import {bigintToNumber, fromHex, toHex} from "@lodestar/utils";
 import {testLogger} from "../../../utils/logger.js";
 import {TestRunnerFn} from "../../utils/types.js";
 
@@ -98,7 +98,7 @@ export const sync: TestRunnerFn<SyncTestCase, void> = (fork) => {
 
       function assertHeader(actualHeader: phase0.BeaconBlockHeader, expectedHeader: CheckHeader, msg: string): void {
         expect(toHeaderSummary(actualHeader)).deep.equals(
-          {root: expectedHeader.beacon_root, slot: Number(expectedHeader.slot as bigint)},
+          {root: expectedHeader.beacon_root, slot: bigintToNumber(expectedHeader.slot as bigint)},
           msg
         );
       }
@@ -119,7 +119,7 @@ export const sync: TestRunnerFn<SyncTestCase, void> = (fork) => {
       for (const [i, step] of testcase.steps.entries()) {
         try {
           if (isProcessUpdateStep(step)) {
-            const currentSlot = Number(step.process_update.current_slot as bigint);
+            const currentSlot = bigintToNumber(step.process_update.current_slot as bigint);
             logger.debug(`Step ${i}/${stepsLen} process_update`, renderSlot(currentSlot));
 
             const updateBytes = testcase.updates.get(step.process_update.update);
@@ -127,7 +127,7 @@ export const sync: TestRunnerFn<SyncTestCase, void> = (fork) => {
               throw Error(`update ${step.process_update.update} not found`);
             }
 
-            const headerSlot = Number(step.process_update.checks.optimistic_header.slot);
+            const headerSlot = bigintToNumber(step.process_update.checks.optimistic_header.slot);
             const update = config.getPostAltairForkTypes(headerSlot).LightClientUpdate.deserialize(updateBytes);
 
             logger.debug(`LightclientUpdateSummary: ${JSON.stringify(toLightClientUpdateSummary(update))}`);
@@ -138,7 +138,7 @@ export const sync: TestRunnerFn<SyncTestCase, void> = (fork) => {
 
           // force_update step
           else if (isForceUpdateStep(step)) {
-            const currentSlot = Number(step.force_update.current_slot as bigint);
+            const currentSlot = bigintToNumber(step.force_update.current_slot as bigint);
             logger.debug(`Step ${i}/${stepsLen} force_update`, renderSlot(currentSlot));
 
             // Simulate force_update()
@@ -201,7 +201,7 @@ function pickConfigForkEpochs(config: Partial<ChainConfig>): Partial<ChainConfig
       if (typeof value === "bigint" && value > BigInt(Number.MAX_SAFE_INTEGER)) {
         configOnlyFork[key] = Infinity;
       } else {
-        configOnlyFork[key] = Number(value);
+        configOnlyFork[key] = typeof value === "bigint" ? bigintToNumber(value) : Number(value);
       }
     }
   }

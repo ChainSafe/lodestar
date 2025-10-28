@@ -5,7 +5,7 @@ import {config as chainConfig} from "@lodestar/config/default";
 import {DOMAIN_BEACON_ATTESTER, MAX_VALIDATORS_PER_COMMITTEE} from "@lodestar/params";
 import {computeSigningRoot} from "@lodestar/state-transition";
 import {AttesterSlashing, phase0, ssz} from "@lodestar/types";
-import {CliCommand, toPubkeyHex} from "@lodestar/utils";
+import {CliCommand,bigintToNumber, toPubkeyHex} from "@lodestar/utils";
 import {SecretKeysArgs, deriveSecretKeys, secretKeysOptions} from "../util/deriveSecretKeys.js";
 
 type SelfSlashArgs = SecretKeysArgs & {
@@ -141,7 +141,7 @@ function signAttestationDataBigint(
   sks: SecretKey[],
   data: phase0.AttestationDataBigint
 ): Uint8Array {
-  const slot = Number(data.slot as bigint);
+  const slot = bigintToNumber(data.slot as bigint);
   const proposerDomain = config.getDomain(slot, DOMAIN_BEACON_ATTESTER);
   const signingRoot = computeSigningRoot(ssz.phase0.AttestationDataBigint, data, proposerDomain);
 

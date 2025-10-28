@@ -5,7 +5,7 @@ import {config as chainConfig} from "@lodestar/config/default";
 import {DOMAIN_BEACON_PROPOSER} from "@lodestar/params";
 import {computeSigningRoot} from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
-import {CliCommand, toPubkeyHex} from "@lodestar/utils";
+import {CliCommand,bigintToNumber, toPubkeyHex} from "@lodestar/utils";
 import {SecretKeysArgs, deriveSecretKeys, secretKeysOptions} from "../util/deriveSecretKeys.js";
 
 type SelfSlashArgs = SecretKeysArgs & {
@@ -131,7 +131,7 @@ export async function selfSlashProposerHandler(args: SelfSlashArgs): Promise<voi
 }
 
 function signHeaderBigint(config: BeaconConfig, sk: SecretKey, header: phase0.BeaconBlockHeaderBigint): Uint8Array {
-  const slot = Number(header.slot as bigint);
+  const slot = bigintToNumber(header.slot as bigint);
   const proposerDomain = config.getDomain(slot, DOMAIN_BEACON_PROPOSER);
   const signingRoot = computeSigningRoot(ssz.phase0.BeaconBlockHeaderBigint, header, proposerDomain);
   return sk.sign(signingRoot).toBytes();

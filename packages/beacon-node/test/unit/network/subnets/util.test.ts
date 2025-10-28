@@ -1,7 +1,7 @@
 import {describe, expect, it} from "vitest";
 import {config} from "@lodestar/config/default";
 import {ATTESTATION_SUBNET_PREFIX_BITS, NODE_ID_BITS} from "@lodestar/params";
-import {bigIntToBytes} from "@lodestar/utils";
+import {bigIntToBytes, bigintToNumber} from "@lodestar/utils";
 import {computeSubscribedSubnet, getNodeIdPrefix, getNodeOffset} from "../../../../src/network/subnets/util.js";
 
 const nodeIds: string[] = [
@@ -24,7 +24,7 @@ describe("getNodeIdPrefix", () => {
       // nodeId is of type uint256, which is 32 bytes
       const nodeIdBytes = bigIntToBytes(nodeIdBigInt, 32, "be");
       expect(getNodeIdPrefix(nodeIdBytes)).toBe(
-        Number(nodeIdBigInt >> BigInt(NODE_ID_BITS - ATTESTATION_SUBNET_PREFIX_BITS))
+        bigintToNumber(nodeIdBigInt >> BigInt(NODE_ID_BITS - ATTESTATION_SUBNET_PREFIX_BITS))
       );
     });
   }
@@ -36,7 +36,7 @@ describe("getNodeOffset", () => {
       const nodeIdBigInt = BigInt(nodeId);
       // nodeId is of type uint256, which is 32 bytes
       const nodeIdBytes = bigIntToBytes(nodeIdBigInt, 32, "be");
-      expect(getNodeOffset(nodeIdBytes)).toBe(Number(nodeIdBigInt % BigInt(256)));
+      expect(getNodeOffset(nodeIdBytes)).toBe(bigintToNumber(nodeIdBigInt % BigInt(256)));
     });
   }
 });

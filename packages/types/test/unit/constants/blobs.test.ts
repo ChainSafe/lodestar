@@ -1,6 +1,7 @@
 import {describe, expect, it} from "vitest";
 import * as constants from "@lodestar/params";
 import {ssz} from "../../../src/index.js";
+import {bigintToNumber} from "@lodestar/utils";
 
 // NOTE: This test is here and not in lodestar-params, to prevent lodestar-params depending on SSZ
 // Since lodestar-params and lodestar-types are in the same mono-repo, running this test here is enough
@@ -8,7 +9,7 @@ import {ssz} from "../../../src/index.js";
 
 describe(`${constants.ACTIVE_PRESET}/ blobs pre-computed constants`, () => {
   const BLOB_SIDECAR_FIXED_SIZE = ssz.deneb.BlobSidecars.elementType.fixedSize;
-  const KZG_COMMITMENT_GINDEX0 = Number(ssz.deneb.BeaconBlockBody.getPathInfo(["blobKzgCommitments", 0]).gindex);
+  const KZG_COMMITMENT_GINDEX0 = bigintToNumber(ssz.deneb.BeaconBlockBody.getPathInfo(["blobKzgCommitments", 0]).gindex);
   const KZG_COMMITMENT_SUBTREE_INDEX0 = KZG_COMMITMENT_GINDEX0 - 2 ** constants.KZG_COMMITMENT_INCLUSION_PROOF_DEPTH;
 
   const correctConstants = {

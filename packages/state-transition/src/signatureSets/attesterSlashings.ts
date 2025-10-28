@@ -2,6 +2,8 @@ import {DOMAIN_BEACON_ATTESTER} from "@lodestar/params";
 import {AttesterSlashing, IndexedAttestationBigint, SignedBeaconBlock, ssz} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "../types.js";
 import {ISignatureSet, SignatureSetType, computeSigningRoot, computeStartSlotAtEpoch} from "../util/index.js";
+import {bigintToNumber} from "@lodestar/utils";
+
 
 /** Get signature sets from all AttesterSlashing objects in a block */
 export function getAttesterSlashingsSignatureSets(
@@ -27,7 +29,7 @@ export function getIndexedAttestationBigintSignatureSet(
   state: CachedBeaconStateAllForks,
   indexedAttestation: IndexedAttestationBigint
 ): ISignatureSet {
-  const slot = computeStartSlotAtEpoch(Number(indexedAttestation.data.target.epoch as bigint));
+  const slot = computeStartSlotAtEpoch(bigintToNumber(indexedAttestation.data.target.epoch as bigint));
   const domain = state.config.getDomain(state.slot, DOMAIN_BEACON_ATTESTER, slot);
 
   return {

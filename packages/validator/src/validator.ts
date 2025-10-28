@@ -167,7 +167,7 @@ export class Validator {
     const {db, config: chainConfig, logger, slashingProtection, signers, valProposerConfig} = opts;
     const config = createBeaconConfig(chainConfig, genesis.genesisValidatorsRoot);
     const controller = opts.abortController;
-    const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime)});
+    const clock = new Clock(config, logger, {genesisTime: (genesis.genesisTime)});
     const loggerVc = getLoggerVc(logger, clock);
 
     let api: ApiClient;

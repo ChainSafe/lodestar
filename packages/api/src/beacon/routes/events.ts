@@ -23,6 +23,7 @@ import {EmptyMeta, EmptyResponseCodec, EmptyResponseData} from "../../utils/code
 import {getPostAltairForkTypes, getPostBellatrixForkTypes} from "../../utils/fork.js";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {VersionType} from "../../utils/metadata.js";
+import {bigintToNumber} from "@lodestar/utils";
 
 const stringType = new StringType();
 export const blobSidecarSSE = new ContainerType(
@@ -273,11 +274,11 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
     [EventType.proposerSlashing]: ssz.phase0.ProposerSlashing,
     [EventType.attesterSlashing]: {
       toJson: (attesterSlashing) => {
-        const fork = config.getForkName(Number(attesterSlashing.attestation1.data.slot));
+        const fork = config.getForkName(bigintToNumber(attesterSlashing.attestation1.data.slot));
         return sszTypesFor(fork).AttesterSlashing.toJson(attesterSlashing);
       },
       fromJson: (attesterSlashing) => {
-        const fork = config.getForkName(Number((attesterSlashing as AttesterSlashing).attestation1.data.slot));
+        const fork = config.getForkName(bigintToNumber((attesterSlashing as AttesterSlashing).attestation1.data.slot));
         return sszTypesFor(fork).AttesterSlashing.fromJson(attesterSlashing);
       },
     },

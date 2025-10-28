@@ -9,7 +9,7 @@ import {
   WEIGHT_DENOMINATOR,
 } from "@lodestar/params";
 import {altair} from "@lodestar/types";
-import {bigIntSqrt} from "@lodestar/utils";
+import {bigIntSqrt, bigintToNumber} from "@lodestar/utils";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
 import {BeaconStateAllForks} from "../types.js";
 import {getNextSyncCommitteeIndices} from "./seed.js";
@@ -48,7 +48,7 @@ export function getNextSyncCommittee(
 export function computeSyncParticipantReward(totalActiveBalanceIncrements: number): number {
   const totalActiveBalance = BigInt(totalActiveBalanceIncrements) * BigInt(EFFECTIVE_BALANCE_INCREMENT);
   const baseRewardPerIncrement = Math.floor(
-    (EFFECTIVE_BALANCE_INCREMENT * BASE_REWARD_FACTOR) / Number(bigIntSqrt(totalActiveBalance))
+    (EFFECTIVE_BALANCE_INCREMENT * BASE_REWARD_FACTOR) / bigintToNumber(bigIntSqrt(totalActiveBalance))
   );
   const totalBaseRewards = baseRewardPerIncrement * totalActiveBalanceIncrements;
   const maxParticipantRewards = Math.floor(
@@ -64,6 +64,6 @@ export function computeSyncParticipantReward(totalActiveBalanceIncrements: numbe
 export function computeBaseRewardPerIncrement(totalActiveStakeByIncrement: number): number {
   return Math.floor(
     (EFFECTIVE_BALANCE_INCREMENT * BASE_REWARD_FACTOR) /
-      Number(bigIntSqrt(BigInt(totalActiveStakeByIncrement) * BigInt(EFFECTIVE_BALANCE_INCREMENT)))
+      bigintToNumber(bigIntSqrt(BigInt(totalActiveStakeByIncrement) * BigInt(EFFECTIVE_BALANCE_INCREMENT)))
   );
 }

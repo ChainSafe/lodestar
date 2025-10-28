@@ -6,7 +6,7 @@ import {
   PENDING_PARTIAL_WITHDRAWALS_LIMIT,
 } from "@lodestar/params";
 import {electra, phase0, ssz} from "@lodestar/types";
-import {toHex} from "@lodestar/utils";
+import {toHex, bigintToNumber} from "@lodestar/utils";
 import {CachedBeaconStateElectra} from "../types.js";
 import {hasCompoundingWithdrawalCredential, hasExecutionWithdrawalCredential} from "../util/electra.js";
 import {computeExitEpochAndUpdateChurn} from "../util/epoch.js";
@@ -18,7 +18,7 @@ export function processWithdrawalRequest(
   state: CachedBeaconStateElectra,
   withdrawalRequest: electra.WithdrawalRequest
 ): void {
-  const amount = Number(withdrawalRequest.amount);
+  const amount = bigintToNumber(withdrawalRequest.amount);
   const {pendingPartialWithdrawals, validators, epochCtx} = state;
   // no need to use unfinalized pubkey cache from 6110 as validator won't be active anyway
   const {pubkey2index, config} = epochCtx;

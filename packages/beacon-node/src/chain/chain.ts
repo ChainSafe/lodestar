@@ -101,6 +101,7 @@ import {FIFOBlockStateCache} from "./stateCache/fifoBlockStateCache.js";
 import {InMemoryCheckpointStateCache} from "./stateCache/inMemoryCheckpointsCache.js";
 import {PersistentCheckpointStateCache} from "./stateCache/persistentCheckpointsCache.js";
 import {ValidatorMonitor} from "./validatorMonitor.js";
+import {bigintToNumber} from "@lodestar/utils"
 
 /**
  * The maximum number of cached produced results to keep in memory.
@@ -411,7 +412,7 @@ export class BeaconChain implements IBeaconChain {
     const anchorStateFork = this.config.getForkName(anchorState.slot);
     if (isForkPostElectra(anchorStateFork)) {
       const {eth1DepositIndex, depositRequestsStartIndex} = anchorState as BeaconStateElectra;
-      if (eth1DepositIndex === Number(depositRequestsStartIndex)) {
+      if (eth1DepositIndex === bigintToNumber(depositRequestsStartIndex)) {
         this.eth1.stopPollingEth1Data();
       }
     }

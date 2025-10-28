@@ -1,6 +1,7 @@
 import {describe, expect, it} from "vitest";
 import * as constants from "@lodestar/params";
 import {ssz} from "../../../src/index.js";
+import {bigintToNumber} from "@lodestar/utils";
 
 // NOTE: This test is here and not in lodestar-params, to prevent lodestar-params depending on SSZ
 // Since lodestar-params and lodestar-types are in the same mono-repo, running this test here is enough
@@ -37,5 +38,5 @@ function floorlog2(num: number): number {
 
 /** Type safe wrapper for Number constructor that takes 'any' */
 function bnToNum(bn: bigint): number {
-  return Number(bn);
+  return bigintToNumber(bn);
 }

@@ -50,6 +50,7 @@ import {
 } from "@lodestar/types";
 import {
   TimeoutError,
+  bigintToNumber,
   defer,
   formatWeiToEth,
   fromHex,
@@ -455,8 +456,8 @@ export function getValidatorApi(
 
       metrics?.blockProductionSuccess.inc({source});
       metrics?.blockProductionNumAggregated.observe({source}, block.body.attestations.length);
-      metrics?.blockProductionConsensusBlockValue.observe({source}, Number(formatWeiToEth(consensusBlockValue)));
-      metrics?.blockProductionExecutionPayloadValue.observe({source}, Number(formatWeiToEth(executionPayloadValue)));
+      metrics?.blockProductionConsensusBlockValue.observe({source}, bigintToNumber(consensusBlockValue));
+      metrics?.blockProductionExecutionPayloadValue.observe({source}, bigintToNumber(executionPayloadValue));
       logger.verbose("Produced blinded block", {
         slot,
         executionPayloadValue,
@@ -512,8 +513,8 @@ export function getValidatorApi(
 
       metrics?.blockProductionSuccess.inc({source});
       metrics?.blockProductionNumAggregated.observe({source}, block.body.attestations.length);
-      metrics?.blockProductionConsensusBlockValue.observe({source}, Number(formatWeiToEth(consensusBlockValue)));
-      metrics?.blockProductionExecutionPayloadValue.observe({source}, Number(formatWeiToEth(executionPayloadValue)));
+      metrics?.blockProductionConsensusBlockValue.observe({source}, bigintToNumber(consensusBlockValue));
+      metrics?.blockProductionExecutionPayloadValue.observe({source}, bigintToNumber(executionPayloadValue));
 
       const blockRoot = toRootHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block));
       logger.verbose("Produced execution block", {

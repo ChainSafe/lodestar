@@ -14,6 +14,7 @@ import {
 } from "../utils/codecs.js";
 import {Endpoint, RouteDefinitions, Schema} from "../utils/index.js";
 import {WireFormat} from "../utils/wireFormat.js";
+import { bigintToNumber } from "@lodestar/utils";
 
 export enum ImportStatus {
   /** Keystore successfully decrypted and imported to keymanager permanent storage */
@@ -691,7 +692,7 @@ function parseGasLimit(gasLimitInput: string | number): number {
   if ((typeof gasLimitInput !== "string" && typeof gasLimitInput !== "number") || `${gasLimitInput}`.trim() === "") {
     throw Error("Not valid Gas Limit");
   }
-  const gasLimit = Number(gasLimitInput);
+  const gasLimit = typeof gasLimitInput === "string" ? parseInt(gasLimitInput, 10) : gasLimitInput;;
   if (Number.isNaN(gasLimit) || gasLimit === 0) {
     throw Error(`Gas Limit is not valid gasLimit=${gasLimit}`);
   }
