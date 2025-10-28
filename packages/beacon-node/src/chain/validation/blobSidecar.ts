@@ -177,6 +177,7 @@ export async function validateGossipBlobSidecar(
  * Requires the block to be known to the node
  */
 export async function validateBlockBlobSidecars(
+  chain: IBeaconChain,
   blockSlot: Slot,
   blockRoot: Root,
   blockBlobCount: number,
@@ -196,7 +197,8 @@ export async function validateBlockBlobSidecars(
   }
 
   // Hash the first sidecar block header and compare the rest via (cheaper) equality
-  const firstSidecarBlockHeader = blobSidecars[0].signedBlockHeader.message;
+  const firstSidecarSignedBlockHeader = blobSidecars[0].signedBlockHeader;
+  const firstSidecarBlockHeader = firstSidecarSignedBlockHeader.message;
   const firstBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(firstSidecarBlockHeader);
   if (Buffer.compare(blockRoot, firstBlockRoot) !== 0) {
     throw new BlobSidecarValidationError(
@@ -209,6 +211,39 @@ export async function validateBlockBlobSidecars(
       },
       "BlobSidecar doesn't match corresponding block"
     );
+  }
+
+  const parentRootHex = toRootHex(firstSidecarBlockHeader.parentRoot);
+  const blockState = await chain.regen
+    .getBlockSlotState(
+      parentRootHex,
+      firstSidecarBlockHeader.slot,
+      {dontTransferCache: true},
+      RegenCaller.validateReqRespDataColumn
+    )
+    .catch(() => {
+      throw new BlobSidecarValidationError({
+        code: BlobSidecarErrorCode.PARENT_UNKNOWN,
+        parentRoot: parentRootHex,
+        slot: blockSlot,
+        blockRoot: toRootHex(blockRoot),
+      });
+    });
+
+  const signatureSet = getBlockHeaderProposerSignatureSet(blockState, firstSidecarSignedBlockHeader);
+  if (
+    !(await chain.bls.verifySignatureSets([signatureSet], {
+      batchable: true,
+      priority: false,
+      verifyOnMainThread: false,
+    }))
+  ) {
+    throw new BlobSidecarValidationError({
+      code: BlobSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID,
+      blockRoot: toRootHex(blockRoot),
+      slot: blockSlot,
+      index: blobSidecars[0].index,
+    });
   }
 
   const commitments = [];

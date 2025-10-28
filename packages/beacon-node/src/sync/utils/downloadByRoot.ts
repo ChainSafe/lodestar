@@ -241,6 +241,7 @@ export async function fetchByRoot({
       if (isBlockInputBlobs(cacheItem.blockInput)) {
         blobSidecars = await fetchAndValidateBlobs({
           config,
+          chain,
           network,
           peerIdStr,
           forkName: forkName as ForkPreFulu,
@@ -286,6 +287,7 @@ export async function fetchByRoot({
       const blobCount = commitments.length;
       blobSidecars = await fetchAndValidateBlobs({
         config,
+        chain,
         network,
         peerIdStr,
         forkName: forkName as ForkPreFulu,
@@ -337,12 +339,13 @@ export async function fetchAndValidateBlock({
 }
 
 export async function fetchAndValidateBlobs({
+  chain,
   network,
   peerIdStr,
   blockRoot,
   block,
   missing,
-}: Omit<FetchByRootAndValidateBlobsProps, "chain">): Promise<deneb.BlobSidecars> {
+}: FetchByRootAndValidateBlobsProps): Promise<deneb.BlobSidecars> {
   const blobSidecars: deneb.BlobSidecars = await fetchBlobsByRoot({
     network,
     peerIdStr,
@@ -350,7 +353,7 @@ export async function fetchAndValidateBlobs({
     missing,
   });
 
-  await validateBlockBlobSidecars(block.message.slot, blockRoot, missing.length, blobSidecars);
+  await validateBlockBlobSidecars(chain, block.message.slot, blockRoot, missing.length, blobSidecars);
 
   return blobSidecars;
 }

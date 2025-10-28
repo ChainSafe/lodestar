@@ -364,6 +364,7 @@ export async function validateResponses({
     }
 
     validatedResponses.validatedBlobSidecars = await validateBlobsByRangeResponse(
+      chain,
       blocksForDataValidation,
       blobSidecars
     );
@@ -507,6 +508,7 @@ export function validateBlockByRangeResponse(
  * This is used only in Deneb and Electra
  */
 export async function validateBlobsByRangeResponse(
+  chain: IBeaconChain,
   dataRequestBlocks: ValidatedBlock[],
   blobSidecars: deneb.BlobSidecars
 ): Promise<ValidatedBlobSidecars[]> {
@@ -561,9 +563,13 @@ export async function validateBlobsByRangeResponse(
     }
 
     validateSidecarsPromises.push(
-      validateBlockBlobSidecars(block.message.slot, blockRoot, blockKzgCommitments.length, blockBlobSidecars).then(
-        () => ({blockRoot, blobSidecars: blockBlobSidecars})
-      )
+      validateBlockBlobSidecars(
+        chain,
+        block.message.slot,
+        blockRoot,
+        blockKzgCommitments.length,
+        blockBlobSidecars
+      ).then(() => ({blockRoot, blobSidecars: blockBlobSidecars}))
     );
   }
 
