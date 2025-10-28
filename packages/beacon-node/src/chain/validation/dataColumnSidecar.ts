@@ -273,7 +273,7 @@ export function verifyDataColumnSidecarInclusionProof(dataColumnSidecar: fulu.Da
  * Requires the block to be known to the node
  */
 export async function validateBlockDataColumnSidecars(
-  chain: IBeaconChain,
+  chain: IBeaconChain | null,
   blockSlot: Slot,
   blockRoot: Root,
   blockBlobCount: number,
@@ -311,37 +311,39 @@ export async function validateBlockDataColumnSidecars(
     );
   }
 
-  const parentRootHex = toRootHex(firstSidecarBlockHeader.parentRoot);
-  const blockState = await chain.regen
-    .getBlockSlotState(
-      parentRootHex,
-      firstSidecarBlockHeader.slot,
-      {dontTransferCache: true},
-      RegenCaller.validateReqRespDataColumn
-    )
-    .catch(() => {
-      throw new DataColumnSidecarValidationError({
-        code: DataColumnSidecarErrorCode.PARENT_UNKNOWN,
-        slot: blockSlot,
-        blockRoot: toRootHex(blockRoot),
-        parentRoot: parentRootHex,
+  if (chain !== null) {
+    const parentRootHex = toRootHex(firstSidecarBlockHeader.parentRoot);
+    const blockState = await chain.regen
+      .getBlockSlotState(
+        parentRootHex,
+        firstSidecarBlockHeader.slot,
+        {dontTransferCache: true},
+        RegenCaller.validateReqRespDataColumn
+      )
+      .catch(() => {
+        throw new DataColumnSidecarValidationError({
+          code: DataColumnSidecarErrorCode.PARENT_UNKNOWN,
+          slot: blockSlot,
+          blockRoot: toRootHex(blockRoot),
+          parentRoot: parentRootHex,
+        });
       });
-    });
 
-  const signatureSet = getBlockHeaderProposerSignatureSet(blockState, firstSidecarSignedBlockHeader);
-  if (
-    !(await chain.bls.verifySignatureSets([signatureSet], {
-      batchable: true,
-      priority: false,
-      verifyOnMainThread: false,
-    }))
-  ) {
-    throw new DataColumnSidecarValidationError({
-      code: DataColumnSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID,
-      blockRoot: toRootHex(blockRoot),
-      slot: blockSlot,
-      index: dataColumnSidecars[0].index,
-    });
+    const signatureSet = getBlockHeaderProposerSignatureSet(blockState, firstSidecarSignedBlockHeader);
+    if (
+      !(await chain.bls.verifySignatureSets([signatureSet], {
+        batchable: true,
+        priority: false,
+        verifyOnMainThread: false,
+      }))
+    ) {
+      throw new DataColumnSidecarValidationError({
+        code: DataColumnSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID,
+        blockRoot: toRootHex(blockRoot),
+        slot: blockSlot,
+        index: dataColumnSidecars[0].index,
+      });
+    }
   }
 
   const commitments: Uint8Array[] = [];

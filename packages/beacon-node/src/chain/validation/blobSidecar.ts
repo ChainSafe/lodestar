@@ -175,9 +175,11 @@ export async function validateGossipBlobSidecar(
  * Validate some blob sidecars in a block
  *
  * Requires the block to be known to the node
+ *
+ * NOTE: chain is optional for testing purposes and will skip signature verification
  */
 export async function validateBlockBlobSidecars(
-  chain: IBeaconChain,
+  chain: IBeaconChain | null,
   blockSlot: Slot,
   blockRoot: Root,
   blockBlobCount: number,
@@ -213,37 +215,39 @@ export async function validateBlockBlobSidecars(
     );
   }
 
-  const parentRootHex = toRootHex(firstSidecarBlockHeader.parentRoot);
-  const blockState = await chain.regen
-    .getBlockSlotState(
-      parentRootHex,
-      firstSidecarBlockHeader.slot,
-      {dontTransferCache: true},
-      RegenCaller.validateReqRespDataColumn
-    )
-    .catch(() => {
-      throw new BlobSidecarValidationError({
-        code: BlobSidecarErrorCode.PARENT_UNKNOWN,
-        parentRoot: parentRootHex,
-        slot: blockSlot,
-        blockRoot: toRootHex(blockRoot),
+  if (chain !== null) {
+    const parentRootHex = toRootHex(firstSidecarBlockHeader.parentRoot);
+    const blockState = await chain.regen
+      .getBlockSlotState(
+        parentRootHex,
+        firstSidecarBlockHeader.slot,
+        {dontTransferCache: true},
+        RegenCaller.validateReqRespDataColumn
+      )
+      .catch(() => {
+        throw new BlobSidecarValidationError({
+          code: BlobSidecarErrorCode.PARENT_UNKNOWN,
+          parentRoot: parentRootHex,
+          slot: blockSlot,
+          blockRoot: toRootHex(blockRoot),
+        });
       });
-    });
 
-  const signatureSet = getBlockHeaderProposerSignatureSet(blockState, firstSidecarSignedBlockHeader);
-  if (
-    !(await chain.bls.verifySignatureSets([signatureSet], {
-      batchable: true,
-      priority: false,
-      verifyOnMainThread: false,
-    }))
-  ) {
-    throw new BlobSidecarValidationError({
-      code: BlobSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID,
-      blockRoot: toRootHex(blockRoot),
-      slot: blockSlot,
-      index: blobSidecars[0].index,
-    });
+    const signatureSet = getBlockHeaderProposerSignatureSet(blockState, firstSidecarSignedBlockHeader);
+    if (
+      !(await chain.bls.verifySignatureSets([signatureSet], {
+        batchable: true,
+        priority: false,
+        verifyOnMainThread: false,
+      }))
+    ) {
+      throw new BlobSidecarValidationError({
+        code: BlobSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID,
+        blockRoot: toRootHex(blockRoot),
+        slot: blockSlot,
+        index: blobSidecars[0].index,
+      });
+    }
   }
 
   const commitments = [];

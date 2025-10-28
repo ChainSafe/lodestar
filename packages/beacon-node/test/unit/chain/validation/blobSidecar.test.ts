@@ -11,6 +11,7 @@ describe("validateBlockBlobSidecars", () => {
   it("should validate correct blob sidecars", async () => {
     await expect(
       validateBlockBlobSidecars(
+        null,
         block.message.slot,
         blockRoot,
         block.message.body.blobKzgCommitments.length,
@@ -20,7 +21,7 @@ describe("validateBlockBlobSidecars", () => {
   });
 
   it("should error on no blobs in block", async () => {
-    await expect(validateBlockBlobSidecars(block.message.slot, blockRoot, 0, blobSidecars)).rejects.toThrow(
+    await expect(validateBlockBlobSidecars(null, block.message.slot, blockRoot, 0, blobSidecars)).rejects.toThrow(
       BlobSidecarValidationError
     );
   });
@@ -30,7 +31,7 @@ describe("validateBlockBlobSidecars", () => {
     invalidSidecar.signedBlockHeader.message.slot += 1; // invalid slot (will change the root)
 
     await expect(
-      validateBlockBlobSidecars(block.message.slot, blockRoot, block.message.body.blobKzgCommitments.length, [
+      validateBlockBlobSidecars(null, block.message.slot, blockRoot, block.message.body.blobKzgCommitments.length, [
         invalidSidecar,
       ])
     ).rejects.toThrow(BlobSidecarValidationError);
@@ -41,7 +42,7 @@ describe("validateBlockBlobSidecars", () => {
     invalidSidecar.index = block.message.body.blobKzgCommitments.length; // invalid index
 
     await expect(
-      validateBlockBlobSidecars(block.message.slot, blockRoot, block.message.body.blobKzgCommitments.length, [
+      validateBlockBlobSidecars(null, block.message.slot, blockRoot, block.message.body.blobKzgCommitments.length, [
         invalidSidecar,
       ])
     ).rejects.toThrow(BlobSidecarValidationError);
@@ -52,7 +53,7 @@ describe("validateBlockBlobSidecars", () => {
     invalidSidecar.kzgCommitment = invalidSidecar.kzgCommitment.map((b) => b ^ 1); // invalid commitment
 
     await expect(
-      validateBlockBlobSidecars(block.message.slot, blockRoot, block.message.body.blobKzgCommitments.length, [
+      validateBlockBlobSidecars(null, block.message.slot, blockRoot, block.message.body.blobKzgCommitments.length, [
         invalidSidecar,
       ])
     ).rejects.toThrow(BlobSidecarValidationError);
@@ -63,7 +64,7 @@ describe("validateBlockBlobSidecars", () => {
     invalidSidecar.kzgCommitmentInclusionProof[0][0] ^= 1; // invalid inclusion proof
 
     await expect(
-      validateBlockBlobSidecars(block.message.slot, blockRoot, block.message.body.blobKzgCommitments.length, [
+      validateBlockBlobSidecars(null, block.message.slot, blockRoot, block.message.body.blobKzgCommitments.length, [
         invalidSidecar,
       ])
     ).rejects.toThrow(BlobSidecarValidationError);
@@ -74,7 +75,7 @@ describe("validateBlockBlobSidecars", () => {
     invalidSidecar.kzgProof = invalidSidecar.kzgProof.map((b) => b ^ 1); // invalid proof
 
     await expect(
-      validateBlockBlobSidecars(block.message.slot, blockRoot, block.message.body.blobKzgCommitments.length, [
+      validateBlockBlobSidecars(null, block.message.slot, blockRoot, block.message.body.blobKzgCommitments.length, [
         invalidSidecar,
       ])
     ).rejects.toThrow(BlobSidecarValidationError);
