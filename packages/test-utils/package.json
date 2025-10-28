@@ -13,23 +13,15 @@
   "exports": {
     ".": {
       "bun": "./src/index.ts",
+      "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     },
     "./doubles": {
       "bun": "./src/doubles.ts",
+      "types": "./lib/doubles.d.ts",
       "import": "./lib/doubles.js"
     }
   },
-  "typesVersions": {
-    "*": {
-      "*": [
-        "*",
-        "lib/*",
-        "lib/*/index"
-      ]
-    }
-  },
-  "types": "lib/index.d.ts",
   "files": [
     "src",
     "lib",

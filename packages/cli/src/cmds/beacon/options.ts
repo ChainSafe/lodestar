@@ -10,6 +10,8 @@ type BeaconExtraArgs = {
   bootnodesFile?: string;
   checkpointSyncUrl?: string;
   checkpointState?: string;
+  unsafeCheckpointState?: string;
+  lastPersistedCheckpointState?: boolean;
   wssCheckpoint?: string;
   forceCheckpointSync?: boolean;
   ignoreWeakSubjectivityCheck?: boolean;
@@ -58,8 +60,22 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
   },
 
   checkpointState: {
-    description: "Set a checkpoint state to start syncing from",
+    description: "File path or url to finalized checkpoint state to start syncing from",
     type: "string",
+    group: "weak subjectivity",
+  },
+
+  unsafeCheckpointState: {
+    hidden: true,
+    description: "File path or url to unfinalized checkpoint state to start syncing from",
+    type: "string",
+    group: "weak subjectivity",
+  },
+
+  lastPersistedCheckpointState: {
+    hidden: true,
+    description: "Use the last safe persisted checkpoint state to start syncing from",
+    type: "boolean",
     group: "weak subjectivity",
   },
 

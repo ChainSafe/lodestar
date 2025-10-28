@@ -16,7 +16,15 @@
   "exports": {
     ".": {
       "bun": "./src/index.ts",
+      "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
+    }
+  },
+  "imports": {
+    "#bytes": {
+      "bun": "./src/bytes/bun.ts",
+      "browser": "./lib/bytes/browser.js",
+      "default": "./lib/bytes/nodejs.js"
     }
   },
   "files": [
@@ -40,6 +48,7 @@
   "types": "lib/index.d.ts",
   "dependencies": {
     "@chainsafe/as-sha256": "^1.2.0",
+    "@lodestar/bun": "git+https://github.com/ChainSafe/lodestar-bun.git",
     "any-signal": "^4.1.1",
     "bigint-buffer": "^1.1.5",
     "case": "^1.6.3",

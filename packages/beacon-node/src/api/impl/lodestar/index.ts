@@ -1,5 +1,3 @@
-import fs from "node:fs";
-import path from "node:path";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
@@ -8,13 +6,16 @@ import {Repository} from "@lodestar/db";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateCapella, getLatestWeakSubjectivityCheckpointEpoch, loadState} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {toHex, toRootHex} from "@lodestar/utils";
+import {Checkpoint} from "@lodestar/types/phase0";
+import {fromHex, toHex, toRootHex} from "@lodestar/utils";
 import {BeaconChain} from "../../../chain/index.js";
 import {QueuedStateRegenerator, RegenRequest} from "../../../chain/regen/index.js";
 import {IBeaconDb} from "../../../db/interface.js";
 import {GossipType} from "../../../network/index.js";
-import {profileNodeJS, writeHeapSnapshot} from "../../../util/profile.js";
+import {getStateSlotFromBytes} from "../../../util/multifork.js";
+import {ProfileThread, profileThread, writeHeapSnapshot} from "../../../util/profile.js";
 import {getStateResponseWithRegen} from "../beacon/state/utils.js";
+import {ApiError} from "../errors.js";
 import {ApiModules} from "../types.js";
 
 export function getLodestarApi({
@@ -26,7 +27,9 @@ export function getLodestarApi({
 }: Pick<ApiModules, "chain" | "config" | "db" | "network" | "sync">): ApplicationMethods<routes.lodestar.Endpoints> {
   let writingHeapdump = false;
   let writingProfile = false;
-  const defaultProfileMs = SLOTS_PER_EPOCH * config.SLOT_DURATION_MS;
+  // for NodeJS, profile the whole epoch
+  // for Bun, profile 1 slot. Otherwise it will either crash the app, and/or inspector cannot render the profile
+  const defaultProfileMs = globalThis.Bun ? config.SLOT_DURATION_MS : SLOTS_PER_EPOCH * config.SLOT_DURATION_MS;
 
   return {
     async writeHeapdump({thread = "main", dirpath = "."}) {
@@ -63,7 +66,6 @@ export function getLodestarApi({
 
       try {
         let filepath: string;
-        let profile: string;
         switch (thread) {
           case "network":
             filepath = await network.writeNetworkThreadProfile(duration, dirpath);
@@ -73,12 +75,10 @@ export function getLodestarApi({
             break;
           default:
             // main thread
-            profile = await profileNodeJS(duration);
-            filepath = path.join(dirpath, `main_thread_${new Date().toISOString()}.cpuprofile`);
-            fs.writeFileSync(filepath, profile);
+            filepath = await profileThread(ProfileThread.MAIN, duration, dirpath);
             break;
         }
-        return {data: {filepath}};
+        return {data: {result: filepath}};
       } finally {
         writingProfile = false;
       }
@@ -218,6 +218,26 @@ export function getLodestarApi({
         meta: {executionOptimistic, finalized, version: fork},
       };
     },
+
+    // the optional checkpoint is in root:epoch format
+    async getPersistedCheckpointState({checkpointId}) {
+      const checkpoint = checkpointId ? getCheckpointFromArg(checkpointId) : undefined;
+      const stateBytes = await chain.getPersistedCheckpointState(checkpoint);
+      if (stateBytes === null) {
+        throw new ApiError(
+          404,
+          checkpointId ? `Checkpoint state not found for id ${checkpointId}` : "Latest safe checkpoint state not found"
+        );
+      }
+
+      const slot = getStateSlotFromBytes(stateBytes);
+      return {
+        data: stateBytes,
+        meta: {
+          version: config.getForkName(slot),
+        },
+      };
+    },
   };
 }
 
@@ -245,6 +265,18 @@ function regenRequestToJson(config: ChainForkConfig, regenRequest: RegenRequest)
         root: regenRequest.args[0],
       };
   }
+}
+
+const CHECKPOINT_REGEX = /^(?:0x)?([0-9a-f]{64}):([0-9]+)$/;
+/**
+ * Extract a checkpoint from a string in the format `rootHex:epoch`.
+ */
+export function getCheckpointFromArg(checkpointStr: string): Checkpoint {
+  const match = CHECKPOINT_REGEX.exec(checkpointStr.toLowerCase());
+  if (!match) {
+    throw new ApiError(400, `Could not parse checkpoint string: ${checkpointStr}`);
+  }
+  return {root: fromHex(match[1]), epoch: parseInt(match[2])};
 }
 
 function stringifyKeys(keys: (Uint8Array | number | string)[]): string[] {

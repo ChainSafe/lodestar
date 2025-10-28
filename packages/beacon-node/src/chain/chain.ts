@@ -37,6 +37,7 @@ import {
   ValidatorIndex,
   Wei,
   isBlindedBeaconBlock,
+  phase0,
 } from "@lodestar/types";
 import {Logger, fromHex, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
@@ -95,11 +96,13 @@ import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {SeenBlockInput} from "./seenCache/seenGossipBlockInput.js";
 import {ShufflingCache} from "./shufflingCache.js";
 import {BlockStateCacheImpl} from "./stateCache/blockStateCacheImpl.js";
-import {DbCPStateDatastore} from "./stateCache/datastore/db.js";
+import {DbCPStateDatastore, checkpointToDatastoreKey} from "./stateCache/datastore/db.js";
 import {FileCPStateDatastore} from "./stateCache/datastore/file.js";
+import {CPStateDatastore} from "./stateCache/datastore/types.js";
 import {FIFOBlockStateCache} from "./stateCache/fifoBlockStateCache.js";
 import {InMemoryCheckpointStateCache} from "./stateCache/inMemoryCheckpointsCache.js";
 import {PersistentCheckpointStateCache} from "./stateCache/persistentCheckpointsCache.js";
+import {CheckpointStateCache} from "./stateCache/types.js";
 import {ValidatorMonitor} from "./validatorMonitor.js";
 import {bigintToNumber} from "@lodestar/utils"
 
@@ -182,6 +185,8 @@ export class BeaconChain implements IBeaconChain {
 
   protected readonly blockProcessor: BlockProcessor;
   protected readonly db: IBeaconDb;
+  // this is only available if nHistoricalStates is enabled
+  private readonly cpStateDatastore?: CPStateDatastore;
   private abortController = new AbortController();
   private processShutdownCallback: ProcessShutdownCallback;
   private _earliestAvailableSlot: Slot;
@@ -211,6 +216,7 @@ export class BeaconChain implements IBeaconChain {
       metrics,
       validatorMonitor,
       anchorState,
+      isAnchorStateFinalized,
       eth1,
       executionEngine,
       executionBuilder,
@@ -227,6 +233,7 @@ export class BeaconChain implements IBeaconChain {
       metrics: Metrics | null;
       validatorMonitor: ValidatorMonitor | null;
       anchorState: BeaconStateAllForks;
+      isAnchorStateFinalized: boolean;
       eth1: IEth1ForBlockProduction;
       executionEngine: IExecutionEngine;
       executionBuilder?: IExecutionBuilder;
@@ -265,8 +272,7 @@ export class BeaconChain implements IBeaconChain {
     this.seenAttestationDatas = new SeenAttestationDatas(metrics, this.opts?.attDataCacheSlotDistance);
 
     const nodeId = computeNodeIdFromPrivateKey(privateKey);
-    const initialCustodyGroupCount =
-      opts.initialCustodyGroupCount ?? (opts.supernode ? config.NUMBER_OF_CUSTODY_GROUPS : config.CUSTODY_REQUIREMENT);
+    const initialCustodyGroupCount = opts.initialCustodyGroupCount ?? config.CUSTODY_REQUIREMENT;
     this.metrics?.peerDas.targetCustodyGroupCount.set(initialCustodyGroupCount);
     this.custodyConfig = new CustodyConfig({
       nodeId,
@@ -327,23 +333,26 @@ export class BeaconChain implements IBeaconChain {
     this.bufferPool = this.opts.nHistoricalStates
       ? new BufferPool(anchorState.type.tree_serializedSize(anchorState.node), metrics)
       : null;
-    const checkpointStateCache = this.opts.nHistoricalStates
-      ? new PersistentCheckpointStateCache(
-          {
-            metrics,
-            logger,
-            clock,
-            blockStateCache,
-            bufferPool: this.bufferPool,
-            datastore: fileDataStore
-              ? // debug option if we want to investigate any issues with the DB
-                new FileCPStateDatastore(dataDir)
-              : // production option
-                new DbCPStateDatastore(this.db),
-          },
-          this.opts
-        )
-      : new InMemoryCheckpointStateCache({metrics});
+
+    let checkpointStateCache: CheckpointStateCache;
+    this.cpStateDatastore = undefined;
+    if (this.opts.nHistoricalStates) {
+      this.cpStateDatastore = fileDataStore ? new FileCPStateDatastore(dataDir) : new DbCPStateDatastore(this.db);
+      checkpointStateCache = new PersistentCheckpointStateCache(
+        {
+          metrics,
+          logger,
+          clock,
+          blockStateCache,
+          bufferPool: this.bufferPool,
+          datastore: this.cpStateDatastore,
+        },
+        this.opts
+      );
+    } else {
+      checkpointStateCache = new InMemoryCheckpointStateCache({metrics});
+    }
+
     const {checkpoint} = computeAnchorCheckpoint(config, anchorState);
     blockStateCache.add(cachedState);
     blockStateCache.setHeadState(cachedState);
@@ -354,6 +363,7 @@ export class BeaconChain implements IBeaconChain {
       emitter,
       clock.currentSlot,
       cachedState,
+      isAnchorStateFinalized,
       opts,
       this.justifiedBalancesGetter.bind(this),
       metrics,
@@ -603,6 +613,20 @@ export class BeaconChain implements IBeaconChain {
 
     const data = await this.db.stateArchive.getByRoot(fromHex(stateRoot));
     return data && {state: data, executionOptimistic: false, finalized: true};
+  }
+
+  async getPersistedCheckpointState(checkpoint?: phase0.Checkpoint): Promise<Uint8Array | null> {
+    if (!this.cpStateDatastore) {
+      throw new Error("n-historical-state flag is not enabled");
+    }
+
+    if (checkpoint == null) {
+      // return the last safe checkpoint state by default
+      return this.cpStateDatastore.readLatestSafe();
+    }
+
+    const persistedKey = checkpointToDatastoreKey(checkpoint);
+    return this.cpStateDatastore.read(persistedKey);
   }
 
   getStateByCheckpoint(
@@ -1217,9 +1241,10 @@ export class BeaconChain implements IBeaconChain {
   }
 
   private async updateValidatorsCustodyRequirement(finalizedCheckpoint: CheckpointWithHex): Promise<void> {
-    if (this.opts.supernode) {
-      // Disable dynamic custody updates for supernodes since they must maintain custody
-      // of all custody groups regardless of validator effective balances
+    if (this.custodyConfig.targetCustodyGroupCount === this.config.NUMBER_OF_CUSTODY_GROUPS) {
+      // Custody requirements can only be increased, we can disable dynamic custody updates
+      // if the node already maintains custody of all custody groups in case it is configured
+      // as a supernode or has validators attached with a total effective balance of at least 4096 ETH.
       return;
     }
 

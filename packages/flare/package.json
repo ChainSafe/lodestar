@@ -12,19 +12,10 @@
   "exports": {
     ".": {
       "bun": "./src/index.ts",
+      "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     }
   },
-  "typesVersions": {
-    "*": {
-      "*": [
-        "*",
-        "lib/*",
-        "lib/*/index"
-      ]
-    }
-  },
-  "types": "lib/index.d.ts",
   "files": [
     "src",
     "lib",

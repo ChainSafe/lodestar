@@ -15,8 +15,6 @@ describe("forkchoice updateHead", () => {
     (4 * 60 * 60) / 12,
     // 1 day of blocks
     (24 * 60 * 60) / 12,
-    // // 20 days of blocks
-    // (20 * 24 * 60 * 60) / 12,
   ]) {
     runUpdateHeadBenchmark({initialValidatorCount: 600_000, initialBlockCount, initialEquivocatedCount: 0});
   }

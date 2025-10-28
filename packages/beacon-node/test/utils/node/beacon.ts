@@ -8,7 +8,7 @@ import {ChainConfig, createBeaconConfig, createChainForkConfig} from "@lodestar/
 import {config as minimalConfig} from "@lodestar/config/default";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {LoggerNode} from "@lodestar/logger/node";
-import {ForkSeq, GENESIS_SLOT, NUMBER_OF_COLUMNS, SLOTS_PER_EPOCH, ZERO_HASH_HEX} from "@lodestar/params";
+import {ForkSeq, GENESIS_SLOT, SLOTS_PER_EPOCH, ZERO_HASH_HEX} from "@lodestar/params";
 import {BeaconStateAllForks, computeTimeAtSlot} from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
 import {RecursivePartial, isPlainObject, toRootHex} from "@lodestar/utils";
@@ -83,7 +83,7 @@ export async function getDevBeaconNode(
         },
         chain: {
           // configure supernode does not work because we don't get through cli
-          initialCustodyGroupCount: NUMBER_OF_COLUMNS,
+          initialCustodyGroupCount: config.NUMBER_OF_CUSTODY_GROUPS,
         },
         executionEngine: {
           mode: "mock",
@@ -131,6 +131,7 @@ export async function getDevBeaconNode(
     peerStoreDir,
     anchorState,
     wsCheckpoint: opts.wsCheckpoint,
+    isAnchorStateFinalized: true,
   });
 }
 

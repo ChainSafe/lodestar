@@ -16,23 +16,21 @@
   "exports": {
     ".": {
       "bun": "./src/index.ts",
+      "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     },
     "./utils": {
       "bun": "./src/utils/index.ts",
+      "types": "./lib/utils/index.d.ts",
       "import": "./lib/utils/index.js"
     }
   },
-  "typesVersions": {
-    "*": {
-      "*": [
-        "*",
-        "lib/*",
-        "lib/*/index"
-      ]
+  "imports": {
+    "#snappy": {
+      "bun": "./src/encodingStrategies/sszSnappy/snappyFrames/snappy_bun.ts",
+      "default": "./lib/encodingStrategies/sszSnappy/snappyFrames/snappy.js"
     }
   },
-  "types": "./lib/index.d.ts",
   "files": [
     "src",
     "lib",

@@ -1,6 +1,7 @@
 import {IForkChoice} from "@lodestar/fork-choice";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Slot, Status} from "@lodestar/types";
+import {IBeaconChain} from "../../chain/interface.ts";
 import {ChainTarget} from "../range/utils/index.js";
 
 /** The type of peer relative to our current state */
@@ -103,8 +104,11 @@ export function getRangeSyncType(local: Status, remote: Status, forkChoice: IFor
 export function getRangeSyncTarget(
   local: Status,
   remote: Status,
-  forkChoice: IForkChoice
+  chain: IBeaconChain
 ): {syncType: RangeSyncType; startEpoch: Slot; target: ChainTarget} {
+  const forkChoice = chain.forkChoice;
+
+  // finalized sync
   if (remote.finalizedEpoch > local.finalizedEpoch && !forkChoice.hasBlock(remote.finalizedRoot)) {
     return {
       // If  RangeSyncType.Finalized, the range of blocks fetchable from startEpoch and target must allow to switch
@@ -131,11 +135,26 @@ export function getRangeSyncTarget(
       },
     };
   }
+
+  // we don't want to sync from epoch < minEpoch
+  // if we boot from an unfinalized checkpoint state, we don't want to sync before anchorStateLatestBlockSlot
+  // if we boot from a finalized checkpoint state, anchorStateLatestBlockSlot is trusted and we also don't want to sync before it
+  const minEpoch = Math.max(remote.finalizedEpoch, computeEpochAtSlot(chain.anchorStateLatestBlockSlot));
+
+  // head sync
   return {
     syncType: RangeSyncType.Head,
-    // The new peer has the same finalized (earlier filters should prevent a peer with an
-    // earlier finalized chain from reaching here).
-    startEpoch: Math.min(computeEpochAtSlot(local.headSlot), remote.finalizedEpoch),
+    // The new peer has the same finalized `remote.finalizedEpoch == local.finalizedEpoch` since
+    // previous filters should prevent a peer with an earlier finalized chain from reaching here.
+    //
+    // By default and during stable network conditions, the head sync always starts from
+    // the finalized epoch (even though it's the head sync) because finalized epoch is < local head.
+    // This is to prevent the issue noted here https://github.com/ChainSafe/lodestar/pull/7509#discussion_r1984353063.
+    //
+    // During non-finality of the network, when starting from an unfinalized checkpoint state, we don't want
+    // to sync before anchorStateLatestBlockSlot as finalized epoch is too far away. Local head will also be
+    // the same to that value at startup, the head sync always starts from anchorStateLatestBlockSlot in this case.
+    startEpoch: Math.min(computeEpochAtSlot(local.headSlot), minEpoch),
     target: {
       slot: remote.headSlot,
       root: remote.headRoot,

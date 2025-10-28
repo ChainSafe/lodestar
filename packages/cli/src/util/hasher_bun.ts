@@ -8,7 +8,9 @@ import {
   doMerkleizeBlockArray,
   doMerkleizeBlocksBytes,
 } from "@chainsafe/persistent-merkle-tree";
-import {digest2Bytes32, digest2Bytes32Into, hashInto} from "@lodestar/bun";
+import {hashtree} from "@lodestar/bun";
+
+const {digest2Bytes32, digest2Bytes32Into, hashInto} = hashtree;
 
 /**
  * Best SIMD implementation is in 512 bits = 64 bytes

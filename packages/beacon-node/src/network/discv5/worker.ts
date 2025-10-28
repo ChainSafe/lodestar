@@ -1,5 +1,3 @@
-import fs from "node:fs";
-import path from "node:path";
 import worker from "node:worker_threads";
 import {privateKeyFromProtobuf} from "@libp2p/crypto/keys";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
@@ -14,7 +12,7 @@ import {Gauge} from "@lodestar/utils";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {collectNodeJSMetrics} from "../../metrics/nodeJsMetrics.js";
 import {Clock} from "../../util/clock.js";
-import {profileNodeJS, writeHeapSnapshot} from "../../util/profile.js";
+import {ProfileThread, profileThread, writeHeapSnapshot} from "../../util/profile.js";
 import {Discv5WorkerApi, Discv5WorkerData} from "./types.js";
 import {ENRRelevance, enrRelevance} from "./utils.js";
 
@@ -108,10 +106,7 @@ const module: Discv5WorkerApi = {
     return (await metricsRegistry?.metrics()) ?? "";
   },
   writeProfile: async (durationMs: number, dirpath: string) => {
-    const profile = await profileNodeJS(durationMs);
-    const filePath = path.join(dirpath, `discv5_thread_${new Date().toISOString()}.cpuprofile`);
-    fs.writeFileSync(filePath, profile);
-    return filePath;
+    return profileThread(ProfileThread.DISC5, durationMs, dirpath);
   },
   writeHeapSnapshot: async (prefix: string, dirpath: string) => {
     return writeHeapSnapshot(prefix, dirpath);

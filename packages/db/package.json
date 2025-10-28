@@ -15,20 +15,20 @@
   "exports": {
     ".": {
       "bun": "./src/index.ts",
+      "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     },
     "./controller/level": {
-      "bun": "./src/controller/level_bun.ts",
+      "bun": "./src/controller/level.ts",
       "import": "./lib/controller/level.js"
     }
   },
   "imports": {
     "#controller/level": {
-      "bun": "./src/controller/level_bun.ts",
+      "bun": "./src/controller/level.ts",
       "import": "./src/controller/level.js"
     }
   },
-  "types": "./lib/index.d.ts",
   "files": [
     "src",
     "lib",

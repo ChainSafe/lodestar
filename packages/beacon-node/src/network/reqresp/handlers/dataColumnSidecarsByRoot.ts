@@ -1,3 +1,4 @@
+import {PeerId} from "@libp2p/interface";
 import {ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {ColumnIndex} from "@lodestar/types";
@@ -5,6 +6,7 @@ import {toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {DataColumnSidecarsByRootRequest} from "../../../util/types.js";
+import {prettyPrintPeerId} from "../../util.ts";
 import {
   handleColumnSidecarUnavailability,
   validateRequestedDataColumns,
@@ -13,7 +15,9 @@ import {
 export async function* onDataColumnSidecarsByRoot(
   requestBody: DataColumnSidecarsByRootRequest,
   chain: IBeaconChain,
-  db: IBeaconDb
+  db: IBeaconDb,
+  peerId: PeerId,
+  peerClient: string
 ): AsyncIterable<ResponseOutgoing> {
   // SPEC: minimum_request_epoch = max(current_epoch - MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS, FULU_FORK_EPOCH)
   const currentEpoch = chain.clock.currentEpoch;
@@ -36,6 +40,14 @@ export async function* onDataColumnSidecarsByRoot(
 
     if (slot === null) {
       // We haven't seen the block
+      continue;
+    }
+
+    if (slot < chain.earliestAvailableSlot) {
+      chain.logger.verbose("Peer did not respect earliestAvailableSlot for DataColumnSidecarsByRoot", {
+        peer: prettyPrintPeerId(peerId),
+        client: peerClient,
+      });
       continue;
     }
 

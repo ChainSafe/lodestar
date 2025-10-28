@@ -16,44 +16,43 @@
   "exports": {
     ".": {
       "bun": "./src/index.ts",
+      "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     },
     "./altair": {
       "bun": "./src/altair/index.ts",
+      "types": "./lib/altair/index.d.ts",
       "import": "./lib/altair/index.js"
     },
     "./capella": {
       "bun": "./src/capella/index.ts",
+      "types": "./lib/capella/index.d.ts",
       "import": "./lib/capella/index.js"
     },
     "./bellatrix": {
       "bun": "./src/bellatrix/index.ts",
+      "types": "./lib/bellatrix/index.d.ts",
       "import": "./lib/bellatrix/index.js"
     },
     "./deneb": {
       "bun": "./src/deneb/index.ts",
+      "types": "./lib/deneb/index.d.ts",
       "import": "./lib/deneb/index.js"
     },
     "./electra": {
       "bun": "./src/electra/index.ts",
+      "types": "./lib/electra/index.d.ts",
       "import": "./lib/electra/index.js"
     },
     "./fulu": {
       "bun": "./src/fulu/index.ts",
+      "types": "./lib/fulu/index.d.ts",
       "import": "./lib/fulu/index.js"
     },
     "./phase0": {
       "bun": "./src/phase0/index.ts",
+      "types": "./lib/phase0/index.d.ts",
       "import": "./lib/phase0/index.js"
-    }
-  },
-  "typesVersions": {
-    "*": {
-      "*": [
-        "*",
-        "lib/*",
-        "lib/*/index"
-      ]
     }
   },
   "files": [

@@ -225,6 +225,7 @@ stakers
 subnet
 subnets
 sudo
+supernode
 tcp
 testnet
 testnets
