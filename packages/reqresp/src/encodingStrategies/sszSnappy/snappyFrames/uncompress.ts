@@ -1,5 +1,5 @@
-import {uncompress} from "snappyjs";
 import {Uint8ArrayList} from "uint8arraylist";
+import {uncompress} from "#snappy";
 import {ChunkType, IDENTIFIER, UNCOMPRESSED_CHUNK_SIZE, crc} from "./common.js";
 
 export class SnappyFramesUncompress {

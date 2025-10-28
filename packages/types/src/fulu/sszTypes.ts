@@ -111,6 +111,14 @@ export const BlobsBundle = new ContainerType(
   {typeName: "BlobsBundle", jsonCase: "eth2"}
 );
 
+export const ExecutionPayloadAndBlobsBundle = new ContainerType(
+  {
+    executionPayload: electraSsz.ExecutionPayload,
+    blobsBundle: BlobsBundle,
+  },
+  {typeName: "ExecutionPayloadAndBlobsBundle", jsonCase: "eth2"}
+);
+
 export const BeaconState = new ContainerType(
   {
     ...electraSsz.BeaconState.fields,

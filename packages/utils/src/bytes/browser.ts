@@ -121,3 +121,68 @@ function charCodeToByte(charCode: number): number {
 
   throw new Error(`Invalid hex character code: ${charCode}`);
 }
+
+import {toBigIntBE, toBigIntLE, toBufferBE, toBufferLE} from "bigint-buffer";
+
+type Endianness = "le" | "be";
+
+const hexByByte: string[] = [];
+/**
+ * @deprecated Use toHex() instead.
+ */
+export function toHexString(bytes: Uint8Array): string {
+  let hex = "0x";
+  for (const byte of bytes) {
+    if (!hexByByte[byte]) {
+      hexByByte[byte] = byte < 16 ? "0" + byte.toString(16) : byte.toString(16);
+    }
+    hex += hexByByte[byte];
+  }
+  return hex;
+}
+
+/**
+ * Return a byte array from a number or BigInt
+ */
+export function intToBytes(value: bigint | number, length: number, endianness: Endianness = "le"): Uint8Array {
+  return bigIntToBytes(BigInt(value), length, endianness);
+}
+
+/**
+ * Convert byte array in LE to integer.
+ */
+export function bytesToInt(value: Uint8Array, endianness: Endianness = "le"): number {
+  return Number(bytesToBigInt(value, endianness));
+}
+
+export function bigIntToBytes(value: bigint, length: number, endianness: Endianness = "le"): Uint8Array {
+  if (endianness === "le") {
+    return toBufferLE(value, length);
+  }
+  if (endianness === "be") {
+    return toBufferBE(value, length);
+  }
+  throw new Error("endianness must be either 'le' or 'be'");
+}
+
+export function bytesToBigInt(value: Uint8Array, endianness: Endianness = "le"): bigint {
+  if (!(value instanceof Uint8Array)) {
+    throw new TypeError("expected a Uint8Array");
+  }
+
+  if (endianness === "le") {
+    return toBigIntLE(value as Buffer);
+  }
+  if (endianness === "be") {
+    return toBigIntBE(value as Buffer);
+  }
+  throw new Error("endianness must be either 'le' or 'be'");
+}
+
+export function xor(a: Uint8Array, b: Uint8Array): Uint8Array {
+  const length = Math.min(a.length, b.length);
+  for (let i = 0; i < length; i++) {
+    a[i] = a[i] ^ b[i];
+  }
+  return a;
+}

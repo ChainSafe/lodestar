@@ -149,7 +149,10 @@ export async function downloadFile(pathDest: string, url: string): Promise<void>
  */
 export async function downloadOrLoadFile(pathOrUrl: string): Promise<Uint8Array> {
   if (isUrl(pathOrUrl)) {
-    const res = await fetch(pathOrUrl);
+    const res = await fetch(pathOrUrl, {
+      // Ensure we only receive SSZ responses if REST API is queried
+      headers: {accept: "application/octet-stream"},
+    });
     if (!res.ok) {
       throw new Error(`Failed to download file from ${pathOrUrl}: ${res.status} ${res.statusText}`);
     }

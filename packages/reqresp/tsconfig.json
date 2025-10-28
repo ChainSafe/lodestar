@@ -3,6 +3,7 @@
   "include": ["src", "test"],
   "exclude": ["../../node_modules/it-pipe"],
   "compilerOptions": {
+    "rootDir": "../..",
     "outDir": "lib",
     "typeRoots": ["../../node_modules/@types", "../../types"]
   }

@@ -138,7 +138,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
         eth1: new Eth1ForBlockProduction(),
         opPool: new OpPool(),
         aggregatedAttestationPool: new AggregatedAttestationPool(config),
-        syncContributionAndProofPool: new SyncContributionAndProofPool(clock),
+        syncContributionAndProofPool: new SyncContributionAndProofPool(config, clock),
         // @ts-expect-error
         beaconProposerCache: new BeaconProposerCache(),
         shufflingCache: new ShufflingCache(),
@@ -197,7 +197,7 @@ export type MockedForkChoice = Mocked<ForkChoice>;
 
 export function getMockedForkChoice(): MockedForkChoice {
   // ForkChoice package is mocked globally
-  return vi.mocked(new ForkChoice({} as any, {} as any, {} as any, {} as any));
+  return vi.mocked(new ForkChoice({} as any, {} as any, {} as any, {} as any, {} as any));
 }
 
 // To avoid loading the package in test while mocked, exporting frequently used types and constants

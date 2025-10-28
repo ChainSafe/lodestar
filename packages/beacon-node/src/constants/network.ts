@@ -1,22 +1,3 @@
-/**
- * For more info on some of these constants:
- * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#configuration
- */
-
-// Gossip constants
-
-/**
- * The maximum number of slots during which an attestation can be propagated.
- */
-export const ATTESTATION_PROPAGATION_SLOT_RANGE = 32;
-
-/** The maximum allowed size of uncompressed gossip messages. */
-export const GOSSIP_MAX_SIZE = 2 ** 20;
-export const GOSSIP_MAX_SIZE_BELLATRIX = 10 * GOSSIP_MAX_SIZE;
-/** The maximum allowed size of uncompressed req/resp chunked responses. */
-export const MAX_CHUNK_SIZE = 2 ** 20;
-export const MAX_CHUNK_SIZE_BELLATRIX = 10 * MAX_CHUNK_SIZE;
-
 export enum GoodByeReasonCode {
   INBOUND_DISCONNECT = -1,
   CLIENT_SHUTDOWN = 1,

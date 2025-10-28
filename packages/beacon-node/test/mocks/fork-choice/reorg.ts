@@ -36,9 +36,10 @@ export class ReorgedForkChoice extends ForkChoice {
     fcStore: IForkChoiceStore,
     /** The underlying representation of the block DAG. */
     protoArray: ProtoArray,
+    validatorCount: number,
     opts?: ForkChoiceOpts
   ) {
-    super(config, fcStore, protoArray, null, opts);
+    super(config, fcStore, protoArray, validatorCount, null, opts);
     this._fcStore = fcStore;
   }
 

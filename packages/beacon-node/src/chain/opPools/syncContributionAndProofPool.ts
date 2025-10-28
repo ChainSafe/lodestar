@@ -1,10 +1,10 @@
 import {Signature, aggregateSignatures} from "@chainsafe/blst";
 import {BitArray} from "@chainsafe/ssz";
+import {ChainForkConfig} from "@lodestar/config";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {G2_POINT_AT_INFINITY} from "@lodestar/state-transition";
 import {Root, Slot, SubnetID, altair, ssz} from "@lodestar/types";
 import {Logger, MapDef, toRootHex} from "@lodestar/utils";
-import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants/constants.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {IClock} from "../../util/clock.js";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
@@ -51,6 +51,7 @@ export class SyncContributionAndProofPool {
   private lowestPermissibleSlot = 0;
 
   constructor(
+    private readonly config: ChainForkConfig,
     private readonly clock: IClock,
     private readonly metrics: Metrics | null = null,
     private logger: Logger | null = null
@@ -92,7 +93,7 @@ export class SyncContributionAndProofPool {
 
     // Reject ContributionAndProofs of previous slots
     // for api ContributionAndProofs, we allow them to be added to the pool
-    if (!priority && slot < this.clock.slotWithPastTolerance(MAXIMUM_GOSSIP_CLOCK_DISPARITY)) {
+    if (!priority && slot < this.clock.slotWithPastTolerance(this.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY / 1000)) {
       return InsertOutcome.Late;
     }
 

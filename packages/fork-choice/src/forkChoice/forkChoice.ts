@@ -36,9 +36,10 @@ import {
   HEX_ZERO_HASH,
   LVHExecResponse,
   MaybeValidExecutionStatus,
+  NULL_VOTE_INDEX,
   ProtoBlock,
   ProtoNode,
-  VoteTracker,
+  VoteIndex,
 } from "../protoArray/interface.js";
 import {ProtoArray} from "../protoArray/protoArray.js";
 import {ForkChoiceError, ForkChoiceErrorCode, InvalidAttestationCode, InvalidBlockCode} from "./errors.js";
@@ -47,7 +48,6 @@ import {
   AncestorStatus,
   EpochDifference,
   IForkChoice,
-  LatestMessage,
   NotReorgedReason,
   PowBlockHex,
   ShouldOverrideForkChoiceUpdateResult,
@@ -71,6 +71,9 @@ export type UpdateAndGetHeadOpt =
   | {mode: UpdateHeadOpt.GetProposerHead; secFromSlot: number; slot: Slot}
   | {mode: UpdateHeadOpt.GetPredictedProposerHead; secFromSlot: number; slot: Slot};
 
+// the initial vote epoch for all validators
+const INIT_VOTE_EPOCH: Epoch = 0;
+
 /**
  * Provides an implementation of "Ethereum Consensus -- Beacon Chain Fork Choice":
  *
@@ -91,11 +94,12 @@ export type UpdateAndGetHeadOpt =
 export class ForkChoice implements IForkChoice {
   irrecoverableError?: Error;
   /**
-   * Votes currently tracked in the protoArray
-   * Indexed by validator index
-   * Each vote contains the latest message and previous message
+   * Votes currently tracked in the protoArray. Instead of tracking a VoteTracker of currentIndex, nextIndex and epoch,
+   * we decompose the struct and track them in 3 separate arrays for performance reason.
    */
-  private readonly votes: VoteTracker[] = [];
+  private readonly voteCurrentIndices: VoteIndex[];
+  private readonly voteNextIndices: VoteIndex[];
+  private readonly voteNextEpochs: Epoch[];
 
   /**
    * Attestations that arrived at the current slot and must be queued for later processing.
@@ -138,15 +142,22 @@ export class ForkChoice implements IForkChoice {
     private readonly fcStore: IForkChoiceStore,
     /** The underlying representation of the block DAG. */
     private readonly protoArray: ProtoArray,
+    validatorCount: number,
     readonly metrics: ForkChoiceMetrics | null,
     private readonly opts?: ForkChoiceOpts,
     private readonly logger?: Logger
   ) {
+    // initialize votes, they will grow in addLatestMessage() function below
+    this.voteCurrentIndices = new Array(validatorCount).fill(NULL_VOTE_INDEX);
+    this.voteNextIndices = new Array(validatorCount).fill(NULL_VOTE_INDEX);
+    // when compute deltas, we ignore epoch if voteNextIndex is NULL_VOTE_INDEX anyway
+    this.voteNextEpochs = new Array(validatorCount).fill(INIT_VOTE_EPOCH);
+
     this.head = this.updateHead();
     this.balances = this.fcStore.justified.balances;
 
     metrics?.forkChoice.votes.addCollect(() => {
-      metrics.forkChoice.votes.set(this.votes.length);
+      metrics.forkChoice.votes.set(this.voteNextEpochs.length);
       metrics.forkChoice.queuedAttestations.set(this.queuedAttestationsPreviousSlot);
       metrics.forkChoice.validatedAttestationDatas.set(this.validatedAttestationDatas.size);
       metrics.forkChoice.balancesLength.set(this.balances.length);
@@ -443,13 +454,34 @@ export class ForkChoice implements IForkChoice {
     // Check if scores need to be calculated/updated
     const oldBalances = this.balances;
     const newBalances = this.fcStore.justified.balances;
-    const deltas = computeDeltas(
+    const computeDeltasMetrics = this.metrics?.forkChoice.computeDeltas;
+
+    const timer = computeDeltasMetrics?.duration.startTimer();
+    const {
+      deltas,
+      equivocatingValidators,
+      oldInactiveValidators,
+      newInactiveValidators,
+      unchangedVoteValidators,
+      newVoteValidators,
+    } = computeDeltas(
       this.protoArray.nodes.length,
-      this.votes,
+      this.voteCurrentIndices,
+      this.voteNextIndices,
       oldBalances,
       newBalances,
       this.fcStore.equivocatingIndices
     );
+    timer?.();
+
+    computeDeltasMetrics?.deltasCount.set(deltas.length);
+    computeDeltasMetrics?.zeroDeltasCount.set(deltas.filter((d) => d === 0).length);
+    computeDeltasMetrics?.equivocatingValidators.set(equivocatingValidators);
+    computeDeltasMetrics?.oldInactiveValidators.set(oldInactiveValidators);
+    computeDeltasMetrics?.newInactiveValidators.set(newInactiveValidators);
+    computeDeltasMetrics?.unchangedVoteValidators.set(unchangedVoteValidators);
+    computeDeltasMetrics?.newVoteValidators.set(newVoteValidators);
+
     this.balances = newBalances;
     /**
      * The structure in line with deltas to propagate boost up the branch
@@ -819,17 +851,6 @@ export class ForkChoice implements IForkChoice {
     }
   }
 
-  getLatestMessage(validatorIndex: ValidatorIndex): LatestMessage | undefined {
-    const vote = this.votes[validatorIndex];
-    if (vote === undefined) {
-      return undefined;
-    }
-    return {
-      epoch: vote.nextEpoch,
-      root: vote.nextIndex === null ? HEX_ZERO_HASH : this.protoArray.nodes[vote.nextIndex].blockRoot,
-    };
-  }
-
   /**
    * Call `onTick` for all slots between `fcStore.getCurrentSlot()` and the provided `currentSlot`.
    * This should only be called once per slot because:
@@ -931,6 +952,11 @@ export class ForkChoice implements IForkChoice {
     return block;
   }
 
+  getFinalizedCheckpointSlot(): Slot {
+    const finalizedEpoch = this.fcStore.finalizedCheckpoint.epoch;
+    return computeStartSlotAtEpoch(finalizedEpoch);
+  }
+
   /**
    * Returns true if the `descendantRoot` has an ancestor with `ancestorRoot`.
    *
@@ -947,28 +973,26 @@ export class ForkChoice implements IForkChoice {
   prune(finalizedRoot: RootHex): ProtoBlock[] {
     const prunedNodes = this.protoArray.maybePrune(finalizedRoot);
     const prunedCount = prunedNodes.length;
-    for (let i = 0; i < this.votes.length; i++) {
-      const vote = this.votes[i];
-      // validator has never voted
-      if (vote === undefined) {
-        continue;
-      }
+    for (let i = 0; i < this.voteNextEpochs.length; i++) {
+      const currentIndex = this.voteCurrentIndices[i];
 
-      if (vote.currentIndex !== null) {
-        if (vote.currentIndex >= prunedCount) {
-          vote.currentIndex -= prunedCount;
+      if (currentIndex !== NULL_VOTE_INDEX) {
+        if (currentIndex >= prunedCount) {
+          this.voteCurrentIndices[i] = currentIndex - prunedCount;
         } else {
           // the vote was for a pruned proto node
-          vote.currentIndex = null;
+          this.voteCurrentIndices[i] = NULL_VOTE_INDEX;
         }
       }
 
-      if (vote.nextIndex !== null) {
-        if (vote.nextIndex >= prunedCount) {
-          vote.nextIndex -= prunedCount;
+      const nextIndex = this.voteNextIndices[i];
+
+      if (nextIndex !== NULL_VOTE_INDEX) {
+        if (nextIndex >= prunedCount) {
+          this.voteNextIndices[i] = nextIndex - prunedCount;
         } else {
           // the vote was for a pruned proto node
-          vote.nextIndex = null;
+          this.voteNextIndices[i] = NULL_VOTE_INDEX;
         }
       }
     }
@@ -1435,25 +1459,29 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
-   * Add a validator's latest message to the tracked votes
+   * Add a validator's latest message to the tracked votes.
+   * Always sync voteCurrentIndices and voteNextIndices so that it'll not throw in computeDeltas()
    */
   private addLatestMessage(validatorIndex: ValidatorIndex, nextEpoch: Epoch, nextRoot: RootHex): void {
-    const vote = this.votes[validatorIndex];
     // should not happen, attestation is validated before this step
     const nextIndex = this.protoArray.indices.get(nextRoot);
     if (nextIndex === undefined) {
       throw new Error(`Could not find proto index for nextRoot ${nextRoot}`);
     }
 
-    if (vote === undefined) {
-      this.votes[validatorIndex] = {
-        currentIndex: null,
-        nextIndex,
-        nextEpoch,
-      };
-    } else if (nextEpoch > vote.nextEpoch) {
-      vote.nextIndex = nextIndex;
-      vote.nextEpoch = nextEpoch;
+    // ensure there is no undefined entries in Votes arrays
+    if (this.voteNextEpochs.length < validatorIndex + 1) {
+      for (let i = this.voteNextEpochs.length; i < validatorIndex + 1; i++) {
+        this.voteNextEpochs[i] = INIT_VOTE_EPOCH;
+        this.voteCurrentIndices[i] = this.voteNextIndices[i] = NULL_VOTE_INDEX;
+      }
+    }
+
+    const existingNextEpoch = this.voteNextEpochs[validatorIndex];
+    if (existingNextEpoch === INIT_VOTE_EPOCH || nextEpoch > existingNextEpoch) {
+      // nextIndex is transfered to currentIndex in computeDeltas()
+      this.voteNextIndices[validatorIndex] = nextIndex;
+      this.voteNextEpochs[validatorIndex] = nextEpoch;
     }
     // else its an old vote, don't count it
   }
