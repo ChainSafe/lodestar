@@ -255,7 +255,7 @@ export async function validateBlockBlobSidecars(
   const proofs = [];
   for (const blobSidecar of blobSidecars) {
     const blobIdx = blobSidecar.index;
-    if (!ssz.phase0.BeaconBlockHeader.equals(blobSidecar.signedBlockHeader.message, firstSidecarBlockHeader)) {
+    if (!ssz.phase0.SignedBeaconBlockHeader.equals(blobSidecar.signedBlockHeader, firstSidecarSignedBlockHeader)) {
       throw new BlobSidecarValidationError(
         {
           code: BlobSidecarErrorCode.INCORRECT_BLOCK,
