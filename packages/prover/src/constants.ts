@@ -1,5 +1,5 @@
-// Reference : Configuration
-// https://github.com/ethereum/consensus-specs/blob/03c4ea240fccfa78469aa039a4a7177beca54074/specs/altair/light-client/p2p-interface.md#configuration
+
+// https://github.com/ethereum/consensus-specs/blob/v1.6.0-beta.1package/specs/altair/light-client/p2p-interface.md#configuration
 export const MAX_REQUEST_LIGHT_CLIENT_UPDATES = 128;
 export const MAX_PAYLOAD_HISTORY = 32;
 export const VERIFICATION_FAILED_RESPONSE_CODE = -33091;

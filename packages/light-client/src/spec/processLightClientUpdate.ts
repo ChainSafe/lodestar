@@ -86,12 +86,12 @@ export function getSyncCommitteeAtPeriod(
     store.bestValidUpdates.delete(period - 1);
 
     if (opts.updateHeadersOnForcedUpdate) {
-      // From https://github.com/ethereum/consensus-specs/blob/a57e15636013eeba3610ff3ade41781dba1bb0cd/specs/altair/light-client/sync-protocol.md?plain=1#L403
+      // From https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.6/specs/altair/light-client/sync-protocol.md?plain=1#L403
       if (update.finalizedHeader.beacon.slot <= store.finalizedHeader.beacon.slot) {
         update.finalizedHeader = update.attestedHeader;
       }
 
-      // From https://github.com/ethereum/consensus-specs/blob/a57e15636013eeba3610ff3ade41781dba1bb0cd/specs/altair/light-client/sync-protocol.md?plain=1#L374
+      // From https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.6/specs/altair/light-client/sync-protocol.md?plain=1#L374
       if (update.finalizedHeader.beacon.slot > store.finalizedHeader.beacon.slot) {
         store.finalizedHeader = update.finalizedHeader;
       }
