@@ -52,6 +52,7 @@ export type {
   BeaconStateElectra,
   BeaconStateExecutions,
   BeaconStateFulu,
+  BeaconStateGloas,
   // Non-cached states
   BeaconStatePhase0,
   CachedBeaconStateAllForks,
@@ -62,6 +63,7 @@ export type {
   CachedBeaconStateElectra,
   CachedBeaconStateExecutions,
   CachedBeaconStateFulu,
+  CachedBeaconStateGloas,
   CachedBeaconStatePhase0,
 } from "./types.js";
 export * from "./util/index.js";

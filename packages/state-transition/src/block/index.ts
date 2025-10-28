@@ -1,7 +1,7 @@
 import {ForkSeq} from "@lodestar/params";
-import {BeaconBlock, BlindedBeaconBlock, altair, capella} from "@lodestar/types";
+import {BeaconBlock, BlindedBeaconBlock, altair, capella, gloas} from "@lodestar/types";
 import {BeaconStateTransitionMetrics} from "../metrics.js";
-import {CachedBeaconStateAllForks, CachedBeaconStateBellatrix, CachedBeaconStateCapella} from "../types.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateBellatrix, CachedBeaconStateCapella, CachedBeaconStateGloas} from "../types.js";
 import {getFullOrBlindedPayload, isExecutionEnabled} from "../util/execution.js";
 import {BlockExternalData, DataAvailabilityStatus} from "./externalData.js";
 import {processBlobKzgCommitments} from "./processBlobKzgCommitments.js";
@@ -13,6 +13,8 @@ import {processRandao} from "./processRandao.js";
 import {processSyncAggregate} from "./processSyncCommittee.js";
 import {processWithdrawals} from "./processWithdrawals.js";
 import {ProcessBlockOpts, ProposerRewardType} from "./types.js";
+import { processExecutionPayloadBid } from "./processExecutionPayloadBid.ts";
+import { processPayloadAttestation } from "./processPayloadAttestation.ts";
 
 // Spec tests
 export {
@@ -22,6 +24,8 @@ export {
   processEth1Data,
   processSyncAggregate,
   processWithdrawals,
+  processExecutionPayloadBid,
+  processPayloadAttestation,
 };
 
 export * from "./externalData.js";
@@ -67,7 +71,7 @@ export function processBlock(
   }
 
   if (fork >= ForkSeq.gloas) {
-    // process_execution_payload_bid
+    processExecutionPayloadBid(state as CachedBeaconStateGloas, block as gloas.BeaconBlock);
   }
 
   processRandao(state, block, verifySignatures);

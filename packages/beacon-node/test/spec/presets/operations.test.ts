@@ -7,11 +7,12 @@ import {
   CachedBeaconStateBellatrix,
   CachedBeaconStateCapella,
   CachedBeaconStateElectra,
+  CachedBeaconStateGloas,
   ExecutionPayloadStatus,
   getBlockRootAtSlot,
 } from "@lodestar/state-transition";
 import * as blockFns from "@lodestar/state-transition/block";
-import {AttesterSlashing, altair, bellatrix, capella, electra, phase0, ssz, sszTypesFor} from "@lodestar/types";
+import {AttesterSlashing, altair, bellatrix, capella, electra, gloas, phase0, ssz, sszTypesFor} from "@lodestar/types";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {getConfig} from "../../utils/config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
@@ -95,7 +96,16 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
   },
 
   consolidation_request: (state, testCase: {consolidation_request: electra.ConsolidationRequest}) => {
-    blockFns.processConsolidationRequest(state as CachedBeaconStateElectra, testCase.consolidation_request);
+    const fork = state.config.getForkSeq(state.slot);
+    blockFns.processConsolidationRequest(fork, state as CachedBeaconStateElectra, testCase.consolidation_request);
+  },
+
+  execution_payload_bid: (state, testCase: {block: gloas.BeaconBlock}) => {
+    blockFns.processExecutionPayloadBid(state as CachedBeaconStateGloas, testCase.block);
+  },
+
+  payload_attestation: (state, testCase: {payload_attestation: gloas.PayloadAttestation}) => {
+    blockFns.processPayloadAttestation(state as CachedBeaconStateGloas, testCase.payload_attestation);
   },
 };
 
@@ -149,6 +159,7 @@ const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork,
         withdrawal_request: ssz.electra.WithdrawalRequest,
         deposit_request: ssz.electra.DepositRequest,
         consolidation_request: ssz.electra.ConsolidationRequest,
+        payload_attestation: ssz.gloas.PayloadAttestation,
       },
       shouldError: (testCase) => testCase.post === undefined,
       getExpected: (testCase) => testCase.post,
