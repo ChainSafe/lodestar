@@ -1,4 +1,4 @@
-import {RootHex, Slot, SubnetID} from "@lodestar/types";
+import {Slot, SubnetID} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 import {GossipActionError} from "./gossipValidation.js";
 

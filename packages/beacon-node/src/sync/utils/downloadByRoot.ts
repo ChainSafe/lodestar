@@ -14,7 +14,6 @@ import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockIn
 import {BlockInputSource, IBlockInput} from "../../chain/blocks/blockInput/types.js";
 import {ChainEventEmitter} from "../../chain/emitter.js";
 import {IBeaconChain} from "../../chain/interface.ts";
-import {SeenBlockInput} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {validateBlockBlobSidecars} from "../../chain/validation/blobSidecar.js";
 import {validateBlockDataColumnSidecars} from "../../chain/validation/dataColumnSidecar.js";
 import {INetwork} from "../../network/interface.js";
@@ -33,7 +32,7 @@ import {
 
 export type FetchByRootCoreProps = {
   config: ChainForkConfig;
-  chain: IBeaconChain;
+  chain: IBeaconChain | null; // null for testing purposes
   network: INetwork;
   peerMeta: PeerSyncMeta;
 };
