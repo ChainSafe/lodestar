@@ -60,15 +60,15 @@ type LoadedStateBytesData = {persistedKey: DatastoreKey; stateBytes: Uint8Array}
  */
 export const DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY = 3;
 
-// TODO GLOAS: re-evaluate this timing
-const PROCESS_CHECKPOINT_STATES_BPS = 6667;
-
 /**
  * By default we don't prune any persistent checkpoint states as it's not safe to delete them during
  * long non-finality as we don't know the state of the chain and there could be a deep (hundreds of epochs) reorg
  * if there two competing chains with similar weight.
  */
 export const DEFAULT_MAX_CP_STATE_ON_DISK = Infinity;
+
+// TODO GLOAS: re-evaluate this timing
+const PROCESS_CHECKPOINT_STATES_BPS = 6667;
 
 /**
  * An implementation of CheckpointStateCache that keep up to n epoch checkpoint states in memory and persist the rest to disk
