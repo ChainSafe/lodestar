@@ -89,7 +89,7 @@ function parseProposerConfigSection(
     builder:
       overrideConfig?.builder || builder
         ? {
-            gasLimit: overrideConfig?.builder?.gasLimit ?? (gas_limit !== undefined ? parseInt(gas_limit) : undefined),
+            gasLimit: overrideConfig?.builder?.gasLimit ?? (gas_limit !== undefined ? parseInt(gas_limit, 10) : undefined),
             selection: overrideConfig?.builder?.selection ?? parseBuilderSelection(builderSelection),
             boostFactor: overrideConfig?.builder?.boostFactor ?? parseBuilderBoostFactor(boost_factor),
           }
