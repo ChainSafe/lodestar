@@ -315,9 +315,9 @@ export async function produceBlockBody<T extends BlockType>(
           parentBlockRoot: toRootHex(parentBlockRoot),
           feeRecipient,
         });
-        // Reference : Constructing the BeaconBlockBody
+      
 
-        // https://github.com/ethereum/consensus-specs/blob/ad1c65b7afff775ad208f203b766aa4038b57f41/specs/deneb/validator.md#constructing-the-beaconblockbody
+        // https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.6/specs/deneb/validator.md#constructing-the-beaconblockbody
         const prepareRes = await prepareExecutionPayload(
           this,
           this.logger,

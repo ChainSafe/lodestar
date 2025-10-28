@@ -74,7 +74,7 @@ export type UpdateAndGetHeadOpt =
 /**
  * Provides an implementation of "Ethereum Consensus -- Beacon Chain Fork Choice":
  *
- * Reference : Fork Choice
+ * 
  * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md#fork-choice
  *
  * ## Detail
@@ -398,8 +398,7 @@ export class ForkChoice implements IForkChoice {
     }
 
     // No reorg if parentBlock is "not strong" ie. parentBlock's weight is less than or equal to (REORG_PARENT_WEIGHT_THRESHOLD = 160)% of total attester weight
-    // Reference : is_parent_strong
-    // https://github.com/ethereum/consensus-specs/blob/46306c4f8addef64defc2a52d85f46992ba2421b/specs/phase0/fork-choice.md#is_parent_strong
+    // https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.6/specs/phase0/fork-choice.md#is_parent_strong
     const parentThreshold = getCommitteeFraction(this.fcStore.justified.totalBalance, {
       slotsPerEpoch: SLOTS_PER_EPOCH,
       committeePercent: this.config.REORG_PARENT_WEIGHT_THRESHOLD,
@@ -628,8 +627,7 @@ export class ForkChoice implements IForkChoice {
 
     // As per specs, we should be validating here the terminal conditions of
     // the PoW if this were a merge transition block.
-    // Reference : on_block
-    // (https://github.com/ethereum/consensus-specs/blob/46306c4f8addef64defc2a52d85f46992ba2421b/specs/bellatrix/fork-choice.md#on_block)
+    // (https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.6/specs/bellatrix/fork-choice.md#on_block)
     //
     // However this check has been moved to the `verifyBlockStateTransition` in
     // `packages/beacon-node/src/chain/blocks/verifyBlock.ts` as:
@@ -1643,8 +1641,8 @@ export function assertValidTerminalPowBlock(
     }
   }
 }
-// Reference : calculate_committee_fraction.
-// Approximate https://github.com/ethereum/consensus-specs/blob/46306c4f8addef64defc2a52d85f46992ba2421b/specs/phase0/fork-choice.md#calculate_committee_fraction
+
+// Approximate https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.6/specs/phase0/fork-choice.md#calculate_committee_fraction
 // Calculates proposer boost score when committeePercent = config.PROPOSER_SCORE_BOOST
 export function getCommitteeFraction(
   justifiedTotalActiveBalanceByIncrement: number,

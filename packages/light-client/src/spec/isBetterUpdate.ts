@@ -20,7 +20,7 @@ export type LightClientUpdateSummary = {
 /**
  * Returns the update with more bits. On ties, prevUpdate is the better
  *
- * https://github.com/ethereum/consensus-specs/blob/be3c774069e16e89145660be511c1b183056017e/specs/altair/light-client/sync-protocol.md#is_better_update
+ * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.6/specs/altair/light-client/sync-protocol.md#is_better_update
  */
 export function isBetterUpdate(newUpdate: LightClientUpdateSummary, oldUpdate: LightClientUpdateSummary): boolean {
   // Compare supermajority (> 2/3) sync committee participation
