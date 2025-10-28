@@ -64,10 +64,11 @@ export const DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY = 3;
 const PROCESS_CHECKPOINT_STATES_BPS = 6667;
 
 /**
- * During nft state of Holesky in Feb 2025, lodestar stores ~250MB per epoch and it's not sustainable to keep all states on disk.
- * It's not likely to have reorgs that go back to 10 epochs ago, so we only keep 10 epochs on disk.
+ * By default we don't prune any persistent checkpoint states as it's not safe to delete them during
+ * long non-finality as we don't know the state of the chain and there could be a deep (hundreds of epochs) reorg
+ * if there two competing chains with similar weight.
  */
-export const DEFAULT_MAX_CP_STATE_ON_DISK = 10;
+export const DEFAULT_MAX_CP_STATE_ON_DISK = Infinity;
 
 /**
  * An implementation of CheckpointStateCache that keep up to n epoch checkpoint states in memory and persist the rest to disk
@@ -782,7 +783,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       this.cache.delete(key);
     }
     this.epochIndex.delete(epoch);
-    this.logger.verbose("Pruned checkpoints state for epoch", {
+    this.logger.verbose("Pruned checkpoint states for epoch", {
       epoch,
       persistCount,
       rootHexes: Array.from(rootHexes).join(","),
@@ -807,7 +808,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       this.deleteAllEpochItems(epoch).catch((e) =>
         this.logger.debug(
           "Error delete all epoch items",
-          {epoch, maxCPStateEpochsOnDisk: this.maxEpochsOnDisk, maxEpochsInMemory: this.maxEpochsInMemory},
+          {epoch, maxEpochsOnDisk: this.maxEpochsOnDisk, maxEpochsInMemory: this.maxEpochsInMemory},
           e as Error
         )
       );

@@ -8,6 +8,7 @@ import {ShufflingCacheOpts} from "./shufflingCache.js";
 import {DEFAULT_MAX_BLOCK_STATES, FIFOBlockStateCacheOpts} from "./stateCache/fifoBlockStateCache.js";
 import {
   DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY,
+  DEFAULT_MAX_CP_STATE_ON_DISK,
   PersistentCheckpointStateCacheOpts,
 } from "./stateCache/persistentCheckpointsCache.js";
 import {ValidatorMonitorOpts} from "./validatorMonitor.js";
@@ -132,4 +133,5 @@ export const defaultChainOptions: IChainOptions = {
   nHistoricalStatesFileDataStore: true,
   maxBlockStates: DEFAULT_MAX_BLOCK_STATES,
   maxCPStateEpochsInMemory: DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY,
+  maxCPStateEpochsOnDisk: DEFAULT_MAX_CP_STATE_ON_DISK,
 };
