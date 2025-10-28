@@ -52,7 +52,6 @@ import {
   TimeoutError,
   bigintToNumber,
   defer,
-  formatWeiToEth,
   fromHex,
   prettyWeiToEth,
   resolveOrRacePromises,

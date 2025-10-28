@@ -14,7 +14,6 @@ import {
 } from "../utils/codecs.js";
 import {Endpoint, RouteDefinitions, Schema} from "../utils/index.js";
 import {WireFormat} from "../utils/wireFormat.js";
-import { bigintToNumber } from "@lodestar/utils";
 
 export enum ImportStatus {
   /** Keystore successfully decrypted and imported to keymanager permanent storage */
