@@ -9,7 +9,6 @@ import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   getBlockHeaderProposerSignatureSet,
-  getBlockHeaderProposerSignatureSetFromParentState,
 } from "@lodestar/state-transition";
 import {BlobIndex, Root, Slot, SubnetID, deneb, ssz} from "@lodestar/types";
 import {toRootHex, verifyMerkleBranch} from "@lodestar/utils";
@@ -125,7 +124,7 @@ export async function validateGossipBlobSidecar(
     });
 
   // [REJECT] The proposer signature, signed_beacon_block.signature, is valid with respect to the proposer_index pubkey.
-  const signatureSet = getBlockHeaderProposerSignatureSetFromParentState(blockState, blobSidecar.signedBlockHeader);
+  const signatureSet = getBlockHeaderProposerSignatureSet(blockState, blobSidecar.signedBlockHeader);
   // Don't batch so verification is not delayed
   if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: true}))) {
     throw new BlobSidecarGossipError(GossipAction.REJECT, {
@@ -218,12 +217,7 @@ export async function validateBlockBlobSidecars(
 
   if (chain !== null) {
     const headState = await chain.getHeadState();
-    const signatureSet = getBlockHeaderProposerSignatureSet(
-      headState.config,
-      headState.epochCtx.index2pubkey,
-      firstSidecarSignedBlockHeader.message.slot,
-      firstSidecarSignedBlockHeader
-    );
+    const signatureSet = getBlockHeaderProposerSignatureSet(headState, firstSidecarSignedBlockHeader, true);
 
     if (
       !(await chain.bls.verifySignatureSets([signatureSet], {

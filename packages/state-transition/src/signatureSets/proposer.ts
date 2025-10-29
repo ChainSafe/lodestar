@@ -34,29 +34,18 @@ export function getBlockProposerSignatureSet(
 }
 
 export function getBlockHeaderProposerSignatureSet(
-  config: BeaconConfig,
-  index2pubkey: Index2PubkeyCache,
-  parentSlot: Slot,
-  signedBlockHeader: phase0.SignedBeaconBlockHeader
+  state: CachedBeaconStateAllForks,
+  signedBlockHeader: phase0.SignedBeaconBlockHeader,
+  useHeaderSlotOnly = false
 ): ISignatureSet {
-  const domain = config.getDomain(parentSlot, DOMAIN_BEACON_PROPOSER, signedBlockHeader.message.slot);
+  const {config, epochCtx} = state;
+  const stateSlot = useHeaderSlotOnly ? signedBlockHeader.message.slot : state.slot;
+  const domain = config.getDomain(stateSlot, DOMAIN_BEACON_PROPOSER, signedBlockHeader.message.slot);
 
   return {
     type: SignatureSetType.single,
-    pubkey: index2pubkey[signedBlockHeader.message.proposerIndex],
+    pubkey: epochCtx.index2pubkey[signedBlockHeader.message.proposerIndex],
     signingRoot: computeSigningRoot(ssz.phase0.BeaconBlockHeader, signedBlockHeader.message, domain),
     signature: signedBlockHeader.signature,
   };
-}
-
-export function getBlockHeaderProposerSignatureSetFromParentState(
-  parentState: CachedBeaconStateAllForks,
-  signedBlockHeader: phase0.SignedBeaconBlockHeader
-): ISignatureSet {
-  return getBlockHeaderProposerSignatureSet(
-    parentState.config,
-    parentState.epochCtx.index2pubkey,
-    parentState.slot,
-    signedBlockHeader
-  );
 }
