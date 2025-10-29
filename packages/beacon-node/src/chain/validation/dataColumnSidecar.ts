@@ -316,21 +316,11 @@ export async function validateBlockDataColumnSidecars(
   }
 
   if (chain !== null) {
-    const parentRootHex = toRootHex(firstSidecarBlockHeader.parentRoot);
-    const parentBlock = chain.seenBlockInputCache.get(parentRootHex);
-    if (!parentBlock) {
-      throw new DataColumnSidecarValidationError({
-        code: DataColumnSidecarErrorCode.PARENT_UNKNOWN,
-        slot: blockSlot,
-        blockRoot: toRootHex(blockRoot),
-        parentRoot: parentRootHex,
-      });
-    }
     const headState = await chain.getHeadState();
     const signatureSet = getBlockHeaderProposerSignatureSet(
       headState.config,
       headState.epochCtx.index2pubkey,
-      parentBlock.slot,
+      firstSidecarSignedBlockHeader.message.slot,
       firstSidecarSignedBlockHeader
     );
 
