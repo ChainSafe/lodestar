@@ -765,7 +765,7 @@ function verifyAttestationTargetRoot(headBlock: ProtoBlock, targetRoot: Root, at
     // Whilst this attestation *technically* could be used to add value to a block, it is
     // invalid in the spirit of the protocol. Here we choose safety over profit.
     //
-    // Reference:
+  
     // https://github.com/ethereum/consensus-specs/pull/2001#issuecomment-699246659
     throw new AttestationError(GossipAction.REJECT, {
       code: AttestationErrorCode.INVALID_TARGET_ROOT,

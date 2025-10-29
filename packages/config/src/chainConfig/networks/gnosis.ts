@@ -4,7 +4,7 @@ import {chainConfig as mainnet} from "../configs/mainnet.js";
 import {ChainConfig} from "../types.js";
 
 // Gnosis beacon chain config:
-//Reference : config
+
 // https://github.com/gnosischain/configs/blob/d447a94bbe1bafbef4fe5a2fbb2e5469e7b494bb/mainnet/config.yaml
 
 export const gnosisChainConfig: ChainConfig = {
