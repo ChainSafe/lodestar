@@ -9,6 +9,7 @@ import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   getBlockHeaderProposerSignatureSet,
+  getBlockHeaderProposerSignatureSetFromParentState,
 } from "@lodestar/state-transition";
 import {BlobIndex, Root, Slot, SubnetID, deneb, ssz} from "@lodestar/types";
 import {toRootHex, verifyMerkleBranch} from "@lodestar/utils";
@@ -124,7 +125,7 @@ export async function validateGossipBlobSidecar(
     });
 
   // [REJECT] The proposer signature, signed_beacon_block.signature, is valid with respect to the proposer_index pubkey.
-  const signatureSet = getBlockHeaderProposerSignatureSet(blockState, blobSidecar.signedBlockHeader);
+  const signatureSet = getBlockHeaderProposerSignatureSetFromParentState(blockState, blobSidecar.signedBlockHeader);
   // Don't batch so verification is not delayed
   if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: true}))) {
     throw new BlobSidecarGossipError(GossipAction.REJECT, {
@@ -217,23 +218,23 @@ export async function validateBlockBlobSidecars(
 
   if (chain !== null) {
     const parentRootHex = toRootHex(firstSidecarBlockHeader.parentRoot);
-    const blockState = await chain.regen
-      .getBlockSlotState(
-        parentRootHex,
-        firstSidecarBlockHeader.slot,
-        {dontTransferCache: true},
-        RegenCaller.validateReqRespDataColumn
-      )
-      .catch(() => {
-        throw new BlobSidecarValidationError({
-          code: BlobSidecarErrorCode.PARENT_UNKNOWN,
-          parentRoot: parentRootHex,
-          slot: blockSlot,
-          blockRoot: toRootHex(blockRoot),
-        });
+    const parentBlock = chain.seenBlockInputCache.get(parentRootHex);
+    if (!parentBlock) {
+      throw new BlobSidecarValidationError({
+        code: BlobSidecarErrorCode.PARENT_UNKNOWN,
+        parentRoot: parentRootHex,
+        slot: blockSlot,
+        blockRoot: toRootHex(blockRoot),
       });
+    }
+    const headState = await chain.getHeadState();
+    const signatureSet = getBlockHeaderProposerSignatureSet(
+      headState.config,
+      headState.epochCtx.index2pubkey,
+      parentBlock.slot,
+      firstSidecarSignedBlockHeader
+    );
 
-    const signatureSet = getBlockHeaderProposerSignatureSet(blockState, firstSidecarSignedBlockHeader);
     if (
       !(await chain.bls.verifySignatureSets([signatureSet], {
         batchable: true,

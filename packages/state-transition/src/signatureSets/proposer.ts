@@ -1,5 +1,7 @@
+import {BeaconConfig} from "@lodestar/config";
 import {DOMAIN_BEACON_PROPOSER} from "@lodestar/params";
-import {SignedBeaconBlock, SignedBlindedBeaconBlock, isBlindedBeaconBlock, phase0, ssz} from "@lodestar/types";
+import {SignedBeaconBlock, SignedBlindedBeaconBlock, Slot, isBlindedBeaconBlock, phase0, ssz} from "@lodestar/types";
+import {Index2PubkeyCache} from "../cache/pubkeyCache.ts";
 import {CachedBeaconStateAllForks} from "../types.js";
 import {computeSigningRoot} from "../util/index.js";
 import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../util/signatureSets.js";
@@ -32,16 +34,29 @@ export function getBlockProposerSignatureSet(
 }
 
 export function getBlockHeaderProposerSignatureSet(
-  state: CachedBeaconStateAllForks,
+  config: BeaconConfig,
+  index2pubkey: Index2PubkeyCache,
+  parentSlot: Slot,
   signedBlockHeader: phase0.SignedBeaconBlockHeader
 ): ISignatureSet {
-  const {config, epochCtx} = state;
-  const domain = config.getDomain(state.slot, DOMAIN_BEACON_PROPOSER, signedBlockHeader.message.slot);
+  const domain = config.getDomain(parentSlot, DOMAIN_BEACON_PROPOSER, signedBlockHeader.message.slot);
 
   return {
     type: SignatureSetType.single,
-    pubkey: epochCtx.index2pubkey[signedBlockHeader.message.proposerIndex],
+    pubkey: index2pubkey[signedBlockHeader.message.proposerIndex],
     signingRoot: computeSigningRoot(ssz.phase0.BeaconBlockHeader, signedBlockHeader.message, domain),
     signature: signedBlockHeader.signature,
   };
+}
+
+export function getBlockHeaderProposerSignatureSetFromParentState(
+  parentState: CachedBeaconStateAllForks,
+  signedBlockHeader: phase0.SignedBeaconBlockHeader
+): ISignatureSet {
+  return getBlockHeaderProposerSignatureSet(
+    parentState.config,
+    parentState.epochCtx.index2pubkey,
+    parentState.slot,
+    signedBlockHeader
+  );
 }
