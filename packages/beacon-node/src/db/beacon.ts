@@ -5,7 +5,7 @@ import {CheckpointStateRepository} from "./repositories/checkpointState.js";
 import {
   AttesterSlashingRepository,
   BLSToExecutionChangeRepository,
-  BackfilledRanges,
+  BackfillState,
   BestLightClientUpdateRepository,
   BlobSidecarsArchiveRepository,
   BlobSidecarsRepository,
@@ -23,7 +23,7 @@ import {
   SyncCommitteeWitnessRepository,
   VoluntaryExitRepository,
 } from "./repositories/index.js";
-import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single/index.js";
+import {BackfillRange, PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single/index.js";
 
 export type BeaconDbModules = {
   config: ChainForkConfig;
@@ -59,7 +59,8 @@ export class BeaconDb implements IBeaconDb {
   syncCommittee: SyncCommitteeRepository;
   syncCommitteeWitness: SyncCommitteeWitnessRepository;
 
-  backfilledRanges: BackfilledRanges;
+  backfillRange: BackfillRange;
+  backfillState: BackfillState;
 
   constructor(
     config: ChainForkConfig,
@@ -92,7 +93,8 @@ export class BeaconDb implements IBeaconDb {
     this.syncCommittee = new SyncCommitteeRepository(config, db);
     this.syncCommitteeWitness = new SyncCommitteeWitnessRepository(config, db);
 
-    this.backfilledRanges = new BackfilledRanges(config, db);
+    this.backfillRange = new BackfillRange(config, db);
+    this.backfillState = new BackfillState(config, db);
   }
 
   close(): Promise<void> {
