@@ -73,7 +73,7 @@ export class WorkerNetworkCore implements INetworkCore {
     // Handles ReqResp response from worker and calls async generator in main thread
     this.reqRespBridgeRespHandler = new AsyncIterableBridgeHandler(
       getReqRespBridgeRespEvents(this.reqRespBridgeEventBus),
-      (data) => modules.getReqRespHandler(data.method)(data.req, peerIdFromString(data.peerId))
+      (data) => modules.getReqRespHandler(data.method)(data.req, peerIdFromString(data.peerId), data.peerClient)
     );
 
     wireEventsOnMainThread<NetworkEventData>(

@@ -17,8 +17,10 @@ import {MapTracker} from "./mapMetrics.js";
 import {BlockStateCache, CacheItemType, CheckpointHex, CheckpointStateCache} from "./types.js";
 
 export type PersistentCheckpointStateCacheOpts = {
-  /** Keep max n states in memory, persist the rest to disk */
+  /** Keep max n state epochs in memory, persist the rest to disk */
   maxCPStateEpochsInMemory?: number;
+  /** Keep max n state epochs on disk */
+  maxCPStateEpochsOnDisk?: number;
 };
 
 type PersistentCheckpointStateCacheModules = {
@@ -57,6 +59,14 @@ type LoadedStateBytesData = {persistedKey: DatastoreKey; stateBytes: Uint8Array}
  * may not be available in memory, and stay on disk instead.
  */
 export const DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY = 3;
+
+/**
+ * By default we don't prune any persistent checkpoint states as it's not safe to delete them during
+ * long non-finality as we don't know the state of the chain and there could be a deep (hundreds of epochs) reorg
+ * if there two competing chains with similar weight but we wouldn't have a close enough state to pivot to this chain
+ * and instead require a resync from last finalized checkpoint state which could be very far in the past.
+ */
+export const DEFAULT_MAX_CP_STATE_ON_DISK = Infinity;
 
 // TODO GLOAS: re-evaluate this timing
 const PROCESS_CHECKPOINT_STATES_BPS = 6667;
@@ -104,6 +114,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   private preComputedCheckpoint: string | null = null;
   private preComputedCheckpointHits: number | null = null;
   private readonly maxEpochsInMemory: number;
+  private readonly maxEpochsOnDisk: number;
   private readonly datastore: CPStateDatastore;
   private readonly blockStateCache: BlockStateCache;
   private readonly bufferPool?: BufferPool | null;
@@ -139,10 +150,16 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     this.logger = logger;
     this.clock = clock;
     this.signal = signal;
+
     if (opts.maxCPStateEpochsInMemory !== undefined && opts.maxCPStateEpochsInMemory < 0) {
       throw new Error("maxEpochsInMemory must be >= 0");
     }
+    if (opts.maxCPStateEpochsOnDisk !== undefined && opts.maxCPStateEpochsOnDisk < 0) {
+      throw new Error("maxCPStateEpochsOnDisk must be >= 0");
+    }
+
     this.maxEpochsInMemory = opts.maxCPStateEpochsInMemory ?? DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY;
+    this.maxEpochsOnDisk = opts.maxCPStateEpochsOnDisk ?? DEFAULT_MAX_CP_STATE_ON_DISK;
     // Specify different datastore for testing
     this.datastore = datastore;
     this.blockStateCache = blockStateCache;
@@ -324,6 +341,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       this.logger.verbose("Added checkpoint state to memory", {epoch: cp.epoch, rootHex: cpHex.rootHex});
     }
     this.epochIndex.getOrDefault(cp.epoch).add(cpHex.rootHex);
+    this.prunePersistedStates();
   }
 
   /**
@@ -766,11 +784,36 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       this.cache.delete(key);
     }
     this.epochIndex.delete(epoch);
-    this.logger.verbose("Pruned finalized checkpoints states for epoch", {
+    this.logger.verbose("Pruned checkpoint states for epoch", {
       epoch,
       persistCount,
       rootHexes: Array.from(rootHexes).join(","),
     });
+  }
+
+  /**
+   * Prune persisted checkpoint states from disk.
+   * Note that this should handle all possible errors and not throw.
+   */
+  private prunePersistedStates(): void {
+    //                epochsOnDisk                                   epochsInMemory
+    // |----------------------------------------------------------|----------------------|
+    const maxTrackedEpochs = this.maxEpochsOnDisk + this.maxEpochsInMemory;
+    if (this.epochIndex.size <= maxTrackedEpochs) {
+      return;
+    }
+
+    const sortedEpochs = Array.from(this.epochIndex.keys()).sort((a, b) => a - b);
+    const pruneEpochs = sortedEpochs.slice(0, sortedEpochs.length - maxTrackedEpochs);
+    for (const epoch of pruneEpochs) {
+      this.deleteAllEpochItems(epoch).catch((e) =>
+        this.logger.debug(
+          "Error delete all epoch items",
+          {epoch, maxEpochsOnDisk: this.maxEpochsOnDisk, maxEpochsInMemory: this.maxEpochsInMemory},
+          e as Error
+        )
+      );
+    }
   }
 
   /**

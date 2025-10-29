@@ -104,7 +104,7 @@ export async function handleRequest({
 
         yield* pipe(
           // TODO: Debug the reason for type conversion here
-          protocol.handler(requestChunk, peerId),
+          protocol.handler(requestChunk, peerId, peerClient),
           // NOTE: Do not log the resp chunk contents, logs get extremely cluttered
           // Note: Not logging on each chunk since after 1 year it hasn't add any value when debugging
           // onChunk(() => logger.debug("Resp sending chunk", logCtx)),

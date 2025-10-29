@@ -1,3 +1,4 @@
+import {PeerId} from "@libp2p/interface";
 import {ChainConfig} from "@lodestar/config";
 import {GENESIS_SLOT} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
@@ -6,6 +7,7 @@ import {ColumnIndex, fulu} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
+import {prettyPrintPeerId} from "../../util.ts";
 import {
   handleColumnSidecarUnavailability,
   validateRequestedDataColumns,
@@ -14,7 +16,9 @@ import {
 export async function* onDataColumnSidecarsByRange(
   request: fulu.DataColumnSidecarsByRangeRequest,
   chain: IBeaconChain,
-  db: IBeaconDb
+  db: IBeaconDb,
+  peerId: PeerId,
+  peerClient: string
 ): AsyncIterable<ResponseOutgoing> {
   // Non-finalized range of columns
   const {startSlot, count, columns: requestedColumns} = validateDataColumnSidecarsByRangeRequest(chain.config, request);
@@ -22,6 +26,14 @@ export async function* onDataColumnSidecarsByRange(
   const endSlot = startSlot + count;
 
   if (availableColumns.length === 0) {
+    return;
+  }
+
+  if (startSlot < chain.earliestAvailableSlot) {
+    chain.logger.verbose("Peer did not respect earliestAvailableSlot for DataColumnSidecarsByRange", {
+      peer: prettyPrintPeerId(peerId),
+      client: peerClient,
+    });
     return;
   }
 

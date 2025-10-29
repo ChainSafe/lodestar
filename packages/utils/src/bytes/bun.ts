@@ -44,11 +44,29 @@ export function fromHexInto(hex: string, buffer: Uint8Array): void {
 
 export const toHexString = toHex;
 
-export const {
-  intToBytes,
-  bytesToInt,
-  // naming differences from upstream
-  intToBytes: bigIntToBytes,
-  bytesToBigint: bytesToBigInt,
-} = bytes;
+import {bytesToBigInt as bBytesToBigInt, bytesToInt as bBytesToInt, intToBytes as bIntToBytes} from "./browser.ts";
+
+export function intToBytes(value: number | bigint, byteLength: number, endianness: "be" | "le" = "le"): Uint8Array {
+  if (byteLength > 8) {
+    return bIntToBytes(value, byteLength, endianness);
+  }
+  return bytes.intToBytes(value, byteLength, endianness);
+}
+
+export function bytesToInt(buf: Uint8Array, endianness: "be" | "le" = "le"): number {
+  if (buf.length > 8) {
+    return bBytesToInt(buf, endianness);
+  }
+  return bytes.bytesToInt(buf, endianness);
+}
+
+export const bigIntToBytes = intToBytes;
+
+export function bytesToBigInt(buf: Uint8Array, endianness: "be" | "le" = "le"): bigint {
+  if (buf.length > 8) {
+    return bBytesToBigInt(buf, endianness);
+  }
+  return bytes.bytesToBigint(buf, endianness);
+}
+
 export {xor} from "./browser.ts";
