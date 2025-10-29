@@ -1,7 +1,5 @@
-import {BeaconConfig} from "@lodestar/config";
 import {DOMAIN_BEACON_PROPOSER} from "@lodestar/params";
-import {SignedBeaconBlock, SignedBlindedBeaconBlock, Slot, isBlindedBeaconBlock, phase0, ssz} from "@lodestar/types";
-import {Index2PubkeyCache} from "../cache/pubkeyCache.ts";
+import {SignedBeaconBlock, SignedBlindedBeaconBlock, isBlindedBeaconBlock, phase0, ssz} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "../types.js";
 import {computeSigningRoot} from "../util/index.js";
 import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../util/signatureSets.js";
