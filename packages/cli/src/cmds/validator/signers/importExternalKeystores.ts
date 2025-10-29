@@ -55,8 +55,6 @@ export function isVotingKeystore(filename: string): boolean {
     //       However, that's too restrictive. Guide left here as a reference
     //
     // The format exported by the `staking-deposit-cli` library.
-    //
-    // Reference to function that generates keystores:
     // https://github.com/ethereum/staking-deposit-cli/blob/7cebff15eac299b3b1b090c896dd3410c8463450/eth2deposit/credentials.py#L58-L62
     //
     // Since we include the key derivation path of `m/12381/3600/x/0/0` this should only ever match

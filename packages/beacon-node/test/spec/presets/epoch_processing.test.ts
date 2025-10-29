@@ -121,7 +121,6 @@ specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIV
     fn: epochProcessing([
       // TODO: invalid_large_withdrawable_epoch asserts an overflow on a u64 for its exit epoch.
       // Currently unable to reproduce in Lodestar, skipping for now
-      // Reference : L349
       // https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.6/tests/core/pyspec/eth2spec/test/phase0/epoch_processing/test_process_registry_updates.py#L349
       "invalid_large_withdrawable_epoch",
     ]),
