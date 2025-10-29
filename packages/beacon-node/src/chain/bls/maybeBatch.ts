@@ -39,7 +39,7 @@ export function verifySignatureSetsMaybeBatch(sets: SignatureSetDeserialized[]):
   } catch (_) {
     // A signature could be malformed, in that case fromBytes throws error
     // blst-ts `verifyMultipleSignatures` is also a fallible operation if mul_n_aggregate fails
-    // see https://github.com/ChainSafe/blst-ts/blob/bc9f2a46059bc437e1e045b086f8269d00c1343c/src/lib.ts#L291
+    // see https://github.com/ChainSafe/blst-ts/blob/b1ba6333f664b08e5c50b2b0d18c4f079203962b/src/lib.ts#L291
     return false;
   }
 }
