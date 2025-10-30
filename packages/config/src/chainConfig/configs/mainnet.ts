@@ -54,7 +54,7 @@ export const chainConfig: ChainConfig = {
 
   // FULU
   FULU_FORK_VERSION: b("0x06000000"),
-  FULU_FORK_EPOCH: Infinity,
+  FULU_FORK_EPOCH: 411392, // December 3, 2025, 09:49:11pm UTC
 
   // GLOAS
   GLOAS_FORK_VERSION: b("0x07000000"),
@@ -184,5 +184,14 @@ export const chainConfig: ChainConfig = {
 
   // Blob Scheduling
   // ---------------------------------------------------------------
-  BLOB_SCHEDULE: [],
+  BLOB_SCHEDULE: [
+    {
+      EPOCH: 412672, // December 9, 2025, 02:21:11pm UTC
+      MAX_BLOBS_PER_BLOCK: 15,
+    },
+    {
+      EPOCH: 419072, // January 7, 2026, 01:01:11am UTC
+      MAX_BLOBS_PER_BLOCK: 21,
+    },
+  ],
 };
