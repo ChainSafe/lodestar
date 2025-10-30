@@ -47,7 +47,7 @@ describe("voluntaryExit saveToFile-noNetwork cmd", () => {
     // check on environment/network calls
     const mockEnv = vi.spyOn(process, "env", "get").mockReturnValue({
       ...process.env,
-      ETH_RPC_URL: "", // ensure no RPC URL defined
+      ETH_RPC_URL: "", 
     });
 
     let publishedToNetwork = false;
@@ -70,7 +70,7 @@ describe("voluntaryExit saveToFile-noNetwork cmd", () => {
     });
 
     try {
-      await mockExec(); // simulate execCliCommand
+      await mockExec(); 
     } catch {}
 
     // Assert: no network calls were made

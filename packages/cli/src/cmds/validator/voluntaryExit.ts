@@ -1,4 +1,3 @@
-import inquirer from "inquirer";
 import {Signature} from "@chainsafe/blst";
 import {ApiClient, getClient} from "@lodestar/api";
 import {BeaconConfig, createBeaconConfig} from "@lodestar/config";
@@ -11,6 +10,7 @@ import {
 import {Epoch, ValidatorIndex, phase0, ssz} from "@lodestar/types";
 import {CliCommand, fromHex, toPubkeyHex} from "@lodestar/utils";
 import {SignableMessageType, Signer, SignerType, externalSignerPostSignature} from "@lodestar/validator";
+import inquirer from "inquirer";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {GlobalArgs} from "../../options/index.js";
 import {YargsError, ensure0xPrefix, wrapError} from "../../util/index.js";
@@ -21,6 +21,7 @@ type VoluntaryExitArgs = {
   exitEpoch?: number;
   pubkeys?: string[];
   yes?: boolean;
+  saveToFile?: string;
 };
 
 export const voluntaryExit: CliCommand<VoluntaryExitArgs, IValidatorCliArgs & GlobalArgs> = {
@@ -65,9 +66,14 @@ If no `pubkeys` are provided, it will exit all validators that have been importe
       description: "Skip confirmation prompt",
       type: "boolean",
     },
+
+    saveToFile: {
+      description: "Path to file where signed voluntary exit(s) will be saved as JSON instead of being published to the network.",
+      type: "string",
+    },
   },
 
-  handler: async (args) => {
+  handler: async (args: VoluntaryExitArgs & IValidatorCliArgs & GlobalArgs) => {
     // Fetch genesisValidatorsRoot always from beacon node
     // Do not use known networks cache, it defaults to mainnet for devnets
     const {config: chainForkConfig, network} = getBeaconConfigFromArgs(args);
@@ -111,6 +117,7 @@ ${validatorsToExit.map((v) => `${v.pubkey} ${v.index} ${v.status}`).join("\n")}`
     }
 
     const alreadySubmitted = [];
+    const signedExits = [];
     for (const [i, validatorToExit] of validatorsToExit.entries()) {
       const v: {index: ValidatorIndex; signer: Signer; pubkey: string} = validatorToExit;
       let signedVoluntaryExit: phase0.SignedVoluntaryExit;
@@ -137,6 +144,13 @@ ${validatorsToExit.map((v) => `${v.pubkey} ${v.index} ${v.status}`).join("\n")}`
           }
         }
       }
+    }
+
+    if (args.saveToFile && signedExits.length > 0) {
+      // Write all signed voluntary exits to the specified file as a JSON array
+      const {writeFile} = await import("../../util/file.js");
+      writeFile(args.saveToFile, signedExits);
+      console.log(`Saved ${signedExits.length} signed voluntary exit(s) to file: ${args.saveToFile}`);
     }
 
     if (alreadySubmitted.length > 0) {
@@ -240,7 +254,3 @@ function getSignerPubkeyHex(signer: Signer): string {
       return signer.pubkey;
   }
 }
-
-
-
-
