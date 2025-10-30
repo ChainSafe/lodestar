@@ -112,19 +112,6 @@ ${validatorsToExit.map((v) => `${v.pubkey} ${v.index} ${v.status}`).join("\n")}`
 
     const alreadySubmitted = [];
     for (const [i, validatorToExit] of validatorsToExit.entries()) {
-<<<<<<< HEAD
-      const {err} = await wrapError(processVoluntaryExit({config, client}, exitEpoch, validatorToExit));
-      const {pubkey, index} = validatorToExit;
-      if (err === null) {
-        console.log(`Submitted voluntary exit for ${pubkey} (${index}) ${i + 1}/${signersToExit.length}`);
-      } else {
-        if (err.message.includes("ALREADY_EXISTS")) {
-          alreadySubmitted.push(validatorToExit);
-        } else {
-          console.log(
-            `Voluntary exit errored for ${pubkey} (${index}) ${i + 1}/${signersToExit.length}: ${err.message}`
-          );
-=======
       const v: {index: ValidatorIndex; signer: Signer; pubkey: string} = validatorToExit;
       let signedVoluntaryExit: phase0.SignedVoluntaryExit;
       try {
@@ -148,7 +135,6 @@ ${validatorsToExit.map((v) => `${v.pubkey} ${v.index} ${v.status}`).join("\n")}`
               `Voluntary exit errored for ${v.pubkey} (${v.index}) ${i + 1}/${signersToExit.length}: ${err && err.message ? err.message : err}`
             );
           }
->>>>>>> 7aba5b1b4b (Update voluntaryExit.ts)
         }
       }
     }
@@ -195,11 +181,6 @@ async function signVoluntaryExit(
     message: voluntaryExit,
     signature: signature.toBytes(),
   };
-<<<<<<< HEAD
-
-  (await client.beacon.submitPoolVoluntaryExit({signedVoluntaryExit})).assertOk();
-=======
->>>>>>> 7aba5b1b4b (Update voluntaryExit.ts)
 }
 
 type SignerPubkey = {signer: Signer; pubkey: string};
