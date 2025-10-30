@@ -1,165 +1,95 @@
 import {existsSync, mkdirSync} from "node:fs";
-import path from "node:path";
+import path, {basename} from "node:path";
 import {fileURLToPath} from "node:url";
-import {assert, beforeAll, describe, it} from "vitest";
+import {beforeAll, describe, expect, it} from "vitest";
 import {ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {mainnetChainConfig} from "@lodestar/config/networks";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
-import {EraFile, EraFileReader, EraFileWriter} from "../../src/index.ts";
+import {EraReader, EraWriter} from "../../src/era/index.ts";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 describe.runIf(!process.env.CI)("read original era and re-write our own era file", () => {
-  let cfg: ChainForkConfig;
+  let config: ChainForkConfig;
   const eraPath = path.resolve(__dirname, "../mainnet-01506-4781865b.era");
   const expectedEra = 1506;
 
   beforeAll(() => {
-    cfg = createChainForkConfig(mainnetChainConfig);
+    config = createChainForkConfig(mainnetChainConfig);
   });
 
-  it("reads an existing era file and writes a new era file that round-trips", async () => {
+  it("validate an existing era file, rewrite into a new era file, and validate that new era file", async () => {
     const SPR = SLOTS_PER_HISTORICAL_ROOT;
     const stateSlot = expectedEra * SPR;
-    const blockStartSlot = stateSlot - SPR;
 
     const startTime = Date.now();
     let t0 = startTime;
 
     console.log("stage: open and read original era file");
-    const originalEraFile = await EraFile.open(eraPath);
-    const originalIndex = await originalEraFile.createIndex();
-    const reader = new EraFileReader(originalEraFile, originalIndex, cfg);
+    const reader = await EraReader.open(config, eraPath);
     console.log(`  time: ${Date.now() - t0}ms`);
     t0 = Date.now();
 
-    console.log("stage: read state from original file");
-    const originalState = await reader.readCanonicalState();
-    assert.equal(Number(originalState.slot), stateSlot);
+    console.log(`progress: ${reader.groups.length} group(s) found`);
+
+    console.log("stage: validate original era file");
+    await reader.validate();
     console.log(`  time: ${Date.now() - t0}ms`);
     t0 = Date.now();
 
-    console.log("stage: read blocks from original file");
-    const blocks: {slot: number; block: any}[] = [];
-    for (let i = 0; i < originalIndex.indices.length; i++) {
-      if (originalIndex.indices[i] === 0) continue;
-      const slot = blockStartSlot + i;
-      const block = await reader.readBlock(slot);
-      assert.ok(block !== null, `Expected block at slot ${slot} but got null`);
-      blocks.push({slot, block});
-      if ((i & 0x1ff) === 0) {
-        console.log(`progress: scanned ${i}/${SPR} slots, non-empty ${blocks.length}`);
-      }
-    }
-    console.log(`stage: read complete (non-empty blocks=${blocks.length})`);
-    console.log(`  time: ${Date.now() - t0}ms`);
-    t0 = Date.now();
-
-    await originalEraFile.close();
-
-    console.log("stage: create and write new era file");
-    console.log("stage: create and write new era file");
+    console.log("stage: create new era file writer");
     const outDir = path.resolve(__dirname, "../out");
     if (!existsSync(outDir)) mkdirSync(outDir, {recursive: true});
-    const outFile = path.resolve(outDir, `mainnet-${String(expectedEra).padStart(5, "0")}-rewrite.era`);
+    let outFile = path.resolve(outDir, `mainnet-${String(expectedEra).padStart(5, "0")}-deadbeef.era`);
 
-    const newEraFile = await EraFile.create(outFile, expectedEra);
-    const writer = new EraFileWriter(newEraFile, cfg);
-
-    // Write state
-    console.log("stage: write state");
-    await writer.writeCanonicalState(originalState);
+    const writer = await EraWriter.create(config, outFile, expectedEra);
     console.log(`  time: ${Date.now() - t0}ms`);
     t0 = Date.now();
 
-    // Write all blocks
-    console.log("stage: write blocks");
-    for (const {block} of blocks) {
+    console.log("stage: read blocks from original and write to new era file");
+    const blocksIndex = reader.groups[0].blocksIndex;
+    if (!blocksIndex) {
+      throw new Error("Original era file missing blocks index");
+    }
+    for (let slot = blocksIndex.startSlot; slot < blocksIndex.startSlot + blocksIndex.offsets.length; slot++) {
+      const block = await reader.readBlock(slot);
+      if (block === null) continue;
       await writer.writeBlock(block);
     }
     console.log(`  time: ${Date.now() - t0}ms`);
     t0 = Date.now();
 
-    // Finish writing
-    console.log("stage: finish writing");
-    await writer.finish();
-    await newEraFile.close();
+    console.log("stage: read state from original era file");
+    const originalState = await reader.readState();
+    expect(originalState.slot).to.equal(stateSlot);
     console.log(`  time: ${Date.now() - t0}ms`);
     t0 = Date.now();
 
-    console.log("stage: validate new era file");
-    // Open and validate the new file
-    const validationEraFile = await EraFile.open(outFile);
-    const validationIndex = await validationEraFile.createIndex();
-    const validationReader = new EraFileReader(validationEraFile, validationIndex, cfg);
+    console.log("stage: write state to new era file");
+    await writer.writeState(originalState);
     console.log(`  time: ${Date.now() - t0}ms`);
     t0 = Date.now();
 
-    // Validate entire era file format and correctness
-    console.log("stage: validate era file format");
-    await validationEraFile.validate(cfg);
+    console.log("stage: finish reading and writing");
+    await reader.close();
+    outFile = await writer.finish();
     console.log(`  time: ${Date.now() - t0}ms`);
     t0 = Date.now();
 
-    // Validate index matches
-    assert.equal(validationIndex.startSlot, blockStartSlot);
-    assert.equal(validationIndex.indices.length, SPR);
-    const newNonEmpty = validationIndex.indices.filter((o) => o !== 0).length;
-    assert.equal(newNonEmpty, blocks.length);
+    expect(basename(outFile)).to.equal(basename(eraPath));
 
-    // Validate empty/non-empty slot pattern matches original
-    for (let i = 0; i < SPR; i++) {
-      const originalIsEmpty = originalIndex.indices[i] === 0;
-      const newIsEmpty = validationIndex.indices[i] === 0;
-      assert.equal(newIsEmpty, originalIsEmpty, `Slot ${blockStartSlot + i} empty/non-empty status should match`);
-    }
-
-    // Validate state matches (full comparison via SSZ serialization)
-    console.log("stage: validate state");
-    const validatedState = await validationReader.readCanonicalState();
-
-    // Serialize both states and compare bytes - this proves they're 100% identical
-    const originalTypes = cfg.getForkTypes(originalState.slot);
-    const validatedTypes = cfg.getForkTypes(validatedState.slot);
-    const originalSSZ = originalTypes.BeaconState.serialize(originalState);
-    const validatedSSZ = validatedTypes.BeaconState.serialize(validatedState);
-
-    assert.deepEqual(validatedSSZ, originalSSZ, "State SSZ bytes should match exactly");
+    console.log("stage: open and validate new era file");
+    const newReader = await EraReader.open(config, outFile);
+    await newReader.validate();
     console.log(`  time: ${Date.now() - t0}ms`);
     t0 = Date.now();
-
-    // Validate ALL blocks match exactly (full comparison via SSZ serialization)
-    console.log("stage: validate all blocks");
-    for (const {slot, block} of blocks) {
-      const validatedBlock = await validationReader.readBlock(slot);
-      assert.ok(validatedBlock !== null, `Block at slot ${slot} should not be null`);
-
-      // Serialize both blocks and compare bytes - this proves they're 100% identical
-      const types = cfg.getForkTypes(slot);
-      const originalSSZ = types.SignedBeaconBlock.serialize(block);
-      const validatedSSZ = types.SignedBeaconBlock.serialize(validatedBlock);
-      assert.deepEqual(validatedSSZ, originalSSZ, `Block at slot ${slot} SSZ bytes should match exactly`);
-    }
-    console.log(`  time: ${Date.now() - t0}ms`);
-    t0 = Date.now();
-
-    // Validate empty slots remain empty
-    console.log("stage: validate empty slots");
-    for (let i = 0; i < originalIndex.indices.length; i++) {
-      if (originalIndex.indices[i] === 0) {
-        const slot = blockStartSlot + i;
-        const validatedBlock = await validationReader.readBlock(slot);
-        assert.equal(validatedBlock, null, `Slot ${slot} should be empty`);
-      }
-    }
-    console.log(`  time: ${Date.now() - t0}ms`);
 
     // Cleanup
-    await validationEraFile.close();
+    await newReader.close();
 
     const totalTime = Date.now() - startTime;
-    console.log(`Round-trip test passed: ${blocks.length} blocks written and fully validated`);
+    console.log("Round-trip test passed");
     console.log(`  Total time: ${totalTime}ms (${(totalTime / 1000).toFixed(2)}s)`);
   }, 120000);
 });
