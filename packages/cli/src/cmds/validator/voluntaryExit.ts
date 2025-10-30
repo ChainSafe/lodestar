@@ -1,3 +1,4 @@
+import inquirer from "inquirer";
 import {Signature} from "@chainsafe/blst";
 import {ApiClient, getClient} from "@lodestar/api";
 import {BeaconConfig, createBeaconConfig} from "@lodestar/config";
@@ -10,7 +11,6 @@ import {
 import {Epoch, ValidatorIndex, phase0, ssz} from "@lodestar/types";
 import {CliCommand, fromHex, toPubkeyHex} from "@lodestar/utils";
 import {SignableMessageType, Signer, SignerType, externalSignerPostSignature} from "@lodestar/validator";
-import inquirer from "inquirer";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {GlobalArgs} from "../../options/index.js";
 import {YargsError, ensure0xPrefix, wrapError} from "../../util/index.js";
@@ -68,7 +68,8 @@ If no `pubkeys` are provided, it will exit all validators that have been importe
     },
 
     saveToFile: {
-      description: "Path to file where signed voluntary exit(s) will be saved as JSON instead of being published to the network.",
+      description:
+        "Path to file where signed voluntary exit(s) will be saved as JSON instead of being published to the network.",
       type: "string",
     },
   },
@@ -124,7 +125,9 @@ ${validatorsToExit.map((v) => `${v.pubkey} ${v.index} ${v.status}`).join("\n")}`
       try {
         signedVoluntaryExit = await signVoluntaryExit(config, exitEpoch, v);
       } catch (err) {
-        console.log(`Signing voluntary exit errored for ${v.pubkey} (${v.index}): ${err instanceof Error ? err.message : err}`);
+        console.log(
+          `Signing voluntary exit errored for ${v.pubkey} (${v.index}): ${err instanceof Error ? err.message : err}`
+        );
         continue;
       }
       if (args.saveToFile) {

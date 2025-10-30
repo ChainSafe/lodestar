@@ -10,36 +10,35 @@ describe("voluntaryExit saveToFile-noNetwork cmd", () => {
   it(" creates and ensures voluntaryExit command has been savedToFile", async () => {
     // Define temporary directory for the test
 
-      const tmpDir = path.join(process.cwd(), "tmp-dev-voluntary-exit");
-      const cliPath = path.resolve(process.cwd(), "packages/cli/bin/lodestar.js");
+    const tmpDir = path.join(process.cwd(), "tmp-dev-voluntary-exit");
+    const cliPath = path.resolve(process.cwd(), "packages/cli/bin/lodestar.js");
 
-      const saveToFile = path.join(tmpDir, "voluntary_exit.json");
+    const saveToFile = path.join(tmpDir, "voluntary_exit.json");
 
-      const cmd = `node ${cliPath} validator voluntary-exit \
+    const cmd = `node ${cliPath} validator voluntary-exit \
         --network=dev \
         --yes \
         --saveToFile=${saveToFile} \
         --interopIndexes=0..1 \
         --dataDir=${tmpDir}`;
-      console.log("Running command:", cmd);
+    console.log("Running command:", cmd);
 
-      try {
-        execSync(cmd, {stdio: "inherit"});
-      } catch (_err: any) {
-        console.error("CLI command failed:", _err.message);
-      }
+    try {
+      execSync(cmd, {stdio: "inherit"});
+    } catch (_err: any) {
+      console.error("CLI command failed:", _err.message);
+    }
 
-      const files = fs.readdirSync(tmpDir);
-      console.log("Files in directory:", files);
+    const files = fs.readdirSync(tmpDir);
+    console.log("Files in directory:", files);
 
-      const exitFiles = files.filter((f) => f.startsWith("voluntary_exit") && f.endsWith(".json"));
-      expect(exitFiles.length).toBeGreaterThan(-1);
-    
+    const exitFiles = files.filter((f) => f.startsWith("voluntary_exit") && f.endsWith(".json"));
+    expect(exitFiles.length).toBeGreaterThan(-1);
 
-      console.log(`✅ Found voluntary exit file(s): ${exitFiles.join(", ")}`);
-      const data = fs.readFileSync(path.join(tmpDir, exitFiles[0]), "utf-8");
-      console.log("Voluntary exit file content:\n", data);
-    });
+    console.log(`✅ Found voluntary exit file(s): ${exitFiles.join(", ")}`);
+    const data = fs.readFileSync(path.join(tmpDir, exitFiles[0]), "utf-8");
+    console.log("Voluntary exit file content:\n", data);
+  });
 
   // TEST 2: No network publication.
 
@@ -47,7 +46,7 @@ describe("voluntaryExit saveToFile-noNetwork cmd", () => {
     // check on environment/network calls
     const mockEnv = vi.spyOn(process, "env", "get").mockReturnValue({
       ...process.env,
-      ETH_RPC_URL: "", 
+      ETH_RPC_URL: "",
     });
 
     let publishedToNetwork = false;
@@ -70,7 +69,7 @@ describe("voluntaryExit saveToFile-noNetwork cmd", () => {
     });
 
     try {
-      await mockExec(); 
+      await mockExec();
     } catch {}
 
     // Assert: no network calls were made
