@@ -271,6 +271,8 @@ export function verifyDataColumnSidecarInclusionProof(dataColumnSidecar: fulu.Da
  * Validate a subset of data column sidecars in a block
  *
  * Requires the block to be known to the node
+ *
+ * NOTE: chain is optional for testing purposes and will skip signature verification
  */
 export async function validateBlockDataColumnSidecars(
   chain: IBeaconChain | null,
