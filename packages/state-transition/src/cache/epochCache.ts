@@ -47,6 +47,7 @@ import {
   getSeed,
   isActiveValidator,
   isAggregatorFromCommitteeLength,
+  naiveGetPTCIndices,
 } from "../util/index.js";
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
 import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
@@ -60,7 +61,7 @@ import {
   computeSyncCommitteeCache,
   getSyncCommitteeCache,
 } from "./syncCommitteeCache.js";
-import {BeaconStateAllForks, BeaconStateAltair} from "./types.js";
+import {BeaconStateAllForks, BeaconStateAltair, BeaconStateGloas} from "./types.js";
 
 /** `= PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)` */
 export const PROPOSER_WEIGHT_FACTOR = PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT);
@@ -239,6 +240,10 @@ export class EpochCache {
   /** TODO: Indexed SyncCommitteeCache */
   nextSyncCommitteeIndexed: SyncCommitteeCache;
 
+  // TODO GLOAS: See if we need to cached PTC for prev/next epoch
+  // PTC for current epoch
+  PTC: ValidatorIndex[][] ;
+
   // TODO: Helper stats
   syncPeriod: SyncPeriod;
 
@@ -277,6 +282,7 @@ export class EpochCache {
     previousTargetUnslashedBalanceIncrements: number;
     currentSyncCommitteeIndexed: SyncCommitteeCache;
     nextSyncCommitteeIndexed: SyncCommitteeCache;
+    PTC: ValidatorIndex[][];
     epoch: Epoch;
     syncPeriod: SyncPeriod;
   }) {
@@ -308,6 +314,7 @@ export class EpochCache {
     this.previousTargetUnslashedBalanceIncrements = data.previousTargetUnslashedBalanceIncrements;
     this.currentSyncCommitteeIndexed = data.currentSyncCommitteeIndexed;
     this.nextSyncCommitteeIndexed = data.nextSyncCommitteeIndexed;
+    this.PTC = data.PTC;
     this.epoch = data.epoch;
     this.syncPeriod = data.syncPeriod;
   }
@@ -486,6 +493,17 @@ export class EpochCache {
       nextSyncCommitteeIndexed = new SyncCommitteeCacheEmpty();
     }
 
+    // Compute PTC for this epoch
+    let PTC: ValidatorIndex[][] = [];
+    if (currentEpoch >= config.GLOAS_FORK_EPOCH) {
+      PTC = naiveGetPTCIndices(
+        state as BeaconStateGloas,
+        currentShuffling,
+        effectiveBalanceIncrements,
+        currentEpoch
+      );
+    } 
+
     // Precompute churnLimit for efficient initiateValidatorExit() during block proposing MUST be recompute everytime the
     // active validator indices set changes in size. Validators change active status only when:
     // - validator.activation_epoch is set. Only changes in process_registry_updates() if validator can be activated. If
@@ -560,6 +578,7 @@ export class EpochCache {
       currentTargetUnslashedBalanceIncrements,
       currentSyncCommitteeIndexed,
       nextSyncCommitteeIndexed,
+      PTC,
       epoch: currentEpoch,
       syncPeriod: computeSyncPeriodAtEpoch(currentEpoch),
     });
@@ -606,6 +625,7 @@ export class EpochCache {
       currentTargetUnslashedBalanceIncrements: this.currentTargetUnslashedBalanceIncrements,
       currentSyncCommitteeIndexed: this.currentSyncCommitteeIndexed,
       nextSyncCommitteeIndexed: this.nextSyncCommitteeIndexed,
+      PTC: this.PTC,
       epoch: this.epoch,
       syncPeriod: this.syncPeriod,
     });
@@ -751,6 +771,9 @@ export class EpochCache {
     const epochAfterUpcoming = upcomingEpoch + 1;
 
     this.proposersPrevEpoch = this.proposers;
+    if (upcomingEpoch >= this.config.GLOAS_FORK_EPOCH) {
+      this.PTC = naiveGetPTCIndices(state as BeaconStateGloas, this.currentShuffling, this.effectiveBalanceIncrements, upcomingEpoch);
+    } 
     if (upcomingEpoch >= this.config.FULU_FORK_EPOCH) {
       // Populate proposer cache with lookahead from state
       const proposerLookahead = (state as CachedBeaconStateFulu).proposerLookahead.getAll();
@@ -1153,8 +1176,29 @@ export class EpochCache {
     return this.epoch >= this.config.ELECTRA_FORK_EPOCH;
   }
 
-  getIndexedPayloadAttestation(payloadAttestation: gloas.PayloadAttestation): gloas.IndexedPayloadAttestation {
-    throw Error("Unimplemented");
+  getPTC(slot: Slot): ValidatorIndex[] {
+    const epoch = computeEpochAtSlot(slot);
+
+    if (epoch < this.config.GLOAS_FORK_EPOCH) {
+      throw new Error("PTC is not available before GLOAS fork");
+    }
+
+    if (epoch === this.epoch) {
+      return this.PTC[slot % SLOTS_PER_EPOCH];
+    }
+
+    throw new Error(`PTC is not available for slot=${slot}`);
+  }
+
+  getIndexedPayloadAttestation(slot: Slot, payloadAttestation: gloas.PayloadAttestation): gloas.IndexedPayloadAttestation {
+    const PTC = this.getPTC(slot);
+    const attestingIndices = payloadAttestation.aggregationBits.intersectValues(PTC);
+    
+    return {
+      attestingIndices: attestingIndices.sort((a, b) => a - b),
+      data: {...payloadAttestation.data, blobDataAvailable: true},
+      signature: payloadAttestation.signature,
+    };
   }
 }
 

@@ -5,6 +5,7 @@ import {
 } from "@chainsafe/swap-or-not-shuffle";
 import {
   DOMAIN_BEACON_PROPOSER,
+  DOMAIN_PTC_ATTESTER,
   DOMAIN_SYNC_COMMITTEE,
   EFFECTIVE_BALANCE_INCREMENT,
   EPOCHS_PER_HISTORICAL_VECTOR,
@@ -12,6 +13,7 @@ import {
   MAX_EFFECTIVE_BALANCE,
   MAX_EFFECTIVE_BALANCE_ELECTRA,
   MIN_SEED_LOOKAHEAD,
+  PTC_SIZE,
   SHUFFLE_ROUND_COUNT,
   SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SIZE,
@@ -19,7 +21,7 @@ import {
 import {Bytes32, DomainType, Epoch, ValidatorIndex} from "@lodestar/types";
 import {assert, bytesToBigInt, bytesToInt, intToBytes} from "@lodestar/utils";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
-import {BeaconStateAllForks, CachedBeaconStateAllForks} from "../types.js";
+import {BeaconStateAllForks, BeaconStateGloas, CachedBeaconStateAllForks} from "../types.js";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "./epoch.js";
 
 /**
@@ -265,6 +267,60 @@ export function getNextSyncCommitteeIndices(
     SHUFFLE_ROUND_COUNT
   );
 }
+
+export function naiveGetPTCIndices(
+  state: BeaconStateGloas,
+  shuffling: {activeIndices: Uint32Array},
+  effectiveBalanceIncrements: EffectiveBalanceIncrements,
+  epoch: Epoch
+): ValidatorIndex[][] {
+  const epochSeed = getSeed(state, epoch, DOMAIN_PTC_ATTESTER);
+  const startSlot = computeStartSlotAtEpoch(epoch);
+  const ptcIndices = [];
+
+  for (let slot = startSlot; slot < startSlot + SLOTS_PER_EPOCH; slot++) {
+    const indices = naiveComputePTCIndices(
+      effectiveBalanceIncrements,
+      shuffling.activeIndices,
+      digest(Buffer.concat([epochSeed, intToBytes(slot, 8)]))
+    );
+    ptcIndices.push(indices);
+  }
+
+  return ptcIndices;
+}
+
+export function naiveComputePTCIndices(
+  effectiveBalanceIncrements: EffectiveBalanceIncrements,
+  indices: ArrayLike<ValidatorIndex>,
+  seed: Uint8Array,
+): ValidatorIndex[] {
+  if (indices.length === 0) {
+    throw Error("Validator indices must not be empty");
+  }
+
+  const result = [];
+
+  const MAX_RANDOM_VALUE = 2 ** 16 - 1;
+  const MAX_EFFECTIVE_BALANCE_INCREMENT = MAX_EFFECTIVE_BALANCE_ELECTRA / EFFECTIVE_BALANCE_INCREMENT;
+
+  let i = 0;
+  while (result.length < PTC_SIZE) {
+    const candidateIndex = indices[i % indices.length];
+    const randomBytes = digest(Buffer.concat([seed, intToBytes(Math.floor(i / 16), 8, "le")]));
+    const offset = (i % 16) * 2;
+    const randomValue = bytesToInt(randomBytes.subarray(offset, offset + 2));
+
+    const effectiveBalanceIncrement = effectiveBalanceIncrements[candidateIndex];
+    if (effectiveBalanceIncrement * MAX_RANDOM_VALUE >= MAX_EFFECTIVE_BALANCE_INCREMENT * randomValue) {
+      result.push(candidateIndex);
+    }
+    i += 1;
+  }
+
+  return result;
+}
+
 
 /**
  * Return the shuffled validator index corresponding to ``seed`` (and ``index_count``).
