@@ -68,13 +68,17 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
     blockFns.processVoluntaryExit(fork, state, testCase.voluntary_exit);
   },
 
-  execution_payload: (state, testCase: {body: bellatrix.BeaconBlockBody; execution: {execution_valid: boolean}}) => {
+  execution_payload: (state, testCase: {body: bellatrix.BeaconBlockBody | gloas.BeaconBlockBody; signed_envelope: gloas.ExecutionPayloadEnvelope, execution: {execution_valid: boolean}}) => {
     const fork = state.config.getForkSeq(state.slot);
-    blockFns.processExecutionPayload(fork, state as CachedBeaconStateBellatrix, testCase.body, {
-      executionPayloadStatus: testCase.execution.execution_valid
-        ? ExecutionPayloadStatus.valid
-        : ExecutionPayloadStatus.invalid,
-    });
+    if (fork >= ForkSeq.gloas) {
+      throw new Error("Unimplemented");
+    } else {
+      blockFns.processExecutionPayload(fork, state as CachedBeaconStateBellatrix, testCase.body, {
+        executionPayloadStatus: testCase.execution.execution_valid
+          ? ExecutionPayloadStatus.valid
+          : ExecutionPayloadStatus.invalid,
+      });
+    }
   },
 
   bls_to_execution_change: (state, testCase: {address_change: capella.SignedBLSToExecutionChange}) => {
@@ -160,6 +164,7 @@ const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork,
         deposit_request: ssz.electra.DepositRequest,
         consolidation_request: ssz.electra.ConsolidationRequest,
         payload_attestation: ssz.gloas.PayloadAttestation,
+        signed_envelope: ssz.gloas.SignedExecutionPayloadEnvelope,
       },
       shouldError: (testCase) => testCase.post === undefined,
       getExpected: (testCase) => testCase.post,

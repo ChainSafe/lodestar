@@ -22,7 +22,7 @@ export function processExecutionPayloadBid(
     if (amount !== 0) {
       throw Error(`Invalid execution payload bid: self-build with non-zero amount ${amount}`);
     }
-    if (signedBid.signature !== G2_POINT_AT_INFINITY) {
+    if (!byteArrayEquals(signedBid.signature, G2_POINT_AT_INFINITY)) {
       throw Error("Invalid execution payload bid: self-build with non-zero signature");
     }
     // Non-self builds require builder withdrawal credential

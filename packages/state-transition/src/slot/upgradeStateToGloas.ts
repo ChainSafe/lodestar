@@ -1,6 +1,7 @@
 import {ssz} from "@lodestar/types";
 import {getCachedBeaconState} from "../cache/stateCache.js";
 import {CachedBeaconStateFulu, CachedBeaconStateGloas} from "../types.js";
+import { SLOTS_PER_HISTORICAL_ROOT } from "@lodestar/params";
 
 /**
  * Upgrade a state from Fulu to Gloas.
@@ -11,6 +12,11 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
 
   const stateFuluNode = ssz.fulu.BeaconState.commitViewDU(stateFulu);
   const stateGloasView = ssz.gloas.BeaconState.getViewDU(stateFuluNode);
+
+  for (let i = 0; i < SLOTS_PER_HISTORICAL_ROOT; i++) {
+    stateGloasView.executionPayloadAvailability.set(i, true);
+  }
+  stateGloasView.latestBlockHash = stateFulu.latestExecutionPayloadHeader.blockHash;
 
   const stateGloas = getCachedBeaconState(stateGloasView, stateFulu);
 

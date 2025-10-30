@@ -49,6 +49,8 @@ export function processAttestationsAltair(
   let newSeenAttesters = 0;
   let newSeenAttestersEffectiveBalance = 0;
 
+  const builderWeightMap: Map<number, number> = new Map();
+
   for (const attestation of attestations) {
     const data = attestation.data;
 
@@ -141,17 +143,16 @@ export function processAttestationsAltair(
       const builderPendingPaymentIndex = inCurrentEpoch
         ? SLOTS_PER_EPOCH + (data.slot % SLOTS_PER_EPOCH)
         : data.slot % SLOTS_PER_EPOCH;
-      const payment = (state as CachedBeaconStateGloas).builderPendingPayments.get(builderPendingPaymentIndex);
-      const updatedWeight = payment.weight + paymentWeightToAdd * EFFECTIVE_BALANCE_INCREMENT;
 
-      (state as CachedBeaconStateGloas).builderPendingPayments.set(
-        builderPendingPaymentIndex,
-        ssz.gloas.BuilderPendingPayment.toViewDU({
-          ...payment,
-          weight: updatedWeight,
-        })
-      );
+      const existingWeight = builderWeightMap.get(builderPendingPaymentIndex) ?? (state as CachedBeaconStateGloas).builderPendingPayments.get(builderPendingPaymentIndex).weight;
+      const updatedWeight = existingWeight + paymentWeightToAdd * EFFECTIVE_BALANCE_INCREMENT;
+      builderWeightMap.set(builderPendingPaymentIndex, updatedWeight);
     }
+  }
+
+  for (const [index, weight] of builderWeightMap) {
+    const payment = (state as CachedBeaconStateGloas).builderPendingPayments.get(index);
+    payment.weight = weight;
   }
 
   metrics?.newSeenAttestersPerBlock.set(newSeenAttesters);
