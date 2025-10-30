@@ -1,4 +1,5 @@
 import {Id, Repository} from "@lodestar/db";
+import {Logger} from "@lodestar/logger";
 import {
   BLS_WITHDRAWAL_PREFIX,
   ForkName,
@@ -28,10 +29,14 @@ import {
 import {fromHex, toHex, toRootHex} from "@lodestar/utils";
 import {IBeaconDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/metrics.js";
+import {INetwork} from "../../network/interface.js";
 import {SignedBLSToExecutionChangeVersioned} from "../../util/types.js";
+import {IBeaconChain} from "../index.js";
 import {BlockType} from "../interface.js";
 import {BlockProductionStep} from "../produceBlock/produceBlockBody.js";
+import {validateGossipVoluntaryExit} from "../validation/voluntaryExit.js";
 import {isValidBlsToExecutionChangeForBlockInclusion} from "./utils.js";
+import {VoluntaryExitDelayedBroadcaster} from "./voluntaryExitBroadcaster.js";
 
 type HexRoot = string;
 type AttesterSlashingCached = {
@@ -50,6 +55,20 @@ export class OpPool {
   private readonly attesterSlashingIndexes = new Set<ValidatorIndex>();
   /** Map of validator index -> SignedBLSToExecutionChange */
   private readonly blsToExecutionChanges = new Map<ValidatorIndex, SignedBLSToExecutionChangeVersioned>();
+  /** Handles delayed broadcasting of voluntary exits */
+  private readonly voluntaryExitBroadcaster: VoluntaryExitDelayedBroadcaster;
+
+  constructor(
+    private readonly chain: IBeaconChain,
+    private readonly network: INetwork,
+    private readonly logger: Logger
+  ) {
+    // Initialize the voluntary exit broadcaster
+    this.voluntaryExitBroadcaster = new VoluntaryExitDelayedBroadcaster(this.chain, this.network, this.logger);
+
+    // Start periodic check for cached voluntary exits
+    this.startPeriodicBroadcastCheck();
+  }
 
   // Getters for metrics
 
@@ -81,7 +100,7 @@ export class OpPool {
       this.insertProposerSlashing(proposerSlashing);
     }
     for (const voluntaryExit of voluntaryExits) {
-      this.insertVoluntaryExit(voluntaryExit);
+      await this.insertVoluntaryExit(voluntaryExit);
     }
     for (const item of blsToExecutionChanges) {
       this.insertBlsToExecutionChange(item.data, item.preCapella);
@@ -162,9 +181,37 @@ export class OpPool {
     this.proposerSlashings.set(proposerSlashing.signedHeader1.message.proposerIndex, proposerSlashing);
   }
 
-  /** Must be validated beforehand */
-  insertVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): void {
-    this.voluntaryExits.set(voluntaryExit.message.validatorIndex, voluntaryExit);
+  /**
+   * Must be validated beforehand.
+   * MODIFIED: Now async and tries to broadcast immediately if conditions met,
+   * otherwise caches for delayed broadcast.
+   */
+  async insertVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<void> {
+    const validatorIndex = voluntaryExit.message.validatorIndex;
+
+    // Don't add if already seen
+    if (this.hasSeenVoluntaryExit(validatorIndex)) {
+      return;
+    }
+
+    try {
+      // Try full validation (including transient conditions)
+      await validateGossipVoluntaryExit(this.chain, voluntaryExit);
+
+      // If validation passes, add to main pool (ready to include in blocks and broadcast)
+      this.voluntaryExits.set(validatorIndex, voluntaryExit);
+
+      this.logger.debug("Voluntary exit added to pool (conditions met)", {validatorIndex});
+    } catch (e) {
+      // If validation fails due to transient conditions, cache for delayed broadcast
+      // The signature was already validated in validateApiVoluntaryExit
+      this.voluntaryExitBroadcaster.addToCacheForDelayedBroadcast(voluntaryExit);
+
+      this.logger.debug("Voluntary exit cached for delayed broadcast", {
+        validatorIndex,
+        error: (e as Error).message,
+      });
+    }
   }
 
   /** Must be validated beforehand */
@@ -173,6 +220,29 @@ export class OpPool {
       data: blsToExecutionChange,
       preCapella,
     });
+  }
+
+  /**
+   * Start periodic check of cached voluntary exits.
+   * Checks every slot (12 seconds) for exits ready to broadcast.
+   */
+  private startPeriodicBroadcastCheck(): void {
+    const checkIntervalMs = 12_000; // Every slot (12 seconds)
+
+    setInterval(async () => {
+      try {
+        await this.voluntaryExitBroadcaster.checkAndBroadcastCachedExits();
+      } catch (e) {
+        this.logger.error("Error in periodic voluntary exit broadcast check", {error: (e as Error).message});
+      }
+    }, checkIntervalMs);
+  }
+
+  /**
+   * Get cache size for metrics/monitoring
+   */
+  getVoluntaryExitCacheSize(): number {
+    return this.voluntaryExitBroadcaster.getCacheSize();
   }
 
   /**
