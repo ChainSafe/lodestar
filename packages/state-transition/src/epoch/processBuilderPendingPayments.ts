@@ -22,10 +22,7 @@ export function processBuilderPendingPayments(state: CachedBeaconStateGloas): vo
   // TODO GLOAS: Optimize this
   for (let i = 0; i < state.builderPendingPayments.length; i++) {
     if (i < SLOTS_PER_EPOCH) {
-      state.builderPendingPayments.set(
-        i,
-        state.builderPendingPayments.get(i + SLOTS_PER_EPOCH).clone(),
-      );
+      state.builderPendingPayments.set(i, state.builderPendingPayments.get(i + SLOTS_PER_EPOCH).clone());
     } else {
       state.builderPendingPayments.set(i, ssz.gloas.BuilderPendingPayment.defaultViewDU());
     }

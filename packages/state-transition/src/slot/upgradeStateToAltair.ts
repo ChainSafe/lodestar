@@ -136,7 +136,7 @@ function translateParticipation(
       attestation.inclusionDelay,
       epochCtx.epoch,
       rootCache,
-      null,
+      null
     );
 
     const committeeIndices = epochCtx.getBeaconCommittee(data.slot, data.index);

@@ -81,7 +81,7 @@ export function processAttestationsAltair(
       stateSlot - data.slot,
       epochCtx.epoch,
       rootCache,
-      fork >= ForkSeq.gloas ? (state as CachedBeaconStateGloas).executionPayloadAvailability.toBoolArray() : null,
+      fork >= ForkSeq.gloas ? (state as CachedBeaconStateGloas).executionPayloadAvailability.toBoolArray() : null
     );
 
     // For each participant, update their participation
@@ -176,7 +176,7 @@ export function getAttestationParticipationStatus(
   inclusionDelay: number,
   currentEpoch: Epoch,
   rootCache: RootCache,
-  executionPayloadAvailability: boolean[] | null,
+  executionPayloadAvailability: boolean[] | null
 ): number {
   const justifiedCheckpoint =
     data.target.epoch === currentEpoch ? rootCache.currentJustifiedCheckpoint : rootCache.previousJustifiedCheckpoint;

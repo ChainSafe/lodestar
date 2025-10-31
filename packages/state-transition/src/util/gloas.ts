@@ -11,7 +11,7 @@ import {AttestationData} from "@lodestar/types/phase0";
 import {CachedBeaconStateGloas} from "../types.ts";
 import {getBlockRootAtSlot} from "./blockRoot.ts";
 import {computeEpochAtSlot} from "./epoch.ts";
-import { RootCache } from "./rootCache.ts";
+import {RootCache} from "./rootCache.ts";
 
 export function hasBuilderWithdrawalCredential(withdrawalCredentials: Uint8Array): boolean {
   return withdrawalCredentials[0] === BUILDER_WITHDRAWAL_PREFIX;

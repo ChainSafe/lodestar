@@ -488,7 +488,9 @@ export class AggregatedAttestationPool {
             inclusionDistance,
             stateEpoch,
             rootCache,
-            ForkSeq[fork] >= ForkSeq.gloas ? (state as CachedBeaconStateGloas).executionPayloadAvailability.toBoolArray() : null,
+            ForkSeq[fork] >= ForkSeq.gloas
+              ? (state as CachedBeaconStateGloas).executionPayloadAvailability.toBoolArray()
+              : null
           );
 
           const weight =

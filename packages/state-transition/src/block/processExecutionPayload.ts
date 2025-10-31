@@ -1,15 +1,14 @@
-import {PublicKey, Signature, verify} from "@chainsafe/blst";
 import {byteArrayEquals} from "@chainsafe/ssz";
-import {DOMAIN_BEACON_BUILDER, ForkName, ForkSeq, isForkPostDeneb} from "@lodestar/params";
-import {BeaconBlockBody, BlindedBeaconBlockBody, deneb, gloas, isExecutionPayload, ssz} from "@lodestar/types";
+import {ForkName, ForkSeq, isForkPostDeneb} from "@lodestar/params";
+import {BeaconBlockBody, BlindedBeaconBlockBody, deneb, isExecutionPayload} from "@lodestar/types";
 import {toHex, toRootHex} from "@lodestar/utils";
-import {CachedBeaconStateBellatrix, CachedBeaconStateCapella, CachedBeaconStateGloas} from "../types.js";
+import {CachedBeaconStateBellatrix, CachedBeaconStateCapella} from "../types.js";
 import {
   executionPayloadToPayloadHeader,
   getFullOrBlindedPayloadFromBody,
   isMergeTransitionComplete,
 } from "../util/execution.js";
-import {computeEpochAtSlot, computeSigningRoot, computeTimeAtSlot, getRandaoMix} from "../util/index.js";
+import {computeEpochAtSlot, computeTimeAtSlot, getRandaoMix} from "../util/index.js";
 import {BlockExternalData, ExecutionPayloadStatus} from "./externalData.js";
 
 export function processExecutionPayload(
