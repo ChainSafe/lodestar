@@ -55,6 +55,7 @@ export {
   processPendingDeposits,
   processPendingConsolidations,
   processProposerLookahead,
+  processBuilderPendingPayments,
 };
 
 export {computeUnrealizedCheckpoints} from "./computeUnrealizedCheckpoints.js";

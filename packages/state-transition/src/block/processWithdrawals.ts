@@ -70,6 +70,7 @@ export function processWithdrawals(
 
   if (fork >= ForkSeq.gloas) {
     const stateGloas = state as CachedBeaconStateGloas;
+    stateGloas.latestWithdrawalsRoot = ssz.capella.Withdrawals.hashTreeRoot(expectedWithdrawals);
 
     const unprocessedWithdrawals = stateGloas.builderPendingWithdrawals
       .getAllReadonly()
