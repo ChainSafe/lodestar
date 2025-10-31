@@ -242,7 +242,7 @@ export class EpochCache {
 
   // TODO GLOAS: See if we need to cached PTC for prev/next epoch
   // PTC for current epoch
-  PTC: ValidatorIndex[][] ;
+  PTC: ValidatorIndex[][];
 
   // TODO: Helper stats
   syncPeriod: SyncPeriod;
@@ -496,13 +496,8 @@ export class EpochCache {
     // Compute PTC for this epoch
     let PTC: ValidatorIndex[][] = [];
     if (currentEpoch >= config.GLOAS_FORK_EPOCH) {
-      PTC = naiveGetPTCIndices(
-        state as BeaconStateGloas,
-        currentShuffling,
-        effectiveBalanceIncrements,
-        currentEpoch
-      );
-    } 
+      PTC = naiveGetPTCIndices(state as BeaconStateGloas, currentShuffling, effectiveBalanceIncrements, currentEpoch);
+    }
 
     // Precompute churnLimit for efficient initiateValidatorExit() during block proposing MUST be recompute everytime the
     // active validator indices set changes in size. Validators change active status only when:
@@ -772,8 +767,13 @@ export class EpochCache {
 
     this.proposersPrevEpoch = this.proposers;
     if (upcomingEpoch >= this.config.GLOAS_FORK_EPOCH) {
-      this.PTC = naiveGetPTCIndices(state as BeaconStateGloas, this.currentShuffling, this.effectiveBalanceIncrements, upcomingEpoch);
-    } 
+      this.PTC = naiveGetPTCIndices(
+        state as BeaconStateGloas,
+        this.currentShuffling,
+        this.effectiveBalanceIncrements,
+        upcomingEpoch
+      );
+    }
     if (upcomingEpoch >= this.config.FULU_FORK_EPOCH) {
       // Populate proposer cache with lookahead from state
       const proposerLookahead = (state as CachedBeaconStateFulu).proposerLookahead.getAll();
@@ -1190,10 +1190,13 @@ export class EpochCache {
     throw new Error(`PTC is not available for slot=${slot}`);
   }
 
-  getIndexedPayloadAttestation(slot: Slot, payloadAttestation: gloas.PayloadAttestation): gloas.IndexedPayloadAttestation {
+  getIndexedPayloadAttestation(
+    slot: Slot,
+    payloadAttestation: gloas.PayloadAttestation
+  ): gloas.IndexedPayloadAttestation {
     const PTC = this.getPTC(slot);
     const attestingIndices = payloadAttestation.aggregationBits.intersectValues(PTC);
-    
+
     return {
       attestingIndices: attestingIndices.sort((a, b) => a - b),
       data: {...payloadAttestation.data, blobDataAvailable: true},

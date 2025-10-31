@@ -144,7 +144,9 @@ export function processAttestationsAltair(
         ? SLOTS_PER_EPOCH + (data.slot % SLOTS_PER_EPOCH)
         : data.slot % SLOTS_PER_EPOCH;
 
-      const existingWeight = builderWeightMap.get(builderPendingPaymentIndex) ?? (state as CachedBeaconStateGloas).builderPendingPayments.get(builderPendingPaymentIndex).weight;
+      const existingWeight =
+        builderWeightMap.get(builderPendingPaymentIndex) ??
+        (state as CachedBeaconStateGloas).builderPendingPayments.get(builderPendingPaymentIndex).weight;
       const updatedWeight = existingWeight + paymentWeightToAdd * EFFECTIVE_BALANCE_INCREMENT;
       builderWeightMap.set(builderPendingPaymentIndex, updatedWeight);
     }

@@ -1,7 +1,7 @@
+import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {getCachedBeaconState} from "../cache/stateCache.js";
 import {CachedBeaconStateFulu, CachedBeaconStateGloas} from "../types.js";
-import { SLOTS_PER_HISTORICAL_ROOT } from "@lodestar/params";
 
 /**
  * Upgrade a state from Fulu to Gloas.

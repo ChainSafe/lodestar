@@ -293,7 +293,7 @@ export function naiveGetPTCIndices(
 export function naiveComputePTCIndices(
   effectiveBalanceIncrements: EffectiveBalanceIncrements,
   indices: ArrayLike<ValidatorIndex>,
-  seed: Uint8Array,
+  seed: Uint8Array
 ): ValidatorIndex[] {
   if (indices.length === 0) {
     throw Error("Validator indices must not be empty");
@@ -320,7 +320,6 @@ export function naiveComputePTCIndices(
 
   return result;
 }
-
 
 /**
  * Return the shuffled validator index corresponding to ``seed`` (and ``index_count``).
