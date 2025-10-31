@@ -5,6 +5,7 @@ import {
   MIN_ATTESTATION_INCLUSION_DELAY,
   PROPOSER_WEIGHT,
   SLOTS_PER_EPOCH,
+  SLOTS_PER_HISTORICAL_ROOT,
   TIMELY_HEAD_FLAG_INDEX,
   TIMELY_HEAD_WEIGHT,
   TIMELY_SOURCE_FLAG_INDEX,
@@ -13,12 +14,12 @@ import {
   TIMELY_TARGET_WEIGHT,
   WEIGHT_DENOMINATOR,
 } from "@lodestar/params";
-import {Attestation, Epoch, phase0, ssz} from "@lodestar/types";
+import {Attestation, Epoch, phase0} from "@lodestar/types";
 import {intSqrt} from "@lodestar/utils";
 import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {getAttestationWithIndicesSignatureSet} from "../signatureSets/indexedAttestation.js";
 import {CachedBeaconStateAltair, CachedBeaconStateGloas} from "../types.js";
-import {isAttestationSameSlot} from "../util/gloas.ts";
+import {isAttestationSameSlot, isAttestationSameSlotRootCache} from "../util/gloas.ts";
 import {increaseBalance, verifySignatureSet} from "../util/index.js";
 import {RootCache} from "../util/rootCache.js";
 import {checkpointToStr, isTimelyTarget, validateAttestation} from "./processAttestationPhase0.js";
@@ -79,7 +80,8 @@ export function processAttestationsAltair(
       data,
       stateSlot - data.slot,
       epochCtx.epoch,
-      rootCache
+      rootCache,
+      fork >= ForkSeq.gloas ? (state as CachedBeaconStateGloas).executionPayloadAvailability.toBoolArray() : null,
     );
 
     // For each participant, update their participation
@@ -173,7 +175,8 @@ export function getAttestationParticipationStatus(
   data: phase0.AttestationData,
   inclusionDelay: number,
   currentEpoch: Epoch,
-  rootCache: RootCache
+  rootCache: RootCache,
+  executionPayloadAvailability: boolean[] | null,
 ): number {
   const justifiedCheckpoint =
     data.target.epoch === currentEpoch ? rootCache.currentJustifiedCheckpoint : rootCache.previousJustifiedCheckpoint;
@@ -196,8 +199,32 @@ export function getAttestationParticipationStatus(
   const isMatchingTarget = byteArrayEquals(data.target.root, rootCache.getBlockRoot(data.target.epoch));
 
   // a timely head is only be set if the target is _also_ matching
-  const isMatchingHead =
+  // In gloas, this is called `is_matching_blockroot`
+  let isMatchingHead =
     isMatchingTarget && byteArrayEquals(data.beaconBlockRoot, rootCache.getBlockRootAtSlot(data.slot));
+
+  if (fork >= ForkSeq.gloas) {
+    let isMatchingPayload = false;
+
+    if (isAttestationSameSlotRootCache(rootCache, data)) {
+      if (data.index !== 0) {
+        throw new Error("Attesting same slot must indicate empty payload");
+      }
+      isMatchingPayload = true;
+    } else {
+      if (executionPayloadAvailability === null) {
+        throw new Error("Must supply executionPayloadAvailability post-gloas");
+      }
+
+      if (data.index !== 0 && data.index !== 1) {
+        throw new Error(`data index must be 0 or 1 index=${data.index}`);
+      }
+
+      isMatchingPayload = Boolean(data.index) === executionPayloadAvailability[data.slot % SLOTS_PER_HISTORICAL_ROOT];
+    }
+
+    isMatchingHead = isMatchingHead && isMatchingPayload;
+  }
 
   let flags = 0;
   if (isMatchingSource && inclusionDelay <= SLOTS_PER_EPOCH_SQRT) flags |= TIMELY_SOURCE;

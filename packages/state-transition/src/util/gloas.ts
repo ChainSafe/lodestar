@@ -41,3 +41,12 @@ export function isAttestationSameSlot(state: CachedBeaconStateGloas, data: Attes
 
   return isMatchingBlockRoot && isCurrentBlockRoot;
 }
+
+export function isAttestationSameSlotRootCache(rootCache: RootCache, data: AttestationData): boolean {
+  if (data.slot === 0) return true;
+
+  const isMatchingBlockRoot = byteArrayEquals(data.beaconBlockRoot, rootCache.getBlockRootAtSlot(data.slot));
+  const isCurrentBlockRoot = !byteArrayEquals(data.beaconBlockRoot, rootCache.getBlockRootAtSlot(data.slot - 1));
+
+  return isMatchingBlockRoot && isCurrentBlockRoot;
+}
