@@ -2,7 +2,7 @@ import {type FileHandle, open} from "node:fs/promises";
 import {basename} from "node:path";
 import {PublicKey, Signature, verify} from "@chainsafe/blst";
 import {ChainForkConfig, createCachedGenesis} from "@lodestar/config";
-import {DOMAIN_BEACON_PROPOSER} from "@lodestar/params";
+import {DOMAIN_BEACON_PROPOSER, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {BeaconState, SignedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {E2STORE_HEADER_SIZE, EntryType, readEntry, readVersion} from "../e2s.ts";
 import {snappyUncompress} from "../util.ts";
@@ -157,23 +157,27 @@ export class EraReader {
         }
 
         // validate blocks
-        const signatureSets: {
-          msg: Uint8Array;
-          pk: PublicKey;
-          sig: Signature;
-        }[] = [];
-        for (let slot = index.blocksIndex.startSlot; slot <= index.blocksIndex.offsets.length; slot++) {
+        for (
+          let slot = index.blocksIndex.startSlot;
+          slot <= index.blocksIndex.startSlot + index.blocksIndex.offsets.length;
+          slot++
+        ) {
           const block = await this.readBlock(slot);
           if (block === null) {
             if (slot === index.blocksIndex.startSlot) continue; // first slot in the era can't be easily validated
-            if (Buffer.compare(state.blockRoots[slot - 1], state.blockRoots[slot]) !== 0) {
+            if (
+              Buffer.compare(
+                state.blockRoots[(slot - 1) % SLOTS_PER_HISTORICAL_ROOT],
+                state.blockRoots[slot % SLOTS_PER_HISTORICAL_ROOT]
+              ) !== 0
+            ) {
               throw new Error(`Block root mismatch at slot ${slot} for empty slot`);
             }
             continue;
           }
 
           const blockRoot = this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message);
-          if (Buffer.compare(blockRoot, state.blockRoots[slot]) !== 0) {
+          if (Buffer.compare(blockRoot, state.blockRoots[slot % SLOTS_PER_HISTORICAL_ROOT]) !== 0) {
             throw new Error(`Block root mismatch at slot ${slot}`);
           }
           const msg = ssz.phase0.SigningData.hashTreeRoot({
@@ -182,7 +186,6 @@ export class EraReader {
           });
           const pk = PublicKey.fromBytes(state.validators[block.message.proposerIndex].pubkey);
           const sig = Signature.fromBytes(block.signature);
-          signatureSets.push({msg, pk, sig});
           if (!verify(msg, pk, sig, true, true)) {
             throw new Error(`Block signature verification failed at slot ${slot}`);
           }
