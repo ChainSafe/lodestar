@@ -391,8 +391,8 @@ export class PeerDiscovery {
     // tcp multiaddr is known to be be present, checked inside the worker
     const multiaddrTCP = enr.getLocationMultiaddr(ENRKey.tcp);
     if (!multiaddrTCP) {
-      this.logger.error("Discv5 worker sent enr without tcp multiaddr", {enr: enr.encodeTxt()});
-      this.metrics?.discovery.discoveredStatus.inc({status: DiscoveredPeerStatus.error});
+      this.logger.warn("Discv5 worker sent enr without tcp multiaddr", {enr: enr.encodeTxt()});
+      this.metrics?.discovery.discoveredStatus.inc({status: DiscoveredPeerStatus.no_multiaddrs});
       return;
     }
     // Are this fields mandatory?
