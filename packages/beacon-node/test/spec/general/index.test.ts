@@ -19,9 +19,7 @@ import {sszGeneric} from "./ssz_generic.js";
 // ```
 const skipOpts: SkipOpts = {
   skippedHandlers: ["compute_challenge", "compute_verify_cell_kzg_proof_batch_challenge"],
-  skippedTests: [
-    /^.+\/kzg\/recover_cells_and_kzg_proofs\/kzg-mainnet\/recover_cells_and_kzg_proofs_case_invalid_shuffled_.*/,
-  ],
+  skippedTests: [],
 };
 
 specTestIterator(

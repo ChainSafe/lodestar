@@ -862,47 +862,47 @@
   resolved "https://registry.yarnpkg.com/@colors/colors/-/colors-1.5.0.tgz#bb504579c1cae923e6576a4f5da43d25f97bdbd9"
   integrity sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ==
 
-"@crate-crypto/node-eth-kzg-darwin-arm64@0.8.0":
-  version "0.8.0"
-  resolved "https://registry.yarnpkg.com/@crate-crypto/node-eth-kzg-darwin-arm64/-/node-eth-kzg-darwin-arm64-0.8.0.tgz#d1581b70eae95dc17c3bfc381eb01d91bc00cf9f"
-  integrity sha512-O3UloqPV40wWEgHmVQO475W2En7cZPa0fs2hnWBBpkyHr6G0rXw9a+TEXX6lJm7r8ZMlny7oU2ge/xo2Lu1SBA==
+"@crate-crypto/node-eth-kzg-darwin-arm64@0.9.1":
+  version "0.9.1"
+  resolved "https://registry.yarnpkg.com/@crate-crypto/node-eth-kzg-darwin-arm64/-/node-eth-kzg-darwin-arm64-0.9.1.tgz#d2fc17950ab1efc3836c9de589576c2384d75a0b"
+  integrity sha512-C9o04zqes9E/f/3u/rpV+uDHaHx0qsu8NcNYOBkhId48eu1dZoYWYWlXfbx2pFpZwzsWnKjjp1Pxr+LfKGPTCA==
 
-"@crate-crypto/node-eth-kzg-darwin-x64@0.8.0":
-  version "0.8.0"
-  resolved "https://registry.yarnpkg.com/@crate-crypto/node-eth-kzg-darwin-x64/-/node-eth-kzg-darwin-x64-0.8.0.tgz#dd5fd9e997ffdb692bdf266f9ba8a7e3edc99568"
-  integrity sha512-wk84+ugYI+HhPm0NIysutPT7wuS1zPirpPccRJI4IhPg3tE+pVLH4BMPR3t7M63BLqLdhnD+Ky+kYWzpxgG7iQ==
+"@crate-crypto/node-eth-kzg-darwin-x64@0.9.1":
+  version "0.9.1"
+  resolved "https://registry.yarnpkg.com/@crate-crypto/node-eth-kzg-darwin-x64/-/node-eth-kzg-darwin-x64-0.9.1.tgz#adb83ef83363984e8488ba0c7ce8da360c3faef6"
+  integrity sha512-RR7qJLcptZKeCrnIfeqSNfU4IAkoxQ8LvnyLAlqvPPICsA1+7xhYYDVmxS0lXp+rphBc7oJhA6R54ZuSAM9hVw==
 
-"@crate-crypto/node-eth-kzg-linux-arm64-gnu@0.8.0":
-  version "0.8.0"
-  resolved "https://registry.yarnpkg.com/@crate-crypto/node-eth-kzg-linux-arm64-gnu/-/node-eth-kzg-linux-arm64-gnu-0.8.0.tgz#3a2b3a269462a1cf1993d41b7b26411e3fdcd035"
-  integrity sha512-eVgrcOcKxS1y2lwypja5UsNqNM5xYjHQeNsOBbG6c3MEoCD5pCVrMVTABXHJX4HsUHfOBLqbmwABi6Aqt2eHPA==
+"@crate-crypto/node-eth-kzg-linux-arm64-gnu@0.9.1":
+  version "0.9.1"
+  resolved "https://registry.yarnpkg.com/@crate-crypto/node-eth-kzg-linux-arm64-gnu/-/node-eth-kzg-linux-arm64-gnu-0.9.1.tgz#6028923d407bfcf90038480758cd30ff4a85a0bf"
+  integrity sha512-UXGkGMwcqkD9fvlVSoje7nra92ztuhjXLULgacIxCCAcz97WuOuoUtH2fjChQvQ75bxy+EKpjXyerBe5ZRShSA==
 
-"@crate-crypto/node-eth-kzg-linux-x64-gnu@0.8.0":
-  version "0.8.0"
-  resolved "https://registry.yarnpkg.com/@crate-crypto/node-eth-kzg-linux-x64-gnu/-/node-eth-kzg-linux-x64-gnu-0.8.0.tgz#e0e99f04f8e58411c532a7ca2f838af9ce138c42"
-  integrity sha512-PNEG96jwoKbErAqHEYIHZe1n/60LPz2MdUELnyHrXUbvUoLZzk3eZLTzNv/WlaT1xVocF9P4S4XwCoHaQNFY7g==
+"@crate-crypto/node-eth-kzg-linux-x64-gnu@0.9.1":
+  version "0.9.1"
+  resolved "https://registry.yarnpkg.com/@crate-crypto/node-eth-kzg-linux-x64-gnu/-/node-eth-kzg-linux-x64-gnu-0.9.1.tgz#8a6a48d73a0da04afc2f05dadc4c35af614e4890"
+  integrity sha512-TYOUz0+0mQlcod/yL7t0bq3Se9+nNXNBGZyah/c9vW0ytQaLHwKggDrPc6tPQz7L4P7dgyFuQWgdrgkReZ3p7A==
 
-"@crate-crypto/node-eth-kzg-win32-arm64-msvc@0.8.0":
-  version "0.8.0"
-  resolved "https://registry.yarnpkg.com/@crate-crypto/node-eth-kzg-win32-arm64-msvc/-/node-eth-kzg-win32-arm64-msvc-0.8.0.tgz#cdb11f6b3da36e72214f8773ec919fd024e6e96d"
-  integrity sha512-GQbInTzcH678PLyqhV9BVIxPBMr8eMxDatd3aPGJOmTD/JVUPvxuVR9wB8BbEafKePXx8i+clsih7HX6+ZlCqg==
+"@crate-crypto/node-eth-kzg-win32-arm64-msvc@0.9.1":
+  version "0.9.1"
+  resolved "https://registry.yarnpkg.com/@crate-crypto/node-eth-kzg-win32-arm64-msvc/-/node-eth-kzg-win32-arm64-msvc-0.9.1.tgz#65cb713be675d971525c5160e9b7aee00ce41d57"
+  integrity sha512-yr8jifMgXWSTpWRnQuZd2QbcY8WTCS2u4kZnj7TsuYrmjgEunhOYOBZivdo3ocYIXadrc9axvLta+z2lFFR4Tg==
 
-"@crate-crypto/node-eth-kzg-win32-x64-msvc@0.8.0":
-  version "0.8.0"
-  resolved "https://registry.yarnpkg.com/@crate-crypto/node-eth-kzg-win32-x64-msvc/-/node-eth-kzg-win32-x64-msvc-0.8.0.tgz#cf1544d8190474f49701368c86b4e7bf8cee28ef"
-  integrity sha512-1WANeqBEg6XQ3U6WY4bqtZlsK3kRFZMC4vXJgC10QV+QViFLrOs09fK7KEQPdPQTRoQAfXJiu1g0yVoj1UIqKg==
+"@crate-crypto/node-eth-kzg-win32-x64-msvc@0.9.1":
+  version "0.9.1"
+  resolved "https://registry.yarnpkg.com/@crate-crypto/node-eth-kzg-win32-x64-msvc/-/node-eth-kzg-win32-x64-msvc-0.9.1.tgz#3a36498dbadc1d33af790ad571283e93533c1910"
+  integrity sha512-DDhI3SjoVMOFj8C+5gjfsTMtHZebqTRbt3E+Jiy9wyNBQdTjP8MDg/apVI7KtrVmluEX2bVJqNDwjr+Mw9tFww==
 
-"@crate-crypto/node-eth-kzg@0.8.0":
-  version "0.8.0"
-  resolved "https://registry.yarnpkg.com/@crate-crypto/node-eth-kzg/-/node-eth-kzg-0.8.0.tgz#b05f232a8d8c7e452348c481e9b74b68c9d99633"
-  integrity sha512-4O6RLpmzeiMZUPbuKsZ5PffIRBjodQjvhh9xVcmVlTRB8BBMXtCmdJe6MafGMTKum5mD3imce2Wwk0QVb0Ectw==
+"@crate-crypto/node-eth-kzg@0.9.1":
+  version "0.9.1"
+  resolved "https://registry.yarnpkg.com/@crate-crypto/node-eth-kzg/-/node-eth-kzg-0.9.1.tgz#e52028ba78b07911a964c26c1818b7954f7ce84a"
+  integrity sha512-T6ibygoZ4O5x1bhyr65SnMtU7pSpWWUIxIWcN6PDSZny1PwnlX2Jx42F3sogrLsy7MIQ7zHkwA0Pf4kybpxAVA==
   optionalDependencies:
-    "@crate-crypto/node-eth-kzg-darwin-arm64" "0.8.0"
-    "@crate-crypto/node-eth-kzg-darwin-x64" "0.8.0"
-    "@crate-crypto/node-eth-kzg-linux-arm64-gnu" "0.8.0"
-    "@crate-crypto/node-eth-kzg-linux-x64-gnu" "0.8.0"
-    "@crate-crypto/node-eth-kzg-win32-arm64-msvc" "0.8.0"
-    "@crate-crypto/node-eth-kzg-win32-x64-msvc" "0.8.0"
+    "@crate-crypto/node-eth-kzg-darwin-arm64" "0.9.1"
+    "@crate-crypto/node-eth-kzg-darwin-x64" "0.9.1"
+    "@crate-crypto/node-eth-kzg-linux-arm64-gnu" "0.9.1"
+    "@crate-crypto/node-eth-kzg-linux-x64-gnu" "0.9.1"
+    "@crate-crypto/node-eth-kzg-win32-arm64-msvc" "0.9.1"
+    "@crate-crypto/node-eth-kzg-win32-x64-msvc" "0.9.1"
 
 "@cspotcode/source-map-support@^0.8.0":
   version "0.8.1"
