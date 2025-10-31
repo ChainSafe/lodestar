@@ -1,20 +1,26 @@
 import {ForkSeq} from "@lodestar/params";
 import {BeaconBlock, BlindedBeaconBlock, altair, capella, gloas} from "@lodestar/types";
 import {BeaconStateTransitionMetrics} from "../metrics.js";
-import {CachedBeaconStateAllForks, CachedBeaconStateBellatrix, CachedBeaconStateCapella, CachedBeaconStateGloas} from "../types.js";
+import {
+  CachedBeaconStateAllForks,
+  CachedBeaconStateBellatrix,
+  CachedBeaconStateCapella,
+  CachedBeaconStateGloas,
+} from "../types.js";
 import {getFullOrBlindedPayload, isExecutionEnabled} from "../util/execution.js";
 import {BlockExternalData, DataAvailabilityStatus} from "./externalData.js";
 import {processBlobKzgCommitments} from "./processBlobKzgCommitments.js";
 import {processBlockHeader} from "./processBlockHeader.js";
 import {processEth1Data} from "./processEth1Data.js";
 import {processExecutionPayload} from "./processExecutionPayload.js";
+import {processExecutionPayloadBid} from "./processExecutionPayloadBid.ts";
+import {processExecutionPayloadEnvelope} from "./processExecutionPayloadEnvelope.ts";
 import {processOperations} from "./processOperations.js";
+import {processPayloadAttestation} from "./processPayloadAttestation.ts";
 import {processRandao} from "./processRandao.js";
 import {processSyncAggregate} from "./processSyncCommittee.js";
 import {processWithdrawals} from "./processWithdrawals.js";
 import {ProcessBlockOpts, ProposerRewardType} from "./types.js";
-import { processExecutionPayloadBid } from "./processExecutionPayloadBid.ts";
-import { processPayloadAttestation } from "./processPayloadAttestation.ts";
 
 // Spec tests
 export {
@@ -26,6 +32,7 @@ export {
   processWithdrawals,
   processExecutionPayloadBid,
   processPayloadAttestation,
+  processExecutionPayloadEnvelope,
 };
 
 export * from "./externalData.js";

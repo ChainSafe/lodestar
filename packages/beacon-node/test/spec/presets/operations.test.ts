@@ -1,5 +1,5 @@
 import path from "node:path";
-import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkName, ForkSeq} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {
   BeaconStateAllForks,
@@ -68,10 +68,17 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
     blockFns.processVoluntaryExit(fork, state, testCase.voluntary_exit);
   },
 
-  execution_payload: (state, testCase: {body: bellatrix.BeaconBlockBody | gloas.BeaconBlockBody; signed_envelope: gloas.ExecutionPayloadEnvelope, execution: {execution_valid: boolean}}) => {
+  execution_payload: (
+    state,
+    testCase: {
+      body: bellatrix.BeaconBlockBody | gloas.BeaconBlockBody;
+      signed_envelope: gloas.SignedExecutionPayloadEnvelope;
+      execution: {execution_valid: boolean};
+    }
+  ) => {
     const fork = state.config.getForkSeq(state.slot);
     if (fork >= ForkSeq.gloas) {
-      throw new Error("Unimplemented");
+      blockFns.processExecutionPayloadEnvelope(state as CachedBeaconStateGloas, testCase.signed_envelope, true);
     } else {
       blockFns.processExecutionPayload(fork, state as CachedBeaconStateBellatrix, testCase.body, {
         executionPayloadStatus: testCase.execution.execution_valid

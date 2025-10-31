@@ -83,21 +83,3 @@ export function processExecutionPayload(
     .getPostBellatrixForkTypes(state.slot)
     .ExecutionPayloadHeader.toViewDU(payloadHeader) as typeof state.latestExecutionPayloadHeader;
 }
-
-function verifyExecutionPayloadEnvelopeSignature(
-  state: CachedBeaconStateGloas,
-  pubkey: Uint8Array,
-  signedEnvelope: gloas.SignedExecutionPayloadEnvelope
-): boolean {
-  const domain = state.config.getDomain(state.slot, DOMAIN_BEACON_BUILDER);
-  const signingRoot = computeSigningRoot(ssz.gloas.ExecutionPayloadEnvelope, signedEnvelope.message, domain);
-
-  try {
-    const publicKey = PublicKey.fromBytes(pubkey);
-    const signature = Signature.fromBytes(signedEnvelope.signature, true);
-
-    return verify(signingRoot, publicKey, signature);
-  } catch (_e) {
-    return false; // Catch all BLS errors: failed key validation, failed signature validation, invalid signature
-  }
-}
