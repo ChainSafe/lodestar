@@ -1,9 +1,9 @@
 import {decode as varintDecode, encodingLength as varintEncodingLength} from "uint8-varint";
 import {Uint8ArrayList} from "uint8arraylist";
+import {SnappyFramesUncompress} from "@lodestar/utils";
 import {TypeSizes} from "../../types.js";
 import {BufferedSource} from "../../utils/index.js";
 import {SszSnappyError, SszSnappyErrorCode} from "./errors.js";
-import {SnappyFramesUncompress} from "./snappyFrames/uncompress.js";
 import {maxEncodedLen} from "./utils.js";
 
 export const MAX_VARINT_BYTES = 10;

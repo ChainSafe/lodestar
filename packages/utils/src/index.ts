@@ -18,6 +18,7 @@ export * from "./objects.js";
 export * from "./promise.js";
 export {type RetryOptions, retry} from "./retry.js";
 export * from "./sleep.js";
+export * from "./snappy/index.js";
 export * from "./sort.js";
 export * from "./timeout.js";
 export {type RecursivePartial, type RequiredSelective, bnToNum} from "./types.js";

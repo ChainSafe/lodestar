@@ -1,5 +1,5 @@
 import {Uint8ArrayList} from "uint8arraylist";
-import {SnappyFramesUncompress, encodeSnappy} from "@lodestar/reqresp/encodingStrategies/sszSnappy";
+import {SnappyFramesUncompress, encodeSnappy} from "@lodestar/utils";
 
 /** Read 48-bit signed integer (little-endian) at offset. */
 export function readInt48(bytes: Uint8Array, offset: number): number {
