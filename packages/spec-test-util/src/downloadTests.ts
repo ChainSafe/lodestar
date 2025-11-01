@@ -7,14 +7,14 @@ import {promisify} from "node:util";
 import {rimraf} from "rimraf";
 import {fetch, retry} from "@lodestar/utils";
 
-export const defaultSpecTestsRepoUrl = "https://github.com/ethereum/consensus-spec-tests";
+export const defaultSpecTestsRepoUrl = "https://github.com/ethereum/consensus-specs";
 
 const logEmpty = (): void => {};
 
 export type DownloadTestsOptions = {
   specVersion: string;
   outputDir: string;
-  /** Root Github URL `https://github.com/ethereum/consensus-spec-tests` */
+  /** Root Github URL `https://github.com/ethereum/consensus-specs` */
   specTestsRepoUrl: string;
   /** Release files names to download without prefix `["general", "mainnet", "minimal"]` */
   testsToDownload: string[];
