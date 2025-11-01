@@ -1120,8 +1120,8 @@ export function getValidatorApi(
       };
     },
 
-    async getProposerDutiesV2(args) {
-      return this.getProposerDuties(args, {}, {v2: true});
+    async getProposerDutiesV2(args, context) {
+      return this.getProposerDuties(args, context, {v2: true});
     },
 
     async getAttesterDuties({epoch, indices}) {
