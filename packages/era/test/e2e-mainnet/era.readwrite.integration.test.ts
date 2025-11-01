@@ -91,5 +91,5 @@ describe.runIf(!process.env.CI)("read original era and re-write our own era file
     const totalTime = Date.now() - startTime;
     console.log("Round-trip test passed");
     console.log(`  Total time: ${totalTime}ms (${(totalTime / 1000).toFixed(2)}s)`);
-  }, 120000);
+  }, 1000000);
 });

@@ -159,7 +159,7 @@ export class EraReader {
         // validate blocks
         for (
           let slot = index.blocksIndex.startSlot;
-          slot <= index.blocksIndex.startSlot + index.blocksIndex.offsets.length;
+          slot < index.blocksIndex.startSlot + index.blocksIndex.offsets.length;
           slot++
         ) {
           const block = await this.readBlock(slot);
