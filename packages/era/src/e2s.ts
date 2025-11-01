@@ -149,7 +149,7 @@ export async function readSlotIndex(fh: FileHandle, offset: number): Promise<Slo
  */
 export async function writeEntry(fh: FileHandle, offset: number, type: EntryType, payload: Uint8Array): Promise<void> {
   const header = new Uint8Array(E2STORE_HEADER_SIZE);
-  writeUint16(header, 0, type);           // type (2 bytes)
+  writeUint16(header, 0, type); // type (2 bytes)
   writeUint32(header, 2, payload.length); // length (4 bytes)
   // reserved bytes (6-7) remain 0
   await fh.writev([header, payload], offset);
