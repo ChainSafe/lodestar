@@ -839,7 +839,6 @@ function renderAttestationSummary(
   summary: AttestationSummary | undefined,
   flags: ParticipationFlags
 ): string {
-  
   // https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.6/specs/altair/beacon-chain.md#get_attestation_participation_flag_indices
   //
   // is_matching_source = data.source == justified_checkpoint
