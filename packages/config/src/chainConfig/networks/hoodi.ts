@@ -3,7 +3,6 @@ import {chainConfig as mainnet} from "../configs/mainnet.js";
 import {ChainConfig} from "../types.js";
 
 // Hoodi beacon chain config:
-//Referece : config
 // https://github.com/eth-clients/hoodi/blob/21a110a60e6558a2ba7c819fa4b80029d49ab205/metadata/config.yaml
 
 export const hoodiChainConfig: ChainConfig = {

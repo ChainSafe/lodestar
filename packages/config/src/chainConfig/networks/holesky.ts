@@ -2,8 +2,8 @@ import {fromHex as b} from "@lodestar/utils";
 import {chainConfig as mainnet} from "../configs/mainnet.js";
 import {ChainConfig} from "../types.js";
 
-
-// https://github.com/eth-clients/holesky/blob/8aec65f11f0c986d6b76b2eb902420635eb9b815/metadata/config.yaml
+// Holesky beacon chain config:
+// https://github.com/eth-clients/holesky/blob/main/metadata/config.yaml
 
 export const holeskyChainConfig: ChainConfig = {
   ...mainnet,
