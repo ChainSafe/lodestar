@@ -70,7 +70,6 @@ export function generateBlocksSZZTypeMapping(fork: ForkName, n: number): BlocksS
  * ```
  * {blocks_count: 16}
  * ```
- * 
  * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.6/tests/formats/finality/README.md
  */
 type FinalityTestCase = {

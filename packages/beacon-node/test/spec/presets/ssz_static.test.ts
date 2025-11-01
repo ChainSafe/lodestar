@@ -19,9 +19,7 @@ import {RunnerType} from "../utils/types.js";
 //       | serialized.ssz_snappy
 //       | value.yaml
 //
-// 
-// 
-// Docs: https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.6/tests/formats/ssz_static/core.md
+//  Docs: https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.6/tests/formats/ssz_static/core.md
 
 type Types = Record<string, Type<any>>;
 
