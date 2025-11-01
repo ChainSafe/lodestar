@@ -39,10 +39,10 @@ const baseChainConfig: ChainConfig = {
   DENEB_FORK_EPOCH: 0,
   // Electra
   ELECTRA_FORK_VERSION: b("0x6000101b"),
-  ELECTRA_FORK_EPOCH: 10,
+  ELECTRA_FORK_EPOCH: 0,
   // Fulu
   FULU_FORK_VERSION: b("0x7000101b"),
-  FULU_FORK_EPOCH: Infinity,
+  FULU_FORK_EPOCH: 0,
   // Gloas
   GLOAS_FORK_VERSION: b("0x8000101b"),
   GLOAS_FORK_EPOCH: Infinity,
@@ -51,13 +51,21 @@ const baseChainConfig: ChainConfig = {
   // ---------------------------------------------------------------
   DEPOSIT_CHAIN_ID: 39438000,
   DEPOSIT_NETWORK_ID: 39438000,
-  DEPOSIT_CONTRACT_ADDRESS: b("0x4242424242424242424242424242424242424242"),
 
   ETH1_FOLLOW_DISTANCE: 12,
 
   // Blob Scheduling
   // ---------------------------------------------------------------
-  BLOB_SCHEDULE: [],
+  BLOB_SCHEDULE: [
+    {
+      EPOCH: 2048,
+      MAX_BLOBS_PER_BLOCK: 12,
+    },
+    {
+      EPOCH: 4096,
+      MAX_BLOBS_PER_BLOCK: 15,
+    },
+  ],
 };
 
 // Reset interval (7 days) in milliseconds, based on ephemery-genesis values.env:

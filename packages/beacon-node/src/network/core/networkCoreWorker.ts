@@ -98,8 +98,13 @@ const core = await NetworkCore.init({
   metricsRegistry: metricsRegister,
   events,
   clock,
-  getReqRespHandler: (method) => (req, peerId) =>
-    reqRespBridgeRespCaller.getAsyncIterable({method, req, peerId: peerIdToString(peerId)}),
+  getReqRespHandler: (method) => (req, peerId, peerClient) =>
+    reqRespBridgeRespCaller.getAsyncIterable({
+      method,
+      req,
+      peerId: peerIdToString(peerId),
+      peerClient,
+    }),
   activeValidatorCount: workerData.activeValidatorCount,
   initialStatus: workerData.initialStatus,
   initialCustodyGroupCount: workerData.initialCustodyGroupCount,

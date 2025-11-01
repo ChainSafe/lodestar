@@ -307,7 +307,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         });
         throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
           code: DataColumnSidecarErrorCode.ALREADY_KNOWN,
-          columnIdx: dataColumnSidecar.index,
+          columnIndex: dataColumnSidecar.index,
           slot,
         });
       }

@@ -29,7 +29,7 @@ export type NetworkEventData = {
     clientAgent: string;
   };
   [NetworkEvent.peerDisconnected]: {peer: PeerIdStr};
-  [NetworkEvent.reqRespRequest]: {request: RequestTypedContainer; peer: PeerId};
+  [NetworkEvent.reqRespRequest]: {request: RequestTypedContainer; peer: PeerId; peerClient: string};
   [NetworkEvent.pendingGossipsubMessage]: PendingGossipsubMessage;
   [NetworkEvent.gossipMessageValidationResult]: {
     msgId: string;
