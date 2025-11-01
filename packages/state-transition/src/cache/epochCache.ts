@@ -1199,7 +1199,7 @@ export class EpochCache {
 
     return {
       attestingIndices: attestingIndices.sort((a, b) => a - b),
-      data: {...payloadAttestation.data, blobDataAvailable: true},
+      data: payloadAttestation.data,
       signature: payloadAttestation.signature,
     };
   }

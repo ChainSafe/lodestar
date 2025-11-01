@@ -270,7 +270,7 @@ export function getNextSyncCommitteeIndices(
 
 export function naiveGetPTCIndices(
   state: BeaconStateGloas,
-  shuffling: {activeIndices: Uint32Array},
+  shuffling: {committees: Uint32Array[][]},
   effectiveBalanceIncrements: EffectiveBalanceIncrements,
   epoch: Epoch
 ): ValidatorIndex[][] {
@@ -279,9 +279,10 @@ export function naiveGetPTCIndices(
   const ptcIndices = [];
 
   for (let slot = startSlot; slot < startSlot + SLOTS_PER_EPOCH; slot++) {
+    const slotCommittees = shuffling.committees[slot % SLOTS_PER_EPOCH];
     const indices = naiveComputePTCIndices(
       effectiveBalanceIncrements,
-      shuffling.activeIndices,
+      slotCommittees.flatMap(c => Array.from(c)),
       digest(Buffer.concat([epochSeed, intToBytes(slot, 8)]))
     );
     ptcIndices.push(indices);
