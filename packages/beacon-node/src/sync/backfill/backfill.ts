@@ -128,7 +128,6 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
   private wsValidated = false;
 
   /**
-   * Reference : 
    * From https://github.com/ethereum/consensus-specs/blob/46306c4f8addef64defc2a52d85f46992ba2421b/specs/phase0/weak-subjectivity.md
    *
    *

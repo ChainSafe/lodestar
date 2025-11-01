@@ -27,7 +27,7 @@ export async function* onBlobSidecarsByRoot(
 
     // NOTE: Only support non-finalized blocks.
     // SPEC: Clients MUST support requesting blocks and sidecars since the latest finalized epoch.
-    // https://github.com/ethereum/consensus-specs/blob/v1.2.0/specs/eip4844/p2p-interface.md#beaconblockandblobssidecarbyroot-v1
+    // https://github.com/ethereum/consensus-specs/blob/11a037fd9227e29ee809c9397b09f8cc3383a8c0/specs/eip4844/p2p-interface.md#beaconblockandblobssidecarbyroot-v1
     if (!block || block.slot <= finalizedSlot) {
       continue;
     }

@@ -59,7 +59,7 @@ export const BATCH_BUFFER_SIZE = Math.ceil(10 / EPOCHS_PER_BATCH);
 
 /**
  * Maximum number of concurrent requests to perform with a SyncChain.
- * This is according to the spec https://github.com/ethereum/consensus-specs/blob/46306c4f8addef64defc2a52d85f46992ba2421b/specs/phase0/p2p-interface.md
+ * This is according to the spec https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/p2p-interface.md
  */
 export const MAX_CONCURRENT_REQUESTS = 2;
 
