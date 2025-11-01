@@ -131,7 +131,6 @@ const MAX_ATTESTATIONS_PER_GROUP_ELECTRA = Math.min(
   MAX_ATTESTATIONS_ELECTRA
 );
 
-
 /** Same to https://github.com/ethereum/consensus-specs/blob/v1.5.0/specs/altair/beacon-chain.md#has_flag */
 const TIMELY_SOURCE = 1 << TIMELY_SOURCE_FLAG_INDEX;
 const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
@@ -832,8 +831,7 @@ export function aggregateInto(attestation1: AttestationWithIndex, attestation2: 
 /**
  * Electra and after: Block proposer consolidates attestations with the same
  * attestation data from different committee into a single attestation
- * 
- * https://github.com/ethereum/consensus-specs/blob/aba6345776aa876dad368cab27fbbb23fae20455/specs/_features/eip7549/validator.md?plain=1#L39
+ *  https://github.com/ethereum/consensus-specs/blob/aba6345776aa876dad368cab27fbbb23fae20455/specs/_features/eip7549/validator.md?plain=1#L39
  */
 export function aggregateConsolidation({byCommittee, attData}: AttestationsConsolidation): electra.Attestation {
   const committeeBits = BitArray.fromBitLen(MAX_COMMITTEES_PER_SLOT);

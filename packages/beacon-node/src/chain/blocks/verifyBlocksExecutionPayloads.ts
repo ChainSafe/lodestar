@@ -192,7 +192,7 @@ export async function verifyBlocksExecutionPayload(
     // a valid terminal PoW block.
     //
     // However specs define this check to be run inside forkChoice's onBlock
-    // (https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.6/specs/bellatrix/fork-choice.md#on_block)
+    // (https://github.com/ethereum/consensus-specs/blob/dev/specs/bellatrix/fork-choice.md#on_block)
     // but we perform the check here (as inspired from the lighthouse impl)
     //
     // Reasons:

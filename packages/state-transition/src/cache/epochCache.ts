@@ -834,7 +834,7 @@ export class EpochCache {
 
   /**
    * Read from proposers instead of state.proposer_lookahead because we set it in `finalProcessEpoch()`
-   * See https://github.com/ethereum/consensus-specs/blob/v1.6.0-beta.1/specs/fulu/beacon-chain.md#modified-get_beacon_proposer_index
+   * See https://github.com/ethereum/consensus-specs/blob/e9266b2145c09b63ba0039a9f477cfe8a629c78b/specs/fulu/beacon-chain.md#modified-get_beacon_proposer_index
    */
   getBeaconProposer(slot: Slot): ValidatorIndex {
     const epoch = computeEpochAtSlot(slot);

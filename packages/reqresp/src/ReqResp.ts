@@ -38,7 +38,6 @@ export interface ReqRespOpts extends SendRequestOpts, ReqRespRateLimiterOpts {
  * Implementation of Ethereum Consensus p2p Req/Resp domain.
  * For the spec that this code is based on, see:
  * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-reqresp-domain
- *
  * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.6/specs/altair/light-client/p2p-interface.md#the-reqresp-domain
  */
 export class ReqResp {
