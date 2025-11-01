@@ -1002,7 +1002,7 @@ export function getValidatorApi(
       return {data: contribution};
     },
 
-    async getProposerDuties({epoch}) {
+    async getProposerDuties({epoch}, _context, opts) {
       notWhileSyncing();
 
       // Early check that epoch is no more than current_epoch + 1, or allow for pre-genesis
@@ -1106,7 +1106,10 @@ export function getValidatorApi(
 
       // Returns `null` on the one-off scenario where the genesis block decides its own shuffling.
       // It should be set to the latest block applied to `self` or the genesis block root.
-      const dependentRoot = proposerShufflingDecisionRoot(state) || (await getGenesisBlockRoot(state));
+      const dependentRoot =
+        // The dependent root is different in v2 due to deterministic proposer lookahead
+        proposerShufflingDecisionRoot(opts?.v2 ? ForkName.fulu : ForkName.phase0, state) ||
+        (await getGenesisBlockRoot(state));
 
       return {
         data: duties,
@@ -1115,6 +1118,10 @@ export function getValidatorApi(
           executionOptimistic: isOptimisticBlock(head),
         },
       };
+    },
+
+    async getProposerDutiesV2(args) {
+      return this.getProposerDuties(args, {}, {v2: true});
     },
 
     async getAttesterDuties({epoch, indices}) {
