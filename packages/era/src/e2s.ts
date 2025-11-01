@@ -1,6 +1,6 @@
 import type {FileHandle} from "node:fs/promises";
 import {Slot} from "@lodestar/types";
-import {readInt48, writeInt48} from "./util.ts";
+import {readInt48, readUint16, readUint32, writeInt48, writeUint16, writeUint32} from "./util.ts";
 
 /**
  * Known entry types in an E2Store (.e2s) file along with their exact 2-byte codes.
@@ -73,18 +73,17 @@ export function parseEntryHeader(header: Uint8Array): {type: EntryType; length: 
   }
 
   // validate entry type from first 2 bytes
-  const typeCode = header[0] | (header[1] << 8);
-  const typeEntry = EntryType[EntryType[typeCode] as keyof typeof EntryType];
-  if (typeEntry === undefined) {
+  const typeCode = readUint16(header, 0);
+  if (!(typeCode in EntryType)) {
     throw new Error(`Unknown E2Store entry type: 0x${typeCode.toString(16)}`);
   }
-  const type = typeEntry as EntryType;
+  const type = typeCode as EntryType;
 
   // Parse data length from next 4 bytes (offset 2, little endian)
-  const length = header[2] | (header[3] << 8) | (header[4] << 16) | (header[5] << 24);
+  const length = readUint32(header, 2);
 
   // Validate reserved bytes are zero (offset 6-7)
-  const reserved = header[6] | (header[7] << 8);
+  const reserved = readUint16(header, 6);
   if (reserved !== 0) {
     throw new Error(`E2Store reserved bytes must be zero, got: ${reserved}`);
   }
@@ -150,14 +149,9 @@ export async function readSlotIndex(fh: FileHandle, offset: number): Promise<Slo
  */
 export async function writeEntry(fh: FileHandle, offset: number, type: EntryType, payload: Uint8Array): Promise<void> {
   const header = new Uint8Array(E2STORE_HEADER_SIZE);
-  // type
-  header[0] = type;
-  header[1] = type >>> 8;
-  // length u32 LE
-  header[2] = payload.length & 0xff;
-  header[3] = (payload.length >>> 8) & 0xff;
-  header[4] = (payload.length >>> 16) & 0xff;
-  header[5] = (payload.length >>> 24) & 0xff;
+  writeUint16(header, 0, type);           // type (2 bytes)
+  writeUint32(header, 2, payload.length); // length (4 bytes)
+  // reserved bytes (6-7) remain 0
   await fh.writev([header, payload], offset);
 }
 
