@@ -1107,7 +1107,7 @@ export function getValidatorApi(
       // Returns `null` on the one-off scenario where the genesis block decides its own shuffling.
       // It should be set to the latest block applied to `self` or the genesis block root.
       const dependentRoot =
-        // In v2 the dependent root is based on fork to account for deterministic proposer lookahead
+        // In v2 the dependent root is different after fulu due to deterministic proposer lookahead
         proposerShufflingDecisionRoot(opts?.v2 ? config.getForkName(startSlot) : ForkName.phase0, state) ||
         (await getGenesisBlockRoot(state));
 
