@@ -249,6 +249,32 @@ describe("AttestationDutiesService", () => {
     const newDependentRoot = toRootHex(Buffer.alloc(32, 2));
     const headBlockRoot = toRootHex(Buffer.alloc(32, 3));
 
+    let clock: ClockMock;
+    let dutiesService: AttestationDutiesService;
+    let onNewHeadCallback: (headEvent: HeadEventData) => Promise<void>;
+
+    beforeEach(() => {
+      api.validator.prepareBeaconCommitteeSubnet.mockResolvedValue(mockApiResponse({}));
+
+      clock = new ClockMock();
+      const syncingStatusTracker = new SyncingStatusTracker(loggerVc, api, clock, null);
+
+      vi.spyOn(chainHeadTracker, "runOnNewHead");
+      chainHeadTracker.runOnNewHead.mockImplementation((callback) => {
+        onNewHeadCallback = callback;
+      });
+
+      dutiesService = new AttestationDutiesService(
+        loggerVc,
+        api,
+        clock,
+        validatorStore,
+        chainHeadTracker,
+        syncingStatusTracker,
+        null
+      );
+    });
+
     it("Should resubscribe to beacon subnets when current epoch dependent root changes", async () => {
       const slot = 5;
       const currentEpoch = computeEpochAtSlot(slot);
@@ -269,33 +295,13 @@ describe("AttestationDutiesService", () => {
           meta: {dependentRoot: oldDependentRoot, executionOptimistic: false},
         })
       );
-      api.validator.prepareBeaconCommitteeSubnet.mockResolvedValue(mockApiResponse({}));
-
-      const clock = new ClockMock();
-      const syncingStatusTracker = new SyncingStatusTracker(loggerVc, api, clock, null);
-
-      vi.spyOn(chainHeadTracker, "runOnNewHead");
-      let onNewHeadCallback: ((headEvent: HeadEventData) => Promise<void>) | undefined;
-      chainHeadTracker.runOnNewHead.mockImplementation((callback) => {
-        onNewHeadCallback = callback;
-      });
-
-      const dutiesService = new AttestationDutiesService(
-        loggerVc,
-        api,
-        clock,
-        validatorStore,
-        chainHeadTracker,
-        syncingStatusTracker,
-        null
-      );
 
       await clock.tickEpochFns(currentEpoch, controller.signal);
 
-      expect(dutiesService["dutiesByIndexByEpoch"].get(currentEpoch)).toBeDefined();
+      expect(dutiesService["dutiesByIndexByEpoch"].get(currentEpoch)?.dutiesByIndex.get(index)?.duty).toEqual(duty);
       expect(api.validator.prepareBeaconCommitteeSubnet).toHaveBeenCalledTimes(1);
 
-      const reorgedDuty = {...duty, slot: slot + 1, committeeIndex: 3};
+      const reorgedDuty: routes.validator.AttesterDuty = {...duty, slot: slot + 1, committeeIndex: 3};
       api.validator.getAttesterDuties.mockResolvedValue(
         mockApiResponse({
           data: [reorgedDuty],
@@ -303,7 +309,7 @@ describe("AttestationDutiesService", () => {
         })
       );
 
-      await onNewHeadCallback!({
+      await onNewHeadCallback({
         slot,
         head: headBlockRoot,
         previousDutyDependentRoot: newDependentRoot,
@@ -311,20 +317,23 @@ describe("AttestationDutiesService", () => {
       });
 
       expect(api.validator.prepareBeaconCommitteeSubnet).toHaveBeenCalledTimes(2);
-
-      const lastCallArgs = api.validator.prepareBeaconCommitteeSubnet.mock.calls[1][0];
-      expect(lastCallArgs.subscriptions).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            validatorIndex: index,
-            slot: reorgedDuty.slot,
+      expect(api.validator.prepareBeaconCommitteeSubnet).toHaveBeenLastCalledWith({
+        subscriptions: [
+          {
+            validatorIndex: reorgedDuty.validatorIndex,
+            committeesAtSlot: reorgedDuty.committeesAtSlot,
             committeeIndex: reorgedDuty.committeeIndex,
-          }),
-        ])
+            slot: reorgedDuty.slot,
+            isAggregator: false,
+          },
+        ],
+      });
+      expect(dutiesService["dutiesByIndexByEpoch"].get(currentEpoch)?.dutiesByIndex.get(index)?.duty).toEqual(
+        reorgedDuty
       );
     });
 
-    it("Should resubscribe when next epoch dependent root changes", async () => {
+    it("Should resubscribe to beacon subnets when next epoch dependent root changes", async () => {
       const slot = 5;
       const currentEpoch = computeEpochAtSlot(slot);
       const nextEpoch = currentEpoch + 1;
@@ -349,40 +358,33 @@ describe("AttestationDutiesService", () => {
         pubkey: pubkeys[0],
       };
 
-      api.validator.getAttesterDuties.mockResolvedValue(
+      // First call for current epoch
+      api.validator.getAttesterDuties.mockResolvedValueOnce(
         mockApiResponse({
           data: [currentEpochDuty],
           meta: {dependentRoot: oldDependentRoot, executionOptimistic: false},
         })
       );
-      api.validator.prepareBeaconCommitteeSubnet.mockResolvedValue(mockApiResponse({}));
 
-      const clock = new ClockMock();
-      const syncingStatusTracker = new SyncingStatusTracker(loggerVc, api, clock, null);
-
-      vi.spyOn(chainHeadTracker, "runOnNewHead");
-      let onNewHeadCallback: ((headEvent: HeadEventData) => Promise<void>) | undefined;
-      chainHeadTracker.runOnNewHead.mockImplementation((callback) => {
-        onNewHeadCallback = callback;
-      });
-
-      const dutiesService = new AttestationDutiesService(
-        loggerVc,
-        api,
-        clock,
-        validatorStore,
-        chainHeadTracker,
-        syncingStatusTracker,
-        null
+      // Second call for next epoch
+      api.validator.getAttesterDuties.mockResolvedValueOnce(
+        mockApiResponse({
+          data: [nextEpochDuty],
+          meta: {dependentRoot: oldDependentRoot, executionOptimistic: false},
+        })
       );
 
       await clock.tickEpochFns(currentEpoch, controller.signal);
 
-      expect(dutiesService["dutiesByIndexByEpoch"].get(currentEpoch)).toBeDefined();
-      expect(dutiesService["dutiesByIndexByEpoch"].get(nextEpoch)).toBeDefined();
+      expect(dutiesService["dutiesByIndexByEpoch"].get(currentEpoch)?.dutiesByIndex.get(index)?.duty).toEqual(
+        currentEpochDuty
+      );
+      expect(dutiesService["dutiesByIndexByEpoch"].get(nextEpoch)?.dutiesByIndex.get(index)?.duty).toEqual(
+        nextEpochDuty
+      );
       expect(api.validator.prepareBeaconCommitteeSubnet).toHaveBeenCalledTimes(1);
 
-      const reorgedNextEpochDuty = {...nextEpochDuty, committeeIndex: 4};
+      const reorgedNextEpochDuty: routes.validator.AttesterDuty = {...nextEpochDuty, committeeIndex: 4};
       api.validator.getAttesterDuties.mockResolvedValue(
         mockApiResponse({
           data: [reorgedNextEpochDuty],
@@ -390,7 +392,7 @@ describe("AttestationDutiesService", () => {
         })
       );
 
-      await onNewHeadCallback!({
+      await onNewHeadCallback({
         slot,
         head: headBlockRoot,
         previousDutyDependentRoot: oldDependentRoot,
@@ -398,20 +400,23 @@ describe("AttestationDutiesService", () => {
       });
 
       expect(api.validator.prepareBeaconCommitteeSubnet).toHaveBeenCalledTimes(2);
-
-      const lastCallArgs = api.validator.prepareBeaconCommitteeSubnet.mock.calls[1][0];
-      expect(lastCallArgs.subscriptions).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            validatorIndex: index,
-            slot: reorgedNextEpochDuty.slot,
+      expect(api.validator.prepareBeaconCommitteeSubnet).toHaveBeenLastCalledWith({
+        subscriptions: [
+          {
+            validatorIndex: reorgedNextEpochDuty.validatorIndex,
+            committeesAtSlot: reorgedNextEpochDuty.committeesAtSlot,
             committeeIndex: reorgedNextEpochDuty.committeeIndex,
-          }),
-        ])
+            slot: reorgedNextEpochDuty.slot,
+            isAggregator: false,
+          },
+        ],
+      });
+      expect(dutiesService["dutiesByIndexByEpoch"].get(nextEpoch)?.dutiesByIndex.get(index)?.duty).toEqual(
+        reorgedNextEpochDuty
       );
     });
 
-    it("Should not resubscribe when dependent root unchanged", async () => {
+    it("Should not resubscribe to beacon subnets when dependent root is unchanged", async () => {
       const slot = 5;
       const currentEpoch = computeEpochAtSlot(slot);
 
@@ -431,33 +436,13 @@ describe("AttestationDutiesService", () => {
           meta: {dependentRoot: oldDependentRoot, executionOptimistic: false},
         })
       );
-      api.validator.prepareBeaconCommitteeSubnet.mockResolvedValue(mockApiResponse({}));
-
-      const clock = new ClockMock();
-      const syncingStatusTracker = new SyncingStatusTracker(loggerVc, api, clock, null);
-
-      vi.spyOn(chainHeadTracker, "runOnNewHead");
-      let onNewHeadCallback: ((headEvent: HeadEventData) => Promise<void>) | undefined;
-      chainHeadTracker.runOnNewHead.mockImplementation((callback) => {
-        onNewHeadCallback = callback;
-      });
-
-      const dutiesService = new AttestationDutiesService(
-        loggerVc,
-        api,
-        clock,
-        validatorStore,
-        chainHeadTracker,
-        syncingStatusTracker,
-        null
-      );
 
       await clock.tickEpochFns(currentEpoch, controller.signal);
 
-      expect(dutiesService["dutiesByIndexByEpoch"].get(currentEpoch)).toBeDefined();
+      expect(dutiesService["dutiesByIndexByEpoch"].get(currentEpoch)?.dutiesByIndex.get(index)?.duty).toEqual(duty);
       const initialCalls = api.validator.prepareBeaconCommitteeSubnet.mock.calls.length;
 
-      await onNewHeadCallback!({
+      await onNewHeadCallback({
         slot,
         head: headBlockRoot,
         previousDutyDependentRoot: oldDependentRoot,
