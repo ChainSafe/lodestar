@@ -378,6 +378,7 @@ export class AttestationDutiesService {
       }
     }
 
+    // Previous subscriptions are no longer valid and need to updated
     await this.subscribeToBeaconCommitteeSubnets(beaconCommitteeSubscriptions);
   }
 
