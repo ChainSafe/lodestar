@@ -169,24 +169,6 @@ export class AttestationDutiesService {
   };
 
   /**
-   * Subscribe to beacon committee subnets with batching and error handling
-   */
-  private async subscribeToBeaconCommitteeSubnets(
-    beaconCommitteeSubscriptions: routes.validator.BeaconCommitteeSubscription[]
-  ): Promise<void> {
-    if (beaconCommitteeSubscriptions.length > 0) {
-      const subscriptionsBatches = batchItems(beaconCommitteeSubscriptions, {batchSize: SUBSCRIPTIONS_PER_REQUEST});
-      const responses = await Promise.all(
-        subscriptionsBatches.map((subscriptions) => this.api.validator.prepareBeaconCommitteeSubnet({subscriptions}))
-      );
-
-      for (const res of responses) {
-        res.assertOk();
-      }
-    }
-  }
-
-  /**
    * Query the beacon node for attestation duties for any known validators.
    *
    * This function will perform (in the following order):
@@ -397,6 +379,21 @@ export class AttestationDutiesService {
     }
 
     await this.subscribeToBeaconCommitteeSubnets(beaconCommitteeSubscriptions);
+  }
+
+  private async subscribeToBeaconCommitteeSubnets(
+    beaconCommitteeSubscriptions: routes.validator.BeaconCommitteeSubscription[]
+  ): Promise<void> {
+    if (beaconCommitteeSubscriptions.length > 0) {
+      const subscriptionsBatches = batchItems(beaconCommitteeSubscriptions, {batchSize: SUBSCRIPTIONS_PER_REQUEST});
+      const responses = await Promise.all(
+        subscriptionsBatches.map((subscriptions) => this.api.validator.prepareBeaconCommitteeSubnet({subscriptions}))
+      );
+
+      for (const res of responses) {
+        res.assertOk();
+      }
+    }
   }
 
   private async getDutyAndProof(duty: routes.validator.AttesterDuty): Promise<AttDutyAndProof> {
