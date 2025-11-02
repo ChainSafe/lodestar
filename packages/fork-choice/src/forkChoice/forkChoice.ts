@@ -74,6 +74,7 @@ export type UpdateAndGetHeadOpt =
 /**
  * Provides an implementation of "Ethereum Consensus -- Beacon Chain Fork Choice":
  *
+ * 
  * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md#fork-choice
  *
  * ## Detail
