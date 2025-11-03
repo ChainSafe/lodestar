@@ -11,6 +11,7 @@ import {
   GossipValidatorBatchFn,
   GossipValidatorFn,
 } from "../gossip/interface.js";
+import {prettyPrintPeerIdStr} from "../util.ts";
 
 export type ValidatorFnModules = {
   config: ChainForkConfig;
@@ -142,7 +143,11 @@ export function getGossipValidatorFn(gossipHandlers: GossipHandlers, modules: Va
 
         case GossipAction.REJECT:
           metrics?.networkProcessor.gossipValidationReject.inc({topic: type});
-          logger.debug(`Gossip validation ${type} rejected`, {clientAgent, clientVersion}, e);
+          logger.debug(
+            `Gossip validation ${type} rejected`,
+            {clientAgent, clientVersion, peerId: prettyPrintPeerIdStr(propagationSource)},
+            e
+          );
           return TopicValidatorResult.Reject;
       }
     }
