@@ -553,7 +553,11 @@ export class NetworkCore implements INetworkCore {
           // On fork boundary transition
           if (epoch === nextBoundaryEpoch) {
             // updateEth2Field() MUST be called with clock epoch, onEpoch event is emitted in response to clock events
-            this.metadata.updateEth2Field(epoch);
+            const {forkDigest} = this.metadata.updateEth2Field(epoch);
+            // Update local status to reflect the new fork digest, otherwise we will disconnect peers that re-status us
+            // right after the fork transition due to incompatible forks as our fork digest is stale since we only
+            // update it once we import a new head or when emitting update status event.
+            this.statusCache.update({...this.statusCache.get(), forkDigest});
             this.reqResp.registerProtocolsAtBoundary(nextBoundary);
           }
 

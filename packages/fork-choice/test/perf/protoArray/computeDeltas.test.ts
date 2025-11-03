@@ -1,17 +1,17 @@
 import {beforeAll, bench, describe, setBenchOpts} from "@chainsafe/benchmark";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsZeroed} from "@lodestar/state-transition";
 import {computeDeltas} from "../../../src/protoArray/computeDeltas.js";
-import {VoteTracker} from "../../../src/protoArray/interface.js";
+import {NULL_VOTE_INDEX} from "../../../src/protoArray/interface.js";
 
 describe("computeDeltas", () => {
   let oldBalances: EffectiveBalanceIncrements;
   let newBalances: EffectiveBalanceIncrements;
 
-  const oneHourProtoNodes = (60 * 60) / 12;
-  const fourHourProtoNodes = 4 * oneHourProtoNodes;
-  const oneDayProtoNodes = 24 * oneHourProtoNodes;
-  // 2 first numbers are respective to number of validators in goerli, mainnet as of Aug 2023
-  const numValidators = [500_000, 750_000, 1_400_000, 2_100_000];
+  // it's not much differences between 1h vs 4h or even 1d proto nodes
+  const numProtoNode = (60 * 60) / 12;
+  const inactiveValidatorsPercentages = [0, 0.1, 0.2, 0.5];
+
+  const numValidators = [1_400_000, 2_100_000];
   for (const numValidator of numValidators) {
     beforeAll(
       () => {
@@ -27,27 +27,38 @@ describe("computeDeltas", () => {
     );
 
     setBenchOpts({
-      minMs: 30 * 1000,
-      maxMs: 40 * 1000,
+      minMs: 10 * 1000,
+      maxMs: 10 * 1000,
     });
 
-    for (const numProtoNode of [oneHourProtoNodes, fourHourProtoNodes, oneDayProtoNodes]) {
+    for (const inainactiveValidatorsPercentage of inactiveValidatorsPercentages) {
+      if (inainactiveValidatorsPercentage < 0 || inainactiveValidatorsPercentage > 1) {
+        throw new Error("inactiveValidatorsPercentage must be between 0 and 1");
+      }
+      // this results in [null, 10, 5, 2], ie for 10% inactive validators, every validator index ending with 0 is inactive
+      const inactiveValidatorMod =
+        inainactiveValidatorsPercentage === 0 ? null : Math.floor(1 / inainactiveValidatorsPercentage);
+      const voteCurrentIndices = Array.from({length: numValidator}, () => NULL_VOTE_INDEX);
+      const voteNextIndices = Array.from({length: numValidator}, () => NULL_VOTE_INDEX);
       bench({
-        id: `computeDeltas ${numValidator} validators ${numProtoNode} proto nodes`,
+        id: `computeDeltas ${numValidator} validators ${inainactiveValidatorsPercentage * 100}% inactive`,
         beforeEach: () => {
-          const votes: VoteTracker[] = [];
-          const epoch = 100_000;
           for (let i = 0; i < numValidator; i++) {
-            votes.push({
-              currentIndex: Math.floor(numProtoNode / 2),
-              nextIndex: Math.floor(numProtoNode / 2) + 1,
-              nextEpoch: epoch,
-            });
+            if (inactiveValidatorMod != null && i % inactiveValidatorMod === 0) continue;
+            voteCurrentIndices[i] = Math.floor(numProtoNode / 2);
+            voteNextIndices[i] = Math.floor(numProtoNode / 2) + 1;
           }
-          return votes;
+          return {voteCurrentIndices, voteNextIndices};
         },
-        fn: (votes) => {
-          computeDeltas(numProtoNode, votes, oldBalances, newBalances, new Set());
+        fn: ({voteCurrentIndices, voteNextIndices}) => {
+          computeDeltas(
+            numProtoNode,
+            voteCurrentIndices,
+            voteNextIndices,
+            oldBalances,
+            newBalances,
+            new Set([1, 2, 3, 4, 5])
+          );
         },
       });
     }

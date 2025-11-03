@@ -1,5 +1,5 @@
 import {BeaconConfig, ForkBoundary} from "@lodestar/config";
-import {ATTESTATION_SUBNET_COUNT, EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Epoch, Slot, SubnetID, ssz} from "@lodestar/types";
 import {Logger, MapDef} from "@lodestar/utils";
@@ -92,8 +92,8 @@ export class AttnetsService implements IAttnetsService {
     const shortLivedSubnets = this.committeeSubnets.getActiveTtl(this.clock.currentSlot);
 
     const longLivedSubscriptionsToSlot =
-      (Math.floor(this.clock.currentEpoch / EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION) + 1) *
-      EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION *
+      (Math.floor(this.clock.currentEpoch / this.config.EPOCHS_PER_SUBNET_SUBSCRIPTION) + 1) *
+      this.config.EPOCHS_PER_SUBNET_SUBSCRIPTION *
       SLOTS_PER_EPOCH;
     const longLivedSubnets = Array.from(this.longLivedSubscriptions).map((subnet) => ({
       subnet,
@@ -234,11 +234,11 @@ export class AttnetsService implements IAttnetsService {
 
   /**
    * Run per epoch, clean-up operations that are not urgent
-   * Subscribe to new random subnets every EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION epochs
+   * Subscribe to new random subnets every EPOCHS_PER_SUBNET_SUBSCRIPTION epochs
    */
   private onEpoch = (epoch: Epoch): void => {
     try {
-      if (epoch % EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION === 0) {
+      if (epoch % this.config.EPOCHS_PER_SUBNET_SUBSCRIPTION === 0) {
         this.recomputeLongLivedSubnets();
       }
     } catch (e) {
@@ -253,7 +253,7 @@ export class AttnetsService implements IAttnetsService {
     }
 
     const oldSubnets = this.longLivedSubscriptions;
-    const newSubnets = computeSubscribedSubnet(this.nodeId, this.clock.currentEpoch);
+    const newSubnets = computeSubscribedSubnet(this.config, this.nodeId, this.clock.currentEpoch);
     this.logger.verbose("Recomputing long-lived subscriptions", {
       epoch: this.clock.currentEpoch,
       oldSubnets: Array.from(oldSubnets).join(","),

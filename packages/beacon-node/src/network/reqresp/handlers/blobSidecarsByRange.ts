@@ -1,5 +1,5 @@
 import {ChainConfig} from "@lodestar/config";
-import {BLOBSIDECAR_FIXED_SIZE, GENESIS_SLOT} from "@lodestar/params";
+import {BLOB_SIDECAR_FIXED_SIZE, GENESIS_SLOT} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Slot, deneb} from "@lodestar/types";
@@ -71,17 +71,17 @@ export function* iterateBlobBytesFromWrapper(
   blockSlot: Slot
 ): Iterable<ResponseOutgoing> {
   const allBlobSideCarsBytes = blobSideCarsBytesWrapped.slice(BLOB_SIDECARS_IN_WRAPPER_INDEX);
-  const blobsLen = allBlobSideCarsBytes.length / BLOBSIDECAR_FIXED_SIZE;
+  const blobsLen = allBlobSideCarsBytes.length / BLOB_SIDECAR_FIXED_SIZE;
 
   for (let index = 0; index < blobsLen; index++) {
     const blobSideCarBytes = allBlobSideCarsBytes.slice(
-      index * BLOBSIDECAR_FIXED_SIZE,
-      (index + 1) * BLOBSIDECAR_FIXED_SIZE
+      index * BLOB_SIDECAR_FIXED_SIZE,
+      (index + 1) * BLOB_SIDECAR_FIXED_SIZE
     );
-    if (blobSideCarBytes.length !== BLOBSIDECAR_FIXED_SIZE) {
+    if (blobSideCarBytes.length !== BLOB_SIDECAR_FIXED_SIZE) {
       throw new ResponseError(
         RespStatus.SERVER_ERROR,
-        `Invalid blobSidecar index=${index} bytes length=${blobSideCarBytes.length} expected=${BLOBSIDECAR_FIXED_SIZE} for slot ${blockSlot} blobsLen=${blobsLen}`
+        `Invalid blobSidecar index=${index} bytes length=${blobSideCarBytes.length} expected=${BLOB_SIDECAR_FIXED_SIZE} for slot ${blockSlot} blobsLen=${blobsLen}`
       );
     }
     yield {

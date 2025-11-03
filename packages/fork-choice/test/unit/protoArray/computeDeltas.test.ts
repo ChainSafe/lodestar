@@ -1,34 +1,39 @@
 import {describe, expect, it} from "vitest";
 import {getEffectiveBalanceIncrementsZeroed} from "@lodestar/state-transition";
 import {computeDeltas} from "../../../src/protoArray/computeDeltas.js";
+import {NULL_VOTE_INDEX} from "../../../src/protoArray/interface.js";
 
 describe("computeDeltas", () => {
   it("zero hash", () => {
     const validatorCount = 16;
 
     const indices = new Map();
-    const votes = [];
+    const voteCurrentIndices = [];
+    const voteNextIndices = [];
     const oldBalances = getEffectiveBalanceIncrementsZeroed(validatorCount);
     const newBalances = getEffectiveBalanceIncrementsZeroed(validatorCount);
 
     for (const i of Array.from({length: validatorCount}, (_, i) => i)) {
       indices.set(i.toString(), i);
-      votes.push({
-        currentIndex: 0,
-        nextIndex: 0,
-        nextEpoch: 0,
-      });
+      voteCurrentIndices.push(0);
+      voteNextIndices.push(0);
       oldBalances[i] = 0;
       newBalances[i] = 0;
     }
 
-    const deltas = computeDeltas(indices.size, votes, oldBalances, newBalances, new Set());
+    const {deltas} = computeDeltas(
+      indices.size,
+      voteCurrentIndices,
+      voteNextIndices,
+      oldBalances,
+      newBalances,
+      new Set()
+    );
 
     expect(deltas.length).toEqual(validatorCount);
     expect(deltas).toEqual(Array.from({length: validatorCount}, () => 0));
-
-    for (const vote of votes) {
-      expect(vote.currentIndex).toEqual(vote.nextIndex);
+    for (let i = 0; i < voteCurrentIndices.length; i++) {
+      expect(voteCurrentIndices[i]).toBe(voteNextIndices[i]);
     }
   });
 
@@ -37,22 +42,27 @@ describe("computeDeltas", () => {
     const validatorCount = 16;
 
     const indices = new Map();
-    const votes = [];
+    const voteCurrentIndices = [];
+    const voteNextIndices = [];
     const oldBalances = getEffectiveBalanceIncrementsZeroed(validatorCount);
     const newBalances = getEffectiveBalanceIncrementsZeroed(validatorCount);
 
     for (const i of Array.from({length: validatorCount}, (_, i) => i)) {
       indices.set((i + 1).toString(), i);
-      votes.push({
-        currentIndex: null,
-        nextIndex: 0,
-        nextEpoch: 0,
-      });
+      voteCurrentIndices.push(NULL_VOTE_INDEX);
+      voteNextIndices.push(0);
       oldBalances[i] = balance;
       newBalances[i] = balance;
     }
 
-    const deltas = computeDeltas(indices.size, votes, oldBalances, newBalances, new Set());
+    const {deltas} = computeDeltas(
+      indices.size,
+      voteCurrentIndices,
+      voteNextIndices,
+      oldBalances,
+      newBalances,
+      new Set()
+    );
 
     expect(deltas.length).toEqual(validatorCount);
 
@@ -70,22 +80,27 @@ describe("computeDeltas", () => {
     const validatorCount = 16;
 
     const indices = new Map();
-    const votes = [];
+    const voteCurrentIndices = [];
+    const voteNextIndices = [];
     const oldBalances = getEffectiveBalanceIncrementsZeroed(validatorCount);
     const newBalances = getEffectiveBalanceIncrementsZeroed(validatorCount);
 
     for (const i of Array.from({length: validatorCount}, (_, i) => i)) {
       indices.set((i + 1).toString(), i);
-      votes.push({
-        currentIndex: null,
-        nextIndex: i,
-        nextEpoch: 0,
-      });
+      voteCurrentIndices.push(NULL_VOTE_INDEX);
+      voteNextIndices.push(i);
       oldBalances[i] = balance;
       newBalances[i] = balance;
     }
 
-    const deltas = computeDeltas(indices.size, votes, oldBalances, newBalances, new Set());
+    const {deltas} = computeDeltas(
+      indices.size,
+      voteCurrentIndices,
+      voteNextIndices,
+      oldBalances,
+      newBalances,
+      new Set()
+    );
 
     expect(deltas.length).toEqual(validatorCount);
 
@@ -99,22 +114,27 @@ describe("computeDeltas", () => {
     const validatorCount = 16;
 
     const indices = new Map();
-    const votes = [];
+    const voteCurrentIndices = [];
+    const voteNextIndices = [];
     const oldBalances = getEffectiveBalanceIncrementsZeroed(validatorCount);
     const newBalances = getEffectiveBalanceIncrementsZeroed(validatorCount);
 
     for (const i of Array.from({length: validatorCount}, (_, i) => i)) {
       indices.set((i + 1).toString(), i);
-      votes.push({
-        currentIndex: 0,
-        nextIndex: 1,
-        nextEpoch: 0,
-      });
+      voteCurrentIndices.push(0);
+      voteNextIndices.push(1);
       oldBalances[i] = balance;
       newBalances[i] = balance;
     }
 
-    const deltas = computeDeltas(indices.size, votes, oldBalances, newBalances, new Set());
+    const {deltas} = computeDeltas(
+      indices.size,
+      voteCurrentIndices,
+      voteNextIndices,
+      oldBalances,
+      newBalances,
+      new Set()
+    );
 
     expect(deltas.length).toEqual(validatorCount);
 
@@ -137,22 +157,27 @@ describe("computeDeltas", () => {
     const validatorCount = 16;
 
     const indices = new Map();
-    const votes = [];
+    const voteCurrentIndices = [];
+    const voteNextIndices = [];
     const oldBalances = getEffectiveBalanceIncrementsZeroed(validatorCount);
     const newBalances = getEffectiveBalanceIncrementsZeroed(validatorCount);
 
     for (const i of Array.from({length: validatorCount}, (_, i) => i)) {
       indices.set((i + 1).toString(), i);
-      votes.push({
-        currentIndex: 0,
-        nextIndex: 1,
-        nextEpoch: 0,
-      });
+      voteCurrentIndices.push(0);
+      voteNextIndices.push(1);
       oldBalances[i] = oldBalance;
       newBalances[i] = newBalance;
     }
 
-    const deltas = computeDeltas(indices.size, votes, oldBalances, newBalances, new Set());
+    const {deltas} = computeDeltas(
+      indices.size,
+      voteCurrentIndices,
+      voteNextIndices,
+      oldBalances,
+      newBalances,
+      new Set()
+    );
 
     expect(deltas.length).toEqual(validatorCount);
 
@@ -176,11 +201,8 @@ describe("computeDeltas", () => {
     indices.set("3", 1);
 
     // Both validators move votes from block1 to block2
-    const votes = Array.from({length: 2}, () => ({
-      currentIndex: 0,
-      nextIndex: 1,
-      nextEpoch: 0,
-    }));
+    const voteCurrentIndices = Array.from({length: 2}, () => 0);
+    const voteNextIndices = Array.from({length: 2}, () => 1);
 
     // There is only one validator in the old balances.
     const oldBalances = getEffectiveBalanceIncrementsZeroed(1);
@@ -190,15 +212,22 @@ describe("computeDeltas", () => {
     newBalances[0] = balance;
     newBalances[1] = balance;
 
-    const deltas = computeDeltas(indices.size, votes, oldBalances, newBalances, new Set());
+    const {deltas} = computeDeltas(
+      indices.size,
+      voteCurrentIndices,
+      voteNextIndices,
+      oldBalances,
+      newBalances,
+      new Set()
+    );
 
     expect(deltas.length).toEqual(2);
 
     expect(deltas[0].toString()).toEqual((0 - balance).toString());
     expect(deltas[1].toString()).toEqual((balance * 2).toString());
 
-    for (const vote of votes) {
-      expect(vote.currentIndex).toBe(vote.nextIndex);
+    for (let i = 0; i < voteCurrentIndices.length; i++) {
+      expect(voteCurrentIndices[i]).toBe(voteNextIndices[i]);
     }
   });
 
@@ -211,11 +240,8 @@ describe("computeDeltas", () => {
     indices.set("3", 1);
 
     // Both validators move votes from block1 to block2
-    const votes = Array.from({length: 2}, () => ({
-      currentIndex: 0,
-      nextIndex: 1,
-      nextEpoch: 0,
-    }));
+    const voteCurrentIndices = Array.from({length: 2}, () => 0);
+    const voteNextIndices = Array.from({length: 2}, () => 1);
     // There are two validators in the old balances.
     const oldBalances = getEffectiveBalanceIncrementsZeroed(2);
     oldBalances[0] = balance;
@@ -224,15 +250,22 @@ describe("computeDeltas", () => {
     const newBalances = getEffectiveBalanceIncrementsZeroed(1);
     newBalances[0] = balance;
 
-    const deltas = computeDeltas(indices.size, votes, oldBalances, newBalances, new Set());
+    const {deltas} = computeDeltas(
+      indices.size,
+      voteCurrentIndices,
+      voteNextIndices,
+      oldBalances,
+      newBalances,
+      new Set()
+    );
 
     expect(deltas.length).toEqual(2);
 
     expect(deltas[0].toString()).toEqual((0 - balance * 2).toString());
     expect(deltas[1].toString()).toEqual(balance.toString());
 
-    for (const vote of votes) {
-      expect(vote.currentIndex).toBe(vote.nextIndex);
+    for (let i = 0; i < voteCurrentIndices.length; i++) {
+      expect(voteCurrentIndices[i]).toBe(voteNextIndices[i]);
     }
   });
 
@@ -246,22 +279,33 @@ describe("computeDeltas", () => {
     indices.set("3", 1);
 
     // Both validators move votes from block1 to block2
-    const votes = Array.from({length: 2}, () => ({
-      currentIndex: 0,
-      nextIndex: 1,
-      nextEpoch: 0,
-    }));
+    const voteCurrentIndices = Array.from({length: 2}, () => 0);
+    const voteNextIndices = Array.from({length: 2}, () => 1);
 
     const balances = new Uint16Array([firstBalance, secondBalance]);
     // 1st validator is part of an attester slashing
     const equivocatingIndices = new Set([0]);
-    let deltas = computeDeltas(indices.size, votes, balances, balances, equivocatingIndices);
+    let {deltas} = computeDeltas(
+      indices.size,
+      voteCurrentIndices,
+      voteNextIndices,
+      balances,
+      balances,
+      equivocatingIndices
+    );
     expect(deltas[0]).toBeWithMessage(
       -1 * (firstBalance + secondBalance),
       "should disregard the 1st validator due to attester slashing"
     );
     expect(deltas[1]).toBeWithMessage(secondBalance, "should move 2nd balance from 1st root to 2nd root");
-    deltas = computeDeltas(indices.size, votes, balances, balances, equivocatingIndices);
+    deltas = computeDeltas(
+      indices.size,
+      voteCurrentIndices,
+      voteNextIndices,
+      balances,
+      balances,
+      equivocatingIndices
+    ).deltas;
     expect(deltas).toEqualWithMessage([0, 0], "calling computeDeltas again should not have any affect on the weight");
   });
 });

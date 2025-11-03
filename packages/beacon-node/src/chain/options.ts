@@ -8,6 +8,7 @@ import {ShufflingCacheOpts} from "./shufflingCache.js";
 import {DEFAULT_MAX_BLOCK_STATES, FIFOBlockStateCacheOpts} from "./stateCache/fifoBlockStateCache.js";
 import {
   DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY,
+  DEFAULT_MAX_CP_STATE_ON_DISK,
   PersistentCheckpointStateCacheOpts,
 } from "./stateCache/persistentCheckpointsCache.js";
 import {ValidatorMonitorOpts} from "./validatorMonitor.js";
@@ -41,8 +42,6 @@ export type IChainOptions = BlockProcessOpts &
     maxCachedBlobSidecars?: number;
     /** Max number of produced block roots (blinded or full) cached for broadcast validations */
     maxCachedProducedRoots?: number;
-    /** Subscribe to and custody all data column sidecar subnets */
-    supernode?: boolean;
     initialCustodyGroupCount?: number;
     broadcastValidationStrictness?: string;
     minSameMessageSignatureSetsToBatch: number;
@@ -118,7 +117,6 @@ export const defaultChainOptions: IChainOptions = {
   archiveMode: DEFAULT_ARCHIVE_MODE,
   pruneHistory: false,
   emitPayloadAttributes: false,
-  supernode: false,
   // for gossip block validation, it's unlikely we see a reorg with 32 slots
   // for attestation validation, having this value ensures we don't have to regen states most of the time
   maxSkipSlots: 32,
@@ -135,4 +133,5 @@ export const defaultChainOptions: IChainOptions = {
   nHistoricalStatesFileDataStore: true,
   maxBlockStates: DEFAULT_MAX_BLOCK_STATES,
   maxCPStateEpochsInMemory: DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY,
+  maxCPStateEpochsOnDisk: DEFAULT_MAX_CP_STATE_ON_DISK,
 };

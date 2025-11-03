@@ -214,7 +214,6 @@ describe("api/validator - produceBlockV3", () => {
       graffiti: toGraffitiBytes(graffiti),
       slot,
       parentBlockRoot,
-      parentSlot: currentSlot - 1,
       feeRecipient,
       commonBlockBodyPromise: expect.any(Promise),
     });
@@ -227,7 +226,6 @@ describe("api/validator - produceBlockV3", () => {
       graffiti: toGraffitiBytes(graffiti),
       slot,
       parentBlockRoot,
-      parentSlot: currentSlot - 1,
       feeRecipient: undefined,
       commonBlockBodyPromise: expect.any(Promise),
     });
@@ -285,7 +283,6 @@ describe("api/validator - produceBlockV3", () => {
       graffiti: toGraffitiBytes(graffiti),
       slot,
       feeRecipient,
-      parentSlot: slot - 1,
       parentBlockRoot: fromHexString(ZERO_HASH_HEX),
       proposerIndex: 0,
       proposerPubKey: new Uint8Array(32).fill(1),
@@ -311,7 +308,6 @@ describe("api/validator - produceBlockV3", () => {
       randaoReveal,
       graffiti: toGraffitiBytes(graffiti),
       slot,
-      parentSlot: slot - 1,
       parentBlockRoot: fromHexString(ZERO_HASH_HEX),
       proposerIndex: 0,
       proposerPubKey: new Uint8Array(32).fill(1),

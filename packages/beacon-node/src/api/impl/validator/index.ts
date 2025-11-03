@@ -179,10 +179,13 @@ export function getValidatorApi(
   /**
    * Validator clock may be advanced from beacon's clock. If the validator requests a resource in a
    * future slot, wait some time instead of rejecting the request because it's in the future.
-   * This value is the same to MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC.
+   * This value is the same to MAXIMUM_GOSSIP_CLOCK_DISPARITY.
    * For very fast networks, reduce clock disparity to half a slot.
    */
-  const MAX_API_CLOCK_DISPARITY_SEC = Math.min(0.5, config.SLOT_DURATION_MS / 2000);
+  const MAX_API_CLOCK_DISPARITY_SEC = Math.min(
+    config.MAXIMUM_GOSSIP_CLOCK_DISPARITY / 1000,
+    config.SLOT_DURATION_MS / 2000
+  );
   const MAX_API_CLOCK_DISPARITY_MS = MAX_API_CLOCK_DISPARITY_SEC * 1000;
 
   /** Compute and cache the genesis block root */
@@ -411,11 +414,9 @@ export function getValidatorApi(
     {
       commonBlockBodyPromise,
       parentBlockRoot,
-      parentSlot,
     }: Omit<routes.validator.ExtraProduceBlockOpts, "builderSelection"> & {
       commonBlockBodyPromise: Promise<CommonBlockBody>;
       parentBlockRoot: Root;
-      parentSlot: Slot;
     }
   ): Promise<ProduceBlindedBlockRes> {
     const version = config.getForkName(slot);
@@ -447,7 +448,6 @@ export function getValidatorApi(
       const {block, executionPayloadValue, consensusBlockValue} = await chain.produceBlindedBlock({
         slot,
         parentBlockRoot,
-        parentSlot,
         randaoReveal,
         graffiti,
         commonBlockBodyPromise,
@@ -483,11 +483,9 @@ export function getValidatorApi(
       strictFeeRecipientCheck,
       commonBlockBodyPromise,
       parentBlockRoot,
-      parentSlot,
     }: Omit<routes.validator.ExtraProduceBlockOpts, "builderSelection"> & {
       commonBlockBodyPromise: Promise<CommonBlockBody>;
       parentBlockRoot: Root;
-      parentSlot: Slot;
     }
   ): Promise<ProduceBlockContentsRes & {shouldOverrideBuilder?: boolean}> {
     const source = ProducedBlockSource.engine;
@@ -499,7 +497,6 @@ export function getValidatorApi(
       const {block, executionPayloadValue, consensusBlockValue, shouldOverrideBuilder} = await chain.produceBlock({
         slot,
         parentBlockRoot,
-        parentSlot,
         randaoReveal,
         graffiti,
         feeRecipient,
@@ -642,7 +639,6 @@ export function getValidatorApi(
           strictFeeRecipientCheck: false,
           commonBlockBodyPromise,
           parentBlockRoot,
-          parentSlot,
         })
       : Promise.reject(new Error("Builder disabled"));
 
@@ -652,7 +648,6 @@ export function getValidatorApi(
           strictFeeRecipientCheck,
           commonBlockBodyPromise,
           parentBlockRoot,
-          parentSlot,
         }).then((engineBlock) => {
           // Once the engine returns a block, in the event of either:
           // - suspected builder censorship
@@ -695,7 +690,6 @@ export function getValidatorApi(
         .produceCommonBlockBody({
           slot,
           parentBlockRoot,
-          parentSlot,
           randaoReveal,
           graffiti: graffitiBytes,
         })

@@ -50,6 +50,7 @@ describe("produceBlockBody", () => {
         metrics: null,
         validatorMonitor: null,
         anchorState: state,
+        isAnchorStateFinalized: true,
         eth1: new Eth1ForBlockProductionDisabled(),
         executionEngine: new ExecutionEngineDisabled(),
       }
@@ -78,7 +79,6 @@ describe("produceBlockBody", () => {
       const slot = state.slot;
 
       const commonBlockBodyPromise = chain.produceCommonBlockBody({
-        parentSlot: slot,
         slot: slot + 1,
         graffiti: Buffer.alloc(32),
         randaoReveal: Buffer.alloc(96),
@@ -86,7 +86,6 @@ describe("produceBlockBody", () => {
       });
 
       await produceBlockBody.call(chain, BlockType.Full, state, {
-        parentSlot: slot,
         slot: slot + 1,
         graffiti: Buffer.alloc(32),
         randaoReveal: Buffer.alloc(96),
