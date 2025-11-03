@@ -100,7 +100,12 @@ export async function validateGossipBlobSidecar(
     //    descend from the finalized root.
     // (Non-Lighthouse): Since we prune all blocks non-descendant from finalized checking the `db.block` database won't be useful to guard
     // against known bad fork blocks, so we throw PARENT_UNKNOWN for cases (1) and (2)
-    throw new BlobSidecarGossipError(GossipAction.IGNORE, {code: BlobSidecarErrorCode.PARENT_UNKNOWN, parentRoot});
+    throw new BlobSidecarGossipError(GossipAction.IGNORE, {
+      code: BlobSidecarErrorCode.PARENT_UNKNOWN,
+      parentRoot,
+      blockRoot: blockHex,
+      slot: blobSlot,
+    });
   }
 
   // [REJECT] The blob is from a higher slot than its parent.
@@ -120,7 +125,12 @@ export async function validateGossipBlobSidecar(
   const blockState = await chain.regen
     .getBlockSlotState(parentRoot, blobSlot, {dontTransferCache: true}, RegenCaller.validateGossipBlock)
     .catch(() => {
-      throw new BlobSidecarGossipError(GossipAction.IGNORE, {code: BlobSidecarErrorCode.PARENT_UNKNOWN, parentRoot});
+      throw new BlobSidecarGossipError(GossipAction.IGNORE, {
+        code: BlobSidecarErrorCode.PARENT_UNKNOWN,
+        parentRoot,
+        blockRoot: blockHex,
+        slot: blobSlot,
+      });
     });
 
   // [REJECT] The proposer signature, signed_beacon_block.signature, is valid with respect to the proposer_index pubkey.

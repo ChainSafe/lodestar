@@ -53,8 +53,8 @@ export type BlobSidecarErrorType =
   | {
       code: BlobSidecarErrorCode.PARENT_UNKNOWN;
       parentRoot: RootHex;
-      slot?: Slot;
-      blockRoot?: RootHex;
+      slot: Slot;
+      blockRoot: RootHex;
     }
   | {code: BlobSidecarErrorCode.NOT_LATER_THAN_PARENT; parentSlot: Slot; slot: Slot}
   | {
