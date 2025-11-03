@@ -68,17 +68,19 @@ export function processExecutionPayloadBid(
     throw Error(`Parent block hash of bid does not match state's latest block hash`);
   }
 
-  const pendingPaymentView = ssz.gloas.BuilderPendingPayment.toViewDU({
-    weight: 0,
-    withdrawal: ssz.gloas.BuilderPendingWithdrawal.toViewDU({
-      feeRecipient: bid.feeRecipient,
-      amount,
-      builderIndex,
-      withdrawableEpoch: FAR_FUTURE_EPOCH,
-    }),
-  });
+  if (amount > 0) {
+    const pendingPaymentView = ssz.gloas.BuilderPendingPayment.toViewDU({
+      weight: 0,
+      withdrawal: ssz.gloas.BuilderPendingWithdrawal.toViewDU({
+        feeRecipient: bid.feeRecipient,
+        amount,
+        builderIndex,
+        withdrawableEpoch: FAR_FUTURE_EPOCH,
+      }),
+    });
 
-  state.builderPendingPayments.set(SLOTS_PER_EPOCH + (bid.slot % SLOTS_PER_EPOCH), pendingPaymentView);
+    state.builderPendingPayments.set(SLOTS_PER_EPOCH + (bid.slot % SLOTS_PER_EPOCH), pendingPaymentView);
+  }
 
   state.latestExecutionPayloadBid = ssz.gloas.ExecutionPayloadBid.toViewDU({
     ...bid,
