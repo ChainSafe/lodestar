@@ -334,10 +334,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
 
     try {
-      const peer = await core.dumpPeer(peerIdStr);
-      const agentClient = peer?.agentClient;
-      const agentVersion = peer?.agentVersion;
-      await validateGossipDataColumnSidecar(chain, dataColumnSidecar, gossipSubnet, metrics, agentClient, agentVersion);
+      await validateGossipDataColumnSidecar(chain, dataColumnSidecar, gossipSubnet, metrics);
       const blockInput = chain.seenBlockInputCache.getByColumn({
         blockRootHex,
         columnSidecar: dataColumnSidecar,
