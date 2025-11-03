@@ -555,8 +555,7 @@ export async function validateBlobsByRangeResponse(
 
     validateSidecarsPromises.push(
       validateBlockBlobSidecars(
-        // do not pass chain here so we do not validate header signature
-        null,
+        null, // do not pass chain here so we do not validate header signature
         block.message.slot,
         blockRoot,
         blockKzgCommitments.length,
@@ -773,8 +772,7 @@ export async function validateColumnsByRangeResponse(
 
     validationPromises.push(
       validateBlockDataColumnSidecars(
-        // do not pass chain here so we do not validate header signature
-        null,
+        null, // do not pass chain here so we do not validate header signature
         slot,
         blockRoot,
         blobCount,
