@@ -57,12 +57,12 @@
     "axios": "^1.3.4",
     "testcontainers": "^10.2.1",
     "tmp": "^0.2.1",
-    "vitest": "3.0.9"
+    "vitest": "^4.0.6"
   },
   "devDependencies": {
     "@types/yargs": "^17.0.24"
   },
   "peerDependencies": {
-    "vitest": "3.0.9"
+    "vitest": "^4.0.6"
   }
 }

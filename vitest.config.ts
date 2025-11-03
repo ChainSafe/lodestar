@@ -1,15 +1,12 @@
 import path from "node:path";
-import {ViteUserConfig, defineConfig} from "vitest/config";
+import {TestUserConfig, defineConfig} from "vitest/config";
 import {browserTestProject} from "./configs/vitest.config.browser.js";
 import {e2eMainnetProject, e2eMinimalProject} from "./configs/vitest.config.e2e.js";
 import {specProjectMainnet, specProjectMinimal} from "./configs/vitest.config.spec.js";
 import {typesTestProject} from "./configs/vitest.config.types.js";
 import {unitTestMainnetProject, unitTestMinimalProject} from "./configs/vitest.config.unit.js";
 
-const isBun = "bun" in process.versions;
-
-export function getReporters(): ViteUserConfig["test"]["reporters"] {
-  if (isBun) return [["default", {summary: false}]];
+export function getReporters(): TestUserConfig["reporters"] {
   if (process.env.GITHUB_ACTIONS) return ["verbose", "hanging-process", "github-actions"];
   if (process.env.TEST_COMPACT_OUTPUT) return ["basic", "hanging-process"];
 
@@ -18,7 +15,7 @@ export function getReporters(): ViteUserConfig["test"]["reporters"] {
 
 export default defineConfig({
   test: {
-    workspace: [
+    projects: [
       {
         extends: true,
         ...unitTestMinimalProject,
@@ -77,9 +74,8 @@ export default defineConfig({
     onConsoleLog: () => !process.env.TEST_QUIET_CONSOLE,
     coverage: {
       enabled: false,
+      include: ["packages/**/src/**.{ts}"],
       clean: true,
-      all: false,
-      extension: [".ts"],
       provider: "v8",
       reporter: [["lcovonly", {file: "lcov.info"}], ["text"]],
       reportsDirectory: "./coverage",
