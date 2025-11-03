@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {Logger} from "@lodestar/utils";
+import {Logger, sleep} from "@lodestar/utils";
 import {BLOB_AND_PROOF_V2_RPC_BYTES} from "../execution/engine/types.js";
 import {IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/metrics.js";
@@ -97,8 +97,11 @@ export class GetBlobsTracker {
         this.metrics,
         this.blobsAndProofsBuffers[freeIndex].buffers
       )
-        .then((result) => {
-          this.logger.debug("getBlobsV2 result for block", {...logCtx, result});
+        .then(async (result) => {
+          this.logger.debug("getBlobsV2 result for block, waiting for publish", {...logCtx, result});
+          // allow time for the columns to publish so that the buffers don't get cleared before
+          // the data serializes across the thread boundary
+          await sleep(3000);
           this.metrics?.dataColumns.dataColumnEngineResult.inc({result});
         })
         .catch((error) => {
@@ -106,7 +109,7 @@ export class GetBlobsTracker {
           this.metrics?.dataColumns.dataColumnEngineResult.inc({result: DataColumnEngineResult.Failed});
         })
         .finally(() => {
-          this.logger.verbose("Completed getBlobsV2 for block", logCtx);
+          this.logger.verbose("Completed getBlobsV2 for block. setting inUse=false for clearing buffers now", logCtx);
           this.activeReconstructions.delete(blockInput.blockRootHex);
           this.blobsAndProofsBuffers[freeIndex].inUse = false;
         });

@@ -597,6 +597,8 @@ export function deserializeBlobAndProofsV2(data: BlobAndProofV2Rpc): BlobAndProo
   };
 }
 
+const ZERO_PROOF = Buffer.alloc(PROOF_BYTES, 0);
+
 /**
  * The same to deserializeBlobAndProofsV2 but using preallocated buffers since BlobAndProofV2Rpc is fixed size
  */
@@ -622,6 +624,9 @@ export function deserializeBlobAndProofsV2IntoBytes(data: BlobAndProofV2Rpc, buf
     );
     if (proof.length !== PROOF_BYTES) {
       throw Error(`Invalid proof length ${proof.length}, expected ${PROOF_BYTES}`);
+    }
+    if (Buffer.compare(proof, ZERO_PROOF)) {
+      throw Error("Zero-Proof detected from getBlobsV2 call");
     }
     proofs.push(proof);
   }
