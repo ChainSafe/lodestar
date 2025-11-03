@@ -253,14 +253,19 @@ export async function validateBlockBlobSidecars(
   const commitments = [];
   const blobs = [];
   const proofs = [];
-  for (const blobSidecar of blobSidecars) {
-    const blobIdx = blobSidecar.index;
-    if (!ssz.phase0.SignedBeaconBlockHeader.equals(blobSidecar.signedBlockHeader, firstSidecarSignedBlockHeader)) {
+  for (let i = 0; i < blobSidecars.length; i++) {
+    const blobSidecar = blobSidecars[i];
+    const blobIndex = blobSidecar.index;
+
+    if (
+      i !== 0 &&
+      !ssz.phase0.SignedBeaconBlockHeader.equals(blobSidecar.signedBlockHeader, firstSidecarSignedBlockHeader)
+    ) {
       throw new BlobSidecarValidationError(
         {
           code: BlobSidecarErrorCode.INCORRECT_BLOCK,
           slot: blockSlot,
-          blobIdx,
+          blobIdx: blobIndex,
           expected: toRootHex(blockRoot),
           actual: "unknown - compared via equality",
         },
@@ -273,7 +278,7 @@ export async function validateBlockBlobSidecars(
         {
           code: BlobSidecarErrorCode.INCLUSION_PROOF_INVALID,
           slot: blockSlot,
-          blobIdx,
+          blobIdx: blobIndex,
         },
         "BlobSidecar inclusion proof invalid"
       );

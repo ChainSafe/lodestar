@@ -352,7 +352,10 @@ export async function validateBlockDataColumnSidecars(
   for (let i = 0; i < dataColumnSidecars.length; i++) {
     const columnSidecar = dataColumnSidecars[i];
 
-    if (!ssz.phase0.SignedBeaconBlockHeader.equals(firstSidecarSignedBlockHeader, columnSidecar.signedBlockHeader)) {
+    if (
+      i !== 0 &&
+      !ssz.phase0.SignedBeaconBlockHeader.equals(firstSidecarSignedBlockHeader, columnSidecar.signedBlockHeader)
+    ) {
       throw new DataColumnSidecarValidationError({
         code: DataColumnSidecarErrorCode.INCORRECT_HEADER_ROOT,
         slot: blockSlot,
