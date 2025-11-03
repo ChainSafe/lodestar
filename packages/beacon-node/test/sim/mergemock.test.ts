@@ -178,7 +178,7 @@ describe("executionEngine / ExecutionEngineHttp", () => {
         strictFeeRecipientCheck: true,
         feeRecipient: feeRecipientEngine,
         builder: {
-          gasLimit: 30000000,
+          gasLimit: 60000000,
           selection: routes.validator.BuilderSelection.BuilderAlways,
         },
       },

@@ -219,16 +219,7 @@ export class AttestationDutiesService {
     }
 
     // If there are any subscriptions, push them out to the beacon node.
-    if (beaconCommitteeSubscriptions.length > 0) {
-      const subscriptionsBatches = batchItems(beaconCommitteeSubscriptions, {batchSize: SUBSCRIPTIONS_PER_REQUEST});
-      const responses = await Promise.all(
-        subscriptionsBatches.map((subscriptions) => this.api.validator.prepareBeaconCommitteeSubnet({subscriptions}))
-      );
-
-      for (const res of responses) {
-        res.assertOk();
-      }
-    }
+    await this.subscribeToBeaconCommitteeSubnets(beaconCommitteeSubscriptions);
   }
 
   /**
@@ -371,6 +362,39 @@ export class AttestationDutiesService {
       .catch((e: Error) => {
         this.logger.error("Failed to redownload attester duties when reorg happens", logContext, e);
       });
+
+    const beaconCommitteeSubscriptions: routes.validator.BeaconCommitteeSubscription[] = [];
+    const epochDuties = this.dutiesByIndexByEpoch.get(dutyEpoch)?.dutiesByIndex;
+
+    if (epochDuties) {
+      for (const {duty, selectionProof} of epochDuties.values()) {
+        beaconCommitteeSubscriptions.push({
+          validatorIndex: duty.validatorIndex,
+          committeesAtSlot: duty.committeesAtSlot,
+          committeeIndex: duty.committeeIndex,
+          slot: duty.slot,
+          isAggregator: selectionProof !== null,
+        });
+      }
+    }
+
+    // Previous subscriptions are no longer valid and need to be updated
+    await this.subscribeToBeaconCommitteeSubnets(beaconCommitteeSubscriptions);
+  }
+
+  private async subscribeToBeaconCommitteeSubnets(
+    beaconCommitteeSubscriptions: routes.validator.BeaconCommitteeSubscription[]
+  ): Promise<void> {
+    if (beaconCommitteeSubscriptions.length > 0) {
+      const subscriptionsBatches = batchItems(beaconCommitteeSubscriptions, {batchSize: SUBSCRIPTIONS_PER_REQUEST});
+      const responses = await Promise.all(
+        subscriptionsBatches.map((subscriptions) => this.api.validator.prepareBeaconCommitteeSubnet({subscriptions}))
+      );
+
+      for (const res of responses) {
+        res.assertOk();
+      }
+    }
   }
 
   private async getDutyAndProof(duty: routes.validator.AttesterDuty): Promise<AttDutyAndProof> {

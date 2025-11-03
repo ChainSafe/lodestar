@@ -9,7 +9,7 @@ import {
   isForkPostFulu,
 } from "@lodestar/params";
 import {BeaconBlockBody, BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
-import {LodestarError, fromHex, prettyBytes, prettyPrintIndices, toHex, toRootHex} from "@lodestar/utils";
+import {LodestarError, fromHex, prettyPrintIndices, toHex, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../../chain/blocks/blockInput/types.js";
 import {ChainEventEmitter} from "../../chain/emitter.js";
@@ -121,7 +121,7 @@ export async function downloadByRoot({
     if (!blobSidecars) {
       throw new DownloadByRootError({
         code: DownloadByRootErrorCode.MISSING_BLOB_RESPONSE,
-        blockRoot: prettyBytes(rootHex),
+        blockRoot: rootHex,
         peer: peerIdStr,
       });
     }
@@ -159,7 +159,7 @@ export async function downloadByRoot({
     if (!columnSidecars) {
       throw new DownloadByRootError({
         code: DownloadByRootErrorCode.MISSING_COLUMN_RESPONSE,
-        blockRoot: prettyBytes(rootHex),
+        blockRoot: rootHex,
         peer: peerIdStr,
       });
     }
@@ -319,7 +319,7 @@ export async function fetchAndValidateBlock({
     throw new DownloadByRootError({
       code: DownloadByRootErrorCode.MISSING_BLOCK_RESPONSE,
       peer: prettyPrintPeerIdStr(peerIdStr),
-      blockRoot: prettyBytes(blockRoot),
+      blockRoot: toRootHex(blockRoot),
     });
   }
   const receivedRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
@@ -328,8 +328,8 @@ export async function fetchAndValidateBlock({
       {
         code: DownloadByRootErrorCode.MISMATCH_BLOCK_ROOT,
         peer: prettyPrintPeerIdStr(peerIdStr),
-        requestedBlockRoot: prettyBytes(blockRoot),
-        receivedBlockRoot: prettyBytes(toRootHex(receivedRoot)),
+        requestedBlockRoot: toRootHex(blockRoot),
+        receivedBlockRoot: toRootHex(receivedRoot),
       },
       "block does not match requested root"
     );

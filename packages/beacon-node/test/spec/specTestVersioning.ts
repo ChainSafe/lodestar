@@ -17,7 +17,7 @@ export const ethereumConsensusSpecsTests: DownloadTestsOptions = {
   specVersion: "v1.6.0-beta.0",
   // Target directory is the host package root: 'packages/*/spec-tests'
   outputDir: path.join(__dirname, "../../spec-tests"),
-  specTestsRepoUrl: "https://github.com/ethereum/consensus-spec-tests",
+  specTestsRepoUrl: "https://github.com/ethereum/consensus-specs",
   testsToDownload: ["general", "mainnet", "minimal"],
 };
 

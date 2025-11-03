@@ -296,6 +296,10 @@ export class Eth2Gossipsub extends GossipSub {
     // Get seenTimestamp before adding the message to the queue or add async delays
     const seenTimestampSec = Date.now() / 1000;
 
+    const peerIdStr = propagationSource.toString();
+    const clientAgent = this.peersData.getPeerKind(peerIdStr) ?? "Unknown";
+    const clientVersion = this.peersData.getAgentVersion(peerIdStr);
+
     // Use setTimeout to yield to the macro queue
     // Without this we'll have huge event loop lag
     // See https://github.com/ChainSafe/lodestar/issues/5604
@@ -305,7 +309,9 @@ export class Eth2Gossipsub extends GossipSub {
         msg,
         msgId,
         // Hot path, use cached .toString() version
-        propagationSource: propagationSource.toString(),
+        propagationSource: peerIdStr,
+        clientVersion,
+        clientAgent,
         seenTimestampSec,
         startProcessUnixSec: null,
       });

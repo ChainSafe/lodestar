@@ -13,7 +13,7 @@ const testValue = {
       strictFeeRecipientCheck: true,
       feeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       builder: {
-        gasLimit: 45000000,
+        gasLimit: 60000000,
         selection: undefined,
         boostFactor: undefined,
       },
@@ -34,7 +34,7 @@ const testValue = {
     strictFeeRecipientCheck: true,
     feeRecipient: "0xcccccccccccccccccccccccccccccccccccccccc",
     builder: {
-      gasLimit: 45000000,
+      gasLimit: 60000000,
       selection: routes.validator.BuilderSelection.MaxProfit,
       boostFactor: BigInt(50),
     },
