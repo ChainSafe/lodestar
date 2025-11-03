@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {Logger, sleep} from "@lodestar/utils";
+import {Logger} from "@lodestar/utils";
 import {BLOB_AND_PROOF_V2_RPC_BYTES} from "../execution/engine/types.js";
 import {IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/metrics.js";
@@ -98,7 +98,7 @@ export class GetBlobsTracker {
         this.blobsAndProofsBuffers[freeIndex].buffers
       )
         .then((result) => {
-          this.logger.debug("getBlobsV2 result for block, waiting for publish", {...logCtx, result});
+          this.logger.debug("getBlobsV2 result for block", {...logCtx, result});
           this.metrics?.dataColumns.dataColumnEngineResult.inc({result});
         })
         .catch((error) => {

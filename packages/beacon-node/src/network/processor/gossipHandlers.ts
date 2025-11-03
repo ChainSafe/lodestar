@@ -79,7 +79,6 @@ import {
 import {sszDeserialize} from "../gossip/topic.js";
 import {INetwork} from "../interface.js";
 import {PeerAction} from "../peers/index.js";
-import {prettyPrintPeerIdStr} from "../util.ts";
 import {AggregatorTracker} from "./aggregatorTracker.js";
 
 /**
@@ -335,7 +334,10 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
 
     try {
-      await validateGossipDataColumnSidecar(chain, dataColumnSidecar, gossipSubnet, metrics);
+      const peer = await core.dumpPeer(peerIdStr);
+      const agentClient = peer?.agentClient;
+      const agentVersion = peer?.agentVersion;
+      await validateGossipDataColumnSidecar(chain, dataColumnSidecar, gossipSubnet, metrics, agentClient, agentVersion);
       const blockInput = chain.seenBlockInputCache.getByColumn({
         blockRootHex,
         columnSidecar: dataColumnSidecar,
@@ -386,14 +388,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         //        unknownBlockSync.  And duplicate addition of a block will be deduplicated by the
         //        BlockInputSync event handler. Check this!!
         // events.emit(NetworkEvent.unknownBlockParent, {blockInput, peer: peerIdStr});
-
-        // biome-ignore lint/suspicious/noExplicitAny: debugging
-        (e as any).type.peerId = prettyPrintPeerIdStr(peerIdStr);
-        const peer = await core.dumpPeer(peerIdStr);
-        // biome-ignore lint/suspicious/noExplicitAny: debugging
-        (e as any).type.agentClient = peer?.agentClient;
-        // biome-ignore lint/suspicious/noExplicitAny: debugging
-        (e as any).type.agentVersion = peer?.agentVersion;
       }
 
       throw e;

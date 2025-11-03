@@ -28,7 +28,9 @@ export async function validateGossipDataColumnSidecar(
   chain: IBeaconChain,
   dataColumnSidecar: fulu.DataColumnSidecar,
   gossipSubnet: SubnetID,
-  metrics: Metrics | null
+  metrics: Metrics | null,
+  agentClient?: sting,
+  agentVersion?: string
 ): Promise<void> {
   const blockHeader = dataColumnSidecar.signedBlockHeader.message;
 
@@ -174,6 +176,8 @@ export async function validateGossipDataColumnSidecar(
       code: DataColumnSidecarErrorCode.INVALID_KZG_PROOF,
       slot: blockHeader.slot,
       columnIndex: dataColumnSidecar.index,
+      clientAgent: agentClient ?? "Unknown",
+      clientVersion: agentVersion ?? "Unknown",
     });
   } finally {
     kzgProofTimer?.();

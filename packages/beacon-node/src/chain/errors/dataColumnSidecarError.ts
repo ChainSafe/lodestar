@@ -62,7 +62,13 @@ export type DataColumnSidecarErrorType =
   | {code: DataColumnSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID}
   | {code: DataColumnSidecarErrorCode.NOT_LATER_THAN_PARENT; parentSlot: Slot; slot: Slot}
   | {code: DataColumnSidecarErrorCode.INCLUSION_PROOF_INVALID; slot: Slot; columnIndex: number}
-  | {code: DataColumnSidecarErrorCode.INVALID_KZG_PROOF; slot: Slot; columnIndex: number}
+  | {
+      code: DataColumnSidecarErrorCode.INVALID_KZG_PROOF;
+      slot: Slot;
+      columnIndex: number;
+      clientAgent: string;
+      clientVersion: string;
+    }
   | {code: DataColumnSidecarErrorCode.INCORRECT_SIDECAR_COUNT; slot: number; expected: number; actual: number}
   | {
       code: DataColumnSidecarErrorCode.INCORRECT_BLOCK;
