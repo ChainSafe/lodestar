@@ -1,4 +1,4 @@
-import {Slot, SubnetID} from "@lodestar/types";
+import {RootHex, Slot, SubnetID} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 import {GossipActionError} from "./gossipValidation.js";
 
@@ -60,13 +60,13 @@ export type DataColumnSidecarErrorType =
   | {code: DataColumnSidecarErrorCode.WOULD_REVERT_FINALIZED_SLOT; blockSlot: Slot; finalizedSlot: Slot}
   | {
       code: DataColumnSidecarErrorCode.PARENT_UNKNOWN;
-      parentRoot: string;
+      parentRoot: RootHex;
       slot: Slot;
     }
   | {
       code: DataColumnSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID;
       slot: Slot;
-      blockRoot: string;
+      blockRoot: RootHex;
       index: number;
     }
   | {code: DataColumnSidecarErrorCode.NOT_LATER_THAN_PARENT; parentSlot: Slot; slot: Slot}
