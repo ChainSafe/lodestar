@@ -91,6 +91,8 @@ describe("data serialization through worker boundary", () => {
       msgSlot: 1000,
       msgId: ZERO_HASH_HEX,
       propagationSource: peerId,
+      clientAgent: "Unknown",
+      clientVersion: "NA",
       seenTimestampSec: 1600000000,
       startProcessUnixSec: 1600000000,
     },
