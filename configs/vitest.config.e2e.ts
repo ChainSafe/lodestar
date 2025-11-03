@@ -17,6 +17,8 @@ export const e2eMinimalProject = defineProject({
       LODESTAR_PRESET: "minimal",
     },
     pool: "forks",
+    maxWorkers: 1,
+    isolate: false,
     sequence: {
       concurrent: false,
       shuffle: false,
@@ -38,6 +40,8 @@ export const e2eMainnetProject = defineProject({
       LODESTAR_PRESET: "mainnet",
     },
     pool: "forks",
+    maxWorkers: 1,
+    isolate: false,
     sequence: {
       concurrent: false,
       shuffle: false,
