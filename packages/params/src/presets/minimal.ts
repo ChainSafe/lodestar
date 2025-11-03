@@ -1,7 +1,7 @@
 import {BeaconPreset} from "../types.js";
 
 // Minimal preset
-// https://github.com/ethereum/consensus-specs/tree/dev/presets/minimal
+// https://github.com/ethereum/consensus-specs/tree/v1.6.0-alpha.6/presets/minimal
 
 export const minimalPreset: BeaconPreset = {
   // Misc

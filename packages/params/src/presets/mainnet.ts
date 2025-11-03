@@ -1,7 +1,7 @@
 import {BeaconPreset} from "../types.js";
 
 // Mainnet preset
-// https://github.com/ethereum/consensus-specs/tree/dev/presets/mainnet
+// https://github.com/ethereum/consensus-specs/tree/v1.6.0-alpha.6/presets/mainnet
 
 export const mainnetPreset: BeaconPreset = {
   // Misc

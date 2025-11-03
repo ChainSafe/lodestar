@@ -397,7 +397,7 @@ export class ForkChoice implements IForkChoice {
       return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.HeadBlockNotWeak};
     }
     // No reorg if parentBlock is "not strong" ie. parentBlock's weight is less than or equal to (REORG_PARENT_WEIGHT_THRESHOLD = 160)% of total attester weight
-    // https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/fork-choice.md#is_parent_strong
+    // https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.6/specs/phase0/fork-choice.md#is_parent_strong
     const parentThreshold = getCommitteeFraction(this.fcStore.justified.totalBalance, {
       slotsPerEpoch: SLOTS_PER_EPOCH,
       committeePercent: this.config.REORG_PARENT_WEIGHT_THRESHOLD,
@@ -626,7 +626,7 @@ export class ForkChoice implements IForkChoice {
 
     // As per specs, we should be validating here the terminal conditions of
     // the PoW if this were a merge transition block.
-    // (https://github.com/ethereum/consensus-specs/blob/dev/specs/bellatrix/fork-choice.md#on_block)
+    // (https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.6/specs/bellatrix/fork-choice.md#on_block)
     //
     // However this check has been moved to the `verifyBlockStateTransition` in
     // `packages/beacon-node/src/chain/blocks/verifyBlock.ts` as:
