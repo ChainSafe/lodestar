@@ -150,6 +150,8 @@ export type GossipMessageInfo = {
   topic: GossipTopic;
   msg: Message;
   propagationSource: PeerIdStr;
+  clientAgent: string;
+  clientVersion: string;
   seenTimestampSec: number;
   msgSlot: Slot | null;
   indexed?: string;

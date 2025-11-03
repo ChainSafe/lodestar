@@ -15,6 +15,8 @@ export type PendingGossipsubMessage = {
   msgSlot?: Slot;
   msgId: string;
   propagationSource: PeerIdStr;
+  clientAgent: string;
+  clientVersion: string;
   seenTimestampSec: number;
   startProcessUnixSec: number | null;
   // specific properties for IndexedGossipQueueMinSize, for beacon_attestation topic only

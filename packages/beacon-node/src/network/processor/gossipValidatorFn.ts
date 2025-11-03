@@ -99,7 +99,15 @@ export function getGossipValidatorBatchFn(
 export function getGossipValidatorFn(gossipHandlers: GossipHandlers, modules: ValidatorFnModules): GossipValidatorFn {
   const {logger, metrics} = modules;
 
-  return async function gossipValidatorFn({topic, msg, propagationSource, seenTimestampSec, msgSlot}) {
+  return async function gossipValidatorFn({
+    topic,
+    msg,
+    propagationSource,
+    clientAgent,
+    clientVersion,
+    seenTimestampSec,
+    msgSlot,
+  }) {
     const type = topic.type;
 
     try {
@@ -134,7 +142,7 @@ export function getGossipValidatorFn(gossipHandlers: GossipHandlers, modules: Va
 
         case GossipAction.REJECT:
           metrics?.networkProcessor.gossipValidationReject.inc({topic: type});
-          logger.debug(`Gossip validation ${type} rejected`, {}, e);
+          logger.debug(`Gossip validation ${type} rejected`, {clientAgent, clientVersion}, e);
           return TopicValidatorResult.Reject;
       }
     }
