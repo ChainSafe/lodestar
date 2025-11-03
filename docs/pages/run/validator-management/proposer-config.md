@@ -21,7 +21,7 @@ proposer_config:
   "0xa4855c83d868f772a579133d9f23818008417b743e8447e235d8eb78b1d8f8a9f63f98c551beb7de254400f89592314d":
     fee_recipient: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
     builder:
-      gas_limit: "4500000"
+      gas_limit: "45000000"
       selection: "maxprofit"
       boost_factor: "100"
 default_config:
