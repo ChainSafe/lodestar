@@ -19,7 +19,8 @@ export function hasBuilderWithdrawalCredential(withdrawalCredentials: Uint8Array
 
 export function getBuilderPaymentQuorumThreshold(state: CachedBeaconStateGloas): number {
   const quorum =
-    Math.floor(state.epochCtx.totalActiveBalanceIncrements * EFFECTIVE_BALANCE_INCREMENT / SLOTS_PER_EPOCH) * BUILDER_PAYMENT_THRESHOLD_NUMERATOR;
+    Math.floor((state.epochCtx.totalActiveBalanceIncrements * EFFECTIVE_BALANCE_INCREMENT) / SLOTS_PER_EPOCH) *
+    BUILDER_PAYMENT_THRESHOLD_NUMERATOR;
 
   return Math.floor(quorum / BUILDER_PAYMENT_THRESHOLD_DENOMINATOR);
 }

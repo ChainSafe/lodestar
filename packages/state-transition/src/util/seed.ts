@@ -282,7 +282,7 @@ export function naiveGetPTCIndices(
     const slotCommittees = shuffling.committees[slot % SLOTS_PER_EPOCH];
     const indices = naiveComputePTCIndices(
       effectiveBalanceIncrements,
-      slotCommittees.flatMap(c => Array.from(c)),
+      slotCommittees.flatMap((c) => Array.from(c)),
       digest(Buffer.concat([epochSeed, intToBytes(slot, 8)]))
     );
     ptcIndices.push(indices);
