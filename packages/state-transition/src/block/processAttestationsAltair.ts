@@ -156,7 +156,9 @@ export function processAttestationsAltair(
 
   for (const [index, weight] of builderWeightMap) {
     const payment = (state as CachedBeaconStateGloas).builderPendingPayments.get(index);
-    payment.weight = weight;
+    if (payment.withdrawal.amount > 0) {
+      payment.weight = weight;
+    }
   }
 
   metrics?.newSeenAttestersPerBlock.set(newSeenAttesters);
