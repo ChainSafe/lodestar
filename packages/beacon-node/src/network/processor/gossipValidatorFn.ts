@@ -145,7 +145,7 @@ export function getGossipValidatorFn(gossipHandlers: GossipHandlers, modules: Va
           metrics?.networkProcessor.gossipValidationReject.inc({topic: type});
           logger.debug(
             `Gossip validation ${type} rejected`,
-            {clientAgent, clientVersion, peerId: prettyPrintPeerIdStr(propagationSource)},
+            {peerId: prettyPrintPeerIdStr(propagationSource), clientAgent, clientVersion},
             e
           );
           return TopicValidatorResult.Reject;

@@ -298,7 +298,7 @@ export class Eth2Gossipsub extends GossipSub {
 
     const peerIdStr = propagationSource.toString();
     const clientAgent = this.peersData.getPeerKind(peerIdStr) ?? "Unknown";
-    const clientVersion = this.peersData.getAgentVersion(peerIdStr) ?? "Unknown";
+    const clientVersion = this.peersData.getAgentVersion(peerIdStr);
 
     // Use setTimeout to yield to the macro queue
     // Without this we'll have huge event loop lag
