@@ -106,7 +106,7 @@ export class GetBlobsTracker {
           this.metrics?.dataColumns.dataColumnEngineResult.inc({result: DataColumnEngineResult.Failed});
         })
         .finally(() => {
-          this.logger.verbose("Completed getBlobsV2 for block. setting inUse=false for clearing buffers now", logCtx);
+          this.logger.verbose("Completed getBlobsV2 for block", logCtx);
           this.activeReconstructions.delete(blockInput.blockRootHex);
           this.blobsAndProofsBuffers[freeIndex].inUse = false;
         });
