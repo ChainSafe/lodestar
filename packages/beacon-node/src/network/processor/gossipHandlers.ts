@@ -386,10 +386,14 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         //        unknownBlockSync.  And duplicate addition of a block will be deduplicated by the
         //        BlockInputSync event handler. Check this!!
         // events.emit(NetworkEvent.unknownBlockParent, {blockInput, peer: peerIdStr});
-        e.type.peerId = prettyPrintPeerIdStr(peerIdStr);
+
+        // biome-ignore lint/suspicious/noExplicitAny: debugging
+        (e as any).type.peerId = prettyPrintPeerIdStr(peerIdStr);
         const peer = await core.dumpPeer(peerIdStr);
-        e.type.agentClient = peer?.agentClient;
-        e.type.agentVersion = peer?.agentVersion;
+        // biome-ignore lint/suspicious/noExplicitAny: debugging
+        (e as any).type.agentClient = peer?.agentClient;
+        // biome-ignore lint/suspicious/noExplicitAny: debugging
+        (e as any).type.agentVersion = peer?.agentVersion;
       }
 
       throw e;
