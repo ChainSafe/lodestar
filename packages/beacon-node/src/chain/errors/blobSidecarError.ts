@@ -59,9 +59,9 @@ export type BlobSidecarErrorType =
   | {code: BlobSidecarErrorCode.NOT_LATER_THAN_PARENT; parentSlot: Slot; slot: Slot}
   | {
       code: BlobSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID;
-      blockRoot?: RootHex;
-      slot?: Slot;
-      index?: number;
+      blockRoot: RootHex;
+      slot: Slot;
+      index: number;
     }
   | {code: BlobSidecarErrorCode.INCLUSION_PROOF_INVALID; slot: Slot; blobIdx: number}
   | {code: BlobSidecarErrorCode.INCORRECT_PROPOSER; proposerIndex: ValidatorIndex};

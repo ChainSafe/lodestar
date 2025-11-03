@@ -86,6 +86,7 @@ export async function validateGossipDataColumnSidecar(
     throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
       code: DataColumnSidecarErrorCode.PARENT_UNKNOWN,
       parentRoot,
+      slot: blockHeader.slot,
     });
   }
 
@@ -108,6 +109,7 @@ export async function validateGossipDataColumnSidecar(
       throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
         code: DataColumnSidecarErrorCode.PARENT_UNKNOWN,
         parentRoot,
+        slot: blockHeader.slot,
       });
     });
 
@@ -135,8 +137,13 @@ export async function validateGossipDataColumnSidecar(
       verifyOnMainThread: blockHeader.slot > chain.forkChoice.getHead().slot,
     }))
   ) {
+    const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(dataColumnSidecar.signedBlockHeader.message);
+    const blockRootHex = toRootHex(blockRoot);
     throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
       code: DataColumnSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID,
+      blockRoot: blockRootHex,
+      index: dataColumnSidecar.index,
+      slot: blockHeader.slot,
     });
   }
 

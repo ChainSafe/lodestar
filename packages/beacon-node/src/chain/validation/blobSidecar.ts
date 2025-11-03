@@ -139,6 +139,9 @@ export async function validateGossipBlobSidecar(
   if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: true}))) {
     throw new BlobSidecarGossipError(GossipAction.REJECT, {
       code: BlobSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID,
+      blockRoot: blockHex,
+      index: blobSidecar.index,
+      slot: blobSlot,
     });
   }
 

@@ -61,14 +61,13 @@ export type DataColumnSidecarErrorType =
   | {
       code: DataColumnSidecarErrorCode.PARENT_UNKNOWN;
       parentRoot: string;
-      slot?: Slot;
-      blockRoot?: string;
+      slot: Slot;
     }
   | {
       code: DataColumnSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID;
-      slot?: Slot;
-      blockRoot?: string;
-      index?: number;
+      slot: Slot;
+      blockRoot: string;
+      index: number;
     }
   | {code: DataColumnSidecarErrorCode.NOT_LATER_THAN_PARENT; parentSlot: Slot; slot: Slot}
   | {code: DataColumnSidecarErrorCode.INCLUSION_PROOF_INVALID; slot: Slot; columnIndex: number}
