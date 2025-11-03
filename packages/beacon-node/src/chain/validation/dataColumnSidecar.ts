@@ -283,7 +283,8 @@ export function verifyDataColumnSidecarInclusionProof(dataColumnSidecar: fulu.Da
  *
  * Requires the block to be known to the node
  *
- * NOTE: chain is optional for testing purposes and will skip signature verification
+ * NOTE: chain is optional to skip signature verification. Helpful for testing purposes and so that can control whether
+ * signature gets checked depending on the reqresp method that is being checked
  */
 export async function validateBlockDataColumnSidecars(
   chain: IBeaconChain | null,
