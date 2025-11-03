@@ -27,6 +27,8 @@ import {getRandPeerIdStr, getRandPeerSyncMeta} from "../../utils/peer.js";
 
 describe.skip(
   "sync by UnknownBlockSync",
+  // spacer comment to avoid unnecessary changes in git
+  {timeout: 20_000},
   () => {
     const logger = testLogger();
     const slotSec = 0.3;
@@ -258,8 +260,7 @@ describe.skip(
         syncService.close();
       });
     }
-  },
-  {timeout: 20_000}
+  }
 );
 
 describe("UnknownBlockSync", () => {

@@ -3,6 +3,7 @@ import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {ChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {EpochDifference, ForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {Logger} from "@lodestar/utils";
 import {BeaconProposerCache} from "../../src/chain/beaconProposerCache.js";
 import {BeaconChain} from "../../src/chain/chain.js";
@@ -20,7 +21,7 @@ import {getMockedLogger} from "./loggerMock.js";
 
 export type MockedBeaconChain = Mocked<BeaconChain> & {
   logger: Mocked<Logger>;
-  getHeadState: Mock;
+  getHeadState: Mocked<CachedBeaconStateAllForks>;
   forkChoice: MockedForkChoice;
   executionEngine: Mocked<ExecutionEngineHttp>;
   executionBuilder: Mocked<ExecutionBuilderHttp>;
