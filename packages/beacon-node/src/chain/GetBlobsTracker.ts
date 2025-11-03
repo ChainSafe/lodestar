@@ -97,11 +97,8 @@ export class GetBlobsTracker {
         this.metrics,
         this.blobsAndProofsBuffers[freeIndex].buffers
       )
-        .then(async (result) => {
+        .then((result) => {
           this.logger.debug("getBlobsV2 result for block, waiting for publish", {...logCtx, result});
-          // allow time for the columns to publish so that the buffers don't get cleared before
-          // the data serializes across the thread boundary
-          await sleep(3000);
           this.metrics?.dataColumns.dataColumnEngineResult.inc({result});
         })
         .catch((error) => {
