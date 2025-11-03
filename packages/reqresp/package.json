@@ -29,6 +29,12 @@
       "import": "./lib/encodingStrategies/sszSnappy/index.js"
     }
   },
+  "imports": {
+    "#snappy": {
+      "bun": "./src/utils/snappy_bun.ts",
+      "default": "./lib/utils/snappy.js"
+    }
+  },
   "files": [
     "src",
     "lib",

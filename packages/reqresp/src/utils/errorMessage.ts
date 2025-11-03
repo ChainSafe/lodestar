@@ -1,8 +1,8 @@
 import {decode as varintDecode, encodingLength as varintEncodingLength} from "uint8-varint";
 import {Uint8ArrayList} from "uint8arraylist";
-import {SnappyFramesUncompress} from "@lodestar/utils";
 import {writeSszSnappyPayload} from "../encodingStrategies/sszSnappy/encode.js";
 import {Encoding} from "../types.js";
+import {SnappyFramesUncompress} from "./snappyIndex.js";
 
 // ErrorMessage schema:
 //

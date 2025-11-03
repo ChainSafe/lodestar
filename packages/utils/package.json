@@ -25,10 +25,6 @@
       "bun": "./src/bytes/bun.ts",
       "browser": "./lib/bytes/browser.js",
       "default": "./lib/bytes/nodejs.js"
-    },
-    "#snappy": {
-      "bun": "./src/snappy/snappy_bun.ts",
-      "default": "./lib/snappy/snappy.js"
     }
   },
   "files": [
@@ -52,15 +48,11 @@
   "types": "lib/index.d.ts",
   "dependencies": {
     "@chainsafe/as-sha256": "^1.2.0",
-    "@chainsafe/fast-crc32c": "^4.2.0",
     "@lodestar/bun": "git+https://github.com/ChainSafe/lodestar-bun.git",
     "any-signal": "^4.1.1",
     "bigint-buffer": "^1.1.5",
     "case": "^1.6.3",
-    "js-yaml": "^4.1.0",
-    "snappy": "^7.2.2",
-    "snappyjs": "^0.7.0",
-    "uint8arraylist": "^2.4.7"
+    "js-yaml": "^4.1.0"
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.5",

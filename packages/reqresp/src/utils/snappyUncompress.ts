@@ -1,6 +1,6 @@
 import {Uint8ArrayList} from "uint8arraylist";
 import {uncompress} from "#snappy";
-import {ChunkType, IDENTIFIER, UNCOMPRESSED_CHUNK_SIZE, crc} from "./common.js";
+import {ChunkType, IDENTIFIER, UNCOMPRESSED_CHUNK_SIZE, crc} from "./snappyCommon.js";
 
 export class SnappyFramesUncompress {
   private buffer = new Uint8ArrayList();

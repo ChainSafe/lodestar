@@ -42,6 +42,7 @@
     "@chainsafe/blst": "^2.2.0",
     "@lodestar/config": "^1.35.0",
     "@lodestar/params": "^1.35.0",
+    "@lodestar/reqresp": "^1.35.0",
     "@lodestar/types": "^1.35.0",
     "uint8arraylist": "^2.4.7"
   }
