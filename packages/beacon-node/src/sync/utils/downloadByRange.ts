@@ -16,7 +16,6 @@ import {
   isBlockInputBlobs,
   isBlockInputColumns,
 } from "../../chain/blocks/blockInput/index.js";
-import {IBeaconChain} from "../../chain/interface.ts";
 import {SeenBlockInput} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {validateBlockBlobSidecars} from "../../chain/validation/blobSidecar.js";
 import {validateBlockDataColumnSidecars} from "../../chain/validation/dataColumnSidecar.js";

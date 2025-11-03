@@ -7,7 +7,8 @@ import {
 import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
-  getBlockHeaderProposerSignatureSet,
+  getBlockHeaderProposerSignatureSetByHeaderSlot,
+  getBlockHeaderProposerSignatureSetByParentStateSlot,
 } from "@lodestar/state-transition";
 import {Root, Slot, SubnetID, fulu, ssz} from "@lodestar/types";
 import {toRootHex, verifyMerkleBranch} from "@lodestar/utils";
@@ -130,7 +131,10 @@ export async function validateGossipDataColumnSidecar(
   }
 
   // 5) [REJECT] The proposer signature of sidecar.signed_block_header, is valid with respect to the block_header.proposer_index pubkey.
-  const signatureSet = getBlockHeaderProposerSignatureSet(blockState, dataColumnSidecar.signedBlockHeader);
+  const signatureSet = getBlockHeaderProposerSignatureSetByParentStateSlot(
+    blockState,
+    dataColumnSidecar.signedBlockHeader
+  );
   // Don't batch so verification is not delayed
   if (
     !(await chain.bls.verifySignatureSets([signatureSet], {
@@ -322,7 +326,7 @@ export async function validateBlockDataColumnSidecars(
 
   if (chain !== null) {
     const headState = await chain.getHeadState();
-    const signatureSet = getBlockHeaderProposerSignatureSet(headState, firstSidecarSignedBlockHeader, true);
+    const signatureSet = getBlockHeaderProposerSignatureSetByHeaderSlot(headState, firstSidecarSignedBlockHeader);
 
     if (
       !(await chain.bls.verifySignatureSets([signatureSet], {
