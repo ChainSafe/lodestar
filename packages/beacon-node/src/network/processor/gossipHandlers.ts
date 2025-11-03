@@ -79,6 +79,7 @@ import {
 import {sszDeserialize} from "../gossip/topic.js";
 import {INetwork} from "../interface.js";
 import {PeerAction} from "../peers/index.js";
+import {prettyPrintPeerIdStr} from "../util.ts";
 import {AggregatorTracker} from "./aggregatorTracker.js";
 
 /**
@@ -370,6 +371,10 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         //        unknownBlockSync.  And duplicate addition of a block will be deduplicated by the
         //        BlockInputSync event handler. Check this!!
         // events.emit(NetworkEvent.unknownBlockParent, {blockInput, peer: peerIdStr});
+        e.type.peerId = prettyPrintPeerIdStr(peerIdStr);
+        const peer = await core.dumpPeer(peerIdStr);
+        e.type.agentClient = peer?.agentClient;
+        e.type.agentVersion = peer?.agentVersion;
       }
 
       throw e;
