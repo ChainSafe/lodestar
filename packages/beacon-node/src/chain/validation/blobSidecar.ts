@@ -236,7 +236,7 @@ export async function validateBlockBlobSidecars(
     if (
       !(await chain.bls.verifySignatureSets([signatureSet], {
         batchable: true,
-        priority: false,
+        priority: true,
         verifyOnMainThread: false,
       }))
     ) {

@@ -331,7 +331,7 @@ export async function validateBlockDataColumnSidecars(
     if (
       !(await chain.bls.verifySignatureSets([signatureSet], {
         batchable: true,
-        priority: false,
+        priority: true,
         verifyOnMainThread: false,
       }))
     ) {
