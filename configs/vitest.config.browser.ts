@@ -1,5 +1,4 @@
 import path from "node:path";
-// import {webdriverio} from "@vitest/browser-webdriverio";
 import {playwright} from "@vitest/browser-playwright";
 import {nodePolyfills} from "vite-plugin-node-polyfills";
 import {defineProject} from "vitest/config";
