@@ -158,6 +158,7 @@ export async function validateGossipBlock(
   if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: true}))) {
     throw new BlockGossipError(GossipAction.REJECT, {
       code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID,
+      blockSlot,
     });
   }
 
