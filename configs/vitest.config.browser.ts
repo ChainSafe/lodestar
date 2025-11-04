@@ -24,16 +24,13 @@ export const browserTestProject = defineProject({
       provider: playwright(),
       connectTimeout: 90_0000,
       instances: [
+        // TODO: Add support for webkit when available
         {
           browser: "firefox",
           maxConcurrency: 1,
         },
         {
           browser: "chromium",
-          maxConcurrency: 1,
-        },
-        {
-          browser: "webkit",
           maxConcurrency: 1,
         },
       ],
