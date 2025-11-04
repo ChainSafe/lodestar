@@ -49,6 +49,7 @@
     "@types/react": "^19.1.12",
     "@vitest/browser": "^4.0.7",
     "@vitest/browser-webdriverio": "^4.0.7",
+    "@vitest/browser-playwright": "^4.0.7",
     "@vitest/coverage-v8": "^4.0.7",
     "bun-types": "^1.2.21",
     "crypto-browserify": "^3.12.0",
@@ -77,7 +78,8 @@
     "vitest": "^4.0.7",
     "vitest-when": "^0.9.0",
     "wait-port": "^1.1.0",
-    "webdriverio": "^9.20.0"
+    "webdriverio": "^9.20.0",
+    "playwright": "^1.56.1"
   },
   "resolutions": {
     "dns-over-http-resolver": "^2.1.1",
