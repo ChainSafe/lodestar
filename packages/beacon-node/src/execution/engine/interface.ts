@@ -132,7 +132,7 @@ export interface IExecutionEngine {
    * Returns ``True`` iff ``execution_payload`` is valid with respect to ``self.execution_state``.
    *
    * Required for block processing in the beacon state transition function.
-   * https://github.com/ethereum/consensus-specs/blob/4c1156d504279069799924dbbc79cf13d9454ae3/specs/merge/beacon-chain.md#on_payload
+   * https://github.com/ethereum/consensus-specs/blob/0eb0a934a3/specs/merge/beacon-chain.md#on_payload
    *
    * Should be called in advance before, after or in parallel to block processing
    */
