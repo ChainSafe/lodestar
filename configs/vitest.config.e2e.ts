@@ -18,7 +18,7 @@ export const e2eMinimalProject = defineProject({
     },
     pool: "forks",
     maxWorkers: 1,
-    isolate: false,
+    isolate: true,
     sequence: {
       concurrent: false,
       shuffle: false,
@@ -41,7 +41,7 @@ export const e2eMainnetProject = defineProject({
     },
     pool: "forks",
     maxWorkers: 1,
-    isolate: false,
+    isolate: true,
     sequence: {
       concurrent: false,
       shuffle: false,
