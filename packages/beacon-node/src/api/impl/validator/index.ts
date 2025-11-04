@@ -1002,7 +1002,7 @@ export function getValidatorApi(
       return {data: contribution};
     },
 
-    async getProposerDuties({epoch}, _context, opts) {
+    async getProposerDuties({epoch}, _context, opts?: {v2?: boolean}) {
       notWhileSyncing();
 
       // Early check that epoch is no more than current_epoch + 1, or allow for pre-genesis
