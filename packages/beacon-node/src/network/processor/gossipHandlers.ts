@@ -296,6 +296,21 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     const slot = dataColumnBlockHeader.slot;
     const blockRootHex = toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(dataColumnBlockHeader));
 
+    // check to see if block has already been processed and BlockInput has been deleted (column received via reqresp or other means)
+    if (chain.forkChoice.hasBlockHex(blockRootHex)) {
+      metrics?.peerDas.dataColumnSidecarProcessingSkip.inc();
+      logger.debug("Already processed block for column sidecar, skipping processing", {
+        slot,
+        blockRoot: blockRootHex,
+        index: dataColumnSidecar.index,
+      });
+      throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
+        code: DataColumnSidecarErrorCode.ALREADY_KNOWN,
+        columnIndex: dataColumnSidecar.index,
+        slot,
+      });
+    }
+
     // first check if we should even process this column (we may have already processed it via getBlobsV2)
     {
       const blockInput = chain.seenBlockInputCache.get(blockRootHex);

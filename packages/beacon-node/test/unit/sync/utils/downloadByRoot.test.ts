@@ -112,6 +112,7 @@ describe("downloadByRoot.ts", () => {
 
       const response = await fetchAndValidateBlobs({
         config,
+        chain: null,
         network,
         forkName,
         peerIdStr,
@@ -137,6 +138,7 @@ describe("downloadByRoot.ts", () => {
 
       const response = await fetchAndValidateBlobs({
         config,
+        chain: null,
         network,
         forkName,
         peerIdStr,
@@ -165,6 +167,7 @@ describe("downloadByRoot.ts", () => {
       await expect(
         fetchAndValidateBlobs({
           config,
+          chain: null,
           network,
           forkName,
           peerIdStr,
@@ -262,6 +265,7 @@ describe("downloadByRoot.ts", () => {
 
       const response = await fetchAndValidateColumns({
         config,
+        chain: null,
         network,
         forkName,
         peerMeta,
@@ -303,6 +307,7 @@ describe("downloadByRoot.ts", () => {
       await expect(
         fetchAndValidateColumns({
           config,
+          chain: null,
           network,
           forkName,
           peerMeta,

@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.35.0",
+  "version": "1.36.0",
   "type": "module",
   "exports": {
     ".": {
@@ -40,11 +40,11 @@
   },
   "dependencies": {
     "@chainsafe/ssz": "^1.2.2",
-    "@lodestar/config": "^1.35.0",
-    "@lodestar/params": "^1.35.0",
-    "@lodestar/state-transition": "^1.35.0",
-    "@lodestar/types": "^1.35.0",
-    "@lodestar/utils": "^1.35.0"
+    "@lodestar/config": "^1.36.0",
+    "@lodestar/params": "^1.36.0",
+    "@lodestar/state-transition": "^1.36.0",
+    "@lodestar/types": "^1.36.0",
+    "@lodestar/utils": "^1.36.0"
   },
   "keywords": [
     "ethereum",

@@ -227,6 +227,7 @@ const forkChoiceTest =
                   }
 
                   await validateBlockDataColumnSidecars(
+                    chain,
                     slot,
                     blockRoot,
                     (signedBlock as SignedBeaconBlock<ForkPostFulu & ForkPreGloas>).message.body.blobKzgCommitments
