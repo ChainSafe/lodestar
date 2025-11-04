@@ -12,7 +12,7 @@ vi.mock("@lodestar/db/controller/level", async (importOriginal) => {
 
   return {
     ...mod,
-    LevelDbController: vi.spyOn(mod, "LevelDbController").mockImplementation(() => {
+    LevelDbController: vi.spyOn(mod, "LevelDbController").mockImplementation(function MockedLevelDbController() {
       return {
         get: vi.fn(),
         put: vi.fn(),
@@ -21,7 +21,7 @@ vi.mock("@lodestar/db/controller/level", async (importOriginal) => {
         valuesStream: vi.fn(),
         batchDelete: vi.fn(),
         batchPut: vi.fn(),
-      } as unknown as LevelDbController;
+      };
     }),
   };
 });

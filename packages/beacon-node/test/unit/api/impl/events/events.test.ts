@@ -12,13 +12,13 @@ vi.mock("../../../../../src/chain/index.js", async (importActual) => {
 
   return {
     ...mod,
-    BeaconChain: vi.spyOn(mod, "BeaconChain").mockImplementation(() => {
+    BeaconChain: vi.spyOn(mod, "BeaconChain").mockImplementation(function MockedBeaconChain() {
       return {
         emitter: new ChainEventEmitter(),
         forkChoice: {
           getHead: vi.fn(),
         },
-      } as unknown as BeaconChain;
+      };
     }),
   };
 });
