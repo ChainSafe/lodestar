@@ -30,7 +30,7 @@ const reader = await era.EraReader.open(config, "mainnet-xxxxx-xxxxxxxx.era");
 reader.groups.length === 1;
 
 // read blocks
-const slot = reader.groups[0].startSlot;
+const slot = reader.groups[0].blocksIndex?.startSlot ?? 0;
 
 // return snappy-frame compressed, ssz-serialized block at slot or null if a skip slot
 // throws if out of range
@@ -52,14 +52,19 @@ await reader.readState();
 ```ts
 import {era} from "@lodestar/era";
 import {config} from "@lodestar/config/default";
+import {SignedBeaconBlock, BeaconState} from "@lodestar/types";
 
-const writer = await era.EraWriter.create(config, "path/to/era");
+const writer = await era.EraWriter.create(config, "path/to/era", 0);
 
 // similar api to reader, can write compressed, serialized, or deserialized items
 // first write all blocks for the era
+// Assuming `block` is a SignedBeaconBlock
+declare const block: SignedBeaconBlock;
 await writer.writeBlock(block);
 // ...
 // then write the state
+// Assuming `state` is a BeaconState
+declare const state: BeaconState;
 await writer.writeState(state);
 // if applicable, continue writing eras of blocks and state (an era file can contain multiple eras, or "groups" as the spec states)
 // when finished, must call `finish`, which will close the file handler and rename the file to the spec-compliant name
