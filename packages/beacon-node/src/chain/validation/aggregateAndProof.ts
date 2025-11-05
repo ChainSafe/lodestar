@@ -72,6 +72,27 @@ async function validateAggregateAndProof(
   const attSlot = attData.slot;
 
   let attIndex: number | null;
+  if (ForkSeq[fork] >= ForkSeq.gloas) {
+    // [REJECT] `aggregate.data.index < 2`.
+    if (attData.index >= 2) {
+      throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_PAYLOAD_STATUS_VALUE});
+    }
+    // [REJECT] `aggregate.data.index == 0` if `block.slot == aggregate.data.slot`.
+    const block = chain.forkChoice.getBlock(attData.beaconBlockRoot);
+    
+    // If block is unknown, we don't handle it here. It will throw error later on at `verifyHeadBlockAndTargetRoot()`
+    if (block !== null) {
+      if (block.slot === attData.slot && attData.index !== 0) {
+        throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.PREMATURELY_INDICATE_PAYLOAD_PRESENT})
+      }
+    }
+
+    // [REJECT] len(committee_indices) == 1, where committee_indices = get_committee_indices(aggregate)
+    attIndex = (aggregate as electra.Attestation).committeeBits.getSingleTrueBit();
+    if (attIndex === null) {
+      throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.NOT_EXACTLY_ONE_COMMITTEE_BIT_SET});
+    }
+  }
   if (ForkSeq[fork] >= ForkSeq.electra) {
     attIndex = (aggregate as electra.Attestation).committeeBits.getSingleTrueBit();
     // [REJECT] len(committee_indices) == 1, where committee_indices = get_committee_indices(aggregate)
