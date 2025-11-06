@@ -175,10 +175,8 @@ jobs:
       - uses: "./.github/actions/setup-and-build"
         with:
           node: ${{ matrix.node }}
-      - name: Install Chrome browser
-        run: npx @puppeteer/browsers install chromedriver@stable --path /tmp
-      - name: Install Firefox browser
-        run: npx @puppeteer/browsers install firefox@stable --path /tmp
+      - name: Install
+        run: yarn playwright install
       - name: Browser tests
         run: |
           export DISPLAY=':99.0'

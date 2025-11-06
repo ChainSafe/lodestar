@@ -226,6 +226,7 @@ export const DataColumnSidecar = new ContainerType(
     kzgProofs: fuluSsz.DataColumnSidecar.fields.kzgProofs,
     // signedBlockHeader: phase0Ssz.SignedBeaconBlockHeader, // Removed in GLOAS:EIP7732
     // kzgCommitmentsInclusionProof: KzgCommitmentsInclusionProof, // Removed in GLOAS:EIP7732
+    slot: Slot, // New in GLOAS:EIP7732
     beaconBlockRoot: Root, // New in GLOAS:EIP7732
   },
   {typeName: "DataColumnSidecar", jsonCase: "eth2"}

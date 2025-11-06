@@ -7,7 +7,8 @@ import {
 import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
-  getBlockHeaderProposerSignatureSet,
+  getBlockHeaderProposerSignatureSetByHeaderSlot,
+  getBlockHeaderProposerSignatureSetByParentStateSlot,
 } from "@lodestar/state-transition";
 import {Root, Slot, SubnetID, fulu, ssz} from "@lodestar/types";
 import {toRootHex, verifyMerkleBranch} from "@lodestar/utils";
@@ -86,6 +87,7 @@ export async function validateGossipDataColumnSidecar(
     throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
       code: DataColumnSidecarErrorCode.PARENT_UNKNOWN,
       parentRoot,
+      slot: blockHeader.slot,
     });
   }
 
@@ -108,6 +110,7 @@ export async function validateGossipDataColumnSidecar(
       throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
         code: DataColumnSidecarErrorCode.PARENT_UNKNOWN,
         parentRoot,
+        slot: blockHeader.slot,
       });
     });
 
@@ -128,15 +131,23 @@ export async function validateGossipDataColumnSidecar(
   }
 
   // 5) [REJECT] The proposer signature of sidecar.signed_block_header, is valid with respect to the block_header.proposer_index pubkey.
-  const signatureSet = getBlockHeaderProposerSignatureSet(blockState, dataColumnSidecar.signedBlockHeader);
+  const signatureSet = getBlockHeaderProposerSignatureSetByParentStateSlot(
+    blockState,
+    dataColumnSidecar.signedBlockHeader
+  );
   // Don't batch so verification is not delayed
   if (
     !(await chain.bls.verifySignatureSets([signatureSet], {
       verifyOnMainThread: blockHeader.slot > chain.forkChoice.getHead().slot,
     }))
   ) {
+    const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(dataColumnSidecar.signedBlockHeader.message);
+    const blockRootHex = toRootHex(blockRoot);
     throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
       code: DataColumnSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID,
+      blockRoot: blockRootHex,
+      index: dataColumnSidecar.index,
+      slot: blockHeader.slot,
     });
   }
 
@@ -271,8 +282,12 @@ export function verifyDataColumnSidecarInclusionProof(dataColumnSidecar: fulu.Da
  * Validate a subset of data column sidecars in a block
  *
  * Requires the block to be known to the node
+ *
+ * NOTE: chain is optional to skip signature verification. Helpful for testing purposes and so that can control whether
+ * signature gets checked depending on the reqresp method that is being checked
  */
 export async function validateBlockDataColumnSidecars(
+  chain: IBeaconChain | null,
   blockSlot: Slot,
   blockRoot: Root,
   blockBlobCount: number,
@@ -294,7 +309,8 @@ export async function validateBlockDataColumnSidecars(
     );
   }
   // Hash the first sidecar block header and compare the rest via (cheaper) equality
-  const firstSidecarBlockHeader = dataColumnSidecars[0].signedBlockHeader.message;
+  const firstSidecarSignedBlockHeader = dataColumnSidecars[0].signedBlockHeader;
+  const firstSidecarBlockHeader = firstSidecarSignedBlockHeader.message;
   const firstBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(firstSidecarBlockHeader);
   if (Buffer.compare(blockRoot, firstBlockRoot) !== 0) {
     throw new DataColumnSidecarValidationError(
@@ -309,6 +325,26 @@ export async function validateBlockDataColumnSidecars(
     );
   }
 
+  if (chain !== null) {
+    const headState = await chain.getHeadState();
+    const signatureSet = getBlockHeaderProposerSignatureSetByHeaderSlot(headState, firstSidecarSignedBlockHeader);
+
+    if (
+      !(await chain.bls.verifySignatureSets([signatureSet], {
+        batchable: true,
+        priority: true,
+        verifyOnMainThread: false,
+      }))
+    ) {
+      throw new DataColumnSidecarValidationError({
+        code: DataColumnSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID,
+        blockRoot: toRootHex(blockRoot),
+        slot: blockSlot,
+        index: dataColumnSidecars[0].index,
+      });
+    }
+  }
+
   const commitments: Uint8Array[] = [];
   const cellIndices: number[] = [];
   const cells: Uint8Array[] = [];
@@ -316,7 +352,10 @@ export async function validateBlockDataColumnSidecars(
   for (let i = 0; i < dataColumnSidecars.length; i++) {
     const columnSidecar = dataColumnSidecars[i];
 
-    if (!ssz.phase0.BeaconBlockHeader.equals(firstSidecarBlockHeader, columnSidecar.signedBlockHeader.message)) {
+    if (
+      i !== 0 &&
+      !ssz.phase0.SignedBeaconBlockHeader.equals(firstSidecarSignedBlockHeader, columnSidecar.signedBlockHeader)
+    ) {
       throw new DataColumnSidecarValidationError({
         code: DataColumnSidecarErrorCode.INCORRECT_HEADER_ROOT,
         slot: blockSlot,

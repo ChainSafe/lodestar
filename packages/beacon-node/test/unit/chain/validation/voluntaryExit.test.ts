@@ -66,7 +66,7 @@ describe("validate voluntary exit", () => {
     vi.spyOn(chainStub, "getHeadStateAtCurrentEpoch").mockResolvedValue(state);
     vi.spyOn(opPool, "hasSeenBlsToExecutionChange");
     vi.spyOn(opPool, "hasSeenVoluntaryExit");
-    vi.spyOn(chainStub.bls, "verifySignatureSets").mockResolvedValue(true);
+    chainStub.bls.verifySignatureSets.mockResolvedValue(true);
   });
 
   afterEach(() => {
@@ -165,7 +165,7 @@ describe("validate voluntary exit", () => {
 
     opPool.hasSeenVoluntaryExit.mockReturnValue(false);
 
-    vi.spyOn(chainStub.bls, "verifySignatureSets").mockResolvedValue(false);
+    chainStub.bls.verifySignatureSets.mockResolvedValue(false);
 
     await expectRejectedWithLodestarError(
       validateGossipVoluntaryExit(chainStub, signedVoluntaryExitInvalidSig),

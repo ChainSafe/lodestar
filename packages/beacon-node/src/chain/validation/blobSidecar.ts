@@ -8,7 +8,8 @@ import {
 import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
-  getBlockHeaderProposerSignatureSet,
+  getBlockHeaderProposerSignatureSetByHeaderSlot,
+  getBlockHeaderProposerSignatureSetByParentStateSlot,
 } from "@lodestar/state-transition";
 import {BlobIndex, Root, Slot, SubnetID, deneb, ssz} from "@lodestar/types";
 import {toRootHex, verifyMerkleBranch} from "@lodestar/utils";
@@ -100,7 +101,12 @@ export async function validateGossipBlobSidecar(
     //    descend from the finalized root.
     // (Non-Lighthouse): Since we prune all blocks non-descendant from finalized checking the `db.block` database won't be useful to guard
     // against known bad fork blocks, so we throw PARENT_UNKNOWN for cases (1) and (2)
-    throw new BlobSidecarGossipError(GossipAction.IGNORE, {code: BlobSidecarErrorCode.PARENT_UNKNOWN, parentRoot});
+    throw new BlobSidecarGossipError(GossipAction.IGNORE, {
+      code: BlobSidecarErrorCode.PARENT_UNKNOWN,
+      parentRoot,
+      blockRoot: blockHex,
+      slot: blobSlot,
+    });
   }
 
   // [REJECT] The blob is from a higher slot than its parent.
@@ -120,15 +126,23 @@ export async function validateGossipBlobSidecar(
   const blockState = await chain.regen
     .getBlockSlotState(parentRoot, blobSlot, {dontTransferCache: true}, RegenCaller.validateGossipBlock)
     .catch(() => {
-      throw new BlobSidecarGossipError(GossipAction.IGNORE, {code: BlobSidecarErrorCode.PARENT_UNKNOWN, parentRoot});
+      throw new BlobSidecarGossipError(GossipAction.IGNORE, {
+        code: BlobSidecarErrorCode.PARENT_UNKNOWN,
+        parentRoot,
+        blockRoot: blockHex,
+        slot: blobSlot,
+      });
     });
 
   // [REJECT] The proposer signature, signed_beacon_block.signature, is valid with respect to the proposer_index pubkey.
-  const signatureSet = getBlockHeaderProposerSignatureSet(blockState, blobSidecar.signedBlockHeader);
+  const signatureSet = getBlockHeaderProposerSignatureSetByParentStateSlot(blockState, blobSidecar.signedBlockHeader);
   // Don't batch so verification is not delayed
   if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: true}))) {
     throw new BlobSidecarGossipError(GossipAction.REJECT, {
       code: BlobSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID,
+      blockRoot: blockHex,
+      index: blobSidecar.index,
+      slot: blobSlot,
     });
   }
 
@@ -175,8 +189,12 @@ export async function validateGossipBlobSidecar(
  * Validate some blob sidecars in a block
  *
  * Requires the block to be known to the node
+ *
+ * NOTE: chain is optional to skip signature verification. Helpful for testing purposes and so that can control whether
+ * signature gets checked depending on the reqresp method that is being checked
  */
 export async function validateBlockBlobSidecars(
+  chain: IBeaconChain | null,
   blockSlot: Slot,
   blockRoot: Root,
   blockBlobCount: number,
@@ -196,7 +214,8 @@ export async function validateBlockBlobSidecars(
   }
 
   // Hash the first sidecar block header and compare the rest via (cheaper) equality
-  const firstSidecarBlockHeader = blobSidecars[0].signedBlockHeader.message;
+  const firstSidecarSignedBlockHeader = blobSidecars[0].signedBlockHeader;
+  const firstSidecarBlockHeader = firstSidecarSignedBlockHeader.message;
   const firstBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(firstSidecarBlockHeader);
   if (Buffer.compare(blockRoot, firstBlockRoot) !== 0) {
     throw new BlobSidecarValidationError(
@@ -211,17 +230,42 @@ export async function validateBlockBlobSidecars(
     );
   }
 
+  if (chain !== null) {
+    const headState = await chain.getHeadState();
+    const signatureSet = getBlockHeaderProposerSignatureSetByHeaderSlot(headState, firstSidecarSignedBlockHeader);
+
+    if (
+      !(await chain.bls.verifySignatureSets([signatureSet], {
+        batchable: true,
+        priority: true,
+        verifyOnMainThread: false,
+      }))
+    ) {
+      throw new BlobSidecarValidationError({
+        code: BlobSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID,
+        blockRoot: toRootHex(blockRoot),
+        slot: blockSlot,
+        index: blobSidecars[0].index,
+      });
+    }
+  }
+
   const commitments = [];
   const blobs = [];
   const proofs = [];
-  for (const blobSidecar of blobSidecars) {
-    const blobIdx = blobSidecar.index;
-    if (!ssz.phase0.BeaconBlockHeader.equals(blobSidecar.signedBlockHeader.message, firstSidecarBlockHeader)) {
+  for (let i = 0; i < blobSidecars.length; i++) {
+    const blobSidecar = blobSidecars[i];
+    const blobIndex = blobSidecar.index;
+
+    if (
+      i !== 0 &&
+      !ssz.phase0.SignedBeaconBlockHeader.equals(blobSidecar.signedBlockHeader, firstSidecarSignedBlockHeader)
+    ) {
       throw new BlobSidecarValidationError(
         {
           code: BlobSidecarErrorCode.INCORRECT_BLOCK,
           slot: blockSlot,
-          blobIdx,
+          blobIdx: blobIndex,
           expected: toRootHex(blockRoot),
           actual: "unknown - compared via equality",
         },
@@ -234,7 +278,7 @@ export async function validateBlockBlobSidecars(
         {
           code: BlobSidecarErrorCode.INCLUSION_PROOF_INVALID,
           slot: blockSlot,
-          blobIdx,
+          blobIdx: blobIndex,
         },
         "BlobSidecar inclusion proof invalid"
       );

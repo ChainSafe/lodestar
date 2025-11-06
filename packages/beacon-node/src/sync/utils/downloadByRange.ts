@@ -37,7 +37,6 @@ export type DownloadByRangeResponses = {
 
 export type DownloadAndCacheByRangeProps = DownloadByRangeRequests & {
   config: ChainForkConfig;
-  cache: SeenBlockInput;
   network: INetwork;
   logger: Logger;
   peerIdStr: string;
@@ -203,7 +202,7 @@ export async function downloadByRange({
   blocksRequest,
   blobsRequest,
   columnsRequest,
-}: Omit<DownloadAndCacheByRangeProps, "cache">): Promise<WarnResult<ValidatedResponses, DownloadByRangeError>> {
+}: DownloadAndCacheByRangeProps): Promise<WarnResult<ValidatedResponses, DownloadByRangeError>> {
   let response: DownloadByRangeResponses;
   try {
     response = await requestByRange({
@@ -555,9 +554,13 @@ export async function validateBlobsByRangeResponse(
     }
 
     validateSidecarsPromises.push(
-      validateBlockBlobSidecars(block.message.slot, blockRoot, blockKzgCommitments.length, blockBlobSidecars).then(
-        () => ({blockRoot, blobSidecars: blockBlobSidecars})
-      )
+      validateBlockBlobSidecars(
+        null, // do not pass chain here so we do not validate header signature
+        block.message.slot,
+        blockRoot,
+        blockKzgCommitments.length,
+        blockBlobSidecars
+      ).then(() => ({blockRoot, blobSidecars: blockBlobSidecars}))
     );
   }
 
@@ -768,7 +771,13 @@ export async function validateColumnsByRangeResponse(
     }
 
     validationPromises.push(
-      validateBlockDataColumnSidecars(slot, blockRoot, blobCount, columnSidecars).then(() => ({
+      validateBlockDataColumnSidecars(
+        null, // do not pass chain here so we do not validate header signature
+        slot,
+        blockRoot,
+        blobCount,
+        columnSidecars
+      ).then(() => ({
         blockRoot,
         columnSidecars,
       }))
