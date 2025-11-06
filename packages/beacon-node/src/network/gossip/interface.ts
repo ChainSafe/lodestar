@@ -38,6 +38,7 @@ export enum GossipType {
   light_client_optimistic_update = "light_client_optimistic_update",
   bls_to_execution_change = "bls_to_execution_change",
   execution_payload = "execution_payload",
+  payload_attestation_message = "payload_attestation_message",
 }
 
 export type SequentialGossipType = Exclude<GossipType, GossipType.beacon_attestation>;
@@ -73,6 +74,7 @@ export type GossipTopicTypeMap = {
   [GossipType.light_client_optimistic_update]: {type: GossipType.light_client_optimistic_update};
   [GossipType.bls_to_execution_change]: {type: GossipType.bls_to_execution_change};
   [GossipType.execution_payload]: {type: GossipType.execution_payload};
+  [GossipType.payload_attestation_message]: {type: GossipType.payload_attestation_message};
 };
 
 export type GossipTopicMap = {
@@ -103,6 +105,7 @@ export type GossipTypeMap = {
   [GossipType.light_client_optimistic_update]: LightClientOptimisticUpdate;
   [GossipType.bls_to_execution_change]: capella.SignedBLSToExecutionChange;
   [GossipType.execution_payload]: gloas.SignedExecutionPayloadEnvelope;
+  [GossipType.payload_attestation_message]: gloas.PayloadAttestationMessage;
 };
 
 export type GossipFnByType = {
@@ -129,6 +132,9 @@ export type GossipFnByType = {
   ) => Promise<void> | void;
   [GossipType.execution_payload]: (
     executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
+  ) => Promise<void> | void;
+  [GossipType.payload_attestation_message]: (
+    payloadAttestationMessage: gloas.PayloadAttestationMessage
   ) => Promise<void> | void;
 };
 
