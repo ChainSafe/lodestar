@@ -39,6 +39,7 @@ export enum GossipType {
   bls_to_execution_change = "bls_to_execution_change",
   execution_payload = "execution_payload",
   payload_attestation_message = "payload_attestation_message",
+  execution_payload_bid = "execution_payload_bid",
 }
 
 export type SequentialGossipType = Exclude<GossipType, GossipType.beacon_attestation>;
@@ -75,6 +76,7 @@ export type GossipTopicTypeMap = {
   [GossipType.bls_to_execution_change]: {type: GossipType.bls_to_execution_change};
   [GossipType.execution_payload]: {type: GossipType.execution_payload};
   [GossipType.payload_attestation_message]: {type: GossipType.payload_attestation_message};
+  [GossipType.execution_payload_bid]: {type: GossipType.execution_payload_bid};
 };
 
 export type GossipTopicMap = {
@@ -106,6 +108,7 @@ export type GossipTypeMap = {
   [GossipType.bls_to_execution_change]: capella.SignedBLSToExecutionChange;
   [GossipType.execution_payload]: gloas.SignedExecutionPayloadEnvelope;
   [GossipType.payload_attestation_message]: gloas.PayloadAttestationMessage;
+  [GossipType.execution_payload_bid]: gloas.SignedExecutionPayloadBid;
 };
 
 export type GossipFnByType = {
@@ -135,6 +138,9 @@ export type GossipFnByType = {
   ) => Promise<void> | void;
   [GossipType.payload_attestation_message]: (
     payloadAttestationMessage: gloas.PayloadAttestationMessage
+  ) => Promise<void> | void;
+  [GossipType.execution_payload_bid]: (
+    executionPayloadBid: gloas.SignedExecutionPayloadBid
   ) => Promise<void> | void;
 };
 

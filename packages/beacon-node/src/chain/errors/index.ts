@@ -10,3 +10,4 @@ export * from "./syncCommitteeError.js";
 export * from "./voluntaryExitError.js";
 export * from "./executionPayloadEnvelope.js";
 export * from "./payloadAttestation.js";
+export * from "./executionPayloadBid.js";

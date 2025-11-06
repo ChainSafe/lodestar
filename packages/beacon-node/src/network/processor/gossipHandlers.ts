@@ -837,6 +837,16 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       
       // TODO GLOAS: Handle valid payload attestation message. Store in a pool
     },
+    [GossipType.execution_payload_bid]: async ({
+      gossipData,
+      topic,
+    }: GossipHandlerParamGeneric<GossipType.execution_payload_bid>) => {
+      const {serializedData} = gossipData;
+      const executionPayloadBid = sszDeserialize(topic, serializedData);
+      await validateGossipExecutionPayloadBid(chain, executionPayloadBid);
+      
+      // TODO GLOAS: Handle valid payload bid. Store in a pool
+    }
   };
 }
 
