@@ -80,6 +80,7 @@ import {sszDeserialize} from "../gossip/topic.js";
 import {INetwork} from "../interface.js";
 import {PeerAction} from "../peers/index.js";
 import {AggregatorTracker} from "./aggregatorTracker.js";
+import { validateGossipExecutionPayloadEnvelope } from "../../chain/validation/executionPayloadEnvelope.ts";
 
 /**
  * Gossip handler options as part of network options
@@ -815,6 +816,16 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       }
 
       chain.emitter.emit(routes.events.EventType.blsToExecutionChange, blsToExecutionChange);
+    },
+    [GossipType.execution_payload]: async ({
+      gossipData,
+      topic,
+    }: GossipHandlerParamGeneric<GossipType.execution_payload>) => {
+      const {serializedData} = gossipData;
+      const executionPayloadEnvelope = sszDeserialize(topic, serializedData);
+      await validateGossipExecutionPayloadEnvelope(chain, executionPayloadEnvelope);
+      
+      // TODO GLOAS: Handle valid envelope. Store execution payload envelope in a pool
     },
   };
 }
