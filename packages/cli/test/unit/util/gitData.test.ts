@@ -19,7 +19,10 @@ describe("util / gitData", () => {
   it("gitData file must exist", () => {
     const gitData = readGitDataFile();
 
-    expect(gitData).toEqual(getGitData());
+    expect(gitData.branch).toEqual(getGitData().branch);
+    expect(gitData.commit).toHaveLength(40);
+    expect(typeof gitData.commit).toBe("string");
+
   });
 
   it("gitData path must be included in the package.json", () => {

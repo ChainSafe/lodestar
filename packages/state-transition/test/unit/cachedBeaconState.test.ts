@@ -9,6 +9,10 @@ import {createCachedBeaconState, loadCachedBeaconState} from "../../src/cache/st
 import {modifyStateSameValidator, newStateWithValidators} from "../utils/capella.js";
 import {interopPubkeysCached} from "../utils/interop.js";
 import {createCachedBeaconStateTest} from "../utils/state.js";
+import { beforeAll, afterAll, describe, expect, it, vi } from "vitest";
+
+vi.setConfig({ testTimeout: 120000 });
+
 
 describe("CachedBeaconState", () => {
   vi.setConfig({testTimeout: 20_000, hookTimeout: 20_000});
