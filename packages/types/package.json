@@ -77,5 +77,8 @@
     "eth-consensus",
     "beacon",
     "blockchain"
-  ]
+  ],
+  "devDependencies": {
+    "markdownlint-cli": "^0.45.0"
+  }
 }

@@ -1,7 +1,7 @@
 # Lodestar Types Documentation & Examples
 
-This repository provides **learning resources and runnable examples** for working with [SSZ (Simple Serialize)](https://github.com/ethereum/consensus-specs/tree/dev/ssz) in TypeScript.  
-It is designed for Ethereum developers, researchers, and contributors working with the Lodestar consensus client, but also useful for anyone learning SSZ.
+This repository provides **learning resources and runnable examples** for working with  
+[SSZ (Simple Serialize)](https://github.com/ethereum/consensus-specs/tree/dev/ssz) in TypeScript.
 
 ---
 
@@ -67,7 +67,7 @@ npm install @chainsafe/ssz @lodestar/types typescript ts-node
 Run an Example:
 Pick an example from the file and place it in its own file, e.g. Container.ts, then run the file with the following command.
 
-```
+```bash
 npx ts-node examples/simple-container.ts
 
 ```
@@ -83,14 +83,14 @@ Demonstrates:
 `deserialize()` — parse bytes back into structured data
 Useful for: learning container patterns and core SSZ workflow.
 
-2. nested-container
+1. nested-container
 
 Shows how containers can contain other containers.
 Demonstrates:
 Serialization and deserialization of nested structures
 Useful for: building real-world Ethereum objects (validators, blocks, etc.).
 
-3. lists-vectors.ts
+1. lists-vectors.ts
    Introduces SSZ lists (variable-length) and vectors (fixed-length).
 
 Demonstrates:

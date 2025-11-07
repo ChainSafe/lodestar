@@ -14,7 +14,7 @@ tags: [ssz, lodestar, merkle-trees, proofs, ethereum, typescript]
   - [Introduction to views and proofs](#introduction-to-views-and-proofs)
     - [What are Views in SSZ?](#what-are-views-in-ssz)
     - [Why Views?](#why-views)
-      - [ Views vs Values (side-by-side)](#1-views-vs-values-side-by-side)
+      - [Views vs Values (side-by-side)](#1-views-vs-values-side-by-side)
       - [What are 'View'?](#what-are-view)
       - [Tree-backed Views](#tree-backed-views)
         - [1. TreeView](#1-treeview)
@@ -323,7 +323,7 @@ It’s built using a Merkle tree, where:
 - Every parent node represents the hash of its two children.
 - The top node (root) represents the entire dataset.
 
-#### How Merkle proofs work.
+#### How Merkle proofs work
 
 To verify a proof, you only need:
 
@@ -334,6 +334,7 @@ To verify a proof, you only need:
 In Lodestar SSZ, proofs let you generate a Merkle proof for selected fields, send or store only those parts (great for light clients) and verify or reconstruct the partial object later.
 
 Every View in Lodestar comes with methods for working with proofs.
+
 | Method | Purpose |
 | ----------------------------- | --------------------------------------- |
 | `view.createProof(paths)` | Create a proof for selected subfields |

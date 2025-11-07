@@ -1,0 +1,19 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "ignorePaths": [
+    "node_modules",
+    "build",
+    "dist",
+    "**/pnpm-lock.yaml"
+  ],
+  "dictionaryDefinitions": [
+    {
+      "name": "project-words",
+      "path": "./.wordlist.txt",
+      "addWords": true
+    }
+  ],
+  "dictionaries": ["project-words"],
+  "files": ["packages/**/*.{md,ts,js,tsx,json}"]
+}

@@ -185,7 +185,7 @@ The whole structure is fixed-size — so it’s encoded without any offsets.
 | **Type Aliases**    | Shorthand notations for common composite types           |
 | **Constants**       | Internal SSZ rules for byte/bit sizing and Merkleization |
 
-## To learn more about lodestar types go to this repository - [ ChainSafe/Lodestar](https://github.com/ChainSafe/lodestar/tree/unstable/packages/types)
+## To learn more about lodestar types go to this repository - [ChainSafe/Lodestar](https://github.com/ChainSafe/lodestar/tree/unstable/packages/types)
 
 ---
 
@@ -284,7 +284,7 @@ attestation.data.slot = 123456;
 attestation.aggregationBits = new Uint8Array([1, 0, 1]);
 ```
 
-### TypeScript Safety with Lodestar SSZ Library.
+### TypeScript Safety with Lodestar SSZ Library
 
 Lodestar’s SSZ library provides strong TypeScript safety for Ethereum data structures.
 
@@ -488,7 +488,7 @@ sha256("hello")
 
 #### What is Merkleization?
 
--[ Merkleization ](https://www.investopedia.com/terms/m/merkle-tree.asp) is the process of hashing SSZ objects into a binary Merkle tree.
+-[Merkleization](https://www.investopedia.com/terms/m/merkle-tree.asp) is the process of hashing SSZ objects into a binary Merkle tree.
 
 - Each field → a leaf node.
 - The tree’s root hash = Merkle root → uniquely represents the entire object.
@@ -518,7 +518,7 @@ Continue combining until a single 32-byte Merkle root remains.
 NB// The root is the Merkle root. Merkle roots are stored in block headers, they prove contents of the entire block.
 
 To learn more about merkleization read this article.
-[ Merkleization simplified ](https://www.investopedia.com/terms/m/merkle-tree.asp)
+[Merkleization simplified](https://www.investopedia.com/terms/m/merkle-tree.asp)
 
 Example: Merkleizing a simple number with no siblings, just the root.
 
@@ -545,7 +545,7 @@ Use Lodestar helpers instead of JSON.stringify directly.
 - But APIs, config files, and REST/GraphQL endpoints typically use JSON.
 - To bridge the two, SSZ types expose helper functions for converting to/from JSON.
 
-#### 1. Encoding to JSON.
+#### 1. Encoding to JSON
 
 Every SSZ type has the following:
 
