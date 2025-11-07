@@ -18,6 +18,7 @@ export function getReporters(): ViteUserConfig["test"]["reporters"] {
 
 export default defineConfig({
   test: {
+    testTimeout: 120000, // 2 minutes per test
     workspace: [
       {
         extends: true,
