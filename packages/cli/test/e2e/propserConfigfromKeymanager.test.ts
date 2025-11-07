@@ -1,13 +1,13 @@
 import path from "node:path";
+import {rimraf} from "rimraf";
+import {beforeAll, describe, it, onTestFinished, vi} from "vitest";
 import {ImportStatus} from "@lodestar/api/keymanager";
 import {getKeystoresStr} from "@lodestar/test-utils";
 import {Interchange} from "@lodestar/validator";
-import {rimraf} from "rimraf";
-import {beforeAll, describe, it, onTestFinished, vi} from "vitest";
-import {testFilesDir} from "../utils.js";
 import {cachedPubkeysHex, cachedSeckeysHex} from "../utils/cachedKeys.js";
 import {expectDeepEquals} from "../utils/runUtils.js";
 import {startValidatorWithKeyManager} from "../utils/validator.js";
+import {testFilesDir} from "../utils.js";
 
 describe("import keystores from api, test DefaultProposerConfig", () => {
   vi.setConfig({testTimeout: 30_000});
@@ -16,7 +16,7 @@ describe("import keystores from api, test DefaultProposerConfig", () => {
 
   const defaultOptions = {
     suggestedFeeRecipient: "0x0000000000000000000000000000000000000000",
-    gasLimit: 45_000_000,
+    gasLimit: 60_000_000,
     graffiti: "aaaa",
   };
 

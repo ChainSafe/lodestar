@@ -1,15 +1,9 @@
-import {DataAvailabilityStatus, EffectiveBalanceIncrements} from "@lodestar/state-transition";
-import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {
-  AttesterSlashing,
-  BeaconBlock,
-  Epoch,
-  IndexedAttestation,
-  Root,
-  RootHex,
-  Slot,
-  ValidatorIndex,
-} from "@lodestar/types";
+  CachedBeaconStateAllForks,
+  DataAvailabilityStatus,
+  EffectiveBalanceIncrements,
+} from "@lodestar/state-transition";
+import {AttesterSlashing, BeaconBlock, Epoch, IndexedAttestation, Root, RootHex, Slot} from "@lodestar/types";
 import {LVHExecResponse, MaybeValidExecutionStatus, ProtoBlock, ProtoNode} from "../protoArray/interface.js";
 import {UpdateAndGetHeadOpt} from "./forkChoice.js";
 import {CheckpointWithHex} from "./store.js";
@@ -70,15 +64,6 @@ export enum NotReorgedReason {
   Unknown = "unknown", // A placeholder in case reason is not provided
 }
 
-export type ForkChoiceMetrics = {
-  votes: number;
-  queuedAttestations: number;
-  validatedAttestationDatas: number;
-  balancesLength: number;
-  nodes: number;
-  indices: number;
-};
-
 export type ShouldOverrideForkChoiceUpdateResult =
   | {shouldOverrideFcu: true; parentBlock: ProtoBlock}
   | {shouldOverrideFcu: false; reason: NotReorgedReason};
@@ -86,7 +71,6 @@ export type ShouldOverrideForkChoiceUpdateResult =
 export interface IForkChoice {
   irrecoverableError?: Error;
 
-  getMetrics(): ForkChoiceMetrics;
   /**
    * Returns the block root of an ancestor of `block_root` at the given `slot`. (Note: `slot` refers
    * to the block that is *returned*, not the one that is supplied.)
@@ -185,7 +169,6 @@ export interface IForkChoice {
    * https://github.com/ethereum/consensus-specs/blob/v1.2.0-rc.3/specs/phase0/fork-choice.md#on_attester_slashing
    */
   onAttesterSlashing(slashing: AttesterSlashing): void;
-  getLatestMessage(validatorIndex: ValidatorIndex): LatestMessage | undefined;
   /**
    * Call `onTick` for all slots between `fcStore.getCurrentSlot()` and the provided `currentSlot`.
    */
@@ -213,6 +196,7 @@ export interface IForkChoice {
   getBlockHex(blockRoot: RootHex): ProtoBlock | null;
   getFinalizedBlock(): ProtoBlock;
   getJustifiedBlock(): ProtoBlock;
+  getFinalizedCheckpointSlot(): Slot;
   /**
    * Returns true if the `descendantRoot` has an ancestor with `ancestorRoot`.
    *
@@ -268,9 +252,4 @@ export type PowBlockHex = {
   blockHash: RootHex;
   parentHash: RootHex;
   totalDifficulty: bigint;
-};
-
-export type LatestMessage = {
-  epoch: Epoch;
-  root: RootHex;
 };

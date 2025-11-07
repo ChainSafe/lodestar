@@ -12,8 +12,7 @@ import {
 } from "@lodestar/state-transition";
 import {Slot, sszTypesFor} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";
-import {Logger, callFnWhenAwait, formatBytes, fromHex} from "@lodestar/utils";
-import {fetch} from "@lodestar/utils";
+import {Logger, callFnWhenAwait, fetch, formatBytes, fromHex} from "@lodestar/utils";
 import {parseBootnodesFile} from "../util/format.js";
 import * as chiado from "./chiado.js";
 import * as dev from "./dev.js";

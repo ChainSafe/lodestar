@@ -1,5 +1,6 @@
 import {Signature, aggregateSignatures} from "@chainsafe/blst";
 import {BitArray} from "@chainsafe/ssz";
+import {ChainForkConfig} from "@lodestar/config";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {Root, Slot, SubcommitteeIndex, SubnetID, altair} from "@lodestar/types";
 import {MapDef, toRootHex} from "@lodestar/utils";
@@ -44,8 +45,8 @@ export class SyncCommitteeMessagePool {
   private lowestPermissibleSlot = 0;
 
   constructor(
+    private readonly config: ChainForkConfig,
     private readonly clock: IClock,
-    private readonly cutOffSecFromSlot: number,
     private readonly preaggregateSlotDistance = 0
   ) {}
 
@@ -68,6 +69,7 @@ export class SyncCommitteeMessagePool {
     priority?: boolean
   ): InsertOutcome {
     const {slot, beaconBlockRoot} = signature;
+    const fork = this.config.getForkName(slot);
     const rootHex = toRootHex(beaconBlockRoot);
     const lowestPermissibleSlot = this.lowestPermissibleSlot;
 
@@ -76,8 +78,8 @@ export class SyncCommitteeMessagePool {
       return InsertOutcome.Old;
     }
 
-    // validator gets SyncCommitteeContribution at 2/3 of slot, it's no use to preaggregate later than that time
-    if (!priority && this.clock.secFromSlot(slot) > this.cutOffSecFromSlot) {
+    // validator gets SyncCommitteeContribution at CONTRIBUTION_DUE_BPS of slot, it's no use to preaggregate later than that time
+    if (!priority && this.clock.msFromSlot(slot) > this.config.getSyncContributionDueMs(fork)) {
       return InsertOutcome.Late;
     }
 

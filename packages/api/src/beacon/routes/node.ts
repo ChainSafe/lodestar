@@ -1,6 +1,6 @@
-import {ContainerType, ValueOf} from "@chainsafe/ssz";
+import {ContainerType, OptionalType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {ssz, stringType} from "@lodestar/types";
+import {StringType, fulu, ssz, stringType} from "@lodestar/types";
 import {
   ArrayOf,
   EmptyArgs,
@@ -24,6 +24,7 @@ export const NetworkIdentityType = new ContainerType(
     enr: stringType,
     p2pAddresses: ArrayOf(stringType),
     discoveryAddresses: ArrayOf(stringType),
+    // TODO Fulu: replace with `ssz.fulu.Metadata` once `custody_group_count` is more widely supported
     /** Based on Ethereum Consensus [Metadata object](https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#metadata) */
     metadata: ssz.altair.Metadata,
   },
@@ -56,19 +57,28 @@ export const SyncingStatusType = new ContainerType(
   {jsonCase: "eth2"}
 );
 
-export type NetworkIdentity = ValueOf<typeof NetworkIdentityType>;
+export type NetworkIdentity = ValueOf<typeof NetworkIdentityType> & {
+  metadata: Partial<fulu.Metadata>;
+};
 
 export type PeerState = "disconnected" | "connecting" | "connected" | "disconnecting";
 export type PeerDirection = "inbound" | "outbound";
 
-export type NodePeer = {
-  peerId: string;
-  enr: string;
-  lastSeenP2pAddress: string;
-  state: PeerState;
-  // the spec does not specify direction for a disconnected peer, lodestar uses null in that case
-  direction: PeerDirection | null;
-};
+export const NodePeerType = new ContainerType(
+  {
+    peerId: stringType,
+    enr: new OptionalType(stringType),
+    lastSeenP2pAddress: stringType,
+    state: new StringType<PeerState>(),
+    // the spec does not specify direction for a disconnected peer, lodestar uses null in that case
+    direction: new OptionalType(new StringType<PeerDirection>()),
+  },
+  {jsonCase: "eth2"}
+);
+export const NodePeersType = ArrayOf(NodePeerType);
+
+export type NodePeer = ValueOf<typeof NodePeerType>;
+export type NodePeers = ValueOf<typeof NodePeersType>;
 
 export type PeersMeta = {count: number};
 
@@ -112,7 +122,7 @@ export type Endpoints = {
     "GET",
     FilterGetPeers,
     {query: {state?: PeerState[]; direction?: PeerDirection[]}},
-    NodePeer[],
+    NodePeers,
     PeersMeta
   >;
 
@@ -190,7 +200,26 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       req: EmptyRequestCodec,
       resp: {
         onlySupport: WireFormat.json,
-        data: NetworkIdentityType,
+        // TODO Fulu: clean this up
+        data: {
+          ...JsonOnlyResponseCodec.data,
+          toJson: (data) => {
+            const json = NetworkIdentityType.toJson(data);
+            const {custodyGroupCount} = data.metadata;
+            (json as {metadata: {custody_group_count: string | undefined}}).metadata.custody_group_count =
+              custodyGroupCount !== undefined ? String(custodyGroupCount) : undefined;
+            return json;
+          },
+          fromJson: (json) => {
+            const data = NetworkIdentityType.fromJson(json);
+            const {
+              metadata: {custody_group_count},
+            } = json as {metadata: {custody_group_count: string | undefined}};
+            (data.metadata as Partial<fulu.Metadata>).custodyGroupCount =
+              custody_group_count !== undefined ? parseInt(custody_group_count) : undefined;
+            return data;
+          },
+        },
         meta: EmptyMetaCodec,
       },
     },
@@ -203,7 +232,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         schema: {query: {state: Schema.StringArray, direction: Schema.StringArray}},
       },
       resp: {
-        ...JsonOnlyResponseCodec,
+        data: NodePeersType,
         meta: {
           toJson: (d) => d,
           fromJson: (d) => ({count: (d as PeersMeta).count}),
@@ -214,6 +243,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
           toResponse: (data, meta) => ({data, meta}),
           fromResponse: (resp) => resp as {data: NodePeer[]; meta: PeersMeta},
         },
+        onlySupport: WireFormat.json,
       },
     },
     getPeer: {
@@ -224,7 +254,11 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         parseReq: ({params}) => ({peerId: params.peer_id}),
         schema: {params: {peer_id: Schema.StringRequired}},
       },
-      resp: JsonOnlyResponseCodec,
+      resp: {
+        data: NodePeerType,
+        meta: EmptyMetaCodec,
+        onlySupport: WireFormat.json,
+      },
     },
     getPeerCount: {
       url: "/eth/v1/node/peer_count",

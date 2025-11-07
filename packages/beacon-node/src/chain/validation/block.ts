@@ -11,7 +11,6 @@ import {
 } from "@lodestar/state-transition";
 import {SignedBeaconBlock, deneb} from "@lodestar/types";
 import {sleep, toRootHex} from "@lodestar/utils";
-import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants/index.js";
 import {BlockErrorCode, BlockGossipError, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../interface.js";
 import {RegenCaller} from "../regen/index.js";
@@ -159,6 +158,7 @@ export async function validateGossipBlock(
   if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: true}))) {
     throw new BlockGossipError(GossipAction.REJECT, {
       code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID,
+      blockSlot,
     });
   }
 
@@ -179,7 +179,7 @@ export async function validateGossipBlock(
   // gossip validation promise without any extra infrastructure.
   // Do the sleep at the end, since regen and signature validation can already take longer than `msToBlockSlot`.
   const msToBlockSlot = computeTimeAtSlot(config, blockSlot, chain.genesisTime) * 1000 - Date.now();
-  if (msToBlockSlot <= MAXIMUM_GOSSIP_CLOCK_DISPARITY && msToBlockSlot > 0) {
+  if (msToBlockSlot <= config.MAXIMUM_GOSSIP_CLOCK_DISPARITY && msToBlockSlot > 0) {
     // If block is between 0 and 500 ms early, hold it in a promise. Equivalent to a pending queue.
     await sleep(msToBlockSlot);
   }

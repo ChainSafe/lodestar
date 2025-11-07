@@ -1,6 +1,6 @@
+import {beforeEach, describe, expect, it} from "vitest";
 import {routes} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
-import {beforeEach, describe, expect, it} from "vitest";
 import {getConfigApi, renderJsonSpec} from "../../../../../src/api/impl/config/index.js";
 
 describe("config api implementation", () => {
@@ -35,6 +35,7 @@ describe("config api implementation", () => {
 
       expect(specJson.SECONDS_PER_ETH1_BLOCK).toBe("14");
       expect(specJson.DEPOSIT_CONTRACT_ADDRESS).toBe("0x00000000219ab540356cbb839cbe05303d7705fa");
+      expect(specJson.DEPOSIT_REQUEST_TYPE).toBe("0x00");
     });
   });
 });

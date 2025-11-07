@@ -1,5 +1,5 @@
-import {ForkName, ForkPreDeneb} from "@lodestar/params";
-import {BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
+import {ForkName, ForkPostFulu, ForkPreDeneb, ForkPreGloas} from "@lodestar/params";
+import {BeaconBlockBody, BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
 import {fromHex, prettyBytes, toRootHex, withTimeout} from "@lodestar/utils";
 import {VersionedHashes} from "../../../execution/index.js";
 import {kzgCommitmentToVersionedHash} from "../../../util/blobs.js";
@@ -11,7 +11,6 @@ import {
   BlobMeta,
   BlobWithSource,
   BlockInputInit,
-  ColumnMeta,
   ColumnWithSource,
   CreateBlockInputMeta,
   DAData,
@@ -20,6 +19,7 @@ import {
   LogMetaBasic,
   LogMetaBlobs,
   LogMetaColumns,
+  MissingColumnMeta,
   PromiseParts,
   SourceMeta,
 } from "./types.js";
@@ -142,8 +142,8 @@ abstract class AbstractBlockInput<F extends ForkName = ForkName, TData extends D
 
   getLogMeta(): LogMetaBasic {
     return {
-      blockRoot: prettyBytes(this.blockRootHex),
       slot: this.slot,
+      blockRoot: prettyBytes(this.blockRootHex),
       timeCreatedSec: this.timeCreatedSec,
     };
   }
@@ -201,12 +201,14 @@ export class BlockInputPreData extends AbstractBlockInput<ForkPreDeneb, null> {
   private constructor(init: BlockInputInit, state: BlockInputPreDataState) {
     super(init);
     this.state = state;
+    this.dataPromise.resolve(null);
+    this.blockPromise.resolve(state.block);
   }
 
   static createFromBlock(props: AddBlock & CreateBlockInputMeta): BlockInputPreData {
     const init: BlockInputInit = {
       daOutOfRange: props.daOutOfRange,
-      timeCreated: props.source.seenTimestampSec,
+      timeCreated: props.seenTimestampSec,
       forkName: props.forkName,
       slot: props.block.message.slot,
       blockRootHex: props.blockRootHex,
@@ -216,20 +218,26 @@ export class BlockInputPreData extends AbstractBlockInput<ForkPreDeneb, null> {
       hasBlock: true,
       hasAllData: true,
       block: props.block,
-      source: props.source,
-      timeCompleteSec: props.source.seenTimestampSec,
+      source: {
+        source: props.source,
+        seenTimestampSec: props.seenTimestampSec,
+        peerIdStr: props.peerIdStr,
+      },
+      timeCompleteSec: props.seenTimestampSec,
     };
     return new BlockInputPreData(init, state);
   }
 
-  addBlock(_: AddBlock): void {
-    throw new BlockInputError(
-      {
-        code: BlockInputErrorCode.INVALID_CONSTRUCTION,
-        blockRoot: this.blockRootHex,
-      },
-      "Cannot addBlock to BlockInputPreData"
-    );
+  addBlock(_: AddBlock, opts = {throwOnDuplicateAdd: true}): void {
+    if (opts.throwOnDuplicateAdd) {
+      throw new BlockInputError(
+        {
+          code: BlockInputErrorCode.INVALID_CONSTRUCTION,
+          blockRoot: this.blockRootHex,
+        },
+        "Cannot addBlock to BlockInputPreData"
+      );
+    }
   }
 }
 
@@ -283,12 +291,16 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
       hasAllData,
       versionedHashes: props.block.message.body.blobKzgCommitments.map(kzgCommitmentToVersionedHash),
       block: props.block,
-      source: props.source,
-      timeCompleteSec: hasAllData ? props.source.seenTimestampSec : undefined,
+      source: {
+        source: props.source,
+        seenTimestampSec: props.seenTimestampSec,
+        peerIdStr: props.peerIdStr,
+      },
+      timeCompleteSec: hasAllData ? props.seenTimestampSec : undefined,
     } as BlockInputBlobsState;
     const init: BlockInputInit = {
       daOutOfRange: props.daOutOfRange,
-      timeCreated: props.source.seenTimestampSec,
+      timeCreated: props.seenTimestampSec,
       forkName: props.forkName,
       slot: props.block.message.slot,
       blockRootHex: props.blockRootHex,
@@ -327,25 +339,18 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
 
   getLogMeta(): LogMetaBlobs {
     return {
-      blockRoot: prettyBytes(this.blockRootHex),
       slot: this.slot,
+      blockRoot: prettyBytes(this.blockRootHex),
       timeCreatedSec: this.timeCreatedSec,
       expectedBlobs: this.state.hasBlock ? this.state.block.message.body.blobKzgCommitments.length : "unknown",
       receivedBlobs: this.blobsCache.size,
     };
   }
 
-  addBlock({blockRootHex, block, source}: AddBlock<ForkBlobsDA>): void {
-    if (this.state.hasBlock) {
-      throw new BlockInputError(
-        {
-          code: BlockInputErrorCode.INVALID_CONSTRUCTION,
-          blockRoot: this.blockRootHex,
-        },
-        "Cannot addBlock to BlockInputBlobs after it already has a block"
-      );
-    }
-
+  addBlock(
+    {blockRootHex, block, source, seenTimestampSec, peerIdStr}: AddBlock<ForkBlobsDA>,
+    opts = {throwOnDuplicateAdd: true}
+  ): void {
     // this check suffices for checking slot, parentRoot, and forkName
     if (blockRootHex !== this.blockRootHex) {
       throw new BlockInputError(
@@ -353,10 +358,24 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
           code: BlockInputErrorCode.MISMATCHED_ROOT_HEX,
           blockInputRoot: this.blockRootHex,
           mismatchedRoot: blockRootHex,
-          source: source.source,
-          peerId: `${source.peerIdStr}`,
+          source,
+          peerId: `${peerIdStr}`,
         },
         "addBlock blockRootHex does not match BlockInput.blockRootHex"
+      );
+    }
+
+    if (!opts.throwOnDuplicateAdd) {
+      return;
+    }
+
+    if (this.state.hasBlock) {
+      throw new BlockInputError(
+        {
+          code: BlockInputErrorCode.INVALID_CONSTRUCTION,
+          blockRoot: this.blockRootHex,
+        },
+        "Cannot addBlock to BlockInputBlobs after it already has a block"
       );
     }
 
@@ -376,8 +395,12 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
       hasAllData,
       block,
       versionedHashes: block.message.body.blobKzgCommitments.map(kzgCommitmentToVersionedHash),
-      source,
-      timeCompleteSec: hasAllData ? source.seenTimestampSec : undefined,
+      source: {
+        source,
+        seenTimestampSec,
+        peerIdStr,
+      },
+      timeCompleteSec: hasAllData ? seenTimestampSec : undefined,
     } as BlockInputBlobsState;
     this.blockPromise.resolve(block);
     if (hasAllData) {
@@ -389,26 +412,10 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
     return this.blobsCache.has(blobIndex);
   }
 
-  addBlob({blockRootHex, blobSidecar, source, peerIdStr, seenTimestampSec}: AddBlob): void {
-    if (this.state.hasAllData) {
-      throw new BlockInputError(
-        {
-          code: BlockInputErrorCode.INVALID_CONSTRUCTION,
-          blockRoot: this.blockRootHex,
-        },
-        "Cannot addBlob to BlockInputBlobs after it already is complete"
-      );
-    }
-    if (this.blobsCache.has(blobSidecar.index)) {
-      throw new BlockInputError(
-        {
-          code: BlockInputErrorCode.INVALID_CONSTRUCTION,
-          blockRoot: this.blockRootHex,
-        },
-        "Cannot addBlob to BlockInputBlobs with duplicate blobIndex"
-      );
-    }
-
+  addBlob(
+    {blockRootHex, blobSidecar, source, peerIdStr, seenTimestampSec}: AddBlob,
+    opts = {throwOnDuplicateAdd: true}
+  ): void {
     // this check suffices for checking slot, parentRoot, and forkName
     if (blockRootHex !== this.blockRootHex) {
       throw new BlockInputError(
@@ -423,8 +430,23 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
       );
     }
 
+    const isDuplicate = this.blobsCache.has(blobSidecar.index);
+    if (isDuplicate && opts.throwOnDuplicateAdd) {
+      throw new BlockInputError(
+        {
+          code: BlockInputErrorCode.INVALID_CONSTRUCTION,
+          blockRoot: this.blockRootHex,
+        },
+        "Cannot addBlob to BlockInputBlobs with duplicate blobIndex"
+      );
+    }
+
     if (this.state.hasBlock) {
       assertBlockAndBlobArePaired(this.blockRootHex, this.state.block, blobSidecar);
+    }
+
+    if (isDuplicate) {
+      return;
     }
 
     this.blobsCache.set(blobSidecar.index, {blobSidecar, source, seenTimestampSec, peerIdStr});
@@ -473,7 +495,7 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
         blobMeta.push({
           index,
           blockRoot: fromHex(this.blockRootHex),
-          versionHash: versionedHashes[index],
+          versionedHash: versionedHashes[index],
         });
       }
     }
@@ -585,6 +607,10 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     this.custodyColumns = custodyColumns;
   }
 
+  get columnCount(): number {
+    return this.columnsCache.size;
+  }
+
   static createFromBlock(
     props: AddBlock<ForkColumnsDA> &
       CreateBlockInputMeta & {sampledColumns: ColumnIndex[]; custodyColumns: ColumnIndex[]}
@@ -598,13 +624,17 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
       hasAllData,
       versionedHashes: props.block.message.body.blobKzgCommitments.map(kzgCommitmentToVersionedHash),
       block: props.block,
-      source: props.source,
-      timeCreated: props.source.seenTimestampSec,
-      timeCompleteSec: hasAllData ? props.source.seenTimestampSec : undefined,
+      source: {
+        source: props.source,
+        seenTimestampSec: props.seenTimestampSec,
+        peerIdStr: props.peerIdStr,
+      },
+      timeCreated: props.seenTimestampSec,
+      timeCompleteSec: hasAllData ? props.seenTimestampSec : undefined,
     } as BlockInputColumnsState;
     const init: BlockInputInit = {
       daOutOfRange: props.daOutOfRange,
-      timeCreated: props.source.seenTimestampSec,
+      timeCreated: props.seenTimestampSec,
       forkName: props.forkName,
       blockRootHex: props.blockRootHex,
       parentRootHex: toRootHex(props.block.message.parentRoot),
@@ -622,7 +652,8 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
   static createFromColumn(
     props: AddColumn & CreateBlockInputMeta & {sampledColumns: ColumnIndex[]; custodyColumns: ColumnIndex[]}
   ): BlockInputColumns {
-    const hasAllData = props.sampledColumns.length === 0;
+    const hasAllData =
+      props.daOutOfRange || props.columnSidecar.kzgCommitments.length === 0 || props.sampledColumns.length === 0;
     const state: BlockInputColumnsState = {
       hasBlock: false,
       hasAllData,
@@ -645,8 +676,8 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
 
   getLogMeta(): LogMetaColumns {
     return {
-      blockRoot: prettyBytes(this.blockRootHex),
       slot: this.slot,
+      blockRoot: prettyBytes(this.blockRootHex),
       timeCreatedSec: this.timeCreatedSec,
       expectedColumns:
         this.state.hasBlock && this.state.block.message.body.blobKzgCommitments.length === 0
@@ -656,7 +687,24 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     };
   }
 
-  addBlock(props: AddBlock<ForkColumnsDA>): void {
+  addBlock(props: AddBlock<ForkColumnsDA>, opts = {throwOnDuplicateAdd: true}): void {
+    if (props.blockRootHex !== this.blockRootHex) {
+      throw new BlockInputError(
+        {
+          code: BlockInputErrorCode.MISMATCHED_ROOT_HEX,
+          blockInputRoot: this.blockRootHex,
+          mismatchedRoot: props.blockRootHex,
+          source: props.source,
+          peerId: `${props.peerIdStr}`,
+        },
+        "addBlock blockRootHex does not match BlockInput.blockRootHex"
+      );
+    }
+
+    if (!opts.throwOnDuplicateAdd) {
+      return;
+    }
+
     if (this.state.hasBlock) {
       throw new BlockInputError(
         {
@@ -667,41 +715,30 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
       );
     }
 
-    if (props.blockRootHex !== this.blockRootHex) {
-      throw new BlockInputError(
-        {
-          code: BlockInputErrorCode.MISMATCHED_ROOT_HEX,
-          blockInputRoot: this.blockRootHex,
-          mismatchedRoot: props.blockRootHex,
-          source: props.source.source,
-          peerId: `${props.source.peerIdStr}`,
-        },
-        "addBlock blockRootHex does not match BlockInput.blockRootHex"
-      );
-    }
-
-    for (const {columnSidecar} of this.columnsCache.values()) {
-      if (!blockAndColumnArePaired(props.block, columnSidecar)) {
-        this.columnsCache.delete(columnSidecar.index);
-        // this.logger?.error(`Removing columnIndex=${columnSidecar.index} from BlockInput`, {}, err);
-      }
-    }
-
-    const hasAllData = props.block.message.body.blobKzgCommitments.length === 0 || this.state.hasAllData;
+    const hasAllData =
+      (props.block.message.body as BeaconBlockBody<ForkPostFulu & ForkPreGloas>).blobKzgCommitments.length === 0 ||
+      this.state.hasAllData;
 
     this.state = {
       ...this.state,
       hasBlock: true,
       hasAllData,
       block: props.block,
-      source: props.source,
-      timeCompleteSec: hasAllData ? props.source.seenTimestampSec : undefined,
+      source: {
+        source: props.source,
+        seenTimestampSec: props.seenTimestampSec,
+        peerIdStr: props.peerIdStr,
+      },
+      timeCompleteSec: hasAllData ? props.seenTimestampSec : undefined,
     } as BlockInputColumnsState;
 
     this.blockPromise.resolve(props.block);
   }
 
-  addColumn({blockRootHex, columnSidecar, source, seenTimestampSec, peerIdStr}: AddColumn): void {
+  addColumn(
+    {blockRootHex, columnSidecar, source, seenTimestampSec, peerIdStr}: AddColumn,
+    opts = {throwOnDuplicateAdd: true}
+  ): void {
     if (blockRootHex !== this.blockRootHex) {
       throw new BlockInputError(
         {
@@ -715,8 +752,19 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
       );
     }
 
-    if (this.state.hasBlock) {
-      assertBlockAndColumnArePaired(this.blockRootHex, this.state.block, columnSidecar);
+    const isDuplicate = this.columnsCache.has(columnSidecar.index);
+    if (isDuplicate && opts.throwOnDuplicateAdd) {
+      throw new BlockInputError(
+        {
+          code: BlockInputErrorCode.INVALID_CONSTRUCTION,
+          blockRoot: this.blockRootHex,
+        },
+        "Cannot addColumn to BlockInputColumns with duplicate column index"
+      );
+    }
+
+    if (isDuplicate) {
+      return;
     }
 
     this.columnsCache.set(columnSidecar.index, {columnSidecar, source, seenTimestampSec, peerIdStr});
@@ -754,6 +802,17 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     return columns;
   }
 
+  getSampledColumnsWithSource(): ColumnWithSource[] {
+    const columns: ColumnWithSource[] = [];
+    for (const index of this.sampledColumns) {
+      const column = this.columnsCache.get(index);
+      if (column) {
+        columns.push(column);
+      }
+    }
+    return columns;
+  }
+
   getSampledColumns(): fulu.DataColumnSidecars {
     const columns: fulu.DataColumnSidecars = [];
     for (const index of this.sampledColumns) {
@@ -773,48 +832,23 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     return this.getAllColumnsWithSource().map(({columnSidecar}) => columnSidecar);
   }
 
-  getMissingSampledColumnMeta(): ColumnMeta[] {
+  getMissingSampledColumnMeta(): MissingColumnMeta {
     if (this.state.hasAllData) {
-      return [];
+      return {
+        missing: [],
+        versionedHashes: this.state.versionedHashes,
+      };
     }
 
-    const needed: ColumnMeta[] = [];
-    const blockRoot = fromHex(this.blockRootHex);
+    const missing: number[] = [];
     for (const index of this.sampledColumns) {
       if (!this.columnsCache.has(index)) {
-        needed.push({index, blockRoot});
+        missing.push(index);
       }
     }
-    return needed;
-  }
-}
-
-function blockAndColumnArePaired(
-  block: SignedBeaconBlock<ForkColumnsDA>,
-  columnSidecar: fulu.DataColumnSidecar
-): boolean {
-  return (
-    block.message.body.blobKzgCommitments.length === columnSidecar.kzgCommitments.length &&
-    block.message.body.blobKzgCommitments.every((commitment, index) =>
-      Buffer.compare(commitment, columnSidecar.kzgCommitments[index])
-    )
-  );
-}
-
-function assertBlockAndColumnArePaired(
-  blockRootHex: string,
-  block: SignedBeaconBlock<ForkColumnsDA>,
-  columnSidecar: fulu.DataColumnSidecar
-): void {
-  if (!blockAndColumnArePaired(block, columnSidecar)) {
-    throw new BlockInputError(
-      {
-        code: BlockInputErrorCode.MISMATCHED_KZG_COMMITMENT,
-        blockRoot: blockRootHex,
-        slot: block.message.slot,
-        sidecarIndex: columnSidecar.index,
-      },
-      "DataColumnsSidecar kzgCommitment does not match block kzgCommitment"
-    );
+    return {
+      missing,
+      versionedHashes: this.state.versionedHashes,
+    };
   }
 }

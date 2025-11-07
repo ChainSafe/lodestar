@@ -1,11 +1,11 @@
 import EventEmitter from "node:events";
 import fs from "node:fs/promises";
 import path from "node:path";
+import createDebug from "debug";
 import {routes} from "@lodestar/api/beacon";
 import {ChainForkConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
 import {Epoch, Slot} from "@lodestar/types";
-import createDebug from "debug";
 import {isNullish} from "../../utils.js";
 import {defaultAssertions} from "./assertions/defaults/index.js";
 import {EpochClock} from "./epochClock.js";

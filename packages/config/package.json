@@ -1,6 +1,6 @@
 {
   "name": "@lodestar/config",
-  "version": "1.32.0",
+  "version": "1.36.0",
   "description": "Chain configuration required for lodestar",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
@@ -11,34 +11,30 @@
   "type": "module",
   "exports": {
     ".": {
+      "bun": "./src/index.ts",
+      "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     },
     "./default": {
+      "bun": "./src/default.ts",
+      "types": "./lib/default.d.ts",
       "import": "./lib/default.js"
     },
     "./networks": {
+      "bun": "./src/networks.ts",
+      "types": "./lib/networks.d.ts",
       "import": "./lib/networks.js"
     },
     "./configs": {
+      "bun": "./src/configs.ts",
+      "types": "./lib/configs.d.ts",
       "import": "./lib/configs.js"
     }
   },
-  "typesVersions": {
-    "*": {
-      "*": [
-        "*",
-        "lib/*",
-        "lib/*/index"
-      ]
-    }
-  },
-  "types": "lib/index.d.ts",
   "files": [
-    "lib/**/*.js",
-    "lib/**/*.js.map",
-    "lib/**/*.d.ts",
-    "*.d.ts",
-    "*.js"
+    "src",
+    "lib",
+    "!**/*.tsbuildinfo"
   ],
   "scripts": {
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",
@@ -64,9 +60,9 @@
     "blockchain"
   ],
   "dependencies": {
-    "@chainsafe/ssz": "^1.2.1",
-    "@lodestar/params": "^1.32.0",
-    "@lodestar/types": "^1.32.0",
-    "@lodestar/utils": "^1.32.0"
+    "@chainsafe/ssz": "^1.2.2",
+    "@lodestar/params": "^1.36.0",
+    "@lodestar/types": "^1.36.0",
+    "@lodestar/utils": "^1.36.0"
   }
 }

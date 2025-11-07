@@ -1,20 +1,25 @@
 import path from "node:path";
-import {activePreset} from "@lodestar/params";
 import {nodeAssertion} from "../utils/crucible/assertions/nodeAssertion.js";
 import {BeaconClient, ExecutionClient, Match} from "../utils/crucible/interfaces.js";
 import {Simulation} from "../utils/crucible/simulation.js";
 import {defineSimTestConfig, logFilesDir, replaceIpFromUrl} from "../utils/crucible/utils/index.js";
 import {connectAllNodes, waitForSlot} from "../utils/crucible/utils/network.js";
 
-const altairForkEpoch = 2;
-const bellatrixForkEpoch = 4;
-const runTillEpoch = 6;
-const syncWaitEpoch = 2;
+const altairForkEpoch = 0;
+const bellatrixForkEpoch = 0;
+const capellaForkEpoch = 0;
+const denebForkEpoch = 0;
+const electraForkEpoch = 0;
+const runTillEpoch = 4;
 
 const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
   ALTAIR_FORK_EPOCH: altairForkEpoch,
   BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
-  runTillEpoch: runTillEpoch + syncWaitEpoch,
+  CAPELLA_FORK_EPOCH: capellaForkEpoch,
+  DENEB_FORK_EPOCH: denebForkEpoch,
+  ELECTRA_FORK_EPOCH: electraForkEpoch,
+  runTillEpoch: runTillEpoch,
+  additionalSlotsForTTD: 0,
   initialNodes: 3,
 });
 
@@ -74,7 +79,7 @@ await node3.execution.job.stop();
 
 // node2 and node3 will successfully reach TTD if they can communicate to an EL on node1
 await waitForSlot("Wait half additional epoch to bellatrix fork epoch", {
-  slot: env.clock.getLastSlotOfEpoch(bellatrixForkEpoch) + activePreset.SLOTS_PER_EPOCH / 2,
+  slot: env.clock.getLastSlotOfEpoch(2),
   env,
 });
 

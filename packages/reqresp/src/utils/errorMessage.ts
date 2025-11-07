@@ -1,4 +1,7 @@
+import {decode as varintDecode, encodingLength as varintEncodingLength} from "uint8-varint";
+import {Uint8ArrayList} from "uint8arraylist";
 import {writeSszSnappyPayload} from "../encodingStrategies/sszSnappy/encode.js";
+import {SnappyFramesUncompress} from "../encodingStrategies/sszSnappy/snappyFrames/uncompress.js";
 import {Encoding} from "../types.js";
 
 // ErrorMessage schema:
@@ -28,8 +31,21 @@ export async function* encodeErrorMessage(errorMessage: string, encoding: Encodi
 /**
  * Decodes error message from network bytes and removes non printable, non ascii characters.
  */
-export function decodeErrorMessage(errorMessage: Uint8Array): string {
+export async function decodeErrorMessage(encodedErrorMessage: Uint8Array): Promise<string> {
   const encoder = new TextDecoder();
-  // remove non ascii characters from string
-  return encoder.decode(errorMessage.slice(0, 256)).replace(/[^\x20-\x7F]/g, "");
+  let sszDataLength: number;
+  try {
+    sszDataLength = varintDecode(encodedErrorMessage);
+    const decompressor = new SnappyFramesUncompress();
+    const varintBytes = varintEncodingLength(sszDataLength);
+    const errorMessage = decompressor.uncompress(new Uint8ArrayList(encodedErrorMessage.subarray(varintBytes)));
+    if (errorMessage == null || errorMessage.length !== sszDataLength) {
+      throw new Error("Malformed input: data length mismatch");
+    }
+    // remove non ascii characters from string
+    return encoder.decode(errorMessage.subarray(0)).replace(/[^\x20-\x7F]/g, "");
+  } catch (_e) {
+    // remove non ascii characters from string
+    return encoder.decode(encodedErrorMessage.slice(0, 256)).replace(/[^\x20-\x7F]/g, "");
+  }
 }

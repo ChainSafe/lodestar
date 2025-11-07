@@ -1,9 +1,11 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, GENESIS_SLOT} from "@lodestar/params";
-import {BeaconStateAllForks, initializeBeaconStateFromEth1} from "@lodestar/state-transition";
-import {createEmptyEpochCacheImmutableData} from "@lodestar/state-transition";
+import {
+  BeaconStateAllForks,
+  createEmptyEpochCacheImmutableData,
+  initializeBeaconStateFromEth1,
+} from "@lodestar/state-transition";
 import {Bytes32, TimeSeconds, phase0, ssz, sszTypesFor} from "@lodestar/types";
-
 import {DepositTree} from "../../../db/repositories/depositDataRoot.js";
 
 export const INTEROP_BLOCK_HASH = Buffer.alloc(32, "B");

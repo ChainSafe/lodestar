@@ -18,6 +18,7 @@ export const gnosisChainConfig: ChainConfig = {
 
   // Time parameters
   SECONDS_PER_SLOT: 5,
+  SLOT_DURATION_MS: 5000,
   SECONDS_PER_ETH1_BLOCK: 6,
   ETH1_FOLLOW_DISTANCE: 1024,
   CHURN_LIMIT_QUOTIENT: 4096,
@@ -57,6 +58,9 @@ export const gnosisChainConfig: ChainConfig = {
   // Fulu
   FULU_FORK_VERSION: b("0x06000064"),
   FULU_FORK_EPOCH: Infinity,
+  // Gloas
+  GLOAS_FORK_VERSION: b("0x07000064"),
+  GLOAS_FORK_EPOCH: Infinity,
 
   // Deneb
   MAX_BLOBS_PER_BLOCK: 2,

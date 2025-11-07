@@ -1,8 +1,7 @@
 import {setMaxListeners} from "node:events";
-import {Registry} from "prom-client";
-
-import {hasher} from "@chainsafe/persistent-merkle-tree";
 import {PrivateKey} from "@libp2p/interface";
+import {Registry} from "prom-client";
+import {hasher} from "@chainsafe/persistent-merkle-tree";
 import {BeaconApiMethods} from "@lodestar/api/beacon/server";
 import {BeaconConfig} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
@@ -10,7 +9,6 @@ import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {phase0} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
-
 import {BeaconRestApiServer, getApi} from "../api/index.js";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
 import {ValidatorMonitor, createValidatorMonitor} from "../chain/validatorMonitor.js";
@@ -55,6 +53,7 @@ export type BeaconNodeInitModules = {
   dataDir: string;
   peerStoreDir?: string;
   anchorState: BeaconStateAllForks;
+  isAnchorStateFinalized: boolean;
   wsCheckpoint?: phase0.Checkpoint;
   metricsRegistries?: Registry[];
 };
@@ -156,6 +155,7 @@ export class BeaconNode {
     dataDir,
     peerStoreDir,
     anchorState,
+    isAnchorStateFinalized,
     wsCheckpoint,
     metricsRegistries = [],
   }: BeaconNodeInitModules): Promise<T> {
@@ -208,6 +208,7 @@ export class BeaconNode {
       : null;
 
     const chain = new BeaconChain(opts.chain, {
+      privateKey,
       config,
       clock,
       dataDir,
@@ -218,6 +219,7 @@ export class BeaconNode {
       metrics,
       validatorMonitor,
       anchorState,
+      isAnchorStateFinalized,
       eth1: initializeEth1ForBlockProduction(opts.eth1, {
         config,
         db,

@@ -1,9 +1,9 @@
-import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {ForkName, ForkPostCapella, ForkPostDeneb} from "@lodestar/params";
-import {computeStartSlotAtEpoch, signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {SignedBeaconBlock, deneb, ssz} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
 import {describe, expect, it} from "vitest";
+import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {ForkName, ForkPostCapella, ForkPostDeneb, ForkPreGloas} from "@lodestar/params";
+import {computeStartSlotAtEpoch, signedBlockToSignedHeader} from "@lodestar/state-transition";
+import {BeaconBlockBody, SignedBeaconBlock, deneb, ssz} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {
   AddBlob,
   AddBlock,
@@ -17,12 +17,14 @@ const CAPELLA_FORK_EPOCH = 0;
 const DENEB_FORK_EPOCH = 1;
 const ELECTRA_FORK_EPOCH = 2;
 const FULU_FORK_EPOCH = 3;
+const GLOAS_FORK_EPOCH = 4;
 const config = createChainForkConfig({
   ...defaultChainConfig,
   CAPELLA_FORK_EPOCH,
   DENEB_FORK_EPOCH,
   ELECTRA_FORK_EPOCH,
   FULU_FORK_EPOCH,
+  GLOAS_FORK_EPOCH,
 });
 
 const slots: Record<ForkPostCapella, number> = {
@@ -30,6 +32,7 @@ const slots: Record<ForkPostCapella, number> = {
   deneb: computeStartSlotAtEpoch(DENEB_FORK_EPOCH),
   electra: computeStartSlotAtEpoch(ELECTRA_FORK_EPOCH),
   fulu: computeStartSlotAtEpoch(FULU_FORK_EPOCH),
+  gloas: computeStartSlotAtEpoch(GLOAS_FORK_EPOCH),
 };
 
 type BlockTestSet<F extends ForkPostCapella> = {
@@ -55,7 +58,7 @@ type BlockAndBlobTestSet<F extends ForkPostDeneb = ForkPostDeneb> = BlockTestSet
 function buildBlockAndBlobsTestSet(forkName: ForkPostDeneb, numberOfBlobs: number): BlockAndBlobTestSet<ForkPostDeneb> {
   const {block, blockRoot, rootHex} = buildBlockTestSet<ForkPostDeneb>(forkName);
   const commitments = Array.from({length: numberOfBlobs}, () => Buffer.alloc(48, 0x77));
-  block.message.body.blobKzgCommitments = commitments;
+  (block.message.body as BeaconBlockBody<ForkPostDeneb & ForkPreGloas>).blobKzgCommitments = commitments;
   const signedBlockHeader = signedBlockToSignedHeader(config, block);
   const blobSidecars: deneb.BlobSidecars = [];
   for (const kzgCommitment of commitments) {
@@ -123,7 +126,7 @@ describe("BlockInput", () => {
             blockRootHex: rootHex,
             daOutOfRange: false,
             forkName: ForkName.deneb,
-            seenTimestampSec: Date.now(),
+            seenTimestampSec: Date.now() / 1000,
             source: BlockInputSource.gossip,
           } as AddBlob & CreateBlockInputMeta);
         }
@@ -132,10 +135,8 @@ describe("BlockInput", () => {
           blockRootHex: rootHex,
           daOutOfRange: false,
           forkName: ForkName.deneb,
-          source: {
-            source: BlockInputSource.gossip,
-            seenTimestampSec: Date.now(),
-          },
+          source: BlockInputSource.gossip,
+          seenTimestampSec: Date.now() / 1000,
         } as AddBlock<ForkBlobsDA> & CreateBlockInputMeta);
         for (const blobSidecar of blobSidecars) {
           testArray.push({
@@ -143,7 +144,7 @@ describe("BlockInput", () => {
             blockRootHex: rootHex,
             daOutOfRange: false,
             forkName: ForkName.deneb,
-            seenTimestampSec: Date.now(),
+            seenTimestampSec: Date.now() / 1000,
             source: BlockInputSource.gossip,
           } as AddBlob & CreateBlockInputMeta);
         }

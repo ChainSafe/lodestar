@@ -21,8 +21,8 @@ import {
   createCachedBeaconState,
   interopSecretKey,
   newFilledArray,
+  processSlots,
 } from "../../src/index.js";
-import {processSlots} from "../../src/index.js";
 import {
   BeaconStateAltair,
   BeaconStatePhase0,

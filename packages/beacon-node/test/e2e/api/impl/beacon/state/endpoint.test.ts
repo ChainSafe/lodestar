@@ -1,9 +1,9 @@
+import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {ApiClient, getClient} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeCommitteeCount} from "@lodestar/state-transition";
-import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {BeaconNode} from "../../../../../../src/node/nodejs.js";
 import {LogLevel, testLogger} from "../../../../../utils/logger.js";
 import {getDevBeaconNode} from "../../../../../utils/node/beacon.js";

@@ -1,3 +1,4 @@
+import {concat} from "uint8arrays/concat";
 import {digest} from "@chainsafe/as-sha256";
 import {CompactMultiProof, ProofType, createProof} from "@chainsafe/persistent-merkle-tree";
 import {routes} from "@lodestar/api";
@@ -5,7 +6,6 @@ import {ApplicationMethods} from "@lodestar/api/server";
 import {ForkName} from "@lodestar/params";
 import {RootHex, SyncPeriod, altair} from "@lodestar/types";
 import {notNullish} from "@lodestar/utils";
-import {concat} from "uint8arrays/concat";
 import {BeaconStateAltair} from "../utils/types.js";
 
 type ProofApi = ApplicationMethods<routes.proof.Endpoints>;

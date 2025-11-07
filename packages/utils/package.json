@@ -11,15 +11,26 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.32.0",
+  "version": "1.36.0",
   "type": "module",
-  "exports": "./lib/index.js",
+  "exports": {
+    ".": {
+      "bun": "./src/index.ts",
+      "types": "./lib/index.d.ts",
+      "import": "./lib/index.js"
+    }
+  },
+  "imports": {
+    "#bytes": {
+      "bun": "./src/bytes/bun.ts",
+      "browser": "./lib/bytes/browser.js",
+      "default": "./lib/bytes/nodejs.js"
+    }
+  },
   "files": [
-    "lib/**/*.d.ts",
-    "lib/**/*.js",
-    "lib/**/*.js.map",
-    "*.d.ts",
-    "*.js"
+    "src",
+    "lib",
+    "!**/*.tsbuildinfo"
   ],
   "scripts": {
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",
@@ -37,6 +48,7 @@
   "types": "lib/index.d.ts",
   "dependencies": {
     "@chainsafe/as-sha256": "^1.2.0",
+    "@lodestar/bun": "git+https://github.com/ChainSafe/lodestar-bun.git",
     "any-signal": "^4.1.1",
     "bigint-buffer": "^1.1.5",
     "case": "^1.6.3",

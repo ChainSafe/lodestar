@@ -9,7 +9,6 @@ import {
 } from "@lodestar/params";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {BeaconBlockBody, SSZTypesFor, ssz} from "@lodestar/types";
-
 import {SyncCommitteeWitness} from "./types.js";
 
 export function getSyncCommitteesWitness(fork: ForkName, state: BeaconStateAllForks): SyncCommitteeWitness {

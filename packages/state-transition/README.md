@@ -15,7 +15,7 @@ The beacon state transition and state transition utilities
 ```typescript
 import {CachedBeaconStateAllForks, stateTransition} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {generateState} from "../test/utils/state";
+import {generateState} from "./test/utils/state.js";
 
 // dummy test state
 const preState: CachedBeaconStateAllForks = generateState() as CachedBeaconStateAllForks;

@@ -1,8 +1,8 @@
 import {IncomingMessage} from "node:http";
-import {BooleanType, ContainerType, UintNumberType, ValueOf} from "@chainsafe/ssz";
-import {ErrorAborted, TimeoutError, toBase64} from "@lodestar/utils";
 import {RouteOptions, fastify} from "fastify";
 import {afterEach, describe, expect, it, vi} from "vitest";
+import {BooleanType, ContainerType, UintNumberType, ValueOf} from "@chainsafe/ssz";
+import {ErrorAborted, TimeoutError, toBase64} from "@lodestar/utils";
 import {WireFormat} from "../../../src/index.js";
 import {addSszContentTypeParser} from "../../../src/server/index.js";
 import {HttpClient, RouteDefinitionExtra} from "../../../src/utils/client/index.js";

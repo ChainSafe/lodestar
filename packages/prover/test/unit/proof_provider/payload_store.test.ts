@@ -1,11 +1,10 @@
+import {MockedObject, beforeEach, describe, expect, it, vi} from "vitest";
+import {when} from "vitest-when";
 import {ApiClient, ApiResponse, HttpStatusCode, routes} from "@lodestar/api";
 import {Logger} from "@lodestar/logger";
 import {ForkName} from "@lodestar/params";
 import {ExecutionPayload, SignedBeaconBlock, capella} from "@lodestar/types";
-import {hash} from "@lodestar/utils";
-import {toHexString} from "@lodestar/utils";
-import {MockedObject, beforeEach, describe, expect, it, vi} from "vitest";
-import {when} from "vitest-when";
+import {hash, toHexString} from "@lodestar/utils";
 import {MAX_PAYLOAD_HISTORY} from "../../../src/constants.js";
 import {PayloadStore} from "../../../src/proof_provider/payload_store.js";
 

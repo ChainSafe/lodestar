@@ -1,5 +1,5 @@
 import {DOMAIN_BEACON_PROPOSER} from "@lodestar/params";
-import {SignedBeaconBlock, SignedBlindedBeaconBlock, isBlindedBeaconBlock, phase0, ssz} from "@lodestar/types";
+import {SignedBeaconBlock, SignedBlindedBeaconBlock, Slot, isBlindedBeaconBlock, phase0, ssz} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "../types.js";
 import {computeSigningRoot} from "../util/index.js";
 import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../util/signatureSets.js";
@@ -31,12 +31,27 @@ export function getBlockProposerSignatureSet(
   };
 }
 
-export function getBlockHeaderProposerSignatureSet(
-  state: CachedBeaconStateAllForks,
+export function getBlockHeaderProposerSignatureSetByParentStateSlot(
+  parentState: CachedBeaconStateAllForks,
   signedBlockHeader: phase0.SignedBeaconBlockHeader
+) {
+  return getBlockHeaderProposerSignatureSet(parentState, signedBlockHeader, parentState.slot);
+}
+
+export function getBlockHeaderProposerSignatureSetByHeaderSlot(
+  headState: CachedBeaconStateAllForks,
+  signedBlockHeader: phase0.SignedBeaconBlockHeader
+) {
+  return getBlockHeaderProposerSignatureSet(headState, signedBlockHeader, signedBlockHeader.message.slot);
+}
+
+function getBlockHeaderProposerSignatureSet(
+  state: CachedBeaconStateAllForks,
+  signedBlockHeader: phase0.SignedBeaconBlockHeader,
+  domainSlot: Slot
 ): ISignatureSet {
   const {config, epochCtx} = state;
-  const domain = config.getDomain(state.slot, DOMAIN_BEACON_PROPOSER, signedBlockHeader.message.slot);
+  const domain = config.getDomain(domainSlot, DOMAIN_BEACON_PROPOSER, signedBlockHeader.message.slot);
 
   return {
     type: SignatureSetType.single,

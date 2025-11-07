@@ -1,5 +1,5 @@
-import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {describe} from "vitest";
+import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {getClient} from "../../../src/builder/client.js";
 import {Endpoints} from "../../../src/builder/routes.js";
 import {getRoutes} from "../../../src/builder/server/index.js";

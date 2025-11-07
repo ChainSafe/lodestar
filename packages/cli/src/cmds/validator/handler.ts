@@ -7,7 +7,7 @@ import {
   collectNodeJSMetrics,
   getHttpMetricsServer,
 } from "@lodestar/beacon-node";
-import {LevelDbController} from "@lodestar/db";
+import {LevelDbController} from "@lodestar/db/controller/level";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {
   ProcessShutdownCallback,
@@ -15,12 +15,19 @@ import {
   Validator,
   ValidatorProposerConfig,
   defaultOptions,
+  getMetrics,
 } from "@lodestar/validator";
-import {getMetrics} from "@lodestar/validator";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {GlobalArgs} from "../../options/index.js";
-import {YargsError, cleanOldLogFiles, mkdir, parseLoggerArgs} from "../../util/index.js";
-import {onGracefulShutdown, parseFeeRecipient, parseProposerConfig} from "../../util/index.js";
+import {
+  YargsError,
+  cleanOldLogFiles,
+  mkdir,
+  onGracefulShutdown,
+  parseFeeRecipient,
+  parseLoggerArgs,
+  parseProposerConfig,
+} from "../../util/index.js";
 import {parseBuilderBoostFactor, parseBuilderSelection} from "../../util/proposerConfig.js";
 import {getVersionData} from "../../util/version.js";
 import {KeymanagerApi} from "./keymanager/impl.js";
@@ -167,7 +174,6 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
       doppelgangerProtection,
       afterBlockDelaySlotFraction: args.afterBlockDelaySlotFraction,
       scAfterBlockDelaySlotFraction: args.scAfterBlockDelaySlotFraction,
-      disableAttestationGrouping: args.disableAttestationGrouping,
       valProposerConfig,
       distributed: args.distributed,
       broadcastValidation: parseBroadcastValidation(args.broadcastValidation),

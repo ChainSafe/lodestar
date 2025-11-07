@@ -10,7 +10,7 @@ export function formatNodePeer(peerIdStr: string, connections: Connection[]): ro
   return {
     peerId: conn ? conn.remotePeer.toString() : peerIdStr,
     // TODO: figure out how to get enr of peer
-    enr: "",
+    enr: null,
     lastSeenP2pAddress: conn ? conn.remoteAddr.toString() : "",
     direction: conn ? (conn.direction as routes.node.PeerDirection) : null,
     state: conn ? getPeerState(conn.status) : "disconnected",

@@ -1,7 +1,7 @@
+import {beforeAll, describe, expect, it} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {BLSPubkey, ValidatorIndex, ssz} from "@lodestar/types";
-import {beforeAll, describe, expect, it} from "vitest";
 import {getPubkeysForIndices} from "../../../../../src/api/impl/validator/utils.js";
 
 describe("api / impl / validator / utils", () => {

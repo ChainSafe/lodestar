@@ -2,7 +2,6 @@ import {byteArrayEquals} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {FilterOptions} from "@lodestar/db";
 import {phase0, ssz} from "@lodestar/types";
-
 import {IBeaconDb} from "../db/index.js";
 import {Eth1Error, Eth1ErrorCode} from "./errors.js";
 import {Eth1Block} from "./interface.js";

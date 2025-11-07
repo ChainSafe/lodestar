@@ -952,6 +952,168 @@
         "x": 0,
         "y": 25
       },
+      "id": 572,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(beacon_block_production_consensus_block_value_sum[$rate_interval]))\n/\nsum(rate(beacon_block_production_consensus_block_value_count[$rate_interval]))",
+          "instant": false,
+          "legendFormat": "value",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Consensus block value average",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 25
+      },
+      "id": 573,
+      "options": {
+        "calculate": false,
+        "cellGap": 1,
+        "color": {
+          "exponent": 0.5,
+          "fill": "dark-orange",
+          "mode": "scheme",
+          "reverse": false,
+          "scale": "exponential",
+          "scheme": "Magma",
+          "steps": 64
+        },
+        "exemplars": {
+          "color": "rgba(255,0,255,0.7)"
+        },
+        "filterValues": {
+          "le": 1e-9
+        },
+        "legend": {
+          "show": true
+        },
+        "rowsFrame": {
+          "layout": "auto"
+        },
+        "tooltip": {
+          "mode": "single",
+          "showColorScale": false,
+          "yHistogram": false
+        },
+        "yAxis": {
+          "axisPlacement": "left",
+          "reverse": false
+        }
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(beacon_block_production_consensus_block_value_bucket[$rate_interval])",
+          "format": "heatmap",
+          "instant": false,
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Consensus block value histogram",
+      "type": "heatmap"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 33
+      },
       "id": 511,
       "options": {
         "legend": {
@@ -1117,7 +1279,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 25
+        "y": 33
       },
       "id": 378,
       "options": {
@@ -1203,7 +1365,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 33
+        "y": 41
       },
       "id": 376,
       "options": {
@@ -1288,7 +1450,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 33
+        "y": 41
       },
       "id": 532,
       "options": {
@@ -1391,7 +1553,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 41
+        "y": 49
       },
       "id": 531,
       "options": {
@@ -1476,7 +1638,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 41
+        "y": 49
       },
       "id": 534,
       "options": {
@@ -1527,7 +1689,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 48
+        "y": 56
       },
       "id": 535,
       "options": {
@@ -1641,7 +1803,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 48
+        "y": 56
       },
       "id": 537,
       "options": {
@@ -1734,7 +1896,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 54
+        "y": 62
       },
       "id": 548,
       "options": {
@@ -1818,7 +1980,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 56
+        "y": 64
       },
       "id": 549,
       "options": {
@@ -1858,7 +2020,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 64
+        "y": 72
       },
       "id": 541,
       "panels": [],
@@ -1889,7 +2051,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 65
+        "y": 73
       },
       "id": 543,
       "options": {
@@ -1968,7 +2130,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 65
+        "y": 73
       },
       "id": 545,
       "options": {
@@ -2073,7 +2235,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 73
+        "y": 81
       },
       "id": 539,
       "options": {
@@ -2167,7 +2329,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 73
+        "y": 81
       },
       "id": 564,
       "options": {
@@ -2205,7 +2367,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 81
+        "y": 89
       },
       "id": 555,
       "panels": [],
@@ -2262,7 +2424,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 82
+        "y": 90
       },
       "id": 554,
       "options": {
@@ -2358,7 +2520,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 82
+        "y": 90
       },
       "id": 556,
       "options": {
@@ -2453,7 +2615,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 90
+        "y": 98
       },
       "id": 563,
       "options": {
@@ -2535,7 +2697,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 90
+        "y": 98
       },
       "id": 560,
       "options": {
@@ -2617,7 +2779,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 98
+        "y": 106
       },
       "id": 558,
       "options": {
@@ -2699,7 +2861,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 98
+        "y": 106
       },
       "id": 559,
       "options": {
@@ -2781,7 +2943,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 106
+        "y": 114
       },
       "id": 557,
       "options": {
@@ -2876,7 +3038,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 106
+        "y": 114
       },
       "id": 562,
       "options": {
@@ -2958,7 +3120,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 114
+        "y": 122
       },
       "id": 561,
       "options": {
@@ -2996,7 +3158,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 122
+        "y": 130
       },
       "id": 550,
       "panels": [],
@@ -3053,7 +3215,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 123
+        "y": 131
       },
       "id": 551,
       "options": {
@@ -3200,7 +3362,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 123
+        "y": 131
       },
       "id": 552,
       "options": {
@@ -3282,7 +3444,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 131
+        "y": 139
       },
       "id": 553,
       "options": {
@@ -3320,7 +3482,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 139
+        "y": 147
       },
       "id": 565,
       "panels": [],
@@ -3377,7 +3539,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 140
+        "y": 148
       },
       "id": 566,
       "options": {
@@ -3472,7 +3634,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 140
+        "y": 148
       },
       "id": 571,
       "options": {
@@ -3593,7 +3755,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 148
+        "y": 156
       },
       "id": 569,
       "options": {
@@ -3675,7 +3837,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 148
+        "y": 156
       },
       "id": 570,
       "options": {
@@ -3757,7 +3919,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 156
+        "y": 164
       },
       "id": 567,
       "options": {
@@ -3839,7 +4001,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 156
+        "y": 164
       },
       "id": 568,
       "options": {

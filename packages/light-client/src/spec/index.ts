@@ -12,8 +12,8 @@ import {ProcessUpdateOpts, getSyncCommitteeAtPeriod, processLightClientUpdate} f
 import {ILightClientStore, LightClientStore, LightClientStoreEvents} from "./store.js";
 import {ZERO_HEADER, ZERO_SYNC_COMMITTEE, getZeroFinalityBranch, getZeroSyncCommitteeBranch} from "./utils.js";
 
-export {isBetterUpdate, toLightClientUpdateSummary} from "./isBetterUpdate.js";
 export type {LightClientUpdateSummary} from "./isBetterUpdate.js";
+export {isBetterUpdate, toLightClientUpdateSummary} from "./isBetterUpdate.js";
 export {upgradeLightClientHeader} from "./utils.js";
 
 export class LightclientSpec {

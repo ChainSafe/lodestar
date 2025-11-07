@@ -1,6 +1,6 @@
-import {ContainerType, ValueOf} from "@chainsafe/ssz";
+import {ContainerType, ListBasicType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName} from "@lodestar/params";
+import {ForkName, MAX_BLOB_COMMITMENTS_PER_BLOCK} from "@lodestar/params";
 import {
   Attestation,
   AttesterSlashing,
@@ -19,7 +19,6 @@ import {
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
-
 import {EmptyMeta, EmptyResponseCodec, EmptyResponseData} from "../../utils/codecs.js";
 import {getPostAltairForkTypes, getPostBellatrixForkTypes} from "../../utils/fork.js";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
@@ -37,6 +36,17 @@ export const blobSidecarSSE = new ContainerType(
   {typeName: "BlobSidecarSSE", jsonCase: "eth2"}
 );
 type BlobSidecarSSE = ValueOf<typeof blobSidecarSSE>;
+
+export const dataColumnSidecarSSE = new ContainerType(
+  {
+    blockRoot: stringType,
+    index: ssz.ColumnIndex,
+    slot: ssz.Slot,
+    kzgCommitments: new ListBasicType(stringType, MAX_BLOB_COMMITMENTS_PER_BLOCK),
+  },
+  {typeName: "DataColumnSidecarSSE", jsonCase: "eth2"}
+);
+type DataColumnSidecarSSE = ValueOf<typeof dataColumnSidecarSSE>;
 
 export enum EventType {
   /**
@@ -76,6 +86,8 @@ export enum EventType {
   payloadAttributes = "payload_attributes",
   /** The node has received a valid BlobSidecar (from P2P or API) */
   blobSidecar = "blob_sidecar",
+  /** The node has received a valid DataColumnSidecar (from P2P or API) */
+  dataColumnSidecar = "data_column_sidecar",
 }
 
 export const eventTypes: {[K in EventType]: K} = {
@@ -95,6 +107,7 @@ export const eventTypes: {[K in EventType]: K} = {
   [EventType.lightClientFinalityUpdate]: EventType.lightClientFinalityUpdate,
   [EventType.payloadAttributes]: EventType.payloadAttributes,
   [EventType.blobSidecar]: EventType.blobSidecar,
+  [EventType.dataColumnSidecar]: EventType.dataColumnSidecar,
 };
 
 export type EventData = {
@@ -143,6 +156,7 @@ export type EventData = {
   [EventType.lightClientFinalityUpdate]: {version: ForkName; data: LightClientFinalityUpdate};
   [EventType.payloadAttributes]: {version: ForkName; data: SSEPayloadAttributes};
   [EventType.blobSidecar]: BlobSidecarSSE;
+  [EventType.dataColumnSidecar]: DataColumnSidecarSSE;
 };
 
 export type BeaconEvent = {[K in EventType]: {type: K; message: EventData[K]}}[EventType];
@@ -296,6 +310,7 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
     [EventType.contributionAndProof]: ssz.altair.SignedContributionAndProof,
     [EventType.payloadAttributes]: WithVersion((fork) => getPostBellatrixForkTypes(fork).SSEPayloadAttributes),
     [EventType.blobSidecar]: blobSidecarSSE,
+    [EventType.dataColumnSidecar]: dataColumnSidecarSSE,
 
     [EventType.lightClientOptimisticUpdate]: WithVersion(
       (fork) => getPostAltairForkTypes(fork).LightClientOptimisticUpdate

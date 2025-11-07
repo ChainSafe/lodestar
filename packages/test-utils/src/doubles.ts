@@ -1,5 +1,5 @@
-import {Logger} from "@lodestar/utils";
 import {MockInstance, vi} from "vitest";
+import {Logger} from "@lodestar/utils";
 
 type Callback = () => void;
 type Handler = (cb: Callback) => void;

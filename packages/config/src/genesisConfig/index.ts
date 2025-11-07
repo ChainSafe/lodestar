@@ -5,6 +5,7 @@ import {intToBytes, strip0xPrefix, toHex, xor} from "@lodestar/utils";
 import {ChainForkConfig} from "../beaconConfig.js";
 import {ForkBoundary} from "../forkConfig/types.js";
 import {CachedGenesis, ForkDigestHex} from "./types.js";
+
 export type {ForkDigestContext} from "./types.js";
 
 export function createCachedGenesis(chainForkConfig: ChainForkConfig, genesisValidatorsRoot: Root): CachedGenesis {
@@ -40,7 +41,7 @@ export function createCachedGenesis(chainForkConfig: ChainForkConfig, genesisVal
   return {
     genesisValidatorsRoot,
 
-    getDomain(stateSlot: Slot, domainType: DomainType, messageSlot?: Slot): Uint8Array {
+    getDomain(domainSlot: Slot, domainType: DomainType, messageSlot?: Slot): Uint8Array {
       // ```py
       // def get_domain(state: BeaconState, domain_type: DomainType, epoch: Epoch=None) -> Domain:
       //   """
@@ -51,9 +52,9 @@ export function createCachedGenesis(chainForkConfig: ChainForkConfig, genesisVal
       //   return compute_domain(domain_type, fork_version, state.genesis_validators_root)
       // ```
 
-      const epoch = Math.floor((messageSlot ?? stateSlot) / SLOTS_PER_EPOCH);
+      const epoch = Math.floor((messageSlot ?? domainSlot) / SLOTS_PER_EPOCH);
       // Get pre-computed fork schedule, which _should_ match the one in the state
-      const stateForkInfo = chainForkConfig.getForkInfo(stateSlot);
+      const stateForkInfo = chainForkConfig.getForkInfo(domainSlot);
       // Only allow to select either current or previous fork respective of the fork schedule at stateSlot
       const forkName = epoch < stateForkInfo.epoch ? stateForkInfo.prevForkName : stateForkInfo.name;
       const forkInfo = chainForkConfig.forks[forkName];

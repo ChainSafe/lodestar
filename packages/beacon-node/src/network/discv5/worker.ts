@@ -1,20 +1,18 @@
-import fs from "node:fs";
-import path from "node:path";
 import worker from "node:worker_threads";
-import {Discv5} from "@chainsafe/discv5";
+import {privateKeyFromProtobuf} from "@libp2p/crypto/keys";
+import {peerIdFromPrivateKey} from "@libp2p/peer-id";
+import {Multiaddr, multiaddr} from "@multiformats/multiaddr";
+import {Discv5, Discv5EventEmitter} from "@chainsafe/discv5";
 import {ENR, ENRData, SignableENR, SignableENRData} from "@chainsafe/enr";
 import {Observable, Subject} from "@chainsafe/threads/observable";
 import {expose} from "@chainsafe/threads/worker";
-import {privateKeyFromProtobuf} from "@libp2p/crypto/keys";
-import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {createBeaconConfig} from "@lodestar/config";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {Gauge} from "@lodestar/utils";
-import {Multiaddr, multiaddr} from "@multiformats/multiaddr";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {collectNodeJSMetrics} from "../../metrics/nodeJsMetrics.js";
 import {Clock} from "../../util/clock.js";
-import {profileNodeJS, writeHeapSnapshot} from "../../util/profile.js";
+import {ProfileThread, profileThread, writeHeapSnapshot} from "../../util/profile.js";
 import {Discv5WorkerApi, Discv5WorkerData} from "./types.js";
 import {ENRRelevance, enrRelevance} from "./utils.js";
 
@@ -59,7 +57,7 @@ const discv5 = Discv5.create({
   },
   config: workerData.config,
   metricsRegistry,
-});
+}) as Discv5 & Discv5EventEmitter;
 
 // Load boot enrs
 for (const bootEnr of workerData.bootEnrs) {
@@ -93,13 +91,13 @@ const module: Discv5WorkerApi = {
     discv5.enr.set(key, value);
   },
   async kadValues(): Promise<ENRData[]> {
-    return discv5.kadValues().map((enr) => enr.toObject());
+    return discv5.kadValues().map((enr: ENR) => enr.toObject());
   },
   async discoverKadValues(): Promise<void> {
     discv5.kadValues().map(onDiscovered);
   },
   async findRandomNode(): Promise<ENRData[]> {
-    return (await discv5.findRandomNode()).map((enr) => enr.toObject());
+    return (await discv5.findRandomNode()).map((enr: ENR) => enr.toObject());
   },
   discovered() {
     return Observable.from(subject);
@@ -108,10 +106,7 @@ const module: Discv5WorkerApi = {
     return (await metricsRegistry?.metrics()) ?? "";
   },
   writeProfile: async (durationMs: number, dirpath: string) => {
-    const profile = await profileNodeJS(durationMs);
-    const filePath = path.join(dirpath, `discv5_thread_${new Date().toISOString()}.cpuprofile`);
-    fs.writeFileSync(filePath, profile);
-    return filePath;
+    return profileThread(ProfileThread.DISC5, durationMs, dirpath);
   },
   writeHeapSnapshot: async (prefix: string, dirpath: string) => {
     return writeHeapSnapshot(prefix, dirpath);

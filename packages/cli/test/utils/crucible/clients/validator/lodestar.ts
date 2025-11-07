@@ -2,8 +2,7 @@ import {writeFile} from "node:fs/promises";
 import path from "node:path";
 import {getClient as keyManagerGetClient} from "@lodestar/api/keymanager";
 import {chainConfigToJson} from "@lodestar/config";
-import {LogLevel} from "@lodestar/utils";
-import {fetch} from "@lodestar/utils";
+import {LogLevel, fetch} from "@lodestar/utils";
 import {defaultOptions} from "@lodestar/validator";
 import {IValidatorCliArgs} from "../../../../../src/cmds/validator/options.js";
 import {GlobalArgs} from "../../../../../src/options/globalOptions.js";
@@ -60,7 +59,7 @@ export const generateLodestarValidatorNode: ValidatorNodeGenerator<ValidatorClie
           path.join(rootDir, "params.json"),
         ],
         env: {
-          DEBUG: process.env.DISABLE_DEBUG_LOGS ? "" : "*,-winston:*",
+          DEBUG: process.env.ENABLE_DEBUG_LOGS ? "*,-winston:*" : "",
         },
       },
       logs: {

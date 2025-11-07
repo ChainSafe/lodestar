@@ -1,5 +1,6 @@
-import {PeerIdStr} from "@chainsafe/libp2p-gossipsub/types";
 import {Message, TopicValidatorResult} from "@libp2p/interface";
+import {Libp2p} from "libp2p";
+import {PeerIdStr} from "@chainsafe/libp2p-gossipsub/types";
 import {BeaconConfig, ForkBoundary} from "@lodestar/config";
 import {
   AttesterSlashing,
@@ -13,10 +14,10 @@ import {
   altair,
   capella,
   deneb,
+  fulu,
   phase0,
 } from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
-import {Libp2p} from "libp2p";
 import {AttestationError, AttestationErrorType} from "../../chain/errors/attestationError.js";
 import {GossipActionError} from "../../chain/errors/gossipValidation.js";
 import {IBeaconChain} from "../../chain/index.js";
@@ -25,6 +26,7 @@ import {JobItemQueue} from "../../util/queue/index.js";
 export enum GossipType {
   beacon_block = "beacon_block",
   blob_sidecar = "blob_sidecar",
+  data_column_sidecar = "data_column_sidecar",
   beacon_aggregate_and_proof = "beacon_aggregate_and_proof",
   beacon_attestation = "beacon_attestation",
   voluntary_exit = "voluntary_exit",
@@ -56,6 +58,7 @@ export interface IGossipTopic {
 export type GossipTopicTypeMap = {
   [GossipType.beacon_block]: {type: GossipType.beacon_block};
   [GossipType.blob_sidecar]: {type: GossipType.blob_sidecar; subnet: SubnetID};
+  [GossipType.data_column_sidecar]: {type: GossipType.data_column_sidecar; subnet: SubnetID};
   [GossipType.beacon_aggregate_and_proof]: {type: GossipType.beacon_aggregate_and_proof};
   [GossipType.beacon_attestation]: {type: GossipType.beacon_attestation; subnet: SubnetID};
   [GossipType.voluntary_exit]: {type: GossipType.voluntary_exit};
@@ -88,6 +91,7 @@ export type GossipTypeMap = {
   [GossipType.blob_sidecar]: deneb.BlobSidecar;
   [GossipType.beacon_aggregate_and_proof]: SignedAggregateAndProof;
   [GossipType.beacon_attestation]: SingleAttestation;
+  [GossipType.data_column_sidecar]: fulu.DataColumnSidecar;
   [GossipType.voluntary_exit]: phase0.SignedVoluntaryExit;
   [GossipType.proposer_slashing]: phase0.ProposerSlashing;
   [GossipType.attester_slashing]: AttesterSlashing;
@@ -103,6 +107,7 @@ export type GossipFnByType = {
   [GossipType.blob_sidecar]: (blobSidecar: deneb.BlobSidecar) => Promise<void> | void;
   [GossipType.beacon_aggregate_and_proof]: (aggregateAndProof: SignedAggregateAndProof) => Promise<void> | void;
   [GossipType.beacon_attestation]: (attestation: SingleAttestation) => Promise<void> | void;
+  [GossipType.data_column_sidecar]: (dataColumnSidecar: fulu.DataColumnSidecar) => Promise<void> | void;
   [GossipType.voluntary_exit]: (voluntaryExit: phase0.SignedVoluntaryExit) => Promise<void> | void;
   [GossipType.proposer_slashing]: (proposerSlashing: phase0.ProposerSlashing) => Promise<void> | void;
   [GossipType.attester_slashing]: (attesterSlashing: AttesterSlashing) => Promise<void> | void;
@@ -145,6 +150,8 @@ export type GossipMessageInfo = {
   topic: GossipTopic;
   msg: Message;
   propagationSource: PeerIdStr;
+  clientAgent: string;
+  clientVersion: string;
   seenTimestampSec: number;
   msgSlot: Slot | null;
   indexed?: string;
@@ -204,7 +211,7 @@ export type BatchGossipHandler<K extends GossipType> = (
   gossipHandlerParams: GossipHandlerParamGeneric<K>[]
 ) => Promise<(null | GossipActionError<AttestationErrorType>)[]>;
 
-// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+// biome-ignore lint/suspicious/noExplicitAny: Need the usage of `any` here to infer any type
 export type ResolvedType<F extends (...args: any) => Promise<any>> = F extends (...args: any) => Promise<infer T>
   ? T
   : never;

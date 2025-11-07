@@ -1,11 +1,11 @@
 import {randomBytes} from "node:crypto";
 import fs from "node:fs";
+import tmp from "tmp";
+import {beforeEach, describe, expect, it, vi} from "vitest";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {SecretKey} from "@chainsafe/blst";
 import {interopSecretKey} from "@lodestar/state-transition";
 import {SignerLocal, SignerType} from "@lodestar/validator";
-import tmp from "tmp";
-import {beforeEach, describe, expect, it, vi} from "vitest";
 import {LocalKeystoreDefinition} from "../../../../../src/cmds/validator/keymanager/interface.js";
 import {loadKeystoreCache, writeKeystoreCache} from "../../../../../src/cmds/validator/keymanager/keystoreCache.js";
 

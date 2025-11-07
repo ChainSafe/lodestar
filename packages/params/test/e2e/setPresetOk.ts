@@ -3,6 +3,7 @@
 
 // 1. Import from @lodestar/params/setPreset only
 import {PresetName, setActivePreset} from "../../src/setPreset.js";
+
 setActivePreset(PresetName.minimal);
 
 // 2. Import from any other @lodestar/params paths

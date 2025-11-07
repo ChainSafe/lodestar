@@ -1,3 +1,4 @@
+import {afterEach, describe, expect, it, vi} from "vitest";
 import {CompactMultiProof, computeDescriptor} from "@chainsafe/persistent-merkle-tree";
 import {JsonPath, toHexString} from "@chainsafe/ssz";
 import {ApiClient, getClient, routes} from "@lodestar/api";
@@ -6,7 +7,6 @@ import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateAllForks, BeaconStateAltair} from "@lodestar/state-transition";
 import {altair, ssz} from "@lodestar/types";
-import {afterEach, describe, expect, it, vi} from "vitest";
 import {Lightclient, LightclientEvent} from "../../src/index.js";
 import {LightClientRestTransport} from "../../src/transport/rest.js";
 import {computeSyncPeriodAtSlot} from "../../src/utils/clock.js";
@@ -35,7 +35,7 @@ describe("sync", () => {
   });
 
   it("Sync lightclient and track head", async () => {
-    const SECONDS_PER_SLOT = 2;
+    const SLOT_DURATION_MS = 2000;
     const ALTAIR_FORK_EPOCH = 0;
 
     const initialPeriod = 0;
@@ -45,8 +45,8 @@ describe("sync", () => {
     const targetSlot = firstHeadSlot + slotsIntoPeriod;
 
     // Genesis data such that targetSlot is at the current clock slot
-    const chainConfig: ChainConfig = {...chainConfigDef, SECONDS_PER_SLOT, ALTAIR_FORK_EPOCH};
-    const genesisTime = Math.floor(Date.now() / 1000) - chainConfig.SECONDS_PER_SLOT * targetSlot;
+    const chainConfig: ChainConfig = {...chainConfigDef, SLOT_DURATION_MS, ALTAIR_FORK_EPOCH};
+    const genesisTime = Math.floor(Date.now() / 1000) - (chainConfig.SLOT_DURATION_MS / 1000) * targetSlot;
     const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
     const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
 

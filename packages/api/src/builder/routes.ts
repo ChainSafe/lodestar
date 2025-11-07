@@ -13,7 +13,6 @@ import {
   ssz,
 } from "@lodestar/types";
 import {fromHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
-
 import {
   ArrayOf,
   EmptyArgs,

@@ -114,6 +114,7 @@ const sidebars: SidebarsConfig = {
             "contribution/testing/index",
             "contribution/testing/end-to-end-tests",
             "contribution/testing/integration-tests",
+            "contribution/testing/kurtosis",
             "contribution/testing/performance-tests",
             "contribution/testing/simulation-tests",
             "contribution/testing/spec-tests",

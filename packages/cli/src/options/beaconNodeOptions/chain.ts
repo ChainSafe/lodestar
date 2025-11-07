@@ -29,12 +29,13 @@ export type ChainArgs = {
   "chain.minSameMessageSignatureSetsToBatch"?: number;
   "chain.maxShufflingCacheEpochs"?: number;
   "chain.archiveStateEpochFrequency": number;
-  "chain.archiveBlobEpochs"?: number;
+  "chain.archiveDataEpochs"?: number;
   "chain.archiveMode": ArchiveMode;
   "chain.nHistoricalStates"?: boolean;
   "chain.nHistoricalStatesFileDataStore"?: boolean;
   "chain.maxBlockStates"?: number;
   "chain.maxCPStateEpochsInMemory"?: number;
+  "chain.maxCPStateEpochsOnDisk"?: number;
 
   "chain.pruneHistory"?: boolean;
 };
@@ -49,10 +50,10 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     disableBlsBatchVerify: args["chain.disableBlsBatchVerify"],
     persistProducedBlocks: args["chain.persistProducedBlocks"],
     persistInvalidSszObjects: args["chain.persistInvalidSszObjects"],
-    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+    // biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
     persistInvalidSszObjectsDir: undefined as any,
     persistOrphanedBlocks: args["chain.persistOrphanedBlocks"],
-    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+    // biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
     persistOrphanedBlocksDir: undefined as any,
     proposerBoost: args["chain.proposerBoost"],
     proposerBoostReorg: args["chain.proposerBoostReorg"],
@@ -69,13 +70,14 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
       args["chain.minSameMessageSignatureSetsToBatch"] ?? defaultOptions.chain.minSameMessageSignatureSetsToBatch,
     maxShufflingCacheEpochs: args["chain.maxShufflingCacheEpochs"] ?? defaultOptions.chain.maxShufflingCacheEpochs,
     archiveStateEpochFrequency: args["chain.archiveStateEpochFrequency"],
-    archiveBlobEpochs: args["chain.archiveBlobEpochs"],
+    archiveDataEpochs: args["chain.archiveDataEpochs"],
     archiveMode: args["chain.archiveMode"] ?? defaultOptions.chain.archiveMode,
     nHistoricalStates: args["chain.nHistoricalStates"] ?? defaultOptions.chain.nHistoricalStates,
     nHistoricalStatesFileDataStore:
       args["chain.nHistoricalStatesFileDataStore"] ?? defaultOptions.chain.nHistoricalStatesFileDataStore,
     maxBlockStates: args["chain.maxBlockStates"] ?? defaultOptions.chain.maxBlockStates,
     maxCPStateEpochsInMemory: args["chain.maxCPStateEpochsInMemory"] ?? defaultOptions.chain.maxCPStateEpochsInMemory,
+    maxCPStateEpochsOnDisk: args["chain.maxCPStateEpochsOnDisk"] ?? defaultOptions.chain.maxCPStateEpochsOnDisk,
     pruneHistory: args["chain.pruneHistory"],
   };
 }
@@ -275,8 +277,10 @@ Will double processing times. Use only for debugging purposes.",
     group: "chain",
   },
 
-  "chain.archiveBlobEpochs": {
-    description: "Number of epochs to retain finalized blobs (minimum of MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS)",
+  "chain.archiveDataEpochs": {
+    alias: "chain.archiveBlobEpochs",
+    description:
+      "Number of epochs to retain finalized blobs/columns (minimum of MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS/MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS)",
     type: "number",
     group: "chain",
   },
@@ -314,8 +318,15 @@ Will double processing times. Use only for debugging purposes.",
     group: "chain",
   },
 
-  "chain.pruneHistory": {
+  "chain.maxCPStateEpochsOnDisk": {
     hidden: true,
+    description: "Max epochs to cache checkpoint states on disk, used for PersistentCheckpointStateCache",
+    type: "number",
+    default: defaultOptions.chain.maxCPStateEpochsOnDisk,
+    group: "chain",
+  },
+
+  "chain.pruneHistory": {
     description: "Prune historical blocks and state",
     type: "boolean",
     default: defaultOptions.chain.pruneHistory,

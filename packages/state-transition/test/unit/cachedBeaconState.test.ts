@@ -1,10 +1,10 @@
+import {describe, expect, it, vi} from "vitest";
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {fromHexString} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
-import {describe, expect, it, vi} from "vitest";
 import {createCachedBeaconState, loadCachedBeaconState} from "../../src/cache/stateCache.js";
 import {modifyStateSameValidator, newStateWithValidators} from "../utils/capella.js";
 import {interopPubkeysCached} from "../utils/interop.js";
