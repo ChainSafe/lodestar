@@ -3,7 +3,13 @@ import {StrictEventEmitter} from "strict-event-emitter-types";
 import {ByteVectorType} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {BeaconStateAllForks, computeAnchorCheckpoint} from "@lodestar/state-transition";
+import {
+  BeaconStateAllForks,
+  computeAnchorCheckpoint,
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
+  isStartSlotOfEpoch,
+} from "@lodestar/state-transition";
 import {
   BeaconBlockHeader,
   Root,
@@ -14,7 +20,7 @@ import {
   fulu,
   phase0,
 } from "@lodestar/types";
-import {ErrorAborted, Logger, prettyPrintIndices, toRootHex} from "@lodestar/utils";
+import {ErrorAborted, Logger, prettyPrintIndices, sleep, toHex, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/index.js";
 import {IBeaconDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/metrics.js";
@@ -101,7 +107,7 @@ type PeerBackfillSyncMeta = PeerSyncMeta & {
   score: number;
   // requestsInFlight: number; // rethink will it be really useful
   // For round-robin distribution
-  lastSlotRequested: number;
+  lastSlotRequested: number; // change to lastEpochRequested and adapt usage accordingly
   failedRequests: number;
   avgResTime: number;
 };
@@ -176,27 +182,74 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
   ): Promise<T> {
     const {config, anchorState, wsCheckpoint, logger} = modules;
 
-    const {checkpoint: anchorCp} = computeAnchorCheckpoint(config, anchorState);
-    const anchorBlockParentRoot = anchorState.latestBlockHeader.toValue().parentRoot;
-    const anchorSlot = anchorState.latestBlockHeader.slot;
-    // Assumptions: anchor is meant to be
-    const syncAnchor = {
-      anchorBlockParentRoot,
-      anchorBlock: null,
-      anchorBlockRoot: anchorCp.root, // this may help
-      anchorSlot,
-      lastBackSyncedBlock: null,
-    };
+    const prevBackfillRange = await modules.db.backfillRange.get();
+
+    let syncAnchor: BackFillSyncAnchor;
+
+    if (prevBackfillRange) {
+      // the beggining and ending epoch slots must be in blockarchive.
+      // beginningEpoch is always greater than endingEpoch
+      const anchorBlock = await modules.db.blockArchive.get(computeStartSlotAtEpoch(prevBackfillRange.endingEpoch));
+
+      if (anchorBlock) {
+        modules.logger.info("Got prevBackfillRange from db, using it to set anchor block: ", {...prevBackfillRange});
+        const blockRoot = modules.config
+          .getForkTypes(anchorBlock.message.slot)
+          .BeaconBlock.hashTreeRoot(anchorBlock.message);
+        syncAnchor = {
+          anchorBlockParentRoot: anchorBlock?.message.parentRoot,
+          anchorBlock,
+          anchorBlockRoot: blockRoot, // this may help
+          anchorSlot: anchorBlock?.message.slot,
+          lastBackSyncedBlock: {slot: anchorBlock.message.slot, root: blockRoot, block: anchorBlock},
+        };
+      } else {
+        // handle more gracefully, most prob by resetting the backfillrange using anchorState
+        // throw Error("Invalid prevBackfillRange in db.");
+        modules.logger.error("Invalid prevBackfillRange in db. Reinitializing backfill states using anchorState.");
+        // use anchor from modules
+        const {checkpoint: anchorCp} = computeAnchorCheckpoint(config, anchorState);
+        const anchorBlockParentRoot = anchorState.latestBlockHeader.toValue().parentRoot;
+        const anchorSlot = anchorState.latestBlockHeader.slot;
+        syncAnchor = {
+          anchorBlockParentRoot,
+          anchorBlock: null,
+          anchorBlockRoot: anchorCp.root, // this may help
+          anchorSlot,
+          lastBackSyncedBlock: null,
+        };
+        // Initialize backfill states to maintain point of reference for future
+        await modules.db.backfillRange.put({beginningEpoch: anchorCp.epoch, endingEpoch: anchorCp.epoch});
+        await modules.db.backfillState.put(anchorCp.epoch, {hasBlock: true, hasBlobs: true, columnIndices: []});
+      }
+    } else {
+      // Todo: Remove this duplicate code.
+      modules.logger.warn("prevBackfillRange absent in db. Initializing backfill states using anchorState.");
+      // use anchor from modules
+      const {checkpoint: anchorCp} = computeAnchorCheckpoint(config, anchorState);
+      const anchorBlockParentRoot = anchorState.latestBlockHeader.toValue().parentRoot;
+      const anchorSlot = anchorState.latestBlockHeader.slot;
+      syncAnchor = {
+        anchorBlockParentRoot,
+        anchorBlock: null,
+        anchorBlockRoot: anchorCp.root, // this may help
+        anchorSlot,
+        lastBackSyncedBlock: null,
+      };
+      // Initialize backfill states to maintain point of reference for future
+      await modules.db.backfillRange.put({beginningEpoch: anchorCp.epoch, endingEpoch: anchorCp.epoch});
+      await modules.db.backfillState.put(anchorCp.epoch, {hasBlock: true, hasBlobs: true, columnIndices: []});
+    }
 
     // ***************
-    // Already present: anchorState, anchorCp.epoch, anchorCp.root, anchorSlot, wsCheckpoint
+    // Already present: anchorState, anchorCp.epoch, anchorCp.root, anchorSlot, wsCheckpoint, anchorBlockHeader
     // Might be present: anchorBlock
     // Must be present: anchorChildBlock
 
-    const backfillStartFromSlot = anchorSlot;
+    const backfillStartFromSlot = syncAnchor?.anchorSlot;
     logger.info("Initializing from Checkpoint", {
-      root: toRootHex(anchorCp.root),
-      epoch: anchorCp.epoch,
+      root: toRootHex(syncAnchor?.anchorBlockRoot),
+      epoch: computeEpochAtSlot(syncAnchor?.anchorSlot),
       backfillStartFromSlot,
     });
 
@@ -301,8 +354,16 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
         // Mark: B
 
         const currRequiredSlot = this.syncAnchor.lastBackSyncedBlock?.slot ?? this.backfillStartFromSlot;
-        const batchSize = this.opts.backfillBatchSize;
+        // Todo: Allow users to configure batchSize
+        // default: 32 slots (1 epoch)
+        const batchSize = isStartSlotOfEpoch(currRequiredSlot) ? 32 : currRequiredSlot % SLOTS_PER_EPOCH;
         const batchStartSlot = Math.max(0, currRequiredSlot - batchSize);
+        // Ex:
+        // 0-31, 32-63, 64-95, 96-127, 128-...
+        // (epoch 2) 64-32=32 // (epoch 3) 68-(68%32)=68-4=64
+        // batchSize: 32      // batchSize: 4
+        // batchStartSlot: 32 // batchStartSlot: 64
+
         // Flow:
         // send beacon_blocks_by_range request
         // validate blocks
@@ -331,6 +392,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
             startSlot: req.startSlot,
             count: req.count,
             endSlot: batchStartSlot + batchSize - 1,
+            epoch: computeEpochAtSlot(req.startSlot),
             currRequiredSlot,
             lastBackSyncedBlockSlot: this.syncAnchor.lastBackSyncedBlock?.slot,
             backfillStartFromSlot: this.backfillStartFromSlot,
@@ -344,9 +406,11 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
             // resDetails:
             iteration: iterationCount,
             resTimeMs: resTime,
-            blocksReceived: res.length,
-            startSlot: req.startSlot,
-            endSlot: req.startSlot + req.count - 1,
+            blocksReceived: res?.length,
+            startSlot: res[0]?.data.message.slot,
+            // biome-ignore lint/style/useAtIndex: this is correct
+            endSlot: res[res?.length - 1]?.data.message.slot,
+            epoch: computeEpochAtSlot(res[0]?.data.message.slot),
             // peerDetails:
             peer: goodPeer,
             client: goodPeerMetaData?.client,
@@ -362,16 +426,18 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
           // Log first and last block details
           if (res.length > 0) {
             this.logger.info("Batch block details", {
-              firstBlockSlot: res[0].data.message.slot,
-              // biome-ignore lint/style/useAtIndex: this is correct
-              lastBlockSlot: res[res.length - 1].data.message.slot,
-              totalBlocks: res.length,
+              slots: res
+                .map((elem) => {
+                  return elem.data.message.slot;
+                })
+                .toString(),
             });
           } else {
             this.logger.error("Empty blocks response", {
               peer: goodPeer,
               ...req,
             });
+            // Todo: fix this. throwing when only one slot is requested and it is actually missed slot.
             throw Error("Empty blocks response");
           }
           // DEBUG_CODE
@@ -409,6 +475,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
             startSlot: req.startSlot,
             count: req.count,
             endSlot: batchStartSlot + batchSize - 1,
+            epoch: computeEpochAtSlot(req.startSlot),
             lastBackSyncedBlockSlot: this.syncAnchor.lastBackSyncedBlock?.slot,
             backfillStartFromSlot: this.backfillStartFromSlot,
           });
@@ -450,11 +517,23 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
         // Mark: E
 
         try {
+          // Todo: handle this in some way. Do we really need to discard the incomplete res?
+          // missing last slots and missing intermediate slots in response will throw `BackfillSyncErrorCode.NOT_ANCHORED`
+          // and `BackfillSyncErrorCode.NOT_LINEAR` errors respectively, except when there is an actual missed slot
+          // we need to check only if first slot is present to ensure the whole sequence is present.
+          // but first slot can also be empty, so need to figure out some workaround.
+          // if (res?.length !== req.count) throw Error("Didn't recieve full sequence, Retry!");
+
           const anchorParentRoot = this.syncAnchor.anchorBlockParentRoot;
-          // Note that blocks in res are in reverse order
+          // nextAnchor is present in the sequence
           const {nextAnchor, verifiedBlocks /* , error */} = verifyBlockSequence(this.config, res, anchorParentRoot);
+          // Note that blocks in both res and verifiedBlocks are in reverse order now, because the
+          // blocks.reverse() inside verifyBlockSequence() mutates the original data.
+
           // Mark: F
+          // Todo: fix this. throwing when only one slot is requested and it is actually missed slot.
           if (!nextAnchor || verifiedBlocks?.length === 0) throw Error("Didn't receive nextAnchor. Retry!");
+
           this.logger.info("Verified Block Sequence", {
             nextAnchor: nextAnchor?.slot,
             verifiedBlocks: verifiedBlocks?.length,
@@ -464,12 +543,13 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
             verifiedBlocksStart: verifiedBlocks[0].data.message.slot,
             // biome-ignore lint/style/useAtIndex: this is correct
             verifiedBlocksEnd: verifiedBlocks[verifiedBlocks.length - 1].data.message.slot,
-            // error: error,
+            epoch: computeEpochAtSlot(verifiedBlocks[0].data.message.slot),
           });
 
           await verifyBlockProposerSignature(this.chain.bls, this.chain.getHeadState(), verifiedBlocks);
           this.logger.info("Verified Block Proposer Signatures.");
 
+          // Todo: Move persistence out of this validation try catch block
           // Mark: G
           // Store in db: blockarchive in the format: KeyValue<Slot, SignedBeaconBlock>[]
           try {
@@ -489,9 +569,81 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
               firstBlockSlot: verifiedBlocks[0].data.message.slot,
               // biome-ignore lint/style/useAtIndex: this is correct
               lastBlockSlot: verifiedBlocks[verifiedBlocks?.length - 1].data.message.slot,
+              epoch: computeEpochAtSlot(verifiedBlocks[0].data.message.slot),
             });
             throw error as Error;
           }
+          // Mark: H
+
+          // Todo: Think about how to initialize these on node startup
+
+          // Update BackfillRange
+          const t1 = Date.now();
+          const prevBackfillRange = await this.db.backfillRange.get();
+          if (!prevBackfillRange) {
+            // this shouldn't happen as we are initializing in init fn
+            this.db.backfillRange.put({
+              beginningEpoch: computeEpochAtSlot(this.syncAnchor?.anchorSlot!),
+              endingEpoch: computeEpochAtSlot(nextAnchor.slot),
+            });
+            // DEBUG_CODE
+            this.logger.warn("This shouldn't happen here. Initialized backfillRange: ", {
+              beginningEpoch: computeEpochAtSlot(this.syncAnchor?.anchorSlot!),
+              endingEpoch: computeEpochAtSlot(nextAnchor.slot),
+            });
+            // DEBUG_CODE
+          } else {
+            this.db.backfillRange.put({
+              beginningEpoch: prevBackfillRange.beginningEpoch,
+              endingEpoch: computeEpochAtSlot(nextAnchor.slot),
+            });
+
+            // DEBUG_CODE
+            this.logger.info("Updated backfillRange: ", {
+              beginningEpoch: prevBackfillRange.beginningEpoch,
+              endingEpoch: computeEpochAtSlot(nextAnchor.slot),
+            });
+            // DEBUG_CODE
+          }
+          const t2 = Date.now();
+          this.logger.info("Update backfill range: ", {updateTime: t2 - t1});
+
+          // Update BackfillState
+          const t3 = Date.now();
+          const prevBackfillStateData = await this.db.backfillState.get(computeEpochAtSlot(nextAnchor.slot));
+          if (!prevBackfillStateData) {
+            const backfillStateData = {
+              hasBlock: true,
+              hasBlobs: false,
+              columnIndices: [],
+            };
+            await this.db.backfillState.put(computeEpochAtSlot(nextAnchor.slot), backfillStateData);
+            this.logger.info("Updated backfillState:", {
+              epoch: computeEpochAtSlot(nextAnchor.slot),
+              hasBlock: backfillStateData.hasBlock,
+              hasBlobs: backfillStateData.hasBlobs,
+              columns: prettyPrintIndices(backfillStateData.columnIndices),
+            });
+          } else {
+            const updatedStateData = {
+              ...prevBackfillStateData,
+              hasblock: true,
+            };
+            await this.db.backfillState.put(computeEpochAtSlot(nextAnchor.slot), updatedStateData);
+            this.logger.info("Updated backfillState:", {
+              epoch: computeEpochAtSlot(nextAnchor.slot),
+              hasBlock: updatedStateData.hasBlock,
+              hasBlobs: updatedStateData.hasBlobs,
+              columns: prettyPrintIndices(updatedStateData.columnIndices || []),
+              // prevBackfillStateData:
+              prevhasBlock: prevBackfillStateData.hasBlock,
+              prevhasBlobs: prevBackfillStateData.hasBlobs,
+              prevcolumns: prettyPrintIndices(prevBackfillStateData.columnIndices || []),
+            });
+          }
+          const t4 = Date.now();
+          this.logger.info("Update backfill state: ", {updateTime: t4 - t3});
+          // DEBUG_CODE
 
           // Update lastBackSyncedBlock
           this.syncAnchor = {
@@ -502,13 +654,20 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
             anchorSlot: nextAnchor?.slot,
           };
 
-          // Mark: H
-          // Todo: update db singleton object: BackfillRange and BackfillState
-          // Todo: Think about how to initialize these on node startup
+          // DEBUG_CODE
+          this.logger.info("Updated syncAnchor: ", {
+            lastBackSyncedBlockSlot: nextAnchor?.slot,
+            anchorBlockSlot: nextAnchor?.block.message.slot,
+            anchorBlockParentRoot: toHex(nextAnchor?.block.message.parentRoot),
+            anchorBlockRoot: toHex(nextAnchor?.root),
+            anchorSlot: nextAnchor?.slot,
+          });
+          // DEBUG_CODE
+
           // Todo: update earliestAvailableSlot
           // Mark: I
         } catch (validErr) {
-          this.logger.error("Block Sequence verification failed", {
+          this.logger.error("Block Sequence verification or persistence failed", {
             anchorBlockSlot: this.syncAnchor.anchorSlot,
             anchorParentRoot: this.syncAnchor.anchorBlockParentRoot.toString(),
             firstBlockSlot: res[0]?.data.message.slot,
@@ -554,6 +713,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       } finally {
         // if (this.status !== BackfillSyncStatus.aborted) this.processor.trigger(); ?
         // sleep for sometime
+        // await sleep(5000, this.signal);
         await new Promise((resolve) => setTimeout(resolve, 5000));
       }
     }
@@ -712,7 +872,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       // if lastSlotRequest is very recent
       if (
         meta.lastSlotRequested !== 0 &&
-        Math.abs(meta.lastSlotRequested - currRequiredSlot) < this.opts.backfillBatchSize
+        Math.abs(meta.lastSlotRequested - currRequiredSlot) < 2 * 32 // this.opts.backfillBatchSize
       ) {
         // DEBUG_CODE
         // this.logger.info("Skipping recently used peer", {
