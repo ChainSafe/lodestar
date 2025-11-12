@@ -16,12 +16,6 @@
       "import": "./lib/index.js"
     }
   },
-  "imports": {
-    "#hashtree-hasher": {
-      "bun": "./src/util/hasher_bun.ts",
-      "import": "./lib/util/hasher_nodejs.js"
-    }
-  },
   "files": [
     "src",
     "lib",
@@ -77,7 +71,6 @@
     "@libp2p/peer-id": "^5.1.0",
     "@lodestar/api": "^1.36.0",
     "@lodestar/beacon-node": "^1.36.0",
-    "@lodestar/bun": "git+https://github.com/ChainSafe/lodestar-bun.git",
     "@lodestar/config": "^1.36.0",
     "@lodestar/db": "^1.36.0",
     "@lodestar/light-client": "^1.36.0",

@@ -83,10 +83,6 @@
     "#datastore-wrapper": {
       "bun": "./src/network/peers/datastore_bun.ts",
       "default": "datastore-level"
-    },
-    "#snappy": {
-      "bun": "./src/network/gossip/snappy_bun.ts",
-      "default": "snappyjs"
     }
   },
   "files": [
@@ -145,7 +141,6 @@
     "@libp2p/prometheus-metrics": "^4.3.15",
     "@libp2p/tcp": "^10.1.8",
     "@lodestar/api": "^1.36.0",
-    "@lodestar/bun": "git+https://github.com/ChainSafe/lodestar-bun.git",
     "@lodestar/config": "^1.36.0",
     "@lodestar/db": "^1.36.0",
     "@lodestar/fork-choice": "^1.36.0",

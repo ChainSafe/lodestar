@@ -1,4 +1,4 @@
-import {compress} from "#snappy";
+import {compress} from "snappyjs";
 import {ChunkType, IDENTIFIER_FRAME, UNCOMPRESSED_CHUNK_SIZE, crc} from "./snappyCommon.js";
 
 // The logic in this file is largely copied (in simplified form) from https://github.com/ChainSafe/node-snappy-stream/
