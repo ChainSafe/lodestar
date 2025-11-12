@@ -1,3 +1,4 @@
+// snappy is better for compression for larger payloads
 import {compressSync} from "snappy";
 import {ChunkType, IDENTIFIER_FRAME, UNCOMPRESSED_CHUNK_SIZE, crc} from "./snappyCommon.js";
 

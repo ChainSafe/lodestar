@@ -1,4 +1,5 @@
 import {Message} from "@libp2p/interface";
+// snappyjs is better for compression for smaller payloads
 import {compress, uncompress} from "snappyjs";
 import xxhashFactory from "xxhash-wasm";
 import {digest} from "@chainsafe/as-sha256";
