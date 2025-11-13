@@ -96,4 +96,10 @@ export default defineConfig({
       ],
     },
   },
+  ssr: {
+    resolve: {
+      // This allows subpath imports to work for Bun in vitest
+      conditions: globalThis.Bun ? ["import", "bun"] : ["import", "default"],
+    },
+  },
 });
