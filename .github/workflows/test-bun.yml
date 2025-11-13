@@ -34,5 +34,5 @@ jobs:
         run: yarn build
       - name: Unit Tests
         # These packages are not testable yet in Bun because of `@chainsafe/blst` dependency.
-        run: excluded=(beacon-node prover light-client cli); for pkg in packages/*/; do [[ ! " ${excluded[@]} " =~ " $(basename "$pkg") " ]] && echo "Testing $(basename "$pkg")" && (cd "$pkg" && bun run --bun test:unit); done
+        run: excluded=(prover light-client); for pkg in packages/*/; do [[ ! " ${excluded[@]} " =~ " $(basename "$pkg") " ]] && echo "Testing $(basename "$pkg")" && (cd "$pkg" && bun run --bun test:unit); done
         shell: bash
