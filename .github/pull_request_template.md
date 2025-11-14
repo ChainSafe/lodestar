@@ -10,7 +10,7 @@
 
 <!-- Link to issues: Resolves #111, Resolves #222 -->
 
-This pull request closes #issue_number
+Closes #issue_number
 
 **AI Assistance Disclosure**
 
