@@ -397,7 +397,7 @@ export async function processSlotsToNearestCheckpoint(
       // in normal condition, we only process 1 epoch so never reach this
       // in that case, we want to prune state at the last 1/3 slot of slot 0 of the next epoch after importing the 1st block of epoch
       // in non-finality time, we may process a lot of epochs so need to prune the cache to keep the node healthy
-      // this happened to hoodi on Feb 2025, see https://github.com/ChainSafe/lodestar/issues/7495#issuecomment-2680800898
+      // this behavior was observed on Holesky in Feb 2025, see https://github.com/ChainSafe/lodestar/issues/7495#issuecomment-2680800898
       // cannot use getBlockRootAtSlot() because nextEpochSlot = postState
       const latestBlockHex = toRootHex(cp.root);
       try {
