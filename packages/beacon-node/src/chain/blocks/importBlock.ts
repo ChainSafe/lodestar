@@ -245,7 +245,7 @@ export async function importBlock(
         executionOptimistic: isOptimisticBlock(newHead),
       });
     } catch (e) {
-      // getDependentRoot() may fail with error: "No block for root" as we can see in holesky non-finality issue
+      // getDependentRoot() may fail with error: "No block for root" as we observed in hoodi non-finality issue
       this.logger.debug("Error emitting head event", {slot: newHead.slot, root: newHead.blockRoot}, e as Error);
     }
 

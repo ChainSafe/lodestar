@@ -5,7 +5,9 @@ dist
 .nyc_output/
 coverage/**
 .DS_Store
+node1-docker.sh
 *.swp
+bun.lock
 .idea
 beaconchain
 lodestar-config.toml

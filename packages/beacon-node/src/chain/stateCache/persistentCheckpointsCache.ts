@@ -473,7 +473,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
    * - 1 then we'll persist {root: b1, epoch n-1} checkpoint state to disk. Note that at epoch n there is both {root: b0, epoch: n} and {root: c0, epoch: n} checkpoint states in memory
    * - 2 then we'll persist {root: b2, epoch n-2} checkpoint state to disk, there are also 2 checkpoint states in memory at epoch n, same to the above (maxEpochsInMemory=1)
    *
-   * As of Mar 2024, it takes <=350ms to persist a holesky state on fast server
+   * As of Mar 2024, it takes <=350ms to persist a hoodi state on a fast server
    */
   async processState(blockRootHex: RootHex, state: CachedBeaconStateAllForks): Promise<number> {
     let persistCount = 0;
@@ -717,7 +717,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
             );
             const cpPersist = {epoch: epoch, root: fromHex(rootHex)};
             // It's not sustainable to allocate ~240MB for each state every epoch, so we use buffer pool to reuse the memory.
-            // As monitored on holesky as of Jan 2024:
+            // As monitored on hoodi as of Jan 2024:
             //   - This does not increase heap allocation while gc time is the same
             //   - It helps stabilize persist time and save ~300ms in average (1.5s vs 1.2s)
             //   - It also helps the state reload to save ~500ms in average (4.3s vs 3.8s)
@@ -818,7 +818,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
 
   /**
    * Serialize validators to bytes leveraging the buffer pool to save memory allocation.
-   *   - As monitored on holesky as of Jan 2024, it helps save ~500ms state reload time (4.3s vs 3.8s)
+   *   - As monitored on hoodi as of Jan 2024, it helps save ~500ms state reload time (4.3s vs 3.8s)
    *   - Also `serializeState.test.ts` perf test shows a lot of differences allocating validators bytes once vs every time,
    * This is 2x - 3x faster than allocating memory every time.
    */

@@ -1,15 +1,15 @@
 import {describe, expect, it} from "vitest";
-import {ChainConfig, chainConfigToJson} from "@lodestar/config";
+import {ChainConfig, SpecJson, chainConfigToJson} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {networksChainConfig} from "@lodestar/config/networks";
 import {NotEqualParamsError, assertEqualParams} from "../../../src/util/params.js";
-import {lighthouseHoleskyConfig, nimbusHoleskyConfig, prysmHoleskyConfig, tekuHoleskyConfig} from "./interopConfigs.js";
+import {lighthouseHoodiConfig, nimbusHoodiConfig, prysmHoodiConfig, tekuHoodiConfig} from "./interopConfigs.js";
 
-const testCases: {name: string; items: [ChainConfig, Record<string, string>]}[] = [
-  {name: "lighthouse", items: [networksChainConfig.holesky, lighthouseHoleskyConfig]},
-  {name: "prysm", items: [networksChainConfig.holesky, prysmHoleskyConfig]},
-  {name: "teku", items: [networksChainConfig.holesky, tekuHoleskyConfig]},
-  {name: "nimbus", items: [networksChainConfig.holesky, nimbusHoleskyConfig]},
+const testCases: {name: string; items: [ChainConfig, SpecJson]}[] = [
+  {name: "lighthouse", items: [networksChainConfig.hoodi, lighthouseHoodiConfig]},
+  {name: "prysm", items: [networksChainConfig.hoodi, prysmHoodiConfig]},
+  {name: "teku", items: [networksChainConfig.hoodi, tekuHoodiConfig]},
+  {name: "nimbus", items: [networksChainConfig.hoodi, nimbusHoodiConfig]},
 ];
 
 describe("utils / params / assertEqualParams", () => {
@@ -36,7 +36,7 @@ describe("utils / params / assertEqualParams", () => {
   });
 
   for (const {name, items} of testCases) {
-    it(`${name} holesky == lodestar holesky`, () => {
+    it(`${name} hoodi == lodestar hoodi`, () => {
       assertEqualParams(items[0], items[1]);
     });
   }

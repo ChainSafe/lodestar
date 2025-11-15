@@ -16,7 +16,7 @@ import {generatePerfTestCachedStateAltair} from "../../util.js";
  *    ✔ migrate state 1000000 validators, 1700 modified, 1000 new          0.3663298 ops/s    2.729781  s/op        -         21 runs   62.1 s
  *    ✔ migrate state 1000000 validators, 3400 modified, 2000 new          0.3413125 ops/s    2.929866  s/op        -         19 runs   60.9 s
 
- * - On holesky, there are ~1.5M validators
+ * - On hoodi, there are ~1.5M validators
  *    ✔ migrate state 1500000 validators, 24 modified, 0 new               0.4278145 ops/s    2.337461  s/op        -         24 runs   61.1 s
  *    ✔ migrate state 1500000 validators, 1700 modified, 1000 new          0.3642085 ops/s    2.745680  s/op        -         20 runs   60.1 s
  *    ✔ migrate state 1500000 validators, 3400 modified, 2000 new          0.3344296 ops/s    2.990166  s/op        -         19 runs   62.4 s
@@ -33,7 +33,7 @@ describe("loadState", () => {
     {seedValidators: 1_000_000, numModifiedValidators: 1700, numNewValidators: 1000},
     // similar to migrating from state 7327776 to state 7335360 on mainnet, this is 237 epochs difference ~ 1 day
     {seedValidators: 1_000_000, numModifiedValidators: 3400, numNewValidators: 2000},
-    // same tests on holesky with 1_500_000 validators
+    // same tests on hoodi with 1_500_000 validators
     {seedValidators: 1_500_000, numModifiedValidators: 24, numNewValidators: 0},
     {seedValidators: 1_500_000, numModifiedValidators: 1700, numNewValidators: 1000},
     {seedValidators: 1_500_000, numModifiedValidators: 3400, numNewValidators: 2000},
